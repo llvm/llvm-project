@@ -10,12 +10,10 @@
 #ifndef LLD_ELF_WRITER_H
 #define LLD_ELF_WRITER_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include <cstdint>
 #include <memory>
-
-namespace llvm {
-  class StringRef;
-}
 
 namespace lld {
 namespace elf {
@@ -41,8 +39,8 @@ struct PhdrEntry {
   bool HasLMA = false;
 };
 
-template <class ELFT>
-llvm::StringRef getOutputSectionName(InputSectionBase<ELFT> *S);
+llvm::StringRef getOutputSectionName(llvm::StringRef Name,
+                                     llvm::BumpPtrAllocator &Alloc);
 
 template <class ELFT> void reportDiscarded(InputSectionBase<ELFT> *IS);
 

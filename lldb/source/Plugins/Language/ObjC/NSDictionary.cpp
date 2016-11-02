@@ -579,8 +579,8 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
     *(data_ptr + 1) = value_at_idx;
   } else {
     uint32_t *data_ptr = (uint32_t *)buffer_sp->GetBytes();
-    *data_ptr = key_ptr;
-    *(data_ptr + 1) = value_ptr;
+    *data_ptr = key_at_idx;
+    *(data_ptr + 1) = value_at_idx;
   }
 
   DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);

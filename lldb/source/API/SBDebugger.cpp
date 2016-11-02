@@ -48,6 +48,7 @@
 #include "lldb/Target/TargetList.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ManagedStatic.h"
 
@@ -474,7 +475,8 @@ bool SBDebugger::SetDefaultArchitecture(const char *arch_name) {
 
 ScriptLanguage
 SBDebugger::GetScriptingLanguage(const char *script_language_name) {
-  return Args::StringToScriptLanguage(script_language_name,
+  if (!script_language_name) return eScriptLanguageDefault;
+  return Args::StringToScriptLanguage(llvm::StringRef(script_language_name),
                                       eScriptLanguageDefault, nullptr);
 }
 
@@ -928,14 +930,15 @@ const char *SBDebugger::GetPrompt() const {
   if (log)
     log->Printf("SBDebugger(%p)::GetPrompt () => \"%s\"",
                 static_cast<void *>(m_opaque_sp.get()),
-                (m_opaque_sp ? m_opaque_sp->GetPrompt() : ""));
+                (m_opaque_sp ? m_opaque_sp->GetPrompt().str().c_str() : ""));
 
-  return (m_opaque_sp ? m_opaque_sp->GetPrompt() : nullptr);
+  return (m_opaque_sp ? ConstString(m_opaque_sp->GetPrompt()).GetCString()
+                      : nullptr);
 }
 
 void SBDebugger::SetPrompt(const char *prompt) {
   if (m_opaque_sp)
-    m_opaque_sp->SetPrompt(prompt);
+    m_opaque_sp->SetPrompt(llvm::StringRef::withNullAsEmpty(prompt));
 }
 
 ScriptLanguage SBDebugger::GetScriptLanguage() const {

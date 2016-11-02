@@ -59,7 +59,7 @@ void OptionValueProperties::Initialize(const PropertyDefinition *defs) {
   for (size_t i = 0; defs[i].name; ++i) {
     Property property(defs[i]);
     assert(property.IsValid());
-    m_name_to_index.Append(property.GetName().GetCString(),
+    m_name_to_index.Append(property.GetName().GetStringRef(),
                            m_properties.size());
     property.GetValue()->SetParent(shared_from_this());
     m_properties.push_back(property);
@@ -79,7 +79,7 @@ void OptionValueProperties::AppendProperty(const ConstString &name,
                                            bool is_global,
                                            const OptionValueSP &value_sp) {
   Property property(name, desc, is_global, value_sp);
-  m_name_to_index.Append(name.GetCString(), m_properties.size());
+  m_name_to_index.Append(name.GetStringRef(), m_properties.size());
   m_properties.push_back(property);
   value_sp->SetParent(shared_from_this());
   m_name_to_index.Sort();
@@ -109,7 +109,7 @@ OptionValueProperties::GetValueForKey(const ExecutionContext *exe_ctx,
                                       const ConstString &key,
                                       bool will_modify) const {
   lldb::OptionValueSP value_sp;
-  size_t idx = m_name_to_index.Find(key.GetCString(), SIZE_MAX);
+  size_t idx = m_name_to_index.Find(key.GetStringRef(), SIZE_MAX);
   if (idx < m_properties.size())
     value_sp = GetPropertyAtIndex(exe_ctx, will_modify, idx)->GetValue();
   return value_sp;
@@ -234,15 +234,16 @@ OptionValueProperties::GetPropertyDescriptionAtIndex(uint32_t idx) const {
 
 uint32_t
 OptionValueProperties::GetPropertyIndex(const ConstString &name) const {
-  return m_name_to_index.Find(name.GetCString(), SIZE_MAX);
+  return m_name_to_index.Find(name.GetStringRef(), SIZE_MAX);
 }
 
 const Property *
 OptionValueProperties::GetProperty(const ExecutionContext *exe_ctx,
                                    bool will_modify,
                                    const ConstString &name) const {
-  return GetPropertyAtIndex(exe_ctx, will_modify,
-                            m_name_to_index.Find(name.GetCString(), SIZE_MAX));
+  return GetPropertyAtIndex(
+      exe_ctx, will_modify,
+      m_name_to_index.Find(name.GetStringRef(), SIZE_MAX));
 }
 
 const Property *OptionValueProperties::GetPropertyAtIndex(
@@ -491,7 +492,7 @@ const char *OptionValueProperties::GetPropertyAtIndexAsString(
 }
 
 bool OptionValueProperties::SetPropertyAtIndexAsString(
-    const ExecutionContext *exe_ctx, uint32_t idx, const char *new_value) {
+    const ExecutionContext *exe_ctx, uint32_t idx, llvm::StringRef new_value) {
   const Property *property = GetPropertyAtIndex(exe_ctx, true, idx);
   if (property) {
     OptionValue *value = property->GetValue().get();

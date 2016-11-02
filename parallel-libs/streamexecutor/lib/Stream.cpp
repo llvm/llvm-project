@@ -27,7 +27,7 @@ Stream::Stream(PlatformDevice *D, const void *PlatformStreamHandle)
          "cannot construct a stream object with a null platform stream handle");
 }
 
-Stream::Stream(Stream &&Other)
+Stream::Stream(Stream &&Other) noexcept
     : PDevice(Other.PDevice), PlatformStreamHandle(Other.PlatformStreamHandle),
       ErrorMessageMutex(std::move(Other.ErrorMessageMutex)),
       ErrorMessage(std::move(Other.ErrorMessage)) {
@@ -35,7 +35,7 @@ Stream::Stream(Stream &&Other)
   Other.PlatformStreamHandle = nullptr;
 }
 
-Stream &Stream::operator=(Stream &&Other) {
+Stream &Stream::operator=(Stream &&Other) noexcept {
   PDevice = Other.PDevice;
   PlatformStreamHandle = Other.PlatformStreamHandle;
   ErrorMessageMutex = std::move(Other.ErrorMessageMutex);

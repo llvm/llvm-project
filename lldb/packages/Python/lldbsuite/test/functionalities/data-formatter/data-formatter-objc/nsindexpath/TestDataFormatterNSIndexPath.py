@@ -45,6 +45,7 @@ class NSIndexPathDataFormatterTestCase(TestBase):
         commands()
 
     @skipUnlessDarwin
+    @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656605")
     def test_nsindexpath_with_run_command(self):
         """Test formatters for NSIndexPath."""
         self.appkit_tester_impl(self.nsindexpath_data_formatter_commands)

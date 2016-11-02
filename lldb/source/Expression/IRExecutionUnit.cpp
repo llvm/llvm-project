@@ -1035,8 +1035,6 @@ void IRExecutionUnit::GetStaticInitializers(
                      3); // this is standardized
           if (llvm::Function *ctor_function =
                   llvm::dyn_cast<llvm::Function>(ctor_struct->getOperand(1))) {
-            ctor_function->dump();
-
             ConstString ctor_function_name_cs(ctor_function->getName().str());
 
             for (JittedFunction &jitted_function : m_jitted_functions) {

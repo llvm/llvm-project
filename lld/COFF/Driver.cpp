@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Config.h"
 #include "Driver.h"
+#include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
@@ -373,10 +373,8 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   // Create a dummy PDB file to satisfy build sytem rules.
-  if (auto *Arg = Args.getLastArg(OPT_pdb)) {
+  if (auto *Arg = Args.getLastArg(OPT_pdb))
     Config->PDBPath = Arg->getValue();
-    createPDB(Config->PDBPath);
-  }
 
   // Handle /noentry
   if (Args.hasArg(OPT_noentry)) {

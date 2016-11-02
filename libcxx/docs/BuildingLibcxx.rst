@@ -144,26 +144,26 @@ libc++ specific options
 
   **Default**: ``OFF``
 
-  Build libc++ as a 32 bit library. Also see :option:`LLVM_BUILD_32_BITS`.
+  Build libc++ as a 32 bit library. Also see `LLVM_BUILD_32_BITS`.
 
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
   **Default**: ``ON``
 
-  Build libc++ as a shared library. Either :option:`LIBCXX_ENABLE_SHARED` or
-  :option:`LIBCXX_ENABLE_STATIC` has to be enabled.
+  Build libc++ as a shared library. Either `LIBCXX_ENABLE_SHARED` or
+  `LIBCXX_ENABLE_STATIC` has to be enabled.
 
 .. option:: LIBCXX_ENABLE_STATIC:BOOL
 
   **Default**: ``ON``
 
-  Build libc++ as a static library. Either :option:`LIBCXX_ENABLE_SHARED` or
-  :option:`LIBCXX_ENABLE_STATIC` has to be enabled.
+  Build libc++ as a static library. Either `LIBCXX_ENABLE_SHARED` or
+  `LIBCXX_ENABLE_STATIC` has to be enabled.
 
 .. option:: LIBCXX_LIBDIR_SUFFIX:STRING
 
   Extra suffix to append to the directory where libraries are to be installed.
-  This option overrides :option:`LLVM_LIBDIR_SUFFIX`.
+  This option overrides `LLVM_LIBDIR_SUFFIX`.
 
 
 .. _libc++experimental options:

@@ -659,9 +659,11 @@ __kmp_stg_parse_blocktime( char const * name, char const * value, void * data ) 
         }; // if
         __kmp_env_blocktime = TRUE;    // KMP_BLOCKTIME was specified.
     }; // if
-    // calculate number of monitor thread wakeup intervals corresonding to blocktime.
+#if KMP_USE_MONITOR
+    // calculate number of monitor thread wakeup intervals corresponding to blocktime.
     __kmp_monitor_wakeups = KMP_WAKEUPS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
     __kmp_bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME( __kmp_dflt_blocktime, __kmp_monitor_wakeups );
+#endif
     K_DIAG( 1, ( "__kmp_env_blocktime == %d\n", __kmp_env_blocktime ) );
     if ( __kmp_env_blocktime ) {
         K_DIAG( 1, ( "__kmp_dflt_blocktime == %d\n", __kmp_dflt_blocktime ) );
@@ -795,6 +797,7 @@ __kmp_stg_print_wait_policy( kmp_str_buf_t * buffer, char const * name, void * d
 
 } // __kmp_stg_print_wait_policy
 
+#if KMP_USE_MONITOR
 // -------------------------------------------------------------------------------------------------
 // KMP_MONITOR_STACKSIZE
 // -------------------------------------------------------------------------------------------------
@@ -832,6 +835,7 @@ __kmp_stg_print_monitor_stacksize( kmp_str_buf_t * buffer, char const * name, vo
     }
 
 } // __kmp_stg_print_monitor_stacksize
+#endif // KMP_USE_MONITOR
 
 // -------------------------------------------------------------------------------------------------
 // KMP_SETTINGS
@@ -1181,6 +1185,19 @@ static void
 __kmp_stg_print_max_active_levels( kmp_str_buf_t * buffer, char const * name, void * data ) {
     __kmp_stg_print_int( buffer, name, __kmp_dflt_max_active_levels );
 } // __kmp_stg_print_max_active_levels
+
+#if OMP_40_ENABLED
+// -------------------------------------------------------------------------------------------------
+// OpenMP 4.0: OMP_DEFAULT_DEVICE
+// -------------------------------------------------------------------------------------------------
+static void __kmp_stg_parse_default_device(char const *name, char const *value, void *data) {
+  __kmp_stg_parse_int(name, value, 0, KMP_MAX_DEFAULT_DEVICE_LIMIT, &__kmp_default_device);
+} // __kmp_stg_parse_default_device
+
+static void __kmp_stg_print_default_device(kmp_str_buf_t *buffer, char const *name, void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_default_device);
+} // __kmp_stg_print_default_device
+#endif
 
 #if OMP_45_ENABLED
 // -------------------------------------------------------------------------------------------------
@@ -3780,6 +3797,7 @@ __kmp_stg_print_par_range_env( kmp_str_buf_t * buffer, char const * name, void *
     }
 } // __kmp_stg_print_par_range_env
 
+#if KMP_USE_MONITOR
 // -------------------------------------------------------------------------------------------------
 // KMP_YIELD_CYCLE, KMP_YIELD_ON, KMP_YIELD_OFF
 // -------------------------------------------------------------------------------------------------
@@ -3815,6 +3833,7 @@ static void
 __kmp_stg_print_yield_off( kmp_str_buf_t * buffer, char const * name, void * data ) {
     __kmp_stg_print_int( buffer, name, __kmp_yield_off_count );
 } // __kmp_stg_print_yield_off
+#endif // KMP_USE_MONITOR
 
 #endif
 
@@ -4662,7 +4681,9 @@ static kmp_setting_t __kmp_stg_table[] = {
     { "KMP_DUPLICATE_LIB_OK",              __kmp_stg_parse_duplicate_lib_ok,   __kmp_stg_print_duplicate_lib_ok,   NULL, 0, 0 },
     { "KMP_LIBRARY",                       __kmp_stg_parse_wait_policy,        __kmp_stg_print_wait_policy,        NULL, 0, 0 },
     { "KMP_MAX_THREADS",                   __kmp_stg_parse_all_threads,        NULL,                               NULL, 0, 0 }, // For backward compatibility
+#if KMP_USE_MONITOR
     { "KMP_MONITOR_STACKSIZE",             __kmp_stg_parse_monitor_stacksize,  __kmp_stg_print_monitor_stacksize,  NULL, 0, 0 },
+#endif
     { "KMP_SETTINGS",                      __kmp_stg_parse_settings,           __kmp_stg_print_settings,           NULL, 0, 0 },
     { "KMP_STACKOFFSET",                   __kmp_stg_parse_stackoffset,        __kmp_stg_print_stackoffset,        NULL, 0, 0 },
     { "KMP_STACKSIZE",                     __kmp_stg_parse_stacksize,          __kmp_stg_print_stacksize,          NULL, 0, 0 },
@@ -4677,6 +4698,9 @@ static kmp_setting_t __kmp_stg_table[] = {
     { "KMP_TASKING",                       __kmp_stg_parse_tasking,            __kmp_stg_print_tasking,            NULL, 0, 0 },
     { "KMP_TASK_STEALING_CONSTRAINT",      __kmp_stg_parse_task_stealing,      __kmp_stg_print_task_stealing,      NULL, 0, 0 },
     { "OMP_MAX_ACTIVE_LEVELS",             __kmp_stg_parse_max_active_levels,  __kmp_stg_print_max_active_levels,  NULL, 0, 0 },
+#if OMP_40_ENABLED
+    { "OMP_DEFAULT_DEVICE",                __kmp_stg_parse_default_device,     __kmp_stg_print_default_device,     NULL, 0, 0 },
+#endif
 #if OMP_45_ENABLED
     { "OMP_MAX_TASK_PRIORITY",             __kmp_stg_parse_max_task_priority,  __kmp_stg_print_max_task_priority,  NULL, 0, 0 },
 #endif
@@ -4715,9 +4739,11 @@ static kmp_setting_t __kmp_stg_table[] = {
     { "KMP_DIAG",                          __kmp_stg_parse_diag,               __kmp_stg_print_diag,               NULL, 0, 0 },
 
     { "KMP_PAR_RANGE",                     __kmp_stg_parse_par_range_env,      __kmp_stg_print_par_range_env,      NULL, 0, 0 },
+#if KMP_USE_MONITOR
     { "KMP_YIELD_CYCLE",                   __kmp_stg_parse_yield_cycle,        __kmp_stg_print_yield_cycle,        NULL, 0, 0 },
     { "KMP_YIELD_ON",                      __kmp_stg_parse_yield_on,           __kmp_stg_print_yield_on,           NULL, 0, 0 },
     { "KMP_YIELD_OFF",                     __kmp_stg_parse_yield_off,          __kmp_stg_print_yield_off,          NULL, 0, 0 },
+#endif
 #endif // KMP_DEBUG
 
     { "KMP_ALIGN_ALLOC",                   __kmp_stg_parse_align_alloc,        __kmp_stg_print_align_alloc,        NULL, 0, 0 },

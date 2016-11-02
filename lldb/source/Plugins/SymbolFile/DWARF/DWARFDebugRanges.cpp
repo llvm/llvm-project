@@ -118,9 +118,11 @@ void DWARFDebugRanges::Dump(Stream &s,
   }
 }
 
-bool DWARFDebugRanges::FindRanges(dw_offset_t debug_ranges_offset,
+bool DWARFDebugRanges::FindRanges(dw_addr_t debug_ranges_base,
+                                  dw_offset_t debug_ranges_offset,
                                   DWARFRangeList &range_list) const {
-  range_map_const_iterator pos = m_range_map.find(debug_ranges_offset);
+  dw_addr_t debug_ranges_address = debug_ranges_base + debug_ranges_offset;
+  range_map_const_iterator pos = m_range_map.find(debug_ranges_address);
   if (pos != m_range_map.end()) {
     range_list = pos->second;
     return true;

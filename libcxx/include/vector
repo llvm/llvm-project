@@ -312,7 +312,7 @@ __vector_base_common<__b>::__throw_out_of_range() const
 #pragma warning( push )
 #pragma warning( disable: 4231 )
 #endif // _LIBCPP_MSVC
-_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_TYPE_VIS __vector_base_common<true>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __vector_base_common<true>)
 #ifdef _LIBCPP_MSVC
 #pragma warning( pop )
 #endif // _LIBCPP_MSVC

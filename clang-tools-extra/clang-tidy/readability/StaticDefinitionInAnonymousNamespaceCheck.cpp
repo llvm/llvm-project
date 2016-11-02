@@ -18,20 +18,14 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-namespace {
-AST_POLYMORPHIC_MATCHER(isStatic, AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                                  VarDecl)) {
-  return Node.getStorageClass() == SC_Static;
-}
-} // namespace
-
 void StaticDefinitionInAnonymousNamespaceCheck::registerMatchers(
     MatchFinder *Finder) {
-  Finder->addMatcher(namedDecl(anyOf(functionDecl(isDefinition(), isStatic()),
-                                     varDecl(isDefinition(), isStatic())),
-                               hasParent(namespaceDecl(isAnonymous())))
-                         .bind("static-def"),
-                     this);
+  Finder->addMatcher(
+      namedDecl(anyOf(functionDecl(isDefinition(), isStaticStorageClass()),
+                      varDecl(isDefinition(), isStaticStorageClass())),
+                hasParent(namespaceDecl(isAnonymous())))
+          .bind("static-def"),
+      this);
 }
 
 void StaticDefinitionInAnonymousNamespaceCheck::check(
@@ -53,12 +47,12 @@ void StaticDefinitionInAnonymousNamespaceCheck::check(
   Token Tok;
   SourceLocation Loc = Def->getSourceRange().getBegin();
   while (Loc < Def->getSourceRange().getEnd() &&
-         !Lexer::getRawToken(Loc, Tok, *Result.SourceManager,
-                             Result.Context->getLangOpts(), true)) {
+         !Lexer::getRawToken(Loc, Tok, *Result.SourceManager, getLangOpts(),
+                             true)) {
     SourceRange TokenRange(Tok.getLocation(), Tok.getEndLoc());
-    StringRef SourceText = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(TokenRange),
-        *Result.SourceManager, Result.Context->getLangOpts());
+    StringRef SourceText =
+        Lexer::getSourceText(CharSourceRange::getTokenRange(TokenRange),
+                             *Result.SourceManager, getLangOpts());
     if (SourceText == "static") {
       Diag << FixItHint::CreateRemoval(TokenRange);
       break;

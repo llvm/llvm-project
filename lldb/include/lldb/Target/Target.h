@@ -159,16 +159,16 @@ public:
   uint32_t GetMaximumMemReadSize() const;
 
   FileSpec GetStandardInputPath() const;
-
-  void SetStandardInputPath(const char *path);
-
+  FileSpec GetStandardErrorPath() const;
   FileSpec GetStandardOutputPath() const;
 
-  void SetStandardOutputPath(const char *path);
+  void SetStandardInputPath(llvm::StringRef path);
+  void SetStandardOutputPath(llvm::StringRef path);
+  void SetStandardErrorPath(llvm::StringRef path);
 
-  FileSpec GetStandardErrorPath() const;
-
-  void SetStandardErrorPath(const char *path);
+  void SetStandardInputPath(const char *path) = delete;
+  void SetStandardOutputPath(const char *path) = delete;
+  void SetStandardErrorPath(const char *path) = delete;
 
   bool GetBreakpointsConsultPlatformAvoidList();
 
@@ -715,6 +715,16 @@ public:
   bool RemoveWatchpointByID(lldb::watch_id_t watch_id);
 
   bool IgnoreWatchpointByID(lldb::watch_id_t watch_id, uint32_t ignore_count);
+
+  Error SerializeBreakpointsToFile(const FileSpec &file,
+                                   const BreakpointIDList &bp_ids, bool append);
+
+  Error CreateBreakpointsFromFile(const FileSpec &file,
+                                  BreakpointIDList &new_bps);
+
+  Error CreateBreakpointsFromFile(const FileSpec &file,
+                                  std::vector<std::string> &names,
+                                  BreakpointIDList &new_bps);
 
   //------------------------------------------------------------------
   /// Get \a load_addr as a callable code load address for this target
@@ -1308,10 +1318,10 @@ protected:
   Debugger &m_debugger;
   lldb::PlatformSP m_platform_sp; ///< The platform for this target.
   std::recursive_mutex m_mutex; ///< An API mutex that is used by the lldb::SB*
-                                ///classes make the SB interface thread safe
+                                /// classes make the SB interface thread safe
   ArchSpec m_arch;
   ModuleList m_images; ///< The list of images for this process (shared
-                       ///libraries and anything dynamically loaded).
+                       /// libraries and anything dynamically loaded).
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;

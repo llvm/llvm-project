@@ -10,6 +10,11 @@
 // XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: libcpp-has-no-threads
 
+// This test hangs forever when built against libstdc++. In order to allow
+// validation of the test suite against other STLs we have to mark it
+// unsupported.
+// UNSUPPORTED: libstdc++
+
 // <mutex>
 
 // template <class L1, class L2, class... L3>

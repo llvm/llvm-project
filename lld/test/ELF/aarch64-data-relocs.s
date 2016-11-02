@@ -12,12 +12,12 @@ _start:
 // S = 0x100, A = 0x24
 // S + A = 0x124
 // CHECK: Contents of section .R_AARCH64_ABS64:
-// CHECK-NEXT: 11000 24010000 00000000
+// CHECK-NEXT: 20000 24010000 00000000
 
 .section .R_AARCH64_PREL64, "ax",@progbits
   .xword foo - . + 0x24
 
-// S = 0x100, A = 0x24, P = 0x11008
-// S + A - P = 0xfffffffffffef11c
+// S = 0x100, A = 0x24, P = 0x20008
+// S + A - P = 0xfffffffffffe011c
 // CHECK: Contents of section .R_AARCH64_PREL64:
-// CHECK-NEXT: 11008 1cf1feff ffffffff
+// CHECK-NEXT: 20008 1c01feff ffffffff

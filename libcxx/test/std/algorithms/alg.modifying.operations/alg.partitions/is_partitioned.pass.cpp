@@ -14,6 +14,7 @@
 //     is_partitioned(InputIterator first, InputIterator last, Predicate pred);
 
 #include <algorithm>
+#include <functional>
 #include <cassert>
 
 #include "test_iterators.h"

@@ -29,6 +29,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -36,6 +38,12 @@ using namespace lldb_private;
 // arguments to
 // calling functions.
 //
+
+static OptionDefinition g_arg_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation." },
+    // clang-format on
+};
 
 CommandObjectArgs::CommandOptions::CommandOptions(
     CommandInterpreter &interpreter)
@@ -61,8 +69,9 @@ Error CommandObjectArgs::CommandOptions::SetOptionValue(
 void CommandObjectArgs::CommandOptions::OptionParsingStarting(
     ExecutionContext *execution_context) {}
 
-const OptionDefinition *CommandObjectArgs::CommandOptions::GetDefinitions() {
-  return g_option_table;
+llvm::ArrayRef<OptionDefinition>
+CommandObjectArgs::CommandOptions::GetDefinitions() {
+  return llvm::makeArrayRef(g_arg_options);
 }
 
 CommandObjectArgs::CommandObjectArgs(CommandInterpreter &interpreter)
@@ -94,10 +103,7 @@ bool CommandObjectArgs::DoExecute(Args &args, CommandReturnObject &result) {
     return false;
   }
 
-  const size_t num_args = args.GetArgumentCount();
-  size_t arg_index;
-
-  if (!num_args) {
+  if (args.empty()) {
     result.AppendError("args requires at least one argument");
     result.SetStatus(eReturnStatusFailed);
     return false;
@@ -136,73 +142,70 @@ bool CommandObjectArgs::DoExecute(Args &args, CommandReturnObject &result) {
 
   ValueList value_list;
 
-  for (arg_index = 0; arg_index < num_args; ++arg_index) {
-    const char *arg_type_cstr = args.GetArgumentAtIndex(arg_index);
+  for (auto &arg_entry : args.entries()) {
+    llvm::StringRef arg_type = arg_entry.ref;
     Value value;
     value.SetValueType(Value::eValueTypeScalar);
     CompilerType compiler_type;
 
-    char *int_pos;
-    if ((int_pos = strstr(const_cast<char *>(arg_type_cstr), "int"))) {
+    std::size_t int_pos = arg_type.find("int");
+    if (int_pos != llvm::StringRef::npos) {
       Encoding encoding = eEncodingSint;
 
       int width = 0;
 
-      if (int_pos > arg_type_cstr + 1) {
-        result.AppendErrorWithFormat("Invalid format: %s.\n", arg_type_cstr);
+      if (int_pos > 1) {
+        result.AppendErrorWithFormat("Invalid format: %s.\n",
+                                     arg_entry.c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-      if (int_pos == arg_type_cstr + 1 && arg_type_cstr[0] != 'u') {
-        result.AppendErrorWithFormat("Invalid format: %s.\n", arg_type_cstr);
+      if (int_pos == 1 && arg_type[0] != 'u') {
+        result.AppendErrorWithFormat("Invalid format: %s.\n",
+                                     arg_entry.c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-      if (arg_type_cstr[0] == 'u') {
+      if (arg_type[0] == 'u') {
         encoding = eEncodingUint;
       }
 
-      char *width_pos = int_pos + 3;
+      llvm::StringRef width_spec = arg_type.drop_front(int_pos + 3);
 
-      if (!strcmp(width_pos, "8_t"))
-        width = 8;
-      else if (!strcmp(width_pos, "16_t"))
-        width = 16;
-      else if (!strcmp(width_pos, "32_t"))
-        width = 32;
-      else if (!strcmp(width_pos, "64_t"))
-        width = 64;
-      else {
-        result.AppendErrorWithFormat("Invalid format: %s.\n", arg_type_cstr);
+      auto exp_result = llvm::StringSwitch<llvm::Optional<int>>(width_spec)
+                            .Case("8_t", 8)
+                            .Case("16_t", 16)
+                            .Case("32_t", 32)
+                            .Case("64_t", 64)
+                            .Default(llvm::None);
+      if (!exp_result.hasValue()) {
+        result.AppendErrorWithFormat("Invalid format: %s.\n",
+                                     arg_entry.c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
+      width = *exp_result;
+
       compiler_type =
           type_system->GetBuiltinTypeForEncodingAndBitSize(encoding, width);
 
       if (!compiler_type.IsValid()) {
         result.AppendErrorWithFormat(
             "Couldn't get Clang type for format %s (%s integer, width %d).\n",
-            arg_type_cstr, (encoding == eEncodingSint ? "signed" : "unsigned"),
-            width);
+            arg_entry.c_str(),
+            (encoding == eEncodingSint ? "signed" : "unsigned"), width);
 
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-    } else if (strchr(arg_type_cstr, '*')) {
-      if (!strcmp(arg_type_cstr, "void*"))
-        compiler_type =
-            type_system->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
-      else if (!strcmp(arg_type_cstr, "char*"))
-        compiler_type =
-            type_system->GetBasicTypeFromAST(eBasicTypeChar).GetPointerType();
-      else {
-        result.AppendErrorWithFormat("Invalid format: %s.\n", arg_type_cstr);
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
+    } else if (arg_type == "void*") {
+      compiler_type =
+          type_system->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
+    } else if (arg_type == "char*") {
+      compiler_type =
+          type_system->GetBasicTypeFromAST(eBasicTypeChar).GetPointerType();
     } else {
-      result.AppendErrorWithFormat("Invalid format: %s.\n", arg_type_cstr);
+      result.AppendErrorWithFormat("Invalid format: %s.\n", arg_entry.c_str());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
@@ -219,19 +222,12 @@ bool CommandObjectArgs::DoExecute(Args &args, CommandReturnObject &result) {
 
   result.GetOutputStream().Printf("Arguments : \n");
 
-  for (arg_index = 0; arg_index < num_args; ++arg_index) {
-    result.GetOutputStream().Printf("%" PRIu64 " (%s): ", (uint64_t)arg_index,
-                                    args.GetArgumentAtIndex(arg_index));
-    value_list.GetValueAtIndex(arg_index)->Dump(&result.GetOutputStream());
+  for (auto entry : llvm::enumerate(args.entries())) {
+    result.GetOutputStream().Printf("%" PRIu64 " (%s): ", (uint64_t)entry.Index,
+                                    entry.Value.c_str());
+    value_list.GetValueAtIndex(entry.Index)->Dump(&result.GetOutputStream());
     result.GetOutputStream().Printf("\n");
   }
 
   return result.Succeeded();
 }
-
-OptionDefinition CommandObjectArgs::CommandOptions::g_option_table[] = {
-    // clang-format off
-  {LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-    // clang-format on
-};

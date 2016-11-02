@@ -25,29 +25,29 @@
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" libxyz.a )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script 2>/dev/null
 # RUN: ld.lld -o %t2 %t.script -L%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" =libxyz.a )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script  2>/dev/null
 # RUN: ld.lld -o %t2 %t.script --sysroot=%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" -lxyz )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script  2>/dev/null
 # RUN: ld.lld -o %t2 %t.script -L%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" libxyz.a )" > %t.script
-# RUN: not ld.lld -o %t2 %t.script
+# RUN: not ld.lld -o %t2 %t.script  2>/dev/null
 # RUN: ld.lld -o %t2 %t.script -L%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
 # RUN: echo "GROUP(\"%t\" /libxyz.a )" > %t.script
 # RUN: echo "GROUP(\"%t\" /libxyz.a )" > %t.dir/xyz.script
-# RUN: not ld.lld -o %t2 %t.script
-# RUN: not ld.lld -o %t2 %t.script --sysroot=%t.dir
+# RUN: not ld.lld -o %t2 %t.script 2>/dev/null
+# RUN: not ld.lld -o %t2 %t.script --sysroot=%t.dir  2>/dev/null
 # RUN: ld.lld -o %t2 %t.dir/xyz.script --sysroot=%t.dir
 # RUN: llvm-readobj %t2 > /dev/null
 
@@ -60,11 +60,10 @@
 # RUN: ld.lld -o %t2 %t.script %t
 # RUN: llvm-readobj %t2 > /dev/null
 
+# The entry symbol should not cause an undefined error.
 # RUN: echo "ENTRY(_wrong_label)" > %t.script
-# RUN: not ld.lld -o %t2 %t.script %t > %t.log 2>&1
-# RUN: FileCheck -check-prefix=ERR-ENTRY %s < %t.log
-
-# ERR-ENTRY: undefined symbol: _wrong_label
+# RUN: ld.lld -o %t2 %t.script %t
+# RUN: ld.lld --entry=abc -o %t2 %t
 
 # -e has precedence over linker script's ENTRY.
 # RUN: echo "ENTRY(_label)" > %t.script

@@ -21,8 +21,6 @@
 using namespace lldb_private;
 using namespace clang;
 
-const char *g_clang_expression_variable_kind_name = "ClangExpressionVariable";
-
 ClangExpressionVariable::ClangExpressionVariable(
     ExecutionContextScope *exe_scope, lldb::ByteOrder byte_order,
     uint32_t addr_byte_size)

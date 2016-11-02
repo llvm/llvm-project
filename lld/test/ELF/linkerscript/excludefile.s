@@ -11,15 +11,15 @@
 
 # CHECK: Disassembly of section .text:
 # CHECK: _start:
-# CHECK:      120:       48 c7 c0 3c 00 00 00    movq    $60, %rax
-# CHECK:      127:       48 c7 c7 2a 00 00 00    movq    $42, %rdi
-# CHECK:      12e:       00 00   addb    %al, (%rax)
+# CHECK-NEXT: :       48 c7 c0 3c 00 00 00    movq    $60, %rax
+# CHECK-NEXT: :       48 c7 c7 2a 00 00 00    movq    $42, %rdi
+# CHECK-NEXT: :       00 00   addb    %al, (%rax)
 # CHECK: _potato:
-# CHECK:      130:       90      nop
-# CHECK:      131:       90      nop
-# CHECK:      132:       00 00   addb    %al, (%rax)
+# CHECK-NEXT: :       90      nop
+# CHECK-NEXT: :       90      nop
+# CHECK-NEXT: :       00 00   addb    %al, (%rax)
 # CHECK: tomato:
-# CHECK:      134:       b8 01 00 00 00  movl    $1, %eax
+# CHECK-NEXT: :       b8 01 00 00 00  movl    $1, %eax
 
 # RUN: echo "SECTIONS { .patatino : \
 # RUN: { KEEP(*(EXCLUDE_FILE(*notinclude) .text)) } }" \
@@ -29,15 +29,15 @@
 
 # EXCLUDE: Disassembly of section .patatino:
 # EXCLUDE: _start:
-# EXCLUDE:      120:       48 c7 c0 3c 00 00 00    movq    $60, %rax
-# EXCLUDE:      127:       48 c7 c7 2a 00 00 00    movq    $42, %rdi
-# EXCLUDE:      12e:       00 00   addb    %al, (%rax)
+# EXCLUDE-NEXT: :       48 c7 c0 3c 00 00 00    movq    $60, %rax
+# EXCLUDE-NEXT: :       48 c7 c7 2a 00 00 00    movq    $42, %rdi
+# EXCLUDE-NEXT: :       00 00   addb    %al, (%rax)
 # EXCLUDE: _potato:
-# EXCLUDE:      130:       90      nop
-# EXCLUDE:      131:       90      nop
+# EXCLUDE-NEXT: :       90      nop
+# EXCLUDE-NEXT: :       90      nop
 # EXCLUDE: Disassembly of section .text:
 # EXCLUDE: tomato:
-# EXCLUDE:      134:       b8 01 00 00 00  movl    $1, %eax
+# EXCLUDE-NEXT: :       b8 01 00 00 00  movl    $1, %eax
 
 .section .text
 .globl _start

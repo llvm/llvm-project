@@ -39,6 +39,9 @@ public:
   Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
+  Error
+  SetValueFromString(const char *,
+                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
     m_values.clear();

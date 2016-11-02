@@ -17,7 +17,7 @@
 
 #include <vector>
 #include <cassert>
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
 
@@ -68,8 +68,8 @@ int main()
             assert(v[j] == 0);
     }
     {
-        std::vector<int, stack_allocator<int, 300> > v(100);
-        std::vector<int, stack_allocator<int, 300> >::iterator i = v.insert(v.cbegin() + 10, 1);
+        std::vector<int, limited_allocator<int, 300> > v(100);
+        std::vector<int, limited_allocator<int, 300> >::iterator i = v.insert(v.cbegin() + 10, 1);
         assert(v.size() == 101);
         assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);

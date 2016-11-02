@@ -57,6 +57,8 @@ bool CommandObjectSyntax::DoExecute(Args &command,
   if (argc > 0) {
     cmd_obj = m_interpreter.GetCommandObject(command.GetArgumentAtIndex(0));
     bool all_okay = true;
+    // TODO: Convert to entry-based iteration.  Requires converting
+    // GetSubcommandObject.
     for (size_t i = 1; i < argc; ++i) {
       std::string sub_command = command.GetArgumentAtIndex(i);
       if (!cmd_obj->IsMultiwordObject()) {
@@ -77,7 +79,7 @@ bool CommandObjectSyntax::DoExecute(Args &command,
         output_strm.Printf("\nSyntax: %s\n", cmd_obj->GetSyntax());
         output_strm.Printf(
             "(Try 'help %s' for more information on command options syntax.)\n",
-            cmd_obj->GetCommandName());
+            cmd_obj->GetCommandName().str().c_str());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         output_strm.Printf("\nSyntax: %s\n", cmd_obj->GetSyntax());

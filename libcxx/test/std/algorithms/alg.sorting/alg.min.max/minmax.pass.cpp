@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 void
 test(const T& a, const T& b, const T& x, const T& y)
@@ -45,7 +47,7 @@ int main()
     test(x, y, y, x);
     test(y, x, y, x);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER >= 14
     {
 //  Note that you can't take a reference to a local var, since
 //  its address is not a compile-time constant.

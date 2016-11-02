@@ -266,16 +266,7 @@ FTN_GET_AFFINITY_MAX_PROC( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
-        if ( ! ( KMP_AFFINITY_CAPABLE() ) ) {
-            return 0;
-        }
-
-    #if KMP_GROUP_AFFINITY
-        if ( __kmp_num_proc_groups > 1 ) {
-            return (int)(__kmp_num_proc_groups*sizeof(DWORD_PTR)*CHAR_BIT);
-        }
-    #endif /* KMP_GROUP_AFFINITY */
-        return __kmp_xproc;
+        return __kmp_aux_get_affinity_max_proc();
     #endif
 }
 
@@ -699,6 +690,8 @@ FTN_GET_NUM_PLACES( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return 0;
         return __kmp_affinity_num_masks;
     #endif
 }
@@ -714,6 +707,8 @@ FTN_GET_PLACE_NUM_PROCS( int place_num )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return 0;
         if ( place_num < 0 || place_num >= (int)__kmp_affinity_num_masks )
             return 0;
         kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
@@ -738,6 +733,8 @@ FTN_GET_PLACE_PROC_IDS( int place_num, int *ids )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return;
         if ( place_num < 0 || place_num >= (int)__kmp_affinity_num_masks )
             return;
         kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
@@ -763,6 +760,8 @@ FTN_GET_PLACE_NUM( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return -1;
         gtid = __kmp_entry_gtid();
         thread = __kmp_thread_from_gtid(gtid);
         if ( thread->th.th_current_place < 0 )
@@ -782,6 +781,8 @@ FTN_GET_PARTITION_NUM_PLACES( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return 0;
         gtid = __kmp_entry_gtid();
         thread = __kmp_thread_from_gtid(gtid);
         first_place = thread->th.th_first_place;
@@ -806,6 +807,8 @@ FTN_GET_PARTITION_PLACE_NUMS( int *place_nums ) {
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
+        if (!KMP_AFFINITY_CAPABLE())
+            return;
         gtid = __kmp_entry_gtid();
         thread = __kmp_thread_from_gtid(gtid);
         first_place = thread->th.th_first_place;
@@ -904,18 +907,27 @@ xexpand(FTN_GET_TEAM_NUM)( void )
     #endif
 }
 
-#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-
 int FTN_STDCALL
-FTN_GET_DEFAULT_DEVICE( void )
+xexpand(FTN_GET_DEFAULT_DEVICE)( void )
 {
-    return 0;
+    #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+        return 0;
+    #else
+        return __kmp_entry_thread() -> th.th_current_task -> td_icvs.default_device;
+    #endif
 }
 
 void FTN_STDCALL
-FTN_SET_DEFAULT_DEVICE( int KMP_DEREF arg )
+xexpand(FTN_SET_DEFAULT_DEVICE)( int KMP_DEREF arg )
 {
+    #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+    // Nothing.
+    #else
+        __kmp_entry_thread() -> th.th_current_task -> td_icvs.default_device = KMP_DEREF arg;
+    #endif
 }
+
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 
 int FTN_STDCALL
 FTN_GET_NUM_DEVICES( void )
@@ -1391,6 +1403,8 @@ xaliasify(FTN_GET_PROC_BIND, 40);
 xaliasify(FTN_GET_NUM_TEAMS, 40);
 xaliasify(FTN_GET_TEAM_NUM, 40);
 xaliasify(FTN_GET_CANCELLATION, 40);
+xaliasify(FTN_GET_DEFAULT_DEVICE, 40);
+xaliasify(FTN_SET_DEFAULT_DEVICE, 40);
 xaliasify(FTN_IS_INITIAL_DEVICE, 40);
 #endif /* OMP_40_ENABLED */
 
@@ -1456,11 +1470,13 @@ xversionify(FTN_IN_FINAL,          31, "OMP_3.1");
 
 #if OMP_40_ENABLED
 // OMP_4.0 versioned symbols
-xversionify(FTN_GET_PROC_BIND,     40, "OMP_4.0");
-xversionify(FTN_GET_NUM_TEAMS,     40, "OMP_4.0");
-xversionify(FTN_GET_TEAM_NUM,      40, "OMP_4.0");
-xversionify(FTN_GET_CANCELLATION,  40, "OMP_4.0");
-xversionify(FTN_IS_INITIAL_DEVICE, 40, "OMP_4.0");
+xversionify(FTN_GET_PROC_BIND,      40, "OMP_4.0");
+xversionify(FTN_GET_NUM_TEAMS,      40, "OMP_4.0");
+xversionify(FTN_GET_TEAM_NUM,       40, "OMP_4.0");
+xversionify(FTN_GET_CANCELLATION,   40, "OMP_4.0");
+xversionify(FTN_GET_DEFAULT_DEVICE, 40, "OMP_4.0");
+xversionify(FTN_SET_DEFAULT_DEVICE, 40, "OMP_4.0");
+xversionify(FTN_IS_INITIAL_DEVICE,  40, "OMP_4.0");
 #endif /* OMP_40_ENABLED */
 
 #if OMP_45_ENABLED

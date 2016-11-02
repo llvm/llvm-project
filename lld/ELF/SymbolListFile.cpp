@@ -46,7 +46,7 @@ void DynamicListParser::run() {
     while (!Error) {
       Config->DynamicList.push_back(unquote(next()));
       expect(";");
-      if (skip("}"))
+      if (consume("}"))
         break;
     }
     expect(";");

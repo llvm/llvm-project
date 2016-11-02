@@ -23,10 +23,17 @@ class ExprCommandWithFixits(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @skipUnlessDarwin
-    def test(self):
-        """Test calling a function that throws and ObjC exception."""
+    def test_with_target(self):
+        """Test calling expressions with errors that can be fixed by the FixIts."""
         self.build()
         self.try_expressions()
+
+    def test_with_dummy_target(self):
+        """Test calling expressions in the dummy target with errors that can be fixed by the FixIts."""
+        ret_val = lldb.SBCommandReturnObject()
+        result = self.dbg.GetCommandInterpreter().HandleCommand("expression ((1 << 16) - 1))", ret_val)
+        self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "The expression was successful.")
+        self.assertTrue("Fix-it applied" in ret_val.GetError(), "Found the applied FixIt.")
 
     def try_expressions(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""

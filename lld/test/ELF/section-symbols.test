@@ -5,7 +5,7 @@
 # with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
 
 !ELF
-FileHeader:      
+FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   OSABI:           ELFOSABI_FREEBSD

@@ -41,6 +41,9 @@ public:
   Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
+  Error
+  SetValueFromString(const char *,
+                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
     m_values.clear();
@@ -70,14 +73,6 @@ public:
 
   Error SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
                     const char *name, const char *value) override;
-
-  //---------------------------------------------------------------------
-  // String value getters and setters
-  //---------------------------------------------------------------------
-  const char *GetStringValueForKey(const ConstString &key);
-
-  bool SetStringValueForKey(const ConstString &key, const char *value,
-                            bool can_replace = true);
 
   bool SetValueForKey(const ConstString &key,
                       const lldb::OptionValueSP &value_sp,

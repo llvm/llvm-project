@@ -14,7 +14,7 @@
 #include <list>
 #include <cassert>
 #include "DefaultOnly.h"
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 
 int main()
@@ -42,7 +42,7 @@ int main()
         assert(*i == 2);
     }
     {
-        std::list<int, stack_allocator<int, 3> > l(3, 2);
+        std::list<int, limited_allocator<int, 3> > l(3, 2);
         assert(l.size() == 3);
         assert(std::distance(l.begin(), l.end()) == 3);
         std::list<int>::const_iterator i = l.begin();

@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: ld.lld -m elf_x86_64 %t.o -o %t.so -save-temps -shared
-; RUN: llvm-dis %t.so.lto.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t.so.0.4.opt.bc -o - | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

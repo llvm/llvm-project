@@ -81,26 +81,59 @@ Make sure vim can find :program:`clang-include-fixer`:
 You can customize the number of headers being shown by setting
 ``let g:clang_include_fixer_maximum_suggested_headers=5``
 
+Customized settings in `.vimrc`:
+
+- ``let g:clang_include_fixer_path = "clang-include-fixer"``
+
+  Set clang-include-fixer binary file path.
+
+- ``let g:clang_include_fixer_maximum_suggested_headers = 3``
+
+  Set the maximum number of ``#includes`` to show. Default is 3.
+
+- ``let g:clang_include_fixer_increment_num = 5``
+
+  Set the increment number of #includes to show every time when pressing ``m``.
+  Default is 5.
+
+- ``let g:clang_include_fixer_jump_to_include = 0``
+
+  Set to 1 if you want to jump to the new inserted ``#include`` line. Default is
+  0.
+
+- ``let g:clang_include_fixer_query_mode = 0``
+
+  Set to 1 if you want to insert ``#include`` for the symbol under the cursor.
+  Default is 0. Compared to normal mode, this mode won't parse the source file
+  and only search the sysmbol from database, which is faster than normal mode.
+
 See ``clang-include-fixer.py`` for more details.
 
 Integrate with Emacs
 --------------------
 To run `clang-include-fixer` on a potentially unsaved buffer in Emacs.
-Ensure that Emacs finds ``clang-include-fixer.el`` by adding the directory containing the file to the ``load-path``
-and requiring the `clang-include-fixer` in your ```.emacs``:
+Ensure that Emacs finds ``clang-include-fixer.el`` by adding the directory
+containing the file to the ``load-path`` and requiring the `clang-include-fixer`
+in your ``.emacs``:
 
 .. code-block:: console
 
  (add-to-list 'load-path "path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/"
  (require 'clang-include-fixer)
 
-Within Emacs the tool can be invoked with the command ``M-x clang-include-fixer``.
+Within Emacs the tool can be invoked with the command
+``M-x clang-include-fixer``.  This will insert the header that defines the
+first undefined symbol; if there is more than one header that would define the
+symbol, the user is prompted to select one.
+
+To include the header that defines the symbol at point, run
+``M-x clang-include-fixer-at-point``.
 
 Make sure Emacs can find :program:`clang-include-fixer`:
 
-- Add the path to :program:`clang-include-fixer` to the PATH environment variable.
-
-See ``clang-include-fixer.el`` for more details.
+- Either add the parent directory of :program:`clang-include-fixer` to the PATH
+  environment variable, or customize the Emacs user option
+  ``clang-include-fixer-executable`` to point to the file name of the program.
 
 How it Works
 ============

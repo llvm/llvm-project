@@ -495,7 +495,7 @@ TEST_F(StringExtractorTest, GetNameColonValueSuccess) {
   EXPECT_TRUE(ex.GetNameColonValue(name, value));
   EXPECT_EQ("key2", name);
   EXPECT_EQ("value2", value);
-  EXPECT_EQ(0, ex.GetBytesLeft());
+  EXPECT_EQ(0u, ex.GetBytesLeft());
 }
 
 TEST_F(StringExtractorTest, GetNameColonValueContainsColon) {
@@ -510,7 +510,7 @@ TEST_F(StringExtractorTest, GetNameColonValueContainsColon) {
   EXPECT_TRUE(ex.GetNameColonValue(name, value));
   EXPECT_EQ("key2", name);
   EXPECT_EQ("value3", value);
-  EXPECT_EQ(0, ex.GetBytesLeft());
+  EXPECT_EQ(0u, ex.GetBytesLeft());
 }
 
 TEST_F(StringExtractorTest, GetNameColonValueNoSemicolon) {
@@ -520,7 +520,7 @@ TEST_F(StringExtractorTest, GetNameColonValueNoSemicolon) {
   llvm::StringRef name;
   llvm::StringRef value;
   EXPECT_FALSE(ex.GetNameColonValue(name, value));
-  EXPECT_EQ(0, ex.GetBytesLeft());
+  EXPECT_EQ(0u, ex.GetBytesLeft());
 }
 
 TEST_F(StringExtractorTest, GetNameColonValueNoColon) {
@@ -530,169 +530,169 @@ TEST_F(StringExtractorTest, GetNameColonValueNoColon) {
   llvm::StringRef name;
   llvm::StringRef value;
   EXPECT_FALSE(ex.GetNameColonValue(name, value));
-  EXPECT_EQ(0, ex.GetBytesLeft());
+  EXPECT_EQ(0u, ex.GetBytesLeft());
 }
 
 TEST_F(StringExtractorTest, GetU32LittleEndian) {
   StringExtractor ex("");
-  EXPECT_EQ(0x0, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("0");
-  EXPECT_EQ(0x0, ex.GetHexMaxU32(true, 1));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU32(true, 1));
 
   ex.Reset("1");
-  EXPECT_EQ(0x1, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("01");
-  EXPECT_EQ(0x1, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("001");
-  EXPECT_EQ(0x100, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x100ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("12");
-  EXPECT_EQ(0x12, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x12ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("123");
-  EXPECT_EQ(0x312, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x312ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("1203");
-  EXPECT_EQ(0x312, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x312ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("1234");
-  EXPECT_EQ(0x3412, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x3412ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("12340");
-  EXPECT_EQ(0x3412, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x3412ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("123400");
-  EXPECT_EQ(0x3412, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x3412ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("12345670");
-  EXPECT_EQ(0x70563412, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0x70563412ull, ex.GetHexMaxU32(true, 0));
 
   ex.Reset("123456701");
-  EXPECT_EQ(0, ex.GetHexMaxU32(true, 0));
+  EXPECT_EQ(0ull, ex.GetHexMaxU32(true, 0));
 }
 
 TEST_F(StringExtractorTest, GetU32BigEndian) {
   StringExtractor ex("");
-  EXPECT_EQ(0x0, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("0");
-  EXPECT_EQ(0x0, ex.GetHexMaxU32(false, 1));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU32(false, 1));
 
   ex.Reset("1");
-  EXPECT_EQ(0x1, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("01");
-  EXPECT_EQ(0x1, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("001");
-  EXPECT_EQ(0x1, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("12");
-  EXPECT_EQ(0x12, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x12ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("123");
-  EXPECT_EQ(0x123, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x123ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("1203");
-  EXPECT_EQ(0x1203, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x1203ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("1234");
-  EXPECT_EQ(0x1234, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x1234ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("12340");
-  EXPECT_EQ(0x12340, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x12340ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("123400");
-  EXPECT_EQ(0x123400, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x123400ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("12345670");
-  EXPECT_EQ(0x12345670, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0x12345670ull, ex.GetHexMaxU32(false, 0));
 
   ex.Reset("123456700");
-  EXPECT_EQ(0, ex.GetHexMaxU32(false, 0));
+  EXPECT_EQ(0ull, ex.GetHexMaxU32(false, 0));
 }
 
 TEST_F(StringExtractorTest, GetU64LittleEndian) {
   StringExtractor ex("");
-  EXPECT_EQ(0x0, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("0");
-  EXPECT_EQ(0x0, ex.GetHexMaxU64(true, 1));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU64(true, 1));
 
   ex.Reset("1");
-  EXPECT_EQ(0x1, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("01");
-  EXPECT_EQ(0x1, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("001");
-  EXPECT_EQ(0x100, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x100ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("12");
-  EXPECT_EQ(0x12, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x12ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("123");
-  EXPECT_EQ(0x312, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x312ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("1203");
-  EXPECT_EQ(0x312, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x312ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("1234");
-  EXPECT_EQ(0x3412, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x3412ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("12340");
-  EXPECT_EQ(0x3412, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x3412ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("123400");
-  EXPECT_EQ(0x3412, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0x3412ull, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("123456789ABCDEF0");
   EXPECT_EQ(0xF0DEBC9A78563412ULL, ex.GetHexMaxU64(true, 0));
 
   ex.Reset("123456789ABCDEF01");
-  EXPECT_EQ(0, ex.GetHexMaxU64(true, 0));
+  EXPECT_EQ(0ull, ex.GetHexMaxU64(true, 0));
 }
 
 TEST_F(StringExtractorTest, GetU64BigEndian) {
   StringExtractor ex("");
-  EXPECT_EQ(0x0, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("0");
-  EXPECT_EQ(0x0, ex.GetHexMaxU64(false, 1));
+  EXPECT_EQ(0x0ull, ex.GetHexMaxU64(false, 1));
 
   ex.Reset("1");
-  EXPECT_EQ(0x1, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("01");
-  EXPECT_EQ(0x1, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("001");
-  EXPECT_EQ(0x1, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x1ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("12");
-  EXPECT_EQ(0x12, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x12ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("123");
-  EXPECT_EQ(0x123, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x123ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("1203");
-  EXPECT_EQ(0x1203, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x1203ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("1234");
-  EXPECT_EQ(0x1234, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x1234ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("12340");
-  EXPECT_EQ(0x12340, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x12340ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("123400");
-  EXPECT_EQ(0x123400, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0x123400ull, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("123456789ABCDEF0");
   EXPECT_EQ(0x123456789ABCDEF0ULL, ex.GetHexMaxU64(false, 0));
 
   ex.Reset("123456789ABCDEF000");
-  EXPECT_EQ(0, ex.GetHexMaxU64(false, 0));
+  EXPECT_EQ(0ull, ex.GetHexMaxU64(false, 0));
 }

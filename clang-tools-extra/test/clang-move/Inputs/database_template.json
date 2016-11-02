@@ -1,0 +1,7 @@
+[
+{
+  "directory": "$test_dir/build",
+  "command": "clang++ -o test.o -I../include $test_dir/src/test.cpp",
+  "file": "$test_dir/src/test.cpp"
+}
+]

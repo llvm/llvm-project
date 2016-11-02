@@ -12,9 +12,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
-#if !LIBCXXABI_HAS_NO_THREADS
-#  include <pthread.h>
-#endif
+#include "../src/threading_support.h"
 #include <unistd.h>
 
 #include "../src/cxa_exception.hpp"
@@ -38,34 +36,21 @@ void *thread_code (void *parm) {
     return parm;
     }
 
-#if !LIBCXXABI_HAS_NO_THREADS
+#ifndef _LIBCXXABI_HAS_NO_THREADS
 #define NUMTHREADS  10
-size_t      thread_globals [ NUMTHREADS ] = { 0 };
-pthread_t   threads        [ NUMTHREADS ];
+size_t                 thread_globals [ NUMTHREADS ] = { 0 };
+__libcxxabi_thread_t   threads        [ NUMTHREADS ];
 #endif
-
-void print_sizes ( size_t *first, size_t *last ) {
-    std::cout << "{ " << std::hex;
-    for ( size_t *iter = first; iter != last; ++iter )
-        std::cout << *iter << " ";
-    std::cout << "}" << std::dec << std::endl;
-    }
 
 int main ( int argc, char *argv [] ) {
     int retVal = 0;
 
-#if LIBCXXABI_HAS_NO_THREADS
-    size_t thread_globals;
-    // Check that __cxa_get_globals() is not NULL.
-    if (thread_code(&thread_globals) == 0) {
-        retVal = 1;
-    }
-#else
+#ifndef _LIBCXXABI_HAS_NO_THREADS
 //  Make the threads, let them run, and wait for them to finish
     for ( int i = 0; i < NUMTHREADS; ++i )
-        pthread_create( threads + i, NULL, thread_code, (void *) (thread_globals + i));
+        __libcxxabi_thread_create ( threads + i, thread_code, (void *) (thread_globals + i));
     for ( int i = 0; i < NUMTHREADS; ++i )
-        pthread_join ( threads [ i ], NULL );
+        __libcxxabi_thread_join ( &threads [ i ] );
 
     for ( int i = 0; i < NUMTHREADS; ++i )
         if ( 0 == thread_globals [ i ] ) {
@@ -73,15 +58,18 @@ int main ( int argc, char *argv [] ) {
             retVal = 1;
             }
         
-//  print_sizes ( thread_globals, thread_globals + NUMTHREADS );
     std::sort ( thread_globals, thread_globals + NUMTHREADS );
     for ( int i = 1; i < NUMTHREADS; ++i )
         if ( thread_globals [ i - 1 ] == thread_globals [ i ] ) {
             std::cerr << "Duplicate thread globals (" << i-1 << " and " << i << ")" << std::endl;
             retVal = 2;
             }
-//  print_sizes ( thread_globals, thread_globals + NUMTHREADS );
-
-#endif
-    return retVal;
+#else // _LIBCXXABI_HAS_NO_THREADS
+    size_t thread_globals;
+    // Check that __cxa_get_globals() is not NULL.
+    if (thread_code(&thread_globals) == 0) {
+        retVal = 1;
     }
+#endif // !_LIBCXXABI_HAS_NO_THREADS
+    return retVal;
+}

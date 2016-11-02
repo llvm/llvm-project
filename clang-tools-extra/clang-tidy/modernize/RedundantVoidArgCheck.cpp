@@ -45,6 +45,9 @@ const char LambdaId[] = "lambda";
 } // namespace
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   Finder->addMatcher(functionDecl(parameterCountIs(0), unless(isImplicit()),
                                   unless(isExternC()))
                          .bind(FunctionId),
@@ -72,10 +75,6 @@ void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void RedundantVoidArgCheck::check(const MatchFinder::MatchResult &Result) {
-  if (!Result.Context->getLangOpts().CPlusPlus) {
-    return;
-  }
-
   const BoundNodes &Nodes = Result.Nodes;
   if (const auto *Function = Nodes.getNodeAs<FunctionDecl>(FunctionId)) {
     processFunctionDecl(Result, Function);
@@ -118,16 +117,15 @@ void RedundantVoidArgCheck::processFunctionDecl(
 void RedundantVoidArgCheck::removeVoidArgumentTokens(
     const ast_matchers::MatchFinder::MatchResult &Result, SourceRange Range,
     StringRef GrammarLocation) {
-  CharSourceRange CharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(Range), *Result.SourceManager,
-      Result.Context->getLangOpts());
+  CharSourceRange CharRange =
+      Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Range),
+                               *Result.SourceManager, getLangOpts());
 
-  std::string DeclText = Lexer::getSourceText(CharRange, *Result.SourceManager,
-                                              Result.Context->getLangOpts())
-                             .str();
-  Lexer PrototypeLexer(CharRange.getBegin(), Result.Context->getLangOpts(),
-                       DeclText.data(), DeclText.data(),
-                       DeclText.data() + DeclText.size());
+  std::string DeclText =
+      Lexer::getSourceText(CharRange, *Result.SourceManager, getLangOpts())
+          .str();
+  Lexer PrototypeLexer(CharRange.getBegin(), getLangOpts(), DeclText.data(),
+                       DeclText.data(), DeclText.data() + DeclText.size());
   enum TokenState {
     NothingYet,
     SawLeftParen,

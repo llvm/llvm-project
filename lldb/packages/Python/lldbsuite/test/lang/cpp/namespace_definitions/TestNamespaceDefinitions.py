@@ -20,6 +20,7 @@ class NamespaceDefinitionsTestCase(TestBase):
         compiler_version=[
             "<",
             "4.9"])
+    @expectedFailureAll(oslist=["windows"])
     def test_expr(self):
         self.build()
         self.common_setup()

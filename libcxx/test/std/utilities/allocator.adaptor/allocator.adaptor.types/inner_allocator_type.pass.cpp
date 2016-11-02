@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <memory>
 
 // template <class OuterAlloc, class... InnerAllocs>
@@ -21,8 +23,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
     static_assert((std::is_same<
         std::scoped_allocator_adaptor<A1<int>>::inner_allocator_type,
         std::scoped_allocator_adaptor<A1<int>>>::value), "");
@@ -34,6 +34,4 @@ int main()
     static_assert((std::is_same<
         std::scoped_allocator_adaptor<A1<int>, A2<int>, A3<int>>::inner_allocator_type,
         std::scoped_allocator_adaptor<A2<int>, A3<int>>>::value), "");
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

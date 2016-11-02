@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: libcpp-no-exceptions
 // <regex>
 
 // template <class charT, class traits = regex_traits<charT>> class basic_regex;

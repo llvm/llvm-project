@@ -92,6 +92,11 @@ static cl::opt<std::string>
                 cl::desc("The CUDA version to compile for"), cl::Hidden,
                 cl::init("sm_30"), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<int>
+    MinCompute("polly-acc-mincompute",
+               cl::desc("Minimal number of compute statements to run on GPU."),
+               cl::Hidden, cl::init(10 * 512 * 512));
+
 /// Create the ast expressions for a ScopStmt.
 ///
 /// This function is a callback for to generate the ast expressions for each
@@ -151,6 +156,18 @@ public:
 
   /// Finalize the generated scop.
   virtual void finalize();
+
+  /// Track if the full build process was successful.
+  ///
+  /// This value is set to false, if throughout the build process an error
+  /// occurred which prevents us from generating valid GPU code.
+  bool BuildSuccessful = true;
+
+  /// The maximal number of loops surrounding a sequential kernel.
+  unsigned DeepestSequential = 0;
+
+  /// The maximal number of loops surrounding a parallel kernel.
+  unsigned DeepestParallel = 0;
 
 private:
   /// A vector of array base pointers for which a new ScopArrayInfo was created.
@@ -278,6 +295,21 @@ private:
   /// @param Array The array for which to compute a size.
   Value *getArraySize(gpu_array_info *Array);
 
+  /// Generate code to compute the minimal offset at which an array is accessed.
+  ///
+  /// The offset of an array is the minimal array location accessed in a scop.
+  ///
+  /// Example:
+  ///
+  ///   for (long i = 0; i < 100; i++)
+  ///     A[i + 42] += ...
+  ///
+  ///   getArrayOffset(A) results in 42.
+  ///
+  /// @param Array The array for which to compute the offset.
+  /// @returns An llvm::Value that contains the offset of the array.
+  Value *getArrayOffset(gpu_array_info *Array);
+
   /// Prepare the kernel arguments for kernel code generation
   ///
   /// @param Kernel The kernel to generate code for.
@@ -357,6 +389,15 @@ private:
   ///
   /// @returns The Assembly string of the kernel.
   std::string finalizeKernelFunction();
+
+  /// Finalize the generation of the kernel arguments.
+  ///
+  /// This function ensures that not-read-only scalars used in a kernel are
+  /// stored back to the global memory location they ared backed up with before
+  /// the kernel terminates.
+  ///
+  /// @params Kernel The kernel to finalize kernel arguments for.
+  void finalizeKernelArguments(ppcg_kernel *Kernel);
 
   /// Create code that allocates memory to store arrays on device.
   void allocateDeviceArrays();
@@ -462,6 +503,12 @@ void GPUNodeBuilder::allocateDeviceArrays() {
     DevArrayName.append(Array->name);
 
     Value *ArraySize = getArraySize(Array);
+    Value *Offset = getArrayOffset(Array);
+    if (Offset)
+      ArraySize = Builder.CreateSub(
+          ArraySize,
+          Builder.CreateMul(Offset,
+                            Builder.getInt64(ScopArray->getElemSizeInBytes())));
     Value *DevArray = createCallAllocateMemoryForDevice(ArraySize);
     DevArray->setName(DevArrayName);
     DeviceAllocations[ScopArray] = DevArray;
@@ -707,10 +754,54 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
     }
 
     Value *NumElements = ExprBuilder.create(Res);
+    if (NumElements->getType() != ArraySize->getType())
+      NumElements = Builder.CreateSExt(NumElements, ArraySize->getType());
     ArraySize = Builder.CreateMul(ArraySize, NumElements);
   }
   isl_ast_build_free(Build);
   return ArraySize;
+}
+
+Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
+  if (gpu_array_is_scalar(Array))
+    return nullptr;
+
+  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+
+  isl_set *Min = isl_set_lexmin(isl_set_copy(Array->extent));
+
+  isl_set *ZeroSet = isl_set_universe(isl_set_get_space(Min));
+
+  for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++)
+    ZeroSet = isl_set_fix_si(ZeroSet, isl_dim_set, i, 0);
+
+  if (isl_set_is_subset(Min, ZeroSet)) {
+    isl_set_free(Min);
+    isl_set_free(ZeroSet);
+    isl_ast_build_free(Build);
+    return nullptr;
+  }
+  isl_set_free(ZeroSet);
+
+  isl_ast_expr *Result =
+      isl_ast_expr_from_val(isl_val_int_from_si(isl_set_get_ctx(Min), 0));
+
+  for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++) {
+    if (i > 0) {
+      isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i - 1]);
+      isl_ast_expr *BExpr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
+      Result = isl_ast_expr_mul(Result, BExpr);
+    }
+    isl_pw_aff *DimMin = isl_set_dim_min(isl_set_copy(Min), i);
+    isl_ast_expr *MExpr = isl_ast_build_expr_from_pw_aff(Build, DimMin);
+    Result = isl_ast_expr_add(Result, MExpr);
+  }
+
+  Value *ResultValue = ExprBuilder.create(Result);
+  isl_set_free(Min);
+  isl_ast_build_free(Build);
+
+  return ResultValue;
 }
 
 void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
@@ -722,6 +813,7 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
   auto ScopArray = (ScopArrayInfo *)(Array->user);
 
   Value *Size = getArraySize(Array);
+  Value *Offset = getArrayOffset(Array);
   Value *DevPtr = DeviceAllocations[ScopArray];
 
   Value *HostPtr;
@@ -731,7 +823,19 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
   else
     HostPtr = ScopArray->getBasePtr();
 
+  if (Offset) {
+    HostPtr = Builder.CreatePointerCast(
+        HostPtr, ScopArray->getElementType()->getPointerTo());
+    HostPtr = Builder.CreateGEP(HostPtr, Offset);
+  }
+
   HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
+
+  if (Offset) {
+    Size = Builder.CreateSub(
+        Size, Builder.CreateMul(
+                  Offset, Builder.getInt64(ScopArray->getElemSizeInBytes())));
+  }
 
   if (Direction == HOST_TO_DEVICE)
     createCallCopyFromHostToDevice(HostPtr, DevPtr, Size);
@@ -826,7 +930,7 @@ void GPUNodeBuilder::createScopStmt(isl_ast_expr *Expr,
   if (Stmt->isBlockStmt())
     BlockGen.copyStmt(*Stmt, LTS, Indexes);
   else
-    assert(0 && "Region statement not supported\n");
+    RegionGen.copyStmt(*Stmt, LTS, Indexes);
 }
 
 void GPUNodeBuilder::createKernelSync() {
@@ -990,17 +1094,34 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
     const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
 
-    Value *DevArray = DeviceAllocations[(ScopArrayInfo *)SAI];
+    Value *DevArray = DeviceAllocations[const_cast<ScopArrayInfo *>(SAI)];
     DevArray = createCallGetDevicePtr(DevArray);
-    Instruction *Param = new AllocaInst(
-        Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
-        EntryBlock->getTerminator());
-    Builder.CreateStore(DevArray, Param);
+
+    Value *Offset = getArrayOffset(&Prog->array[i]);
+
+    if (Offset) {
+      DevArray = Builder.CreatePointerCast(
+          DevArray, SAI->getElementType()->getPointerTo());
+      DevArray = Builder.CreateGEP(DevArray, Builder.CreateNeg(Offset));
+      DevArray = Builder.CreatePointerCast(DevArray, Builder.getInt8PtrTy());
+    }
     Value *Slot = Builder.CreateGEP(
         Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
-    Value *ParamTyped =
-        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
-    Builder.CreateStore(ParamTyped, Slot);
+
+    if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      Value *ValPtr = BlockGen.getOrCreateAlloca(SAI);
+      Value *ValPtrCast =
+          Builder.CreatePointerCast(ValPtr, Builder.getInt8PtrTy());
+      Builder.CreateStore(ValPtrCast, Slot);
+    } else {
+      Instruction *Param = new AllocaInst(
+          Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
+          EntryBlock->getTerminator());
+      Builder.CreateStore(DevArray, Param);
+      Value *ParamTyped =
+          Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+      Builder.CreateStore(ParamTyped, Slot);
+    }
     Index++;
   }
 
@@ -1064,6 +1185,13 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_id_free(Id);
   isl_ast_node_free(KernelStmt);
 
+  if (Kernel->n_grid > 1)
+    DeepestParallel =
+        std::max(DeepestParallel, isl_space_dim(Kernel->space, isl_dim_set));
+  else
+    DeepestSequential =
+        std::max(DeepestSequential, isl_space_dim(Kernel->space, isl_dim_set));
+
   Value *BlockDimX, *BlockDimY, *BlockDimZ;
   std::tie(BlockDimX, BlockDimY, BlockDimZ) = getBlockSizes(Kernel);
 
@@ -1097,13 +1225,13 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
 
   create(isl_ast_node_copy(Kernel->tree));
 
+  finalizeKernelArguments(Kernel);
   Function *F = Builder.GetInsertBlock()->getParent();
   addCUDAAnnotations(F->getParent(), BlockDimX, BlockDimY, BlockDimZ);
   clearDominators(F);
   clearScalarEvolution(F);
   clearLoops(F);
 
-  Builder.SetInsertPoint(&HostInsertPoint);
   IDToValue = HostIDs;
 
   ValueMap = std::move(HostValueMap);
@@ -1116,9 +1244,10 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
     S.invalidateScopArrayInfo(BasePtr, ScopArrayInfo::MK_Array);
   LocalArrays.clear();
 
+  std::string ASMString = finalizeKernelFunction();
+  Builder.SetInsertPoint(&HostInsertPoint);
   Value *Parameters = createLaunchParameters(Kernel, F, SubtreeValues);
 
-  std::string ASMString = finalizeKernelFunction();
   std::string Name = "kernel_" + std::to_string(Kernel->id);
   Value *KernelString = Builder.CreateGlobalStringPtr(ASMString, Name);
   Value *NameString = Builder.CreateGlobalStringPtr(Name, Name + "_name");
@@ -1161,7 +1290,13 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     if (!ppcg_kernel_requires_array_argument(Kernel, i))
       continue;
 
-    Args.push_back(Builder.getInt8PtrTy());
+    if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+      Args.push_back(SAI->getElementType());
+    } else {
+      Args.push_back(Builder.getInt8PtrTy());
+    }
   }
 
   int NumHostIters = isl_space_dim(Kernel->space, isl_dim_set);
@@ -1200,6 +1335,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     SmallVector<const SCEV *, 4> Sizes;
     isl_ast_build *Build =
         isl_ast_build_from_context(isl_set_copy(Prog->context));
+    Sizes.push_back(nullptr);
     for (long j = 1; j < Kernel->array[i].array->n_index; j++) {
       isl_ast_expr *DimSize = isl_ast_build_expr_from_pw_aff(
           Build, isl_pw_aff_copy(Kernel->array[i].array->bound[j]));
@@ -1287,15 +1423,62 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
       continue;
     }
 
+    Value *Val = &*Arg;
+
+    if (!gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      Type *TypePtr = SAI->getElementType()->getPointerTo();
+      Value *TypedArgPtr = Builder.CreatePointerCast(Val, TypePtr);
+      Val = Builder.CreateLoad(TypedArgPtr);
+    }
+
     Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
-    Value *ArgPtr = &*Arg;
-    Type *TypePtr = SAI->getElementType()->getPointerTo();
-    Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
-    Value *Val = Builder.CreateLoad(TypedArgPtr);
     Builder.CreateStore(Val, Alloca);
 
     Arg++;
   }
+}
+
+void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
+  auto *FN = Builder.GetInsertBlock()->getParent();
+  auto Arg = FN->arg_begin();
+
+  bool StoredScalar = false;
+  for (long i = 0; i < Kernel->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    isl_id_free(Id);
+
+    if (SAI->getNumberOfDimensions() > 0) {
+      Arg++;
+      continue;
+    }
+
+    if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
+      Arg++;
+      continue;
+    }
+
+    Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
+    Value *ArgPtr = &*Arg;
+    Type *TypePtr = SAI->getElementType()->getPointerTo();
+    Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
+    Value *Val = Builder.CreateLoad(Alloca);
+    Builder.CreateStore(Val, TypedArgPtr);
+    StoredScalar = true;
+
+    Arg++;
+  }
+
+  if (StoredScalar)
+    /// In case more than one thread contains scalar stores, the generated
+    /// code might be incorrect, if we only store at the end of the kernel.
+    /// To support this case we need to store these scalars back at each
+    /// memory store or at least before each kernel barrier.
+    if (Kernel->n_block != 0 || Kernel->n_grid != 0)
+      BuildSuccessful = 0;
 }
 
 void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
@@ -1309,6 +1492,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
     Type *ArrayTy = EleTy;
     SmallVector<const SCEV *, 4> Sizes;
 
+    Sizes.push_back(nullptr);
     for (unsigned int j = 1; j < Var.array->n_index; ++j) {
       isl_val *Val = isl_vec_get_element_val(Var.size, j);
       long Bound = isl_val_get_num_si(Val);
@@ -1409,10 +1593,10 @@ std::string GPUNodeBuilder::createKernelASM() {
 }
 
 std::string GPUNodeBuilder::finalizeKernelFunction() {
-  // Verify module.
-  llvm::legacy::PassManager Passes;
-  Passes.add(createVerifierPass());
-  Passes.run(*GPUModule);
+  if (verifyModule(*GPUModule)) {
+    BuildSuccessful = false;
+    return "";
+  }
 
   if (DumpKernelIR)
     outs() << *GPUModule << "\n";
@@ -1784,17 +1968,27 @@ public:
   /// @param Array The polly array from which to take the information.
   void setArrayBounds(gpu_array_info &PPCGArray, ScopArrayInfo *Array) {
     if (PPCGArray.n_index > 0) {
-      isl_set *Dom = isl_set_copy(PPCGArray.extent);
-      Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
-      isl_pw_aff *Bound = isl_set_dim_max(isl_set_copy(Dom), 0);
-      isl_set_free(Dom);
-      Dom = isl_pw_aff_domain(isl_pw_aff_copy(Bound));
-      isl_local_space *LS = isl_local_space_from_space(isl_set_get_space(Dom));
-      isl_aff *One = isl_aff_zero_on_domain(LS);
-      One = isl_aff_add_constant_si(One, 1);
-      Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
-      Bound = isl_pw_aff_gist(Bound, S->getContext());
-      PPCGArray.bound[0] = Bound;
+      if (isl_set_is_empty(PPCGArray.extent)) {
+        isl_set *Dom = isl_set_copy(PPCGArray.extent);
+        isl_local_space *LS = isl_local_space_from_space(
+            isl_space_params(isl_set_get_space(Dom)));
+        isl_set_free(Dom);
+        isl_aff *Zero = isl_aff_zero_on_domain(LS);
+        PPCGArray.bound[0] = isl_pw_aff_from_aff(Zero);
+      } else {
+        isl_set *Dom = isl_set_copy(PPCGArray.extent);
+        Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
+        isl_pw_aff *Bound = isl_set_dim_max(isl_set_copy(Dom), 0);
+        isl_set_free(Dom);
+        Dom = isl_pw_aff_domain(isl_pw_aff_copy(Bound));
+        isl_local_space *LS =
+            isl_local_space_from_space(isl_set_get_space(Dom));
+        isl_aff *One = isl_aff_zero_on_domain(LS);
+        One = isl_aff_add_constant_si(One, 1);
+        Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
+        Bound = isl_pw_aff_gist(Bound, S->getContext());
+        PPCGArray.bound[0] = Bound;
+      }
     }
 
     for (unsigned i = 1; i < PPCGArray.n_index; ++i) {
@@ -1832,7 +2026,8 @@ public:
       PPCGArray.n_ref = 0;
       PPCGArray.refs = nullptr;
       PPCGArray.accessed = true;
-      PPCGArray.read_only_scalar = false;
+      PPCGArray.read_only_scalar =
+          Array->isReadOnly() && Array->getNumberOfDimensions() == 0;
       PPCGArray.has_compound_element = false;
       PPCGArray.local = false;
       PPCGArray.declare_local = false;
@@ -2084,6 +2279,109 @@ public:
     PPCGScop->options = nullptr;
   }
 
+  /// Approximate the number of points in the set.
+  ///
+  /// This function returns an ast expression that overapproximates the number
+  /// of points in an isl set through the rectangular hull surrounding this set.
+  ///
+  /// @param Set   The set to count.
+  /// @param Build The isl ast build object to use for creating the ast
+  ///              expression.
+  ///
+  /// @returns An approximation of the number of points in the set.
+  __isl_give isl_ast_expr *approxPointsInSet(__isl_take isl_set *Set,
+                                             __isl_keep isl_ast_build *Build) {
+
+    isl_val *One = isl_val_int_from_si(isl_set_get_ctx(Set), 1);
+    auto *Expr = isl_ast_expr_from_val(isl_val_copy(One));
+
+    isl_space *Space = isl_set_get_space(Set);
+    Space = isl_space_params(Space);
+    auto *Univ = isl_set_universe(Space);
+    isl_pw_aff *OneAff = isl_pw_aff_val_on_domain(Univ, One);
+
+    for (long i = 0; i < isl_set_dim(Set, isl_dim_set); i++) {
+      isl_pw_aff *Max = isl_set_dim_max(isl_set_copy(Set), i);
+      isl_pw_aff *Min = isl_set_dim_min(isl_set_copy(Set), i);
+      isl_pw_aff *DimSize = isl_pw_aff_sub(Max, Min);
+      DimSize = isl_pw_aff_add(DimSize, isl_pw_aff_copy(OneAff));
+      auto DimSizeExpr = isl_ast_build_expr_from_pw_aff(Build, DimSize);
+      Expr = isl_ast_expr_mul(Expr, DimSizeExpr);
+    }
+
+    isl_set_free(Set);
+    isl_pw_aff_free(OneAff);
+
+    return Expr;
+  }
+
+  /// Approximate a number of dynamic instructions executed by a given
+  /// statement.
+  ///
+  /// @param Stmt  The statement for which to compute the number of dynamic
+  ///              instructions.
+  /// @param Build The isl ast build object to use for creating the ast
+  ///              expression.
+  /// @returns An approximation of the number of dynamic instructions executed
+  ///          by @p Stmt.
+  __isl_give isl_ast_expr *approxDynamicInst(ScopStmt &Stmt,
+                                             __isl_keep isl_ast_build *Build) {
+    auto Iterations = approxPointsInSet(Stmt.getDomain(), Build);
+
+    long InstCount = 0;
+
+    if (Stmt.isBlockStmt()) {
+      auto *BB = Stmt.getBasicBlock();
+      InstCount = std::distance(BB->begin(), BB->end());
+    } else {
+      auto *R = Stmt.getRegion();
+
+      for (auto *BB : R->blocks()) {
+        InstCount += std::distance(BB->begin(), BB->end());
+      }
+    }
+
+    isl_val *InstVal = isl_val_int_from_si(S->getIslCtx(), InstCount);
+    auto *InstExpr = isl_ast_expr_from_val(InstVal);
+    return isl_ast_expr_mul(InstExpr, Iterations);
+  }
+
+  /// Approximate dynamic instructions executed in scop.
+  ///
+  /// @param S     The scop for which to approximate dynamic instructions.
+  /// @param Build The isl ast build object to use for creating the ast
+  ///              expression.
+  /// @returns An approximation of the number of dynamic instructions executed
+  ///          in @p S.
+  __isl_give isl_ast_expr *
+  getNumberOfIterations(Scop &S, __isl_keep isl_ast_build *Build) {
+    isl_ast_expr *Instructions;
+
+    isl_val *Zero = isl_val_int_from_si(S.getIslCtx(), 0);
+    Instructions = isl_ast_expr_from_val(Zero);
+
+    for (ScopStmt &Stmt : S) {
+      isl_ast_expr *StmtInstructions = approxDynamicInst(Stmt, Build);
+      Instructions = isl_ast_expr_add(Instructions, StmtInstructions);
+    }
+    return Instructions;
+  }
+
+  /// Create a check that ensures sufficient compute in scop.
+  ///
+  /// @param S     The scop for which to ensure sufficient compute.
+  /// @param Build The isl ast build object to use for creating the ast
+  ///              expression.
+  /// @returns An expression that evaluates to TRUE in case of sufficient
+  ///          compute and to FALSE, otherwise.
+  __isl_give isl_ast_expr *
+  createSufficientComputeCheck(Scop &S, __isl_keep isl_ast_build *Build) {
+    auto Iterations = getNumberOfIterations(S, Build);
+    auto *MinComputeVal = isl_val_int_from_si(S.getIslCtx(), MinCompute);
+    auto *MinComputeExpr = isl_ast_expr_from_val(MinComputeVal);
+    return isl_ast_expr_ge(Iterations, MinComputeExpr);
+  }
+
   /// Generate code for a given GPU AST described by @p Root.
   ///
   /// @param Root An isl_ast_node pointing to the root of the GPU AST.
@@ -2119,6 +2417,8 @@ public:
 
     isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx());
     isl_ast_expr *Condition = IslAst::buildRunCondition(S, Build);
+    isl_ast_expr *SufficientCompute = createSufficientComputeCheck(*S, Build);
+    Condition = isl_ast_expr_and(Condition, SufficientCompute);
     isl_ast_build_free(Build);
 
     Value *RTC = NodeBuilder.createRTC(Condition);
@@ -2129,6 +2429,15 @@ public:
     NodeBuilder.initializeAfterRTH();
     NodeBuilder.create(Root);
     NodeBuilder.finalize();
+
+    /// In case a sequential kernel has more surrounding loops as any parallel
+    /// kernel, the SCoP is probably mostly sequential. Hence, there is no
+    /// point in running it on a CPU.
+    if (NodeBuilder.DeepestSequential > NodeBuilder.DeepestParallel)
+      SplitBlock->getTerminator()->setOperand(0, Builder.getFalse());
+
+    if (!NodeBuilder.BuildSuccessful)
+      SplitBlock->getTerminator()->setOperand(0, Builder.getFalse());
   }
 
   bool runOnScop(Scop &CurrentScop) override {

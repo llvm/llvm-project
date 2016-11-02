@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <algorithm>
 
 // template<class T, class Compare>
@@ -19,11 +21,11 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "counting_predicates.hpp"
 
 bool all_equal(int, int) { return false; } // everything is equal
 
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 void test_all_equal(std::initializer_list<int> il)
 {
     binary_counting_predicate<bool(*)(int, int), int, int> pred (all_equal);
@@ -33,11 +35,9 @@ void test_all_equal(std::initializer_list<int> il)
     assert(p.second == *--ptr);
     assert(pred.count() <= ((3 * il.size()) / 2));
 }
-#endif
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     assert((std::minmax({1, 2, 3}, std::greater<int>()) == std::pair<int, int>(3, 1)));
     assert((std::minmax({1, 3, 2}, std::greater<int>()) == std::pair<int, int>(3, 1)));
     assert((std::minmax({2, 1, 3}, std::greater<int>()) == std::pair<int, int>(3, 1)));
@@ -63,7 +63,7 @@ int main()
     test_all_equal({0,1,2,3,4,5,6,7,8,9,10});
     test_all_equal({0,1,2,3,4,5,6,7,8,9,10,11});
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER >= 14
     {
     static_assert((std::minmax({1, 2, 3}, std::greater<int>()) == std::pair<int, int>(3, 1)), "");
     static_assert((std::minmax({1, 3, 2}, std::greater<int>()) == std::pair<int, int>(3, 1)), "");
@@ -73,5 +73,4 @@ int main()
     static_assert((std::minmax({3, 2, 1}, std::greater<int>()) == std::pair<int, int>(3, 1)), "");
     }
 #endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

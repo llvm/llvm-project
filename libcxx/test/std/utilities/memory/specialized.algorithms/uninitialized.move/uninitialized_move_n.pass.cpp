@@ -20,7 +20,6 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "test_throw.h"
 
 struct Counted {
   static int count;
@@ -28,7 +27,7 @@ struct Counted {
   static void reset() { count = constructed =  0; }
   explicit Counted(int&& x) : value(x) { x = 0; ++count; ++constructed; }
   Counted(Counted const&) { assert(false); }
-  ~Counted() { --count; }
+  ~Counted() { assert(count > 0); --count; }
   friend void operator&(Counted) = delete;
   int value;
 };
@@ -43,13 +42,13 @@ struct ThrowsCounted {
   explicit ThrowsCounted(int&& x) {
       ++constructed;
       if (throw_after > 0 && --throw_after == 0) {
-          test_throw<int>();
+        TEST_THROW(1);
       }
       ++count;
       x = 0;
   }
   ThrowsCounted(ThrowsCounted const&) { assert(false); }
-  ~ThrowsCounted() { --count; }
+  ~ThrowsCounted() { assert(count > 0); --count; }
   friend void operator&(ThrowsCounted) = delete;
 };
 int ThrowsCounted::count = 0;
@@ -69,15 +68,13 @@ void test_ctor_throws()
         std::uninitialized_move_n(values, N, It(p));
         assert(false);
     } catch (...) {}
-    assert(ThrowsCounted::count == 3);
+    assert(ThrowsCounted::count == 0);
     assert(ThrowsCounted::constructed == 4); // forth construction throws
     assert(values[0] == 0);
     assert(values[1] == 0);
     assert(values[2] == 0);
     assert(values[3] == 4);
     assert(values[4] == 5);
-    std::destroy(p, p+3);
-    assert(ThrowsCounted::count == 0);
 #endif
 }
 

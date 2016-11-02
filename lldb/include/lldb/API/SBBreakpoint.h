@@ -88,6 +88,10 @@ public:
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 
+  void SetCommandLineCommands(SBStringList &commands);
+
+  bool GetCommandLineCommands(SBStringList &commands);
+
   SBError SetScriptCallbackBody(const char *script_body_text);
 
   bool AddName(const char *new_name);
@@ -104,6 +108,8 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  bool GetDescription(lldb::SBStream &description, bool include_locations);
+
   static bool EventIsBreakpointEvent(const lldb::SBEvent &event);
 
   static lldb::BreakpointEventType
@@ -119,6 +125,7 @@ public:
   GetNumBreakpointLocationsFromEvent(const lldb::SBEvent &event_sp);
 
 private:
+  friend class SBBreakpointList;
   friend class SBBreakpointLocation;
   friend class SBTarget;
 
@@ -137,6 +144,37 @@ private:
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
   lldb::BreakpointSP m_opaque_sp;
+};
+
+class SBBreakpointListImpl;
+
+class LLDB_API SBBreakpointList {
+public:
+  SBBreakpointList(SBTarget &target);
+
+  ~SBBreakpointList();
+
+  size_t GetSize() const;
+
+  SBBreakpoint GetBreakpointAtIndex(size_t idx);
+
+  SBBreakpoint FindBreakpointByID(lldb::break_id_t);
+
+  void Append(const SBBreakpoint &sb_file);
+
+  bool AppendIfUnique(const SBBreakpoint &sb_file);
+
+  void AppendByID(lldb::break_id_t id);
+
+  void Clear();
+
+protected:
+  friend class SBTarget;
+
+  void CopyToBreakpointIDList(lldb_private::BreakpointIDList &bp_id_list);
+
+private:
+  std::shared_ptr<SBBreakpointListImpl> m_opaque_sp;
 };
 
 } // namespace lldb

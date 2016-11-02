@@ -238,7 +238,7 @@ void UseDefaultCheck::registerMatchers(MatchFinder *Finder) {
             isDefinition(),
             anyOf(
                 // Default constructor.
-                allOf(unless(hasAnyConstructorInitializer(anything())),
+                allOf(unless(hasAnyConstructorInitializer(isWritten())),
                       parameterCountIs(0)),
                 // Copy constructor.
                 allOf(isCopyConstructor(),
@@ -296,12 +296,12 @@ void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
       if (!isCopyConstructorAndCanBeDefaulted(Result.Context, Ctor))
         return;
       SpecialFunctionName = "copy constructor";
-    }
-    // If there are constructor initializers, they must be removed.
-    if (Ctor->getNumCtorInitializers() != 0) {
-      StartLoc = getColonLoc(Result.Context, Ctor);
-      if (!StartLoc.isValid())
-        return;
+      // If there are constructor initializers, they must be removed.
+      if (Ctor->getNumCtorInitializers() != 0) {
+        StartLoc = getColonLoc(Result.Context, Ctor);
+        if (!StartLoc.isValid())
+          return;
+      }
     }
   } else if (isa<CXXDestructorDecl>(SpecialFunctionDecl)) {
     SpecialFunctionName = "destructor";

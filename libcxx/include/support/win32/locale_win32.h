@@ -17,7 +17,6 @@ extern "C" unsigned short  __declspec(dllimport) _ctype[];
 #include "support/win32/support.h"
 #include "support/win32/locale_mgmt_win32.h"
 #include <stdio.h>
-#include <memory>
 
 lconv *localeconv_l( locale_t loc );
 size_t mbrlen_l( const char *__restrict s, size_t n,
@@ -34,21 +33,19 @@ size_t wcsnrtombs_l( char *__restrict dst, const wchar_t **__restrict src,
                      size_t nwc, size_t len, mbstate_t *__restrict ps, locale_t loc);
 wint_t btowc_l( int c, locale_t loc );
 int wctob_l( wint_t c, locale_t loc );
-typedef _VSTD::remove_pointer<locale_t>::type __locale_struct;
-typedef _VSTD::unique_ptr<__locale_struct, decltype(&uselocale)> __locale_raii;
 inline _LIBCPP_ALWAYS_INLINE
 decltype(MB_CUR_MAX) MB_CUR_MAX_L( locale_t __l )
 {
-  __locale_raii __current( uselocale(__l), uselocale );
-  return MB_CUR_MAX;
+  return ___mb_cur_max_l_func(__l);
 }
 
 // the *_l functions are prefixed on Windows, only available for msvcr80+, VS2005+
 #define mbtowc_l _mbtowc_l
 #define strtoll_l _strtoi64_l
 #define strtoull_l _strtoui64_l
-// FIXME: current msvcrt does not know about long double
-#define strtold_l _strtod_l
+#define strtof_l _strtof_l
+#define strtod_l _strtod_l
+#define strtold_l _strtold_l
 
 inline _LIBCPP_INLINE_VISIBILITY
 int

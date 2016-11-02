@@ -189,8 +189,7 @@ bool CMICmdCmdGdbInfo::GetPrintFn(const CMIUtilString &vrPrintFnName,
 // Throws:  None.
 //--
 bool CMICmdCmdGdbInfo::PrintFnSharedLibrary() {
-  CMICmnStreamStdout &rStdout = CMICmnStreamStdout::Instance();
-  bool bOk = rStdout.TextToStdout(
+  bool bOk = CMICmnStreamStdout::TextToStdout(
       "~\"From        To          Syms Read   Shared Object Library\"");
 
   CMICmnLLDBDebugSessionInfo &rSessionInfo(
@@ -224,7 +223,7 @@ bool CMICmdCmdGdbInfo::PrintFnSharedLibrary() {
         }
       }
       bOk = bOk &&
-            rStdout.TextToStdout(CMIUtilString::Format(
+        CMICmnStreamStdout::TextToStdout(CMIUtilString::Format(
                 "~\"0x%016" PRIx64 "\t0x%016" PRIx64 "\t%s\t\t%s\"", addrLoadS,
                 addrLoadS + addrLoadSize, strHasSymbols.c_str(),
                 strModuleFullPath.c_str()));

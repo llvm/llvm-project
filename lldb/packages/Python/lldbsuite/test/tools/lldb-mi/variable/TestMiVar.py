@@ -61,7 +61,7 @@ class MiVarTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done,value=\"30\"")
         self.runCmd("-var-update --all-values var2")
         # self.expect("\^done,changelist=\[\{name=\"var2\",value=\"30\",in_scope=\"true\",type_changed=\"false\",has_more=\"0\"\}\]")
-        # #FIXME -var-update doesn't work
+        # FIXME -var-update doesn't work
         self.runCmd("-var-delete var2")
         self.expect("\^done")
         self.runCmd("-var-create var2 * g_MyVar")
@@ -84,7 +84,7 @@ class MiVarTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done,value=\"3\"")
         self.runCmd("-var-update --all-values var3")
         # self.expect("\^done,changelist=\[\{name=\"var3\",value=\"3\",in_scope=\"true\",type_changed=\"false\",has_more=\"0\"\}\]")
-        # #FIXME -var-update doesn't work
+        # FIXME -var-update doesn't work
         self.runCmd("-var-delete var3")
         self.expect("\^done")
         self.runCmd("-var-create var3 * s_MyVar")
@@ -107,7 +107,7 @@ class MiVarTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done,value=\"2\"")
         self.runCmd("-var-update --all-values var4")
         # self.expect("\^done,changelist=\[\{name=\"var4\",value=\"2\",in_scope=\"true\",type_changed=\"false\",has_more=\"0\"\}\]")
-        # #FIXME -var-update doesn't work
+        # FIXME -var-update doesn't work
         self.runCmd("-var-delete var4")
         self.expect("\^done")
         self.runCmd("-var-create var4 * b")
@@ -147,6 +147,13 @@ class MiVarTestCase(lldbmi_testcase.MiTestCaseBase):
         # FIXME -var-list-children shows invalid thread-id
         self.expect(
             "\^done,numchild=\"1\",children=\[child=\{name=\"var6\.\*\$[0-9]+\",exp=\"\*\$[0-9]+\",numchild=\"0\",type=\"const char\",thread-id=\"4294967295\",value=\"47 '/'\",has_more=\"0\"\}\],has_more=\"0\"")
+
+        # Print an expression with spaces and optional arguments
+        self.runCmd("-data-evaluate-expression \"a + b\"")
+        self.expect("\^done,value=\"12\"")
+        self.runCmd("-var-create var7 * \"a + b\" --thread 1 --frame 0")
+        self.expect(
+            "\^done,name=\"var7\",numchild=\"0\",value=\"12\",type=\"int\",thread-id=\"1\",has_more=\"0\"")
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
@@ -315,12 +322,14 @@ class MiVarTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that -var-list-children lists all children with their values
         # (and that from and to are optional)
         self.runCmd("-var-list-children --all-values var_complx")
-        self.expect("\^done,numchild=\"3\",children=\[child=\{name=\"var_complx\.i\",exp=\"i\",numchild=\"0\",type=\"int\",thread-id=\"1\",value=\"3\",has_more=\"0\"\},child=\{name=\"var_complx\.inner\",exp=\"inner\",numchild=\"1\",type=\"complex_type::\(anonymous struct\)\",thread-id=\"1\",value=\"\{\.\.\.\}\",has_more=\"0\"\},child=\{name=\"var_complx\.complex_ptr\",exp=\"complex_ptr\",numchild=\"3\",type=\"complex_type \*\",thread-id=\"1\",value=\"0x[0-9a-f]+\",has_more=\"0\"\}\],has_more=\"0\"")
+        self.expect(
+            "\^done,numchild=\"3\",children=\[child=\{name=\"var_complx\.i\",exp=\"i\",numchild=\"0\",type=\"int\",thread-id=\"1\",value=\"3\",has_more=\"0\"\},child=\{name=\"var_complx\.inner\",exp=\"inner\",numchild=\"1\",type=\"complex_type::\(anonymous struct\)\",thread-id=\"1\",value=\"\{\.\.\.\}\",has_more=\"0\"\},child=\{name=\"var_complx\.complex_ptr\",exp=\"complex_ptr\",numchild=\"3\",type=\"complex_type \*\",thread-id=\"1\",value=\"0x[0-9a-f]+\",has_more=\"0\"\}\],has_more=\"0\"")
         self.runCmd("-var-list-children --simple-values var_complx_array")
         self.expect(
             "\^done,numchild=\"2\",children=\[child=\{name=\"var_complx_array\.\[0\]\",exp=\"\[0\]\",numchild=\"3\",type=\"complex_type\",thread-id=\"1\",has_more=\"0\"\},child=\{name=\"var_complx_array\.\[1\]\",exp=\"\[1\]\",numchild=\"3\",type=\"complex_type\",thread-id=\"1\",has_more=\"0\"\}\],has_more=\"0\"")
         self.runCmd("-var-list-children 0 var_pcomplx")
-        self.expect("\^done,numchild=\"2\",children=\[child=\{name=\"var_pcomplx\.complex_type\",exp=\"complex_type\",numchild=\"3\",type=\"complex_type\",thread-id=\"1\",has_more=\"0\"\},child={name=\"var_pcomplx\.complx\",exp=\"complx\",numchild=\"3\",type=\"complex_type\",thread-id=\"1\",has_more=\"0\"\}\],has_more=\"0\"")
+        self.expect(
+            "\^done,numchild=\"2\",children=\[child=\{name=\"var_pcomplx\.complex_type\",exp=\"complex_type\",numchild=\"3\",type=\"complex_type\",thread-id=\"1\",has_more=\"0\"\},child={name=\"var_pcomplx\.complx\",exp=\"complx\",numchild=\"3\",type=\"complex_type\",thread-id=\"1\",has_more=\"0\"\}\],has_more=\"0\"")
 
         # Test that -var-list-children lists children without values
         self.runCmd("-var-list-children 0 var_complx 0 1")

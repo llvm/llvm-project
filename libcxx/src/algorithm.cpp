@@ -48,7 +48,7 @@ template bool __insertion_sort_incomplete<__less<long double>&, long double*>(lo
 template unsigned __sort5<__less<long double>&, long double*>(long double*, long double*, long double*, long double*, long double*, __less<long double>&);
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-static __libcpp_mutex_t __rs_mut = _LIBCPP_MUTEX_INITIALIZER;
+_LIBCPP_SAFE_STATIC static __libcpp_mutex_t __rs_mut = _LIBCPP_MUTEX_INITIALIZER;
 #endif
 unsigned __rs_default::__c_ = 0;
 

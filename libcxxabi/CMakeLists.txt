@@ -49,7 +49,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(LLVM_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Path to llvm/include")
     set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
     set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-    set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/share/llvm/cmake")
+    set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     set(LLVM_LIT_PATH "${LLVM_PATH}/utils/lit/lit.py")
   else()
     message(FATAL_ERROR "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
@@ -249,6 +249,15 @@ if (LIBCXXABI_USE_COMPILER_RT)
   list(APPEND LIBCXXABI_LINK_FLAGS "-rtlib=compiler-rt")
 endif()
 
+# Let the library headers know they are currently being used to build the
+# library.
+add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
+
+# Disable DLL annotations on Windows for static builds.
+if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
+  add_definitions(-D_LIBCXXABI_DISABLE_DLL_IMPORT_EXPORT)
+endif()
+
 append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WERROR_FLAG -Werror=return-type)
 
 # Get warning flags
@@ -326,14 +335,14 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
                         " is also set to ON.")
   endif()
-  add_definitions(-DLIBCXXABI_HAS_NO_THREADS=1)
+  add_definitions(-D_LIBCXXABI_HAS_NO_THREADS)
 endif()
 
 if (LIBCXXABI_HAS_PTHREAD_API)
   add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
+  add_definitions(-D_LIBCXXABI_USE_THREAD_API_PTHREAD)
 endif()
 
-# This is the _ONLY_ place where add_definitions is called.
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()

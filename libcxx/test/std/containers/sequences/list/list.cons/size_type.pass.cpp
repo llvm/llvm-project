@@ -14,7 +14,7 @@
 #include <list>
 #include <cassert>
 #include "DefaultOnly.h"
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 
 template <class T, class Allocator>
@@ -48,7 +48,7 @@ int main()
         assert(*i == 0);
     }
     {
-        std::list<int, stack_allocator<int, 3> > l(3);
+        std::list<int, limited_allocator<int, 3> > l(3);
         assert(l.size() == 3);
         assert(std::distance(l.begin(), l.end()) == 3);
         std::list<int>::const_iterator i = l.begin();

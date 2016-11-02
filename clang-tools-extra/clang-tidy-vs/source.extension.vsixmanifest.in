@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Vsix Version="1.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2010">
   <Identifier Id="405594C3-042A-4155-B9A6-E25DAB8B1924">
-    <Name>ClangFormat</Name>
+    <Name>ClangTidy</Name>
     <Author>LLVM</Author>
     <Version>@CLANG_TIDY_VS_VERSION@</Version>
     <Description xml:space="preserve">A static analysis tool for C/C++ code.</Description>

@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: linux
-// REQUIRES: thread_atexit
 
 #include <assert.h>
 #include <cxxabi.h>
@@ -28,7 +27,7 @@ int main() {
   int RV = __cxxabiv1::__cxa_thread_atexit(
       reinterpret_cast<void (*)(void *)>(1), reinterpret_cast<void *>(2),
       reinterpret_cast<void *>(3));
-  assert(RV = 4);
+  assert(RV == 4);
   assert(AtexitImplCalled);
   return 0;
 }

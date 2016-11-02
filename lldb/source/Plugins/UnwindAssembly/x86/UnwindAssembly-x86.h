@@ -13,7 +13,7 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
-#include "llvm-c/Disassembler.h"
+#include "x86AssemblyInspectionEngine.h"
 
 // Project includes
 #include "lldb/Target/UnwindAssembly.h"
@@ -62,10 +62,11 @@ public:
   uint32_t GetPluginVersion() override;
 
 private:
-  UnwindAssembly_x86(const lldb_private::ArchSpec &arch, int cpu);
+  UnwindAssembly_x86(const lldb_private::ArchSpec &arch);
 
-  int m_cpu;
   lldb_private::ArchSpec m_arch;
+
+  lldb_private::x86AssemblyInspectionEngine *m_assembly_inspection_engine;
 };
 
 #endif // liblldb_UnwindAssembly_x86_h_

@@ -79,12 +79,13 @@ protected:
 
       tooling::Replacement Replacement(SM, Range, FixIt.CodeToInsert);
       llvm::Error Err = Error.Fix[Replacement.getFilePath()].add(Replacement);
-      // FIXME: better error handling.
+      // FIXME: better error handling (at least, don't let other replacements be
+      // applied).
       if (Err) {
         llvm::errs() << "Fix conflicts with existing fix! "
                     << llvm::toString(std::move(Err)) << "\n";
+        assert(false && "Fix conflicts with existing fix!");
       }
-      assert(!Err && "Fix conflicts with existing fix!");
     }
   }
 
@@ -294,12 +295,24 @@ static bool LineIsMarkedWithNOLINT(SourceManager& SM, SourceLocation Loc) {
   return false;
 }
 
+static bool LineIsMarkedWithNOLINTinMacro(SourceManager &SM,
+                                          SourceLocation Loc) {
+  while (true) {
+    if (LineIsMarkedWithNOLINT(SM, Loc))
+      return true;
+    if (!Loc.isMacroID())
+      return false;
+    Loc = SM.getImmediateExpansionRange(Loc).first;
+  }
+  return false;
+}
+
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
   if (Info.getLocation().isValid() &&
       DiagLevel != DiagnosticsEngine::Error &&
       DiagLevel != DiagnosticsEngine::Fatal &&
-      LineIsMarkedWithNOLINT(Diags->getSourceManager(), Info.getLocation())) {
+      LineIsMarkedWithNOLINTinMacro(Diags->getSourceManager(), Info.getLocation())) {
     ++Context.Stats.ErrorsIgnoredNOLINT;
     return;
   }

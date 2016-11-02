@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: c++03
+// XFAIL: c++03, c++98
 
 // <iterator>
 // template <class C> auto begin(C& c) -> decltype(c.begin());

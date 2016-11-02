@@ -278,29 +278,27 @@ public:
   unsigned getNumberOfDimensions() const {
     if (Kind == MK_PHI || Kind == MK_ExitPHI || Kind == MK_Value)
       return 0;
-    return DimensionSizes.size() + 1;
+    return DimensionSizes.size();
   }
 
   /// Return the size of dimension @p dim as SCEV*.
   //
   //  Scalars do not have array dimensions and the first dimension of
   //  a (possibly multi-dimensional) array also does not carry any size
-  //  information.
+  //  information, in case the array is not newly created.
   const SCEV *getDimensionSize(unsigned Dim) const {
-    assert(Dim > 0 && "Only dimensions larger than zero are sized.");
     assert(Dim < getNumberOfDimensions() && "Invalid dimension");
-    return DimensionSizes[Dim - 1];
+    return DimensionSizes[Dim];
   }
 
   /// Return the size of dimension @p dim as isl_pw_aff.
   //
   //  Scalars do not have array dimensions and the first dimension of
   //  a (possibly multi-dimensional) array also does not carry any size
-  //  information.
+  //  information, in case the array is not newly created.
   __isl_give isl_pw_aff *getDimensionSizePw(unsigned Dim) const {
-    assert(Dim > 0 && "Only dimensions larger than zero are sized.");
     assert(Dim < getNumberOfDimensions() && "Invalid dimension");
-    return isl_pw_aff_copy(DimensionSizesPw[Dim - 1]);
+    return isl_pw_aff_copy(DimensionSizesPw[Dim]);
   }
 
   /// Get the canonical element type of this array.
@@ -358,6 +356,9 @@ public:
 
   /// Get the space of this array access.
   __isl_give isl_space *getSpace() const;
+
+  /// If the array is read only
+  bool isReadOnly();
 
 private:
   void addDerivedSAI(ScopArrayInfo *DerivedSAI) {
@@ -691,6 +692,19 @@ public:
                ArrayRef<const SCEV *> Subscripts, ArrayRef<const SCEV *> Sizes,
                Value *AccessValue, ScopArrayInfo::MemoryKind Kind,
                StringRef BaseName);
+
+  /// Create a new MemoryAccess that corresponds to @p AccRel.
+  ///
+  /// Along with @p Stmt and @p AccType it uses information about dimension
+  /// lengths of the accessed array, the type of the accessed array elements,
+  /// the name of the accessed array that is derived from the object accessible
+  /// via @p AccRel.
+  ///
+  /// @param Stmt       The parent statement.
+  /// @param AccType    Whether read or write access.
+  /// @param AccRel     The access relation that describes the memory access.
+  MemoryAccess(ScopStmt *Stmt, AccessType AccType, __isl_take isl_map *AccRel);
+
   ~MemoryAccess();
 
   /// Add a new incoming block/value pairs for this PHI/ExitPHI access.
@@ -1085,6 +1099,16 @@ public:
   /// Create an overapproximating ScopStmt for the region @p R.
   ScopStmt(Scop &parent, Region &R);
 
+  /// Create a copy statement.
+  ///
+  /// @param Stmt       The parent statement.
+  /// @param SourceRel  The source location.
+  /// @param TargetRel  The target location.
+  /// @param Domain     The original domain under which copy statement whould
+  ///                   be executed.
+  ScopStmt(Scop &parent, __isl_take isl_map *SourceRel,
+           __isl_take isl_map *TargetRel, __isl_take isl_set *Domain);
+
   /// Initialize members after all MemoryAccesses have been added.
   void init(LoopInfo &LI);
 
@@ -1219,10 +1243,14 @@ public:
 
   /// Get the schedule function of this ScopStmt.
   ///
-  /// @return The schedule function of this ScopStmt.
+  /// @return The schedule function of this ScopStmt, if it does not contain
+  /// extension nodes, and nullptr, otherwise.
   __isl_give isl_map *getSchedule() const;
 
   /// Get an isl string representing this schedule.
+  ///
+  /// @return An isl string representing this schedule, if it does not contain
+  /// extension nodes, and an empty string, otherwise.
   std::string getScheduleStr() const;
 
   /// Get the invalid domain for this statement.
@@ -1246,6 +1274,9 @@ public:
 
   /// Return true if this statement represents a single basic block.
   bool isBlockStmt() const { return BB != nullptr; }
+
+  /// Return true if this is a copy statement.
+  bool isCopyStmt() const { return BB == nullptr && R == nullptr; }
 
   /// Get the region represented by this ScopStmt (if any).
   ///
@@ -1450,6 +1481,9 @@ private:
   /// Max loop depth.
   unsigned MaxLoopDepth;
 
+  /// Number of copy statements.
+  unsigned CopyStmtsNum;
+
   typedef std::list<ScopStmt> StmtSet;
   /// The statements in this Scop.
   StmtSet Stmts;
@@ -1617,11 +1651,6 @@ private:
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
        ScopDetection::DetectionContext &DC);
 
-  /// Add the access function to all MemoryAccess objects of the Scop
-  ///        created in this pass.
-  void addAccessFunction(MemoryAccess *Access) {
-    AccessFunctions.emplace_back(Access);
-  }
   //@}
 
   /// Initialize this ScopBuilder.
@@ -1722,9 +1751,6 @@ private:
 
   /// Add parameter constraints to @p C that imply a non-empty domain.
   __isl_give isl_set *addNonEmptyDomainConstraints(__isl_take isl_set *C) const;
-
-  /// Simplify the SCoP representation
-  void simplifySCoP(bool AfterHoisting);
 
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
@@ -1928,6 +1954,30 @@ private:
 
 public:
   ~Scop();
+
+  /// Get the count of copy statements added to this Scop.
+  ///
+  /// @return The count of copy statements added to this Scop.
+  unsigned getCopyStmtsNum() { return CopyStmtsNum; }
+
+  /// Create a new copy statement.
+  ///
+  /// A new statement will be created and added to the statement vector.
+  ///
+  /// @param Stmt       The parent statement.
+  /// @param SourceRel  The source location.
+  /// @param TargetRel  The target location.
+  /// @param Domain     The original domain under which copy statement whould
+  ///                   be executed.
+  ScopStmt *addScopStmt(__isl_take isl_map *SourceRel,
+                        __isl_take isl_map *TargetRel,
+                        __isl_take isl_set *Domain);
+
+  /// Add the access function to all MemoryAccess objects of the Scop
+  ///        created in this pass.
+  void addAccessFunction(MemoryAccess *Access) {
+    AccessFunctions.emplace_back(Access);
+  }
 
   ScalarEvolution *getSE() const;
 
@@ -2351,6 +2401,9 @@ public:
   __isl_give isl_union_map *getAccesses();
 
   /// Get the schedule of all the statements in the SCoP.
+  ///
+  /// @return The schedule of all the statements in the SCoP, if the schedule of
+  /// the Scop does not contain extension nodes, and nullptr, otherwise.
   __isl_give isl_union_map *getSchedule() const;
 
   /// Get a schedule tree describing the schedule of all statements.
@@ -2382,6 +2435,18 @@ public:
   /// Find the ScopArrayInfo associated with an isl Id
   ///        that has name @p Name.
   ScopArrayInfo *getArrayInfoByName(const std::string BaseName);
+
+  /// Check whether @p Schedule contains extension nodes.
+  ///
+  /// @return true if @p Schedule contains extension nodes.
+  static bool containsExtensionNode(__isl_keep isl_schedule *Schedule);
+
+  /// Simplify the SCoP representation.
+  ///
+  /// @param AfterHoisting Whether it is called after invariant load hoisting.
+  ///                      When true, also removes statements without
+  ///                      side-effects.
+  void simplifySCoP(bool AfterHoisting);
 };
 
 /// Print Scop scop to raw_ostream O.

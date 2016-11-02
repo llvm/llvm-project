@@ -153,12 +153,36 @@ TEST_CASE(copy_dir_test)
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
     const path dest = env.create_dir("dir1");
-    std::error_code ec;
+    std::error_code ec = GetTestEC();
     TEST_CHECK(fs::copy_file(file, dest, ec) == false);
     TEST_CHECK(ec);
-    ec.clear();
+    TEST_CHECK(ec != GetTestEC());
+    ec = GetTestEC();
     TEST_CHECK(fs::copy_file(dest, file, ec) == false);
     TEST_CHECK(ec);
+    TEST_CHECK(ec != GetTestEC());
+}
+
+TEST_CASE(non_regular_file_test)
+{
+    scoped_test_env env;
+    const path fifo = env.create_fifo("fifo");
+    const path dest = env.make_env_path("dest");
+    const path file = env.create_file("file", 42);
+    {
+        std::error_code ec = GetTestEC();
+        TEST_REQUIRE(fs::copy_file(fifo, dest, ec) == false);
+        TEST_CHECK(ec);
+        TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(!exists(dest));
+    }
+    {
+        std::error_code ec = GetTestEC();
+        TEST_REQUIRE(fs::copy_file(file, fifo, copy_options::overwrite_existing, ec) == false);
+        TEST_CHECK(ec);
+        TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(is_fifo(fifo));
+    }
 }
 
 TEST_SUITE_END()

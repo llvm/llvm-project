@@ -3,11 +3,6 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
 
-; RUN: opt %loadPolly -polly-codegen-ppcg \
-; RUN: -polly-acc-use-shared \
-; RUN: -disable-output -polly-acc-dump-kernel-ir < %s | \
-; RUN: FileCheck -check-prefix=KERNEL %s
-
 ; REQUIRES: pollyacc
 
 ;    void add(float *A, float alpha) {
@@ -16,22 +11,17 @@
 ;          A[i] += alpha;
 ;    }
 
-; CODE:  read(t0);
-; CODE-NEXT:  if (t0 == 0)
-; CODE-NEXT:    read();
+; CODE:       read(t0);
 ; CODE-NEXT:  sync0();
 ; CODE-NEXT:  for (int c3 = 0; c3 <= 9; c3 += 1)
 ; CODE-NEXT:    Stmt_bb5(t0, c3);
 ; CODE-NEXT:  sync1();
 ; CODE-NEXT:  write(t0);
 
-
-; KERNEL: @shared_MemRef_alpha = internal addrspace(3) global float 0.000000e+00, align 4
-
-; KERNEL:  %polly.access.cast.MemRef_alpha = bitcast i8* %MemRef_alpha to float*
-; KERNEL-NEXT:  %shared.read1 = load float, float* %polly.access.cast.MemRef_alpha
-; KERNEL-NEXT:  store float %shared.read1, float addrspace(3)* @shared_MemRef_alpha
-
+; This test case was intended to test code generation for scalars stored
+; in shared memory. However, after properly marking the scalar as read-only
+; the scalar is not stored any more in shared memory. We still leave this
+; test case as documentation if we every forget to mark scalars as read-only.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

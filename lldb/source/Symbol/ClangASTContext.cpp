@@ -964,72 +964,75 @@ ClangASTContext::GetBasicTypeEnumeration(const ConstString &name) {
     static std::once_flag g_once_flag;
     std::call_once(g_once_flag, []() {
       // "void"
-      g_type_map.Append(ConstString("void").GetCString(), eBasicTypeVoid);
+      g_type_map.Append(ConstString("void").GetStringRef(), eBasicTypeVoid);
 
       // "char"
-      g_type_map.Append(ConstString("char").GetCString(), eBasicTypeChar);
-      g_type_map.Append(ConstString("signed char").GetCString(),
+      g_type_map.Append(ConstString("char").GetStringRef(), eBasicTypeChar);
+      g_type_map.Append(ConstString("signed char").GetStringRef(),
                         eBasicTypeSignedChar);
-      g_type_map.Append(ConstString("unsigned char").GetCString(),
+      g_type_map.Append(ConstString("unsigned char").GetStringRef(),
                         eBasicTypeUnsignedChar);
-      g_type_map.Append(ConstString("wchar_t").GetCString(), eBasicTypeWChar);
-      g_type_map.Append(ConstString("signed wchar_t").GetCString(),
+      g_type_map.Append(ConstString("wchar_t").GetStringRef(), eBasicTypeWChar);
+      g_type_map.Append(ConstString("signed wchar_t").GetStringRef(),
                         eBasicTypeSignedWChar);
-      g_type_map.Append(ConstString("unsigned wchar_t").GetCString(),
+      g_type_map.Append(ConstString("unsigned wchar_t").GetStringRef(),
                         eBasicTypeUnsignedWChar);
       // "short"
-      g_type_map.Append(ConstString("short").GetCString(), eBasicTypeShort);
-      g_type_map.Append(ConstString("short int").GetCString(), eBasicTypeShort);
-      g_type_map.Append(ConstString("unsigned short").GetCString(),
+      g_type_map.Append(ConstString("short").GetStringRef(), eBasicTypeShort);
+      g_type_map.Append(ConstString("short int").GetStringRef(),
+                        eBasicTypeShort);
+      g_type_map.Append(ConstString("unsigned short").GetStringRef(),
                         eBasicTypeUnsignedShort);
-      g_type_map.Append(ConstString("unsigned short int").GetCString(),
+      g_type_map.Append(ConstString("unsigned short int").GetStringRef(),
                         eBasicTypeUnsignedShort);
 
       // "int"
-      g_type_map.Append(ConstString("int").GetCString(), eBasicTypeInt);
-      g_type_map.Append(ConstString("signed int").GetCString(), eBasicTypeInt);
-      g_type_map.Append(ConstString("unsigned int").GetCString(),
+      g_type_map.Append(ConstString("int").GetStringRef(), eBasicTypeInt);
+      g_type_map.Append(ConstString("signed int").GetStringRef(),
+                        eBasicTypeInt);
+      g_type_map.Append(ConstString("unsigned int").GetStringRef(),
                         eBasicTypeUnsignedInt);
-      g_type_map.Append(ConstString("unsigned").GetCString(),
+      g_type_map.Append(ConstString("unsigned").GetStringRef(),
                         eBasicTypeUnsignedInt);
 
       // "long"
-      g_type_map.Append(ConstString("long").GetCString(), eBasicTypeLong);
-      g_type_map.Append(ConstString("long int").GetCString(), eBasicTypeLong);
-      g_type_map.Append(ConstString("unsigned long").GetCString(),
+      g_type_map.Append(ConstString("long").GetStringRef(), eBasicTypeLong);
+      g_type_map.Append(ConstString("long int").GetStringRef(), eBasicTypeLong);
+      g_type_map.Append(ConstString("unsigned long").GetStringRef(),
                         eBasicTypeUnsignedLong);
-      g_type_map.Append(ConstString("unsigned long int").GetCString(),
+      g_type_map.Append(ConstString("unsigned long int").GetStringRef(),
                         eBasicTypeUnsignedLong);
 
       // "long long"
-      g_type_map.Append(ConstString("long long").GetCString(),
+      g_type_map.Append(ConstString("long long").GetStringRef(),
                         eBasicTypeLongLong);
-      g_type_map.Append(ConstString("long long int").GetCString(),
+      g_type_map.Append(ConstString("long long int").GetStringRef(),
                         eBasicTypeLongLong);
-      g_type_map.Append(ConstString("unsigned long long").GetCString(),
+      g_type_map.Append(ConstString("unsigned long long").GetStringRef(),
                         eBasicTypeUnsignedLongLong);
-      g_type_map.Append(ConstString("unsigned long long int").GetCString(),
+      g_type_map.Append(ConstString("unsigned long long int").GetStringRef(),
                         eBasicTypeUnsignedLongLong);
 
       // "int128"
-      g_type_map.Append(ConstString("__int128_t").GetCString(),
+      g_type_map.Append(ConstString("__int128_t").GetStringRef(),
                         eBasicTypeInt128);
-      g_type_map.Append(ConstString("__uint128_t").GetCString(),
+      g_type_map.Append(ConstString("__uint128_t").GetStringRef(),
                         eBasicTypeUnsignedInt128);
 
       // Miscellaneous
-      g_type_map.Append(ConstString("bool").GetCString(), eBasicTypeBool);
-      g_type_map.Append(ConstString("float").GetCString(), eBasicTypeFloat);
-      g_type_map.Append(ConstString("double").GetCString(), eBasicTypeDouble);
-      g_type_map.Append(ConstString("long double").GetCString(),
+      g_type_map.Append(ConstString("bool").GetStringRef(), eBasicTypeBool);
+      g_type_map.Append(ConstString("float").GetStringRef(), eBasicTypeFloat);
+      g_type_map.Append(ConstString("double").GetStringRef(), eBasicTypeDouble);
+      g_type_map.Append(ConstString("long double").GetStringRef(),
                         eBasicTypeLongDouble);
-      g_type_map.Append(ConstString("id").GetCString(), eBasicTypeObjCID);
-      g_type_map.Append(ConstString("SEL").GetCString(), eBasicTypeObjCSel);
-      g_type_map.Append(ConstString("nullptr").GetCString(), eBasicTypeNullPtr);
+      g_type_map.Append(ConstString("id").GetStringRef(), eBasicTypeObjCID);
+      g_type_map.Append(ConstString("SEL").GetStringRef(), eBasicTypeObjCSel);
+      g_type_map.Append(ConstString("nullptr").GetStringRef(),
+                        eBasicTypeNullPtr);
       g_type_map.Sort();
     });
 
-    return g_type_map.Find(name.GetCString(), eBasicTypeInvalid);
+    return g_type_map.Find(name.GetStringRef(), eBasicTypeInvalid);
   }
   return eBasicTypeInvalid;
 }
@@ -4353,6 +4356,8 @@ ClangASTContext::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::Adjusted:
     break;
+  case clang::Type::ObjCTypeParam:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -4505,19 +4510,22 @@ ClangASTContext::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
       }
       break;
 
-    case clang::Type::ObjCObjectPointer:
-      if (GetCompleteType(type)) {
-        const clang::ObjCObjectPointerType *objc_class_type =
-            qual_type->getAsObjCInterfacePointerType();
-        if (objc_class_type) {
-          clang::ObjCInterfaceDecl *class_interface_decl =
-              objc_class_type->getInterfaceDecl();
-          if (class_interface_decl)
-            num_functions = std::distance(class_interface_decl->meth_begin(),
-                                          class_interface_decl->meth_end());
+    case clang::Type::ObjCObjectPointer: {
+      const clang::ObjCObjectPointerType *objc_class_type =
+          qual_type->getAsObjCInterfacePointerType();
+      const clang::ObjCInterfaceType *objc_interface_type =
+          objc_class_type->getInterfaceType();
+      if (objc_interface_type &&
+          GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+        clang::ObjCInterfaceDecl *class_interface_decl =
+            objc_interface_type->getDecl();
+        if (class_interface_decl) {
+          num_functions = std::distance(class_interface_decl->meth_begin(),
+                                        class_interface_decl->meth_end());
         }
       }
       break;
+    }
 
     case clang::Type::ObjCObject:
     case clang::Type::ObjCInterface:
@@ -4610,34 +4618,36 @@ ClangASTContext::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
       }
       break;
 
-    case clang::Type::ObjCObjectPointer:
-      if (GetCompleteType(type)) {
-        const clang::ObjCObjectPointerType *objc_class_type =
-            qual_type->getAsObjCInterfacePointerType();
-        if (objc_class_type) {
-          clang::ObjCInterfaceDecl *class_interface_decl =
-              objc_class_type->getInterfaceDecl();
-          if (class_interface_decl) {
-            auto method_iter = class_interface_decl->meth_begin();
-            auto method_end = class_interface_decl->meth_end();
-            if (idx <
-                static_cast<size_t>(std::distance(method_iter, method_end))) {
-              std::advance(method_iter, idx);
-              clang::ObjCMethodDecl *objc_method_decl =
-                  method_iter->getCanonicalDecl();
-              if (objc_method_decl) {
-                clang_decl = CompilerDecl(this, objc_method_decl);
-                name = objc_method_decl->getSelector().getAsString();
-                if (objc_method_decl->isClassMethod())
-                  kind = lldb::eMemberFunctionKindStaticMethod;
-                else
-                  kind = lldb::eMemberFunctionKindInstanceMethod;
-              }
+    case clang::Type::ObjCObjectPointer: {
+      const clang::ObjCObjectPointerType *objc_class_type =
+          qual_type->getAsObjCInterfacePointerType();
+      const clang::ObjCInterfaceType *objc_interface_type =
+          objc_class_type->getInterfaceType();
+      if (objc_interface_type &&
+          GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+        clang::ObjCInterfaceDecl *class_interface_decl =
+            objc_interface_type->getDecl();
+        if (class_interface_decl) {
+          auto method_iter = class_interface_decl->meth_begin();
+          auto method_end = class_interface_decl->meth_end();
+          if (idx <
+              static_cast<size_t>(std::distance(method_iter, method_end))) {
+            std::advance(method_iter, idx);
+            clang::ObjCMethodDecl *objc_method_decl =
+                method_iter->getCanonicalDecl();
+            if (objc_method_decl) {
+              clang_decl = CompilerDecl(this, objc_method_decl);
+              name = objc_method_decl->getSelector().getAsString();
+              if (objc_method_decl->isClassMethod())
+                kind = lldb::eMemberFunctionKindStaticMethod;
+              else
+                kind = lldb::eMemberFunctionKindInstanceMethod;
             }
           }
         }
       }
       break;
+    }
 
     case clang::Type::ObjCObject:
     case clang::Type::ObjCInterface:
@@ -5199,6 +5209,8 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
   // pointer type decayed from an array or function type.
   case clang::Type::Decayed:
     break;
+  case clang::Type::ObjCTypeParam:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -5345,6 +5357,8 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
 
   // pointer type decayed from an array or function type.
   case clang::Type::Decayed:
+    break;
+  case clang::Type::ObjCTypeParam:
     break;
   }
   // We don't know hot to display this type...
@@ -5711,19 +5725,21 @@ uint32_t ClangASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {
                 .GetNumFields();
     break;
 
-  case clang::Type::ObjCObjectPointer:
-    if (GetCompleteType(type)) {
-      const clang::ObjCObjectPointerType *objc_class_type =
-          qual_type->getAsObjCInterfacePointerType();
-      if (objc_class_type) {
-        clang::ObjCInterfaceDecl *class_interface_decl =
-            objc_class_type->getInterfaceDecl();
-
-        if (class_interface_decl)
-          count = class_interface_decl->ivar_size();
+  case clang::Type::ObjCObjectPointer: {
+    const clang::ObjCObjectPointerType *objc_class_type =
+        qual_type->getAsObjCInterfacePointerType();
+    const clang::ObjCInterfaceType *objc_interface_type =
+        objc_class_type->getInterfaceType();
+    if (objc_interface_type &&
+        GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+      clang::ObjCInterfaceDecl *class_interface_decl =
+          objc_interface_type->getDecl();
+      if (class_interface_decl) {
+        count = class_interface_decl->ivar_size();
       }
     }
     break;
+  }
 
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface:
@@ -5856,13 +5872,16 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
     }
     break;
 
-  case clang::Type::ObjCObjectPointer:
-    if (GetCompleteType(type)) {
-      const clang::ObjCObjectPointerType *objc_class_type =
-          qual_type->getAsObjCInterfacePointerType();
-      if (objc_class_type) {
-        clang::ObjCInterfaceDecl *class_interface_decl =
-            objc_class_type->getInterfaceDecl();
+  case clang::Type::ObjCObjectPointer: {
+    const clang::ObjCObjectPointerType *objc_class_type =
+        qual_type->getAsObjCInterfacePointerType();
+    const clang::ObjCInterfaceType *objc_interface_type =
+        objc_class_type->getInterfaceType();
+    if (objc_interface_type &&
+        GetCompleteType((lldb::opaque_compiler_type_t)objc_interface_type)) {
+      clang::ObjCInterfaceDecl *class_interface_decl =
+          objc_interface_type->getDecl();
+      if (class_interface_decl) {
         return CompilerType(
             this, GetObjCFieldAtIndex(getASTContext(), class_interface_decl,
                                       idx, name, bit_offset_ptr,
@@ -5870,6 +5889,7 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
       }
     }
     break;
+  }
 
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface:

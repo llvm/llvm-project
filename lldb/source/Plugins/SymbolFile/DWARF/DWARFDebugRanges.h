@@ -23,7 +23,8 @@ public:
   static void Dump(lldb_private::Stream &s,
                    const lldb_private::DWARFDataExtractor &debug_ranges_data,
                    lldb::offset_t *offset_ptr, dw_addr_t cu_base_addr);
-  bool FindRanges(dw_offset_t debug_ranges_offset,
+  bool FindRanges(dw_addr_t debug_ranges_base,
+                  dw_offset_t debug_ranges_offset,
                   DWARFRangeList &range_list) const;
 
 protected:

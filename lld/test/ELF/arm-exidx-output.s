@@ -10,8 +10,6 @@
  .syntax unified
  .section .text, "ax",%progbits
  .globl _start
- .align 2
- .type _start,%function
 _start:
  .fnstart
  bx lr
@@ -20,8 +18,6 @@ _start:
 
  .section .text.f1, "ax", %progbits
  .globl f1
- .align 2
- .type f1,%function
 f1:
  .fnstart
  bx lr
@@ -30,8 +26,6 @@ f1:
 
  .section .text.f2, "ax", %progbits
  .globl f2
- .align 2
- .type f2,%function
 f2:
  .fnstart
  bx lr
@@ -41,9 +35,8 @@ f2:
 // CHECK:         Section {
 // CHECK:         Name: .ARM.exidx
 // CHECK-NEXT:    Type: SHT_ARM_EXIDX (0x70000001)
-// CHECK-NEXT:    Flags [ (0x82)
+// CHECK-NEXT:    Flags [ (0x2)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
-// CHECK-NEXT:      SHF_LINK_ORDER (0x80)
 // CHECK-NEXT:    ]
 
 // CHECK-NOT:     Name: .ARM.exidx.text.f1

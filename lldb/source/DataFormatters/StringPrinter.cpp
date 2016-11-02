@@ -135,7 +135,7 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
 
   unsigned utf8_encoded_len = getNumBytesForUTF8(*buffer);
 
-  if (1 + buffer_end - buffer < utf8_encoded_len) {
+  if (1u + std::distance(buffer, buffer_end) < utf8_encoded_len) {
     // I don't have enough bytes - print whatever I have left
     retval = {buffer, static_cast<size_t>(1 + buffer_end - buffer)};
     next = buffer_end + 1;

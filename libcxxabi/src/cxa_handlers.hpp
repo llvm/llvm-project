@@ -13,6 +13,8 @@
 #ifndef _CXA_HANDLERS_H
 #define _CXA_HANDLERS_H
 
+#include <__cxxabi_config.h>
+
 #include <exception>
 
 namespace std
@@ -31,9 +33,9 @@ __terminate(terminate_handler func) _NOEXCEPT;
 extern "C"
 {
 
-extern void (*__cxa_terminate_handler)();
-extern void (*__cxa_unexpected_handler)();
-extern void (*__cxa_new_handler)();
+_LIBCXXABI_DATA_VIS extern void (*__cxa_terminate_handler)();
+_LIBCXXABI_DATA_VIS extern void (*__cxa_unexpected_handler)();
+_LIBCXXABI_DATA_VIS extern void (*__cxa_new_handler)();
 
 /*
 

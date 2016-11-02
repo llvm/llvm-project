@@ -64,11 +64,20 @@
 # DSO-NEXT:      Other: 0
 # DSO-NEXT:      Section: .text (0x6)
 # DSO-NEXT:    }
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Name: _ZN3abcC2Ev@@LIBSAMPLE_1.0
+# DSO-NEXT:      Value: 0x1004
+# DSO-NEXT:      Size: 0
+# DSO-NEXT:      Binding: Global (0x1)
+# DSO-NEXT:      Type: Function (0x2)
+# DSO-NEXT:      Other: 0
+# DSO-NEXT:      Section: .text (0x6)
+# DSO-NEXT:    }
 # DSO-NEXT:  ]
 # DSO-NEXT:  Version symbols {
 # DSO-NEXT:    Section Name: .gnu.version
-# DSO-NEXT:    Address: 0x240
-# DSO-NEXT:    Offset: 0x240
+# DSO-NEXT:    Address: 0x258
+# DSO-NEXT:    Offset: 0x258
 # DSO-NEXT:    Link: 1
 # DSO-NEXT:    Symbols [
 # DSO-NEXT:      Symbol {
@@ -90,6 +99,10 @@
 # DSO-NEXT:      Symbol {
 # DSO-NEXT:        Version: 2
 # DSO-NEXT:        Name: _ZN3abcC1Ev@@LIBSAMPLE_1.0
+# DSO-NEXT:      }
+# DSO-NEXT:      Symbol {
+# DSO-NEXT:        Version: 2
+# DSO-NEXT:        Name: _ZN3abcC2Ev@@LIBSAMPLE_1.0
 # DSO-NEXT:      }
 # DSO-NEXT:    ]
 # DSO-NEXT:  }
@@ -113,4 +126,9 @@ retq
 .globl _ZN3abcC1Ev
 .type _ZN3abcC1Ev,@function
 _ZN3abcC1Ev:
+retq
+
+.globl _ZN3abcC2Ev
+.type _ZN3abcC2Ev,@function
+_ZN3abcC2Ev:
 retq

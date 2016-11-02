@@ -22,6 +22,12 @@
 #define TEST_HAS_FEATURE(X) 0
 #endif
 
+#ifdef __has_include
+#define TEST_HAS_INCLUDE(X) __has_include(X)
+#else
+#define TEST_HAS_INCLUDE(X) 0
+#endif
+
 #ifdef __has_extension
 #define TEST_HAS_EXTENSION(X) __has_extension(X)
 #else
@@ -63,7 +69,7 @@
 #endif
 
 // Attempt to deduce GCC version
-#if defined(_LIBCPP_VERSION) && __has_include(<features.h>)
+#if defined(_LIBCPP_VERSION) && TEST_HAS_INCLUDE(<features.h>)
 #include <features.h>
 #define TEST_HAS_GLIBC
 #define TEST_GLIBC_PREREQ(major, minor) __GLIBC_PREREQ(major, minor)
@@ -82,16 +88,24 @@
 #if TEST_STD_VER >= 11
 #define TEST_CONSTEXPR constexpr
 #define TEST_NOEXCEPT noexcept
+#define TEST_NOEXCEPT_COND(...) noexcept(__VA_ARGS__)
 # if TEST_STD_VER >= 14
 #   define TEST_CONSTEXPR_CXX14 constexpr
 # else
 #   define TEST_CONSTEXPR_CXX14
 # endif
+#define TEST_ALIGNOF(...) alignof(__VA_ARGS__)
+#define TEST_ALIGNAS(...) alignas(__VA_ARGS__)
 #else
 #define TEST_CONSTEXPR
 #define TEST_CONSTEXPR_CXX14
-#define TEST_NOEXCEPT
+#define TEST_NOEXCEPT throw()
+#define TEST_NOEXCEPT_COND(...)
+#define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
+#define TEST_ALIGNAS(...) __attribute__((__aligned__(__VA_ARGS__)))
 #endif
+
+#define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
     && !defined(__GXX_RTTI)
@@ -118,9 +132,11 @@
 #if defined(_LIBCPP_VERSION)
 #define LIBCPP_ASSERT(...) assert(__VA_ARGS__)
 #define LIBCPP_STATIC_ASSERT(...) static_assert(__VA_ARGS__)
+#define LIBCPP_ONLY(...) __VA_ARGS__
 #else
 #define LIBCPP_ASSERT(...) ((void)0)
 #define LIBCPP_STATIC_ASSERT(...) ((void)0)
+#define LIBCPP_ONLY(...) ((void)0)
 #endif
 
 #define ASSERT_NOEXCEPT(...) \
@@ -139,5 +155,16 @@ struct is_same<T, T> { enum {value = 1}; };
 #define ASSERT_SAME_TYPE(...) \
     static_assert(test_macros_detail::is_same<__VA_ARGS__>::value, \
                  "Types differ uexpectedly")
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+#define TEST_THROW(...) throw __VA_ARGS__
+#else
+#if defined(__GNUC__)
+#define TEST_THROW(...) __builtin_abort()
+#else
+#include <stdlib.h>
+#define TEST_THROW(...) ::abort()
+#endif
+#endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

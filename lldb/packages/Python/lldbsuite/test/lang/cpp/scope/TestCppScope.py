@@ -11,9 +11,20 @@ class TestCppScopes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureDarwin
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
-    def test_with_run_command(self):
+    def test_all_but_c(self):
+        self.do_test(False)
+
+    # There's a global symbol in libsystem on Darwin that messes up
+    # the lookup of class C.  Breaking that test out from the others
+    # since that is a odd failure, and I don't want it to mask the
+    # real purpose of this test.
+    @expectedFailureDarwin(bugnumber="<rdar://problem/28623427>")
+    @expectedFailureAll(oslist=["windows"])
+    def test_c(self):
+        self.do_test(True)
+    
+    def do_test(self, test_c):
         self.build()
 
         # Get main source file
@@ -75,6 +86,11 @@ class TestCppScopes(TestBase):
                 "target variable returns wrong variable " + name)
 
         for name in global_variables_assert:
+            if name is "C::a" and not test_c:
+                continue
+            if name is not "C::a" and test_c:
+                continue
+
             value = frame.EvaluateExpression(name)
             assert_value = global_variables_assert[name]
             self.assertTrue(

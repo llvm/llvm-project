@@ -554,7 +554,10 @@ void call_operator_noexcept_test()
         using T = NoExceptCallable<bool>;
         T value(true);
         auto ret = std::not_fn(value);
-        static_assert(noexcept(!_VSTD::__invoke(value)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(!_VSTD::__invoke(value)), "");
+#if TEST_STD_VER > 14
+        static_assert(noexcept(!std::invoke(value)), "");
+#endif
         static_assert(noexcept(ret()), "call should be noexcept");
         auto const& cret = ret;
         static_assert(noexcept(cret()), "call should be noexcept");
@@ -577,6 +580,19 @@ void call_operator_noexcept_test()
     }
 }
 
+void test_lwg2767() {
+    // See http://wg21.link/LWG2767
+    struct Abstract { virtual void f() const = 0; };
+    struct Derived : public Abstract { void f() const {} };
+    struct F { bool operator()(Abstract&&) { return false; } };
+    {
+        Derived d;
+        Abstract &a = d;
+        bool b = std::not_fn(F{})(std::move(a));
+        assert(b);
+    }
+}
+
 int main()
 {
     constructor_tests();
@@ -586,4 +602,5 @@ int main()
     call_operator_sfinae_test(); // somewhat of an extension
     call_operator_forwarding_test();
     call_operator_noexcept_test();
+    test_lwg2767();
 }

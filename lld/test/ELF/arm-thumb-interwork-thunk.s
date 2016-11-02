@@ -1,12 +1,14 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: echo "SECTIONS { \
+// RUN:       . = SIZEOF_HEADERS; \
 // RUN:       .R_ARM_JUMP24_callee_1 : { *(.R_ARM_JUMP24_callee_low) } \
 // RUN:       .R_ARM_THM_JUMP_callee_1 : { *(.R_ARM_THM_JUMP_callee_low)} \
 // RUN:       .text : { *(.text) } \
 // RUN:       .arm_caller : { *(.arm_caller) } \
 // RUN:       .thumb_caller : { *(.thumb_caller) } \
 // RUN:       .R_ARM_JUMP24_callee_2 : { *(.R_ARM_JUMP24_callee_high) } \
-// RUN:       .R_ARM_THM_JUMP_callee_2 : { *(.R_ARM_THM_JUMP_callee_high) } } " > %t.script
+// RUN:       .R_ARM_THM_JUMP_callee_2 : { *(.R_ARM_THM_JUMP_callee_high) } \
+// RUN:       .got.plt 0x1894 : {  }  } " > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2 2>&1
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB -check-prefix=CHECK-ABS-THUMB %s
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM -check-prefix=CHECK-ABS-ARM %s

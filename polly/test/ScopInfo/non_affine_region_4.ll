@@ -17,13 +17,13 @@
 ; CHECK:       Arrays {
 ; CHECK-NEXT:      i32 MemRef_A[*]; // Element size 4
 ; CHECK-NEXT:      i32 MemRef_y__phi; // Element size 4
-; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
+; CHECK-NEXT:      i32 MemRef_x; // Element size 4
 ; CHECK-NEXT:  }
 ;
 ; CHECK:       Arrays (Bounds as pw_affs) {
 ; CHECK-NEXT:      i32 MemRef_A[*]; // Element size 4
 ; CHECK-NEXT:      i32 MemRef_y__phi; // Element size 4
-; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
+; CHECK-NEXT:      i32 MemRef_x; // Element size 4
 ; CHECK-NEXT:  }
 ;
 ; CHECK:       Statements {

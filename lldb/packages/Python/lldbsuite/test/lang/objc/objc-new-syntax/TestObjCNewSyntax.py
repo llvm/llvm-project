@@ -39,6 +39,7 @@ class ObjCNewSyntaxTestCase(TestBase):
         bugnumber='rdar://27792848')
     @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion(
         '12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @expectedFailureAll(archs=["i[3-6]86"])
     def test_expr(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

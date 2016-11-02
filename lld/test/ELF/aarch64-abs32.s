@@ -14,11 +14,11 @@ _start:
 // RUN: llvm-objdump -s -section=.data %t2 | FileCheck %s
 
 // CHECK: Contents of section .data:
-// 11000: S = 0x100, A = 0xfffffeff
+// 20000: S = 0x100, A = 0xfffffeff
 //        S + A = 0xffffffff
-// 11004: S = 0x100, A = -0x80000100
+// 20004: S = 0x100, A = -0x80000100
 //        S + A = 0x80000000
-// CHECK-NEXT: 11000 ffffffff 00000080
+// CHECK-NEXT: 20000 ffffffff 00000080
 
 // RUN: not ld.lld %t.o %t255.o -o %t2
 //   | FileCheck %s --check-prefix=OVERFLOW

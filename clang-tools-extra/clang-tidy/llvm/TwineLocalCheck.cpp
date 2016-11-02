@@ -45,8 +45,7 @@ void TwineLocalCheck::check(const MatchFinder::MatchResult &Result) {
     if (VD->getType()->getCanonicalTypeUnqualified() ==
         C->getType()->getCanonicalTypeUnqualified()) {
       SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-          VD->getInit()->getLocEnd(), 0, *Result.SourceManager,
-          Result.Context->getLangOpts());
+          VD->getInit()->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
       Diag << FixItHint::CreateReplacement(TypeRange, "std::string")
            << FixItHint::CreateInsertion(VD->getInit()->getLocStart(), "(")
            << FixItHint::CreateInsertion(EndLoc, ").str()");

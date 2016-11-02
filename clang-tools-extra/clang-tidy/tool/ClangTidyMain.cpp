@@ -129,8 +129,9 @@ List all enabled checks and exit. Use with
                                 cl::init(false), cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> ExplainConfig("explain-config", cl::desc(R"(
-for each enabled check explains, where it is enabled, i.e. in clang-tidy binary,
-command line or a specific configuration file.
+For each enabled check explains, where it is
+enabled, i.e. in clang-tidy binary, command
+line or a specific configuration file.
 )"),
                                    cl::init(false), cl::cat(ClangTidyCategory));
 

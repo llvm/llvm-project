@@ -40,7 +40,7 @@
 #include "RNBContext.h"
 #include "RNBServices.h"
 #include "RNBSocket.h"
-#include "lldb/Utility/StdStringExtractor.h"
+#include "StdStringExtractor.h"
 
 #if defined(HAVE_LIBCOMPRESSION)
 #include <compression.h>

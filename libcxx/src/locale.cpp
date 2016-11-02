@@ -28,7 +28,7 @@
 #include "__sso_allocator"
 #if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
 #include "support/win32/locale_win32.h"
-#elif !defined(__ANDROID__)
+#elif !defined(__BIONIC__)
 #include <langinfo.h>
 #endif
 #include <stdlib.h>
@@ -6031,66 +6031,66 @@ void __throw_runtime_error(const char* msg)
 #endif
 }
 
-template class collate<char>;
-template class collate<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;
 
-template class num_get<char>;
-template class num_get<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<wchar_t>;
 
-template struct __num_get<char>;
-template struct __num_get<wchar_t>;
+template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<char>;
+template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<wchar_t>;
 
-template class num_put<char>;
-template class num_put<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<wchar_t>;
 
-template struct __num_put<char>;
-template struct __num_put<wchar_t>;
+template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<char>;
+template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<wchar_t>;
 
-template class time_get<char>;
-template class time_get<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<wchar_t>;
 
-template class time_get_byname<char>;
-template class time_get_byname<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<wchar_t>;
 
-template class time_put<char>;
-template class time_put<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<wchar_t>;
 
-template class time_put_byname<char>;
-template class time_put_byname<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<wchar_t>;
 
-template class moneypunct<char, false>;
-template class moneypunct<char, true>;
-template class moneypunct<wchar_t, false>;
-template class moneypunct<wchar_t, true>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, false>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, true>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, false>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, true>;
 
-template class moneypunct_byname<char, false>;
-template class moneypunct_byname<char, true>;
-template class moneypunct_byname<wchar_t, false>;
-template class moneypunct_byname<wchar_t, true>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, false>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, true>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, false>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, true>;
 
-template class money_get<char>;
-template class money_get<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<wchar_t>;
 
-template class __money_get<char>;
-template class __money_get<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<wchar_t>;
 
-template class money_put<char>;
-template class money_put<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<wchar_t>;
 
-template class __money_put<char>;
-template class __money_put<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<wchar_t>;
 
-template class messages<char>;
-template class messages<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<wchar_t>;
 
-template class messages_byname<char>;
-template class messages_byname<wchar_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<char>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<wchar_t>;
 
-template class codecvt_byname<char, char, mbstate_t>;
-template class codecvt_byname<wchar_t, char, mbstate_t>;
-template class codecvt_byname<char16_t, char, mbstate_t>;
-template class codecvt_byname<char32_t, char, mbstate_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char, char, mbstate_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<wchar_t, char, mbstate_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t, char, mbstate_t>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char, mbstate_t>;
 
-template class __vector_base_common<true>;
+template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __vector_base_common<true>;
 
 _LIBCPP_END_NAMESPACE_STD

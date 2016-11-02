@@ -19,9 +19,11 @@
 #include <memory>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_TEMPLATE_ALIASES
+#if TEST_STD_VER >= 11
     static_assert((std::is_same<std::pointer_traits<int*>::rebind<double>, double*>::value), "");
 #else
     static_assert((std::is_same<std::pointer_traits<int*>::rebind<double>::other, double*>::value), "");

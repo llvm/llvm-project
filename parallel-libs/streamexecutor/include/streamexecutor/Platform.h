@@ -18,7 +18,7 @@
 #ifndef STREAMEXECUTOR_PLATFORM_H
 #define STREAMEXECUTOR_PLATFORM_H
 
-#include "streamexecutor/Utils/Error.h"
+#include "streamexecutor/Error.h"
 
 namespace streamexecutor {
 
@@ -31,10 +31,8 @@ public:
   /// Gets the number of devices available for this platform.
   virtual size_t getDeviceCount() const = 0;
 
-  /// Gets a pointer to a Device with the given index for this platform.
-  ///
-  /// Ownership of the Device instance is NOT transferred to the caller.
-  virtual Expected<Device *> getDevice(size_t DeviceIndex) = 0;
+  /// Gets a Device with the given index for this platform.
+  virtual Expected<Device> getDevice(size_t DeviceIndex) = 0;
 };
 
 } // namespace streamexecutor

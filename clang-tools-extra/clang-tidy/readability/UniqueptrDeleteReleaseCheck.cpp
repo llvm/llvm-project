@@ -51,9 +51,8 @@ void UniqueptrDeleteReleaseCheck::check(
   if (PtrExpr->getType()->isDependentType())
     return;
 
-  SourceLocation AfterPtr =
-      Lexer::getLocForEndOfToken(PtrExpr->getLocEnd(), 0, *Result.SourceManager,
-                                 Result.Context->getLangOpts());
+  SourceLocation AfterPtr = Lexer::getLocForEndOfToken(
+      PtrExpr->getLocEnd(), 0, *Result.SourceManager, getLangOpts());
 
   diag(DeleteExpr->getLocStart(),
        "prefer '= nullptr' to 'delete x.release()' to reset unique_ptr<> "

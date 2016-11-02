@@ -137,7 +137,7 @@ public:
 template <class _Tp>
 class __thread_specific_ptr
 {
-    __libcpp_tl_key __key_;
+    __libcpp_tls_key __key_;
 
      // Only __thread_local_data() may construct a __thread_specific_ptr
      // and only with _Tp == __thread_struct.
@@ -155,7 +155,7 @@ public:
     ~__thread_specific_ptr();
 
     _LIBCPP_INLINE_VISIBILITY
-    pointer get() const {return static_cast<_Tp*>(__libcpp_tl_get(__key_));}
+    pointer get() const {return static_cast<_Tp*>(__libcpp_tls_get(__key_));}
     _LIBCPP_INLINE_VISIBILITY
     pointer operator*() const {return *get();}
     _LIBCPP_INLINE_VISIBILITY
@@ -173,7 +173,7 @@ __thread_specific_ptr<_Tp>::__at_thread_exit(void* __p)
 template <class _Tp>
 __thread_specific_ptr<_Tp>::__thread_specific_ptr()
 {
-    int __ec = __libcpp_tl_create(
+    int __ec = __libcpp_tls_create(
         &__key_,
         &__thread_specific_ptr::__at_thread_exit);
     if (__ec)
@@ -196,7 +196,7 @@ __thread_specific_ptr<_Tp>::set_pointer(pointer __p)
 {
     _LIBCPP_ASSERT(get() == nullptr,
                    "Attempting to overwrite thread local data");
-    __libcpp_tl_set(__key_, __p);
+    __libcpp_tls_set(__key_, __p);
 }
 
 class _LIBCPP_TYPE_VIS thread;

@@ -43,16 +43,16 @@ namespace {
 class Executor {
 public:
   explicit Executor(StringRef S) : Saver(Alloc), Prog(Saver.save(S)) {}
-  void add(StringRef S)    { Args.push_back(Saver.save(S)); }
-  void add(std::string &S) { Args.push_back(Saver.save(S)); }
-  void add(Twine S)        { Args.push_back(Saver.save(S)); }
-  void add(const char *S)  { Args.push_back(Saver.save(S)); }
+  void add(StringRef S) { Args.push_back(Saver.save(S).data()); }
+  void add(std::string &S) { Args.push_back(Saver.save(S).data()); }
+  void add(Twine S) { Args.push_back(Saver.save(S).data()); }
+  void add(const char *S) { Args.push_back(Saver.save(S).data()); }
 
   void run() {
     ErrorOr<std::string> ExeOrErr = llvm::sys::findProgramByName(Prog);
     if (auto EC = ExeOrErr.getError())
       fatal(EC, "unable to find " + Prog + " in PATH: ");
-    const char *Exe = Saver.save(*ExeOrErr);
+    const char *Exe = Saver.save(*ExeOrErr).data();
     Args.insert(Args.begin(), Exe);
     Args.push_back(nullptr);
     if (llvm::sys::ExecuteAndWait(Args[0], Args.data()) != 0) {
@@ -75,10 +75,8 @@ private:
 // Returns /machine's value.
 MachineTypes getMachineType(StringRef S) {
   MachineTypes MT = StringSwitch<MachineTypes>(S.lower())
-                        .Case("x64", AMD64)
-                        .Case("amd64", AMD64)
-                        .Case("x86", I386)
-                        .Case("i386", I386)
+                        .Cases("x64", "amd64", AMD64)
+                        .Cases("x86", "i386", I386)
                         .Case("arm", ARMNT)
                         .Default(IMAGE_FILE_MACHINE_UNKNOWN);
   if (MT != IMAGE_FILE_MACHINE_UNKNOWN)

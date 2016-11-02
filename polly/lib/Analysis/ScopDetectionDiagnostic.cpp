@@ -43,8 +43,6 @@ using namespace llvm;
 
 BADSCOP_STAT(CFG, "CFG too complex");
 BADSCOP_STAT(LoopBound, "Loop bounds can not be computed");
-BADSCOP_STAT(LoopOverlapWithNonAffineSubRegion,
-             "Loop overlap with nonaffine subregion");
 BADSCOP_STAT(FuncCall, "Function call with side effects appeared");
 BADSCOP_STAT(AffFunc, "Expression not affine");
 BADSCOP_STAT(Alias, "Found base address alias");
@@ -330,30 +328,20 @@ std::string ReportLoopBound::getEndUserMessage() const {
 }
 
 //===----------------------------------------------------------------------===//
-// ReportLoopOverlapWithNonAffineSubRegion.
+// ReportLoopHasNoExit.
 
-ReportLoopOverlapWithNonAffineSubRegion::
-    ReportLoopOverlapWithNonAffineSubRegion(Loop *L, Region *R)
-    : RejectReason(rrkLoopOverlapWithNonAffineSubRegion), L(L), R(R),
-      Loc(L->getStartLoc()) {
-  ++BadLoopOverlapWithNonAffineSubRegionForScop;
+std::string ReportLoopHasNoExit::getMessage() const {
+  return "Loop " + L->getHeader()->getName() + " has no exit.";
 }
 
-std::string ReportLoopOverlapWithNonAffineSubRegion::getMessage() const {
-  return "Non affine subregion: " + R->getNameStr() + " overlaps Loop " +
-         L->getHeader()->getName();
+bool ReportLoopHasNoExit::classof(const RejectReason *RR) {
+  return RR->getKind() == rrkLoopHasNoExit;
 }
 
-const DebugLoc &ReportLoopOverlapWithNonAffineSubRegion::getDebugLoc() const {
-  return Loc;
-}
+const DebugLoc &ReportLoopHasNoExit::getDebugLoc() const { return Loc; }
 
-bool ReportLoopOverlapWithNonAffineSubRegion::classof(const RejectReason *RR) {
-  return RR->getKind() == rrkLoopOverlapWithNonAffineSubRegion;
-}
-
-std::string ReportLoopOverlapWithNonAffineSubRegion::getEndUserMessage() const {
-  return "Loop overlaps with nonaffine subregion.";
+std::string ReportLoopHasNoExit::getEndUserMessage() const {
+  return "Loop cannot be handled because it has no exit.";
 }
 
 //===----------------------------------------------------------------------===//

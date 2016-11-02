@@ -347,11 +347,13 @@ void SymbolTable::addCombinedLTOObject(ObjectFile *Obj) {
       Sym->Body = Body;
       continue;
     }
-    if (auto *L = dyn_cast<Lazy>(Existing)) {
-      // We may see new references to runtime library symbols such as __chkstk
-      // here. These symbols must be wholly defined in non-bitcode files.
-      addMemberFile(L);
-      continue;
+    if (isa<Undefined>(Body)) {
+      if (auto *L = dyn_cast<Lazy>(Existing)) {
+        // We may see new references to runtime library symbols such as __chkstk
+        // here. These symbols must be wholly defined in non-bitcode files.
+        addMemberFile(L);
+        continue;
+      }
     }
 
     int Comp = Existing->compare(Body);

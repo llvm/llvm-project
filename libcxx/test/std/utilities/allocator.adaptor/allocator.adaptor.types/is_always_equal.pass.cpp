@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <memory>
 
 // template <class OuterAlloc, class... InnerAllocs>
@@ -22,8 +24,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
     // sanity checks
     static_assert( (std::is_same<
     		std::allocator_traits<A1<int>>::is_always_equal, std::false_type>::value
@@ -69,7 +69,4 @@ int main()
               std::allocator_traits<A2<int>>::is_always_equal::value &&
               std::allocator_traits<A3<int>>::is_always_equal::value)
         ), "");
-
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

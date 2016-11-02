@@ -316,8 +316,7 @@ void NativeThreadLinux::SetStoppedBySignal(uint32_t signo,
           (info->si_signo == SIGBUS && info->si_code == SI_KERNEL)
               ? CrashReason::eInvalidAddress
               : GetCrashReason(*info);
-      m_stop_description = GetCrashReasonString(
-          reason, reinterpret_cast<uintptr_t>(info->si_addr));
+      m_stop_description = GetCrashReasonString(reason, *info);
       break;
     }
   }

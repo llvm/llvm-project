@@ -154,7 +154,8 @@ else:
         build_script_arguments += ["--release", "--assertions", "--lldb"]
     else:
         build_script_arguments += ["--debug-swift",
-                                   "--debug-lldb", "--skip-build-benchmarks"]
+                                   "--debug-lldb", "--skip-build-benchmarks",
+                                   "--extra-cmake-options=-DCMAKE_CXX_FLAGS=-fno-limit-debug-info"]
     if args.foundation:
         build_script_arguments += ["--foundation"]
     build_script_impl_arguments += ["--build-swift-static-stdlib=1"]

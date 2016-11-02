@@ -70,7 +70,7 @@ lldb::TypeCategoryImplSP JavaLanguage::GetFormatters() {
   std::call_once(g_initialize, [this]() -> void {
     DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
     if (g_category) {
-      const char *array_regexp = "^.*\\[\\]&?$";
+      llvm::StringRef array_regexp("^.*\\[\\]&?$");
 
       lldb::TypeSummaryImplSP string_summary_sp(new CXXFunctionSummaryFormat(
           TypeSummaryImpl::Flags().SetDontShowChildren(true),

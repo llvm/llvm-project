@@ -151,7 +151,7 @@ enum {
   UNW_X86_ECX = 1,
   UNW_X86_EDX = 2,
   UNW_X86_EBX = 3,
-#ifdef __FreeBSD__
+#if defined(__CloudABI__) || defined(__FreeBSD__)
   UNW_X86_ESP = 4,
   UNW_X86_EBP = 5,
 #else

@@ -28,7 +28,7 @@ AddressResolverName::AddressResolverName(const char *func_name,
     : AddressResolver(), m_func_name(func_name), m_class_name(nullptr),
       m_regex(), m_match_type(type) {
   if (m_match_type == AddressResolver::Regexp) {
-    if (!m_regex.Compile(m_func_name.AsCString())) {
+    if (!m_regex.Compile(m_func_name.GetStringRef())) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
       if (log)
@@ -186,7 +186,7 @@ void AddressResolverName::GetDescription(Stream *s) {
   s->PutCString("Address by function name: ");
 
   if (m_match_type == AddressResolver::Regexp)
-    s->Printf("'%s' (regular expression)", m_regex.GetText());
+    s->Printf("'%s' (regular expression)", m_regex.GetText().str().c_str());
   else
     s->Printf("'%s'", m_func_name.AsCString());
 }

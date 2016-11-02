@@ -35,8 +35,7 @@ static cl::opt<OverflowTrackingChoice> OTMode(
                clEnumValN(OT_REQUEST, "request",
                           "Track the overflow bit if requested."),
                clEnumValN(OT_ALWAYS, "always",
-                          "Always track the overflow bit."),
-               clEnumValEnd),
+                          "Always track the overflow bit.")),
     cl::Hidden, cl::init(OT_REQUEST), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,

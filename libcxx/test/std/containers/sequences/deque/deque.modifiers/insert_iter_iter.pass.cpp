@@ -20,7 +20,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "MoveOnly.h"
-#include "../../../stack_allocator.h"
+#include "test_allocator.h"
 #include "min_allocator.h"
 
 template <class C>
@@ -270,7 +270,7 @@ int main()
                 testN<std::deque<int> >(rng[i], rng[j], rng[k]);
     testNI<std::deque<int> >(1500, 2000, 1000);
 #if TEST_STD_VER >= 11
-    test_move<std::deque<MoveOnly, stack_allocator<MoveOnly, 2000> > >();
+    test_move<std::deque<MoveOnly, limited_allocator<MoveOnly, 2000> > >();
 #endif
     }
 #if TEST_STD_VER >= 11

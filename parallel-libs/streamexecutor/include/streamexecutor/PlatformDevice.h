@@ -20,10 +20,10 @@
 #define STREAMEXECUTOR_PLATFORMDEVICE_H
 
 #include "streamexecutor/DeviceMemory.h"
+#include "streamexecutor/Error.h"
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/LaunchDimensions.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
-#include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 
@@ -37,25 +37,29 @@ public:
 
   virtual std::string getName() const = 0;
 
+  virtual std::string getPlatformName() const = 0;
+
   /// Creates a platform-specific kernel.
   virtual Expected<const void *>
   createKernel(const MultiKernelLoaderSpec &Spec) {
-    return make_error("createKernel not implemented for platform " + getName());
+    return make_error("createKernel not implemented for platform " +
+                      getPlatformName());
   }
 
   virtual Error destroyKernel(const void *Handle) {
     return make_error("destroyKernel not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Creates a platform-specific stream.
   virtual Expected<const void *> createStream() {
-    return make_error("createStream not implemented for platform " + getName());
+    return make_error("createStream not implemented for platform " +
+                      getPlatformName());
   }
 
   virtual Error destroyStream(const void *Handle) {
     return make_error("destroyStream not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Launches a kernel on the given stream.
@@ -63,27 +67,28 @@ public:
                        BlockDimensions BlockSize, GridDimensions GridSize,
                        const void *PKernelHandle,
                        const PackedKernelArgumentArrayBase &ArgumentArray) {
-    return make_error("launch not implemented for platform " + getName());
+    return make_error("launch not implemented for platform " +
+                      getPlatformName());
   }
 
   /// Copies data from the device to the host.
   ///
-  /// HostDst should have been allocated by allocateHostMemory or registered
-  /// with registerHostMemory.
+  /// HostDst should have been registered with registerHostMemory.
   virtual Error copyD2H(const void *PlatformStreamHandle,
                         const void *DeviceSrcHandle, size_t SrcByteOffset,
                         void *HostDst, size_t DstByteOffset, size_t ByteCount) {
-    return make_error("copyD2H not implemented for platform " + getName());
+    return make_error("copyD2H not implemented for platform " +
+                      getPlatformName());
   }
 
   /// Copies data from the host to the device.
   ///
-  /// HostSrc should have been allocated by allocateHostMemory or registered
-  /// with registerHostMemory.
+  /// HostSrc should have been registered with registerHostMemory.
   virtual Error copyH2D(const void *PlatformStreamHandle, const void *HostSrc,
                         size_t SrcByteOffset, const void *DeviceDstHandle,
                         size_t DstByteOffset, size_t ByteCount) {
-    return make_error("copyH2D not implemented for platform " + getName());
+    return make_error("copyH2D not implemented for platform " +
+                      getPlatformName());
   }
 
   /// Copies data from one device location to another.
@@ -91,66 +96,52 @@ public:
                         const void *DeviceSrcHandle, size_t SrcByteOffset,
                         const void *DeviceDstHandle, size_t DstByteOffset,
                         size_t ByteCount) {
-    return make_error("copyD2D not implemented for platform " + getName());
+    return make_error("copyD2D not implemented for platform " +
+                      getPlatformName());
   }
 
   /// Blocks the host until the given stream completes all the work enqueued up
   /// to the point this function is called.
   virtual Error blockHostUntilDone(const void *PlatformStreamHandle) {
     return make_error("blockHostUntilDone not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Allocates untyped device memory of a given size in bytes.
   virtual Expected<void *> allocateDeviceMemory(size_t ByteCount) {
     return make_error("allocateDeviceMemory not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Frees device memory previously allocated by allocateDeviceMemory.
   virtual Error freeDeviceMemory(const void *Handle) {
     return make_error("freeDeviceMemory not implemented for platform " +
-                      getName());
-  }
-
-  /// Allocates untyped host memory of a given size in bytes.
-  ///
-  /// Host memory allocated via this method is suitable for use with copyH2D and
-  /// copyD2H.
-  virtual Expected<void *> allocateHostMemory(size_t ByteCount) {
-    return make_error("allocateHostMemory not implemented for platform " +
-                      getName());
-  }
-
-  /// Frees host memory allocated by allocateHostMemory.
-  virtual Error freeHostMemory(void *Memory) {
-    return make_error("freeHostMemory not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Registers previously allocated host memory so it can be used with copyH2D
   /// and copyD2H.
   virtual Error registerHostMemory(void *Memory, size_t ByteCount) {
     return make_error("registerHostMemory not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Unregisters host memory previously registered with registerHostMemory.
-  virtual Error unregisterHostMemory(void *Memory) {
+  virtual Error unregisterHostMemory(const void *Memory) {
     return make_error("unregisterHostMemory not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Copies the given number of bytes from device memory to host memory.
   ///
   /// Blocks the calling host thread until the copy is completed. Can operate on
-  /// any host memory, not just registered host memory or host memory allocated
-  /// by allocateHostMemory. Does not block any ongoing device calls.
+  /// any host memory, not just registered host memory. Does not block any
+  /// ongoing device calls.
   virtual Error synchronousCopyD2H(const void *DeviceSrcHandle,
                                    size_t SrcByteOffset, void *HostDst,
                                    size_t DstByteOffset, size_t ByteCount) {
     return make_error("synchronousCopyD2H not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Similar to synchronousCopyD2H(const void *, size_t, void
@@ -160,18 +151,18 @@ public:
                                    const void *DeviceDstHandle,
                                    size_t DstByteOffset, size_t ByteCount) {
     return make_error("synchronousCopyH2D not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 
   /// Similar to synchronousCopyD2H(const void *, size_t, void
   /// *, size_t, size_t), but copies memory from one location in device memory
   /// to another rather than from device to host.
-  virtual Error synchronousCopyD2D(const void *DeviceDstHandle,
-                                   size_t DstByteOffset,
-                                   const void *DeviceSrcHandle,
-                                   size_t SrcByteOffset, size_t ByteCount) {
+  virtual Error synchronousCopyD2D(const void *DeviceSrcHandle,
+                                   size_t SrcByteOffset,
+                                   const void *DeviceDstHandle,
+                                   size_t DstByteOffset, size_t ByteCount) {
     return make_error("synchronousCopyD2D not implemented for platform " +
-                      getName());
+                      getPlatformName());
   }
 };
 

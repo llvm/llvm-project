@@ -16,7 +16,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
+#ifndef _LIBUNWIND_HAS_NO_THREADS
+  #include <pthread.h>
+#endif
 #include <unwind.h>
 
 #ifdef __APPLE__
@@ -60,7 +62,9 @@ private:
 
   // These fields are all static to avoid needing an initializer.
   // There is only one instance of this class per process.
+#ifndef _LIBUNWIND_HAS_NO_THREADS
   static pthread_rwlock_t _lock;
+#endif
 #ifdef __APPLE__
   static void dyldUnloadHook(const struct mach_header *mh, intptr_t slide);
   static bool _registeredForDyldUnloads;
@@ -87,8 +91,10 @@ DwarfFDECache<A>::_bufferEnd = &_initialBuffer[64];
 template <typename A>
 typename DwarfFDECache<A>::entry DwarfFDECache<A>::_initialBuffer[64];
 
+#ifndef _LIBUNWIND_HAS_NO_THREADS
 template <typename A>
 pthread_rwlock_t DwarfFDECache<A>::_lock = PTHREAD_RWLOCK_INITIALIZER;
+#endif
 
 #ifdef __APPLE__
 template <typename A>

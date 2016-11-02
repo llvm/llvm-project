@@ -85,9 +85,11 @@ VERSION {
         __kmp_invoke_microtask;
         __kmp_itt_fini_ittlib;
         __kmp_itt_init_ittlib;
+#if KMP_USE_MONITOR
         __kmp_launch_monitor;
-        __kmp_launch_worker;
         __kmp_reap_monitor;
+#endif
+        __kmp_launch_worker;
         __kmp_reap_worker;
         __kmp_release_64;
         __kmp_wait_64;

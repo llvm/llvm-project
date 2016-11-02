@@ -383,7 +383,7 @@ def make_symlink(
     bMakeFileCalled = "-m" in vDictArgs
     eOSType = utilsOsType.determine_os_type()
     if not bMakeFileCalled:
-        return (bOk, strErrMsg)
+        strBuildDir = os.path.join("..", "..", "..")
     else:
         # Resolve vstrSrcFile path relatively the build directory
         if eOSType == utilsOsType.EnumOsType.Windows:
@@ -394,7 +394,7 @@ def make_symlink(
             # On a UNIX style platform the vstrFrameworkPythonDir looks like:
             # llvm/build/lib/python2.7/site-packages/lldb
             strBuildDir = os.path.join("..", "..", "..", "..")
-        strSrc = os.path.normcase(os.path.join(strBuildDir, vstrSrcFile))
+    strSrc = os.path.normcase(os.path.join(strBuildDir, vstrSrcFile))
 
     return make_symlink_native(vDictArgs, strSrc, strTarget)
 
@@ -434,7 +434,7 @@ def make_symlink_liblldb(
 
     bMakeFileCalled = "-m" in vDictArgs
     if not bMakeFileCalled:
-        strSrc = os.path.join(vstrLldbLibDir, "LLDB")
+        strSrc = "LLDB"
     else:
         strLibFileExtn = ""
         if eOSType == utilsOsType.EnumOsType.Windows:
@@ -724,7 +724,7 @@ def get_framework_python_dir_other_platforms(vDictArgs):
         # We are being built by XCode, so all the lldb Python files can go
         # into the LLDB.framework/Resources/Python subdirectory.
         strWkDir = vDictArgs["--targetDir"]
-        strWkDir += os.path.join(strWkDir, "LLDB.framework")
+        strWkDir = os.path.join(strWkDir, "LLDB.framework")
         if os.path.exists(strWkDir):
             if bDbg:
                 print((strMsgFoundLldbFrameWkDir % strWkDir))

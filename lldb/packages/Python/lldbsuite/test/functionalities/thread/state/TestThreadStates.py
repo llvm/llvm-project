@@ -23,7 +23,7 @@ class ThreadStateTestCase(TestBase):
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
     @expectedFailureAll(
         oslist=lldbplatformutil.getDarwinOSTriples(),
-        bugnumber="llvm.org/pr15824 thread states not properly maintained")
+        bugnumber="llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>")
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr18190 thread states not properly maintained")
@@ -64,7 +64,7 @@ class ThreadStateTestCase(TestBase):
         self.process_interrupt_test()
 
     # thread states not properly maintained
-    @unittest2.expectedFailure("llvm.org/pr15824")
+    @unittest2.expectedFailure("llvm.org/pr15824 and <rdar://problem/28557237>")
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")

@@ -46,6 +46,9 @@ public:
   Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
+  Error
+  SetValueFromString(const char *,
+                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
@@ -184,8 +187,11 @@ public:
                                          uint32_t idx,
                                          const char *fail_value) const;
 
+  bool SetPropertyAtIndexAsString(const ExecutionContext *, uint32_t,
+                                  const char *) = delete;
+
   bool SetPropertyAtIndexAsString(const ExecutionContext *exe_ctx, uint32_t idx,
-                                  const char *new_value);
+                                  llvm::StringRef new_value);
 
   OptionValueString *
   GetPropertyAtIndexAsOptionValueString(const ExecutionContext *exe_ctx,

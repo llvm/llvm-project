@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstdio>
 #include <cstdlib>
 #include <vector>
 
@@ -109,24 +108,29 @@ int main() {
   if (Platform->getDeviceCount() == 0) {
     return EXIT_FAILURE;
   }
-  se::Device *Device = getOrDie(Platform->getDevice(0));
+  se::Device Device = getOrDie(Platform->getDevice(0));
 
   // Load the kernel onto the device.
   cg::SaxpyKernel Kernel =
-      getOrDie(Device->createKernel<cg::SaxpyKernel>(cg::SaxpyLoaderSpec));
+      getOrDie(Device.createKernel<cg::SaxpyKernel>(cg::SaxpyLoaderSpec));
+
+  se::RegisteredHostMemory<float> RegisteredX =
+      getOrDie(Device.registerHostMemory<float>(HostX));
+  se::RegisteredHostMemory<float> RegisteredY =
+      getOrDie(Device.registerHostMemory<float>(HostY));
 
   // Allocate memory on the device.
   se::GlobalDeviceMemory<float> X =
-      getOrDie(Device->allocateDeviceMemory<float>(ArraySize));
+      getOrDie(Device.allocateDeviceMemory<float>(ArraySize));
   se::GlobalDeviceMemory<float> Y =
-      getOrDie(Device->allocateDeviceMemory<float>(ArraySize));
+      getOrDie(Device.allocateDeviceMemory<float>(ArraySize));
 
   // Run operations on a stream.
-  se::Stream Stream = getOrDie(Device->createStream());
-  Stream.thenCopyH2D<float>(HostX, X)
-      .thenCopyH2D<float>(HostY, Y)
+  se::Stream Stream = getOrDie(Device.createStream());
+  Stream.thenCopyH2D(RegisteredX, X)
+      .thenCopyH2D(RegisteredY, Y)
       .thenLaunch(ArraySize, 1, Kernel, A, X, Y)
-      .thenCopyD2H<float>(X, HostX);
+      .thenCopyD2H(X, RegisteredX);
   // Wait for the stream to complete.
   se::dieIfError(Stream.blockHostUntilDone());
 

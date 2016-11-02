@@ -18,8 +18,9 @@
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/SHA1.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -685,8 +686,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (!Config->RPath.empty())
     Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
          Out<ELFT>::DynStrTab->addString(Config->RPath)});
-  for (const std::unique_ptr<SharedFile<ELFT>> &F :
-       Symtab<ELFT>::X->getSharedFiles())
+  for (SharedFile<ELFT> *F : Symtab<ELFT>::X->getSharedFiles())
     if (F->isNeeded())
       Add({DT_NEEDED, Out<ELFT>::DynStrTab->addString(F->getSoName())});
   if (!Config->SoName.empty())
@@ -878,6 +878,9 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
 
 template <class ELFT> void OutputSection<ELFT>::finalize() {
   uint32_t Type = this->Header.sh_type;
+  // SHF_LINK_ORDER only has meaning in relocatable objects
+  if (!Config->Relocatable)
+    this->Header.sh_flags &= ~SHF_LINK_ORDER;
   if (Type != SHT_RELA && Type != SHT_REL)
     return;
   this->Header.sh_link = Out<ELFT>::SymTab->SectionIndex;
@@ -894,19 +897,10 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   Sections.push_back(S);
   S->OutSec = this;
   this->updateAlignment(S->Alignment);
-}
-
-// If an input string is in the form of "foo.N" where N is a number,
-// return N. Otherwise, returns 65536, which is one greater than the
-// lowest priority.
-static int getPriority(StringRef S) {
-  size_t Pos = S.rfind('.');
-  if (Pos == StringRef::npos)
-    return 65536;
-  int V;
-  if (S.substr(Pos + 1).getAsInteger(10, V))
-    return 65536;
-  return V;
+  // Keep sh_entsize value of the input section to be able to perform merging
+  // later during a final linking using the generated relocatable object.
+  if (Config->Relocatable && (S->getSectionHdr()->sh_flags & SHF_MERGE))
+    this->Header.sh_entsize = S->getSectionHdr()->sh_entsize;
 }
 
 // This function is called after we sort input sections
@@ -1019,6 +1013,9 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
     for (InputSection<ELFT> *C : Sections)
       C->writeTo(Buf);
   }
+  // Linker scripts may have BYTE()-family commands with which you
+  // can write arbitrary bytes to the output. Process them if any.
+  Script<ELFT>::X->writeDataBytes(this->Name, Buf);
 }
 
 template <class ELFT>
@@ -1197,7 +1194,7 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
     size_t CieOffset = Cie->Piece->OutputOff;
     writeCieFde<ELFT>(Buf + CieOffset, Cie->Piece->data());
 
-    for (SectionPiece *Fde : Cie->FdePieces) {
+    for (EhSectionPiece *Fde : Cie->FdePieces) {
       size_t Off = Fde->OutputOff;
       writeCieFde<ELFT>(Buf + Off, Fde->data());
 
@@ -1232,19 +1229,7 @@ MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t Type,
       Builder(StringTableBuilder::RAW, Alignment) {}
 
 template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  if (shouldTailMerge()) {
-    StringRef Data = Builder.data();
-    memcpy(Buf, Data.data(), Data.size());
-    return;
-  }
-  for (const std::pair<CachedHash<StringRef>, size_t> &P : Builder.getMap()) {
-    StringRef Data = P.first.Val;
-    memcpy(Buf + P.second, Data.data(), Data.size());
-  }
-}
-
-static StringRef toStringRef(ArrayRef<uint8_t> A) {
-  return {(const char *)A.data(), A.size()};
+  Builder.write(Buf);
 }
 
 template <class ELFT>
@@ -1255,19 +1240,19 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   this->Header.sh_entsize = Sec->getSectionHdr()->sh_entsize;
   Sections.push_back(Sec);
 
-  bool IsString = this->Header.sh_flags & SHF_STRINGS;
-
   for (SectionPiece &Piece : Sec->Pieces) {
     if (!Piece.Live)
       continue;
-    uintX_t OutputOffset = Builder.add(toStringRef(Piece.data()));
-    if (!IsString || !shouldTailMerge())
+    StringRef Data = toStringRef(Sec->getData(Piece));
+    CachedHashStringRef V(Data, Piece.Hash);
+    uintX_t OutputOffset = Builder.add(V);
+    if (!shouldTailMerge())
       Piece.OutputOff = OutputOffset;
   }
 }
 
 template <class ELFT>
-unsigned MergeOutputSection<ELFT>::getOffset(StringRef Val) {
+unsigned MergeOutputSection<ELFT>::getOffset(CachedHashStringRef Val) {
   return Builder.getOffset(Val);
 }
 
@@ -1278,6 +1263,8 @@ template <class ELFT> bool MergeOutputSection<ELFT>::shouldTailMerge() const {
 template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
   if (shouldTailMerge())
     Builder.finalize();
+  else
+    Builder.finalizeInOrder();
   this->Header.sh_size = Builder.getSize();
 }
 
@@ -1431,8 +1418,7 @@ template <class ELFT>
 void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   // Iterate over all input object files to copy their local symbols
   // to the output symbol table pointed by Buf.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &File :
-       Symtab<ELFT>::X->getObjectFiles()) {
+  for (ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
     for (const std::pair<const DefinedRegular<ELFT> *, size_t> &P :
          File->KeptLocalSyms) {
       const DefinedRegular<ELFT> &Body = *P.first;
@@ -1478,13 +1464,19 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     else if (isa<DefinedRegular<ELFT>>(Body))
       ESym->st_shndx = SHN_ABS;
 
-    // On MIPS we need to mark symbol which has a PLT entry and requires pointer
-    // equality by STO_MIPS_PLT flag. That is necessary to help dynamic linker
-    // distinguish such symbols and MIPS lazy-binding stubs.
-    // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
-    if (Config->EMachine == EM_MIPS && Body->isInPlt() &&
-        Body->NeedsCopyOrPltAddr)
-      ESym->st_other |= STO_MIPS_PLT;
+    if (Config->EMachine == EM_MIPS) {
+      // On MIPS we need to mark symbol which has a PLT entry and requires
+      // pointer equality by STO_MIPS_PLT flag. That is necessary to help
+      // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
+      // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+      if (Body->isInPlt() && Body->NeedsCopyOrPltAddr)
+        ESym->st_other |= STO_MIPS_PLT;
+      if (Config->Relocatable) {
+        auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
+        if (D && D->isMipsPIC())
+          ESym->st_other |= STO_MIPS_PIC;
+      }
+    }
     ++ESym;
   }
 }
@@ -1694,15 +1686,11 @@ template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+void BuildIdFastHash<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   const endianness E = ELFT::TargetEndianness;
 
-  // 64-bit FNV-1 hash
-  uint64_t Hash = 0xcbf29ce484222325;
-  for (uint8_t B : Buf) {
-    Hash *= 0x100000001b3;
-    Hash ^= B;
-  }
+  // 64-bit xxhash
+  uint64_t Hash = xxHash64(toStringRef(Buf));
   write64<E>(this->HashBuf, Hash);
 }
 
@@ -1749,7 +1737,10 @@ MipsReginfoOutputSection<ELFT>::MipsReginfoOutputSection()
 template <class ELFT>
 void MipsReginfoOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *R = reinterpret_cast<Elf_Mips_RegInfo *>(Buf);
-  R->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
+  if (Config->Relocatable)
+    R->ri_gp_value = 0;
+  else
+    R->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
   R->ri_gprmask = GprMask;
 }
 
@@ -1778,7 +1769,10 @@ void MipsOptionsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   Opt->section = 0;
   Opt->info = 0;
   auto *Reg = reinterpret_cast<Elf_Mips_RegInfo *>(Buf + sizeof(*Opt));
-  Reg->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
+  if (Config->Relocatable)
+    Reg->ri_gp_value = 0;
+  else
+    Reg->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
   Reg->ri_gprmask = GprMask;
 }
 
@@ -1831,23 +1825,60 @@ void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
+static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
+  return S->getSectionHdr()->sh_flags & ~SHF_GROUP & ~SHF_COMPRESSED;
+}
+
+template <class ELFT>
+static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
+                                            StringRef OutsecName) {
+  const typename ELFT::Shdr *H = C->getSectionHdr();
+  typedef typename ELFT::uint uintX_t;
+  uintX_t Flags = getOutFlags(C);
+
+  // For SHF_MERGE we create different output sections for each alignment.
+  // This makes each output section simple and keeps a single level mapping from
+  // input to output.
+  // In case of relocatable object generation we do not try to perform merging
+  // and treat SHF_MERGE sections as regular ones, but also create different
+  // output sections for them to allow merging at final linking stage.
+  uintX_t Alignment = 0;
+  if (isa<MergeInputSection<ELFT>>(C) ||
+      (Config->Relocatable && (H->sh_flags & SHF_MERGE)))
+    Alignment = std::max(H->sh_addralign, H->sh_entsize);
+
+  uint32_t Type = H->sh_type;
+  return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
+}
+
+template <class ELFT>
 std::pair<OutputSectionBase<ELFT> *, bool>
 OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
                                    StringRef OutsecName) {
   SectionKey<ELFT::Is64Bits> Key = createKey(C, OutsecName);
-  OutputSectionBase<ELFT> *&Sec = Map[Key];
-  if (Sec)
-    return {Sec, false};
+  return create(Key, C);
+}
 
+template <class ELFT>
+std::pair<OutputSectionBase<ELFT> *, bool>
+OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
+                                   InputSectionBase<ELFT> *C) {
+  uintX_t Flags = getOutFlags(C);
+  OutputSectionBase<ELFT> *&Sec = Map[Key];
+  if (Sec) {
+    Sec->updateFlags(Flags);
+    return {Sec, false};
+  }
+
+  uint32_t Type = C->getSectionHdr()->sh_type;
   switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
-    Sec = new OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    Sec = new OutputSection<ELFT>(Key.Name, Type, Flags);
     break;
   case InputSectionBase<ELFT>::EHFrame:
     return {Out<ELFT>::EhFrame, false};
   case InputSectionBase<ELFT>::Merge:
-    Sec = new MergeOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags,
-                                       Key.Alignment);
+    Sec = new MergeOutputSection<ELFT>(Key.Name, Type, Flags, Key.Alignment);
     break;
   case InputSectionBase<ELFT>::MipsReginfo:
     Sec = new MipsReginfoOutputSection<ELFT>();
@@ -1861,24 +1892,6 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   }
   Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};
-}
-
-template <class ELFT>
-SectionKey<ELFT::Is64Bits>
-OutputSectionFactory<ELFT>::createKey(InputSectionBase<ELFT> *C,
-                                      StringRef OutsecName) {
-  const Elf_Shdr *H = C->getSectionHdr();
-  uintX_t Flags = H->sh_flags & ~SHF_GROUP & ~SHF_COMPRESSED;
-
-  // For SHF_MERGE we create different output sections for each alignment.
-  // This makes each output section simple and keeps a single level mapping from
-  // input to output.
-  uintX_t Alignment = 0;
-  if (isa<MergeInputSection<ELFT>>(C))
-    Alignment = std::max(H->sh_addralign, H->sh_entsize);
-
-  uint32_t Type = H->sh_type;
-  return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
 }
 
 template <bool Is64Bits>
@@ -2025,10 +2038,10 @@ template class BuildIdSection<ELF32BE>;
 template class BuildIdSection<ELF64LE>;
 template class BuildIdSection<ELF64BE>;
 
-template class BuildIdFnv1<ELF32LE>;
-template class BuildIdFnv1<ELF32BE>;
-template class BuildIdFnv1<ELF64LE>;
-template class BuildIdFnv1<ELF64BE>;
+template class BuildIdFastHash<ELF32LE>;
+template class BuildIdFastHash<ELF32BE>;
+template class BuildIdFastHash<ELF64LE>;
+template class BuildIdFastHash<ELF64BE>;
 
 template class BuildIdMd5<ELF32LE>;
 template class BuildIdMd5<ELF32BE>;

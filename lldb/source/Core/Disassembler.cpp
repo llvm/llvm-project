@@ -289,6 +289,9 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
         func_decl_file == prologue_end_line.original_file) {
       decl_line.file = func_decl_file;
       decl_line.line = func_decl_line;
+      // TODO do we care about column on these entries?  If so, we need to
+      // plumb that through GetStartLineSourceInfo.
+      decl_line.column = 0;
     }
   }
   return decl_line;
@@ -448,6 +451,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
               SourceLine this_line;
               this_line.file = sc.line_entry.file;
               this_line.line = sc.line_entry.line;
+              this_line.column = sc.line_entry.column;
               if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, this_line) ==
                   false)
                 AddLineToSourceLineTables(this_line, source_lines_seen);
@@ -613,7 +617,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
             line_highlight = "**";
           }
           source_manager.DisplaySourceLinesWithLineNumbers(
-              ln.file, ln.line, 0, 0, line_highlight, &strm);
+              ln.file, ln.line, ln.column, 0, 0, line_highlight, &strm);
         }
         if (source_lines_to_display.print_source_context_end_eol)
           strm.EOL();
@@ -781,9 +785,10 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
 
     if (!line.empty()) {
       std::string value;
-      static RegularExpression g_reg_exp("^[ \t]*([^ \t]+)[ \t]*$");
+      static RegularExpression g_reg_exp(
+          llvm::StringRef("^[ \t]*([^ \t]+)[ \t]*$"));
       RegularExpression::Match regex_match(1);
-      bool reg_exp_success = g_reg_exp.Execute(line.c_str(), &regex_match);
+      bool reg_exp_success = g_reg_exp.Execute(line, &regex_match);
       if (reg_exp_success)
         regex_match.GetMatchAtIndex(line.c_str(), 1, value);
       else
@@ -843,11 +848,11 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
     // Try to find a key-value pair in the current line and add it to the
     // dictionary.
     if (!line.empty()) {
-      static RegularExpression g_reg_exp(
-          "^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=[ \t]*(.*)[ \t]*$");
+      static RegularExpression g_reg_exp(llvm::StringRef(
+          "^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=[ \t]*(.*)[ \t]*$"));
       RegularExpression::Match regex_match(2);
 
-      bool reg_exp_success = g_reg_exp.Execute(line.c_str(), &regex_match);
+      bool reg_exp_success = g_reg_exp.Execute(line, &regex_match);
       std::string key;
       std::string value;
       if (reg_exp_success) {
@@ -1320,3 +1325,127 @@ void PseudoInstruction::SetDescription(const char *description) {
   if (description && strlen(description) > 0)
     m_description = description;
 }
+
+Instruction::Operand Instruction::Operand::BuildRegister(ConstString &r) {
+  Operand ret;
+  ret.m_type = Type::Register;
+  ret.m_register = r;
+  return ret;
+}
+
+Instruction::Operand Instruction::Operand::BuildImmediate(lldb::addr_t imm,
+                                                          bool neg) {
+  Operand ret;
+  ret.m_type = Type::Immediate;
+  ret.m_immediate = imm;
+  ret.m_negative = neg;
+  return ret;
+}
+
+Instruction::Operand Instruction::Operand::BuildImmediate(int64_t imm) {
+  Operand ret;
+  ret.m_type = Type::Immediate;
+  if (imm < 0) {
+    ret.m_immediate = -imm;
+    ret.m_negative = true;
+  } else {
+    ret.m_immediate = imm;
+    ret.m_negative = false;
+  }
+  return ret;
+}
+
+Instruction::Operand
+Instruction::Operand::BuildDereference(const Operand &ref) {
+  Operand ret;
+  ret.m_type = Type::Dereference;
+  ret.m_children = {ref};
+  return ret;
+}
+
+Instruction::Operand Instruction::Operand::BuildSum(const Operand &lhs,
+                                                    const Operand &rhs) {
+  Operand ret;
+  ret.m_type = Type::Sum;
+  ret.m_children = {lhs, rhs};
+  return ret;
+}
+
+Instruction::Operand Instruction::Operand::BuildProduct(const Operand &lhs,
+                                                        const Operand &rhs) {
+  Operand ret;
+  ret.m_type = Type::Product;
+  ret.m_children = {lhs, rhs};
+  return ret;
+}
+
+std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::MatchBinaryOp(
+    std::function<bool(const Instruction::Operand &)> base,
+    std::function<bool(const Instruction::Operand &)> left,
+    std::function<bool(const Instruction::Operand &)> right) {
+  return [base, left, right](const Instruction::Operand &op) -> bool {
+    return (base(op) && op.m_children.size() == 2 &&
+            ((left(op.m_children[0]) && right(op.m_children[1])) ||
+             (left(op.m_children[1]) && right(op.m_children[0]))));
+  };
+}
+
+std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::MatchUnaryOp(
+    std::function<bool(const Instruction::Operand &)> base,
+    std::function<bool(const Instruction::Operand &)> child) {
+  return [base, child](const Instruction::Operand &op) -> bool {
+    return (base(op) && op.m_children.size() == 1 && child(op.m_children[0]));
+  };
+}
+
+std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::MatchRegOp(const RegisterInfo &info) {
+  return [&info](const Instruction::Operand &op) {
+    return (op.m_type == Instruction::Operand::Type::Register &&
+            (op.m_register == ConstString(info.name) ||
+             op.m_register == ConstString(info.alt_name)));
+  };
+}
+
+std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::FetchRegOp(ConstString &reg) {
+  return [&reg](const Instruction::Operand &op) {
+    if (op.m_type != Instruction::Operand::Type::Register) {
+      return false;
+    }
+    reg = op.m_register;
+    return true;
+  };
+}
+
+std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::MatchImmOp(int64_t imm) {
+  return [imm](const Instruction::Operand &op) {
+    return (op.m_type == Instruction::Operand::Type::Immediate &&
+            ((op.m_negative && op.m_immediate == (uint64_t)-imm) ||
+             (!op.m_negative && op.m_immediate == (uint64_t)imm)));
+  };
+}
+
+std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::FetchImmOp(int64_t &imm) {
+  return [&imm](const Instruction::Operand &op) {
+    if (op.m_type != Instruction::Operand::Type::Immediate) {
+      return false;
+    }
+    if (op.m_negative) {
+      imm = -((int64_t)op.m_immediate);
+    } else {
+      imm = ((int64_t)op.m_immediate);
+    }
+    return true;
+  };
+}
+
+std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::MatchOpType(Instruction::Operand::Type type) {
+  return [type](const Instruction::Operand &op) { return op.m_type == type; };
+}
+

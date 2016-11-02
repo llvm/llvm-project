@@ -296,8 +296,7 @@ void TypeMismatchCheck::check(const MatchFinder::MatchResult &Result) {
       addPair(0, 2);
     }
   }
-  checkArguments(BufferTypes, BufferExprs, MPIDatatypes,
-                 Result.Context->getLangOpts());
+  checkArguments(BufferTypes, BufferExprs, MPIDatatypes, getLangOpts());
 }
 
 void TypeMismatchCheck::checkArguments(ArrayRef<const Type *> BufferTypes,

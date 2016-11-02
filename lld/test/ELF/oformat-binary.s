@@ -11,6 +11,10 @@
 # RUN: ld.lld -o %t2.out --script %t.script %t --oformat binary
 # RUN: od -t x1 -v %t2.out | FileCheck %s
 
+# RUN: echo "SECTIONS { }" > %t.script
+# RUN: ld.lld -o %t2.out --script %t.script %t --oformat binary
+# RUN: od -t x1 -v %t2.out | FileCheck %s
+
 # RUN: not ld.lld -o %t3.out %t --oformat foo 2>&1 \
 # RUN:   | FileCheck %s --check-prefix ERR
 # ERR: unknown --oformat value: foo

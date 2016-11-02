@@ -12,7 +12,6 @@ add_lldb_library(lldbUtility
   RegisterNumber.cpp
   SelectHelper.cpp
   SharingPtr.cpp
-  StdStringExtractor.cpp
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
   StringLexer.cpp

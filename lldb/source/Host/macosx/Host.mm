@@ -354,11 +354,11 @@ static bool WaitForProcessToSIGSTOP(const lldb::pid_t pid,
 
 const char *applscript_in_new_tty = "tell application \"Terminal\"\n"
                                     "   activate\n"
-                                    "	do script \"%s\"\n"
+                                    "	do script \"/bin/bash -c '%s';exit\"\n"
                                     "end tell\n";
 
 const char *applscript_in_existing_tty = "\
-set the_shell_script to \"%s\"\n\
+set the_shell_script to \"/bin/bash -c '%s';exit\"\n\
 tell application \"Terminal\"\n\
 	repeat with the_window in (get windows)\n\
 		repeat with the_tab in tabs of the_window\n\
@@ -806,7 +806,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
           for (int i = 0; i < static_cast<int>(argc); ++i) {
             cstr = data.GetCStr(&offset);
             if (cstr)
-              proc_args.AppendArgument(cstr);
+              proc_args.AppendArgument(llvm::StringRef(cstr));
           }
 
           Args &proc_env = process_info.GetEnvironmentEntries();
@@ -824,7 +824,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                     llvm::Triple::MacOSX);
             }
 
-            proc_env.AppendArgument(cstr);
+            proc_env.AppendArgument(llvm::StringRef(cstr));
           }
           return true;
         }
@@ -1156,19 +1156,19 @@ static Error LaunchProcessXPC(const char *exe_path,
   xpc_dictionary_set_int64(message, LauncherXPCServicePosixspawnFlagsKey,
                            Host::GetPosixspawnFlags(launch_info));
   const FileAction *file_action = launch_info.GetFileActionForFD(STDIN_FILENO);
-  if (file_action && file_action->GetPath()) {
+  if (file_action && !file_action->GetPath().empty()) {
     xpc_dictionary_set_string(message, LauncherXPCServiceStdInPathKeyKey,
-                              file_action->GetPath());
+                              file_action->GetPath().str().c_str());
   }
   file_action = launch_info.GetFileActionForFD(STDOUT_FILENO);
-  if (file_action && file_action->GetPath()) {
+  if (file_action && !file_action->GetPath().empty()) {
     xpc_dictionary_set_string(message, LauncherXPCServiceStdOutPathKeyKey,
-                              file_action->GetPath());
+                              file_action->GetPath().str().c_str());
   }
   file_action = launch_info.GetFileActionForFD(STDERR_FILENO);
-  if (file_action && file_action->GetPath()) {
+  if (file_action && !file_action->GetPath().empty()) {
     xpc_dictionary_set_string(message, LauncherXPCServiceStdErrPathKeyKey,
-                              file_action->GetPath());
+                              file_action->GetPath().str().c_str());
   }
 
   xpc_object_t reply =
@@ -1379,7 +1379,8 @@ Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       if (!str_sp)
         continue;
 
-      launch_info.GetArguments().AppendArgument(str_sp->GetValue().c_str());
+      launch_info.GetArguments().AppendArgument(
+          llvm::StringRef(str_sp->GetValue().c_str()));
     }
   }
 

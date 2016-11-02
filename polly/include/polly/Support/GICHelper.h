@@ -19,6 +19,7 @@
 #include "isl/aff.h"
 #include "isl/ctx.h"
 #include "isl/map.h"
+#include "isl/options.h"
 #include "isl/set.h"
 #include "isl/union_map.h"
 #include "isl/union_set.h"
@@ -248,22 +249,26 @@ template <typename T> class IslPtr {
 private:
   T *Obj;
 
-  explicit IslPtr(__isl_take T *Obj, bool TakeOwnership)
-      : Obj(TakeOwnership ? Obj : Traits::copy(Obj)) {}
+  explicit IslPtr(__isl_take T *Obj) : Obj(Obj) {}
 
 public:
   IslPtr() : Obj(nullptr) {}
   /* implicit */ IslPtr(std::nullptr_t That) : IslPtr() {}
 
-  /* implicit */ IslPtr(const ThisTy &That) : IslPtr(That.Obj, false) {}
-  /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj, true) {
+  /* implicit */ IslPtr(const ThisTy &That)
+      : IslPtr(IslObjTraits<T>::copy(That.Obj)) {}
+  /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj) {
     That.Obj = nullptr;
   }
-  /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy(), true) {}
-  ~IslPtr() { Traits::free(Obj); }
+  /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy()) {}
+  ~IslPtr() {
+    if (Obj)
+      Traits::free(Obj);
+  }
 
   ThisTy &operator=(const ThisTy &That) {
-    Traits::free(this->Obj);
+    if (Obj)
+      Traits::free(Obj);
     this->Obj = Traits::copy(That.Obj);
     return *this;
   }
@@ -276,17 +281,27 @@ public:
 
   static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
 
-  static ThisTy give(T *Obj) { return ThisTy(Obj, true); }
+  static ThisTy give(__isl_take T *Obj) { return ThisTy(Obj); }
   T *keep() const { return Obj; }
-  T *take() {
+  __isl_give T *take() {
     auto *Result = Obj;
     Obj = nullptr;
     return Result;
   }
-  T *copy() const { return Traits::copy(Obj); }
+  __isl_give T *copy() const { return Traits::copy(Obj); }
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }
+
+  /// Print a string representation of this ISL object to stderr.
+  ///
+  /// This function is meant to be called from a debugger and therefore must
+  /// not be declared inline: The debugger needs a valid function pointer to
+  /// call, even if the method is not used.
+  ///
+  /// Note that the string representation of isl_*_dump is different than the
+  /// one for isl_printer/isl_*_to_str().
+  void dump() const;
 };
 
 template <typename T> static IslPtr<T> give(__isl_take T *Obj) {
@@ -330,10 +345,15 @@ public:
   static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
 
   T *keep() const { return Obj; }
-  T *copy() const { return Traits::copy(Obj); }
+  __isl_give T *copy() const { return Traits::copy(Obj); }
 
   isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
   std::string toStr() const { return Traits::to_str(Obj); }
+
+  /// Print a string representation of this ISL object to stderr.
+  ///
+  /// @see IslPtr<T>::dump()
+  void dump() const;
 };
 
 template <typename T>
@@ -405,6 +425,70 @@ foreachEltWithBreak(NonowningIslPtr<isl_union_map> UMap,
 isl_stat foreachPieceWithBreak(
     NonowningIslPtr<isl_pw_aff> PwAff,
     const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> &F);
+
+/// Scoped limit of ISL operations.
+///
+/// Limits the number of ISL operations during the lifetime of this object. The
+/// idea is to use this as an RAII guard for the scope where the code is aware
+/// that ISL can return errors even when all input is valid. After leaving the
+/// scope, it will return to the error setting as it was before. That also means
+/// that the error setting should not be changed while in that scope.
+///
+/// Such scopes are not allowed to be nested because the previous operations
+/// counter cannot be reset to the previous state, or one that adds the
+/// operations while being in the nested scope. Use therefore is only allowed
+/// while currently a no operations-limit is active.
+class IslMaxOperationsGuard {
+private:
+  /// The ISL context to set the operations limit.
+  ///
+  /// If set to nullptr, there is no need for any action at the end of the
+  /// scope.
+  isl_ctx *IslCtx;
+
+  /// Old OnError setting; to reset to when the scope ends.
+  int OldOnError;
+
+public:
+  /// Enter a max operations scope.
+  ///
+  /// @param IslCtx      The ISL context to set the operations limit for.
+  /// @param LocalMaxOps Maximum number of operations allowed in the
+  ///                    scope. If set to zero, no operations limit is enforced.
+  IslMaxOperationsGuard(isl_ctx *IslCtx, unsigned long LocalMaxOps)
+      : IslCtx(IslCtx) {
+    assert(IslCtx);
+    assert(isl_ctx_get_max_operations(IslCtx) == 0 &&
+           "Nested max operations not supported");
+
+    if (LocalMaxOps == 0) {
+      // No limit on operations; also disable restoring on_error/max_operations.
+      this->IslCtx = nullptr;
+      return;
+    }
+
+    // Save previous state.
+    OldOnError = isl_options_get_on_error(IslCtx);
+
+    // Activate the new setting.
+    isl_ctx_set_max_operations(IslCtx, LocalMaxOps);
+    isl_ctx_reset_operations(IslCtx);
+    isl_options_set_on_error(IslCtx, ISL_ON_ERROR_CONTINUE);
+  }
+
+  /// Leave the max operations scope.
+  ~IslMaxOperationsGuard() {
+    if (!IslCtx)
+      return;
+
+    assert(isl_options_get_on_error(IslCtx) == ISL_ON_ERROR_CONTINUE &&
+           "Unexpected change of the on_error setting");
+
+    // Return to the previous error setting.
+    isl_ctx_set_max_operations(IslCtx, 0);
+    isl_options_set_on_error(IslCtx, OldOnError);
+  }
+};
 
 } // end namespace polly
 

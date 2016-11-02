@@ -53,7 +53,9 @@ set(LIBUNWIND_SOURCES
 set(libraries ${LIBUNWINDCXX_ABI_LIBRARIES})
 append_if(libraries LIBUNWIND_HAS_C_LIB c)
 append_if(libraries LIBUNWIND_HAS_DL_LIB dl)
-append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)
+if (LIBUNWIND_ENABLE_THREADS)
+  append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)
+endif()
 
 # Setup flags.
 append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_FPIC_FLAG -fPIC)

@@ -1100,6 +1100,7 @@ public:
 
 #else  // !defined(_LIBCPP_CXX03_LANG)
     template <class _Key, class _Args>
+    _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> __emplace_unique_key_args(_Key const&, _Args& __args);
 
     iterator __insert_multi(const __container_value_type& __x);
@@ -1937,13 +1938,11 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _Key, class ..._Args>
-_LIBCPP_INLINE_VISIBILITY
 pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& __k, _Args&&... __args)
 #else
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _Key, class _Args>
-_LIBCPP_INLINE_VISIBILITY
 pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& __k, _Args& __args)
 #endif

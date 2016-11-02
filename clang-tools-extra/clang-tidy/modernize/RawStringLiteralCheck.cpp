@@ -108,15 +108,15 @@ void RawStringLiteralCheck::storeOptions(ClangTidyOptions::OptionMap &Options) {
 }
 
 void RawStringLiteralCheck::registerMatchers(MatchFinder *Finder) {
+  // Raw string literals require C++11 or later.
+  if (!getLangOpts().CPlusPlus11)
+    return;
+
   Finder->addMatcher(
       stringLiteral(unless(hasParent(predefinedExpr()))).bind("lit"), this);
 }
 
 void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
-  // Raw string literals require C++11 or later.
-  if (!Result.Context->getLangOpts().CPlusPlus11)
-    return;
-
   const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("lit");
   if (Literal->getLocStart().isMacroID())
     return;
@@ -129,7 +129,7 @@ void RawStringLiteralCheck::replaceWithRawStringLiteral(
     const MatchFinder::MatchResult &Result, const StringLiteral *Literal) {
   CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Literal->getSourceRange()),
-      *Result.SourceManager, Result.Context->getLangOpts());
+      *Result.SourceManager, getLangOpts());
   diag(Literal->getLocStart(),
        "escaped string literal can be written as a raw string literal")
       << FixItHint::CreateReplacement(

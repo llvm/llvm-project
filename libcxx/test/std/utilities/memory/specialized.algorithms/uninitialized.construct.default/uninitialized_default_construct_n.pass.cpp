@@ -20,7 +20,6 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "test_throw.h"
 
 struct Counted {
   static int count;
@@ -28,7 +27,7 @@ struct Counted {
   static void reset() { count = constructed =  0; }
   explicit Counted() { ++count; ++constructed; }
   Counted(Counted const&) { assert(false); }
-  ~Counted() { --count; }
+  ~Counted() { assert(count > 0); --count; }
   friend void operator&(Counted) = delete;
 };
 int Counted::count = 0;
@@ -43,12 +42,12 @@ struct ThrowsCounted {
   explicit ThrowsCounted() {
       ++constructed;
       if (throw_after > 0 && --throw_after == 0) {
-          test_throw<int>();
+          TEST_THROW(1);
       }
       ++count;
   }
   ThrowsCounted(ThrowsCounted const&) { assert(false); }
-  ~ThrowsCounted() { --count; }
+  ~ThrowsCounted() { assert(count > 0); --count; }
   friend void operator&(ThrowsCounted) = delete;
 };
 int ThrowsCounted::count = 0;
@@ -67,10 +66,8 @@ void test_ctor_throws()
         std::uninitialized_default_construct_n(It(p), N);
         assert(false);
     } catch (...) {}
-    assert(ThrowsCounted::count == 3);
-    assert(ThrowsCounted::constructed == 4); // forth construction throws
-    std::destroy(p, p+3);
     assert(ThrowsCounted::count == 0);
+    assert(ThrowsCounted::constructed == 4); // forth construction throws
 #endif
 }
 

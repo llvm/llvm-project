@@ -92,7 +92,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
              Tok.getRawIdentifier() == "explicit";
     };
     SourceRange ExplicitTokenRange =
-        FindToken(*Result.SourceManager, Result.Context->getLangOpts(),
+        FindToken(*Result.SourceManager, getLangOpts(),
                   Ctor->getOuterLocStart(), Ctor->getLocEnd(), isKWExplicit);
     StringRef ConstructorDescription;
     if (Ctor->isMoveConstructor())

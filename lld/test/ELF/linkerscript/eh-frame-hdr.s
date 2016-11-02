@@ -7,8 +7,8 @@
 # RUN: ld.lld -o %t1 --eh-frame-hdr --script %t.script %t
 # RUN: llvm-objdump -s -section=".eh_frame_hdr" %t1 | FileCheck %s
 
-# CHECK:      0158 011b033b 14000000 01000000 49000000
-# CHECK-NEXT: 0168 30000000
+# CHECK:      011b033b 14000000 01000000 49000000
+# CHECK-NEXT: 30000000
 
 .global _start
 _start:

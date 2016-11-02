@@ -5,6 +5,11 @@
 ; RUN: ld.lld -m elf_x86_64 %t2.o %t.so -o %t
 ; RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
 
+; Check that we don't crash when gc'ing sections and printing the result.
+; RUN: ld.lld -m elf_x86_64 %t2.o %t.so --gc-sections --print-gc-sections \
+; RUN:   -o %t
+; RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

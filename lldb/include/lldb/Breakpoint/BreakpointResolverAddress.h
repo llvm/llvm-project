@@ -36,6 +36,13 @@ public:
 
   ~BreakpointResolverAddress() override;
 
+  static BreakpointResolver *
+  CreateFromStructuredData(Breakpoint *bkpt,
+                           const StructuredData::Dictionary &options_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
+
   void ResolveBreakpoint(SearchFilter &filter) override;
 
   void ResolveBreakpointInModules(SearchFilter &filter,

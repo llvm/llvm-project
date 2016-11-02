@@ -51,6 +51,7 @@
 #include "UnusedParametersCheck.h"
 #include "UnusedRAIICheck.h"
 #include "UnusedUsingDeclsCheck.h"
+#include "UseAfterMoveCheck.h"
 #include "VirtualNearMissCheck.h"
 
 namespace clang {
@@ -139,6 +140,7 @@ public:
     CheckFactories.registerCheck<UnusedRAIICheck>("misc-unused-raii");
     CheckFactories.registerCheck<UnusedUsingDeclsCheck>(
         "misc-unused-using-decls");
+    CheckFactories.registerCheck<UseAfterMoveCheck>("misc-use-after-move");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
         "misc-virtual-near-miss");
   }

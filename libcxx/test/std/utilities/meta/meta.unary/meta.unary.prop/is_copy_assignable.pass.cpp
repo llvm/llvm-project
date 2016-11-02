@@ -74,12 +74,10 @@ int main()
     test_is_copy_assignable<NotEmpty> ();
     test_is_copy_assignable<Empty> ();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     test_is_not_copy_assignable<const int> ();
     test_is_not_copy_assignable<int[]> ();
     test_is_not_copy_assignable<int[3]> ();
-#endif
-#if TEST_STD_VER >= 11
     test_is_not_copy_assignable<B> ();
 #endif
     test_is_not_copy_assignable<void> ();

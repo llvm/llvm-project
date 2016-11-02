@@ -74,7 +74,7 @@ class ExprCharTestCase(TestBase):
         archs=[
             "i[3-6]86",
             "x86_64"],
-        bugnumber="llvm.org/pr23069")
+        bugnumber="llvm.org/pr23069, <rdar://problem/28721938>")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @expectedFailureAll(triple='mips*', bugnumber="llvm.org/pr23069")
     def test_unsigned_char(self):

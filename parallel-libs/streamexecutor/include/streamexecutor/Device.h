@@ -17,14 +17,19 @@
 
 #include <type_traits>
 
+#include "streamexecutor/Error.h"
+#include "streamexecutor/HostMemory.h"
 #include "streamexecutor/KernelSpec.h"
 #include "streamexecutor/PlatformDevice.h"
-#include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 
 class Stream;
 
+/// A class representing a StreamExecutor device.
+///
+/// Device instances are basically just pointers to the underlying
+/// implementation, so they are small and can be passed around by value.
 class Device {
 public:
   explicit Device(PlatformDevice *PDevice);
@@ -39,9 +44,8 @@ public:
                                    KernelT>::type>
   createKernel(const MultiKernelLoaderSpec &Spec) {
     Expected<const void *> MaybeKernelHandle = PDevice->createKernel(Spec);
-    if (!MaybeKernelHandle) {
+    if (!MaybeKernelHandle)
       return MaybeKernelHandle.takeError();
-    }
     return KernelT(PDevice, *MaybeKernelHandle, Spec.getKernelName());
   }
 
@@ -58,36 +62,18 @@ public:
     return GlobalDeviceMemory<T>(this, *MaybeMemory, ElementCount);
   }
 
-  /// Allocates an array of ElementCount entries of type T in host memory.
-  ///
-  /// Host memory allocated by this function can be used for asynchronous memory
-  /// copies on streams. See Stream::thenCopyD2H and Stream::thenCopyH2D.
-  template <typename T> Expected<T *> allocateHostMemory(size_t ElementCount) {
-    Expected<void *> MaybeMemory =
-        PDevice->allocateHostMemory(ElementCount * sizeof(T));
-    if (!MaybeMemory)
-      return MaybeMemory.takeError();
-    return static_cast<T *>(*MaybeMemory);
-  }
-
-  /// Frees memory previously allocated with allocateHostMemory.
-  template <typename T> Error freeHostMemory(T *Memory) {
-    return PDevice->freeHostMemory(Memory);
-  }
-
   /// Registers a previously allocated host array of type T for asynchronous
   /// memory operations.
   ///
   /// Host memory registered by this function can be used for asynchronous
   /// memory copies on streams. See Stream::thenCopyD2H and Stream::thenCopyH2D.
   template <typename T>
-  Error registerHostMemory(T *Memory, size_t ElementCount) {
-    return PDevice->registerHostMemory(Memory, ElementCount * sizeof(T));
-  }
-
-  /// Unregisters host memory previously registered by registerHostMemory.
-  template <typename T> Error unregisterHostMemory(T *Memory) {
-    return PDevice->unregisterHostMemory(Memory);
+  Expected<RegisteredHostMemory<T>>
+  registerHostMemory(llvm::MutableArrayRef<T> Memory) {
+    if (Error E = PDevice->registerHostMemory(Memory.data(),
+                                              Memory.size() * sizeof(T)))
+      return std::move(E);
+    return RegisteredHostMemory<T>(this, Memory.data(), Memory.size());
   }
 
   /// \anchor DeviceHostSyncCopyGroup
@@ -98,9 +84,8 @@ public:
   /// device calls.
   ///
   /// There are no restrictions on the host memory that is used as a source or
-  /// destination in these copy methods, so there is no need to allocate that
-  /// host memory using allocateHostMemory or register it with
-  /// registerHostMemory.
+  /// destination in these copy methods, so there is no need to register that
+  /// host memory with registerHostMemory.
   ///
   /// Each of these methods has a single template parameter, T, that specifies
   /// the type of data being copied. The ElementCount arguments specify the
@@ -301,6 +286,12 @@ private:
   friend GlobalDeviceMemoryBase;
   Error freeDeviceMemory(const GlobalDeviceMemoryBase &Memory) {
     return PDevice->freeDeviceMemory(Memory.getHandle());
+  }
+
+  // Only destroyRegisteredHostMemoryInternals may unregister host memory.
+  friend void internal::destroyRegisteredHostMemoryInternals(Device *, void *);
+  Error unregisterHostMemory(const void *Pointer) {
+    return PDevice->unregisterHostMemory(Pointer);
   }
 
   PlatformDevice *PDevice;

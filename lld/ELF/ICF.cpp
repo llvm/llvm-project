@@ -148,8 +148,7 @@ template <class ELFT> bool ICF<ELFT>::isEligible(InputSectionBase<ELFT> *Sec) {
 template <class ELFT>
 std::vector<InputSection<ELFT> *> ICF<ELFT>::getSections() {
   std::vector<InputSection<ELFT> *> V;
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles())
+  for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (isEligible(S))
         V.push_back(cast<InputSection<ELFT>>(S));
@@ -233,8 +232,7 @@ bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
   }
 
   return A->getSectionHdr()->sh_flags == B->getSectionHdr()->sh_flags &&
-         A->getSize() == B->getSize() &&
-         A->getSectionData() == B->getSectionData();
+         A->getSize() == B->getSize() && A->Data == B->Data;
 }
 
 template <class ELFT>

@@ -95,8 +95,8 @@ noinst_PROGRAMS = isl_test$(EXEEXT) isl_polyhedron_sample$(EXEEXT) \
 	isl_pip$(EXEEXT) isl_polyhedron_minimize$(EXEEXT) \
 	isl_polytope_scan$(EXEEXT) \
 	isl_polyhedron_detect_equalities$(EXEEXT) isl_cat$(EXEEXT) \
-	isl_closure$(EXEEXT) isl_bound$(EXEEXT) isl_codegen$(EXEEXT) \
-	isl_test_int$(EXEEXT) $(am__EXEEXT_1)
+	isl_closure$(EXEEXT) isl_bound$(EXEEXT) isl_schedule$(EXEEXT) \
+	isl_codegen$(EXEEXT) isl_test_int$(EXEEXT) $(am__EXEEXT_1)
 TESTS = isl_test$(EXEEXT) codegen_test.sh pip_test.sh bound_test.sh \
 	isl_test_int$(EXEEXT) $(am__EXEEXT_1)
 @IMATH_FOR_MP_TRUE@am__append_1 = isl_test_imath
@@ -201,6 +201,7 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_schedule_band.c isl_schedule_band.h isl_schedule_node.c \
 	isl_schedule_node_private.h isl_schedule_read.c \
 	isl_schedule_tree.c isl_schedule_tree.h isl_schedule_private.h \
+	isl_schedule_constraints.c isl_schedule_constraints.h \
 	isl_scheduler.c isl_set_list.c isl_sort.c isl_sort.h \
 	isl_space.c isl_space_private.h isl_stream.c \
 	isl_stream_private.h isl_seq.c isl_seq.h isl_tab.c isl_tab.h \
@@ -241,11 +242,12 @@ am_libisl_la_OBJECTS = $(am__objects_4) $(am__objects_5) isl_aff.lo \
 	isl_point.lo isl_polynomial.lo isl_printer.lo print.lo \
 	isl_range.lo isl_reordering.lo isl_sample.lo isl_scan.lo \
 	isl_schedule.lo isl_schedule_band.lo isl_schedule_node.lo \
-	isl_schedule_read.lo isl_schedule_tree.lo isl_scheduler.lo \
-	isl_set_list.lo isl_sort.lo isl_space.lo isl_stream.lo \
-	isl_seq.lo isl_tab.lo isl_tab_pip.lo isl_tarjan.lo \
-	isl_transitive_closure.lo isl_union_map.lo isl_val.lo \
-	isl_vec.lo isl_version.lo isl_vertices.lo
+	isl_schedule_read.lo isl_schedule_tree.lo \
+	isl_schedule_constraints.lo isl_scheduler.lo isl_set_list.lo \
+	isl_sort.lo isl_space.lo isl_stream.lo isl_seq.lo isl_tab.lo \
+	isl_tab_pip.lo isl_tarjan.lo isl_transitive_closure.lo \
+	isl_union_map.lo isl_val.lo isl_vec.lo isl_version.lo \
+	isl_vertices.lo
 libisl_la_OBJECTS = $(am_libisl_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -299,6 +301,12 @@ isl_polyhedron_sample_DEPENDENCIES = libisl.la
 am_isl_polytope_scan_OBJECTS = polytope_scan.$(OBJEXT)
 isl_polytope_scan_OBJECTS = $(am_isl_polytope_scan_OBJECTS)
 isl_polytope_scan_DEPENDENCIES = libisl.la
+am_isl_schedule_OBJECTS = schedule.$(OBJEXT)
+isl_schedule_OBJECTS = $(am_isl_schedule_OBJECTS)
+isl_schedule_DEPENDENCIES = libisl.la
+isl_schedule_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(isl_schedule_LDFLAGS) $(LDFLAGS) -o $@
 isl_test_SOURCES = isl_test.c
 isl_test_OBJECTS = isl_test.$(OBJEXT)
 isl_test_DEPENDENCIES = libisl.la
@@ -357,14 +365,16 @@ SOURCES = $(libisl_la_SOURCES) $(isl_bound_SOURCES) $(isl_cat_SOURCES) \
 	$(isl_pip_SOURCES) $(isl_polyhedron_detect_equalities_SOURCES) \
 	$(isl_polyhedron_minimize_SOURCES) \
 	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
-	isl_test.c isl_test_imath.c isl_test_int.c
+	$(isl_schedule_SOURCES) isl_test.c isl_test_imath.c \
+	isl_test_int.c
 DIST_SOURCES = $(am__libisl_la_SOURCES_DIST) $(isl_bound_SOURCES) \
 	$(isl_cat_SOURCES) $(isl_closure_SOURCES) \
 	$(isl_codegen_SOURCES) $(isl_pip_SOURCES) \
 	$(isl_polyhedron_detect_equalities_SOURCES) \
 	$(isl_polyhedron_minimize_SOURCES) \
 	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
-	isl_test.c isl_test_imath.c isl_test_int.c
+	$(isl_schedule_SOURCES) isl_test.c isl_test_imath.c \
+	isl_test_int.c
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -922,6 +932,8 @@ libisl_la_SOURCES = \
 	isl_schedule_tree.c \
 	isl_schedule_tree.h \
 	isl_schedule_private.h \
+	isl_schedule_constraints.c \
+	isl_schedule_constraints.h \
 	isl_scheduler.c \
 	isl_set_list.c \
 	isl_sort.c \
@@ -967,6 +979,11 @@ isl_pip_LDFLAGS = @MP_LDFLAGS@
 isl_pip_LDADD = libisl.la @MP_LIBS@
 isl_pip_SOURCES = \
 	pip.c
+
+isl_schedule_LDFLAGS = @MP_LDFLAGS@
+isl_schedule_LDADD = libisl.la @MP_LIBS@
+isl_schedule_SOURCES = \
+	schedule.c
 
 isl_codegen_LDFLAGS = @MP_LDFLAGS@
 isl_codegen_LDADD = libisl.la @MP_LIBS@
@@ -1112,6 +1129,7 @@ EXTRA_DIST = \
 	isl_pw_templ.c \
 	isl_pw_hash.c \
 	isl_pw_union_opt.c \
+	read_in_string_templ.c \
 	isl_tab_lexopt_templ.c \
 	isl_union_macro.h \
 	isl_union_templ.c \
@@ -1295,6 +1313,10 @@ isl_polytope_scan$(EXEEXT): $(isl_polytope_scan_OBJECTS) $(isl_polytope_scan_DEP
 	@rm -f isl_polytope_scan$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(isl_polytope_scan_OBJECTS) $(isl_polytope_scan_LDADD) $(LIBS)
 
+isl_schedule$(EXEEXT): $(isl_schedule_OBJECTS) $(isl_schedule_DEPENDENCIES) $(EXTRA_isl_schedule_DEPENDENCIES) 
+	@rm -f isl_schedule$(EXEEXT)
+	$(AM_V_CCLD)$(isl_schedule_LINK) $(isl_schedule_OBJECTS) $(isl_schedule_LDADD) $(LIBS)
+
 isl_test$(EXEEXT): $(isl_test_OBJECTS) $(isl_test_DEPENDENCIES) $(EXTRA_isl_test_DEPENDENCIES) 
 	@rm -f isl_test$(EXEEXT)
 	$(AM_V_CCLD)$(isl_test_LINK) $(isl_test_OBJECTS) $(isl_test_LDADD) $(LIBS)
@@ -1377,6 +1399,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_scan.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_schedule.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_schedule_band.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_schedule_constraints.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_schedule_node.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_schedule_read.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_schedule_tree.Plo@am__quote@
@@ -1408,6 +1431,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/polyhedron_sample.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/polytope_scan.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/print.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/schedule.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@imath_wrap/$(DEPDIR)/gmp_compat.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@imath_wrap/$(DEPDIR)/imath.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@imath_wrap/$(DEPDIR)/imrat.Plo@am__quote@

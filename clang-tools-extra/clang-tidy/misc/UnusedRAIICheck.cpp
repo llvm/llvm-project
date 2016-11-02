@@ -85,7 +85,7 @@ void UnusedRAIICheck::check(const MatchFinder::MatchResult &Result) {
   const auto *TL = selectFirst<TypeLoc>("t", Matches);
   D << FixItHint::CreateInsertion(
       Lexer::getLocForEndOfToken(TL->getLocEnd(), 0, *Result.SourceManager,
-                                 Result.Context->getLangOpts()),
+                                 getLangOpts()),
       Replacement);
 }
 

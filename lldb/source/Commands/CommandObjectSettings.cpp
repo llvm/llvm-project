@@ -27,12 +27,17 @@ using namespace lldb_private;
 // CommandObjectSettingsSet
 //-------------------------------------------------------------------------
 
+static OptionDefinition g_settings_set_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Apply the new value to the global default value." }
+    // clang-format on
+};
+
 class CommandObjectSettingsSet : public CommandObjectRaw {
 public:
   CommandObjectSettingsSet(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "settings set",
-                         "Set the value of the specified debugger setting.",
-                         nullptr),
+                         "Set the value of the specified debugger setting."),
         m_options() {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
@@ -118,11 +123,9 @@ insert-before or insert-after.");
       m_global = false;
     }
 
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_settings_set_options);
+    }
 
     // Instance variables to hold the values for command options.
 
@@ -242,13 +245,6 @@ private:
   CommandOptions m_options;
 };
 
-OptionDefinition CommandObjectSettingsSet::CommandOptions::g_option_table[] = {
-    // clang-format off
-  {LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Apply the new value to the global default value."},
-  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
-    // clang-format on
-};
-
 //-------------------------------------------------------------------------
 // CommandObjectSettingsShow -- Show current values
 //-------------------------------------------------------------------------
@@ -298,7 +294,9 @@ protected:
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
     const size_t argc = args.GetArgumentCount();
-    if (argc > 0) {
+    if (!args.empty()) {
+      // TODO: Convert this to StringRef based enumeration.  Requires converting
+      // DumpPropertyValue first.
       for (size_t i = 0; i < argc; ++i) {
         const char *property_path = args.GetArgumentAtIndex(i);
 
@@ -378,6 +376,8 @@ protected:
     if (argc > 0) {
       const bool dump_qualified_name = true;
 
+      // TODO: Convert to StringRef based enumeration.  Requires converting
+      // GetPropertyAtPath first.
       for (size_t i = 0; i < argc; ++i) {
         const char *property_path = args.GetArgumentAtIndex(i);
 
@@ -412,8 +412,7 @@ public:
   CommandObjectSettingsRemove(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "settings remove",
                          "Remove a value from a setting, specified by array "
-                         "index or dictionary key.",
-                         nullptr) {
+                         "index or dictionary key.") {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
     CommandArgumentData var_name_arg;
@@ -520,8 +519,7 @@ public:
   CommandObjectSettingsReplace(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "settings replace",
                          "Replace the debugger setting value specified by "
-                         "array index or dictionary key.",
-                         nullptr) {
+                         "array index or dictionary key.") {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
     CommandArgumentEntry arg3;
@@ -632,8 +630,7 @@ public:
       : CommandObjectRaw(interpreter, "settings insert-before",
                          "Insert one or more values into an debugger array "
                          "setting immediately before the specified element "
-                         "index.",
-                         nullptr) {
+                         "index.") {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
     CommandArgumentEntry arg3;
@@ -744,8 +741,7 @@ public:
   CommandObjectSettingsInsertAfter(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "settings insert-after",
                          "Insert one or more values into a debugger array "
-                         "settings after the specified element index.",
-                         nullptr) {
+                         "settings after the specified element index.") {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
     CommandArgumentEntry arg3;
@@ -856,8 +852,7 @@ public:
   CommandObjectSettingsAppend(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "settings append",
                          "Append one or more values to a debugger array, "
-                         "dictionary, or string setting.",
-                         nullptr) {
+                         "dictionary, or string setting.") {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
     CommandArgumentData var_name_arg;

@@ -102,9 +102,9 @@ static uint32_t getPicFlags(ArrayRef<FileFlags> Files) {
   for (const FileFlags &F : Files.slice(1)) {
     bool IsPic2 = F.Flags & (EF_MIPS_PIC | EF_MIPS_CPIC);
     if (IsPic && !IsPic2)
-      warning("linking abicalls code with non-abicalls file: " + F.Filename);
+      warn("linking abicalls code with non-abicalls file: " + F.Filename);
     if (!IsPic && IsPic2)
-      warning("linking non-abicalls code with abicalls file: " + F.Filename);
+      warn("linking non-abicalls code with abicalls file: " + F.Filename);
   }
 
   // Compute the result PIC/non-PIC flag.
@@ -283,10 +283,10 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> Files) {
 
 template <class ELFT> uint32_t elf::getMipsEFlags() {
   std::vector<FileFlags> V;
-  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles())
+  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     V.push_back({F->getName(), F->getObj().getHeader()->e_flags});
-
+  if (V.empty())
+    return 0;
   checkFlags(V);
   return getMiscFlags(V) | getPicFlags(V) | getArchFlags(V);
 }

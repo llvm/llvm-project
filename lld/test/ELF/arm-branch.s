@@ -1,6 +1,7 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/far-arm-abs.s -o %tfar
 // RUN: echo "SECTIONS { \
+// RUN:          . = 0xb4; \
 // RUN:          .callee1 : { *(.callee_low) } \
 // RUN:          .caller : { *(.text) } \
 // RUN:          .callee2 : { *(.callee_high) } } " > %t.script

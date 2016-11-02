@@ -8,6 +8,22 @@ config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
+config.cc = "@CMAKE_C_COMPILER@"
+config.cxx = "@CMAKE_CXX_COMPILER@"
+
+test_c_compiler = "@LLDB_TEST_C_COMPILER@"
+test_cxx_compiler = "@LLDB_TEST_CXX_COMPILER@"
+test_clang = "@LLDB_TEST_CLANG@".lower()
+test_clang = test_clang == "on" or test_clang == "true" or test_clang == "1"
+
+if len(test_c_compiler) > 0:
+  config.cc = test_c_compiler
+if len(test_c_compiler) > 0:
+  config.cxx = test_cxx_compiler
+
+if test_clang:
+  config.cc = 'clang'
+  config.cxx = 'clang++'
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

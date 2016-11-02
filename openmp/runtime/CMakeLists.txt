@@ -65,6 +65,8 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH x86_64)
   elseif(LIBOMP_NATIVE_ARCH STREQUAL "x86_64")
     set(LIBOMP_ARCH x86_64)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc64le")
+    set(LIBOMP_ARCH ppc64le)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "powerpc")
     set(LIBOMP_ARCH ppc64)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "aarch64")
@@ -94,7 +96,9 @@ if(LIBOMP_OMP_VERSION EQUAL 41)
 endif()
 libomp_check_variable(LIBOMP_OMP_VERSION 45 40 30)
 # Set the OpenMP Year and Month assiociated with version
-if(${LIBOMP_OMP_VERSION} GREATER 40 OR ${LIBOMP_OMP_VERSION} EQUAL 40)
+if(${LIBOMP_OMP_VERSION} GREATER 45 OR ${LIBOMP_OMP_VERSION} EQUAL 45)
+  set(LIBOMP_OMP_YEAR_MONTH 201511)
+elseif(${LIBOMP_OMP_VERSION} GREATER 40 OR ${LIBOMP_OMP_VERSION} EQUAL 40)
   set(LIBOMP_OMP_YEAR_MONTH 201307)
 elseif(${LIBOMP_OMP_VERSION} GREATER 30 OR ${LIBOMP_OMP_VERSION} EQUAL 30)
   set(LIBOMP_OMP_YEAR_MONTH 201107)
@@ -337,6 +341,10 @@ else()
 endif()
 
 set(LIBOMP_LIB_FILE ${LIBOMP_LIB_NAME}${LIBOMP_LIBRARY_SUFFIX})
+
+# Optional backwards compatibility aliases.
+set(LIBOMP_INSTALL_ALIASES TRUE CACHE BOOL
+  "Install libgomp and libiomp5 library aliases for backwards compatibility")
 
 # Print configuration after all variables are set.
 if(${LIBOMP_STANDALONE_BUILD})

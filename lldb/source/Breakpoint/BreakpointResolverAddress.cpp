@@ -17,6 +17,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -40,6 +41,63 @@ BreakpointResolverAddress::BreakpointResolverAddress(Breakpoint *bkpt,
 }
 
 BreakpointResolverAddress::~BreakpointResolverAddress() {}
+
+BreakpointResolver *BreakpointResolverAddress::CreateFromStructuredData(
+    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
+    Error &error) {
+  std::string module_name;
+  lldb::addr_t addr_offset;
+  FileSpec module_filespec;
+  bool success;
+
+  success = options_dict.GetValueForKeyAsInteger(
+      GetKey(OptionNames::AddressOffset), addr_offset);
+  if (!success) {
+    error.SetErrorString("BRFL::CFSD: Couldn't find address offset entry.");
+    return nullptr;
+  }
+  Address address(addr_offset);
+
+  success = options_dict.HasKey(GetKey(OptionNames::ModuleName));
+  if (success) {
+    success = options_dict.GetValueForKeyAsString(
+        GetKey(OptionNames::ModuleName), module_name);
+    if (!success) {
+      error.SetErrorString("BRA::CFSD: Couldn't read module name entry.");
+      return nullptr;
+    }
+    module_filespec.SetFile(module_name.c_str(), false);
+  }
+  return new BreakpointResolverAddress(bkpt, address, module_filespec);
+}
+
+StructuredData::ObjectSP
+BreakpointResolverAddress::SerializeToStructuredData() {
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+  SectionSP section_sp = m_addr.GetSection();
+  if (section_sp) {
+    ModuleSP module_sp = section_sp->GetModule();
+    ConstString module_name;
+    if (module_sp)
+      module_name.SetCString(module_name.GetCString());
+
+    options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
+                                   module_name.GetCString());
+    options_dict_sp->AddIntegerItem(GetKey(OptionNames::AddressOffset),
+                                    m_addr.GetOffset());
+  } else {
+    options_dict_sp->AddIntegerItem(GetKey(OptionNames::AddressOffset),
+                                    m_addr.GetOffset());
+    if (m_module_filespec) {
+      options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
+                                     m_module_filespec.GetPath());
+    }
+  }
+
+  return WrapOptionsDict(options_dict_sp);
+  return StructuredData::ObjectSP();
+}
 
 void BreakpointResolverAddress::ResolveBreakpoint(SearchFilter &filter) {
   // If the address is not section relative, then we should not try to
