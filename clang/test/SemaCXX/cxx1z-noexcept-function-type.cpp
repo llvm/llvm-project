@@ -89,3 +89,11 @@ namespace CompatWarning {
   template<typename T> void h(...) = delete; // expected-note {{deleted}}
   void test_h() { h<void>(nullptr); } // expected-error {{deleted}}
 }
+
+namespace ImplicitExceptionSpec {
+  struct S {
+    ~S();
+    void f(const S &s = S());
+  };
+  S::~S() {}
+}
