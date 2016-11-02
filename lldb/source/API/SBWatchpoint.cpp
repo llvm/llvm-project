@@ -130,13 +130,14 @@ void SBWatchpoint::SetEnabled(bool enabled) {
     Target &target = watchpoint_sp->GetTarget();
     std::lock_guard<std::recursive_mutex> guard(target.GetAPIMutex());
     ProcessSP process_sp = target.GetProcessSP();
+    const bool notify = true;
     if (process_sp) {
       if (enabled)
-        process_sp->EnableWatchpoint(watchpoint_sp.get(), false);
+        process_sp->EnableWatchpoint(watchpoint_sp.get(), notify);
       else
-        process_sp->DisableWatchpoint(watchpoint_sp.get(), false);
+        process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
     } else {
-      watchpoint_sp->SetEnabled(enabled);
+      watchpoint_sp->SetEnabled(enabled, notify);
     }
   }
 }
