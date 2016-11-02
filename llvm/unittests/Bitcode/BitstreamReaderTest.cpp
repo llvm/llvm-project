@@ -158,4 +158,13 @@ TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
   }
 }
 
+TEST(BitstreamReaderTest, shortRead) {
+  uint8_t Bytes[] = {8, 7, 6, 5, 4, 3, 2, 1};
+  for (unsigned I = 1; I != 8; ++I) {
+    BitstreamReader Reader(ArrayRef<uint8_t>(Bytes, I));
+    SimpleBitstreamCursor Cursor(Reader);
+    EXPECT_EQ(8ull, Cursor.Read(8));
+  }
+}
+
 } // end anonymous namespace
