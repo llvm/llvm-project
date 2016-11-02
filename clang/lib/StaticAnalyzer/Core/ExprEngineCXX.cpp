@@ -65,7 +65,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   if (Optional<Loc> L = V.getAs<Loc>())
     V = Pred->getState()->getSVal(*L);
   else
-    assert(V.isUnknown());
+    assert(V.isUnknownOrUndef());
 
   const Expr *CallExpr = Call.getOriginExpr();
   evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
