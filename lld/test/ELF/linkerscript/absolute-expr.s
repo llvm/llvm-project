@@ -72,7 +72,7 @@ foo = 0x123
 # CHECK-NEXT:   Section: Absolute
 # CHECK-NEXT: }
 # CHECK-NEXT: Symbol {
-# CHECK-NEXT:   Name: bar6 (30)
+# CHECK-NEXT:   Name: bar6
 # CHECK-NEXT:   Value: 0x124
 # CHECK-NEXT:   Size: 0
 # CHECK-NEXT:   Binding: Global (0x1)

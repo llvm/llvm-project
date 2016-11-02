@@ -24,7 +24,6 @@
 
 namespace llvm {
   class BitstreamWriter;
-  class DataStreamer;
   class LLVMContext;
   class Module;
   class ModulePass;
@@ -46,13 +45,6 @@ namespace llvm {
   getLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
                        LLVMContext &Context,
                        bool ShouldLazyLoadMetadata = false);
-
-  /// Read the header of the specified stream and prepare for lazy
-  /// deserialization and streaming of function bodies.
-  ErrorOr<std::unique_ptr<Module>>
-  getStreamedBitcodeModule(StringRef Name,
-                           std::unique_ptr<DataStreamer> Streamer,
-                           LLVMContext &Context);
 
   /// Read the header of the specified bitcode buffer and extract just the
   /// triple information. If successful, this returns a string. On error, this

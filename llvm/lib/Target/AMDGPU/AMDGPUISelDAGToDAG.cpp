@@ -183,8 +183,21 @@ bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
 /// determined.
 const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
                                                           unsigned OpNo) const {
-  if (!N->isMachineOpcode())
+  if (!N->isMachineOpcode()) {
+    if (N->getOpcode() == ISD::CopyToReg) {
+      unsigned Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+      if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+        MachineRegisterInfo &MRI = CurDAG->getMachineFunction().getRegInfo();
+        return MRI.getRegClass(Reg);
+      }
+
+      const SIRegisterInfo *TRI
+        = static_cast<const SISubtarget *>(Subtarget)->getRegisterInfo();
+      return TRI->getPhysRegClass(Reg);
+    }
+
     return nullptr;
+  }
 
   switch (N->getMachineOpcode()) {
   default: {

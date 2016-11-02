@@ -438,6 +438,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SCALAR_STORE;
   }
 
+  static bool isFixedSize(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::FIXED_SIZE;
+  }
+
+  bool isFixedSize(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::FIXED_SIZE;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     unsigned Dest = MI.getOperand(0).getReg();

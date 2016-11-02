@@ -10,8 +10,9 @@
 #include "OutputSections.h"
 #include "Config.h"
 #include "EhFrame.h"
-#include "LinkerScript.h"
 #include "GdbIndex.h"
+#include "LinkerScript.h"
+#include "Memory.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -1881,24 +1882,23 @@ OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
   uint32_t Type = C->Type;
   switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
-    Sec = new OutputSection<ELFT>(Key.Name, Type, Flags);
+    Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
     break;
   case InputSectionBase<ELFT>::EHFrame:
     return {Out<ELFT>::EhFrame, false};
   case InputSectionBase<ELFT>::Merge:
-    Sec = new MergeOutputSection<ELFT>(Key.Name, Type, Flags, Key.Alignment);
+    Sec = make<MergeOutputSection<ELFT>>(Key.Name, Type, Flags, Key.Alignment);
     break;
   case InputSectionBase<ELFT>::MipsReginfo:
-    Sec = new MipsReginfoOutputSection<ELFT>();
+    Sec = make<MipsReginfoOutputSection<ELFT>>();
     break;
   case InputSectionBase<ELFT>::MipsOptions:
-    Sec = new MipsOptionsOutputSection<ELFT>();
+    Sec = make<MipsOptionsOutputSection<ELFT>>();
     break;
   case InputSectionBase<ELFT>::MipsAbiFlags:
-    Sec = new MipsAbiFlagsOutputSection<ELFT>();
+    Sec = make<MipsAbiFlagsOutputSection<ELFT>>();
     break;
   }
-  Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};
 }
 

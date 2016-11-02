@@ -19,6 +19,7 @@
 // Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/STLUtils.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

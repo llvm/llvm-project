@@ -28,8 +28,3 @@ extern "C" void LLVMInitializeRISCVTargetInfo() {
   RegisterTarget<Triple::riscv64> Y(getTheRISCV64Target(), "riscv64",
                                     "64-bit RISC-V");
 }
-
-// FIXME: Temporary stub - this function must be defined for linking
-// to succeed and will be called unconditionally by llc, so must be a no-op.
-// Remove once this function is properly implemented.
-extern "C" void LLVMInitializeRISCVTargetMC() {}

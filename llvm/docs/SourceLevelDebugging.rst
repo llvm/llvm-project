@@ -64,7 +64,7 @@ user a relationship between generated code and the original program source
 code.
 
 Currently, there are two backend consumers of debug info: DwarfDebug and
-CodeViewDebug. DwarfDebug produces DWARF sutable for use with GDB, LLDB, and
+CodeViewDebug. DwarfDebug produces DWARF suitable for use with GDB, LLDB, and
 other DWARF-based debuggers. :ref:`CodeViewDebug <codeview>` produces CodeView,
 the Microsoft debug info format, which is usable with Microsoft debuggers such
 as Visual Studio and WinDBG. LLVM's debug information format is mostly derived
@@ -92,11 +92,10 @@ information provides the following guarantees:
   as setting program variables, or calling functions that have been
   deleted.
 
-* As desired, LLVM optimizations can be upgraded to be aware of the LLVM
-  debugging information, allowing them to update the debugging information
-  as they perform aggressive optimizations.  This means that, with effort,
-  the LLVM optimizers could optimize debug code just as well as non-debug
-  code.
+* As desired, LLVM optimizations can be upgraded to be aware of debugging
+  information, allowing them to update the debugging information as they
+  perform aggressive optimizations.  This means that, with effort, the LLVM
+  optimizers could optimize debug code just as well as non-debug code.
 
 * LLVM debug information does not prevent optimizations from
   happening (for example inlining, basic block reordering/merging/cleanup,
@@ -113,10 +112,10 @@ the program as it executes from a debugger.  Compiling a program with
 "``-O3 -g``" gives you full debug information that is always available and
 accurate for reading (e.g., you get accurate stack traces despite tail call
 elimination and inlining), but you might lose the ability to modify the program
-and call functions where were optimized out of the program, or inlined away
+and call functions which were optimized out of the program, or inlined away
 completely.
 
-:ref:`LLVM test suite <test-suite-quickstart>` provides a framework to test
+The :ref:`LLVM test suite <test-suite-quickstart>` provides a framework to test
 optimizer's handling of debugging information.  It can be run like this:
 
 .. code-block:: bash
@@ -829,13 +828,13 @@ for the current string value.
 
 The problem with this layout for debuggers is that we need to optimize for the
 negative lookup case where the symbol we're searching for is not present.  So
-if we were to lookup "``printf``" in the table above, we would make a 32 hash
-for "``printf``", it might match ``bucket[3]``.  We would need to go to the
-offset 0x000034f0 and start looking to see if our 32 bit hash matches.  To do
-so, we need to read the next pointer, then read the hash, compare it, and skip
-to the next bucket.  Each time we are skipping many bytes in memory and
-touching new cache pages just to do the compare on the full 32 bit hash.  All
-of these accesses then tell us that we didn't have a match.
+if we were to lookup "``printf``" in the table above, we would make a 32-bit
+hash for "``printf``", it might match ``bucket[3]``.  We would need to go to
+the offset 0x000034f0 and start looking to see if our 32 bit hash matches.  To
+do so, we need to read the next pointer, then read the hash, compare it, and
+skip to the next bucket.  Each time we are skipping many bytes in memory and
+touching new pages just to do the compare on the full 32 bit hash.  All of
+these accesses then tell us that we didn't have a match.
 
 Name Hash Tables
 """"""""""""""""

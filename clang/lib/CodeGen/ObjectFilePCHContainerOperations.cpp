@@ -325,8 +325,8 @@ void ObjectFilePCHContainerReader::ExtractPCH(
       if ((!IsCOFF && Name == "__clangast") || (IsCOFF && Name == "clangast")) {
         StringRef Buf;
         Section.getContents(Buf);
-        return StreamFile.init((const unsigned char *)Buf.begin(),
-                               (const unsigned char *)Buf.end());
+        StreamFile = llvm::BitstreamReader(Buf);
+        return;
       }
     }
   }
@@ -334,8 +334,7 @@ void ObjectFilePCHContainerReader::ExtractPCH(
     if (EIB.convertToErrorCode() ==
         llvm::object::object_error::invalid_file_type)
       // As a fallback, treat the buffer as a raw AST.
-      StreamFile.init((const unsigned char *)Buffer.getBufferStart(),
-                      (const unsigned char *)Buffer.getBufferEnd());
+      StreamFile = llvm::BitstreamReader(Buffer);
     else
       EIB.log(llvm::errs());
   });

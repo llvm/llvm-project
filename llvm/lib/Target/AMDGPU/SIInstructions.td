@@ -615,23 +615,23 @@ def : Pat <
 /********** ================== **********/
 
 def : Pat <
-  (SGPRImm<(i32 imm)>:$imm),
-  (S_MOV_B32 imm:$imm)
->;
-
-def : Pat <
-  (SGPRImm<(f32 fpimm)>:$imm),
-  (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
->;
-
-def : Pat <
-  (i32 imm:$imm),
+  (VGPRImm<(i32 imm)>:$imm),
   (V_MOV_B32_e32 imm:$imm)
 >;
 
 def : Pat <
-  (f32 fpimm:$imm),
+  (VGPRImm<(f32 fpimm)>:$imm),
   (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : Pat <
+  (i32 imm:$imm),
+  (S_MOV_B32 imm:$imm)
+>;
+
+def : Pat <
+  (f32 fpimm:$imm),
+  (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : Pat <

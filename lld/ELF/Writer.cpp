@@ -49,6 +49,7 @@ public:
 private:
   typedef PhdrEntry<ELFT> Phdr;
 
+  void createSyntheticSections();
   void copyLocalSymbols();
   void addReservedSymbols();
   void addInputSec(InputSectionBase<ELFT> *S);
@@ -126,128 +127,7 @@ template <class ELFT> static bool needsInterpSection() {
 }
 
 template <class ELFT> void elf::writeResult() {
-  typedef typename ELFT::uint uintX_t;
-  typedef typename ELFT::Ehdr Elf_Ehdr;
-
-  // Create singleton output sections.
-  OutputSection<ELFT> Bss(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
-  DynamicSection<ELFT> Dynamic;
-  EhOutputSection<ELFT> EhFrame;
-  GotSection<ELFT> Got;
-  PltSection<ELFT> Plt;
-  RelocationSection<ELFT> RelaDyn(Config->Rela ? ".rela.dyn" : ".rel.dyn",
-                                  Config->ZCombreloc);
-  StringTableSection<ELFT> ShStrTab(".shstrtab", false);
-  VersionTableSection<ELFT> VerSym;
-  VersionNeedSection<ELFT> VerNeed;
-
-  OutputSectionBase<ELFT> ElfHeader("", 0, SHF_ALLOC);
-  ElfHeader.setSize(sizeof(Elf_Ehdr));
-  OutputSectionBase<ELFT> ProgramHeaders("", 0, SHF_ALLOC);
-  ProgramHeaders.updateAlignment(sizeof(uintX_t));
-
-  // Instantiate optional output sections if they are needed.
-  std::unique_ptr<InterpSection<ELFT>> Interp;
-  std::unique_ptr<BuildIdSection<ELFT>> BuildId;
-  std::unique_ptr<StringTableSection<ELFT>> DynStrTab;
-  std::unique_ptr<SymbolTableSection<ELFT>> DynSymTab;
-  std::unique_ptr<EhFrameHeader<ELFT>> EhFrameHdr;
-  std::unique_ptr<GdbIndexSection<ELFT>> GdbIndex;
-  std::unique_ptr<GnuHashTableSection<ELFT>> GnuHashTab;
-  std::unique_ptr<GotPltSection<ELFT>> GotPlt;
-  std::unique_ptr<HashTableSection<ELFT>> HashTab;
-  std::unique_ptr<RelocationSection<ELFT>> RelaPlt;
-  std::unique_ptr<StringTableSection<ELFT>> StrTab;
-  std::unique_ptr<SymbolTableSection<ELFT>> SymTabSec;
-  std::unique_ptr<OutputSection<ELFT>> MipsRldMap;
-  std::unique_ptr<VersionDefinitionSection<ELFT>> VerDef;
-
-  if (needsInterpSection<ELFT>())
-    Interp.reset(new InterpSection<ELFT>);
-
-  if (Config->BuildId == BuildIdKind::Fast)
-    BuildId.reset(new BuildIdFastHash<ELFT>);
-  else if (Config->BuildId == BuildIdKind::Md5)
-    BuildId.reset(new BuildIdMd5<ELFT>);
-  else if (Config->BuildId == BuildIdKind::Sha1)
-    BuildId.reset(new BuildIdSha1<ELFT>);
-  else if (Config->BuildId == BuildIdKind::Uuid)
-    BuildId.reset(new BuildIdUuid<ELFT>);
-  else if (Config->BuildId == BuildIdKind::Hexstring)
-    BuildId.reset(new BuildIdHexstring<ELFT>);
-
-  if (!Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic) {
-    DynStrTab.reset(new StringTableSection<ELFT>(".dynstr", true));
-    DynSymTab.reset(new SymbolTableSection<ELFT>(*DynStrTab));
-  }
-
-  if (Config->EhFrameHdr)
-    EhFrameHdr.reset(new EhFrameHeader<ELFT>);
-
-  if (Config->GnuHash)
-    GnuHashTab.reset(new GnuHashTableSection<ELFT>);
-  if (Config->SysvHash)
-    HashTab.reset(new HashTableSection<ELFT>);
-  if (Config->GdbIndex)
-    GdbIndex.reset(new GdbIndexSection<ELFT>);
-  StringRef S = Config->Rela ? ".rela.plt" : ".rel.plt";
-  GotPlt.reset(new GotPltSection<ELFT>);
-  RelaPlt.reset(new RelocationSection<ELFT>(S, false /*Sort*/));
-  if (Config->Strip != StripPolicy::All) {
-    StrTab.reset(new StringTableSection<ELFT>(".strtab", false));
-    SymTabSec.reset(new SymbolTableSection<ELFT>(*StrTab));
-  }
-  if (Config->EMachine == EM_MIPS && !Config->Shared) {
-    // This is a MIPS specific section to hold a space within the data segment
-    // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
-    // See "Dynamic section" in Chapter 5 in the following document:
-    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    MipsRldMap.reset(new OutputSection<ELFT>(".rld_map", SHT_PROGBITS,
-                                             SHF_ALLOC | SHF_WRITE));
-    MipsRldMap->setSize(sizeof(uintX_t));
-    MipsRldMap->updateAlignment(sizeof(uintX_t));
-  }
-  if (!Config->VersionDefinitions.empty())
-    VerDef.reset(new VersionDefinitionSection<ELFT>());
-
-  Out<ELFT>::Bss = &Bss;
-  Out<ELFT>::DynStrTab = DynStrTab.get();
-  Out<ELFT>::DynSymTab = DynSymTab.get();
-  Out<ELFT>::Dynamic = &Dynamic;
-  Out<ELFT>::EhFrame = &EhFrame;
-  Out<ELFT>::EhFrameHdr = EhFrameHdr.get();
-  Out<ELFT>::GdbIndex = GdbIndex.get();
-  Out<ELFT>::GnuHashTab = GnuHashTab.get();
-  Out<ELFT>::Got = &Got;
-  Out<ELFT>::GotPlt = GotPlt.get();
-  Out<ELFT>::HashTab = HashTab.get();
-  Out<ELFT>::Interp = Interp.get();
-  Out<ELFT>::Plt = &Plt;
-  Out<ELFT>::RelaDyn = &RelaDyn;
-  Out<ELFT>::RelaPlt = RelaPlt.get();
-  Out<ELFT>::ShStrTab = &ShStrTab;
-  Out<ELFT>::StrTab = StrTab.get();
-  Out<ELFT>::SymTab = SymTabSec.get();
-  Out<ELFT>::VerDef = VerDef.get();
-  Out<ELFT>::VerSym = &VerSym;
-  Out<ELFT>::VerNeed = &VerNeed;
-  Out<ELFT>::MipsRldMap = MipsRldMap.get();
-  Out<ELFT>::Opd = nullptr;
-  Out<ELFT>::OpdBuf = nullptr;
-  Out<ELFT>::TlsPhdr = nullptr;
-  Out<ELFT>::ElfHeader = &ElfHeader;
-  Out<ELFT>::ProgramHeaders = &ProgramHeaders;
-
-  Out<ELFT>::PreinitArray = nullptr;
-  Out<ELFT>::InitArray = nullptr;
-  Out<ELFT>::FiniArray = nullptr;
-
-  // Initialize linker generated sections
-  In<ELFT>::BuildId = BuildId.get();
-  In<ELFT>::Sections = {BuildId.get()};
-
   Writer<ELFT>().run();
-  Out<ELFT>::Pool.clear();
 }
 
 template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
@@ -260,6 +140,7 @@ template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
+  createSyntheticSections();
   addReservedSymbols();
 
   if (Target->NeedsThunks)
@@ -326,6 +207,84 @@ template <class ELFT> void Writer<ELFT>::run() {
     // freeing it is a waste of time in a regular linker run.
     exitLld(0);
   }
+}
+
+// Initialize Out<ELFT> members.
+template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
+  // Initialize all pointers with NULL. This is needed because
+  // you can call lld::elf::main more than once as a library.
+  memset(&Out<ELFT>::First, 0, sizeof(Out<ELFT>));
+
+  // Create singleton output sections.
+  Out<ELFT>::Bss =
+      make<OutputSection<ELFT>>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
+  Out<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
+  Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
+  Out<ELFT>::Got = make<GotSection<ELFT>>();
+  Out<ELFT>::Plt = make<PltSection<ELFT>>();
+  Out<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
+      Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
+  Out<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
+  Out<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
+  Out<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
+
+  Out<ELFT>::ElfHeader = make<OutputSectionBase<ELFT>>("", 0, SHF_ALLOC);
+  Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
+  Out<ELFT>::ProgramHeaders = make<OutputSectionBase<ELFT>>("", 0, SHF_ALLOC);
+  Out<ELFT>::ProgramHeaders->updateAlignment(sizeof(uintX_t));
+
+  if (needsInterpSection<ELFT>())
+    Out<ELFT>::Interp = make<InterpSection<ELFT>>();
+
+  if (!Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic) {
+    Out<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
+    Out<ELFT>::DynSymTab =
+        make<SymbolTableSection<ELFT>>(*Out<ELFT>::DynStrTab);
+  }
+
+  if (Config->EhFrameHdr)
+    Out<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
+
+  if (Config->GnuHash)
+    Out<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
+  if (Config->SysvHash)
+    Out<ELFT>::HashTab = make<HashTableSection<ELFT>>();
+  if (Config->GdbIndex)
+    Out<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
+
+  Out<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
+  Out<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
+      Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
+  if (Config->Strip != StripPolicy::All) {
+    Out<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
+    Out<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*Out<ELFT>::StrTab);
+  }
+
+  if (Config->EMachine == EM_MIPS && !Config->Shared) {
+    // This is a MIPS specific section to hold a space within the data segment
+    // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
+    // See "Dynamic section" in Chapter 5 in the following document:
+    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+    Out<ELFT>::MipsRldMap = make<OutputSection<ELFT>>(".rld_map", SHT_PROGBITS,
+                                                      SHF_ALLOC | SHF_WRITE);
+    Out<ELFT>::MipsRldMap->setSize(sizeof(uintX_t));
+    Out<ELFT>::MipsRldMap->updateAlignment(sizeof(uintX_t));
+  }
+  if (!Config->VersionDefinitions.empty())
+    Out<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
+
+  // Initialize linker generated sections
+  if (Config->BuildId == BuildIdKind::Fast)
+    In<ELFT>::BuildId = make<BuildIdFastHash<ELFT>>();
+  else if (Config->BuildId == BuildIdKind::Md5)
+    In<ELFT>::BuildId = make<BuildIdMd5<ELFT>>();
+  else if (Config->BuildId == BuildIdKind::Sha1)
+    In<ELFT>::BuildId = make<BuildIdSha1<ELFT>>();
+  else if (Config->BuildId == BuildIdKind::Uuid)
+    In<ELFT>::BuildId = make<BuildIdUuid<ELFT>>();
+  else if (Config->BuildId == BuildIdKind::Hexstring)
+    In<ELFT>::BuildId = make<BuildIdHexstring<ELFT>>();
+  In<ELFT>::Sections = {In<ELFT>::BuildId};
 }
 
 template <class ELFT>

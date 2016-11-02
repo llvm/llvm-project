@@ -246,8 +246,7 @@ GlobalModuleIndex::readIndex(StringRef Path) {
   std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrErr.get());
 
   /// \brief The bitstream reader from which we'll read the AST file.
-  llvm::BitstreamReader Reader((const unsigned char *)Buffer->getBufferStart(),
-                               (const unsigned char *)Buffer->getBufferEnd());
+  llvm::BitstreamReader Reader(*Buffer);
 
   /// \brief The main bitstream cursor for the main block.
   llvm::BitstreamCursor Cursor(Reader);

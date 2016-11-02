@@ -27,7 +27,7 @@
 
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: @ (0)
+# CHECK-NEXT:     Name: @
 # CHECK-NEXT:     Value: 0x0
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Local
@@ -36,7 +36,7 @@
 # CHECK-NEXT:     Section: Undefined
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: foo1@ (1)
+# CHECK-NEXT:     Name: foo1@
 # CHECK-NEXT:     Value: 0x11000
 # CHECK-NEXT:     Size: 0
 # CHECK-NEXT:     Binding: Global (0x1)
@@ -54,7 +54,7 @@
 
 # CHECK2:      DynamicSymbols [
 # CHECK2-NEXT:   Symbol {
-# CHECK2-NEXT:     Name: @ (0)
+# CHECK2-NEXT:     Name: @
 # CHECK2-NEXT:     Value: 0x0
 # CHECK2-NEXT:     Size: 0
 # CHECK2-NEXT:     Binding: Local
@@ -63,7 +63,7 @@
 # CHECK2-NEXT:     Section: Undefined
 # CHECK2-NEXT:   }
 # CHECK2-NEXT:   Symbol {
-# CHECK2-NEXT:     Name: foo1@ (1)
+# CHECK2-NEXT:     Name: foo1@
 # CHECK2-NEXT:     Value: 0x11000
 # CHECK2-NEXT:     Size: 0
 # CHECK2-NEXT:     Binding: Global (0x1)
@@ -72,7 +72,7 @@
 # CHECK2-NEXT:     Section: .text (0x4)
 # CHECK2-NEXT:   }
 # CHECK2-NEXT:   Symbol {
-# CHECK2-NEXT:     Name: foo2@ (6)
+# CHECK2-NEXT:     Name: foo2@
 # CHECK2-NEXT:     Value: 0x11001
 # CHECK2-NEXT:     Size: 0
 # CHECK2-NEXT:     Binding: Global (0x1)
@@ -81,7 +81,7 @@
 # CHECK2-NEXT:     Section: .text (0x4)
 # CHECK2-NEXT:   }
 # CHECK2-NEXT:   Symbol {
-# CHECK2-NEXT:     Name: foo31@ (11)
+# CHECK2-NEXT:     Name: foo31@
 # CHECK2-NEXT:     Value: 0x11002
 # CHECK2-NEXT:     Size: 0
 # CHECK2-NEXT:     Binding: Global (0x1)
