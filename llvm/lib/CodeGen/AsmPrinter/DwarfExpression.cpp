@@ -203,76 +203,69 @@ static unsigned getOffsetOrZero(unsigned OffsetInBits,
 }
 
 bool DwarfExpression::AddMachineRegExpression(const TargetRegisterInfo &TRI,
-                                              const DIExpression *Expr,
+                                              DIExpressionCursor &ExprCursor,
                                               unsigned MachineReg,
                                               unsigned PieceOffsetInBits) {
-  auto I = Expr->expr_op_begin();
-  auto E = Expr->expr_op_end();
-  if (I == E)
+  if (!ExprCursor)
     return AddMachineRegPiece(TRI, MachineReg);
 
   // Pattern-match combinations for which more efficient representations exist
   // first.
   bool ValidReg = false;
-  switch (I->getOp()) {
+  auto Op = ExprCursor.peek();
+  switch (Op->getOp()) {
   case dwarf::DW_OP_bit_piece: {
-    unsigned OffsetInBits = I->getArg(0);
-    unsigned SizeInBits   = I->getArg(1);
+    unsigned OffsetInBits = Op->getArg(0);
+    unsigned SizeInBits = Op->getArg(1);
     // Piece always comes at the end of the expression.
-    return AddMachineRegPiece(TRI, MachineReg, SizeInBits,
-               getOffsetOrZero(OffsetInBits, PieceOffsetInBits));
+    AddMachineRegPiece(TRI, MachineReg, SizeInBits,
+                       getOffsetOrZero(OffsetInBits, PieceOffsetInBits));
+    ExprCursor.take();
+    break;
   }
   case dwarf::DW_OP_plus:
   case dwarf::DW_OP_minus: {
     // [DW_OP_reg,Offset,DW_OP_plus, DW_OP_deref] --> [DW_OP_breg, Offset].
     // [DW_OP_reg,Offset,DW_OP_minus,DW_OP_deref] --> [DW_OP_breg,-Offset].
-    auto N = I.getNext();
-    if (N != E && N->getOp() == dwarf::DW_OP_deref) {
-      unsigned Offset = I->getArg(0);
+    auto N = ExprCursor.peekNext();
+    if (N && N->getOp() == dwarf::DW_OP_deref) {
+      unsigned Offset = Op->getArg(0);
       ValidReg = AddMachineRegIndirect(
-          TRI, MachineReg, I->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
-      std::advance(I, 2);
-      break;
+          TRI, MachineReg, Op->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
+      ExprCursor.consume(2);
     } else
       ValidReg = AddMachineRegPiece(TRI, MachineReg);
+    break;
   }
-  case dwarf::DW_OP_deref: {
-      // [DW_OP_reg,DW_OP_deref] --> [DW_OP_breg].
-      ValidReg = AddMachineRegIndirect(TRI, MachineReg);
-      ++I;
-      break;
-  }
-  default:
-    llvm_unreachable("unsupported operand");
+  case dwarf::DW_OP_deref:
+    // [DW_OP_reg,DW_OP_deref] --> [DW_OP_breg].
+    ValidReg = AddMachineRegIndirect(TRI, MachineReg);
+    ExprCursor.take();
+    break;
   }
 
-  if (!ValidReg)
-    return false;
-
-  // Emit remaining elements of the expression.
-  AddExpression(I, E, PieceOffsetInBits);
-  return true;
+  return ValidReg;
 }
 
-void DwarfExpression::AddExpression(DIExpression::expr_op_iterator I,
-                                    DIExpression::expr_op_iterator E,
+void DwarfExpression::AddExpression(DIExpressionCursor &&ExprCursor,
                                     unsigned PieceOffsetInBits) {
-  for (; I != E; ++I) {
-    switch (I->getOp()) {
+  while (ExprCursor) {
+    auto Op = ExprCursor.take();
+    switch (Op->getOp()) {
     case dwarf::DW_OP_bit_piece: {
-      unsigned OffsetInBits = I->getArg(0);
-      unsigned SizeInBits   = I->getArg(1);
+      unsigned OffsetInBits = Op->getArg(0);
+      unsigned SizeInBits   = Op->getArg(1);
       AddOpPiece(SizeInBits, getOffsetOrZero(OffsetInBits, PieceOffsetInBits));
       break;
     }
     case dwarf::DW_OP_plus:
       EmitOp(dwarf::DW_OP_plus_uconst);
-      EmitUnsigned(I->getArg(0));
+      EmitUnsigned(Op->getArg(0));
       break;
     case dwarf::DW_OP_minus:
       // There is no OP_minus_uconst.
       EmitOp(dwarf::DW_OP_constu);
-      EmitUnsigned(I->getArg(0));
+      EmitUnsigned(Op->getArg(0));
       EmitOp(dwarf::DW_OP_minus);
       break;
     case dwarf::DW_OP_deref:
@@ -280,7 +273,7 @@ void DwarfExpression::AddExpression(DIExpression::expr_op_iterator I,
       break;
     case dwarf::DW_OP_constu:
       EmitOp(dwarf::DW_OP_constu);
-      EmitUnsigned(I->getArg(0));
+      EmitUnsigned(Op->getArg(0));
       break;
     case dwarf::DW_OP_stack_value:
       AddStackValue();
