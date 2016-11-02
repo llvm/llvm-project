@@ -110,3 +110,63 @@ __xray_FunctionExit:
 .Ltmp3:
 	.size __xray_FunctionExit, .Ltmp3-__xray_FunctionExit
 	.cfi_endproc
+
+	.global __xray_FunctionTailExit
+	.align 16, 0x90
+	.type __xray_FunctionTailExit,@function
+__xray_FunctionTailExit:
+	.cfi_startproc
+	// Save the important registers as in the entry trampoline, but indicate that
+	// this is an exit. In the future, we will introduce a new entry type that
+	// differentiates between a normal exit and a tail exit, but we'd have to do
+	// this and increment the version number for the header.
+	pushq %rbp
+	.cfi_def_cfa_offset 16
+	subq $200, %rsp
+	movupd	%xmm0, 184(%rsp)
+	movupd	%xmm1, 168(%rsp)
+	movupd	%xmm2, 152(%rsp)
+	movupd	%xmm3, 136(%rsp)
+	movupd	%xmm4, 120(%rsp)
+	movupd	%xmm5, 104(%rsp)
+	movupd	%xmm6, 88(%rsp)
+	movupd	%xmm7, 72(%rsp)
+	movq	%rdi, 64(%rsp)
+	movq  %rax, 56(%rsp)
+	movq  %rdx, 48(%rsp)
+	movq	%rsi, 40(%rsp)
+	movq	%rcx, 32(%rsp)
+	movq	%r8, 24(%rsp)
+	movq	%r9, 16(%rsp)
+
+	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
+	testq %rax,%rax
+	je	.Ltmp4
+
+	movl	%r10d, %edi
+	movl	$1, %esi
+	callq	*%rax
+
+.Ltmp4:
+  // Restore the registers.
+	movupd	184(%rsp), %xmm0
+	movupd	168(%rsp), %xmm1
+	movupd	152(%rsp), %xmm2
+	movupd	136(%rsp), %xmm3
+	movupd	120(%rsp), %xmm4
+	movupd	104(%rsp), %xmm5
+	movupd	88(%rsp) , %xmm6
+	movupd	72(%rsp) , %xmm7
+	movq	64(%rsp), %rdi
+	movq  56(%rsp), %rax
+	movq  48(%rsp), %rdx
+	movq	40(%rsp), %rsi
+	movq	32(%rsp), %rcx
+	movq	24(%rsp), %r8
+	movq	16(%rsp), %r9
+	addq	$200, %rsp
+	popq	%rbp
+	retq
+.Ltmp5:
+  .size __xray_FunctionTailExit, .Ltmp5-__xray_FunctionTailExit
+	.cfi_endproc
