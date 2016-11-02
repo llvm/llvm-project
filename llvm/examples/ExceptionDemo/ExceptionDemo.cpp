@@ -254,7 +254,7 @@ static llvm::AllocaInst *createEntryBlockAlloca(llvm::Function &function,
                                                 llvm::Constant *initWith = 0) {
   llvm::BasicBlock &block = function.getEntryBlock();
   llvm::IRBuilder<> tmp(&block, block.begin());
-  llvm::AllocaInst *ret = tmp.CreateAlloca(type, 0, varName.c_str());
+  llvm::AllocaInst *ret = tmp.CreateAlloca(type, 0, varName);
 
   if (initWith)
     tmp.CreateStore(initWith, ret);

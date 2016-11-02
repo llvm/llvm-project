@@ -31,27 +31,27 @@ YAML:     - Kind:            LF_FIELDLIST
 YAML:       FieldList:       
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1
 YAML:             Name:            apartment
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2
 YAML:             Name:            single
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           3
 YAML:             Name:            free
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           4
 YAML:             Name:            neutral
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           5
 YAML:             Name:            both
 YAML:     - Kind:            LF_ENUM
@@ -69,18 +69,13 @@ YAML:         Options:         [ None, ForwardReference, HasUniqueName ]
 YAML:         FieldList:       0
 YAML:         Name:            '__vc_attributes::threadingAttribute'
 YAML:         UniqueName:      '.?AUthreadingAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            0
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4100
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None, Const ]
-YAML:         Size:            4
+YAML:         Attrs:           33802
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         
 YAML:         ArgIndices:      [ 4099 ]
@@ -108,15 +103,11 @@ YAML:     - Kind:            LF_METHODLIST
 YAML:       MethodOverloadList: 
 YAML:         Methods:         
 YAML:           - Type:            4103
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:           - Type:            4104
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:     - Kind:            LF_FIELDLIST
@@ -132,7 +123,7 @@ YAML:             MethodList:      4105
 YAML:             Name:            threadingAttribute
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4099
 YAML:             FieldOffset:     0
 YAML:             Name:            value
@@ -143,8 +134,6 @@ YAML:         Options:         [ None, HasConstructorOrDestructor, ContainsNeste
 YAML:         FieldList:       4106
 YAML:         Name:            '__vc_attributes::threadingAttribute'
 YAML:         UniqueName:      '.?AUthreadingAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            4
@@ -152,17 +141,17 @@ YAML:     - Kind:            LF_FIELDLIST
 YAML:       FieldList:       
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           0
 YAML:             Name:            native
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1
 YAML:             Name:            com
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2
 YAML:             Name:            managed
 YAML:     - Kind:            LF_ENUM
@@ -180,18 +169,13 @@ YAML:         Options:         [ None, ForwardReference, HasUniqueName ]
 YAML:         FieldList:       0
 YAML:         Name:            '__vc_attributes::event_receiverAttribute'
 YAML:         UniqueName:      '.?AUevent_receiverAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            0
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4110
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None, Const ]
-YAML:         Size:            4
+YAML:         Attrs:           33802
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         
 YAML:         ArgIndices:      [ 4109, 48 ]
@@ -232,21 +216,15 @@ YAML:     - Kind:            LF_METHODLIST
 YAML:       MethodOverloadList: 
 YAML:         Methods:         
 YAML:           - Type:            4113
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:           - Type:            4115
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:           - Type:            4116
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:     - Kind:            LF_FIELDLIST
@@ -262,13 +240,13 @@ YAML:             MethodList:      4117
 YAML:             Name:            event_receiverAttribute
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4109
 YAML:             FieldOffset:     0
 YAML:             Name:            type
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            48
 YAML:             FieldOffset:     4
 YAML:             Name:            layout_dependent
@@ -279,8 +257,6 @@ YAML:         Options:         [ None, HasConstructorOrDestructor, ContainsNeste
 YAML:         FieldList:       4118
 YAML:         Name:            '__vc_attributes::event_receiverAttribute'
 YAML:         UniqueName:      '.?AUevent_receiverAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            8
@@ -288,17 +264,17 @@ YAML:     - Kind:            LF_FIELDLIST
 YAML:       FieldList:       
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           0
 YAML:             Name:            never
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1
 YAML:             Name:            allowed
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2
 YAML:             Name:            always
 YAML:     - Kind:            LF_ENUM
@@ -316,18 +292,13 @@ YAML:         Options:         [ None, ForwardReference, HasUniqueName ]
 YAML:         FieldList:       0
 YAML:         Name:            '__vc_attributes::aggregatableAttribute'
 YAML:         UniqueName:      '.?AUaggregatableAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            0
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4122
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None, Const ]
-YAML:         Size:            4
+YAML:         Attrs:           33802
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         
 YAML:         ArgIndices:      [ 4121 ]
@@ -355,15 +326,11 @@ YAML:     - Kind:            LF_METHODLIST
 YAML:       MethodOverloadList: 
 YAML:         Methods:         
 YAML:           - Type:            4125
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:           - Type:            4126
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:     - Kind:            LF_FIELDLIST
@@ -379,7 +346,7 @@ YAML:             MethodList:      4127
 YAML:             Name:            aggregatableAttribute
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4121
 YAML:             FieldOffset:     0
 YAML:             Name:            type
@@ -390,8 +357,6 @@ YAML:         Options:         [ None, HasConstructorOrDestructor, ContainsNeste
 YAML:         FieldList:       4128
 YAML:         Name:            '__vc_attributes::aggregatableAttribute'
 YAML:         UniqueName:      '.?AUaggregatableAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            4
@@ -407,12 +372,12 @@ YAML:     - Kind:            LF_FIELDLIST
 YAML:       FieldList:       
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           0
 YAML:             Name:            speed
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1
 YAML:             Name:            size
 YAML:     - Kind:            LF_ENUM
@@ -430,18 +395,13 @@ YAML:         Options:         [ None, ForwardReference, HasUniqueName ]
 YAML:         FieldList:       0
 YAML:         Name:            '__vc_attributes::event_sourceAttribute'
 YAML:         UniqueName:      '.?AUevent_sourceAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            0
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4133
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None, Const ]
-YAML:         Size:            4
+YAML:         Attrs:           33802
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         
 YAML:         ArgIndices:      [ 4130 ]
@@ -469,15 +429,11 @@ YAML:     - Kind:            LF_METHODLIST
 YAML:       MethodOverloadList: 
 YAML:         Methods:         
 YAML:           - Type:            4136
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:           - Type:            4137
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:     - Kind:            LF_FIELDLIST
@@ -497,19 +453,19 @@ YAML:             MethodList:      4138
 YAML:             Name:            event_sourceAttribute
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4130
 YAML:             FieldOffset:     0
 YAML:             Name:            type
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4132
 YAML:             FieldOffset:     4
 YAML:             Name:            optimize
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            48
 YAML:             FieldOffset:     8
 YAML:             Name:            decorate
@@ -520,8 +476,6 @@ YAML:         Options:         [ None, HasConstructorOrDestructor, ContainsNeste
 YAML:         FieldList:       4139
 YAML:         Name:            '__vc_attributes::event_sourceAttribute'
 YAML:         UniqueName:      '.?AUevent_sourceAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            12
@@ -529,32 +483,32 @@ YAML:     - Kind:            LF_FIELDLIST
 YAML:       FieldList:       
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1
 YAML:             Name:            dll
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2
 YAML:             Name:            exe
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           3
 YAML:             Name:            service
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           4
 YAML:             Name:            unspecified
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2
 YAML:             Name:            EXE
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           3
 YAML:             Name:            SERVICE
 YAML:     - Kind:            LF_ENUM
@@ -572,18 +526,13 @@ YAML:         Options:         [ None, ForwardReference, HasUniqueName ]
 YAML:         FieldList:       0
 YAML:         Name:            '__vc_attributes::moduleAttribute'
 YAML:         UniqueName:      '.?AUmoduleAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            0
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4143
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None, Const ]
-YAML:         Size:            4
+YAML:         Attrs:           33802
 YAML:     - Kind:            LF_MODIFIER
 YAML:       Modifier:        
 YAML:         ModifiedType:    112
@@ -591,10 +540,7 @@ YAML:         Modifiers:       [ None, Const ]
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4145
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None ]
-YAML:         Size:            4
+YAML:         Attrs:           32778
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         
 YAML:         ArgIndices:      [ 4142, 4146, 4146, 4146, 116, 48, 4146, 116, 
@@ -636,21 +582,15 @@ YAML:     - Kind:            LF_METHODLIST
 YAML:       MethodOverloadList: 
 YAML:         Methods:         
 YAML:           - Type:            4148
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:           - Type:            4150
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:           - Type:            4151
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            ''
 YAML:     - Kind:            LF_FIELDLIST
@@ -666,91 +606,91 @@ YAML:             MethodList:      4152
 YAML:             Name:            moduleAttribute
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4142
 YAML:             FieldOffset:     0
 YAML:             Name:            type
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     4
 YAML:             Name:            name
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     8
 YAML:             Name:            version
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     12
 YAML:             Name:            uuid
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            116
 YAML:             FieldOffset:     16
 YAML:             Name:            lcid
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            48
 YAML:             FieldOffset:     20
 YAML:             Name:            control
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     24
 YAML:             Name:            helpstring
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            116
 YAML:             FieldOffset:     28
 YAML:             Name:            helpstringcontext
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     32
 YAML:             Name:            helpstringdll
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     36
 YAML:             Name:            helpfile
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            116
 YAML:             FieldOffset:     40
 YAML:             Name:            helpcontext
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            48
 YAML:             FieldOffset:     44
 YAML:             Name:            hidden
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            48
 YAML:             FieldOffset:     45
 YAML:             Name:            restricted
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     48
 YAML:             Name:            custom
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4146
 YAML:             FieldOffset:     52
 YAML:             Name:            resource_name
@@ -761,8 +701,6 @@ YAML:         Options:         [ None, HasConstructorOrDestructor, ContainsNeste
 YAML:         FieldList:       4153
 YAML:         Name:            '__vc_attributes::moduleAttribute'
 YAML:         UniqueName:      '.?AUmoduleAttribute@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            56
@@ -770,152 +708,152 @@ YAML:     - Kind:            LF_FIELDLIST
 YAML:       FieldList:       
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           0
 YAML:             Name:            eAnyUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1
 YAML:             Name:            eCoClassUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2
 YAML:             Name:            eCOMInterfaceUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           6
 YAML:             Name:            eInterfaceUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           8
 YAML:             Name:            eMemberUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           16
 YAML:             Name:            eMethodUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           32
 YAML:             Name:            eInterfaceMethodUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           64
 YAML:             Name:            eInterfaceMemberUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           128
 YAML:             Name:            eCoClassMemberUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           256
 YAML:             Name:            eCoClassMethodUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           768
 YAML:             Name:            eGlobalMethodUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1024
 YAML:             Name:            eGlobalDataUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2048
 YAML:             Name:            eClassUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           4096
 YAML:             Name:            eInterfaceParameterUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           12288
 YAML:             Name:            eMethodParameterUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           16384
 YAML:             Name:            eIDLModuleUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           -32768
 YAML:             Name:            eAnonymousUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           65536
 YAML:             Name:            eTypedefUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           131072
 YAML:             Name:            eUnionUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           262144
 YAML:             Name:            eEnumUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           524288
 YAML:             Name:            eDefineTagUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1048576
 YAML:             Name:            eStructUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2097152
 YAML:             Name:            eLocalUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           4194304
 YAML:             Name:            ePropertyUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           8388608
 YAML:             Name:            eEventUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           16777216
 YAML:             Name:            eTemplateUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           16777216
 YAML:             Name:            eModuleUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           33554432
 YAML:             Name:            eIllegalUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           67108864
 YAML:             Name:            eAsynchronousUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           4161535
 YAML:             Name:            eAnyIDLUsage
 YAML:     - Kind:            LF_ENUM
@@ -933,18 +871,13 @@ YAML:         Options:         [ None, ForwardReference, HasUniqueName ]
 YAML:         FieldList:       0
 YAML:         Name:            '__vc_attributes::helper_attributes::usageAttribute'
 YAML:         UniqueName:      '.?AUusageAttribute@helper_attributes@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            0
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4157
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None, Const ]
-YAML:         Size:            4
+YAML:         Attrs:           33802
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         
 YAML:         ArgIndices:      [ 117 ]
@@ -967,14 +900,12 @@ YAML:             Name:            usage_e
 YAML:         - Kind:            LF_ONEMETHOD
 YAML:           OneMethod:       
 YAML:             Type:            4160
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            usageAttribute
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            117
 YAML:             FieldOffset:     0
 YAML:             Name:            value
@@ -985,8 +916,6 @@ YAML:         Options:         [ None, HasConstructorOrDestructor, ContainsNeste
 YAML:         FieldList:       4161
 YAML:         Name:            '__vc_attributes::helper_attributes::usageAttribute'
 YAML:         UniqueName:      '.?AUusageAttribute@helper_attributes@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            4
@@ -994,22 +923,22 @@ YAML:     - Kind:            LF_FIELDLIST
 YAML:       FieldList:       
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           0
 YAML:             Name:            eBoolean
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           1
 YAML:             Name:            eInteger
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           2
 YAML:             Name:            eFloat
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Value:           3
 YAML:             Name:            eDouble
 YAML:     - Kind:            LF_ENUM
@@ -1027,18 +956,13 @@ YAML:         Options:         [ None, ForwardReference, HasUniqueName ]
 YAML:         FieldList:       0
 YAML:         Name:            '__vc_attributes::helper_attributes::v1_alttypeAttribute'
 YAML:         UniqueName:      '.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            0
 YAML:     - Kind:            LF_POINTER
 YAML:       Pointer:         
 YAML:         ReferentType:    4165
-YAML:         PtrKind:         Near32
-YAML:         Mode:            Pointer
-YAML:         Options:         [ None, Const ]
-YAML:         Size:            4
+YAML:         Attrs:           33802
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         
 YAML:         ArgIndices:      [ 4164 ]
@@ -1061,14 +985,12 @@ YAML:             Name:            type_e
 YAML:         - Kind:            LF_ONEMETHOD
 YAML:           OneMethod:       
 YAML:             Type:            4168
-YAML:             Kind:            Vanilla
-YAML:             Options:         [ None ]
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             VFTableOffset:   -1
 YAML:             Name:            v1_alttypeAttribute
 YAML:         - Kind:            LF_MEMBER
 YAML:           DataMember:      
-YAML:             Access:          Public
+YAML:             Attrs:           3
 YAML:             Type:            4164
 YAML:             FieldOffset:     0
 YAML:             Name:            type
@@ -1079,8 +1001,6 @@ YAML:         Options:         [ None, HasConstructorOrDestructor, ContainsNeste
 YAML:         FieldList:       4169
 YAML:         Name:            '__vc_attributes::helper_attributes::v1_alttypeAttribute'
 YAML:         UniqueName:      '.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@'
-YAML:         Hfa:             None
-YAML:         WinRTKind:       None
 YAML:         DerivationList:  0
 YAML:         VTableShape:     0
 YAML:         Size:            4

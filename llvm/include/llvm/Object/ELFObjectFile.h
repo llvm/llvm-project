@@ -268,7 +268,7 @@ protected:
     assert(SymTable->sh_type == ELF::SHT_SYMTAB ||
            SymTable->sh_type == ELF::SHT_DYNSYM);
 
-    uintptr_t SHT = reinterpret_cast<uintptr_t>(EF.section_begin());
+    uintptr_t SHT = reinterpret_cast<uintptr_t>((*EF.sections()).begin());
     unsigned SymTableIndex =
         (reinterpret_cast<uintptr_t>(SymTable) - SHT) / sizeof(Elf_Shdr);
 
@@ -638,7 +638,7 @@ template <class ELFT>
 relocation_iterator
 ELFObjectFile<ELFT>::section_rel_begin(DataRefImpl Sec) const {
   DataRefImpl RelData;
-  uintptr_t SHT = reinterpret_cast<uintptr_t>(EF.section_begin());
+  uintptr_t SHT = reinterpret_cast<uintptr_t>((*EF.sections()).begin());
   RelData.d.a = (Sec.p - SHT) / EF.getHeader()->e_shentsize;
   RelData.d.b = 0;
   return relocation_iterator(RelocationRef(RelData, this));
@@ -767,7 +767,10 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, std::error_code &EC)
       EF(Data.getBuffer(), EC) {
   if (EC)
     return;
-  for (const Elf_Shdr &Sec : EF.sections()) {
+  auto SectionsOrErr = EF.sections();
+  if ((EC = SectionsOrErr.getError()))
+    return;
+  for (const Elf_Shdr &Sec : *SectionsOrErr) {
     switch (Sec.sh_type) {
     case ELF::SHT_DYNSYM: {
       if (DotDynSymSec) {
@@ -828,12 +831,12 @@ elf_symbol_iterator ELFObjectFile<ELFT>::dynamic_symbol_end() const {
 
 template <class ELFT>
 section_iterator ELFObjectFile<ELFT>::section_begin() const {
-  return section_iterator(SectionRef(toDRI(EF.section_begin()), this));
+  return section_iterator(SectionRef(toDRI((*EF.sections()).begin()), this));
 }
 
 template <class ELFT>
 section_iterator ELFObjectFile<ELFT>::section_end() const {
-  return section_iterator(SectionRef(toDRI(EF.section_end()), this));
+  return section_iterator(SectionRef(toDRI((*EF.sections()).end()), this));
 }
 
 template <class ELFT>

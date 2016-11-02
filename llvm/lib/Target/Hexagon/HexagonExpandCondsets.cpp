@@ -1078,6 +1078,8 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
   LiveInterval &L2 = LIS->getInterval(R2.Reg);
   if (L2.empty())
     return false;
+  if (L1.hasSubRanges() || L2.hasSubRanges())
+    return false;
   bool Overlap = L1.overlaps(L2);
 
   DEBUG(dbgs() << "compatible registers: ("
@@ -1113,6 +1115,7 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
   }
   while (L2.begin() != L2.end())
     L2.removeSegment(*L2.begin());
+  LIS->removeInterval(R2.Reg);
 
   updateKillFlags(R1.Reg);
   DEBUG(dbgs() << "coalesced: " << L1 << "\n");
@@ -1174,12 +1177,13 @@ bool HexagonExpandCondsets::coalesceSegments(
     if (!Done && S2.isReg()) {
       RegisterRef RS = S2;
       MachineInstr *RDef = getReachingDefForPred(RS, CI, RP.Reg, false);
-      if (!RDef || !HII->isPredicable(*RDef))
+      if (!RDef || !HII->isPredicable(*RDef)) {
         Done = coalesceRegisters(RD, RegisterRef(S2));
         if (Done) {
           UpdRegs.insert(RD.Reg);
           UpdRegs.insert(S2.getReg());
         }
+      }
     }
     Changed |= Done;
   }

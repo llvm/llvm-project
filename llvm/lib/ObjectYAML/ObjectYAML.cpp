@@ -51,7 +51,7 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
       else
         IO.setError(
             llvm::Twine("YAML Object File unsupported document type tag '") +
-            llvm::Twine(Tag.c_str()) + llvm::Twine("'!"));
+            llvm::Twine(Tag) + llvm::Twine("'!"));
     }
   }
 }

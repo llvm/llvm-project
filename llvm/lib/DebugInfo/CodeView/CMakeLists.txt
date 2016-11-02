@@ -1,5 +1,6 @@
 add_llvm_library(LLVMDebugInfoCodeView
   CodeViewError.cpp
+  CodeViewRecordIO.cpp
   CVSymbolVisitor.cpp
   CVTypeVisitor.cpp
   EnumTables.cpp
@@ -15,6 +16,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   TypeDumper.cpp
   TypeRecord.cpp
   TypeRecordBuilder.cpp
+  TypeRecordMapping.cpp
   TypeStreamMerger.cpp
   TypeTableBuilder.cpp
 

@@ -25,11 +25,18 @@ namespace msf {
 
 class StreamWriter {
 public:
+  StreamWriter() {}
   StreamWriter(WritableStreamRef Stream);
 
   Error writeBytes(ArrayRef<uint8_t> Buffer);
+  Error writeInteger(uint8_t Int);
   Error writeInteger(uint16_t Dest);
   Error writeInteger(uint32_t Dest);
+  Error writeInteger(uint64_t Dest);
+  Error writeInteger(int8_t Int);
+  Error writeInteger(int16_t Dest);
+  Error writeInteger(int32_t Dest);
+  Error writeInteger(int64_t Dest);
   Error writeZeroString(StringRef Str);
   Error writeFixedString(StringRef Str);
   Error writeStreamRef(ReadableStreamRef Ref);
@@ -77,7 +84,7 @@ public:
 
 private:
   WritableStreamRef Stream;
-  uint32_t Offset;
+  uint32_t Offset = 0;
 };
 } // namespace msf
 } // namespace llvm

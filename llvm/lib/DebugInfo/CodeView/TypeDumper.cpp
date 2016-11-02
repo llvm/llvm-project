@@ -268,12 +268,7 @@ Error CVTypeDumper::visitMemberEnd(CVMemberRecord &Record) {
 
 Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
                                      FieldListRecord &FieldList) {
-  TypeDeserializer Deserializer;
-  TypeVisitorCallbackPipeline Pipeline;
-  Pipeline.addCallbackToPipeline(Deserializer);
-  Pipeline.addCallbackToPipeline(*this);
-
-  CVTypeVisitor Visitor(Pipeline);
+  CVTypeVisitor Visitor(*this);
   if (auto EC = Visitor.visitFieldListMemberStream(FieldList.Data))
     return EC;
 
