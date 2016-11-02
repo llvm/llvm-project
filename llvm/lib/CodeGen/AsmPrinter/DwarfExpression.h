@@ -25,6 +25,51 @@ class TargetRegisterInfo;
 class DwarfUnit;
 class DIELoc;
 
+/// Holds a DIExpression and keeps track of how many operands have been consumed
+/// so far.
+class DIExpressionCursor {
+  DIExpression::expr_op_iterator Start, End;
+public:
+  DIExpressionCursor(const DIExpression *Expr) {
+    if (!Expr) {
+      assert(Start == End);
+      return;
+    }
+    Start = Expr->expr_op_begin();
+    End = Expr->expr_op_end();
+  }
+
+  /// Consume one operation.
+  Optional<DIExpression::ExprOperand> take() {
+    if (Start == End)
+      return None;
+    return *(Start++);
+  }
+
+  /// Consume N operations.
+  void consume(unsigned N) { std::advance(Start, N); }
+
+  /// Return the current operation.
+  Optional<DIExpression::ExprOperand> peek() const {
+    if (Start == End)
+      return None;
+    return *(Start);
+  }
+
+  /// Return the next operation.
+  Optional<DIExpression::ExprOperand> peekNext() const {
+    if (Start == End)
+      return None;
+
+    auto Next = Start.getNext();
+    if (Next == End)
+      return None;
+
+    return *Next;
+  }
+  operator bool() const { return Start != End; }
+};
+
 /// Base class containing the logic for constructing DWARF expressions
 /// independently of whether they are emitted into a DIE or into a .debug_loc
 /// entry.
@@ -77,7 +122,7 @@ public:
   bool AddMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
                              int Offset = 0);
 
-  /// \brief Emit a partial DWARF register operation.
+  /// Emit a partial DWARF register operation.
   /// \param MachineReg        the register
   /// \param PieceSizeInBits   size and
   /// \param PieceOffsetInBits offset of the piece in bits, if this is one
@@ -102,19 +147,19 @@ public:
   /// Emit an unsigned constant.
   void AddUnsignedConstant(const APInt &Value);
 
-  /// \brief Emit an entire expression on top of a machine register location.
+  /// Emit a machine register location while consuming the prefix of a
+  /// DwarfExpression.
   ///
-  /// \param PieceOffsetInBits If this is one piece out of a fragmented
+  /// \param PieceOffsetInBits     If this is one piece out of a fragmented
   /// location, this is the offset of the piece inside the entire variable.
   /// \return false if no DWARF register exists for MachineReg.
   bool AddMachineRegExpression(const TargetRegisterInfo &TRI,
-                               const DIExpression *Expr, unsigned MachineReg,
+                               DIExpressionCursor &Expr, unsigned MachineReg,
                                unsigned PieceOffsetInBits = 0);
-  /// Emit a the operations remaining the DIExpressionIterator I.
-  /// \param PieceOffsetInBits If this is one piece out of a fragmented
+  /// Emit all remaining operations in the DIExpressionCursor.
+  /// \param PieceOffsetInBits     If this is one piece out of a fragmented
   /// location, this is the offset of the piece inside the entire variable.
-  void AddExpression(DIExpression::expr_op_iterator I,
-                     DIExpression::expr_op_iterator E,
+  void AddExpression(DIExpressionCursor &&Expr,
                      unsigned PieceOffsetInBits = 0);
 };
 
