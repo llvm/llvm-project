@@ -609,7 +609,7 @@ protected:
     m_module_list.Clear();
     if (!m_options.modules.empty()) {
       for (size_t i = 0, e = m_options.modules.size(); i < e; ++i) {
-        FileSpec module_file_spec(m_options.modules[i].c_str(), false);
+        FileSpec module_file_spec(m_options.modules[i], false);
         if (module_file_spec) {
           ModuleSpec module_spec(module_file_spec);
           if (target->GetImages().FindModules(module_spec, m_module_list) == 0)
@@ -944,7 +944,7 @@ protected:
     if (num_modules > 0) {
       ModuleList matching_modules;
       for (size_t i = 0; i < num_modules; ++i) {
-        FileSpec module_file_spec(m_options.modules[i].c_str(), false);
+        FileSpec module_file_spec(m_options.modules[i], false);
         if (module_file_spec) {
           ModuleSpec module_spec(module_file_spec);
           matching_modules.Clear();
@@ -969,7 +969,7 @@ protected:
     if (num_modules > 0) {
       ModuleList matching_modules;
       for (size_t i = 0; i < num_modules; ++i) {
-        FileSpec module_file_spec(m_options.modules[i].c_str(), false);
+        FileSpec module_file_spec(m_options.modules[i], false);
         if (module_file_spec) {
           ModuleSpec module_spec(module_file_spec);
           matching_modules.Clear();
@@ -1228,7 +1228,7 @@ protected:
       if (!m_options.modules.empty()) {
         ModuleList matching_modules;
         for (size_t i = 0, e = m_options.modules.size(); i < e; ++i) {
-          FileSpec module_file_spec(m_options.modules[i].c_str(), false);
+          FileSpec module_file_spec(m_options.modules[i], false);
           if (module_file_spec) {
             ModuleSpec module_spec(module_file_spec);
             matching_modules.Clear();

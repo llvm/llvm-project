@@ -539,7 +539,7 @@ Error Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     FileSpec tmpdir_file_spec;
     if (HostInfo::GetLLDBPath(ePathTypeLLDBTempSystemDir, tmpdir_file_spec)) {
       tmpdir_file_spec.AppendPathComponent("lldb-shell-output.%%%%%%");
-      llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath().c_str(),
+      llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
                                       output_file_path);
     } else {
       llvm::sys::fs::createTemporaryFile("lldb-shell-output.%%%%%%", "",

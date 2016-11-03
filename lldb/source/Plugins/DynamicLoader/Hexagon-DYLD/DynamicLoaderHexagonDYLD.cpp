@@ -369,7 +369,7 @@ void DynamicLoaderHexagonDYLD::RefreshModules() {
 
     E = m_rendezvous.loaded_end();
     for (I = m_rendezvous.loaded_begin(); I != E; ++I) {
-      FileSpec file(I->path.c_str(), true);
+      FileSpec file(I->path, true);
       ModuleSP module_sp =
           LoadModuleAtAddress(file, I->link_addr, I->base_addr, true);
       if (module_sp.get()) {
@@ -393,7 +393,7 @@ void DynamicLoaderHexagonDYLD::RefreshModules() {
 
     E = m_rendezvous.unloaded_end();
     for (I = m_rendezvous.unloaded_begin(); I != E; ++I) {
-      FileSpec file(I->path.c_str(), true);
+      FileSpec file(I->path, true);
       ModuleSpec module_spec(file);
       ModuleSP module_sp = loaded_modules.FindFirstModule(module_spec);
 

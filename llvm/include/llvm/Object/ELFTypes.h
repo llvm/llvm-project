@@ -124,20 +124,19 @@ struct ELFDataTypeTypedefHelper<ELFType<TargetEndianness, true>>
 };
 
 // I really don't like doing this, but the alternative is copypasta.
-#define LLVM_ELF_IMPORT_TYPES(E, W)                                            \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Addr Elf_Addr; \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Off Elf_Off;   \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Half Elf_Half; \
-  typedef typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Word Elf_Word; \
-  typedef                                                                      \
-      typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Sword Elf_Sword;   \
-  typedef                                                                      \
-      typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Xword Elf_Xword;   \
-  typedef                                                                      \
-      typename ELFDataTypeTypedefHelper<ELFType<E, W>>::Elf_Sxword Elf_Sxword;
 
 #define LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)                                       \
-  LLVM_ELF_IMPORT_TYPES(ELFT::TargetEndianness, ELFT::Is64Bits)
+  typedef typename ELFT::Addr Elf_Addr;                                        \
+  typedef typename ELFT::Off Elf_Off;                                          \
+  typedef typename ELFT::Half Elf_Half;                                        \
+  typedef typename ELFT::Word Elf_Word;                                        \
+  typedef typename ELFT::Sword Elf_Sword;                                      \
+  typedef typename ELFT::Xword Elf_Xword;                                      \
+  typedef typename ELFT::Sxword Elf_Sxword;
+
+#define LLD_ELF_COMMA ,
+#define LLVM_ELF_IMPORT_TYPES(E, W)                                            \
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFType<E LLD_ELF_COMMA W>)
 
 // Section header.
 template <class ELFT> struct Elf_Shdr_Base;

@@ -340,6 +340,10 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
     if (Constant *C = dyn_cast<Constant>(CI->getArgOperand(0)))
       return C->isNullValue() || isa<UndefValue>(C);
 
+  if (CallSite CS = CallSite(I))
+    if (isMathLibCallNoop(CS, TLI))
+      return true;
+
   return false;
 }
 

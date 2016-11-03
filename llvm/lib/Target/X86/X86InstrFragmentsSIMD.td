@@ -965,28 +965,23 @@ def X86mstore : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 
 def masked_store_aligned128 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                          (X86mstore node:$src1, node:$src2, node:$src3), [{
-  if (auto *Store = dyn_cast<MaskedStoreSDNode>(N))
-    return Store->getAlignment() >= 16;
-  return false;
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 16;
 }]>;
 
 def masked_store_aligned256 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                          (X86mstore node:$src1, node:$src2, node:$src3), [{
-  if (auto *Store = dyn_cast<MaskedStoreSDNode>(N))
-    return Store->getAlignment() >= 32;
-  return false;
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 32;
 }]>;
 
 def masked_store_aligned512 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                          (X86mstore node:$src1, node:$src2, node:$src3), [{
-  if (auto *Store = dyn_cast<MaskedStoreSDNode>(N))
-    return Store->getAlignment() >= 64;
-  return false;
+  return cast<MaskedStoreSDNode>(N)->getAlignment() >= 64;
 }]>;
 
 def masked_store_unaligned : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                         (X86mstore node:$src1, node:$src2, node:$src3), [{
-  return isa<MaskedStoreSDNode>(N);
+                         (masked_store node:$src1, node:$src2, node:$src3), [{
+  return (!cast<MaskedStoreSDNode>(N)->isTruncatingStore()) &&
+         (!cast<MaskedStoreSDNode>(N)->isCompressingStore());
 }]>;
 
 def X86mCompressingStore : PatFrag<(ops node:$src1, node:$src2, node:$src3),

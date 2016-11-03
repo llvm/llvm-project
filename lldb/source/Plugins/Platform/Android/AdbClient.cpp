@@ -428,7 +428,7 @@ AdbClient::GetSyncService(Error &error) {
 Error AdbClient::SyncService::internalPullFile(const FileSpec &remote_file,
                                                const FileSpec &local_file) {
   const auto local_file_path = local_file.GetPath();
-  llvm::FileRemover local_file_remover(local_file_path.c_str());
+  llvm::FileRemover local_file_remover(local_file_path);
 
   std::ofstream dst(local_file_path, std::ios::out | std::ios::binary);
   if (!dst.is_open())

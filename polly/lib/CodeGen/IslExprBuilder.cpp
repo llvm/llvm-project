@@ -41,9 +41,10 @@ static cl::opt<OverflowTrackingChoice> OTMode(
 IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,
                                IDToValueTy &IDToValue, ValueMapT &GlobalMap,
                                const DataLayout &DL, ScalarEvolution &SE,
-                               DominatorTree &DT, LoopInfo &LI)
+                               DominatorTree &DT, LoopInfo &LI,
+                               BasicBlock *StartBlock)
     : S(S), Builder(Builder), IDToValue(IDToValue), GlobalMap(GlobalMap),
-      DL(DL), SE(SE), DT(DT), LI(LI) {
+      DL(DL), SE(SE), DT(DT), LI(LI), StartBlock(StartBlock) {
   OverflowState = (OTMode == OT_ALWAYS) ? Builder.getFalse() : nullptr;
 }
 
@@ -284,7 +285,8 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     DimSCEV = SCEVParameterRewriter::rewrite(DimSCEV, SE, Map);
     Value *DimSize =
         expandCodeFor(S, SE, DL, "polly", DimSCEV, DimSCEV->getType(),
-                      &*Builder.GetInsertPoint());
+                      &*Builder.GetInsertPoint(), nullptr,
+                      StartBlock->getSinglePredecessor());
 
     Type *Ty = getWidestType(DimSize->getType(), IndexOp->getType());
 

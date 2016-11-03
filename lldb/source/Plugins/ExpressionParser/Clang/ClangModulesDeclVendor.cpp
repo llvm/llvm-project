@@ -131,7 +131,7 @@ void StoringDiagnosticConsumer::DumpDiagnostics(Stream &error_stream) {
   for (IDAndDiagnostic &diag : m_diagnostics) {
     switch (diag.first) {
     default:
-      error_stream.PutCString(diag.second.c_str());
+      error_stream.PutCString(diag.second);
       error_stream.PutChar('\n');
       break;
     case clang::DiagnosticsEngine::Level::Ignored:
@@ -441,7 +441,7 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
     if (macro_info) {
       std::string macro_expansion = "#define ";
-      macro_expansion.append(mi->first->getName().str().c_str());
+      macro_expansion.append(mi->first->getName().str());
 
       {
         if (macro_info->isFunctionLike()) {

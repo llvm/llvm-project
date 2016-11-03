@@ -49,6 +49,33 @@ public:
                                            void *&) const;
 };
 
+// This implements the following proposal from cxx-abi-dev (not yet part of the
+// ABI document):
+//
+//   http://sourcerytools.com/pipermail/cxx-abi-dev/2016-October/002988.html
+//
+// This is necessary for support of http://wg21.link/p0012, which permits throwing
+// noexcept function and member function pointers and catching them as non-noexcept
+// pointers.
+class _LIBCXXABI_TYPE_VIS __qualified_function_type_info : public __shim_type_info {
+public:
+  const __function_type_info* __base_type;
+  unsigned int __qualifiers;
+
+  enum __qualifiers_mask {
+    __const_mask = 0x01,
+    __volatile_mask = 0x02,
+    __restrict_mask = 0x04,
+    __lval_ref_mask = 0x08,
+    __rval_ref_mask = 0x10,
+    __noexcept_mask = 0x20,
+    __transaction_safe_mask = 0x40,
+    __noreturn_mask = 0x80
+  };
+
+  _LIBCXXABI_HIDDEN virtual ~__qualified_function_type_info();
+};
+
 class _LIBCXXABI_TYPE_VIS __enum_type_info : public __shim_type_info {
 public:
   _LIBCXXABI_HIDDEN virtual ~__enum_type_info();

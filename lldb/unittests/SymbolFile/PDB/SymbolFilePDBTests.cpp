@@ -487,7 +487,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestEnumTypes)) {
 
     std::string sizeof_var = "sizeof_";
     sizeof_var.append(Enum);
-    EXPECT_EQ(GetGlobalConstantInteger(session, sizeof_var.c_str()),
+    EXPECT_EQ(GetGlobalConstantInteger(session, sizeof_var),
               enum_type->GetByteSize());
   }
 }
@@ -535,7 +535,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestTypedefs)) {
 
     std::string sizeof_var = "sizeof_";
     sizeof_var.append(Typedef);
-    EXPECT_EQ(GetGlobalConstantInteger(session, sizeof_var.c_str()),
+    EXPECT_EQ(GetGlobalConstantInteger(session, sizeof_var),
               typedef_type->GetByteSize());
   }
 }

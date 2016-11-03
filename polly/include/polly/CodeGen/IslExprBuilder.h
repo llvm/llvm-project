@@ -114,18 +114,25 @@ public:
 
   /// Construct an IslExprBuilder.
   ///
-  /// @param Builder The IRBuilder used to construct the isl_ast_expr[ession].
-  ///                The insert location of this IRBuilder defines WHERE the
-  ///                corresponding LLVM-IR is generated.
-  ///
-  /// @param IDToValue The isl_ast_expr[ession] may reference parameters or
-  ///                  variables (identified by an isl_id). The IDTOValue map
-  ///                  specifies the LLVM-IR Values that correspond to these
-  ///                  parameters and variables.
+  /// @param Builder     The IRBuilder used to construct the
+  ///                    isl_ast_expr[ession]. The insert location of this
+  ///                    IRBuilder defines WHERE the  corresponding LLVM-IR
+  ///                    is generated.
+  /// @param IDToValue   The isl_ast_expr[ession] may reference parameters or
+  ///                    variables (identified by an isl_id). The IDTOValue map
+  ///                    specifies the LLVM-IR Values that correspond to these
+  ///                    parameters and variables.
+  /// @param GlobalMap   A mapping from llvm::Values used in the original scop
+  ///                    region to a new set of llvm::Values.
+  /// @param DL          DataLayout for the current Module.
+  /// @param SE          ScalarEvolution analysis for the current function.
+  /// @param DT          DominatorTree analysis for the current function.
+  /// @param LI          LoopInfo analysis for the current function.
+  /// @param StartBlock The first basic block after the RTC.
   IslExprBuilder(Scop &S, PollyIRBuilder &Builder, IDToValueTy &IDToValue,
                  ValueMapT &GlobalMap, const llvm::DataLayout &DL,
                  llvm::ScalarEvolution &SE, llvm::DominatorTree &DT,
-                 llvm::LoopInfo &LI);
+                 llvm::LoopInfo &LI, llvm::BasicBlock *StartBlock);
 
   /// Create LLVM-IR for an isl_ast_expr[ession].
   ///
@@ -201,6 +208,7 @@ private:
   llvm::ScalarEvolution &SE;
   llvm::DominatorTree &DT;
   llvm::LoopInfo &LI;
+  llvm::BasicBlock *StartBlock;
 
   llvm::Value *createOp(__isl_take isl_ast_expr *Expr);
   llvm::Value *createOpUnary(__isl_take isl_ast_expr *Expr);

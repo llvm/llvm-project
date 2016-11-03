@@ -20,38 +20,9 @@
 ; X86:      .cv_loc 0 1 6 0
 ; X86:      ret
 ; X86:      [[END_OF_F:.?Lfunc_end.*]]:
-;
-; X86-LABEL: .section        .debug$S,"dr"
-; X86-NEXT: .p2align 2
-; X86-NEXT: .long   4
-; Symbol subsection
-; X86-NEXT: .long   241
-; X86-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
-; X86-NEXT: [[F1_START]]:
-; X86-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X86:      [[C1_END]]:
-; X86-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
-; X86-NEXT: [[PROC_SEGMENT_START]]:
-; X86-NEXT: .short  4423
-; X86-NEXT: .long   0
-; X86-NEXT: .long   0
-; X86-NEXT: .long   0
-; X86-NEXT: .long [[END_OF_F]]-_f
-; X86-NEXT: .long   0
-; X86-NEXT: .long   0
-; X86-NEXT: .long   4098
-; X86-NEXT: .secrel32 _f
-; X86-NEXT: .secidx _f
-; X86-NEXT: .byte   0
-; X86-NEXT: .asciz "f"
-; X86-NEXT: [[PROC_SEGMENT_END]]:
-; X86-NEXT: .short  2
-; X86-NEXT: .short  4431
-; X86-NEXT: [[F1_END]]:
-; X86-NEXT: .p2align 2
+
 ; Line table
-; X86-NEXT: .cv_linetable 0, _f, [[END_OF_F]]
+; X86:      .cv_linetable 0, _f, [[END_OF_F]]
 ; File index to string table offset subsection
 ; X86-NEXT: .cv_filechecksums
 ; String table
@@ -61,12 +32,6 @@
 ; OBJ32:      Name: .debug$S (2E 64 65 62 75 67 24 53)
 ; OBJ32:      Characteristics [ (0x42300040)
 ; OBJ32:      ]
-; OBJ32:      Relocations [
-; OBJ32-NEXT:   0x59 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x5D IMAGE_REL_I386_SECTION _f
-; OBJ32-NEXT:   0x70 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x74 IMAGE_REL_I386_SECTION _f
-; OBJ32-NEXT: ]
 ; OBJ32:    CodeViewDebugInfo [
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
@@ -115,38 +80,9 @@
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
 ; X64:      [[END_OF_F:.?Lfunc_end.*]]:
-;
-; X64-LABEL: .section        .debug$S,"dr"
-; X64-NEXT: .p2align 2
-; X64-NEXT: .long   4
-; Symbol subsection
-; X64-NEXT: .long   241
-; X64-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
-; X64-NEXT: [[F1_START]]:
-; X64-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X64:      [[C1_END]]:
-; X64-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
-; X64-NEXT: [[PROC_SEGMENT_START]]:
-; X64-NEXT: .short  4423
-; X64-NEXT: .long   0
-; X64-NEXT: .long   0
-; X64-NEXT: .long   0
-; X64-NEXT: .long [[END_OF_F]]-f
-; X64-NEXT: .long   0
-; X64-NEXT: .long   0
-; X64-NEXT: .long   4098
-; X64-NEXT: .secrel32 f
-; X64-NEXT: .secidx f
-; X64-NEXT: .byte   0
-; X64-NEXT: .asciz "f"
-; X64-NEXT: [[PROC_SEGMENT_END]]:
-; X64-NEXT: .short  2
-; X64-NEXT: .short  4431
-; X64-NEXT: [[F1_END]]:
-; X64-NEXT: .p2align 2
+
 ; Line table
-; X64-NEXT: .cv_linetable 0, f, [[END_OF_F]]
+; X64:      .cv_linetable 0, f, [[END_OF_F]]
 ; File index to string table offset subsection
 ; X64-NEXT: .cv_filechecksums
 ; String table
@@ -156,12 +92,6 @@
 ; OBJ64:      Name: .debug$S (2E 64 65 62 75 67 24 53)
 ; OBJ64:      Characteristics [ (0x42300040)
 ; OBJ64:      ]
-; OBJ64:      Relocations [
-; OBJ64-NEXT:   0x59 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x5D IMAGE_REL_AMD64_SECTION f
-; OBJ64-NEXT:   0x70 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x74 IMAGE_REL_AMD64_SECTION f
-; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ64:        ProcStart {

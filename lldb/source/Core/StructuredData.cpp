@@ -181,7 +181,7 @@ StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
   if (this->GetType() == Type::eTypeDictionary) {
     std::pair<llvm::StringRef, llvm::StringRef> match = path.split('.');
     std::string key = match.first.str();
-    ObjectSP value = this->GetAsDictionary()->GetValueForKey(key.c_str());
+    ObjectSP value = this->GetAsDictionary()->GetValueForKey(key);
     if (value.get()) {
       // Do we have additional words to descend?  If not, return the
       // value we're at right now.

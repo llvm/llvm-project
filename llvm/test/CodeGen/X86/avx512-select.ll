@@ -133,10 +133,9 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; CHECK-NEXT:    kmovw %edx, %k0
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    kmovw %esi, %k2
-; CHECK-NEXT:    kandw %k0, %k1, %k1
-; CHECK-NEXT:    knotw %k0, %k0
-; CHECK-NEXT:    kandw %k0, %k2, %k0
-; CHECK-NEXT:    korw %k0, %k1, %k0
+; CHECK-NEXT:    kandnw %k2, %k0, %k2
+; CHECK-NEXT:    kandw %k0, %k1, %k0
+; CHECK-NEXT:    korw %k2, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>

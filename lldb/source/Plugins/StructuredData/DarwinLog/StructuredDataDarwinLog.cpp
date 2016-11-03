@@ -1818,7 +1818,7 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
       // Display the activity chain, from parent-most to child-most
       // activity, separated by a colon (:).
       stream.PutCString("activity-chain=");
-      stream.PutCString(activity_chain.c_str());
+      stream.PutCString(activity_chain);
 #else
       if (GetGlobalProperties()->GetDisplayActivityChain()) {
         // Display the activity chain, from parent-most to child-most
@@ -1850,7 +1850,7 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
       if (header_count > 0)
         stream.PutChar(',');
       stream.PutCString("subsystem=");
-      stream.PutCString(subsystem.c_str());
+      stream.PutCString(subsystem);
       ++header_count;
     }
   }
@@ -1862,14 +1862,14 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
       if (header_count > 0)
         stream.PutChar(',');
       stream.PutCString("category=");
-      stream.PutCString(category.c_str());
+      stream.PutCString(category);
       ++header_count;
     }
   }
   stream.PutCString("] ");
 
   auto &result = stream.GetString();
-  output_stream.PutCString(result.c_str());
+  output_stream.PutCString(result);
 
   return result.size();
 }

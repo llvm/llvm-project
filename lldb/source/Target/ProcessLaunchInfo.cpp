@@ -384,7 +384,7 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
             new_path += curr_path;
           }
           new_path += "\" ";
-          shell_command.PutCString(new_path.c_str());
+          shell_command.PutCString(new_path);
         }
 
         if (triple.getOS() != llvm::Triple::Win32 ||

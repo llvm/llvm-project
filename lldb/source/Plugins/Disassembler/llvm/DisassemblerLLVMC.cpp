@@ -736,7 +736,7 @@ public:
       if (op.m_negative) {
         s.PutCString("-");
       }
-      s.PutCString(llvm::to_string(op.m_immediate).c_str());
+      s.PutCString(llvm::to_string(op.m_immediate));
       break;
     case Operand::Type::Invalid:
       s.PutCString("Invalid");
@@ -1044,8 +1044,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     } else {
       thumb_arch_name = "thumbv8.2a";
     }
-    thumb_arch.GetTriple().setArchName(
-        llvm::StringRef(thumb_arch_name.c_str()));
+    thumb_arch.GetTriple().setArchName(llvm::StringRef(thumb_arch_name));
   }
 
   // If no sub architecture specified then use the most recent arm architecture

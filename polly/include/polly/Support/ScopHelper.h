@@ -333,18 +333,21 @@ void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
 /// The parameters are the same as for the creation of a SCEVExpander as well
 /// as the call to SCEVExpander::expandCodeFor:
 ///
-/// @param S    The current Scop.
-/// @param SE   The Scalar Evolution pass.
-/// @param DL   The module data layout.
-/// @param Name The suffix added to the new instruction names.
-/// @param E    The expression for which code is actually generated.
-/// @param Ty   The type of the resulting code.
-/// @param IP   The insertion point for the new code.
-/// @param VMap A remaping of values used in @p E.
+/// @param S     The current Scop.
+/// @param SE    The Scalar Evolution pass.
+/// @param DL    The module data layout.
+/// @param Name  The suffix added to the new instruction names.
+/// @param E     The expression for which code is actually generated.
+/// @param Ty    The type of the resulting code.
+/// @param IP    The insertion point for the new code.
+/// @param VMap  A remaping of values used in @p E.
+/// @param RTCBB The last block of the RTC. Used to insert loop-invariant
+///              instructions in rare cases.
 llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                            const llvm::DataLayout &DL, const char *Name,
                            const llvm::SCEV *E, llvm::Type *Ty,
-                           llvm::Instruction *IP, ValueMapT *VMap = nullptr);
+                           llvm::Instruction *IP, ValueMapT *VMap,
+                           llvm::BasicBlock *RTCBB);
 
 /// Check if the block is a error block.
 ///

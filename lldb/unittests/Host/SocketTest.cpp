@@ -79,7 +79,7 @@ protected:
     std::unique_ptr<SocketType> connect_socket_up(
         new SocketType(child_processes_inherit, error));
     EXPECT_FALSE(error.Fail());
-    error = connect_socket_up->Connect(connect_remote_address.c_str());
+    error = connect_socket_up->Connect(connect_remote_address);
     EXPECT_FALSE(error.Fail());
     EXPECT_TRUE(connect_socket_up->IsValid());
 

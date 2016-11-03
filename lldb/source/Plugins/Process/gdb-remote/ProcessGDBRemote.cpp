@@ -2321,7 +2321,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         reason = "watchpoint";
         StreamString ostr;
         ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
-        description = ostr.GetString().c_str();
+        description = ostr.GetString();
       } else if (key.compare("library") == 0) {
         LoadModules();
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
@@ -4579,7 +4579,7 @@ size_t ProcessGDBRemote::LoadModules(LoadedModuleInfoList &module_list) {
     if (!modInfo.get_link_map(link_map))
       link_map = LLDB_INVALID_ADDRESS;
 
-    FileSpec file(mod_name.c_str(), true);
+    FileSpec file(mod_name, true);
     lldb::ModuleSP module_sp =
         LoadModuleAtAddress(file, link_map, mod_base, mod_base_is_offset);
 

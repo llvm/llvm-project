@@ -1656,7 +1656,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
       if (repeat_command != nullptr)
         m_repeat_command.assign(repeat_command);
       else
-        m_repeat_command.assign(original_command_string.c_str());
+        m_repeat_command.assign(original_command_string);
 
       m_command_history.AppendString(original_command_string);
     }
@@ -2146,7 +2146,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
     }
 
     if (!init_file && !m_skip_lldbinit_files)
-      init_file.SetFile(init_file_path.c_str(), false);
+      init_file.SetFile(init_file_path, false);
   }
 
   // If the file exists, tell HandleCommand to 'source' it; this will do the
@@ -2932,7 +2932,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
     ExtractCommand(scratch_command, next_word, suffix, quote_char);
     if (cmd_obj == nullptr) {
       std::string full_name;
-      bool is_alias = GetAliasFullName(next_word.c_str(), full_name);
+      bool is_alias = GetAliasFullName(next_word, full_name);
       cmd_obj = GetCommandObject(next_word, &matches);
       bool is_real_command =
           (is_alias == false) ||
@@ -2940,8 +2940,8 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       if (!is_real_command) {
         matches.Clear();
         std::string alias_result;
-        cmd_obj = BuildAliasResult(full_name.c_str(), scratch_command,
-                                   alias_result, result);
+        cmd_obj =
+            BuildAliasResult(full_name, scratch_command, alias_result, result);
         revised_command_line.Printf("%s", alias_result.c_str());
         if (cmd_obj) {
           wants_raw_input = cmd_obj->WantsRawCommandString();

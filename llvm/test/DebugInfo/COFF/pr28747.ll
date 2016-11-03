@@ -1,8 +1,14 @@
 ; RUN: llc < %s | FileCheck %s
-
 ; CHECK:             .section .debug$S,"dr"{{$}}
 ; CHECK-NEXT:        .p2align 2
 ; CHECK-NEXT:        .long 4
+; CHECK-NEXT:        .long	241
+; CHECK-NEXT:        .long	[[SUBSEC_END:.*]]-[[SUBSEC_START:.*]] # Subsection size
+; CHECK-NEXT:        [[SUBSEC_START]]:
+; CHECK-NEXT:        .short	[[C1_END:.*]]-[[C1_START:.*]] # Record length
+; CHECK:             [[C1_END]]:
+; CHECK-NEXT:        [[SUBSEC_END]]:
+; CHECK-NEXT:        .p2align 2
 ; CHECK-NEXT:        .cv_filechecksums
 ; CHECK-NEXT:        .cv_stringtable
 
