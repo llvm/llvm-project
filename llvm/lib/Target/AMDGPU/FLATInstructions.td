@@ -341,6 +341,8 @@ let Predicates = [isCIVI] in {
 
 def : FlatLoadPat <FLAT_LOAD_UBYTE, flat_az_extloadi8, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, flat_sextloadi8, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, flat_az_extloadi8, i16>;
+def : FlatLoadPat <FLAT_LOAD_SBYTE, flat_sextloadi8, i16>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, flat_az_extloadi16, i32>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, flat_sextloadi16, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORD, flat_load, i32>;
@@ -389,6 +391,10 @@ def : FlatAtomicPat <FLAT_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 
 } // End Predicates = [isCIVI]
 
+let Predicates = [isVI] in {
+  def : FlatStorePat <FLAT_STORE_SHORT, flat_truncstorei8, i16>;
+  def : FlatStorePat <FLAT_STORE_SHORT, flat_store, i16>;
+}
 
 
 //===----------------------------------------------------------------------===//

@@ -434,10 +434,8 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
 
 template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSymbols(ArrayRef<Elf_Shdr> Sections) {
-  Elf_Sym_Range Syms = this->getElfSymbols(false);
-  uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
-  SymbolBodies.reserve(NumSymbols);
-  for (const Elf_Sym &Sym : Syms)
+  SymbolBodies.reserve(this->Symbols.size());
+  for (const Elf_Sym &Sym : this->Symbols)
     SymbolBodies.push_back(createSymbolBody(&Sym));
 }
 

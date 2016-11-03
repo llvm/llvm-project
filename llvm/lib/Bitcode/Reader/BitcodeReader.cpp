@@ -2628,11 +2628,13 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() != 5)
         return error("Invalid record");
 
-      IsDistinct = Record[0];
+      IsDistinct = Record[0] & 1;
+      bool ExportSymbols = Record[0] & 2;
       MetadataList.assignValue(
-          GET_OR_DISTINCT(DINamespace, (Context, getMDOrNull(Record[1]),
-                                        getMDOrNull(Record[2]),
-                                        getMDString(Record[3]), Record[4])),
+          GET_OR_DISTINCT(DINamespace,
+                          (Context, getMDOrNull(Record[1]),
+                           getMDOrNull(Record[2]), getMDString(Record[3]),
+                           Record[4], ExportSymbols)),
           NextMetadataNo++);
       break;
     }

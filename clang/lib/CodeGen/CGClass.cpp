@@ -2842,31 +2842,6 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
       cast<llvm::PointerType>(VTable->getType())->getElementType());
 }
 
-// FIXME: Ideally Expr::IgnoreParenNoopCasts should do this, but it doesn't do
-// quite what we want.
-static const Expr *skipNoOpCastsAndParens(const Expr *E) {
-  while (true) {
-    if (const ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
-      E = PE->getSubExpr();
-      continue;
-    }
-
-    if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
-      if (CE->getCastKind() == CK_NoOp) {
-        E = CE->getSubExpr();
-        continue;
-      }
-    }
-    if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-      if (UO->getOpcode() == UO_Extension) {
-        E = UO->getSubExpr();
-        continue;
-      }
-    }
-    return E;
-  }
-}
-
 bool
 CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
                                                    const CXXMethodDecl *MD) {
@@ -2878,6 +2853,12 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
   // If the member function is marked 'final', we know that it can't be
   // overridden and can therefore devirtualize it.
   if (MD->hasAttr<FinalAttr>())
+    return true;
+
+  // If the base expression (after skipping derived-to-base conversions) is a
+  // class prvalue, then we can devirtualize.
+  Base = Base->getBestDynamicClassTypeExpr();
+  if (Base->isRValue() && Base->getType()->isRecordType())
     return true;
 
   // If the most derived class is marked final, we know that no subclass can
@@ -2907,7 +2888,6 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
   if (MD->getParent()->hasAttr<FinalAttr>())
     return true;
 
-  Base = skipNoOpCastsAndParens(Base);
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Base)) {
     if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       // This is a record decl. We know the type and can devirtualize it.
@@ -2924,17 +2904,15 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
     if (const ValueDecl *VD = dyn_cast<ValueDecl>(ME->getMemberDecl()))
       return VD->getType()->isRecordType();
 
-  // We can always devirtualize calls on temporary object expressions.
-  if (isa<CXXConstructExpr>(Base))
-    return true;
-
-  // And calls on bound temporaries.
-  if (isa<CXXBindTemporaryExpr>(Base))
-    return true;
-
-  // Check if this is a call expr that returns a record type.
-  if (const CallExpr *CE = dyn_cast<CallExpr>(Base))
-    return CE->getCallReturnType(getContext())->isRecordType();
+  // Likewise for calls on an object accessed by a (non-reference) pointer to
+  // member access.
+  if (auto *BO = dyn_cast<BinaryOperator>(Base)) {
+    if (BO->isPtrMemOp()) {
+      auto *MPT = BO->getRHS()->getType()->castAs<MemberPointerType>();
+      if (MPT->getPointeeType()->isRecordType())
+        return true;
+    }
+  }
 
   // We can't devirtualize the call.
   return false;

@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i16:
@@ -539,7 +539,13 @@ define void @local_zextload_i16_to_i64(i64 addrspace(3)* %out, i16 addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_i16_to_i64:
-; GCN: ds_read_i16 v[[LO:[0-9]+]],
+; FIXME: Need to optimize this sequence to avoid an extra shift.
+;  t25: i32,ch = load<LD2[%in(addrspace=3)], anyext from i16> t12, t10, undef:i32
+;          t28: i64 = any_extend t25
+;        t30: i64 = sign_extend_inreg t28, ValueType:ch:i16
+; SI: ds_read_i16 v[[LO:[0-9]+]],
+; VI: ds_read_u16 v[[ULO:[0-9]+]]
+; VI: v_bfe_i32 v[[LO:[0-9]+]], v[[ULO]], 0, 16
 ; GCN-DAG: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
 ; GCN: ds_write_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]]

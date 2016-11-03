@@ -778,9 +778,9 @@ void scanRelocations(InputSectionBase<ELFT> &S,
                      const typename ELFT::Shdr &RelSec) {
   ELFFile<ELFT> &EObj = S.getFile()->getObj();
   if (RelSec.sh_type == SHT_RELA)
-    scanRelocs(S, EObj.relas(&RelSec));
+    scanRelocs(S, check(EObj.relas(&RelSec)));
   else
-    scanRelocs(S, EObj.rels(&RelSec));
+    scanRelocs(S, check(EObj.rels(&RelSec)));
 }
 
 template <class ELFT, class RelTy>
@@ -808,9 +808,9 @@ void createThunks(InputSectionBase<ELFT> &S,
                   const typename ELFT::Shdr &RelSec) {
   ELFFile<ELFT> &EObj = S.getFile()->getObj();
   if (RelSec.sh_type == SHT_RELA)
-    createThunks(S, EObj.relas(&RelSec));
+    createThunks(S, check(EObj.relas(&RelSec)));
   else
-    createThunks(S, EObj.rels(&RelSec));
+    createThunks(S, check(EObj.rels(&RelSec)));
 }
 
 template void scanRelocations<ELF32LE>(InputSectionBase<ELF32LE> &,

@@ -390,6 +390,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
   Options.UnitTimeoutSec = Flags.timeout;
+  Options.ErrorExitCode = Flags.error_exitcode;
   Options.TimeoutExitCode = Flags.timeout_exitcode;
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;

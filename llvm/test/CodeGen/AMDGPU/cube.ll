@@ -30,10 +30,10 @@ define void @cube(<4 x float> addrspace(1)* %out, float %a, float %b, float %c) 
 }
 
 ; GCN-LABEL: {{^}}legacy_cube:
-; GCN-DAG: v_cubeid_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG: v_cubesc_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG: v_cubetc_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG: v_cubema_f32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_cubeid_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_cubesc_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_cubetc_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_cubema_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN: buffer_store_dwordx4
 define void @legacy_cube(<4 x float> addrspace(1)* %out, <4 x float> %abcx) #1 {
   %cube = call <4 x float> @llvm.AMDGPU.cube(<4 x float> %abcx)

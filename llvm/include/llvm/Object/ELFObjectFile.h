@@ -317,7 +317,10 @@ public:
   const Elf_Rela *getRela(DataRefImpl Rela) const;
 
   const Elf_Sym *getSymbol(DataRefImpl Sym) const {
-    return EF.template getEntry<Elf_Sym>(Sym.d.a, Sym.d.b);
+    auto Ret = EF.template getEntry<Elf_Sym>(Sym.d.a, Sym.d.b);
+    if (std::error_code EC = Ret.getError())
+      report_fatal_error(EC.message());
+    return *Ret;
   }
 
   const Elf_Shdr *getSection(DataRefImpl Sec) const {
@@ -749,14 +752,20 @@ template <class ELFT>
 const typename ELFObjectFile<ELFT>::Elf_Rel *
 ELFObjectFile<ELFT>::getRel(DataRefImpl Rel) const {
   assert(getRelSection(Rel)->sh_type == ELF::SHT_REL);
-  return EF.template getEntry<Elf_Rel>(Rel.d.a, Rel.d.b);
+  auto Ret = EF.template getEntry<Elf_Rel>(Rel.d.a, Rel.d.b);
+  if (std::error_code EC = Ret.getError())
+    report_fatal_error(EC.message());
+  return *Ret;
 }
 
 template <class ELFT>
 const typename ELFObjectFile<ELFT>::Elf_Rela *
 ELFObjectFile<ELFT>::getRela(DataRefImpl Rela) const {
   assert(getRelSection(Rela)->sh_type == ELF::SHT_RELA);
-  return EF.template getEntry<Elf_Rela>(Rela.d.a, Rela.d.b);
+  auto Ret = EF.template getEntry<Elf_Rela>(Rela.d.a, Rela.d.b);
+  if (std::error_code EC = Ret.getError())
+    report_fatal_error(EC.message());
+  return *Ret;
 }
 
 template <class ELFT>

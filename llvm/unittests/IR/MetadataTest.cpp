@@ -1706,20 +1706,28 @@ TEST_F(DINamespaceTest, get) {
   DIFile *File = getFile();
   StringRef Name = "namespace";
   unsigned Line = 5;
+  bool ExportSymbols = true;
 
-  auto *N = DINamespace::get(Context, Scope, File, Name, Line);
+  auto *N = DINamespace::get(Context, Scope, File, Name, Line, ExportSymbols);
 
   EXPECT_EQ(dwarf::DW_TAG_namespace, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(File, N->getFile());
   EXPECT_EQ(Name, N->getName());
   EXPECT_EQ(Line, N->getLine());
-  EXPECT_EQ(N, DINamespace::get(Context, Scope, File, Name, Line));
+  EXPECT_EQ(N,
+    DINamespace::get(Context, Scope, File, Name, Line, ExportSymbols));
 
-  EXPECT_NE(N, DINamespace::get(Context, getFile(), File, Name, Line));
-  EXPECT_NE(N, DINamespace::get(Context, Scope, getFile(), Name, Line));
-  EXPECT_NE(N, DINamespace::get(Context, Scope, File, "other", Line));
-  EXPECT_NE(N, DINamespace::get(Context, Scope, File, Name, Line + 1));
+  EXPECT_NE(N,
+    DINamespace::get(Context, getFile(), File, Name, Line, ExportSymbols));
+  EXPECT_NE(N,
+    DINamespace::get(Context, Scope, getFile(), Name, Line, ExportSymbols));
+  EXPECT_NE(N,
+    DINamespace::get(Context, Scope, File, "other", Line, ExportSymbols));
+  EXPECT_NE(N,
+    DINamespace::get(Context, Scope, File, Name, Line + 1, ExportSymbols));
+  EXPECT_NE(N,
+    DINamespace::get(Context, Scope, File, Name, Line, !ExportSymbols));
 
   TempDINamespace Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));

@@ -216,7 +216,10 @@ std::error_code ELFDumper<ELFT>::dumpRelocation(const RelT *Rel,
   R.Offset = Rel->r_offset;
   R.Addend = 0;
 
-  const Elf_Sym *Sym = Obj.getRelocationSymbol(Rel, SymTab);
+  auto SymOrErr = Obj.getRelocationSymbol(Rel, SymTab);
+  if (std::error_code EC = SymOrErr.getError())
+    return EC;
+  const Elf_Sym *Sym = *SymOrErr;
   ErrorOr<const Elf_Shdr *> StrTabSec = Obj.getSection(SymTab->sh_link);
   if (std::error_code EC = StrTabSec.getError())
     return EC;
@@ -292,7 +295,10 @@ ELFDumper<ELFT>::dumpRelSection(const Elf_Shdr *Shdr) {
     return EC;
   const Elf_Shdr *SymTab = *SymTabOrErr;
 
-  for (const Elf_Rel &Rel : Obj.rels(Shdr)) {
+  auto Rels = Obj.rels(Shdr);
+  if (std::error_code EC = Rels.getError())
+    return EC;
+  for (const Elf_Rel &Rel : *Rels) {
     ELFYAML::Relocation R;
     if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
       return EC;
@@ -316,7 +322,10 @@ ELFDumper<ELFT>::dumpRelaSection(const Elf_Shdr *Shdr) {
     return EC;
   const Elf_Shdr *SymTab = *SymTabOrErr;
 
-  for (const Elf_Rela &Rel : Obj.relas(Shdr)) {
+  auto Rels = Obj.relas(Shdr);
+  if (std::error_code EC = Rels.getError())
+    return EC;
+  for (const Elf_Rela &Rel : *Rels) {
     ELFYAML::Relocation R;
     if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
       return EC;

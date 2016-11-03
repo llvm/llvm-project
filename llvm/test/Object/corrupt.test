@@ -36,7 +36,7 @@ RUN: not llvm-readobj -program-headers \
 RUN:   %p/Inputs/corrupt-invalid-phentsize.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=PHENTSIZE %s
 
-PHENTSIZE: Invalid program header size
+PHENTSIZE: Invalid data was encountered while parsing the file.
 
 RUN: not llvm-readobj -dynamic-table \
 RUN:   %p/Inputs/corrupt-invalid-virtual-addr.elf.x86-64 2>&1 | \

@@ -56,8 +56,7 @@ public:
 
   Error finalizeMsfLayout();
 
-  Expected<std::unique_ptr<TpiStream>> build(PDBFile &File,
-                                             const msf::WritableStream &Buffer);
+  Expected<std::unique_ptr<TpiStream>> build(PDBFile &File);
 
   Error commit(const msf::MSFLayout &Layout, const msf::WritableStream &Buffer);
 
