@@ -158,10 +158,11 @@ public:
                                        ArrayRef<Elf_Word> ShndxTable) const;
   ErrorOr<const Elf_Shdr *> getSection(uint32_t Index) const;
 
-  const Elf_Sym *getSymbol(const Elf_Shdr *Sec, uint32_t Index) const {
+  ErrorOr<const Elf_Sym *> getSymbol(const Elf_Shdr *Sec,
+                                     uint32_t Index) const {
     Elf_Sym_Range Symbols = symbols(Sec);
     if (Index >= Symbols.size())
-      report_fatal_error("Invalid symbol index");
+      return object_error::invalid_symbol_index;
     return &Symbols[Index];
   }
 

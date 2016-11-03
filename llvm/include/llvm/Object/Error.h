@@ -34,6 +34,7 @@ enum class object_error {
   string_table_non_null_end,
   invalid_section_index,
   bitcode_section_not_found,
+  invalid_symbol_index,
 };
 
 inline std::error_code make_error_code(object_error e) {
