@@ -2585,18 +2585,18 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
   // per cxx-abi-dev proposal on 2016-10-11.
   if (T->hasInstantiationDependentExceptionSpec()) {
     if (T->getExceptionSpecType() == EST_ComputedNoexcept) {
-      Out << "nX";
+      Out << "DO";
       mangleExpression(T->getNoexceptExpr());
       Out << "E";
     } else {
       assert(T->getExceptionSpecType() == EST_Dynamic);
-      Out << "tw";
+      Out << "Dw";
       for (auto ExceptTy : T->exceptions())
         mangleType(ExceptTy);
       Out << "E";
     }
   } else if (T->isNothrow(getASTContext())) {
-    Out << "nx";
+    Out << "Do";
   }
 
   Out << 'F';

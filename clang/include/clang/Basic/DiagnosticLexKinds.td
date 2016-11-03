@@ -183,7 +183,7 @@ def ext_hex_constant_invalid : Extension<
 def ext_hex_literal_invalid : Extension<
   "hexadecimal floating literals are a C++1z feature">, InGroup<CXX1z>;
 def warn_cxx1z_hex_literal : Warning<
-  "hexidecimal floating literals are incompatible with "
+  "hexadecimal floating literals are incompatible with "
   "C++ standards before C++1z">,
   InGroup<CXXPre1zCompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
