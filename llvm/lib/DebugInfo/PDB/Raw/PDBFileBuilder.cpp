@@ -97,28 +97,28 @@ PDBFileBuilder::build(std::unique_ptr<msf::WritableStream> PdbFileBuffer) {
   File->ContainerLayout = *ExpectedLayout;
 
   if (Info) {
-    auto ExpectedInfo = Info->build(*File, *PdbFileBuffer);
+    auto ExpectedInfo = Info->build(*File);
     if (!ExpectedInfo)
       return ExpectedInfo.takeError();
     File->Info = std::move(*ExpectedInfo);
   }
 
   if (Dbi) {
-    auto ExpectedDbi = Dbi->build(*File, *PdbFileBuffer);
+    auto ExpectedDbi = Dbi->build(*File);
     if (!ExpectedDbi)
       return ExpectedDbi.takeError();
     File->Dbi = std::move(*ExpectedDbi);
   }
 
   if (Tpi) {
-    auto ExpectedTpi = Tpi->build(*File, *PdbFileBuffer);
+    auto ExpectedTpi = Tpi->build(*File);
     if (!ExpectedTpi)
       return ExpectedTpi.takeError();
     File->Tpi = std::move(*ExpectedTpi);
   }
 
   if (Ipi) {
-    auto ExpectedIpi = Ipi->build(*File, *PdbFileBuffer);
+    auto ExpectedIpi = Ipi->build(*File);
     if (!ExpectedIpi)
       return ExpectedIpi.takeError();
     File->Ipi = std::move(*ExpectedIpi);

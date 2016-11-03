@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -debug-info-kind=limited -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -debug-info-kind=line-tables-only -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLT %s
-// RUN: %clang_cc1 -debug-info-kind=standalone -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-NOLIMIT %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=limited -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=line-tables-only -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLT %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=standalone -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-NOLIMIT %s
 
 namespace A {
 #line 1 "foo.cpp"
@@ -49,6 +49,9 @@ using B::i;
 namespace B {
 int var_fwd = i;
 }
+inline namespace I {
+int var_i;
+}
 }
 void B::func_fwd() {}
 
@@ -63,6 +66,8 @@ void B::func_fwd() {}
 // CHECK: [[VAR_FWD:![0-9]+]] = distinct !DIGlobalVariable(name: "var_fwd",{{.*}} scope: [[NS]],
 // CHECK-SAME:                                             line: 44
 // CHECK-SAME:                                             isDefinition: true
+// CHECK: distinct !DIGlobalVariable(name: "var_i",{{.*}} scope: [[INLINE:![0-9]+]],
+// CHECK: [[INLINE]] = !DINamespace(name: "I", scope: [[CTXT]], file: [[FOOCPP]], line: 46, exportSymbols: true)
 // CHECK: [[CU:![0-9]+]] = distinct !DICompileUnit(
 // CHECK-SAME:                            imports: [[MODULES:![0-9]*]]
 // CHECK: [[MODULES]] = !{[[M1:![0-9]+]], [[M2:![0-9]+]], [[M3:![0-9]+]], [[M4:![0-9]+]], [[M5:![0-9]+]], [[M6:![0-9]+]], [[M7:![0-9]+]], [[M8:![0-9]+]], [[M9:![0-9]+]], [[M10:![0-9]+]], [[M11:![0-9]+]], [[M12:![0-9]+]], [[M13:![0-9]+]], [[M14:![0-9]+]], [[M15:![0-9]+]], [[M16:![0-9]+]], [[M17:![0-9]+]]}
@@ -101,7 +106,7 @@ void B::func_fwd() {}
 // CHECK-SAME:                          scope: [[NS]], file: [[FOOCPP]], line: 9
 // CHECK: [[M15]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[VAR_FWD:![0-9]+]]
 // CHECK: [[M16]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[FUNC_FWD:![0-9]+]]
-// CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 47,{{.*}} isDefinition: true
+// CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 50,{{.*}} isDefinition: true
 // CHECK: [[M17]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[CTXT]], entity: [[I]]
 
 // CHECK-GMLT: [[CU:![0-9]+]] = distinct !DICompileUnit(

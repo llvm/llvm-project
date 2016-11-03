@@ -970,6 +970,25 @@ static Error checkThreadCommand(const MachOObjectFile *Obj,
                               "flavor number " + Twine(nflavor) + " in " +
                               CmdName + " command");
       }
+    } else if (cputype == MachO::CPU_TYPE_ARM64) {
+      if (flavor == MachO::ARM_THREAD_STATE64) {
+        if (count != MachO::ARM_THREAD_STATE64_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not ARM_THREAD_STATE64_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a ARM_THREAD_STATE64 flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::arm_thread_state64_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " ARM_THREAD_STATE64 extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::arm_thread_state64_t);
+      } else {
+        return malformedError("load command " + Twine(LoadCommandIndex) +
+                              " unknown flavor (" + Twine(flavor) + ") for "
+                              "flavor number " + Twine(nflavor) + " in " +
+                              CmdName + " command");
+      }
     } else if (cputype == MachO::CPU_TYPE_POWERPC) {
       if (flavor == MachO::PPC_THREAD_STATE) {
         if (count != MachO::PPC_THREAD_STATE_COUNT)

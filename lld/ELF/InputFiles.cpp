@@ -103,14 +103,6 @@ std::string elf::getFilename(const InputFile *F) {
   return F->getName();
 }
 
-template <class ELFT> static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
-  std::error_code EC;
-  ELFFile<ELFT> F(MB.getBuffer(), EC);
-  if (EC)
-    fatal(EC, "failed to read " + MB.getBufferIdentifier());
-  return F;
-}
-
 template <class ELFT> static ELFKind getELFKind() {
   if (ELFT::TargetEndianness == support::little)
     return ELFT::Is64Bits ? ELF64LEKind : ELF32LEKind;
@@ -118,34 +110,31 @@ template <class ELFT> static ELFKind getELFKind() {
 }
 
 template <class ELFT>
-ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB)
-    : InputFile(K, MB), ELFObj(createELFObj<ELFT>(MB)) {
+ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB) : InputFile(K, MB) {
   EKind = getELFKind<ELFT>();
-  EMachine = ELFObj.getHeader()->e_machine;
-  OSABI = ELFObj.getHeader()->e_ident[llvm::ELF::EI_OSABI];
+  EMachine = getObj().getHeader()->e_machine;
+  OSABI = getObj().getHeader()->e_ident[llvm::ELF::EI_OSABI];
 }
 
 template <class ELFT>
-typename ELFT::SymRange ELFFileBase<ELFT>::getElfSymbols(bool OnlyGlobals) {
-  if (OnlyGlobals)
+typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalSymbols() {
     return makeArrayRef(Symbols.begin() + FirstNonLocal, Symbols.end());
-  return Symbols;
 }
 
 template <class ELFT>
 uint32_t ELFFileBase<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
-  return check(ELFObj.getSectionIndex(&Sym, Symbols, SymtabSHNDX));
+  return check(getObj().getSectionIndex(&Sym, Symbols, SymtabSHNDX));
 }
 
 template <class ELFT>
 void ELFFileBase<ELFT>::initSymtab(ArrayRef<Elf_Shdr> Sections,
                                    const Elf_Shdr *Symtab) {
   FirstNonLocal = Symtab->sh_info;
-  Symbols = check(ELFObj.symbols(Symtab));
+  Symbols = check(getObj().symbols(Symtab));
   if (FirstNonLocal == 0 || FirstNonLocal > Symbols.size())
     fatal(getFilename(this) + ": invalid sh_info in symbol table");
 
-  StringTable = check(ELFObj.getStringTableForSymtab(*Symtab, Sections));
+  StringTable = check(getObj().getStringTableForSymtab(*Symtab, Sections));
 }
 
 template <class ELFT>
@@ -182,7 +171,7 @@ template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
 template <class ELFT>
 void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   // Read section and symbol tables.
-  ArrayRef<Elf_Shdr> ObjSections = check(this->ELFObj.sections());
+  ArrayRef<Elf_Shdr> ObjSections = check(this->getObj().sections());
   initializeSections(ComdatGroups, ObjSections);
   initializeSymbols(ObjSections);
 }
@@ -205,7 +194,7 @@ elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
 template <class ELFT>
 ArrayRef<typename elf::ObjectFile<ELFT>::Elf_Word>
 elf::ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
-  const ELFFile<ELFT> &Obj = this->ELFObj;
+  const ELFFile<ELFT> &Obj = this->getObj();
   ArrayRef<Elf_Word> Entries =
       check(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec));
   if (Entries.empty() || Entries[0] != GRP_COMDAT)
@@ -270,7 +259,7 @@ template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSections(
     DenseSet<CachedHashStringRef> &ComdatGroups,
     ArrayRef<Elf_Shdr> ObjSections) {
-  const ELFFile<ELFT> &Obj = this->ELFObj;
+  const ELFFile<ELFT> &Obj = this->getObj();
   uint64_t Size = ObjSections.size();
   Sections.resize(Size);
   unsigned I = -1;
@@ -352,7 +341,8 @@ template <class ELFT>
 InputSectionBase<ELFT> *
 elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
                                           StringRef SectionStringTable) {
-  StringRef Name = check(this->ELFObj.getSectionName(&Sec, SectionStringTable));
+  StringRef Name =
+      check(this->getObj().getSectionName(&Sec, SectionStringTable));
 
   switch (Sec.sh_type) {
   case SHT_ARM_ATTRIBUTES:
@@ -434,10 +424,8 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
 
 template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSymbols(ArrayRef<Elf_Shdr> Sections) {
-  Elf_Sym_Range Syms = this->getElfSymbols(false);
-  uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
-  SymbolBodies.reserve(NumSymbols);
-  for (const Elf_Sym &Sym : Syms)
+  SymbolBodies.reserve(this->Symbols.size());
+  for (const Elf_Sym &Sym : this->Symbols)
     SymbolBodies.push_back(createSymbolBody(&Sym));
 }
 
@@ -550,7 +538,8 @@ SharedFile<ELFT>::SharedFile(MemoryBufferRef M)
 template <class ELFT>
 const typename ELFT::Shdr *
 SharedFile<ELFT>::getSection(const Elf_Sym &Sym) const {
-  return check(this->ELFObj.getSection(&Sym, this->Symbols, this->SymtabSHNDX));
+  return check(
+      this->getObj().getSection(&Sym, this->Symbols, this->SymtabSHNDX));
 }
 
 // Partially parse the shared object file so that we can call
@@ -560,7 +549,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   typedef typename ELFT::uint uintX_t;
   const Elf_Shdr *DynamicSec = nullptr;
 
-  const ELFFile<ELFT> Obj = this->ELFObj;
+  const ELFFile<ELFT> Obj = this->getObj();
   ArrayRef<Elf_Shdr> Sections = check(Obj.sections());
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
@@ -624,8 +613,8 @@ SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
     return Verdefs;
 
   // The location of the first global versym entry.
-  Versym = reinterpret_cast<const Elf_Versym *>(this->ELFObj.base() +
-                                                VersymSec->sh_offset) +
+  const char *Base = this->MB.getBuffer().data();
+  Versym = reinterpret_cast<const Elf_Versym *>(Base + VersymSec->sh_offset) +
            this->FirstNonLocal;
 
   // We cannot determine the largest verdef identifier without inspecting
@@ -637,7 +626,7 @@ SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
 
   // Build the Verdefs array by following the chain of Elf_Verdef objects
   // from the start of the .gnu.version_d section.
-  const uint8_t *Verdef = this->ELFObj.base() + VerdefSec->sh_offset;
+  const char *Verdef = Base + VerdefSec->sh_offset;
   for (unsigned I = 0; I != VerdefCount; ++I) {
     auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
     Verdef += CurVerdef->vd_next;
@@ -656,7 +645,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   const Elf_Versym *Versym = nullptr;
   std::vector<const Elf_Verdef *> Verdefs = parseVerdefs(Versym);
 
-  Elf_Sym_Range Syms = this->getElfSymbols(true);
+  Elf_Sym_Range Syms = this->getGlobalSymbols();
   for (const Elf_Sym &Sym : Syms) {
     unsigned VersymIndex = 0;
     if (Versym) {
@@ -795,6 +784,11 @@ static InputFile *createELFFile(MemoryBufferRef MB) {
   if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
     fatal("invalid data encoding: " + MB.getBufferIdentifier());
 
+  size_t BufSize = MB.getBuffer().size();
+  if ((Size == ELFCLASS32 && BufSize < sizeof(Elf32_Ehdr)) ||
+      (Size == ELFCLASS64 && BufSize < sizeof(Elf64_Ehdr)))
+    fatal("file is too short");
+
   InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
     Obj = make<T<ELF32LE>>(MB);
@@ -872,7 +866,7 @@ template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::SymRange Elf_Sym_Range;
 
-  const ELFFile<ELFT> Obj = createELFObj<ELFT>(this->MB);
+  const ELFFile<ELFT> Obj(this->MB.getBuffer());
   ArrayRef<Elf_Shdr> Sections = check(Obj.sections());
   for (const Elf_Shdr &Sec : Sections) {
     if (Sec.sh_type != SHT_SYMTAB)

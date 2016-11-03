@@ -1,8 +1,11 @@
-// RUN: %clang_cc1 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
 
 struct A {
   virtual void f();
   virtual void f_const() const;
+  virtual void g();
 
   A h();
 };
@@ -35,6 +38,64 @@ void f(A a, A *ap, A& ar) {
 
   // CHECK: call void @_ZN1A1fEv
   (a).f();
+}
+
+struct D : A { virtual void g(); };
+struct XD { D d; };
+
+D gd();
+
+void fd(D d, XD xd, D *p) {
+  // CHECK: call void @_ZN1A1fEv(%struct.A*
+  d.f();
+
+  // CHECK: call void @_ZN1D1gEv(%struct.D*
+  d.g();
+
+  // CHECK: call void @_ZN1A1fEv
+  D().f();
+
+  // CHECK: call void @_ZN1D1gEv
+  D().g();
+
+  // CHECK: call void @_ZN1A1fEv
+  gd().f();
+  
+  // CHECK: call void @_ZNK1A7f_constEv
+  d.f_const();
+
+  // CHECK: call void @_ZN1A1fEv
+  (d).f();
+
+  // CHECK: call void @_ZN1A1fEv
+  (true, d).f();
+
+  // CHECK: call void @_ZN1D1gEv
+  (true, d).g();
+
+  // CHECK: call void @_ZN1A1fEv
+  xd.d.f();
+
+  // CHECK: call void @_ZN1A1fEv
+  XD().d.f();
+
+  // CHECK: call void @_ZN1A1fEv
+  D XD::*mp;
+  (xd.*mp).f();
+
+  // CHECK: call void @_ZN1D1gEv
+  (xd.*mp).g();
+
+  // Can't devirtualize this; we have no guarantee that p points to a D here,
+  // due to the "single object is considered to be an array of one element"
+  // rule.
+  // CHECK: call void %
+  p[0].f();
+
+  // FIXME: We can devirtualize this, by C++1z [expr.add]/6 (if the array
+  // element type and the pointee type are not similar, behavior is undefined).
+  // CHECK: call void %
+  p[1].f();
 }
 
 struct B {

@@ -1636,40 +1636,45 @@ class DINamespace : public DIScope {
   friend class MDNode;
 
   unsigned Line;
+  unsigned ExportSymbols : 1;
 
   DINamespace(LLVMContext &Context, StorageType Storage, unsigned Line,
-              ArrayRef<Metadata *> Ops)
+              bool ExportSymbols, ArrayRef<Metadata *> Ops)
       : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace,
                 Ops),
-        Line(Line) {}
+        Line(Line), ExportSymbols(ExportSymbols) {}
   ~DINamespace() = default;
 
   static DINamespace *getImpl(LLVMContext &Context, DIScope *Scope,
                               DIFile *File, StringRef Name, unsigned Line,
-                              StorageType Storage, bool ShouldCreate = true) {
+                              bool ExportSymbols, StorageType Storage,
+                              bool ShouldCreate = true) {
     return getImpl(Context, Scope, File, getCanonicalMDString(Context, Name),
-                   Line, Storage, ShouldCreate);
+                   Line, ExportSymbols, Storage, ShouldCreate);
   }
   static DINamespace *getImpl(LLVMContext &Context, Metadata *Scope,
                               Metadata *File, MDString *Name, unsigned Line,
-                              StorageType Storage, bool ShouldCreate = true);
+                              bool ExportSymbols, StorageType Storage,
+                              bool ShouldCreate = true);
 
   TempDINamespace cloneImpl() const {
     return getTemporary(getContext(), getScope(), getFile(), getName(),
-                        getLine());
+                        getLine(), getExportSymbols());
   }
 
 public:
   DEFINE_MDNODE_GET(DINamespace, (DIScope * Scope, DIFile *File, StringRef Name,
-                                  unsigned Line),
-                    (Scope, File, Name, Line))
-  DEFINE_MDNODE_GET(DINamespace, (Metadata * Scope, Metadata *File,
-                                  MDString *Name, unsigned Line),
-                    (Scope, File, Name, Line))
+                                  unsigned Line, bool ExportSymbols),
+                    (Scope, File, Name, Line, ExportSymbols))
+  DEFINE_MDNODE_GET(DINamespace,
+                    (Metadata * Scope, Metadata *File, MDString *Name,
+                     unsigned Line, bool ExportSymbols),
+                    (Scope, File, Name, Line, ExportSymbols))
 
   TempDINamespace clone() const { return cloneImpl(); }
 
   unsigned getLine() const { return Line; }
+  bool getExportSymbols() const { return ExportSymbols; }
   DIScope *getScope() const { return cast_or_null<DIScope>(getRawScope()); }
   StringRef getName() const { return getStringOperand(2); }
 

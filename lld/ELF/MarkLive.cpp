@@ -80,13 +80,13 @@ static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> &Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
-  ELFFile<ELFT> &Obj = Sec.getFile()->getObj();
+  ELFFile<ELFT> Obj = Sec.getFile()->getObj();
   for (const typename ELFT::Shdr *RelSec : Sec.RelocSections) {
     if (RelSec->sh_type == SHT_RELA) {
-      for (const typename ELFT::Rela &Rel : Obj.relas(RelSec))
+      for (const typename ELFT::Rela &Rel : check(Obj.relas(RelSec)))
         Fn(resolveReloc(Sec, Rel));
     } else {
-      for (const typename ELFT::Rel &Rel : Obj.rels(RelSec))
+      for (const typename ELFT::Rel &Rel : check(Obj.rels(RelSec)))
         Fn(resolveReloc(Sec, Rel));
     }
   }
@@ -153,11 +153,11 @@ scanEhFrameSection(EhInputSection<ELFT> &EH,
   // .eh_frame keep other section alive and some don't.
   EH.split();
 
-  ELFFile<ELFT> &EObj = EH.getFile()->getObj();
+  ELFFile<ELFT> EObj = EH.getFile()->getObj();
   if (EH.RelocSection->sh_type == SHT_RELA)
-    scanEhFrameSection(EH, EObj.relas(EH.RelocSection), Enqueue);
+    scanEhFrameSection(EH, check(EObj.relas(EH.RelocSection)), Enqueue);
   else
-    scanEhFrameSection(EH, EObj.rels(EH.RelocSection), Enqueue);
+    scanEhFrameSection(EH, check(EObj.rels(EH.RelocSection)), Enqueue);
 }
 
 // We do not garbage-collect two types of sections:

@@ -114,28 +114,20 @@ struct OutputSectionCommand : BaseCommand {
 // It can optionally have negative match pattern for EXCLUDED_FILE command.
 // Also it may be surrounded with SORT() command, so contains sorting rules.
 struct SectionPattern {
-  SectionPattern(StringMatcher &&Re1, StringMatcher &&Re2)
-      : ExcludedFileRe(std::forward<StringMatcher>(Re1)),
-        SectionRe(std::forward<StringMatcher>(Re2)) {}
+  SectionPattern(StringMatcher &&Pat1, StringMatcher &&Pat2)
+      : ExcludedFilePat(Pat1), SectionPat(Pat2) {}
 
-  SectionPattern(SectionPattern &&Other) {
-    std::swap(ExcludedFileRe, Other.ExcludedFileRe);
-    std::swap(SectionRe, Other.SectionRe);
-    std::swap(SortOuter, Other.SortOuter);
-    std::swap(SortInner, Other.SortInner);
-  }
-
-  StringMatcher ExcludedFileRe;
-  StringMatcher SectionRe;
+  StringMatcher ExcludedFilePat;
+  StringMatcher SectionPat;
   SortSectionPolicy SortOuter;
   SortSectionPolicy SortInner;
 };
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
-      : BaseCommand(InputSectionKind), FileRe(FilePattern) {}
+      : BaseCommand(InputSectionKind), FilePat({FilePattern}) {}
   static bool classof(const BaseCommand *C);
-  StringMatcher FileRe;
+  StringMatcher FilePat;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.

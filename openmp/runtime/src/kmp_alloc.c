@@ -1,5 +1,5 @@
 /*
- * kmp_alloc.c -- private/shared dyanmic memory allocation and management
+ * kmp_alloc.c -- private/shared dynamic memory allocation and management
  */
 
 

@@ -1740,6 +1740,7 @@ static void writeDINamespace(raw_ostream &Out, const DINamespace *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
+  Printer.printBool("exportSymbols", N->getExportSymbols(), false);
   Out << ")";
 }
 

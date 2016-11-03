@@ -1083,6 +1083,8 @@ DIE *DwarfUnit::getOrCreateNameSpace(const DINamespace *NS) {
   DD->addAccelNamespace(Name, NDie);
   addGlobalName(Name, NDie, NS->getScope());
   addSourceLine(NDie, NS);
+  if (NS->getExportSymbols())
+    addFlag(NDie, dwarf::DW_AT_export_symbols);
   return &NDie;
 }
 

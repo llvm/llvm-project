@@ -8656,6 +8656,43 @@ static void Print_arm_thread_state32_t(MachO::arm_thread_state32_t &cpu32) {
   outs() << "\t   cpsr " << format("0x%08" PRIx32, cpu32.cpsr) << "\n";
 }
 
+static void Print_arm_thread_state64_t(MachO::arm_thread_state64_t &cpu64) {
+  outs() << "\t    x0  " << format("0x%016" PRIx64, cpu64.x[0]);
+  outs() << " x1  "      << format("0x%016" PRIx64, cpu64.x[1]);
+  outs() << " x2  "      << format("0x%016" PRIx64, cpu64.x[2]) << "\n";
+  outs() << "\t    x3  " << format("0x%016" PRIx64, cpu64.x[3]);
+  outs() << " x4  "      << format("0x%016" PRIx64, cpu64.x[4]);
+  outs() << " x5  "      << format("0x%016" PRIx64, cpu64.x[5]) << "\n";
+  outs() << "\t    x6  " << format("0x%016" PRIx64, cpu64.x[6]);
+  outs() << " x7  "      << format("0x%016" PRIx64, cpu64.x[7]);
+  outs() << " x8  "      << format("0x%016" PRIx64, cpu64.x[8]) << "\n";
+  outs() << "\t    x9  " << format("0x%016" PRIx64, cpu64.x[9]);
+  outs() << " x10 "      << format("0x%016" PRIx64, cpu64.x[10]);
+  outs() << " x11 "      << format("0x%016" PRIx64, cpu64.x[11]) << "\n";
+  outs() << "\t    x12 " << format("0x%016" PRIx64, cpu64.x[12]);
+  outs() << " x13 "      << format("0x%016" PRIx64, cpu64.x[13]);
+  outs() << " x14 "      << format("0x%016" PRIx64, cpu64.x[14]) << "\n";
+  outs() << "\t    x15 " << format("0x%016" PRIx64, cpu64.x[15]);
+  outs() << " x16 "      << format("0x%016" PRIx64, cpu64.x[16]);
+  outs() << " x17 "      << format("0x%016" PRIx64, cpu64.x[17]) << "\n";
+  outs() << "\t    x18 " << format("0x%016" PRIx64, cpu64.x[18]);
+  outs() << " x19 "      << format("0x%016" PRIx64, cpu64.x[19]);
+  outs() << " x20 "      << format("0x%016" PRIx64, cpu64.x[20]) << "\n";
+  outs() << "\t    x21 " << format("0x%016" PRIx64, cpu64.x[21]);
+  outs() << " x22 "      << format("0x%016" PRIx64, cpu64.x[22]);
+  outs() << " x23 "      << format("0x%016" PRIx64, cpu64.x[23]) << "\n";
+  outs() << "\t    x24 " << format("0x%016" PRIx64, cpu64.x[24]);
+  outs() << " x25 "      << format("0x%016" PRIx64, cpu64.x[25]);
+  outs() << " x26 "      << format("0x%016" PRIx64, cpu64.x[26]) << "\n";
+  outs() << "\t    x27 " << format("0x%016" PRIx64, cpu64.x[27]);
+  outs() << " x28 "      << format("0x%016" PRIx64, cpu64.x[28]);
+  outs() << "  fp "      << format("0x%016" PRIx64, cpu64.fp) << "\n";
+  outs() << "\t     lr " << format("0x%016" PRIx64, cpu64.lr);
+  outs() << " sp  "      << format("0x%016" PRIx64, cpu64.sp);
+  outs() << "  pc "      << format("0x%016" PRIx64, cpu64.pc) << "\n";
+  outs() << "\t   cpsr " << format("0x%08"  PRIx32, cpu64.cpsr) << "\n";
+}
+
 static void PrintThreadCommand(MachO::thread_command t, const char *Ptr,
                                bool isLittleEndian, uint32_t cputype) {
   if (t.cmd == MachO::LC_THREAD)
@@ -8852,6 +8889,53 @@ static void PrintThreadCommand(MachO::thread_command t, const char *Ptr,
         if (isLittleEndian != sys::IsLittleEndianHost)
           swapStruct(cpu32);
         Print_arm_thread_state32_t(cpu32);
+      } else {
+        outs() << "     flavor " << flavor << " (unknown)\n";
+        outs() << "      count " << count << "\n";
+        outs() << "      state (unknown)\n";
+        begin += count * sizeof(uint32_t);
+      }
+    }
+  } else if (cputype == MachO::CPU_TYPE_ARM64) {
+    while (begin < end) {
+      if (end - begin > (ptrdiff_t)sizeof(uint32_t)) {
+        memcpy((char *)&flavor, begin, sizeof(uint32_t));
+        begin += sizeof(uint32_t);
+      } else {
+        flavor = 0;
+        begin = end;
+      }
+      if (isLittleEndian != sys::IsLittleEndianHost)
+        sys::swapByteOrder(flavor);
+      if (end - begin > (ptrdiff_t)sizeof(uint32_t)) {
+        memcpy((char *)&count, begin, sizeof(uint32_t));
+        begin += sizeof(uint32_t);
+      } else {
+        count = 0;
+        begin = end;
+      }
+      if (isLittleEndian != sys::IsLittleEndianHost)
+        sys::swapByteOrder(count);
+      if (flavor == MachO::ARM_THREAD_STATE64) {
+        outs() << "     flavor ARM_THREAD_STATE64\n";
+        if (count == MachO::ARM_THREAD_STATE64_COUNT)
+          outs() << "      count ARM_THREAD_STATE64_COUNT\n";
+        else
+          outs() << "      count " << count
+                 << " (not ARM_THREAD_STATE64_COUNT)\n";
+        MachO::arm_thread_state64_t cpu64;
+        left = end - begin;
+        if (left >= sizeof(MachO::arm_thread_state64_t)) {
+          memcpy(&cpu64, begin, sizeof(MachO::arm_thread_state64_t));
+          begin += sizeof(MachO::arm_thread_state64_t);
+        } else {
+          memset(&cpu64, '\0', sizeof(MachO::arm_thread_state64_t));
+          memcpy(&cpu64, begin, left);
+          begin += left;
+        }
+        if (isLittleEndian != sys::IsLittleEndianHost)
+          swapStruct(cpu64);
+        Print_arm_thread_state64_t(cpu64);
       } else {
         outs() << "     flavor " << flavor << " (unknown)\n";
         outs() << "      count " << count << "\n";

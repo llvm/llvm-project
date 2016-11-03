@@ -402,7 +402,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (const Elf_Sym &S : SS->file()->getElfSymbols(true)) {
+  for (const Elf_Sym &S : SS->file()->getGlobalSymbols()) {
     if (S.st_shndx != Shndx || S.st_value != Value)
       continue;
     auto *Alias = dyn_cast_or_null<SharedSymbol<ELFT>>(
@@ -776,11 +776,11 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 template <class ELFT>
 void scanRelocations(InputSectionBase<ELFT> &S,
                      const typename ELFT::Shdr &RelSec) {
-  ELFFile<ELFT> &EObj = S.getFile()->getObj();
+  ELFFile<ELFT> EObj = S.getFile()->getObj();
   if (RelSec.sh_type == SHT_RELA)
-    scanRelocs(S, EObj.relas(&RelSec));
+    scanRelocs(S, check(EObj.relas(&RelSec)));
   else
-    scanRelocs(S, EObj.rels(&RelSec));
+    scanRelocs(S, check(EObj.rels(&RelSec)));
 }
 
 template <class ELFT, class RelTy>
@@ -806,11 +806,11 @@ static void createThunks(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 template <class ELFT>
 void createThunks(InputSectionBase<ELFT> &S,
                   const typename ELFT::Shdr &RelSec) {
-  ELFFile<ELFT> &EObj = S.getFile()->getObj();
+  ELFFile<ELFT> EObj = S.getFile()->getObj();
   if (RelSec.sh_type == SHT_RELA)
-    createThunks(S, EObj.relas(&RelSec));
+    createThunks(S, check(EObj.relas(&RelSec)));
   else
-    createThunks(S, EObj.rels(&RelSec));
+    createThunks(S, check(EObj.rels(&RelSec)));
 }
 
 template void scanRelocations<ELF32LE>(InputSectionBase<ELF32LE> &,

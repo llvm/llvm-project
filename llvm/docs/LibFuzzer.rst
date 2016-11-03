@@ -240,8 +240,9 @@ The most important command line options are:
   The limit is checked in a separate thread every second.
   If running w/o ASAN/MSAN, you may use 'ulimit -v' instead.
 ``-timeout_exitcode``
-  Exit code (default 77) to emit when terminating due to timeout, when
-  ``-abort_on_timeout`` is not set.
+  Exit code (default 77) used if libFuzzer reports a timeout.
+``-error_exitcode``
+  Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a bug (leak, OOM, etc).
 ``-max_total_time``
   If positive, indicates the maximum total time in seconds to run the fuzzer.
   If 0 (the default), run indefinitely.
