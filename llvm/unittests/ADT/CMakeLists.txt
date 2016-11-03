@@ -35,6 +35,7 @@ set(ADTSources
   PriorityWorklistTest.cpp
   RangeAdapterTest.cpp
   SCCIteratorTest.cpp
+  STLExtrasTest.cpp
   ScopeExitTest.cpp
   SequenceTest.cpp
   SetVectorTest.cpp
@@ -44,6 +45,7 @@ set(ADTSources
   SparseBitVectorTest.cpp
   SparseMultiSetTest.cpp
   SparseSetTest.cpp
+  StringExtrasTest.cpp
   StringMapTest.cpp
   StringRefTest.cpp
   TinyPtrVectorTest.cpp
