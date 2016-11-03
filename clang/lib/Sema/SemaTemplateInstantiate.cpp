@@ -210,7 +210,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : SemaRef(SemaRef), SavedInNonInstantiationSFINAEContext(
                             SemaRef.InNonInstantiationSFINAEContext) {
   // Don't allow further instantiation if a fatal error and an uncompilable
-  // error have occcured. Any diagnostics we might have raised will not be
+  // error have occurred. Any diagnostics we might have raised will not be
   // visible, and we do not need to construct a correct AST.
   if (SemaRef.Diags.hasFatalErrorOccurred() &&
       SemaRef.Diags.hasUncompilableErrorOccurred()) {
