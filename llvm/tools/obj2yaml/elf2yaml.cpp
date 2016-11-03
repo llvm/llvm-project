@@ -145,7 +145,10 @@ ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   StringRef StrTable = *StrTableOrErr;
 
   bool IsFirstSym = true;
-  for (const Elf_Sym &Sym : Obj.symbols(Symtab)) {
+  auto SymtabOrErr = Obj.symbols(Symtab);
+  if (std::error_code EC = SymtabOrErr.getError())
+    return EC;
+  for (const Elf_Sym &Sym : *SymtabOrErr) {
     if (IsFirstSym) {
       IsFirstSym = false;
       continue;

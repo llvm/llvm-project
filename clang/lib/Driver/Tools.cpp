@@ -7133,11 +7133,10 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs, None));
 }
 
-void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
-                                  const InputInfoList &Outputs,
-                                  const InputInfoList &Inputs,
-                                  const llvm::opt::ArgList &TCArgs,
-                                  const char *LinkingOutput) const {
+void OffloadBundler::ConstructJobMultipleOutputs(
+    Compilation &C, const JobAction &JA, const InputInfoList &Outputs,
+    const InputInfoList &Inputs, const llvm::opt::ArgList &TCArgs,
+    const char *LinkingOutput) const {
   // The version with multiple outputs is expected to refer to a unbundling job.
   auto &UA = cast<OffloadUnbundlingJobAction>(JA);
 

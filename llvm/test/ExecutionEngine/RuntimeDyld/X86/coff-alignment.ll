@@ -1,3 +1,4 @@
+; REQUIRES: system-windows
 ; RUN: opt -mtriple=x86_64-pc-win32-coff %s -o - | lli
 
 @o = common global i32 0, align 4

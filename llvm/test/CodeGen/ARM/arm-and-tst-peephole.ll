@@ -28,10 +28,12 @@ tailrecurse:                                      ; preds = %sw.bb, %entry
 ; ARM:      ands {{r[0-9]+}}, {{r[0-9]+}}, #3
 ; ARM-NEXT: beq
 
-; THUMB:      lsls r[[R0:[0-9]+]], r{{.*}}, #30
+; THUMB:      movs r[[R0:[0-9]+]], #3
+; THUMB-NEXT: ands r[[R0]], r
+; THUMB-NEXT: cmp r[[R0]], #0
 ; THUMB-NEXT: beq
 
-; T2:      lsls r[[R0:[0-9]+]], r{{.*}}, #30
+; T2:      ands {{r[0-9]+}}, {{r[0-9]+}}, #3
 ; T2-NEXT: beq
 
   %and = and i32 %0, 3
@@ -91,7 +93,7 @@ entry:
   %1 = load i8, i8* %0, align 1
   %2 = zext i8 %1 to i32
 ; ARM: ands
-; THUMB: lsls
+; THUMB: ands
 ; T2: ands
 ; V8: ands
 ; V8-NEXT: beq
@@ -148,9 +150,10 @@ define i32 @test_tst_assessment(i1 %lhs, i1 %rhs) {
   %rhs32 = zext i1 %rhs to i32
   %diff = sub nsw i32 %lhs32, %rhs32
 ; ARM: tst r1, #1
-; THUMB: lsls r1, r1, #31
-; T2: lsls r1, r1, #31
-; V8: lsls r1, r1, #31
+; THUMB: movs [[RTMP:r[0-9]+]], #1
+; THUMB: tst r1, [[RTMP]]
+; T2: tst.w r1, #1
+; V8: tst.w r1, #1
   ret i32 %diff
 }
 

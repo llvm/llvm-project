@@ -507,8 +507,8 @@ uint32_t ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     Result |= SymbolRef::SF_Absolute;
 
   if (ESym->getType() == ELF::STT_FILE || ESym->getType() == ELF::STT_SECTION ||
-      ESym == EF.symbols(DotSymtabSec).begin() ||
-      ESym == EF.symbols(DotDynSymSec).begin())
+      ESym == (*EF.symbols(DotSymtabSec)).begin() ||
+      ESym == (*EF.symbols(DotDynSymSec)).begin())
     Result |= SymbolRef::SF_FormatSpecific;
 
   if (EF.getHeader()->e_machine == ELF::EM_ARM) {

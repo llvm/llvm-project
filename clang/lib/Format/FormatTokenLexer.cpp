@@ -525,10 +525,12 @@ FormatToken *FormatTokenLexer::getNextToken() {
   } else if (FormatTok->Tok.is(tok::greatergreater)) {
     FormatTok->Tok.setKind(tok::greater);
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
+    ++Column;
     StateStack.push(LexerState::TOKEN_STASHED);
   } else if (FormatTok->Tok.is(tok::lessless)) {
     FormatTok->Tok.setKind(tok::less);
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
+    ++Column;
     StateStack.push(LexerState::TOKEN_STASHED);
   }
 

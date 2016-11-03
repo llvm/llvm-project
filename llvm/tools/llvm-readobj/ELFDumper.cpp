@@ -246,7 +246,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
     if (!DotSymtabSec)
       return;
     StrTable = unwrapOrError(Obj->getStringTableForSymtab(*DotSymtabSec));
-    Syms = Obj->symbols(DotSymtabSec);
+    Syms = unwrapOrError(Obj->symbols(DotSymtabSec));
     SymtabName = unwrapOrError(Obj->getSectionName(DotSymtabSec));
     Entries = DotSymtabSec->getEntityCount();
   }
@@ -696,11 +696,11 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
   return FullSymbolName;
 }
 
-template <typename ELFO>
+template <typename ELFT>
 static void
-getSectionNameIndex(const ELFO &Obj, const typename ELFO::Elf_Sym *Symbol,
-                    const typename ELFO::Elf_Sym *FirstSym,
-                    ArrayRef<typename ELFO::Elf_Word> ShndxTable,
+getSectionNameIndex(const ELFFile<ELFT> &Obj, const typename ELFT::Sym *Symbol,
+                    const typename ELFT::Sym *FirstSym,
+                    ArrayRef<typename ELFT::Word> ShndxTable,
                     StringRef &SectionName, unsigned &SectionIndex) {
   SectionIndex = Symbol->st_shndx;
   if (Symbol->isUndefined())
@@ -717,9 +717,9 @@ getSectionNameIndex(const ELFO &Obj, const typename ELFO::Elf_Sym *Symbol,
     SectionName = "Reserved";
   else {
     if (SectionIndex == SHN_XINDEX)
-      SectionIndex =
-          Obj.getExtendedSymbolTableIndex(Symbol, FirstSym, ShndxTable);
-    const typename ELFO::Elf_Shdr *Sec =
+      SectionIndex = unwrapOrError(object::getExtendedSymbolTableIndex<ELFT>(
+          Symbol, FirstSym, ShndxTable));
+    const typename ELFT::Shdr *Sec =
         unwrapOrError(Obj.getSection(SectionIndex));
     SectionName = unwrapOrError(Obj.getSectionName(Sec));
   }
@@ -2389,8 +2389,7 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
   OS << "\n";
   Str = printEnum(e->e_ident[ELF::EI_OSABI], makeArrayRef(ElfOSABI));
   printFields(OS, "OS/ABI:", Str);
-  Str = "0x" + to_hexString(e->e_version);
-  Str = to_hexString(e->e_ident[ELF::EI_ABIVERSION]);
+  Str = "0x" + to_hexString(e->e_ident[ELF::EI_ABIVERSION]);
   printFields(OS, "ABI Version:", Str);
   Str = printEnum(e->e_type, makeArrayRef(ElfObjectFileType));
   printFields(OS, "Type:", Str);
@@ -2737,8 +2736,8 @@ std::string GNUStyle<ELFT>::getSymbolSectionNdx(const ELFO *Obj,
   case ELF::SHN_COMMON:
     return "COM";
   case ELF::SHN_XINDEX:
-    SectionIndex = Obj->getExtendedSymbolTableIndex(
-        Symbol, FirstSym, this->dumper()->getShndxTable());
+    SectionIndex = unwrapOrError(object::getExtendedSymbolTableIndex<ELFT>(
+        Symbol, FirstSym, this->dumper()->getShndxTable()));
   default:
     // Find if:
     // Processor specific
@@ -3494,11 +3493,12 @@ template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
       const Elf_Shdr *Symtab = this->dumper()->getDotSymtabSec();
       StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*Symtab));
 
-      for (const Elf_Sym &Sym : Obj->symbols(Symtab)) {
+      for (const Elf_Sym &Sym : unwrapOrError(Obj->symbols(Symtab))) {
         const Elf_Shdr *SymSec = unwrapOrError(
             Obj->getSection(&Sym, Symtab, this->dumper()->getShndxTable()));
         if (SymSec == &Sec)
-          printSymbol(Obj, &Sym, Obj->symbols(Symtab).begin(), StrTable, false);
+          printSymbol(Obj, &Sym, unwrapOrError(Obj->symbols(Symtab)).begin(),
+                      StrTable, false);
       }
     }
 
