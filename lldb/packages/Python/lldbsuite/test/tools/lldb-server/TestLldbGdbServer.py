@@ -579,6 +579,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
     @llgs_test
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054771")
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_llgs(
             self):
         self.init_llgs_test()
@@ -595,6 +596,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
     @llgs_test
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054771")
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_llgs(
             self):
         self.init_llgs_test()
