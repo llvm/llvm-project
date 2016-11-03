@@ -1522,7 +1522,7 @@ static bool ShouldDiagnoseUnusedDecl(const NamedDecl *D) {
   if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
 
     // White-list anything with an __attribute__((unused)) type.
-    QualType Ty = VD->getType();
+    const auto *Ty = VD->getType().getTypePtr();
 
     // Only look at the outermost level of typedef.
     if (const TypedefType *TT = Ty->getAs<TypedefType>()) {
@@ -1534,6 +1534,10 @@ static bool ShouldDiagnoseUnusedDecl(const NamedDecl *D) {
     // dependent, don't diagnose the variable.
     if (Ty->isIncompleteType() || Ty->isDependentType())
       return false;
+
+    // Look at the element type to ensure that the warning behaviour is
+    // consistent for both scalars and arrays.
+    Ty = Ty->getBaseElementTypeUnsafe();
 
     if (const TagType *TT = Ty->getAs<TagType>()) {
       const TagDecl *Tag = TT->getDecl();
@@ -15182,7 +15186,7 @@ static void checkModuleImportContext(Sema &S, Module *M,
   } else if (!M->IsExternC && ExternCLoc.isValid()) {
     S.Diag(ImportLoc, diag::ext_module_import_in_extern_c)
       << M->getFullModuleName();
-    S.Diag(ExternCLoc, diag::note_module_import_in_extern_c);
+    S.Diag(ExternCLoc, diag::note_extern_c_begins_here);
   }
 }
 
