@@ -196,6 +196,26 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
   //        |                      //
   //      ExitBB                   //
   //      /    \                   //
+  //
+
+  // Split the edge between SplitBlock and EntryBB, to avoid a critical edge.
+  splitEdge(SplitBlock, EntryBB, ".pre_entry_bb", &DT, &LI, &RI);
+
+  //      \   /                    //
+  //    EnteringBB                 //
+  //        |                      //
+  //    SplitBlock---------\       //
+  //        |              |       //
+  //    PreEntryBB         |       //
+  //   _____|_____         |       //
+  //  /  EntryBB  \    StartBlock  //
+  //  |  (region) |        |       //
+  //  \_ExitingBB_/   ExitingBlock //
+  //        |              |       //
+  //    MergeBlock---------/       //
+  //        |                      //
+  //      ExitBB                   //
+  //      /    \                   //
 
   return StartBlock;
 }

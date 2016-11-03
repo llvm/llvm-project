@@ -99,7 +99,7 @@ bool Broadcaster::BroadcasterImpl::GetEventNames(
             s.PutCString(GetBroadcasterName());
             s.PutChar('.');
           }
-          s.PutCString(pos->second.c_str());
+          s.PutCString(pos->second);
           ++num_names_added;
         }
       }

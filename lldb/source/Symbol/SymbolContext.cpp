@@ -913,7 +913,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
         if (m_module_sp.get() != sc.module_sp.get())
           return false;
       } else {
-        FileSpec module_file_spec(m_module_spec.c_str(), false);
+        FileSpec module_file_spec(m_module_spec, false);
         if (!FileSpec::Equal(module_file_spec, sc.module_sp->GetFileSpec(),
                              false))
           return false;

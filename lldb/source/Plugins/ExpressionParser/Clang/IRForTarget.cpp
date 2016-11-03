@@ -1149,7 +1149,7 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   GlobalVariable *persistent_global = new GlobalVariable(
       (*m_module), alloc->getType(), false, /* not constant */
       GlobalValue::ExternalLinkage, NULL,   /* no initializer */
-      alloc->getName().str().c_str());
+      alloc->getName().str());
 
   // What we're going to do here is make believe this was a regular old external
   // variable.  That means we need to make the metadata valid.

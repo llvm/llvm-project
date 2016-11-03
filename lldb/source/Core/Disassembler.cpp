@@ -725,15 +725,15 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     opcode_column_width = m_opcode_name.length() + 1;
   }
 
-  ss.PutCString(m_opcode_name.c_str());
+  ss.PutCString(m_opcode_name);
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
-  ss.PutCString(m_mnemonics.c_str());
+  ss.PutCString(m_mnemonics);
 
   if (!m_comment.empty()) {
     ss.FillLastLineToColumn(
         opcode_pos + opcode_column_width + operand_column_width, ' ');
     ss.PutCString(" ; ");
-    ss.PutCString(m_comment.c_str());
+    ss.PutCString(m_comment);
   }
   s->Write(ss.GetData(), ss.GetSize());
 }

@@ -1208,7 +1208,7 @@ void Module::LogMessageVerboseBacktrace(Log *log, const char *format, ...) {
       std::string back_trace;
       llvm::raw_string_ostream stream(back_trace);
       llvm::sys::PrintStackTrace(stream);
-      log_message.PutCString(back_trace.c_str());
+      log_message.PutCString(back_trace);
     }
     log->PutCString(log_message.GetString().c_str());
   }

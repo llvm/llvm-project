@@ -477,7 +477,7 @@ SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
     error.SetErrorString("SFBM::CFSD: filter module item not a string.");
     return nullptr;
   }
-  FileSpec module_spec(module.c_str(), false);
+  FileSpec module_spec(module, false);
 
   return SearchFilterSP(
       new SearchFilterByModule(target.shared_from_this(), module_spec));
@@ -646,7 +646,7 @@ SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
             "SFBM::CFSD: filter module item %zu not a string.", i);
         return nullptr;
       }
-      modules.Append(FileSpec(module.c_str(), false));
+      modules.Append(FileSpec(module, false));
     }
   }
 
@@ -711,7 +711,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
             "SFBM::CFSD: filter module item %zu not a string.", i);
         return result_sp;
       }
-      modules.Append(FileSpec(module.c_str(), false));
+      modules.Append(FileSpec(module, false));
     }
   }
 
@@ -733,7 +733,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
           "SFBM::CFSD: filter cu item %zu not a string.", i);
       return nullptr;
     }
-    cus.Append(FileSpec(cu.c_str(), false));
+    cus.Append(FileSpec(cu, false));
   }
 
   return SearchFilterSP(new SearchFilterByModuleListAndCU(

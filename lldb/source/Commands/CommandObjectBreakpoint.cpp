@@ -2305,8 +2305,7 @@ protected:
       }
     }
     Error error = target->SerializeBreakpointsToFile(
-        FileSpec(m_options.m_filename.c_str(), true), valid_bp_ids,
-        m_options.m_append);
+        FileSpec(m_options.m_filename, true), valid_bp_ids, m_options.m_append);
     if (!error.Success()) {
       result.AppendErrorWithFormat("error serializing breakpoints: %s.",
                                    error.AsCString());

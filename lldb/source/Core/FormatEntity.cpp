@@ -1106,7 +1106,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true; // Only return true if all items succeeded
 
   case Entry::Type::String:
-    s.PutCString(entry.string.c_str());
+    s.PutCString(entry.string);
     return true;
 
   case Entry::Type::Scope: {

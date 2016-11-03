@@ -77,7 +77,7 @@ Error OptionValueFileSpec::SetValueFromString(llvm::StringRef value,
       // or whitespace.
       value = value.trim("\"' \t");
       m_value_was_set = true;
-      m_current_value.SetFile(value.str().c_str(), m_resolve);
+      m_current_value.SetFile(value.str(), m_resolve);
       m_data_sp.reset();
       m_data_mod_time.Clear();
       NotifyValueChanged();

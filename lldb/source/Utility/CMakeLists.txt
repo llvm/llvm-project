@@ -15,6 +15,5 @@ add_lldb_library(lldbUtility
   StringExtractorGDBRemote.cpp
   StringLexer.cpp
   TaskPool.cpp
-  TimeSpecTimeout.cpp
   UriParser.cpp
   )

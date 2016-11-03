@@ -610,7 +610,7 @@ FileSpec FileSpec::GetNormalizedPath() const {
 void FileSpec::Dump(Stream *s) const {
   if (s) {
     std::string path{GetPath(true)};
-    s->PutCString(path.c_str());
+    s->PutCString(path);
     char path_separator = GetPreferredPathSeparator(m_syntax);
     if (!m_filename && !path.empty() && path.back() != path_separator)
       s->PutChar(path_separator);

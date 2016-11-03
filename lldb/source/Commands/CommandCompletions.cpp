@@ -414,7 +414,7 @@ CommandCompletions::SourceFileCompleter::SourceFileCompleter(
                                     match_start_point, max_return_elements,
                                     matches),
       m_include_support_files(include_support_files), m_matching_files() {
-  FileSpec partial_spec(m_completion_str.c_str(), false);
+  FileSpec partial_spec(m_completion_str, false);
   m_file_name = partial_spec.GetFilename().GetCString();
   m_dir_name = partial_spec.GetDirectory().GetCString();
 }
@@ -560,7 +560,7 @@ CommandCompletions::ModuleCompleter::ModuleCompleter(
     : CommandCompletions::Completer(interpreter, completion_str,
                                     match_start_point, max_return_elements,
                                     matches) {
-  FileSpec partial_spec(m_completion_str.c_str(), false);
+  FileSpec partial_spec(m_completion_str, false);
   m_file_name = partial_spec.GetFilename().GetCString();
   m_dir_name = partial_spec.GetDirectory().GetCString();
 }

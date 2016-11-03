@@ -373,7 +373,7 @@ lldb_private::Error PlatformDarwin::GetSharedModuleWithLocalCache(
     if (!cache_path.empty()) {
       std::string module_path(module_spec.GetFileSpec().GetPath());
       cache_path.append(module_path);
-      FileSpec module_cache_spec(cache_path.c_str(), false);
+      FileSpec module_cache_spec(cache_path, false);
 
       // if rsync is supported, always bring in the file - rsync will be very
       // efficient
@@ -1294,7 +1294,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
       if (xcode_select_prefix_dir)
         xcode_dir_path.append(xcode_select_prefix_dir);
       xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
-      temp_file_spec.SetFile(xcode_dir_path.c_str(), false);
+      temp_file_spec.SetFile(xcode_dir_path, false);
       size_t bytes_read = temp_file_spec.ReadFileContents(
           0, developer_dir_path, sizeof(developer_dir_path), NULL);
       if (bytes_read > 0) {
@@ -1436,7 +1436,7 @@ static FileSpec CheckPathForXcode(const FileSpec &fspec) {
     size_t pos = path_to_shlib.rfind(substr);
     if (pos != std::string::npos) {
       path_to_shlib.erase(pos + strlen(substr));
-      FileSpec ret(path_to_shlib.c_str(), false);
+      FileSpec ret(path_to_shlib, false);
 
       FileSpec xcode_binary_path = ret;
       xcode_binary_path.AppendPathComponent("MacOS");
@@ -1503,7 +1503,7 @@ static FileSpec GetXcodeContentsPath() {
           }
           output.append("/..");
 
-          g_xcode_filespec = CheckPathForXcode(FileSpec(output.c_str(), false));
+          g_xcode_filespec = CheckPathForXcode(FileSpec(output, false));
         }
       }
     }
@@ -1604,7 +1604,7 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
 
   enumerator_info.sdk_type = sdk_type;
 
-  FileSpec::EnumerateDirectory(sdks_spec.GetPath().c_str(), find_directories,
+  FileSpec::EnumerateDirectory(sdks_spec.GetPath(), find_directories,
                                find_files, find_other, DirectoryEnumerator,
                                &enumerator_info);
 
@@ -1654,8 +1654,7 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
         FileSpec native_sdk_spec = sdks_spec;
         StreamString native_sdk_name;
         native_sdk_name.Printf("MacOSX%u.%u.sdk", major, minor);
-        native_sdk_spec.AppendPathComponent(
-            native_sdk_name.GetString().c_str());
+        native_sdk_spec.AppendPathComponent(native_sdk_name.GetString());
 
         if (native_sdk_spec.Exists()) {
           return native_sdk_spec;
@@ -1744,22 +1743,19 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
       minimum_version_option.PutCString("-mios-version-min=");
       minimum_version_option.PutCString(
           clang::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString()
-              .c_str());
+              .getAsString());
       break;
     case SDKType::iPhoneSimulator:
       minimum_version_option.PutCString("-mios-simulator-version-min=");
       minimum_version_option.PutCString(
           clang::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString()
-              .c_str());
+              .getAsString());
       break;
     case SDKType::MacOSX:
       minimum_version_option.PutCString("-mmacosx-version-min=");
       minimum_version_option.PutCString(
           clang::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString()
-              .c_str());
+              .getAsString());
     }
     options.push_back(minimum_version_option.GetString());
   }

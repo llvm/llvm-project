@@ -35,7 +35,6 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
-
 namespace {
 // In ELF object file all section addresses are zero. If we have multiple
 // .text sections (when using -ffunction-section or comdat group) then
@@ -53,11 +52,10 @@ public:
 };
 }
 
-template <class ELFT> DIHelper<ELFT>::DIHelper(InputFile *F) {
-  Expected<std::unique_ptr<object::ObjectFile>> Obj =
-      object::ObjectFile::createObjectFile(F->MB);
-  if (!Obj)
-    return;
+template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
+  std::unique_ptr<object::ObjectFile> Obj =
+      check(object::ObjectFile::createObjectFile(this->MB),
+            "createObjectFile failed");
 
   ObjectInfo ObjInfo;
   DWARFContextInMemory Dwarf(*Obj.get(), &ObjInfo);
@@ -65,35 +63,35 @@ template <class ELFT> DIHelper<ELFT>::DIHelper(InputFile *F) {
   DataExtractor LineData(Dwarf.getLineSection().Data,
                          ELFT::TargetEndianness == support::little,
                          ELFT::Is64Bits ? 8 : 4);
+
   // The second parameter is offset in .debug_line section
   // for compilation unit (CU) of interest. We have only one
   // CU (object file), so offset is always 0.
   DwarfLine->getOrParseLineTable(LineData, 0);
 }
 
-template <class ELFT> DIHelper<ELFT>::~DIHelper() {}
-
+// Returns source line information for a given offset
+// using DWARF debug info.
 template <class ELFT>
-std::string DIHelper<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
-                                        uintX_t Offset) {
+std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
+                                               uintX_t Offset) {
   if (!DwarfLine)
-    return "";
+    initializeDwarfLine();
 
-  DILineInfo LineInfo;
-  DILineInfoSpecifier Spec;
-  // The offset to CU is 0 (see DIHelper constructor).
-  const DWARFDebugLine::LineTable *LineTbl = DwarfLine->getLineTable(0);
-  if (!LineTbl)
+  // The offset to CU is 0.
+  const DWARFDebugLine::LineTable *Tbl = DwarfLine->getLineTable(0);
+  if (!Tbl)
     return "";
 
   // Use fake address calcuated by adding section file offset and offset in
-  // section.
-  // See comments for ObjectInfo class
-  LineTbl->getFileLineInfoForAddress(S->Offset + Offset, nullptr, Spec.FLIKind,
-                                     LineInfo);
-  return LineInfo.Line != 0
-             ? LineInfo.FileName + " (" + std::to_string(LineInfo.Line) + ")"
-             : "";
+  // section. See comments for ObjectInfo class.
+  DILineInfo Info;
+  DILineInfoSpecifier Spec;
+  Tbl->getFileLineInfoForAddress(S->Offset + Offset, nullptr, Spec.FLIKind,
+                                 Info);
+  if (Info.Line == 0)
+    return "";
+  return Info.FileName + " (" + std::to_string(Info.Line) + ")";
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
@@ -185,13 +183,6 @@ ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
   return makeArrayRef(this->SymbolBodies).slice(1);
 }
 
-template <class ELFT> DIHelper<ELFT> *elf::ObjectFile<ELFT>::getDIHelper() {
-  if (!DIH)
-    DIH.reset(new DIHelper<ELFT>(this));
-
-  return DIH.get();
-}
-
 template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
   if (ELFT::Is64Bits && MipsOptions && MipsOptions->Reginfo)
     return MipsOptions->Reginfo->ri_gp_value;
@@ -211,10 +202,13 @@ void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 // They are identified and deduplicated by group name. This function
 // returns a group name.
 template <class ELFT>
-StringRef elf::ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
+StringRef
+elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
+                                            const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
-  const Elf_Shdr *Symtab = check(Obj.getSection(Sec.sh_link));
-  const Elf_Sym *Sym = Obj.getSymbol(Symtab, Sec.sh_info);
+  const Elf_Shdr *Symtab =
+      check(object::getSection<ELFT>(Sections, Sec.sh_link));
+  const Elf_Sym *Sym = check(Obj.getSymbol(Symtab, Sec.sh_info));
   StringRef Strtab = check(Obj.getStringTableForSymtab(*Symtab));
   return check(Sym->getName(Strtab));
 }
@@ -308,7 +302,9 @@ void elf::ObjectFile<ELFT>::initializeSections(
     switch (Sec.sh_type) {
     case SHT_GROUP:
       Sections[I] = &InputSection<ELFT>::Discarded;
-      if (ComdatGroups.insert(CachedHashStringRef(getShtGroupSignature(Sec)))
+      if (ComdatGroups
+              .insert(
+                  CachedHashStringRef(getShtGroupSignature(ObjSections, Sec)))
               .second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
@@ -968,8 +964,3 @@ template void BinaryFile::parse<ELF32LE>();
 template void BinaryFile::parse<ELF32BE>();
 template void BinaryFile::parse<ELF64LE>();
 template void BinaryFile::parse<ELF64BE>();
-
-template class elf::DIHelper<ELF32LE>;
-template class elf::DIHelper<ELF32BE>;
-template class elf::DIHelper<ELF64LE>;
-template class elf::DIHelper<ELF64BE>;

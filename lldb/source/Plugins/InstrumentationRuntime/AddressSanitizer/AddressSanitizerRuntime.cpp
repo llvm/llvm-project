@@ -244,7 +244,7 @@ bool AddressSanitizerRuntime::NotifyBreakpointHit(
     if (thread_sp)
       thread_sp->SetStopInfo(InstrumentationRuntimeStopInfo::
                                  CreateStopReasonWithInstrumentationData(
-                                     *thread_sp, description.c_str(), report));
+                                     *thread_sp, description, report));
 
     StreamFileSP stream_sp(
         process_sp->GetTarget().GetDebugger().GetOutputFile());

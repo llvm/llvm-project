@@ -198,7 +198,7 @@ Error OptionValueDictionary::SetArgs(const Args &args, VarSetOperationType op) {
 
 Error OptionValueDictionary::SetValueFromString(llvm::StringRef value,
                                                 VarSetOperationType op) {
-  Args args(value.str().c_str());
+  Args args(value.str());
   Error error = SetArgs(args, op);
   if (error.Success())
     NotifyValueChanged();

@@ -56,7 +56,6 @@ public:
     Got,
     GotPlt,
     HashTable,
-    Interp,
     Merge,
     MipsReginfo,
     MipsOptions,
@@ -517,17 +516,6 @@ private:
 };
 
 template <class ELFT>
-class InterpSection final : public OutputSectionBase<ELFT> {
-  typedef OutputSectionBase<ELFT> Base;
-
-public:
-  InterpSection();
-  void writeTo(uint8_t *Buf) override;
-  typename Base::Kind getKind() const override { return Base::Interp; }
-  static bool classof(const Base *B) { return B->getKind() == Base::Interp; }
-};
-
-template <class ELFT>
 class StringTableSection final : public OutputSectionBase<ELFT> {
   typedef OutputSectionBase<ELFT> Base;
 
@@ -755,7 +743,6 @@ template <class ELFT> struct Out {
   static GotPltSection<ELFT> *GotPlt;
   static GotSection<ELFT> *Got;
   static HashTableSection<ELFT> *HashTab;
-  static InterpSection<ELFT> *Interp;
   static OutputSection<ELFT> *Bss;
   static OutputSection<ELFT> *MipsRldMap;
   static OutputSectionBase<ELFT> *Opd;
@@ -822,7 +809,6 @@ template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
 template <class ELFT> GotPltSection<ELFT> *Out<ELFT>::GotPlt;
 template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;
 template <class ELFT> HashTableSection<ELFT> *Out<ELFT>::HashTab;
-template <class ELFT> InterpSection<ELFT> *Out<ELFT>::Interp;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::Opd;

@@ -83,7 +83,7 @@ BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
     return nullptr;
   }
 
-  FileSpec file_spec(filename.c_str(), false);
+  FileSpec file_spec(filename, false);
 
   return new BreakpointResolverFileLine(bkpt, file_spec, line_no, offset,
                                         check_inlines, skip_prologue,

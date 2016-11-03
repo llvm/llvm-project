@@ -107,16 +107,16 @@ void Log::VAPrintf(const char *format, va_list args) {
       llvm::raw_string_ostream stream(back_trace);
       llvm::sys::PrintStackTrace(stream);
       stream.flush();
-      header.PutCString(back_trace.c_str());
+      header.PutCString(back_trace);
     }
 
     if (m_options.Test(LLDB_LOG_OPTION_THREADSAFE)) {
       static std::recursive_mutex g_LogThreadedMutex;
       std::lock_guard<std::recursive_mutex> guard(g_LogThreadedMutex);
-      stream_sp->PutCString(header.GetString().c_str());
+      stream_sp->PutCString(header.GetString());
       stream_sp->Flush();
     } else {
-      stream_sp->PutCString(header.GetString().c_str());
+      stream_sp->PutCString(header.GetString());
       stream_sp->Flush();
     }
   }

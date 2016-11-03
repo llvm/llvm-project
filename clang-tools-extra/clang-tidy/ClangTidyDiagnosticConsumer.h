@@ -286,6 +286,7 @@ private:
   std::unique_ptr<llvm::Regex> HeaderFilter;
   bool LastErrorRelatesToUserCode;
   bool LastErrorPassesLineFilter;
+  bool LastErrorWasIgnored;
 };
 
 } // end namespace tidy
