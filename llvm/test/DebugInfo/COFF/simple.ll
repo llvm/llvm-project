@@ -25,11 +25,16 @@
 ; X86-NEXT: .long   4
 ; Symbol subsection
 ; X86-NEXT: .long   241
-; X86-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
+; X86-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
 ; Compiler information record
-; X86-NEXT: [[F1_START]]:
+; X86-NEXT: [[COMPILE_START]]:
 ; X86-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
 ; X86:      [[C1_END]]:
+; X86-NEXT: [[COMPILE_END]]:
+; X86-NEXT: .p2align	2
+; X86-NEXT:	.long	241  # Symbol subsection for f
+; X86-NEXT:	.long	[[F1_END:.*]]-[[F1_START:.*]] # Subsection size
+; X86-NEXT: [[F1_START]]:
 ; X86-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X86-NEXT: [[PROC_SEGMENT_START]]:
 ; X86-NEXT: .short  4423
@@ -61,10 +66,10 @@
 ; OBJ32:      Characteristics [ (0x42300040)
 ; OBJ32:      ]
 ; OBJ32:      Relocations [
-; OBJ32-NEXT:   0x59 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x5D IMAGE_REL_I386_SECTION _f
-; OBJ32-NEXT:   0x70 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x74 IMAGE_REL_I386_SECTION _f
+; OBJ32-NEXT:   0x64 IMAGE_REL_I386_SECREL _f
+; OBJ32-NEXT:   0x68 IMAGE_REL_I386_SECTION _f
+; OBJ32-NEXT:   0x7C IMAGE_REL_I386_SECREL _f
+; OBJ32-NEXT:   0x80 IMAGE_REL_I386_SECTION _f
 ; OBJ32-NEXT: ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
@@ -117,11 +122,16 @@
 ; X64-NEXT: .long   4
 ; Symbol subsection
 ; X64-NEXT: .long   241
-; X64-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
+; X64-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
 ; Compiler information record
-; X64-NEXT: [[F1_START]]:
+; X64-NEXT: [[COMPILE_START]]:
 ; X64-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
 ; X64:      [[C1_END]]:
+; X64-NEXT: [[COMPILE_END]]:
+; X64-NEXT: .p2align	2
+; X64-NEXT:	.long	241  # Symbol subsection for f
+; X64-NEXT:	.long	[[F1_END:.*]]-[[F1_START:.*]] # Subsection size
+; X64-NEXT: [[F1_START]]:
 ; X64-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X64-NEXT: [[PROC_SEGMENT_START]]:
 ; X64-NEXT: .short  4423
@@ -153,10 +163,10 @@
 ; OBJ64:      Characteristics [ (0x42300040)
 ; OBJ64:      ]
 ; OBJ64:      Relocations [
-; OBJ64-NEXT:   0x59 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x5D IMAGE_REL_AMD64_SECTION f
-; OBJ64-NEXT:   0x70 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x74 IMAGE_REL_AMD64_SECTION f
+; OBJ64-NEXT:   0x64 IMAGE_REL_AMD64_SECREL f
+; OBJ64-NEXT:   0x68 IMAGE_REL_AMD64_SECTION f
+; OBJ64-NEXT:   0x7C IMAGE_REL_AMD64_SECREL f
+; OBJ64-NEXT:   0x80 IMAGE_REL_AMD64_SECTION f
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)

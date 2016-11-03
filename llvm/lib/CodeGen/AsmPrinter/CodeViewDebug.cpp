@@ -391,6 +391,11 @@ void CodeViewDebug::endModule() {
   // Use the generic .debug$S section, and make a subsection for all the inlined
   // subprograms.
   switchToDebugSectionForSymbol(nullptr);
+
+  MCSymbol *CompilerInfo = beginCVSubsection(ModuleSubstreamKind::Symbols);
+  emitCompilerInformation();
+  endCVSubsection(CompilerInfo);
+
   emitInlineeLinesSubsection();
 
   // Emit per-function debug information.
@@ -2131,8 +2136,6 @@ MCSymbol *CodeViewDebug::beginCVSubsection(ModuleSubstreamKind Kind) {
   OS.AddComment("Subsection size");
   OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
   OS.EmitLabel(BeginLabel);
-  if (Kind == ModuleSubstreamKind::Symbols)
-    emitCompilerInformation();
   return EndLabel;
 }
 

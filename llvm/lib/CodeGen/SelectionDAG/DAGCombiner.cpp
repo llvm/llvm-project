@@ -5583,7 +5583,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
                            Alignment, MST->getAAInfo(), MST->getRanges());
 
     Lo = DAG.getMaskedStore(Chain, DL, DataLo, Ptr, MaskLo, LoMemVT, MMO,
-                            MST->isTruncatingStore());
+                            MST->isTruncatingStore(), MST->isCompressingStore());
 
     unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
     Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
@@ -5596,7 +5596,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
                            MST->getRanges());
 
     Hi = DAG.getMaskedStore(Chain, DL, DataHi, Ptr, MaskHi, HiMemVT, MMO,
-                            MST->isTruncatingStore());
+                            MST->isTruncatingStore(), MST->isCompressingStore());
 
     AddToWorklist(Lo.getNode());
     AddToWorklist(Hi.getNode());

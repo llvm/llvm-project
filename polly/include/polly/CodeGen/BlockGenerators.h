@@ -78,10 +78,12 @@ public:
   ///                    an original value appearing in this mapping is replaced
   ///                    with the new value it is mapped to.
   /// @param ExprBuilder An expression builder to generate new access functions.
+  /// @param StartBlock  The first basic block after the RTC.
   BlockGenerator(PollyIRBuilder &Builder, LoopInfo &LI, ScalarEvolution &SE,
                  DominatorTree &DT, ScalarAllocaMapTy &ScalarMap,
                  ScalarAllocaMapTy &PHIOpMap, EscapeUsersAllocaMapTy &EscapeMap,
-                 ValueMapT &GlobalMap, IslExprBuilder *ExprBuilder = nullptr);
+                 ValueMapT &GlobalMap, IslExprBuilder *ExprBuilder,
+                 BasicBlock *StartBlock);
 
   /// Copy the basic block.
   ///
@@ -314,6 +316,9 @@ protected:
   ///        llvm::Values, which is used to replace these old values during
   ///        code generation.
   ValueMapT &GlobalMap;
+
+  /// The first basic block after the RTC.
+  BasicBlock *StartBlock;
 
   /// Split @p BB to create a new one we can use to clone @p BB in.
   BasicBlock *splitBB(BasicBlock *BB);

@@ -48,16 +48,14 @@ static cl::opt<bool> DebugPrinting(
     cl::desc("Add printf calls that show the values loaded/stored."),
     cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-BlockGenerator::BlockGenerator(PollyIRBuilder &B, LoopInfo &LI,
-                               ScalarEvolution &SE, DominatorTree &DT,
-                               ScalarAllocaMapTy &ScalarMap,
-                               ScalarAllocaMapTy &PHIOpMap,
-                               EscapeUsersAllocaMapTy &EscapeMap,
-                               ValueMapT &GlobalMap,
-                               IslExprBuilder *ExprBuilder)
+BlockGenerator::BlockGenerator(
+    PollyIRBuilder &B, LoopInfo &LI, ScalarEvolution &SE, DominatorTree &DT,
+    ScalarAllocaMapTy &ScalarMap, ScalarAllocaMapTy &PHIOpMap,
+    EscapeUsersAllocaMapTy &EscapeMap, ValueMapT &GlobalMap,
+    IslExprBuilder *ExprBuilder, BasicBlock *StartBlock)
     : Builder(B), LI(LI), SE(SE), ExprBuilder(ExprBuilder), DT(DT),
       EntryBB(nullptr), PHIOpMap(PHIOpMap), ScalarMap(ScalarMap),
-      EscapeMap(EscapeMap), GlobalMap(GlobalMap) {}
+      EscapeMap(EscapeMap), GlobalMap(GlobalMap), StartBlock(StartBlock) {}
 
 Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
                                              ValueMapT &BBMap,
@@ -85,7 +83,8 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
   assert(IP != Builder.GetInsertBlock()->end() &&
          "Only instructions can be insert points for SCEVExpander");
   Value *Expanded =
-      expandCodeFor(S, SE, DL, "polly", NewScev, Old->getType(), &*IP, &VTV);
+      expandCodeFor(S, SE, DL, "polly", NewScev, Old->getType(), &*IP, &VTV,
+                    StartBlock->getSinglePredecessor());
 
   BBMap[Old] = Expanded;
   return Expanded;
@@ -524,18 +523,9 @@ void BlockGenerator::generateScalarStores(
 
 void BlockGenerator::createScalarInitialization(Scop &S) {
   BasicBlock *ExitBB = S.getExit();
+  BasicBlock *PreEntryBB = S.getEnteringBlock();
 
-  // The split block __just before__ the region and optimized region.
-  BasicBlock *SplitBB = S.getEnteringBlock();
-  BranchInst *SplitBBTerm = cast<BranchInst>(SplitBB->getTerminator());
-  assert(SplitBBTerm->getNumSuccessors() == 2 && "Bad region entering block!");
-
-  // Get the start block of the __optimized__ region.
-  BasicBlock *StartBB = SplitBBTerm->getSuccessor(0);
-  if (StartBB == S.getEntry())
-    StartBB = SplitBBTerm->getSuccessor(1);
-
-  Builder.SetInsertPoint(&*StartBB->begin());
+  Builder.SetInsertPoint(&*StartBlock->begin());
 
   for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)
@@ -544,15 +534,15 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
       // For PHI nodes, the only values we need to store are the ones that
       // reach the PHI node from outside the region. In general there should
       // only be one such incoming edge and this edge should enter through
-      // 'SplitBB'.
+      // 'PreEntryBB'.
       auto PHI = cast<PHINode>(Array->getBasePtr());
 
       for (auto BI = PHI->block_begin(), BE = PHI->block_end(); BI != BE; BI++)
-        if (!S.contains(*BI) && *BI != SplitBB)
+        if (!S.contains(*BI) && *BI != PreEntryBB)
           llvm_unreachable("Incoming edges from outside the scop should always "
-                           "come from SplitBB");
+                           "come from PreEntryBB");
 
-      int Idx = PHI->getBasicBlockIndex(SplitBB);
+      int Idx = PHI->getBasicBlockIndex(PreEntryBB);
       if (Idx < 0)
         continue;
 

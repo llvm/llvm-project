@@ -1967,3 +1967,152 @@ llvm::ConstantFoldCall(Function *F, ArrayRef<Constant *> Operands,
 
   return ConstantFoldScalarCall(Name, F->getIntrinsicID(), Ty, Operands, TLI);
 }
+
+bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
+  // FIXME: Refactor this code; this duplicates logic in LibCallsShrinkWrap
+  // (and to some extent ConstantFoldScalarCall).
+  Function *F = CS.getCalledFunction();
+  if (!F)
+    return false;
+
+  LibFunc::Func Func;
+  if (!TLI || !TLI->getLibFunc(*F, Func))
+    return false;
+
+  if (CS.getNumArgOperands() == 1) {
+    if (ConstantFP *OpC = dyn_cast<ConstantFP>(CS.getArgOperand(0))) {
+      const APFloat &Op = OpC->getValueAPF();
+      switch (Func) {
+      case LibFunc::logl:
+      case LibFunc::log:
+      case LibFunc::logf:
+      case LibFunc::log2l:
+      case LibFunc::log2:
+      case LibFunc::log2f:
+      case LibFunc::log10l:
+      case LibFunc::log10:
+      case LibFunc::log10f:
+        return Op.isNaN() || (!Op.isZero() && !Op.isNegative());
+
+      case LibFunc::expl:
+      case LibFunc::exp:
+      case LibFunc::expf:
+        // FIXME: These boundaries are slightly conservative.
+        if (OpC->getType()->isDoubleTy())
+          return Op.compare(APFloat(-745.0)) != APFloat::cmpLessThan &&
+                 Op.compare(APFloat(709.0)) != APFloat::cmpGreaterThan;
+        if (OpC->getType()->isFloatTy())
+          return Op.compare(APFloat(-103.0f)) != APFloat::cmpLessThan &&
+                 Op.compare(APFloat(88.0f)) != APFloat::cmpGreaterThan;
+        break;
+
+      case LibFunc::exp2l:
+      case LibFunc::exp2:
+      case LibFunc::exp2f:
+        // FIXME: These boundaries are slightly conservative.
+        if (OpC->getType()->isDoubleTy())
+          return Op.compare(APFloat(-1074.0)) != APFloat::cmpLessThan &&
+                 Op.compare(APFloat(1023.0)) != APFloat::cmpGreaterThan;
+        if (OpC->getType()->isFloatTy())
+          return Op.compare(APFloat(-149.0f)) != APFloat::cmpLessThan &&
+                 Op.compare(APFloat(127.0f)) != APFloat::cmpGreaterThan;
+        break;
+
+      case LibFunc::sinl:
+      case LibFunc::sin:
+      case LibFunc::sinf:
+      case LibFunc::cosl:
+      case LibFunc::cos:
+      case LibFunc::cosf:
+        return !Op.isInfinity();
+
+      case LibFunc::tanl:
+      case LibFunc::tan:
+      case LibFunc::tanf: {
+        // FIXME: Stop using the host math library.
+        // FIXME: The computation isn't done in the right precision.
+        Type *Ty = OpC->getType();
+        if (Ty->isDoubleTy() || Ty->isFloatTy() || Ty->isHalfTy()) {
+          double OpV = getValueAsDouble(OpC);
+          return ConstantFoldFP(tan, OpV, Ty) != nullptr;
+        }
+        break;
+      }
+
+      case LibFunc::asinl:
+      case LibFunc::asin:
+      case LibFunc::asinf:
+      case LibFunc::acosl:
+      case LibFunc::acos:
+      case LibFunc::acosf:
+        return Op.compare(APFloat(Op.getSemantics(), "-1")) !=
+                   APFloat::cmpLessThan &&
+               Op.compare(APFloat(Op.getSemantics(), "1")) !=
+                   APFloat::cmpGreaterThan;
+
+      case LibFunc::sinh:
+      case LibFunc::cosh:
+      case LibFunc::sinhf:
+      case LibFunc::coshf:
+      case LibFunc::sinhl:
+      case LibFunc::coshl:
+        // FIXME: These boundaries are slightly conservative.
+        if (OpC->getType()->isDoubleTy())
+          return Op.compare(APFloat(-710.0)) != APFloat::cmpLessThan &&
+                 Op.compare(APFloat(710.0)) != APFloat::cmpGreaterThan;
+        if (OpC->getType()->isFloatTy())
+          return Op.compare(APFloat(-89.0f)) != APFloat::cmpLessThan &&
+                 Op.compare(APFloat(89.0f)) != APFloat::cmpGreaterThan;
+        break;
+
+      case LibFunc::sqrtl:
+      case LibFunc::sqrt:
+      case LibFunc::sqrtf:
+        return Op.isNaN() || Op.isZero() || !Op.isNegative();
+
+      // FIXME: Add more functions: sqrt_finite, atanh, expm1, log1p,
+      // maybe others?
+      default:
+        break;
+      }
+    }
+  }
+
+  if (CS.getNumArgOperands() == 2) {
+    ConstantFP *Op0C = dyn_cast<ConstantFP>(CS.getArgOperand(0));
+    ConstantFP *Op1C = dyn_cast<ConstantFP>(CS.getArgOperand(1));
+    if (Op0C && Op1C) {
+      const APFloat &Op0 = Op0C->getValueAPF();
+      const APFloat &Op1 = Op1C->getValueAPF();
+
+      switch (Func) {
+      case LibFunc::powl:
+      case LibFunc::pow:
+      case LibFunc::powf: {
+        // FIXME: Stop using the host math library.
+        // FIXME: The computation isn't done in the right precision.
+        Type *Ty = Op0C->getType();
+        if (Ty->isDoubleTy() || Ty->isFloatTy() || Ty->isHalfTy()) {
+          if (Ty == Op1C->getType()) {
+            double Op0V = getValueAsDouble(Op0C);
+            double Op1V = getValueAsDouble(Op1C);
+            return ConstantFoldBinaryFP(pow, Op0V, Op1V, Ty) != nullptr;
+          }
+        }
+        break;
+      }
+
+      case LibFunc::fmodl:
+      case LibFunc::fmod:
+      case LibFunc::fmodf:
+        return Op0.isNaN() || Op1.isNaN() ||
+               (!Op0.isInfinity() && !Op1.isZero());
+
+      default:
+        break;
+      }
+    }
+  }
+
+  return false;
+}

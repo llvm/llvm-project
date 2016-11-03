@@ -23,6 +23,7 @@
 namespace llvm {
 class APInt;
 template <typename T> class ArrayRef;
+class CallSite;
 class Constant;
 class ConstantExpr;
 class ConstantVector;
@@ -125,6 +126,10 @@ bool canConstantFoldCallTo(const Function *F);
 /// with the specified arguments, returning null if unsuccessful.
 Constant *ConstantFoldCall(Function *F, ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
+
+/// \brief Check whether the given call has no side-effects.
+/// Specifically checks for math routimes which sometimes set errno.
+bool isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI);
 }
 
 #endif

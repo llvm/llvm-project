@@ -226,9 +226,10 @@ struct ScopExpander : SCEVVisitor<ScopExpander, const SCEV *> {
   friend struct SCEVVisitor<ScopExpander, const SCEV *>;
 
   explicit ScopExpander(const Region &R, ScalarEvolution &SE,
-                        const DataLayout &DL, const char *Name, ValueMapT *VMap)
+                        const DataLayout &DL, const char *Name, ValueMapT *VMap,
+                        BasicBlock *RTCBB)
       : Expander(SCEVExpander(SE, DL, Name)), SE(SE), Name(Name), R(R),
-        VMap(VMap) {}
+        VMap(VMap), RTCBB(RTCBB) {}
 
   Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *I) {
     // If we generate code in the region we will immediately fall back to the
@@ -245,6 +246,7 @@ private:
   const char *Name;
   const Region &R;
   ValueMapT *VMap;
+  BasicBlock *RTCBB;
 
   const SCEV *visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
                                Instruction *IP) {
@@ -280,15 +282,14 @@ private:
         return visit(NewE);
     }
 
-    auto *EnteringBB = R.getEnteringBlock();
     Instruction *Inst = dyn_cast<Instruction>(E->getValue());
     Instruction *IP;
     if (Inst && !R.contains(Inst))
       IP = Inst;
-    else if (Inst && EnteringBB->getParent() == Inst->getFunction())
-      IP = EnteringBB->getTerminator();
+    else if (Inst && RTCBB->getParent() == Inst->getFunction())
+      IP = RTCBB->getTerminator();
     else
-      IP = EnteringBB->getParent()->getEntryBlock().getTerminator();
+      IP = RTCBB->getParent()->getEntryBlock().getTerminator();
 
     if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
                   Inst->getOpcode() != Instruction::SDiv))
@@ -363,8 +364,9 @@ private:
 
 Value *polly::expandCodeFor(Scop &S, ScalarEvolution &SE, const DataLayout &DL,
                             const char *Name, const SCEV *E, Type *Ty,
-                            Instruction *IP, ValueMapT *VMap) {
-  ScopExpander Expander(S.getRegion(), SE, DL, Name, VMap);
+                            Instruction *IP, ValueMapT *VMap,
+                            BasicBlock *RTCBB) {
+  ScopExpander Expander(S.getRegion(), SE, DL, Name, VMap, RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
 }
 

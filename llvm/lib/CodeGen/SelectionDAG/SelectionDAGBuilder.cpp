@@ -3667,16 +3667,39 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   DAG.setRoot(StoreNode);
 }
 
-void SelectionDAGBuilder::visitMaskedStore(const CallInst &I) {
+void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
+                                           bool IsCompressing) {
   SDLoc sdl = getCurSDLoc();
 
-  // llvm.masked.store.*(Src0, Ptr, alignment, Mask)
-  Value  *PtrOperand = I.getArgOperand(1);
+  auto getMaskedStoreOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
+                           unsigned& Alignment) {
+    // llvm.masked.store.*(Src0, Ptr, alignment, Mask)
+    Src0 = I.getArgOperand(0);
+    Ptr = I.getArgOperand(1);
+    Alignment = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
+    Mask = I.getArgOperand(3);
+  };
+  auto getCompressingStoreOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
+                           unsigned& Alignment) {
+    // llvm.masked.compressstore.*(Src0, Ptr, Mask)
+    Src0 = I.getArgOperand(0);
+    Ptr = I.getArgOperand(1);
+    Mask = I.getArgOperand(2);
+    Alignment = 0;
+  };
+
+  Value  *PtrOperand, *MaskOperand, *Src0Operand;
+  unsigned Alignment;
+  if (IsCompressing)
+    getCompressingStoreOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
+  else
+    getMaskedStoreOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
+
   SDValue Ptr = getValue(PtrOperand);
-  SDValue Src0 = getValue(I.getArgOperand(0));
-  SDValue Mask = getValue(I.getArgOperand(3));
+  SDValue Src0 = getValue(Src0Operand);
+  SDValue Mask = getValue(MaskOperand);
+
   EVT VT = Src0.getValueType();
-  unsigned Alignment = (cast<ConstantInt>(I.getArgOperand(2)))->getZExtValue();
   if (!Alignment)
     Alignment = DAG.getEVTAlignment(VT);
 
@@ -3689,7 +3712,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I) {
                           MachineMemOperand::MOStore,  VT.getStoreSize(),
                           Alignment, AAInfo);
   SDValue StoreNode = DAG.getMaskedStore(getRoot(), sdl, Src0, Ptr, Mask, VT,
-                                         MMO, false);
+                                         MMO, false /* Truncating */,
+                                         IsCompressing);
   DAG.setRoot(StoreNode);
   setValue(&I, StoreNode);
 }
@@ -3710,7 +3734,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I) {
 // extract the spalt value and use it as a uniform base.
 // In all other cases the function returns 'false'.
 //
-static bool getUniformBase(const Value *& Ptr, SDValue& Base, SDValue& Index,
+static bool getUniformBase(const Value* &Ptr, SDValue& Base, SDValue& Index,
                            SelectionDAGBuilder* SDB) {
 
   SelectionDAG& DAG = SDB->DAG;
@@ -3790,18 +3814,38 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   setValue(&I, Scatter);
 }
 
-void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I) {
+void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDLoc sdl = getCurSDLoc();
 
-  // @llvm.masked.load.*(Ptr, alignment, Mask, Src0)
-  Value  *PtrOperand = I.getArgOperand(0);
-  SDValue Ptr = getValue(PtrOperand);
-  SDValue Src0 = getValue(I.getArgOperand(3));
-  SDValue Mask = getValue(I.getArgOperand(2));
+  auto getMaskedLoadOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
+                           unsigned& Alignment) {
+    // @llvm.masked.load.*(Ptr, alignment, Mask, Src0)
+    Ptr = I.getArgOperand(0);
+    Alignment = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
+    Mask = I.getArgOperand(2);
+    Src0 = I.getArgOperand(3);
+  };
+  auto getExpandingLoadOps = [&](Value* &Ptr, Value* &Mask, Value* &Src0,
+                           unsigned& Alignment) {
+    // @llvm.masked.expandload.*(Ptr, Mask, Src0)
+    Ptr = I.getArgOperand(0);
+    Alignment = 0;
+    Mask = I.getArgOperand(1);
+    Src0 = I.getArgOperand(2);
+  };
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-  unsigned Alignment = (cast<ConstantInt>(I.getArgOperand(1)))->getZExtValue();
+  Value  *PtrOperand, *MaskOperand, *Src0Operand;
+  unsigned Alignment;
+  if (IsExpanding)
+    getExpandingLoadOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
+  else
+    getMaskedLoadOps(PtrOperand, MaskOperand, Src0Operand, Alignment);
+
+  SDValue Ptr = getValue(PtrOperand);
+  SDValue Src0 = getValue(Src0Operand);
+  SDValue Mask = getValue(MaskOperand);
+
+  EVT VT = Src0.getValueType();
   if (!Alignment)
     Alignment = DAG.getEVTAlignment(VT);
 
@@ -3821,7 +3865,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I) {
                           Alignment, AAInfo, Ranges);
 
   SDValue Load = DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Mask, Src0, VT, MMO,
-                                   ISD::NON_EXTLOAD, false);
+                                   ISD::NON_EXTLOAD, IsExpanding);
   if (AddToChain) {
     SDValue OutChain = Load.getValue(1);
     DAG.setRoot(OutChain);
@@ -5053,6 +5097,12 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     return nullptr;
   case Intrinsic::masked_store:
     visitMaskedStore(I);
+    return nullptr;
+  case Intrinsic::masked_expandload:
+    visitMaskedLoad(I, true /* IsExpanding */);
+    return nullptr;
+  case Intrinsic::masked_compressstore:
+    visitMaskedStore(I, true /* IsCompressing */);
     return nullptr;
   case Intrinsic::x86_mmx_pslli_w:
   case Intrinsic::x86_mmx_pslli_d:

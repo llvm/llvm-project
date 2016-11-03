@@ -439,3 +439,48 @@ INVALID-SYMTAB-OVERLAP: macho-invalid-symtab-overlap': truncated or malformed ob
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-strtab-overlap 2>&1 | FileCheck -check-prefix INVALID-STRTAB-OVERLAP %s
 INVALID-STRTAB-OVERLAP: macho-invalid-strtab-overlap': truncated or malformed object (string table at offset 60 with a size of 16, overlaps symbol table at offset 52 with a size of 12)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-overlap 2>&1 | FileCheck -check-prefix INVALID-SECTION-OVERLAP %s
+INVALID-SECTION-OVERLAP: macho-invalid-section-overlap': truncated or malformed object (symbol table at offset 208 with a size of 12, overlaps section contents at offset 184 with a size of 32)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-reloc-overlap 2>&1 | FileCheck -check-prefix INVALID-RELOC-OVERLAP %s
+INVALID-RELOC-OVERLAP: macho-invalid-reloc-overlap': truncated or malformed object (section relocation entries at offset 204 with a size of 8, overlaps section contents at offset 176 with a size of 32)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-toc-overlap 2>&1 | FileCheck -check-prefix INVALID-TOC-OVERLAP %s
+INVALID-TOC-OVERLAP: macho-invalid-toc-overlap': truncated or malformed object (table of contents at offset 292 with a size of 8, overlaps section relocation entries at offset 288 with a size of 8)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-modtab-overlap 2>&1 | FileCheck -check-prefix INVALID-MODTAB-OVERLAP %s
+INVALID-MODTAB-OVERLAP: macho-invalid-modtab-overlap': truncated or malformed object (module table at offset 300 with a size of 52, overlaps table of contents at offset 296 with a size of 8)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-extrefsyms-overlap 2>&1 | FileCheck -check-prefix INVALID-EXTREFSYMS-OVERLAP %s
+INVALID-EXTREFSYMS-OVERLAP: macho-invalid-extrefsyms-overlap': truncated or malformed object (reference table at offset 352 with a size of 4, overlaps module table at offset 304 with a size of 52)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-indirectsyms-overlap 2>&1 | FileCheck -check-prefix INVALID-INDIRECTSYMS-OVERLAP %s
+INVALID-INDIRECTSYMS-OVERLAP: macho-invalid-indirectsyms-overlap': truncated or malformed object (indirect table at offset 364 with a size of 4, overlaps section contents at offset 364 with a size of 4)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-extreloff-overlap 2>&1 | FileCheck -check-prefix INVALID-EXTRELOFF-OVERLAP %s
+INVALID-EXTRELOFF-OVERLAP: macho-invalid-extreloff-overlap': truncated or malformed object (external relocation table at offset 424 with a size of 8, overlaps reference table at offset 424 with a size of 4)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-locreloff-overlap 2>&1 | FileCheck -check-prefix INVALID-LOCRELOFF-OVERLAP %s
+INVALID-LOCRELOFF-OVERLAP: macho-invalid-locreloff-overlap': truncated or malformed object (local relocation table at offset 432 with a size of 8, overlaps external relocation table at offset 428 with a size of 8)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-hints-overlap 2>&1 | FileCheck -check-prefix INVALID-HINTS-OVERLAP %s
+INVALID-HINTS-OVERLAP: macho-invalid-hints-overlap': truncated or malformed object (two level hints at offset 104 with a size of 4, overlaps Mach-O headers at offset 0 with a size of 108)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-codesig-overlap 2>&1 | FileCheck -check-prefix INVALID-CODESIG-OVERLAP %s
+INVALID-CODESIG-OVERLAP: macho-invalid-codesig-overlap': truncated or malformed object (code signature data at offset 40 with a size of 32, overlaps Mach-O headers at offset 0 with a size of 48)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-rebase-overlap 2>&1 | FileCheck -check-prefix INVALID-REBASE-OVERLAP %s
+INVALID-REBASE-OVERLAP: macho-invalid-rebase-overlap': truncated or malformed object (dyld rebase info at offset 72 with a size of 32, overlaps Mach-O headers at offset 0 with a size of 80)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-bind-overlap 2>&1 | FileCheck -check-prefix INVALID-BIND-OVERLAP %s
+INVALID-BIND-OVERLAP: macho-invalid-bind-overlap': truncated or malformed object (dyld bind info at offset 104 with a size of 32, overlaps dyld rebase info at offset 80 with a size of 32)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-weak_bind-overlap 2>&1 | FileCheck -check-prefix INVALID-WEAK_BIND-OVERLAP %s
+INVALID-WEAK_BIND-OVERLAP: macho-invalid-weak_bind-overlap': truncated or malformed object (dyld weak bind info at offset 136 with a size of 32, overlaps dyld bind info at offset 112 with a size of 32)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-lazy_bind-overlap 2>&1 | FileCheck -check-prefix INVALID-LAZY_BIND-OVERLAP %s
+INVALID-LAZY_BIND-OVERLAP: macho-invalid-lazy_bind-overlap': truncated or malformed object (dyld lazy bind info at offset 168 with a size of 32, overlaps dyld weak bind info at offset 144 with a size of 32)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-export-overlap 2>&1 | FileCheck -check-prefix INVALID-EXPORT-OVERLAP %s
+INVALID-EXPORT-OVERLAP: macho-invalid-export-overlap': truncated or malformed object (dyld export info at offset 200 with a size of 32, overlaps dyld lazy bind info at offset 176 with a size of 32)

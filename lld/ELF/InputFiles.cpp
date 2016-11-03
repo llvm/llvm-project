@@ -52,7 +52,7 @@ public:
 };
 }
 
-template <class ELFT> void ObjectFile<ELFT>::initializeDwarfLine() {
+template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
   std::unique_ptr<object::ObjectFile> Obj =
       check(object::ObjectFile::createObjectFile(this->MB),
             "createObjectFile failed");
@@ -73,8 +73,8 @@ template <class ELFT> void ObjectFile<ELFT>::initializeDwarfLine() {
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-std::string ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
-                                          uintX_t Offset) {
+std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
+                                               uintX_t Offset) {
   if (!DwarfLine)
     initializeDwarfLine();
 
@@ -202,9 +202,12 @@ void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 // They are identified and deduplicated by group name. This function
 // returns a group name.
 template <class ELFT>
-StringRef elf::ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
+StringRef
+elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
+                                            const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
-  const Elf_Shdr *Symtab = check(Obj.getSection(Sec.sh_link));
+  const Elf_Shdr *Symtab =
+      check(object::getSection<ELFT>(Sections, Sec.sh_link));
   const Elf_Sym *Sym = Obj.getSymbol(Symtab, Sec.sh_info);
   StringRef Strtab = check(Obj.getStringTableForSymtab(*Symtab));
   return check(Sym->getName(Strtab));
@@ -299,7 +302,9 @@ void elf::ObjectFile<ELFT>::initializeSections(
     switch (Sec.sh_type) {
     case SHT_GROUP:
       Sections[I] = &InputSection<ELFT>::Discarded;
-      if (ComdatGroups.insert(CachedHashStringRef(getShtGroupSignature(Sec)))
+      if (ComdatGroups
+              .insert(
+                  CachedHashStringRef(getShtGroupSignature(ObjSections, Sec)))
               .second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
