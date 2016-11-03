@@ -208,7 +208,7 @@ elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
   const ELFFile<ELFT> &Obj = this->ELFObj;
   const Elf_Shdr *Symtab =
       check(object::getSection<ELFT>(Sections, Sec.sh_link));
-  const Elf_Sym *Sym = Obj.getSymbol(Symtab, Sec.sh_info);
+  const Elf_Sym *Sym = check(Obj.getSymbol(Symtab, Sec.sh_info));
   StringRef Strtab = check(Obj.getStringTableForSymtab(*Symtab));
   return check(Sym->getName(Strtab));
 }

@@ -1052,10 +1052,10 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,
 }
 
 llvm::Constant *
-CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *blockExpr,
-                                    const char *name) {
-  CGBlockInfo blockInfo(blockExpr->getBlockDecl(), name);
-  blockInfo.BlockExpression = blockExpr;
+CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE,
+                                    StringRef Name) {
+  CGBlockInfo blockInfo(BE->getBlockDecl(), Name);
+  blockInfo.BlockExpression = BE;
 
   // Compute information about the layout, etc., of this block.
   computeBlockInfo(*this, nullptr, blockInfo);
