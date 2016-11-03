@@ -67,10 +67,25 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   if (GVar && GVar->isConstant() && GVar->hasGlobalUnnamedAddr())
     return false;
 
-  auto *Summary = ImportIndex.getGlobalValueSummary(SGV->getGUID());
-  assert(Summary && "Missing summary for global value");
-  if (Summary->noRename())
-    return false;
+  // If we are exporting, we need to see whether this value is marked
+  // as NoRename in the summary. If we are importing, we may not have
+  // a summary in the distributed backend case (only summaries for values
+  // importes as defs, not references, are included in the index passed
+  // to the distributed backends).
+  auto Summaries = ImportIndex.findGlobalValueSummaryList(SGV->getGUID());
+  if (Summaries == ImportIndex.end())
+    // Assert that this is an import - we should always have access to the
+    // summary when exporting.
+    assert(isPerformingImport() &&
+           "Missing summary for global value when exporting");
+  else {
+    assert(Summaries->second.size() == 1 && "Local has more than one summary");
+    if (Summaries->second.front()->noRename()) {
+      assert((isModuleExporting() || !GlobalsToImport->count(SGV)) &&
+             "Imported a non-renamable local value");
+      return false;
+    }
+  }
 
   // Eventually we only need to promote functions in the exporting module that
   // are referenced by a potentially exported function (i.e. one that is in the
