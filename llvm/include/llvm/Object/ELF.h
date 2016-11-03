@@ -79,8 +79,12 @@ public:
 
   ErrorOr<StringRef> getStringTable(const Elf_Shdr *Section) const;
   ErrorOr<StringRef> getStringTableForSymtab(const Elf_Shdr &Section) const;
+  ErrorOr<StringRef> getStringTableForSymtab(const Elf_Shdr &Section,
+                                             Elf_Shdr_Range Sections) const;
 
   ErrorOr<ArrayRef<Elf_Word>> getSHNDXTable(const Elf_Shdr &Section) const;
+  ErrorOr<ArrayRef<Elf_Word>> getSHNDXTable(const Elf_Shdr &Section,
+                                            Elf_Shdr_Range Sections) const;
 
   void VerifyStrTab(const Elf_Shdr *sh) const;
 
@@ -423,12 +427,23 @@ ELFFile<ELFT>::getStringTable(const Elf_Shdr *Section) const {
 template <class ELFT>
 ErrorOr<ArrayRef<typename ELFT::Word>>
 ELFFile<ELFT>::getSHNDXTable(const Elf_Shdr &Section) const {
+  auto SectionsOrErr = sections();
+  if (std::error_code EC = SectionsOrErr.getError())
+    return EC;
+  return getSHNDXTable(Section, *SectionsOrErr);
+}
+
+template <class ELFT>
+ErrorOr<ArrayRef<typename ELFT::Word>>
+ELFFile<ELFT>::getSHNDXTable(const Elf_Shdr &Section,
+                             Elf_Shdr_Range Sections) const {
   assert(Section.sh_type == ELF::SHT_SYMTAB_SHNDX);
   auto VOrErr = getSectionContentsAsArray<Elf_Word>(&Section);
   if (std::error_code EC = VOrErr.getError())
     return EC;
   ArrayRef<Elf_Word> V = *VOrErr;
-  ErrorOr<const Elf_Shdr *> SymTableOrErr = getSection(Section.sh_link);
+  ErrorOr<const Elf_Shdr *> SymTableOrErr =
+      object::getSection<ELFT>(Sections, Section.sh_link);
   if (std::error_code EC = SymTableOrErr.getError())
     return EC;
   const Elf_Shdr &SymTable = **SymTableOrErr;
@@ -443,9 +458,21 @@ ELFFile<ELFT>::getSHNDXTable(const Elf_Shdr &Section) const {
 template <class ELFT>
 ErrorOr<StringRef>
 ELFFile<ELFT>::getStringTableForSymtab(const Elf_Shdr &Sec) const {
+  auto SectionsOrErr = sections();
+  if (std::error_code EC = SectionsOrErr.getError())
+    return EC;
+  return getStringTableForSymtab(Sec, *SectionsOrErr);
+}
+
+template <class ELFT>
+ErrorOr<StringRef>
+ELFFile<ELFT>::getStringTableForSymtab(const Elf_Shdr &Sec,
+                                       Elf_Shdr_Range Sections) const {
+
   if (Sec.sh_type != ELF::SHT_SYMTAB && Sec.sh_type != ELF::SHT_DYNSYM)
     return object_error::parse_failed;
-  ErrorOr<const Elf_Shdr *> SectionOrErr = getSection(Sec.sh_link);
+  ErrorOr<const Elf_Shdr *> SectionOrErr =
+      object::getSection<ELFT>(Sections, Sec.sh_link);
   if (std::error_code EC = SectionOrErr.getError())
     return EC;
   return getStringTable(*SectionOrErr);

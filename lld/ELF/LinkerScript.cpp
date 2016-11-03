@@ -936,7 +936,7 @@ private:
   std::vector<uint8_t> readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
-  Regex readFilePatterns();
+  StringMatcher readFilePatterns();
   std::vector<SectionPattern> readInputSectionsList();
   InputSectionDescription *readInputSectionRules(StringRef FilePattern);
   unsigned readPhdrType();
@@ -1207,11 +1207,11 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-Regex ScriptParser::readFilePatterns() {
+StringMatcher ScriptParser::readFilePatterns() {
   std::vector<StringRef> V;
   while (!Error && !consume(")"))
     V.push_back(next());
-  return compileGlobPatterns(V);
+  return StringMatcher(std::move(V));
 }
 
 SortSectionPolicy ScriptParser::readSortKind() {
@@ -1236,7 +1236,7 @@ SortSectionPolicy ScriptParser::readSortKind() {
 std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
   std::vector<SectionPattern> Ret;
   while (!Error && peek() != ")") {
-    Regex ExcludeFileRe;
+    StringMatcher ExcludeFileRe;
     if (consume("EXCLUDE_FILE")) {
       expect("(");
       ExcludeFileRe = readFilePatterns();
@@ -1247,7 +1247,7 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
       V.push_back(next());
 
     if (!V.empty())
-      Ret.push_back({std::move(ExcludeFileRe), compileGlobPatterns(V)});
+      Ret.push_back({std::move(ExcludeFileRe), StringMatcher(std::move(V))});
     else
       setError("section pattern is expected");
   }

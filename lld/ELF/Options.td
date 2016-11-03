@@ -27,11 +27,11 @@ def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
 
 def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
 
-def Tbss: Separate<["-"], "Tbss">, HelpText<"Same as --section-start with .bss as the sectionname">;
+def Tbss: S<"Tbss">, HelpText<"Same as --section-start with .bss as the sectionname">;
 
-def Tdata: Separate<["-"], "Tdata">, HelpText<"Same as --section-start with .data as the sectionname">;
+def Tdata: S<"Tdata">, HelpText<"Same as --section-start with .data as the sectionname">;
 
-def Ttext: Separate<["-"], "Ttext">, HelpText<"Same as --section-start with .text as the sectionname">;
+def Ttext: S<"Ttext">, HelpText<"Same as --section-start with .text as the sectionname">;
 
 def allow_multiple_definition: F<"allow-multiple-definition">,
   HelpText<"Allow multiple definitions">;

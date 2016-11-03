@@ -21,6 +21,36 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
 
+// Returns true if S matches T. S can contain glob meta-characters.
+// The asterisk ('*') matches zero or more characters, and the question
+// mark ('?') matches one character.
+static bool globMatch(StringRef S, StringRef T) {
+  for (;;) {
+    if (S.empty())
+      return T.empty();
+    if (S[0] == '*') {
+      S = S.substr(1);
+      if (S.empty())
+        // Fast path. If a pattern is '*', it matches anything.
+        return true;
+      for (size_t I = 0, E = T.size(); I < E; ++I)
+        if (globMatch(S, T.substr(I)))
+          return true;
+      return false;
+    }
+    if (T.empty() || (S[0] != T[0] && S[0] != '?'))
+      return false;
+    S = S.substr(1);
+    T = T.substr(1);
+  }
+}
+
+bool StringMatcher::match(StringRef S) {
+  for (StringRef P : Patterns)
+    if (globMatch(P, S))
+      return true;
+  return false;
+}
 // If an input string is in the form of "foo.N" where N is a number,
 // return N. Otherwise, returns 65536, which is one greater than the
 // lowest priority.

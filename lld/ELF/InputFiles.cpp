@@ -208,7 +208,7 @@ elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
   const ELFFile<ELFT> &Obj = this->ELFObj;
   const Elf_Shdr *Symtab =
       check(object::getSection<ELFT>(Sections, Sec.sh_link));
-  const Elf_Sym *Sym = Obj.getSymbol(Symtab, Sec.sh_info);
+  const Elf_Sym *Sym = check(Obj.getSymbol(Symtab, Sec.sh_info));
   StringRef Strtab = check(Obj.getStringTableForSymtab(*Symtab));
   return check(Sym->getName(Strtab));
 }
@@ -318,7 +318,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
       this->Symtab = &Sec;
       break;
     case SHT_SYMTAB_SHNDX:
-      this->SymtabSHNDX = check(Obj.getSHNDXTable(Sec));
+      this->SymtabSHNDX = check(Obj.getSHNDXTable(Sec, ObjSections));
       break;
     case SHT_STRTAB:
     case SHT_NULL:
@@ -575,7 +575,8 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   const Elf_Shdr *DynamicSec = nullptr;
 
   const ELFFile<ELFT> Obj = this->ELFObj;
-  for (const Elf_Shdr &Sec : check(Obj.sections())) {
+  ArrayRef<Elf_Shdr> Sections = check(Obj.sections());
+  for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
     default:
       continue;
@@ -586,7 +587,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
       DynamicSec = &Sec;
       break;
     case SHT_SYMTAB_SHNDX:
-      this->SymtabSHNDX = check(Obj.getSHNDXTable(Sec));
+      this->SymtabSHNDX = check(Obj.getSHNDXTable(Sec, Sections));
       break;
     case SHT_GNU_versym:
       this->VersymSec = &Sec;
