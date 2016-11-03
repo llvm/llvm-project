@@ -635,7 +635,7 @@ protected:
     }
 
     // Verify that the command is alias-able.
-    if (m_interpreter.CommandExists(alias_command.c_str())) {
+    if (m_interpreter.CommandExists(alias_command)) {
       result.AppendErrorWithFormat(
           "'%s' is a permanent debugger command and cannot be redefined.\n",
           alias_command.c_str());
@@ -728,7 +728,7 @@ protected:
     // Verify that the command is alias'able, and get the appropriate command
     // object.
 
-    if (m_interpreter.CommandExists(alias_command.c_str())) {
+    if (m_interpreter.CommandExists(alias_command)) {
       result.AppendErrorWithFormat(
           "'%s' is a permanent debugger command and cannot be redefined.\n",
           alias_command.c_str());
@@ -780,17 +780,17 @@ protected:
           args.GetCommandString(args_string);
         }
 
-        if (m_interpreter.AliasExists(alias_command.c_str()) ||
-            m_interpreter.UserCommandExists(alias_command.c_str())) {
+        if (m_interpreter.AliasExists(alias_command) ||
+            m_interpreter.UserCommandExists(alias_command)) {
           result.AppendWarningWithFormat(
               "Overwriting existing definition for '%s'.\n",
               alias_command.c_str());
         }
 
         if (CommandAlias *alias = m_interpreter.AddAlias(
-                alias_command.c_str(),
+                alias_command,
                 use_subcommand ? subcommand_obj_sp : command_obj_sp,
-                args_string.c_str())) {
+                args_string)) {
           if (m_command_options.m_help.OptionWasSet())
             alias->SetHelp(m_command_options.m_help.GetCurrentValue());
           if (m_command_options.m_long_help.OptionWasSet())
@@ -1713,7 +1713,7 @@ protected:
             // everything should be fine now, let's add this alias
 
             CommandObjectSP command_obj_sp(new CommandObjectPythonFunction(
-                m_interpreter, m_cmd_name, funct_name_str.c_str(), m_short_help,
+                m_interpreter, m_cmd_name, funct_name_str, m_short_help,
                 m_synchronicity));
 
             if (!m_interpreter.AddUserCommand(m_cmd_name, command_obj_sp,

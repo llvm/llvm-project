@@ -153,7 +153,7 @@ static void lto_add_attrs(lto_code_gen_t cg) {
       attrs.append(MAttrs[i]);
     }
 
-    CG->setAttr(attrs.c_str());
+    CG->setAttr(attrs);
   }
 
   if (OptLevel < '0' || OptLevel > '3')

@@ -52,8 +52,7 @@ lldb::thread_result_t
 HostNativeThreadBase::ThreadCreateTrampoline(lldb::thread_arg_t arg) {
   ThreadLauncher::HostThreadCreateInfo *info =
       (ThreadLauncher::HostThreadCreateInfo *)arg;
-  ThisThread::SetName(info->thread_name.c_str(),
-                      HostInfo::GetMaxThreadNameLength());
+  ThisThread::SetName(info->thread_name, HostInfo::GetMaxThreadNameLength());
 
   thread_func_t thread_fptr = info->thread_fptr;
   thread_arg_t thread_arg = info->thread_arg;

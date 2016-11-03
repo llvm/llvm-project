@@ -305,8 +305,9 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
   ConnectionStatus status = eConnectionStatusSuccess;
   bool done = false;
   while (!done && comm->m_read_thread_enabled) {
+    const int timeout_us = 5000000;
     size_t bytes_read = comm->ReadFromConnection(
-        buf, sizeof(buf), 5 * TimeValue::MicroSecPerSec, status, &error);
+        buf, sizeof(buf), timeout_us, status, &error);
     if (bytes_read > 0)
       comm->AppendBytesToCache(buf, bytes_read, true, status);
     else if ((bytes_read == 0) && status == eConnectionStatusEndOfFile) {

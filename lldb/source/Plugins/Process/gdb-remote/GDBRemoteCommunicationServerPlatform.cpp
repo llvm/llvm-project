@@ -128,7 +128,7 @@ Error GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   std::string platform_ip;
   int platform_port;
   std::string platform_path;
-  bool ok = UriParser::Parse(GetConnection()->GetURI().c_str(), platform_scheme,
+  bool ok = UriParser::Parse(GetConnection()->GetURI(), platform_scheme,
                              platform_ip, platform_port, platform_path);
   UNUSED_IF_ASSERT_DISABLED(ok);
   assert(ok);

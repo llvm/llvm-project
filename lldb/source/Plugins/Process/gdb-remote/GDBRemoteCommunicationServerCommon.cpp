@@ -358,8 +358,7 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
         StringExtractor extractor(value);
         std::string file;
         extractor.GetHexByteString(file);
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(file.c_str(),
-                                                                false);
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(file, false);
       } else if (key.equals("name_match")) {
         NameMatchType name_match =
             llvm::StringSwitch<NameMatchType>(value)
@@ -644,8 +643,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Size(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    lldb::user_id_t retcode =
-        FileSystem::GetFileSize(FileSpec(path.c_str(), false));
+    lldb::user_id_t retcode = FileSystem::GetFileSize(FileSpec(path, false));
     StreamString response;
     response.PutChar('F');
     response.PutHex64(retcode);
@@ -684,7 +682,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Exists(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    bool retcode = FileSystem::GetFileExists(FileSpec(path.c_str(), false));
+    bool retcode = FileSystem::GetFileExists(FileSpec(path, false));
     StreamString response;
     response.PutChar('F');
     response.PutChar(',');
@@ -776,7 +774,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_MD5(
   if (!path.empty()) {
     uint64_t a, b;
     StreamGDBRemote response;
-    if (!FileSystem::CalculateMD5(FileSpec(path.c_str(), false), a, b)) {
+    if (!FileSystem::CalculateMD5(FileSpec(path, false), a, b)) {
       response.PutCString("F,");
       response.PutCString("x");
     } else {
@@ -1031,8 +1029,7 @@ GDBRemoteCommunicationServerCommon::Handle_A(StringExtractorGDBRemote &packet) {
 
               if (success) {
                 if (arg_idx == 0)
-                  m_process_launch_info.GetExecutableFile().SetFile(arg.c_str(),
-                                                                    false);
+                  m_process_launch_info.GetExecutableFile().SetFile(arg, false);
                 m_process_launch_info.GetArguments().AppendArgument(arg);
                 if (log)
                   log->Printf("LLGSPacketHandler::%s added arg %d: \"%s\"",
@@ -1276,7 +1273,7 @@ FileSpec GDBRemoteCommunicationServerCommon::FindModuleFile(
 #ifdef __ANDROID__
   return HostInfoAndroid::ResolveLibraryPath(module_path, arch);
 #else
-  return FileSpec(module_path.c_str(), true);
+  return FileSpec(module_path, true);
 #endif
 }
 
@@ -1284,7 +1281,7 @@ ModuleSpec GDBRemoteCommunicationServerCommon::GetModuleInfo(
     const std::string &module_path, const std::string &triple) {
   ArchSpec arch(triple.c_str());
 
-  const FileSpec req_module_path_spec(module_path.c_str(), true);
+  const FileSpec req_module_path_spec(module_path, true);
   const FileSpec module_path_spec =
       FindModuleFile(req_module_path_spec.GetPath(), arch);
   const ModuleSpec module_spec(module_path_spec, arch);

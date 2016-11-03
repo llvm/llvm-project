@@ -372,7 +372,7 @@ Error TargetList::CreateTargetInternal(Debugger &debugger,
           std::string cwd_user_exe_path(cwd);
           cwd_user_exe_path += '/';
           cwd_user_exe_path += user_exe_path;
-          FileSpec cwd_file(cwd_user_exe_path.c_str(), false);
+          FileSpec cwd_file(cwd_user_exe_path, false);
           if (cwd_file.Exists())
             file = cwd_file;
         }

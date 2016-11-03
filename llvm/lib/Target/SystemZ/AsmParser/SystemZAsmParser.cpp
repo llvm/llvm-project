@@ -1113,14 +1113,14 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
   const MCExpr *Expr;
   const MCExpr *Length;
   if (parseAddress(HaveReg1, Reg1, HaveReg2, Reg2, Expr, Length))
-    return MatchOperand_ParseFail;
+    return true;
   // If the register combination is not valid for any instruction, reject it.
   // Otherwise, fall back to reporting an unrecognized instruction.
   if (HaveReg1 && Reg1.Group != RegGR && Reg1.Group != RegV
       && parseAddressRegister(Reg1))
-    return MatchOperand_ParseFail;
+    return true;
   if (HaveReg2 && parseAddressRegister(Reg2))
-    return MatchOperand_ParseFail;
+    return true;
 
   SMLoc EndLoc =
     SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);

@@ -207,10 +207,10 @@ std::string ScriptSummaryFormat::GetDescription() {
     if (m_function_name.empty()) {
       sstr.PutCString("no backing script");
     } else {
-      sstr.PutCString(m_function_name.c_str());
+      sstr.PutCString(m_function_name);
     }
   } else {
-    sstr.PutCString(m_python_script.c_str());
+    sstr.PutCString(m_python_script);
   }
   return sstr.GetString();
 }

@@ -591,7 +591,7 @@ protected:
                         scope_string = GetScopeString(var_sp).str();
 
                       if (!scope_string.empty())
-                        s.PutCString(scope_string.c_str());
+                        s.PutCString(scope_string);
 
                       if (m_option_variable.show_decl &&
                           var_sp->GetDeclaration().GetFile()) {
@@ -637,7 +637,7 @@ protected:
                 scope_string = GetScopeString(var_sp).str();
 
               if (!scope_string.empty())
-                s.PutCString(scope_string.c_str());
+                s.PutCString(scope_string);
 
               //                            if (format != eFormatDefault)
               //                                valobj_sp->SetFormat (format);
@@ -698,7 +698,7 @@ protected:
                     continue;
 
                   if (!scope_string.empty())
-                    s.PutCString(scope_string.c_str());
+                    s.PutCString(scope_string);
 
                   if (m_option_variable.show_decl &&
                       var_sp->GetDeclaration().GetFile()) {

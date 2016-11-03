@@ -1,7 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN %s
-; XFAIL: *
+; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -mattr=-promote-alloca,-load-store-opt < %s | FileCheck -check-prefix=GCN %s
 
-@sPrivateStorage = external addrspace(3) global [256 x [8 x <4 x i64>]]
+@sPrivateStorage = internal addrspace(3) global [256 x [8 x <4 x i64>]] undef
 
 ; GCN-LABEL: {{^}}ds_reorder_vector_split:
 
@@ -16,20 +15,19 @@
 ; GCN-DAG: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:24
 ; GCN-DAG: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:16
 ; GCN-DAG: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}} offset:8
+; Appears to be dead store of vector component.
+; GCN-DAG: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]$}}
 
-; GCN: s_waitcnt lgkmcnt
 
-; GCN-DAG ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:8
+; GCN-DAG: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:8
 ; GCN-DAG: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:16
 ; GCN-DAG: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:24
 
-; Appears to be dead store of vector component.
-; GCN: ds_write_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]$}}
+; GCN-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
+; GCN-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16
+; GCN-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24
 
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dwordx2
 ; GCN: s_endpgm
 define void @ds_reorder_vector_split(<4 x i64> addrspace(1)* nocapture readonly %srcValues, i32 addrspace(1)* nocapture readonly %offsets, <4 x i64> addrspace(1)* nocapture %destBuffer, i32 %alignmentOffset) #0 {
 entry:

@@ -9,12 +9,27 @@ template <typename T>
 struct unique_ptr {
   unique_ptr();
   T *get() const;
+  explicit operator bool() const;
+  void reset(T *ptr);
+  T &operator*() const;
+  T *operator->() const;
+  T& operator[](size_t i) const;
 };
 
 template <typename T>
 struct shared_ptr {
   shared_ptr();
   T *get() const;
+  explicit operator bool() const;
+  void reset(T *ptr);
+  T &operator*() const;
+  T *operator->() const;
+};
+
+template <typename T>
+struct weak_ptr {
+  weak_ptr();
+  bool expired() const;
 };
 
 #define DECLARE_STANDARD_CONTAINER(name) \
@@ -146,20 +161,58 @@ void parameters(A a) {
   // CHECK-MESSAGES: [[@LINE-3]]:3: note: move occurred here
 }
 
-void uniquePtrAndSharedPtr() {
-  // Use-after-moves on std::unique_ptr<> or std::shared_ptr<> aren't flagged.
+void standardSmartPtr() {
+  // std::unique_ptr<>, std::shared_ptr<> and std::weak_ptr<> are guaranteed to
+  // be null after a std::move. So the check only flags accesses that would
+  // dereference the pointer.
   {
     std::unique_ptr<A> ptr;
     std::move(ptr);
     ptr.get();
+    static_cast<bool>(ptr);
+    *ptr;
+    // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-5]]:5: note: move occurred here
+  }
+  {
+    std::unique_ptr<A> ptr;
+    std::move(ptr);
+    ptr->foo();
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+  }
+  {
+    std::unique_ptr<A> ptr;
+    std::move(ptr);
+    ptr[0];
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     std::shared_ptr<A> ptr;
     std::move(ptr);
     ptr.get();
+    static_cast<bool>(ptr);
+    *ptr;
+    // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-5]]:5: note: move occurred here
   }
-  // This is also true if the std::unique_ptr<> or std::shared_ptr<> is wrapped
-  // in a typedef.
+  {
+    std::shared_ptr<A> ptr;
+    std::move(ptr);
+    ptr->foo();
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+  }
+  {
+    // std::weak_ptr<> cannot be dereferenced directly, so we only check that
+    // member functions may be called on it after a move.
+    std::weak_ptr<A> ptr;
+    std::move(ptr);
+    ptr.expired();
+  }
+  // Make sure we recognize std::unique_ptr<> or std::shared_ptr<> if they're
+  // wrapped in a typedef.
   {
     typedef std::unique_ptr<A> PtrToA;
     PtrToA ptr;
@@ -172,7 +225,8 @@ void uniquePtrAndSharedPtr() {
     std::move(ptr);
     ptr.get();
   }
-  // And it's also true if the template argument is a little more involved.
+  // And we don't get confused if the template argument is a little more
+  // involved.
   {
     struct B {
       typedef A AnotherNameForA;
@@ -180,6 +234,17 @@ void uniquePtrAndSharedPtr() {
     std::unique_ptr<B::AnotherNameForA> ptr;
     std::move(ptr);
     ptr.get();
+  }
+  // We don't give any special treatment to types that are called "unique_ptr"
+  // or "shared_ptr" but are not in the "::std" namespace.
+  {
+    struct unique_ptr {
+      void get();
+    } ptr;
+    std::move(ptr);
+    ptr.get();
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
   }
 }
 
@@ -792,6 +857,24 @@ void standardContainerAssignIsReinit() {
     container1.empty();
     // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'container1' used after it was
     // CHECK-MESSAGES: [[@LINE-4]]:5: note: move occurred here
+  }
+}
+
+// Resetting the standard smart pointer types using reset() is treated as a
+// re-initialization. (We don't test std::weak_ptr<> because it can't be
+// dereferenced directly.)
+void standardSmartPointerResetIsReinit() {
+  {
+    std::unique_ptr<A> ptr;
+    std::move(ptr);
+    ptr.reset(new A);
+    *ptr;
+  }
+  {
+    std::shared_ptr<A> ptr;
+    std::move(ptr);
+    ptr.reset(new A);
+    *ptr;
   }
 }
 

@@ -5,8 +5,12 @@
 // RUN: %clangxx_asan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
-// On Windows, defining strtoll results in linker errors.
-// XFAIL: freebsd,win32
+// XFAIL: freebsd
+
+// On Windows, defining strtoll in a static build results in linker errors, but
+// it works with the dynamic runtime.
+// XFAIL: win32-static-asan
+
 #include <stdlib.h>
 #include <stdio.h>
 

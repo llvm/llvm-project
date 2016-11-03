@@ -42,10 +42,10 @@ entry:
 
 ; CHECK-MSVC: Relocations [
 ; CHECK-MSVC:   Section {{.*}} .debug$S {
-; CHECK-MSVC:     0x5A IMAGE_REL_ARM_SECREL function
-; CHECK-MSVC:     0x5E IMAGE_REL_ARM_SECTION function
-; CHECK-MSVC:     0x78 IMAGE_REL_ARM_SECREL function
-; CHECK-MSVC:     0x7C IMAGE_REL_ARM_SECTION function
+; CHECK-MSVC:     0x64 IMAGE_REL_ARM_SECREL function
+; CHECK-MSVC:     0x68 IMAGE_REL_ARM_SECTION function
+; CHECK-MSVC:     0x80 IMAGE_REL_ARM_SECREL function
+; CHECK-MSVC:     0x84 IMAGE_REL_ARM_SECTION function
 ; CHECK-MSVC:   }
 ; CHECK-MSVC: ]
 

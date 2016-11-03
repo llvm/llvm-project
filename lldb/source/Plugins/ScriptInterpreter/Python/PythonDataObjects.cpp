@@ -1021,7 +1021,7 @@ uint32_t PythonFile::GetOptionsFromMode(llvm::StringRef mode) {
   if (mode.empty())
     return 0;
 
-  return llvm::StringSwitch<uint32_t>(mode.str().c_str())
+  return llvm::StringSwitch<uint32_t>(mode.str())
       .Case("r", File::eOpenOptionRead)
       .Case("w", File::eOpenOptionWrite)
       .Case("a", File::eOpenOptionWrite | File::eOpenOptionAppend |

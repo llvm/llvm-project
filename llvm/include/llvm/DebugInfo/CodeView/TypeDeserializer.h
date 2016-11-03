@@ -10,57 +10,108 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEDESERIALIZER_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEDESERIALIZER_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
+#include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
+
 class TypeDeserializer : public TypeVisitorCallbacks {
+  struct MappingInfo {
+    explicit MappingInfo(ArrayRef<uint8_t> RecordData)
+        : Stream(RecordData), Reader(Stream), Mapping(Reader) {}
+
+    msf::ByteStream Stream;
+    msf::StreamReader Reader;
+    TypeRecordMapping Mapping;
+  };
+
 public:
   TypeDeserializer() {}
 
+  Error visitTypeBegin(CVType &Record) override {
+    assert(!Mapping && "Already in a type mapping!");
+    Mapping = llvm::make_unique<MappingInfo>(Record.content());
+    return Mapping->Mapping.visitTypeBegin(Record);
+  }
+  Error visitTypeEnd(CVType &Record) override {
+    assert(Mapping && "Not in a type mapping!");
+    auto EC = Mapping->Mapping.visitTypeEnd(Record);
+    Mapping.reset();
+    return EC;
+  }
+
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(CVType &CVR, Name##Record &Record) override {         \
-    return defaultVisitKnownRecord(CVR, Record);                               \
+    return visitKnownRecordImpl<Name##Record>(CVR, Record);                    \
   }
+#define MEMBER_RECORD(EnumName, EnumVal, Name)
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#include "TypeRecords.def"
+
+private:
+  template <typename RecordType>
+  Error visitKnownRecordImpl(CVType &CVR, RecordType &Record) {
+    return Mapping->Mapping.visitKnownRecord(CVR, Record);
+  }
+
+  std::unique_ptr<MappingInfo> Mapping;
+};
+
+class FieldListDeserializer : public TypeVisitorCallbacks {
+  struct MappingInfo {
+    explicit MappingInfo(msf::StreamReader &R)
+        : Reader(R), Mapping(Reader), StartOffset(0) {}
+
+    msf::StreamReader &Reader;
+    TypeRecordMapping Mapping;
+    uint32_t StartOffset;
+  };
+
+public:
+  explicit FieldListDeserializer(msf::StreamReader &Reader) : Mapping(Reader) {}
+
+  Error visitMemberBegin(CVMemberRecord &Record) override {
+    Mapping.StartOffset = Mapping.Reader.getOffset();
+    return Mapping.Mapping.visitMemberBegin(Record);
+  }
+  Error visitMemberEnd(CVMemberRecord &Record) override {
+    if (auto EC = Mapping.Mapping.visitMemberEnd(Record))
+      return EC;
+    return Error::success();
+  }
+
+#define TYPE_RECORD(EnumName, EnumVal, Name)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   Error visitKnownMember(CVMemberRecord &CVR, Name##Record &Record) override { \
-    return defaultVisitKnownMember(CVR, Record);                               \
+    return visitKnownMemberImpl<Name##Record>(CVR, Record);                    \
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "TypeRecords.def"
 
-protected:
-  template <typename T>
-  Error deserializeRecord(msf::StreamReader &Reader, TypeLeafKind Kind,
-                          T &Record) const {
-    TypeRecordKind RK = static_cast<TypeRecordKind>(Kind);
-    auto ExpectedRecord = T::deserialize(RK, Reader);
-    if (!ExpectedRecord)
-      return ExpectedRecord.takeError();
-    Record = std::move(*ExpectedRecord);
-    return Error::success();
-  }
-
 private:
-  template <typename T> Error defaultVisitKnownRecord(CVType &CVR, T &Record) {
-    msf::ByteStream S(CVR.content());
-    msf::StreamReader SR(S);
-    if (auto EC = deserializeRecord(SR, CVR.Type, Record))
+  template <typename RecordType>
+  Error visitKnownMemberImpl(CVMemberRecord &CVR, RecordType &Record) {
+    if (auto EC = Mapping.Mapping.visitKnownMember(CVR, Record))
       return EC;
+
+    uint32_t EndOffset = Mapping.Reader.getOffset();
+    uint32_t RecordLength = EndOffset - Mapping.StartOffset;
+    Mapping.Reader.setOffset(Mapping.StartOffset);
+    if (auto EC = Mapping.Reader.readBytes(CVR.Data, RecordLength))
+      return EC;
+    assert(Mapping.Reader.getOffset() == EndOffset);
     return Error::success();
   }
-  template <typename T>
-  Error defaultVisitKnownMember(CVMemberRecord &CVMR, T &Record) {
-    msf::ByteStream S(CVMR.Data);
-    msf::StreamReader SR(S);
-    if (auto EC = deserializeRecord(SR, CVMR.Kind, Record))
-      return EC;
-    return Error::success();
-  }
+  MappingInfo Mapping;
 };
 }
 }

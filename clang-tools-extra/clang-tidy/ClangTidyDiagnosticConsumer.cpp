@@ -250,7 +250,7 @@ StringRef ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
 
 ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(ClangTidyContext &Ctx)
     : Context(Ctx), LastErrorRelatesToUserCode(false),
-      LastErrorPassesLineFilter(false) {
+      LastErrorPassesLineFilter(false), LastErrorWasIgnored(false) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   Diags.reset(new DiagnosticsEngine(
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts, this,
@@ -309,13 +309,20 @@ static bool LineIsMarkedWithNOLINTinMacro(SourceManager &SM,
 
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
+  if (LastErrorWasIgnored && DiagLevel == DiagnosticsEngine::Note)
+    return;
+
   if (Info.getLocation().isValid() &&
       DiagLevel != DiagnosticsEngine::Error &&
       DiagLevel != DiagnosticsEngine::Fatal &&
       LineIsMarkedWithNOLINTinMacro(Diags->getSourceManager(), Info.getLocation())) {
     ++Context.Stats.ErrorsIgnoredNOLINT;
+    // Ignored a warning, should ignore related notes as well
+    LastErrorWasIgnored = true;
     return;
   }
+
+  LastErrorWasIgnored = false;
   // Count warnings/errors.
   DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
 

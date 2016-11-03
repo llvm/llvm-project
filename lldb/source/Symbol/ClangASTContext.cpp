@@ -6518,7 +6518,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
         if (idx == child_idx) {
           // Print the member type if requested
           // Print the member name and equal sign
-          child_name.assign(field->getNameAsString().c_str());
+          child_name.assign(field->getNameAsString());
 
           // Figure out the type byte size (field_type_info.first) and
           // alignment (field_type_info.second) from the AST context.
@@ -6577,7 +6577,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                           superclass_interface_decl));
 
                   child_name.assign(
-                      superclass_interface_decl->getNameAsString().c_str());
+                      superclass_interface_decl->getNameAsString());
 
                   clang::TypeInfo ivar_type_info =
                       getASTContext()->getTypeInfo(ivar_qual_type.getTypePtr());
@@ -6608,7 +6608,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
                 clang::QualType ivar_qual_type(ivar_decl->getType());
 
-                child_name.assign(ivar_decl->getNameAsString().c_str());
+                child_name.assign(ivar_decl->getNameAsString());
 
                 clang::TypeInfo ivar_type_info =
                     getASTContext()->getTypeInfo(ivar_qual_type.getTypePtr());
@@ -8205,14 +8205,14 @@ bool ClangASTContext::AddObjCClassProperty(
           std::string property_setter_no_colon(
               property_setter_name, strlen(property_setter_name) - 1);
           clang::IdentifierInfo *setter_ident =
-              &clang_ast->Idents.get(property_setter_no_colon.c_str());
+              &clang_ast->Idents.get(property_setter_no_colon);
           setter_sel = clang_ast->Selectors.getSelector(1, &setter_ident);
         } else if (!(property_attributes & DW_APPLE_PROPERTY_readonly)) {
           std::string setter_sel_string("set");
           setter_sel_string.push_back(::toupper(property_name[0]));
           setter_sel_string.append(&property_name[1]);
           clang::IdentifierInfo *setter_ident =
-              &clang_ast->Idents.get(setter_sel_string.c_str());
+              &clang_ast->Idents.get(setter_sel_string);
           setter_sel = clang_ast->Selectors.getSelector(1, &setter_ident);
         }
         property_decl->setSetterName(setter_sel);
@@ -9254,7 +9254,7 @@ bool ClangASTContext::DumpTypeValue(
               enum_end_pos = enum_decl->enumerator_end();
                enum_pos != enum_end_pos; ++enum_pos) {
             if (enum_pos->getInitVal().getSExtValue() == enum_svalue) {
-              s->PutCString(enum_pos->getNameAsString().c_str());
+              s->PutCString(enum_pos->getNameAsString());
               return true;
             }
           }
@@ -9268,7 +9268,7 @@ bool ClangASTContext::DumpTypeValue(
               enum_end_pos = enum_decl->enumerator_end();
                enum_pos != enum_end_pos; ++enum_pos) {
             if (enum_pos->getInitVal().getZExtValue() == enum_uvalue) {
-              s->PutCString(enum_pos->getNameAsString().c_str());
+              s->PutCString(enum_pos->getNameAsString());
               return true;
             }
           }
@@ -9438,7 +9438,7 @@ void ClangASTContext::DumpTypeDescription(lldb::opaque_compiler_type_t type,
             typedef_decl->getQualifiedNameAsString());
         if (!clang_typedef_name.empty()) {
           s->PutCString("typedef ");
-          s->PutCString(clang_typedef_name.c_str());
+          s->PutCString(clang_typedef_name);
         }
       }
     } break;
@@ -9488,7 +9488,7 @@ void ClangASTContext::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       } else {
         std::string clang_type_name(qual_type.getAsString());
         if (!clang_type_name.empty())
-          s->PutCString(clang_type_name.c_str());
+          s->PutCString(clang_type_name);
       }
     }
     }

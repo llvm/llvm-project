@@ -4426,11 +4426,9 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
   // Initialize the block descriptor.
   std::string DescData = "__" + FuncName + "_block_desc_" + BlockNumber + "_DATA";
 
-  VarDecl *NewVD = VarDecl::Create(*Context, TUDecl,
-                                   SourceLocation(), SourceLocation(),
-                                   &Context->Idents.get(DescData.c_str()),
-                                   Context->VoidPtrTy, nullptr,
-                                   SC_Static);
+  VarDecl *NewVD = VarDecl::Create(
+      *Context, TUDecl, SourceLocation(), SourceLocation(),
+      &Context->Idents.get(DescData), Context->VoidPtrTy, nullptr, SC_Static);
   UnaryOperator *DescRefExpr =
     new (Context) UnaryOperator(new (Context) DeclRefExpr(NewVD, false,
                                                           Context->VoidPtrTy,
@@ -5650,14 +5648,12 @@ void RewriteObjCFragileABI::RewriteObjCCategoryImplDecl(ObjCCategoryImplDecl *ID
       InstanceMethods.push_back(Setter);
   }
   RewriteObjCMethodsMetaData(InstanceMethods.begin(), InstanceMethods.end(),
-                             true, "CATEGORY_", FullCategoryName.c_str(),
-                             Result);
-  
+                             true, "CATEGORY_", FullCategoryName, Result);
+
   // Build _objc_method_list for class's class methods if needed
   RewriteObjCMethodsMetaData(IDecl->classmeth_begin(), IDecl->classmeth_end(),
-                             false, "CATEGORY_", FullCategoryName.c_str(),
-                             Result);
-  
+                             false, "CATEGORY_", FullCategoryName, Result);
+
   // Protocols referenced in class declaration?
   // Null CDecl is case of a category implementation with no category interface
   if (CDecl)
@@ -5776,7 +5772,7 @@ void RewriteObjCFragileABI::RewriteObjCMethodsMetaData(MethodIterator MethodBegi
   Result += "{\n\t0, " + utostr(NumMethods) + "\n";
   
   Result += "\t,{{(SEL)\"";
-  Result += (*MethodBegin)->getSelector().getAsString().c_str();
+  Result += (*MethodBegin)->getSelector().getAsString();
   std::string MethodTypeString;
   Context->getObjCEncodingForMethodDecl(*MethodBegin, MethodTypeString);
   Result += "\", \"";
@@ -5786,7 +5782,7 @@ void RewriteObjCFragileABI::RewriteObjCMethodsMetaData(MethodIterator MethodBegi
   Result += "}\n";
   for (++MethodBegin; MethodBegin != MethodEnd; ++MethodBegin) {
     Result += "\t  ,{(SEL)\"";
-    Result += (*MethodBegin)->getSelector().getAsString().c_str();
+    Result += (*MethodBegin)->getSelector().getAsString();
     std::string MethodTypeString;
     Context->getObjCEncodingForMethodDecl(*MethodBegin, MethodTypeString);
     Result += "\", \"";

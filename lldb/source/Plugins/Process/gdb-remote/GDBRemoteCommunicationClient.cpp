@@ -345,7 +345,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
     packet.PutCString(i == 0 ? ":" : ";");
-    packet.PutCString(features[i].c_str());
+    packet.PutCString(features[i]);
   }
 
   StringExtractorGDBRemote response;
@@ -1070,7 +1070,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   if (avail_type != CompressionType::None) {
     StringExtractorGDBRemote response;
     std::string packet = "QEnableCompression:type:" + avail_name + ";";
-    if (SendPacketAndWaitForResponse(packet.c_str(), response, false) !=
+    if (SendPacketAndWaitForResponse(packet, response, false) !=
         PacketResult::Success)
       return;
 
@@ -1772,7 +1772,7 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
         // control the characters in a process name
         std::string name;
         extractor.GetHexByteString(name);
-        process_info.GetExecutableFile().SetFile(name.c_str(), false);
+        process_info.GetExecutableFile().SetFile(name, false);
       } else if (name.equals("cputype")) {
         value.getAsInteger(0, cpu);
       } else if (name.equals("cpusubtype")) {
@@ -2015,7 +2015,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
             match_info.GetProcessInfo().GetArchitecture();
         const llvm::Triple &triple = match_arch.GetTriple();
         packet.PutCString("triple:");
-        packet.PutCString(triple.getTriple().c_str());
+        packet.PutCString(triple.getTriple());
         packet.PutChar(';');
       }
     }
@@ -3201,7 +3201,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string path;
       extractor.GetHexByteString(path);
-      module_spec.GetFileSpec() = FileSpec(path.c_str(), false, arch_spec);
+      module_spec.GetFileSpec() = FileSpec(path, false, arch_spec);
     }
   }
 
@@ -3322,7 +3322,7 @@ bool GDBRemoteCommunicationClient::ReadExtFeature(
            << "," << std::hex << size;
 
     GDBRemoteCommunication::PacketResult res =
-        SendPacketAndWaitForResponse(packet.str().c_str(), chunk, false);
+        SendPacketAndWaitForResponse(packet.str(), chunk, false);
 
     if (res != GDBRemoteCommunication::PacketResult::Success) {
       err.SetErrorString("Error sending $qXfer packet");
@@ -3609,8 +3609,8 @@ Error GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
   // Send the packet.
   const bool send_async = false;
   StringExtractorGDBRemote response;
-  auto result = SendPacketAndWaitForResponse(stream.GetString().c_str(),
-                                             response, send_async);
+  auto result =
+      SendPacketAndWaitForResponse(stream.GetString(), response, send_async);
   if (result == PacketResult::Success) {
     // We failed if the config result comes back other than OK.
     if (strcmp(response.GetStringRef().c_str(), "OK") == 0) {

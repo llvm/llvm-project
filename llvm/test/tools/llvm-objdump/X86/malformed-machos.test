@@ -7,17 +7,17 @@
 
 # m0001: mem-crup-0001.macho': truncated or malformed object (addr field plus size of section 2 in LC_SEGMENT_64 command 0 greater than than the segment's vmaddr plus vmsize)
 
-# RUN: llvm-objdump -macho -objc-meta-data \
-# RUN:   %p/Inputs/malformed-machos/mem-crup-0006.macho \
+# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN:   %p/Inputs/malformed-machos/mem-crup-0006.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0006 %s 
 
-# m0006: ivarLayout 0x8
+# m0006: malformed-machos/mem-crup-0006.macho': truncated or malformed object (section contents at offset 4128 with a size of 176, overlaps section contents at offset 4128 with a size of 8)
 
-# RUN: llvm-objdump -macho -objc-meta-data \
-# RUN:   %p/Inputs/malformed-machos/mem-crup-0006.macho \
+# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN:   %p/Inputs/malformed-machos/mem-crup-0010.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0010 %s 
 
-# m0010: 00000000000010e0 0x10e8 _OBJC_CLASS_
+# m0010: mem-crup-0010.macho': truncated or malformed object (section contents at offset 4320 with a size of 80, overlaps section contents at offset 4320 with a size of 8)
 
 # RUN: not llvm-objdump -macho -objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0040.macho 2>&1 \
@@ -34,8 +34,8 @@
 # RUN: llvm-objdump -macho -objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0261.macho
 
-# RUN: llvm-objdump -macho -disassemble \
-# RUN:   %p/Inputs/malformed-machos/mem-crup-0337.macho \
+# RUN: not llvm-objdump -macho -disassemble \
+# RUN:   %p/Inputs/malformed-machos/mem-crup-0337.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0337 %s 
 
-# m0337: subq	$16, %rsp
+# m0337: mem-crup-0337.macho': truncated or malformed object (section relocation entries at offset 0 with a size of 512, overlaps Mach-O headers at offset 0 with a size of 2048)

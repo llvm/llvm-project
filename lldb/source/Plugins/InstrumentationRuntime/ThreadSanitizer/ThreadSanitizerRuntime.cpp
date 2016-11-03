@@ -817,7 +817,7 @@ bool ThreadSanitizerRuntime::NotifyBreakpointHit(
       thread_sp->SetStopInfo(
           InstrumentationRuntimeStopInfo::
               CreateStopReasonWithInstrumentationData(
-                  *thread_sp, stop_reason_description.c_str(), report));
+                  *thread_sp, stop_reason_description, report));
 
     StreamFileSP stream_sp(
         process_sp->GetTarget().GetDebugger().GetOutputFile());

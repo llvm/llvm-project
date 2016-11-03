@@ -1232,10 +1232,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setTruncStoreAction(MVT::v4i32, MVT::v4i8,  Legal);
       setTruncStoreAction(MVT::v4i32, MVT::v4i16, Legal);
     } else {
-      setOperationAction(ISD::MLOAD,    MVT::v8i32, Custom);
-      setOperationAction(ISD::MLOAD,    MVT::v8f32, Custom);
-      setOperationAction(ISD::MSTORE,   MVT::v8i32, Custom);
-      setOperationAction(ISD::MSTORE,   MVT::v8f32, Custom);
+      for (auto VT : {MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
+           MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64}) {
+        setOperationAction(ISD::MLOAD,  VT, Custom);
+        setOperationAction(ISD::MSTORE, VT, Custom);
+      }
     }
     setOperationAction(ISD::TRUNCATE,           MVT::i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v16i8, Custom);
@@ -21940,26 +21941,48 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Mask = N->getMask();
   SDLoc dl(Op);
 
+  assert((!N->isExpandingLoad() || Subtarget.hasAVX512()) &&
+         "Expanding masked load is supported on AVX-512 target only!");
+
+  assert((!N->isExpandingLoad() || ScalarVT.getSizeInBits() >= 32) &&
+         "Expanding masked load is supported for 32 and 64-bit types only!");
+
+  // 4x32, 4x64 and 2x64 vectors of non-expanding loads are legal regardless of
+  // VLX. These types for exp-loads are handled here.
+  if (!N->isExpandingLoad() && VT.getVectorNumElements() <= 4)
+    return Op;
+
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked load op.");
 
-  assert(((ScalarVT == MVT::i32 || ScalarVT == MVT::f32) ||
+  assert((ScalarVT.getSizeInBits() >= 32 ||
           (Subtarget.hasBWI() &&
               (ScalarVT == MVT::i8 || ScalarVT == MVT::i16))) &&
          "Unsupported masked load op.");
 
   // This operation is legal for targets with VLX, but without
   // VLX the vector should be widened to 512 bit
-  unsigned NumEltsInWideVec = 512/VT.getScalarSizeInBits();
+  unsigned NumEltsInWideVec = 512 / VT.getScalarSizeInBits();
   MVT WideDataVT = MVT::getVectorVT(ScalarVT, NumEltsInWideVec);
-  MVT WideMaskVT = MVT::getVectorVT(MVT::i1, NumEltsInWideVec);
   SDValue Src0 = N->getSrc0();
   Src0 = ExtendToType(Src0, WideDataVT, DAG);
+
+  // Mask element has to be i1 
+  MVT MaskEltTy = Mask.getSimpleValueType().getScalarType();
+  assert((MaskEltTy == MVT::i1 || VT.getVectorNumElements() <= 4) &&
+         "We handle 4x32, 4x64 and 2x64 vectors only in this casse");
+
+  MVT WideMaskVT = MVT::getVectorVT(MaskEltTy, NumEltsInWideVec);
+
   Mask = ExtendToType(Mask, WideMaskVT, DAG, true);
+  if (MaskEltTy != MVT::i1)
+    Mask = DAG.getNode(ISD::TRUNCATE, dl,
+                       MVT::getVectorVT(MVT::i1, NumEltsInWideVec), Mask);
   SDValue NewLoad = DAG.getMaskedLoad(WideDataVT, dl, N->getChain(),
                                       N->getBasePtr(), Mask, Src0,
                                       N->getMemoryVT(), N->getMemOperand(),
-                                      N->getExtensionType());
+                                      N->getExtensionType(),
+                                      N->isExpandingLoad());
 
   SDValue Exract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT,
                                NewLoad.getValue(0),
@@ -21977,10 +22000,20 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Mask = N->getMask();
   SDLoc dl(Op);
 
+  assert((!N->isCompressingStore() || Subtarget.hasAVX512()) &&
+         "Expanding masked load is supported on AVX-512 target only!");
+
+  assert((!N->isCompressingStore() || ScalarVT.getSizeInBits() >= 32) &&
+         "Expanding masked load is supported for 32 and 64-bit types only!");
+
+  // 4x32 and 2x64 vectors of non-compressing stores are legal regardless to VLX.
+  if (!N->isCompressingStore() && VT.getVectorNumElements() <= 4)
+    return Op;
+
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked store op.");
 
-  assert(((ScalarVT == MVT::i32 || ScalarVT == MVT::f32) ||
+  assert((ScalarVT.getSizeInBits() >= 32 ||
           (Subtarget.hasBWI() &&
               (ScalarVT == MVT::i8 || ScalarVT == MVT::i16))) &&
           "Unsupported masked store op.");
@@ -21989,12 +22022,22 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   // VLX the vector should be widened to 512 bit
   unsigned NumEltsInWideVec = 512/VT.getScalarSizeInBits();
   MVT WideDataVT = MVT::getVectorVT(ScalarVT, NumEltsInWideVec);
-  MVT WideMaskVT = MVT::getVectorVT(MVT::i1, NumEltsInWideVec);
+
+  // Mask element has to be i1 
+  MVT MaskEltTy = Mask.getSimpleValueType().getScalarType();
+  assert((MaskEltTy == MVT::i1 || VT.getVectorNumElements() <= 4) &&
+         "We handle 4x32, 4x64 and 2x64 vectors only in this casse");
+
+  MVT WideMaskVT = MVT::getVectorVT(MaskEltTy, NumEltsInWideVec);
+
   DataToStore = ExtendToType(DataToStore, WideDataVT, DAG);
   Mask = ExtendToType(Mask, WideMaskVT, DAG, true);
+  if (MaskEltTy != MVT::i1)
+    Mask = DAG.getNode(ISD::TRUNCATE, dl,
+                       MVT::getVectorVT(MVT::i1, NumEltsInWideVec), Mask);
   return DAG.getMaskedStore(N->getChain(), dl, DataToStore, N->getBasePtr(),
                             Mask, N->getMemoryVT(), N->getMemOperand(),
-                            N->isTruncatingStore());
+                            N->isTruncatingStore(), N->isCompressingStore());
 }
 
 static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
@@ -29881,6 +29924,11 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const X86Subtarget &Subtarget) {
   MaskedLoadSDNode *Mld = cast<MaskedLoadSDNode>(N);
+
+  // TODO: Expanding load with constant mask may be optimized as well.
+  if (Mld->isExpandingLoad())
+    return SDValue();
+
   if (Mld->getExtensionType() == ISD::NON_EXTLOAD) {
     if (SDValue ScalarLoad = reduceMaskedLoadToScalarLoad(Mld, DAG, DCI))
       return ScalarLoad;
@@ -29996,6 +30044,10 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
 static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
   MaskedStoreSDNode *Mst = cast<MaskedStoreSDNode>(N);
+
+  if (Mst->isCompressingStore())
+    return SDValue();
+    
   if (!Mst->isTruncatingStore())
     return reduceMaskedStoreToScalarStore(Mst, DAG);
 

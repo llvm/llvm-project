@@ -133,6 +133,7 @@ class LLVMVectorSameWidth<int num, LLVMType elty>
   ValueType ElTy = elty.VT;
 }
 class LLVMPointerTo<int num> : LLVMMatchType<num>;
+class LLVMPointerToElt<int num> : LLVMMatchType<num>;
 class LLVMVectorOfPointersToElt<int num> : LLVMMatchType<num>;
 
 // Match the type of another intrinsic parameter that is expected to be a
@@ -718,12 +719,24 @@ def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
                                  [LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
                                   LLVMVectorSameWidth<0, llvm_i1_ty>,
                                   LLVMMatchType<0>],
-				  [IntrReadMem]>;
+                                 [IntrReadMem]>;
 
 def int_masked_scatter: Intrinsic<[],
                                   [llvm_anyvector_ty,
                                    LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
                                    LLVMVectorSameWidth<0, llvm_i1_ty>]>;
+
+def int_masked_expandload: Intrinsic<[llvm_anyvector_ty],
+                                     [LLVMPointerToElt<0>,
+                                      LLVMVectorSameWidth<0, llvm_i1_ty>,
+                                      LLVMMatchType<0>],
+                                     [IntrReadMem]>;
+
+def int_masked_compressstore: Intrinsic<[],
+                                     [llvm_anyvector_ty,
+                                      LLVMPointerToElt<0>,
+                                      LLVMVectorSameWidth<0, llvm_i1_ty>],
+                                     [IntrArgMemOnly]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],

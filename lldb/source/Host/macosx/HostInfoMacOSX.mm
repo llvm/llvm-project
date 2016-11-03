@@ -233,11 +233,13 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &file_spec) {
   std::string raw_path = lldb_file_spec.GetPath();
 
   size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos != std::string::npos) {
-    framework_pos += strlen("LLDB.framework");
-    raw_path.resize(framework_pos);
-    raw_path.append("/Resources/Clang");
-  }
+  if (framework_pos == std::string::npos)
+    return HostInfoPosix::ComputeClangDirectory(file_spec);
+  
+  framework_pos += strlen("LLDB.framework");
+  raw_path.resize(framework_pos);
+  raw_path.append("/Resources/Clang");
+  
   file_spec.SetFile(raw_path.c_str(), true);
   return true;
 }

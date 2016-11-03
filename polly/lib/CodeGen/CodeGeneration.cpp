@@ -133,8 +133,6 @@ public:
     assert(EnteringBB);
     PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
 
-    IslNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, S);
-
     // Only build the run-time condition and parameters _after_ having
     // introduced the conditional branch. This is important as the conditional
     // branch will guard the original scop from new induction variables that
@@ -144,6 +142,9 @@ public:
     BasicBlock *StartBlock =
         executeScopConditionally(S, this, Builder.getTrue());
     auto *SplitBlock = StartBlock->getSinglePredecessor();
+
+    IslNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, S,
+                               StartBlock);
 
     // First generate code for the hoisted invariant loads and transitively the
     // parameters they reference. Afterwards, for the remaining parameters that

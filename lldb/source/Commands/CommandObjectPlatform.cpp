@@ -550,7 +550,7 @@ public:
         perms = lldb::eFilePermissionsUserRW | lldb::eFilePermissionsGroupRW |
                 lldb::eFilePermissionsWorldRead;
       lldb::user_id_t fd = platform_sp->OpenFile(
-          FileSpec(cmd_line.c_str(), false),
+          FileSpec(cmd_line, false),
           File::eOpenOptionRead | File::eOpenOptionWrite |
               File::eOpenOptionAppend | File::eOpenOptionCanCreate,
           perms, error);
@@ -957,7 +957,7 @@ public:
     if (platform_sp) {
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       user_id_t size =
-          platform_sp->GetFileSize(FileSpec(remote_file_path.c_str(), false));
+          platform_sp->GetFileSize(FileSpec(remote_file_path, false));
       if (size != UINT64_MAX) {
         result.AppendMessageWithFormat("File size of %s (remote): %" PRIu64
                                        "\n",
@@ -1793,7 +1793,7 @@ public:
       error = (platform_sp->RunShellCommand(expr, working_dir, &status, &signo,
                                             &output, m_options.timeout));
       if (!output.empty())
-        result.GetOutputStream().PutCString(output.c_str());
+        result.GetOutputStream().PutCString(output);
       if (status > 0) {
         if (signo > 0) {
           const char *signo_cstr = Host::GetSignalAsCString(signo);

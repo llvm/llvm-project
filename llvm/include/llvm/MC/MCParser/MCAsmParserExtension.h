@@ -80,8 +80,29 @@ public:
 
   const AsmToken &Lex() { return getParser().Lex(); }
   const AsmToken &getTok() { return getParser().getTok(); }
-  bool parseToken(AsmToken::TokenKind T, const Twine &Msg) {
+  bool parseToken(AsmToken::TokenKind T,
+                  const Twine &Msg = "unexpected token") {
     return getParser().parseToken(T, Msg);
+  }
+
+  bool parseMany(std::function<bool()> parseOne, bool hasComma = true) {
+    return getParser().parseMany(parseOne, hasComma);
+  }
+
+  bool parseOptionalToken(AsmToken::TokenKind T) {
+    return getParser().parseOptionalToken(T);
+  }
+
+  bool check(bool P, const llvm::Twine &Msg) {
+    return getParser().check(P, Msg);
+  }
+
+  bool check(bool P, SMLoc Loc, const llvm::Twine &Msg) {
+    return getParser().check(P, Loc, Msg);
+  }
+
+  bool addErrorSuffix(const Twine &Suffix) {
+    return getParser().addErrorSuffix(Suffix);
   }
 
   bool HasBracketExpressions() const { return BracketExpressionsSupported; }

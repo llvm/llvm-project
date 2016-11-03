@@ -470,7 +470,7 @@ void SymbolFilePDB::FindTypesByName(const std::string &name,
                                     lldb_private::TypeMap &types) {
   auto global = m_session_up->getGlobalScope();
   std::unique_ptr<IPDBEnumSymbols> results;
-  results = global->findChildren(PDB_SymType::None, name.c_str(),
+  results = global->findChildren(PDB_SymType::None, name,
                                  PDB_NameSearchFlags::NS_Default);
 
   uint32_t matches = 0;

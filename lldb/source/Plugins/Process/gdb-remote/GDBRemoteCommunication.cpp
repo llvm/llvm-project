@@ -880,8 +880,8 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
         }
       }
 
-      m_history.AddPacket(m_bytes.c_str(), total_length,
-                          History::ePacketTypeRecv, total_length);
+      m_history.AddPacket(m_bytes, total_length, History::ePacketTypeRecv,
+                          total_length);
 
       // Clear packet_str in case there is some existing data in it.
       packet_str.clear();

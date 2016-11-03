@@ -2101,7 +2101,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       Desc.getNumImplicitUses();
     const unsigned NumImplicitOps = IsDst ? 2 : 1;
 
-    if (MI.getNumOperands() != StaticNumOps + NumImplicitOps) {
+    // Allow additional implicit operands. This allows a fixup done by the post
+    // RA scheduler where the main implicit operand is killed and implicit-defs
+    // are added for sub-registers that remain live after this instruction.
+    if (MI.getNumOperands() < StaticNumOps + NumImplicitOps) {
       ErrInfo = "missing implicit register operands";
       return false;
     }

@@ -24,8 +24,8 @@ auto &ti_lref = typeid(void (A::*)() &);
 // CHECK-DAG: @_ZTIM1AFvvOE = [[PMFTI]] {{.*}}), i32 0, {{.*}} @_ZTIFvvOE
 auto &ti_rref = typeid(void (A::*)() &&);
 
-// CHECK-DAG: @_ZTInxFvvE = [[QFTI]] {{.*}} @_ZTIFvvE {{.*}}, i32 32 }, comdat
-// CHECK-DAG: @_ZTIM1AnxFvvE = [[PMFTI]] {{.*}}), i32 0, {{.*}} @_ZTInxFvvE
+// CHECK-DAG: @_ZTIDoFvvE = [[QFTI]] {{.*}} @_ZTIFvvE {{.*}}, i32 32 }, comdat
+// CHECK-DAG: @_ZTIM1ADoFvvE = [[PMFTI]] {{.*}}), i32 0, {{.*}} @_ZTIDoFvvE
 auto &ti_noexcept = typeid(void (A::*)() noexcept);
 
 //auto &ti_txsafe = typeid(void (A::*)() transaction_safe);
@@ -34,18 +34,18 @@ auto &ti_noexcept = typeid(void (A::*)() noexcept);
 // CHECK-DAG: @_ZTIM1AFvvE = [[PMFTI]] {{.*}}), i32 0, {{.*}} @_ZTIFvvE
 auto &ti_noreturn = typeid(void __attribute__((noreturn)) (A::*)());
 
-// CHECK-DAG: @_ZTIrVKnxFvvRE = [[QFTI]] {{.*}} @_ZTIFvvE {{.*}}, i32 47 }, comdat
-// CHECK-DAG: @_ZTIM1ArVKnxFvvRE = [[PMFTI]] {{.*}}), i32 0, {{.*}} @_ZTIrVKnxFvvRE
+// CHECK-DAG: @_ZTIrVKDoFvvRE = [[QFTI]] {{.*}} @_ZTIFvvE {{.*}}, i32 47 }, comdat
+// CHECK-DAG: @_ZTIM1ArVKDoFvvRE = [[PMFTI]] {{.*}}), i32 0, {{.*}} @_ZTIrVKDoFvvRE
 auto &ti_rainbow = typeid(void (A::*)() const volatile __restrict & noexcept);
 
 // CHECK-LABEL: define void @_Z1fv(
 __attribute__((noreturn)) void f() noexcept {
-  // CHECK: call void @__cxa_throw({{.*}}@_ZTIPnxFvvE
+  // CHECK: call void @__cxa_throw({{.*}}@_ZTIPDoFvvE
   throw f;
 }
 
-// CHECK-LABEL: define void @_Z1gM1AnxFvvE(
+// CHECK-LABEL: define void @_Z1gM1ADoFvvE(
 void g(__attribute__((noreturn)) void (A::*p)() noexcept) {
-  // CHECK: call void @__cxa_throw({{.*}}@_ZTIM1AnxFvvE
+  // CHECK: call void @__cxa_throw({{.*}}@_ZTIM1ADoFvvE
   throw p;
 }

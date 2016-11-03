@@ -72,7 +72,7 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
 
 Error OptionValueArray::SetValueFromString(llvm::StringRef value,
                                            VarSetOperationType op) {
-  Args args(value.str().c_str());
+  Args args(value.str());
   Error error = SetArgs(args, op);
   if (error.Success())
     NotifyValueChanged();

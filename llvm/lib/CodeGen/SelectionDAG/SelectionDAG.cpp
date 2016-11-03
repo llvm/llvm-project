@@ -2036,7 +2036,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   APInt KnownZero2, KnownOne2;
   unsigned NumElts = DemandedElts.getBitWidth();
 
-  if (DemandedElts == APInt(NumElts, 0))
+  if (!DemandedElts)
     return;  // No demanded elts, better to assume we don't know anything.
 
   switch (Op.getOpcode()) {
@@ -2099,13 +2099,13 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
         DemandedRHS.setBit((unsigned)M % NumElts);
     }
     // Known bits are the values that are shared by every demanded element.
-    if (DemandedLHS != APInt(NumElts, 0)) {
+    if (!!DemandedLHS) {
       SDValue LHS = Op.getOperand(0);
       computeKnownBits(LHS, KnownZero2, KnownOne2, DemandedLHS, Depth + 1);
       KnownOne &= KnownOne2;
       KnownZero &= KnownZero2;
     }
-    if (DemandedRHS != APInt(NumElts, 0)) {
+    if (!!DemandedRHS) {
       SDValue RHS = Op.getOperand(1);
       computeKnownBits(RHS, KnownZero2, KnownOne2, DemandedRHS, Depth + 1);
       KnownOne &= KnownOne2;

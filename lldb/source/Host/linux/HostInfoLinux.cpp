@@ -176,7 +176,7 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
     }
   });
 
-  return g_fields->m_distribution_id.c_str();
+  return g_fields->m_distribution_id;
 }
 
 FileSpec HostInfoLinux::GetProgramFileSpec() {

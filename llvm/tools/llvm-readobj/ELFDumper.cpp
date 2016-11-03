@@ -728,7 +728,7 @@ getSectionNameIndex(const ELFO &Obj, const typename ELFO::Elf_Sym *Symbol,
 template <class ELFO>
 static const typename ELFO::Elf_Shdr *
 findNotEmptySectionByAddress(const ELFO *Obj, uint64_t Addr) {
-  for (const auto &Shdr : Obj->sections())
+  for (const auto &Shdr : unwrapOrError(Obj->sections()))
     if (Shdr.sh_addr == Addr && Shdr.sh_size > 0)
       return &Shdr;
   return nullptr;
@@ -737,7 +737,7 @@ findNotEmptySectionByAddress(const ELFO *Obj, uint64_t Addr) {
 template <class ELFO>
 static const typename ELFO::Elf_Shdr *findSectionByName(const ELFO &Obj,
                                                         StringRef Name) {
-  for (const auto &Shdr : Obj.sections()) {
+  for (const auto &Shdr : unwrapOrError(Obj.sections())) {
     if (Name == unwrapOrError(Obj.getSectionName(&Shdr)))
       return &Shdr;
   }
@@ -1315,7 +1315,7 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
     LoadSegments.push_back(&Phdr);
   }
 
-  for (const Elf_Shdr &Sec : Obj->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     switch (Sec.sh_type) {
     case ELF::SHT_SYMTAB:
       if (DotSymtabSec != nullptr)
@@ -1857,7 +1857,7 @@ template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
   }
 
   DictScope BA(W, "BuildAttributes");
-  for (const ELFO::Elf_Shdr &Sec : Obj->sections()) {
+  for (const ELFO::Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     if (Sec.sh_type != ELF::SHT_ARM_ATTRIBUTES)
       continue;
 
@@ -2336,7 +2336,7 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
 
 template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   const Elf_Shdr *StackMapSection = nullptr;
-  for (const auto &Sec : Obj->sections()) {
+  for (const auto &Sec : unwrapOrError(Obj->sections())) {
     StringRef Name = unwrapOrError(Obj->getSectionName(&Sec));
     if (Name == ".llvm_stackmaps") {
       StackMapSection = &Sec;
@@ -2423,7 +2423,7 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
 template <class ELFT> void GNUStyle<ELFT>::printGroupSections(const ELFO *Obj) {
   uint32_t SectionIndex = 0;
   bool HasGroups = false;
-  for (const Elf_Shdr &Sec : Obj->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     if (Sec.sh_type == ELF::SHT_GROUP) {
       HasGroups = true;
       const Elf_Shdr *Symtab = unwrapOrError(Obj->getSection(Sec.sh_link));
@@ -2517,7 +2517,7 @@ static inline void printRelocHeader(raw_ostream &OS, bool Is64, bool IsRela) {
 
 template <class ELFT> void GNUStyle<ELFT>::printRelocations(const ELFO *Obj) {
   bool HasRelocSections = false;
-  for (const Elf_Shdr &Sec : Obj->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     if (Sec.sh_type != ELF::SHT_REL && Sec.sh_type != ELF::SHT_RELA)
       continue;
     HasRelocSections = true;
@@ -2663,7 +2663,7 @@ template <class ELFT> void GNUStyle<ELFT>::printSections(const ELFO *Obj) {
     printField(f);
   OS << "\n";
 
-  for (const Elf_Shdr &Sec : Obj->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     Number = to_string(SectionIndex);
     Fields[0].Str = Number;
     Fields[1].Str = unwrapOrError(Obj->getSectionName(&Sec));
@@ -2941,7 +2941,7 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
   for (const Elf_Phdr &Phdr : Obj->program_headers()) {
     std::string Sections;
     OS << format("   %2.2d     ", Phnum++);
-    for (const Elf_Shdr &Sec : Obj->sections()) {
+    for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
       // Check if each section is in a segment and then print mapping.
       // readelf additionally makes sure it does not print zero sized sections
       // at end of segments and for PT_DYNAMIC both start and end of section
@@ -3273,7 +3273,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (P.p_type == PT_NOTE)
         process(P.p_offset, P.p_filesz);
   } else {
-    for (const auto &S : Obj->sections())
+    for (const auto &S : unwrapOrError(Obj->sections()))
       if (S.sh_type == SHT_NOTE)
         process(S.sh_offset, S.sh_size);
   }
@@ -3328,7 +3328,7 @@ void LLVMStyle<ELFT>::printGroupSections(const ELFO *Obj) {
   DictScope Lists(W, "Groups");
   uint32_t SectionIndex = 0;
   bool HasGroups = false;
-  for (const Elf_Shdr &Sec : Obj->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     if (Sec.sh_type == ELF::SHT_GROUP) {
       HasGroups = true;
       const Elf_Shdr *Symtab = unwrapOrError(Obj->getSection(Sec.sh_link));
@@ -3362,7 +3362,7 @@ template <class ELFT> void LLVMStyle<ELFT>::printRelocations(const ELFO *Obj) {
   ListScope D(W, "Relocations");
 
   int SectionNumber = -1;
-  for (const Elf_Shdr &Sec : Obj->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     ++SectionNumber;
 
     if (Sec.sh_type != ELF::SHT_REL && Sec.sh_type != ELF::SHT_RELA)
@@ -3436,7 +3436,7 @@ template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
   ListScope SectionsD(W, "Sections");
 
   int SectionIndex = -1;
-  for (const Elf_Shdr &Sec : Obj->sections()) {
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
     ++SectionIndex;
 
     StringRef Name = unwrapOrError(Obj->getSectionName(&Sec));

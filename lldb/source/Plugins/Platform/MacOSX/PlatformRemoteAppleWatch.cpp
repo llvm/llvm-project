@@ -281,8 +281,8 @@ bool PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded() {
       const bool find_other = false;
 
       SDKDirectoryInfoCollection builtin_sdk_directory_infos;
-      FileSpec::EnumerateDirectory(m_device_support_directory.c_str(),
-                                   find_directories, find_files, find_other,
+      FileSpec::EnumerateDirectory(m_device_support_directory, find_directories,
+                                   find_files, find_other,
                                    GetContainedFilesIntoVectorOfStringsCallback,
                                    &builtin_sdk_directory_infos);
 
@@ -452,14 +452,13 @@ const char *PlatformRemoteAppleWatch::GetDeviceSupportDirectory() {
       m_device_support_directory.assign(device_support_dir);
       m_device_support_directory.append(
           "/Platforms/watchOS.platform/DeviceSupport");
-      FileSpec platform_device_support_dir(m_device_support_directory.c_str(),
-                                           true);
+      FileSpec platform_device_support_dir(m_device_support_directory, true);
       if (!platform_device_support_dir.Exists()) {
         std::string alt_platform_dirname = device_support_dir;
         alt_platform_dirname.append(
             "/Platforms/WatchOS.platform/DeviceSupport");
-        FileSpec alt_platform_device_support_dir(
-            m_device_support_directory.c_str(), true);
+        FileSpec alt_platform_device_support_dir(m_device_support_directory,
+                                                 true);
         if (alt_platform_device_support_dir.Exists()) {
           m_device_support_directory = alt_platform_dirname;
         }
@@ -545,7 +544,7 @@ bool PlatformRemoteAppleWatch::GetFileInSDK(
 
       const char *paths_to_try[] = {"Symbols", "", "Symbols.Internal", nullptr};
       for (size_t i = 0; paths_to_try[i] != nullptr; i++) {
-        local_file.SetFile(sdkroot_path.c_str(), false);
+        local_file.SetFile(sdkroot_path, false);
         if (paths_to_try[i][0] != '\0')
           local_file.AppendPathComponent(paths_to_try[i]);
         local_file.AppendPathComponent(platform_file_path);
