@@ -246,7 +246,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
     if (!DotSymtabSec)
       return;
     StrTable = unwrapOrError(Obj->getStringTableForSymtab(*DotSymtabSec));
-    Syms = Obj->symbols(DotSymtabSec);
+    Syms = unwrapOrError(Obj->symbols(DotSymtabSec));
     SymtabName = unwrapOrError(Obj->getSectionName(DotSymtabSec));
     Entries = DotSymtabSec->getEntityCount();
   }
@@ -696,11 +696,11 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
   return FullSymbolName;
 }
 
-template <typename ELFO>
+template <typename ELFT>
 static void
-getSectionNameIndex(const ELFO &Obj, const typename ELFO::Elf_Sym *Symbol,
-                    const typename ELFO::Elf_Sym *FirstSym,
-                    ArrayRef<typename ELFO::Elf_Word> ShndxTable,
+getSectionNameIndex(const ELFFile<ELFT> &Obj, const typename ELFT::Sym *Symbol,
+                    const typename ELFT::Sym *FirstSym,
+                    ArrayRef<typename ELFT::Word> ShndxTable,
                     StringRef &SectionName, unsigned &SectionIndex) {
   SectionIndex = Symbol->st_shndx;
   if (Symbol->isUndefined())
@@ -717,9 +717,9 @@ getSectionNameIndex(const ELFO &Obj, const typename ELFO::Elf_Sym *Symbol,
     SectionName = "Reserved";
   else {
     if (SectionIndex == SHN_XINDEX)
-      SectionIndex =
-          Obj.getExtendedSymbolTableIndex(Symbol, FirstSym, ShndxTable);
-    const typename ELFO::Elf_Shdr *Sec =
+      SectionIndex = unwrapOrError(object::getExtendedSymbolTableIndex<ELFT>(
+          Symbol, FirstSym, ShndxTable));
+    const typename ELFT::Shdr *Sec =
         unwrapOrError(Obj.getSection(SectionIndex));
     SectionName = unwrapOrError(Obj.getSectionName(Sec));
   }
@@ -1305,7 +1305,7 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
     : ObjDumper(Writer), Obj(Obj) {
 
   SmallVector<const Elf_Phdr *, 4> LoadSegments;
-  for (const Elf_Phdr &Phdr : Obj->program_headers()) {
+  for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
       DynamicTable = createDRIFrom(&Phdr, sizeof(Elf_Dyn));
       continue;
@@ -2389,8 +2389,7 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
   OS << "\n";
   Str = printEnum(e->e_ident[ELF::EI_OSABI], makeArrayRef(ElfOSABI));
   printFields(OS, "OS/ABI:", Str);
-  Str = "0x" + to_hexString(e->e_version);
-  Str = to_hexString(e->e_ident[ELF::EI_ABIVERSION]);
+  Str = "0x" + to_hexString(e->e_ident[ELF::EI_ABIVERSION]);
   printFields(OS, "ABI Version:", Str);
   Str = printEnum(e->e_type, makeArrayRef(ElfObjectFileType));
   printFields(OS, "Type:", Str);
@@ -2737,8 +2736,8 @@ std::string GNUStyle<ELFT>::getSymbolSectionNdx(const ELFO *Obj,
   case ELF::SHN_COMMON:
     return "COM";
   case ELF::SHN_XINDEX:
-    SectionIndex = Obj->getExtendedSymbolTableIndex(
-        Symbol, FirstSym, this->dumper()->getShndxTable());
+    SectionIndex = unwrapOrError(object::getExtendedSymbolTableIndex<ELFT>(
+        Symbol, FirstSym, this->dumper()->getShndxTable()));
   default:
     // Find if:
     // Processor specific
@@ -2911,7 +2910,7 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
   else
     OS << "  Type           Offset   VirtAddr   PhysAddr   FileSiz "
        << "MemSiz  Flg Align\n";
-  for (const auto &Phdr : Obj->program_headers()) {
+  for (const auto &Phdr : unwrapOrError(Obj->program_headers())) {
     Type = getElfPtType(Header->e_machine, Phdr.p_type);
     Offset = to_string(format_hex(Phdr.p_offset, 8));
     VMA = to_string(format_hex(Phdr.p_vaddr, Width));
@@ -2938,7 +2937,7 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
   }
   OS << "\n Section to Segment mapping:\n  Segment Sections...\n";
   int Phnum = 0;
-  for (const Elf_Phdr &Phdr : Obj->program_headers()) {
+  for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
     std::string Sections;
     OS << format("   %2.2d     ", Phnum++);
     for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
@@ -3269,7 +3268,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   };
 
   if (IsCore) {
-    for (const auto &P : Obj->program_headers())
+    for (const auto &P : unwrapOrError(Obj->program_headers()))
       if (P.p_type == PT_NOTE)
         process(P.p_offset, P.p_filesz);
   } else {
@@ -3494,11 +3493,12 @@ template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
       const Elf_Shdr *Symtab = this->dumper()->getDotSymtabSec();
       StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*Symtab));
 
-      for (const Elf_Sym &Sym : Obj->symbols(Symtab)) {
+      for (const Elf_Sym &Sym : unwrapOrError(Obj->symbols(Symtab))) {
         const Elf_Shdr *SymSec = unwrapOrError(
             Obj->getSection(&Sym, Symtab, this->dumper()->getShndxTable()));
         if (SymSec == &Sec)
-          printSymbol(Obj, &Sym, Obj->symbols(Symtab).begin(), StrTable, false);
+          printSymbol(Obj, &Sym, unwrapOrError(Obj->symbols(Symtab)).begin(),
+                      StrTable, false);
       }
     }
 
@@ -3630,7 +3630,7 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
   ListScope L(W, "ProgramHeaders");
 
-  for (const Elf_Phdr &Phdr : Obj->program_headers()) {
+  for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
     DictScope P(W, "ProgramHeader");
     W.printHex("Type",
                getElfSegmentType(Obj->getHeader()->e_machine, Phdr.p_type),

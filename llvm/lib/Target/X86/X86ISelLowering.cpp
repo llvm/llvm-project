@@ -3985,7 +3985,7 @@ static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
 /// Do a one-to-one translation of a ISD::CondCode to the X86-specific
 /// condition code, returning the condition code and the LHS/RHS of the
 /// comparison to make.
-static unsigned TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
+static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
                                bool isFP, SDValue &LHS, SDValue &RHS,
                                SelectionDAG &DAG) {
   if (!isFP) {
@@ -15340,6 +15340,13 @@ unsigned X86TargetLowering::combineRepeatedFPDivisors() const {
   return 2;
 }
 
+/// Helper for creating a X86ISD::SETCC node.
+static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
+                        SelectionDAG &DAG) {
+  return DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                     DAG.getConstant(Cond, dl, MVT::i8), EFLAGS);
+}
+
 /// Create a BT (Bit Test) node - Test bit \p BitNo in \p Src and set condition
 /// according to equal/not-equal condition code \p CC.
 static SDValue getBitTestCondition(SDValue Src, SDValue BitNo, ISD::CondCode CC,
@@ -15367,8 +15374,7 @@ static SDValue getBitTestCondition(SDValue Src, SDValue BitNo, ISD::CondCode CC,
 
   SDValue BT = DAG.getNode(X86ISD::BT, dl, MVT::i32, Src, BitNo);
   X86::CondCode Cond = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
-  return DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                     DAG.getConstant(Cond, dl, MVT::i8), BT);
+  return getSETCC(Cond, BT, dl , DAG);
 }
 
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
@@ -15999,9 +16005,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
         return Op0;
 
       CCode = X86::GetOppositeBranchCondition(CCode);
-      SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                                  DAG.getConstant(CCode, dl, MVT::i8),
-                                  Op0.getOperand(1));
+      SDValue SetCC = getSETCC(CCode, Op0.getOperand(1), dl, DAG);
       if (VT == MVT::i1)
         return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, SetCC);
       return SetCC;
@@ -16019,14 +16023,13 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   bool IsFP = Op1.getSimpleValueType().isFloatingPoint();
-  unsigned X86CC = TranslateX86CC(CC, dl, IsFP, Op0, Op1, DAG);
+  X86::CondCode X86CC = TranslateX86CC(CC, dl, IsFP, Op0, Op1, DAG);
   if (X86CC == X86::COND_INVALID)
     return SDValue();
 
   SDValue EFLAGS = EmitCmp(Op0, Op1, X86CC, dl, DAG);
   EFLAGS = ConvertCmpIfNecessary(EFLAGS, DAG);
-  SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                              DAG.getConstant(X86CC, dl, MVT::i8), EFLAGS);
+  SDValue SetCC = getSETCC(X86CC, EFLAGS, dl, DAG);
   if (VT == MVT::i1)
     return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, SetCC);
   return SetCC;
@@ -16045,8 +16048,7 @@ SDValue X86TargetLowering::LowerSETCCE(SDValue Op, SelectionDAG &DAG) const {
   assert(Carry.getOpcode() != ISD::CARRY_FALSE);
   SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
   SDValue Cmp = DAG.getNode(X86ISD::SBB, DL, VTs, LHS, RHS, Carry);
-  SDValue SetCC = DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
-                              DAG.getConstant(CC, DL, MVT::i8), Cmp.getValue(1));
+  SDValue SetCC = getSETCC(CC, Cmp.getValue(1), DL, DAG);
   if (Op.getSimpleValueType() == MVT::i1)
     return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
   return SetCC;
@@ -18172,39 +18174,29 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       SDValue SetCC;
       switch (CC) {
       case ISD::SETEQ: { // (ZF = 0 and PF = 0)
-        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                            DAG.getConstant(X86::COND_E, dl, MVT::i8), Comi);
-        SDValue SetNP = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                                    DAG.getConstant(X86::COND_NP, dl, MVT::i8),
-                                    Comi);
+        SetCC = getSETCC(X86::COND_E, Comi, dl, DAG);
+        SDValue SetNP = getSETCC(X86::COND_NP, Comi, dl, DAG);
         SetCC = DAG.getNode(ISD::AND, dl, MVT::i8, SetCC, SetNP);
         break;
       }
       case ISD::SETNE: { // (ZF = 1 or PF = 1)
-        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                            DAG.getConstant(X86::COND_NE, dl, MVT::i8), Comi);
-        SDValue SetP = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                                   DAG.getConstant(X86::COND_P, dl, MVT::i8),
-                                   Comi);
+        SetCC = getSETCC(X86::COND_NE, Comi, dl, DAG);
+        SDValue SetP = getSETCC(X86::COND_P, Comi, dl, DAG);
         SetCC = DAG.getNode(ISD::OR, dl, MVT::i8, SetCC, SetP);
         break;
       }
       case ISD::SETGT: // (CF = 0 and ZF = 0)
-        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                            DAG.getConstant(X86::COND_A, dl, MVT::i8), Comi);
+        SetCC = getSETCC(X86::COND_A, Comi, dl, DAG);
         break;
       case ISD::SETLT: { // The condition is opposite to GT. Swap the operands.
-        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                            DAG.getConstant(X86::COND_A, dl, MVT::i8), InvComi);
+        SetCC = getSETCC(X86::COND_A, InvComi, dl, DAG);
         break;
       }
       case ISD::SETGE: // CF = 0
-        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                            DAG.getConstant(X86::COND_AE, dl, MVT::i8), Comi);
+        SetCC = getSETCC(X86::COND_AE, Comi, dl, DAG);
         break;
       case ISD::SETLE: // The condition is opposite to GE. Swap the operands.
-        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                            DAG.getConstant(X86::COND_AE, dl, MVT::i8), InvComi);
+        SetCC = getSETCC(X86::COND_AE, InvComi, dl, DAG);
         break;
       default:
         llvm_unreachable("Unexpected illegal condition!");
@@ -18377,7 +18369,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
   case Intrinsic::x86_avx_vtestc_pd_256:
   case Intrinsic::x86_avx_vtestnzc_pd_256: {
     bool IsTestPacked = false;
-    unsigned X86CC;
+    X86::CondCode X86CC;
     switch (IntNo) {
     default: llvm_unreachable("Bad fallthrough in Intrinsic lowering.");
     case Intrinsic::x86_avx_vtestz_ps:
@@ -18419,18 +18411,17 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     SDValue RHS = Op.getOperand(2);
     unsigned TestOpc = IsTestPacked ? X86ISD::TESTP : X86ISD::PTEST;
     SDValue Test = DAG.getNode(TestOpc, dl, MVT::i32, LHS, RHS);
-    SDValue CC = DAG.getConstant(X86CC, dl, MVT::i8);
-    SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, CC, Test);
+    SDValue SetCC = getSETCC(X86CC, Test, dl, DAG);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
   }
   case Intrinsic::x86_avx512_kortestz_w:
   case Intrinsic::x86_avx512_kortestc_w: {
-    unsigned X86CC = (IntNo == Intrinsic::x86_avx512_kortestz_w)? X86::COND_E: X86::COND_B;
+    X86::CondCode X86CC =
+        (IntNo == Intrinsic::x86_avx512_kortestz_w) ? X86::COND_E : X86::COND_B;
     SDValue LHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(1));
     SDValue RHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(2));
-    SDValue CC = DAG.getConstant(X86CC, dl, MVT::i8);
     SDValue Test = DAG.getNode(X86ISD::KORTEST, dl, MVT::i32, LHS, RHS);
-    SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, CC, Test);
+    SDValue SetCC = getSETCC(X86CC, Test, dl, DAG);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
   }
 
@@ -18445,7 +18436,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
   case Intrinsic::x86_sse42_pcmpistriz128:
   case Intrinsic::x86_sse42_pcmpestriz128: {
     unsigned Opcode;
-    unsigned X86CC;
+    X86::CondCode X86CC;
     switch (IntNo) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
     case Intrinsic::x86_sse42_pcmpistria128:
@@ -18492,9 +18483,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     SmallVector<SDValue, 5> NewOps(Op->op_begin()+1, Op->op_end());
     SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
     SDValue PCMP = DAG.getNode(Opcode, dl, VTs, NewOps);
-    SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                                DAG.getConstant(X86CC, dl, MVT::i8),
-                                SDValue(PCMP.getNode(), 1));
+    SDValue SetCC = getSETCC(X86CC, SDValue(PCMP.getNode(), 1), dl, DAG);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
   }
 
@@ -18917,9 +18906,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   case XTEST: {
     SDVTList VTs = DAG.getVTList(Op->getValueType(0), MVT::Other);
     SDValue InTrans = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(0));
-    SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                                DAG.getConstant(X86::COND_NE, dl, MVT::i8),
-                                InTrans);
+
+    SDValue SetCC = getSETCC(X86::COND_NE, InTrans, dl, DAG);
     SDValue Ret = DAG.getNode(ISD::ZERO_EXTEND, dl, Op->getValueType(0), SetCC);
     return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(),
                        Ret, SDValue(InTrans.getNode(), 1));
@@ -18934,9 +18922,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                               Op.getOperand(4), GenCF.getValue(1));
     SDValue Store = DAG.getStore(Op.getOperand(0), dl, Res.getValue(0),
                                  Op.getOperand(5), MachinePointerInfo());
-    SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                                DAG.getConstant(X86::COND_B, dl, MVT::i8),
-                                Res.getValue(1));
+    SDValue SetCC = getSETCC(X86::COND_B, Res.getValue(1), dl, DAG);
     SDValue Results[] = { SetCC, Store };
     return DAG.getMergeValues(Results, dl);
   }
@@ -20931,7 +20917,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   unsigned BaseOp = 0;
-  unsigned Cond = 0;
+  X86::CondCode Cond;
   SDLoc DL(Op);
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Unknown ovf instruction!");
@@ -20979,10 +20965,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
                                  MVT::i32);
     SDValue Sum = DAG.getNode(X86ISD::UMUL, DL, VTs, LHS, RHS);
 
-    SDValue SetCC =
-      DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
-                  DAG.getConstant(X86::COND_O, DL, MVT::i32),
-                  SDValue(Sum.getNode(), 2));
+    SDValue SetCC = getSETCC(X86::COND_O, SDValue(Sum.getNode(), 2), DL, DAG);
 
     if (N->getValueType(1) == MVT::i1)
       SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
@@ -20995,10 +20978,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   SDVTList VTs = DAG.getVTList(N->getValueType(0), MVT::i32);
   SDValue Sum = DAG.getNode(BaseOp, DL, VTs, LHS, RHS);
 
-  SDValue SetCC =
-    DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
-                DAG.getConstant(Cond, DL, MVT::i32),
-                SDValue(Sum.getNode(), 1));
+  SDValue SetCC = getSETCC(Cond, SDValue(Sum.getNode(), 1), DL, DAG);
 
   if (N->getValueType(1) == MVT::i1)
     SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
@@ -21198,9 +21178,7 @@ static SDValue LowerCMP_SWAP(SDValue Op, const X86Subtarget &Subtarget,
     DAG.getCopyFromReg(Result.getValue(0), DL, Reg, T, Result.getValue(1));
   SDValue EFLAGS = DAG.getCopyFromReg(cpOut.getValue(1), DL, X86::EFLAGS,
                                       MVT::i32, cpOut.getValue(2));
-  SDValue Success = DAG.getNode(X86ISD::SETCC, DL, Op->getValueType(1),
-                                DAG.getConstant(X86::COND_E, DL, MVT::i8),
-                                EFLAGS);
+  SDValue Success = getSETCC(X86::COND_E, EFLAGS, DL, DAG);
 
   DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), cpOut);
   DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), Success);
@@ -22524,9 +22502,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     SDValue EFLAGS = DAG.getCopyFromReg(cpOutH.getValue(1), dl, X86::EFLAGS,
                                         MVT::i32, cpOutH.getValue(2));
-    SDValue Success =
-        DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                    DAG.getConstant(X86::COND_E, dl, MVT::i8), EFLAGS);
+    SDValue Success = getSETCC(X86::COND_E, EFLAGS, dl, DAG);
     Success = DAG.getZExtOrTrunc(Success, dl, N->getValueType(1));
 
     Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, T, OpsF));
@@ -28085,8 +28061,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // This is efficient for any integer data type (including i8/i16) and
       // shift amount.
       if (FalseC->getAPIntValue() == 0 && TrueC->getAPIntValue().isPowerOf2()) {
-        Cond = DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
-                           DAG.getConstant(CC, DL, MVT::i8), Cond);
+        Cond = getSETCC(CC, Cond, DL, DAG);
 
         // Zero extend the condition if needed.
         Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, TrueC->getValueType(0), Cond);
@@ -28102,8 +28077,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // Optimize Cond ? cst+1 : cst -> zext(setcc(C)+cst.  This is efficient
       // for any integer data type, including i8/i16.
       if (FalseC->getAPIntValue()+1 == TrueC->getAPIntValue()) {
-        Cond = DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
-                           DAG.getConstant(CC, DL, MVT::i8), Cond);
+        Cond = getSETCC(CC, Cond, DL, DAG);
 
         // Zero extend the condition if needed.
         Cond = DAG.getNode(ISD::ZERO_EXTEND, DL,
@@ -28140,8 +28114,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
 
         if (isFastMultiplier) {
           APInt Diff = TrueC->getAPIntValue()-FalseC->getAPIntValue();
-          Cond = DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
-                             DAG.getConstant(CC, DL, MVT::i8), Cond);
+          Cond = getSETCC(CC, Cond, DL ,DAG);
           // Zero extend the condition if needed.
           Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, FalseC->getValueType(0),
                              Cond);
@@ -31560,10 +31533,8 @@ static SDValue combineX86SetCC(SDNode *N, SelectionDAG &DAG,
     return MaterializeSETB(DL, EFLAGS, DAG, N->getSimpleValueType(0));
 
   // Try to simplify the EFLAGS and condition code operands.
-  if (SDValue Flags = combineSetCCEFLAGS(EFLAGS, CC, DAG)) {
-    SDValue Cond = DAG.getConstant(CC, DL, MVT::i8);
-    return DAG.getNode(X86ISD::SETCC, DL, N->getVTList(), Cond, Flags);
-  }
+  if (SDValue Flags = combineSetCCEFLAGS(EFLAGS, CC, DAG))
+    return getSETCC(CC, Flags, DL, DAG);
 
   return SDValue();
 }

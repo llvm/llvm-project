@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-HSA -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-NOHSA,GCN-NOHSA-SI,FUNC %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN -check-prefix=GCN-HSA -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-NOHSA,GCN-NOHSA-VI,FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}constant_load_i16:
@@ -428,8 +428,15 @@ define void @constant_zextload_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(
 }
 
 ; FUNC-LABEL: {{^}}constant_sextload_i16_to_i64:
-; GCN-NOHSA-DAG: buffer_load_sshort v[[LO:[0-9]+]],
+; FIXME: Need to optimize this sequence to avoid extra bfe:
+;  t28: i32,ch = load<LD2[%in(addrspace=1)], anyext from i16> t12, t27, undef:i64
+;          t31: i64 = any_extend t28 
+;        t33: i64 = sign_extend_inreg t31, ValueType:ch:i16
+
+; GCN-NOHSA-SI-DAG: buffer_load_sshort v[[LO:[0-9]+]],
 ; GCN-HSA-DAG: flat_load_sshort v[[LO:[0-9]+]],
+; GCN-NOHSA-VI-DAG: buffer_load_ushort v[[ULO:[0-9]+]],
+; GCN-NOHSA-VI-DAG: v_bfe_i32 v[[LO:[0-9]+]], v[[ULO]], 0, 16
 ; GCN-DAG: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
 ; GCN-NOHSA: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]]

@@ -353,7 +353,7 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
   error(StrTableOrErr.getError());
   StringRef StrTable = *StrTableOrErr;
 
-  for (const Elf_Sym &Sym : ELF->symbols(Symtab))
+  for (const Elf_Sym &Sym : unwrapOrError(ELF->symbols(Symtab)))
     if (Sym.st_shndx == Section && Sym.st_value == Address &&
         Sym.getType() == ELF::STT_FUNC) {
       auto NameOrErr = Sym.getName(StrTable);

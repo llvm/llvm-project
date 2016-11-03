@@ -836,6 +836,7 @@
 		947CF7711DC7B1EE00EF980B /* ProcessMinidump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947CF7701DC7B1EE00EF980B /* ProcessMinidump.cpp */; };
 		947CF7761DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947CF7741DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp */; };
 		947CF7771DC7B20D00EF980B /* ThreadMinidump.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947CF7751DC7B20D00EF980B /* ThreadMinidump.cpp */; };
+		9485545A1DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948554591DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp */; };
 		949ADF031406F648004833E1 /* ValueObjectConstResultImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */; };
 		949EEDA01BA74B6D008C63CF /* CoreMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949EED9E1BA74B64008C63CF /* CoreMedia.cpp */; };
 		949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949EEDA11BA76571008C63CF /* Cocoa.cpp */; };
@@ -2740,6 +2741,8 @@
 		947CF7741DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_x86_32.cpp; sourceTree = "<group>"; };
 		947CF7751DC7B20D00EF980B /* ThreadMinidump.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ThreadMinidump.cpp; sourceTree = "<group>"; };
 		9481FE6B1B5F2D9200DED357 /* Either.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Either.h; path = include/lldb/Utility/Either.h; sourceTree = "<group>"; };
+		948554581DCBAE3200345FF5 /* RenderScriptScriptGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RenderScriptScriptGroup.h; sourceTree = "<group>"; };
+		948554591DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RenderScriptScriptGroup.cpp; sourceTree = "<group>"; };
 		949ADF001406F62E004833E1 /* ValueObjectConstResultImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ValueObjectConstResultImpl.h; path = include/lldb/Core/ValueObjectConstResultImpl.h; sourceTree = "<group>"; };
 		949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectConstResultImpl.cpp; path = source/Core/ValueObjectConstResultImpl.cpp; sourceTree = "<group>"; };
 		949EED9E1BA74B64008C63CF /* CoreMedia.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CoreMedia.cpp; path = Language/ObjC/CoreMedia.cpp; sourceTree = "<group>"; };
@@ -5722,6 +5725,8 @@
 			isa = PBXGroup;
 			children = (
 				23D065811D4A7BDA0008EDE6 /* CMakeLists.txt */,
+				948554591DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp */,
+				948554581DCBAE3200345FF5 /* RenderScriptScriptGroup.h */,
 				23D065831D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h */,
 				23D065821D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.cpp */,
 				23D065851D4A7BDA0008EDE6 /* RenderScriptRuntime.h */,
@@ -7391,6 +7396,7 @@
 				4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */,
 				26AB92121819D74600E63F3E /* DWARFDataExtractor.cpp in Sources */,
 				268900E913353E6F00698AC0 /* CPPLanguageRuntime.cpp in Sources */,
+				9485545A1DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp in Sources */,
 				268900EA13353E6F00698AC0 /* DynamicLoader.cpp in Sources */,
 				945261BF1B9A11FC00BF138D /* CxxStringTypes.cpp in Sources */,
 				268900EB13353E6F00698AC0 /* ExecutionContext.cpp in Sources */,

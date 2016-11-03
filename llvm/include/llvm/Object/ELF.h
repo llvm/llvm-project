@@ -72,8 +72,8 @@ private:
   const Elf_Ehdr *Header;
 
 public:
-  template<typename T>
-  const T        *getEntry(uint32_t Section, uint32_t Entry) const;
+  template <typename T>
+  ErrorOr<const T *> getEntry(uint32_t Section, uint32_t Entry) const;
   template <typename T>
   const T *getEntry(const Elf_Shdr *Section, uint32_t Entry) const;
 
@@ -111,13 +111,10 @@ public:
 
   ErrorOr<Elf_Shdr_Range> sections() const;
 
-  Elf_Sym_Range symbols(const Elf_Shdr *Sec) const {
+  ErrorOr<Elf_Sym_Range> symbols(const Elf_Shdr *Sec) const {
     if (!Sec)
       return makeArrayRef<Elf_Sym>(nullptr, nullptr);
-    auto V = getSectionContentsAsArray<Elf_Sym>(Sec);
-    if (!V)
-      report_fatal_error(V.getError().message());
-    return *V;
+    return getSectionContentsAsArray<Elf_Sym>(Sec);
   }
 
   Elf_Rela_Range relas(const Elf_Shdr *Sec) const {
@@ -135,40 +132,26 @@ public:
   }
 
   /// \brief Iterate over program header table.
-  const Elf_Phdr *program_header_begin() const {
+  ErrorOr<Elf_Phdr_Range> program_headers() const {
     if (Header->e_phnum && Header->e_phentsize != sizeof(Elf_Phdr))
-      report_fatal_error("Invalid program header size");
-    return reinterpret_cast<const Elf_Phdr *>(base() + Header->e_phoff);
-  }
-
-  const Elf_Phdr *program_header_end() const {
-    return program_header_begin() + Header->e_phnum;
-  }
-
-  const Elf_Phdr_Range program_headers() const {
-    return makeArrayRef(program_header_begin(), program_header_end());
+      return object_error::parse_failed;
+    auto *Begin = reinterpret_cast<const Elf_Phdr *>(base() + Header->e_phoff);
+    return makeArrayRef(Begin, Begin+Header->e_phnum);
   }
 
   ErrorOr<StringRef> getSectionStringTable(Elf_Shdr_Range Sections) const;
-  uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
-                                       const Elf_Shdr *SymTab,
-                                       ArrayRef<Elf_Word> ShndxTable) const;
-  uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
-                                       const Elf_Sym *FirstSym,
-                                       ArrayRef<Elf_Word> ShndxTable) const;
   const Elf_Ehdr *getHeader() const { return Header; }
+  ErrorOr<uint32_t> getSectionIndex(const Elf_Sym *Sym, Elf_Sym_Range Syms,
+                                    ArrayRef<Elf_Word> ShndxTable) const;
   ErrorOr<const Elf_Shdr *> getSection(const Elf_Sym *Sym,
                                        const Elf_Shdr *SymTab,
+                                       ArrayRef<Elf_Word> ShndxTable) const;
+  ErrorOr<const Elf_Shdr *> getSection(const Elf_Sym *Sym, Elf_Sym_Range Symtab,
                                        ArrayRef<Elf_Word> ShndxTable) const;
   ErrorOr<const Elf_Shdr *> getSection(uint32_t Index) const;
 
   ErrorOr<const Elf_Sym *> getSymbol(const Elf_Shdr *Sec,
-                                     uint32_t Index) const {
-    Elf_Sym_Range Symbols = symbols(Sec);
-    if (Index >= Symbols.size())
-      return object_error::invalid_symbol_index;
-    return &Symbols[Index];
-  }
+                                     uint32_t Index) const;
 
   ErrorOr<StringRef> getSectionName(const Elf_Shdr *Section) const;
   ErrorOr<StringRef> getSectionName(const Elf_Shdr *Section,
@@ -192,40 +175,76 @@ getSection(typename ELFT::ShdrRange Sections, uint32_t Index) {
 }
 
 template <class ELFT>
-uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
-    const Elf_Sym *Sym, const Elf_Shdr *SymTab,
-    ArrayRef<Elf_Word> ShndxTable) const {
-  return getExtendedSymbolTableIndex(Sym, symbols(SymTab).begin(), ShndxTable);
-}
-
-template <class ELFT>
-uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
-    const Elf_Sym *Sym, const Elf_Sym *FirstSym,
-    ArrayRef<Elf_Word> ShndxTable) const {
+inline ErrorOr<uint32_t>
+getExtendedSymbolTableIndex(const typename ELFT::Sym *Sym,
+                            const typename ELFT::Sym *FirstSym,
+                            ArrayRef<typename ELFT::Word> ShndxTable) {
   assert(Sym->st_shndx == ELF::SHN_XINDEX);
   unsigned Index = Sym - FirstSym;
   if (Index >= ShndxTable.size())
-    report_fatal_error("Invalid symbol table index");
+    return object_error::parse_failed;
   // The size of the table was checked in getSHNDXTable.
   return ShndxTable[Index];
+}
+
+template <class ELFT>
+ErrorOr<uint32_t>
+ELFFile<ELFT>::getSectionIndex(const Elf_Sym *Sym, Elf_Sym_Range Syms,
+                               ArrayRef<Elf_Word> ShndxTable) const {
+  uint32_t Index = Sym->st_shndx;
+  if (Index == ELF::SHN_XINDEX) {
+    auto ErrorOrIndex = object::getExtendedSymbolTableIndex<ELFT>(
+        Sym, Syms.begin(), ShndxTable);
+    if (std::error_code EC = ErrorOrIndex.getError())
+      return EC;
+    return *ErrorOrIndex;
+  }
+  if (Index == ELF::SHN_UNDEF || Index >= ELF::SHN_LORESERVE)
+    return 0;
+  return Index;
 }
 
 template <class ELFT>
 ErrorOr<const typename ELFT::Shdr *>
 ELFFile<ELFT>::getSection(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                           ArrayRef<Elf_Word> ShndxTable) const {
-  uint32_t Index = Sym->st_shndx;
-  if (Index == ELF::SHN_UNDEF ||
-      (Index >= ELF::SHN_LORESERVE && Index != ELF::SHN_XINDEX))
+  auto SymsOrErr = symbols(SymTab);
+  if (std::error_code EC = SymsOrErr.getError())
+    return EC;
+  return getSection(Sym, *SymsOrErr, ShndxTable);
+}
+
+template <class ELFT>
+ErrorOr<const typename ELFT::Shdr *>
+ELFFile<ELFT>::getSection(const Elf_Sym *Sym, Elf_Sym_Range Symbols,
+                          ArrayRef<Elf_Word> ShndxTable) const {
+  ErrorOr<uint32_t> IndexOrErr = getSectionIndex(Sym, Symbols, ShndxTable);
+  if (std::error_code EC = IndexOrErr.getError())
+    return EC;
+  uint32_t Index = *IndexOrErr;
+  if (Index == 0)
     return nullptr;
-
-  if (Index == ELF::SHN_XINDEX)
-    Index = getExtendedSymbolTableIndex(Sym, SymTab, ShndxTable);
-
   auto SectionsOrErr = sections();
   if (std::error_code EC = SectionsOrErr.getError())
     return EC;
   return object::getSection<ELFT>(*SectionsOrErr, Index);
+}
+
+template <class ELFT>
+inline ErrorOr<const typename ELFT::Sym *>
+getSymbol(typename ELFT::SymRange Symbols, uint32_t Index) {
+  if (Index >= Symbols.size())
+    return object_error::invalid_symbol_index;
+  return &Symbols[Index];
+}
+
+template <class ELFT>
+ErrorOr<const typename ELFT::Sym *>
+ELFFile<ELFT>::getSymbol(const Elf_Shdr *Sec, uint32_t Index) const {
+  auto SymtabOrErr = symbols(Sec);
+  if (std::error_code EC = SymtabOrErr.getError())
+    return EC;
+  return object::getSymbol<ELFT>(*SymtabOrErr, Index);
 }
 
 template <class ELFT>
@@ -384,10 +403,11 @@ ErrorOr<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
 
 template <class ELFT>
 template <typename T>
-const T *ELFFile<ELFT>::getEntry(uint32_t Section, uint32_t Entry) const {
+ErrorOr<const T *> ELFFile<ELFT>::getEntry(uint32_t Section,
+                                           uint32_t Entry) const {
   ErrorOr<const Elf_Shdr *> Sec = getSection(Section);
   if (std::error_code EC = Sec.getError())
-    report_fatal_error(EC.message());
+    return EC;
   return getEntry<T>(*Sec, Entry);
 }
 

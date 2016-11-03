@@ -141,6 +141,18 @@ static void addDefsToList(const MachineInstr &MI,
   }
 }
 
+static bool memAccessesCanBeReordered(
+  MachineBasicBlock::iterator A,
+  MachineBasicBlock::iterator B,
+  const SIInstrInfo *TII,
+  llvm::AliasAnalysis * AA) {
+  return (TII->areMemAccessesTriviallyDisjoint(*A, *B, AA) ||
+    // RAW or WAR - cannot reorder
+    // WAW - cannot reorder
+    // RAR - safe to reorder
+    !(A->mayStore() || B->mayStore()));
+}
+
 // Add MI and its defs to the lists if MI reads one of the defs that are
 // already in the list. Returns true in that case.
 static bool
@@ -173,8 +185,8 @@ canMoveInstsAcrossMemOp(MachineInstr &MemOp,
   for (MachineInstr *InstToMove : InstsToMove) {
     if (!InstToMove->mayLoadOrStore())
       continue;
-    if (!TII->areMemAccessesTriviallyDisjoint(MemOp, *InstToMove, AA))
-      return false;
+    if (!memAccessesCanBeReordered(MemOp, *InstToMove, TII, AA))
+        return false;
   }
   return true;
 }
@@ -233,7 +245,7 @@ SILoadStoreOptimizer::findMatchingDSInst(MachineBasicBlock::iterator I,
         return E;
 
       if (MBBI->mayLoadOrStore() &&
-          !TII->areMemAccessesTriviallyDisjoint(*I, *MBBI, AA)) {
+        !memAccessesCanBeReordered(*I, *MBBI, TII, AA)) {
         // We fail condition #1, but we may still be able to satisfy condition
         // #2.  Add this instruction to the move list and then we will check
         // if condition #2 holds once we have selected the matching instruction.
@@ -288,8 +300,10 @@ SILoadStoreOptimizer::findMatchingDSInst(MachineBasicBlock::iterator I,
     // We could potentially keep looking, but we'd need to make sure that
     // it was safe to move I and also all the instruction in InstsToMove
     // down past this instruction.
-    // FIXME: This is too conservative.
-    break;
+    if (!memAccessesCanBeReordered(*I, *MBBI, TII, AA) ||   // check if we can move I across MBBI
+      !canMoveInstsAcrossMemOp(*MBBI, InstsToMove, TII, AA) // check if we can move all I's users
+     )
+      break;
   }
   return E;
 }

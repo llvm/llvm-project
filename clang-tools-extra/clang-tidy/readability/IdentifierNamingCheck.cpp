@@ -395,6 +395,9 @@ static StyleKind findStyleKind(
     if (Decl->isAnonymousStructOrUnion())
       return SK_Invalid;
 
+    if (!Decl->getCanonicalDecl()->isThisDeclarationADefinition())
+      return SK_Invalid;
+
     if (Decl->hasDefinition() && Decl->isAbstract() &&
         NamingStyles[SK_AbstractClass].isSet())
       return SK_AbstractClass;

@@ -52,3 +52,4 @@ class TypeLookupTestCase(TestBase):
                     "no type was found matching 'PleaseDontBeARealTypeThatExists'"])
         self.expect('type lookup MyCPPClass', substrs=['setF', 'float getF'])
         self.expect('type lookup MyClass', substrs=['setF', 'float getF'])
+        self.expect('type lookup MyObjCClass', substrs=['@interface MyObjCClass', 'int x', 'int y'])

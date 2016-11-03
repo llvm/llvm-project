@@ -78,6 +78,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v16i32, &AMDGPU::SReg_512RegClass);
   addRegisterClass(MVT::v16f32, &AMDGPU::VReg_512RegClass);
 
+  if (Subtarget->has16BitInsts())
+    addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
+
   computeRegisterProperties(STI.getRegisterInfo());
 
   // We need to custom lower vector stores from local memory
@@ -220,6 +223,55 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FCOS, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f64, Custom);
+
+  if (Subtarget->has16BitInsts()) {
+    setOperationAction(ISD::Constant, MVT::i16, Legal);
+
+    setOperationAction(ISD::SMIN, MVT::i16, Legal);
+    setOperationAction(ISD::SMAX, MVT::i16, Legal);
+
+    setOperationAction(ISD::UMIN, MVT::i16, Legal);
+    setOperationAction(ISD::UMAX, MVT::i16, Legal);
+
+    setOperationAction(ISD::SETCC, MVT::i16, Promote);
+    AddPromotedToType(ISD::SETCC, MVT::i16, MVT::i32);
+
+    setOperationAction(ISD::SIGN_EXTEND, MVT::i16, Promote);
+    AddPromotedToType(ISD::SIGN_EXTEND, MVT::i16, MVT::i32);
+
+    setOperationAction(ISD::ROTR, MVT::i16, Promote);
+    setOperationAction(ISD::ROTL, MVT::i16, Promote);
+
+    setOperationAction(ISD::SDIV, MVT::i16, Promote);
+    setOperationAction(ISD::UDIV, MVT::i16, Promote);
+    setOperationAction(ISD::SREM, MVT::i16, Promote);
+    setOperationAction(ISD::UREM, MVT::i16, Promote);
+
+    setOperationAction(ISD::BSWAP, MVT::i16, Promote);
+    setOperationAction(ISD::BITREVERSE, MVT::i16, Promote);
+
+    setOperationAction(ISD::CTTZ, MVT::i16, Promote);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i16, Promote);
+    setOperationAction(ISD::CTLZ, MVT::i16, Promote);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i16, Promote);
+
+    setOperationAction(ISD::SELECT_CC, MVT::i16, Expand);
+
+    setOperationAction(ISD::BR_CC, MVT::i16, Expand);
+
+    setOperationAction(ISD::LOAD, MVT::i16, Custom);
+
+    setTruncStoreAction(MVT::i64, MVT::i16, Expand);
+
+    setOperationAction(ISD::UINT_TO_FP, MVT::i16, Promote);
+    AddPromotedToType(ISD::UINT_TO_FP, MVT::i16, MVT::i32);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i16, Promote);
+    AddPromotedToType(ISD::SINT_TO_FP, MVT::i16, MVT::i32);
+    setOperationAction(ISD::FP16_TO_FP, MVT::i16, Promote);
+    AddPromotedToType(ISD::FP16_TO_FP, MVT::i16, MVT::i32);
+    setOperationAction(ISD::FP_TO_FP16, MVT::i16, Promote);
+    AddPromotedToType(ISD::FP_TO_FP16, MVT::i16, MVT::i32);
+  }
 
   setTargetDAGCombine(ISD::FADD);
   setTargetDAGCombine(ISD::FSUB);
@@ -2558,7 +2610,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   EVT MemVT = Load->getMemoryVT();
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
-    assert(MemVT == MVT::i1 && "Only i1 non-extloads expected");
     // FIXME: Copied from PPC
     // First, load into 32 bits, then truncate to 1 bit.
 
@@ -2566,8 +2617,10 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     SDValue BasePtr = Load->getBasePtr();
     MachineMemOperand *MMO = Load->getMemOperand();
 
+    EVT RealMemVT = (MemVT == MVT::i1) ? MVT::i8 : MVT::i16;
+
     SDValue NewLD = DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i32, Chain,
-                                   BasePtr, MVT::i8, MMO);
+                                   BasePtr, RealMemVT, MMO);
 
     SDValue Ops[] = {
       DAG.getNode(ISD::TRUNCATE, DL, MemVT, NewLD),
@@ -3381,8 +3434,23 @@ static SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
   }
 
   EVT VT = K0->getValueType(0);
-  return DAG.getNode(Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3, SL, VT,
-                     Op0.getOperand(0), SDValue(K0, 0), SDValue(K1, 0));
+
+  MVT NVT = MVT::i32;
+  unsigned ExtOp = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+
+  SDValue Tmp1, Tmp2, Tmp3;
+  Tmp1 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(0));
+  Tmp2 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(1));
+  Tmp3 = DAG.getNode(ExtOp, SL, NVT, Op1);
+
+  if (VT == MVT::i16) {
+    Tmp1 = DAG.getNode(Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3, SL, NVT,
+                       Tmp1, Tmp2, Tmp3);
+
+    return DAG.getNode(ISD::TRUNCATE, SL, VT, Tmp1);
+  } else
+    return DAG.getNode(Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3, SL, VT,
+                       Op0.getOperand(0), SDValue(K0, 0), SDValue(K1, 0));
 }
 
 static bool isKnownNeverSNan(SelectionDAG &DAG, SDValue Op) {

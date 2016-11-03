@@ -638,12 +638,12 @@ declare double @llvm.pow.f64(double, double)
 ; during PEI with shrink-wrapping enable.
 ; CHECK-LABEL: debug_info:
 ;
-; ENABLE: {{tst  r2, #1|lsls r1, r2, #31}}
+; ENABLE: tst{{(\.w)?}}  r2, #1
 ; ENABLE-NEXT: beq      [[BB13:LBB[0-9_]+]]
 ;
 ; CHECK: push
 ;
-; DISABLE: {{tst  r2, #1|lsls r1, r2, #31}}
+; DISABLE: tst{{(\.w)?}}  r2, #1
 ; DISABLE-NEXT: beq      [[BB13:LBB[0-9_]+]]
 ;
 ; CHECK: bl{{x?}} _pow

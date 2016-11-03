@@ -123,7 +123,7 @@ def SCC_CLASS : RegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
 // TODO: Do we need to set DwarfRegAlias on register tuples?
 
 // SGPR 32-bit registers
-def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
+def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16], 32,
                             (add (sequence "SGPR%u", 0, 103))> {
   let AllocationPriority = 1;
 }
@@ -190,7 +190,8 @@ def TTMP_128Regs : RegisterTuples<[sub0, sub1, sub2, sub3],
                                (add (decimate (shl TTMP_32, 3), 4))]>;
 
 // VGPR 32-bit registers
-def VGPR_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
+// i16 only on VI+
+def VGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16], 32,
                             (add (sequence "VGPR%u", 0, 255))> {
   let AllocationPriority = 1;
   let Size = 32;
@@ -258,8 +259,8 @@ def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32], 32,
 }
 
 // Register class for all scalar registers (SGPRs + Special Registers)
-def SReg_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
-  (add SReg_32_XM0, M0)> {
+def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16], 32,
+  (add SReg_32_XM0, M0, VCC_LO, VCC_HI, EXEC_LO, EXEC_HI, FLAT_SCR_LO, FLAT_SCR_HI)> {
   let AllocationPriority = 1;
 }
 
@@ -346,7 +347,7 @@ def VReg_1 : RegisterClass<"AMDGPU", [i1], 32, (add VGPR_32)> {
   let Size = 32;
 }
 
-def VS_32 : RegisterClass<"AMDGPU", [i32, f32], 32, (add VGPR_32, SReg_32)> {
+def VS_32 : RegisterClass<"AMDGPU", [i32, f32, i16], 32, (add VGPR_32, SReg_32)> {
   let isAllocatable = 0;
 }
 

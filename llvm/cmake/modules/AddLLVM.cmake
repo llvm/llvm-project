@@ -1351,8 +1351,10 @@ function(llvm_setup_rpath name)
     return()
   endif()
 
-  set_target_properties(${name} PROPERTIES
-                        BUILD_WITH_INSTALL_RPATH On
-                        INSTALL_RPATH "${_install_rpath}"
-                        ${_install_name_dir})
+  if(DEFINED _install_rpath)
+    set_target_properties(${name} PROPERTIES
+                          BUILD_WITH_INSTALL_RPATH On
+                          INSTALL_RPATH "${_install_rpath}"
+                          ${_install_name_dir})
+  endif()
 endfunction()

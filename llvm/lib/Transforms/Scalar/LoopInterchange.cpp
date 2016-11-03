@@ -205,7 +205,7 @@ static bool isOuterMostDepPositive(CharMatrix &DepMatrix, unsigned Row,
 static bool containsNoDependence(CharMatrix &DepMatrix, unsigned Row,
                                  unsigned Column) {
   for (unsigned i = 0; i < Column; ++i) {
-    if (DepMatrix[Row][i] != '=' || DepMatrix[Row][i] != 'S' ||
+    if (DepMatrix[Row][i] != '=' && DepMatrix[Row][i] != 'S' &&
         DepMatrix[Row][i] != 'I')
       return false;
   }
