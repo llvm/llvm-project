@@ -25,6 +25,18 @@ std::vector<uint8_t> parseHex(StringRef S);
 bool isValidCIdentifier(StringRef S);
 StringRef unquote(StringRef S);
 
+class StringMatcher {
+public:
+  StringMatcher() = default;
+  explicit StringMatcher(StringRef P) : Patterns({P}) {}
+  explicit StringMatcher(std::vector<StringRef> &&Pat)
+      : Patterns(std::move(Pat)) {}
+
+  bool match(StringRef S);
+private:
+  std::vector<StringRef> Patterns;
+};
+
 // Returns a demangled C++ symbol name. If Name is not a mangled
 // name or the system does not provide __cxa_demangle function,
 // it returns an unmodified string.

@@ -1036,7 +1036,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::caretequal: {
     std::string ThisTok(PP.getSpelling(Tok));
     if (isLetter(ThisTok[0])) {
-      IdentifierInfo *II = &PP.getIdentifierTable().get(ThisTok.data());
+      IdentifierInfo *II = &PP.getIdentifierTable().get(ThisTok);
       Tok.setKind(tok::identifier);
       SelectorLoc = ConsumeToken();
       return II;

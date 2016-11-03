@@ -633,7 +633,6 @@
 		26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CEB5F018762056008F575A /* CommandObjectGUI.cpp */; };
 		26CFDCA3186163A4000E63E5 /* Editline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26CFDCA2186163A4000E63E5 /* Editline.cpp */; };
 		26CFDCA818616473000E63E5 /* libedit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 26F5C32A10F3DFDD009D5894 /* libedit.dylib */; };
-		26D1804216CEDF0700EDFB5B /* TimeSpecTimeout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D1804016CEDF0700EDFB5B /* TimeSpecTimeout.cpp */; };
 		26D265BC136B4269002EEE45 /* lldb-public.h in Headers */ = {isa = PBXBuildFile; fileRef = 26651A14133BEC76005B64B7 /* lldb-public.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		26D52C1F1A980FE300E5D2FB /* MICmdCmdSymbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D52C1D1A980FE300E5D2FB /* MICmdCmdSymbol.cpp */; };
 		26D55235159A7DB100708D8D /* libxml2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 26D55234159A7DB100708D8D /* libxml2.dylib */; };
@@ -2252,8 +2251,6 @@
 		26D0DD5310FE555900271C65 /* BreakpointResolverAddress.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolverAddress.cpp; path = source/Breakpoint/BreakpointResolverAddress.cpp; sourceTree = "<group>"; };
 		26D0DD5410FE555900271C65 /* BreakpointResolverFileLine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolverFileLine.cpp; path = source/Breakpoint/BreakpointResolverFileLine.cpp; sourceTree = "<group>"; };
 		26D0DD5510FE555900271C65 /* BreakpointResolverName.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolverName.cpp; path = source/Breakpoint/BreakpointResolverName.cpp; sourceTree = "<group>"; };
-		26D1804016CEDF0700EDFB5B /* TimeSpecTimeout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TimeSpecTimeout.cpp; path = source/Utility/TimeSpecTimeout.cpp; sourceTree = "<group>"; };
-		26D1804616CEE12C00EDFB5B /* TimeSpecTimeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TimeSpecTimeout.h; path = source/Utility/TimeSpecTimeout.h; sourceTree = "<group>"; };
 		26D27C9D11ED3A4E0024D721 /* ELFHeader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ELFHeader.cpp; sourceTree = "<group>"; };
 		26D27C9E11ED3A4E0024D721 /* ELFHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ELFHeader.h; sourceTree = "<group>"; };
 		26D52C1D1A980FE300E5D2FB /* MICmdCmdSymbol.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MICmdCmdSymbol.cpp; path = "tools/lldb-mi/MICmdCmdSymbol.cpp"; sourceTree = SOURCE_ROOT; };
@@ -4242,8 +4239,6 @@
 				2676A093119C93C8008A98EF /* StringExtractorGDBRemote.cpp */,
 				94380B8019940B0300BFE4A8 /* StringLexer.h */,
 				94380B8119940B0A00BFE4A8 /* StringLexer.cpp */,
-				26D1804616CEE12C00EDFB5B /* TimeSpecTimeout.h */,
-				26D1804016CEDF0700EDFB5B /* TimeSpecTimeout.cpp */,
 				94BA8B6E176F8CA0005A91B5 /* Range.h */,
 				94BA8B6C176F8C9B005A91B5 /* Range.cpp */,
 				AF1FA8891A60A69500272AFC /* RegisterNumber.cpp */,
@@ -7048,7 +7043,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				33E5E8471A674FB60024ED68 /* StringConvert.cpp in Sources */,
-				26D1804216CEDF0700EDFB5B /* TimeSpecTimeout.cpp in Sources */,
 				2689FFDA13353D9D00698AC0 /* lldb.cpp in Sources */,
 				4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */,
 				AF415AE71D949E4400FCE0D4 /* x86AssemblyInspectionEngine.cpp in Sources */,

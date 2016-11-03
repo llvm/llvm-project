@@ -650,11 +650,14 @@ define i1 @beq_to_bx(i32* %y, i32 %head) {
 
 ; CHECK: tst r3, r4
 ; ENABLE-NEXT: pop {r4}
-; ENABLE-NEXT: pop {r3}
-; ENABLE-NEXT: mov lr, r3
+; ENABLE-NEXT: mov r12, r{{.*}}
+; ENABLE-NEXT: pop {r0}
+; ENABLE-NEXT: mov lr, r0
+; ENABLE-NEXT: mov r0, r12
 ; CHECK-NEXT: beq [[EXIT_LABEL]]
 
 ; CHECK: str r1, [r2]
+; CHECK: str r3, [r2]
 ; CHECK-NEXT: movs r0, #0
 ; CHECK-NEXT: [[EXIT_LABEL]]: @ %cleanup
 ; ENABLE-NEXT: bx lr
@@ -675,6 +678,7 @@ if.end:
 
 if.end4:
   store i32 %head, i32* %y, align 4
+  store volatile i32 %z, i32* %y, align 4
   br label %cleanup
 
 cleanup:

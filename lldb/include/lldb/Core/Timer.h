@@ -20,8 +20,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/TimeValue.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Chrono.h"
 
 namespace lldb_private {
 
@@ -61,27 +61,17 @@ public:
   static void ResetCategoryTimes();
 
 protected:
-  void ChildStarted(const TimeValue &time);
-
-  void ChildStopped(const TimeValue &time);
-
-  uint64_t GetTotalElapsedNanoSeconds();
-
-  uint64_t GetTimerElapsedNanoSeconds();
+  using TimePoint = std::chrono::steady_clock::time_point;
+  void ChildDuration(TimePoint::duration dur) { m_child_duration += dur; }
 
   const char *m_category;
-  TimeValue m_total_start;
-  TimeValue m_timer_start;
-  uint64_t m_total_ticks; // Total running time for this timer including when
-                          // other timers below this are running
-  uint64_t m_timer_ticks; // Ticks for this timer that do not include when other
-                          // timers below this one are running
+  TimePoint m_total_start;
+  TimePoint::duration m_child_duration{0};
 
   static std::atomic<bool> g_quiet;
   static std::atomic<unsigned> g_display_depth;
 
 private:
-  Timer();
   DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 

@@ -19,7 +19,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Regex.h"
 #include <functional>
 
 namespace lld {
@@ -115,9 +114,9 @@ struct OutputSectionCommand : BaseCommand {
 // It can optionally have negative match pattern for EXCLUDED_FILE command.
 // Also it may be surrounded with SORT() command, so contains sorting rules.
 struct SectionPattern {
-  SectionPattern(llvm::Regex &&Re1, llvm::Regex &&Re2)
-      : ExcludedFileRe(std::forward<llvm::Regex>(Re1)),
-        SectionRe(std::forward<llvm::Regex>(Re2)) {}
+  SectionPattern(StringMatcher &&Re1, StringMatcher &&Re2)
+      : ExcludedFileRe(std::forward<StringMatcher>(Re1)),
+        SectionRe(std::forward<StringMatcher>(Re2)) {}
 
   SectionPattern(SectionPattern &&Other) {
     std::swap(ExcludedFileRe, Other.ExcludedFileRe);
@@ -126,18 +125,17 @@ struct SectionPattern {
     std::swap(SortInner, Other.SortInner);
   }
 
-  llvm::Regex ExcludedFileRe;
-  llvm::Regex SectionRe;
+  StringMatcher ExcludedFileRe;
+  StringMatcher SectionRe;
   SortSectionPolicy SortOuter;
   SortSectionPolicy SortInner;
 };
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
-      : BaseCommand(InputSectionKind),
-        FileRe(compileGlobPatterns({FilePattern})) {}
+      : BaseCommand(InputSectionKind), FileRe(FilePattern) {}
   static bool classof(const BaseCommand *C);
-  llvm::Regex FileRe;
+  StringMatcher FileRe;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
