@@ -614,7 +614,7 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
                                           TAA, TAAParsed, StubSize);
 
   if (!ErrorStr.empty())
-    return Error(Loc, ErrorStr.c_str());
+    return Error(Loc, ErrorStr);
 
   // Issue a warning if the target is not powerpc and Section is a *coal* section.
   Triple TT = getParser().getContext().getObjectFileInfo()->getTargetTriple();

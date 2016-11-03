@@ -208,7 +208,6 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
-  void addMachineSSAOptimization() override;
   void addPreEmitPass() override;
 
   void addPreRegAlloc() override;
@@ -237,14 +236,8 @@ bool MipsPassConfig::addInstSelector() {
   return false;
 }
 
-void MipsPassConfig::addMachineSSAOptimization() {
-  addPass(createMipsOptimizePICCallPass(getMipsTargetMachine()));
-  TargetPassConfig::addMachineSSAOptimization();
-}
-
 void MipsPassConfig::addPreRegAlloc() {
-  if (getOptLevel() == CodeGenOpt::None)
-    addPass(createMipsOptimizePICCallPass(getMipsTargetMachine()));
+  addPass(createMipsOptimizePICCallPass(getMipsTargetMachine()));
 }
 
 TargetIRAnalysis MipsTargetMachine::getTargetIRAnalysis() {

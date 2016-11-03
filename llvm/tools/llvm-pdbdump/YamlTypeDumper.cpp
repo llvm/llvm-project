@@ -300,8 +300,6 @@ void MappingTraits<ClassRecord>::mapping(IO &IO, ClassRecord &Class) {
   IO.mapRequired("FieldList", Class.FieldList);
   IO.mapRequired("Name", Class.Name);
   IO.mapRequired("UniqueName", Class.UniqueName);
-  IO.mapRequired("Hfa", Class.Hfa);
-  IO.mapRequired("WinRTKind", Class.WinRTKind);
   IO.mapRequired("DerivationList", Class.DerivationList);
   IO.mapRequired("VTableShape", Class.VTableShape);
   IO.mapRequired("Size", Class.Size);
@@ -313,7 +311,6 @@ void MappingTraits<UnionRecord>::mapping(IO &IO, UnionRecord &Union) {
   IO.mapRequired("FieldList", Union.FieldList);
   IO.mapRequired("Name", Union.Name);
   IO.mapRequired("UniqueName", Union.UniqueName);
-  IO.mapRequired("Hfa", Union.Hfa);
   IO.mapRequired("Size", Union.Size);
 }
 
@@ -337,7 +334,6 @@ void MappingTraits<VFTableRecord>::mapping(IO &IO, VFTableRecord &VFT) {
   IO.mapRequired("CompleteClass", VFT.CompleteClass);
   IO.mapRequired("OverriddenVFTable", VFT.OverriddenVFTable);
   IO.mapRequired("VFPtrOffset", VFT.VFPtrOffset);
-  IO.mapRequired("Name", VFT.Name);
   IO.mapRequired("MethodNames", VFT.MethodNames);
 }
 
@@ -387,10 +383,7 @@ void MappingTraits<TypeServer2Record>::mapping(IO &IO, TypeServer2Record &TS) {
 
 void MappingTraits<PointerRecord>::mapping(IO &IO, PointerRecord &Ptr) {
   IO.mapRequired("ReferentType", Ptr.ReferentType);
-  IO.mapRequired("PtrKind", Ptr.PtrKind);
-  IO.mapRequired("Mode", Ptr.Mode);
-  IO.mapRequired("Options", Ptr.Options);
-  IO.mapRequired("Size", Ptr.Size);
+  IO.mapRequired("Attrs", Ptr.Attrs);
   IO.mapOptional("MemberInfo", Ptr.MemberInfo);
 }
 
@@ -442,9 +435,7 @@ void MappingTraits<NestedTypeRecord>::mapping(IO &IO,
 
 void MappingTraits<OneMethodRecord>::mapping(IO &IO, OneMethodRecord &Method) {
   IO.mapRequired("Type", Method.Type);
-  IO.mapRequired("Kind", Method.Kind);
-  IO.mapRequired("Options", Method.Options);
-  IO.mapRequired("Access", Method.Access);
+  IO.mapRequired("Attrs", Method.Attrs.Attrs);
   IO.mapRequired("VFTableOffset", Method.VFTableOffset);
   IO.mapRequired("Name", Method.Name);
 }
@@ -457,7 +448,7 @@ void MappingTraits<OverloadedMethodRecord>::mapping(
 }
 
 void MappingTraits<DataMemberRecord>::mapping(IO &IO, DataMemberRecord &Field) {
-  IO.mapRequired("Access", Field.Access);
+  IO.mapRequired("Attrs", Field.Attrs.Attrs);
   IO.mapRequired("Type", Field.Type);
   IO.mapRequired("FieldOffset", Field.FieldOffset);
   IO.mapRequired("Name", Field.Name);
@@ -465,7 +456,7 @@ void MappingTraits<DataMemberRecord>::mapping(IO &IO, DataMemberRecord &Field) {
 
 void MappingTraits<StaticDataMemberRecord>::mapping(
     IO &IO, StaticDataMemberRecord &Field) {
-  IO.mapRequired("Access", Field.Access);
+  IO.mapRequired("Attrs", Field.Attrs.Attrs);
   IO.mapRequired("Type", Field.Type);
   IO.mapRequired("Name", Field.Name);
 }
@@ -475,20 +466,20 @@ void MappingTraits<VFPtrRecord>::mapping(IO &IO, VFPtrRecord &VFTable) {
 }
 
 void MappingTraits<EnumeratorRecord>::mapping(IO &IO, EnumeratorRecord &Enum) {
-  IO.mapRequired("Access", Enum.Access);
+  IO.mapRequired("Attrs", Enum.Attrs.Attrs);
   IO.mapRequired("Value", Enum.Value);
   IO.mapRequired("Name", Enum.Name);
 }
 
 void MappingTraits<BaseClassRecord>::mapping(IO &IO, BaseClassRecord &Base) {
-  IO.mapRequired("Access", Base.Access);
+  IO.mapRequired("Attrs", Base.Attrs.Attrs);
   IO.mapRequired("Type", Base.Type);
   IO.mapRequired("Offset", Base.Offset);
 }
 
 void MappingTraits<VirtualBaseClassRecord>::mapping(
     IO &IO, VirtualBaseClassRecord &Base) {
-  IO.mapRequired("Access", Base.Access);
+  IO.mapRequired("Attrs", Base.Attrs.Attrs);
   IO.mapRequired("BaseType", Base.BaseType);
   IO.mapRequired("VBPtrType", Base.VBPtrType);
   IO.mapRequired("VBPtrOffset", Base.VBPtrOffset);
@@ -568,7 +559,10 @@ struct MappingContextTraits<pdb::yaml::PdbTpiFieldListRecord,
   static void mapping(IO &IO, pdb::yaml::PdbTpiFieldListRecord &Obj,
                       pdb::yaml::SerializationContext &Context) {
     codeview::TypeVisitorCallbackPipeline Pipeline;
-    codeview::TypeDeserializer Deserializer;
+
+    msf::ByteStream Data(Obj.Record.Data);
+    msf::StreamReader FieldReader(Data);
+    codeview::FieldListDeserializer Deserializer(FieldReader);
     codeview::TypeSerializationVisitor Serializer(Context.FieldListBuilder,
                                                   Context.TypeTableBuilder);
     pdb::TpiHashUpdater Hasher;

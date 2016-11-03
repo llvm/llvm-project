@@ -72,13 +72,7 @@ TypeIndex TypeTableBuilder::writeKnownType(const PointerRecord &Record) {
   TypeRecordBuilder Builder(Record.getKind());
 
   Builder.writeTypeIndex(Record.getReferentType());
-  uint32_t flags = static_cast<uint32_t>(Record.getOptions()) |
-                   (Record.getSize() << PointerRecord::PointerSizeShift) |
-                   (static_cast<uint32_t>(Record.getMode())
-                    << PointerRecord::PointerModeShift) |
-                   (static_cast<uint32_t>(Record.getPointerKind())
-                    << PointerRecord::PointerKindShift);
-  Builder.writeUInt32(flags);
+  Builder.writeUInt32(Record.Attrs);
 
   if (Record.isPointerToMember()) {
     const MemberPointerInfo &M = Record.getMemberInfo();

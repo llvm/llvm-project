@@ -10,44 +10,29 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
 
-static Error skipPadding(msf::StreamReader &Reader) {
-  if (Reader.empty())
-    return Error::success();
-
-  uint8_t Leaf = Reader.peek();
-  if (Leaf < LF_PAD0)
-    return Error::success();
-  // Leaf is greater than 0xf0. We should advance by the number of bytes in
-  // the low 4 bits.
-  unsigned BytesToAdvance = Leaf & 0x0F;
-  return Reader.skip(BytesToAdvance);
-}
-
 template <typename T>
 static Expected<CVMemberRecord>
-deserializeMemberRecord(msf::StreamReader &Reader, TypeLeafKind Kind) {
-  msf::StreamReader OldReader = Reader;
-  TypeRecordKind RK = static_cast<TypeRecordKind>(Kind);
-  auto ExpectedRecord = T::deserialize(RK, Reader);
-  if (!ExpectedRecord)
-    return ExpectedRecord.takeError();
-  assert(Reader.bytesRemaining() < OldReader.bytesRemaining());
-  if (auto EC = skipPadding(Reader))
+deserializeMemberRecord(FieldListDeserializer &Deserializer,
+                        msf::StreamReader &Reader, TypeLeafKind Kind) {
+  T MR(static_cast<TypeRecordKind>(Kind));
+  CVMemberRecord CVR;
+  CVR.Kind = Kind;
+
+  if (auto EC = Deserializer.visitMemberBegin(CVR))
+    return std::move(EC);
+  if (auto EC = Deserializer.visitKnownMember(CVR, MR))
+    return std::move(EC);
+  if (auto EC = Deserializer.visitMemberEnd(CVR))
     return std::move(EC);
 
-  CVMemberRecord CVMR;
-  CVMR.Kind = Kind;
-
-  uint32_t RecordLength = OldReader.bytesRemaining() - Reader.bytesRemaining();
-  if (auto EC = OldReader.readBytes(CVMR.Data, RecordLength))
-    return std::move(EC);
-
-  return CVMR;
+  return CVR;
 }
 
 CVTypeVisitor::CVTypeVisitor(TypeVisitorCallbacks &Callbacks)
@@ -138,22 +123,28 @@ Error CVTypeVisitor::visitTypeStream(const CVTypeArray &Types) {
 }
 
 template <typename MR>
-static Error visitKnownMember(msf::StreamReader &Reader, TypeLeafKind Leaf,
+static Error visitKnownMember(FieldListDeserializer &Deserializer,
+                              msf::StreamReader &Reader, TypeLeafKind Leaf,
                               TypeVisitorCallbacks &Callbacks) {
-  auto ExpectedRecord = deserializeMemberRecord<MR>(Reader, Leaf);
-  if (!ExpectedRecord)
-    return ExpectedRecord.takeError();
-  CVMemberRecord &Record = *ExpectedRecord;
-  if (auto EC = Callbacks.visitMemberBegin(Record))
+  MR Record(static_cast<TypeRecordKind>(Leaf));
+  CVMemberRecord CVR;
+  CVR.Kind = Leaf;
+
+  if (auto EC = Callbacks.visitMemberBegin(CVR))
     return EC;
-  if (auto EC = visitKnownMember<MR>(Record, Callbacks))
+  if (auto EC = Callbacks.visitKnownMember(CVR, Record))
     return EC;
-  if (auto EC = Callbacks.visitMemberEnd(Record))
+  if (auto EC = Callbacks.visitMemberEnd(CVR))
     return EC;
   return Error::success();
 }
 
 Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
+  FieldListDeserializer Deserializer(Reader);
+  TypeVisitorCallbackPipeline Pipeline;
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(Callbacks);
+
   TypeLeafKind Leaf;
   while (!Reader.empty()) {
     if (auto EC = Reader.readEnum(Leaf))
@@ -168,7 +159,8 @@ Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
           cv_error_code::unknown_member_record);
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   case EnumName: {                                                             \
-    if (auto EC = visitKnownMember<Name##Record>(Reader, Leaf, Callbacks))     \
+    if (auto EC = visitKnownMember<Name##Record>(Deserializer, Reader, Leaf,   \
+                                                 Pipeline))                    \
       return EC;                                                               \
     break;                                                                     \
   }

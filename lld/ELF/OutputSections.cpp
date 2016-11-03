@@ -497,17 +497,6 @@ template <class ELFT> void RelocationSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-InterpSection<ELFT>::InterpSection()
-    : OutputSectionBase<ELFT>(".interp", SHT_PROGBITS, SHF_ALLOC) {
-  this->Header.sh_size = Config->DynamicLinker.size() + 1;
-}
-
-template <class ELFT> void InterpSection<ELFT>::writeTo(uint8_t *Buf) {
-  StringRef S = Config->DynamicLinker;
-  memcpy(Buf, S.data(), S.size());
-}
-
-template <class ELFT>
 HashTableSection<ELFT>::HashTableSection()
     : OutputSectionBase<ELFT>(".hash", SHT_HASH, SHF_ALLOC) {
   this->Header.sh_entsize = sizeof(Elf_Word);
@@ -722,19 +711,15 @@ DynamicSection<ELFT>::DynamicSection()
   // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
   if (Config->EMachine == EM_MIPS)
     Header.sh_flags = SHF_ALLOC;
+
+  addEntries();
 }
 
-template <class ELFT> void DynamicSection<ELFT>::finalize() {
-  if (this->Header.sh_size)
-    return; // Already finalized.
-
-  Elf_Shdr &Header = this->Header;
-  Header.sh_link = Out<ELFT>::DynStrTab->SectionIndex;
-
-  auto Add = [=](Entry E) { Entries.push_back(E); };
-
-  // Add strings. We know that these are the last strings to be added to
-  // DynStrTab and doing this here allows this function to set DT_STRSZ.
+// There are some dynamic entries that don't depend on other sections.
+// Such entries can be set early.
+template <class ELFT> void DynamicSection<ELFT>::addEntries() {
+  // Add strings to .dynstr early so that .dynstr's size will be
+  // fixed early.
   for (StringRef S : Config->AuxiliaryList)
     Add({DT_AUXILIARY, Out<ELFT>::DynStrTab->addString(S)});
   if (!Config->RPath.empty())
@@ -746,7 +731,37 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (!Config->SoName.empty())
     Add({DT_SONAME, Out<ELFT>::DynStrTab->addString(Config->SoName)});
 
-  Out<ELFT>::DynStrTab->finalize();
+  // Set DT_FLAGS and DT_FLAGS_1.
+  uint32_t DtFlags = 0;
+  uint32_t DtFlags1 = 0;
+  if (Config->Bsymbolic)
+    DtFlags |= DF_SYMBOLIC;
+  if (Config->ZNodelete)
+    DtFlags1 |= DF_1_NODELETE;
+  if (Config->ZNow) {
+    DtFlags |= DF_BIND_NOW;
+    DtFlags1 |= DF_1_NOW;
+  }
+  if (Config->ZOrigin) {
+    DtFlags |= DF_ORIGIN;
+    DtFlags1 |= DF_1_ORIGIN;
+  }
+
+  if (DtFlags)
+    Add({DT_FLAGS, DtFlags});
+  if (DtFlags1)
+    Add({DT_FLAGS_1, DtFlags1});
+
+  if (!Config->Entry.empty())
+    Add({DT_DEBUG, (uint64_t)0});
+}
+
+// Add remaining entries to complete .dynamic contents.
+template <class ELFT> void DynamicSection<ELFT>::finalize() {
+  if (this->Header.sh_size)
+    return; // Already finalized.
+
+  this->Header.sh_link = Out<ELFT>::DynStrTab->SectionIndex;
 
   if (Out<ELFT>::RelaDyn->hasRelocs()) {
     bool IsRela = Config->Rela;
@@ -799,29 +814,6 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Fini))
     Add({DT_FINI, B});
 
-  uint32_t DtFlags = 0;
-  uint32_t DtFlags1 = 0;
-  if (Config->Bsymbolic)
-    DtFlags |= DF_SYMBOLIC;
-  if (Config->ZNodelete)
-    DtFlags1 |= DF_1_NODELETE;
-  if (Config->ZNow) {
-    DtFlags |= DF_BIND_NOW;
-    DtFlags1 |= DF_1_NOW;
-  }
-  if (Config->ZOrigin) {
-    DtFlags |= DF_ORIGIN;
-    DtFlags1 |= DF_1_ORIGIN;
-  }
-
-  if (DtFlags)
-    Add({DT_FLAGS, DtFlags});
-  if (DtFlags1)
-    Add({DT_FLAGS_1, DtFlags1});
-
-  if (!Config->Entry.empty())
-    Add({DT_DEBUG, (uint64_t)0});
-
   bool HasVerNeed = Out<ELFT>::VerNeed->getNeedNum() != 0;
   if (HasVerNeed || Out<ELFT>::VerDef)
     Add({DT_VERSYM, Out<ELFT>::VerSym});
@@ -850,7 +842,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   }
 
   // +1 for DT_NULL
-  Header.sh_size = (Entries.size() + 1) * Header.sh_entsize;
+  this->Header.sh_size = (Entries.size() + 1) * this->Header.sh_entsize;
 }
 
 template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1965,11 +1957,6 @@ template class RelocationSection<ELF32LE>;
 template class RelocationSection<ELF32BE>;
 template class RelocationSection<ELF64LE>;
 template class RelocationSection<ELF64BE>;
-
-template class InterpSection<ELF32LE>;
-template class InterpSection<ELF32BE>;
-template class InterpSection<ELF64LE>;
-template class InterpSection<ELF64BE>;
 
 template class GnuHashTableSection<ELF32LE>;
 template class GnuHashTableSection<ELF32BE>;

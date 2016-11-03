@@ -135,6 +135,8 @@ void DynTypedNode::dump(llvm::raw_ostream &OS, SourceManager &SM) const {
     D->dump(OS);
   else if (const Stmt *S = get<Stmt>())
     S->dump(OS, SM);
+  else if (const Type *T = get<Type>())
+    T->dump(OS);
   else
     OS << "Unable to dump values of type " << NodeKind.asStringRef() << "\n";
 }

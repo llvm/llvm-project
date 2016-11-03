@@ -422,7 +422,7 @@ void MachObjectWriter::writeLinkerOptionsLoadCommand(
   uint64_t BytesWritten = sizeof(MachO::linker_option_command);
   for (const std::string &Option : Options) {
     // Write each string, including the null byte.
-    writeBytes(Option.c_str(), Option.size() + 1);
+    writeBytes(Option, Option.size() + 1);
     BytesWritten += Option.size() + 1;
   }
 

@@ -246,7 +246,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
       const uint32_t num_files = files.size();
       for (size_t idx_file = 0; idx_file < num_files; ++idx_file) {
         const std::string &filename = files[idx_file];
-        FileSpec file_spec(filename.c_str(), true);
+        FileSpec file_spec(filename, true);
 
         if (llvm::sys::fs::equivalent(file_spec.GetPath(),
                                       module_spec.GetFileSpec().GetPath()))

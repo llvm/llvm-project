@@ -84,14 +84,7 @@ private:
   }
 
   Error visitKnownRecordImpl(FieldListRecord &Record) {
-    // Don't do anything, this will get written in the call to visitTypeEnd().
-    TypeVisitorCallbackPipeline Pipeline;
-    TypeDeserializer Deserializer;
-
-    Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(*this);
-
-    CVTypeVisitor Visitor(Pipeline);
+    CVTypeVisitor Visitor(*this);
 
     if (auto EC = Visitor.visitFieldListMemberStream(Record.Data))
       return EC;

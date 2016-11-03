@@ -1279,7 +1279,7 @@ static void DumpModuleArchitecture(Stream &strm, Module *module,
     if (width)
       strm.Printf("%-*s", width, arch_str.c_str());
     else
-      strm.PutCString(arch_str.c_str());
+      strm.PutCString(arch_str);
   }
 }
 

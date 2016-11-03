@@ -13,5 +13,13 @@ class X {
   int X:: *memptr; // expected-warning{{member pointer is missing a nullability type specifier}}
 };
 
+template <typename T>
+struct Typedefs {
+  typedef T *Base; // no-warning
+  typedef Base *type; // expected-warning{{pointer is missing a nullability type specifier}}
+};
+
+Typedefs<int> xx;
+Typedefs<void *> yy;
 
 

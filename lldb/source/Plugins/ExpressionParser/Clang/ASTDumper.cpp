@@ -106,6 +106,4 @@ void ASTDumper::ToLog(Log *log, const char *prefix) {
   free(alloc);
 }
 
-void ASTDumper::ToStream(lldb::StreamSP &stream) {
-  stream->PutCString(m_dump.c_str());
-}
+void ASTDumper::ToStream(lldb::StreamSP &stream) { stream->PutCString(m_dump); }

@@ -178,6 +178,23 @@ TEST(SimpleIListTest, erase) {
   EXPECT_EQ(2u, L.size());
 }
 
+TEST(SimpleIListTest, reverse_iterator) {
+  simple_ilist<Node> L;
+  Node A, B, C;
+  L.push_back(A);
+  L.push_back(B);
+  L.push_back(C);
+
+  auto ReverseIter = L.rbegin();
+  EXPECT_EQ(C.getReverseIterator(), ReverseIter);
+  ++ReverseIter;
+  EXPECT_EQ(B.getReverseIterator(), ReverseIter);
+  ++ReverseIter;
+  EXPECT_EQ(A.getReverseIterator(), ReverseIter);
+  ++ReverseIter;
+  EXPECT_EQ(L.rend(), ReverseIter);
+}
+
 TEST(SimpleIListTest, eraseAndDispose) {
   simple_ilist<Node> L;
   Node A, C;

@@ -46,5 +46,5 @@ void ThisThread::SetName(llvm::StringRef name, int max_length) {
     truncated_name = truncated_name.substr(begin, count);
   }
 
-  SetName(truncated_name.c_str());
+  SetName(truncated_name);
 }

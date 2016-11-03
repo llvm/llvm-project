@@ -1504,7 +1504,7 @@ bool HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
     ES << "0-" << Max;
   else
     ES << Max << "-" << (-Max - 1);
-  return Parser.printError(IDLoc, ES.str().c_str());
+  return Parser.printError(IDLoc, ES.str());
 }
 
 int HexagonAsmParser::processInstruction(MCInst &Inst,

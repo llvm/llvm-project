@@ -106,6 +106,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const AttributeList &attr,
     case AttributeList::AT_FastCall: \
     case AttributeList::AT_StdCall: \
     case AttributeList::AT_ThisCall: \
+    case AttributeList::AT_RegCall: \
     case AttributeList::AT_Pascal: \
     case AttributeList::AT_SwiftCall: \
     case AttributeList::AT_VectorCall: \
@@ -3599,7 +3600,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // inner pointers.
     complainAboutMissingNullability = CAMN_InnerPointers;
 
-    if (T->canHaveNullability() && !T->getNullability(S.Context)) {
+    auto isDependentNonPointerType = [](QualType T) -> bool {
+      // Note: This is intended to be the same check as Type::canHaveNullability
+      // except with all of the ambiguous cases being treated as 'false' rather
+      // than 'true'.
+      return T->isDependentType() && !T->isAnyPointerType() &&
+        !T->isBlockPointerType() && !T->isMemberPointerType();
+    };
+
+    if (T->canHaveNullability() && !T->getNullability(S.Context) &&
+        !isDependentNonPointerType(T)) {
+      // Note that we allow but don't require nullability on dependent types.
       ++NumPointersRemaining;
     }
 
@@ -4750,6 +4761,8 @@ static AttributeList::Kind getAttrListKind(AttributedType::Kind kind) {
     return AttributeList::AT_StdCall;
   case AttributedType::attr_thiscall:
     return AttributeList::AT_ThisCall;
+  case AttributedType::attr_regcall:
+    return AttributeList::AT_RegCall;
   case AttributedType::attr_pascal:
     return AttributeList::AT_Pascal;
   case AttributedType::attr_swiftcall:
@@ -6086,6 +6099,8 @@ static AttributedType::Kind getCCTypeAttrKind(AttributeList &Attr) {
     return AttributedType::attr_stdcall;
   case AttributeList::AT_ThisCall:
     return AttributedType::attr_thiscall;
+  case AttributeList::AT_RegCall:
+    return AttributedType::attr_regcall;
   case AttributeList::AT_Pascal:
     return AttributedType::attr_pascal;
   case AttributeList::AT_SwiftCall:

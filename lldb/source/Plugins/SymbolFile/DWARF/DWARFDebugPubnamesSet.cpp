@@ -140,7 +140,7 @@ void DWARFDebugPubnamesSet::Find(
   DescriptorConstIter pos;
   DescriptorConstIter end = m_descriptors.end();
   for (pos = m_descriptors.begin(); pos != end; ++pos) {
-    if (regex.Execute(pos->name.c_str()))
+    if (regex.Execute(pos->name))
       die_offset_coll.push_back(m_header.die_offset + pos->offset);
   }
 }

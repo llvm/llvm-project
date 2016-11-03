@@ -66,7 +66,7 @@ BreakpointResolver *BreakpointResolverAddress::CreateFromStructuredData(
       error.SetErrorString("BRA::CFSD: Couldn't read module name entry.");
       return nullptr;
     }
-    module_filespec.SetFile(module_name.c_str(), false);
+    module_filespec.SetFile(module_name, false);
   }
   return new BreakpointResolverAddress(bkpt, address, module_filespec);
 }

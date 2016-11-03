@@ -345,7 +345,7 @@ Error PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
       log->Printf("Failed to remove temp directory: %s", error.AsCString());
   });
 
-  FileSpec symfile_platform_filespec(tmpdir.c_str(), false);
+  FileSpec symfile_platform_filespec(tmpdir, false);
   symfile_platform_filespec.AppendPathComponent("symbolized.oat");
 
   // Execute oatdump on the remote device to generate a file with symtab

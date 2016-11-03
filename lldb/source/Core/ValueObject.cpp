@@ -2034,7 +2034,7 @@ bool ValueObject::GetBaseClassPath(Stream &s) {
     if (this_had_base_class) {
       if (parent_had_base_class)
         s.PutCString("::");
-      s.PutCString(cxx_class_name.c_str());
+      s.PutCString(cxx_class_name);
     }
     return parent_had_base_class || this_had_base_class;
   }

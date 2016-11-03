@@ -1782,18 +1782,10 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
 
     KMP_DEBUG_ASSERT( victim_td -> td.td_deque != NULL );
 
-    if ( !is_constrained ) {
-        taskdata = victim_td -> td.td_deque[ victim_td -> td.td_deque_head ];
-        KMP_ASSERT(taskdata);
-        // Bump head pointer and Wrap.
-        victim_td -> td.td_deque_head = ( victim_td -> td.td_deque_head + 1 ) & TASK_DEQUE_MASK(victim_td->td);
-    } else {
-        // While we have postponed tasks let's steal from tail of the deque (smaller tasks)
-        kmp_int32 tail = ( victim_td -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK(victim_td->td);  // Wrap index.
-        taskdata = victim_td -> td.td_deque[ tail ];
-        KMP_ASSERT(taskdata);
+    taskdata = victim_td->td.td_deque[victim_td->td.td_deque_head];
+    if ( is_constrained ) {
         // we need to check if the candidate obeys task scheduling constraint:
-        // only child of current task can be scheduled
+        // only descendant of current task can be scheduled
         kmp_taskdata_t * current = __kmp_threads[ gtid ]->th.th_current_task;
         kmp_int32        level = current->td_level;
         kmp_taskdata_t * parent = taskdata->td_parent;
@@ -1802,7 +1794,9 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
             KMP_DEBUG_ASSERT(parent != NULL);
         }
         if ( parent != current ) {
-            // If the tail task is not a descendant of the current task then do not steal it.
+            // If the head task is not a descendant of the current task then do not
+            // steal it. No other task in victim's deque can be a descendant of the
+            // current task.
             __kmp_release_bootstrap_lock( & victim_td -> td.td_deque_lock );
             KA_TRACE(10, ("__kmp_steal_task(exit #2): T#%d could not steal from T#%d: task_team=%p "
                           "ntasks=%d head=%u tail=%u\n",
@@ -1811,8 +1805,9 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
                           victim_td->td.td_deque_head, victim_td->td.td_deque_tail) );
             return NULL;
         }
-        victim_td -> td.td_deque_tail = tail;
     }
+    // Bump head pointer and Wrap.
+    victim_td->td.td_deque_head = (victim_td->td.td_deque_head + 1) & TASK_DEQUE_MASK(victim_td->td);
     if (*thread_finished) {
         // We need to un-mark this victim as a finished victim.  This must be done before
         // releasing the lock, or else other threads (starting with the master victim)

@@ -13,6 +13,8 @@
 
 // requires RandomAccessIterator<Iter>
 //   unspecified operator[](difference_type n) const;
+//
+//  constexpr in C++17
 
 #include <iterator>
 #include <cassert>
@@ -20,6 +22,7 @@
 #include <memory>
 #endif
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It>
@@ -55,4 +58,14 @@ int main()
         p[j].reset(i+j);
     test(p, 3, Ptr(i+3));
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+#if TEST_STD_VER > 14
+    {
+    constexpr const char *p = "123456789";
+    typedef std::move_iterator<const char *> MI;
+    constexpr MI it1 = std::make_move_iterator(p);
+    static_assert(it1[0] == '1', "");
+    static_assert(it1[5] == '6', "");
+    }
+#endif
 }

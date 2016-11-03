@@ -1286,7 +1286,8 @@ Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
          "Insert location points after last valid instruction");
   Instruction *InsertLocation = &*Builder.GetInsertPoint();
   return expandCodeFor(S, SE, DL, "polly", Expr, Expr->getType(),
-                       InsertLocation, &ValueMap);
+                       InsertLocation, &ValueMap,
+                       StartBlock->getSinglePredecessor());
 }
 
 /// The AST expression we generate to perform the run-time check assumes

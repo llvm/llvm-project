@@ -19,3 +19,9 @@ class BT {
     return { .idx = 0 }; // Make sure this doesn't trigger a crash.
   }
 };
+
+// CHECK: [[@LINE+1]]:23 | type-alias/C | size_t |
+typedef unsigned long size_t;
+// CHECK: [[@LINE+2]]:7 | function/C | operator new | c:@F@operator new#l# | __Znwm |
+// CHECK: [[@LINE+1]]:20 | type-alias/C | size_t | {{.*}} | Ref |
+void* operator new(size_t sz);

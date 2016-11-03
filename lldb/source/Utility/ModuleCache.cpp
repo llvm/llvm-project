@@ -82,8 +82,7 @@ FileSpec GetModuleDirectory(const FileSpec &root_dir_spec, const UUID &uuid) {
 }
 
 FileSpec GetSymbolFileSpec(const FileSpec &module_file_spec) {
-  return FileSpec((module_file_spec.GetPath() + kSymFileExtension).c_str(),
-                  false);
+  return FileSpec(module_file_spec.GetPath() + kSymFileExtension, false);
 }
 
 void DeleteExistingModule(const FileSpec &root_dir_spec,
@@ -199,8 +198,8 @@ Error ModuleCache::Put(const FileSpec &root_dir_spec, const char *hostname,
       JoinPath(module_spec_dir, target_file.GetFilename().AsCString());
 
   const auto tmp_file_path = tmp_file.GetPath();
-  const auto err_code = llvm::sys::fs::rename(
-      tmp_file_path.c_str(), module_file_path.GetPath().c_str());
+  const auto err_code =
+      llvm::sys::fs::rename(tmp_file_path, module_file_path.GetPath());
   if (err_code)
     return Error("Failed to rename file %s to %s: %s", tmp_file_path.c_str(),
                  module_file_path.GetPath().c_str(),
@@ -295,7 +294,7 @@ Error ModuleCache::GetAndPut(const FileSpec &root_dir_spec,
 
   const auto tmp_download_file_spec = JoinPath(module_spec_dir, kTempFileName);
   error = module_downloader(module_spec, tmp_download_file_spec);
-  llvm::FileRemover tmp_file_remover(tmp_download_file_spec.GetPath().c_str());
+  llvm::FileRemover tmp_file_remover(tmp_download_file_spec.GetPath());
   if (error.Fail())
     return Error("Failed to download module: %s", error.AsCString());
 
@@ -315,8 +314,7 @@ Error ModuleCache::GetAndPut(const FileSpec &root_dir_spec,
   const auto tmp_download_sym_file_spec =
       JoinPath(module_spec_dir, kTempSymFileName);
   error = symfile_downloader(cached_module_sp, tmp_download_sym_file_spec);
-  llvm::FileRemover tmp_symfile_remover(
-      tmp_download_sym_file_spec.GetPath().c_str());
+  llvm::FileRemover tmp_symfile_remover(tmp_download_sym_file_spec.GetPath());
   if (error.Fail())
     // Failed to download a symfile but fetching the module was successful. The
     // module might

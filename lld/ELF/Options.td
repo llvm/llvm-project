@@ -27,11 +27,11 @@ def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
 
 def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
 
-def Tbss: J<"Tbss=">, HelpText<"Same as --section-start with .bss as the sectionname">;
+def Tbss: Separate<["-"], "Tbss">, HelpText<"Same as --section-start with .bss as the sectionname">;
 
-def Tdata: J<"Tdata=">, HelpText<"Same as --section-start with .data as the sectionname">;
+def Tdata: Separate<["-"], "Tdata">, HelpText<"Same as --section-start with .data as the sectionname">;
 
-def Ttext: J<"Ttext=">, HelpText<"Same as --section-start with .text as the sectionname">;
+def Ttext: Separate<["-"], "Ttext">, HelpText<"Same as --section-start with .text as the sectionname">;
 
 def allow_multiple_definition: F<"allow-multiple-definition">,
   HelpText<"Allow multiple definitions">;
@@ -252,8 +252,11 @@ def alias_soname_h: JoinedOrSeparate<["-"], "h">, Alias<soname>;
 def alias_soname_soname: S<"soname">, Alias<soname>;
 def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
+def alias_Tbss: J<"Tbss=">, Alias<Tbss>;
+def alias_Tdata: J<"Tdata=">, Alias<Tdata>;
 def alias_trace: Flag<["-"], "t">, Alias<trace>;
 def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
+def alias_Ttext: J<"Ttext=">, Alias<Ttext>;
 def alias_undefined_eq: J<"undefined=">, Alias<undefined>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;

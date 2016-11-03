@@ -2647,8 +2647,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
     for (std::vector<ClassAliasPair>::iterator iter = ClassAliases.begin();
        iter != ClassAliases.end(); ++iter) {
        llvm::Constant *TheClass =
-         TheModule.getGlobalVariable(("_OBJC_CLASS_" + iter->first).c_str(),
-            true);
+          TheModule.getGlobalVariable("_OBJC_CLASS_" + iter->first, true);
        if (TheClass) {
          TheClass = llvm::ConstantExpr::getBitCast(TheClass, PtrTy);
          Builder.CreateCall(RegisterAlias,

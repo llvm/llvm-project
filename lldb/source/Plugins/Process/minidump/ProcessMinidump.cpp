@@ -258,12 +258,12 @@ void ProcessMinidump::ReadModuleList() {
 
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES));
     if (log) {
-      log->Printf(
-          "ProcessMinidump::%s found module: name: %s %#010lx-%#010lx size: %u",
-          __FUNCTION__, name.getValue().c_str(),
-          uint64_t(module->base_of_image),
-          module->base_of_image + module->size_of_image,
-          uint32_t(module->size_of_image));
+      log->Printf("ProcessMinidump::%s found module: name: %s %#010" PRIx64
+                  "-%#010" PRIx64 " size: %" PRIu32,
+                  __FUNCTION__, name.getValue().c_str(),
+                  uint64_t(module->base_of_image),
+                  module->base_of_image + module->size_of_image,
+                  uint32_t(module->size_of_image));
     }
 
     // check if the process is wow64 - a 32 bit windows process running on a

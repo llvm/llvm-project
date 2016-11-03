@@ -142,7 +142,7 @@ Error PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
   // should try again.
   Error error;
   do {
-    llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath().c_str(),
+    llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
                                     named_pipe_path);
     error = CreateNew(named_pipe_path, child_process_inherit);
   } while (error.GetError() == EEXIST);

@@ -54,13 +54,17 @@
 ; X86-LABEL: .section        .debug$S,"dr"
 ; X86-NEXT: .p2align 2
 ; X86-NEXT: .long   4
+; X86-NEXT: .long   241
+; X86-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
+; Compiler information record
+; X86-NEXT: [[COMPILE_START]]:
+; X86-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
+; X86:      [[COMPILE_END]]:
+; X86-NEXT: .p2align 2
 ; Symbol subsection for x
 ; X86-NEXT: .long   241
 ; X86-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
 ; X86-NEXT: [[F1_START]]:
-; X86-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X86:      [[C1_END]]:
 ; X86-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X86-NEXT: [[PROC_SEGMENT_START]]:
 ; X86-NEXT: .short  4422
@@ -84,11 +88,8 @@
 ; X86: .cv_linetable 0, _x, [[END_OF_X]]
 ; Symbol subsection for y
 ; X86-NEXT: .long   241
-; X86-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
-; X86-NEXT: [[F1_START]]:
-; X86-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X86:      [[C1_END]]:
+; X86-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
+; X86-NEXT: [[COMPILE_START]]:
 ; X86-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X86-NEXT: [[PROC_SEGMENT_START]]:
 ; X86-NEXT: .short  4423
@@ -106,17 +107,14 @@
 ; X86-NEXT: [[PROC_SEGMENT_END]]:
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
-; X86-NEXT: [[F1_END]]:
+; X86-NEXT: [[COMPILE_END]]:
 ; X86-NEXT: .p2align 2
 ; Line table subsection for y
 ; X86: .cv_linetable 1, _y, [[END_OF_Y]]
 ; Symbol subsection for f
 ; X86-NEXT: .long   241
-; X86-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
-; X86-NEXT: [[F1_START]]:
-; X86-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X86:      [[C1_END]]:
+; X86-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
+; X86-NEXT: [[COMPILE_START]]:
 ; X86-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X86-NEXT: [[PROC_SEGMENT_START]]:
 ; X86-NEXT: .short  4423
@@ -134,7 +132,7 @@
 ; X86-NEXT: [[PROC_SEGMENT_END]]:
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
-; X86-NEXT: [[F1_END]]:
+; X86-NEXT: [[COMPILE_END]]:
 ; X86-NEXT: .p2align 2
 ; Line table subsection for f
 ; X86: .cv_linetable 2, _f, [[END_OF_F]]
@@ -145,20 +143,6 @@
 ; OBJ32:      Name: .debug$S (2E 64 65 62 75 67 24 53)
 ; OBJ32:      Characteristics [ (0x42300040)
 ; OBJ32:      ]
-; OBJ32:      Relocations [
-; OBJ32-NEXT:   0x59 IMAGE_REL_I386_SECREL _x
-; OBJ32-NEXT:   0x5D IMAGE_REL_I386_SECTION _x
-; OBJ32-NEXT:   0x70 IMAGE_REL_I386_SECREL _x
-; OBJ32-NEXT:   0x74 IMAGE_REL_I386_SECTION _x
-; OBJ32-NEXT:   0xF5 IMAGE_REL_I386_SECREL _y
-; OBJ32-NEXT:   0xF9 IMAGE_REL_I386_SECTION _y
-; OBJ32-NEXT:   0x10C IMAGE_REL_I386_SECREL _y
-; OBJ32-NEXT:   0x110 IMAGE_REL_I386_SECTION _y
-; OBJ32-NEXT:   0x191 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x195 IMAGE_REL_I386_SECTION _f
-; OBJ32-NEXT:   0x1A8 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0x1AC IMAGE_REL_I386_SECTION _f
-; OBJ32-NEXT: ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ32:        ProcStart {
@@ -324,16 +308,21 @@
 ; X64-NEXT: ret
 ; X64:      [[END_OF_F:.?Lfunc_end.*]]:
 ;
+
 ; X64-LABEL: .section        .debug$S,"dr"
 ; X64-NEXT: .p2align 2
 ; X64-NEXT: .long   4
+; X64-NEXT: .long   241
+; X64-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
+; Compiler information record
+; X64-NEXT: [[COMPILE_START]]:
+; X64-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
+; X64:      [[COMPILE_END]]:
+; X64-NEXT: .p2align 2
 ; Symbol subsection for x
 ; X64-NEXT: .long   241
-; X64-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
+; X64-NEXT: .long  [[F1_END:.*]]-[[F1_START:.*]] #
 ; X64-NEXT: [[F1_START]]:
-; X64-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X64:      [[C1_END]]:
 ; X64-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X64-NEXT: [[PROC_SEGMENT_START]]:
 ; X64-NEXT: .short  4422
@@ -357,11 +346,8 @@
 ; X64: .cv_linetable 0, x, [[END_OF_X]]
 ; Symbol subsection for y
 ; X64-NEXT: .long   241
-; X64-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
-; X64-NEXT: [[F1_START]]:
-; X64-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X64:      [[C1_END]]:
+; X64-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
+; X64-NEXT: [[COMPILE_START]]:
 ; X64-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X64-NEXT: [[PROC_SEGMENT_START]]:
 ; X64-NEXT: .short  4423
@@ -379,17 +365,14 @@
 ; X64-NEXT: [[PROC_SEGMENT_END]]:
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
-; X64-NEXT: [[F1_END]]:
+; X64-NEXT: [[COMPILE_END]]:
 ; X64-NEXT: .p2align 2
 ; Line table subsection for y
 ; X64: .cv_linetable 1, y, [[END_OF_Y]]
 ; Symbol subsection for f
 ; X64-NEXT: .long   241
-; X64-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]] #
-; Compiler information record
-; X64-NEXT: [[F1_START]]:
-; X64-NEXT: .short [[C1_END:.*]]-[[C1_START:.*]] #
-; X64:      [[C1_END]]:
+; X64-NEXT: .long [[COMPILE_END:.*]]-[[COMPILE_START:.*]] #
+; X64:      [[COMPILE_START]]:
 ; X64-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X64-NEXT: [[PROC_SEGMENT_START]]:
 ; X64-NEXT: .short  4423
@@ -407,7 +390,7 @@
 ; X64-NEXT: [[PROC_SEGMENT_END]]:
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
-; X64-NEXT: [[F1_END]]:
+; X64-NEXT: [[COMPILE_END]]:
 ; X64-NEXT: .p2align 2
 ; Line table subsection for f
 ; X64: .cv_linetable 2, f, [[END_OF_F]]
@@ -421,18 +404,18 @@
 ; OBJ64:      Characteristics [ (0x42300040)
 ; OBJ64:      ]
 ; OBJ64:      Relocations [
-; OBJ64-NEXT:   0x59 IMAGE_REL_AMD64_SECREL x
-; OBJ64-NEXT:   0x5D IMAGE_REL_AMD64_SECTION x
-; OBJ64-NEXT:   0x70 IMAGE_REL_AMD64_SECREL x
-; OBJ64-NEXT:   0x74 IMAGE_REL_AMD64_SECTION x
-; OBJ64-NEXT:   0x101 IMAGE_REL_AMD64_SECREL y
-; OBJ64-NEXT:   0x105 IMAGE_REL_AMD64_SECTION y
-; OBJ64-NEXT:   0x118 IMAGE_REL_AMD64_SECREL y
-; OBJ64-NEXT:   0x11C IMAGE_REL_AMD64_SECTION y
-; OBJ64-NEXT:   0x1A9 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x1AD IMAGE_REL_AMD64_SECTION f
-; OBJ64-NEXT:   0x1C0 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x1C4 IMAGE_REL_AMD64_SECTION f
+; OBJ64-NEXT:   0x64 IMAGE_REL_AMD64_SECREL x
+; OBJ64-NEXT:   0x68 IMAGE_REL_AMD64_SECTION x
+; OBJ64-NEXT:   0x7C IMAGE_REL_AMD64_SECREL x
+; OBJ64-NEXT:   0x80 IMAGE_REL_AMD64_SECTION x
+; OBJ64-NEXT:   0xE0 IMAGE_REL_AMD64_SECREL y
+; OBJ64-NEXT:   0xE4 IMAGE_REL_AMD64_SECTION y
+; OBJ64-NEXT:   0xF8 IMAGE_REL_AMD64_SECREL y
+; OBJ64-NEXT:   0xFC IMAGE_REL_AMD64_SECTION y
+; OBJ64-NEXT:   0x15C IMAGE_REL_AMD64_SECREL f
+; OBJ64-NEXT:   0x160 IMAGE_REL_AMD64_SECTION f
+; OBJ64-NEXT:   0x174 IMAGE_REL_AMD64_SECREL f
+; OBJ64-NEXT:   0x178 IMAGE_REL_AMD64_SECTION f
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)

@@ -101,6 +101,7 @@ public:
       : Index(static_cast<uint32_t>(Kind) | static_cast<uint32_t>(Mode)) {}
 
   uint32_t getIndex() const { return Index; }
+  void setIndex(uint32_t I) { Index = I; }
   bool isSimple() const { return Index < FirstNonSimpleIndex; }
 
   bool isNoneType() const { return *this == None(); }

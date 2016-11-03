@@ -60,7 +60,7 @@ void ASTStructExtractor::ExtractFromFunctionDecl(FunctionDecl *F) {
 
   RecordDecl *struct_decl = NULL;
 
-  StringRef desired_name(m_struct_name.c_str());
+  StringRef desired_name(m_struct_name);
 
   for (CompoundStmt::const_body_iterator bi = body_compound_stmt->body_begin(),
                                          be = body_compound_stmt->body_end();
@@ -125,7 +125,7 @@ void ASTStructExtractor::ExtractFromTopLevelDecl(Decl *D) {
 
   if (m_ast_context && function_decl &&
       !m_function.m_wrapper_function_name.compare(
-          function_decl->getNameAsString().c_str())) {
+          function_decl->getNameAsString())) {
     ExtractFromFunctionDecl(function_decl);
   }
 }

@@ -18,6 +18,7 @@
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "CommandProcessorCheck.h"
 #include "FloatLoopCounter.h"
+#include "LimitedRandomnessCheck.h"
 #include "SetLongJmpCheck.h"
 #include "StaticObjectExceptionCheck.h"
 #include "StrToNumCheck.h"
@@ -53,6 +54,9 @@ public:
         "cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
+    // MSC
+    CheckFactories.registerCheck<LimitedRandomnessCheck>(
+        "cert-msc50-cpp");
 
     // C checkers
     // DCL
@@ -70,6 +74,9 @@ public:
     // ERR
     CheckFactories.registerCheck<StrToNumCheck>(
         "cert-err34-c");
+    // MSC
+    CheckFactories.registerCheck<LimitedRandomnessCheck>(
+        "cert-msc30-c");
   }
   ClangTidyOptions getModuleOptions() override {
     ClangTidyOptions Options;

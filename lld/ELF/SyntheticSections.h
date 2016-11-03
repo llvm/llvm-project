@@ -15,6 +15,11 @@
 namespace lld {
 namespace elf {
 
+template <class ELFT> class InterpSection final : public InputSection<ELFT> {
+public:
+  InterpSection();
+};
+
 template <class ELFT> class BuildIdSection : public InputSection<ELFT> {
 public:
   virtual void writeBuildId(llvm::MutableArrayRef<uint8_t> Buf) = 0;
@@ -62,10 +67,12 @@ public:
 // Linker generated sections which can be used as inputs.
 template <class ELFT> struct In {
   static BuildIdSection<ELFT> *BuildId;
+  static InterpSection<ELFT> *Interp;
   static std::vector<InputSection<ELFT> *> Sections;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
+template <class ELFT> InterpSection<ELFT> *In<ELFT>::Interp;
 template <class ELFT> std::vector<InputSection<ELFT> *> In<ELFT>::Sections;
 
 } // namespace elf

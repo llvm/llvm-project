@@ -2466,12 +2466,18 @@ void QualType::dump(const char *msg) const {
   dump();
 }
 
-LLVM_DUMP_METHOD void QualType::dump() const {
-  ASTDumper Dumper(llvm::errs(), nullptr, nullptr);
+LLVM_DUMP_METHOD void QualType::dump() const { dump(llvm::errs()); }
+
+LLVM_DUMP_METHOD void QualType::dump(llvm::raw_ostream &OS) const {
+  ASTDumper Dumper(OS, nullptr, nullptr);
   Dumper.dumpTypeAsChild(*this);
 }
 
-LLVM_DUMP_METHOD void Type::dump() const { QualType(this, 0).dump(); }
+LLVM_DUMP_METHOD void Type::dump() const { dump(llvm::errs()); }
+
+LLVM_DUMP_METHOD void Type::dump(llvm::raw_ostream &OS) const {
+  QualType(this, 0).dump(OS);
+}
 
 //===----------------------------------------------------------------------===//
 // Decl method implementations

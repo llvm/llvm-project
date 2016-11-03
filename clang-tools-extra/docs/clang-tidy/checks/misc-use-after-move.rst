@@ -75,10 +75,6 @@ move:
       std::cout << str;
     }
 
-No warnings are emitted for objects of type ``std::unique_ptr`` and
-``std::shared_ptr``, as they have defined move behavior. (Objects of these
-classes are guaranteed to be empty after they have been moved from.)
-
 Subsections below explain more precisely what exactly the check considers to be
 a move, use, and reinitialization.
 
@@ -153,6 +149,13 @@ Use
 Any occurrence of the moved variable that is not a reinitialization (see below)
 is considered to be a use.
 
+An exception to this are objects of type ``std::unique_ptr``,
+``std::shared_ptr`` and ``std::weak_ptr``, which have defined move behavior
+(objects of these classes are guaranteed to be empty after they have been moved
+from). Therefore, an object of these classes will only be considered to be used
+if it is dereferenced, i.e. if ``operator*``, ``operator->`` or ``operator[]``
+(in the case of ``std::unique_ptr<T []>``) is called on it.
+
 If multiple uses occur after a move, only the first of these is flagged.
 
 Reinitialization
@@ -171,6 +174,9 @@ The check considers a variable to be reinitialized in the following cases:
     ``forward_list``, ``list``, ``set``, ``map``, ``multiset``, ``multimap``,
     ``unordered_set``, ``unordered_map``, ``unordered_multiset``,
     ``unordered_multimap``.
+
+  - ``reset()`` is called on the variable and the variable is of type
+    ``std::unique_ptr``, ``std::shared_ptr`` or ``std::weak_ptr``.
 
 If the variable in question is a struct and an individual member variable of
 that struct is written to, the check does not consider this to be a

@@ -562,7 +562,7 @@ IRDynamicChecks::~IRDynamicChecks() = default;
 bool IRDynamicChecks::runOnModule(llvm::Module &M) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  llvm::Function *function = M.getFunction(StringRef(m_func_name.c_str()));
+  llvm::Function *function = M.getFunction(StringRef(m_func_name));
 
   if (!function) {
     if (log)

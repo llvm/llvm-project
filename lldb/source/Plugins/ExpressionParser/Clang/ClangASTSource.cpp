@@ -922,7 +922,7 @@ static bool FindObjCMethodDeclsWithOrigin(
     std::string decl_name_string_without_colon(decl_name_string.c_str(),
                                                decl_name_string.length() - 1);
     IdentifierInfo *ident =
-        &original_ctx->Idents.get(decl_name_string_without_colon.c_str());
+        &original_ctx->Idents.get(decl_name_string_without_colon);
     original_selector = original_ctx->Selectors.getSelector(1, &ident);
   } else {
     SmallVector<IdentifierInfo *, 4> idents;
@@ -1293,7 +1293,7 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
     return false;
 
   std::string name_str = context.m_decl_name.getAsString();
-  StringRef name(name_str.c_str());
+  StringRef name(name_str);
   IdentifierInfo &name_identifier(
       origin_iface_decl->getASTContext().Idents.get(name));
 

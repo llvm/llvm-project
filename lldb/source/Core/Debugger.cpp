@@ -280,7 +280,7 @@ Error Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       std::string str = lldb_utility::ansi::FormatAnsiTerminalCodes(
           new_prompt, GetUseColor());
       if (str.length())
-        new_prompt = str.c_str();
+        new_prompt = str;
       GetCommandInterpreter().UpdatePrompt(new_prompt);
       EventSP prompt_change_event_sp(
           new Event(CommandInterpreter::eBroadcastBitResetPrompt,
@@ -350,7 +350,7 @@ void Debugger::SetPrompt(llvm::StringRef p) {
   std::string str =
       lldb_utility::ansi::FormatAnsiTerminalCodes(new_prompt, GetUseColor());
   if (str.length())
-    new_prompt = str.c_str();
+    new_prompt = str;
   GetCommandInterpreter().UpdatePrompt(new_prompt);
 }
 
@@ -1429,7 +1429,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
               content_stream.Flush();
 
               // Print it.
-              output_stream_sp->PutCString(content_stream.GetString().c_str());
+              output_stream_sp->PutCString(content_stream.GetString());
             }
           } else {
             error_stream_sp->Printf("Failed to print structured "

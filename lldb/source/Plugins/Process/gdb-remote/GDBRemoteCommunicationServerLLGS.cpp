@@ -667,7 +667,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
 
     if (::strcspn(thread_name.c_str(), "$#+-;:") == thread_name_len) {
       response.PutCString("name:");
-      response.PutCString(thread_name.c_str());
+      response.PutCString(thread_name);
     } else {
       // The thread name contains special chars, send as hex bytes.
       response.PutCString("hexname:");

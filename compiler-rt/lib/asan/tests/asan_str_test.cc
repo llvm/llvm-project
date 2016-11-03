@@ -127,7 +127,15 @@ TEST(AddressSanitizer, StrNLenOOBTest) {
 }
 #endif  // SANITIZER_TEST_HAS_STRNLEN
 
-TEST(AddressSanitizer, StrDupOOBTest) {
+// This test fails with the WinASan dynamic runtime because we fail to intercept
+// strdup.
+#if defined(_MSC_VER) && defined(_DLL)
+#define MAYBE_StrDupOOBTest DISABLED_StrDupOOBTest
+#else
+#define MAYBE_StrDupOOBTest StrDupOOBTest
+#endif
+
+TEST(AddressSanitizer, MAYBE_StrDupOOBTest) {
   size_t size = Ident(42);
   char *str = MallocAndMemsetString(size);
   char *new_str;

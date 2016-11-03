@@ -146,8 +146,10 @@ class GPUNodeBuilder : public IslNodeBuilder {
 public:
   GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator, Pass *P,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
-                 DominatorTree &DT, Scop &S, gpu_prog *Prog)
-      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S), Prog(Prog) {
+                 DominatorTree &DT, Scop &S, BasicBlock *StartBlock,
+                 gpu_prog *Prog)
+      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S, StartBlock),
+        Prog(Prog) {
     getExprBuilder().setIDToSAI(&IDToSAI);
   }
 
@@ -2398,9 +2400,6 @@ public:
 
     PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
 
-    GPUNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, *S,
-                               Prog);
-
     // Only build the run-time condition and parameters _after_ having
     // introduced the conditional branch. This is important as the conditional
     // branch will guard the original scop from new induction variables that
@@ -2409,6 +2408,9 @@ public:
     // code generating this scop.
     BasicBlock *StartBlock =
         executeScopConditionally(*S, this, Builder.getTrue());
+
+    GPUNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, *S,
+                               StartBlock, Prog);
 
     // TODO: Handle LICM
     auto SplitBlock = StartBlock->getSinglePredecessor();
