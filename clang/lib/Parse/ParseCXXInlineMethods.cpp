@@ -832,22 +832,30 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
         }
       }
 
-      if (Tok.isOneOf(tok::identifier, tok::kw_template)) {
+      if (Tok.is(tok::identifier)) {
         Toks.push_back(Tok);
         ConsumeToken();
-      } else if (Tok.is(tok::code_completion)) {
-        Toks.push_back(Tok);
-        ConsumeCodeCompletionToken();
-        // Consume the rest of the initializers permissively.
-        // FIXME: We should be able to perform code-completion here even if
-        //        there isn't a subsequent '{' token.
-        MightBeTemplateArgument = true;
-        break;
       } else {
         break;
       }
     } while (Tok.is(tok::coloncolon));
 
+    if (Tok.is(tok::code_completion)) {
+      Toks.push_back(Tok);
+      ConsumeCodeCompletionToken();
+      if (Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw_decltype)) {
+        // Could be the start of another member initializer (the ',' has not
+        // been written yet)
+        continue;
+      }
+    }
+
+    if (Tok.is(tok::comma)) {
+      // The initialization is missing, we'll diagnose it later.
+      Toks.push_back(Tok);
+      ConsumeToken();
+      continue;
+    }
     if (Tok.is(tok::less))
       MightBeTemplateArgument = true;
 
@@ -888,6 +896,26 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
       // means the initializer is malformed; we'll diagnose it later.
       if (!getLangOpts().CPlusPlus11)
         return false;
+
+      const Token &PreviousToken = Toks[Toks.size() - 2];
+      if (!MightBeTemplateArgument &&
+          !PreviousToken.isOneOf(tok::identifier, tok::greater,
+                                 tok::greatergreater)) {
+        // If the opening brace is not preceded by one of these tokens, we are
+        // missing the mem-initializer-id. In order to recover better, we need
+        // to use heuristics to determine if this '{' is most likely the
+        // begining of a brace-init-list or the function body.
+        // Check the token after the corresponding '}'.
+        TentativeParsingAction PA(*this);
+        if (SkipUntil(tok::r_brace) &&
+            !Tok.isOneOf(tok::comma, tok::ellipsis, tok::l_brace)) {
+          // Consider there was a malformed initializer and this is the start
+          // of the function body. We'll diagnose it later.
+          PA.Revert();
+          return false;
+        }
+        PA.Revert();
+      }
     }
 
     // Grab the initializer (or the subexpression of the template argument).

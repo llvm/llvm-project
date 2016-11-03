@@ -257,9 +257,9 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ;
 ; SKX-LABEL: test4:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpcmpgtq %ymm3, %ymm2, %k0
-; SKX-NEXT:    knotw %k0, %k1
-; SKX-NEXT:    vpcmpgtq %ymm1, %ymm0, %k0 {%k1}
+; SKX-NEXT:    vpcmpgtq %ymm1, %ymm0, %k0
+; SKX-NEXT:    vpcmpgtq %ymm3, %ymm2, %k1
+; SKX-NEXT:    kandnw %k0, %k1, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    retq
   %x_gt_y = icmp sgt <4 x i64> %x, %y
@@ -280,8 +280,8 @@ define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64> %y1
 ; SKX-LABEL: test5:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpcmpgtq %xmm0, %xmm1, %k0
-; SKX-NEXT:    knotw %k0, %k1
-; SKX-NEXT:    vpcmpgtq %xmm3, %xmm2, %k0 {%k1}
+; SKX-NEXT:    vpcmpgtq %xmm3, %xmm2, %k1
+; SKX-NEXT:    kandnw %k1, %k0, %k0
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
 ; SKX-NEXT:    retq
   %x_gt_y = icmp slt <2 x i64> %x, %y

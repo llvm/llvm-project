@@ -202,10 +202,13 @@ void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
 // They are identified and deduplicated by group name. This function
 // returns a group name.
 template <class ELFT>
-StringRef elf::ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
+StringRef
+elf::ObjectFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
+                                            const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
-  const Elf_Shdr *Symtab = check(Obj.getSection(Sec.sh_link));
-  const Elf_Sym *Sym = Obj.getSymbol(Symtab, Sec.sh_info);
+  const Elf_Shdr *Symtab =
+      check(object::getSection<ELFT>(Sections, Sec.sh_link));
+  const Elf_Sym *Sym = check(Obj.getSymbol(Symtab, Sec.sh_info));
   StringRef Strtab = check(Obj.getStringTableForSymtab(*Symtab));
   return check(Sym->getName(Strtab));
 }
@@ -299,7 +302,9 @@ void elf::ObjectFile<ELFT>::initializeSections(
     switch (Sec.sh_type) {
     case SHT_GROUP:
       Sections[I] = &InputSection<ELFT>::Discarded;
-      if (ComdatGroups.insert(CachedHashStringRef(getShtGroupSignature(Sec)))
+      if (ComdatGroups
+              .insert(
+                  CachedHashStringRef(getShtGroupSignature(ObjSections, Sec)))
               .second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
