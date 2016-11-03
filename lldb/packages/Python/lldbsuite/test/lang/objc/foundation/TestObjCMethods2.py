@@ -108,10 +108,6 @@ class FoundationTestCase2(TestBase):
                     patterns=["\(int\) \$.* = 3"])
         self.runCmd("process continue")
 
-    @expectedFailureAll(
-        oslist=["macosx"],
-        debug_info="gmodules",
-        bugnumber="llvm.org/pr27861")
     def test_NSString_expr_commands(self):
         """Test expression commands for NSString."""
         self.build()
@@ -131,18 +127,18 @@ class FoundationTestCase2(TestBase):
                     patterns=["\(int\) \$.* ="])
         self.expect("expression (int)[str_id length]",
                     patterns=["\(int\) \$.* ="])
-        self.expect("expression [str description]",
+        self.expect("expression (id)[str description]",
                     patterns=["\(id\) \$.* = 0x"])
         self.expect("expression (id)[str_id description]",
                     patterns=["\(id\) \$.* = 0x"])
         self.expect("expression str.length")
-        self.expect("expression str.description")
         self.expect('expression str = @"new"')
         self.runCmd("image lookup -t NSString")
-        self.expect('expression str = [NSString stringWithCString: "new"]')
+        self.expect('expression str = (id)[NSString stringWithCString: "new"]')
         self.runCmd("process continue")
 
-    def test_MyString_dump(self):
+    @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
+    def test_MyString_dump_with_runtime(self):
         """Test dump of a known Objective-C object by dereferencing it."""
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
@@ -159,29 +155,31 @@ class FoundationTestCase2(TestBase):
             "expression --show-types -- *my",
             patterns=[
                 "\(MyString\) \$.* = ",
-                "\(MyBase\)",
-                "\(NSObject\)",
-                "\(Class\)"])
+                "\(MyBase\)"])
         self.runCmd("process continue")
 
-    @expectedFailureAll(archs=["i[3-6]86"])
-    @expectedFailureAll(
-        oslist=["macosx"],
-        debug_info="gmodules",
-        bugnumber="rdar://26557987")
-    def test_NSError_po(self):
-        """Test that po of the result of an unknown method doesn't require a cast."""
+    @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
+    @expectedFailureAll(oslist=["macosx"], debug_info=["gmodules"],
+                        bugnumber="rdar://28983234")
+    def test_runtime_types(self):
+        """Test commands that require runtime types"""
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        line = self.lines[4]
-
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.m", line, num_expected_locations=1, loc_exact=True)
+        # Break inside Test_NSString:
+        line = self.lines[2]
+        lldbutil.run_break_set_by_source_regexp(
+            self, "NSString tests")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        # Test_NSString:
+        self.runCmd("thread backtrace")
+        self.expect("expression [str length]",
+                    patterns=["\(NSUInteger\) \$.* ="])
+        self.expect("expression str.length")
+        self.expect('expression str = [NSString stringWithCString: "new"]')
         self.expect(
             'po [NSError errorWithDomain:@"Hello" code:35 userInfo:@{@"NSDescription" : @"be completed."}]',
             substrs=[

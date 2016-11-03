@@ -153,12 +153,13 @@ static bool IsValidBasename(const llvm::StringRef &basename) {
   if (!basename.startswith("operator"))
     return false;
 
-  static RegularExpression g_operator_regex("^(operator)( "
-                                            "?)([A-Za-z_][A-Za-z_0-9]*|\\(\\)|"
-                                            "\\[\\]|[\\^<>=!\\/"
-                                            "*+-]+)(<.*>)?(\\[\\])?$");
+  static RegularExpression g_operator_regex(
+      llvm::StringRef("^(operator)( "
+                      "?)([A-Za-z_][A-Za-z_0-9]*|\\(\\)|"
+                      "\\[\\]|[\\^<>=!\\/"
+                      "*+-]+)(<.*>)?(\\[\\])?$"));
   std::string basename_str(basename.str());
-  return g_operator_regex.Execute(basename_str.c_str(), nullptr);
+  return g_operator_regex.Execute(basename_str, nullptr);
 }
 
 void CPlusPlusLanguage::MethodName::Parse() {
@@ -289,10 +290,11 @@ bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
     const char *name, llvm::StringRef &context, llvm::StringRef &identifier) {
-  static RegularExpression g_basename_regex(
-      "^(([A-Za-z_][A-Za-z_0-9]*::)*)(~?[A-Za-z_~][A-Za-z_0-9]*)$");
+  static RegularExpression g_basename_regex(llvm::StringRef(
+      "^(([A-Za-z_][A-Za-z_0-9]*::)*)(~?[A-Za-z_~][A-Za-z_0-9]*)$"));
   RegularExpression::Match match(4);
-  if (g_basename_regex.Execute(name, &match)) {
+  if (g_basename_regex.Execute(llvm::StringRef::withNullAsEmpty(name),
+                               &match)) {
     match.GetMatchAtIndex(name, 1, context);
     match.GetMatchAtIndex(name, 3, identifier);
     return true;
@@ -305,28 +307,29 @@ public:
   CPPRuntimeEquivalents() {
     m_impl.Append(ConstString("std::basic_string<char, std::char_traits<char>, "
                               "std::allocator<char> >")
-                      .AsCString(),
+                      .GetStringRef(),
                   ConstString("basic_string<char>"));
 
     // these two (with a prefixed std::) occur when c++stdlib string class
     // occurs as a template argument in some STL container
     m_impl.Append(ConstString("std::basic_string<char, std::char_traits<char>, "
                               "std::allocator<char> >")
-                      .AsCString(),
+                      .GetStringRef(),
                   ConstString("std::basic_string<char>"));
 
     m_impl.Sort();
   }
 
   void Add(ConstString &type_name, ConstString &type_equivalent) {
-    m_impl.Insert(type_name.AsCString(), type_equivalent);
+    m_impl.Insert(type_name.GetStringRef(), type_equivalent);
   }
 
   uint32_t FindExactMatches(ConstString &type_name,
                             std::vector<ConstString> &equivalents) {
     uint32_t count = 0;
 
-    for (ImplData match = m_impl.FindFirstValueForName(type_name.AsCString());
+    for (ImplData match =
+             m_impl.FindFirstValueForName(type_name.GetStringRef());
          match != nullptr; match = m_impl.FindNextValueForName(match)) {
       equivalents.push_back(match->value);
       count++;
@@ -349,13 +352,13 @@ public:
                               std::vector<ConstString> &equivalents) {
     uint32_t count = 0;
 
-    const char *type_name_cstr = type_name.AsCString();
+    llvm::StringRef type_name_cstr = type_name.GetStringRef();
 
     size_t items_count = m_impl.GetSize();
 
     for (size_t item = 0; item < items_count; item++) {
-      const char *key_cstr = m_impl.GetCStringAtIndex(item);
-      if (strstr(type_name_cstr, key_cstr)) {
+      llvm::StringRef key_cstr = m_impl.GetCStringAtIndex(item);
+      if (type_name_cstr.contains(key_cstr)) {
         count += AppendReplacements(type_name_cstr, key_cstr, equivalents);
       }
     }
@@ -375,7 +378,8 @@ private:
     return target;
   }
 
-  uint32_t AppendReplacements(const char *original, const char *matching_key,
+  uint32_t AppendReplacements(llvm::StringRef original,
+                              llvm::StringRef matching_key,
                               std::vector<ConstString> &equivalents) {
     std::string matching_key_str(matching_key);
     ConstString original_const(original);
@@ -564,8 +568,8 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       ConstString("^std::__(ndk)?1::atomic<.+>$"), stl_synth_flags, true);
 
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
-      RegularExpressionSP(
-          new RegularExpression("^(std::__(ndk)?1::)deque<.+>(( )?&)?$")),
+      RegularExpressionSP(new RegularExpression(
+          llvm::StringRef("^(std::__(ndk)?1::)deque<.+>(( )?&)?$"))),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.libcxx.stddeque_SynthProvider")));
@@ -750,34 +754,38 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       false);
 
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
-      RegularExpressionSP(new RegularExpression("^std::vector<.+>(( )?&)?$")),
+      RegularExpressionSP(
+          new RegularExpression(llvm::StringRef("^std::vector<.+>(( )?&)?$"))),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider")));
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
-      RegularExpressionSP(new RegularExpression("^std::map<.+> >(( )?&)?$")),
+      RegularExpressionSP(
+          new RegularExpression(llvm::StringRef("^std::map<.+> >(( )?&)?$"))),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapSynthProvider")));
   cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(
-      RegularExpressionSP(
-          new RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$")),
+      RegularExpressionSP(new RegularExpression(
+          llvm::StringRef("^std::(__cxx11::)?list<.+>(( )?&)?$"))),
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdListSynthProvider")));
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(true);
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
-      RegularExpressionSP(new RegularExpression("^std::vector<.+>(( )?&)?$")),
-      TypeSummaryImplSP(
-          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
-      RegularExpressionSP(new RegularExpression("^std::map<.+> >(( )?&)?$")),
+      RegularExpressionSP(
+          new RegularExpression(llvm::StringRef("^std::vector<.+>(( )?&)?$"))),
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
       RegularExpressionSP(
-          new RegularExpression("^std::(__cxx11::)?list<.+>(( )?&)?$")),
+          new RegularExpression(llvm::StringRef("^std::map<.+> >(( )?&)?$"))),
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpressionSP(new RegularExpression(
+          llvm::StringRef("^std::(__cxx11::)?list<.+>(( )?&)?$"))),
       TypeSummaryImplSP(
           new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
 

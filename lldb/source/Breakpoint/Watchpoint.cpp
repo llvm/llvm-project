@@ -61,7 +61,8 @@ void Watchpoint::SetCallback(WatchpointHitCallback callback, void *baton,
                              bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free
   // or delete it when it goes goes out of scope.
-  m_options.SetCallback(callback, BatonSP(new Baton(baton)), is_synchronous);
+  m_options.SetCallback(callback, std::make_shared<UntypedBaton>(baton),
+                        is_synchronous);
 
   SendWatchpointChangedEvent(eWatchpointEventTypeCommandChanged);
 }

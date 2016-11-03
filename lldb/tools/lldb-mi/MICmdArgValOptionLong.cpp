@@ -184,16 +184,8 @@ bool CMICmdArgValOptionLong::Validate(CMICmdArgContext &vwArgContext) {
 //--
 bool CMICmdArgValOptionLong::ExtractExpectedOptions(CMICmdArgContext &vrwTxt,
                                                     const MIuint nArgIndex) {
-  CMIUtilString::VecString_t vecOptions;
-  MIuint nOptionsPresent = 0;
-  if ((m_eExpectingOptionType != eArgValType_StringQuoted) &&
-      (m_eExpectingOptionType != eArgValType_StringQuotedNumber) &&
-      (m_eExpectingOptionType != eArgValType_StringQuotedNumberPath))
-    nOptionsPresent = vrwTxt.GetArgsLeftToParse().Split(" ", vecOptions);
-  else
-    nOptionsPresent =
-        vrwTxt.GetArgsLeftToParse().SplitConsiderQuotes(" ", vecOptions);
-  if (nOptionsPresent == 0)
+  CMIUtilString::VecString_t vecOptions = vrwTxt.GetArgs();
+  if (vecOptions.size() == 0)
     return MIstatus::failure;
 
   MIuint nArgIndexCnt = 0;

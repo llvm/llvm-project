@@ -59,7 +59,7 @@ Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
     ConstString const_enumerator_name(value.trim());
     const EnumerationMapEntry *enumerator_entry =
         m_enumerations.FindFirstValueForName(
-            const_enumerator_name.GetCString());
+            const_enumerator_name.GetStringRef());
     if (enumerator_entry) {
       m_current_value = enumerator_entry->value.value;
       NotifyValueChanged();
@@ -69,9 +69,10 @@ Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
       const size_t count = m_enumerations.GetSize();
       if (count) {
         error_strm.Printf(", valid values are: %s",
-                          m_enumerations.GetCStringAtIndex(0));
+                          m_enumerations.GetCStringAtIndex(0).str().c_str());
         for (size_t i = 1; i < count; ++i) {
-          error_strm.Printf(", %s", m_enumerations.GetCStringAtIndex(i));
+          error_strm.Printf(", %s",
+                            m_enumerations.GetCStringAtIndex(i).str().c_str());
         }
       }
       error.SetErrorString(error_strm.GetData());
@@ -98,7 +99,7 @@ void OptionValueEnumeration::SetEnumerations(
       ConstString const_enumerator_name(enumerators[i].string_value);
       EnumeratorInfo enumerator_info = {enumerators[i].value,
                                         enumerators[i].usage};
-      m_enumerations.Append(const_enumerator_name.GetCString(),
+      m_enumerations.Append(const_enumerator_name.GetStringRef(),
                             enumerator_info);
     }
     m_enumerations.Sort();
@@ -117,10 +118,9 @@ size_t OptionValueEnumeration::AutoComplete(
 
   const uint32_t num_enumerators = m_enumerations.GetSize();
   if (s && s[0]) {
-    const size_t s_len = strlen(s);
     for (size_t i = 0; i < num_enumerators; ++i) {
-      const char *name = m_enumerations.GetCStringAtIndex(i);
-      if (::strncmp(s, name, s_len) == 0)
+      llvm::StringRef name = m_enumerations.GetCStringAtIndex(i);
+      if (name.startswith(s))
         matches.AppendString(name);
     }
   } else {

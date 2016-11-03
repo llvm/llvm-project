@@ -25,11 +25,11 @@ public:
 
   void SetOwnsHandle(bool owns);
 
-  virtual Error Terminate();
-  virtual Error GetMainModule(FileSpec &file_spec) const;
+  Error Terminate() override;
+  Error GetMainModule(FileSpec &file_spec) const override;
 
-  virtual lldb::pid_t GetProcessId() const;
-  virtual bool IsRunning() const;
+  lldb::pid_t GetProcessId() const override;
+  bool IsRunning() const override;
 
   HostThread StartMonitoring(const Host::MonitorChildProcessCallback &callback,
                              bool monitor_signals) override;

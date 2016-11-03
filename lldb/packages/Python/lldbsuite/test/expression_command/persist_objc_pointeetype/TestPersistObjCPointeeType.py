@@ -25,6 +25,7 @@ class PersistObjCPointeeType(TestBase):
     @expectedFailureAll(
         bugnumber='http://llvm.org/pr23504',
         oslist=['macosx'], compiler='clang', compiler_version=['<', '7.0.0'])
+    @skipIf(archs=["i386", "i686"])
     def test_with(self):
         """Test that we can p *objcObject"""
         self.build()

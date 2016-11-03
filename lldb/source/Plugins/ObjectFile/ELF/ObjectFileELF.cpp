@@ -1405,8 +1405,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             return error;
           }
           llvm::StringRef path(cstr);
-          if (path.startswith("/lib/x86_64-linux-gnu") ||
-              path.startswith("/lib/i386-linux-gnu")) {
+          if (path.contains("/lib/x86_64-linux-gnu") || path.contains("/lib/i386-linux-gnu")) {
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
             break;
           }
@@ -1941,9 +1940,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeGoSymtab;
 
       const uint32_t permissions =
-          ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0) |
-          ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0) |
-          ((header.sh_flags & SHF_EXECINSTR) ? ePermissionsExecutable : 0);
+          ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0u) |
+          ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0u) |
+          ((header.sh_flags & SHF_EXECINSTR) ? ePermissionsExecutable : 0u);
       switch (header.sh_type) {
       case SHT_SYMTAB:
         assert(sect_type == eSectionTypeOther);

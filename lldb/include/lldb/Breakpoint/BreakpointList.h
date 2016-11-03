@@ -103,6 +103,17 @@ public:
   const lldb::BreakpointSP GetBreakpointAtIndex(size_t i) const;
 
   //------------------------------------------------------------------
+  /// Find all the breakpoints with a given name
+  ///
+  /// @param[in] name
+  ///   The breakpoint name for which to search.
+  ///
+  /// @result
+  ///   \bfalse if the input name was not a legal breakpoint name.
+  //------------------------------------------------------------------
+  bool FindBreakpointsByName(const char *name, BreakpointList &matching_bps);
+
+  //------------------------------------------------------------------
   /// Returns the number of elements in this breakpoint list.
   ///
   /// @result

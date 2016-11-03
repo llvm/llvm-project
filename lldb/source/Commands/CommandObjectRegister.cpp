@@ -38,6 +38,15 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // "register read"
 //----------------------------------------------------------------------
+
+static OptionDefinition g_register_read_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_ALL, false, "alternate", 'A', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,  "Display register names using the alternate register name if there is one." },
+  { LLDB_OPT_SET_1,   false, "set",       's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeIndex, "Specify which register sets to dump by index." },
+  { LLDB_OPT_SET_2,   false, "all",       'a', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,  "Show all register sets." },
+    // clang-format on
+};
+
 class CommandObjectRegisterRead : public CommandObjectParsed {
 public:
   CommandObjectRegisterRead(CommandInterpreter &interpreter)
@@ -241,9 +250,9 @@ protected:
 
     ~CommandOptions() override = default;
 
-    uint32_t GetNumDefinitions() override;
-
-    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_register_read_options);
+    }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       set_indexes.Clear();
@@ -251,10 +260,10 @@ protected:
       alternate_name.Clear();
     }
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_value,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
-      const int short_option = g_option_table[option_idx].short_option;
+      const int short_option = GetDefinitions()[option_idx].short_option;
       switch (short_option) {
       case 's': {
         OptionValueSP value_sp(OptionValueUInt64::Create(option_value, error));
@@ -285,10 +294,7 @@ protected:
       }
       return error;
     }
-
-    // Options table: Required for subclasses of Options.
-
-    static const OptionDefinition g_option_table[];
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     // Instance variables to hold the values for command options.
     OptionValueArray set_indexes;
@@ -300,19 +306,6 @@ protected:
   OptionGroupFormat m_format_options;
   CommandOptions m_command_options;
 };
-
-const OptionDefinition
-    CommandObjectRegisterRead::CommandOptions::g_option_table[] = {
-        // clang-format off
-  {LLDB_OPT_SET_ALL, false, "alternate", 'A', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,  "Display register names using the alternate register name if there is one."},
-  {LLDB_OPT_SET_1,   false, "set",       's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeIndex, "Specify which register sets to dump by index."},
-  {LLDB_OPT_SET_2,   false, "all",       'a', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,  "Show all register sets."},
-        // clang-format on
-};
-
-uint32_t CommandObjectRegisterRead::CommandOptions::GetNumDefinitions() {
-  return llvm::array_lengthof(g_option_table);
-}
 
 //----------------------------------------------------------------------
 // "register write"

@@ -48,7 +48,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static OptionDefinition g_option_table[] = {
+static OptionDefinition g_read_memory_options[] = {
     // clang-format off
   {LLDB_OPT_SET_1, false, "num-per-line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNumberPerLine, "The number of items per line to display." },
   {LLDB_OPT_SET_2, false, "binary",       'b', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,          "If true, memory will be saved as binary. If false, the memory is saved save as an ASCII dump that "
@@ -69,23 +69,22 @@ public:
 
   ~OptionGroupReadMemory() override = default;
 
-  uint32_t GetNumDefinitions() override {
-    return sizeof(g_option_table) / sizeof(OptionDefinition);
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::makeArrayRef(g_read_memory_options);
   }
 
-  const OptionDefinition *GetDefinitions() override { return g_option_table; }
-
-  Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                        ExecutionContext *execution_context) override {
     Error error;
-    const int short_option = g_option_table[option_idx].short_option;
+    const int short_option = g_read_memory_options[option_idx].short_option;
 
     switch (short_option) {
     case 'l':
-      error = m_num_per_line.SetValueFromString(option_arg);
+      error = m_num_per_line.SetValueFromString(option_value);
       if (m_num_per_line.GetCurrentValue() == 0)
         error.SetErrorStringWithFormat(
-            "invalid value for --num-per-line option '%s'", option_arg);
+            "invalid value for --num-per-line option '%s'",
+            option_value.str().c_str());
       break;
 
     case 'b':
@@ -93,7 +92,7 @@ public:
       break;
 
     case 't':
-      error = m_view_as_type.SetValueFromString(option_arg);
+      error = m_view_as_type.SetValueFromString(option_value);
       break;
 
     case 'r':
@@ -101,7 +100,7 @@ public:
       break;
 
     case 'E':
-      error = m_offset.SetValueFromString(option_arg);
+      error = m_offset.SetValueFromString(option_value);
       break;
 
     default:
@@ -111,6 +110,7 @@ public:
     }
     return error;
   }
+  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_num_per_line.Clear();
@@ -906,15 +906,11 @@ public:
 
     ~OptionGroupFindMemory() override = default;
 
-    uint32_t GetNumDefinitions() override {
-      return sizeof(g_memory_find_option_table) / sizeof(OptionDefinition);
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_memory_find_option_table);
     }
 
-    const OptionDefinition *GetDefinitions() override {
-      return g_memory_find_option_table;
-    }
-
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option =
@@ -922,20 +918,20 @@ public:
 
       switch (short_option) {
       case 'e':
-        m_expr.SetValueFromString(option_arg);
+        m_expr.SetValueFromString(option_value);
         break;
 
       case 's':
-        m_string.SetValueFromString(option_arg);
+        m_string.SetValueFromString(option_value);
         break;
 
       case 'c':
-        if (m_count.SetValueFromString(option_arg).Fail())
+        if (m_count.SetValueFromString(option_value).Fail())
           error.SetErrorString("unrecognized value for count");
         break;
 
       case 'o':
-        if (m_offset.SetValueFromString(option_arg).Fail())
+        if (m_offset.SetValueFromString(option_value).Fail())
           error.SetErrorString("unrecognized value for dump-offset");
         break;
 
@@ -946,6 +942,7 @@ public:
       }
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_expr.Clear();
@@ -1206,15 +1203,11 @@ public:
 
     ~OptionGroupWriteMemory() override = default;
 
-    uint32_t GetNumDefinitions() override {
-      return sizeof(g_memory_write_option_table) / sizeof(OptionDefinition);
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_memory_write_option_table);
     }
 
-    const OptionDefinition *GetDefinitions() override {
-      return g_memory_write_option_table;
-    }
-
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option =
@@ -1222,20 +1215,19 @@ public:
 
       switch (short_option) {
       case 'i':
-        m_infile.SetFile(option_arg, true);
+        m_infile.SetFile(option_value, true);
         if (!m_infile.Exists()) {
           m_infile.Clear();
           error.SetErrorStringWithFormat("input file does not exist: '%s'",
-                                         option_arg);
+                                         option_value.str().c_str());
         }
         break;
 
       case 'o': {
-        bool success;
-        m_infile_offset = StringConvert::ToUInt64(option_arg, 0, 0, &success);
-        if (!success) {
+        if (option_value.getAsInteger(0, m_infile_offset)) {
+          m_infile_offset = 0;
           error.SetErrorStringWithFormat("invalid offset string '%s'",
-                                         option_arg);
+                                         option_value.str().c_str());
         }
       } break;
 
@@ -1246,6 +1238,7 @@ public:
       }
       return error;
     }
+    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_infile.Clear();
@@ -1478,7 +1471,8 @@ protected:
         break;
 
       case eFormatBoolean:
-        uval64 = Args::StringToBoolean(value_str, false, &success);
+        uval64 = Args::StringToBoolean(
+            llvm::StringRef::withNullAsEmpty(value_str), false, &success);
         if (!success) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid boolean string value.\n", value_str);

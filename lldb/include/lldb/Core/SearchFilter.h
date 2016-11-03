@@ -15,6 +15,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/FileSpecList.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -100,6 +101,8 @@ public:
   SearchFilter(const lldb::TargetSP &target_sp);
 
   SearchFilter(const SearchFilter &rhs);
+
+  SearchFilter(const lldb::TargetSP &target_sp, unsigned char filterType);
 
   virtual ~SearchFilter();
 
@@ -213,7 +216,61 @@ public:
 
   lldb::SearchFilterSP CopyForBreakpoint(Breakpoint &breakpoint);
 
+  static lldb::SearchFilterSP
+  CreateFromStructuredData(Target &target,
+                           const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  virtual StructuredData::ObjectSP SerializeToStructuredData() {
+    return StructuredData::ObjectSP();
+  }
+
+  static const char *GetSerializationKey() { return "SearchFilter"; }
+
+  static const char *GetSerializationSubclassKey() { return "Type"; }
+
+  static const char *GetSerializationSubclassOptionsKey() { return "Options"; }
+
+  enum FilterTy {
+    Unconstrained = 0,
+    Exception,
+    ByModule,
+    ByModules,
+    ByModulesAndCU,
+    LastKnownFilterType = ByModulesAndCU,
+    UnknownFilter
+  };
+
+  static const char *g_ty_to_name[LastKnownFilterType + 2];
+
+  enum FilterTy GetFilterTy() {
+    if (SubclassID > FilterTy::LastKnownFilterType)
+      return FilterTy::UnknownFilter;
+    else
+      return (enum FilterTy)SubclassID;
+  }
+
+  const char *GetFilterName() { return FilterTyToName(GetFilterTy()); }
+
+  static const char *FilterTyToName(enum FilterTy);
+
+  static FilterTy NameToFilterTy(const char *name);
+
 protected:
+  // Serialization of SearchFilter options:
+  enum OptionNames { ModList = 0, CUList, LanguageName, LastOptionName };
+  static const char *g_option_names[LastOptionName];
+
+  static const char *GetKey(enum OptionNames enum_value) {
+    return g_option_names[enum_value];
+  }
+
+  StructuredData::DictionarySP
+  WrapOptionsDict(StructuredData::DictionarySP options_dict_sp);
+
+  void SerializeFileSpecList(StructuredData::DictionarySP &options_dict_sp,
+                             OptionNames name, FileSpecList &file_list);
+
   // These are utility functions to assist with the search iteration.  They are
   // used by the
   // default Search method.
@@ -239,6 +296,8 @@ protected:
   lldb::TargetSP
       m_target_sp; // Every filter has to be associated with a target for
                    // now since you need a starting place for the search.
+private:
+  unsigned char SubclassID;
 };
 
 //----------------------------------------------------------------------
@@ -250,12 +309,20 @@ protected:
 class SearchFilterForUnconstrainedSearches : public SearchFilter {
 public:
   SearchFilterForUnconstrainedSearches(const lldb::TargetSP &target_sp)
-      : SearchFilter(target_sp) {}
+      : SearchFilter(target_sp, FilterTy::Unconstrained) {}
+
   ~SearchFilterForUnconstrainedSearches() override = default;
 
   bool ModulePasses(const FileSpec &module_spec) override;
 
   bool ModulePasses(const lldb::ModuleSP &module_sp) override;
+
+  static lldb::SearchFilterSP
+  CreateFromStructuredData(Target &target,
+                           const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
   lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
@@ -304,6 +371,13 @@ public:
 
   void Search(Searcher &searcher) override;
 
+  static lldb::SearchFilterSP
+  CreateFromStructuredData(Target &target,
+                           const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
+
 protected:
   lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
 
@@ -325,6 +399,10 @@ public:
   //------------------------------------------------------------------
   SearchFilterByModuleList(const lldb::TargetSP &targetSP,
                            const FileSpecList &module_list);
+
+  SearchFilterByModuleList(const lldb::TargetSP &targetSP,
+                           const FileSpecList &module_list,
+                           enum FilterTy filter_ty);
 
   SearchFilterByModuleList(const SearchFilterByModuleList &rhs);
 
@@ -349,6 +427,15 @@ public:
   void Dump(Stream *s) const override;
 
   void Search(Searcher &searcher) override;
+
+  static lldb::SearchFilterSP
+  CreateFromStructuredData(Target &target,
+                           const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
+
+  void SerializeUnwrapped(StructuredData::DictionarySP &options_dict_sp);
 
 protected:
   lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
@@ -393,6 +480,13 @@ public:
   void Dump(Stream *s) const override;
 
   void Search(Searcher &searcher) override;
+
+  static lldb::SearchFilterSP
+  CreateFromStructuredData(Target &target,
+                           const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
 
 protected:
   lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;

@@ -26,9 +26,9 @@ void CreateEnvironmentBuffer(const Args &env, std::vector<char> &buffer) {
     return;
 
   // Environment buffer is a null terminated list of null terminated strings
-  for (int i = 0; i < env.GetArgumentCount(); ++i) {
+  for (auto &entry : env.entries()) {
     std::wstring warg;
-    if (llvm::ConvertUTF8toWide(env.GetArgumentAtIndex(i), warg)) {
+    if (llvm::ConvertUTF8toWide(entry.ref, warg)) {
       buffer.insert(buffer.end(), (char *)warg.c_str(),
                     (char *)(warg.c_str() + warg.size() + 1));
     }
@@ -47,8 +47,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   std::string executable;
   std::string commandLine;
   std::vector<char> environment;
-  STARTUPINFO startupinfo = {0};
-  PROCESS_INFORMATION pi = {0};
+  STARTUPINFO startupinfo = {};
+  PROCESS_INFORMATION pi = {};
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
@@ -120,11 +120,11 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
   const FileAction *action = launch_info.GetFileActionForFD(fd);
   if (action == nullptr)
     return NULL;
-  SECURITY_ATTRIBUTES secattr = {0};
+  SECURITY_ATTRIBUTES secattr = {};
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
 
-  const char *path = action->GetPath();
+  llvm::StringRef path = action->GetPath();
   DWORD access = 0;
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;

@@ -137,6 +137,23 @@ BreakpointList::FindBreakpointByID(break_id_t break_id) const {
   return stop_sp;
 }
 
+bool BreakpointList::FindBreakpointsByName(const char *name,
+                                           BreakpointList &matching_bps) {
+  Error error;
+  if (!name)
+    return false;
+
+  if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(name), error))
+    return false;
+
+  for (BreakpointSP bkpt_sp : Breakpoints()) {
+    if (bkpt_sp->MatchesName(name)) {
+      matching_bps.Add(bkpt_sp, false);
+    }
+  }
+  return true;
+}
+
 void BreakpointList::Dump(Stream *s) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   s->Printf("%p: ", static_cast<const void *>(this));

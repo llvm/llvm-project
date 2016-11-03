@@ -130,10 +130,10 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, const char *prompt,
     : IOHandlerEditline(
           debugger, IOHandler::Type::Confirm,
           nullptr, // nullptr editline_name means no history loaded/saved
-          nullptr, // No prompt
-          nullptr, // No continuation prompt
-          false,   // Multi-line
-          false,   // Don't colorize the prompt (i.e. the confirm message.)
+          llvm::StringRef(), // No prompt
+          llvm::StringRef(), // No continuation prompt
+          false,             // Multi-line
+          false, // Don't colorize the prompt (i.e. the confirm message.)
           0, *this),
       m_default_response(default_response), m_user_response(default_response) {
   StreamString prompt_stream;
@@ -143,7 +143,7 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, const char *prompt,
   else
     prompt_stream.Printf(": [y/N] ");
 
-  SetPrompt(prompt_stream.GetString().c_str());
+  SetPrompt(prompt_stream.GetString());
 }
 
 IOHandlerConfirm::~IOHandlerConfirm() = default;
@@ -251,8 +251,9 @@ int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
 IOHandlerEditline::IOHandlerEditline(
     Debugger &debugger, IOHandler::Type type,
     const char *editline_name, // Used for saving history files
-    const char *prompt, const char *continuation_prompt, bool multi_line,
-    bool color_prompts, uint32_t line_number_start, IOHandlerDelegate &delegate)
+    llvm::StringRef prompt, llvm::StringRef continuation_prompt,
+    bool multi_line, bool color_prompts, uint32_t line_number_start,
+    IOHandlerDelegate &delegate)
     : IOHandlerEditline(debugger, type,
                         StreamFileSP(), // Inherit input from top input reader
                         StreamFileSP(), // Inherit output from top input reader
@@ -267,8 +268,9 @@ IOHandlerEditline::IOHandlerEditline(
     const lldb::StreamFileSP &input_sp, const lldb::StreamFileSP &output_sp,
     const lldb::StreamFileSP &error_sp, uint32_t flags,
     const char *editline_name, // Used for saving history files
-    const char *prompt, const char *continuation_prompt, bool multi_line,
-    bool color_prompts, uint32_t line_number_start, IOHandlerDelegate &delegate)
+    llvm::StringRef prompt, llvm::StringRef continuation_prompt,
+    bool multi_line, bool color_prompts, uint32_t line_number_start,
+    IOHandlerDelegate &delegate)
     : IOHandler(debugger, type, input_sp, output_sp, error_sp, flags),
 #ifndef LLDB_DISABLE_LIBEDIT
       m_editline_ap(), m_delegate(delegate), m_prompt(),
@@ -300,7 +302,7 @@ IOHandlerEditline::IOHandlerEditline(
   }
 #endif
   SetBaseLineNumber(m_base_line_number);
-  SetPrompt(prompt ? prompt : "");
+  SetPrompt(prompt);
   SetContinuationPrompt(continuation_prompt);
 }
 
@@ -429,11 +431,9 @@ const char *IOHandlerEditline::GetPrompt() {
   return m_prompt.c_str();
 }
 
-bool IOHandlerEditline::SetPrompt(const char *p) {
-  if (p && p[0])
-    m_prompt = p;
-  else
-    m_prompt.clear();
+bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
+  m_prompt = prompt;
+
 #ifndef LLDB_DISABLE_LIBEDIT
   if (m_editline_ap)
     m_editline_ap->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
@@ -446,11 +446,8 @@ const char *IOHandlerEditline::GetContinuationPrompt() {
                                         : m_continuation_prompt.c_str());
 }
 
-void IOHandlerEditline::SetContinuationPrompt(const char *p) {
-  if (p && p[0])
-    m_continuation_prompt = p;
-  else
-    m_continuation_prompt.clear();
+void IOHandlerEditline::SetContinuationPrompt(llvm::StringRef prompt) {
+  m_continuation_prompt = prompt;
 
 #ifndef LLDB_DISABLE_LIBEDIT
   if (m_editline_ap)
@@ -572,8 +569,8 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
   else
 #endif
   {
-    const char *prompt = GetPrompt();
 #ifdef _MSC_VER
+    const char *prompt = GetPrompt();
     if (prompt) {
       // Back up over previous prompt using Windows API
       CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
@@ -587,9 +584,11 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
     }
 #endif
     IOHandler::PrintAsync(stream, s, len);
+#ifdef _MSC_VER
     if (prompt)
       IOHandler::PrintAsync(GetOutputStreamFile().get(), prompt,
                             strlen(prompt));
+#endif
   }
 }
 

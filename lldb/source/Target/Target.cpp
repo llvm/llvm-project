@@ -17,6 +17,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
+#include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverAddress.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
@@ -810,6 +811,162 @@ bool Target::EnableBreakpointByID(break_id_t break_id) {
     return true;
   }
   return false;
+}
+
+Error Target::SerializeBreakpointsToFile(const FileSpec &file,
+                                         const BreakpointIDList &bp_ids,
+                                         bool append) {
+  Error error;
+
+  if (!file) {
+    error.SetErrorString("Invalid FileSpec.");
+    return error;
+  }
+
+  std::string path(file.GetPath());
+  StructuredData::ObjectSP input_data_sp;
+
+  StructuredData::ArraySP break_store_sp;
+  StructuredData::Array *break_store_ptr = nullptr;
+
+  if (append) {
+    input_data_sp = StructuredData::ParseJSONFromFile(file, error);
+    if (error.Success()) {
+      break_store_ptr = input_data_sp->GetAsArray();
+      if (!break_store_ptr) {
+        error.SetErrorStringWithFormat(
+            "Tried to append to invalid input file %s", path.c_str());
+        return error;
+      }
+    }
+  }
+
+  if (!break_store_ptr) {
+    break_store_sp.reset(new StructuredData::Array());
+    break_store_ptr = break_store_sp.get();
+  }
+
+  StreamFile out_file(path.c_str(),
+                      File::OpenOptions::eOpenOptionTruncate |
+                          File::OpenOptions::eOpenOptionWrite |
+                          File::OpenOptions::eOpenOptionCanCreate |
+                          File::OpenOptions::eOpenOptionCloseOnExec,
+                      lldb::eFilePermissionsFileDefault);
+  if (!out_file.GetFile().IsValid()) {
+    error.SetErrorStringWithFormat("Unable to open output file: %s.",
+                                   path.c_str());
+    return error;
+  }
+
+  std::unique_lock<std::recursive_mutex> lock;
+  GetBreakpointList().GetListMutex(lock);
+
+  if (bp_ids.GetSize() == 0) {
+    const BreakpointList &breakpoints = GetBreakpointList();
+
+    size_t num_breakpoints = breakpoints.GetSize();
+    for (size_t i = 0; i < num_breakpoints; i++) {
+      Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
+      StructuredData::ObjectSP bkpt_save_sp = bp->SerializeToStructuredData();
+      // If a breakpoint can't serialize it, just ignore it for now:
+      if (bkpt_save_sp)
+        break_store_ptr->AddItem(bkpt_save_sp);
+    }
+  } else {
+
+    std::unordered_set<lldb::break_id_t> processed_bkpts;
+    const size_t count = bp_ids.GetSize();
+    for (size_t i = 0; i < count; ++i) {
+      BreakpointID cur_bp_id = bp_ids.GetBreakpointIDAtIndex(i);
+      lldb::break_id_t bp_id = cur_bp_id.GetBreakpointID();
+
+      if (bp_id != LLDB_INVALID_BREAK_ID) {
+        // Only do each breakpoint once:
+        std::pair<std::unordered_set<lldb::break_id_t>::iterator, bool>
+            insert_result = processed_bkpts.insert(bp_id);
+        if (!insert_result.second)
+          continue;
+
+        Breakpoint *bp = GetBreakpointByID(bp_id).get();
+        StructuredData::ObjectSP bkpt_save_sp = bp->SerializeToStructuredData();
+        // If the user explicitly asked to serialize a breakpoint, and we
+        // can't, then
+        // raise an error:
+        if (!bkpt_save_sp) {
+          error.SetErrorStringWithFormat("Unable to serialize breakpoint %d",
+                                         bp_id);
+          return error;
+        }
+        break_store_ptr->AddItem(bkpt_save_sp);
+      }
+    }
+  }
+
+  break_store_ptr->Dump(out_file, false);
+  out_file.PutChar('\n');
+  return error;
+}
+
+Error Target::CreateBreakpointsFromFile(const FileSpec &file,
+                                        BreakpointIDList &new_bps) {
+  std::vector<std::string> no_names;
+  return CreateBreakpointsFromFile(file, no_names, new_bps);
+}
+
+Error Target::CreateBreakpointsFromFile(const FileSpec &file,
+                                        std::vector<std::string> &names,
+                                        BreakpointIDList &new_bps) {
+  std::unique_lock<std::recursive_mutex> lock;
+  GetBreakpointList().GetListMutex(lock);
+
+  Error error;
+  StructuredData::ObjectSP input_data_sp =
+      StructuredData::ParseJSONFromFile(file, error);
+  if (!error.Success()) {
+    return error;
+  } else if (!input_data_sp || !input_data_sp->IsValid()) {
+    error.SetErrorStringWithFormat("Invalid JSON from input file: %s.",
+                                   file.GetPath().c_str());
+    return error;
+  }
+
+  StructuredData::Array *bkpt_array = input_data_sp->GetAsArray();
+  if (!bkpt_array) {
+    error.SetErrorStringWithFormat(
+        "Invalid breakpoint data from input file: %s.", file.GetPath().c_str());
+    return error;
+  }
+
+  size_t num_bkpts = bkpt_array->GetSize();
+  size_t num_names = names.size();
+
+  for (size_t i = 0; i < num_bkpts; i++) {
+    StructuredData::ObjectSP bkpt_object_sp = bkpt_array->GetItemAtIndex(i);
+    // Peel off the breakpoint key, and feed the rest to the Breakpoint:
+    StructuredData::Dictionary *bkpt_dict = bkpt_object_sp->GetAsDictionary();
+    if (!bkpt_dict) {
+      error.SetErrorStringWithFormat(
+          "Invalid breakpoint data for element %zu from input file: %s.", i,
+          file.GetPath().c_str());
+      return error;
+    }
+    StructuredData::ObjectSP bkpt_data_sp =
+        bkpt_dict->GetValueForKey(Breakpoint::GetSerializationKey());
+    if (num_names &&
+        !Breakpoint::SerializedBreakpointMatchesNames(bkpt_data_sp, names))
+      continue;
+
+    BreakpointSP bkpt_sp =
+        Breakpoint::CreateFromStructuredData(*this, bkpt_data_sp, error);
+    if (!error.Success()) {
+      error.SetErrorStringWithFormat(
+          "Error restoring breakpoint %zu from %s: %s.", i,
+          file.GetPath().c_str(), error.AsCString());
+      return error;
+    }
+    new_bps.AddBreakpointID(BreakpointID(bkpt_sp->GetID()));
+  }
+  return error;
 }
 
 // The flag 'end_to_end', default to true, signifies that the operation is
@@ -3740,7 +3897,8 @@ const char *TargetProperties::GetArg0() const {
 
 void TargetProperties::SetArg0(const char *arg) {
   const uint32_t idx = ePropertyArg0;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, arg);
+  m_collection_sp->SetPropertyAtIndexAsString(
+      nullptr, idx, llvm::StringRef::withNullAsEmpty(arg));
   m_launch_info.SetArg0(arg);
 }
 
@@ -3903,9 +4061,9 @@ FileSpec TargetProperties::GetStandardInputPath() const {
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
 }
 
-void TargetProperties::SetStandardInputPath(const char *p) {
+void TargetProperties::SetStandardInputPath(llvm::StringRef path) {
   const uint32_t idx = ePropertyInputPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
+  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
 }
 
 FileSpec TargetProperties::GetStandardOutputPath() const {
@@ -3913,14 +4071,19 @@ FileSpec TargetProperties::GetStandardOutputPath() const {
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
 }
 
-void TargetProperties::SetStandardOutputPath(const char *p) {
+void TargetProperties::SetStandardOutputPath(llvm::StringRef path) {
   const uint32_t idx = ePropertyOutputPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
+  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
 }
 
 FileSpec TargetProperties::GetStandardErrorPath() const {
   const uint32_t idx = ePropertyErrorPath;
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+}
+
+void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
+  const uint32_t idx = ePropertyErrorPath;
+  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
 }
 
 LanguageType TargetProperties::GetLanguage() const {
@@ -3944,11 +4107,6 @@ const char *TargetProperties::GetExpressionPrefixContentsAsCString() {
       return (const char *)data_sp->GetBytes();
   }
   return nullptr;
-}
-
-void TargetProperties::SetStandardErrorPath(const char *p) {
-  const uint32_t idx = ePropertyErrorPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
 }
 
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
@@ -4046,23 +4204,17 @@ void TargetProperties::SetProcessLaunchInfo(
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
-    const char *input_path = input_file_action->GetPath();
-    if (input_path)
-      SetStandardInputPath(input_path);
+    SetStandardInputPath(input_file_action->GetPath());
   }
   const FileAction *output_file_action =
       launch_info.GetFileActionForFD(STDOUT_FILENO);
   if (output_file_action) {
-    const char *output_path = output_file_action->GetPath();
-    if (output_path)
-      SetStandardOutputPath(output_path);
+    SetStandardOutputPath(output_file_action->GetPath());
   }
   const FileAction *error_file_action =
       launch_info.GetFileActionForFD(STDERR_FILENO);
   if (error_file_action) {
-    const char *error_path = error_file_action->GetPath();
-    if (error_path)
-      SetStandardErrorPath(error_path);
+    SetStandardErrorPath(error_file_action->GetPath());
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));

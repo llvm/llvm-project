@@ -34,6 +34,27 @@ using namespace lldb_private;
 
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, Thread &thread, UnwindPlan &unwind_plan) {
+  std::vector<uint8_t> function_text(range.GetByteSize());
+  ProcessSP process_sp(thread.GetProcess());
+  if (process_sp) {
+    Error error;
+    const bool prefer_file_cache = true;
+    if (process_sp->GetTarget().ReadMemory(
+            range.GetBaseAddress(), prefer_file_cache, function_text.data(),
+            range.GetByteSize(), error) != range.GetByteSize()) {
+      return false;
+    }
+  }
+  return GetNonCallSiteUnwindPlanFromAssembly(
+      range, function_text.data(), function_text.size(), unwind_plan);
+}
+
+bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
+    AddressRange &range, uint8_t *opcode_data, size_t opcode_size,
+    UnwindPlan &unwind_plan) {
+  if (opcode_data == nullptr || opcode_size == 0)
+    return false;
+
   if (range.GetByteSize() > 0 && range.GetBaseAddress().IsValid() &&
       m_inst_emulator_ap.get()) {
 
@@ -46,18 +67,16 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     if (unwind_plan.GetRowCount() == 0)
       return false;
 
-    ExecutionContext exe_ctx;
-    thread.CalculateExecutionContext(exe_ctx);
     const bool prefer_file_cache = true;
-    DisassemblerSP disasm_sp(Disassembler::DisassembleRange(
-        m_arch, NULL, NULL, exe_ctx, range, prefer_file_cache));
+    DisassemblerSP disasm_sp(Disassembler::DisassembleBytes(
+        m_arch, NULL, NULL, range.GetBaseAddress(), opcode_data, opcode_size,
+        99999, prefer_file_cache));
 
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
 
     if (disasm_sp) {
 
       m_range_ptr = &range;
-      m_thread_ptr = &thread;
       m_unwind_plan_ptr = &unwind_plan;
 
       const uint32_t addr_byte_size = m_arch.GetAddressByteSize();
@@ -154,8 +173,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
               m_register_values = it->second.second;
             }
 
-            m_inst_emulator_ap->SetInstruction(
-                inst->GetOpcode(), inst->GetAddress(), exe_ctx.GetTargetPtr());
+            m_inst_emulator_ap->SetInstruction(inst->GetOpcode(),
+                                               inst->GetAddress(), nullptr);
 
             if (last_condition !=
                 m_inst_emulator_ap->GetInstructionCondition()) {
@@ -253,11 +272,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     if (log && log->GetVerbose()) {
       StreamString strm;
-      lldb::addr_t base_addr =
-          range.GetBaseAddress().GetLoadAddress(thread.CalculateTarget().get());
+      lldb::addr_t base_addr = range.GetBaseAddress().GetFileAddress();
       strm.Printf("Resulting unwind rows for [0x%" PRIx64 " - 0x%" PRIx64 "):",
                   base_addr, base_addr + range.GetByteSize());
-      unwind_plan.Dump(strm, &thread, base_addr);
+      unwind_plan.Dump(strm, nullptr, base_addr);
       log->PutCString(strm.GetData());
     }
     return unwind_plan.GetRowCount() > 0;
@@ -610,6 +628,19 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextSetFramePointer:
     if (!m_fp_is_cfa) {
       m_fp_is_cfa = true;
+      m_cfa_reg_info = *reg_info;
+      const uint32_t cfa_reg_num =
+          reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
+      assert(cfa_reg_num != LLDB_INVALID_REGNUM);
+      m_curr_row->GetCFAValue().SetIsRegisterPlusOffset(
+          cfa_reg_num, m_initial_sp - reg_value.GetAsUInt64());
+      m_curr_row_modified = true;
+    }
+    break;
+
+  case EmulateInstruction::eContextRestoreStackPointer:
+    if (m_fp_is_cfa) {
+      m_fp_is_cfa = false;
       m_cfa_reg_info = *reg_info;
       const uint32_t cfa_reg_num =
           reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];

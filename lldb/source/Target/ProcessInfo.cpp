@@ -18,6 +18,8 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Host/PosixApi.h"
 
+#include "llvm/ADT/SmallString.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -66,8 +68,9 @@ void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,
   if (exe_file) {
     m_executable = exe_file;
     if (add_exe_file_as_first_arg) {
-      char filename[PATH_MAX];
-      if (exe_file.GetPath(filename, sizeof(filename)))
+      llvm::SmallString<PATH_MAX> filename;
+      exe_file.GetPath(filename);
+      if (!filename.empty())
         m_arguments.InsertArgumentAtIndex(0, filename);
     }
   } else {

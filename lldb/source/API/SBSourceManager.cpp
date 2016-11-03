@@ -37,7 +37,7 @@ public:
   }
 
   size_t DisplaySourceLinesWithLineNumbers(const lldb_private::FileSpec &file,
-                                           uint32_t line,
+                                           uint32_t line, uint32_t column,
                                            uint32_t context_before,
                                            uint32_t context_after,
                                            const char *current_line_cstr,
@@ -48,14 +48,15 @@ public:
     lldb::TargetSP target_sp(m_target_wp.lock());
     if (target_sp) {
       return target_sp->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-          file, line, context_before, context_after, current_line_cstr, s);
+          file, line, column, context_before, context_after, current_line_cstr,
+          s);
     } else {
       lldb::DebuggerSP debugger_sp(m_debugger_wp.lock());
       if (debugger_sp) {
         return debugger_sp->GetSourceManager()
-            .DisplaySourceLinesWithLineNumbers(file, line, context_before,
-                                               context_after, current_line_cstr,
-                                               s);
+            .DisplaySourceLinesWithLineNumbers(file, line, column,
+                                               context_before, context_after,
+                                               current_line_cstr, s);
       }
     }
     return 0;
@@ -96,10 +97,20 @@ SBSourceManager::~SBSourceManager() {}
 size_t SBSourceManager::DisplaySourceLinesWithLineNumbers(
     const SBFileSpec &file, uint32_t line, uint32_t context_before,
     uint32_t context_after, const char *current_line_cstr, SBStream &s) {
+  const uint32_t column = 0;
+  return DisplaySourceLinesWithLineNumbersAndColumn(
+      file.ref(), line, column, context_before, context_after,
+      current_line_cstr, s);
+}
+
+size_t SBSourceManager::DisplaySourceLinesWithLineNumbersAndColumn(
+    const SBFileSpec &file, uint32_t line, uint32_t column,
+    uint32_t context_before, uint32_t context_after,
+    const char *current_line_cstr, SBStream &s) {
   if (m_opaque_ap.get() == NULL)
     return 0;
 
   return m_opaque_ap->DisplaySourceLinesWithLineNumbers(
-      file.ref(), line, context_before, context_after, current_line_cstr,
-      s.get());
+      file.ref(), line, column, context_before, context_after,
+      current_line_cstr, s.get());
 }

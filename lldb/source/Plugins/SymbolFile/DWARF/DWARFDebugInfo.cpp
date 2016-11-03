@@ -535,18 +535,20 @@ FindCallbackString(SymbolFileDWARF *dwarf2Data, DWARFCompileUnit *cu,
                    const uint32_t curr_depth, void *userData) {
   FindCallbackStringInfo *info = (FindCallbackStringInfo *)userData;
 
-  if (die) {
-    const char *die_name = die->GetName(dwarf2Data, cu);
-    if (die_name) {
-      if (info->regex) {
-        if (info->regex->Execute(die_name))
-          info->die_offsets.push_back(die->GetOffset());
-      } else {
-        if ((info->ignore_case ? strcasecmp(die_name, info->name)
-                               : strcmp(die_name, info->name)) == 0)
-          info->die_offsets.push_back(die->GetOffset());
-      }
-    }
+  if (!die)
+    return next_offset;
+
+  const char *die_name = die->GetName(dwarf2Data, cu);
+  if (!die_name)
+    return next_offset;
+
+  if (info->regex) {
+    if (info->regex->Execute(llvm::StringRef(die_name)))
+      info->die_offsets.push_back(die->GetOffset());
+  } else {
+    if ((info->ignore_case ? strcasecmp(die_name, info->name)
+                           : strcmp(die_name, info->name)) == 0)
+      info->die_offsets.push_back(die->GetOffset());
   }
 
   // Just return the current offset to parse the next CU or DIE entry

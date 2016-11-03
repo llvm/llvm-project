@@ -94,12 +94,12 @@ class BreakpointCommandTestCase(TestBase):
                     substrs=["Breakpoint commands:",
                              "frame variable --show-types --scope"])
         self.expect("breakpoint command list 2", "Breakpoint 2 command ok",
-                    substrs=["Breakpoint commands:",
+                    substrs=["Breakpoint commands (Python):",
                              "here = open",
                              "here.write",
                              "here.close()"])
         self.expect("breakpoint command list 3", "Breakpoint 3 command ok",
-                    substrs=["Breakpoint commands:",
+                    substrs=["Breakpoint commands (Python):",
                              "bktptcmd.function(frame, bp_loc, internal_dict)"])
 
         self.expect("breakpoint command list 4", "Breakpoint 4 command ok",

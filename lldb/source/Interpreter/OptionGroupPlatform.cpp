@@ -85,20 +85,15 @@ static OptionDefinition g_option_table[] = {
                                             "that contains a root of all "
                                             "remote system files."}};
 
-const OptionDefinition *OptionGroupPlatform::GetDefinitions() {
+llvm::ArrayRef<OptionDefinition> OptionGroupPlatform::GetDefinitions() {
+  llvm::ArrayRef<OptionDefinition> result(g_option_table);
   if (m_include_platform_option)
-    return g_option_table;
-  return g_option_table + 1;
-}
-
-uint32_t OptionGroupPlatform::GetNumDefinitions() {
-  if (m_include_platform_option)
-    return llvm::array_lengthof(g_option_table);
-  return llvm::array_lengthof(g_option_table) - 1;
+    return result;
+  return result.drop_front();
 }
 
 Error OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
-                                          const char *option_arg,
+                                          llvm::StringRef option_arg,
                                           ExecutionContext *execution_context) {
   Error error;
   if (!m_include_platform_option)
@@ -112,18 +107,18 @@ Error OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
     break;
 
   case 'v':
-    if (Args::StringToVersion(option_arg, m_os_version_major,
-                              m_os_version_minor,
-                              m_os_version_update) == option_arg)
-      error.SetErrorStringWithFormat("invalid version string '%s'", option_arg);
+    if (!Args::StringToVersion(option_arg, m_os_version_major,
+                               m_os_version_minor, m_os_version_update))
+      error.SetErrorStringWithFormat("invalid version string '%s'",
+                                     option_arg.str().c_str());
     break;
 
   case 'b':
-    m_sdk_build.SetCString(option_arg);
+    m_sdk_build.SetString(option_arg);
     break;
 
   case 'S':
-    m_sdk_sysroot.SetCString(option_arg);
+    m_sdk_sysroot.SetString(option_arg);
     break;
 
   default:

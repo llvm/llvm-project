@@ -106,15 +106,30 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
                    (uint64_t)(exc_data_count > 0 ? exc_data[0] : 0xBADDBADD),
                    (uint64_t)(exc_data_count > 1 ? exc_data[1] : 0xBADDBADD));
   }
+  g_message->exc_type = 0;
+  g_message->exc_data.clear();
 
   if (task_port == g_message->task_port) {
     g_message->task_port = task_port;
     g_message->thread_port = thread_port;
     g_message->exc_type = exc_type;
-    g_message->exc_data.resize(exc_data_count);
-    ::memcpy(&g_message->exc_data[0], exc_data,
-             g_message->exc_data.size() * sizeof(mach_exception_data_type_t));
+    for (mach_msg_type_number_t i=0; i<exc_data_count; ++i)
+      g_message->exc_data.push_back(exc_data[i]);
     return KERN_SUCCESS;
+  } else if (!MachTask::IsValid(g_message->task_port)) {
+    // Our original exception port isn't valid anymore check for a SIGTRAP
+    if (exc_type == EXC_SOFTWARE && exc_data_count == 2 &&
+        exc_data[0] == EXC_SOFT_SIGNAL && exc_data[1] == SIGTRAP) {
+      // We got a SIGTRAP which indicates we might have exec'ed and possibly
+      // lost our old task port during the exec, so we just need to switch over
+      // to using this new task port
+      g_message->task_port = task_port;
+      g_message->thread_port = thread_port;
+      g_message->exc_type = exc_type;
+      for (mach_msg_type_number_t i=0; i<exc_data_count; ++i)
+        g_message->exc_data.push_back(exc_data[i]);
+      return KERN_SUCCESS;
+    }
   }
   return KERN_FAILURE;
 }

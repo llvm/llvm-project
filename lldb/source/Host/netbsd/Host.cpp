@@ -110,7 +110,7 @@ static bool GetNetBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
     if (!cstr)
       break;
 
-    proc_args.AppendArgument(cstr);
+    proc_args.AppendArgument(llvm::StringRef(cstr));
   }
 
   return true;

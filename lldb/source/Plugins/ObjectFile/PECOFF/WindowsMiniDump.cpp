@@ -33,7 +33,7 @@ bool SaveMiniDump(const lldb::ProcessSP &process_sp,
   std::wstring wide_name;
   wide_name.resize(file_name.size() + 1);
   char *result_ptr = reinterpret_cast<char *>(&wide_name[0]);
-  const UTF8 *error_ptr = nullptr;
+  const llvm::UTF8 *error_ptr = nullptr;
   if (!llvm::ConvertUTF8toWide(sizeof(wchar_t), file_name, result_ptr,
                                error_ptr)) {
     error.SetErrorString("cannot convert file name");

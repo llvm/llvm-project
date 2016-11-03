@@ -75,6 +75,12 @@ void SBStringList::AppendList(const SBStringList &strings) {
   }
 }
 
+void SBStringList::AppendList(const StringList &strings) {
+  if (!IsValid())
+    m_opaque_ap.reset(new lldb_private::StringList());
+  m_opaque_ap->AppendList(strings);
+}
+
 uint32_t SBStringList::GetSize() const {
   if (IsValid()) {
     return m_opaque_ap->GetSize();

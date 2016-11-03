@@ -25,7 +25,7 @@ include_directories(../../source)
 
 include(../../cmake/LLDBDependencies.cmake)
 
-add_lldb_executable(lldb-server
+add_lldb_executable(lldb-server INCLUDE_IN_FRAMEWORK
     Acceptor.cpp
     lldb-gdbserver.cpp
     lldb-platform.cpp

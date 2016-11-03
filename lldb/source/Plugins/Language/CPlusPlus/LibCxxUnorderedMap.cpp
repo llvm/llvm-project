@@ -47,6 +47,8 @@ public:
   size_t GetIndexOfChildWithName(const ConstString &name) override;
 
 private:
+  CompilerType m_element_type;
+  CompilerType m_node_type;
   ValueObject *m_tree;
   size_t m_num_elements;
   ValueObject *m_next_element;
@@ -57,8 +59,8 @@ private:
 
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     LibcxxStdUnorderedMapSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_tree(nullptr), m_num_elements(0),
-      m_next_element(nullptr), m_elements_cache() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type(), m_tree(nullptr),
+      m_num_elements(0), m_next_element(nullptr), m_elements_cache() {
   if (valobj_sp)
     Update();
 }
@@ -90,8 +92,32 @@ lldb::ValueObjectSP lldb_private::formatters::
         node_sp->GetChildMemberWithName(ConstString("__value_"), true);
     ValueObjectSP hash_sp =
         node_sp->GetChildMemberWithName(ConstString("__hash_"), true);
-    if (!hash_sp || !value_sp)
-      return lldb::ValueObjectSP();
+    if (!hash_sp || !value_sp) {
+      if (!m_element_type) {
+        auto first_sp = m_backend.GetChildAtNamePath({ConstString("__table_"),
+                                                      ConstString("__p1_"),
+                                                      ConstString("__first_")});
+        if (!first_sp)
+          return nullptr;
+        m_element_type = first_sp->GetCompilerType();
+        lldb::TemplateArgumentKind kind;
+        m_element_type = m_element_type.GetTemplateArgument(0, kind);
+        m_element_type = m_element_type.GetPointeeType();
+        m_node_type = m_element_type;
+        m_element_type = m_element_type.GetTemplateArgument(0, kind);
+        std::string name;
+        m_element_type =
+            m_element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
+        m_element_type = m_element_type.GetTypedefedType();
+      }
+      if (!m_node_type)
+        return nullptr;
+      node_sp = node_sp->Cast(m_node_type);
+      value_sp = node_sp->GetChildMemberWithName(ConstString("__value_"), true);
+      hash_sp = node_sp->GetChildMemberWithName(ConstString("__hash_"), true);
+      if (!value_sp || !hash_sp)
+        return nullptr;
+    }
     m_elements_cache.push_back(
         {value_sp.get(), hash_sp->GetValueAsUnsigned(0)});
     m_next_element =

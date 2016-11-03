@@ -832,7 +832,7 @@ bool ThreadSanitizerRuntime::NotifyBreakpointHit(
 }
 
 const RegularExpression &ThreadSanitizerRuntime::GetPatternForRuntimeLibrary() {
-  static RegularExpression regex("libclang_rt.tsan_");
+  static RegularExpression regex(llvm::StringRef("libclang_rt.tsan_"));
   return regex;
 }
 

@@ -28,7 +28,6 @@ class WatchpointSetErrorTestCase(TestBase):
         # Build dictionary to have unique executable names for each test
         # method.
 
-    @expectedFailureAll(oslist=["windows"])
     def test_error_cases_with_watchpoint_set(self):
         """Test error cases with the 'watchpoint set' command."""
         self.build()

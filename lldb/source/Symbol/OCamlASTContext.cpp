@@ -645,7 +645,7 @@ bool OCamlASTContext::DumpTypeValue(
   }
 
   if (IsScalarType(type)) {
-    return data.Dump(s, byte_offset, format, byte_size, 1, UINT64_MAX,
+    return data.Dump(s, byte_offset, format, byte_size, 1, SIZE_MAX,
                      LLDB_INVALID_ADDRESS, bitfield_bit_size,
                      bitfield_bit_offset, exe_scope);
   }

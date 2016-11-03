@@ -51,21 +51,20 @@ Property::Property(const PropertyDefinition &definition)
     // "definition.default_uint_value" is the default boolean value if
     // "definition.default_cstr_value" is NULL, otherwise interpret
     // "definition.default_cstr_value" as a string value that represents the
-    // default
-    // value.
+    // default value.
     if (definition.default_cstr_value)
       m_value_sp.reset(new OptionValueBoolean(Args::StringToBoolean(
-          definition.default_cstr_value, false, nullptr)));
+          llvm::StringRef(definition.default_cstr_value), false, nullptr)));
     else
       m_value_sp.reset(
           new OptionValueBoolean(definition.default_uint_value != 0));
     break;
 
-  case OptionValue::eTypeChar:
-    m_value_sp.reset(new OptionValueChar(
-        Args::StringToChar(definition.default_cstr_value, '\0', nullptr)));
+  case OptionValue::eTypeChar: {
+    llvm::StringRef s(definition.default_cstr_value ? definition.default_cstr_value : "");
+    m_value_sp = std::make_shared<OptionValueChar>(Args::StringToChar(s, '\0', nullptr));
     break;
-
+  }
   case OptionValue::eTypeDictionary:
     // "definition.default_uint_value" is always a OptionValue::Type
     m_value_sp.reset(new OptionValueDictionary(OptionValue::ConvertTypeToMask(
@@ -83,7 +82,9 @@ Property::Property(const PropertyDefinition &definition)
           definition.enum_values, definition.default_uint_value);
       m_value_sp.reset(enum_value);
       if (definition.default_cstr_value) {
-        if (enum_value->SetValueFromString(definition.default_cstr_value)
+        if (enum_value
+                ->SetValueFromString(
+                    llvm::StringRef(definition.default_cstr_value))
                 .Success()) {
           enum_value->SetDefaultValue(enum_value->GetCurrentValue());
           // Call Clear() since we don't want the value to appear as
@@ -140,7 +141,8 @@ Property::Property(const PropertyDefinition &definition)
     {
       LanguageType new_lang = eLanguageTypeUnknown;
       if (definition.default_cstr_value)
-        Language::GetLanguageTypeFromString(definition.default_cstr_value);
+        Language::GetLanguageTypeFromString(
+            llvm::StringRef(definition.default_cstr_value));
       else
         new_lang = (LanguageType)definition.default_uint_value;
       m_value_sp.reset(new OptionValueLanguage(new_lang));

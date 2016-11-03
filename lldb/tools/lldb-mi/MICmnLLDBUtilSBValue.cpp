@@ -18,6 +18,9 @@
 #include "MICmnMIValueTuple.h"
 #include "MIUtilString.h"
 
+static const char *kUnknownValue = "??";
+static const char *kUnresolvedCompositeValue = "{...}";
+
 //++
 //------------------------------------------------------------------------------------
 // Details: CMICmnLLDBUtilSBValue constructor.
@@ -32,8 +35,8 @@
 CMICmnLLDBUtilSBValue::CMICmnLLDBUtilSBValue(
     const lldb::SBValue &vrValue, const bool vbHandleCharType /* = false */,
     const bool vbHandleArrayType /* = true */)
-    : m_rValue(const_cast<lldb::SBValue &>(vrValue)), m_pUnkwn("??"),
-      m_pComposite("{...}"), m_bHandleCharType(vbHandleCharType),
+    : m_rValue(const_cast<lldb::SBValue &>(vrValue)),
+      m_bHandleCharType(vbHandleCharType),
       m_bHandleArrayType(vbHandleArrayType) {
   m_bValidSBValue = m_rValue.IsValid();
 }
@@ -80,7 +83,7 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetName() const {
 CMIUtilString CMICmnLLDBUtilSBValue::GetValue(
     const bool vbExpandAggregates /* = false */) const {
   if (!m_bValidSBValue)
-    return m_pUnkwn;
+    return kUnknownValue;
 
   CMICmnLLDBDebugSessionInfo &rSessionInfo(
       CMICmnLLDBDebugSessionInfo::Instance());
@@ -98,7 +101,7 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetValue(
     return value;
 
   if (!vbExpandAggregates && !bPrintExpandAggregates)
-    return m_pComposite;
+    return kUnresolvedCompositeValue;
 
   bool bPrintAggregateFieldNames = false;
   bPrintAggregateFieldNames =
@@ -110,7 +113,7 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetValue(
   CMICmnMIValueTuple miValueTuple;
   const bool bOk = GetCompositeValue(bPrintAggregateFieldNames, miValueTuple);
   if (!bOk)
-    return m_pUnkwn;
+    return kUnknownValue;
 
   value = miValueTuple.GetString();
   return value;
@@ -131,11 +134,11 @@ bool CMICmnLLDBUtilSBValue::GetSimpleValue(const bool vbHandleArrayType,
                                            CMIUtilString &vwrValue) const {
   const MIuint nChildren = m_rValue.GetNumChildren();
   if (nChildren == 0) {
-    vwrValue = GetValueSummary(!m_bHandleCharType && IsCharType(), m_pUnkwn);
+    vwrValue = GetValueSummary(!m_bHandleCharType && IsCharType(), kUnknownValue);
     return MIstatus::success;
   } else if (IsPointerType()) {
     vwrValue =
-        GetValueSummary(!m_bHandleCharType && IsPointeeCharType(), m_pUnkwn);
+        GetValueSummary(!m_bHandleCharType && IsPointeeCharType(), kUnknownValue);
     return MIstatus::success;
   } else if (IsArrayType()) {
     CMICmnLLDBDebugSessionInfo &rSessionInfo(
@@ -187,13 +190,13 @@ bool CMICmnLLDBUtilSBValue::GetCompositeValue(
                                                     miValueTuple, vnDepth + 1);
       if (!bOk)
         // Can't obtain composite type
-        value = m_pUnkwn;
+        value = kUnknownValue;
       else
         // OK. Value is composite and was successfully got
         value = miValueTuple.GetString();
     } else {
       // Need to get value from composite type, but vnMaxDepth is reached
-      value = m_pComposite;
+      value = kUnresolvedCompositeValue;
     }
     const bool bNoQuotes = true;
     const CMICmnMIValueConst miValueConst(value, bNoQuotes);
@@ -404,7 +407,7 @@ CMICmnLLDBUtilSBValue::ReadCStringFromHostMemory(lldb::SBValue &vrValue,
     const MIuint64 nReadBytes =
         process.ReadMemory(addr, &ch, sizeof(ch), error);
     if (error.Fail() || nReadBytes != sizeof(ch))
-      return m_pUnkwn;
+      return kUnknownValue;
     else if (ch == 0)
       break;
     result.append(
@@ -425,7 +428,7 @@ CMICmnLLDBUtilSBValue::ReadCStringFromHostMemory(lldb::SBValue &vrValue,
 //--
 bool CMICmnLLDBUtilSBValue::IsNameUnknown() const {
   const CMIUtilString name(GetName());
-  return (name == m_pUnkwn);
+  return (name == kUnknownValue);
 }
 
 //++
@@ -438,7 +441,7 @@ bool CMICmnLLDBUtilSBValue::IsNameUnknown() const {
 //--
 bool CMICmnLLDBUtilSBValue::IsValueUnknown() const {
   const CMIUtilString value(GetValue());
-  return (value == m_pUnkwn);
+  return (value == kUnknownValue);
 }
 
 //++
@@ -451,7 +454,7 @@ bool CMICmnLLDBUtilSBValue::IsValueUnknown() const {
 //--
 CMIUtilString CMICmnLLDBUtilSBValue::GetTypeName() const {
   const char *pName = m_bValidSBValue ? m_rValue.GetTypeName() : nullptr;
-  const CMIUtilString text((pName != nullptr) ? pName : m_pUnkwn);
+  const CMIUtilString text((pName != nullptr) ? pName : kUnknownValue);
 
   return text;
 }
@@ -466,7 +469,7 @@ CMIUtilString CMICmnLLDBUtilSBValue::GetTypeName() const {
 //--
 CMIUtilString CMICmnLLDBUtilSBValue::GetTypeNameDisplay() const {
   const char *pName = m_bValidSBValue ? m_rValue.GetDisplayTypeName() : nullptr;
-  const CMIUtilString text((pName != nullptr) ? pName : m_pUnkwn);
+  const CMIUtilString text((pName != nullptr) ? pName : kUnknownValue);
 
   return text;
 }

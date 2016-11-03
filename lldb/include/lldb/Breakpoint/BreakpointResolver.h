@@ -136,19 +136,45 @@ public:
   //------------------------------------------------------------------
   virtual void Dump(Stream *s) const = 0;
 
+  /// This section handles serializing and deserializing from StructuredData
+  /// objects.
+
+  static lldb::BreakpointResolverSP
+  CreateFromStructuredData(const StructuredData::Dictionary &resolver_dict,
+                           Error &error);
+
+  virtual StructuredData::ObjectSP SerializeToStructuredData() {
+    return StructuredData::ObjectSP();
+  }
+
+  static const char *GetSerializationKey() { return "BKPTResolver"; }
+
+  static const char *GetSerializationSubclassKey() { return "Type"; }
+
+  static const char *GetSerializationSubclassOptionsKey() { return "Options"; }
+
+  StructuredData::DictionarySP
+  WrapOptionsDict(StructuredData::DictionarySP options_dict_sp);
+
+  //------------------------------------------------------------------
   //------------------------------------------------------------------
   /// An enumeration for keeping track of the concrete subclass that
   /// is actually instantiated. Values of this enumeration are kept in the
   /// BreakpointResolver's SubclassID field. They are used for concrete type
   /// identification.
   enum ResolverTy {
-    FileLineResolver, // This is an instance of BreakpointResolverFileLine
-    AddressResolver,  // This is an instance of BreakpointResolverAddress
-    NameResolver,     // This is an instance of BreakpointResolverName
+    FileLineResolver = 0, // This is an instance of BreakpointResolverFileLine
+    AddressResolver,      // This is an instance of BreakpointResolverAddress
+    NameResolver,         // This is an instance of BreakpointResolverName
     FileRegexResolver,
     ExceptionResolver,
-    LastKnownResolverType = ExceptionResolver
+    LastKnownResolverType = ExceptionResolver,
+    UnknownResolver
   };
+
+  // Translate the Ty to name for serialization,
+  // the "+2" is one for size vrs. index, and one for UnknownResolver.
+  static const char *g_ty_to_name[LastKnownResolverType + 2];
 
   //------------------------------------------------------------------
   /// getResolverID - Return an ID for the concrete type of this object.  This
@@ -156,8 +182,49 @@ public:
   /// for any other purpose, as the values may change as LLDB evolves.
   unsigned getResolverID() const { return SubclassID; }
 
+  enum ResolverTy GetResolverTy() {
+    if (SubclassID > ResolverTy::LastKnownResolverType)
+      return ResolverTy::UnknownResolver;
+    else
+      return (enum ResolverTy)SubclassID;
+  }
+
+  const char *GetResolverName() { return ResolverTyToName(GetResolverTy()); }
+
+  static const char *ResolverTyToName(enum ResolverTy);
+
+  static ResolverTy NameToResolverTy(const char *name);
+
   virtual lldb::BreakpointResolverSP
   CopyForBreakpoint(Breakpoint &breakpoint) = 0;
+
+protected:
+  // Used for serializing resolver options:
+  // The options in this enum and the strings in the
+  // g_option_names must be kept in sync.
+  enum class OptionNames : uint32_t {
+    AddressOffset = 0,
+    ExactMatch,
+    FileName,
+    Inlines,
+    LanguageName,
+    LineNumber,
+    ModuleName,
+    NameMaskArray,
+    Offset,
+    RegexString,
+    SectionName,
+    SkipPrologue,
+    SymbolNameArray,
+    LastOptionName
+  };
+  static const char
+      *g_option_names[static_cast<uint32_t>(OptionNames::LastOptionName)];
+
+public:
+  static const char *GetKey(OptionNames enum_value) {
+    return g_option_names[static_cast<uint32_t>(enum_value)];
+  }
 
 protected:
   //------------------------------------------------------------------
@@ -169,7 +236,9 @@ protected:
   /// so, and then set
   /// breakpoint locations in this breakpoint for all the resultant addresses.
   void SetSCMatchesByLine(SearchFilter &filter, SymbolContextList &sc_list,
-                          bool skip_prologue, const char *log_ident);
+                          bool skip_prologue, llvm::StringRef log_ident);
+  void SetSCMatchesByLine(SearchFilter &, SymbolContextList &, bool,
+                          const char *) = delete;
 
   lldb::BreakpointLocationSP AddLocation(Address loc_addr,
                                          bool *new_location = NULL);

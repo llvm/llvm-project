@@ -24,9 +24,6 @@ class StdVectorDataFormatterTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @skipIfFreeBSD
-    @expectedFailureAll(
-        compiler="icc",
-        bugnumber="llvm.org/pr15301 LLDB prints incorrect sizes of STL containers")
     @skipIfWindows  # libstdcpp not ported to Windows
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""

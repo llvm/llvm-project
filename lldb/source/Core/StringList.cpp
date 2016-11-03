@@ -103,34 +103,21 @@ void StringList::Join(const char *separator, Stream &strm) {
 void StringList::Clear() { m_strings.clear(); }
 
 void StringList::LongestCommonPrefix(std::string &common_prefix) {
-  const size_t num_strings = m_strings.size();
+  common_prefix.clear();
+  if (m_strings.empty())
+    return;
 
-  if (num_strings == 0) {
-    common_prefix.clear();
-  } else {
-    common_prefix = m_strings.front();
-
-    for (size_t idx = 1; idx < num_strings; ++idx) {
-      std::string &curr_string = m_strings[idx];
-      size_t new_size = curr_string.size();
-
-      // First trim common_prefix if it is longer than the current element:
-      if (common_prefix.size() > new_size)
-        common_prefix.erase(new_size);
-
-      // Then trim it at the first disparity:
-      for (size_t i = 0; i < common_prefix.size(); i++) {
-        if (curr_string[i] != common_prefix[i]) {
-          common_prefix.erase(i);
-          break;
-        }
-      }
-
-      // If we've emptied the common prefix, we're done.
-      if (common_prefix.empty())
+  auto args = llvm::makeArrayRef(m_strings);
+  llvm::StringRef prefix = args.front();
+  for (auto arg : args.drop_front()) {
+    size_t count = 0;
+    for (count = 0; count < std::min(prefix.size(), arg.size()); ++count) {
+      if (prefix[count] != arg[count])
         break;
     }
+    prefix = prefix.take_front(count);
   }
+  common_prefix = prefix;
 }
 
 void StringList::InsertStringAtIndex(size_t idx, const char *str) {

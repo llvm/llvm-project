@@ -360,18 +360,28 @@ class UnixProcessHelper(ProcessHelper):
 
         # Choose kill mechanism based on whether we're targeting
         # a process group or just a process.
-        if popen_process.using_process_groups:
-            # if log_file:
-            #    log_file.write(
-            #        "sending signum {} to process group {} now\n".format(
-            #            signum, popen_process.pid))
-            os.killpg(popen_process.pid, signum)
-        else:
-            # if log_file:
-            #    log_file.write(
-            #        "sending signum {} to process {} now\n".format(
-            #            signum, popen_process.pid))
-            os.kill(popen_process.pid, signum)
+        try:
+            if popen_process.using_process_groups:
+                # if log_file:
+                #    log_file.write(
+                #        "sending signum {} to process group {} now\n".format(
+                #            signum, popen_process.pid))
+                os.killpg(popen_process.pid, signum)
+            else:
+                # if log_file:
+                #    log_file.write(
+                #        "sending signum {} to process {} now\n".format(
+                #            signum, popen_process.pid))
+                os.kill(popen_process.pid, signum)
+        except OSError as error:
+            import errno
+            if error.errno == errno.ESRCH:
+                # This is okay - failed to find the process.  It may be that
+                # that the timeout pre-kill hook eliminated the process.  We'll
+                # ignore.
+                pass
+            else:
+                raise
 
     def soft_terminate(self, popen_process, log_file=None, want_core=True):
         # Choose signal based on desire for core file.
@@ -481,6 +491,19 @@ class ProcessDriver(object):
         pass
 
     def on_process_exited(self, command, output, was_timeout, exit_status):
+        pass
+
+    def on_timeout_pre_kill(self):
+        """Called after the timeout interval elapses but before killing it.
+
+        This method is added to enable derived classes the ability to do
+        something to the process prior to it being killed.  For example,
+        this would be a good spot to run a program that samples the process
+        to see what it was doing (or not doing).
+
+        Do not attempt to reap the process (i.e. use wait()) in this method.
+        That will interfere with the kill mechanism and return code processing.
+        """
         pass
 
     def write(self, content):
@@ -640,6 +663,11 @@ class ProcessDriver(object):
             # Reap the child process here.
             self.returncode = self.process.wait()
         else:
+
+            # Allow derived classes to do some work after we detected
+            # a timeout but before we touch the timed-out process.
+            self.on_timeout_pre_kill()
+
             # Prepare to stop the process
             process_terminated = completed_normally
             terminate_attempt_count = 0

@@ -55,10 +55,12 @@ def is_variable_in_register(frame, var_name):
         return True
 
 
-def is_struct_pointer_in_register(frame, var_name):
+def is_struct_pointer_in_register(frame, var_name, trace):
     # Ensure we can lookup the variable.
     var = frame.FindVariable(var_name)
-    # print("\nchecking {}...".format(var_name))
+    if trace:
+        print("\nchecking {}...".format(var_name))
+
     if var is None or not var.IsValid():
         # print("{} cannot be found".format(var_name))
         return False
@@ -68,13 +70,16 @@ def is_struct_pointer_in_register(frame, var_name):
     value = var.GetValue()
     # print("checking value...")
     if value is None:
-        # print("value is invalid")
+        if trace:
+            print("value is invalid")
         return False
-    # else:
-    #     print("value is {}".format(value))
+    else:
+        if trace:
+             print("value is {}".format(value))
 
     var_loc = var.GetLocation()
-    # print("checking location: {}".format(var_loc))
+    if trace:
+        print("checking location: {}".format(var_loc))
     if var_loc is None or var_loc.startswith("0x"):
         # The frame var is not in a register but rather a memory location.
         # print("frame var {} is not in a register".format(var_name))
@@ -94,12 +99,13 @@ class RegisterVariableTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
-    @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://26050265")
+    @expectedFailureAll(compiler="clang", archs=["i386"])
     @expectedFailureAll(
         compiler="gcc", compiler_version=[
             '>=', '4.8.2'], archs=[
             "i386", "x86_64"])
     @expectedFailureAll(oslist=["linux"], bugnumber="bugs.swift.org/SR-2140")
+    @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://28983120")
     def test_and_run_command(self):
         """Test expressions on register values."""
 
@@ -140,7 +146,7 @@ class RegisterVariableTestCase(TestBase):
             self.expect("expr a", VARIABLES_DISPLAYED_CORRECTLY,
                         patterns=[re_expr_equals('int', 2)])
 
-        if is_struct_pointer_in_register(frame, 'b'):
+        if is_struct_pointer_in_register(frame, 'b', self.TraceOn()):
             register_variables_count += 1
             self.expect("expr b->m1", VARIABLES_DISPLAYED_CORRECTLY,
                         patterns=[re_expr_equals('int', 3)])
@@ -162,7 +168,7 @@ class RegisterVariableTestCase(TestBase):
         # Try some variables that should be visible
         frame = self.dbg.GetSelectedTarget().GetProcess(
         ).GetSelectedThread().GetSelectedFrame()
-        if is_struct_pointer_in_register(frame, 'b'):
+        if is_struct_pointer_in_register(frame, 'b', self.TraceOn()):
             register_variables_count += 1
             self.expect("expr b->m2", VARIABLES_DISPLAYED_CORRECTLY,
                         patterns=[re_expr_equals('int', 5)])

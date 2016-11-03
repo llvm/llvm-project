@@ -106,7 +106,7 @@ const Baton *WatchpointOptions::GetBaton() const {
 bool WatchpointOptions::InvokeCallback(StoppointCallbackContext *context,
                                        lldb::user_id_t watch_id) {
   if (m_callback && context->is_synchronous == IsCallbackSynchronous()) {
-    return m_callback(m_callback_baton_sp ? m_callback_baton_sp->m_data
+    return m_callback(m_callback_baton_sp ? m_callback_baton_sp->data()
                                           : nullptr,
                       context, watch_id);
   } else
@@ -173,7 +173,7 @@ void WatchpointOptions::GetDescription(Stream *s,
 
 void WatchpointOptions::CommandBaton::GetDescription(
     Stream *s, lldb::DescriptionLevel level) const {
-  CommandData *data = (CommandData *)m_data;
+  const CommandData *data = getItem();
 
   if (level == eDescriptionLevelBrief) {
     s->Printf(", commands = %s",

@@ -77,6 +77,9 @@ class TestSwiftPathWithColon(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        # Don't allow ansi highlighting to interfere with the output.
+        self.runCmd('settings set stop-show-column none')
+
         self.expect('breakpoint set -l 13', substrs=['foo'])
 
         self.expect('source list -l 13', substrs=['return x + y - z'])

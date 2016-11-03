@@ -65,9 +65,9 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
         self.expect(
             'frame variable iimI',
             substrs=[
-                'first = 0',
-                'second = 12'])
-        self.expect('expr iimI', substrs=['first = 0', 'second = 12'])
+                'first = 43981',
+                'second = 61681'])
+        self.expect('expr iimI', substrs=['first = 43981', 'second = 61681'])
 
         self.expect(
             'frame variable simI',

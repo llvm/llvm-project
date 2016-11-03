@@ -50,6 +50,10 @@ public:
                    const lldb_private::FileSpec *file,
                    lldb::offset_t file_offset, lldb::offset_t length);
 
+  ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
+                   lldb::DataBufferSP &header_data_sp,
+                   const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
+
   ~ObjectFilePECOFF() override;
 
   //------------------------------------------------------------------
@@ -127,6 +131,10 @@ public:
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
+
+  bool IsWindowsSubsystem();
+
+  lldb_private::DataExtractor ReadImageData(uint32_t offset, size_t size);
 
 protected:
   bool NeedsEndianSwap() const;

@@ -999,7 +999,7 @@ size_t DynamicLoaderDarwin::FindEquivalentSymbols(
   equivalent_regex_buf.append(trampoline_name.GetCString());
   equivalent_regex_buf.append(resolver_name_regex);
 
-  RegularExpression equivalent_name_regex(equivalent_regex_buf.c_str());
+  RegularExpression equivalent_name_regex(equivalent_regex_buf);
   const bool append = true;
   images.FindSymbolsMatchingRegExAndType(equivalent_name_regex, eSymbolTypeCode,
                                          equivalent_symbols, append);

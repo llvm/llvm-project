@@ -56,7 +56,9 @@ class StaticVariableTestCase(TestBase):
                 VARIABLES_DISPLAYED_CORRECTLY,
                 startstr="(int) A::g_points[1].x = 11")
 
-    @expectedFailureDarwin(9980907)
+    @expectedFailureAll(
+        oslist=lldbplatformutil.getDarwinOSTriples(),
+        bugnumber="<rdar://problem/28706946>")
     @expectedFailureAll(
         compiler=[
             "clang",
