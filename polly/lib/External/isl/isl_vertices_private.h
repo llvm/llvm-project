@@ -11,6 +11,8 @@ struct isl_morph;
  * of the vertex as a singleton parametric set.  "dom" is the projection
  * of "vertex" onto the parameter space, i.e., the activity domain
  * of the vertex.
+ * During the construction of vertices and chambers, the activity domain
+ * of every parametric vertex is full-dimensional.
  */
 struct isl_vertex {
 	isl_basic_set *dom;

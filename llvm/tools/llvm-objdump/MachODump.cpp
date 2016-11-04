@@ -4405,12 +4405,7 @@ static bool print_class_ro64_t(uint64_t p, struct DisassembleInfo *info,
   r = get_pointer_64(p, offset, left, S, info);
   if (r == nullptr || left < sizeof(struct class_ro64_t))
     return false;
-  memset(&cro, '\0', sizeof(struct class_ro64_t));
-  if (left < sizeof(struct class_ro64_t)) {
-    memcpy(&cro, r, left);
-    outs() << "   (class_ro_t entends past the end of the section)\n";
-  } else
-    memcpy(&cro, r, sizeof(struct class_ro64_t));
+  memcpy(&cro, r, sizeof(struct class_ro64_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(cro);
   outs() << "                    flags " << format("0x%" PRIx32, cro.flags);
@@ -4607,12 +4602,7 @@ static void print_class64_t(uint64_t p, struct DisassembleInfo *info) {
   r = get_pointer_64(p, offset, left, S, info);
   if (r == nullptr || left < sizeof(struct class64_t))
     return;
-  memset(&c, '\0', sizeof(struct class64_t));
-  if (left < sizeof(struct class64_t)) {
-    memcpy(&c, r, left);
-    outs() << "   (class_t entends past the end of the section)\n";
-  } else
-    memcpy(&c, r, sizeof(struct class64_t));
+  memcpy(&c, r, sizeof(struct class64_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(c);
 

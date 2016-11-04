@@ -319,9 +319,7 @@ bool ARMSubtarget::enablePostRAScheduler() const {
   return (!isThumb() || hasThumb2());
 }
 
-bool ARMSubtarget::enableAtomicExpand() const {
-  return hasAnyDataBarrier() && (!isThumb() || hasV8MBaselineOps());
-}
+bool ARMSubtarget::enableAtomicExpand() const { return hasAnyDataBarrier(); }
 
 bool ARMSubtarget::useStride4VFPs(const MachineFunction &MF) const {
   // For general targets, the prologue can grow when VFPs are allocated with

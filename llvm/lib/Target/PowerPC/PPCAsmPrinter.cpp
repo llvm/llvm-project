@@ -1370,57 +1370,61 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
   // Darwin/PPC always uses mach-o.
   const TargetLoweringObjectFileMachO &TLOFMacho =
       static_cast<const TargetLoweringObjectFileMachO &>(getObjFileLowering());
-  MachineModuleInfoMachO &MMIMacho =
-      MMI->getObjFileInfo<MachineModuleInfoMachO>();
+  if (MMI) {
+    MachineModuleInfoMachO &MMIMacho =
+        MMI->getObjFileInfo<MachineModuleInfoMachO>();
 
-  if (MAI->doesSupportExceptionHandling() && MMI) {
-    // Add the (possibly multiple) personalities to the set of global values.
-    // Only referenced functions get into the Personalities list.
-    for (const Function *Personality : MMI->getPersonalities()) {
-      if (Personality) {
-        MCSymbol *NLPSym =
-            getSymbolWithGlobalValueBase(Personality, "$non_lazy_ptr");
-        MachineModuleInfoImpl::StubValueTy &StubSym =
-            MMIMacho.getGVStubEntry(NLPSym);
-        StubSym =
-            MachineModuleInfoImpl::StubValueTy(getSymbol(Personality), true);
+    if (MAI->doesSupportExceptionHandling()) {
+      // Add the (possibly multiple) personalities to the set of global values.
+      // Only referenced functions get into the Personalities list.
+      for (const Function *Personality : MMI->getPersonalities()) {
+        if (Personality) {
+          MCSymbol *NLPSym =
+              getSymbolWithGlobalValueBase(Personality, "$non_lazy_ptr");
+          MachineModuleInfoImpl::StubValueTy &StubSym =
+              MMIMacho.getGVStubEntry(NLPSym);
+          StubSym =
+              MachineModuleInfoImpl::StubValueTy(getSymbol(Personality), true);
+        }
       }
     }
-  }
 
-  // Output stubs for dynamically-linked functions.
-  MachineModuleInfoMachO::SymbolListTy Stubs = MMIMacho.GetGVStubList();
+    // Output stubs for dynamically-linked functions.
+    MachineModuleInfoMachO::SymbolListTy Stubs = MMIMacho.GetGVStubList();
 
-  // Output macho stubs for external and common global variables.
-  if (!Stubs.empty()) {
-    // Switch with ".non_lazy_symbol_pointer" directive.
-    OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-    EmitAlignment(isPPC64 ? 3 : 2);
+    // Output macho stubs for external and common global variables.
+    if (!Stubs.empty()) {
+      // Switch with ".non_lazy_symbol_pointer" directive.
+      OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
+      EmitAlignment(isPPC64 ? 3 : 2);
 
-    for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
-      // L_foo$stub:
-      OutStreamer->EmitLabel(Stubs[i].first);
-      //   .indirect_symbol _foo
-      MachineModuleInfoImpl::StubValueTy &MCSym = Stubs[i].second;
-      OutStreamer->EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+      for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
+        // L_foo$stub:
+        OutStreamer->EmitLabel(Stubs[i].first);
+        //   .indirect_symbol _foo
+        MachineModuleInfoImpl::StubValueTy &MCSym = Stubs[i].second;
+        OutStreamer->EmitSymbolAttribute(MCSym.getPointer(),
+                                         MCSA_IndirectSymbol);
 
-      if (MCSym.getInt())
-        // External to current translation unit.
-        OutStreamer->EmitIntValue(0, isPPC64 ? 8 : 4/*size*/);
-      else
-        // Internal to current translation unit.
-        //
-        // When we place the LSDA into the TEXT section, the type info pointers
-        // need to be indirect and pc-rel. We accomplish this by using NLPs.
-        // However, sometimes the types are local to the file. So we need to
-        // fill in the value for the NLP in those cases.
-        OutStreamer->EmitValue(MCSymbolRefExpr::create(MCSym.getPointer(),
-                                                       OutContext),
-                              isPPC64 ? 8 : 4/*size*/);
+        if (MCSym.getInt())
+          // External to current translation unit.
+          OutStreamer->EmitIntValue(0, isPPC64 ? 8 : 4 /*size*/);
+        else
+          // Internal to current translation unit.
+          //
+          // When we place the LSDA into the TEXT section, the type info
+          // pointers
+          // need to be indirect and pc-rel. We accomplish this by using NLPs.
+          // However, sometimes the types are local to the file. So we need to
+          // fill in the value for the NLP in those cases.
+          OutStreamer->EmitValue(
+              MCSymbolRefExpr::create(MCSym.getPointer(), OutContext),
+              isPPC64 ? 8 : 4 /*size*/);
+      }
+
+      Stubs.clear();
+      OutStreamer->AddBlankLine();
     }
-
-    Stubs.clear();
-    OutStreamer->AddBlankLine();
   }
 
   // Funny Darwin hack: This flag tells the linker that no global symbols

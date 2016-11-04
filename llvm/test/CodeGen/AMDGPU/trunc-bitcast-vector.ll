@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}trunc_i64_bitcast_v2i32:
 ; CHECK: buffer_load_dword v
@@ -47,12 +47,7 @@ define void @trunc_i16_bitcast_v2i16(i16 addrspace(1)* %out, <2 x i16> addrspace
 }
 
 ; CHECK-LABEL: {{^}}trunc_i16_bitcast_v4i16:
-; FIXME We need to teach the dagcombiner to reduce load width for:
-;   t21: v2i32,ch = load<LD8[%in(addrspace=1)]> t12, t10, undef:i64
-;        t23: i64 = bitcast t21
-;      t30: i16 = truncate t23
-; SI: buffer_load_dword v[[VAL:[0-9]+]]
-; VI: buffer_load_dwordx2 v{{\[}}[[VAL:[0-9]+]]
+; CHECK: buffer_load_dword [[VAL:v[0-9]+]]
 ; CHECK: buffer_store_short [[VAL]]
 define void @trunc_i16_bitcast_v4i16(i16 addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
   %ld = load <4 x i16>, <4 x i16> addrspace(1)* %in

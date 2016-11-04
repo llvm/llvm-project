@@ -223,5 +223,3 @@ set_target_properties(polly-check-format PROPERTIES FOLDER "Polly")
 add_custom_target(polly-update-format DEPENDS ${update_format_depends})
 set_target_properties(polly-update-format PROPERTIES FOLDER "Polly")
 
-# Set the variable POLLY_LINK_LIBS in the llvm/tools/ dir.
-set(POLLY_LINK_LIBS ${POLLY_LINK_LIBS} PARENT_SCOPE)

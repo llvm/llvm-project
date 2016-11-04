@@ -540,7 +540,7 @@ static int extract_term_and_mod(struct isl_extract_mod_data *data,
 						isl_dim_div, data->i, 0);
 	if (s < 0)
 		data->v = isl_val_neg(data->v);
-	term = isl_aff_scale_val(data->div, isl_val_copy(data->v));
+	term = isl_aff_scale_val(term, isl_val_copy(data->v));
 
 	if (!data->add)
 		data->add = term;
