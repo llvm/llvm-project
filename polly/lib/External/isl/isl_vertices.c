@@ -109,15 +109,20 @@ error:
 }
 
 /* Prepend a vertex to the linked list "list" based on the equalities in "tab".
+ * Return isl_bool_true if the vertex was actually added and
+ * isl_bool_false otherwise.
+ * In particular, vertices with a lower-dimensional activity domain are
+ * not added to the list because they would not be included in any chamber.
+ * Return isl_bool_error on error.
  */
-static int add_vertex(struct isl_vertex_list **list,
+static isl_bool add_vertex(struct isl_vertex_list **list,
 	__isl_keep isl_basic_set *bset, struct isl_tab *tab)
 {
 	unsigned nvar;
 	struct isl_vertex_list *v = NULL;
 
 	if (isl_tab_detect_implicit_equalities(tab) < 0)
-		return -1;
+		return isl_bool_error;
 
 	nvar = isl_basic_set_dim(bset, isl_dim_set);
 
@@ -138,13 +143,18 @@ static int add_vertex(struct isl_vertex_list **list,
 	if (!v->v.dom)
 		goto error;
 
+	if (v->v.dom->n_eq > 0) {
+		free_vertex_list(v);
+		return isl_bool_false;
+	}
+
 	v->next = *list;
 	*list = v;
 
-	return 0;
+	return isl_bool_true;
 error:
 	free_vertex_list(v);
-	return -1;
+	return isl_bool_error;
 }
 
 /* Compute the parametric vertices and the chamber decomposition
@@ -466,9 +476,11 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 		}
 		if (selected == nvar) {
 			if (tab->n_dead == nvar) {
-				if (add_vertex(&list, bset, tab) < 0)
+				isl_bool added = add_vertex(&list, bset, tab);
+				if (added < 0)
 					goto error;
-				n_vertices++;
+				if (added)
+					n_vertices++;
 			}
 			init = 0;
 			continue;
@@ -566,14 +578,21 @@ error:
 
 /* Can "tab" be intersected with "bset" without resulting in
  * a lower-dimensional set.
+ * "bset" itself is assumed to be full-dimensional.
  */
-static int can_intersect(struct isl_tab *tab, __isl_keep isl_basic_set *bset)
+static isl_bool can_intersect(struct isl_tab *tab,
+	__isl_keep isl_basic_set *bset)
 {
 	int i;
 	struct isl_tab_undo *snap;
 
+	if (bset->n_eq > 0)
+		isl_die(isl_basic_set_get_ctx(bset), isl_error_internal,
+			"expecting full-dimensional input",
+			return isl_bool_error);
+
 	if (isl_tab_extend_cons(tab, bset->n_ineq) < 0)
-		return -1;
+		return isl_bool_error;
 
 	snap = isl_tab_snap(tab);
 
@@ -581,18 +600,18 @@ static int can_intersect(struct isl_tab *tab, __isl_keep isl_basic_set *bset)
 		if (isl_tab_ineq_type(tab, bset->ineq[i]) == isl_ineq_redundant)
 			continue;
 		if (isl_tab_add_ineq(tab, bset->ineq[i]) < 0)
-			return -1;
+			return isl_bool_error;
 	}
 
 	if (isl_tab_detect_implicit_equalities(tab) < 0)
-		return -1;
+		return isl_bool_error;
 	if (tab->n_dead) {
 		if (isl_tab_rollback(tab, snap) < 0)
-			return -1;
-		return 0;
+			return isl_bool_error;
+		return isl_bool_false;
 	}
 
-	return 1;
+	return isl_bool_true;
 }
 
 static int add_chamber(struct isl_chamber_list **list,
