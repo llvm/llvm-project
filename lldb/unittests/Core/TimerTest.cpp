@@ -40,10 +40,8 @@ TEST(TimerTest, CategoryTimesNested) {
   {
     Timer t1("CAT1", "");
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    {
-      Timer t2("CAT1", "");
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    Timer t2("CAT1", "");
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   StreamString ss;
   Timer::DumpCategoryTimes(&ss);
@@ -57,19 +55,18 @@ TEST(TimerTest, CategoryTimes2) {
   Timer::ResetCategoryTimes();
   {
     Timer t1("CAT1", "");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    Timer t2("CAT2", "");
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    {
-      Timer t2("CAT2", "");
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
   }
   StreamString ss;
   Timer::DumpCategoryTimes(&ss);
   double seconds1, seconds2;
   ASSERT_EQ(2, sscanf(ss.GetData(), "%lf sec for CAT1%*[\n ]%lf sec for CAT2",
-                      &seconds1, &seconds2));
-  EXPECT_LT(0.001, seconds1);
-  EXPECT_GT(0.1, seconds1);
+                      &seconds1, &seconds2))
+      << "String: " << ss.GetString();
+  EXPECT_LT(0.01, seconds1);
+  EXPECT_GT(1, seconds1);
   EXPECT_LT(0.001, seconds2);
   EXPECT_GT(0.1, seconds2);
 }

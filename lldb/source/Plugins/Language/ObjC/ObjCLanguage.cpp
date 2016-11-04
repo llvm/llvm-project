@@ -994,10 +994,23 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
 
     friend class lldb_private::ObjCLanguage;
   };
+  
+  class ObjCDebugInfoScavenger : public Language::ImageListTypeScavenger {
+  public:
+    virtual CompilerType AdjustForInclusion(CompilerType &candidate) override {
+      LanguageType lang_type(candidate.GetMinimumLanguage());
+      if (!Language::LanguageIsObjC(lang_type))
+        return CompilerType();
+      if (candidate.IsTypedefType())
+        return candidate.GetTypedefedType();
+      return candidate;
+    }
+  };
 
   return std::unique_ptr<TypeScavenger>(
       new Language::EitherTypeScavenger<ObjCModulesScavenger,
-                                        ObjCRuntimeScavenger>());
+                                        ObjCRuntimeScavenger,
+                                        ObjCDebugInfoScavenger>());
 }
 
 bool ObjCLanguage::GetFormatterPrefixSuffix(ValueObject &valobj,

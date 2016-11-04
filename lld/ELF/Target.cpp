@@ -1652,6 +1652,9 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 RelExpr ARMTargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,
                                     const InputFile &File,
                                     const SymbolBody &S) const {
+  // If S is an undefined weak symbol we don't need a Thunk
+  if (S.isUndefined())
+    return Expr;
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or
   // R_ARM_THM_CALL.

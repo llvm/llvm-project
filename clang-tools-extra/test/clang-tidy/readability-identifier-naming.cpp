@@ -190,6 +190,11 @@ public:
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for class member 'ClassMember_2'
 // CHECK-FIXES: {{^}}    static int ClassMember2;{{$}}
 };
+class my_class;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'my_class'
+// CHECK-FIXES: {{^}}class CMyClass;{{$}}
+
+class my_forward_declared_class; // No warning should be triggered.
 
 const int my_class::classConstant = 4;
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for class constant 'classConstant'
