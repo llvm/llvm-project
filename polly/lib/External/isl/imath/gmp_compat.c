@@ -28,12 +28,19 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdio.h>
 
 #ifdef  NDEBUG
 #define CHECK(res) (res)
 #else
 #define CHECK(res) assert(((res) == MP_OK) && "expected MP_OK")
 #endif
+
+/* *(signed char *)&endian_test will thus either be:
+ *     0b00000001 =  1 on big-endian
+ *     0b11111111 = -1 on little-endian */
+static const uint16_t endian_test = 0x1FF;
+#define HOST_ENDIAN (*(signed char *)&endian_test)
 
 /*************************************************************************
  *
@@ -673,22 +680,19 @@ unsigned long GMPZAPI(fdiv_q_ui)(mp_int q, mp_int n, unsigned long d) {
 
 /* gmp: mpz_export */
 void* GMPZAPI(export)(void *rop, size_t *countp, int order, size_t size, int endian, size_t nails, mp_int op) {
-  int i;
+  int i, j;
   int num_used_bytes;
   size_t num_words, num_missing_bytes;
+  ssize_t word_offset;
   unsigned char* dst;
-  unsigned char* src;
+  mp_digit* src;
+  int src_bits;
 
   /* We do not have a complete implementation. Assert to ensure our
-   * restrictions are in place, We do not support big endian output, but do not
-   * check that native endian is little endian. */
+   * restrictions are in place. */
   assert(nails  == 0 && "Do not support non-full words");
-  assert((endian == 0 || endian == -1) && "Do not support big endian");
-
-  /* The gmp API requires that order must be -1 or 1.
-     Not sure how gmp behaves when order is not 1 or -1, so force all non-one
-     values to -1 for now. */
-  if (order != 1) order = -1;
+  assert(endian == 1 || endian == 0 || endian == -1);
+  assert(order == 1 || order == -1);
 
   /* Test for zero */
   if (mp_int_compare_zero(op) == 0) {
@@ -719,47 +723,32 @@ void* GMPZAPI(export)(void *rop, size_t *countp, int order, size_t size, int end
     rop = malloc(num_words * size);
   }
 
-  /* Initialize dst and src pointers */
-  dst = (unsigned char *)rop;
-  src = (unsigned char *)MP_DIGITS(op);
-
-  /* Most significant word first */
-  if (order == 1) {
-    size_t words_written = 0;
-    src += (num_words-1) * size;
-
-    /* Handle write of first word specially */
-    for (i = 0; i < size - num_missing_bytes; i++)
-      dst[i] = src[i];
-    for (; i < size; i++)
-      dst[i] = 0;
-    dst += size;
-    src -= size;
-    words_written++;
-
-    for (; words_written < num_words; words_written++) {
-      for (i = 0; i < size; i++)
-        dst[i] = src[i];
-      dst += size;
-      src -= size;
-    }
+  if (endian == 0) {
+    endian = HOST_ENDIAN;
   }
-  /* Least significant word first */
-  else {
-    size_t words_written = 0;
-    for (; words_written < num_words - 1; words_written++) {
-      for (i = 0; i < size; i++)
-        dst[i] = src[i];
-      dst += size;
-      src += size;
+
+  /* Initialize dst and src pointers */
+  dst = (unsigned char *) rop + (order >= 0 ? (num_words-1) * size : 0) + (endian >= 0 ? size-1 : 0);
+  src = MP_DIGITS(op);
+  src_bits = MP_DIGIT_BIT;
+
+  word_offset = (endian >= 0 ? size : -size) + (order < 0 ? size : -size);
+
+  for (i = 0; i < num_words; i++) {
+    for (j = 0; j < size && i * size + j < num_used_bytes; j++) {
+      if (src_bits == 0) {
+        ++src;
+        src_bits = MP_DIGIT_BIT;
+      }
+      *dst = (*src >> (MP_DIGIT_BIT - src_bits)) & 0xFF;
+      src_bits -= 8;
+      dst -= endian;
     }
-
-    /* Handle write of last word specially */
-    for (i = 0; i < size - num_missing_bytes; i++)
-      dst[i] = src[i];
-
-    for (; i < size; i++)
-      dst[i] = 0;
+    for (; j < size; j++) {
+      *dst = 0;
+      dst -= endian;
+    }
+    dst += word_offset;
   }
 
   if (countp)
@@ -773,17 +762,23 @@ void GMPZAPI(import)(mp_int rop, size_t count, int order, size_t size, int endia
   mp_int tmp = &tmpz;
   size_t total_size;
   size_t num_digits;
-  const char *src;
-  char *dst;
-  int i;
+  ssize_t word_offset;
+  const unsigned char *src;
+  mp_digit *dst;
+  int dst_bits;
+  int i, j;
   if (count == 0 || op == NULL)
     return;
 
   /* We do not have a complete implementation. Assert to ensure our
-   * restrictions are in place, We do not support big endian output, but do not
-   * check that native endian is little endian. */
+   * restrictions are in place. */
   assert(nails  == 0 && "Do not support non-full words");
-  assert((endian == 0 || endian == -1) && "Do not support big endian");
+  assert(endian == 1 || endian == 0 || endian == -1);
+  assert(order == 1 || order == -1);
+
+  if (endian == 0) {
+    endian = HOST_ENDIAN;
+  }
 
   /* Compute number of needed digits by ceil division */
   total_size = count * size;
@@ -795,30 +790,25 @@ void GMPZAPI(import)(mp_int rop, size_t count, int order, size_t size, int endia
     tmp->digits[i] = 0;
 
   /* Copy bytes */
-  src = (const char *) op;
-  dst = (char *)MP_DIGITS(tmp);
+  src = (const unsigned char *) op + (order >= 0 ? (count-1) * size : 0) + (endian >= 0 ? size-1 : 0);
+  dst = MP_DIGITS(tmp);
+  dst_bits = 0;
 
-  /* Most significant word is first */
-  if (order == 1) {
-    size_t word;
-    dst += (count - 1) * size;
-    for (word = 0; word < count; word++) {
-      for (i = 0; i < size; i++)
-        dst[i] = src[i];
-      dst -= size;
-      src += size;
+  word_offset = (endian >= 0 ? size : -size) + (order < 0 ? size : -size);
+
+  for (i = 0; i < count; i++) {
+    for (j = 0; j < size; j++) {
+      if (dst_bits == MP_DIGIT_BIT) {
+        ++dst;
+        dst_bits = 0;
+      }
+      *dst |= ((mp_digit)*src) << dst_bits;
+      dst_bits += 8;
+      src -= endian;
     }
+    src += word_offset;
   }
-  /* Least significant word is first */
-  else {
-    size_t word;
-    for (word = 0; word < count; word++) {
-      for (i = 0; i < size; i++)
-        dst[i] = src[i];
-      dst += size;
-      src += size;
-    }
-  }
+
   MP_USED(tmp) = num_digits;
 
   /* Remove leading zeros from number */

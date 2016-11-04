@@ -1263,6 +1263,9 @@ struct {
 	    "i2 <= 5 + i0 and i2 >= i0 }" },
 	{ "{ [x, y] : 3y <= 2x and y >= -2 + 2x and 2y >= 2 - x }",
 	    "{ [x, y] : 1 = 0 }" },
+	{ "{ [x, y, z] : 0 <= x, y, z <= 10; [x, y, 0] : x >= 0 and y > 0; "
+	    "[x, y, 0] : x >= 0 and y < 0 }",
+	    "{ [x, y, z] : x >= 0 and 0 <= z <= 10 }" },
 };
 
 static int test_convex_hull_algo(isl_ctx *ctx, int convex)
@@ -4854,12 +4857,22 @@ int test_fixed(isl_ctx *ctx)
 struct isl_vertices_test_data {
 	const char *set;
 	int n;
-	const char *vertex[2];
+	const char *vertex[6];
 } vertices_tests[] = {
 	{ "{ A[t, i] : t = 12 and i >= 4 and i <= 12 }",
 	  2, { "{ A[12, 4] }", "{ A[12, 12] }" } },
 	{ "{ A[t, i] : t = 14 and i = 1 }",
 	  1, { "{ A[14, 1] }" } },
+	{ "[n, m] -> { [a, b, c] : b <= a and a <= n and b > 0 and c >= b and "
+				"c <= m and m <= n and m > 0 }",
+	  6, {
+		"[n, m] -> { [n, m, m] : 0 < m <= n }",
+		"[n, m] -> { [n, 1, m] : 0 < m <= n }",
+		"[n, m] -> { [n, 1, 1] : 0 < m <= n }",
+		"[n, m] -> { [m, m, m] : 0 < m <= n }",
+		"[n, m] -> { [1, 1, m] : 0 < m <= n }",
+		"[n, m] -> { [1, 1, 1] : 0 < m <= n }"
+	    } },
 };
 
 /* Check that "vertex" corresponds to one of the vertices in data->vertex.
