@@ -62,6 +62,8 @@ void SwiftLanguage::Initialize() {
       "_TtCs29_NativeDictionaryStorageOwner");
   static ConstString g_NSDictionaryClass3(
       "_TtGCs29_NativeDictionaryStorageOwner");
+  static ConstString g_NSDictionaryClass4("_TtGCs26_SwiftDeferredNSDictionary");
+
   static ConstString g_NSSetClass1("_TtCSs22_NativeSetStorageOwner");
   static ConstString g_NSSetClass2("_TtCs22_NativeSetStorageOwner");
   static ConstString g_NSStringClass1("_NSContiguousString");
@@ -87,6 +89,11 @@ void SwiftLanguage::Initialize() {
     AdditionalFormatterMatching()
     .GetPrefixMatch(g_NSDictionaryClass3),
     lldb_private::formatters::swift::Dictionary_SummaryProvider});
+  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetPrefixMatch(g_NSDictionaryClass4),
+                  lldb_private::formatters::swift::Dictionary_SummaryProvider});
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
       .push_back({lldb_private::formatters::NSDictionary_Additionals::
                       AdditionalFormatterMatching()
@@ -105,6 +112,12 @@ void SwiftLanguage::Initialize() {
     .GetPrefixMatch(g_NSDictionaryClass3),
     lldb_private::formatters::swift::
     DictionarySyntheticFrontEndCreator});
+  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetPrefixMatch(g_NSDictionaryClass4),
+                  lldb_private::formatters::swift::
+                      DictionarySyntheticFrontEndCreator});
 
   lldb_private::formatters::NSSet_Additionals::GetAdditionalSummaries().emplace(
       g_NSSetClass1, lldb_private::formatters::swift::Set_SummaryProvider);
@@ -383,12 +396,16 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                 lldb_private::formatters::swift::Dictionary_SummaryProvider,
                 "Swift.Dictionary summary provider",
                 ConstString("^Swift.Dictionary<.+,.+>$"), summary_flags, true);
-  AddCXXSummary(
-      swift_category_sp,
-      lldb_private::formatters::NSDictionarySummaryProvider<false>,
-      "Swift.Dictionary synthetic children",
-      ConstString("^_TtCs29_NativeDictionaryStorageOwner[A-Fa-f0-9]+$"),
-      summary_flags, true);
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::NSDictionarySummaryProvider<false>,
+                "Swift.Dictionary synthetic children",
+                ConstString("^Swift._SwiftDeferredNSDictionary<.+>$"),
+                summary_flags, true);
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::NSDictionarySummaryProvider<false>,
+                "Swift.Dictionary synthetic children",
+                ConstString("^_TtGCs29_NativeDictionaryStorageOwner.*_$"),
+                summary_flags, true);
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::NSDictionarySummaryProvider<false>,
                 "Swift.Dictionary synthetic children",
@@ -451,6 +468,11 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "Swift.Dictionary synthetic children",
       ConstString("^_TtCs29_NativeDictionaryStorageOwner[A-Fa-f0-9]+$"),
       synth_flags, true);
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
+      "Swift.Dictionary synthetic children",
+      ConstString("^Swift._SwiftDeferredNSDictionary<.+>$"), synth_flags, true);
   AddCXXSynthetic(
       swift_category_sp,
       lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,

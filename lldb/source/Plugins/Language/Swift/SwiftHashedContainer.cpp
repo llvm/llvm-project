@@ -203,6 +203,10 @@ SwiftHashedContainerNativeBufferHandler::
 
   static ConstString g_key("key");
   static ConstString g_value("value");
+  static ConstString g__value("_value");
+
+  static ConstString g_capacity("capacity");
+  static ConstString g_count("count");
 
   if (!m_nativeStorage)
     return;
@@ -223,26 +227,33 @@ SwiftHashedContainerNativeBufferHandler::
   if (!m_element_type)
     return;
 
-  auto buffer_ptr = m_nativeStorage->GetChildAtNamePath({g_buffer})
-                        ->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  if (!buffer_ptr)
-    return;
-
   m_process = m_nativeStorage->GetProcessSP().get();
   if (!m_process)
     return;
 
   m_ptr_size = m_process->GetAddressByteSize();
 
-  Error error;
-  m_capacity =
-      m_process->ReadPointerFromMemory(buffer_ptr + 2 * m_ptr_size, error);
-  if (error.Fail())
-    return;
-  m_count =
-      m_process->ReadPointerFromMemory(buffer_ptr + 3 * m_ptr_size, error);
-  if (error.Fail())
-    return;
+  auto buffer_sp = m_nativeStorage->GetChildAtNamePath({g_buffer});
+  if (buffer_sp) {
+    auto buffer_ptr = buffer_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    if (buffer_ptr == 0 || buffer_ptr == LLDB_INVALID_ADDRESS)
+      return;
+
+    Error error;
+    m_capacity =
+        m_process->ReadPointerFromMemory(buffer_ptr + 2 * m_ptr_size, error);
+    if (error.Fail())
+      return;
+    m_count =
+        m_process->ReadPointerFromMemory(buffer_ptr + 3 * m_ptr_size, error);
+    if (error.Fail())
+      return;
+  } else {
+    m_capacity = m_nativeStorage->GetChildAtNamePath({g_capacity, g__value})
+                     ->GetValueAsUnsigned(0);
+    m_count = m_nativeStorage->GetChildAtNamePath({g_count, g__value})
+                  ->GetValueAsUnsigned(0);
+  }
 
   m_nativeStorage = nativeStorage_sp.get();
   m_bitmask_ptr =
@@ -334,9 +345,11 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
     SyntheticCreatorFunction Synthetic, ConstString mangled,
     ConstString demangled) {
   static ConstString g__variantStorage("_variantStorage");
+  static ConstString g__variantBuffer("_variantBuffer");
   static ConstString g_Native("native");
   static ConstString g_Cocoa("cocoa");
   static ConstString g_nativeStorage("nativeStorage");
+  static ConstString g_nativeBuffer("nativeBuffer");
   static ConstString g_buffer("buffer");
   static ConstString g_storage("storage");
   static ConstString g__storage("_storage");
@@ -367,7 +380,30 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
       valobj_sp->GetChildMemberWithName(g__variantStorage, true));
 
   if (!_variantStorageSP)
+    _variantStorageSP =
+        valobj_sp->GetChildMemberWithName(g__variantBuffer, true);
+
+  if (!_variantStorageSP) {
+    static ConstString g__SwiftDeferredNSDictionary(
+        "Swift._SwiftDeferredNSDictionary");
+    if (type_name_cs.GetStringRef().startswith(
+            g__SwiftDeferredNSDictionary.GetStringRef())) {
+      ValueObjectSP storage_sp(
+          valobj_sp->GetChildAtNamePath({g_nativeBuffer, g__storage}));
+      if (storage_sp) {
+        CompilerType child_type(valobj_sp->GetCompilerType());
+        lldb::TemplateArgumentKind kind;
+        CompilerType key_type(child_type.GetTemplateArgument(0, kind));
+        CompilerType value_type(child_type.GetTemplateArgument(1, kind));
+
+        auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(
+            Native(storage_sp, key_type, value_type));
+        if (handler && handler->IsValid())
+          return handler;
+      }
+    }
     return nullptr;
+  }
 
   ConstString storage_kind(_variantStorageSP->GetValueAsCString());
 
@@ -417,7 +453,12 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
     ValueObjectSP native_sp(_variantStorageSP->GetChildAtNamePath({g_Native}));
     ValueObjectSP nativeStorage_sp(
         _variantStorageSP->GetChildAtNamePath({g_Native, g_nativeStorage}));
-    if (!native_sp || !nativeStorage_sp)
+    if (!native_sp)
+      return nullptr;
+    if (!nativeStorage_sp)
+      nativeStorage_sp =
+          _variantStorageSP->GetChildAtNamePath({g_Native, g__storage});
+    if (!nativeStorage_sp)
       return nullptr;
 
     CompilerType child_type(valobj.GetCompilerType());
