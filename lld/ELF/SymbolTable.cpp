@@ -470,12 +470,12 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
 
 // Returns a list of defined symbols that match with a given regex.
 template <class ELFT>
-std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(const Regex &Re) {
+std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(const StringMatcher &M) {
   std::vector<SymbolBody *> Res;
   for (Symbol *Sym : SymVector) {
     SymbolBody *B = Sym->body();
     StringRef Name = B->getName();
-    if (!B->isUndefined() && const_cast<Regex &>(Re).match(Name))
+    if (!B->isUndefined() && M.match(Name))
       Res.push_back(B);
   }
   return Res;
@@ -611,10 +611,10 @@ findDemangled(std::map<std::string, std::vector<SymbolBody *>> &D,
 
 static std::vector<SymbolBody *>
 findAllDemangled(const std::map<std::string, std::vector<SymbolBody *>> &D,
-                 const Regex &Re) {
+                 StringMatcher &M) {
   std::vector<SymbolBody *> Res;
   for (auto &P : D) {
-    if (const_cast<Regex &>(Re).match(P.first))
+    if (M.match(P.first))
       for (SymbolBody *Body : P.second)
         if (!Body->isUndefined())
           Res.push_back(Body);
@@ -639,8 +639,8 @@ template <class ELFT> void SymbolTable<ELFT>::handleAnonymousVersion() {
   }
   if (Patterns.empty())
     return;
-  Regex Re = compileGlobPatterns(Patterns);
-  std::vector<SymbolBody *> Syms = findAll(Re);
+  StringMatcher M(Patterns);
+  std::vector<SymbolBody *> Syms = findAll(M);
   for (SymbolBody *B : Syms)
     B->symbol()->VersionId = VER_NDX_GLOBAL;
 }
@@ -696,9 +696,9 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
     for (SymbolVersion &Sym : V.Globals) {
       if (!Sym.HasWildcards)
         continue;
-      Regex Re = compileGlobPatterns({Sym.Name});
+      StringMatcher M({Sym.Name});
       std::vector<SymbolBody *> Syms =
-          Sym.IsExternCpp ? findAllDemangled(Demangled, Re) : findAll(Re);
+          Sym.IsExternCpp ? findAllDemangled(Demangled, M) : findAll(M);
 
       // Exact matching takes precendence over fuzzy matching,
       // so we set a version to a symbol only if no version has been assigned

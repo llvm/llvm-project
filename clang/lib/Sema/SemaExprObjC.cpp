@@ -2539,6 +2539,10 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
                                       SourceLocation RBracLoc,
                                       MultiExprArg ArgsIn,
                                       bool isImplicit) {
+  assert((Receiver || SuperLoc.isValid()) && "If the Receiver is null, the "
+                                             "SuperLoc must be valid so we can "
+                                             "use it instead.");
+
   // The location of the receiver.
   SourceLocation Loc = SuperLoc.isValid()? SuperLoc : Receiver->getLocStart();
   SourceRange RecRange =

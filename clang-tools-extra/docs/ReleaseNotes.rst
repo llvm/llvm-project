@@ -134,6 +134,10 @@ Improvements to clang-tidy
   Flags member initializations that are unnecessary because the same default
   constructor would be called if they were not present.
 
+- The `readability-redundant-string-cstr
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-string-cstr.html>`_ check
+  now warns about redundant calls to data() too.
+
 Fixed bugs:
 
 - `modernize-make-unique

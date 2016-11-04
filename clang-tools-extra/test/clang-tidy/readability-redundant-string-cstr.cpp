@@ -16,6 +16,7 @@ struct basic_string {
   basic_string(const C *p, const A &a = A());
 
   const C *c_str() const;
+  const C *data() const;
 
   _Type& append(const C *s);
   _Type& append(const C *s, size n);
@@ -66,7 +67,10 @@ struct StringRef {
 
 void f1(const std::string &s) {
   f1(s.c_str());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to `c_str()` [readability-redundant-string-cstr]
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}f1(s);{{$}}
+  f1(s.data());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'data' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}f1(s);{{$}}
 }
 void f2(const llvm::StringRef r) {
@@ -86,7 +90,7 @@ void f3(const llvm::StringRef &r) {
 void f4(const std::string &s) {
   const std::string* ptr = &s;
   f1(ptr->c_str());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to `c_str()` [readability-redundant-string-cstr]
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}f1(*ptr);{{$}}
 }
 void f5(const std::string &s) {
@@ -168,7 +172,7 @@ void f6(const std::string &s) {
 
 void g1(const std::wstring &s) {
   g1(s.c_str());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to `c_str()` [readability-redundant-string-cstr]
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}g1(s);{{$}}
 }
 
@@ -176,7 +180,7 @@ void g1(const std::wstring &s) {
 
 void h1(const std::u16string &s) {
   h1(s.c_str());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to `c_str()` [readability-redundant-string-cstr]
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}h1(s);{{$}}
 }
 
@@ -184,7 +188,7 @@ void h1(const std::u16string &s) {
 
 void k1(const std::u32string &s) {
   k1(s.c_str());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to `c_str()` [readability-redundant-string-cstr]
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}k1(s);{{$}}
 }
 

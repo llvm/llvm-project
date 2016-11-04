@@ -138,11 +138,11 @@ public:
   /// tool chain specific translations applied.
   /// \param LinkingOutput If this output will eventually feed the
   /// linker, then this is the final output name of the linked image.
-  virtual void ConstructJob(Compilation &C, const JobAction &JA,
-                            const InputInfoList &Outputs,
-                            const InputInfoList &Inputs,
-                            const llvm::opt::ArgList &TCArgs,
-                            const char *LinkingOutput) const;
+  virtual void ConstructJobMultipleOutputs(Compilation &C, const JobAction &JA,
+                                           const InputInfoList &Outputs,
+                                           const InputInfoList &Inputs,
+                                           const llvm::opt::ArgList &TCArgs,
+                                           const char *LinkingOutput) const;
 };
 
 } // end namespace driver

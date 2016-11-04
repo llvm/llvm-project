@@ -219,13 +219,13 @@ bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
   for (size_t I = 0, E = A->RelocSections.size(); I != E; ++I) {
     const Elf_Shdr *RA = A->RelocSections[I];
     const Elf_Shdr *RB = B->RelocSections[I];
-    ELFFile<ELFT> &FileA = A->File->getObj();
-    ELFFile<ELFT> &FileB = B->File->getObj();
+    ELFFile<ELFT> FileA = A->File->getObj();
+    ELFFile<ELFT> FileB = B->File->getObj();
     if (RA->sh_type == SHT_RELA) {
-      if (!relocationEq(FileA.relas(RA), FileB.relas(RB)))
+      if (!relocationEq(check(FileA.relas(RA)), check(FileB.relas(RB))))
         return false;
     } else {
-      if (!relocationEq(FileA.rels(RA), FileB.rels(RB)))
+      if (!relocationEq(check(FileA.rels(RA)), check(FileB.rels(RB))))
         return false;
     }
   }
@@ -272,13 +272,13 @@ bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
   for (size_t I = 0, E = A->RelocSections.size(); I != E; ++I) {
     const Elf_Shdr *RA = A->RelocSections[I];
     const Elf_Shdr *RB = B->RelocSections[I];
-    ELFFile<ELFT> &FileA = A->File->getObj();
-    ELFFile<ELFT> &FileB = B->File->getObj();
+    ELFFile<ELFT> FileA = A->File->getObj();
+    ELFFile<ELFT> FileB = B->File->getObj();
     if (RA->sh_type == SHT_RELA) {
-      if (!variableEq(A, B, FileA.relas(RA), FileB.relas(RB)))
+      if (!variableEq(A, B, check(FileA.relas(RA)), check(FileB.relas(RB))))
         return false;
     } else {
-      if (!variableEq(A, B, FileA.rels(RA), FileB.rels(RB)))
+      if (!variableEq(A, B, check(FileA.rels(RA)), check(FileB.rels(RB))))
         return false;
     }
   }

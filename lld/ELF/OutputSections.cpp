@@ -1064,13 +1064,8 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
   ArrayRef<uint8_t> Filler = Script<ELFT>::X->getFiller(this->Name);
   if (!Filler.empty())
     fill(Buf, this->getSize(), Filler);
-  if (Config->Threads) {
-    parallel_for_each(Sections.begin(), Sections.end(),
-                      [=](InputSection<ELFT> *C) { C->writeTo(Buf); });
-  } else {
-    for (InputSection<ELFT> *C : Sections)
-      C->writeTo(Buf);
-  }
+  parallel_for_each(Sections.begin(), Sections.end(),
+                    [=](InputSection<ELFT> *C) { C->writeTo(Buf); });
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
   Script<ELFT>::X->writeDataBytes(this->Name, Buf);
@@ -1177,11 +1172,11 @@ void EhOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
     return;
 
   if (const Elf_Shdr *RelSec = Sec->RelocSection) {
-    ELFFile<ELFT> &Obj = Sec->getFile()->getObj();
+    ELFFile<ELFT> Obj = Sec->getFile()->getObj();
     if (RelSec->sh_type == SHT_RELA)
-      addSectionAux(Sec, Obj.relas(RelSec));
+      addSectionAux(Sec, check(Obj.relas(RelSec)));
     else
-      addSectionAux(Sec, Obj.rels(RelSec));
+      addSectionAux(Sec, check(Obj.rels(RelSec)));
     return;
   }
   addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
