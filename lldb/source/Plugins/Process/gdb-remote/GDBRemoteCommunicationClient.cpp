@@ -2148,8 +2148,9 @@ std::chrono::duration<float> calculate_standard_deviation(
 
 void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
                                                    uint32_t max_send,
-                                                   uint32_t max_recv, bool json,
-                                                   Stream &strm) {
+                                                   uint32_t max_recv,
+                                                   uint64_t recv_amount,
+                                                   bool json, Stream &strm) {
   using namespace std::chrono;
 
   uint32_t i;
@@ -2215,13 +2216,11 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
       }
     }
 
-    const uint64_t k_recv_amount = 4 * 1024 * 1024; // Receive amount in bytes
-
-    const float k_recv_amount_mb = (float)k_recv_amount / (1024.0f * 1024.0f);
+    const float k_recv_amount_mb = (float)recv_amount / (1024.0f * 1024.0f);
     if (json)
       strm.Printf("\n    ]\n  },\n  \"download_speed\" : {\n    \"byte_size\" "
                   ": %" PRIu64 ",\n    \"results\" : [",
-                  k_recv_amount);
+                  recv_amount);
     else
       strm.Printf("Testing receiving %2.1fMB of data using varying receive "
                   "packet sizes:\n",
@@ -2238,7 +2237,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
         const auto start_time = steady_clock::now();
         uint32_t bytes_read = 0;
         uint32_t packet_count = 0;
-        while (bytes_read < k_recv_amount) {
+        while (bytes_read < recv_amount) {
           StringExtractorGDBRemote response;
           SendPacketAndWaitForResponse(packet.GetString(), response, false);
           bytes_read += recv_size;
@@ -2246,7 +2245,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
         }
         const auto end_time = steady_clock::now();
         const auto total_time = end_time - start_time;
-        float mb_second = ((float)k_recv_amount) /
+        float mb_second = ((float)recv_amount) /
                           duration<float>(total_time).count() /
                           (1024.0 * 1024.0);
         float packets_per_second =

@@ -1531,6 +1531,7 @@ static struct isl_basic_set *uset_convex_hull_unbounded(struct isl_set *set)
 			break;
 		}
 		if (t->n_eq < isl_basic_set_total_dim(t)) {
+			convex_hull = isl_basic_set_underlying_set(convex_hull);
 			set = isl_set_add_basic_set(set, convex_hull);
 			return modulo_lineality(set, t);
 		}

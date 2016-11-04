@@ -270,21 +270,23 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
     return;
 
   std::thread server_thread([&server] {
-    StringExtractorGDBRemote request;
-    PacketResult result = server.GetPacket(request);
-    if (result == PacketResult::ErrorDisconnected)
-      return;
-    ASSERT_EQ(PacketResult::Success, result);
-    StringRef ref = request.GetStringRef();
-    ASSERT_TRUE(ref.consume_front("qSpeedTest:response_size:"));
-    int size;
-    ASSERT_FALSE(ref.consumeInteger(10, size)) << "ref: " << ref;
-    std::string response(size, 'X');
-    ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
+    for (;;) {
+      StringExtractorGDBRemote request;
+      PacketResult result = server.GetPacket(request);
+      if (result == PacketResult::ErrorDisconnected)
+        return;
+      ASSERT_EQ(PacketResult::Success, result);
+      StringRef ref = request.GetStringRef();
+      ASSERT_TRUE(ref.consume_front("qSpeedTest:response_size:"));
+      int size;
+      ASSERT_FALSE(ref.consumeInteger(10, size)) << "ref: " << ref;
+      std::string response(size, 'X');
+      ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
+    }
   });
 
   StreamString ss;
-  client.TestPacketSpeed(10, 32, 32, true, ss);
+  client.TestPacketSpeed(10, 32, 32, 4096, true, ss);
   client.Disconnect();
   server_thread.join();
 
