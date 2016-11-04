@@ -222,6 +222,38 @@ let isCommutable = 1 in {
 
 } // End SubtargetPredicate = isVI
 
+def : Pat <
+  (i16 (select i1:$src0, i16:$src1, i16:$src2)),
+  (V_CNDMASK_B32_e64 $src2, $src1, $src0)
+>;
+
+let Predicates = [isVI] in {
+
+multiclass Tenary_i16_Pats <SDPatternOperator op1, SDPatternOperator op2,
+                            Instruction inst, SDPatternOperator op3> {
+def : Pat<
+  (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
+  (inst i16:$src0, i16:$src1, i16:$src2)
+>;
+
+def : Pat<
+  (i32 (op3 (op2 (op1 i16:$src0, i16:$src1), i16:$src2))),
+  (inst i16:$src0, i16:$src1, i16:$src2)
+>;
+
+def : Pat<
+  (i64 (op3 (op2 (op1 i16:$src0, i16:$src1), i16:$src2))),
+   (REG_SEQUENCE VReg_64,
+     (inst i16:$src0, i16:$src1, i16:$src2), sub0,
+     (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+}
+
+defm: Tenary_i16_Pats<mul, add, V_MAD_U16, zext>;
+defm: Tenary_i16_Pats<mul, add, V_MAD_I16, sext>;
+
+} // End Predicates = [isVI]
+
 
 //===----------------------------------------------------------------------===//
 // Target

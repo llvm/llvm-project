@@ -48,9 +48,9 @@ Error InfoStreamBuilder::finalizeMsfLayout() {
 }
 
 Expected<std::unique_ptr<InfoStream>>
-InfoStreamBuilder::build(PDBFile &File, const msf::WritableStream &Buffer) {
-  auto StreamData = MappedBlockStream::createIndexedStream(File.getMsfLayout(),
-                                                           Buffer, StreamPDB);
+InfoStreamBuilder::build(PDBFile &File) {
+  auto StreamData = MappedBlockStream::createIndexedStream(
+      File.getMsfLayout(), File.getMsfBuffer(), StreamPDB);
   auto Info = llvm::make_unique<InfoStream>(std::move(StreamData));
   Info->Version = Ver;
   Info->Signature = Sig;

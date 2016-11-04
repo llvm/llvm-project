@@ -1627,7 +1627,7 @@ void ModuleBitcodeWriter::writeDILexicalBlockFile(
 void ModuleBitcodeWriter::writeDINamespace(const DINamespace *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  Record.push_back(N->isDistinct() | N->getExportSymbols() << 1);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));

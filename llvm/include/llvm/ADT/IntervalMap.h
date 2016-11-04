@@ -150,6 +150,12 @@ struct IntervalMapInfo {
     return a+1 == b;
   }
 
+  /// nonEmpty - Return true if [a;b] is non-empty.
+  /// This is a <= b for a closed interval, a < b for [a;b) half-open intervals.
+  static inline bool nonEmpty(const T &a, const T &b) {
+    return a <= b;
+  }
+
 };
 
 template <typename T>
@@ -168,6 +174,11 @@ struct IntervalMapHalfOpenInfo {
   /// adjacent - Return true when the intervals [x;a) and [b;y) can coalesce.
   static inline bool adjacent(const T &a, const T &b) {
     return a == b;
+  }
+
+  /// nonEmpty - Return true if [a;b) is non-empty.
+  static inline bool nonEmpty(const T &a, const T &b) {
+    return a < b;
   }
 
 };
@@ -1669,7 +1680,7 @@ iterator::setNodeStop(unsigned Level, KeyT Stop) {
 template <typename KeyT, typename ValT, unsigned N, typename Traits>
 void IntervalMap<KeyT, ValT, N, Traits>::
 iterator::setStart(KeyT a) {
-  assert(Traits::stopLess(a, this->stop()) && "Cannot move start beyond stop");
+  assert(Traits::nonEmpty(a, this->stop()) && "Cannot move start beyond stop");
   KeyT &CurStart = this->unsafeStart();
   if (!Traits::startLess(a, CurStart) || !canCoalesceLeft(a, this->value())) {
     CurStart = a;
@@ -1685,7 +1696,7 @@ iterator::setStart(KeyT a) {
 template <typename KeyT, typename ValT, unsigned N, typename Traits>
 void IntervalMap<KeyT, ValT, N, Traits>::
 iterator::setStop(KeyT b) {
-  assert(Traits::stopLess(this->start(), b) && "Cannot move stop beyond start");
+  assert(Traits::nonEmpty(this->start(), b) && "Cannot move stop beyond start");
   if (Traits::startLess(b, this->stop()) ||
       !canCoalesceRight(b, this->value())) {
     setStopUnchecked(b);

@@ -1742,6 +1742,25 @@ namespace llvm {
       sys::swapByteOrder(x.cpsr);
     }
 
+    struct arm_thread_state64_t {
+      uint64_t x[29];
+      uint64_t fp;
+      uint64_t lr;
+      uint64_t sp;
+      uint64_t pc;
+      uint32_t cpsr;
+    };
+
+    inline void swapStruct(arm_thread_state64_t &x) {
+      for (int i = 0; i < 29; i++)
+        sys::swapByteOrder(x.x[i]);
+      sys::swapByteOrder(x.fp);
+      sys::swapByteOrder(x.lr);
+      sys::swapByteOrder(x.sp);
+      sys::swapByteOrder(x.pc);
+      sys::swapByteOrder(x.cpsr);
+    }
+
     struct arm_state_hdr_t {
       uint32_t flavor;
       uint32_t count;
@@ -1777,6 +1796,9 @@ namespace llvm {
 
     const uint32_t ARM_THREAD_STATE_COUNT =
       sizeof(arm_thread_state32_t) / sizeof(uint32_t);
+
+    const uint32_t ARM_THREAD_STATE64_COUNT =
+      sizeof(arm_thread_state64_t) / sizeof(uint32_t);
 
     struct ppc_thread_state32_t {
       uint32_t srr0;

@@ -4232,6 +4232,10 @@ bool CodeGenPrepare::extLdPromotion(TypePromotionTransaction &TPT,
 /// promotions apply.
 ///
 bool CodeGenPrepare::moveExtToFormExtLoad(Instruction *&I) {
+  // ExtLoad formation infrastructure requires TLI to be effective.
+  if (!TLI)
+    return false;
+
   // Try to promote a chain of computation if it allows to form
   // an extended load.
   TypePromotionTransaction TPT;
@@ -4261,7 +4265,7 @@ bool CodeGenPrepare::moveExtToFormExtLoad(Instruction *&I) {
 
   // If the load has other users and the truncate is not free, this probably
   // isn't worthwhile.
-  if (!LI->hasOneUse() && TLI &&
+  if (!LI->hasOneUse() &&
       (TLI->isTypeLegal(LoadVT) || !TLI->isTypeLegal(VT)) &&
       !TLI->isTruncateFree(I->getType(), LI->getType())) {
     I = OldExt;
@@ -4277,7 +4281,7 @@ bool CodeGenPrepare::moveExtToFormExtLoad(Instruction *&I) {
     assert(isa<SExtInst>(I) && "Unexpected ext type!");
     LType = ISD::SEXTLOAD;
   }
-  if (TLI && !TLI->isLoadExtLegal(LType, VT, LoadVT)) {
+  if (!TLI->isLoadExtLegal(LType, VT, LoadVT)) {
     I = OldExt;
     TPT.rollback(LastKnownGood);
     return false;

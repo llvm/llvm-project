@@ -99,16 +99,15 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
   return Error::success();
 }
 
-Expected<std::unique_ptr<TpiStream>>
-TpiStreamBuilder::build(PDBFile &File, const msf::WritableStream &Buffer) {
+Expected<std::unique_ptr<TpiStream>> TpiStreamBuilder::build(PDBFile &File) {
   if (!VerHeader.hasValue())
     return make_error<RawError>(raw_error_code::unspecified,
                                 "Missing TPI Stream Version");
   if (auto EC = finalize())
     return std::move(EC);
 
-  auto StreamData =
-      MappedBlockStream::createIndexedStream(File.getMsfLayout(), Buffer, Idx);
+  auto StreamData = MappedBlockStream::createIndexedStream(
+      File.getMsfLayout(), File.getMsfBuffer(), Idx);
   auto Tpi = llvm::make_unique<TpiStream>(File, std::move(StreamData));
   Tpi->Header = Header;
   Tpi->TypeRecords = VarStreamArray<codeview::CVType>(TypeRecordStream);

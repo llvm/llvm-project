@@ -301,6 +301,20 @@ defm V_COS_F16 : VOP1Inst <"v_cos_f16", VOP_F16_F16>;
 
 }
 
+let Predicates = [isVI] in {
+
+def : Pat<
+    (f32 (f16_to_fp i16:$src)),
+    (V_CVT_F32_F16_e32 $src)
+>;
+
+def : Pat<
+    (i16 (fp_to_f16 f32:$src)),
+    (V_CVT_F16_F32_e32 $src)
+>;
+
+}
+
 //===----------------------------------------------------------------------===//
 // Target
 //===----------------------------------------------------------------------===//
@@ -561,10 +575,39 @@ def V_MOVRELD_B32_V16 : V_MOVRELD_B32_pseudo<VReg_512>;
 let Predicates = [isVI] in {
 
 def : Pat <
-  (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$row_mask, imm:$bank_mask,
-                      imm:$bound_ctrl),
+  (i32 (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$row_mask, imm:$bank_mask,
+                      imm:$bound_ctrl)),
   (V_MOV_B32_dpp $src, (as_i32imm $dpp_ctrl), (as_i32imm $row_mask),
                        (as_i32imm $bank_mask), (as_i1imm $bound_ctrl))
+>;
+
+
+def : Pat<
+  (i32 (anyext i16:$src)),
+  (COPY $src)
+>;
+
+def : Pat<
+   (i64 (anyext i16:$src)),
+   (REG_SEQUENCE VReg_64,
+     (i32 (COPY $src)), sub0,
+     (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+def : Pat<
+  (i16 (trunc i32:$src)),
+  (COPY $src)
+>;
+
+def : Pat<
+  (i1 (trunc i16:$src)),
+  (COPY $src)
+>;
+
+
+def : Pat <
+  (i16 (trunc i64:$src)),
+  (EXTRACT_SUBREG $src, sub0)
 >;
 
 } // End Predicates = [isVI]

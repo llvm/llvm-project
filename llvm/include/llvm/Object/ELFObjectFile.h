@@ -317,7 +317,10 @@ public:
   const Elf_Rela *getRela(DataRefImpl Rela) const;
 
   const Elf_Sym *getSymbol(DataRefImpl Sym) const {
-    return EF.template getEntry<Elf_Sym>(Sym.d.a, Sym.d.b);
+    auto Ret = EF.template getEntry<Elf_Sym>(Sym.d.a, Sym.d.b);
+    if (std::error_code EC = Ret.getError())
+      report_fatal_error(EC.message());
+    return *Ret;
   }
 
   const Elf_Shdr *getSection(DataRefImpl Sec) const {
@@ -507,8 +510,8 @@ uint32_t ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     Result |= SymbolRef::SF_Absolute;
 
   if (ESym->getType() == ELF::STT_FILE || ESym->getType() == ELF::STT_SECTION ||
-      ESym == EF.symbols(DotSymtabSec).begin() ||
-      ESym == EF.symbols(DotDynSymSec).begin())
+      ESym == (*EF.symbols(DotSymtabSec)).begin() ||
+      ESym == (*EF.symbols(DotDynSymSec)).begin())
     Result |= SymbolRef::SF_FormatSpecific;
 
   if (EF.getHeader()->e_machine == ELF::EM_ARM) {
@@ -749,14 +752,20 @@ template <class ELFT>
 const typename ELFObjectFile<ELFT>::Elf_Rel *
 ELFObjectFile<ELFT>::getRel(DataRefImpl Rel) const {
   assert(getRelSection(Rel)->sh_type == ELF::SHT_REL);
-  return EF.template getEntry<Elf_Rel>(Rel.d.a, Rel.d.b);
+  auto Ret = EF.template getEntry<Elf_Rel>(Rel.d.a, Rel.d.b);
+  if (std::error_code EC = Ret.getError())
+    report_fatal_error(EC.message());
+  return *Ret;
 }
 
 template <class ELFT>
 const typename ELFObjectFile<ELFT>::Elf_Rela *
 ELFObjectFile<ELFT>::getRela(DataRefImpl Rela) const {
   assert(getRelSection(Rela)->sh_type == ELF::SHT_RELA);
-  return EF.template getEntry<Elf_Rela>(Rela.d.a, Rela.d.b);
+  auto Ret = EF.template getEntry<Elf_Rela>(Rela.d.a, Rela.d.b);
+  if (std::error_code EC = Ret.getError())
+    report_fatal_error(EC.message());
+  return *Ret;
 }
 
 template <class ELFT>
@@ -764,9 +773,7 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, std::error_code &EC)
     : ELFObjectFileBase(
           getELFType(ELFT::TargetEndianness == support::little, ELFT::Is64Bits),
           Object),
-      EF(Data.getBuffer(), EC) {
-  if (EC)
-    return;
+      EF(Data.getBuffer()) {
   auto SectionsOrErr = EF.sections();
   if ((EC = SectionsOrErr.getError()))
     return;

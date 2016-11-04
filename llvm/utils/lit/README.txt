@@ -10,7 +10,9 @@ to be a lightweight testing tool with as simple a user interface as possible.
  Contributing to lit
 =====================
 
-Please read the TODO file in this directory for ideas on what to work on.
+Please browse the Test Suite > lit category in LLVM's Bugzilla for ideas on
+what to work on.
+
 Before submitting patches, run the test suite to ensure nothing has regressed:
 
     # From within your LLVM source directory.

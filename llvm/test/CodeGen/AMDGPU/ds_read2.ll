@@ -493,6 +493,46 @@ define void @misaligned_read2_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %in)
   ret void
 }
 
+; SI-LABEL: ds_read_diff_base_interleaving
+; SI-NOT: ds_read_b32
+define amdgpu_kernel void @ds_read_diff_base_interleaving(
+  float addrspace(1)* nocapture %arg,
+  [4 x [4 x float]] addrspace(3)* %arg1,
+  [4 x [4 x float]] addrspace(3)* %arg2,
+  [4 x [4 x float]] addrspace(3)* %arg3,
+  [4 x [4 x float]] addrspace(3)* %arg4) #1 {
+bb:
+  %tmp = getelementptr float, float addrspace(1)* %arg, i64 10
+  %tmp5 = tail call i32 @llvm.amdgcn.workitem.id.x() #2
+  %tmp6 = tail call i32 @llvm.amdgcn.workitem.id.y() #2
+  %tmp7 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg1, i32 0, i32 %tmp6, i32 0
+  %tmp8 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg2, i32 0, i32 0, i32 %tmp5
+  %tmp9 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg3, i32 0, i32 %tmp6, i32 0
+  %tmp10 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg4, i32 0, i32 0, i32 %tmp5
+  %tmp11 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg1, i32 0, i32 %tmp6, i32 1
+  %tmp12 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg2, i32 0, i32 1, i32 %tmp5
+  %tmp13 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg3, i32 0, i32 %tmp6, i32 1
+  %tmp14 = getelementptr [4 x [4 x float]], [4 x [4 x float]] addrspace(3)* %arg4, i32 0, i32 1, i32 %tmp5
+  %tmp15 = load float, float addrspace(3)* %tmp7
+  %tmp16 = load float, float addrspace(3)* %tmp8
+  %tmp17 = fmul float %tmp15, %tmp16
+  %tmp18 = fadd float 2.000000e+00, %tmp17
+  %tmp19 = load float, float addrspace(3)* %tmp9
+  %tmp20 = load float, float addrspace(3)* %tmp10
+  %tmp21 = fmul float %tmp19, %tmp20
+  %tmp22 = fsub float %tmp18, %tmp21
+  %tmp23 = load float, float addrspace(3)* %tmp11
+  %tmp24 = load float, float addrspace(3)* %tmp12
+  %tmp25 = fmul float %tmp23, %tmp24
+  %tmp26 = fsub float %tmp22, %tmp25
+  %tmp27 = load float, float addrspace(3)* %tmp13
+  %tmp28 = load float, float addrspace(3)* %tmp14
+  %tmp29 = fmul float %tmp27, %tmp28
+  %tmp30 = fsub float %tmp26, %tmp29
+  store float %tmp30, float addrspace(1)* %tmp
+  ret void
+}
+
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 

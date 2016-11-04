@@ -450,10 +450,11 @@ namespace {
     /// This is a helper function for MergeConsecutiveStores. When the source
     /// elements of the consecutive stores are all constants or all extracted
     /// vector elements, try to merge them into one larger store.
-    /// \return True if a merged store was created.
-    bool MergeStoresOfConstantsOrVecElts(SmallVectorImpl<MemOpLink> &StoreNodes,
-                                         EVT MemVT, unsigned NumStores,
-                                         bool IsConstantSrc, bool UseVector);
+    /// \return number of stores that were merged into a merged store (always
+    /// a prefix of \p StoreNode).
+    bool MergeStoresOfConstantsOrVecElts(
+        SmallVectorImpl<MemOpLink> &StoreNodes, EVT MemVT, unsigned NumStores,
+        bool IsConstantSrc, bool UseVector);
 
     /// This is a helper function for MergeConsecutiveStores.
     /// Stores that may be merged are placed in StoreNodes.
@@ -470,8 +471,10 @@ namespace {
 
     /// Merge consecutive store operations into a wide store.
     /// This optimization uses wide integers or vectors when possible.
-    /// \return True if some memory operations were changed.
-    bool MergeConsecutiveStores(StoreSDNode *N);
+    /// \return number of stores that were merged into a merged store (the
+    /// affected nodes are stored as a prefix in \p StoreNodes).
+    bool MergeConsecutiveStores(StoreSDNode *N,
+                                SmallVectorImpl<MemOpLink> &StoreNodes);
 
     /// \brief Try to transform a truncation where C is a constant:
     ///     (trunc (and X, C)) -> (and (trunc X), (trunc C))
@@ -11513,6 +11516,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
     }
   }
 
+  StoreNodes.erase(StoreNodes.begin() + NumStores, StoreNodes.end());
   return true;
 }
 
@@ -11655,7 +11659,8 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
   return true;
 }
 
-bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
+bool DAGCombiner::MergeConsecutiveStores(
+    StoreSDNode* St, SmallVectorImpl<MemOpLink> &StoreNodes) {
   if (OptLevel == CodeGenOpt::None)
     return false;
 
@@ -11698,9 +11703,6 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
   // We need to make sure that these nodes do not interfere with
   // any of the store nodes.
   SmallVector<LSBaseSDNode*, 8> AliasLoadNodes;
-
-  // Save the StoreSDNodes that we find in the chain.
-  SmallVector<MemOpLink, 8> StoreNodes;
 
   getStoreMergeAndAliasCandidates(St, StoreNodes, AliasLoadNodes);
 
@@ -12060,6 +12062,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
     }
   }
 
+  StoreNodes.erase(StoreNodes.begin() + NumElem, StoreNodes.end());
   return true;
 }
 
@@ -12303,19 +12306,20 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   // Only perform this optimization before the types are legal, because we
   // don't want to perform this optimization on every DAGCombine invocation.
   if (!LegalTypes) {
-    bool EverChanged = false;
-
-    do {
+    for (;;) {
       // There can be multiple store sequences on the same chain.
       // Keep trying to merge store sequences until we are unable to do so
       // or until we merge the last store on the chain.
-      bool Changed = MergeConsecutiveStores(ST);
-      EverChanged |= Changed;
+      SmallVector<MemOpLink, 8> StoreNodes;
+      bool Changed = MergeConsecutiveStores(ST, StoreNodes);
       if (!Changed) break;
-    } while (ST->getOpcode() != ISD::DELETED_NODE);
 
-    if (EverChanged)
-      return SDValue(N, 0);
+      if (any_of(StoreNodes,
+                 [ST](const MemOpLink &Link) { return Link.MemNode == ST; })) {
+        // ST has been merged and no longer exists.
+        return SDValue(N, 0);
+      }
+    }
   }
 
   // Turn 'store float 1.0, Ptr' -> 'store int 0x12345678, Ptr'

@@ -100,6 +100,7 @@ define void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrsp
 ; GCN: buffer_load_ubyte [[VAL:v[0-9]+]],
 ; GCN-DAG: v_ffbh_u32_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_byte [[RESULT]],
+; GCN: s_endpgm
 define void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
   %val = load i8, i8 addrspace(1)* %valptr
   %ctlz = call i8 @llvm.ctlz.i8(i8 %val, i1 false) nounwind readnone

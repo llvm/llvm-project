@@ -54,6 +54,46 @@ define void @test_sub_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)
   ret void
 }
 
+; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+define void @test_sub_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
+    %b_ptr = getelementptr i16, i16 addrspace(1)* %in, i16 1
+    %a = load i16, i16 addrspace(1)* %in 
+    %b = load i16, i16 addrspace(1)* %b_ptr
+    %result = sub i16 %a, %b
+    store i16 %result, i16 addrspace(1)* %out
+    ret void
+}
+
+; FUNC-LABEL: {{^}}test_sub_v2i16:
+
+; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+
+define void @test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
+    %b_ptr = getelementptr <2 x i16>, <2 x i16> addrspace(1)* %in, i16 1
+    %a = load <2 x i16>, <2 x i16> addrspace(1) * %in 
+    %b = load <2 x i16>, <2 x i16> addrspace(1) * %b_ptr
+    %result = sub <2 x i16> %a, %b
+    store <2 x i16> %result, <2 x i16> addrspace(1)* %out
+    ret void
+}
+
+; FUNC-LABEL: {{^}}test_sub_v4i16:
+
+; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+
+define void @test_sub_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
+    %b_ptr = getelementptr <4 x i16>, <4 x i16> addrspace(1)* %in, i16 1
+    %a = load <4 x i16>, <4 x i16> addrspace(1) * %in 
+    %b = load <4 x i16>, <4 x i16> addrspace(1) * %b_ptr
+    %result = sub <4 x i16> %a, %b
+    store <4 x i16> %result, <4 x i16> addrspace(1)* %out
+    ret void
+}
+
 ; FUNC-LABEL: {{^}}s_sub_i64:
 ; SI: s_sub_u32
 ; SI: s_subb_u32
