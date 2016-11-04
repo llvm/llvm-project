@@ -22,7 +22,7 @@ template <class ELFT> class ObjectFile;
 template <class ELFT> class SymbolTable;
 template <class ELFT> void writeResult();
 template <class ELFT> void markLive();
-template <class ELFT> bool isRelroSection(OutputSectionBase<ELFT> *Sec);
+template <class ELFT> bool isRelroSection(const OutputSectionBase<ELFT> *Sec);
 
 // This describes a program header entry.
 // Each contains type, access flags and range of output sections that will be
