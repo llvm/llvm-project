@@ -15,6 +15,8 @@ using namespace llvm;
 namespace {
 
 typedef IntervalMap<unsigned, unsigned, 4> UUMap;
+typedef IntervalMap<unsigned, unsigned, 4,
+                    IntervalMapHalfOpenInfo<unsigned>> UUHalfOpenMap;
 
 // Empty map tests
 TEST(IntervalMapTest, EmptyMap) {
@@ -125,9 +127,23 @@ TEST(IntervalMapTest, SingleEntryMap) {
   EXPECT_EQ(200u, I.stop());
   EXPECT_EQ(2u, I.value());
 
+  // Shrink the interval to have a length of 1
+  I.setStop(150);
+  ASSERT_TRUE(I.valid());
+  EXPECT_EQ(150u, I.start());
+  EXPECT_EQ(150u, I.stop());
+  EXPECT_EQ(2u, I.value());
+
   I.setStop(160);
   ASSERT_TRUE(I.valid());
   EXPECT_EQ(150u, I.start());
+  EXPECT_EQ(160u, I.stop());
+  EXPECT_EQ(2u, I.value());
+
+  // Shrink the interval to have a length of 1
+  I.setStart(160);
+  ASSERT_TRUE(I.valid());
+  EXPECT_EQ(160u, I.start());
   EXPECT_EQ(160u, I.stop());
   EXPECT_EQ(2u, I.value());
 
@@ -135,6 +151,37 @@ TEST(IntervalMapTest, SingleEntryMap) {
   I.erase();
   EXPECT_TRUE(map.empty());
   EXPECT_EQ(0, std::distance(map.begin(), map.end()));
+}
+
+// Single entry half-open map tests
+TEST(IntervalMapTest, SingleEntryHalfOpenMap) {
+  UUHalfOpenMap::Allocator allocator;
+  UUHalfOpenMap map(allocator);
+  map.insert(100, 150, 1);
+  EXPECT_FALSE(map.empty());
+
+  UUHalfOpenMap::iterator I = map.begin();
+  ASSERT_TRUE(I.valid());
+
+  // Shrink the interval to have a length of 1
+  I.setStart(149);
+  ASSERT_TRUE(I.valid());
+  EXPECT_EQ(149u, I.start());
+  EXPECT_EQ(150u, I.stop());
+  EXPECT_EQ(1u, I.value());
+
+  I.setStop(160);
+  ASSERT_TRUE(I.valid());
+  EXPECT_EQ(149u, I.start());
+  EXPECT_EQ(160u, I.stop());
+  EXPECT_EQ(1u, I.value());
+
+  // Shrink the interval to have a length of 1
+  I.setStop(150);
+  ASSERT_TRUE(I.valid());
+  EXPECT_EQ(149u, I.start());
+  EXPECT_EQ(150u, I.stop());
+  EXPECT_EQ(1u, I.value());
 }
 
 // Flat coalescing tests.

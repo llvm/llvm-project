@@ -685,9 +685,10 @@ DISubprogram *DIBuilder::createMethod(DIScope *Context, StringRef Name,
 }
 
 DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
-                                        DIFile *File, unsigned LineNo) {
+                                        DIFile *File, unsigned LineNo,
+                                        bool ExportSymbols) {
   return DINamespace::get(VMContext, getNonCompileUnitScope(Scope), File, Name,
-                          LineNo);
+                          LineNo, ExportSymbols);
 }
 
 DIModule *DIBuilder::createModule(DIScope *Scope, StringRef Name,

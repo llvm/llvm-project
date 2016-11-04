@@ -1057,6 +1057,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   } else {
     // If there's anything we can use as a barrier, go through custom lowering
     // for ATOMIC_FENCE.
+    // If target has DMB in thumb, Fences can be inserted.
+    if (Subtarget->hasDataBarrier())
+      InsertFencesForAtomic = true;
+
     setOperationAction(ISD::ATOMIC_FENCE,   MVT::Other,
                        Subtarget->hasAnyDataBarrier() ? Custom : Expand);
 
@@ -1075,8 +1079,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Expand);
     // Mark ATOMIC_LOAD and ATOMIC_STORE custom so we can handle the
     // Unordered/Monotonic case.
-    setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Custom);
-    setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Custom);
+    if (!InsertFencesForAtomic) {
+      setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Custom);
+      setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Custom);
+    }
   }
 
   setOperationAction(ISD::PREFETCH,         MVT::Other, Custom);
@@ -12879,7 +12885,8 @@ ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 TargetLowering::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
-  return (Size <= (Subtarget->isMClass() ? 32U : 64U))
+  bool hasAtomicRMW = !Subtarget->isThumb() || Subtarget->hasV8MBaselineOps();
+  return (Size <= (Subtarget->isMClass() ? 32U : 64U) && hasAtomicRMW)
              ? AtomicExpansionKind::LLSC
              : AtomicExpansionKind::None;
 }
@@ -12891,7 +12898,9 @@ bool ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(
   // on the stack and close enough to the spill slot, this can lead to a
   // situation where the monitor always gets cleared and the atomic operation
   // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  return getTargetMachine().getOptLevel() != 0;
+  bool hasAtomicCmpXchg =
+      !Subtarget->isThumb() || Subtarget->hasV8MBaselineOps();
+  return getTargetMachine().getOptLevel() != 0 && hasAtomicCmpXchg;
 }
 
 bool ARMTargetLowering::shouldInsertFencesForAtomic(

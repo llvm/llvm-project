@@ -4092,12 +4092,13 @@ bool LLParser::ParseDINamespace(MDNode *&Result, bool IsDistinct) {
   REQUIRED(scope, MDField, );                                                  \
   OPTIONAL(file, MDField, );                                                   \
   OPTIONAL(name, MDStringField, );                                             \
-  OPTIONAL(line, LineField, );
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(exportSymbols, MDBoolField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DINamespace,
-                           (Context, scope.Val, file.Val, name.Val, line.Val));
+  (Context, scope.Val, file.Val, name.Val, line.Val, exportSymbols.Val));
   return false;
 }
 

@@ -700,6 +700,7 @@ private:
     SequenceNumberManager &operator=(SequenceNumberManager &&Other) {
       NextSequenceNumber = std::move(Other.NextSequenceNumber);
       FreeSequenceNumbers = std::move(Other.FreeSequenceNumbers);
+      return *this;
     }
 
     void reset() {

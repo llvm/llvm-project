@@ -1128,7 +1128,6 @@ def getAtomicNoRetOp : InstrMapping {
 
 include "SIInstructions.td"
 include "CIInstructions.td"
-include "VIInstructions.td"
 
 include "DSInstructions.td"
 include "MIMGInstructions.td"
