@@ -58,7 +58,7 @@ int main()
     test(u32string_view{U"123"});
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     constexpr string_view       sv { "123", 3 };
     constexpr u16string_view u16sv {u"123", 3 };

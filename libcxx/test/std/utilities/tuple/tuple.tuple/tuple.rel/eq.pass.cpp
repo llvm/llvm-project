@@ -21,6 +21,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -143,7 +145,7 @@ int main()
         assert(!(t1 == t2));
         assert(t1 != t2);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         typedef std::tuple<char, int, double> T1;
         typedef std::tuple<double, char, int> T2;

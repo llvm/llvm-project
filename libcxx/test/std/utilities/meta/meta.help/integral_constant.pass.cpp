@@ -14,6 +14,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::integral_constant<int, 5> _5;
@@ -26,7 +28,7 @@ int main()
     assert(_5() == 5);
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     static_assert ( _5{}() == 5, "" );
     static_assert ( std::true_type{}(), "" );
 #endif

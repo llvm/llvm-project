@@ -20,6 +20,8 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -40,7 +42,7 @@ int main()
         assert(i == 0);
         assert(j == 0);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         constexpr auto t1 = std::make_tuple(0, 1, 3.14);
         constexpr int i1 = std::get<1>(t1);

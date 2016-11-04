@@ -40,7 +40,7 @@ using namespace lld::elf;
 static ArrayRef<uint8_t> createInterp() {
   // StringSaver guarantees that the returned string ends with '\0'.
   StringRef S = Saver.save(Config->DynamicLinker);
-  return {(uint8_t *)S.data(), S.size() + 1};
+  return {(const uint8_t *)S.data(), S.size() + 1};
 }
 
 template <class ELFT>

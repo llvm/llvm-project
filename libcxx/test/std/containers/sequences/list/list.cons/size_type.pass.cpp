@@ -13,6 +13,7 @@
 
 #include <list>
 #include <cassert>
+#include "test_macros.h"
 #include "DefaultOnly.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
@@ -21,7 +22,7 @@ template <class T, class Allocator>
 void
 test3(unsigned n, Allocator const &alloc = Allocator())
 {
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     typedef std::list<T, Allocator> C;
     typedef typename C::const_iterator const_iterator;
     {
@@ -59,7 +60,7 @@ int main()
         ++i;
         assert(*i == 0);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         typedef std::list<int, min_allocator<int> > C;
         C l(3, min_allocator<int> ());

@@ -21,6 +21,8 @@
 #include <utility>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -79,7 +81,7 @@ int main()
         assert( (p1 >= p2));
     }
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         typedef std::pair<int, short> P;
         constexpr P p1(3, 4);

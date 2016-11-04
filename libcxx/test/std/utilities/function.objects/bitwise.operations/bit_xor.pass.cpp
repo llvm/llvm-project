@@ -15,6 +15,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -29,7 +31,7 @@ int main()
     assert(f(0x58D3, 0) == 0x58D3);
     assert(f(0xFFFF, 0x58D3) == 0xA72C);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef std::bit_xor<> F2;
     const F2 f = F2();

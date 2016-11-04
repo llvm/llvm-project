@@ -66,7 +66,7 @@ void coff::createPDB(StringRef Path, ArrayRef<uint8_t> SectionTable) {
 
   // Add Section Map stream.
   ArrayRef<object::coff_section> Sections = {
-      (object::coff_section *)SectionTable.data(),
+      (const object::coff_section *)SectionTable.data(),
       SectionTable.size() / sizeof(object::coff_section)};
   std::vector<pdb::SecMapEntry> SectionMap =
       pdb::DbiStreamBuilder::createSectionMap(Sections);

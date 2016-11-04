@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class FromDuration, class ToDuration>
 void
 test(const FromDuration& df, const ToDuration& d)
@@ -35,7 +37,7 @@ test(const FromDuration& df, const ToDuration& d)
     }
 }
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
 
 template<class FromDuration, long long From, class ToDuration, long long To>
 void test_constexpr ()
@@ -65,7 +67,7 @@ int main()
          std::chrono::duration<double, std::ratio<3600> >(7265./3600));
     test(std::chrono::duration<int, std::ratio<2, 3> >(9),
          std::chrono::duration<int, std::ratio<3, 5> >(10));
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     test_constexpr<std::chrono::milliseconds, 7265000, std::chrono::hours,    2> ();
     test_constexpr<std::chrono::milliseconds, 7265000, std::chrono::minutes,121> ();

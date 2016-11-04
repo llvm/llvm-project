@@ -15,9 +15,11 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename T>
 void test () {
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     constexpr T sv1;
     static_assert ( sv1.size() == 0, "" );

@@ -22,6 +22,7 @@
 #include <set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
@@ -55,7 +56,7 @@ int main()
     assert(*next(m.begin()) == 2);
     assert(*next(m.begin(), 2) == 3);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef int V;
     V ar[] =
