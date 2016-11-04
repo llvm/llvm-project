@@ -36,10 +36,13 @@ class RSModuleDescriptor;
 struct RSGlobalDescriptor;
 struct RSKernelDescriptor;
 struct RSReductionDescriptor;
+struct RSScriptGroupDescriptor;
 
 typedef std::shared_ptr<RSModuleDescriptor> RSModuleDescriptorSP;
 typedef std::shared_ptr<RSGlobalDescriptor> RSGlobalDescriptorSP;
 typedef std::shared_ptr<RSKernelDescriptor> RSKernelDescriptorSP;
+typedef std::shared_ptr<RSScriptGroupDescriptor> RSScriptGroupDescriptorSP;
+
 struct RSCoordinate {
   uint32_t x, y, z;
 
@@ -227,6 +230,61 @@ public:
   std::string m_resname;
 };
 
+struct RSScriptGroupDescriptor {
+  struct Kernel {
+    ConstString m_name;
+    lldb::addr_t m_addr;
+  };
+  ConstString m_name;
+  std::vector<Kernel> m_kernels;
+};
+
+typedef std::vector<RSScriptGroupDescriptorSP> RSScriptGroupList;
+
+class RSScriptGroupBreakpointResolver : public BreakpointResolver {
+public:
+  RSScriptGroupBreakpointResolver(Breakpoint *bp, const ConstString &name,
+                                  const RSScriptGroupList &groups,
+                                  bool stop_on_all)
+      : BreakpointResolver(bp, BreakpointResolver::NameResolver),
+        m_group_name(name), m_script_groups(groups),
+        m_stop_on_all(stop_on_all) {}
+
+  void GetDescription(Stream *strm) override {
+    if (strm)
+      strm->Printf("RenderScript ScriptGroup breakpoint for '%s'",
+                   m_group_name.AsCString());
+  }
+
+  void Dump(Stream *s) const override {}
+
+  Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
+                                          SymbolContext &context, Address *addr,
+                                          bool containing) override;
+
+  Searcher::Depth GetDepth() override { return Searcher::eDepthModule; }
+
+  lldb::BreakpointResolverSP
+  CopyForBreakpoint(Breakpoint &breakpoint) override {
+    lldb::BreakpointResolverSP ret_sp(new RSScriptGroupBreakpointResolver(
+        &breakpoint, m_group_name, m_script_groups, m_stop_on_all));
+    return ret_sp;
+  }
+
+protected:
+  const RSScriptGroupDescriptorSP
+  FindScriptGroup(const ConstString &name) const {
+    for (auto sg : m_script_groups) {
+      if (ConstString::Compare(sg->m_name, name) == 0)
+        return sg;
+    }
+    return RSScriptGroupDescriptorSP();
+  }
+
+  ConstString m_group_name;
+  const RSScriptGroupList &m_script_groups;
+  bool m_stop_on_all;
+};
 } // namespace lldb_renderscript
 
 class RenderScriptRuntime : public lldb_private::CPPLanguageRuntime {
@@ -304,6 +362,9 @@ public:
       const lldb_renderscript::RSCoordinate *coords = nullptr,
       int kernel_types = ~(0));
 
+  bool PlaceBreakpointOnScriptGroup(lldb::TargetSP target, Stream &strm,
+                                    const ConstString &name, bool stop_on_all);
+
   void SetBreakAllKernels(bool do_break, lldb::TargetSP target);
 
   void Status(Stream &strm) const;
@@ -320,6 +381,18 @@ public:
 
   void Initiate();
 
+  const lldb_renderscript::RSScriptGroupList &GetScriptGroups() const {
+    return m_scriptGroups;
+  };
+
+  bool IsKnownKernel(const ConstString &name) {
+    for (const auto &module : m_rsmodules)
+      for (const auto &kernel : module->m_kernels)
+        if (kernel.m_name == name)
+          return true;
+    return false;
+  }
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------
@@ -330,10 +403,14 @@ public:
   static bool GetKernelCoordinate(lldb_renderscript::RSCoordinate &coord,
                                   Thread *thread_ptr);
 
+  bool ResolveKernelName(lldb::addr_t kernel_address, ConstString &name);
+
 protected:
   struct ScriptDetails;
   struct AllocationDetails;
   struct Element;
+
+  lldb_renderscript::RSScriptGroupList m_scriptGroups;
 
   void InitSearchFilter(lldb::TargetSP target) {
     if (!m_filtersp)
@@ -348,6 +425,9 @@ protected:
 
   bool EvalRSExpression(const char *expression, StackFrame *frame_ptr,
                         uint64_t *result);
+
+  lldb::BreakpointSP CreateScriptGroupBreakpoint(const ConstString &name,
+                                                 bool multi);
 
   lldb::BreakpointSP CreateKernelBreakpoint(const ConstString &name);
 
@@ -415,6 +495,10 @@ private:
                                   lldb::user_id_t break_loc_id);
 
   void HookCallback(RuntimeHook *hook_info, ExecutionContext &context);
+
+  // Callback function when 'debugHintScriptGroup2' executes on the target.
+  void CaptureDebugHintScriptGroup2(RuntimeHook *hook_info,
+                                    ExecutionContext &context);
 
   void CaptureScriptInit(RuntimeHook *hook_info, ExecutionContext &context);
 

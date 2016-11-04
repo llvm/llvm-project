@@ -100,21 +100,22 @@ public:
     return K == ObjectKind || K == SharedKind;
   }
 
-  const llvm::object::ELFFile<ELFT> &getObj() const { return ELFObj; }
-  llvm::object::ELFFile<ELFT> &getObj() { return ELFObj; }
+  llvm::object::ELFFile<ELFT> getObj() const {
+    return llvm::object::ELFFile<ELFT>(MB.getBuffer());
+  }
 
   StringRef getStringTable() const { return StringTable; }
 
   uint32_t getSectionIndex(const Elf_Sym &Sym) const;
 
-  Elf_Sym_Range getElfSymbols(bool OnlyGlobals);
+  Elf_Sym_Range getGlobalSymbols();
 
 protected:
-  llvm::object::ELFFile<ELFT> ELFObj;
-  const Elf_Shdr *Symtab = nullptr;
+  ArrayRef<Elf_Sym> Symbols;
+  uint32_t FirstNonLocal = 0;
   ArrayRef<Elf_Word> SymtabSHNDX;
   StringRef StringTable;
-  void initStringTable();
+  void initSymtab(ArrayRef<Elf_Shdr> Sections, const Elf_Shdr *Symtab);
 };
 
 // .o file.
@@ -157,8 +158,6 @@ public:
     return getSymbolBody(SymIndex);
   }
 
-  const Elf_Shdr *getSymbolTable() const { return this->Symtab; };
-
   // Returns source line information for a given offset.
   // If no information is available, returns "".
   std::string getLineInfo(InputSectionBase<ELFT> *S, uintX_t Offset);
@@ -179,8 +178,9 @@ public:
 
 private:
   void
-  initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
-  void initializeSymbols();
+  initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups,
+                     ArrayRef<Elf_Shdr> ObjSections);
+  void initializeSymbols(ArrayRef<Elf_Shdr> Sections);
   void initializeDwarfLine();
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Shdr &Sec);
   InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec,

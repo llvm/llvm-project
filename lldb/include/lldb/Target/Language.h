@@ -95,32 +95,51 @@ public:
                    ResultSet &results) override;
   };
 
-  template <typename TypeScavenger1, typename TypeScavenger2>
+  template <typename... ScavengerTypes>
   class EitherTypeScavenger : public TypeScavenger {
+  public:
+    EitherTypeScavenger() : TypeScavenger(), m_scavengers() {
+      for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
+        if (scavenger)
+          m_scavengers.push_back(scavenger);
+      }
+    }
+  protected:
     bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
                    ResultSet &results) override {
       const bool append = false;
-      auto ts1 = TypeScavenger1();
-      if (ts1.Find(exe_scope, key, results, append))
-        return true;
-      auto ts2 = TypeScavenger2();
-      if (ts2.Find(exe_scope, key, results, append))
-        return true;
+      for (auto& scavenger : m_scavengers) {
+        if (scavenger && scavenger->Find(exe_scope, key, results, append))
+          return true;
+      }
       return false;
     }
+  private:
+    std::vector<std::shared_ptr<TypeScavenger>> m_scavengers;
   };
 
-  template <typename TypeScavenger1, typename TypeScavenger2>
-  class BothTypeScavenger : public TypeScavenger {
+  template <typename... ScavengerTypes>
+  class UnionTypeScavenger : public TypeScavenger {
+  public:
+    UnionTypeScavenger() : TypeScavenger(), m_scavengers() {
+      for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
+        if (scavenger)
+          m_scavengers.push_back(scavenger);
+      }
+    }
+  protected:
     bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
                    ResultSet &results) override {
       const bool append = true;
-      auto ts1 = TypeScavenger1();
-      bool success = ts1.Find(exe_scope, key, results, append);
-      auto ts2 = TypeScavenger2();
-      success = ts2.Find(exe_scope, key, results, append) || success;
+      bool success = false;
+      for (auto& scavenger : m_scavengers) {
+        if (scavenger)
+          success = scavenger->Find(exe_scope, key, results, append) || success;
+      }
       return success;
     }
+  private:
+    std::vector<std::shared_ptr<TypeScavenger>> m_scavengers;
   };
 
   enum class FunctionNameRepresentation {

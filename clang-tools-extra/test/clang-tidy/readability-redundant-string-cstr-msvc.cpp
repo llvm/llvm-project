@@ -12,6 +12,7 @@ struct basic_string {
   basic_string(const C *p);
   basic_string(const C *p, const A &a);
   const C *c_str() const;
+  const C *data() const;
 };
 typedef basic_string<char, std::char_traits<char>, std::allocator<char>> string;
 }
@@ -24,7 +25,10 @@ struct StringRef {
 
 void f1(const std::string &s) {
   f1(s.c_str());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to `c_str()` [readability-redundant-string-cstr]
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}f1(s);{{$}}
+  f1(s.data());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'data' [readability-redundant-string-cstr]
   // CHECK-FIXES: {{^  }}f1(s);{{$}}
 }
 void f2(const llvm::StringRef r) {

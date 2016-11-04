@@ -569,7 +569,7 @@ std::map<std::string, Replacements> groupReplacementsByFile(
     const std::map<std::string, Replacements> &FileToReplaces) {
   std::map<std::string, Replacements> Result;
   for (const auto &Entry : FileToReplaces) {
-    llvm::SmallString<256> CleanPath(Entry.first.data());
+    llvm::SmallString<256> CleanPath(Entry.first);
     llvm::sys::path::remove_dots(CleanPath, /*remove_dot_dot=*/true);
     Result[CleanPath.str()] = std::move(Entry.second);
   }

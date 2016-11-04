@@ -99,7 +99,7 @@ void RedundantStringCStrCheck::registerMatchers(
   const auto StringCStrCallExpr =
       cxxMemberCallExpr(on(StringExpr.bind("arg")),
                         callee(memberExpr().bind("member")),
-                        callee(cxxMethodDecl(hasName("c_str"))))
+                        callee(cxxMethodDecl(hasAnyName("c_str", "data"))))
           .bind("call");
 
   // Detect redundant 'c_str()' calls through a string constructor.
@@ -192,7 +192,8 @@ void RedundantStringCStrCheck::registerMatchers(
 void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getStmtAs<CallExpr>("call");
   const auto *Arg = Result.Nodes.getStmtAs<Expr>("arg");
-  bool Arrow = Result.Nodes.getStmtAs<MemberExpr>("member")->isArrow();
+  const auto *Member = Result.Nodes.getStmtAs<MemberExpr>("member");
+  bool Arrow = Member->isArrow();
   // Replace the "call" node with the "arg" node, prefixed with '*'
   // if the call was using '->' rather than '.'.
   std::string ArgText =
@@ -200,7 +201,8 @@ void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {
   if (ArgText.empty())
     return;
 
-  diag(Call->getLocStart(), "redundant call to `c_str()`")
+  diag(Call->getLocStart(), "redundant call to %0")
+      << Member->getMemberDecl()
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
 }
 

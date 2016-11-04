@@ -111,11 +111,11 @@ template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   for (InputSectionDescription *ID : Opt.KeptSections) {
     StringRef Filename = S->getFile()->getName();
-    if (!ID->FileRe.match(sys::path::filename(Filename)))
+    if (!ID->FilePat.match(sys::path::filename(Filename)))
       continue;
 
     for (SectionPattern &P : ID->SectionPatterns)
-      if (P.SectionRe.match(S->Name))
+      if (P.SectionPat.match(S->Name))
         return true;
   }
   return false;
@@ -178,13 +178,13 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
     size_t SizeBefore = I->Sections.size();
     for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
       StringRef Filename = sys::path::filename(F->getName());
-      if (!I->FileRe.match(Filename) || Pat.ExcludedFileRe.match(Filename))
+      if (!I->FilePat.match(Filename) || Pat.ExcludedFilePat.match(Filename))
         continue;
 
       for (InputSectionBase<ELFT> *S : F->getSections())
-        if (!isDiscarded(S) && !S->OutSec && Pat.SectionRe.match(S->Name))
+        if (!isDiscarded(S) && !S->OutSec && Pat.SectionPat.match(S->Name))
           I->Sections.push_back(S);
-      if (Pat.SectionRe.match("COMMON"))
+      if (Pat.SectionPat.match("COMMON"))
         I->Sections.push_back(InputSection<ELFT>::CommonInputSection);
     }
 
@@ -936,7 +936,7 @@ private:
   std::vector<uint8_t> readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
-  Regex readFilePatterns();
+  StringMatcher readFilePatterns();
   std::vector<SectionPattern> readInputSectionsList();
   InputSectionDescription *readInputSectionRules(StringRef FilePattern);
   unsigned readPhdrType();
@@ -1207,11 +1207,11 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-Regex ScriptParser::readFilePatterns() {
+StringMatcher ScriptParser::readFilePatterns() {
   std::vector<StringRef> V;
   while (!Error && !consume(")"))
     V.push_back(next());
-  return compileGlobPatterns(V);
+  return StringMatcher(V);
 }
 
 SortSectionPolicy ScriptParser::readSortKind() {
@@ -1236,10 +1236,10 @@ SortSectionPolicy ScriptParser::readSortKind() {
 std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
   std::vector<SectionPattern> Ret;
   while (!Error && peek() != ")") {
-    Regex ExcludeFileRe;
+    StringMatcher ExcludeFilePat;
     if (consume("EXCLUDE_FILE")) {
       expect("(");
-      ExcludeFileRe = readFilePatterns();
+      ExcludeFilePat = readFilePatterns();
     }
 
     std::vector<StringRef> V;
@@ -1247,7 +1247,7 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
       V.push_back(next());
 
     if (!V.empty())
-      Ret.push_back({std::move(ExcludeFileRe), compileGlobPatterns(V)});
+      Ret.push_back({std::move(ExcludeFilePat), StringMatcher(V)});
     else
       setError("section pattern is expected");
   }

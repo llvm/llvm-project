@@ -18,13 +18,18 @@ private:
 
   virtual void virtualMemberFunction();
   virtual void pureVirtualMemberFunction() = 0;
+
+  friend void friendFunction();
+  template <typename T>
+  friend void friendFunctionTemplate();
+  friend class F;
 };
 
 X::X(int value) {
 }
 
 // RUN: c-index-test -test-load-source all %s | FileCheck %s
-// CHECK: load-classes.cpp:3:8: StructDecl=X:3:8 (Definition) Extent=[3:1 - 21:2]
+// CHECK: load-classes.cpp:3:8: StructDecl=X:3:8 (Definition) Extent=[3:1 - 26:2]
 // CHECK: load-classes.cpp:4:3: CXXConstructor=X:4:3 (converting constructor) Extent=[4:3 - 4:15] [access=public]
 // FIXME: missing TypeRef in the constructor name
 // CHECK: load-classes.cpp:4:9: ParmDecl=value:4:9 (Definition) Extent=[4:5 - 4:14]
@@ -46,7 +51,14 @@ X::X(int value) {
 // CHECK: load-classes.cpp:16:21: TemplateTypeParameter=T:16:21 (Definition) Extent=[16:12 - 16:22] [access=public]
 // CHECK: load-classes.cpp:19:16: CXXMethod=virtualMemberFunction:19:16 (virtual) Extent=[19:3 - 19:39] [access=private]
 // CHECK: load-classes.cpp:20:16: CXXMethod=pureVirtualMemberFunction:20:16 (virtual) (pure) Extent=[20:3 - 20:47] [access=private]
-// CHECK: load-classes.cpp:23:4: CXXConstructor=X:23:4 (Definition) (converting constructor) Extent=[23:1 - 24:2] [access=public]
-// CHECK: load-classes.cpp:23:1: TypeRef=struct X:3:8 Extent=[23:1 - 23:2]
-// CHECK: load-classes.cpp:23:10: ParmDecl=value:23:10 (Definition) Extent=[23:6 - 23:15]
-// CHECK: load-classes.cpp:23:17: CompoundStmt= Extent=[23:17 - 24:2]
+// CHECK: load-classes.cpp:22:15: FriendDecl=:22:15 Extent=[22:3 - 22:31] [access=public]
+// CHECK: load-classes.cpp:22:15: FunctionDecl=friendFunction:22:15 Extent=[22:3 - 22:31] [access=public]
+// CHECK: load-classes.cpp:24:15: FriendDecl=:24:15 Extent=[23:3 - 24:39] [access=public]
+// CHECK: load-classes.cpp:24:15: FunctionTemplate=friendFunctionTemplate:24:15 Extent=[23:3 - 24:39] [access=public]
+// CHECK: load-classes.cpp:23:22: TemplateTypeParameter=T:23:22 (Definition) Extent=[23:13 - 23:23] [access=public]
+// CHECK: load-classes.cpp:25:10: FriendDecl=:25:10 Extent=[25:3 - 25:17] [access=public]
+// CHECK: load-classes.cpp:25:16: TypeRef=class F:25:16 Extent=[25:16 - 25:17]
+// CHECK: load-classes.cpp:28:4: CXXConstructor=X:28:4 (Definition) (converting constructor) Extent=[28:1 - 29:2] [access=public]
+// CHECK: load-classes.cpp:28:1: TypeRef=struct X:3:8 Extent=[28:1 - 28:2]
+// CHECK: load-classes.cpp:28:10: ParmDecl=value:28:10 (Definition) Extent=[28:6 - 28:15]
+// CHECK: load-classes.cpp:28:17: CompoundStmt= Extent=[28:17 - 29:2]
