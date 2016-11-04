@@ -4905,13 +4905,11 @@ public:
         const uint64_t max_send = m_max_send.GetOptionValue().GetCurrentValue();
         const uint64_t max_recv = m_max_recv.GetOptionValue().GetCurrentValue();
         const bool json = m_json.GetOptionValue().GetCurrentValue();
-        if (output_stream_sp)
-          process->GetGDBRemote().TestPacketSpeed(
-              num_packets, max_send, max_recv, json, *output_stream_sp);
-        else {
-          process->GetGDBRemote().TestPacketSpeed(
-              num_packets, max_send, max_recv, json, result.GetOutputStream());
-        }
+        const uint64_t k_recv_amount =
+            4 * 1024 * 1024; // Receive amount in bytes
+        process->GetGDBRemote().TestPacketSpeed(
+            num_packets, max_send, max_recv, k_recv_amount, json,
+            output_stream_sp ? *output_stream_sp : result.GetOutputStream());
         result.SetStatus(eReturnStatusSuccessFinishResult);
         return true;
       }

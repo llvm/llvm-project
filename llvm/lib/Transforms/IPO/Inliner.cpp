@@ -310,7 +310,7 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
     if (IC2.isAlways())
       continue;
 
-    // See if inlining or original callsite would erase the cost delta of
+    // See if inlining of the original callsite would erase the cost delta of
     // this callsite. We subtract off the penalty for the call instruction,
     // which we would be deleting.
     if (IC2.getCostDelta() <= CandidateCost) {

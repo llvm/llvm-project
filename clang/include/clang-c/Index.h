@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 35
+#define CINDEX_VERSION_MINOR 36
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -2404,8 +2404,12 @@ enum CXCursorKind {
    * \brief A static_assert or _Static_assert node
    */
   CXCursor_StaticAssert                  = 602,
+  /**
+   * \brief a friend declaration.
+   */
+  CXCursor_FriendDecl                    = 603,
   CXCursor_FirstExtraDecl                = CXCursor_ModuleImportDecl,
-  CXCursor_LastExtraDecl                 = CXCursor_StaticAssert,
+  CXCursor_LastExtraDecl                 = CXCursor_FriendDecl,
 
   /**
    * \brief A code completion overload candidate.

@@ -200,6 +200,8 @@ TEST(FileSpecTest, EqualDotsPosixRoot) {
 
 TEST(FileSpecTest, GetNormalizedPath) {
   std::pair<const char *, const char *> posix_tests[] = {
+      {"/foo/.././bar", "/bar"},
+      {"/foo/./../bar", "/bar"},
       {"/foo/../bar", "/bar"},
       {"/foo/./bar", "/foo/bar"},
       {"/foo/..", "/"},

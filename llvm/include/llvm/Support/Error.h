@@ -147,7 +147,7 @@ class LLVM_NODISCARD Error {
 
   // Expected<T> needs to be able to steal the payload when constructed from an
   // error.
-  template <typename T> class Expected;
+  template <typename T> friend class Expected;
 
 public:
   /// Create a success value. Prefer using 'Error::success()' for readability
@@ -642,7 +642,7 @@ public:
 
   {
     assert(Err && "Cannot create Expected<T> from Error success value.");
-    new (getErrorStorage()) Error(std::move(Err));
+    new (getErrorStorage()) error_type(Err.takePayload());
   }
 
   /// Create an Expected<T> success value from the given OtherT value, which

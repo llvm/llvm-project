@@ -663,4 +663,3 @@ and force instruction pairs to be scheduled together.
 More general handling of any_extend and zero_extend:
 
 See https://reviews.llvm.org/D24924#555306
-

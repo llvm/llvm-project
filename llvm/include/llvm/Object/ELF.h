@@ -69,9 +69,11 @@ private:
 
   StringRef Buf;
 
-  const Elf_Ehdr *Header;
-
 public:
+  const Elf_Ehdr *getHeader() const {
+    return reinterpret_cast<const Elf_Ehdr *>(base());
+  }
+
   template <typename T>
   ErrorOr<const T *> getEntry(uint32_t Section, uint32_t Entry) const;
   template <typename T>
@@ -96,17 +98,17 @@ public:
   ErrorOr<const Elf_Sym *> getRelocationSymbol(const Elf_Rel *Rel,
                                                const Elf_Shdr *SymTab) const;
 
-  ELFFile(StringRef Object, std::error_code &EC);
+  ELFFile(StringRef Object);
 
   bool isMipsELF64() const {
-    return Header->e_machine == ELF::EM_MIPS &&
-      Header->getFileClass() == ELF::ELFCLASS64;
+    return getHeader()->e_machine == ELF::EM_MIPS &&
+           getHeader()->getFileClass() == ELF::ELFCLASS64;
   }
 
   bool isMips64EL() const {
-    return Header->e_machine == ELF::EM_MIPS &&
-      Header->getFileClass() == ELF::ELFCLASS64 &&
-      Header->getDataEncoding() == ELF::ELFDATA2LSB;
+    return getHeader()->e_machine == ELF::EM_MIPS &&
+           getHeader()->getFileClass() == ELF::ELFCLASS64 &&
+           getHeader()->getDataEncoding() == ELF::ELFDATA2LSB;
   }
 
   ErrorOr<Elf_Shdr_Range> sections() const;
@@ -127,14 +129,14 @@ public:
 
   /// \brief Iterate over program header table.
   ErrorOr<Elf_Phdr_Range> program_headers() const {
-    if (Header->e_phnum && Header->e_phentsize != sizeof(Elf_Phdr))
+    if (getHeader()->e_phnum && getHeader()->e_phentsize != sizeof(Elf_Phdr))
       return object_error::parse_failed;
-    auto *Begin = reinterpret_cast<const Elf_Phdr *>(base() + Header->e_phoff);
-    return makeArrayRef(Begin, Begin+Header->e_phnum);
+    auto *Begin =
+        reinterpret_cast<const Elf_Phdr *>(base() + getHeader()->e_phoff);
+    return makeArrayRef(Begin, Begin + getHeader()->e_phnum);
   }
 
   ErrorOr<StringRef> getSectionStringTable(Elf_Shdr_Range Sections) const;
-  const Elf_Ehdr *getHeader() const { return Header; }
   ErrorOr<uint32_t> getSectionIndex(const Elf_Sym *Sym, Elf_Sym_Range Syms,
                                     ArrayRef<Elf_Word> ShndxTable) const;
   ErrorOr<const Elf_Shdr *> getSection(const Elf_Sym *Sym,
@@ -269,7 +271,7 @@ ELFFile<ELFT>::getSectionContents(const Elf_Shdr *Sec) const {
 
 template <class ELFT>
 StringRef ELFFile<ELFT>::getRelocationTypeName(uint32_t Type) const {
-  return getELFRelocationTypeName(Header->e_machine, Type);
+  return getELFRelocationTypeName(getHeader()->e_machine, Type);
 }
 
 template <class ELFT>
@@ -316,7 +318,7 @@ ELFFile<ELFT>::getRelocationSymbol(const Elf_Rel *Rel,
 template <class ELFT>
 ErrorOr<StringRef>
 ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections) const {
-  uint32_t Index = Header->e_shstrndx;
+  uint32_t Index = getHeader()->e_shstrndx;
   if (Index == ELF::SHN_XINDEX)
     Index = Sections[0].sh_link;
 
@@ -328,26 +330,8 @@ ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections) const {
 }
 
 template <class ELFT>
-ELFFile<ELFT>::ELFFile(StringRef Object, std::error_code &EC) : Buf(Object) {
-  const uint64_t FileSize = Buf.size();
-
-  if (sizeof(Elf_Ehdr) > FileSize) {
-    // File too short!
-    EC = object_error::parse_failed;
-    return;
-  }
-
-  Header = reinterpret_cast<const Elf_Ehdr *>(base());
-
-  if (Header->e_shoff == 0) {
-    if (Header->e_shnum != 0) {
-      // e_shnum should be zero if a file has no section header table
-      EC = object_error::parse_failed;
-    }
-    return;
-  }
-
-  EC = std::error_code();
+ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {
+  assert(sizeof(Elf_Ehdr) <= Buf.size() && "Invalid buffer");
 }
 
 template <class ELFT>
@@ -357,12 +341,12 @@ static bool compareAddr(uint64_t VAddr, const Elf_Phdr_Impl<ELFT> *Phdr) {
 
 template <class ELFT>
 ErrorOr<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
-  const uintX_t SectionTableOffset = Header->e_shoff;
+  const uintX_t SectionTableOffset = getHeader()->e_shoff;
   if (SectionTableOffset == 0)
     return ArrayRef<Elf_Shdr>();
 
   // Invalid section header entry size (e_shentsize) in ELF header
-  if (Header->e_shentsize != sizeof(Elf_Shdr))
+  if (getHeader()->e_shentsize != sizeof(Elf_Shdr))
     return object_error::parse_failed;
 
   const uint64_t FileSize = Buf.size();
@@ -378,7 +362,7 @@ ErrorOr<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const Elf_Shdr *First =
       reinterpret_cast<const Elf_Shdr *>(base() + SectionTableOffset);
 
-  uintX_t NumSections = Header->e_shnum;
+  uintX_t NumSections = getHeader()->e_shnum;
   if (NumSections == 0)
     NumSections = First->sh_size;
 

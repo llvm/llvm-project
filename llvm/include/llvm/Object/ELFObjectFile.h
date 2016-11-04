@@ -773,9 +773,7 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, std::error_code &EC)
     : ELFObjectFileBase(
           getELFType(ELFT::TargetEndianness == support::little, ELFT::Is64Bits),
           Object),
-      EF(Data.getBuffer(), EC) {
-  if (EC)
-    return;
+      EF(Data.getBuffer()) {
   auto SectionsOrErr = EF.sections();
   if ((EC = SectionsOrErr.getError()))
     return;

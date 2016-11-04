@@ -2086,11 +2086,10 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
   SmallPtrSet<const BasicBlock *, 4> Visited;
   for (BasicBlock &BB: F) {
     ReturnInst *Ret = dyn_cast<ReturnInst>(&BB.back());
-
-    DEBUG(dbgs() << "Visiting: " << *Ret << "\n");
-
     if (!Ret)
       continue;
+
+    DEBUG(dbgs() << "Visiting: " << *Ret << "\n");
 
     const Value *Arg = GetRCIdentityRoot(Ret->getOperand(0));
 

@@ -563,7 +563,7 @@ template <class ELFT> void EhInputSection<ELFT>::split() {
     return;
 
   if (RelocSection) {
-    ELFFile<ELFT> &Obj = this->File->getObj();
+    ELFFile<ELFT> Obj = this->File->getObj();
     if (RelocSection->sh_type == SHT_RELA)
       split(check(Obj.relas(RelocSection)));
     else

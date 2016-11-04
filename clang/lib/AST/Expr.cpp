@@ -561,6 +561,7 @@ std::string PredefinedExpr::ComputeName(IdentType IT, const Decl *CurrentDecl) {
       FT = dyn_cast<FunctionProtoType>(AFT);
 
     if (IT == FuncSig) {
+      assert(FT && "We must have a written prototype in this case.");
       switch (FT->getCallConv()) {
       case CC_C: POut << "__cdecl "; break;
       case CC_X86StdCall: POut << "__stdcall "; break;
