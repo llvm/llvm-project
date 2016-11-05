@@ -38,8 +38,7 @@ const char* StringFromEnv(const char* flag, const char* default_val);
 // Parses a string for a bool flag, in the form of either
 // "--flag=value" or "--flag".
 //
-// In the former case, the value is taken as true as long as it does
-// not start with '0', 'f', or 'F'.
+// In the former case, the value is taken as true if it passes IsTruthyValue().
 //
 // In the latter case, the value is taken as true.
 //
@@ -71,6 +70,10 @@ bool ParseStringFlag(const char* str, const char* flag, std::string* value);
 // Returns true if the string matches the flag.
 bool IsFlag(const char* str, const char* flag);
 
+// Returns true unless value starts with one of: '0', 'f', 'F', 'n' or 'N', or
+// some non-alphanumeric character. As a special case, also returns true if
+// value is the empty string.
+bool IsTruthyFlagValue(const std::string& value);
 }  // end namespace benchmark
 
 #endif  // BENCHMARK_COMMANDLINEFLAGS_H_

@@ -55,7 +55,7 @@ f5:
   adds x0, x0, #1
   adds x0, x0, #1
   ldr w0, =0x10004
-// CHECK: ldr w0, .Ltmp[[TMP4:[0-9]+]]
+// CHECK: ldr w0, .Ltmp[[TMP3:[0-9]+]]
   adds x0, x0, #1
   adds x0, x0, #1
   adds x0, x0, #1
@@ -225,9 +225,6 @@ f18:
 // CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP3]]
 // CHECK: .word 65540
-// CHECK: .p2align 2
-// CHECK: .Ltmp[[TMP4]]
-// CHECK: .word 65540
 
 // CHECK: .section e,"ax",@progbits
 // CHECK: .p2align 2
@@ -314,6 +311,3 @@ f18:
 // CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP25]]
 // CHECK: .word 3276900
-// CHECK: .p2align 3
-// CHECK: .Ltmp[[TMP26]]
-// CHECK: .xword 3276900

@@ -48,7 +48,7 @@ f5:
   adds r0, r0, #1
   adds r0, r0, #1
   ldr r0, =0x10005
-@ CHECK: ldr r0, Ltmp4
+@ CHECK: ldr r0, Ltmp3
   adds r0, r0, #1
   adds r0, r0, #1
   adds r0, r0, #1
@@ -61,7 +61,7 @@ f5:
 @ CHECK-LABEL: f6:
 f6:
   ldr r0, =0x10006
-@ CHECK: ldr r0, Ltmp5
+@ CHECK: ldr r0, Ltmp4
   adds r0, r0, #1
   adds r0, r0, #1
   adds r0, r0, #1
@@ -78,7 +78,7 @@ f7:
 f8:
   adds r0, r0, #1
   ldr r0, =0x10007
-@ CHECK: ldr r0, Ltmp6
+@ CHECK: ldr r0, Ltmp5
   adds r0, r0, #1
   adds r0, r0, #1
 
@@ -91,21 +91,21 @@ f8:
 @ CHECK-LABEL: f9:
 f9:
   ldr r0, =foo
-@ CHECK: ldr r0, Ltmp7
+@ CHECK: ldr r0, Ltmp6
 
 @ load a symbol from another section
 .section __TEXT,h,regular,pure_instructions
 @ CHECK-LABEL: f10:
 f10:
   ldr r0, =f5
-@ CHECK: ldr r0, Ltmp8
+@ CHECK: ldr r0, Ltmp7
 
 @ load a symbol from the same section
 .section __TEXT,i,regular,pure_instructions
 @ CHECK-LABEL: f11:
 f11:
   ldr r0, =f12
-@ CHECK: ldr r0, Ltmp9
+@ CHECK: ldr r0, Ltmp8
 
 @ CHECK-LABEL: f12:
 f12:
@@ -119,11 +119,11 @@ f13:
   adds r0, r0, #1
   adds r0, r0, #1
   ldr r0, =0x10008
-@ CHECK: ldr r0, Ltmp10
+@ CHECK: ldr r0, Ltmp9
   adds r0, r0, #1
   adds r0, r0, #1
   ldr r0, =bar
-@ CHECK: ldr r0, Ltmp11
+@ CHECK: ldr r0, Ltmp10
   adds r0, r0, #1
   adds r0, r0, #1
 @
@@ -139,18 +139,18 @@ f13:
 @ CHECK-LABEL: f14:
 f14:
   useit_in_a_macro
+@ CHECK: ldr r0, Ltmp11
 @ CHECK: ldr r0, Ltmp12
-@ CHECK: ldr r0, Ltmp13
 
 @ usage with expressions
 .section __TEXT,l,regular,pure_instructions
 @ CHECK-LABEL: f15:
 f15:
   ldr r0, =0x10001+9
-@ CHECK: ldr r0, Ltmp14
+@ CHECK: ldr r0, Ltmp13
   adds r0, r0, #1
   ldr r0, =bar+4
-@ CHECK: ldr r0, Ltmp15
+@ CHECK: ldr r0, Ltmp14
   adds r0, r0, #1
 
 @ transformation to mov
@@ -162,7 +162,7 @@ f16:
   ldr r1, =0x1
 @ CHECK-ARM: mov r1, #1
 @ CHECK-ARMV5: mov r1, #1
-@ CHECK-THUMB: ldr r1, Ltmp16
+@ CHECK-THUMB: ldr r1, Ltmp15
 @ CHECK-THUMB2: mov.w r1, #1
 @ CHECK-BASELINE: movw r1, #1
 
@@ -170,60 +170,60 @@ f16:
   ldr r2, =0x120000
 @ CHECK-ARM: mov r2, #1179648
 @ CHECK-ARMV5: mov r2, #1179648
-@ CHECK-THUMB: ldr r2, Ltmp17
+@ CHECK-THUMB: ldr r2, Ltmp16
 @ CHECK-THUMB2: mov.w r2, #1179648
-@ CHECK-BASELINE: ldr r2, Ltmp16
+@ CHECK-BASELINE: ldr r2, Ltmp15
 
 @ Immediate can be represented only with movw instruction
   ldr r3, =0x1234
 @ CHECK-ARM: movw r3, #4660
-@ CHECK-ARMV5: ldr r3, Ltmp16
-@ CHECK-THUMB: ldr r3, Ltmp18
+@ CHECK-ARMV5: ldr r3, Ltmp15
+@ CHECK-THUMB: ldr r3, Ltmp17
 @ CHECK-THUMB2: movw r3, #4660
 @ CHECK-BASELINE: movw r3, #4660
 
 @ Immediate can be represented only with T2 modified immediate
   ldr r4, =0xabababab
-@ CHECK-ARM: ldr r4, Ltmp16
-@ CHECK-ARMV5: ldr r4, Ltmp17
-@ CHECK-THUMB: ldr r4, Ltmp19
+@ CHECK-ARM: ldr r4, Ltmp15
+@ CHECK-ARMV5: ldr r4, Ltmp16
+@ CHECK-THUMB: ldr r4, Ltmp18
 @ CHECK-THUMB2: mov.w r4, #2880154539
-@ CHECK-BASELINE: ldr r4, Ltmp17
+@ CHECK-BASELINE: ldr r4, Ltmp16
 
 @ Immediate can be represented only with A1 modified immediate
   ldr r5, =0x1000000b
 @ CHECK-ARM: mov r5, #268435467
 @ CHECK-ARMV5: mov r5, #268435467
-@ CHECK-THUMB: ldr r5, Ltmp20
-@ CHECK-THUMB2: ldr r5, Ltmp16
-@ CHECK-BASELINE: ldr r5, Ltmp18
+@ CHECK-THUMB: ldr r5, Ltmp19
+@ CHECK-THUMB2: ldr r5, Ltmp15
+@ CHECK-BASELINE: ldr r5, Ltmp17
 
 @ Negative numbers can be used with MVN or in Thumb2 with modified immediate
   ldr r6, =-1
 @ CHECK-ARM: mvn r6, #0
 @ CHECK-ARMV5: mvn r6, #0
-@ CHECK-THUMB: ldr r6, Ltmp21
+@ CHECK-THUMB: ldr r6, Ltmp20
 @ CHECK-THUMB2: mov.w r6, #-1
-@ CHECK-BASELINE: ldr r6, Ltmp19
+@ CHECK-BASELINE: ldr r6, Ltmp18
   ldr r7, =-0x100
 @ CHECK-ARM: mvn r7, #255
 @ CHECK-ARMV5: mvn r7, #255
-@ CHECK-THUMB: ldr r7, Ltmp22
+@ CHECK-THUMB: ldr r7, Ltmp21
 @ CHECK-THUMB2: mvn r7, #255
-@ CHECK-BASELINE: ldr r7, Ltmp20
+@ CHECK-BASELINE: ldr r7, Ltmp19
 
 @ Constant expressions can be used
   .equ expr, 0x10 + 0x10
   ldr r0, = expr
 @ CHECK-ARM: mov r0, #32
 @ CHECK-ARMV5: mov r0, #32
-@ CHECK-THUMB: ldr r0, Ltmp23
+@ CHECK-THUMB: ldr r0, Ltmp22
 @ CHECK-THUMB2: mov.w r0, #32
 @ CHECK-BASELINE: movw r0, #32
   ldr r1, = expr - 0x10
 @ CHECK-ARM: mov r1, #16
 @ CHECK-ARMV5: mov r1, #16
-@ CHECK-THUMB: ldr r1, Ltmp24
+@ CHECK-THUMB: ldr r1, Ltmp23
 @ CHECK-THUMB2: mov.w r1, #16
 @ CHECK-BASELINE: movw r1, #16
 
@@ -239,8 +239,8 @@ f17:
 @ CHECK-ARM: mov r3, #32
 @ CHECK-ARMV5: mov r2, #3
 @ CHECK-ARMV5: mov r3, #32
-@ CHECK-THUMB: ldr r2, Ltmp25
-@ CHECK-THUMB: ldr r3, Ltmp26
+@ CHECK-THUMB: ldr r2, Ltmp24
+@ CHECK-THUMB: ldr r3, Ltmp22
 @ CHECK-THUMB2: mov.w r2, #3
 @ CHECK-THUMB2: mov.w r3, #32
 @ CHECK-BASELINE: movw r2, #3
@@ -270,18 +270,15 @@ f17:
 @ CHECK: .p2align 2
 @ CHECK-LABEL: Ltmp3:
 @ CHECK: .long 65541
-@ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp4:
-@ CHECK: .long 65541
 @ CHECK: .end_data_region
 
 @ CHECK: .section __TEXT,e,regular,pure_instructions
 @ CHECK: .data_region
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp5:
+@ CHECK-LABEL: Ltmp4:
 @ CHECK: .long 65542
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp6:
+@ CHECK-LABEL: Ltmp5:
 @ CHECK: .long 65543
 @ CHECK: .end_data_region
 
@@ -291,50 +288,50 @@ f17:
 @ CHECK: .section __TEXT,g,regular,pure_instructions
 @ CHECK: .data_region
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp7:
+@ CHECK-LABEL: Ltmp6:
 @ CHECK: .long foo
 @ CHECK: .end_data_region
 
 @ CHECK: .section __TEXT,h,regular,pure_instructions
 @ CHECK: .data_region
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp8:
+@ CHECK-LABEL: Ltmp7:
 @ CHECK: .long f5
 @ CHECK: .end_data_region
 
 @ CHECK: .section __TEXT,i,regular,pure_instructions
 @ CHECK: .data_region
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp9:
+@ CHECK-LABEL: Ltmp8:
 @ CHECK: .long f12
 @ CHECK: .end_data_region
 
 @ CHECK: .section __TEXT,j,regular,pure_instructions
 @ CHECK: .data_region
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp10:
+@ CHECK-LABEL: Ltmp9:
 @ CHECK: .long 65544
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp11:
+@ CHECK-LABEL: Ltmp10:
 @ CHECK: .long bar
 @ CHECK: .end_data_region
 
 @ CHECK: .section __TEXT,k,regular,pure_instructions
 @ CHECK: .data_region
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp12:
+@ CHECK-LABEL: Ltmp11:
 @ CHECK: .long 65545
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp13:
+@ CHECK-LABEL: Ltmp12:
 @ CHECK: .long baz
 @ CHECK: .end_data_region
 
 @ CHECK: .section __TEXT,l,regular,pure_instructions
 @ CHECK: .data_region
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp14:
+@ CHECK-LABEL: Ltmp13:
 @ CHECK: .long 65546
 @ CHECK: .p2align 2
-@ CHECK-LABEL: Ltmp15:
+@ CHECK-LABEL: Ltmp14:
 @ CHECK: .long bar+4
 @ CHECK: .end_data_region

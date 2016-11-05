@@ -1,4 +1,4 @@
-//===------ Core/Pass.h - Base class for linker passes --------------------===//
+//===------ Core/Pass.h - Base class for linker passes ----------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -10,13 +10,10 @@
 #ifndef LLD_CORE_PASS_H
 #define LLD_CORE_PASS_H
 
-#include "lld/Core/Atom.h"
-#include "lld/Core/File.h"
-#include "lld/Core/Reference.h"
 #include "llvm/Support/Error.h"
-#include <vector>
 
 namespace lld {
+
 class SimpleFile;
 
 /// Once the core linking is done (which resolves references, coalesces atoms
@@ -31,16 +28,16 @@ class SimpleFile;
 /// new Atoms to the graph using the File's addAtom() method.
 class Pass {
 public:
-  virtual ~Pass() { }
+  virtual ~Pass() = default;
 
   /// Do the actual work of the Pass.
   virtual llvm::Error perform(SimpleFile &mergedFile) = 0;
 
 protected:
   // Only subclassess can be instantiated.
-  Pass() { }
+  Pass() = default;
 };
 
-} // namespace lld
+} // end namespace lld
 
 #endif // LLD_CORE_PASS_H

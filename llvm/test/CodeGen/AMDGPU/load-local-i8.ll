@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
@@ -141,17 +141,8 @@ define void @local_zextload_v2i8_to_v2i32(<2 x i32> addrspace(3)* %out, <2 x i8>
 ; GCN-NOT: s_wqm_b64
 ; GCN: s_mov_b32 m0
 ; GCN: ds_read_u16
-; FIXME: Need to optimize this sequence to avoid extra shift on VI.
-;         t23: i16 = srl t39, Constant:i32<8> 
-;          t31: i32 = any_extend t23
-;        t33: i32 = sign_extend_inreg t31, ValueType:ch:i8
-
-; SI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
-; SI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
-
-; VI-DAG: v_lshrrev_b16_e32 [[SHIFT:v[0-9]+]], 8, v{{[0-9]+}}
-; VI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
-; VI-DAG: v_bfe_i32 v{{[0-9]+}}, [[SHIFT]], 0, 8
+; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
+; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
 
 ; EG: LDS_USHORT_READ_RET
 ; EG-DAG: BFE_INT
@@ -166,8 +157,7 @@ define void @local_sextload_v2i8_to_v2i32(<2 x i32> addrspace(3)* %out, <2 x i8>
 ; FUNC-LABEL: {{^}}local_zextload_v3i8_to_v3i32:
 ; GCN: ds_read_b32
 
-; SI-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
-; VI-DAG: v_lshrrev_b16_e32 v{{[0-9]+}}, 8, {{v[0-9]+}}
+; GCN-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
 ; GCN-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 16, 8
 ; GCN-DAG: v_and_b32_e32 v{{[0-9]+}}, 0xff,
 

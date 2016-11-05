@@ -31,8 +31,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umul24_i16_vgpr_sext:
-; SI: v_mul_u32_u24_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; VI: v_mul_lo_u16_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN: v_mul_u32_u24_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 16
 define void @test_umul24_i16_vgpr_sext(i32 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
@@ -63,9 +62,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umul24_i16_vgpr:
-; SI: v_mul_u32_u24_e32
-; SI: v_and_b32_e32
-; VI: v_mul_lo_u16
+; GCN: v_mul_u32_u24_e32
+; GCN: v_and_b32_e32
 define void @test_umul24_i16_vgpr(i32 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.y = call i32 @llvm.amdgcn.workitem.id.y()
@@ -79,9 +77,9 @@ define void @test_umul24_i16_vgpr(i32 addrspace(1)* %out, i16 addrspace(1)* %in)
   ret void
 }
 
+; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; FUNC-LABEL: {{^}}test_umul24_i8_vgpr:
-; SI: v_mul_u32_u24_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; VI: v_mul_lo_u16_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN: v_mul_u32_u24_e{{(32|64)}} [[MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
 ; GCN: v_bfe_i32 v{{[0-9]}}, [[MUL]], 0, 8
 define void @test_umul24_i8_vgpr(i32 addrspace(1)* %out, i8 addrspace(1)* %a, i8 addrspace(1)* %b) {
 entry:

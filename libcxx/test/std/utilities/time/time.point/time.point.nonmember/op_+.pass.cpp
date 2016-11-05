@@ -22,6 +22,8 @@
 #include <chrono>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::chrono::system_clock Clock;
@@ -34,7 +36,7 @@ int main()
     t2 = Duration2(6) + t1;
     assert(t2.time_since_epoch() == Duration2(3006));
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     constexpr std::chrono::time_point<Clock, Duration1> t1(Duration1(3));
     constexpr std::chrono::time_point<Clock, Duration2> t2 = t1 + Duration2(5);

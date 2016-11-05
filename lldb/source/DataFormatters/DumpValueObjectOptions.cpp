@@ -22,7 +22,7 @@ using namespace lldb_private;
 DumpValueObjectOptions::DumpValueObjectOptions()
     : m_summary_sp(), m_root_valobj_name(),
       m_max_ptr_depth(PointerDepth{PointerDepth::Mode::Default, 0}),
-      m_decl_printing_helper(), m_use_synthetic(true),
+      m_decl_printing_helper(), m_pointer_as_array(), m_use_synthetic(true),
       m_scope_already_checked(false), m_flat_output(false), m_ignore_cap(false),
       m_show_types(false), m_show_location(false), m_use_objc(false),
       m_hide_root_type(false), m_hide_name(false), m_hide_value(false),
@@ -195,6 +195,12 @@ DumpValueObjectOptions::SetRevealEmptyAggregates(bool reveal) {
 
 DumpValueObjectOptions &
 DumpValueObjectOptions::SetElementCount(uint32_t element_count) {
-  m_element_count = element_count;
+  m_pointer_as_array = PointerAsArraySettings(element_count);
+  return *this;
+}
+
+DumpValueObjectOptions &DumpValueObjectOptions::SetPointerAsArray(
+    const PointerAsArraySettings &ptr_array) {
+  m_pointer_as_array = ptr_array;
   return *this;
 }

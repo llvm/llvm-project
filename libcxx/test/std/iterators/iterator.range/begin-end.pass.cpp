@@ -32,7 +32,7 @@ void test_const_container( const C & c, typename C::value_type val ) {
     assert (*std::begin(c)   ==  val );
     assert ( std::begin(c)   != c.end());
     assert ( std::end(c)     == c.end());
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     assert ( std::cbegin(c)  == c.cbegin());
     assert ( std::cbegin(c)  != c.cend());
     assert ( std::cend(c)    == c.cend());
@@ -51,7 +51,7 @@ void test_const_container( const std::initializer_list<T> & c, T val ) {
     assert (*std::begin(c)   ==  val );
     assert ( std::begin(c)   != c.end());
     assert ( std::end(c)     == c.end());
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
 //  initializer_list doesn't have cbegin/cend/rbegin/rend
 //  but std::cbegin(),etc work (b/c they're general fn templates)
 //     assert ( std::cbegin(c)  == c.cbegin());
@@ -72,7 +72,7 @@ void test_container( C & c, typename C::value_type val ) {
     assert (*std::begin(c)   ==  val );
     assert ( std::begin(c)   != c.end());
     assert ( std::end(c)     == c.end());
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     assert ( std::cbegin(c)  == c.cbegin());
     assert ( std::cbegin(c)  != c.cend());
     assert ( std::cend(c)    == c.cend());
@@ -91,7 +91,7 @@ void test_container( std::initializer_list<T> & c, T val ) {
     assert (*std::begin(c)   ==  val );
     assert ( std::begin(c)   != c.end());
     assert ( std::end(c)     == c.end());
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
 //  initializer_list doesn't have cbegin/cend/rbegin/rend
 //     assert ( std::cbegin(c)  == c.cbegin());
 //     assert ( std::cbegin(c)  != c.cend());
@@ -111,7 +111,7 @@ void test_const_array( const T (&array)[Sz] ) {
     assert (*std::begin(array)  ==  array[0] );
     assert ( std::begin(array)  != std::end(array));
     assert ( std::end(array)    == array + Sz);
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     assert ( std::cbegin(array) == array );
     assert (*std::cbegin(array) == array[0] );
     assert ( std::cbegin(array) != std::cend(array));
@@ -137,7 +137,7 @@ int main(){
 
     static constexpr int arrA [] { 1, 2, 3 };
     test_const_array ( arrA );
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     constexpr const int *b = std::cbegin(arrA);
     constexpr const int *e = std::cend(arrA);
     static_assert(e - b == 3, "");

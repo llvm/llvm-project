@@ -15,6 +15,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::logical_not<int> F;
@@ -23,7 +25,7 @@ int main()
     static_assert((std::is_same<F::result_type, bool>::value), "" );
     assert(!f(36));
     assert(f(0));
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     typedef std::logical_not<> F2;
     const F2 f2 = F2();
     assert(!f2(36));

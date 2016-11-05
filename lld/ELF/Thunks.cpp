@@ -22,18 +22,20 @@
 //===---------------------------------------------------------------------===//
 
 #include "Thunks.h"
+#include "Config.h"
 #include "Error.h"
-#include "InputFiles.h"
 #include "InputSection.h"
 #include "Memory.h"
 #include "OutputSections.h"
 #include "Symbols.h"
 #include "Target.h"
-#include "llvm/Support/Allocator.h"
-
-#include "llvm/Object/ELF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <cstdint>
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -44,6 +46,7 @@ namespace lld {
 namespace elf {
 
 namespace {
+
 // Specific ARM Thunk implementations. The naming convention is:
 // Source State, TargetState, Target Requirement, ABS or PI, Range
 template <class ELFT>
@@ -97,7 +100,8 @@ public:
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf) const override;
 };
-} // anonymous namespace
+
+} // end anonymous namespace
 
 // ARM Target Thunks
 template <class ELFT> static uint64_t getARMThunkDestVA(const SymbolBody &S) {
@@ -182,7 +186,7 @@ template <class ELFT> typename ELFT::uint Thunk<ELFT>::getVA() const {
   return Owner.OutSec->getVA() + Owner.OutSecOff + Offset;
 }
 
-template <class ELFT> Thunk<ELFT>::~Thunk() {}
+template <class ELFT> Thunk<ELFT>::~Thunk() = default;
 
 // Creates a thunk for Thumb-ARM interworking.
 template <class ELFT>
@@ -265,5 +269,5 @@ template class Thunk<ELF32BE>;
 template class Thunk<ELF64LE>;
 template class Thunk<ELF64BE>;
 
-} // namespace elf
-} // namespace lld
+} // end namespace elf
+} // end namespace lld

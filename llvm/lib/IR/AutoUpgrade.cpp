@@ -279,22 +279,22 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx512.mask.padd.") ||
          Name.startswith("avx512.mask.psub.") ||
          Name.startswith("avx512.mask.pmull.") ||
-         Name.startswith("avx512.mask.add.pd.128") ||
-         Name.startswith("avx512.mask.add.pd.256") ||
-         Name.startswith("avx512.mask.add.ps.128") ||
-         Name.startswith("avx512.mask.add.ps.256") ||
-         Name.startswith("avx512.mask.div.pd.128") ||
-         Name.startswith("avx512.mask.div.pd.256") ||
-         Name.startswith("avx512.mask.div.ps.128") ||
-         Name.startswith("avx512.mask.div.ps.256") ||
-         Name.startswith("avx512.mask.mul.pd.128") ||
-         Name.startswith("avx512.mask.mul.pd.256") ||
-         Name.startswith("avx512.mask.mul.ps.128") ||
-         Name.startswith("avx512.mask.mul.ps.256") ||
-         Name.startswith("avx512.mask.sub.pd.128") ||
-         Name.startswith("avx512.mask.sub.pd.256") ||
-         Name.startswith("avx512.mask.sub.ps.128") ||
-         Name.startswith("avx512.mask.sub.ps.256") ||
+         Name == "avx512.mask.add.pd.128" ||
+         Name == "avx512.mask.add.pd.256" ||
+         Name == "avx512.mask.add.ps.128" ||
+         Name == "avx512.mask.add.ps.256" ||
+         Name == "avx512.mask.div.pd.128" ||
+         Name == "avx512.mask.div.pd.256" ||
+         Name == "avx512.mask.div.ps.128" ||
+         Name == "avx512.mask.div.ps.256" ||
+         Name == "avx512.mask.mul.pd.128" ||
+         Name == "avx512.mask.mul.pd.256" ||
+         Name == "avx512.mask.mul.ps.128" ||
+         Name == "avx512.mask.mul.ps.256" ||
+         Name == "avx512.mask.sub.pd.128" ||
+         Name == "avx512.mask.sub.pd.256" ||
+         Name == "avx512.mask.sub.ps.128" ||
+         Name == "avx512.mask.sub.ps.256" ||
          Name.startswith("sse41.pmovsx") ||
          Name.startswith("sse41.pmovzx") ||
          Name.startswith("avx2.pmovsx") ||
@@ -401,12 +401,6 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                   : Intrinsic::x86_avx512_mask_psrl_qi_512;
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), ShiftID);
-      return true;
-    }
-    // Fix the FMA4 intrinsics to remove the 4
-    if (IsX86 && Name.startswith("fma4.")) {
-      rename(F);
-      NewFn = F;
       return true;
     }
     // Upgrade any XOP PERMIL2 index operand still using a float/double vector.
@@ -1304,31 +1298,28 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = Builder.CreateMul(CI->getArgOperand(0), CI->getArgOperand(1));
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
-    } else if (IsX86 && (Name.startswith("avx512.mask.add.pd.128") ||
-                         Name.startswith("avx512.mask.add.pd.256") ||
-                         Name.startswith("avx512.mask.add.ps.128") ||
-                         Name.startswith("avx512.mask.add.ps.256"))) {
+    } else if (IsX86 && (Name.startswith("avx512.mask.add.p"))) {
       Rep = Builder.CreateFAdd(CI->getArgOperand(0), CI->getArgOperand(1));
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
-    } else if (IsX86 && (Name.startswith("avx512.mask.div.pd.128") ||
-                         Name.startswith("avx512.mask.div.pd.256") ||
-                         Name.startswith("avx512.mask.div.ps.128") ||
-                         Name.startswith("avx512.mask.div.ps.256"))) {
+    } else if (IsX86 && (Name == "avx512.mask.div.pd.128" ||
+                         Name == "avx512.mask.div.pd.256" ||
+                         Name == "avx512.mask.div.ps.128" ||
+                         Name == "avx512.mask.div.ps.256")) {
       Rep = Builder.CreateFDiv(CI->getArgOperand(0), CI->getArgOperand(1));
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
-    } else if (IsX86 && (Name.startswith("avx512.mask.mul.pd.128") ||
-                         Name.startswith("avx512.mask.mul.pd.256") ||
-                         Name.startswith("avx512.mask.mul.ps.128") ||
-                         Name.startswith("avx512.mask.mul.ps.256"))) {
+    } else if (IsX86 && (Name == "avx512.mask.mul.pd.128" ||
+                         Name == "avx512.mask.mul.pd.256" ||
+                         Name == "avx512.mask.mul.ps.128" ||
+                         Name == "avx512.mask.mul.ps.256")) {
       Rep = Builder.CreateFMul(CI->getArgOperand(0), CI->getArgOperand(1));
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
-    } else if (IsX86 && (Name.startswith("avx512.mask.sub.pd.128") ||
-                         Name.startswith("avx512.mask.sub.pd.256") ||
-                         Name.startswith("avx512.mask.sub.ps.128") ||
-                         Name.startswith("avx512.mask.sub.ps.256"))) {
+    } else if (IsX86 && (Name == "avx512.mask.sub.pd.128" ||
+                         Name == "avx512.mask.sub.pd.256" ||
+                         Name == "avx512.mask.sub.ps.128" ||
+                         Name == "avx512.mask.sub.ps.256")) {
       Rep = Builder.CreateFSub(CI->getArgOperand(0), CI->getArgOperand(1));
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));

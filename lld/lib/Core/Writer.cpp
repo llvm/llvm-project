@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/File.h"
 #include "lld/Core/Writer.h"
 
 namespace lld {
-Writer::Writer() {
-}
 
-Writer::~Writer() {
-}
+Writer::Writer() = default;
+
+Writer::~Writer() = default;
+
 } // end namespace lld

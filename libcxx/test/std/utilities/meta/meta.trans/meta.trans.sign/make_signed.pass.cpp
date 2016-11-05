@@ -38,7 +38,7 @@ template <class T, class U>
 void test_make_signed()
 {
     static_assert((std::is_same<typename std::make_signed<T>::type, U>::value), "");
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     static_assert((std::is_same<std::make_signed_t<T>, U>::value), "");
 #endif
 }

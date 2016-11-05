@@ -359,7 +359,7 @@ void ValueObjectPrinter::GetValueSummaryError(std::string &value,
   lldb::Format format = m_options.m_format;
   // if I am printing synthetized elements, apply the format to those elements
   // only
-  if (m_options.m_element_count > 0)
+  if (m_options.m_pointer_as_array)
     m_valobj->GetValueAsCString(lldb::eFormatDefault, value);
   else if (format != eFormatDefault && format != m_valobj->GetFormat())
     m_valobj->GetValueAsCString(format, value);
@@ -449,7 +449,7 @@ bool ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
   if (ShouldPrintValueObject()) {
     // let's avoid the overly verbose no description error for a nil thing
     if (m_options.m_use_objc && !IsNil() && !IsUninitialized() &&
-        (m_options.m_element_count == 0)) {
+        (!m_options.m_pointer_as_array)) {
       if (!m_options.m_hide_value || !m_options.m_hide_name)
         m_stream->Printf(" ");
       const char *object_desc = nullptr;
@@ -513,7 +513,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
 
   // if the user has specified an element count, always print children
   // as it is explicit user demand being honored
-  if (m_options.m_element_count > 0)
+  if (m_options.m_pointer_as_array)
     return true;
 
   TypeSummaryImpl *entry = GetSummaryFormatter();
@@ -583,9 +583,9 @@ void ValueObjectPrinter::PrintChildrenPreamble() {
 void ValueObjectPrinter::PrintChild(
     ValueObjectSP child_sp,
     const DumpValueObjectOptions::PointerDepth &curr_ptr_depth) {
-  const uint32_t consumed_depth = (m_options.m_element_count == 0) ? 1 : 0;
+  const uint32_t consumed_depth = (!m_options.m_pointer_as_array) ? 1 : 0;
   const bool does_consume_ptr_depth =
-      ((IsPtr() && m_options.m_element_count == 0) || IsRef());
+      ((IsPtr() && !m_options.m_pointer_as_array) || IsRef());
 
   DumpValueObjectOptions child_options(m_options);
   child_options.SetFormat(m_options.m_format)
@@ -612,8 +612,8 @@ void ValueObjectPrinter::PrintChild(
 uint32_t ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
   ValueObject *synth_m_valobj = GetValueObjectForChildrenGeneration();
 
-  if (m_options.m_element_count > 0)
-    return m_options.m_element_count;
+  if (m_options.m_pointer_as_array)
+    return m_options.m_pointer_as_array.m_element_count;
 
   size_t num_children = synth_m_valobj->GetNumChildren();
   print_dotdotdot = false;
@@ -664,11 +664,20 @@ bool ValueObjectPrinter::ShouldPrintEmptyBrackets(bool value_printed,
   return true;
 }
 
+static constexpr size_t PhysicalIndexForLogicalIndex(size_t base, size_t stride,
+                                                     size_t logical) {
+  return base + logical * stride;
+}
+
 ValueObjectSP ValueObjectPrinter::GenerateChild(ValueObject *synth_valobj,
                                                 size_t idx) {
-  if (m_options.m_element_count > 0) {
+  if (m_options.m_pointer_as_array) {
     // if generating pointer-as-array children, use GetSyntheticArrayMember
-    return synth_valobj->GetSyntheticArrayMember(idx, true);
+    return synth_valobj->GetSyntheticArrayMember(
+        PhysicalIndexForLogicalIndex(
+            m_options.m_pointer_as_array.m_base_element,
+            m_options.m_pointer_as_array.m_stride, idx),
+        true);
   } else {
     // otherwise, do the usual thing
     return synth_valobj->GetChildAtIndex(idx, true);
@@ -779,7 +788,7 @@ void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
   bool print_oneline =
       (curr_ptr_depth.CanAllowExpansion() || m_options.m_show_types ||
        !m_options.m_allow_oneliner_mode || m_options.m_flat_output ||
-       (m_options.m_element_count > 0) || m_options.m_show_location)
+       (m_options.m_pointer_as_array) || m_options.m_show_location)
           ? false
           : DataVisualization::ShouldPrintAsOneLiner(*m_valobj);
   bool is_instance_ptr = IsInstancePointer();

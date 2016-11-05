@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}s_sext_i1_to_i32:
 ; GCN: v_cndmask_b32_e64
@@ -55,43 +55,22 @@ define void @v_sext_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %in) no
 }
 
 ; GCN-LABEL: {{^}}s_sext_i16_to_i64:
-; GCN: s_bfe_i64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x100000
+; GCN: s_endpgm
 define void @s_sext_i16_to_i64(i64 addrspace(1)* %out, i16 %a) nounwind {
   %sext = sext i16 %a to i64
   store i64 %sext, i64 addrspace(1)* %out, align 8
   ret void
 }
 
-; GCN-LABEL: {{^}}s_sext_i1_to_i16:
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1
-; GCN-NEXT: buffer_store_short [[RESULT]]
-define void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
-  %cmp = icmp eq i32 %a, %b
-  %sext = sext i1 %cmp to i16
-  store i16 %sext, i16 addrspace(1)* %out
-  ret void
-}
-
 ; GCN-LABEL: {{^}}s_sext_v4i8_to_v4i32:
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
+; GCN-DAG: s_sext_i32_i8 [[EXT0:s[0-9]+]], [[VAL]]
+; GCN-DAG: s_bfe_i32 [[EXT1:s[0-9]+]], [[VAL]], 0x80008
 ; GCN-DAG: s_bfe_i32 [[EXT2:s[0-9]+]], [[VAL]], 0x80010
 ; GCN-DAG: s_ashr_i32 [[EXT3:s[0-9]+]], [[VAL]], 24
-; SI-DAG: s_bfe_i32 [[EXT1:s[0-9]+]], [[VAL]], 0x80008
-; GCN-DAG: s_sext_i32_i8 [[EXT0:s[0-9]+]], [[VAL]]
-
-; FIXME: We end up with a v_bfe instruction, because the i16 srl
-; gets selected to a v_lshrrev_b16 instructions, so the input to
-; the bfe is a vector registers.  To fix this we need to be able to
-; optimize:
-; t29: i16 = truncate t10
-; t55: i16 = srl t29, Constant:i32<8>
-; t63: i32 = any_extend t55
-; t64: i32 = sign_extend_inreg t63, ValueType:ch:i8
-
-; VI-DAG: v_bfe_i32 [[VEXT1:v[0-9]+]], v{{[0-9]+}}, 0, 8
 
 ; GCN-DAG: v_mov_b32_e32 [[VEXT0:v[0-9]+]], [[EXT0]]
-; SI-DAG: v_mov_b32_e32 [[VEXT1:v[0-9]+]], [[EXT1]]
+; GCN-DAG: v_mov_b32_e32 [[VEXT1:v[0-9]+]], [[EXT1]]
 ; GCN-DAG: v_mov_b32_e32 [[VEXT2:v[0-9]+]], [[EXT2]]
 ; GCN-DAG: v_mov_b32_e32 [[VEXT3:v[0-9]+]], [[EXT3]]
 
@@ -117,17 +96,10 @@ define void @s_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 %a) nounwind {
 
 ; GCN-LABEL: {{^}}v_sext_v4i8_to_v4i32:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]]
-; FIXME: need to optimize same sequence as above test to avoid
-; this shift.
-; VI-DAG: v_lshrrev_b16_e32 [[SH16:v[0-9]+]], 8, [[VAL]]
+; GCN-DAG: v_bfe_i32 [[EXT0:v[0-9]+]], [[VAL]], 0, 8
+; GCN-DAG: v_bfe_i32 [[EXT1:v[0-9]+]], [[VAL]], 8, 8
+; GCN-DAG: v_bfe_i32 [[EXT2:v[0-9]+]], [[VAL]], 16, 8
 ; GCN-DAG: v_ashrrev_i32_e32 [[EXT3:v[0-9]+]], 24, [[VAL]]
-; VI-DAG: v_bfe_i32 [[EXT0:v[0-9]+]], [[VAL]], 0, 8
-; VI-DAG: v_bfe_i32 [[EXT2:v[0-9]+]], [[VAL]], 16, 8
-; VI-DAG: v_bfe_i32 [[EXT1:v[0-9]+]], [[SH16]], 0, 8
-
-; SI-DAG: v_bfe_i32 [[EXT2:v[0-9]+]], [[VAL]], 16, 8
-; SI-DAG: v_bfe_i32 [[EXT1:v[0-9]+]], [[VAL]], 8, 8
-; SI: v_bfe_i32 [[EXT0:v[0-9]+]], [[VAL]], 0, 8
 
 ; GCN: buffer_store_dword [[EXT0]]
 ; GCN: buffer_store_dword [[EXT1]]

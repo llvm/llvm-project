@@ -9,16 +9,17 @@
 
 #include "lld/Core/File.h"
 #include "lld/Core/Reader.h"
+#include "lld/Core/Reference.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
-#include <system_error>
+#include <algorithm>
 
 namespace lld {
 
-YamlIOTaggedDocumentHandler::~YamlIOTaggedDocumentHandler() {}
+YamlIOTaggedDocumentHandler::~YamlIOTaggedDocumentHandler() = default;
 
 void Registry::add(std::unique_ptr<Reader> reader) {
   _readers.push_back(std::move(reader));
@@ -62,7 +63,6 @@ bool Registry::handleTaggedDoc(llvm::yaml::IO &io,
       return true;
   return false;
 }
-
 
 void Registry::addKindTable(Reference::KindNamespace ns,
                             Reference::KindArch arch,

@@ -59,6 +59,10 @@ def calculate_change(old_val, new_val):
     """
     Return a float representing the decimal change between old_val and new_val.
     """
+    if old_val == 0 and new_val == 0:
+        return 0.0
+    if old_val == 0:
+        return float(new_val - old_val) / (float(old_val + new_val) / 2)
     return float(new_val - old_val) / abs(old_val)
 
 
@@ -73,7 +77,7 @@ def generate_difference_report(json1, json2, use_color=True):
             if b['name'] == name:
                 return b
         return None
-    first_line = "{:<{}s}     Time           CPU".format(
+    first_line = "{:<{}s}     Time           CPU           Old           New".format(
         'Benchmark', first_col_width)
     output_strs = [first_line, '-' * len(first_line)]
     for bn in json1['benchmarks']:
@@ -88,12 +92,13 @@ def generate_difference_report(json1, json2, use_color=True):
                 return BC_WHITE
             else:
                 return BC_CYAN
-        fmt_str = "{}{:<{}s}{endc}    {}{:+.2f}{endc}         {}{:+.2f}{endc}"
+        fmt_str = "{}{:<{}s}{endc}    {}{:+.2f}{endc}         {}{:+.2f}{endc}         {:4d}         {:4d}"
         tres = calculate_change(bn['real_time'], other_bench['real_time'])
         cpures = calculate_change(bn['cpu_time'], other_bench['cpu_time'])
         output_strs += [color_format(use_color, fmt_str,
             BC_HEADER, bn['name'], first_col_width,
             get_color(tres), tres, get_color(cpures), cpures,
+            bn['cpu_time'], other_bench['cpu_time'],
             endc=BC_ENDC)]
     return output_strs
 

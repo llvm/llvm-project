@@ -22,9 +22,11 @@
 
 #include <utility>
 
+#include "test_macros.h"
+
 int main()
 {
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
 
 //  Should fail to compile, since float is not an integral type
     using floatmix = std::integer_sequence<float>;
@@ -34,5 +36,5 @@ int main()
 
 X
 
-#endif  // _LIBCPP_STD_VER > 11
+#endif  // TEST_STD_VER > 11
 }
