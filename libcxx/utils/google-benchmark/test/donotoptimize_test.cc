@@ -4,15 +4,12 @@
 
 namespace {
 #if defined(__GNUC__)
-  std::uint64_t double_up(const std::uint64_t x) __attribute__ ((const));
+std::uint64_t double_up(const std::uint64_t x) __attribute__((const));
 #endif
-  std::uint64_t double_up(const std::uint64_t x) {
-    return x * 2;
-  }
+std::uint64_t double_up(const std::uint64_t x) { return x * 2; }
 }
 
 int main(int, char*[]) {
-
   // this test verifies compilation of DoNotOptimize() for some types
 
   char buffer8[8];

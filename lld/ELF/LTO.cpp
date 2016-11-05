@@ -12,9 +12,27 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/ELF.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -76,7 +94,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
 
 BitcodeCompiler::BitcodeCompiler() : LtoObj(createLTO()) {}
 
-BitcodeCompiler::~BitcodeCompiler() {}
+BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
   replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type,
@@ -125,7 +143,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
 
   checkError(LtoObj->run([&](size_t Task) {
     return llvm::make_unique<lto::NativeObjectStream>(
-        llvm::make_unique<llvm::raw_svector_ostream>(Buff[Task]));
+        llvm::make_unique<raw_svector_ostream>(Buff[Task]));
   }));
 
   for (unsigned I = 0; I != MaxTasks; ++I) {

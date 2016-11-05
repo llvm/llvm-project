@@ -119,8 +119,7 @@ LeastSq MinimalLeastSq(const std::vector<int>& n,
 //                  this one. If it is oAuto, it will be calculated the best
 //                  fitting curve.
 LeastSq MinimalLeastSq(const std::vector<int>& n,
-                       const std::vector<double>& time,
-                       const BigO complexity) {
+                       const std::vector<double>& time, const BigO complexity) {
   CHECK_EQ(n.size(), time.size());
   CHECK_GE(n.size(), 2);  // Do not compute fitting curve is less than two
                           // benchmark runs are given
@@ -196,6 +195,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
       cpu_accumulated_time_stat.Mean() * run_iterations;
   mean_data.bytes_per_second = bytes_per_second_stat.Mean();
   mean_data.items_per_second = items_per_second_stat.Mean();
+  mean_data.time_unit = reports[0].time_unit;
 
   // Only add label to mean/stddev if it is same for all runs
   mean_data.report_label = reports[0].report_label;
@@ -214,6 +214,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
   stddev_data.cpu_accumulated_time = cpu_accumulated_time_stat.StdDev();
   stddev_data.bytes_per_second = bytes_per_second_stat.StdDev();
   stddev_data.items_per_second = items_per_second_stat.StdDev();
+  stddev_data.time_unit = reports[0].time_unit;
 
   results.push_back(mean_data);
   results.push_back(stddev_data);
