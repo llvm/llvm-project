@@ -244,3 +244,19 @@ struct IncompleteType;
 void NegativeForIncompleteType(IncompleteType I) {
   // CHECK-MESSAGES: [[@LINE-1]]:47: error: variable has incomplete type 'IncompleteType' [clang-diagnostic-error]
 }
+
+// Case where parameter in declaration is already const-qualified but not in
+// implementation. Make sure a second 'const' is not added to the declaration.
+void PositiveConstDeclaration(const ExpensiveToCopyType A);
+// CHECK-FIXES: void PositiveConstDeclaration(const ExpensiveToCopyType& A);
+void PositiveConstDeclaration(ExpensiveToCopyType A) {
+  // CHECK-MESSAGES: [[@LINE-1]]:51: warning: the parameter 'A' is copied
+  // CHECK-FIXES: void PositiveConstDeclaration(const ExpensiveToCopyType& A) {
+}
+
+void PositiveNonConstDeclaration(ExpensiveToCopyType A);
+// CHECK-FIXES: void PositiveNonConstDeclaration(const ExpensiveToCopyType& A);
+void PositiveNonConstDeclaration(const ExpensiveToCopyType A) {
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'A'
+  // CHECK-FIXES: void PositiveNonConstDeclaration(const ExpensiveToCopyType& A) {
+}

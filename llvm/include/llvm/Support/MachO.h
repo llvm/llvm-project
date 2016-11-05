@@ -1749,6 +1749,7 @@ namespace llvm {
       uint64_t sp;
       uint64_t pc;
       uint32_t cpsr;
+      uint32_t pad;
     };
 
     inline void swapStruct(arm_thread_state64_t &x) {

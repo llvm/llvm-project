@@ -584,10 +584,15 @@ macro(add_llvm_library name)
         set(install_type ARCHIVE)
       endif()
 
+      if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+          NOT LLVM_DISTRIBUTION_COMPONENTS)
+        set(export_to_llvmexports EXPORT LLVMExports)
+      endif()
+
       install(TARGETS ${name}
-            EXPORT LLVMExports
-            ${install_type} DESTINATION ${install_dir}
-            COMPONENT ${name})
+              ${export_to_llvmexports}
+              ${install_type} DESTINATION ${install_dir}
+              COMPONENT ${name})
 
       if (NOT CMAKE_CONFIGURATION_TYPES)
         add_custom_target(install-${name}
@@ -618,10 +623,16 @@ macro(add_llvm_loadable_module name)
         else()
           set(dlldir "lib${LLVM_LIBDIR_SUFFIX}")
         endif()
+
+        if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+            NOT LLVM_DISTRIBUTION_COMPONENTS)
+          set(export_to_llvmexports EXPORT LLVMExports)
+        endif()
+
         install(TARGETS ${name}
-          EXPORT LLVMExports
-          LIBRARY DESTINATION ${dlldir}
-          ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+                ${export_to_llvmexports}
+                LIBRARY DESTINATION ${dlldir}
+                ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
       endif()
       set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
     endif()
@@ -797,8 +808,13 @@ macro(add_llvm_tool name)
 
   if ( ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if( LLVM_BUILD_TOOLS )
+      if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+          NOT LLVM_DISTRIBUTION_COMPONENTS)
+        set(export_to_llvmexports EXPORT LLVMExports)
+      endif()
+
       install(TARGETS ${name}
-              EXPORT LLVMExports
+              ${export_to_llvmexports}
               RUNTIME DESTINATION ${LLVM_TOOLS_INSTALL_DIR}
               COMPONENT ${name})
 
