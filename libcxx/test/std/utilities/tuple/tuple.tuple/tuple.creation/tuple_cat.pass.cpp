@@ -21,6 +21,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 
 int main()
@@ -48,7 +49,7 @@ int main()
         assert(std::get<0>(t) == 1);
     }
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         constexpr std::tuple<> t = std::tuple_cat();
         ((void)t); // Prevent unused warning

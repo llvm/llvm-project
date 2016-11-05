@@ -7,10 +7,11 @@
 // NOTE: Users should NOT include or use src/check.h. This is only done in
 // order to test library internals.
 
-#include "benchmark/benchmark_api.h"
-#include "../src/check.h"
-#include <stdexcept>
 #include <cstdlib>
+#include <stdexcept>
+
+#include "../src/check.h"
+#include "benchmark/benchmark_api.h"
 
 #if defined(__GNUC__) && !defined(__EXCEPTIONS)
 #define TEST_HAS_NO_EXCEPTIONS
@@ -29,13 +30,15 @@ void try_invalid_pause_resume(benchmark::State& state) {
   try {
     state.PauseTiming();
     std::abort();
-  } catch (std::logic_error const&) {}
+  } catch (std::logic_error const&) {
+  }
   try {
     state.ResumeTiming();
     std::abort();
-  } catch (std::logic_error const&) {}
+  } catch (std::logic_error const&) {
+  }
 #else
-  (void)state; // avoid unused warning
+  (void)state;  // avoid unused warning
 #endif
 }
 
@@ -54,7 +57,7 @@ void BM_diagnostic_test(benchmark::State& state) {
 }
 BENCHMARK(BM_diagnostic_test);
 
-int main(int argc, char** argv) {
+int main(int argc, char* argv[]) {
   benchmark::internal::GetAbortHandler() = &TestHandler;
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

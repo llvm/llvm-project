@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -fix-errors -- --std=c++11
 
 // CHECK-FIXES: #include <utility>
 
@@ -236,4 +236,27 @@ void PositiveConstRefNotMoveAssignable(ExpensiveToCopyType A) {
   // CHECK-FIXES: void PositiveConstRefNotMoveAssignable(const ExpensiveToCopyType& A) {
   ExpensiveToCopyType B;
   B = A;
+}
+
+// Ensure that incomplete types result in an error from the frontend and not a
+// clang-tidy diagnostic about IncompleteType being expensive to copy.
+struct IncompleteType;
+void NegativeForIncompleteType(IncompleteType I) {
+  // CHECK-MESSAGES: [[@LINE-1]]:47: error: variable has incomplete type 'IncompleteType' [clang-diagnostic-error]
+}
+
+// Case where parameter in declaration is already const-qualified but not in
+// implementation. Make sure a second 'const' is not added to the declaration.
+void PositiveConstDeclaration(const ExpensiveToCopyType A);
+// CHECK-FIXES: void PositiveConstDeclaration(const ExpensiveToCopyType& A);
+void PositiveConstDeclaration(ExpensiveToCopyType A) {
+  // CHECK-MESSAGES: [[@LINE-1]]:51: warning: the parameter 'A' is copied
+  // CHECK-FIXES: void PositiveConstDeclaration(const ExpensiveToCopyType& A) {
+}
+
+void PositiveNonConstDeclaration(ExpensiveToCopyType A);
+// CHECK-FIXES: void PositiveNonConstDeclaration(const ExpensiveToCopyType& A);
+void PositiveNonConstDeclaration(const ExpensiveToCopyType A) {
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'A'
+  // CHECK-FIXES: void PositiveNonConstDeclaration(const ExpensiveToCopyType& A) {
 }

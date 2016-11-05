@@ -23,7 +23,7 @@
 
 template<typename SV>
 void test1 () {
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     constexpr SV sv1;
     static_assert ( sv1.size() == 0, "" );

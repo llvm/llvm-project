@@ -22,9 +22,10 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "is_transparent.h"
 
-#if _LIBCPP_STD_VER <= 11
+#if TEST_STD_VER <= 11
 #error "This test requires is C++14 (or later)"
 #else
 

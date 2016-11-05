@@ -6,7 +6,6 @@
 #include <ostream>
 #include <type_traits>
 
-
 namespace benchmark {
 
 template <typename VType, typename NumType>
@@ -136,7 +135,7 @@ class Stat1 {
 
  private:
   static_assert(std::is_integral<NumType>::value &&
-                !std::is_same<NumType, bool>::value,
+                    !std::is_same<NumType, bool>::value,
                 "NumType must be an integral type that is not bool.");
   // Let i be the index of the samples provided (using +=)
   // and weight[i],value[i] be the data of sample #i

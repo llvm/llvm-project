@@ -15,6 +15,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::bit_or<int> F;
@@ -27,7 +29,7 @@ int main()
     assert(f(0x58D3, 0xEA95) == 0xFAD7);
     assert(f(0x58D3, 0) == 0x58D3);
     assert(f(0xFFFF, 0x58D3) == 0xFFFF);
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     typedef std::bit_or<> F2;
     const F2 f2 = F2();
     assert(f2(0xEA95, 0xEA95) == 0xEA95);

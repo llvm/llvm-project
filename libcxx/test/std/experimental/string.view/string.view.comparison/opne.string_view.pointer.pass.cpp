@@ -17,6 +17,7 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
 #include "constexpr_char_traits.hpp"
 
 template <class S>
@@ -49,7 +50,7 @@ int main()
     test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", false);
     }
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef std::experimental::basic_string_view<char, constexpr_char_traits<char>> SV;
     constexpr SV  sv1;

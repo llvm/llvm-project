@@ -12,8 +12,7 @@ void BM_basic_slow(benchmark::State& state) {
   std::chrono::milliseconds sleep_duration(state.range(0));
   while (state.KeepRunning()) {
     std::this_thread::sleep_for(
-      std::chrono::duration_cast<std::chrono::nanoseconds>(sleep_duration)
-      );
+        std::chrono::duration_cast<std::chrono::nanoseconds>(sleep_duration));
   }
 }
 

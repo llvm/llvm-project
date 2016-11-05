@@ -38,7 +38,7 @@ template <class T, class U>
 void test_make_unsigned()
 {
     static_assert((std::is_same<typename std::make_unsigned<T>::type, U>::value), "");
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     static_assert((std::is_same<std::make_unsigned_t<T>, U>::value), "");
 #endif
 }

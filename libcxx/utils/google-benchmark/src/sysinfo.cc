@@ -17,13 +17,13 @@
 
 #ifdef BENCHMARK_OS_WINDOWS
 #include <Shlwapi.h>
-#include <Windows.h>
 #include <VersionHelpers.h>
+#include <Windows.h>
 #else
 #include <fcntl.h>
 #include <sys/resource.h>
-#include <sys/types.h> // this header must be included before 'sys/sysctl.h' to avoid compilation error on FreeBSD
 #include <sys/time.h>
+#include <sys/types.h>  // this header must be included before 'sys/sysctl.h' to avoid compilation error on FreeBSD
 #include <unistd.h>
 #if defined BENCHMARK_OS_FREEBSD || defined BENCHMARK_OS_MACOSX
 #include <sys/sysctl.h>
@@ -31,8 +31,8 @@
 #endif
 
 #include <cerrno>
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -52,7 +52,6 @@ namespace {
 std::once_flag cpuinfo_init;
 double cpuinfo_cycles_per_second = 1.0;
 int cpuinfo_num_cpus = 1;  // Conservative guess
-std::mutex cputimens_mutex;
 
 #if !defined BENCHMARK_OS_MACOSX
 const int64_t estimate_time_ms = 1000;
@@ -85,6 +84,22 @@ bool ReadIntFromFile(const char* file, long* value) {
     close(fd);
   }
   return ret;
+}
+#endif
+
+#if defined BENCHMARK_OS_LINUX || defined BENCHMARK_OS_CYGWIN
+static std::string convertToLowerCase(std::string s) {
+  for (auto& ch : s)
+    ch = std::tolower(ch);
+  return s;
+}
+static bool startsWithKey(std::string Value, std::string Key,
+                          bool IgnoreCase = true) {
+  if (IgnoreCase) {
+    Key = convertToLowerCase(std::move(Key));
+    Value = convertToLowerCase(std::move(Value));
+  }
+  return Value.compare(0, Key.size(), Key) == 0;
 }
 #endif
 
@@ -127,7 +142,8 @@ void InitializeSystemInfo() {
   if (fd == -1) {
     perror(pname);
     if (!saw_mhz) {
-      cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+      cpuinfo_cycles_per_second =
+          static_cast<double>(EstimateCyclesPerSecond());
     }
     return;
   }
@@ -160,21 +176,21 @@ void InitializeSystemInfo() {
     // When parsing the "cpu MHz" and "bogomips" (fallback) entries, we only
     // accept postive values. Some environments (virtual machines) report zero,
     // which would cause infinite looping in WallTime_Init.
-    if (!saw_mhz && strncasecmp(line, "cpu MHz", sizeof("cpu MHz") - 1) == 0) {
+    if (!saw_mhz && startsWithKey(line, "cpu MHz")) {
       const char* freqstr = strchr(line, ':');
       if (freqstr) {
         cpuinfo_cycles_per_second = strtod(freqstr + 1, &err) * 1000000.0;
         if (freqstr[1] != '\0' && *err == '\0' && cpuinfo_cycles_per_second > 0)
           saw_mhz = true;
       }
-    } else if (strncasecmp(line, "bogomips", sizeof("bogomips") - 1) == 0) {
+    } else if (startsWithKey(line, "bogomips")) {
       const char* freqstr = strchr(line, ':');
       if (freqstr) {
         bogo_clock = strtod(freqstr + 1, &err) * 1000000.0;
         if (freqstr[1] != '\0' && *err == '\0' && bogo_clock > 0)
           saw_bogo = true;
       }
-    } else if (strncmp(line, "processor", sizeof("processor") - 1) == 0) {
+    } else if (startsWithKey(line, "processor", /*IgnoreCase*/false)) {
       // The above comparison is case-sensitive because ARM kernels often
       // include a "Processor" line that tells you about the CPU, distinct
       // from the usual "processor" lines that give you CPU ids. No current
@@ -197,7 +213,8 @@ void InitializeSystemInfo() {
       cpuinfo_cycles_per_second = bogo_clock;
     } else {
       // If we don't even have bogomips, we'll use the slow estimation.
-      cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+      cpuinfo_cycles_per_second =
+          static_cast<double>(EstimateCyclesPerSecond());
     }
   }
   if (num_cpus == 0) {
@@ -239,7 +256,6 @@ void InitializeSystemInfo() {
   }
 // TODO: also figure out cpuinfo_num_cpus
 
-
 #elif defined BENCHMARK_OS_WINDOWS
   // In NT, read MHz from the registry. If we fail to do so or we're in win9x
   // then make a crude estimate.
@@ -249,140 +265,46 @@ void InitializeSystemInfo() {
           SHGetValueA(HKEY_LOCAL_MACHINE,
                       "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
                       "~MHz", nullptr, &data, &data_size)))
-    cpuinfo_cycles_per_second = static_cast<double>((int64_t)data * (int64_t)(1000 * 1000));  // was mhz
+    cpuinfo_cycles_per_second =
+        static_cast<double>((int64_t)data * (int64_t)(1000 * 1000));  // was mhz
   else
     cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
 
   SYSTEM_INFO sysinfo;
-  // Use memset as opposed to = {} to avoid GCC missing initializer false positives.
+  // Use memset as opposed to = {} to avoid GCC missing initializer false
+  // positives.
   std::memset(&sysinfo, 0, sizeof(SYSTEM_INFO));
   GetSystemInfo(&sysinfo);
-  cpuinfo_num_cpus = sysinfo.dwNumberOfProcessors; // number of logical processors in the current group
+  cpuinfo_num_cpus = sysinfo.dwNumberOfProcessors;  // number of logical
+                                                    // processors in the current
+                                                    // group
 
 #elif defined BENCHMARK_OS_MACOSX
-  // returning "mach time units" per second. the current number of elapsed
-  // mach time units can be found by calling uint64 mach_absolute_time();
-  // while not as precise as actual CPU cycles, it is accurate in the face
-  // of CPU frequency scaling and multi-cpu/core machines.
-  // Our mac users have these types of machines, and accuracy
-  // (i.e. correctness) trumps precision.
-  // See cycleclock.h: CycleClock::Now(), which returns number of mach time
-  // units on Mac OS X.
-  mach_timebase_info_data_t timebase_info;
-  mach_timebase_info(&timebase_info);
-  double mach_time_units_per_nanosecond =
-      static_cast<double>(timebase_info.denom) /
-      static_cast<double>(timebase_info.numer);
-  cpuinfo_cycles_per_second = mach_time_units_per_nanosecond * 1e9;
-
-  int num_cpus = 0;
+  int32_t num_cpus = 0;
   size_t size = sizeof(num_cpus);
-  int numcpus_name[] = {CTL_HW, HW_NCPU};
-  if (::sysctl(numcpus_name, arraysize(numcpus_name), &num_cpus, &size, nullptr, 0) ==
-          0 &&
-      (size == sizeof(num_cpus)))
+  if (::sysctlbyname("hw.ncpu", &num_cpus, &size, nullptr, 0) == 0 &&
+      (size == sizeof(num_cpus))) {
     cpuinfo_num_cpus = num_cpus;
-
+  } else {
+    fprintf(stderr, "%s\n", strerror(errno));
+    std::exit(EXIT_FAILURE);
+  }
+  int64_t cpu_freq = 0;
+  size = sizeof(cpu_freq);
+  if (::sysctlbyname("hw.cpufrequency", &cpu_freq, &size, nullptr, 0) == 0 &&
+      (size == sizeof(cpu_freq))) {
+    cpuinfo_cycles_per_second = cpu_freq;
+  } else {
+    fprintf(stderr, "%s\n", strerror(errno));
+    std::exit(EXIT_FAILURE);
+  }
 #else
   // Generic cycles per second counter
   cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
 #endif
 }
+
 }  // end namespace
-
-// getrusage() based implementation of MyCPUUsage
-static double MyCPUUsageRUsage() {
-#ifndef BENCHMARK_OS_WINDOWS
-  struct rusage ru;
-  if (getrusage(RUSAGE_SELF, &ru) == 0) {
-    return (static_cast<double>(ru.ru_utime.tv_sec) +
-            static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 +
-            static_cast<double>(ru.ru_stime.tv_sec) +
-            static_cast<double>(ru.ru_stime.tv_usec) * 1e-6);
-  } else {
-    return 0.0;
-  }
-#else
-  HANDLE proc = GetCurrentProcess();
-  FILETIME creation_time;
-  FILETIME exit_time;
-  FILETIME kernel_time;
-  FILETIME user_time;
-  ULARGE_INTEGER kernel;
-  ULARGE_INTEGER user;
-  GetProcessTimes(proc, &creation_time, &exit_time, &kernel_time, &user_time);
-  kernel.HighPart = kernel_time.dwHighDateTime;
-  kernel.LowPart = kernel_time.dwLowDateTime;
-  user.HighPart = user_time.dwHighDateTime;
-  user.LowPart = user_time.dwLowDateTime;
-  return (static_cast<double>(kernel.QuadPart) +
-          static_cast<double>(user.QuadPart)) * 1e-7;
-#endif  // OS_WINDOWS
-}
-
-#ifndef BENCHMARK_OS_WINDOWS
-static bool MyCPUUsageCPUTimeNsLocked(double* cputime) {
-  static int cputime_fd = -1;
-  if (cputime_fd == -1) {
-    cputime_fd = open("/proc/self/cputime_ns", O_RDONLY);
-    if (cputime_fd < 0) {
-      cputime_fd = -1;
-      return false;
-    }
-  }
-  char buff[64];
-  memset(buff, 0, sizeof(buff));
-  if (pread(cputime_fd, buff, sizeof(buff) - 1, 0) <= 0) {
-    close(cputime_fd);
-    cputime_fd = -1;
-    return false;
-  }
-  unsigned long long result = strtoull(buff, nullptr, 0);
-  if (result == (std::numeric_limits<unsigned long long>::max)()) {
-    close(cputime_fd);
-    cputime_fd = -1;
-    return false;
-  }
-  *cputime = static_cast<double>(result) / 1e9;
-  return true;
-}
-#endif  // OS_WINDOWS
-
-double MyCPUUsage() {
-#ifndef BENCHMARK_OS_WINDOWS
-  {
-    std::lock_guard<std::mutex> l(cputimens_mutex);
-    static bool use_cputime_ns = true;
-    if (use_cputime_ns) {
-      double value;
-      if (MyCPUUsageCPUTimeNsLocked(&value)) {
-        return value;
-      }
-      // Once MyCPUUsageCPUTimeNsLocked fails once fall back to getrusage().
-      VLOG(1) << "Reading /proc/self/cputime_ns failed. Using getrusage().\n";
-      use_cputime_ns = false;
-    }
-  }
-#endif  // OS_WINDOWS
-  return MyCPUUsageRUsage();
-}
-
-double ChildrenCPUUsage() {
-#ifndef BENCHMARK_OS_WINDOWS
-  struct rusage ru;
-  if (getrusage(RUSAGE_CHILDREN, &ru) == 0) {
-    return (static_cast<double>(ru.ru_utime.tv_sec) +
-            static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 +
-            static_cast<double>(ru.ru_stime.tv_sec) +
-            static_cast<double>(ru.ru_stime.tv_usec) * 1e-6);
-  } else {
-    return 0.0;
-  }
-#else
-  // TODO: Not sure what this even means on Windows
-  return 0.0;
-#endif  // OS_WINDOWS
-}
 
 double CyclesPerSecond(void) {
   std::call_once(cpuinfo_init, InitializeSystemInfo);
@@ -410,8 +332,8 @@ bool CpuScalingEnabled() {
   // local file system. If reading the exported files fails, then we may not be
   // running on Linux, so we silently ignore all the read errors.
   for (int cpu = 0, num_cpus = NumCPUs(); cpu < num_cpus; ++cpu) {
-    std::string governor_file = StrCat("/sys/devices/system/cpu/cpu", cpu,
-                                       "/cpufreq/scaling_governor");
+    std::string governor_file =
+        StrCat("/sys/devices/system/cpu/cpu", cpu, "/cpufreq/scaling_governor");
     FILE* file = fopen(governor_file.c_str(), "r");
     if (!file) break;
     char buff[16];

@@ -20,6 +20,7 @@
 #include <cassert>
 #include <iterator>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -120,7 +121,7 @@ int main()
         C::const_iterator j;
     }
 #endif
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     { // N3644 testing
         std::forward_list<int>::iterator ii1{}, ii2{};
         std::forward_list<int>::iterator ii4 = ii1;

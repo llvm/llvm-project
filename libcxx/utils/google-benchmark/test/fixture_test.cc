@@ -20,15 +20,12 @@ class MyFixture : public ::benchmark::Fixture {
     }
   }
 
-  ~MyFixture() {
-    assert(data == nullptr);
-  }
+  ~MyFixture() { assert(data == nullptr); }
 
   std::unique_ptr<int> data;
 };
 
-
-BENCHMARK_F(MyFixture, Foo)(benchmark::State& st) {
+BENCHMARK_F(MyFixture, Foo)(benchmark::State &st) {
   assert(data.get() != nullptr);
   assert(*data == 42);
   while (st.KeepRunning()) {

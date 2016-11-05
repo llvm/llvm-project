@@ -14,15 +14,19 @@
 #include "Strings.h"
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <functional>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 namespace lld {
 namespace elf {
+
 class DefinedCommon;
 class ScriptParser;
 class SymbolBody;
@@ -67,7 +71,9 @@ enum SectionsCommandKind {
 
 struct BaseCommand {
   BaseCommand(int K) : Kind(K) {}
-  virtual ~BaseCommand() {}
+
+  virtual ~BaseCommand() = default;
+
   int Kind;
 };
 
@@ -75,6 +81,7 @@ struct BaseCommand {
 struct SymbolAssignment : BaseCommand {
   SymbolAssignment(StringRef Name, Expr E)
       : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
+
   static bool classof(const BaseCommand *C);
 
   // The LHS of an expression. Name is either a symbol name or ".".
@@ -98,7 +105,9 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 struct OutputSectionCommand : BaseCommand {
   OutputSectionCommand(StringRef Name)
       : BaseCommand(OutputSectionKind), Name(Name) {}
+
   static bool classof(const BaseCommand *C);
+
   StringRef Name;
   Expr AddrExpr;
   Expr AlignExpr;
@@ -126,7 +135,9 @@ struct SectionPattern {
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
       : BaseCommand(InputSectionKind), FilePat({FilePattern}) {}
+
   static bool classof(const BaseCommand *C);
+
   StringMatcher FilePat;
 
   // Input sections that matches at least one of SectionPatterns
@@ -139,7 +150,9 @@ struct InputSectionDescription : BaseCommand {
 // Represents an ASSERT().
 struct AssertCommand : BaseCommand {
   AssertCommand(Expr E) : BaseCommand(AssertKind), Expression(E) {}
+
   static bool classof(const BaseCommand *C);
+
   Expr Expression;
 };
 
@@ -147,7 +160,9 @@ struct AssertCommand : BaseCommand {
 struct BytesDataCommand : BaseCommand {
   BytesDataCommand(uint64_t Data, unsigned Size)
       : BaseCommand(BytesDataKind), Data(Data), Size(Size) {}
+
   static bool classof(const BaseCommand *C);
+
   uint64_t Data;
   unsigned Offset;
   unsigned Size;
@@ -201,6 +216,7 @@ template <class ELFT> class LinkerScript final : public LinkerScriptBase {
 public:
   LinkerScript();
   ~LinkerScript();
+
   void processCommands(OutputSectionFactory<ELFT> &Factory);
   void createSections(OutputSectionFactory<ELFT> &Factory);
   void adjustSectionsBeforeSorting();
@@ -263,7 +279,7 @@ template <class ELFT> LinkerScript<ELFT> *Script<ELFT>::X;
 
 extern LinkerScriptBase *ScriptBase;
 
-} // namespace elf
-} // namespace lld
+} // end namespace elf
+} // end namespace lld
 
-#endif
+#endif // LLD_ELF_LINKER_SCRIPT_H
