@@ -15,6 +15,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::bit_and<int> F;
@@ -27,7 +29,7 @@ int main()
     assert(f(0x58D3, 0xEA95) == 0x4891);
     assert(f(0x58D3, 0) == 0);
     assert(f(0xFFFF, 0x58D3) == 0x58D3);
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     typedef std::bit_and<> F2;
     const F2 f2 = F2();
     assert(f2(0xEA95, 0xEA95) == 0xEA95);

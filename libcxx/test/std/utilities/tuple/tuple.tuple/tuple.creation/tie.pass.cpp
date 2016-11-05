@@ -20,6 +20,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -29,7 +31,7 @@ int main()
         assert(i == 42);
         assert(s == "C++");
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         static constexpr int i = 42;
         static constexpr double f = 1.1;

@@ -39,7 +39,7 @@ int main () {
     test ( U"a", 1 );
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     constexpr const char *s = "ABC";
     constexpr std::experimental::basic_string_view<char> sv( s, 2 );

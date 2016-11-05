@@ -1,4 +1,4 @@
-//===- Core/Atom.h - A node in linking graph ------------------------------===//
+//===- Core/Atom.h - A node in linking graph --------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -11,6 +11,7 @@
 #define LLD_CORE_ATOM_H
 
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lld {
 
@@ -28,6 +29,7 @@ class OwningAtomPtr;
 ///
 class Atom {
   template<typename T> friend class OwningAtomPtr;
+
 public:
   /// Whether this atom is defined or a proxy for an undefined symbol
   enum Definition {
@@ -46,7 +48,6 @@ public:
     scopeGlobal            ///< Accessible to all atoms and visible to runtime
                            ///  loader (e.g. visibility=default).
   };
-
 
   /// file - returns the File that produced/owns this Atom
   virtual const File& file() const = 0;
@@ -69,7 +70,7 @@ protected:
   /// object.  Therefore, no one but the owning File object should call
   /// delete on an Atom.  In fact, some File objects may bulk allocate
   /// an array of Atoms, so they cannot be individually deleted by anyone.
-  virtual ~Atom() {}
+  virtual ~Atom() = default;
 
 private:
   Definition _definition;
@@ -81,9 +82,10 @@ template<typename T>
 class OwningAtomPtr {
 private:
   OwningAtomPtr(const OwningAtomPtr &) = delete;
-  void operator=(const OwningAtomPtr&) = delete;
+  void operator=(const OwningAtomPtr &) = delete;
+
 public:
-  OwningAtomPtr() : atom(nullptr) { }
+  OwningAtomPtr() = default;
   OwningAtomPtr(T *atom) : atom(atom) { }
 
   ~OwningAtomPtr() {
@@ -121,9 +123,9 @@ public:
   }
 
 private:
-  T *atom;
+  T *atom = nullptr;
 };
 
-} // namespace lld
+} // end namespace lld
 
 #endif // LLD_CORE_ATOM_H

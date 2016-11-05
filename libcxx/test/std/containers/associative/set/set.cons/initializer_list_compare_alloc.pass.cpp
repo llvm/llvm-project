@@ -16,6 +16,7 @@
 
 #include <set>
 #include <cassert>
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
@@ -40,7 +41,7 @@ int main()
     assert(m.key_comp() == Cmp(10));
     assert(m.get_allocator() == A(4));
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef test_compare<std::less<int> > Cmp;
     typedef test_allocator<int> A;

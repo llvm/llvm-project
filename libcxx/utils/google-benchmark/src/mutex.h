@@ -1,28 +1,26 @@
 #ifndef BENCHMARK_MUTEX_H_
 #define BENCHMARK_MUTEX_H_
 
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+
+#include "check.h"
 
 // Enable thread safety attributes only with clang.
 // The attributes can be safely erased when compiling with other compilers.
 #if defined(HAVE_THREAD_SAFETY_ATTRIBUTES)
-#define THREAD_ANNOTATION_ATTRIBUTE__(x)   __attribute__((x))
+#define THREAD_ANNOTATION_ATTRIBUTE__(x) __attribute__((x))
 #else
-#define THREAD_ANNOTATION_ATTRIBUTE__(x)   // no-op
+#define THREAD_ANNOTATION_ATTRIBUTE__(x)  // no-op
 #endif
 
-#define CAPABILITY(x) \
-  THREAD_ANNOTATION_ATTRIBUTE__(capability(x))
+#define CAPABILITY(x) THREAD_ANNOTATION_ATTRIBUTE__(capability(x))
 
-#define SCOPED_CAPABILITY \
-  THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)
+#define SCOPED_CAPABILITY THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)
 
-#define GUARDED_BY(x) \
-  THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
+#define GUARDED_BY(x) THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
 
-#define PT_GUARDED_BY(x) \
-  THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
+#define PT_GUARDED_BY(x) THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
 
 #define ACQUIRED_BEFORE(...) \
   THREAD_ANNOTATION_ATTRIBUTE__(acquired_before(__VA_ARGS__))
@@ -54,21 +52,17 @@
 #define TRY_ACQUIRE_SHARED(...) \
   THREAD_ANNOTATION_ATTRIBUTE__(try_acquire_shared_capability(__VA_ARGS__))
 
-#define EXCLUDES(...) \
-  THREAD_ANNOTATION_ATTRIBUTE__(locks_excluded(__VA_ARGS__))
+#define EXCLUDES(...) THREAD_ANNOTATION_ATTRIBUTE__(locks_excluded(__VA_ARGS__))
 
-#define ASSERT_CAPABILITY(x) \
-  THREAD_ANNOTATION_ATTRIBUTE__(assert_capability(x))
+#define ASSERT_CAPABILITY(x) THREAD_ANNOTATION_ATTRIBUTE__(assert_capability(x))
 
 #define ASSERT_SHARED_CAPABILITY(x) \
   THREAD_ANNOTATION_ATTRIBUTE__(assert_shared_capability(x))
 
-#define RETURN_CAPABILITY(x) \
-  THREAD_ANNOTATION_ATTRIBUTE__(lock_returned(x))
+#define RETURN_CAPABILITY(x) THREAD_ANNOTATION_ATTRIBUTE__(lock_returned(x))
 
 #define NO_THREAD_SAFETY_ANALYSIS \
   THREAD_ANNOTATION_ATTRIBUTE__(no_thread_safety_analysis)
-
 
 namespace benchmark {
 
@@ -78,65 +72,84 @@ typedef std::condition_variable Condition;
 // we can annotate them with thread safety attributes and use the
 // -Wthread-safety warning with clang. The standard library types cannot be
 // used directly because they do not provided the required annotations.
-class CAPABILITY("mutex") Mutex
-{
-public:
+class CAPABILITY("mutex") Mutex {
+ public:
   Mutex() {}
 
   void lock() ACQUIRE() { mut_.lock(); }
   void unlock() RELEASE() { mut_.unlock(); }
-  std::mutex& native_handle() {
-    return mut_;
-  }
-private:
+  std::mutex& native_handle() { return mut_; }
+
+ private:
   std::mutex mut_;
 };
 
-
-class SCOPED_CAPABILITY MutexLock
-{
+class SCOPED_CAPABILITY MutexLock {
   typedef std::unique_lock<std::mutex> MutexLockImp;
-public:
-  MutexLock(Mutex& m) ACQUIRE(m) : ml_(m.native_handle())
-  { }
+
+ public:
+  MutexLock(Mutex& m) ACQUIRE(m) : ml_(m.native_handle()) {}
   ~MutexLock() RELEASE() {}
   MutexLockImp& native_handle() { return ml_; }
-private:
+
+ private:
   MutexLockImp ml_;
 };
 
+class Barrier {
+ public:
+  Barrier(int num_threads) : running_threads_(num_threads) {}
 
-class Notification
-{
-public:
-  Notification() : notified_yet_(false) { }
-
-  void WaitForNotification() const EXCLUDES(mutex_) {
-    MutexLock m_lock(mutex_);
-    auto notified_fn = [this]() REQUIRES(mutex_) {
-                            return this->HasBeenNotified();
-                        };
-    cv_.wait(m_lock.native_handle(), notified_fn);
-  }
-
-  void Notify() EXCLUDES(mutex_) {
+  // Called by each thread
+  bool wait() EXCLUDES(lock_) {
+    bool last_thread = false;
     {
-      MutexLock lock(mutex_);
-      notified_yet_ = 1;
+      MutexLock ml(lock_);
+      last_thread = createBarrier(ml);
     }
-    cv_.notify_all();
+    if (last_thread) phase_condition_.notify_all();
+    return last_thread;
   }
 
-private:
-  bool HasBeenNotified() const REQUIRES(mutex_) {
-    return notified_yet_;
+  void removeThread() EXCLUDES(lock_) {
+    MutexLock ml(lock_);
+    --running_threads_;
+    if (entered_ != 0) phase_condition_.notify_all();
   }
 
-  mutable Mutex mutex_;
-  mutable std::condition_variable cv_;
-  bool notified_yet_ GUARDED_BY(mutex_);
+ private:
+  Mutex lock_;
+  Condition phase_condition_;
+  int running_threads_;
+
+  // State for barrier management
+  int phase_number_ = 0;
+  int entered_ = 0;  // Number of threads that have entered this barrier
+
+  // Enter the barrier and wait until all other threads have also
+  // entered the barrier.  Returns iff this is the last thread to
+  // enter the barrier.
+  bool createBarrier(MutexLock& ml) REQUIRES(lock_) {
+    CHECK_LT(entered_, running_threads_);
+    entered_++;
+    if (entered_ < running_threads_) {
+      // Wait for all threads to enter
+      int phase_number_cp = phase_number_;
+      auto cb = [this, phase_number_cp]() {
+        return this->phase_number_ > phase_number_cp ||
+               entered_ == running_threads_;  // A thread has aborted in error
+      };
+      phase_condition_.wait(ml.native_handle(), cb);
+      if (phase_number_ > phase_number_cp) return false;
+      // else (running_threads_ == entered_) and we are the last thread.
+    }
+    // Last thread has reached the barrier
+    phase_number_++;
+    entered_ = 0;
+    return true;
+  }
 };
 
-} // end namespace benchmark
+}  // end namespace benchmark
 
-#endif // BENCHMARK_MUTEX_H_
+#endif  // BENCHMARK_MUTEX_H_

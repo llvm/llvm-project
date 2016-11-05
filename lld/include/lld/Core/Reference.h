@@ -1,4 +1,4 @@
-//===- Core/References.h - A Reference to Another Atom --------------------===//
+//===- Core/References.h - A Reference to Another Atom ----------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -10,10 +10,10 @@
 #ifndef LLD_CORE_REFERENCES_H
 #define LLD_CORE_REFERENCES_H
 
-#include "lld/Core/LLVM.h"
-#include "llvm/ADT/StringSwitch.h"
+#include <cstdint>
 
 namespace lld {
+
 class Atom;
 
 ///
@@ -107,13 +107,13 @@ protected:
   /// object.  Therefore, no one but the owning File object should call
   /// delete on an Reference.  In fact, some File objects may bulk allocate
   /// an array of References, so they cannot be individually deleted by anyone.
-  virtual ~Reference() {}
+  virtual ~Reference() = default;
 
   KindValue  _kindValue;
   uint8_t    _kindNamespace;
   uint8_t    _kindArch;
 };
 
-} // namespace lld
+} // end namespace lld
 
 #endif // LLD_CORE_REFERENCES_H

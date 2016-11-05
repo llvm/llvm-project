@@ -79,7 +79,7 @@ public:
   uintX_t getFileOffset() { return Header.sh_offset; }
   void setSHName(unsigned Val) { Header.sh_name = Val; }
   void writeHeaderTo(Elf_Shdr *SHdr);
-  StringRef getName() { return Name; }
+  StringRef getName() const { return Name; }
 
   virtual void addSection(InputSectionBase<ELFT> *C) {}
   virtual Kind getKind() const { return Base; }

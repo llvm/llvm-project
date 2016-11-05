@@ -11,7 +11,6 @@ namespace internal {
 // a pointer by mistake, you will get a compile-time error.
 //
 
-
 // This template function declaration is used in defining arraysize.
 // Note that the function doesn't need an implementation, as we only
 // use its type.
@@ -28,7 +27,7 @@ char (&ArraySizeHelper(const T (&array)[N]))[N];
 
 #define arraysize(array) (sizeof(::benchmark::internal::ArraySizeHelper(array)))
 
-} // end namespace internal
-} // end namespace benchmark
+}  // end namespace internal
+}  // end namespace benchmark
 
-#endif // BENCHMARK_ARRAYSIZE_H_
+#endif  // BENCHMARK_ARRAYSIZE_H_

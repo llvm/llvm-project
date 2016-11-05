@@ -8,12 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Core/File.h"
-#include "lld/Core/LLVM.h"
 #include <mutex>
 
 namespace lld {
 
-File::~File() { }
+File::~File() = default;
 
 File::AtomVector<DefinedAtom> File::_noDefinedAtoms;
 File::AtomVector<UndefinedAtom> File::_noUndefinedAtoms;
@@ -27,4 +26,4 @@ std::error_code File::parse() {
   return _lastError.getValue();
 }
 
-} // namespace lld
+} // end namespace lld

@@ -1,4 +1,4 @@
-//===- lld/Core/Node.h - Input file class ---------------------------------===//
+//===- lld/Core/Node.h - Input file class -----------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -17,9 +17,8 @@
 #define LLD_CORE_NODE_H
 
 #include "lld/Core/File.h"
-#include "llvm/Option/ArgList.h"
+#include <algorithm>
 #include <memory>
-#include <vector>
 
 namespace lld {
 
@@ -29,8 +28,10 @@ namespace lld {
 class Node {
 public:
   enum class Kind { File, GroupEnd };
+
   explicit Node(Kind type) : _kind(type) {}
-  virtual ~Node() {}
+  virtual ~Node() = default;
+
   virtual Kind kind() const { return _kind; }
 
 private:
@@ -69,6 +70,6 @@ protected:
   std::unique_ptr<File> _file;
 };
 
-} // namespace lld
+} // end namespace lld
 
 #endif // LLD_CORE_NODE_H

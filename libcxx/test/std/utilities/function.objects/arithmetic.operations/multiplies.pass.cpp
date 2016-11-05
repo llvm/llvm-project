@@ -15,6 +15,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::multiplies<int> F;
@@ -23,7 +25,7 @@ int main()
     static_assert((std::is_same<int, F::second_argument_type>::value), "" );
     static_assert((std::is_same<int, F::result_type>::value), "" );
     assert(f(3, 2) == 6);
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     typedef std::multiplies<> F2;
     const F2 f2 = F2();
     assert(f2(3,2) == 6);

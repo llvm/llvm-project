@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cfloat>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -135,7 +136,7 @@ int main()
         assert(c.key_eq() == test_compare<std::equal_to<int> >());
         assert((c.get_allocator() == min_allocator<std::pair<const int, std::string> >()));
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         typedef std::pair<int, std::string> P;
         typedef test_allocator<std::pair<const int, std::string>> A;

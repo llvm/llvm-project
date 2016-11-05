@@ -14,6 +14,7 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
 #include "constexpr_char_traits.hpp"
 
 int sign ( int x ) { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
@@ -106,7 +107,7 @@ int main () {
     test(U"abcdefghijklmnopqrst", U"abcdefghijklmnopqrst", 0);
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef std::experimental::basic_string_view<char, constexpr_char_traits<char>> SV;
     constexpr SV  sv1 { "abcde", 5 };

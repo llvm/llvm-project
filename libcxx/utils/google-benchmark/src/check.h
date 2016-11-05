@@ -13,53 +13,52 @@ namespace internal {
 typedef void(AbortHandlerT)();
 
 inline AbortHandlerT*& GetAbortHandler() {
-    static AbortHandlerT* handler = &std::abort;
-    return handler;
+  static AbortHandlerT* handler = &std::abort;
+  return handler;
 }
 
 BENCHMARK_NORETURN inline void CallAbortHandler() {
-    GetAbortHandler()();
-    std::abort(); // fallback to enforce noreturn
+  GetAbortHandler()();
+  std::abort();  // fallback to enforce noreturn
 }
 
 // CheckHandler is the class constructed by failing CHECK macros. CheckHandler
 // will log information about the failures and abort when it is destructed.
 class CheckHandler {
-public:
+ public:
   CheckHandler(const char* check, const char* file, const char* func, int line)
-    : log_(GetErrorLogInstance())
-  {
-    log_ << file << ":" << line << ": " << func << ": Check `"
-          << check << "' failed. ";
+      : log_(GetErrorLogInstance()) {
+    log_ << file << ":" << line << ": " << func << ": Check `" << check
+         << "' failed. ";
   }
 
-  std::ostream& GetLog() {
-    return log_;
-  }
+  LogType& GetLog() { return log_; }
 
   BENCHMARK_NORETURN ~CheckHandler() BENCHMARK_NOEXCEPT_OP(false) {
-      log_ << std::endl;
-      CallAbortHandler();
+    log_ << std::endl;
+    CallAbortHandler();
   }
 
-  CheckHandler & operator=(const CheckHandler&) = delete;
+  CheckHandler& operator=(const CheckHandler&) = delete;
   CheckHandler(const CheckHandler&) = delete;
   CheckHandler() = delete;
-private:
-  std::ostream& log_;
+
+ private:
+  LogType& log_;
 };
 
-} // end namespace internal
-} // end namespace benchmark
+}  // end namespace internal
+}  // end namespace benchmark
 
 // The CHECK macro returns a std::ostream object that can have extra information
 // written to it.
 #ifndef NDEBUG
-# define CHECK(b)  (b ? ::benchmark::internal::GetNullLogInstance()        \
-                      : ::benchmark::internal::CheckHandler(               \
-                          #b, __FILE__, __func__, __LINE__).GetLog())
+#define CHECK(b)                                                             \
+  (b ? ::benchmark::internal::GetNullLogInstance()                           \
+     : ::benchmark::internal::CheckHandler(#b, __FILE__, __func__, __LINE__) \
+           .GetLog())
 #else
-# define CHECK(b) ::benchmark::internal::GetNullLogInstance()
+#define CHECK(b) ::benchmark::internal::GetNullLogInstance()
 #endif
 
 #define CHECK_EQ(a, b) CHECK((a) == (b))

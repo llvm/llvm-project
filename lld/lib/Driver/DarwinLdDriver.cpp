@@ -14,24 +14,45 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Core/ArchiveLibraryFile.h"
+#include "lld/Core/Error.h"
 #include "lld/Core/File.h"
 #include "lld/Core/Instrumentation.h"
+#include "lld/Core/LLVM.h"
+#include "lld/Core/Node.h"
 #include "lld/Core/PassManager.h"
 #include "lld/Core/Resolver.h"
 #include "lld/Core/SharedLibraryFile.h"
-#include "lld/Driver/Driver.h"
+#include "lld/Core/Simple.h"
+#include "lld/Core/LinkingContext.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MachO.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 using namespace lld;
 
@@ -116,7 +137,7 @@ loadFile(MachOLinkingContext &ctx, StringRef path,
   return files;
 }
 
-} // anonymous namespace
+} // end anonymous namespace
 
 // Test may be running on Windows. Canonicalize the path
 // separator to '/' to get consistent outputs for tests.
@@ -165,8 +186,6 @@ static std::error_code parseExportsList(StringRef exportFilePath,
   }
   return std::error_code();
 }
-
-
 
 /// Order files are one symbol per line. Blank lines are ignored.
 /// Trailing comments start with #. Symbol names can be prefixed with an
@@ -1213,5 +1232,6 @@ bool link(llvm::ArrayRef<const char *> args, raw_ostream &diagnostics) {
 
   return true;
 }
-} // namespace mach_o
-} // namespace lld
+
+} // end namespace mach_o
+} // end namespace lld

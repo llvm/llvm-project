@@ -14,6 +14,7 @@
 #include <deque>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "DefaultOnly.h"
 #include "min_allocator.h"
@@ -22,7 +23,7 @@ template <class T, class Allocator>
 void
 test2(unsigned n)
 {
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     typedef std::deque<T, Allocator> C;
     typedef typename C::const_iterator const_iterator;
     assert(DefaultOnly::count == 0);
@@ -64,7 +65,7 @@ template <class T, class Allocator>
 void
 test3(unsigned n, Allocator const &alloc = Allocator())
 {
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     typedef std::deque<T, Allocator> C;
     typedef typename C::const_iterator const_iterator;
     {
@@ -104,7 +105,7 @@ int main()
     test<DefaultOnly, min_allocator<DefaultOnly> >(4095);
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     test3<DefaultOnly, std::allocator<DefaultOnly>> (1023);
     test3<int, std::allocator<int>>(1);
     test3<int, min_allocator<int>> (3);
