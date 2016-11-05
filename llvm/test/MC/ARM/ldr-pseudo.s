@@ -48,7 +48,7 @@ f5:
   adds r0, r0, #1
   adds r0, r0, #1
   ldr r0, =0x10005
-@ CHECK: ldr r0, .Ltmp[[TMP4:[0-9]+]]
+@ CHECK: ldr r0, .Ltmp[[TMP3:[0-9]+]]
   adds r0, r0, #1
   adds r0, r0, #1
   adds r0, r0, #1
@@ -263,8 +263,6 @@ f17:
 @ CHECK: .section d,"ax",%progbits
 @ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP3]]
-@ CHECK: .long 65541
-@ CHECK: .Ltmp[[TMP4]]
 @ CHECK: .long 65541
 
 @ CHECK: .section e,"ax",%progbits

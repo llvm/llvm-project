@@ -27,9 +27,7 @@ class TestReporter : public benchmark::ConsoleReporter {
 
   virtual ~TestReporter() {}
 
-  size_t GetCount() const {
-    return count_;
-  }
+  size_t GetCount() const { return count_; }
 
  private:
   mutable size_t count_;
@@ -37,46 +35,47 @@ class TestReporter : public benchmark::ConsoleReporter {
 
 }  // end namespace
 
-
 static void NoPrefix(benchmark::State& state) {
-  while (state.KeepRunning()) {}
+  while (state.KeepRunning()) {
+  }
 }
 BENCHMARK(NoPrefix);
 
 static void BM_Foo(benchmark::State& state) {
-  while (state.KeepRunning()) {}
+  while (state.KeepRunning()) {
+  }
 }
 BENCHMARK(BM_Foo);
 
-
 static void BM_Bar(benchmark::State& state) {
-  while (state.KeepRunning()) {}
+  while (state.KeepRunning()) {
+  }
 }
 BENCHMARK(BM_Bar);
 
-
 static void BM_FooBar(benchmark::State& state) {
-  while (state.KeepRunning()) {}
+  while (state.KeepRunning()) {
+  }
 }
 BENCHMARK(BM_FooBar);
 
-
 static void BM_FooBa(benchmark::State& state) {
-  while (state.KeepRunning()) {}
+  while (state.KeepRunning()) {
+  }
 }
 BENCHMARK(BM_FooBa);
 
-
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   bool list_only = false;
-  for (int i=0; i < argc; ++i)
-    list_only |= std::string(argv[i]).find("--benchmark_list_tests") != std::string::npos;
+  for (int i = 0; i < argc; ++i)
+    list_only |= std::string(argv[i]).find("--benchmark_list_tests") !=
+                 std::string::npos;
 
   benchmark::Initialize(&argc, argv);
 
   TestReporter test_reporter;
-  const size_t returned_count = benchmark::RunSpecifiedBenchmarks(&test_reporter);
+  const size_t returned_count =
+      benchmark::RunSpecifiedBenchmarks(&test_reporter);
 
   if (argc == 2) {
     // Make sure we ran all of the tests

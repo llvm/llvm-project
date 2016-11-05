@@ -11,12 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-def callv3 : SDNode<"HexagonISD::CALL", SDT_SPCall,
-           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
-
-def callv3nr : SDNode<"HexagonISD::CALLnr", SDT_SPCall,
-           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
-
 //===----------------------------------------------------------------------===//
 // J +
 //===----------------------------------------------------------------------===//
@@ -107,9 +101,7 @@ def A2_addsph : T_ALU64_addsp_hl<":raw:hi", 0b111>;
 
 let hasSideEffects = 0, isAsmParserOnly = 1 in
 def A2_addsp : ALU64_rr<(outs DoubleRegs:$Rd),
-  (ins IntRegs:$Rs, DoubleRegs:$Rt), "$Rd = add($Rs, $Rt)",
-  [(set (i64 DoubleRegs:$Rd), (i64 (add (i64 (sext (i32 IntRegs:$Rs))),
-                                        (i64 DoubleRegs:$Rt))))],
+  (ins IntRegs:$Rs, DoubleRegs:$Rt), "$Rd = add($Rs, $Rt)", [],
   "", ALU64_tc_1_SLOT23>;
 
 
@@ -139,59 +131,9 @@ def A2_minup : T_XTYPE_MIN_MAX_P<0, 1>;
 def A2_maxp  : T_XTYPE_MIN_MAX_P<1, 0>;
 def A2_maxup : T_XTYPE_MIN_MAX_P<1, 1>;
 
-multiclass MinMax_pats_p<PatFrag Op, InstHexagon Inst, InstHexagon SwapInst> {
-  defm: T_MinMax_pats<Op, DoubleRegs, i64, Inst, SwapInst>;
-}
-
-let AddedComplexity = 200 in {
-  defm: MinMax_pats_p<setge,  A2_maxp,  A2_minp>;
-  defm: MinMax_pats_p<setgt,  A2_maxp,  A2_minp>;
-  defm: MinMax_pats_p<setle,  A2_minp,  A2_maxp>;
-  defm: MinMax_pats_p<setlt,  A2_minp,  A2_maxp>;
-  defm: MinMax_pats_p<setuge, A2_maxup, A2_minup>;
-  defm: MinMax_pats_p<setugt, A2_maxup, A2_minup>;
-  defm: MinMax_pats_p<setule, A2_minup, A2_maxup>;
-  defm: MinMax_pats_p<setult, A2_minup, A2_maxup>;
-}
-
 //===----------------------------------------------------------------------===//
 // ALU64/ALU -
 //===----------------------------------------------------------------------===//
-
-
-
-
-//def : Pat <(brcond (i1 (seteq (i32 IntRegs:$src1), 0)), bb:$offset),
-//      (JMP_RegEzt (i32 IntRegs:$src1), bb:$offset)>;
-
-//def : Pat <(brcond (i1 (setne (i32 IntRegs:$src1), 0)), bb:$offset),
-//      (JMP_RegNzt (i32 IntRegs:$src1), bb:$offset)>;
-
-//def : Pat <(brcond (i1 (setle (i32 IntRegs:$src1), 0)), bb:$offset),
-//      (JMP_RegLezt (i32 IntRegs:$src1), bb:$offset)>;
-
-//def : Pat <(brcond (i1 (setge (i32 IntRegs:$src1), 0)), bb:$offset),
-//      (JMP_RegGezt (i32 IntRegs:$src1), bb:$offset)>;
-
-//def : Pat <(brcond (i1 (setgt (i32 IntRegs:$src1), -1)), bb:$offset),
-//      (JMP_RegGezt (i32 IntRegs:$src1), bb:$offset)>;
-
-// Map call instruction
-def : Pat<(callv3 I32:$dst),
-          (J2_callr I32:$dst)>;
-def : Pat<(callv3 tglobaladdr:$dst),
-          (J2_call tglobaladdr:$dst)>;
-def : Pat<(callv3 texternalsym:$dst),
-          (J2_call texternalsym:$dst)>;
-def : Pat<(callv3 tglobaltlsaddr:$dst),
-          (J2_call tglobaltlsaddr:$dst)>;
-
-def : Pat<(callv3nr I32:$dst),
-          (PS_callr_nr I32:$dst)>;
-def : Pat<(callv3nr tglobaladdr:$dst),
-          (PS_call_nr tglobaladdr:$dst)>;
-def : Pat<(callv3nr texternalsym:$dst),
-          (PS_call_nr texternalsym:$dst)>;
 
 //===----------------------------------------------------------------------===//
 // :raw form of vrcmpys:hi/lo insns

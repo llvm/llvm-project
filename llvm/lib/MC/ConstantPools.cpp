@@ -36,10 +36,20 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
 
 const MCExpr *ConstantPool::addEntry(const MCExpr *Value, MCContext &Context,
                                      unsigned Size, SMLoc Loc) {
+  const MCConstantExpr *C = dyn_cast<MCConstantExpr>(Value);
+
+  // Check if there is existing entry for the same constant. If so, reuse it.
+  auto Itr = C ? CachedEntries.find(C->getValue()) : CachedEntries.end();
+  if (Itr != CachedEntries.end())
+    return Itr->second;
+
   MCSymbol *CPEntryLabel = Context.createTempSymbol();
 
   Entries.push_back(ConstantPoolEntry(CPEntryLabel, Value, Size, Loc));
-  return MCSymbolRefExpr::create(CPEntryLabel, Context);
+  const auto SymRef = MCSymbolRefExpr::create(CPEntryLabel, Context);
+  if (C)
+    CachedEntries[C->getValue()] = SymRef;
+  return SymRef;
 }
 
 bool ConstantPool::empty() { return Entries.empty(); }

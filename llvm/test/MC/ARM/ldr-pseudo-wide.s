@@ -19,26 +19,26 @@ f1:
 @ CHECK-DARWIN-THUMB2: ldr r0, Ltmp0
 
   ldr.w r0, =0x10002
-@ CHECK-ARM: ldr r0, .Ltmp[[TMP1:[0-9]+]]
-@ CHECK-DARWIN-ARM: ldr r0, Ltmp1
-@ CHECK-THUMB2: ldr.w r0, .Ltmp[[TMP1:[0-9]+]]
-@ CHECK-DARWIN-THUMB2: ldr.w r0, Ltmp1
+@ CHECK-ARM: ldr r0, .Ltmp[[TMP0]]
+@ CHECK-DARWIN-ARM: ldr r0, Ltmp0
+@ CHECK-THUMB2: ldr.w r0, .Ltmp[[TMP0:[0-9]+]]
+@ CHECK-DARWIN-THUMB2: ldr.w r0, Ltmp0
 @ CHECK-THUMB: error: instruction requires: thumb2
 @ CHECK-THUMB-NEXT:  ldr.w r0, =0x10002
 
 @ CHECK-LABEL: f2:
 f2:
   ldr r0, =foo
-@ CHECK-ARM: ldr r0, .Ltmp[[TMP2:[0-9]+]]
-@ CHECK-DARWIN-ARM: ldr r0, Ltmp2
-@ CHECK-THUMB2: ldr r0, .Ltmp[[TMP2:[0-9]+]]
-@ CHECK-DARWIN-THUMB2: ldr r0, Ltmp2
+@ CHECK-ARM: ldr r0, .Ltmp[[TMP1:[0-9]+]]
+@ CHECK-DARWIN-ARM: ldr r0, Ltmp1
+@ CHECK-THUMB2: ldr r0, .Ltmp[[TMP1:[0-9]+]]
+@ CHECK-DARWIN-THUMB2: ldr r0, Ltmp1
 
   ldr.w r0, =foo
-@ CHECK-ARM: ldr r0, .Ltmp[[TMP3:[0-9]+]]
-@ CHECK-DARWIN-ARM: ldr r0, Ltmp3
-@ CHECK-THUMB2: ldr.w r0, .Ltmp[[TMP3:[0-9]+]]
-@ CHECK-DARWIN-THUMB2: ldr.w r0, Ltmp3
+@ CHECK-ARM: ldr r0, .Ltmp[[TMP2:[0-9]+]]
+@ CHECK-DARWIN-ARM: ldr r0, Ltmp2
+@ CHECK-THUMB2: ldr.w r0, .Ltmp[[TMP2:[0-9]+]]
+@ CHECK-DARWIN-THUMB2: ldr.w r0, Ltmp2
 @ CHECK-THUMB: error: instruction requires: thumb2
 @ CHECK-THUMB-NEXT:  ldr.w r0, =foo
 
@@ -55,17 +55,13 @@ f3:
 @ CHECK: .Ltmp0:
 @ CHECK-NEXT: .long   65538
 @ CHECK: .Ltmp1:
-@ CHECK-NEXT: .long   65538
-@ CHECK: .Ltmp2:
 @ CHECK-NEXT: .long   foo
-@ CHECK: .Ltmp3:
+@ CHECK: .Ltmp2:
 @ CHECK-NEXT: .long   foo
 
 @ CHECK-DARWIN: Ltmp0:
 @ CHECK-DARWIN-NEXT: .long   65538
 @ CHECK-DARWIN: Ltmp1:
-@ CHECK-DARWIN-NEXT: .long   65538
-@ CHECK-DARWIN: Ltmp2:
 @ CHECK-DARWIN-NEXT: .long   foo
-@ CHECK-DARWIN: Ltmp3:
+@ CHECK-DARWIN: Ltmp2:
 @ CHECK-DARWIN-NEXT: .long   foo

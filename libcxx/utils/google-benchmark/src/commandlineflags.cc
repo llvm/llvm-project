@@ -14,6 +14,7 @@
 
 #include "commandlineflags.h"
 
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -43,7 +44,7 @@ bool ParseInt32(const std::string& src_text, const char* str, int32_t* value) {
       // The parsed value overflows as a long.  (strtol() returns
       // LONG_MAX or LONG_MIN when the input overflows.)
       result != long_value
-          // The parsed value overflows as an Int32.
+      // The parsed value overflows as an Int32.
       ) {
     std::cerr << src_text << " is expected to be a 32-bit integer, "
               << "but actually has value \"" << str << "\", "
@@ -74,17 +75,6 @@ bool ParseDouble(const std::string& src_text, const char* str, double* value) {
   return true;
 }
 
-inline const char* GetEnv(const char* name) {
-#if defined(__BORLANDC__) || defined(__SunOS_5_8) || defined(__SunOS_5_9)
-  // Environment variables which we programmatically clear will be set to the
-  // empty string rather than unset (nullptr).  Handle that case.
-  const char* const env = getenv(name);
-  return (env != nullptr && env[0] != '\0') ? env : nullptr;
-#else
-  return getenv(name);
-#endif
-}
-
 // Returns the name of the environment variable corresponding to the
 // given flag.  For example, FlagToEnvVar("foo") will return
 // "BENCHMARK_FOO" in the open-source version.
@@ -104,8 +94,9 @@ static std::string FlagToEnvVar(const char* flag) {
 // The value is considered true iff it's not "0".
 bool BoolFromEnv(const char* flag, bool default_value) {
   const std::string env_var = FlagToEnvVar(flag);
-  const char* const string_value = GetEnv(env_var.c_str());
-  return string_value == nullptr ? default_value : strcmp(string_value, "0") != 0;
+  const char* const string_value = getenv(env_var.c_str());
+  return string_value == nullptr ? default_value
+                                 : strcmp(string_value, "0") != 0;
 }
 
 // Reads and returns a 32-bit integer stored in the environment
@@ -113,7 +104,7 @@ bool BoolFromEnv(const char* flag, bool default_value) {
 // doesn't represent a valid 32-bit integer, returns default_value.
 int32_t Int32FromEnv(const char* flag, int32_t default_value) {
   const std::string env_var = FlagToEnvVar(flag);
-  const char* const string_value = GetEnv(env_var.c_str());
+  const char* const string_value = getenv(env_var.c_str());
   if (string_value == nullptr) {
     // The environment variable is not set.
     return default_value;
@@ -133,7 +124,7 @@ int32_t Int32FromEnv(const char* flag, int32_t default_value) {
 // the given flag; if it's not set, returns default_value.
 const char* StringFromEnv(const char* flag, const char* default_value) {
   const std::string env_var = FlagToEnvVar(flag);
-  const char* const value = GetEnv(env_var.c_str());
+  const char* const value = getenv(env_var.c_str());
   return value == nullptr ? default_value : value;
 }
 
@@ -175,7 +166,7 @@ bool ParseBoolFlag(const char* str, const char* flag, bool* value) {
   if (value_str == nullptr) return false;
 
   // Converts the string value to a bool.
-  *value = !(*value_str == '0' || *value_str == 'f' || *value_str == 'F');
+  *value = IsTruthyFlagValue(value_str);
   return true;
 }
 
@@ -216,5 +207,12 @@ bool ParseStringFlag(const char* str, const char* flag, std::string* value) {
 
 bool IsFlag(const char* str, const char* flag) {
   return (ParseFlagValue(str, flag, true) != nullptr);
+}
+
+bool IsTruthyFlagValue(const std::string& str) {
+  if (str.empty()) return true;
+  char ch = str[0];
+  return isalnum(ch) &&
+         !(ch == '0' || ch == 'f' || ch == 'F' || ch == 'n' || ch == 'N');
 }
 }  // end namespace benchmark

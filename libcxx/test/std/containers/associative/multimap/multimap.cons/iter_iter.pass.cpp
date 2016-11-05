@@ -17,6 +17,7 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -76,7 +77,7 @@ int main()
     assert(*next(m.begin(), 7) == V(3, 1.5));
     assert(*next(m.begin(), 8) == V(3, 2));
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef std::pair<const int, double> V;
     V ar[] =

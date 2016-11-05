@@ -20,6 +20,7 @@
 #include <cassert>
 #include <iterator>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 struct A
@@ -135,7 +136,7 @@ int main()
         assert(j->first == 3);
     }
 #endif
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     { // N3644 testing
         typedef std::vector<int> C;
         C::iterator ii1{}, ii2{};

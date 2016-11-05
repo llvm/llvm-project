@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "string_util.h"
-#include "walltime.h"
+#include "timers.h"
 
 // File format reference: http://edoceo.com/utilitas/csv-file-format.
 
@@ -31,38 +31,28 @@ namespace benchmark {
 
 namespace {
 std::vector<std::string> elements = {
-  "name",
-  "iterations",
-  "real_time",
-  "cpu_time",
-  "time_unit",
-  "bytes_per_second",
-  "items_per_second",
-  "label",
-  "error_occurred",
-  "error_message"
-};
+    "name",           "iterations",       "real_time",        "cpu_time",
+    "time_unit",      "bytes_per_second", "items_per_second", "label",
+    "error_occurred", "error_message"};
 }
 
 bool CSVReporter::ReportContext(const Context& context) {
   PrintBasicContext(&GetErrorStream(), context);
 
   std::ostream& Out = GetOutputStream();
-  for (auto B = elements.begin(); B != elements.end(); ) {
+  for (auto B = elements.begin(); B != elements.end();) {
     Out << *B++;
-    if (B != elements.end())
-      Out << ",";
+    if (B != elements.end()) Out << ",";
   }
   Out << "\n";
   return true;
 }
 
-void CSVReporter::ReportRuns(const std::vector<Run> & reports) {
-  for (const auto& run : reports)
-    PrintRunData(run);
+void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
+  for (const auto& run : reports) PrintRunData(run);
 }
 
-void CSVReporter::PrintRunData(const Run & run) {
+void CSVReporter::PrintRunData(const Run& run) {
   std::ostream& Out = GetOutputStream();
 
   // Field with embedded double-quote characters must be doubled and the field

@@ -1,6 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=FUNC -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=FUNC -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.AMDGPU.bfe.u32(i32, i32, i32) nounwind readnone
@@ -74,14 +73,11 @@ define void @bfe_u32_zextload_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %in) n
 }
 
 ; FUNC-LABEL: {{^}}bfe_u32_zext_in_reg_i8:
-; GCN: buffer_load_dword
+; SI: buffer_load_dword
 ; SI: v_add_i32
 ; SI-NEXT: v_and_b32_e32
-; FIXME: Should be using s_add_i32
-; VI: v_add_i32
-; VI-NEXT: v_and_b32_e32
 ; SI-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
+; SI: s_endpgm
 define void @bfe_u32_zext_in_reg_i8(i32 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
   %load = load i32, i32 addrspace(1)* %in, align 4
   %add = add i32 %load, 1

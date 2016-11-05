@@ -15,11 +15,13 @@
 #include <complex>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 void
 test_constexpr()
 {
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     constexpr std::complex<T> c1;
     static_assert(c1.real() == 0, "");
     static_assert(c1.imag() == 0, "");

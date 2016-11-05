@@ -17,7 +17,7 @@ endmacro(compile_benchmark_test)
 
 
 macro(compile_output_test name)
-  add_executable(${name} "${name}.cc")
+  add_executable(${name} "${name}.cc" output_test.h)
   target_link_libraries(${name} output_test_helper benchmark
           ${BENCHMARK_CXX_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 endmacro(compile_output_test)
@@ -85,8 +85,14 @@ if (BENCHMARK_HAS_CXX03_FLAG)
   add_test(cxx03 cxx03_test --benchmark_min_time=0.01)
 endif()
 
+# Attempt to work around flaky test failures when running on Appveyor servers.
+if (DEFINED ENV{APPVEYOR})
+  set(COMPLEXITY_MIN_TIME "0.5")
+else()
+  set(COMPLEXITY_MIN_TIME "0.01")
+endif()
 compile_output_test(complexity_test)
-add_test(complexity_benchmark complexity_test --benchmark_min_time=0.01)
+add_test(complexity_benchmark complexity_test --benchmark_min_time=${COMPLEXITY_MIN_TIME})
 
 # Add the coverage command(s)
 if(CMAKE_BUILD_TYPE)

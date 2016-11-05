@@ -2,8 +2,6 @@
 #define BENCHMARK_SYSINFO_H_
 
 namespace benchmark {
-double MyCPUUsage();
-double ChildrenCPUUsage();
 int NumCPUs();
 double CyclesPerSecond();
 bool CpuScalingEnabled();

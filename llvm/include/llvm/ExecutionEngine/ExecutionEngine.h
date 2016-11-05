@@ -198,8 +198,12 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  /// removeModule - Remove a Module from the list of modules.  Returns true if
-  /// M is found.
+  /// removeModule - Removes a Module from the list of modules, but does not
+  /// free the module's memory. Returns true if M is found, in which case the
+  /// caller assumes responsibility for deleting the module.
+  //
+  // FIXME: This stealth ownership transfer is horrible. This will probably be
+  //        fixed by deleting ExecutionEngine.
   virtual bool removeModule(Module *M);
 
   /// FindFunctionNamed - Search all of the active modules to find the function that

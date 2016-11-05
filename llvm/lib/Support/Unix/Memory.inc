@@ -153,7 +153,10 @@ Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
 
   int Protect = getPosixProtectionFlags(Flags);
 
-  int Result = ::mprotect((void*)((uintptr_t)M.Address & ~(PageSize-1)), PageSize*((M.Size+PageSize-1)/PageSize), Protect);
+  uintptr_t Start = alignAddr((uint8_t *)M.Address - PageSize + 1, PageSize);
+  uintptr_t End = alignAddr((uint8_t *)M.Address + M.Size, PageSize);
+  int Result = ::mprotect((void *)Start, End - Start, Protect);
+
   if (Result != 0)
     return std::error_code(errno, std::generic_category());
 

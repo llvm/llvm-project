@@ -385,7 +385,8 @@ static int getPPC64SectionRank(StringRef SectionName) {
       .Default(1);
 }
 
-template <class ELFT> bool elf::isRelroSection(OutputSectionBase<ELFT> *Sec) {
+template <class ELFT>
+bool elf::isRelroSection(const OutputSectionBase<ELFT> *Sec) {
   if (!Config->ZRelro)
     return false;
   typename ELFT::uint Flags = Sec->getFlags();
@@ -407,8 +408,8 @@ template <class ELFT> bool elf::isRelroSection(OutputSectionBase<ELFT> *Sec) {
 }
 
 template <class ELFT>
-static bool compareSectionsNonScript(OutputSectionBase<ELFT> *A,
-                                     OutputSectionBase<ELFT> *B) {
+static bool compareSectionsNonScript(const OutputSectionBase<ELFT> *A,
+                                     const OutputSectionBase<ELFT> *B) {
   // Put .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
   bool AIsInterp = A->getName() == ".interp";
@@ -489,8 +490,8 @@ static bool compareSectionsNonScript(OutputSectionBase<ELFT> *A,
 
 // Output section ordering is determined by this function.
 template <class ELFT>
-static bool compareSections(OutputSectionBase<ELFT> *A,
-                            OutputSectionBase<ELFT> *B) {
+static bool compareSections(const OutputSectionBase<ELFT> *A,
+                            const OutputSectionBase<ELFT> *B) {
   // For now, put sections mentioned in a linker script first.
   int AIndex = Script<ELFT>::X->getSectionIndex(A->getName());
   int BIndex = Script<ELFT>::X->getSectionIndex(B->getName());
@@ -1473,10 +1474,10 @@ template struct elf::PhdrEntry<ELF32BE>;
 template struct elf::PhdrEntry<ELF64LE>;
 template struct elf::PhdrEntry<ELF64BE>;
 
-template bool elf::isRelroSection<ELF32LE>(OutputSectionBase<ELF32LE> *);
-template bool elf::isRelroSection<ELF32BE>(OutputSectionBase<ELF32BE> *);
-template bool elf::isRelroSection<ELF64LE>(OutputSectionBase<ELF64LE> *);
-template bool elf::isRelroSection<ELF64BE>(OutputSectionBase<ELF64BE> *);
+template bool elf::isRelroSection<ELF32LE>(const OutputSectionBase<ELF32LE> *);
+template bool elf::isRelroSection<ELF32BE>(const OutputSectionBase<ELF32BE> *);
+template bool elf::isRelroSection<ELF64LE>(const OutputSectionBase<ELF64LE> *);
+template bool elf::isRelroSection<ELF64BE>(const OutputSectionBase<ELF64BE> *);
 
 template void elf::reportDiscarded<ELF32LE>(InputSectionBase<ELF32LE> *);
 template void elf::reportDiscarded<ELF32BE>(InputSectionBase<ELF32BE> *);

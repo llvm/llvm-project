@@ -87,9 +87,16 @@ else()
     add_cxx_compiler_flag(-Wstrict-aliasing)
   endif()
   add_cxx_compiler_flag(-Wthread-safety)
-  if (HAVE_WTHREAD_SAFETY)
-    add_definitions(-DHAVE_WTHREAD_SAFETY)
+  if (HAVE_CXX_FLAG_WTHREAD_SAFETY)
     cxx_feature_check(THREAD_SAFETY_ATTRIBUTES)
+  endif()
+
+  # On most UNIX like platforms g++ and clang++ define _GNU_SOURCE as a
+  # predefined macro, which turns on all of the wonderful libc extensions.
+  # However g++ doesn't do this in Cygwin so we have to define it ourselfs
+  # since we depend on GNU/POSIX/BSD extensions.
+  if (CYGWIN)
+    add_definitions(-D_GNU_SOURCE=1)
   endif()
 
   # Link time optimisation
@@ -148,11 +155,15 @@ if (BENCHMARK_USE_LIBCXX)
 endif(BENCHMARK_USE_LIBCXX)
 
 # C++ feature checks
+# Determine the correct regular expression engine to use
 cxx_feature_check(STD_REGEX)
 cxx_feature_check(GNU_POSIX_REGEX)
 cxx_feature_check(POSIX_REGEX)
-cxx_feature_check(STEADY_CLOCK)
+if(NOT HAVE_STD_REGEX AND NOT HAVE_GNU_POSIX_REGEX AND NOT HAVE_POSIX_REGEX)
+  message(FATAL_ERROR "Failed to determine the source files for the regular expression backend")
+endif()
 
+cxx_feature_check(STEADY_CLOCK)
 # Ensure we have pthreads
 find_package(Threads REQUIRED)
 

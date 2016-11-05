@@ -16,7 +16,9 @@
 #include <experimental/string_view>
 #include <cassert>
 
-#if _LIBCPP_STD_VER > 11
+#include "test_macros.h"
+
+#if TEST_STD_VER > 11
 // quoted is C++14 only
 
 bool is_skipws ( const std::istream *is ) {

@@ -20,6 +20,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct Explicit {
   int value;
   explicit Explicit(int x) : value(x) {}
@@ -43,7 +45,7 @@ struct D
     explicit D(int i) : B(i) {}
 };
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
 
 struct A
 {
@@ -72,7 +74,7 @@ int main()
         T1 t1 = t0;
         assert(std::get<0>(t1) == 2);
     }
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
         typedef std::tuple<double> T0;
         typedef std::tuple<A> T1;

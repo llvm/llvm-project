@@ -23,7 +23,7 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
       stmt(anyOf(returnStmt().bind("return"), continueStmt().bind("continue"),
                  breakStmt().bind("break"), cxxThrowExpr().bind("throw")));
   Finder->addMatcher(
-      stmt(forEach(
+      compoundStmt(forEach(
           ifStmt(hasThen(stmt(
                      anyOf(ControlFlowInterruptorMatcher,
                            compoundStmt(has(ControlFlowInterruptorMatcher))))),

@@ -16,6 +16,7 @@
 #include <set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 #include "private_constructor.hpp"
 
@@ -91,7 +92,7 @@ int main()
     }
     }
 #endif
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef int V;
     typedef std::multiset<int, std::less<>> M;

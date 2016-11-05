@@ -1646,7 +1646,12 @@ class LSRInstance {
   Instruction *IVIncInsertPos;
 
   /// Interesting factors between use strides.
-  SmallSetVector<int64_t, 8> Factors;
+  ///
+  /// We explicitly use a SetVector which contains a SmallSet, instead of the
+  /// default, a SmallDenseSet, because we need to use the full range of
+  /// int64_ts, and there's currently no good way of doing that with
+  /// SmallDenseSet.
+  SetVector<int64_t, SmallVector<int64_t, 8>, SmallSet<int64_t, 8>> Factors;
 
   /// Interesting use types, to facilitate truncation reuse.
   SmallSetVector<Type *, 4> Types;

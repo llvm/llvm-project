@@ -137,8 +137,13 @@ macro(add_tablegen target project)
   endif()
 
   if (${project} STREQUAL LLVM AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+    if(${target} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
+        NOT LLVM_DISTRIBUTION_COMPONENTS)
+      set(export_to_llvmexports EXPORT LLVMExports)
+    endif()
+
     install(TARGETS ${target}
-            EXPORT LLVMExports
+            ${export_to_llvmexports}
             RUNTIME DESTINATION ${LLVM_TOOLS_INSTALL_DIR})
   endif()
   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${target})
