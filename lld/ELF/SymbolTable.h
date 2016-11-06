@@ -91,6 +91,8 @@ public:
   void trace(StringRef Name);
   void wrap(StringRef Name);
 
+  std::vector<InputSectionBase<ELFT> *> Sections;
+
 private:
   std::vector<SymbolBody *> findAll(const StringMatcher &M);
   std::pair<Symbol *, bool> insert(StringRef &Name);

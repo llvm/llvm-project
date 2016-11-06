@@ -585,6 +585,22 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
     error(Msg);
 }
 
+template <class RelTy>
+static std::pair<uint32_t, uint32_t>
+mergeMipsN32RelTypes(uint32_t Type, uint32_t Offset, RelTy *I, RelTy *E) {
+  // MIPS N32 ABI treats series of successive relocations with the same offset
+  // as a single relocation. The similar approach used by N64 ABI, but this ABI
+  // packs all relocations into the single relocation record. Here we emulate
+  // this for the N32 ABI. Iterate over relocation with the same offset and put
+  // theirs types into the single bit-set.
+  uint32_t Processed = 0;
+  for (; I != E && Offset == I->r_offset; ++I) {
+    ++Processed;
+    Type |= I->getType(Config->Mips64EL) << (8 * Processed);
+  }
+  return std::make_pair(Type, Processed);
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -623,6 +639,13 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     const RelTy &RI = *I;
     SymbolBody &Body = File.getRelocTargetSym(RI);
     uint32_t Type = RI.getType(Config->Mips64EL);
+
+    if (Config->MipsN32Abi) {
+      uint32_t Processed;
+      std::tie(Type, Processed) =
+          mergeMipsN32RelTypes(Type, RI.r_offset, I + 1, E);
+      I += Processed;
+    }
 
     // We only report undefined symbols if they are referenced somewhere in the
     // code.

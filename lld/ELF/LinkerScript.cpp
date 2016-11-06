@@ -29,8 +29,8 @@
 #include "Symbols.h"
 #include "Target.h"
 #include "Writer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -193,16 +193,18 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
   // and attach them to I.
   for (SectionPattern &Pat : I->SectionPatterns) {
     size_t SizeBefore = I->Sections.size();
-    for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-      StringRef Filename = sys::path::filename(F->getName());
-      if (!I->FilePat.match(Filename) || Pat.ExcludedFilePat.match(Filename))
+
+    for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections) {
+      if (isDiscarded(S) || S->OutSec)
         continue;
 
-      for (InputSectionBase<ELFT> *S : F->getSections())
-        if (!isDiscarded(S) && !S->OutSec && Pat.SectionPat.match(S->Name))
-          I->Sections.push_back(S);
-      if (Pat.SectionPat.match("COMMON"))
-        I->Sections.push_back(InputSection<ELFT>::CommonInputSection);
+      StringRef Filename;
+      if (elf::ObjectFile<ELFT> *F = S->getFile())
+        Filename = sys::path::filename(F->getName());
+
+      if (I->FilePat.match(Filename) && !Pat.ExcludedFilePat.match(Filename) &&
+          Pat.SectionPat.match(S->Name))
+        I->Sections.push_back(S);
     }
 
     // Sort sections as instructed by SORT-family commands and --sort-section
@@ -363,11 +365,11 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
 template <class ELFT>
 void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   processCommands(Factory);
+
   // Add orphan sections.
-  for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
-    for (InputSectionBase<ELFT> *S : F->getSections())
-      if (!isDiscarded(S) && !S->OutSec)
-        addSection(Factory, S, getOutputSectionName(S->Name));
+  for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
+    if (!isDiscarded(S) && !S->OutSec)
+      addSection(Factory, S, getOutputSectionName(S->Name));
 }
 
 // Sets value of a section-defined symbol. Two kinds of

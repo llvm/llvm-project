@@ -282,8 +282,3 @@ def VolatileV3 {
                          W12, W13, W14, W15,
                          Q0, Q1, Q2, Q3];
 }
-
-def PositiveHalfWord : PatLeaf<(i32 IntRegs:$a),
-[{
-  return isPositiveHalfWord(N);
-}]>;

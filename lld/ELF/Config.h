@@ -105,6 +105,7 @@ struct Configuration {
   bool GnuHash = false;
   bool ICF;
   bool Mips64EL = false;
+  bool MipsN32Abi = false;
   bool NoGnuUnique;
   bool NoUndefinedVersion;
   bool Nostdlib;

@@ -21,7 +21,9 @@
 #include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
+#include "SymbolTable.h"
 
+#include "lld/Core/Parallel.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -36,6 +38,43 @@ using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf;
+
+template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
+  std::vector<DefinedCommon *> V;
+  for (Symbol *S : Symtab<ELFT>::X->getSymbols())
+    if (auto *B = dyn_cast<DefinedCommon>(S->body()))
+      V.push_back(B);
+  return V;
+}
+
+// Find all common symbols and allocate space for them.
+template <class ELFT>
+CommonSection<ELFT>::CommonSection()
+    : InputSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1,
+                         ArrayRef<uint8_t>(), "COMMON") {
+  this->Live = true;
+
+  // Sort the common symbols by alignment as an heuristic to pack them better.
+  std::vector<DefinedCommon *> Syms = getCommonSymbols<ELFT>();
+  std::stable_sort(Syms.begin(), Syms.end(),
+                   [](const DefinedCommon *A, const DefinedCommon *B) {
+                     return A->Alignment > B->Alignment;
+                   });
+
+  // Assign offsets to symbols.
+  size_t Size = 0;
+  size_t Alignment = 1;
+  for (DefinedCommon *Sym : Syms) {
+    Alignment = std::max<size_t>(Alignment, Sym->Alignment);
+    Size = alignTo(Size, Sym->Alignment);
+
+    // Compute symbol offset relative to beginning of input section.
+    Sym->Offset = Size;
+    Size += Sym->Size;
+  }
+  this->Alignment = Alignment;
+  this->Data = makeArrayRef<uint8_t>(nullptr, Size);
+}
 
 static ArrayRef<uint8_t> createInterp() {
   // StringSaver guarantees that the returned string ends with '\0'.
@@ -53,7 +92,8 @@ InterpSection<ELFT>::InterpSection()
 template <class ELFT>
 BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
     : InputSection<ELFT>(SHF_ALLOC, SHT_NOTE, 1, ArrayRef<uint8_t>(),
-                         ".note.gnu.build-id") {
+                         ".note.gnu.build-id"),
+      HashSize(HashSize) {
   this->Live = true;
 
   Buf.resize(16 + HashSize);
@@ -70,29 +110,66 @@ uint8_t *BuildIdSection<ELFT>::getOutputLoc(uint8_t *Start) const {
   return Start + this->OutSec->getFileOffset() + this->OutSecOff;
 }
 
+static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,
+                                            size_t ChunkSize) {
+  std::vector<ArrayRef<uint8_t>> Ret;
+  while (Arr.size() > ChunkSize) {
+    Ret.push_back(Arr.take_front(ChunkSize));
+    Arr = Arr.drop_front(ChunkSize);
+  }
+  if (!Arr.empty())
+    Ret.push_back(Arr);
+  return Ret;
+}
+
+template <class ELFT>
+void BuildIdSection<ELFT>::computeHash(
+    llvm::ArrayRef<uint8_t> Data,
+    std::function<void(ArrayRef<uint8_t> Arr, uint8_t *Hash)> Hash) {
+  std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
+  std::vector<uint8_t> HashList(Chunks.size() * HashSize);
+
+  if (Config->Threads)
+    parallel_for_each(Chunks.begin(), Chunks.end(),
+                      [&](ArrayRef<uint8_t> &Chunk) {
+                        size_t Id = &Chunk - Chunks.data();
+                        Hash(Chunk, HashList.data() + Id * HashSize);
+                      });
+  else
+    std::for_each(Chunks.begin(), Chunks.end(), [&](ArrayRef<uint8_t> &Chunk) {
+      size_t Id = &Chunk - Chunks.data();
+      Hash(Chunk, HashList.data() + Id * HashSize);
+    });
+
+  Hash(HashList, this->getOutputLoc((uint8_t *)Data.begin()) + 16);
+}
+
 template <class ELFT>
 void BuildIdFastHash<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
-  const endianness E = ELFT::TargetEndianness;
-
-  // 64-bit xxhash
-  uint64_t Hash = xxHash64(toStringRef(Buf));
-  write64<E>(this->getOutputLoc(Buf.begin()) + 16, Hash);
+  computeHash(Buf, [](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
+    uint64_t Hash = xxHash64(toStringRef(Arr));
+    write64<ELFT::TargetEndianness>(Dest, Hash);
+  });
 }
 
 template <class ELFT>
 void BuildIdMd5<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
-  MD5 Hash;
-  Hash.update(Buf);
-  MD5::MD5Result Res;
-  Hash.final(Res);
-  memcpy(this->getOutputLoc(Buf.begin()) + 16, Res, 16);
+  computeHash(Buf, [&](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
+    MD5 Hash;
+    Hash.update(Arr);
+    MD5::MD5Result Res;
+    Hash.final(Res);
+    memcpy(Dest, Res, HashSize);
+  });
 }
 
 template <class ELFT>
 void BuildIdSha1<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
-  SHA1 Hash;
-  Hash.update(Buf);
-  memcpy(this->getOutputLoc(Buf.begin()) + 16, Hash.final().data(), 20);
+  computeHash(Buf, [&](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
+    SHA1 Hash;
+    Hash.update(Arr);
+    memcpy(Dest, Hash.final().data(), HashSize);
+  });
 }
 
 template <class ELFT>
@@ -110,6 +187,11 @@ void BuildIdHexstring<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
   memcpy(this->getOutputLoc(Buf.begin()) + 16, Config->BuildIdVector.data(),
          Config->BuildIdVector.size());
 }
+
+template class elf::CommonSection<ELF32LE>;
+template class elf::CommonSection<ELF32BE>;
+template class elf::CommonSection<ELF64LE>;
+template class elf::CommonSection<ELF64BE>;
 
 template class elf::InterpSection<ELF32LE>;
 template class elf::InterpSection<ELF32BE>;

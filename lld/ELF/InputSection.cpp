@@ -825,31 +825,6 @@ bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == InputSectionBase<ELFT>::MipsAbiFlags;
 }
 
-template <class ELFT>
-InputSection<ELFT> InputSection<ELFT>::createCommonInputSection(
-    std::vector<DefinedCommon *> Syms) {
-  // Sort the common symbols by alignment as an heuristic to pack them better.
-  std::stable_sort(Syms.begin(), Syms.end(),
-                   [](const DefinedCommon *A, const DefinedCommon *B) {
-                     return A->Alignment > B->Alignment;
-                   });
-
-  size_t Size = 0;
-  uintX_t Alignment = 1;
-  for (DefinedCommon *Sym : Syms) {
-    Alignment = std::max<uintX_t>(Alignment, Sym->Alignment);
-    Size = alignTo(Size, Sym->Alignment);
-
-    // Compute symbol offset relative to beginning of input section.
-    Sym->Offset = Size;
-    Size += Sym->Size;
-  }
-  ArrayRef<uint8_t> Data = makeArrayRef<uint8_t>(nullptr, Size);
-  InputSection Ret(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Data, "");
-  Ret.Live = true;
-  return Ret;
-}
-
 template class elf::InputSectionBase<ELF32LE>;
 template class elf::InputSectionBase<ELF32BE>;
 template class elf::InputSectionBase<ELF64LE>;
