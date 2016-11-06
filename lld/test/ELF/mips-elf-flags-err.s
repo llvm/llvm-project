@@ -82,6 +82,6 @@ __start:
 # OCTEON-NEXT:   EF_MIPS_PIC
 # OCTEON-NEXT: ]
 
-# N32O32: target ABI 'n32' is incompatible with 'o32': {{.*}}mips-elf-flags-err.s.tmp2.o
+# N32O32: error: {{.*}}mips-elf-flags-err.s.tmp2.o is incompatible with {{.*}}mips-elf-flags-err.s.tmp1.o
 
 # NAN: target -mnan=2008 is incompatible with -mnan=legacy: {{.*}}mips-elf-flags-err.s.tmp2.o

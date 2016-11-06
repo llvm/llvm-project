@@ -258,25 +258,6 @@ def nOneImmPred  : PatLeaf<(i32 imm), [{
   return (-1 == v);
 }]>;
 
-def Set5ImmPred : PatLeaf<(i32 imm), [{
-  // Set5ImmPred predicate - True if the number is in the series of values.
-  // [ 2^0, 2^1, ... 2^31 ]
-  // For use in setbit immediate.
-  uint32_t v = (int32_t)N->getSExtValue();
-  // Constrain to 32 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
-}]>;
-
-def Clr5ImmPred : PatLeaf<(i32 imm), [{
-  // Clr5ImmPred predicate - True if the number is in the series of
-  // bit negated values.
-  // [ 2^0, 2^1, ... 2^31 ]
-  // For use in clrbit immediate.
-  // Note: we are bit NOTing the value.
-  uint32_t v = ~ (int32_t)N->getSExtValue();
-  // Constrain to 32 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
-}]>;
 
 // Extendable immediate operands.
 def f32ExtOperand : AsmOperandClass { let Name = "f32Ext"; }
@@ -394,12 +375,3 @@ def calltarget : Operand<i32> {
 
 def bblabel : Operand<i32>;
 def bbl     : SDNode<"ISD::BasicBlock", SDTPtrLeaf, [], "BasicBlockSDNode">;
-
-// Return true if for a 32 to 64-bit sign-extended load.
-def is_sext_i32 : PatLeaf<(i64 DoubleRegs:$src1), [{
-  LoadSDNode *LD = dyn_cast<LoadSDNode>(N);
-  if (!LD)
-    return false;
-  return LD->getExtensionType() == ISD::SEXTLOAD &&
-         LD->getMemoryVT().getScalarType() == MVT::i32;
-}]>;

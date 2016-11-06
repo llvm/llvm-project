@@ -30,6 +30,7 @@
 #include "OutputSections.h"
 #include "Symbols.h"
 #include "Thunks.h"
+#include "Writer.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/ELF.h"
@@ -1921,8 +1922,8 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
 template <class ELFT>
 RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
                                          const SymbolBody &S) const {
-  if (ELFT::Is64Bits)
-    // See comment in the calculateMips64RelChain.
+  // See comment in the calculateMipsRelChain.
+  if (ELFT::Is64Bits || Config->MipsN32Abi)
     Type &= 0xff;
   switch (Type) {
   default:
@@ -2047,10 +2048,17 @@ template <class ELFT> static bool isMipsR6() {
 template <class ELFT>
 void MipsTargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, 0x3c1c0000);      // lui   $28, %hi(&GOTPLT[0])
-  write32<E>(Buf + 4, 0x8f990000);  // lw    $25, %lo(&GOTPLT[0])($28)
-  write32<E>(Buf + 8, 0x279c0000);  // addiu $28, $28, %lo(&GOTPLT[0])
-  write32<E>(Buf + 12, 0x031cc023); // subu  $24, $24, $28
+  if (Config->MipsN32Abi) {
+    write32<E>(Buf, 0x3c0e0000);      // lui   $14, %hi(&GOTPLT[0])
+    write32<E>(Buf + 4, 0x8dd90000);  // lw    $25, %lo(&GOTPLT[0])($14)
+    write32<E>(Buf + 8, 0x25ce0000);  // addiu $14, $14, %lo(&GOTPLT[0])
+    write32<E>(Buf + 12, 0x030ec023); // subu  $24, $24, $14
+  } else {
+    write32<E>(Buf, 0x3c1c0000);      // lui   $28, %hi(&GOTPLT[0])
+    write32<E>(Buf + 4, 0x8f990000);  // lw    $25, %lo(&GOTPLT[0])($28)
+    write32<E>(Buf + 8, 0x279c0000);  // addiu $28, $28, %lo(&GOTPLT[0])
+    write32<E>(Buf + 12, 0x031cc023); // subu  $24, $24, $28
+  }
   write32<E>(Buf + 16, 0x03e07825); // move  $15, $31
   write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
   write32<E>(Buf + 24, 0x0320f809); // jalr  $25
@@ -2137,8 +2145,8 @@ uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
   }
 }
 
-static std::pair<uint32_t, uint64_t> calculateMips64RelChain(uint32_t Type,
-                                                             uint64_t Val) {
+static std::pair<uint32_t, uint64_t> calculateMipsRelChain(uint32_t Type,
+                                                           uint64_t Val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -2175,8 +2183,8 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   else if (Type == R_MIPS_TLS_TPREL_HI16 || Type == R_MIPS_TLS_TPREL_LO16 ||
            Type == R_MIPS_TLS_TPREL32 || Type == R_MIPS_TLS_TPREL64)
     Val -= 0x7000;
-  if (ELFT::Is64Bits)
-    std::tie(Type, Val) = calculateMips64RelChain(Type, Val);
+  if (ELFT::Is64Bits || Config->MipsN32Abi)
+    std::tie(Type, Val) = calculateMipsRelChain(Type, Val);
   switch (Type) {
   case R_MIPS_32:
   case R_MIPS_GPREL32:

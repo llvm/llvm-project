@@ -391,9 +391,6 @@ public:
   // AttributeSet Introspection
   //===--------------------------------------------------------------------===//
 
-  // FIXME: Remove this.
-  uint64_t Raw(unsigned Index) const;
-
   /// \brief Return a raw pointer that uniquely identifies this attribute list.
   void *getRawPointer() const {
     return pImpl;
@@ -458,11 +455,6 @@ public:
   AttrBuilder()
       : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
         DerefOrNullBytes(0), AllocSizeArgs(0) {}
-  explicit AttrBuilder(uint64_t Val)
-      : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0), AllocSizeArgs(0) {
-    addRawValue(Val);
-  }
   AttrBuilder(const Attribute &A)
       : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
         DerefOrNullBytes(0), AllocSizeArgs(0) {
@@ -590,11 +582,6 @@ public:
   bool operator!=(const AttrBuilder &B) {
     return !(*this == B);
   }
-
-  // FIXME: Remove this in 4.0.
-
-  /// \brief Add the raw value to the internal representation.
-  AttrBuilder &addRawValue(uint64_t Val);
 };
 
 namespace AttributeFuncs {

@@ -1355,6 +1355,98 @@ StructType *BitcodeReader::createIdentifiedStructType(LLVMContext &Context) {
 //  Functions for parsing blocks from the bitcode file
 //===----------------------------------------------------------------------===//
 
+static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
+  switch (Val) {
+  case Attribute::EndAttrKinds:
+    llvm_unreachable("Synthetic enumerators which should never get here");
+
+  case Attribute::None:            return 0;
+  case Attribute::ZExt:            return 1 << 0;
+  case Attribute::SExt:            return 1 << 1;
+  case Attribute::NoReturn:        return 1 << 2;
+  case Attribute::InReg:           return 1 << 3;
+  case Attribute::StructRet:       return 1 << 4;
+  case Attribute::NoUnwind:        return 1 << 5;
+  case Attribute::NoAlias:         return 1 << 6;
+  case Attribute::ByVal:           return 1 << 7;
+  case Attribute::Nest:            return 1 << 8;
+  case Attribute::ReadNone:        return 1 << 9;
+  case Attribute::ReadOnly:        return 1 << 10;
+  case Attribute::NoInline:        return 1 << 11;
+  case Attribute::AlwaysInline:    return 1 << 12;
+  case Attribute::OptimizeForSize: return 1 << 13;
+  case Attribute::StackProtect:    return 1 << 14;
+  case Attribute::StackProtectReq: return 1 << 15;
+  case Attribute::Alignment:       return 31 << 16;
+  case Attribute::NoCapture:       return 1 << 21;
+  case Attribute::NoRedZone:       return 1 << 22;
+  case Attribute::NoImplicitFloat: return 1 << 23;
+  case Attribute::Naked:           return 1 << 24;
+  case Attribute::InlineHint:      return 1 << 25;
+  case Attribute::StackAlignment:  return 7 << 26;
+  case Attribute::ReturnsTwice:    return 1 << 29;
+  case Attribute::UWTable:         return 1 << 30;
+  case Attribute::NonLazyBind:     return 1U << 31;
+  case Attribute::SanitizeAddress: return 1ULL << 32;
+  case Attribute::MinSize:         return 1ULL << 33;
+  case Attribute::NoDuplicate:     return 1ULL << 34;
+  case Attribute::StackProtectStrong: return 1ULL << 35;
+  case Attribute::SanitizeThread:  return 1ULL << 36;
+  case Attribute::SanitizeMemory:  return 1ULL << 37;
+  case Attribute::NoBuiltin:       return 1ULL << 38;
+  case Attribute::Returned:        return 1ULL << 39;
+  case Attribute::Cold:            return 1ULL << 40;
+  case Attribute::Builtin:         return 1ULL << 41;
+  case Attribute::OptimizeNone:    return 1ULL << 42;
+  case Attribute::InAlloca:        return 1ULL << 43;
+  case Attribute::NonNull:         return 1ULL << 44;
+  case Attribute::JumpTable:       return 1ULL << 45;
+  case Attribute::Convergent:      return 1ULL << 46;
+  case Attribute::SafeStack:       return 1ULL << 47;
+  case Attribute::NoRecurse:       return 1ULL << 48;
+  case Attribute::InaccessibleMemOnly:         return 1ULL << 49;
+  case Attribute::InaccessibleMemOrArgMemOnly: return 1ULL << 50;
+  case Attribute::SwiftSelf:       return 1ULL << 51;
+  case Attribute::SwiftError:      return 1ULL << 52;
+  case Attribute::WriteOnly:       return 1ULL << 53;
+  case Attribute::Dereferenceable:
+    llvm_unreachable("dereferenceable attribute not supported in raw format");
+    break;
+  case Attribute::DereferenceableOrNull:
+    llvm_unreachable("dereferenceable_or_null attribute not supported in raw "
+                     "format");
+    break;
+  case Attribute::ArgMemOnly:
+    llvm_unreachable("argmemonly attribute not supported in raw format");
+    break;
+  case Attribute::AllocSize:
+    llvm_unreachable("allocsize not supported in raw format");
+    break;
+  }
+  llvm_unreachable("Unsupported attribute type");
+}
+
+static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
+  if (!Val) return;
+
+  for (Attribute::AttrKind I = Attribute::None; I != Attribute::EndAttrKinds;
+       I = Attribute::AttrKind(I + 1)) {
+    if (I == Attribute::Dereferenceable ||
+        I == Attribute::DereferenceableOrNull ||
+        I == Attribute::ArgMemOnly ||
+        I == Attribute::AllocSize)
+      continue;
+    if (uint64_t A = (Val & getRawAttributeMask(I))) {
+      if (I == Attribute::Alignment)
+        B.addAlignmentAttr(1ULL << ((A >> 16) - 1));
+      else if (I == Attribute::StackAlignment)
+        B.addStackAlignmentAttr(1ULL << ((A >> 26)-1));
+      else
+        B.addAttribute(I);
+    }
+  }
+}
+
 /// \brief This fills an AttrBuilder object with the LLVM attributes that have
 /// been decoded from the given integer. This function must stay in sync with
 /// 'encodeLLVMAttributesForBitcode'.
@@ -1370,8 +1462,8 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
 
   if (Alignment)
     B.addAlignmentAttr(Alignment);
-  B.addRawValue(((EncodedAttrs & (0xfffffULL << 32)) >> 11) |
-                (EncodedAttrs & 0xffff));
+  addRawAttributeValue(B, ((EncodedAttrs & (0xfffffULL << 32)) >> 11) |
+                          (EncodedAttrs & 0xffff));
 }
 
 std::error_code BitcodeReader::parseAttributeBlock() {

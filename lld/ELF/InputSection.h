@@ -273,14 +273,6 @@ public:
   template <class RelTy>
   void relocateNonAlloc(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 
-  // Common symbols don't belong to any section. But it is easier for us
-  // to handle them as if they belong to some input section. So we defined
-  // this section that "contains" all common symbols.
-  static InputSection<ELFT> *CommonInputSection;
-
-  static InputSection<ELFT>
-  createCommonInputSection(std::vector<DefinedCommon *> Syms);
-
 private:
   template <class RelTy>
   void copyRelocations(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
@@ -293,9 +285,6 @@ private:
 
   llvm::TinyPtrVector<const Thunk<ELFT> *> Thunks;
 };
-
-template <class ELFT>
-InputSection<ELFT> *InputSection<ELFT>::CommonInputSection;
 
 // MIPS .reginfo section provides information on the registers used by the code
 // in the object file. Linker should collect this information and write a single

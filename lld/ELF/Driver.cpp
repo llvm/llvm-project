@@ -59,7 +59,8 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 }
 
 // Parses a linker -m option.
-static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
+static std::tuple<ELFKind, uint16_t, uint8_t, bool>
+parseEmulation(StringRef Emul) {
   uint8_t OSABI = 0;
   StringRef S = Emul;
   if (S.endswith("_fbsd")) {
@@ -74,6 +75,8 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Case("elf32btsmip", {ELF32BEKind, EM_MIPS})
           .Case("elf32ltsmip", {ELF32LEKind, EM_MIPS})
+          .Case("elf32btsmipn32", {ELF32BEKind, EM_MIPS})
+          .Case("elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
           .Case("elf32ppc", {ELF32BEKind, EM_PPC})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
@@ -89,7 +92,8 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
     else
       error("unknown emulation: " + Emul);
   }
-  return std::make_tuple(Ret.first, Ret.second, OSABI);
+  bool IsMipsN32ABI = S == "elf32btsmipn32" || S == "elf32ltsmipn32";
+  return std::make_tuple(Ret.first, Ret.second, OSABI, IsMipsN32ABI);
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -459,8 +463,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_m)) {
     // Parse ELF{32,64}{LE,BE} and CPU type.
     StringRef S = Arg->getValue();
-    std::tie(Config->EKind, Config->EMachine, Config->OSABI) =
-        parseEmulation(S);
+    std::tie(Config->EKind, Config->EMachine, Config->OSABI,
+             Config->MipsN32Abi) = parseEmulation(S);
     Config->Emulation = S;
   }
 
@@ -655,6 +659,7 @@ void LinkerDriver::inferMachineType() {
     Config->EKind = F->EKind;
     Config->EMachine = F->EMachine;
     Config->OSABI = F->OSABI;
+    Config->MipsN32Abi = Config->EMachine == EM_MIPS && isMipsN32Abi(F);
     return;
   }
   error("target emulation unknown: -m or at least one .o file required");
@@ -691,7 +696,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   LinkerScript<ELFT> LS;
   ScriptBase = Script<ELFT>::X = &LS;
 
-  Config->Rela = ELFT::Is64Bits || Config->EMachine == EM_X86_64;
+  Config->Rela =
+      ELFT::Is64Bits || Config->EMachine == EM_X86_64 || Config->MipsN32Abi;
   Config->Mips64EL =
       (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind);
   Config->ImageBase = getImageBase(Args);
@@ -750,6 +756,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
 
+  // Now that we have a complete list of input files.
+  // Beyond this point, no new files are added.
+  // Aggregate all input sections into one place.
+  for (elf::ObjectFile<ELFT> *F : Symtab.getObjectFiles())
+    for (InputSectionBase<ELFT> *S : F->getSections())
+      Symtab.Sections.push_back(S);
+  for (BinaryFile *F : Symtab.getBinaryFiles())
+    for (InputSectionData *S : F->getSections())
+      Symtab.Sections.push_back(cast<InputSection<ELFT>>(S));
+
   // Do size optimizations: garbage collection and identical code folding.
   if (Config->GcSections)
     markLive<ELFT>();
@@ -758,15 +774,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // MergeInputSection::splitIntoPieces needs to be called before
   // any call of MergeInputSection::getOffset. Do that.
-  for (elf::ObjectFile<ELFT> *F : Symtab.getObjectFiles()) {
-    for (InputSectionBase<ELFT> *S : F->getSections()) {
-      if (!S || S == &InputSection<ELFT>::Discarded || !S->Live)
-        continue;
-      if (S->Compressed)
-        S->uncompress();
-      if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
-        MS->splitIntoPieces();
-    }
+  for (InputSectionBase<ELFT> *S : Symtab.Sections) {
+    if (!S || S == &InputSection<ELFT>::Discarded || !S->Live)
+      continue;
+    if (S->Compressed)
+      S->uncompress();
+    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+      MS->splitIntoPieces();
   }
 
   // Write the result to the file.

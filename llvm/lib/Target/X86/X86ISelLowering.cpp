@@ -7397,6 +7397,7 @@ static SmallBitVector computeZeroableShuffleElements(ArrayRef<int> Mask,
 static SDValue lowerVectorShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
                                             ArrayRef<int> Mask, SDValue V1,
                                             SDValue V2,
+                                            const SmallBitVector &Zeroable,
                                             const X86Subtarget &Subtarget,
                                             SelectionDAG &DAG) {
   int Size = Mask.size();
@@ -7407,8 +7408,6 @@ static SDValue lowerVectorShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
   assert((Subtarget.hasSSSE3() && VT.is128BitVector()) ||
          (Subtarget.hasAVX2() && VT.is256BitVector()) ||
          (Subtarget.hasBWI() && VT.is512BitVector()));
-
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
 
   SmallVector<SDValue, 64> PSHUFBMask(NumBytes);
   // Sign bit set in i8 mask means zero element.
@@ -7484,6 +7483,7 @@ static SDValue lowerVectorShuffleWithUNPCK(const SDLoc &DL, MVT VT,
 /// one of the inputs being zeroable.
 static SDValue lowerVectorShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
                                            SDValue V2, ArrayRef<int> Mask,
+                                           const SmallBitVector &Zeroable,
                                            SelectionDAG &DAG) {
   MVT EltVT = VT.getVectorElementType();
   int NumEltBits = EltVT.getSizeInBits();
@@ -7496,7 +7496,6 @@ static SDValue lowerVectorShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
     AllOnes = DAG.getBitcast(EltVT, AllOnes);
   }
   SmallVector<SDValue, 16> VMaskOps(Mask.size(), Zero);
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
   SDValue V;
   for (int i = 0, Size = Mask.size(); i < Size; ++i) {
     if (Zeroable[i])
@@ -7559,12 +7558,12 @@ static SDValue lowerVectorShuffleAsBitBlend(const SDLoc &DL, MVT VT, SDValue V1,
 /// that the shuffle mask is a blend, or convertible into a blend with zero.
 static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                          SDValue V2, ArrayRef<int> Original,
+                                         const SmallBitVector &Zeroable,
                                          const X86Subtarget &Subtarget,
                                          SelectionDAG &DAG) {
   bool V1IsZero = ISD::isBuildVectorAllZeros(V1.getNode());
   bool V2IsZero = ISD::isBuildVectorAllZeros(V2.getNode());
   SmallVector<int, 8> Mask(Original.begin(), Original.end());
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
   bool ForceV1Zero = false, ForceV2Zero = false;
 
   // Attempt to generate the binary blend mask. If an input is zero then
@@ -7673,7 +7672,8 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
            "256-bit byte-blends require AVX2 support!");
 
     // Attempt to lower to a bitmask if we can. VPAND is faster than VPBLENDVB.
-    if (SDValue Masked = lowerVectorShuffleAsBitMask(DL, VT, V1, V2, Mask, DAG))
+    if (SDValue Masked =
+            lowerVectorShuffleAsBitMask(DL, VT, V1, V2, Mask, Zeroable, DAG))
       return Masked;
 
     // Scale the blend by the number of bytes per element.
@@ -7955,10 +7955,9 @@ static SDValue lowerVectorShuffleAsByteRotate(const SDLoc &DL, MVT VT,
 /// [  1, 2, -1, -1, -1, -1, zz, zz]
 static SDValue lowerVectorShuffleAsShift(const SDLoc &DL, MVT VT, SDValue V1,
                                          SDValue V2, ArrayRef<int> Mask,
+                                         const SmallBitVector &Zeroable,
                                          const X86Subtarget &Subtarget,
                                          SelectionDAG &DAG) {
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
-
   int Size = Mask.size();
   assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
 
@@ -8026,13 +8025,12 @@ static SDValue lowerVectorShuffleAsShift(const SDLoc &DL, MVT VT, SDValue V1,
 /// \brief Try to lower a vector shuffle using SSE4a EXTRQ/INSERTQ.
 static SDValue lowerVectorShuffleWithSSE4A(const SDLoc &DL, MVT VT, SDValue V1,
                                            SDValue V2, ArrayRef<int> Mask,
+                                           const SmallBitVector &Zeroable,
                                            SelectionDAG &DAG) {
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
-  assert(!Zeroable.all() && "Fully zeroable shuffle mask");
-
   int Size = Mask.size();
   int HalfSize = Size / 2;
   assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
+  assert(!Zeroable.all() && "Fully zeroable shuffle mask");
 
   // Upper half must be undefined.
   if (!isUndefInRange(Mask, HalfSize, HalfSize))
@@ -8330,9 +8328,8 @@ static SDValue lowerVectorShuffleAsSpecificZeroOrAnyExtend(
 /// are both incredibly common and often quite performance sensitive.
 static SDValue lowerVectorShuffleAsZeroOrAnyExtend(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
-    const X86Subtarget &Subtarget, SelectionDAG &DAG) {
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
-
+    const SmallBitVector &Zeroable, const X86Subtarget &Subtarget,
+    SelectionDAG &DAG) {
   int Bits = VT.getSizeInBits();
   int NumLanes = Bits / 128;
   int NumElements = VT.getVectorNumElements();
@@ -8915,10 +8912,10 @@ static bool matchVectorShuffleAsInsertPS(SDValue &V1, SDValue &V2,
 
 static SDValue lowerVectorShuffleAsInsertPS(const SDLoc &DL, SDValue V1,
                                             SDValue V2, ArrayRef<int> Mask,
+                                            const SmallBitVector &Zeroable,
                                             SelectionDAG &DAG) {
   assert(V1.getSimpleValueType() == MVT::v4f32 && "Bad operand type!");
   assert(V2.getSimpleValueType() == MVT::v4f32 && "Bad operand type!");
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
 
   // Attempt to match the insertps pattern.
   unsigned InsertPSMask;
@@ -9050,6 +9047,7 @@ static SDValue lowerVectorShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
 /// it is better to avoid lowering through this for integer vectors where
 /// possible.
 static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -9111,7 +9109,7 @@ static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   if (Subtarget.hasSSE41())
     if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v2f64, V1, V2, Mask,
-                                                  Subtarget, DAG))
+                                                  Zeroable, Subtarget, DAG))
       return Blend;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -9131,6 +9129,7 @@ static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// it falls back to the floating point shuffle operation with appropriate bit
 /// casting.
 static SDValue lowerV2I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -9183,7 +9182,7 @@ static SDValue lowerV2I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v2i64, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // When loading a scalar and then shuffling it into a vector we can often do
@@ -9203,7 +9202,7 @@ static SDValue lowerV2I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   bool IsBlendSupported = Subtarget.hasSSE41();
   if (IsBlendSupported)
     if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v2i64, V1, V2, Mask,
-                                                  Subtarget, DAG))
+                                                  Zeroable, Subtarget, DAG))
       return Blend;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -9349,6 +9348,7 @@ static SDValue lowerVectorShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
 /// domain crossing penalties, as these are sufficient to implement all v4f32
 /// shuffles.
 static SDValue lowerV4F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -9397,11 +9397,12 @@ static SDValue lowerV4F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   if (Subtarget.hasSSE41()) {
     if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v4f32, V1, V2, Mask,
-                                                  Subtarget, DAG))
+                                                  Zeroable, Subtarget, DAG))
       return Blend;
 
     // Use INSERTPS if we can complete the shuffle efficiently.
-    if (SDValue V = lowerVectorShuffleAsInsertPS(DL, V1, V2, Mask, DAG))
+    if (SDValue V =
+            lowerVectorShuffleAsInsertPS(DL, V1, V2, Mask, Zeroable, DAG))
       return V;
 
     if (!isSingleSHUFPSMask(Mask))
@@ -9430,6 +9431,7 @@ static SDValue lowerV4F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// We try to handle these with integer-domain shuffles where we can, but for
 /// blends we use the floating point domain blend instructions.
 static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -9440,8 +9442,8 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative. It also allows us to fold memory operands into the
   // shuffle in many cases.
-  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(DL, MVT::v4i32, V1, V2,
-                                                         Mask, Subtarget, DAG))
+  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
+          DL, MVT::v4i32, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
@@ -9470,7 +9472,7 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v4i32, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // There are special ways we can lower some single-element blends.
@@ -9484,11 +9486,11 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   bool IsBlendSupported = Subtarget.hasSSE41();
   if (IsBlendSupported)
     if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v4i32, V1, V2, Mask,
-                                                  Subtarget, DAG))
+                                                  Zeroable, Subtarget, DAG))
       return Blend;
 
-  if (SDValue Masked =
-          lowerVectorShuffleAsBitMask(DL, MVT::v4i32, V1, V2, Mask, DAG))
+  if (SDValue Masked = lowerVectorShuffleAsBitMask(DL, MVT::v4i32, V1, V2, Mask,
+                                                   Zeroable, DAG))
     return Masked;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -9993,8 +9995,8 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
 /// blend if only one input is used.
 static SDValue lowerVectorShuffleAsBlendOfPSHUFBs(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
-    SelectionDAG &DAG, bool &V1InUse, bool &V2InUse) {
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
+    const SmallBitVector &Zeroable, SelectionDAG &DAG, bool &V1InUse,
+    bool &V2InUse) {
   SDValue V1Mask[16];
   SDValue V2Mask[16];
   V1InUse = false;
@@ -10054,6 +10056,7 @@ static SDValue lowerVectorShuffleAsBlendOfPSHUFBs(
 /// halves of the inputs separately (making them have relatively few inputs)
 /// and then concatenate them.
 static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -10064,7 +10067,7 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative.
   if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
-          DL, MVT::v8i16, V1, V2, Mask, Subtarget, DAG))
+          DL, MVT::v8i16, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   int NumV2Inputs = count_if(Mask, [](int M) { return M >= 8; });
@@ -10077,7 +10080,7 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
     // Try to use shift instructions.
     if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v8i16, V1, V1, Mask,
-                                                  Subtarget, DAG))
+                                                  Zeroable, Subtarget, DAG))
       return Shift;
 
     // Use dedicated unpack instructions for masks that match their pattern.
@@ -10103,12 +10106,13 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v8i16, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // See if we can use SSE4A Extraction / Insertion.
   if (Subtarget.hasSSE4A())
-    if (SDValue V = lowerVectorShuffleWithSSE4A(DL, MVT::v8i16, V1, V2, Mask, DAG))
+    if (SDValue V = lowerVectorShuffleWithSSE4A(DL, MVT::v8i16, V1, V2, Mask,
+                                                Zeroable, DAG))
       return V;
 
   // There are special ways we can lower some single-element blends.
@@ -10122,11 +10126,11 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   bool IsBlendSupported = Subtarget.hasSSE41();
   if (IsBlendSupported)
     if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v8i16, V1, V2, Mask,
-                                                  Subtarget, DAG))
+                                                  Zeroable, Subtarget, DAG))
       return Blend;
 
-  if (SDValue Masked =
-          lowerVectorShuffleAsBitMask(DL, MVT::v8i16, V1, V2, Mask, DAG))
+  if (SDValue Masked = lowerVectorShuffleAsBitMask(DL, MVT::v8i16, V1, V2, Mask,
+                                                   Zeroable, DAG))
     return Masked;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -10152,14 +10156,14 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // can both shuffle and set up the inefficient blend.
   if (!IsBlendSupported && Subtarget.hasSSSE3()) {
     bool V1InUse, V2InUse;
-    return lowerVectorShuffleAsBlendOfPSHUFBs(DL, MVT::v8i16, V1, V2, Mask, DAG,
-                                              V1InUse, V2InUse);
+    return lowerVectorShuffleAsBlendOfPSHUFBs(DL, MVT::v8i16, V1, V2, Mask,
+                                              Zeroable, DAG, V1InUse, V2InUse);
   }
 
   // We can always bit-blend if we have to so the fallback strategy is to
   // decompose into single-input permutes and blends.
   return lowerVectorShuffleAsDecomposedShuffleBlend(DL, MVT::v8i16, V1, V2,
-                                                      Mask, DAG);
+                                                    Mask, DAG);
 }
 
 /// \brief Check whether a compaction lowering can be done by dropping even
@@ -10236,6 +10240,7 @@ static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
 /// the existing lowering for v8i16 blends on each half, finally PACK-ing them
 /// back together.
 static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -10245,7 +10250,7 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v16i8, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // Try to use byte rotation instructions.
@@ -10255,12 +10260,13 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use a zext lowering.
   if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
-          DL, MVT::v16i8, V1, V2, Mask, Subtarget, DAG))
+          DL, MVT::v16i8, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   // See if we can use SSE4A Extraction / Insertion.
   if (Subtarget.hasSSE4A())
-    if (SDValue V = lowerVectorShuffleWithSSE4A(DL, MVT::v16i8, V1, V2, Mask, DAG))
+    if (SDValue V = lowerVectorShuffleWithSSE4A(DL, MVT::v16i8, V1, V2, Mask,
+                                                Zeroable, DAG))
       return V;
 
   int NumV2Elements = count_if(Mask, [](int M) { return M >= 16; });
@@ -10363,8 +10369,8 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
       return V;
   }
 
-  if (SDValue Masked =
-          lowerVectorShuffleAsBitMask(DL, MVT::v16i8, V1, V2, Mask, DAG))
+  if (SDValue Masked = lowerVectorShuffleAsBitMask(DL, MVT::v16i8, V1, V2, Mask,
+                                                   Zeroable, DAG))
     return Masked;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -10390,15 +10396,15 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     bool V2InUse = false;
 
     SDValue PSHUFB = lowerVectorShuffleAsBlendOfPSHUFBs(
-        DL, MVT::v16i8, V1, V2, Mask, DAG, V1InUse, V2InUse);
+        DL, MVT::v16i8, V1, V2, Mask, Zeroable, DAG, V1InUse, V2InUse);
 
     // If both V1 and V2 are in use and we can use a direct blend or an unpack,
     // do so. This avoids using them to handle blends-with-zero which is
     // important as a single pshufb is significantly faster for that.
     if (V1InUse && V2InUse) {
       if (Subtarget.hasSSE41())
-        if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v16i8, V1, V2,
-                                                      Mask, Subtarget, DAG))
+        if (SDValue Blend = lowerVectorShuffleAsBlend(
+                DL, MVT::v16i8, V1, V2, Mask, Zeroable, Subtarget, DAG))
           return Blend;
 
       // We can use an unpack to do the blending rather than an or in some
@@ -10524,21 +10530,22 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// dispatches to the lowering routines accordingly.
 static SDValue lower128BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                         MVT VT, SDValue V1, SDValue V2,
+                                        const SmallBitVector &Zeroable,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   switch (VT.SimpleTy) {
   case MVT::v2i64:
-    return lowerV2I64VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV2I64VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v2f64:
-    return lowerV2F64VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV2F64VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v4i32:
-    return lowerV4I32VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV4I32VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v4f32:
-    return lowerV4F32VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV4F32VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v8i16:
-    return lowerV8I16VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV8I16VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v16i8:
-    return lowerV16I8VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV16I8VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
 
   default:
     llvm_unreachable("Unimplemented!");
@@ -10835,6 +10842,7 @@ static SDValue lowerVectorShuffleAsLanePermuteAndBlend(const SDLoc &DL, MVT VT,
 /// \brief Handle lowering 2-lane 128-bit shuffles.
 static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
                                         SDValue V2, ArrayRef<int> Mask,
+                                        const SmallBitVector &Zeroable,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   // TODO: If minimizing size and one of the inputs is a zero vector and the
@@ -10843,7 +10851,7 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
 
   // Blends are faster and handle all the non-lane-crossing cases.
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, VT, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Blend;
 
   bool IsV1Zero = ISD::isBuildVectorAllZeros(V1.getNode());
@@ -11353,6 +11361,7 @@ static SDValue lowerVectorShuffleWithPERMV(const SDLoc &DL, MVT VT,
 /// Also ends up handling lowering of 4-lane 64-bit integer shuffles when AVX2
 /// isn't available.
 static SDValue lowerV4F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -11363,7 +11372,7 @@ static SDValue lowerV4F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   SmallVector<int, 4> WidenedMask;
   if (canWidenShuffleElements(Mask, WidenedMask))
     if (SDValue V = lowerV2X128VectorShuffle(DL, MVT::v4f64, V1, V2, Mask,
-                                             Subtarget, DAG))
+                                             Zeroable, Subtarget, DAG))
       return V;
 
   if (V2.isUndef()) {
@@ -11407,7 +11416,7 @@ static SDValue lowerV4F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return V;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v4f64, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Blend;
 
   // Check if the blend happens to exactly fit that of SHUFPD.
@@ -11446,6 +11455,7 @@ static SDValue lowerV4F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// This routine is only called when we have AVX2 and thus a reasonable
 /// instruction set for v4i64 shuffling..
 static SDValue lowerV4I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -11457,11 +11467,11 @@ static SDValue lowerV4I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   SmallVector<int, 4> WidenedMask;
   if (canWidenShuffleElements(Mask, WidenedMask))
     if (SDValue V = lowerV2X128VectorShuffle(DL, MVT::v4i64, V1, V2, Mask,
-                                             Subtarget, DAG))
+                                             Zeroable, Subtarget, DAG))
       return V;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v4i64, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Blend;
 
   // Check for being able to broadcast a single element.
@@ -11491,7 +11501,7 @@ static SDValue lowerV4I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v4i64, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   if (SDValue Rotate = lowerVectorShuffleAsByteRotate(DL, MVT::v4i64, V1, V2,
@@ -11523,6 +11533,7 @@ static SDValue lowerV4I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// Also ends up handling lowering of 8-lane 32-bit integer shuffles when AVX2
 /// isn't available.
 static SDValue lowerV8F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -11531,7 +11542,7 @@ static SDValue lowerV8F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   assert(Mask.size() == 8 && "Unexpected mask size for v8 shuffle!");
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v8f32, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Blend;
 
   // Check for being able to broadcast a single element.
@@ -11608,6 +11619,7 @@ static SDValue lowerV8F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// This routine is only called when we have AVX2 and thus a reasonable
 /// instruction set for v8i32 shuffling..
 static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -11619,12 +11631,12 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative. It also allows us to fold memory operands into the
   // shuffle in many cases.
-  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(DL, MVT::v8i32, V1, V2,
-                                                         Mask, Subtarget, DAG))
+  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
+          DL, MVT::v8i32, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v8i32, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Blend;
 
   // Check for being able to broadcast a single element.
@@ -11650,7 +11662,7 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v8i32, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // Try to use byte rotation instructions.
@@ -11687,6 +11699,7 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// This routine is only called when we have AVX2 and thus a reasonable
 /// instruction set for v16i16 shuffling..
 static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                        const SmallBitVector &Zeroable,
                                         SDValue V1, SDValue V2,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
@@ -11698,8 +11711,8 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative. It also allows us to fold memory operands into the
   // shuffle in many cases.
-  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(DL, MVT::v16i16, V1, V2,
-                                                         Mask, Subtarget, DAG))
+  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
+          DL, MVT::v16i16, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   // Check for being able to broadcast a single element.
@@ -11708,7 +11721,7 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Broadcast;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v16i16, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Blend;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -11718,7 +11731,7 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v16i16, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // Try to use byte rotation instructions.
@@ -11749,8 +11762,8 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     }
   }
 
-  if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(DL, MVT::v16i16, Mask, V1,
-                                                    V2, Subtarget, DAG))
+  if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(
+          DL, MVT::v16i16, Mask, V1, V2, Zeroable, Subtarget, DAG))
     return PSHUFB;
 
   // AVX512BWVL can lower to VPERMW.
@@ -11772,6 +11785,7 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// This routine is only called when we have AVX2 and thus a reasonable
 /// instruction set for v32i8 shuffling..
 static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -11783,8 +11797,8 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative. It also allows us to fold memory operands into the
   // shuffle in many cases.
-  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(DL, MVT::v32i8, V1, V2,
-                                                         Mask, Subtarget, DAG))
+  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
+          DL, MVT::v32i8, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   // Check for being able to broadcast a single element.
@@ -11793,7 +11807,7 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Broadcast;
 
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v32i8, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Blend;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -11803,7 +11817,7 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v32i8, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // Try to use byte rotation instructions.
@@ -11823,8 +11837,8 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v32i8, V1, V2, Mask,
                                                    DAG);
 
-  if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(DL, MVT::v32i8, Mask, V1,
-                                                    V2, Subtarget, DAG))
+  if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(
+          DL, MVT::v32i8, Mask, V1, V2, Zeroable, Subtarget, DAG))
     return PSHUFB;
 
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
@@ -11844,6 +11858,7 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// together based on the available instructions.
 static SDValue lower256BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                         MVT VT, SDValue V1, SDValue V2,
+                                        const SmallBitVector &Zeroable,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   // If we have a single input to the zero element, insert that into V1 if we
@@ -11872,7 +11887,8 @@ static SDValue lower256BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (ElementBits < 32) {
       // No floating point type available, if we can't use the bit operations
       // for masking/blending then decompose into 128-bit vectors.
-      if (SDValue V = lowerVectorShuffleAsBitMask(DL, VT, V1, V2, Mask, DAG))
+      if (SDValue V =
+              lowerVectorShuffleAsBitMask(DL, VT, V1, V2, Mask, Zeroable, DAG))
         return V;
       if (SDValue V = lowerVectorShuffleAsBitBlend(DL, VT, V1, V2, Mask, DAG))
         return V;
@@ -11888,17 +11904,17 @@ static SDValue lower256BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   switch (VT.SimpleTy) {
   case MVT::v4f64:
-    return lowerV4F64VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV4F64VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v4i64:
-    return lowerV4I64VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV4I64VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v8f32:
-    return lowerV8F32VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV8F32VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v8i32:
-    return lowerV8I32VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV8I32VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v16i16:
-    return lowerV16I16VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV16I16VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v32i8:
-    return lowerV32I8VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV32I8VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
 
   default:
     llvm_unreachable("Not a valid 256-bit x86 vector type!");
@@ -12039,6 +12055,7 @@ static SDValue lowerV16F32VectorShuffle(SDLoc DL, ArrayRef<int> Mask,
 
 /// \brief Handle lowering of 8-lane 64-bit integer shuffles.
 static SDValue lowerV8I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -12073,7 +12090,7 @@ static SDValue lowerV8I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v8i64, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   if (SDValue Rotate = lowerVectorShuffleAsByteRotate(DL, MVT::v8i64, V1, V2,
@@ -12089,6 +12106,7 @@ static SDValue lowerV8I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
 /// \brief Handle lowering of 16-lane 32-bit integer shuffles.
 static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                        const SmallBitVector &Zeroable,
                                         SDValue V1, SDValue V2,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
@@ -12099,9 +12117,8 @@ static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative. It also allows us to fold memory operands into the
   // shuffle in many cases.
-  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(DL, MVT::v16i32, V1,
-                                                         V2, Mask, Subtarget,
-                                                         DAG))
+  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
+          DL, MVT::v16i32, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   // If the shuffle mask is repeated in each 128-bit lane we can use more
@@ -12122,7 +12139,7 @@ static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v16i32, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // Try to use byte rotation instructions.
@@ -12136,6 +12153,7 @@ static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
 /// \brief Handle lowering of 32-lane 16-bit integer shuffles.
 static SDValue lowerV32I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                        const SmallBitVector &Zeroable,
                                         SDValue V1, SDValue V2,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
@@ -12147,9 +12165,8 @@ static SDValue lowerV32I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative. It also allows us to fold memory operands into the
   // shuffle in many cases.
-  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(DL, MVT::v32i16, V1,
-                                                         V2, Mask, Subtarget,
-                                                         DAG))
+  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
+          DL, MVT::v32i16, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -12159,7 +12176,7 @@ static SDValue lowerV32I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v32i16, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // Try to use byte rotation instructions.
@@ -12183,6 +12200,7 @@ static SDValue lowerV32I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
 /// \brief Handle lowering of 64-lane 8-bit integer shuffles.
 static SDValue lowerV64I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
+                                       const SmallBitVector &Zeroable,
                                        SDValue V1, SDValue V2,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -12194,8 +12212,8 @@ static SDValue lowerV64I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Whenever we can lower this as a zext, that instruction is strictly faster
   // than any alternative. It also allows us to fold memory operands into the
   // shuffle in many cases.
-  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(DL, MVT::v64i8, V1, V2,
-                                                         Mask, Subtarget, DAG))
+  if (SDValue ZExt = lowerVectorShuffleAsZeroOrAnyExtend(
+          DL, MVT::v64i8, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return ZExt;
 
   // Use dedicated unpack instructions for masks that match their pattern.
@@ -12205,7 +12223,7 @@ static SDValue lowerV64I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v64i8, V1, V2, Mask,
-                                                Subtarget, DAG))
+                                                Zeroable, Subtarget, DAG))
     return Shift;
 
   // Try to use byte rotation instructions.
@@ -12213,8 +12231,8 @@ static SDValue lowerV64I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
     return Rotate;
 
-  if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(DL, MVT::v64i8, Mask, V1,
-                                                    V2, Subtarget, DAG))
+  if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(
+          DL, MVT::v64i8, Mask, V1, V2, Zeroable, Subtarget, DAG))
     return PSHUFB;
 
   // FIXME: Implement direct support for this type!
@@ -12228,6 +12246,7 @@ static SDValue lowerV64I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// together based on the available instructions.
 static SDValue lower512BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                         MVT VT, SDValue V1, SDValue V2,
+                                        const SmallBitVector &Zeroable,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   assert(Subtarget.hasAVX512() &&
@@ -12258,13 +12277,13 @@ static SDValue lower512BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   case MVT::v16f32:
     return lowerV16F32VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
   case MVT::v8i64:
-    return lowerV8I64VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV8I64VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v16i32:
-    return lowerV16I32VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV16I32VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v32i16:
-    return lowerV32I16VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV32I16VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
   case MVT::v64i8:
-    return lowerV64I8VectorShuffle(DL, Mask, V1, V2, Subtarget, DAG);
+    return lowerV64I8VectorShuffle(DL, Mask, Zeroable, V1, V2, Subtarget, DAG);
 
   default:
     llvm_unreachable("Not a valid 512-bit x86 vector type!");
@@ -12480,13 +12499,16 @@ static SDValue lowerVectorShuffle(SDValue Op, const X86Subtarget &Subtarget,
 
   // For each vector width, delegate to a specialized lowering routine.
   if (VT.is128BitVector())
-    return lower128BitVectorShuffle(DL, Mask, VT, V1, V2, Subtarget, DAG);
+    return lower128BitVectorShuffle(DL, Mask, VT, V1, V2, Zeroable, Subtarget,
+                                    DAG);
 
   if (VT.is256BitVector())
-    return lower256BitVectorShuffle(DL, Mask, VT, V1, V2, Subtarget, DAG);
+    return lower256BitVectorShuffle(DL, Mask, VT, V1, V2, Zeroable, Subtarget,
+                                    DAG);
 
   if (VT.is512BitVector())
-    return lower512BitVectorShuffle(DL, Mask, VT, V1, V2, Subtarget, DAG);
+    return lower512BitVectorShuffle(DL, Mask, VT, V1, V2, Zeroable, Subtarget,
+                                    DAG);
 
   if (Is1BitVector)
     return lower1BitVectorShuffle(DL, Mask, VT, V1, V2, Subtarget, DAG);
@@ -18040,7 +18062,12 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
                                               Src1, Src2, Src3, Src4),
                                   Mask, PassThru, Subtarget, DAG);
     }
-    case CVTPD2PS: {
+    case CVTPD2PS:
+      // ISD::FP_ROUND has a second argument that indicates if the truncation
+      // does not change the value. Set it to 0 since it can change.
+      return DAG.getNode(IntrData->Opc0, dl, VT, Op.getOperand(1),
+                         DAG.getIntPtrConstant(0, dl));
+    case CVTPD2PS_MASK: {
       SDValue Src = Op.getOperand(1);
       SDValue PassThru = Op.getOperand(2);
       SDValue Mask = Op.getOperand(3);
@@ -21945,7 +21972,7 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Src0 = N->getSrc0();
   Src0 = ExtendToType(Src0, WideDataVT, DAG);
 
-  // Mask element has to be i1 
+  // Mask element has to be i1.
   MVT MaskEltTy = Mask.getSimpleValueType().getScalarType();
   assert((MaskEltTy == MVT::i1 || VT.getVectorNumElements() <= 4) &&
          "We handle 4x32, 4x64 and 2x64 vectors only in this casse");
@@ -22001,7 +22028,7 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumEltsInWideVec = 512/VT.getScalarSizeInBits();
   MVT WideDataVT = MVT::getVectorVT(ScalarVT, NumEltsInWideVec);
 
-  // Mask element has to be i1 
+  // Mask element has to be i1.
   MVT MaskEltTy = Mask.getSimpleValueType().getScalarType();
   assert((MaskEltTy == MVT::i1 || VT.getVectorNumElements() <= 4) &&
          "We handle 4x32, 4x64 and 2x64 vectors only in this casse");
@@ -30020,7 +30047,7 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 
   if (Mst->isCompressingStore())
     return SDValue();
-    
+
   if (!Mst->isTruncatingStore())
     return reduceMaskedStoreToScalarStore(Mst, DAG);
 
@@ -32858,7 +32885,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &X86::VK1WMRegClass);
         case MVT::i64:
           return std::make_pair(0U, &X86::VK64WMRegClass);
-        } 
+        }
       }
       break;
     }

@@ -85,9 +85,6 @@ public:
     ID.AddString(Kind);
     if (!Values.empty()) ID.AddString(Values);
   }
-
-  // FIXME: Remove this!
-  static uint64_t getAttrMask(Attribute::AttrKind Val);
 };
 
 //===----------------------------------------------------------------------===//
@@ -257,9 +254,6 @@ public:
       ID.AddPointer(Nodes[i].second);
     }
   }
-
-  // FIXME: This atrocity is temporary.
-  uint64_t Raw(unsigned Index) const;
 
   void dump() const;
 };

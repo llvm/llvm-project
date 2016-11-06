@@ -186,6 +186,7 @@ private:
   bool isValueExtension(const SDValue &Val, unsigned FromBits, SDValue &Src);
   bool orIsAdd(const SDNode *N) const;
   bool isAlignedMemNode(const MemSDNode *N) const;
+  bool isPositiveHalfWord(const SDNode *N) const;
 
   SmallDenseMap<SDNode *,int> RootWeights;
   SmallDenseMap<SDNode *,int> RootHeights;
@@ -1536,6 +1537,19 @@ bool HexagonDAGToDAGISel::orIsAdd(const SDNode *N) const {
 
 bool HexagonDAGToDAGISel::isAlignedMemNode(const MemSDNode *N) const {
   return N->getAlignment() >= N->getMemoryVT().getStoreSize();
+}
+
+// Return true when the given node fits in a positive half word.
+bool HexagonDAGToDAGISel::isPositiveHalfWord(const SDNode *N) const {
+  if (const ConstantSDNode *CN = dyn_cast<const ConstantSDNode>(N)) {
+    int64_t V = CN->getSExtValue();
+    return V > 0 && isInt<16>(V);
+  }
+  if (N->getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    const VTSDNode *VN = dyn_cast<const VTSDNode>(N->getOperand(1));
+    return VN->getVT().getSizeInBits() <= 16;
+  }
+  return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

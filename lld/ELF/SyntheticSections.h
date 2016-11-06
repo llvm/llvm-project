@@ -15,11 +15,19 @@
 namespace lld {
 namespace elf {
 
+// This class represents a BSS section containing all common symbols.
+template <class ELFT> class CommonSection final : public InputSection<ELFT> {
+public:
+  CommonSection();
+};
+
+// .interp section.
 template <class ELFT> class InterpSection final : public InputSection<ELFT> {
 public:
   InterpSection();
 };
 
+// .note.gnu.build-id section.
 template <class ELFT> class BuildIdSection : public InputSection<ELFT> {
 public:
   virtual void writeBuildId(llvm::MutableArrayRef<uint8_t> Buf) = 0;
@@ -30,6 +38,12 @@ public:
 protected:
   BuildIdSection(size_t HashSize);
   std::vector<uint8_t> Buf;
+
+  void
+  computeHash(llvm::ArrayRef<uint8_t> Buf,
+              std::function<void(ArrayRef<uint8_t> Arr, uint8_t *Hash)> Hash);
+
+  size_t HashSize;
 };
 
 template <class ELFT>
@@ -67,13 +81,13 @@ public:
 // Linker generated sections which can be used as inputs.
 template <class ELFT> struct In {
   static BuildIdSection<ELFT> *BuildId;
+  static CommonSection<ELFT> *Common;
   static InterpSection<ELFT> *Interp;
-  static std::vector<InputSection<ELFT> *> Sections;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
+template <class ELFT> CommonSection<ELFT> *In<ELFT>::Common;
 template <class ELFT> InterpSection<ELFT> *In<ELFT>::Interp;
-template <class ELFT> std::vector<InputSection<ELFT> *> In<ELFT>::Sections;
 
 } // namespace elf
 } // namespace lld

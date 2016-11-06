@@ -33,6 +33,12 @@ page <http://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
+* The C API functions LLVMAddFunctionAttr, LLVMGetFunctionAttr,
+  LLVMRemoveFunctionAttr, LLVMAddAttribute, LLVMRemoveAttribute,
+  LLVMGetAttribute, LLVMAddInstrAttribute and
+  LLVMRemoveInstrAttribute have been removed.
+
+* The C API enum LLVMAttribute has been deleted.
 
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of

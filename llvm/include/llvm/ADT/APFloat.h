@@ -232,11 +232,6 @@ public:
   /// \name Convenience "constructors"
   /// @{
 
-  /// Returns a float which is bitcasted from an all one value int.
-  ///
-  /// \param BitWidth - Select float type
-  static IEEEFloat getAllOnesValue(unsigned BitWidth);
-
   /// @}
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
@@ -645,8 +640,11 @@ class APFloat : public APFloatBase {
     IEEEFloat IEEE;
     DoubleAPFloat Double;
 
-    explicit Storage(IEEEFloat F) : IEEE(std::move(F)) {}
-    explicit Storage(DoubleAPFloat F) : Double(std::move(F)) {}
+    explicit Storage(IEEEFloat F, const fltSemantics &S);
+    explicit Storage(DoubleAPFloat F, const fltSemantics &S)
+        : Double(std::move(F)) {
+      assert(&S == &PPCDoubleDouble);
+    }
 
     template <typename... ArgTypes>
     Storage(const fltSemantics &Semantics, ArgTypes &&... Args) {
@@ -770,8 +768,9 @@ class APFloat : public APFloatBase {
     llvm_unreachable("This is a workaround for old clang.");
   }
 
-  explicit APFloat(IEEEFloat F) : U(std::move(F)) {}
-  explicit APFloat(DoubleAPFloat F) : U(std::move(F)) {}
+  explicit APFloat(IEEEFloat F, const fltSemantics &S) : U(std::move(F), S) {}
+  explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
+      : U(std::move(F), S) {}
 
 public:
   APFloat(const fltSemantics &Semantics) : U(Semantics) {}
@@ -781,8 +780,8 @@ public:
   APFloat(const fltSemantics &Semantics, uninitializedTag)
       : U(Semantics, uninitialized) {}
   APFloat(const fltSemantics &Semantics, const APInt &I) : U(Semantics, I) {}
-  explicit APFloat(double d) : U(IEEEFloat(d)) {}
-  explicit APFloat(float f) : U(IEEEFloat(f)) {}
+  explicit APFloat(double d) : U(IEEEFloat(d), IEEEdouble) {}
+  explicit APFloat(float f) : U(IEEEFloat(f), IEEEsingle) {}
   APFloat(const APFloat &RHS) = default;
   APFloat(APFloat &&RHS) = default;
 
@@ -881,14 +880,7 @@ public:
   ///
   /// \param BitWidth - Select float type
   /// \param isIEEE   - If 128 bit number, select between PPC and IEEE
-  static APFloat getAllOnesValue(unsigned BitWidth, bool isIEEE = false) {
-    if (isIEEE) {
-      return APFloat(IEEEFloat::getAllOnesValue(BitWidth));
-    } else {
-      assert(BitWidth == 128);
-      return APFloat(PPCDoubleDouble, APInt::getAllOnesValue(BitWidth));
-    }
-  }
+  static APFloat getAllOnesValue(unsigned BitWidth, bool isIEEE = false);
 
   void Profile(FoldingSetNodeID &NID) const { getIEEE().Profile(NID); }
 
@@ -919,19 +911,19 @@ public:
   opStatus next(bool nextDown) { return getIEEE().next(nextDown); }
 
   APFloat operator+(const APFloat &RHS) const {
-    return APFloat(getIEEE() + RHS.getIEEE());
+    return APFloat(getIEEE() + RHS.getIEEE(), getSemantics());
   }
 
   APFloat operator-(const APFloat &RHS) const {
-    return APFloat(getIEEE() - RHS.getIEEE());
+    return APFloat(getIEEE() - RHS.getIEEE(), getSemantics());
   }
 
   APFloat operator*(const APFloat &RHS) const {
-    return APFloat(getIEEE() * RHS.getIEEE());
+    return APFloat(getIEEE() * RHS.getIEEE(), getSemantics());
   }
 
   APFloat operator/(const APFloat &RHS) const {
-    return APFloat(getIEEE() / RHS.getIEEE());
+    return APFloat(getIEEE() / RHS.getIEEE(), getSemantics());
   }
 
   void changeSign() { getIEEE().changeSign(); }
@@ -939,7 +931,8 @@ public:
   void copySign(const APFloat &RHS) { getIEEE().copySign(RHS.getIEEE()); }
 
   static APFloat copySign(APFloat Value, const APFloat &Sign) {
-    return APFloat(IEEEFloat::copySign(Value.getIEEE(), Sign.getIEEE()));
+    return APFloat(IEEEFloat::copySign(Value.getIEEE(), Sign.getIEEE()),
+                   Value.getSemantics());
   }
 
   opStatus convert(const fltSemantics &ToSemantics, roundingMode RM,
@@ -1035,7 +1028,7 @@ public:
 /// xlC compiler.
 hash_code hash_value(const APFloat &Arg);
 inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
-  return APFloat(scalbn(X.getIEEE(), Exp, RM));
+  return APFloat(scalbn(X.getIEEE(), Exp, RM), X.getSemantics());
 }
 
 /// \brief Equivalent of C standard library function.
@@ -1043,7 +1036,7 @@ inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
 /// While the C standard says Exp is an unspecified value for infinity and nan,
 /// this returns INT_MAX for infinities, and INT_MIN for NaNs.
 inline APFloat frexp(const APFloat &X, int &Exp, APFloat::roundingMode RM) {
-  return APFloat(frexp(X.getIEEE(), Exp, RM));
+  return APFloat(frexp(X.getIEEE(), Exp, RM), X.getSemantics());
 }
 /// \brief Returns the absolute value of the argument.
 inline APFloat abs(APFloat X) {

@@ -6077,6 +6077,8 @@ def : Pat<(v8f64 (extloadv8f32 addr:$src)),
             (VCVTPS2PDZrm addr:$src)>;
 
 let Predicates = [HasVLX] in {
+  def : Pat<(v2f64 (extloadv2f32 addr:$src)),
+              (VCVTPS2PDZ128rm addr:$src)>;
   def : Pat<(v4f64 (extloadv4f32 addr:$src)),
               (VCVTPS2PDZ256rm addr:$src)>;
 }
