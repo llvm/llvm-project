@@ -32,12 +32,48 @@ std::ostream &operator<<(std::ostream &OS,
 
 }
 
+// Check that we can't accidentally assign a temporary std::string to a
+// StringRef. (Unfortunately we can't make use of the same thing with
+// constructors.)
+//
+// Disable this check under MSVC; even MSVC 2015 isn't consistent between
+// std::is_assignable and actually writing such an assignment.
+#if !defined(_MSC_VER)
+static_assert(
+    !std::is_assignable<StringRef, std::string>::value,
+    "Assigning from prvalue std::string");
+static_assert(
+    !std::is_assignable<StringRef, std::string &&>::value,
+    "Assigning from xvalue std::string");
+static_assert(
+    std::is_assignable<StringRef, std::string &>::value,
+    "Assigning from lvalue std::string");
+static_assert(
+    std::is_assignable<StringRef, const char *>::value,
+    "Assigning from prvalue C string");
+static_assert(
+    std::is_assignable<StringRef, const char * &&>::value,
+    "Assigning from xvalue C string");
+static_assert(
+    std::is_assignable<StringRef, const char * &>::value,
+    "Assigning from lvalue C string");
+#endif
+
+
 namespace {
 TEST(StringRefTest, Construction) {
   EXPECT_EQ("", StringRef());
   EXPECT_EQ("hello", StringRef("hello"));
   EXPECT_EQ("hello", StringRef("hello world", 5));
   EXPECT_EQ("hello", StringRef(std::string("hello")));
+}
+
+TEST(StringRefTest, EmptyInitializerList) {
+  StringRef S = {};
+  EXPECT_TRUE(S.empty());
+
+  S = {};
+  EXPECT_TRUE(S.empty());
 }
 
 TEST(StringRefTest, Iteration) {
