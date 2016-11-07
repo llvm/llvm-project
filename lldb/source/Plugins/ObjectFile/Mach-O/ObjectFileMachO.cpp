@@ -667,8 +667,12 @@ public:
         // x0-x29 + fp + lr + sp + pc (== 33 64-bit registers) plus cpsr (1
         // 32-bit register)
         if (count >= (33 * 2) + 1) {
-          for (uint32_t i = 0; i < 33; ++i)
+          for (uint32_t i = 0; i < 29; ++i)
             gpr.x[i] = data.GetU64(&offset);
+          gpr.fp = data.GetU64(&offset);
+          gpr.lr = data.GetU64(&offset);
+          gpr.sp = data.GetU64(&offset);
+          gpr.pc = data.GetU64(&offset);
           gpr.cpsr = data.GetU32(&offset);
           SetError(GPRRegSet, Read, 0);
         }

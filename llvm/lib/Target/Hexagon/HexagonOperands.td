@@ -196,12 +196,6 @@ def u8_0ImmPred  : PatLeaf<(i32 imm), [{
   return isUInt<8>(v);
 }]>;
 
-def u7_0StrictPosImmPred : ImmLeaf<i32, [{
-  // u7_0StrictPosImmPred predicate - True if the immediate fits in an 7-bit
-  // unsigned field and is strictly greater than 0.
-  return isUInt<7>(Imm) && Imm > 0;
-}]>;
-
 def u6_0ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isUInt<6>(v);
@@ -235,47 +229,6 @@ def u3_0ImmPred  : PatLeaf<(i32 imm), [{
 def u2_0ImmPred  : PatLeaf<(i32 imm), [{
   int64_t v = (int64_t)N->getSExtValue();
   return isUInt<2>(v);
-}]>;
-
-def m5_0ImmPred  : PatLeaf<(i32 imm), [{
-  // m5_0ImmPred predicate - True if the number is in range -1 .. -31
-  // and will fit in a 5 bit field when made positive, for use in memops.
-  int64_t v = (int64_t)N->getSExtValue();
-  return (-31 <= v && v <= -1);
-}]>;
-
-//InN means negative integers in [-(2^N - 1), 0]
-def n8_0ImmPred  : PatLeaf<(i32 imm), [{
-  // n8_0ImmPred predicate - True if the immediate fits in a 8-bit signed
-  // field.
-  int64_t v = (int64_t)N->getSExtValue();
-  return (-255 <= v && v <= 0);
-}]>;
-
-def nOneImmPred  : PatLeaf<(i32 imm), [{
-  // nOneImmPred predicate - True if the immediate is -1.
-  int64_t v = (int64_t)N->getSExtValue();
-  return (-1 == v);
-}]>;
-
-def Set5ImmPred : PatLeaf<(i32 imm), [{
-  // Set5ImmPred predicate - True if the number is in the series of values.
-  // [ 2^0, 2^1, ... 2^31 ]
-  // For use in setbit immediate.
-  uint32_t v = (int32_t)N->getSExtValue();
-  // Constrain to 32 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
-}]>;
-
-def Clr5ImmPred : PatLeaf<(i32 imm), [{
-  // Clr5ImmPred predicate - True if the number is in the series of
-  // bit negated values.
-  // [ 2^0, 2^1, ... 2^31 ]
-  // For use in clrbit immediate.
-  // Note: we are bit NOTing the value.
-  uint32_t v = ~ (int32_t)N->getSExtValue();
-  // Constrain to 32 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
 }]>;
 
 // Extendable immediate operands.
@@ -339,25 +292,6 @@ let OperandType = "OPERAND_IMMEDIATE", PrintMethod = "printExtOperand",
 }
 
 
-def s4_7ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  if (HST->hasV60TOps())
-    // Return true if the immediate can fit in a 10-bit sign extended field and
-    // is 128-byte aligned.
-    return isShiftedInt<4,7>(v);
-  return false;
-}]>;
-
-def s4_6ImmPred  : PatLeaf<(i32 imm), [{
-  int64_t v = (int64_t)N->getSExtValue();
-  if (HST->hasV60TOps())
-    // Return true if the immediate can fit in a 10-bit sign extended field and
-    // is 64-byte aligned.
-    return isShiftedInt<4,6>(v);
-  return false;
-}]>;
-
-
 // This complex pattern exists only to create a machine instruction operand
 // of type "frame index". There doesn't seem to be a way to do that directly
 // in the patterns.
@@ -394,12 +328,3 @@ def calltarget : Operand<i32> {
 
 def bblabel : Operand<i32>;
 def bbl     : SDNode<"ISD::BasicBlock", SDTPtrLeaf, [], "BasicBlockSDNode">;
-
-// Return true if for a 32 to 64-bit sign-extended load.
-def is_sext_i32 : PatLeaf<(i64 DoubleRegs:$src1), [{
-  LoadSDNode *LD = dyn_cast<LoadSDNode>(N);
-  if (!LD)
-    return false;
-  return LD->getExtensionType() == ISD::SEXTLOAD &&
-         LD->getMemoryVT().getScalarType() == MVT::i32;
-}]>;

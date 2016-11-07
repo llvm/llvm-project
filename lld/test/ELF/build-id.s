@@ -16,6 +16,14 @@
 # RUN: ld.lld --build-id=md5 --build-id=none %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
 
+## Multithreaded cases:
+# RUN: ld.lld --build-id -threads %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
+# RUN: ld.lld --build-id=md5 -threads %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=MD5 %s
+# RUN: ld.lld --build-id=sha1 -threads %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SHA1 %s
+
 .globl _start
 _start:
   nop
@@ -26,12 +34,19 @@ _start:
 # DEFAULT:      Contents of section .note.test:
 # DEFAULT:      Contents of section .note.gnu.build-id:
 # DEFAULT-NEXT: 04000000 08000000 03000000 474e5500  ............GNU.
+# DEFAULT-NEXT: ab
 
 # MD5:      Contents of section .note.gnu.build-id:
 # MD5-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.
+# MD5-NEXT: 29
 
 # SHA1:      Contents of section .note.gnu.build-id:
 # SHA1-NEXT: 04000000 14000000 03000000 474e5500  ............GNU.
+# SHA1-NEXT: b1
+
+# TREE:      Contents of section .note.gnu.build-id:
+# TREE-NEXT: 04000000 14000000 03000000 474e5500  ............GNU.
+# TREE-NEXT: 18
 
 # UUID:      Contents of section .note.gnu.build-id:
 # UUID-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.

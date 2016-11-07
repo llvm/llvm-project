@@ -3630,15 +3630,10 @@ void ModuleBitcodeWriter::writeModuleHash(size_t BlockStartPos) {
   SHA1 Hasher;
   Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&(Buffer)[BlockStartPos],
                                   Buffer.size() - BlockStartPos));
-  auto Hash = Hasher.result();
-  SmallVector<uint64_t, 20> Vals;
-  auto LShift = [&](unsigned char Val, unsigned Amount)
-                    -> uint64_t { return ((uint64_t)Val) << Amount; };
+  StringRef Hash = Hasher.result();
+  uint32_t Vals[5];
   for (int Pos = 0; Pos < 20; Pos += 4) {
-    uint32_t SubHash = LShift(Hash[Pos + 0], 24);
-    SubHash |= LShift(Hash[Pos + 1], 16) | LShift(Hash[Pos + 2], 8) |
-               (unsigned)(unsigned char)Hash[Pos + 3];
-    Vals.push_back(SubHash);
+    Vals[Pos / 4] = support::endian::read32be(Hash.data() + Pos);
   }
 
   // Emit the finished record.

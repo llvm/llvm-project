@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/File.h"
 #include "lld/Core/Reader.h"
+#include "lld/Core/File.h"
 #include "lld/Core/Reference.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <memory>
 #include <algorithm>
+#include <memory>
 
 namespace lld {
 

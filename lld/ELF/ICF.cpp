@@ -147,10 +147,9 @@ template <class ELFT> bool ICF<ELFT>::isEligible(InputSectionBase<ELFT> *Sec) {
 template <class ELFT>
 std::vector<InputSection<ELFT> *> ICF<ELFT>::getSections() {
   std::vector<InputSection<ELFT> *> V;
-  for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
-    for (InputSectionBase<ELFT> *S : F->getSections())
-      if (isEligible(S))
-        V.push_back(cast<InputSection<ELFT>>(S));
+  for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
+    if (isEligible(S))
+      V.push_back(cast<InputSection<ELFT>>(S));
   return V;
 }
 

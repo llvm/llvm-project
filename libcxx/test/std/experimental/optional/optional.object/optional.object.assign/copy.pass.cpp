@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // optional<T>& operator=(const optional<T>& rhs);
@@ -16,6 +15,8 @@
 #include <experimental/optional>
 #include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 using std::experimental::optional;
 
@@ -34,7 +35,7 @@ struct X
     X(const X&)
     {
         if (throw_now)
-            throw 6;
+            TEST_THROW(6);
     }
 };
 
@@ -79,6 +80,7 @@ int main()
         assert(static_cast<bool>(opt) == static_cast<bool>(opt2));
         assert(*opt == *opt2);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         optional<X> opt;
         optional<X> opt2(X{});
@@ -95,4 +97,5 @@ int main()
             assert(static_cast<bool>(opt) == false);
         }
     }
+#endif
 }
