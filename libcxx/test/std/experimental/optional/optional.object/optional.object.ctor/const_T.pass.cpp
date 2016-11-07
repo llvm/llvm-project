@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 
 // <optional>
 
@@ -17,6 +16,8 @@
 #include <experimental/optional>
 #include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 using std::experimental::optional;
 
@@ -42,7 +43,7 @@ class Z
 {
 public:
     Z(int)  {}
-    Z(const Z&) {throw 6;}
+    Z(const Z&) {TEST_THROW(6);}
 };
 
 
@@ -97,6 +98,7 @@ int main()
         };
 
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         typedef Z T;
         try
@@ -110,4 +112,5 @@ int main()
             assert(i == 6);
         }
     }
+#endif
 }

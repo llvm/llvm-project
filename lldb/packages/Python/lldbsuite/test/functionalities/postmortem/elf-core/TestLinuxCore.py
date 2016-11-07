@@ -30,13 +30,13 @@ class LinuxCoreTestCase(TestBase):
     @skipIf(triple='^mips')
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
-        self.do_test("i386", self._i386_pid, self._i386_regions)
+        self.do_test("linux-i386", self._i386_pid, self._i386_regions)
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
-        self.do_test("x86_64", self._x86_64_pid, self._x86_64_regions)
+        self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions)
 
     # This seems to hang on non-s390x platforms for some reason.  Disabling
     # for now.
@@ -44,7 +44,7 @@ class LinuxCoreTestCase(TestBase):
     @skipIf(triple='^mips')
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
-        self.do_test("s390x", self._s390x_pid, self._s390x_regions)
+        self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions)
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
@@ -52,9 +52,9 @@ class LinuxCoreTestCase(TestBase):
         """Test that we read the information from the core correctly even if we have a running
         process with the same PID around"""
         try:
-            shutil.copyfile("x86_64.out", "x86_64-pid.out")
-            shutil.copyfile("x86_64.core", "x86_64-pid.core")
-            with open("x86_64-pid.core", "r+b") as f:
+            shutil.copyfile("linux-x86_64.out", "linux-x86_64-pid.out")
+            shutil.copyfile("linux-x86_64.core", "linux-x86_64-pid.core")
+            with open("linux-x86_64-pid.core", "r+b") as f:
                 # These are offsets into the NT_PRSTATUS and NT_PRPSINFO structures in the note
                 # segment of the core file. If you update the file, these offsets may need updating
                 # as well. (Notes can be viewed with readelf --notes.)
@@ -70,10 +70,10 @@ class LinuxCoreTestCase(TestBase):
                     # works.
                     f.seek(pid_offset)
                     f.write(struct.pack("<I", os.getpid()))
-            self.do_test("x86_64-pid", os.getpid(), self._x86_64_regions)
+            self.do_test("linux-x86_64-pid", os.getpid(), self._x86_64_regions)
         finally:
-            self.RemoveTempFile("x86_64-pid.out")
-            self.RemoveTempFile("x86_64-pid.core")
+            self.RemoveTempFile("linux-x86_64-pid.out")
+            self.RemoveTempFile("linux-x86_64-pid.core")
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
@@ -102,7 +102,7 @@ class LinuxCoreTestCase(TestBase):
 
         # without destroying this process, run the test which opens another core file with the
         # same pid
-        self.do_test("x86_64", self._x86_64_pid, self._x86_64_regions)
+        self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions)
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()

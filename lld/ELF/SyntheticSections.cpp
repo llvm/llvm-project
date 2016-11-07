@@ -95,14 +95,14 @@ BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
                          ".note.gnu.build-id"),
       HashSize(HashSize) {
   this->Live = true;
+}
 
-  Buf.resize(16 + HashSize);
+template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf.data(), 4);                   // Name size
-  write32<E>(Buf.data() + 4, HashSize);        // Content size
-  write32<E>(Buf.data() + 8, NT_GNU_BUILD_ID); // Type
-  memcpy(Buf.data() + 12, "GNU", 4);           // Name string
-  this->Data = ArrayRef<uint8_t>(Buf);
+  write32<E>(Buf, 4);                   // Name size
+  write32<E>(Buf + 4, HashSize);        // Content size
+  write32<E>(Buf + 8, NT_GNU_BUILD_ID); // Type
+  memcpy(Buf + 12, "GNU", 4);           // Name string
 }
 
 template <class ELFT>

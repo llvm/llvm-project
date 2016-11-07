@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // void swap(optional&)
@@ -18,6 +17,8 @@
 #include <experimental/optional>
 #include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 using std::experimental::optional;
 
@@ -56,10 +57,10 @@ class Z
     int i_;
 public:
     Z(int i) : i_(i) {}
-    Z(Z&&) {throw 7;}
+    Z(Z&&) {TEST_THROW(7);}
 
     friend constexpr bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}
-    friend void swap(Z& x, Z& y) {throw 6;}
+    friend void swap(Z& x, Z& y) {TEST_THROW(6);}
 };
 
 struct ConstSwappable {
@@ -231,6 +232,7 @@ int main()
         assert(static_cast<bool>(opt2) == true);
         assert(*opt2 == 1);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         optional<Z> opt1;
         optional<Z> opt2;
@@ -307,4 +309,5 @@ int main()
         assert(static_cast<bool>(opt2) == true);
         assert(*opt2 == 2);
     }
+#endif
 }

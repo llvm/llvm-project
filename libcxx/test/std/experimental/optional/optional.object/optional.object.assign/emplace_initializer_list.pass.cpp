@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // template <class U, class... Args>
@@ -18,6 +17,8 @@
 #include <type_traits>
 #include <cassert>
 #include <vector>
+
+#include "test_macros.h"
 
 using std::experimental::optional;
 
@@ -60,7 +61,7 @@ public:
     constexpr Z() : i_(0) {}
     constexpr Z(int i) : i_(i) {}
     Z(std::initializer_list<int> il) : i_(il.begin()[0]), j_(il.begin()[1])
-        {throw 6;}
+        {TEST_THROW(6);}
     ~Z() {dtor_called = true;}
 
     friend constexpr bool operator==(const Z& x, const Z& y)
@@ -104,6 +105,7 @@ int main()
         assert(static_cast<bool>(opt) == true);
         assert(*opt == Y({1, 2}));
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         Z z;
         optional<Z> opt(z);
@@ -120,4 +122,5 @@ int main()
             assert(Z::dtor_called == true);
         }
     }
+#endif
 }
