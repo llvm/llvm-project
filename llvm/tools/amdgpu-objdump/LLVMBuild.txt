@@ -1,4 +1,4 @@
-;===- ./lib/Target/AMDGPU/Disassembler/LLVMBuild.txt ------------*- Conf -*--===;
+;===- ./tools/amdgpu-objdump/LLVMBuild.txt -----------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -16,8 +16,7 @@
 ;===------------------------------------------------------------------------===;
 
 [component_0]
-type = Library
-name = AMDGPUDisassembler
-parent = AMDGPU
-required_libraries = AMDGPUDesc AMDGPUInfo AMDGPUUtils MC MCDisassembler Support Object
-add_to_library_groups = AMDGPU
+type = Tool
+name = amdgpu-objdump
+parent = Tools
+required_libraries = MC MCDisassembler MCParser Object all-targets
