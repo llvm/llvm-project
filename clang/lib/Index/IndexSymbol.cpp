@@ -74,9 +74,14 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Enum; break;
     }
 
-    if (const CXXRecordDecl *CXXRec = dyn_cast<CXXRecordDecl>(D))
-      if (!CXXRec->isCLike())
+    if (const CXXRecordDecl *CXXRec = dyn_cast<CXXRecordDecl>(D)) {
+      if (!CXXRec->isCLike()) {
         Info.Lang = SymbolLanguage::CXX;
+        if (CXXRec->getDescribedClassTemplate()) {
+          Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
+        }
+      }
+    }
 
     if (isa<ClassTemplatePartialSpecializationDecl>(D)) {
       Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
