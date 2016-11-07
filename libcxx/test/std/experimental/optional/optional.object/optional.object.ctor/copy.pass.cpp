@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // optional(const optional<T>& rhs);
@@ -17,6 +16,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 using std::experimental::optional;
 
 template <class T>
@@ -24,7 +25,12 @@ void
 test(const optional<T>& rhs, bool is_going_to_throw = false)
 {
     bool rhs_engaged = static_cast<bool>(rhs);
+#ifdef TEST_HAS_NO_EXCEPTIONS
+    if (is_going_to_throw)
+        return;
+#else
     try
+#endif
     {
         optional<T> lhs = rhs;
         assert(is_going_to_throw == false);
@@ -32,10 +38,13 @@ test(const optional<T>& rhs, bool is_going_to_throw = false)
         if (rhs_engaged)
             assert(*lhs == *rhs);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     catch (int i)
     {
         assert(i == 6);
+        assert(is_going_to_throw);
     }
+#endif
 }
 
 class X
@@ -68,7 +77,7 @@ public:
     Z(const Z&)
     {
         if (++count == 2)
-            throw 6;
+            TEST_THROW(6);
     }
 
     friend constexpr bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}

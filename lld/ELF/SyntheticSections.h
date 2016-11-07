@@ -30,6 +30,8 @@ public:
 // .note.gnu.build-id section.
 template <class ELFT> class BuildIdSection : public InputSection<ELFT> {
 public:
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return 16 + HashSize; }
   virtual void writeBuildId(llvm::MutableArrayRef<uint8_t> Buf) = 0;
   virtual ~BuildIdSection() = default;
 
@@ -37,7 +39,6 @@ public:
 
 protected:
   BuildIdSection(size_t HashSize);
-  std::vector<uint8_t> Buf;
 
   void
   computeHash(llvm::MutableArrayRef<uint8_t> Buf,

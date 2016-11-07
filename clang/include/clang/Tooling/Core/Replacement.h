@@ -19,6 +19,7 @@
 #ifndef LLVM_CLANG_TOOLING_CORE_REPLACEMENT_H
 #define LLVM_CLANG_TOOLING_CORE_REPLACEMENT_H
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
@@ -293,9 +294,10 @@ calculateRangesAfterReplacements(const Replacements &Replaces,
                                  const std::vector<Range> &Ranges);
 
 /// \brief If there are multiple <File, Replacements> pairs with the same file
-/// path after removing dots, we only keep one pair (with path after dots being
-/// removed) and discard the rest.
+/// entry, we only keep one pair and discard the rest.
+/// If a file does not exist, its corresponding replacements will be ignored.
 std::map<std::string, Replacements> groupReplacementsByFile(
+    FileManager &FileMgr,
     const std::map<std::string, Replacements> &FileToReplaces);
 
 template <typename Node>

@@ -57,7 +57,8 @@ int RefactoringTool::runAndSave(FrontendActionFactory *ActionFactory) {
 
 bool RefactoringTool::applyAllReplacements(Rewriter &Rewrite) {
   bool Result = true;
-  for (const auto &Entry : groupReplacementsByFile(FileToReplaces))
+  for (const auto &Entry : groupReplacementsByFile(
+           Rewrite.getSourceMgr().getFileManager(), FileToReplaces))
     Result = tooling::applyAllReplacements(Entry.second, Rewrite) && Result;
   return Result;
 }
@@ -73,7 +74,8 @@ bool formatAndApplyAllReplacements(
   FileManager &Files = SM.getFileManager();
 
   bool Result = true;
-  for (const auto &FileAndReplaces : groupReplacementsByFile(FileToReplaces)) {
+  for (const auto &FileAndReplaces : groupReplacementsByFile(
+           Rewrite.getSourceMgr().getFileManager(), FileToReplaces)) {
     const std::string &FilePath = FileAndReplaces.first;
     auto &CurReplaces = FileAndReplaces.second;
 

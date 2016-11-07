@@ -79,13 +79,6 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   this->Offset = Hdr->sh_offset;
 }
 
-template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
-  if (auto *D = dyn_cast<InputSection<ELFT>>(this))
-    if (D->getThunksSize() > 0)
-      return D->getThunkOff() + D->getThunksSize();
-  return Data.size();
-}
-
 // Returns a string for an error message.
 template <class SectionT> static std::string getName(SectionT *Sec) {
   return (Sec->getFile()->getName() + "(" + Sec->Name + ")").str();
@@ -205,6 +198,11 @@ InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
 template <class ELFT>
 bool InputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == Base::Regular;
+}
+
+template <class ELFT> size_t InputSection<ELFT>::getSize() const {
+  return getThunksSize() > 0 ? getThunkOff() + getThunksSize()
+                             : this->Data.size();
 }
 
 template <class ELFT>
