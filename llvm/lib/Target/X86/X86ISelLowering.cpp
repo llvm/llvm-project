@@ -8484,8 +8484,8 @@ static bool isShuffleFoldableLoad(SDValue V) {
 /// across all subtarget feature sets.
 static SDValue lowerVectorShuffleAsElementInsertion(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
-    const X86Subtarget &Subtarget, SelectionDAG &DAG) {
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
+    const SmallBitVector &Zeroable, const X86Subtarget &Subtarget,
+    SelectionDAG &DAG) {
   MVT ExtVT = VT;
   MVT EltVT = VT.getVectorElementType();
 
@@ -9084,14 +9084,14 @@ static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have a single input, insert that into V1 if we can do so cheaply.
   if ((Mask[0] >= 2) + (Mask[1] >= 2) == 1) {
     if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-            DL, MVT::v2f64, V1, V2, Mask, Subtarget, DAG))
+            DL, MVT::v2f64, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return Insertion;
     // Try inverting the insertion since for v2 masks it is easy to do and we
     // can't reliably sort the mask one way or the other.
     int InverseMask[2] = {Mask[0] < 0 ? -1 : (Mask[0] ^ 2),
                           Mask[1] < 0 ? -1 : (Mask[1] ^ 2)};
     if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-            DL, MVT::v2f64, V2, V1, InverseMask, Subtarget, DAG))
+            DL, MVT::v2f64, V2, V1, InverseMask, Zeroable, Subtarget, DAG))
       return Insertion;
   }
 
@@ -9188,13 +9188,13 @@ static SDValue lowerV2I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // When loading a scalar and then shuffling it into a vector we can often do
   // the insertion cheaply.
   if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-          DL, MVT::v2i64, V1, V2, Mask, Subtarget, DAG))
+          DL, MVT::v2i64, V1, V2, Mask, Zeroable, Subtarget, DAG))
     return Insertion;
   // Try inverting the insertion since for v2 masks it is easy to do and we
   // can't reliably sort the mask one way or the other.
   int InverseMask[2] = {Mask[0] ^ 2, Mask[1] ^ 2};
   if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-          DL, MVT::v2i64, V2, V1, InverseMask, Subtarget, DAG))
+          DL, MVT::v2i64, V2, V1, InverseMask, Zeroable, Subtarget, DAG))
     return Insertion;
 
   // We have different paths for blend lowering, but they all must use the
@@ -9391,8 +9391,8 @@ static SDValue lowerV4F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // when the V2 input is targeting element 0 of the mask -- that is the fast
   // case here.
   if (NumV2Elements == 1 && Mask[0] >= 4)
-    if (SDValue V = lowerVectorShuffleAsElementInsertion(DL, MVT::v4f32, V1, V2,
-                                                         Mask, Subtarget, DAG))
+    if (SDValue V = lowerVectorShuffleAsElementInsertion(
+            DL, MVT::v4f32, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return V;
 
   if (Subtarget.hasSSE41()) {
@@ -9477,8 +9477,8 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // There are special ways we can lower some single-element blends.
   if (NumV2Elements == 1)
-    if (SDValue V = lowerVectorShuffleAsElementInsertion(DL, MVT::v4i32, V1, V2,
-                                                         Mask, Subtarget, DAG))
+    if (SDValue V = lowerVectorShuffleAsElementInsertion(
+            DL, MVT::v4i32, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return V;
 
   // We have different paths for blend lowering, but they all must use the
@@ -10117,8 +10117,8 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // There are special ways we can lower some single-element blends.
   if (NumV2Inputs == 1)
-    if (SDValue V = lowerVectorShuffleAsElementInsertion(DL, MVT::v8i16, V1, V2,
-                                                         Mask, Subtarget, DAG))
+    if (SDValue V = lowerVectorShuffleAsElementInsertion(
+            DL, MVT::v8i16, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return V;
 
   // We have different paths for blend lowering, but they all must use the
@@ -10425,8 +10425,8 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // There are special ways we can lower some single-element blends.
   if (NumV2Elements == 1)
-    if (SDValue V = lowerVectorShuffleAsElementInsertion(DL, MVT::v16i8, V1, V2,
-                                                         Mask, Subtarget, DAG))
+    if (SDValue V = lowerVectorShuffleAsElementInsertion(
+            DL, MVT::v16i8, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return V;
 
   if (SDValue BitBlend =
@@ -11868,7 +11868,7 @@ static SDValue lower256BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   if (NumV2Elements == 1 && Mask[0] >= NumElts)
     if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-                              DL, VT, V1, V2, Mask, Subtarget, DAG))
+            DL, VT, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return Insertion;
 
   // Handle special cases where the lower or upper half is UNDEF.
@@ -12259,7 +12259,7 @@ static SDValue lower512BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   if (NumV2Elements == 1 && Mask[0] >= NumElts)
     if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-                              DL, VT, V1, V2, Mask, Subtarget, DAG))
+            DL, VT, V1, V2, Mask, Zeroable, Subtarget, DAG))
       return Insertion;
 
   // Check for being able to broadcast a single element.

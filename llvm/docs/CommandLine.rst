@@ -1289,8 +1289,7 @@ Here is an example of how the function could be used:
   int main(int argc, char **argv) {
     cl::OptionCategory AnotherCategory("Some options");
 
-    StringMap<cl::Option*> Map;
-    cl::getRegisteredOptions(Map);
+    StringMap<cl::Option*> &Map = cl::getRegisteredOptions();
 
     //Unhide useful option and put it in a different category
     assert(Map.count("print-all-options") > 0);
