@@ -23,6 +23,10 @@
   FUNC1(__hc_##name, __ocml_##name##_f32, int, float) \
   FUNC1(__hc_##name##_double, __ocml_##name##_f64, int, double)
 
+#define FUNC1B(name) \
+  FUNC1(__hc_##name, __ocml_##name##_f32, float, uint) \
+  FUNC1(__hc_##name##_double, __ocml_##name##_f64, double, ulong)
+
 #define FUNC2(name, ocml_name, Tr, Ta1, Ta2) \
   ATTR Tr name(Ta1 x, Ta2 y) \
   { \
@@ -88,7 +92,7 @@ FUNC1A(log1p)
 FUNC1A(logb)
 // modff
 // modf
-// nan
+FUNC1B(nan)
 FUNC1A(nearbyint)
 FUNC2A(nextafter)
 FUNC2A(pow)
