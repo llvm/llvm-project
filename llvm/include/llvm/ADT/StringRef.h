@@ -226,6 +226,15 @@ namespace llvm {
       return Data[Index];
     }
 
+    /// Disallow accidental assignment from a temporary std::string.
+    ///
+    /// The declaration here is extra complicated so that `stringRef = {}`
+    /// and `stringRef = "abc"` continue to select the move assignment operator.
+    template <typename T>
+    typename std::enable_if<std::is_same<T, std::string>::value,
+                            StringRef>::type &
+    operator=(T &&Str) = delete;
+
     /// @}
     /// @name Type Conversions
     /// @{
