@@ -562,7 +562,7 @@ public:
       break;
 
     case 'f':
-      return ParseFilterRule(option_arg);
+      return ParseFilterRule(option_strref);
 
     case 'i':
       m_include_info_level = true;
@@ -664,10 +664,10 @@ public:
   bool GetBroadcastEvents() const { return m_broadcast_events; }
 
 private:
-  Error ParseFilterRule(const char *rule_text_cstr) {
+  Error ParseFilterRule(llvm::StringRef rule_text) {
     Error error;
 
-    if (!rule_text_cstr || !rule_text_cstr[0]) {
+    if (rule_text.empty()) {
       error.SetErrorString("invalid rule_text");
       return error;
     }
@@ -692,14 +692,12 @@ private:
     //   match {exact-match-text} |
     //   regex {search-regex}
 
-    const std::string rule_text(rule_text_cstr);
-
     // Parse action.
     auto action_end_pos = rule_text.find(" ");
     if (action_end_pos == std::string::npos) {
       error.SetErrorStringWithFormat("could not parse filter rule "
                                      "action from \"%s\"",
-                                     rule_text_cstr);
+                                     rule_text.str().c_str());
       return error;
     }
     auto action = rule_text.substr(0, action_end_pos);
@@ -709,8 +707,7 @@ private:
     else if (action == "reject")
       accept = false;
     else {
-      error.SetErrorString("filter action must be \"accept\" or "
-                           "\"deny\"");
+      error.SetErrorString("filter action must be \"accept\" or \"deny\"");
       return error;
     }
 
@@ -719,7 +716,7 @@ private:
     if (attribute_end_pos == std::string::npos) {
       error.SetErrorStringWithFormat("could not parse filter rule "
                                      "attribute from \"%s\"",
-                                     rule_text_cstr);
+                                     rule_text.str().c_str());
       return error;
     }
     auto attribute = rule_text.substr(action_end_pos + 1,
@@ -728,7 +725,7 @@ private:
     if (attribute_index < 0) {
       error.SetErrorStringWithFormat("filter rule attribute unknown: "
                                      "%s",
-                                     attribute.c_str());
+                                     attribute.str().c_str());
       return error;
     }
 
@@ -748,12 +745,10 @@ private:
     return error;
   }
 
-  int MatchAttributeIndex(const std::string &attribute_name) {
-    auto attribute_count =
-        sizeof(s_filter_attributes) / sizeof(s_filter_attributes[0]);
-    for (size_t i = 0; i < attribute_count; ++i) {
-      if (attribute_name == s_filter_attributes[i])
-        return static_cast<int>(i);
+  int MatchAttributeIndex(llvm::StringRef attribute_name) const {
+    for (const auto &Item : llvm::enumerate(s_filter_attributes)) {
+      if (attribute_name == Item.Value)
+        return Item.Index;
     }
 
     // We didn't match anything.

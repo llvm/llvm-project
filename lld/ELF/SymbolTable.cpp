@@ -36,8 +36,12 @@ using namespace lld::elf;
 template <class ELFT> static bool isCompatible(InputFile *F) {
   if (!isa<ELFFileBase<ELFT>>(F) && !isa<BitcodeFile>(F))
     return true;
-  if (F->EKind == Config->EKind && F->EMachine == Config->EMachine)
-    return true;
+  if (F->EKind == Config->EKind && F->EMachine == Config->EMachine) {
+    if (Config->EMachine != EM_MIPS)
+      return true;
+    if (isMipsN32Abi(F) == Config->MipsN32Abi)
+      return true;
+  }
   StringRef A = F->getName();
   StringRef B = Config->Emulation;
   if (B.empty())

@@ -16,6 +16,7 @@
 
 namespace lld {
 namespace elf {
+class InputFile;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class ObjectFile;
@@ -45,6 +46,8 @@ template <class ELFT> uint32_t getMipsEFlags();
 
 uint8_t getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
                          llvm::StringRef FileName);
+
+bool isMipsN32Abi(const InputFile *F);
 }
 }
 

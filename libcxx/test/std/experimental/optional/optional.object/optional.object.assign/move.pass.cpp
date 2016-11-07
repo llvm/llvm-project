@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // optional<T>& operator=(optional<T>&& rhs)
@@ -18,6 +17,8 @@
 #include <experimental/optional>
 #include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 using std::experimental::optional;
 
@@ -36,7 +37,7 @@ struct X
     X(X&&)
     {
         if (throw_now)
-            throw 6;
+            TEST_THROW(6);
     }
     X& operator=(X&&) noexcept
     {
@@ -44,9 +45,9 @@ struct X
     }
 };
 
-struct Y {};
-
 bool X::throw_now = false;
+
+struct Y {};
 
 int main()
 {
@@ -88,6 +89,7 @@ int main()
         optional<const AllowConstAssign> opt2;
         opt = std::move(opt2);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         static_assert(!std::is_nothrow_move_assignable<optional<X>>::value, "");
         optional<X> opt;
@@ -105,6 +107,7 @@ int main()
             assert(static_cast<bool>(opt) == false);
         }
     }
+#endif
     {
         static_assert(std::is_nothrow_move_assignable<optional<Y>>::value, "");
     }
