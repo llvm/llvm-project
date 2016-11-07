@@ -117,6 +117,8 @@ template <> struct MappingTraits<DiagnosticInfoOptimizationBase::Argument> {
   static void mapping(IO &io, DiagnosticInfoOptimizationBase::Argument &A) {
     assert(io.outputting() && "input not yet implemented");
     io.mapRequired(A.Key.data(), A.Val);
+    if (A.DLoc)
+      io.mapOptional("DebugLoc", A.DLoc);
   }
 };
 

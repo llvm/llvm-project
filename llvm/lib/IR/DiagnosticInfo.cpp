@@ -171,7 +171,14 @@ const std::string DiagnosticInfoWithDebugLocBase::getLocationStr() const {
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, Value *V)
-    : Key(Key), Val(GlobalValue::getRealLinkageName(V->getName())) {}
+    : Key(Key), Val(GlobalValue::getRealLinkageName(V->getName())) {
+  if (auto *F = dyn_cast<Function>(V)) {
+    if (DISubprogram *SP = F->getSubprogram())
+      DLoc = DebugLoc::get(SP->getScopeLine(), 0, SP);
+  }
+  else if (auto *I = dyn_cast<Instruction>(V))
+    DLoc = I->getDebugLoc();
+}
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
     : Key(Key), Val(itostr(N)) {}
