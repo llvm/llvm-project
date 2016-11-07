@@ -18,7 +18,7 @@ extension Collection {
 func main() {
   var a = [2: 2]
   for element in a {
-    a.foo(element)
+    a.foo((key: element.key, value: element.value))
   }
 }
 
