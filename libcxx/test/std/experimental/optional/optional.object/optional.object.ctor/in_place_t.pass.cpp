@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 
 // <optional>
 
@@ -19,6 +18,7 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
 
 using std::experimental::optional;
 using std::experimental::in_place_t;
@@ -55,7 +55,7 @@ public:
 class Z
 {
 public:
-    Z(int i) {throw 6;}
+    Z(int i) {TEST_THROW(6);}
 };
 
 
@@ -128,6 +128,7 @@ int main()
         };
 
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         try
         {
@@ -139,4 +140,5 @@ int main()
             assert(i == 6);
         }
     }
+#endif
 }

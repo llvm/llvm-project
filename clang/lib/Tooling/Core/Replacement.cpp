@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -566,12 +567,16 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
 }
 
 std::map<std::string, Replacements> groupReplacementsByFile(
+    FileManager &FileMgr,
     const std::map<std::string, Replacements> &FileToReplaces) {
   std::map<std::string, Replacements> Result;
+  llvm::SmallPtrSet<const FileEntry *, 16> ProcessedFileEntries;
   for (const auto &Entry : FileToReplaces) {
-    llvm::SmallString<256> CleanPath(Entry.first);
-    llvm::sys::path::remove_dots(CleanPath, /*remove_dot_dot=*/true);
-    Result[CleanPath.str()] = std::move(Entry.second);
+    const FileEntry *FE = FileMgr.getFile(Entry.first);
+    if (!FE)
+      llvm::errs() << "File path " << Entry.first << " is invalid.\n";
+    else if (ProcessedFileEntries.insert(FE).second)
+      Result[Entry.first] = std::move(Entry.second);
   }
   return Result;
 }

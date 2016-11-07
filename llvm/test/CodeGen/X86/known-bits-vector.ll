@@ -89,3 +89,49 @@ define <4 x float> @knownbits_mask_shuffle_uitofp(<4 x i32> %a0) nounwind {
   %3 = uitofp <4 x i32> %2 to <4 x float>
   ret <4 x float> %3
 }
+
+define <4 x float> @knownbits_mask_or_shuffle_uitofp(<4 x i32> %a0) nounwind {
+; X32-LABEL: knownbits_mask_or_shuffle_uitofp:
+; X32:       # BB#0:
+; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpor {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_or_shuffle_uitofp:
+; X64:       # BB#0:
+; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
+  %2 = or <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+  %4 = uitofp <4 x i32> %3 to <4 x float>
+  ret <4 x float> %4
+}
+
+define <4 x float> @knownbits_mask_xor_shuffle_uitofp(<4 x i32> %a0) nounwind {
+; X32-LABEL: knownbits_mask_xor_shuffle_uitofp:
+; X32:       # BB#0:
+; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpxor {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_xor_shuffle_uitofp:
+; X64:       # BB#0:
+; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
+  %2 = xor <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+  %4 = uitofp <4 x i32> %3 to <4 x float>
+  ret <4 x float> %4
+}

@@ -19,6 +19,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -972,40 +973,64 @@ TEST_F(MergeReplacementsTest, OverlappingRanges) {
       toReplacements({{"", 0, 3, "cc"}, {"", 3, 3, "dd"}}));
 }
 
-TEST(DeduplicateByFileTest, LeaveLeadingDotDot) {
+TEST(DeduplicateByFileTest, PathsWithDots) {
   std::map<std::string, Replacements> FileToReplaces;
+  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
+      new vfs::InMemoryFileSystem());
+  FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
 #if !defined(LLVM_ON_WIN32)
-  FileToReplaces["../../a/b/.././c.h"] = Replacements();
-  FileToReplaces["../../a/c.h"] = Replacements();
+  StringRef Path1 = "a/b/.././c.h";
+  StringRef Path2 = "a/c.h";
 #else
-  FileToReplaces["..\\..\\a\\b\\..\\.\\c.h"] = Replacements();
-  FileToReplaces["..\\..\\a\\c.h"] = Replacements();
+  StringRef Path1 = "a\\b\\..\\.\\c.h";
+  StringRef Path2 = "a\\c.h";
 #endif
-  FileToReplaces = groupReplacementsByFile(FileToReplaces);
+  EXPECT_TRUE(VFS->addFile(Path1, 0, llvm::MemoryBuffer::getMemBuffer("")));
+  EXPECT_TRUE(VFS->addFile(Path2, 0, llvm::MemoryBuffer::getMemBuffer("")));
+  FileToReplaces[Path1] = Replacements();
+  FileToReplaces[Path2] = Replacements();
+  FileToReplaces = groupReplacementsByFile(*FileMgr, FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
-#if !defined(LLVM_ON_WIN32)
-  EXPECT_EQ("../../a/c.h", FileToReplaces.begin()->first);
-#else
-  EXPECT_EQ("..\\..\\a\\c.h", FileToReplaces.begin()->first);
-#endif
+  EXPECT_EQ(Path1, FileToReplaces.begin()->first);
 }
 
-TEST(DeduplicateByFileTest, RemoveDotSlash) {
+TEST(DeduplicateByFileTest, PathWithDotSlash) {
   std::map<std::string, Replacements> FileToReplaces;
+  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
+      new vfs::InMemoryFileSystem());
+  FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
 #if !defined(LLVM_ON_WIN32)
-  FileToReplaces["./a/b/.././c.h"] = Replacements();
-  FileToReplaces["a/c.h"] = Replacements();
+  StringRef Path1 = "./a/b/c.h";
+  StringRef Path2 = "a/b/c.h";
 #else
-  FileToReplaces[".\\a\\b\\..\\.\\c.h"] = Replacements();
-  FileToReplaces["a\\c.h"] = Replacements();
+  StringRef Path1 = ".\\a\\b\\c.h";
+  StringRef Path2 = "a\\b\\c.h";
 #endif
-  FileToReplaces = groupReplacementsByFile(FileToReplaces);
+  EXPECT_TRUE(VFS->addFile(Path1, 0, llvm::MemoryBuffer::getMemBuffer("")));
+  EXPECT_TRUE(VFS->addFile(Path2, 0, llvm::MemoryBuffer::getMemBuffer("")));
+  FileToReplaces[Path1] = Replacements();
+  FileToReplaces[Path2] = Replacements();
+  FileToReplaces = groupReplacementsByFile(*FileMgr, FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
+  EXPECT_EQ(Path1, FileToReplaces.begin()->first);
+}
+
+TEST(DeduplicateByFileTest, NonExistingFilePath) {
+  std::map<std::string, Replacements> FileToReplaces;
+  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
+      new vfs::InMemoryFileSystem());
+  FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
 #if !defined(LLVM_ON_WIN32)
-  EXPECT_EQ("a/c.h", FileToReplaces.begin()->first);
+  StringRef Path1 = "./a/b/c.h";
+  StringRef Path2 = "a/b/c.h";
 #else
-  EXPECT_EQ("a\\c.h", FileToReplaces.begin()->first);
+  StringRef Path1 = ".\\a\\b\\c.h";
+  StringRef Path2 = "a\\b\\c.h";
 #endif
+  FileToReplaces[Path1] = Replacements();
+  FileToReplaces[Path2] = Replacements();
+  FileToReplaces = groupReplacementsByFile(*FileMgr, FileToReplaces);
+  EXPECT_TRUE(FileToReplaces.empty());
 }
 
 } // end namespace tooling

@@ -342,6 +342,27 @@ uint8_t elf::getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
   return OldFlag;
 }
 
+template <class ELFT> static bool isN32Abi(const InputFile *F) {
+  if (auto *EF = dyn_cast<ELFFileBase<ELFT>>(F))
+    return EF->getObj().getHeader()->e_flags & EF_MIPS_ABI2;
+  return false;
+}
+
+bool elf::isMipsN32Abi(const InputFile *F) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return isN32Abi<ELF32LE>(F);
+  case ELF32BEKind:
+    return isN32Abi<ELF32BE>(F);
+  case ELF64LEKind:
+    return isN32Abi<ELF64LE>(F);
+  case ELF64BEKind:
+    return isN32Abi<ELF64BE>(F);
+  default:
+    llvm_unreachable("unknown Config->EKind");
+  }
+}
+
 template uint32_t elf::getMipsEFlags<ELF32LE>();
 template uint32_t elf::getMipsEFlags<ELF32BE>();
 template uint32_t elf::getMipsEFlags<ELF64LE>();

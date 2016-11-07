@@ -15,6 +15,7 @@
 #include "Memory.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Core/Parallel.h"
 #include "llvm/Support/Dwarf.h"
@@ -1556,7 +1557,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     break;
   }
   case SymbolBody::DefinedCommonKind:
-    return InputSection<ELFT>::CommonInputSection->OutSec;
+    return In<ELFT>::Common->OutSec;
   case SymbolBody::SharedKind:
     if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
       return Out<ELFT>::Bss;

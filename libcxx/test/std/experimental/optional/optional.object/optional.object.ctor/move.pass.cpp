@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11
-// XFAIL: libcpp-no-exceptions
 // <optional>
 
 // optional(optional<T>&& rhs) noexcept(is_nothrow_move_constructible<T>::value);
@@ -16,6 +15,8 @@
 #include <experimental/optional>
 #include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 using std::experimental::optional;
 
@@ -26,16 +27,24 @@ test(optional<T>& rhs, bool is_going_to_throw = false)
     static_assert(std::is_nothrow_move_constructible<optional<T>>::value ==
                   std::is_nothrow_move_constructible<T>::value, "");
     bool rhs_engaged = static_cast<bool>(rhs);
+#ifdef TEST_HAS_NO_EXCEPTIONS
+    if (is_going_to_throw)
+        return;
+#else
     try
+#endif
     {
         optional<T> lhs = std::move(rhs);
         assert(is_going_to_throw == false);
         assert(static_cast<bool>(lhs) == rhs_engaged);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     catch (int i)
     {
         assert(i == 6);
+        assert(is_going_to_throw);
     }
+#endif
 }
 
 class X
@@ -68,7 +77,7 @@ public:
     Z(Z&&)
     {
         if (++count == 2)
-            throw 6;
+            TEST_THROW(6);
     }
 
     friend constexpr bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}

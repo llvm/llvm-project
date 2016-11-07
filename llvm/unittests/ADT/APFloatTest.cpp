@@ -1527,6 +1527,34 @@ TEST(APFloatTest, PPCDoubleDouble) {
   // This is what we get with our 106-bit mantissa approximation
   EXPECT_EQ(0x0000000000000000ull, test.bitcastToAPInt().getRawData()[1]);
 #endif
+
+  // PR30869
+  {
+    auto Result = APFloat(APFloat::PPCDoubleDouble, "1.0") +
+                  APFloat(APFloat::PPCDoubleDouble, "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+
+    Result = APFloat(APFloat::PPCDoubleDouble, "1.0") -
+             APFloat(APFloat::PPCDoubleDouble, "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+
+    Result = APFloat(APFloat::PPCDoubleDouble, "1.0") *
+             APFloat(APFloat::PPCDoubleDouble, "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+
+    Result = APFloat(APFloat::PPCDoubleDouble, "1.0") /
+             APFloat(APFloat::PPCDoubleDouble, "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+
+    int Exp;
+    Result = frexp(APFloat(APFloat::PPCDoubleDouble, "1.0"), Exp,
+                   APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+
+    Result = scalbn(APFloat(APFloat::PPCDoubleDouble, "1.0"), 1,
+                    APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+  }
 }
 
 TEST(APFloatTest, isNegative) {

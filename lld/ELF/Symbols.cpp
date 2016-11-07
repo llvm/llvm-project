@@ -12,6 +12,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -69,8 +70,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     return VA;
   }
   case SymbolBody::DefinedCommonKind:
-    return InputSection<ELFT>::CommonInputSection->OutSec->getVA() +
-           InputSection<ELFT>::CommonInputSection->OutSecOff +
+    return In<ELFT>::Common->OutSec->getVA() + In<ELFT>::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(Body);

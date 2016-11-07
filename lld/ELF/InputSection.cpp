@@ -79,13 +79,6 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   this->Offset = Hdr->sh_offset;
 }
 
-template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
-  if (auto *D = dyn_cast<InputSection<ELFT>>(this))
-    if (D->getThunksSize() > 0)
-      return D->getThunkOff() + D->getThunksSize();
-  return Data.size();
-}
-
 // Returns a string for an error message.
 template <class SectionT> static std::string getName(SectionT *Sec) {
   return (Sec->getFile()->getName() + "(" + Sec->Name + ")").str();
@@ -205,6 +198,11 @@ InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
 template <class ELFT>
 bool InputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == Base::Regular;
+}
+
+template <class ELFT> size_t InputSection<ELFT>::getSize() const {
+  return getThunksSize() > 0 ? getThunkOff() + getThunksSize()
+                             : this->Data.size();
 }
 
 template <class ELFT>
@@ -823,31 +821,6 @@ MipsAbiFlagsInputSection<ELFT>::MipsAbiFlagsInputSection(
 template <class ELFT>
 bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == InputSectionBase<ELFT>::MipsAbiFlags;
-}
-
-template <class ELFT>
-InputSection<ELFT> InputSection<ELFT>::createCommonInputSection(
-    std::vector<DefinedCommon *> Syms) {
-  // Sort the common symbols by alignment as an heuristic to pack them better.
-  std::stable_sort(Syms.begin(), Syms.end(),
-                   [](const DefinedCommon *A, const DefinedCommon *B) {
-                     return A->Alignment > B->Alignment;
-                   });
-
-  size_t Size = 0;
-  uintX_t Alignment = 1;
-  for (DefinedCommon *Sym : Syms) {
-    Alignment = std::max<uintX_t>(Alignment, Sym->Alignment);
-    Size = alignTo(Size, Sym->Alignment);
-
-    // Compute symbol offset relative to beginning of input section.
-    Sym->Offset = Size;
-    Size += Sym->Size;
-  }
-  ArrayRef<uint8_t> Data = makeArrayRef<uint8_t>(nullptr, Size);
-  InputSection Ret(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Data, "");
-  Ret.Live = true;
-  return Ret;
 }
 
 template class elf::InputSectionBase<ELF32LE>;
