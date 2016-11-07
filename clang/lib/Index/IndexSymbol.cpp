@@ -91,6 +91,25 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.SubKinds |= (unsigned)SymbolSubKind::TemplateSpecialization;
     }
 
+  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+    Info.Kind = SymbolKind::Variable;
+    if (isa<CXXRecordDecl>(D->getDeclContext())) {
+      Info.Kind = SymbolKind::StaticProperty;
+      Info.Lang = SymbolLanguage::CXX;
+    }
+    if (isa<VarTemplatePartialSpecializationDecl>(D)) {
+      Info.Lang = SymbolLanguage::CXX;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
+      Info.SubKinds |= (unsigned)SymbolSubKind::TemplatePartialSpecialization;
+    } else if (isa<VarTemplateSpecializationDecl>(D)) {
+      Info.Lang = SymbolLanguage::CXX;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
+      Info.SubKinds |= (unsigned)SymbolSubKind::TemplateSpecialization;
+    } else if (VD->getDescribedVarTemplate()) {
+      Info.Lang = SymbolLanguage::CXX;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
+    }
+
   } else {
     switch (D->getKind()) {
     case Decl::Import:
@@ -100,16 +119,6 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::TypeAlias; break; // Lang = C
     case Decl::Function:
       Info.Kind = SymbolKind::Function;
-      break;
-    case Decl::ParmVar:
-      Info.Kind = SymbolKind::Variable;
-      break;
-    case Decl::Var:
-      Info.Kind = SymbolKind::Variable;
-      if (isa<CXXRecordDecl>(D->getDeclContext())) {
-        Info.Kind = SymbolKind::StaticProperty;
-        Info.Lang = SymbolLanguage::CXX;
-      }
       break;
     case Decl::Field:
       Info.Kind = SymbolKind::Field;
