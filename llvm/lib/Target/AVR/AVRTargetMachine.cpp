@@ -93,15 +93,21 @@ const AVRSubtarget *AVRTargetMachine::getSubtargetImpl(const Function &) const {
 //===----------------------------------------------------------------------===//
 
 bool AVRPassConfig::addInstSelector() {
+  // Install an instruction selector.
+  addPass(createAVRISelDag(getAVRTargetMachine(), getOptLevel()));
+  // Create the frame analyzer pass used by the PEI pass.
+  addPass(createAVRFrameAnalyzerPass());
+
   return false;
 }
 
 void AVRPassConfig::addPreRegAlloc() {
+  // Create the dynalloc SP save/restore pass to handle variable sized allocas.
+  addPass(createAVRDynAllocaSRPass());
 }
 
 void AVRPassConfig::addPreSched2() { }
 
-void AVRPassConfig::addPreEmitPass() {
-}
+void AVRPassConfig::addPreEmitPass() { }
 
 } // end of namespace llvm

@@ -44,18 +44,8 @@ public:
   /// Returns a random number in the range [0, Max).
   result_type operator()();
 
-  // We can only make min/max constexpr if generator_type::min/max are
-  // constexpr.  The MSVC 2013 STL does not make these constexpr, so we have to
-  // avoid declaring them as constexpr even if the compiler, like clang-cl,
-  // supports it.
-#if defined(_MSC_VER) && _MSC_VER < 1900
-#define STL_CONSTEXPR
-#else
-#define STL_CONSTEXPR constexpr
-#endif
-
-  static STL_CONSTEXPR result_type min() { return generator_type::min(); }
-  static STL_CONSTEXPR result_type max() { return generator_type::max(); }
+  static constexpr result_type min() { return generator_type::min(); }
+  static constexpr result_type max() { return generator_type::max(); }
 
 private:
   /// Seeds and salts the underlying RNG engine.
