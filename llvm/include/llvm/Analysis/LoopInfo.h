@@ -367,6 +367,27 @@ extern template class LoopBase<BasicBlock, Loop>;
 /// in the CFG are neccessarily loops.
 class Loop : public LoopBase<BasicBlock, Loop> {
 public:
+  /// \brief A range representing the start and end location of a loop.
+  class LocRange {
+    DebugLoc Start;
+    DebugLoc End;
+
+  public:
+    LocRange() {}
+    LocRange(DebugLoc Start) : Start(std::move(Start)), End(std::move(Start)) {}
+    LocRange(DebugLoc Start, DebugLoc End) : Start(std::move(Start)),
+                                             End(std::move(End)) {}
+
+    const DebugLoc &getStart() const { return Start; }
+    const DebugLoc &getEnd() const { return End; }
+
+    /// \brief Check for null.
+    ///
+    explicit operator bool() const {
+      return Start && End;
+    }
+  };
+
   Loop() {}
 
   /// Return true if the specified value is loop invariant.
@@ -473,6 +494,9 @@ public:
   /// cannot find a terminating instruction with location information,
   /// it returns an unknown location.
   DebugLoc getStartLoc() const;
+
+  /// Return the source code span of the loop.
+  LocRange getLocRange() const;
 
   StringRef getName() const {
     if (BasicBlock *Header = getHeader())

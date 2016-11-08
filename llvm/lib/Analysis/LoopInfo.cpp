@@ -305,23 +305,40 @@ bool Loop::isAnnotatedParallel() const {
 }
 
 DebugLoc Loop::getStartLoc() const {
+  return getLocRange().getStart();
+}
+
+Loop::LocRange Loop::getLocRange() const {
   // If we have a debug location in the loop ID, then use it.
-  if (MDNode *LoopID = getLoopID())
-    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i)
-      if (DILocation *L = dyn_cast<DILocation>(LoopID->getOperand(i)))
-        return DebugLoc(L);
+  if (MDNode *LoopID = getLoopID()) {
+    DebugLoc Start;
+    // We use the first DebugLoc in the header as the start location of the loop
+    // and if there is a second DebugLoc in the header we use it as end location
+    // of the loop.
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      if (DILocation *L = dyn_cast<DILocation>(LoopID->getOperand(i))) {
+        if (!Start)
+          Start = DebugLoc(L);
+        else
+          return LocRange(Start, DebugLoc(L));
+      }
+    }
+
+    if (Start)
+      return LocRange(Start);
+  }
 
   // Try the pre-header first.
   if (BasicBlock *PHeadBB = getLoopPreheader())
     if (DebugLoc DL = PHeadBB->getTerminator()->getDebugLoc())
-      return DL;
+      return LocRange(DL);
 
   // If we have no pre-header or there are no instructions with debug
   // info in it, try the header.
   if (BasicBlock *HeadBB = getHeader())
-    return HeadBB->getTerminator()->getDebugLoc();
+    return LocRange(HeadBB->getTerminator()->getDebugLoc());
 
-  return DebugLoc();
+  return LocRange();
 }
 
 bool Loop::hasDedicatedExits() const {

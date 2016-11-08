@@ -10,9 +10,9 @@
 #===------------------------------------------------------------------------===#
 
 import os
-import re
-import sys
 import glob
+import argparse
+
 
 def replaceInFile(fileName, sFrom, sTo):
   if sFrom == sTo:
@@ -29,6 +29,7 @@ def replaceInFile(fileName, sFrom, sTo):
   with open(fileName, "w") as f:
     f.write(txt)
 
+
 def generateCommentLineHeader(filename):
   return ''.join(['//===--- ',
                   os.path.basename(filename),
@@ -36,12 +37,14 @@ def generateCommentLineHeader(filename):
                   '-' * max(0, 42 - len(os.path.basename(filename))),
                   '*- C++ -*-===//'])
 
+
 def generateCommentLineSource(filename):
   return ''.join(['//===--- ',
                   os.path.basename(filename),
                   ' - clang-tidy',
                   '-' * max(0, 52 - len(os.path.basename(filename))),
                   '-===//'])
+
 
 def fileRename(fileName, sFrom, sTo):
   if sFrom not in fileName:
@@ -51,42 +54,54 @@ def fileRename(fileName, sFrom, sTo):
   os.rename(fileName, newFileName)
   return newFileName
 
+
 def getListOfFiles(clang_tidy_path):
-  files =  glob.glob(os.path.join(clang_tidy_path,'*'))
+  files = glob.glob(os.path.join(clang_tidy_path, '*'))
   for dirname in files:
     if os.path.isdir(dirname):
-      files += glob.glob(os.path.join(dirname,'*'))
-  files += glob.glob(os.path.join(clang_tidy_path,'..', 'test', 'clang-tidy', '*'))
-  files += glob.glob(os.path.join(clang_tidy_path,'..', 'docs', 'clang-tidy', 'checks', '*'))
+      files += glob.glob(os.path.join(dirname, '*'))
+  files += glob.glob(os.path.join(clang_tidy_path, '..', 'test',
+                                  'clang-tidy', '*'))
+  files += glob.glob(os.path.join(clang_tidy_path, '..', 'docs',
+                                  'clang-tidy', 'checks', '*'))
   return [filename for filename in files if os.path.isfile(filename)]
 
+
 def main():
-  if len(sys.argv) != 4:
-    print('Usage: rename_check.py <module> <old-check-name> <new-check-name>\n')
-    print('       example: rename_check.py misc awesome-functions new-awesome-function')
-    return
+  parser = argparse.ArgumentParser(description='Rename clang-tidy check.')
+  parser.add_argument('module', type=str,
+                      help='Module where the renamed check is defined')
+  parser.add_argument('old_check_name', type=str,
+                      help='Old check name.')
+  parser.add_argument('new_check_name', type=str,
+                      help='New check name.')
+  args = parser.parse_args()
 
-  module = sys.argv[1].lower()
-  check_name = sys.argv[2]
+  args.module = args.module.lower()
   check_name_camel = ''.join(map(lambda elem: elem.capitalize(),
-                                 check_name.split('-'))) + 'Check'
-  check_name_new = sys.argv[3]
-  check_name_new_camel = ''.join(map(lambda elem: elem.capitalize(),
-                                 check_name_new.split('-'))) + 'Check'
+                                 args.old_check_name.split('-'))) + 'Check'
+  check_name_new_camel = (''.join(map(lambda elem: elem.capitalize(),
+                                      args.new_check_name.split('-'))) +
+                          'Check')
 
-  clang_tidy_path = os.path.dirname(sys.argv[0])
+  clang_tidy_path = os.path.dirname(__file__)
 
-  header_guard_old = module.upper() + '_' + check_name.upper().replace('-', '_')
-  header_guard_new = module.upper() + '_' + check_name_new.upper().replace('-', '_')
+  header_guard_old = (args.module.upper() + '_' +
+                      args.old_check_name.upper().replace('-', '_'))
+  header_guard_new = (args.module.upper() + '_' +
+                      args.new_check_name.upper().replace('-', '_'))
 
   for filename in getListOfFiles(clang_tidy_path):
     originalName = filename
-    filename = fileRename(filename, check_name, check_name_new)
+    filename = fileRename(filename, args.old_check_name,
+                          args.new_check_name)
     filename = fileRename(filename, check_name_camel, check_name_new_camel)
-    replaceInFile(filename, generateCommentLineHeader(originalName), generateCommentLineHeader(filename))
-    replaceInFile(filename, generateCommentLineSource(originalName), generateCommentLineSource(filename))
+    replaceInFile(filename, generateCommentLineHeader(originalName),
+                  generateCommentLineHeader(filename))
+    replaceInFile(filename, generateCommentLineSource(originalName),
+                  generateCommentLineSource(filename))
     replaceInFile(filename, header_guard_old, header_guard_new)
-    replaceInFile(filename, check_name, check_name_new)
+    replaceInFile(filename, args.old_check_name, args.new_check_name)
     replaceInFile(filename, check_name_camel, check_name_new_camel)
 
 if __name__ == '__main__':
