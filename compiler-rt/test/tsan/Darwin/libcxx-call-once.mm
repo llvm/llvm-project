@@ -1,6 +1,10 @@
 // RUN: %clangxx_tsan %s -o %t -framework Foundation -std=c++11
 // RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
 
+// A lot of bots are configured not to checkout libcxx and run against the
+// (buggy) system-installed version.
+// REQUIRES: disabled
+
 #import <Foundation/Foundation.h>
 
 #import <iostream>
