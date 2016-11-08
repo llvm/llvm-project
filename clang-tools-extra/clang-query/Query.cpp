@@ -65,7 +65,7 @@ struct CollectBoundNodes : MatchFinder::MatchCallback {
   }
 };
 
-}  // namespace
+} // namespace
 
 bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
   unsigned MatchCount = 0;
@@ -100,11 +100,10 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
           if (R.isValid()) {
             TextDiagnostic TD(OS, AST->getASTContext().getLangOpts(),
                               &AST->getDiagnostics().getDiagnosticOptions());
-            TD.emitDiagnostic(
-                R.getBegin(), DiagnosticsEngine::Note,
-                "\"" + BI->first + "\" binds here",
-                CharSourceRange::getTokenRange(R),
-                None, &AST->getSourceManager());
+            TD.emitDiagnostic(R.getBegin(), DiagnosticsEngine::Note,
+                              "\"" + BI->first + "\" binds here",
+                              CharSourceRange::getTokenRange(R), None,
+                              &AST->getSourceManager());
           }
           break;
         }

@@ -403,23 +403,28 @@ public:
       Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
 
       // Return true when Inst is defined inside the region R.
-      if (Inst && R->contains(Inst)) {
+      if (!Inst || !R->contains(Inst))
+        return true;
+
+      HasInRegionDeps = true;
+      return false;
+    }
+
+    if (auto AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+      if (AllowLoops)
+        return true;
+
+      if (!Scope) {
         HasInRegionDeps = true;
         return false;
       }
-    } else if (auto AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
-      if (!AllowLoops) {
-        if (!Scope) {
-          HasInRegionDeps = true;
-          return false;
-        }
-        auto *L = AddRec->getLoop();
-        if (R->contains(L) && !L->contains(Scope)) {
-          HasInRegionDeps = true;
-          return false;
-        }
+      auto *L = AddRec->getLoop();
+      if (R->contains(L) && !L->contains(Scope)) {
+        HasInRegionDeps = true;
+        return false;
       }
     }
+
     return true;
   }
   bool isDone() { return false; }

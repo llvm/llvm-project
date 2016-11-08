@@ -47,7 +47,7 @@ void StaticObjectExceptionCheck::check(const MatchFinder::MatchResult &Result) {
       << VD << (VD->getStorageDuration() == SD_Static ? 0 : 1);
 
   SourceLocation FuncLocation = Func->getLocation();
-  if(FuncLocation.isValid()) {
+  if (FuncLocation.isValid()) {
     diag(FuncLocation,
          "possibly throwing %select{constructor|function}0 declared here",
          DiagnosticIDs::Note)

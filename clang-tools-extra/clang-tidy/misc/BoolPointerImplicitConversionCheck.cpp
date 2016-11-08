@@ -25,7 +25,8 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
                            hasType(pointerType(pointee(booleanType()))),
                            ignoringParenImpCasts(declRefExpr().bind("expr")))),
                        hasCastKind(CK_PointerToBoolean))))),
-             unless(isInTemplateInstantiation())).bind("if"),
+             unless(isInTemplateInstantiation()))
+          .bind("if"),
       this);
 }
 

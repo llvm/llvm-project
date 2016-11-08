@@ -126,7 +126,8 @@ void MoveConstructorInitCheck::handleParamNotMoved(
 void MoveConstructorInitCheck::handleMoveConstructor(
     const MatchFinder::MatchResult &Result) {
   const auto *CopyCtor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  const auto *Initializer = Result.Nodes.getNodeAs<CXXCtorInitializer>("move-init");
+  const auto *Initializer =
+      Result.Nodes.getNodeAs<CXXCtorInitializer>("move-init");
 
   // Do not diagnose if the expression used to perform the initialization is a
   // trivially-copyable type.

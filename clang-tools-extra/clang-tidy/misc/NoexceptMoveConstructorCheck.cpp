@@ -43,8 +43,8 @@ void NoexceptMoveConstructorCheck::check(
     }
 
     const auto *ProtoType = Decl->getType()->getAs<FunctionProtoType>();
-    switch(ProtoType->getNoexceptSpec(*Result.Context)) {
-      case  FunctionProtoType::NR_NoNoexcept:
+    switch (ProtoType->getNoexceptSpec(*Result.Context)) {
+      case FunctionProtoType::NR_NoNoexcept:
         diag(Decl->getLocation(), "move %0s should be marked noexcept")
             << MethodType;
         // FIXME: Add a fixit.
@@ -71,4 +71,3 @@ void NoexceptMoveConstructorCheck::check(
 } // namespace misc
 } // namespace tidy
 } // namespace clang
-

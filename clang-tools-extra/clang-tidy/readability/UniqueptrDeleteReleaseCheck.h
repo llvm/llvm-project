@@ -34,4 +34,3 @@ public:
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_UNIQUEPTR_DELETE_RELEASE_H
-

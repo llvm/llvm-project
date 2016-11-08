@@ -77,8 +77,8 @@ int main(int argc, const char **argv) {
   // Add "-fparse-all-comments" compile option to make clang parse all comments,
   // otherwise, ordinary comments like "//" and "/*" won't get parsed (This is
   // a bit of hacky).
-  std::vector<std::string> ExtraArgs( argv, argv + argc );
-  ExtraArgs.insert(ExtraArgs.begin()+1, "-extra-arg=-fparse-all-comments");
+  std::vector<std::string> ExtraArgs(argv, argv + argc);
+  ExtraArgs.insert(ExtraArgs.begin() + 1, "-extra-arg=-fparse-all-comments");
   std::unique_ptr<const char *[]> RawExtraArgs(
       new const char *[ExtraArgs.size()]);
   for (size_t i = 0; i < ExtraArgs.size(); ++i)
@@ -90,7 +90,7 @@ int main(int argc, const char **argv) {
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(),
                                 OptionsParser.getSourcePathList());
   move::ClangMoveTool::MoveDefinitionSpec Spec;
-  Spec.Names = { Names.begin(), Names.end() };
+  Spec.Names = {Names.begin(), Names.end()};
   Spec.OldHeader = OldHeader;
   Spec.NewHeader = NewHeader;
   Spec.OldCC = OldCC;

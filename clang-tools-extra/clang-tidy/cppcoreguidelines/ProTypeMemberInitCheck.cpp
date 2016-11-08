@@ -278,8 +278,7 @@ void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   // AST.
   Finder->addMatcher(
       cxxRecordDecl(
-          isDefinition(), unless(isInstantiated()),
-          hasDefaultConstructor(),
+          isDefinition(), unless(isInstantiated()), hasDefaultConstructor(),
           anyOf(has(cxxConstructorDecl(isDefaultConstructor(), isDefaulted(),
                                        unless(isImplicit()))),
                 unless(has(cxxConstructorDecl()))),
@@ -465,7 +464,7 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
       << toCommaSeparatedString(AllBases, BasesToInit);
 
   if (Ctor)
-      fixInitializerList(Context, Diag, Ctor, BasesToInit);
+    fixInitializerList(Context, Diag, Ctor, BasesToInit);
 }
 
 void ProTypeMemberInitCheck::checkUninitializedTrivialType(

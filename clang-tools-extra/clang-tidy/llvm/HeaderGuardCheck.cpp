@@ -14,7 +14,7 @@ namespace tidy {
 namespace llvm {
 
 LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
-                                           ClangTidyContext* Context)
+                                           ClangTidyContext *Context)
     : HeaderGuardCheck(Name, Context),
       RawStringHeaderFileExtensions(
           Options.getLocalOrGlobal("HeaderFileExtensions", ",h,hh,hpp,hxx")) {
