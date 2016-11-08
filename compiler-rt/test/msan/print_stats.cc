@@ -1,22 +1,22 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -g %s -o %t 
 // RUN: %run %t 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-NOSTATS %s
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-NOSTATS %s
 // RUN: MSAN_OPTIONS=print_stats=1 %run %t 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-NOSTATS %s
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-NOSTATS %s
 // RUN: MSAN_OPTIONS=print_stats=1,atexit=1 %run %t 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-STATS %s
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-STATS %s
 
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -g -DPOSITIVE=1 %s -o %t 
 // RUN: not %run %t 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-NOSTATS %s
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-NOSTATS %s
 // RUN: MSAN_OPTIONS=print_stats=1 not %run %t 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-STATS %s
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-STATS %s
 
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -g -DPOSITIVE=1 -mllvm -msan-keep-going=1 %s -o %t 
+// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -fsanitize-recover=memory -g -DPOSITIVE=1 %s -o %t
 // RUN: not %run %t 2>&1 | \
-// RUN:  FileCheck --check-prefix=CHECK --check-prefix=CHECK-NOSTATS --check-prefix=CHECK-KEEPGOING %s
+// RUN:  FileCheck --check-prefixes=CHECK,CHECK-NOSTATS,CHECK-RECOVER %s
 // RUN: MSAN_OPTIONS=print_stats=1 not %run %t 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK --check-prefix=CHECK-STATS --check-prefix=CHECK-KEEPGOING %s
+// RUN:   FileCheck --check-prefixes=CHECK,CHECK-STATS,CHECK-RECOVER %s
 
 #include <stdio.h>
 int main(int argc, char **argv) {
@@ -42,4 +42,4 @@ int main(int argc, char **argv) {
 // CHECK-NOSTATS-NOT: Unique origin histories:
 // CHECK-NOSTATS-NOT: History depot allocated bytes:
 
-// CHECK-KEEPGOING: MemorySanitizer: 1 warnings reported.
+// CHECK-RECOVER: MemorySanitizer: 1 warnings reported.

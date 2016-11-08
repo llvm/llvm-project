@@ -267,7 +267,7 @@ static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
   thr->fast_state.IncrementEpoch();
   // Can't increment epoch w/o writing to the trace as well.
   TraceAddEvent(thr, thr->fast_state, EventTypeMop, 0);
-  ReleaseImpl(thr, pc, &s->clock);
+  ReleaseStoreImpl(thr, pc, &s->clock);
   NoTsanAtomicStore(a, v, mo);
   s->mtx.Unlock();
 }
