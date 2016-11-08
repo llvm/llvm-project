@@ -16,7 +16,7 @@ def Z13Model : SchedMachineModel {
 
     let UnsupportedFeatures = Arch11UnsupportedFeatures.List;
     
-    let IssueWidth = 6;             // 2 * 3 instructions decoded per cycle.
+    let IssueWidth = 8;
     let MicroOpBufferSize = 60;     // Issue queues
     let LoadLatency = 1;            // Optimistic load latency.
 
@@ -63,20 +63,19 @@ def : WriteRes<Lat30, []> { let Latency = 30; let NumMicroOps = 0;}
 def Z13_FXaUnit     : ProcResource<2>;
 def Z13_FXbUnit     : ProcResource<2>;
 def Z13_LSUnit      : ProcResource<2>;
-def Z13_VecBFUnit   : ProcResource<2>;
-def Z13_VecDFUnit   : ProcResource<2>;
+def Z13_VecUnit     : ProcResource<2>;
 def Z13_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
-def Z13_VecMulUnit  : ProcResource<2>;
-def Z13_VecStrUnit  : ProcResource<2>;
-def Z13_VecXsPmUnit : ProcResource<2>;
 def Z13_VBUnit      : ProcResource<2>;
 
 // Subtarget specific definitions of scheduling resources.
-def : WriteRes<FXa,     [Z13_FXaUnit]>   { let Latency = 1; }
-def : WriteRes<FXb,     [Z13_FXbUnit]>   { let Latency = 1; }
-def : WriteRes<LSU,     [Z13_LSUnit]>    { let Latency = 4; }
-def : WriteRes<VecBF,   [Z13_VecBFUnit]> { let Latency = 8; }
-def : WriteRes<VecDF,   [Z13_VecDFUnit]>;
+def : WriteRes<FXa,     [Z13_FXaUnit]> { let Latency = 1; }
+def : WriteRes<FXa2,    [Z13_FXaUnit, Z13_FXaUnit]> { let Latency = 2; }
+def : WriteRes<FXb,     [Z13_FXbUnit]> { let Latency = 1; }
+def : WriteRes<LSU,     [Z13_LSUnit]>  { let Latency = 4; }
+def : WriteRes<VecBF,   [Z13_VecUnit]> { let Latency = 8; }
+def : WriteRes<VecBF2,  [Z13_VecUnit, Z13_VecUnit]> { let Latency = 9; }
+def : WriteRes<VecDF,   [Z13_VecUnit]> { let Latency = 8; }
+def : WriteRes<VecDF2,  [Z13_VecUnit, Z13_VecUnit]> { let Latency = 9; }
 def : WriteRes<VecFPd,  [Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
                          Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
                          Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
@@ -88,9 +87,9 @@ def : WriteRes<VecFPd,  [Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
                          Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit,
                          Z13_VecFPdUnit, Z13_VecFPdUnit, Z13_VecFPdUnit]>
                          { let Latency = 30; }
-def : WriteRes<VecMul,  [Z13_VecMulUnit]>  { let Latency = 5; }
-def : WriteRes<VecStr,  [Z13_VecStrUnit]>  { let Latency = 4; }
-def : WriteRes<VecXsPm, [Z13_VecXsPmUnit]> { let Latency = 3; }
+def : WriteRes<VecMul,  [Z13_VecUnit]> { let Latency = 5; }
+def : WriteRes<VecStr,  [Z13_VecUnit]> { let Latency = 4; }
+def : WriteRes<VecXsPm, [Z13_VecUnit]> { let Latency = 3; }
 def : WriteRes<VBU,     [Z13_VBUnit]>; // Virtual Branching Unit
 
 // -------------------------- INSTRUCTIONS ---------------------------------- //
@@ -443,9 +442,9 @@ def : InstRW<[FXa, LSU, Lat9], (instregex "MH(Y)?$")>;
 
 def : InstRW<[FXa, Lat30, GroupAlone], (instregex "DSG(F)?R$")>;
 def : InstRW<[LSU, FXa, Lat30, GroupAlone], (instregex "DSG(F)?$")>;
-def : InstRW<[FXa, FXa, Lat20, GroupAlone], (instregex "DLR$")>;
-def : InstRW<[FXa, FXa, Lat30, GroupAlone], (instregex "DLGR$")>;
-def : InstRW<[FXa, FXa, LSU, Lat30, GroupAlone], (instregex "DL(G)?$")>;
+def : InstRW<[FXa2, FXa2, Lat20, GroupAlone], (instregex "DLR$")>;
+def : InstRW<[FXa2, FXa2, Lat30, GroupAlone], (instregex "DLGR$")>;
+def : InstRW<[FXa2, FXa2, LSU, Lat30, GroupAlone], (instregex "DL(G)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Shifts
@@ -644,8 +643,8 @@ def : InstRW<[FXb, FXb, Lat2, GroupAlone], (instregex "LXR$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "LT(D|E)BR$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "LTEBRCompare(_VecPseudo)?$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "LTDBRCompare(_VecPseudo)?$")>;
-def : InstRW<[VecDF, VecDF, Lat11, GroupAlone], (instregex "LTXBR$")>;
-def : InstRW<[VecDF, VecDF, Lat11, GroupAlone],
+def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "LTXBR$")>;
+def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone],
              (instregex "LTXBRCompare(_VecPseudo)?$")>;
 
 // Copy sign
@@ -680,16 +679,16 @@ def : InstRW<[VecDF, VecDF, Lat20], (instregex "LDXBR(A)?$")>;
 // Load lengthened
 def : InstRW<[VecBF, LSU, Lat12], (instregex "LDEB$")>;
 def : InstRW<[VecBF], (instregex "LDEBR$")>;
-def : InstRW<[VecBF, VecBF, LSU, Lat12 , GroupAlone], (instregex "LX(D|E)B$")>;
-def : InstRW<[VecBF, VecBF, Lat9 , GroupAlone], (instregex "LX(D|E)BR$")>;
+def : InstRW<[VecBF2, VecBF2, LSU, Lat12 , GroupAlone], (instregex "LX(D|E)B$")>;
+def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "LX(D|E)BR$")>;
 
 // Convert from fixed / logical
 def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CE(F|G)BR$")>;
 def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CD(F|G)BR$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat12, GroupAlone], (instregex "CX(F|G)BR$")>;
+def : InstRW<[FXb, VecDF2, VecDF2, Lat12, GroupAlone], (instregex "CX(F|G)BR$")>;
 def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CEL(F|G)BR$")>;
 def : InstRW<[FXb, VecBF, Lat9, BeginGroup], (instregex "CDL(F|G)BR$")>;
-def : InstRW<[FXb, VecDF, VecDF, Lat12, GroupAlone], (instregex "CXL(F|G)BR$")>;
+def : InstRW<[FXb, VecDF2, VecDF2, Lat12, GroupAlone], (instregex "CXL(F|G)BR$")>;
 
 // Convert to fixed / logical
 def : InstRW<[FXb, VecBF, Lat11, BeginGroup], (instregex "CF(E|D)BR$")>;
@@ -710,7 +709,7 @@ def : InstRW<[VecXsPm, Lat4], (instregex "L(C|N|P)EBR$")>;
 def : InstRW<[FXb], (instregex "LCDFR(_32)?$")>;
 def : InstRW<[FXb], (instregex "LNDFR(_32)?$")>;
 def : InstRW<[FXb], (instregex "LPDFR(_32)?$")>;
-def : InstRW<[VecDF, VecDF, Lat11, GroupAlone], (instregex "L(C|N|P)XBR$")>;
+def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "L(C|N|P)XBR$")>;
 
 // Square root
 def : InstRW<[VecFPd, LSU], (instregex "SQ(E|D)B$")>;
@@ -720,7 +719,7 @@ def : InstRW<[VecFPd, VecFPd, GroupAlone], (instregex "SQXBR$")>;
 // Load FP integer
 def : InstRW<[VecBF], (instregex "FIEBR(A)?$")>;
 def : InstRW<[VecBF], (instregex "FIDBR(A)?$")>;
-def : InstRW<[VecDF, VecDF, Lat11, GroupAlone], (instregex "FIXBR(A)?$")>;
+def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "FIXBR(A)?$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Binary arithmetic
@@ -729,19 +728,19 @@ def : InstRW<[VecDF, VecDF, Lat11, GroupAlone], (instregex "FIXBR(A)?$")>;
 // Addition
 def : InstRW<[VecBF, LSU, Lat12], (instregex "A(E|D)B$")>;
 def : InstRW<[VecBF], (instregex "A(E|D)BR$")>;
-def : InstRW<[VecDF, VecDF, Lat11, GroupAlone], (instregex "AXBR$")>;
+def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "AXBR$")>;
 
 // Subtraction
 def : InstRW<[VecBF, LSU, Lat12], (instregex "S(E|D)B$")>;
 def : InstRW<[VecBF], (instregex "S(E|D)BR$")>;
-def : InstRW<[VecDF, VecDF, Lat11, GroupAlone], (instregex "SXBR$")>;
+def : InstRW<[VecDF2, VecDF2, Lat11, GroupAlone], (instregex "SXBR$")>;
 
 // Multiply
 def : InstRW<[VecBF, LSU, Lat12], (instregex "M(D|DE|EE)B$")>;
 def : InstRW<[VecBF], (instregex "M(D|DE|EE)BR$")>;
-def : InstRW<[VecBF, VecBF, LSU, Lat12, GroupAlone], (instregex "MXDB$")>;
-def : InstRW<[VecBF, VecBF, Lat9, GroupAlone], (instregex "MXDBR$")>;
-def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "MXBR$")>;
+def : InstRW<[VecBF2, VecBF2, LSU, Lat12, GroupAlone], (instregex "MXDB$")>;
+def : InstRW<[VecBF2, VecBF2, GroupAlone], (instregex "MXDBR$")>;
+def : InstRW<[VecDF2, VecDF2, Lat20, GroupAlone], (instregex "MXBR$")>;
 
 // Multiply and add / subtract
 def : InstRW<[VecBF, LSU, Lat12, GroupAlone], (instregex "M(A|S)EB$")>;
@@ -765,7 +764,7 @@ def : InstRW<[VecDF, VecDF, Lat20, GroupAlone], (instregex "CXBR$")>;
 
 // Test Data Class
 def : InstRW<[LSU, VecXsPm, Lat9], (instregex "TC(E|D)B$")>;
-def : InstRW<[LSU, VecDF, VecDF, Lat15, GroupAlone], (instregex "TCXB$")>;
+def : InstRW<[LSU, VecDF2, VecDF2, Lat15, GroupAlone], (instregex "TCXB$")>;
 
 
 // --------------------------------- Vector --------------------------------- //
@@ -921,26 +920,29 @@ def : InstRW<[VecStr, Lat5], (instregex "VTM$")>;
 // Vector: Floating-point arithmetic
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecBF], (instregex "VCD(G|GB|LG|LGB)$")>;
+def : InstRW<[VecBF2], (instregex "VCD(G|GB|LG|LGB)$")>;
 def : InstRW<[VecBF], (instregex "WCD(GB|LGB)$")>;
-def : InstRW<[VecBF], (instregex "VC(L)?GD$")>;
-def : InstRW<[VecBF], (instregex "(V|W)FADB$")>;
-def : InstRW<[VecBF], (instregex "(V|W)CGDB$")>;
-def : InstRW<[VecBF], (instregex "VF(I|M|A|S)$")>;
-def : InstRW<[VecBF], (instregex "VF(I|M|S)DB$")>;
+def : InstRW<[VecBF2], (instregex "VC(L)?GD$")>;
+def : InstRW<[VecBF2], (instregex "VFADB$")>;
+def : InstRW<[VecBF], (instregex "WFADB$")>;
+def : InstRW<[VecBF2], (instregex "VCGDB$")>;
+def : InstRW<[VecBF], (instregex "WCGDB$")>;
+def : InstRW<[VecBF2], (instregex "VF(I|M|A|S)$")>;
+def : InstRW<[VecBF2], (instregex "VF(I|M|S)DB$")>;
 def : InstRW<[VecBF], (instregex "WF(I|M|S)DB$")>;
-def : InstRW<[VecBF], (instregex "(V|W)CLGDB$")>;
+def : InstRW<[VecBF2], (instregex "VCLGDB$")>;
+def : InstRW<[VecBF], (instregex "WCLGDB$")>;
 def : InstRW<[VecXsPm], (instregex "VFL(C|N|P)DB$")>;
 def : InstRW<[VecXsPm], (instregex "WFL(C|N|P)DB$")>;
-def : InstRW<[VecBF], (instregex "VFM(A|S)$")>;
-def : InstRW<[VecBF], (instregex "VFM(A|S)DB$")>;
+def : InstRW<[VecBF2], (instregex "VFM(A|S)$")>;
+def : InstRW<[VecBF2], (instregex "VFM(A|S)DB$")>;
 def : InstRW<[VecBF], (instregex "WFM(A|S)DB$")>;
 def : InstRW<[VecXsPm], (instregex "VFPSO$")>;
 def : InstRW<[VecXsPm], (instregex "(V|W)FPSODB$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "VFTCI(DB)?$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "WFTCIDB$")>;
-def : InstRW<[VecBF], (instregex "VL(DE|ED)$")>;
-def : InstRW<[VecBF], (instregex "VL(DE|ED)B$")>;
+def : InstRW<[VecBF2], (instregex "VL(DE|ED)$")>;
+def : InstRW<[VecBF2], (instregex "VL(DE|ED)B$")>;
 def : InstRW<[VecBF], (instregex "WL(DE|ED)B$")>;
 
 // divide / square root

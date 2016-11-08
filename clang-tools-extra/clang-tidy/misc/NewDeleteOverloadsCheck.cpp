@@ -64,7 +64,8 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
 
 OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
   switch (FD->getOverloadedOperator()) {
-  default: break;
+  default:
+    break;
   case OO_New:
     return OO_Delete;
   case OO_Delete:
@@ -79,7 +80,8 @@ OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
 
 const char *getOperatorName(OverloadedOperatorKind K) {
   switch (K) {
-  default: break;
+  default:
+    break;
   case OO_New:
     return "operator new";
   case OO_Delete:
@@ -140,13 +142,12 @@ void NewDeleteOverloadsCheck::registerMatchers(MatchFinder *Finder) {
   // However, I think it's more reasonable to warn in this case as the user
   // should really be writing that as a deleted function.
   Finder->addMatcher(
-      functionDecl(
-          unless(anyOf(isImplicit(), isPlacementOverload(), isDeleted(),
-                       cxxMethodDecl(isPrivate()))),
-          anyOf(hasOverloadedOperatorName("new"),
-                hasOverloadedOperatorName("new[]"),
-                hasOverloadedOperatorName("delete"),
-                hasOverloadedOperatorName("delete[]")))
+      functionDecl(unless(anyOf(isImplicit(), isPlacementOverload(),
+                                isDeleted(), cxxMethodDecl(isPrivate()))),
+                   anyOf(hasOverloadedOperatorName("new"),
+                         hasOverloadedOperatorName("new[]"),
+                         hasOverloadedOperatorName("delete"),
+                         hasOverloadedOperatorName("delete[]")))
           .bind("func"),
       this);
 }

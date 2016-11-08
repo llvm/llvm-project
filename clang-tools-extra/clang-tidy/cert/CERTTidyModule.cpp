@@ -34,8 +34,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     // C++ checkers
     // DCL
-    CheckFactories.registerCheck<VariadicFunctionDefCheck>(
-        "cert-dcl50-cpp");
+    CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
         "cert-dcl54-cpp");
     CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
@@ -46,37 +45,27 @@ public:
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<SetLongJmpCheck>(
-        "cert-err52-cpp");
-    CheckFactories.registerCheck<StaticObjectExceptionCheck>(
-        "cert-err58-cpp");
-    CheckFactories.registerCheck<ThrownExceptionTypeCheck>(
-        "cert-err60-cpp");
+    CheckFactories.registerCheck<SetLongJmpCheck>("cert-err52-cpp");
+    CheckFactories.registerCheck<StaticObjectExceptionCheck>("cert-err58-cpp");
+    CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MSC
-    CheckFactories.registerCheck<LimitedRandomnessCheck>(
-        "cert-msc50-cpp");
+    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
 
     // C checkers
     // DCL
-    CheckFactories.registerCheck<misc::StaticAssertCheck>(
-        "cert-dcl03-c");
+    CheckFactories.registerCheck<misc::StaticAssertCheck>("cert-dcl03-c");
     // ENV
-    CheckFactories.registerCheck<CommandProcessorCheck>(
-        "cert-env33-c");
+    CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
     // FLP
-    CheckFactories.registerCheck<FloatLoopCounter>(
-        "cert-flp30-c");
+    CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
     // FIO
-    CheckFactories.registerCheck<misc::NonCopyableObjectsCheck>(
-        "cert-fio38-c");
+    CheckFactories.registerCheck<misc::NonCopyableObjectsCheck>("cert-fio38-c");
     // ERR
-    CheckFactories.registerCheck<StrToNumCheck>(
-        "cert-err34-c");
+    CheckFactories.registerCheck<StrToNumCheck>("cert-err34-c");
     // MSC
-    CheckFactories.registerCheck<LimitedRandomnessCheck>(
-        "cert-msc30-c");
+    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
   }
   ClangTidyOptions getModuleOptions() override {
     ClangTidyOptions Options;
@@ -89,8 +78,8 @@ public:
 
 // Register the MiscTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<cert::CERTModule>
-X("cert-module",
-  "Adds lint checks corresponding to CERT secure coding guidelines.");
+    X("cert-module",
+      "Adds lint checks corresponding to CERT secure coding guidelines.");
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the CERTModule.

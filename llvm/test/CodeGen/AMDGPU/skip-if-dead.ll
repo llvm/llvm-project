@@ -262,13 +262,11 @@ exit:
 ; CHECK-NEXT: s_endpgm
 
 ; CHECK: [[KILLBB:BB[0-9]+_[0-9]+]]:
-; CHECK: s_and_b64 vcc, exec,
 ; CHECK-NEXT: s_cbranch_vccz [[PHIBB:BB[0-9]+_[0-9]+]]
 
 ; CHECK: [[PHIBB]]:
 ; CHECK: v_cmp_eq_f32_e32 vcc, 0, [[PHIREG]]
-; CHECK: s_and_b64 vcc, exec, vcc
-; CHECK: s_cbranch_vccz [[ENDBB:BB[0-9]+_[0-9]+]]
+; CHECK-NEXT: s_cbranch_vccz [[ENDBB:BB[0-9]+_[0-9]+]]
 
 ; CHECK: ; %bb10
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 9
@@ -303,16 +301,14 @@ end:
 
 ; CHECK-LABEL: {{^}}no_skip_no_successors:
 ; CHECK: v_cmp_nge_f32
-; CHECK: s_and_b64 vcc, exec,
-; CHECK: s_cbranch_vccz [[SKIPKILL:BB[0-9]+_[0-9]+]]
+; CHECK-NEXT: s_cbranch_vccz [[SKIPKILL:BB[0-9]+_[0-9]+]]
 
 ; CHECK: ; %bb6
 ; CHECK: s_mov_b64 exec, 0
 
 ; CHECK: [[SKIPKILL]]:
 ; CHECK: v_cmp_nge_f32
-; CHECK: s_and_b64 vcc, exec, vcc
-; CHECK: s_cbranch_vccz [[UNREACHABLE:BB[0-9]+_[0-9]+]]
+; CHECK-NEXT: s_cbranch_vccz [[UNREACHABLE:BB[0-9]+_[0-9]+]]
 
 ; CHECK: [[UNREACHABLE]]:
 ; CHECK-NEXT: .Lfunc_end{{[0-9]+}}

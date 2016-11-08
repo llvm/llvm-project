@@ -16,7 +16,7 @@ def Z196Model : SchedMachineModel {
 
     let UnsupportedFeatures = Arch9UnsupportedFeatures.List;
     
-    let IssueWidth = 3;             // 3 instructions decoded per cycle.
+    let IssueWidth = 5;
     let MicroOpBufferSize = 40;     // Issue queues
     let LoadLatency = 1;            // Optimistic load latency.
 
@@ -56,8 +56,8 @@ def : WriteRes<Lat20, []> { let Latency = 20; let NumMicroOps = 0;}
 def : WriteRes<Lat30, []> { let Latency = 30; let NumMicroOps = 0;}
 
 // Execution units.
-def Z196_FXUnit : ProcResource<1>;
-def Z196_LSUnit : ProcResource<1>;
+def Z196_FXUnit : ProcResource<2>;
+def Z196_LSUnit : ProcResource<2>;
 def Z196_FPUnit : ProcResource<1>;
 
 // Subtarget specific definitions of scheduling resources.
@@ -65,6 +65,7 @@ def : WriteRes<FXU,       [Z196_FXUnit]> { let Latency = 1; }
 def : WriteRes<LSU,       [Z196_LSUnit]> { let Latency = 4; }
 def : WriteRes<LSU_lat1,  [Z196_LSUnit]> { let Latency = 1; }
 def : WriteRes<FPU,       [Z196_FPUnit]> { let Latency = 8; }
+def : WriteRes<FPU2,      [Z196_FPUnit, Z196_FPUnit]> { let Latency = 9; }
 
 // -------------------------- INSTRUCTIONS ---------------------------------- //
 
@@ -410,13 +411,13 @@ def : InstRW<[FXU, LSU, Lat9], (instregex "MH(Y)?$")>;
 // Division and remainder
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FPU, FPU, FXU, FXU, FXU, FXU, Lat30, GroupAlone],
+def : InstRW<[FPU2, FPU2, FXU, FXU, FXU, FXU, Lat30, GroupAlone],
               (instregex "DSG(F)?R$")>;
-def : InstRW<[FPU, FPU, LSU, FXU, FXU, FXU, Lat30, GroupAlone],
+def : InstRW<[FPU2, FPU2, LSU, FXU, FXU, FXU, Lat30, GroupAlone],
               (instregex "DSG(F)?$")>;
-def : InstRW<[FPU, FPU, FXU, FXU, FXU, FXU, FXU, Lat30, GroupAlone],
+def : InstRW<[FPU2, FPU2, FXU, FXU, FXU, FXU, FXU, Lat30, GroupAlone],
               (instregex "DL(G)?R$")>;
-def : InstRW<[FPU, FPU, LSU, FXU, FXU, FXU, FXU, Lat30, GroupAlone],
+def : InstRW<[FPU2, FPU2, LSU, FXU, FXU, FXU, FXU, Lat30, GroupAlone],
               (instregex "DL(G)?$")>;
 
 //===----------------------------------------------------------------------===//
@@ -589,8 +590,8 @@ def : InstRW<[FXU, FXU, Lat2, GroupAlone], (instregex "LXR$")>;
 def : InstRW<[FPU], (instregex "LT(D|E)BR$")>;
 def : InstRW<[FPU], (instregex "LTEBRCompare(_VecPseudo)?$")>;
 def : InstRW<[FPU], (instregex "LTDBRCompare(_VecPseudo)?$")>;
-def : InstRW<[FPU, FPU, Lat9, GroupAlone], (instregex "LTXBR$")>;
-def : InstRW<[FPU, FPU, Lat9, GroupAlone],
+def : InstRW<[FPU2, FPU2, Lat9, GroupAlone], (instregex "LTXBR$")>;
+def : InstRW<[FPU2, FPU2, Lat9, GroupAlone],
              (instregex "LTXBRCompare(_VecPseudo)?$")>;
 
 // Copy sign
@@ -625,16 +626,16 @@ def : InstRW<[FPU, FPU, Lat20], (instregex "LDXBR(A)?$")>;
 // Load lengthened
 def : InstRW<[FPU, LSU, Lat12], (instregex "LDEB$")>;
 def : InstRW<[FPU], (instregex "LDEBR$")>;
-def : InstRW<[FPU, FPU, LSU, Lat15, GroupAlone], (instregex "LX(D|E)B$")>;
-def : InstRW<[FPU, FPU, Lat10, GroupAlone], (instregex "LX(D|E)BR$")>;
+def : InstRW<[FPU2, FPU2, LSU, Lat15, GroupAlone], (instregex "LX(D|E)B$")>;
+def : InstRW<[FPU2, FPU2, Lat10, GroupAlone], (instregex "LX(D|E)BR$")>;
 
 // Convert from fixed / logical
 def : InstRW<[FXU, FPU, Lat9, GroupAlone], (instregex "CE(F|G)BR$")>;
 def : InstRW<[FXU, FPU, Lat9, GroupAlone], (instregex "CD(F|G)BR$")>;
-def : InstRW<[FXU, FPU, FPU, Lat11, GroupAlone], (instregex "CX(F|G)BR$")>;
+def : InstRW<[FXU, FPU2, FPU2, Lat11, GroupAlone], (instregex "CX(F|G)BR$")>;
 def : InstRW<[FXU, FPU, Lat9, GroupAlone], (instregex "CEL(F|G)BR$")>;
 def : InstRW<[FXU, FPU, Lat9, GroupAlone], (instregex "CDL(F|G)BR$")>;
-def : InstRW<[FXU, FPU, FPU, Lat11, GroupAlone], (instregex "CXL(F|G)BR$")>;
+def : InstRW<[FXU, FPU2, FPU2, Lat11, GroupAlone], (instregex "CXL(F|G)BR$")>;
 
 // Convert to fixed / logical
 def : InstRW<[FXU, FPU, Lat12, GroupAlone], (instregex "CF(E|D)BR$")>;
@@ -654,17 +655,17 @@ def : InstRW<[FPU], (instregex "L(C|N|P)EBR$")>;
 def : InstRW<[FXU], (instregex "LCDFR(_32)?$")>;
 def : InstRW<[FXU], (instregex "LNDFR(_32)?$")>;
 def : InstRW<[FXU], (instregex "LPDFR(_32)?$")>;
-def : InstRW<[FPU, FPU, Lat9, GroupAlone], (instregex "L(C|N|P)XBR$")>;
+def : InstRW<[FPU2, FPU2, Lat9, GroupAlone], (instregex "L(C|N|P)XBR$")>;
 
 // Square root
 def : InstRW<[FPU, LSU, Lat30], (instregex "SQ(E|D)B$")>;
 def : InstRW<[FPU, Lat30], (instregex "SQ(E|D)BR$")>;
-def : InstRW<[FPU, FPU, Lat30, GroupAlone], (instregex "SQXBR$")>;
+def : InstRW<[FPU2, FPU2, Lat30, GroupAlone], (instregex "SQXBR$")>;
 
 // Load FP integer
 def : InstRW<[FPU], (instregex "FIEBR(A)?$")>;
 def : InstRW<[FPU], (instregex "FIDBR(A)?$")>;
-def : InstRW<[FPU, FPU, Lat15, GroupAlone], (instregex "FIXBR(A)?$")>;
+def : InstRW<[FPU2, FPU2, Lat15, GroupAlone], (instregex "FIXBR(A)?$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Binary arithmetic
@@ -673,19 +674,19 @@ def : InstRW<[FPU, FPU, Lat15, GroupAlone], (instregex "FIXBR(A)?$")>;
 // Addition
 def : InstRW<[FPU, LSU, Lat12], (instregex "A(E|D)B$")>;
 def : InstRW<[FPU], (instregex "A(E|D)BR$")>;
-def : InstRW<[FPU, FPU, Lat20, GroupAlone], (instregex "AXBR$")>;
+def : InstRW<[FPU2, FPU2, Lat20, GroupAlone], (instregex "AXBR$")>;
 
 // Subtraction
 def : InstRW<[FPU, LSU, Lat12], (instregex "S(E|D)B$")>;
 def : InstRW<[FPU], (instregex "S(E|D)BR$")>;
-def : InstRW<[FPU, FPU, Lat20, GroupAlone], (instregex "SXBR$")>;
+def : InstRW<[FPU2, FPU2, Lat20, GroupAlone], (instregex "SXBR$")>;
 
 // Multiply
 def : InstRW<[FPU, LSU, Lat12], (instregex "M(D|DE|EE)B$")>;
 def : InstRW<[FPU], (instregex "M(D|DE|EE)BR$")>;
-def : InstRW<[FPU, FPU, LSU, Lat15, GroupAlone], (instregex "MXDB$")>;
-def : InstRW<[FPU, FPU, Lat10, GroupAlone], (instregex "MXDBR$")>;
-def : InstRW<[FPU, FPU, Lat30, GroupAlone], (instregex "MXBR$")>;
+def : InstRW<[FPU2, FPU2, LSU, Lat15, GroupAlone], (instregex "MXDB$")>;
+def : InstRW<[FPU2, FPU2, Lat10, GroupAlone], (instregex "MXDBR$")>;
+def : InstRW<[FPU2, FPU2, Lat30, GroupAlone], (instregex "MXBR$")>;
 
 // Multiply and add / subtract
 def : InstRW<[FPU, LSU, Lat12, GroupAlone], (instregex "M(A|S)EB$")>;
@@ -696,7 +697,7 @@ def : InstRW<[FPU, GroupAlone], (instregex "M(A|S)DBR$")>;
 // Division
 def : InstRW<[FPU, LSU, Lat30], (instregex "D(E|D)B$")>;
 def : InstRW<[FPU, Lat30], (instregex "D(E|D)BR$")>;
-def : InstRW<[FPU, FPU, Lat30, GroupAlone], (instregex "DXBR$")>;
+def : InstRW<[FPU2, FPU2, Lat30, GroupAlone], (instregex "DXBR$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Comparisons
@@ -709,7 +710,7 @@ def : InstRW<[FPU, FPU, Lat30], (instregex "CXBR$")>;
 
 // Test Data Class
 def : InstRW<[FPU, LSU, Lat15], (instregex "TC(E|D)B$")>;
-def : InstRW<[FPU, FPU, LSU, Lat15, GroupAlone], (instregex "TCXB$")>;
+def : InstRW<[FPU2, FPU2, LSU, Lat15, GroupAlone], (instregex "TCXB$")>;
 
 }
 

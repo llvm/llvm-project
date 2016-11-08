@@ -83,8 +83,8 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
                      "has no effect; remove std::move()"
                      "%select{| or make the variable non-const}3")
                 << IsConstArg << IsVariable << IsTriviallyCopyable
-                << (IsConstArg && IsVariable && !IsTriviallyCopyable)
-                << Var << Arg->getType();
+                << (IsConstArg && IsVariable && !IsTriviallyCopyable) << Var
+                << Arg->getType();
 
     ReplaceCallWithArg(CallMove, Diag, SM, getLangOpts());
   } else if (ReceivingExpr) {

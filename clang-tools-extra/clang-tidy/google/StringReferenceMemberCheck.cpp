@@ -32,13 +32,13 @@ void StringReferenceMemberCheck::registerMatchers(
   auto ConstString = qualType(isConstQualified(), hasDeclaration(String));
 
   // Ignore members in template instantiations.
-  Finder->addMatcher(fieldDecl(hasType(references(ConstString)),
-                               unless(isInstantiated())).bind("member"),
-                     this);
+  Finder->addMatcher(
+      fieldDecl(hasType(references(ConstString)), unless(isInstantiated()))
+          .bind("member"),
+      this);
 }
 
-void
-StringReferenceMemberCheck::check(const MatchFinder::MatchResult &Result) {
+void StringReferenceMemberCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Member = Result.Nodes.getNodeAs<FieldDecl>("member");
   diag(Member->getLocStart(), "const string& members are dangerous; it is much "
                               "better to use alternatives, such as pointers or "

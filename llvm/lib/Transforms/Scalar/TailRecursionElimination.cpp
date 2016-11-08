@@ -236,7 +236,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls) {
       if (!CI || CI->isTailCall())
         continue;
 
-      bool IsNoTail = CI->isNoTailCall();
+      bool IsNoTail = CI->isNoTailCall() || CI->hasOperandBundles();
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed

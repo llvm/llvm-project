@@ -178,8 +178,10 @@ FunctionPass *llvm::createSIInsertWaitsPass() {
 
 const Counters SIInsertWaits::ZeroCounts = { { 0, 0, 0 } };
 
-static bool readsVCCZ(unsigned Opcode) {
-  return Opcode == AMDGPU::S_CBRANCH_VCCNZ || Opcode == AMDGPU::S_CBRANCH_VCCZ;
+static bool readsVCCZ(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  return (Opc == AMDGPU::S_CBRANCH_VCCNZ || Opc == AMDGPU::S_CBRANCH_VCCZ) &&
+         !MI.getOperand(1).isUndef();
 }
 
 bool SIInsertWaits::hasOutstandingLGKM() const {
@@ -574,7 +576,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
         }
 
         // Check if we need to apply the bug work-around
-        if (readsVCCZ(I->getOpcode()) && VCCZCorrupt) {
+        if (VCCZCorrupt && readsVCCZ(*I)) {
           DEBUG(dbgs() << "Inserting vccz bug work-around before: " << *I << '\n');
 
           // Wait on everything, not just LGKM.  vccz reads usually come from
@@ -589,7 +591,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
           // vcc and then writing it back to the register.
           BuildMI(MBB, I, I->getDebugLoc(), TII->get(AMDGPU::S_MOV_B64),
                   AMDGPU::VCC)
-                  .addReg(AMDGPU::VCC);
+            .addReg(AMDGPU::VCC);
         }
       }
 

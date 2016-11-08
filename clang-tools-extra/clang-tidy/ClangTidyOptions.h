@@ -173,7 +173,8 @@ public:
   // \brief A pair of configuration file base name and a function parsing
   // configuration from text in the corresponding format.
   typedef std::pair<std::string, std::function<llvm::ErrorOr<ClangTidyOptions>(
-                                     llvm::StringRef)>> ConfigFileHandler;
+                                     llvm::StringRef)>>
+      ConfigFileHandler;
 
   /// \brief Configuration file handlers listed in the order of priority.
   ///

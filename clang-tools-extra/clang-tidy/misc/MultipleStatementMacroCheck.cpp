@@ -29,7 +29,7 @@ const Stmt *nextStmt(const MatchFinder::MatchResult &Result, const Stmt *S) {
   const Stmt *Parent = Parents[0].get<Stmt>();
   if (!Parent)
     return nullptr;
-  const Stmt* Prev = nullptr;
+  const Stmt *Prev = nullptr;
   for (const Stmt *Child : Parent->children()) {
     if (Prev == S)
       return Child;
@@ -53,7 +53,7 @@ ExpansionRanges getExpansionRanges(SourceLocation Loc,
   return Locs;
 }
 
-}  // namespace
+} // namespace
 
 void MultipleStatementMacroCheck::registerMatchers(MatchFinder *Finder) {
   const auto Inner = expr(isInMacro(), unless(compoundStmt())).bind("inner");

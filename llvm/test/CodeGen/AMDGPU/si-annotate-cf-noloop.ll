@@ -37,7 +37,6 @@ bb5:                                              ; preds = %bb3, %bb1
 ; OPT-NOT: call i1 @llvm.amdgcn.loop
 
 ; GCN-LABEL: {{^}}annotate_ret_noloop:
-; GCN: s_and_b64 vcc
 ; GCN: s_cbranch_vccnz
 ; GCN: s_endpgm
 ; GCN: .Lfunc_end1

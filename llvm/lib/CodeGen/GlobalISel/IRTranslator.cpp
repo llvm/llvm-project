@@ -38,6 +38,13 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)
 
+static void reportTranslationError(const Value &V, const Twine &Message) {
+  std::string ErrStorage;
+  raw_string_ostream Err(ErrStorage);
+  Err << Message << ": " << V << '\n';
+  report_fatal_error(Err.str());
+}
+
 IRTranslator::IRTranslator() : MachineFunctionPass(ID), MRI(nullptr) {
   initializeIRTranslatorPass(*PassRegistry::getPassRegistry());
 }
@@ -67,7 +74,7 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
               MachineFunctionProperties::Property::FailedISel);
           return 0;
         }
-        report_fatal_error("unable to translate constant");
+        reportTranslationError(Val, "unable to translate constant");
       }
     }
   }
@@ -661,9 +668,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
     for (const Instruction &Inst: BB) {
       bool Succeeded = translate(Inst);
       if (!Succeeded) {
-        DEBUG(dbgs() << "Cannot translate: " << Inst << '\n');
         if (TPC->isGlobalISelAbortEnabled())
-          report_fatal_error("Unable to translate instruction");
+          reportTranslationError(Inst, "unable to translate instruction");
         MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
         break;
       }

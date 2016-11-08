@@ -1686,8 +1686,10 @@ IEEEFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
   bool ignored;
   fs = V.convertToInteger(x, parts * integerPartWidth, true,
                           rmNearestTiesToEven, &ignored);
-  if (fs==opInvalidOp)
+  if (fs==opInvalidOp) {
+    delete[] x;
     return fs;
+  }
 
   fs = V.convertFromZeroExtendedInteger(x, parts * integerPartWidth, true,
                                         rmNearestTiesToEven);
@@ -1724,8 +1726,10 @@ IEEEFloat::opStatus IEEEFloat::mod(const IEEEFloat &rhs) {
     bool ignored;
     fs = V.convertToInteger(x, parts * integerPartWidth, true,
                             rmTowardZero, &ignored);
-    if (fs==opInvalidOp)
+    if (fs==opInvalidOp) {
+      delete[] x;
       return fs;
+    }
 
     fs = V.convertFromZeroExtendedInteger(x, parts * integerPartWidth, true,
                                           rmNearestTiesToEven);

@@ -20,11 +20,12 @@ namespace misc {
 
 class NewDeleteOverloadsCheck : public ClangTidyCheck {
   std::map<const clang::CXXRecordDecl *,
-           llvm::SmallVector<const clang::FunctionDecl *, 4>> Overloads;
+           llvm::SmallVector<const clang::FunctionDecl *, 4>>
+      Overloads;
 
 public:
   NewDeleteOverloadsCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;

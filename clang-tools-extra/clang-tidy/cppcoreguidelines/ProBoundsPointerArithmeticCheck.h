@@ -17,7 +17,8 @@ namespace tidy {
 namespace cppcoreguidelines {
 
 /// Flags all kinds of pointer arithmetic that have result of pointer type, i.e.
-/// +, -, +=, -=, ++, --. In addition, the [] operator on pointers (not on arrays) is flagged.
+/// +, -, +=, -=, ++, --. In addition, the [] operator on pointers (not on
+/// arrays) is flagged.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-bounds-pointer-arithmetic.html

@@ -110,7 +110,8 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
         SourceParamName != OtherParamName) {
       SourceRange OtherParamNameRange =
           DeclarationNameInfo((*OtherParamIt)->getDeclName(),
-                              (*OtherParamIt)->getLocation()).getSourceRange();
+                              (*OtherParamIt)->getLocation())
+              .getSourceRange();
 
       bool GenerateFixItHint = checkIfFixItHintIsApplicable(
           ParameterSourceDeclaration, *SourceParamIt, OriginalDeclaration);
@@ -202,13 +203,15 @@ std::string joinParameterNames(
 }
 
 void formatDifferingParamsDiagnostic(
-    InconsistentDeclarationParameterNameCheck *Check,
-    SourceLocation Location, StringRef OtherDeclarationDescription,
+    InconsistentDeclarationParameterNameCheck *Check, SourceLocation Location,
+    StringRef OtherDeclarationDescription,
     const DifferingParamsContainer &DifferingParams) {
-  auto ChooseOtherName =
-      [](const DifferingParamInfo &ParamInfo) { return ParamInfo.OtherName; };
-  auto ChooseSourceName =
-      [](const DifferingParamInfo &ParamInfo) { return ParamInfo.SourceName; };
+  auto ChooseOtherName = [](const DifferingParamInfo &ParamInfo) {
+    return ParamInfo.OtherName;
+  };
+  auto ChooseSourceName = [](const DifferingParamInfo &ParamInfo) {
+    return ParamInfo.SourceName;
+  };
 
   auto ParamDiag =
       Check->diag(Location,

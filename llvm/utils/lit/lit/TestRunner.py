@@ -555,8 +555,14 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
 
         # Show the error conditions:
         if result.exitCode != 0:
-            out += "error: command failed with exit status: %d\n" % (
-                result.exitCode,)
+            # On Windows, a negative exit code indicates a signal, and those are
+            # easier to recognize or look up if we print them in hex.
+            if litConfig.isWindows and result.exitCode < 0:
+                codeStr = hex(int(result.exitCode & 0xFFFFFFFF)).rstrip("L")
+            else:
+                codeStr = str(result.exitCode)
+            out += "error: command failed with exit status: %s\n" % (
+                codeStr,)
         if litConfig.maxIndividualTestTime > 0:
             out += 'error: command reached timeout: %s\n' % (
                 str(result.timeoutReached),)

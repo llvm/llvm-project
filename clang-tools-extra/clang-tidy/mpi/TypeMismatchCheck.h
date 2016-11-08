@@ -41,8 +41,7 @@ private:
   /// \param LO language options
   void checkArguments(ArrayRef<const Type *> BufferTypes,
                       ArrayRef<const Expr *> BufferExprs,
-                      ArrayRef<StringRef> MPIDatatypes,
-                      const LangOptions &LO);
+                      ArrayRef<StringRef> MPIDatatypes, const LangOptions &LO);
 };
 
 } // namespace mpi

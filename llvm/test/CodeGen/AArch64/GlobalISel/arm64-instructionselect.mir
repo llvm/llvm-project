@@ -147,6 +147,10 @@
 
   define void @icmp() { ret void }
   define void @fcmp() { ret void }
+
+  define void @phi() { ret void }
+
+  define void @select() { ret void }
 ...
 
 ---
@@ -2833,4 +2837,84 @@ body:             |
     %2(s64) = COPY %d0
     %3(s1) = G_FCMP floatpred(uge), %2, %2
 
+...
+
+---
+# CHECK-LABEL: name: phi
+name:            phi
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: fpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: fpr }
+
+# CHECK:  body:
+# CHECK:    bb.1:
+# CHECK:      %2 = PHI %0, %bb.0, %2, %bb.1
+
+body:             |
+  bb.0:
+    liveins: %s0, %w0
+    successors: %bb.1
+    %0(s32) = COPY %s0
+    %1(s1) = COPY %w0
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %2(s32) = PHI %0, %bb.0, %2, %bb.1
+    G_BRCOND %1, %bb.1
+
+  bb.2:
+    %s0 = COPY %2
+    RET_ReallyLR implicit %s0
+...
+
+---
+# CHECK-LABEL: name: select
+name:            select
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: gpr32 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr64 }
+# CHECK-NEXT:  - { id: 5, class: gpr64 }
+# CHECK-NEXT:  - { id: 6, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+
+# CHECK:  body:
+# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
+# CHECK:      %3 = CSELWr %1, %2, 1, implicit %nzcv
+# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
+# CHECK:      %6 = CSELXr %4, %5, 1, implicit %nzcv
+body:             |
+  bb.0:
+    liveins: %w0, %w1, %w2
+    %0(s1) = COPY %w0
+
+    %1(s32) = COPY %w1
+    %2(s32) = COPY %w2
+    %3(s32) = G_SELECT %0, %1, %2
+
+    %4(s64) = COPY %x0
+    %5(s64) = COPY %x1
+    %6(s64) = G_SELECT %0, %4, %5
 ...
