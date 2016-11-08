@@ -73,16 +73,19 @@ namespace CodeGen {
       Last = PseudoDestructor
     };
 
+    struct BuiltinInfoStorage {
+      const FunctionDecl *Decl;
+      unsigned ID;
+    };
+    struct PseudoDestructorInfoStorage {
+      const CXXPseudoDestructorExpr *Expr;
+    };
+
     SpecialKind KindOrFunctionPointer;
     union {
       CGCalleeInfo AbstractInfo;
-      struct {
-        const FunctionDecl *Decl;
-        unsigned ID;
-      } BuiltinInfo;
-      struct {
-        const CXXPseudoDestructorExpr *Expr;
-      } PseudoDestructorInfo;
+      BuiltinInfoStorage BuiltinInfo;
+      PseudoDestructorInfoStorage PseudoDestructorInfo;
     };
 
     explicit CGCallee(SpecialKind kind) : KindOrFunctionPointer(kind) {}

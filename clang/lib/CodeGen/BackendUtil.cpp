@@ -200,7 +200,9 @@ static void addMemorySanitizerPass(const PassManagerBuilder &Builder,
   const PassManagerBuilderWrapper &BuilderWrapper =
       static_cast<const PassManagerBuilderWrapper&>(Builder);
   const CodeGenOptions &CGOpts = BuilderWrapper.getCGOpts();
-  PM.add(createMemorySanitizerPass(CGOpts.SanitizeMemoryTrackOrigins));
+  int TrackOrigins = CGOpts.SanitizeMemoryTrackOrigins;
+  bool Recover = CGOpts.SanitizeRecover.has(SanitizerKind::Memory);
+  PM.add(createMemorySanitizerPass(TrackOrigins, Recover));
 
   // MemorySanitizer inserts complex instrumentation that mostly follows
   // the logic of the original code, but operates on "shadow" values.

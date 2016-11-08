@@ -1711,7 +1711,7 @@ void ASTReader::ReadDefinedMacros() {
     BitstreamCursor &MacroCursor = I->MacroCursor;
 
     // If there was no preprocessor block, skip this file.
-    if (!MacroCursor.getBitStreamReader())
+    if (MacroCursor.getBitcodeBytes().empty())
       continue;
 
     BitstreamCursor Cursor = MacroCursor;
@@ -3798,7 +3798,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
   return Success;
 }
 
-static ASTFileSignature readASTFileSignature(llvm::BitstreamReader &StreamFile);
+static ASTFileSignature readASTFileSignature(StringRef PCH);
 
 /// \brief Whether \p Stream starts with the AST/PCH file magic number 'CPCH'.
 static bool startsWithASTFileMagic(BitstreamCursor &Stream) {
@@ -3885,8 +3885,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   ModuleFile &F = *M;
   BitstreamCursor &Stream = F.Stream;
-  PCHContainerRdr.ExtractPCH(F.Buffer->getMemBufferRef(), F.StreamFile);
-  Stream.init(&F.StreamFile);
+  Stream = BitstreamCursor(PCHContainerRdr.ExtractPCH(*F.Buffer));
   F.SizeInBits = F.Buffer->getBufferSize() * 8;
   
   // Sniff for the signature.
@@ -4175,10 +4174,10 @@ void ASTReader::finalizeForWriting() {
   // Nothing to do for now.
 }
 
-/// \brief Reads and return the signature record from \p StreamFile's control
-/// block, or else returns 0.
-static ASTFileSignature readASTFileSignature(llvm::BitstreamReader &StreamFile){
-  BitstreamCursor Stream(StreamFile);
+/// \brief Reads and return the signature record from \p PCH's control block, or
+/// else returns 0.
+static ASTFileSignature readASTFileSignature(StringRef PCH) {
+  BitstreamCursor Stream(PCH);
   if (!startsWithASTFileMagic(Stream))
     return 0;
 
@@ -4216,9 +4215,7 @@ std::string ASTReader::getOriginalSourceFile(
   }
 
   // Initialize the stream
-  llvm::BitstreamReader StreamFile;
-  PCHContainerRdr.ExtractPCH((*Buffer)->getMemBufferRef(), StreamFile);
-  BitstreamCursor Stream(StreamFile);
+  BitstreamCursor Stream(PCHContainerRdr.ExtractPCH(**Buffer));
 
   // Sniff for the signature.
   if (!startsWithASTFileMagic(Stream)) {
@@ -4318,9 +4315,7 @@ bool ASTReader::readASTFileControlBlock(
   }
 
   // Initialize the stream
-  llvm::BitstreamReader StreamFile;
-  PCHContainerRdr.ExtractPCH((*Buffer)->getMemBufferRef(), StreamFile);
-  BitstreamCursor Stream(StreamFile);
+  BitstreamCursor Stream(PCHContainerRdr.ExtractPCH(**Buffer));
 
   // Sniff for the signature.
   if (!startsWithASTFileMagic(Stream))

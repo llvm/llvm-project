@@ -135,15 +135,14 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     }
 
     // Initialize the stream.
-    PCHContainerRdr.ExtractPCH(ModuleEntry->Buffer->getMemBufferRef(),
-                               ModuleEntry->StreamFile);
+    ModuleEntry->Data = PCHContainerRdr.ExtractPCH(*ModuleEntry->Buffer);
   }
 
   if (ExpectedSignature) {
     // If we've not read the control block yet, read the signature eagerly now
     // so that we can check it.
     if (!ModuleEntry->Signature)
-      ModuleEntry->Signature = ReadSignature(ModuleEntry->StreamFile);
+      ModuleEntry->Signature = ReadSignature(ModuleEntry->Data);
 
     if (ModuleEntry->Signature != ExpectedSignature) {
       ErrorStr = ModuleEntry->Signature ? "signature mismatch"

@@ -189,7 +189,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
  */
 
 /// The number of fields in a block header.
-const unsigned BlockHeaderSize = 5;
+const static unsigned BlockHeaderSize = 5;
 
 namespace {
   /// A chunk of data that we actually have to capture in the block.
