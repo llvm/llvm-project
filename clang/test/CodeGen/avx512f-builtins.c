@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -O2 -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=O2
 
 #include <immintrin.h>
 
@@ -7995,32 +7996,141 @@ __m512d test_mm512_setzero_pd()
   return _mm512_setzero_pd();
 }
 
+__mmask16 test_mm512_int2mask(int __a)
+{
+  // O2-LABEL: test_mm512_int2mask
+  // O2: trunc i32 %__a to i16
+  return _mm512_int2mask(__a);
+}
+
+int test_mm512_mask2int(__mmask16 __a)
+{
+  // O2-LABEL: test_mm512_mask2int
+  // O2: zext i16 %__a to i32
+  return _mm512_mask2int(__a);
+}
+
 __m128 test_mm_mask_move_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
-  // CHECK-LABEL: @test_mm_mask_move_ss
-  // CHECK: @llvm.x86.avx512.mask.move.ss
+  // O2-LABEL: @test_mm_mask_move_ss
+  // O2: %[[M:.*]] = and i8 %__U, 1
+  // O2: %[[M2:.*]] = icmp ne i8 %[[M]], 0
+  // O2: %[[ELM1:.*]] = extractelement <4 x float> %__B, i32 0
+  // O2: %[[ELM2:.*]] = extractelement <4 x float> %__W, i32 0
+  // O2: %[[SEL:.*]] = select i1 %[[M2]], float %[[ELM1]], float %[[ELM2]]
+  // O2: %[[RES:.*]] = insertelement <4 x float> %__A, float %[[SEL]], i32 0
+  // O2: ret <4 x float> %[[RES]]
   return _mm_mask_move_ss ( __W,  __U,  __A,  __B);
 }
 
 __m128 test_mm_maskz_move_ss (__mmask8 __U, __m128 __A, __m128 __B)
 {
-  // CHECK-LABEL: @test_mm_maskz_move_ss
-  // CHECK: @llvm.x86.avx512.mask.move.ss
+  // O2-LABEL: @test_mm_maskz_move_ss
+  // O2: %[[M:.*]] = and i8 %__U, 1
+  // O2: %[[M2:.*]] = icmp ne i8 %[[M]], 0
+  // O2: %[[ELM1:.*]] = extractelement <4 x float> %__B, i32 0
+  // O2: %[[SEL:.*]] = select i1 %[[M2]], float %[[ELM1]], float 0.0 
+  // O2: %[[RES:.*]] = insertelement <4 x float> %__A, float %[[SEL]], i32 0
+  // O2: ret <4 x float> %[[RES]]
   return _mm_maskz_move_ss (__U, __A, __B);
 }
 
-__m128d test_mm_mask_move_sd (__m128 __W, __mmask8 __U, __m128d __A, __m128d __B)
+__m128d test_mm_mask_move_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
 {
-  // CHECK-LABEL: @test_mm_mask_move_sd
-  // CHECK: @llvm.x86.avx512.mask.move.sd
+  // O2-LABEL: @test_mm_mask_move_sd
+  // O2: %[[M:.*]] = and i8 %__U, 1
+  // O2: %[[M2:.*]] = icmp ne i8 %[[M]], 0
+  // O2: %[[ELM1:.*]] = extractelement <2 x double> %__B, i32 0
+  // O2: %[[ELM2:.*]] = extractelement <2 x double> %__W, i32 0
+  // O2: %[[SEL:.*]] = select i1 %[[M2]], double %[[ELM1]], double %[[ELM2]]
+  // O2: %[[RES:.*]] = insertelement <2 x double> %__A, double %[[SEL]], i32 0
+  // O2: ret <2 x double> %[[RES]]
   return _mm_mask_move_sd ( __W,  __U,  __A,  __B);
 }
 
 __m128d test_mm_maskz_move_sd (__mmask8 __U, __m128d __A, __m128d __B)
 {
-  // CHECK-LABEL: @test_mm_maskz_move_sd
-  // CHECK: @llvm.x86.avx512.mask.move.sd
+  // O2-LABEL: @test_mm_maskz_move_sd
+  // O2: %[[M:.*]] = and i8 %__U, 1
+  // O2: %[[M2:.*]] = icmp ne i8 %[[M]], 0
+  // O2: %[[ELM1:.*]] = extractelement <2 x double> %__B, i32 0
+  // O2: %[[SEL:.*]] = select i1 %[[M2]], double %[[ELM1]], double 0.0
+  // O2: %[[RES:.*]] = insertelement <2 x double> %__A, double %[[SEL]], i32 0
+  // O2: ret <2 x double> %[[RES]]
   return _mm_maskz_move_sd (__U, __A, __B);
+}
+
+void test_mm_mask_store_ss(float * __P, __mmask8 __U, __m128 __A)
+{
+  // O2-LABEL: @test_mm_mask_store_ss
+  // O2: %[[CAST:.*]] = bitcast float* %__P to <16 x float>*
+  // O2: %[[SHUFFLE:.*]] = shufflevector <4 x float> %__A, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // O2: %[[MASK1:.*]] = and i8 %__U, 1
+  // O2: %[[MASK2:.*]] = zext i8 %[[MASK1]] to i16
+  // O2: %[[MASK3:.*]] = bitcast i16 %[[MASK2]] to <16 x i1>
+  // O2: tail call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> %[[SHUFFLE]], <16 x float>* %[[CAST]], i32 16, <16 x i1> %[[MASK3]])
+  _mm_mask_store_ss(__P, __U, __A);
+}
+
+void test_mm_mask_store_sd(double * __P, __mmask8 __U, __m128d __A)
+{
+  // O2-LABEL: @test_mm_mask_store_sd
+  // O2: %[[CAST:.*]] = bitcast double* %__P to <8 x double>*
+  // O2: %[[SHUFFLE:.*]] = shufflevector <2 x double> %__A, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // O2: %[[MASK1:.*]] = and i8 %__U, 1
+  // O2: %[[MASK2:.*]] = bitcast i8 %[[MASK1]] to <8 x i1>
+  // O2: tail call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %[[SHUFFLE]], <8 x double>* %[[CAST]], i32 16, <8 x i1> %[[MASK2]])
+  _mm_mask_store_sd(__P, __U, __A);
+}
+
+__m128 test_mm_mask_load_ss(__m128 __A, __mmask8 __U, const float* __W)
+{
+  // O2-LABEL: @test_mm_mask_load_ss
+  // O2: %[[SHUF:.*]] = shufflevector <4 x float> %__A, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, <4 x i32> <i32 0, i32 4, i32 4, i32 4>
+  // O2: %[[PTR:.*]] = bitcast float* %__W to <16 x float>*
+  // O2: %[[SHUF2:.*]] = shufflevector <4 x float> %[[SHUF]], <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // O2: %[[AND:.*]] = and i8 %__U, 1
+  // O2: %[[MASK:.*]] = zext i8 %[[AND]] to i16
+  // O2: %[[MASK2:.*]] = bitcast i16 %[[MASK]] to <16 x i1>
+  // O2: %[[RES:.*]] = tail call <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>* %[[PTR]], i32 16, <16 x i1> %[[MASK2]], <16 x float> %[[SHUF2]]) 
+  // O2: shufflevector <16 x float> %[[RES]], <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  return _mm_mask_load_ss(__A, __U, __W);
+}
+
+__m128 test_mm_maskz_load_ss (__mmask8 __U, const float * __W)
+{
+  // O2-LABEL: @test_mm_maskz_load_ss
+  // O2: %[[PTR:.*]] = bitcast float* %__W to <16 x float>*
+  // O2: %[[AND:.*]] = and i8 %__U, 1
+  // O2: %[[MASK:.*]] = zext i8 %[[AND]] to i16
+  // O2: %[[MASK2:.*]] = bitcast i16 %[[MASK]] to <16 x i1>
+  // O2: %[[RES:.*]] = tail call <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>* %[[PTR]], i32 16, <16 x i1> %[[MASK2]], <16 x float> zeroinitializer) 
+  // O2: shufflevector <16 x float> %[[RES]], <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  return _mm_maskz_load_ss (__U, __W);
+}
+
+__m128d test_mm_mask_load_sd (__m128d __A, __mmask8 __U, const double * __W)
+{
+  // O2-LABEL: @test_mm_mask_load_sd
+  // O2: %[[SHUF:.*]] = insertelement <2 x double> %__A, double 0.000000e+00, i32 1
+  // O2: %[[PTR:.*]] = bitcast double* %__W to <8 x double>*
+  // O2: %[[SHUF2:.*]] = shufflevector <2 x double> %[[SHUF]], <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // O2: %[[AND:.*]] = and i8 %__U, 1
+  // O2: %[[MASK:.*]] = bitcast i8 %[[AND]] to <8 x i1>
+  // O2: %[[RES:.*]] = tail call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %[[PTR]], i32 16, <8 x i1> %[[MASK]], <8 x double> %[[SHUF2]]) 
+  // O2: shufflevector <8 x double> %[[RES]], <8 x double> undef, <2 x i32> <i32 0, i32 1>
+  return _mm_mask_load_sd (__A, __U, __W);
+}
+
+__m128d test_mm_maskz_load_sd (__mmask8 __U, const double * __W)
+{
+  // O2-LABEL: @test_mm_maskz_load_sd
+  // O2: %[[PTR:.*]] = bitcast double* %__W to <8 x double>*
+  // O2: %[[AND:.*]] = and i8 %__U, 1
+  // O2: %[[MASK:.*]] = bitcast i8 %[[AND]] to <8 x i1>
+  // O2: %[[RES:.*]] = tail call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %[[PTR]], i32 16, <8 x i1> %[[MASK]], <8 x double> zeroinitializer) 
+  // O2: shufflevector <8 x double> %[[RES]], <8 x double> undef, <2 x i32> <i32 0, i32 1>
+  return _mm_maskz_load_sd (__U, __W);
 }
 
 __m512d test_mm512_abs_pd(__m512d a){
