@@ -1961,7 +1961,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
 }
 
 UserExpression *Target::GetUserExpressionForLanguage(
-    const char *expr, const char *expr_prefix, lldb::LanguageType language,
+    llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, Error &error) {
   Error type_system_error;
@@ -1978,7 +1978,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
     return nullptr;
   }
 
-  user_expr = type_system->GetUserExpression(expr, expr_prefix, language,
+  user_expr = type_system->GetUserExpression(expr, prefix, language,
                                              desired_type, options);
   if (!user_expr)
     error.SetErrorStringWithFormat(
@@ -2118,14 +2118,14 @@ Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
 }
 
 ExpressionResults Target::EvaluateExpression(
-    const char *expr_cstr, ExecutionContextScope *exe_scope,
+    llvm::StringRef expr, ExecutionContextScope *exe_scope,
     lldb::ValueObjectSP &result_valobj_sp,
     const EvaluateExpressionOptions &options, std::string *fixed_expression) {
   result_valobj_sp.reset();
 
   ExpressionResults execution_results = eExpressionSetupError;
 
-  if (expr_cstr == nullptr || expr_cstr[0] == '\0')
+  if (expr.empty())
     return execution_results;
 
   // We shouldn't run stop hooks in expressions.
@@ -2147,10 +2147,10 @@ ExpressionResults Target::EvaluateExpression(
   // variable (something like "$0")
   lldb::ExpressionVariableSP persistent_var_sp;
   // Only check for persistent variables the expression starts with a '$'
-  if (expr_cstr[0] == '$')
+  if (expr[0] == '$')
     persistent_var_sp = GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeC)
                             ->GetPersistentExpressionState()
-                            ->GetVariable(expr_cstr);
+                            ->GetVariable(expr);
 
   if (persistent_var_sp) {
     result_valobj_sp = persistent_var_sp->GetValueObject();
@@ -2158,10 +2158,10 @@ ExpressionResults Target::EvaluateExpression(
   } else {
     const char *prefix = GetExpressionPrefixContentsAsCString();
     Error error;
-    execution_results = UserExpression::Evaluate(
-        exe_ctx, options, expr_cstr, prefix, result_valobj_sp, error,
-        0, // Line Number
-        fixed_expression);
+    execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+                                                 result_valobj_sp, error,
+                                                 0, // Line Number
+                                                 fixed_expression);
   }
 
   m_suppress_stop_hooks = old_suppress_value;

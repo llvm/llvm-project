@@ -874,7 +874,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
       {
         target->DumpPrintableRepresentation(
             s, val_obj_display, custom_format,
-            ValueObject::ePrintableRepresentationSpecialCasesDisable);
+            ValueObject::PrintableRepresentationSpecialCases::eDisable);
       }
       return true;
     }
@@ -1676,8 +1676,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                       ss, ValueObject::ValueObjectRepresentationStyle::
                               eValueObjectRepresentationStyleSummary,
                       eFormatDefault,
-                      ValueObject::PrintableRepresentationSpecialCases::
-                          ePrintableRepresentationSpecialCasesAllow,
+                      ValueObject::PrintableRepresentationSpecialCases::eAllow,
                       false);
               }
 

@@ -550,106 +550,114 @@ void Args::Clear() {
 }
 
 lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
-                                   const char *s, lldb::addr_t fail_value,
+                                   llvm::StringRef s, lldb::addr_t fail_value,
                                    Error *error_ptr) {
   bool error_set = false;
-  if (s && s[0]) {
-    llvm::StringRef sref = s;
+  if (s.empty()) {
+    if (error_ptr)
+      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
+                                          s.str().c_str());
+    return fail_value;
+  }
 
-    char *end = nullptr;
-    lldb::addr_t addr = ::strtoull(s, &end, 0);
-    if (*end == '\0') {
+  llvm::StringRef sref = s;
+
+  lldb::addr_t addr = LLDB_INVALID_ADDRESS;
+  if (!s.getAsInteger(0, addr)) {
+    if (error_ptr)
+      error_ptr->Clear();
+    return addr;
+  }
+
+  // Try base 16 with no prefix...
+  if (!s.getAsInteger(16, addr)) {
+    if (error_ptr)
+      error_ptr->Clear();
+    return addr;
+  }
+
+  Target *target = nullptr;
+  if (!exe_ctx || !(target = exe_ctx->GetTargetPtr())) {
+    if (error_ptr)
+      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
+                                          s.str().c_str());
+    return fail_value;
+  }
+
+  lldb::ValueObjectSP valobj_sp;
+  EvaluateExpressionOptions options;
+  options.SetCoerceToId(false);
+  options.SetUnwindOnError(true);
+  options.SetKeepInMemory(false);
+  options.SetTryAllThreads(true);
+
+  ExpressionResults expr_result =
+      target->EvaluateExpression(s, exe_ctx->GetFramePtr(), valobj_sp, options);
+
+  bool success = false;
+  if (expr_result == eExpressionCompleted) {
+    if (valobj_sp)
+      valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
+          valobj_sp->GetDynamicValueType(), true);
+    // Get the address to watch.
+    if (valobj_sp)
+      addr = valobj_sp->GetValueAsUnsigned(fail_value, &success);
+    if (success) {
       if (error_ptr)
         error_ptr->Clear();
-      return addr; // All characters were used, return the result
+      return addr;
+    } else {
+      if (error_ptr) {
+        error_set = true;
+        error_ptr->SetErrorStringWithFormat(
+            "address expression \"%s\" resulted in a value whose type "
+            "can't be converted to an address: %s",
+            s, valobj_sp->GetTypeName().GetCString());
+      }
     }
-    // Try base 16 with no prefix...
-    addr = ::strtoull(s, &end, 16);
-    if (*end == '\0') {
-      if (error_ptr)
-        error_ptr->Clear();
-      return addr; // All characters were used, return the result
-    }
 
-    if (exe_ctx) {
-      Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
-        lldb::ValueObjectSP valobj_sp;
-        EvaluateExpressionOptions options;
-        options.SetCoerceToId(false);
-        options.SetUnwindOnError(true);
-        options.SetKeepInMemory(false);
-        options.SetTryAllThreads(true);
+  } else {
+    // Since the compiler can't handle things like "main + 12" we should
+    // try to do this for now. The compiler doesn't like adding offsets
+    // to function pointer types.
+    static RegularExpression g_symbol_plus_offset_regex(
+        "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
+    RegularExpression::Match regex_match(3);
+    if (g_symbol_plus_offset_regex.Execute(sref, &regex_match)) {
+      uint64_t offset = 0;
+      bool add = true;
+      std::string name;
+      std::string str;
+      if (regex_match.GetMatchAtIndex(s, 1, name)) {
+        if (regex_match.GetMatchAtIndex(s, 2, str)) {
+          add = str[0] == '+';
 
-        ExpressionResults expr_result = target->EvaluateExpression(
-            s, exe_ctx->GetFramePtr(), valobj_sp, options);
+          if (regex_match.GetMatchAtIndex(s, 3, str)) {
+            offset = StringConvert::ToUInt64(str.c_str(), 0, 0, &success);
 
-        bool success = false;
-        if (expr_result == eExpressionCompleted) {
-          if (valobj_sp)
-            valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
-                valobj_sp->GetDynamicValueType(), true);
-          // Get the address to watch.
-          if (valobj_sp)
-            addr = valobj_sp->GetValueAsUnsigned(fail_value, &success);
-          if (success) {
-            if (error_ptr)
-              error_ptr->Clear();
-            return addr;
-          } else {
-            if (error_ptr) {
-              error_set = true;
-              error_ptr->SetErrorStringWithFormat(
-                  "address expression \"%s\" resulted in a value whose type "
-                  "can't be converted to an address: %s",
-                  s, valobj_sp->GetTypeName().GetCString());
-            }
-          }
-
-        } else {
-          // Since the compiler can't handle things like "main + 12" we should
-          // try to do this for now. The compiler doesn't like adding offsets
-          // to function pointer types.
-          static RegularExpression g_symbol_plus_offset_regex(llvm::StringRef(
-              "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$"));
-          RegularExpression::Match regex_match(3);
-          if (g_symbol_plus_offset_regex.Execute(sref, &regex_match)) {
-            uint64_t offset = 0;
-            bool add = true;
-            std::string name;
-            std::string str;
-            if (regex_match.GetMatchAtIndex(s, 1, name)) {
-              if (regex_match.GetMatchAtIndex(s, 2, str)) {
-                add = str[0] == '+';
-
-                if (regex_match.GetMatchAtIndex(s, 3, str)) {
-                  offset = StringConvert::ToUInt64(str.c_str(), 0, 0, &success);
-
-                  if (success) {
-                    Error error;
-                    addr = StringToAddress(exe_ctx, name.c_str(),
-                                           LLDB_INVALID_ADDRESS, &error);
-                    if (addr != LLDB_INVALID_ADDRESS) {
-                      if (add)
-                        return addr + offset;
-                      else
-                        return addr - offset;
-                    }
-                  }
-                }
+            if (success) {
+              Error error;
+              addr = StringToAddress(exe_ctx, name.c_str(),
+                                     LLDB_INVALID_ADDRESS, &error);
+              if (addr != LLDB_INVALID_ADDRESS) {
+                if (add)
+                  return addr + offset;
+                else
+                  return addr - offset;
               }
             }
-          }
-
-          if (error_ptr) {
-            error_set = true;
-            error_ptr->SetErrorStringWithFormat(
-                "address expression \"%s\" evaluation failed", s);
           }
         }
       }
     }
+
+    if (error_ptr) {
+      error_set = true;
+      error_ptr->SetErrorStringWithFormat(
+          "address expression \"%s\" evaluation failed", s);
+    }
   }
+
   if (error_ptr) {
     if (!error_set)
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",

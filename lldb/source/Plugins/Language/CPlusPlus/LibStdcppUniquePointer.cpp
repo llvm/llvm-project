@@ -135,7 +135,7 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(
       if (m_obj_obj->DumpPrintableRepresentation(
               stream, ValueObject::eValueObjectRepresentationStyleSummary,
               lldb::eFormatInvalid,
-              ValueObject::ePrintableRepresentationSpecialCasesDisable,
+              ValueObject::PrintableRepresentationSpecialCases::eDisable,
               false)) {
         print_pointee = true;
       }

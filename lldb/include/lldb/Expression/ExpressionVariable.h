@@ -189,20 +189,17 @@ public:
     return var_sp;
   }
 
-  lldb::ExpressionVariableSP GetVariable(const char *name) {
-    lldb::ExpressionVariableSP var_sp;
-    if (name && name[0]) {
-      for (size_t index = 0, size = GetSize(); index < size; ++index) {
-        var_sp = GetVariableAtIndex(index);
-        const char *var_name_cstr = var_sp->GetName().GetCString();
-        if (!var_name_cstr || !name)
-          continue;
-        if (::strcmp(var_name_cstr, name) == 0)
-          return var_sp;
-      }
-      var_sp.reset();
+  lldb::ExpressionVariableSP GetVariable(llvm::StringRef name) {
+    if (name.empty())
+      return nullptr;
+
+    for (size_t index = 0, size = GetSize(); index < size; ++index) {
+      auto var_sp = GetVariableAtIndex(index);
+      llvm::StringRef var_name_str = var_sp->GetName().GetStringRef();
+      if (var_name_str == name)
+        return var_sp;
     }
-    return var_sp;
+    return nullptr;
   }
 
   void RemoveVariable(lldb::ExpressionVariableSP var_sp) {

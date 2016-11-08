@@ -57,8 +57,8 @@ private:
 //----------------------------------------------------------------------
 class GoUserExpression : public UserExpression {
 public:
-  GoUserExpression(ExecutionContextScope &exe_scope, const char *expr,
-                   const char *expr_prefix, lldb::LanguageType language,
+  GoUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
+                   llvm::StringRef prefix, lldb::LanguageType language,
                    ResultType desired_type,
                    const EvaluateExpressionOptions &options);
 

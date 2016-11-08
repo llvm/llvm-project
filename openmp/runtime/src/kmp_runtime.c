@@ -37,6 +37,7 @@
 #include <process.h>
 #endif
 
+#include "tsan_annotations.h"
 
 #if defined(KMP_GOMP_COMPAT)
 char const __kmp_version_alt_comp[] = KMP_VERSION_PREFIX "alternative compiler support: yes";
@@ -5669,6 +5670,7 @@ __kmp_reap_thread(
             /* Assume the threads are at the fork barrier here */
             KA_TRACE( 20, ("__kmp_reap_thread: releasing T#%d from fork barrier for reap\n", gtid ) );
             /* Need release fence here to prevent seg faults for tree forkjoin barrier (GEH) */
+            ANNOTATE_HAPPENS_BEFORE(thread);
             kmp_flag_64 flag(&thread->th.th_bar[ bs_forkjoin_barrier ].bb.b_go, thread);
             __kmp_release_64(&flag);
         }; // if

@@ -57,6 +57,7 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                    declStmt(
                        has(varDecl(hasLocalStorage(),
                                    hasType(matchers::isExpensiveToCopy()),
+                                   unless(isImplicit()),
                                    hasInitializer(
                                        cxxConstructExpr(
                                            hasDeclaration(cxxConstructorDecl(

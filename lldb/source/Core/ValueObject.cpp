@@ -1279,10 +1279,9 @@ bool ValueObject::DumpPrintableRepresentation(
 
   Flags flags(GetTypeInfo());
 
-  bool allow_special = ((special & ePrintableRepresentationSpecialCasesAllow) ==
-                        ePrintableRepresentationSpecialCasesAllow);
-  bool only_special = ((special & ePrintableRepresentationSpecialCasesOnly) ==
-                       ePrintableRepresentationSpecialCasesOnly);
+  bool allow_special =
+      (special == ValueObject::PrintableRepresentationSpecialCases::eAllow);
+  const bool only_special = false;
 
   if (allow_special) {
     if (flags.AnySet(eTypeIsArray | eTypeIsPointer) &&
