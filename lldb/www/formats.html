@@ -22,24 +22,38 @@
 				   <p>LLDB has a facility to allow users to define the 
 				       format of the information that generates the descriptions
 				       for threads and stack frames. Typically when your program stops
-				       at a breakpoint you will get a line that describes why
-				       your thread stopped:</p>
+				       at a breakpoint you will get two lines that describes why
+				       your thread stopped and where:</p>
 
-    			   <p><b><code>* thread #1: tid = 0x2e03, 0x0000000100000e85 a.out`main + 4, stop reason = breakpoint 1.1</code></b></p>
+    			   <p><b><code>* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+<br>&nbsp&nbsp    frame #0: test`main at test.c:5
+</b></p>
 
         		   <p>Stack backtraces frames also have a similar information line:</p>
 
                    <p><code><b>(lldb)</b> thread backtrace
-                   <br><b>thread #1: tid = 0x2e03, stop reason = breakpoint 1.1
+                   <br><b>* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
                    <br>&nbsp;&nbsp;frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
                    <br>&nbsp;&nbsp;frame #1: 0x0000000100000e40 a.out`start + 52
                    </code></b></p>
 
-				   <p>The two format strings can currently be set using the <b>settings set</b> command:</p>
-				   <p><code><b>(lldb)</b> settings set frame-format STRING
-				   <br><b>(lldb)</b> settings set thread-format STRING
+				   <p>The two format strings that govern the printing in these output forms can currently be set using the <b>settings set</b> command:</p>
+				   <p><code><b>(lldb)</b> settings set thread-stop-format STRING
+				   <br><b>(lldb)</b> settings set frame-format STRING
 				   </p></code>
 
+                        <p>The first of these is an abbreviated thread output, that just contains data about
+                          the thread, and not the stop frame.  It will always get used in situations where the
+                          frame output follows immediately, so that information would be redundant.  The second
+                          is the frame printing.
+                       </p>
+                       <p>
+                         There is another thread format used for commands like <code>thread list</code> where
+                         the thread information isn't followed by frame info.  In that case, it is convenient to have
+                         frame zero information in the thread output.  That format is set by:</p>
+                       </p>
+				   <p><code><b>(lldb)</b> settings set thread-format STRING
+				   </p></code>
                    </div>
        			<div class="postfooter"></div>
    			</div>
@@ -224,9 +238,9 @@
                        <b><code>"settings show"</code></b> command:
                        
                    <p><b><code>(lldb)</b> settings show thread-format 
-                   <br>thread-format (string) = 'thread #${thread.index}: tid = ${thread.id}{, ${frame.pc}}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{, stop reason = ${thread.stop-reason}}{, name = ${thread.name}}{, queue = ${thread.queue}}\n'
+                   <br>thread-format (format-string) = "thread #${thread.index}: tid = ${thread.id%tid}{, ${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}}{, name = '${thread.name}'}{, queue = '${thread.queue}'}{, activity = '${thread.info.activity.name}'}{, ${thread.info.trace_messages} messages}{, stop reason = ${thread.stop-reason}}{\nReturn value: ${thread.return-value}}{\nCompleted expression: ${thread.completed-expression}}\n"
                    <br><b>(lldb)</b> settings show frame-format 
-                   <br>frame-format (string) = 'frame #${frame.index}: ${frame.pc}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{ at ${line.file.basename}:${line.number}}\n'
+                   <br>frame-format (format-string) = "frame #${frame.index}:{ ${frame.no-debug}${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}}{${function.is-optimized} [opt]}\n"
                    </code></p>
 
 
