@@ -548,38 +548,40 @@ define <4 x double> @splat_concat4(double* %p) {
 }
 
 ;
-; FIXME: When VBROADCAST replaces an existing load, ensure it still respects lifetime dependencies.
+; When VBROADCAST replaces an existing load, ensure it still respects lifetime dependencies.
 ;
 define float @broadcast_lifetime() nounwind {
 ; X32-LABEL: broadcast_lifetime:
 ; X32:       ## BB#0:
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $40, %esp
+; X32-NEXT:    subl $56, %esp
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _gfunc
+; X32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm0
+; X32-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp) ## 16-byte Spill
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _gfunc
 ; X32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm0
-; X32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
-; X32-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; X32-NEXT:    vsubss {{[0-9]+}}(%esp), %xmm0, %xmm0 ## 16-byte Folded Reload
 ; X32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
-; X32-NEXT:    addl $40, %esp
+; X32-NEXT:    addl $56, %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: broadcast_lifetime:
 ; X64:       ## BB#0:
-; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    leaq (%rsp), %rdi
-; X64-NEXT:    callq _gfunc
+; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    leaq (%rsp), %rdi
 ; X64-NEXT:    callq _gfunc
 ; X64-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm0
-; X64-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm1
-; X64-NEXT:    vsubss %xmm0, %xmm1, %xmm0
-; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) ## 16-byte Spill
+; X64-NEXT:    leaq (%rsp), %rdi
+; X64-NEXT:    callq _gfunc
+; X64-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm0
+; X64-NEXT:    vsubss {{[0-9]+}}(%rsp), %xmm0, %xmm0 ## 16-byte Folded Reload
+; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
   %1 = alloca <4 x float>, align 16
   %2 = alloca <4 x float>, align 16
