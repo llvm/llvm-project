@@ -47,13 +47,12 @@
 using namespace lldb_private;
 
 UserExpression::UserExpression(ExecutionContextScope &exe_scope,
-                               const char *expr, const char *expr_prefix,
+                               llvm::StringRef expr, llvm::StringRef prefix,
                                lldb::LanguageType language,
                                ResultType desired_type,
                                const EvaluateExpressionOptions &options)
-    : Expression(exe_scope), m_expr_text(expr),
-      m_expr_prefix(expr_prefix ? expr_prefix : ""), m_language(language),
-      m_desired_type(desired_type), m_options(options) {}
+    : Expression(exe_scope), m_expr_text(expr), m_expr_prefix(prefix),
+      m_language(language), m_desired_type(desired_type), m_options(options) {}
 
 UserExpression::~UserExpression() {}
 
@@ -140,7 +139,7 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
 
 lldb::ExpressionResults UserExpression::Evaluate(
     ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
-    const char *expr_cstr, const char *expr_prefix,
+    llvm::StringRef expr, llvm::StringRef prefix,
     lldb::ValueObjectSP &result_valobj_sp, Error &error, uint32_t line_offset,
     std::string *fixed_expression, lldb::ModuleSP *jit_module_sp_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
@@ -158,6 +157,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
     if (log)
       log->Printf("== [UserExpression::Evaluate] Passed a NULL target, can't "
                   "run expressions.");
+    error.SetErrorString("expression passed a null target");
     return lldb::eExpressionSetupError;
   }
 
@@ -186,16 +186,15 @@ lldb::ExpressionResults UserExpression::Evaluate(
   ThreadList::ExpressionExecutionThreadPusher execution_thread_pusher(
       thread_sp);
 
-  const char *full_prefix = NULL;
-  const char *option_prefix = options.GetPrefix();
+  llvm::StringRef full_prefix;
+  llvm::StringRef option_prefix(options.GetPrefix());
   std::string full_prefix_storage;
-  if (expr_prefix && option_prefix) {
-    full_prefix_storage.assign(expr_prefix);
+  if (!prefix.empty() && !option_prefix.empty()) {
+    full_prefix_storage = prefix;
     full_prefix_storage.append(option_prefix);
-    if (!full_prefix_storage.empty())
-      full_prefix = full_prefix_storage.c_str();
-  } else if (expr_prefix)
-    full_prefix = expr_prefix;
+    full_prefix = full_prefix_storage;
+  } else if (!prefix.empty())
+    full_prefix = prefix;
   else
     full_prefix = option_prefix;
 
@@ -210,7 +209,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
   }
 
   lldb::UserExpressionSP user_expression_sp(
-      target->GetUserExpressionForLanguage(expr_cstr, full_prefix, language,
+      target->GetUserExpressionForLanguage(expr, full_prefix, language,
                                            desired_type, options, error));
   if (error.Fail()) {
     if (log)
@@ -221,7 +220,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
 
   if (log)
     log->Printf("== [UserExpression::Evaluate] Parsing expression %s ==",
-                expr_cstr);
+                expr.str().c_str());
 
   const bool keep_expression_in_memory = true;
   const bool generate_debug_info = options.GetGenerateDebugInfo();

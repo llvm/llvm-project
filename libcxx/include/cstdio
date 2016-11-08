@@ -121,11 +121,9 @@ using ::fscanf;
 using ::snprintf;
 using ::sprintf;
 using ::sscanf;
-#ifndef _LIBCPP_MSVCRT
 using ::vfprintf;
 using ::vfscanf;
 using ::vsscanf;
-#endif // _LIBCPP_MSVCRT
 using ::vsnprintf;
 using ::vsprintf;
 using ::fgetc;

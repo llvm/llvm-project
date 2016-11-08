@@ -737,8 +737,12 @@ Error PlatformPOSIX::EvaluateLibdlExpression(
   expr_options.SetTimeoutUsec(2000000);  // 2 seconds
 
   Error expr_error;
-  UserExpression::Evaluate(exe_ctx, expr_options, expr_cstr, expr_prefix,
-                           result_valobj_sp, expr_error);
+  ExpressionResults result =
+      UserExpression::Evaluate(exe_ctx, expr_options, expr_cstr, expr_prefix,
+                               result_valobj_sp, expr_error);
+  if (result != eExpressionCompleted)
+    return expr_error;
+
   if (result_valobj_sp->GetError().Fail())
     return result_valobj_sp->GetError();
   return Error();

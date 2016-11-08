@@ -217,3 +217,14 @@ C<bool, F(0)> c;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use nullptr
 // CHECK-FIXES: C<bool, F(nullptr)> c;
 #undef F
+
+// Test default argument expression.
+struct D {
+  explicit D(void *t, int *c = NULL) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: use nullptr
+  // CHECK-FIXES: explicit D(void *t, int *c = nullptr) {}
+};
+
+void test_default_argument() {
+  D(nullptr);
+}

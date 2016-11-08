@@ -536,10 +536,9 @@ public:
       ValueObjectRepresentationStyle val_obj_display,
       lldb::Format custom_format);
 
-  enum PrintableRepresentationSpecialCases {
-    ePrintableRepresentationSpecialCasesDisable = 0,
-    ePrintableRepresentationSpecialCasesAllow = 1,
-    ePrintableRepresentationSpecialCasesOnly = 3
+  enum class PrintableRepresentationSpecialCases : bool {
+    eDisable = false,
+    eAllow = true
   };
 
   bool
@@ -548,7 +547,7 @@ public:
                                   eValueObjectRepresentationStyleSummary,
                               lldb::Format custom_format = lldb::eFormatInvalid,
                               PrintableRepresentationSpecialCases special =
-                                  ePrintableRepresentationSpecialCasesAllow,
+                                  PrintableRepresentationSpecialCases::eAllow,
                               bool do_dump_error = true);
   bool GetValueIsValid() const;
 

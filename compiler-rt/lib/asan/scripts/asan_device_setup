@@ -302,16 +302,20 @@ fi
 
 ASAN_OPTIONS=start_deactivated=1,malloc_context_size=0
 
-function generate_zygote_wrapper { # from, to, asan_rt
+# The name of a symlink to libclang_rt.asan-$ARCH-android.so used in LD_PRELOAD.
+# The idea is to have the same name in lib and lib64 to keep it from falling
+# apart when a 64-bit process spawns a 32-bit one, inheriting the environment.
+ASAN_RT_SYMLINK=symlink-to-libclang_rt.asan
+
+function generate_zygote_wrapper { # from, to
   local _from=$1
   local _to=$2
-  local _asan_rt=$3
   if [[ PRE_L -eq 0 ]]; then
     # LD_PRELOAD parsing is broken in N if it starts with ":". Luckily, it is
     # unset in the system environment since L.
-    local _ld_preload=$_asan_rt
+    local _ld_preload=$ASAN_RT_SYMLINK
   else
-    local _ld_preload=\$LD_PRELOAD:$_asan_rt
+    local _ld_preload=\$LD_PRELOAD:$ASAN_RT_SYMLINK
   fi
   cat <<EOF >"$TMPDIR/$_from"
 #!/system/bin/sh-from-zygote
@@ -340,18 +344,18 @@ if [[ -f "$TMPDIR/app_process64" ]]; then
     mv "$TMPDIR/app_process32" "$TMPDIR/app_process32.real"
     mv "$TMPDIR/app_process64" "$TMPDIR/app_process64.real"
   fi
-  generate_zygote_wrapper "app_process32" "/system/bin/app_process32.real" "$ASAN_RT"
-  generate_zygote_wrapper "app_process64" "/system/bin/app_process64.real" "$ASAN_RT64"
+  generate_zygote_wrapper "app_process32" "/system/bin/app_process32.real"
+  generate_zygote_wrapper "app_process64" "/system/bin/app_process64.real"
 else
   # A 32-bit device.
-  generate_zygote_wrapper "app_process.wrap" "/system/bin/app_process32" "$ASAN_RT"
+  generate_zygote_wrapper "app_process.wrap" "/system/bin/app_process32"
 fi
 
 # General command-line tool wrapper (use for anything that's not started as
 # zygote).
 cat <<EOF >"$TMPDIR/asanwrapper"
 #!/system/bin/sh
-LD_PRELOAD=$ASAN_RT \\
+LD_PRELOAD=$ASAN_RT_SYMLINK \\
 exec \$@
 
 EOF
@@ -359,7 +363,7 @@ EOF
 if [[ -n "$ASAN_RT64" ]]; then
   cat <<EOF >"$TMPDIR/asanwrapper64"
 #!/system/bin/sh
-LD_PRELOAD=$ASAN_RT64 \\
+LD_PRELOAD=$ASAN_RT_SYMLINK \\
 exec \$@
 
 EOF
@@ -410,11 +414,16 @@ if ! ( cd "$TMPDIRBASE" && diff -qr old/ new/ ) ; then
       install "$TMPDIR/app_process64.real" /system/bin 755 $CTX
       install "$TMPDIR/asanwrapper" /system/bin 755
       install "$TMPDIR/asanwrapper64" /system/bin 755
+
+      adb_shell ln -s $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
+      adb_shell ln -s $ASAN_RT64 /system/lib64/$ASAN_RT_SYMLINK
     else
       install "$TMPDIR/$ASAN_RT" /system/lib 644
       install "$TMPDIR/app_process32" /system/bin 755 $CTX
       install "$TMPDIR/app_process.wrap" /system/bin 755 $CTX
       install "$TMPDIR/asanwrapper" /system/bin 755 $CTX
+
+      adb_shell ln -s $ASAN_RT /system/lib/$ASAN_RT_SYMLINK
 
       adb_shell rm /system/bin/app_process
       adb_shell ln -s /system/bin/app_process.wrap /system/bin/app_process

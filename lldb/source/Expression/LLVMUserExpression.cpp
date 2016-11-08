@@ -42,13 +42,12 @@
 using namespace lldb_private;
 
 LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
-                                       const char *expr,
-                                       const char *expr_prefix,
+                                       llvm::StringRef expr,
+                                       llvm::StringRef prefix,
                                        lldb::LanguageType language,
                                        ResultType desired_type,
                                        const EvaluateExpressionOptions &options)
-    : UserExpression(exe_scope, expr, expr_prefix, language, desired_type,
-                     options),
+    : UserExpression(exe_scope, expr, prefix, language, desired_type, options),
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
       m_stack_frame_top(LLDB_INVALID_ADDRESS), m_transformed_text(),
       m_execution_unit_sp(), m_materializer_ap(), m_jit_module_wp(),

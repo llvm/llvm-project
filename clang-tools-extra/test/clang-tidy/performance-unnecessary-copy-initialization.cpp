@@ -368,3 +368,22 @@ void WarningOnlyMultiDeclStmt() {
   // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy' of the variable 'orig' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: ExpensiveToCopyType copy = orig, copy2;
 }
+
+class Element {};
+class Container {
+public:
+  class Iterator {
+  public:
+    void operator++();
+    Element operator*();
+    bool operator!=(const Iterator &);
+    WeirdCopyCtorType c;
+  };
+  const Iterator &begin() const;
+  const Iterator &end() const;
+};
+
+void implicitVarFalsePositive() {
+  for (const Element &E : Container()) {
+  }
+}
