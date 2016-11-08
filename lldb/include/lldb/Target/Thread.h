@@ -499,8 +499,11 @@ public:
     // thread for all memory threads each time we stop.
   }
 
-  void DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx);
-
+  // If stop_format is true, this will be the form used when we print stop info.
+  // If false, it will be the form we use for thread list and co.
+  void DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx, 
+                               bool stop_format);
+ 
   bool GetDescription(Stream &s, lldb::DescriptionLevel level,
                       bool print_json_thread, bool print_json_stopinfo);
 
@@ -1154,7 +1157,8 @@ public:
   GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr);
 
   size_t GetStatus(Stream &strm, uint32_t start_frame, uint32_t num_frames,
-                   uint32_t num_frames_with_source);
+                   uint32_t num_frames_with_source,
+                   bool stop_format);
 
   size_t GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                              uint32_t num_frames, bool show_frame_info,
