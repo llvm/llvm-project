@@ -1926,6 +1926,9 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   //
   // FIXME: How do you declare (but not define) a partial specialization of
   // a static data member template outside the containing class?
+  if (isThisDeclarationADemotedDefinition())
+    return DeclarationOnly;
+
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
         !(getCanonicalDecl()->isInline() &&
@@ -2248,6 +2251,56 @@ bool VarDecl::checkInitIsICE() const {
   Eval->CheckingICE = false;
   Eval->CheckedICE = true;
   return Eval->IsICE;
+}
+
+VarDecl *VarDecl::getTemplateInstantiationPattern() const {
+  // If it's a variable template specialization, find the template or partial
+  // specialization from which it was instantiated.
+  if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(this)) {
+    auto From = VDTemplSpec->getInstantiatedFrom();
+    if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+      while (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate()) {
+        if (NewVTD->isMemberSpecialization())
+          break;
+        VTD = NewVTD;
+      }
+      return VTD->getTemplatedDecl()->getDefinition();
+    }
+    if (auto *VTPSD =
+            From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+      while (auto *NewVTPSD = VTPSD->getInstantiatedFromMember()) {
+        if (NewVTPSD->isMemberSpecialization())
+          break;
+        VTPSD = NewVTPSD;
+      }
+      return VTPSD->getDefinition();
+    }
+  }
+
+  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo()) {
+    if (isTemplateInstantiation(MSInfo->getTemplateSpecializationKind())) {
+      VarDecl *VD = getInstantiatedFromStaticDataMember();
+      while (auto *NewVD = VD->getInstantiatedFromStaticDataMember())
+        VD = NewVD;
+      return VD->getDefinition();
+    }
+  }
+
+  if (VarTemplateDecl *VarTemplate = getDescribedVarTemplate()) {
+
+    while (VarTemplate->getInstantiatedFromMemberTemplate()) {
+      if (VarTemplate->isMemberSpecialization())
+        break;
+      VarTemplate = VarTemplate->getInstantiatedFromMemberTemplate();
+    }
+
+    assert((!VarTemplate->getTemplatedDecl() ||
+            !isTemplateInstantiation(getTemplateSpecializationKind())) &&
+           "couldn't find pattern for variable instantiation");
+
+    return VarTemplate->getTemplatedDecl();
+  }
+  return nullptr;
 }
 
 VarDecl *VarDecl::getInstantiatedFromStaticDataMember() const {

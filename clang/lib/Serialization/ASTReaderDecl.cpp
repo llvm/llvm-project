@@ -382,27 +382,6 @@ namespace clang {
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
-
-    /// We've merged the definition \p MergedDef into the existing definition
-    /// \p Def. Ensure that \p Def is made visible whenever \p MergedDef is made
-    /// visible.
-    void mergeDefinitionVisibility(NamedDecl *Def, NamedDecl *MergedDef) {
-      if (Def->isHidden()) {
-        // If MergedDef is visible or becomes visible, make the definition visible.
-        if (!MergedDef->isHidden())
-          Def->Hidden = false;
-        else if (Reader.getContext().getLangOpts().ModulesLocalVisibility) {
-          Reader.getContext().mergeDefinitionIntoModule(
-              Def, MergedDef->getImportedOwningModule(),
-              /*NotifyListeners*/ false);
-          Reader.PendingMergedDefinitionsToDeduplicate.insert(Def);
-        } else {
-          auto SubmoduleID = MergedDef->getOwningModuleID();
-          assert(SubmoduleID && "hidden definition in no module");
-          Reader.HiddenNamesMap[Reader.getSubmodule(SubmoduleID)].push_back(Def);
-        }
-      }
-    }
   };
 } // end namespace clang
 
@@ -709,7 +688,7 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
     if (OldDef) {
       Reader.MergedDeclContexts.insert(std::make_pair(ED, OldDef));
       ED->IsCompleteDefinition = false;
-      mergeDefinitionVisibility(OldDef, ED);
+      Reader.mergeDefinitionVisibility(OldDef, ED);
     } else {
       OldDef = ED;
     }
@@ -1236,6 +1215,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
   VD->VarDeclBits.TSCSpec = Record[Idx++];
   VD->VarDeclBits.InitStyle = Record[Idx++];
   if (!isa<ParmVarDecl>(VD)) {
+    VD->NonParmVarDeclBits.IsThisDeclarationADemotedDefinition = Record[Idx++];
     VD->NonParmVarDeclBits.ExceptionVar = Record[Idx++];
     VD->NonParmVarDeclBits.NRVOVariable = Record[Idx++];
     VD->NonParmVarDeclBits.CXXForRangeDecl = Record[Idx++];
@@ -1256,7 +1236,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
 
   if (uint64_t Val = Record[Idx++]) {
     VD->setInit(Reader.ReadExpr(F));
-    if (Val > 1) {
+    if (Val > 1) { // IsInitKnownICE = 1, IsInitNotICE = 2, IsInitICE = 3
       EvaluatedStmt *Eval = VD->ensureEvaluatedStmt();
       Eval->CheckedICE = true;
       Eval->IsICE = Val == 3;
@@ -1597,7 +1577,7 @@ void ASTDeclReader::MergeDefinitionData(
                                                     DD.Definition));
     Reader.PendingDefinitions.erase(MergeDD.Definition);
     MergeDD.Definition->IsCompleteDefinition = false;
-    mergeDefinitionVisibility(DD.Definition, MergeDD.Definition);
+    Reader.mergeDefinitionVisibility(DD.Definition, MergeDD.Definition);
     assert(Reader.Lookups.find(MergeDD.Definition) == Reader.Lookups.end() &&
            "already loaded pending lookups for merged definition");
   }
@@ -3081,6 +3061,29 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
 }
 
 namespace clang {
+template<>
+void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
+                                           Redeclarable<VarDecl> *D,
+                                           Decl *Previous, Decl *Canon) {
+  VarDecl *VD = static_cast<VarDecl*>(D);
+  VarDecl *PrevVD = cast<VarDecl>(Previous);
+  D->RedeclLink.setPrevious(PrevVD);
+  D->First = PrevVD->First;
+
+  // We should keep at most one definition on the chain.
+  // FIXME: Cache the definition once we've found it. Building a chain with
+  // N definitions currently takes O(N^2) time here.
+  if (VD->isThisDeclarationADefinition() == VarDecl::Definition) {
+    for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
+      if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
+        Reader.mergeDefinitionVisibility(CurD, VD);
+        VD->demoteThisDefinitionToDeclaration();
+        break;
+      }
+    }
+  }
+}
+
 template<>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<FunctionDecl> *D,
