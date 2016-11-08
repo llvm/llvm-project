@@ -68,6 +68,10 @@
 #define OMP_45_ENABLED (LIBOMP_OMP_VERSION >= 45)
 #define OMP_40_ENABLED (LIBOMP_OMP_VERSION >= 40)
 #define OMP_30_ENABLED (LIBOMP_OMP_VERSION >= 30)
+#cmakedefine01 LIBOMP_TSAN_SUPPORT
+#if LIBOMP_TSAN_SUPPORT
+#define TSAN_SUPPORT
+#endif
 
 // Configured cache line based on architecture
 #if KMP_ARCH_PPC64

@@ -33,6 +33,7 @@ template <typename T> class Optional;
 class FunctionType;
 class GVMaterializer;
 class LLVMContext;
+class MemoryBuffer;
 class RandomNumberGenerator;
 class StructType;
 template <class PtrType> class SmallPtrSetImpl;
@@ -158,6 +159,9 @@ private:
   std::string GlobalScopeAsm;     ///< Inline Asm at global scope.
   ValueSymbolTable *ValSymTab;    ///< Symbol table for values
   ComdatSymTabType ComdatSymTab;  ///< Symbol table for COMDATs
+  std::unique_ptr<MemoryBuffer>
+  OwnedMemoryBuffer;              ///< Memory buffer directly owned by this
+                                  ///< module, for legacy clients only.
   std::unique_ptr<GVMaterializer>
   Materializer;                   ///< Used to materialize GlobalValues
   std::string ModuleID;           ///< Human readable identifier for the module
@@ -802,6 +806,9 @@ public:
   /// \brief Returns profile summary metadata
   Metadata *getProfileSummary();
   /// @}
+
+  /// Take ownership of the given memory buffer.
+  void setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB);
 };
 
 /// \brief Given "llvm.used" or "llvm.compiler.used" as a global name, collect

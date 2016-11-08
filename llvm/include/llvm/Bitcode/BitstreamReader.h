@@ -35,11 +35,8 @@
 
 namespace llvm {
 
-/// This class is used to read from an LLVM bitcode stream, maintaining
-/// information that is global to decoding the entire file. While a file is
-/// being read, multiple cursors can be independently advanced or skipped around
-/// within the file.  These are represented by the BitstreamCursor class.
-class BitstreamReader {
+/// This class maintains the abbreviations read from a block info block.
+class BitstreamBlockInfo {
 public:
   /// This contains information emitted to BLOCKINFO_BLOCK blocks. These
   /// describe abbreviations that all blocks of the specified ID inherit.
@@ -51,39 +48,9 @@ public:
   };
 
 private:
-  ArrayRef<uint8_t> BitcodeBytes;
-
   std::vector<BlockInfo> BlockInfoRecords;
 
-  /// This is set to true if we don't care about the block/record name
-  /// information in the BlockInfo block. Only llvm-bcanalyzer uses this.
-  bool IgnoreBlockInfoNames = true;
-
 public:
-  BitstreamReader() = default;
-  BitstreamReader(ArrayRef<uint8_t> BitcodeBytes)
-      : BitcodeBytes(BitcodeBytes) {}
-  BitstreamReader(StringRef BitcodeBytes)
-      : BitcodeBytes(reinterpret_cast<const uint8_t *>(BitcodeBytes.data()),
-                     BitcodeBytes.size()) {}
-  BitstreamReader(MemoryBufferRef BitcodeBytes)
-      : BitstreamReader(BitcodeBytes.getBuffer()) {}
-
-  ArrayRef<uint8_t> getBitcodeBytes() { return BitcodeBytes; }
-
-  /// This is called by clients that want block/record name information.
-  void CollectBlockInfoNames() { IgnoreBlockInfoNames = false; }
-  bool isIgnoringBlockInfoNames() { return IgnoreBlockInfoNames; }
-
-  //===--------------------------------------------------------------------===//
-  // Block Manipulation
-  //===--------------------------------------------------------------------===//
-
-  /// Return true if we've already read and processed the block info block for
-  /// this Bitstream. We only process it for the first cursor that walks over
-  /// it.
-  bool hasBlockInfoRecords() const { return !BlockInfoRecords.empty(); }
-
   /// If there is block info for the specified ID, return it, otherwise return
   /// null.
   const BlockInfo *getBlockInfo(unsigned BlockID) const {
@@ -107,22 +74,13 @@ public:
     BlockInfoRecords.back().BlockID = BlockID;
     return BlockInfoRecords.back();
   }
-
-  /// Takes block info from the other bitstream reader.
-  ///
-  /// This is a "take" operation because BlockInfo records are non-trivial, and
-  /// indeed rather expensive.
-  void takeBlockInfo(BitstreamReader &&Other) {
-    assert(!hasBlockInfoRecords());
-    BlockInfoRecords = std::move(Other.BlockInfoRecords);
-  }
 };
 
 /// This represents a position within a bitstream. There may be multiple
 /// independent cursors reading within one bitstream, each maintaining their
 /// own local state.
 class SimpleBitstreamCursor {
-  BitstreamReader *R = nullptr;
+  ArrayRef<uint8_t> BitcodeBytes;
   size_t NextChar = 0;
 
 public:
@@ -144,17 +102,21 @@ public:
   static const size_t MaxChunkSize = sizeof(word_t) * 8;
 
   SimpleBitstreamCursor() = default;
-
-  explicit SimpleBitstreamCursor(BitstreamReader &R) : R(&R) {}
-  explicit SimpleBitstreamCursor(BitstreamReader *R) : R(R) {}
+  explicit SimpleBitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
+      : BitcodeBytes(BitcodeBytes) {}
+  explicit SimpleBitstreamCursor(StringRef BitcodeBytes)
+      : BitcodeBytes(reinterpret_cast<const uint8_t *>(BitcodeBytes.data()),
+                     BitcodeBytes.size()) {}
+  explicit SimpleBitstreamCursor(MemoryBufferRef BitcodeBytes)
+      : SimpleBitstreamCursor(BitcodeBytes.getBuffer()) {}
 
   bool canSkipToPos(size_t pos) const {
     // pos can be skipped to if it is a valid address or one byte past the end.
-    return pos <= R->getBitcodeBytes().size();
+    return pos <= BitcodeBytes.size();
   }
 
   bool AtEndOfStream() {
-    return BitsInCurWord == 0 && R->getBitcodeBytes().size() <= NextChar;
+    return BitsInCurWord == 0 && BitcodeBytes.size() <= NextChar;
   }
 
   /// Return the bit # of the bit we are reading.
@@ -165,8 +127,7 @@ public:
   // Return the byte # of the current bit.
   uint64_t getCurrentByteNo() const { return GetCurrentBitNo() / 8; }
 
-  BitstreamReader *getBitStreamReader() { return R; }
-  const BitstreamReader *getBitStreamReader() const { return R; }
+  ArrayRef<uint8_t> getBitcodeBytes() const { return BitcodeBytes; }
 
   /// Reset the stream to the specified bit number.
   void JumpToBit(uint64_t BitNo) {
@@ -183,27 +144,9 @@ public:
       Read(WordBitNo);
   }
 
-  /// Reset the stream to the bit pointed at by the specified pointer.
-  ///
-  /// The pointer must be a dereferenceable pointer into the bytes in the
-  /// underlying memory object.
-  void jumpToPointer(const uint8_t *Pointer) {
-    auto *Pointer0 = getPointerToByte(0, 1);
-    assert((intptr_t)Pointer0 <= (intptr_t)Pointer &&
-           "Expected pointer into bitstream");
-
-    JumpToBit(8 * (Pointer - Pointer0));
-    assert((intptr_t)getPointerToByte(getCurrentByteNo(), 1) ==
-               (intptr_t)Pointer &&
-           "Expected to reach pointer");
-  }
-  void jumpToPointer(const char *Pointer) {
-    jumpToPointer((const uint8_t *)Pointer);
-  }
-
   /// Get a pointer into the bitstream at the specified byte offset.
   const uint8_t *getPointerToByte(uint64_t ByteNo, uint64_t NumBytes) {
-    return R->getBitcodeBytes().data() + ByteNo;
+    return BitcodeBytes.data() + ByteNo;
   }
 
   /// Get a pointer into the bitstream at the specified bit offset.
@@ -215,21 +158,20 @@ public:
   }
 
   void fillCurWord() {
-    ArrayRef<uint8_t> Buf = R->getBitcodeBytes();
-    if (NextChar >= Buf.size())
+    if (NextChar >= BitcodeBytes.size())
       report_fatal_error("Unexpected end of file");
 
     // Read the next word from the stream.
-    const uint8_t *NextCharPtr = Buf.data() + NextChar;
+    const uint8_t *NextCharPtr = BitcodeBytes.data() + NextChar;
     unsigned BytesRead;
-    if (Buf.size() >= NextChar + sizeof(word_t)) {
+    if (BitcodeBytes.size() >= NextChar + sizeof(word_t)) {
       BytesRead = sizeof(word_t);
       CurWord =
           support::endian::read<word_t, support::little, support::unaligned>(
               NextCharPtr);
     } else {
       // Short read.
-      BytesRead = Buf.size() - NextChar;
+      BytesRead = BitcodeBytes.size() - NextChar;
       CurWord = 0;
       for (unsigned B = 0; B != BytesRead; ++B)
         CurWord |= uint64_t(NextCharPtr[B]) << (B * 8);
@@ -330,7 +272,7 @@ public:
   }
 
   /// Skip to the end of the file.
-  void skipToEnd() { NextChar = R->getBitcodeBytes().size(); }
+  void skipToEnd() { NextChar = BitcodeBytes.size(); }
 };
 
 /// When advancing through a bitstream cursor, each advance can discover a few
@@ -386,27 +328,25 @@ class BitstreamCursor : SimpleBitstreamCursor {
   /// This tracks the codesize of parent blocks.
   SmallVector<Block, 8> BlockScope;
 
+  BitstreamBlockInfo *BlockInfo = nullptr;
+
 public:
   static const size_t MaxChunkSize = sizeof(word_t) * 8;
 
   BitstreamCursor() = default;
-
-  explicit BitstreamCursor(BitstreamReader &R) { init(&R); }
-
-  void init(BitstreamReader *R) {
-    freeState();
-    SimpleBitstreamCursor::operator=(SimpleBitstreamCursor(R));
-    CurCodeSize = 2;
-  }
-
-  void freeState();
+  explicit BitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
+      : SimpleBitstreamCursor(BitcodeBytes) {}
+  explicit BitstreamCursor(StringRef BitcodeBytes)
+      : SimpleBitstreamCursor(BitcodeBytes) {}
+  explicit BitstreamCursor(MemoryBufferRef BitcodeBytes)
+      : SimpleBitstreamCursor(BitcodeBytes) {}
 
   using SimpleBitstreamCursor::canSkipToPos;
   using SimpleBitstreamCursor::AtEndOfStream;
+  using SimpleBitstreamCursor::getBitcodeBytes;
   using SimpleBitstreamCursor::GetCurrentBitNo;
   using SimpleBitstreamCursor::getCurrentByteNo;
   using SimpleBitstreamCursor::getPointerToByte;
-  using SimpleBitstreamCursor::getBitStreamReader;
   using SimpleBitstreamCursor::JumpToBit;
   using SimpleBitstreamCursor::fillCurWord;
   using SimpleBitstreamCursor::Read;
@@ -549,7 +489,17 @@ public:
   //===--------------------------------------------------------------------===//
   void ReadAbbrevRecord();
 
-  bool ReadBlockInfoBlock();
+  /// Read and return a block info block from the bitstream. If an error was
+  /// encountered, return None.
+  ///
+  /// \param ReadBlockInfoNames Whether to read block/record name information in
+  /// the BlockInfo block. Only llvm-bcanalyzer uses this.
+  Optional<BitstreamBlockInfo>
+  ReadBlockInfoBlock(bool ReadBlockInfoNames = false);
+
+  /// Set the block info to be used by this BitstreamCursor to interpret
+  /// abbreviated records.
+  void setBlockInfo(BitstreamBlockInfo *BI) { BlockInfo = BI; }
 };
 
 } // end llvm namespace

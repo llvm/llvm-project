@@ -680,6 +680,62 @@ about files with uncommitted changes. The fix is to rebuild the metadata:
 
 Please, refer to the Git-SVN manual (``man git-svn``) for more information.
 
+For developers to work with a git monorepo
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+   This set-up is using unofficial mirror hosted on GitHub, use with caution.
+
+To set up a clone of all the llvm projects using a unified repository:
+
+.. code-block:: console
+
+  % export TOP_LEVEL_DIR=`pwd`
+  % git clone https://github.com/llvm-project/llvm-project/
+  % cd llvm-project
+  % git config branch.master.rebase true
+
+You can configure various build directory from this clone, starting with a build
+of LLVM alone:
+
+.. code-block:: console
+
+  % cd $TOP_LEVEL_DIR
+  % mkdir llvm-build && cd llvm-build
+  % cmake -GNinja ../llvm-project/llvm
+
+Or lldb:
+
+.. code-block:: console
+
+  % cd $TOP_LEVEL_DIR
+  % mkdir lldb-build && cd lldb-build
+  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS=lldb
+
+Or a combination of multiple projects:
+
+.. code-block:: console
+
+  % cd $TOP_LEVEL_DIR
+  % mkdir clang-build && cd clang-build
+  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;libcxx;compiler-rt"
+
+A helper script is provided in `llvm/utils/git-svn/git-llvm`. After you add it
+to your path, you can push committed changes upstream with `git llvm push`.
+
+.. code-block:: console
+
+  % export PATH=$PATH:$TOP_LEVEL_DIR/llvm-project/llvm/utils/git-svn/
+  % git llvm push
+
+While this is using SVN under the hood, it does not require any interaction from
+you with git-svn.
+After a few minutes, `git pull` should get back the changes as they were
+commited. Note that a current limitation is that `git` does not directly record
+file rename, and thus it is propagated to SVN as a combination of delete-add
+instead of a file rename.
+
 Local LLVM Configuration
 ------------------------
 

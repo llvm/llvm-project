@@ -122,7 +122,7 @@ bool RegularExpression::Execute(llvm::StringRef str, Match *match) const {
   return true;
 }
 
-bool RegularExpression::Match::GetMatchAtIndex(const char *s, uint32_t idx,
+bool RegularExpression::Match::GetMatchAtIndex(llvm::StringRef s, uint32_t idx,
                                                std::string &match_str) const {
   llvm::StringRef match_str_ref;
   if (GetMatchAtIndex(s, idx, match_str_ref)) {
@@ -133,7 +133,7 @@ bool RegularExpression::Match::GetMatchAtIndex(const char *s, uint32_t idx,
 }
 
 bool RegularExpression::Match::GetMatchAtIndex(
-    const char *s, uint32_t idx, llvm::StringRef &match_str) const {
+    llvm::StringRef s, uint32_t idx, llvm::StringRef &match_str) const {
   if (idx < m_matches.size()) {
     if (m_matches[idx].rm_eo == -1 && m_matches[idx].rm_so == -1)
       return false;
@@ -143,8 +143,8 @@ bool RegularExpression::Match::GetMatchAtIndex(
       match_str = llvm::StringRef();
       return true;
     } else if (m_matches[idx].rm_eo > m_matches[idx].rm_so) {
-      match_str = llvm::StringRef(s + m_matches[idx].rm_so,
-                                  m_matches[idx].rm_eo - m_matches[idx].rm_so);
+      match_str = s.substr(m_matches[idx].rm_so,
+                           m_matches[idx].rm_eo - m_matches[idx].rm_so);
       return true;
     }
   }
@@ -152,7 +152,7 @@ bool RegularExpression::Match::GetMatchAtIndex(
 }
 
 bool RegularExpression::Match::GetMatchSpanningIndices(
-    const char *s, uint32_t idx1, uint32_t idx2,
+    llvm::StringRef s, uint32_t idx1, uint32_t idx2,
     llvm::StringRef &match_str) const {
   if (idx1 < m_matches.size() && idx2 < m_matches.size()) {
     if (m_matches[idx1].rm_so == m_matches[idx2].rm_eo) {
@@ -160,9 +160,8 @@ bool RegularExpression::Match::GetMatchSpanningIndices(
       match_str = llvm::StringRef();
       return true;
     } else if (m_matches[idx1].rm_so < m_matches[idx2].rm_eo) {
-      match_str =
-          llvm::StringRef(s + m_matches[idx1].rm_so,
-                          m_matches[idx2].rm_eo - m_matches[idx1].rm_so);
+      match_str = s.substr(m_matches[idx1].rm_so,
+                           m_matches[idx2].rm_eo - m_matches[idx1].rm_so);
       return true;
     }
   }

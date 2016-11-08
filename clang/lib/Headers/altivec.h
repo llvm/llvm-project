@@ -1564,6 +1564,12 @@ vec_cmpeq(vector unsigned char __a, vector unsigned char __b) {
                                                       (vector char)__b);
 }
 
+static __inline__ vector bool char __ATTRS_o_ai
+vec_cmpeq(vector bool char __a, vector bool char __b) {
+  return (vector bool char)__builtin_altivec_vcmpequb((vector char)__a,
+                                                      (vector char)__b);
+}
+
 static __inline__ vector bool short __ATTRS_o_ai vec_cmpeq(vector short __a,
                                                            vector short __b) {
   return (vector bool short)__builtin_altivec_vcmpequh(__a, __b);
@@ -1571,6 +1577,12 @@ static __inline__ vector bool short __ATTRS_o_ai vec_cmpeq(vector short __a,
 
 static __inline__ vector bool short __ATTRS_o_ai
 vec_cmpeq(vector unsigned short __a, vector unsigned short __b) {
+  return (vector bool short)__builtin_altivec_vcmpequh((vector short)__a,
+                                                       (vector short)__b);
+}
+
+static __inline__ vector bool short __ATTRS_o_ai
+vec_cmpeq(vector bool short __a, vector bool short __b) {
   return (vector bool short)__builtin_altivec_vcmpequh((vector short)__a,
                                                        (vector short)__b);
 }
@@ -1586,6 +1598,12 @@ vec_cmpeq(vector unsigned int __a, vector unsigned int __b) {
                                                      (vector int)__b);
 }
 
+static __inline__ vector bool int __ATTRS_o_ai vec_cmpeq(vector bool int __a,
+                                                         vector bool int __b) {
+  return (vector bool int)__builtin_altivec_vcmpequw((vector int)__a,
+                                                     (vector int)__b);
+}
+
 #ifdef __POWER8_VECTOR__
 static __inline__ vector bool long long __ATTRS_o_ai
 vec_cmpeq(vector signed long long __a, vector signed long long __b) {
@@ -1597,6 +1615,13 @@ vec_cmpeq(vector unsigned long long __a, vector unsigned long long __b) {
   return (vector bool long long)__builtin_altivec_vcmpequd(
       (vector long long)__a, (vector long long)__b);
 }
+
+static __inline__ vector bool long long __ATTRS_o_ai
+vec_cmpeq(vector bool long long __a, vector bool long long __b) {
+  return (vector bool long long)__builtin_altivec_vcmpequd(
+      (vector long long)__a, (vector long long)__b);
+}
+
 #endif
 
 static __inline__ vector bool int __ATTRS_o_ai vec_cmpeq(vector float __a,
@@ -2298,14 +2323,15 @@ vec_first_match_or_eos_index(vector signed char __a, vector signed char __b) {
      result if either is zero.
   */
   vector bool char __tmp1 = vec_cmpeq(__a, __b);
-  vector bool char __tmp2 = __tmp1 | vec_cmpeq(__tmp1, __a) |
-    vec_cmpeq(__tmp1, __b);
+  vector bool char __tmp2 = __tmp1 |
+                            vec_cmpeq((vector signed char)__tmp1, __a) |
+                            vec_cmpeq((vector signed char)__tmp1, __b);
 
   vector unsigned long long __res =
 #ifdef __LITTLE_ENDIAN__
-    vec_cnttz((vector unsigned long long)__tmp2);
+      vec_cnttz((vector unsigned long long)__tmp2);
 #else
-    vec_cntlz((vector unsigned long long)__tmp2);
+      vec_cntlz((vector unsigned long long)__tmp2);
 #endif
   if (__res[0] == 64) {
     return (__res[1] + 64) >> 3;
@@ -2317,14 +2343,15 @@ static __inline__ unsigned __ATTRS_o_ai
 vec_first_match_or_eos_index(vector unsigned char __a,
                              vector unsigned char __b) {
   vector bool char __tmp1 = vec_cmpeq(__a, __b);
-  vector bool char __tmp2 = __tmp1 | vec_cmpeq(__tmp1, __a) |
-    vec_cmpeq(__tmp1, __b);
+  vector bool char __tmp2 = __tmp1 |
+                            vec_cmpeq((vector unsigned char)__tmp1, __a) |
+                            vec_cmpeq((vector unsigned char)__tmp1, __b);
 
   vector unsigned long long __res =
 #ifdef __LITTLE_ENDIAN__
-    vec_cnttz((vector unsigned long long)__tmp2);
+      vec_cnttz((vector unsigned long long)__tmp2);
 #else
-    vec_cntlz((vector unsigned long long)__tmp2);
+      vec_cntlz((vector unsigned long long)__tmp2);
 #endif
   if (__res[0] == 64) {
     return (__res[1] + 64) >> 3;
@@ -2335,14 +2362,15 @@ vec_first_match_or_eos_index(vector unsigned char __a,
 static __inline__ unsigned __ATTRS_o_ai
 vec_first_match_or_eos_index(vector signed short __a, vector signed short __b) {
   vector bool short __tmp1 = vec_cmpeq(__a, __b);
-  vector bool short __tmp2 = __tmp1 | vec_cmpeq(__tmp1, __a) |
-    vec_cmpeq(__tmp1, __b);
+  vector bool short __tmp2 = __tmp1 |
+                             vec_cmpeq((vector signed short)__tmp1, __a) |
+                             vec_cmpeq((vector signed short)__tmp1, __b);
 
   vector unsigned long long __res =
 #ifdef __LITTLE_ENDIAN__
-    vec_cnttz((vector unsigned long long)__tmp2);
+      vec_cnttz((vector unsigned long long)__tmp2);
 #else
-    vec_cntlz((vector unsigned long long)__tmp2);
+      vec_cntlz((vector unsigned long long)__tmp2);
 #endif
   if (__res[0] == 64) {
     return (__res[1] + 64) >> 4;
@@ -2354,14 +2382,15 @@ static __inline__ unsigned __ATTRS_o_ai
 vec_first_match_or_eos_index(vector unsigned short __a,
                              vector unsigned short __b) {
   vector bool short __tmp1 = vec_cmpeq(__a, __b);
-  vector bool short __tmp2 = __tmp1 | vec_cmpeq(__tmp1, __a) |
-    vec_cmpeq(__tmp1, __b);
+  vector bool short __tmp2 = __tmp1 |
+                             vec_cmpeq((vector unsigned short)__tmp1, __a) |
+                             vec_cmpeq((vector unsigned short)__tmp1, __b);
 
   vector unsigned long long __res =
 #ifdef __LITTLE_ENDIAN__
-    vec_cnttz((vector unsigned long long)__tmp2);
+      vec_cnttz((vector unsigned long long)__tmp2);
 #else
-    vec_cntlz((vector unsigned long long)__tmp2);
+      vec_cntlz((vector unsigned long long)__tmp2);
 #endif
   if (__res[0] == 64) {
     return (__res[1] + 64) >> 4;
@@ -2372,14 +2401,14 @@ vec_first_match_or_eos_index(vector unsigned short __a,
 static __inline__ unsigned __ATTRS_o_ai
 vec_first_match_or_eos_index(vector signed int __a, vector signed int __b) {
   vector bool int __tmp1 = vec_cmpeq(__a, __b);
-  vector bool int __tmp2 = __tmp1 | vec_cmpeq(__tmp1, __a) |
-    vec_cmpeq(__tmp1, __b);
+  vector bool int __tmp2 = __tmp1 | vec_cmpeq((vector signed int)__tmp1, __a) |
+                           vec_cmpeq((vector signed int)__tmp1, __b);
 
   vector unsigned long long __res =
 #ifdef __LITTLE_ENDIAN__
-    vec_cnttz((vector unsigned long long)__tmp2);
+      vec_cnttz((vector unsigned long long)__tmp2);
 #else
-    vec_cntlz((vector unsigned long long)__tmp2);
+      vec_cntlz((vector unsigned long long)__tmp2);
 #endif
   if (__res[0] == 64) {
     return (__res[1] + 64) >> 5;
@@ -2388,11 +2417,11 @@ vec_first_match_or_eos_index(vector signed int __a, vector signed int __b) {
 }
 
 static __inline__ unsigned __ATTRS_o_ai
-vec_first_match_or_eos_index(vector unsigned int __a,
-                             vector unsigned int __b) {
+vec_first_match_or_eos_index(vector unsigned int __a, vector unsigned int __b) {
   vector bool int __tmp1 = vec_cmpeq(__a, __b);
-  vector bool int __tmp2 = __tmp1 | vec_cmpeq(__tmp1, __a) |
-    vec_cmpeq(__tmp1, __b);
+  vector bool int __tmp2 = __tmp1 |
+                           vec_cmpeq((vector unsigned int)__tmp1, __a) |
+                           vec_cmpeq((vector unsigned int)__tmp1, __b);
 
   vector unsigned long long __res =
 #ifdef __LITTLE_ENDIAN__

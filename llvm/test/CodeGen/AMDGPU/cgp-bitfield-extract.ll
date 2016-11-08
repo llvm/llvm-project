@@ -170,13 +170,12 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_span_midpoint:
+; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
 ; GCN: s_cbranch_vccnz BB3_2
 
-; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
 ; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0xff
 
 ; GCN: BB3_2:
-; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
 ; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0x7f
 
 ; GCN: BB3_3:

@@ -105,9 +105,8 @@ llvm::loadModuleFromBuffer(const MemoryBufferRef &Buffer, LLVMContext &Context,
   SMDiagnostic Err;
   ErrorOr<std::unique_ptr<Module>> ModuleOrErr(nullptr);
   if (Lazy) {
-    ModuleOrErr =
-        getLazyBitcodeModule(MemoryBuffer::getMemBuffer(Buffer, false), Context,
-                             /* ShouldLazyLoadMetadata */ Lazy);
+    ModuleOrErr = getLazyBitcodeModule(Buffer, Context,
+                                       /* ShouldLazyLoadMetadata */ Lazy);
   } else {
     ModuleOrErr = parseBitcodeFile(Buffer, Context);
   }

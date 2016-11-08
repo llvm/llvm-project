@@ -265,3 +265,9 @@ if(${LIBOMP_USE_HWLOC})
   endif()
 endif()
 
+# Check if ThreadSanitizer support is available
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND ${INTEL64})
+  set(LIBOMP_HAVE_TSAN_SUPPORT TRUE)
+else()
+  set(LIBOMP_HAVE_TSAN_SUPPORT FALSE)
+endif()

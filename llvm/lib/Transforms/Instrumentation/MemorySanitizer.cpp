@@ -312,9 +312,10 @@ static const PlatformMemoryMapParams FreeBSD_X86_MemoryMapParams = {
 /// uninitialized reads.
 class MemorySanitizer : public FunctionPass {
  public:
-  MemorySanitizer(int TrackOrigins = 0)
+  MemorySanitizer(int TrackOrigins = 0, bool Recover = false)
       : FunctionPass(ID),
         TrackOrigins(std::max(TrackOrigins, (int)ClTrackOrigins)),
+        Recover(Recover || ClKeepGoing),
         WarningFn(nullptr) {}
   StringRef getPassName() const override { return "MemorySanitizer"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -329,6 +330,7 @@ class MemorySanitizer : public FunctionPass {
 
   /// \brief Track origins (allocation points) of uninitialized values.
   int TrackOrigins;
+  bool Recover;
 
   LLVMContext *C;
   Type *IntptrTy;
@@ -395,8 +397,8 @@ INITIALIZE_PASS_END(
     MemorySanitizer, "msan",
     "MemorySanitizer: detects uninitialized reads.", false, false)
 
-FunctionPass *llvm::createMemorySanitizerPass(int TrackOrigins) {
-  return new MemorySanitizer(TrackOrigins);
+FunctionPass *llvm::createMemorySanitizerPass(int TrackOrigins, bool Recover) {
+  return new MemorySanitizer(TrackOrigins, Recover);
 }
 
 /// \brief Create a non-const global initialized with the given string.
@@ -421,8 +423,8 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
   // which is not yet implemented.
-  StringRef WarningFnName = ClKeepGoing ? "__msan_warning"
-                                        : "__msan_warning_noreturn";
+  StringRef WarningFnName = Recover ? "__msan_warning"
+                                    : "__msan_warning_noreturn";
   WarningFn = M.getOrInsertFunction(WarningFnName, IRB.getVoidTy(), nullptr);
 
   for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
@@ -566,9 +568,9 @@ bool MemorySanitizer::doInitialization(Module &M) {
     new GlobalVariable(M, IRB.getInt32Ty(), true, GlobalValue::WeakODRLinkage,
                        IRB.getInt32(TrackOrigins), "__msan_track_origins");
 
-  if (ClKeepGoing)
+  if (Recover)
     new GlobalVariable(M, IRB.getInt32Ty(), true, GlobalValue::WeakODRLinkage,
-                       IRB.getInt32(ClKeepGoing), "__msan_keep_going");
+                       IRB.getInt32(Recover), "__msan_keep_going");
 
   return true;
 }
@@ -792,7 +794,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         }
         IRB.CreateCall(MS.WarningFn, {});
         IRB.CreateCall(MS.EmptyAsm, {});
-        // FIXME: Insert UnreachableInst if !ClKeepGoing?
+        // FIXME: Insert UnreachableInst if !MS.Recover?
         // This may invalidate some of the following checks and needs to be done
         // at the very end.
       }
@@ -815,7 +817,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                     getCleanShadow(ConvertedShadow), "_mscmp");
       Instruction *CheckTerm = SplitBlockAndInsertIfThen(
           Cmp, OrigIns,
-          /* Unreachable */ !ClKeepGoing, MS.ColdCallWeights);
+          /* Unreachable */ !MS.Recover, MS.ColdCallWeights);
 
       IRB.SetInsertPoint(CheckTerm);
       if (MS.TrackOrigins) {

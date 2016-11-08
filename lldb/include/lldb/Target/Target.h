@@ -984,7 +984,7 @@ public:
   // Returns a new-ed object which the caller owns.
 
   UserExpression *GetUserExpressionForLanguage(
-      const char *expr, const char *expr_prefix, lldb::LanguageType language,
+      llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
       Expression::ResultType desired_type,
       const EvaluateExpressionOptions &options, Error &error);
 
@@ -1049,7 +1049,7 @@ public:
   // If an expression is going to be run, then it should have a frame filled
   // in in th execution context.
   lldb::ExpressionResults EvaluateExpression(
-      const char *expression, ExecutionContextScope *exe_scope,
+      llvm::StringRef expression, ExecutionContextScope *exe_scope,
       lldb::ValueObjectSP &result_valobj_sp,
       const EvaluateExpressionOptions &options = EvaluateExpressionOptions(),
       std::string *fixed_expression = nullptr);

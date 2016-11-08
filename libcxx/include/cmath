@@ -386,7 +386,6 @@ using ::tanf;
 using ::tanh;
 using ::tanhf;
 
-#ifndef _LIBCPP_MSVCRT
 using ::acosh;
 using ::acoshf;
 using ::asinh;
@@ -395,7 +394,6 @@ using ::atanh;
 using ::atanhf;
 using ::cbrt;
 using ::cbrtf;
-#endif
 
 using ::copysign;
 using ::copysignf;
@@ -439,10 +437,8 @@ using ::lround;
 using ::lroundf;
 #endif // _LIBCPP_MSVCRT
 
-#ifndef _LIBCPP_MSVCRT
 using ::nan;
 using ::nanf;
-#endif // _LIBCPP_MSVCRT
 
 #ifndef _LIBCPP_MSVCRT
 using ::nearbyint;
@@ -491,13 +487,11 @@ using ::sinhl;
 using ::sqrtl;
 using ::tanl;
 
-#ifndef _LIBCPP_MSVCRT
 using ::tanhl;
 using ::acoshl;
 using ::asinhl;
 using ::atanhl;
 using ::cbrtl;
-#endif  // !_LIBCPP_MSVCRT
 
 using ::copysignl;
 

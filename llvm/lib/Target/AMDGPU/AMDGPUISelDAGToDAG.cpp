@@ -1407,26 +1407,12 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     return;
   }
 
-  // The result of VOPC instructions is or'd against ~EXEC before it is
-  // written to vcc or another SGPR.  This means that the value '1' is always
-  // written to the corresponding bit for results that are masked.  In order
-  // to correctly check against vccz, we need to and VCC with the EXEC
-  // register in order to clear the value from the masked bits.
-
   SDLoc SL(N);
 
-  SDNode *MaskedCond =
-        CurDAG->getMachineNode(AMDGPU::S_AND_B64, SL, MVT::i1,
-                               CurDAG->getRegister(AMDGPU::EXEC, MVT::i1),
-                               Cond);
-  SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, AMDGPU::VCC,
-                                     SDValue(MaskedCond, 0),
-                                     SDValue()); // Passing SDValue() adds a
-                                                 // glue output.
+  SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, AMDGPU::VCC, Cond);
   CurDAG->SelectNodeTo(N, AMDGPU::S_CBRANCH_VCCNZ, MVT::Other,
                        N->getOperand(2), // Basic Block
-                       VCC.getValue(0),  // Chain
-                       VCC.getValue(1)); // Glue
+                       VCC.getValue(0));
   return;
 }
 

@@ -977,7 +977,7 @@ TEST(DeduplicateByFileTest, PathsWithDots) {
   std::map<std::string, Replacements> FileToReplaces;
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
       new vfs::InMemoryFileSystem());
-  FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
+  FileManager FileMgr(FileSystemOptions(), VFS);
 #if !defined(LLVM_ON_WIN32)
   StringRef Path1 = "a/b/.././c.h";
   StringRef Path2 = "a/c.h";
@@ -989,7 +989,7 @@ TEST(DeduplicateByFileTest, PathsWithDots) {
   EXPECT_TRUE(VFS->addFile(Path2, 0, llvm::MemoryBuffer::getMemBuffer("")));
   FileToReplaces[Path1] = Replacements();
   FileToReplaces[Path2] = Replacements();
-  FileToReplaces = groupReplacementsByFile(*FileMgr, FileToReplaces);
+  FileToReplaces = groupReplacementsByFile(FileMgr, FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
   EXPECT_EQ(Path1, FileToReplaces.begin()->first);
 }
@@ -998,7 +998,7 @@ TEST(DeduplicateByFileTest, PathWithDotSlash) {
   std::map<std::string, Replacements> FileToReplaces;
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
       new vfs::InMemoryFileSystem());
-  FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
+  FileManager FileMgr(FileSystemOptions(), VFS);
 #if !defined(LLVM_ON_WIN32)
   StringRef Path1 = "./a/b/c.h";
   StringRef Path2 = "a/b/c.h";
@@ -1010,7 +1010,7 @@ TEST(DeduplicateByFileTest, PathWithDotSlash) {
   EXPECT_TRUE(VFS->addFile(Path2, 0, llvm::MemoryBuffer::getMemBuffer("")));
   FileToReplaces[Path1] = Replacements();
   FileToReplaces[Path2] = Replacements();
-  FileToReplaces = groupReplacementsByFile(*FileMgr, FileToReplaces);
+  FileToReplaces = groupReplacementsByFile(FileMgr, FileToReplaces);
   EXPECT_EQ(1u, FileToReplaces.size());
   EXPECT_EQ(Path1, FileToReplaces.begin()->first);
 }
@@ -1019,7 +1019,7 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
   std::map<std::string, Replacements> FileToReplaces;
   llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
       new vfs::InMemoryFileSystem());
-  FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
+  FileManager FileMgr(FileSystemOptions(), VFS);
 #if !defined(LLVM_ON_WIN32)
   StringRef Path1 = "./a/b/c.h";
   StringRef Path2 = "a/b/c.h";
@@ -1029,7 +1029,7 @@ TEST(DeduplicateByFileTest, NonExistingFilePath) {
 #endif
   FileToReplaces[Path1] = Replacements();
   FileToReplaces[Path2] = Replacements();
-  FileToReplaces = groupReplacementsByFile(*FileMgr, FileToReplaces);
+  FileToReplaces = groupReplacementsByFile(FileMgr, FileToReplaces);
   EXPECT_TRUE(FileToReplaces.empty());
 }
 

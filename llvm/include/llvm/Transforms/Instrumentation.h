@@ -108,7 +108,8 @@ ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
                                              bool Recover = false);
 
 // Insert MemorySanitizer instrumentation (detection of uninitialized reads)
-FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0);
+FunctionPass *createMemorySanitizerPass(int TrackOrigins = 0,
+                                        bool Recover = false);
 
 // Insert ThreadSanitizer (race detection) instrumentation
 FunctionPass *createThreadSanitizerPass();

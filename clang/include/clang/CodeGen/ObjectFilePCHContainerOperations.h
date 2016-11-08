@@ -35,10 +35,8 @@ class ObjectFilePCHContainerWriter : public PCHContainerWriter {
 class ObjectFilePCHContainerReader : public PCHContainerReader {
   StringRef getFormat() const override { return "obj"; }
 
-  /// Initialize an llvm::BitstreamReader with the serialized
-  /// AST inside the PCH container Buffer.
-  void ExtractPCH(llvm::MemoryBufferRef Buffer,
-                  llvm::BitstreamReader &StreamFile) const override;
+  /// Returns the serialized AST inside the PCH container Buffer.
+  StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
 };
 }
 
