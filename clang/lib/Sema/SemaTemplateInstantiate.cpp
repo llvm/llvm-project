@@ -209,9 +209,11 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     sema::TemplateDeductionInfo *DeductionInfo)
     : SemaRef(SemaRef), SavedInNonInstantiationSFINAEContext(
                             SemaRef.InNonInstantiationSFINAEContext) {
-  // Don't allow further instantiation if a fatal error has occcured.  Any
-  // diagnostics we might have raised will not be visible.
-  if (SemaRef.Diags.hasFatalErrorOccurred()) {
+  // Don't allow further instantiation if a fatal error and an uncompilable
+  // error have occcured. Any diagnostics we might have raised will not be
+  // visible, and we do not need to construct a correct AST.
+  if (SemaRef.Diags.hasFatalErrorOccurred() &&
+      SemaRef.Diags.hasUncompilableErrorOccurred()) {
     Invalid = true;
     return;
   }
