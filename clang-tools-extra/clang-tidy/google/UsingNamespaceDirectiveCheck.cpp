@@ -27,8 +27,8 @@ void UsingNamespaceDirectiveCheck::registerMatchers(
     Finder->addMatcher(usingDirectiveDecl().bind("usingNamespace"), this);
 }
 
-void
-UsingNamespaceDirectiveCheck::check(const MatchFinder::MatchResult &Result) {
+void UsingNamespaceDirectiveCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *U = Result.Nodes.getNodeAs<UsingDirectiveDecl>("usingNamespace");
   SourceLocation Loc = U->getLocStart();
   if (U->isImplicit() || !Loc.isValid())

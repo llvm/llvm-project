@@ -31,7 +31,6 @@ AST_MATCHER(FloatingLiteral, floatHalf) {
 }
 } // namespace
 
-
 void IncorrectRoundings::registerMatchers(MatchFinder *MatchFinder) {
   // Match a floating literal with value 0.5.
   auto FloatHalf = floatLiteral(floatHalf());

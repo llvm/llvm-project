@@ -16,7 +16,8 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-/// This check finds string literals which are probably concatenated accidentally.
+/// This check finds string literals which are probably concatenated
+/// accidentally.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-missing-comma.html

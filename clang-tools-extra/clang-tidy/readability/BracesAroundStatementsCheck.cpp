@@ -117,8 +117,8 @@ BracesAroundStatementsCheck::BracesAroundStatementsCheck(
       // Always add braces by default.
       ShortStatementLines(Options.get("ShortStatementLines", 0U)) {}
 
-void
-BracesAroundStatementsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+void BracesAroundStatementsCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ShortStatementLines", ShortStatementLines);
 }
 
@@ -130,8 +130,8 @@ void BracesAroundStatementsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(cxxForRangeStmt().bind("for-range"), this);
 }
 
-void
-BracesAroundStatementsCheck::check(const MatchFinder::MatchResult &Result) {
+void BracesAroundStatementsCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const SourceManager &SM = *Result.SourceManager;
   const ASTContext *Context = Result.Context;
 

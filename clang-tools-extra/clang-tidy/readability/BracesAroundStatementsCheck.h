@@ -58,7 +58,7 @@ private:
                                const ASTContext *Context);
 
 private:
-  std::set<const Stmt*> ForceBracesStmts;
+  std::set<const Stmt *> ForceBracesStmts;
   const unsigned ShortStatementLines;
 };
 

@@ -38,4 +38,3 @@ protected:
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_MAKE_UNIQUE_H
-

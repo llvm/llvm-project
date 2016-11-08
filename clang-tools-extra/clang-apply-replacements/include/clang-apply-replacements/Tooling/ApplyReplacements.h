@@ -38,8 +38,7 @@ namespace replace {
 typedef std::vector<clang::tooling::Range> RangeVector;
 
 /// \brief Collection of TranslationUnitReplacements.
-typedef std::vector<clang::tooling::TranslationUnitReplacements>
-TUReplacements;
+typedef std::vector<clang::tooling::TranslationUnitReplacements> TUReplacements;
 
 /// \brief Collection of TranslationUnitReplacement files.
 typedef std::vector<std::string> TUReplacementFiles;
@@ -66,11 +65,9 @@ typedef llvm::DenseMap<const clang::FileEntry *,
 ///
 /// \returns An error_code indicating success or failure in navigating the
 /// directory structure.
-std::error_code
-collectReplacementsFromDirectory(const llvm::StringRef Directory,
-                                 TUReplacements &TUs,
-                                 TUReplacementFiles &TURFiles,
-                                 clang::DiagnosticsEngine &Diagnostics);
+std::error_code collectReplacementsFromDirectory(
+    const llvm::StringRef Directory, TUReplacements &TUs,
+    TUReplacementFiles &TURFiles, clang::DiagnosticsEngine &Diagnostics);
 
 /// \brief Deduplicate, check for conflicts, and apply all Replacements stored
 /// in \c TUs. If conflicts occur, no Replacements are applied.
@@ -115,7 +112,7 @@ bool applyReplacements(const FileToReplacementsMap &GroupedReplacements,
 /// \pre Replacements[i].getOffset() <= Replacements[i+1].getOffset().
 ///
 /// \param[in] Replacements Replacements from a single file.
-/// 
+///
 /// \returns Collection of source ranges that enclose all given Replacements.
 /// One range is created for each replacement.
 RangeVector calculateChangedRanges(
