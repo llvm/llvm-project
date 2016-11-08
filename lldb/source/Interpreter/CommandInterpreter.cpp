@@ -1104,9 +1104,10 @@ bool CommandInterpreter::RemoveUser(llvm::StringRef alias_name) {
 
 void CommandInterpreter::GetHelp(CommandReturnObject &result,
                                  uint32_t cmd_types) {
-  const char *help_prologue = GetDebugger().GetIOHandlerHelpPrologue();
-  if (help_prologue != NULL) {
-    OutputFormattedHelpText(result.GetOutputStream(), NULL, help_prologue);
+  llvm::StringRef help_prologue(GetDebugger().GetIOHandlerHelpPrologue());
+  if (!help_prologue.empty()) {
+    OutputFormattedHelpText(result.GetOutputStream(), llvm::StringRef(),
+                            help_prologue);
   }
 
   CommandObject::CommandMap::const_iterator pos;
@@ -1121,8 +1122,8 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
           (pos->first.compare(0, 1, "_") == 0))
         continue;
 
-      OutputFormattedHelpText(result.GetOutputStream(), pos->first.c_str(),
-                              "--", pos->second->GetHelp(), max_len);
+      OutputFormattedHelpText(result.GetOutputStream(), pos->first, "--",
+                              pos->second->GetHelp(), max_len);
     }
     result.AppendMessage("");
   }
@@ -1138,8 +1139,7 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
 
     for (auto alias_pos = m_alias_dict.begin(); alias_pos != m_alias_dict.end();
          ++alias_pos) {
-      OutputFormattedHelpText(result.GetOutputStream(),
-                              alias_pos->first.c_str(), "--",
+      OutputFormattedHelpText(result.GetOutputStream(), alias_pos->first, "--",
                               alias_pos->second->GetHelp(), max_len);
     }
     result.AppendMessage("");
@@ -1151,8 +1151,8 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
     result.AppendMessage("");
     max_len = FindLongestCommandWord(m_user_dict);
     for (pos = m_user_dict.begin(); pos != m_user_dict.end(); ++pos) {
-      OutputFormattedHelpText(result.GetOutputStream(), pos->first.c_str(),
-                              "--", pos->second->GetHelp(), max_len);
+      OutputFormattedHelpText(result.GetOutputStream(), pos->first, "--",
+                              pos->second->GetHelp(), max_len);
     }
     result.AppendMessage("");
   }
@@ -2498,79 +2498,68 @@ void CommandInterpreter::SetSynchronous(bool value) {
 }
 
 void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
-                                                 const char *prefix,
-                                                 const char *help_text) {
+                                                 llvm::StringRef prefix,
+                                                 llvm::StringRef help_text) {
   const uint32_t max_columns = m_debugger.GetTerminalWidth();
-  if (prefix == NULL)
-    prefix = "";
 
-  size_t prefix_width = strlen(prefix);
-  size_t line_width_max = max_columns - prefix_width;
-  const char *help_text_end = help_text + strlen(help_text);
-  const char *line_start = help_text;
+  size_t line_width_max = max_columns - prefix.size();
   if (line_width_max < 16)
-    line_width_max = help_text_end - help_text + prefix_width;
+    line_width_max = help_text.size() + prefix.size();
 
-  strm.IndentMore(prefix_width);
-  while (line_start < help_text_end) {
-    // Break each line at the first newline or last space/tab before
-    // the maximum number of characters that fit on a line.  Lines with no
-    // natural break are left unbroken to wrap.
-    const char *line_end = help_text_end;
-    const char *line_scan = line_start;
-    const char *line_scan_end = help_text_end;
-    while (line_scan < line_scan_end) {
-      char next = *line_scan;
-      if (next == '\t' || next == ' ') {
-        line_end = line_scan;
-        line_scan_end = line_start + line_width_max;
-      } else if (next == '\n' || next == '\0') {
-        line_end = line_scan;
-        break;
-      }
-      ++line_scan;
-    }
-
+  strm.IndentMore(prefix.size());
+  bool prefixed_yet = false;
+  while (!help_text.empty()) {
     // Prefix the first line, indent subsequent lines to line up
-    if (line_start == help_text)
-      strm.Write(prefix, prefix_width);
-    else
+    if (!prefixed_yet) {
+      strm << prefix;
+      prefixed_yet = true;
+    } else
       strm.Indent();
-    strm.Write(line_start, line_end - line_start);
+
+    // Never print more than the maximum on one line.
+    llvm::StringRef this_line = help_text.substr(0, line_width_max);
+
+    // Always break on an explicit newline.
+    std::size_t first_newline = this_line.find_first_of("\n");
+
+    // Don't break on space/tab unless the text is too long to fit on one line.
+    std::size_t last_space = llvm::StringRef::npos;
+    if (this_line.size() != help_text.size())
+      last_space = this_line.find_last_of(" \t");
+
+    // Break at whichever condition triggered first.
+    this_line = this_line.substr(0, std::min(first_newline, last_space));
+    strm.PutCString(this_line);
     strm.EOL();
 
-    // When a line breaks at whitespace consume it before continuing
-    line_start = line_end;
-    char next = *line_start;
-    if (next == '\n')
-      ++line_start;
-    else
-      while (next == ' ' || next == '\t')
-        next = *(++line_start);
+    // Remove whitespace / newlines after breaking.
+    help_text = help_text.drop_front(this_line.size()).ltrim();
   }
-  strm.IndentLess(prefix_width);
+  strm.IndentLess(prefix.size());
 }
 
 void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
-                                                 const char *word_text,
-                                                 const char *separator,
-                                                 const char *help_text,
+                                                 llvm::StringRef word_text,
+                                                 llvm::StringRef separator,
+                                                 llvm::StringRef help_text,
                                                  size_t max_word_len) {
   StreamString prefix_stream;
-  prefix_stream.Printf("  %-*s %s ", (int)max_word_len, word_text, separator);
+  prefix_stream.Printf("  %-*s %*s ", (int)max_word_len, word_text.data(),
+                       (int)separator.size(), separator.data());
   OutputFormattedHelpText(strm, prefix_stream.GetData(), help_text);
 }
 
-void CommandInterpreter::OutputHelpText(Stream &strm, const char *word_text,
-                                        const char *separator,
-                                        const char *help_text,
+void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
+                                        llvm::StringRef separator,
+                                        llvm::StringRef help_text,
                                         uint32_t max_word_len) {
-  int indent_size = max_word_len + strlen(separator) + 2;
+  int indent_size = max_word_len + separator.size() + 2;
 
   strm.IndentMore(indent_size);
 
   StreamString text_strm;
-  text_strm.Printf("%-*s %s %s", max_word_len, word_text, separator, help_text);
+  text_strm.Printf("%-*s ", (int)max_word_len, word_text.data());
+  text_strm << separator << " " << help_text;
 
   const uint32_t max_columns = m_debugger.GetTerminalWidth();
 

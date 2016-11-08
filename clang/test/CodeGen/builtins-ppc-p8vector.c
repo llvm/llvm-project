@@ -151,6 +151,11 @@ void test1() {
 // CHECK-PPC: warning: implicit declaration of function 'vec_mergeo'
   
   /* vec_cmpeq */
+  res_vbll = vec_cmpeq(vbll, vbll);
+// CHECK: @llvm.ppc.altivec.vcmpequd
+// CHECK-LE: @llvm.ppc.altivec.vcmpequd
+// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
+
   res_vbll = vec_cmpeq(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd

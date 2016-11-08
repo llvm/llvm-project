@@ -336,24 +336,21 @@ public:
 
   void GetAliasHelp(const char *alias_name, StreamString &help_string);
 
-  void OutputFormattedHelpText(Stream &strm, const char *prefix,
-                               const char *help_text);
+  void OutputFormattedHelpText(Stream &strm, llvm::StringRef prefix,
+                               llvm::StringRef help_text);
 
-  void OutputFormattedHelpText(Stream &stream, const char *command_word,
-                               const char *separator, const char *help_text,
-                               size_t max_word_len);
+  void OutputFormattedHelpText(Stream &stream, llvm::StringRef command_word,
+                               llvm::StringRef separator,
+                               llvm::StringRef help_text, size_t max_word_len);
 
   // this mimics OutputFormattedHelpText but it does perform a much simpler
   // formatting, basically ensuring line alignment. This is only good if you
-  // have
-  // some complicated layout for your help text and want as little help as
-  // reasonable
-  // in properly displaying it. Most of the times, you simply want to type some
-  // text
-  // and have it printed in a reasonable way on screen. If so, use
-  // OutputFormattedHelpText
-  void OutputHelpText(Stream &stream, const char *command_word,
-                      const char *separator, const char *help_text,
+  // have some complicated layout for your help text and want as little help as
+  // reasonable in properly displaying it. Most of the times, you simply want
+  // to type some text and have it printed in a reasonable way on screen. If
+  // so, use OutputFormattedHelpText
+  void OutputHelpText(Stream &stream, llvm::StringRef command_word,
+                      llvm::StringRef separator, llvm::StringRef help_text,
                       uint32_t max_word_len);
 
   Debugger &GetDebugger() { return m_debugger; }

@@ -762,7 +762,7 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
         child_sp->DumpPrintableRepresentation(
             *m_stream, ValueObject::eValueObjectRepresentationStyleSummary,
             m_options.m_format,
-            ValueObject::ePrintableRepresentationSpecialCasesDisable);
+            ValueObject::PrintableRepresentationSpecialCases::eDisable);
       }
     }
 

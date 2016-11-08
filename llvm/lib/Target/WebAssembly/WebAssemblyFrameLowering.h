@@ -46,6 +46,7 @@ class WebAssemblyFrameLowering final : public TargetFrameLowering {
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
  private:
+  bool hasBP(const MachineFunction &MF) const;
   bool needsSP(const MachineFunction &MF, const MachineFrameInfo &MFI) const;
   bool needsSPWriteback(const MachineFunction &MF,
                         const MachineFrameInfo &MFI) const;

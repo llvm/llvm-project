@@ -173,8 +173,8 @@ public:
   /// \brief The global bit offset (or base) of this module
   uint64_t GlobalBitOffset;
 
-  /// \brief The bitstream reader from which we'll read the AST file.
-  llvm::BitstreamReader StreamFile;
+  /// \brief The serialized bitstream data for this file.
+  StringRef Data;
 
   /// \brief The main bitstream cursor for the main block.
   llvm::BitstreamCursor Stream;

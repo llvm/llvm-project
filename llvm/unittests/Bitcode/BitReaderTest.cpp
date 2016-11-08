@@ -53,10 +53,8 @@ static std::unique_ptr<Module> getLazyModuleFromAssembly(LLVMContext &Context,
                                                          SmallString<1024> &Mem,
                                                          const char *Assembly) {
   writeModuleToBuffer(parseAssembly(Context, Assembly), Mem);
-  std::unique_ptr<MemoryBuffer> Buffer =
-      MemoryBuffer::getMemBuffer(Mem.str(), "test", false);
   ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
-      getLazyBitcodeModule(std::move(Buffer), Context);
+      getLazyBitcodeModule(MemoryBufferRef(Mem.str(), "test"), Context);
   return std::move(ModuleOrErr.get());
 }
 

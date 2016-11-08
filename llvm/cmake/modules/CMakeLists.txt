@@ -103,8 +103,11 @@ configure_file(
   @ONLY)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  install(EXPORT LLVMExports DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
-          COMPONENT cmake-exports)
+  get_property(llvm_has_exports GLOBAL PROPERTY LLVM_HAS_EXPORTS)
+  if(llvm_has_exports)
+    install(EXPORT LLVMExports DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
+            COMPONENT cmake-exports)
+  endif()
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLVMConfig.cmake

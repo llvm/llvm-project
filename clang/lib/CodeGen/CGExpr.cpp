@@ -2276,13 +2276,15 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
       return LV;
     }
 
-    assert(E->getSubExpr()->getType()->isAnyComplexType());
+    QualType T = ExprTy->castAs<ComplexType>()->getElementType();
 
     Address Component =
       (E->getOpcode() == UO_Real
          ? emitAddrOfRealComponent(LV.getAddress(), LV.getType())
          : emitAddrOfImagComponent(LV.getAddress(), LV.getType()));
-    return MakeAddrLValue(Component, ExprTy, LV.getAlignmentSource());
+    LValue ElemLV = MakeAddrLValue(Component, T, LV.getAlignmentSource());
+    ElemLV.getQuals().addQualifiers(LV.getQuals());
+    return ElemLV;
   }
   case UO_PreInc:
   case UO_PreDec: {

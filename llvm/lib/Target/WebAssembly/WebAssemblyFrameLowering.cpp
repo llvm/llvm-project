@@ -37,15 +37,34 @@ using namespace llvm;
 // TODO: wasm64
 // TODO: Emit TargetOpcode::CFI_INSTRUCTION instructions
 
+/// We need a base pointer in the case of having items on the stack that
+/// require stricter alignment than the stack pointer itself.  Because we need
+/// to shift the stack pointer by some unknown amount to force the alignment,
+/// we need to record the value of the stack pointer on entry to the function.
+bool WebAssemblyFrameLowering::hasBP(
+    const MachineFunction &MF) const {
+  const auto *RegInfo =
+      MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
+  return RegInfo->needsStackRealignment(MF);
+}
+
 /// Return true if the specified function should have a dedicated frame pointer
 /// register.
 bool WebAssemblyFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const auto *RegInfo =
-      MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
-  return MFI.isFrameAddressTaken() || MFI.hasVarSizedObjects() ||
-         MFI.hasStackMap() || MFI.hasPatchPoint() ||
-         RegInfo->needsStackRealignment(MF);
+
+  // When we have var-sized objects, we move the stack pointer by an unknown
+  // amount, and need to emit a frame pointer to restore the stack to where we
+  // were on function entry.
+  // If we already need a base pointer, we use that to fix up the stack pointer.
+  // If there are no fixed-size objects, we would have no use of a frame
+  // pointer, and thus should not emit one.
+  bool HasFixedSizedObjects = MFI.getStackSize() > 0;
+  bool NeedsFixedReference = !hasBP(MF) || HasFixedSizedObjects;
+
+  return MFI.isFrameAddressTaken() ||
+         (MFI.hasVarSizedObjects() && NeedsFixedReference) ||
+         MFI.hasStackMap() || MFI.hasPatchPoint();
 }
 
 /// Under normal circumstances, when a frame pointer is not required, we reserve
@@ -107,7 +126,7 @@ MachineBasicBlock::iterator
 WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  assert(!I->getOperand(0).getImm() && hasFP(MF) &&
+  assert(!I->getOperand(0).getImm() && (hasFP(MF) || hasBP(MF)) &&
          "Call frame pseudos should only be used for dynamic stack adjustment");
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   if (I->getOpcode() == TII->getCallFrameDestroyOpcode() &&
@@ -137,7 +156,9 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   const TargetRegisterClass *PtrRC =
       MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
   unsigned Zero = MRI.createVirtualRegister(PtrRC);
-  unsigned SPReg = MRI.createVirtualRegister(PtrRC);
+  unsigned SPReg = WebAssembly::SP32;
+  if (StackSize)
+    SPReg = MRI.createVirtualRegister(PtrRC);
   const char *ES = "__stack_pointer";
   auto *SPSymbol = MF.createExternalSymbolName(ES);
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), Zero)
@@ -146,13 +167,20 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
       MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES)),
       MachineMemOperand::MOLoad, 4, 4);
   // Load the SP value.
-  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::LOAD_I32),
-          StackSize ? SPReg : (unsigned)WebAssembly::SP32)
+  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::LOAD_I32), SPReg)
       .addImm(2)       // p2align
       .addExternalSymbol(SPSymbol)
       .addReg(Zero)    // addr
       .addMemOperand(LoadMMO);
 
+  bool HasBP = hasBP(MF);
+  if (HasBP) {
+    auto FI = MF.getInfo<WebAssemblyFunctionInfo>();
+    unsigned BasePtr = MRI.createVirtualRegister(PtrRC);
+    FI->setBasePointerVreg(BasePtr);
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::COPY), BasePtr)
+        .addReg(SPReg);
+  }
   if (StackSize) {
     // Subtract the frame size
     unsigned OffsetReg = MRI.createVirtualRegister(PtrRC);
@@ -162,6 +190,18 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
             WebAssembly::SP32)
         .addReg(SPReg)
         .addReg(OffsetReg);
+  }
+  if (HasBP) {
+    unsigned BitmaskReg = MRI.createVirtualRegister(PtrRC);
+    unsigned Alignment = MFI.getMaxAlignment();
+    assert((1 << countTrailingZeros(Alignment)) == Alignment &&
+      "Alignment must be a power of 2");
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), BitmaskReg)
+        .addImm((int)~(Alignment - 1));
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::AND_I32),
+            WebAssembly::SP32)
+        .addReg(WebAssembly::SP32)
+        .addReg(BitmaskReg);
   }
   if (hasFP(MF)) {
     // Unlike most conventional targets (where FP points to the saved FP),
@@ -193,7 +233,10 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
   // subtracted in the prolog.
   unsigned SPReg = 0;
   MachineBasicBlock::iterator InsertAddr = InsertPt;
-  if (StackSize) {
+  if (hasBP(MF)) {
+    auto FI = MF.getInfo<WebAssemblyFunctionInfo>();
+    SPReg = FI->getBasePointerVreg();
+  } else if (StackSize) {
     const TargetRegisterClass *PtrRC =
         MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
     unsigned OffsetReg = MRI.createVirtualRegister(PtrRC);

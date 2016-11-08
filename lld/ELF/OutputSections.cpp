@@ -504,18 +504,6 @@ HashTableSection<ELFT>::HashTableSection()
   this->Header.sh_addralign = sizeof(Elf_Word);
 }
 
-static uint32_t hashSysv(StringRef Name) {
-  uint32_t H = 0;
-  for (char C : Name) {
-    H = (H << 4) + C;
-    uint32_t G = H & 0xf0000000;
-    if (G)
-      H ^= G >> 24;
-    H &= ~G;
-  }
-  return H;
-}
-
 template <class ELFT> void HashTableSection<ELFT>::finalize() {
   this->Header.sh_link = Out<ELFT>::DynSymTab->SectionIndex;
 
@@ -542,7 +530,7 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
     SymbolBody *Body = S.Symbol;
     StringRef Name = Body->getName();
     unsigned I = Body->DynsymIndex;
-    uint32_t Hash = hashSysv(Name) % NumSymbols;
+    uint32_t Hash = hashSysV(Name) % NumSymbols;
     Chains[I] = Buckets[Hash];
     Buckets[Hash] = I;
   }
@@ -1607,7 +1595,7 @@ void VersionDefinitionSection<ELFT>::writeOne(uint8_t *Buf, uint32_t Index,
   Verdef->vd_next = sizeof(Elf_Verdef) + sizeof(Elf_Verdaux);
   Verdef->vd_flags = (Index == 1 ? VER_FLG_BASE : 0);
   Verdef->vd_ndx = Index;
-  Verdef->vd_hash = hashSysv(Name);
+  Verdef->vd_hash = hashSysV(Name);
 
   auto *Verdaux = reinterpret_cast<Elf_Verdaux *>(Buf + sizeof(Elf_Verdef));
   Verdaux->vda_name = NameOff;

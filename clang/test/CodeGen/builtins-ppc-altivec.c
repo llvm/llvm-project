@@ -938,6 +938,14 @@ void test2() {
 // CHECK: @llvm.ppc.altivec.vcmpequb
 // CHECK-LE: @llvm.ppc.altivec.vcmpequb
 
+  res_vbc = vec_cmpeq(vbc, vbc);
+// CHECK: @llvm.ppc.altivec.vcmpequb
+// CHECK-LE: @llvm.ppc.altivec.vcmpequb
+
+  res_vbc = vec_cmpeq(vbc, vbc);
+// CHECK: @llvm.ppc.altivec.vcmpequb
+// CHECK-LE: @llvm.ppc.altivec.vcmpequb
+
   res_vbs = vec_cmpeq(vs, vs);
 // CHECK: @llvm.ppc.altivec.vcmpequh
 // CHECK-LE: @llvm.ppc.altivec.vcmpequh
@@ -946,11 +954,27 @@ void test2() {
 // CHECK: @llvm.ppc.altivec.vcmpequh
 // CHECK-LE: @llvm.ppc.altivec.vcmpequh
 
+  res_vbs = vec_cmpeq(vbs, vbs);
+// CHECK: @llvm.ppc.altivec.vcmpequh
+// CHECK-LE: @llvm.ppc.altivec.vcmpequh
+
+  res_vbs = vec_cmpeq(vbs, vbs);
+// CHECK: @llvm.ppc.altivec.vcmpequh
+// CHECK-LE: @llvm.ppc.altivec.vcmpequh
+
   res_vbi = vec_cmpeq(vi, vi);
 // CHECK: @llvm.ppc.altivec.vcmpequw
 // CHECK-LE: @llvm.ppc.altivec.vcmpequw
 
   res_vbi = vec_cmpeq(vui, vui);
+// CHECK: @llvm.ppc.altivec.vcmpequw
+// CHECK-LE: @llvm.ppc.altivec.vcmpequw
+
+  res_vbi = vec_cmpeq(vbi, vbi);
+// CHECK: @llvm.ppc.altivec.vcmpequw
+// CHECK-LE: @llvm.ppc.altivec.vcmpequw
+
+  res_vbi = vec_cmpeq(vbi, vbi);
 // CHECK: @llvm.ppc.altivec.vcmpequw
 // CHECK-LE: @llvm.ppc.altivec.vcmpequw
 

@@ -28,6 +28,9 @@ VERSION {
         ompt_tool;           # OMPT initialization interface
         ompt_control;        # OMPT control interface
 
+        # icc drops weak attribute at linking step without the following line:
+        Annotate*;           # TSAN annotation
+
         #
         # OMPT state placeholders
         #

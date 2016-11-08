@@ -97,7 +97,6 @@ for.body:
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
 ; GCN: v_cmp_eq_u32_e32 vcc, 1,
 
-; GCN: s_and_b64 s{{\[[0-9]+:[0-9]+\]}}, exec, vcc
 ; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]
 ; GCN: s_cbranch_vccnz [[LOOPBB]]
 ; GCN-NEXT: ; BB#2

@@ -113,6 +113,8 @@ libomp_append(LIBOMP_CFILES kmp_ftn_extra.c)
 libomp_append(LIBOMP_CFILES kmp_version.c)
 libomp_append(LIBOMP_CFILES ompt-general.c IF_TRUE LIBOMP_OMPT_SUPPORT)
 
+libomp_append(LIBOMP_CFILES tsan_annotations.c IF_TRUE LIBOMP_TSAN_SUPPORT)
+
 set(LIBOMP_SOURCE_FILES ${LIBOMP_CFILES} ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES})
 # For Windows, there is a resource file (.rc -> .res) that is also compiled
 libomp_append(LIBOMP_SOURCE_FILES libomp.rc WIN32)

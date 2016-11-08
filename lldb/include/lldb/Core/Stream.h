@@ -191,6 +191,8 @@ public:
   //------------------------------------------------------------------
   Stream &operator<<(const char *cstr);
 
+  Stream &operator<<(llvm::StringRef str);
+
   //------------------------------------------------------------------
   /// Output a pointer value \a p to the stream \a s.
   ///

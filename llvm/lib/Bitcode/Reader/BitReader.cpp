@@ -101,7 +101,7 @@ LLVMBool LLVMGetBitcodeModuleInContext(LLVMContextRef ContextRef,
   std::unique_ptr<MemoryBuffer> Owner(unwrap(MemBuf));
 
   ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
-      getLazyBitcodeModule(std::move(Owner), Ctx);
+      getOwningLazyBitcodeModule(std::move(Owner), Ctx);
   Owner.release();
   Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
 
@@ -124,7 +124,7 @@ LLVMBool LLVMGetBitcodeModuleInContext2(LLVMContextRef ContextRef,
   std::unique_ptr<MemoryBuffer> Owner(unwrap(MemBuf));
 
   ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
-      getLazyBitcodeModule(std::move(Owner), Ctx);
+      getOwningLazyBitcodeModule(std::move(Owner), Ctx);
   Owner.release();
 
   if (ModuleOrErr.getError()) {

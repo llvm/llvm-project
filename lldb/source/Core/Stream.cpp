@@ -227,6 +227,11 @@ Stream &Stream::operator<<(const char *s) {
   return *this;
 }
 
+Stream &Stream::operator<<(llvm::StringRef str) {
+  Write(str.data(), str.size());
+  return *this;
+}
+
 //------------------------------------------------------------------
 // Stream the pointer value out to this stream.
 //------------------------------------------------------------------

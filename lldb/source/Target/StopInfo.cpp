@@ -764,8 +764,8 @@ protected:
 
         if (m_should_stop && wp_sp->GetConditionText() != nullptr) {
           // We need to make sure the user sees any parse errors in their
-          // condition, so we'll hook the
-          // constructor errors up to the debugger's Async I/O.
+          // condition, so we'll hook the constructor errors up to the
+          // debugger's Async I/O.
           ExpressionResults result_code;
           EvaluateExpressionOptions expr_options;
           expr_options.SetUnwindOnError(true);
@@ -773,8 +773,8 @@ protected:
           ValueObjectSP result_value_sp;
           Error error;
           result_code = UserExpression::Evaluate(
-              exe_ctx, expr_options, wp_sp->GetConditionText(), nullptr,
-              result_value_sp, error);
+              exe_ctx, expr_options, wp_sp->GetConditionText(),
+              llvm::StringRef(), result_value_sp, error);
 
           if (result_code == eExpressionCompleted) {
             if (result_value_sp) {
@@ -784,8 +784,7 @@ protected:
                   // We have been vetoed.  This takes precedence over querying
                   // the watchpoint whether it should stop (aka ignore count and
                   // friends).  See also StopInfoWatchpoint::ShouldStop() as
-                  // well
-                  // as Process::ProcessEventData::DoOnRemoval().
+                  // well as Process::ProcessEventData::DoOnRemoval().
                   m_should_stop = false;
                 } else
                   m_should_stop = true;

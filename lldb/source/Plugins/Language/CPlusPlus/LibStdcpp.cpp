@@ -420,7 +420,8 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
     if (pointee_sp->DumpPrintableRepresentation(
             stream, ValueObject::eValueObjectRepresentationStyleSummary,
             lldb::eFormatInvalid,
-            ValueObject::ePrintableRepresentationSpecialCasesDisable, false)) {
+            ValueObject::PrintableRepresentationSpecialCases::eDisable,
+            false)) {
       return true;
     }
   }

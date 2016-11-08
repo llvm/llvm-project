@@ -1095,7 +1095,8 @@ namespace {
 struct PostOrderFunctionAttrsLegacyPass : public CallGraphSCCPass {
   static char ID; // Pass identification, replacement for typeid
   PostOrderFunctionAttrsLegacyPass() : CallGraphSCCPass(ID) {
-    initializePostOrderFunctionAttrsLegacyPassPass(*PassRegistry::getPassRegistry());
+    initializePostOrderFunctionAttrsLegacyPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
@@ -1117,7 +1118,9 @@ INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_END(PostOrderFunctionAttrsLegacyPass, "functionattrs",
                     "Deduce function attributes", false, false)
 
-Pass *llvm::createPostOrderFunctionAttrsLegacyPass() { return new PostOrderFunctionAttrsLegacyPass(); }
+Pass *llvm::createPostOrderFunctionAttrsLegacyPass() {
+  return new PostOrderFunctionAttrsLegacyPass();
+}
 
 template <typename AARGetterT>
 static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
@@ -1179,7 +1182,8 @@ namespace {
 struct ReversePostOrderFunctionAttrsLegacyPass : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
   ReversePostOrderFunctionAttrsLegacyPass() : ModulePass(ID) {
-    initializeReversePostOrderFunctionAttrsLegacyPassPass(*PassRegistry::getPassRegistry());
+    initializeReversePostOrderFunctionAttrsLegacyPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override;

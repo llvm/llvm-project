@@ -123,11 +123,9 @@ using ::fwscanf;
 using ::swprintf;
 using ::vfwprintf;
 using ::vswprintf;
-#ifndef _LIBCPP_MSVCRT
 using ::swscanf;
 using ::vfwscanf;
 using ::vswscanf;
-#endif // _LIBCPP_MSVCRT
 using ::fgetwc;
 using ::fgetws;
 using ::fputwc;
@@ -137,10 +135,8 @@ using ::getwc;
 using ::putwc;
 using ::ungetwc;
 using ::wcstod;
-#ifndef _LIBCPP_MSVCRT
 using ::wcstof;
 using ::wcstold;
-#endif // _LIBCPP_MSVCRT
 using ::wcstol;
 #ifndef _LIBCPP_HAS_NO_LONG_LONG
 using ::wcstoll;
@@ -182,9 +178,7 @@ using ::wcsrtombs;
 
 #ifndef _LIBCPP_HAS_NO_STDIN
 using ::getwchar;
-#ifndef _LIBCPP_MSVCRT
 using ::vwscanf;
-#endif // _LIBCPP_MSVCRT
 using ::wscanf;
 #endif
 

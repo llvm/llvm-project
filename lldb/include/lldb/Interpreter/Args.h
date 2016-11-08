@@ -358,10 +358,9 @@ public:
     return min <= sval64 && sval64 <= max;
   }
 
-  // TODO: Make this function take a StringRef
   static lldb::addr_t StringToAddress(const ExecutionContext *exe_ctx,
-                                      const char *s, lldb::addr_t fail_value,
-                                      Error *error);
+                                      llvm::StringRef s,
+                                      lldb::addr_t fail_value, Error *error);
 
   static bool StringToBoolean(llvm::StringRef s, bool fail_value,
                               bool *success_ptr);

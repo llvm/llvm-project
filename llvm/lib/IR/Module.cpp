@@ -25,6 +25,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <algorithm>
@@ -517,6 +518,10 @@ void Module::setProfileSummary(Metadata *M) {
 
 Metadata *Module::getProfileSummary() {
   return getModuleFlag("ProfileSummary");
+}
+
+void Module::setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB) {
+  OwnedMemoryBuffer = std::move(MB);
 }
 
 GlobalVariable *llvm::collectUsedGlobalVariables(

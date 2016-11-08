@@ -245,6 +245,9 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
+  ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
+                                     unsigned EltSize) const;
+
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp, const MachineOperand *SrcDst,

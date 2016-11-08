@@ -346,7 +346,16 @@ def run_clang_format_and_save_to_tree(changed_lines, revision=None,
   Returns the object ID (SHA-1) of the created tree."""
   def index_info_generator():
     for filename, line_ranges in changed_lines.iteritems():
-      mode = oct(os.stat(filename).st_mode)
+      if revision:
+        git_metadata_cmd = ['git', 'ls-tree',
+                            '%s:%s' % (revision, os.path.dirname(filename)),
+                            os.path.basename(filename)]
+        git_metadata = subprocess.Popen(git_metadata_cmd, stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE)
+        stdout = git_metadata.communicate()[0]
+        mode = oct(int(stdout.split()[0], 8))
+      else:
+        mode = oct(os.stat(filename).st_mode)
       blob_id = clang_format_to_blob(filename, line_ranges,
                                      revision=revision,
                                      binary=binary,

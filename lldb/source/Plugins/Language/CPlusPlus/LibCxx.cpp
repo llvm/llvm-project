@@ -59,7 +59,8 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
       if (pointee_sp->DumpPrintableRepresentation(
               stream, ValueObject::eValueObjectRepresentationStyleSummary,
               lldb::eFormatInvalid,
-              ValueObject::ePrintableRepresentationSpecialCasesDisable, false))
+              ValueObject::PrintableRepresentationSpecialCases::eDisable,
+              false))
         print_pointee = true;
     }
     if (!print_pointee)

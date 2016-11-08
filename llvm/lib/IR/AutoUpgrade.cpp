@@ -219,6 +219,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       NewFn = nullptr;
       return true;
     }
+    break;
 
   case 'x': {
     bool IsX86 = Name.startswith("x86.");

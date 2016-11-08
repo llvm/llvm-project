@@ -143,8 +143,8 @@ static Expected<std::unique_ptr<Module>> openInputFile(LLVMContext &Context) {
   if (!MBOrErr)
     return errorCodeToError(MBOrErr.getError());
   ErrorOr<std::unique_ptr<Module>> MOrErr =
-      getLazyBitcodeModule(std::move(*MBOrErr), Context,
-                           /*ShouldLazyLoadMetadata=*/true);
+      getOwningLazyBitcodeModule(std::move(*MBOrErr), Context,
+                                 /*ShouldLazyLoadMetadata=*/true);
   if (!MOrErr)
     return errorCodeToError(MOrErr.getError());
   if (MaterializeMetadata)

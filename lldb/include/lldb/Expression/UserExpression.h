@@ -62,8 +62,8 @@ public:
   ///     If not eResultTypeAny, the type to use for the expression
   ///     result.
   //------------------------------------------------------------------
-  UserExpression(ExecutionContextScope &exe_scope, const char *expr,
-                 const char *expr_prefix, lldb::LanguageType language,
+  UserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
+                 llvm::StringRef prefix, lldb::LanguageType language,
                  ResultType desired_type,
                  const EvaluateExpressionOptions &options);
 
@@ -258,7 +258,7 @@ public:
   //------------------------------------------------------------------
   static lldb::ExpressionResults
   Evaluate(ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
-           const char *expr_cstr, const char *expr_prefix,
+           llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
            lldb::ValueObjectSP &result_valobj_sp, Error &error,
            uint32_t line_offset = 0, std::string *fixed_expression = nullptr,
            lldb::ModuleSP *jit_module_sp_ptr = nullptr);
