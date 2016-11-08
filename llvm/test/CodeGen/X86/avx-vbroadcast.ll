@@ -546,3 +546,62 @@ define <4 x double> @splat_concat4(double* %p) {
   %6 = shufflevector <2 x double> %3, <2 x double> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %6
 }
+
+;
+; FIXME: When VBROADCAST replaces an existing load, ensure it still respects lifetime dependencies.
+;
+define float @broadcast_lifetime() nounwind {
+; X32-LABEL: broadcast_lifetime:
+; X32:       ## BB#0:
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    subl $40, %esp
+; X32-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl %esi, (%esp)
+; X32-NEXT:    calll _gfunc
+; X32-NEXT:    movl %esi, (%esp)
+; X32-NEXT:    calll _gfunc
+; X32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm0
+; X32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
+; X32-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; X32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    addl $40, %esp
+; X32-NEXT:    popl %esi
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_lifetime:
+; X64:       ## BB#0:
+; X64-NEXT:    subq $24, %rsp
+; X64-NEXT:    leaq (%rsp), %rdi
+; X64-NEXT:    callq _gfunc
+; X64-NEXT:    leaq (%rsp), %rdi
+; X64-NEXT:    callq _gfunc
+; X64-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm0
+; X64-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm1
+; X64-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    retq
+  %1 = alloca <4 x float>, align 16
+  %2 = alloca <4 x float>, align 16
+  %3 = bitcast <4 x float>* %1 to i8*
+  %4 = bitcast <4 x float>* %2 to i8*
+
+  call void @llvm.lifetime.start(i64 16, i8* %3)
+  call void @gfunc(<4 x float>* %1)
+  %5 = load <4 x float>, <4 x float>* %1, align 16
+  call void @llvm.lifetime.end(i64 16, i8* %3)
+
+  call void @llvm.lifetime.start(i64 16, i8* %4)
+  call void @gfunc(<4 x float>* %2)
+  %6 = load <4 x float>, <4 x float>* %2, align 16
+  call void @llvm.lifetime.end(i64 16, i8* %4)
+
+  %7 = extractelement <4 x float> %5, i32 1
+  %8 = extractelement <4 x float> %6, i32 1
+  %9 = fsub float %8, %7
+  ret float %9
+}
+
+declare void @gfunc(<4 x float>*)
+declare void @llvm.lifetime.start(i64, i8*)
+declare void @llvm.lifetime.end(i64, i8*)
