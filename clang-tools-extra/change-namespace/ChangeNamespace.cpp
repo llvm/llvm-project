@@ -345,7 +345,8 @@ void ChangeNamespaceTool::run(
   } else if (const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type")) {
     fixTypeLoc(Result, startLocationForType(*TLoc), EndLocationForType(*TLoc),
                *TLoc);
-  } else if (const auto *VarRef = Result.Nodes.getNodeAs<DeclRefExpr>("var_ref")){
+  } else if (const auto *VarRef =
+                 Result.Nodes.getNodeAs<DeclRefExpr>("var_ref")) {
     const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var_decl");
     assert(Var);
     if (Var->getCanonicalDecl()->isStaticDataMember())
@@ -358,8 +359,8 @@ void ChangeNamespaceTool::run(
                                         VarRefRange.getEnd(), Name);
   } else {
     const auto *Call = Result.Nodes.getNodeAs<clang::CallExpr>("call");
-    assert(Call != nullptr &&"Expecting callback for CallExpr.");
-    const clang::FunctionDecl* Func = Call->getDirectCallee();
+    assert(Call != nullptr && "Expecting callback for CallExpr.");
+    const clang::FunctionDecl *Func = Call->getDirectCallee();
     assert(Func != nullptr);
     // Ignore out-of-line static methods since they will be handled by nested
     // name specifiers.
@@ -548,7 +549,8 @@ void ChangeNamespaceTool::fixUsingShadowDecl(
     const UsingDecl *UsingDeclaration) {
   SourceLocation Start = UsingDeclaration->getLocStart();
   SourceLocation End = UsingDeclaration->getLocEnd();
-  if (Start.isInvalid() || End.isInvalid()) return;
+  if (Start.isInvalid() || End.isInvalid())
+    return;
 
   assert(UsingDeclaration->shadow_size() > 0);
   // FIXME: it might not be always accurate to use the first using-decl.

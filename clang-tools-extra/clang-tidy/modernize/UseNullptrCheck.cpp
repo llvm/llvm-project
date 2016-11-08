@@ -38,8 +38,7 @@ AST_MATCHER(Type, sugaredNullptrType) {
 /// can be replaced instead of just the inner-most implicit cast.
 StatementMatcher makeCastSequenceMatcher() {
   StatementMatcher ImplicitCastToNull = implicitCastExpr(
-      anyOf(hasCastKind(CK_NullToPointer),
-            hasCastKind(CK_NullToMemberPointer)),
+      anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))));
 
   return castExpr(anyOf(ImplicitCastToNull,

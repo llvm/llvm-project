@@ -19,8 +19,8 @@ namespace misc {
 
 namespace {
 
-bool isConcatenatedLiteralsOnPurpose(ASTContext* Ctx,
-                                     const StringLiteral* Lit) {
+bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
+                                     const StringLiteral *Lit) {
   // String literals surrounded by parentheses are assumed to be on purpose.
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
   auto Parents = Ctx->getParents(*Lit);
@@ -36,13 +36,13 @@ bool isConcatenatedLiteralsOnPurpose(ASTContext* Ctx,
   //       "second literal",
   //       [...]
   //     };
-  const SourceManager& SM = Ctx->getSourceManager();
+  const SourceManager &SM = Ctx->getSourceManager();
   bool IndentedCorrectly = true;
   SourceLocation FirstToken = Lit->getStrTokenLoc(0);
   FileID BaseFID = SM.getFileID(FirstToken);
   unsigned int BaseIndent = SM.getSpellingColumnNumber(FirstToken);
   unsigned int BaseLine = SM.getSpellingLineNumber(FirstToken);
-  for (unsigned int TokNum = 1; TokNum < Lit->getNumConcatenated(); ++ TokNum) {
+  for (unsigned int TokNum = 1; TokNum < Lit->getNumConcatenated(); ++TokNum) {
     SourceLocation Token = Lit->getStrTokenLoc(TokNum);
     FileID FID = SM.getFileID(Token);
     unsigned int Indent = SM.getSpellingColumnNumber(Token);
@@ -59,14 +59,14 @@ bool isConcatenatedLiteralsOnPurpose(ASTContext* Ctx,
   return false;
 }
 
-AST_MATCHER_P(StringLiteral, isConcatenatedLiteral,
-              unsigned, MaxConcatenatedTokens) {
+AST_MATCHER_P(StringLiteral, isConcatenatedLiteral, unsigned,
+              MaxConcatenatedTokens) {
   return Node.getNumConcatenated() > 1 &&
          Node.getNumConcatenated() < MaxConcatenatedTokens &&
          !isConcatenatedLiteralsOnPurpose(&Finder->getASTContext(), &Node);
 }
 
-}  // namespace
+} // namespace
 
 SuspiciousMissingCommaCheck::SuspiciousMissingCommaCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -102,25 +102,28 @@ void SuspiciousMissingCommaCheck::check(
 
   // Skip small arrays as they often generate false-positive.
   unsigned int Size = InitializerList->getNumInits();
-  if (Size < SizeThreshold) return;
+  if (Size < SizeThreshold)
+    return;
 
   // Count the number of occurence of concatenated string literal.
   unsigned int Count = 0;
   for (unsigned int i = 0; i < Size; ++i) {
     const Expr *Child = InitializerList->getInit(i)->IgnoreImpCasts();
     if (const auto *Literal = dyn_cast<StringLiteral>(Child)) {
-      if (Literal->getNumConcatenated() > 1) ++Count;
+      if (Literal->getNumConcatenated() > 1)
+        ++Count;
     }
   }
 
   // Warn only when concatenation is not common in this initializer list.
   // The current threshold is set to less than 1/5 of the string literals.
-  if (double(Count) / Size > RatioThreshold) return;
+  if (double(Count) / Size > RatioThreshold)
+    return;
 
   diag(ConcatenatedLiteral->getLocStart(),
        "suspicious string literal, probably missing a comma");
 }
 
-}  // namespace misc
-}  // namespace tidy
-}  // namespace clang
+} // namespace misc
+} // namespace tidy
+} // namespace clang

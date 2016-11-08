@@ -352,8 +352,7 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
-    return std::move(getLazyBitcodeModule(MemoryBuffer::getMemBuffer(
-                                              ModuleMap[Identifier], false),
+    return std::move(getLazyBitcodeModule(ModuleMap[Identifier],
                                           Mod.getContext(),
                                           /*ShouldLazyLoadMetadata=*/true)
                          .get());

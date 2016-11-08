@@ -58,7 +58,6 @@ type (
 	Metadata struct {
 		C C.LLVMMetadataRef
 	}
-	Attribute        uint64
 	Opcode           C.LLVMOpcode
 	TypeKind         C.LLVMTypeKind
 	Linkage          C.LLVMLinkage

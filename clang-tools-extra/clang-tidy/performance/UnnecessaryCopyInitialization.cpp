@@ -27,7 +27,6 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
 
 } // namespace
 
-
 using namespace ::clang::ast_matchers;
 using utils::decl_ref_expr::isOnlyUsedAsConst;
 
@@ -44,9 +43,9 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   // variable being declared. The assumption is that the const reference being
   // returned either points to a global static variable or to a member of the
   // called object.
-  auto ConstRefReturningMethodCall = cxxMemberCallExpr(
-      callee(cxxMethodDecl(returns(ConstReference))),
-      on(declRefExpr(to(varDecl().bind("objectArg")))));
+  auto ConstRefReturningMethodCall =
+      cxxMemberCallExpr(callee(cxxMethodDecl(returns(ConstReference))),
+                        on(declRefExpr(to(varDecl().bind("objectArg")))));
   auto ConstRefReturningFunctionCall =
       callExpr(callee(functionDecl(returns(ConstReference))),
                unless(callee(cxxMethodDecl())));
@@ -64,14 +63,14 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                                                isCopyConstructor())),
                                            hasArgument(0, CopyCtorArg))
                                            .bind("ctorCall")))
-                               .bind("newVarDecl"))).bind("declStmt")))
+                               .bind("newVarDecl")))
+                       .bind("declStmt")))
         .bind("blockStmt");
   };
 
-  Finder->addMatcher(
-      localVarCopiedFrom(anyOf(ConstRefReturningFunctionCall,
-                               ConstRefReturningMethodCall)),
-      this);
+  Finder->addMatcher(localVarCopiedFrom(anyOf(ConstRefReturningFunctionCall,
+                                              ConstRefReturningMethodCall)),
+                     this);
 
   Finder->addMatcher(localVarCopiedFrom(declRefExpr(
                          to(varDecl(hasLocalStorage()).bind("oldVarDecl")))),

@@ -26,8 +26,9 @@ namespace tidy {
 /// this object.
 class ClangTidyCheckFactories {
 public:
-  typedef std::function<ClangTidyCheck *(
-      StringRef Name, ClangTidyContext *Context)> CheckFactory;
+  typedef std::function<ClangTidyCheck *(StringRef Name,
+                                         ClangTidyContext *Context)>
+      CheckFactory;
 
   /// \brief Registers check \p Factory with name \p Name.
   ///
@@ -58,8 +59,8 @@ public:
   template <typename CheckType> void registerCheck(StringRef CheckName) {
     registerCheckFactory(CheckName,
                          [](StringRef Name, ClangTidyContext *Context) {
-      return new CheckType(Name, Context);
-    });
+                           return new CheckType(Name, Context);
+                         });
   }
 
   /// \brief Create instances of all checks matching \p CheckRegexString and

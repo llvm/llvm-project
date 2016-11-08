@@ -32,7 +32,6 @@ done:
 ; FIXME: We could use _e32 here if we re-used the 0 from [[STORE_VAL]], and
 ; also scheduled the write first.
 ; GCN-DAG: v_cmp_eq_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
-; GCN-DAG: s_and_b64 vcc, exec, [[COND]]
 ; GCN-DAG: v_mov_b32_e32 [[STORE_VAL:v[0-9]+]], 0
 ; GCN: s_cbranch_vccnz [[IF_LABEL:[0-9_A-Za-z]+]]
 
@@ -89,7 +88,6 @@ done:
 ; FIXME: We could use _e32 here if we re-used the 0 from [[STORE_VAL]], and
 ; also scheduled the write first.
 ; GCN-DAG: v_cmp_neq_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
-; GCN-DAG: s_and_b64 vcc, exec, [[COND]]
 ; GCN-DAG: v_mov_b32_e32 [[STORE_VAL:v[0-9]+]], 0
 ; GCN: s_cbranch_vccnz [[IF_LABEL:[0-9_A-Za-z]+]]
 
@@ -253,8 +251,7 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; GCN: s_load_dword [[COND:s[0-9]+]]
 ; GCN: s_cmp_lt_i32 [[COND]], 1
 ; GCN: s_cbranch_scc1 [[EXIT:[A-Za-z0-9_]+]]
-; GCN: v_cmp_gt_i32_e64 [[MASK:s\[[0-9]+:[0-9]+\]]], [[COND]], 0{{$}}
-; GCN: s_and_b64 vcc, exec, [[MASK]]
+; GCN: v_cmp_gt_i32_e64 vcc, [[COND]], 0{{$}}
 ; GCN: s_cbranch_vccnz [[EXIT]]
 ; GCN: buffer_store
 ; GCN: {{^}}[[EXIT]]:
@@ -439,7 +436,6 @@ bb9:                                              ; preds = %bb8, %bb4
 ; GCN-DAG: v_mov_b32_e32 [[STORE_VAL:v[0-9]+]], 0
 
 ; SI: v_cmp_eq_u64_e64
-; SI: s_and_b64 vcc, exec,
 ; SI: s_cbranch_vccnz [[IF_LABEL:[0-9_A-Za-z]+]]
 
 ; VI: s_cbranch_scc1 [[IF_LABEL:[0-9_A-Za-z]+]]
@@ -471,7 +467,6 @@ done:
 ; GCN-DAG: v_mov_b32_e32 [[STORE_VAL:v[0-9]+]], 0
 
 ; SI: v_cmp_ne_u64_e64
-; SI: s_and_b64 vcc, exec,
 ; SI: s_cbranch_vccnz [[IF_LABEL:[0-9_A-Za-z]+]]
 
 ; VI: s_cbranch_scc1 [[IF_LABEL:[0-9_A-Za-z]+]]
@@ -500,7 +495,6 @@ done:
 
 ; GCN-LABEL: {{^}}uniform_if_scc_i64_sgt:
 ; GCN: v_cmp_gt_i64_e64
-; GCN: s_and_b64 vcc, exec,
 ; GCN: s_cbranch_vccnz [[IF_LABEL:[0-9_A-Za-z]+]]
 
 ; Fall-through to the else

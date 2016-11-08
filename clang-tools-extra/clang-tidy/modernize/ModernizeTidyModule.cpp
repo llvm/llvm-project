@@ -37,8 +37,7 @@ namespace modernize {
 class ModernizeModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<AvoidBindCheck>(
-        "modernize-avoid-bind");
+    CheckFactories.registerCheck<AvoidBindCheck>("modernize-avoid-bind");
     CheckFactories.registerCheck<DeprecatedHeadersCheck>(
         "modernize-deprecated-headers");
     CheckFactories.registerCheck<LoopConvertCheck>("modernize-loop-convert");

@@ -336,6 +336,14 @@ LLVM-specific variables
   will not be used.  If the variable for an external project does not point
   to a valid path, then that project will not be built.
 
+**LLVM_ENABLE_PROJECTS**:STRING
+  Semicolon-separated list of projects to build, or *all* for building all
+  (clang, libcxx, libcxxabi, lldb, compiler-rt, lld, polly) projects.
+  This flag assumes that projects are checked out side-by-side and not nested,
+  i.e. clang needs to be in parallel of llvm instead of nested in `llvm/tools`.
+  This feature allows to have one build for only LLVM and another for clang+llvm
+  using the same source checkout.
+
 **LLVM_EXTERNAL_PROJECTS**:STRING
   Semicolon-separated list of additional external projects to build as part of
   llvm. For each project LLVM_EXTERNAL_<NAME>_SOURCE_DIR have to be specified

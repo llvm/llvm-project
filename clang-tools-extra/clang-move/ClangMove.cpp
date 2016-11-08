@@ -25,14 +25,13 @@ namespace move {
 namespace {
 
 // FIXME: Move to ASTMatchers.
-AST_MATCHER(VarDecl, isStaticDataMember) {
-  return Node.isStaticDataMember();
-}
+AST_MATCHER(VarDecl, isStaticDataMember) { return Node.isStaticDataMember(); }
 
 AST_MATCHER_P(Decl, hasOutermostEnclosingClass,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
-  const auto* Context = Node.getDeclContext();
-  if (!Context) return false;
+  const auto *Context = Node.getDeclContext();
+  if (!Context)
+    return false;
   while (const auto *NextContext = Context->getParent()) {
     if (isa<NamespaceDecl>(NextContext) ||
         isa<TranslationUnitDecl>(NextContext))
@@ -46,7 +45,8 @@ AST_MATCHER_P(Decl, hasOutermostEnclosingClass,
 AST_MATCHER_P(CXXMethodDecl, ofOutermostEnclosingClass,
               ast_matchers::internal::Matcher<CXXRecordDecl>, InnerMatcher) {
   const CXXRecordDecl *Parent = Node.getParent();
-  if (!Parent) return false;
+  if (!Parent)
+    return false;
   while (const auto *NextParent =
              dyn_cast<CXXRecordDecl>(Parent->getParent())) {
     Parent = NextParent;
@@ -64,7 +64,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
   llvm::SmallString<128> AbsolutePath(Path);
   if (std::error_code EC =
           llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath))
-    llvm::errs() << "Warning: could not make absolute file: '" <<  EC.message()
+    llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
                  << '\n';
   llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
   llvm::sys::path::native(AbsolutePath);
@@ -76,16 +76,17 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
 //
 // The Path can be a path relative to the build directory, or retrieved from
 // the SourceManager.
-std::string MakeAbsolutePath(const SourceManager& SM, StringRef Path) {
+std::string MakeAbsolutePath(const SourceManager &SM, StringRef Path) {
   llvm::SmallString<128> AbsolutePath(Path);
   if (std::error_code EC =
-       SM.getFileManager().getVirtualFileSystem()->makeAbsolute(AbsolutePath))
-    llvm::errs() << "Warning: could not make absolute file: '" <<  EC.message()
+          SM.getFileManager().getVirtualFileSystem()->makeAbsolute(
+              AbsolutePath))
+    llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
                  << '\n';
   // Handle symbolic link path cases.
   // We are trying to get the real file path of the symlink.
   const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
-       llvm::sys::path::parent_path(AbsolutePath.str()));
+      llvm::sys::path::parent_path(AbsolutePath.str()));
   if (Dir) {
     StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
     SmallVector<char, 128> AbsoluteFilename;
@@ -156,7 +157,7 @@ getLocForEndOfDecl(const clang::Decl *D, const SourceManager *SM,
   // FIXME: this is a bit hacky to get ReadToEndOfLine work.
   Lex.setParsingPreprocessorDirective(true);
   Lex.ReadToEndOfLine(&Line);
-  SourceLocation EndLoc  = D->getLocEnd().getLocWithOffset(Line.size());
+  SourceLocation EndLoc = D->getLocEnd().getLocWithOffset(Line.size());
   // If we already reach EOF, just return the EOF SourceLocation;
   // otherwise, move 1 offset ahead to include the trailing newline character
   // '\n'.
@@ -172,14 +173,12 @@ GetFullRange(const clang::SourceManager *SM, const clang::Decl *D,
   clang::SourceRange Full = D->getSourceRange();
   Full.setEnd(getLocForEndOfDecl(D, SM));
   // Expand to comments that are associated with the Decl.
-  if (const auto* Comment =
-          D->getASTContext().getRawCommentForDeclNoCache(D)) {
+  if (const auto *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
     if (SM->isBeforeInTranslationUnit(Full.getEnd(), Comment->getLocEnd()))
       Full.setEnd(Comment->getLocEnd());
     // FIXME: Don't delete a preceding comment, if there are no other entities
     // it could refer to.
-    if (SM->isBeforeInTranslationUnit(Comment->getLocStart(),
-                                      Full.getBegin()))
+    if (SM->isBeforeInTranslationUnit(Comment->getLocStart(), Full.getBegin()))
       Full.setBegin(Comment->getLocStart());
   }
 
@@ -228,8 +227,7 @@ std::vector<std::string> GetNamespaces(const clang::Decl *D) {
 clang::tooling::Replacements
 createInsertedReplacements(const std::vector<std::string> &Includes,
                            const std::vector<ClangMoveTool::MovedDecl> &Decls,
-                           llvm::StringRef FileName,
-                           bool IsHeader = false) {
+                           llvm::StringRef FileName, bool IsHeader = false) {
   std::string NewCode;
   std::string GuardName(FileName);
   if (IsHeader) {
@@ -325,8 +323,8 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
 
   auto InOldHeader = isExpansionInFile(
       MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader));
-  auto InOldCC = isExpansionInFile(
-      MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC));
+  auto InOldCC =
+      isExpansionInFile(MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC));
   auto InOldFiles = anyOf(InOldHeader, InOldCC);
   auto InMovedClass =
       hasOutermostEnclosingClass(cxxRecordDecl(*InMovedClassNames));
@@ -346,10 +344,10 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
       this);
 
   // Match static member variable definition of the moved class.
-  Finder->addMatcher(varDecl(InMovedClass, InOldCC, isDefinition(),
-                             isStaticDataMember())
-                         .bind("class_static_var_decl"),
-                     this);
+  Finder->addMatcher(
+      varDecl(InMovedClass, InOldCC, isDefinition(), isStaticDataMember())
+          .bind("class_static_var_decl"),
+      this);
 
   auto InOldCCNamedNamespace =
       allOf(hasParent(namespaceDecl(unless(isAnonymous()))), InOldCC);
@@ -357,10 +355,9 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // in classes, functions and anonymous namespaces are covered in other
   // matchers.
   Finder->addMatcher(
-      namedDecl(
-          anyOf(usingDecl(InOldCCNamedNamespace),
-                usingDirectiveDecl(InOldCC, InOldCCNamedNamespace),
-                typeAliasDecl(InOldCC, InOldCCNamedNamespace)))
+      namedDecl(anyOf(usingDecl(InOldCCNamedNamespace),
+                      usingDirectiveDecl(InOldCC, InOldCCNamedNamespace),
+                      typeAliasDecl(InOldCC, InOldCCNamedNamespace)))
           .bind("using_decl"),
       this);
 
@@ -373,11 +370,10 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   auto IsOldCCStaticDefinition =
       allOf(isDefinition(), unless(InMovedClass), InOldCCNamedNamespace,
             isStaticStorageClass());
-  Finder->addMatcher(
-      namedDecl(anyOf(functionDecl(IsOldCCStaticDefinition),
-                      varDecl(IsOldCCStaticDefinition)))
-          .bind("static_decls"),
-      this);
+  Finder->addMatcher(namedDecl(anyOf(functionDecl(IsOldCCStaticDefinition),
+                                     varDecl(IsOldCCStaticDefinition)))
+                         .bind("static_decls"),
+                     this);
 
   // Match forward declarations in old header.
   Finder->addMatcher(
@@ -413,8 +409,8 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
         MovedDecls.emplace_back(FWD, &Result.Context->getSourceManager());
       }
     }
-  } else if (const auto *ANS = Result.Nodes.getNodeAs<clang::NamespaceDecl>(
-                 "anonymous_ns")) {
+  } else if (const auto *ANS =
+                 Result.Nodes.getNodeAs<clang::NamespaceDecl>("anonymous_ns")) {
     MovedDecls.emplace_back(ANS, &Result.Context->getSourceManager());
   } else if (const auto *ND =
                  Result.Nodes.getNodeAs<clang::NamedDecl>("static_decls")) {
@@ -425,11 +421,10 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   }
 }
 
-void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader,
-                                bool IsAngled,
+void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
                                 llvm::StringRef SearchPath,
                                 llvm::StringRef FileName,
-                                const SourceManager& SM) {
+                                const SourceManager &SM) {
   SmallVector<char, 128> HeaderWithSearchPath;
   llvm::sys::path::append(HeaderWithSearchPath, SearchPath, IncludeHeader);
   std::string AbsoluteOldHeader =
@@ -460,8 +455,8 @@ void ClangMoveTool::removeClassDefinitionInOldFiles() {
     const auto &SM = *MovedDecl.SM;
     auto Range = GetFullRange(&SM, MovedDecl.Decl);
     clang::tooling::Replacement RemoveReplacement(
-        *MovedDecl.SM, clang::CharSourceRange::getCharRange(
-                           Range.getBegin(), Range.getEnd()),
+        *MovedDecl.SM,
+        clang::CharSourceRange::getCharRange(Range.getBegin(), Range.getEnd()),
         "");
     std::string FilePath = RemoveReplacement.getFilePath().str();
     auto Err = FileToReplacements[FilePath].add(RemoveReplacement);

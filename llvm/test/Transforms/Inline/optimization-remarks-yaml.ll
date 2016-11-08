@@ -26,6 +26,7 @@
 ; YAML-NEXT:   - Callee: foo
 ; YAML-NEXT:   - String: ' will not be inlined into '
 ; YAML-NEXT:   - Caller: baz
+; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 4, Column: 0 }
 ; YAML-NEXT:   - String: ' because its definition is unavailable'
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Missed
@@ -38,6 +39,7 @@
 ; YAML-NEXT:   - Callee: bar
 ; YAML-NEXT:   - String: ' will not be inlined into '
 ; YAML-NEXT:   - Caller: baz
+; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 4, Column: 0 }
 ; YAML-NEXT:   - String: ' because its definition is unavailable'
 ; YAML-NEXT: ...
 

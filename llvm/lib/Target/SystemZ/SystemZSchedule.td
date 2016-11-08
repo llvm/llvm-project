@@ -8,6 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 // Scheduler resources
+// Resources ending with a '2' use that resource for 2 cycles. An instruction
+// using two such resources use the mapped unit for 4 cycles, and 2 is added
+// to the total number of uops of the sched class.
 
 // These three resources are used to express decoder grouping rules.
 // The number of decoder slots needed by an instructions is normally
@@ -38,6 +41,7 @@ def Lat30 : SchedWrite;
 
 // Fixed-point
 def FXa         : SchedWrite;
+def FXa2        : SchedWrite;
 def FXb         : SchedWrite;
 def FXU         : SchedWrite;
 
@@ -50,11 +54,14 @@ def LSU         : SchedWrite;
 def LSU_lat1    : SchedWrite;
 
 // Floating point unit (zEC12 and earlier)
-def FPU : SchedWrite;
+def FPU  : SchedWrite;
+def FPU2 : SchedWrite;
 
 // Vector sub units (z13)
 def VecBF     : SchedWrite;
+def VecBF2    : SchedWrite;
 def VecDF     : SchedWrite;
+def VecDF2    : SchedWrite;
 def VecFPd    : SchedWrite; // Blocking BFP div/sqrt unit.
 def VecMul    : SchedWrite;
 def VecStr    : SchedWrite;

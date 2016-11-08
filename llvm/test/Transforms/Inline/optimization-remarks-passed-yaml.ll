@@ -23,8 +23,10 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: foo
+; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 1, Column: 0 }
 ; YAML-NEXT:   - String: ' can be inlined into '
 ; YAML-NEXT:   - Caller: bar
+; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 3, Column: 0 }
 ; YAML-NEXT:   - String: ' with cost='
 ; YAML-NEXT:   - Cost: '{{[0-9]+}}'
 ; YAML-NEXT:   - String: ' (threshold='
@@ -39,8 +41,10 @@
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - Callee: foo
+; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 1, Column: 0 }
 ; YAML-NEXT:   - String: ' inlined into '
 ; YAML-NEXT:   - Caller: bar
+; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 3, Column: 0 }
 ; YAML-NEXT: ...
 
 ; ModuleID = '/tmp/s.c'

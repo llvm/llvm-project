@@ -469,8 +469,8 @@ a variadic list of "handlers", each of which must be a callable type (a
 function, lambda, or class with a call operator) with one argument. The
 ``handleErrors`` function will visit each handler in the sequence and check its
 argument type against the dynamic type of the error, running the first handler
-that matches. This is the same process that is used for catch clauses in C++
-exceptions.
+that matches. This is the same decision process that is used decide which catch
+clause to run for a C++ exception.
 
 Since the list of handlers passed to ``handleErrors`` may not cover every error
 type that can occur, the ``handleErrors`` function also returns an Error value
@@ -499,6 +499,11 @@ function should generally be avoided: the introduction of a new error type
 elsewhere in the program can easily turn a formerly exhaustive list of errors
 into a non-exhaustive list, risking unexpected program termination. Where
 possible, use handleErrors and propagate unknown errors up the stack instead.
+
+For tool code, where errors can be handled by printing an error message then
+exiting with an error code, the :ref:`ExitOnError <err_exitonerr>` utility
+may be a better choice than handleErrors, as it simplifies control flow when
+calling fallible functions.
 
 StringError
 """""""""""
@@ -579,6 +584,8 @@ actually recognises three different forms of handler signature:
 
 Any error returned from a handler will be returned from the ``handleErrors``
 function so that it can be handled itself, or propagated up the stack.
+
+.. _err_exitonerr:
 
 Using ExitOnError to simplify tool code
 """""""""""""""""""""""""""""""""""""""

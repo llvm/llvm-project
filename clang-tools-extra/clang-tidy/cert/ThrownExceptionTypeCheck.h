@@ -23,7 +23,7 @@ namespace cert {
 class ThrownExceptionTypeCheck : public ClangTidyCheck {
 public:
   ThrownExceptionTypeCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };

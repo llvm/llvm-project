@@ -69,11 +69,9 @@ public:
   /// in the file system. It can be a relative path or an absolute path.
   /// \param FileName The name of file where the IncludeHeader comes from.
   /// \param SM The SourceManager.
-  void addIncludes(llvm::StringRef IncludeHeader,
-                   bool IsAngled,
-                   llvm::StringRef SearchPath,
-                   llvm::StringRef FileName,
-                   const SourceManager& SM);
+  void addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
+                   llvm::StringRef SearchPath, llvm::StringRef FileName,
+                   const SourceManager &SM);
 
 private:
   void removeClassDefinitionInOldFiles();

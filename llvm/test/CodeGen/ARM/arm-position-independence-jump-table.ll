@@ -85,7 +85,7 @@ lab4:
 ; THUMB2: [[LBB4]]
 ; THUMB2-NEXT: b exit4
 
-
+; THUMB1: .p2align 2
 ; THUMB1: add     r[[x:[0-9]+]], pc
 ; THUMB1: ldrb    r[[x]], [r[[x]], #4]
 ; THUMB1: lsls    r[[x]], r[[x]], #1

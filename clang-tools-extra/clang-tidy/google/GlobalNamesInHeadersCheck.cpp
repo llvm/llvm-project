@@ -26,8 +26,7 @@ GlobalNamesInHeadersCheck::GlobalNamesInHeadersCheck(StringRef Name,
       RawStringHeaderFileExtensions(
           Options.getLocalOrGlobal("HeaderFileExtensions", "h")) {
   if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                        HeaderFileExtensions,
-                                        ',')) {
+                                        HeaderFileExtensions, ',')) {
     llvm::errs() << "Invalid header file extension: "
                  << RawStringHeaderFileExtensions << "\n";
   }
@@ -38,12 +37,12 @@ void GlobalNamesInHeadersCheck::storeOptions(
   Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
 }
 
-void
-GlobalNamesInHeadersCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
-  Finder->addMatcher(
-      decl(anyOf(usingDecl(), usingDirectiveDecl()),
-           hasDeclContext(translationUnitDecl())).bind("using_decl"),
-      this);
+void GlobalNamesInHeadersCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
+  Finder->addMatcher(decl(anyOf(usingDecl(), usingDirectiveDecl()),
+                          hasDeclContext(translationUnitDecl()))
+                         .bind("using_decl"),
+                     this);
 }
 
 void GlobalNamesInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
@@ -61,7 +60,7 @@ void GlobalNamesInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       return;
   }
 
-  if (const auto* UsingDirective = dyn_cast<UsingDirectiveDecl>(D)) {
+  if (const auto *UsingDirective = dyn_cast<UsingDirectiveDecl>(D)) {
     if (UsingDirective->getNominatedNamespace()->isAnonymousNamespace()) {
       // Anynoumous namespaces inject a using directive into the AST to import
       // the names into the containing namespace.

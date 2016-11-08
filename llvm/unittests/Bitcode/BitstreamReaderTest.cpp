@@ -20,8 +20,7 @@ TEST(BitstreamReaderTest, AtEndOfStream) {
   uint8_t Bytes[4] = {
     0x00, 0x01, 0x02, 0x03
   };
-  BitstreamReader Reader(Bytes);
-  BitstreamCursor Cursor(Reader);
+  BitstreamCursor Cursor(Bytes);
 
   EXPECT_FALSE(Cursor.AtEndOfStream());
   (void)Cursor.Read(8);
@@ -40,24 +39,21 @@ TEST(BitstreamReaderTest, AtEndOfStreamJump) {
   uint8_t Bytes[4] = {
     0x00, 0x01, 0x02, 0x03
   };
-  BitstreamReader Reader(Bytes);
-  BitstreamCursor Cursor(Reader);
+  BitstreamCursor Cursor(Bytes);
 
   Cursor.JumpToBit(32);
   EXPECT_TRUE(Cursor.AtEndOfStream());
 }
 
 TEST(BitstreamReaderTest, AtEndOfStreamEmpty) {
-  BitstreamReader Reader(ArrayRef<uint8_t>{});
-  BitstreamCursor Cursor(Reader);
+  BitstreamCursor Cursor(ArrayRef<uint8_t>{});
 
   EXPECT_TRUE(Cursor.AtEndOfStream());
 }
 
 TEST(BitstreamReaderTest, getCurrentByteNo) {
   uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03};
-  BitstreamReader Reader(Bytes);
-  SimpleBitstreamCursor Cursor(Reader);
+  SimpleBitstreamCursor Cursor(Bytes);
 
   for (unsigned I = 0, E = 32; I != E; ++I) {
     EXPECT_EQ(I / 8, Cursor.getCurrentByteNo());
@@ -68,8 +64,7 @@ TEST(BitstreamReaderTest, getCurrentByteNo) {
 
 TEST(BitstreamReaderTest, getPointerToByte) {
   uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-  BitstreamReader Reader(Bytes);
-  SimpleBitstreamCursor Cursor(Reader);
+  SimpleBitstreamCursor Cursor(Bytes);
 
   for (unsigned I = 0, E = 8; I != E; ++I) {
     EXPECT_EQ(Bytes + I, Cursor.getPointerToByte(I, 1));
@@ -78,22 +73,10 @@ TEST(BitstreamReaderTest, getPointerToByte) {
 
 TEST(BitstreamReaderTest, getPointerToBit) {
   uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-  BitstreamReader Reader(Bytes);
-  SimpleBitstreamCursor Cursor(Reader);
+  SimpleBitstreamCursor Cursor(Bytes);
 
   for (unsigned I = 0, E = 8; I != E; ++I) {
     EXPECT_EQ(Bytes + I, Cursor.getPointerToBit(I * 8, 1));
-  }
-}
-
-TEST(BitstreamReaderTest, jumpToPointer) {
-  uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-  BitstreamReader Reader(Bytes);
-  SimpleBitstreamCursor Cursor(Reader);
-
-  for (unsigned I : {0, 6, 2, 7}) {
-    Cursor.jumpToPointer(Bytes + I);
-    EXPECT_EQ(I, Cursor.getCurrentByteNo());
   }
 }
 
@@ -129,9 +112,8 @@ TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
     }
 
     // Stream the buffer into the reader.
-    BitstreamReader R(
+    BitstreamCursor Stream(
         ArrayRef<uint8_t>((const uint8_t *)Buffer.begin(), Buffer.size()));
-    BitstreamCursor Stream(R);
 
     // Header.  Included in test so that we can run llvm-bcanalyzer to debug
     // when there are problems.
@@ -161,8 +143,7 @@ TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
 TEST(BitstreamReaderTest, shortRead) {
   uint8_t Bytes[] = {8, 7, 6, 5, 4, 3, 2, 1};
   for (unsigned I = 1; I != 8; ++I) {
-    BitstreamReader Reader(ArrayRef<uint8_t>(Bytes, I));
-    SimpleBitstreamCursor Cursor(Reader);
+    SimpleBitstreamCursor Cursor(ArrayRef<uint8_t>(Bytes, I));
     EXPECT_EQ(8ull, Cursor.Read(8));
   }
 }
