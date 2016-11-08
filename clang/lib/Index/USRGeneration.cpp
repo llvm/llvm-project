@@ -286,6 +286,15 @@ void USRGenerator::VisitVarDecl(const VarDecl *D) {
 
   VisitDeclContext(D->getDeclContext());
 
+  if (VarTemplateDecl *VarTmpl = D->getDescribedVarTemplate()) {
+    Out << "@VT";
+    VisitTemplateParameterList(VarTmpl->getTemplateParameters());
+  } else if (const VarTemplatePartialSpecializationDecl *PartialSpec
+             = dyn_cast<VarTemplatePartialSpecializationDecl>(D)) {
+    Out << "@VP";
+    VisitTemplateParameterList(PartialSpec->getTemplateParameters());
+  }
+
   // Variables always have simple names.
   StringRef s = D->getName();
 
@@ -297,6 +306,17 @@ void USRGenerator::VisitVarDecl(const VarDecl *D) {
     IgnoreResults = true;
   else
     Out << '@' << s;
+
+  // For a template specialization, mangle the template arguments.
+  if (const VarTemplateSpecializationDecl *Spec
+                              = dyn_cast<VarTemplateSpecializationDecl>(D)) {
+    const TemplateArgumentList &Args = Spec->getTemplateInstantiationArgs();
+    Out << '>';
+    for (unsigned I = 0, N = Args.size(); I != N; ++I) {
+      Out << '#';
+      VisitTemplateArgument(Args.get(I));
+    }
+  }
 }
 
 void USRGenerator::VisitNonTypeTemplateParmDecl(
