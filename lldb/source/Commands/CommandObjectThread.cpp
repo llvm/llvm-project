@@ -277,9 +277,9 @@ protected:
 
     // Don't show source context when doing backtraces.
     const uint32_t num_frames_with_source = 0;
-
+    const bool stop_format = true;
     if (!thread->GetStatus(strm, m_options.m_start, m_options.m_count,
-                           num_frames_with_source, false)) {
+                           num_frames_with_source, stop_format)) {
       result.AppendErrorWithFormat(
           "error displaying backtrace for thread: \"0x%4.4x\"\n",
           thread->GetIndexID());
