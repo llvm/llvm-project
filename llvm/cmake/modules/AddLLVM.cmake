@@ -1302,6 +1302,10 @@ function(llvm_externalize_debuginfo name)
 endfunction()
 
 function(llvm_setup_rpath name)
+  if(CMAKE_INSTALL_RPATH)
+    return()
+  endif()
+
   if(LLVM_INSTALL_PREFIX AND NOT (LLVM_INSTALL_PREFIX STREQUAL CMAKE_INSTALL_PREFIX))
     set(extra_libdir ${LLVM_LIBRARY_DIR})
   elseif(LLVM_BUILD_LIBRARY_DIR)
@@ -1312,16 +1316,14 @@ function(llvm_setup_rpath name)
     set(_install_name_dir INSTALL_NAME_DIR "@rpath")
     set(_install_rpath "@loader_path/../lib" ${extra_libdir})
   elseif(UNIX)
-    if(NOT DEFINED CMAKE_INSTALL_RPATH)
-      set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
-      if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
-        set_property(TARGET ${name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,-z,origin ")
-      elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT LLVM_LINKER_IS_GOLD)
-        # $ORIGIN is not interpreted at link time by ld.bfd
-        set_property(TARGET ${name} APPEND_STRING PROPERTY
-                     LINK_FLAGS " -Wl,-rpath-link,${LLVM_LIBRARY_OUTPUT_INTDIR} ")
-      endif()
+    set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+    if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
+      set_property(TARGET ${name} APPEND_STRING PROPERTY
+                   LINK_FLAGS " -Wl,-z,origin ")
+    elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT LLVM_LINKER_IS_GOLD)
+      # $ORIGIN is not interpreted at link time by ld.bfd
+      set_property(TARGET ${name} APPEND_STRING PROPERTY
+                   LINK_FLAGS " -Wl,-rpath-link,${LLVM_LIBRARY_OUTPUT_INTDIR} ")
     endif()
   else()
     return()
