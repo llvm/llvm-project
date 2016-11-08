@@ -39,7 +39,10 @@ set(CLANG_CONFIG_CMAKE_DIR)
 set(CLANG_CONFIG_EXPORTS_FILE)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  install(EXPORT ClangTargets DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
+  get_property(clang_has_exports GLOBAL PROPERTY CLANG_HAS_EXPORTS)
+  if(clang_has_exports)
+    install(EXPORT ClangTargets DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
+  endif()
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake

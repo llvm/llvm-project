@@ -24,8 +24,8 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
   if (!Buffer)
     return SDError::CouldNotLoad;
 
-  llvm::BitstreamReader StreamFile(**Buffer);
-  llvm::BitstreamCursor Stream(StreamFile);
+  llvm::BitstreamCursor Stream(**Buffer);
+  Optional<llvm::BitstreamBlockInfo> BlockInfo;
 
   // Sniff for the signature.
   if (Stream.Read(8) != 'D' ||
@@ -41,10 +41,13 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
 
     std::error_code EC;
     switch (Stream.ReadSubBlockID()) {
-    case llvm::bitc::BLOCKINFO_BLOCK_ID:
-      if (Stream.ReadBlockInfoBlock())
+    case llvm::bitc::BLOCKINFO_BLOCK_ID: {
+      BlockInfo = Stream.ReadBlockInfoBlock();
+      if (!BlockInfo)
         return SDError::MalformedBlockInfoBlock;
+      Stream.setBlockInfo(&*BlockInfo);
       continue;
+    }
     case BLOCK_META:
       if ((EC = readMetaBlock(Stream)))
         return EC;

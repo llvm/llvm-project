@@ -312,8 +312,9 @@ ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
       CI, MainFileName, OutputFileName, std::move(OS), Buffer);
 }
 
-void ObjectFilePCHContainerReader::ExtractPCH(
-    llvm::MemoryBufferRef Buffer, llvm::BitstreamReader &StreamFile) const {
+StringRef
+ObjectFilePCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
+  StringRef PCH;
   auto OFOrErr = llvm::object::ObjectFile::createObjectFile(Buffer);
   if (OFOrErr) {
     auto &OF = OFOrErr.get();
@@ -323,10 +324,8 @@ void ObjectFilePCHContainerReader::ExtractPCH(
       StringRef Name;
       Section.getName(Name);
       if ((!IsCOFF && Name == "__clangast") || (IsCOFF && Name == "clangast")) {
-        StringRef Buf;
-        Section.getContents(Buf);
-        StreamFile = llvm::BitstreamReader(Buf);
-        return;
+        Section.getContents(PCH);
+        return PCH;
       }
     }
   }
@@ -334,8 +333,9 @@ void ObjectFilePCHContainerReader::ExtractPCH(
     if (EIB.convertToErrorCode() ==
         llvm::object::object_error::invalid_file_type)
       // As a fallback, treat the buffer as a raw AST.
-      StreamFile = llvm::BitstreamReader(Buffer);
+      PCH = Buffer.getBuffer();
     else
       EIB.log(llvm::errs());
   });
+  return PCH;
 }
