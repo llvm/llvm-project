@@ -125,6 +125,9 @@ class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
 public:
   typedef llvm::StringMap<std::string> ConfigTable;
 
+  static std::vector<StringRef>
+  getRegisteredCheckers(bool IncludeExperimental = false);
+
   /// \brief Pair of checker name and enable/disable.
   std::vector<std::pair<std::string, bool> > CheckersControlList;
   
