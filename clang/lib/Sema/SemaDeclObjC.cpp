@@ -1030,6 +1030,7 @@ ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
 /// typedef'ed use for a qualified super class and adds them to the list
 /// of the protocols.
 void Sema::ActOnTypedefedProtocols(SmallVectorImpl<Decl *> &ProtocolRefs,
+                                  SmallVectorImpl<SourceLocation> &ProtocolLocs,
                                    IdentifierInfo *SuperName,
                                    SourceLocation SuperLoc) {
   if (!SuperName)
@@ -1042,8 +1043,14 @@ void Sema::ActOnTypedefedProtocols(SmallVectorImpl<Decl *> &ProtocolRefs,
   if (const TypedefNameDecl *TDecl = dyn_cast_or_null<TypedefNameDecl>(IDecl)) {
     QualType T = TDecl->getUnderlyingType();
     if (T->isObjCObjectType())
-      if (const ObjCObjectType *OPT = T->getAs<ObjCObjectType>())
+      if (const ObjCObjectType *OPT = T->getAs<ObjCObjectType>()) {
         ProtocolRefs.append(OPT->qual_begin(), OPT->qual_end());
+        // FIXME: Consider whether this should be an invalid loc since the loc
+        // is not actually pointing to a protocol name reference but to the
+        // typedef reference. Note that the base class name loc is also pointing
+        // at the typedef.
+        ProtocolLocs.append(OPT->getNumProtocols(), SuperLoc);
+      }
   }
 }
 

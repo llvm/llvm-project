@@ -516,6 +516,18 @@ _mm512_castsi512_si256 (__m512i __A)
   return (__m256i)__builtin_shufflevector(__A, __A , 0, 1, 2, 3);
 }
 
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
+_mm512_int2mask(int __a)
+{
+  return (__mmask16)__a;
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_mask2int(__mmask16 __a)
+{
+  return (int)__a;
+}
+
 /* Bitwise operators */
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_and_epi32(__m512i __a, __m512i __b)
@@ -9152,35 +9164,96 @@ _mm512_maskz_moveldup_ps (__mmask16 __U, __m512 __A)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_move_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
-  return (__m128) __builtin_ia32_movss_mask ((__v4sf) __A, (__v4sf) __B,
-               (__v4sf) __W,
-               (__mmask8) __U);
+  __m128 res = __A; 
+  res[0] = (__U & 1) ? __B[0] : __W[0];
+  return res; 
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_maskz_move_ss (__mmask8 __U, __m128 __A, __m128 __B)
 {
-  return (__m128) __builtin_ia32_movss_mask ((__v4sf) __A, (__v4sf) __B,
-               (__v4sf)
-               _mm_setzero_si128(),
-               (__mmask8) __U);
+  __m128 res = __A; 
+  res[0] = (__U & 1) ? __B[0] : 0; 
+  return res; 
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mask_move_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
 {
-  return (__m128d) __builtin_ia32_movsd_mask ((__v2df) __A, (__v2df) __B,
-               (__v2df) __W,
-               (__mmask8) __U);
+  __m128d res = __A; 
+  res[0] = (__U & 1) ? __B[0] : __W[0];
+  return res; 
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_maskz_move_sd (__mmask8 __U, __m128d __A, __m128d __B)
 {
-  return (__m128d) __builtin_ia32_movsd_mask ((__v2df) __A, (__v2df) __B,
-               (__v2df)
-               _mm_setzero_pd (),
-               (__mmask8) __U);
+  __m128d res = __A; 
+  res[0] = (__U & 1) ? __B[0] : 0; 
+  return res; 
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mask_store_ss (float * __W, __mmask8 __U, __m128 __A)
+{
+  __builtin_ia32_storess128_mask ((__v16sf *)__W, 
+                (__v16sf) _mm512_castps128_ps512(__A),
+                (__mmask16) __U & (__mmask16)1);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mask_store_sd (double * __W, __mmask8 __U, __m128d __A)
+{
+  __builtin_ia32_storesd128_mask ((__v8df *)__W, 
+                (__v8df) _mm512_castpd128_pd512(__A),
+                (__mmask8) __U & 1);
+}
+
+static __inline__ __m128 __DEFAULT_FN_ATTRS
+_mm_mask_load_ss (__m128 __W, __mmask8 __U, const float* __A)
+{
+  __m128 src = (__v4sf) __builtin_shufflevector((__v4sf) __W,
+                                                (__v4sf) {0.0, 0.0, 0.0, 0.0},
+                                                0, 4, 4, 4);
+
+  return (__m128) __builtin_shufflevector(
+                           __builtin_ia32_loadss128_mask ((__v16sf *) __A,
+                                      (__v16sf) _mm512_castps128_ps512(src),
+                                      (__mmask16) __U & 1),
+                           _mm512_undefined_ps(), 0, 1, 2, 3);
+}
+
+static __inline__ __m128 __DEFAULT_FN_ATTRS
+_mm_maskz_load_ss (__mmask8 __U, const float* __A)
+{
+  return (__m128) __builtin_shufflevector(
+                           __builtin_ia32_loadss128_mask ((__v16sf *) __A,
+                                      (__v16sf) _mm512_setzero_ps(),
+                                      (__mmask16) __U & 1),
+                           _mm512_undefined_ps(), 0, 1, 2, 3);
+}
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_mask_load_sd (__m128d __W, __mmask8 __U, const double* __A)
+{
+  __m128d src = (__v2df) __builtin_shufflevector((__v2df) __W,
+                                                 (__v2df) {0.0, 0.0}, 0, 2);
+
+  return (__m128d) __builtin_shufflevector(
+                            __builtin_ia32_loadsd128_mask ((__v8df *) __A,
+                                      (__v8df) _mm512_castpd128_pd512(src),
+                                      (__mmask8) __U & 1),
+                            _mm512_undefined_pd(), 0, 1);
+}
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_maskz_load_sd (__mmask8 __U, const double* __A)
+{
+  return (__m128d) __builtin_shufflevector(
+                            __builtin_ia32_loadsd128_mask ((__v8df *) __A,
+                                      (__v8df) _mm512_setzero_pd(),
+                                      (__mmask8) __U & 1),
+                            _mm512_undefined_pd(), 0, 1);
 }
 
 #define _mm512_shuffle_epi32(A, I) __extension__ ({ \

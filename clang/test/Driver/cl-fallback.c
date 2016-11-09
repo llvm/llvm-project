@@ -46,6 +46,12 @@
 // GS: cl.exe
 // GS: "/GS-"
 
+// RUN: %clang_cl /fallback /Zc:threadSafeInit -### -- %s 2>&1 | FileCheck -check-prefix=ThreadSafe %s
+// ThreadSafe: /Zc:threadSafeInit
+
+// RUN: %clang_cl /fallback /Zc:threadSafeInit- -### -- %s 2>&1 | FileCheck -check-prefix=NonThreadSafe %s
+// NonThreadSafe: /Zc:threadSafeInit-
+
 // RUN: %clang_cl /fallback /Od -### -- %s 2>&1 | FileCheck -check-prefix=O0 %s
 // O0: cl.exe
 // O0: "/Od"
