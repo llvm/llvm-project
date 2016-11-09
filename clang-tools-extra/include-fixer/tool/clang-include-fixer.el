@@ -5,8 +5,8 @@
 
 ;;; Commentary:
 
-;; This package allows to invoke the 'clang-include-fixer' within Emacs.
-;; 'clang-include-fixer' provides an automated way of adding #include
+;; This package allows Emacs users to invoke the 'clang-include-fixer' within
+;; Emacs.  'clang-include-fixer' provides an automated way of adding #include
 ;; directives for missing symbols in one translation unit, see
 ;; <http://clang.llvm.org/extra/include-fixer.html>.
 

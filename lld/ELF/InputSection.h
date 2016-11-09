@@ -116,9 +116,8 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;
 
-  static InputSectionBase<ELFT> Discarded;
-
   ObjectFile<ELFT> *getFile() const { return File; }
+  llvm::object::ELFFile<ELFT> getObj() const { return File->getObj(); }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
   InputSectionBase *getLinkOrderDep() const;
   // Translate an offset in the input section to an offset in the output
@@ -136,8 +135,6 @@ private:
   std::pair<ArrayRef<uint8_t>, uint64_t>
   getRawCompressedData(ArrayRef<uint8_t> Data);
 };
-
-template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;
 
 // SectionPiece represents a piece of splittable section contents.
 // We allocate a lot of these and binary search on them. This means that they
@@ -237,9 +234,12 @@ template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
 public:
+  InputSection();
   InputSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
                ArrayRef<uint8_t> Data, StringRef Name);
   InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
+
+  static InputSection<ELFT> Discarded;
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
@@ -285,6 +285,8 @@ private:
 
   llvm::TinyPtrVector<const Thunk<ELFT> *> Thunks;
 };
+
+template <class ELFT> InputSection<ELFT> InputSection<ELFT>::Discarded;
 
 // MIPS .reginfo section provides information on the registers used by the code
 // in the object file. Linker should collect this information and write a single

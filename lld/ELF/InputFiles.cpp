@@ -446,7 +446,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   }
 
-  if (S == &InputSectionBase<ELFT>::Discarded)
+  if (S == &InputSection<ELFT>::Discarded)
     return S;
   return S->Repl;
 }

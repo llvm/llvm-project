@@ -190,6 +190,9 @@ InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
 }
 
 template <class ELFT>
+InputSection<ELFT>::InputSection() : InputSectionBase<ELFT>() {}
+
+template <class ELFT>
 InputSection<ELFT>::InputSection(uintX_t Flags, uint32_t Type,
                                  uintX_t Addralign, ArrayRef<uint8_t> Data,
                                  StringRef Name)
@@ -470,9 +473,9 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   if (IS && !(IS->Flags & SHF_ALLOC)) {
     for (const Elf_Shdr *RelSec : IS->RelocSections) {
       if (RelSec->sh_type == SHT_RELA)
-        IS->relocateNonAlloc(Buf, check(IS->File->getObj().relas(RelSec)));
+        IS->relocateNonAlloc(Buf, check(IS->getObj().relas(RelSec)));
       else
-        IS->relocateNonAlloc(Buf, check(IS->File->getObj().rels(RelSec)));
+        IS->relocateNonAlloc(Buf, check(IS->getObj().rels(RelSec)));
     }
     return;
   }
@@ -607,7 +610,7 @@ template <class ELFT> void EhInputSection<ELFT>::split() {
     return;
 
   if (RelocSection) {
-    ELFFile<ELFT> Obj = this->File->getObj();
+    ELFFile<ELFT> Obj = this->getObj();
     if (RelocSection->sh_type == SHT_RELA)
       split(check(Obj.relas(RelocSection)));
     else
