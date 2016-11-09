@@ -134,7 +134,7 @@ ObjectContainerBSDArchive::Object::Extract(const DataExtractor &data,
 }
 
 ObjectContainerBSDArchive::Archive::Archive(const lldb_private::ArchSpec &arch,
-                                            const lldb_private::TimeValue &time,
+                                            const llvm::sys::TimePoint<> &time,
                                             lldb::offset_t file_offset,
                                             lldb_private::DataExtractor &data)
     : m_arch(arch), m_time(time), m_file_offset(file_offset), m_objects(),
@@ -169,13 +169,14 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
 
 ObjectContainerBSDArchive::Object *
 ObjectContainerBSDArchive::Archive::FindObject(
-    const ConstString &object_name, const TimeValue &object_mod_time) {
+    const ConstString &object_name,
+    const llvm::sys::TimePoint<> &object_mod_time) {
   const ObjectNameToIndexMap::Entry *match =
       m_object_name_to_index_map.FindFirstValueForName(
           object_name.GetStringRef());
   if (match) {
-    if (object_mod_time.IsValid()) {
-      const uint64_t object_date = object_mod_time.GetAsSecondsSinceJan1_1970();
+    if (object_mod_time != llvm::sys::TimePoint<>()) {
+      const uint64_t object_date = llvm::sys::toTimeT(object_mod_time);
       if (m_objects[match->value].ar_date == object_date)
         return &m_objects[match->value];
       const ObjectNameToIndexMap::Entry *next_match =
@@ -195,8 +196,8 @@ ObjectContainerBSDArchive::Archive::FindObject(
 
 ObjectContainerBSDArchive::Archive::shared_ptr
 ObjectContainerBSDArchive::Archive::FindCachedArchive(
-    const FileSpec &file, const ArchSpec &arch, const TimeValue &time,
-    lldb::offset_t file_offset) {
+    const FileSpec &file, const ArchSpec &arch,
+    const llvm::sys::TimePoint<> &time, lldb::offset_t file_offset) {
   std::lock_guard<std::recursive_mutex> guard(Archive::GetArchiveCacheMutex());
   shared_ptr archive_sp;
   Archive::Map &archive_map = Archive::GetArchiveCache();
@@ -236,8 +237,9 @@ ObjectContainerBSDArchive::Archive::FindCachedArchive(
 
 ObjectContainerBSDArchive::Archive::shared_ptr
 ObjectContainerBSDArchive::Archive::ParseAndCacheArchiveForFile(
-    const FileSpec &file, const ArchSpec &arch, const TimeValue &time,
-    lldb::offset_t file_offset, DataExtractor &data) {
+    const FileSpec &file, const ArchSpec &arch,
+    const llvm::sys::TimePoint<> &time, lldb::offset_t file_offset,
+    DataExtractor &data) {
   shared_ptr archive_sp(new Archive(arch, time, file_offset, data));
   if (archive_sp) {
     const size_t num_objects = archive_sp->ParseObjects();
@@ -453,7 +455,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   data.SetData(data_sp, data_offset, data_sp->GetByteSize());
   if (file && data_sp && ObjectContainerBSDArchive::MagicBytesMatch(data)) {
     const size_t initial_count = specs.GetSize();
-    TimeValue file_mod_time = FileSystem::GetModificationTime(file);
+    llvm::sys::TimePoint<> file_mod_time =
+        FileSystem::GetModificationTime(file);
     Archive::shared_ptr archive_sp(Archive::FindCachedArchive(
         file, ArchSpec(), file_mod_time, file_offset));
     bool set_archive_arch = false;
@@ -480,8 +483,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
                     specs)) {
               ModuleSpec &spec =
                   specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
-              TimeValue object_mod_time;
-              object_mod_time.OffsetWithSeconds(object->ar_date);
+              llvm::sys::TimePoint<> object_mod_time(
+                  std::chrono::seconds(object->ar_date));
               spec.GetObjectName() = object->ar_name;
               spec.SetObjectOffset(object_file_offset);
               spec.SetObjectSize(file_size - object_file_offset);

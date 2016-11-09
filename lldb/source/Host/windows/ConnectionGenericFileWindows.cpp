@@ -10,7 +10,6 @@
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Host/TimeValue.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -195,9 +194,7 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
       // The expected return path.  The operation is pending.  Wait for the
       // operation to complete
       // or be interrupted.
-      TimeValue time_value;
-      time_value.OffsetWithMicroSeconds(timeout_usec);
-      DWORD milliseconds = time_value.milliseconds();
+      DWORD milliseconds = timeout_usec/1000;
       DWORD wait_result =
           ::WaitForMultipleObjects(llvm::array_lengthof(m_event_handles),
                                    m_event_handles, FALSE, milliseconds);

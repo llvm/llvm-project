@@ -5092,8 +5092,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // The expression evaluation should still succeed.
     bool miss_first_event = true;
 #endif
-    TimeValue one_thread_timeout;
-    TimeValue final_timeout;
     std::chrono::microseconds timeout = std::chrono::microseconds(0);
 
     while (true) {

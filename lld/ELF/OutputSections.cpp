@@ -906,13 +906,27 @@ void EhFrameHeader<ELFT>::addFde(uint32_t Pc, uint32_t FdeVA) {
   Fdes.push_back({Pc, FdeVA});
 }
 
+template <class ELFT> static uint64_t getEntsize(uint32_t Type) {
+  switch (Type) {
+  case SHT_RELA:
+    return sizeof(typename ELFT::Rela);
+  case SHT_REL:
+    return sizeof(typename ELFT::Rel);
+  case SHT_MIPS_REGINFO:
+    return sizeof(Elf_Mips_RegInfo<ELFT>);
+  case SHT_MIPS_OPTIONS:
+    return sizeof(Elf_Mips_Options<ELFT>) + sizeof(Elf_Mips_RegInfo<ELFT>);
+  case SHT_MIPS_ABIFLAGS:
+    return sizeof(Elf_Mips_ABIFlags<ELFT>);
+  default:
+    return 0;
+  }
+}
+
 template <class ELFT>
 OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
     : OutputSectionBase<ELFT>(Name, Type, Flags) {
-  if (Type == SHT_RELA)
-    this->Entsize = sizeof(Elf_Rela);
-  else if (Type == SHT_REL)
-    this->Entsize = sizeof(Elf_Rel);
+  this->Entsize = getEntsize<ELFT>(Type);
 }
 
 template <class ELFT> void OutputSection<ELFT>::finalize() {
@@ -1725,104 +1739,6 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-MipsReginfoOutputSection<ELFT>::MipsReginfoOutputSection()
-    : OutputSectionBase<ELFT>(".reginfo", SHT_MIPS_REGINFO, SHF_ALLOC) {
-  this->Addralign = 4;
-  this->Entsize = sizeof(Elf_Mips_RegInfo);
-  this->Size = sizeof(Elf_Mips_RegInfo);
-}
-
-template <class ELFT>
-void MipsReginfoOutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  auto *R = reinterpret_cast<Elf_Mips_RegInfo *>(Buf);
-  if (Config->Relocatable)
-    R->ri_gp_value = 0;
-  else
-    R->ri_gp_value = Out<ELFT>::Got->Addr + MipsGPOffset;
-  R->ri_gprmask = GprMask;
-}
-
-template <class ELFT>
-void MipsReginfoOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
-  // Copy input object file's .reginfo gprmask to output.
-  auto *S = cast<MipsReginfoInputSection<ELFT>>(C);
-  GprMask |= S->Reginfo->ri_gprmask;
-  S->OutSec = this;
-}
-
-template <class ELFT>
-MipsOptionsOutputSection<ELFT>::MipsOptionsOutputSection()
-    : OutputSectionBase<ELFT>(".MIPS.options", SHT_MIPS_OPTIONS,
-                              SHF_ALLOC | SHF_MIPS_NOSTRIP) {
-  this->Addralign = 8;
-  this->Entsize = 1;
-  this->Size = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
-}
-
-template <class ELFT>
-void MipsOptionsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  auto *Opt = reinterpret_cast<Elf_Mips_Options *>(Buf);
-  Opt->kind = ODK_REGINFO;
-  Opt->size = this->Size;
-  Opt->section = 0;
-  Opt->info = 0;
-  auto *Reg = reinterpret_cast<Elf_Mips_RegInfo *>(Buf + sizeof(*Opt));
-  if (Config->Relocatable)
-    Reg->ri_gp_value = 0;
-  else
-    Reg->ri_gp_value = Out<ELFT>::Got->Addr + MipsGPOffset;
-  Reg->ri_gprmask = GprMask;
-}
-
-template <class ELFT>
-void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
-  auto *S = cast<MipsOptionsInputSection<ELFT>>(C);
-  if (S->Reginfo)
-    GprMask |= S->Reginfo->ri_gprmask;
-  S->OutSec = this;
-}
-
-template <class ELFT>
-MipsAbiFlagsOutputSection<ELFT>::MipsAbiFlagsOutputSection()
-    : OutputSectionBase<ELFT>(".MIPS.abiflags", SHT_MIPS_ABIFLAGS, SHF_ALLOC) {
-  this->Addralign = 8;
-  this->Entsize = sizeof(Elf_Mips_ABIFlags);
-  this->Size = sizeof(Elf_Mips_ABIFlags);
-  memset(&Flags, 0, sizeof(Flags));
-}
-
-template <class ELFT>
-void MipsAbiFlagsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  memcpy(Buf, &Flags, sizeof(Flags));
-}
-
-template <class ELFT>
-void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
-  // Check compatibility and merge fields from input .MIPS.abiflags
-  // to the output one.
-  auto *S = cast<MipsAbiFlagsInputSection<ELFT>>(C);
-  S->OutSec = this;
-  if (S->Flags->version != 0) {
-    error(getFilename(S->getFile()) + ": unexpected .MIPS.abiflags version " +
-          Twine(S->Flags->version));
-    return;
-  }
-  // LLD checks ISA compatibility in getMipsEFlags(). Here we just
-  // select the highest number of ISA/Rev/Ext.
-  Flags.isa_level = std::max(Flags.isa_level, S->Flags->isa_level);
-  Flags.isa_rev = std::max(Flags.isa_rev, S->Flags->isa_rev);
-  Flags.isa_ext = std::max(Flags.isa_ext, S->Flags->isa_ext);
-  Flags.gpr_size = std::max(Flags.gpr_size, S->Flags->gpr_size);
-  Flags.cpr1_size = std::max(Flags.cpr1_size, S->Flags->cpr1_size);
-  Flags.cpr2_size = std::max(Flags.cpr2_size, S->Flags->cpr2_size);
-  Flags.ases |= S->Flags->ases;
-  Flags.flags1 |= S->Flags->flags1;
-  Flags.flags2 |= S->Flags->flags2;
-  Flags.fp_abi = elf::getMipsFpAbiFlag(Flags.fp_abi, S->Flags->fp_abi,
-                                       getFilename(S->getFile()));
-}
-
-template <class ELFT>
 static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
   return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
@@ -1875,15 +1791,6 @@ OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
     return {Out<ELFT>::EhFrame, false};
   case InputSectionBase<ELFT>::Merge:
     Sec = make<MergeOutputSection<ELFT>>(Key.Name, Type, Flags, Key.Alignment);
-    break;
-  case InputSectionBase<ELFT>::MipsReginfo:
-    Sec = make<MipsReginfoOutputSection<ELFT>>();
-    break;
-  case InputSectionBase<ELFT>::MipsOptions:
-    Sec = make<MipsOptionsOutputSection<ELFT>>();
-    break;
-  case InputSectionBase<ELFT>::MipsAbiFlags:
-    Sec = make<MipsAbiFlagsOutputSection<ELFT>>();
     break;
   }
   return {Sec, true};
@@ -1977,21 +1884,6 @@ template class EhOutputSection<ELF32LE>;
 template class EhOutputSection<ELF32BE>;
 template class EhOutputSection<ELF64LE>;
 template class EhOutputSection<ELF64BE>;
-
-template class MipsReginfoOutputSection<ELF32LE>;
-template class MipsReginfoOutputSection<ELF32BE>;
-template class MipsReginfoOutputSection<ELF64LE>;
-template class MipsReginfoOutputSection<ELF64BE>;
-
-template class MipsOptionsOutputSection<ELF32LE>;
-template class MipsOptionsOutputSection<ELF32BE>;
-template class MipsOptionsOutputSection<ELF64LE>;
-template class MipsOptionsOutputSection<ELF64BE>;
-
-template class MipsAbiFlagsOutputSection<ELF32LE>;
-template class MipsAbiFlagsOutputSection<ELF32BE>;
-template class MipsAbiFlagsOutputSection<ELF64LE>;
-template class MipsAbiFlagsOutputSection<ELF64BE>;
 
 template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;

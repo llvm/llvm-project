@@ -71,7 +71,7 @@ Name prefix            Description
 ====================== =========================================================
 
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
-diagnostics are displayed by clang-tidy and can be filtered out using
+diagnostics are displayed by :program:`clang-tidy` and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect
 compilation arguments, so it can not turn on Clang warnings which are not
 already turned on in build configuration. The ``-warnings-as-errors=`` option
@@ -237,16 +237,16 @@ Getting Involved
 checks, but its power is in the ability to easily write custom checks.
 
 Checks are organized in modules, which can be linked into :program:`clang-tidy`
-with minimal or no code changes in clang-tidy.
+with minimal or no code changes in :program:`clang-tidy`.
 
 Checks can plug into the analysis on the preprocessor level using `PPCallbacks`_
 or on the AST level using `AST Matchers`_. When an error is found, checks can
 report them in a way similar to how Clang diagnostics work. A fix-it hint can be
 attached to a diagnostic message.
 
-The interface provided by clang-tidy makes it easy to write useful and precise
-checks in just a few lines of code. If you have an idea for a good check, the
-rest of this document explains how to do this.
+The interface provided by :program:`clang-tidy` makes it easy to write useful
+and precise checks in just a few lines of code. If you have an idea for a good
+check, the rest of this document explains how to do this.
 
 There are a few tools particularly useful when developing clang-tidy checks:
   * ``add_new_check.py`` is a script to automate the process of adding a new
@@ -352,43 +352,58 @@ readability, etc.), certain coding style or standard (Google, LLVM, CERT, etc.)
 or a widely used API (e.g. MPI). Their names are same as user-facing check
 groups names described :ref:`above <checks-groups-table>`.
 
-After choosing the module, you need to create a class for your check:
+After choosing the module and the name for the check, run the
+``clang-tidy/add_new_check.py`` script to create the skeleton of the check and
+plug it to :program:`clang-tidy`. It's the recommended way of adding new checks.
+
+If we want to create a `readability-awesome-function-names`, we would run:
+
+.. code-block:: console
+
+  $ clang-tidy/add_new_check.py readability awesome-function-names
+
+
+The ``add_new_check.py`` script will:
+  * create the class for your check inside the specified module's directory and
+    register it in the module and in the build system;
+  * create a lit test file in the ``test/clang-tidy/`` directory;
+  * create a documentation file and include it into the
+    ``docs/clang-tidy/checks/list.rst``.
+
+Let's see in more detail at the check class definition:
 
 .. code-block:: c++
+
+  ...
 
   #include "../ClangTidy.h"
 
   namespace clang {
   namespace tidy {
-  namespace some_module {
+  namespace readability {
 
-  class MyCheck : public ClangTidyCheck {
+  ...
+  class AwesomeFunctionNamesCheck : public ClangTidyCheck {
   public:
-    MyCheck(StringRef Name, ClangTidyContext *Context)
+    AwesomeFunctionNamesCheck(StringRef Name, ClangTidyContext *Context)
         : ClangTidyCheck(Name, Context) {}
+    void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+    void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   };
 
-  } // namespace some_module
+  } // namespace readability
   } // namespace tidy
   } // namespace clang
+
+  ...
 
 Constructor of the check receives the ``Name`` and ``Context`` parameters, and
 must forward them to the ``ClangTidyCheck`` constructor.
 
-Next, you need to decide whether it should operate on the preprocessor level or
-on the AST level. Let's imagine that we need to work with the AST in our check.
-In this case we need to override two methods:
-
-.. code-block:: c++
-
-  ...
-  class ExplicitConstructorCheck : public ClangTidyCheck {
-  public:
-    ExplicitConstructorCheck(StringRef Name, ClangTidyContext *Context)
-        : ClangTidyCheck(Name, Context) {}
-    void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-    void check(ast_matchers::MatchFinder::MatchResult &Result) override;
-  };
+In our case the check needs to operate on the AST level and it overrides the
+``registerMatchers`` and ``check`` methods. If we wanted to analyze code on the
+preprocessor level, we'd need instead to override the ``registerPPCallbacks``
+method.
 
 In the ``registerMatchers`` method we create an AST Matcher (see `AST Matchers`_
 for more information) that will find the pattern in the AST that we want to
@@ -399,24 +414,20 @@ can further inspect them and report diagnostics.
 
   using namespace ast_matchers;
 
-  void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
-    Finder->addMatcher(constructorDecl().bind("ctor"), this);
+  void AwesomeFunctionNamesCheck::registerMatchers(MatchFinder *Finder) {
+    Finder->addMatcher(functionDecl().bind("x"), this);
   }
 
-  void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
-    const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-    // Do not be confused: isExplicit means 'explicit' keyword is present,
-    // isImplicit means that it's a compiler-generated constructor.
-    if (Ctor->isOutOfLine() || Ctor->isExplicit() || Ctor->isImplicit())
+  void AwesomeFunctionNamesCheck::check(const MatchFinder::MatchResult &Result) {
+    const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
+    if (MatchedDecl->getName().startswith("awesome_"))
       return;
-    if (Ctor->getNumParams() == 0 || Ctor->getMinRequiredArguments() > 1)
-      return;
-    SourceLocation Loc = Ctor->getLocation();
-    diag(Loc, "single-argument constructors must be explicit")
-        << FixItHint::CreateInsertion(Loc, "explicit ");
+    diag(MatchedDecl->getLocation(), "function %0 is insufficiently awesome")
+        << MatchedDecl
+        << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
   }
 
-(The full code for this check resides in
+(If you want to see an example of a useful check, look at
 `clang-tidy/google/ExplicitConstructorCheck.h
 <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/ExplicitConstructorCheck.h>`_
 and `clang-tidy/google/ExplicitConstructorCheck.cpp
@@ -425,6 +436,9 @@ and `clang-tidy/google/ExplicitConstructorCheck.cpp
 
 Registering your Check
 ----------------------
+
+(The ``add_new_check.py`` takes care of registering the check in an existing
+module. If you want to create a new module or know the details, read on.)
 
 The check should be registered in the corresponding module with a distinct name:
 
@@ -448,7 +462,7 @@ statically initialized variable:
 
 
 When using LLVM build system, we need to use the following hack to ensure the
-module is linked into the clang-tidy binary:
+module is linked into the :program:`clang-tidy` binary:
 
 Add this near the ``ClangTidyModuleRegistry::Add<MyModule>`` variable:
 
@@ -458,8 +472,9 @@ Add this near the ``ClangTidyModuleRegistry::Add<MyModule>`` variable:
   // and thus register the MyModule.
   volatile int MyModuleAnchorSource = 0;
 
-And this to the main translation unit of the clang-tidy binary (or the binary
-you link the ``clang-tidy`` library in) ``clang-tidy/tool/ClangTidyMain.cpp``:
+And this to the main translation unit of the :program:`clang-tidy` binary (or
+the binary you link the ``clang-tidy`` library in)
+``clang-tidy/tool/ClangTidyMain.cpp``:
 
 .. code-block:: c++
 
@@ -511,7 +526,7 @@ be set in a ``.clang-tidy`` file in the following way:
 If you need to specify check options on a command line, you can use the inline
 YAML format:
 
-.. code-block:: bash
+.. code-block:: console
 
   $ clang-tidy -config="{CheckOptions: [{key: a, value: b}, {key: x, value: y}]}" ...
 
@@ -540,7 +555,7 @@ substitutions and distinct function and variable names in the test code.
 Here's an example of a test using the ``check_clang_tidy.py`` script (the full
 source code is at `test/clang-tidy/google-readability-casting.cpp`_):
 
-.. code-block:: bash
+.. code-block:: c++
 
   // RUN: %check_clang_tidy %s google-readability-casting %t
 
@@ -559,9 +574,9 @@ most frequent pitfalls are macros and templates:
 2. multiple macro expansions/template instantiations may result in the same code
    being inspected by the check multiple times (possibly, with different
    meanings, see 1), and the same warning (or a slightly different one) may be
-   issued by the check multiple times; clang-tidy will deduplicate _identical_
-   warnings, but if the warnings are slightly different, all of them will be
-   shown to the user (and used for applying fixes, if any);
+   issued by the check multiple times; :program:`clang-tidy` will deduplicate
+   _identical_ warnings, but if the warnings are slightly different, all of them
+   will be shown to the user (and used for applying fixes, if any);
 3. making replacements to a macro body/template definition may be fine for some
    macro expansions/template instantiations, but easily break some other
    expansions/instantiations.

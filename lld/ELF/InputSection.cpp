@@ -103,17 +103,6 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
     return Offset;
   case Merge:
     return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
-  case MipsReginfo:
-  case MipsOptions:
-  case MipsAbiFlags:
-    // MIPS .reginfo, .MIPS.options, and .MIPS.abiflags sections are consumed
-    // by the linker, and the linker produces a single output section. It is
-    // possible that input files contain section symbol points to the
-    // corresponding input section. Redirect it to the produced output section.
-    if (Offset != 0)
-      fatal(getName(this) + ": unsupported reference to the middle of '" +
-            Name + "' section");
-    return this->OutSec->Addr;
   }
   llvm_unreachable("invalid section kind");
 }
@@ -188,6 +177,9 @@ InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
     return getFile()->getSections()[Link];
   return nullptr;
 }
+
+template <class ELFT>
+InputSection<ELFT>::InputSection() : InputSectionBase<ELFT>() {}
 
 template <class ELFT>
 InputSection<ELFT>::InputSection(uintX_t Flags, uint32_t Type,
@@ -470,9 +462,9 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   if (IS && !(IS->Flags & SHF_ALLOC)) {
     for (const Elf_Shdr *RelSec : IS->RelocSections) {
       if (RelSec->sh_type == SHT_RELA)
-        IS->relocateNonAlloc(Buf, check(IS->File->getObj().relas(RelSec)));
+        IS->relocateNonAlloc(Buf, check(IS->getObj().relas(RelSec)));
       else
-        IS->relocateNonAlloc(Buf, check(IS->File->getObj().rels(RelSec)));
+        IS->relocateNonAlloc(Buf, check(IS->getObj().rels(RelSec)));
     }
     return;
   }
@@ -607,7 +599,7 @@ template <class ELFT> void EhInputSection<ELFT>::split() {
     return;
 
   if (RelocSection) {
-    ELFFile<ELFT> Obj = this->File->getObj();
+    ELFFile<ELFT> Obj = this->getObj();
     if (RelocSection->sh_type == SHT_RELA)
       split(check(Obj.relas(RelocSection)));
     else
@@ -797,78 +789,6 @@ template <class ELFT> void MergeInputSection<ELFT>::finalizePieces() {
   }
 }
 
-template <class ELFT>
-MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(elf::ObjectFile<ELFT> *F,
-                                                       const Elf_Shdr *Hdr,
-                                                       StringRef Name)
-    : InputSectionBase<ELFT>(F, Hdr, Name,
-                             InputSectionBase<ELFT>::MipsReginfo) {
-  ArrayRef<uint8_t> Data = this->Data;
-  // Initialize this->Reginfo.
-  if (Data.size() != sizeof(Elf_Mips_RegInfo<ELFT>)) {
-    error(getName(this) + ": invalid size of .reginfo section");
-    return;
-  }
-  Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(Data.data());
-  if (Config->Relocatable && Reginfo->ri_gp_value)
-    error(getName(this) + ": unsupported non-zero ri_gp_value");
-}
-
-template <class ELFT>
-bool MipsReginfoInputSection<ELFT>::classof(const InputSectionData *S) {
-  return S->kind() == InputSectionBase<ELFT>::MipsReginfo;
-}
-
-template <class ELFT>
-MipsOptionsInputSection<ELFT>::MipsOptionsInputSection(elf::ObjectFile<ELFT> *F,
-                                                       const Elf_Shdr *Hdr,
-                                                       StringRef Name)
-    : InputSectionBase<ELFT>(F, Hdr, Name,
-                             InputSectionBase<ELFT>::MipsOptions) {
-  // Find ODK_REGINFO option in the section's content.
-  ArrayRef<uint8_t> D = this->Data;
-  while (!D.empty()) {
-    if (D.size() < sizeof(Elf_Mips_Options<ELFT>)) {
-      error(getName(this) + ": invalid size of .MIPS.options section");
-      break;
-    }
-    auto *O = reinterpret_cast<const Elf_Mips_Options<ELFT> *>(D.data());
-    if (O->kind == ODK_REGINFO) {
-      Reginfo = &O->getRegInfo();
-      if (Config->Relocatable && Reginfo->ri_gp_value)
-        error(getName(this) + ": unsupported non-zero ri_gp_value");
-      break;
-    }
-    if (!O->size)
-      fatal(getName(this) + ": zero option descriptor size");
-    D = D.slice(O->size);
-  }
-}
-
-template <class ELFT>
-bool MipsOptionsInputSection<ELFT>::classof(const InputSectionData *S) {
-  return S->kind() == InputSectionBase<ELFT>::MipsOptions;
-}
-
-template <class ELFT>
-MipsAbiFlagsInputSection<ELFT>::MipsAbiFlagsInputSection(
-    elf::ObjectFile<ELFT> *F, const Elf_Shdr *Hdr, StringRef Name)
-    : InputSectionBase<ELFT>(F, Hdr, Name,
-                             InputSectionBase<ELFT>::MipsAbiFlags) {
-  // Initialize this->Flags.
-  ArrayRef<uint8_t> Data = this->Data;
-  if (Data.size() != sizeof(Elf_Mips_ABIFlags<ELFT>)) {
-    error("invalid size of .MIPS.abiflags section");
-    return;
-  }
-  Flags = reinterpret_cast<const Elf_Mips_ABIFlags<ELFT> *>(Data.data());
-}
-
-template <class ELFT>
-bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionData *S) {
-  return S->kind() == InputSectionBase<ELFT>::MipsAbiFlags;
-}
-
 template class elf::InputSectionBase<ELF32LE>;
 template class elf::InputSectionBase<ELF32BE>;
 template class elf::InputSectionBase<ELF64LE>;
@@ -888,18 +808,3 @@ template class elf::MergeInputSection<ELF32LE>;
 template class elf::MergeInputSection<ELF32BE>;
 template class elf::MergeInputSection<ELF64LE>;
 template class elf::MergeInputSection<ELF64BE>;
-
-template class elf::MipsReginfoInputSection<ELF32LE>;
-template class elf::MipsReginfoInputSection<ELF32BE>;
-template class elf::MipsReginfoInputSection<ELF64LE>;
-template class elf::MipsReginfoInputSection<ELF64BE>;
-
-template class elf::MipsOptionsInputSection<ELF32LE>;
-template class elf::MipsOptionsInputSection<ELF32BE>;
-template class elf::MipsOptionsInputSection<ELF64LE>;
-template class elf::MipsOptionsInputSection<ELF64BE>;
-
-template class elf::MipsAbiFlagsInputSection<ELF32LE>;
-template class elf::MipsAbiFlagsInputSection<ELF32BE>;
-template class elf::MipsAbiFlagsInputSection<ELF64LE>;
-template class elf::MipsAbiFlagsInputSection<ELF64BE>;

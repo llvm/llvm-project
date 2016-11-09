@@ -291,6 +291,27 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::Common = Common;
     Symtab<ELFT>::X->Sections.push_back(Common);
   }
+
+  if (Config->EMachine == EM_MIPS) {
+    // .MIPS.abiflags
+    auto *AbiFlags = make<MipsAbiFlagsSection<ELFT>>();
+    if (AbiFlags->Live) {
+      In<ELFT>::MipsAbiFlags = AbiFlags;
+      Symtab<ELFT>::X->Sections.push_back(AbiFlags);
+    }
+    // .MIPS.options
+    auto *OptSec = make<MipsOptionsSection<ELFT>>();
+    if (OptSec->Live) {
+      In<ELFT>::MipsOptions = OptSec;
+      Symtab<ELFT>::X->Sections.push_back(OptSec);
+    }
+    // MIPS .reginfo
+    auto *RegSec = make<MipsReginfoSection<ELFT>>();
+    if (RegSec->Live) {
+      In<ELFT>::MipsReginfo = RegSec;
+      Symtab<ELFT>::X->Sections.push_back(RegSec);
+    }
+  }
 }
 
 template <class ELFT>
@@ -1440,6 +1461,13 @@ static void sortARMExidx(uint8_t *Buf, uint64_t OutSecVA, uint64_t Size) {
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
   uint8_t *Buf = Buffer->getBufferStart();
+
+  // Finalize MIPS .reginfo and .MIPS.options sections
+  // because they contain offsets to .got and _gp.
+  if (In<ELFT>::MipsReginfo)
+    In<ELFT>::MipsReginfo->finalize();
+  if (In<ELFT>::MipsOptions)
+    In<ELFT>::MipsOptions->finalize();
 
   // PPC64 needs to process relocations in the .opd section
   // before processing relocations in code-containing sections.

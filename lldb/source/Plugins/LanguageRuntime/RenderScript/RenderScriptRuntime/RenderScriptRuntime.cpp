@@ -883,6 +883,10 @@ RSReduceBreakpointResolver::SearchCallback(lldb_private::SearchFilter &filter,
         auto address = symbol->GetAddress();
         if (filter.AddressPasses(address)) {
           bool new_bp;
+          if (!SkipPrologue(module, address)) {
+            if (log)
+              log->Printf("%s: Error trying to skip prologue", __FUNCTION__);
+          }
           m_breakpoint->AddLocation(address, &new_bp);
           if (log)
             log->Printf("%s: %s reduction breakpoint on %s in %s", __FUNCTION__,
