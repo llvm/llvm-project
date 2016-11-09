@@ -9,11 +9,6 @@
 
 #include "CommandObjectTarget.h"
 
-// C Includes
-// C++ Includes
-#include <cerrno>
-
-// Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
@@ -54,6 +49,10 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+
+// C Includes
+// C++ Includes
+#include <cerrno>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -3108,7 +3107,7 @@ protected:
       } break;
 
       case 'm':
-        module->GetModificationTime().Dump(&strm, width);
+        DumpTimePoint(module->GetModificationTime(), strm, width);
         break;
 
       case 'p':

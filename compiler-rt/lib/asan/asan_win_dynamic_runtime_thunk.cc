@@ -62,7 +62,8 @@ static int InitializeClonedVariables() {
   return 0;
 }
 
-static void NTAPI asan_thread_init(void *mod, unsigned long reason, void *reserved) {
+static void NTAPI asan_thread_init(void *mod, unsigned long reason,
+    void *reserved) {
   if (reason == DLL_PROCESS_ATTACH) InitializeClonedVariables();
 }
 
@@ -71,8 +72,8 @@ static void NTAPI asan_thread_init(void *mod, unsigned long reason, void *reserv
 // initializer is needed as a backup.
 __declspec(allocate(".CRT$XIB")) int (*__asan_initialize_cloned_variables)() =
     InitializeClonedVariables;
-__declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(
-    void *, unsigned long, void *) = asan_thread_init;
+__declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(void *,
+    unsigned long, void *) = asan_thread_init;
 
 ////////////////////////////////////////////////////////////////////////////////
 // For some reason, the MD CRT doesn't call the C/C++ terminators during on DLL

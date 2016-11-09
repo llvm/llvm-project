@@ -355,8 +355,8 @@ static void NTAPI asan_thread_init(void *module, DWORD reason, void *reserved) {
 }
 
 #pragma section(".CRT$XLAB", long, read)  // NOLINT
-__declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(
-    void *, unsigned long, void *) = asan_thread_init;
+__declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(void *,
+    unsigned long, void *) = asan_thread_init;
 #endif
 
 
