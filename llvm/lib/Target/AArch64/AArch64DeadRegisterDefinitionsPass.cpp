@@ -145,7 +145,6 @@ bool AArch64DeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TRI = MF.getSubtarget().getRegisterInfo();
-  bool Changed = false;
   DEBUG(dbgs() << "***** AArch64DeadRegisterDefinitions *****\n");
   Changed = false;
   for (auto &MBB : MF)

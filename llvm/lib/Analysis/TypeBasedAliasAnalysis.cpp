@@ -417,15 +417,14 @@ MDNode *MDNode::getMostGenericTBAA(MDNode *A, MDNode *B) {
     return A;
 
   // For struct-path aware TBAA, we use the access type of the tag.
-  bool StructPath = isStructPathTBAA(A) && isStructPathTBAA(B);
-  if (StructPath) {
-    A = cast_or_null<MDNode>(MutableTBAAStructTagNode(A).getAccessType());
-    if (!A)
-      return nullptr;
-    B = cast_or_null<MDNode>(MutableTBAAStructTagNode(B).getAccessType());
-    if (!B)
-      return nullptr;
-  }
+  assert(isStructPathTBAA(A) && isStructPathTBAA(B) &&
+         "Auto upgrade should have taken care of this!");
+  A = cast_or_null<MDNode>(MutableTBAAStructTagNode(A).getAccessType());
+  if (!A)
+    return nullptr;
+  B = cast_or_null<MDNode>(MutableTBAAStructTagNode(B).getAccessType());
+  if (!B)
+    return nullptr;
 
   SmallSetVector<MDNode *, 4> PathA;
   MutableTBAANode TA(A);
@@ -457,8 +456,6 @@ MDNode *MDNode::getMostGenericTBAA(MDNode *A, MDNode *B) {
     --IA;
     --IB;
   }
-  if (!StructPath)
-    return Ret;
 
   if (!Ret)
     return nullptr;
@@ -492,52 +489,8 @@ void Instruction::getAAMetadata(AAMDNodes &N, bool Merge) const {
 /// Aliases - Test whether the type represented by A may alias the
 /// type represented by B.
 bool TypeBasedAAResult::Aliases(const MDNode *A, const MDNode *B) const {
-  // Make sure that both MDNodes are struct-path aware.
-  if (isStructPathTBAA(A) && isStructPathTBAA(B))
-    return PathAliases(A, B);
-
-  // Keep track of the root node for A and B.
-  TBAANode RootA, RootB;
-
-  // Climb the tree from A to see if we reach B.
-  for (TBAANode T(A);;) {
-    if (T.getNode() == B)
-      // B is an ancestor of A.
-      return true;
-
-    RootA = T;
-    T = T.getParent();
-    if (!T.getNode())
-      break;
-  }
-
-  // Climb the tree from B to see if we reach A.
-  for (TBAANode T(B);;) {
-    if (T.getNode() == A)
-      // A is an ancestor of B.
-      return true;
-
-    RootB = T;
-    T = T.getParent();
-    if (!T.getNode())
-      break;
-  }
-
-  // Neither node is an ancestor of the other.
-
-  // If they have different roots, they're part of different potentially
-  // unrelated type systems, so we must be conservative.
-  if (RootA.getNode() != RootB.getNode())
-    return true;
-
-  // If they have the same root, then we've proved there's no alias.
-  return false;
-}
-
-/// Test whether the struct-path tag represented by A may alias the
-/// struct-path tag represented by B.
-bool TypeBasedAAResult::PathAliases(const MDNode *A, const MDNode *B) const {
-  // Verify that both input nodes are struct-path aware.
+  // Verify that both input nodes are struct-path aware.  Auto-upgrade should
+  // have taken care of this.
   assert(isStructPathTBAA(A) && "MDNode A is not struct-path aware.");
   assert(isStructPathTBAA(B) && "MDNode B is not struct-path aware.");
 

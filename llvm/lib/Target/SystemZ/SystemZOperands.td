@@ -570,17 +570,6 @@ def bdvaddr12only     : BDVMode<            "64", "12">;
 // Miscellaneous
 //===----------------------------------------------------------------------===//
 
-// Access registers.  At present we just use them for accessing the thread
-// pointer, so we don't expose them as register to LLVM.
-def AccessReg : AsmOperandClass {
-  let Name = "AccessReg";
-  let ParserMethod = "parseAccessReg";
-}
-def access_reg : Immediate<i32, [{ return N->getZExtValue() < 16; }],
-                           NOOP_SDNodeXForm, "AccessReg"> {
-  let ParserMatchClass = AccessReg;
-}
-
 // A 4-bit condition-code mask.
 def cond4 : PatLeaf<(i32 imm), [{ return (N->getZExtValue() < 16); }]>,
             Operand<i32> {

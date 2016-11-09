@@ -47,7 +47,7 @@ template <class T> struct SpecificAlloc : public SpecificAllocBase {
   llvm::SpecificBumpPtrAllocator<T> Alloc;
 };
 
-// Use this arena if your object have a destructor.
+// Use this arena if your object has a destructor.
 // Your destructor will be invoked from freeArena().
 template <typename T, typename... U> inline T *make(U &&... Args) {
   static SpecificAlloc<T> Alloc;

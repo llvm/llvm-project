@@ -1400,19 +1400,14 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; KNL-LABEL: sext_8i1_8i32:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; KNL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
-; KNL-NEXT:    knotw %k0, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovqd %zmm0, %ymm0
+; KNL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
+; KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; KNL-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8i1_8i32:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0
-; SKX-NEXT:    knotb %k0, %k0
+; SKX-NEXT:    vpcmpled %ymm0, %ymm1, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %ymm0
 ; SKX-NEXT:    retq
   %x = icmp slt <8 x i32> %a1, %a2

@@ -7,15 +7,15 @@
 diagnostics:
 .Label:
     .inst
-// CHECK-ERROR: expected expression following directive
+// CHECK: [[@LINE-1]]:5: error: expected expression following '.inst' directive 
 
     .inst 0x5e104020,
-// CHECK-ERROR: expected expression
+// CHECK: [[@LINE-1]]:22: error: unknown token in expression in '.inst' directive
 
     .inst .Label
-// CHECK-ERROR: expected constant expression
+// CHECK: [[@LINE-1]]:11: error: expected constant expression in '.inst' directive
 
     .inst 0x5e104020 0x5e104020
-// CHECK-ERROR: unexpected token in directive
+// CHECK: [[@LINE-1]]:22: error: unexpected token in '.inst' directive
 
 // CHECK-ERROR-NOT: unexpected token at start of statement	

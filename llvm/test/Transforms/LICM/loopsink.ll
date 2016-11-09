@@ -21,7 +21,7 @@
 ; CHECK: load i32, i32* @g
 ; CHECK: .b3:
 ; CHECK-NOT:  load i32, i32* @g
-define i32 @t1(i32, i32) #0 {
+define i32 @t1(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
@@ -88,7 +88,7 @@ define i32 @t1(i32, i32) #0 {
 ; CHECK: .b6:
 ; CHECK: load i32, i32* @g
 ; CHECK: .b7:
-define i32 @t2(i32, i32) #0 {
+define i32 @t2(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
@@ -150,7 +150,7 @@ define i32 @t2(i32, i32) #0 {
 ; CHECK: load i32, i32* @g
 ; CHECK: .b1:
 ; CHECK-NOT: load i32, i32* @g
-define i32 @t3(i32, i32) #0 {
+define i32 @t3(i32, i32) #0 !prof !0 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %.exit, label %.preheader
 
@@ -201,7 +201,7 @@ define i32 @t3(i32, i32) #0 {
 ; CHECK: .b1:
 ; CHECK: load i32, i32* @g
 ; CHECK: .exit:
-define i32 @t4(i32, i32) #0 {
+define i32 @t4(i32, i32) #0 !prof !0 {
 .preheader:
   %invariant = load i32, i32* @g
   br label %.b1
@@ -235,7 +235,7 @@ define i32 @t4(i32, i32) #0 {
 ; CHECK: load i32, i32* @g
 ; CHECK: .b1:
 ; CHECK-NOT: load i32, i32* @g
-define i32 @t5(i32, i32*) #0 {
+define i32 @t5(i32, i32*) #0 !prof !0 {
   %3 = icmp eq i32 %0, 0
   br i1 %3, label %.exit, label %.preheader
 
@@ -281,6 +281,7 @@ define i32 @t5(i32, i32*) #0 {
 
 declare i32 @foo()
 
+!0 = !{!"function_entry_count", i64 1}
 !1 = !{!"branch_weights", i32 1, i32 2000}
 !2 = !{!"branch_weights", i32 2000, i32 1}
 !3 = !{!"branch_weights", i32 100, i32 1}

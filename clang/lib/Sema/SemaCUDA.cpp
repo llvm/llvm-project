@@ -577,8 +577,22 @@ static bool IsKnownEmitted(Sema &S, FunctionDecl *FD) {
       (T == Sema::CFT_Device || T == Sema::CFT_Global))
     return false;
 
-  // Externally-visible and similar functions are always emitted.
-  if (!isDiscardableGVALinkage(S.getASTContext().GetGVALinkageForFunction(FD)))
+  // Check whether this function is externally visible -- if so, it's
+  // known-emitted.
+  //
+  // We have to check the GVA linkage of the function's *definition* -- if we
+  // only have a declaration, we don't know whether or not the function will be
+  // emitted, because (say) the definition could include "inline".
+  FunctionDecl *Def = FD->getDefinition();
+
+  // We may currently be parsing the body of FD, in which case
+  // FD->getDefinition() will be null, but we still want to treat FD as though
+  // it's a definition.
+  if (!Def && FD->willHaveBody())
+    Def = FD;
+
+  if (Def &&
+      !isDiscardableGVALinkage(S.getASTContext().GetGVALinkageForFunction(Def)))
     return true;
 
   // Otherwise, the function is known-emitted if it's in our set of

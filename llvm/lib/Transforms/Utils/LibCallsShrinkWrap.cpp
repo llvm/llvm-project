@@ -29,6 +29,7 @@
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -529,7 +530,7 @@ bool LibCallsShrinkWrap::perform(CallInst *CI) {
 }
 
 void LibCallsShrinkWrapLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
+  AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
@@ -561,6 +562,8 @@ PreservedAnalyses LibCallsShrinkWrapPass::run(Function &F,
   bool Changed = runImpl(F, TLI);
   if (!Changed)
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  auto PA = PreservedAnalyses();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 }

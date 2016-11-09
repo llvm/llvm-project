@@ -48,10 +48,8 @@ define void @neg_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovups (%ecx), %ymm0
-; X32-NEXT:    vcmpltps (%eax), %ymm0, %ymm0
-; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; X32-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vcmpnltps (%eax), %ymm0, %ymm0
+; X32-NEXT:    vandps LCPI1_0, %ymm0, %ymm0
 ; X32-NEXT:    vmovaps %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
@@ -59,10 +57,8 @@ define void @neg_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X64-LABEL: neg_masks:
 ; X64:       ## BB#0:
 ; X64-NEXT:    vmovups (%rsi), %ymm0
-; X64-NEXT:    vcmpltps (%rdi), %ymm0, %ymm0
-; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; X64-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vcmpnltps (%rdi), %ymm0, %ymm0
+; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovaps %ymm0, (%rax)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

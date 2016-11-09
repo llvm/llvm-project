@@ -701,26 +701,25 @@ public:
                   StringRef Name)
       : TypeRecord(TypeRecordKind::OneMethod), Type(Type), Attrs(Attrs),
         VFTableOffset(VFTableOffset), Name(Name) {}
-  OneMethodRecord(TypeIndex Type, MemberAccess Access, MethodKind Kind,
+  OneMethodRecord(TypeIndex Type, MemberAccess Access, MethodKind MK,
                   MethodOptions Options, int32_t VFTableOffset, StringRef Name)
       : TypeRecord(TypeRecordKind::OneMethod), Type(Type),
-        Attrs(Access, Kind, Options), VFTableOffset(VFTableOffset), Name(Name) {
-  }
+        Attrs(Access, MK, Options), VFTableOffset(VFTableOffset), Name(Name) {}
 
   /// Rewrite member type indices with IndexMap. Returns false if a type index
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
   TypeIndex getType() const { return Type; }
-  MethodKind getKind() const { return Attrs.getMethodKind(); }
+  MethodKind getMethodKind() const { return Attrs.getMethodKind(); }
   MethodOptions getOptions() const { return Attrs.getFlags(); }
   MemberAccess getAccess() const { return Attrs.getAccess(); }
   int32_t getVFTableOffset() const { return VFTableOffset; }
   StringRef getName() const { return Name; }
 
   bool isIntroducingVirtual() const {
-    return getKind() == MethodKind::IntroducingVirtual ||
-           getKind() == MethodKind::PureIntroducingVirtual;
+    return getMethodKind() == MethodKind::IntroducingVirtual ||
+           getMethodKind() == MethodKind::PureIntroducingVirtual;
   }
   TypeIndex Type;
   MemberAttributes Attrs;

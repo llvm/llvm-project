@@ -109,14 +109,6 @@ private:
   /// Map generic virtual registers to their actual size.
   mutable std::unique_ptr<VRegToTypeMap> VRegToType;
 
-  /// Accessor for VRegToType. This accessor should only be used
-  /// by global-isel related work.
-  VRegToTypeMap &getVRegToType() const {
-    if (!VRegToType)
-      VRegToType.reset(new VRegToTypeMap);
-    return *VRegToType.get();
-  }
-
   /// Keep track of the physical registers that are live in to the function.
   /// Live in values are typically arguments in registers.  LiveIn values are
   /// allowed to have virtual registers associated with them, stored in the
@@ -642,6 +634,14 @@ public:
   ///
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass);
 
+  /// Accessor for VRegToType. This accessor should only be used
+  /// by global-isel related work.
+  VRegToTypeMap &getVRegToType() const {
+    if (!VRegToType)
+      VRegToType.reset(new VRegToTypeMap);
+    return *VRegToType.get();
+  }
+
   /// Get the low-level type of \p VReg or LLT{} if VReg is not a generic
   /// (target independent) virtual register.
   LLT getType(unsigned VReg) const;
@@ -654,7 +654,8 @@ public:
   unsigned createGenericVirtualRegister(LLT Ty);
 
   /// Remove all types associated to virtual registers (after instruction
-  /// selection and constraining of all generic virtual registers).
+  /// selection and constraining of all generic virtual registers). Returns true
+  /// if the VReg mapping was consistent.
   void clearVirtRegTypes();
 
   /// Creates a new virtual register that has no register class, register bank

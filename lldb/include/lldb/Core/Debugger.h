@@ -218,6 +218,8 @@ public:
 
   const FormatEntity::Entry *GetThreadFormat() const;
 
+  const FormatEntity::Entry *GetThreadStopFormat() const;
+
   lldb::ScriptLanguage GetScriptLanguage() const;
 
   bool SetScriptLanguage(lldb::ScriptLanguage script_lang);

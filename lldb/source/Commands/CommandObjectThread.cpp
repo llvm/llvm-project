@@ -248,9 +248,11 @@ protected:
             thread->shared_from_this(), type);
         if (ext_thread_sp && ext_thread_sp->IsValid()) {
           const uint32_t num_frames_with_source = 0;
+          const bool stop_format = false;
           if (ext_thread_sp->GetStatus(strm, m_options.m_start,
                                        m_options.m_count,
-                                       num_frames_with_source)) {
+                                       num_frames_with_source,
+                                       stop_format)) {
             DoExtendedBacktrace(ext_thread_sp.get(), result);
           }
         }
@@ -275,9 +277,9 @@ protected:
 
     // Don't show source context when doing backtraces.
     const uint32_t num_frames_with_source = 0;
-
+    const bool stop_format = true;
     if (!thread->GetStatus(strm, m_options.m_start, m_options.m_count,
-                           num_frames_with_source)) {
+                           num_frames_with_source, stop_format)) {
       result.AppendErrorWithFormat(
           "error displaying backtrace for thread: \"0x%4.4x\"\n",
           thread->GetIndexID());
@@ -1308,7 +1310,7 @@ protected:
     const uint32_t num_frames_with_source = 0;
     process->GetStatus(strm);
     process->GetThreadStatus(strm, only_threads_with_stop_reason, start_frame,
-                             num_frames, num_frames_with_source);
+                             num_frames, num_frames_with_source, false);
     return result.Succeeded();
   }
 };

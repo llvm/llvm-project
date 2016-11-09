@@ -79,6 +79,13 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   this->Offset = Hdr->sh_offset;
 }
 
+template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
+  if (auto *D = dyn_cast<InputSection<ELFT>>(this))
+    if (D->getThunksSize() > 0)
+      return D->getThunkOff() + D->getThunksSize();
+  return Data.size();
+}
+
 // Returns a string for an error message.
 template <class SectionT> static std::string getName(SectionT *Sec) {
   return (Sec->getFile()->getName() + "(" + Sec->Name + ")").str();
@@ -106,7 +113,7 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
     if (Offset != 0)
       fatal(getName(this) + ": unsupported reference to the middle of '" +
             Name + "' section");
-    return this->OutSec->getVA();
+    return this->OutSec->Addr;
   }
   llvm_unreachable("invalid section kind");
 }
@@ -200,11 +207,6 @@ bool InputSection<ELFT>::classof(const InputSectionData *S) {
   return S->kind() == Base::Regular;
 }
 
-template <class ELFT> size_t InputSection<ELFT>::getSize() const {
-  return getThunksSize() > 0 ? getThunkOff() + getThunksSize()
-                             : this->Data.size();
-}
-
 template <class ELFT>
 InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
   assert(this->Type == SHT_RELA || this->Type == SHT_REL);
@@ -265,7 +267,7 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_TLSDESC_CALL:
     llvm_unreachable("cannot relocate hint relocs");
   case R_TLSLD:
-    return Out<ELFT>::Got->getTlsIndexOff() + A - Out<ELFT>::Got->getSize();
+    return Out<ELFT>::Got->getTlsIndexOff() + A - Out<ELFT>::Got->Size;
   case R_TLSLD_PC:
     return Out<ELFT>::Got->getTlsIndexVA() + A - P;
   case R_THUNK_ABS:
@@ -276,8 +278,7 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_PPC_TOC:
     return getPPC64TocBase() + A;
   case R_TLSGD:
-    return Out<ELFT>::Got->getGlobalDynOffset(Body) + A -
-           Out<ELFT>::Got->getSize();
+    return Out<ELFT>::Got->getGlobalDynOffset(Body) + A - Out<ELFT>::Got->Size;
   case R_TLSGD_PC:
     return Out<ELFT>::Got->getGlobalDynAddr(Body) + A - P;
   case R_TLSDESC:
@@ -293,13 +294,12 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_SIZE:
     return Body.getSize<ELFT>() + A;
   case R_GOTREL:
-    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->getVA();
+    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->Addr;
   case R_GOTREL_FROM_END:
-    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->getVA() -
-           Out<ELFT>::Got->getSize();
+    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->Addr - Out<ELFT>::Got->Size;
   case R_RELAX_TLS_GD_TO_IE_END:
   case R_GOT_FROM_END:
-    return Body.getGotOffset<ELFT>() + A - Out<ELFT>::Got->getSize();
+    return Body.getGotOffset<ELFT>() + A - Out<ELFT>::Got->Size;
   case R_RELAX_TLS_GD_TO_IE_ABS:
   case R_GOT:
     return Body.getGotVA<ELFT>() + A;
@@ -310,9 +310,9 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_GOT_PC:
     return Body.getGotVA<ELFT>() + A - P;
   case R_GOTONLY_PC:
-    return Out<ELFT>::Got->getVA() + A - P;
+    return Out<ELFT>::Got->Addr + A - P;
   case R_GOTONLY_PC_FROM_END:
-    return Out<ELFT>::Got->getVA() + A - P + Out<ELFT>::Got->getSize();
+    return Out<ELFT>::Got->Addr + A - P + Out<ELFT>::Got->Size;
   case R_RELAX_TLS_LD_TO_LE:
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_GD_TO_LE:
@@ -364,8 +364,8 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     if (Out<ELF64BE>::Opd) {
       // If this is a local call, and we currently have the address of a
       // function-descriptor, get the underlying code address instead.
-      uint64_t OpdStart = Out<ELF64BE>::Opd->getVA();
-      uint64_t OpdEnd = OpdStart + Out<ELF64BE>::Opd->getSize();
+      uint64_t OpdStart = Out<ELF64BE>::Opd->Addr;
+      uint64_t OpdEnd = OpdStart + Out<ELF64BE>::Opd->Size;
       bool InOpd = OpdStart <= SymVA && SymVA < OpdEnd;
       if (InOpd)
         SymVA = read64be(&Out<ELF64BE>::OpdBuf[SymVA - OpdStart]);
@@ -406,7 +406,7 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       return;
     }
 
-    uintX_t AddrLoc = this->OutSec->getVA() + Offset;
+    uintX_t AddrLoc = this->OutSec->Addr + Offset;
     uint64_t SymVA = 0;
     if (!Sym.isTls() || Out<ELFT>::TlsPhdr)
       SymVA = SignExtend64<sizeof(uintX_t) * 8>(
@@ -438,7 +438,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
     uint32_t Type = Rel.Type;
     uintX_t A = Rel.Addend;
 
-    uintX_t AddrLoc = OutSec->getVA() + Offset;
+    uintX_t AddrLoc = OutSec->Addr + Offset;
     RelExpr Expr = Rel.Expr;
     uint64_t SymVA =
         SignExtend64<Bits>(getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, Expr));

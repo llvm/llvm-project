@@ -16,10 +16,15 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+namespace msf {
+class StreamReader;
+class StreamWriter;
+}
 namespace codeview {
 class TypeRecordMapping : public TypeVisitorCallbacks {
 public:
   explicit TypeRecordMapping(msf::StreamReader &Reader) : IO(Reader) {}
+  explicit TypeRecordMapping(msf::StreamWriter &Writer) : IO(Writer) {}
 
   Error visitTypeBegin(CVType &Record) override;
   Error visitTypeEnd(CVType &Record) override;
@@ -37,6 +42,7 @@ public:
 
 private:
   Optional<TypeLeafKind> TypeKind;
+  Optional<TypeLeafKind> MemberKind;
 
   CodeViewRecordIO IO;
 };

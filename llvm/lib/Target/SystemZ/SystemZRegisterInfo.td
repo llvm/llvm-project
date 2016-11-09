@@ -36,15 +36,16 @@ def subreg_hr32  : ComposedSubRegIndex<subreg_h64, subreg_r32>;
 // associated operand called NAME.  SIZE is the size and alignment
 // of the registers and REGLIST is the list of individual registers.
 multiclass SystemZRegClass<string name, list<ValueType> types, int size,
-                           dag regList> {
+                           dag regList, bit allocatable = 1> {
   def AsmOperand : AsmOperandClass {
     let Name = name;
     let ParserMethod = "parse"##name;
     let RenderMethod = "addRegOperands";
   }
-  def Bit : RegisterClass<"SystemZ", types, size, regList> {
-    let Size = size;
-  }
+  let isAllocatable = allocatable in
+    def Bit : RegisterClass<"SystemZ", types, size, regList> {
+      let Size = size;
+    }
   def "" : RegisterOperand<!cast<RegisterClass>(name##"Bit")> {
     let ParserMatchClass = !cast<AsmOperandClass>(name##"AsmOperand");
   }
@@ -292,3 +293,14 @@ def v128any : TypedReg<untyped, VR128>;
 def CC : SystemZReg<"cc">;
 let isAllocatable = 0 in
   def CCRegs : RegisterClass<"SystemZ", [i32], 32, (add CC)>;
+
+// Access registers.
+class ACR32<bits<16> num, string n> : SystemZReg<n> {
+  let HWEncoding = num;
+}
+foreach I = 0-15 in {
+  def A#I : ACR32<I, "a"#I>, DwarfRegNum<[!add(I, 48)]>;
+}
+defm AR32 : SystemZRegClass<"AR32", [i32], 32,
+                            (add (sequence "A%u", 0, 15)), 0>;
+

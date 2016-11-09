@@ -76,7 +76,17 @@ class FieldListDeserializer : public TypeVisitorCallbacks {
   };
 
 public:
-  explicit FieldListDeserializer(msf::StreamReader &Reader) : Mapping(Reader) {}
+  explicit FieldListDeserializer(msf::StreamReader &Reader) : Mapping(Reader) {
+    CVType FieldList;
+    FieldList.Type = TypeLeafKind::LF_FIELDLIST;
+    consumeError(Mapping.Mapping.visitTypeBegin(FieldList));
+  }
+
+  ~FieldListDeserializer() {
+    CVType FieldList;
+    FieldList.Type = TypeLeafKind::LF_FIELDLIST;
+    consumeError(Mapping.Mapping.visitTypeEnd(FieldList));
+  }
 
   Error visitMemberBegin(CVMemberRecord &Record) override {
     Mapping.StartOffset = Mapping.Reader.getOffset();

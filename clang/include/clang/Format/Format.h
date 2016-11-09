@@ -794,7 +794,7 @@ llvm::Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);
 
-/// \brief Reformats the given \p Ranges in the file \p ID.
+/// \brief Reformats the given \p Ranges in \p Code.
 ///
 /// Each range is extended on either end to its next bigger logic unit, i.e.
 /// everything that might influence its formatting or might be influenced by its
@@ -806,31 +806,15 @@ cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// If ``IncompleteFormat`` is non-null, its value will be set to true if any
 /// of the affected ranges were not formatted due to a non-recoverable syntax
 /// error.
-tooling::Replacements reformat(const FormatStyle &Style,
-                               SourceManager &SourceMgr, FileID ID,
-                               ArrayRef<CharSourceRange> Ranges,
-                               bool *IncompleteFormat = nullptr);
-
-/// \brief Reformats the given \p Ranges in \p Code.
-///
-/// Otherwise identical to the reformat() function using a file ID.
 tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
                                ArrayRef<tooling::Range> Ranges,
                                StringRef FileName = "<stdin>",
                                bool *IncompleteFormat = nullptr);
 
-/// \brief Clean up any erroneous/redundant code in the given \p Ranges in the
-/// file \p ID.
-///
-/// Returns the ``Replacements`` that clean up all \p Ranges in the file \p ID.
-tooling::Replacements cleanup(const FormatStyle &Style,
-                              SourceManager &SourceMgr, FileID ID,
-                              ArrayRef<CharSourceRange> Ranges);
-
 /// \brief Clean up any erroneous/redundant code in the given \p Ranges in \p
 /// Code.
 ///
-/// Otherwise identical to the cleanup() function using a file ID.
+/// Returns the ``Replacements`` that clean up all \p Ranges in \p Code.
 tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
                               ArrayRef<tooling::Range> Ranges,
                               StringRef FileName = "<stdin>");

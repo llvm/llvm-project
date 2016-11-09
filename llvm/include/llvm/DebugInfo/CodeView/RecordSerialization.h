@@ -32,7 +32,7 @@ using llvm::support::ulittle32_t;
 enum : unsigned { MaxRecordLength = 0xFF00 };
 
 struct RecordPrefix {
-  ulittle16_t RecordLen;  // Record length, starting from &Leaf.
+  ulittle16_t RecordLen;  // Record length, starting from &RecordKind.
   ulittle16_t RecordKind; // Record kind enum (SymRecordKind or TypeRecordKind)
 };
 

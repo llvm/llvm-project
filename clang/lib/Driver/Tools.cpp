@@ -10978,6 +10978,14 @@ std::unique_ptr<Command> visualstudio::Compiler::GetCommand(
                                options::OPT__SLASH_MT, options::OPT__SLASH_MTd))
     A->render(Args, CmdArgs);
 
+  // Use MSVC's default threadsafe statics behaviour unless there was a flag.
+  if (Arg *A = Args.getLastArg(options::OPT_fthreadsafe_statics,
+                               options::OPT_fno_threadsafe_statics)) {
+    CmdArgs.push_back(A->getOption().getID() == options::OPT_fthreadsafe_statics
+                          ? "/Zc:threadSafeInit"
+                          : "/Zc:threadSafeInit-");
+  }
+
   // Pass through all unknown arguments so that the fallback command can see
   // them too.
   Args.AddAllArgs(CmdArgs, options::OPT_UNKNOWN);

@@ -139,13 +139,6 @@ void SystemZInstPrinter::printU48ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<48>(MI, OpNum, O);
 }
 
-void SystemZInstPrinter::printAccessRegOperand(const MCInst *MI, int OpNum,
-                                               raw_ostream &O) {
-  uint64_t Value = MI->getOperand(OpNum).getImm();
-  assert(Value < 16 && "Invalid access register number");
-  O << "%a" << (unsigned int)Value;
-}
-
 void SystemZInstPrinter::printPCRelOperand(const MCInst *MI, int OpNum,
                                            raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
