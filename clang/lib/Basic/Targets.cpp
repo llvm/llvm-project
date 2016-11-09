@@ -3351,6 +3351,12 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
              Name == "avx512vbmi" || Name == "avx512ifma") {
     if (Enabled)
       setSSELevel(Features, AVX512F, Enabled);
+    // Enable BWI instruction if VBMI is being enabled.
+    if (Name == "avx512vbmi" && Enabled)
+      Features["avx512bw"] = true;
+    // Also disable VBMI if BWI is being disabled.
+    if (Name == "avx512bw" && !Enabled)
+      Features["avx512vbmi"] = false;
   } else if (Name == "fma") {
     if (Enabled)
       setSSELevel(Features, AVX, Enabled);

@@ -350,15 +350,22 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
     cf_dict = (CFDictionaryRef)CFDictionaryGetValue(
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSourcePathRemapping"));
     if (cf_dict && CFGetTypeID(cf_dict) == CFDictionaryGetTypeID()) {
-      // If we see DBGVersion with any kind of value, this is a new style
+      // If we see DBGVersion with a value of 2 or higher, this is a new style
       // DBGSourcePathRemapping dictionary
       bool new_style_source_remapping_dictionary = false;
       std::string original_DBGSourcePath_value = DBGSourcePath;
-      const void *version_value;
-      version_value =
-          CFDictionaryGetValue((CFDictionaryRef)uuid_dict, CFSTR("DBGVersion"));
-      if (version_value)
-        new_style_source_remapping_dictionary = true;
+      cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
+                                                 CFSTR("DBGVersion"));
+      if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
+        std::string version;
+        CFCString::FileSystemRepresentation(cf_str, version);
+        if (!version.empty() && isdigit(version[0])) {
+          int version_number = atoi(version.c_str());
+          if (version_number > 1) {
+            new_style_source_remapping_dictionary = true;
+          }
+        }
+      }
 
       CFIndex kv_pair_count = CFDictionaryGetCount((CFDictionaryRef)uuid_dict);
       if (kv_pair_count > 0) {

@@ -101,10 +101,17 @@ set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (NOT LIBCXX_CXX_ABI)
+  find_path(
+    LIBCXX_LIBCXXABI_INCLUDES_INTERNAL
+    cxxabi.h
+    PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi/include
+          ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
+    NO_DEFAULT_PATH
+  )
   if (NOT DEFINED LIBCXX_STANDALONE_BUILD AND
-      IS_DIRECTORY "${CMAKE_SOURCE_DIR}/projects/libcxxabi")
+      IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
-    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${CMAKE_SOURCE_DIR}/projects/libcxxabi/include")
+    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_INTREE 1)
   else()
     set(LIBCXX_CXX_ABI_LIBNAME "none")
