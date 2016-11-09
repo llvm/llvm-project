@@ -114,7 +114,8 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
       Message =
           (llvm::Twine(
                "%0 ends with a comment that refers to a wrong namespace '") +
-           NamespaceNameInComment + "'").str();
+           NamespaceNameInComment + "'")
+              .str();
     } else if (Comment.startswith("//")) {
       // Assume that this is an unrecognized form of a namespace closing line
       // comment. Replace it.

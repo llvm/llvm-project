@@ -1328,7 +1328,7 @@ bool SBThread::GetStatus(SBStream &status) const {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (exe_ctx.HasThreadScope()) {
-    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1);
+    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true);
   } else
     strm.PutCString("No status");
 
@@ -1336,6 +1336,10 @@ bool SBThread::GetStatus(SBStream &status) const {
 }
 
 bool SBThread::GetDescription(SBStream &description) const {
+    return GetDescription(description, false);
+}
+
+bool SBThread::GetDescription(SBStream &description, bool stop_format) const {
   Stream &strm = description.ref();
 
   std::unique_lock<std::recursive_mutex> lock;
@@ -1343,7 +1347,8 @@ bool SBThread::GetDescription(SBStream &description) const {
 
   if (exe_ctx.HasThreadScope()) {
     exe_ctx.GetThreadPtr()->DumpUsingSettingsFormat(strm,
-                                                    LLDB_INVALID_THREAD_ID);
+                                                    LLDB_INVALID_THREAD_ID,
+                                                    stop_format);
     // strm.Printf("SBThread: tid = 0x%4.4" PRIx64,
     // exe_ctx.GetThreadPtr()->GetID());
   } else

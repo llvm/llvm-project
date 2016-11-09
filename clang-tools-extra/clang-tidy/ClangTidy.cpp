@@ -56,15 +56,6 @@ namespace tidy {
 namespace {
 static const char *AnalyzerCheckNamePrefix = "clang-analyzer-";
 
-static const StringRef StaticAnalyzerChecks[] = {
-#define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, DESCFILE, HELPTEXT, GROUPINDEX, HIDDEN)       \
-  FULLNAME,
-#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
-#undef CHECKER
-#undef GET_CHECKERS
-};
-
 class AnalyzerDiagnosticConsumer : public ento::PathDiagnosticConsumer {
 public:
   AnalyzerDiagnosticConsumer(ClangTidyContext &Context) : Context(Context) {}
@@ -296,6 +287,36 @@ static void setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
   }
 }
 
+typedef std::vector<std::pair<std::string, bool>> CheckersList;
+
+static CheckersList getCheckersControlList(GlobList &Filter) {
+  CheckersList List;
+
+  const auto &RegisteredCheckers =
+      AnalyzerOptions::getRegisteredCheckers(/*IncludeExperimental=*/false);
+  bool AnalyzerChecksEnabled = false;
+  for (StringRef CheckName : RegisteredCheckers) {
+    std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
+    AnalyzerChecksEnabled |= Filter.contains(ClangTidyCheckName);
+  }
+
+  if (!AnalyzerChecksEnabled)
+    return List;
+
+  // List all static analyzer checkers that our filter enables.
+  //
+  // Always add all core checkers if any other static analyzer check is enabled.
+  // This is currently necessary, as other path sensitive checks rely on the
+  // core checkers.
+  for (StringRef CheckName : RegisteredCheckers) {
+    std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
+
+    if (CheckName.startswith("core") || Filter.contains(ClangTidyCheckName))
+      List.emplace_back(CheckName, true);
+  }
+  return List;
+}
+
 std::unique_ptr<clang::ASTConsumer>
 ClangTidyASTConsumerFactory::CreateASTConsumer(
     clang::CompilerInstance &Compiler, StringRef File) {
@@ -377,37 +398,6 @@ ClangTidyOptions::OptionMap ClangTidyASTConsumerFactory::getCheckOptions() {
   for (const auto &Check : Checks)
     Check->storeOptions(Options);
   return Options;
-}
-
-ClangTidyASTConsumerFactory::CheckersList
-ClangTidyASTConsumerFactory::getCheckersControlList(GlobList &Filter) {
-  CheckersList List;
-
-  bool AnalyzerChecksEnabled = false;
-  for (StringRef CheckName : StaticAnalyzerChecks) {
-    std::string Checker((AnalyzerCheckNamePrefix + CheckName).str());
-    AnalyzerChecksEnabled =
-        AnalyzerChecksEnabled ||
-        (!CheckName.startswith("debug") && Filter.contains(Checker));
-  }
-
-  if (AnalyzerChecksEnabled) {
-    // Run our regex against all possible static analyzer checkers.  Note that
-    // debug checkers print values / run programs to visualize the CFG and are
-    // thus not applicable to clang-tidy in general.
-    //
-    // Always add all core checkers if any other static analyzer checks are
-    // enabled. This is currently necessary, as other path sensitive checks
-    // rely on the core checkers.
-    for (StringRef CheckName : StaticAnalyzerChecks) {
-      std::string Checker((AnalyzerCheckNamePrefix + CheckName).str());
-
-      if (CheckName.startswith("core") ||
-          (!CheckName.startswith("debug") && Filter.contains(Checker)))
-        List.push_back(std::make_pair(CheckName, true));
-    }
-  }
-  return List;
 }
 
 DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc, StringRef Message,

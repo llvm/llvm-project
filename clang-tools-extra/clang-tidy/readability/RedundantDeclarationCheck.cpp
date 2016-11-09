@@ -19,7 +19,8 @@ namespace tidy {
 namespace readability {
 
 void RedundantDeclarationCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(namedDecl(anyOf(varDecl(), functionDecl())).bind("Decl"), this);
+  Finder->addMatcher(namedDecl(anyOf(varDecl(), functionDecl())).bind("Decl"),
+                     this);
 }
 
 void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
@@ -33,8 +34,8 @@ void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &SM = *Result.SourceManager;
 
   const bool DifferentHeaders =
-       !SM.isInMainFile(D->getLocation()) &&
-       !SM.isWrittenInSameFile(Prev->getLocation(), D->getLocation());
+      !SM.isInMainFile(D->getLocation()) &&
+      !SM.isWrittenInSameFile(Prev->getLocation(), D->getLocation());
 
   bool MultiVar = false;
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
@@ -57,8 +58,7 @@ void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       D->getSourceRange().getEnd(), 0, SM, Result.Context->getLangOpts());
   {
-    auto Diag = diag(D->getLocation(), "redundant %0 declaration")
-                << D;
+    auto Diag = diag(D->getLocation(), "redundant %0 declaration") << D;
     if (!MultiVar && !DifferentHeaders)
       Diag << FixItHint::CreateRemoval(
           SourceRange(D->getSourceRange().getBegin(), EndLoc));

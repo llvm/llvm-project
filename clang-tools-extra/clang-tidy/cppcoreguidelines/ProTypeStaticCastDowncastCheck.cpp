@@ -26,7 +26,8 @@ void ProTypeStaticCastDowncastCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void ProTypeStaticCastDowncastCheck::check(const MatchFinder::MatchResult &Result) {
+void ProTypeStaticCastDowncastCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<CXXStaticCastExpr>("cast");
   if (MatchedCast->getCastKind() != CK_BaseToDerived)
     return;

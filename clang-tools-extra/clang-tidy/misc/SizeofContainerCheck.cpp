@@ -47,4 +47,3 @@ void SizeofContainerCheck::check(const MatchFinder::MatchResult &Result) {
 } // namespace misc
 } // namespace tidy
 } // namespace clang
-

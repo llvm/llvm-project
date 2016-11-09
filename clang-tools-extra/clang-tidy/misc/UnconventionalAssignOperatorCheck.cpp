@@ -17,7 +17,8 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-void UnconventionalAssignOperatorCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+void UnconventionalAssignOperatorCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
   if (!getLangOpts().CPlusPlus)
@@ -65,7 +66,8 @@ void UnconventionalAssignOperatorCheck::registerMatchers(ast_matchers::MatchFind
                      this);
 }
 
-void UnconventionalAssignOperatorCheck::check(const MatchFinder::MatchResult &Result) {
+void UnconventionalAssignOperatorCheck::check(
+    const MatchFinder::MatchResult &Result) {
   if (const auto *RetStmt = Result.Nodes.getNodeAs<ReturnStmt>("returnStmt")) {
     diag(RetStmt->getLocStart(), "operator=() should always return '*this'");
   } else {

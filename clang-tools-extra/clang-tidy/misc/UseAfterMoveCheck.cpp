@@ -604,8 +604,7 @@ void UseAfterMoveFinder::getReinits(
   }
 }
 
-static void emitDiagnostic(const Expr *MovingCall,
-                           const DeclRefExpr *MoveArg,
+static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
                            const UseAfterMove &Use, ClangTidyCheck *Check,
                            ASTContext *Context) {
   SourceLocation UseLoc = Use.DeclRef->getExprLoc();
@@ -631,12 +630,11 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   auto CallMoveMatcher =
-      callExpr(
-          callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
-          hasArgument(0, declRefExpr().bind("arg")),
-          anyOf(hasAncestor(lambdaExpr().bind("containing-lambda")),
-                hasAncestor(functionDecl().bind("containing-func"))),
-          unless(inDecltypeOrTemplateArg()))
+      callExpr(callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
+               hasArgument(0, declRefExpr().bind("arg")),
+               anyOf(hasAncestor(lambdaExpr().bind("containing-lambda")),
+                     hasAncestor(functionDecl().bind("containing-func"))),
+               unless(inDecltypeOrTemplateArg()))
           .bind("call-move");
 
   Finder->addMatcher(

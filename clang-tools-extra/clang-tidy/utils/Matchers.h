@@ -10,8 +10,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "TypeTraits.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 namespace clang {
 namespace tidy {
@@ -21,9 +21,7 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
   return Node.isRelationalOp();
 }
 
-AST_MATCHER(BinaryOperator, isEqualityOperator) {
-  return Node.isEqualityOp();
-}
+AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
 
 AST_MATCHER(BinaryOperator, isComparisonOperator) {
   return Node.isComparisonOp();

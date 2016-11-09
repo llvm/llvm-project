@@ -35,8 +35,7 @@ DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
       RawStringHeaderFileExtensions(
           Options.getLocalOrGlobal("HeaderFileExtensions", ",h,hh,hpp,hxx")) {
   if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                        HeaderFileExtensions,
-                                        ',')) {
+                                        HeaderFileExtensions, ',')) {
     // FIXME: Find a more suitable way to handle invalid configuration
     // options.
     llvm::errs() << "Invalid header file extension: "

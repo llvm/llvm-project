@@ -52,8 +52,6 @@ private:
   unsigned SectionKind : 3;
 
 public:
-  virtual ~InputSectionData() = default;
-  InputSectionData(InputSectionData &&) = default;
   Kind kind() const { return (Kind)SectionKind; }
 
   unsigned Live : 1; // for garbage collection
@@ -67,9 +65,6 @@ public:
     assert(S % sizeof(T) == 0);
     return llvm::makeArrayRef<T>((const T *)Data.data(), S / sizeof(T));
   }
-
-  virtual void writeTo(uint8_t *Buf) {}
-  virtual size_t getSize() const { return Data.size(); }
 
   // If a section is compressed, this has the uncompressed section data.
   std::unique_ptr<uint8_t[]> UncompressedData;
@@ -117,6 +112,9 @@ public:
   // if you need to get a pointer to this instance, do not use
   // this but instead this->Repl.
   InputSectionBase<ELFT> *Repl;
+
+  // Returns the size of this section (even if this is a common or BSS.)
+  size_t getSize() const;
 
   static InputSectionBase<ELFT> Discarded;
 
@@ -245,7 +243,7 @@ public:
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
-  void writeTo(uint8_t *Buf) override;
+  void writeTo(uint8_t *Buf);
 
   // Relocation sections that refer to this one.
   llvm::TinyPtrVector<const Elf_Shdr *> RelocSections;
@@ -271,9 +269,6 @@ public:
 
   // Size of chunk with thunks code.
   uint64_t getThunksSize() const;
-
-  // Size of section in bytes.
-  size_t getSize() const override;
 
   template <class RelTy>
   void relocateNonAlloc(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);

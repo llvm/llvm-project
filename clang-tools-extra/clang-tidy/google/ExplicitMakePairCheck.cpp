@@ -25,8 +25,8 @@ namespace tidy {
 namespace google {
 namespace build {
 
-void
-ExplicitMakePairCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+void ExplicitMakePairCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
   if (!getLangOpts().CPlusPlus)
@@ -39,7 +39,8 @@ ExplicitMakePairCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
                callee(expr(ignoringParenImpCasts(
                    declRefExpr(hasExplicitTemplateArgs(),
                                to(functionDecl(hasName("::std::make_pair"))))
-                       .bind("declref"))))).bind("call"),
+                       .bind("declref")))))
+          .bind("call"),
       this);
 }
 
@@ -61,13 +62,13 @@ void ExplicitMakePairCheck::check(const MatchFinder::MatchResult &Result) {
       Arg1->getType() != Call->getArg(1)->getType()) {
     diag(Call->getLocStart(), "for C++11-compatibility, use pair directly")
         << FixItHint::CreateReplacement(
-            SourceRange(DeclRef->getLocStart(), DeclRef->getLAngleLoc()),
-            "std::pair<");
+               SourceRange(DeclRef->getLocStart(), DeclRef->getLAngleLoc()),
+               "std::pair<");
   } else {
     diag(Call->getLocStart(),
          "for C++11-compatibility, omit template arguments from make_pair")
         << FixItHint::CreateRemoval(
-            SourceRange(DeclRef->getLAngleLoc(), DeclRef->getRAngleLoc()));
+               SourceRange(DeclRef->getLAngleLoc(), DeclRef->getRAngleLoc()));
   }
 }
 

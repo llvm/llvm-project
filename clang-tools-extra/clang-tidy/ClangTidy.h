@@ -204,9 +204,6 @@ public:
   ClangTidyOptions::OptionMap getCheckOptions();
 
 private:
-  typedef std::vector<std::pair<std::string, bool>> CheckersList;
-  CheckersList getCheckersControlList(GlobList &Filter);
-
   ClangTidyContext &Context;
   std::unique_ptr<ClangTidyCheckFactories> CheckFactories;
 };

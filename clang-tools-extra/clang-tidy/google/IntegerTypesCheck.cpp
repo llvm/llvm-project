@@ -40,7 +40,6 @@ namespace tidy {
 namespace google {
 namespace runtime {
 
-
 IntegerTypesCheck::IntegerTypesCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       UnsignedTypePrefix(Options.get("UnsignedTypePrefix", "uint")),

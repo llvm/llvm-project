@@ -47,8 +47,8 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void
-ProBoundsPointerArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
+void ProBoundsPointerArithmeticCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<Expr>("expr");
 
   diag(MatchedExpr->getExprLoc(), "do not use pointer arithmetic");

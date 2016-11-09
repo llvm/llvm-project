@@ -22,8 +22,8 @@
 #include "ProTypeStaticCastDowncastCheck.h"
 #include "ProTypeUnionAccessCheck.h"
 #include "ProTypeVarargCheck.h"
-#include "SpecialMemberFunctionsCheck.h"
 #include "SlicingCheck.h"
+#include "SpecialMemberFunctionsCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -57,8 +57,7 @@ public:
         "cppcoreguidelines-pro-type-vararg");
     CheckFactories.registerCheck<SpecialMemberFunctionsCheck>(
         "cppcoreguidelines-special-member-functions");
-    CheckFactories.registerCheck<SlicingCheck>(
-        "cppcoreguidelines-slicing");
+    CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
     CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
   }

@@ -19,8 +19,8 @@ namespace tidy {
 namespace google {
 namespace runtime {
 
-void
-OverloadedUnaryAndCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+void OverloadedUnaryAndCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
   if (!getLangOpts().CPlusPlus)
@@ -34,10 +34,10 @@ OverloadedUnaryAndCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Also match freestanding unary operator& overloads. Be careful not to match
   // binary methods.
   Finder->addMatcher(
-      functionDecl(
-          allOf(unless(cxxMethodDecl()),
-                functionDecl(parameterCountIs(1),
-                             hasOverloadedOperatorName("&")).bind("overload"))),
+      functionDecl(allOf(
+          unless(cxxMethodDecl()),
+          functionDecl(parameterCountIs(1), hasOverloadedOperatorName("&"))
+              .bind("overload"))),
       this);
 }
 

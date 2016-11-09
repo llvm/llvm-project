@@ -14,11 +14,13 @@
 
 #include "lldb/lldb-private.h"
 
-#include <chrono>
+#include "llvm/Support/Chrono.h"
 
 #include <stdint.h>
 
 namespace lldb_private {
+
+void DumpTimePoint(llvm::sys::TimePoint<>, Stream &s, uint32_t width = 0);
 
 class TimeValue {
 public:
@@ -34,9 +36,7 @@ public:
   TimeValue(const TimeValue &rhs);
   TimeValue(const struct timespec &ts);
   explicit TimeValue(uint32_t seconds, uint64_t nanos = 0);
-  TimeValue(std::chrono::time_point<std::chrono::system_clock,
-                                    std::chrono::nanoseconds>
-                point)
+  TimeValue(const llvm::sys::TimePoint<> point)
       : m_nano_seconds(point.time_since_epoch().count()) {}
   ~TimeValue();
 
@@ -44,6 +44,9 @@ public:
   // Operators
   //------------------------------------------------------------------
   const TimeValue &operator=(const TimeValue &rhs);
+  operator llvm::sys::TimePoint<>() {
+    return llvm::sys::TimePoint<>(std::chrono::nanoseconds(m_nano_seconds));
+  }
 
   void Clear();
 
@@ -65,7 +68,6 @@ public:
 
   static TimeValue Now();
 
-  void Dump(Stream *s, uint32_t width = 0) const;
 
   /// Returns only the seconds component of the TimeValue. The nanoseconds
   /// portion is ignored. No rounding is performed.

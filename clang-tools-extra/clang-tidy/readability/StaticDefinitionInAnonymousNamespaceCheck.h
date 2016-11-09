@@ -22,7 +22,8 @@ namespace readability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html
 class StaticDefinitionInAnonymousNamespaceCheck : public ClangTidyCheck {
 public:
-  StaticDefinitionInAnonymousNamespaceCheck(StringRef Name, ClangTidyContext *Context)
+  StaticDefinitionInAnonymousNamespaceCheck(StringRef Name,
+                                            ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;

@@ -14,6 +14,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -23,6 +24,9 @@ namespace move {
 
 // FIXME: Make it support more types, e.g. function definitions.
 // Currently only support moving class definition.
+//
+// When moving all class declarations in old header, all code in old.h/cc will
+// be moved.
 class ClangMoveTool : public ast_matchers::MatchFinder::MatchCallback {
 public:
   // Information about the declaration being moved.
@@ -68,16 +72,22 @@ public:
   /// \param SearchPath The search path which was used to find the IncludeHeader
   /// in the file system. It can be a relative path or an absolute path.
   /// \param FileName The name of file where the IncludeHeader comes from.
+  /// \param IncludeRange The source range for the written file name in #include
+  ///  (i.e. "old.h" for #include "old.h") in old.cc.
   /// \param SM The SourceManager.
-  void addIncludes(llvm::StringRef IncludeHeader,
-                   bool IsAngled,
-                   llvm::StringRef SearchPath,
-                   llvm::StringRef FileName,
-                   const SourceManager& SM);
+  void addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
+                   llvm::StringRef SearchPath, llvm::StringRef FileName,
+                   clang::CharSourceRange IncludeFilenameRange,
+                   const SourceManager &SM);
 
 private:
+  // Make the Path absolute using the OrignalRunningDirectory if the Path is not
+  // an absolute path. An empty Path will result in an empty string.
+  std::string makeAbsolutePath(StringRef Path);
+
   void removeClassDefinitionInOldFiles();
   void moveClassDefinitionToNewFiles();
+  void moveAll(SourceManager& SM, StringRef OldFile, StringRef NewFile);
 
   MoveDefinitionSpec Spec;
   // The Key is file path, value is the replacements being applied to the file.
@@ -99,6 +109,12 @@ private:
   std::string OriginalRunningDirectory;
   // The name of a predefined code style.
   std::string FallbackStyle;
+  // The unmoved named declarations in old header.
+  llvm::SmallPtrSet<const NamedDecl*, 8> UnremovedDeclsInOldHeader;
+  /// The source range for the written file name in #include (i.e. "old.h" for
+  /// #include "old.h") in old.cc,  including the enclosing quotes or angle
+  /// brackets.
+  clang::CharSourceRange OldHeaderIncludeRange;
 };
 
 class ClangMoveAction : public clang::ASTFrontendAction {

@@ -33,10 +33,9 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
                        hasArgument(1, cxxDefaultArgExpr()))));
 
   // Match a string constructor expression with an empty string literal.
-  const auto EmptyStringCtorExpr =
-      cxxConstructExpr(StringConstructorExpr,
-          hasArgument(0, ignoringParenImpCasts(
-                             stringLiteral(hasSize(0)))));
+  const auto EmptyStringCtorExpr = cxxConstructExpr(
+      StringConstructorExpr,
+      hasArgument(0, ignoringParenImpCasts(stringLiteral(hasSize(0)))));
 
   const auto EmptyStringCtorExprWithTemporaries =
       cxxConstructExpr(StringConstructorExpr,

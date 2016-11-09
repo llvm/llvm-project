@@ -10,10 +10,10 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_FORWARDDECLARATIONNAMESPACECHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_FORWARDDECLARATIONNAMESPACECHECK_H
 
+#include "../ClangTidy.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <set>
 #include <vector>
-#include "llvm/ADT/SmallPtrSet.h"
-#include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {

@@ -20,15 +20,16 @@ namespace tidy {
 namespace google {
 namespace runtime {
 
-void
-MemsetZeroLengthCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+void MemsetZeroLengthCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
   // Look for memset(x, y, 0) as those is most likely an argument swap.
   // TODO: Also handle other standard functions that suffer from the same
   //       problem, e.g. memchr.
-  Finder->addMatcher(
-      callExpr(callee(functionDecl(hasName("::memset"))), argumentCountIs(3),
-               unless(isInTemplateInstantiation())).bind("decl"),
-      this);
+  Finder->addMatcher(callExpr(callee(functionDecl(hasName("::memset"))),
+                              argumentCountIs(3),
+                              unless(isInTemplateInstantiation()))
+                         .bind("decl"),
+                     this);
 }
 
 /// \brief Get a StringRef representing a SourceRange.

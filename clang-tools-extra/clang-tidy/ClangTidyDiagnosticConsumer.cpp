@@ -83,7 +83,7 @@ protected:
       // applied).
       if (Err) {
         llvm::errs() << "Fix conflicts with existing fix! "
-                    << llvm::toString(std::move(Err)) << "\n";
+                     << llvm::toString(std::move(Err)) << "\n";
         assert(false && "Fix conflicts with existing fix!");
       }
     }
@@ -124,10 +124,9 @@ ClangTidyMessage::ClangTidyMessage(StringRef Message,
 
 ClangTidyError::ClangTidyError(StringRef CheckName,
                                ClangTidyError::Level DiagLevel,
-                               bool IsWarningAsError,
-                               StringRef BuildDirectory)
-    : CheckName(CheckName), BuildDirectory(BuildDirectory), DiagLevel(DiagLevel),
-      IsWarningAsError(IsWarningAsError) {}
+                               bool IsWarningAsError, StringRef BuildDirectory)
+    : CheckName(CheckName), BuildDirectory(BuildDirectory),
+      DiagLevel(DiagLevel), IsWarningAsError(IsWarningAsError) {}
 
 // Returns true if GlobList starts with the negative indicator ('-'), removes it
 // from the GlobList.
@@ -279,7 +278,7 @@ void ClangTidyDiagnosticConsumer::finalizeLastError() {
   LastErrorPassesLineFilter = false;
 }
 
-static bool LineIsMarkedWithNOLINT(SourceManager& SM, SourceLocation Loc) {
+static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc) {
   bool Invalid;
   const char *CharacterData = SM.getCharacterData(Loc, &Invalid);
   if (!Invalid) {
@@ -312,10 +311,10 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
   if (LastErrorWasIgnored && DiagLevel == DiagnosticsEngine::Note)
     return;
 
-  if (Info.getLocation().isValid() &&
-      DiagLevel != DiagnosticsEngine::Error &&
+  if (Info.getLocation().isValid() && DiagLevel != DiagnosticsEngine::Error &&
       DiagLevel != DiagnosticsEngine::Fatal &&
-      LineIsMarkedWithNOLINTinMacro(Diags->getSourceManager(), Info.getLocation())) {
+      LineIsMarkedWithNOLINTinMacro(Diags->getSourceManager(),
+                                    Info.getLocation())) {
     ++Context.Stats.ErrorsIgnoredNOLINT;
     // Ignored a warning, should ignore related notes as well
     LastErrorWasIgnored = true;

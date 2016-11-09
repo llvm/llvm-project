@@ -68,7 +68,8 @@ Optional<FixItHint> UsingInserter::createUsingDeclaration(
   if (HasConflictingDeclaration || HasConflictingDeclRef)
     return None;
 
-  std::string Declaration = (llvm::Twine("\nusing ") + QualifiedName + ";").str();
+  std::string Declaration =
+      (llvm::Twine("\nusing ") + QualifiedName + ";").str();
 
   AddedUsing.emplace(std::make_pair(Function, QualifiedName.str()));
   return FixItHint::CreateInsertion(InsertLoc, Declaration);

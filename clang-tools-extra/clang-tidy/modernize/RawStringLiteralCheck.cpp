@@ -133,7 +133,7 @@ void RawStringLiteralCheck::replaceWithRawStringLiteral(
   diag(Literal->getLocStart(),
        "escaped string literal can be written as a raw string literal")
       << FixItHint::CreateReplacement(
-          CharRange, asRawStringLiteral(Literal, DelimiterStem));
+             CharRange, asRawStringLiteral(Literal, DelimiterStem));
 }
 
 } // namespace modernize

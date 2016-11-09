@@ -26,9 +26,7 @@ void ProTypeVarargCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(vAArgExpr().bind("va_use"), this);
 
   Finder->addMatcher(
-      callExpr(callee(functionDecl(isVariadic())))
-          .bind("callvararg"),
-      this);
+      callExpr(callee(functionDecl(isVariadic()))).bind("callvararg"), this);
 }
 
 static bool hasSingleVariadicArgumentWithValue(const CallExpr *C, uint64_t I) {

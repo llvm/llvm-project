@@ -9,8 +9,8 @@
 
 #include "UseAutoCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -114,20 +114,19 @@ AST_MATCHER(NamedDecl, hasStdIteratorName) {
 /// recordDecl(hasStdContainerName()) matches \c vector and \c forward_list
 /// but not \c my_vec.
 AST_MATCHER(NamedDecl, hasStdContainerName) {
-  static const char *const ContainerNames[] = {"array",         "deque",
-                                               "forward_list",  "list",
-                                               "vector",
+  static const char *const ContainerNames[] = {
+      "array",         "deque",
+      "forward_list",  "list",
+      "vector",
 
-                                               "map",           "multimap",
-                                               "set",           "multiset",
+      "map",           "multimap",
+      "set",           "multiset",
 
-                                               "unordered_map",
-                                               "unordered_multimap",
-                                               "unordered_set",
-                                               "unordered_multiset",
+      "unordered_map", "unordered_multimap",
+      "unordered_set", "unordered_multiset",
 
-                                               "queue",         "priority_queue",
-                                               "stack"};
+      "queue",         "priority_queue",
+      "stack"};
 
   for (const char *Name : ContainerNames) {
     if (hasName(Name).matches(Node, Finder, Builder))

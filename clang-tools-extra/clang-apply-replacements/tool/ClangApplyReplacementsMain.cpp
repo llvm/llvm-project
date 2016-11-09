@@ -43,7 +43,6 @@ static cl::opt<bool> RemoveTUReplacementFiles(
              "merging/replacing."),
     cl::init(false), cl::cat(ReplacementCategory));
 
-
 static cl::opt<bool> DoFormat(
     "format",
     cl::desc("Enable formatting of code changed by applying replacements.\n"
@@ -63,8 +62,8 @@ static cl::opt<std::string> FormatStyleConfig(
     cl::init(""), cl::cat(FormattingCategory));
 
 static cl::opt<std::string>
-FormatStyleOpt("style", cl::desc(format::StyleOptionHelpDescription),
-               cl::init("LLVM"), cl::cat(FormattingCategory));
+    FormatStyleOpt("style", cl::desc(format::StyleOptionHelpDescription),
+                   cl::init("LLVM"), cl::cat(FormattingCategory));
 
 namespace {
 // Helper object to remove the TUReplacement files (triggered by
@@ -75,9 +74,7 @@ public:
                     clang::DiagnosticsEngine &Diagnostics)
       : TURFiles(Files), Diag(Diagnostics) {}
 
-  ~ScopedFileRemover() {
-    deleteReplacementFiles(TURFiles, Diag);
-  }
+  ~ScopedFileRemover() { deleteReplacementFiles(TURFiles, Diag); }
 
 private:
   const TUReplacementFiles &TURFiles;
@@ -106,7 +103,8 @@ static void printVersion() {
 static bool
 getRewrittenData(const std::vector<tooling::Replacement> &Replacements,
                  Rewriter &Rewrites, std::string &Result) {
-  if (Replacements.empty()) return true;
+  if (Replacements.empty())
+    return true;
 
   if (!applyAllReplacements(Replacements, Rewrites))
     return false;
@@ -206,8 +204,7 @@ int main(int argc, char **argv) {
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()),
-      DiagOpts.get());
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts.get());
 
   // Determine a formatting style from options.
   format::FormatStyle FormatStyle;

@@ -20,8 +20,8 @@ namespace tidy {
 namespace google {
 namespace readability {
 
-void
-AvoidCStyleCastsCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+void AvoidCStyleCastsCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
   Finder->addMatcher(
       cStyleCastExpr(
           // Filter out (EnumType)IntegerLiteral construct, which is generated
@@ -29,7 +29,8 @@ AvoidCStyleCastsCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
           // FIXME: Remove this once this is fixed in the AST.
           unless(hasParent(substNonTypeTemplateParmExpr())),
           // Avoid matches in template instantiations.
-          unless(isInTemplateInstantiation())).bind("cast"),
+          unless(isInTemplateInstantiation()))
+          .bind("cast"),
       this);
 }
 
@@ -143,7 +144,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       ReplaceWithCast("const_cast");
       return;
     }
-    // FALLTHROUGH
+  // FALLTHROUGH
   case clang::CK_IntegralCast:
     // Convert integral and no-op casts between builtin types and enums to
     // static_cast. A cast from enum to integer may be unnecessary, but it's

@@ -307,8 +307,7 @@ ImplicitBoolCastCheck::ImplicitBoolCastCheck(StringRef Name,
       AllowConditionalPointerCasts(
           Options.get("AllowConditionalPointerCasts", false)) {}
 
-void ImplicitBoolCastCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
+void ImplicitBoolCastCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowConditionalIntegerCasts",
                 AllowConditionalIntegerCasts);
   Options.store(Opts, "AllowConditionalPointerCasts",

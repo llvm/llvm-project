@@ -35,10 +35,8 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
   if (!Function || !Function->hasBody())
     return None;
 
-
   if (AddedAliases[Function].count(Namespace.str()) != 0)
     return None;
-
 
   // FIXME: Doesn't consider the order of declarations.
   // If we accidentially pick an alias defined later in the function,

@@ -173,24 +173,25 @@ const char ExpectedNewCC[] = "namespace a {\n"
                              "} // namespace a\n";
 
 std::map<std::string, std::string>
-runClangMoveOnCode(const move::ClangMoveTool::MoveDefinitionSpec &Spec) {
+runClangMoveOnCode(const move::ClangMoveTool::MoveDefinitionSpec &Spec,
+                   const char *const Header = TestHeader,
+                   const char *const CC = TestCC) {
   clang::RewriterTestContext Context;
 
   std::map<llvm::StringRef, clang::FileID> FileToFileID;
   std::vector<std::pair<std::string, std::string>> FileToSourceText = {
-      {TestHeaderName, TestHeader}, {TestCCName, TestCC}};
+      {TestHeaderName, Header}, {TestCCName, CC}};
 
   auto CreateFiles = [&FileToSourceText, &Context, &FileToFileID](
       llvm::StringRef Name, llvm::StringRef Code) {
     if (!Name.empty()) {
-      FileToSourceText.emplace_back(Name, Code);
       FileToFileID[Name] = Context.createInMemoryFile(Name, Code);
     }
   };
   CreateFiles(Spec.NewCC, "");
   CreateFiles(Spec.NewHeader, "");
-  CreateFiles(Spec.OldHeader, TestHeader);
-  CreateFiles(Spec.OldCC, TestCC);
+  CreateFiles(Spec.OldHeader, Header);
+  CreateFiles(Spec.OldCC, CC);
 
   std::map<std::string, tooling::Replacements> FileToReplacements;
   llvm::SmallString<128> InitialDirectory;
@@ -201,7 +202,7 @@ runClangMoveOnCode(const move::ClangMoveTool::MoveDefinitionSpec &Spec) {
       Spec, FileToReplacements, InitialDirectory.str(), "LLVM");
 
   tooling::runToolOnCodeWithArgs(
-      Factory->create(), TestCC, {"-std=c++11", "-fparse-all-comments"},
+      Factory->create(), CC, {"-std=c++11", "-fparse-all-comments"},
       TestCCName, "clang-move", std::make_shared<PCHContainerOperations>(),
       FileToSourceText);
   formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm");
@@ -261,6 +262,79 @@ TEST(ClangMove, MoveNonExistClass) {
   Spec.NewCC = "new_foo.cc";
   auto Results = runClangMoveOnCode(Spec);
   EXPECT_EQ(0u, Results.size());
+}
+
+TEST(ClangMove, MoveAll) {
+  std::vector<std::string> TestHeaders = {
+    "class A {\npublic:\n  int f();\n};",
+    // forward declaration.
+    "class B;\nclass A {\npublic:\n  int f();\n};",
+    // template forward declaration.
+    "template <typename T> class B;\nclass A {\npublic:\n  int f();\n};",
+    "namespace a {}\nclass A {\npublic:\n  int f();\n};",
+    "namespace a {}\nusing namespace a;\nclass A {\npublic:\n  int f();\n};",
+  };
+  const char Code[] = "#include \"foo.h\"\nint A::f() { return 0; }";
+  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("A");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  for (const auto& Header : TestHeaders) {
+    auto Results = runClangMoveOnCode(Spec, Header.c_str(), Code);
+    EXPECT_EQ(Header, Results[Spec.NewHeader]);
+    EXPECT_EQ("", Results[Spec.OldHeader]);
+    EXPECT_EQ("", Results[Spec.OldCC]);
+  }
+}
+
+TEST(ClangMove, MoveAllMultipleClasses) {
+  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  std::vector<std::string> TestHeaders = {
+    "class C;\nclass A {\npublic:\n  int f();\n};\nclass B {};",
+    "class C;\nclass B;\nclass A {\npublic:\n  int f();\n};\nclass B {};",
+  };
+  const char Code[] = "#include \"foo.h\"\nint A::f() { return 0; }";
+  Spec.Names = {std::string("A"), std::string("B")};
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  for (const auto& Header : TestHeaders) {
+    auto Results = runClangMoveOnCode(Spec, Header.c_str(), Code);
+    EXPECT_EQ(Header, Results[Spec.NewHeader]);
+    EXPECT_EQ("", Results[Spec.OldHeader]);
+    EXPECT_EQ("", Results[Spec.OldCC]);
+  }
+}
+
+TEST(ClangMove, DontMoveAll) {
+  const char ExpectedHeader[] = "#ifndef NEW_FOO_H\n"
+                                "#define NEW_FOO_H\n"
+                                "class A {\npublic:\n  int f();\n};\n"
+                                "#endif // NEW_FOO_H\n";
+  const char Code[] = "#include \"foo.h\"\nint A::f() { return 0; }";
+  std::vector<std::string> TestHeaders = {
+    "typedef int Int;\nclass A {\npublic:\n  int f();\n};",
+    "using Int=int;\nclass A {\npublic:\n  int f();\n};",
+    "class B {};\nclass A {\npublic:\n  int f();\n};",
+    "void f() {};\nclass A {\npublic:\n  int f();\n};",
+    "enum Color { RED };\nclass A {\npublic:\n  int f();\n};",
+  };
+  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("A");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  for (const auto& Header : TestHeaders) {
+    auto Results = runClangMoveOnCode(Spec, Header.c_str(), Code);
+    EXPECT_EQ(ExpectedHeader, Results[Spec.NewHeader]);
+    // The expected old header should not contain class A definition.
+    std::string ExpectedOldHeader = Header.substr(0, Header.size() - 31);
+    EXPECT_EQ(ExpectedOldHeader, Results[Spec.OldHeader]);
+  }
 }
 
 } // namespace

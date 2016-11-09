@@ -48,4 +48,3 @@ public:
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_DEFAULT_H
-

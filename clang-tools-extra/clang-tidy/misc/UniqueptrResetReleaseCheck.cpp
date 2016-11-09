@@ -91,7 +91,7 @@ bool areDeletersCompatible(const MatchFinder::MatchResult &Result) {
   return false;
 }
 
-}  // namespace
+} // namespace
 
 void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
   if (!areDeletersCompatible(Result))
@@ -127,9 +127,8 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
   }
   std::string NewText = LeftText + " = " + RightText;
 
-  diag(ResetMember->getExprLoc(), DiagText)
-      << FixItHint::CreateReplacement(
-          CharSourceRange::getTokenRange(ResetCall->getSourceRange()), NewText);
+  diag(ResetMember->getExprLoc(), DiagText) << FixItHint::CreateReplacement(
+      CharSourceRange::getTokenRange(ResetCall->getSourceRange()), NewText);
 }
 
 } // namespace misc

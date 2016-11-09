@@ -127,7 +127,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
        FunctionDecl = FunctionDecl->getPreviousDecl()) {
     const auto &CurrentParam = *FunctionDecl->getParamDecl(Index);
     Diag << utils::fixit::changeVarDeclToReference(CurrentParam,
-                                                           *Result.Context);
+                                                   *Result.Context);
     // The parameter of each declaration needs to be checked individually as to
     // whether it is const or not as constness can differ between definition and
     // declaration.

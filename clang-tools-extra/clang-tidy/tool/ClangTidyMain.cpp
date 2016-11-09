@@ -49,10 +49,9 @@ Configuration files:
 
 )");
 
-const char DefaultChecks[] =  // Enable these checks:
+const char DefaultChecks[] =  // Enable these checks by default:
     "clang-diagnostic-*,"     //   * compiler diagnostics
-    "clang-analyzer-*,"       //   * Static Analyzer checks
-    "-clang-analyzer-alpha*"; //   * but not alpha checks: many false positives
+    "clang-analyzer-*";       //   * Static Analyzer checks
 
 static cl::opt<std::string> Checks("checks", cl::desc(R"(
 Comma-separated list of globs with optional '-'
@@ -93,9 +92,7 @@ static cl::opt<bool>
     SystemHeaders("system-headers",
                   cl::desc("Display the errors from system headers."),
                   cl::init(false), cl::cat(ClangTidyCategory));
-static cl::opt<std::string>
-    LineFilter("line-filter",
-               cl::desc(R"(
+static cl::opt<std::string> LineFilter("line-filter", cl::desc(R"(
 List of files with line ranges to filter the
 warnings. Can be used together with
 -header-filter. The format of the list is a
@@ -105,7 +102,8 @@ JSON array of objects:
     {"name":"file2.h"}
   ]
 )"),
-               cl::init(""), cl::cat(ClangTidyCategory));
+                                       cl::init(""),
+                                       cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> Fix("fix", cl::desc(R"(
 Apply suggested fixes. Without -fix-errors
@@ -220,7 +218,7 @@ static void printProfileData(const ProfileData &Profile,
   std::vector<std::pair<llvm::TimeRecord, StringRef>> Timers;
   TimeRecord Total;
 
-  for (const auto& P : Profile.Records) {
+  for (const auto &P : Profile.Records) {
     Timers.emplace_back(P.getValue(), P.getKey());
     Total += P.getValue();
   }
@@ -324,7 +322,7 @@ static int clangTidyMain(int argc, const char **argv) {
   std::vector<std::string> EnabledChecks = getCheckNames(EffectiveOptions);
 
   if (ExplainConfig) {
-    //FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
+    // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
     std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
         RawOptions = OptionsProvider->getRawOptions(FilePath);
     for (const std::string &Check : EnabledChecks) {
@@ -377,8 +375,7 @@ static int clangTidyMain(int argc, const char **argv) {
   std::vector<ClangTidyError> Errors;
   ClangTidyStats Stats =
       runClangTidy(std::move(OptionsProvider), OptionsParser.getCompilations(),
-                   PathList, &Errors,
-                   EnableCheckProfile ? &Profile : nullptr);
+                   PathList, &Errors, EnableCheckProfile ? &Profile : nullptr);
   bool FoundErrors =
       std::find_if(Errors.begin(), Errors.end(), [](const ClangTidyError &E) {
         return E.DiagLevel == ClangTidyError::Error;
@@ -458,7 +455,7 @@ static int LLVM_ATTRIBUTE_UNUSED ModernizeModuleAnchorDestination =
 // This anchor is used to force the linker to link the MPIModule.
 extern volatile int MPIModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED MPIModuleAnchorDestination =
-          MPIModuleAnchorSource;
+    MPIModuleAnchorSource;
 
 // This anchor is used to force the linker to link the PerformanceModule.
 extern volatile int PerformanceModuleAnchorSource;

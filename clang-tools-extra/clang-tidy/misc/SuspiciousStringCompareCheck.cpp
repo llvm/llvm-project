@@ -20,7 +20,6 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-
 // Semicolon separated list of known string compare-like functions. The list
 // must ends with a semicolon.
 static const char KnownStringCompareFunctions[] = "__builtin_memcmp;"
@@ -104,13 +103,12 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
           .bind("decl");
   const auto DirectStringCompareCallExpr =
       callExpr(hasDeclaration(FunctionCompareDecl)).bind("call");
-  const auto MacroStringCompareCallExpr =
-      conditionalOperator(
-        anyOf(hasTrueExpression(ignoringParenImpCasts(DirectStringCompareCallExpr)),
-              hasFalseExpression(ignoringParenImpCasts(DirectStringCompareCallExpr))));
+  const auto MacroStringCompareCallExpr = conditionalOperator(anyOf(
+      hasTrueExpression(ignoringParenImpCasts(DirectStringCompareCallExpr)),
+      hasFalseExpression(ignoringParenImpCasts(DirectStringCompareCallExpr))));
   // The implicit cast is not present in C.
   const auto StringCompareCallExpr = ignoringParenImpCasts(
-        anyOf(DirectStringCompareCallExpr, MacroStringCompareCallExpr));
+      anyOf(DirectStringCompareCallExpr, MacroStringCompareCallExpr));
 
   if (WarnOnImplicitComparison) {
     // Detect suspicious calls to string compare:
@@ -203,7 +201,8 @@ void SuspiciousStringCompareCheck::check(
         << Decl;
   }
 
-  if (const auto* BinOp = Result.Nodes.getNodeAs<BinaryOperator>("suspicious-operator")) {
+  if (const auto *BinOp =
+          Result.Nodes.getNodeAs<BinaryOperator>("suspicious-operator")) {
     diag(Call->getLocStart(), "results of function %0 used by operator '%1'")
         << Decl << BinOp->getOpcodeStr();
   }

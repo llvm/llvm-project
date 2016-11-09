@@ -176,6 +176,8 @@ public:
 
   bool GetDescription(lldb::SBStream &description) const;
 
+  bool GetDescription(lldb::SBStream &description, bool stop_format) const;
+
   bool GetStatus(lldb::SBStream &status) const;
 
   SBThread GetExtendedBacktraceThread(const char *type);

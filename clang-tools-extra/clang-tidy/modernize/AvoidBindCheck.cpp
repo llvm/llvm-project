@@ -154,7 +154,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   addPlaceholderArgs(Args, Stream);
   Stream << " { return ";
   Ref->printPretty(Stream, nullptr, Result.Context->getPrintingPolicy());
-  Stream<< "(";
+  Stream << "(";
   addFunctionCallArgs(Args, Stream);
   Stream << "); };";
 

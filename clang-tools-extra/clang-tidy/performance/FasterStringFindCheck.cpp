@@ -30,10 +30,12 @@ llvm::Optional<std::string> MakeCharacterLiteral(const StringLiteral *Literal) {
   }
   // Now replace the " with '.
   auto pos = Result.find_first_of('"');
-  if (pos == Result.npos) return llvm::None;
+  if (pos == Result.npos)
+    return llvm::None;
   Result[pos] = '\'';
   pos = Result.find_last_of('"');
-  if (pos == Result.npos) return llvm::None;
+  if (pos == Result.npos)
+    return llvm::None;
   Result[pos] = '\'';
   return Result;
 }
@@ -50,8 +52,7 @@ FasterStringFindCheck::FasterStringFindCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
-          Options.get("StringLikeClasses", "std::basic_string"))) {
-}
+          Options.get("StringLikeClasses", "std::basic_string"))) {}
 
 void FasterStringFindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StringLikeClasses",

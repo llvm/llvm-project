@@ -178,9 +178,8 @@ public:
 
 private:
   void
-  initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups,
-                     ArrayRef<Elf_Shdr> ObjSections);
-  void initializeSymbols(ArrayRef<Elf_Shdr> Sections);
+  initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
+  void initializeSymbols();
   void initializeDwarfLine();
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Shdr &Sec);
   InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec,

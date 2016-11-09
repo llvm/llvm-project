@@ -100,8 +100,6 @@ private:
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
-  void reportDuplicate(SymbolBody *Existing, InputFile *NewFile);
-
   std::map<std::string, std::vector<SymbolBody *>> getDemangledSyms();
   void handleAnonymousVersion();
 

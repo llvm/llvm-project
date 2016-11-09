@@ -20,13 +20,13 @@ namespace performance {
 // the underlying type is the one returned by the iterator (i.e. that there
 // isn't any implicit conversion).
 class ImplicitCastInLoopCheck : public ClangTidyCheck {
- public:
-   ImplicitCastInLoopCheck(StringRef Name, ClangTidyContext *Context)
-       : ClangTidyCheck(Name, Context) {}
-   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+public:
+  ImplicitCastInLoopCheck(StringRef Name, ClangTidyContext *Context)
+      : ClangTidyCheck(Name, Context) {}
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
- private:
+private:
   void ReportAndFix(const ASTContext *Context, const VarDecl *VD,
                     const CXXOperatorCallExpr *OperatorCall);
 };
@@ -35,4 +35,4 @@ class ImplicitCastInLoopCheck : public ClangTidyCheck {
 } // namespace tidy
 } // namespace clang
 
-#endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CAST_IN_LOOP_CHECK_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_IMPLICIT_CAST_IN_LOOP_CHECK_H_

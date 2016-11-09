@@ -67,4 +67,3 @@ void UniqueptrDeleteReleaseCheck::check(
 } // namespace readability
 } // namespace tidy
 } // namespace clang
-

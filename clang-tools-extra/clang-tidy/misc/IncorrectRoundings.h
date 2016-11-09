@@ -36,4 +36,4 @@ public:
 } // namespace tidy
 } // namespace clang
 
-#endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCORRECTROUNDINGS_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCORRECTROUNDINGS_H_

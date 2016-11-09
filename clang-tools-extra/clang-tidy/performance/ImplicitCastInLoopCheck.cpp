@@ -29,7 +29,7 @@ namespace {
 bool IsNonTrivialImplicitCast(const Stmt *ST) {
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(ST)) {
     return (ICE->getCastKind() != CK_NoOp) ||
-            IsNonTrivialImplicitCast(ICE->getSubExpr());
+           IsNonTrivialImplicitCast(ICE->getSubExpr());
   }
   return false;
 }
