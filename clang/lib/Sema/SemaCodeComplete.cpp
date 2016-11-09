@@ -3611,6 +3611,44 @@ static ObjCContainerDecl *getContainerDef(ObjCContainerDecl *Container) {
   return Container;
 }
 
+/// \brief Adds a block invocation code completion result for the given block
+/// declaration \p BD.
+static void AddObjCBlockCall(ASTContext &Context, const PrintingPolicy &Policy,
+                             CodeCompletionBuilder &Builder,
+                             const NamedDecl *BD,
+                             const FunctionTypeLoc &BlockLoc,
+                             const FunctionProtoTypeLoc &BlockProtoLoc) {
+  Builder.AddResultTypeChunk(
+      GetCompletionTypeString(BlockLoc.getReturnLoc().getType(), Context,
+                              Policy, Builder.getAllocator()));
+
+  AddTypedNameChunk(Context, Policy, BD, Builder);
+  Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+
+  if (BlockProtoLoc && BlockProtoLoc.getTypePtr()->isVariadic()) {
+    Builder.AddPlaceholderChunk("...");
+  } else {
+    for (unsigned I = 0, N = BlockLoc.getNumParams(); I != N; ++I) {
+      if (I)
+        Builder.AddChunk(CodeCompletionString::CK_Comma);
+
+      // Format the placeholder string.
+      std::string PlaceholderStr =
+          FormatFunctionParameter(Policy, BlockLoc.getParam(I));
+
+      if (I == N - 1 && BlockProtoLoc &&
+          BlockProtoLoc.getTypePtr()->isVariadic())
+        PlaceholderStr += ", ...";
+
+      // Add the placeholder string.
+      Builder.AddPlaceholderChunk(
+          Builder.getAllocator().CopyString(PlaceholderStr));
+    }
+  }
+
+  Builder.AddChunk(CodeCompletionString::CK_RightParen);
+}
+
 static void AddObjCProperties(const CodeCompletionContext &CCContext,
                               ObjCContainerDecl *Container,
                               bool AllowCategories, bool AllowNullaryMethods,
@@ -3628,42 +3666,61 @@ static void AddObjCProperties(const CodeCompletionContext &CCContext,
     if (!AddedProperties.insert(P->getIdentifier()).second)
       continue;
 
-    Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
-                           CurContext);
+    // FIXME: Provide block invocation completion for non-statement
+    // expressions.
+    if (!P->getType().getTypePtr()->isBlockPointerType() ||
+        !IsBaseExprStatement) {
+      Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
+                             CurContext);
+      continue;
+    }
+
+    // Block setter and invocation completion is provided only when we are able
+    // to find the FunctionProtoTypeLoc with parameter names for the block.
+    FunctionTypeLoc BlockLoc;
+    FunctionProtoTypeLoc BlockProtoLoc;
+    findTypeLocationForBlockDecl(P->getTypeSourceInfo(), BlockLoc,
+                                 BlockProtoLoc);
+    if (!BlockLoc) {
+      Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
+                             CurContext);
+      continue;
+    }
+
+    // The default completion result for block properties should be the block
+    // invocation completion when the base expression is a statement.
+    CodeCompletionBuilder Builder(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+    AddObjCBlockCall(Container->getASTContext(),
+                     getCompletionPrintingPolicy(Results.getSema()), Builder, P,
+                     BlockLoc, BlockProtoLoc);
+    Results.MaybeAddResult(
+        Result(Builder.TakeString(), P, Results.getBasePriority(P)),
+        CurContext);
 
     // Provide additional block setter completion iff the base expression is a
-    // statement.
-    if (!P->isReadOnly() && IsBaseExprStatement &&
-        P->getType().getTypePtr()->isBlockPointerType()) {
-      FunctionTypeLoc BlockLoc;
-      FunctionProtoTypeLoc BlockProtoLoc;
-      findTypeLocationForBlockDecl(P->getTypeSourceInfo(), BlockLoc,
-                                   BlockProtoLoc);
+    // statement and the block property is mutable.
+    if (!P->isReadOnly()) {
+      CodeCompletionBuilder Builder(Results.getAllocator(),
+                                    Results.getCodeCompletionTUInfo());
+      AddResultTypeChunk(Container->getASTContext(),
+                         getCompletionPrintingPolicy(Results.getSema()), P,
+                         CCContext.getBaseType(), Builder);
+      Builder.AddTypedTextChunk(
+          Results.getAllocator().CopyString(P->getName()));
+      Builder.AddChunk(CodeCompletionString::CK_Equal);
 
-      // Provide block setter completion only when we are able to find
-      // the FunctionProtoTypeLoc with parameter names for the block.
-      if (BlockLoc) {
-        CodeCompletionBuilder Builder(Results.getAllocator(),
-                                      Results.getCodeCompletionTUInfo());
-        AddResultTypeChunk(Container->getASTContext(),
-                           getCompletionPrintingPolicy(Results.getSema()), P,
-                           CCContext.getBaseType(), Builder);
-        Builder.AddTypedTextChunk(
-            Results.getAllocator().CopyString(P->getName()));
-        Builder.AddChunk(CodeCompletionString::CK_Equal);
+      std::string PlaceholderStr = formatBlockPlaceholder(
+          getCompletionPrintingPolicy(Results.getSema()), P, BlockLoc,
+          BlockProtoLoc, /*SuppressBlockName=*/true);
+      // Add the placeholder string.
+      Builder.AddPlaceholderChunk(
+          Builder.getAllocator().CopyString(PlaceholderStr));
 
-        std::string PlaceholderStr = formatBlockPlaceholder(
-            getCompletionPrintingPolicy(Results.getSema()), P, BlockLoc,
-            BlockProtoLoc, /*SuppressBlockName=*/true);
-        // Add the placeholder string.
-        Builder.AddPlaceholderChunk(
-            Builder.getAllocator().CopyString(PlaceholderStr));
-
-        Results.MaybeAddResult(
-            Result(Builder.TakeString(), P,
-                   Results.getBasePriority(P) + CCD_BlockPropertySetter),
-            CurContext);
-      }
+      Results.MaybeAddResult(
+          Result(Builder.TakeString(), P,
+                 Results.getBasePriority(P) + CCD_BlockPropertySetter),
+          CurContext);
     }
   }
 
