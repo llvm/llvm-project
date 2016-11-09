@@ -3267,7 +3267,8 @@ void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 static ScheduleDAGInstrs *createGenericSchedPostRA(MachineSchedContext *C) {
-  return new ScheduleDAGMI(C, make_unique<PostGenericScheduler>(C), /*IsPostRA=*/true);
+  return new ScheduleDAGMI(C, make_unique<PostGenericScheduler>(C),
+                           /*RemoveKillFlags=*/true);
 }
 
 //===----------------------------------------------------------------------===//

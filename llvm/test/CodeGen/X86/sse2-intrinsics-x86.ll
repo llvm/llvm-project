@@ -324,8 +324,6 @@ define <4 x float> @test_x86_sse2_cvtpd2ps_zext(<2 x double> %a0) nounwind {
 ; SKX-LABEL: test_x86_sse2_cvtpd2ps_zext:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vcvtpd2ps %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x5a,0xc0]
-; SKX-NEXT:    vmovq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfe,0x08,0x7e,0xc0]
-; SKX-NEXT:    ## xmm0 = xmm0[0],zero
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %cvt = call <4 x float> @llvm.x86.sse2.cvtpd2ps(<2 x double> %a0)
   %res = shufflevector <4 x float> %cvt, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -502,10 +500,15 @@ define <4 x i32> @test_x86_sse2_cvttpd2dq(<2 x double> %a0) {
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0 ## encoding: [0x66,0x0f,0xe6,0xc0]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse2_cvttpd2dq:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe6,0xc0]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse2_cvttpd2dq:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe6,0xc0]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_cvttpd2dq:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xe6,0xc0]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> %a0) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
 }
@@ -516,22 +519,16 @@ define <2 x i64> @test_mm_cvttpd_epi32_zext(<2 x double> %a0) nounwind {
 ; SSE-LABEL: test_mm_cvttpd_epi32_zext:
 ; SSE:       ## BB#0:
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0 ## encoding: [0x66,0x0f,0xe6,0xc0]
-; SSE-NEXT:    movq %xmm0, %xmm0 ## encoding: [0xf3,0x0f,0x7e,0xc0]
-; SSE-NEXT:    ## xmm0 = xmm0[0],zero
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_mm_cvttpd_epi32_zext:
 ; AVX2:       ## BB#0:
 ; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe6,0xc0]
-; AVX2-NEXT:    vmovq %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x7e,0xc0]
-; AVX2-NEXT:    ## xmm0 = xmm0[0],zero
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_mm_cvttpd_epi32_zext:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe6,0xc0]
-; SKX-NEXT:    vmovq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfe,0x08,0x7e,0xc0]
-; SKX-NEXT:    ## xmm0 = xmm0[0],zero
+; SKX-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xe6,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %cvt = call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> %a0)
   %res = shufflevector <4 x i32> %cvt, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>

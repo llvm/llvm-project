@@ -126,23 +126,14 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(
   if (!m_ptr_obj)
     return false;
 
-  if (m_ptr_obj->GetValueAsUnsigned(0) == 0) {
+  bool success;
+  uint64_t ptr_value = m_ptr_obj->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+  if (ptr_value == 0)
     stream.Printf("nullptr");
-  } else {
-    Error error;
-    bool print_pointee = false;
-    if (m_obj_obj) {
-      if (m_obj_obj->DumpPrintableRepresentation(
-              stream, ValueObject::eValueObjectRepresentationStyleSummary,
-              lldb::eFormatInvalid,
-              ValueObject::PrintableRepresentationSpecialCases::eDisable,
-              false)) {
-        print_pointee = true;
-      }
-    }
-    if (!print_pointee)
-      stream.Printf("ptr = 0x%" PRIx64, m_ptr_obj->GetValueAsUnsigned(0));
-  }
+  else
+    stream.Printf("0x%" PRIx64, ptr_value);
   return true;
 }
 

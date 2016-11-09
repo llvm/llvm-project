@@ -6582,6 +6582,17 @@ static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
   return OldDC->isFileContext() ? SDK_Global : SDK_Local;
 }
 
+/// Return the location of the capture if the given lambda captures the given
+/// variable \p VD, or an invalid source location otherwise.
+static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
+                                         const VarDecl *VD) {
+  for (const LambdaScopeInfo::Capture &Capture : LSI->Captures) {
+    if (Capture.isVariableCapture() && Capture.getVariable() == VD)
+      return Capture.getLocation();
+  }
+  return SourceLocation();
+}
+
 /// \brief Diagnose variable or built-in function shadowing.  Implements
 /// -Wshadow.
 ///
@@ -6640,6 +6651,22 @@ void Sema::CheckShadow(Scope *S, VarDecl *D, const LookupResult& R) {
 
   DeclContext *OldDC = ShadowedDecl->getDeclContext();
 
+  unsigned WarningDiag = diag::warn_decl_shadow;
+  SourceLocation CaptureLoc;
+  if (isa<VarDecl>(ShadowedDecl) && NewDC && isa<CXXMethodDecl>(NewDC)) {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
+      // Try to avoid warnings for lambdas with an explicit capture list.
+      if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent()) &&
+          RD->getLambdaCaptureDefault() == LCD_None) {
+        const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
+        // Warn only when the lambda captures the shadowed decl explicitly.
+        CaptureLoc = getCaptureLocation(LSI, cast<VarDecl>(ShadowedDecl));
+        if (CaptureLoc.isInvalid())
+          WarningDiag = diag::warn_decl_shadow_uncaptured_local;
+      }
+    }
+  }
+
   // Only warn about certain kinds of shadowing for class members.
   if (NewDC && NewDC->isRecord()) {
     // In particular, don't warn about shadowing non-class members.
@@ -6661,7 +6688,9 @@ void Sema::CheckShadow(Scope *S, VarDecl *D, const LookupResult& R) {
   if (getSourceManager().isInSystemMacro(R.getNameLoc()))
     return;
   ShadowedDeclKind Kind = computeShadowedDeclKind(ShadowedDecl, OldDC);
-  Diag(R.getNameLoc(), diag::warn_decl_shadow) << Name << Kind << OldDC;
+  Diag(R.getNameLoc(), WarningDiag) << Name << Kind << OldDC;
+  if (!CaptureLoc.isInvalid())
+    Diag(CaptureLoc, diag::note_var_explicitly_captured_here) << Name;
   Diag(ShadowedDecl->getLocation(), diag::note_previous_declaration);
 }
 

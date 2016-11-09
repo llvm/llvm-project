@@ -66,7 +66,7 @@ static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsage
   return { toDuration(RU.ru_utime), toDuration(RU.ru_stime) };
 #else
 #warning Cannot get usage times on this platform
-  return {};
+  return { std::chrono::microseconds::zero(), std::chrono::microseconds::zero() };
 #endif
 }
 

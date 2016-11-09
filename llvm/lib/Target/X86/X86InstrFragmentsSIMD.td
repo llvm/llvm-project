@@ -70,6 +70,9 @@ def X86cmps    : SDNode<"X86ISD::FSETCC",     SDTX86Cmps>;
 def X86cvttpd2dq: SDNode<"X86ISD::CVTTPD2DQ",
                   SDTypeProfile<1, 1, [SDTCisVT<0, v4i32>,
                                        SDTCisVT<1, v2f64>]>>;
+def X86cvttpd2udq: SDNode<"X86ISD::CVTTPD2UDQ",
+                   SDTypeProfile<1, 1, [SDTCisVT<0, v4i32>,
+                                        SDTCisVT<1, v2f64>]>>;
 def X86cvtdq2pd: SDNode<"X86ISD::CVTDQ2PD",
                  SDTypeProfile<1, 1, [SDTCisVT<0, v2f64>,
                                       SDTCisVT<1, v4i32>]>>;

@@ -3294,7 +3294,7 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
     sys::path::append(Path, Filename);
   BinaryHolder ObjHolder(Options.Verbose);
   auto &Obj =
-      ModuleMap.addDebugMapObject(Path, sys::TimeValue::PosixZeroTime());
+      ModuleMap.addDebugMapObject(Path, sys::TimePoint<std::chrono::seconds>());
   auto ErrOrObj = loadObject(ObjHolder, Obj, ModuleMap);
   if (!ErrOrObj) {
     // Try and emit more helpful warnings by applying some heuristics.

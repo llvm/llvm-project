@@ -258,6 +258,42 @@ static uint64_t getAArch64Page(uint64_t Expr) {
   return Expr & (~static_cast<uint64_t>(0xFFF));
 }
 
+static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type,
+                                              uint32_t A,
+                                              uint32_t P) {
+  switch (Type) {
+  case R_ARM_THM_JUMP11:
+    return P + 2;
+  case R_ARM_CALL:
+  case R_ARM_JUMP24:
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+  case R_ARM_PREL31:
+  case R_ARM_THM_JUMP19:
+  case R_ARM_THM_JUMP24:
+    return P + 4;
+  case R_ARM_THM_CALL:
+    // We don't want an interworking BLX to ARM
+    return P + 5;
+  default:
+    return A;
+  }
+}
+
+static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type,
+                                                  uint64_t A,
+                                                  uint64_t P) {
+  switch (Type) {
+  case R_AARCH64_CALL26:
+  case R_AARCH64_CONDBR19:
+  case R_AARCH64_JUMP26:
+  case R_AARCH64_TSTBR14:
+    return P + 4;
+  default:
+    return A;
+  }
+}
+
 template <class ELFT>
 static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
                                     typename ELFT::uint P,
@@ -373,10 +409,20 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     return SymVA - P;
   }
   case R_PC:
+    if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak()) {
+      // On ARM and AArch64 a branch to an undefined weak resolves to the
+      // next instruction, otherwise the place.
+      if (Config->EMachine == EM_ARM)
+        return getARMUndefinedRelativeWeakVA(Type, A, P);
+      if (Config->EMachine == EM_AARCH64)
+        return getAArch64UndefinedRelativeWeakVA(Type, A, P);
+    }
   case R_RELAX_GOT_PC:
     return Body.getVA<ELFT>(A) - P;
   case R_PLT_PAGE_PC:
   case R_PAGE_PC:
+    if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
+      return getAArch64Page(A);
     return getAArch64Page(Body.getVA<ELFT>(A)) - getAArch64Page(P);
   }
   llvm_unreachable("Invalid expression");

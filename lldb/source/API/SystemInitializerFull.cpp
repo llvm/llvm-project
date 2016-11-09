@@ -109,7 +109,6 @@
 
 #if defined(_MSC_VER)
 #include "Plugins/Process/Windows/Live/ProcessWindowsLive.h"
-#include "Plugins/Process/Windows/MiniDump/ProcessWinMiniDump.h"
 #include "lldb/Host/windows/windows.h"
 #endif
 
@@ -306,9 +305,6 @@ void SystemInitializerFull::Initialize() {
   JITLoaderGDB::Initialize();
   ProcessElfCore::Initialize();
   minidump::ProcessMinidump::Initialize();
-#if defined(_MSC_VER)
-  ProcessWinMiniDump::Initialize();
-#endif
   MemoryHistoryASan::Initialize();
   AddressSanitizerRuntime::Initialize();
   ThreadSanitizerRuntime::Initialize();
@@ -432,9 +428,6 @@ void SystemInitializerFull::Terminate() {
   JITLoaderGDB::Terminate();
   ProcessElfCore::Terminate();
   minidump::ProcessMinidump::Terminate();
-#if defined(_MSC_VER)
-  ProcessWinMiniDump::Terminate();
-#endif
   MemoryHistoryASan::Terminate();
   AddressSanitizerRuntime::Terminate();
   ThreadSanitizerRuntime::Terminate();

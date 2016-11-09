@@ -117,7 +117,7 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override {
     return new ScheduleDAGMI(C, make_unique<SystemZPostRASchedStrategy>(C),
-                             /*IsPostRA=*/true);
+                             /*RemoveKillFlags=*/true);
   }
 
   void addIRPasses() override;

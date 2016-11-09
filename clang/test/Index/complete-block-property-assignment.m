@@ -35,11 +35,11 @@ typedef void (^FooBlock)(Foo *someParameter);
 // RUN: c-index-test -code-completion-at=%s:29:9 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: ObjCPropertyDecl:{ResultType int}{TypedText foo} (35)
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType Obj *}{TypedText obj} (35)
-// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void (^)(Obj *)}{TypedText onAction} (35)
+// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText onAction}{LeftParen (}{Placeholder Obj *object}{RightParen )} (35)
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void (^)(Obj *)}{TypedText onAction}{Equal  = }{Placeholder ^(Obj *object)} (38)
-// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType FooBlock}{TypedText onEventHandler} (35)
+// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText onEventHandler}{LeftParen (}{Placeholder Foo *someParameter}{RightParen )} (35)
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType FooBlock}{TypedText onEventHandler}{Equal  = }{Placeholder ^(Foo *someParameter)} (38)
-// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void (^)(int *)}{TypedText onReadonly} (35)
+// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText onReadonly}{LeftParen (}{Placeholder int *someParameter}{RightParen )} (35)
 
 - (void) takeInt:(int)x { }
 

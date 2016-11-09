@@ -35,6 +35,7 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Host/TimeValue.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/Function.h"

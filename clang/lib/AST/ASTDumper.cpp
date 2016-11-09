@@ -545,6 +545,8 @@ namespace  {
       dumpDecl(Node->getLambdaClass());
     }
     void VisitSizeOfPackExpr(const SizeOfPackExpr *Node);
+    void
+    VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *Node);
 
     // ObjC
     void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node);
@@ -2194,6 +2196,11 @@ void ASTDumper::VisitSizeOfPackExpr(const SizeOfPackExpr *Node) {
       dumpTemplateArgument(A);
 }
 
+void ASTDumper::VisitCXXDependentScopeMemberExpr(
+    const CXXDependentScopeMemberExpr *Node) {
+  VisitExpr(Node);
+  OS << " " << (Node->isArrow() ? "->" : ".") << Node->getMember();
+}
 
 //===----------------------------------------------------------------------===//
 // Obj-C Expressions

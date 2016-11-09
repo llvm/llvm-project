@@ -856,9 +856,9 @@ Error ModuleList::GetSharedModule(const ModuleSpec &module_spec,
       // If we didn't have a UUID in mind when looking for the object file,
       // then we should make sure the modification time hasn't changed!
       if (platform_module_spec.GetUUIDPtr() == nullptr) {
-        TimeValue file_spec_mod_time(FileSystem::GetModificationTime(
-            located_binary_modulespec.GetFileSpec()));
-        if (file_spec_mod_time.IsValid()) {
+        auto file_spec_mod_time = FileSystem::GetModificationTime(
+            located_binary_modulespec.GetFileSpec());
+        if (file_spec_mod_time != llvm::sys::TimePoint<>()) {
           if (file_spec_mod_time != module_sp->GetModificationTime()) {
             if (old_module_sp_ptr)
               *old_module_sp_ptr = module_sp;

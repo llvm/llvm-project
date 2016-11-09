@@ -19,9 +19,9 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/TimeValue.h"
 
 namespace llvm {
 namespace dsymutil {
@@ -54,7 +54,8 @@ class BinaryHolder {
   /// potential match for the given \p Filename in the currently
   /// mapped archive if there is one.
   ErrorOr<std::vector<MemoryBufferRef>>
-  GetArchiveMemberBuffers(StringRef Filename, sys::TimeValue Timestamp);
+  GetArchiveMemberBuffers(StringRef Filename,
+                          sys::TimePoint<std::chrono::seconds> Timestamp);
 
   /// Interpret Filename as an archive member specification map the
   /// corresponding archive to memory and return the MemoryBufferRefs
@@ -62,7 +63,8 @@ class BinaryHolder {
   /// returned when there are multiple architectures available for the
   /// requested file.
   ErrorOr<std::vector<MemoryBufferRef>>
-  MapArchiveAndGetMemberBuffers(StringRef Filename, sys::TimeValue Timestamp);
+  MapArchiveAndGetMemberBuffers(StringRef Filename,
+                                sys::TimePoint<std::chrono::seconds> Timestamp);
 
   /// Return the MemoryBufferRef that holds the memory mapping for the
   /// given \p Filename. This function will try to parse archive
@@ -74,7 +76,8 @@ class BinaryHolder {
   /// Multiple buffers are returned when there are multiple
   /// architectures available for the requested file.
   ErrorOr<std::vector<MemoryBufferRef>>
-  GetMemoryBuffersForFile(StringRef Filename, sys::TimeValue Timestamp);
+  GetMemoryBuffersForFile(StringRef Filename,
+                          sys::TimePoint<std::chrono::seconds> Timestamp);
 
   void changeBackingMemoryBuffer(std::unique_ptr<MemoryBuffer> &&MemBuf);
   ErrorOr<const object::ObjectFile &> getObjfileForArch(const Triple &T);
@@ -91,13 +94,15 @@ public:
   /// multiple architectures available for the requested file.
   ErrorOr<std::vector<const object::ObjectFile *>>
   GetObjectFiles(StringRef Filename,
-                 sys::TimeValue Timestamp = sys::TimeValue::PosixZeroTime());
+                 sys::TimePoint<std::chrono::seconds> Timestamp =
+                     sys::TimePoint<std::chrono::seconds>());
 
   /// Wraps GetObjectFiles() to return a derived ObjectFile type.
   template <typename ObjectFileType>
   ErrorOr<std::vector<const ObjectFileType *>>
   GetFilesAs(StringRef Filename,
-             sys::TimeValue Timestamp = sys::TimeValue::PosixZeroTime()) {
+             sys::TimePoint<std::chrono::seconds> Timestamp =
+                 sys::TimePoint<std::chrono::seconds>()) {
     auto ErrOrObjFile = GetObjectFiles(Filename, Timestamp);
     if (auto Err = ErrOrObjFile.getError())
       return Err;

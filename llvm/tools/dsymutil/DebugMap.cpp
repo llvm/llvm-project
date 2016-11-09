@@ -21,7 +21,7 @@ namespace dsymutil {
 using namespace llvm::object;
 
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
-                               sys::TimeValue Timestamp)
+                               sys::TimePoint<std::chrono::seconds> Timestamp)
     : Filename(ObjectFilename), Timestamp(Timestamp) {}
 
 bool DebugMapObject::addSymbol(StringRef Name, Optional<uint64_t> ObjectAddress,
@@ -62,8 +62,9 @@ void DebugMapObject::print(raw_ostream &OS) const {
 void DebugMapObject::dump() const { print(errs()); }
 #endif
 
-DebugMapObject &DebugMap::addDebugMapObject(StringRef ObjectFilePath,
-                                            sys::TimeValue Timestamp) {
+DebugMapObject &
+DebugMap::addDebugMapObject(StringRef ObjectFilePath,
+                            sys::TimePoint<std::chrono::seconds> Timestamp) {
   Objects.emplace_back(new DebugMapObject(ObjectFilePath, Timestamp));
   return *Objects.back();
 }
@@ -132,7 +133,7 @@ struct MappingTraits<dsymutil::DebugMapObject>::YamlDMO {
   dsymutil::DebugMapObject denormalize(IO &IO);
 
   std::string Filename;
-  sys::TimeValue::SecondsType Timestamp;
+  int64_t Timestamp;
   std::vector<dsymutil::DebugMapObject::YAMLSymbolMapping> Entries;
 };
 
@@ -202,7 +203,7 @@ void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
     IO &io, dsymutil::DebugMapObject &Obj) {
   Filename = Obj.Filename;
-  Timestamp = Obj.getTimestamp().toEpochTime();
+  Timestamp = sys::toTimeT(Obj.getTimestamp());
   Entries.reserve(Obj.Symbols.size());
   for (auto &Entry : Obj.Symbols)
     Entries.push_back(std::make_pair(Entry.getKey(), Entry.getValue()));
@@ -240,9 +241,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
     }
   }
 
-  sys::TimeValue TV;
-  TV.fromEpochTime(Timestamp);
-  dsymutil::DebugMapObject Res(Path, TV);
+  dsymutil::DebugMapObject Res(Path, sys::toTimePoint(Timestamp));
   for (auto &Entry : Entries) {
     auto &Mapping = Entry.second;
     Optional<uint64_t> ObjAddress;

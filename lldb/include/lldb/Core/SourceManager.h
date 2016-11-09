@@ -10,17 +10,18 @@
 #ifndef liblldb_SourceManager_h_
 #define liblldb_SourceManager_h_
 
+// Project includes
+#include "lldb/Host/FileSpec.h"
+#include "lldb/lldb-private.h"
+
+// Other libraries and framework includes
+#include "llvm/Support/Chrono.h"
+
 // C Includes
 // C++ Includes
 #include <map>
 #include <memory>
 #include <vector>
-
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Host/TimeValue.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -71,8 +72,9 @@ public:
     FileSpec m_file_spec; // The actually file spec being used (if the target
                           // has source mappings, this might be different from
                           // m_file_spec_orig)
-    TimeValue m_mod_time; // Keep the modification time that this file data is
-                          // valid for
+
+    // Keep the modification time that this file data is valid for
+    llvm::sys::TimePoint<> m_mod_time;
 
     // If the target uses path remappings, be sure to clear our notion of a
     // source file if the path modification ID changes
