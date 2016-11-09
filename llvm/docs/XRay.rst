@@ -96,11 +96,11 @@ C/C++/Objective-C source-level attributes would get:
 .. code-block:: llvm
 
     define i32 @always_instrument() uwtable "function-instrument"="xray-always" {
-      // ...
+      ; ...
     }
 
     define i32 @never_instrument() uwtable "function-instrument"="xray-never" {
-      // ...
+      ; ...
     }
 
 You can also set the ``xray-instruction-threshold`` attribute and provide a
@@ -110,7 +110,7 @@ it gets instrumented.
 .. code-block:: llvm
 
     define i32 @maybe_instrument() uwtable "xray-instruction-threshold"="2" {
-      // ...
+      ; ...
     }
 
 XRay Runtime Library

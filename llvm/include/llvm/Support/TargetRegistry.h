@@ -280,9 +280,6 @@ public:
   /// hasMCAsmBackend - Check if this target supports .o generation.
   bool hasMCAsmBackend() const { return MCAsmBackendCtorFn != nullptr; }
 
-  /// hasMCAsmParser - Check if this target supports assembly parsing.
-  bool hasMCAsmParser() const { return MCAsmParserCtorFn != nullptr; }
-
   /// @}
   /// @name Feature Constructors
   /// @{

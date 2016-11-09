@@ -184,25 +184,10 @@ namespace llvm {
   }
 
   const std::error_category &BitcodeErrorCategory();
-  enum class BitcodeError { InvalidBitcodeSignature = 1, CorruptedBitcode };
+  enum class BitcodeError { CorruptedBitcode = 1 };
   inline std::error_code make_error_code(BitcodeError E) {
     return std::error_code(static_cast<int>(E), BitcodeErrorCategory());
   }
-
-  class BitcodeDiagnosticInfo : public DiagnosticInfo {
-    const Twine &Msg;
-    std::error_code EC;
-
-  public:
-    BitcodeDiagnosticInfo(std::error_code EC, DiagnosticSeverity Severity,
-                          const Twine &Msg);
-    void print(DiagnosticPrinter &DP) const override;
-    std::error_code getError() const { return EC; }
-
-    static bool classof(const DiagnosticInfo *DI) {
-      return DI->getKind() == DK_Bitcode;
-    }
-  };
 
 } // End llvm namespace
 

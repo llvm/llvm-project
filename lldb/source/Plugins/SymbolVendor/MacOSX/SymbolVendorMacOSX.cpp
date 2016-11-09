@@ -209,8 +209,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                         // DBGSourcePath
                         // values were incorrect.  If we have a newer style
                         // DBGSourcePathRemapping, there will be a DBGVersion
-                        // key in the plist
-                        // (we don't care about the value at this point).
+                        // key in the plist with version 2 or higher.
                         //
                         // If this is an old style DBGSourcePathRemapping,
                         // ignore the
@@ -221,7 +220,17 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                         std::string original_DBGSourcePath_value =
                             DBGSourcePath;
                         if (plist_sp->GetAsDictionary()->HasKey("DBGVersion")) {
-                          new_style_source_remapping_dictionary = true;
+                          std::string version_string =
+                              plist_sp->GetAsDictionary()
+                                  ->GetValueForKey("DBGVersion")
+                                  ->GetStringValue("");
+                          if (!version_string.empty() &&
+                              isdigit(version_string[0])) {
+                            int version_number = atoi(version_string.c_str());
+                            if (version_number > 1) {
+                              new_style_source_remapping_dictionary = true;
+                            }
+                          }
                         }
 
                         StructuredData::Dictionary *remappings_dict =

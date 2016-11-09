@@ -107,7 +107,7 @@ BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
 
 template <class ELFT>
 uint8_t *BuildIdSection<ELFT>::getOutputLoc(uint8_t *Start) const {
-  return Start + this->OutSec->getFileOffset() + this->OutSecOff;
+  return Start + this->OutSec->Offset + this->OutSecOff;
 }
 
 static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,

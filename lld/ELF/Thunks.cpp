@@ -183,7 +183,7 @@ Thunk<ELFT>::Thunk(const SymbolBody &D, const InputSection<ELFT> &O)
     : Destination(D), Owner(O), Offset(O.getThunkOff() + O.getThunksSize()) {}
 
 template <class ELFT> typename ELFT::uint Thunk<ELFT>::getVA() const {
-  return Owner.OutSec->getVA() + Owner.OutSecOff + Offset;
+  return Owner.OutSec->Addr + Owner.OutSecOff + Offset;
 }
 
 template <class ELFT> Thunk<ELFT>::~Thunk() = default;

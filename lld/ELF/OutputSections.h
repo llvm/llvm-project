@@ -71,13 +71,8 @@ public:
   };
 
   OutputSectionBase(StringRef Name, uint32_t Type, uintX_t Flags);
-  void setVA(uintX_t VA) { Header.sh_addr = VA; }
-  uintX_t getVA() const { return Header.sh_addr; }
   void setLMAOffset(uintX_t LMAOff) { LMAOffset = LMAOff; }
-  uintX_t getLMA() const { return Header.sh_addr + LMAOffset; }
-  void setFileOffset(uintX_t Off) { Header.sh_offset = Off; }
-  uintX_t getFileOffset() { return Header.sh_offset; }
-  void setSHName(unsigned Val) { Header.sh_name = Val; }
+  uintX_t getLMA() const { return Addr + LMAOffset; }
   void writeHeaderTo(Elf_Shdr *SHdr);
   StringRef getName() const { return Name; }
 
@@ -89,19 +84,11 @@ public:
 
   unsigned SectionIndex;
 
-  // Returns the size of the section in the output file.
-  uintX_t getSize() const { return Header.sh_size; }
-  void setSize(uintX_t Val) { Header.sh_size = Val; }
-  uintX_t getFlags() const { return Header.sh_flags; }
-  void updateFlags(uintX_t Val) { Header.sh_flags |= Val; }
   uint32_t getPhdrFlags() const;
-  uintX_t getFileOff() const { return Header.sh_offset; }
-  uintX_t getAlignment() const { return Header.sh_addralign; }
-  uint32_t getType() const { return Header.sh_type; }
 
   void updateAlignment(uintX_t Alignment) {
-    if (Alignment > Header.sh_addralign)
-      Header.sh_addralign = Alignment;
+    if (Alignment > Addralign)
+      Addralign = Alignment;
   }
 
   // If true, this section will be page aligned on disk.
@@ -122,10 +109,20 @@ public:
   virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
 
-protected:
   StringRef Name;
-  Elf_Shdr Header;
+
+  // The following fields correspond to Elf_Shdr members.
+  uintX_t Size = 0;
+  uintX_t Entsize = 0;
+  uintX_t Addralign = 0;
+  uintX_t Offset = 0;
+  uintX_t Flags = 0;
   uintX_t LMAOffset = 0;
+  uintX_t Addr = 0;
+  uint32_t ShName = 0;
+  uint32_t Type = 0;
+  uint32_t Info = 0;
+  uint32_t Link = 0;
 };
 
 template <class ELFT>
@@ -187,7 +184,7 @@ public:
   // after 'local' and 'global' entries.
   uintX_t getMipsTlsOffset() const;
 
-  uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
+  uintX_t getTlsIndexVA() { return this->Addr + TlsIndexOff; }
   uint32_t getTlsIndexOff() const { return TlsIndexOff; }
 
   // Flag to force GOT to be in output if we have relocations
@@ -794,7 +791,7 @@ private:
 template <class ELFT> uint64_t getHeaderSize() {
   if (Config->OFormatBinary)
     return 0;
-  return Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  return Out<ELFT>::ElfHeader->Size + Out<ELFT>::ProgramHeaders->Size;
 }
 
 template <class ELFT> uint8_t Out<ELFT>::First;

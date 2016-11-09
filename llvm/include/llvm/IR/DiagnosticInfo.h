@@ -49,7 +49,6 @@ enum DiagnosticSeverity : char {
 /// \brief Defines the different supported kind of a diagnostic.
 /// This enum should be extended with a new ID for each added concrete subclass.
 enum DiagnosticKind {
-  DK_Bitcode,
   DK_InlineAsm,
   DK_ResourceLimit,
   DK_StackSize,

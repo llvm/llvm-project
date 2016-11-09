@@ -6621,8 +6621,6 @@ class BitcodeErrorCategoryType : public std::error_category {
   std::string message(int IE) const override {
     BitcodeError E = static_cast<BitcodeError>(IE);
     switch (E) {
-    case BitcodeError::InvalidBitcodeSignature:
-      return "Invalid bitcode signature";
     case BitcodeError::CorruptedBitcode:
       return "Corrupted bitcode";
     }

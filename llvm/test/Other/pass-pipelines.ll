@@ -82,6 +82,9 @@
 ; the runtime unrolling though.
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Loop Invariant Code Motion
+; CHECK-O2: FunctionPass Manager
+; CHECK-O2: Loop Pass Manager
+; CHECK-O2-NEXT: Loop Sink
 ; CHECK-O2-NOT: Manager
 ;
 ; FIXME: There really shouldn't be another pass manager, especially one that
