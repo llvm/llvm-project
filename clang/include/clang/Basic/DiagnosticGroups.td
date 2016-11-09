@@ -348,12 +348,14 @@ def ShadowFieldInConstructorModified : DiagGroup<"shadow-field-in-constructor-mo
 def ShadowFieldInConstructor : DiagGroup<"shadow-field-in-constructor",
                                          [ShadowFieldInConstructorModified]>;
 def ShadowIvar : DiagGroup<"shadow-ivar">;
+def ShadowUncapturedLocal : DiagGroup<"shadow-uncaptured-local">;
 
 // -Wshadow-all is a catch-all for all shadowing. -Wshadow is just the
 // shadowing that we think is unsafe.
 def Shadow : DiagGroup<"shadow", [ShadowFieldInConstructorModified,
                                   ShadowIvar]>;
-def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor]>;
+def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor,
+                                         ShadowUncapturedLocal]>;
 
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def : DiagGroup<"sign-promo">;

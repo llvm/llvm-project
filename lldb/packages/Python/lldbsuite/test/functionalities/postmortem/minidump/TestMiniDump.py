@@ -15,9 +15,8 @@ from lldbsuite.test import lldbutil
 class MiniDumpTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessWindows  # for now mini-dump debugging is limited to Windows hosts
-    @no_debug_info_test
     def test_process_info_in_mini_dump(self):
         """Test that lldb can read the process information from the minidump."""
         # target create -c fizzbuzz_no_heap.dmp
@@ -28,8 +27,6 @@ class MiniDumpTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         self.assertEqual(self.process.GetProcessID(), 4440)
 
-    @skipUnlessWindows  # for now mini-dump debugging is limited to Windows hosts
-    @no_debug_info_test
     def test_thread_info_in_mini_dump(self):
         """Test that lldb can read the thread information from the minidump."""
         # target create -c fizzbuzz_no_heap.dmp
@@ -44,8 +41,6 @@ class MiniDumpTestCase(TestBase):
         stop_description = thread.GetStopDescription(256)
         self.assertTrue("0xc0000005" in stop_description)
 
-    @skipUnlessWindows  # for now mini-dump debugging is limited to Windows hosts
-    @no_debug_info_test
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
         # target create -c fizzbuzz_no_heap.dmp
@@ -63,8 +58,7 @@ class MiniDumpTestCase(TestBase):
         self.assertTrue(eip.IsValid())
         self.assertEqual(pc, eip.GetValueAsUnsigned())
 
-    @skipUnlessWindows
-    @not_remote_testsuite_ready
+    @skipUnlessWindows # Minidump saving works only on windows
     def test_deeper_stack_in_mini_dump(self):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
@@ -100,8 +94,7 @@ class MiniDumpTestCase(TestBase):
             if (os.path.isfile(core)):
                 os.unlink(core)
 
-    @skipUnlessWindows
-    @not_remote_testsuite_ready
+    @skipUnlessWindows # Minidump saving works only on windows
     def test_local_variables_in_mini_dump(self):
         """Test that we can examine local variables in a mini dump."""
         self.build()
