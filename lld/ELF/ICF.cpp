@@ -128,7 +128,7 @@ template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
 
 // Returns true if Sec is subject of ICF.
 template <class ELFT> bool ICF<ELFT>::isEligible(InputSectionBase<ELFT> *Sec) {
-  if (!Sec || Sec == &InputSection<ELFT>::Discarded || !Sec->Live)
+  if (!Sec->Live)
     return false;
   auto *S = dyn_cast<InputSection<ELFT>>(Sec);
   if (!S)

@@ -171,9 +171,8 @@ template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
 template <class ELFT>
 void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   // Read section and symbol tables.
-  ArrayRef<Elf_Shdr> ObjSections = check(this->getObj().sections());
-  initializeSections(ComdatGroups, ObjSections);
-  initializeSymbols(ObjSections);
+  initializeSections(ComdatGroups);
+  initializeSymbols();
 }
 
 // Sections with SHT_GROUP and comdat bits define comdat section groups.
@@ -257,8 +256,8 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 
 template <class ELFT>
 void elf::ObjectFile<ELFT>::initializeSections(
-    DenseSet<CachedHashStringRef> &ComdatGroups,
-    ArrayRef<Elf_Shdr> ObjSections) {
+    DenseSet<CachedHashStringRef> &ComdatGroups) {
+  ArrayRef<Elf_Shdr> ObjSections = check(this->getObj().sections());
   const ELFFile<ELFT> &Obj = this->getObj();
   uint64_t Size = ObjSections.size();
   Sections.resize(Size);
@@ -422,8 +421,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
   return make<InputSection<ELFT>>(this, &Sec, Name);
 }
 
-template <class ELFT>
-void elf::ObjectFile<ELFT>::initializeSymbols(ArrayRef<Elf_Shdr> Sections) {
+template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
   SymbolBodies.reserve(this->Symbols.size());
   for (const Elf_Sym &Sym : this->Symbols)
     SymbolBodies.push_back(createSymbolBody(&Sym));

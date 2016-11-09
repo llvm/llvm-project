@@ -394,8 +394,8 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
     fatal("cannot create a copy relocation for symbol " + SS->getName());
 
   uintX_t Alignment = getAlignment(SS);
-  uintX_t Off = alignTo(Out<ELFT>::Bss->getSize(), Alignment);
-  Out<ELFT>::Bss->setSize(Off + SymSize);
+  uintX_t Off = alignTo(Out<ELFT>::Bss->Size, Alignment);
+  Out<ELFT>::Bss->Size = Off + SymSize;
   Out<ELFT>::Bss->updateAlignment(Alignment);
   uintX_t Shndx = SS->Sym.st_shndx;
   uintX_t Value = SS->Sym.st_value;
@@ -539,8 +539,7 @@ static DefinedRegular<ELFT> *getSymbolAt(InputSectionBase<ELFT> *S,
 }
 
 template <class ELFT>
-static std::string getLocation(SymbolBody &Sym, InputSectionBase<ELFT> &S,
-                               typename ELFT::uint Offset) {
+std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
   ObjectFile<ELFT> *File = S.getFile();
 
   // First check if we can get desired values from debugging information.
@@ -548,11 +547,12 @@ static std::string getLocation(SymbolBody &Sym, InputSectionBase<ELFT> &S,
   if (!LineInfo.empty())
     return LineInfo;
 
-  // If don't have STT_FILE typed symbol in object file then
-  // use object file name.
+  // File->SourceFile contains STT_FILE symbol contents which is a
+  // filename. Compilers usually create STT_FILE symbols. If it's
+  // missing, we use an actual filename.
   std::string SrcFile = File->SourceFile;
   if (SrcFile.empty())
-    SrcFile = Sym.File ? getFilename(Sym.File) : getFilename(File);
+    SrcFile = getFilename(File);
 
   // Find a symbol at a given location.
   DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
@@ -576,7 +576,7 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
       Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
     return;
 
-  std::string Msg = getLocation(Sym, S, Offset) + ": undefined symbol '" +
+  std::string Msg = getLocation(S, Offset) + ": undefined symbol '" +
                     maybeDemangle(Sym.getName()) + "'";
 
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
@@ -853,5 +853,14 @@ template void createThunks<ELF64LE>(InputSectionBase<ELF64LE> &,
                                     const ELF64LE::Shdr &);
 template void createThunks<ELF64BE>(InputSectionBase<ELF64BE> &,
                                     const ELF64BE::Shdr &);
+
+template std::string getLocation<ELF32LE>(InputSectionBase<ELF32LE> &S,
+                                          uint32_t Offset);
+template std::string getLocation<ELF32BE>(InputSectionBase<ELF32BE> &S,
+                                          uint32_t Offset);
+template std::string getLocation<ELF64LE>(InputSectionBase<ELF64LE> &S,
+                                          uint64_t Offset);
+template std::string getLocation<ELF64BE>(InputSectionBase<ELF64BE> &S,
+                                          uint64_t Offset);
 }
 }

@@ -122,13 +122,13 @@ public:
   void InclusionDirective(clang::SourceLocation HashLoc,
                           const clang::Token & /*IncludeTok*/,
                           StringRef FileName, bool IsAngled,
-                          clang::CharSourceRange /*FilenameRange*/,
+                          clang::CharSourceRange FilenameRange,
                           const clang::FileEntry * /*File*/,
                           StringRef SearchPath, StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/) override {
     if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc)))
       MoveTool->addIncludes(FileName, IsAngled, SearchPath,
-                            FileEntry->getName(), SM);
+                            FileEntry->getName(), FilenameRange, SM);
   }
 
 private:
@@ -321,20 +321,42 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
     return;
   }
 
-  auto InOldHeader = isExpansionInFile(
-      MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader));
-  auto InOldCC =
-      isExpansionInFile(MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC));
+  auto InOldHeader = isExpansionInFile(makeAbsolutePath(Spec.OldHeader));
+  auto InOldCC = isExpansionInFile(makeAbsolutePath(Spec.OldCC));
   auto InOldFiles = anyOf(InOldHeader, InOldCC);
   auto InMovedClass =
       hasOutermostEnclosingClass(cxxRecordDecl(*InMovedClassNames));
 
+  auto ForwardDecls =
+      cxxRecordDecl(unless(anyOf(isImplicit(), isDefinition())));
+
+  //============================================================================
+  // Matchers for old header
+  //============================================================================
+  // Match all top-level named declarations (e.g. function, variable, enum) in
+  // old header, exclude forward class declarations and namespace declarations.
+  //
+  // The old header which contains only one declaration being moved and forward
+  // declarations is considered to be moved totally.
+  auto AllDeclsInHeader = namedDecl(
+      unless(ForwardDecls), unless(namespaceDecl()),
+      unless(usingDirectiveDecl()), // using namespace decl.
+      unless(classTemplateDecl(has(ForwardDecls))), // template forward decl.
+      InOldHeader,
+      hasParent(decl(anyOf(namespaceDecl(), translationUnitDecl()))));
+  Finder->addMatcher(AllDeclsInHeader.bind("decls_in_header"), this);
+  // Match forward declarations in old header.
+  Finder->addMatcher(namedDecl(ForwardDecls, InOldHeader).bind("fwd_decl"),
+                     this);
+
+  //============================================================================
+  // Matchers for old files, including old.h/old.cc
+  //============================================================================
   // Match moved class declarations.
   auto MovedClass = cxxRecordDecl(
       InOldFiles, *InMovedClassNames, isDefinition(),
       hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())));
   Finder->addMatcher(MovedClass.bind("moved_class"), this);
-
   // Match moved class methods (static methods included) which are defined
   // outside moved class declaration.
   Finder->addMatcher(
@@ -343,6 +365,9 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
           .bind("class_method"),
       this);
 
+  //============================================================================
+  // Matchers for old cc
+  //============================================================================
   // Match static member variable definition of the moved class.
   Finder->addMatcher(
       varDecl(InMovedClass, InOldCC, isDefinition(), isStaticDataMember())
@@ -374,16 +399,13 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                      varDecl(IsOldCCStaticDefinition)))
                          .bind("static_decls"),
                      this);
-
-  // Match forward declarations in old header.
-  Finder->addMatcher(
-      cxxRecordDecl(unless(anyOf(isImplicit(), isDefinition())), InOldHeader)
-          .bind("fwd_decl"),
-      this);
 }
 
 void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
-  if (const auto *CMD =
+  if (const auto *D =
+          Result.Nodes.getNodeAs<clang::NamedDecl>("decls_in_header")) {
+    UnremovedDeclsInOldHeader.insert(D);
+  } else if (const auto *CMD =
           Result.Nodes.getNodeAs<clang::CXXMethodDecl>("class_method")) {
     // Skip inline class methods. isInline() ast matcher doesn't ignore this
     // case.
@@ -399,6 +421,7 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<clang::CXXRecordDecl>("moved_class")) {
     MovedDecls.emplace_back(class_decl, &Result.Context->getSourceManager());
     RemovedDecls.push_back(MovedDecls.back());
+    UnremovedDeclsInOldHeader.erase(class_decl);
   } else if (const auto *FWD =
                  Result.Nodes.getNodeAs<clang::CXXRecordDecl>("fwd_decl")) {
     // Skip all forwad declarations which appear after moved class declaration.
@@ -421,21 +444,27 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   }
 }
 
+std::string ClangMoveTool::makeAbsolutePath(StringRef Path) {
+  return MakeAbsolutePath(OriginalRunningDirectory, Path);
+}
+
 void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
                                 llvm::StringRef SearchPath,
                                 llvm::StringRef FileName,
+                                clang::CharSourceRange IncludeFilenameRange,
                                 const SourceManager &SM) {
   SmallVector<char, 128> HeaderWithSearchPath;
   llvm::sys::path::append(HeaderWithSearchPath, SearchPath, IncludeHeader);
-  std::string AbsoluteOldHeader =
-      MakeAbsolutePath(OriginalRunningDirectory, Spec.OldHeader);
+  std::string AbsoluteOldHeader = makeAbsolutePath(Spec.OldHeader);
   // FIXME: Add old.h to the new.cc/h when the new target has dependencies on
   // old.h/c. For instance, when moved class uses another class defined in
   // old.h, the old.h should be added in new.h.
   if (AbsoluteOldHeader ==
       MakeAbsolutePath(SM, llvm::StringRef(HeaderWithSearchPath.data(),
-                                           HeaderWithSearchPath.size())))
+                                           HeaderWithSearchPath.size()))) {
+    OldHeaderIncludeRange = IncludeFilenameRange;
     return;
+  }
 
   std::string IncludeLine =
       IsAngled ? ("#include <" + IncludeHeader + ">\n").str()
@@ -444,8 +473,7 @@ void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
   std::string AbsoluteCurrentFile = MakeAbsolutePath(SM, FileName);
   if (AbsoluteOldHeader == AbsoluteCurrentFile) {
     HeaderIncludes.push_back(IncludeLine);
-  } else if (MakeAbsolutePath(OriginalRunningDirectory, Spec.OldCC) ==
-             AbsoluteCurrentFile) {
+  } else if (makeAbsolutePath(Spec.OldCC) == AbsoluteCurrentFile) {
     CCIncludes.push_back(IncludeLine);
   }
 }
@@ -499,9 +527,46 @@ void ClangMoveTool::moveClassDefinitionToNewFiles() {
         createInsertedReplacements(CCIncludes, NewCCDecls, Spec.NewCC);
 }
 
+// Move all contents from OldFile to NewFile.
+void ClangMoveTool::moveAll(SourceManager &SM, StringRef OldFile,
+                            StringRef NewFile) {
+  const FileEntry *FE = SM.getFileManager().getFile(makeAbsolutePath(OldFile));
+  if (!FE) {
+    llvm::errs() << "Failed to get file: " << OldFile << "\n";
+    return;
+  }
+  FileID ID = SM.getOrCreateFileID(FE, SrcMgr::C_User);
+  auto Begin = SM.getLocForStartOfFile(ID);
+  auto End = SM.getLocForEndOfFile(ID);
+  clang::tooling::Replacement RemoveAll (
+      SM, clang::CharSourceRange::getCharRange(Begin, End), "");
+  std::string FilePath = RemoveAll.getFilePath().str();
+  FileToReplacements[FilePath] = clang::tooling::Replacements(RemoveAll);
+
+  StringRef Code = SM.getBufferData(ID);
+  if (!NewFile.empty()) {
+    auto AllCode = clang::tooling::Replacements(
+        clang::tooling::Replacement(NewFile, 0, 0, Code));
+    // If we are moving from old.cc, an extra step is required: excluding
+    // the #include of "old.h", instead, we replace it with #include of "new.h".
+    if (Spec.NewCC == NewFile && OldHeaderIncludeRange.isValid()) {
+      AllCode = AllCode.merge(
+          clang::tooling::Replacements(clang::tooling::Replacement(
+              SM, OldHeaderIncludeRange, '"' + Spec.NewHeader + '"')));
+    }
+    FileToReplacements[NewFile] = std::move(AllCode);
+  }
+}
+
 void ClangMoveTool::onEndOfTranslationUnit() {
   if (RemovedDecls.empty())
     return;
+  if (UnremovedDeclsInOldHeader.empty() && !Spec.OldHeader.empty()) {
+    auto &SM = *RemovedDecls[0].SM;
+    moveAll(SM, Spec.OldHeader, Spec.NewHeader);
+    moveAll(SM, Spec.OldCC, Spec.NewCC);
+    return;
+  }
   removeClassDefinitionInOldFiles();
   moveClassDefinitionToNewFiles();
 }
