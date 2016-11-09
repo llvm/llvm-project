@@ -371,7 +371,8 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
   }
 
   if (Tok.isNot(tok::less))
-    Actions.ActOnTypedefedProtocols(protocols, superClassId, superClassLoc);
+    Actions.ActOnTypedefedProtocols(protocols, protocolLocs,
+                                    superClassId, superClassLoc);
   
   Decl *ClsType =
     Actions.ActOnStartClassInterface(getCurScope(), AtLoc, nameId, nameLoc, 
