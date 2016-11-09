@@ -368,12 +368,6 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
 }
 
 static void diagnosticHandler(const DiagnosticInfo &DI) {
-  if (const auto *BDI = dyn_cast<BitcodeDiagnosticInfo>(&DI)) {
-    std::error_code EC = BDI->getError();
-    if (EC == BitcodeError::InvalidBitcodeSignature)
-      return;
-  }
-
   std::string ErrStorage;
   {
     raw_string_ostream OS(ErrStorage);

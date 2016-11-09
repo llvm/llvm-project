@@ -11,7 +11,6 @@
 #define LLVM_TOOLS_LLVMPDBDUMP_YAMLTYPEDUMPER_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/YAMLTraits.h"
 

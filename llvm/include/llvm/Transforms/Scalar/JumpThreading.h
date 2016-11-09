@@ -129,6 +129,8 @@ private:
                                     BasicBlock *NewBB, BasicBlock *SuccBB);
   /// Check if the block has profile metadata for its outgoing edges.
   bool doesBlockHaveProfileData(BasicBlock *BB);
+  SelectInst *getSelectFedByPhi(PHINode *PN);
+  void expandSelect(SelectInst *SI);
 };
 
 } // end namespace llvm

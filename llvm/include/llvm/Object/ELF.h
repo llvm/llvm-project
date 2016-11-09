@@ -506,10 +506,10 @@ ErrorOr<StringRef> ELFFile<ELFT>::getSectionName(const Elf_Shdr *Section,
 /// This function returns the hash value for a symbol in the .dynsym section
 /// Name of the API remains consistent as specified in the libelf
 /// REF : http://www.sco.com/developers/gabi/latest/ch5.dynamic.html#hash
-static inline unsigned hashSysV(StringRef &symbolName) {
+inline unsigned hashSysV(StringRef SymbolName) {
   unsigned h = 0, g;
-  for (unsigned i = 0, j = symbolName.size(); i < j; i++) {
-    h = (h << 4) + symbolName[i];
+  for (char C : SymbolName) {
+    h = (h << 4) + C;
     g = h & 0xf0000000L;
     if (g != 0)
       h ^= g >> 24;

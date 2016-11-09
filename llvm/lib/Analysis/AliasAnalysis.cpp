@@ -141,7 +141,8 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
   // Try to refine the mod-ref info further using other API entry points to the
   // aggregate set of AA results.
   auto MRB = getModRefBehavior(CS);
-  if (MRB == FMRB_DoesNotAccessMemory)
+  if (MRB == FMRB_DoesNotAccessMemory ||
+      MRB == FMRB_OnlyAccessesInaccessibleMem)
     return MRI_NoModRef;
 
   if (onlyReadsMemory(MRB))
@@ -149,7 +150,7 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
   else if (doesNotReadMemory(MRB))
     Result = ModRefInfo(Result & MRI_Mod);
 
-  if (onlyAccessesArgPointees(MRB)) {
+  if (onlyAccessesArgPointees(MRB) || onlyAccessesInaccessibleOrArgMem(MRB)) {
     bool DoesAlias = false;
     ModRefInfo AllArgsMask = MRI_NoModRef;
     if (doesAccessArgPointees(MRB)) {

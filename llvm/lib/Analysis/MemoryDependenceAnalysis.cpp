@@ -338,7 +338,7 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
 
 MemDepResult
 MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
-                                                             BasicBlock *BB) {
+                                                            BasicBlock *BB) {
   Value *LoadOperand = LI->getPointerOperand();
   // It's is not safe to walk the use list of global value, because function
   // passes aren't allowed to look outside their functions.
@@ -681,7 +681,7 @@ MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst) {
 
   // Do the scan.
   if (BasicBlock::iterator(QueryInst) == QueryParent->begin()) {
-    // No dependence found.  If this is the entry block of the function, it is
+    // No dependence found. If this is the entry block of the function, it is
     // unknown, otherwise it is non-local.
     if (QueryParent != &QueryParent->getParent()->getEntryBlock())
       LocalCache = MemDepResult::getNonLocal();
@@ -693,7 +693,7 @@ MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst) {
     if (MemLoc.Ptr) {
       // If we can do a pointer scan, make it happen.
       bool isLoad = !(MR & MRI_Mod);
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(QueryInst))
+      if (auto *II = dyn_cast<IntrinsicInst>(QueryInst))
         isLoad |= II->getIntrinsicID() == Intrinsic::lifetime_start;
 
       LocalCache = getPointerDependencyFrom(

@@ -110,6 +110,10 @@ N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: DWARF Parser
 
+N: Michael Kuperstein
+E: mkuper@google.com
+D: Loop Vectorizer
+
 N: Sergei Larin
 E: slarin@codeaurora.org
 D: VLIW Instruction Scheduling, Packetization
@@ -161,7 +165,7 @@ D: Fast-Isel
 
 N: Nadav Rotem
 E: nadav.rotem@me.com
-D: X86 Backend, Loop Vectorizer
+D: X86 Backend
 
 N: Duncan Sands
 E: baldrick@free.fr

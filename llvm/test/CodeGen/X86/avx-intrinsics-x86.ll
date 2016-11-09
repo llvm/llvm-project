@@ -338,10 +338,15 @@ declare <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double>, <4 x float>) nounwind
 
 
 define <4 x i32> @test_x86_sse2_cvttpd2dq(<2 x double> %a0) {
-; CHECK-LABEL: test_x86_sse2_cvttpd2dq:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe6,0xc0]
-; CHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX-LABEL: test_x86_sse2_cvttpd2dq:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xe6,0xc0]
+; AVX-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_sse2_cvttpd2dq:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xe6,0xc0]
+; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> %a0) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
 }

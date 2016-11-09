@@ -1193,6 +1193,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,         MVT::v16i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v8i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i32, Legal);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i1,   Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i1,  Custom);
@@ -22358,12 +22359,16 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FP_TO_UINT: {
     bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT;
 
-    if (IsSigned && N->getValueType(0) == MVT::v2i32) {
+    if (N->getValueType(0) == MVT::v2i32) {
+      assert((IsSigned || Subtarget.hasAVX512()) &&
+             "Can only handle signed conversion without AVX512");
       assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
       SDValue Src = N->getOperand(0);
       if (Src.getValueType() == MVT::v2f64) {
         SDValue Idx = DAG.getIntPtrConstant(0, dl);
-        SDValue Res = DAG.getNode(X86ISD::CVTTPD2DQ, dl, MVT::v4i32, Src);
+        SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTPD2DQ
+                                           : X86ISD::CVTTPD2UDQ,
+                                  dl, MVT::v4i32, Src);
         Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res, Idx);
         Results.push_back(Res);
         return;
@@ -22372,7 +22377,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue Idx = DAG.getIntPtrConstant(0, dl);
         SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
                                   DAG.getUNDEF(MVT::v2f32));
-        Res = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::v4i32, Res);
+        Res = DAG.getNode(IsSigned ? ISD::FP_TO_SINT
+                                   : ISD::FP_TO_UINT, dl, MVT::v4i32, Res);
         Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res, Idx);
         Results.push_back(Res);
         return;
@@ -22700,6 +22706,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VFPROUND_RND:       return "X86ISD::VFPROUND_RND";
   case X86ISD::VFPROUNDS_RND:      return "X86ISD::VFPROUNDS_RND";
   case X86ISD::CVTTPD2DQ:          return "X86ISD::CVTTPD2DQ";
+  case X86ISD::CVTTPD2UDQ:         return "X86ISD::CVTTPD2UDQ";
   case X86ISD::CVTDQ2PD:           return "X86ISD::CVTDQ2PD";
   case X86ISD::CVTUDQ2PD:          return "X86ISD::CVTUDQ2PD";
   case X86ISD::CVT2MASK:           return "X86ISD::CVT2MASK";
