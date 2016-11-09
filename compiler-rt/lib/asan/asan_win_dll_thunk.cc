@@ -456,4 +456,19 @@ static int call_asan_init() {
 #pragma section(".CRT$XIB", long, read)  // NOLINT
 __declspec(allocate(".CRT$XIB")) int (*__asan_preinit)() = call_asan_init;
 
+#ifdef _M_IX86
+#define NTAPI __stdcall
+#else
+#define NTAPI
+#endif
+
+static void NTAPI asan_thread_init(void *mod, unsigned long reason,
+                                   void *reserved) {
+  if (reason == /*DLL_PROCESS_ATTACH=*/1) __asan_init();
+}
+
+#pragma section(".CRT$XLAB", long, read)  // NOLINT
+__declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(void *,
+    unsigned long, void *) = asan_thread_init;
+
 #endif // ASAN_DLL_THUNK

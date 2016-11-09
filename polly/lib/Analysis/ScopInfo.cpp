@@ -4153,6 +4153,7 @@ void Scop::addScopStmt(BasicBlock *BB, Region *R) {
 ScopStmt *Scop::addScopStmt(__isl_take isl_map *SourceRel,
                             __isl_take isl_map *TargetRel,
                             __isl_take isl_set *Domain) {
+#ifndef NDEBUG
   isl_set *SourceDomain = isl_map_domain(isl_map_copy(SourceRel));
   isl_set *TargetDomain = isl_map_domain(isl_map_copy(TargetRel));
   assert(isl_set_is_subset(Domain, TargetDomain) &&
@@ -4161,6 +4162,7 @@ ScopStmt *Scop::addScopStmt(__isl_take isl_map *SourceRel,
          "Source access not defined for complete statement domain");
   isl_set_free(SourceDomain);
   isl_set_free(TargetDomain);
+#endif
   Stmts.emplace_back(*this, SourceRel, TargetRel, Domain);
   CopyStmtsNum++;
   return &(Stmts.back());

@@ -612,7 +612,7 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
         error_ptr->SetErrorStringWithFormat(
             "address expression \"%s\" resulted in a value whose type "
             "can't be converted to an address: %s",
-            s, valobj_sp->GetTypeName().GetCString());
+            s.str().c_str(), valobj_sp->GetTypeName().GetCString());
       }
     }
 
@@ -654,14 +654,14 @@ lldb::addr_t Args::StringToAddress(const ExecutionContext *exe_ctx,
     if (error_ptr) {
       error_set = true;
       error_ptr->SetErrorStringWithFormat(
-          "address expression \"%s\" evaluation failed", s);
+          "address expression \"%s\" evaluation failed", s.str().c_str());
     }
   }
 
   if (error_ptr) {
     if (!error_set)
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s);
+                                          s.str().c_str());
   }
   return fail_value;
 }
