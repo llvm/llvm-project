@@ -129,3 +129,23 @@ extern int setjmp(jmp_buf);
 // CHECK: [[@LINE+1]]:12 | extension/ObjC | <no-name> | <no-usr> | <no-cgname> | Decl | rel: 0
 @interface NonExistent()
 @end
+
+@interface MyGenCls<ObjectType> : Base
+@end
+
+@protocol MyEnumerating
+@end
+
+// CHECK: [[@LINE+4]]:41 | type-alias/C | MyEnumerator | c:index-source.m@T@MyEnumerator | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+3]]:26 | protocol/ObjC | MyEnumerating | c:objc(pl)MyEnumerating | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE+2]]:9 | class/ObjC | MyGenCls | c:objc(cs)MyGenCls | _OBJC_CLASS_$_MyGenCls | Ref | rel: 0
+// CHECK: [[@LINE+1]]:18 | class/ObjC | Base | c:objc(cs)Base | _OBJC_CLASS_$_Base | Ref | rel: 0
+typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
+
+// CHECK: [[@LINE+5]]:12 | class/ObjC | PermanentEnumerator | c:objc(cs)PermanentEnumerator | _OBJC_CLASS_$_PermanentEnumerator | Decl | rel: 0
+// CHECK: [[@LINE+4]]:34 | class/ObjC | MyGenCls | c:objc(cs)MyGenCls | _OBJC_CLASS_$_MyGenCls | Ref,RelBase | rel: 1
+// CHECK-NEXT: RelBase | PermanentEnumerator | c:objc(cs)PermanentEnumerator
+// CHECK: [[@LINE+2]]:34 | protocol/ObjC | MyEnumerating | c:objc(pl)MyEnumerating | <no-cgname> | Ref,RelBase | rel: 1
+// CHECK-NEXT: RelBase | PermanentEnumerator | c:objc(cs)PermanentEnumerator
+@interface PermanentEnumerator : MyEnumerator
+@end
