@@ -112,8 +112,10 @@ enum FunctionModRefLocation {
   FMRL_Nowhere = 0,
   /// Access to memory via argument pointers.
   FMRL_ArgumentPointees = 4,
+  /// Memory that is inaccessible via LLVM IR.
+  FMRL_InaccessibleMem = 8,
   /// Access to any memory.
-  FMRL_Anywhere = 8 | FMRL_ArgumentPointees
+  FMRL_Anywhere = 16 | FMRL_InaccessibleMem | FMRL_ArgumentPointees
 };
 
 /// Summary of how a function affects memory in the program.
@@ -142,6 +144,22 @@ enum FunctionModRefBehavior {
   ///
   /// This property corresponds to the IntrArgMemOnly LLVM intrinsic flag.
   FMRB_OnlyAccessesArgumentPointees = FMRL_ArgumentPointees | MRI_ModRef,
+
+  /// The only memory references in this function (if it has any) are
+  /// references of memory that is otherwise inaccessible via LLVM IR.
+  ///
+  /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
+  FMRB_OnlyAccessesInaccessibleMem = FMRL_InaccessibleMem | MRI_ModRef,
+
+  /// The function may perform non-volatile loads and stores of objects
+  /// pointed to by its pointer-typed arguments, with arbitrary offsets, and
+  /// it may also perform loads and stores of memory that is otherwise
+  /// inaccessible via LLVM IR.
+  ///
+  /// This property corresponds to the LLVM IR
+  /// inaccessiblemem_or_argmemonly attribute.
+  FMRB_OnlyAccessesInaccessibleOrArgMem = FMRL_InaccessibleMem |
+                                          FMRL_ArgumentPointees | MRI_ModRef,
 
   /// This function does not perform any non-local stores or volatile loads,
   /// but may read from any memory location.
@@ -337,6 +355,26 @@ public:
   /// (with arbitrary offsets).
   static bool doesAccessArgPointees(FunctionModRefBehavior MRB) {
     return (MRB & MRI_ModRef) && (MRB & FMRL_ArgumentPointees);
+  }
+
+  /// Checks if functions with the specified behavior are known to read and
+  /// write at most from memory that is inaccessible from LLVM IR.
+  static bool onlyAccessesInaccessibleMem(FunctionModRefBehavior MRB) {
+    return !(MRB & FMRL_Anywhere & ~FMRL_InaccessibleMem);
+  }
+
+  /// Checks if functions with the specified behavior are known to potentially
+  /// read or write from memory that is inaccessible from LLVM IR.
+  static bool doesAccessInaccessibleMem(FunctionModRefBehavior MRB) {
+    return (MRB & MRI_ModRef) && (MRB & FMRL_InaccessibleMem);
+  }
+
+  /// Checks if functions with the specified behavior are known to read and
+  /// write at most from memory that is inaccessible from LLVM IR or objects
+  /// pointed to by their pointer-typed arguments (with arbitrary offsets).
+  static bool onlyAccessesInaccessibleOrArgMem(FunctionModRefBehavior MRB) {
+    return !(MRB & FMRL_Anywhere &
+             ~(FMRL_InaccessibleMem | FMRL_ArgumentPointees));
   }
 
   /// getModRefInfo (for call sites) - Return information about whether

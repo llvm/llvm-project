@@ -626,10 +626,7 @@ void PassManagerBuilder::populateModulePassManager(
     // outer loop. LICM pass can help to promote the runtime check out if the
     // checked value is loop invariant.
     MPM.add(createLICMPass());
-
-    // Get rid of LCSSA nodes.
-    MPM.add(createInstructionSimplifierPass());
-  }
+ }
 
   // After vectorization and unrolling, assume intrinsics may tell us more
   // about pointer alignments.
@@ -650,6 +647,9 @@ void PassManagerBuilder::populateModulePassManager(
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
 
+  MPM.add(createLoopSinkPass());
+  // Get rid of LCSSA nodes.
+  MPM.add(createInstructionSimplifierPass());
   addExtensionsToPM(EP_OptimizerLast, MPM);
 }
 

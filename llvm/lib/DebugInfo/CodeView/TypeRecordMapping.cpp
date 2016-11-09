@@ -17,24 +17,6 @@ using namespace llvm::codeview;
     return EC;
 
 namespace {
-struct MapStringZ {
-  Error operator()(CodeViewRecordIO &IO, StringRef &S) const {
-    return IO.mapStringZ(S);
-  }
-};
-
-struct MapInteger {
-  template <typename T> Error operator()(CodeViewRecordIO &IO, T &N) const {
-    return IO.mapInteger(N);
-  }
-};
-
-struct MapEnum {
-  template <typename T> Error operator()(CodeViewRecordIO &IO, T &N) const {
-    return IO.mapEnum(N);
-  }
-};
-
 struct MapOneMethodRecord {
   explicit MapOneMethodRecord(bool IsFromOverloadList)
       : IsFromOverloadList(IsFromOverloadList) {}
@@ -64,35 +46,97 @@ private:
 
 static Error mapNameAndUniqueName(CodeViewRecordIO &IO, StringRef &Name,
                                   StringRef &UniqueName, bool HasUniqueName) {
-  error(IO.mapStringZ(Name));
-  if (HasUniqueName)
-    error(IO.mapStringZ(UniqueName));
+  if (IO.isWriting()) {
+    // Try to be smart about what we write here.  We can't write anything too
+    // large, so if we're going to go over the limit, truncate both the name
+    // and unique name by the same amount.
+    size_t BytesLeft = IO.maxFieldLength();
+    if (HasUniqueName) {
+      size_t BytesNeeded = Name.size() + UniqueName.size() + 2;
+      StringRef N = Name;
+      StringRef U = UniqueName;
+      if (BytesNeeded > BytesLeft) {
+        size_t BytesToDrop = (BytesNeeded - BytesLeft);
+        size_t DropN = std::min(N.size(), BytesToDrop / 2);
+        size_t DropU = std::min(U.size(), BytesToDrop - DropN);
+
+        N = N.drop_back(DropN);
+        U = U.drop_back(DropU);
+      }
+
+      error(IO.mapStringZ(N));
+      error(IO.mapStringZ(U));
+    } else {
+      size_t BytesNeeded = Name.size() + 1;
+      StringRef N = Name;
+      if (BytesNeeded > BytesLeft) {
+        size_t BytesToDrop = std::min(N.size(), BytesToDrop);
+        N = N.drop_back(BytesToDrop);
+      }
+      error(IO.mapStringZ(N));
+    }
+  } else {
+    error(IO.mapStringZ(Name));
+    if (HasUniqueName)
+      error(IO.mapStringZ(UniqueName));
+  }
 
   return Error::success();
 }
 
 Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
-  error(IO.beginRecord(CVR.Type));
+  assert(!TypeKind.hasValue() && "Already in a type mapping!");
+  assert(!MemberKind.hasValue() && "Already in a member mapping!");
+
+  // FieldList and MethodList records can be any length because they can be
+  // split with continuation records.  All other record types cannot be
+  // longer than the maximum record length.
+  Optional<uint32_t> MaxLen;
+  if (CVR.Type != TypeLeafKind::LF_FIELDLIST &&
+      CVR.Type != TypeLeafKind::LF_METHODLIST)
+    MaxLen = MaxRecordLength - sizeof(RecordPrefix);
+  error(IO.beginRecord(MaxLen));
   TypeKind = CVR.Type;
   return Error::success();
 }
 
 Error TypeRecordMapping::visitTypeEnd(CVType &Record) {
+  assert(TypeKind.hasValue() && "Not in a type mapping!");
+  assert(!MemberKind.hasValue() && "Still in a member mapping!");
+
   error(IO.endRecord());
+
   TypeKind.reset();
   return Error::success();
 }
 
 Error TypeRecordMapping::visitMemberBegin(CVMemberRecord &Record) {
+  assert(TypeKind.hasValue() && "Not in a type mapping!");
+  assert(!MemberKind.hasValue() && "Already in a member mapping!");
+
+  // The largest possible subrecord is one in which there is a record prefix,
+  // followed by the subrecord, followed by a continuation, and that entire
+  // sequence spaws `MaxRecordLength` bytes.  So the record's length is
+  // calculated as follows.
+  constexpr uint32_t ContinuationLength = 8;
+  error(IO.beginRecord(MaxRecordLength - sizeof(RecordPrefix) -
+                       ContinuationLength));
+
+  MemberKind = Record.Kind;
   return Error::success();
 }
 
 Error TypeRecordMapping::visitMemberEnd(CVMemberRecord &Record) {
+  assert(TypeKind.hasValue() && "Not in a type mapping!");
+  assert(MemberKind.hasValue() && "Not in a member mapping!");
+
   if (!IO.isWriting()) {
     if (auto EC = IO.skipPadding())
       return EC;
   }
 
+  MemberKind.reset();
+  error(IO.endRecord());
   return Error::success();
 }
 
@@ -129,7 +173,9 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ArgListRecord &Record) {
-  error(IO.mapVectorN<uint32_t>(Record.StringIndices, MapInteger()));
+  error(IO.mapVectorN<uint32_t>(
+      Record.StringIndices,
+      [](CodeViewRecordIO &IO, TypeIndex &N) { return IO.mapInteger(N); }));
 
   return Error::success();
 }
@@ -245,7 +291,9 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, VFTableRecord &Record) {
       NamesLen += Name.size() + 1;
   }
   error(IO.mapInteger(NamesLen));
-  error(IO.mapVectorTail(Record.MethodNames, MapStringZ()));
+  error(IO.mapVectorTail(
+      Record.MethodNames,
+      [](CodeViewRecordIO &IO, StringRef &S) { return IO.mapStringZ(S); }));
 
   return Error::success();
 }
@@ -295,7 +343,9 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           BuildInfoRecord &Record) {
-  error(IO.mapVectorN<uint16_t>(Record.ArgIndices, MapInteger()));
+  error(IO.mapVectorN<uint16_t>(
+      Record.ArgIndices,
+      [](CodeViewRecordIO &IO, TypeIndex &N) { return IO.mapInteger(N); }));
 
   return Error::success();
 }

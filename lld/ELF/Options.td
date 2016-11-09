@@ -301,6 +301,7 @@ def no_warn_mismatch: F<"no-warn-mismatch">;
 def rpath_link: S<"rpath-link">;
 def rpath_link_eq: J<"rpath-link=">;
 def sort_common: F<"sort-common">;
+def stats: F<"stats">;
 def warn_execstack: F<"warn-execstack">;
 def warn_shared_textrel: F<"warn-shared-textrel">;
 def EB : F<"EB">;

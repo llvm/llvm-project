@@ -35,6 +35,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/VariableList.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
@@ -175,9 +176,8 @@ public:
   DebugMapModule(const ModuleSP &exe_module_sp, uint32_t cu_idx,
                  const FileSpec &file_spec, const ArchSpec &arch,
                  const ConstString *object_name, off_t object_offset,
-                 const TimeValue *object_mod_time_ptr)
-      : Module(file_spec, arch, object_name, object_offset,
-               object_mod_time_ptr),
+                 const llvm::sys::TimePoint<> object_mod_time)
+      : Module(file_spec, arch, object_name, object_offset, object_mod_time),
         m_exe_module_wp(exe_module_sp), m_cu_idx(cu_idx) {}
 
   ~DebugMapModule() override = default;
@@ -355,9 +355,8 @@ void SymbolFileDWARFDebugMap::InitOSO() {
           m_compile_unit_infos[i].so_file.SetFile(
               so_symbol->GetName().AsCString(), false);
           m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
-          TimeValue oso_mod_time;
-          oso_mod_time.OffsetWithSeconds(oso_symbol->GetIntegerValue(0));
-          m_compile_unit_infos[i].oso_mod_time = oso_mod_time;
+          m_compile_unit_infos[i].oso_mod_time =
+              llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));
           uint32_t sibling_idx = so_symbol->GetSiblingIndex();
           // The sibling index can't be less that or equal to the current index
           // "i"
@@ -425,15 +424,14 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       FileSpec oso_file(oso_path, false);
       ConstString oso_object;
       if (oso_file.Exists()) {
-        TimeValue oso_mod_time(FileSystem::GetModificationTime(oso_file));
+        auto oso_mod_time = FileSystem::GetModificationTime(oso_file);
         if (oso_mod_time != comp_unit_info->oso_mod_time) {
           obj_file->GetModule()->ReportError(
               "debug map object file '%s' has changed (actual time is "
-              "0x%" PRIx64 ", debug map time is 0x%" PRIx64
+              "%s, debug map time is %s"
               ") since this executable was linked, file will be ignored",
-              oso_file.GetPath().c_str(),
-              oso_mod_time.GetAsSecondsSinceJan1_1970(),
-              comp_unit_info->oso_mod_time.GetAsSecondsSinceJan1_1970());
+              oso_file.GetPath().c_str(), llvm::to_string(oso_mod_time).c_str(),
+              llvm::to_string(comp_unit_info->oso_mod_time).c_str());
           return NULL;
         }
 
@@ -464,7 +462,8 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       comp_unit_info->oso_sp->module_sp.reset(new DebugMapModule(
           obj_file->GetModule(), GetCompUnitInfoIndex(comp_unit_info), oso_file,
           oso_arch, oso_object ? &oso_object : NULL, 0,
-          oso_object ? &comp_unit_info->oso_mod_time : NULL));
+          oso_object ? comp_unit_info->oso_mod_time
+                     : llvm::sys::TimePoint<>()));
     }
   }
   if (comp_unit_info->oso_sp)

@@ -3969,9 +3969,33 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       }
     }
 
+    // An unsigned min/max can be written with a signed compare.
+    const APInt *C2;
+    if ((CmpLHS == TrueVal && match(FalseVal, m_APInt(C2))) ||
+        (CmpLHS == FalseVal && match(TrueVal, m_APInt(C2)))) {
+      // Is the sign bit set?
+      // (X <s 0) ? X : MAXVAL ==> (X >u MAXVAL) ? X : MAXVAL ==> UMAX
+      // (X <s 0) ? MAXVAL : X ==> (X >u MAXVAL) ? MAXVAL : X ==> UMIN
+      if (Pred == CmpInst::ICMP_SLT && *C1 == 0 && C2->isMaxSignedValue()) {
+        LHS = TrueVal;
+        RHS = FalseVal;
+        return {CmpLHS == TrueVal ? SPF_UMAX : SPF_UMIN, SPNB_NA, false};
+      }
+
+      // Is the sign bit clear?
+      // (X >s -1) ? MINVAL : X ==> (X <u MINVAL) ? MINVAL : X ==> UMAX
+      // (X >s -1) ? X : MINVAL ==> (X <u MINVAL) ? X : MINVAL ==> UMIN
+      if (Pred == CmpInst::ICMP_SGT && C1->isAllOnesValue() &&
+          C2->isMinSignedValue()) {
+        LHS = TrueVal;
+        RHS = FalseVal;
+        return {CmpLHS == FalseVal ? SPF_UMAX : SPF_UMIN, SPNB_NA, false};
+      }
+    }
+
+    // Look through 'not' ops to find disguised signed min/max.
     // (X >s C) ? ~X : ~C ==> (~X <s ~C) ? ~X : ~C ==> SMIN(~X, ~C)
     // (X <s C) ? ~X : ~C ==> (~X >s ~C) ? ~X : ~C ==> SMAX(~X, ~C)
-    const APInt *C2;
     if (match(TrueVal, m_Not(m_Specific(CmpLHS))) &&
         match(FalseVal, m_APInt(C2)) && ~(*C1) == *C2 &&
         (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SLT)) {

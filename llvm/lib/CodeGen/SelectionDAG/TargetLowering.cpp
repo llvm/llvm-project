@@ -1302,11 +1302,11 @@ bool TargetLowering::isConstTrueVal(const SDNode *N) const {
     if (!BV)
       return false;
 
-    BitVector UndefElements;
-    CN = BV->getConstantSplatNode(&UndefElements);
-    // Only interested in constant splats, and we don't try to handle undef
-    // elements in identifying boolean constants.
-    if (!CN || UndefElements.none())
+    // Only interested in constant splats, we don't care about undef
+    // elements in identifying boolean constants and getConstantSplatNode
+    // returns NULL if all ops are undef;
+    CN = BV->getConstantSplatNode();
+    if (!CN)
       return false;
   }
 
@@ -1342,11 +1342,11 @@ bool TargetLowering::isConstFalseVal(const SDNode *N) const {
     if (!BV)
       return false;
 
-    BitVector UndefElements;
-    CN = BV->getConstantSplatNode(&UndefElements);
-    // Only interested in constant splats, and we don't try to handle undef
-    // elements in identifying boolean constants.
-    if (!CN || UndefElements.none())
+    // Only interested in constant splats, we don't care about undef
+    // elements in identifying boolean constants and getConstantSplatNode
+    // returns NULL if all ops are undef;
+    CN = BV->getConstantSplatNode();
+    if (!CN)
       return false;
   }
 

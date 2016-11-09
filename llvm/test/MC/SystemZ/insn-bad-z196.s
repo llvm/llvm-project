@@ -35,6 +35,34 @@
 	aih	%r0, (1 << 31)
 
 #CHECK: error: invalid operand
+#CHECK: cdfbra	%f0, 0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: cdfbra	%f0, 0, %r0, 16
+#CHECK: error: invalid operand
+#CHECK: cdfbra	%f0, -1, %r0, 0
+#CHECK: error: invalid operand
+#CHECK: cdfbra	%f0, 16, %r0, 0
+
+	cdfbra	%f0, 0, %r0, -1
+	cdfbra	%f0, 0, %r0, 16
+	cdfbra	%f0, -1, %r0, 0
+	cdfbra	%f0, 16, %r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cdgbra	%f0, 0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: cdgbra	%f0, 0, %r0, 16
+#CHECK: error: invalid operand
+#CHECK: cdgbra	%f0, -1, %r0, 0
+#CHECK: error: invalid operand
+#CHECK: cdgbra	%f0, 16, %r0, 0
+
+	cdgbra	%f0, 0, %r0, -1
+	cdgbra	%f0, 0, %r0, 16
+	cdgbra	%f0, -1, %r0, 0
+	cdgbra	%f0, 16, %r0, 0
+
+#CHECK: error: invalid operand
 #CHECK: cdlfbr	%f0, 0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: cdlfbr	%f0, 0, %r0, 16
@@ -63,6 +91,34 @@
 	cdlgbr	%f0, 16, %r0, 0
 
 #CHECK: error: invalid operand
+#CHECK: cefbra	%f0, 0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: cefbra	%f0, 0, %r0, 16
+#CHECK: error: invalid operand
+#CHECK: cefbra	%f0, -1, %r0, 0
+#CHECK: error: invalid operand
+#CHECK: cefbra	%f0, 16, %r0, 0
+
+	cefbra	%f0, 0, %r0, -1
+	cefbra	%f0, 0, %r0, 16
+	cefbra	%f0, -1, %r0, 0
+	cefbra	%f0, 16, %r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cegbra	%f0, 0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: cegbra	%f0, 0, %r0, 16
+#CHECK: error: invalid operand
+#CHECK: cegbra	%f0, -1, %r0, 0
+#CHECK: error: invalid operand
+#CHECK: cegbra	%f0, 16, %r0, 0
+
+	cegbra	%f0, 0, %r0, -1
+	cegbra	%f0, 0, %r0, 16
+	cegbra	%f0, -1, %r0, 0
+	cegbra	%f0, 16, %r0, 0
+
+#CHECK: error: invalid operand
 #CHECK: celfbr	%f0, 0, %r0, -1
 #CHECK: error: invalid operand
 #CHECK: celfbr	%f0, 0, %r0, 16
@@ -89,6 +145,96 @@
 	celgbr	%f0, 0, %r0, 16
 	celgbr	%f0, -1, %r0, 0
 	celgbr	%f0, 16, %r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cfdbra	%r0, 0, %f0, -1
+#CHECK: error: invalid operand
+#CHECK: cfdbra	%r0, 0, %f0, 16
+#CHECK: error: invalid operand
+#CHECK: cfdbra	%r0, -1, %f0, 0
+#CHECK: error: invalid operand
+#CHECK: cfdbra	%r0, 16, %f0, 0
+
+	cfdbra	%r0, 0, %f0, -1
+	cfdbra	%r0, 0, %f0, 16
+	cfdbra	%r0, -1, %f0, 0
+	cfdbra	%r0, 16, %f0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cfebra	%r0, 0, %f0, -1
+#CHECK: error: invalid operand
+#CHECK: cfebra	%r0, 0, %f0, 16
+#CHECK: error: invalid operand
+#CHECK: cfebra	%r0, -1, %f0, 0
+#CHECK: error: invalid operand
+#CHECK: cfebra	%r0, 16, %f0, 0
+
+	cfebra	%r0, 0, %f0, -1
+	cfebra	%r0, 0, %f0, 16
+	cfebra	%r0, -1, %f0, 0
+	cfebra	%r0, 16, %f0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cfxbra	%r0, 0, %f0, -1
+#CHECK: error: invalid operand
+#CHECK: cfxbra	%r0, 0, %f0, 16
+#CHECK: error: invalid operand
+#CHECK: cfxbra	%r0, -1, %f0, 0
+#CHECK: error: invalid operand
+#CHECK: cfxbra	%r0, 16, %f0, 0
+#CHECK: error: invalid register pair
+#CHECK: cfxbra	%r0, 0, %f14, 0
+
+	cfxbra	%r0, 0, %f0, -1
+	cfxbra	%r0, 0, %f0, 16
+	cfxbra	%r0, -1, %f0, 0
+	cfxbra	%r0, 16, %f0, 0
+	cfxbra	%r0, 0, %f14, 0
+
+#CHECK: error: invalid operand
+#CHECK: cgdbra	%r0, 0, %f0, -1
+#CHECK: error: invalid operand
+#CHECK: cgdbra	%r0, 0, %f0, 16
+#CHECK: error: invalid operand
+#CHECK: cgdbra	%r0, -1, %f0, 0
+#CHECK: error: invalid operand
+#CHECK: cgdbra	%r0, 16, %f0, 0
+
+	cgdbra	%r0, 0, %f0, -1
+	cgdbra	%r0, 0, %f0, 16
+	cgdbra	%r0, -1, %f0, 0
+	cgdbra	%r0, 16, %f0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cgebra	%r0, 0, %f0, -1
+#CHECK: error: invalid operand
+#CHECK: cgebra	%r0, 0, %f0, 16
+#CHECK: error: invalid operand
+#CHECK: cgebra	%r0, -1, %f0, 0
+#CHECK: error: invalid operand
+#CHECK: cgebra	%r0, 16, %f0, 0
+
+	cgebra	%r0, 0, %f0, -1
+	cgebra	%r0, 0, %f0, 16
+	cgebra	%r0, -1, %f0, 0
+	cgebra	%r0, 16, %f0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cgxbra	%r0, 0, %f0, -1
+#CHECK: error: invalid operand
+#CHECK: cgxbra	%r0, 0, %f0, 16
+#CHECK: error: invalid operand
+#CHECK: cgxbra	%r0, -1, %f0, 0
+#CHECK: error: invalid operand
+#CHECK: cgxbra	%r0, 16, %f0, 0
+#CHECK: error: invalid register pair
+#CHECK: cgxbra	%r0, 0, %f14, 0
+
+	cgxbra	%r0, 0, %f0, -1
+	cgxbra	%r0, 0, %f0, 16
+	cgxbra	%r0, -1, %f0, 0
+	cgxbra	%r0, 16, %f0, 0
+	cgxbra	%r0, 0, %f14, 0
 
 #CHECK: error: invalid operand
 #CHECK: chf	%r0, -524289
@@ -211,6 +357,40 @@
 
 	clih	%r0, -1
 	clih	%r0, (1 << 32)
+
+#CHECK: error: invalid operand
+#CHECK: cxfbra	%f0, 0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: cxfbra	%f0, 0, %r0, 16
+#CHECK: error: invalid operand
+#CHECK: cxfbra	%f0, -1, %r0, 0
+#CHECK: error: invalid operand
+#CHECK: cxfbra	%f0, 16, %r0, 0
+#CHECK: error: invalid register pair
+#CHECK: cxfbra	%f2, 0, %r0, 0
+
+	cxfbra	%f0, 0, %r0, -1
+	cxfbra	%f0, 0, %r0, 16
+	cxfbra	%f0, -1, %r0, 0
+	cxfbra	%f0, 16, %r0, 0
+	cxfbra	%f2, 0, %r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: cxgbra	%f0, 0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: cxgbra	%f0, 0, %r0, 16
+#CHECK: error: invalid operand
+#CHECK: cxgbra	%f0, -1, %r0, 0
+#CHECK: error: invalid operand
+#CHECK: cxgbra	%f0, 16, %r0, 0
+#CHECK: error: invalid register pair
+#CHECK: cxgbra	%f2, 0, %r0, 0
+
+	cxgbra	%f0, 0, %r0, -1
+	cxgbra	%f0, 0, %r0, 16
+	cxgbra	%f0, -1, %r0, 0
+	cxgbra	%f0, 16, %r0, 0
+	cxgbra	%f2, 0, %r0, 0
 
 #CHECK: error: invalid operand
 #CHECK: cxlfbr	%f0, 0, %r0, -1

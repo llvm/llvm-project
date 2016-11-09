@@ -150,6 +150,12 @@ static DecodeStatus DecodeVR128BitRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, SystemZMC::VR128Regs, 32);
 }
 
+static DecodeStatus DecodeAR32BitRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, SystemZMC::AR32Regs, 16);
+}
+
 template<unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))
@@ -164,12 +170,6 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm) {
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm)));
   return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeAccessRegOperand(MCInst &Inst, uint64_t Imm,
-                                           uint64_t Address,
-                                           const void *Decoder) {
-  return decodeUImmOperand<4>(Inst, Imm);
 }
 
 static DecodeStatus decodeU1ImmOperand(MCInst &Inst, uint64_t Imm,

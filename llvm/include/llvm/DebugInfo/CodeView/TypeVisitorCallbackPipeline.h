@@ -74,26 +74,34 @@ public:
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(CVType &CVR, Name##Record &Record) override {         \
-    for (auto Visitor : Pipeline) {                                            \
-      if (auto EC = Visitor->visitKnownRecord(CVR, Record))                    \
-        return EC;                                                             \
-    }                                                                          \
-    return Error::success();                                                   \
+    return visitKnownRecordImpl(CVR, Record);                                  \
   }
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   Error visitKnownMember(CVMemberRecord &CVMR, Name##Record &Record)           \
       override {                                                               \
-    for (auto Visitor : Pipeline) {                                            \
-      if (auto EC = Visitor->visitKnownMember(CVMR, Record))                   \
-        return EC;                                                             \
-    }                                                                          \
-    return Error::success();                                                   \
+    return visitKnownMemberImpl(CVMR, Record);                                 \
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
 private:
+  template <typename T> Error visitKnownRecordImpl(CVType &CVR, T &Record) {
+    for (auto Visitor : Pipeline) {
+      if (auto EC = Visitor->visitKnownRecord(CVR, Record))
+        return EC;
+    }
+    return Error::success();
+  }
+
+  template <typename T>
+  Error visitKnownMemberImpl(CVMemberRecord &CVMR, T &Record) {
+    for (auto Visitor : Pipeline) {
+      if (auto EC = Visitor->visitKnownMember(CVMR, Record))
+        return EC;
+    }
+    return Error::success();
+  }
   std::vector<TypeVisitorCallbacks *> Pipeline;
 };
 }

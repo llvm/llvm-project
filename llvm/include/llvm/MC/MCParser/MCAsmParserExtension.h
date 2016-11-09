@@ -68,8 +68,8 @@ public:
   bool Warning(SMLoc L, const Twine &Msg) {
     return getParser().Warning(L, Msg);
   }
-  bool Error(SMLoc L, const Twine &Msg) {
-    return getParser().Error(L, Msg);
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = SMRange()) {
+    return getParser().Error(L, Msg, Range);
   }
   void Note(SMLoc L, const Twine &Msg) {
     getParser().Note(L, Msg);

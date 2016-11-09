@@ -60,15 +60,10 @@ define <4 x i32> @smax_vec2(<4 x i32> %x) {
   ret <4 x i32> %sel
 }
 
-; FIXME: These are unsigned min/max ops.
-
 define <4 x i32> @umax_vec1(<4 x i32> %x) {
 ; CHECK-LABEL: umax_vec1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm1
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
-; CHECK-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = icmp slt <4 x i32> %x, zeroinitializer
@@ -79,9 +74,7 @@ define <4 x i32> @umax_vec1(<4 x i32> %x) {
 define <4 x i32> @umax_vec2(<4 x i32> %x) {
 ; CHECK-LABEL: umax_vec2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vblendvps %xmm1, {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -92,9 +85,7 @@ define <4 x i32> @umax_vec2(<4 x i32> %x) {
 define <4 x i32> @umin_vec1(<4 x i32> %x) {
 ; CHECK-LABEL: umin_vec1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm1
-; CHECK-NEXT:    vblendvps %xmm1, {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = icmp slt <4 x i32> %x, zeroinitializer
@@ -105,10 +96,7 @@ define <4 x i32> @umin_vec1(<4 x i32> %x) {
 define <4 x i32> @umin_vec2(<4 x i32> %x) {
 ; CHECK-LABEL: umin_vec2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; CHECK-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>

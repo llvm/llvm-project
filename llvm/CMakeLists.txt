@@ -109,6 +109,7 @@ foreach(proj ${LLVM_ENABLE_PROJECTS})
     message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
   endif()
   string(TOUPPER "${proj}" upper_proj)
+  STRING(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
   set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
   # There is a widely spread opinion that clang-tools-extra should be merged
   # into clang. The following simulates it by always enabling clang-tools-extra

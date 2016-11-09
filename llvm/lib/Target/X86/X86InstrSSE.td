@@ -2065,11 +2065,12 @@ let Predicates = [UseSSE2] in {
             (CVTTPS2DQrm addr:$src)>;
 }
 
+let Predicates = [HasAVX, NoVLX] in
 def VCVTTPD2DQrr : VPDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                         "cvttpd2dq\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst,
-                              (int_x86_sse2_cvttpd2dq VR128:$src))],
-                              IIC_SSE_CVT_PD_RR>, VEX, Sched<[WriteCvtF2I]>;
+                          (v4i32 (X86cvttpd2dq (v2f64 VR128:$src))))],
+                        IIC_SSE_CVT_PD_RR>, VEX, Sched<[WriteCvtF2I]>;
 
 // The assembler can recognize rr 256-bit instructions by seeing a ymm
 // register, but the same isn't true when using memory operands instead.
@@ -2078,10 +2079,11 @@ def VCVTTPD2DQrr : VPDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
 // XMM only
 def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
                 (VCVTTPD2DQrr VR128:$dst, VR128:$src), 0>;
+let Predicates = [HasAVX, NoVLX] in
 def VCVTTPD2DQXrm : VPDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                          "cvttpd2dqx\t{$src, $dst|$dst, $src}",
-                         [(set VR128:$dst, (int_x86_sse2_cvttpd2dq
-                                            (loadv2f64 addr:$src)))],
+                         [(set VR128:$dst,
+                           (v4i32 (X86cvttpd2dq (loadv2f64 addr:$src))))],
                          IIC_SSE_CVT_PD_RM>, VEX, Sched<[WriteCvtF2ILd]>;
 
 // YMM only
@@ -2099,13 +2101,10 @@ def : InstAlias<"vcvttpd2dq\t{$src, $dst|$dst, $src}",
                 (VCVTTPD2DQYrr VR128:$dst, VR256:$src), 0>;
 
 let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttpd2dq (v2f64 VR128:$src)))))))),
+  let AddedComplexity = 15 in
+  def : Pat<(X86vzmovl (v2i64 (bitconvert
+                               (v4i32 (X86cvttpd2dq (v2f64 VR128:$src)))))),
             (VCVTTPD2DQrr VR128:$src)>;
-  def : Pat<(v4i32 (X86cvttpd2dq (v2f64 VR128:$src))),
-            (VCVTTPD2DQrr VR128:$src)>;
-  def : Pat<(v4i32 (X86cvttpd2dq (loadv2f64 addr:$src))),
-            (VCVTTPD2DQXrm addr:$src)>;
 
   def : Pat<(v4i32 (fp_to_sint (v4f64 VR256:$src))),
             (VCVTTPD2DQYrr VR256:$src)>;
@@ -2125,8 +2124,9 @@ def CVTTPD2DQrm : PDI<0xE6, MRMSrcMem, (outs VR128:$dst),(ins f128mem:$src),
                       Sched<[WriteCvtF2ILd]>;
 
 let Predicates = [UseSSE2] in {
-  def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttpd2dq (v2f64 VR128:$src)))))))),
+  let AddedComplexity = 15 in
+  def : Pat<(X86vzmovl (v2i64 (bitconvert
+                               (v4i32 (X86cvttpd2dq (v2f64 VR128:$src)))))),
             (CVTTPD2DQrr VR128:$src)>;
   def : Pat<(v4i32 (X86cvttpd2dq (v2f64 VR128:$src))),
             (CVTTPD2DQrr VR128:$src)>;
@@ -2254,8 +2254,9 @@ def CVTPD2PSrm : PDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
 
 let Predicates = [HasAVX, NoVLX] in {
   // Match fpround and fpextend for 128/256-bit conversions
-  def : Pat<(v4f32 (bitconvert (X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))))),
+  let AddedComplexity = 15 in
+  def : Pat<(X86vzmovl (v2f64 (bitconvert
+                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
             (VCVTPD2PSrr VR128:$src)>;
   def : Pat<(v4f32 (X86vfpround (v2f64 VR128:$src))),
             (VCVTPD2PSrr VR128:$src)>;
@@ -2272,8 +2273,9 @@ let Predicates = [HasAVX, NoVLX] in {
 
 let Predicates = [UseSSE2] in {
   // Match fpround and fpextend for 128 conversions
-  def : Pat<(v4f32 (bitconvert (X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))))),
+  let AddedComplexity = 15 in
+  def : Pat<(X86vzmovl (v2f64 (bitconvert
+                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
             (CVTPD2PSrr VR128:$src)>;
   def : Pat<(v4f32 (X86vfpround (v2f64 VR128:$src))),
             (CVTPD2PSrr VR128:$src)>;

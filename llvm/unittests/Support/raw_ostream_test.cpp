@@ -181,5 +181,157 @@ TEST(raw_ostreamTest, FormatDecimal) {
                           printToString(format_decimal(INT64_MIN, 21), 21));
 }
 
+std::string
+format_hex_bytes(const void *P, size_t N,
+                 llvm::Optional<uint64_t> Offset = llvm::Optional<uint64_t>(),
+                 uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
+  std::string S;
+  if (P && N) {
+    llvm::raw_string_ostream Str(S);
+    Str << llvm::format_hex_bytes(
+        llvm::ArrayRef<uint8_t>(static_cast<const uint8_t *>(P), N), Offset,
+        NumPerLine, ByteGroupSize);
+    Str.flush();
+  }
+  return S;
+}
 
+std::string format_hex_bytes_with_ascii(
+    const void *P, size_t N,
+    llvm::Optional<uint64_t> Offset = llvm::Optional<uint64_t>(),
+    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
+  std::string S;
+  if (P && N) {
+    llvm::raw_string_ostream Str(S);
+    Str << llvm::format_hex_bytes_with_ascii(
+        llvm::ArrayRef<uint8_t>(static_cast<const uint8_t *>(P), N), Offset,
+        NumPerLine, ByteGroupSize);
+    Str.flush();
+  }
+  return S;
+}
+
+TEST(raw_ostreamTest, FormattedHexBytes) {
+  char b[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+              'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+              'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+  // Test raw bytes
+  const llvm::Optional<uint64_t> InvalidOffset;
+  // Test invalid input.
+  EXPECT_EQ("", format_hex_bytes(nullptr, 0));
+  EXPECT_EQ("", format_hex_bytes(b, 0));
+  EXPECT_EQ("", format_hex_bytes(nullptr, 16));
+  //----------------------------------------------------------------------
+  // Test hex byte output with the default 4 byte groups
+  //----------------------------------------------------------------------
+  EXPECT_EQ("61", format_hex_bytes(b, 1));
+  EXPECT_EQ("61626364 65", format_hex_bytes(b, 5));
+  // Test that 16 bytes get written to a line correctly.
+  EXPECT_EQ("61626364 65666768 696a6b6c 6d6e6f70", format_hex_bytes(b, 16));
+  // Test raw bytes with default 16 bytes per line wrapping.
+  EXPECT_EQ("61626364 65666768 696a6b6c 6d6e6f70\n71", format_hex_bytes(b, 17));
+  // Test raw bytes with 1 bytes per line wrapping.
+  EXPECT_EQ("61\n62\n63\n64\n65\n66", format_hex_bytes(b, 6, InvalidOffset, 1));
+  // Test raw bytes with 7 bytes per line wrapping.
+  EXPECT_EQ("61626364 656667\n68696a6b 6c6d6e\n6f7071",
+            format_hex_bytes(b, 17, InvalidOffset, 7));
+  // Test raw bytes with 8 bytes per line wrapping.
+  EXPECT_EQ("61626364 65666768\n696a6b6c 6d6e6f70\n71",
+            format_hex_bytes(b, 17, InvalidOffset, 8));
+  //----------------------------------------------------------------------
+  // Test hex byte output with the 1 byte groups
+  //----------------------------------------------------------------------
+  EXPECT_EQ("61 62 63 64 65", format_hex_bytes(b, 5, InvalidOffset, 16, 1));
+  // Test that 16 bytes get written to a line correctly.
+  EXPECT_EQ("61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f 70",
+            format_hex_bytes(b, 16, InvalidOffset, 16, 1));
+  // Test raw bytes with default 16 bytes per line wrapping.
+  EXPECT_EQ("61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f 70\n71",
+            format_hex_bytes(b, 17, InvalidOffset, 16, 1));
+  // Test raw bytes with 7 bytes per line wrapping.
+  EXPECT_EQ("61 62 63 64 65 66 67\n68 69 6a 6b 6c 6d 6e\n6f 70 71",
+            format_hex_bytes(b, 17, InvalidOffset, 7, 1));
+  // Test raw bytes with 8 bytes per line wrapping.
+  EXPECT_EQ("61 62 63 64 65 66 67 68\n69 6a 6b 6c 6d 6e 6f 70\n71",
+            format_hex_bytes(b, 17, InvalidOffset, 8, 1));
+
+  //----------------------------------------------------------------------
+  // Test hex byte output with the 2 byte groups
+  //----------------------------------------------------------------------
+  EXPECT_EQ("6162 6364 65", format_hex_bytes(b, 5, InvalidOffset, 16, 2));
+  // Test that 16 bytes get written to a line correctly.
+  EXPECT_EQ("6162 6364 6566 6768 696a 6b6c 6d6e 6f70",
+            format_hex_bytes(b, 16, InvalidOffset, 16, 2));
+  // Test raw bytes with default 16 bytes per line wrapping.
+  EXPECT_EQ("6162 6364 6566 6768 696a 6b6c 6d6e 6f70\n71",
+            format_hex_bytes(b, 17, InvalidOffset, 16, 2));
+  // Test raw bytes with 7 bytes per line wrapping.
+  EXPECT_EQ("6162 6364 6566 67\n6869 6a6b 6c6d 6e\n6f70 71",
+            format_hex_bytes(b, 17, InvalidOffset, 7, 2));
+  // Test raw bytes with 8 bytes per line wrapping.
+  EXPECT_EQ("6162 6364 6566 6768\n696a 6b6c 6d6e 6f70\n71",
+            format_hex_bytes(b, 17, InvalidOffset, 8, 2));
+
+  //----------------------------------------------------------------------
+  // Test hex bytes with offset with the default 4 byte groups.
+  //----------------------------------------------------------------------
+  EXPECT_EQ("0x0000000000000000: 61", format_hex_bytes(b, 1, 0x0));
+  EXPECT_EQ("0x0000000000001000: 61", format_hex_bytes(b, 1, 0x1000));
+  EXPECT_EQ("0x0000000000001000: 61\n0x0000000000001001: 62",
+            format_hex_bytes(b, 2, 0x1000, 1));
+  //----------------------------------------------------------------------
+  // Test hex bytes with ASCII with the default 4 byte groups.
+  //----------------------------------------------------------------------
+  EXPECT_EQ("61626364 65666768 696a6b6c 6d6e6f70  |abcdefghijklmnop|",
+            format_hex_bytes_with_ascii(b, 16));
+  EXPECT_EQ("61626364 65666768  |abcdefgh|\n"
+            "696a6b6c 6d6e6f70  |ijklmnop|",
+            format_hex_bytes_with_ascii(b, 16, InvalidOffset, 8));
+  EXPECT_EQ("61626364 65666768  |abcdefgh|\n696a6b6c           |ijkl|",
+            format_hex_bytes_with_ascii(b, 12, InvalidOffset, 8));
+  char unprintable[] = {'a', '\x1e', 'b', '\x1f'};
+  // Make sure the ASCII is still lined up correctly when fewer bytes than 16
+  // bytes per line are available. The ASCII should still be aligned as if 16
+  // bytes of hex might be displayed.
+  EXPECT_EQ("611e621f                             |a.b.|",
+            format_hex_bytes_with_ascii(unprintable, 4));
+  //----------------------------------------------------------------------
+  // Test hex bytes with ASCII with offsets with the default 4 byte groups.
+  //----------------------------------------------------------------------
+  EXPECT_EQ("0x0000000000000000: 61626364 65666768 "
+            "696a6b6c 6d6e6f70  |abcdefghijklmnop|",
+            format_hex_bytes_with_ascii(b, 16, 0));
+  EXPECT_EQ("0x0000000000000000: 61626364 65666768  |abcdefgh|\n"
+            "0x0000000000000008: 696a6b6c 6d6e6f70  |ijklmnop|",
+            format_hex_bytes_with_ascii(b, 16, 0, 8));
+  EXPECT_EQ("0x0000000000000000: 61626364 656667  |abcdefg|\n"
+            "0x0000000000000007: 68696a6b 6c      |hijkl|",
+            format_hex_bytes_with_ascii(b, 12, 0, 7));
+
+  //----------------------------------------------------------------------
+  // Test hex bytes with ASCII with offsets with the default 2 byte groups.
+  //----------------------------------------------------------------------
+  EXPECT_EQ("0x0000000000000000: 6162 6364 6566 6768 "
+            "696a 6b6c 6d6e 6f70  |abcdefghijklmnop|",
+            format_hex_bytes_with_ascii(b, 16, 0, 16, 2));
+  EXPECT_EQ("0x0000000000000000: 6162 6364 6566 6768  |abcdefgh|\n"
+            "0x0000000000000008: 696a 6b6c 6d6e 6f70  |ijklmnop|",
+            format_hex_bytes_with_ascii(b, 16, 0, 8, 2));
+  EXPECT_EQ("0x0000000000000000: 6162 6364 6566 67  |abcdefg|\n"
+            "0x0000000000000007: 6869 6a6b 6c       |hijkl|",
+            format_hex_bytes_with_ascii(b, 12, 0, 7, 2));
+
+  //----------------------------------------------------------------------
+  // Test hex bytes with ASCII with offsets with the default 1 byte groups.
+  //----------------------------------------------------------------------
+  EXPECT_EQ("0x0000000000000000: 61 62 63 64 65 66 67 68 "
+            "69 6a 6b 6c 6d 6e 6f 70  |abcdefghijklmnop|",
+            format_hex_bytes_with_ascii(b, 16, 0, 16, 1));
+  EXPECT_EQ("0x0000000000000000: 61 62 63 64 65 66 67 68  |abcdefgh|\n"
+            "0x0000000000000008: 69 6a 6b 6c 6d 6e 6f 70  |ijklmnop|",
+            format_hex_bytes_with_ascii(b, 16, 0, 8, 1));
+  EXPECT_EQ("0x0000000000000000: 61 62 63 64 65 66 67  |abcdefg|\n"
+            "0x0000000000000007: 68 69 6a 6b 6c        |hijkl|",
+            format_hex_bytes_with_ascii(b, 12, 0, 7, 1));
+}
 }

@@ -1305,29 +1305,25 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
 
     // MAX(~a, ~b) -> ~MIN(a, b)
-    if (SPF == SPF_SMAX || SPF == SPF_UMAX) {
-      if (IsFreeToInvert(LHS, LHS->hasNUses(2)) &&
-          IsFreeToInvert(RHS, RHS->hasNUses(2))) {
+    if ((SPF == SPF_SMAX || SPF == SPF_UMAX) &&
+        IsFreeToInvert(LHS, LHS->hasNUses(2)) &&
+        IsFreeToInvert(RHS, RHS->hasNUses(2))) {
+      // For this transform to be profitable, we need to eliminate at least two
+      // 'not' instructions if we're going to add one 'not' instruction.
+      int NumberOfNots =
+          (LHS->hasNUses(2) && match(LHS, m_Not(m_Value()))) +
+          (RHS->hasNUses(2) && match(RHS, m_Not(m_Value()))) +
+          (SI.hasOneUse() && match(*SI.user_begin(), m_Not(m_Value())));
 
-        // This transform adds a xor operation and that extra cost needs to be
-        // justified.  We look for simplifications that will result from
-        // applying this rule:
-
-        bool Profitable =
-            (LHS->hasNUses(2) && match(LHS, m_Not(m_Value()))) ||
-            (RHS->hasNUses(2) && match(RHS, m_Not(m_Value()))) ||
-            (SI.hasOneUse() && match(*SI.user_begin(), m_Not(m_Value())));
-
-        if (Profitable) {
-          Value *NewLHS = Builder->CreateNot(LHS);
-          Value *NewRHS = Builder->CreateNot(RHS);
-          Value *NewCmp = SPF == SPF_SMAX
-                              ? Builder->CreateICmpSLT(NewLHS, NewRHS)
-                              : Builder->CreateICmpULT(NewLHS, NewRHS);
-          Value *NewSI =
-              Builder->CreateNot(Builder->CreateSelect(NewCmp, NewLHS, NewRHS));
-          return replaceInstUsesWith(SI, NewSI);
-        }
+      if (NumberOfNots >= 2) {
+        Value *NewLHS = Builder->CreateNot(LHS);
+        Value *NewRHS = Builder->CreateNot(RHS);
+        Value *NewCmp = SPF == SPF_SMAX
+                            ? Builder->CreateICmpSLT(NewLHS, NewRHS)
+                            : Builder->CreateICmpULT(NewLHS, NewRHS);
+        Value *NewSI =
+            Builder->CreateNot(Builder->CreateSelect(NewCmp, NewLHS, NewRHS));
+        return replaceInstUsesWith(SI, NewSI);
       }
     }
 

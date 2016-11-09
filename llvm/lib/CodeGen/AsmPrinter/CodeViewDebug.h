@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCStreamer.h"
@@ -37,7 +37,7 @@ struct ClassInfo;
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   MCStreamer &OS;
   llvm::BumpPtrAllocator Allocator;
-  codeview::MemoryTypeTableBuilder TypeTable;
+  codeview::TypeTableBuilder TypeTable;
 
   /// Represents the most general definition range.
   struct LocalVarDefRange {
