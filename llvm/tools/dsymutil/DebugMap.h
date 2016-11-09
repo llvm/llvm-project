@@ -26,10 +26,10 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TimeValue.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
@@ -92,8 +92,9 @@ public:
 
   /// This function adds an DebugMapObject to the list owned by this
   /// debug map.
-  DebugMapObject &addDebugMapObject(StringRef ObjectFilePath,
-                                    sys::TimeValue Timestamp);
+  DebugMapObject &
+  addDebugMapObject(StringRef ObjectFilePath,
+                    sys::TimePoint<std::chrono::seconds> Timestamp);
 
   const Triple &getTriple() const { return BinaryTriple; }
 
@@ -149,7 +150,9 @@ public:
 
   llvm::StringRef getObjectFilename() const { return Filename; }
 
-  sys::TimeValue getTimestamp() const { return Timestamp; }
+  sys::TimePoint<std::chrono::seconds> getTimestamp() const {
+    return Timestamp;
+  }
 
   iterator_range<StringMap<SymbolMapping>::const_iterator> symbols() const {
     return make_range(Symbols.begin(), Symbols.end());
@@ -162,10 +165,11 @@ public:
 private:
   friend class DebugMap;
   /// DebugMapObjects can only be constructed by the owning DebugMap.
-  DebugMapObject(StringRef ObjectFilename, sys::TimeValue Timestamp);
+  DebugMapObject(StringRef ObjectFilename,
+                 sys::TimePoint<std::chrono::seconds> Timestamp);
 
   std::string Filename;
-  sys::TimeValue Timestamp;
+  sys::TimePoint<std::chrono::seconds> Timestamp;
   StringMap<SymbolMapping> Symbols;
   DenseMap<uint64_t, DebugMapEntry *> AddressToMapping;
 

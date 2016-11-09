@@ -1196,48 +1196,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MRI.clearKillFlags(Src3SubLo);
       return true;
     }
-    case Hexagon::Insert4: {
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned Src1Reg = MI.getOperand(1).getReg();
-      unsigned Src2Reg = MI.getOperand(2).getReg();
-      unsigned Src3Reg = MI.getOperand(3).getReg();
-      unsigned Src4Reg = MI.getOperand(4).getReg();
-      unsigned Src1RegIsKill = getKillRegState(MI.getOperand(1).isKill());
-      unsigned Src2RegIsKill = getKillRegState(MI.getOperand(2).isKill());
-      unsigned Src3RegIsKill = getKillRegState(MI.getOperand(3).isKill());
-      unsigned Src4RegIsKill = getKillRegState(MI.getOperand(4).isKill());
-      unsigned DstSubHi = HRI.getSubReg(DstReg, Hexagon::subreg_hireg);
-      unsigned DstSubLo = HRI.getSubReg(DstReg, Hexagon::subreg_loreg);
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(Hexagon::S2_insert),
-              HRI.getSubReg(DstReg, Hexagon::subreg_loreg))
-          .addReg(DstSubLo)
-          .addReg(Src1Reg, Src1RegIsKill)
-          .addImm(16)
-          .addImm(0);
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(Hexagon::S2_insert),
-              HRI.getSubReg(DstReg, Hexagon::subreg_loreg))
-          .addReg(DstSubLo)
-          .addReg(Src2Reg, Src2RegIsKill)
-          .addImm(16)
-          .addImm(16);
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(Hexagon::S2_insert),
-              HRI.getSubReg(DstReg, Hexagon::subreg_hireg))
-          .addReg(DstSubHi)
-          .addReg(Src3Reg, Src3RegIsKill)
-          .addImm(16)
-          .addImm(0);
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(Hexagon::S2_insert),
-              HRI.getSubReg(DstReg, Hexagon::subreg_hireg))
-          .addReg(DstSubHi)
-          .addReg(Src4Reg, Src4RegIsKill)
-          .addImm(16)
-          .addImm(16);
-      MBB.erase(MI);
-      MRI.clearKillFlags(DstReg);
-      MRI.clearKillFlags(DstSubHi);
-      MRI.clearKillFlags(DstSubLo);
-      return true;
-    }
     case Hexagon::PS_pselect: {
       const MachineOperand &Op0 = MI.getOperand(0);
       const MachineOperand &Op1 = MI.getOperand(1);

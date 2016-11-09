@@ -10,19 +10,20 @@
 #ifndef liblldb_ModuleSpec_h_
 #define liblldb_ModuleSpec_h_
 
-// C Includes
-// C++ Includes
-#include <mutex>
-#include <vector>
-
-// Other libraries and framework includes
 // Project includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Target/PathMappingList.h"
+
+// Other libraries and framework includes
+#include "llvm/Support/Chrono.h"
+
+// C Includes
+// C++ Includes
+#include <mutex>
+#include <vector>
 
 namespace lldb_private {
 
@@ -31,19 +32,17 @@ public:
   ModuleSpec()
       : m_file(), m_platform_file(), m_symbol_file(), m_arch(), m_uuid(),
         m_object_name(), m_object_offset(0), m_object_size(0),
-        m_object_mod_time(), m_source_mappings() {}
+        m_source_mappings() {}
 
   ModuleSpec(const FileSpec &file_spec)
       : m_file(file_spec), m_platform_file(), m_symbol_file(), m_arch(),
         m_uuid(), m_object_name(), m_object_offset(0),
-        m_object_size(file_spec.GetByteSize()), m_object_mod_time(),
-        m_source_mappings() {}
+        m_object_size(file_spec.GetByteSize()), m_source_mappings() {}
 
   ModuleSpec(const FileSpec &file_spec, const ArchSpec &arch)
       : m_file(file_spec), m_platform_file(), m_symbol_file(), m_arch(arch),
         m_uuid(), m_object_name(), m_object_offset(0),
-        m_object_size(file_spec.GetByteSize()), m_object_mod_time(),
-        m_source_mappings() {}
+        m_object_size(file_spec.GetByteSize()), m_source_mappings() {}
 
   ModuleSpec(const ModuleSpec &rhs)
       : m_file(rhs.m_file), m_platform_file(rhs.m_platform_file),
@@ -139,9 +138,11 @@ public:
 
   void SetObjectSize(uint64_t object_size) { m_object_size = object_size; }
 
-  TimeValue &GetObjectModificationTime() { return m_object_mod_time; }
+  llvm::sys::TimePoint<> &GetObjectModificationTime() {
+    return m_object_mod_time;
+  }
 
-  const TimeValue &GetObjectModificationTime() const {
+  const llvm::sys::TimePoint<> &GetObjectModificationTime() const {
     return m_object_mod_time;
   }
 
@@ -157,7 +158,7 @@ public:
     m_object_offset = 0;
     m_object_size = 0;
     m_source_mappings.Clear(false);
-    m_object_mod_time.Clear();
+    m_object_mod_time = llvm::sys::TimePoint<>();
   }
 
   explicit operator bool() const {
@@ -175,7 +176,7 @@ public:
       return true;
     if (m_object_size)
       return true;
-    if (m_object_mod_time.IsValid())
+    if (m_object_mod_time != llvm::sys::TimePoint<>())
       return true;
     return false;
   }
@@ -236,11 +237,11 @@ public:
       strm.Printf("object size = %" PRIu64, m_object_size);
       dumped_something = true;
     }
-    if (m_object_mod_time.IsValid()) {
+    if (m_object_mod_time != llvm::sys::TimePoint<>()) {
       if (dumped_something)
         strm.PutCString(", ");
       strm.Printf("object_mod_time = 0x%" PRIx64,
-                  m_object_mod_time.GetAsSecondsSinceJan1_1970());
+                  llvm::sys::toTimeT(m_object_mod_time));
     }
   }
 
@@ -294,7 +295,7 @@ protected:
   ConstString m_object_name;
   uint64_t m_object_offset;
   uint64_t m_object_size;
-  TimeValue m_object_mod_time;
+  llvm::sys::TimePoint<> m_object_mod_time;
   mutable PathMappingList m_source_mappings;
 };
 

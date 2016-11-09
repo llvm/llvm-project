@@ -16,10 +16,10 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TimeValue.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
@@ -34,7 +34,7 @@ namespace vfs {
 class Status {
   std::string Name;
   llvm::sys::fs::UniqueID UID;
-  llvm::sys::TimeValue MTime;
+  llvm::sys::TimePoint<> MTime;
   uint32_t User;
   uint32_t Group;
   uint64_t Size;
@@ -48,7 +48,7 @@ public:
   Status() : Type(llvm::sys::fs::file_type::status_error) {}
   Status(const llvm::sys::fs::file_status &Status);
   Status(StringRef Name, llvm::sys::fs::UniqueID UID,
-         llvm::sys::TimeValue MTime, uint32_t User, uint32_t Group,
+         llvm::sys::TimePoint<> MTime, uint32_t User, uint32_t Group,
          uint64_t Size, llvm::sys::fs::file_type Type,
          llvm::sys::fs::perms Perms);
 
@@ -64,7 +64,7 @@ public:
   /// @{
   llvm::sys::fs::file_type getType() const { return Type; }
   llvm::sys::fs::perms getPermissions() const { return Perms; }
-  llvm::sys::TimeValue getLastModificationTime() const { return MTime; }
+  llvm::sys::TimePoint<> getLastModificationTime() const { return MTime; }
   llvm::sys::fs::UniqueID getUniqueID() const { return UID; }
   uint32_t getUser() const { return User; }
   uint32_t getGroup() const { return Group; }

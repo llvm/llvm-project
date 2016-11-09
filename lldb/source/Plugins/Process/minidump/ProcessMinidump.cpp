@@ -63,11 +63,7 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   lldb::DataBufferSP all_data_sp(crash_file->MemoryMapFileContents());
   auto minidump_parser = MinidumpParser::Create(all_data_sp);
   // check if the parser object is valid
-  // skip if the Minidump file is Windows generated, because we are still
-  // work-in-progress
-  if (!minidump_parser ||
-      minidump_parser->GetArchitecture().GetTriple().getOS() ==
-          llvm::Triple::OSType::Win32)
+  if (!minidump_parser)
     return nullptr;
 
   return std::make_shared<ProcessMinidump>(target_sp, listener_sp, *crash_file,

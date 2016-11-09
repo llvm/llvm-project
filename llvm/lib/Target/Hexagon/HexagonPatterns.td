@@ -2209,7 +2209,8 @@ def: Pat<(or (or (or (shl (i64 (zext (and I32:$b, (i32 65535)))), (i32 16)),
                      (i64 (zext (i32 (and I32:$a, (i32 65535)))))),
                  (shl (i64 (anyext (and I32:$c, (i32 65535)))), (i32 32))),
              (shl (Aext64 I32:$d), (i32 48))),
-         (Insert4 IntRegs:$a, IntRegs:$b, IntRegs:$c, IntRegs:$d)>;
+         (A2_combinew (A2_combine_ll I32:$d, I32:$c),
+                      (A2_combine_ll I32:$b, I32:$a))>;
 
 // We need custom lowering of ISD::PREFETCH into HexagonISD::DCFETCH
 // because the SDNode ISD::PREFETCH has properties MayLoad and MayStore.

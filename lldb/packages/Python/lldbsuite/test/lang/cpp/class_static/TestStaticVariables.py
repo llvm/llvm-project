@@ -44,7 +44,7 @@ class StaticVariableTestCase(TestBase):
         self.expect(
             'target variable A::g_points',
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=['\(PointType \[[1-9]*\]\) A::g_points = {.*}'])
+            patterns=['\(PointType \[[1-9]*\]\) A::g_points = {'])
         self.expect('target variable g_points', VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['(PointType [2]) g_points'])
 

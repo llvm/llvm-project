@@ -504,7 +504,7 @@ def : InstRW<[FXU, LSU, FXU, Lat6, GroupAlone], (instregex "CS(G|Y)?$")>;
 def : InstRW<[LSU], (instregex "(EAR|SAR|CPYA)$")>;
 
 // Load address extended
-def : InstRW<[LSU, FXU], (instregex "LAE(Y)?$")>;
+def : InstRW<[LSU, FXU, Lat5, GroupAlone], (instregex "LAE(Y)?$")>;
 
 // Load/store access multiple (not modeled precisely)
 def : InstRW<[LSU, Lat30, GroupAlone], (instregex "(L|ST)AM(Y)?$")>;
@@ -523,14 +523,14 @@ def : InstRW<[LSU, EndGroup], (instregex "SPM$")>;
 def : InstRW<[FXU, FXU, LSU, Lat8, GroupAlone], (instregex "BAL(R)?$")>;
 
 // Test addressing mode
-def : InstRW<[FXU, EndGroup], (instregex "TAM$")>;
+def : InstRW<[FXU], (instregex "TAM$")>;
 
 // Set addressing mode
 def : InstRW<[LSU, EndGroup], (instregex "SAM(24|31|64)$")>;
 
 // Branch (and save) and set mode.
-def : InstRW<[FXU, LSU, Lat4, GroupAlone], (instregex "BSM$")>;
-def : InstRW<[FXU, FXU, LSU, Lat5, GroupAlone], (instregex "BASSM$")>;
+def : InstRW<[FXU, LSU, Lat5, GroupAlone], (instregex "BSM$")>;
+def : InstRW<[FXU, FXU, LSU, Lat6, GroupAlone], (instregex "BASSM$")>;
 
 //===----------------------------------------------------------------------===//
 // Miscellaneous Instructions.

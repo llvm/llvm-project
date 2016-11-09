@@ -102,7 +102,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       // A cached stat value would be fine as well.
       if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
         ModuleEntry->InputFilesValidationTimestamp =
-            Status.getLastModificationTime().toEpochTime();
+            llvm::sys::toTimeT(Status.getLastModificationTime());
     }
 
     // Load the contents of the module
