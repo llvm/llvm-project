@@ -11,10 +11,10 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/FieldListRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/Error.h"
@@ -54,7 +54,8 @@ namespace {
 ///   existing destination type index.
 class TypeStreamMerger : public TypeVisitorCallbacks {
 public:
-  TypeStreamMerger(TypeTableBuilder &DestStream) : DestStream(DestStream) {
+  TypeStreamMerger(TypeTableBuilder &DestStream)
+      : DestStream(DestStream), FieldListBuilder(DestStream) {
     assert(!hadError());
   }
 
@@ -94,7 +95,7 @@ private:
   template <typename RecordType>
   Error visitKnownMemberRecordImpl(RecordType &Record) {
     FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);
-    FieldBuilder.writeMemberType(Record);
+    FieldListBuilder.writeMemberType(Record);
     return Error::success();
   }
 
@@ -102,9 +103,10 @@ private:
 
   bool FoundBadTypeIndex = false;
 
-  FieldListRecordBuilder FieldBuilder;
+  BumpPtrAllocator Allocator;
 
   TypeTableBuilder &DestStream;
+  FieldListRecordBuilder FieldListBuilder;
 
   bool IsInFieldList{false};
   size_t BeginIndexMapSize = 0;
@@ -120,6 +122,7 @@ Error TypeStreamMerger::visitTypeBegin(CVRecord<TypeLeafKind> &Rec) {
   if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
     assert(!IsInFieldList);
     IsInFieldList = true;
+    FieldListBuilder.begin();
   } else
     BeginIndexMapSize = IndexMap.size();
   return Error::success();
@@ -127,8 +130,8 @@ Error TypeStreamMerger::visitTypeBegin(CVRecord<TypeLeafKind> &Rec) {
 
 Error TypeStreamMerger::visitTypeEnd(CVRecord<TypeLeafKind> &Rec) {
   if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
-    IndexMap.push_back(DestStream.writeFieldList(FieldBuilder));
-    FieldBuilder.reset();
+    TypeIndex Index = FieldListBuilder.end();
+    IndexMap.push_back(Index);
     IsInFieldList = false;
   }
   return Error::success();

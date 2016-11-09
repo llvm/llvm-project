@@ -44,11 +44,13 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-static void reportSelectionError(const MachineInstr &MI, const Twine &Message) {
-  const MachineFunction &MF = *MI.getParent()->getParent();
+static void reportSelectionError(const MachineInstr *MI, const Twine &Message) {
+  const MachineFunction &MF = *MI->getParent()->getParent();
   std::string ErrStorage;
   raw_string_ostream Err(ErrStorage);
-  Err << Message << ":\nIn function: " << MF.getName() << '\n' << MI << '\n';
+  Err << Message << ":\nIn function: " << MF.getName() << '\n';
+  if (MI)
+    Err << *MI << '\n';
   report_fatal_error(Err.str());
 }
 
@@ -67,6 +69,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // FIXME: freezeReservedRegs is now done in IRTranslator, but there are many
   // other MF/MFI fields we need to initialize.
 
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
 #ifndef NDEBUG
   // Check that our input is fully legal: we require the function to have the
   // Legalized property, so it should be.
@@ -75,12 +79,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // The RegBankSelected property is already checked in the verifier. Note
   // that it has the same layering problem, but we only use inline methods so
   // end up not needing to link against the GlobalISel library.
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
   if (const LegalizerInfo *MLI = MF.getSubtarget().getLegalizerInfo())
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
-          reportSelectionError(MI, "Instruction is not legal");
+          reportSelectionError(&MI, "Instruction is not legal");
 
 #endif
   // FIXME: We could introduce new blocks and will need to fix the outer loop.
@@ -89,37 +92,83 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   bool Failed = false;
   for (MachineBasicBlock *MBB : post_order(&MF)) {
-    for (MachineBasicBlock::reverse_iterator MII = MBB->rbegin(),
-                                             End = MBB->rend();
-         MII != End;) {
-      MachineInstr &MI = *MII++;
-      DEBUG(dbgs() << "Selecting: " << MI << '\n');
+    if (MBB->empty())
+      continue;
+
+    // Select instructions in reverse block order. We permit erasing so have
+    // to resort to manually iterating and recognizing the begin (rend) case.
+    bool ReachedBegin = false;
+    for (auto MII = std::prev(MBB->end()), Begin = MBB->begin();
+         !ReachedBegin;) {
+#ifndef NDEBUG
+      // Keep track of the insertion range for debug printing.
+      const auto AfterIt = std::next(MII);
+#endif
+      // Select this instruction.
+      MachineInstr &MI = *MII;
+
+      // And have our iterator point to the next instruction, if there is one.
+      if (MII == Begin)
+        ReachedBegin = true;
+      else
+        --MII;
+
+      DEBUG(dbgs() << "Selecting: \n  " << MI);
+
       if (!ISel->select(MI)) {
         if (TPC.isGlobalISelAbortEnabled())
           // FIXME: It would be nice to dump all inserted instructions.  It's
           // not
           // obvious how, esp. considering select() can insert after MI.
-          reportSelectionError(MI, "Cannot select");
+          reportSelectionError(&MI, "Cannot select");
         Failed = true;
         break;
       }
+
+      // Dump the range of instructions that MI expanded into.
+      DEBUG({
+        auto InsertedBegin = ReachedBegin ? MBB->begin() : std::next(MII);
+        dbgs() << "Into:\n";
+        for (auto &InsertedMI : make_range(InsertedBegin, AfterIt))
+          dbgs() << "  " << InsertedMI;
+        dbgs() << '\n';
+      });
     }
   }
+
+  // Now that selection is complete, there are no more generic vregs.  Verify
+  // that the size of the now-constrained vreg is unchanged and that it has a
+  // register class.
+  for (auto &VRegToType : MRI.getVRegToType()) {
+    unsigned VReg = VRegToType.first;
+    auto *RC = MRI.getRegClassOrNull(VReg);
+    auto *MI = MRI.def_instr_begin(VReg) == MRI.def_instr_end()
+                   ? nullptr
+                   : &*MRI.def_instr_begin(VReg);
+    if (!RC) {
+      if (TPC.isGlobalISelAbortEnabled())
+        reportSelectionError(MI, "VReg as no regclass after selection");
+      Failed = true;
+      break;
+    }
+
+    if (VRegToType.second.isValid() &&
+        VRegToType.second.getSizeInBits() > (RC->getSize() * 8)) {
+      if (TPC.isGlobalISelAbortEnabled())
+        reportSelectionError(
+            MI, "VReg has explicit size different from class size");
+      Failed = true;
+      break;
+    }
+  }
+
+  MRI.getVRegToType().clear();
 
   if (!TPC.isGlobalISelAbortEnabled() && (Failed || MF.size() == NumBlocks)) {
     MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
     return false;
   }
   assert(MF.size() == NumBlocks && "Inserting blocks is not supported yet");
-
-  // Now that selection is complete, there are no more generic vregs.
-  // FIXME: We're still discussing what to do with the vreg->size map:
-  // it's somewhat redundant (with the def MIs type size), but having to
-  // examine MIs is also awkward.  Another alternative is to track the type on
-  // the vreg instead, but that's not ideal either, because it's saying that
-  // vregs have types, which they really don't. But then again, LLT is just
-  // a size and a "shape": it's probably the same information as regbank info.
-  MF.getRegInfo().clearVirtRegTypes();
 
   // FIXME: Should we accurately track changes?
   return true;

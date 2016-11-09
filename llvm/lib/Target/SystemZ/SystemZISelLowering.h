@@ -83,10 +83,6 @@ enum NodeType : unsigned {
   // base of the dynamically-allocatable area.
   ADJDYNALLOC,
 
-  // Extracts the value of a 32-bit access register.  Operand 0 is
-  // the number of the register.
-  EXTRACT_ACCESS,
-
   // Count number of bits set in operand 0 per byte.
   POPCNT,
 

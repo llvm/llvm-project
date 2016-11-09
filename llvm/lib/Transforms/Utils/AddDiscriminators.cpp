@@ -188,12 +188,13 @@ static bool addDiscriminators(Function &F) {
         continue;
       // If we could insert more than one block with the same line+file, a
       // discriminator is needed to distinguish both instructions.
-      unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
+      // Only the lowest 7 bits are used to represent a discriminator to fit
+      // it in 1 byte ULEB128 representation.
+      unsigned Discriminator = (R.second ? ++LDM[L] : LDM[L]) & 0x7f;
       I.setDebugLoc(DIL->cloneWithDiscriminator(Discriminator));
       DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                   << DIL->getColumn() << ":"
-                   << Discriminator << " "
-                   << I << "\n");
+                   << DIL->getColumn() << ":" << Discriminator << " " << I
+                   << "\n");
       Changed = true;
     }
   }
@@ -215,7 +216,8 @@ static bool addDiscriminators(Function &F) {
       Location L =
           std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
       if (!CallLocations.insert(L).second) {
-        Current->setDebugLoc(CurrentDIL->cloneWithDiscriminator(++LDM[L]));
+        Current->setDebugLoc(
+            CurrentDIL->cloneWithDiscriminator((++LDM[L]) & 0x7f));
         Changed = true;
       }
     }

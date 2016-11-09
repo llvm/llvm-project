@@ -352,6 +352,61 @@ raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
   return *this;
 }
 
+raw_ostream &raw_ostream::operator<<(const FormattedHexBytes &FB) {
+  size_t LineIndex = 0;
+  const size_t Size = FB.Bytes.size();
+  HexPrintStyle OffsetStyle =
+      FB.Upper ? HexPrintStyle::PrefixUpper : HexPrintStyle::PrefixLower;
+  HexPrintStyle ByteStyle =
+      FB.Upper ? HexPrintStyle::Upper : HexPrintStyle::Lower;
+  while (LineIndex < Size) {
+    if (FB.FirstByteOffset.hasValue()) {
+      uint64_t Offset = FB.FirstByteOffset.getValue();
+      llvm::write_hex(*this, Offset + LineIndex, OffsetStyle,
+                      sizeof(Offset) * 2 + 2);
+      *this << ": ";
+    }
+    // Print the hex bytes for this line
+    uint32_t I = 0;
+    for (I = 0; I < FB.NumPerLine; ++I) {
+      size_t Index = LineIndex + I;
+      if (Index >= Size)
+        break;
+      if (I && (I % FB.ByteGroupSize) == 0)
+        *this << " ";
+      llvm::write_hex(*this, FB.Bytes[Index], ByteStyle, 2);
+    }
+    uint32_t BytesDisplayed = I;
+    if (FB.ASCII) {
+      // Print any spaces needed for any bytes that we didn't print on this
+      // line so that the ASCII bytes are correctly aligned.
+      for (; I < FB.NumPerLine; ++I) {
+        if (I && (I % FB.ByteGroupSize) == 0)
+          indent(3);
+        else
+          indent(2);
+      }
+      *this << "  |";
+      // Print the ASCII char values for each byte on this line
+      for (I = 0; I < FB.NumPerLine; ++I) {
+        size_t Index = LineIndex + I;
+        if (Index >= Size)
+          break;
+        char ch = (char)FB.Bytes[Index];
+        if (isprint(ch))
+          *this << ch;
+        else
+          *this << '.';
+      }
+      *this << '|';
+    }
+    LineIndex += BytesDisplayed;
+    if (LineIndex < Size)
+      *this << '\n';
+  }
+  return *this;
+}
+
 /// indent - Insert 'NumSpaces' spaces.
 raw_ostream &raw_ostream::indent(unsigned NumSpaces) {
   static const char Spaces[] = "                                "

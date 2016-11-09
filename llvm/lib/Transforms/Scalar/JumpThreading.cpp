@@ -1963,61 +1963,100 @@ bool JumpThreadingPass::TryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
   return false;
 }
 
-/// TryToUnfoldSelectInCurrBB - Look for PHI/Select in the same BB of the form
+/// GetSelectFedByPhi - Look for PHI/Select in the same BB of the form
 /// bb:
 ///   %p = phi [false, %bb1], [true, %bb2], [false, %bb3], [true, %bb4], ...
 ///   %s = select p, trueval, falseval
 ///
-/// And expand the select into a branch structure. This later enables
+/// And return the select. Unfolding it into a branch structure later enables
 /// jump-threading over bb in this pass.
 ///
-/// Using the similar approach of SimplifyCFG::FoldCondBranchOnPHI(), unfold
-/// select if the associated PHI has at least one constant.  If the unfolded
-/// select is not jump-threaded, it will be folded again in the later
-/// optimizations.
+/// Using the similar approach of SimplifyCFG::FoldCondBranchOnPHI(), return
+/// select if the associated PHI has at least one constant.
+SelectInst *JumpThreadingPass::getSelectFedByPhi(PHINode *PN) {
+
+  unsigned NumPHIValues = PN->getNumIncomingValues();
+  if (NumPHIValues == 0 || !PN->hasOneUse())
+    return nullptr;
+
+  SelectInst *SI = dyn_cast<SelectInst>(PN->user_back());
+  BasicBlock *BB = PN->getParent();
+  if (!SI || SI->getParent() != BB)
+    return nullptr;
+
+  Value *Cond = SI->getCondition();
+  if (!Cond || Cond != PN || !Cond->getType()->isIntegerTy(1))
+    return nullptr;
+
+  for (unsigned i = 0; i != NumPHIValues; ++i) {
+    if (PN->getIncomingBlock(i) == BB)
+      return nullptr;
+    if (isa<ConstantInt>(PN->getIncomingValue(i)))
+      return SI;
+  }
+
+  return nullptr;
+}
+
+/// ExpandSelect - Expand a select into an if-then-else construct.
+void JumpThreadingPass::expandSelect(SelectInst *SI) {
+
+  BasicBlock *BB = SI->getParent();
+  TerminatorInst *Term =
+      SplitBlockAndInsertIfThen(SI->getCondition(), SI, false);
+  PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI);
+  NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
+  NewPN->addIncoming(SI->getFalseValue(), BB);
+  SI->replaceAllUsesWith(NewPN);
+  SI->eraseFromParent();
+}
+
+/// TryToUnfoldSelectInCurrBB - Unfold selects that could be jump-threaded were
+/// they if-then-elses. If the unfolded selects are not jump-threaded, it will
+/// be folded again in the later optimizations.
 bool JumpThreadingPass::TryToUnfoldSelectInCurrBB(BasicBlock *BB) {
+
   // If threading this would thread across a loop header, don't thread the edge.
   // See the comments above FindLoopHeaders for justifications and caveats.
   if (LoopHeaders.count(BB))
     return false;
 
-  // Look for a Phi/Select pair in the same basic block.  The Phi feeds the
-  // condition of the Select and at least one of the incoming values is a
-  // constant.
-  for (BasicBlock::iterator BI = BB->begin();
-       PHINode *PN = dyn_cast<PHINode>(BI); ++BI) {
-    unsigned NumPHIValues = PN->getNumIncomingValues();
-    if (NumPHIValues == 0 || !PN->hasOneUse())
-      continue;
+  bool Changed = false;
+  for (auto &I : *BB) {
 
-    SelectInst *SI = dyn_cast<SelectInst>(PN->user_back());
-    if (!SI || SI->getParent() != BB)
+    // Look for a Phi/Select pair in the same basic block.  The Phi feeds the
+    // condition of the Select and at least one of the incoming values is a
+    // constant.
+    PHINode *PN;
+    SelectInst *SI;
+    if ((PN = dyn_cast<PHINode>(&I)) && (SI = getSelectFedByPhi(PN))) {
+      expandSelect(SI);
+      Changed = true;
       continue;
-
-    Value *Cond = SI->getCondition();
-    if (!Cond || Cond != PN || !Cond->getType()->isIntegerTy(1))
-      continue;
-
-    bool HasConst = false;
-    for (unsigned i = 0; i != NumPHIValues; ++i) {
-      if (PN->getIncomingBlock(i) == BB)
-        return false;
-      if (isa<ConstantInt>(PN->getIncomingValue(i)))
-        HasConst = true;
     }
 
-    if (HasConst) {
-      // Expand the select.
-      TerminatorInst *Term =
-          SplitBlockAndInsertIfThen(SI->getCondition(), SI, false);
-      PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI);
-      NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
-      NewPN->addIncoming(SI->getFalseValue(), BB);
-      SI->replaceAllUsesWith(NewPN);
-      SI->eraseFromParent();
-      return true;
+    if (I.getType()->isIntegerTy(1)) {
+
+      SmallVector<SelectInst *, 4> Selects;
+
+      // Look for scalar booleans used in selects as conditions. If there are
+      // several selects that use the same boolean, they are candidates for jump
+      // threading and therefore we should unfold them.
+      for (Value *U : I.users())
+        if (auto *SI = dyn_cast<SelectInst>(U))
+          Selects.push_back(SI);
+      if (Selects.size() <= 1)
+        continue;
+
+      // Remove duplicates
+      std::sort(Selects.begin(), Selects.end());
+      auto NewEnd = std::unique(Selects.begin(), Selects.end());
+
+      Changed = true;
+      for (auto SI = Selects.begin(); SI != NewEnd; ++SI)
+        expandSelect(*SI);
     }
   }
-  
-  return false;
+
+  return Changed;
 }

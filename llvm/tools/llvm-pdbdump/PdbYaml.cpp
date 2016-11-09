@@ -18,7 +18,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
-#include "llvm/DebugInfo/CodeView/TypeSerializationVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -244,8 +244,7 @@ void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
             pdb::yaml::SerializationContext &Context) {
   codeview::TypeVisitorCallbackPipeline Pipeline;
   codeview::TypeDeserializer Deserializer;
-  codeview::TypeSerializationVisitor Serializer(Context.FieldListBuilder,
-                                                Context.TypeTableBuilder);
+  codeview::TypeSerializer Serializer(Context.Allocator);
   pdb::TpiHashUpdater Hasher;
 
   if (IO.outputting()) {
@@ -255,6 +254,11 @@ void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
   } else {
     // For Yaml to PDB, extract from the high level record type, then write it
     // to bytes.
+
+    // This might be interpreted as a hack, but serializing FieldList
+    // sub-records requires having access to the same serializer being used by
+    // the FieldList itself.
+    Context.ActiveSerializer = &Serializer;
     Pipeline.addCallbackToPipeline(Context.Dumper);
     Pipeline.addCallbackToPipeline(Serializer);
     Pipeline.addCallbackToPipeline(Hasher);
@@ -262,4 +266,5 @@ void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
 
   codeview::CVTypeVisitor Visitor(Pipeline);
   consumeError(Visitor.visitTypeRecord(Obj.Record));
+  Context.ActiveSerializer = nullptr;
 }

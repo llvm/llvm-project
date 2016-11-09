@@ -273,6 +273,7 @@ For API clients and LLVM developers.
    MIRLangRef
    Coroutines
    GlobalISel
+   XRay
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -393,6 +394,9 @@ For API clients and LLVM developers.
 
 :doc:`GlobalISel`
   This describes the prototype instruction selection replacement, GlobalISel.
+
+:doc:`XRay`
+  High-level documentation of how to use XRay in LLVM.
 
 Development Process Documentation
 =================================

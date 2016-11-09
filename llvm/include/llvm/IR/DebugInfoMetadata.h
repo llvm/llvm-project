@@ -1953,10 +1953,10 @@ public:
   /// TODO: Store arguments directly and change \a DIExpression to store a
   /// range of these.
   class ExprOperand {
-    const uint64_t *Op;
+    const uint64_t *Op = nullptr;
 
   public:
-    ExprOperand() : Op(nullptr) {};
+    ExprOperand() = default;
     explicit ExprOperand(const uint64_t *Op) : Op(Op) {}
 
     const uint64_t *get() const { return Op; }

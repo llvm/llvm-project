@@ -524,8 +524,6 @@ public:
   StringTableSection(StringRef Name, bool Dynamic);
   unsigned addString(StringRef S, bool HashIt = true);
   void writeTo(uint8_t *Buf) override;
-  unsigned getSize() const { return Size; }
-  void finalize() override { this->Header.sh_size = getSize(); }
   bool isDynamic() const { return Dynamic; }
   typename Base::Kind getKind() const override { return Base::StrTable; }
   static bool classof(const Base *B) { return B->getKind() == Base::StrTable; }
@@ -534,7 +532,6 @@ private:
   const bool Dynamic;
   llvm::DenseMap<StringRef, unsigned> StringMap;
   std::vector<StringRef> Strings;
-  unsigned Size = 1; // ELF string tables start with a NUL byte, so 1.
 };
 
 template <class ELFT>

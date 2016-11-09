@@ -3327,11 +3327,16 @@ void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
 void ModuleBitcodeWriter::writeModuleLevelReferences(
     const GlobalVariable &V, SmallVector<uint64_t, 64> &NameVals,
     unsigned FSModRefsAbbrev) {
-  // Only interested in recording variable defs in the summary.
-  if (V.isDeclaration())
+  auto Summaries =
+      Index->findGlobalValueSummaryList(GlobalValue::getGUID(V.getName()));
+  if (Summaries == Index->end()) {
+    // Only declarations should not have a summary (a declaration might however
+    // have a summary if the def was in module level asm).
+    assert(V.isDeclaration());
     return;
+  }
+  auto *Summary = Summaries->second.front().get();
   NameVals.push_back(VE.getValueID(&V));
-  auto *Summary = Index->getGlobalValueSummary(V);
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
   NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
 
@@ -3409,14 +3414,20 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
   // Iterate over the list of functions instead of the Index to
   // ensure the ordering is stable.
   for (const Function &F : M) {
-    if (F.isDeclaration())
-      continue;
     // Summary emission does not support anonymous functions, they have to
     // renamed using the anonymous function renaming pass.
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    auto *Summary = Index->getGlobalValueSummary(F);
+    auto Summaries =
+        Index->findGlobalValueSummaryList(GlobalValue::getGUID(F.getName()));
+    if (Summaries == Index->end()) {
+      // Only declarations should not have a summary (a declaration might
+      // however have a summary if the def was in module level asm).
+      assert(F.isDeclaration());
+      continue;
+    }
+    auto *Summary = Summaries->second.front().get();
     writePerModuleFunctionSummaryRecord(NameVals, Summary, VE.getValueID(&F),
                                         FSCallsAbbrev, FSCallsProfileAbbrev, F);
   }

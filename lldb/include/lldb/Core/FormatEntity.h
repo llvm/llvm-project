@@ -62,6 +62,7 @@ public:
       File,
       Lang,
       FrameIndex,
+      FrameNoDebug,
       FrameRegisterPC,
       FrameRegisterSP,
       FrameRegisterFP,

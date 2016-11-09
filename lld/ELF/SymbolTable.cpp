@@ -234,7 +234,7 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
 // Construct a string in the form of "Sym in File1 and File2".
 // Used to construct an error message.
 static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
-  return maybeDemangle(Existing->getName()) + " in " +
+  return "'" + maybeDemangle(Existing->getName()) + "' in " +
          getFilename(Existing->File) + " and " + getFilename(NewFile);
 }
 
@@ -257,7 +257,7 @@ SymbolTable<ELFT>::insert(StringRef &Name, uint8_t Type, uint8_t Visibility,
     S->IsUsedInRegularObj = true;
   if (!WasInserted && S->body()->Type != SymbolBody::UnknownType &&
       ((Type == STT_TLS) != S->body()->isTls()))
-    error("TLS attribute mismatch for symbol: " + conflictMsg(S->body(), File));
+    error("TLS attribute mismatch for symbol " + conflictMsg(S->body(), File));
 
   return {S, WasInserted};
 }
@@ -365,14 +365,33 @@ Symbol *SymbolTable<ELFT>::addCommon(StringRef N, uint64_t Size,
   return S;
 }
 
-template <class ELFT>
-void SymbolTable<ELFT>::reportDuplicate(SymbolBody *Existing,
-                                        InputFile *NewFile) {
-  std::string Msg = "duplicate symbol: " + conflictMsg(Existing, NewFile);
+static void print(const Twine &Msg) {
   if (Config->AllowMultipleDefinition)
     warn(Msg);
   else
     error(Msg);
+}
+
+static void reportDuplicate(SymbolBody *Existing, InputFile *NewFile) {
+  print("duplicate symbol " + conflictMsg(Existing, NewFile));
+}
+
+template <class ELFT>
+static void reportDuplicate(SymbolBody *Existing,
+                            InputSectionBase<ELFT> *ErrSec,
+                            typename ELFT::uint ErrOffset) {
+  DefinedRegular<ELFT> *D = dyn_cast<DefinedRegular<ELFT>>(Existing);
+  if (!D || !D->Section || !ErrSec) {
+    reportDuplicate(Existing, ErrSec ? ErrSec->getFile() : nullptr);
+    return;
+  }
+
+  std::string OldLoc = getLocation(*D->Section, D->Value);
+  std::string NewLoc = getLocation(*ErrSec, ErrOffset);
+
+  print(NewLoc + ": duplicate symbol '" + maybeDemangle(Existing->getName()) +
+        "'");
+  print(OldLoc + ": previous definition was here");
 }
 
 template <typename ELFT>
@@ -397,7 +416,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
     replaceBody<DefinedRegular<ELFT>>(S, Name, StOther, Type, Value, Size,
                                       Section);
   else if (Cmp == 0)
-    reportDuplicate(S->body(), Section->getFile());
+    reportDuplicate(S->body(), Section, Value);
   return S;
 }
 

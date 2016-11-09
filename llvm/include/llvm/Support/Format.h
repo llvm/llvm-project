@@ -23,6 +23,7 @@
 #ifndef LLVM_SUPPORT_FORMAT_H
 #define LLVM_SUPPORT_FORMAT_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
@@ -200,6 +201,39 @@ inline FormattedNumber format_hex_no_prefix(uint64_t N, unsigned Width,
 ///   OS << format_decimal(12345, 3) => "12345"
 inline FormattedNumber format_decimal(int64_t N, unsigned Width) {
   return FormattedNumber(0, N, Width, false, false, false);
+}
+
+class FormattedHexBytes {
+  llvm::ArrayRef<uint8_t> Bytes;
+  // Display offsets for each line if FirstByteOffset has a value.
+  llvm::Optional<uint64_t> FirstByteOffset;
+  uint32_t NumPerLine;   // Number of bytes to show per line.
+  uint8_t ByteGroupSize; // How many hex bytes are grouped without spaces
+  bool Upper;            // Show offset and hex bytes as upper case.
+  bool ASCII;            // Show the ASCII bytes for the hex bytes to the right.
+  friend class raw_ostream;
+
+public:
+  FormattedHexBytes(llvm::ArrayRef<uint8_t> B, llvm::Optional<uint64_t> O,
+                    uint32_t NPL, uint8_t BGS, bool U, bool A)
+      : Bytes(B), FirstByteOffset(O), NumPerLine(NPL), ByteGroupSize(BGS),
+        Upper(U), ASCII(A) {}
+};
+
+inline FormattedHexBytes format_hex_bytes(
+    llvm::ArrayRef<uint8_t> Bytes,
+    llvm::Optional<uint64_t> FirstByteOffset = llvm::Optional<uint64_t>(),
+    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
+  return FormattedHexBytes(Bytes, FirstByteOffset, NumPerLine, ByteGroupSize,
+                           false /*Upper*/, false /*ASCII*/);
+}
+
+inline FormattedHexBytes format_hex_bytes_with_ascii(
+    llvm::ArrayRef<uint8_t> Bytes,
+    llvm::Optional<uint64_t> FirstByteOffset = llvm::Optional<uint64_t>(),
+    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
+  return FormattedHexBytes(Bytes, FirstByteOffset, NumPerLine, ByteGroupSize,
+                           false /*Upper*/, true /*ASCII*/);
 }
 
 } // end namespace llvm

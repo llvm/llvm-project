@@ -117,10 +117,6 @@ bool BytesDataCommand::classof(const BaseCommand *C) {
   return C->Kind == BytesDataKind;
 }
 
-template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
-  return !S || !S->Live;
-}
-
 template <class ELFT> LinkerScript<ELFT>::LinkerScript() = default;
 template <class ELFT> LinkerScript<ELFT>::~LinkerScript() = default;
 
@@ -195,7 +191,7 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
     size_t SizeBefore = I->Sections.size();
 
     for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections) {
-      if (isDiscarded(S) || S->OutSec)
+      if (!S->Live || S->OutSec)
         continue;
 
       StringRef Filename;
@@ -368,7 +364,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
 
   // Add orphan sections.
   for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
-    if (!isDiscarded(S) && !S->OutSec)
+    if (S->Live && !S->OutSec)
       addSection(Factory, S, getOutputSectionName(S->Name));
 }
 

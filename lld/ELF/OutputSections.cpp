@@ -1328,7 +1328,10 @@ template <class ELFT>
 StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
     : OutputSectionBase<ELFT>(Name, SHT_STRTAB,
                               Dynamic ? (uintX_t)SHF_ALLOC : 0),
-      Dynamic(Dynamic) {}
+      Dynamic(Dynamic) {
+  // ELF string tables start with a NUL byte, so 1.
+  this->setSize(1);
+}
 
 // Adds a string to the string table. If HashIt is true we hash and check for
 // duplicates. It is optional because the name of global symbols are already
@@ -1337,12 +1340,12 @@ StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
 template <class ELFT>
 unsigned StringTableSection<ELFT>::addString(StringRef S, bool HashIt) {
   if (HashIt) {
-    auto R = StringMap.insert(std::make_pair(S, Size));
+    auto R = StringMap.insert(std::make_pair(S, this->getSize()));
     if (!R.second)
       return R.first->second;
   }
-  unsigned Ret = Size;
-  Size += S.size() + 1;
+  unsigned Ret = this->getSize();
+  this->setSize(this->getSize() + S.size() + 1);
   Strings.push_back(S);
   return Ret;
 }

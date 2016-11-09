@@ -36,17 +36,42 @@ define <2 x i64> @footz(<2 x i64> %a) nounwind {
 define <2 x i64> @foolz(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: foolz:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd %xmm0, %rax
-; CHECK-NEXT:    bsrq %rax, %rax
-; CHECK-NEXT:    xorq $63, %rax
-; CHECK-NEXT:    movd %rax, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; CHECK-NEXT:    movd %xmm0, %rax
-; CHECK-NEXT:    bsrq %rax, %rax
-; CHECK-NEXT:    xorq $63, %rax
-; CHECK-NEXT:    movd %rax, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlq $1, %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrlq $2, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlq $4, %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrlq $8, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlq $16, %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrlq $32, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrlq $1, %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    psubq %xmm0, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    psrlq $2, %xmm1
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    paddq %xmm2, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    psrlq $4, %xmm2
+; CHECK-NEXT:    paddq %xmm1, %xmm2
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm2
+; CHECK-NEXT:    pxor %xmm0, %xmm0
+; CHECK-NEXT:    psadbw %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %c = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
   ret <2 x i64> %c
@@ -115,21 +140,43 @@ define <2 x i32> @promlz(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: promlz:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    movd %xmm0, %rax
-; CHECK-NEXT:    bsrq %rax, %rax
-; CHECK-NEXT:    movl $127, %ecx
-; CHECK-NEXT:    cmoveq %rcx, %rax
-; CHECK-NEXT:    xorq $63, %rax
-; CHECK-NEXT:    movd %rax, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; CHECK-NEXT:    movd %xmm0, %rax
-; CHECK-NEXT:    bsrq %rax, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
-; CHECK-NEXT:    xorq $63, %rax
-; CHECK-NEXT:    movd %rax, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; CHECK-NEXT:    psubq {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    psrlq $1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    psrlq $2, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    psrlq $4, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    psrlq $8, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    psrlq $16, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    psrlq $32, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NEXT:    pxor %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    psrlq $1, %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    psubq %xmm0, %xmm2
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    pand %xmm0, %xmm3
+; CHECK-NEXT:    psrlq $2, %xmm2
+; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    paddq %xmm3, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    psrlq $4, %xmm0
+; CHECK-NEXT:    paddq %xmm2, %xmm0
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    psadbw %xmm1, %xmm0
+; CHECK-NEXT:    psubq {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false)
   ret <2 x i32> %c

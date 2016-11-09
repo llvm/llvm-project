@@ -48,11 +48,10 @@ template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
 }
 
 // Find all common symbols and allocate space for them.
-template <class ELFT>
-CommonSection<ELFT>::CommonSection()
-    : InputSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1,
-                         ArrayRef<uint8_t>(), "COMMON") {
-  this->Live = true;
+template <class ELFT> InputSection<ELFT> *elf::createCommonSection() {
+  auto *Ret = make<InputSection<ELFT>>(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1,
+                                       ArrayRef<uint8_t>(), "COMMON");
+  Ret->Live = true;
 
   // Sort the common symbols by alignment as an heuristic to pack them better.
   std::vector<DefinedCommon *> Syms = getCommonSymbols<ELFT>();
@@ -72,8 +71,9 @@ CommonSection<ELFT>::CommonSection()
     Sym->Offset = Size;
     Size += Sym->Size;
   }
-  this->Alignment = Alignment;
-  this->Data = makeArrayRef<uint8_t>(nullptr, Size);
+  Ret->Alignment = Alignment;
+  Ret->Data = makeArrayRef<uint8_t>(nullptr, Size);
+  return Ret;
 }
 
 static ArrayRef<uint8_t> createInterp() {
@@ -82,11 +82,11 @@ static ArrayRef<uint8_t> createInterp() {
   return {(const uint8_t *)S.data(), S.size() + 1};
 }
 
-template <class ELFT>
-InterpSection<ELFT>::InterpSection()
-    : InputSection<ELFT>(SHF_ALLOC, SHT_PROGBITS, 1, createInterp(),
-                         ".interp") {
-  this->Live = true;
+template <class ELFT> InputSection<ELFT> *elf::createInterpSection() {
+  auto *Ret = make<InputSection<ELFT>>(SHF_ALLOC, SHT_PROGBITS, 1,
+                                       createInterp(), ".interp");
+  Ret->Live = true;
+  return Ret;
 }
 
 template <class ELFT>
@@ -95,14 +95,14 @@ BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
                          ".note.gnu.build-id"),
       HashSize(HashSize) {
   this->Live = true;
-}
 
-template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
+  Buf.resize(16 + HashSize);
   const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, 4);                   // Name size
-  write32<E>(Buf + 4, HashSize);        // Content size
-  write32<E>(Buf + 8, NT_GNU_BUILD_ID); // Type
-  memcpy(Buf + 12, "GNU", 4);           // Name string
+  write32<E>(Buf.data(), 4);                   // Name size
+  write32<E>(Buf.data() + 4, HashSize);        // Content size
+  write32<E>(Buf.data() + 8, NT_GNU_BUILD_ID); // Type
+  memcpy(Buf.data() + 12, "GNU", 4);           // Name string
+  this->Data = ArrayRef<uint8_t>(Buf);
 }
 
 template <class ELFT>
@@ -188,15 +188,15 @@ void BuildIdHexstring<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
          Config->BuildIdVector.size());
 }
 
-template class elf::CommonSection<ELF32LE>;
-template class elf::CommonSection<ELF32BE>;
-template class elf::CommonSection<ELF64LE>;
-template class elf::CommonSection<ELF64BE>;
+template InputSection<ELF32LE> *elf::createCommonSection();
+template InputSection<ELF32BE> *elf::createCommonSection();
+template InputSection<ELF64LE> *elf::createCommonSection();
+template InputSection<ELF64BE> *elf::createCommonSection();
 
-template class elf::InterpSection<ELF32LE>;
-template class elf::InterpSection<ELF32BE>;
-template class elf::InterpSection<ELF64LE>;
-template class elf::InterpSection<ELF64BE>;
+template InputSection<ELF32LE> *elf::createInterpSection();
+template InputSection<ELF32BE> *elf::createInterpSection();
+template InputSection<ELF64LE> *elf::createInterpSection();
+template InputSection<ELF64BE> *elf::createInterpSection();
 
 template class elf::BuildIdSection<ELF32LE>;
 template class elf::BuildIdSection<ELF32BE>;

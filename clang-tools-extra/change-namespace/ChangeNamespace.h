@@ -67,8 +67,8 @@ private:
 
   void replaceQualifiedSymbolInDeclContext(
       const ast_matchers::MatchFinder::MatchResult &Result,
-      const Decl *DeclContext, SourceLocation Start, SourceLocation End,
-      llvm::StringRef DeclName);
+      const DeclContext *DeclContext, SourceLocation Start, SourceLocation End,
+      const NamedDecl *FromDecl);
 
   void fixTypeLoc(const ast_matchers::MatchFinder::MatchResult &Result,
                   SourceLocation Start, SourceLocation End, TypeLoc Type);
@@ -139,6 +139,12 @@ private:
   // will be done after removing the code from the old namespace and before
   // inserting it to the new namespace.
   std::map<std::string, std::vector<InsertForwardDeclaration>> InsertFwdDecls;
+  // Records all using declarations, which can be used to shorten namespace
+  // specifiers.
+  llvm::SmallPtrSet<const UsingDecl *, 8> UsingDecls;
+  // Records all using namespace declarations, which can be used to shorten
+  // namespace specifiers.
+  llvm::SmallPtrSet<const UsingDirectiveDecl *, 8> UsingNamespaceDecls;
 };
 
 } // namespace change_namespace

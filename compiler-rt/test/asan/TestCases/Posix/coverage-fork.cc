@@ -3,7 +3,7 @@
 // RUN: mkdir -p %T/coverage-fork && cd %T/coverage-fork
 // RUN: %env_asan_opts=coverage=1:coverage_direct=0:verbosity=1 %run %t 2>&1 | FileCheck %s
 //
-// XFAIL: android
+// UNSUPPORTED: android
 
 #include <stdio.h>
 #include <string.h>

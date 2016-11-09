@@ -97,6 +97,7 @@ static FormatEntity::Entry::Definition g_frame_child_entries[] = {
     ENTRY("fp", FrameRegisterFP, UInt64),
     ENTRY("sp", FrameRegisterSP, UInt64),
     ENTRY("flags", FrameRegisterFlags, UInt64),
+    ENTRY("no-debug", FrameNoDebug, None),
     ENTRY_CHILDREN("reg", FrameRegisterByName, UInt64, g_string_entry),
 };
 
@@ -320,6 +321,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(File);
     ENUM_TO_CSTR(Lang);
     ENUM_TO_CSTR(FrameIndex);
+    ENUM_TO_CSTR(FrameNoDebug);
     ENUM_TO_CSTR(FrameRegisterPC);
     ENUM_TO_CSTR(FrameRegisterSP);
     ENUM_TO_CSTR(FrameRegisterFP);
@@ -1444,6 +1446,15 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       }
     }
     return false;
+
+  case Entry::Type::FrameNoDebug:
+    if (exe_ctx) {
+      StackFrame *frame = exe_ctx->GetFramePtr();
+      if (frame) {
+        return !frame->HasDebugInformation();
+      }
+    }
+    return true;
 
   case Entry::Type::FrameRegisterByName:
     if (exe_ctx) {

@@ -12,10 +12,12 @@
 
 #include "PdbYaml.h"
 #include "YamlTypeDumper.h"
-#include "llvm/DebugInfo/CodeView/FieldListRecordBuilder.h"
-#include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
+#include "llvm/Support/Allocator.h"
 
 namespace llvm {
+namespace codeview {
+class TypeSerializer;
+}
 namespace yaml {
 class IO;
 }
@@ -24,10 +26,11 @@ namespace pdb {
 namespace yaml {
 struct SerializationContext {
   explicit SerializationContext(llvm::yaml::IO &IO, BumpPtrAllocator &Allocator)
-      : Dumper(IO, *this), TypeTableBuilder(Allocator) {}
+      : Dumper(IO, *this), Allocator(Allocator) {}
+
   codeview::yaml::YamlTypeDumperCallbacks Dumper;
-  codeview::MemoryTypeTableBuilder TypeTableBuilder;
-  codeview::FieldListRecordBuilder FieldListBuilder;
+  BumpPtrAllocator &Allocator;
+  codeview::TypeSerializer *ActiveSerializer = nullptr;
 };
 }
 }

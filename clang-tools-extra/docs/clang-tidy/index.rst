@@ -38,10 +38,10 @@ negative globs remove them. For example,
 
 .. code-block:: console
 
-  $ clang-tidy test.cpp -checks=-*,clang-analyzer-*,-clang-analyzer-alpha*
+  $ clang-tidy test.cpp -checks=-*,clang-analyzer-*,-clang-analyzer-cplusplus*
 
 will disable all default checks (``-*``) and enable all ``clang-analyzer-*``
-checks except for ``clang-analyzer-alpha*`` ones.
+checks except for ``clang-analyzer-cplusplus*`` ones.
 
 The ``-list-checks`` option lists all the enabled checks. When used without
 ``-checks=``, it shows checks enabled by default. Use ``-checks=*`` to see all

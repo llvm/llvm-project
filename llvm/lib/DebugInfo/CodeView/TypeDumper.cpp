@@ -428,7 +428,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
                                      MethodOverloadListRecord &MethodList) {
   for (auto &M : MethodList.getMethods()) {
     ListScope S(*W, "Method");
-    printMemberAttributes(M.getAccess(), M.getKind(), M.getOptions());
+    printMemberAttributes(M.getAccess(), M.getMethodKind(), M.getOptions());
     printTypeIndex("Type", M.getType());
     if (M.isIntroducingVirtual())
       W->printHex("VFTableOffset", M.getVFTableOffset());
@@ -607,7 +607,7 @@ Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
 
 Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      OneMethodRecord &Method) {
-  MethodKind K = Method.getKind();
+  MethodKind K = Method.getMethodKind();
   printMemberAttributes(Method.getAccess(), K, Method.getOptions());
   printTypeIndex("Type", Method.getType());
   // If virtual, then read the vftable offset.

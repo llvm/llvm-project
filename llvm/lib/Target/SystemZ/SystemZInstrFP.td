@@ -27,28 +27,28 @@ defm CondStoreF64 : CondStores<FP64, nonvolatile_store,
 
 // Load zero.
 let hasSideEffects = 0, isAsCheapAsAMove = 1, isMoveImm = 1 in {
-  def LZER : InherentRRE<"lzer", 0xB374, FP32,  (fpimm0)>;
-  def LZDR : InherentRRE<"lzdr", 0xB375, FP64,  (fpimm0)>;
-  def LZXR : InherentRRE<"lzxr", 0xB376, FP128, (fpimm0)>;
+  def LZER : InherentRRE<"lzer", 0xB374, FP32,  fpimm0>;
+  def LZDR : InherentRRE<"lzdr", 0xB375, FP64,  fpimm0>;
+  def LZXR : InherentRRE<"lzxr", 0xB376, FP128, fpimm0>;
 }
 
 // Moves between two floating-point registers.
 let hasSideEffects = 0 in {
-  def LER : UnaryRR <"le", 0x38,   null_frag, FP32,  FP32>;
-  def LDR : UnaryRR <"ld", 0x28,   null_frag, FP64,  FP64>;
-  def LXR : UnaryRRE<"lx", 0xB365, null_frag, FP128, FP128>;
+  def LER : UnaryRR <"ler", 0x38,   null_frag, FP32,  FP32>;
+  def LDR : UnaryRR <"ldr", 0x28,   null_frag, FP64,  FP64>;
+  def LXR : UnaryRRE<"lxr", 0xB365, null_frag, FP128, FP128>;
 
   // For z13 we prefer LDR over LER to avoid partial register dependencies.
   let isCodeGenOnly = 1 in
-    def LDR32 : UnaryRR<"ld", 0x28, null_frag, FP32, FP32>;
+    def LDR32 : UnaryRR<"ldr", 0x28, null_frag, FP32, FP32>;
 }
 
 // Moves between two floating-point registers that also set the condition
 // codes.
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
-  defm LTEBR : LoadAndTestRRE<"lteb", 0xB302, FP32>;
-  defm LTDBR : LoadAndTestRRE<"ltdb", 0xB312, FP64>;
-  defm LTXBR : LoadAndTestRRE<"ltxb", 0xB342, FP128>;
+  defm LTEBR : LoadAndTestRRE<"ltebr", 0xB302, FP32>;
+  defm LTDBR : LoadAndTestRRE<"ltdbr", 0xB312, FP64>;
+  defm LTXBR : LoadAndTestRRE<"ltxbr", 0xB342, FP128>;
 }
 // Note that LTxBRCompare is not available if we have vector support,
 // since load-and-test instructions will partially clobber the target
@@ -73,13 +73,13 @@ let Predicates = [FeatureVector] in {
 }
 
 // Moves between 64-bit integer and floating-point registers.
-def LGDR : UnaryRRE<"lgd", 0xB3CD, bitconvert, GR64, FP64>;
-def LDGR : UnaryRRE<"ldg", 0xB3C1, bitconvert, FP64, GR64>;
+def LGDR : UnaryRRE<"lgdr", 0xB3CD, bitconvert, GR64, FP64>;
+def LDGR : UnaryRRE<"ldgr", 0xB3C1, bitconvert, FP64, GR64>;
 
 // fcopysign with an FP32 result.
 let isCodeGenOnly = 1 in {
-  def CPSDRss : BinaryRRF<"cpsd", 0xB372, fcopysign, FP32, FP32>;
-  def CPSDRsd : BinaryRRF<"cpsd", 0xB372, fcopysign, FP32, FP64>;
+  def CPSDRss : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP32>;
+  def CPSDRsd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP64>;
 }
 
 // The sign of an FP128 is in the high register.
@@ -88,8 +88,8 @@ def : Pat<(fcopysign FP32:$src1, FP128:$src2),
 
 // fcopysign with an FP64 result.
 let isCodeGenOnly = 1 in
-  def CPSDRds : BinaryRRF<"cpsd", 0xB372, fcopysign, FP64, FP32>;
-def CPSDRdd : BinaryRRF<"cpsd", 0xB372, fcopysign, FP64, FP64>;
+  def CPSDRds : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP32>;
+def CPSDRdd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP64>;
 
 // The sign of an FP128 is in the high register.
 def : Pat<(fcopysign FP64:$src1, FP128:$src2),
@@ -154,15 +154,15 @@ let SimpleBDXStore = 1 in {
 // Convert floating-point values to narrower representations, rounding
 // according to the current mode.  The destination of LEXBR and LDXBR
 // is a 128-bit value, but only the first register of the pair is used.
-def LEDBR : UnaryRRE<"ledb", 0xB344, fpround,    FP32,  FP64>;
-def LEXBR : UnaryRRE<"lexb", 0xB346, null_frag, FP128, FP128>;
-def LDXBR : UnaryRRE<"ldxb", 0xB345, null_frag, FP128, FP128>;
+def LEDBR : UnaryRRE<"ledbr", 0xB344, fpround,    FP32,  FP64>;
+def LEXBR : UnaryRRE<"lexbr", 0xB346, null_frag, FP128, FP128>;
+def LDXBR : UnaryRRE<"ldxbr", 0xB345, null_frag, FP128, FP128>;
 
-def LEDBRA : UnaryRRF4<"ledbra", 0xB344, FP32,  FP64>,
+def LEDBRA : TernaryRRFe<"ledbra", 0xB344, FP32,  FP64>,
              Requires<[FeatureFPExtension]>;
-def LEXBRA : UnaryRRF4<"lexbra", 0xB346, FP128, FP128>,
+def LEXBRA : TernaryRRFe<"lexbra", 0xB346, FP128, FP128>,
              Requires<[FeatureFPExtension]>;
-def LDXBRA : UnaryRRF4<"ldxbra", 0xB345, FP128, FP128>,
+def LDXBRA : TernaryRRFe<"ldxbra", 0xB345, FP128, FP128>,
              Requires<[FeatureFPExtension]>;
 
 def : Pat<(f32 (fpround FP128:$src)),
@@ -171,9 +171,9 @@ def : Pat<(f64 (fpround FP128:$src)),
           (EXTRACT_SUBREG (LDXBR FP128:$src), subreg_h64)>;
 
 // Extend register floating-point values to wider representations.
-def LDEBR : UnaryRRE<"ldeb", 0xB304, fpextend, FP64,  FP32>;
-def LXEBR : UnaryRRE<"lxeb", 0xB306, fpextend, FP128, FP32>;
-def LXDBR : UnaryRRE<"lxdb", 0xB305, fpextend, FP128, FP64>;
+def LDEBR : UnaryRRE<"ldebr", 0xB304, fpextend, FP64,  FP32>;
+def LXEBR : UnaryRRE<"lxebr", 0xB306, fpextend, FP128, FP32>;
+def LXDBR : UnaryRRE<"lxdbr", 0xB305, fpextend, FP128, FP64>;
 
 // Extend memory floating-point values to wider representations.
 def LDEB : UnaryRXE<"ldeb", 0xED04, extloadf32, FP64,  4>;
@@ -181,23 +181,35 @@ def LXEB : UnaryRXE<"lxeb", 0xED06, extloadf32, FP128, 4>;
 def LXDB : UnaryRXE<"lxdb", 0xED05, extloadf64, FP128, 8>;
 
 // Convert a signed integer register value to a floating-point one.
-def CEFBR : UnaryRRE<"cefb", 0xB394, sint_to_fp, FP32,  GR32>;
-def CDFBR : UnaryRRE<"cdfb", 0xB395, sint_to_fp, FP64,  GR32>;
-def CXFBR : UnaryRRE<"cxfb", 0xB396, sint_to_fp, FP128, GR32>;
+def CEFBR : UnaryRRE<"cefbr", 0xB394, sint_to_fp, FP32,  GR32>;
+def CDFBR : UnaryRRE<"cdfbr", 0xB395, sint_to_fp, FP64,  GR32>;
+def CXFBR : UnaryRRE<"cxfbr", 0xB396, sint_to_fp, FP128, GR32>;
 
-def CEGBR : UnaryRRE<"cegb", 0xB3A4, sint_to_fp, FP32,  GR64>;
-def CDGBR : UnaryRRE<"cdgb", 0xB3A5, sint_to_fp, FP64,  GR64>;
-def CXGBR : UnaryRRE<"cxgb", 0xB3A6, sint_to_fp, FP128, GR64>;
+def CEGBR : UnaryRRE<"cegbr", 0xB3A4, sint_to_fp, FP32,  GR64>;
+def CDGBR : UnaryRRE<"cdgbr", 0xB3A5, sint_to_fp, FP64,  GR64>;
+def CXGBR : UnaryRRE<"cxgbr", 0xB3A6, sint_to_fp, FP128, GR64>;
+
+// The FP extension feature provides versions of the above that allow
+// specifying rounding mode and inexact-exception suppression flags.
+let Predicates = [FeatureFPExtension] in {
+  def CEFBRA : TernaryRRFe<"cefbra", 0xB394, FP32,  GR32>;
+  def CDFBRA : TernaryRRFe<"cdfbra", 0xB395, FP64,  GR32>;
+  def CXFBRA : TernaryRRFe<"cxfbra", 0xB396, FP128, GR32>;
+
+  def CEGBRA : TernaryRRFe<"cegbra", 0xB3A4, FP32,  GR64>;
+  def CDGBRA : TernaryRRFe<"cdgbra", 0xB3A5, FP64,  GR64>;
+  def CXGBRA : TernaryRRFe<"cxgbra", 0xB3A6, FP128, GR64>;
+}
 
 // Convert am unsigned integer register value to a floating-point one.
 let Predicates = [FeatureFPExtension] in {
-  def CELFBR : UnaryRRF4<"celfbr", 0xB390, FP32,  GR32>;
-  def CDLFBR : UnaryRRF4<"cdlfbr", 0xB391, FP64,  GR32>;
-  def CXLFBR : UnaryRRF4<"cxlfbr", 0xB392, FP128, GR32>;
+  def CELFBR : TernaryRRFe<"celfbr", 0xB390, FP32,  GR32>;
+  def CDLFBR : TernaryRRFe<"cdlfbr", 0xB391, FP64,  GR32>;
+  def CXLFBR : TernaryRRFe<"cxlfbr", 0xB392, FP128, GR32>;
 
-  def CELGBR : UnaryRRF4<"celgbr", 0xB3A0, FP32,  GR64>;
-  def CDLGBR : UnaryRRF4<"cdlgbr", 0xB3A1, FP64,  GR64>;
-  def CXLGBR : UnaryRRF4<"cxlgbr", 0xB3A2, FP128, GR64>;
+  def CELGBR : TernaryRRFe<"celgbr", 0xB3A0, FP32,  GR64>;
+  def CDLGBR : TernaryRRFe<"cdlgbr", 0xB3A1, FP64,  GR64>;
+  def CXLGBR : TernaryRRFe<"cxlgbr", 0xB3A2, FP128, GR64>;
 
   def : Pat<(f32  (uint_to_fp GR32:$src)), (CELFBR 0, GR32:$src, 0)>;
   def : Pat<(f64  (uint_to_fp GR32:$src)), (CDLFBR 0, GR32:$src, 0)>;
@@ -211,13 +223,13 @@ let Predicates = [FeatureFPExtension] in {
 // Convert a floating-point register value to a signed integer value,
 // with the second operand (modifier M3) specifying the rounding mode.
 let Defs = [CC] in {
-  def CFEBR : UnaryRRF<"cfeb", 0xB398, GR32, FP32>;
-  def CFDBR : UnaryRRF<"cfdb", 0xB399, GR32, FP64>;
-  def CFXBR : UnaryRRF<"cfxb", 0xB39A, GR32, FP128>;
+  def CFEBR : BinaryRRFe<"cfebr", 0xB398, GR32, FP32>;
+  def CFDBR : BinaryRRFe<"cfdbr", 0xB399, GR32, FP64>;
+  def CFXBR : BinaryRRFe<"cfxbr", 0xB39A, GR32, FP128>;
 
-  def CGEBR : UnaryRRF<"cgeb", 0xB3A8, GR64, FP32>;
-  def CGDBR : UnaryRRF<"cgdb", 0xB3A9, GR64, FP64>;
-  def CGXBR : UnaryRRF<"cgxb", 0xB3AA, GR64, FP128>;
+  def CGEBR : BinaryRRFe<"cgebr", 0xB3A8, GR64, FP32>;
+  def CGDBR : BinaryRRFe<"cgdbr", 0xB3A9, GR64, FP64>;
+  def CGXBR : BinaryRRFe<"cgxbr", 0xB3AA, GR64, FP128>;
 }
 
 // fp_to_sint always rounds towards zero, which is modifier value 5.
@@ -229,16 +241,28 @@ def : Pat<(i64 (fp_to_sint FP32:$src)),  (CGEBR 5, FP32:$src)>;
 def : Pat<(i64 (fp_to_sint FP64:$src)),  (CGDBR 5, FP64:$src)>;
 def : Pat<(i64 (fp_to_sint FP128:$src)), (CGXBR 5, FP128:$src)>;
 
+// The FP extension feature provides versions of the above that allow
+// also specifying the inexact-exception suppression flag.
+let Predicates = [FeatureFPExtension], Defs = [CC] in {
+  def CFEBRA : TernaryRRFe<"cfebra", 0xB398, GR32, FP32>;
+  def CFDBRA : TernaryRRFe<"cfdbra", 0xB399, GR32, FP64>;
+  def CFXBRA : TernaryRRFe<"cfxbra", 0xB39A, GR32, FP128>;
+
+  def CGEBRA : TernaryRRFe<"cgebra", 0xB3A8, GR64, FP32>;
+  def CGDBRA : TernaryRRFe<"cgdbra", 0xB3A9, GR64, FP64>;
+  def CGXBRA : TernaryRRFe<"cgxbra", 0xB3AA, GR64, FP128>;
+}
+
 // Convert a floating-point register value to an unsigned integer value.
 let Predicates = [FeatureFPExtension] in {
   let Defs = [CC] in {
-    def CLFEBR : UnaryRRF4<"clfebr", 0xB39C, GR32, FP32>;
-    def CLFDBR : UnaryRRF4<"clfdbr", 0xB39D, GR32, FP64>;
-    def CLFXBR : UnaryRRF4<"clfxbr", 0xB39E, GR32, FP128>;
+    def CLFEBR : TernaryRRFe<"clfebr", 0xB39C, GR32, FP32>;
+    def CLFDBR : TernaryRRFe<"clfdbr", 0xB39D, GR32, FP64>;
+    def CLFXBR : TernaryRRFe<"clfxbr", 0xB39E, GR32, FP128>;
 
-    def CLGEBR : UnaryRRF4<"clgebr", 0xB3AC, GR64, FP32>;
-    def CLGDBR : UnaryRRF4<"clgdbr", 0xB3AD, GR64, FP64>;
-    def CLGXBR : UnaryRRF4<"clgxbr", 0xB3AE, GR64, FP128>;
+    def CLGEBR : TernaryRRFe<"clgebr", 0xB3AC, GR64, FP32>;
+    def CLGDBR : TernaryRRFe<"clgdbr", 0xB3AD, GR64, FP64>;
+    def CLGXBR : TernaryRRFe<"clgxbr", 0xB3AE, GR64, FP128>;
   }
 
   def : Pat<(i32 (fp_to_uint FP32:$src)),  (CLFEBR 5, FP32:$src,  0)>;
@@ -265,50 +289,50 @@ let Predicates = [FeatureFPExtension] in {
 
 // Negation (Load Complement).
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
-  def LCEBR : UnaryRRE<"lceb", 0xB303, null_frag, FP32,  FP32>;
-  def LCDBR : UnaryRRE<"lcdb", 0xB313, null_frag, FP64,  FP64>;
-  def LCXBR : UnaryRRE<"lcxb", 0xB343, fneg, FP128, FP128>;
+  def LCEBR : UnaryRRE<"lcebr", 0xB303, null_frag, FP32,  FP32>;
+  def LCDBR : UnaryRRE<"lcdbr", 0xB313, null_frag, FP64,  FP64>;
+  def LCXBR : UnaryRRE<"lcxbr", 0xB343, fneg, FP128, FP128>;
 }
 // Generic form, which does not set CC.
-def LCDFR : UnaryRRE<"lcdf", 0xB373, fneg, FP64,  FP64>;
+def LCDFR : UnaryRRE<"lcdfr", 0xB373, fneg, FP64,  FP64>;
 let isCodeGenOnly = 1 in
-  def LCDFR_32 : UnaryRRE<"lcdf", 0xB373, fneg, FP32,  FP32>;
+  def LCDFR_32 : UnaryRRE<"lcdfr", 0xB373, fneg, FP32,  FP32>;
 
 // Absolute value (Load Positive).
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
-  def LPEBR : UnaryRRE<"lpeb", 0xB300, null_frag, FP32,  FP32>;
-  def LPDBR : UnaryRRE<"lpdb", 0xB310, null_frag, FP64,  FP64>;
-  def LPXBR : UnaryRRE<"lpxb", 0xB340, fabs, FP128, FP128>;
+  def LPEBR : UnaryRRE<"lpebr", 0xB300, null_frag, FP32,  FP32>;
+  def LPDBR : UnaryRRE<"lpdbr", 0xB310, null_frag, FP64,  FP64>;
+  def LPXBR : UnaryRRE<"lpxbr", 0xB340, fabs, FP128, FP128>;
 }
 // Generic form, which does not set CC.
-def LPDFR : UnaryRRE<"lpdf", 0xB370, fabs, FP64,  FP64>;
+def LPDFR : UnaryRRE<"lpdfr", 0xB370, fabs, FP64,  FP64>;
 let isCodeGenOnly = 1 in
-  def LPDFR_32 : UnaryRRE<"lpdf", 0xB370, fabs, FP32,  FP32>;
+  def LPDFR_32 : UnaryRRE<"lpdfr", 0xB370, fabs, FP32,  FP32>;
 
 // Negative absolute value (Load Negative).
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
-  def LNEBR : UnaryRRE<"lneb", 0xB301, null_frag, FP32,  FP32>;
-  def LNDBR : UnaryRRE<"lndb", 0xB311, null_frag, FP64,  FP64>;
-  def LNXBR : UnaryRRE<"lnxb", 0xB341, fnabs, FP128, FP128>;
+  def LNEBR : UnaryRRE<"lnebr", 0xB301, null_frag, FP32,  FP32>;
+  def LNDBR : UnaryRRE<"lndbr", 0xB311, null_frag, FP64,  FP64>;
+  def LNXBR : UnaryRRE<"lnxbr", 0xB341, fnabs, FP128, FP128>;
 }
 // Generic form, which does not set CC.
-def LNDFR : UnaryRRE<"lndf", 0xB371, fnabs, FP64,  FP64>;
+def LNDFR : UnaryRRE<"lndfr", 0xB371, fnabs, FP64,  FP64>;
 let isCodeGenOnly = 1 in
-  def LNDFR_32 : UnaryRRE<"lndf", 0xB371, fnabs, FP32,  FP32>;
+  def LNDFR_32 : UnaryRRE<"lndfr", 0xB371, fnabs, FP32,  FP32>;
 
 // Square root.
-def SQEBR : UnaryRRE<"sqeb", 0xB314, fsqrt, FP32,  FP32>;
-def SQDBR : UnaryRRE<"sqdb", 0xB315, fsqrt, FP64,  FP64>;
-def SQXBR : UnaryRRE<"sqxb", 0xB316, fsqrt, FP128, FP128>;
+def SQEBR : UnaryRRE<"sqebr", 0xB314, fsqrt, FP32,  FP32>;
+def SQDBR : UnaryRRE<"sqdbr", 0xB315, fsqrt, FP64,  FP64>;
+def SQXBR : UnaryRRE<"sqxbr", 0xB316, fsqrt, FP128, FP128>;
 
 def SQEB : UnaryRXE<"sqeb", 0xED14, loadu<fsqrt>, FP32, 4>;
 def SQDB : UnaryRXE<"sqdb", 0xED15, loadu<fsqrt>, FP64, 8>;
 
 // Round to an integer, with the second operand (modifier M3) specifying
 // the rounding mode.  These forms always check for inexact conditions.
-def FIEBR : UnaryRRF<"fieb", 0xB357, FP32,  FP32>;
-def FIDBR : UnaryRRF<"fidb", 0xB35F, FP64,  FP64>;
-def FIXBR : UnaryRRF<"fixb", 0xB347, FP128, FP128>;
+def FIEBR : BinaryRRFe<"fiebr", 0xB357, FP32,  FP32>;
+def FIDBR : BinaryRRFe<"fidbr", 0xB35F, FP64,  FP64>;
+def FIXBR : BinaryRRFe<"fixbr", 0xB347, FP128, FP128>;
 
 // frint rounds according to the current mode (modifier 0) and detects
 // inexact conditions.
@@ -319,9 +343,9 @@ def : Pat<(frint FP128:$src), (FIXBR 0, FP128:$src)>;
 let Predicates = [FeatureFPExtension] in {
   // Extended forms of the FIxBR instructions.  M4 can be set to 4
   // to suppress detection of inexact conditions.
-  def FIEBRA : UnaryRRF4<"fiebra", 0xB357, FP32,  FP32>;
-  def FIDBRA : UnaryRRF4<"fidbra", 0xB35F, FP64,  FP64>;
-  def FIXBRA : UnaryRRF4<"fixbra", 0xB347, FP128, FP128>;
+  def FIEBRA : TernaryRRFe<"fiebra", 0xB357, FP32,  FP32>;
+  def FIDBRA : TernaryRRFe<"fidbra", 0xB35F, FP64,  FP64>;
+  def FIXBRA : TernaryRRFe<"fixbra", 0xB347, FP128, FP128>;
 
   // fnearbyint is like frint but does not detect inexact conditions.
   def : Pat<(fnearbyint FP32:$src),  (FIEBRA 0, FP32:$src,  4)>;
@@ -359,9 +383,9 @@ let Predicates = [FeatureFPExtension] in {
 // Addition.
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
   let isCommutable = 1 in {
-    def AEBR : BinaryRRE<"aeb", 0xB30A, fadd, FP32,  FP32>;
-    def ADBR : BinaryRRE<"adb", 0xB31A, fadd, FP64,  FP64>;
-    def AXBR : BinaryRRE<"axb", 0xB34A, fadd, FP128, FP128>;
+    def AEBR : BinaryRRE<"aebr", 0xB30A, fadd, FP32,  FP32>;
+    def ADBR : BinaryRRE<"adbr", 0xB31A, fadd, FP64,  FP64>;
+    def AXBR : BinaryRRE<"axbr", 0xB34A, fadd, FP128, FP128>;
   }
   def AEB : BinaryRXE<"aeb", 0xED0A, fadd, FP32, load, 4>;
   def ADB : BinaryRXE<"adb", 0xED1A, fadd, FP64, load, 8>;
@@ -369,9 +393,9 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
 
 // Subtraction.
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
-  def SEBR : BinaryRRE<"seb", 0xB30B, fsub, FP32,  FP32>;
-  def SDBR : BinaryRRE<"sdb", 0xB31B, fsub, FP64,  FP64>;
-  def SXBR : BinaryRRE<"sxb", 0xB34B, fsub, FP128, FP128>;
+  def SEBR : BinaryRRE<"sebr", 0xB30B, fsub, FP32,  FP32>;
+  def SDBR : BinaryRRE<"sdbr", 0xB31B, fsub, FP64,  FP64>;
+  def SXBR : BinaryRRE<"sxbr", 0xB34B, fsub, FP128, FP128>;
 
   def SEB : BinaryRXE<"seb",  0xED0B, fsub, FP32, load, 4>;
   def SDB : BinaryRXE<"sdb",  0xED1B, fsub, FP64, load, 8>;
@@ -379,15 +403,15 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
 
 // Multiplication.
 let isCommutable = 1 in {
-  def MEEBR : BinaryRRE<"meeb", 0xB317, fmul, FP32,  FP32>;
-  def MDBR  : BinaryRRE<"mdb",  0xB31C, fmul, FP64,  FP64>;
-  def MXBR  : BinaryRRE<"mxb",  0xB34C, fmul, FP128, FP128>;
+  def MEEBR : BinaryRRE<"meebr", 0xB317, fmul, FP32,  FP32>;
+  def MDBR  : BinaryRRE<"mdbr",  0xB31C, fmul, FP64,  FP64>;
+  def MXBR  : BinaryRRE<"mxbr",  0xB34C, fmul, FP128, FP128>;
 }
 def MEEB : BinaryRXE<"meeb", 0xED17, fmul, FP32, load, 4>;
 def MDB  : BinaryRXE<"mdb",  0xED1C, fmul, FP64, load, 8>;
 
 // f64 multiplication of two FP32 registers.
-def MDEBR : BinaryRRE<"mdeb", 0xB30C, null_frag, FP64, FP32>;
+def MDEBR : BinaryRRE<"mdebr", 0xB30C, null_frag, FP64, FP32>;
 def : Pat<(fmul (f64 (fpextend FP32:$src1)), (f64 (fpextend FP32:$src2))),
           (MDEBR (INSERT_SUBREG (f64 (IMPLICIT_DEF)),
                                 FP32:$src1, subreg_r32), FP32:$src2)>;
@@ -400,7 +424,7 @@ def : Pat<(fmul (f64 (fpextend FP32:$src1)),
                 bdxaddr12only:$addr)>;
 
 // f128 multiplication of two FP64 registers.
-def MXDBR : BinaryRRE<"mxdb", 0xB307, null_frag, FP128, FP64>;
+def MXDBR : BinaryRRE<"mxdbr", 0xB307, null_frag, FP128, FP64>;
 def : Pat<(fmul (f128 (fpextend FP64:$src1)), (f128 (fpextend FP64:$src2))),
           (MXDBR (INSERT_SUBREG (f128 (IMPLICIT_DEF)),
                                 FP64:$src1, subreg_h64), FP64:$src2)>;
@@ -413,23 +437,23 @@ def : Pat<(fmul (f128 (fpextend FP64:$src1)),
                 bdxaddr12only:$addr)>;
 
 // Fused multiply-add.
-def MAEBR : TernaryRRD<"maeb", 0xB30E, z_fma, FP32>;
-def MADBR : TernaryRRD<"madb", 0xB31E, z_fma, FP64>;
+def MAEBR : TernaryRRD<"maebr", 0xB30E, z_fma, FP32>;
+def MADBR : TernaryRRD<"madbr", 0xB31E, z_fma, FP64>;
 
 def MAEB : TernaryRXF<"maeb", 0xED0E, z_fma, FP32, load, 4>;
 def MADB : TernaryRXF<"madb", 0xED1E, z_fma, FP64, load, 8>;
 
 // Fused multiply-subtract.
-def MSEBR : TernaryRRD<"mseb", 0xB30F, z_fms, FP32>;
-def MSDBR : TernaryRRD<"msdb", 0xB31F, z_fms, FP64>;
+def MSEBR : TernaryRRD<"msebr", 0xB30F, z_fms, FP32>;
+def MSDBR : TernaryRRD<"msdbr", 0xB31F, z_fms, FP64>;
 
 def MSEB : TernaryRXF<"mseb", 0xED0F, z_fms, FP32, load, 4>;
 def MSDB : TernaryRXF<"msdb", 0xED1F, z_fms, FP64, load, 8>;
 
 // Division.
-def DEBR : BinaryRRE<"deb", 0xB30D, fdiv, FP32,  FP32>;
-def DDBR : BinaryRRE<"ddb", 0xB31D, fdiv, FP64,  FP64>;
-def DXBR : BinaryRRE<"dxb", 0xB34D, fdiv, FP128, FP128>;
+def DEBR : BinaryRRE<"debr", 0xB30D, fdiv, FP32,  FP32>;
+def DDBR : BinaryRRE<"ddbr", 0xB31D, fdiv, FP64,  FP64>;
+def DXBR : BinaryRRE<"dxbr", 0xB34D, fdiv, FP128, FP128>;
 
 def DEB : BinaryRXE<"deb", 0xED0D, fdiv, FP32, load, 4>;
 def DDB : BinaryRXE<"ddb", 0xED1D, fdiv, FP64, load, 8>;
@@ -439,9 +463,9 @@ def DDB : BinaryRXE<"ddb", 0xED1D, fdiv, FP64, load, 8>;
 //===----------------------------------------------------------------------===//
 
 let Defs = [CC], CCValues = 0xF in {
-  def CEBR : CompareRRE<"ceb", 0xB309, z_fcmp, FP32,  FP32>;
-  def CDBR : CompareRRE<"cdb", 0xB319, z_fcmp, FP64,  FP64>;
-  def CXBR : CompareRRE<"cxb", 0xB349, z_fcmp, FP128, FP128>;
+  def CEBR : CompareRRE<"cebr", 0xB309, z_fcmp, FP32,  FP32>;
+  def CDBR : CompareRRE<"cdbr", 0xB319, z_fcmp, FP64,  FP64>;
+  def CXBR : CompareRRE<"cxbr", 0xB349, z_fcmp, FP128, FP128>;
 
   def CEB : CompareRXE<"ceb", 0xED09, z_fcmp, FP32, load, 4>;
   def CDB : CompareRXE<"cdb", 0xED19, z_fcmp, FP64, load, 8>;

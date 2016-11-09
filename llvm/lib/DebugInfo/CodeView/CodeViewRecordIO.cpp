@@ -16,18 +16,37 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-Error CodeViewRecordIO::beginRecord(uint16_t Kind) {
-  assert(!CurrentRecord.hasValue() && "There is already a record active!");
-  CurrentRecord.emplace();
-
-  CurrentRecord->Kind = Kind;
+Error CodeViewRecordIO::beginRecord(Optional<uint32_t> MaxLength) {
+  RecordLimit Limit;
+  Limit.MaxLength = MaxLength;
+  Limit.BeginOffset = getCurrentOffset();
+  Limits.push_back(Limit);
   return Error::success();
 }
 
 Error CodeViewRecordIO::endRecord() {
-  assert(CurrentRecord.hasValue() && "Not in a record!");
-  CurrentRecord.reset();
+  assert(!Limits.empty() && "Not in a record!");
+  Limits.pop_back();
   return Error::success();
+}
+
+uint32_t CodeViewRecordIO::maxFieldLength() const {
+  assert(!Limits.empty() && "Not in a record!");
+
+  // The max length of the next field is the minimum of all lengths that would
+  // be allowed by any of the sub-records we're in.  In practice, we can only
+  // ever be at most 1 sub-record deep (in a FieldList), but this works for
+  // the general case.
+  uint32_t Offset = getCurrentOffset();
+  Optional<uint32_t> Min = Limits.front().bytesRemaining(Offset);
+  for (auto X : makeArrayRef(Limits).drop_front()) {
+    Optional<uint32_t> ThisMin = X.bytesRemaining(Offset);
+    if (ThisMin.hasValue())
+      Min = (Min.hasValue()) ? std::min(*Min, *ThisMin) : *ThisMin;
+  }
+  assert(Min.hasValue() && "Every field must have a maximum length!");
+
+  return *Min;
 }
 
 Error CodeViewRecordIO::skipPadding() {
@@ -114,7 +133,9 @@ Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value) {
 
 Error CodeViewRecordIO::mapStringZ(StringRef &Value) {
   if (isWriting()) {
-    if (auto EC = Writer->writeZeroString(Value))
+    // Truncate if we attempt to write too much.
+    StringRef S = Value.take_front(maxFieldLength() - 1);
+    if (auto EC = Writer->writeZeroString(S))
       return EC;
   } else {
     if (auto EC = Reader->readZeroString(Value))
@@ -124,6 +145,10 @@ Error CodeViewRecordIO::mapStringZ(StringRef &Value) {
 }
 
 Error CodeViewRecordIO::mapGuid(StringRef &Guid) {
+  constexpr uint32_t GuidSize = 16;
+  if (maxFieldLength() < GuidSize)
+    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+
   if (isWriting()) {
     assert(Guid.size() == 16 && "Invalid Guid Size!");
     if (auto EC = Writer->writeFixedString(Guid))

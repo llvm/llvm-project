@@ -15,7 +15,7 @@
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeSerializationVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiHashing.h"
 
@@ -540,15 +540,27 @@ void llvm::codeview::yaml::YamlTypeDumperCallbacks::visitKnownRecordImpl(
     // which will recurse back to the standard handler for top-level fields
     // (top-level and member fields all have the exact same Yaml syntax so use
     // the same parser).
-    //
-    // If we are not outputting, then the array contains no data starting out,
-    // and is instead populated from the sequence represented by the yaml --
-    // again, using the same logic that we use for top-level records.
     FieldListRecordSplitter Splitter(FieldListRecords);
     CVTypeVisitor V(Splitter);
     consumeError(V.visitFieldListMemberStream(FieldList.Data));
+    YamlIO.mapRequired("FieldList", FieldListRecords, Context);
+  } else {
+    // If we are not outputting, then the array contains no data starting out,
+    // and is instead populated from the sequence represented by the yaml --
+    // again, using the same logic that we use for top-level records.
+    assert(Context.ActiveSerializer && "There is no active serializer!");
+    codeview::TypeVisitorCallbackPipeline Pipeline;
+    pdb::TpiHashUpdater Hasher;
+
+    // For Yaml to PDB, dump it (to fill out the record fields from the Yaml)
+    // then serialize those fields to bytes, then update their hashes.
+    Pipeline.addCallbackToPipeline(Context.Dumper);
+    Pipeline.addCallbackToPipeline(*Context.ActiveSerializer);
+    Pipeline.addCallbackToPipeline(Hasher);
+
+    codeview::CVTypeVisitor Visitor(Pipeline);
+    YamlIO.mapRequired("FieldList", FieldListRecords, Visitor);
   }
-  YamlIO.mapRequired("FieldList", FieldListRecords, Context);
 }
 
 namespace llvm {
@@ -558,29 +570,28 @@ struct MappingContextTraits<pdb::yaml::PdbTpiFieldListRecord,
                             pdb::yaml::SerializationContext> {
   static void mapping(IO &IO, pdb::yaml::PdbTpiFieldListRecord &Obj,
                       pdb::yaml::SerializationContext &Context) {
+    assert(IO.outputting());
     codeview::TypeVisitorCallbackPipeline Pipeline;
 
     msf::ByteStream Data(Obj.Record.Data);
     msf::StreamReader FieldReader(Data);
     codeview::FieldListDeserializer Deserializer(FieldReader);
-    codeview::TypeSerializationVisitor Serializer(Context.FieldListBuilder,
-                                                  Context.TypeTableBuilder);
-    pdb::TpiHashUpdater Hasher;
 
-    if (IO.outputting()) {
-      // For PDB to Yaml, deserialize into a high level record type, then dump
-      // it.
-      Pipeline.addCallbackToPipeline(Deserializer);
-      Pipeline.addCallbackToPipeline(Context.Dumper);
-    } else {
-      // For Yaml to PDB, extract from the high level record type, then write it
-      // to bytes.
-      Pipeline.addCallbackToPipeline(Context.Dumper);
-      Pipeline.addCallbackToPipeline(Serializer);
-      Pipeline.addCallbackToPipeline(Hasher);
-    }
+    // For PDB to Yaml, deserialize into a high level record type, then dump
+    // it.
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(Context.Dumper);
 
     codeview::CVTypeVisitor Visitor(Pipeline);
+    consumeError(Visitor.visitMemberRecord(Obj.Record));
+  }
+};
+
+template <>
+struct MappingContextTraits<pdb::yaml::PdbTpiFieldListRecord,
+                            codeview::CVTypeVisitor> {
+  static void mapping(IO &IO, pdb::yaml::PdbTpiFieldListRecord &Obj,
+                      codeview::CVTypeVisitor &Visitor) {
     consumeError(Visitor.visitMemberRecord(Obj.Record));
   }
 };

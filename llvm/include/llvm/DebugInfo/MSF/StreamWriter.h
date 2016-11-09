@@ -26,7 +26,7 @@ namespace msf {
 class StreamWriter {
 public:
   StreamWriter() {}
-  StreamWriter(WritableStreamRef Stream);
+  explicit StreamWriter(WritableStreamRef Stream);
 
   Error writeBytes(ArrayRef<uint8_t> Buffer);
   Error writeInteger(uint8_t Int);

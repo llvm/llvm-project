@@ -1,23 +1,15 @@
-; DISABLED: llc < %s -mips-ssection-threshold=8 -march=mips -o %t0
-; DISABLED: llc < %s -mips-ssection-threshold=0 -march=mips -o %t1
-; DISABLED: grep {sdata} %t0 | count 1
-; DISABLED: grep {sbss} %t0 | count 1
-; DISABLED: grep {gp_rel} %t0 | count 2
-; DISABLED: not grep {sdata} %t1 
-; DISABLED: not grep {sbss} %t1 
-; DISABLED: not grep {gp_rel} %t1
-; DISABLED: grep {\%hi} %t1 | count 2
-; DISABLED: grep {\%lo} %t1 | count 3
-; RUN: false
-; XFAIL: *
+; RUN: llc < %s -march=mips -mcpu=mips32 -mips-ssection-threshold=8 -relocation-model=static -mattr=+noabicalls -mgpopt | FileCheck %s
 
+%struct.anon = type { i32, i32 }
 
-target datalayout = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64"
-target triple = "mipsallegrexel-unknown-psp-elf"
+@s0 = constant [8 x i8] c"AAAAAAA\00", align 4
 
-  %struct.anon = type { i32, i32 }
-@s0 = global [8 x i8] c"AAAAAAA\00", align 4
+; CHECK: .type  foo,@object
+; CHECK-NEXT: .section .sdata,"aw",@progbits
 @foo = global %struct.anon { i32 2, i32 3 }
+
+; CHECK:  .type bar,@object
+; CHECK-NEXT:  .section  .sbss,"aw",@nobits
 @bar = global %struct.anon zeroinitializer 
 
 define i8* @A0() nounwind {

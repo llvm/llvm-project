@@ -72,7 +72,7 @@ Like this:
   }
 
 Note that this fuzz target does not depend on libFuzzer in any way
-ans so it is possible and even desirable to use it with other fuzzing engines
+and so it is possible and even desirable to use it with other fuzzing engines
 e.g. AFL_ and/or Radamsa_.
 
 Some important things to remember about fuzz targets:
@@ -81,8 +81,8 @@ Some important things to remember about fuzz targets:
 * It must tolerate any kind of input (empty, huge, malformed, etc).
 * It must not `exit()` on any input.
 * It may use threads but ideally all threads should be joined at the end of the function.
-* It must be as deterministic as possible. Non-determinism (e.g. random decisions not based on the input byte) will make fuzzing inefficient.
-* It must be fast. Try avoiding cubic or greater complexity.
+* It must be as deterministic as possible. Non-determinism (e.g. random decisions not based on the input bytes) will make fuzzing inefficient.
+* It must be fast. Try avoiding cubic or greater complexity, logging, or excessive memory consumption.
 * Ideally, it should not modify any global state (although that's not strict).
 
 
