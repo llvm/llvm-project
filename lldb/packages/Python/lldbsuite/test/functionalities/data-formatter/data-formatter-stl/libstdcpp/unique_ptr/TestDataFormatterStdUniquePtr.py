@@ -34,12 +34,12 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
         self.assertTrue(frame.IsValid())
 
         self.expect("frame variable nup", substrs=['nup = nullptr'])
-        self.expect("frame variable iup", substrs=['iup = 123', 'object = 123'])
-        self.expect("frame variable sup", substrs=['sup = "foobar"', 'object = "foobar"'])
+        self.expect("frame variable iup", substrs=['iup = 0x', 'object = 123'])
+        self.expect("frame variable sup", substrs=['sup = 0x', 'object = "foobar"'])
 
         self.expect("frame variable ndp", substrs=['ndp = nullptr'])
-        self.expect("frame variable idp", substrs=['idp = 456', 'object = 456', 'deleter = ', 'a = 1', 'b = 2'])
-        self.expect("frame variable sdp", substrs=['sdp = "baz"', 'object = "baz"', 'deleter = ', 'a = 3', 'b = 4'])
+        self.expect("frame variable idp", substrs=['idp = 0x', 'object = 456', 'deleter = ', 'a = 1', 'b = 2'])
+        self.expect("frame variable sdp", substrs=['sdp = 0x', 'object = "baz"', 'deleter = ', 'a = 3', 'b = 4'])
         
         self.assertEqual(123, frame.GetValueForVariablePath("iup.object").GetValueAsUnsigned())
         self.assertFalse(frame.GetValueForVariablePath("iup.deleter").IsValid())

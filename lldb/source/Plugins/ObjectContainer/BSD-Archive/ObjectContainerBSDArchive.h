@@ -10,18 +10,19 @@
 #ifndef liblldb_ObjectContainerBSDArchive_h_
 #define liblldb_ObjectContainerBSDArchive_h_
 
-// C Includes
-// C++ Includes
-#include <mutex>
-
-// Other libraries and framework includes
 // Project includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Symbol/ObjectContainer.h"
+
+// Other libraries and framework includes
+#include "llvm/Support/Chrono.h"
+
+// C Includes
+// C++ Includes
+#include <mutex>
 
 class ObjectContainerBSDArchive : public lldb_private::ObjectContainer {
 public:
@@ -110,7 +111,7 @@ protected:
     typedef std::multimap<lldb_private::FileSpec, shared_ptr> Map;
 
     Archive(const lldb_private::ArchSpec &arch,
-            const lldb_private::TimeValue &mod_time, lldb::offset_t file_offset,
+            const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset,
             lldb_private::DataExtractor &data);
 
     ~Archive();
@@ -121,11 +122,11 @@ protected:
 
     static Archive::shared_ptr FindCachedArchive(
         const lldb_private::FileSpec &file, const lldb_private::ArchSpec &arch,
-        const lldb_private::TimeValue &mod_time, lldb::offset_t file_offset);
+        const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset);
 
     static Archive::shared_ptr ParseAndCacheArchiveForFile(
         const lldb_private::FileSpec &file, const lldb_private::ArchSpec &arch,
-        const lldb_private::TimeValue &mod_time, lldb::offset_t file_offset,
+        const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset,
         lldb_private::DataExtractor &data);
 
     size_t GetNumObjects() const { return m_objects.size(); }
@@ -139,11 +140,11 @@ protected:
     size_t ParseObjects();
 
     Object *FindObject(const lldb_private::ConstString &object_name,
-                       const lldb_private::TimeValue &object_mod_time);
+                       const llvm::sys::TimePoint<> &object_mod_time);
 
     lldb::offset_t GetFileOffset() const { return m_file_offset; }
 
-    const lldb_private::TimeValue &GetModificationTime() { return m_time; }
+    const llvm::sys::TimePoint<> &GetModificationTime() { return m_time; }
 
     const lldb_private::ArchSpec &GetArchitecture() const { return m_arch; }
 
@@ -159,7 +160,7 @@ protected:
     // Member Variables
     //----------------------------------------------------------------------
     lldb_private::ArchSpec m_arch;
-    lldb_private::TimeValue m_time;
+    llvm::sys::TimePoint<> m_time;
     lldb::offset_t m_file_offset;
     Object::collection m_objects;
     ObjectNameToIndexMap m_object_name_to_index_map;
