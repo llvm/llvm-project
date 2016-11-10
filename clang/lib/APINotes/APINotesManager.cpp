@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include <sys/stat.h>
 
 using namespace clang;
@@ -50,6 +51,20 @@ STATISTIC(NumBinaryCacheMisses,
           "binary form cache misses");
 STATISTIC(NumBinaryCacheRebuilds,
           "binary form cache rebuilds");
+
+namespace {
+  /// Prints two successive strings, which much be kept alive as long as the
+  /// PrettyStackTrace entry.
+  class PrettyStackTraceDoubleString : public llvm::PrettyStackTraceEntry {
+    StringRef First, Second;
+  public:
+    PrettyStackTraceDoubleString(StringRef first, StringRef second)
+        : First(first), Second(second) {}
+    void print(raw_ostream &OS) const override {
+      OS << First << Second;
+    }
+  };
+}
 
 APINotesManager::APINotesManager(SourceManager &sourceMgr,
                                  const LangOptions &langOpts)
@@ -140,6 +155,8 @@ static void pruneAPINotesCache(StringRef APINotesCachePath) {
 std::unique_ptr<APINotesReader>
 APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   FileManager &fileMgr = SourceMgr.getFileManager();
+  PrettyStackTraceDoubleString trace("Loading API notes from ",
+                                     apiNotesFile->getName());
 
   // If the API notes file is already in the binary form, load it directly.
   StringRef apiNotesFileName = apiNotesFile->getName();
