@@ -2749,11 +2749,11 @@ functions that have an argument with a transparent union type. The compiler
 behaviour is changed in the following manner:
 
 - A value whose type is any member of the transparent union can be passed as an
-argument without the need to cast that value.
+  argument without the need to cast that value.
 
 - The argument is passed to the function using the calling convention of the
-first member of the transparent union. Consequently, all the members of the
-transparent union should have the same calling convention as its first member.
+  first member of the transparent union. Consequently, all the members of the
+  transparent union should have the same calling convention as its first member.
 
 Transparent unions are not supported in C++.
   }];

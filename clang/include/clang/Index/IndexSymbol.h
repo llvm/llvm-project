@@ -66,8 +66,9 @@ enum class SymbolSubKind : uint8_t {
   UnitTest                      = 1 << 3,
   IBAnnotated                   = 1 << 4,
   IBOutletCollection            = 1 << 5,
+  GKInspectable                 = 1 << 6,
 };
-static const unsigned SymbolSubKindBitNum = 6;
+static const unsigned SymbolSubKindBitNum = 7;
 typedef unsigned SymbolSubKindSet;
 
 /// Set of roles that are attributed to symbol occurrences.

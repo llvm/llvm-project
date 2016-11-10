@@ -165,6 +165,10 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::InstanceProperty;
       Info.Lang = SymbolLanguage::ObjC;
       checkForIBOutlets(D, Info.SubKinds);
+      if (auto *Annot = D->getAttr<AnnotateAttr>()) {
+        if (Annot->getAnnotation() == "gk_inspectable")
+          Info.SubKinds |= (unsigned)SymbolSubKind::GKInspectable;
+      }
       break;
     case Decl::ObjCIvar:
       Info.Kind = SymbolKind::Field;
@@ -380,6 +384,7 @@ void index::applyForEachSymbolSubKind(SymbolSubKindSet SubKinds,
   APPLY_FOR_SUBKIND(UnitTest);
   APPLY_FOR_SUBKIND(IBAnnotated);
   APPLY_FOR_SUBKIND(IBOutletCollection);
+  APPLY_FOR_SUBKIND(GKInspectable);
 
 #undef APPLY_FOR_SUBKIND
 }
@@ -398,6 +403,7 @@ void index::printSymbolSubKinds(SymbolSubKindSet SubKinds, raw_ostream &OS) {
     case SymbolSubKind::UnitTest: OS << "test"; break;
     case SymbolSubKind::IBAnnotated: OS << "IB"; break;
     case SymbolSubKind::IBOutletCollection: OS << "IBColl"; break;
+    case SymbolSubKind::GKInspectable: OS << "GKI"; break;
     }
   });
 }
