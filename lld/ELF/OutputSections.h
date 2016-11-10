@@ -51,7 +51,6 @@ public:
     EHFrameHdr,
     GnuHashTable,
     Got,
-    GotPlt,
     HashTable,
     Merge,
     Plt,
@@ -209,24 +208,6 @@ private:
 
   // Write MIPS-specific parts of the GOT.
   void writeMipsGot(uint8_t *Buf);
-};
-
-template <class ELFT> class GotPltSection final : public OutputSectionBase {
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  GotPltSection();
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-  void addEntry(SymbolBody &Sym);
-  bool empty() const;
-  Kind getKind() const override { return GotPlt; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == GotPlt;
-  }
-
-private:
-  std::vector<const SymbolBody *> Entries;
 };
 
 template <class ELFT> class PltSection final : public OutputSectionBase {
@@ -429,6 +410,7 @@ public:
   typedef typename ELFT::uint uintX_t;
   OutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void addSection(InputSectionData *C) override;
+  void sort(std::function<unsigned(InputSection<ELFT> *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;
@@ -602,12 +584,15 @@ template <class ELFT> class DynamicSection final : public OutputSectionBase {
     int32_t Tag;
     union {
       OutputSectionBase *OutSec;
+      InputSection<ELFT> *InSec;
       uint64_t Val;
       const SymbolBody *Sym;
     };
-    enum KindT { SecAddr, SecSize, SymAddr, PlainInt } Kind;
+    enum KindT { SecAddr, SecSize, SymAddr, PlainInt, InSecAddr } Kind;
     Entry(int32_t Tag, OutputSectionBase *OutSec, KindT Kind = SecAddr)
         : Tag(Tag), OutSec(OutSec), Kind(Kind) {}
+    Entry(int32_t Tag, InputSection<ELFT> *Sec)
+        : Tag(Tag), InSec(Sec), Kind(InSecAddr) {}
     Entry(int32_t Tag, uint64_t Val) : Tag(Tag), Val(Val), Kind(PlainInt) {}
     Entry(int32_t Tag, const SymbolBody *Sym)
         : Tag(Tag), Sym(Sym), Kind(SymAddr) {}
@@ -676,7 +661,6 @@ template <class ELFT> struct Out {
   static EhOutputSection<ELFT> *EhFrame;
   static GdbIndexSection<ELFT> *GdbIndex;
   static GnuHashTableSection<ELFT> *GnuHashTab;
-  static GotPltSection<ELFT> *GotPlt;
   static GotSection<ELFT> *Got;
   static HashTableSection<ELFT> *HashTab;
   static OutputSection<ELFT> *Bss;
@@ -742,7 +726,6 @@ template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> GdbIndexSection<ELFT> *Out<ELFT>::GdbIndex;
 template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
-template <class ELFT> GotPltSection<ELFT> *Out<ELFT>::GotPlt;
 template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;
 template <class ELFT> HashTableSection<ELFT> *Out<ELFT>::HashTab;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;

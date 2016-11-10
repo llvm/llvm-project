@@ -21,8 +21,6 @@ class EnumTypesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.c', '// Set break point at this line.')
 
-    # derefing the null pointer "works" on Windows
-    @expectedFailureAll(oslist=['windows'])
     def test(self):
         """Test 'image lookup -t days' and check for correct display and enum value printing."""
         self.build()

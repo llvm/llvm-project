@@ -45,6 +45,7 @@ unsigned short param_us;
 int param_i;
 unsigned int param_ui;
 float param_f;
+signed long long param_sll;
 
 int res_sc;
 int res_uc;
@@ -9223,4 +9224,70 @@ void test8() {
 // CHECK-LE: store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* {{%.+}}, align 16
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
+}
+
+/* ------------------------------ vec_xl ------------------------------------ */
+void test9() {
+  // CHECK-LABEL: define void @test9
+  // CHECK-LE-LABEL: define void @test9
+  res_vsc = vec_xl(param_sll, &param_sc);
+  // CHECK: load <16 x i8>, <16 x i8>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <16 x i8>, <16 x i8>* %{{[0-9]+}}, align 16
+
+  res_vuc = vec_xl(param_sll, &param_uc);
+  // CHECK: load <16 x i8>, <16 x i8>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <16 x i8>, <16 x i8>* %{{[0-9]+}}, align 16
+
+  res_vs = vec_xl(param_sll, &param_s);
+  // CHECK: load <8 x i16>, <8 x i16>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <8 x i16>, <8 x i16>* %{{[0-9]+}}, align 16
+
+  res_vus = vec_xl(param_sll, &param_us);
+  // CHECK: load <8 x i16>, <8 x i16>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <8 x i16>, <8 x i16>* %{{[0-9]+}}, align 16
+
+  res_vi = vec_xl(param_sll, &param_i);
+  // CHECK: load <4 x i32>, <4 x i32>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <4 x i32>, <4 x i32>* %{{[0-9]+}}, align 16
+
+  res_vui = vec_xl(param_sll, &param_ui);
+  // CHECK: load <4 x i32>, <4 x i32>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <4 x i32>, <4 x i32>* %{{[0-9]+}}, align 16
+
+  res_vf = vec_xl(param_sll, &param_f);
+  // CHECK: load <4 x float>, <4 x float>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <4 x float>, <4 x float>* %{{[0-9]+}}, align 16
+}
+
+/* ------------------------------ vec_xst ------------------------------------ */
+void test10() {
+  // CHECK-LABEL: define void @test10
+  // CHECK-LE-LABEL: define void @test10
+  vec_xst(vsc, param_sll, &param_sc);
+  // CHECK: store <16 x i8> %{{[0-9]+}}, <16 x i8>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <16 x i8> %{{[0-9]+}}, <16 x i8>* %{{[0-9]+}}, align 16
+
+  vec_xst(vuc, param_sll, &param_uc);
+  // CHECK: store <16 x i8> %{{[0-9]+}}, <16 x i8>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <16 x i8> %{{[0-9]+}}, <16 x i8>* %{{[0-9]+}}, align 16
+
+  vec_xst(vs, param_sll, &param_s);
+  // CHECK: store <8 x i16> %{{[0-9]+}}, <8 x i16>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <8 x i16> %{{[0-9]+}}, <8 x i16>* %{{[0-9]+}}, align 16
+
+  vec_xst(vus, param_sll, &param_us);
+  // CHECK: store <8 x i16> %{{[0-9]+}}, <8 x i16>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <8 x i16> %{{[0-9]+}}, <8 x i16>* %{{[0-9]+}}, align 16
+
+  vec_xst(vi, param_sll, &param_i);
+  // CHECK: store <4 x i32> %{{[0-9]+}}, <4 x i32>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <4 x i32> %{{[0-9]+}}, <4 x i32>* %{{[0-9]+}}, align 16
+
+  vec_xst(vui, param_sll, &param_ui);
+  // CHECK: store <4 x i32> %{{[0-9]+}}, <4 x i32>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <4 x i32> %{{[0-9]+}}, <4 x i32>* %{{[0-9]+}}, align 16
+
+  vec_xst(vf, param_sll, &param_f);
+  // CHECK: store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}, align 16
 }

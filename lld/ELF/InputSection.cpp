@@ -14,6 +14,7 @@
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
 
@@ -55,6 +56,9 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                        !Config->GcSections || !(Flags & SHF_ALLOC)),
       File(File), Flags(Flags), Entsize(Entsize), Type(Type), Link(Link),
       Info(Info), Repl(this) {
+  NumRelocations = 0;
+  AreRelocsRela = false;
+
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
   uint64_t V = std::max<uint64_t>(Addralign, 1);
@@ -80,9 +84,13 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
 }
 
 template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
+  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this))
+    return S->getSize();
+
   if (auto *D = dyn_cast<InputSection<ELFT>>(this))
     if (D->getThunksSize() > 0)
       return D->getThunkOff() + D->getThunksSize();
+
   return Data.size();
 }
 
@@ -95,6 +103,7 @@ template <class ELFT>
 typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (kind()) {
   case Regular:
+  case Synthetic:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
@@ -184,10 +193,10 @@ InputSection<ELFT>::InputSection() : InputSectionBase<ELFT>() {}
 template <class ELFT>
 InputSection<ELFT>::InputSection(uintX_t Flags, uint32_t Type,
                                  uintX_t Addralign, ArrayRef<uint8_t> Data,
-                                 StringRef Name)
+                                 StringRef Name, Kind K)
     : InputSectionBase<ELFT>(nullptr, Flags, Type,
                              /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Addralign,
-                             Data, Name, Base::Regular) {}
+                             Data, Name, K) {}
 
 template <class ELFT>
 InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
@@ -196,7 +205,7 @@ InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
 
 template <class ELFT>
 bool InputSection<ELFT>::classof(const InputSectionData *S) {
-  return S->kind() == Base::Regular;
+  return S->kind() == Base::Regular || S->kind() == Base::Synthetic;
 }
 
 template <class ELFT>
@@ -460,12 +469,10 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   // we handle relocations directly here.
   auto *IS = dyn_cast<InputSection<ELFT>>(this);
   if (IS && !(IS->Flags & SHF_ALLOC)) {
-    for (const Elf_Shdr *RelSec : IS->RelocSections) {
-      if (RelSec->sh_type == SHT_RELA)
-        IS->relocateNonAlloc(Buf, check(IS->getObj().relas(RelSec)));
-      else
-        IS->relocateNonAlloc(Buf, check(IS->getObj().rels(RelSec)));
-    }
+    if (IS->AreRelocsRela)
+      IS->relocateNonAlloc(Buf, IS->relas());
+    else
+      IS->relocateNonAlloc(Buf, IS->rels());
     return;
   }
 
@@ -525,6 +532,11 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   }
   if (this->Type == SHT_REL) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rel>());
+    return;
+  }
+
+  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
+    S->writeTo(Buf);
     return;
   }
 
@@ -598,12 +610,11 @@ template <class ELFT> void EhInputSection<ELFT>::split() {
   if (!this->Pieces.empty())
     return;
 
-  if (RelocSection) {
-    ELFFile<ELFT> Obj = this->getObj();
-    if (RelocSection->sh_type == SHT_RELA)
-      split(check(Obj.relas(RelocSection)));
+  if (this->NumRelocations) {
+    if (this->AreRelocsRela)
+      split(this->relas());
     else
-      split(check(Obj.rels(RelocSection)));
+      split(this->rels());
     return;
   }
   split(makeArrayRef<typename ELFT::Rela>(nullptr, nullptr));

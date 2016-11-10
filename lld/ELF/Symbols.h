@@ -466,6 +466,8 @@ inline Symbol *SymbolBody::symbol() {
                                     offsetof(Symbol, Body));
 }
 
+StringRef getSymbolName(StringRef SymTab, SymbolBody &Body);
+
 } // namespace elf
 } // namespace lld
 

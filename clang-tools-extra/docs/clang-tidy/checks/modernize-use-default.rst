@@ -25,5 +25,4 @@ defaulted functions as trivial.
   A::~A() = default;
 
 .. note::
-  Copy-constructor, copy-assignment operator, move-constructor and
-  move-assignment operator are not supported yet.
+  Move-constructor and move-assignment operator are not supported yet.
