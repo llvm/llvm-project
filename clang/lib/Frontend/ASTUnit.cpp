@@ -1392,7 +1392,8 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
         }
 
         OverriddenFiles[Status.getUniqueID()] = PreambleFileHash::createForFile(
-            Status.getSize(), Status.getLastModificationTime().toEpochTime());
+            Status.getSize(),
+            llvm::sys::toTimeT(Status.getLastModificationTime()));
       }
 
       for (const auto &RB : PreprocessorOpts.RemappedFileBuffers) {
@@ -1433,8 +1434,8 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
         
         // The file was not remapped; check whether it has changed on disk.
         if (Status.getSize() != uint64_t(F->second.Size) ||
-            Status.getLastModificationTime().toEpochTime() !=
-                uint64_t(F->second.ModTime))
+            llvm::sys::toTimeT(Status.getLastModificationTime()) !=
+                F->second.ModTime)
           AnyFileChanged = true;
       }
           

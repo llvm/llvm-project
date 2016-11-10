@@ -15,18 +15,18 @@ struct S {
 #pragma omp threadprivate(TS)
 };
 
-// CHECK:      template <class T = int> struct S {
-// CHECK:        static int TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
-// CHECK-NEXT: }
-// CHECK:      template <class T = long> struct S {
-// CHECK:        static long TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
-// CHECK-NEXT: }
 // CHECK:      template <class T> struct S {
 // CHECK:        static T TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S::TS)
 // CHECK:      };
+// CHECK:      template<> struct S<int> {
+// CHECK:        static int TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
+// CHECK-NEXT: }
+// CHECK:      template<> struct S<long> {
+// CHECK:        static long TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
+// CHECK-NEXT: }
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {
@@ -50,7 +50,25 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
-// CHECK: template <typename T = int, int C = 5> int tmain(int argc, int *argv) {
+// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
+// CHECK-NEXT: T b = argc, c, d, e, f, g;
+// CHECK-NEXT: static T a;
+// CHECK-NEXT: S<T> s;
+// CHECK-NEXT: #pragma omp parallel sections
+// CHECK-NEXT: {
+// CHECK-NEXT: a = 2;
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp parallel sections default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) copyin(S<T>::TS) proc_bind(master) reduction(+: c) reduction(max: e)
+// CHECK-NEXT: {
+// CHECK-NEXT: foo();
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp parallel sections if(C) num_threads(s) proc_bind(close) reduction(^: e,f) reduction(&&: g) lastprivate(b,c)
+// CHECK-NEXT: {
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp section
+// CHECK-NEXT: foo();
+// CHECK-NEXT: }
+// CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
 // CHECK-NEXT: static int a;
 // CHECK-NEXT: S<int> s;
@@ -68,7 +86,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp section
 // CHECK-NEXT: foo();
 // CHECK-NEXT: }
-// CHECK: template <typename T = long, int C = 1> long tmain(long argc, long *argv) {
+// CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
 // CHECK-NEXT: long b = argc, c, d, e, f, g;
 // CHECK-NEXT: static long a;
 // CHECK-NEXT: S<long> s;
@@ -81,24 +99,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp parallel sections if(1) num_threads(s) proc_bind(close) reduction(^: e,f) reduction(&&: g) lastprivate(b,c)
-// CHECK-NEXT: {
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp section
-// CHECK-NEXT: foo();
-// CHECK-NEXT: }
-// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
-// CHECK-NEXT: T b = argc, c, d, e, f, g;
-// CHECK-NEXT: static T a;
-// CHECK-NEXT: S<T> s;
-// CHECK-NEXT: #pragma omp parallel sections
-// CHECK-NEXT: {
-// CHECK-NEXT: a = 2;
-// CHECK-NEXT: }
-// CHECK-NEXT: #pragma omp parallel sections default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) copyin(S<T>::TS) proc_bind(master) reduction(+: c) reduction(max: e)
-// CHECK-NEXT: {
-// CHECK-NEXT: foo();
-// CHECK-NEXT: }
-// CHECK-NEXT: #pragma omp parallel sections if(C) num_threads(s) proc_bind(close) reduction(^: e,f) reduction(&&: g) lastprivate(b,c)
 // CHECK-NEXT: {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp section

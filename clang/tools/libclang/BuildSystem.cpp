@@ -16,15 +16,15 @@
 #include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TimeValue.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace llvm::sys;
 
 unsigned long long clang_getBuildSessionTimestamp(void) {
-  return llvm::sys::TimeValue::now().toEpochTime();
+  return llvm::sys::toTimeT(std::chrono::system_clock::now());
 }
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(clang::vfs::YAMLVFSWriter,

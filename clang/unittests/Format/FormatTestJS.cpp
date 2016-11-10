@@ -1462,6 +1462,7 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
   verifyFormat("let x = !foo;\n");
   verifyFormat("let x = foo[0]!;\n");
   verifyFormat("let x = (foo)!;\n");
+  verifyFormat("let x = foo! - 1;\n");
   verifyFormat("let x = {foo: 1}!;\n");
 }
 

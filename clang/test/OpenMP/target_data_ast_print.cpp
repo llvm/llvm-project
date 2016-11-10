@@ -46,7 +46,29 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
-// CHECK: template <typename T = int, int C = 5> int tmain(int argc, int *argv) {
+// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
+// CHECK-NEXT: T i, j, b, c, d, e, x[20];
+// CHECK-NEXT: #pragma omp target data map(to: c)
+// CHECK-NEXT: i = argc;
+// CHECK-NEXT: #pragma omp target data map(to: c) if(target data: j > 0)
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target data map(to: c) if(b)
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target data map(tofrom: c)
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target data map(tofrom: c) if(b > e)
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target data map(tofrom: x[0:10],c)
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target data map(to: c) map(from: d)
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target data map(always,alloc: e)
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target data map(tofrom: e)
+// CHECK-NEXT: {
+// CHECK-NEXT: #pragma omp target map(always,alloc: e)
+// CHECK-NEXT: foo();
+// CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int i, j, b, c, d, e, x[20];
 // CHECK-NEXT: #pragma omp target data map(to: c)
 // CHECK-NEXT: i = argc;
@@ -68,30 +90,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp target map(always,alloc: e)
 // CHECK-NEXT: foo();
-// CHECK: template <typename T = char, int C = 1> char tmain(char argc, char *argv) {
+// CHECK: template<> char tmain<char, 1>(char argc, char *argv) {
 // CHECK-NEXT: char i, j, b, c, d, e, x[20];
-// CHECK-NEXT: #pragma omp target data map(to: c)
-// CHECK-NEXT: i = argc;
-// CHECK-NEXT: #pragma omp target data map(to: c) if(target data: j > 0)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target data map(to: c) if(b)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target data map(tofrom: c)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target data map(tofrom: c) if(b > e)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target data map(tofrom: x[0:10],c)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target data map(to: c) map(from: d)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target data map(always,alloc: e)
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target data map(tofrom: e)
-// CHECK-NEXT: {
-// CHECK-NEXT: #pragma omp target map(always,alloc: e)
-// CHECK-NEXT: foo();
-// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
-// CHECK-NEXT: T i, j, b, c, d, e, x[20];
 // CHECK-NEXT: #pragma omp target data map(to: c)
 // CHECK-NEXT: i = argc;
 // CHECK-NEXT: #pragma omp target data map(to: c) if(target data: j > 0)

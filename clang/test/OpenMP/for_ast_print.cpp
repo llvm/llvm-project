@@ -50,15 +50,15 @@ public:
   }
 };
 
-// CHECK: #pragma omp for private(this->a) private(this->a) private(this->S::a)
-// CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S::a)
-// CHECK: #pragma omp for linear(val(this->c))
 // CHECK: #pragma omp for private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(T::a)
 // CHECK: #pragma omp for linear(val(this->c))
 // CHECK: #pragma omp for private(this->a) private(this->a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a)
 // CHECK: #pragma omp for linear(uval(this->b))
+// CHECK: #pragma omp for private(this->a) private(this->a) private(this->S::a)
+// CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S::a)
+// CHECK: #pragma omp for linear(val(this->c))
 
 class S8 : public S7<S> {
   S8() {}
@@ -137,6 +137,7 @@ T tmain(T argc) {
 }
 
 int main(int argc, char **argv) {
+// CHECK: int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;

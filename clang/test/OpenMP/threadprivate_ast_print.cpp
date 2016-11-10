@@ -43,11 +43,11 @@ template <class T> T foo() {
   v = ST<T>::m;
   return v;
 }
-//CHECK: template <class T = int> int foo() {
-//CHECK-NEXT: static int v;
-//CHECK-NEXT: #pragma omp threadprivate(v)
 //CHECK: template <class T> T foo() {
 //CHECK-NEXT: static T v;
+//CHECK-NEXT: #pragma omp threadprivate(v)
+//CHECK: template<> int foo<int>() {
+//CHECK-NEXT: static int v;
 //CHECK-NEXT: #pragma omp threadprivate(v)
 
 namespace ns{

@@ -47,7 +47,7 @@ Status::Status(const file_status &Status)
       User(Status.getUser()), Group(Status.getGroup()), Size(Status.getSize()),
       Type(Status.type()), Perms(Status.permissions()), IsVFSMapped(false)  {}
 
-Status::Status(StringRef Name, UniqueID UID, sys::TimeValue MTime,
+Status::Status(StringRef Name, UniqueID UID, sys::TimePoint<> MTime,
                uint32_t User, uint32_t Group, uint64_t Size, file_type Type,
                perms Perms)
     : Name(Name), UID(UID), MTime(MTime), User(User), Group(Group), Size(Size),
@@ -494,8 +494,8 @@ public:
 
 InMemoryFileSystem::InMemoryFileSystem(bool UseNormalizedPaths)
     : Root(new detail::InMemoryDirectory(
-          Status("", getNextVirtualUniqueID(), llvm::sys::TimeValue::MinTime(),
-                 0, 0, 0, llvm::sys::fs::file_type::directory_file,
+          Status("", getNextVirtualUniqueID(), llvm::sys::TimePoint<>(), 0, 0,
+                 0, llvm::sys::fs::file_type::directory_file,
                  llvm::sys::fs::perms::all_all))),
       UseNormalizedPaths(UseNormalizedPaths) {}
 
@@ -532,7 +532,7 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
         // End of the path, create a new file.
         // FIXME: expose the status details in the interface.
         Status Stat(P.str(), getNextVirtualUniqueID(),
-                    llvm::sys::TimeValue(ModificationTime, 0), 0, 0,
+                    llvm::sys::toTimePoint(ModificationTime), 0, 0,
                     Buffer->getBufferSize(),
                     llvm::sys::fs::file_type::regular_file,
                     llvm::sys::fs::all_all);
@@ -545,9 +545,9 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
       // FIXME: expose the status details in the interface.
       Status Stat(
           StringRef(Path.str().begin(), Name.end() - Path.str().begin()),
-          getNextVirtualUniqueID(), llvm::sys::TimeValue(ModificationTime, 0),
-          0, 0, Buffer->getBufferSize(),
-          llvm::sys::fs::file_type::directory_file, llvm::sys::fs::all_all);
+          getNextVirtualUniqueID(), llvm::sys::toTimePoint(ModificationTime), 0,
+          0, Buffer->getBufferSize(), llvm::sys::fs::file_type::directory_file,
+          llvm::sys::fs::all_all);
       Dir = cast<detail::InMemoryDirectory>(Dir->addChild(
           Name, llvm::make_unique<detail::InMemoryDirectory>(std::move(Stat))));
       continue;
@@ -1073,8 +1073,9 @@ class RedirectingFileSystemParser {
 
     // ... or create a new one
     std::unique_ptr<Entry> E = llvm::make_unique<RedirectingDirectoryEntry>(
-        Name, Status("", getNextVirtualUniqueID(), sys::TimeValue::now(), 0, 0,
-                     0, file_type::directory_file, sys::fs::all_all));
+        Name,
+        Status("", getNextVirtualUniqueID(), std::chrono::system_clock::now(),
+               0, 0, 0, file_type::directory_file, sys::fs::all_all));
 
     if (!ParentEntry) { // Add a new root to the overlay
       FS->Roots.push_back(std::move(E));
@@ -1275,8 +1276,8 @@ class RedirectingFileSystemParser {
     case EK_Directory:
       Result = llvm::make_unique<RedirectingDirectoryEntry>(
           LastComponent, std::move(EntryArrayContents),
-          Status("", getNextVirtualUniqueID(), sys::TimeValue::now(), 0, 0, 0,
-                 file_type::directory_file, sys::fs::all_all));
+          Status("", getNextVirtualUniqueID(), std::chrono::system_clock::now(),
+                 0, 0, 0, file_type::directory_file, sys::fs::all_all));
       break;
     }
 
@@ -1292,8 +1293,8 @@ class RedirectingFileSystemParser {
       Entries.push_back(std::move(Result));
       Result = llvm::make_unique<RedirectingDirectoryEntry>(
           *I, std::move(Entries),
-          Status("", getNextVirtualUniqueID(), sys::TimeValue::now(), 0, 0, 0,
-                 file_type::directory_file, sys::fs::all_all));
+          Status("", getNextVirtualUniqueID(), std::chrono::system_clock::now(),
+                 0, 0, 0, file_type::directory_file, sys::fs::all_all));
     }
     return Result;
   }

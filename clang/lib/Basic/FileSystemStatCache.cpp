@@ -23,7 +23,7 @@ static void copyStatusToFileData(const vfs::Status &Status,
                                  FileData &Data) {
   Data.Name = Status.getName();
   Data.Size = Status.getSize();
-  Data.ModTime = Status.getLastModificationTime().toEpochTime();
+  Data.ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
   Data.UniqueID = Status.getUniqueID();
   Data.IsDirectory = Status.isDirectory();
   Data.IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
