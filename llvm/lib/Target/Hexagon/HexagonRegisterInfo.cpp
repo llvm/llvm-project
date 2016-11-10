@@ -235,6 +235,28 @@ unsigned HexagonRegisterInfo::getStackRegister() const {
 }
 
 
+unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
+      const TargetRegisterClass *RC, unsigned GenIdx) const {
+  assert(GenIdx == Hexagon::ps_sub_lo || GenIdx == Hexagon::ps_sub_hi);
+
+  static const unsigned ISub[] = { Hexagon::isub_lo, Hexagon::isub_hi };
+  static const unsigned VSub[] = { Hexagon::vsub_lo, Hexagon::vsub_hi };
+
+  switch (RC->getID()) {
+    case Hexagon::CtrRegs64RegClassID:
+    case Hexagon::DoubleRegsRegClassID:
+      return ISub[GenIdx];
+    case Hexagon::VecDblRegsRegClassID:
+    case Hexagon::VecDblRegs128BRegClassID:
+      return VSub[GenIdx];
+  }
+
+  if (const TargetRegisterClass *SuperRC = *RC->getSuperClasses())
+    return getHexagonSubRegIndex(SuperRC, GenIdx);
+
+  llvm_unreachable("Invalid register class");
+}
+
 bool HexagonRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF)
       const {
   return MF.getSubtarget<HexagonSubtarget>().getFrameLowering()->hasFP(MF);

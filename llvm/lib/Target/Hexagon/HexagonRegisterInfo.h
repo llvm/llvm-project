@@ -22,6 +22,12 @@
 #include "HexagonGenRegisterInfo.inc"
 
 namespace llvm {
+
+namespace Hexagon {
+  // Generic (pseudo) subreg indices for use with getHexagonSubRegIndex.
+  enum { ps_sub_lo = 0, ps_sub_hi = 1 };
+}
+
 class HexagonRegisterInfo : public HexagonGenRegisterInfo {
 public:
   HexagonRegisterInfo();
@@ -60,6 +66,9 @@ public:
   unsigned getFrameRegister(const MachineFunction &MF) const override;
   unsigned getFrameRegister() const;
   unsigned getStackRegister() const;
+
+  unsigned getHexagonSubRegIndex(const TargetRegisterClass *RC,
+        unsigned GenIdx) const;
 
   const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,
         const TargetRegisterClass *RC) const;

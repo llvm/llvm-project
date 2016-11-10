@@ -915,7 +915,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
                  .addUse(SrcXReg)
                  .addImm(0)
                  .addImm(SrcTy.getSizeInBits() - 1);
-    } else if (DstTy == LLT::scalar(32)) {
+    } else if (DstTy.isScalar() && DstTy.getSizeInBits() <= 32) {
       const unsigned NewOpc = isSigned ? AArch64::SBFMWri : AArch64::UBFMWri;
       ExtI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
                  .addDef(DefReg)

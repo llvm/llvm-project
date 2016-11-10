@@ -57,23 +57,23 @@ __start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 1
-# CHECK-NEXT:     Name: .reginfo
-# CHECK-NEXT:     Type: SHT_MIPS_REGINFO (0x70000006)
+# CHECK-NEXT:     Name: .MIPS.abiflags
+# CHECK-NEXT:     Type: SHT_MIPS_ABIFLAGS (0x7000002A)
 # CHECK-NEXT:     Flags [ (0x2)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x100F4
-# CHECK-NEXT:     Offset: 0xF4
+# CHECK-NEXT:     Address: 0x100F8
+# CHECK-NEXT:     Offset: 0xF8
 # CHECK-NEXT:     Size: 24
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
-# CHECK-NEXT:     AddressAlignment: 4
+# CHECK-NEXT:     AddressAlignment: 8
 # CHECK-NEXT:     EntrySize: 24
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 2
-# CHECK-NEXT:     Name: .MIPS.abiflags
-# CHECK-NEXT:     Type: SHT_MIPS_ABIFLAGS (0x7000002A)
+# CHECK-NEXT:     Name: .reginfo
+# CHECK-NEXT:     Type: SHT_MIPS_REGINFO (0x70000006)
 # CHECK-NEXT:     Flags [ (0x2)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
 # CHECK-NEXT:     ]
@@ -82,7 +82,7 @@ __start:
 # CHECK-NEXT:     Size: 24
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
-# CHECK-NEXT:     AddressAlignment: 8
+# CHECK-NEXT:     AddressAlignment: 4
 # CHECK-NEXT:     EntrySize: 24
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {

@@ -29,7 +29,7 @@ template <class ELFT> class ICF;
 template <class ELFT> class DefinedRegular;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
-template <class ELFT> class OutputSectionBase;
+class OutputSectionBase;
 
 // We need non-template input section class to store symbol layout
 // in linker script parser structures, where we do not have ELFT
@@ -39,7 +39,7 @@ template <class ELFT> class OutputSectionBase;
 // section
 class InputSectionData {
 public:
-  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions, MipsAbiFlags };
+  enum Kind { Regular, EHFrame, Merge };
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
@@ -104,7 +104,7 @@ public:
                    uintX_t Entsize, uint32_t Link, uint32_t Info,
                    uintX_t Addralign, ArrayRef<uint8_t> Data, StringRef Name,
                    Kind SectionKind);
-  OutputSectionBase<ELFT> *OutSec = nullptr;
+  OutputSectionBase *OutSec = nullptr;
 
   // This pointer points to the "real" instance of this instance.
   // Usually Repl == this. However, if ICF merges two sections,
@@ -116,9 +116,8 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;
 
-  static InputSectionBase<ELFT> Discarded;
-
   ObjectFile<ELFT> *getFile() const { return File; }
+  llvm::object::ELFFile<ELFT> getObj() const { return File->getObj(); }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
   InputSectionBase *getLinkOrderDep() const;
   // Translate an offset in the input section to an offset in the output
@@ -136,8 +135,6 @@ private:
   std::pair<ArrayRef<uint8_t>, uint64_t>
   getRawCompressedData(ArrayRef<uint8_t> Data);
 };
-
-template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;
 
 // SectionPiece represents a piece of splittable section contents.
 // We allocate a lot of these and binary search on them. This means that they
@@ -237,9 +234,12 @@ template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
 public:
+  InputSection();
   InputSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
                ArrayRef<uint8_t> Data, StringRef Name);
   InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
+
+  static InputSection<ELFT> Discarded;
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
@@ -286,47 +286,7 @@ private:
   llvm::TinyPtrVector<const Thunk<ELFT> *> Thunks;
 };
 
-// MIPS .reginfo section provides information on the registers used by the code
-// in the object file. Linker should collect this information and write a single
-// .reginfo section in the output file. The output section contains a union of
-// used registers masks taken from input .reginfo sections and final value
-// of the `_gp` symbol.  For details: Chapter 4 / "Register Information" at
-// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-template <class ELFT>
-class MipsReginfoInputSection : public InputSectionBase<ELFT> {
-  typedef typename ELFT::Shdr Elf_Shdr;
-
-public:
-  MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
-                          StringRef Name);
-  static bool classof(const InputSectionData *S);
-
-  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
-};
-
-template <class ELFT>
-class MipsOptionsInputSection : public InputSectionBase<ELFT> {
-  typedef typename ELFT::Shdr Elf_Shdr;
-
-public:
-  MipsOptionsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
-                          StringRef Name);
-  static bool classof(const InputSectionData *S);
-
-  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
-};
-
-template <class ELFT>
-class MipsAbiFlagsInputSection : public InputSectionBase<ELFT> {
-  typedef typename ELFT::Shdr Elf_Shdr;
-
-public:
-  MipsAbiFlagsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
-                           StringRef Name);
-  static bool classof(const InputSectionData *S);
-
-  const llvm::object::Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;
-};
+template <class ELFT> InputSection<ELFT> InputSection<ELFT>::Discarded;
 
 } // namespace elf
 } // namespace lld

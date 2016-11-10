@@ -1025,53 +1025,6 @@ def : Pat<(store (i32 -1), addr:$dst), (OR32mi8 addr:$dst, -1)>;
 def : Pat<(store (i64 -1), addr:$dst), (OR64mi8 addr:$dst, -1)>;
 }
 
-// ConstantPool GlobalAddress, ExternalSymbol, and JumpTable
-def : Pat<(i32 (X86Wrapper tconstpool  :$dst)), (MOV32ri tconstpool  :$dst)>;
-def : Pat<(i32 (X86Wrapper tjumptable  :$dst)), (MOV32ri tjumptable  :$dst)>;
-def : Pat<(i32 (X86Wrapper tglobaltlsaddr:$dst)),(MOV32ri tglobaltlsaddr:$dst)>;
-def : Pat<(i32 (X86Wrapper tglobaladdr :$dst)), (MOV32ri tglobaladdr :$dst)>;
-def : Pat<(i32 (X86Wrapper texternalsym:$dst)), (MOV32ri texternalsym:$dst)>;
-def : Pat<(i32 (X86Wrapper mcsym:$dst)), (MOV32ri mcsym:$dst)>;
-def : Pat<(i32 (X86Wrapper tblockaddress:$dst)), (MOV32ri tblockaddress:$dst)>;
-
-def : Pat<(add GR32:$src1, (X86Wrapper tconstpool:$src2)),
-          (ADD32ri GR32:$src1, tconstpool:$src2)>;
-def : Pat<(add GR32:$src1, (X86Wrapper tjumptable:$src2)),
-          (ADD32ri GR32:$src1, tjumptable:$src2)>;
-def : Pat<(add GR32:$src1, (X86Wrapper tglobaladdr :$src2)),
-          (ADD32ri GR32:$src1, tglobaladdr:$src2)>;
-def : Pat<(add GR32:$src1, (X86Wrapper texternalsym:$src2)),
-          (ADD32ri GR32:$src1, texternalsym:$src2)>;
-def : Pat<(add GR32:$src1, (X86Wrapper mcsym:$src2)),
-          (ADD32ri GR32:$src1, mcsym:$src2)>;
-def : Pat<(add GR32:$src1, (X86Wrapper tblockaddress:$src2)),
-          (ADD32ri GR32:$src1, tblockaddress:$src2)>;
-
-def : Pat<(store (i32 (X86Wrapper tglobaladdr:$src)), addr:$dst),
-          (MOV32mi addr:$dst, tglobaladdr:$src)>;
-def : Pat<(store (i32 (X86Wrapper texternalsym:$src)), addr:$dst),
-          (MOV32mi addr:$dst, texternalsym:$src)>;
-def : Pat<(store (i32 (X86Wrapper mcsym:$src)), addr:$dst),
-          (MOV32mi addr:$dst, mcsym:$src)>;
-def : Pat<(store (i32 (X86Wrapper tblockaddress:$src)), addr:$dst),
-          (MOV32mi addr:$dst, tblockaddress:$src)>;
-
-// ConstantPool GlobalAddress, ExternalSymbol, and JumpTable when not in small
-// code model mode, should use 'movabs'.  FIXME: This is really a hack, the
-//  'movabs' predicate should handle this sort of thing.
-def : Pat<(i64 (X86Wrapper tconstpool  :$dst)),
-          (MOV64ri tconstpool  :$dst)>, Requires<[FarData]>;
-def : Pat<(i64 (X86Wrapper tjumptable  :$dst)),
-          (MOV64ri tjumptable  :$dst)>, Requires<[FarData]>;
-def : Pat<(i64 (X86Wrapper tglobaladdr :$dst)),
-          (MOV64ri tglobaladdr :$dst)>, Requires<[FarData]>;
-def : Pat<(i64 (X86Wrapper texternalsym:$dst)),
-          (MOV64ri texternalsym:$dst)>, Requires<[FarData]>;
-def : Pat<(i64 (X86Wrapper mcsym:$dst)),
-          (MOV64ri mcsym:$dst)>, Requires<[FarData]>;
-def : Pat<(i64 (X86Wrapper tblockaddress:$dst)),
-          (MOV64ri tblockaddress:$dst)>, Requires<[FarData]>;
-
 // In kernel code model, we can get the address of a label
 // into a register with 'movq'.  FIXME: This is a hack, the 'imm' predicate of
 // the MOV64ri32 should accept these.

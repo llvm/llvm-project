@@ -14,21 +14,19 @@
 
 let AddedComplexity = 100 in {
 def : Pat < (v16i32 (int_hexagon_V6_lo (v32i32 VecDblRegs:$src1))),
-            (v16i32 (EXTRACT_SUBREG (v32i32 VecDblRegs:$src1), subreg_loreg)) >,
+            (v16i32 (EXTRACT_SUBREG (v32i32 VecDblRegs:$src1), vsub_lo)) >,
             Requires<[UseHVXSgl]>;
 
 def : Pat < (v16i32 (int_hexagon_V6_hi (v32i32 VecDblRegs:$src1))),
-            (v16i32 (EXTRACT_SUBREG (v32i32 VecDblRegs:$src1), subreg_hireg)) >,
+            (v16i32 (EXTRACT_SUBREG (v32i32 VecDblRegs:$src1), vsub_hi)) >,
             Requires<[UseHVXSgl]>;
 
 def : Pat < (v32i32 (int_hexagon_V6_lo_128B (v64i32 VecDblRegs128B:$src1))),
-            (v32i32 (EXTRACT_SUBREG (v64i32 VecDblRegs128B:$src1),
-                                     subreg_loreg)) >,
+            (v32i32 (EXTRACT_SUBREG (v64i32 VecDblRegs128B:$src1), vsub_lo)) >,
             Requires<[UseHVXDbl]>;
 
 def : Pat < (v32i32 (int_hexagon_V6_hi_128B (v64i32 VecDblRegs128B:$src1))),
-            (v32i32 (EXTRACT_SUBREG (v64i32 VecDblRegs128B:$src1),
-                                     subreg_hireg)) >,
+            (v32i32 (EXTRACT_SUBREG (v64i32 VecDblRegs128B:$src1), vsub_hi)) >,
             Requires<[UseHVXDbl]>;
 }
 

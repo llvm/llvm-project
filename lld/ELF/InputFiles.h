@@ -162,10 +162,10 @@ public:
   // If no information is available, returns "".
   std::string getLineInfo(InputSectionBase<ELFT> *S, uintX_t Offset);
 
-  // Get MIPS GP0 value defined by this file. This value represents the gp value
+  // MIPS GP0 value defined by this file. This value represents the gp value
   // used to create the relocatable object and required to support
   // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.
-  uint32_t getMipsGp0() const;
+  uint32_t MipsGp0 = 0;
 
   // The number is the offset in the string table. It will be used as the
   // st_name of the symbol.
@@ -193,13 +193,6 @@ private:
 
   // List of all symbols referenced or defined by this file.
   std::vector<SymbolBody *> SymbolBodies;
-
-  // MIPS .reginfo section defined by this file.
-  std::unique_ptr<MipsReginfoInputSection<ELFT>> MipsReginfo;
-  // MIPS .MIPS.options section defined by this file.
-  std::unique_ptr<MipsOptionsInputSection<ELFT>> MipsOptions;
-  // MIPS .MIPS.abiflags section defined by this file.
-  std::unique_ptr<MipsAbiFlagsInputSection<ELFT>> MipsAbiFlags;
 
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a

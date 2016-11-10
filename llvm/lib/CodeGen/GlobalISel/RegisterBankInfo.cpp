@@ -523,7 +523,7 @@ void RegisterBankInfo::PartialMapping::print(raw_ostream &OS) const {
     OS << "nullptr";
 }
 
-bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningFulBitWidth) const {
+bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningfulBitWidth) const {
   assert(NumBreakDowns && "Value mapped nowhere?!");
   unsigned OrigValueBitWidth = 0;
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {
@@ -535,7 +535,7 @@ bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningFulBitWidth) const {
     OrigValueBitWidth =
         std::max(OrigValueBitWidth, PartMap.getHighBitIdx() + 1);
   }
-  assert(OrigValueBitWidth >= MeaningFulBitWidth &&
+  assert(OrigValueBitWidth >= MeaningfulBitWidth &&
          "Meaningful bits not covered by the mapping");
   APInt ValueMask(OrigValueBitWidth, 0);
   for (const RegisterBankInfo::PartialMapping &PartMap : *this) {

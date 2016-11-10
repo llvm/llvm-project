@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -119,6 +121,24 @@ bool ProfileSummaryInfo::isColdCount(uint64_t C) {
   if (!ColdCountThreshold)
     computeThresholds();
   return ColdCountThreshold && C <= ColdCountThreshold.getValue();
+}
+
+bool ProfileSummaryInfo::isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI) {
+  auto Count = BFI->getBlockProfileCount(B);
+  if (Count && isHotCount(*Count))
+    return true;
+  // Use extractProfTotalWeight to get BB count.
+  // For Sample PGO, BFI may not provide accurate BB count due to errors
+  // magnified during sample count propagation. This serves as a backup plan
+  // to ensure all hot BB will not be missed.
+  // The query currently has false positives as branch instruction cloning does
+  // not update/scale branch weights. Unlike false negatives, this will not cause
+  // performance problem.
+  uint64_t TotalCount;
+  if (B->getTerminator()->extractProfTotalWeight(TotalCount) &&
+      isHotCount(TotalCount))
+    return true;
+  return false;
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

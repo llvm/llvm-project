@@ -22,6 +22,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -222,12 +223,10 @@ int main(int argc, char **argv) {
     }
   }
 
-  auto Materialize = [&](GlobalValue &GV) {
-    if (std::error_code EC = GV.materialize()) {
-      errs() << argv[0] << ": error reading input: " << EC.message() << "\n";
-      exit(1);
-    }
-  };
+  // Use *argv instead of argv[0] to work around a wrong GCC warning.
+  ExitOnError ExitOnErr(std::string(*argv) + ": error reading input: ");
+
+  auto Materialize = [&](GlobalValue &GV) { ExitOnErr(GV.materialize()); };
 
   // Materialize requisite global values.
   if (!DeleteFn) {
@@ -251,7 +250,7 @@ int main(int argc, char **argv) {
     // Now that we have all the GVs we want, mark the module as fully
     // materialized.
     // FIXME: should the GVExtractionPass handle this?
-    M->materializeAll();
+    ExitOnErr(M->materializeAll());
   }
 
   // In addition to deleting all other functions, we also want to spiff it

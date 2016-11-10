@@ -59,8 +59,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 }
 
 // Parses a linker -m option.
-static std::tuple<ELFKind, uint16_t, uint8_t, bool>
-parseEmulation(StringRef Emul) {
+static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
   uint8_t OSABI = 0;
   StringRef S = Emul;
   if (S.endswith("_fbsd")) {
@@ -92,8 +91,7 @@ parseEmulation(StringRef Emul) {
     else
       error("unknown emulation: " + Emul);
   }
-  bool IsMipsN32ABI = S == "elf32btsmipn32" || S == "elf32ltsmipn32";
-  return std::make_tuple(Ret.first, Ret.second, OSABI, IsMipsN32ABI);
+  return std::make_tuple(Ret.first, Ret.second, OSABI);
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -463,8 +461,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_m)) {
     // Parse ELF{32,64}{LE,BE} and CPU type.
     StringRef S = Arg->getValue();
-    std::tie(Config->EKind, Config->EMachine, Config->OSABI,
-             Config->MipsN32Abi) = parseEmulation(S);
+    std::tie(Config->EKind, Config->EMachine, Config->OSABI) =
+        parseEmulation(S);
+    Config->MipsN32Abi = (S == "elf32btsmipn32" || S == "elf32ltsmipn32");
     Config->Emulation = S;
   }
 

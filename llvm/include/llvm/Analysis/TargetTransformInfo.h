@@ -275,6 +275,11 @@ public:
     /// applies even if full unrolling is selected. This allows a target to fall
     /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.
     unsigned FullUnrollMaxCount;
+    // Represents number of instructions optimized when "back edge"
+    // becomes "fall through" in unrolled loop.
+    // For now we count a conditional branch on a backedge and a comparison
+    // feeding it.
+    unsigned BEInsns;
     /// Allow partial unrolling (unrolling of loops to expand the size of the
     /// loop body, not only to eliminate small constant-trip-count loops).
     bool Partial;

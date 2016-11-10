@@ -35,7 +35,6 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/Function.h"
@@ -5093,8 +5092,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // The expression evaluation should still succeed.
     bool miss_first_event = true;
 #endif
-    TimeValue one_thread_timeout;
-    TimeValue final_timeout;
     std::chrono::microseconds timeout = std::chrono::microseconds(0);
 
     while (true) {

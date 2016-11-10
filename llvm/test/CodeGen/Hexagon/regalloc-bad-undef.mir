@@ -146,11 +146,11 @@ body:             |
     successors: %bb.1.for.body
 
     %59 = A2_tfrsi 524288
-    undef %32.subreg_hireg = A2_tfrsi 0
+    undef %32.isub_hi = A2_tfrsi 0
     %8 = S2_extractup undef %9, 6, 25
     %47 = A2_tfrpi 2
     %13 = A2_tfrpi -1
-    %13 = S2_asl_r_p_acc %13, %47, %8.subreg_loreg
+    %13 = S2_asl_r_p_acc %13, %47, %8.isub_lo
     %51 = A2_tfrpi 0
 
     ; CHECK: %d2 = S2_extractup undef %d0, 6, 25
@@ -164,25 +164,25 @@ body:             |
     ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
     J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3, implicit-def %r0
     ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
-    undef %29.subreg_loreg = COPY killed %r0
-    %29.subreg_hireg = S2_asr_i_r %29.subreg_loreg, 31
+    undef %29.isub_lo = COPY killed %r0
+    %29.isub_hi = S2_asr_i_r %29.isub_lo, 31
     ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
     J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3, implicit-def %r0
     ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
-    %32.subreg_loreg = COPY killed %r0
+    %32.isub_lo = COPY killed %r0
     %7 = S2_extractup %32, 22, 9
     ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
     J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3, implicit-def %r0
     ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
-    undef %43.subreg_loreg = COPY killed %r0
-    %43.subreg_hireg = COPY %32.subreg_hireg
+    undef %43.isub_lo = COPY killed %r0
+    %43.isub_hi = COPY %32.isub_hi
     %16 = S2_extractup %43, 6, 25
     %18 = A2_tfrpi -1
-    %18 = S2_asl_r_p_acc %18, %47, %16.subreg_loreg
+    %18 = S2_asl_r_p_acc %18, %47, %16.isub_lo
     ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
     J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3
     ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
-    %22 = S2_asl_r_p %18, %8.subreg_loreg
+    %22 = S2_asl_r_p %18, %8.isub_lo
     %21 = COPY %13
     %21 = S2_lsr_i_p_and %21, %29, 9
     %22 = S2_asl_i_p_and %22, %7, 42

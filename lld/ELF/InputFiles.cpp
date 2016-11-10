@@ -160,14 +160,6 @@ ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
   return makeArrayRef(this->SymbolBodies).slice(1);
 }
 
-template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
-  if (ELFT::Is64Bits && MipsOptions && MipsOptions->Reginfo)
-    return MipsOptions->Reginfo->ri_gp_value;
-  if (!ELFT::Is64Bits && MipsReginfo && MipsReginfo->Reginfo)
-    return MipsReginfo->Reginfo->ri_gp_value;
-  return 0;
-}
-
 template <class ELFT>
 void elf::ObjectFile<ELFT>::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
   // Read section and symbol tables.
@@ -348,24 +340,6 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     // FIXME: ARM meta-data section. At present attributes are ignored,
     // they can be used to reason about object compatibility.
     return &InputSection<ELFT>::Discarded;
-  case SHT_MIPS_REGINFO:
-    if (MipsReginfo)
-      fatal(getFilename(this) +
-            ": multiple SHT_MIPS_REGINFO sections are not allowed");
-    MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec, Name));
-    return MipsReginfo.get();
-  case SHT_MIPS_OPTIONS:
-    if (MipsOptions)
-      fatal(getFilename(this) +
-            ": multiple SHT_MIPS_OPTIONS sections are not allowed");
-    MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec, Name));
-    return MipsOptions.get();
-  case SHT_MIPS_ABIFLAGS:
-    if (MipsAbiFlags)
-      fatal(getFilename(this) +
-            ": multiple SHT_MIPS_ABIFLAGS sections are not allowed");
-    MipsAbiFlags.reset(new MipsAbiFlagsInputSection<ELFT>(this, &Sec, Name));
-    return MipsAbiFlags.get();
   case SHT_RELA:
   case SHT_REL: {
     // This section contains relocation information.
@@ -446,7 +420,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   }
 
-  if (S == &InputSectionBase<ELFT>::Discarded)
+  if (S == &InputSection<ELFT>::Discarded)
     return S;
   return S->Repl;
 }
@@ -821,12 +795,12 @@ template <class ELFT> void BinaryFile::parse() {
       make<InputSection<ELFT>>(SHF_ALLOC, SHT_PROGBITS, 8, Data, ".data");
   Sections.push_back(Section);
 
-  elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, Section, STB_GLOBAL,
-                                   STT_OBJECT, 0);
-  elf::Symtab<ELFT>::X->addRegular(EndName, STV_DEFAULT, Section, STB_GLOBAL,
-                                   STT_OBJECT, Data.size());
-  elf::Symtab<ELFT>::X->addRegular(SizeName, STV_DEFAULT, nullptr, STB_GLOBAL,
-                                   STT_OBJECT, Data.size());
+  elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, STT_OBJECT, 0, 0,
+                                   STB_GLOBAL, Section);
+  elf::Symtab<ELFT>::X->addRegular(EndName, STV_DEFAULT, STT_OBJECT,
+                                   Data.size(), 0, STB_GLOBAL, Section);
+  elf::Symtab<ELFT>::X->addRegular(SizeName, STV_DEFAULT, STT_OBJECT,
+                                   Data.size(), 0, STB_GLOBAL, nullptr);
 }
 
 static bool isBitcode(MemoryBufferRef MB) {

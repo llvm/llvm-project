@@ -36,7 +36,7 @@
 
                                       <p>You also need to choose the ivars for the class with care, since you can't add or remove ivars
                                         without breaking binary compatibility.  In some cases, the SB class is a thin wrapper around
-                                        an interal lldb_private object.  In that case, the class can have a single ivar, which is 
+                                        an internal lldb_private object.  In that case, the class can have a single ivar, which is
                                         either a pointer, shared_ptr or unique_ptr to the object in the lldb_private API.  All the
                                         lldb_private classes that get used this way are declared as opaque classes in lldb_forward.h,
                                         which is included in SBDefines.h.  So if you need an SB class to wrap an lldb_private class
@@ -47,8 +47,9 @@
                                         as a direct ivar in the SB Class.  Instead, make an Impl class in the SB's .cpp file, and then
                                         make the SB object hold a shared or unique pointer to the Impl object.  The theory behind this is
                                         that if you need more state in the SB object, those needs are likely to change over time, 
-                                        and this way the impl class can pick up members without changing the size of the object.
-                                        An example of this is the SBValue class.
+                                        and this way the Impl class can pick up members without changing the size of the object.
+                                        An example of this is the SBValue class.  Please note that you should not put this Impl class
+                                        in the lldb namespace.  Failure to do so leads to leakage of weak-linked symbols in the SBAPI.
                                         
                                       <p>In order to fit into the Python API's, we need to be able to default construct all the SB objects.
                                         Since the ivars of the classes are all pointers of one sort or other, this can easily be done, but

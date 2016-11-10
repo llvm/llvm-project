@@ -11,10 +11,8 @@ def F64 : PatLeaf<(f64 DoubleRegs:$R)>;
 
 // Pattern fragments to extract the low and high subregisters from a
 // 64-bit value.
-def LoReg: OutPatFrag<(ops node:$Rs),
-                      (EXTRACT_SUBREG (i64 $Rs), subreg_loreg)>;
-def HiReg: OutPatFrag<(ops node:$Rs),
-                      (EXTRACT_SUBREG (i64 $Rs), subreg_hireg)>;
+def LoReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_lo)>;
+def HiReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_hi)>;
 
 def orisadd: PatFrag<(ops node:$Addr, node:$off),
     (or node:$Addr, node:$off), [{ return orIsAdd(N); }]>;
@@ -594,33 +592,33 @@ let AddedComplexity = 20 in { // Complexity greater than and/or/xor
 let AddedComplexity = 20 in { // Complexity greater than and/or/xor
   def: Pat<(and I64:$Rss, IsNPow2_64L:$V),
            (REG_SEQUENCE DoubleRegs,
-                (i32 (HiReg $Rss)), subreg_hireg,
-                (S2_clrbit_i (LoReg $Rss), (LogN2_64 $V)), subreg_loreg)>;
+                (i32 (HiReg $Rss)), isub_hi,
+                (S2_clrbit_i (LoReg $Rss), (LogN2_64 $V)), isub_lo)>;
   def: Pat<(and I64:$Rss, IsNPow2_64H:$V),
            (REG_SEQUENCE DoubleRegs,
                 (S2_clrbit_i (HiReg $Rss), (UDEC32 (i32 (LogN2_64 $V)))),
-                subreg_hireg,
-                (i32 (LoReg $Rss)), subreg_loreg)>;
+                isub_hi,
+                (i32 (LoReg $Rss)), isub_lo)>;
 
   def: Pat<(or I64:$Rss, IsPow2_64L:$V),
            (REG_SEQUENCE DoubleRegs,
-                (i32 (HiReg $Rss)), subreg_hireg,
-                (S2_setbit_i (LoReg $Rss), (Log2_64 $V)), subreg_loreg)>;
+                (i32 (HiReg $Rss)), isub_hi,
+                (S2_setbit_i (LoReg $Rss), (Log2_64 $V)), isub_lo)>;
   def: Pat<(or I64:$Rss, IsPow2_64H:$V),
            (REG_SEQUENCE DoubleRegs,
                 (S2_setbit_i (HiReg $Rss), (UDEC32 (i32 (Log2_64 $V)))),
-                subreg_hireg,
-                (i32 (LoReg $Rss)), subreg_loreg)>;
+                isub_hi,
+                (i32 (LoReg $Rss)), isub_lo)>;
 
   def: Pat<(xor I64:$Rss, IsPow2_64L:$V),
            (REG_SEQUENCE DoubleRegs,
-                (i32 (HiReg $Rss)), subreg_hireg,
-                (S2_togglebit_i (LoReg $Rss), (Log2_64 $V)), subreg_loreg)>;
+                (i32 (HiReg $Rss)), isub_hi,
+                (S2_togglebit_i (LoReg $Rss), (Log2_64 $V)), isub_lo)>;
   def: Pat<(xor I64:$Rss, IsPow2_64H:$V),
            (REG_SEQUENCE DoubleRegs,
                 (S2_togglebit_i (HiReg $Rss), (UDEC32 (i32 (Log2_64 $V)))),
-                subreg_hireg,
-                (i32 (LoReg $Rss)), subreg_loreg)>;
+                isub_hi,
+                (i32 (LoReg $Rss)), isub_lo)>;
 }
 
 let AddedComplexity = 20 in { // Complexity greater than cmp reg-imm.
@@ -2695,13 +2693,13 @@ def : Pat <(fneg F32:$src1),
 
 def: Pat<(fabs F64:$Rs),
          (REG_SEQUENCE DoubleRegs,
-              (S2_clrbit_i (HiReg $Rs), 31), subreg_hireg,
-              (i32 (LoReg $Rs)), subreg_loreg)>;
+              (S2_clrbit_i (HiReg $Rs), 31), isub_hi,
+              (i32 (LoReg $Rs)), isub_lo)>;
 
 def: Pat<(fneg F64:$Rs),
          (REG_SEQUENCE DoubleRegs,
-              (S2_togglebit_i (HiReg $Rs), 31), subreg_hireg,
-              (i32 (LoReg $Rs)), subreg_loreg)>;
+              (S2_togglebit_i (HiReg $Rs), 31), isub_hi,
+              (i32 (LoReg $Rs)), isub_lo)>;
 
 def alignedload : PatFrag<(ops node:$addr), (load $addr), [{
   return isAlignedMemNode(dyn_cast<MemSDNode>(N));

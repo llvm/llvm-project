@@ -359,7 +359,8 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   };
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader);
-  Importer.importFunctions(Mod, ImportList);
+  if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
+    return Err;
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return Error();

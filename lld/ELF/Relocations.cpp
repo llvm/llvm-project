@@ -518,7 +518,7 @@ static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
     if (Expr == R_GOTREL) {
       Addend -= MipsGPOffset;
       if (Body.isLocal())
-        Addend += File.getMipsGp0();
+        Addend += File.MipsGp0;
     }
   }
   if (Config->Pic && Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)

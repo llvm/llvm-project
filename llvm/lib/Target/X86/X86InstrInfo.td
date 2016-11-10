@@ -765,6 +765,12 @@ def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 
 def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
 
+// A relocatable immediate is either an immediate operand or an operand that can
+// be relocated by the linker to an immediate, such as a regular symbol in
+// non-PIC code.
+def relocImm : ComplexPattern<iAny, 1, "selectRelocImm", [imm, X86Wrapper], [],
+                              0>;
+
 //===----------------------------------------------------------------------===//
 // X86 Instruction Predicate Definitions.
 def TruePredicate : Predicate<"true">;
@@ -877,8 +883,6 @@ def IsNaCl       : Predicate<"Subtarget->isTargetNaCl()">;
 def NotNaCl      : Predicate<"!Subtarget->isTargetNaCl()">;
 def SmallCode    : Predicate<"TM.getCodeModel() == CodeModel::Small">;
 def KernelCode   : Predicate<"TM.getCodeModel() == CodeModel::Kernel">;
-def FarData      : Predicate<"TM.getCodeModel() != CodeModel::Small &&"
-                             "TM.getCodeModel() != CodeModel::Kernel">;
 def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
                              "TM.getCodeModel() == CodeModel::Kernel">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
@@ -950,7 +954,7 @@ def imm8_su : PatLeaf<(i8 imm), [{
 def imm16_su : PatLeaf<(i16 imm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
-def imm32_su : PatLeaf<(i32 imm), [{
+def imm32_su : PatLeaf<(i32 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 def i64immSExt32_su : PatLeaf<(i64immSExt32), [{
@@ -1380,7 +1384,7 @@ def MOV16ri : Ii16<0xB8, AddRegFrm, (outs GR16:$dst), (ins i16imm:$src),
                    [(set GR16:$dst, imm:$src)], IIC_MOV>, OpSize16;
 def MOV32ri : Ii32<0xB8, AddRegFrm, (outs GR32:$dst), (ins i32imm:$src),
                    "mov{l}\t{$src, $dst|$dst, $src}",
-                   [(set GR32:$dst, imm:$src)], IIC_MOV>, OpSize32;
+                   [(set GR32:$dst, relocImm:$src)], IIC_MOV>, OpSize32;
 def MOV64ri32 : RIi32S<0xC7, MRM0r, (outs GR64:$dst), (ins i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
                        [(set GR64:$dst, i64immSExt32:$src)], IIC_MOV>;
@@ -1388,7 +1392,7 @@ def MOV64ri32 : RIi32S<0xC7, MRM0r, (outs GR64:$dst), (ins i64i32imm:$src),
 let isReMaterializable = 1 in {
 def MOV64ri : RIi64<0xB8, AddRegFrm, (outs GR64:$dst), (ins i64imm:$src),
                     "movabs{q}\t{$src, $dst|$dst, $src}",
-                    [(set GR64:$dst, imm:$src)], IIC_MOV>;
+                    [(set GR64:$dst, relocImm:$src)], IIC_MOV>;
 }
 
 // Longer forms that use a ModR/M byte. Needed for disassembler

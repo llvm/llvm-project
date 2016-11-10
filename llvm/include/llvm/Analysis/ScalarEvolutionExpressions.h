@@ -537,6 +537,31 @@ namespace llvm {
     T.visitAll(Root);
   }
 
+  /// Return true if any node in \p Root satisfies the predicate \p Pred.
+  template <typename PredTy>
+  bool SCEVExprContains(const SCEV *Root, PredTy Pred) {
+    struct FindClosure {
+      bool Found = false;
+      PredTy Pred;
+
+      FindClosure(PredTy Pred) : Pred(Pred) {}
+
+      bool follow(const SCEV *S) {
+        if (!Pred(S))
+          return true;
+
+        Found = true;
+        return false;
+      }
+
+      bool isDone() const { return Found; }
+    };
+
+    FindClosure FC(Pred);
+    visitAll(Root, FC);
+    return FC.Found;
+  }
+
   /// This visitor recursively visits a SCEV expression and re-writes it.
   /// The result from each visit is cached, so it will return the same
   /// SCEV for the same input.

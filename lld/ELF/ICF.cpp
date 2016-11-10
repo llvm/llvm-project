@@ -218,8 +218,8 @@ bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
   for (size_t I = 0, E = A->RelocSections.size(); I != E; ++I) {
     const Elf_Shdr *RA = A->RelocSections[I];
     const Elf_Shdr *RB = B->RelocSections[I];
-    ELFFile<ELFT> FileA = A->File->getObj();
-    ELFFile<ELFT> FileB = B->File->getObj();
+    ELFFile<ELFT> FileA = A->getObj();
+    ELFFile<ELFT> FileB = B->getObj();
     if (RA->sh_type == SHT_RELA) {
       if (!relocationEq(check(FileA.relas(RA)), check(FileB.relas(RB))))
         return false;
@@ -271,8 +271,8 @@ bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
   for (size_t I = 0, E = A->RelocSections.size(); I != E; ++I) {
     const Elf_Shdr *RA = A->RelocSections[I];
     const Elf_Shdr *RB = B->RelocSections[I];
-    ELFFile<ELFT> FileA = A->File->getObj();
-    ELFFile<ELFT> FileB = B->File->getObj();
+    ELFFile<ELFT> FileA = A->getObj();
+    ELFFile<ELFT> FileB = B->getObj();
     if (RA->sh_type == SHT_RELA) {
       if (!variableEq(A, B, check(FileA.relas(RA)), check(FileB.relas(RB))))
         return false;

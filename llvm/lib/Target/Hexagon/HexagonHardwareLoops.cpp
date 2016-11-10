@@ -1501,9 +1501,9 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
         return false;
       unsigned Sub2 = DI->getOperand(2).getImm();
       unsigned Sub4 = DI->getOperand(4).getImm();
-      if (Sub2 == Hexagon::subreg_loreg && Sub4 == Hexagon::subreg_hireg)
+      if (Sub2 == Hexagon::isub_lo && Sub4 == Hexagon::isub_hi)
         TV = V1 | (V3 << 32);
-      else if (Sub2 == Hexagon::subreg_hireg && Sub4 == Hexagon::subreg_loreg)
+      else if (Sub2 == Hexagon::isub_hi && Sub4 == Hexagon::isub_lo)
         TV = V3 | (V1 << 32);
       else
         llvm_unreachable("Unexpected form of REG_SEQUENCE");
@@ -1517,10 +1517,10 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
   // By now, we should have successfuly obtained the immediate value defining
   // the register referenced in MO. Handle a potential use of a subregister.
   switch (MO.getSubReg()) {
-    case Hexagon::subreg_loreg:
+    case Hexagon::isub_lo:
       Val = TV & 0xFFFFFFFFULL;
       break;
-    case Hexagon::subreg_hireg:
+    case Hexagon::isub_hi:
       Val = (TV >> 32) & 0xFFFFFFFFULL;
       break;
     default:

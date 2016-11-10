@@ -393,6 +393,16 @@ ComplexPattern::ComplexPattern(Record *R) {
   SelectFunc  = R->getValueAsString("SelectFunc");
   RootNodes   = R->getValueAsListOfDefs("RootNodes");
 
+  // FIXME: This is a hack to statically increase the priority of patterns which
+  // maps a sub-dag to a complex pattern. e.g. favors LEA over ADD. To get best
+  // possible pattern match we'll need to dynamically calculate the complexity
+  // of all patterns a dag can potentially map to.
+  int64_t RawComplexity = R->getValueAsInt("Complexity");
+  if (RawComplexity == -1)
+    Complexity = NumOperands * 3;
+  else
+    Complexity = RawComplexity;
+
   // Parse the properties.
   Properties = 0;
   std::vector<Record*> PropList = R->getValueAsListOfDefs("Properties");
