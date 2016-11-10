@@ -3,7 +3,8 @@
 // RUN: %clang_cc1 -triple powerpc64-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=PPC64
 // RUN: %clang_cc1 -triple mipsel-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS32
 // RUN: %clang_cc1 -triple mips64el-linux-gnu -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
-// RUN: %clang_cc1 -triple sparc-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARC
+// RUN: %clang_cc1 -triple sparc-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV8 -check-prefix=SPARC
+// RUN: %clang_cc1 -triple sparcv9-unknown-eabi -emit-llvm %s -o - | FileCheck %s -check-prefix=SPARCV9 -check-prefix=SPARC
 
 unsigned char c1, c2;
 unsigned short s1, s2;
@@ -99,8 +100,10 @@ void test1(void) {
 // SPARC: store atomic i16 {{.*}}, i16* @s1 seq_cst
 // SPARC: = load atomic i32, i32* @i1 seq_cst
 // SPARC: store atomic i32 {{.*}}, i32* @i1 seq_cst
-// SPARC: = load atomic i64, i64* @ll1 seq_cst
-// SPARC: store atomic i64 {{.*}}, i64* @ll1 seq_cst
-// SPARC: call void @__atomic_load(i32 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
-// SPARC: call void @__atomic_store(i32 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
+// SPARCV8: call i64 @__atomic_load_8(i8* bitcast (i64* @ll1 to i8*)
+// SPARCV8: call void @__atomic_store_8(i8* bitcast (i64* @ll1 to i8*), i64
+// SPARCV9: load atomic i64, i64* @ll1 seq_cst, align 8
+// SPARCV9: store atomic i64 {{.*}}, i64* @ll1 seq_cst, align 8
+// SPARCV8: call void @__atomic_load(i32 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
+// SPARCV8: call void @__atomic_store(i32 100, i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a1, i32 0, i32 0), i8* getelementptr inbounds ([100 x i8], [100 x i8]* @a2, i32 0, i32 0)
 }

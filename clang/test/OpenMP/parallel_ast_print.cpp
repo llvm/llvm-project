@@ -58,10 +58,6 @@ public:
   }
 };
 
-// CHECK: #pragma omp parallel private(this->a) private(this->a) private(this->S1::a)
-// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(this->S1::a)
-// CHECK: #pragma omp parallel shared(this->a) shared(this->a) shared(this->S1::a)
-// CHECK: #pragma omp parallel reduction(+: this->a) reduction(*: this->b[:])
 // CHECK: #pragma omp parallel private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(T::a)
 // CHECK: #pragma omp parallel shared(this->a) shared(this->a) shared(T::a)
@@ -70,6 +66,10 @@ public:
 // CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a)
 // CHECK: #pragma omp parallel shared(this->a) shared(this->a)
 // CHECK: #pragma omp parallel reduction(&&: this->a) reduction(^: this->b[s.a.a])
+// CHECK: #pragma omp parallel private(this->a) private(this->a) private(this->S1::a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(this->S1::a)
+// CHECK: #pragma omp parallel shared(this->a) shared(this->a) shared(this->S1::a)
+// CHECK: #pragma omp parallel reduction(+: this->a) reduction(*: this->b[:])
 
 class S8 : public S7<S1> {
   S8() {}
@@ -122,18 +122,18 @@ struct S {
   #pragma omp threadprivate(TS)
 };
 
-// CHECK:      template <class T = int> struct S {
-// CHECK:        static int TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
-// CHECK-NEXT: }
-// CHECK:      template <class T = long> struct S {
-// CHECK:        static long TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
-// CHECK-NEXT: }
 // CHECK:      template <class T> struct S {
 // CHECK:        static T TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S::TS)
 // CHECK:      };
+// CHECK:      template<> struct S<int> {
+// CHECK:        static int TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
+// CHECK-NEXT: }
+// CHECK:      template<> struct S<long> {
+// CHECK:        static long TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
+// CHECK-NEXT: }
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {
@@ -150,28 +150,6 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
-// CHECK: template <typename T = int, int C = 5> int tmain(int argc, int *argv) {
-// CHECK-NEXT: int b = argc, c, d, e, f, g;
-// CHECK-NEXT: static int a;
-// CHECK-NEXT: S<int> s;
-// CHECK-NEXT: int arr[5][10], arr1[5];
-// CHECK-NEXT: #pragma omp parallel
-// CHECK-NEXT: a = 2;
-// CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) copyin(S<int>::TS) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp parallel if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(&&: g)
-// CHECK-NEXT: foo()
-// CHECK: template <typename T = long, int C = 1> long tmain(long argc, long *argv) {
-// CHECK-NEXT: long b = argc, c, d, e, f, g;
-// CHECK-NEXT: static long a;
-// CHECK-NEXT: S<long> s;
-// CHECK-NEXT: long arr[1][10], arr1[1];
-// CHECK-NEXT: #pragma omp parallel
-// CHECK-NEXT: a = 2;
-// CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(1) copyin(S<long>::TS) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10])
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp parallel if(1) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(&&: g)
-// CHECK-NEXT: foo()
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T b = argc, c, d, e, f, g;
 // CHECK-NEXT: static T a;
@@ -182,6 +160,28 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) copyin(S<T>::TS) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp parallel if(C) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(&&: g)
+// CHECK-NEXT: foo()
+// CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
+// CHECK-NEXT: int b = argc, c, d, e, f, g;
+// CHECK-NEXT: static int a;
+// CHECK-NEXT: S<int> s;
+// CHECK-NEXT: int arr[5][10], arr1[5];
+// CHECK-NEXT: #pragma omp parallel
+// CHECK-NEXT: a = 2;
+// CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) copyin(S<int>::TS) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp parallel if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(&&: g)
+// CHECK-NEXT: foo()
+// CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
+// CHECK-NEXT: long b = argc, c, d, e, f, g;
+// CHECK-NEXT: static long a;
+// CHECK-NEXT: S<long> s;
+// CHECK-NEXT: long arr[1][10], arr1[1];
+// CHECK-NEXT: #pragma omp parallel
+// CHECK-NEXT: a = 2;
+// CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(1) copyin(S<long>::TS) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10])
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp parallel if(1) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(&&: g)
 // CHECK-NEXT: foo()
 
 enum Enum { };

@@ -37,9 +37,9 @@ public:
   }
 };
 
-// CHECK: #pragma omp distribute parallel for private(this->a) private(this->a) private(this->S::a)
 // CHECK: #pragma omp distribute parallel for private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp distribute parallel for private(this->a) private(this->a)
+// CHECK: #pragma omp distribute parallel for private(this->a) private(this->a) private(this->S::a)
 
 class S8 : public S7<S> {
   S8() {}

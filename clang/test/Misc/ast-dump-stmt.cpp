@@ -65,3 +65,19 @@ void TestDependentAllocationExpr() {
 // CHECK: FunctionTemplateDecl {{.*}} TestDependentAllocationExpr
 // CHECK: CXXNewExpr {{.*'T \*'$}}
 // CHECK: CXXDeleteExpr {{.*'void'$}}
+
+template <typename T>
+class DependentScopeMemberExprWrapper {
+  T member;
+};
+
+template <typename T>
+void TestDependentScopeMemberExpr() {
+  DependentScopeMemberExprWrapper<T> obj;
+  obj.member = T();
+  (&obj)->member = T();
+}
+
+// CHECK: FunctionTemplateDecl {{.*}} TestDependentScopeMemberExpr
+// CHECK: CXXDependentScopeMemberExpr {{.*}} lvalue .member
+// CHECK: CXXDependentScopeMemberExpr {{.*}} lvalue ->member

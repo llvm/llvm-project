@@ -432,7 +432,7 @@ void test_lifetime_extended_temporaries() {
 }
 
 
-// CHECK-LABEL: int *PR18472()
+// CHECK-LABEL: template<> int *PR18472<int>()
 // CHECK: [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1
 // CHECK: [B1]

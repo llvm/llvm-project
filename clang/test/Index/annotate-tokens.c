@@ -239,3 +239,7 @@ void test() {
 // CHECK-RANGE2: Identifier: "reg" [68:3 - 68:6] DeclRefExpr=reg:67:7
 // CHECK-RANGE2: Punctuation: "." [68:6 - 68:7] MemberRefExpr=field:62:9
 // CHECK-RANGE2: Identifier: "field" [68:7 - 68:12] MemberRefExpr=field:62:9
+
+// RUN: c-index-test -test-annotate-tokens=%s:68:15:68:16 %s | FileCheck %s -check-prefix=CHECK-RANGE3
+// CHECK-RANGE3: Literal: "1" [68:15 - 68:16] IntegerLiteral=
+// CHECK-RANGE3-NOT: Punctuation: ";"

@@ -35,8 +35,8 @@ public:
 };
 
 // CHECK: #pragma omp simd aligned(this->a)
-// CHECK: #pragma omp simd aligned(this->a)
 // CHECK: #pragma omp simd aligned(this->b: 8)
+// CHECK: #pragma omp simd aligned(this->a)
 
 class S8 : public S7<SS> {
   S8() {}
@@ -129,7 +129,7 @@ template<int LEN> struct S2 {
 };
 
 // S2<4>::func is called below in main.
-// CHECK: template <int LEN = 4> struct S2 {
+// CHECK: template<> struct S2<4> {
 // CHECK-NEXT: static void func(int n, float *a, float *b, float *c)     {
 // CHECK-NEXT:   int k1 = 0, k2 = 0;
 // CHECK-NEXT: #pragma omp simd safelen(4) linear(k1,k2: 4) aligned(a: 4) simdlen(4)
