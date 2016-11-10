@@ -1275,7 +1275,7 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
   Impl.InputBuffer = inputBuffer;
   Impl.OwnsInputBuffer = ownsInputBuffer;
   Impl.SwiftVersion = swiftVersion;
-  llvm::BitstreamCursor cursor(Impl.InputBuffer->getBuffer());
+  llvm::BitstreamCursor cursor(*Impl.InputBuffer);
 
   // Validate signature.
   for (auto byte : API_NOTES_SIGNATURE) {
