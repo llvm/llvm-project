@@ -121,6 +121,8 @@ protected:
 // .o file.
 template <class ELFT> class ObjectFile : public ELFFileBase<ELFT> {
   typedef ELFFileBase<ELFT> Base;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::SymRange Elf_Sym_Range;

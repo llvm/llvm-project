@@ -30,16 +30,8 @@
 ; CHECK:  %pexp.p_div_q = udiv i64 %polly.indvar, 127
 ; CHECK:  %polly.access.B10 = getelementptr float, float* %B, i64 %pexp.p_div_q
 
-; #define floord(n,d) ((n < 0) ? (n - d + 1) : n) / d
-; A[p + 127 * floord(-p - 1, 127) + 127]
-; CHECK:  %pexp.fdiv_q.0 = sub nsw i64 %p, 127
-; CHECK:  %pexp.fdiv_q.1 = add nsw i64 %pexp.fdiv_q.0, 1
-; CHECK:  %pexp.fdiv_q.2 = icmp slt i64 %p, 0
-; CHECK:  %pexp.fdiv_q.3 = select i1 %pexp.fdiv_q.2, i64 %pexp.fdiv_q.1, i64 %p
-; CHECK:  %pexp.fdiv_q.4 = sdiv i64 %pexp.fdiv_q.3, 127
-; CHECK:  %[[r1:[0-9]*]] = mul nsw i64 127, %pexp.fdiv_q.4
-; CHECK:  %[[r2:[0-9]*]] = sub nsw i64 %p, %[[r1]]
-; CHECK:  %polly.access.A11 = getelementptr float, float* %A, i64 %[[r2]]
+; A[p % 128]
+; CHECK:  %polly.access.A11 = getelementptr float, float* %A, i64 0
 
 ; A[p / 127]
 ; CHECK:  %pexp.div = sdiv exact i64 %p, 127
@@ -53,12 +45,8 @@
 ; POW2:  %pexp.p_div_q = udiv i64 %polly.indvar, 128
 ; POW2:  %polly.access.B10 = getelementptr float, float* %B, i64 %pexp.p_div_q
 
-; #define floord(n,d) ((n < 0) ? (n - d + 1) : n) / d
-; A[p + 128 * floord(-p - 1, 128) + 128]
-; POW2:  %polly.fdiv_q.shr = ashr i64 %p, 7
-; POW2:  %[[r1:[0-9]*]] = mul nsw i64 128, %polly.fdiv_q.shr
-; POW2:  %[[r2:[0-9]*]] = sub nsw i64 %p, %[[r1]]
-; POW2:  %polly.access.A11 = getelementptr float, float* %A, i64 %[[r2]]
+; A[p % 128]
+; POW2:  %polly.access.A11 = getelementptr float, float* %A, i64 0
 
 ; A[p / 128]
 ; POW2:  %pexp.div = sdiv exact i64 %p, 128

@@ -827,6 +827,9 @@ sys_error(
             // TODO: Add checking result of malloc().
             char * buffer = (char *) KMP_INTERNAL_MALLOC( size );
             int    rc;
+            if (buffer == NULL) {
+                KMP_FATAL(MemoryAllocFailed);
+            }
             rc = strerror_r( err, buffer, size );
             if ( rc == -1 ) {
                 rc = errno;            // XSI version sets errno.
@@ -835,6 +838,9 @@ sys_error(
                 KMP_INTERNAL_FREE( buffer );
                 size *= 2;
                 buffer = (char *) KMP_INTERNAL_MALLOC( size );
+                if (buffer == NULL) {
+                    KMP_FATAL(MemoryAllocFailed);
+                }
                 rc = strerror_r( err, buffer, size );
                 if ( rc == -1 ) {
                     rc = errno;        // XSI version sets errno.

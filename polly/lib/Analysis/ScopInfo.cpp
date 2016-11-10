@@ -3768,6 +3768,8 @@ void Scop::addAssumption(AssumptionKind Kind, __isl_take isl_set *Set,
 
 void Scop::recordAssumption(AssumptionKind Kind, __isl_take isl_set *Set,
                             DebugLoc Loc, AssumptionSign Sign, BasicBlock *BB) {
+  assert((isl_set_is_params(Set) || BB) &&
+         "Assumptions without a basic block must be parameter sets");
   RecordedAssumptions.push_back({Kind, Sign, Set, Loc, BB});
 }
 

@@ -447,6 +447,18 @@ static SortSectionPolicy getSortKind(opt::InputArgList &Args) {
   return SortSectionPolicy::Default;
 }
 
+// Parse the --symbol-ordering-file argument. File has form:
+// symbolName1
+// [...]
+// symbolNameN
+static void parseSymbolOrderingList(MemoryBufferRef MB) {
+  unsigned I = 0;
+  SmallVector<StringRef, 0> Arr;
+  MB.getBuffer().split(Arr, '\n');
+  for (StringRef S : Arr)
+    Config->SymbolOrderingFile.insert({CachedHashStringRef(S.trim()), I++});
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_L))
@@ -579,6 +591,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_dynamic_list))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       parseDynamicList(*Buffer);
+
+  if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+      parseSymbolOrderingList(*Buffer);
 
   for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
     Config->DynamicList.push_back(Arg->getValue());

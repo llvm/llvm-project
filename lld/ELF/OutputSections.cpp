@@ -14,6 +14,7 @@
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "Strings.h"
+#include "SymbolListFile.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -104,35 +105,6 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
     write64le(Buf, CU.first);
     write64le(Buf + 8, CU.second);
     Buf += 16;
-  }
-}
-
-template <class ELFT>
-GotPltSection<ELFT>::GotPltSection()
-    : OutputSectionBase(".got.plt", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE) {
-  this->Addralign = Target->GotPltEntrySize;
-}
-
-template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
-  Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
-  Entries.push_back(&Sym);
-}
-
-template <class ELFT> bool GotPltSection<ELFT>::empty() const {
-  return Entries.empty();
-}
-
-template <class ELFT> void GotPltSection<ELFT>::finalize() {
-  this->Size = (Target->GotPltHeaderEntriesNum + Entries.size()) *
-               Target->GotPltEntrySize;
-}
-
-template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
-  Target->writeGotPltHeader(Buf);
-  Buf += Target->GotPltHeaderEntriesNum * Target->GotPltEntrySize;
-  for (const SymbolBody *B : Entries) {
-    Target->writeGotPlt(Buf, *B);
-    Buf += sizeof(uintX_t);
   }
 }
 
@@ -774,7 +746,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({DT_JMPREL, Out<ELFT>::RelaPlt});
     Add({DT_PLTRELSZ, Out<ELFT>::RelaPlt->Size});
     Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
-         Out<ELFT>::GotPlt});
+         In<ELFT>::GotPlt});
     Add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
   }
 
@@ -844,6 +816,9 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
     switch (E.Kind) {
     case Entry::SecAddr:
       P->d_un.d_ptr = E.OutSec->Addr;
+      break;
+    case Entry::InSecAddr:
+      P->d_un.d_ptr = E.InSec->OutSec->Addr + E.InSec->OutSecOff;
       break;
     case Entry::SecSize:
       P->d_un.d_val = E.OutSec->Size;
@@ -978,6 +953,21 @@ template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
   this->Size = Off;
 }
 
+template <class ELFT>
+void OutputSection<ELFT>::sort(
+    std::function<unsigned(InputSection<ELFT> *S)> Order) {
+  typedef std::pair<unsigned, InputSection<ELFT> *> Pair;
+  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
+
+  std::vector<Pair> V;
+  for (InputSection<ELFT> *S : Sections)
+    V.push_back({Order(S), S});
+  std::stable_sort(V.begin(), V.end(), Comp);
+  Sections.clear();
+  for (Pair &P : V)
+    Sections.push_back(P.second);
+}
+
 // Sorts input sections by section name suffixes, so that .foo.N comes
 // before .foo.M if N < M. Used to sort .{init,fini}_array.N sections.
 // We want to keep the original order if the priorities are the same
@@ -986,16 +976,7 @@ template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
 // For more detail, read the section of the GCC's manual about init_priority.
 template <class ELFT> void OutputSection<ELFT>::sortInitFini() {
   // Sort sections by priority.
-  typedef std::pair<int, InputSection<ELFT> *> Pair;
-  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
-
-  std::vector<Pair> V;
-  for (InputSection<ELFT> *S : Sections)
-    V.push_back({getPriority(S->Name), S});
-  std::stable_sort(V.begin(), V.end(), Comp);
-  Sections.clear();
-  for (Pair &P : V)
-    Sections.push_back(P.second);
+  sort([](InputSection<ELFT> *S) { return getPriority(S->Name); });
 }
 
 // Returns true if S matches /Filename.?\.o$/.
@@ -1181,12 +1162,11 @@ void EhOutputSection<ELFT>::addSection(InputSectionData *C) {
   if (Sec->Pieces.empty())
     return;
 
-  if (const Elf_Shdr *RelSec = Sec->RelocSection) {
-    ELFFile<ELFT> Obj = Sec->getFile()->getObj();
-    if (RelSec->sh_type == SHT_RELA)
-      addSectionAux(Sec, check(Obj.relas(RelSec)));
+  if (Sec->NumRelocations) {
+    if (Sec->AreRelocsRela)
+      addSectionAux(Sec, Sec->relas());
     else
-      addSectionAux(Sec, check(Obj.rels(RelSec)));
+      addSectionAux(Sec, Sec->rels());
     return;
   }
   addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
@@ -1782,6 +1762,7 @@ OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
   uint32_t Type = C->Type;
   switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
+  case InputSectionBase<ELFT>::Synthetic:
     Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
     break;
   case InputSectionBase<ELFT>::EHFrame:
@@ -1837,11 +1818,6 @@ template class EhFrameHeader<ELF32LE>;
 template class EhFrameHeader<ELF32BE>;
 template class EhFrameHeader<ELF64LE>;
 template class EhFrameHeader<ELF64BE>;
-
-template class GotPltSection<ELF32LE>;
-template class GotPltSection<ELF32BE>;
-template class GotPltSection<ELF64LE>;
-template class GotPltSection<ELF64BE>;
 
 template class GotSection<ELF32LE>;
 template class GotSection<ELF32BE>;
