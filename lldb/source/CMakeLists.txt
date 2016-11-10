@@ -62,8 +62,8 @@ if(DEFINED lldb_vc)
                HEADER_FILE_ONLY TRUE)
 
   # Tell Version.cpp that it needs to build with -DHAVE_SVN_VERSION_INC.
-  set_source_files_properties(lldb.cpp
-    PROPERTIES COMPILE_DEFINITIONS "HAVE_SVN_VERSION_INC")
+  set_property(SOURCE lldb.cpp APPEND PROPERTY 
+               COMPILE_DEFINITIONS "HAVE_SVN_VERSION_INC")
   list(APPEND lldbBase_SOURCES ${version_inc})
 endif()
 
@@ -86,12 +86,12 @@ if(APPLE)
                HEADER_FILE_ONLY TRUE)
 
   # Tell Version.cpp that it needs to build with -DHAVE_SVN_VERSION_INC.
-  set_source_files_properties(lldb.cpp
-    PROPERTIES COMPILE_DEFINITIONS "HAVE_APPLE_VERSION_INC")
+  set_property(SOURCE lldb.cpp APPEND PROPERTY 
+               COMPILE_DEFINITIONS "HAVE_APPLE_VERSION_INC")
   list(APPEND lldbBase_SOURCES ${apple_version_inc})
 elseif(LLDB_VERSION_STRING)
-  set_source_files_properties(lldb.cpp
-    PROPERTIES COMPILE_DEFINITIONS "LLDB_VERSION_STRING=${LLDB_VERSION_STRING}")
+  set_property(SOURCE lldb.cpp APPEND PROPERTY
+               COMPILE_DEFINITIONS "LLDB_VERSION_STRING=${LLDB_VERSION_STRING}")
 endif()
 
 add_lldb_library(lldbBase
