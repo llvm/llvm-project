@@ -81,8 +81,10 @@ let Namespace = "Hexagon" in {
     let Num = !cast<bits<5>>(num);
   }
 
-  def subreg_loreg  : SubRegIndex<32>;
-  def subreg_hireg  : SubRegIndex<32, 32>;
+  def isub_lo  : SubRegIndex<32>;
+  def isub_hi  : SubRegIndex<32, 32>;
+  def vsub_lo  : SubRegIndex<512>;
+  def vsub_hi  : SubRegIndex<512, 512>;
   def subreg_overflow : SubRegIndex<1, 0>;
 
   // Integer registers.
@@ -95,7 +97,7 @@ let Namespace = "Hexagon" in {
   def R31 : Ri<31, "r31", ["lr"]>, DwarfRegNum<[31]>;
 
   // Aliases of the R* registers used to hold 64-bit int values (doubles).
-  let SubRegIndices = [subreg_loreg, subreg_hireg], CoveredBySubRegs = 1 in {
+  let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
   def D0  : Rd< 0,  "r1:0",  [R0,  R1]>,  DwarfRegNum<[32]>;
   def D1  : Rd< 2,  "r3:2",  [R2,  R3]>,  DwarfRegNum<[34]>;
   def D2  : Rd< 4,  "r5:4",  [R4,  R5]>,  DwarfRegNum<[36]>;
@@ -150,7 +152,7 @@ let Namespace = "Hexagon" in {
   // Define C8 separately and make it aliased with USR.
   // The problem is that USR has subregisters (e.g. overflow). If USR was
   // specified as a subregister of C9_8, it would imply that subreg_overflow
-  // and subreg_loreg can be composed, which leads to all kinds of issues
+  // and isub_lo can be composed, which leads to all kinds of issues
   // with lane masks.
   def C8   : Rc<8,  "c8",       [], [USR]>, DwarfRegNum<[75]>;
   def PC   : Rc<9,  "pc">,                  DwarfRegNum<[76]>;
@@ -163,7 +165,7 @@ let Namespace = "Hexagon" in {
 }
 
   // Control registers pairs.
-  let SubRegIndices = [subreg_loreg, subreg_hireg], CoveredBySubRegs = 1 in {
+  let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
     def C1_0   : Rcc<0,   "c1:0",  [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
     def C3_2   : Rcc<2,   "c3:2",  [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
     def C5_4   : Rcc<4,   "c5:4",  [P3_0, C5]>,              DwarfRegNum<[71]>;
@@ -180,7 +182,7 @@ let Namespace = "Hexagon" in {
   }
 
   // Aliases of the V* registers used to hold double vec values.
-  let SubRegIndices = [subreg_loreg, subreg_hireg], CoveredBySubRegs = 1 in {
+  let SubRegIndices = [vsub_lo, vsub_hi], CoveredBySubRegs = 1 in {
   def W0  : Rd< 0,  "v1:0",  [V0,  V1]>,  DwarfRegNum<[99]>;
   def W1  : Rd< 2,  "v3:2",  [V2,  V3]>,  DwarfRegNum<[101]>;
   def W2  : Rd< 4,  "v5:4",  [V4,  V5]>,  DwarfRegNum<[103]>;

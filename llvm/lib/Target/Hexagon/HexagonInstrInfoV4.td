@@ -2956,11 +2956,6 @@ def L2_loadrigp  : T_LoadGP<"memw",  "LDriw",  IntRegs, u16_2Imm, 0b100>;
 let accessSize = DoubleWordAccess in
 def L2_loadrdgp  : T_LoadGP<"memd", "LDrid", DoubleRegs, u16_3Imm, 0b110>;
 
-let Constraints = "@earlyclobber $dst" in
-def Insert4 : PseudoM<(outs DoubleRegs:$dst), (ins IntRegs:$a, IntRegs:$b,
-                                                   IntRegs:$c, IntRegs:$d),
-  ".error \"Should never try to emit Insert4\"", []>;
-
 //===----------------------------------------------------------------------===//
 // :raw for of boundscheck:hi:lo insns
 //===----------------------------------------------------------------------===//

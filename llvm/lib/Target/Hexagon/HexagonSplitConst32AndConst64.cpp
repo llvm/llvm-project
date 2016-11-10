@@ -87,8 +87,8 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
         unsigned DestReg = MI.getOperand(0).getReg();
         int64_t ImmValue = MI.getOperand(1).getImm();
         const DebugLoc &DL = MI.getDebugLoc();
-        unsigned DestLo = TRI->getSubReg(DestReg, Hexagon::subreg_loreg);
-        unsigned DestHi = TRI->getSubReg(DestReg, Hexagon::subreg_hireg);
+        unsigned DestLo = TRI->getSubReg(DestReg, Hexagon::isub_lo);
+        unsigned DestHi = TRI->getSubReg(DestReg, Hexagon::isub_hi);
 
         int32_t LowWord = (ImmValue & 0xFFFFFFFF);
         int32_t HighWord = (ImmValue >> 32) & 0xFFFFFFFF;

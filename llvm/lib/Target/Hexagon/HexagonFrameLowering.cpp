@@ -876,8 +876,8 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       // understand paired registers for cfi_offset.
       // Eg .cfi_offset r1:0, -64
 
-      unsigned HiReg = HRI.getSubReg(Reg, Hexagon::subreg_hireg);
-      unsigned LoReg = HRI.getSubReg(Reg, Hexagon::subreg_loreg);
+      unsigned HiReg = HRI.getSubReg(Reg, Hexagon::isub_hi);
+      unsigned LoReg = HRI.getSubReg(Reg, Hexagon::isub_lo);
       unsigned HiDwarfReg = HRI.getDwarfRegNum(HiReg, true);
       unsigned LoDwarfReg = HRI.getDwarfRegNum(LoReg, true);
       auto OffHi = MCCFIInstruction::createOffset(FrameLabel, HiDwarfReg,
@@ -1639,8 +1639,8 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
 
   DebugLoc DL = MI->getDebugLoc();
   unsigned SrcR = MI->getOperand(2).getReg();
-  unsigned SrcLo = HRI.getSubReg(SrcR, Hexagon::subreg_loreg);
-  unsigned SrcHi = HRI.getSubReg(SrcR, Hexagon::subreg_hireg);
+  unsigned SrcLo = HRI.getSubReg(SrcR, Hexagon::vsub_lo);
+  unsigned SrcHi = HRI.getSubReg(SrcR, Hexagon::vsub_hi);
   bool IsKill = MI->getOperand(2).isKill();
   int FI = MI->getOperand(0).getIndex();
 
@@ -1697,8 +1697,8 @@ bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
 
   DebugLoc DL = MI->getDebugLoc();
   unsigned DstR = MI->getOperand(0).getReg();
-  unsigned DstHi = HRI.getSubReg(DstR, Hexagon::subreg_hireg);
-  unsigned DstLo = HRI.getSubReg(DstR, Hexagon::subreg_loreg);
+  unsigned DstHi = HRI.getSubReg(DstR, Hexagon::vsub_hi);
+  unsigned DstLo = HRI.getSubReg(DstR, Hexagon::vsub_lo);
   int FI = MI->getOperand(1).getIndex();
 
   bool Is128B = HST.useHVXDblOps();

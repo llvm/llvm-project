@@ -1946,12 +1946,15 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
   if (MI.isRegSequence()) {
     unsigned Sub1 = MI.getOperand(2).getImm();
     unsigned Sub2 = MI.getOperand(4).getImm();
-    if (Sub1 != Hexagon::subreg_loreg && Sub1 != Hexagon::subreg_hireg)
+    const TargetRegisterClass *DefRC = MRI->getRegClass(DefR.Reg);
+    unsigned SubLo = HRI.getHexagonSubRegIndex(DefRC, Hexagon::ps_sub_lo);
+    unsigned SubHi = HRI.getHexagonSubRegIndex(DefRC, Hexagon::ps_sub_hi);
+    if (Sub1 != SubLo && Sub1 != SubHi)
       return false;
-    if (Sub2 != Hexagon::subreg_loreg && Sub2 != Hexagon::subreg_hireg)
+    if (Sub2 != SubLo && Sub2 != SubHi)
       return false;
     assert(Sub1 != Sub2);
-    bool LoIs1 = (Sub1 == Hexagon::subreg_loreg);
+    bool LoIs1 = (Sub1 == SubLo);
     const MachineOperand &OpLo = LoIs1 ? MI.getOperand(1) : MI.getOperand(3);
     const MachineOperand &OpHi = LoIs1 ? MI.getOperand(3) : MI.getOperand(1);
     LatticeCell RC;
@@ -2196,11 +2199,10 @@ bool HexagonConstEvaluator::evaluate(const Register &R,
     Result = Input;
     return true;
   }
-  // Predicate registers do not have subregisters.
   const TargetRegisterClass *RC = MRI->getRegClass(R.Reg);
-  if (RC == &Hexagon::PredRegsRegClass)
+  if (RC != &Hexagon::DoubleRegsRegClass)
     return false;
-  if (R.SubReg != Hexagon::subreg_loreg && R.SubReg != Hexagon::subreg_hireg)
+  if (R.SubReg != Hexagon::isub_lo && R.SubReg != Hexagon::isub_hi)
     return false;
 
   assert(!Input.isTop());
@@ -2215,7 +2217,7 @@ bool HexagonConstEvaluator::evaluate(const Register &R,
       Result.add(Ns);
       return true;
     }
-    if (R.SubReg == Hexagon::subreg_hireg) {
+    if (R.SubReg == Hexagon::isub_hi) {
       uint32_t Ns = (Ps & P::SignProperties);
       Result.add(Ns);
       return true;
@@ -2233,7 +2235,7 @@ bool HexagonConstEvaluator::evaluate(const Register &R,
     if (!A.isIntN(64))
       return false;
     uint64_t U = A.getZExtValue();
-    if (R.SubReg == Hexagon::subreg_hireg)
+    if (R.SubReg == Hexagon::isub_hi)
       U >>= 32;
     U &= 0xFFFFFFFFULL;
     uint32_t U32 = Lo_32(U);

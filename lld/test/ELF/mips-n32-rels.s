@@ -38,7 +38,7 @@
 #                                                       ^-- %lo(0x17ff0)
 
 # CHECK:      Contents of section .rodata:
-# CHECK-NEXT:  10128 00020004
+# CHECK-NEXT:  100f4 00020004
 #                    ^-- loc
 
 # CHECK: 00020004      .text   00000000 loc

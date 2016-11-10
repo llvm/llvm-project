@@ -175,7 +175,8 @@ namespace {
     static bool replaceSubWithSub(unsigned OldR, unsigned OldSR,
         unsigned NewR, unsigned NewSR, MachineRegisterInfo &MRI);
     static bool parseRegSequence(const MachineInstr &I,
-        BitTracker::RegisterRef &SL, BitTracker::RegisterRef &SH);
+        BitTracker::RegisterRef &SL, BitTracker::RegisterRef &SH,
+        const MachineRegisterInfo &MRI);
 
     static bool getUsedBitsInStore(unsigned Opc, BitVector &Bits,
         uint16_t Begin);
@@ -379,16 +380,14 @@ bool HexagonBitSimplify::getSubregMask(const BitTracker::RegisterRef &RR,
     return true;
   }
 
-  assert(RR.Sub == Hexagon::subreg_loreg || RR.Sub == Hexagon::subreg_hireg);
-  if (RR.Sub == Hexagon::subreg_loreg)
-    Begin = 0;
+  Begin = 0;
 
   switch (RC->getID()) {
     case Hexagon::DoubleRegsRegClassID:
     case Hexagon::VecDblRegsRegClassID:
     case Hexagon::VecDblRegs128BRegClassID:
       Width = RC->getSize()*8 / 2;
-      if (RR.Sub == Hexagon::subreg_hireg)
+      if (RR.Sub == Hexagon::isub_hi || RR.Sub == Hexagon::vsub_hi)
         Begin = Width;
       break;
     default:
@@ -401,16 +400,22 @@ bool HexagonBitSimplify::getSubregMask(const BitTracker::RegisterRef &RR,
 // For a REG_SEQUENCE, set SL to the low subregister and SH to the high
 // subregister.
 bool HexagonBitSimplify::parseRegSequence(const MachineInstr &I,
-      BitTracker::RegisterRef &SL, BitTracker::RegisterRef &SH) {
+      BitTracker::RegisterRef &SL, BitTracker::RegisterRef &SH,
+      const MachineRegisterInfo &MRI) {
   assert(I.getOpcode() == TargetOpcode::REG_SEQUENCE);
   unsigned Sub1 = I.getOperand(2).getImm(), Sub2 = I.getOperand(4).getImm();
-  assert(Sub1 != Sub2);
-  if (Sub1 == Hexagon::subreg_loreg && Sub2 == Hexagon::subreg_hireg) {
+  auto *DstRC = MRI.getRegClass(I.getOperand(0).getReg());
+  auto &HRI = static_cast<const HexagonRegisterInfo&>(
+                  *MRI.getTargetRegisterInfo());
+  unsigned SubLo = HRI.getHexagonSubRegIndex(DstRC, Hexagon::ps_sub_lo);
+  unsigned SubHi = HRI.getHexagonSubRegIndex(DstRC, Hexagon::ps_sub_hi);
+  assert((Sub1 == SubLo && Sub2 == SubHi) || (Sub1 == SubHi && Sub2 == SubLo));
+  if (Sub1 == SubLo && Sub2 == SubHi) {
     SL = I.getOperand(1);
     SH = I.getOperand(3);
     return true;
   }
-  if (Sub1 == Hexagon::subreg_hireg && Sub2 == Hexagon::subreg_loreg) {
+  if (Sub1 == SubHi && Sub2 == SubLo) {
     SH = I.getOperand(1);
     SL = I.getOperand(3);
     return true;
@@ -858,7 +863,7 @@ bool HexagonBitSimplify::getUsedBits(unsigned Opc, unsigned OpN,
 
 
 // Calculate the register class that matches Reg:Sub. For example, if
-// vreg1 is a double register, then vreg1:subreg_hireg would match "int"
+// vreg1 is a double register, then vreg1:isub_hi would match the "int"
 // register class.
 const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
       const BitTracker::RegisterRef &RR, MachineRegisterInfo &MRI) {
@@ -867,20 +872,23 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
   auto *RC = MRI.getRegClass(RR.Reg);
   if (RR.Sub == 0)
     return RC;
+  auto &HRI = static_cast<const HexagonRegisterInfo&>(
+                  *MRI.getTargetRegisterInfo());
 
-  auto VerifySR = [] (unsigned Sub) -> void {
-    assert(Sub == Hexagon::subreg_hireg || Sub == Hexagon::subreg_loreg);
+  auto VerifySR = [&HRI] (const TargetRegisterClass *RC, unsigned Sub) -> void {
+    assert(Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo) ||
+           Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi));
   };
 
   switch (RC->getID()) {
     case Hexagon::DoubleRegsRegClassID:
-      VerifySR(RR.Sub);
+      VerifySR(RC, RR.Sub);
       return &Hexagon::IntRegsRegClass;
     case Hexagon::VecDblRegsRegClassID:
-      VerifySR(RR.Sub);
+      VerifySR(RC, RR.Sub);
       return &Hexagon::VectorRegsRegClass;
     case Hexagon::VecDblRegs128BRegClassID:
-      VerifySR(RR.Sub);
+      VerifySR(RC, RR.Sub);
       return &Hexagon::VectorRegs128BRegClass;
   }
   return nullptr;
@@ -1212,11 +1220,11 @@ bool RedundantInstrElimination::computeUsedBits(unsigned Reg, BitVector &Bits) {
 // holds the bits for the entire register. To keep track of that, the
 // argument Begin indicates where in Bits is the lowest-significant bit
 // of the register used in operand OpN. For example, in instruction:
-//   vreg1 = S2_lsr_i_r vreg2:subreg_hireg, 10
+//   vreg1 = S2_lsr_i_r vreg2:isub_hi, 10
 // the operand 1 is a 32-bit register, which happens to be a subregister
 // of the 64-bit register vreg2, and that subregister starts at position 32.
 // In this case Begin=32, since Bits[32] would be the lowest-significant bit
-// of vreg2:subreg_hireg.
+// of vreg2:isub_hi.
 bool RedundantInstrElimination::computeUsedBits(const MachineInstr &MI,
       unsigned OpN, BitVector &Bits, uint16_t Begin) {
   unsigned Opc = MI.getOpcode();
@@ -1479,14 +1487,15 @@ namespace {
   class CopyGeneration : public Transformation {
   public:
     CopyGeneration(BitTracker &bt, const HexagonInstrInfo &hii,
-        MachineRegisterInfo &mri)
-      : Transformation(true), HII(hii), MRI(mri), BT(bt) {}
+        const HexagonRegisterInfo &hri, MachineRegisterInfo &mri)
+      : Transformation(true), HII(hii), HRI(hri), MRI(mri), BT(bt) {}
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
   private:
     bool findMatch(const BitTracker::RegisterRef &Inp,
         BitTracker::RegisterRef &Out, const RegisterSet &AVs);
 
     const HexagonInstrInfo &HII;
+    const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
     BitTracker &BT;
     RegisterSet Forbidden;
@@ -1495,12 +1504,13 @@ namespace {
   class CopyPropagation : public Transformation {
   public:
     CopyPropagation(const HexagonRegisterInfo &hri, MachineRegisterInfo &mri)
-        : Transformation(false), MRI(mri) {}
+        : Transformation(false), HRI(hri), MRI(mri) {}
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
     static bool isCopyReg(unsigned Opc, bool NoConv);
   private:
     bool propagateRegCopy(MachineInstr &MI);
 
+    const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
   };
 
@@ -1544,9 +1554,9 @@ bool CopyGeneration::findMatch(const BitTracker::RegisterRef &Inp,
       continue;
 
     if (HBS::isEqual(InpRC, B, RC, 0, W))
-      Out.Sub = Hexagon::subreg_loreg;
+      Out.Sub = Hexagon::isub_lo;
     else if (HBS::isEqual(InpRC, B, RC, W, W))
-      Out.Sub = Hexagon::subreg_hireg;
+      Out.Sub = Hexagon::isub_hi;
     else
       continue;
     Out.Reg = R;
@@ -1597,17 +1607,19 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
           FRC == &Hexagon::VecDblRegsRegClass ||
           FRC == &Hexagon::VecDblRegs128BRegClass) {
         // Try to generate REG_SEQUENCE.
-        BitTracker::RegisterRef TL = { R, Hexagon::subreg_loreg };
-        BitTracker::RegisterRef TH = { R, Hexagon::subreg_hireg };
+        unsigned SubLo = HRI.getHexagonSubRegIndex(FRC, Hexagon::ps_sub_lo);
+        unsigned SubHi = HRI.getHexagonSubRegIndex(FRC, Hexagon::ps_sub_hi);
+        BitTracker::RegisterRef TL = { R, SubLo };
+        BitTracker::RegisterRef TH = { R, SubHi };
         BitTracker::RegisterRef ML, MH;
         if (findMatch(TL, ML, AVB) && findMatch(TH, MH, AVB)) {
           auto *FRC = HBS::getFinalVRegClass(R, MRI);
           unsigned NewR = MRI.createVirtualRegister(FRC);
           BuildMI(B, At, DL, HII.get(TargetOpcode::REG_SEQUENCE), NewR)
             .addReg(ML.Reg, 0, ML.Sub)
-            .addImm(Hexagon::subreg_loreg)
+            .addImm(SubLo)
             .addReg(MH.Reg, 0, MH.Sub)
-            .addImm(Hexagon::subreg_hireg);
+            .addImm(SubHi);
           BT.put(BitTracker::RegisterRef(NewR), BT.get(R));
           HBS::replaceReg(R, NewR, MRI);
           Forbidden.insert(R);
@@ -1661,29 +1673,31 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
     }
     case TargetOpcode::REG_SEQUENCE: {
       BitTracker::RegisterRef SL, SH;
-      if (HBS::parseRegSequence(MI, SL, SH)) {
-        Changed = HBS::replaceSubWithSub(RD.Reg, Hexagon::subreg_loreg,
-                                         SL.Reg, SL.Sub, MRI);
-        Changed |= HBS::replaceSubWithSub(RD.Reg, Hexagon::subreg_hireg,
-                                          SH.Reg, SH.Sub, MRI);
+      if (HBS::parseRegSequence(MI, SL, SH, MRI)) {
+        const TargetRegisterClass *RC = MRI.getRegClass(RD.Reg);
+        unsigned SubLo = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo);
+        unsigned SubHi = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi);
+        Changed  = HBS::replaceSubWithSub(RD.Reg, SubLo, SL.Reg, SL.Sub, MRI);
+        Changed |= HBS::replaceSubWithSub(RD.Reg, SubHi, SH.Reg, SH.Sub, MRI);
       }
       break;
     }
     case Hexagon::A2_combinew:
     case Hexagon::V6_vcombine:
     case Hexagon::V6_vcombine_128B: {
+      const TargetRegisterClass *RC = MRI.getRegClass(RD.Reg);
+      unsigned SubLo = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo);
+      unsigned SubHi = HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi);
       BitTracker::RegisterRef RH = MI.getOperand(1), RL = MI.getOperand(2);
-      Changed = HBS::replaceSubWithSub(RD.Reg, Hexagon::subreg_loreg,
-                                       RL.Reg, RL.Sub, MRI);
-      Changed |= HBS::replaceSubWithSub(RD.Reg, Hexagon::subreg_hireg,
-                                        RH.Reg, RH.Sub, MRI);
+      Changed  = HBS::replaceSubWithSub(RD.Reg, SubLo, RL.Reg, RL.Sub, MRI);
+      Changed |= HBS::replaceSubWithSub(RD.Reg, SubHi, RH.Reg, RH.Sub, MRI);
       break;
     }
     case Hexagon::A4_combineir:
     case Hexagon::A4_combineri: {
       unsigned SrcX = (Opc == Hexagon::A4_combineir) ? 2 : 1;
-      unsigned Sub = (Opc == Hexagon::A4_combineir) ? Hexagon::subreg_loreg
-                                                    : Hexagon::subreg_hireg;
+      unsigned Sub = (Opc == Hexagon::A4_combineir) ? Hexagon::isub_lo
+                                                    : Hexagon::isub_hi;
       BitTracker::RegisterRef RS = MI.getOperand(SrcX);
       Changed = HBS::replaceSubWithSub(RD.Reg, Sub, RS.Reg, RS.Sub, MRI);
       break;
@@ -1811,19 +1825,19 @@ bool BitSimplification::matchHalf(unsigned SelfR,
   unsigned Sub = 0;
   switch (Pos) {
     case 0:
-      Sub = Hexagon::subreg_loreg;
+      Sub = Hexagon::isub_lo;
       Low = true;
       break;
     case 16:
-      Sub = Hexagon::subreg_loreg;
+      Sub = Hexagon::isub_lo;
       Low = false;
       break;
     case 32:
-      Sub = Hexagon::subreg_hireg;
+      Sub = Hexagon::isub_hi;
       Low = true;
       break;
     case 48:
-      Sub = Hexagon::subreg_hireg;
+      Sub = Hexagon::isub_hi;
       Low = false;
       break;
     default:
@@ -2174,10 +2188,10 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
     BitTracker::RegisterRef RR(V.RefI.Reg, 0);
     if (TC == &Hexagon::DoubleRegsRegClass) {
       P = V.RefI.Pos;
-      RR.Sub = Hexagon::subreg_loreg;
+      RR.Sub = Hexagon::isub_lo;
       if (P >= 32) {
         P -= 32;
-        RR.Sub = Hexagon::subreg_hireg;
+        RR.Sub = Hexagon::isub_hi;
       }
     } else if (TC == &Hexagon::IntRegsRegClass) {
       P = V.RefI.Pos;
@@ -2296,7 +2310,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
   }
 
   RegisterSet ACG;  // Available registers for CG.
-  CopyGeneration CopyG(BT, HII, MRI);
+  CopyGeneration CopyG(BT, HII, HRI, MRI);
   Changed |= visitBlock(Entry, CopyG, ACG);
 
   RegisterSet ACP;  // Available registers for CP.

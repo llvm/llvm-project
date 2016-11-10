@@ -106,9 +106,9 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       const MachineOperand &HiOp = MI->getOperand(1);
       const MachineOperand &LoOp = MI->getOperand(2);
       assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
-      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::subreg_hireg),
+      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_hi),
               DFG.makeRegRef(HiOp.getReg(),  HiOp.getSubReg()));
-      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::subreg_loreg),
+      mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_lo),
               DFG.makeRegRef(LoOp.getReg(), LoOp.getSubReg()));
       return true;
     }

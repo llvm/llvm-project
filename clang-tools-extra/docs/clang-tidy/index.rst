@@ -71,7 +71,7 @@ Name prefix            Description
 ====================== =========================================================
 
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
-diagnostics are displayed by clang-tidy and can be filtered out using
+diagnostics are displayed by :program:`clang-tidy` and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect
 compilation arguments, so it can not turn on Clang warnings which are not
 already turned on in build configuration. The ``-warnings-as-errors=`` option
@@ -237,16 +237,16 @@ Getting Involved
 checks, but its power is in the ability to easily write custom checks.
 
 Checks are organized in modules, which can be linked into :program:`clang-tidy`
-with minimal or no code changes in clang-tidy.
+with minimal or no code changes in :program:`clang-tidy`.
 
 Checks can plug into the analysis on the preprocessor level using `PPCallbacks`_
 or on the AST level using `AST Matchers`_. When an error is found, checks can
 report them in a way similar to how Clang diagnostics work. A fix-it hint can be
 attached to a diagnostic message.
 
-The interface provided by clang-tidy makes it easy to write useful and precise
-checks in just a few lines of code. If you have an idea for a good check, the
-rest of this document explains how to do this.
+The interface provided by :program:`clang-tidy` makes it easy to write useful
+and precise checks in just a few lines of code. If you have an idea for a good
+check, the rest of this document explains how to do this.
 
 There are a few tools particularly useful when developing clang-tidy checks:
   * ``add_new_check.py`` is a script to automate the process of adding a new
@@ -354,7 +354,7 @@ groups names described :ref:`above <checks-groups-table>`.
 
 After choosing the module and the name for the check, run the
 ``clang-tidy/add_new_check.py`` script to create the skeleton of the check and
-plug it to clang-tidy. It's the recommended way of adding new checks.
+plug it to :program:`clang-tidy`. It's the recommended way of adding new checks.
 
 If we want to create a `readability-awesome-function-names`, we would run:
 
@@ -462,7 +462,7 @@ statically initialized variable:
 
 
 When using LLVM build system, we need to use the following hack to ensure the
-module is linked into the clang-tidy binary:
+module is linked into the :program:`clang-tidy` binary:
 
 Add this near the ``ClangTidyModuleRegistry::Add<MyModule>`` variable:
 
@@ -472,8 +472,9 @@ Add this near the ``ClangTidyModuleRegistry::Add<MyModule>`` variable:
   // and thus register the MyModule.
   volatile int MyModuleAnchorSource = 0;
 
-And this to the main translation unit of the clang-tidy binary (or the binary
-you link the ``clang-tidy`` library in) ``clang-tidy/tool/ClangTidyMain.cpp``:
+And this to the main translation unit of the :program:`clang-tidy` binary (or
+the binary you link the ``clang-tidy`` library in)
+``clang-tidy/tool/ClangTidyMain.cpp``:
 
 .. code-block:: c++
 
@@ -573,9 +574,9 @@ most frequent pitfalls are macros and templates:
 2. multiple macro expansions/template instantiations may result in the same code
    being inspected by the check multiple times (possibly, with different
    meanings, see 1), and the same warning (or a slightly different one) may be
-   issued by the check multiple times; clang-tidy will deduplicate _identical_
-   warnings, but if the warnings are slightly different, all of them will be
-   shown to the user (and used for applying fixes, if any);
+   issued by the check multiple times; :program:`clang-tidy` will deduplicate
+   _identical_ warnings, but if the warnings are slightly different, all of them
+   will be shown to the user (and used for applying fixes, if any);
 3. making replacements to a macro body/template definition may be fine for some
    macro expansions/template instantiations, but easily break some other
    expansions/instantiations.

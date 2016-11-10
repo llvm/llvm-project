@@ -14,6 +14,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Error.h"
 
 #include <functional>
 #include <map>
@@ -53,8 +54,9 @@ public:
   /// \p ForceImportReferencedDiscardableSymbols will set the ModuleLinker in
   /// a mode where referenced discarable symbols in the source modules will be
   /// imported as well even if they are not present in the ImportList.
-  bool importFunctions(Module &M, const ImportMapTy &ImportList,
-                       bool ForceImportReferencedDiscardableSymbols = false);
+  Expected<bool>
+  importFunctions(Module &M, const ImportMapTy &ImportList,
+                  bool ForceImportReferencedDiscardableSymbols = false);
 
 private:
   /// The summaries index used to trigger importing.

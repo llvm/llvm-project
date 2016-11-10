@@ -2558,7 +2558,7 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
         SDValue pack = DAG.getNode(HexagonISD::PACKHL, dl, MVT::v4i16,
                                    BVN->getOperand(1), BVN->getOperand(0));
 
-        return DAG.getTargetExtractSubreg(Hexagon::subreg_loreg, dl, MVT::v2i16,
+        return DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::v2i16,
                                           pack);
       }
     }
@@ -2730,14 +2730,12 @@ HexagonTargetLowering::LowerEXTRACT_SUBVECTOR_HVX(SDValue Op,
   // These two will get lowered to an appropriate EXTRACT_SUBREG in ISel.
   if (Val == 0) {
     SDValue Vec = Op.getOperand(0);
-    unsigned Subreg = Hexagon::subreg_loreg;
-    return DAG.getTargetExtractSubreg(Subreg, dl, ResVT, Vec);
+    return DAG.getTargetExtractSubreg(Hexagon::vsub_lo, dl, ResVT, Vec);
   }
 
   if (ResVT.getVectorNumElements() == Val) {
     SDValue Vec = Op.getOperand(0);
-    unsigned Subreg = Hexagon::subreg_hireg;
-    return DAG.getTargetExtractSubreg(Subreg, dl, ResVT, Vec);
+    return DAG.getTargetExtractSubreg(Hexagon::vsub_hi, dl, ResVT, Vec);
   }
 
   return SDValue();
@@ -2778,16 +2776,16 @@ HexagonTargetLowering::LowerEXTRACT_VECTOR(SDValue Op,
 
     if (W == 32) {
       // Translate this node into EXTRACT_SUBREG.
-      unsigned Subreg = (X == 0) ? Hexagon::subreg_loreg : 0;
+      unsigned Subreg = (X == 0) ? Hexagon::isub_lo : 0;
 
       if (X == 0)
-        Subreg = Hexagon::subreg_loreg;
+        Subreg = Hexagon::isub_lo;
       else if (SVT == MVT::v2i32 && X == 1)
-        Subreg = Hexagon::subreg_hireg;
+        Subreg = Hexagon::isub_hi;
       else if (SVT == MVT::v4i16 && X == 2)
-        Subreg = Hexagon::subreg_hireg;
+        Subreg = Hexagon::isub_hi;
       else if (SVT == MVT::v8i8 && X == 4)
-        Subreg = Hexagon::subreg_hireg;
+        Subreg = Hexagon::isub_hi;
       else
         llvm_unreachable("Bad offset");
       N = DAG.getTargetExtractSubreg(Subreg, dl, MVT::i32, Vec);
@@ -2797,7 +2795,7 @@ HexagonTargetLowering::LowerEXTRACT_VECTOR(SDValue Op,
     } else if (SVT.getSizeInBits() == 64) {
       N = DAG.getNode(HexagonISD::EXTRACTU, dl, MVT::i64, Ops);
       if (VT.getSizeInBits() == 32)
-        N = DAG.getTargetExtractSubreg(Hexagon::subreg_loreg, dl, MVT::i32, N);
+        N = DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::i32, N);
     } else
       return SDValue();
 
@@ -2819,7 +2817,7 @@ HexagonTargetLowering::LowerEXTRACT_VECTOR(SDValue Op,
   } else {
     N = DAG.getNode(HexagonISD::EXTRACTURP, dl, MVT::i64, Ops);
     if (VT.getSizeInBits() == 32)
-      N = DAG.getTargetExtractSubreg(Hexagon::subreg_loreg, dl, MVT::i32, N);
+      N = DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::i32, N);
   }
   return DAG.getNode(ISD::BITCAST, dl, VT, N);
 }

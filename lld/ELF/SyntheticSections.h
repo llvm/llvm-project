@@ -15,6 +15,49 @@
 namespace lld {
 namespace elf {
 
+// .MIPS.abiflags section.
+template <class ELFT>
+class MipsAbiFlagsSection final : public InputSection<ELFT> {
+  typedef llvm::object::Elf_Mips_ABIFlags<ELFT> Elf_Mips_ABIFlags;
+
+public:
+  MipsAbiFlagsSection();
+
+private:
+  Elf_Mips_ABIFlags Flags = {};
+};
+
+// .MIPS.options section.
+template <class ELFT>
+class MipsOptionsSection final : public InputSection<ELFT> {
+  typedef llvm::object::Elf_Mips_Options<ELFT> Elf_Mips_Options;
+  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+
+public:
+  MipsOptionsSection();
+  void finalize();
+
+private:
+  std::vector<uint8_t> Buf;
+
+  Elf_Mips_Options *getOptions() {
+    return reinterpret_cast<Elf_Mips_Options *>(Buf.data());
+  }
+};
+
+// MIPS .reginfo section.
+template <class ELFT>
+class MipsReginfoSection final : public InputSection<ELFT> {
+  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+
+public:
+  MipsReginfoSection();
+  void finalize();
+
+private:
+  Elf_Mips_RegInfo Reginfo = {};
+};
+
 // .note.gnu.build-id section.
 template <class ELFT> class BuildIdSection : public InputSection<ELFT> {
 public:
@@ -74,11 +117,17 @@ template <class ELFT> struct In {
   static BuildIdSection<ELFT> *BuildId;
   static InputSection<ELFT> *Common;
   static InputSection<ELFT> *Interp;
+  static MipsAbiFlagsSection<ELFT> *MipsAbiFlags;
+  static MipsOptionsSection<ELFT> *MipsOptions;
+  static MipsReginfoSection<ELFT> *MipsReginfo;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
+template <class ELFT> MipsAbiFlagsSection<ELFT> *In<ELFT>::MipsAbiFlags;
+template <class ELFT> MipsOptionsSection<ELFT> *In<ELFT>::MipsOptions;
+template <class ELFT> MipsReginfoSection<ELFT> *In<ELFT>::MipsReginfo;
 
 } // namespace elf
 } // namespace lld

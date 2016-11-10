@@ -19,7 +19,7 @@
 namespace lld {
 namespace elf {
 class Lazy;
-template <class ELFT> class OutputSectionBase;
+class OutputSectionBase;
 struct Symbol;
 
 typedef llvm::CachedHashStringRef SymName;
@@ -61,14 +61,12 @@ public:
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                      uintX_t Value, uintX_t Size, uint8_t Binding,
                      InputSectionBase<ELFT> *Section);
-
   Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
                      InputSectionBase<ELFT> *Section);
-  Symbol *addRegular(StringRef Name, uint8_t StOther,
-                     InputSectionBase<ELFT> *Section, uint8_t Binding,
-                     uint8_t Type, uintX_t Value);
-  Symbol *addSynthetic(StringRef N, OutputSectionBase<ELFT> *Section,
-                       uintX_t Value, uint8_t StOther);
+
+  Symbol *addSynthetic(StringRef N, OutputSectionBase *Section, uintX_t Value,
+                       uint8_t StOther);
+
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);
 

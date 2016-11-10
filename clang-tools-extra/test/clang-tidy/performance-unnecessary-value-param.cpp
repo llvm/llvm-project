@@ -253,3 +253,21 @@ void PositiveNonConstDeclaration(const ExpensiveToCopyType A) {
   // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'A'
   // CHECK-FIXES: void PositiveNonConstDeclaration(const ExpensiveToCopyType& A) {
 }
+
+void PositiveOnlyMessageAsReferencedInCompilationUnit(ExpensiveToCopyType A) {
+  // CHECK-MESSAGES: [[@LINE-1]]:75: warning: the parameter 'A' is copied
+  // CHECK-FIXES: void PositiveOnlyMessageAsReferencedInCompilationUnit(ExpensiveToCopyType A) {
+}
+
+void ReferenceFunctionOutsideOfCallExpr() {
+  void (*ptr)(ExpensiveToCopyType) = &PositiveOnlyMessageAsReferencedInCompilationUnit;
+}
+
+void PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType A) {
+  // CHECK-MESSAGES: [[@LINE-1]]:66: warning: the parameter 'A' is copied
+  // CHECK-FIXES: void PositiveMessageAndFixAsFunctionIsCalled(const ExpensiveToCopyType& A) {
+}
+
+void ReferenceFunctionByCallingIt() {
+  PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType());
+}

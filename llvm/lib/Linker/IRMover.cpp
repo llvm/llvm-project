@@ -963,8 +963,8 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
   assert(Dst.isDeclaration() && !Src.isDeclaration());
 
   // Materialize if needed.
-  if (std::error_code EC = Src.materialize())
-    return errorCodeToError(EC);
+  if (Error Err = Src.materialize())
+    return Err;
 
   // Link in the operands without remapping.
   if (Src.hasPrefixData())
@@ -1191,8 +1191,8 @@ static std::string mergeTriples(const Triple &SrcTriple,
 Error IRLinker::run() {
   // Ensure metadata materialized before value mapping.
   if (SrcM->getMaterializer())
-    if (std::error_code EC = SrcM->getMaterializer()->materializeMetadata())
-      return errorCodeToError(EC);
+    if (Error Err = SrcM->getMaterializer()->materializeMetadata())
+      return Err;
 
   // Inherit the target data from the source module if the destination module
   // doesn't have one already.

@@ -5,17 +5,17 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Make sure we are preserving debug info in the vectorized code.
 
 ; CHECK: for.body.lr.ph
-; CHECK:   cmp.zero = icmp eq i64 {{.*}}, 0, !dbg ![[LOC:[0-9]+]]
+; CHECK:   cmp.zero = icmp eq i64 {{.*}}, 0, !dbg !{{[0-9]+}}
 ; CHECK: vector.body
-; CHECK:   index {{.*}}, !dbg ![[LOC]]
-; CHECK:   getelementptr inbounds i32, i32* %a, {{.*}}, !dbg ![[LOC2:[0-9]+]]
-; CHECK:   load <2 x i32>, <2 x i32>* {{.*}}, !dbg ![[LOC2]]
-; CHECK:   add <2 x i32> {{.*}}, !dbg ![[LOC2]]
+; CHECK:   index {{.*}}, !dbg ![[LOC:[0-9]+]]
+; CHECK:   getelementptr inbounds i32, i32* %a, {{.*}}, !dbg ![[LOC]]
+; CHECK:   load <2 x i32>, <2 x i32>* {{.*}}, !dbg ![[LOC]]
+; CHECK:   add <2 x i32> {{.*}}, !dbg ![[LOC]]
 ; CHECK:   add i64 %index, 2, !dbg ![[LOC]]
 ; CHECK:   icmp eq i64 %index.next, %n.vec, !dbg ![[LOC]]
 ; CHECK: middle.block
-; CHECK:   add <2 x i32> %{{.*}}, %rdx.shuf, !dbg ![[LOC2]]
-; CHECK:   extractelement <2 x i32> %bin.rdx, i32 0, !dbg ![[LOC2]]
+; CHECK:   add <2 x i32> %{{.*}}, %rdx.shuf, !dbg ![[LOC]]
+; CHECK:   extractelement <2 x i32> %bin.rdx, i32 0, !dbg ![[LOC]]
 
 define i32 @f(i32* nocapture %a, i32 %size) #0 !dbg !4 {
 entry:
@@ -36,10 +36,10 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %0 = load i32, i32* %arrayidx, align 4, !dbg !22
   %add = add i32 %0, %sum.05, !dbg !22
   tail call void @llvm.dbg.value(metadata i32 %add.lcssa, i64 0, metadata !15, metadata !DIExpression()), !dbg !22
-  %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !21
-  tail call void @llvm.dbg.value(metadata !{null}, i64 0, metadata !16, metadata !DIExpression()), !dbg !21
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !21
-  %exitcond = icmp ne i32 %lftr.wideiv, %size, !dbg !21
+  %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !22
+  tail call void @llvm.dbg.value(metadata !{null}, i64 0, metadata !16, metadata !DIExpression()), !dbg !22
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !22
+  %exitcond = icmp ne i32 %lftr.wideiv, %size, !dbg !22
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge, !dbg !21
 
 for.cond.for.end_crit_edge:                       ; preds = %for.body

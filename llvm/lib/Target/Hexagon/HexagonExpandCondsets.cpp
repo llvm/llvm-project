@@ -236,9 +236,11 @@ INITIALIZE_PASS_END(HexagonExpandCondsets, "expand-condsets",
 
 unsigned HexagonExpandCondsets::getMaskForSub(unsigned Sub) {
   switch (Sub) {
-    case Hexagon::subreg_loreg:
+    case Hexagon::isub_lo:
+    case Hexagon::vsub_lo:
       return Sub_Low;
-    case Hexagon::subreg_hireg:
+    case Hexagon::isub_hi:
+    case Hexagon::vsub_hi:
       return Sub_High;
     case Hexagon::NoSubRegister:
       return Sub_None;

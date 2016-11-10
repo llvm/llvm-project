@@ -60,8 +60,8 @@ public:
 private:
   // Options that matches the setters above.
   std::string Path;
-  std::chrono::seconds Expiration;
-  std::chrono::seconds Interval;
+  std::chrono::seconds Expiration = std::chrono::seconds::zero();
+  std::chrono::seconds Interval = std::chrono::seconds::zero();
   unsigned PercentageOfAvailableSpace = 0;
 };
 

@@ -21,11 +21,11 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MD5.h"
-#include <system_error>
 
 namespace llvm {
 
 class Comdat;
+class Error;
 class GlobalObject;
 class PointerType;
 class Module;
@@ -467,10 +467,8 @@ public:
   /// function has been read in yet or not.
   bool isMaterializable() const;
 
-  /// Make sure this GlobalValue is fully read. If the module is corrupt, this
-  /// returns true and fills in the optional string with information about the
-  /// problem.  If successful, this returns false.
-  std::error_code materialize();
+  /// Make sure this GlobalValue is fully read.
+  Error materialize();
 
 /// @}
 

@@ -606,7 +606,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
 // Automatically import functions in Module \p DestModule based on the summaries
 // index.
 //
-bool FunctionImporter::importFunctions(
+Expected<bool> FunctionImporter::importFunctions(
     Module &DestModule, const FunctionImporter::ImportMapTy &ImportList,
     bool ForceImportReferencedDiscardableSymbols) {
   DEBUG(dbgs() << "Starting import for Module "
@@ -630,7 +630,8 @@ bool FunctionImporter::importFunctions(
 
     // If modules were created with lazy metadata loading, materialize it
     // now, before linking it (otherwise this will be a noop).
-    SrcModule->materializeMetadata();
+    if (Error Err = SrcModule->materializeMetadata())
+      return std::move(Err);
     UpgradeDebugInfo(*SrcModule);
 
     auto &ImportGUIDs = FunctionsToImportPerModule->second;
@@ -645,7 +646,8 @@ bool FunctionImporter::importFunctions(
                    << " " << F.getName() << " from "
                    << SrcModule->getSourceFileName() << "\n");
       if (Import) {
-        F.materialize();
+        if (Error Err = F.materialize())
+          return std::move(Err);
         if (EnableImportMetadata) {
           // Add 'thinlto_src_module' metadata for statistics and debugging.
           F.setMetadata(
@@ -667,7 +669,8 @@ bool FunctionImporter::importFunctions(
                    << " " << GV.getName() << " from "
                    << SrcModule->getSourceFileName() << "\n");
       if (Import) {
-        GV.materialize();
+        if (Error Err = GV.materialize())
+          return std::move(Err);
         GlobalsToImport.insert(&GV);
       }
     }
@@ -693,9 +696,11 @@ bool FunctionImporter::importFunctions(
                        << " " << GO->getName() << " from "
                        << SrcModule->getSourceFileName() << "\n");
 #endif
-        GO->materialize();
+        if (Error Err = GO->materialize())
+          return std::move(Err);
         GlobalsToImport.insert(GO);
-        GA.materialize();
+        if (Error Err = GA.materialize())
+          return std::move(Err);
         GlobalsToImport.insert(&GA);
       }
     }
@@ -799,8 +804,17 @@ static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
     return loadFile(Identifier, M.getContext());
   };
   FunctionImporter Importer(*Index, ModuleLoader);
-  return Importer.importFunctions(M, ImportList,
-                                  !DontForceImportReferencedDiscardableSymbols);
+  Expected<bool> Result = Importer.importFunctions(
+      M, ImportList, !DontForceImportReferencedDiscardableSymbols);
+
+  // FIXME: Probably need to propagate Errors through the pass manager.
+  if (!Result) {
+    logAllUnhandledErrors(Result.takeError(), errs(),
+                          "Error importing module: ");
+    return false;
+  }
+
+  return *Result;
 }
 
 namespace {

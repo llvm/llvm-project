@@ -108,6 +108,8 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM assembly."),
     cl::init(false), cl::Hidden);
 
+static ExitOnError ExitOnErr;
+
 // Read the specified bitcode file in and return it. This routine searches the
 // link path for the specified file to try to find it...
 //
@@ -129,7 +131,7 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
   }
 
   if (MaterializeMetadata) {
-    Result->materializeMetadata();
+    ExitOnErr(Result->materializeMetadata());
     UpgradeDebugInfo(*Result);
   }
 
@@ -264,7 +266,7 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
     auto &Entry = ModuleToGlobalsToImportMap[SrcModule.getModuleIdentifier()];
     Entry.insert(F);
 
-    F->materialize();
+    ExitOnErr(F->materialize());
   }
 
   // Do the actual import of globals now, one Module at a time
@@ -277,7 +279,7 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
 
     // If modules were created with lazy metadata loading, materialize it
     // now, before linking it (otherwise this will be a noop).
-    SrcModule->materializeMetadata();
+    ExitOnErr(SrcModule->materializeMetadata());
     UpgradeDebugInfo(*SrcModule);
 
     // Linkage Promotion and renaming
@@ -347,6 +349,8 @@ int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
+
+  ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   LLVMContext Context;
   Context.setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);

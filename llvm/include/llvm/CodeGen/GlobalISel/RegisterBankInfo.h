@@ -161,11 +161,11 @@ public:
     bool isValid() const { return BreakDown && NumBreakDowns; }
 
     /// Verify that this mapping makes sense for a value of
-    /// \p MeaningFulBitWidth.
+    /// \p MeaningfulBitWidth.
     /// \note This method does not check anything when assertions are disabled.
     ///
     /// \return True is the check was successful.
-    bool verify(unsigned MeaningFulBitWidth) const;
+    bool verify(unsigned MeaningfulBitWidth) const;
 
     /// Print this on dbgs() stream.
     void dump() const;
