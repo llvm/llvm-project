@@ -3106,6 +3106,9 @@ public:
   /// method) or an Objective-C property attribute, rather than as an
   /// underscored type specifier.
   ///
+  /// \param allowArrayTypes Whether to accept nullability specifiers on an
+  /// array type (e.g., because it will decay to a pointer).
+  ///
   /// \param overrideExisting Whether to override an existing, locally-specified
   /// nullability specifier rather than complaining about the conflict.
   ///
@@ -3113,6 +3116,7 @@ public:
   bool checkNullabilityTypeSpecifier(QualType &type, NullabilityKind nullability,
                                      SourceLocation nullabilityLoc,
                                      bool isContextSensitive,
+                                     bool allowArrayTypes,
                                      bool implicit,
                                      bool overrideExisting = false);
 

@@ -3461,6 +3461,39 @@ static void checkNullabilityConsistency(TypeProcessingState &state,
     << static_cast<unsigned>(pointerKind);
 }
 
+/// Returns true if any of the declarator chunks before \p endIndex include a
+/// level of indirection: array, pointer, reference, or pointer-to-member.
+///
+/// Because declarator chunks are stored in outer-to-inner order, testing
+/// every chunk before \p endIndex is testing all chunks that embed the current
+/// chunk as part of their type.
+///
+/// It is legal to pass the result of Declarator::getNumTypeObjects() as the
+/// end index, in which case all chunks are tested.
+static bool hasOuterPointerLikeChunk(const Declarator &D, unsigned endIndex) {
+  unsigned i = endIndex;
+  while (i != 0) {
+    // Walk outwards along the declarator chunks.
+    --i;
+    const DeclaratorChunk &DC = D.getTypeObject(i);
+    switch (DC.Kind) {
+    case DeclaratorChunk::Paren:
+      break;
+    case DeclaratorChunk::Array:
+    case DeclaratorChunk::Pointer:
+    case DeclaratorChunk::Reference:
+    case DeclaratorChunk::MemberPointer:
+      return true;
+    case DeclaratorChunk::Function:
+    case DeclaratorChunk::BlockPointer:
+    case DeclaratorChunk::Pipe:
+      // These are invalid anyway, so just ignore.
+      break;
+    }
+  }
+  return false;
+}
+
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                                 QualType declSpecType,
                                                 TypeSourceInfo *TInfo) {
@@ -3912,31 +3945,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         // C99 6.7.5.2p1: ... and then only in the outermost array type
         // derivation.
-        unsigned x = chunkIndex;
-        while (x != 0) {
-          // Walk outwards along the declarator chunks.
-          x--;
-          const DeclaratorChunk &DC = D.getTypeObject(x);
-          switch (DC.Kind) {
-          case DeclaratorChunk::Paren:
-            continue;
-          case DeclaratorChunk::Array:
-          case DeclaratorChunk::Pointer:
-          case DeclaratorChunk::Reference:
-          case DeclaratorChunk::MemberPointer:
-            S.Diag(DeclType.Loc, diag::err_array_static_not_outermost) <<
-              (ASM == ArrayType::Static ? "'static'" : "type qualifier");
-            if (ASM == ArrayType::Static)
-              ASM = ArrayType::Normal;
-            ATI.TypeQuals = 0;
-            D.setInvalidType(true);
-            break;
-          case DeclaratorChunk::Function:
-          case DeclaratorChunk::BlockPointer:
-          case DeclaratorChunk::Pipe:
-            // These are invalid anyway, so just ignore.
-            break;
-          }
+        if (hasOuterPointerLikeChunk(D, chunkIndex)) {
+          S.Diag(DeclType.Loc, diag::err_array_static_not_outermost) <<
+            (ASM == ArrayType::Static ? "'static'" : "type qualifier");
+          if (ASM == ArrayType::Static)
+            ASM = ArrayType::Normal;
+          ATI.TypeQuals = 0;
+          D.setInvalidType(true);
         }
       }
       const AutoType *AT = T->getContainedAutoType();
@@ -5818,6 +5833,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
                                          NullabilityKind nullability,
                                          SourceLocation nullabilityLoc,
                                          bool isContextSensitive,
+                                         bool allowOnArrayType,
                                          bool implicit,
                                          bool overrideExisting) {
   if (!implicit) {
@@ -5899,7 +5915,8 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   }
 
   // If this definitely isn't a pointer type, reject the specifier.
-  if (!desugared->canHaveNullability()) {
+  if (!desugared->canHaveNullability() &&
+      !(allowOnArrayType && desugared->isArrayType())) {
     if (!implicit) {
       Diag(nullabilityLoc, diag::err_nullability_nonpointer)
         << DiagNullabilityKind(nullability, isContextSensitive) << type;
@@ -5911,7 +5928,12 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   // attributes, require that the type be a single-level pointer.
   if (isContextSensitive) {
     // Make sure that the pointee isn't itself a pointer type.
-    QualType pointeeType = desugared->getPointeeType();
+    const Type *pointeeType;
+    if (desugared->isArrayType())
+      pointeeType = desugared->getArrayElementTypeNoTypeQual();
+    else
+      pointeeType = desugared->getPointeeType().getTypePtr();
+
     if (pointeeType->isAnyPointerType() ||
         pointeeType->isObjCObjectPointerType() ||
         pointeeType->isMemberPointerType()) {
@@ -6657,13 +6679,22 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // don't want to distribute the nullability specifier past any
       // dependent type, because that complicates the user model.
       if (type->canHaveNullability() || type->isDependentType() ||
+          type->isArrayType() ||
           !distributeNullabilityTypeAttr(state, type, attr)) {
+        unsigned endIndex;
+        if (TAL == TAL_DeclChunk)
+          endIndex = state.getCurrentChunkIndex();
+        else
+          endIndex = state.getDeclarator().getNumTypeObjects();
+        bool allowOnArrayType =
+            state.getDeclarator().isPrototypeContext() &&
+            !hasOuterPointerLikeChunk(state.getDeclarator(), endIndex);
         if (state.getSema().checkNullabilityTypeSpecifier(
               type,
               mapNullabilityAttrKind(attr.getKind()),
               attr.getLoc(),
               attr.isContextSensitiveKeywordAttribute(),
-              /*implicit=*/false)) {
+              allowOnArrayType, /*implicit=*/false)) {
           attr.setInvalid();
         }
 
