@@ -364,16 +364,15 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                     isDefinition())
           .bind("class_method"),
       this);
+  // Match static member variable definition of the moved class.
+  Finder->addMatcher(
+      varDecl(InMovedClass, InOldFiles, isDefinition(), isStaticDataMember())
+          .bind("class_static_var_decl"),
+      this);
 
   //============================================================================
   // Matchers for old cc
   //============================================================================
-  // Match static member variable definition of the moved class.
-  Finder->addMatcher(
-      varDecl(InMovedClass, InOldCC, isDefinition(), isStaticDataMember())
-          .bind("class_static_var_decl"),
-      this);
-
   auto InOldCCNamedNamespace =
       allOf(hasParent(namespaceDecl(unless(isAnonymous()))), InOldCC);
   // Matching using decls/type alias decls which are in named namespace. Those
@@ -412,25 +411,36 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
     if (!CMD->isInlined()) {
       MovedDecls.emplace_back(CMD, &Result.Context->getSourceManager());
       RemovedDecls.push_back(MovedDecls.back());
+      // Get template class method from its method declaration as
+      // UnremovedDecls stores template class method.
+      if (const auto *FTD = CMD->getDescribedFunctionTemplate())
+        UnremovedDeclsInOldHeader.erase(FTD);
+      else
+        UnremovedDeclsInOldHeader.erase(CMD);
     }
   } else if (const auto *VD = Result.Nodes.getNodeAs<clang::VarDecl>(
                  "class_static_var_decl")) {
     MovedDecls.emplace_back(VD, &Result.Context->getSourceManager());
     RemovedDecls.push_back(MovedDecls.back());
-  } else if (const auto *class_decl =
+    UnremovedDeclsInOldHeader.erase(MovedDecls.back().Decl);
+  } else if (const auto *CD =
                  Result.Nodes.getNodeAs<clang::CXXRecordDecl>("moved_class")) {
-    MovedDecls.emplace_back(class_decl, &Result.Context->getSourceManager());
+    // Get class template from its class declaration as UnremovedDecls stores
+    // class template.
+    if (const auto * TC = CD->getDescribedClassTemplate())
+      MovedDecls.emplace_back(TC, &Result.Context->getSourceManager());
+    else
+      MovedDecls.emplace_back(CD, &Result.Context->getSourceManager());
     RemovedDecls.push_back(MovedDecls.back());
-    UnremovedDeclsInOldHeader.erase(class_decl);
+    UnremovedDeclsInOldHeader.erase(MovedDecls.back().Decl);
   } else if (const auto *FWD =
                  Result.Nodes.getNodeAs<clang::CXXRecordDecl>("fwd_decl")) {
     // Skip all forwad declarations which appear after moved class declaration.
     if (RemovedDecls.empty()) {
-      if (const auto *DCT = FWD->getDescribedClassTemplate()) {
+      if (const auto *DCT = FWD->getDescribedClassTemplate())
         MovedDecls.emplace_back(DCT, &Result.Context->getSourceManager());
-      } else {
+      else
         MovedDecls.emplace_back(FWD, &Result.Context->getSourceManager());
-      }
     }
   } else if (const auto *ANS =
                  Result.Nodes.getNodeAs<clang::NamespaceDecl>("anonymous_ns")) {
