@@ -13,6 +13,8 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
 
+class StructuredDataImpl;
+
 namespace lldb {
 
 class SBStructuredData {
@@ -36,8 +38,7 @@ public:
   lldb::SBError GetDescription(lldb::SBStream &stream) const;
 
 private:
-  class Impl;
-  std::unique_ptr<Impl> m_impl_up;
+  std::unique_ptr<StructuredDataImpl> m_impl_up;
 };
 }
 
