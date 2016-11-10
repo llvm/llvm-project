@@ -502,9 +502,6 @@ public:
   /// The Swift version to use for filtering.
   VersionTuple SwiftVersion;
 
-  /// The reader attached to \c InputBuffer.
-  llvm::BitstreamReader InputReader;
-
   /// The name of the module that we read from the control block.
   std::string ModuleName;
 
@@ -1278,10 +1275,7 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
   Impl.InputBuffer = inputBuffer;
   Impl.OwnsInputBuffer = ownsInputBuffer;
   Impl.SwiftVersion = swiftVersion;
-  Impl.InputReader.init(
-    reinterpret_cast<const uint8_t *>(Impl.InputBuffer->getBufferStart()), 
-    reinterpret_cast<const uint8_t *>(Impl.InputBuffer->getBufferEnd()));
-  llvm::BitstreamCursor cursor(Impl.InputReader);
+  llvm::BitstreamCursor cursor(Impl.InputBuffer->getBuffer());
 
   // Validate signature.
   for (auto byte : API_NOTES_SIGNATURE) {
@@ -1294,11 +1288,14 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
   // Look at all of the blocks.
   bool hasValidControlBlock = false;
   SmallVector<uint64_t, 64> scratch;
-  auto topLevelEntry = cursor.advance();
-  while (topLevelEntry.Kind == llvm::BitstreamEntry::SubBlock) {
+  while (!cursor.AtEndOfStream()) {
+    auto topLevelEntry = cursor.advance();
+    if (topLevelEntry.Kind != llvm::BitstreamEntry::SubBlock)
+      break;
+
     switch (topLevelEntry.ID) {
     case llvm::bitc::BLOCKINFO_BLOCK_ID:
-      if (cursor.ReadBlockInfoBlock()) {
+      if (!cursor.ReadBlockInfoBlock()) {
         failed = true;
         break;
       }
@@ -1399,11 +1396,9 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
       }
       break;
     }
-
-    topLevelEntry = cursor.advance(llvm::BitstreamCursor::AF_DontPopBlockAtEnd);
   }
 
-  if (topLevelEntry.Kind != llvm::BitstreamEntry::EndBlock) {
+  if (!cursor.AtEndOfStream()) {
     failed = true;
     return;
   }
