@@ -12224,6 +12224,12 @@
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
@@ -12260,6 +12266,12 @@
 				);
 				FRAMEWORK_VERSION = A;
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
 				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = "resources/LLDB-Info.plist";
@@ -12351,6 +12363,12 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
@@ -13885,6 +13903,12 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
+					"LLDB_VERSION_STRING=\"lldb-${CURRENT_PROJECT_VERSION}\"",
+				);
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
