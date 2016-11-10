@@ -18,10 +18,10 @@
 #ifndef LLVM_IR_GVMATERIALIZER_H
 #define LLVM_IR_GVMATERIALIZER_H
 
-#include <system_error>
 #include <vector>
 
 namespace llvm {
+class Error;
 class Function;
 class GlobalValue;
 class Module;
@@ -36,13 +36,13 @@ public:
 
   /// Make sure the given GlobalValue is fully read.
   ///
-  virtual std::error_code materialize(GlobalValue *GV) = 0;
+  virtual Error materialize(GlobalValue *GV) = 0;
 
   /// Make sure the entire Module has been completely read.
   ///
-  virtual std::error_code materializeModule() = 0;
+  virtual Error materializeModule() = 0;
 
-  virtual std::error_code materializeMetadata() = 0;
+  virtual Error materializeMetadata() = 0;
   virtual void setStripDebugInfo() = 0;
 
   virtual std::vector<StructType *> getIdentifiedStructTypes() const = 0;

@@ -542,7 +542,7 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
 
   if (ST->isTruncatingStore() && ValueVT.getSizeInBits() == 64) {
     assert(StoredVT.getSizeInBits() < 64 && "Not a truncating store");
-    Value = CurDAG->getTargetExtractSubreg(Hexagon::subreg_loreg,
+    Value = CurDAG->getTargetExtractSubreg(Hexagon::isub_lo,
                                            dl, MVT::i32, Value);
   }
 
@@ -764,8 +764,7 @@ void HexagonDAGToDAGISel::SelectZeroExtend(SDNode *N) {
     if (ExVT.getSizeInBits() == 32) {
       SDNode *And = CurDAG->getMachineNode(Hexagon::A2_andp, dl, MVT::i64,
                                            SDValue(Mask,0), SDValue(OnesReg,0));
-      SDValue SubR = CurDAG->getTargetConstant(Hexagon::subreg_loreg, dl,
-                                               MVT::i32);
+      SDValue SubR = CurDAG->getTargetConstant(Hexagon::isub_lo, dl, MVT::i32);
       ReplaceNode(N, CurDAG->getMachineNode(Hexagon::EXTRACT_SUBREG, dl, ExVT,
                                             SDValue(And, 0), SubR));
       return;

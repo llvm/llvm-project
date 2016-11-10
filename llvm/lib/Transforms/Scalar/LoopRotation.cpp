@@ -326,6 +326,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // Otherwise, stick the new instruction into the new block!
       C->setName(Inst->getName());
       C->insertBefore(LoopEntryBranch);
+
+      if (auto *II = dyn_cast<IntrinsicInst>(C))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          AC->registerAssumption(II);
     }
   }
 

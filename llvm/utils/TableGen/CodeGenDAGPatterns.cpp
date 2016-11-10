@@ -805,14 +805,9 @@ static unsigned getPatternSize(const TreePatternNode *P,
   if (P->isLeaf() && isa<IntInit>(P->getLeafValue()))
     Size += 2;
 
-  // FIXME: This is a hack to statically increase the priority of patterns
-  // which maps a sub-dag to a complex pattern. e.g. favors LEA over ADD.
-  // Later we can allow complexity / cost for each pattern to be (optionally)
-  // specified. To get best possible pattern match we'll need to dynamically
-  // calculate the complexity of all patterns a dag can potentially map to.
   const ComplexPattern *AM = P->getComplexPatternInfo(CGP);
   if (AM) {
-    Size += AM->getNumOperands() * 3;
+    Size += AM->getComplexity();
 
     // We don't want to count any children twice, so return early.
     return Size;

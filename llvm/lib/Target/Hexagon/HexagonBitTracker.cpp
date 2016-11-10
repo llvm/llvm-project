@@ -84,12 +84,14 @@ BT::BitMask HexagonEvaluator::mask(unsigned Reg, unsigned Sub) const {
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   unsigned ID = RC->getID();
   uint16_t RW = getRegBitWidth(RegisterRef(Reg, Sub));
+  auto &HRI = static_cast<const HexagonRegisterInfo&>(TRI);
+  bool IsSubLo = (Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo));
   switch (ID) {
     case DoubleRegsRegClassID:
     case VecDblRegsRegClassID:
     case VecDblRegs128BRegClassID:
-      return (Sub == subreg_loreg) ? BT::BitMask(0, RW-1)
-                                   : BT::BitMask(RW, 2*RW-1);
+      return IsSubLo ? BT::BitMask(0, RW-1)
+                     : BT::BitMask(RW, 2*RW-1);
     default:
       break;
   }
@@ -895,7 +897,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &BI,
                                 const CellMapType &Inputs,
                                 BranchTargetList &Targets,
                                 bool &FallsThru) const {
-  // We need to evaluate one branch at a time. TII::AnalyzeBranch checks
+  // We need to evaluate one branch at a time. TII::analyzeBranch checks
   // all the branches in a basic block at once, so we cannot use it.
   unsigned Opc = BI.getOpcode();
   bool SimpleBranch = false;

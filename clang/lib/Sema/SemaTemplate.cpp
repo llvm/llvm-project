@@ -7674,7 +7674,8 @@ Sema::ActOnExplicitInstantiation(Scope *S,
       Def->setTemplateSpecializationKind(TSK);
 
       if (!getDLLAttr(Def) && getDLLAttr(Specialization) &&
-          Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+          (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
+           Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment())) {
         // In the MS ABI, an explicit instantiation definition can add a dll
         // attribute to a template with a previous instantiation declaration.
         // MinGW doesn't allow this.

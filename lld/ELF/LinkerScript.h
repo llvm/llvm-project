@@ -32,7 +32,7 @@ class ScriptParser;
 class SymbolBody;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class InputSection;
-template <class ELFT> class OutputSectionBase;
+class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
 class InputSectionData;
 
@@ -240,7 +240,7 @@ public:
   bool isDefined(StringRef S) override;
   bool isAbsolute(StringRef S) override;
 
-  std::vector<OutputSectionBase<ELFT> *> *OutputSections;
+  std::vector<OutputSectionBase *> *OutputSections;
 
   int getSectionIndex(StringRef Name);
 
@@ -262,13 +262,13 @@ private:
 
   uintX_t Dot;
   uintX_t LMAOffset = 0;
-  OutputSectionBase<ELFT> *CurOutSec = nullptr;
+  OutputSectionBase *CurOutSec = nullptr;
   uintX_t ThreadBssOffset = 0;
-  void switchTo(OutputSectionBase<ELFT> *Sec);
+  void switchTo(OutputSectionBase *Sec);
   void flush();
   void output(InputSection<ELFT> *Sec);
   void process(BaseCommand &Base);
-  llvm::DenseSet<OutputSectionBase<ELFT> *> AlreadyOutputOS;
+  llvm::DenseSet<OutputSectionBase *> AlreadyOutputOS;
   llvm::DenseSet<InputSectionData *> AlreadyOutputIS;
 };
 

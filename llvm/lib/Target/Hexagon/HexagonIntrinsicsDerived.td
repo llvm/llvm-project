@@ -20,21 +20,21 @@ def : Pat <(mul DoubleRegs:$src1, DoubleRegs:$src2),
            (EXTRACT_SUBREG
             (i64
              (M2_dpmpyuu_s0 (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src1),
-                                          subreg_loreg)),
+                                          isub_lo)),
                      (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src2),
-                                          subreg_loreg)))),
-            subreg_hireg)),
-          (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src1), subreg_loreg)),
-          (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src2), subreg_hireg))),
-         (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src2), subreg_loreg)),
-         (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src1), subreg_hireg))),
+                                          isub_lo)))),
+            isub_hi)),
+          (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src1), isub_lo)),
+          (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src2), isub_hi))),
+         (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src2), isub_lo)),
+         (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src1), isub_hi))),
         (i32
          (EXTRACT_SUBREG
           (i64
            (M2_dpmpyuu_s0 
-             (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src1), subreg_loreg)),
+             (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src1), isub_lo)),
                    (i32 (EXTRACT_SUBREG (i64 DoubleRegs:$src2),
-                                        subreg_loreg)))), subreg_loreg))))>;
+                                        isub_lo)))), isub_lo))))>;
 
 
 

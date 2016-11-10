@@ -27,6 +27,8 @@
 #include <memory>
 
 namespace llvm {
+class BasicBlock;
+class BlockFrequencyInfo;
 class ProfileSummary;
 /// \brief Analysis providing profile information.
 ///
@@ -59,6 +61,8 @@ public:
   bool isHotCount(uint64_t C);
   /// \brief Returns true if count \p C is considered cold.
   bool isColdCount(uint64_t C);
+  /// \brief Returns true if BasicBlock \p B is considered hot.
+  bool isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI);
 };
 
 /// An analysis pass based on legacy pass manager to deliver ProfileSummaryInfo.

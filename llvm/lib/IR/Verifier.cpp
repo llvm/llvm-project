@@ -389,8 +389,8 @@ private:
                        SmallVectorImpl<const MDNode *> &Requirements);
   void visitFunction(const Function &F);
   void visitBasicBlock(BasicBlock &BB);
-  void visitRangeMetadata(Instruction& I, MDNode* Range, Type* Ty);
-  void visitDereferenceableMetadata(Instruction& I, MDNode* MD);
+  void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
+  void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
   void visitTBAAMetadata(Instruction &I, MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
@@ -2968,10 +2968,8 @@ static bool isContiguous(const ConstantRange &A, const ConstantRange &B) {
   return A.getUpper() == B.getLower() || A.getLower() == B.getUpper();
 }
 
-void Verifier::visitRangeMetadata(Instruction& I,
-                                  MDNode* Range, Type* Ty) {
-  assert(Range &&
-         Range == I.getMetadata(LLVMContext::MD_range) &&
+void Verifier::visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty) {
+  assert(Range && Range == I.getMetadata(LLVMContext::MD_range) &&
          "precondition violation");
 
   unsigned NumOperands = Range->getNumOperands();

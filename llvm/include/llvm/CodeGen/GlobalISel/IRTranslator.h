@@ -132,6 +132,10 @@ private:
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U);
 
+  bool translateInvoke(const User &U);
+
+  bool translateLandingPad(const User &U);
+
   /// Translate one of LLVM's cast instructions into MachineInstrs, with the
   /// given generic Opcode.
   bool translateCast(unsigned Opcode, const User &U);
@@ -287,7 +291,6 @@ private:
   // translation.
   bool translateSwitch(const User &U) { return false; }
   bool translateIndirectBr(const User &U) { return false; }
-  bool translateInvoke(const User &U) { return false; }
   bool translateResume(const User &U) { return false; }
   bool translateCleanupRet(const User &U) { return false; }
   bool translateCatchRet(const User &U) { return false; }
@@ -304,7 +307,6 @@ private:
   bool translateExtractElement(const User &U) { return false; }
   bool translateInsertElement(const User &U) { return false; }
   bool translateShuffleVector(const User &U) { return false; }
-  bool translateLandingPad(const User &U) { return false; }
 
   /// @}
 

@@ -6803,7 +6803,10 @@ public:
       PtrDiffType = SignedLong;
       break;
     }
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    // Up to 32 bits are lock-free atomic, but we're willing to do atomic ops
+    // on up to 64 bits.
+    MaxAtomicPromoteWidth = 64;
+    MaxAtomicInlineWidth = 32;
   }
 
   void getTargetDefines(const LangOptions &Opts,

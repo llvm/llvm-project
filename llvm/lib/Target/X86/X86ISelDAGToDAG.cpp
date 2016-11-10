@@ -228,6 +228,7 @@ namespace {
                              SDValue &Index, SDValue &Disp,
                              SDValue &Segment,
                              SDValue &NodeWithChain);
+    bool selectRelocImm(SDValue N, SDValue &Op);
 
     bool tryFoldLoad(SDNode *P, SDValue N,
                      SDValue &Base, SDValue &Scale,
@@ -1704,6 +1705,27 @@ bool X86DAGToDAGISel::selectTLSADDRAddr(SDValue N, SDValue &Base,
   return true;
 }
 
+bool X86DAGToDAGISel::selectRelocImm(SDValue N, SDValue &Op) {
+  if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
+    Op = CurDAG->getTargetConstant(CN->getAPIntValue(), SDLoc(CN),
+                                   N.getValueType());
+    return true;
+  }
+
+  if (N.getOpcode() != X86ISD::Wrapper)
+    return false;
+
+  unsigned Opc = N.getOperand(0)->getOpcode();
+  if (Opc == ISD::TargetConstantPool || Opc == ISD::TargetJumpTable ||
+      Opc == ISD::TargetExternalSymbol || Opc == ISD::TargetGlobalAddress ||
+      Opc == ISD::TargetGlobalTLSAddress || Opc == ISD::MCSymbol ||
+      Opc == ISD::TargetBlockAddress) {
+    Op = N.getOperand(0);
+    return true;
+  }
+
+  return false;
+}
 
 bool X86DAGToDAGISel::tryFoldLoad(SDNode *P, SDValue N,
                                   SDValue &Base, SDValue &Scale,

@@ -441,7 +441,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
   MachineBasicBlock *TmpLB = const_cast<MachineBasicBlock*>(LB);
   SmallVector<MachineOperand,2> Cond;
   bool BadLB = TII->analyzeBranch(*TmpLB, TB, FB, Cond, false);
-  // Only analyzable conditional branches. HII::AnalyzeBranch will put
+  // Only analyzable conditional branches. HII::analyzeBranch will put
   // the branch opcode as the first element of Cond, and the predicate
   // operand as the second.
   if (BadLB || Cond.size() != 2)
@@ -452,7 +452,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
   // Must go to the header.
   if (TB != HB && FB != HB)
     return;
-  assert(Cond[1].isReg() && "Unexpected Cond vector from AnalyzeBranch");
+  assert(Cond[1].isReg() && "Unexpected Cond vector from analyzeBranch");
   // Expect a predicate register.
   unsigned PR = Cond[1].getReg();
   assert(MRI->getRegClass(PR) == &Hexagon::PredRegsRegClass);
@@ -569,7 +569,7 @@ void HexagonSplitDoubleRegs::createHalfInstr(unsigned Opc, MachineInstr *MI,
         SR = SubR;
       } else {
         const UUPair &P = F->second;
-        R = (SubR == Hexagon::subreg_loreg) ? P.first : P.second;
+        R = (SubR == Hexagon::isub_lo) ? P.first : P.second;
         SR = 0;
       }
     }
@@ -763,8 +763,8 @@ void HexagonSplitDoubleRegs::splitShift(MachineInstr *MI,
   unsigned RS = getRegState(Op1);
   unsigned ShiftOpc = Left ? S2_asl_i_r
                            : (Signed ? S2_asr_i_r : S2_lsr_i_r);
-  unsigned LoSR = subreg_loreg;
-  unsigned HiSR = subreg_hireg;
+  unsigned LoSR = isub_lo;
+  unsigned HiSR = isub_hi;
 
   if (S == 0) {
     // No shift, subregister copy.
@@ -884,8 +884,8 @@ void HexagonSplitDoubleRegs::splitAslOr(MachineInstr *MI,
   unsigned RS2 = getRegState(Op2);
   const TargetRegisterClass *IntRC = &IntRegsRegClass;
 
-  unsigned LoSR = subreg_loreg;
-  unsigned HiSR = subreg_hireg;
+  unsigned LoSR = isub_lo;
+  unsigned HiSR = isub_hi;
 
   // Op0 = S2_asl_i_p_or Op1, Op2, Op3
   // means:  Op0 = or (Op1, asl(Op2, Op3))
@@ -965,25 +965,25 @@ bool HexagonSplitDoubleRegs::splitInstr(MachineInstr *MI,
     case TargetOpcode::COPY: {
       unsigned DstR = MI->getOperand(0).getReg();
       if (MRI->getRegClass(DstR) == DoubleRC) {
-        createHalfInstr(Opc, MI, PairMap, subreg_loreg);
-        createHalfInstr(Opc, MI, PairMap, subreg_hireg);
+        createHalfInstr(Opc, MI, PairMap, isub_lo);
+        createHalfInstr(Opc, MI, PairMap, isub_hi);
         Split = true;
       }
       break;
     }
     case A2_andp:
-      createHalfInstr(A2_and, MI, PairMap, subreg_loreg);
-      createHalfInstr(A2_and, MI, PairMap, subreg_hireg);
+      createHalfInstr(A2_and, MI, PairMap, isub_lo);
+      createHalfInstr(A2_and, MI, PairMap, isub_hi);
       Split = true;
       break;
     case A2_orp:
-      createHalfInstr(A2_or, MI, PairMap, subreg_loreg);
-      createHalfInstr(A2_or, MI, PairMap, subreg_hireg);
+      createHalfInstr(A2_or, MI, PairMap, isub_lo);
+      createHalfInstr(A2_or, MI, PairMap, isub_hi);
       Split = true;
       break;
     case A2_xorp:
-      createHalfInstr(A2_xor, MI, PairMap, subreg_loreg);
-      createHalfInstr(A2_xor, MI, PairMap, subreg_hireg);
+      createHalfInstr(A2_xor, MI, PairMap, isub_lo);
+      createHalfInstr(A2_xor, MI, PairMap, isub_hi);
       Split = true;
       break;
 
@@ -1047,10 +1047,10 @@ void HexagonSplitDoubleRegs::replaceSubregUses(MachineInstr *MI,
       continue;
     const UUPair &P = F->second;
     switch (Op.getSubReg()) {
-      case Hexagon::subreg_loreg:
+      case Hexagon::isub_lo:
         Op.setReg(P.first);
         break;
-      case Hexagon::subreg_hireg:
+      case Hexagon::isub_hi:
         Op.setReg(P.second);
         break;
     }
@@ -1079,9 +1079,9 @@ void HexagonSplitDoubleRegs::collapseRegPairs(MachineInstr *MI,
     unsigned NewDR = MRI->createVirtualRegister(DoubleRC);
     BuildMI(B, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), NewDR)
       .addReg(Pr.first)
-      .addImm(Hexagon::subreg_loreg)
+      .addImm(Hexagon::isub_lo)
       .addReg(Pr.second)
-      .addImm(Hexagon::subreg_hireg);
+      .addImm(Hexagon::isub_hi);
     Op.setReg(NewDR);
   }
 }

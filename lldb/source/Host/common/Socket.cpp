@@ -15,7 +15,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Host/StringConvert.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/common/UDPSocket.h"
 
