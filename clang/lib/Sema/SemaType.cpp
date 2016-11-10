@@ -3896,8 +3896,22 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         attr->setUsedAsTypeAttr();
       }
     }
+
+    auto isVaList = [&S](QualType T) -> bool {
+      auto *typedefTy = T->getAs<TypedefType>();
+      if (!typedefTy)
+        return false;
+      TypedefDecl *vaListTypedef = S.Context.getBuiltinVaListDecl();
+      do {
+        if (typedefTy->getDecl() == vaListTypedef)
+          return true;
+        typedefTy = typedefTy->desugar()->getAs<TypedefType>();
+      } while (typedefTy);
+      return false;
+    };
+
     if (complainAboutMissingNullability == CAMN_Yes &&
-        T->isArrayType() && !T->getNullability(S.Context) &&
+        T->isArrayType() && !T->getNullability(S.Context) && !isVaList(T) &&
         D.isPrototypeContext() &&
         !hasOuterPointerLikeChunk(D, D.getNumTypeObjects())) {
       checkNullabilityConsistency(S, SimplePointerKind::Array,

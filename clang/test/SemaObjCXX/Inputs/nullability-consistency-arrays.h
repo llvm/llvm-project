@@ -1,3 +1,5 @@
+#include <stdarg.h>
+
 void firstThingInTheFileThatNeedsNullabilityIsAnArray(int ints[]);
 #if ARRAYS_CHECKED
 // expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
@@ -32,6 +34,26 @@ void testAllOK(
     int ints[_Nonnull],
     void * _Nullable ptrs[_Nonnull],
     void * _Nullable * _Nullable nestedPtrs[_Nonnull]);
+
+void testVAList(va_list ok); // no warning
+
+#if __cplusplus
+// Carefully construct a test case such that if a platform's va_list is an array
+// or pointer type, it gets tested, but otherwise it does not.
+template<class T, class F>
+struct pointer_like_or { typedef F type; };
+template<class T, class F>
+struct pointer_like_or<T*, F> { typedef T *type; };
+template<class T, class F>
+struct pointer_like_or<T* const, F> { typedef T * const type; };
+template<class T, class F>
+struct pointer_like_or<T[], F> { typedef T type[]; };
+template<class T, class F, unsigned size>
+struct pointer_like_or<T[size], F> { typedef T type[size]; };
+
+void testVAListWithNullability(
+  pointer_like_or<va_list, void*>::type _Nonnull x); // no errors
+#endif
 
 void nestedArrays(int x[5][1]) {}
 #if ARRAYS_CHECKED
