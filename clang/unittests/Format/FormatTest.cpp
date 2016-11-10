@@ -11544,6 +11544,26 @@ TEST_F(FormatTest, FormatsTableGenCode) {
   verifyFormat("include \"a.td\"\ninclude \"b.td\"", Style);
 }
 
+TEST_F(FormatTest, ArrayOfTemplates) {
+  EXPECT_EQ("auto a = new unique_ptr<int>[10];",
+            format("auto a = new unique_ptr<int > [ 10];"));
+
+  FormatStyle Spaces = getLLVMStyle();
+  Spaces.SpacesInSquareBrackets = true;
+  EXPECT_EQ("auto a = new unique_ptr<int>[ 10 ];",
+            format("auto a = new unique_ptr<int > [10];", Spaces));
+}
+
+TEST_F(FormatTest, ArrayAsTemplateType) {
+  EXPECT_EQ("auto a = unique_ptr<Foo<Bar>[10]>;",
+            format("auto a = unique_ptr < Foo < Bar>[ 10]> ;"));
+
+  FormatStyle Spaces = getLLVMStyle();
+  Spaces.SpacesInSquareBrackets = true;
+  EXPECT_EQ("auto a = unique_ptr<Foo<Bar>[ 10 ]>;",
+            format("auto a = unique_ptr < Foo < Bar>[10]> ;", Spaces));
+}
+
 // Since this test case uses UNIX-style file path. We disable it for MS
 // compiler.
 #if !defined(_MSC_VER) && !defined(__MINGW32__)

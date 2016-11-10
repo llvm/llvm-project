@@ -4908,7 +4908,15 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
   QualType PtrTy = getPointerType(PrettyArrayType->getElementType());
 
   // int x[restrict 4] ->  int *restrict
-  return getQualifiedType(PtrTy, PrettyArrayType->getIndexTypeQualifiers());
+  QualType Result = getQualifiedType(PtrTy,
+                                     PrettyArrayType->getIndexTypeQualifiers());
+
+  // int x[_Nullable] -> int * _Nullable
+  if (auto Nullability = Ty->getNullability(*this)) {
+    Result = const_cast<ASTContext *>(this)->getAttributedType(
+        AttributedType::getNullabilityAttrKind(*Nullability), Result, Result);
+  }
+  return Result;
 }
 
 QualType ASTContext::getBaseElementType(const ArrayType *array) const {
