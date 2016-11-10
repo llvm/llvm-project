@@ -197,12 +197,22 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     ProfileSummaryInfo *PSI) {
   ModuleSummaryIndex Index;
 
-  // Identify the local values in the llvm.used set, which should not be
-  // exported as they would then require renaming and promotion, but we
-  // may have opaque uses e.g. in inline asm.
-  SmallPtrSet<GlobalValue *, 8> Used;
-  collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
+  // Identify the local values in the llvm.used and llvm.compiler.used sets,
+  // which should not be exported as they would then require renaming and
+  // promotion, but we may have opaque uses e.g. in inline asm. We collect them
+  // here because we use this information to mark functions containing inline
+  // assembly calls as not importable.
   SmallPtrSet<GlobalValue *, 8> LocalsUsed;
+  SmallPtrSet<GlobalValue *, 8> Used;
+  // First collect those in the llvm.used set.
+  collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
+  for (auto *V : Used) {
+    if (V->hasLocalLinkage())
+      LocalsUsed.insert(V);
+  }
+  Used.clear();
+  // Next collect those in the llvm.compiler.used set.
+  collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ true);
   for (auto *V : Used) {
     if (V->hasLocalLinkage())
       LocalsUsed.insert(V);
