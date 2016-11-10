@@ -149,6 +149,7 @@ private:
 
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
+template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
 
 // Linker generated sections which can be used as inputs.
 template <class ELFT> struct In {

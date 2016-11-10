@@ -59,8 +59,9 @@ _start:
 // CHECK-NEXT:  EntrySize: 0
 // CHECK-NEXT:  SectionData (
 // CHECK-NEXT:    0000: 00626172 002E7465 78740066 6F6F6261  |.bar..text.fooba|
-// CHECK-NEXT:    0010: 72002E73 796D7461 62002E73 68737472  |r..symtab..shstr|
-// CHECK-NEXT:    0020: 74616200 2E737472 74616200           |tab..strtab.|
+// CHECK-NEXT:    0010: 72002E63 6F6D6D65 6E74002E 73796D74  |r..comment..symt|
+// CHECK-NEXT:    0020: 6162002E 73687374 72746162 002E7374  |ab..shstrtab..st|
+// CHECK-NEXT:    0030: 72746162 00                          |rtab.|
 // CHECK-NEXT:  )
 // CHECK-NEXT:}
 // CHECK:        Name: .strtab

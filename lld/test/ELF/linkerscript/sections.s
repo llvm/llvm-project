@@ -21,9 +21,10 @@
 # SEC-DEFAULT: 3 other         00000003 {{[0-9a-f]*}} DATA
 # SEC-DEFAULT: 4 .bss          00000002 {{[0-9a-f]*}} BSS
 # SEC-DEFAULT: 5 .shstrtab     00000002 {{[0-9a-f]*}}
-# SEC-DEFAULT: 6 .symtab       00000030 {{[0-9a-f]*}}
-# SEC-DEFAULT: 7 .shstrtab     00000032 {{[0-9a-f]*}}
-# SEC-DEFAULT: 8 .strtab       00000008 {{[0-9a-f]*}}
+# SEC-DEFAULT: 6 .comment      00000008 {{[0-9a-f]*}}
+# SEC-DEFAULT: 7 .symtab       00000030 {{[0-9a-f]*}}
+# SEC-DEFAULT: 8 .shstrtab     0000003b {{[0-9a-f]*}}
+# SEC-DEFAULT: 9 .strtab       00000008 {{[0-9a-f]*}}
 
 # Sections are put in order specified in linker script, other than alloc
 # sections going first.
@@ -43,7 +44,7 @@
 # SEC-ORDER: 1 .bss          00000002 {{[0-9a-f]*}} BSS
 # SEC-ORDER: 2 other         00000003 {{[0-9a-f]*}} DATA
 # SEC-ORDER: 3 .shstrtab     00000002 {{[0-9a-f]*}}
-# SEC-ORDER: 4 .shstrtab     00000032 {{[0-9a-f]*}}
+# SEC-ORDER: 4 .shstrtab     0000003b {{[0-9a-f]*}}
 # SEC-ORDER: 5 .symtab       00000030 {{[0-9a-f]*}}
 # SEC-ORDER: 6 .strtab       00000008 {{[0-9a-f]*}}
 # SEC-ORDER: 7 .data         00000020 {{[0-9a-f]*}} DATA
@@ -63,9 +64,10 @@
 # SEC-SWAP-NAMES: 3 other         00000003 {{[0-9a-f]*}} DATA
 # SEC-SWAP-NAMES: 4 .bss          00000002 {{[0-9a-f]*}} BSS
 # SEC-SWAP-NAMES: 5 .shstrtab     00000002 {{[0-9a-f]*}}
-# SEC-SWAP-NAMES: 6 .symtab       00000030 {{[0-9a-f]*}}
-# SEC-SWAP-NAMES: 7 .shstrtab     00000032 {{[0-9a-f]*}}
-# SEC-SWAP-NAMES: 8 .strtab       00000008 {{[0-9a-f]*}}
+# SEC-SWAP-NAMES: 6 .comment      00000008 {{[0-9a-f]*}}
+# SEC-SWAP-NAMES: 7 .symtab       00000030 {{[0-9a-f]*}}
+# SEC-SWAP-NAMES: 8 .shstrtab     0000003b {{[0-9a-f]*}}
+# SEC-SWAP-NAMES: 9 .strtab       00000008 {{[0-9a-f]*}}
 
 # .shstrtab from the input object file is discarded.
 # RUN: echo "SECTIONS { \
@@ -79,9 +81,10 @@
 # SEC-DISCARD: 2 .data         00000020 {{[0-9a-f]*}} DATA
 # SEC-DISCARD: 3 other         00000003 {{[0-9a-f]*}} DATA
 # SEC-DISCARD: 4 .bss          00000002 {{[0-9a-f]*}} BSS
-# SEC-DISCARD: 5 .symtab       00000030 {{[0-9a-f]*}}
-# SEC-DISCARD: 6 .shstrtab     00000032 {{[0-9a-f]*}}
-# SEC-DISCARD: 7 .strtab       00000008 {{[0-9a-f]*}}
+# SEC-DISCARD: 5 .comment      00000008 {{[0-9a-f]*}}
+# SEC-DISCARD: 6 .symtab       00000030 {{[0-9a-f]*}}
+# SEC-DISCARD: 7 .shstrtab     0000003b {{[0-9a-f]*}}
+# SEC-DISCARD: 8 .strtab       00000008 {{[0-9a-f]*}}
 
 # Multiple SECTIONS command specifying additional input section descriptions
 # for the same output section description - input sections are merged into
@@ -100,9 +103,10 @@
 # SEC-MULTI: 2 .data         00000023 {{[0-9a-f]*}} DATA
 # SEC-MULTI: 3 .bss          00000002 {{[0-9a-f]*}} BSS
 # SEC-MULTI: 4 .shstrtab     00000002 {{[0-9a-f]*}}
-# SEC-MULTI: 5 .symtab       00000030 {{[0-9a-f]*}}
-# SEC-MULTI: 6 .shstrtab     0000002c {{[0-9a-f]*}}
-# SEC-MULTI: 7 .strtab       00000008 {{[0-9a-f]*}}
+# SEC-MULTI: 5 .comment      00000008 {{[0-9a-f]*}}
+# SEC-MULTI: 6 .symtab       00000030 {{[0-9a-f]*}}
+# SEC-MULTI: 7 .shstrtab     00000035 {{[0-9a-f]*}}
+# SEC-MULTI: 8 .strtab       00000008 {{[0-9a-f]*}}
 
 .globl _start
 _start:
