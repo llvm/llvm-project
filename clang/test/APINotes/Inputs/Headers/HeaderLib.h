@@ -9,6 +9,7 @@ int unavailable_function(void);
 int unavailable_global_int;
 
 void do_something_with_pointers(int *ptr1, int *ptr2);
+void do_something_with_arrays(int simple[], int nested[][2]);
 
 typedef int unavailable_typedef;
 struct unavailable_struct { int x, y, z; };

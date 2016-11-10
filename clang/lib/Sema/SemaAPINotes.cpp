@@ -64,7 +64,7 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
   QualType origType = type;
   S.checkNullabilityTypeSpecifier(type, nullability, decl->getLocation(),
                                   /*isContextSensitive=*/false,
-                                  /*implicit=*/true,
+                                  isa<ParmVarDecl>(decl), /*implicit=*/true,
                                   overrideExisting);
   if (type.getTypePtr() == origType.getTypePtr())
     return;
