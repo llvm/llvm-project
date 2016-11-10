@@ -82,7 +82,7 @@ inline StringRef getInstrProfValueProfFuncName() {
 /// Return the name of the section containing function coverage mapping
 /// data.
 inline StringRef getInstrProfCoverageSectionName(bool AddSegment) {
-  return AddSegment ? "__DATA," INSTR_PROF_COVMAP_SECT_NAME_STR
+  return AddSegment ? "__LLVM_COV," INSTR_PROF_COVMAP_SECT_NAME_STR
                     : INSTR_PROF_COVMAP_SECT_NAME_STR;
 }
 
