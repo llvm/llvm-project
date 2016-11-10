@@ -38,15 +38,15 @@ _start:
 # CHECK-NEXT:   Version: 1
 # CHECK-NEXT:   Entry: 0x10020040
 # CHECK-NEXT:   ProgramHeaderOffset: 0x40
-# CHECK-NEXT:   SectionHeaderOffset: 0x200C8
+# CHECK-NEXT:   SectionHeaderOffset: 0x200D8
 # CHECK-NEXT:   Flags [ (0x0)
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 64
 # CHECK-NEXT:   ProgramHeaderEntrySize: 56
 # CHECK-NEXT:   ProgramHeaderCount: 6
 # CHECK-NEXT:   SectionHeaderEntrySize: 64
-# CHECK-NEXT:   SectionHeaderCount: 9
-# CHECK-NEXT:   StringTableSectionIndex: 7
+# CHECK-NEXT:   SectionHeaderCount: 10
+# CHECK-NEXT:   StringTableSectionIndex: 8
 # CHECK-NEXT: }
 # CHECK-NEXT: Sections [
 # CHECK-NEXT:   Section {
@@ -163,14 +163,33 @@ _start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 6
+# CHECK-NEXT:     Name: .comment
+# CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
+# CHECK-NEXT:     Flags [ (0x30)
+# CHECK-NEXT:       SHF_MERGE (0x10)
+# CHECK-NEXT:       SHF_STRINGS (0x20)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset: 0x20058
+# CHECK-NEXT:     Size: 8
+# CHECK-NEXT:     Link: 0
+# CHECK-NEXT:     Info: 0
+# CHECK-NEXT:     AddressAlignment: 1
+# CHECK-NEXT:     EntrySize: 1
+# CHECK-NEXT:     SectionData (
+# CHECK-NEXT:         0000: 4C4C4420 312E3000 |LLD 1.0.|
+# CHECK-NEXT:     )
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 7
 # CHECK-NEXT:     Name: .symtab
 # CHECK-NEXT:     Type: SHT_SYMTAB (0x2)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x20058
+# CHECK-NEXT:     Offset: 0x20060
 # CHECK-NEXT:     Size: 48
-# CHECK-NEXT:     Link: 8
+# CHECK-NEXT:     Link: 9
 # CHECK-NEXT:     Info: 1
 # CHECK-NEXT:     AddressAlignment: 8
 # CHECK-NEXT:     EntrySize: 24
@@ -178,14 +197,14 @@ _start:
 # CHECK:          )
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 7
+# CHECK-NEXT:     Index: 8
 # CHECK-NEXT:     Name: .shstrtab
 # CHECK-NEXT:     Type: SHT_STRTAB
 # CHECK-NEXT:     Flags [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x20088
-# CHECK-NEXT:     Size: 54
+# CHECK-NEXT:     Offset: 0x20090
+# CHECK-NEXT:     Size: 63
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
 # CHECK-NEXT:     AddressAlignment: 1
@@ -194,13 +213,13 @@ _start:
 # CHECK:          )
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 8
+# CHECK-NEXT:     Index: 9
 # CHECK-NEXT:     Name: .strtab
 # CHECK-NEXT:     Type: SHT_STRTAB
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x200BE
+# CHECK-NEXT:     Offset: 0x200CF
 # CHECK-NEXT:     Size: 8
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0

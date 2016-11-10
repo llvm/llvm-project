@@ -25,12 +25,14 @@
 #include "Target.h"
 #include "Writer.h"
 
+#include "lld/Config/Version.h"
 #include "lld/Core/Parallel.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/xxhash.h"
+#include <cstdlib>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -75,6 +77,36 @@ template <class ELFT> InputSection<ELFT> *elf::createCommonSection() {
   }
   Ret->Alignment = Alignment;
   Ret->Data = makeArrayRef<uint8_t>(nullptr, Size);
+  return Ret;
+}
+
+// Returns an LLD version string.
+static ArrayRef<uint8_t> getVersion() {
+  // Check LLD_VERSION first for ease of testing.
+  // You can get consitent output by using the environment variable.
+  // This is only for testing.
+  StringRef S = getenv("LLD_VERSION");
+  if (S.empty())
+    S = Saver.save(Twine("Linker: ") + getLLDVersion());
+
+  // +1 to include the terminating '\0'.
+  return {(const uint8_t *)S.data(), S.size() + 1};
+};
+
+// Creates a .comment section containing LLD version info.
+// With this feature, you can identify LLD-generated binaries easily
+// by "objdump -s -j .comment <file>".
+// The returned object is a mergeable string section.
+template <class ELFT> MergeInputSection<ELFT> *elf::createCommentSection() {
+  typename ELFT::Shdr Hdr = {};
+  Hdr.sh_flags = SHF_MERGE | SHF_STRINGS;
+  Hdr.sh_type = SHT_PROGBITS;
+  Hdr.sh_entsize = 1;
+  Hdr.sh_addralign = 1;
+
+  auto *Ret = make<MergeInputSection<ELFT>>(/*file=*/nullptr, &Hdr, ".comment");
+  Ret->Data = getVersion();
+  Ret->splitIntoPieces();
   return Ret;
 }
 
@@ -351,6 +383,11 @@ template InputSection<ELF32LE> *elf::createInterpSection();
 template InputSection<ELF32BE> *elf::createInterpSection();
 template InputSection<ELF64LE> *elf::createInterpSection();
 template InputSection<ELF64BE> *elf::createInterpSection();
+
+template MergeInputSection<ELF32LE> *elf::createCommentSection();
+template MergeInputSection<ELF32BE> *elf::createCommentSection();
+template MergeInputSection<ELF64LE> *elf::createCommentSection();
+template MergeInputSection<ELF64BE> *elf::createCommentSection();
 
 template class elf::MipsAbiFlagsSection<ELF32LE>;
 template class elf::MipsAbiFlagsSection<ELF32BE>;

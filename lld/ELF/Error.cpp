@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
@@ -50,6 +51,12 @@ void elf::error(std::error_code EC, const Twine &Prefix) {
 void elf::exitLld(int Val) {
   outs().flush();
   errs().flush();
+
+  // Dealloc/destroy ManagedStatic variables before calling
+  // _exit(). In a non-LTO build, this is a nop. In an LTO
+  // build allows us to get the output of -time-passes.
+  llvm_shutdown();
+
   _exit(Val);
 }
 

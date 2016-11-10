@@ -14,7 +14,7 @@
 // SO-NEXT: Flags [
 // SO-NEXT: ]
 // SO-NEXT: Address:
-// SO-NEXT: Offset: 0x1030
+// SO-NEXT: Offset: 0x1038
 // SO-NEXT: Size:
 // SO-NEXT: Link:
 // SO-NEXT: Info:

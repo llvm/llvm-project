@@ -352,15 +352,16 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
 NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
   static const uint32_t NumberOfSections = 2;
   static const uint32_t NumberOfSymbols = 1;
+  uint32_t VASize = is32bit() ? 4 : 8;
 
   // COFF Header
   coff_file_header Header{
       u16(Config->Machine), u16(NumberOfSections), u32(0),
       u32(sizeof(Header) + (NumberOfSections * sizeof(coff_section)) +
           // .idata$5
-          sizeof(export_address_table_entry) +
+          VASize +
           // .idata$4
-          sizeof(export_address_table_entry)),
+          VASize),
       u32(NumberOfSymbols), u16(0),
       u16(is32bit() ? IMAGE_FILE_32BIT_MACHINE : 0),
   };
@@ -371,36 +372,40 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
       {{'.', 'i', 'd', 'a', 't', 'a', '$', '5'},
        u32(0),
        u32(0),
-       u32(sizeof(export_address_table_entry)),
+       u32(VASize),
        u32(sizeof(coff_file_header) + NumberOfSections * sizeof(coff_section)),
        u32(0),
        u32(0),
        u16(0),
        u16(0),
-       u32(IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA |
-           IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE)},
+       u32((is32bit() ? IMAGE_SCN_ALIGN_4BYTES : IMAGE_SCN_ALIGN_8BYTES) |
+           IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
+           IMAGE_SCN_MEM_WRITE)},
       {{'.', 'i', 'd', 'a', 't', 'a', '$', '4'},
        u32(0),
        u32(0),
-       u32(sizeof(export_address_table_entry)),
+       u32(VASize),
        u32(sizeof(coff_file_header) + NumberOfSections * sizeof(coff_section) +
-           sizeof(export_address_table_entry)),
+           VASize),
        u32(0),
        u32(0),
        u16(0),
        u16(0),
-       u32(IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_CNT_INITIALIZED_DATA |
-           IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE)},
+       u32((is32bit() ? IMAGE_SCN_ALIGN_4BYTES : IMAGE_SCN_ALIGN_8BYTES) |
+           IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
+           IMAGE_SCN_MEM_WRITE)},
   };
   append(Buffer, SectionTable);
 
-  // .idata$5
-  static const export_address_table_entry ILT{u32(0)};
-  append(Buffer, ILT);
+  // .idata$5, ILT
+  append(Buffer, u32(0));
+  if (!is32bit())
+    append(Buffer, u32(0));
 
-  // .idata$4
-  static const export_address_table_entry IAT{u32(0)};
-  append(Buffer, IAT);
+  // .idata$4, IAT
+  append(Buffer, u32(0));
+  if (!is32bit())
+    append(Buffer, u32(0));
 
   // Symbol Table
   coff_symbol16 SymbolTable[NumberOfSymbols] = {
