@@ -279,6 +279,7 @@ def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
 def NullabilityDeclSpec : DiagGroup<"nullability-declspec">;
+def NullabilityInferredOnNestedType : DiagGroup<"nullability-inferred-on-nested-type">;
 def NullableToNonNullConversion : DiagGroup<"nullable-to-nonnull-conversion">;
 def NullabilityCompletenessOnArrays : DiagGroup<"nullability-completeness-on-arrays">;
 def NullabilityCompleteness : DiagGroup<"nullability-completeness",

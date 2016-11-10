@@ -3247,15 +3247,27 @@ namespace {
     // NSError**
     NSErrorPointerPointer,
   };
+
+  /// Describes a declarator chunk wrapping a pointer that marks inference as
+  /// unexpected.
+  // These values must be kept in sync with diagnostics.
+  enum class PointerWrappingDeclaratorKind {
+    /// Pointer is top-level.
+    None = -1,
+    /// Pointer is an array element.
+    Array = 0,
+    /// Pointer is the referent type of a C++ reference.
+    Reference = 1
+  };
 } // end anonymous namespace
 
 /// Classify the given declarator, whose type-specified is \c type, based on
 /// what kind of pointer it refers to.
 ///
 /// This is used to determine the default nullability.
-static PointerDeclaratorKind classifyPointerDeclarator(Sema &S,
-                                                       QualType type,
-                                                       Declarator &declarator) {
+static PointerDeclaratorKind
+classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
+                          PointerWrappingDeclaratorKind &wrappingKind) {
   unsigned numNormalPointers = 0;
 
   // For any dependent type, we consider it a non-pointer.
@@ -3267,6 +3279,10 @@ static PointerDeclaratorKind classifyPointerDeclarator(Sema &S,
     DeclaratorChunk &chunk = declarator.getTypeObject(i);
     switch (chunk.Kind) {
     case DeclaratorChunk::Array:
+      if (numNormalPointers == 0)
+        wrappingKind = PointerWrappingDeclaratorKind::Array;
+      break;
+
     case DeclaratorChunk::Function:
     case DeclaratorChunk::Pipe:
       break;
@@ -3277,14 +3293,18 @@ static PointerDeclaratorKind classifyPointerDeclarator(Sema &S,
                                    : PointerDeclaratorKind::SingleLevelPointer;
 
     case DeclaratorChunk::Paren:
+      break;
+
     case DeclaratorChunk::Reference:
-      continue;
+      if (numNormalPointers == 0)
+        wrappingKind = PointerWrappingDeclaratorKind::Reference;
+      break;
 
     case DeclaratorChunk::Pointer:
       ++numNormalPointers;
       if (numNormalPointers > 2)
         return PointerDeclaratorKind::MultiLevelPointer;
-      continue;
+      break;
     }
   }
 
@@ -3634,6 +3654,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     CAMN_Yes
   } complainAboutMissingNullability = CAMN_No;
   unsigned NumPointersRemaining = 0;
+  auto complainAboutInferringWithinChunk = PointerWrappingDeclaratorKind::None;
 
   if (IsTypedefName) {
     // For typedefs, we do not infer any nullability (the default),
@@ -3702,11 +3723,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // fallthrough
 
     case Declarator::FileContext:
-    case Declarator::KNRTypeListContext:
+    case Declarator::KNRTypeListContext: {
       complainAboutMissingNullability = CAMN_Yes;
 
       // Nullability inference depends on the type and declarator.
-      switch (classifyPointerDeclarator(S, T, D)) {
+      auto wrappingKind = PointerWrappingDeclaratorKind::None;
+      switch (classifyPointerDeclarator(S, T, D, wrappingKind)) {
       case PointerDeclaratorKind::NonPointer:
       case PointerDeclaratorKind::MultiLevelPointer:
         // Cannot infer nullability.
@@ -3715,6 +3737,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       case PointerDeclaratorKind::SingleLevelPointer:
         // Infer _Nonnull if we are in an assumes-nonnull region.
         if (inAssumeNonNullRegion) {
+          complainAboutInferringWithinChunk = wrappingKind;
           inferNullability = NullabilityKind::NonNull;
           inferNullabilityCS = (context == Declarator::ObjCParameterContext ||
                                 context == Declarator::ObjCResultContext);
@@ -3755,6 +3778,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         break;
       }
       break;
+    }
 
     case Declarator::ConversionIdContext:
       complainAboutMissingNullability = CAMN_Yes;
@@ -3811,6 +3835,25 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (inferNullabilityCS) {
         state.getDeclarator().getMutableDeclSpec().getObjCQualifiers()
           ->setObjCDeclQualifier(ObjCDeclSpec::DQ_CSNullability);
+      }
+
+      if (pointerLoc.isValid() &&
+          complainAboutInferringWithinChunk !=
+            PointerWrappingDeclaratorKind::None) {
+        SourceLocation fixItLoc = S.getLocForEndOfToken(pointerLoc);
+        StringRef insertionText = " _Nonnull ";
+        if (const char *nextChar = S.SourceMgr.getCharacterData(fixItLoc)) {
+          if (isWhitespace(*nextChar)) {
+            insertionText = insertionText.drop_back();
+          } else if (!isIdentifierBody(nextChar[0], /*allow dollar*/true) &&
+                     !isIdentifierBody(nextChar[-1], /*allow dollar*/true)) {
+            insertionText = insertionText.drop_back().drop_front();
+          }
+        }
+
+        S.Diag(pointerLoc, diag::warn_nullability_inferred_on_nested_type)
+          << static_cast<int>(complainAboutInferringWithinChunk)
+          << FixItHint::CreateInsertion(fixItLoc, insertionText);
       }
 
       if (inferNullabilityInnerOnly)

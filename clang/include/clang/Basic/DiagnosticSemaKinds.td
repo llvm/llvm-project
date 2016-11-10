@@ -8712,6 +8712,11 @@ def warn_nullability_missing_array : Warning<
   "_Nullable, or _Null_unspecified)">,
   InGroup<NullabilityCompletenessOnArrays>;
 
+def warn_nullability_inferred_on_nested_type : Warning<
+  "inferring '_Nonnull' for pointer type within %select{array|reference}0 is "
+  "deprecated">,
+  InGroup<NullabilityInferredOnNestedType>;
+
 def err_objc_type_arg_explicit_nullability : Error<
   "type argument %0 cannot explicitly specify nullability">;
 
