@@ -226,11 +226,14 @@ BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
   this->Data = ArrayRef<uint8_t>(Buf);
 }
 
+// Returns the location of the build-id hash value in the output.
 template <class ELFT>
 uint8_t *BuildIdSection<ELFT>::getOutputLoc(uint8_t *Start) const {
-  return Start + this->OutSec->Offset + this->OutSecOff;
+  // First 16 bytes are a header.
+  return Start + this->OutSec->Offset + this->OutSecOff + 16;
 }
 
+// Split one uint8 array into small pieces of uint8 arrays.
 static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,
                                             size_t ChunkSize) {
   std::vector<ArrayRef<uint8_t>> Ret;
@@ -243,59 +246,60 @@ static std::vector<ArrayRef<uint8_t>> split(ArrayRef<uint8_t> Arr,
   return Ret;
 }
 
+// Computes a hash value of Data using a given hash function.
+// In order to utilize multiple cores, we first split data into 1MB
+// chunks, compute a hash for each chunk, and then compute a hash value
+// of the hash values.
 template <class ELFT>
 void BuildIdSection<ELFT>::computeHash(
     llvm::MutableArrayRef<uint8_t> Data,
-    std::function<void(ArrayRef<uint8_t> Arr, uint8_t *Hash)> Hash) {
+    std::function<void(ArrayRef<uint8_t> Arr, uint8_t *Dest)> HashFn) {
   std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
   std::vector<uint8_t> HashList(Chunks.size() * HashSize);
 
-  if (Config->Threads)
-    parallel_for_each(Chunks.begin(), Chunks.end(),
-                      [&](ArrayRef<uint8_t> &Chunk) {
-                        size_t Id = &Chunk - Chunks.data();
-                        Hash(Chunk, HashList.data() + Id * HashSize);
-                      });
-  else
-    std::for_each(Chunks.begin(), Chunks.end(), [&](ArrayRef<uint8_t> &Chunk) {
-      size_t Id = &Chunk - Chunks.data();
-      Hash(Chunk, HashList.data() + Id * HashSize);
-    });
+  auto Fn = [&](ArrayRef<uint8_t> &Chunk) {
+    size_t Idx = &Chunk - Chunks.data();
+    HashFn(Chunk, HashList.data() + Idx * HashSize);
+  };
 
-  Hash(HashList, this->getOutputLoc(Data.begin()) + 16);
+  if (Config->Threads)
+    parallel_for_each(Chunks.begin(), Chunks.end(), Fn);
+  else
+    std::for_each(Chunks.begin(), Chunks.end(), Fn);
+
+  HashFn(HashList, this->getOutputLoc(Data.begin()));
 }
 
 template <class ELFT>
 void BuildIdFastHash<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
   this->computeHash(Buf, [](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
-    uint64_t Hash = xxHash64(toStringRef(Arr));
-    write64<ELFT::TargetEndianness>(Dest, Hash);
+    write64le(Dest, xxHash64(toStringRef(Arr)));
   });
 }
 
 template <class ELFT>
 void BuildIdMd5<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
-  this->computeHash(Buf, [&](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
+  this->computeHash(Buf, [](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
     MD5 Hash;
     Hash.update(Arr);
     MD5::MD5Result Res;
     Hash.final(Res);
-    memcpy(Dest, Res, this->HashSize);
+    memcpy(Dest, Res, 16);
   });
 }
 
 template <class ELFT>
 void BuildIdSha1<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
-  this->computeHash(Buf, [&](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
+  this->computeHash(Buf, [](ArrayRef<uint8_t> Arr, uint8_t *Dest) {
     SHA1 Hash;
     Hash.update(Arr);
-    memcpy(Dest, Hash.final().data(), this->HashSize);
+    memcpy(Dest, Hash.final().data(), 20);
   });
 }
 
 template <class ELFT>
 void BuildIdUuid<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
-  if (getRandomBytes(this->getOutputLoc(Buf.begin()) + 16, 16))
+  if (getRandomBytes(this->getOutputLoc(Buf.data()), this->HashSize))
     error("entropy source failure");
 }
 
@@ -305,7 +309,7 @@ BuildIdHexstring<ELFT>::BuildIdHexstring()
 
 template <class ELFT>
 void BuildIdHexstring<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
-  memcpy(this->getOutputLoc(Buf.begin()) + 16, Config->BuildIdVector.data(),
+  memcpy(this->getOutputLoc(Buf.data()), Config->BuildIdVector.data(),
          Config->BuildIdVector.size());
 }
 

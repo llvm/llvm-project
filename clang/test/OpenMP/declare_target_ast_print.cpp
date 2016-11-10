@@ -34,7 +34,12 @@ void foo_cpp() {}
 #pragma omp declare target
 template <class T>
 struct C {
-// CHECK: template <class T = int> struct C
+// CHECK: template <class T> struct C {
+// CHECK: #pragma omp declare target
+// CHECK-NEXT: static T ts;
+// CHECK-NEXT: #pragma omp end declare target
+
+// CHECK: template<> struct C<int>
   T t;
 // CHECK-NEXT: int t;
   static T ts;
@@ -58,11 +63,6 @@ struct C {
 // CHECK-NEXT: }
 // CHECK: #pragma omp end declare target
 };
-
-// CHECK: template <class T> struct C {
-// CHECK: #pragma omp declare target
-// CHECK-NEXT: static T ts;
-// CHECK-NEXT: #pragma omp end declare target
 
 template<class T>
 T C<T>::ts = 1;

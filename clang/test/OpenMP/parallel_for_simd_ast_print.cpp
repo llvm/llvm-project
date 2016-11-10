@@ -35,9 +35,9 @@ public:
   }
 };
 
-// CHECK: #pragma omp parallel for simd private(this->a) private(this->a) private(this->S1::a)
 // CHECK: #pragma omp parallel for simd private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp parallel for simd private(this->a) private(this->a)
+// CHECK: #pragma omp parallel for simd private(this->a) private(this->a) private(this->S1::a)
 
 class S8 : public S7<S1> {
   S8() {}
@@ -126,7 +126,7 @@ template<int LEN> struct S2 {
 };
 
 // S2<4>::func is called below in main.
-// CHECK: template <int LEN = 4> struct S2 {
+// CHECK: template<> struct S2<4> {
 // CHECK-NEXT: static void func(int n, float *a, float *b, float *c)     {
 // CHECK-NEXT:   int k1 = 0, k2 = 0;
 // CHECK-NEXT: #pragma omp parallel for simd safelen(4) linear(k1,k2: 4) aligned(a: 4) simdlen(4)

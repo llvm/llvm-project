@@ -34,7 +34,29 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
-// CHECK: template <typename T = int, int C = 5> int tmain(int argc, int *argv) {
+// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
+// CHECK-NEXT: T i, j, a[20]
+// CHECK-NEXT: #pragma omp target
+// CHECK-NEXT: foo();
+// CHECK-NEXT: #pragma omp target if(target: argc > 0)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target if(C)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(tofrom: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(tofrom: a[0:10],i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(to: i) map(from: j)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(always,alloc: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target nowait
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
+// CHECK-NEXT: foo()
+// CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int i, j, a[20]
 // CHECK-NEXT: #pragma omp target
 // CHECK-NEXT: foo();
@@ -56,35 +78,13 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
 // CHECK-NEXT: foo()
-// CHECK: template <typename T = char, int C = 1> char tmain(char argc, char *argv) {
+// CHECK: template<> char tmain<char, 1>(char argc, char *argv) {
 // CHECK-NEXT: char i, j, a[20]
 // CHECK-NEXT: #pragma omp target
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target if(target: argc > 0)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target if(1)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target map(tofrom: i)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target map(tofrom: a[0:10],i)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target map(to: i) map(from: j)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target map(always,alloc: i)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target nowait
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
-// CHECK-NEXT: foo()
-// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
-// CHECK-NEXT: T i, j, a[20]
-// CHECK-NEXT: #pragma omp target
-// CHECK-NEXT: foo();
-// CHECK-NEXT: #pragma omp target if(target: argc > 0)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target if(C)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target map(tofrom: i)
 // CHECK-NEXT: foo()

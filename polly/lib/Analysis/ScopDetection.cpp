@@ -341,15 +341,15 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
   Loop *L = LI->getLoopFor(&BB);
   const SCEV *ConditionSCEV = SE->getSCEVAtScope(Condition, L);
 
+  if (IsLoopBranch && L->isLoopLatch(&BB))
+    return false;
+
   if (isAffine(ConditionSCEV, L, Context))
     return true;
 
-  if (!IsLoopBranch && AllowNonAffineSubRegions &&
+  if (AllowNonAffineSubRegions &&
       addOverApproximatedRegion(RI->getRegionFor(&BB), Context))
     return true;
-
-  if (IsLoopBranch)
-    return false;
 
   return invalid<ReportNonAffBranch>(Context, /*Assert=*/true, &BB,
                                      ConditionSCEV, ConditionSCEV, SI);
@@ -358,6 +358,10 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
 bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
                                   Value *Condition, bool IsLoopBranch,
                                   DetectionContext &Context) const {
+
+  // Constant integer conditions are always affine.
+  if (isa<ConstantInt>(Condition))
+    return true;
 
   if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Condition)) {
     auto Opcode = BinOp->getOpcode();
@@ -424,10 +428,6 @@ bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
   // UndefValue is not allowed as condition.
   if (isa<UndefValue>(Condition))
     return invalid<ReportUndefCond>(Context, /*Assert=*/true, TI, &BB);
-
-  // Constant integer conditions are always affine.
-  if (isa<ConstantInt>(Condition))
-    return true;
 
   if (BranchInst *BI = dyn_cast<BranchInst>(TI))
     return isValidBranch(BB, BI, Condition, IsLoopBranch, Context);

@@ -172,7 +172,7 @@ T tmain(T argc) {
   return 0;
 }
 
-// CHECK: template <typename T = int> int tmain(int argc) {
+// CHECK: template<> int tmain<int>(int argc) {
 // CHECK-NEXT: const int da[5] = {0};
 // CHECK-NEXT: S6 h[10];
 // CHECK-NEXT: auto &rh = h;
@@ -202,7 +202,7 @@ T tmain(T argc) {
 // CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp target is_device_ptr(da)
 
-// CHECK: template <typename T = int *> int *tmain(int *argc) {
+// CHECK: template<> int *tmain<int *>(int *argc) {
 // CHECK-NEXT: int *const da[5] = {0};
 // CHECK-NEXT: S6 h[10];
 // CHECK-NEXT: auto &rh = h;

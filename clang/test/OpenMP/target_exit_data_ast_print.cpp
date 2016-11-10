@@ -66,7 +66,36 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
-// CHECK: template <typename T = int, int C = 5> int tmain(int argc, int *argv) {
+// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
+// CHECK-NEXT: T i, j, b, c, d, e, x[20];
+// CHECK-NEXT: i = argc;
+// CHECK-NEXT: #pragma omp target exit data map(from: i)
+// CHECK-NEXT: #pragma omp target exit data map(from: i) if(target exit data: j > 0)
+// CHECK-NEXT: #pragma omp target exit data map(from: i) if(b)
+// CHECK-NEXT: #pragma omp target exit data map(from: c)
+// CHECK-NEXT: #pragma omp target exit data map(from: c) if(b > e)
+// CHECK-NEXT: #pragma omp target exit data map(release: x[0:10],c)
+// CHECK-NEXT: #pragma omp target exit data map(delete: x[0:10])
+// CHECK-NEXT: #pragma omp target exit data map(always,delete: x[0:10])
+// CHECK-NEXT: #pragma omp target exit data map(from: c) map(release: d)
+// CHECK-NEXT: #pragma omp target exit data map(always,release: e)
+// CHECK-NEXT: #pragma omp target exit data nowait map(from: i)
+// CHECK-NEXT: #pragma omp target exit data nowait map(from: i) if(target exit data: j > 0)
+// CHECK-NEXT: #pragma omp target exit data map(from: i) if(b) nowait
+// CHECK-NEXT: #pragma omp target exit data map(from: c) nowait
+// CHECK-NEXT: #pragma omp target exit data map(from: c) nowait if(b > e)
+// CHECK-NEXT: #pragma omp target exit data nowait map(release: x[0:10],c)
+// CHECK-NEXT: #pragma omp target exit data nowait map(from: c) map(release: d)
+// CHECK-NEXT: #pragma omp target exit data nowait map(always,release: e)
+// CHECK-NEXT: #pragma omp target exit data depend(in : argc,argv[i:argc],x[:]) nowait map(from: i)
+// CHECK-NEXT: #pragma omp target exit data nowait depend(in : argc,argv[i:argc],x[:]) map(from: i) if(target exit data: j > 0)
+// CHECK-NEXT: #pragma omp target exit data map(from: i) depend(in : argc,argv[i:argc],x[:]) if(b) nowait
+// CHECK-NEXT: #pragma omp target exit data map(from: c) depend(in : argc,argv[i:argc],x[:]) nowait
+// CHECK-NEXT: #pragma omp target exit data map(from: c) depend(in : argc,argv[i:argc],x[:]) nowait if(b > e)
+// CHECK-NEXT: #pragma omp target exit data nowait map(release: x[0:10],c) depend(in : argc,argv[i:argc],x[:])
+// CHECK-NEXT: #pragma omp target exit data nowait map(from: c) depend(in : argc,argv[i:argc],x[:]) map(release: d)
+// CHECK-NEXT: #pragma omp target exit data depend(in : argc,argv[i:argc],x[:]) nowait map(always,release: e)
+// CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int i, j, b, c, d, e, x[20];
 // CHECK-NEXT: i = argc;
 // CHECK-NEXT: #pragma omp target exit data map(from: i)
@@ -95,37 +124,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target exit data nowait map(release: x[0:10],c) depend(in : argc,argv[i:argc],x[:])
 // CHECK-NEXT: #pragma omp target exit data nowait map(from: c) depend(in : argc,argv[i:argc],x[:]) map(release: d)
 // CHECK-NEXT: #pragma omp target exit data depend(in : argc,argv[i:argc],x[:]) nowait map(always,release: e)
-// CHECK: template <typename T = char, int C = 1> char tmain(char argc, char *argv) {
+// CHECK: template<> char tmain<char, 1>(char argc, char *argv) {
 // CHECK-NEXT: char i, j, b, c, d, e, x[20];
-// CHECK-NEXT: i = argc;
-// CHECK-NEXT: #pragma omp target exit data map(from: i)
-// CHECK-NEXT: #pragma omp target exit data map(from: i) if(target exit data: j > 0)
-// CHECK-NEXT: #pragma omp target exit data map(from: i) if(b)
-// CHECK-NEXT: #pragma omp target exit data map(from: c)
-// CHECK-NEXT: #pragma omp target exit data map(from: c) if(b > e)
-// CHECK-NEXT: #pragma omp target exit data map(release: x[0:10],c)
-// CHECK-NEXT: #pragma omp target exit data map(delete: x[0:10])
-// CHECK-NEXT: #pragma omp target exit data map(always,delete: x[0:10])
-// CHECK-NEXT: #pragma omp target exit data map(from: c) map(release: d)
-// CHECK-NEXT: #pragma omp target exit data map(always,release: e)
-// CHECK-NEXT: #pragma omp target exit data nowait map(from: i)
-// CHECK-NEXT: #pragma omp target exit data nowait map(from: i) if(target exit data: j > 0)
-// CHECK-NEXT: #pragma omp target exit data map(from: i) if(b) nowait
-// CHECK-NEXT: #pragma omp target exit data map(from: c) nowait
-// CHECK-NEXT: #pragma omp target exit data map(from: c) nowait if(b > e)
-// CHECK-NEXT: #pragma omp target exit data nowait map(release: x[0:10],c)
-// CHECK-NEXT: #pragma omp target exit data nowait map(from: c) map(release: d)
-// CHECK-NEXT: #pragma omp target exit data nowait map(always,release: e)
-// CHECK-NEXT: #pragma omp target exit data depend(in : argc,argv[i:argc],x[:]) nowait map(from: i)
-// CHECK-NEXT: #pragma omp target exit data nowait depend(in : argc,argv[i:argc],x[:]) map(from: i) if(target exit data: j > 0)
-// CHECK-NEXT: #pragma omp target exit data map(from: i) depend(in : argc,argv[i:argc],x[:]) if(b) nowait
-// CHECK-NEXT: #pragma omp target exit data map(from: c) depend(in : argc,argv[i:argc],x[:]) nowait
-// CHECK-NEXT: #pragma omp target exit data map(from: c) depend(in : argc,argv[i:argc],x[:]) nowait if(b > e)
-// CHECK-NEXT: #pragma omp target exit data nowait map(release: x[0:10],c) depend(in : argc,argv[i:argc],x[:])
-// CHECK-NEXT: #pragma omp target exit data nowait map(from: c) depend(in : argc,argv[i:argc],x[:]) map(release: d)
-// CHECK-NEXT: #pragma omp target exit data depend(in : argc,argv[i:argc],x[:]) nowait map(always,release: e)
-// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
-// CHECK-NEXT: T i, j, b, c, d, e, x[20];
 // CHECK-NEXT: i = argc;
 // CHECK-NEXT: #pragma omp target exit data map(from: i)
 // CHECK-NEXT: #pragma omp target exit data map(from: i) if(target exit data: j > 0)

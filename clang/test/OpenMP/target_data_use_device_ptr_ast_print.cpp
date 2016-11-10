@@ -110,7 +110,7 @@ T tmain(T argc) {
   return 0;
 }
 
-// CHECK: template <typename T = int> int tmain(int argc) {
+// CHECK: template<> int tmain<int>(int argc) {
 // CHECK-NEXT: int i;
 // CHECK-NEXT: int &j = i;
 // CHECK-NEXT: int *k = &j;
@@ -120,7 +120,7 @@ T tmain(T argc) {
 // CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp target data map(tofrom: i) use_device_ptr(z)
 
-// CHECK: template <typename T = int *> int *tmain(int *argc) {
+// CHECK: template<> int *tmain<int *>(int *argc) {
 // CHECK-NEXT: int *i;
 // CHECK-NEXT: int *&j = i;
 // CHECK-NEXT: int **k = &j;

@@ -253,7 +253,10 @@ static const IntrinsicData* getIntrinsicWithChain(uint16_t IntNo) {
  */
 static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(avx_cvt_pd2_ps_256,CVTPD2PS, ISD::FP_ROUND, 0),
+  X86_INTRINSIC_DATA(avx_cvt_pd2dq_256, INTR_TYPE_1OP, X86ISD::CVTP2SI, 0),
   X86_INTRINSIC_DATA(avx_cvtdq2_ps_256, INTR_TYPE_1OP, ISD::SINT_TO_FP, 0),
+  X86_INTRINSIC_DATA(avx_cvtt_pd2dq_256,INTR_TYPE_1OP, ISD::FP_TO_SINT, 0),
+  X86_INTRINSIC_DATA(avx_cvtt_ps2dq_256,INTR_TYPE_1OP, ISD::FP_TO_SINT, 0),
   X86_INTRINSIC_DATA(avx_hadd_pd_256,   INTR_TYPE_2OP, X86ISD::FHADD, 0),
   X86_INTRINSIC_DATA(avx_hadd_ps_256,   INTR_TYPE_2OP, X86ISD::FHADD, 0),
   X86_INTRINSIC_DATA(avx_hsub_pd_256,   INTR_TYPE_2OP, X86ISD::FHSUB, 0),
@@ -1635,8 +1638,10 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(sse2_comilt_sd,    COMI, X86ISD::COMI, ISD::SETLT),
   X86_INTRINSIC_DATA(sse2_comineq_sd,   COMI, X86ISD::COMI, ISD::SETNE),
   X86_INTRINSIC_DATA(sse2_cvtdq2ps,     INTR_TYPE_1OP, ISD::SINT_TO_FP, 0),
+  X86_INTRINSIC_DATA(sse2_cvtpd2dq,     INTR_TYPE_1OP, X86ISD::CVTP2SI, 0),
   X86_INTRINSIC_DATA(sse2_cvtpd2ps,     INTR_TYPE_1OP, X86ISD::VFPROUND, 0),
   X86_INTRINSIC_DATA(sse2_cvttpd2dq,    INTR_TYPE_1OP, X86ISD::CVTTPD2DQ, 0),
+  X86_INTRINSIC_DATA(sse2_cvttps2dq,    INTR_TYPE_1OP, ISD::FP_TO_SINT, 0),
   X86_INTRINSIC_DATA(sse2_max_pd,       INTR_TYPE_2OP, X86ISD::FMAX, 0),
   X86_INTRINSIC_DATA(sse2_min_pd,       INTR_TYPE_2OP, X86ISD::FMIN, 0),
   X86_INTRINSIC_DATA(sse2_movmsk_pd,    INTR_TYPE_1OP, X86ISD::MOVMSK, 0),

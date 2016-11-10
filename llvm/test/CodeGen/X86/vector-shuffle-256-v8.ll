@@ -2543,3 +2543,51 @@ define <8 x i32> @insert_dup_mem_v8i32(i32* %ptr) {
   %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <8 x i32> zeroinitializer
   ret <8 x i32> %tmp2
 }
+
+define <8 x i32> @shuffle_v8i32_12345678(<8 x i32> %a, <8 x i32> %b) {
+; AVX1-LABEL: shuffle_v8i32_12345678:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0],ymm0[3,0],ymm1[4,4],ymm0[7,4]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,2],ymm1[2,0],ymm0[5,6],ymm1[6,4]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shuffle_v8i32_12345678:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6,7]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,2,3,4,5,6,7,0]
+; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v8i32_12345678:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} ymm2 = [1,2,3,4,5,6,7,8]
+; AVX512VL-NEXT:    vpermt2d %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    retq
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+  ret <8 x i32> %shuffle
+}
+
+define <8 x i32> @shuffle_v8i32_12345670(<8 x i32> %a) {
+; AVX1-LABEL: shuffle_v8i32_12345670:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0],ymm0[3,0],ymm1[4,4],ymm0[7,4]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,2],ymm1[2,0],ymm0[5,6],ymm1[6,4]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shuffle_v8i32_12345670:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,2,3,4,5,6,7,0]
+; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v8i32_12345670:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} ymm1 = [1,2,3,4,5,6,7,0]
+; AVX512VL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512VL-NEXT:    retq
+  %shuffle = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
+  ret <8 x i32> %shuffle
+}

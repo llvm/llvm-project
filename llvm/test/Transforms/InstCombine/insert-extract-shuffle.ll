@@ -237,3 +237,30 @@ end:
   ret double %mu
 }
 
+; https://llvm.org/bugs/show_bug.cgi?id=30923
+; Delete the widening shuffle if we're not going to reduce the extract/insert to a shuffle.
+
+define <4 x float> @PR30923(<2 x float> %x) {
+; CHECK-LABEL: @PR30923(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    [[EXT1:%.*]] = extractelement <2 x float> %x, i32 1
+; CHECK-NEXT:    store float [[EXT1]], float* undef, align 4
+; CHECK-NEXT:    br label %bb2
+; CHECK:       bb2:
+; CHECK-NEXT:    [[EXT2:%.*]] = extractelement <2 x float> %x, i32 0
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, float [[EXT2]], i32 2
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[INS1]], float [[EXT1]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[INS2]]
+;
+bb1:
+  %ext1 = extractelement <2 x float> %x, i32 1
+  store float %ext1, float* undef, align 4
+  br label %bb2
+
+bb2:
+  %widen = shufflevector <2 x float> %x, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %ext2 = extractelement <4 x float> %widen, i32 0
+  %ins1 = insertelement <4 x float> <float 0.0, float 0.0, float undef, float undef>, float %ext2, i32 2
+  %ins2 = insertelement <4 x float> %ins1, float %ext1, i32 3
+  ret <4 x float> %ins2
+}

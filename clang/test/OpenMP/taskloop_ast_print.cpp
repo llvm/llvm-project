@@ -48,6 +48,7 @@ T tmain(T argc) {
   return T();
 }
 
+// CHECK-LABEL: int main(int argc, char **argv) {
 int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
