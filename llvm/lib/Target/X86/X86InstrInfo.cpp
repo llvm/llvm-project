@@ -5303,6 +5303,8 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case X86::CMP16ri:
   case X86::CMP16ri8:
   case X86::CMP8ri:
+    if (!MI.getOperand(1).isImm())
+      return false;
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;
@@ -5334,6 +5336,8 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case X86::SUB16ri:
   case X86::SUB16ri8:
   case X86::SUB8ri:
+    if (!MI.getOperand(2).isImm())
+      return false;
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;

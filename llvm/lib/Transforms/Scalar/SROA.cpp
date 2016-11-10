@@ -44,12 +44,12 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TimeValue.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1000,7 +1000,8 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
 
 #ifndef NDEBUG
   if (SROARandomShuffleSlices) {
-    std::mt19937 MT(static_cast<unsigned>(sys::TimeValue::now().msec()));
+    std::mt19937 MT(static_cast<unsigned>(
+        std::chrono::system_clock::now().time_since_epoch().count()));
     std::shuffle(Slices.begin(), Slices.end(), MT);
   }
 #endif

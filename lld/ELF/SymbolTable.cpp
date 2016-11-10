@@ -128,8 +128,9 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
 template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addAbsolute(StringRef Name,
                                                      uint8_t Visibility) {
-  return cast<DefinedRegular<ELFT>>(
-      addRegular(Name, Visibility, nullptr, STB_GLOBAL, STT_NOTYPE, 0)->body());
+  Symbol *Sym =
+      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, STB_GLOBAL, nullptr);
+  return cast<DefinedRegular<ELFT>>(Sym->body());
 }
 
 // Add Name as an "ignored" symbol. An ignored symbol is a regular
@@ -157,6 +158,7 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
   Symbol *Sym = B->symbol();
   Symbol *Real = addUndefined(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined(Saver.save("__wrap_" + Name));
+
   // We rename symbols by replacing the old symbol's SymbolBody with the new
   // symbol's SymbolBody. This causes all SymbolBody pointers referring to the
   // old symbol to instead refer to the new symbol.
@@ -421,16 +423,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
 }
 
 template <typename ELFT>
-Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
-                                      InputSectionBase<ELFT> *Section,
-                                      uint8_t Binding, uint8_t Type,
-                                      uintX_t Value) {
-  return addRegular(Name, StOther, Type, Value, 0, Binding, Section);
-}
-
-template <typename ELFT>
-Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
-                                        OutputSectionBase<ELFT> *Section,
+Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N, OutputSectionBase *Section,
                                         uintX_t Value, uint8_t StOther) {
   Symbol *S;
   bool WasInserted;

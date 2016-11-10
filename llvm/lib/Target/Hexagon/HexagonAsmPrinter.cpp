@@ -152,8 +152,8 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       // This should be an assert in the frontend.
       if (Hexagon::DoubleRegsRegClass.contains(RegNumber))
         RegNumber = TRI->getSubReg(RegNumber, ExtraCode[0] == 'L' ?
-                                              Hexagon::subreg_loreg :
-                                              Hexagon::subreg_hireg);
+                                              Hexagon::isub_lo :
+                                              Hexagon::isub_hi);
       OS << HexagonInstPrinter::getRegisterName(RegNumber);
       return false;
     }
@@ -414,8 +414,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
       TmpInst.setOpcode(Hexagon::A2_combinew);
       TmpInst.addOperand(MappedInst.getOperand(0));
       MCOperand &MO1 = MappedInst.getOperand(1);
-      unsigned High = RI->getSubReg(MO1.getReg(), Hexagon::subreg_hireg);
-      unsigned Low = RI->getSubReg(MO1.getReg(), Hexagon::subreg_loreg);
+      unsigned High = RI->getSubReg(MO1.getReg(), Hexagon::isub_hi);
+      unsigned Low = RI->getSubReg(MO1.getReg(), Hexagon::isub_lo);
       // Add a new operand for the second register in the pair.
       TmpInst.addOperand(MCOperand::createReg(High));
       TmpInst.addOperand(MCOperand::createReg(Low));
@@ -487,8 +487,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   // Translate a "$Rdd = $Rss" to "$Rdd = combine($Rs, $Rt)"
   case Hexagon::A2_tfrp: {
     MCOperand &MO = MappedInst.getOperand(1);
-    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::subreg_hireg);
-    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::subreg_loreg);
+    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
+    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
     MO.setReg(High);
     // Add a new operand for the second register in the pair.
     MappedInst.addOperand(MCOperand::createReg(Low));
@@ -499,8 +499,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::A2_tfrpt:
   case Hexagon::A2_tfrpf: {
     MCOperand &MO = MappedInst.getOperand(2);
-    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::subreg_hireg);
-    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::subreg_loreg);
+    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
+    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
     MO.setReg(High);
     // Add a new operand for the second register in the pair.
     MappedInst.addOperand(MCOperand::createReg(Low));
@@ -512,8 +512,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::A2_tfrptnew:
   case Hexagon::A2_tfrpfnew: {
     MCOperand &MO = MappedInst.getOperand(2);
-    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::subreg_hireg);
-    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::subreg_loreg);
+    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
+    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
     MO.setReg(High);
     // Add a new operand for the second register in the pair.
     MappedInst.addOperand(MCOperand::createReg(Low));

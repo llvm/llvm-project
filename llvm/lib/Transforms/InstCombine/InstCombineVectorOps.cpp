@@ -413,6 +413,14 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   if (InsertionBlock != InsElt->getParent())
     return;
 
+  // TODO: This restriction matches the check in visitInsertElementInst() and
+  // prevents an infinite loop caused by not turning the extract/insert pair
+  // into a shuffle. We really should not need either check, but we're lacking
+  // folds for shufflevectors because we're afraid to generate shuffle masks
+  // that the backend can't handle.
+  if (InsElt->hasOneUse() && isa<InsertElementInst>(InsElt->user_back()))
+    return;
+
   auto *WideVec = new ShuffleVectorInst(ExtVecOp, UndefValue::get(ExtVecType),
                                         ConstantVector::get(ExtendMask));
 

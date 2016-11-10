@@ -356,7 +356,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
     if (!MO.isReg() || !MO.isUse())
       continue;
     Register Reg(MO);
-    if (Reg.S && Reg.S != Hexagon::subreg_loreg)
+    if (Reg.S && Reg.S != Hexagon::isub_lo)
       return false;
     if (!PredGPRs.count(Reg))
       return false;

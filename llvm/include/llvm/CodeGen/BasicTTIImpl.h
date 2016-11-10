@@ -285,6 +285,10 @@ public:
     // Avoid unrolling when optimizing for size.
     UP.OptSizeThreshold = 0;
     UP.PartialOptSizeThreshold = 0;
+
+    // Set number of instructions optimized when "back edge"
+    // becomes "fall through" to default value of 2.
+    UP.BEInsns = 2;
   }
 
   /// @}

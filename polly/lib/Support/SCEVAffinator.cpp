@@ -229,6 +229,9 @@ __isl_give PWACtx SCEVAffinator::visit(const SCEV *Expr) {
   auto *Factor = ConstantAndLeftOverPair.first;
   Expr = ConstantAndLeftOverPair.second;
 
+  auto *Scope = getScope();
+  S->addParams(getParamsInAffineExpr(&S->getRegion(), Scope, Expr, SE));
+
   // In case the scev is a valid parameter, we do not further analyze this
   // expression, but create a new parameter in the isl_pw_aff. This allows us
   // to treat subexpressions that we cannot translate into an piecewise affine

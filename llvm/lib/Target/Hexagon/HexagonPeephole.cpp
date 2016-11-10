@@ -10,7 +10,7 @@
 //    Transform the following pattern
 //    %vreg170<def> = SXTW %vreg166
 //    ...
-//    %vreg176<def> = COPY %vreg170:subreg_loreg
+//    %vreg176<def> = COPY %vreg170:isub_lo
 //
 //    Into
 //    %vreg176<def> = COPY vreg166
@@ -167,9 +167,9 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
       // Look for this sequence below
       // %vregDoubleReg1 = LSRd_ri %vregDoubleReg0, 32
-      // %vregIntReg = COPY %vregDoubleReg1:subreg_loreg.
+      // %vregIntReg = COPY %vregDoubleReg1:isub_lo.
       // and convert into
-      // %vregIntReg = COPY %vregDoubleReg0:subreg_hireg.
+      // %vregIntReg = COPY %vregDoubleReg0:isub_hi.
       if (MI.getOpcode() == Hexagon::S2_lsr_i_p) {
         assert(MI.getNumOperands() == 3);
         MachineOperand &Dst = MI.getOperand(0);
@@ -180,7 +180,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
         unsigned DstReg = Dst.getReg();
         unsigned SrcReg = Src1.getReg();
         PeepholeDoubleRegsMap[DstReg] =
-          std::make_pair(*&SrcReg, Hexagon::subreg_hireg);
+          std::make_pair(*&SrcReg, Hexagon::isub_hi);
       }
 
       // Look for P=NOT(P).
@@ -201,14 +201,14 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Look for copy:
-      // %vreg176<def> = COPY %vreg170:subreg_loreg
+      // %vreg176<def> = COPY %vreg170:isub_lo
       if (!DisableOptSZExt && MI.isCopy()) {
         assert(MI.getNumOperands() == 2);
         MachineOperand &Dst = MI.getOperand(0);
         MachineOperand &Src = MI.getOperand(1);
 
         // Make sure we are copying the lower 32 bits.
-        if (Src.getSubReg() != Hexagon::subreg_loreg)
+        if (Src.getSubReg() != Hexagon::isub_lo)
           continue;
 
         unsigned DstReg = Dst.getReg();

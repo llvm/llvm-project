@@ -20,6 +20,7 @@
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
@@ -1377,8 +1378,9 @@ void FunctionPassManager::add(Pass *P) {
 /// so, return true.
 ///
 bool FunctionPassManager::run(Function &F) {
-  if (std::error_code EC = F.materialize())
-    report_fatal_error("Error reading bitcode file: " + EC.message());
+  handleAllErrors(F.materialize(), [&](ErrorInfoBase &EIB) {
+    report_fatal_error("Error reading bitcode file: " + EIB.message());
+  });
   return FPM->run(F);
 }
 

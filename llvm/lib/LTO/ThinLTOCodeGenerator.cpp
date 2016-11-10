@@ -152,7 +152,8 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
                       const FunctionImporter::ImportMapTy &ImportList) {
   ModuleLoader Loader(TheModule.getContext(), ModuleMap);
   FunctionImporter Importer(Index, Loader);
-  Importer.importFunctions(TheModule, ImportList);
+  if (!Importer.importFunctions(TheModule, ImportList))
+    report_fatal_error("importFunctions failed");
 }
 
 static void optimizeModule(Module &TheModule, TargetMachine &TM) {

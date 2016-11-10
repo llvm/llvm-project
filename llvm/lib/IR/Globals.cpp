@@ -21,6 +21,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
@@ -33,7 +34,7 @@ bool GlobalValue::isMaterializable() const {
     return F->isMaterializable();
   return false;
 }
-std::error_code GlobalValue::materialize() {
+Error GlobalValue::materialize() {
   return getParent()->materialize(this);
 }
 

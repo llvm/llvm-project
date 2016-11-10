@@ -1387,9 +1387,9 @@ bool HexagonGenInsert::generateInserts() {
     unsigned Wdh = IF.Wdh, Off = IF.Off;
     unsigned InsS = 0;
     if (R32 && MRI->getRegClass(IF.InsR) == &Hexagon::DoubleRegsRegClass) {
-      InsS = Hexagon::subreg_loreg;
+      InsS = Hexagon::isub_lo;
       if (Off >= 32) {
-        InsS = Hexagon::subreg_hireg;
+        InsS = Hexagon::isub_hi;
         Off -= 32;
       }
     }

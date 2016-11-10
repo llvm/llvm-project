@@ -418,11 +418,10 @@ int main(int argc, char **argv, char * const *envp) {
 
   // If not jitting lazily, load the whole bitcode file eagerly too.
   if (NoLazyCompilation) {
-    if (std::error_code EC = Mod->materializeAll()) {
-      errs() << argv[0] << ": bitcode didn't read correctly.\n";
-      errs() << "Reason: " << EC.message() << "\n";
-      exit(1);
-    }
+    // Use *argv instead of argv[0] to work around a wrong GCC warning.
+    ExitOnError ExitOnErr(std::string(*argv) +
+                          ": bitcode didn't read correctly: ");
+    ExitOnErr(Mod->materializeAll());
   }
 
   std::string ErrorMsg;
