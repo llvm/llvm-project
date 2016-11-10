@@ -39,7 +39,7 @@ class OutputSectionBase;
 // section
 class InputSectionData {
 public:
-  enum Kind { Regular, EHFrame, Merge };
+  enum Kind { Regular, EHFrame, Merge, Synthetic, };
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
@@ -232,11 +232,13 @@ template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::uint uintX_t;
+  typedef InputSectionData::Kind Kind;
 
 public:
   InputSection();
   InputSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
-               ArrayRef<uint8_t> Data, StringRef Name);
+               ArrayRef<uint8_t> Data, StringRef Name,
+               Kind K = InputSectionData::Regular);
   InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
 
   static InputSection<ELFT> Discarded;

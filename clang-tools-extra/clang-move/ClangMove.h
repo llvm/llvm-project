@@ -72,7 +72,7 @@ public:
   /// \param SearchPath The search path which was used to find the IncludeHeader
   /// in the file system. It can be a relative path or an absolute path.
   /// \param FileName The name of file where the IncludeHeader comes from.
-  /// \param IncludeRange The source range for the written file name in #include
+  /// \param IncludeFilenameRange The source range for the written file name in #include
   ///  (i.e. "old.h" for #include "old.h") in old.cc.
   /// \param SM The SourceManager.
   void addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,

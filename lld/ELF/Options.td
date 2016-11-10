@@ -177,6 +177,9 @@ def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
+def symbol_ordering_file: S<"symbol-ordering-file">,
+  HelpText<"Layout sections in the order specified by symbol file">;
+
 def sysroot: J<"sysroot=">, HelpText<"Set the system root">;
 
 def target1_rel: F<"target1-rel">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_REL32">;
@@ -220,7 +223,7 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
 // Aliases
-def alias_auxiliary: Separate<["-"], "f">, Alias<auxiliary>;
+def alias_auxiliary: JoinedOrSeparate<["-"], "f">, Alias<auxiliary>;
 def alias_Bdynamic_call_shared: F<"call_shared">, Alias<Bdynamic>;
 def alias_Bdynamic_dy: F<"dy">, Alias<Bdynamic>;
 def alias_Bstatic_dn: F<"dn">, Alias<Bstatic>;

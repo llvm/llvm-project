@@ -313,6 +313,36 @@ void BuildIdHexstring<ELFT>::writeBuildId(MutableArrayRef<uint8_t> Buf) {
          Config->BuildIdVector.size());
 }
 
+template <class ELFT>
+GotPltSection<ELFT>::GotPltSection()
+    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                             Target->GotPltEntrySize, ".got.plt") {
+  this->Live = true;
+}
+
+template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
+  Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
+  Entries.push_back(&Sym);
+}
+
+template <class ELFT> bool GotPltSection<ELFT>::empty() const {
+  return Entries.empty();
+}
+
+template <class ELFT> size_t GotPltSection<ELFT>::getSize() const {
+  return (Target->GotPltHeaderEntriesNum + Entries.size()) *
+         Target->GotPltEntrySize;
+}
+
+template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
+  Target->writeGotPltHeader(Buf);
+  Buf += Target->GotPltHeaderEntriesNum * Target->GotPltEntrySize;
+  for (const SymbolBody *B : Entries) {
+    Target->writeGotPlt(Buf, *B);
+    Buf += sizeof(uintX_t);
+  }
+}
+
 template InputSection<ELF32LE> *elf::createCommonSection();
 template InputSection<ELF32BE> *elf::createCommonSection();
 template InputSection<ELF64LE> *elf::createCommonSection();
@@ -367,3 +397,8 @@ template class elf::BuildIdHexstring<ELF32LE>;
 template class elf::BuildIdHexstring<ELF32BE>;
 template class elf::BuildIdHexstring<ELF64LE>;
 template class elf::BuildIdHexstring<ELF64BE>;
+
+template class elf::GotPltSection<ELF32LE>;
+template class elf::GotPltSection<ELF32BE>;
+template class elf::GotPltSection<ELF64LE>;
+template class elf::GotPltSection<ELF64BE>;

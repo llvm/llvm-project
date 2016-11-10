@@ -313,6 +313,13 @@ SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
       isl_pw_aff_lt_set(isl_pw_aff_copy(OpPWAC.first), isl_pw_aff_neg(ExpPWA));
   auto *OutOfBoundsDom = isl_set_union(SmallerDom, GreaterDom);
   OpPWAC.second = isl_set_union(OpPWAC.second, isl_set_copy(OutOfBoundsDom));
+
+  if (!BB) {
+    assert(isl_set_dim(OutOfBoundsDom, isl_dim_set) == 0 &&
+           "Expected a zero dimensional set for non-basic-block domains");
+    OutOfBoundsDom = isl_set_params(OutOfBoundsDom);
+  }
+
   S->recordAssumption(UNSIGNED, OutOfBoundsDom, DebugLoc(), AS_RESTRICTION, BB);
 
   return OpPWAC;

@@ -35,9 +35,9 @@ public:
   }
 };
 
-// CHECK: #pragma omp task private(this->a) private(this->a) private(this->S1::a)
 // CHECK: #pragma omp task private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp task private(this->a) private(this->a)
+// CHECK: #pragma omp task private(this->a) private(this->a) private(this->S1::a)
 
 class S8 : public S7<S1> {
   S8() {}
@@ -66,18 +66,18 @@ struct S {
 #pragma omp threadprivate(TS)
 };
 
-// CHECK:      template <class T = int> struct S {
-// CHECK:        static int TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
-// CHECK-NEXT: }
-// CHECK:      template <class T = long> struct S {
-// CHECK:        static long TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
-// CHECK-NEXT: }
 // CHECK:      template <class T> struct S {
 // CHECK:        static T TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S::TS)
 // CHECK:      };
+// CHECK:      template<> struct S<int> {
+// CHECK:        static int TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
+// CHECK-NEXT: }
+// CHECK:      template<> struct S<long> {
+// CHECK:        static long TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
+// CHECK-NEXT: }
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {
@@ -94,28 +94,6 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
-// CHECK: template <typename T = int, int C = 5> int tmain(int argc, int *argv) {
-// CHECK-NEXT: int b = argc, c, d, e, f, g;
-// CHECK-NEXT: static int a;
-// CHECK-NEXT: S<int> s;
-// CHECK-NEXT: int arr[argc];
-// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:]) if(task: argc > 0)
-// CHECK-NEXT: a = 2;
-// CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<int>::TS > 0) priority(argc)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5)
-// CHECK-NEXT: foo()
-// CHECK: template <typename T = long, int C = 1> long tmain(long argc, long *argv) {
-// CHECK-NEXT: long b = argc, c, d, e, f, g;
-// CHECK-NEXT: static long a;
-// CHECK-NEXT: S<long> s;
-// CHECK-NEXT: long arr[argc];
-// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:]) if(task: argc > 0)
-// CHECK-NEXT: a = 2;
-// CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<long>::TS > 0) priority(argc)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1)
-// CHECK-NEXT: foo()
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T b = argc, c, d, e, f, g;
 // CHECK-NEXT: static T a;
@@ -126,6 +104,28 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<T>::TS > 0) priority(argc)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp task if(C) mergeable priority(C)
+// CHECK-NEXT: foo()
+// CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
+// CHECK-NEXT: int b = argc, c, d, e, f, g;
+// CHECK-NEXT: static int a;
+// CHECK-NEXT: S<int> s;
+// CHECK-NEXT: int arr[argc];
+// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:]) if(task: argc > 0)
+// CHECK-NEXT: a = 2;
+// CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<int>::TS > 0) priority(argc)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5)
+// CHECK-NEXT: foo()
+// CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
+// CHECK-NEXT: long b = argc, c, d, e, f, g;
+// CHECK-NEXT: static long a;
+// CHECK-NEXT: S<long> s;
+// CHECK-NEXT: long arr[argc];
+// CHECK-NEXT: #pragma omp task untied depend(in : argc,argv[b:argc],arr[:]) if(task: argc > 0)
+// CHECK-NEXT: a = 2;
+// CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<long>::TS > 0) priority(argc)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1)
 // CHECK-NEXT: foo()
 
 enum Enum {};

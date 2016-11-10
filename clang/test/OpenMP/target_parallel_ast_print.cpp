@@ -15,18 +15,18 @@ struct S {
   #pragma omp threadprivate(TS)
 };
 
-// CHECK:      template <class T = int> struct S {
-// CHECK:        static int TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
-// CHECK-NEXT: }
-// CHECK:      template <class T = char> struct S {
-// CHECK:        static char TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<char>::TS)
-// CHECK-NEXT: }
 // CHECK:      template <class T> struct S {
 // CHECK:        static T TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S::TS)
 // CHECK:      };
+// CHECK:      template<> struct S<int> {
+// CHECK:        static int TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
+// CHECK-NEXT: }
+// CHECK:      template<> struct S<char> {
+// CHECK:        static char TS;
+// CHECK-NEXT:   #pragma omp threadprivate(S<char>::TS)
+// CHECK-NEXT: }
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {
@@ -64,7 +64,39 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
-// CHECK: template <typename T = int, int C = 5> int tmain(int argc, int *argv) {
+// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
+// CHECK-NEXT: T b = argc, c, d, e, f, g;
+// CHECK-NEXT: static T h;
+// CHECK-NEXT: S<T> s;
+// CHECK-NEXT: T arr[C][10], arr1[C];
+// CHECK-NEXT: T i, j, a[20]
+// CHECK-NEXT: #pragma omp target parallel
+// CHECK-NEXT: h = 2;
+// CHECK-NEXT: #pragma omp target parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel if(C) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(&&: g)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel if(target: argc > 0)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel if(parallel: argc > 0)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel if(C)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel map(tofrom: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel map(tofrom: a[0:10],i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel map(to: i) map(from: j)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel map(always,alloc: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel nowait
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel depend(in : argc,argv[i:argc],a[:])
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target parallel defaultmap(tofrom: scalar)
+// CHECK-NEXT: foo()
+// CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
 // CHECK-NEXT: static int h;
 // CHECK-NEXT: S<int> s;
@@ -96,7 +128,7 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target parallel defaultmap(tofrom: scalar)
 // CHECK-NEXT: foo()
-// CHECK: template <typename T = char, int C = 1> char tmain(char argc, char *argv) {
+// CHECK: template<> char tmain<char, 1>(char argc, char *argv) {
 // CHECK-NEXT: char b = argc, c, d, e, f, g;
 // CHECK-NEXT: static char h;
 // CHECK-NEXT: S<char> s;
@@ -113,38 +145,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target parallel if(parallel: argc > 0)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target parallel if(1)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel map(tofrom: i)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel map(tofrom: a[0:10],i)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel map(to: i) map(from: j)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel map(always,alloc: i)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel nowait
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel depend(in : argc,argv[i:argc],a[:])
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel defaultmap(tofrom: scalar)
-// CHECK-NEXT: foo()
-// CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
-// CHECK-NEXT: T b = argc, c, d, e, f, g;
-// CHECK-NEXT: static T h;
-// CHECK-NEXT: S<T> s;
-// CHECK-NEXT: T arr[C][10], arr1[C];
-// CHECK-NEXT: T i, j, a[20]
-// CHECK-NEXT: #pragma omp target parallel
-// CHECK-NEXT: h = 2;
-// CHECK-NEXT: #pragma omp target parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel if(C) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(&&: g)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel if(target: argc > 0)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel if(parallel: argc > 0)
-// CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp target parallel if(C)
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target parallel map(tofrom: i)
 // CHECK-NEXT: foo()

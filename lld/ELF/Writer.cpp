@@ -248,7 +248,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   if (Config->GdbIndex)
     Out<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
 
-  Out<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
   Out<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   if (Config->Strip != StripPolicy::All) {
@@ -312,6 +311,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
       Symtab<ELFT>::X->Sections.push_back(RegSec);
     }
   }
+
+  In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
 }
 
 template <class ELFT>
@@ -423,7 +424,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
   if (Type == SHT_INIT_ARRAY || Type == SHT_FINI_ARRAY ||
       Type == SHT_PREINIT_ARRAY)
     return true;
-  if (Sec == Out<ELFT>::GotPlt)
+  if (Sec == In<ELFT>::GotPlt->OutSec)
     return Config->ZNow;
   if (Sec == Out<ELFT>::Dynamic || Sec == Out<ELFT>::Got)
     return true;
@@ -659,6 +660,38 @@ template <class ELFT> static void sortCtorsDtors(OutputSectionBase *S) {
     reinterpret_cast<OutputSection<ELFT> *>(S)->sortCtorsDtors();
 }
 
+// Sort input sections using the list provided by --symbol-ordering-file.
+template <class ELFT>
+static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> V) {
+  if (Config->SymbolOrderingFile.empty())
+    return;
+
+  // Build sections order map from symbols list.
+  DenseMap<InputSectionBase<ELFT> *, unsigned> SectionsOrder;
+  for (elf::ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
+    for (SymbolBody *Body : File->getSymbols()) {
+      auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
+      if (!D || !D->Section)
+        continue;
+      StringRef SymName = getSymbolName(File->getStringTable(), *Body);
+      auto It = Config->SymbolOrderingFile.find(CachedHashString(SymName));
+      if (It == Config->SymbolOrderingFile.end())
+        continue;
+
+      auto It2 = SectionsOrder.insert({D->Section, It->second});
+      if (!It2.second)
+        It2.first->second = std::min(It->second, It2.first->second);
+    }
+  }
+
+  for (OutputSectionBase *Base : V)
+    if (OutputSection<ELFT> *Sec = dyn_cast<OutputSection<ELFT>>(Base))
+      Sec->sort([&](InputSection<ELFT> *S) {
+        auto It = SectionsOrder.find(S);
+        return It == SectionsOrder.end() ? UINT32_MAX : It->second;
+      });
+}
+
 template <class ELFT>
 void Writer<ELFT>::forEachRelSec(
     std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
@@ -703,6 +736,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   for (InputSectionBase<ELFT> *IS : Symtab<ELFT>::X->Sections)
     addInputSec(IS);
 
+  sortBySymbolsOrder<ELFT>(OutputSections);
   sortInitFini<ELFT>(findSection(".init_array"));
   sortInitFini<ELFT>(findSection(".fini_array"));
   sortCtorsDtors<ELFT>(findSection(".ctors"));
@@ -860,6 +894,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // This function adds linker-created Out<ELFT>::* sections.
   addPredefinedSections();
 
+  // We fill .got.plt section in scanRelocs(). This is the
+  // reason we don't add it earlier in createSections().
+  if (!In<ELFT>::GotPlt->empty()) {
+    addInputSec(In<ELFT>::GotPlt);
+    In<ELFT>::GotPlt->OutSec->assignOffsets();
+  }
+
   sortSections();
 
   unsigned I = 1;
@@ -943,8 +984,6 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   if (needsGot())
     Add(Out<ELFT>::Got);
-  if (Out<ELFT>::GotPlt && !Out<ELFT>::GotPlt->empty())
-    Add(Out<ELFT>::GotPlt);
   if (!Out<ELFT>::Plt->empty())
     Add(Out<ELFT>::Plt);
   if (!Out<ELFT>::EhFrame->empty())

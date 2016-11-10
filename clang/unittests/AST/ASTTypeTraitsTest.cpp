@@ -163,7 +163,7 @@ TEST(DynTypedNode, StmtDump) {
 
 TEST(DynTypedNode, DeclPrint) {
   PrintVerifier Verifier;
-  Verifier.expectString("void f() {\n}\n\n");
+  Verifier.expectString("void f() {\n}\n");
   EXPECT_TRUE(Verifier.match("void f() {}", functionDecl()));
 }
 

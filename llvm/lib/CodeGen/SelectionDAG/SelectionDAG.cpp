@@ -2244,7 +2244,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     break;
   case ISD::SHL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
+                       Depth + 1);
       KnownZero = KnownZero << *ShAmt;
       KnownOne = KnownOne << *ShAmt;
       // Low bits are known zero.
@@ -2253,7 +2254,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     break;
   case ISD::SRL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
-      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth + 1);
+      computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
+                       Depth + 1);
       KnownZero = KnownZero.lshr(*ShAmt);
       KnownOne  = KnownOne.lshr(*ShAmt);
       // High bits are known zero.

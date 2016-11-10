@@ -44,10 +44,11 @@
 #include "Relocations.h"
 #include "Config.h"
 #include "OutputSections.h"
+#include "Strings.h"
 #include "SymbolTable.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "Strings.h"
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
@@ -418,16 +419,6 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
 }
 
 template <class ELFT>
-static StringRef getSymbolName(const elf::ObjectFile<ELFT> &File,
-                               SymbolBody &Body) {
-  if (Body.isLocal() && Body.getNameOffset())
-    return File.getStringTable().data() + Body.getNameOffset();
-  if (!Body.isLocal())
-    return Body.getName();
-  return "";
-}
-
-template <class ELFT>
 static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
                           bool IsWrite, RelExpr Expr, uint32_t Type,
                           const uint8_t *Data) {
@@ -449,7 +440,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    StringRef Name = getSymbolName(File, Body);
+    StringRef Name = getSymbolName(File.getStringTable(), Body);
     error("can't create dynamic relocation " + getRelName(Type) + " against " +
           (Name.empty() ? "readonly segment" : "symbol " + Name));
     return Expr;
@@ -557,7 +548,7 @@ std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
   // Find a symbol at a given location.
   DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
   if (Encl && Encl->Type == STT_FUNC) {
-    StringRef Func = getSymbolName(*File, *Encl);
+    StringRef Func = getSymbolName(File->getStringTable(), *Encl);
     return SrcFile + " (function " + maybeDemangle(Func) + ")";
   }
 
@@ -753,8 +744,8 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       else
         Rel = Target->PltRel;
 
-      Out<ELFT>::GotPlt->addEntry(Body);
-      Out<ELFT>::RelaPlt->addReloc({Rel, Out<ELFT>::GotPlt,
+      In<ELFT>::GotPlt->addEntry(Body);
+      Out<ELFT>::RelaPlt->addReloc({Rel, In<ELFT>::GotPlt,
                                     Body.getGotPltOffset<ELFT>(), !Preemptible,
                                     &Body, 0});
       continue;

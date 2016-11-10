@@ -4512,7 +4512,6 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
 
   // fold vector ops
-  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   if (VT.isVector()) {
     if (SDValue FoldedVOp = SimplifyVBinOp(N))
       return FoldedVOp;
@@ -4533,11 +4532,11 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
                                                      N01CV, N1CV))
             return DAG.getNode(ISD::AND, SDLoc(N), VT, N00, C);
         }
-      } else {
-        N1C = isConstOrConstSplat(N1);
       }
     }
   }
+
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // fold (shl c1, c2) -> c1<<c2
   ConstantSDNode *N0C = getAsNonOpaqueConstant(N0);
