@@ -59,6 +59,9 @@ static std::string GetBuildDate() {
 }
 #endif
 
+#define QUOTE(str) #str
+#define EXPAND_AND_QUOTE(str) QUOTE(str)
+
 const char *lldb_private::GetVersion() {
   // On platforms other than Darwin, report a version number in the same style
   // as the clang tool.
@@ -80,7 +83,7 @@ const char *lldb_private::GetVersion() {
     }
 #ifdef LLDB_VERSION_STRING
     g_version_str += " (";
-    g_version_str += LLDB_VERSION_STRING;
+    g_version_str += EXPAND_AND_QUOTE(LLDB_VERSION_STRING);
 #if LLDB_IS_BUILDBOT_BUILD
     g_version_str = "buildbot";
     std::string build_date = GetBuildDate();

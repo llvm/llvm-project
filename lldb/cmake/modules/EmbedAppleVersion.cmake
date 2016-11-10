@@ -3,7 +3,7 @@ execute_process(COMMAND /usr/libexec/PlistBuddy -c "Print:CFBundleVersion" ${LLD
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 file(APPEND "${HEADER_FILE}.tmp"
-    "#define LLDB_VERSION_STRING \"lldb-${BundleVersion}\"\n")
+    "#define LLDB_VERSION_STRING lldb-${BundleVersion}\n")
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
   "${HEADER_FILE}.tmp" "${HEADER_FILE}")

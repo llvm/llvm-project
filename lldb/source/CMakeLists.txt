@@ -91,7 +91,7 @@ if(APPLE)
   list(APPEND lldbBase_SOURCES ${apple_version_inc})
 elseif(LLDB_VERSION_STRING)
   set_source_files_properties(lldb.cpp
-    PROPERTIES COMPILE_DEFINITIONS "LLDB_VERSION_STRING=\"${LLDB_VERSION_STRING}\"")
+    PROPERTIES COMPILE_DEFINITIONS "LLDB_VERSION_STRING=${LLDB_VERSION_STRING}")
 endif()
 
 add_lldb_library(lldbBase
