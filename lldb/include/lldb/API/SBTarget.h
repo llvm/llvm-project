@@ -830,7 +830,7 @@ public:
 protected:
   friend class SBAddress;
   friend class SBBlock;
-  friend class SBBreakpointListImpl;
+  friend class SBBreakpointList;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;
