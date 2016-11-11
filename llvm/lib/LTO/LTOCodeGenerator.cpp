@@ -19,7 +19,7 @@
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/ParallelCG.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/Config/config.h"

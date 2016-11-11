@@ -345,6 +345,78 @@ defm V_MIN_I16 : VOP2Inst <"v_min_i16", VOP_I16_I16_I16>;
 
 } // End SubtargetPredicate = isVI
 
+// Note: 16-bit instructions produce a 0 result in the high 16-bits.
+multiclass Arithmetic_i16_Pats <SDPatternOperator op, Instruction inst> {
+
+def : Pat<
+  (op i16:$src0, i16:$src1),
+  (inst $src0, $src1)
+>;
+
+def : Pat<
+  (i32 (zext (op i16:$src0, i16:$src1))),
+  (inst $src0, $src1)
+>;
+
+def : Pat<
+  (i64 (zext (op i16:$src0, i16:$src1))),
+   (REG_SEQUENCE VReg_64,
+     (inst $src0, $src1), sub0,
+     (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+}
+
+multiclass Bits_OpsRev_i16_Pats <SDPatternOperator op, Instruction inst> {
+
+def : Pat<
+  (op i16:$src0, i32:$src1),
+  (inst $src1, $src0)
+>;
+
+def : Pat<
+  (i32 (zext (op i16:$src0, i32:$src1))),
+  (inst $src1, $src0)
+>;
+
+
+def : Pat<
+  (i64 (zext (op i16:$src0, i32:$src1))),
+   (REG_SEQUENCE VReg_64,
+     (inst $src1, $src0), sub0,
+     (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+}
+
+class ZExt_i16_i1_Pat <SDNode ext> : Pat <
+  (i16 (ext i1:$src)),
+  (V_CNDMASK_B32_e64 (i32 0), (i32 1), $src)
+>;
+
+let Predicates = [isVI] in {
+
+defm : Arithmetic_i16_Pats<add, V_ADD_U16_e32>;
+defm : Arithmetic_i16_Pats<mul, V_MUL_LO_U16_e32>;
+defm : Arithmetic_i16_Pats<sub, V_SUB_U16_e32>;
+defm : Arithmetic_i16_Pats<smin, V_MIN_I16_e32>;
+defm : Arithmetic_i16_Pats<smax, V_MAX_I16_e32>;
+defm : Arithmetic_i16_Pats<umin, V_MIN_U16_e32>;
+defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e32>;
+
+defm : Arithmetic_i16_Pats<and, V_AND_B32_e32>;
+defm : Arithmetic_i16_Pats<or, V_OR_B32_e32>;
+defm : Arithmetic_i16_Pats<xor, V_XOR_B32_e32>;
+
+defm : Bits_OpsRev_i16_Pats<shl, V_LSHLREV_B16_e32>;
+defm : Bits_OpsRev_i16_Pats<srl, V_LSHRREV_B16_e32>;
+defm : Bits_OpsRev_i16_Pats<sra, V_ASHRREV_B16_e32>;
+
+def : ZExt_i16_i1_Pat<zext>;
+def : ZExt_i16_i1_Pat<sext>;
+def : ZExt_i16_i1_Pat<anyext>;
+
+} // End Predicates = [isVI]
+
 //===----------------------------------------------------------------------===//
 // SI
 //===----------------------------------------------------------------------===//

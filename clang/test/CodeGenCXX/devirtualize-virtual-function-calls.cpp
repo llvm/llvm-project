@@ -161,3 +161,37 @@ namespace test4 {
     p->fish.eat();
   }
 }
+
+// Do not devirtualize to pure virtual function calls.
+namespace test5 {
+  struct X {
+    virtual void f() = 0;
+  };
+  struct Y {};
+  // CHECK-LABEL: define {{.*}} @_ZN5test51f
+  void f(Y &y, X Y::*p) {
+    // CHECK-NOT: call {{.*}} @_ZN5test51X1fEv
+    // CHECK: call void %
+    (y.*p).f();
+  };
+
+  struct Z final {
+    virtual void f() = 0;
+  };
+  // CHECK-LABEL: define {{.*}} @_ZN5test51g
+  void g(Z &z) {
+    // CHECK-NOT: call {{.*}} @_ZN5test51Z1fEv
+    // CHECK: call void %
+    z.f();
+  }
+
+  struct Q {
+    virtual void f() final = 0;
+  };
+  // CHECK-LABEL: define {{.*}} @_ZN5test51h
+  void h(Q &q) {
+    // CHECK-NOT: call {{.*}} @_ZN5test51Q1fEv
+    // CHECK: call void %
+    q.f();
+  }
+}

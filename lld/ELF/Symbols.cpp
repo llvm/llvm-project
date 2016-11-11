@@ -151,7 +151,7 @@ typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
-  return Out<ELFT>::Got->Addr + getGotOffset<ELFT>();
+  return In<ELFT>::Got->getVA() + getGotOffset<ELFT>();
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {

@@ -825,8 +825,8 @@ static void handleEnableIfAttr(Sema &S, Decl *D, const AttributeList &Attr) {
       !Expr::isPotentialConstantExprUnevaluated(Cond, cast<FunctionDecl>(D),
                                                 Diags)) {
     S.Diag(Attr.getLoc(), diag::err_enable_if_never_constant_expr);
-    for (int I = 0, N = Diags.size(); I != N; ++I)
-      S.Diag(Diags[I].first, Diags[I].second);
+    for (const PartialDiagnosticAt &PDiag : Diags)
+      S.Diag(PDiag.first, PDiag.second);
     return;
   }
 

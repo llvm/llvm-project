@@ -1020,7 +1020,7 @@ uint64_t getPPC64TocBase() {
   // TOC starts where the first of these sections starts. We always create a
   // .got when we see a relocation that uses it, so for us the start is always
   // the .got.
-  uint64_t TocVA = Out<ELF64BE>::Got->Addr;
+  uint64_t TocVA = In<ELF64BE>::Got->getVA();
 
   // Per the ppc64-elf-linux ABI, The TOC base is TOC value plus 0x8000
   // thus permitting a full 64 Kbytes segment. Note that the glibc startup

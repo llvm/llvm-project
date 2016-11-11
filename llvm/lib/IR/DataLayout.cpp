@@ -506,10 +506,7 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
       // with what clang and llvm-gcc do.
       unsigned Align = getTypeAllocSize(cast<VectorType>(Ty)->getElementType());
       Align *= cast<VectorType>(Ty)->getNumElements();
-      // If the alignment is not a power of 2, round up to the next power of 2.
-      // This happens for non-power-of-2 length vectors.
-      if (Align & (Align-1))
-        Align = NextPowerOf2(Align);
+      Align = PowerOf2Ceil(Align);
       return Align;
     }
   }
@@ -522,8 +519,7 @@ unsigned DataLayout::getAlignmentInfo(AlignTypeEnum AlignType,
   // layout.
   if (BestMatchIdx == -1) {
     unsigned Align = getTypeStoreSize(Ty);
-    if (Align & (Align-1))
-      Align = NextPowerOf2(Align);
+    Align = PowerOf2Ceil(Align);
     return Align;
   }
 

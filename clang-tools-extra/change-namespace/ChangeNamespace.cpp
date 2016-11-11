@@ -57,16 +57,19 @@ SourceLocation EndLocationForType(TypeLoc TLoc) {
 }
 
 // Returns the containing namespace of `InnerNs` by skipping `PartialNsName`.
-// If the `InnerNs` does not have `PartialNsName` as suffix, nullptr is
-// returned.
+// If the `InnerNs` does not have `PartialNsName` as suffix, or `PartialNsName`
+// is empty, nullptr is returned.
 // For example, if `InnerNs` is "a::b::c" and `PartialNsName` is "b::c", then
 // the NamespaceDecl of namespace "a" will be returned.
 const NamespaceDecl *getOuterNamespace(const NamespaceDecl *InnerNs,
                                        llvm::StringRef PartialNsName) {
+  if (!InnerNs || PartialNsName.empty())
+    return nullptr;
   const auto *CurrentContext = llvm::cast<DeclContext>(InnerNs);
   const auto *CurrentNs = InnerNs;
   llvm::SmallVector<llvm::StringRef, 4> PartialNsNameSplitted;
-  PartialNsName.split(PartialNsNameSplitted, "::");
+  PartialNsName.split(PartialNsNameSplitted, "::", /*MaxSplit=*/-1,
+                      /*KeepEmpty=*/false);
   while (!PartialNsNameSplitted.empty()) {
     // Get the inner-most namespace in CurrentContext.
     while (CurrentContext && !llvm::isa<NamespaceDecl>(CurrentContext))
@@ -404,7 +407,7 @@ void ChangeNamespaceTool::run(
     clang::SourceRange VarRefRange = VarRef->getSourceRange();
     replaceQualifiedSymbolInDeclContext(
         Result, Context->getDeclContext(), VarRefRange.getBegin(),
-        VarRefRange.getEnd(), llvm::dyn_cast<NamedDecl>(Var));
+        VarRefRange.getEnd(), llvm::cast<NamedDecl>(Var));
   } else {
     const auto *Call = Result.Nodes.getNodeAs<clang::CallExpr>("call");
     assert(Call != nullptr && "Expecting callback for CallExpr.");
@@ -421,7 +424,7 @@ void ChangeNamespaceTool::run(
     clang::SourceRange CalleeRange = Call->getCallee()->getSourceRange();
     replaceQualifiedSymbolInDeclContext(
         Result, Context->getDeclContext(), CalleeRange.getBegin(),
-        CalleeRange.getEnd(), llvm::dyn_cast<NamedDecl>(Func));
+        CalleeRange.getEnd(), llvm::cast<NamedDecl>(Func));
   }
 }
 
@@ -468,16 +471,20 @@ void ChangeNamespaceTool::moveOldNamespace(
   // "x::y" will be inserted inside the existing namespace "a" and after "a::b".
   // `OuterNs` is the first namespace in `DiffOldNamespace`, e.g. "namespace b"
   // in the above example.
-  // FIXME: consider the case where DiffOldNamespace is empty.
+  // If there is no outer namespace (i.e. DiffOldNamespace is empty), the new
+  // namespace will be a nested namespace in the old namespace.
   const NamespaceDecl *OuterNs = getOuterNamespace(NsDecl, DiffOldNamespace);
-  SourceLocation LocAfterNs =
-      getStartOfNextLine(OuterNs->getRBraceLoc(), *Result.SourceManager,
-                         Result.Context->getLangOpts());
-  assert(LocAfterNs.isValid() &&
-         "Failed to get location after DiffOldNamespace");
+  SourceLocation InsertionLoc = Start;
+  if (OuterNs) {
+    SourceLocation LocAfterNs =
+        getStartOfNextLine(OuterNs->getRBraceLoc(), *Result.SourceManager,
+                           Result.Context->getLangOpts());
+    assert(LocAfterNs.isValid() &&
+           "Failed to get location after DiffOldNamespace");
+    InsertionLoc = LocAfterNs;
+  }
   MoveNs.InsertionOffset = Result.SourceManager->getFileOffset(
-      Result.SourceManager->getSpellingLoc(LocAfterNs));
-
+      Result.SourceManager->getSpellingLoc(InsertionLoc));
   MoveNs.FID = Result.SourceManager->getFileID(Start);
   MoveNs.SourceMgr = Result.SourceManager;
   MoveNamespaces[R.getFilePath()].push_back(MoveNs);
@@ -543,7 +550,7 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
     const DeclContext *DeclCtx, SourceLocation Start, SourceLocation End,
     const NamedDecl *FromDecl) {
   const auto *NsDeclContext = DeclCtx->getEnclosingNamespaceContext();
-  const auto *NsDecl = llvm::dyn_cast<NamespaceDecl>(NsDeclContext);
+  const auto *NsDecl = llvm::cast<NamespaceDecl>(NsDeclContext);
   // Calculate the name of the `NsDecl` after it is moved to new namespace.
   std::string OldNs = NsDecl->getQualifiedNameAsString();
   llvm::StringRef Postfix = OldNs;

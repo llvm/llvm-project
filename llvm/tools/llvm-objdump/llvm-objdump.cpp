@@ -1969,7 +1969,7 @@ static void DumpObject(const COFFImportFile *I, const Archive *A) {
 
 /// @brief Dump each object file in \a a;
 static void DumpArchive(const Archive *a) {
-  Error Err;
+  Error Err = Error::success();
   for (auto &C : a->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
     if (!ChildOrErr) {

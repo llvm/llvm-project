@@ -66,17 +66,20 @@ getStackIndexOfNearestEnclosingCaptureReadyLambda(
   // Label failure to capture.
   const Optional<unsigned> NoLambdaIsCaptureReady;
 
+  // Ignore all inner captured regions.
+  unsigned CurScopeIndex = FunctionScopes.size() - 1;
+  while (CurScopeIndex > 0 && isa<clang::sema::CapturedRegionScopeInfo>(
+                                  FunctionScopes[CurScopeIndex]))
+    --CurScopeIndex;
   assert(
-      isa<clang::sema::LambdaScopeInfo>(
-          FunctionScopes[FunctionScopes.size() - 1]) &&
+      isa<clang::sema::LambdaScopeInfo>(FunctionScopes[CurScopeIndex]) &&
       "The function on the top of sema's function-info stack must be a lambda");
-  
+
   // If VarToCapture is null, we are attempting to capture 'this'.
   const bool IsCapturingThis = !VarToCapture;
   const bool IsCapturingVariable = !IsCapturingThis;
 
   // Start with the current lambda at the top of the stack (highest index).
-  unsigned CurScopeIndex = FunctionScopes.size() - 1;
   DeclContext *EnclosingDC =
       cast<sema::LambdaScopeInfo>(FunctionScopes[CurScopeIndex])->CallOperator;
 
@@ -1619,6 +1622,9 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
         CheckConstexprFunctionDecl(CallOperator) &&
         CheckConstexprFunctionBody(CallOperator, CallOperator->getBody()));
   }
+
+  // Emit delayed shadowing warnings now that the full capture list is known.
+  DiagnoseShadowingLambdaDecls(LSI);
 
   if (!CurContext->isDependentContext()) {
     switch (ExprEvalContexts.back().Context) {

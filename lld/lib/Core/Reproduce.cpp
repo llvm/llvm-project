@@ -50,6 +50,12 @@ static void writeMember(raw_fd_ostream &OS, StringRef Path, StringRef Data) {
   OS << Data;                            // c_filedata
 }
 
+// Converts path to use unix path separators so the cpio can be extracted on
+// both unix and windows.
+static void convertToUnixPathSeparator(SmallString<128> &Path) {
+  std::replace(Path.begin(), Path.end(), '\\', '/');
+}
+
 void CpioFile::append(StringRef Path, StringRef Data) {
   if (!Seen.insert(Path).second)
     return;
@@ -59,10 +65,7 @@ void CpioFile::append(StringRef Path, StringRef Data) {
   // (i.e. in that case we are creating baz.cpio.)
   SmallString<128> Fullpath;
   path::append(Fullpath, Basename, Path);
-
-  // Use unix path separators so the cpio can be extracted on both unix and
-  // windows.
-  std::replace(Fullpath.begin(), Fullpath.end(), '\\', '/');
+  convertToUnixPathSeparator(Fullpath);
 
   writeMember(*OS, Fullpath, Data);
 
@@ -76,6 +79,8 @@ void CpioFile::append(StringRef Path, StringRef Data) {
 // Makes a given pathname an absolute path first, and then remove
 // beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
 // assuming that the current directory is "/home/john/bar".
+// Returned string is a backslash-separated path even on Windows to avoid
+// a mess with backslash-as-escape and backslash-as-path-separator.
 std::string lld::relativeToRoot(StringRef Path) {
   SmallString<128> Abs = Path;
   if (sys::fs::make_absolute(Abs))
@@ -93,6 +98,7 @@ std::string lld::relativeToRoot(StringRef Path) {
     Res = Root.substr(2);
 
   path::append(Res, path::relative_path(Abs));
+  convertToUnixPathSeparator(Res);
 
   return Res.str();
 }

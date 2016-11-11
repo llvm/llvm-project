@@ -349,6 +349,37 @@ TEST_F(FormatTestJS, FormatsNamespaces) {
                "}\n");
 }
 
+TEST_F(FormatTestJS, NamespacesMayNotWrap) {
+  verifyFormat("declare namespace foobarbaz {\n"
+               "}\n", getGoogleJSStyleWithColumns(18));
+  verifyFormat("declare module foobarbaz {\n"
+               "}\n", getGoogleJSStyleWithColumns(15));
+  verifyFormat("namespace foobarbaz {\n"
+               "}\n", getGoogleJSStyleWithColumns(10));
+  verifyFormat("module foobarbaz {\n"
+               "}\n", getGoogleJSStyleWithColumns(7));
+}
+
+TEST_F(FormatTestJS, AmbientDeclarations) {
+  FormatStyle NineCols = getGoogleJSStyleWithColumns(9);
+  verifyFormat(
+      "declare class\n"
+      "    X {}",
+      NineCols);
+  verifyFormat(
+      "declare function\n"
+      "x();",  // TODO(martinprobst): should ideally be indented.
+      NineCols);
+  verifyFormat(
+      "declare enum X {\n"
+      "}",
+      NineCols);
+  verifyFormat(
+      "declare let\n"
+      "    x: number;",
+      NineCols);
+}
+
 TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
   verifyFormat("function outer1(a, b) {\n"
                "  function inner1(a, b) {\n"

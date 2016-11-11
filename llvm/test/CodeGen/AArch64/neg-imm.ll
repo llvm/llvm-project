@@ -30,9 +30,9 @@ if.then3:
 
 for.inc:
 ; CHECK_LABEL: %for.inc
-; CHECK:  add
-; CHECK-NEXT:  cmp
-; CHECK:  b.le
+; CHECK:  cmp
+; CHECK-NEXT:  add
+; CHECK-NEXT:  b.le
 ; CHECK_LABEL: %for.cond.cleanup
   %inc = add nsw i32 %x.015, 1
   %cmp1 = icmp sgt i32 %x.015, %px

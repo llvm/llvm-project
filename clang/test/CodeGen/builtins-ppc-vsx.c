@@ -21,6 +21,7 @@ vector bool long long vbll = { 1, 0 };
 vector signed long long vsll = { 255LL, -937LL };
 vector unsigned long long vull = { 1447LL, 2894LL };
 double d = 23.4;
+signed long long sll = 618LL;
 float af[4] = {23.4f, 56.7f, 89.0f, 12.3f};
 double ad[2] = {23.4, 56.7};
 signed char asc[16] = { -8,  9, -10, 11, -12, 13, -14, 15,
@@ -31,8 +32,8 @@ signed short ass[8] = { -1, 2, -3, 4, -5, 6, -7, 8 };
 unsigned short aus[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 signed int asi[4] = { -1, 2, -3, 4 };
 unsigned int aui[4] = { 0, 1, 2, 3 };
-signed long asl[2] = { -1L, 2L };
-unsigned long aul[2] = { 1L, 2L };
+signed long long asll[2] = { -1L, 2L };
+unsigned long long aull[2] = { 1L, 2L };
 
 vector float res_vf;
 vector double res_vd;
@@ -1248,4 +1249,28 @@ res_vsll = vec_slo(vsll, vsc);
   res_vull = vec_sro(vull, vuc);
 // CHECK: @llvm.ppc.altivec.vsro
 // CHECK-LE: @llvm.ppc.altivec.vsro
+
+res_vsll = vec_xl(sll, asll);
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+
+res_vull = vec_xl(sll, aull);
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+
+res_vd = vec_xl(sll, ad);
+// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK-LE: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
+
+vec_xst(vsll, sll, asll);
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+
+vec_xst(vull, sll, aull);
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+
+vec_xst(vd, sll, ad);
+// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK-LE: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
 }

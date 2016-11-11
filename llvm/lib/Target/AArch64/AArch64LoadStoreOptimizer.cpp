@@ -1699,8 +1699,7 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   UsedRegs.resize(TRI->getNumRegs());
 
   bool Modified = false;
-  bool enableNarrowZeroStOpt =
-      Subtarget->mergeNarrowStores() && !Subtarget->requiresStrictAlign();
+  bool enableNarrowZeroStOpt = !Subtarget->requiresStrictAlign();
   for (auto &MBB : Fn)
     Modified |= optimizeBlock(MBB, enableNarrowZeroStOpt);
 

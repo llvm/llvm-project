@@ -515,6 +515,71 @@ define i32 @trunc_select_miscompile(i32 %a, i1 zeroext %cc) {
   ret i32 %tmp2
 }
 
+; reproducer for pr29002
+define void @clamp_i8(i32 %src, i8* %dst) {
+; CHECK-LABEL: clamp_i8:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    cmpl $127, %edi
+; CHECK-NEXT:    movl $127, %eax
+; CHECK-NEXT:    cmovlel %edi, %eax
+; CHECK-NEXT:    movb $127, %cl
+; CHECK-NEXT:    jg LBB22_2
+; CHECK-NEXT:  ## BB#1:
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:  LBB22_2:
+; CHECK-NEXT:    cmpl $-128, %eax
+; CHECK-NEXT:    movb $-128, %al
+; CHECK-NEXT:    jl LBB22_4
+; CHECK-NEXT:  ## BB#3:
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:  LBB22_4:
+; CHECK-NEXT:    movb %al, (%rsi)
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %src, 127
+  %sel1 = select i1 %cmp, i32 127, i32 %src
+  %cmp1 = icmp slt i32 %sel1, -128
+  %sel2 = select i1 %cmp1, i32 -128, i32 %sel1
+  %conv = trunc i32 %sel2 to i8
+  store i8 %conv, i8* %dst, align 2
+  ret void
+}
+
+; reproducer for pr29002
+define void @clamp(i32 %src, i16* %dst) {
+; GENERIC-LABEL: clamp:
+; GENERIC:       ## BB#0:
+; GENERIC-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
+; GENERIC-NEXT:    movl $32767, %eax ## imm = 0x7FFF
+; GENERIC-NEXT:    cmovlel %edi, %eax
+; GENERIC-NEXT:    movw $32767, %cx ## imm = 0x7FFF
+; GENERIC-NEXT:    cmovlew %di, %cx
+; GENERIC-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
+; GENERIC-NEXT:    movw $-32768, %ax ## imm = 0x8000
+; GENERIC-NEXT:    cmovgew %cx, %ax
+; GENERIC-NEXT:    movw %ax, (%rsi)
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: clamp:
+; ATOM:       ## BB#0:
+; ATOM-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
+; ATOM-NEXT:    movl $32767, %eax ## imm = 0x7FFF
+; ATOM-NEXT:    movw $32767, %cx ## imm = 0x7FFF
+; ATOM-NEXT:    cmovlel %edi, %eax
+; ATOM-NEXT:    cmovlew %di, %cx
+; ATOM-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
+; ATOM-NEXT:    movw $-32768, %dx ## imm = 0x8000
+; ATOM-NEXT:    cmovgew %cx, %dx
+; ATOM-NEXT:    movw %dx, (%rsi)
+; ATOM-NEXT:    retq
+  %cmp = icmp sgt i32 %src, 32767
+  %sel1 = select i1 %cmp, i32 32767, i32 %src
+  %cmp1 = icmp slt i32 %sel1, -32768
+  %sel2 = select i1 %cmp1, i32 -32768, i32 %sel1
+  %conv = trunc i32 %sel2 to i16
+  store i16 %conv, i16* %dst, align 2
+  ret void
+}
+
 define void @test19() {
 ; This is a massive reduction of an llvm-stress test case that generates
 ; interesting chains feeding setcc and eventually a f32 select operation. This
@@ -527,19 +592,19 @@ define void @test19() {
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB22_1: ## %CF
+; CHECK-NEXT:  LBB24_1: ## %CF
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB22_1
+; CHECK-NEXT:    jne LBB24_1
 ; CHECK-NEXT:  ## BB#2: ## %CF250
-; CHECK-NEXT:    ## in Loop: Header=BB22_1 Depth=1
-; CHECK-NEXT:    jne LBB22_1
+; CHECK-NEXT:    ## in Loop: Header=BB24_1 Depth=1
+; CHECK-NEXT:    jne LBB24_1
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB22_3: ## %CF242
+; CHECK-NEXT:  LBB24_3: ## %CF242
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    jp LBB22_3
+; CHECK-NEXT:    jp LBB24_3
 ; CHECK-NEXT:  ## BB#4: ## %CF244
 ; CHECK-NEXT:    retq
 BB:

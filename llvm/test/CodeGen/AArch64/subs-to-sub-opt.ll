@@ -7,7 +7,7 @@
 define i32 @test01() nounwind {
 ; CHECK: ldrb {{.*}}
 ; CHECK-NEXT: ldrb {{.*}}
-; CHECK-NEXT: sub {{.*}}
+; CHECK: sub {{.*}}
 ; CHECK-NEXT: cmn {{.*}}
 entry:
   %0 = load i8, i8* @a, align 1

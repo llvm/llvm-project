@@ -27,6 +27,7 @@ namespace llvm {
 
 class Error;
 class ErrorList;
+class ErrorSuccess;
 
 /// Base class for error info classes. Do not extend this directly: Extend
 /// the ErrorInfo template subclass instead.
@@ -149,17 +150,16 @@ class LLVM_NODISCARD Error {
   // error.
   template <typename T> friend class Expected;
 
-public:
+protected:
   /// Create a success value. Prefer using 'Error::success()' for readability
-  /// where possible.
   Error() : Payload(nullptr) {
     setPtr(nullptr);
     setChecked(false);
   }
 
-  /// Create a success value. This is equivalent to calling the default
-  /// constructor, but should be preferred for readability where possible.
-  static Error success() { return Error(); }
+public:
+  /// Create a success value.
+  static ErrorSuccess success();
 
   // Errors are not copy-constructable.
   Error(const Error &Other) = delete;
@@ -278,6 +278,13 @@ private:
 
   ErrorInfoBase *Payload;
 };
+
+/// Subclass of Error for the sole purpose of identifying the success path in
+/// the type system. This allows to catch invalid conversion to Expected<T> at
+/// compile time.
+class ErrorSuccess : public Error {};
+
+inline ErrorSuccess Error::success() { return ErrorSuccess(); }
 
 /// Make a Error instance representing failure using the given error info
 /// type.
@@ -644,6 +651,11 @@ public:
     assert(Err && "Cannot create Expected<T> from Error success value.");
     new (getErrorStorage()) error_type(Err.takePayload());
   }
+
+  /// Forbid to convert from Error::success() implicitly, this avoids having
+  /// Expected<T> foo() { return Error::success(); } which compiles otherwise
+  /// but triggers the assertion above.
+  Expected(ErrorSuccess) = delete;
 
   /// Create an Expected<T> success value from the given OtherT value, which
   /// must be convertible to T.

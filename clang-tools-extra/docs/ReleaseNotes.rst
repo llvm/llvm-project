@@ -91,6 +91,11 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-auto.html>`_ check
   now warns about variable declarations that are initialized with a cast.
 
+- New `modernize-use-equals-delete
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-delete.html>`_ check
+
+  Adds ``= delete`` to unimplemented private special member functions.
+
 - New `mpi-buffer-deref
   <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
 

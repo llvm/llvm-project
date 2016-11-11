@@ -223,8 +223,8 @@ void InstrumentationMapExtractor::exportAsYAML(raw_ostream &OS) {
   Out << YAMLSleds;
 }
 
-static CommandRegistration Unused(&Extract, [] {
-  Error Err;
+static CommandRegistration Unused(&Extract, []() -> Error {
+  Error Err = Error::success();
   xray::InstrumentationMapExtractor Extractor(
       ExtractInput, InstrumentationMapExtractor::InputFormats::ELF, Err);
   if (Err)

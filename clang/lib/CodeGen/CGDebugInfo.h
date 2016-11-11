@@ -320,6 +320,9 @@ public:
   /// ignored.
   void setLocation(SourceLocation Loc);
 
+  // Converts a SourceLocation to a DebugLoc
+  llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Loc);
+
   /// Emit metadata to indicate a change in line/column information in
   /// the source file. If the location is invalid, the previous
   /// location will be reused.

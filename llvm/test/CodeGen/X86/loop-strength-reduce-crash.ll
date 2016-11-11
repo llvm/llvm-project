@@ -1,7 +1,8 @@
-; RUN: llc < %s -o /dev/null
+; RUN: opt -loop-reduce < %s -o /dev/null
 
-; Check that this doesn't crash (by virtue of using INT64_MAX as a constant in
-; the loop).
+; LSR doesn't actually do anything on this input; just check that it doesn't
+; crash while building the compatible type for the IV (by virtue of using
+; INT64_MAX as a constant in the loop).
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"

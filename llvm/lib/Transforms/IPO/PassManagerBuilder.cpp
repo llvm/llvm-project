@@ -647,6 +647,10 @@ void PassManagerBuilder::populateModulePassManager(
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
 
+  // LoopSink pass sinks instructions hoisted by LICM, which serves as a
+  // canonicalization pass that enables other optimizations. As a result,
+  // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
+  // result too early.
   MPM.add(createLoopSinkPass());
   // Get rid of LCSSA nodes.
   MPM.add(createInstructionSimplifierPass());

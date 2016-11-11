@@ -15,18 +15,28 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
 
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
+#include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Dwarf.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <new>
+#include <type_traits>
 
 namespace llvm {
+
 class AsmPrinter;
 class MCExpr;
 class MCSymbol;
 class raw_ostream;
-class DwarfTypeUnit;
 
 //===--------------------------------------------------------------------===//
 /// DIEAbbrevData - Dwarf abbreviation data, describes one attribute of a
@@ -75,7 +85,7 @@ class DIEAbbrev : public FoldingSetNode {
   SmallVector<DIEAbbrevData, 12> Data;
 
 public:
-  DIEAbbrev(dwarf::Tag T, bool C) : Tag(T), Children(C), Data() {}
+  DIEAbbrev(dwarf::Tag T, bool C) : Tag(T), Children(C) {}
 
   // Accessors.
   dwarf::Tag getTag() const { return Tag; }
@@ -355,9 +365,11 @@ private:
 
 public:
   DIEValue() = default;
+
   DIEValue(const DIEValue &X) : Ty(X.Ty), Attribute(X.Attribute), Form(X.Form) {
     copyVal(X);
   }
+
   DIEValue &operator=(const DIEValue &X) {
     destroyVal();
     Ty = X.Ty;
@@ -366,6 +378,7 @@ public:
     copyVal(X);
     return *this;
   }
+
   ~DIEValue() { destroyVal(); }
 
 #define HANDLE_DIEVALUE_SMALL(T)                                               \
@@ -413,6 +426,7 @@ public:
 
 struct IntrusiveBackListNode {
   PointerIntPair<IntrusiveBackListNode *, 1> Next;
+
   IntrusiveBackListNode() : Next(this, true) {}
 
   IntrusiveBackListNode *getNext() const {
@@ -576,12 +590,11 @@ public:
   }
 
   value_range values() {
-    return llvm::make_range(value_iterator(List.begin()),
-                            value_iterator(List.end()));
+    return make_range(value_iterator(List.begin()), value_iterator(List.end()));
   }
   const_value_range values() const {
-    return llvm::make_range(const_value_iterator(List.begin()),
-                            const_value_iterator(List.end()));
+    return make_range(const_value_iterator(List.begin()),
+                      const_value_iterator(List.end()));
   }
 };
 
@@ -631,10 +644,10 @@ public:
   typedef iterator_range<const_child_iterator> const_child_range;
 
   child_range children() {
-    return llvm::make_range(Children.begin(), Children.end());
+    return make_range(Children.begin(), Children.end());
   }
   const_child_range children() const {
-    return llvm::make_range(Children.begin(), Children.end());
+    return make_range(Children.begin(), Children.end());
   }
 
   DIE *getParent() const { return Parent; }
@@ -740,6 +753,6 @@ public:
   void print(raw_ostream &O) const;
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H

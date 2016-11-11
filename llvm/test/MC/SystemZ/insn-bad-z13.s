@@ -5,6 +5,30 @@
 # RUN: FileCheck < %t %s
 
 #CHECK: error: invalid operand
+#CHECK: lzrf	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: lzrf	%r0, 524288
+
+	lzrf	%r0, -524289
+	lzrf	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: lzrg	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: lzrg	%r0, 524288
+
+	lzrg	%r0, -524289
+	lzrg	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: llzrgf	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: llzrgf	%r0, 524288
+
+	llzrgf	%r0, -524289
+	llzrgf	%r0, 524288
+
+#CHECK: error: invalid operand
 #CHECK: lcbb	%r0, 0, -1
 #CHECK: error: invalid operand
 #CHECK: lcbb	%r0, 0, 16

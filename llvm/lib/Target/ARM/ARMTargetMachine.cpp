@@ -10,11 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARM.h"
-#include "ARMFrameLowering.h"
 #include "ARMTargetMachine.h"
+#include "ARM.h"
+#include "ARMCallLowering.h"
+#include "ARMFrameLowering.h"
+#include "ARMInstructionSelector.h"
+#include "ARMLegalizerInfo.h"
+#include "ARMRegisterBankInfo.h"
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
@@ -22,8 +30,8 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;
@@ -57,6 +65,7 @@ extern "C" void LLVMInitializeARMTarget() {
   RegisterTargetMachine<ThumbBETargetMachine> B(getTheThumbBETarget());
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
 }
@@ -231,6 +240,29 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() {}
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+namespace {
+struct ARMGISelActualAccessor : public GISelAccessor {
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  const CallLowering *getCallLowering() const override {
+    return CallLoweringInfo.get();
+  }
+  const InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
+  const class LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return RegBankInfo.get();
+  }
+};
+} // End anonymous namespace.
+#endif
+
 const ARMSubtarget *
 ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
@@ -263,6 +295,24 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = llvm::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle);
   }
+
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+  GISelAccessor *GISel = new GISelAccessor();
+#else
+  ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
+  GISel->CallLoweringInfo.reset(new ARMCallLowering(*I->getTargetLowering()));
+  GISel->Legalizer.reset(new ARMLegalizerInfo());
+
+  auto *RBI = new ARMRegisterBankInfo(*I->getRegisterInfo());
+
+  // FIXME: At this point, we can't rely on Subtarget having RBI.
+  // It's awkward to mix passing RBI and the Subtarget; should we pass
+  // TII/TRI as well?
+  GISel->InstSelector.reset(new ARMInstructionSelector(*this, *I, *RBI));
+
+  GISel->RegBankInfo.reset(RBI);
+#endif
+  I->setGISelAccessor(*GISel);
   return I.get();
 }
 
@@ -353,6 +403,12 @@ public:
   void addIRPasses() override;
   bool addPreISel() override;
   bool addInstSelector() override;
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+  bool addIRTranslator() override;
+  bool addLegalizeMachineIR() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
+#endif
   void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -412,6 +468,28 @@ bool ARMPassConfig::addInstSelector() {
   addPass(createARMISelDag(getARMTargetMachine(), getOptLevel()));
   return false;
 }
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+bool ARMPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+bool ARMPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+bool ARMPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool ARMPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect());
+  return false;
+}
+#endif
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOpt::None) {

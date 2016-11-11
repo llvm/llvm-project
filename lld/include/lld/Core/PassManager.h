@@ -36,7 +36,7 @@ public:
     for (std::unique_ptr<Pass> &pass : _passes)
       if (llvm::Error EC = pass->perform(file))
         return EC;
-    return llvm::Error();
+    return llvm::Error::success();
   }
 
 private:

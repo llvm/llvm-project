@@ -2081,6 +2081,14 @@
 	llgc	%r0, 524288
 
 #CHECK: error: invalid operand
+#CHECK: llgt	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: llgt	%r0, 524288
+
+	llgt	%r0, -524289
+	llgt	%r0, 524288
+
+#CHECK: error: invalid operand
 #CHECK: llgf	%r0, -524289
 #CHECK: error: invalid operand
 #CHECK: llgf	%r0, 524288

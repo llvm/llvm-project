@@ -1113,7 +1113,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     }
 
     {
-      Error Err;
+      Error Err = Error::success();
       for (auto &C : A->children(Err)) {
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary(&Context);
         if (!ChildOrErr) {
@@ -1178,7 +1178,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
             } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                            I->getAsArchive()) {
               std::unique_ptr<Archive> &A = *AOrErr;
-              Error Err;
+              Error Err = Error::success();
               for (auto &C : A->children(Err)) {
                 Expected<std::unique_ptr<Binary>> ChildOrErr =
                     C.getAsBinary(&Context);
@@ -1249,7 +1249,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
           } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                          I->getAsArchive()) {
             std::unique_ptr<Archive> &A = *AOrErr;
-            Error Err;
+            Error Err = Error::success();
             for (auto &C : A->children(Err)) {
               Expected<std::unique_ptr<Binary>> ChildOrErr =
                   C.getAsBinary(&Context);
@@ -1316,7 +1316,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
       } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                   I->getAsArchive()) {
         std::unique_ptr<Archive> &A = *AOrErr;
-        Error Err;
+        Error Err = Error::success();
         for (auto &C : A->children(Err)) {
           Expected<std::unique_ptr<Binary>> ChildOrErr =
             C.getAsBinary(&Context);

@@ -389,56 +389,56 @@ llvm::Error ArchHandler_arm64::getReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+      return llvm::Error::success();
   case ARM64_RELOC_PAGE21             | rPcRel | rExtern | rLength4:
     // ex: adrp x1, _foo@PAGE
     *kind = page21;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_PAGEOFF12                   | rExtern | rLength4:
     // ex: ldr x0, [x1, _foo@PAGEOFF]
     *kind = offset12KindFromInstruction(*(const little32_t *)fixupContent);
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_GOT_LOAD_PAGE21    | rPcRel | rExtern | rLength4:
     // ex: adrp x1, _foo@GOTPAGE
     *kind = gotPage21;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_GOT_LOAD_PAGEOFF12          | rExtern | rLength4:
     // ex: ldr x0, [x1, _foo@GOTPAGEOFF]
     *kind = gotOffset12;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_TLVP_LOAD_PAGE21   | rPcRel | rExtern | rLength4:
     // ex: adrp x1, _foo@TLVPAGE
     *kind = tlvPage21;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_TLVP_LOAD_PAGEOFF12         | rExtern | rLength4:
     // ex: ldr x0, [x1, _foo@TLVPAGEOFF]
     *kind = tlvOffset12;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_UNSIGNED                    | rExtern | rLength8:
     // ex: .quad _foo + N
     *kind = pointer64;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = *(const little64_t *)fixupContent;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_UNSIGNED                              | rLength8:
      // ex: .quad Lfoo + N
      *kind = pointer64;
@@ -450,7 +450,7 @@ llvm::Error ArchHandler_arm64::getReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM64_RELOC_POINTER_TO_GOT     | rPcRel | rExtern | rLength4:
     // ex: .long _foo@GOT - .
 
@@ -464,7 +464,7 @@ llvm::Error ArchHandler_arm64::getReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return llvm::Error();
+    return llvm::Error::success();
   default:
     return llvm::make_error<GenericError>("unsupported arm64 relocation type");
   }
@@ -485,7 +485,7 @@ llvm::Error ArchHandler_arm64::getPairReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = reloc1.symbol;
-    return llvm::Error();
+    return llvm::Error::success();
   case ((ARM64_RELOC_ADDEND                                | rLength4) << 16 |
          ARM64_RELOC_PAGE21             | rPcRel | rExtern | rLength4):
     // ex: adrp x1, _foo@PAGE
@@ -493,7 +493,7 @@ llvm::Error ArchHandler_arm64::getPairReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = reloc1.symbol;
-    return llvm::Error();
+    return llvm::Error::success();
   case ((ARM64_RELOC_ADDEND                                | rLength4) << 16 |
          ARM64_RELOC_PAGEOFF12                   | rExtern | rLength4): {
     // ex: ldr w0, [x1, _foo@PAGEOFF]
@@ -502,7 +502,7 @@ llvm::Error ArchHandler_arm64::getPairReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = reloc1.symbol;
-    return llvm::Error();
+    return llvm::Error::success();
   }
   case ((ARM64_RELOC_SUBTRACTOR                  | rExtern | rLength8) << 16 |
          ARM64_RELOC_UNSIGNED                    | rExtern | rLength8):
@@ -522,7 +522,7 @@ llvm::Error ArchHandler_arm64::getPairReferenceInfo(
       return llvm::make_error<GenericError>(
                                     "paired relocs must have the same offset");
     *addend = (int64_t)*(const little64_t *)fixupContent + offsetInAtom;
-    return llvm::Error();
+    return llvm::Error::success();
   case ((ARM64_RELOC_SUBTRACTOR                  | rExtern | rLength4) << 16 |
          ARM64_RELOC_UNSIGNED                    | rExtern | rLength4):
     // ex: .quad _foo - .
@@ -530,7 +530,7 @@ llvm::Error ArchHandler_arm64::getPairReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = (int32_t)*(const little32_t *)fixupContent + offsetInAtom;
-    return llvm::Error();
+    return llvm::Error::success();
   default:
     return llvm::make_error<GenericError>("unsupported arm64 relocation pair");
   }

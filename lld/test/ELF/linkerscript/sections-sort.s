@@ -24,6 +24,7 @@ nop
 # CHECK-NEXT: 4 .hash
 # CHECK-NEXT: 5 .dynstr
 # CHECK-NEXT: 6 .dynamic
-# CHECK-NEXT: 7 .symtab
-# CHECK-NEXT: 8 .shstrtab
-# CHECK-NEXT: 9 .strtab
+# CHECK-NEXT: 7 .comment
+# CHECK-NEXT: 8 .symtab
+# CHECK-NEXT: 9 .shstrtab
+# CHECK-NEXT: 10 .strtab

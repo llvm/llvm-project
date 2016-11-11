@@ -1073,7 +1073,7 @@ Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits, uint32_t UniversalCputype,
                         uint32_t UniversalIndex) {
-  Error Err;
+  Error Err = Error::success();
   std::unique_ptr<MachOObjectFile> Obj(
       new MachOObjectFile(std::move(Object), IsLittleEndian,
                           Is64Bits, Err, UniversalCputype,

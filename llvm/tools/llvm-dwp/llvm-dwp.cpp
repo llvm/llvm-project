@@ -364,7 +364,7 @@ static Error handleCompressedSection(
     std::deque<SmallString<32>> &UncompressedSections, StringRef &Name,
     StringRef &Contents) {
   if (!Name.startswith("zdebug_"))
-    return Error();
+    return Error::success();
   UncompressedSections.emplace_back();
   uint64_t OriginalSize;
   if (!zlib::isAvailable())
@@ -377,7 +377,7 @@ static Error handleCompressedSection(
             .str());
   Name = Name.substr(1);
   Contents = UncompressedSections.back();
-  return Error();
+  return Error::success();
 }
 
 static Error handleSection(
@@ -392,10 +392,10 @@ static Error handleSection(
     StringRef &AbbrevSection, StringRef &CurCUIndexSection,
     StringRef &CurTUIndexSection) {
   if (Section.isBSS())
-    return Error();
+    return Error::success();
 
   if (Section.isVirtual())
-    return Error();
+    return Error::success();
 
   StringRef Name;
   if (std::error_code Err = Section.getName(Name))
@@ -412,7 +412,7 @@ static Error handleSection(
 
   auto SectionPair = KnownSections.find(Name);
   if (SectionPair == KnownSections.end())
-    return Error();
+    return Error::success();
 
   if (DWARFSectionKind Kind = SectionPair->second.second) {
     auto Index = Kind - DW_SECT_INFO;
@@ -449,7 +449,7 @@ static Error handleSection(
     Out.SwitchSection(OutSection);
     Out.EmitBytes(Contents);
   }
-  return Error();
+  return Error::success();
 }
 
 static Error
@@ -600,7 +600,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   writeIndex(Out, MCOFI.getDwarfCUIndexSection(), ContributionOffsets,
              IndexEntries);
 
-  return Error();
+  return Error::success();
 }
 
 static int error(const Twine &Error, const Twine &Context) {

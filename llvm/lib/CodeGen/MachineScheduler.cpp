@@ -1501,10 +1501,9 @@ namespace {
 /// that may be fused by the processor into a single operation.
 class MacroFusion : public ScheduleDAGMutation {
   const TargetInstrInfo &TII;
-  const TargetRegisterInfo &TRI;
 public:
-  MacroFusion(const TargetInstrInfo &TII, const TargetRegisterInfo &TRI)
-    : TII(TII), TRI(TRI) {}
+  MacroFusion(const TargetInstrInfo &TII)
+    : TII(TII) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 };
@@ -1513,26 +1512,11 @@ public:
 namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation>
-createMacroFusionDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI) {
-  return make_unique<MacroFusion>(*TII, *TRI);
+createMacroFusionDAGMutation(const TargetInstrInfo *TII) {
+  return make_unique<MacroFusion>(*TII);
 }
 
 } // namespace llvm
-
-/// Returns true if \p MI reads a register written by \p Other.
-static bool HasDataDep(const TargetRegisterInfo &TRI, const MachineInstr &MI,
-                       const MachineInstr &Other) {
-  for (const MachineOperand &MO : MI.uses()) {
-    if (!MO.isReg() || !MO.readsReg())
-      continue;
-
-    unsigned Reg = MO.getReg();
-    if (Other.modifiesRegister(Reg, &TRI))
-      return true;
-  }
-  return false;
-}
 
 /// \brief Callback from DAG postProcessing to create cluster edges to encourage
 /// fused operations.
@@ -1545,16 +1529,12 @@ void MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
   if (!Branch)
     return;
 
-  for (SUnit &SU : DAG->SUnits) {
-    // SUnits with successors can't be schedule in front of the ExitSU.
-    if (!SU.Succs.empty())
+  for (SDep &PredDep : ExitSU.Preds) {
+    if (PredDep.isWeak())
       continue;
-    // We only care if the node writes to a register that the branch reads.
-    MachineInstr *Pred = SU.getInstr();
-    if (!HasDataDep(TRI, *Branch, *Pred))
-      continue;
-
-    if (!TII.shouldScheduleAdjacent(*Pred, *Branch))
+    SUnit &SU = *PredDep.getSUnit();
+    MachineInstr &Pred = *SU.getInstr();
+    if (!TII.shouldScheduleAdjacent(Pred, *Branch))
       continue;
 
     // Create a single weak edge from SU to ExitSU. The only effect is to cause
@@ -1566,6 +1546,16 @@ void MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
     bool Success = DAG->addEdge(&ExitSU, SDep(&SU, SDep::Cluster));
     (void)Success;
     assert(Success && "No DAG nodes should be reachable from ExitSU");
+
+    // Adjust latency of data deps between the nodes.
+    for (SDep &PredDep : ExitSU.Preds) {
+      if (PredDep.getSUnit() == &SU)
+        PredDep.setLatency(0);
+    }
+    for (SDep &SuccDep : SU.Succs) {
+      if (SuccDep.getSUnit() == &ExitSU)
+        SuccDep.setLatency(0);
+    }
 
     DEBUG(dbgs() << "Macro Fuse SU(" << SU.NodeNum << ")\n");
     break;
@@ -3128,7 +3118,7 @@ static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C) {
       DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   }
   if (EnableMacroFusion)
-    DAG->addMutation(createMacroFusionDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createMacroFusionDAGMutation(DAG->TII));
   return DAG;
 }
 

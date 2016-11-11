@@ -718,8 +718,8 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
 /// If array indices are not pointer-sized integers, explicitly cast them so
 /// that they aren't implicitly casted by the getelementptr.
 Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
-                         Type *ResultTy, const DataLayout &DL,
-                         const TargetLibraryInfo *TLI) {
+                         Type *ResultTy, Optional<unsigned> InRangeIndex,
+                         const DataLayout &DL, const TargetLibraryInfo *TLI) {
   Type *IntPtrTy = DL.getIntPtrType(ResultTy);
 
   bool Any = false;
@@ -742,7 +742,8 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
   if (!Any)
     return nullptr;
 
-  Constant *C = ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], NewIdxs);
+  Constant *C = ConstantExpr::getGetElementPtr(
+      SrcElemTy, Ops[0], NewIdxs, /*InBounds=*/false, InRangeIndex);
   if (Constant *Folded = ConstantFoldConstant(C, DL, TLI))
     C = Folded;
 
@@ -771,13 +772,16 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
                                   ArrayRef<Constant *> Ops,
                                   const DataLayout &DL,
                                   const TargetLibraryInfo *TLI) {
+  const GEPOperator *InnermostGEP = GEP;
+
   Type *SrcElemTy = GEP->getSourceElementType();
   Type *ResElemTy = GEP->getResultElementType();
   Type *ResTy = GEP->getType();
   if (!SrcElemTy->isSized())
     return nullptr;
 
-  if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy, DL, TLI))
+  if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy,
+                                   GEP->getInRangeIndex(), DL, TLI))
     return C;
 
   Constant *Ptr = Ops[0];
@@ -820,6 +824,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // If this is a GEP of a GEP, fold it all into a single GEP.
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+    InnermostGEP = GEP;
+
     SmallVector<Value *, 4> NestedOps(GEP->op_begin() + 1, GEP->op_end());
 
     // Do not try the incorporate the sub-GEP if some index is not a number.
@@ -925,8 +931,23 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   if (Offset != 0)
     return nullptr;
 
+  // Preserve the inrange index from the innermost GEP if possible. We must
+  // have calculated the same indices up to and including the inrange index.
+  Optional<unsigned> InRangeIndex;
+  if (Optional<unsigned> LastIRIndex = InnermostGEP->getInRangeIndex())
+    if (SrcElemTy == InnermostGEP->getSourceElementType() &&
+        NewIdxs.size() > *LastIRIndex) {
+      InRangeIndex = LastIRIndex;
+      for (unsigned I = 0; I <= *LastIRIndex; ++I)
+        if (NewIdxs[I] != InnermostGEP->getOperand(I + 1)) {
+          InRangeIndex = None;
+          break;
+        }
+    }
+
   // Create a GEP.
-  Constant *C = ConstantExpr::getGetElementPtr(SrcElemTy, Ptr, NewIdxs);
+  Constant *C = ConstantExpr::getGetElementPtr(
+      SrcElemTy, Ptr, NewIdxs, /*InBounds=*/false, InRangeIndex);
   assert(C->getType()->getPointerElementType() == Ty &&
          "Computed GetElementPtr has unexpected type!");
 
@@ -944,8 +965,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 /// attempting to fold instructions like loads and stores, which have no
 /// constant expression form.
 ///
-/// TODO: This function neither utilizes nor preserves nsw/nuw/inbounds/etc
-/// information, due to only being passed an opcode and operands. Constant
+/// TODO: This function neither utilizes nor preserves nsw/nuw/inbounds/inrange
+/// etc information, due to only being passed an opcode and operands. Constant
 /// folding using this function strips this information.
 ///
 Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
@@ -965,8 +986,9 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
     if (Constant *C = SymbolicallyEvaluateGEP(GEP, Ops, DL, TLI))
       return C;
 
-    return ConstantExpr::getGetElementPtr(GEP->getSourceElementType(),
-                                          Ops[0], Ops.slice(1));
+    return ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), Ops[0],
+                                          Ops.slice(1), GEP->isInBounds(),
+                                          GEP->getInRangeIndex());
   }
 
   if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE))

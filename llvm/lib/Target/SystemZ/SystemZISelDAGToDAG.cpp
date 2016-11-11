@@ -935,49 +935,55 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
       Count += 1;
   if (Count == 0)
     return false;
-  if (Count == 1) {
-    // Prefer to use normal shift instructions over RISBG, since they can handle
-    // all cases and are sometimes shorter.
-    if (N->getOpcode() != ISD::AND)
-      return false;
 
-    // Prefer register extensions like LLC over RISBG.  Also prefer to start
-    // out with normal ANDs if one instruction would be enough.  We can convert
-    // these ANDs into an RISBG later if a three-address instruction is useful.
-    if (VT == MVT::i32 ||
-        RISBG.Mask == 0xff ||
-        RISBG.Mask == 0xffff ||
-        SystemZ::isImmLF(~RISBG.Mask) ||
-        SystemZ::isImmHF(~RISBG.Mask)) {
-      // Force the new mask into the DAG, since it may include known-one bits.
-      auto *MaskN = cast<ConstantSDNode>(N->getOperand(1).getNode());
-      if (MaskN->getZExtValue() != RISBG.Mask) {
-        SDValue NewMask = CurDAG->getConstant(RISBG.Mask, DL, VT);
-        N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), NewMask);
-        SelectCode(N);
-        return true;
+  // Prefer to use normal shift instructions over RISBG, since they can handle
+  // all cases and are sometimes shorter.
+  if (Count == 1 && N->getOpcode() != ISD::AND)
+    return false;
+
+  // Prefer register extensions like LLC over RISBG.  Also prefer to start
+  // out with normal ANDs if one instruction would be enough.  We can convert
+  // these ANDs into an RISBG later if a three-address instruction is useful.
+  if (RISBG.Rotate == 0) {
+    bool PreferAnd = false;
+    // Prefer AND for any 32-bit and-immediate operation.
+    if (VT == MVT::i32)
+      PreferAnd = true;
+    // As well as for any 64-bit operation that can be implemented via LLC(R),
+    // LLH(R), LLGT(R), or one of the and-immediate instructions.
+    else if (RISBG.Mask == 0xff ||
+             RISBG.Mask == 0xffff ||
+             RISBG.Mask == 0x7fffffff ||
+             SystemZ::isImmLF(~RISBG.Mask) ||
+             SystemZ::isImmHF(~RISBG.Mask))
+     PreferAnd = true;
+    // And likewise for the LLZRGF instruction, which doesn't have a register
+    // to register version.
+    else if (auto *Load = dyn_cast<LoadSDNode>(RISBG.Input)) {
+      if (Load->getMemoryVT() == MVT::i32 &&
+          (Load->getExtensionType() == ISD::EXTLOAD ||
+           Load->getExtensionType() == ISD::ZEXTLOAD) &&
+          RISBG.Mask == 0xffffff00 &&
+          Subtarget->hasLoadAndZeroRightmostByte())
+      PreferAnd = true;
+    }
+    if (PreferAnd) {
+      // Replace the current node with an AND.  Note that the current node
+      // might already be that same AND, in which case it is already CSE'd
+      // with it, and we must not call ReplaceNode.
+      SDValue In = convertTo(DL, VT, RISBG.Input);
+      SDValue Mask = CurDAG->getConstant(RISBG.Mask, DL, VT);
+      SDValue New = CurDAG->getNode(ISD::AND, DL, VT, In, Mask);
+      if (N != New.getNode()) {
+        insertDAGNode(CurDAG, N, Mask);
+        insertDAGNode(CurDAG, N, New);
+        ReplaceNode(N, New.getNode());
+        N = New.getNode();
       }
-      return false;
+      // Now, select the machine opcode to implement this operation.
+      SelectCode(N);
+      return true;
     }
-  }
-
-  // If the RISBG operands require no rotation and just masks the bottom
-  // 8/16 bits, attempt to convert this to a LLC zero extension.
-  if (RISBG.Rotate == 0 && (RISBG.Mask == 0xff || RISBG.Mask == 0xffff)) {
-    unsigned OpCode = (RISBG.Mask == 0xff ? SystemZ::LLGCR : SystemZ::LLGHR);
-    if (VT == MVT::i32) {
-      if (Subtarget->hasHighWord())
-        OpCode = (RISBG.Mask == 0xff ? SystemZ::LLCRMux : SystemZ::LLHRMux);
-      else
-        OpCode = (RISBG.Mask == 0xff ? SystemZ::LLCR : SystemZ::LLHR);
-    }
-
-    SDValue In = convertTo(DL, VT, RISBG.Input);
-    SDValue New = convertTo(
-        DL, VT, SDValue(CurDAG->getMachineNode(OpCode, DL, VT, In), 0));
-    ReplaceUses(N, New.getNode());
-    CurDAG->RemoveDeadNode(N);
-    return true;
   }
 
   unsigned Opcode = SystemZ::RISBG;

@@ -545,7 +545,10 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     } else if (CE->getOpcode() == Instruction::GetElementPtr &&
                // Do not fold addrspacecast (gep 0, .., 0). It might make the
                // addrspacecast uncanonicalized.
-               opc != Instruction::AddrSpaceCast) {
+               opc != Instruction::AddrSpaceCast &&
+               // Do not fold bitcast (gep) with inrange index, as this loses
+               // information.
+               !cast<GEPOperator>(CE)->getInRangeIndex().hasValue()) {
       // If all of the indexes in the GEP are null values, there is no pointer
       // adjustment going on.  We might as well cast the source pointer.
       bool isAllNull = true;
@@ -2046,10 +2049,10 @@ static bool isIndexInRangeOfSequentialType(SequentialType *STy,
   return true;
 }
 
-template<typename IndexTy>
-static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
-                                               bool inBounds,
-                                               ArrayRef<IndexTy> Idxs) {
+Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
+                                          bool InBounds,
+                                          Optional<unsigned> InRangeIndex,
+                                          ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
   Constant *Idx0 = cast<Constant>(Idxs[0]);
   if ((Idxs.size() == 1 && Idx0->isNullValue()))
@@ -2146,9 +2149,18 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
 
         NewIndices.push_back(Combined);
         NewIndices.append(Idxs.begin() + 1, Idxs.end());
+
+        // The combined GEP normally inherits its index inrange attribute from
+        // the inner GEP, but if the inner GEP's last index was adjusted by the
+        // outer GEP, any inbounds attribute on that index is invalidated.
+        Optional<unsigned> IRIndex = cast<GEPOperator>(CE)->getInRangeIndex();
+        if (IRIndex && *IRIndex == CE->getNumOperands() - 2 && !Idx0->isNullValue())
+          IRIndex = None;
+
         return ConstantExpr::getGetElementPtr(
             cast<GEPOperator>(CE)->getSourceElementType(), CE->getOperand(0),
-            NewIndices, inBounds && cast<GEPOperator>(CE)->isInBounds());
+            NewIndices, InBounds && cast<GEPOperator>(CE)->isInBounds(),
+            IRIndex);
       }
     }
 
@@ -2173,8 +2185,9 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
         if (SrcArrayTy && DstArrayTy
             && SrcArrayTy->getElementType() == DstArrayTy->getElementType()
             && SrcPtrTy->getAddressSpace() == DstPtrTy->getAddressSpace())
-          return ConstantExpr::getGetElementPtr(
-              SrcArrayTy, (Constant *)CE->getOperand(0), Idxs, inBounds);
+          return ConstantExpr::getGetElementPtr(SrcArrayTy,
+                                                (Constant *)CE->getOperand(0),
+                                                Idxs, InBounds, InRangeIndex);
       }
     }
   }
@@ -2192,6 +2205,12 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
     if (!CI) {
       // We don't know if it's in range or not.
       Unknown = true;
+      continue;
+    }
+    if (InRangeIndex && i == *InRangeIndex + 1) {
+      // If an index is marked inrange, we cannot apply this canonicalization to
+      // the following index, as that will cause the inrange index to point to
+      // the wrong element.
       continue;
     }
     if (isa<StructType>(Ty)) {
@@ -2256,27 +2275,17 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
   if (!NewIdxs.empty()) {
     for (unsigned i = 0, e = Idxs.size(); i != e; ++i)
       if (!NewIdxs[i]) NewIdxs[i] = cast<Constant>(Idxs[i]);
-    return ConstantExpr::getGetElementPtr(PointeeTy, C, NewIdxs, inBounds);
+    return ConstantExpr::getGetElementPtr(PointeeTy, C, NewIdxs, InBounds,
+                                          InRangeIndex);
   }
 
   // If all indices are known integers and normalized, we can do a simple
   // check for the "inbounds" property.
-  if (!Unknown && !inBounds)
+  if (!Unknown && !InBounds)
     if (auto *GV = dyn_cast<GlobalVariable>(C))
       if (!GV->hasExternalWeakLinkage() && isInBoundsIndices(Idxs))
-        return ConstantExpr::getInBoundsGetElementPtr(PointeeTy, C, Idxs);
+        return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
+                                              /*InBounds=*/true, InRangeIndex);
 
   return nullptr;
-}
-
-Constant *llvm::ConstantFoldGetElementPtr(Type *Ty, Constant *C,
-                                          bool inBounds,
-                                          ArrayRef<Constant *> Idxs) {
-  return ConstantFoldGetElementPtrImpl(Ty, C, inBounds, Idxs);
-}
-
-Constant *llvm::ConstantFoldGetElementPtr(Type *Ty, Constant *C,
-                                          bool inBounds,
-                                          ArrayRef<Value *> Idxs) {
-  return ConstantFoldGetElementPtrImpl(Ty, C, inBounds, Idxs);
 }

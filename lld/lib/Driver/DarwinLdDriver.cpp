@@ -289,7 +289,7 @@ static llvm::Error loadFileList(StringRef fileListPath,
     addFile(path, ctx, forceLoad, false, diagnostics);
     buffer = lineAndRest.second;
   }
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 /// Parse number assuming it is base 16, but allow 0x prefix.

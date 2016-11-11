@@ -1416,6 +1416,14 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
   case SystemZ::CLGFI:
     if (!(MI && isUInt<8>(MI->getOperand(1).getImm())))
       return 0;
+    break;
+  case SystemZ::CL:
+  case SystemZ::CLG:
+    if (!STI.hasMiscellaneousExtensions())
+      return 0;
+    if (!(MI && MI->getOperand(3).getReg() == 0))
+      return 0;
+    break;
   }
   switch (Type) {
   case SystemZII::CompareAndBranch:
@@ -1499,6 +1507,10 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
       return SystemZ::CLFIT;
     case SystemZ::CLGFI:
       return SystemZ::CLGIT;
+    case SystemZ::CL:
+      return SystemZ::CLT;
+    case SystemZ::CLG:
+      return SystemZ::CLGT;
     default:
       return 0;
     }
