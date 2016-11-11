@@ -280,8 +280,9 @@ enum ConstantsCodes {
   CST_CODE_CE_INBOUNDS_GEP = 20, // INBOUNDS_GEP:  [n x operands]
   CST_CODE_BLOCKADDRESS = 21,    // CST_CODE_BLOCKADDRESS [fnty, fnval, bb#]
   CST_CODE_DATA = 22,            // DATA:          [n x elements]
-  CST_CODE_INLINEASM = 23        // INLINEASM:     [sideeffect|alignstack|
+  CST_CODE_INLINEASM = 23,       // INLINEASM:     [sideeffect|alignstack|
                                  //                 asmdialect,asmstr,conststr]
+  CST_CODE_CE_GEP_WITH_INRANGE_INDEX = 24, //      [opty, flags, n x operands]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which

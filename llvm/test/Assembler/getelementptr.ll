@@ -23,6 +23,25 @@
 @PR23753_b = global i8* getelementptr (i8, i8* @PR23753_a, i64 ptrtoint (i8* @PR23753_a to i64))
 ; CHECK: @PR23753_b = global i8* getelementptr (i8, i8* @PR23753_a, i64 ptrtoint (i8* @PR23753_a to i64))
 
+; Verify that inrange on an index inhibits over-indexed getelementptr folding.
+
+@nestedarray = global [2 x [4 x i8*]] zeroinitializer
+
+; CHECK: @nestedarray.1 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i64 1, i32 0)
+@nestedarray.1 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i32 0, i32 4)
+
+; CHECK: @nestedarray.2 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0, i32 4)
+@nestedarray.2 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0, i32 4)
+
+; CHECK: @nestedarray.3 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0, i32 0)
+@nestedarray.3 = alias i8*, getelementptr inbounds ([4 x i8*], [4 x i8*]* getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0), i32 0, i32 0)
+
+; CHECK: @nestedarray.4 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, i32 1, i32 0)
+@nestedarray.4 = alias i8*, getelementptr inbounds ([4 x i8*], [4 x i8*]* getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, i32 0, inrange i32 0), i32 1, i32 0)
+
+; CHECK: @nestedarray.5 = alias i8*, getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i32 1, i32 0)
+@nestedarray.5 = alias i8*, getelementptr inbounds ([4 x i8*], [4 x i8*]* getelementptr inbounds ([2 x [4 x i8*]], [2 x [4 x i8*]]* @nestedarray, inrange i32 0, i32 0), i32 1, i32 0)
+
 ; See if i92 indices work too.
 define i32 *@test({i32, i32}* %t, i92 %n) {
 ; CHECK: @test

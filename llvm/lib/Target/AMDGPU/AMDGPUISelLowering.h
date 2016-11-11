@@ -172,9 +172,9 @@ public:
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
     return true;
   }
-  SDValue getRsqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
-                           int &RefinementSteps,
-                           bool &UseOneConstNR) const override;
+  SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+                           int &RefinementSteps, bool &UseOneConstNR,
+                           bool Reciprocal) const override;
   SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                            int &RefinementSteps) const override;
 

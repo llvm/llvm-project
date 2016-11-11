@@ -161,9 +161,7 @@ uint32_t COFFObjectFile::getSymbolAlignment(DataRefImpl Ref) const {
   // MSVC/link.exe seems to align symbols to the next-power-of-2
   // up to 32 bytes.
   COFFSymbolRef Symb = getCOFFSymbol(Ref);
-  uint32_t Value = Symb.getValue();
-  return std::min(uint64_t(32),
-                  isPowerOf2_64(Value) ? Value : NextPowerOf2(Value));
+  return std::min(uint64_t(32), PowerOf2Ceil(Symb.getValue()));
 }
 
 Expected<uint64_t> COFFObjectFile::getSymbolAddress(DataRefImpl Ref) const {

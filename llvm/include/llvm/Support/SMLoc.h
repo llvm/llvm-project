@@ -50,8 +50,8 @@ class SMRange {
 public:
   SMLoc Start, End;
 
-  SMRange() {}
-  SMRange(NoneType) : Start(), End() {}
+  SMRange() = default;
+  SMRange(NoneType) {}
   SMRange(SMLoc St, SMLoc En) : Start(St), End(En) {
     assert(Start.isValid() == End.isValid() &&
            "Start and end should either both be valid or both be invalid!");
@@ -62,4 +62,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_SMLOC_H

@@ -44,6 +44,19 @@ define <4 x i32> @combine_vec_shl_outofrange1(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+define <4 x i32> @combine_vec_shl_outofrange2(<4 x i32> %a0) {
+; SSE-LABEL: combine_vec_shl_outofrange2:
+; SSE:       # BB#0:
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_shl_outofrange2:
+; AVX:       # BB#0:
+; AVX-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %2 = shl <4 x i32> %1, <i32 33, i32 33, i32 33, i32 33>
+  ret <4 x i32> %2
+}
+
 ; fold (shl x, 0) -> x
 define <4 x i32> @combine_vec_shl_by_zero(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_shl_by_zero:

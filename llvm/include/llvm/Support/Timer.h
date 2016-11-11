@@ -152,8 +152,6 @@ public:
 /// statement.  All timers with the same name are merged.  This is primarily
 /// used for debugging and for hunting performance problems.
 struct NamedRegionTimer : public TimeRegion {
-  explicit NamedRegionTimer(StringRef Name,
-                            bool Enabled = true);
   explicit NamedRegionTimer(StringRef Name, StringRef GroupName,
                             bool Enabled = true);
 };

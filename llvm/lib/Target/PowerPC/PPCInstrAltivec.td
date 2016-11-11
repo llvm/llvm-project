@@ -26,6 +26,7 @@
 // ** in PPCVSXSwapRemoval::gatherVectorInstructions().                      **
 // ****************************************************************************
 
+
 //===----------------------------------------------------------------------===//
 // Altivec transformation functions and pattern fragments.
 //

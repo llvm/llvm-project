@@ -15296,10 +15296,11 @@ bool X86TargetLowering::isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const {
 
 /// The minimum architected relative accuracy is 2^-12. We need one
 /// Newton-Raphson step to have a good float result (24 bits of precision).
-SDValue X86TargetLowering::getRsqrtEstimate(SDValue Op,
-                                            SelectionDAG &DAG, int Enabled,
-                                            int &RefinementSteps,
-                                            bool &UseOneConstNR) const {
+SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
+                                           SelectionDAG &DAG, int Enabled,
+                                           int &RefinementSteps,
+                                           bool &UseOneConstNR,
+                                           bool Reciprocal) const {
   EVT VT = Op.getValueType();
 
   // SSE1 has rsqrtss and rsqrtps. AVX adds a 256-bit variant for rsqrtps.

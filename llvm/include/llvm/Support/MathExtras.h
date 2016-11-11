@@ -641,6 +641,14 @@ inline uint64_t PowerOf2Floor(uint64_t A) {
   return 1ull << (63 - countLeadingZeros(A, ZB_Undefined));
 }
 
+/// Returns the power of two which is greater than or equal to the given value.
+/// Essentially, it is a ceil operation across the domain of powers of two.
+inline uint64_t PowerOf2Ceil(uint64_t A) {
+  if (!A)
+    return 0;
+  return NextPowerOf2(A - 1);
+}
+
 /// Returns the next integer (mod 2**64) that is greater than or equal to
 /// \p Value and is a multiple of \p Align. \p Align must be non-zero.
 ///

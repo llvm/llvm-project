@@ -49,7 +49,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @baz() !dbg !7 !prof !14 {
+define i32 @"\01baz"() !dbg !7 !prof !14 {
 entry:
   %call = call i32 (...) @foo(), !dbg !9
   %call1 = call i32 (...) @"\01bar"(), !dbg !10

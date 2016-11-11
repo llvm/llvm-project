@@ -821,7 +821,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
 static void
 visitObjectFiles(const object::Archive &A,
                  function_ref<void(const object::ObjectFile &)> Fn) {
-  Error Err;
+  Error Err = Error::success();
   for (auto &C : A.children(Err)) {
     Expected<std::unique_ptr<object::Binary>> ChildOrErr = C.getAsBinary();
     failIfError(ChildOrErr);

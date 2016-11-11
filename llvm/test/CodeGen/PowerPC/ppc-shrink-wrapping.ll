@@ -210,6 +210,8 @@ for.end:                                          ; preds = %for.body
 ; CHECK: mflr {{[0-9]+}}
 ;
 ; DISABLE: cmplwi 0, 3, 0
+; DISABLE-NEXT: std
+; DISABLE-NEXT: std
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Loop preheader
@@ -290,6 +292,8 @@ declare void @somethingElse(...)
 ; CHECK: mflr {{[0-9]+}}
 ;
 ; DISABLE: cmplwi 0, 3, 0
+; DISABLE-NEXT: std
+; DISABLE-NEXT: std
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: bl somethingElse
@@ -377,8 +381,8 @@ entry:
 ; ENABLE-DAG: li [[IV:[0-9]+]], 10
 ; ENABLE-DAG: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ;
-; DISABLE: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ; DISABLE: cmplwi 0, 3, 0
+; DISABLE-NEXT: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ; DISABLE: li [[IV:[0-9]+]], 10
 ;

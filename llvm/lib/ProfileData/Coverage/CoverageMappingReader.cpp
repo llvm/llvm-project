@@ -648,7 +648,7 @@ BinaryCoverageReader::create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
   StringRef Coverage;
   uint8_t BytesInAddress;
   support::endianness Endian;
-  Error E;
+  Error E = Error::success();
   consumeError(std::move(E));
   if (ObjectBuffer->getBuffer().startswith(TestingFormatMagic))
     // This is a special format used for testing.

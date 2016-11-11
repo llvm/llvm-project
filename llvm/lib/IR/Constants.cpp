@@ -1167,7 +1167,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
-        GEPO->isInBounds(), OnlyIfReducedTy);
+        GEPO->isInBounds(), GEPO->getInRangeIndex(), OnlyIfReducedTy);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -1893,6 +1893,7 @@ Constant *ConstantExpr::getSelect(Constant *C, Constant *V1, Constant *V2,
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
+                                         Optional<unsigned> InRangeIndex,
                                          Type *OnlyIfReducedTy) {
   if (!Ty)
     Ty = cast<PointerType>(C->getType()->getScalarType())->getElementType();
@@ -1901,7 +1902,8 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
         Ty ==
         cast<PointerType>(C->getType()->getScalarType())->getContainedType(0u));
 
-  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InBounds, Idxs))
+  if (Constant *FC =
+          ConstantFoldGetElementPtr(Ty, C, InBounds, InRangeIndex, Idxs))
     return FC;          // Fold a few common cases.
 
   // Get the result type of the getelementptr!
@@ -1937,9 +1939,12 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
       Idx = ConstantVector::getSplat(NumVecElts, Idx);
     ArgVec.push_back(Idx);
   }
+
+  unsigned SubClassOptionalData = InBounds ? GEPOperator::IsInBounds : 0;
+  if (InRangeIndex && *InRangeIndex < 63)
+    SubClassOptionalData |= (*InRangeIndex + 1) << 1;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                InBounds ? GEPOperator::IsInBounds : 0, None,
-                                Ty);
+                                SubClassOptionalData, None, Ty);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);

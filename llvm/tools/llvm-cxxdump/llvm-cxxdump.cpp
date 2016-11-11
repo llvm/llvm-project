@@ -490,7 +490,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
 }
 
 static void dumpArchive(const Archive *Arc) {
-  Error Err;
+  Error Err = Error::success();
   for (auto &ArcC : Arc->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
     if (!ChildOrErr) {

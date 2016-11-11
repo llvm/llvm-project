@@ -102,7 +102,7 @@ public:
       : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this) {}
 
   StringRef getPassName() const override {
-    return "X86 Assembly / Object Emitter";
+    return "X86 Assembly Printer";
   }
 
   const X86Subtarget &getSubtarget() const { return *Subtarget; }

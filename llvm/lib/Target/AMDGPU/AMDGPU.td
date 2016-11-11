@@ -493,6 +493,8 @@ def isCIVI : Predicate <
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">;
 
+def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">;
+
 class PredicateControl {
   Predicate SubtargetPredicate;
   Predicate SIAssemblerPredicate = isSICI;

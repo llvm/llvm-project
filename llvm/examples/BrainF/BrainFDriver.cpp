@@ -26,7 +26,7 @@
 
 #include "BrainF.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/IR/BasicBlock.h"

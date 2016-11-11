@@ -589,7 +589,7 @@ public:
   /// Channel is the ChannelT instance to communicate on. It is assumed that
   /// the channel is ready to be read from and written to.
   static Expected<OrcRemoteTargetClient> Create(ChannelT &Channel) {
-    Error Err;
+    Error Err = Error::success();
     OrcRemoteTargetClient H(Channel, Err);
     if (Err)
       return std::move(Err);
@@ -808,7 +808,7 @@ private:
   static Error doNothing() { return Error::success(); }
 
   ChannelT &Channel;
-  Error ExistingError;
+  Error ExistingError = Error::success();
   std::string RemoteTargetTriple;
   uint32_t RemotePointerSize = 0;
   uint32_t RemotePageSize = 0;

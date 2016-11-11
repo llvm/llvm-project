@@ -1570,11 +1570,13 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
 
   // Deny any overlapping intervals.  This depends on all the reserved
   // register live ranges to look like dead defs.
-  for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI)
-    if (RHS.overlaps(LIS->getRegUnit(*UI))) {
-      DEBUG(dbgs() << "\t\tInterference: " << PrintRegUnit(*UI, TRI) << '\n');
-      return false;
-    }
+  if (!MRI->isConstantPhysReg(DstReg)) {
+    for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI)
+      if (RHS.overlaps(LIS->getRegUnit(*UI))) {
+        DEBUG(dbgs() << "\t\tInterference: " << PrintRegUnit(*UI, TRI) << '\n');
+        return false;
+      }
+  }
 
   // Skip any value computations, we are not adding new values to the
   // reserved register.  Also skip merging the live ranges, the reserved
@@ -1596,23 +1598,25 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     const SlotIndex CopyRegIdx = LIS->getInstructionIndex(*CopyMI).getRegSlot();
     const SlotIndex DestRegIdx = LIS->getInstructionIndex(*DestMI).getRegSlot();
 
-    // We checked above that there are no interfering defs of the physical
-    // register. However, for this case, where we intent to move up the def of
-    // the physical register, we also need to check for interfering uses.
-    SlotIndexes *Indexes = LIS->getSlotIndexes();
-    for (SlotIndex SI = Indexes->getNextNonNullIndex(DestRegIdx);
-         SI != CopyRegIdx; SI = Indexes->getNextNonNullIndex(SI)) {
-      MachineInstr *MI = LIS->getInstructionFromIndex(SI);
-      if (MI->readsRegister(DstReg, TRI)) {
-        DEBUG(dbgs() << "\t\tInterference (read): " << *MI);
-        return false;
-      }
-
-      // We must also check for clobbers caused by regmasks.
-      for (const auto &MO : MI->operands()) {
-        if (MO.isRegMask() && MO.clobbersPhysReg(DstReg)) {
-          DEBUG(dbgs() << "\t\tInterference (regmask clobber): " << *MI);
+    if (!MRI->isConstantPhysReg(DstReg)) {
+      // We checked above that there are no interfering defs of the physical
+      // register. However, for this case, where we intent to move up the def of
+      // the physical register, we also need to check for interfering uses.
+      SlotIndexes *Indexes = LIS->getSlotIndexes();
+      for (SlotIndex SI = Indexes->getNextNonNullIndex(DestRegIdx);
+           SI != CopyRegIdx; SI = Indexes->getNextNonNullIndex(SI)) {
+        MachineInstr *MI = LIS->getInstructionFromIndex(SI);
+        if (MI->readsRegister(DstReg, TRI)) {
+          DEBUG(dbgs() << "\t\tInterference (read): " << *MI);
           return false;
+        }
+
+        // We must also check for clobbers caused by regmasks.
+        for (const auto &MO : MI->operands()) {
+          if (MO.isRegMask() && MO.clobbersPhysReg(DstReg)) {
+            DEBUG(dbgs() << "\t\tInterference (regmask clobber): " << *MI);
+            return false;
+          }
         }
       }
     }

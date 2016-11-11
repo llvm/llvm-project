@@ -78,8 +78,8 @@ declare i32 @doSomething(i32, i32*)
 ; Next BB.
 ; CHECK: [[LOOP:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP]]
 ;
 ; Next BB.
@@ -144,8 +144,8 @@ declare i32 @something(...)
 ; Next BB.
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: ; %for.end
@@ -188,8 +188,8 @@ for.end:                                          ; preds = %for.body
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: bl _somethingElse
@@ -259,8 +259,8 @@ declare void @somethingElse(...)
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
 ; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: lsl w0, [[SUM]], #3
@@ -333,32 +333,32 @@ entry:
 ;
 ; Sum is merged with the returned register.
 ; CHECK: add [[VA_BASE:x[0-9]+]], sp, #16
-; CHECK-NEXT: str [[VA_BASE]], [sp, #8]
 ; CHECK-NEXT: cmp w1, #1
+; CHECK-NEXT: str [[VA_BASE]], [sp, #8]
+; CHECK-NEXT: mov [[SUM:w0]], wzr
 ; CHECK-NEXT: b.lt [[IFEND_LABEL:LBB[0-9_]+]]
-; CHECK: mov [[SUM:w0]], wzr
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: ldr [[VA_ADDR:x[0-9]+]], [sp, #8]
 ; CHECK-NEXT: add [[NEXT_VA_ADDR:x[0-9]+]], [[VA_ADDR]], #8
 ; CHECK-NEXT: str [[NEXT_VA_ADDR]], [sp, #8]
 ; CHECK-NEXT: ldr [[VA_VAL:w[0-9]+]], {{\[}}[[VA_ADDR]]]
-; CHECK-NEXT: add [[SUM]], [[SUM]], [[VA_VAL]]
 ; CHECK-NEXT: sub w1, w1, #1
+; CHECK-NEXT: add [[SUM]], [[SUM]], [[VA_VAL]]
 ; CHECK-NEXT: cbnz w1, [[LOOP_LABEL]]
+; DISABLE-NEXT: b [[IFEND_LABEL]]
 ;
-; DISABLE-NEXT: b
 ; DISABLE: [[ELSE_LABEL]]: ; %if.else
 ; DISABLE: lsl w0, w1, #1
-;
-; ENABLE: [[ELSE_LABEL]]: ; %if.else
-; ENABLE: lsl w0, w1, #1
-; ENABLE-NEXT: ret
 ;
 ; CHECK: [[IFEND_LABEL]]:
 ; Epilogue code.
 ; CHECK: add sp, sp, #16
 ; CHECK-NEXT: ret
+;
+; ENABLE: [[ELSE_LABEL]]: ; %if.else
+; ENABLE-NEXT: lsl w0, w1, #1
+; ENABLE_NEXT: ret
 define i32 @variadicFunc(i32 %cond, i32 %count, ...) #0 {
 entry:
   %ap = alloca i8*, align 8
@@ -413,9 +413,9 @@ declare void @llvm.va_end(i8*)
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; Inline asm statement.
-; CHECK: add x19, x19, #1
 ; CHECK: sub [[IV]], [[IV]], #1
-; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
+; CHECK: add x19, x19, #1
+; CHECK: cbnz [[IV]], [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: mov w0, wzr
 ; Epilogue code.

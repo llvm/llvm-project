@@ -1,4 +1,4 @@
-//===- GCOV.h - LLVM coverage tool ----------------------------------------===//
+//===- GCOV.h - LLVM coverage tool ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,20 @@
 #define LLVM_SUPPORT_GCOV_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -30,6 +38,7 @@ class GCOVBlock;
 class FileInfo;
 
 namespace GCOV {
+
 enum GCOVVersion { V402, V404, V704 };
 
 /// \brief A struct for passing gcov options between functions.
@@ -47,7 +56,8 @@ struct Options {
   bool LongFileNames;
   bool NoOutput;
 };
-} // end GCOV namespace
+
+} // end namespace GCOV
 
 /// GCOVBuffer - A wrapper around MemoryBuffer to provide GCOV specific
 /// read operations.
@@ -232,8 +242,9 @@ private:
 class GCOVFile {
 public:
   GCOVFile()
-      : GCNOInitialized(false), Checksum(0), Functions(), RunCount(0),
+      : GCNOInitialized(false), Checksum(0), RunCount(0),
         ProgramCount(0) {}
+
   bool readGCNO(GCOVBuffer &Buffer);
   bool readGCDA(GCOVBuffer &Buffer);
   uint32_t getChecksum() const { return Checksum; }
@@ -312,9 +323,9 @@ public:
   typedef SmallVectorImpl<GCOVEdge *>::const_iterator EdgeIterator;
 
   GCOVBlock(GCOVFunction &P, uint32_t N)
-      : Parent(P), Number(N), Counter(0), DstEdgesAreSorted(true), SrcEdges(),
-        DstEdges(), Lines() {}
+      : Parent(P), Number(N), Counter(0), DstEdgesAreSorted(true) {}
   ~GCOVBlock();
+
   const GCOVFunction &getParent() const { return Parent; }
   void addLine(uint32_t N) { Lines.push_back(N); }
   uint32_t getLastLine() const { return Lines.back(); }
@@ -325,6 +336,7 @@ public:
     assert(&Edge->Dst == this); // up to caller to ensure edge is valid
     SrcEdges.push_back(Edge);
   }
+
   void addDstEdge(GCOVEdge *Edge) {
     assert(&Edge->Src == this); // up to caller to ensure edge is valid
     // Check if adding this edge causes list to become unsorted.
@@ -332,6 +344,7 @@ public:
       DstEdgesAreSorted = false;
     DstEdges.push_back(Edge);
   }
+
   size_t getNumSrcEdges() const { return SrcEdges.size(); }
   size_t getNumDstEdges() const { return DstEdges.size(); }
   void sortDstEdges();
@@ -396,19 +409,21 @@ class FileInfo {
 
 public:
   FileInfo(const GCOV::Options &Options)
-      : Options(Options), LineInfo(), RunCount(0), ProgramCount(0) {}
+      : Options(Options), RunCount(0), ProgramCount(0) {}
 
   void addBlockLine(StringRef Filename, uint32_t Line, const GCOVBlock *Block) {
     if (Line > LineInfo[Filename].LastLine)
       LineInfo[Filename].LastLine = Line;
     LineInfo[Filename].Blocks[Line - 1].push_back(Block);
   }
+
   void addFunctionLine(StringRef Filename, uint32_t Line,
                        const GCOVFunction *Function) {
     if (Line > LineInfo[Filename].LastLine)
       LineInfo[Filename].LastLine = Line;
     LineInfo[Filename].Functions[Line - 1].push_back(Function);
   }
+
   void setRunCount(uint32_t Runs) { RunCount = Runs; }
   void setProgramCount(uint32_t Programs) { ProgramCount = Programs; }
   void print(raw_ostream &OS, StringRef MainFilename, StringRef GCNOFile,
@@ -440,6 +455,7 @@ private:
   FileCoverageList FileCoverages;
   FuncCoverageMap FuncCoverages;
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_SUPPORT_GCOV_H
