@@ -66,9 +66,6 @@ public:
     return llvm::makeArrayRef<T>((const T *)Data.data(), S / sizeof(T));
   }
 
-  // If a section is compressed, this has the uncompressed section data.
-  std::unique_ptr<uint8_t[]> UncompressedData;
-
   std::vector<Relocation> Relocations;
 };
 

@@ -59,7 +59,7 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
 }
 
 static void checkError(Error E) {
-  handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
+  handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) -> Error {
     error(EIB.message());
     return Error::success();
   });

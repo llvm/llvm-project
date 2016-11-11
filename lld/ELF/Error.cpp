@@ -49,14 +49,13 @@ void elf::error(std::error_code EC, const Twine &Prefix) {
 }
 
 void elf::exitLld(int Val) {
-  outs().flush();
-  errs().flush();
-
   // Dealloc/destroy ManagedStatic variables before calling
   // _exit(). In a non-LTO build, this is a nop. In an LTO
   // build allows us to get the output of -time-passes.
   llvm_shutdown();
 
+  outs().flush();
+  errs().flush();
   _exit(Val);
 }
 

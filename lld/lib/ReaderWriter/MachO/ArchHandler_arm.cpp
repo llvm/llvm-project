@@ -540,7 +540,7 @@ llvm::Error ArchHandler_arm::getReferenceInfo(
     // Instruction contains branch to addend.
     displacement = getDisplacementFromThumbBranch(instruction, fixupAddress);
     *addend = fixupAddress + 4 + displacement;
-    return llvm::Error();
+      return llvm::Error::success();
   case ARM_THUMB_RELOC_BR22 | rPcRel | rLength4:
     // ex: bl _foo (and _foo is defined)
     if ((instruction & 0xD000F800) == 0x9000F000)
@@ -563,7 +563,7 @@ llvm::Error ArchHandler_arm::getReferenceInfo(
     // reloc.value is target atom's address.  Instruction contains branch
     // to atom+addend.
     *addend += (targetAddress - reloc.value);
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM_RELOC_BR24 | rPcRel | rExtern | rLength4:
     // ex: bl _foo (and _foo is undefined)
     if (((instruction & 0x0F000000) == 0x0A000000)
@@ -576,7 +576,7 @@ llvm::Error ArchHandler_arm::getReferenceInfo(
     // Instruction contains branch to addend.
     displacement = getDisplacementFromArmBranch(instruction);
     *addend = fixupAddress + 8 + displacement;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM_RELOC_BR24 | rPcRel | rLength4:
     // ex: bl _foo (and _foo is defined)
     if (((instruction & 0x0F000000) == 0x0A000000)
@@ -601,32 +601,32 @@ llvm::Error ArchHandler_arm::getReferenceInfo(
     // reloc.value is target atom's address.  Instruction contains branch
     // to atom+addend.
     *addend += (targetAddress - reloc.value);
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM_RELOC_VANILLA | rExtern | rLength4:
     // ex: .long _foo (and _foo is undefined)
     *kind = pointer32;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = instruction;
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM_RELOC_VANILLA | rLength4:
     // ex: .long _foo (and _foo is defined)
     *kind = pointer32;
     if (auto ec = atomFromAddress(reloc.symbol, instruction, target, addend))
       return ec;
     *addend = clearThumbBit((uint32_t) * addend, *target);
-    return llvm::Error();
+    return llvm::Error::success();
   case ARM_RELOC_VANILLA | rScattered | rLength4:
     // ex: .long _foo+a (and _foo is defined)
     *kind = pointer32;
     if (auto ec = atomFromAddress(0, reloc.value, target, addend))
       return ec;
     *addend += (clearThumbBit(instruction, *target) - reloc.value);
-    return llvm::Error();
+    return llvm::Error::success();
   default:
     return llvm::make_error<GenericError>("unsupported arm relocation type");
   }
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 llvm::Error
@@ -847,7 +847,7 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
     value = clearThumbBit(value, *target);
     int64_t ta = (int64_t) value - (toAddress - fromAddress);
     *addend = ta - offsetInFrom;
-    return llvm::Error();
+    return llvm::Error::success();
   } else {
     uint32_t sectIndex;
     if (thumbReloc) {
@@ -895,7 +895,7 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
     }
   }
 
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 void ArchHandler_arm::applyFixupFinal(const Reference &ref, uint8_t *loc,

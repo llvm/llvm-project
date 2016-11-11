@@ -657,7 +657,7 @@ llvm::Error MachOFileLayout::writeSingleSegmentLoadCommand(uint8_t *&lc) {
     ++sout;
   }
   lc = next;
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 template <typename T>
@@ -727,7 +727,7 @@ llvm::Error MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
     }
     lc = reinterpret_cast<uint8_t*>(next);
   }
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 static void writeVersionMinLoadCommand(const NormalizedFile &_file,
@@ -1007,7 +1007,7 @@ llvm::Error MachOFileLayout::writeLoadCommands() {
       lc += sizeof(linkedit_data_command);
     }
   }
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 void MachOFileLayout::writeSectionContent() {
@@ -1537,7 +1537,7 @@ llvm::Error MachOFileLayout::writeBinary(StringRef path) {
   writeLinkEditContent();
   fob->commit();
 
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 /// Takes in-memory normalized view and writes a mach-o object file.

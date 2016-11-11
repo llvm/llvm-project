@@ -107,7 +107,7 @@ private:
     for (const TLVPEntryAtom *slot : entries)
       mergedFile.addAtom(*slot);
 
-    return llvm::Error();
+    return llvm::Error::success();
   }
 
   const DefinedAtom *makeTLVPEntry(const Atom *target) {
