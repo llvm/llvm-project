@@ -336,8 +336,13 @@ public:
 
 /// Describes API notes data for an Objective-C property.
 class ObjCPropertyInfo : public VariableInfo {
+  unsigned SwiftImportAsAccessorsSpecified : 1;
+  unsigned SwiftImportAsAccessors : 1;
+
 public:
-  ObjCPropertyInfo() : VariableInfo() { }
+  ObjCPropertyInfo()
+      : VariableInfo(), SwiftImportAsAccessorsSpecified(false),
+        SwiftImportAsAccessors(false) {}
 
   /// Merge class-wide information into the given property.
   friend ObjCPropertyInfo &operator|=(ObjCPropertyInfo &lhs,
@@ -349,6 +354,32 @@ public:
       }
     }
 
+    return lhs;
+  }
+
+  Optional<bool> getSwiftImportAsAccessors() const {
+    if (SwiftImportAsAccessorsSpecified)
+      return SwiftImportAsAccessors;
+    return None;
+  }
+  void setSwiftImportAsAccessors(Optional<bool> value) {
+    if (value.hasValue()) {
+      SwiftImportAsAccessorsSpecified = true;
+      SwiftImportAsAccessors = value.getValue();
+    } else {
+      SwiftImportAsAccessorsSpecified = false;
+      SwiftImportAsAccessors = false;
+    }
+  }
+
+  friend ObjCPropertyInfo &operator|=(ObjCPropertyInfo &lhs,
+                                      const ObjCPropertyInfo &rhs) {
+    lhs |= static_cast<const VariableInfo &>(rhs);
+    if (!lhs.SwiftImportAsAccessorsSpecified &&
+        rhs.SwiftImportAsAccessorsSpecified) {
+      lhs.SwiftImportAsAccessorsSpecified = true;
+      lhs.SwiftImportAsAccessors = rhs.SwiftImportAsAccessors;
+    }
     return lhs;
   }
 };

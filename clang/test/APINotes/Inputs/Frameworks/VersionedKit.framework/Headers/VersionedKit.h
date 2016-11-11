@@ -17,3 +17,14 @@ __attribute__((swift_bridge("MyValueType")))
 void privateFunc(void) __attribute__((swift_private));
 
 typedef double MyDoubleWrapper __attribute__((swift_wrapper(struct)));
+
+@interface TestProperties
+@property (nonatomic, readwrite, retain) id accessorsOnly;
+@property (nonatomic, readwrite, retain, class) id accessorsOnlyForClass;
+
+@property (nonatomic, readwrite, retain) id accessorsOnlyInVersion3;
+@property (nonatomic, readwrite, retain, class) id accessorsOnlyForClassInVersion3;
+
+@property (nonatomic, readwrite, retain) id accessorsOnlyExceptInVersion3;
+@property (nonatomic, readwrite, retain, class) id accessorsOnlyForClassExceptInVersion3;
+@end
