@@ -427,7 +427,6 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   DEBUG(dbgs() << " Trying to merge set, starts with #"
                << GlobalSet.find_first() << "\n");
 
-  StringRef ExternalName;
   ssize_t i = GlobalSet.find_first();
   while (i != -1) {
     ssize_t j = 0;
@@ -436,6 +435,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     std::vector<Constant*> Inits;
 
     bool HasExternal = false;
+    StringRef FirstExternalName;
     for (j = i; j != -1; j = GlobalSet.find_next(j)) {
       Type *Ty = Globals[j]->getValueType();
       MergedSize += DL.getTypeAllocSize(Ty);
@@ -447,8 +447,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
       if (Globals[j]->hasExternalLinkage() && !HasExternal) {
         HasExternal = true;
-        auto *TheFirstExternal = Globals[j];
-        ExternalName = TheFirstExternal->getName();
+        FirstExternalName = Globals[j]->getName();
       }
     }
 
@@ -468,7 +467,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     // _MergedGlobals symbols.
     Twine MergedName =
         (IsMachO && HasExternal)
-            ? "_MergedGlobals_" + ExternalName
+            ? "_MergedGlobals_" + FirstExternalName
             : "_MergedGlobals";
     auto MergedLinkage = IsMachO ? Linkage : GlobalValue::PrivateLinkage;
     auto *MergedGV = new GlobalVariable(
