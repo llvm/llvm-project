@@ -1312,7 +1312,7 @@ public:
     const lld::File *fileRef = &file;
     yout << fileRef;
 
-    return llvm::Error();
+    return llvm::Error::success();
   }
 
 private:

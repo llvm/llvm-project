@@ -103,7 +103,7 @@ public:
     // Add the image info.
     mergedFile.addAtom(*getImageInfo());
 
-    return llvm::Error();
+    return llvm::Error::success();
   }
 
 private:

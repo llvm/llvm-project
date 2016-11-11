@@ -29,15 +29,15 @@
 # CHECK-NEXT:  Version: 1
 # CHECK-NEXT:  Entry: 0x1000
 # CHECK-NEXT:  ProgramHeaderOffset: 0x40
-# CHECK-NEXT:  SectionHeaderOffset: 0x1110
+# CHECK-NEXT:  SectionHeaderOffset: 0x1120
 # CHECK-NEXT:  Flags [
 # CHECK-NEXT:  ]
 # CHECK-NEXT:  HeaderSize: 64
 # CHECK-NEXT:  ProgramHeaderEntrySize: 56
 # CHECK-NEXT:  ProgramHeaderCount: 7
 # CHECK-NEXT:  SectionHeaderEntrySize: 64
-# CHECK-NEXT:  SectionHeaderCount: 9
-# CHECK-NEXT:  StringTableSectionIndex: 7
+# CHECK-NEXT:  SectionHeaderCount: 10
+# CHECK-NEXT:  StringTableSectionIndex: 8
 # CHECK-NEXT: }
 
 # CHECK:      ProgramHeaders [

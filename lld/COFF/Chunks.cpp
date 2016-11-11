@@ -249,7 +249,7 @@ void SectionChunk::replace(SectionChunk *Other) {
 CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
   // Common symbols are aligned on natural boundaries up to 32 bytes.
   // This is what MSVC link.exe does.
-  Align = std::min(uint64_t(32), NextPowerOf2(Sym.getValue()));
+  Align = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
 }
 
 uint32_t CommonChunk::getPermissions() const {

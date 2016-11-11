@@ -31,7 +31,7 @@ class LazyObjectFile;
 class SymbolBody;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
-template <class ELFT> class OutputSectionBase;
+class OutputSectionBase;
 template <class ELFT> class SharedFile;
 
 struct Symbol;
@@ -249,8 +249,7 @@ InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 template <class ELFT> class DefinedSynthetic : public Defined {
 public:
   typedef typename ELFT::uint uintX_t;
-  DefinedSynthetic(StringRef N, uintX_t Value,
-                   OutputSectionBase<ELFT> *Section);
+  DefinedSynthetic(StringRef N, uintX_t Value, OutputSectionBase *Section);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;
@@ -261,7 +260,7 @@ public:
   static const uintX_t SectionEnd = uintX_t(-1);
 
   uintX_t Value;
-  const OutputSectionBase<ELFT> *Section;
+  const OutputSectionBase *Section;
 };
 
 class Undefined : public SymbolBody {
@@ -466,6 +465,8 @@ inline Symbol *SymbolBody::symbol() {
   return reinterpret_cast<Symbol *>(reinterpret_cast<char *>(this) -
                                     offsetof(Symbol, Body));
 }
+
+StringRef getSymbolName(StringRef SymTab, SymbolBody &Body);
 
 } // namespace elf
 } // namespace lld

@@ -18,6 +18,7 @@ add_clang_library(clangTidyModernizeModule
   UseBoolLiteralsCheck.cpp
   UseDefaultCheck.cpp
   UseEmplaceCheck.cpp
+  UseEqualsDeleteCheck.cpp
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
   UseUsingCheck.cpp

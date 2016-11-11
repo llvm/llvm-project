@@ -70,12 +70,12 @@ static llvm::Error forEachLoadCommand(
       return llvm::make_error<GenericError>("Load command exceeds range");
 
     if (func(slc->cmd, slc->cmdsize, p))
-      return llvm::Error();
+      return llvm::Error::success();
 
     p += slc->cmdsize;
   }
 
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 static std::error_code appendRelocations(Relocations &relocs, StringRef buffer,

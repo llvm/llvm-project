@@ -29,7 +29,7 @@ template <class ELFT> class ICF;
 template <class ELFT> class DefinedRegular;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
-template <class ELFT> class OutputSectionBase;
+class OutputSectionBase;
 
 // We need non-template input section class to store symbol layout
 // in linker script parser structures, where we do not have ELFT
@@ -39,7 +39,7 @@ template <class ELFT> class OutputSectionBase;
 // section
 class InputSectionData {
 public:
-  enum Kind { Regular, EHFrame, Merge };
+  enum Kind { Regular, EHFrame, Merge, Synthetic, };
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
@@ -65,9 +65,6 @@ public:
     assert(S % sizeof(T) == 0);
     return llvm::makeArrayRef<T>((const T *)Data.data(), S / sizeof(T));
   }
-
-  // If a section is compressed, this has the uncompressed section data.
-  std::unique_ptr<uint8_t[]> UncompressedData;
 
   std::vector<Relocation> Relocations;
 };
@@ -96,7 +93,10 @@ public:
 
   InputSectionBase()
       : InputSectionData(Regular, "", ArrayRef<uint8_t>(), false, false),
-        Repl(this) {}
+        Repl(this) {
+    NumRelocations = 0;
+    AreRelocsRela = false;
+  }
 
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                    StringRef Name, Kind SectionKind);
@@ -104,7 +104,21 @@ public:
                    uintX_t Entsize, uint32_t Link, uint32_t Info,
                    uintX_t Addralign, ArrayRef<uint8_t> Data, StringRef Name,
                    Kind SectionKind);
-  OutputSectionBase<ELFT> *OutSec = nullptr;
+  OutputSectionBase *OutSec = nullptr;
+
+  // Relocations that refer to this section.
+  const Elf_Rel *FirstRelocation = nullptr;
+  unsigned NumRelocations : 31;
+  unsigned AreRelocsRela : 1;
+  ArrayRef<Elf_Rel> rels() const {
+    assert(!AreRelocsRela);
+    return llvm::makeArrayRef(FirstRelocation, NumRelocations);
+  }
+  ArrayRef<Elf_Rela> relas() const {
+    assert(AreRelocsRela);
+    return llvm::makeArrayRef(static_cast<const Elf_Rela *>(FirstRelocation),
+                              NumRelocations);
+  }
 
   // This pointer points to the "real" instance of this instance.
   // Usually Repl == this. However, if ICF merges two sections,
@@ -219,8 +233,6 @@ public:
   // rather than a single large blob of data.
   std::vector<EhSectionPiece> Pieces;
 
-  // Relocation section that refer to this one.
-  const Elf_Shdr *RelocSection = nullptr;
 };
 
 // This corresponds to a non SHF_MERGE section of an input file.
@@ -232,11 +244,13 @@ template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::uint uintX_t;
+  typedef InputSectionData::Kind Kind;
 
 public:
   InputSection();
   InputSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
-               ArrayRef<uint8_t> Data, StringRef Name);
+               ArrayRef<uint8_t> Data, StringRef Name,
+               Kind K = InputSectionData::Regular);
   InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
 
   static InputSection<ELFT> Discarded;
@@ -244,9 +258,6 @@ public:
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
   void writeTo(uint8_t *Buf);
-
-  // Relocation sections that refer to this one.
-  llvm::TinyPtrVector<const Elf_Shdr *> RelocSections;
 
   // The offset from beginning of the output sections this section was assigned
   // to. The writer sets a value.

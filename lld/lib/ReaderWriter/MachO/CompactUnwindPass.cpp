@@ -298,7 +298,7 @@ private:
 
     // Skip rest of pass if no unwind info.
     if (unwindLocs.empty() && dwarfFrames.empty())
-      return llvm::Error();
+      return llvm::Error::success();
 
     // FIXME: if there are more than 4 personality functions then we need to
     // defer to DWARF info for the ones we don't put in the list. They should
@@ -353,7 +353,7 @@ private:
       return atom->contentType() == DefinedAtom::typeCompactUnwindInfo;
     });
 
-    return llvm::Error();
+    return llvm::Error::success();
   }
 
   void collectCompactUnwindEntries(

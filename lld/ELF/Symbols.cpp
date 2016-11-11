@@ -33,7 +33,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
     auto &D = cast<DefinedSynthetic<ELFT>>(Body);
-    const OutputSectionBase<ELFT> *Sec = D.Section;
+    const OutputSectionBase *Sec = D.Section;
     if (!Sec)
       return D.Value;
     if (D.Value == DefinedSynthetic<ELFT>::SectionEnd)
@@ -159,7 +159,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
-  return Out<ELFT>::GotPlt->Addr + getGotPltOffset<ELFT>();
+  return In<ELFT>::GotPlt->getVA() + getGotPltOffset<ELFT>();
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltOffset() const {
@@ -216,7 +216,7 @@ Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type,
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
-                                         OutputSectionBase<ELFT> *Section)
+                                         OutputSectionBase *Section)
     : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 
@@ -280,6 +280,14 @@ void elf::printTraceSymbol(Symbol *Sym) {
   else
     outs() << ": definition of ";
   outs() << B->getName() << "\n";
+}
+
+StringRef elf::getSymbolName(StringRef SymTab, SymbolBody &Body) {
+  if (Body.isLocal() && Body.getNameOffset())
+    return SymTab.data() + Body.getNameOffset();
+  if (!Body.isLocal())
+    return Body.getName();
+  return "";
 }
 
 template bool SymbolBody::hasThunk<ELF32LE>() const;

@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // test constexpr bool test(size_t pos) const;
 
 #include <bitset>
 #include <cstdlib>
 #include <cassert>
+
+#include "test_macros.h"
 
 template <std::size_t N>
 std::bitset<N>
@@ -25,30 +26,38 @@ make_bitset()
 }
 
 template <std::size_t N>
-void test_test()
+void test_test(bool test_throws)
 {
     const std::bitset<N> v1 = make_bitset<N>();
+#ifdef TEST_HAS_NO_EXCEPTIONS
+    if (test_throws) return;
+#else
     try
     {
+#endif
         bool b = v1.test(50);
         if (50 >= v1.size())
             assert(false);
         assert(b == v1[50]);
+        assert(!test_throws);
+#ifndef TEST_HAS_NO_EXCEPTIONS
     }
     catch (std::out_of_range&)
     {
+        assert(test_throws);
     }
+#endif
 }
 
 int main()
 {
-    test_test<0>();
-    test_test<1>();
-    test_test<31>();
-    test_test<32>();
-    test_test<33>();
-    test_test<63>();
-    test_test<64>();
-    test_test<65>();
-    test_test<1000>();
+    test_test<0>(true);
+    test_test<1>(true);
+    test_test<31>(true);
+    test_test<32>(true);
+    test_test<33>(true);
+    test_test<63>(false);
+    test_test<64>(false);
+    test_test<65>(false);
+    test_test<1000>(false);
 }

@@ -16,7 +16,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
@@ -353,19 +353,28 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
     if (!Target)
       return nullptr;
-    if (auto *S = dyn_cast<InputSection<ELFT>>(Target)) {
-      S->RelocSections.push_back(&Sec);
-      return nullptr;
+    if (Target->FirstRelocation)
+      fatal(getFilename(this) +
+            ": multiple relocation sections to one section are not supported");
+    if (!isa<InputSection<ELFT>>(Target) && !isa<EhInputSection<ELFT>>(Target))
+      fatal(getFilename(this) +
+            ": relocations pointing to SHF_MERGE are not supported");
+
+    size_t NumRelocations;
+    if (Sec.sh_type == SHT_RELA) {
+      ArrayRef<Elf_Rela> Rels = check(this->getObj().relas(&Sec));
+      Target->FirstRelocation = Rels.begin();
+      NumRelocations = Rels.size();
+      Target->AreRelocsRela = true;
+    } else {
+      ArrayRef<Elf_Rel> Rels = check(this->getObj().rels(&Sec));
+      Target->FirstRelocation = Rels.begin();
+      NumRelocations = Rels.size();
+      Target->AreRelocsRela = false;
     }
-    if (auto *S = dyn_cast<EhInputSection<ELFT>>(Target)) {
-      if (S->RelocSection)
-        fatal(getFilename(this) +
-              ": multiple relocation sections to .eh_frame are not supported");
-      S->RelocSection = &Sec;
-      return nullptr;
-    }
-    fatal(getFilename(this) +
-          ": relocations pointing to SHF_MERGE are not supported");
+    assert(isUInt<31>(NumRelocations));
+    Target->NumRelocations = NumRelocations;
+    return nullptr;
   }
   }
 
@@ -795,12 +804,12 @@ template <class ELFT> void BinaryFile::parse() {
       make<InputSection<ELFT>>(SHF_ALLOC, SHT_PROGBITS, 8, Data, ".data");
   Sections.push_back(Section);
 
-  elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, Section, STB_GLOBAL,
-                                   STT_OBJECT, 0);
-  elf::Symtab<ELFT>::X->addRegular(EndName, STV_DEFAULT, Section, STB_GLOBAL,
-                                   STT_OBJECT, Data.size());
-  elf::Symtab<ELFT>::X->addRegular(SizeName, STV_DEFAULT, nullptr, STB_GLOBAL,
-                                   STT_OBJECT, Data.size());
+  elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, STT_OBJECT, 0, 0,
+                                   STB_GLOBAL, Section);
+  elf::Symtab<ELFT>::X->addRegular(EndName, STV_DEFAULT, STT_OBJECT,
+                                   Data.size(), 0, STB_GLOBAL, Section);
+  elf::Symtab<ELFT>::X->addRegular(SizeName, STV_DEFAULT, STT_OBJECT,
+                                   Data.size(), 0, STB_GLOBAL, nullptr);
 }
 
 static bool isBitcode(MemoryBufferRef MB) {

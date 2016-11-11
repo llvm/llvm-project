@@ -66,7 +66,7 @@ public:
     }
     // Exit early if no shims needed.
     if (_targetToShim.empty())
-      return llvm::Error();
+      return llvm::Error::success();
 
     // Sort shim atoms so the layout order is stable.
     std::vector<const DefinedAtom *> shims;
@@ -83,7 +83,7 @@ public:
     for (const DefinedAtom *shim : shims)
       mergedFile.addAtom(*shim);
 
-    return llvm::Error();
+    return llvm::Error::success();
   }
 
 private:

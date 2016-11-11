@@ -82,7 +82,7 @@ public:
   uint32_t TlsModuleIndexRel;
   uint32_t TlsOffsetRel;
   unsigned GotEntrySize;
-  unsigned GotPltEntrySize;
+  unsigned GotPltEntrySize = 0;
   unsigned PltEntrySize;
   unsigned PltHeaderSize;
 

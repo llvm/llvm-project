@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // test bitset<N>& flip(size_t pos);
 
 #include <bitset>
 #include <cstdlib>
 #include <cassert>
+
+#include "test_macros.h"
 
 template <std::size_t N>
 std::bitset<N>
@@ -25,11 +26,15 @@ make_bitset()
 }
 
 template <std::size_t N>
-void test_flip_one()
+void test_flip_one(bool test_throws)
 {
     std::bitset<N> v = make_bitset<N>();
+#ifdef TEST_HAS_NO_EXCEPTIONS
+    if (test_throws) return;
+#else
     try
     {
+#endif
         v.flip(50);
         bool b = v[50];
         if (50 >= v.size())
@@ -39,21 +44,25 @@ void test_flip_one()
         assert(v[50] != b);
         v.flip(50);
         assert(v[50] == b);
+        assert(!test_throws);
+#ifndef TEST_HAS_NO_EXCEPTIONS
     }
     catch (std::out_of_range&)
     {
+        assert(test_throws);
     }
+#endif
 }
 
 int main()
 {
-    test_flip_one<0>();
-    test_flip_one<1>();
-    test_flip_one<31>();
-    test_flip_one<32>();
-    test_flip_one<33>();
-    test_flip_one<63>();
-    test_flip_one<64>();
-    test_flip_one<65>();
-    test_flip_one<1000>();
+    test_flip_one<0>(true);
+    test_flip_one<1>(true);
+    test_flip_one<31>(true);
+    test_flip_one<32>(true);
+    test_flip_one<33>(true);
+    test_flip_one<63>(false);
+    test_flip_one<64>(false);
+    test_flip_one<65>(false);
+    test_flip_one<1000>(false);
 }

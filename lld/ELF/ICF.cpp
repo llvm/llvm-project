@@ -120,10 +120,7 @@ private:
 // relocation targets is not included in the hash value.
 template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
   uint64_t Flags = S->Flags;
-  uint64_t H = hash_combine(Flags, S->getSize());
-  for (const Elf_Shdr *Rel : S->RelocSections)
-    H = hash_combine(H, (uint64_t)Rel->sh_size);
-  return H;
+  return hash_combine(Flags, S->getSize(), S->NumRelocations);
 }
 
 // Returns true if Sec is subject of ICF.
@@ -212,21 +209,15 @@ bool ICF<ELFT>::relocationEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
 template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
                                const InputSection<ELFT> *B) {
-  if (A->RelocSections.size() != B->RelocSections.size())
+  if (A->NumRelocations != B->NumRelocations)
     return false;
 
-  for (size_t I = 0, E = A->RelocSections.size(); I != E; ++I) {
-    const Elf_Shdr *RA = A->RelocSections[I];
-    const Elf_Shdr *RB = B->RelocSections[I];
-    ELFFile<ELFT> FileA = A->getObj();
-    ELFFile<ELFT> FileB = B->getObj();
-    if (RA->sh_type == SHT_RELA) {
-      if (!relocationEq(check(FileA.relas(RA)), check(FileB.relas(RB))))
-        return false;
-    } else {
-      if (!relocationEq(check(FileA.rels(RA)), check(FileB.rels(RB))))
-        return false;
-    }
+  if (A->AreRelocsRela) {
+    if (!relocationEq(A->relas(), B->relas()))
+      return false;
+  } else {
+    if (!relocationEq(A->rels(), B->rels()))
+      return false;
   }
 
   return A->Flags == B->Flags && A->getSize() == B->getSize() &&
@@ -268,20 +259,9 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
 template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
                                const InputSection<ELFT> *B) {
-  for (size_t I = 0, E = A->RelocSections.size(); I != E; ++I) {
-    const Elf_Shdr *RA = A->RelocSections[I];
-    const Elf_Shdr *RB = B->RelocSections[I];
-    ELFFile<ELFT> FileA = A->getObj();
-    ELFFile<ELFT> FileB = B->getObj();
-    if (RA->sh_type == SHT_RELA) {
-      if (!variableEq(A, B, check(FileA.relas(RA)), check(FileB.relas(RB))))
-        return false;
-    } else {
-      if (!variableEq(A, B, check(FileA.rels(RA)), check(FileB.rels(RB))))
-        return false;
-    }
-  }
-  return true;
+  if (A->AreRelocsRela)
+    return variableEq(A, B, A->relas(), B->relas());
+  return variableEq(A, B, A->rels(), B->rels());
 }
 
 // The main function of ICF.
