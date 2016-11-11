@@ -653,14 +653,14 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
 }
 
 static ELFKind getBitcodeELFKind(MemoryBufferRef MB) {
-  Triple T(getBitcodeTargetTriple(MB, Driver->Context));
+  Triple T(check(getBitcodeTargetTriple(MB)));
   if (T.isLittleEndian())
     return T.isArch64Bit() ? ELF64LEKind : ELF32LEKind;
   return T.isArch64Bit() ? ELF64BEKind : ELF32BEKind;
 }
 
 static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
-  Triple T(getBitcodeTargetTriple(MB, Driver->Context));
+  Triple T(check(getBitcodeTargetTriple(MB)));
   switch (T.getArch()) {
   case Triple::aarch64:
     return EM_AARCH64;

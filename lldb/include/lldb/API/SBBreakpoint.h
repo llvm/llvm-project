@@ -12,6 +12,8 @@
 
 #include "lldb/API/SBDefines.h"
 
+class SBBreakpointListImpl;
+
 namespace lldb {
 
 class LLDB_API SBBreakpoint {
@@ -145,8 +147,6 @@ private:
 
   lldb::BreakpointSP m_opaque_sp;
 };
-
-class SBBreakpointListImpl;
 
 class LLDB_API SBBreakpointList {
 public:

@@ -877,10 +877,13 @@ readCompUnit(const NormalizedFile &normalizedFile,
   // FIXME: Cribbed from llvm-dwp -- should share "lightweight CU DIE
   //        inspection" code if possible.
   uint32_t offset = 0;
+  llvm::dwarf::DwarfFormat Format = llvm::dwarf::DwarfFormat::DWARF32;
   auto infoData = dataExtractorFromSection(normalizedFile, info);
   uint32_t length = infoData.getU32(&offset);
-  if (length == 0xffffffff)
+  if (length == 0xffffffff) {
+    Format = llvm::dwarf::DwarfFormat::DWARF64;
     infoData.getU64(&offset);
+  }
   else if (length > 0xffffff00)
     return llvm::make_error<GenericError>("Malformed DWARF in " + path);
 
@@ -927,7 +930,7 @@ readCompUnit(const NormalizedFile &normalizedFile,
     }
     default:
       llvm::DWARFFormValue::skipValue(form, infoData, &offset, version,
-                                      addrSize);
+                                      addrSize, Format);
     }
   }
   return tu;
