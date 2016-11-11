@@ -3905,6 +3905,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       do {
         if (typedefTy->getDecl() == vaListTypedef)
           return true;
+        if (auto *name = typedefTy->getDecl()->getIdentifier())
+          if (name->isStr("va_list"))
+            return true;
         typedefTy = typedefTy->desugar()->getAs<TypedefType>();
       } while (typedefTy);
       return false;
