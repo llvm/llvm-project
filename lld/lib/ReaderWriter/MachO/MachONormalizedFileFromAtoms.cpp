@@ -985,7 +985,7 @@ llvm::Error Util::getSymbolTableRegion(const DefinedAtom* atom,
   case Atom::scopeTranslationUnit:
     scope = 0;
     inGlobalsRegion = false;
-    return llvm::Error();
+      return llvm::Error::success();
   case Atom::scopeLinkageUnit:
     if ((_ctx.exportMode() == MachOLinkingContext::ExportMode::whiteList) &&
         _ctx.exportSymbolNamed(atom->name())) {
@@ -997,28 +997,28 @@ llvm::Error Util::getSymbolTableRegion(const DefinedAtom* atom,
         // -keep_private_externs means keep in globals region as N_PEXT.
         scope = N_PEXT | N_EXT;
         inGlobalsRegion = true;
-        return llvm::Error();
+        return llvm::Error::success();
       }
     }
     // scopeLinkageUnit symbols are no longer global once linked.
     scope = N_PEXT;
     inGlobalsRegion = false;
-    return llvm::Error();
+    return llvm::Error::success();
   case Atom::scopeGlobal:
     if (_ctx.exportRestrictMode()) {
       if (_ctx.exportSymbolNamed(atom->name())) {
         scope = N_EXT;
         inGlobalsRegion = true;
-        return llvm::Error();
+        return llvm::Error::success();
       } else {
         scope = N_PEXT;
         inGlobalsRegion = false;
-        return llvm::Error();
+        return llvm::Error::success();
       }
     } else {
       scope = N_EXT;
       inGlobalsRegion = true;
-      return llvm::Error();
+      return llvm::Error::success();
     }
     break;
   }
@@ -1139,7 +1139,7 @@ llvm::Error Util::addSymbols(const lld::File &atomFile,
     file.undefinedSymbols.push_back(sym);
   }
 
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 const Atom *Util::targetOfLazyPointer(const DefinedAtom *lpAtom) {

@@ -80,7 +80,7 @@ void ArchiveFile::parse() {
   // Seen is a map from member files to boolean values. Initially
   // all members are mapped to false, which indicates all these files
   // are not read yet.
-  Error Err;
+  Error Err = Error::success();
   for (auto &Child : File->children(Err))
     Seen[Child.getChildOffset()].clear();
   if (Err)

@@ -1030,7 +1030,7 @@ void MachOLinkingContext::finalizeInputFiles() {
 llvm::Error MachOLinkingContext::handleLoadedFile(File &file) {
   auto *machoFile = dyn_cast<MachOFile>(&file);
   if (!machoFile)
-    return llvm::Error();
+    return llvm::Error::success();
 
   // Check that the arch of the context matches that of the file.
   // Also set the arch of the context if it didn't have one.
@@ -1097,7 +1097,7 @@ llvm::Error MachOLinkingContext::handleLoadedFile(File &file) {
     return llvm::make_error<GenericError>("different swift versions");
   }
 
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 } // end namespace lld

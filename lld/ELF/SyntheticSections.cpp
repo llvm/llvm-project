@@ -91,7 +91,7 @@ static ArrayRef<uint8_t> getVersion() {
 
   // +1 to include the terminating '\0'.
   return {(const uint8_t *)S.data(), S.size() + 1};
-};
+}
 
 // Creates a .comment section containing LLD version info.
 // With this feature, you can identify LLD-generated binaries easily

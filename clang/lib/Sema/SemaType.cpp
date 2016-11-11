@@ -3535,7 +3535,7 @@ static void recordNullabilitySeen(Sema &S, SourceLocation loc) {
     S.Diag(fileNullability.PointerLoc, diag::warn_nullability_missing_array);
   } else {
     S.Diag(fileNullability.PointerLoc, diag::warn_nullability_missing)
-      << fileNullability.PointerKind;
+      << static_cast<unsigned>(fileNullability.PointerKind);
   }
 }
 
@@ -3817,6 +3817,23 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
   }
 
+  // Local function that returns true if its argument looks like a va_list.
+  auto isVaList = [&S](QualType T) -> bool {
+    auto *typedefTy = T->getAs<TypedefType>();
+    if (!typedefTy)
+      return false;
+    TypedefDecl *vaListTypedef = S.Context.getBuiltinVaListDecl();
+    do {
+      if (typedefTy->getDecl() == vaListTypedef)
+        return true;
+      if (auto *name = typedefTy->getDecl()->getIdentifier())
+        if (name->isStr("va_list"))
+          return true;
+      typedefTy = typedefTy->desugar()->getAs<TypedefType>();
+    } while (typedefTy);
+    return false;
+  };
+
   // Local function that checks the nullability for a given pointer declarator.
   // Returns true if _Nonnull was inferred.
   auto inferPointerNullability = [&](SimplePointerKind pointerKind,
@@ -3895,33 +3912,26 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // nullability and perform consistency checking.
   if (S.ActiveTemplateInstantiations.empty()) {
     if (T->canHaveNullability() && !T->getNullability(S.Context)) {
-      SimplePointerKind pointerKind = SimplePointerKind::Pointer;
-      if (T->isBlockPointerType())
-        pointerKind = SimplePointerKind::BlockPointer;
-      else if (T->isMemberPointerType())
-        pointerKind = SimplePointerKind::MemberPointer;
+      if (isVaList(T)) {
+        // Record that we've seen a pointer, but do nothing else.
+        if (NumPointersRemaining > 0)
+          --NumPointersRemaining;
+      } else {
+        SimplePointerKind pointerKind = SimplePointerKind::Pointer;
+        if (T->isBlockPointerType())
+          pointerKind = SimplePointerKind::BlockPointer;
+        else if (T->isMemberPointerType())
+          pointerKind = SimplePointerKind::MemberPointer;
 
-      if (auto *attr = inferPointerNullability(
-                         pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
-                         D.getMutableDeclSpec().getAttributes().getListRef())) {
-        T = Context.getAttributedType(
-              AttributedType::getNullabilityAttrKind(*inferNullability), T, T);
-        attr->setUsedAsTypeAttr();
+        if (auto *attr = inferPointerNullability(
+              pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
+              D.getMutableDeclSpec().getAttributes().getListRef())) {
+          T = Context.getAttributedType(
+                AttributedType::getNullabilityAttrKind(*inferNullability),T,T);
+          attr->setUsedAsTypeAttr();
+        }
       }
     }
-
-    auto isVaList = [&S](QualType T) -> bool {
-      auto *typedefTy = T->getAs<TypedefType>();
-      if (!typedefTy)
-        return false;
-      TypedefDecl *vaListTypedef = S.Context.getBuiltinVaListDecl();
-      do {
-        if (typedefTy->getDecl() == vaListTypedef)
-          return true;
-        typedefTy = typedefTy->desugar()->getAs<TypedefType>();
-      } while (typedefTy);
-      return false;
-    };
 
     if (complainAboutMissingNullability == CAMN_Yes &&
         T->isArrayType() && !T->getNullability(S.Context) && !isVaList(T) &&

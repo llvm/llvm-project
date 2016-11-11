@@ -474,7 +474,7 @@ llvm::Error LayoutPass::perform(SimpleFile &mergedFile) {
   });
 
   DEBUG(llvm::dbgs() << "******** Finished laying out atoms\n");
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 void addLayoutPass(PassManager &pm, const MachOLinkingContext &ctx) {

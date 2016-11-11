@@ -13,6 +13,7 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -167,11 +168,10 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
     std::tie(Buf, Size) = getRawCompressedData(Data);
 
   // Uncompress Buf.
-  UncompressedData.reset(new uint8_t[Size]);
-  if (zlib::uncompress(toStringRef(Buf), (char *)UncompressedData.get(),
-                       Size) != zlib::StatusOK)
+  char *OutputBuf = BAlloc.Allocate<char>(Size);
+  if (zlib::uncompress(toStringRef(Buf), OutputBuf, Size) != zlib::StatusOK)
     fatal(getName(this) + ": error while uncompressing section");
-  Data = ArrayRef<uint8_t>(UncompressedData.get(), Size);
+  Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
 }
 
 template <class ELFT>

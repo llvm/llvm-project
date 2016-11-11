@@ -2851,9 +2851,9 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
     return false;
 
   // If the member function is marked 'final', we know that it can't be
-  // overridden and can therefore devirtualize it.
+  // overridden and can therefore devirtualize it unless it's pure virtual.
   if (MD->hasAttr<FinalAttr>())
-    return true;
+    return !MD->isPure();
 
   // If the base expression (after skipping derived-to-base conversions) is a
   // class prvalue, then we can devirtualize.
@@ -2861,31 +2861,28 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
   if (Base->isRValue() && Base->getType()->isRecordType())
     return true;
 
-  // If the most derived class is marked final, we know that no subclass can
-  // override this member function and so we can devirtualize it. For example:
-  //
-  // struct A { virtual void f(); }
-  // struct B final : A { };
-  //
-  // void f(B *b) {
-  //   b->f();
-  // }
-  //
-  if (const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType()) {
-    if (BestDynamicDecl->hasAttr<FinalAttr>())
-      return true;
+  // If we don't even know what we would call, we can't devirtualize.
+  const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType();
+  if (!BestDynamicDecl)
+    return false;
 
-    // There may be a method corresponding to MD in a derived class. If that
-    // method is marked final, we can devirtualize it.
-    const CXXMethodDecl *DevirtualizedMethod =
-        MD->getCorrespondingMethodInClass(BestDynamicDecl);
-    if (DevirtualizedMethod->hasAttr<FinalAttr>())
-      return true;
-  }
+  // There may be a method corresponding to MD in a derived class.
+  const CXXMethodDecl *DevirtualizedMethod =
+      MD->getCorrespondingMethodInClass(BestDynamicDecl);
+
+  // If that method is pure virtual, we can't devirtualize. If this code is
+  // reached, the result would be UB, not a direct call to the derived class
+  // function, and we can't assume the derived class function is defined.
+  if (DevirtualizedMethod->isPure())
+    return false;
+
+  // If that method is marked final, we can devirtualize it.
+  if (DevirtualizedMethod->hasAttr<FinalAttr>())
+    return true;
 
   // Similarly, if the class itself is marked 'final' it can't be overridden
   // and we can therefore devirtualize the member function call.
-  if (MD->getParent()->hasAttr<FinalAttr>())
+  if (BestDynamicDecl->hasAttr<FinalAttr>())
     return true;
 
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Base)) {
