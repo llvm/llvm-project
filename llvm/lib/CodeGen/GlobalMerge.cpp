@@ -427,6 +427,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   DEBUG(dbgs() << " Trying to merge set, starts with #"
                << GlobalSet.find_first() << "\n");
 
+  StringRef ExternalName;
   ssize_t i = GlobalSet.find_first();
   while (i != -1) {
     ssize_t j = 0;
@@ -435,7 +436,6 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     std::vector<Constant*> Inits;
 
     bool HasExternal = false;
-    GlobalVariable *TheFirstExternal = nullptr;
     for (j = i; j != -1; j = GlobalSet.find_next(j)) {
       Type *Ty = Globals[j]->getValueType();
       MergedSize += DL.getTypeAllocSize(Ty);
@@ -447,7 +447,8 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
       if (Globals[j]->hasExternalLinkage() && !HasExternal) {
         HasExternal = true;
-        TheFirstExternal = Globals[j];
+        auto *TheFirstExternal = Globals[j];
+        ExternalName = TheFirstExternal->getName();
       }
     }
 
@@ -459,14 +460,15 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     StructType *MergedTy = StructType::get(M.getContext(), Tys);
     Constant *MergedInit = ConstantStruct::get(MergedTy, Inits);
 
-    // On Darwin external linkage needs to be preserved, otherwise dsymutil
-    // cannot preserve the debug info for the merged variables.  If they have
-    // external linkage, use the symbol name of the first variable merged as the
-    // suffix of global symbol name.  This avoids a link-time naming conflict
-    // for the _MergedGlobals symbols.
+    // On Darwin external linkage needs to be preserved, otherwise
+    // dsymutil cannot preserve the debug info for the merged
+    // variables.  If they have external linkage, use the symbol name
+    // of the first variable merged as the suffix of global symbol
+    // name.  This avoids a link-time naming conflict for the
+    // _MergedGlobals symbols.
     Twine MergedName =
         (IsMachO && HasExternal)
-            ? "_MergedGlobals_" + TheFirstExternal->getName()
+            ? "_MergedGlobals_" + ExternalName
             : "_MergedGlobals";
     auto MergedLinkage = IsMachO ? Linkage : GlobalValue::PrivateLinkage;
     auto *MergedGV = new GlobalVariable(
