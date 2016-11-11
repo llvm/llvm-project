@@ -12,6 +12,9 @@ import argparse
 import os.path
 import subprocess
 import shutil
+from pygments import highlight
+from pygments.lexers.c_cpp import CppLexer
+from pygments.formatters import HtmlFormatter
 
 parser = argparse.ArgumentParser(description=desc)
 parser.add_argument('yaml_files', nargs='+')
@@ -114,14 +117,17 @@ class SourceFileRenderer:
     def __init__(self, filename):
         self.source_stream = open(filename)
         self.stream = open(os.path.join(args.output_dir, SourceFileRenderer.html_file_name(filename)), 'w')
+        self.html_formatter = HtmlFormatter()
+        self.cpp_lexer = CppLexer()
 
     def render_source_line(self, linenum, line):
+        html_line = highlight(line, self.cpp_lexer, self.html_formatter)
         print('''
 <tr>
 <td><a name=\"L{linenum}\">{linenum}</a></td>
 <td></td>
 <td></td>
-<td><pre>{line}</pre></td>
+<td>{html_line}</td>
 </tr>'''.format(**locals()), file=self.stream)
 
     def render_inline_remarks(self, r):
