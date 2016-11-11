@@ -110,7 +110,7 @@ class HelpCommandTestCase(TestBase):
             valid_version_patterns.append(
                 '^lldb-' + (version_str if match else '[0-9]+'))
         else:
-            valid_version_patterns.append('^lldb version (\d|\.)+.*$')
+            valid_version_patterns.append('^lldb version (\d|\.)+.*\n')
 
         match = self.match("version", valid_version_patterns)
         self.assertIsNotNone(
