@@ -13,11 +13,11 @@
 ///
 /// Runtime requests certain information (metadata) about kernels to be able
 /// to execute the kernels and answer the queries about the kernels.
-/// The metadata is represented as a byte stream in an ELF section of a
-/// binary (code object). The byte stream consists of key-value pairs.
-/// Each key is an 8 bit unsigned integer. Each value can be an integer,
-/// a string, or a stream of key-value pairs. There are 3 levels of key-value
-/// pair streams. At the beginning of the ELF section is the top level
+/// The metadata is represented as a note element in the .note ELF section of a
+/// binary (code object). The desc field of the note element consists of
+/// key-value pairs. Each key is an 8 bit unsigned integer. Each value can be
+/// an integer, a string, or a stream of key-value pairs. There are 3 levels of
+/// key-value pair streams. At the beginning of the ELF section is the top level
 /// key-value pair stream. A kernel-level key-value pair stream starts after
 /// encountering KeyKernelBegin and ends immediately before encountering
 /// KeyKernelEnd. A kernel-argument-level key-value pair stream starts
@@ -37,8 +37,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPURUNTIMEMETADATA_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPURUNTIMEMETADATA_H
 
-#include <stdint.h>
-
 namespace AMDGPU {
 
 namespace RuntimeMD {
@@ -46,9 +44,6 @@ namespace RuntimeMD {
   // Version and revision of runtime metadata
   const unsigned char MDVersion   = 1;
   const unsigned char MDRevision  = 0;
-
-  // ELF section name containing runtime metadata
-  const char SectionName[] = ".AMDGPU.runtime_metadata";
 
   // Enumeration values of keys in runtime metadata.
   enum Key {

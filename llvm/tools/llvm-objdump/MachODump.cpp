@@ -1546,7 +1546,8 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
 static void printArchiveHeaders(StringRef Filename, Archive *A, bool verbose,
                                 bool print_offset,
                                 StringRef ArchitectureName = StringRef()) {
-  Error Err;
+  Error Err = Error::success();
+  ;
   for (const auto &C : A->children(Err, false))
     printArchiveChild(Filename, C, verbose, print_offset, ArchitectureName);
 
@@ -1583,7 +1584,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
     if (ArchiveHeaders)
       printArchiveHeaders(Filename, A, !NonVerbose, ArchiveMemberOffsets);
 
-    Error Err;
+    Error Err = Error::success();
     for (auto &C : A->children(Err)) {
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
@@ -1641,7 +1642,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
               if (ArchiveHeaders)
                 printArchiveHeaders(Filename, A.get(), !NonVerbose,
                                     ArchiveMemberOffsets, ArchitectureName);
-              Error Err;
+              Error Err = Error::success();
               for (auto &C : A->children(Err)) {
                 Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
                 if (!ChildOrErr) {
@@ -1697,7 +1698,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
             if (ArchiveHeaders)
               printArchiveHeaders(Filename, A.get(), !NonVerbose,
                                   ArchiveMemberOffsets);
-            Error Err;
+            Error Err = Error::success();
             for (auto &C : A->children(Err)) {
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
               if (!ChildOrErr) {
@@ -1749,7 +1750,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
         if (ArchiveHeaders)
           printArchiveHeaders(Filename, A.get(), !NonVerbose,
                               ArchiveMemberOffsets, ArchitectureName);
-        Error Err;
+        Error Err = Error::success();
         for (auto &C : A->children(Err)) {
           Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
           if (!ChildOrErr) {

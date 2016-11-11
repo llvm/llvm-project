@@ -9,7 +9,13 @@
 %struct.B = type { i32 addrspace(1)*}
 %opencl.clk_event_t = type opaque
 
-; CHECK: .section        .AMDGPU.runtime_metadata
+; CHECK: .section        .note,#alloc
+; CHECK-NEXT: .long   4
+; CHECK-NEXT: .long   [[Ltmp1:.+]]-[[Ltmp0:.+]]
+; CHECK-NEXT: .long   7
+; CHECK-NEXT: .asciz  "AMD"
+; CHECK-NEXT: .p2align        2
+; CHECK-NEXT: [[Ltmp0]]:
 ; CHECK-NEXT: .byte	1
 ; CHECK-NEXT: .short	256
 ; CHECK-NEXT: .byte	2
@@ -23,8 +29,6 @@
 ; CHECK-NEXT: .long	10
 ; CHECK-NEXT: .ascii	"2:1:8:%g\\n"
 
-; CHECK-LABEL:{{^}}test_char:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	9
@@ -92,8 +96,6 @@ define amdgpu_kernel void @test_char(i8 %a) !kernel_arg_addr_space !1 !kernel_ar
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_ushort2:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	12
@@ -161,8 +163,6 @@ define amdgpu_kernel void @test_ushort2(<2 x i16> %a) !kernel_arg_addr_space !1 
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_int3:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	9
@@ -230,8 +230,6 @@ define amdgpu_kernel void @test_int3(<3 x i32> %a) !kernel_arg_addr_space !1 !ke
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_ulong4:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	11
@@ -299,8 +297,6 @@ define amdgpu_kernel void @test_ulong4(<4 x i64> %a) !kernel_arg_addr_space !1 !
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_half8:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	10
@@ -368,8 +364,6 @@ define amdgpu_kernel void @test_half8(<8 x half> %a) !kernel_arg_addr_space !1 !
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_float16:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	12
@@ -437,8 +431,6 @@ define amdgpu_kernel void @test_float16(<16 x float> %a) !kernel_arg_addr_space 
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_double16:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	13
@@ -506,8 +498,6 @@ define amdgpu_kernel void @test_double16(<16 x double> %a) !kernel_arg_addr_spac
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_pointer:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	12
@@ -577,8 +567,6 @@ define amdgpu_kernel void @test_pointer(i32 addrspace(1)* %a) !kernel_arg_addr_s
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_image:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	10
@@ -648,8 +636,6 @@ define amdgpu_kernel void @test_image(%opencl.image2d_t addrspace(1)* %a) !kerne
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_sampler:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	12
@@ -717,8 +703,6 @@ define amdgpu_kernel void @test_sampler(i32 %a) !kernel_arg_addr_space !1 !kerne
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_queue:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	10
@@ -788,8 +772,6 @@ define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a) !kernel_
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_struct:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	11
@@ -859,8 +841,6 @@ define amdgpu_kernel void @test_struct(%struct.A* byval %a) !kernel_arg_addr_spa
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_i128:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	9
@@ -928,8 +908,6 @@ define amdgpu_kernel void @test_i128(i128 %a) !kernel_arg_addr_space !1 !kernel_
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_multi_arg:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	14
@@ -1027,8 +1005,6 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c) !ke
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_addr_space:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	15
@@ -1134,8 +1110,6 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g, i32 addrspace(2
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_type_qual:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	14
@@ -1243,8 +1217,6 @@ define amdgpu_kernel void @test_type_qual(i32 addrspace(1)* %a, i32 addrspace(1)
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_access_qual:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	16
@@ -1348,8 +1320,6 @@ define amdgpu_kernel void @test_access_qual(%opencl.image1d_t addrspace(1)* %ro,
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_vec_type_hint_half:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	23
@@ -1420,8 +1390,6 @@ define amdgpu_kernel void @test_vec_type_hint_half(i32 %a) !kernel_arg_addr_spac
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_vec_type_hint_float:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	24
@@ -1492,8 +1460,6 @@ define amdgpu_kernel void @test_vec_type_hint_float(i32 %a) !kernel_arg_addr_spa
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_vec_type_hint_double:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	25
@@ -1564,8 +1530,6 @@ define amdgpu_kernel void @test_vec_type_hint_double(i32 %a) !kernel_arg_addr_sp
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_vec_type_hint_char:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	23
@@ -1636,8 +1600,6 @@ define amdgpu_kernel void @test_vec_type_hint_char(i32 %a) !kernel_arg_addr_spac
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_vec_type_hint_short:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	24
@@ -1708,8 +1670,6 @@ define amdgpu_kernel void @test_vec_type_hint_short(i32 %a) !kernel_arg_addr_spa
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_vec_type_hint_long:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	23
@@ -1780,8 +1740,6 @@ define amdgpu_kernel void @test_vec_type_hint_long(i32 %a) !kernel_arg_addr_spac
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_vec_type_hint_unknown:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	26
@@ -1852,8 +1810,6 @@ define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a) !kernel_arg_addr_s
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_reqd_wgs_vec_type_hint:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	27
@@ -1928,8 +1884,6 @@ define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a) !kernel_arg_addr_
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_wgs_hint_vec_type_hint:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	27
@@ -2004,8 +1958,6 @@ define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a) !kernel_arg_addr_
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_arg_ptr_to_ptr:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	19
@@ -2075,8 +2027,6 @@ define amdgpu_kernel void @test_arg_ptr_to_ptr(i32 * addrspace(1)* %a) !kernel_a
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_arg_struct_contains_ptr:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	28
@@ -2146,8 +2096,6 @@ define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B * byval %a) !k
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_arg_vector_of_ptr:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	22
@@ -2215,8 +2163,6 @@ define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x i32 addrspace(1)*> %a) !k
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_arg_unknown_builtin_type:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	29
@@ -2287,8 +2233,6 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(%opencl.clk_event_t add
   ret void
 }
 
-; CHECK-LABEL:{{^}}test_pointee_align:
-; CHECK: .section        .AMDGPU.runtime_metadata
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	6
 ; CHECK-NEXT: .long	18
@@ -2471,6 +2415,8 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(%opencl.clk_event_t add
 define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a, i8 addrspace(3)* %b, <2 x i8> addrspace(3)* %c, <3 x i8> addrspace(3)* %d, <4 x i8> addrspace(3)* %e, <8 x i8> addrspace(3)* %f, <16 x i8> addrspace(3)* %g) !kernel_arg_addr_space !91 !kernel_arg_access_qual !92 !kernel_arg_type !93 !kernel_arg_base_type !93 !kernel_arg_type_qual !94 {
   ret void
 }
+; CHECK-NEXT: [[Ltmp1]]:
+; CHECK-NEXT: .p2align        2
 
 !llvm.printf.fmts = !{!100, !101}
 

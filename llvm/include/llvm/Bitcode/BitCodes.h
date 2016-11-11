@@ -25,6 +25,14 @@
 #include <cassert>
 
 namespace llvm {
+/// Offsets of the 32-bit fields of bitcode wrapper header.
+static const unsigned BWH_MagicField = 0 * 4;
+static const unsigned BWH_VersionField = 1 * 4;
+static const unsigned BWH_OffsetField = 2 * 4;
+static const unsigned BWH_SizeField = 3 * 4;
+static const unsigned BWH_CPUTypeField = 4 * 4;
+static const unsigned BWH_HeaderSize = 5 * 4;
+
 namespace bitc {
   enum StandardWidths {
     BlockIDWidth   = 8,  // We use VBR-8 for block IDs.

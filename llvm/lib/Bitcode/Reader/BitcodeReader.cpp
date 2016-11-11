@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -20,7 +21,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/AutoUpgrade.h"
@@ -3285,12 +3285,25 @@ Error BitcodeReader::parseConstants() {
       }
       break;
     }
-    case bitc::CST_CODE_CE_INBOUNDS_GEP:
-    case bitc::CST_CODE_CE_GEP: {  // CE_GEP:        [n x operands]
+    case bitc::CST_CODE_CE_INBOUNDS_GEP: // [ty, n x operands]
+    case bitc::CST_CODE_CE_GEP: // [ty, n x operands]
+    case bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX: { // [ty, flags, n x
+                                                     // operands]
       unsigned OpNum = 0;
       Type *PointeeType = nullptr;
-      if (Record.size() % 2)
+      if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX ||
+          Record.size() % 2)
         PointeeType = getTypeByID(Record[OpNum++]);
+
+      bool InBounds = false;
+      Optional<unsigned> InRangeIndex;
+      if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX) {
+        uint64_t Op = Record[OpNum++];
+        InBounds = Op & 1;
+        InRangeIndex = Op >> 1;
+      } else if (BitCode == bitc::CST_CODE_CE_INBOUNDS_GEP)
+        InBounds = true;
+
       SmallVector<Constant*, 16> Elts;
       while (OpNum != Record.size()) {
         Type *ElTy = getTypeByID(Record[OpNum++]);
@@ -3311,8 +3324,7 @@ Error BitcodeReader::parseConstants() {
 
       ArrayRef<Constant *> Indices(Elts.begin() + 1, Elts.end());
       V = ConstantExpr::getGetElementPtr(PointeeType, Elts[0], Indices,
-                                         BitCode ==
-                                             bitc::CST_CODE_CE_INBOUNDS_GEP);
+                                         InBounds, InRangeIndex);
       break;
     }
     case bitc::CST_CODE_CE_SELECT: {  // CE_SELECT: [opval#, opval#, opval#]
@@ -4335,7 +4347,7 @@ Expected<std::string> BitcodeReader::parseTriple() {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      return Error::success();
+      return "";
 
     case BitstreamEntry::SubBlock:
       if (Entry.ID == bitc::MODULE_BLOCK_ID)
@@ -4368,14 +4380,14 @@ Expected<std::string> BitcodeReader::parseIdentificationBlock() {
     // we need to make sure we aren't at the end of the stream before calling
     // advance, otherwise we'll get an error.
     if (Stream.AtEndOfStream())
-      return Error::success();
+      return "";
 
     BitstreamEntry Entry = Stream.advance();
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      return Error::success();
+      return "";
 
     case BitstreamEntry::SubBlock:
       if (Entry.ID == bitc::IDENTIFICATION_BLOCK_ID) {
@@ -4426,7 +4438,7 @@ Expected<bool> BitcodeReader::hasObjCCategory() {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      return Error::success();
+      return false;
 
     case BitstreamEntry::SubBlock:
       if (Entry.ID == bitc::MODULE_BLOCK_ID)

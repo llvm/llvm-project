@@ -78,6 +78,8 @@ entry:
 ; MOVREL: v_movrels_b32_e32 v{{[0-9]}}, v0
 
 ; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
+; IDXMODE: v_mov_b32_e32 v2, 2
+; IDXMODE: v_mov_b32_e32 v3, 3
 ; IDXMODE-NEXT: s_set_gpr_idx_on [[ADD_IDX]], src0{{$}}
 ; IDXMODE-NEXT: v_mov_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; IDXMODE-NEXT: s_set_gpr_idx_off
@@ -95,6 +97,10 @@ entry:
 ; MOVREL: v_movrels_b32_e32 v{{[0-9]}}, v0
 
 ; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
+; IDXMODE: v_mov_b32_e32 v0,
+; IDXMODE: v_mov_b32_e32 v1,
+; IDXMODE: v_mov_b32_e32 v2,
+; IDXMODE: v_mov_b32_e32 v3,
 ; IDXMODE-NEXT: s_set_gpr_idx_on [[ADD_IDX]], src0{{$}}
 ; IDXMODE-NEXT: v_mov_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; IDXMODE-NEXT: s_set_gpr_idx_off
@@ -572,12 +578,12 @@ bb7:                                              ; preds = %bb4, %bb1
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41a80000
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41b00000
 ; GCN-DAG: s_load_dword [[ARG:s[0-9]+]]
+; IDXMODE-DAG: s_add_i32 [[ARG_ADD:s[0-9]+]], [[ARG]], -16
 
 ; MOVREL-DAG: s_add_i32 m0, [[ARG]], -16
 ; MOVREL: v_movreld_b32_e32 v[[VEC0_ELT0]], 4.0
 ; GCN-NOT: m0
 
-; IDXMODE-DAG: s_add_i32 [[ARG_ADD:s[0-9]+]], [[ARG]], -16
 ; IDXMODE: s_set_gpr_idx_on [[ARG_ADD]], dst
 ; IDXMODE: v_mov_b32_e32 v[[VEC0_ELT0]], 4.0
 ; IDXMODE: s_set_gpr_idx_off

@@ -203,10 +203,12 @@ inline FormattedNumber format_decimal(int64_t N, unsigned Width) {
   return FormattedNumber(0, N, Width, false, false, false);
 }
 
-class FormattedHexBytes {
-  llvm::ArrayRef<uint8_t> Bytes;
-  // Display offsets for each line if FirstByteOffset has a value.
-  llvm::Optional<uint64_t> FirstByteOffset;
+class FormattedBytes {
+  ArrayRef<uint8_t> Bytes;
+
+  // If not None, display offsets for each line relative to starting value.
+  Optional<uint64_t> FirstByteOffset;
+  uint32_t IndentLevel;  // Number of characters to indent each line.
   uint32_t NumPerLine;   // Number of bytes to show per line.
   uint8_t ByteGroupSize; // How many hex bytes are grouped without spaces
   bool Upper;            // Show offset and hex bytes as upper case.
@@ -214,26 +216,31 @@ class FormattedHexBytes {
   friend class raw_ostream;
 
 public:
-  FormattedHexBytes(llvm::ArrayRef<uint8_t> B, llvm::Optional<uint64_t> O,
-                    uint32_t NPL, uint8_t BGS, bool U, bool A)
-      : Bytes(B), FirstByteOffset(O), NumPerLine(NPL), ByteGroupSize(BGS),
-        Upper(U), ASCII(A) {}
+  FormattedBytes(ArrayRef<uint8_t> B, uint32_t IL, Optional<uint64_t> O,
+                 uint32_t NPL, uint8_t BGS, bool U, bool A)
+      : Bytes(B), FirstByteOffset(O), IndentLevel(IL), NumPerLine(NPL),
+        ByteGroupSize(BGS), Upper(U), ASCII(A) {
+
+    if (ByteGroupSize > NumPerLine)
+      ByteGroupSize = NumPerLine;
+  }
 };
 
-inline FormattedHexBytes format_hex_bytes(
-    llvm::ArrayRef<uint8_t> Bytes,
-    llvm::Optional<uint64_t> FirstByteOffset = llvm::Optional<uint64_t>(),
-    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
-  return FormattedHexBytes(Bytes, FirstByteOffset, NumPerLine, ByteGroupSize,
-                           false /*Upper*/, false /*ASCII*/);
+inline FormattedBytes
+format_bytes(ArrayRef<uint8_t> Bytes, Optional<uint64_t> FirstByteOffset = None,
+             uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4,
+             uint32_t IndentLevel = 0, bool Upper = false) {
+  return FormattedBytes(Bytes, IndentLevel, FirstByteOffset, NumPerLine,
+                        ByteGroupSize, Upper, false);
 }
 
-inline FormattedHexBytes format_hex_bytes_with_ascii(
-    llvm::ArrayRef<uint8_t> Bytes,
-    llvm::Optional<uint64_t> FirstByteOffset = llvm::Optional<uint64_t>(),
-    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
-  return FormattedHexBytes(Bytes, FirstByteOffset, NumPerLine, ByteGroupSize,
-                           false /*Upper*/, true /*ASCII*/);
+inline FormattedBytes
+format_bytes_with_ascii(ArrayRef<uint8_t> Bytes,
+                        Optional<uint64_t> FirstByteOffset = None,
+                        uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4,
+                        uint32_t IndentLevel = 0, bool Upper = false) {
+  return FormattedBytes(Bytes, IndentLevel, FirstByteOffset, NumPerLine,
+                        ByteGroupSize, Upper, true);
 }
 
 } // end namespace llvm

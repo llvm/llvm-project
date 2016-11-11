@@ -1474,8 +1474,6 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
 
   bool Timing = OptTiming, TimingDetail = Timing && OptTimingDetail;
   bool Changed = false;
-  TimerGroup __G("hexinsert");
-  NamedRegionTimer __T("hexinsert", Timing && !TimingDetail);
 
   // Sanity check: one, but not both.
   assert(!OptSelectAll0 || !OptSelectHas0);

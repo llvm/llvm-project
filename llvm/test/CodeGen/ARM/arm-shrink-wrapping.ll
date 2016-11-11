@@ -644,6 +644,7 @@ declare double @llvm.pow.f64(double, double)
 ; CHECK: push
 ;
 ; DISABLE: tst{{(\.w)?}}  r2, #1
+; DISABLE-NEXT: vst1.64
 ; DISABLE-NEXT: beq      [[BB13:LBB[0-9_]+]]
 ;
 ; CHECK: bl{{x?}} _pow

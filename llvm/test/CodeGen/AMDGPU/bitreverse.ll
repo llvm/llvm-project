@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=FUNC %s
 
 declare i16 @llvm.bitreverse.i16(i16) #1
 declare i32 @llvm.bitreverse.i32(i32) #1
@@ -12,7 +13,7 @@ declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) #1
 declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #1
 
 ; FUNC-LABEL: {{^}}s_brev_i16:
-; SI: s_brev_b32
+; SI: s_brev_b32 
 define void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) #0 {
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
   store i16 %brev, i16 addrspace(1)* %out

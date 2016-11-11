@@ -29,8 +29,8 @@ exit:
 define void @f2(i8 *%src) {
 ; CHECK-LABEL: f2:
 ; CHECK: llc [[REG:%r[0-5]]], 0(%r2)
-; CHECK: mvi 0(%r2), 0
 ; CHECK: tmll [[REG]], 1
+; CHECK: mvi 0(%r2), 0
 ; CHECK: ber %r14
 ; CHECK: br %r14
 entry:

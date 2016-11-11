@@ -213,8 +213,8 @@ END:
 ;CHECK: image_sample
 ;CHECK: s_and_b64 exec, exec, [[ORIG]]
 ;CHECK: image_sample
-;CHECK: store
 ;CHECK: v_cmp
+;CHECK: store
 define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, i32 %coord) {
 main_body:
   %tex = call <4 x float> @llvm.SI.image.sample.i32(i32 %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)

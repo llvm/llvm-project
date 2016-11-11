@@ -364,7 +364,8 @@ class ZExtOperator : public ConcreteOperator<Operator, Instruction::ZExt> {};
 class GEPOperator
   : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
   enum {
-    IsInBounds = (1 << 0)
+    IsInBounds = (1 << 0),
+    // InRangeIndex: bits 1-6
   };
 
   friend class GetElementPtrInst;
@@ -378,6 +379,12 @@ public:
   /// Test whether this is an inbounds GEP, as defined by LangRef.html.
   bool isInBounds() const {
     return SubclassOptionalData & IsInBounds;
+  }
+  /// Returns the offset of the index with an inrange attachment, or None if
+  /// none.
+  Optional<unsigned> getInRangeIndex() const {
+    if (SubclassOptionalData >> 1 == 0) return None;
+    return (SubclassOptionalData >> 1) - 1;
   }
 
   inline op_iterator       idx_begin()       { return op_begin()+1; }

@@ -1,4 +1,4 @@
-//===-- llvm/Bitcode/ReaderWriter.h - Bitcode reader/writers ----*- C++ -*-===//
+//===-- llvm/Bitcode/BitcodeReader.h - Bitcode reader ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,35 +7,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header defines interfaces to read and write LLVM bitcode files/streams.
+// This header defines interfaces to read LLVM bitcode files/streams.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITCODE_READERWRITER_H
-#define LLVM_BITCODE_READERWRITER_H
+#ifndef LLVM_BITCODE_BITCODEREADER_H
+#define LLVM_BITCODE_BITCODEREADER_H
 
+#include "llvm/Bitcode/BitCodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
-#include <string>
 
 namespace llvm {
-  class BitstreamWriter;
   class LLVMContext;
   class Module;
-  class ModulePass;
-  class raw_ostream;
-
-  /// Offsets of the 32-bit fields of bitcode wrapper header.
-  static const unsigned BWH_MagicField = 0*4;
-  static const unsigned BWH_VersionField = 1*4;
-  static const unsigned BWH_OffsetField = 2*4;
-  static const unsigned BWH_SizeField = 3*4;
-  static const unsigned BWH_CPUTypeField = 4*4;
-  static const unsigned BWH_HeaderSize = 5*4;
 
   /// Read the header of the specified bitcode buffer and prepare for lazy
   /// deserialization of function bodies. If ShouldLazyLoadMetadata is true,
@@ -82,34 +71,6 @@ namespace llvm {
   ErrorOr<std::unique_ptr<ModuleSummaryIndex>>
   getModuleSummaryIndex(MemoryBufferRef Buffer,
                         const DiagnosticHandlerFunction &DiagnosticHandler);
-
-  /// \brief Write the specified module to the specified raw output stream.
-  ///
-  /// For streams where it matters, the given stream should be in "binary"
-  /// mode.
-  ///
-  /// If \c ShouldPreserveUseListOrder, encode the use-list order for each \a
-  /// Value in \c M.  These will be reconstructed exactly when \a M is
-  /// deserialized.
-  ///
-  /// If \c Index is supplied, the bitcode will contain the summary index
-  /// (currently for use in ThinLTO optimization).
-  ///
-  /// \p GenerateHash enables hashing the Module and including the hash in the
-  /// bitcode (currently for use in ThinLTO incremental build).
-  void WriteBitcodeToFile(const Module *M, raw_ostream &Out,
-                          bool ShouldPreserveUseListOrder = false,
-                          const ModuleSummaryIndex *Index = nullptr,
-                          bool GenerateHash = false);
-
-  /// Write the specified module summary index to the given raw output stream,
-  /// where it will be written in a new bitcode block. This is used when
-  /// writing the combined index file for ThinLTO. When writing a subset of the
-  /// index for a distributed backend, provide the \p ModuleToSummariesForIndex
-  /// map.
-  void WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out,
-                        const std::map<std::string, GVSummaryMapTy>
-                            *ModuleToSummariesForIndex = nullptr);
 
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes
   /// for an LLVM IR bitcode wrapper.

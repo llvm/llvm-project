@@ -27,45 +27,18 @@ void ScopedPrinter::printBinaryImpl(StringRef Label, StringRef Str,
 
   if (Block) {
     startLine() << Label;
-    if (Str.size() > 0)
+    if (!Str.empty())
       OS << ": " << Str;
     OS << " (\n";
-    for (size_t addr = 0, end = Data.size(); addr < end; addr += 16) {
-      startLine() << format("  %04" PRIX64 ": ", uint64_t(addr));
-      // Dump line of hex.
-      for (size_t i = 0; i < 16; ++i) {
-        if (i != 0 && i % 4 == 0)
-          OS << ' ';
-        if (addr + i < end)
-          OS << hexdigit((Data[addr + i] >> 4) & 0xF, false)
-             << hexdigit(Data[addr + i] & 0xF, false);
-        else
-          OS << "  ";
-      }
-      // Print ascii.
-      OS << "  |";
-      for (std::size_t i = 0; i < 16 && addr + i < end; ++i) {
-        if (std::isprint(Data[addr + i] & 0xFF))
-          OS << Data[addr + i];
-        else
-          OS << ".";
-      }
-      OS << "|\n";
-    }
-
+    if (!Data.empty())
+      OS << format_bytes_with_ascii(Data, 0, 16, 4, (IndentLevel + 1) * 2, true)
+         << "\n";
     startLine() << ")\n";
   } else {
     startLine() << Label << ":";
-    if (Str.size() > 0)
+    if (!Str.empty())
       OS << " " << Str;
-    OS << " (";
-    for (size_t i = 0; i < Data.size(); ++i) {
-      if (i > 0)
-        OS << " ";
-
-      OS << format("%02X", static_cast<int>(Data[i]));
-    }
-    OS << ")\n";
+    OS << " (" << format_bytes(Data, None, Data.size(), 1, 0, true) << ")\n";
   }
 }
 

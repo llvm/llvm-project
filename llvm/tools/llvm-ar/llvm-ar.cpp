@@ -423,7 +423,7 @@ static void performReadOperation(ArchiveOperation Operation,
 
   bool Filter = !Members.empty();
   {
-    Error Err;
+    Error Err = Error::success();
     for (auto &C : OldArchive->children(Err)) {
       Expected<StringRef> NameOrErr = C.getName();
       failIfError(NameOrErr.takeError());
@@ -551,7 +551,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   int InsertPos = -1;
   StringRef PosName = sys::path::filename(RelPos);
   if (OldArchive) {
-    Error Err;
+    Error Err = Error::success();
     for (auto &Child : OldArchive->children(Err)) {
       int Pos = Ret.size();
       Expected<StringRef> NameOrErr = Child.getName();
@@ -723,7 +723,7 @@ static int performOperation(ArchiveOperation Operation,
     fail("error opening '" + ArchiveName + "': " + EC.message() + "!");
 
   if (!EC) {
-    Error Err;
+    Error Err = Error::success();
     object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
     EC = errorToErrorCode(std::move(Err));
     failIfError(EC,
@@ -785,7 +785,7 @@ static void runMRIScript() {
       Archives.push_back(std::move(*LibOrErr));
       object::Archive &Lib = *Archives.back();
       {
-        Error Err;
+        Error Err = Error::success();
         for (auto &Member : Lib.children(Err))
           addMember(NewMembers, Member);
         failIfError(std::move(Err));

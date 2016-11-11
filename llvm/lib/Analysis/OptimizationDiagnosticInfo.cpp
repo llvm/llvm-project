@@ -80,7 +80,8 @@ template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
 
     // These are read-only for now.
     DebugLoc DL = OptDiag->getDebugLoc();
-    StringRef FN = OptDiag->getFunction().getName();
+    StringRef FN = GlobalValue::getRealLinkageName(
+        OptDiag->getFunction().getName());
 
     StringRef PassName(OptDiag->PassName);
     io.mapRequired("Pass", PassName);

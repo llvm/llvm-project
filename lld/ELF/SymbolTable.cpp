@@ -21,7 +21,6 @@
 #include "Memory.h"
 #include "SymbolListFile.h"
 #include "Symbols.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 
 using namespace llvm;
 using namespace llvm::object;

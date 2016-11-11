@@ -116,14 +116,19 @@ ret:
 ; OPT: store
 ; OPT: ret
 
+; For GFX8: since i16 is legal type, we cannot sink lshr into BBs.
 
 ; GCN-LABEL: {{^}}sink_ubfe_i16:
 ; GCN-NOT: lshr
+; VI: s_bfe_u32 s0, s0, 0xc0004
 ; GCN: s_cbranch_vccnz
 
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
+; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
+; VI: s_and_b32 s0, s0, 0xff
+
 ; GCN: BB2_2:
-; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
+; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
+; VI: s_and_b32 s0, s0, 0x7f
 
 ; GCN: BB2_3:
 ; GCN: buffer_store_short

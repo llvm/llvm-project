@@ -22,13 +22,16 @@
 #define LLVM_SUPPORT_ALLOCATOR_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Memory.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
+#include <iterator>
+#include <type_traits>
+#include <utility>
 
 namespace llvm {
 
@@ -113,7 +116,8 @@ namespace detail {
 // printing code uses Allocator.h in its implementation.
 void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
                                 size_t TotalMemory);
-} // End namespace detail.
+
+} // end namespace detail
 
 /// \brief Allocate memory in an ever growing pool, as if by bump-pointer.
 ///
@@ -365,7 +369,7 @@ template <typename T> class SpecificBumpPtrAllocator {
   BumpPtrAllocator Allocator;
 
 public:
-  SpecificBumpPtrAllocator() : Allocator() {}
+  SpecificBumpPtrAllocator() = default;
   SpecificBumpPtrAllocator(SpecificBumpPtrAllocator &&Old)
       : Allocator(std::move(Old.Allocator)) {}
   ~SpecificBumpPtrAllocator() { DestroyAll(); }
@@ -409,7 +413,7 @@ public:
   T *Allocate(size_t num = 1) { return Allocator.Allocate<T>(num); }
 };
 
-}  // end namespace llvm
+} // end namespace llvm
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold>
 void *operator new(size_t Size,

@@ -56,9 +56,9 @@ bb5:                                              ; preds = %bb, %entry
 define i32 @test_inlineasm(i32 %a) nounwind {
 entry:
 ;CHECK-LABEL:      test_inlineasm:
+;CHECK: cmp
 ;CHECK:      sethi
 ;CHECK:      !NO_APP
-;CHECK-NEXT: cmp
 ;CHECK-NEXT: ble
 ;CHECK-NEXT: mov
   tail call void asm sideeffect "sethi 0, %g0", ""() nounwind
