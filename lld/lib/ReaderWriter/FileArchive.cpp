@@ -79,7 +79,7 @@ public:
   parseAllMembers(std::vector<std::unique_ptr<File>> &result) override {
     if (std::error_code ec = parse())
       return ec;
-    llvm::Error err;
+    llvm::Error err = llvm::Error::success();
     for (auto mf = _archive->child_begin(err), me = _archive->child_end();
          mf != me; ++mf) {
       std::unique_ptr<File> file;
@@ -122,7 +122,7 @@ public:
 protected:
   std::error_code doParse() override {
     // Make Archive object which will be owned by FileArchive object.
-    llvm::Error Err;
+    llvm::Error Err = llvm::Error::success();
     _archive.reset(new Archive(_mb->getMemBufferRef(), Err));
     if (Err)
       return errorToErrorCode(std::move(Err));

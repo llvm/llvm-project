@@ -218,7 +218,7 @@ public:
   llvm::Error perform(SimpleFile &mergedFile) override {
     // Skip this pass if output format uses text relocations instead of stubs.
     if (!this->noTextRelocs())
-      return llvm::Error();
+      return llvm::Error::success();
 
     // Scan all references in all atoms.
     for (const DefinedAtom *atom : mergedFile.defined()) {
@@ -245,7 +245,7 @@ public:
 
     // Exit early if no stubs needed.
     if (_targetToUses.empty())
-      return llvm::Error();
+      return llvm::Error::success();
 
     // First add help-common and GOT slots used by lazy binding.
     SimpleDefinedAtom *helperCommonAtom =
@@ -323,7 +323,7 @@ public:
       lazyOffset += target->name().size() + 12;
     }
 
-    return llvm::Error();
+    return llvm::Error::success();
   }
 
 private:

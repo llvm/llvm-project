@@ -107,7 +107,7 @@ void MachOUniversalBinary::anchor() { }
 
 Expected<std::unique_ptr<MachOUniversalBinary>>
 MachOUniversalBinary::create(MemoryBufferRef Source) {
-  Error Err;
+  Error Err = Error::success();
   std::unique_ptr<MachOUniversalBinary> Ret(
       new MachOUniversalBinary(Source, Err));
   if (Err)

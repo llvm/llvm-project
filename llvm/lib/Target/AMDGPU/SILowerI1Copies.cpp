@@ -121,31 +121,11 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &MF) {
           }
         }
 
-        // If there are uses which are just a copy back from this new VReg_1
-        // to another SGPR_64 just forward propagate original SGPR_64.
-        SmallVector<MachineInstr *, 4> RegUses;
-        for (auto &Use : MRI.use_instructions(Dst.getReg()))
-          if (Use.isFullCopy())
-            RegUses.push_back(&Use);
-
-        while (!RegUses.empty()) {
-          MachineInstr *Use = RegUses.pop_back_val();
-          if (Use->getOperand(1).getReg() == Dst.getReg()) {
-            unsigned RegCopy = Use->getOperand(0).getReg();
-            if (!TargetRegisterInfo::isVirtualRegister(RegCopy))
-              continue;
-            Use->eraseFromParent();
-            MRI.replaceRegWith(RegCopy, Src.getReg());
-          }
-        }
-
-        if (!MRI.use_empty(Dst.getReg()))
-          BuildMI(MBB, &MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64))
-            .addOperand(Dst)
-            .addImm(0)
-            .addImm(-1)
-            .addOperand(Src);
-
+        BuildMI(MBB, &MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64))
+          .addOperand(Dst)
+          .addImm(0)
+          .addImm(-1)
+          .addOperand(Src);
         MI.eraseFromParent();
       } else if (TRI->getCommonSubClass(DstRC, &AMDGPU::SGPR_64RegClass) &&
                  SrcRC == &AMDGPU::VReg_1RegClass) {

@@ -50,3 +50,11 @@
 // CHECK: [[@LINE+1]]:1 | instance-method(IB)/ObjC | doIt | c:objc(cs)IBCls(im)doIt | -[IBCls doIt] | Decl,Dyn,RelChild | rel: 1
 -(IBAction)doIt;
 @end
+
+
+#define GKInspectable __attribute__((annotate("gk_inspectable")))
+
+@interface GKI
+// CHECK: [[@LINE+1]]:40 | instance-property(GKI)/ObjC | gkIntProp | c:objc(cs)GKI(py)gkIntProp | <no-cgname> | Decl,RelChild | rel: 1
+@property (readonly) GKInspectable int gkIntProp;
+@end

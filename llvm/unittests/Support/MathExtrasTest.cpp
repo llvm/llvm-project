@@ -165,6 +165,18 @@ TEST(MathExtras, isPowerOf2_64) {
   EXPECT_FALSE(isPowerOf2_64(0xABCDEF0ABCDEF0LL));
 }
 
+TEST(MathExtras, PowerOf2Ceil) {
+  EXPECT_EQ(0U, PowerOf2Ceil(0U));
+  EXPECT_EQ(8U, PowerOf2Ceil(8U));
+  EXPECT_EQ(8U, PowerOf2Ceil(7U));
+}
+
+TEST(MathExtras, PowerOf2Floor) {
+  EXPECT_EQ(0U, PowerOf2Floor(0U));
+  EXPECT_EQ(8U, PowerOf2Floor(8U));
+  EXPECT_EQ(4U, PowerOf2Floor(7U));
+}
+
 TEST(MathExtras, ByteSwap_32) {
   EXPECT_EQ(0x44332211u, ByteSwap_32(0x11223344));
   EXPECT_EQ(0xDDCCBBAAu, ByteSwap_32(0xAABBCCDD));

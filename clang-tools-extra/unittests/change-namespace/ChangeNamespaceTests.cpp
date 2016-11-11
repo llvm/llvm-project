@@ -97,6 +97,48 @@ TEST_F(ChangeNamespaceTest, SimpleMoveWithoutTypeRefs) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, NewNsNestedInOldNs) {
+  NewNamespace = "na::nb::nc";
+  std::string Code = "namespace na {\n"
+                     "namespace nb {\n"
+                     "class A {};\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "namespace nb {\n"
+                         "namespace nc {\n"
+                         "class A {};\n"
+                         "} // namespace nc\n"
+                         "\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, NewNsNestedInOldNsWithRefs) {
+  NewNamespace = "na::nb::nc";
+  std::string Code = "namespace na {\n"
+                     "class A {};\n"
+                     "namespace nb {\n"
+                     "class B {};\n"
+                     "class C {};\n"
+                     "void f() { A a; B b; }\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "class A {};\n"
+                         "namespace nb {\n"
+                         "namespace nc {\n"
+                         "class B {};\n"
+                         "class C {};\n"
+                         "void f() { A a; B b; }\n"
+                         "} // namespace nc\n"
+                         "\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 TEST_F(ChangeNamespaceTest, SimpleMoveIntoAnotherNestedNamespace) {
   NewNamespace = "na::nc";
   std::string Code = "namespace na {\n"

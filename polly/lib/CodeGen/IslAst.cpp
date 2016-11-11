@@ -63,7 +63,7 @@ static cl::opt<bool> PollyParallelForce(
 
 static cl::opt<bool> UseContext("polly-ast-use-context",
                                 cl::desc("Use context"), cl::Hidden,
-                                cl::init(false), cl::ZeroOrMore,
+                                cl::init(true), cl::ZeroOrMore,
                                 cl::cat(PollyCategory));
 
 static cl::opt<bool> DetectParallel("polly-ast-detect-parallel",

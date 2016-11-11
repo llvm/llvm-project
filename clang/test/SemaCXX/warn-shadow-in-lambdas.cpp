@@ -5,12 +5,48 @@
 void foo(int param) { // expected-note 1+ {{previous declaration is here}}
   int var = 0; // expected-note 1+ {{previous declaration is here}}
 
-  // Warn for lambdas with a default capture specifier.
+  // Avoid warnings for variables that aren't implicitly captured.
   {
+#ifdef AVOID
+    auto f1 = [=] { int var = 1; };  // no warning
+    auto f2 = [&] { int var = 2; };  // no warning
+    auto f3 = [=] (int param) { ; }; // no warning
+    auto f4 = [&] (int param) { ; }; // no warning
+#else
     auto f1 = [=] { int var = 1; };  // expected-warning {{declaration shadows a local variable}}
     auto f2 = [&] { int var = 2; };  // expected-warning {{declaration shadows a local variable}}
     auto f3 = [=] (int param) { ; }; // expected-warning {{declaration shadows a local variable}}
     auto f4 = [&] (int param) { ; }; // expected-warning {{declaration shadows a local variable}}
+#endif
+  }
+
+  // Warn for variables that are implicitly captured.
+  {
+    auto f1 = [=] () {
+      {
+        int var = 1; // expected-warning {{declaration shadows a local variable}}
+      }
+      int x = var; // expected-note {{variable 'var' is captured here}}
+    };
+    auto f2 = [&]
+#ifdef AVOID
+      (int param) {
+#else
+      (int param) { // expected-warning {{declaration shadows a local variable}}
+#endif
+      int x = var; // expected-note {{variable 'var' is captured here}}
+      int var = param; // expected-warning {{declaration shadows a local variable}}
+    };
+  }
+
+  // Warn for variables that are explicitly captured when a lambda has a default
+  // capture specifier.
+  {
+    auto f1 = [=, &var] () { // expected-note {{variable 'var' is captured here}}
+      int x = param; // expected-note {{variable 'param' is captured here}}
+      int var = 0; // expected-warning {{declaration shadows a local variable}}
+      int param = 0; // expected-warning {{declaration shadows a local variable}}
+    };
   }
 
   // Warn normally inside of lambdas.
@@ -72,20 +108,32 @@ void foo(int param) { // expected-note 1+ {{previous declaration is here}}
     };
 #ifdef AVOID
     auto f1 = [] { int var = 1; }; // no warning
+    auto f2 = [=] { int var = 1; }; // no warning
 #else
     auto f1 = [] { int var = 1; }; // expected-warning {{declaration shadows a local variable}}
-#endif
     auto f2 = [=] { int var = 1; }; // expected-warning {{declaration shadows a local variable}}
+#endif
     auto f3 = [var] // expected-note {{variable 'var' is explicitly captured here}}
       { int var = 1; }; // expected-warning {{declaration shadows a local variable}}
+    auto f4 = [&] {
+      int x = var; // expected-note {{variable 'var' is captured here}}
+      int var = 2; // expected-warning {{declaration shadows a local variable}}
+    };
+  };
+  auto l6 = [&] {
+    auto f1 = [param] { // expected-note {{variable 'param' is explicitly captured here}}
+      int param = 0; // expected-warning {{declaration shadows a local variable}}
+    };
   };
 
   // Generic lambda arguments should work.
 #ifdef AVOID
   auto g1 = [](auto param) { ; }; // no warning
+  auto g2 = [=](auto param) { ; }; // no warning
 #else
   auto g1 = [](auto param) { ; }; // expected-warning {{declaration shadows a local variable}}
+  auto g2 = [=](auto param) { ; }; // expected-warning {{declaration shadows a local variable}}
 #endif
-  auto g2 = [param] // expected-note {{variable 'param' is explicitly captured here}}
+  auto g3 = [param] // expected-note {{variable 'param' is explicitly captured here}}
    (auto param) { ; }; // expected-warning {{declaration shadows a local variable}}
 }

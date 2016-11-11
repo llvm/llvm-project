@@ -542,7 +542,7 @@ static void printFileSectionSizes(StringRef file) {
 
   if (Archive *a = dyn_cast<Archive>(&Bin)) {
     // This is an archive. Iterate over each member and display its sizes.
-    Error Err;
+    Error Err = Error::success();
     for (auto &C : a->children(Err)) {
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
@@ -611,7 +611,7 @@ static void printFileSectionSizes(StringRef file) {
               std::unique_ptr<Archive> &UA = *AOrErr;
               // This is an archive. Iterate over each member and display its
               // sizes.
-              Error Err;
+              Error Err = Error::success();
               for (auto &C : UA->children(Err)) {
                 Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
                 if (!ChildOrErr) {
@@ -700,7 +700,7 @@ static void printFileSectionSizes(StringRef file) {
             std::unique_ptr<Archive> &UA = *AOrErr;
             // This is an archive. Iterate over each member and display its
             // sizes.
-            Error Err;
+            Error Err = Error::success();
             for (auto &C : UA->children(Err)) {
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
               if (!ChildOrErr) {
@@ -775,7 +775,7 @@ static void printFileSectionSizes(StringRef file) {
                          I->getAsArchive()) {
         std::unique_ptr<Archive> &UA = *AOrErr;
         // This is an archive. Iterate over each member and display its sizes.
-        Error Err;
+        Error Err = Error::success();
         for (auto &C : UA->children(Err)) {
           Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
           if (!ChildOrErr) {

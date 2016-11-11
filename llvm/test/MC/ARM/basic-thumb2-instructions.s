@@ -886,6 +886,7 @@ _func:
         ldr.w r5, _foo
         ldr   lr, (_strcmp-4)
         ldr sp, _foo
+        ldr pc, _foo
 
 @ CHECK: ldr.w	r5, _foo                @ encoding: [0x5f'A',0xf8'A',A,0x50'A']
 @ CHECK: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
@@ -898,6 +899,10 @@ _func:
 @ CHECK: ldr.w sp, _foo                 @ encoding: [0x5f'A',0xf8'A',A,0xd0'A']
 @ CHECK: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
 @ CHECK-BE: ldr.w sp, _foo                 @ encoding: [0xf8'A',0x5f'A',0xd0'A',A]
+@ CHECK-BE: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
+@ CHECK: ldr.w pc, _foo                 @ encoding: [0x5f'A',0xf8'A',A,0xf0'A']
+@ CHECK: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
+@ CHECK-BE: ldr.w pc, _foo                 @ encoding: [0xf8'A',0x5f'A',0xf0'A',A]
 @ CHECK-BE: @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
 
         ldr r7, [pc, #8]

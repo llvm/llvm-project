@@ -198,23 +198,14 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   DebugLoc Loc = Builder.GetInsertPoint()->getDebugLoc();
   SCEVInsertPointGuard Guard(Builder, this);
 
-  auto *RHSConst = dyn_cast<ConstantInt>(RHS);
+  // Move the insertion point out of as many loops as we can.
+  while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
+    if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS)) break;
+    BasicBlock *Preheader = L->getLoopPreheader();
+    if (!Preheader) break;
 
-  if (Opcode != Instruction::UDiv || (RHSConst && !RHSConst->isZero())) {
-    // FIXME: There is alredy similar logic in expandCodeFor, we should see if
-    // this is actually needed here.
-
-    // Move the insertion point out of as many loops as we can.
-    while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
-      if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS))
-        break;
-      BasicBlock *Preheader = L->getLoopPreheader();
-      if (!Preheader)
-        break;
-
-      // Ok, move up a level.
-      Builder.SetInsertPoint(Preheader->getTerminator());
-    }
+    // Ok, move up a level.
+    Builder.SetInsertPoint(Preheader->getTerminator());
   }
 
   // If we haven't found this binop, insert it.
@@ -1672,34 +1663,31 @@ Value *SCEVExpander::expand(const SCEV *S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
   Instruction *InsertPt = &*Builder.GetInsertPoint();
-  if (!isa<SCEVUDivExpr>(S)) {
-    for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
-         L = L->getParentLoop())
-      if (SE.isLoopInvariant(S, L)) {
-        if (!L)
-          break;
-        if (BasicBlock *Preheader = L->getLoopPreheader())
-          InsertPt = Preheader->getTerminator();
-        else {
-          // LSR sets the insertion point for AddRec start/step values to the
-          // block start to simplify value reuse, even though it's an invalid
-          // position. SCEVExpander must correct for this in all cases.
-          InsertPt = &*L->getHeader()->getFirstInsertionPt();
-        }
-      } else {
-        // If the SCEV is computable at this level, insert it into the header
-        // after the PHIs (and after any other instructions that we've inserted
-        // there) so that it is guaranteed to dominate any user inside the loop.
-        if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
-          InsertPt = &*L->getHeader()->getFirstInsertionPt();
-        while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
-               (isInsertedInstruction(InsertPt) ||
-                isa<DbgInfoIntrinsic>(InsertPt))) {
-          InsertPt = &*std::next(InsertPt->getIterator());
-        }
-        break;
+  for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
+       L = L->getParentLoop())
+    if (SE.isLoopInvariant(S, L)) {
+      if (!L) break;
+      if (BasicBlock *Preheader = L->getLoopPreheader())
+        InsertPt = Preheader->getTerminator();
+      else {
+        // LSR sets the insertion point for AddRec start/step values to the
+        // block start to simplify value reuse, even though it's an invalid
+        // position. SCEVExpander must correct for this in all cases.
+        InsertPt = &*L->getHeader()->getFirstInsertionPt();
       }
-  }
+    } else {
+      // If the SCEV is computable at this level, insert it into the header
+      // after the PHIs (and after any other instructions that we've inserted
+      // there) so that it is guaranteed to dominate any user inside the loop.
+      if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
+        InsertPt = &*L->getHeader()->getFirstInsertionPt();
+      while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
+             (isInsertedInstruction(InsertPt) ||
+              isa<DbgInfoIntrinsic>(InsertPt))) {
+        InsertPt = &*std::next(InsertPt->getIterator());
+      }
+      break;
+    }
 
   // Check to see if we already expanded this here.
   auto I = InsertedExpressions.find(std::make_pair(S, InsertPt));

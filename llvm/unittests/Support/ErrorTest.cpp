@@ -82,12 +82,14 @@ protected:
 
 char CustomSubError::ID = 0;
 
-static Error handleCustomError(const CustomError &CE) { return Error(); }
+static Error handleCustomError(const CustomError &CE) {
+  return Error::success();
+}
 
 static void handleCustomErrorVoid(const CustomError &CE) {}
 
 static Error handleCustomErrorUP(std::unique_ptr<CustomError> CE) {
-  return Error();
+  return Error::success();
 }
 
 static void handleCustomErrorUPVoid(std::unique_ptr<CustomError> CE) {}
@@ -95,14 +97,15 @@ static void handleCustomErrorUPVoid(std::unique_ptr<CustomError> CE) {}
 // Test that success values implicitly convert to false, and don't cause crashes
 // once they've been implicitly converted.
 TEST(Error, CheckedSuccess) {
-  Error E;
+  Error E = Error::success();
   EXPECT_FALSE(E) << "Unexpected error while testing Error 'Success'";
 }
 
 // Test that unchecked succes values cause an abort.
 #ifndef NDEBUG
 TEST(Error, UncheckedSuccess) {
-  EXPECT_DEATH({ Error E; }, "Program aborted due to an unhandled Error:")
+  EXPECT_DEATH({ Error E = Error::success(); },
+               "Program aborted due to an unhandled Error:")
       << "Unchecked Error Succes value did not cause abort()";
 }
 #endif
@@ -119,7 +122,7 @@ void errAsOutParamHelper(Error &Err) {
 
 // Test that ErrorAsOutParameter sets the checked flag on construction.
 TEST(Error, ErrorAsOutParameterChecked) {
-  Error E;
+  Error E = Error::success();
   errAsOutParamHelper(E);
   (void)!!E;
 }
@@ -127,7 +130,7 @@ TEST(Error, ErrorAsOutParameterChecked) {
 // Test that ErrorAsOutParameter clears the checked flag on destruction.
 #ifndef NDEBUG
 TEST(Error, ErrorAsOutParameterUnchecked) {
-  EXPECT_DEATH({ Error E; errAsOutParamHelper(E); },
+  EXPECT_DEATH({ Error E = Error::success(); errAsOutParamHelper(E); },
                "Program aborted due to an unhandled Error:")
       << "ErrorAsOutParameter did not clear the checked flag on destruction.";
 }
@@ -195,31 +198,31 @@ TEST(Error, HandlerTypeDeduction) {
 
   handleAllErrors(
       make_error<CustomError>(42),
-      [](const CustomError &CE) mutable { return Error::success(); });
+      [](const CustomError &CE) mutable  -> Error { return Error::success(); });
 
   handleAllErrors(make_error<CustomError>(42),
                   [](const CustomError &CE) mutable {});
 
   handleAllErrors(make_error<CustomError>(42),
-                  [](CustomError &CE) { return Error::success(); });
+                  [](CustomError &CE) -> Error { return Error::success(); });
 
   handleAllErrors(make_error<CustomError>(42), [](CustomError &CE) {});
 
   handleAllErrors(make_error<CustomError>(42),
-                  [](CustomError &CE) mutable { return Error::success(); });
+                  [](CustomError &CE) mutable -> Error { return Error::success(); });
 
   handleAllErrors(make_error<CustomError>(42), [](CustomError &CE) mutable {});
 
   handleAllErrors(
       make_error<CustomError>(42),
-      [](std::unique_ptr<CustomError> CE) { return Error::success(); });
+      [](std::unique_ptr<CustomError> CE) -> Error { return Error::success(); });
 
   handleAllErrors(make_error<CustomError>(42),
                   [](std::unique_ptr<CustomError> CE) {});
 
   handleAllErrors(
       make_error<CustomError>(42),
-      [](std::unique_ptr<CustomError> CE) mutable { return Error::success(); });
+      [](std::unique_ptr<CustomError> CE) mutable -> Error { return Error::success(); });
 
   handleAllErrors(make_error<CustomError>(42),
                   [](std::unique_ptr<CustomError> CE) mutable {});
@@ -363,7 +366,7 @@ TEST(Error, CheckJoinErrors) {
 
 // Test that we can consume success values.
 TEST(Error, ConsumeSuccess) {
-  Error E;
+  Error E = Error::success();
   consumeError(std::move(E));
 }
 

@@ -71,7 +71,7 @@ public:
                          std::unique_ptr<MCStreamer> Streamer);
 
   StringRef getPassName() const override {
-    return "ARM Assembly / Object Emitter";
+    return "ARM Assembly Printer";
   }
 
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);

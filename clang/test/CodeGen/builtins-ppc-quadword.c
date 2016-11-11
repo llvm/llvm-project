@@ -15,6 +15,12 @@ vector signed __int128 vlll = { -1 };
 // CHECK-PPC: error: __int128 is not supported on this target
 vector unsigned __int128 vulll = { 1 };
 
+signed long long param_sll;
+// CHECK-PPC: error: __int128 is not supported on this target
+signed __int128 param_lll;
+// CHECK-PPC: error: __int128 is not supported on this target
+unsigned __int128 param_ulll;
+
 // CHECK-PPC: error: __int128 is not supported on this target
 vector signed __int128 res_vlll;
 // CHECK-PPC: error: __int128 is not supported on this target
@@ -165,4 +171,26 @@ void test1() {
 // CHECK-LE: xor <16 x i8>
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> {{%.+}}, <4 x i32> {{%.+}}, <16 x i8> {{%.+}})
 // CHECK_PPC: error: call to 'vec_revb' is ambiguous
+
+  /* vec_xl */
+  res_vlll = vec_xl(param_sll, &param_lll);
+  // CHECK: load <1 x i128>, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <1 x i128>, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-PPC: error: call to 'vec_xl' is ambiguous
+
+  res_vulll = vec_xl(param_sll, &param_ulll);
+  // CHECK: load <1 x i128>, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-LE: load <1 x i128>, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-PPC: error: call to 'vec_xl' is ambiguous
+
+  /* vec_xst */
+   vec_xst(vlll, param_sll, &param_lll);
+  // CHECK: store <1 x i128> %{{[0-9]+}}, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <1 x i128> %{{[0-9]+}}, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-PPC: error: call to 'vec_xst' is ambiguous
+
+   vec_xst(vulll, param_sll, &param_ulll);
+  // CHECK: store <1 x i128> %{{[0-9]+}}, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-LE: store <1 x i128> %{{[0-9]+}}, <1 x i128>* %{{[0-9]+}}, align 16
+  // CHECK-PPC: error: call to 'vec_xst' is ambiguous
 }

@@ -100,7 +100,7 @@ llvm::Error Resolver::handleSharedLibrary(File &file) {
 
   if (auto ec = undefAddedOrError.takeError())
     return ec;
-  return llvm::Error();
+  return llvm::Error::success();
 }
 
 bool Resolver::doUndefinedAtom(OwningAtomPtr<UndefinedAtom> atom) {

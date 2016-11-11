@@ -94,7 +94,7 @@ class HelpCommandTestCase(TestBase):
         if sys.platform.startswith("darwin"):
             search_regexp = ['lldb-' + (version_str if match else '[0-9]+')]
         else:
-            search_regexp = ['lldb version (\d|\.)+.*$']
+            search_regexp = ['lldb version (\d|\.)+.*\n']
 
         self.expect("version",
                     patterns=search_regexp)

@@ -161,6 +161,14 @@ class LargeMmapAllocator {
     return GetUser(h);
   }
 
+  void EnsureSortedChunks() {
+    if (chunks_sorted_) return;
+    SortArray(reinterpret_cast<uptr*>(chunks_), n_chunks_);
+    for (uptr i = 0; i < n_chunks_; i++)
+      chunks_[i]->chunk_idx = i;
+    chunks_sorted_ = true;
+  }
+
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
   void *GetBlockBeginFastLocked(void *ptr) {
@@ -168,16 +176,10 @@ class LargeMmapAllocator {
     uptr p = reinterpret_cast<uptr>(ptr);
     uptr n = n_chunks_;
     if (!n) return nullptr;
-    if (!chunks_sorted_) {
-      // Do one-time sort. chunks_sorted_ is reset in Allocate/Deallocate.
-      SortArray(reinterpret_cast<uptr*>(chunks_), n);
-      for (uptr i = 0; i < n; i++)
-        chunks_[i]->chunk_idx = i;
-      chunks_sorted_ = true;
-      min_mmap_ = reinterpret_cast<uptr>(chunks_[0]);
-      max_mmap_ = reinterpret_cast<uptr>(chunks_[n - 1]) +
-          chunks_[n - 1]->map_size;
-    }
+    EnsureSortedChunks();
+    auto min_mmap_ = reinterpret_cast<uptr>(chunks_[0]);
+    auto max_mmap_ =
+        reinterpret_cast<uptr>(chunks_[n - 1]) + chunks_[n - 1]->map_size;
     if (p < min_mmap_ || p >= max_mmap_)
       return nullptr;
     uptr beg = 0, end = n - 1;
@@ -230,8 +232,14 @@ class LargeMmapAllocator {
   // Iterate over all existing chunks.
   // The allocator must be locked when calling this function.
   void ForEachChunk(ForEachChunkCallback callback, void *arg) {
-    for (uptr i = 0; i < n_chunks_; i++)
+    EnsureSortedChunks();  // Avoid doing the sort while iterating.
+    for (uptr i = 0; i < n_chunks_; i++) {
+      auto t = chunks_[i];
       callback(reinterpret_cast<uptr>(GetUser(chunks_[i])), arg);
+      // Consistency check: verify that the array did not change.
+      CHECK_EQ(chunks_[i], t);
+      CHECK_EQ(chunks_[i]->chunk_idx, i);
+    }
   }
 
  private:
@@ -263,7 +271,6 @@ class LargeMmapAllocator {
   uptr page_size_;
   Header *chunks_[kMaxNumChunks];
   uptr n_chunks_;
-  uptr min_mmap_, max_mmap_;
   bool chunks_sorted_;
   struct Stats {
     uptr n_allocs, n_frees, currently_allocated, max_allocated, by_size_log[64];

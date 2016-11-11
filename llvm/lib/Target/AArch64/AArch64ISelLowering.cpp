@@ -4644,10 +4644,11 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::getRsqrtEstimate(SDValue Operand,
-                                                SelectionDAG &DAG, int Enabled,
-                                                int &ExtraSteps,
-                                                bool &UseOneConst) const {
+SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
+                                               SelectionDAG &DAG, int Enabled,
+                                               int &ExtraSteps,
+                                               bool &UseOneConst,
+                                               bool Reciprocal) const {
   if (Enabled == ReciprocalEstimate::Enabled ||
       (Enabled == ReciprocalEstimate::Unspecified && Subtarget->useRSqrt()))
     if (SDValue Estimate = getEstimate(Subtarget, AArch64ISD::FRSQRTE, Operand,

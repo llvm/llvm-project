@@ -28,15 +28,15 @@
 // CHECK-NEXT:   Version: 1
 // CHECK-NEXT:   Entry: 0x0
 // CHECK-NEXT:   ProgramHeaderOffset: 0x34
-// CHECK-NEXT:   SectionHeaderOffset: 0x209C
+// CHECK-NEXT:   SectionHeaderOffset: 0x20AC
 // CHECK-NEXT:   Flags [ (0x0)
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   HeaderSize: 52
 // CHECK-NEXT:   ProgramHeaderEntrySize: 32
 // CHECK-NEXT:   ProgramHeaderCount: 7
 // CHECK-NEXT:   SectionHeaderEntrySize: 40
-// CHECK-NEXT:   SectionHeaderCount: 9
-// CHECK-NEXT:   StringTableSectionIndex: 7
+// CHECK-NEXT:   SectionHeaderCount: 10
+// CHECK-NEXT:   StringTableSectionIndex: 8
 // CHECK-NEXT: }
 // CHECK-NEXT: Sections [
 // CHECK-NEXT:   Section {
@@ -151,14 +151,33 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 6
+// CHECK-NEXT:     Name: .comment
+// CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
+// CHECK-NEXT:     Flags [ (0x30)
+// CHECK-NEXT:       SHF_MERGE (0x10)
+// CHECK-NEXT:       SHF_STRINGS (0x20)
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Address: 0x0
+// CHECK-NEXT:     Offset: 0x2030
+// CHECK-NEXT:     Size: 8
+// CHECK-NEXT:     Link: 0
+// CHECK-NEXT:     Info: 0
+// CHECK-NEXT:     AddressAlignment: 1
+// CHECK-NEXT:     EntrySize: 1
+// CHECK-NEXT:     SectionData (
+// CHECK-NEXT:       0000: 4C4C4420 312E3000 |LLD 1.0.|
+// CHECK-NEXT:     )
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Section {
+// CHECK-NEXT:     Index: 7
 // CHECK-NEXT:     Name: .symtab
 // CHECK-NEXT:     Type: SHT_SYMTAB (0x2)
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x2030
+// CHECK-NEXT:     Offset: 0x2038
 // CHECK-NEXT:     Size: 32
-// CHECK-NEXT:     Link: 8
+// CHECK-NEXT:     Link: 9
 // CHECK-NEXT:     Info: 1
 // CHECK-NEXT:     AddressAlignment: 4
 // CHECK-NEXT:     EntrySize: 16
@@ -168,14 +187,14 @@
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
-// CHECK-NEXT:     Index: 7
+// CHECK-NEXT:     Index: 8
 // CHECK-NEXT:     Name: .shstrtab
 // CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x2050
-// CHECK-NEXT:     Size: 64
+// CHECK-NEXT:     Offset: 0x2058
+// CHECK-NEXT:     Size: 73
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 1
@@ -183,18 +202,19 @@
 // CHECK-NEXT:     SectionData (
 // CHECK-NEXT:       0000: 002E6479 6E73796D 002E6861 7368002E  |..dynsym..hash..|
 // CHECK-NEXT:       0010: 64796E73 7472002E 74657874 002E6479  |dynstr..text..dy|
-// CHECK-NEXT:       0020: 6E616D69 63002E73 796D7461 62002E73  |namic..symtab..s|
-// CHECK-NEXT:       0030: 68737472 74616200 2E737472 74616200  |hstrtab..strtab.|
+// CHECK-NEXT:       0020: 6E616D69 63002E63 6F6D6D65 6E74002E  |namic..comment..|
+// CHECK-NEXT:       0030: 73796D74 6162002E 73687374 72746162  |symtab..shstrtab|
+// CHECK-NEXT:       0040: 002E7374 72746162 00                 |..strtab.|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
-// CHECK-NEXT:     Index: 8
+// CHECK-NEXT:     Index: 9
 // CHECK-NEXT:     Name: .strtab
 // CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x2090
+// CHECK-NEXT:     Offset: 0x20A1
 // CHECK-NEXT:     Size: 1
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0

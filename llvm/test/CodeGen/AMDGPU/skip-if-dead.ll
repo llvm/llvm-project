@@ -138,6 +138,7 @@ exit:
 
 ; CHECK-LABEL: {{^}}test_kill_control_flow_remainder:
 ; CHECK: s_cmp_lg_u32 s{{[0-9]+}}, 0
+; CHECK-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; CHECK-NEXT: s_cbranch_scc1 [[RETURN_BB:BB[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ; BB#1: ; %bb

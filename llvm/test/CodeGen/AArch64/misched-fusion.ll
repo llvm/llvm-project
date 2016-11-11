@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -mattr=+arith-cbz-fusion,+use-postra-scheduler | FileCheck %s
+; RUN: llc -o - %s -mattr=+arith-cbz-fusion | FileCheck %s
 ; RUN: llc -o - %s -mcpu=cyclone | FileCheck %s
 
 target triple = "arm64-apple-ios"

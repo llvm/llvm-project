@@ -306,7 +306,17 @@ private:
     FormatToken *Left = CurrentToken->Previous;
     Left->ParentBracket = Contexts.back().ContextKind;
     FormatToken *Parent = Left->getPreviousNonComment();
-    bool StartsObjCMethodExpr =
+
+    // Cases where '>' is followed by '['.
+    // In C++, this can happen either in array of templates (foo<int>[10])
+    // or when array is a nested template type (unique_ptr<type1<type2>[]>).
+    bool CppArrayTemplates =
+        Style.Language == FormatStyle::LK_Cpp && Parent &&
+        Parent->is(TT_TemplateCloser) &&
+        (Contexts.back().CanBeExpression || Contexts.back().IsExpression ||
+         Contexts.back().InTemplateArgument);
+
+    bool StartsObjCMethodExpr = !CppArrayTemplates &&
         Style.Language == FormatStyle::LK_Cpp &&
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         CurrentToken->isNot(tok::l_brace) &&
@@ -327,7 +337,7 @@ private:
                  Parent->isOneOf(tok::l_brace, tok::comma)) {
         Left->Type = TT_JsComputedPropertyName;
       } else if (Style.Language == FormatStyle::LK_Proto ||
-                 (Parent &&
+                 (!CppArrayTemplates && Parent &&
                   Parent->isOneOf(TT_BinaryOperator, TT_TemplateCloser, tok::at,
                                   tok::comma, tok::l_paren, tok::l_square,
                                   tok::question, tok::colon, tok::kw_return,
@@ -2443,6 +2453,18 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
     if (Right.is(Keywords.kw_as))
       return false; // must not break before as in 'x as type' casts
+    if (Left.is(Keywords.kw_declare) &&
+        Right.isOneOf(Keywords.kw_module, tok::kw_namespace,
+                      Keywords.kw_function, tok::kw_class, tok::kw_enum,
+                      Keywords.kw_interface, Keywords.kw_type, Keywords.kw_var,
+                      Keywords.kw_let, tok::kw_const))
+      // See grammar for 'declare' statements at:
+      // https://github.com/Microsoft/TypeScript/blob/master/doc/spec.md#A.10
+      return false;
+    if (Left.isOneOf(Keywords.kw_module, tok::kw_namespace) &&
+        Right.isOneOf(tok::identifier, tok::string_literal)) {
+      return false; // must not break in "module foo { ...}"
+    }
   }
 
   if (Left.is(tok::at))

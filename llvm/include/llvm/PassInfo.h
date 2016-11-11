@@ -15,8 +15,6 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include "llvm/ADT/StringRef.h"
-
 #include <cassert>
 #include <vector>
 

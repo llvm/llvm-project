@@ -80,15 +80,12 @@ static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> &Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
-  ELFFile<ELFT> Obj = Sec.getFile()->getObj();
-  for (const typename ELFT::Shdr *RelSec : Sec.RelocSections) {
-    if (RelSec->sh_type == SHT_RELA) {
-      for (const typename ELFT::Rela &Rel : check(Obj.relas(RelSec)))
-        Fn(resolveReloc(Sec, Rel));
-    } else {
-      for (const typename ELFT::Rel &Rel : check(Obj.rels(RelSec)))
-        Fn(resolveReloc(Sec, Rel));
-    }
+  if (Sec.AreRelocsRela) {
+    for (const typename ELFT::Rela &Rel : Sec.relas())
+      Fn(resolveReloc(Sec, Rel));
+  } else {
+    for (const typename ELFT::Rel &Rel : Sec.rels())
+      Fn(resolveReloc(Sec, Rel));
   }
   if (Sec.DependentSection)
     Fn({Sec.DependentSection, 0});
@@ -146,18 +143,17 @@ template <class ELFT>
 static void
 scanEhFrameSection(EhInputSection<ELFT> &EH,
                    std::function<void(ResolvedReloc<ELFT>)> Enqueue) {
-  if (!EH.RelocSection)
+  if (!EH.NumRelocations)
     return;
 
   // Unfortunately we need to split .eh_frame early since some relocations in
   // .eh_frame keep other section alive and some don't.
   EH.split();
 
-  ELFFile<ELFT> EObj = EH.getFile()->getObj();
-  if (EH.RelocSection->sh_type == SHT_RELA)
-    scanEhFrameSection(EH, check(EObj.relas(EH.RelocSection)), Enqueue);
+  if (EH.AreRelocsRela)
+    scanEhFrameSection(EH, EH.relas(), Enqueue);
   else
-    scanEhFrameSection(EH, check(EObj.rels(EH.RelocSection)), Enqueue);
+    scanEhFrameSection(EH, EH.rels(), Enqueue);
 }
 
 // We do not garbage-collect two types of sections:

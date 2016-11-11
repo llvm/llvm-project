@@ -23,7 +23,7 @@ namespace llvm {
 class format_object_base;
 class FormattedString;
 class FormattedNumber;
-class FormattedHexBytes;
+class FormattedBytes;
 template <typename T> class SmallVectorImpl;
 
 namespace sys {
@@ -223,8 +223,8 @@ public:
   // Formatted output, see the formatHex() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedNumber &);
 
-  // Formatted output, see the formatHex() function in Support/Format.h.
-  raw_ostream &operator<<(const FormattedHexBytes &);
+  // Formatted output, see the format_bytes() function in Support/Format.h.
+  raw_ostream &operator<<(const FormattedBytes &);
 
   /// indent - Insert 'NumSpaces' spaces.
   raw_ostream &indent(unsigned NumSpaces);

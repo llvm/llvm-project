@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
-; RUN: llc < %s -mtriple aarch64_be--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
-; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=kryo -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
+; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple aarch64_be--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=kryo -verify-machineinstrs | FileCheck %s
 
 ; CHECK-LABEL: Strh_zero
 ; CHECK: str wzr

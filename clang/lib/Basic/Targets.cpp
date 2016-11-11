@@ -465,6 +465,8 @@ protected:
       Triple.getEnvironmentVersion(Maj, Min, Rev);
       this->PlatformName = "android";
       this->PlatformMinVersion = VersionTuple(Maj, Min, Rev);
+      if (Maj)
+        Builder.defineMacro("__ANDROID_API__", Twine(Maj));
     }
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");

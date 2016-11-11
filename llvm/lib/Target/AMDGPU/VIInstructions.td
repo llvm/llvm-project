@@ -8,3 +8,7 @@
 //===----------------------------------------------------------------------===//
 // Instruction definitions for VI and newer.
 //===----------------------------------------------------------------------===//
+
+FIXME: Deleting this file broke buildbots that don't do full rebuilds.  This
+file is no longer used by the backend, so it can be deleted once all
+the buildbots update there dependencies.

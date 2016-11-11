@@ -151,7 +151,7 @@ typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
-  return Out<ELFT>::Got->Addr + getGotOffset<ELFT>();
+  return In<ELFT>::Got->getVA() + getGotOffset<ELFT>();
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
@@ -159,7 +159,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
-  return Out<ELFT>::GotPlt->Addr + getGotPltOffset<ELFT>();
+  return In<ELFT>::GotPlt->getVA() + getGotPltOffset<ELFT>();
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltOffset() const {
@@ -280,6 +280,14 @@ void elf::printTraceSymbol(Symbol *Sym) {
   else
     outs() << ": definition of ";
   outs() << B->getName() << "\n";
+}
+
+StringRef elf::getSymbolName(StringRef SymTab, SymbolBody &Body) {
+  if (Body.isLocal() && Body.getNameOffset())
+    return SymTab.data() + Body.getNameOffset();
+  if (!Body.isLocal())
+    return Body.getName();
+  return "";
 }
 
 template bool SymbolBody::hasThunk<ELF32LE>() const;

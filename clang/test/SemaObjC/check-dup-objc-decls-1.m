@@ -35,6 +35,12 @@ void Gorf() // expected-error {{redefinition of 'Gorf' as different kind of symb
 @protocol PP<P> @end  // expected-note {{previous definition is here}}
 @protocol PP<Q> @end  // expected-warning {{duplicate protocol definition of 'PP'}}
 
+@protocol DP<P> @end
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wduplicate-protocol"
+@protocol DP<Q> @end
+#pragma clang diagnostic pop
+
 @interface A(Cat)<P> @end // expected-note {{previous definition is here}}
 @interface A(Cat)<Q> @end // expected-warning {{duplicate definition of category 'Cat' on interface 'A'}}
 

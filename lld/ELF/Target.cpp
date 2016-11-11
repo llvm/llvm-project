@@ -29,6 +29,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Thunks.h"
 #include "Writer.h"
 
@@ -403,7 +404,7 @@ void X86TargetInfo::writePltHeader(uint8_t *Buf) const {
       0x90, 0x90, 0x90, 0x90              // nop; nop; nop; nop
   };
   memcpy(Buf, PltData, sizeof(PltData));
-  uint32_t Got = Out<ELF32LE>::GotPlt->Addr;
+  uint32_t Got = In<ELF32LE>::GotPlt->getVA();
   write32le(Buf + 2, Got + 4);
   write32le(Buf + 8, Got + 8);
 }
@@ -420,7 +421,7 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 
   // jmp *foo@GOT(%ebx) or jmp *foo_in_GOT
   Buf[1] = Config->Pic ? 0xa3 : 0x25;
-  uint32_t Got = Out<ELF32LE>::GotPlt->Addr;
+  uint32_t Got = In<ELF32LE>::GotPlt->getVA();
   write32le(Buf + 2, Config->Shared ? GotEntryAddr - Got : GotEntryAddr);
   write32le(Buf + 7, RelOff);
   write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
@@ -613,7 +614,7 @@ void X86_64TargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
       0x0f, 0x1f, 0x40, 0x00              // nopl 0x0(rax)
   };
   memcpy(Buf, PltData, sizeof(PltData));
-  uint64_t Got = Out<ELFT>::GotPlt->Addr;
+  uint64_t Got = In<ELFT>::GotPlt->getVA();
   uint64_t Plt = Out<ELFT>::Plt->Addr;
   write32le(Buf + 2, Got - Plt + 2); // GOT+8
   write32le(Buf + 8, Got - Plt + 4); // GOT+16
@@ -1019,7 +1020,7 @@ uint64_t getPPC64TocBase() {
   // TOC starts where the first of these sections starts. We always create a
   // .got when we see a relocation that uses it, so for us the start is always
   // the .got.
-  uint64_t TocVA = Out<ELF64BE>::Got->Addr;
+  uint64_t TocVA = In<ELF64BE>::Got->getVA();
 
   // Per the ppc64-elf-linux ABI, The TOC base is TOC value plus 0x8000
   // thus permitting a full 64 Kbytes segment. Note that the glibc startup
@@ -1274,7 +1275,7 @@ void AArch64TargetInfo::writePltHeader(uint8_t *Buf) const {
   };
   memcpy(Buf, PltData, sizeof(PltData));
 
-  uint64_t Got = Out<ELF64LE>::GotPlt->Addr;
+  uint64_t Got = In<ELF64LE>::GotPlt->getVA();
   uint64_t Plt = Out<ELF64LE>::Plt->Addr;
   relocateOne(Buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
               getAArch64Page(Got + 16) - getAArch64Page(Plt + 4));
@@ -1628,7 +1629,7 @@ void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
       0x00, 0x00, 0x00, 0x00, // L2: .word   &(.got.plt) - L1 - 8
   };
   memcpy(Buf, PltData, sizeof(PltData));
-  uint64_t GotPlt = Out<ELF32LE>::GotPlt->Addr;
+  uint64_t GotPlt = In<ELF32LE>::GotPlt->getVA();
   uint64_t L1 = Out<ELF32LE>::Plt->Addr + 8;
   write32le(Buf + 16, GotPlt - L1 - 8);
 }
@@ -2063,7 +2064,7 @@ void MipsTargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
   write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
   write32<E>(Buf + 24, 0x0320f809); // jalr  $25
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
-  uint64_t Got = Out<ELFT>::GotPlt->Addr;
+  uint64_t Got = In<ELFT>::GotPlt->getVA();
   writeMipsHi16<E>(Buf, Got);
   writeMipsLo16<E>(Buf + 4, Got);
   writeMipsLo16<E>(Buf + 8, Got);
