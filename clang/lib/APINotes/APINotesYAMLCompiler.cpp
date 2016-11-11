@@ -199,6 +199,7 @@ namespace {
     AvailabilityItem Availability;
     Optional<bool> SwiftPrivate;
     StringRef SwiftName;
+    Optional<bool> SwiftImportAsAccessors;
   };
   typedef std::vector<Property> PropertiesSeq;
 
@@ -398,6 +399,7 @@ namespace llvm {
         io.mapOptional("AvailabilityMsg", p.Availability.Msg);
         io.mapOptional("SwiftPrivate",    p.SwiftPrivate);
         io.mapOptional("SwiftName",       p.SwiftName);
+        io.mapOptional("SwiftImportAsAccessors", p.SwiftImportAsAccessors);
       }
     };
 
@@ -784,6 +786,8 @@ namespace {
         pInfo.SwiftName = prop.SwiftName;
         if (prop.Nullability)
           pInfo.setNullabilityAudited(*prop.Nullability);
+        if (prop.SwiftImportAsAccessors)
+          pInfo.setSwiftImportAsAccessors(*prop.SwiftImportAsAccessors);
         if (prop.Kind) {
           Writer->addObjCProperty(clID, prop.Name,
                                   *prop.Kind == MethodKind::Instance, pInfo,
@@ -1196,6 +1200,8 @@ namespace {
       if (auto nullability = info.getNullability()) {
         property.Nullability = *nullability;
       }
+
+      property.SwiftImportAsAccessors = info.getSwiftImportAsAccessors();
 
       auto &items = getTopLevelItems(swiftVersion);
       knownContexts[contextID.Value].getContext(swiftVersion, items)
