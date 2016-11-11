@@ -5,7 +5,7 @@ from __future__ import print_function
 desc = '''Generate HTML output to visualize optimization records from the YAML files
 generated with -fsave-optimization-record and -fdiagnostics-show-hotness.
 
-The tools requires PyYAML to be installed.'''
+The tools requires PyYAML and Pygments Python packages.'''
 
 import yaml
 import argparse
