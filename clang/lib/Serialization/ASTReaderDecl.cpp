@@ -2220,7 +2220,7 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
   VisitDecl(D);
   D->AssertExprAndFailed.setPointer(Reader.ReadExpr(F));
   D->AssertExprAndFailed.setInt(Record[Idx++]);
-  D->Message = cast<StringLiteral>(Reader.ReadExpr(F));
+  D->Message = cast_or_null<StringLiteral>(Reader.ReadExpr(F));
   D->RParenLoc = ReadSourceLocation(Record, Idx);
 }
 
