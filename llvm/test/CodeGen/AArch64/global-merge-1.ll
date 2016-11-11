@@ -12,9 +12,9 @@
 
 define void @f1(i32 %a1, i32 %a2) {
 ;CHECK-APPLE-IOS-NOT: adrp
-;CHECK-APPLE-IOS: adrp	x8, l__MergedGlobals@PAGE
+;CHECK-APPLE-IOS: adrp	x8, __MergedGlobals@PAGE
 ;CHECK-APPLE-IOS-NOT: adrp
-;CHECK-APPLE-IOS: add	x8, x8, l__MergedGlobals@PAGEOFF
+;CHECK-APPLE-IOS: add	x8, x8, __MergedGlobals@PAGEOFF
   store i32 %a1, i32* @m, align 4
   store i32 %a2, i32* @n, align 4
   ret void
@@ -26,6 +26,6 @@ define void @f1(i32 %a1, i32 %a2) {
 ;CHECK: m = .L_MergedGlobals
 ;CHECK: n = .L_MergedGlobals+4
 
-;CHECK-APPLE-IOS: .zerofill __DATA,__bss,l__MergedGlobals,8,3 ; @_MergedGlobals
+;CHECK-APPLE-IOS: .zerofill __DATA,__bss,__MergedGlobals,8,3 ; @_MergedGlobals
 ;CHECK-APPLE-IOS-NOT: _m = l__MergedGlobals
 ;CHECK-APPLE-IOS-NOT: _n = l__MergedGlobals+4
