@@ -29,6 +29,8 @@ def demangle(name):
 
 class Remark(yaml.YAMLObject):
     max_hotness = 1
+    # Map function names to their source location for function where inlining happened
+    caller_loc = dict()
 
     @property
     def File(self):
@@ -149,12 +151,19 @@ class SourceFileRenderer:
 </tr>'''.format(**locals()), file=self.stream)
 
     def render_inline_remarks(self, r):
+        inlining_context = r.DemangledFunctionName
+        dl = Remark.caller_loc.get(r.Function)
+        if dl:
+            link = Remark.make_link(dl['File'], dl['Line'] - 2)
+            inlining_context = "<a href={link}>{r.DemangledFunctionName}</a>".format(**locals())
+
         print('''
 <tr>
 <td></td>
 <td>{r.RelativeHotness}%</td>
 <td class=\"column-entry-{r.color}\">{r.Pass}</td>
 <td class=\"column-entry-yellow\">{r.message}</td>
+<td class=\"column-entry-yellow\">{inlining_context}</td>
 </tr>'''.format(**locals()), file=self.stream)
 
     def render(self, line_remarks):
@@ -174,6 +183,7 @@ class SourceFileRenderer:
 <td>Hotness</td>
 <td>Optimization</td>
 <td>Source</td>
+<td>Inline Context</td>
 </tr>''', file=self.stream)
         for (linenum, line) in enumerate(self.source_stream.readlines(), start=1):
             self.render_source_line(linenum, line)
@@ -240,6 +250,14 @@ for input_file in args.yaml_files:
             file_remarks.setdefault(remark.File, dict()).setdefault(remark.Line, []).append(remark);
 
             Remark.max_hotness = max(Remark.max_hotness, remark.Hotness)
+
+# Set up a map between function names and their source location for function where inlining happened
+for remark in all_remarks.itervalues():
+    if type(remark) == Passed and remark.Pass == "inline" and remark.Name == "Inlined":
+        for arg in remark.Args:
+            caller = arg.get('Caller')
+            if caller:
+                    Remark.caller_loc[caller] = arg['DebugLoc']
 
 sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: r.Hotness, reverse=True)
 
