@@ -708,6 +708,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
                       CFICastStrict | UnsignedIntegerOverflow | LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
+      getTriple().getArch() == llvm::Triple::arm ||
+      getTriple().getArch() == llvm::Triple::aarch64 ||
       getTriple().getArch() == llvm::Triple::wasm32 ||
       getTriple().getArch() == llvm::Triple::wasm64)
     Res |= CFIICall;

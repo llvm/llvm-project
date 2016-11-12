@@ -205,6 +205,12 @@
 // O1:#define __OPTIMIZE__ 1
 //
 //
+// RUN: %clang_cc1 -Og -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix Og %s
+//
+// Og-NOT:#define __OPTIMIZE_SIZE__
+// Og	:#define __OPTIMIZE__ 1
+//
+//
 // RUN: %clang_cc1 -Os -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix Os %s
 //
 // Os:#define __OPTIMIZE_SIZE__ 1

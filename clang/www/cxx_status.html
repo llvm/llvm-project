@@ -536,7 +536,7 @@ as the draft C++1z standard evolves.
     <th>C++1z Proposal</th>
     <th>Available in Clang?</th>
  </tr>
-    <!-- Issaquah papers -->
+    <!-- Issaquah 2014 papers -->
     <tr>
       <td><tt>static_assert</tt> with no message</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3928.pdf">N3928</a></td>
@@ -731,6 +731,22 @@ as the draft C++1z standard evolves.
       <td><a href="http://wg21.link/p0305r1">P0305R1</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
+    <!-- Issaquah 2016 papers -->
+    <tr>
+      <td>Matching template template parameters to compatible arguments</td>
+      <td><a href="http://wg21.link/p0522r0">P0522R0</a></td>
+      <td class="none" align="center">No <a href="#p0522">(12)</a></td>
+    </tr>
+    <tr>
+      <td>Removing deprecated dynamic exception specifications</td>
+      <td><a href="http://wg21.link/p0003r5">P0003R5</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Pack expansions in <em>using-declarations</em></td>
+      <td><a href="http://wg21.link/p0195r2">P0195R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
 </table>
 
 <p>
@@ -756,6 +772,9 @@ left to right in the callee. As a result, function parameters in calls to
 <tt>operator&amp;&amp;</tt>, <tt>operator||</tt>, and <tt>operator,</tt>
 functions using expression syntax are no longer guaranteed to be destroyed in
 reverse construction order in that ABI.
+</span><br>
+<span id="p0522">(12): This is the resolution to a Defect Report, so will be
+applied to all language versions.
 </span>
 </p>
 </details>
@@ -815,7 +834,7 @@ and library features that are not part of standard C++.</p>
     </tr>
     <tr>
       <td>[DRAFT TS] Coroutines</td>
-      <td><a href="http://wg21.link/p0057r5">P0057R5</a></td>
+      <td><a href="http://wg21.link/p0057r7">P0057R7</a></td>
       <td></td>
       <td class="none" align="center">WIP</td>
     </tr>

@@ -3865,6 +3865,7 @@ enum Distro {
   UbuntuWily,
   UbuntuXenial,
   UbuntuYakkety,
+  UbuntuZesty,
   UnknownDistro
 };
 
@@ -3879,7 +3880,7 @@ static bool IsDebian(enum Distro Distro) {
 }
 
 static bool IsUbuntu(enum Distro Distro) {
-  return Distro >= UbuntuHardy && Distro <= UbuntuYakkety;
+  return Distro >= UbuntuHardy && Distro <= UbuntuZesty;
 }
 
 static Distro DetectDistro(vfs::FileSystem &VFS) {
@@ -3911,6 +3912,7 @@ static Distro DetectDistro(vfs::FileSystem &VFS) {
                       .Case("wily", UbuntuWily)
                       .Case("xenial", UbuntuXenial)
                       .Case("yakkety", UbuntuYakkety)
+                      .Case("zesty", UbuntuZesty)
                       .Default(UnknownDistro);
     if (Version != UnknownDistro)
       return Version;

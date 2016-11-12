@@ -827,4 +827,101 @@ vector unsigned char test73(void) {
 // CHECK-NEXT: ret <16 x i8>
   return vec_srv (vuca, vucb);
 }
-
+vector unsigned short test74(void) {
+// CHECK-BE: @llvm.ppc.vsx.xvcvsphp(<4 x float>
+// CHECK-BE: @llvm.ppc.vsx.xvcvsphp(<4 x float>
+// CHECK-BE: @llvm.ppc.altivec.vperm
+// CHECK: @llvm.ppc.vsx.xvcvsphp(<4 x float>
+// CHECK: @llvm.ppc.vsx.xvcvsphp(<4 x float>
+// CHECK: @llvm.ppc.altivec.vperm
+  return vec_pack_to_short_fp32(vfa, vfb);
+}
+vector unsigned int test75(void) {
+// CHECK-BE: @llvm.ppc.altivec.vrlwmi(<4 x i32
+// CHECK-BE-NEXT: ret <4 x i32>
+// CHECK: @llvm.ppc.altivec.vrlwmi(<4 x i32
+// CHECK-NEXT: ret <4 x i32>
+  return vec_rlmi(vuia, vuia, vuia);
+}
+vector unsigned long long test76(void) {
+// CHECK-BE: @llvm.ppc.altivec.vrldmi(<2 x i64
+// CHECK-BE-NEXT: ret <2 x i64>
+// CHECK: @llvm.ppc.altivec.vrldmi(<2 x i64
+// CHECK-NEXT: ret <2 x i64>
+  return vec_rlmi(vula, vula, vula);
+}
+vector unsigned int test77(void) {
+// CHECK-BE: @llvm.ppc.altivec.vrlwnm(<4 x i32
+// CHECK-BE: and <4 x i32
+// CHECK-BE: ret <4 x i32>
+// CHECK: @llvm.ppc.altivec.vrlwnm(<4 x i32
+// CHECK: and <4 x i32
+// CHECK: ret <4 x i32>
+  return vec_rlnm(vuia, vuia, vuia);
+}
+vector unsigned long long test78(void) {
+// CHECK-BE: @llvm.ppc.altivec.vrldnm(<2 x i64
+// CHECK-BE: and <2 x i64
+// CHECK-BE-NEXT: ret <2 x i64>
+// CHECK: @llvm.ppc.altivec.vrldnm(<2 x i64
+// CHECK: and <2 x i64
+// CHECK-NEXT: ret <2 x i64>
+  return vec_rlnm(vula, vula, vula);
+}
+vector double test79(void) {
+// CHECK-BE: extractelement <4 x float>
+// CHECK-BE: fpext float
+// CHECK-BE: insertelement <2 x double>
+// CHECK-BE: extractelement <4 x float>
+// CHECK-BE: fpext float
+// CHECK-BE: insertelement <2 x double>
+// CHECK: extractelement <4 x float>
+// CHECK: fpext float
+// CHECK: insertelement <2 x double>
+// CHECK: extractelement <4 x float>
+// CHECK: fpext float
+// CHECK: insertelement <2 x double>
+  return vec_unpackh(vfa);
+}
+vector double test80(void) {
+// CHECK-BE: extractelement <4 x float>
+// CHECK-BE: fpext float
+// CHECK-BE: insertelement <2 x double>
+// CHECK-BE: extractelement <4 x float>
+// CHECK-BE: fpext float
+// CHECK-BE: insertelement <2 x double>
+// CHECK: extractelement <4 x float>
+// CHECK: fpext float
+// CHECK: insertelement <2 x double>
+// CHECK: extractelement <4 x float>
+// CHECK: fpext float
+// CHECK: insertelement <2 x double>
+  return vec_unpackl(vfa);
+}
+vector double test81(void) {
+  // CHECK: extractelement <2 x double>
+  // CHECK: fptrunc double
+  // CHECK: insertelement <4 x float>
+  // CHECK: extractelement <2 x double>
+  // CHECK: fptrunc double
+  // CHECK: insertelement <4 x float>
+  // CHECK: extractelement <2 x double>
+  // CHECK: fptrunc double
+  // CHECK: insertelement <4 x float>
+  // CHECK: extractelement <2 x double>
+  // CHECK: fptrunc double
+  // CHECK: insertelement <4 x float>
+  // CHECK-LE: extractelement <2 x double>
+  // CHECK-LE: fptrunc double
+  // CHECK-LE: insertelement <4 x float>
+  // CHECK-LE: extractelement <2 x double>
+  // CHECK-LE: fptrunc double
+  // CHECK-LE: insertelement <4 x float>
+  // CHECK-LE: extractelement <2 x double>
+  // CHECK-LE: fptrunc double
+  // CHECK-LE: insertelement <4 x float>
+  // CHECK-LE: extractelement <2 x double>
+  // CHECK-LE: fptrunc double
+  // CHECK-LE: insertelement <4 x float>
+  return vec_pack(vda, vdb);
+}

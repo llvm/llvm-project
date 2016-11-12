@@ -1202,11 +1202,19 @@ BlockScopeInfo *Sema::getCurBlock() {
   return CurBSI;
 }
 
-LambdaScopeInfo *Sema::getCurLambda() {
+LambdaScopeInfo *Sema::getCurLambda(bool IgnoreCapturedRegions) {
   if (FunctionScopes.empty())
     return nullptr;
 
-  auto CurLSI = dyn_cast<LambdaScopeInfo>(FunctionScopes.back());
+  auto I = FunctionScopes.rbegin();
+  if (IgnoreCapturedRegions) {
+    auto E = FunctionScopes.rend();
+    while (I != E && isa<CapturedRegionScopeInfo>(*I))
+      ++I;
+    if (I == E)
+      return nullptr;
+  }
+  auto *CurLSI = dyn_cast<LambdaScopeInfo>(*I);
   if (CurLSI && CurLSI->Lambda &&
       !CurLSI->Lambda->Encloses(CurContext)) {
     // We have switched contexts due to template instantiation.

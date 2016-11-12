@@ -177,6 +177,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       ((Style.AllowShortFunctionsOnASingleLine != FormatStyle::SFS_All) ||
        Style.BreakConstructorInitializersBeforeComma || Style.ColumnLimit != 0))
     return true;
+  if (Current.is(TT_ObjCMethodExpr) && !Previous.is(TT_SelectorName) &&
+      State.Line->startsWith(TT_ObjCMethodSpecifier))
+    return true;
   if (Current.is(TT_SelectorName) && State.Stack.back().ObjCSelectorNameFound &&
       State.Stack.back().BreakBeforeParameter)
     return true;
@@ -671,6 +674,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       return State.Stack.back().ColonPos - NextNonComment->ColumnWidth;
     return State.Stack.back().Indent;
   }
+  if (NextNonComment->is(tok::colon) && NextNonComment->is(TT_ObjCMethodExpr))
+    return State.Stack.back().ColonPos;
   if (NextNonComment->is(TT_ArraySubscriptLSquare)) {
     if (State.Stack.back().StartOfArraySubscripts != 0)
       return State.Stack.back().StartOfArraySubscripts;
