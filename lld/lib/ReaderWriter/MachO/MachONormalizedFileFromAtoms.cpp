@@ -985,7 +985,7 @@ llvm::Error Util::getSymbolTableRegion(const DefinedAtom* atom,
   case Atom::scopeTranslationUnit:
     scope = 0;
     inGlobalsRegion = false;
-      return llvm::Error::success();
+    return llvm::Error::success();
   case Atom::scopeLinkageUnit:
     if ((_ctx.exportMode() == MachOLinkingContext::ExportMode::whiteList) &&
         _ctx.exportSymbolNamed(atom->name())) {
