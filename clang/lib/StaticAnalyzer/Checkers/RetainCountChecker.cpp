@@ -2368,7 +2368,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
     else {
       if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
         if (BRC.getASTContext().getLangOpts().ObjCAutoRefCount) {
-          os << "managed by Automated Reference Counting";
+          os << "managed by Automatic Reference Counting";
         } else {
           os << "whose name ('" << MD->getSelector().getAsString()
              << "') does not start with "
