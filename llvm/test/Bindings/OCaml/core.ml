@@ -404,6 +404,42 @@ let test_constants () =
   end
 
 
+(*===-- Attributes --------------------------------------------------------===*)
+
+let test_attributes () =
+  group "enum attrs";
+  let nonnull_kind = enum_attr_kind "nonnull" in
+  let dereferenceable_kind = enum_attr_kind "dereferenceable" in
+  insist (nonnull_kind = (enum_attr_kind "nonnull"));
+  insist (nonnull_kind <> dereferenceable_kind);
+
+  let nonnull =
+    create_enum_attr context "nonnull" 0L in
+  let dereferenceable_4 =
+    create_enum_attr context "dereferenceable" 4L in
+  let dereferenceable_8 =
+    create_enum_attr context "dereferenceable" 8L in
+  insist (nonnull <> dereferenceable_4);
+  insist (dereferenceable_4 <> dereferenceable_8);
+  insist (nonnull = (create_enum_attr context "nonnull" 0L));
+  insist ((repr_of_attr nonnull) =
+          AttrRepr.Enum(nonnull_kind, 0L));
+  insist ((repr_of_attr dereferenceable_4) =
+          AttrRepr.Enum(dereferenceable_kind, 4L));
+  insist ((attr_of_repr context (repr_of_attr nonnull)) =
+          nonnull);
+  insist ((attr_of_repr context (repr_of_attr dereferenceable_4)) =
+          dereferenceable_4);
+
+  group "string attrs";
+  let foo_bar = create_string_attr context "foo" "bar" in
+  let foo_baz = create_string_attr context "foo" "baz" in
+  insist (foo_bar <> foo_baz);
+  insist (foo_bar = (create_string_attr context "foo" "bar"));
+  insist ((repr_of_attr foo_bar) = AttrRepr.String("foo", "bar"));
+  insist ((attr_of_repr context (repr_of_attr foo_bar)) = foo_bar);
+  ()
+
 (*===-- Global Values -----------------------------------------------------===*)
 
 let test_global_values () =
@@ -747,12 +783,6 @@ let test_params () =
     let p2 = param f 1 in
     set_value_name "One" p1;
     set_value_name "Two" p2;
-    add_param_attr p1 Attribute.Sext;
-    add_param_attr p2 Attribute.Noalias;
-    remove_param_attr p2 Attribute.Noalias;
-    add_function_attr f Attribute.Nounwind;
-    add_function_attr f Attribute.Noreturn;
-    remove_function_attr f Attribute.Noreturn;
 
     insist (Before p1 = param_begin f);
     insist (Before p2 = param_succ p1);
@@ -960,11 +990,25 @@ let test_builder () =
 
   group "function attribute";
   begin
-      ignore (add_function_attr fn Attribute.UWTable);
-      (* CHECK: X7{{.*}}#0{{.*}}personality{{.*}}@__gxx_personality_v0
-       * #0 is uwtable, defined at EOF.
-       *)
-      insist ([Attribute.UWTable] = function_attr fn);
+    let signext  = create_enum_attr context "signext" 0L in
+    let zeroext  = create_enum_attr context "zeroext" 0L in
+    let noalias  = create_enum_attr context "noalias" 0L in
+    let nounwind = create_enum_attr context "nounwind" 0L in
+    let no_sse   = create_string_attr context "no-sse" "" in
+
+    add_function_attr fn signext (AttrIndex.Param 0);
+    add_function_attr fn noalias (AttrIndex.Param 1);
+    insist ((function_attrs fn (AttrIndex.Param 1)) = [|noalias|]);
+    remove_enum_function_attr fn (enum_attr_kind "noalias") (AttrIndex.Param 1);
+    add_function_attr fn no_sse (AttrIndex.Param 1);
+    insist ((function_attrs fn (AttrIndex.Param 1)) = [|no_sse|]);
+    remove_string_function_attr fn "no-sse" (AttrIndex.Param 1);
+    insist ((function_attrs fn (AttrIndex.Param 1)) = [||]);
+    add_function_attr fn nounwind AttrIndex.Function;
+    add_function_attr fn zeroext AttrIndex.Return;
+
+    (* CHECK: define zeroext i32 @X7(i32 signext %P1, i32 %P2)
+     *)
   end;
 
   group "casts"; begin
@@ -1057,7 +1101,7 @@ let test_builder () =
   end;
 
   group "miscellaneous"; begin
-    (* CHECK: %build_call = tail call cc63 i32 @{{.*}}(i32 signext %P2, i32 %P1)
+    (* CHECK: %build_call = tail call cc63 zeroext i32 @{{.*}}(i32 signext %P2, i32 %P1)
      * CHECK: %build_select = select i1 %build_icmp, i32 %P1, i32 %P2
      * CHECK: %build_va_arg = va_arg i8** null, i32
      * CHECK: %build_extractelement = extractelement <4 x i32> %Vec1, i32 %P2
@@ -1073,9 +1117,23 @@ let test_builder () =
     insist (not (is_tail_call ci));
     set_tail_call true ci;
     insist (is_tail_call ci);
-    add_instruction_param_attr ci 1 Attribute.Sext;
-    add_instruction_param_attr ci 2 Attribute.Noalias;
-    remove_instruction_param_attr ci 2 Attribute.Noalias;
+
+    let signext  = create_enum_attr context "signext" 0L in
+    let zeroext  = create_enum_attr context "zeroext" 0L in
+    let noalias  = create_enum_attr context "noalias" 0L in
+    let noreturn = create_enum_attr context "noreturn" 0L in
+    let no_sse   = create_string_attr context "no-sse" "" in
+
+    add_call_site_attr ci signext (AttrIndex.Param 0);
+    add_call_site_attr ci noalias (AttrIndex.Param 1);
+    insist ((call_site_attrs ci (AttrIndex.Param 1)) = [|noalias|]);
+    remove_enum_call_site_attr ci (enum_attr_kind "noalias") (AttrIndex.Param 1);
+    add_call_site_attr ci no_sse (AttrIndex.Param 1);
+    insist ((call_site_attrs ci (AttrIndex.Param 1)) = [|no_sse|]);
+    remove_string_call_site_attr ci "no-sse" (AttrIndex.Param 1);
+    insist ((call_site_attrs ci (AttrIndex.Param 1)) = [||]);
+    add_call_site_attr ci noreturn AttrIndex.Function;
+    add_call_site_attr ci zeroext AttrIndex.Return;
 
     let inst46 = build_icmp Icmp.Eq p1 p2 "build_icmp" atentry in
     ignore (build_select inst46 p1 p2 "build_select" atentry);
@@ -1421,7 +1479,6 @@ let test_builder () =
   end
 
 (* End-of-file checks for things like metdata and attributes.
- * CHECK: attributes #0 = {{.*}}uwtable{{.*}}
  * CHECK: !llvm.module.flags = !{!0}
  * CHECK: !0 = !{i32 1, !"Debug Info Version", i32 3}
  * CHECK: !1 = !{i32 1, !"metadata test"}
@@ -1479,6 +1536,7 @@ let _ =
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;
+  suite "attributes"       test_attributes;
   suite "global values"    test_global_values;
   suite "global variables" test_global_variables;
   suite "uses"             test_uses;

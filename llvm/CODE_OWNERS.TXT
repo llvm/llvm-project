@@ -163,10 +163,6 @@ N: Chad Rosier
 E: mcrosier@codeaurora.org
 D: Fast-Isel
 
-N: Nadav Rotem
-E: nadav.rotem@me.com
-D: X86 Backend
-
 N: Duncan Sands
 E: baldrick@free.fr
 D: DragonEgg
@@ -191,6 +187,10 @@ D: Release manager for the 3.5 and 3.6 branches, R600 Backend, libclc
 N: Evgeniy Stepanov
 E: eugenis@google.com
 D: MemorySanitizer (LLVM part)
+
+N: Craig Topper
+E: craig.topper@gmail.com
+D: X86 Backend
 
 N: Andrew Trick
 E: atrick@apple.com
