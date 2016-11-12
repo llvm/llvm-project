@@ -7,7 +7,7 @@ LLVM 4.0.0 Release Notes
 
 .. warning::
    These are in-progress notes for the upcoming LLVM 4.0.0 release.  You may
-   prefer the `LLVM 3.8 Release Notes <http://llvm.org/releases/3.8.0/docs
+   prefer the `LLVM 3.9 Release Notes <http://llvm.org/releases/3.9.0/docs
    /ReleaseNotes.html>`_.
 
 
