@@ -659,7 +659,7 @@ void internal__exit(int exitcode) {
   // so add our own breakpoint here.
   if (::IsDebuggerPresent())
     __debugbreak();
-  TerminateProcess(GetCurrentProcess(), 3);
+  TerminateProcess(GetCurrentProcess(), exitcode);
 }
 
 uptr internal_ftruncate(fd_t fd, uptr size) {

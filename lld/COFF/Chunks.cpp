@@ -28,7 +28,7 @@ namespace lld {
 namespace coff {
 
 SectionChunk::SectionChunk(ObjectFile *F, const coff_section *H)
-    : Chunk(SectionKind), Repl(this), File(F), Header(H),
+    : Chunk(SectionKind), Repl(this), Header(H), File(F),
       Relocs(File->getCOFFObj()->getRelocations(Header)),
       NumRelocs(std::distance(Relocs.begin(), Relocs.end())) {
   // Initialize SectionName.

@@ -304,9 +304,9 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_TLSDESC_CALL:
     llvm_unreachable("cannot relocate hint relocs");
   case R_TLSLD:
-    return Out<ELFT>::Got->getTlsIndexOff() + A - Out<ELFT>::Got->Size;
+    return In<ELFT>::Got->getTlsIndexOff() + A - In<ELFT>::Got->getSize();
   case R_TLSLD_PC:
-    return Out<ELFT>::Got->getTlsIndexVA() + A - P;
+    return In<ELFT>::Got->getTlsIndexVA() + A - P;
   case R_THUNK_ABS:
     return Body.getThunkVA<ELFT>() + A;
   case R_THUNK_PC:
@@ -315,13 +315,14 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_PPC_TOC:
     return getPPC64TocBase() + A;
   case R_TLSGD:
-    return Out<ELFT>::Got->getGlobalDynOffset(Body) + A - Out<ELFT>::Got->Size;
+    return In<ELFT>::Got->getGlobalDynOffset(Body) + A -
+           In<ELFT>::Got->getSize();
   case R_TLSGD_PC:
-    return Out<ELFT>::Got->getGlobalDynAddr(Body) + A - P;
+    return In<ELFT>::Got->getGlobalDynAddr(Body) + A - P;
   case R_TLSDESC:
-    return Out<ELFT>::Got->getGlobalDynAddr(Body) + A;
+    return In<ELFT>::Got->getGlobalDynAddr(Body) + A;
   case R_TLSDESC_PAGE:
-    return getAArch64Page(Out<ELFT>::Got->getGlobalDynAddr(Body) + A) -
+    return getAArch64Page(In<ELFT>::Got->getGlobalDynAddr(Body) + A) -
            getAArch64Page(P);
   case R_PLT:
     return Body.getPltVA<ELFT>() + A;
@@ -331,12 +332,13 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_SIZE:
     return Body.getSize<ELFT>() + A;
   case R_GOTREL:
-    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->Addr;
+    return Body.getVA<ELFT>(A) - In<ELFT>::Got->getVA();
   case R_GOTREL_FROM_END:
-    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->Addr - Out<ELFT>::Got->Size;
+    return Body.getVA<ELFT>(A) - In<ELFT>::Got->getVA() -
+           In<ELFT>::Got->getSize();
   case R_RELAX_TLS_GD_TO_IE_END:
   case R_GOT_FROM_END:
-    return Body.getGotOffset<ELFT>() + A - Out<ELFT>::Got->Size;
+    return Body.getGotOffset<ELFT>() + A - In<ELFT>::Got->getSize();
   case R_RELAX_TLS_GD_TO_IE_ABS:
   case R_GOT:
     return Body.getGotVA<ELFT>() + A;
@@ -347,9 +349,9 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
   case R_GOT_PC:
     return Body.getGotVA<ELFT>() + A - P;
   case R_GOTONLY_PC:
-    return Out<ELFT>::Got->Addr + A - P;
+    return In<ELFT>::Got->getVA() + A - P;
   case R_GOTONLY_PC_FROM_END:
-    return Out<ELFT>::Got->Addr + A - P + Out<ELFT>::Got->Size;
+    return In<ELFT>::Got->getVA() + A - P + In<ELFT>::Got->getSize();
   case R_RELAX_TLS_LD_TO_LE:
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_GD_TO_LE:
@@ -378,19 +380,19 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
-    return Out<ELFT>::Got->getMipsLocalPageOffset(Body.getVA<ELFT>(A));
+    return In<ELFT>::Got->getMipsLocalPageOffset(Body.getVA<ELFT>(A));
   case R_MIPS_GOT_OFF:
   case R_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend
     // should be applied to the GOT entry content not to the GOT entry offset.
     // That is why we use separate expression type.
-    return Out<ELFT>::Got->getMipsGotOffset(Body, A);
+    return In<ELFT>::Got->getMipsGotOffset(Body, A);
   case R_MIPS_TLSGD:
-    return Out<ELFT>::Got->getGlobalDynOffset(Body) +
-           Out<ELFT>::Got->getMipsTlsOffset() - MipsGPOffset;
+    return In<ELFT>::Got->getGlobalDynOffset(Body) +
+           In<ELFT>::Got->getMipsTlsOffset() - MipsGPOffset;
   case R_MIPS_TLSLD:
-    return Out<ELFT>::Got->getTlsIndexOff() +
-           Out<ELFT>::Got->getMipsTlsOffset() - MipsGPOffset;
+    return In<ELFT>::Got->getTlsIndexOff() + In<ELFT>::Got->getMipsTlsOffset() -
+           MipsGPOffset;
   case R_PPC_OPD: {
     uint64_t SymVA = Body.getVA<ELFT>(A);
     // If we have an undefined weak symbol, we might get here with a symbol

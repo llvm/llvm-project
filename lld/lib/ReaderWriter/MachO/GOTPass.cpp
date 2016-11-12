@@ -134,7 +134,7 @@ private:
     for (const GOTEntryAtom *slot : entries)
       mergedFile.addAtom(*slot);
 
-      return llvm::Error::success();
+    return llvm::Error::success();
   }
 
   bool shouldReplaceTargetWithGOTAtom(const Atom *target, bool canBypassGOT) {

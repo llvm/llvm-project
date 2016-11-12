@@ -8,7 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PDB.h"
+#include "Chunks.h"
 #include "Error.h"
+#include "SymbolTable.h"
+#include "Symbols.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
@@ -25,13 +28,27 @@
 #include <memory>
 
 using namespace lld;
+using namespace lld::coff;
 using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 
+using llvm::object::coff_section;
+
 static ExitOnError ExitOnErr;
 
-void coff::createPDB(StringRef Path, ArrayRef<uint8_t> SectionTable) {
+// Returns a list of all SectionChunks.
+static std::vector<coff_section> getInputSections(SymbolTable *Symtab) {
+  std::vector<coff_section> V;
+  for (Chunk *C : Symtab->getChunks())
+    if (auto *SC = dyn_cast<SectionChunk>(C))
+      V.push_back(*SC->Header);
+  return V;
+}
+
+// Creates a PDB file.
+void coff::createPDB(StringRef Path, SymbolTable *Symtab,
+                     ArrayRef<uint8_t> SectionTable) {
   BumpPtrAllocator Alloc;
   pdb::PDBFileBuilder Builder(Alloc);
   ExitOnErr(Builder.initialize(4096)); // 4096 is blocksize
@@ -63,6 +80,12 @@ void coff::createPDB(StringRef Path, ArrayRef<uint8_t> SectionTable) {
   // Add an empty IPI stream.
   auto &IpiBuilder = Builder.getIpiBuilder();
   IpiBuilder.setVersionHeader(pdb::PdbTpiV80);
+
+  // Add Section Contributions.
+  ArrayRef<coff_section> InputSections = getInputSections(Symtab);
+  std::vector<pdb::SectionContrib> Contribs =
+      pdb::DbiStreamBuilder::createSectionContribs(InputSections);
+  DbiBuilder.setSectionContribs(Contribs);
 
   // Add Section Map stream.
   ArrayRef<object::coff_section> Sections = {

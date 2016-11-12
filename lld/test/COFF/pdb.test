@@ -3,8 +3,8 @@
 # RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
 # RUN:   -dbi-stream -ipi-stream %t.pdb | FileCheck %s
 
-# RUN: llvm-pdbdump raw -section-map -section-headers %t.pdb | \
-# RUN:   FileCheck -check-prefix RAW %s
+# RUN: llvm-pdbdump raw -section-map -section-headers -section-contribs %t.pdb \
+# RUN:   | FileCheck -check-prefix RAW %s
 
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
@@ -18,7 +18,7 @@
 # CHECK-NEXT:     DirectoryBlocks: [ 9 ]
 # CHECK-NEXT:     NumStreams:      6
 # CHECK-NEXT:     FileSize:        40960
-# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 154, 56, 80 ]
+# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 242, 56, 80 ]
 # CHECK-NEXT:   StreamMap:
 # CHECK-NEXT:     - Stream:          [  ]
 # CHECK-NEXT:     - Stream:          [ 5 ]
@@ -44,10 +44,60 @@
 # CHECK-NEXT:     Version:         VC80
 # CHECK-NEXT:     Records:
 
-# RAW:       Section Map [
-# RAW-NEXT:    Entry {
-# RAW-NEXT:      Flags [ (0x10D)
-# RAW-NEXT:      AddressIs32Bit (0x8)
+# RAW:      Section Contributions [
+# RAW-NEXT:   Contribution {
+# RAW-NEXT:     ISect: 0
+# RAW-NEXT:     Off: 140
+# RAW-NEXT:     Size: 3
+# RAW-NEXT:     Characteristics [ (0x60300020)
+# RAW-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+# RAW-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+# RAW-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+# RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# RAW-NEXT:     ]
+# RAW-NEXT:     Module {
+# RAW-NEXT:       Index: 0
+# RAW-NEXT:     }
+# RAW-NEXT:     Data CRC: 0
+# RAW-NEXT:     Reloc CRC: 0
+# RAW-NEXT:   }
+# RAW-NEXT:   Contribution {
+# RAW-NEXT:     ISect: 0
+# RAW-NEXT:     Off: 0
+# RAW-NEXT:     Size: 0
+# RAW-NEXT:     Characteristics [ (0xC0300040)
+# RAW-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+# RAW-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+# RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# RAW-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+# RAW-NEXT:     ]
+# RAW-NEXT:     Module {
+# RAW-NEXT:       Index: 0
+# RAW-NEXT:     }
+# RAW-NEXT:     Data CRC: 0
+# RAW-NEXT:     Reloc CRC: 0
+# RAW-NEXT:   }
+# RAW-NEXT:   Contribution {
+# RAW-NEXT:     ISect: 0
+# RAW-NEXT:     Off: 0
+# RAW-NEXT:     Size: 0
+# RAW-NEXT:     Characteristics [ (0xC0300080)
+# RAW-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+# RAW-NEXT:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+# RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# RAW-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+# RAW-NEXT:     ]
+# RAW-NEXT:     Module {
+# RAW-NEXT:       Index: 0
+# RAW-NEXT:     }
+# RAW-NEXT:     Data CRC: 0
+# RAW-NEXT:     Reloc CRC: 0
+# RAW-NEXT:   }
+# RAW-NEXT: ]
+# RAW-NEXT: Section Map [
+# RAW-NEXT:   Entry {
+# RAW-NEXT:     Flags [ (0x10D)
+# RAW-NEXT:       AddressIs32Bit (0x8)
 # RAW-NEXT:       Execute (0x4)
 # RAW-NEXT:       IsSelector (0x100)
 # RAW-NEXT:       Read (0x1)

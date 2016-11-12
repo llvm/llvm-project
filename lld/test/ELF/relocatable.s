@@ -30,19 +30,19 @@
 # CHECK-NEXT:  Version: 1
 # CHECK-NEXT:  Entry: 0x0
 # CHECK-NEXT:  ProgramHeaderOffset: 0x0
-# CHECK-NEXT:  SectionHeaderOffset: 0x2D0
+# CHECK-NEXT:  SectionHeaderOffset: 0x2C0
 # CHECK-NEXT:  Flags [
 # CHECK-NEXT:  ]
 # CHECK-NEXT:  HeaderSize: 64
 # CHECK-NEXT:  ProgramHeaderEntrySize: 0
 # CHECK-NEXT:  ProgramHeaderCount: 0
 # CHECK-NEXT:  SectionHeaderEntrySize: 64
-# CHECK-NEXT:  SectionHeaderCount: 8
-# CHECK-NEXT:  StringTableSectionIndex: 6
+# CHECK-NEXT:  SectionHeaderCount: 7
+# CHECK-NEXT:  StringTableSectionIndex: 5
 # CHECK-NEXT:  }
 
 # CHECK:       Relocations [
-# CHECK-NEXT:  Section (3) .rela.text {
+# CHECK-NEXT:  Section ({{.*}}) .rela.text {
 # CHECK-NEXT:    0x3 R_X86_64_32S x 0x0
 # CHECK-NEXT:    0xE R_X86_64_32S y 0x0
 # CHECK-NEXT:    0x23 R_X86_64_32S xx 0x0
