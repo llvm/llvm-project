@@ -11,8 +11,8 @@ Written by the `LLVM Team <http://llvm.org/>`_
 .. warning::
 
    These are in-progress notes for the upcoming Clang 4.0.0 release. You may
-   prefer the `Clang 3.8 Release Notes
-   <http://llvm.org/releases/3.8.0/tools/clang/docs/ReleaseNotes.html>`_.
+   prefer the `Clang 3.9 Release Notes
+   <http://llvm.org/releases/3.9.0/tools/clang/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
@@ -57,8 +57,12 @@ Improvements to Clang's diagnostics
 New Compiler Flags
 ------------------
 
-The option ....
+The option -Og has been added to optimize the debugging experience.
+For now, this option is exactly the same as -O1. However, in the future,
+some other optimizations might be enabled or disabled.
 
+
+The option ....
 
 New Pragmas in Clang
 -----------------------
@@ -117,7 +121,7 @@ OpenMP Support in Clang
 Internal API Changes
 --------------------
 
-These are major API changes that have happened since the 3.8 release of
+These are major API changes that have happened since the 3.9 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
