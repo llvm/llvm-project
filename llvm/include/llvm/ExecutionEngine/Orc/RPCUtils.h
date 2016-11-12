@@ -314,6 +314,37 @@ static Error respond(ChannelT &C, const FunctionIdT &ResponseId,
   return C.endSendMessage();
 }
 
+// Converts a given type to the equivalent error return type.
+template <typename T>
+class WrappedHandlerReturn {
+public:
+  using Type = Expected<T>;
+};
+
+template <typename T>
+class WrappedHandlerReturn<Expected<T>> {
+public:
+  using Type = Expected<T>;
+};
+
+template <>
+class WrappedHandlerReturn<void> {
+public:
+  using Type = Error;
+};
+
+template <>
+class WrappedHandlerReturn<Error> {
+public:
+  using Type = Error;
+};
+
+template <>
+class WrappedHandlerReturn<ErrorSuccess> {
+public:
+  using Type = Error;
+};
+
 // This template class provides utilities related to RPC function handlers.
 // The base case applies to non-function types (the template class is
 // specialized for function types) and inherits from the appropriate
@@ -342,7 +373,7 @@ public:
 
   // Call the given handler with the given arguments.
   template <typename HandlerT>
-  static typename ResultTraits<RetT>::ErrorReturnType
+  static typename WrappedHandlerReturn<RetT>::Type
   runHandler(HandlerT &Handler, ArgStorage &Args) {
     return runHandlerHelper<RetT>(Handler, Args,
                                   llvm::index_sequence_for<ArgTs...>());
@@ -366,9 +397,7 @@ private:
   // For non-void user handlers: unwrap the args tuple and call the handler,
   // returning the result.
   template <typename RetTAlt, typename HandlerT, size_t... Indexes>
-  static typename std::enable_if<
-                    !std::is_void<RetTAlt>::value,
-                    typename ResultTraits<RetT>::ErrorReturnType>::type
+  static typename std::enable_if<!std::is_void<RetTAlt>::value, RetT>::type
   runHandlerHelper(HandlerT &Handler, ArgStorage &Args,
                    llvm::index_sequence<Indexes...>) {
     return Handler(std::move(std::get<Indexes>(Args))...);
@@ -377,13 +406,11 @@ private:
   // For void user handlers: unwrap the args tuple and call the handler, then
   // return Error::success().
   template <typename RetTAlt, typename HandlerT, size_t... Indexes>
-  static typename std::enable_if<
-                    std::is_void<RetTAlt>::value,
-                    typename ResultTraits<RetT>::ErrorReturnType>::type
+  static typename std::enable_if<std::is_void<RetTAlt>::value, Error>::type
   runHandlerHelper(HandlerT &Handler, ArgStorage &Args,
                    llvm::index_sequence<Indexes...>) {
     Handler(std::move(std::get<Indexes>(Args))...);
-    return ResultTraits<RetT>::ErrorReturnType::success();
+    return Error::success();
   }
 
   template <typename ChannelT, typename... CArgTs, size_t... Indexes>
