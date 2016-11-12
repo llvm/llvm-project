@@ -310,6 +310,13 @@ static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
   // Handle common entity information.
   ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(info),
                   role);
+  if (auto asAccessors = info.getSwiftImportAsAccessors()) {
+    handleAPINotedAttribute<SwiftImportPropertyAsAccessorsAttr>(S, D,
+                                                                *asAccessors,
+                                                                role, [&] {
+      return SwiftImportPropertyAsAccessorsAttr::CreateImplicit(S.Context);
+    });
+  }
 }
 
 namespace {

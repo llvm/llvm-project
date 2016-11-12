@@ -285,6 +285,9 @@ namespace {
                                             const uint8_t *&data) {
       ObjCPropertyInfo info;
       readVariableInfo(data, info);
+      uint8_t flags = *data++;
+      if (flags & (1 << 0))
+        info.setSwiftImportAsAccessors(flags & (1 << 1));
       return info;
     }
   };
