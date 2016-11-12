@@ -17,6 +17,7 @@ Classes:
         SwiftPrivate:    false
         SwiftName:       ''
         FactoryAsInit:   C
+        ResultType:      id
       - Selector:        init
         MethodKind:      Instance
         NullabilityOfRet: U
@@ -77,6 +78,7 @@ Classes:
           - Position:        1
           - Position:        2
             NoEscape:        true
+            Type:            id
         Nullability:     [ N, N, O ]
         NullabilityOfRet: N
         Availability:    available
@@ -97,6 +99,7 @@ Classes:
         Availability:    available
         AvailabilityMsg: ''
         SwiftName:       enclosing
+        Type:            id
       - Name:            makeBackingLayer
         PropertyKind:    Class
         Nullability:     N
@@ -111,6 +114,7 @@ Functions:
     Availability:    available
     AvailabilityMsg: ''
     SwiftName:       'availableWindowDepths()'
+    ResultType:      NSInteger
 Globals:         
   - Name:            NSCalibratedWhiteColorSpace
     Nullability:     N
@@ -118,6 +122,7 @@ Globals:
     AvailabilityMsg: ''
     SwiftPrivate:    false
     SwiftName:       calibratedWhite
+    Type:            id
 Enumerators:     
   - Name:            NSColorRed
     Availability:    available

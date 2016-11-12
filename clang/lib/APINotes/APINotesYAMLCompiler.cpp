@@ -173,6 +173,7 @@ namespace {
     unsigned Position;
     Optional<bool> NoEscape = false;
     llvm::Optional<NullabilityKind> Nullability;
+    StringRef Type;
   };
   typedef std::vector<Param> ParamsSeq;
 
@@ -189,6 +190,7 @@ namespace {
       = api_notes::FactoryAsInitKind::Infer;
     bool DesignatedInit = false;
     bool Required = false;
+    StringRef ResultType;
   };
   typedef std::vector<Method> MethodsSeq;
 
@@ -200,6 +202,7 @@ namespace {
     Optional<bool> SwiftPrivate;
     StringRef SwiftName;
     Optional<bool> SwiftImportAsAccessors;
+    StringRef Type;
   };
   typedef std::vector<Property> PropertiesSeq;
 
@@ -224,6 +227,8 @@ namespace {
     AvailabilityItem Availability;
     Optional<bool> SwiftPrivate;
     StringRef SwiftName;
+    StringRef Type;
+    StringRef ResultType;
   };
   typedef std::vector<Function> FunctionsSeq;
 
@@ -233,6 +238,7 @@ namespace {
     AvailabilityItem Availability;
     Optional<bool> SwiftPrivate;
     StringRef SwiftName;
+    StringRef Type;
   };
   typedef std::vector<GlobalVariable> GlobalVariablesSeq;
 
@@ -385,6 +391,7 @@ namespace llvm {
         io.mapOptional("Nullability",     p.Nullability, 
                                           AbsentNullability);
         io.mapOptional("NoEscape",        p.NoEscape);
+        io.mapOptional("Type",            p.Type, StringRef(""));
       }
     };
 
@@ -400,6 +407,7 @@ namespace llvm {
         io.mapOptional("SwiftPrivate",    p.SwiftPrivate);
         io.mapOptional("SwiftName",       p.SwiftName);
         io.mapOptional("SwiftImportAsAccessors", p.SwiftImportAsAccessors);
+        io.mapOptional("Type",            p.Type, StringRef(""));
       }
     };
 
@@ -420,6 +428,7 @@ namespace llvm {
                                           api_notes::FactoryAsInitKind::Infer);
         io.mapOptional("DesignatedInit",  m.DesignatedInit, false);
         io.mapOptional("Required",        m.Required, false);
+        io.mapOptional("ResultType",      m.ResultType, StringRef(""));
       }
     };
 
@@ -451,6 +460,7 @@ namespace llvm {
         io.mapOptional("AvailabilityMsg",  f.Availability.Msg);
         io.mapOptional("SwiftPrivate",     f.SwiftPrivate);
         io.mapOptional("SwiftName",        f.SwiftName);
+        io.mapOptional("ResultType",       f.ResultType, StringRef(""));
       }
     };
 
@@ -464,6 +474,7 @@ namespace llvm {
         io.mapOptional("AvailabilityMsg", v.Availability.Msg);
         io.mapOptional("SwiftPrivate",    v.SwiftPrivate);
         io.mapOptional("SwiftName",       v.SwiftName);
+        io.mapOptional("Type",            v.Type, StringRef(""));
       }
     };
 
@@ -621,7 +632,7 @@ namespace {
         if (p.Nullability)
           pi.setNullabilityAudited(*p.Nullability);
         pi.setNoEscape(p.NoEscape);
-
+        pi.setType(p.Type);
         while (outInfo.Params.size() <= p.Position) {
           outInfo.Params.push_back(ParamInfo());
         }
@@ -712,6 +723,7 @@ namespace {
       mInfo.Required = meth.Required;
       if (meth.FactoryAsInit != FactoryAsInitKind::Infer)
         mInfo.setFactoryAsInitKind(meth.FactoryAsInit);
+      mInfo.ResultType = meth.ResultType;
 
       // Translate parameter information.
       convertParams(meth.Params, mInfo);
@@ -788,6 +800,7 @@ namespace {
           pInfo.setNullabilityAudited(*prop.Nullability);
         if (prop.SwiftImportAsAccessors)
           pInfo.setSwiftImportAsAccessors(*prop.SwiftImportAsAccessors);
+        pInfo.setType(prop.Type);
         if (prop.Kind) {
           Writer->addObjCProperty(clID, prop.Name,
                                   *prop.Kind == MethodKind::Instance, pInfo,
@@ -844,6 +857,7 @@ namespace {
         info.SwiftName = global.SwiftName;
         if (global.Nullability)
           info.setNullabilityAudited(*global.Nullability);
+        info.setType(global.Type);
         Writer->addGlobalVariable(global.Name, info, swiftVersion);
       }
 
@@ -867,7 +881,7 @@ namespace {
         convertNullability(function.Nullability,
                            function.NullabilityOfRet,
                            info, function.Name);
-
+        info.ResultType = function.ResultType;
         Writer->addGlobalFunction(function.Name, info, swiftVersion);
       }
 
@@ -1112,6 +1126,7 @@ namespace {
         p.Position = position++;
         p.Nullability = pi.getNullability();
         p.NoEscape = pi.isNoEscape();
+        p.Type = copyString(pi.getType());
         params.push_back(p);
       }
     }
@@ -1181,7 +1196,7 @@ namespace {
       method.FactoryAsInit = info.getFactoryAsInitKind();
       method.DesignatedInit = info.DesignatedInit;
       method.Required = info.Required;
-
+      method.ResultType = copyString(info.ResultType);
       auto &items = getTopLevelItems(swiftVersion);
       knownContexts[contextID.Value].getContext(swiftVersion, items)
         .Methods.push_back(method);
@@ -1203,6 +1218,8 @@ namespace {
 
       property.SwiftImportAsAccessors = info.getSwiftImportAsAccessors();
 
+      property.Type = copyString(info.getType());
+
       auto &items = getTopLevelItems(swiftVersion);
       knownContexts[contextID.Value].getContext(swiftVersion, items)
         .Properties.push_back(property);
@@ -1218,7 +1235,7 @@ namespace {
       if (info.NumAdjustedNullable > 0)
         handleNullability(function.Nullability, function.NullabilityOfRet,
                           info, info.NumAdjustedNullable-1);
-
+      function.ResultType = copyString(info.ResultType);
       auto &items = getTopLevelItems(swiftVersion);
       items.Functions.push_back(function);
     }
@@ -1234,6 +1251,7 @@ namespace {
       if (auto nullability = info.getNullability()) {
         global.Nullability = *nullability;
       }
+      global.Type = copyString(info.getType());
 
       auto &items = getTopLevelItems(swiftVersion);
       items.Globals.push_back(global);
