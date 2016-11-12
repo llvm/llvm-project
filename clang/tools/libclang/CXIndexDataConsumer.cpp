@@ -1134,7 +1134,7 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
 
 static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage L);
 static CXIdxEntityCXXTemplateKind
-getEntityKindFromSymbolSubKinds(SymbolSubKindSet K);
+getEntityKindFromSymbolProperties(SymbolPropertySet K);
 static CXIdxEntityLanguage getEntityLangFromSymbolLang(SymbolLanguage L);
 
 void CXIndexDataConsumer::getEntityInfo(const NamedDecl *D,
@@ -1150,7 +1150,7 @@ void CXIndexDataConsumer::getEntityInfo(const NamedDecl *D,
 
   SymbolInfo SymInfo = getSymbolInfo(D);
   EntityInfo.kind = getEntityKindFromSymbolKind(SymInfo.Kind, SymInfo.Lang);
-  EntityInfo.templateKind = getEntityKindFromSymbolSubKinds(SymInfo.SubKinds);
+  EntityInfo.templateKind = getEntityKindFromSymbolProperties(SymInfo.Properties);
   EntityInfo.lang = getEntityLangFromSymbolLang(SymInfo.Lang);
 
   if (D->hasAttrs()) {
@@ -1290,12 +1290,12 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
 }
 
 static CXIdxEntityCXXTemplateKind
-getEntityKindFromSymbolSubKinds(SymbolSubKindSet K) {
-  if (K & (unsigned)SymbolSubKind::TemplatePartialSpecialization)
+getEntityKindFromSymbolProperties(SymbolPropertySet K) {
+  if (K & (unsigned)SymbolProperty::TemplatePartialSpecialization)
     return CXIdxEntity_TemplatePartialSpecialization;
-  if (K & (unsigned)SymbolSubKind::TemplateSpecialization)
+  if (K & (unsigned)SymbolProperty::TemplateSpecialization)
     return CXIdxEntity_TemplateSpecialization;
-  if (K & (unsigned)SymbolSubKind::Generic)
+  if (K & (unsigned)SymbolProperty::Generic)
     return CXIdxEntity_Template;
   return CXIdxEntity_NonTemplate;
 }
