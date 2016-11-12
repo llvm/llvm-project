@@ -596,25 +596,29 @@ let Uses = [RM] in {
 
   def XVCVDPSP : XX2Form<60, 393,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvdpsp $XT, $XB", IIC_VecFP, []>;
+                      "xvcvdpsp $XT, $XB", IIC_VecFP,
+                      [(set v4f32:$XT, (int_ppc_vsx_xvcvdpsp v2f64:$XB))]>;
   def XVCVDPSXDS : XX2Form<60, 472,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpsxds $XT, $XB", IIC_VecFP,
                       [(set v2i64:$XT, (fp_to_sint v2f64:$XB))]>;
   def XVCVDPSXWS : XX2Form<60, 216,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvdpsxws $XT, $XB", IIC_VecFP, []>;
+                      "xvcvdpsxws $XT, $XB", IIC_VecFP,
+                      [(set v4i32:$XT, (int_ppc_vsx_xvcvdpsxws v2f64:$XB))]>;
   def XVCVDPUXDS : XX2Form<60, 456,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpuxds $XT, $XB", IIC_VecFP,
                       [(set v2i64:$XT, (fp_to_uint v2f64:$XB))]>;
   def XVCVDPUXWS : XX2Form<60, 200,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvdpuxws $XT, $XB", IIC_VecFP, []>;
+                      "xvcvdpuxws $XT, $XB", IIC_VecFP,
+                      [(set v4i32:$XT, (int_ppc_vsx_xvcvdpuxws v2f64:$XB))]>;
 
   def XVCVSPDP : XX2Form<60, 457,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvspdp $XT, $XB", IIC_VecFP, []>;
+                      "xvcvspdp $XT, $XB", IIC_VecFP,
+                      [(set v2f64:$XT, (int_ppc_vsx_xvcvspdp v4f32:$XB))]>;
   def XVCVSPSXDS : XX2Form<60, 408,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspsxds $XT, $XB", IIC_VecFP, []>;
@@ -633,10 +637,12 @@ let Uses = [RM] in {
                       [(set v2f64:$XT, (sint_to_fp v2i64:$XB))]>;
   def XVCVSXDSP : XX2Form<60, 440,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvsxdsp $XT, $XB", IIC_VecFP, []>;
+                      "xvcvsxdsp $XT, $XB", IIC_VecFP,
+                      [(set v4f32:$XT, (int_ppc_vsx_xvcvsxdsp v2i64:$XB))]>;
   def XVCVSXWDP : XX2Form<60, 248,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvsxwdp $XT, $XB", IIC_VecFP, []>;
+                      "xvcvsxwdp $XT, $XB", IIC_VecFP,
+                      [(set v2f64:$XT, (int_ppc_vsx_xvcvsxwdp v4i32:$XB))]>;
   def XVCVSXWSP : XX2Form<60, 184,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvsxwsp $XT, $XB", IIC_VecFP,
@@ -647,10 +653,12 @@ let Uses = [RM] in {
                       [(set v2f64:$XT, (uint_to_fp v2i64:$XB))]>;
   def XVCVUXDSP : XX2Form<60, 424,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvuxdsp $XT, $XB", IIC_VecFP, []>;
+                      "xvcvuxdsp $XT, $XB", IIC_VecFP,
+                      [(set v4f32:$XT, (int_ppc_vsx_xvcvuxdsp v2i64:$XB))]>;
   def XVCVUXWDP : XX2Form<60, 232,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvuxwdp $XT, $XB", IIC_VecFP, []>;
+                      "xvcvuxwdp $XT, $XB", IIC_VecFP,
+                      [(set v2f64:$XT, (int_ppc_vsx_xvcvuxwdp v4i32:$XB))]>;
   def XVCVUXWSP : XX2Form<60, 168,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxwsp $XT, $XB", IIC_VecFP, []>;
@@ -2136,7 +2144,9 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // Vector HP -> SP
   def XVCVHPSP : XX2_XT6_XO5_XB6<60, 24, 475, "xvcvhpsp", vsrc, []>;
-  def XVCVSPHP : XX2_XT6_XO5_XB6<60, 25, 475, "xvcvsphp", vsrc, []>;
+  def XVCVSPHP : XX2_XT6_XO5_XB6<60, 25, 475, "xvcvsphp", vsrc,
+                                 [(set v4f32:$XT,
+                                     (int_ppc_vsx_xvcvsphp v4f32:$XB))]>;
 
   class Z23_VT5_R1_VB5_RMC2_EX1<bits<6> opcode, bits<8> xo, bit ex, string opc,
                                 list<dag> pattern>

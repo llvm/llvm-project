@@ -15,7 +15,10 @@
 
 namespace lld {
 namespace coff {
-void createPDB(llvm::StringRef Path, llvm::ArrayRef<uint8_t> SectionTable);
+class SymbolTable;
+
+void createPDB(llvm::StringRef Path, SymbolTable *Symtab,
+               llvm::ArrayRef<uint8_t> SectionTable);
 }
 }
 

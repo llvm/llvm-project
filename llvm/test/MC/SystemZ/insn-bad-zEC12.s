@@ -4,6 +4,56 @@
 # RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=arch10 < %s 2> %t
 # RUN: FileCheck < %t %s
 
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, 12, -524289
+#CHECK: error: invalid operand
+#CHECK: clt	%r0, 12, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: clt	%r0, 12, 0(%r1,%r2)
+
+	clt	%r0, -1, 0
+	clt	%r0, 16, 0
+	clt	%r0, 12, -524289
+	clt	%r0, 12, 524288
+	clt	%r0, 12, 0(%r1,%r2)
+
+#CHECK: error: invalid instruction
+#CHECK: clto    %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: cltno   %r0, 0
+
+        clto    %r0, 0
+        cltno   %r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: clgt	%r0, -1, 0
+#CHECK: error: invalid operand
+#CHECK: clgt	%r0, 16, 0
+#CHECK: error: invalid operand
+#CHECK: clgt	%r0, 12, -524289
+#CHECK: error: invalid operand
+#CHECK: clgt	%r0, 12, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: clgt	%r0, 12, 0(%r1,%r2)
+
+	clgt	%r0, -1, 0
+	clgt	%r0, 16, 0
+	clgt	%r0, 12, -524289
+	clgt	%r0, 12, 524288
+	clgt	%r0, 12, 0(%r1,%r2)
+
+#CHECK: error: invalid instruction
+#CHECK: clgto    %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: clgtno   %r0, 0
+
+        clgto    %r0, 0
+        clgtno   %r0, 0
+
 #CHECK: error: instruction requires: vector
 #CHECK: lcbb	%r0, 0, 0
 

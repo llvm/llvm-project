@@ -82,7 +82,7 @@ def first_dirname(d):
         d = head
 
 
-def shell(cmd, strip=True, cwd=None, stdin=None):
+def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True):
     log_verbose('Running: %s' % ' '.join(cmd))
 
     start = time.time()
@@ -100,10 +100,13 @@ def shell(cmd, strip=True, cwd=None, stdin=None):
         if strip:
             stdout = stdout.rstrip('\r\n')
         return stdout
-    eprint('`%s` returned %s' % (' '.join(cmd), p.returncode))
+    err_msg = '`%s` returned %s' % (' '.join(cmd), p.returncode)
+    eprint(err_msg)
     if stderr:
         eprint(stderr.rstrip())
-    sys.exit(2)
+    if die_on_failure:
+        sys.exit(2)
+    raise RuntimeError(err_msg)
 
 
 def git(*cmd, **kwargs):
@@ -187,7 +190,13 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
         svn_sr_path = os.path.join(svn_repo, GIT_TO_SVN_DIR[sr])
         # git is the only thing that can handle its own patches...
         log_verbose('Apply patch: %s' % diff)
-        shell(['git', 'apply', '-p2', '-'], cwd=svn_sr_path, stdin=diff)
+        try:
+            shell(['git', 'apply', '-p2', '-'], cwd=svn_sr_path, stdin=diff,
+                  die_on_failure=False)
+        except RuntimeError as e:
+            eprint("Patch doesn't apply: maybe you should try `git pull -r` "
+                   "first?")
+            sys.exit(2)
 
     status_lines = svn(svn_repo, 'status').split('\n')
 

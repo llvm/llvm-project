@@ -448,6 +448,11 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
     return false; // Should not instrument sanitizer init functions.
   if (F.getName().startswith("__sanitizer_"))
     return false;  // Don't instrument __sanitizer_* callbacks.
+  // Don't instrument MSVC CRT configuration helpers. They may run before normal
+  // initialization.
+  if (F.getName() == "__local_stdio_printf_options" ||
+      F.getName() == "__local_stdio_scanf_options")
+    return false;
   // Don't instrument functions using SEH for now. Splitting basic blocks like
   // we do for coverage breaks WinEHPrepare.
   // FIXME: Remove this when SEH no longer uses landingpad pattern matching.

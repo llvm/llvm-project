@@ -1909,7 +1909,7 @@ const internal::VariadicDynCastAllOfMatcher<
 
 /// \brief Matches a C-style cast expression.
 ///
-/// Example: Matches (int*) 2.2f in
+/// Example: Matches (int) 2.2f in
 /// \code
 ///   int i = (int) 2.2f;
 /// \endcode

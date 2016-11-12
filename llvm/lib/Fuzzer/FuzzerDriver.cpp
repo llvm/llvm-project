@@ -446,15 +446,15 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Printf("INFO: Seed: %u\n", Seed);
 
   Random Rand(Seed);
-  MutationDispatcher MD(Rand, Options);
-  InputCorpus Corpus(Options.OutputCorpus);
-  Fuzzer F(Callback, Corpus, MD, Options);
+  auto MD = new MutationDispatcher(Rand, Options);
+  auto Corpus = new InputCorpus(Options.OutputCorpus);
+  auto F = new Fuzzer(Callback, *Corpus, *MD, Options);
 
   for (auto &U: Dictionary)
     if (U.size() <= Word::GetMaxSize())
-      MD.AddWordToManualDictionary(Word(U.data(), U.size()));
+      MD->AddWordToManualDictionary(Word(U.data(), U.size()));
 
-  StartRssThread(&F, Flags.rss_limit_mb);
+  StartRssThread(F, Flags.rss_limit_mb);
 
   // Timer
   if (Flags.timeout > 0)
@@ -468,7 +468,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.handle_term) SetSigTermHandler();
 
   if (Flags.minimize_crash_internal_step)
-    return MinimizeCrashInputInternalStep(&F, &Corpus);
+    return MinimizeCrashInputInternalStep(F, Corpus);
 
   if (DoPlainRun) {
     Options.SaveArtifacts = false;
@@ -479,7 +479,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       auto StartTime = system_clock::now();
       Printf("Running: %s\n", Path.c_str());
       for (int Iter = 0; Iter < Runs; Iter++)
-        RunOneTest(&F, Path.c_str(), Options.MaxLen);
+        RunOneTest(F, Path.c_str(), Options.MaxLen);
       auto StopTime = system_clock::now();
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
       Printf("Executed %s in %zd ms\n", Path.c_str(), (long)MS);
@@ -488,14 +488,14 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
            "*** NOTE: fuzzing was not performed, you have only\n"
            "***       executed the target code on a fixed set of inputs.\n"
            "***\n");
-    F.PrintFinalStats();
+    F->PrintFinalStats();
     exit(0);
   }
 
   if (Flags.merge) {
     if (Options.MaxLen == 0)
-      F.SetMaxInputLen(kMaxSaneLen);
-    F.Merge(*Inputs);
+      F->SetMaxInputLen(kMaxSaneLen);
+    F->Merge(*Inputs);
     exit(0);
   }
 
@@ -512,7 +512,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     size_t MaxLen = 0;
     for (auto &U : InitialCorpus)
       MaxLen = std::max(U.size(), MaxLen);
-    F.SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxLen), kMaxSaneLen));
+    F->SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxLen), kMaxSaneLen));
   }
 
   if (InitialCorpus.empty()) {
@@ -520,14 +520,14 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (Options.Verbosity)
       Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
   }
-  F.ShuffleAndMinimize(&InitialCorpus);
+  F->ShuffleAndMinimize(&InitialCorpus);
   InitialCorpus.clear();  // Don't need this memory any more.
-  F.Loop();
+  F->Loop();
 
   if (Flags.verbosity)
-    Printf("Done %d runs in %zd second(s)\n", F.getTotalNumberOfRuns(),
-           F.secondsSinceProcessStartUp());
-  F.PrintFinalStats();
+    Printf("Done %d runs in %zd second(s)\n", F->getTotalNumberOfRuns(),
+           F->secondsSinceProcessStartUp());
+  F->PrintFinalStats();
 
   exit(0);  // Don't let F destroy itself.
 }

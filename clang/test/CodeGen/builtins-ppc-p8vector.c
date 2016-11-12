@@ -136,6 +136,26 @@ void test1() {
 // CHECK-LE: @llvm.ppc.altivec.vperm
 // CHECK-PPC: warning: implicit declaration of function 'vec_mergee'
 
+  res_vbll = vec_mergee(vbll, vbll);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vsll = vec_mergee(vsll, vsll);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vull = vec_mergee(vull, vull);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vf = vec_mergee(vfa, vfa);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
+  res_vd = vec_mergee(vda, vda);
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
   /* vec_mergeo */
   res_vbi = vec_mergeo(vbi, vbi);
 // CHECK: @llvm.ppc.altivec.vperm
@@ -209,15 +229,6 @@ void test1() {
 // CHECK: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-PPC: error: call to 'vec_cmplt' is ambiguous
-
-  /* vec_double */
-  res_vd = vec_double(vsll);
-// CHECK: sitofp i64 {{.+}} to double
-// CHECK-BE: sitofp i64 {{.+}} to double
-
-  res_vd = vec_double(vull);
-// CHECK: uitofp i64 {{.+}} to double
-// CHECK-BE: uitofp i64 {{.+}} to double
 
   /* vec_eqv */
   res_vsc =  vec_eqv(vsc, vsc);

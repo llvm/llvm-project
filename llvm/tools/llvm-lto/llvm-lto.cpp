@@ -197,7 +197,7 @@ static void handleDiagnostics(lto_codegen_diagnostic_severity_t Severity,
 }
 
 static std::string CurrentActivity;
-static void diagnosticHandler(const DiagnosticInfo &DI) {
+static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
   raw_ostream &OS = errs();
   OS << "llvm-lto: ";
   switch (DI.getSeverity()) {
@@ -224,11 +224,6 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
 
   if (DI.getSeverity() == DS_Error)
     exit(1);
-}
-
-static void diagnosticHandlerWithContext(const DiagnosticInfo &DI,
-                                         void *Context) {
-  diagnosticHandler(DI);
 }
 
 static void error(const Twine &Msg) {
@@ -260,7 +255,7 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
   Buffer = std::move(BufferOrErr.get());
   CurrentActivity = ("loading file '" + Path + "'").str();
   std::unique_ptr<LLVMContext> Context = llvm::make_unique<LLVMContext>();
-  Context->setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);
+  Context->setDiagnosticHandler(diagnosticHandler, nullptr, true);
   ErrorOr<std::unique_ptr<LTOModule>> Ret = LTOModule::createInLocalContext(
       std::move(Context), Buffer->getBufferStart(), Buffer->getBufferSize(),
       Options, Path);
@@ -272,12 +267,9 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
 /// Print some statistics on the index for each input files.
 void printIndexStats() {
   for (auto &Filename : InputFilenames) {
-    CurrentActivity = "loading file '" + Filename + "'";
-    ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-        llvm::getModuleSummaryIndexForFile(Filename, diagnosticHandler);
-    error(IndexOrErr, "error " + CurrentActivity);
-    std::unique_ptr<ModuleSummaryIndex> Index = std::move(IndexOrErr.get());
-    CurrentActivity = "";
+    ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
+    std::unique_ptr<ModuleSummaryIndex> Index =
+        ExitOnErr(llvm::getModuleSummaryIndexForFile(Filename));
     // Skip files without a module summary.
     if (!Index)
       report_fatal_error(Filename + " does not contain an index");
@@ -330,12 +322,9 @@ static void createCombinedModuleSummaryIndex() {
   ModuleSummaryIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
-    CurrentActivity = "loading file '" + Filename + "'";
-    ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-        llvm::getModuleSummaryIndexForFile(Filename, diagnosticHandler);
-    error(IndexOrErr, "error " + CurrentActivity);
-    std::unique_ptr<ModuleSummaryIndex> Index = std::move(IndexOrErr.get());
-    CurrentActivity = "";
+    ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
+    std::unique_ptr<ModuleSummaryIndex> Index =
+        ExitOnErr(llvm::getModuleSummaryIndexForFile(Filename));
     // Skip files without a module summary.
     if (!Index)
       continue;
@@ -400,11 +389,9 @@ loadAllFilesForIndex(const ModuleSummaryIndex &Index) {
 std::unique_ptr<ModuleSummaryIndex> loadCombinedIndex() {
   if (ThinLTOIndex.empty())
     report_fatal_error("Missing -thinlto-index for ThinLTO promotion stage");
-  auto CurrentActivity = "loading file '" + ThinLTOIndex + "'";
-  ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-      llvm::getModuleSummaryIndexForFile(ThinLTOIndex, diagnosticHandler);
-  error(IndexOrErr, "error " + CurrentActivity);
-  return std::move(IndexOrErr.get());
+  ExitOnError ExitOnErr("llvm-lto: error loading file '" + ThinLTOIndex +
+                        "': ");
+  return ExitOnErr(llvm::getModuleSummaryIndexForFile(ThinLTOIndex));
 }
 
 static std::unique_ptr<Module> loadModule(StringRef Filename,
@@ -773,12 +760,12 @@ int main(int argc, char **argv) {
 
   if (CheckHasObjC) {
     for (auto &Filename : InputFilenames) {
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-          MemoryBuffer::getFile(Filename);
-      error(BufferOrErr, "error loading file '" + Filename + "'");
+      ExitOnError ExitOnErr(std::string(*argv) + ": error loading file '" +
+                            Filename + "': ");
+      std::unique_ptr<MemoryBuffer> BufferOrErr =
+          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(Filename)));
       auto Buffer = std::move(BufferOrErr.get());
-      LLVMContext Ctx;
-      if (llvm::isBitcodeContainingObjCCategory(*Buffer, Ctx))
+      if (ExitOnErr(llvm::isBitcodeContainingObjCCategory(*Buffer)))
         outs() << "Bitcode " << Filename << " contains ObjC\n";
       else
         outs() << "Bitcode " << Filename << " does not contain ObjC\n";
@@ -802,7 +789,7 @@ int main(int argc, char **argv) {
   unsigned BaseArg = 0;
 
   LLVMContext Context;
-  Context.setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);
+  Context.setDiagnosticHandler(diagnosticHandler, nullptr, true);
 
   LTOCodeGenerator CodeGen(Context);
 

@@ -46,6 +46,7 @@ protected:
   bool HasProcessorAssist;
   bool HasVector;
   bool HasLoadStoreOnCond2;
+  bool HasLoadAndZeroRightmostByte;
 
 private:
   Triple TargetTriple;
@@ -114,6 +115,11 @@ public:
 
   // Return true if the target has the processor-assist facility.
   bool hasProcessorAssist() const { return HasProcessorAssist; }
+
+  // Return true if the target has the load-and-zero-rightmost-byte facility.
+  bool hasLoadAndZeroRightmostByte() const {
+    return HasLoadAndZeroRightmostByte;
+  }
 
   // Return true if the target has the vector facility.
   bool hasVector() const { return HasVector; }

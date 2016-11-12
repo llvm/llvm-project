@@ -16,7 +16,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,7 +29,6 @@ public:
   void main(ArrayRef<const char *> Args, bool CanExitEarly);
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
-  llvm::LLVMContext Context;      // to parse bitcode files
   std::unique_ptr<CpioFile> Cpio; // for reproduce
 
 private:

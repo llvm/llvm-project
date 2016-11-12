@@ -712,11 +712,11 @@ SBBreakpoint::GetNumBreakpointLocationsFromEvent(const lldb::SBEvent &event) {
 }
 
 // This is simple collection of breakpoint id's and their target.
-class lldb::SBBreakpointListImpl {
+class SBBreakpointListImpl {
 public:
-  SBBreakpointListImpl(SBTarget &target) : m_target_wp() {
-    if (target.IsValid())
-      m_target_wp = target.GetSP();
+  SBBreakpointListImpl(lldb::TargetSP target_sp) : m_target_wp() {
+    if (target_sp && target_sp->IsValid())
+      m_target_wp = target_sp;
   }
 
   ~SBBreakpointListImpl() = default;
@@ -796,7 +796,7 @@ private:
 };
 
 SBBreakpointList::SBBreakpointList(SBTarget &target)
-    : m_opaque_sp(new lldb::SBBreakpointListImpl(target)) {}
+    : m_opaque_sp(new SBBreakpointListImpl(target.GetSP())) {}
 
 SBBreakpointList::~SBBreakpointList() {}
 

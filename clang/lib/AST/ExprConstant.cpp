@@ -7078,6 +7078,56 @@ bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
   }
 
+  case Builtin::BIstrcmp:
+  case Builtin::BIstrncmp:
+  case Builtin::BImemcmp:
+    // A call to strlen is not a constant expression.
+    if (Info.getLangOpts().CPlusPlus11)
+      Info.CCEDiag(E, diag::note_constexpr_invalid_function)
+        << /*isConstexpr*/0 << /*isConstructor*/0
+        << (BuiltinOp == Builtin::BIstrncmp ? "'strncmp'" :
+            BuiltinOp == Builtin::BImemcmp ? "'memcmp'" :
+            "'strcmp'");
+    else
+      Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    // Fall through.
+  case Builtin::BI__builtin_strcmp:
+  case Builtin::BI__builtin_strncmp:
+  case Builtin::BI__builtin_memcmp: {
+    LValue String1, String2;
+    if (!EvaluatePointer(E->getArg(0), String1, Info) ||
+        !EvaluatePointer(E->getArg(1), String2, Info))
+      return false;
+    uint64_t MaxLength = uint64_t(-1);
+    if (BuiltinOp != Builtin::BIstrcmp &&
+        BuiltinOp != Builtin::BI__builtin_strcmp) {
+      APSInt N;
+      if (!EvaluateInteger(E->getArg(2), N, Info))
+        return false;
+      MaxLength = N.getExtValue();
+    }
+    bool StopAtNull = (BuiltinOp != Builtin::BImemcmp &&
+                       BuiltinOp != Builtin::BI__builtin_memcmp);
+    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
+    for (; MaxLength; --MaxLength) {
+      APValue Char1, Char2;
+      if (!handleLValueToRValueConversion(Info, E, CharTy, String1, Char1) ||
+          !handleLValueToRValueConversion(Info, E, CharTy, String2, Char2) ||
+          !Char1.isInt() || !Char2.isInt())
+        return false;
+      if (Char1.getInt() != Char2.getInt())
+        return Success(Char1.getInt() < Char2.getInt() ? -1 : 1, E);
+      if (StopAtNull && !Char1.getInt())
+        return Success(0, E);
+      assert(!(StopAtNull && !Char2.getInt()));
+      if (!HandleLValueArrayAdjustment(Info, E, String1, CharTy, 1) ||
+          !HandleLValueArrayAdjustment(Info, E, String2, CharTy, 1))
+        return false;
+    }
+    // We hit the strncmp / memcmp limit.
+    return Success(0, E);
+  }
+
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
   case Builtin::BI__c11_atomic_is_lock_free: {

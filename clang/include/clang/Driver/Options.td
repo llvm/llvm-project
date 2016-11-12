@@ -728,6 +728,24 @@ def fsanitize_stats : Flag<["-"], "fsanitize-stats">,
 def fno_sanitize_stats : Flag<["-"], "fno-sanitize-stats">,
                                  Group<f_clang_Group>, Flags<[CC1Option]>,
                                  HelpText<"Disable sanitizer statistics gathering.">;
+def fsanitize_thread_memory_access : Flag<["-"], "fsanitize-thread-memory-access">,
+                                     Group<f_clang_Group>,
+                                     HelpText<"Enable memory access instrumentation in ThreadSanitizer (default)">;
+def fno_sanitize_thread_memory_access : Flag<["-"], "fno-sanitize-thread-memory-access">,
+                                        Group<f_clang_Group>,
+                                        HelpText<"Disable memory access instrumentation in ThreadSanitizer">;
+def fsanitize_thread_func_entry_exit : Flag<["-"], "fsanitize-thread-func-entry-exit">,
+                                       Group<f_clang_Group>,
+                                       HelpText<"Enable function entry/exit instrumentation in ThreadSanitizer (default)">;
+def fno_sanitize_thread_func_entry_exit : Flag<["-"], "fno-sanitize-thread-func-entry-exit">,
+                                          Group<f_clang_Group>,
+                                          HelpText<"Disable function entry/exit instrumentation in ThreadSanitizer">;
+def fsanitize_thread_atomics : Flag<["-"], "fsanitize-thread-atomics">,
+                               Group<f_clang_Group>,
+                               HelpText<"Enable atomic operations instrumentation in ThreadSanitizer (default)">;
+def fno_sanitize_thread_atomics : Flag<["-"], "fno-sanitize-thread-atomics">,
+                                  Group<f_clang_Group>,
+                                  HelpText<"Disable atomic operations instrumentation in ThreadSanitizer">;
 def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-undefined-strip-path-components=">,
   Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<number>">,
   HelpText<"Strip (or keep only, if negative) a given number of path components "

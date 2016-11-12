@@ -617,7 +617,6 @@ template <class ELFT>
 GotPltSection<ELFT>::GotPltSection()
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
                              Target->GotPltEntrySize, ".got.plt") {
-  this->Live = true;
 }
 
 template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {

@@ -66,7 +66,9 @@ public:
   SyntheticSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
                    StringRef Name)
       : InputSection<ELFT>(Flags, Type, Addralign, ArrayRef<uint8_t>(), Name,
-                           InputSectionData::Synthetic) {}
+                           InputSectionData::Synthetic) {
+    this->Live = true;
+  }
 
   virtual void writeTo(uint8_t *Buf) = 0;
   virtual size_t getSize() const { return this->Data.size(); }

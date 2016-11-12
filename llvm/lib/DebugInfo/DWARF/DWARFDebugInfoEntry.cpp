@@ -202,18 +202,13 @@ bool DWARFDebugInfoEntryMinimal::extractFast(const DWARFUnit *U,
     *OffsetPtr = Offset;
     return false;
   }
-  ArrayRef<uint8_t> FixedFormSizes = DWARFFormValue::getFixedFormSizes(
-      U->getAddressByteSize(), U->getVersion());
-  assert(FixedFormSizes.size() > 0);
 
   // Skip all data in the .debug_info for the attributes
   for (const auto &AttrSpec : AbbrevDecl->attributes()) {
     auto Form = AttrSpec.Form;
 
-    uint8_t FixedFormSize =
-        (Form < FixedFormSizes.size()) ? FixedFormSizes[Form] : 0;
-    if (FixedFormSize)
-      *OffsetPtr += FixedFormSize;
+    if (Optional<uint8_t> FixedSize = DWARFFormValue::getFixedByteSize(Form, U))
+      *OffsetPtr += *FixedSize;
     else if (!DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, U)) {
       // Restore the original offset.
       *OffsetPtr = Offset;

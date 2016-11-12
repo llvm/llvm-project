@@ -10732,8 +10732,6 @@ Sema::FinalizeDeclaration(Decl *ThisDecl) {
 
   if (auto *DD = dyn_cast<DecompositionDecl>(ThisDecl)) {
     for (auto *BD : DD->bindings()) {
-      if (ThisDecl->isInvalidDecl())
-        BD->setInvalidDecl();
       FinalizeDeclaration(BD);
     }
   }

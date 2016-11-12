@@ -2,7 +2,7 @@
 ; RUN: opt -module-summary %s -o %t1.bc
 ; RUN: opt -module-summary %p/Inputs/thinlto_funcimport.ll -o %t2.bc
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    -shared %t1.bc %t2.bc -o %t
@@ -11,7 +11,7 @@
 
 ; We shouldn't do any importing at -O0
 ; rm -f %t2.bc.3.import.bc
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=O0 \

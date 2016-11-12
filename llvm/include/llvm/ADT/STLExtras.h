@@ -33,6 +33,11 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+
+// Only used by compiler if both template types are the same.  Useful when
+// using SFINAE to test for the existence of member functions.
+template <typename T, T> struct SameType;
+
 namespace detail {
 
 template <typename RangeT>
@@ -477,6 +482,18 @@ struct index_sequence_for : build_index_impl<sizeof...(Ts)> {};
 template <int N> struct rank : rank<N - 1> {};
 template <> struct rank<0> {};
 
+/// \brief traits class for checking whether type T is one of any of the given
+/// types in the variadic list.
+template <typename T, typename... Ts> struct is_one_of {
+  static const bool value = false;
+};
+
+template <typename T, typename U, typename... Ts>
+struct is_one_of<T, U, Ts...> {
+  static const bool value =
+      std::is_same<T, U>::value || is_one_of<T, Ts...>::value;
+};
+
 //===----------------------------------------------------------------------===//
 //     Extra additions for arrays
 //===----------------------------------------------------------------------===//
@@ -767,7 +784,7 @@ private:
 ///
 /// std::vector<char> Items = {'A', 'B', 'C', 'D'};
 /// for (auto X : enumerate(Items)) {
-///   printf("Item %d - %c\n", X.Item, X.Value);
+///   printf("Item %d - %c\n", X.Index, X.Value);
 /// }
 ///
 /// Output:

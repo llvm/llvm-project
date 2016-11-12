@@ -248,5 +248,14 @@ define void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, float %in) #0 {
   ret void
 }
 
+; FUNC-LABEL: {{^}}fp_to_sint_f32_i16:
+; SI: v_cvt_i32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
+; SI: buffer_store_short [[VAL]]
+define void @fp_to_sint_f32_i16(i16 addrspace(1)* %out, float %in) #0 {
+  %sint = fptosi float %in to i16
+  store i16 %sint, i16 addrspace(1)* %out
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

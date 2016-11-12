@@ -47,6 +47,7 @@ public:
   void setPdbDllRbld(uint16_t R);
   void setFlags(uint16_t F);
   void setMachineType(PDB_Machine M);
+  void setSectionContribs(ArrayRef<SectionContrib> SecMap);
   void setSectionMap(ArrayRef<SecMapEntry> SecMap);
 
   // Add given bytes as a new stream.
@@ -63,6 +64,11 @@ public:
   Error commit(const msf::MSFLayout &Layout,
                const msf::WritableStream &Buffer);
 
+  // A helper function to create Section Contributions from COFF input
+  // section headers.
+  static std::vector<SectionContrib>
+  createSectionContribs(ArrayRef<llvm::object::coff_section> SecHdrs);
+
   // A helper function to create a Section Map from a COFF section header.
   static std::vector<SecMapEntry>
   createSectionMap(ArrayRef<llvm::object::coff_section> SecHdrs);
@@ -75,6 +81,7 @@ private:
 
   Error finalize();
   uint32_t calculateModiSubstreamSize() const;
+  uint32_t calculateSectionContribsStreamSize() const;
   uint32_t calculateSectionMapStreamSize() const;
   uint32_t calculateFileInfoSubstreamSize() const;
   uint32_t calculateNamesBufferSize() const;
@@ -110,6 +117,7 @@ private:
   msf::WritableStreamRef NamesBuffer;
   msf::MutableByteStream ModInfoBuffer;
   msf::MutableByteStream FileInfoBuffer;
+  ArrayRef<SectionContrib> SectionContribs;
   ArrayRef<SecMapEntry> SectionMap;
   llvm::SmallVector<DebugStream, (int)DbgHeaderType::Max> DbgStreams;
 };
