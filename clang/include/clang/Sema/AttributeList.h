@@ -885,6 +885,7 @@ enum AttributeDeclKind {
   ExpectedFunction,
   ExpectedUnion,
   ExpectedVariableOrFunction,
+  ExpectedFunctionOrGlobalVar,
   ExpectedFunctionVariableOrObjCInterface,
   ExpectedFunctionOrMethod,
   ExpectedParameter,

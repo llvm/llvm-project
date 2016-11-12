@@ -46,6 +46,10 @@ void DbiStreamBuilder::setFlags(uint16_t F) { Flags = F; }
 
 void DbiStreamBuilder::setMachineType(PDB_Machine M) { MachineType = M; }
 
+void DbiStreamBuilder::setSectionContribs(ArrayRef<SectionContrib> Arr) {
+  SectionContribs = Arr;
+}
+
 void DbiStreamBuilder::setSectionMap(ArrayRef<SecMapEntry> SecMap) {
   SectionMap = SecMap;
 }
@@ -67,8 +71,8 @@ Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
 uint32_t DbiStreamBuilder::calculateSerializedLength() const {
   // For now we only support serializing the header.
   return sizeof(DbiStreamHeader) + calculateFileInfoSubstreamSize() +
-         calculateModiSubstreamSize() + calculateSectionMapStreamSize() +
-         calculateDbgStreamsSize();
+         calculateModiSubstreamSize() + calculateSectionContribsStreamSize() +
+         calculateSectionMapStreamSize() + calculateDbgStreamsSize();
 }
 
 Error DbiStreamBuilder::addModuleInfo(StringRef ObjFile, StringRef Module) {
@@ -104,6 +108,13 @@ uint32_t DbiStreamBuilder::calculateModiSubstreamSize() const {
     Size += M->Obj.size() + 1;
   }
   return Size;
+}
+
+uint32_t DbiStreamBuilder::calculateSectionContribsStreamSize() const {
+  if (SectionContribs.empty())
+    return 0;
+  return sizeof(enum PdbRaw_DbiSecContribVer) +
+         sizeof(SectionContribs[0]) * SectionContribs.size();
 }
 
 uint32_t DbiStreamBuilder::calculateSectionMapStreamSize() const {
@@ -249,7 +260,7 @@ Error DbiStreamBuilder::finalize() {
   H->FileInfoSize = FileInfoBuffer.getLength();
   H->ModiSubstreamSize = ModInfoBuffer.getLength();
   H->OptionalDbgHdrSize = DbgStreams.size() * sizeof(uint16_t);
-  H->SecContrSubstreamSize = 0;
+  H->SecContrSubstreamSize = calculateSectionContribsStreamSize();
   H->SectionMapSize = calculateSectionMapStreamSize();
   H->TypeServerSize = 0;
   H->SymRecordStreamIndex = kInvalidStreamIndex;
@@ -284,6 +295,25 @@ static uint16_t toSecMapFlags(uint32_t Flags) {
   // This seems always 1.
   Ret |= static_cast<uint16_t>(OMFSegDescFlags::IsSelector);
 
+  return Ret;
+}
+
+// A utility function to create Section Contributions
+// for a given input sections.
+std::vector<SectionContrib> DbiStreamBuilder::createSectionContribs(
+    ArrayRef<object::coff_section> SecHdrs) {
+  std::vector<SectionContrib> Ret;
+
+  // Create a SectionContrib for each input section.
+  for (auto &Sec : SecHdrs) {
+    Ret.emplace_back();
+    auto &Entry = Ret.back();
+    memset(&Entry, 0, sizeof(Entry));
+
+    Entry.Off = Sec.PointerToRawData;
+    Entry.Size = Sec.SizeOfRawData;
+    Entry.Characteristics = Sec.Characteristics;
+  }
   return Ret;
 }
 
@@ -362,6 +392,13 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
 
   if (auto EC = Writer.writeStreamRef(ModInfoBuffer))
     return EC;
+
+  if (!SectionContribs.empty()) {
+    if (auto EC = Writer.writeEnum(DbiSecContribVer60))
+      return EC;
+    if (auto EC = Writer.writeArray(SectionContribs))
+      return EC;
+  }
 
   if (!SectionMap.empty()) {
     ulittle16_t Size = static_cast<ulittle16_t>(SectionMap.size());

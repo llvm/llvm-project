@@ -1706,8 +1706,10 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   return Modified;
 }
 
-// FIXME: Do we need/want a pre-alloc pass like ARM has to try to keep
-// loads and stores near one another?
+// FIXME: Do we need/want a pre-alloc pass like ARM has to try to keep loads and
+// stores near one another?  Note: The pre-RA instruction scheduler already has
+// hooks to try and schedule pairable loads/stores together to improve pairing
+// opportunities.  Thus, pre-RA pairing pass may not be worth the effort.
 
 // FIXME: When pairing store instructions it's very possible for this pass to
 // hoist a store with a KILL marker above another use (without a KILL marker).

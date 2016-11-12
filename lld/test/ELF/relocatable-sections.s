@@ -3,10 +3,10 @@
 # RUN: llvm-objdump -section-headers %t | FileCheck %s
 
 # CHECK:      .text
-# CHECK-NEXT: .text._init
-# CHECK-NEXT: .text._fini
 # CHECK-NEXT: .rela.text
+# CHECK: .text._init
 # CHECK-NEXT: .rela.text._init
+# CHECK: .text._fini
 # CHECK-NEXT: .rela.text._fini
 
 .globl _start

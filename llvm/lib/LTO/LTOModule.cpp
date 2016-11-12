@@ -76,13 +76,12 @@ bool LTOModule::isBitcodeFile(StringRef Path) {
 bool LTOModule::isThinLTO() {
   // Right now the detection is only based on the summary presence. We may want
   // to add a dedicated flag at some point.
-  return hasGlobalValueSummary(IRFile->getMemoryBufferRef(),
-                            [](const DiagnosticInfo &DI) {
-                              DiagnosticPrinterRawOStream DP(errs());
-                              DI.print(DP);
-                              errs() << '\n';
-                              return;
-                            });
+  Expected<bool> Result = hasGlobalValueSummary(IRFile->getMemoryBufferRef());
+  if (!Result) {
+    logAllUnhandledErrors(Result.takeError(), errs(), "");
+    return false;
+  }
+  return *Result;
 }
 
 bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,
@@ -92,8 +91,11 @@ bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,
   if (!BCOrErr)
     return false;
   LLVMContext Context;
-  std::string Triple = getBitcodeTargetTriple(*BCOrErr, Context);
-  return StringRef(Triple).startswith(TriplePrefix);
+  ErrorOr<std::string> TripleOrErr =
+      expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(*BCOrErr));
+  if (!TripleOrErr)
+    return false;
+  return StringRef(*TripleOrErr).startswith(TriplePrefix);
 }
 
 std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
@@ -102,7 +104,11 @@ std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
   if (!BCOrErr)
     return "";
   LLVMContext Context;
-  return getBitcodeProducerString(*BCOrErr, Context);
+  ErrorOr<std::string> ProducerOrErr = expectedToErrorOrAndEmitErrors(
+      Context, getBitcodeProducerString(*BCOrErr));
+  if (!ProducerOrErr)
+    return "";
+  return *ProducerOrErr;
 }
 
 ErrorOr<std::unique_ptr<LTOModule>>

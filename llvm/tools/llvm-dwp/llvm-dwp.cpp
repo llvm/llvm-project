@@ -133,7 +133,14 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
                                                          StringRef Str) {
   uint32_t Offset = 0;
   DataExtractor InfoData(Info, true, 0);
-  InfoData.getU32(&Offset); // Length
+  dwarf::DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
+  uint64_t Length = InfoData.getU32(&Offset);
+  // If the length is 0xffffffff, then this indictes that this is a DWARF 64
+  // stream and the length is actually encoded into a 64 bit value that follows.
+  if (Length == 0xffffffffU) {
+    Format = dwarf::DwarfFormat::DWARF64;
+    Length = InfoData.getU64(&Offset);
+  }
   uint16_t Version = InfoData.getU16(&Offset);
   InfoData.getU32(&Offset); // Abbrev offset (should be zero)
   uint8_t AddrSize = InfoData.getU8(&Offset);
@@ -174,7 +181,8 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
       ID.Signature = InfoData.getU64(&Offset);
       break;
     default:
-      DWARFFormValue::skipValue(Form, InfoData, &Offset, Version, AddrSize);
+      DWARFFormValue::skipValue(Form, InfoData, &Offset, Version, AddrSize,
+                                Format);
     }
   }
   return ID;

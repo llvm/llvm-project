@@ -53,4 +53,16 @@ void bitfield() {
   auto &[p, q, r] = a; // expected-error {{decomposes into 2 elements, but 3 names were provided}}
 }
 
+void for_range() {
+  int x = 1;
+  for (auto[a, b] : x) { // expected-error {{invalid range expression of type 'int'; no viable 'begin' function available}}
+    a++;
+  }
+
+  int y[5];
+  for (auto[c] : y) { // expected-error {{cannot decompose non-class, non-array type 'int'}}
+    c++;
+  }
+}
+
 // FIXME: by-value array copies

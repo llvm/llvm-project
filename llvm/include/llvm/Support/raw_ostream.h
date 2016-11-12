@@ -20,6 +20,7 @@
 #include <system_error>
 
 namespace llvm {
+class formatv_object_base;
 class format_object_base;
 class FormattedString;
 class FormattedNumber;
@@ -222,6 +223,9 @@ public:
 
   // Formatted output, see the formatHex() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedNumber &);
+
+  // Formatted output, see the formatv() function in Support/FormatVariadic.h.
+  raw_ostream &operator<<(const formatv_object_base &);
 
   // Formatted output, see the format_bytes() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedBytes &);

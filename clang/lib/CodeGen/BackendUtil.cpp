@@ -725,14 +725,12 @@ static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
   // If we are performing a ThinLTO importing compile, load the function index
   // into memory and pass it into thinBackend, which will run the function
   // importer and invoke LTO passes.
-  ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-      llvm::getModuleSummaryIndexForFile(
-          CGOpts.ThinLTOIndexFile,
-          [&](const DiagnosticInfo &DI) { M->getContext().diagnose(DI); });
-  if (std::error_code EC = IndexOrErr.getError()) {
-    std::string Error = EC.message();
-    errs() << "Error loading index file '" << CGOpts.ThinLTOIndexFile
-           << "': " << Error << "\n";
+  Expected<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
+      llvm::getModuleSummaryIndexForFile(CGOpts.ThinLTOIndexFile);
+  if (!IndexOrErr) {
+    logAllUnhandledErrors(IndexOrErr.takeError(), errs(),
+                          "Error loading index file '" +
+                              CGOpts.ThinLTOIndexFile + "': ");
     return;
   }
   std::unique_ptr<ModuleSummaryIndex> CombinedIndex = std::move(*IndexOrErr);

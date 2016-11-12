@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constant.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
@@ -31,6 +33,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace lowertypetests;
@@ -225,6 +228,9 @@ class LowerTypeTestsModule {
 
   std::vector<ByteArrayInfo> ByteArrayInfos;
 
+  Mangler Mang;
+  Function *WeakInitializerFn = nullptr;
+
   BitSetInfo
   buildBitSet(Metadata *TypeId,
               const DenseMap<GlobalObject *, uint64_t> &GlobalLayout);
@@ -243,17 +249,23 @@ class LowerTypeTestsModule {
                                        ArrayRef<GlobalVariable *> Globals);
   unsigned getJumpTableEntrySize();
   Type *getJumpTableEntryType();
-  Constant *createJumpTableEntry(GlobalObject *Src, Function *Dest,
-                                 unsigned Distance);
+  void createJumpTableEntry(raw_ostream &OS, Function *Dest, unsigned Distance);
+  void createJumpTableAlias(raw_ostream &OS, Function *Dest,
+                            GlobalVariable *JumpTable, unsigned Distance);
   void verifyTypeMDNode(GlobalObject *GO, MDNode *Type);
   void buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
                                  ArrayRef<Function *> Functions);
-  void buildBitSetsFromFunctionsX86(ArrayRef<Metadata *> TypeIds,
+  void buildBitSetsFromFunctionsNative(ArrayRef<Metadata *> TypeIds,
                                     ArrayRef<Function *> Functions);
   void buildBitSetsFromFunctionsWASM(ArrayRef<Metadata *> TypeIds,
                                      ArrayRef<Function *> Functions);
   void buildBitSetsFromDisjointSet(ArrayRef<Metadata *> TypeIds,
                                    ArrayRef<GlobalObject *> Globals);
+
+  void replaceWeakDeclarationWithJumpTablePtr(Function *F, Constant *JT);
+  void moveInitializerToModuleConstructor(GlobalVariable *GV);
+  void findGlobalVariableUsersOf(Constant *C,
+                                 SmallSetVector<GlobalVariable *, 8> &Out);
 
 public:
   LowerTypeTestsModule(Module &M);
@@ -627,62 +639,170 @@ void LowerTypeTestsModule::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
 }
 
 static const unsigned kX86JumpTableEntrySize = 8;
+static const unsigned kARMJumpTableEntrySize = 4;
 
 unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
-  return kX86JumpTableEntrySize;
+  switch (Arch) {
+    case Triple::x86:
+    case Triple::x86_64:
+      return kX86JumpTableEntrySize;
+    case Triple::arm:
+    case Triple::aarch64:
+      return kARMJumpTableEntrySize;
+    default:
+      report_fatal_error("Unsupported architecture for jump tables");
+  }
+}
+
+static bool isValidAsmUnquotedName(StringRef Name) {
+  if (Name.empty())
+    return false;
+
+  for (char C : Name) {
+    if (!((C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
+          (C >= '0' && C <= '9') || C == '_' || C == '$' || C == '.' ||
+          C == '@'))
+      return false;
+  }
+
+  return true;
 }
 
 // Create a constant representing a jump table entry for the target. This
 // consists of an instruction sequence containing a relative branch to Dest. The
 // constant will be laid out at address Src+(Len*Distance) where Len is the
 // target-specific jump table entry size.
-Constant *LowerTypeTestsModule::createJumpTableEntry(GlobalObject *Src,
-                                                     Function *Dest,
-                                                     unsigned Distance) {
-  const unsigned kJmpPCRel32Code = 0xe9;
-  const unsigned kInt3Code = 0xcc;
+void LowerTypeTestsModule::createJumpTableEntry(raw_ostream &OS, Function *Dest,
+                                                unsigned Distance) {
+  // FIXME: replace IR Mangler with TargetLoweringObjectFile interface.
+  // A private instance of Mangler we use here can not deal with unnamed
+  // symbols, as it may create colliding labels. Thankfully(?), the use of
+  // inline asm requires us to give names to all affected functions anyway.
+  assert(Dest->hasName() && "jumptable targets can not be anonymous");
+  SmallString<16> Name;
+  Mang.getNameWithPrefix(Name, Dest, /* CannotUsePrivateLabel */ false);
 
-  ConstantInt *Jmp = ConstantInt::get(Int8Ty, kJmpPCRel32Code);
+  if (!isValidAsmUnquotedName(Name)) {
+    // We are going to emit a function call as textual asm. Escaped strings
+    // in such expressions are not well supported.
+    report_fatal_error(
+        "CFI-ICall does not allow special characters in a function name.");
+  }
 
-  // Build a constant representing the displacement between the constant's
-  // address and Dest. This will resolve to a PC32 relocation referring to Dest.
-  Constant *DestInt = ConstantExpr::getPtrToInt(Dest, IntPtrTy);
-  Constant *SrcInt = ConstantExpr::getPtrToInt(Src, IntPtrTy);
-  Constant *Disp = ConstantExpr::getSub(DestInt, SrcInt);
-  ConstantInt *DispOffset =
-      ConstantInt::get(IntPtrTy, Distance * kX86JumpTableEntrySize + 5);
-  Constant *OffsetedDisp = ConstantExpr::getSub(Disp, DispOffset);
-  OffsetedDisp = ConstantExpr::getTruncOrBitCast(OffsetedDisp, Int32Ty);
+  if (Arch == Triple::x86 || Arch == Triple::x86_64) {
+    OS << "jmp " << Name << "@plt\n";
+    OS << "int3\nint3\nint3\n";
+  } else if (Arch == Triple::arm || Arch == Triple::aarch64) {
+    OS << "b " << Name << "\n";
+  } else {
+    report_fatal_error("Unsupported architecture for jump tables");
+  }
+}
 
-  ConstantInt *Int3 = ConstantInt::get(Int8Ty, kInt3Code);
+void LowerTypeTestsModule::createJumpTableAlias(raw_ostream &OS, Function *Dest,
+                                                GlobalVariable *JumpTable,
+                                                unsigned Distance) {
+  assert(Dest->hasName() && "jumptable targets can not be anonymous");
+  SmallString<16> Name;
+  Mang.getNameWithPrefix(Name, Dest, /* CannotUsePrivateLabel */ false);
 
-  Constant *Fields[] = {
-      Jmp, OffsetedDisp, Int3, Int3, Int3,
-  };
-  return ConstantStruct::getAnon(Fields, /*Packed=*/true);
+  if (!isValidAsmUnquotedName(Name)) {
+    // We are going to emit a function alias as textual asm. Escaped strings
+    // in such expressions are not well supported.
+    report_fatal_error(
+        "CFI-ICall does not allow special characters in a function name.");
+  }
+
+  if (Dest->isWeakForLinker())
+    OS << ".weak " << Name << "\n";
+  else if (!Dest->hasLocalLinkage())
+    OS << ".globl " << Name << "\n";
+  OS << ".type " << Name << ", function\n";
+  OS << Name << " = " << JumpTable->getName() << " + "
+     << (getJumpTableEntrySize() * Distance) << "\n";
+  OS << ".size " << Name << ", " << getJumpTableEntrySize() << "\n";
 }
 
 Type *LowerTypeTestsModule::getJumpTableEntryType() {
-  return StructType::get(M.getContext(),
-                         {Int8Ty, Int32Ty, Int8Ty, Int8Ty, Int8Ty},
-                         /*Packed=*/true);
+  return ArrayType::get(Int8Ty, getJumpTableEntrySize());
 }
 
 /// Given a disjoint set of type identifiers and functions, build the bit sets
 /// and lower the llvm.type.test calls, architecture dependently.
 void LowerTypeTestsModule::buildBitSetsFromFunctions(
     ArrayRef<Metadata *> TypeIds, ArrayRef<Function *> Functions) {
-  if (Arch == Triple::x86 || Arch == Triple::x86_64)
-    buildBitSetsFromFunctionsX86(TypeIds, Functions);
+  if (Arch == Triple::x86 || Arch == Triple::x86_64 || Arch == Triple::arm ||
+      Arch == Triple::aarch64)
+    buildBitSetsFromFunctionsNative(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
     buildBitSetsFromFunctionsWASM(TypeIds, Functions);
   else
     report_fatal_error("Unsupported architecture for jump tables");
 }
 
+void LowerTypeTestsModule::moveInitializerToModuleConstructor(
+    GlobalVariable *GV) {
+  if (WeakInitializerFn == nullptr) {
+    WeakInitializerFn = Function::Create(
+        FunctionType::get(Type::getVoidTy(M.getContext()),
+                          /* IsVarArg */ false),
+        GlobalValue::InternalLinkage, "__cfi_global_var_init", &M);
+    BasicBlock *BB =
+        BasicBlock::Create(M.getContext(), "entry", WeakInitializerFn);
+    ReturnInst::Create(M.getContext(), BB);
+    WeakInitializerFn->setSection(
+        ObjectFormat == Triple::MachO
+            ? "__TEXT,__StaticInit,regular,pure_instructions"
+            : ".text.startup");
+    // This code is equivalent to relocation application, and should run at the
+    // earliest possible time (i.e. with the highest priority).
+    appendToGlobalCtors(M, WeakInitializerFn, /* Priority */ 0);
+  }
+
+  IRBuilder<> IRB(WeakInitializerFn->getEntryBlock().getTerminator());
+  GV->setConstant(false);
+  IRB.CreateAlignedStore(GV->getInitializer(), GV, GV->getAlignment());
+  GV->setInitializer(Constant::getNullValue(GV->getValueType()));
+}
+
+void LowerTypeTestsModule::findGlobalVariableUsersOf(
+    Constant *C, SmallSetVector<GlobalVariable *, 8> &Out) {
+  for (auto *U : C->users()){
+    if (auto *GV = dyn_cast<GlobalVariable>(U))
+      Out.insert(GV);
+    else if (auto *C2 = dyn_cast<Constant>(U))
+      findGlobalVariableUsersOf(C2, Out);
+  }
+}
+
+// Replace all uses of F with (F ? JT : 0).
+void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
+    Function *F, Constant *JT) {
+  // The target expression can not appear in a constant initializer on most
+  // (all?) targets. Switch to a runtime initializer.
+  SmallSetVector<GlobalVariable *, 8> GlobalVarUsers;
+  findGlobalVariableUsersOf(F, GlobalVarUsers);
+  for (auto GV : GlobalVarUsers)
+    moveInitializerToModuleConstructor(GV);
+
+  // Can not RAUW F with an expression that uses F. Replace with a temporary
+  // placeholder first.
+  Function *PlaceholderFn =
+      Function::Create(cast<FunctionType>(F->getValueType()),
+                       GlobalValue::ExternalWeakLinkage, "", &M);
+  F->replaceAllUsesWith(PlaceholderFn);
+
+  Constant *Target = ConstantExpr::getSelect(
+      ConstantExpr::getICmp(CmpInst::ICMP_NE, F,
+                            Constant::getNullValue(F->getType())),
+      JT, Constant::getNullValue(F->getType()));
+  PlaceholderFn->replaceAllUsesWith(Target);
+  PlaceholderFn->eraseFromParent();
+}
+
 /// Given a disjoint set of type identifiers and functions, build a jump table
 /// for the functions, build the bit sets and lower the llvm.type.test calls.
-void LowerTypeTestsModule::buildBitSetsFromFunctionsX86(
+void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     ArrayRef<Metadata *> TypeIds, ArrayRef<Function *> Functions) {
   // Unlike the global bitset builder, the function bitset builder cannot
   // re-arrange functions in a particular order and base its calculations on the
@@ -717,39 +837,35 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsX86(
   // mov h, %ecx
   // ret
   //
-  // To create a jump table for these functions, we instruct the LLVM code
-  // generator to output a jump table in the .text section. This is done by
-  // representing the instructions in the jump table as an LLVM constant and
-  // placing them in a global variable in the .text section. The end result will
-  // (conceptually) look like this:
+  // We output the jump table as module-level inline asm string. The end result
+  // will (conceptually) look like this:
   //
-  // f:
-  // jmp .Ltmp0 ; 5 bytes
+  // f = .cfi.jumptable
+  // g = .cfi.jumptable + 4
+  // h = .cfi.jumptable + 8
+  // .cfi.jumptable:
+  // jmp f.cfi  ; 5 bytes
   // int3       ; 1 byte
   // int3       ; 1 byte
   // int3       ; 1 byte
-  //
-  // g:
-  // jmp .Ltmp1 ; 5 bytes
+  // jmp g.cfi  ; 5 bytes
   // int3       ; 1 byte
   // int3       ; 1 byte
   // int3       ; 1 byte
-  //
-  // h:
-  // jmp .Ltmp2 ; 5 bytes
+  // jmp h.cfi  ; 5 bytes
   // int3       ; 1 byte
   // int3       ; 1 byte
   // int3       ; 1 byte
   //
-  // .Ltmp0:
+  // f.cfi:
   // mov 0, %eax
   // ret
   //
-  // .Ltmp1:
+  // g.cfi:
   // mov 1, %eax
   // ret
   //
-  // .Ltmp2:
+  // h.cfi:
   // mov 2, %eax
   // ret
   //
@@ -763,6 +879,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsX86(
   // normal case the check can be carried out using the same kind of simple
   // arithmetic that we normally use for globals.
 
+  // FIXME: find a better way to represent the jumptable in the IR.
+
   assert(!Functions.empty());
 
   // Build a simple layout based on the regular layout of jump tables.
@@ -774,45 +892,83 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsX86(
   // Create a constant to hold the jump table.
   ArrayType *JumpTableType =
       ArrayType::get(getJumpTableEntryType(), Functions.size());
-  auto JumpTable = new GlobalVariable(M, JumpTableType,
-                                      /*isConstant=*/true,
-                                      GlobalValue::PrivateLinkage, nullptr);
-  JumpTable->setSection(ObjectFormat == Triple::MachO
-                            ? "__TEXT,__text,regular,pure_instructions"
-                            : ".text");
+  auto JumpTable =
+      new GlobalVariable(M, JumpTableType,
+                         /*isConstant=*/true, GlobalValue::ExternalLinkage,
+                         nullptr, ".cfi.jumptable");
+  JumpTable->setVisibility(GlobalValue::HiddenVisibility);
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
+
+  std::string AsmStr;
+  raw_string_ostream AsmOS(AsmStr);
 
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
   for (unsigned I = 0; I != Functions.size(); ++I) {
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getBitCast(
-        ConstantExpr::getGetElementPtr(
-            JumpTableType, JumpTable,
-            ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                                 ConstantInt::get(IntPtrTy, I)}),
-        Functions[I]->getType());
+    // Need a name for the asm label. Normally, unnamed functions get temporary
+    // asm labels in TargetLoweringObjectFile but we don't have access to that
+    // here.
+    if (!Functions[I]->hasName())
+      Functions[I]->setName("unnamed");
     if (LinkerSubsectionsViaSymbols || Functions[I]->isDeclarationForLinker()) {
-      Functions[I]->replaceAllUsesWith(CombinedGlobalElemPtr);
+      Constant *CombinedGlobalElemPtr = ConstantExpr::getBitCast(
+          ConstantExpr::getGetElementPtr(
+              JumpTableType, JumpTable,
+              ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
+                                   ConstantInt::get(IntPtrTy, I)}),
+          Functions[I]->getType());
+
+
+      if (Functions[I]->isWeakForLinker()) {
+        AsmOS << ".weak " << Functions[I]->getName() << "\n";
+        replaceWeakDeclarationWithJumpTablePtr(Functions[I],
+                                               CombinedGlobalElemPtr);
+      } else {
+        Functions[I]->replaceAllUsesWith(CombinedGlobalElemPtr);
+      }
     } else {
       assert(Functions[I]->getType()->getAddressSpace() == 0);
-      GlobalAlias *GAlias = GlobalAlias::create(Functions[I]->getValueType(), 0,
-                                                Functions[I]->getLinkage(), "",
-                                                CombinedGlobalElemPtr, &M);
-      GAlias->setVisibility(Functions[I]->getVisibility());
-      GAlias->takeName(Functions[I]);
-      Functions[I]->replaceAllUsesWith(GAlias);
+
+      createJumpTableAlias(AsmOS, Functions[I], JumpTable, I);
+
+      Function *DeclAlias =
+          Function::Create(cast<FunctionType>(Functions[I]->getValueType()),
+                           GlobalValue::ExternalLinkage, "", &M);
+      // Since the alias (DeclAlias) is actually a declaration, it can not have
+      // internal linkage. Compensate for that by giving it hidden visibility.
+      // With this we end up with a GOT relocation against a local symbol.
+      DeclAlias->setVisibility(Functions[I]->hasLocalLinkage()
+                                   ? GlobalValue::HiddenVisibility
+                                   : Functions[I]->getVisibility());
+      DeclAlias->takeName(Functions[I]);
+      // Unnamed functions can not be added to llvm.used.
+      Functions[I]->setName(DeclAlias->getName() + ".cfi");
+      Functions[I]->replaceAllUsesWith(DeclAlias);
     }
     if (!Functions[I]->isDeclarationForLinker())
-      Functions[I]->setLinkage(GlobalValue::PrivateLinkage);
+      Functions[I]->setLinkage(GlobalValue::InternalLinkage);
   }
 
-  // Build and set the jump table's initializer.
-  std::vector<Constant *> JumpTableEntries;
+  // Try to emit the jump table at the end of the text segment.
+  // Jump table must come after __cfi_check in the cross-dso mode.
+  // FIXME: this magic section name seems to do the trick.
+  AsmOS << ".section " << (ObjectFormat == Triple::MachO
+                               ? "__TEXT,__text,regular,pure_instructions"
+                               : ".text.cfi, \"ax\", @progbits")
+        << "\n";
+  // Align the whole table by entry size.
+  AsmOS << ".balign " << EntrySize << "\n";
+  AsmOS << JumpTable->getName() << ":\n";
   for (unsigned I = 0; I != Functions.size(); ++I)
-    JumpTableEntries.push_back(
-        createJumpTableEntry(JumpTable, Functions[I], I));
-  JumpTable->setInitializer(
-      ConstantArray::get(JumpTableType, JumpTableEntries));
+    createJumpTableEntry(AsmOS, Functions[I], I);
+
+  M.appendModuleInlineAsm(AsmOS.str());
+
+  SmallVector<GlobalValue *, 16> Used;
+  Used.reserve(Functions.size());
+  for (auto *F : Functions)
+    Used.push_back(F);
+  appendToUsed(M, Used);
 }
 
 /// Assign a dummy layout using an incrementing counter, tag each function

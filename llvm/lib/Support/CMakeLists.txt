@@ -55,6 +55,7 @@ add_llvm_library(LLVMSupport
   FileOutputBuffer.cpp
   FoldingSet.cpp
   FormattedStream.cpp
+  FormatVariadic.cpp
   GraphWriter.cpp
   Hashing.cpp
   IntEqClasses.cpp

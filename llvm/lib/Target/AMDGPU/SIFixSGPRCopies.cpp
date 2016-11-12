@@ -234,6 +234,46 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   return true;
 }
 
+static bool phiHasVGPROperands(const MachineInstr &PHI,
+                               const MachineRegisterInfo &MRI,
+                               const SIRegisterInfo *TRI,
+                               const SIInstrInfo *TII) {
+
+  for (unsigned i = 1; i < PHI.getNumOperands(); i += 2) {
+    unsigned Reg = PHI.getOperand(i).getReg();
+    if (TRI->hasVGPRs(MRI.getRegClass(Reg)))
+      return true;
+  }
+  return false;
+}
+static bool phiHasBreakDef(const MachineInstr &PHI,
+                           const MachineRegisterInfo &MRI,
+                           SmallSet<unsigned, 8> &Visited) {
+
+  for (unsigned i = 1; i < PHI.getNumOperands(); i += 2) {
+    unsigned Reg = PHI.getOperand(i).getReg();
+    if (Visited.count(Reg))
+      continue;
+
+    Visited.insert(Reg);
+
+    MachineInstr *DefInstr = MRI.getUniqueVRegDef(Reg);
+    assert(DefInstr);
+    switch (DefInstr->getOpcode()) {
+    default:
+      break;
+    case AMDGPU::SI_BREAK:
+    case AMDGPU::SI_IF_BREAK:
+    case AMDGPU::SI_ELSE_BREAK:
+      return true;
+    case AMDGPU::PHI:
+      if (phiHasBreakDef(*DefInstr, MRI, Visited))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -311,31 +351,11 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         // the first block (where the condition is computed), so there
         // is no chance for values to be over-written.
 
-        bool HasBreakDef = false;
-        for (unsigned i = 1; i < MI.getNumOperands(); i+=2) {
-          unsigned Reg = MI.getOperand(i).getReg();
-          if (TRI->hasVGPRs(MRI.getRegClass(Reg))) {
-            TII->moveToVALU(MI);
-            break;
-          }
-          MachineInstr *DefInstr = MRI.getUniqueVRegDef(Reg);
-          assert(DefInstr);
-          switch(DefInstr->getOpcode()) {
-
-          case AMDGPU::SI_BREAK:
-          case AMDGPU::SI_IF_BREAK:
-          case AMDGPU::SI_ELSE_BREAK:
-          // If we see a PHI instruction that defines an SGPR, then that PHI
-          // instruction has already been considered and should have
-          // a *_BREAK as an operand.
-          case AMDGPU::PHI:
-            HasBreakDef = true;
-            break;
-          }
-        }
-
-        if (!SGPRBranch && !HasBreakDef)
+        SmallSet<unsigned, 8> Visited;
+        if (phiHasVGPROperands(MI, MRI, TRI, TII) ||
+            (!SGPRBranch && !phiHasBreakDef(MI, MRI, Visited))) {
           TII->moveToVALU(MI);
+        }
         break;
       }
       case AMDGPU::REG_SEQUENCE: {

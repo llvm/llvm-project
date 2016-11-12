@@ -1173,6 +1173,22 @@ void test6() {
 // CHECK: @llvm.ppc.altivec.vctuxs
 // CHECK-LE: @llvm.ppc.altivec.vctuxs
 
+  res_vi = vec_signed(vf);
+// CHECK: fptosi <4 x float>
+// CHECK-LE: fptosi <4 x float>
+
+  res_vui = vec_unsigned(vf);
+// CHECK: fptoui <4 x float>
+// CHECK-LE: fptoui <4 x float>
+
+  res_vf = vec_float(vi);
+// CHECK: sitofp <4 x i32>
+// CHECK-LE: sitofp <4 x i32>
+
+  res_vf = vec_float(vui);
+// CHECK: uitofp <4 x i32>
+// CHECK-LE: uitofp <4 x i32>
+
   /* vec_div */
   res_vsc = vec_div(vsc, vsc);
 // CHECK: sdiv <16 x i8>

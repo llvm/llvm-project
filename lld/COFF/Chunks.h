@@ -187,11 +187,12 @@ public:
   // Auxiliary Format 5: Section Definitions. Used for ICF.
   uint32_t Checksum = 0;
 
+  const coff_section *Header;
+
 private:
   // A file this chunk was created from.
   ObjectFile *File;
 
-  const coff_section *Header;
   StringRef SectionName;
   std::vector<SectionChunk *> AssocChildren;
   llvm::iterator_range<const coff_relocation *> Relocs;

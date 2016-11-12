@@ -38,6 +38,9 @@ class SanitizerArgs {
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;
   bool Stats = false;
+  bool TsanMemoryAccess = true;
+  bool TsanFuncEntryExit = true;
+  bool TsanAtomics = true;
 
  public:
   /// Parses the sanitizer arguments from an argument list.

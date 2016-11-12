@@ -540,7 +540,7 @@ llvm::Error ArchHandler_arm::getReferenceInfo(
     // Instruction contains branch to addend.
     displacement = getDisplacementFromThumbBranch(instruction, fixupAddress);
     *addend = fixupAddress + 4 + displacement;
-      return llvm::Error::success();
+    return llvm::Error::success();
   case ARM_THUMB_RELOC_BR22 | rPcRel | rLength4:
     // ex: bl _foo (and _foo is defined)
     if ((instruction & 0xD000F800) == 0x9000F000)

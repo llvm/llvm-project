@@ -162,13 +162,12 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                             TI->getType());
   }
 
-  // TODO: This function ends awkwardly in unreachable - fix to be more normal.
-
   // Only handle binary operators with one-use here. As with the cast case
   // above, it may be possible to relax the one-use constraint, but that needs
   // be examined carefully since it may not reduce the total number of
   // instructions.
-  if (!isa<BinaryOperator>(TI) || !TI->hasOneUse() || !FI->hasOneUse())
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(TI);
+  if (!BO || !TI->hasOneUse() || !FI->hasOneUse())
     return nullptr;
 
   // Figure out if the operations have any operands in common.
@@ -203,14 +202,9 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   // If we reach here, they do have operations in common.
   Value *NewSI = Builder->CreateSelect(SI.getCondition(), OtherOpT, OtherOpF,
                                        SI.getName() + ".v", &SI);
-
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(TI)) {
-    if (MatchIsOpZero)
-      return BinaryOperator::Create(BO->getOpcode(), MatchOp, NewSI);
-    else
-      return BinaryOperator::Create(BO->getOpcode(), NewSI, MatchOp);
-  }
-  llvm_unreachable("Shouldn't get here");
+  Value *Op0 = MatchIsOpZero ? MatchOp : NewSI;
+  Value *Op1 = MatchIsOpZero ? NewSI : MatchOp;
+  return BinaryOperator::Create(BO->getOpcode(), Op0, Op1);
 }
 
 static bool isSelect01(Constant *C1, Constant *C2) {

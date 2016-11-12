@@ -382,7 +382,7 @@ ArchHandler_x86_64::getReferenceInfo(const Relocation &reloc,
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = *(const little32_t *)fixupContent;
-      return llvm::Error::success();
+    return llvm::Error::success();
   case ripRel32Minus1:
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;

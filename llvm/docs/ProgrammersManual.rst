@@ -149,7 +149,7 @@ rarely have to include this file directly).
 
   .. code-block:: c++
 
-    if (AllocationInst *AI = dyn_cast<AllocationInst>(Val)) {
+    if (auto *AI = dyn_cast<AllocationInst>(Val)) {
       // ...
     }
 
@@ -262,6 +262,136 @@ As with a ``StringRef``, ``Twine`` objects point to external memory and should
 almost never be stored or mentioned directly.  They are intended solely for use
 when defining a function which should be able to efficiently accept concatenated
 strings.
+
+.. _formatting_strings:
+
+Formatting strings (the ``formatv`` function)
+---------------------------------------------
+While LLVM doesn't necessarily do a lot of string manipulation and parsing, it
+does do a lot of string formatting.  From diagnostic messages, to llvm tool
+outputs such as ``llvm-readobj`` to printing verbose disassembly listings and
+LLDB runtime logging, the need for string formatting is pervasive.
+
+The ``formatv`` is similar in spirit to ``printf``, but uses a different syntax
+which borrows heavily from Python and C#.  Unlike ``printf`` it deduces the type
+to be formatted at compile time, so it does not need a format specifier such as
+``%d``.  This reduces the mental overhead of trying to construct portable format
+strings, especially for platform-specific types like ``size_t`` or pointer types.
+Unlike both ``printf`` and Python, it additionally fails to compile if LLVM does
+not know how to format the type.  These two properties ensure that the function
+is both safer and simpler to use than traditional formatting methods such as 
+the ``printf`` family of functions.
+
+Simple formatting
+^^^^^^^^^^^^^^^^^
+
+A call to ``formatv`` involves a single **format string** consisting of 0 or more
+**replacement sequences**, followed by a variable length list of **replacement values**.
+A replacement sequence is a string of the form ``{N[[,align]:style]}``.
+
+``N`` refers to the 0-based index of the argument from the list of replacement
+values.  Note that this means it is possible to reference the same parameter
+multiple times, possibly with different style and/or alignment options, in any order.
+
+``align`` is an optional string specifying the width of the field to format
+the value into, and the alignment of the value within the field.  It is specified as
+an optional **alignment style** followed by a positive integral **field width**.  The
+alignment style can be one of the characters ``-`` (left align), ``=`` (center align),
+or ``+`` (right align).  The default is right aligned.  
+
+``style`` is an optional string consisting of a type specific that controls the
+formatting of the value.  For example, to format a floating point value as a percentage,
+you can use the style option ``P``.
+
+Custom formatting
+^^^^^^^^^^^^^^^^^
+
+There are two ways to customize the formatting behavior for a type.
+
+1. Provide a template specialization of ``llvm::format_provider<T>`` for your
+   type ``T`` with the appropriate static format method.
+
+  .. code-block:: c++
+  
+    namespace llvm {
+      template<>
+      struct format_provider<MyFooBar> {
+        static void format(const MyFooBar &V, raw_ostream &Stream, StringRef Style) {
+          // Do whatever is necessary to format `V` into `Stream`
+        }
+      };
+      void foo() {
+        MyFooBar X;
+        std::string S = formatv("{0}", X);
+      }
+    }
+    
+  This is a useful extensibility mechanism for adding support for formatting your own
+  custom types with your own custom Style options.  But it does not help when you want
+  to extend the mechanism for formatting a type that the library already knows how to
+  format.  For that, we need something else.
+    
+2. Provide a **format adapter** with a non-static format method.
+
+  .. code-block:: c++
+  
+    namespace anything {
+      struct format_int_custom {
+        int N;
+        explicit format_int_custom(int N) : N(N) {}
+        void format(llvm::raw_ostream &Stream, StringRef Style) {
+          // Do whatever is necessary to format ``N`` into ``Stream``
+        }
+      };
+    }
+    namespace llvm {
+      void foo() {
+        std::string S = formatv("{0}", anything::format_int_custom(42));
+      }
+    }
+    
+  If the search for a specialization of ``format_provider<T>`` for the given type
+  fails, ``formatv`` will subsequently check the argument for an instance method
+  named ``format`` with the signature described above.  If so, it will call the
+  ``format`` method on the argument passing in the specified style.  This allows
+  one to provide custom formatting of any type, including one which already has
+  a builtin format provider.
+
+``formatv`` Examples
+^^^^^^^^^^^^^^^^^^^^
+Below is intended to provide an incomplete set of examples demonstrating
+the usage of ``formatv``.  More information can be found by reading the
+doxygen documentation or by looking at the unit test suite.
+
+
+.. code-block:: c++
+  
+  std::string S;
+  // Simple formatting of basic types and implicit string conversion.
+  S = formatv("{0} ({1:P})", 7, 0.35);  // S == "7 (35.00%)"
+  
+  // Out-of-order referencing and multi-referencing
+  outs() << formatv("{0} {2} {1} {0}", 1, "test", 3); // prints "1 3 test 1"
+  
+  // Left, right, and center alignment
+  S = formatv("{0,7}",  'a');  // S == "      a";
+  S = formatv("{0,-7}", 'a');  // S == "a      ";
+  S = formatv("{0,=7}", 'a');  // S == "   a   ";
+  S = formatv("{0,+7}", 'a');  // S == "      a";
+  
+  // Custom styles
+  S = formatv("{0:N} - {0:x} - {1:E}", 12345, 123908342); // S == "12,345 - 0x3039 - 1.24E8"
+  
+  // Adapters
+  S = formatv("{0}", fmt_align(42, AlignStyle::Center, 7));  // S == "  42   "
+  S = formatv("{0}", fmt_repeat("hi", 3)); // S == "hihihi"
+  S = formatv("{0}", fmt_pad("hi", 2, 6)); // S == "  hi      "
+  
+  // Ranges
+  std::vector<int> V = {8, 9, 10};
+  S = formatv("{0}", make_range(V.begin(), V.end())); // S == "8, 9, 10"
+  S = formatv("{0:$[+]}", make_range(V.begin(), V.end())); // S == "8+9+10"
+  S = formatv("{0:$[ + ]@[x]}", make_range(V.begin(), V.end())); // S == "0x8 + 0x9 + 0xA"
 
 .. _error_apis:
 
