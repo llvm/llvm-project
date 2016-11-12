@@ -7613,57 +7613,68 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
+  // The below optimizations require a constant RHS.
+  if (!isa<ConstantSDNode>(N->getOperand(1)))
+    return SDValue();
+
+  ConstantSDNode *C = cast<ConstantSDNode>(N->getOperand(1));
+  const APInt &ConstValue = C->getAPIntValue();
+
   // Multiplication of a power of two plus/minus one can be done more
   // cheaply as as shift+add/sub. For now, this is true unilaterally. If
   // future CPUs have a cheaper MADD instruction, this may need to be
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-    const APInt &Value = C->getAPIntValue();
-    EVT VT = N->getValueType(0);
-    SDLoc DL(N);
-    if (Value.isNonNegative()) {
-      // (mul x, 2^N + 1) => (add (shl x, N), x)
-      APInt VM1 = Value - 1;
-      if (VM1.isPowerOf2()) {
-        SDValue ShiftedVal =
-            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                        DAG.getConstant(VM1.logBase2(), DL, MVT::i64));
-        return DAG.getNode(ISD::ADD, DL, VT, ShiftedVal,
-                           N->getOperand(0));
-      }
-      // (mul x, 2^N - 1) => (sub (shl x, N), x)
-      APInt VP1 = Value + 1;
-      if (VP1.isPowerOf2()) {
-        SDValue ShiftedVal =
-            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                        DAG.getConstant(VP1.logBase2(), DL, MVT::i64));
-        return DAG.getNode(ISD::SUB, DL, VT, ShiftedVal,
-                           N->getOperand(0));
-      }
-    } else {
-      // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
-      APInt VNP1 = -Value + 1;
-      if (VNP1.isPowerOf2()) {
-        SDValue ShiftedVal =
-            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                        DAG.getConstant(VNP1.logBase2(), DL, MVT::i64));
-        return DAG.getNode(ISD::SUB, DL, VT, N->getOperand(0),
-                           ShiftedVal);
-      }
-      // (mul x, -(2^N + 1)) => - (add (shl x, N), x)
-      APInt VNM1 = -Value - 1;
-      if (VNM1.isPowerOf2()) {
-        SDValue ShiftedVal =
-            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                        DAG.getConstant(VNM1.logBase2(), DL, MVT::i64));
-        SDValue Add =
-            DAG.getNode(ISD::ADD, DL, VT, ShiftedVal, N->getOperand(0));
-        return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Add);
-      }
-    }
+  unsigned ShiftAmt, AddSubOpc;
+  // Is the shifted value the LHS operand of the add/sub?
+  bool ShiftValUseIsN0 = true;
+  // Do we need to negate the result?
+  bool NegateResult = false;
+
+  if (ConstValue.isNonNegative()) {
+    // (mul x, 2^N + 1) => (add (shl x, N), x)
+    // (mul x, 2^N - 1) => (sub (shl x, N), x)
+    APInt CVMinus1 = ConstValue - 1;
+    APInt CVPlus1 = ConstValue + 1;
+    if (CVMinus1.isPowerOf2()) {
+      ShiftAmt = CVMinus1.logBase2();
+      AddSubOpc = ISD::ADD;
+    } else if (CVPlus1.isPowerOf2()) {
+      ShiftAmt = CVPlus1.logBase2();
+      AddSubOpc = ISD::SUB;
+    } else
+      return SDValue();
+  } else {
+    // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
+    // (mul x, -(2^N + 1)) => - (add (shl x, N), x)
+    APInt CVNegPlus1 = -ConstValue + 1;
+    APInt CVNegMinus1 = -ConstValue - 1;
+    if (CVNegPlus1.isPowerOf2()) {
+      ShiftAmt = CVNegPlus1.logBase2();
+      AddSubOpc = ISD::SUB;
+      ShiftValUseIsN0 = false;
+    } else if (CVNegMinus1.isPowerOf2()) {
+      ShiftAmt = CVNegMinus1.logBase2();
+      AddSubOpc = ISD::ADD;
+      NegateResult = true;
+    } else
+      return SDValue();
   }
-  return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                                   DAG.getConstant(ShiftAmt, DL, MVT::i64));
+
+  SDValue AddSubN0 = ShiftValUseIsN0 ? ShiftedVal : N0;
+  SDValue AddSubN1 = ShiftValUseIsN0 ? N0 : ShiftedVal;
+  SDValue Res = DAG.getNode(AddSubOpc, DL, VT, AddSubN0, AddSubN1);
+  if (!NegateResult)
+    return Res;
+
+  // Negate the result.
+  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Res);
 }
 
 static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,
@@ -8772,26 +8783,42 @@ static SDValue replaceSplatVectorStore(SelectionDAG &DAG, StoreSDNode *St) {
   if (VT.isFloatingPoint())
     return SDValue();
 
-  // Check for insert vector elements.
-  if (StVal.getOpcode() != ISD::INSERT_VECTOR_ELT)
-    return SDValue();
-
   // We can express a splat as store pair(s) for 2 or 4 elements.
   unsigned NumVecElts = VT.getVectorNumElements();
   if (NumVecElts != 4 && NumVecElts != 2)
     return SDValue();
-  SDValue SplatVal = StVal.getOperand(1);
-  unsigned RemainInsertElts = NumVecElts - 1;
 
   // Check that this is a splat.
-  while (--RemainInsertElts) {
-    SDValue NextInsertElt = StVal.getOperand(0);
-    if (NextInsertElt.getOpcode() != ISD::INSERT_VECTOR_ELT)
+  // Make sure that each of the relevant vector element locations are inserted
+  // to, i.e. 0 and 1 for v2i64 and 0, 1, 2, 3 for v4i32.
+  std::bitset<4> IndexNotInserted((1 << NumVecElts) - 1);
+  SDValue SplatVal;
+  for (unsigned I = 0; I < NumVecElts; ++I) {
+    // Check for insert vector elements.
+    if (StVal.getOpcode() != ISD::INSERT_VECTOR_ELT)
       return SDValue();
-    if (NextInsertElt.getOperand(1) != SplatVal)
+
+    // Check that same value is inserted at each vector element.
+    if (I == 0)
+      SplatVal = StVal.getOperand(1);
+    else if (StVal.getOperand(1) != SplatVal)
       return SDValue();
-    StVal = NextInsertElt;
+
+    // Check insert element index.
+    ConstantSDNode *CIndex = dyn_cast<ConstantSDNode>(StVal.getOperand(2));
+    if (!CIndex)
+      return SDValue();
+    uint64_t IndexVal = CIndex->getZExtValue();
+    if (IndexVal >= NumVecElts)
+      return SDValue();
+    IndexNotInserted.reset(IndexVal);
+
+    StVal = StVal.getOperand(0);
   }
+  // Check that all vector element locations were inserted to.
+  if (IndexNotInserted.any())
+      return SDValue();
+
   unsigned OrigAlignment = St->getAlignment();
   unsigned EltOffset = NumVecElts == 4 ? 4 : 8;
   unsigned Alignment = std::min(OrigAlignment, EltOffset);

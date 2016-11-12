@@ -102,18 +102,8 @@ int main(int argc, char* argv[]) {
 
   MyServerT Server(TCPChannel, SymbolLookup, RegisterEHFrames, DeregisterEHFrames);
 
-  while (1) {
-    MyServerT::JITFuncId Id = MyServerT::InvalidId;
-    ExitOnErr(Server.startReceivingFunction(TCPChannel, (uint32_t&)Id));
-    switch (Id) {
-    case MyServerT::TerminateSessionId:
-      ExitOnErr(Server.handleTerminateSession());
-      return 0;
-    default:
-      ExitOnErr(Server.handleKnownFunction(Id));
-      break;
-    }
-  }
+  while (!Server.receivedTerminate())
+    ExitOnErr(Server.handleOne());
 
-  llvm_unreachable("Fell through server command loop.");
+  return 0;
 }

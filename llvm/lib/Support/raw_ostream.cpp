@@ -20,6 +20,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Process.h"
@@ -114,22 +115,22 @@ void raw_ostream::SetBufferAndMode(char *BufferStart, size_t Size,
 }
 
 raw_ostream &raw_ostream::operator<<(unsigned long N) {
-  write_integer(*this, static_cast<uint64_t>(N), IntegerStyle::Integer);
+  write_integer(*this, static_cast<uint64_t>(N), 0, IntegerStyle::Integer);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(long N) {
-  write_integer(*this, static_cast<int64_t>(N), IntegerStyle::Integer);
+  write_integer(*this, static_cast<int64_t>(N), 0, IntegerStyle::Integer);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(unsigned long long N) {
-  write_integer(*this, static_cast<uint64_t>(N), IntegerStyle::Integer);
+  write_integer(*this, static_cast<uint64_t>(N), 0, IntegerStyle::Integer);
   return *this;
 }
 
 raw_ostream &raw_ostream::operator<<(long long N) {
-  write_integer(*this, static_cast<int64_t>(N), IntegerStyle::Integer);
+  write_integer(*this, static_cast<int64_t>(N), 0, IntegerStyle::Integer);
   return *this;
 }
 
@@ -318,6 +319,12 @@ raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
   }
 }
 
+raw_ostream &raw_ostream::operator<<(const formatv_object_base &Obj) {
+  SmallString<128> S;
+  Obj.format(*this);
+  return *this;
+}
+
 raw_ostream &raw_ostream::operator<<(const FormattedString &FS) {
   unsigned Len = FS.Str.size(); 
   int PadAmount = FS.Width - Len;
@@ -344,7 +351,7 @@ raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
   } else {
     llvm::SmallString<16> Buffer;
     llvm::raw_svector_ostream Stream(Buffer);
-    llvm::write_integer(Stream, FN.DecValue, IntegerStyle::Integer);
+    llvm::write_integer(Stream, FN.DecValue, 0, IntegerStyle::Integer);
     if (Buffer.size() < FN.Width)
       indent(FN.Width - Buffer.size());
     (*this) << Buffer;

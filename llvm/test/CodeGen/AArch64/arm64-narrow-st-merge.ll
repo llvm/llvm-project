@@ -1,9 +1,11 @@
-; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mtriple aarch64_be--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=kryo -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple aarch64--none-eabi -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple aarch64--none-eabi -mattr=+strict-align -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-STRICT
 
 ; CHECK-LABEL: Strh_zero
 ; CHECK: str wzr
+; CHECK-STRICT-LABEL: Strh_zero
+; CHECK-STRICT: strh wzr
+; CHECK-STRICT: strh wzr
 define void @Strh_zero(i16* nocapture %P, i32 %n) {
 entry:
   %idxprom = sext i32 %n to i64
@@ -18,6 +20,11 @@ entry:
 
 ; CHECK-LABEL: Strh_zero_4
 ; CHECK: stp wzr, wzr
+; CHECK-STRICT-LABEL: Strh_zero_4
+; CHECK-STRICT: strh wzr
+; CHECK-STRICT: strh wzr
+; CHECK-STRICT: strh wzr
+; CHECK-STRICT: strh wzr
 define void @Strh_zero_4(i16* nocapture %P, i32 %n) {
 entry:
   %idxprom = sext i32 %n to i64
@@ -40,6 +47,8 @@ entry:
 
 ; CHECK-LABEL: Strw_zero
 ; CHECK: str xzr
+; CHECK-STRICT-LABEL: Strw_zero
+; CHECK-STRICT: stp wzr, wzr
 define void @Strw_zero(i32* nocapture %P, i32 %n) {
 entry:
   %idxprom = sext i32 %n to i64
@@ -67,7 +76,10 @@ entry:
 }
 
 ; CHECK-LABEL: Strw_zero_4
-; CHECK: stp xzr
+; CHECK: stp xzr, xzr
+; CHECK-STRICT-LABEL: Strw_zero_4
+; CHECK-STRICT: stp wzr, wzr
+; CHECK-STRICT: stp wzr, wzr
 define void @Strw_zero_4(i32* nocapture %P, i32 %n) {
 entry:
   %idxprom = sext i32 %n to i64
@@ -90,6 +102,9 @@ entry:
 
 ; CHECK-LABEL: Sturb_zero
 ; CHECK: sturh wzr
+; CHECK-STRICT-LABEL: Sturb_zero
+; CHECK-STRICT: sturb wzr
+; CHECK-STRICT: sturb wzr
 define void @Sturb_zero(i8* nocapture %P, i32 %n) #0 {
 entry:
   %sub = add nsw i32 %n, -2
@@ -105,6 +120,9 @@ entry:
 
 ; CHECK-LABEL: Sturh_zero
 ; CHECK: stur wzr
+; CHECK-STRICT-LABEL: Sturh_zero
+; CHECK-STRICT: sturh wzr
+; CHECK-STRICT: sturh wzr
 define void @Sturh_zero(i16* nocapture %P, i32 %n) {
 entry:
   %sub = add nsw i32 %n, -2
@@ -120,6 +138,11 @@ entry:
 
 ; CHECK-LABEL: Sturh_zero_4
 ; CHECK: stp wzr, wzr
+; CHECK-STRICT-LABEL: Sturh_zero_4
+; CHECK-STRICT: sturh wzr
+; CHECK-STRICT: sturh wzr
+; CHECK-STRICT: sturh wzr
+; CHECK-STRICT: sturh wzr
 define void @Sturh_zero_4(i16* nocapture %P, i32 %n) {
 entry:
   %sub = add nsw i32 %n, -3
@@ -143,6 +166,8 @@ entry:
 
 ; CHECK-LABEL: Sturw_zero
 ; CHECK: stur xzr
+; CHECK-STRICT-LABEL: Sturw_zero
+; CHECK-STRICT: stp wzr, wzr
 define void @Sturw_zero(i32* nocapture %P, i32 %n) {
 entry:
   %sub = add nsw i32 %n, -3
@@ -158,6 +183,9 @@ entry:
 
 ; CHECK-LABEL: Sturw_zero_4
 ; CHECK: stp xzr, xzr
+; CHECK-STRICT-LABEL: Sturw_zero_4
+; CHECK-STRICT: stp wzr, wzr
+; CHECK-STRICT: stp wzr, wzr
 define void @Sturw_zero_4(i32* nocapture %P, i32 %n) {
 entry:
   %sub = add nsw i32 %n, -3

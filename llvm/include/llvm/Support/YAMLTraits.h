@@ -11,6 +11,7 @@
 #define LLVM_SUPPORT_YAMLTRAITS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -200,10 +201,6 @@ struct DocumentListTraits {
   // static size_t size(IO &io, T &seq);
   // static T::value_type& element(IO &io, T &seq, size_t index);
 };
-
-// Only used by compiler if both template types are the same
-template <typename T, T>
-struct SameType;
 
 // Only used for better diagnostics of missing traits
 template <typename T>

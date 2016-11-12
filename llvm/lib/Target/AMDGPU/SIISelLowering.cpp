@@ -271,6 +271,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::FP16_TO_FP, MVT::i16, MVT::i32);
     setOperationAction(ISD::FP_TO_FP16, MVT::i16, Promote);
     AddPromotedToType(ISD::FP_TO_FP16, MVT::i16, MVT::i32);
+
+    setOperationAction(ISD::FP_TO_SINT, MVT::i16, Promote);
+    AddPromotedToType(ISD::FP_TO_SINT, MVT::i16, MVT::i32);
+
+    setOperationAction(ISD::FP_TO_UINT, MVT::i16, Promote);
+    AddPromotedToType(ISD::FP_TO_UINT, MVT::i16, MVT::i32);
   }
 
   setTargetDAGCombine(ISD::FADD);

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/RPCByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/RawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/RPCUtils.h"
 #include "gtest/gtest.h"
 
@@ -15,7 +15,7 @@
 
 using namespace llvm;
 using namespace llvm::orc;
-using namespace llvm::orc::remote;
+using namespace llvm::orc::rpc;
 
 class Queue : public std::queue<char> {
 public:
@@ -25,7 +25,7 @@ private:
   std::mutex Lock;
 };
 
-class QueueChannel : public RPCByteChannel {
+class QueueChannel : public RawByteChannel {
 public:
   QueueChannel(Queue &InQueue, Queue &OutQueue)
       : InQueue(InQueue), OutQueue(OutQueue) {}
@@ -61,126 +61,190 @@ private:
   Queue &OutQueue;
 };
 
-class DummyRPC : public testing::Test, public RPC<QueueChannel> {
+class DummyRPCAPI {
 public:
-  enum FuncId : uint32_t {
-    VoidBoolId = RPCFunctionIdTraits<FuncId>::FirstValidId,
-    IntIntId,
-    AllTheTypesId
+
+  class VoidBool : public Function<VoidBool, void(bool)> {
+  public:
+    static const char* getName() { return "VoidBool"; }
   };
 
-  typedef Function<VoidBoolId, void(bool)> VoidBool;
-  typedef Function<IntIntId, int32_t(int32_t)> IntInt;
-  typedef Function<AllTheTypesId,
-                   void(int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
-                        int64_t, uint64_t, bool, std::string, std::vector<int>)>
-      AllTheTypes;
+  class IntInt : public Function<IntInt, int32_t(int32_t)> {
+  public:
+    static const char* getName() { return "IntInt"; }
+  };
+
+  class AllTheTypes
+    : public Function<AllTheTypes,
+                      void(int8_t, uint8_t, int16_t, uint16_t, int32_t,
+                           uint32_t, int64_t, uint64_t, bool, std::string,
+                           std::vector<int>)> {
+  public:
+    static const char* getName() { return "AllTheTypes"; }
+  };
 };
 
-TEST_F(DummyRPC, TestAsyncVoidBool) {
+class DummyRPCEndpoint : public DummyRPCAPI,
+                         public SingleThreadedRPC<QueueChannel> {
+public:
+  DummyRPCEndpoint(Queue &Q1, Queue &Q2)
+      : SingleThreadedRPC(C, true), C(Q1, Q2) {}
+private:
+  QueueChannel C;
+};
+
+TEST(DummyRPC, TestAsyncVoidBool) {
   Queue Q1, Q2;
-  QueueChannel C1(Q1, Q2);
-  QueueChannel C2(Q2, Q1);
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
 
-  // Make an async call.
-  auto ResOrErr = callNBWithSeq<VoidBool>(C1, true);
-  EXPECT_TRUE(!!ResOrErr) << "Simple call over queue failed";
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::VoidBool>(
+          [](bool B) {
+            EXPECT_EQ(B, true)
+              << "Server void(bool) received unexpected result";
+          });
 
-  {
-    // Expect a call to Proc1.
-    auto EC = expect<VoidBool>(C2, [&](bool &B) {
-      EXPECT_EQ(B, true) << "Bool serialization broken";
-      return Error::success();
-    });
-    EXPECT_FALSE(EC) << "Simple expect over queue failed";
-  }
+      {
+        // Poke the server to handle the negotiate call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+      }
 
-  {
-    // Wait for the result.
-    auto EC = waitForResult(C1, ResOrErr->second, handleNone);
-    EXPECT_FALSE(EC) << "Could not read result.";
-  }
-
-  // Verify that the function returned ok.
-  auto Err = ResOrErr->first.get();
-  EXPECT_FALSE(!!Err) << "Remote void function failed to execute.";
-}
-
-TEST_F(DummyRPC, TestAsyncIntInt) {
-  Queue Q1, Q2;
-  QueueChannel C1(Q1, Q2);
-  QueueChannel C2(Q2, Q1);
-
-  // Make an async call.
-  auto ResOrErr = callNBWithSeq<IntInt>(C1, 21);
-  EXPECT_TRUE(!!ResOrErr) << "Simple call over queue failed";
+      {
+        // Poke the server to handle the VoidBool call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to void(bool)";
+      }
+  });
 
   {
-    // Expect a call to Proc1.
-    auto EC = expect<IntInt>(C2, [&](int32_t I) -> Expected<int32_t> {
-      EXPECT_EQ(I, 21) << "Bool serialization broken";
-      return 2 * I;
-    });
-    EXPECT_FALSE(EC) << "Simple expect over queue failed";
-  }
-
-  {
-    // Wait for the result.
-    auto EC = waitForResult(C1, ResOrErr->second, handleNone);
-    EXPECT_FALSE(EC) << "Could not read result.";
-  }
-
-  // Verify that the function returned ok.
-  auto Val = ResOrErr->first.get();
-  EXPECT_TRUE(!!Val) << "Remote int function failed to execute.";
-  EXPECT_EQ(*Val, 42) << "Remote int function return wrong value.";
-}
-
-TEST_F(DummyRPC, TestSerialization) {
-  Queue Q1, Q2;
-  QueueChannel C1(Q1, Q2);
-  QueueChannel C2(Q2, Q1);
-
-  // Make a call to Proc1.
-  std::vector<int> v({42, 7});
-  auto ResOrErr = callNBWithSeq<AllTheTypes>(
-      C1, -101, 250, -10000, 10000, -1000000000, 1000000000, -10000000000,
-      10000000000, true, "foo", v);
-  EXPECT_TRUE(!!ResOrErr) << "Big (serialization test) call over queue failed";
-
-  {
-    // Expect a call to Proc1.
-    auto EC = expect<AllTheTypes>(
-        C2, [&](int8_t &s8, uint8_t &u8, int16_t &s16, uint16_t &u16,
-                int32_t &s32, uint32_t &u32, int64_t &s64, uint64_t &u64,
-                bool &b, std::string &s, std::vector<int> &v) {
-
-          EXPECT_EQ(s8, -101) << "int8_t serialization broken";
-          EXPECT_EQ(u8, 250) << "uint8_t serialization broken";
-          EXPECT_EQ(s16, -10000) << "int16_t serialization broken";
-          EXPECT_EQ(u16, 10000) << "uint16_t serialization broken";
-          EXPECT_EQ(s32, -1000000000) << "int32_t serialization broken";
-          EXPECT_EQ(u32, 1000000000ULL) << "uint32_t serialization broken";
-          EXPECT_EQ(s64, -10000000000) << "int64_t serialization broken";
-          EXPECT_EQ(u64, 10000000000ULL) << "uint64_t serialization broken";
-          EXPECT_EQ(b, true) << "bool serialization broken";
-          EXPECT_EQ(s, "foo") << "std::string serialization broken";
-          EXPECT_EQ(v, std::vector<int>({42, 7}))
-              << "std::vector serialization broken";
+    // Make an async call.
+    auto Err = Client.callAsync<DummyRPCAPI::VoidBool>(
+        [](Error Err) {
+          EXPECT_FALSE(!!Err) << "Async void(bool) response handler failed";
           return Error::success();
-        });
-    EXPECT_FALSE(EC) << "Big (serialization test) call over queue failed";
+        }, true);
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for void(bool)";
   }
 
   {
-    // Wait for the result.
-    auto EC = waitForResult(C1, ResOrErr->second, handleNone);
-    EXPECT_FALSE(EC) << "Could not read result.";
+    // Poke the client to process the result of the void(bool) call.
+    auto Err = Client.handleOne();
+    EXPECT_FALSE(!!Err) << "Client failed to handle response from void(bool)";
   }
 
-  // Verify that the function returned ok.
-  auto Err = ResOrErr->first.get();
-  EXPECT_FALSE(!!Err) << "Remote void function failed to execute.";
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestAsyncIntInt) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::IntInt>(
+          [](int X) -> int {
+            EXPECT_EQ(X, 21) << "Server int(int) receieved unexpected result";
+            return 2 * X;
+          });
+
+      {
+        // Poke the server to handle the negotiate call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+      }
+
+      {
+        // Poke the server to handle the int(int) call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to int(int)";
+      }
+    });
+
+  {
+    auto Err = Client.callAsync<DummyRPCAPI::IntInt>(
+        [](Expected<int> Result) {
+          EXPECT_TRUE(!!Result) << "Async int(int) response handler failed";
+          EXPECT_EQ(*Result, 42)
+            << "Async int(int) response handler received incorrect result";
+          return Error::success();
+        }, 21);
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for int(int)";
+  }
+
+  {
+    // Poke the client to process the result.
+    auto Err = Client.handleOne();
+    EXPECT_FALSE(!!Err) << "Client failed to handle response from void(bool)";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestSerialization) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::AllTheTypes>(
+          [&](int8_t S8, uint8_t U8, int16_t S16, uint16_t U16,
+              int32_t S32, uint32_t U32, int64_t S64, uint64_t U64,
+              bool B, std::string S, std::vector<int> V) {
+
+            EXPECT_EQ(S8, -101) << "int8_t serialization broken";
+            EXPECT_EQ(U8, 250) << "uint8_t serialization broken";
+            EXPECT_EQ(S16, -10000) << "int16_t serialization broken";
+            EXPECT_EQ(U16, 10000) << "uint16_t serialization broken";
+            EXPECT_EQ(S32, -1000000000) << "int32_t serialization broken";
+            EXPECT_EQ(U32, 1000000000ULL) << "uint32_t serialization broken";
+            EXPECT_EQ(S64, -10000000000) << "int64_t serialization broken";
+            EXPECT_EQ(U64, 10000000000ULL) << "uint64_t serialization broken";
+            EXPECT_EQ(B, true) << "bool serialization broken";
+            EXPECT_EQ(S, "foo") << "std::string serialization broken";
+            EXPECT_EQ(V, std::vector<int>({42, 7}))
+              << "std::vector serialization broken";
+            return Error::success();
+          });
+
+      {
+        // Poke the server to handle the negotiate call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+      }
+
+      {
+        // Poke the server to handle the AllTheTypes call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to void(bool)";
+      }
+    });
+
+
+  {
+    // Make an async call.
+    std::vector<int> v({42, 7});
+    auto Err = Client.callAsync<DummyRPCAPI::AllTheTypes>(
+        [](Error Err) {
+          EXPECT_FALSE(!!Err) << "Async AllTheTypes response handler failed";
+          return Error::success();
+        },
+        static_cast<int8_t>(-101), static_cast<uint8_t>(250),
+        static_cast<int16_t>(-10000), static_cast<uint16_t>(10000),
+        static_cast<int32_t>(-1000000000), static_cast<uint32_t>(1000000000),
+        static_cast<int64_t>(-10000000000), static_cast<uint64_t>(10000000000),
+        true, std::string("foo"), v);
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for AllTheTypes";
+  }
+
+  {
+    // Poke the client to process the result of the AllTheTypes call.
+    auto Err = Client.handleOne();
+    EXPECT_FALSE(!!Err) << "Client failed to handle response from AllTheTypes";
+  }
+
+  ServerThread.join();
 }
 
 // Test the synchronous call API.

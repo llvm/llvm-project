@@ -457,5 +457,26 @@ bb7:                                              ; preds = %bb3
   ret void
 }
 
+; GCN-LABEL: {{^}}phi_visit_order:
+; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, 1, v{{[0-9]+}}
+define void @phi_visit_order() {
+bb:
+  br label %bb1
+
+bb1:
+  %tmp = phi i32 [ 0, %bb ], [ %tmp5, %bb4 ]
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %cnd = icmp eq i32 %tid, 0
+  br i1 %cnd, label %bb4, label %bb2
+
+bb2:
+  %tmp3 = add nsw i32 %tmp, 1
+  br label %bb4
+
+bb4:
+  %tmp5 = phi i32 [ %tmp3, %bb2 ], [ %tmp, %bb1 ]
+  br label %bb1
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

@@ -1330,7 +1330,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     }
 
     for (User::const_op_iterator OI=CE->op_begin(); OI != CE->op_end(); ++OI) {
-      if (InRangeOp && (OI - CE->op_begin()) == *InRangeOp)
+      if (InRangeOp && unsigned(OI - CE->op_begin()) == *InRangeOp)
         Out << "inrange ";
       TypePrinter.print((*OI)->getType(), Out);
       Out << ' ';

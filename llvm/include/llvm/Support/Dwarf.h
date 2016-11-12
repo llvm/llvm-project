@@ -433,6 +433,9 @@ private:
   };
 };
 
+/// Constants that define the DWARF format as 32 or 64 bit.
+enum DwarfFormat { DWARF32, DWARF64 };
+
 } // End of namespace dwarf
 
 } // End of namespace llvm

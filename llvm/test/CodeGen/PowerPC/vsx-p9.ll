@@ -190,4 +190,74 @@ entry:
 ; Function Attrs: nounwind readnone
 declare <16 x i8> @llvm.ppc.altivec.vsrv(<16 x i8>, <16 x i8>)
 
+; Function Attrs: nounwind readnone
+define <8 x i16> @testXVCVSPHP(<4 x float> %a) {
+entry:
+; CHECK-LABEL: testXVCVSPHP
+; CHECK: xvcvsphp 34, 34
+; CHECK: blr
+  %0 = tail call <4 x float> @llvm.ppc.vsx.xvcvsphp(<4 x float> %a)
+  %1 = bitcast <4 x float> %0 to <8 x i16>
+  ret <8 x i16> %1
+}
+
+; Function Attrs: nounwind readnone
+define <4 x i32> @testVRLWMI(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+entry:
+; CHECK-LABEL: testVRLWMI
+; CHECK: vrlwmi 3, 2, 4
+; CHECK: blr
+  %0 = tail call <4 x i32> @llvm.ppc.altivec.vrlwmi(<4 x i32> %a, <4 x i32> %c, <4 x i32> %b)
+  ret <4 x i32> %0
+}
+
+; Function Attrs: nounwind readnone
+define <2 x i64> @testVRLDMI(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
+entry:
+; CHECK-LABEL: testVRLDMI
+; CHECK: vrldmi 3, 2, 4
+; CHECK: blr
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vrldmi(<2 x i64> %a, <2 x i64> %c, <2 x i64> %b)
+  ret <2 x i64> %0
+}
+
+; Function Attrs: nounwind readnone
+define <4 x i32> @testVRLWNM(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.altivec.vrlwnm(<4 x i32> %a, <4 x i32> %b)
+  %and.i = and <4 x i32> %0, %c
+  ret <4 x i32> %and.i
+; CHECK-LABEL: testVRLWNM
+; CHECK: vrlwnm 2, 2, 3
+; CHECK: xxland 34, 34, 36
+; CHECK: blr
+}
+
+; Function Attrs: nounwind readnone
+define <2 x i64> @testVRLDNM(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vrldnm(<2 x i64> %a, <2 x i64> %b)
+  %and.i = and <2 x i64> %0, %c
+  ret <2 x i64> %and.i
+; CHECK-LABEL: testVRLDNM
+; CHECK: vrldnm 2, 2, 3
+; CHECK: xxland 34, 34, 36
+; CHECK: blr
+}
+
+; Function Attrs: nounwind readnone
+declare <4 x float> @llvm.ppc.vsx.xvcvsphp(<4 x float>)
+
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.altivec.vrlwmi(<4 x i32>, <4 x i32>, <4 x i32>)
+
+; Function Attrs: nounwind readnone
+declare <2 x i64> @llvm.ppc.altivec.vrldmi(<2 x i64>, <2 x i64>, <2 x i64>)
+
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.altivec.vrlwnm(<4 x i32>, <4 x i32>)
+
+; Function Attrs: nounwind readnone
+declare <2 x i64> @llvm.ppc.altivec.vrldnm(<2 x i64>, <2 x i64>)
+
 declare void @sink(...)

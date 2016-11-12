@@ -15,6 +15,8 @@ type llvalue
 type lluse
 type llbasicblock
 type llbuilder
+type llattrkind
+type llattribute
 type llmemorybuffer
 type llmdkind
 
@@ -79,6 +81,25 @@ module CallConv = struct
   let cold = 9
   let x86_stdcall = 64
   let x86_fastcall = 65
+end
+
+module AttrRepr = struct
+  type t =
+  | Enum of llattrkind * int64
+  | String of string * string
+end
+
+module AttrIndex = struct
+  type t =
+  | Function
+  | Return
+  | Param of int
+
+  let to_int index =
+    match index with
+    | Function -> -1
+    | Return -> 0
+    | Param(n) -> 1 + n
 end
 
 module Attribute = struct
@@ -331,6 +352,47 @@ external create_context : unit -> llcontext = "llvm_create_context"
 external dispose_context : llcontext -> unit = "llvm_dispose_context"
 external global_context : unit -> llcontext = "llvm_global_context"
 external mdkind_id : llcontext -> string -> llmdkind = "llvm_mdkind_id"
+
+(*===-- Attributes --------------------------------------------------------===*)
+exception UnknownAttribute of string
+
+let () = Callback.register_exception "Llvm.UnknownAttribute"
+                                     (UnknownAttribute "")
+
+external enum_attr_kind : string -> llattrkind = "llvm_enum_attr_kind"
+external llvm_create_enum_attr : llcontext -> llattrkind -> int64 ->
+                                 llattribute
+                               = "llvm_create_enum_attr_by_kind"
+external is_enum_attr : llattribute -> bool = "llvm_is_enum_attr"
+external get_enum_attr_kind : llattribute -> llattrkind
+                            = "llvm_get_enum_attr_kind"
+external get_enum_attr_value : llattribute -> int64
+                             = "llvm_get_enum_attr_value"
+external llvm_create_string_attr : llcontext -> string -> string ->
+                                   llattribute
+                                 = "llvm_create_string_attr"
+external is_string_attr : llattribute -> bool = "llvm_is_string_attr"
+external get_string_attr_kind : llattribute -> string
+                              = "llvm_get_string_attr_kind"
+external get_string_attr_value : llattribute -> string
+                               = "llvm_get_string_attr_value"
+
+let create_enum_attr context name value =
+  llvm_create_enum_attr context (enum_attr_kind name) value
+let create_string_attr context kind value =
+  llvm_create_string_attr context kind value
+
+let attr_of_repr context repr =
+  match repr with
+  | AttrRepr.Enum(kind, value) -> llvm_create_enum_attr context kind value
+  | AttrRepr.String(key, value) -> llvm_create_string_attr context key value
+
+let repr_of_attr attr =
+  if is_enum_attr attr then
+    AttrRepr.Enum(get_enum_attr_kind attr, get_enum_attr_value attr)
+  else if is_string_attr attr then
+    AttrRepr.String(get_string_attr_kind attr, get_string_attr_value attr)
+  else assert false
 
 (*===-- Modules -----------------------------------------------------------===*)
 external create_module : llcontext -> string -> llmodule = "llvm_create_module"
@@ -760,99 +822,27 @@ let rec fold_right_function_range f i e init =
 let fold_right_functions f m init =
   fold_right_function_range f (function_end m) (At_start m) init
 
-external llvm_add_function_attr : llvalue -> int32 -> unit
+external llvm_add_function_attr : llvalue -> llattribute -> int -> unit
                                 = "llvm_add_function_attr"
-external llvm_remove_function_attr : llvalue -> int32 -> unit
-                                   = "llvm_remove_function_attr"
-external llvm_function_attr : llvalue -> int32 = "llvm_function_attr"
+external llvm_function_attrs : llvalue -> int -> llattribute array
+                             = "llvm_function_attrs"
+external llvm_remove_enum_function_attr : llvalue -> llattrkind -> int -> unit
+                                        = "llvm_remove_enum_function_attr"
+external llvm_remove_string_function_attr : llvalue -> string -> int -> unit
+                                          = "llvm_remove_string_function_attr"
 
-let pack_attr (attr:Attribute.t) : int32 =
-  match attr with
-  Attribute.Zext                  -> Int32.shift_left 1l 0
-    | Attribute.Sext              -> Int32.shift_left 1l 1
-    | Attribute.Noreturn          -> Int32.shift_left 1l 2
-    | Attribute.Inreg             -> Int32.shift_left 1l 3
-    | Attribute.Structret         -> Int32.shift_left 1l 4
-    | Attribute.Nounwind          -> Int32.shift_left 1l 5
-    | Attribute.Noalias           -> Int32.shift_left 1l 6
-    | Attribute.Byval             -> Int32.shift_left 1l 7
-    | Attribute.Nest              -> Int32.shift_left 1l 8
-    | Attribute.Readnone          -> Int32.shift_left 1l 9
-    | Attribute.Readonly          -> Int32.shift_left 1l 10
-    | Attribute.Noinline          -> Int32.shift_left 1l 11
-    | Attribute.Alwaysinline      -> Int32.shift_left 1l 12
-    | Attribute.Optsize           -> Int32.shift_left 1l 13
-    | Attribute.Ssp               -> Int32.shift_left 1l 14
-    | Attribute.Sspreq            -> Int32.shift_left 1l 15
-    | Attribute.Alignment n       -> Int32.shift_left (Int32.of_int n) 16
-    | Attribute.Nocapture         -> Int32.shift_left 1l 21
-    | Attribute.Noredzone         -> Int32.shift_left 1l 22
-    | Attribute.Noimplicitfloat   -> Int32.shift_left 1l 23
-    | Attribute.Naked             -> Int32.shift_left 1l 24
-    | Attribute.Inlinehint        -> Int32.shift_left 1l 25
-    | Attribute.Stackalignment n  -> Int32.shift_left (Int32.of_int n) 26
-    | Attribute.ReturnsTwice      -> Int32.shift_left 1l 29
-    | Attribute.UWTable           -> Int32.shift_left 1l 30
-    | Attribute.NonLazyBind       -> Int32.shift_left 1l 31
-
-let unpack_attr (a : int32) : Attribute.t list =
-  let l = ref [] in
-  let check attr =
-      Int32.logand (pack_attr attr) a in
-  let checkattr attr =
-      if (check attr) <> 0l then begin
-          l := attr :: !l
-      end
-  in
-  checkattr Attribute.Zext;
-  checkattr Attribute.Sext;
-  checkattr Attribute.Noreturn;
-  checkattr Attribute.Inreg;
-  checkattr Attribute.Structret;
-  checkattr Attribute.Nounwind;
-  checkattr Attribute.Noalias;
-  checkattr Attribute.Byval;
-  checkattr Attribute.Nest;
-  checkattr Attribute.Readnone;
-  checkattr Attribute.Readonly;
-  checkattr Attribute.Noinline;
-  checkattr Attribute.Alwaysinline;
-  checkattr Attribute.Optsize;
-  checkattr Attribute.Ssp;
-  checkattr Attribute.Sspreq;
-  let align = Int32.logand (Int32.shift_right_logical a 16) 31l in
-  if align <> 0l then
-      l := Attribute.Alignment (Int32.to_int align) :: !l;
-  checkattr Attribute.Nocapture;
-  checkattr Attribute.Noredzone;
-  checkattr Attribute.Noimplicitfloat;
-  checkattr Attribute.Naked;
-  checkattr Attribute.Inlinehint;
-  let stackalign = Int32.logand (Int32.shift_right_logical a 26) 7l in
-  if stackalign <> 0l then
-      l := Attribute.Stackalignment (Int32.to_int stackalign) :: !l;
-  checkattr Attribute.ReturnsTwice;
-  checkattr Attribute.UWTable;
-  checkattr Attribute.NonLazyBind;
-  !l;;
-
-let add_function_attr llval attr =
-  llvm_add_function_attr llval (pack_attr attr)
-
-external add_target_dependent_function_attr
-    : llvalue -> string -> string -> unit
-    = "llvm_add_target_dependent_function_attr"
-
-let remove_function_attr llval attr =
-  llvm_remove_function_attr llval (pack_attr attr)
-
-let function_attr f = unpack_attr (llvm_function_attr f)
+let add_function_attr f a i =
+  llvm_add_function_attr f a (AttrIndex.to_int i)
+let function_attrs f i =
+  llvm_function_attrs f (AttrIndex.to_int i)
+let remove_enum_function_attr f k i =
+  llvm_remove_enum_function_attr f k (AttrIndex.to_int i)
+let remove_string_function_attr f k i =
+  llvm_remove_string_function_attr f k (AttrIndex.to_int i)
 
 (*--... Operations on params ...............................................--*)
 external params : llvalue -> llvalue array = "llvm_params"
 external param : llvalue -> int -> llvalue = "llvm_param"
-external llvm_param_attr : llvalue -> int32 = "llvm_param_attr"
-let param_attr p = unpack_attr (llvm_param_attr p)
 external param_parent : llvalue -> llvalue = "LLVMGetParamParent"
 external param_begin : llvalue -> (llvalue, llvalue) llpos = "llvm_param_begin"
 external param_succ : llvalue -> (llvalue, llvalue) llpos = "llvm_param_succ"
@@ -898,20 +888,6 @@ let rec fold_right_param_range f init i e =
 
 let fold_right_params f fn init =
   fold_right_param_range f init (param_end fn) (At_start fn)
-
-external llvm_add_param_attr : llvalue -> int32 -> unit
-                                = "llvm_add_param_attr"
-external llvm_remove_param_attr : llvalue -> int32 -> unit
-                                = "llvm_remove_param_attr"
-
-let add_param_attr llval attr =
-  llvm_add_param_attr llval (pack_attr attr)
-
-let remove_param_attr llval attr =
-  llvm_remove_param_attr llval (pack_attr attr)
-
-external set_param_alignment : llvalue -> int -> unit
-                             = "llvm_set_param_alignment"
 
 (*--... Operations on basic blocks .........................................--*)
 external value_of_block : llbasicblock -> llvalue = "LLVMBasicBlockAsValue"
@@ -1044,16 +1020,23 @@ external instruction_call_conv: llvalue -> int
 external set_instruction_call_conv: int -> llvalue -> unit
                                   = "llvm_set_instruction_call_conv"
 
-external llvm_add_instruction_param_attr : llvalue -> int -> int32 -> unit
-                                         = "llvm_add_instruction_param_attr"
-external llvm_remove_instruction_param_attr : llvalue -> int -> int32 -> unit
-                                         = "llvm_remove_instruction_param_attr"
+external llvm_add_call_site_attr : llvalue -> llattribute -> int -> unit
+                                = "llvm_add_call_site_attr"
+external llvm_call_site_attrs : llvalue -> int -> llattribute array
+                             = "llvm_call_site_attrs"
+external llvm_remove_enum_call_site_attr : llvalue -> llattrkind -> int -> unit
+                                        = "llvm_remove_enum_call_site_attr"
+external llvm_remove_string_call_site_attr : llvalue -> string -> int -> unit
+                                          = "llvm_remove_string_call_site_attr"
 
-let add_instruction_param_attr llval i attr =
-  llvm_add_instruction_param_attr llval i (pack_attr attr)
-
-let remove_instruction_param_attr llval i attr =
-  llvm_remove_instruction_param_attr llval i (pack_attr attr)
+let add_call_site_attr f a i =
+  llvm_add_call_site_attr f a (AttrIndex.to_int i)
+let call_site_attrs f i =
+  llvm_call_site_attrs f (AttrIndex.to_int i)
+let remove_enum_call_site_attr f k i =
+  llvm_remove_enum_call_site_attr f k (AttrIndex.to_int i)
+let remove_string_call_site_attr f k i =
+  llvm_remove_string_call_site_attr f k (AttrIndex.to_int i)
 
 (*--... Operations on call instructions (only) .............................--*)
 external is_tail_call : llvalue -> bool = "llvm_is_tail_call"

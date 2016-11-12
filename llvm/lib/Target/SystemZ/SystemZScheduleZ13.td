@@ -134,6 +134,7 @@ def : InstRW<[VBU], (instregex "(Cond)?Trap$")>;
 def : InstRW<[FXb], (instregex "C(G)?(I|R)T(Asm.*)?$")>;
 def : InstRW<[FXb], (instregex "CL(G)?RT(Asm.*)?$")>;
 def : InstRW<[FXb], (instregex "CL(F|G)IT(Asm.*)?$")>;
+def : InstRW<[FXb, LSU, Lat5], (instregex "CL(G)?T(Asm.*)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Call and return instructions
@@ -194,6 +195,9 @@ def : InstRW<[FXa], (instregex "LG(F|H)I$")>;
 def : InstRW<[FXa], (instregex "LHI(Mux)?$")>;
 def : InstRW<[FXa], (instregex "LR(Mux)?$")>;
 
+// Load and zero rightmost byte
+def : InstRW<[LSU], (instregex "LZR(F|G)$")>;
+
 // Load and test
 def : InstRW<[FXa, LSU, Lat5], (instregex "LT(G)?$")>;
 def : InstRW<[FXa], (instregex "LT(G)?R$")>;
@@ -237,12 +241,15 @@ def : InstRW<[FXa, LSU, Lat5], (instregex "LG(H|F)RL$")>;
 
 def : InstRW<[FXa], (instregex "LLCR(Mux)?$")>;
 def : InstRW<[FXa], (instregex "LLHR(Mux)?$")>;
-def : InstRW<[FXa], (instregex "LLG(C|H|F)R$")>;
+def : InstRW<[FXa], (instregex "LLG(C|H|F|T)R$")>;
 def : InstRW<[LSU], (instregex "LLC(Mux)?$")>;
 def : InstRW<[LSU], (instregex "LLH(Mux)?$")>;
 def : InstRW<[FXa, LSU, Lat5], (instregex "LL(C|H)H$")>;
 def : InstRW<[LSU], (instregex "LLHRL$")>;
-def : InstRW<[LSU], (instregex "LLG(C|H|F|HRL|FRL)$")>;
+def : InstRW<[LSU], (instregex "LLG(C|H|F|T|HRL|FRL)$")>;
+
+// Load and zero rightmost byte
+def : InstRW<[LSU], (instregex "LLZRGF$")>;
 
 //===----------------------------------------------------------------------===//
 // Truncations

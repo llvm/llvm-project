@@ -69,12 +69,6 @@ namespace {
 static cl::opt<int>
     ThreadCount("threads", cl::init(llvm::heavyweight_hardware_concurrency()));
 
-static void diagnosticHandler(const DiagnosticInfo &DI) {
-  DiagnosticPrinterRawOStream DP(errs());
-  DI.print(DP);
-  errs() << '\n';
-}
-
 // Simple helper to save temporary files for debug.
 static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
                             unsigned count, StringRef Suffix) {
@@ -453,14 +447,23 @@ void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {
   if (Modules.empty()) {
     // First module added, so initialize the triple and some options
     LLVMContext Context;
-    Triple TheTriple(getBitcodeTargetTriple(Buffer, Context));
+    StringRef TripleStr;
+    ErrorOr<std::string> TripleOrErr =
+        expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(Buffer));
+    if (TripleOrErr)
+      TripleStr = *TripleOrErr;
+    Triple TheTriple(TripleStr);
     initTMBuilder(TMBuilder, Triple(TheTriple));
   }
 #ifndef NDEBUG
   else {
     LLVMContext Context;
-    assert(TMBuilder.TheTriple.str() ==
-               getBitcodeTargetTriple(Buffer, Context) &&
+    StringRef TripleStr;
+    ErrorOr<std::string> TripleOrErr =
+        expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(Buffer));
+    if (TripleOrErr)
+      TripleStr = *TripleOrErr;
+    assert(TMBuilder.TheTriple.str() == TripleStr &&
            "ThinLTO modules with different triple not supported");
   }
 #endif
@@ -504,13 +507,13 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   std::unique_ptr<ModuleSummaryIndex> CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &ModuleBuffer : Modules) {
-    ErrorOr<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
-        object::ModuleSummaryIndexObjectFile::create(ModuleBuffer,
-                                                     diagnosticHandler);
-    if (std::error_code EC = ObjOrErr.getError()) {
+    Expected<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
+        object::ModuleSummaryIndexObjectFile::create(ModuleBuffer);
+    if (!ObjOrErr) {
       // FIXME diagnose
-      errs() << "error: can't create ModuleSummaryIndexObjectFile for buffer: "
-             << EC.message() << "\n";
+      logAllUnhandledErrors(
+          ObjOrErr.takeError(), errs(),
+          "error: can't create ModuleSummaryIndexObjectFile for buffer: ");
       return nullptr;
     }
     auto Index = (*ObjOrErr)->takeIndex();

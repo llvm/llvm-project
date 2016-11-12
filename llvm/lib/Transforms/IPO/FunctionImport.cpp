@@ -739,36 +739,6 @@ static cl::opt<std::string>
     SummaryFile("summary-file",
                 cl::desc("The summary file to use for function importing."));
 
-static void diagnosticHandler(const DiagnosticInfo &DI) {
-  raw_ostream &OS = errs();
-  DiagnosticPrinterRawOStream DP(OS);
-  DI.print(DP);
-  OS << '\n';
-}
-
-/// Parse the summary index out of an IR file and return the summary
-/// index object if found, or nullptr if not.
-static std::unique_ptr<ModuleSummaryIndex> getModuleSummaryIndexForFile(
-    StringRef Path, std::string &Error,
-    const DiagnosticHandlerFunction &DiagnosticHandler) {
-  std::unique_ptr<MemoryBuffer> Buffer;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(Path);
-  if (std::error_code EC = BufferOrErr.getError()) {
-    Error = EC.message();
-    return nullptr;
-  }
-  Buffer = std::move(BufferOrErr.get());
-  ErrorOr<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
-      object::ModuleSummaryIndexObjectFile::create(Buffer->getMemBufferRef(),
-                                                   DiagnosticHandler);
-  if (std::error_code EC = ObjOrErr.getError()) {
-    Error = EC.message();
-    return nullptr;
-  }
-  return (*ObjOrErr)->takeIndex();
-}
-
 static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
   if (SummaryFile.empty() && !Index)
     report_fatal_error("error: -function-import requires -summary-file or "
@@ -777,13 +747,14 @@ static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
   if (!SummaryFile.empty()) {
     if (Index)
       report_fatal_error("error: -summary-file and index from frontend\n");
-    std::string Error;
-    IndexPtr =
-        getModuleSummaryIndexForFile(SummaryFile, Error, diagnosticHandler);
-    if (!IndexPtr) {
-      errs() << "Error loading file '" << SummaryFile << "': " << Error << "\n";
+    Expected<std::unique_ptr<ModuleSummaryIndex>> IndexPtrOrErr =
+        getModuleSummaryIndexForFile(SummaryFile);
+    if (!IndexPtrOrErr) {
+      logAllUnhandledErrors(IndexPtrOrErr.takeError(), errs(),
+                            "Error loading file '" + SummaryFile + "': ");
       return false;
     }
+    IndexPtr = std::move(*IndexPtrOrErr);
     Index = IndexPtr.get();
   }
 

@@ -13,6 +13,7 @@ add_llvm_library(LLVMTransformUtils
   DemoteRegToStack.cpp
   Evaluator.cpp
   FlattenCFG.cpp
+  FunctionComparator.cpp
   FunctionImportUtils.cpp
   GlobalStatus.cpp
   InlineFunction.cpp

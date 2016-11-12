@@ -192,6 +192,10 @@ let isTerminator = 1, hasCtrlDep = 1 in {
   defm CGIT  : CmpBranchRIEaPair<"cgit",  0xEC70, GR64, imm64sx16>;
   defm CLFIT : CmpBranchRIEaPair<"clfit", 0xEC73, GR32, imm32zx16>;
   defm CLGIT : CmpBranchRIEaPair<"clgit", 0xEC71, GR64, imm64zx16>;
+  let Predicates = [FeatureMiscellaneousExtensions] in {
+    defm CLT  : CmpBranchRSYbPair<"clt",  0xEB23, GR32>;
+    defm CLGT : CmpBranchRSYbPair<"clgt", 0xEB2B, GR64>;
+  }
 
   foreach V = [ "E", "H", "L", "HE", "LE", "LH",
                 "NE", "NH", "NL", "NHE", "NLE", "NLH" ] in {
@@ -207,6 +211,10 @@ let isTerminator = 1, hasCtrlDep = 1 in {
                                          imm32zx16>;
     def CLGITAsm#V : FixedCmpBranchRIEa<ICV<V>, "clgit", 0xEC71, GR64,
                                          imm64zx16>;
+    let Predicates = [FeatureMiscellaneousExtensions] in {
+      def CLTAsm#V  : FixedCmpBranchRSYb<ICV<V>, "clt",  0xEB23, GR32>;
+      def CLGTAsm#V : FixedCmpBranchRSYb<ICV<V>, "clgt", 0xEB2B, GR64>;
+    }
   }
 }
 
@@ -385,6 +393,16 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
 let canFoldAsLoad = 1 in {
   def LRL  : UnaryRILPC<"lrl",  0xC4D, aligned_load, GR32>;
   def LGRL : UnaryRILPC<"lgrl", 0xC48, aligned_load, GR64>;
+}
+
+// Load and zero rightmost byte.
+let Predicates = [FeatureLoadAndZeroRightmostByte] in {
+  def LZRF : UnaryRXY<"lzrf", 0xE33B, null_frag, GR32, 4>;
+  def LZRG : UnaryRXY<"lzrg", 0xE32A, null_frag, GR64, 8>;
+  def : Pat<(and (i32 (load bdxaddr20only:$src)), 0xffffff00),
+            (LZRF bdxaddr20only:$src)>;
+  def : Pat<(and (i64 (load bdxaddr20only:$src)), 0xffffffffffffff00),
+            (LZRG bdxaddr20only:$src)>;
 }
 
 // Register stores.
@@ -574,6 +592,21 @@ def LLGH   : UnaryRXY<"llgh", 0xE391, azextloadi16, GR64, 2>;
 def LLGF   : UnaryRXY<"llgf", 0xE316, azextloadi32, GR64, 4>;
 def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_azextloadi16, GR64>;
 def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_azextloadi32, GR64>;
+
+// 31-to-64-bit zero extensions.
+def LLGTR : UnaryRRE<"llgtr", 0xB917, null_frag, GR64, GR64>;
+def LLGT  : UnaryRXY<"llgt",  0xE317, null_frag, GR64, 4>;
+def : Pat<(and GR64:$src, 0x7fffffff),
+          (LLGTR GR64:$src)>;
+def : Pat<(and (i64 (azextloadi32 bdxaddr20only:$src)), 0x7fffffff),
+          (LLGT bdxaddr20only:$src)>;
+
+// Load and zero rightmost byte.
+let Predicates = [FeatureLoadAndZeroRightmostByte] in {
+  def LLZRGF : UnaryRXY<"llzrgf", 0xE33A, null_frag, GR64, 4>;
+  def : Pat<(and (i64 (azextloadi32 bdxaddr20only:$src)), 0xffffff00),
+            (LLZRGF bdxaddr20only:$src)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Truncations

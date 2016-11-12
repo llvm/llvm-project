@@ -1879,6 +1879,31 @@ multiclass CmpBranchRISPair<string mnemonic, bits<16> opcode,
   def Asm : AsmCmpBranchRIS<mnemonic, opcode, cls, imm>;
 }
 
+class CmpBranchRSYb<string mnemonic, bits<16> opcode,
+                    RegisterOperand cls>
+  : InstRSYb<opcode, (outs), (ins cls:$R1, bdaddr20only:$BD2, cond4:$M3),
+             mnemonic#"$M3\t$R1, $BD2", []>;
+
+class AsmCmpBranchRSYb<string mnemonic, bits<16> opcode,
+                       RegisterOperand cls>
+  : InstRSYb<opcode, (outs), (ins cls:$R1, bdaddr20only:$BD2, imm32zx4:$M3),
+             mnemonic#"\t$R1, $M3, $BD2", []>;
+
+multiclass CmpBranchRSYbPair<string mnemonic, bits<16> opcode,
+                             RegisterOperand cls> {
+  let isCodeGenOnly = 1 in
+    def "" : CmpBranchRSYb<mnemonic, opcode, cls>;
+  def Asm : AsmCmpBranchRSYb<mnemonic, opcode, cls>;
+}
+
+class FixedCmpBranchRSYb<CondVariant V, string mnemonic, bits<16> opcode,
+                          RegisterOperand cls>
+  : InstRSYb<opcode, (outs), (ins cls:$R1, bdaddr20only:$BD2),
+             mnemonic#V.suffix#"\t$R1, $BD2", []> {
+  let isAsmParserOnly = V.alternate;
+  let M3 = V.ccmask;
+}
+
 class BranchUnaryRI<string mnemonic, bits<12> opcode, RegisterOperand cls>
   : InstRIb<opcode, (outs cls:$R1), (ins cls:$R1src, brtarget16:$RI2),
             mnemonic##"\t$R1, $RI2", []> {

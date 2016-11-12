@@ -25,12 +25,19 @@ enum class HexPrintStyle { Upper, Lower, PrefixUpper, PrefixLower };
 
 size_t getDefaultPrecision(FloatStyle Style);
 
-void write_integer(raw_ostream &S, unsigned int N, IntegerStyle Style);
-void write_integer(raw_ostream &S, int N, IntegerStyle Style);
-void write_integer(raw_ostream &S, unsigned long N, IntegerStyle Style);
-void write_integer(raw_ostream &S, long N, IntegerStyle Style);
-void write_integer(raw_ostream &S, unsigned long long N, IntegerStyle Style);
-void write_integer(raw_ostream &S, long long N, IntegerStyle Style);
+bool isPrefixedHexStyle(HexPrintStyle S);
+
+void write_integer(raw_ostream &S, unsigned int N, size_t MinDigits,
+                   IntegerStyle Style);
+void write_integer(raw_ostream &S, int N, size_t MinDigits, IntegerStyle Style);
+void write_integer(raw_ostream &S, unsigned long N, size_t MinDigits,
+                   IntegerStyle Style);
+void write_integer(raw_ostream &S, long N, size_t MinDigits,
+                   IntegerStyle Style);
+void write_integer(raw_ostream &S, unsigned long long N, size_t MinDigits,
+                   IntegerStyle Style);
+void write_integer(raw_ostream &S, long long N, size_t MinDigits,
+                   IntegerStyle Style);
 
 void write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
                Optional<size_t> Width = None);

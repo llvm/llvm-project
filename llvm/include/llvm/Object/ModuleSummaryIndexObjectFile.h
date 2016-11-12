@@ -79,25 +79,18 @@ public:
   static ErrorOr<MemoryBufferRef>
   findBitcodeInMemBuffer(MemoryBufferRef Object);
 
-  /// \brief Looks for summary sections in the given memory buffer,
-  /// returns true if found, else false.
-  static bool hasGlobalValueSummaryInMemBuffer(
-      MemoryBufferRef Object,
-      const DiagnosticHandlerFunction &DiagnosticHandler);
-
   /// \brief Parse module summary index in the given memory buffer.
   /// Return new ModuleSummaryIndexObjectFile instance containing parsed module
   /// summary/index.
-  static ErrorOr<std::unique_ptr<ModuleSummaryIndexObjectFile>>
-  create(MemoryBufferRef Object,
-         const DiagnosticHandlerFunction &DiagnosticHandler);
+  static Expected<std::unique_ptr<ModuleSummaryIndexObjectFile>>
+  create(MemoryBufferRef Object);
 };
 }
 
 /// Parse the module summary index out of an IR file and return the module
 /// summary index object if found, or nullptr if not.
-ErrorOr<std::unique_ptr<ModuleSummaryIndex>> getModuleSummaryIndexForFile(
-    StringRef Path, const DiagnosticHandlerFunction &DiagnosticHandler);
+Expected<std::unique_ptr<ModuleSummaryIndex>>
+getModuleSummaryIndexForFile(StringRef Path);
 }
 
 #endif

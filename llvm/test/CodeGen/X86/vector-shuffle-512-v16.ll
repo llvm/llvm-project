@@ -342,8 +342,7 @@ define <16 x i32> @shuffle_v16i32_16_zz_17_zz_18_zz_19_zz_20_zz_21_zz_22_zz_23_z
 define <16 x i32> @shuffle_v16i32_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_16(<16 x i32> %a, <16 x i32> %b) {
 ; ALL-LABEL: shuffle_v16i32_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_16:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
-; ALL-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; ALL-NEXT:    valignd {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm1[0]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32><i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   ret <16 x i32> %shuffle
@@ -352,8 +351,7 @@ define <16 x i32> @shuffle_v16i32_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_1
 define <16 x i32> @shuffle_v16i32_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_00(<16 x i32> %a) {
 ; ALL-LABEL: shuffle_v16i32_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_00:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
-; ALL-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    valignd {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x i32> %a, <16 x i32> undef, <16 x i32><i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0>
   ret <16 x i32> %shuffle

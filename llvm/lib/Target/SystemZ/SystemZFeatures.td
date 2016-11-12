@@ -111,6 +111,11 @@ def Arch10NewFeatures : SystemZFeatureList<[
 //
 //===----------------------------------------------------------------------===//
 
+def FeatureLoadAndZeroRightmostByte : SystemZFeature<
+  "load-and-zero-rightmost-byte", "LoadAndZeroRightmostByte",
+  "Assume that the load-and-zero-rightmost-byte facility is installed"
+>;
+
 def FeatureLoadStoreOnCond2 : SystemZFeature<
   "load-store-on-cond-2", "LoadStoreOnCond2",
   "Assume that the load/store-on-condition facility 2 is installed"
@@ -123,6 +128,7 @@ def FeatureVector : SystemZFeature<
 def FeatureNoVector : SystemZMissingFeature<"Vector">;
 
 def Arch11NewFeatures : SystemZFeatureList<[
+    FeatureLoadAndZeroRightmostByte,
     FeatureLoadStoreOnCond2,
     FeatureVector
 ]>;

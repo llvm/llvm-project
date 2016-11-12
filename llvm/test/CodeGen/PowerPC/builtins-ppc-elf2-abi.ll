@@ -159,6 +159,80 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
+define <4 x i32> @emit_xvcvdpsxws(<2 x double> %a) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.xvcvdpsxws(<2 x double> %a)
+  ret <4 x i32> %0
+; CHECK-LABEL: @emit_xvcvdpsxws
+; CHECK: xvcvdpsxws 34, 34
+}
+
+; Function Attrs: nounwind readnone
+define <4 x i32> @emit_xvcvdpuxws(<2 x double> %a) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.xvcvdpuxws(<2 x double> %a)
+  ret <4 x i32> %0
+; CHECK-LABEL: @emit_xvcvdpuxws
+; CHECK: xvcvdpuxws 34, 34
+}
+
+; Function Attrs: nounwind readnone
+define <2 x double> @emit_xvcvsxwdp(<4 x i32> %a) {
+entry:
+  %0 = tail call <2 x double> @llvm.ppc.vsx.xvcvsxwdp(<4 x i32> %a)
+  ret <2 x double> %0
+; CHECK-LABEL: @emit_xvcvsxwdp
+; CHECK: xvcvsxwdp 34, 34
+}
+
+; Function Attrs: nounwind readnone
+define <2 x double> @emit_xvcvuxwdp(<4 x i32> %a) {
+entry:
+  %0 = tail call <2 x double> @llvm.ppc.vsx.xvcvuxwdp(<4 x i32> %a)
+  ret <2 x double> %0
+; CHECK-LABEL: @emit_xvcvuxwdp
+; CHECK: xvcvuxwdp 34, 34
+}
+
+; Function Attrs: nounwind readnone
+define <2 x double> @emit_xvcvspdp(<4 x float> %a) {
+entry:
+  %0 = tail call <2 x double> @llvm.ppc.vsx.xvcvspdp(<4 x float> %a)
+  ret <2 x double> %0
+; CHECK-LABEL: @emit_xvcvspdp
+; CHECK: xvcvspdp 34, 34
+}
+
+; Function Attrs: nounwind readnone
+define <4 x float> @emit_xvcvsxdsp(<2 x i64> %a) {
+entry:
+  %0 = tail call <4 x float> @llvm.ppc.vsx.xvcvsxdsp(<2 x i64> %a)
+  ret <4 x float> %0
+; CHECK-LABEL: @emit_xvcvsxdsp
+; CHECK: xvcvsxdsp 34, 34
+}
+
+; Function Attrs: nounwind readnone
+define <4 x float> @emit_xvcvuxdsp(<2 x i64> %a) {
+entry:
+  %0 = tail call <4 x float> @llvm.ppc.vsx.xvcvuxdsp(<2 x i64> %a)
+  ret <4 x float> %0
+; CHECK-LABEL: @emit_xvcvuxdsp
+; CHECK: xvcvuxdsp 34, 34
+}
+
+; Function Attrs: nounwind readnone
+define <4 x float> @emit_xvcvdpsp(<2 x double> %a) {
+entry:
+  %0 = tail call <4 x float> @llvm.ppc.vsx.xvcvdpsp(<2 x double> %a)
+  ret <4 x float> %0
+; CHECK-LABEL: @emit_xvcvdpsp
+; CHECK: xvcvdpsp 34, 34
+}
+
+; Function Attrs: nounwind readnone
+
+; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.ppc.vsx.xvresp(<4 x float>)
 
 ; Function Attrs: nounwind readnone
@@ -193,3 +267,11 @@ declare <2 x i64> @llvm.ppc.vsx.xvcmpgtdp(<2 x double>, <2 x double>)
 
 ; Function Attrs: nounwind readnone
 declare <4 x i32> @llvm.ppc.vsx.xvcmpgtsp(<4 x float>, <4 x float>)
+declare <4 x float> @llvm.ppc.vsx.xvcvdpsp(<2 x double>) #1
+declare <4 x i32> @llvm.ppc.vsx.xvcvdpsxws(<2 x double>) #1
+declare <4 x i32> @llvm.ppc.vsx.xvcvdpuxws(<2 x double>) #1
+declare <2 x double> @llvm.ppc.vsx.xvcvsxwdp(<4 x i32>) #1
+declare <2 x double> @llvm.ppc.vsx.xvcvuxwdp(<4 x i32>) #1
+declare <2 x double> @llvm.ppc.vsx.xvcvspdp(<4 x float>) #1
+declare <4 x float> @llvm.ppc.vsx.xvcvsxdsp(<2 x i64>) #1
+declare <4 x float> @llvm.ppc.vsx.xvcvuxdsp(<2 x i64>) #1
