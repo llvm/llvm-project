@@ -606,11 +606,17 @@ namespace {
     }
 
     unsigned getUnversionedInfoSize(const ObjCPropertyInfo &info) {
-      return getVariableInfoSize(info);
+      return getVariableInfoSize(info) + 1;
     }
 
     void emitUnversionedInfo(raw_ostream &out, const ObjCPropertyInfo &info) {
       emitVariableInfo(out, info);
+      uint8_t flags = 0;
+      if (Optional<bool> value = info.getSwiftImportAsAccessors()) {
+        flags |= 1 << 0;
+        flags |= value.getValue() << 1;
+      }
+      out << flags;
     }
   };
 } // end anonymous namespace
