@@ -1780,6 +1780,8 @@ def note_uninit_fixit_remove_cond : Note<
   "remove the %select{'%1' if its condition|condition if it}0 "
   "is always %select{false|true}2">;
 def err_init_incomplete_type : Error<"initialization of incomplete type %0">;
+def err_list_init_in_parens : Error<"list-initializer for non-class type %0 "
+  "must not be parenthesized">;
 
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;

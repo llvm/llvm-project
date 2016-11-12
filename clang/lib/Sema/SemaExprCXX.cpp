@@ -1221,6 +1221,17 @@ Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
   if (!TInfo)
     TInfo = Context.getTrivialTypeSourceInfo(Ty, SourceLocation());
 
+  // Handle errors like: int({0})
+  if (exprs.size() == 1 && !canInitializeWithParenthesizedList(Ty) &&
+      LParenLoc.isValid() && RParenLoc.isValid())
+    if (auto IList = dyn_cast<InitListExpr>(exprs[0])) {
+      Diag(TInfo->getTypeLoc().getLocStart(), diag::err_list_init_in_parens)
+          << Ty << IList->getSourceRange()
+          << FixItHint::CreateRemoval(LParenLoc)
+          << FixItHint::CreateRemoval(RParenLoc);
+      LParenLoc = RParenLoc = SourceLocation();
+    }
+
   auto Result = BuildCXXTypeConstructExpr(TInfo, LParenLoc, exprs, RParenLoc);
   // Avoid creating a non-type-dependent expression that contains typos.
   // Non-type-dependent expressions are liable to be discarded without
@@ -1562,8 +1573,20 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
     return ExprError();
 
   SourceRange DirectInitRange;
-  if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer))
+  if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer)) {
     DirectInitRange = List->getSourceRange();
+    // Handle errors like: new int a({0})
+    if (List->getNumExprs() == 1 &&
+        !canInitializeWithParenthesizedList(AllocType))
+      if (auto IList = dyn_cast<InitListExpr>(List->getExpr(0))) {
+        Diag(TInfo->getTypeLoc().getLocStart(), diag::err_list_init_in_parens)
+            << AllocType << List->getSourceRange()
+            << FixItHint::CreateRemoval(List->getLocStart())
+            << FixItHint::CreateRemoval(List->getLocEnd());
+        DirectInitRange = SourceRange();
+        Initializer = IList;
+      }
+  }
 
   return BuildCXXNew(SourceRange(StartLoc, D.getLocEnd()), UseGlobal,
                      PlacementLParen,
