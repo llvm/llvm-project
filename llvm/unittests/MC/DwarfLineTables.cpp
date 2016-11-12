@@ -46,21 +46,25 @@ struct Context {
   operator MCContext &() { return *Ctx; };
 };
 
-Context Ctxt;
+Context &getContext() {
+  static Context Ctxt;
+  return Ctxt;
+}
 }
 
 void verifyEncoding(MCDwarfLineTableParams Params, int LineDelta, int AddrDelta,
                     ArrayRef<uint8_t> ExpectedEncoding) {
   SmallString<16> Buffer;
   raw_svector_ostream EncodingOS(Buffer);
-  MCDwarfLineAddr::Encode(Ctxt, Params, LineDelta, AddrDelta, EncodingOS);
+  MCDwarfLineAddr::Encode(getContext(), Params, LineDelta, AddrDelta,
+                          EncodingOS);
   ArrayRef<uint8_t> Encoding(reinterpret_cast<uint8_t *>(Buffer.data()),
                              Buffer.size());
   EXPECT_EQ(ExpectedEncoding, Encoding);
 }
 
 TEST(DwarfLineTables, TestDefaultParams) {
-  if (!Ctxt)
+  if (!getContext())
     return;
 
   MCDwarfLineTableParams Params;
@@ -110,7 +114,7 @@ TEST(DwarfLineTables, TestDefaultParams) {
 }
 
 TEST(DwarfLineTables, TestCustomParams) {
-  if (!Ctxt)
+  if (!getContext())
     return;
 
   // Some tests against the example values given in the standard.
@@ -164,7 +168,7 @@ TEST(DwarfLineTables, TestCustomParams) {
 }
 
 TEST(DwarfLineTables, TestCustomParams2) {
-  if (!Ctxt)
+  if (!getContext())
     return;
 
   // Corner case param values.

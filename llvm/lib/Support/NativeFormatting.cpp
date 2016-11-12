@@ -47,8 +47,8 @@ static void writeWithCommas(raw_ostream &S, ArrayRef<char> Buffer) {
 }
 
 template <typename T>
-static void write_unsigned_impl(raw_ostream &S, T N, IntegerStyle Style,
-                                bool IsNegative) {
+static void write_unsigned_impl(raw_ostream &S, T N, size_t MinDigits,
+                                IntegerStyle Style, bool IsNegative) {
   static_assert(std::is_unsigned<T>::value, "Value is not unsigned!");
 
   char NumberBuffer[128];
@@ -59,6 +59,12 @@ static void write_unsigned_impl(raw_ostream &S, T N, IntegerStyle Style,
 
   if (IsNegative)
     S << '-';
+
+  if (Len < MinDigits && Style != IntegerStyle::Number) {
+    for (size_t I = Len; I < MinDigits; ++I)
+      S << '0';
+  }
+
   if (Style == IntegerStyle::Number) {
     writeWithCommas(S, ArrayRef<char>(std::end(NumberBuffer) - Len, Len));
   } else {
@@ -67,53 +73,60 @@ static void write_unsigned_impl(raw_ostream &S, T N, IntegerStyle Style,
 }
 
 template <typename T>
-static void write_unsigned(raw_ostream &S, T N, IntegerStyle Style,
-                           bool IsNegative = false) {
+static void write_unsigned(raw_ostream &S, T N, size_t MinDigits,
+                           IntegerStyle Style, bool IsNegative = false) {
   // Output using 32-bit div/mod if possible.
   if (N == static_cast<uint32_t>(N))
-    write_unsigned_impl(S, static_cast<uint32_t>(N), Style, IsNegative);
+    write_unsigned_impl(S, static_cast<uint32_t>(N), MinDigits, Style,
+                        IsNegative);
   else
-    write_unsigned_impl(S, N, Style, IsNegative);
+    write_unsigned_impl(S, N, MinDigits, Style, IsNegative);
 }
 
 template <typename T>
-static void write_signed(raw_ostream &S, T N, IntegerStyle Style) {
+static void write_signed(raw_ostream &S, T N, size_t MinDigits,
+                         IntegerStyle Style) {
   static_assert(std::is_signed<T>::value, "Value is not signed!");
 
   using UnsignedT = typename std::make_unsigned<T>::type;
 
   if (N >= 0) {
-    write_unsigned(S, static_cast<UnsignedT>(N), Style);
+    write_unsigned(S, static_cast<UnsignedT>(N), MinDigits, Style);
     return;
   }
 
   UnsignedT UN = -(UnsignedT)N;
-  write_unsigned(S, UN, Style, true);
+  write_unsigned(S, UN, MinDigits, Style, true);
 }
 
-void llvm::write_integer(raw_ostream &S, unsigned int N, IntegerStyle Style) {
-  write_unsigned(S, N, Style);
-}
-
-void llvm::write_integer(raw_ostream &S, int N, IntegerStyle Style) {
-  write_signed(S, N, Style);
-}
-
-void llvm::write_integer(raw_ostream &S, unsigned long N, IntegerStyle Style) {
-  write_unsigned(S, N, Style);
-}
-
-void llvm::write_integer(raw_ostream &S, long N, IntegerStyle Style) {
-  write_signed(S, N, Style);
-}
-
-void llvm::write_integer(raw_ostream &S, unsigned long long N,
+void llvm::write_integer(raw_ostream &S, unsigned int N, size_t MinDigits,
                          IntegerStyle Style) {
-  write_unsigned(S, N, Style);
+  write_unsigned(S, N, MinDigits, Style);
 }
 
-void llvm::write_integer(raw_ostream &S, long long N, IntegerStyle Style) {
-  write_signed(S, N, Style);
+void llvm::write_integer(raw_ostream &S, int N, size_t MinDigits,
+                         IntegerStyle Style) {
+  write_signed(S, N, MinDigits, Style);
+}
+
+void llvm::write_integer(raw_ostream &S, unsigned long N, size_t MinDigits,
+                         IntegerStyle Style) {
+  write_unsigned(S, N, MinDigits, Style);
+}
+
+void llvm::write_integer(raw_ostream &S, long N, size_t MinDigits,
+                         IntegerStyle Style) {
+  write_signed(S, N, MinDigits, Style);
+}
+
+void llvm::write_integer(raw_ostream &S, unsigned long long N, size_t MinDigits,
+                         IntegerStyle Style) {
+  write_unsigned(S, N, MinDigits, Style);
+}
+
+void llvm::write_integer(raw_ostream &S, long long N, size_t MinDigits,
+                         IntegerStyle Style) {
+  write_signed(S, N, MinDigits, Style);
 }
 
 void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
@@ -178,7 +191,9 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
 #if defined(__MINGW32__)
     // FIXME: It should be generic to C++11.
     if (N == 0.0 && std::signbit(N)) {
-      const char *NegativeZero = "-0.000000e+00";
+      char NegativeZero[] = "-0.000000e+00";
+      if (Style == FloatStyle::ExponentUpper)
+        NegativeZero[strlen(NegativeZero) - 4] = 'E';
       S << NegativeZero;
       return;
     }
@@ -187,7 +202,9 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
 
     // negative zero
     if (fpcl == _FPCLASS_NZ) {
-      const char *NegativeZero = "-0.000000e+00";
+      char NegativeZero[] = "-0.000000e+00";
+      if (Style == FloatStyle::ExponentUpper)
+        NegativeZero[strlen(NegativeZero) - 4] = 'E';
       S << NegativeZero;
       return;
     }
@@ -229,6 +246,10 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
   S << Buf;
   if (Style == FloatStyle::Percent)
     S << '%';
+}
+
+bool llvm::isPrefixedHexStyle(HexPrintStyle S) {
+  return (S == HexPrintStyle::PrefixLower || S == HexPrintStyle::PrefixUpper);
 }
 
 size_t llvm::getDefaultPrecision(FloatStyle Style) {

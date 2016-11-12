@@ -654,20 +654,20 @@ int main(int argc, char **argv, char * const *envp) {
     // MCJIT itself. FIXME.
 
     // Lanch the remote process and get a channel to it.
-    std::unique_ptr<FDRPCChannel> C = launchRemote();
+    std::unique_ptr<FDRawChannel> C = launchRemote();
     if (!C) {
       errs() << "Failed to launch remote JIT.\n";
       exit(1);
     }
 
     // Create a remote target client running over the channel.
-    typedef orc::remote::OrcRemoteTargetClient<orc::remote::RPCByteChannel>
+    typedef orc::remote::OrcRemoteTargetClient<orc::rpc::RawByteChannel>
       MyRemote;
-    MyRemote R = ExitOnErr(MyRemote::Create(*C));
+    auto R = ExitOnErr(MyRemote::Create(*C));
 
     // Create a remote memory manager.
     std::unique_ptr<MyRemote::RCMemoryManager> RemoteMM;
-    ExitOnErr(R.createRemoteMemoryManager(RemoteMM));
+    ExitOnErr(R->createRemoteMemoryManager(RemoteMM));
 
     // Forward MCJIT's memory manager calls to the remote memory manager.
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setMemMgr(
@@ -678,7 +678,7 @@ int main(int argc, char **argv, char * const *envp) {
       orc::createLambdaResolver(
         [](const std::string &Name) { return nullptr; },
         [&](const std::string &Name) {
-          if (auto Addr = ExitOnErr(R.getSymbolAddress(Name)))
+          if (auto Addr = ExitOnErr(R->getSymbolAddress(Name)))
 	    return JITSymbol(Addr, JITSymbolFlags::Exported);
           return JITSymbol(nullptr);
         }
@@ -691,7 +691,7 @@ int main(int argc, char **argv, char * const *envp) {
     EE->finalizeObject();
     DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
                  << format("%llx", Entry) << "\n");
-    Result = ExitOnErr(R.callIntVoid(Entry));
+    Result = ExitOnErr(R->callIntVoid(Entry));
 
     // Like static constructors, the remote target MCJIT support doesn't handle
     // this yet. It could. FIXME.
@@ -702,13 +702,13 @@ int main(int argc, char **argv, char * const *envp) {
     EE.reset();
 
     // Signal the remote target that we're done JITing.
-    ExitOnErr(R.terminateSession());
+    ExitOnErr(R->terminateSession());
   }
 
   return Result;
 }
 
-std::unique_ptr<FDRPCChannel> launchRemote() {
+std::unique_ptr<FDRawChannel> launchRemote() {
 #ifndef LLVM_ON_UNIX
   llvm_unreachable("launchRemote not supported on non-Unix platforms");
 #else
@@ -758,6 +758,6 @@ std::unique_ptr<FDRPCChannel> launchRemote() {
   close(PipeFD[1][1]);
 
   // Return an RPC channel connected to our end of the pipes.
-  return llvm::make_unique<FDRPCChannel>(PipeFD[1][0], PipeFD[0][1]);
+  return llvm::make_unique<FDRawChannel>(PipeFD[1][0], PipeFD[0][1]);
 #endif
 }

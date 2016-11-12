@@ -689,8 +689,14 @@ void ScheduleDAGMI::schedule() {
   // This may initialize a DFSResult to be used for queue priority.
   SchedImpl->initialize(this);
 
-  DEBUG(for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
-          SUnits[su].dumpAll(this));
+  DEBUG(
+    if (EntrySU.getInstr() != nullptr)
+      EntrySU.dumpAll(this);
+    for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
+      SUnits[su].dumpAll(this);
+    if (ExitSU.getInstr() != nullptr)
+      ExitSU.dumpAll(this);
+  );
   if (ViewMISchedDAGs) viewGraph();
 
   // Initialize ready queues now that the DAG and priority data are finalized.
@@ -859,6 +865,44 @@ ScheduleDAGMILive::~ScheduleDAGMILive() {
   delete DFSResult;
 }
 
+void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
+  const MachineInstr &MI = *SU.getInstr();
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    if (!MO.readsReg())
+      continue;
+    if (TrackLaneMasks && !MO.isUse())
+      continue;
+
+    unsigned Reg = MO.getReg();
+    if (!TargetRegisterInfo::isVirtualRegister(Reg))
+      continue;
+
+    // Ignore re-defs.
+    if (TrackLaneMasks) {
+      bool FoundDef = false;
+      for (const MachineOperand &MO2 : MI.operands()) {
+        if (MO2.isReg() && MO2.isDef() && MO2.getReg() == Reg && !MO2.isDead()) {
+          FoundDef = true;
+          break;
+        }
+      }
+      if (FoundDef)
+        continue;
+    }
+
+    // Record this local VReg use.
+    VReg2SUnitMultiMap::iterator UI = VRegUses.find(Reg);
+    for (; UI != VRegUses.end(); ++UI) {
+      if (UI->SU == &SU)
+        break;
+    }
+    if (UI == VRegUses.end())
+      VRegUses.insert(VReg2SUnit(Reg, 0, &SU));
+  }
+}
+
 /// enterRegion - Called back from MachineScheduler::runOnMachineFunction after
 /// crossing a scheduling boundary. [begin, end) includes all instructions in
 /// the region, including the boundary itself and single-instruction regions
@@ -886,6 +930,11 @@ void ScheduleDAGMILive::enterRegion(MachineBasicBlock *bb,
 // Setup the register pressure trackers for the top scheduled top and bottom
 // scheduled regions.
 void ScheduleDAGMILive::initRegPressure() {
+  VRegUses.clear();
+  VRegUses.setUniverse(MRI.getNumVirtRegs());
+  for (SUnit &SU : SUnits)
+    collectVRegUses(SU);
+
   TopRPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin,
                     ShouldTrackLaneMasks, false);
   BotRPTracker.init(&MF, RegClassInfo, LIS, BB, LiveRegionEnd,
@@ -1084,6 +1133,8 @@ void ScheduleDAGMILive::schedule() {
   SchedImpl->initialize(this);
 
   DEBUG(
+    if (EntrySU.getInstr() != nullptr)
+      EntrySU.dumpAll(this);
     for (const SUnit &SU : SUnits) {
       SU.dumpAll(this);
       if (ShouldTrackPressure) {
@@ -1092,6 +1143,8 @@ void ScheduleDAGMILive::schedule() {
       }
       dbgs() << '\n';
     }
+    if (ExitSU.getInstr() != nullptr)
+      ExitSU.dumpAll(this);
   );
   if (ViewMISchedDAGs) viewGraph();
 

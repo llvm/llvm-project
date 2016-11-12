@@ -4,14 +4,18 @@
 ; Tests that we correctly handle external references, including the case where
 ; all functions in a bitset are external references.
 
-; X64: @[[JT:.*]] = private constant [1 x <{ i8, i32, i8, i8, i8 }>] [<{ i8, i32, i8, i8, i8 }> <{ i8 -23, i32 trunc (i64 sub (i64 sub (i64 ptrtoint (void ()* @foo to i64), i64 ptrtoint ([1 x <{ i8, i32, i8, i8, i8 }>]* @[[JT]] to i64)), i64 5) to i32), i8 -52, i8 -52, i8 -52 }>], section ".text"
+; X64:      module asm ".cfi.jumptable:"
+; X64-NEXT: module asm "jmp foo@plt"
+; X64-NOT:  module asm "jmp {{.*}}@plt"
+
+; X64: @.cfi.jumptable = external hidden constant [1 x [8 x i8]]
 ; WASM32: private constant [0 x i8] zeroinitializer
 
 ; WASM32: declare !type !{{[0-9]+}} void @foo()
 declare !type !0 void @foo()
 
 define i1 @bar(i8* %ptr) {
-  ; X64: icmp eq i64 {{.*}}, ptrtoint ([1 x <{ i8, i32, i8, i8, i8 }>]* @[[JT]] to i64)
+  ; X64: icmp eq i64 {{.*}}, ptrtoint ([1 x [8 x i8]]* @.cfi.jumptable to i64)
   ; WASM32: sub i64 {{.*}}, 0
   ; WASM32: icmp ult i64 {{.*}}, 1
   %p = call i1 @llvm.type.test(i8* %ptr, metadata !"void")

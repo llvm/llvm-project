@@ -1462,8 +1462,7 @@ define <4 x i64> @shuffle_v4i64_1234(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512VL-LABEL: shuffle_v4i64_1234:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,2,3,0]
+; AVX512VL-NEXT:    valignq {{.*#+}} ymm0 = ymm0[1,2,3],ymm1[0]
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   ret <4 x i64> %shuffle

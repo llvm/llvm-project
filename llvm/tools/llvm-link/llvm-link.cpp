@@ -180,7 +180,7 @@ Module &ModuleLazyLoaderCache::operator()(const char *argv0,
 }
 } // anonymous namespace
 
-static void diagnosticHandler(const DiagnosticInfo &DI) {
+static void diagnosticHandler(const DiagnosticInfo &DI, void *C) {
   unsigned Severity = DI.getSeverity();
   switch (Severity) {
   case DS_Error:
@@ -201,23 +201,13 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
   errs() << '\n';
 }
 
-static void diagnosticHandlerWithContext(const DiagnosticInfo &DI, void *C) {
-  diagnosticHandler(DI);
-}
-
 /// Import any functions requested via the -import option.
 static bool importFunctions(const char *argv0, LLVMContext &Context,
                             Linker &L) {
   if (SummaryIndex.empty())
     return true;
-  ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-      llvm::getModuleSummaryIndexForFile(SummaryIndex, diagnosticHandler);
-  std::error_code EC = IndexOrErr.getError();
-  if (EC) {
-    errs() << EC.message() << '\n';
-    return false;
-  }
-  auto Index = std::move(IndexOrErr.get());
+  std::unique_ptr<ModuleSummaryIndex> Index =
+      ExitOnErr(llvm::getModuleSummaryIndexForFile(SummaryIndex));
 
   // Map of Module -> List of globals to import from the Module
   std::map<StringRef, DenseSet<const GlobalValue *>> ModuleToGlobalsToImportMap;
@@ -319,14 +309,8 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
     // If a module summary index is supplied, load it so linkInModule can treat
     // local functions/variables as exported and promote if necessary.
     if (!SummaryIndex.empty()) {
-      ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-          llvm::getModuleSummaryIndexForFile(SummaryIndex, diagnosticHandler);
-      std::error_code EC = IndexOrErr.getError();
-      if (EC) {
-        errs() << EC.message() << '\n';
-        return false;
-      }
-      auto Index = std::move(IndexOrErr.get());
+      std::unique_ptr<ModuleSummaryIndex> Index =
+          ExitOnErr(llvm::getModuleSummaryIndexForFile(SummaryIndex));
 
       // Promotion
       if (renameModuleForThinLTO(*M, *Index))
@@ -353,7 +337,7 @@ int main(int argc, char **argv) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   LLVMContext Context;
-  Context.setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);
+  Context.setDiagnosticHandler(diagnosticHandler, nullptr, true);
 
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");

@@ -1265,8 +1265,8 @@ int main(int argc, char *argv[]) {
   BinopPrecedence['*'] = 40; // highest.
 
   auto TCPChannel = connect();
-  MyRemote Remote = ExitOnErr(MyRemote::Create(*TCPChannel));
-  TheJIT = llvm::make_unique<KaleidoscopeJIT>(Remote);
+  auto Remote = ExitOnErr(MyRemote::Create(*TCPChannel));
+  TheJIT = llvm::make_unique<KaleidoscopeJIT>(*Remote);
 
   // Automatically inject a definition for 'printExprResult'.
   FunctionProtos["printExprResult"] =
@@ -1288,7 +1288,7 @@ int main(int argc, char *argv[]) {
   TheJIT = nullptr;
 
   // Send a terminate message to the remote to tell it to exit cleanly.
-  ExitOnErr(Remote.terminateSession());
+  ExitOnErr(Remote->terminateSession());
 
   return 0;
 }

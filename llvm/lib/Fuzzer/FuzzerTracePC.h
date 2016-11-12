@@ -101,8 +101,8 @@ private:
   };
 
   Module Modules[4096];
-  size_t NumModules = 0;
-  size_t NumGuards = 0;
+  size_t NumModules;  // linker-initialized.
+  size_t NumGuards;  // linker-initialized.
 
   static const size_t kNumCounters = 1 << 14;
   alignas(8) uint8_t Counters[kNumCounters];

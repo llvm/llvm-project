@@ -379,6 +379,9 @@ protected:
 
   MachineBasicBlock::iterator LiveRegionEnd;
 
+  /// Maps vregs to the SUnits of their uses in the current scheduling region.
+  VReg2SUnitMultiMap VRegUses;
+
   // Map each SU to its summary of pressure changes. This array is updated for
   // liveness during bottom-up scheduling. Top-down scheduling may proceed but
   // has no affect on the pressure diffs.
@@ -491,6 +494,8 @@ protected:
 
   void updateScheduledPressure(const SUnit *SU,
                                const std::vector<unsigned> &NewMaxPressure);
+
+  void collectVRegUses(SUnit &SU);
 };
 
 //===----------------------------------------------------------------------===//

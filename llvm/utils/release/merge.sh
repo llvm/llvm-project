@@ -95,7 +95,7 @@ else
 fi
 
 echo
-echo "# To commit, run the following in $proj.src/:"
+echo "# To commit, run the following in $srcdir/:"
 echo svn commit -F $tempfile
 
 exit 0

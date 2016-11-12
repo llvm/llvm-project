@@ -71,7 +71,6 @@ protected:
 
   // StrictAlign - Disallow unaligned memory accesses.
   bool StrictAlign = false;
-  bool MergeNarrowZeroStores = false;
   bool UseAA = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
@@ -179,7 +178,6 @@ public:
   bool hasCrypto() const { return HasCrypto; }
   bool hasCRC() const { return HasCRC; }
   bool hasRAS() const { return HasRAS; }
-  bool mergeNarrowStores() const { return MergeNarrowZeroStores; }
   bool balanceFPOps() const { return BalanceFPOps; }
   bool predictableSelectIsExpensive() const {
     return PredictableSelectIsExpensive;

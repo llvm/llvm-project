@@ -1337,10 +1337,26 @@ class VX1_VT5_VA5_VB5<bits<11> xo, string opc, list<dag> pattern>
              !strconcat(opc, " $vD, $vA, $vB"), IIC_VecFP, pattern>;
 
 // Vector Rotate Left Mask/Mask-Insert
-def VRLWNM : VX1_VT5_VA5_VB5<389, "vrlwnm", []>;
-def VRLWMI : VX1_VT5_VA5_VB5<133, "vrlwmi", []>;
-def VRLDNM : VX1_VT5_VA5_VB5<453, "vrldnm", []>;
-def VRLDMI : VX1_VT5_VA5_VB5<197, "vrldmi", []>;
+def VRLWNM : VX1_VT5_VA5_VB5<389, "vrlwnm",
+                             [(set v4i32:$vD,
+                                 (int_ppc_altivec_vrlwnm v4i32:$vA,
+                                                         v4i32:$vB))]>;
+def VRLWMI : VXForm_1<133, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, vrrc:$vDi),
+                      "vrlwmi $vD, $vA, $vB", IIC_VecFP,
+                      [(set v4i32:$vD,
+                         (int_ppc_altivec_vrlwmi v4i32:$vA, v4i32:$vB,
+                                                 v4i32:$vDi))]>,
+                      RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
+def VRLDNM : VX1_VT5_VA5_VB5<453, "vrldnm",
+                             [(set v2i64:$vD,
+                                 (int_ppc_altivec_vrldnm v2i64:$vA,
+                                                         v2i64:$vB))]>;
+def VRLDMI : VXForm_1<197, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, vrrc:$vDi),
+                      "vrldmi $vD, $vA, $vB", IIC_VecFP,
+                      [(set v2i64:$vD,
+                         (int_ppc_altivec_vrldmi v2i64:$vA, v2i64:$vB,
+                                                 v2i64:$vDi))]>,
+                      RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
 
 // Vector Shift Left/Right
 def VSLV : VX1_VT5_VA5_VB5<1860, "vslv",

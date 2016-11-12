@@ -21,7 +21,7 @@ namespace {
 template <typename T> std::string format_number(T N, IntegerStyle Style) {
   std::string S;
   llvm::raw_string_ostream Str(S);
-  write_integer(Str, N, Style);
+  write_integer(Str, N, 0, Style);
   Str.flush();
   return S;
 }

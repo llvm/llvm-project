@@ -41,94 +41,51 @@ public:
   OrcRemoteTargetServer(ChannelT &Channel, SymbolLookupFtor SymbolLookup,
                         EHFrameRegistrationFtor EHFramesRegister,
                         EHFrameRegistrationFtor EHFramesDeregister)
-      : Channel(Channel), SymbolLookup(std::move(SymbolLookup)),
+      : OrcRemoteTargetRPCAPI(Channel), SymbolLookup(std::move(SymbolLookup)),
         EHFramesRegister(std::move(EHFramesRegister)),
-        EHFramesDeregister(std::move(EHFramesDeregister)) {}
+        EHFramesDeregister(std::move(EHFramesDeregister)),
+        TerminateFlag(false) {
+
+    using ThisT = typename std::remove_reference<decltype(*this)>::type;
+    addHandler<CallIntVoid>(*this, &ThisT::handleCallIntVoid);
+    addHandler<CallMain>(*this, &ThisT::handleCallMain);
+    addHandler<CallVoidVoid>(*this, &ThisT::handleCallVoidVoid);
+    addHandler<CreateRemoteAllocator>(*this,
+                                      &ThisT::handleCreateRemoteAllocator);
+    addHandler<CreateIndirectStubsOwner>(*this,
+                                         &ThisT::handleCreateIndirectStubsOwner);
+    addHandler<DeregisterEHFrames>(*this, &ThisT::handleDeregisterEHFrames);
+    addHandler<DestroyRemoteAllocator>(*this,
+                                       &ThisT::handleDestroyRemoteAllocator);
+    addHandler<DestroyIndirectStubsOwner>(*this,
+                                          &ThisT::handleDestroyIndirectStubsOwner);
+    addHandler<EmitIndirectStubs>(*this, &ThisT::handleEmitIndirectStubs);
+    addHandler<EmitResolverBlock>(*this, &ThisT::handleEmitResolverBlock);
+    addHandler<EmitTrampolineBlock>(*this, &ThisT::handleEmitTrampolineBlock);
+    addHandler<GetSymbolAddress>(*this, &ThisT::handleGetSymbolAddress);
+    addHandler<GetRemoteInfo>(*this, &ThisT::handleGetRemoteInfo);
+    addHandler<ReadMem>(*this, &ThisT::handleReadMem);
+    addHandler<RegisterEHFrames>(*this, &ThisT::handleRegisterEHFrames);
+    addHandler<ReserveMem>(*this, &ThisT::handleReserveMem);
+    addHandler<SetProtections>(*this, &ThisT::handleSetProtections);
+    addHandler<TerminateSession>(*this, &ThisT::handleTerminateSession);
+    addHandler<WriteMem>(*this, &ThisT::handleWriteMem);
+    addHandler<WritePtr>(*this, &ThisT::handleWritePtr);
+  }
 
   // FIXME: Remove move/copy ops once MSVC supports synthesizing move ops.
   OrcRemoteTargetServer(const OrcRemoteTargetServer &) = delete;
   OrcRemoteTargetServer &operator=(const OrcRemoteTargetServer &) = delete;
 
-  OrcRemoteTargetServer(OrcRemoteTargetServer &&Other)
-      : Channel(Other.Channel), SymbolLookup(std::move(Other.SymbolLookup)),
-        EHFramesRegister(std::move(Other.EHFramesRegister)),
-        EHFramesDeregister(std::move(Other.EHFramesDeregister)) {}
-
+  OrcRemoteTargetServer(OrcRemoteTargetServer &&Other) = default;
   OrcRemoteTargetServer &operator=(OrcRemoteTargetServer &&) = delete;
 
-  Error handleKnownFunction(JITFuncId Id) {
-    typedef OrcRemoteTargetServer ThisT;
-
-    DEBUG(dbgs() << "Handling known proc: " << getJITFuncIdName(Id) << "\n");
-
-    switch (Id) {
-    case CallIntVoidId:
-      return handle<CallIntVoid>(Channel, *this, &ThisT::handleCallIntVoid);
-    case CallMainId:
-      return handle<CallMain>(Channel, *this, &ThisT::handleCallMain);
-    case CallVoidVoidId:
-      return handle<CallVoidVoid>(Channel, *this, &ThisT::handleCallVoidVoid);
-    case CreateRemoteAllocatorId:
-      return handle<CreateRemoteAllocator>(Channel, *this,
-                                           &ThisT::handleCreateRemoteAllocator);
-    case CreateIndirectStubsOwnerId:
-      return handle<CreateIndirectStubsOwner>(
-          Channel, *this, &ThisT::handleCreateIndirectStubsOwner);
-    case DeregisterEHFramesId:
-      return handle<DeregisterEHFrames>(Channel, *this,
-                                        &ThisT::handleDeregisterEHFrames);
-    case DestroyRemoteAllocatorId:
-      return handle<DestroyRemoteAllocator>(
-          Channel, *this, &ThisT::handleDestroyRemoteAllocator);
-    case DestroyIndirectStubsOwnerId:
-      return handle<DestroyIndirectStubsOwner>(
-          Channel, *this, &ThisT::handleDestroyIndirectStubsOwner);
-    case EmitIndirectStubsId:
-      return handle<EmitIndirectStubs>(Channel, *this,
-                                       &ThisT::handleEmitIndirectStubs);
-    case EmitResolverBlockId:
-      return handle<EmitResolverBlock>(Channel, *this,
-                                       &ThisT::handleEmitResolverBlock);
-    case EmitTrampolineBlockId:
-      return handle<EmitTrampolineBlock>(Channel, *this,
-                                         &ThisT::handleEmitTrampolineBlock);
-    case GetSymbolAddressId:
-      return handle<GetSymbolAddress>(Channel, *this,
-                                      &ThisT::handleGetSymbolAddress);
-    case GetRemoteInfoId:
-      return handle<GetRemoteInfo>(Channel, *this, &ThisT::handleGetRemoteInfo);
-    case ReadMemId:
-      return handle<ReadMem>(Channel, *this, &ThisT::handleReadMem);
-    case RegisterEHFramesId:
-      return handle<RegisterEHFrames>(Channel, *this,
-                                      &ThisT::handleRegisterEHFrames);
-    case ReserveMemId:
-      return handle<ReserveMem>(Channel, *this, &ThisT::handleReserveMem);
-    case SetProtectionsId:
-      return handle<SetProtections>(Channel, *this,
-                                    &ThisT::handleSetProtections);
-    case WriteMemId:
-      return handle<WriteMem>(Channel, *this, &ThisT::handleWriteMem);
-    case WritePtrId:
-      return handle<WritePtr>(Channel, *this, &ThisT::handleWritePtr);
-    default:
-      return orcError(OrcErrorCode::UnexpectedRPCCall);
-    }
-
-    llvm_unreachable("Unhandled JIT RPC procedure Id.");
-  }
 
   Expected<JITTargetAddress> requestCompile(JITTargetAddress TrampolineAddr) {
-    auto Listen = [&](RPCByteChannel &C, uint32_t Id) {
-      return handleKnownFunction(static_cast<JITFuncId>(Id));
-    };
-
-    return callSTHandling<RequestCompile>(Channel, Listen, TrampolineAddr);
+    return callB<RequestCompile>(TrampolineAddr);
   }
 
-  Error handleTerminateSession() {
-    return handle<TerminateSession>(Channel, []() { return Error::success(); });
-  }
+  bool receivedTerminate() const { return TerminateFlag; }
 
 private:
   struct Allocator {
@@ -365,15 +322,16 @@ private:
                            IndirectStubSize);
   }
 
-  Expected<std::vector<char>> handleReadMem(JITTargetAddress RSrc, uint64_t Size) {
-    char *Src = reinterpret_cast<char *>(static_cast<uintptr_t>(RSrc));
+  Expected<std::vector<uint8_t>> handleReadMem(JITTargetAddress RSrc,
+                                               uint64_t Size) {
+    uint8_t *Src = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(RSrc));
 
     DEBUG(dbgs() << "  Reading " << Size << " bytes from "
                  << format("0x%016x", RSrc) << "\n");
 
-    std::vector<char> Buffer;
+    std::vector<uint8_t> Buffer;
     Buffer.resize(Size);
-    for (char *P = Src; Size != 0; --Size)
+    for (uint8_t *P = Src; Size != 0; --Size)
       Buffer.push_back(*P++);
 
     return Buffer;
@@ -421,6 +379,11 @@ private:
     return Allocator.setProtections(LocalAddr, Flags);
   }
 
+  Error handleTerminateSession() {
+    TerminateFlag = true;
+    return Error::success();
+  }
+
   Error handleWriteMem(DirectBufferWriter DBW) {
     DEBUG(dbgs() << "  Writing " << DBW.getSize() << " bytes to "
                  << format("0x%016x", DBW.getDst()) << "\n");
@@ -436,7 +399,6 @@ private:
     return Error::success();
   }
 
-  ChannelT &Channel;
   SymbolLookupFtor SymbolLookup;
   EHFrameRegistrationFtor EHFramesRegister, EHFramesDeregister;
   std::map<ResourceIdMgr::ResourceId, Allocator> Allocators;
@@ -444,6 +406,7 @@ private:
   std::map<ResourceIdMgr::ResourceId, ISBlockOwnerList> IndirectStubsOwners;
   sys::OwningMemoryBlock ResolverBlock;
   std::vector<sys::OwningMemoryBlock> TrampolineBlocks;
+  bool TerminateFlag;
 };
 
 } // end namespace remote

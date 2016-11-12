@@ -2476,11 +2476,12 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     break;
   }
   case ISD::SREM:
-    if (ConstantSDNode *Rem = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *Rem = isConstOrConstSplat(Op.getOperand(1))) {
       const APInt &RA = Rem->getAPIntValue().abs();
       if (RA.isPowerOf2()) {
         APInt LowBits = RA - 1;
-        computeKnownBits(Op.getOperand(0), KnownZero2,KnownOne2,Depth+1);
+        computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
+                         Depth + 1);
 
         // The low bits of the first operand are unchanged by the srem.
         KnownZero = KnownZero2 & LowBits;
@@ -2500,11 +2501,12 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     }
     break;
   case ISD::UREM: {
-    if (ConstantSDNode *Rem = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *Rem = isConstOrConstSplat(Op.getOperand(1))) {
       const APInt &RA = Rem->getAPIntValue();
       if (RA.isPowerOf2()) {
         APInt LowBits = (RA - 1);
-        computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, Depth + 1);
+        computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
+                         Depth + 1);
 
         // The upper bits are all zero, the lower ones are unchanged.
         KnownZero = KnownZero2 | ~LowBits;
@@ -2515,8 +2517,10 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 
     // Since the result is less than or equal to either operand, any leading
     // zero bits in either operand must also exist in the result.
-    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, Depth+1);
-    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, Depth+1);
+    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
+                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
+                     Depth + 1);
 
     uint32_t Leaders = std::max(KnownZero.countLeadingOnes(),
                                 KnownZero2.countLeadingOnes());
@@ -2571,7 +2575,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     break;
   }
   case ISD::BSWAP: {
-    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, Depth+1);
+    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
+                     Depth + 1);
     KnownZero = KnownZero2.byteSwap();
     KnownOne = KnownOne2.byteSwap();
     break;

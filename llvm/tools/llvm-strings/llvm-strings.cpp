@@ -33,8 +33,8 @@ static cl::list<std::string> InputFileNames(cl::Positional,
                                             cl::ZeroOrMore);
 
 static void dump(raw_ostream &OS, StringRef Contents) {
-  const char *S = nullptr;
-  for (const char *P = Contents.begin(), *E = Contents.end(); P < E; ++P) {
+  const char *P = nullptr, *E = nullptr, *S = nullptr;
+  for (P = Contents.begin(), E = Contents.end(); P < E; ++P) {
     if (std::isgraph(*P) || std::isblank(*P)) {
       if (S == nullptr)
         S = P;
@@ -44,6 +44,8 @@ static void dump(raw_ostream &OS, StringRef Contents) {
       S = nullptr;
     }
   }
+  if (S && E - S > 3)
+    OS << StringRef(S, E - S) << '\n';
 }
 
 namespace {

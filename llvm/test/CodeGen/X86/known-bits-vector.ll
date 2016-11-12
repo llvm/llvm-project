@@ -255,3 +255,71 @@ define <4 x i32> @knownbits_mask_udiv_shuffle_lshr(<4 x i32> %a0, <4 x i32> %a1)
   %4 = lshr <4 x i32> %3, <i32 22, i32 22, i32 22, i32 22>
   ret <4 x i32> %4
 }
+
+define <4 x i32> @knownbits_urem_lshr(<4 x i32> %a0) nounwind {
+; X32-LABEL: knownbits_urem_lshr:
+; X32:       # BB#0:
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_urem_lshr:
+; X64:       # BB#0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = urem <4 x i32> %a0, <i32 16, i32 16, i32 16, i32 16>
+  %2 = lshr <4 x i32> %1, <i32 22, i32 22, i32 22, i32 22>
+  ret <4 x i32> %2
+}
+
+define <4 x i32> @knownbits_mask_urem_shuffle_lshr(<4 x i32> %a0, <4 x i32> %a1) nounwind {
+; X32-LABEL: knownbits_mask_urem_shuffle_lshr:
+; X32:       # BB#0:
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_urem_shuffle_lshr:
+; X64:       # BB#0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 32767, i32 -1, i32 -1, i32 32767>
+  %2 = and <4 x i32> %a1, <i32 32767, i32 -1, i32 -1, i32 32767>
+  %3 = urem <4 x i32> %1, %2
+  %4 = shufflevector <4 x i32> %3, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %5 = lshr <4 x i32> %4, <i32 22, i32 22, i32 22, i32 22>
+  ret <4 x i32> %5
+}
+
+define <4 x i32> @knownbits_mask_srem_shuffle_lshr(<4 x i32> %a0) nounwind {
+; X32-LABEL: knownbits_mask_srem_shuffle_lshr:
+; X32:       # BB#0:
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_srem_shuffle_lshr:
+; X64:       # BB#0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 -32768, i32 -1, i32 -1, i32 -32768>
+  %2 = srem <4 x i32> %1, <i32 16, i32 16, i32 16, i32 16>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %4 = lshr <4 x i32> %3, <i32 22, i32 22, i32 22, i32 22>
+  ret <4 x i32> %4
+}
+
+define <4 x i32> @knownbits_mask_bswap_shuffle_shl(<4 x i32> %a0) nounwind {
+; X32-LABEL: knownbits_mask_bswap_shuffle_shl:
+; X32:       # BB#0:
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_bswap_shuffle_shl:
+; X64:       # BB#0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 32767, i32 -1, i32 -1, i32 32767>
+  %2 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %1)
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %4 = shl <4 x i32> %3, <i32 22, i32 22, i32 22, i32 22>
+  ret <4 x i32> %4
+}
+declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)

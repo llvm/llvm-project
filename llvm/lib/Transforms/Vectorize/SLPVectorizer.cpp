@@ -211,12 +211,12 @@ static unsigned getSameOpcode(ArrayRef<Value *> VL) {
 /// of each scalar operation (VL) that will be converted into a vector (I).
 /// Flag set: NSW, NUW, exact, and all of fast-math.
 static void propagateIRFlags(Value *I, ArrayRef<Value *> VL) {
-  if (auto *VecOp = dyn_cast<BinaryOperator>(I)) {
-    if (auto *Intersection = dyn_cast<BinaryOperator>(VL[0])) {
+  if (auto *VecOp = dyn_cast<Instruction>(I)) {
+    if (auto *Intersection = dyn_cast<Instruction>(VL[0])) {
       // Intersection is initialized to the 0th scalar,
       // so start counting from index '1'.
       for (int i = 1, e = VL.size(); i < e; ++i) {
-        if (auto *Scalar = dyn_cast<BinaryOperator>(VL[i]))
+        if (auto *Scalar = dyn_cast<Instruction>(VL[i]))
           Intersection->andIRFlags(Scalar);
       }
       VecOp->copyIRFlags(Intersection);
@@ -2430,6 +2430,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V = Builder.CreateICmp(P0, L, R);
 
       E->VectorizedValue = V;
+      propagateIRFlags(E->VectorizedValue, E->Scalars);
       ++NumVectorInstructions;
       return V;
     }
