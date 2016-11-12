@@ -88,6 +88,11 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   PP.addCommentHandler(CommentSemaHandler.get());
 
   PP.setCodeCompletionHandler(*this);
+
+  Actions.ParseTypeFromStringCallback =
+    [this](StringRef typeStr, StringRef context, SourceLocation includeLoc) {
+      return this->parseTypeFromString(typeStr, context, includeLoc);
+    };
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -420,6 +425,9 @@ Parser::ParseScopeFlags::~ParseScopeFlags() {
 //===----------------------------------------------------------------------===//
 
 Parser::~Parser() {
+  // Clear out the parse-type-from-string callback.
+  Actions.ParseTypeFromStringCallback = nullptr;
+
   // If we still have scopes active, delete the scope tree.
   delete getCurScope();
   Actions.CurScope = nullptr;

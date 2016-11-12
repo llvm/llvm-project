@@ -37,4 +37,16 @@ __attribute__((objc_root_class))
 
 #import <SomeKit/SomeKitExplicitNullability.h>
 
+extern int *global_int_ptr;
+
+int *global_int_fun(int *ptr, int *ptr2);
+
+#define SOMEKIT_DOUBLE double
+
+__attribute__((objc_root_class))
+@interface OverriddenTypes
+-(int *)methodToMangle:(int *)ptr1 second:(int *)ptr2;
+@property int *intPropertyToMangle;
+@end
+
 #endif

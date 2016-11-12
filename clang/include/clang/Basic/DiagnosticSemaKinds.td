@@ -8157,6 +8157,13 @@ def err_opencl_enqueue_kernel_blocks_no_args : Error<
   "blocks in this form of device side enqueue call are expected to have have no parameters">;
 } // end of sema category
 
+let CategoryName = "API Notes Issue" in {
+
+def err_incompatible_replacement_type : Error<
+  "API notes replacement type %0 has a different size from original type %1">;
+
+}
+
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
 def err_omp_expected_var_arg : Error<
