@@ -968,7 +968,7 @@ private:
   void readExtern(std::vector<SymbolVersion> *Globals);
   void readVersionDeclaration(StringRef VerStr);
   void readGlobal(StringRef VerStr);
-  void readLocal();
+  void readLocal(StringRef VerStr);
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
@@ -1778,7 +1778,7 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   if (consume("global:") || peek() != "local:")
     readGlobal(VerStr);
   if (consume("local:"))
-    readLocal();
+    readLocal(VerStr);
   expect("}");
 
   // Each version may have a parent version. For example, "Ver2" defined as
@@ -1790,10 +1790,22 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   expect(";");
 }
 
-void ScriptParser::readLocal() {
-  Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-  expect("*");
-  expect(";");
+void ScriptParser::readLocal(StringRef VerStr) {
+  if (consume("*")) {
+    Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+    expect(";");
+    return;
+  }
+
+  if (VerStr.empty())
+    setError("locals list for anonymous version is not supported");
+
+  std::vector<SymbolVersion> &Locals = Config->VersionDefinitions.back().Locals;
+  while (!Error && peek() != "}") {
+    StringRef Tok = next();
+    Locals.push_back({unquote(Tok), false, hasWildcard(Tok)});
+    expect(";");
+  }
 }
 
 void ScriptParser::readExtern(std::vector<SymbolVersion> *Globals) {

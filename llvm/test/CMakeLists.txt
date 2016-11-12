@@ -57,6 +57,7 @@ set(LLVM_TEST_DEPENDS
           llvm-rtdyld
           llvm-size
           llvm-split
+          llvm-strings
           llvm-symbolizer
           llvm-tblgen
           llvm-xray

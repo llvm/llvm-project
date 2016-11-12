@@ -98,7 +98,8 @@ Changes to the AMDGPU Target
 Changes to the OCaml bindings
 -----------------------------
 
- During this release ...
+* The attribute API was completely overhauled, following the changes
+  to the C API.
 
 
 External Open Source Projects Using LLVM 4.0.0

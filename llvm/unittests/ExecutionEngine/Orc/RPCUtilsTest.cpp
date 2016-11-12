@@ -191,7 +191,7 @@ TEST(DummyRPC, TestSerialization) {
       Server.addHandler<DummyRPCAPI::AllTheTypes>(
           [&](int8_t S8, uint8_t U8, int16_t S16, uint16_t U16,
               int32_t S32, uint32_t U32, int64_t S64, uint64_t U64,
-              bool B, std::string S, std::vector<int> V) -> Error {
+              bool B, std::string S, std::vector<int> V) {
 
             EXPECT_EQ(S8, -101) << "int8_t serialization broken";
             EXPECT_EQ(U8, 250) << "uint8_t serialization broken";
