@@ -700,28 +700,37 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
       }
       setVersionId(find(N), V.Name, N, V.Id);
     }
+    for (SymbolVersion Sym : V.Locals) {
+      if (Sym.HasWildcards)
+        continue;
+      setVersionId(find(Sym.Name), V.Name, Sym.Name, VER_NDX_LOCAL);
+    }
   }
 
   // Next, we assign versions to fuzzy matching symbols,
   // i.e. version definitions containing glob meta-characters.
   // Note that because the last match takes precedence over previous matches,
   // we iterate over the definitions in the reverse order.
+  auto assignFuzzyVersion = [&](SymbolVersion &Sym, size_t Version) {
+    if (!Sym.HasWildcards)
+      return;
+    StringMatcher M({Sym.Name});
+    std::vector<SymbolBody *> Syms =
+        Sym.IsExternCpp ? findAllDemangled(Demangled, M) : findAll(M);
+    // Exact matching takes precendence over fuzzy matching,
+    // so we set a version to a symbol only if no version has been assigned
+    // to the symbol. This behavior is compatible with GNU.
+    for (SymbolBody *B : Syms)
+      if (B->symbol()->VersionId == Config->DefaultSymbolVersion)
+        B->symbol()->VersionId = Version;
+  };
+
   for (size_t I = Config->VersionDefinitions.size() - 1; I != (size_t)-1; --I) {
     VersionDefinition &V = Config->VersionDefinitions[I];
-    for (SymbolVersion &Sym : V.Globals) {
-      if (!Sym.HasWildcards)
-        continue;
-      StringMatcher M({Sym.Name});
-      std::vector<SymbolBody *> Syms =
-          Sym.IsExternCpp ? findAllDemangled(Demangled, M) : findAll(M);
-
-      // Exact matching takes precendence over fuzzy matching,
-      // so we set a version to a symbol only if no version has been assigned
-      // to the symbol. This behavior is compatible with GNU.
-      for (SymbolBody *B : Syms)
-        if (B->symbol()->VersionId == Config->DefaultSymbolVersion)
-          B->symbol()->VersionId = V.Id;
-    }
+    for (SymbolVersion &Sym : V.Locals)
+      assignFuzzyVersion(Sym, VER_NDX_LOCAL);
+    for (SymbolVersion &Sym : V.Globals)
+      assignFuzzyVersion(Sym, V.Id);
   }
 }
 

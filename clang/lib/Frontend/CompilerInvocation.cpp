@@ -98,6 +98,9 @@ static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
     if (S == "s" || S == "z" || S.empty())
       return 2;
 
+    if (S == "g")
+      return 1;
+
     return getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
   }
 

@@ -79,7 +79,7 @@ void CpioFile::append(StringRef Path, StringRef Data) {
 // Makes a given pathname an absolute path first, and then remove
 // beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
 // assuming that the current directory is "/home/john/bar".
-// Returned string is a backslash-separated path even on Windows to avoid
+// Returned string is a forward slash separated path even on Windows to avoid
 // a mess with backslash-as-escape and backslash-as-path-separator.
 std::string lld::relativeToRoot(StringRef Path) {
   SmallString<128> Abs = Path;

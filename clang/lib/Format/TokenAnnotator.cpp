@@ -316,8 +316,8 @@ private:
         (Contexts.back().CanBeExpression || Contexts.back().IsExpression ||
          Contexts.back().InTemplateArgument);
 
-    bool StartsObjCMethodExpr = !CppArrayTemplates &&
-        Style.Language == FormatStyle::LK_Cpp &&
+    bool StartsObjCMethodExpr =
+        !CppArrayTemplates && Style.Language == FormatStyle::LK_Cpp &&
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         CurrentToken->isNot(tok::l_brace) &&
         (!Parent ||
@@ -519,12 +519,21 @@ private:
       } else if (Contexts.back().ColonIsObjCMethodExpr ||
                  Line.startsWith(TT_ObjCMethodSpecifier)) {
         Tok->Type = TT_ObjCMethodExpr;
-        Tok->Previous->Type = TT_SelectorName;
-        if (Tok->Previous->ColumnWidth >
-            Contexts.back().LongestObjCSelectorName)
-          Contexts.back().LongestObjCSelectorName = Tok->Previous->ColumnWidth;
-        if (!Contexts.back().FirstObjCSelectorName)
-          Contexts.back().FirstObjCSelectorName = Tok->Previous;
+        const FormatToken *BeforePrevious = Tok->Previous->Previous;
+        if (!BeforePrevious ||
+            !(BeforePrevious->is(TT_CastRParen) ||
+              (BeforePrevious->is(TT_ObjCMethodExpr) &&
+               BeforePrevious->is(tok::colon))) ||
+            BeforePrevious->is(tok::r_square) ||
+            Contexts.back().LongestObjCSelectorName == 0) {
+          Tok->Previous->Type = TT_SelectorName;
+          if (Tok->Previous->ColumnWidth >
+              Contexts.back().LongestObjCSelectorName)
+            Contexts.back().LongestObjCSelectorName =
+                Tok->Previous->ColumnWidth;
+          if (!Contexts.back().FirstObjCSelectorName)
+            Contexts.back().FirstObjCSelectorName = Tok->Previous;
+        }
       } else if (Contexts.back().ColonIsForRangeExpr) {
         Tok->Type = TT_RangeBasedForLoopColon;
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
@@ -1223,6 +1232,13 @@ private:
     // are by the logic above, e.g. "(void)x;".
     if (!LeftOfParens)
       return false;
+
+    // Certain token types inside the parentheses mean that this can't be a
+    // cast.
+    for (const FormatToken *Token = Tok.MatchingParen->Next; Token != &Tok;
+         Token = Token->Next)
+      if (Token->is(TT_BinaryOperator))
+        return false;
 
     // If the following token is an identifier or 'this', this is a cast. All
     // cases where this can be something else are handled above.
@@ -2497,10 +2513,13 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return !Style.BreakBeforeTernaryOperators;
   if (Right.is(TT_InheritanceColon))
     return true;
+  if (Right.is(TT_ObjCMethodExpr) && !Right.is(tok::r_square) &&
+      Left.isNot(TT_SelectorName))
+    return true;
   if (Right.is(tok::colon) &&
       !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon))
     return false;
-  if (Left.is(tok::colon) && (Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)))
+  if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr))
     return true;
   if (Right.is(TT_SelectorName) || (Right.is(tok::identifier) && Right.Next &&
                                     Right.Next->is(TT_ObjCMethodExpr)))

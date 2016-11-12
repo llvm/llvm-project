@@ -293,6 +293,12 @@ BUILTIN(__builtin_altivec_vabsduw, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vslv, "V16UcV16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vsrv, "V16UcV16UcV16Uc", "")
 
+// P9 Vector rotate built-ins
+BUILTIN(__builtin_altivec_vrlwmi, "V4UiV4UiV4UiV4Ui", "")
+BUILTIN(__builtin_altivec_vrldmi, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vrlwnm, "V4UiV4UiV4Ui", "")
+BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")
@@ -379,6 +385,18 @@ BUILTIN(__builtin_vsx_xvabsdp, "V2dV2d", "")
 
 BUILTIN(__builtin_vsx_xviexpdp, "V2dV2ULLiV2ULLi", "")
 BUILTIN(__builtin_vsx_xviexpsp, "V4fV4UiV4Ui", "")
+
+// Conversion builtins
+BUILTIN(__builtin_vsx_xvcvdpsxws, "V4SiV2d", "")
+BUILTIN(__builtin_vsx_xvcvdpuxws, "V4UiV2d", "")
+BUILTIN(__builtin_vsx_xvcvsxwdp, "V2dV4Si", "")
+BUILTIN(__builtin_vsx_xvcvuxwdp, "V2dV4Ui", "")
+BUILTIN(__builtin_vsx_xvcvspdp, "V2dV4f", "")
+BUILTIN(__builtin_vsx_xvcvsxdsp, "V4fV2SLLi", "")
+BUILTIN(__builtin_vsx_xvcvuxdsp, "V4fV2ULLi", "")
+BUILTIN(__builtin_vsx_xvcvdpsp, "V4fV2d", "")
+
+BUILTIN(__builtin_vsx_xvcvsphp, "V4fV4f", "")
 
 // HTM builtins
 BUILTIN(__builtin_tbegin, "UiUIi", "")

@@ -5358,73 +5358,81 @@ __m256i test_mm256_maskz_srai_epi32(__mmask8 __U, __m256i __A) {
 
 __m128i test_mm_sra_epi64(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_sra_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.q.128
+  // CHECK: @llvm.x86.avx512.psra.q.128
   return _mm_sra_epi64(__A, __B); 
 }
 
 __m128i test_mm_mask_sra_epi64(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_sra_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.q.128
+  // CHECK: @llvm.x86.avx512.psra.q.128
+  // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_sra_epi64(__W, __U, __A, __B); 
 }
 
 __m128i test_mm_maskz_sra_epi64(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_sra_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.q.128
+  // CHECK: @llvm.x86.avx512.psra.q.128
+  // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_sra_epi64(__U, __A, __B); 
 }
 
 __m256i test_mm256_sra_epi64(__m256i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm256_sra_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.q.256
+  // CHECK: @llvm.x86.avx512.psra.q.256
   return _mm256_sra_epi64(__A, __B); 
 }
 
 __m256i test_mm256_mask_sra_epi64(__m256i __W, __mmask8 __U, __m256i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm256_mask_sra_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.q.256
+  // CHECK: @llvm.x86.avx512.psra.q.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_sra_epi64(__W, __U, __A, __B); 
 }
 
 __m256i test_mm256_maskz_sra_epi64(__mmask8 __U, __m256i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm256_maskz_sra_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.q.256
+  // CHECK: @llvm.x86.avx512.psra.q.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_sra_epi64(__U, __A, __B); 
 }
 
 __m128i test_mm_srai_epi64(__m128i __A) {
   // CHECK-LABEL: @test_mm_srai_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.qi.128
+  // CHECK: @llvm.x86.avx512.psrai.q.128
   return _mm_srai_epi64(__A, 5); 
 }
 
 __m128i test_mm_mask_srai_epi64(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_srai_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.qi.128
+  // CHECK: @llvm.x86.avx512.psrai.q.128
+  // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_srai_epi64(__W, __U, __A, 5); 
 }
 
 __m128i test_mm_maskz_srai_epi64(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_srai_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.qi.128
+  // CHECK: @llvm.x86.avx512.psrai.q.128
+  // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_srai_epi64(__U, __A, 5); 
 }
 
 __m256i test_mm256_srai_epi64(__m256i __A) {
   // CHECK-LABEL: @test_mm256_srai_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.qi.256
+  // CHECK: @llvm.x86.avx512.psrai.q.256
   return _mm256_srai_epi64(__A, 5); 
 }
 
 __m256i test_mm256_mask_srai_epi64(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_srai_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.qi.256
+  // CHECK: @llvm.x86.avx512.psrai.q.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_srai_epi64(__W, __U, __A, 5); 
 }
 
 __m256i test_mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_srai_epi64
-  // CHECK: @llvm.x86.avx512.mask.psra.qi.256
+  // CHECK: @llvm.x86.avx512.psrai.q.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_srai_epi64(__U, __A, 5); 
 }
 
