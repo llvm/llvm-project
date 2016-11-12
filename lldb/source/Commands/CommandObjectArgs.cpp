@@ -55,7 +55,7 @@ CommandObjectArgs::CommandOptions::CommandOptions(
 CommandObjectArgs::CommandOptions::~CommandOptions() = default;
 
 Error CommandObjectArgs::CommandOptions::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
 

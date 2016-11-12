@@ -192,8 +192,7 @@ public:
   /// @see Args::ParseOptions (Options&)
   /// @see man getopt_long_only
   //------------------------------------------------------------------
-  // TODO: Make this function take a StringRef.
-  virtual Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+  virtual Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                                ExecutionContext *execution_context) = 0;
 
   //------------------------------------------------------------------
@@ -344,7 +343,6 @@ public:
   virtual Error SetOptionValue(uint32_t option_idx,
                                llvm::StringRef option_value,
                                ExecutionContext *execution_context) = 0;
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   virtual void OptionParsingStarting(ExecutionContext *execution_context) = 0;
 
@@ -403,7 +401,7 @@ public:
 
   bool DidFinalize() { return m_did_finalize; }
 
-  Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                        ExecutionContext *execution_context) override;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;

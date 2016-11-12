@@ -126,7 +126,7 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override;
@@ -320,7 +320,7 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -328,11 +328,10 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(
-            llvm::StringRef::withNullAsEmpty(option_arg), true, &success);
+        m_cascade = Args::StringToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
       case 'P':
         handwrite_python = true;
@@ -599,7 +598,6 @@ private:
 
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     // Instance variables to hold the values for command options.
 
@@ -770,7 +768,7 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -783,8 +781,7 @@ protected:
         m_category = std::string(option_arg);
         break;
       case 'l':
-        m_language = Language::GetLanguageTypeFromString(
-            llvm::StringRef::withNullAsEmpty(option_arg));
+        m_language = Language::GetLanguageTypeFromString(option_arg);
         break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
@@ -911,7 +908,7 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -1027,19 +1024,17 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      llvm::StringRef option_strref =
-          llvm::StringRef::withNullAsEmpty(option_arg);
       switch (short_option) {
       case 'w':
-        m_category_regex.SetCurrentValue(option_strref);
+        m_category_regex.SetCurrentValue(option_arg);
         m_category_regex.SetOptionWasSet();
         break;
       case 'l':
-        error = m_category_language.SetValueFromString(option_strref);
+        error = m_category_language.SetValueFromString(option_arg);
         if (error.Success())
           m_category_language.SetOptionWasSet();
         break;
@@ -1249,7 +1244,7 @@ public:
 #endif // LLDB_DISABLE_PYTHON
 
 Error CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = m_getopt_table[option_idx].val;
@@ -1257,11 +1252,10 @@ Error CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 'C':
-    m_flags.SetCascades(Args::StringToBoolean(
-        llvm::StringRef::withNullAsEmpty(option_arg), true, &success));
+    m_flags.SetCascades(Args::StringToBoolean(option_arg, true, &success));
     if (!success)
       error.SetErrorStringWithFormat("invalid value for cascade: %s",
-                                     option_arg);
+                                     option_arg.str().c_str());
     break;
   case 'e':
     m_flags.SetDontShowChildren(false);
@@ -1288,14 +1282,14 @@ Error CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
     m_regex = true;
     break;
   case 'n':
-    m_name.SetCString(option_arg);
+    m_name.SetString(option_arg);
     break;
   case 'o':
-    m_python_script = std::string(option_arg);
+    m_python_script = option_arg;
     m_is_add_script = true;
     break;
   case 'F':
-    m_python_function = std::string(option_arg);
+    m_python_function = option_arg;
     m_is_add_script = true;
     break;
   case 'P':
@@ -1805,7 +1799,7 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -1815,8 +1809,7 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
         m_define_enabled.SetValueFromString(llvm::StringRef("true"));
         break;
       case 'l':
-        error = m_cate_language.SetValueFromString(
-            llvm::StringRef::withNullAsEmpty(option_arg));
+        error = m_cate_language.SetValueFromString(option_arg);
         break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
@@ -1910,19 +1903,18 @@ class CommandObjectTypeCategoryEnable : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'l':
-        if (option_arg) {
-          m_language = Language::GetLanguageTypeFromString(
-              llvm::StringRef::withNullAsEmpty(option_arg));
+        if (!option_arg.empty()) {
+          m_language = Language::GetLanguageTypeFromString(option_arg);
           if (m_language == lldb::eLanguageTypeUnknown)
             error.SetErrorStringWithFormat("unrecognized language '%s'",
-                                           option_arg);
+                                           option_arg.str().c_str());
         }
         break;
       default:
@@ -2088,19 +2080,18 @@ class CommandObjectTypeCategoryDisable : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'l':
-        if (option_arg) {
-          m_language = Language::GetLanguageTypeFromString(
-              llvm::StringRef::withNullAsEmpty(option_arg));
+        if (!option_arg.empty()) {
+          m_language = Language::GetLanguageTypeFromString(option_arg);
           if (m_language == lldb::eLanguageTypeUnknown)
             error.SetErrorStringWithFormat("unrecognized language '%s'",
-                                           option_arg);
+                                           option_arg.str().c_str());
         }
         break;
       default:
@@ -2521,7 +2512,7 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -2529,11 +2520,10 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = Args::StringToBoolean(
-            llvm::StringRef::withNullAsEmpty(option_arg), true, &success);
+        m_cascade = Args::StringToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
       case 'c':
         m_expr_paths.push_back(option_arg);
@@ -2820,7 +2810,6 @@ protected:
 
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_show_help = false;

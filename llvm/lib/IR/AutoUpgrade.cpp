@@ -298,38 +298,18 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name == "avx512.mask.sub.pd.256" ||
          Name == "avx512.mask.sub.ps.128" ||
          Name == "avx512.mask.sub.ps.256" ||
-         Name == "avx512.mask.psll.d.128" ||
-         Name == "avx512.mask.psll.d.256" ||
-         Name == "avx512.mask.psll.q.128" ||
-         Name == "avx512.mask.psll.q.256" ||
-         Name == "avx512.mask.psll.w.128" ||
-         Name == "avx512.mask.psll.w.256" ||
-         Name == "avx512.mask.psra.d.128" ||
-         Name == "avx512.mask.psra.d.256" ||
-         Name == "avx512.mask.psra.w.128" ||
-         Name == "avx512.mask.psra.w.256" ||
-         Name == "avx512.mask.psrl.d.128" ||
-         Name == "avx512.mask.psrl.d.256" ||
-         Name == "avx512.mask.psrl.q.128" ||
-         Name == "avx512.mask.psrl.q.256" ||
-         Name == "avx512.mask.psrl.w.128" ||
-         Name == "avx512.mask.psrl.w.256" ||
-         Name == "avx512.mask.psll.di.128" ||
-         Name == "avx512.mask.psll.di.256" ||
-         Name == "avx512.mask.psll.qi.128" ||
-         Name == "avx512.mask.psll.qi.256" ||
-         Name == "avx512.mask.psll.wi.128" ||
-         Name == "avx512.mask.psll.wi.256" ||
-         Name == "avx512.mask.psra.di.128" ||
-         Name == "avx512.mask.psra.di.256" ||
-         Name == "avx512.mask.psra.wi.128" ||
-         Name == "avx512.mask.psra.wi.256" ||
-         Name == "avx512.mask.psrl.di.128" ||
-         Name == "avx512.mask.psrl.di.256" ||
-         Name == "avx512.mask.psrl.qi.128" ||
-         Name == "avx512.mask.psrl.qi.256" ||
-         Name == "avx512.mask.psrl.wi.128" ||
-         Name == "avx512.mask.psrl.wi.256" ||
+         Name.startswith("avx512.mask.psll.d") ||
+         Name.startswith("avx512.mask.psll.q") ||
+         Name.startswith("avx512.mask.psll.w") ||
+         Name.startswith("avx512.mask.psra.d") ||
+         Name.startswith("avx512.mask.psra.q") ||
+         Name.startswith("avx512.mask.psra.w") ||
+         Name.startswith("avx512.mask.psrl.d") ||
+         Name.startswith("avx512.mask.psrl.q") ||
+         Name.startswith("avx512.mask.psrl.w") ||
+         Name.startswith("avx512.mask.pslli") ||
+         Name.startswith("avx512.mask.psrai") ||
+         Name.startswith("avx512.mask.psrli") ||
          Name == "avx512.mask.psllv2.di" ||
          Name == "avx512.mask.psllv4.di" ||
          Name == "avx512.mask.psllv4.si" ||
@@ -431,23 +411,6 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(),
                                         Intrinsic::x86_xop_vfrcz_sd);
-      return true;
-    }
-    if (IsX86 && (Name.startswith("avx512.mask.pslli.") ||
-                  Name.startswith("avx512.mask.psrai.") ||
-                  Name.startswith("avx512.mask.psrli."))) {
-      Intrinsic::ID ShiftID;
-      if (Name.slice(12, 16) == "psll")
-        ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psll_di_512
-                                  : Intrinsic::x86_avx512_mask_psll_qi_512;
-      else if (Name.slice(12, 16) == "psra")
-        ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psra_di_512
-                                  : Intrinsic::x86_avx512_mask_psra_qi_512;
-      else
-        ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psrl_di_512
-                                  : Intrinsic::x86_avx512_mask_psrl_qi_512;
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), ShiftID);
       return true;
     }
     // Upgrade any XOP PERMIL2 index operand still using a float/double vector.
@@ -1396,66 +1359,138 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psll_d);
     } else if (IsX86 && Name == "avx512.mask.psll.d.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psll_d);
+    } else if (IsX86 && Name == "avx512.mask.psll.d") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psll_d_512);
     } else if (IsX86 && Name == "avx512.mask.psll.q.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psll_q);
     } else if (IsX86 && Name == "avx512.mask.psll.q.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psll_q);
+    } else if (IsX86 && Name == "avx512.mask.psll.q") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psll_q_512);
     } else if (IsX86 && Name == "avx512.mask.psll.w.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psll_w);
     } else if (IsX86 && Name == "avx512.mask.psll.w.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psll_w);
+    } else if (IsX86 && Name == "avx512.mask.psll.w.512") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psll_w_512);
     } else if (IsX86 && Name == "avx512.mask.psra.d.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psra_d);
     } else if (IsX86 && Name == "avx512.mask.psra.d.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psra_d);
+    } else if (IsX86 && Name == "avx512.mask.psra.d") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psra_d_512);
+    } else if (IsX86 && Name == "avx512.mask.psra.q.128") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psra_q_128);
+    } else if (IsX86 && Name == "avx512.mask.psra.q.256") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psra_q_256);
+    } else if (IsX86 && Name == "avx512.mask.psra.q") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psra_q_512);
     } else if (IsX86 && Name == "avx512.mask.psra.w.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psra_w);
     } else if (IsX86 && Name == "avx512.mask.psra.w.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psra_w);
+    } else if (IsX86 && Name == "avx512.mask.psra.w.512") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psra_w_512);
     } else if (IsX86 && Name == "avx512.mask.psrl.d.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrl_d);
     } else if (IsX86 && Name == "avx512.mask.psrl.d.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrl_d);
+    } else if (IsX86 && Name == "avx512.mask.psrl.d") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrl_d_512);
     } else if (IsX86 && Name == "avx512.mask.psrl.q.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrl_q);
     } else if (IsX86 && Name == "avx512.mask.psrl.q.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrl_q);
+    } else if (IsX86 && Name == "avx512.mask.psrl.q") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrl_q_512);
     } else if (IsX86 && Name == "avx512.mask.psrl.w.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrl_w);
     } else if (IsX86 && Name == "avx512.mask.psrl.w.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrl_w);
+    } else if (IsX86 && Name == "avx512.mask.psrl.w.512") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrl_w_512);
     } else if (IsX86 && Name == "avx512.mask.psll.di.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_pslli_d);
     } else if (IsX86 && Name == "avx512.mask.psll.di.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_pslli_d);
+    } else if (IsX86 && (Name == "avx512.mask.psll.di.512" ||
+                         Name == "avx512.mask.pslli.d")) {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_pslli_d_512);
     } else if (IsX86 && Name == "avx512.mask.psll.qi.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_pslli_q);
     } else if (IsX86 && Name == "avx512.mask.psll.qi.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_pslli_q);
+    } else if (IsX86 && (Name == "avx512.mask.psll.qi.512" ||
+                         Name == "avx512.mask.pslli.q")) {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_pslli_q_512);
     } else if (IsX86 && Name == "avx512.mask.psll.wi.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_pslli_w);
     } else if (IsX86 && Name == "avx512.mask.psll.wi.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_pslli_w);
+    } else if (IsX86 && Name == "avx512.mask.psll.wi.512") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_pslli_w_512);
     } else if (IsX86 && Name == "avx512.mask.psra.di.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrai_d);
     } else if (IsX86 && Name == "avx512.mask.psra.di.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrai_d);
+    } else if (IsX86 && (Name == "avx512.mask.psra.di.512" ||
+                         Name == "avx512.mask.psrai.d")) {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrai_d_512);
+    } else if (IsX86 && Name == "avx512.mask.psra.qi.128") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrai_q_128);
+    } else if (IsX86 && Name == "avx512.mask.psra.qi.256") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrai_q_256);
+    } else if (IsX86 && (Name == "avx512.mask.psra.qi.512" ||
+                         Name == "avx512.mask.psrai.q")) {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrai_q_512);
     } else if (IsX86 && Name == "avx512.mask.psra.wi.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrai_w);
     } else if (IsX86 && Name == "avx512.mask.psra.wi.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrai_w);
+    } else if (IsX86 && Name == "avx512.mask.psra.wi.512") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrai_w_512);
     } else if (IsX86 && Name == "avx512.mask.psrl.di.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrli_d);
     } else if (IsX86 && Name == "avx512.mask.psrl.di.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrli_d);
+    } else if (IsX86 && (Name == "avx512.mask.psrl.di.512" ||
+                         Name == "avx512.mask.psrli.d")) {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrli_d_512);
     } else if (IsX86 && Name == "avx512.mask.psrl.qi.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrli_q);
     } else if (IsX86 && Name == "avx512.mask.psrl.qi.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrli_q);
+    } else if (IsX86 && (Name == "avx512.mask.psrl.qi.512" ||
+                         Name == "avx512.mask.psrli.q")) {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrli_q_512);
     } else if (IsX86 && Name == "avx512.mask.psrl.wi.128") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_sse2_psrli_w);
     } else if (IsX86 && Name == "avx512.mask.psrl.wi.256") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psrli_w);
+    } else if (IsX86 && Name == "avx512.mask.psrl.wi.512") {
+      Rep = UpgradeX86MaskedShift(Builder, *CI,
+                                  Intrinsic::x86_avx512_psrli_w_512);
     } else if (IsX86 && Name == "avx512.mask.psllv2.di") {
       Rep = UpgradeX86MaskedShift(Builder, *CI, Intrinsic::x86_avx2_psllv_q);
     } else if (IsX86 && Name == "avx512.mask.psllv4.di") {
@@ -1494,12 +1529,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   default:
     llvm_unreachable("Unknown function for CallInst upgrade.");
 
-  case Intrinsic::x86_avx512_mask_psll_di_512:
-  case Intrinsic::x86_avx512_mask_psra_di_512:
-  case Intrinsic::x86_avx512_mask_psrl_di_512:
-  case Intrinsic::x86_avx512_mask_psll_qi_512:
-  case Intrinsic::x86_avx512_mask_psra_qi_512:
-  case Intrinsic::x86_avx512_mask_psrl_qi_512:
   case Intrinsic::arm_neon_vld1:
   case Intrinsic::arm_neon_vld2:
   case Intrinsic::arm_neon_vld3:

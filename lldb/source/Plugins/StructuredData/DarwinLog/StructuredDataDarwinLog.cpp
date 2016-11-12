@@ -523,12 +523,11 @@ public:
     m_filter_rules.clear();
   }
 
-  Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                        ExecutionContext *execution_context) override {
     Error error;
 
     const int short_option = m_getopt_table[option_idx].val;
-    auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
     switch (short_option) {
     case 'a':
       m_include_any_process = true;
@@ -542,7 +541,7 @@ public:
       break;
 
     case 'b':
-      m_broadcast_events = Args::StringToBoolean(option_strref, true, nullptr);
+      m_broadcast_events = Args::StringToBoolean(option_arg, true, nullptr);
       break;
 
     case 'c':
@@ -558,23 +557,23 @@ public:
       break;
 
     case 'e':
-      m_echo_to_stderr = Args::StringToBoolean(option_strref, false, nullptr);
+      m_echo_to_stderr = Args::StringToBoolean(option_arg, false, nullptr);
       break;
 
     case 'f':
-      return ParseFilterRule(option_strref);
+      return ParseFilterRule(option_arg);
 
     case 'i':
       m_include_info_level = true;
       break;
 
     case 'l':
-      m_live_stream = Args::StringToBoolean(option_strref, false, nullptr);
+      m_live_stream = Args::StringToBoolean(option_arg, false, nullptr);
       break;
 
     case 'n':
       m_filter_fall_through_accepts =
-          Args::StringToBoolean(option_strref, true, nullptr);
+          Args::StringToBoolean(option_arg, true, nullptr);
       break;
 
     case 'r':

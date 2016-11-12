@@ -412,11 +412,10 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
 }
 
 Error ProcessLaunchCommandOptions::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = m_getopt_table[option_idx].val;
-  auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
   switch (short_option) {
   case 's': // Stop at program entry point
@@ -485,40 +484,38 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
   {
     bool success;
     const bool disable_aslr_arg =
-        Args::StringToBoolean(option_strref, true, &success);
+        Args::StringToBoolean(option_arg, true, &success);
     if (success)
       disable_aslr = disable_aslr_arg ? eLazyBoolYes : eLazyBoolNo;
     else
       error.SetErrorStringWithFormat(
           "Invalid boolean value for disable-aslr option: '%s'",
-          option_arg ? option_arg : "<null>");
+          option_arg.empty() ? "<null>" : option_arg.str().c_str());
     break;
   }
 
   case 'X': // shell expand args.
   {
     bool success;
-    const bool expand_args =
-        Args::StringToBoolean(option_strref, true, &success);
+    const bool expand_args = Args::StringToBoolean(option_arg, true, &success);
     if (success)
       launch_info.SetShellExpandArguments(expand_args);
     else
       error.SetErrorStringWithFormat(
           "Invalid boolean value for shell-expand-args option: '%s'",
-          option_arg ? option_arg : "<null>");
+          option_arg.empty() ? "<null>" : option_arg.str().c_str());
     break;
   }
 
   case 'c':
-    if (option_arg && option_arg[0])
+    if (!option_arg.empty())
       launch_info.SetShell(FileSpec(option_arg, false));
     else
       launch_info.SetShell(HostInfo::GetDefaultShell());
     break;
 
   case 'v':
-    launch_info.GetEnvironmentEntries().AppendArgument(
-        llvm::StringRef::withNullAsEmpty(option_arg));
+    launch_info.GetEnvironmentEntries().AppendArgument(option_arg);
     break;
 
   default:

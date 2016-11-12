@@ -110,7 +110,6 @@ public:
     }
     return error;
   }
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_num_per_line.Clear();
@@ -942,7 +941,6 @@ public:
       }
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_expr.Clear();
@@ -1238,7 +1236,6 @@ public:
       }
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_infile.Clear();

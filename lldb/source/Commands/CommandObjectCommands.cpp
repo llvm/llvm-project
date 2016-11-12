@@ -66,29 +66,26 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      llvm::StringRef option_strref =
-          llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'c':
-        error =
-            m_count.SetValueFromString(option_strref, eVarSetOperationAssign);
+        error = m_count.SetValueFromString(option_arg, eVarSetOperationAssign);
         break;
       case 's':
-        if (option_arg && strcmp("end", option_arg) == 0) {
+        if (option_arg == "end") {
           m_start_idx.SetCurrentValue(UINT64_MAX);
           m_start_idx.SetOptionWasSet();
         } else
-          error = m_start_idx.SetValueFromString(option_strref,
+          error = m_start_idx.SetValueFromString(option_arg,
                                                  eVarSetOperationAssign);
         break;
       case 'e':
-        error = m_stop_idx.SetValueFromString(option_strref,
-                                              eVarSetOperationAssign);
+        error =
+            m_stop_idx.SetValueFromString(option_arg, eVarSetOperationAssign);
         break;
       case 'C':
         m_clear.SetCurrentValue(true);
@@ -259,24 +256,22 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      llvm::StringRef option_strref =
-          llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 'e':
-        error = m_stop_on_error.SetValueFromString(option_strref);
+        error = m_stop_on_error.SetValueFromString(option_arg);
         break;
 
       case 'c':
-        error = m_stop_on_continue.SetValueFromString(option_strref);
+        error = m_stop_on_continue.SetValueFromString(option_arg);
         break;
 
       case 's':
-        error = m_silent_run.SetValueFromString(option_strref);
+        error = m_silent_run.SetValueFromString(option_arg);
         break;
 
       default:
@@ -401,7 +396,6 @@ protected:
 
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_help.Clear();
@@ -1229,7 +1223,7 @@ private:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -1498,7 +1492,7 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -1630,32 +1624,32 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'f':
-        if (option_arg)
-          m_funct_name.assign(option_arg);
+        if (!option_arg.empty())
+          m_funct_name = option_arg;
         break;
       case 'c':
-        if (option_arg)
-          m_class_name.assign(option_arg);
+        if (!option_arg.empty())
+          m_class_name = option_arg;
         break;
       case 'h':
-        if (option_arg)
-          m_short_help.assign(option_arg);
+        if (!option_arg.empty())
+          m_short_help = option_arg;
         break;
       case 's':
         m_synchronicity =
             (ScriptedCommandSynchronicity)Args::StringToOptionEnum(
-                llvm::StringRef::withNullAsEmpty(option_arg),
-                GetDefinitions()[option_idx].enum_values, 0, error);
+                option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
           error.SetErrorStringWithFormat(
-              "unrecognized value for synchronicity '%s'", option_arg);
+              "unrecognized value for synchronicity '%s'",
+              option_arg.str().c_str());
         break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
