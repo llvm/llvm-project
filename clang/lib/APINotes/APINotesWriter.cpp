@@ -490,7 +490,7 @@ namespace {
   /// Retrieve the serialized size of the given VariableInfo, for use in
   /// on-disk hash tables.
   unsigned getVariableInfoSize(const VariableInfo &info) {
-    return 2 + getCommonEntityInfoSize(info);
+    return 2 + getCommonEntityInfoSize(info) + 2 + info.getType().size();
   }
 
   /// Emit a serialized representation of the variable information.
@@ -506,6 +506,10 @@ namespace {
     }
 
     out.write(reinterpret_cast<const char *>(bytes), 2);
+
+    endian::Writer<little> writer(out);
+    writer.write<uint16_t>(info.getType().size());
+    out.write(info.getType().data(), info.getType().size());
   }
 
   /// On-dish hash table info key base for handling versioned data.
@@ -691,11 +695,34 @@ void APINotesWriter::Implementation::writeObjCPropertyBlock(
 }
 
 namespace {
+  static unsigned getParamInfoSize(const ParamInfo &info) {
+    return getVariableInfoSize(info) + 1;
+  }
+
+  static void emitParamInfo(raw_ostream &out, const ParamInfo &info) {
+    emitVariableInfo(out, info);
+
+    endian::Writer<little> writer(out);
+
+    uint8_t payload = 0;
+    if (auto noescape = info.isNoEscape()) {
+      payload |= 0x01;
+      if (*noescape)
+        payload |= 0x02;
+    }
+    writer.write<uint8_t>(payload);
+  }
+
   /// Retrieve the serialized size of the given FunctionInfo, for use in
   /// on-disk hash tables.
   static unsigned getFunctionInfoSize(const FunctionInfo &info) {
-    return 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 
-           2 + info.Params.size() * 1;
+    unsigned size = 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 2;
+
+    for (const auto &param : info.Params)
+      size += getParamInfoSize(param);
+
+    size += 2 + info.ResultType.size();
+    return size;
   }
 
   /// Emit a serialized representation of the function information.
@@ -709,22 +736,12 @@ namespace {
 
     // Parameters.
     writer.write<uint16_t>(info.Params.size());
-    for (const auto &pi : info.Params) {
-      uint8_t payload = 0;
-      if (auto noescape = pi.isNoEscape()) {
-        payload |= 0x01;
-        if (*noescape)
-          payload |= 0x02;
-      }
+    for (const auto &pi : info.Params)
+      emitParamInfo(out, pi);
 
-      auto nullability = pi.getNullability();
-      payload = (payload << 1) | nullability.hasValue();
-
-      payload = payload << 2;
-      if (nullability)
-        payload |= static_cast<uint8_t>(*nullability);
-      writer.write<uint8_t>(payload);
-    }
+    // Result type.
+    writer.write<uint16_t>(info.ResultType.size());
+    out.write(info.ResultType.data(), info.ResultType.size());
   }
 
   /// Used to serialize the on-disk Objective-C method table.
