@@ -2695,7 +2695,19 @@ private:
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]
   ExprResult ParseTypeTrait();
-  
+
+  /// Parse the given string as a type.
+  ///
+  /// This is a dangerous utility function currently employed only by API notes.
+  /// It is not a general entry-point for safely parsing types from strings.
+  ///
+  /// \param typeStr The string to be parsed as a type.
+  /// \param context The name of the context in which this string is being
+  /// parsed, which will be used in diagnostics.
+  /// \param includeLoc The location at which this parse was triggered.
+  TypeResult parseTypeFromString(StringRef typeStr, StringRef context,
+                                 SourceLocation includeLoc);
+
   //===--------------------------------------------------------------------===//
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();

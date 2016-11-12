@@ -264,10 +264,62 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                   role);
 }
 
+/// Check that the replacement type provided by API notes is reasonable.
+///
+/// This is a very weak form of ABI check.
+static bool checkAPINotesReplacementType(Sema &S, SourceLocation loc,
+                                         QualType origType,
+                                         QualType replacementType) {
+  if (S.Context.getTypeSize(origType) !=
+        S.Context.getTypeSize(replacementType)) {
+    S.Diag(loc, diag::err_incompatible_replacement_type)
+      << replacementType << origType;
+    return true;
+  }
+
+  return false;
+}
+
 /// Process API notes for a variable or property.
 static void ProcessAPINotes(Sema &S, Decl *D,
                             const api_notes::VariableInfo &info,
                             VersionedInfoRole role) {
+  // Type override.
+  if (role != VersionedInfoRole::Versioned &&
+      !info.getType().empty() && S.ParseTypeFromStringCallback) {
+    auto parsedType = S.ParseTypeFromStringCallback(info.getType(),
+                                                    "<API Notes>",
+                                                    D->getLocation());
+    if (parsedType.isUsable()) {
+      QualType type = Sema::GetTypeFromParser(parsedType.get());
+      auto typeInfo =
+        S.Context.getTrivialTypeSourceInfo(type, D->getLocation());
+
+      if (auto var = dyn_cast<VarDecl>(D)) {
+        // Make adjustments to parameter types.
+        if (isa<ParmVarDecl>(var)) {
+          type = S.adjustParameterTypeForObjCAutoRefCount(type,
+                                                          D->getLocation());
+          type = S.Context.getAdjustedParameterType(type);
+        }
+
+        if (!checkAPINotesReplacementType(S, var->getLocation(), var->getType(),
+                                          type)) {
+          var->setType(type);
+          var->setTypeSourceInfo(typeInfo);
+        }
+      } else if (auto property = dyn_cast<ObjCPropertyDecl>(D)) {
+        if (!checkAPINotesReplacementType(S, property->getLocation(),
+                                          property->getType(),
+                                          type)) {
+          property->setType(type, typeInfo);
+        }
+      } else {
+        llvm_unreachable("API notes allowed a type on an unknown declaration");
+      }
+    }
+  }
+
   // Nullability.
   if (auto Nullability = info.getNullability()) {
     applyNullability(S, D, *Nullability, role);
@@ -347,20 +399,75 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     NumParams = FD->getNumParams();
   else
     NumParams = MD->param_size();
-  
+
+  bool anyTypeChanged = false;
   for (unsigned I = 0; I != NumParams; ++I) {
     ParmVarDecl *Param;
     if (FD)
       Param = FD->getParamDecl(I);
     else
       Param = MD->param_begin()[I];
-    
+
+    QualType paramTypeBefore = Param->getType();
+
+    if (I < info.Params.size()) {
+      ProcessAPINotes(S, Param, info.Params[I], role);
+    }
+
     // Nullability.
     if (info.NullabilityAudited)
       applyNullability(S, Param, info.getParamTypeInfo(I), role);
 
-    if (I < info.Params.size()) {
-      ProcessAPINotes(S, Param, info.Params[I], role);
+    if (paramTypeBefore.getAsOpaquePtr() != Param->getType().getAsOpaquePtr())
+      anyTypeChanged = true;
+  }
+
+  // Result type override.
+  QualType overriddenResultType;
+  if (role != VersionedInfoRole::Versioned && !info.ResultType.empty() &&
+      S.ParseTypeFromStringCallback) {
+    auto parsedType = S.ParseTypeFromStringCallback(info.ResultType,
+                                                    "<API Notes>",
+                                                    D->getLocation());
+    if (parsedType.isUsable()) {
+      QualType resultType = Sema::GetTypeFromParser(parsedType.get());
+
+      if (MD) {
+        if (!checkAPINotesReplacementType(S, D->getLocation(),
+                                          MD->getReturnType(), resultType)) {
+          auto resultTypeInfo =
+            S.Context.getTrivialTypeSourceInfo(resultType, D->getLocation());
+          MD->setReturnType(resultType);
+          MD->setReturnTypeSourceInfo(resultTypeInfo);
+        }
+      } else if (!checkAPINotesReplacementType(S, FD->getLocation(),
+                                               FD->getReturnType(),
+                                               resultType)) {
+        overriddenResultType = resultType;
+        anyTypeChanged = true;
+      }
+    }
+  }
+
+  // If the result type or any of the parameter types changed for a function
+  // declaration, we have to rebuild the type.
+  if (FD && anyTypeChanged) {
+    if (const auto *fnProtoType = FD->getType()->getAs<FunctionProtoType>()) {
+      if (overriddenResultType.isNull())
+        overriddenResultType = fnProtoType->getReturnType();
+
+      SmallVector<QualType, 4> paramTypes;
+      for (auto param : FD->parameters()) {
+        paramTypes.push_back(param->getType());
+      }
+      FD->setType(S.Context.getFunctionType(overriddenResultType,
+                                            paramTypes,
+                                            fnProtoType->getExtProtoInfo()));
+    } else if (!overriddenResultType.isNull()) {
+      const auto *fnNoProtoType = FD->getType()->castAs<FunctionNoProtoType>();
+      FD->setType(
+              S.Context.getFunctionNoProtoType(overriddenResultType,
+                                               fnNoProtoType->getExtInfo()));
     }
   }
 

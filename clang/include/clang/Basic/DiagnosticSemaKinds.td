@@ -8248,6 +8248,13 @@ def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
   InGroup<OpenCLUnsupportedRGBA>;
 } // end of sema category
 
+let CategoryName = "API Notes Issue" in {
+
+def err_incompatible_replacement_type : Error<
+  "API notes replacement type %0 has a different size from original type %1">;
+
+}
+
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
 def err_omp_expected_var_arg : Error<
