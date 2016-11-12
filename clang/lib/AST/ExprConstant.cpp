@@ -5256,7 +5256,7 @@ bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (IsStringLiteralCall(E))
     return Success(E);
 
-  switch (E->getBuiltinCallee()) {
+  switch (unsigned BuiltinOp = E->getBuiltinCallee()) {
   case Builtin::BI__builtin_addressof:
     return EvaluateLValue(E->getArg(0), Result, Info);
   case Builtin::BI__builtin_assume_aligned: {
@@ -5324,6 +5324,65 @@ bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return true;
   }
+
+  case Builtin::BIstrchr:
+  case Builtin::BImemchr:
+    if (Info.getLangOpts().CPlusPlus11)
+      Info.CCEDiag(E, diag::note_constexpr_invalid_function)
+        << /*isConstexpr*/0 << /*isConstructor*/0
+        << (BuiltinOp == Builtin::BIstrchr ? "'strchr'" : "'memchr'");
+    else
+      Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    // Fall through.
+  case Builtin::BI__builtin_strchr:
+  case Builtin::BI__builtin_memchr: {
+    if (!Visit(E->getArg(0)))
+      return false;
+    APSInt Desired;
+    if (!EvaluateInteger(E->getArg(1), Desired, Info))
+      return false;
+    uint64_t MaxLength = uint64_t(-1);
+    if (BuiltinOp != Builtin::BIstrchr &&
+        BuiltinOp != Builtin::BI__builtin_strchr) {
+      APSInt N;
+      if (!EvaluateInteger(E->getArg(2), N, Info))
+        return false;
+      MaxLength = N.getExtValue();
+    }
+
+    QualType CharTy = Info.Ctx.CharTy;
+    bool IsStrchr = (BuiltinOp != Builtin::BImemchr &&
+                     BuiltinOp != Builtin::BI__builtin_memchr);
+
+    // strchr compares directly to the passed integer, and therefore
+    // always fails if given an int that is not a char.
+    if (IsStrchr &&
+        !APSInt::isSameValue(HandleIntToIntCast(Info, E, CharTy,
+                                                E->getArg(1)->getType(),
+                                                Desired),
+                             Desired))
+      return ZeroInitialization(E);
+
+    // memchr compares by converting both sides to unsigned char. That's also
+    // correct for strchr if we get this far.
+    uint64_t DesiredVal = Desired.trunc(Info.Ctx.getCharWidth()).getZExtValue();
+
+    for (; MaxLength; --MaxLength) {
+      APValue Char;
+      if (!handleLValueToRValueConversion(Info, E, CharTy, Result, Char) ||
+          !Char.isInt())
+        return false;
+      if (Char.getInt().getZExtValue() == DesiredVal)
+        return true;
+      if (IsStrchr && !Char.getInt())
+        break;
+      if (!HandleLValueArrayAdjustment(Info, E, Result, CharTy, 1))
+        return false;
+    }
+    // Not found: return nullptr.
+    return ZeroInitialization(E);
+  }
+
   default:
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
   }
@@ -7065,7 +7124,7 @@ bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     // Slow path: scan the bytes of the string looking for the terminating 0.
-    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
+    QualType CharTy = Info.Ctx.CharTy;
     for (uint64_t Strlen = 0; /**/; ++Strlen) {
       APValue Char;
       if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
@@ -7108,7 +7167,7 @@ bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     bool StopAtNull = (BuiltinOp != Builtin::BImemcmp &&
                        BuiltinOp != Builtin::BI__builtin_memcmp);
-    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
+    QualType CharTy = Info.Ctx.CharTy;
     for (; MaxLength; --MaxLength) {
       APValue Char1, Char2;
       if (!handleLValueToRValueConversion(Info, E, CharTy, String1, Char1) ||
