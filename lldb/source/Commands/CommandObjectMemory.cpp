@@ -110,7 +110,6 @@ public:
     }
     return error;
   }
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_num_per_line.Clear();
@@ -811,7 +810,7 @@ protected:
         StreamString name_strm;
         name_strm.Printf("0x%" PRIx64, item_addr);
         ValueObjectSP valobj_sp(ValueObjectMemory::Create(
-            exe_scope, name_strm.GetString().c_str(), address, clang_ast_type));
+            exe_scope, name_strm.GetString(), address, clang_ast_type));
         if (valobj_sp) {
           Format format = m_format_options.GetFormat();
           if (format != eFormatDefault)
@@ -942,7 +941,6 @@ public:
       }
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_expr.Clear();
@@ -1238,7 +1236,6 @@ public:
       }
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_infile.Clear();

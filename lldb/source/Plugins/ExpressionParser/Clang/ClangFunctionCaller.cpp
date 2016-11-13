@@ -203,8 +203,8 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
 
     num_errors = m_parser->Parse(diagnostic_manager);
   } else {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                  "no process - unable to inject function");
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "no process - unable to inject function");
     num_errors = 1;
   }
 

@@ -109,9 +109,9 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
     // we can go grab the value raw and print it as unsigned.
     return false;
   }
-  m_new_value_sp =
-      ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
-                                watch_name.AsCString(), watch_address, m_type);
+  m_new_value_sp = ValueObjectMemory::Create(
+      exe_ctx.GetBestExecutionContextScope(), watch_name.GetStringRef(),
+      watch_address, m_type);
   m_new_value_sp = m_new_value_sp->CreateConstantValue(watch_name);
   return (m_new_value_sp && m_new_value_sp->GetError().Success());
 }

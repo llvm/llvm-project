@@ -237,7 +237,7 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
         CodegenThreadPool.async(
             [&](const SmallString<0> &BC, unsigned ThreadId) {
               LTOLLVMContext Ctx(C);
-              ErrorOr<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
+              Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
                   MemoryBufferRef(StringRef(BC.data(), BC.size()), "ld-temp.o"),
                   Ctx);
               if (!MOrErr)
@@ -353,10 +353,8 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
-    return std::move(getLazyBitcodeModule(ModuleMap[Identifier],
-                                          Mod.getContext(),
-                                          /*ShouldLazyLoadMetadata=*/true)
-                         .get());
+    return getLazyBitcodeModule(ModuleMap[Identifier], Mod.getContext(),
+                                /*ShouldLazyLoadMetadata=*/true);
   };
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader);

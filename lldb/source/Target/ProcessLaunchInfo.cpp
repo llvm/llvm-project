@@ -142,11 +142,8 @@ const char *ProcessLaunchInfo::GetProcessPluginName() const {
   return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
 }
 
-void ProcessLaunchInfo::SetProcessPluginName(const char *plugin) {
-  if (plugin && plugin[0])
-    m_plugin_name.assign(plugin);
-  else
-    m_plugin_name.clear();
+void ProcessLaunchInfo::SetProcessPluginName(llvm::StringRef plugin) {
+  m_plugin_name = plugin;
 }
 
 const FileSpec &ProcessLaunchInfo::GetShell() const { return m_shell; }

@@ -75,6 +75,7 @@ protected:
   bool HalfRate64Ops;
 
   // Dynamially set bits that enable features.
+  bool FP16Denormals;
   bool FP32Denormals;
   bool FP64Denormals;
   bool FPExceptions;
@@ -270,6 +271,9 @@ public:
   /// the given LDS memory size is the only constraint.
   unsigned getOccupancyWithLocalMemSize(uint32_t Bytes) const;
 
+  bool hasFP16Denormals() const {
+    return FP16Denormals;
+  }
 
   bool hasFP32Denormals() const {
     return FP32Denormals;

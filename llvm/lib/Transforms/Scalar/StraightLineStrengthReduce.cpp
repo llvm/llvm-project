@@ -499,9 +499,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
 
     // The base of this candidate is GEP's base plus the offsets of all
     // indices except this current one.
-    const SCEV *BaseExpr = SE->getGEPExpr(GEP->getSourceElementType(),
-                                          SE->getSCEV(GEP->getPointerOperand()),
-                                          IndexExprs, GEP->isInBounds());
+    const SCEV *BaseExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
     Value *ArrayIdx = GEP->getOperand(I);
     uint64_t ElementSize = DL->getTypeAllocSize(*GTI);
     if (ArrayIdx->getType()->getIntegerBitWidth() <=

@@ -77,7 +77,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -87,24 +87,20 @@ public:
         break;
 
       case 'a': {
-        bool success = false;
-
-        address = StringConvert::ToUInt64(option_arg, 0, 0, &success);
-        if (!success) {
+        address.emplace();
+        if (option_arg.getAsInteger(0, *address)) {
           address.reset();
           error.SetErrorStringWithFormat("invalid address argument '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         }
       } break;
 
       case 'o': {
-        bool success = false;
-
-        offset = StringConvert::ToSInt64(option_arg, 0, 0, &success);
-        if (!success) {
+        offset.emplace();
+        if (option_arg.getAsInteger(0, *offset)) {
           offset.reset();
           error.SetErrorStringWithFormat("invalid offset argument '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         }
       } break;
 
@@ -268,18 +264,17 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
-      bool success = false;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
       case 'r':
-        relative_frame_offset =
-            StringConvert::ToSInt32(option_arg, INT32_MIN, 0, &success);
-        if (!success)
+        if (option_arg.getAsInteger(0, relative_frame_offset)) {
+          relative_frame_offset = INT32_MIN;
           error.SetErrorStringWithFormat("invalid frame offset argument '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
+        }
         break;
 
       default:

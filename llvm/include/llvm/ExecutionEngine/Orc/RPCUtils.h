@@ -554,7 +554,7 @@ public:
   using MethodT = RetT(ClassT::*)(ArgTs...);
   MemberFnWrapper(ClassT &Instance, MethodT Method)
       : Instance(Instance), Method(Method) {}
-  RetT operator()(ArgTs &&... Args) const {
+  RetT operator()(ArgTs &&... Args) {
     return (Instance.*Method)(std::move(Args)...);
   }
 private:
@@ -856,7 +856,8 @@ protected:
   template <typename Func, typename HandlerT>
   WrappedHandlerFn wrapHandler(HandlerT Handler, LaunchPolicy Launch) {
     return
-      [this, Handler, Launch](ChannelT &Channel, SequenceNumberT SeqNo) -> Error {
+      [this, Handler, Launch](ChannelT &Channel, SequenceNumberT SeqNo) mutable
+          -> Error {
         // Start by deserializing the arguments.
         auto Args =
           std::make_shared<typename detail::HandlerTraits<HandlerT>::ArgStorage>();

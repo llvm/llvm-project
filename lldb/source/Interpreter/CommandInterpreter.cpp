@@ -1896,7 +1896,7 @@ void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {
     m_command_io_handler_sp->SetPrompt(new_prompt);
 }
 
-bool CommandInterpreter::Confirm(const char *message, bool default_answer) {
+bool CommandInterpreter::Confirm(llvm::StringRef message, bool default_answer) {
   // Check AutoConfirm first:
   if (m_debugger.GetAutoConfirm())
     return default_answer;

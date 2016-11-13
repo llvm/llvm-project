@@ -58,13 +58,13 @@ public:
 
   bool IsDashDashCommand() override;
 
-  const char *GetHelp() override;
+  llvm::StringRef GetHelp() override;
 
-  const char *GetHelpLong() override;
+  llvm::StringRef GetHelpLong() override;
 
-  void SetHelp(const char *str) override;
+  void SetHelp(llvm::StringRef str) override;
 
-  void SetHelpLong(const char *str) override;
+  void SetHelpLong(llvm::StringRef str) override;
 
   bool Execute(const char *args_string, CommandReturnObject &result) override;
 

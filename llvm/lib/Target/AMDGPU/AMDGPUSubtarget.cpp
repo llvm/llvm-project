@@ -56,6 +56,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // denormals, but should be checked. Should we issue a warning somewhere
   // if someone tries to enable these?
   if (getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS) {
+    FP16Denormals = false;
     FP32Denormals = false;
     FP64Denormals = false;
   }
@@ -81,6 +82,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FastFMAF32(false),
     HalfRate64Ops(false),
 
+    FP16Denormals(false),
     FP32Denormals(false),
     FP64Denormals(false),
     FPExceptions(false),

@@ -67,15 +67,15 @@ size_t DiagnosticManager::Printf(DiagnosticSeverity severity,
   size_t result = ss.PrintfVarArg(format, args);
   va_end(args);
 
-  AddDiagnostic(ss.GetData(), severity, eDiagnosticOriginLLDB);
+  AddDiagnostic(ss.GetString(), severity, eDiagnosticOriginLLDB);
 
   return result;
 }
 
-size_t DiagnosticManager::PutCString(DiagnosticSeverity severity,
-                                     const char *cstr) {
-  if (!cstr)
+size_t DiagnosticManager::PutString(DiagnosticSeverity severity,
+                                    llvm::StringRef str) {
+  if (str.empty())
     return 0;
-  AddDiagnostic(cstr, severity, eDiagnosticOriginLLDB);
-  return strlen(cstr);
+  AddDiagnostic(str, severity, eDiagnosticOriginLLDB);
+  return str.size();
 }

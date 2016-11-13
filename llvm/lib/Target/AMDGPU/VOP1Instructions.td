@@ -280,24 +280,24 @@ defm V_EXP_LEGACY_F32 : VOP1Inst <"v_exp_legacy_f32", VOP_F32_F32>;
 
 let SubtargetPredicate = isVI in {
 
-defm V_CVT_F16_U16 : VOP1Inst <"v_cvt_f16_u16", VOP_F16_I16>;
-defm V_CVT_F16_I16 : VOP1Inst <"v_cvt_f16_i16", VOP_F16_I16>;
-defm V_CVT_U16_F16 : VOP1Inst <"v_cvt_u16_f16", VOP_I16_F16>;
-defm V_CVT_I16_F16 : VOP1Inst <"v_cvt_i16_f16", VOP_I16_F16>;
-defm V_RCP_F16 : VOP1Inst <"v_rcp_f16", VOP_F16_F16>;
-defm V_SQRT_F16 : VOP1Inst <"v_sqrt_f16", VOP_F16_F16>;
-defm V_RSQ_F16 : VOP1Inst <"v_rsq_f16", VOP_F16_F16>;
-defm V_LOG_F16 : VOP1Inst <"v_log_f16", VOP_F16_F16>;
-defm V_EXP_F16 : VOP1Inst <"v_exp_f16", VOP_F16_F16>;
-defm V_FREXP_MANT_F16 : VOP1Inst <"v_frexp_mant_f16", VOP_F16_F16>;
-defm V_FREXP_EXP_I16_F16 : VOP1Inst <"v_frexp_exp_i16_f16", VOP_I16_F16>;
-defm V_FLOOR_F16 : VOP1Inst <"v_floor_f16", VOP_F16_F16>;
-defm V_CEIL_F16 : VOP1Inst <"v_ceil_f16", VOP_F16_F16>;
-defm V_TRUNC_F16 : VOP1Inst <"v_trunc_f16", VOP_F16_F16>;
-defm V_RNDNE_F16 : VOP1Inst <"v_rndne_f16", VOP_F16_F16>;
-defm V_FRACT_F16 : VOP1Inst <"v_fract_f16", VOP_F16_F16>;
-defm V_SIN_F16 : VOP1Inst <"v_sin_f16", VOP_F16_F16>;
-defm V_COS_F16 : VOP1Inst <"v_cos_f16", VOP_F16_F16>;
+defm V_CVT_F16_U16 : VOP1Inst <"v_cvt_f16_u16", VOP_F16_I16, uint_to_fp>;
+defm V_CVT_F16_I16 : VOP1Inst <"v_cvt_f16_i16", VOP_F16_I16, sint_to_fp>;
+defm V_CVT_U16_F16 : VOP1Inst <"v_cvt_u16_f16", VOP_I16_F16, fp_to_uint>;
+defm V_CVT_I16_F16 : VOP1Inst <"v_cvt_i16_f16", VOP_I16_F16, fp_to_sint>;
+defm V_RCP_F16 : VOP1Inst <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
+defm V_SQRT_F16 : VOP1Inst <"v_sqrt_f16", VOP_F16_F16, fsqrt>;
+defm V_RSQ_F16 : VOP1Inst <"v_rsq_f16", VOP_F16_F16, AMDGPUrsq>;
+defm V_LOG_F16 : VOP1Inst <"v_log_f16", VOP_F16_F16, flog2>;
+defm V_EXP_F16 : VOP1Inst <"v_exp_f16", VOP_F16_F16, fexp2>;
+defm V_FREXP_MANT_F16 : VOP1Inst <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
+defm V_FREXP_EXP_I16_F16 : VOP1Inst <"v_frexp_exp_i16_f16", VOP_I32_F16, int_amdgcn_frexp_exp>;
+defm V_FLOOR_F16 : VOP1Inst <"v_floor_f16", VOP_F16_F16, ffloor>;
+defm V_CEIL_F16 : VOP1Inst <"v_ceil_f16", VOP_F16_F16, fceil>;
+defm V_TRUNC_F16 : VOP1Inst <"v_trunc_f16", VOP_F16_F16, ftrunc>;
+defm V_RNDNE_F16 : VOP1Inst <"v_rndne_f16", VOP_F16_F16, frint>;
+defm V_FRACT_F16 : VOP1Inst <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
+defm V_SIN_F16 : VOP1Inst <"v_sin_f16", VOP_F16_F16, AMDGPUsin>;
+defm V_COS_F16 : VOP1Inst <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
 
 }
 

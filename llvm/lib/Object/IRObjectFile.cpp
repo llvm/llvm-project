@@ -310,18 +310,18 @@ ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Ob
   }
 }
 
-ErrorOr<std::unique_ptr<IRObjectFile>>
+Expected<std::unique_ptr<IRObjectFile>>
 llvm::object::IRObjectFile::create(MemoryBufferRef Object,
                                    LLVMContext &Context) {
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
   if (!BCOrErr)
-    return BCOrErr.getError();
+    return errorCodeToError(BCOrErr.getError());
 
-  ErrorOr<std::unique_ptr<Module>> MOrErr =
+  Expected<std::unique_ptr<Module>> MOrErr =
       getLazyBitcodeModule(*BCOrErr, Context,
                            /*ShouldLazyLoadMetadata*/ true);
-  if (std::error_code EC = MOrErr.getError())
-    return EC;
+  if (!MOrErr)
+    return MOrErr.takeError();
 
   std::unique_ptr<Module> &M = MOrErr.get();
   return llvm::make_unique<IRObjectFile>(BCOrErr.get(), std::move(M));

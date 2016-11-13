@@ -4422,86 +4422,6 @@ define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x4_256(<4 x i32> %x0, <8 x
   ret <8 x i32> %res5
 }
 
-declare <2 x i64> @llvm.x86.avx512.mask.psra.q.128(<2 x i64>, <2 x i64>, <2 x i64>, i8)
-
-define <2 x i64>@test_int_x86_avx512_mask_psra_q_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_psra_q_128:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vpsraq %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x09,0xe2,0xd1]
-; CHECK-NEXT:    vpsraq %xmm1, %xmm0, %xmm3 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0x89,0xe2,0xd9]
-; CHECK-NEXT:    vpsraq %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xe2,0xc1]
-; CHECK-NEXT:    vpaddq %xmm3, %xmm2, %xmm1 ## encoding: [0x62,0xf1,0xed,0x08,0xd4,0xcb]
-; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0xf5,0x08,0xd4,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.psra.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3)
-  %res1 = call <2 x i64> @llvm.x86.avx512.mask.psra.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> zeroinitializer, i8 %x3)
-  %res2 = call <2 x i64> @llvm.x86.avx512.mask.psra.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 -1)
-  %res3 = add <2 x i64> %res, %res1
-  %res4 = add <2 x i64> %res3, %res2
-  ret <2 x i64> %res4
-}
-
-declare <4 x i64> @llvm.x86.avx512.mask.psra.q.256(<4 x i64>, <2 x i64>, <4 x i64>, i8)
-
-define <4 x i64>@test_int_x86_avx512_mask_psra_q_256(<4 x i64> %x0, <2 x i64> %x1, <4 x i64> %x2, i8 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_psra_q_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vpsraq %xmm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x29,0xe2,0xd1]
-; CHECK-NEXT:    vpsraq %xmm1, %ymm0, %ymm3 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xa9,0xe2,0xd9]
-; CHECK-NEXT:    vpsraq %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0xe2,0xc1]
-; CHECK-NEXT:    vpaddq %ymm3, %ymm2, %ymm1 ## encoding: [0x62,0xf1,0xed,0x28,0xd4,0xcb]
-; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf1,0xf5,0x28,0xd4,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.psra.q.256(<4 x i64> %x0, <2 x i64> %x1, <4 x i64> %x2, i8 %x3)
-  %res1 = call <4 x i64> @llvm.x86.avx512.mask.psra.q.256(<4 x i64> %x0, <2 x i64> %x1, <4 x i64> zeroinitializer, i8 %x3)
-  %res2 = call <4 x i64> @llvm.x86.avx512.mask.psra.q.256(<4 x i64> %x0, <2 x i64> %x1, <4 x i64> %x2, i8 -1)
-  %res3 = add <4 x i64> %res, %res1
-  %res4 = add <4 x i64> %res3, %res2
-  ret <4 x i64> %res4
-}
-
-declare <2 x i64> @llvm.x86.avx512.mask.psra.qi.128(<2 x i64>, i32, <2 x i64>, i8)
-
-define <2 x i64>@test_int_x86_avx512_mask_psra_qi_128(<2 x i64> %x0, i32 %x1, <2 x i64> %x2, i8 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_psra_qi_128:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
-; CHECK-NEXT:    vpsraq $3, %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xf5,0x09,0x72,0xe0,0x03]
-; CHECK-NEXT:    vpsraq $3, %xmm0, %xmm2 {%k1} {z} ## encoding: [0x62,0xf1,0xed,0x89,0x72,0xe0,0x03]
-; CHECK-NEXT:    vpsraq $3, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x72,0xe0,0x03]
-; CHECK-NEXT:    vpaddq %xmm2, %xmm1, %xmm1 ## encoding: [0x62,0xf1,0xf5,0x08,0xd4,0xca]
-; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0xf5,0x08,0xd4,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.psra.qi.128(<2 x i64> %x0, i32 3, <2 x i64> %x2, i8 %x3)
-  %res1 = call <2 x i64> @llvm.x86.avx512.mask.psra.qi.128(<2 x i64> %x0, i32 3, <2 x i64> zeroinitializer, i8 %x3)
-  %res2 = call <2 x i64> @llvm.x86.avx512.mask.psra.qi.128(<2 x i64> %x0, i32 3, <2 x i64> %x2, i8 -1)
-  %res3 = add <2 x i64> %res, %res1
-  %res4 = add <2 x i64> %res3, %res2
-  ret <2 x i64> %res4
-}
-
-declare <4 x i64> @llvm.x86.avx512.mask.psra.qi.256(<4 x i64>, i32, <4 x i64>, i8)
-
-define <4 x i64>@test_int_x86_avx512_mask_psra_qi_256(<4 x i64> %x0, i32 %x1, <4 x i64> %x2, i8 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_psra_qi_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
-; CHECK-NEXT:    vpsraq $3, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf1,0xf5,0x29,0x72,0xe0,0x03]
-; CHECK-NEXT:    vpsraq $3, %ymm0, %ymm2 {%k1} {z} ## encoding: [0x62,0xf1,0xed,0xa9,0x72,0xe0,0x03]
-; CHECK-NEXT:    vpsraq $3, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x72,0xe0,0x03]
-; CHECK-NEXT:    vpaddq %ymm2, %ymm1, %ymm1 ## encoding: [0x62,0xf1,0xf5,0x28,0xd4,0xca]
-; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf1,0xf5,0x28,0xd4,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.psra.qi.256(<4 x i64> %x0, i32 3, <4 x i64> %x2, i8 %x3)
-  %res1 = call <4 x i64> @llvm.x86.avx512.mask.psra.qi.256(<4 x i64> %x0, i32 3, <4 x i64> zeroinitializer, i8 %x3)
-  %res2 = call <4 x i64> @llvm.x86.avx512.mask.psra.qi.256(<4 x i64> %x0, i32 3, <4 x i64> %x2, i8 -1)
-  %res3 = add <4 x i64> %res, %res1
-  %res4 = add <4 x i64> %res3, %res2
-  ret <4 x i64> %res4
-}
-
 declare <2 x i64> @llvm.x86.avx512.mask.psrav.q.128(<2 x i64>, <2 x i64>, <2 x i64>, i8)
 
 define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3) {
@@ -4527,9 +4447,9 @@ define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128_const(i8 %x3) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [2,18446744073709551607]
 ; CHECK-NEXT:    ## encoding: [0x62,0xf1,0xfd,0x08,0x6f,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI270_0-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI266_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    vpsravq {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0x62,0xf2,0xfd,0x08,0x46,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI270_1-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI266_1-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.psrav.q.128(<2 x i64> <i64 2, i64 -9>, <2 x i64> <i64 1, i64 90>, <2 x i64> zeroinitializer, i8 -1)
   ret <2 x i64> %res
@@ -5501,3 +5421,79 @@ define <4 x i64> @test_x86_avx512_maskz_psrai_q_256(<4 x i64> %a0, i8 %mask) {
   ret <4 x i64> %res2
 }
 declare <4 x i64> @llvm.x86.avx512.psrai.q.256(<4 x i64>, i32) nounwind readnone
+
+define <2 x i64> @test_x86_avx512_psrav_q_128(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: test_x86_avx512_psrav_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsravq %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0xfd,0x08,0x46,0xc1]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <2 x i64> @llvm.x86.avx512.psrav.q.128(<2 x i64> %a0, <2 x i64> %a1)
+  ret <2 x i64> %res
+}
+
+define <2 x i64> @test_x86_avx512_mask_psrav_q_128(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psrav_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpsravq %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x46,0xd1]
+; CHECK-NEXT:    vmovdqa64 %xmm2, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x6f,0xc2]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <2 x i64> @llvm.x86.avx512.psrav.q.128(<2 x i64> %a0, <2 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %res2 = select <2 x i1> %mask.extract, <2 x i64> %res, <2 x i64> %a2
+  ret <2 x i64> %res2
+}
+
+define <2 x i64> @test_x86_avx512_maskz_psrav_q_128(<2 x i64> %a0, <2 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psrav_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpsravq %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xfd,0x89,0x46,0xc1]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <2 x i64> @llvm.x86.avx512.psrav.q.128(<2 x i64> %a0, <2 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %res2 = select <2 x i1> %mask.extract, <2 x i64> %res, <2 x i64> zeroinitializer
+  ret <2 x i64> %res2
+}
+
+declare <2 x i64> @llvm.x86.avx512.psrav.q.128(<2 x i64>, <2 x i64>) nounwind readnone
+
+define <4 x i64> @test_x86_avx512_psrav_q_256(<4 x i64> %a0, <4 x i64> %a1) {
+; CHECK-LABEL: test_x86_avx512_psrav_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsravq %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0xfd,0x28,0x46,0xc1]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <4 x i64> @llvm.x86.avx512.psrav.q.256(<4 x i64> %a0, <4 x i64> %a1)
+  ret <4 x i64> %res
+}
+
+define <4 x i64> @test_x86_avx512_mask_psrav_q_256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psrav_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpsravq %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x46,0xd1]
+; CHECK-NEXT:    vmovdqa64 %ymm2, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x6f,0xc2]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <4 x i64> @llvm.x86.avx512.psrav.q.256(<4 x i64> %a0, <4 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res2 = select <4 x i1> %mask.extract, <4 x i64> %res, <4 x i64> %a2
+  ret <4 x i64> %res2
+}
+
+define <4 x i64> @test_x86_avx512_maskz_psrav_q_256(<4 x i64> %a0, <4 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psrav_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpsravq %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf2,0xfd,0xa9,0x46,0xc1]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <4 x i64> @llvm.x86.avx512.psrav.q.256(<4 x i64> %a0, <4 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %mask.extract = shufflevector <8 x i1> %mask.cast, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res2 = select <4 x i1> %mask.extract, <4 x i64> %res, <4 x i64> zeroinitializer
+  ret <4 x i64> %res2
+}
+
+declare <4 x i64> @llvm.x86.avx512.psrav.q.256(<4 x i64>, <4 x i64>) nounwind readnone

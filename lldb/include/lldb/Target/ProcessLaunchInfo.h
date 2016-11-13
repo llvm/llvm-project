@@ -69,7 +69,7 @@ public:
 
   const char *GetProcessPluginName() const;
 
-  void SetProcessPluginName(const char *plugin);
+  void SetProcessPluginName(llvm::StringRef plugin);
 
   const FileSpec &GetShell() const;
 

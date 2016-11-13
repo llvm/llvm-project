@@ -72,13 +72,11 @@ CommandObjectDisassemble::CommandOptions::CommandOptions()
 CommandObjectDisassemble::CommandOptions::~CommandOptions() = default;
 
 Error CommandObjectDisassemble::CommandOptions::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
 
   const int short_option = m_getopt_table[option_idx].val;
-
-  bool success;
 
   switch (short_option) {
   case 'm':
@@ -86,17 +84,16 @@ Error CommandObjectDisassemble::CommandOptions::SetOptionValue(
     break;
 
   case 'C':
-    num_lines_context = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-    if (!success)
+    if (option_arg.getAsInteger(0, num_lines_context))
       error.SetErrorStringWithFormat("invalid num context lines string: \"%s\"",
-                                     option_arg);
+                                     option_arg.str().c_str());
     break;
 
   case 'c':
-    num_instructions = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-    if (!success)
+    if (option_arg.getAsInteger(0, num_instructions))
       error.SetErrorStringWithFormat(
-          "invalid num of instructions string: \"%s\"", option_arg);
+          "invalid num of instructions string: \"%s\"",
+          option_arg.str().c_str());
     break;
 
   case 'b':

@@ -286,6 +286,12 @@ namespace llvm {
       return npos;
     }
 
+    /// Search for the first character \p C in the string, ignoring case.
+    ///
+    /// \returns The index of the first occurrence of \p C, or npos if not
+    /// found.
+    size_t find_lower(char C, size_t From = 0) const;
+
     /// Search for the first character satisfying the predicate \p F
     ///
     /// \returns The index of the first character satisfying \p F starting from
@@ -318,6 +324,12 @@ namespace llvm {
     /// found.
     size_t find(StringRef Str, size_t From = 0) const;
 
+    /// Search for the first string \p Str in the string, ignoring case.
+    ///
+    /// \returns The index of the first occurrence of \p Str, or npos if not
+    /// found.
+    size_t find_lower(StringRef Str, size_t From = 0) const;
+
     /// Search for the last character \p C in the string.
     ///
     /// \returns The index of the last occurrence of \p C, or npos if not
@@ -333,11 +345,23 @@ namespace llvm {
       return npos;
     }
 
+    /// Search for the last character \p C in the string, ignoring case.
+    ///
+    /// \returns The index of the last occurrence of \p C, or npos if not
+    /// found.
+    size_t rfind_lower(char C, size_t From = npos) const;
+
     /// Search for the last string \p Str in the string.
     ///
     /// \returns The index of the last occurrence of \p Str, or npos if not
     /// found.
     size_t rfind(StringRef Str) const;
+
+    /// Search for the last string \p Str in the string, ignoring case.
+    ///
+    /// \returns The index of the last occurrence of \p Str, or npos if not
+    /// found.
+    size_t rfind_lower(StringRef Str) const;
 
     /// Find the first character in the string that is \p C, or npos if not
     /// found. Same as find.
@@ -392,6 +416,18 @@ namespace llvm {
     /// otherwise.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
     bool contains(char C) const { return find_first_of(C) != npos; }
+
+    /// Return true if the given string is a substring of *this, and false
+    /// otherwise.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    bool contains_lower(StringRef Other) const {
+      return find_lower(Other) != npos;
+    }
+
+    /// Return true if the given character is contained in *this, and false
+    /// otherwise.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    bool contains_lower(char C) const { return find_lower(C) != npos; }
 
     /// @}
     /// @name Helpful Algorithms

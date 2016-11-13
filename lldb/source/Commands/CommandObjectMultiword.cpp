@@ -34,7 +34,7 @@ CommandObjectMultiword::CommandObjectMultiword(CommandInterpreter &interpreter,
 
 CommandObjectMultiword::~CommandObjectMultiword() = default;
 
-CommandObjectSP CommandObjectMultiword::GetSubcommandSP(const char *sub_cmd,
+CommandObjectSP CommandObjectMultiword::GetSubcommandSP(llvm::StringRef sub_cmd,
                                                         StringList *matches) {
   CommandObjectSP return_cmd_sp;
   CommandObject::CommandMap::iterator pos;
@@ -69,12 +69,12 @@ CommandObjectSP CommandObjectMultiword::GetSubcommandSP(const char *sub_cmd,
 }
 
 CommandObject *
-CommandObjectMultiword::GetSubcommandObject(const char *sub_cmd,
+CommandObjectMultiword::GetSubcommandObject(llvm::StringRef sub_cmd,
                                             StringList *matches) {
   return GetSubcommandSP(sub_cmd, matches).get();
 }
 
-bool CommandObjectMultiword::LoadSubCommand(const char *name,
+bool CommandObjectMultiword::LoadSubCommand(llvm::StringRef name,
                                             const CommandObjectSP &cmd_obj) {
   if (cmd_obj)
     assert((&GetCommandInterpreter() == &cmd_obj->GetCommandInterpreter()) &&
@@ -246,8 +246,8 @@ const char *CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
   return sub_command_object->GetRepeatCommand(current_command_args, index);
 }
 
-void CommandObjectMultiword::AproposAllSubCommands(const char *prefix,
-                                                   const char *search_word,
+void CommandObjectMultiword::AproposAllSubCommands(llvm::StringRef prefix,
+                                                   llvm::StringRef search_word,
                                                    StringList &commands_found,
                                                    StringList &commands_help) {
   CommandObject::CommandMap::const_iterator pos;
@@ -265,7 +265,7 @@ void CommandObjectMultiword::AproposAllSubCommands(const char *prefix,
     }
 
     if (sub_cmd_obj->IsMultiwordObject())
-      sub_cmd_obj->AproposAllSubCommands(complete_command_name.GetData(),
+      sub_cmd_obj->AproposAllSubCommands(complete_command_name.GetString(),
                                          search_word, commands_found,
                                          commands_help);
   }
@@ -278,11 +278,11 @@ CommandObjectProxy::CommandObjectProxy(CommandInterpreter &interpreter,
 
 CommandObjectProxy::~CommandObjectProxy() = default;
 
-const char *CommandObjectProxy::GetHelpLong() {
+llvm::StringRef CommandObjectProxy::GetHelpLong() {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->GetHelpLong();
-  return nullptr;
+  return llvm::StringRef();
 }
 
 bool CommandObjectProxy::IsRemovable() const {
@@ -313,15 +313,16 @@ void CommandObjectProxy::GenerateHelpText(Stream &result) {
     return proxy_command->GenerateHelpText(result);
 }
 
-lldb::CommandObjectSP CommandObjectProxy::GetSubcommandSP(const char *sub_cmd,
-                                                          StringList *matches) {
+lldb::CommandObjectSP
+CommandObjectProxy::GetSubcommandSP(llvm::StringRef sub_cmd,
+                                    StringList *matches) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->GetSubcommandSP(sub_cmd, matches);
   return lldb::CommandObjectSP();
 }
 
-CommandObject *CommandObjectProxy::GetSubcommandObject(const char *sub_cmd,
+CommandObject *CommandObjectProxy::GetSubcommandObject(llvm::StringRef sub_cmd,
                                                        StringList *matches) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
@@ -329,8 +330,8 @@ CommandObject *CommandObjectProxy::GetSubcommandObject(const char *sub_cmd,
   return nullptr;
 }
 
-void CommandObjectProxy::AproposAllSubCommands(const char *prefix,
-                                               const char *search_word,
+void CommandObjectProxy::AproposAllSubCommands(llvm::StringRef prefix,
+                                               llvm::StringRef search_word,
                                                StringList &commands_found,
                                                StringList &commands_help) {
   CommandObject *proxy_command = GetProxyCommandObject();
@@ -340,7 +341,7 @@ void CommandObjectProxy::AproposAllSubCommands(const char *prefix,
 }
 
 bool CommandObjectProxy::LoadSubCommand(
-    const char *cmd_name, const lldb::CommandObjectSP &command_sp) {
+    llvm::StringRef cmd_name, const lldb::CommandObjectSP &command_sp) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->LoadSubCommand(cmd_name, command_sp);

@@ -66,13 +66,13 @@ size_t FindLongestCommandWord(std::map<std::string, ValueType> &dict) {
 
 class CommandObject {
 public:
-  typedef const char *(ArgumentHelpCallbackFunction)();
+  typedef llvm::StringRef(ArgumentHelpCallbackFunction)();
 
   struct ArgumentHelpCallback {
     ArgumentHelpCallbackFunction *help_callback;
     bool self_formatting;
 
-    const char *operator()() const { return (*help_callback)(); }
+    llvm::StringRef operator()() const { return (*help_callback)(); }
 
     explicit operator bool() const { return (help_callback != nullptr); }
   };
@@ -122,19 +122,19 @@ public:
 
   CommandInterpreter &GetCommandInterpreter() { return m_interpreter; }
 
-  virtual const char *GetHelp();
+  virtual llvm::StringRef GetHelp();
 
-  virtual const char *GetHelpLong();
+  virtual llvm::StringRef GetHelpLong();
 
-  virtual const char *GetSyntax();
+  virtual llvm::StringRef GetSyntax();
 
   llvm::StringRef GetCommandName() const;
 
-  virtual void SetHelp(const char *str);
+  virtual void SetHelp(llvm::StringRef str);
 
-  virtual void SetHelpLong(const char *str);
+  virtual void SetHelpLong(llvm::StringRef str);
 
-  void SetSyntax(const char *str);
+  void SetSyntax(llvm::StringRef str);
 
   // override this to return true if you want to enable the user to delete
   // the Command object from the Command dictionary (aliases have their own
@@ -152,22 +152,22 @@ public:
   // hint to the help system that one cannot pass options to this command
   virtual bool IsDashDashCommand() { return false; }
 
-  virtual lldb::CommandObjectSP GetSubcommandSP(const char *sub_cmd,
+  virtual lldb::CommandObjectSP GetSubcommandSP(llvm::StringRef sub_cmd,
                                                 StringList *matches = nullptr) {
     return lldb::CommandObjectSP();
   }
 
-  virtual CommandObject *GetSubcommandObject(const char *sub_cmd,
+  virtual CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                              StringList *matches = nullptr) {
     return nullptr;
   }
 
-  virtual void AproposAllSubCommands(const char *prefix,
-                                     const char *search_word,
+  virtual void AproposAllSubCommands(llvm::StringRef prefix,
+                                     llvm::StringRef search_word,
                                      StringList &commands_found,
                                      StringList &commands_help) {}
 
-  void FormatLongHelpText(Stream &output_strm, const char *long_help);
+  void FormatLongHelpText(Stream &output_strm, llvm::StringRef long_help);
 
   void GenerateHelpText(CommandReturnObject &result);
 
@@ -177,7 +177,7 @@ public:
   // transparently try and load subcommands - it will fail on
   // anything but a multiword command, but it avoids us doing
   // type checkings and casts
-  virtual bool LoadSubCommand(const char *cmd_name,
+  virtual bool LoadSubCommand(llvm::StringRef cmd_name,
                               const lldb::CommandObjectSP &command_obj) {
     return false;
   }
@@ -219,7 +219,7 @@ public:
 
   bool ParseOptions(Args &args, CommandReturnObject &result);
 
-  void SetCommandName(const char *name);
+  void SetCommandName(llvm::StringRef name);
 
   //------------------------------------------------------------------
   /// The input array contains a parsed version of the line.  The insertion
@@ -324,7 +324,7 @@ public:
     return 0;
   }
 
-  bool HelpTextContainsWord(const char *search_word,
+  bool HelpTextContainsWord(llvm::StringRef search_word,
                             bool search_short_help = true,
                             bool search_long_help = true,
                             bool search_syntax = true,

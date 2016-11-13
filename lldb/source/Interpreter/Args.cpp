@@ -457,9 +457,9 @@ Error Args::ParseOptions(Options &options, ExecutionContext *execution_context,
   int val;
   while (1) {
     int long_options_index = -1;
-    val =
-        OptionParser::Parse(GetArgumentCount(), GetArgumentVector(),
-                            sstr.GetData(), long_options, &long_options_index);
+    val = OptionParser::Parse(GetArgumentCount(), GetArgumentVector(),
+                              sstr.GetString(), long_options,
+                              &long_options_index);
     if (val == -1)
       break;
 
@@ -1175,9 +1175,9 @@ void Args::ParseArgsForCompletion(Options &options,
     bool missing_argument = false;
     int long_options_index = -1;
 
-    val =
-        OptionParser::Parse(dummy_vec.size() - 1, &dummy_vec[0], sstr.GetData(),
-                            long_options, &long_options_index);
+    val = OptionParser::Parse(dummy_vec.size() - 1, &dummy_vec[0],
+                              sstr.GetString(), long_options,
+                              &long_options_index);
 
     if (val == -1) {
       // When we're completing a "--" which is the last option on line,

@@ -59,30 +59,27 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = GetDefinitions()[option_idx].short_option;
       switch (short_option) {
       case 'l':
-        start_line = StringConvert::ToUInt32(option_arg, 0);
-        if (start_line == 0)
+        if (option_arg.getAsInteger(0, start_line))
           error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'e':
-        end_line = StringConvert::ToUInt32(option_arg, 0);
-        if (end_line == 0)
+        if (option_arg.getAsInteger(0, end_line))
           error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'c':
-        num_lines = StringConvert::ToUInt32(option_arg, 0);
-        if (num_lines == 0)
+        if (option_arg.getAsInteger(0, num_lines))
           error.SetErrorStringWithFormat("invalid line count: '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'f':
@@ -686,23 +683,21 @@ class CommandObjectSourceList : public CommandObjectParsed {
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = GetDefinitions()[option_idx].short_option;
       switch (short_option) {
       case 'l':
-        start_line = StringConvert::ToUInt32(option_arg, 0);
-        if (start_line == 0)
+        if (option_arg.getAsInteger(0, start_line))
           error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'c':
-        num_lines = StringConvert::ToUInt32(option_arg, 0);
-        if (num_lines == 0)
+        if (option_arg.getAsInteger(0, num_lines))
           error.SetErrorStringWithFormat("invalid line count: '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'f':
