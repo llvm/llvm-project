@@ -650,21 +650,23 @@ public:
   void Dump(Stream &s, const DumpValueObjectOptions &options);
 
   static lldb::ValueObjectSP
-  CreateValueObjectFromExpression(const char *name, const char *expression,
+  CreateValueObjectFromExpression(llvm::StringRef name,
+                                  llvm::StringRef expression,
                                   const ExecutionContext &exe_ctx);
 
   static lldb::ValueObjectSP
-  CreateValueObjectFromExpression(const char *name, const char *expression,
+  CreateValueObjectFromExpression(llvm::StringRef name,
+                                  llvm::StringRef expression,
                                   const ExecutionContext &exe_ctx,
                                   const EvaluateExpressionOptions &options);
 
   static lldb::ValueObjectSP
-  CreateValueObjectFromAddress(const char *name, uint64_t address,
+  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
                                CompilerType type);
 
   static lldb::ValueObjectSP
-  CreateValueObjectFromData(const char *name, const DataExtractor &data,
+  CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
 
   void LogValueObject(Log *log);

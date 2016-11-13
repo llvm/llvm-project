@@ -8190,38 +8190,45 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitBinaryBuiltin(*this, E, Intrinsic::amdgcn_ds_swizzle);
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
+  case AMDGPU::BI__builtin_amdgcn_div_fixuph:
     return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_div_fixup);
   case AMDGPU::BI__builtin_amdgcn_trig_preop:
   case AMDGPU::BI__builtin_amdgcn_trig_preopf:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_trig_preop);
   case AMDGPU::BI__builtin_amdgcn_rcp:
   case AMDGPU::BI__builtin_amdgcn_rcpf:
+  case AMDGPU::BI__builtin_amdgcn_rcph:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rcp);
   case AMDGPU::BI__builtin_amdgcn_rsq:
   case AMDGPU::BI__builtin_amdgcn_rsqf:
+  case AMDGPU::BI__builtin_amdgcn_rsqh:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rsq);
   case AMDGPU::BI__builtin_amdgcn_rsq_clamp:
   case AMDGPU::BI__builtin_amdgcn_rsq_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rsq_clamp);
   case AMDGPU::BI__builtin_amdgcn_sinf:
+  case AMDGPU::BI__builtin_amdgcn_sinh:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_sin);
   case AMDGPU::BI__builtin_amdgcn_cosf:
+  case AMDGPU::BI__builtin_amdgcn_cosh:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_cos);
   case AMDGPU::BI__builtin_amdgcn_log_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log_clamp);
   case AMDGPU::BI__builtin_amdgcn_ldexp:
   case AMDGPU::BI__builtin_amdgcn_ldexpf:
+  case AMDGPU::BI__builtin_amdgcn_ldexph:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_ldexp);
   case AMDGPU::BI__builtin_amdgcn_frexp_mant:
-  case AMDGPU::BI__builtin_amdgcn_frexp_mantf: {
+  case AMDGPU::BI__builtin_amdgcn_frexp_mantf:
+  case AMDGPU::BI__builtin_amdgcn_frexp_manth:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_frexp_mant);
-  }
   case AMDGPU::BI__builtin_amdgcn_frexp_exp:
-  case AMDGPU::BI__builtin_amdgcn_frexp_expf: {
+  case AMDGPU::BI__builtin_amdgcn_frexp_expf:
+  case AMDGPU::BI__builtin_amdgcn_frexp_exph:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_frexp_exp);
-  }
   case AMDGPU::BI__builtin_amdgcn_fract:
   case AMDGPU::BI__builtin_amdgcn_fractf:
+  case AMDGPU::BI__builtin_amdgcn_fracth:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_fract);
   case AMDGPU::BI__builtin_amdgcn_lerp:
     return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_lerp);
@@ -8235,6 +8242,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_fcmp);
   case AMDGPU::BI__builtin_amdgcn_class:
   case AMDGPU::BI__builtin_amdgcn_classf:
+  case AMDGPU::BI__builtin_amdgcn_classh:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_class);
 
   case AMDGPU::BI__builtin_amdgcn_read_exec: {

@@ -79,9 +79,7 @@ XMLNode XMLDocument::GetRootElement(const char *required_name) {
   return XMLNode();
 }
 
-const std::string &XMLDocument::GetErrors() const {
-  return m_errors.GetString();
-}
+llvm::StringRef XMLDocument::GetErrors() const { return m_errors.GetString(); }
 
 bool XMLDocument::XMLEnabled() {
 #if defined(LIBXML2_DEFINED)
@@ -391,7 +389,7 @@ ApplePropertyList::ApplePropertyList(const char *path)
 
 ApplePropertyList::~ApplePropertyList() {}
 
-const std::string &ApplePropertyList::GetErrors() const {
+llvm::StringRef ApplePropertyList::GetErrors() const {
   return m_xml_doc.GetErrors();
 }
 

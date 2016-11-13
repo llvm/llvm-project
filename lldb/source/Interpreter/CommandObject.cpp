@@ -316,7 +316,7 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
   }
 }
 
-bool CommandObject::HelpTextContainsWord(const char *search_word,
+bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
                                          bool search_syntax,
@@ -341,9 +341,9 @@ bool CommandObject::HelpTextContainsWord(const char *search_word,
     GetOptions()->GenerateOptionUsage(
         usage_help, this,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-    if (usage_help.GetSize() > 0) {
-      const char *usage_text = usage_help.GetData();
-      if (strcasestr(usage_text, search_word))
+    if (!usage_help.Empty()) {
+      llvm::StringRef usage_text = usage_help.GetString();
+      if (usage_text.contains_lower(search_word))
         found_word = true;
     }
   }
@@ -390,7 +390,7 @@ void CommandObject::GetArgumentHelp(Stream &str, CommandArgumentType arg_type,
   name_str.Printf("<%s>", entry->arg_name);
 
   if (entry->help_function) {
-    const char *help_text = entry->help_function();
+    llvm::StringRef help_text = entry->help_function();
     if (!entry->help_function.self_formatting) {
       interpreter.OutputFormattedHelpText(str, name_str.GetData(), "--",
                                           help_text, name_str.GetSize());
@@ -553,7 +553,7 @@ CommandArgumentType CommandObject::LookupArgumentName(const char *arg_name) {
   return return_type;
 }
 
-static const char *RegisterNameHelpTextCallback() {
+static llvm::StringRef RegisterNameHelpTextCallback() {
   return "Register names can be specified using the architecture specific "
          "names.  "
          "They can also be specified using generic names.  Not all generic "
@@ -571,7 +571,7 @@ static const char *RegisterNameHelpTextCallback() {
          "arg{1-6} - integer argument passing registers.\n";
 }
 
-static const char *BreakpointIDHelpTextCallback() {
+static llvm::StringRef BreakpointIDHelpTextCallback() {
   return "Breakpoints are identified using major and minor numbers; the major "
          "number corresponds to the single entity that was created with a "
          "'breakpoint "
@@ -590,7 +590,7 @@ static const char *BreakpointIDHelpTextCallback() {
          "3 or 3.2 could both be valid breakpoint IDs.)";
 }
 
-static const char *BreakpointIDRangeHelpTextCallback() {
+static llvm::StringRef BreakpointIDRangeHelpTextCallback() {
   return "A 'breakpoint ID list' is a manner of specifying multiple "
          "breakpoints. "
          "This can be done through several mechanisms.  The easiest way is to "
@@ -609,7 +609,7 @@ static const char *BreakpointIDRangeHelpTextCallback() {
          " is legal; 2 - 5 is legal; but 3.2 - 4.4 is not legal.";
 }
 
-static const char *BreakpointNameHelpTextCallback() {
+static llvm::StringRef BreakpointNameHelpTextCallback() {
   return "A name that can be added to a breakpoint when it is created, or "
          "later "
          "on with the \"breakpoint name add\" command.  "
@@ -634,7 +634,7 @@ static const char *BreakpointNameHelpTextCallback() {
          "breakpoint locations.";
 }
 
-static const char *GDBFormatHelpTextCallback() {
+static llvm::StringRef GDBFormatHelpTextCallback() {
   return "A GDB format consists of a repeat count, a format letter and a size "
          "letter. "
          "The repeat count is optional and defaults to 1. The format letter is "
@@ -671,12 +671,11 @@ static const char *GDBFormatHelpTextCallback() {
          "dw   - show 1 4 byte decimal integer value\n";
 }
 
-static const char *FormatHelpTextCallback() {
+static llvm::StringRef FormatHelpTextCallback() {
+  static std::string help_text;
 
-  static char *help_text_ptr = nullptr;
-
-  if (help_text_ptr)
-    return help_text_ptr;
+  if (!help_text.empty())
+    return help_text;
 
   StreamString sstr;
   sstr << "One of the format names (or one-character names) that can be used "
@@ -694,20 +693,16 @@ static const char *FormatHelpTextCallback() {
 
   sstr.Flush();
 
-  std::string data = sstr.GetString();
+  help_text = sstr.GetString();
 
-  help_text_ptr = new char[data.length() + 1];
-
-  data.copy(help_text_ptr, data.length());
-
-  return help_text_ptr;
+  return help_text;
 }
 
-static const char *LanguageTypeHelpTextCallback() {
-  static char *help_text_ptr = nullptr;
+static llvm::StringRef LanguageTypeHelpTextCallback() {
+  static std::string help_text;
 
-  if (help_text_ptr)
-    return help_text_ptr;
+  if (!help_text.empty())
+    return help_text;
 
   StreamString sstr;
   sstr << "One of the following languages:\n";
@@ -716,16 +711,12 @@ static const char *LanguageTypeHelpTextCallback() {
 
   sstr.Flush();
 
-  std::string data = sstr.GetString();
+  help_text = sstr.GetString();
 
-  help_text_ptr = new char[data.length() + 1];
-
-  data.copy(help_text_ptr, data.length());
-
-  return help_text_ptr;
+  return help_text;
 }
 
-static const char *SummaryStringHelpTextCallback() {
+static llvm::StringRef SummaryStringHelpTextCallback() {
   return "A summary string is a way to extract information from variables in "
          "order to present them using a summary.\n"
          "Summary strings contain static text, variables, scopes and control "
@@ -800,7 +791,7 @@ static const char *SummaryStringHelpTextCallback() {
          "type summary add -s \"${svar%#}\" -x \"std::list<\"";
 }
 
-static const char *ExprPathHelpTextCallback() {
+static llvm::StringRef ExprPathHelpTextCallback() {
   return "An expression path is the sequence of symbols that is used in C/C++ "
          "to access a member variable of an aggregate object (class).\n"
          "For instance, given a class:\n"
@@ -1028,7 +1019,7 @@ bool CommandObjectRaw::Execute(const char *args_string,
   return handled;
 }
 
-static const char *arch_helper() {
+static llvm::StringRef arch_helper() {
   static StreamString g_archs_help;
   if (g_archs_help.Empty()) {
     StringList archs;
@@ -1036,7 +1027,7 @@ static const char *arch_helper() {
     g_archs_help.Printf("These are the supported architecture names:\n");
     archs.Join("\n", g_archs_help);
   }
-  return g_archs_help.GetData();
+  return g_archs_help.GetString();
 }
 
 CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {

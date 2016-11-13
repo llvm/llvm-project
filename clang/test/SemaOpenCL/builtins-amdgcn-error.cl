@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-amdhsa -target-cpu tahiti -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -verify -S -o - %s
 
 // FIXME: We only get one error if the functions are the other order in the
 // file.

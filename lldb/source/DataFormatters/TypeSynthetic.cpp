@@ -101,7 +101,8 @@ std::string CXXSyntheticChildren::GetDescription() {
 }
 
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
-    const char *name, const char *expression, const ExecutionContext &exe_ctx) {
+    llvm::StringRef name, llvm::StringRef expression,
+    const ExecutionContext &exe_ctx) {
   ValueObjectSP valobj_sp(
       ValueObject::CreateValueObjectFromExpression(name, expression, exe_ctx));
   if (valobj_sp)
@@ -110,7 +111,7 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
 }
 
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromAddress(
-    const char *name, uint64_t address, const ExecutionContext &exe_ctx,
+    llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
     CompilerType type) {
   ValueObjectSP valobj_sp(
       ValueObject::CreateValueObjectFromAddress(name, address, exe_ctx, type));
@@ -120,7 +121,7 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromAddress(
 }
 
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromData(
-    const char *name, const DataExtractor &data,
+    llvm::StringRef name, const DataExtractor &data,
     const ExecutionContext &exe_ctx, CompilerType type) {
   ValueObjectSP valobj_sp(
       ValueObject::CreateValueObjectFromData(name, data, exe_ctx, type));

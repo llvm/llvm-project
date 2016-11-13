@@ -509,7 +509,8 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitBasicLit(
   DataExtractor data(buf, order, addr_size);
 
   CompilerType type = LookupType(target, ConstString("int64"));
-  return ValueObject::CreateValueObjectFromData(nullptr, data, m_exe_ctx, type);
+  return ValueObject::CreateValueObjectFromData(llvm::StringRef(), data,
+                                                m_exe_ctx, type);
 }
 
 ValueObjectSP GoUserExpression::GoInterpreter::VisitIndexExpr(
@@ -565,7 +566,7 @@ GoUserExpression::GoInterpreter::VisitUnaryExpr(const GoASTUnaryExpr *e) {
   case GoLexer::OP_AMP: {
     CompilerType type = x->GetCompilerType().GetPointerType();
     uint64_t address = x->GetAddressOf();
-    return ValueObject::CreateValueObjectFromAddress(nullptr, address,
+    return ValueObject::CreateValueObjectFromAddress(llvm::StringRef(), address,
                                                      m_exe_ctx, type);
   }
   case GoLexer::OP_PLUS:
