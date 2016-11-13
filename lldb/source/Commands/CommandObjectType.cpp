@@ -2841,26 +2841,25 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  const char *GetHelpLong() override {
-    if (m_cmd_help_long.empty()) {
-      StreamString stream;
-      // FIXME: hardcoding languages is not good
-      lldb::LanguageType languages[] = {eLanguageTypeObjC,
-                                        eLanguageTypeC_plus_plus};
+  llvm::StringRef GetHelpLong() override {
+    if (!m_cmd_help_long.empty())
+      return m_cmd_help_long;
 
-      for (const auto lang_type : languages) {
-        if (auto language = Language::FindPlugin(lang_type)) {
-          if (const char *help =
-                  language->GetLanguageSpecificTypeLookupHelp()) {
-            stream.Printf("%s\n", help);
-          }
+    StreamString stream;
+    // FIXME: hardcoding languages is not good
+    lldb::LanguageType languages[] = {eLanguageTypeObjC,
+                                      eLanguageTypeC_plus_plus};
+
+    for (const auto lang_type : languages) {
+      if (auto language = Language::FindPlugin(lang_type)) {
+        if (const char *help = language->GetLanguageSpecificTypeLookupHelp()) {
+          stream.Printf("%s\n", help);
         }
       }
-
-      if (stream.GetData())
-        m_cmd_help_long.assign(stream.GetString());
     }
-    return this->CommandObject::GetHelpLong();
+
+    m_cmd_help_long = stream.GetString();
+    return m_cmd_help_long;
   }
 
   bool DoExecute(const char *raw_command_line,

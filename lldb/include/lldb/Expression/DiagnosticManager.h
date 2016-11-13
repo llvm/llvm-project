@@ -13,6 +13,8 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/ADT/StringRef.h"
+
 #include <string>
 #include <vector>
 
@@ -55,7 +57,7 @@ public:
     }
   }
 
-  Diagnostic(const char *message, DiagnosticSeverity severity,
+  Diagnostic(llvm::StringRef message, DiagnosticSeverity severity,
              DiagnosticOrigin origin, uint32_t compiler_id)
       : m_message(message), m_severity(severity), m_origin(origin),
         m_compiler_id(compiler_id) {}
@@ -72,9 +74,10 @@ public:
 
   uint32_t GetCompilerID() const { return m_compiler_id; }
 
-  const char *GetMessage() const { return m_message.c_str(); }
+  llvm::StringRef GetMessage() const { return m_message; }
 
-  void AppendMessage(const char *message, bool precede_with_newline = true) {
+  void AppendMessage(llvm::StringRef message,
+                     bool precede_with_newline = true) {
     if (precede_with_newline)
       m_message.push_back('\n');
     m_message.append(message);
@@ -114,7 +117,7 @@ public:
     return false;
   }
 
-  void AddDiagnostic(const char *message, DiagnosticSeverity severity,
+  void AddDiagnostic(llvm::StringRef message, DiagnosticSeverity severity,
                      DiagnosticOrigin origin,
                      uint32_t compiler_id = LLDB_INVALID_COMPILER_ID) {
     m_diagnostics.push_back(
@@ -127,11 +130,11 @@ public:
 
   size_t Printf(DiagnosticSeverity severity, const char *format, ...)
       __attribute__((format(printf, 3, 4)));
-  size_t PutCString(DiagnosticSeverity severity, const char *cstr);
+  size_t PutString(DiagnosticSeverity severity, llvm::StringRef str);
 
-  void AppendMessageToDiagnostic(const char *cstr) {
-    if (m_diagnostics.size()) {
-      m_diagnostics.back()->AppendMessage(cstr);
+  void AppendMessageToDiagnostic(llvm::StringRef str) {
+    if (!m_diagnostics.empty()) {
+      m_diagnostics.back()->AppendMessage(str);
     }
   }
 

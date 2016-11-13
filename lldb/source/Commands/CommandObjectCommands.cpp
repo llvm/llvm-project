@@ -1282,7 +1282,7 @@ public:
       : CommandObjectRaw(interpreter, name),
         m_function_name(funct), m_synchro(synch), m_fetched_help_long(false) {
     if (!help.empty())
-      SetHelp(help.c_str());
+      SetHelp(help);
     else {
       StreamString stream;
       stream.Printf("For more information run 'help %s'", name.c_str());
@@ -1298,17 +1298,19 @@ public:
 
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
-  const char *GetHelpLong() override {
-    if (!m_fetched_help_long) {
-      ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
-      if (scripter) {
-        std::string docstring;
-        m_fetched_help_long = scripter->GetDocumentationForItem(
-            m_function_name.c_str(), docstring);
-        if (!docstring.empty())
-          SetHelpLong(docstring.c_str());
-      }
-    }
+  llvm::StringRef GetHelpLong() override {
+    if (m_fetched_help_long)
+      return CommandObjectRaw::GetHelpLong();
+
+    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    if (!scripter)
+      return CommandObjectRaw::GetHelpLong();
+
+    std::string docstring;
+    m_fetched_help_long =
+        scripter->GetDocumentationForItem(m_function_name.c_str(), docstring);
+    if (!docstring.empty())
+      SetHelpLong(docstring);
     return CommandObjectRaw::GetHelpLong();
   }
 
@@ -1371,31 +1373,34 @@ public:
 
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
 
-  const char *GetHelp() override {
-    if (!m_fetched_help_short) {
-      ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
-      if (scripter) {
-        std::string docstring;
-        m_fetched_help_short =
-            scripter->GetShortHelpForCommandObject(m_cmd_obj_sp, docstring);
-        if (!docstring.empty())
-          SetHelp(docstring.c_str());
-      }
-    }
+  llvm::StringRef GetHelp() override {
+    if (m_fetched_help_short)
+      return CommandObjectRaw::GetHelp();
+    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    if (!scripter)
+      return CommandObjectRaw::GetHelp();
+    std::string docstring;
+    m_fetched_help_short =
+        scripter->GetShortHelpForCommandObject(m_cmd_obj_sp, docstring);
+    if (!docstring.empty())
+      SetHelp(docstring);
+
     return CommandObjectRaw::GetHelp();
   }
 
-  const char *GetHelpLong() override {
-    if (!m_fetched_help_long) {
-      ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
-      if (scripter) {
-        std::string docstring;
-        m_fetched_help_long =
-            scripter->GetLongHelpForCommandObject(m_cmd_obj_sp, docstring);
-        if (!docstring.empty())
-          SetHelpLong(docstring.c_str());
-      }
-    }
+  llvm::StringRef GetHelpLong() override {
+    if (m_fetched_help_long)
+      return CommandObjectRaw::GetHelpLong();
+
+    ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
+    if (!scripter)
+      return CommandObjectRaw::GetHelpLong();
+
+    std::string docstring;
+    m_fetched_help_long =
+        scripter->GetLongHelpForCommandObject(m_cmd_obj_sp, docstring);
+    if (!docstring.empty())
+      SetHelpLong(docstring);
     return CommandObjectRaw::GetHelpLong();
   }
 

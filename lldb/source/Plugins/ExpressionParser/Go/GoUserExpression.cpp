@@ -216,7 +216,7 @@ bool GoUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return true;
   const char *error_cstr = m_interpreter->error().AsCString();
   if (error_cstr && error_cstr[0])
-    diagnostic_manager.PutCString(eDiagnosticSeverityError, error_cstr);
+    diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
   else
     diagnostic_manager.Printf(eDiagnosticSeverityError,
                               "expression can't be interpreted or run");
@@ -245,8 +245,8 @@ GoUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
         log->Printf("== [GoUserExpression::Evaluate] Expression may not run, "
                     "but is not constant ==");
 
-      diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                    "expression needed to run but couldn't");
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                   "expression needed to run but couldn't");
 
       return execution_results;
     }
@@ -260,10 +260,10 @@ GoUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   if (!result_val_sp) {
     const char *error_cstr = err.AsCString();
     if (error_cstr && error_cstr[0])
-      diagnostic_manager.PutCString(eDiagnosticSeverityError, error_cstr);
+      diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
     else
-      diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                    "expression can't be interpreted or run");
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                   "expression can't be interpreted or run");
     return lldb::eExpressionDiscarded;
   }
   result.reset(new ExpressionVariable(ExpressionVariable::eKindGo));

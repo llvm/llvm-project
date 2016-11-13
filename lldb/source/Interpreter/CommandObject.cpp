@@ -52,48 +52,42 @@ CommandObject::CommandObject(CommandInterpreter &interpreter, llvm::StringRef na
 
 CommandObject::~CommandObject() {}
 
-const char *CommandObject::GetHelp() { return m_cmd_help_short.c_str(); }
+llvm::StringRef CommandObject::GetHelp() { return m_cmd_help_short; }
 
-const char *CommandObject::GetHelpLong() { return m_cmd_help_long.c_str(); }
+llvm::StringRef CommandObject::GetHelpLong() { return m_cmd_help_long; }
 
-const char *CommandObject::GetSyntax() {
-  if (m_cmd_syntax.length() == 0) {
-    StreamString syntax_str;
-    syntax_str.Printf("%s", GetCommandName().str().c_str());
-    if (!IsDashDashCommand() && GetOptions() != nullptr)
-      syntax_str.Printf(" <cmd-options>");
-    if (m_arguments.size() > 0) {
-      syntax_str.Printf(" ");
-      if (!IsDashDashCommand() && WantsRawCommandString() && GetOptions() &&
-          GetOptions()->NumCommandOptions())
-        syntax_str.Printf("-- ");
-      GetFormattedCommandArguments(syntax_str);
-    }
-    m_cmd_syntax = syntax_str.GetData();
+llvm::StringRef CommandObject::GetSyntax() {
+  if (m_cmd_syntax.empty())
+    return m_cmd_syntax;
+
+  StreamString syntax_str;
+  syntax_str.PutCString(GetCommandName());
+
+  if (!IsDashDashCommand() && GetOptions() != nullptr)
+    syntax_str.PutCString(" <cmd-options>");
+
+  if (!m_arguments.empty()) {
+    syntax_str.PutCString(" ");
+
+    if (!IsDashDashCommand() && WantsRawCommandString() && GetOptions() &&
+        GetOptions()->NumCommandOptions())
+      syntax_str.PutCString("-- ");
+    GetFormattedCommandArguments(syntax_str);
   }
+  m_cmd_syntax = syntax_str.GetData();
 
-  return m_cmd_syntax.c_str();
+  return m_cmd_syntax;
 }
 
 llvm::StringRef CommandObject::GetCommandName() const { return m_cmd_name; }
 
-void CommandObject::SetCommandName(const char *name) { m_cmd_name = name; }
+void CommandObject::SetCommandName(llvm::StringRef name) { m_cmd_name = name; }
 
-void CommandObject::SetHelp(const char *cstr) {
-  if (cstr)
-    m_cmd_help_short = cstr;
-  else
-    m_cmd_help_short.assign("");
-}
+void CommandObject::SetHelp(llvm::StringRef str) { m_cmd_help_short = str; }
 
-void CommandObject::SetHelpLong(const char *cstr) {
-  if (cstr)
-    m_cmd_help_long = cstr;
-  else
-    m_cmd_help_long.assign("");
-}
+void CommandObject::SetHelpLong(llvm::StringRef str) { m_cmd_help_long = str; }
 
-void CommandObject::SetSyntax(const char *cstr) { m_cmd_syntax = cstr; }
+void CommandObject::SetSyntax(llvm::StringRef str) { m_cmd_syntax = str; }
 
 Options *CommandObject::GetOptions() {
   // By default commands don't have options unless this virtual function
@@ -331,15 +325,15 @@ bool CommandObject::HelpTextContainsWord(const char *search_word,
 
   bool found_word = false;
 
-  const char *short_help = GetHelp();
-  const char *long_help = GetHelpLong();
-  const char *syntax_help = GetSyntax();
+  llvm::StringRef short_help = GetHelp();
+  llvm::StringRef long_help = GetHelpLong();
+  llvm::StringRef syntax_help = GetSyntax();
 
-  if (search_short_help && short_help && strcasestr(short_help, search_word))
+  if (search_short_help && short_help.contains_lower(search_word))
     found_word = true;
-  else if (search_long_help && long_help && strcasestr(long_help, search_word))
+  else if (search_long_help && long_help.contains_lower(search_word))
     found_word = true;
-  else if (search_syntax && syntax_help && strcasestr(syntax_help, search_word))
+  else if (search_syntax && syntax_help.contains_lower(search_word))
     found_word = true;
 
   if (!found_word && search_options && GetOptions() != nullptr) {
@@ -842,7 +836,7 @@ static const char *ExprPathHelpTextCallback() {
 }
 
 void CommandObject::FormatLongHelpText(Stream &output_strm,
-                                       const char *long_help) {
+                                       llvm::StringRef long_help) {
   CommandInterpreter &interpreter = GetCommandInterpreter();
   std::stringstream lineStream(long_help);
   std::string line;
@@ -884,8 +878,8 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
         output_strm, this,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
   }
-  const char *long_help = GetHelpLong();
-  if ((long_help != nullptr) && (strlen(long_help) > 0)) {
+  llvm::StringRef long_help = GetHelpLong();
+  if (!long_help.empty()) {
     FormatLongHelpText(output_strm, long_help);
   }
   if (!IsDashDashCommand() && options && options->NumCommandOptions() > 0) {

@@ -4815,29 +4815,29 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock);
 
   if (!thread_plan_sp) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "RunThreadPlan called with empty thread plan.");
     return eExpressionSetupError;
   }
 
   if (!thread_plan_sp->ValidatePlan(nullptr)) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "RunThreadPlan called with an invalid thread plan.");
     return eExpressionSetupError;
   }
 
   if (exe_ctx.GetProcessPtr() != this) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                  "RunThreadPlan called on wrong process.");
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "RunThreadPlan called on wrong process.");
     return eExpressionSetupError;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
   if (thread == nullptr) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                  "RunThreadPlan called with invalid thread.");
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "RunThreadPlan called with invalid thread.");
     return eExpressionSetupError;
   }
 
@@ -4864,7 +4864,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   thread_plan_sp->SetOkayToDiscard(false);
 
   if (m_private_state.GetValue() != eStateStopped) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "RunThreadPlan called while the private state was not stopped.");
     return eExpressionSetupError;
@@ -5028,10 +5028,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         uint64_t computed_one_thread_timeout;
         if (option_one_thread_timeout != 0) {
           if (timeout_usec < option_one_thread_timeout) {
-            diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                          "RunThreadPlan called without one "
-                                          "thread timeout greater than total "
-                                          "timeout");
+            diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                         "RunThreadPlan called without one "
+                                         "thread timeout greater than total "
+                                         "timeout");
             return eExpressionSetupError;
           }
           computed_one_thread_timeout = option_one_thread_timeout;
@@ -5060,7 +5060,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
     Event *other_events = listener_sp->PeekAtNextEvent();
     if (other_events != nullptr) {
-      diagnostic_manager.PutCString(
+      diagnostic_manager.PutString(
           eDiagnosticSeverityError,
           "RunThreadPlan called with pending events on the queue.");
       return eExpressionSetupError;
@@ -5237,9 +5237,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             const bool use_run_lock = false;
             Halt(clear_thread_plans, use_run_lock);
             return_value = eExpressionInterrupted;
-            diagnostic_manager.PutCString(
-                eDiagnosticSeverityRemark,
-                "execution halted by user interrupt.");
+            diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                         "execution halted by user interrupt.");
             if (log)
               log->Printf("Process::RunThreadPlan(): Got  interrupted by "
                           "eBroadcastBitInterrupted, exiting.");
@@ -5350,7 +5349,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               if (stop_state == eStateExited)
                 event_to_broadcast_sp = event_sp;
 
-              diagnostic_manager.PutCString(
+              diagnostic_manager.PutString(
                   eDiagnosticSeverityError,
                   "execution stopped with unexpected state.");
               return_value = eExpressionInterrupted;

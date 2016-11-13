@@ -90,7 +90,7 @@ public:
   // used for this object.
   virtual CommandObject *GetProxyCommandObject() = 0;
 
-  const char *GetHelpLong() override;
+  llvm::StringRef GetHelpLong() override;
 
   bool IsRemovable() const override;
 
