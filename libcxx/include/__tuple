@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY tuple_size;
+template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY tuple_size {};
 
 template <class _Tp>
 class _LIBCPP_TYPE_VIS_ONLY tuple_size<const _Tp>

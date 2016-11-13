@@ -20,7 +20,7 @@ D: DynamicLoader, ObjectFile, IOHandler, EditLine, ValueObject, Watchpoints, deb
 D: Build scripts, Test suite, Platform, gdb-remote, Anything not covered by this file
 
 N: Enrico Granata
-E: egranata@apple.com
+E: granata.enrico@gmail.com
 D: Data Formatters, Core/Value*, Objective C Language runtime, Test suite, Xcode build
 D: SWIG
 

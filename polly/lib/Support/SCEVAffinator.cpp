@@ -140,9 +140,6 @@ __isl_give PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB) {
   } else
     NumIterators = 0;
 
-  auto *Scope = getScope();
-  S->addParams(getParamsInAffineExpr(&S->getRegion(), Scope, Expr, SE));
-
   return visit(Expr);
 }
 
