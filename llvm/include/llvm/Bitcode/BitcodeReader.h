@@ -43,14 +43,14 @@ namespace llvm {
   /// Read the header of the specified bitcode buffer and prepare for lazy
   /// deserialization of function bodies. If ShouldLazyLoadMetadata is true,
   /// lazily load metadata as well.
-  ErrorOr<std::unique_ptr<Module>>
+  Expected<std::unique_ptr<Module>>
   getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
                        bool ShouldLazyLoadMetadata = false);
 
   /// Like getLazyBitcodeModule, except that the module takes ownership of
   /// the memory buffer if successful. If successful, this moves Buffer. On
   /// error, this *does not* move Buffer.
-  ErrorOr<std::unique_ptr<Module>>
+  Expected<std::unique_ptr<Module>>
   getOwningLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
                              LLVMContext &Context,
                              bool ShouldLazyLoadMetadata = false);
@@ -70,8 +70,8 @@ namespace llvm {
   Expected<std::string> getBitcodeProducerString(MemoryBufferRef Buffer);
 
   /// Read the specified bitcode file, returning the module.
-  ErrorOr<std::unique_ptr<Module>> parseBitcodeFile(MemoryBufferRef Buffer,
-                                                    LLVMContext &Context);
+  Expected<std::unique_ptr<Module>> parseBitcodeFile(MemoryBufferRef Buffer,
+                                                     LLVMContext &Context);
 
   /// Check if the given bitcode buffer contains a summary block.
   Expected<bool> hasGlobalValueSummary(MemoryBufferRef Buffer);

@@ -3479,7 +3479,7 @@ Error BitcodeReader::parseConstants() {
 
       if (PointeeType &&
           PointeeType !=
-              cast<SequentialType>(Elts[0]->getType()->getScalarType())
+              cast<PointerType>(Elts[0]->getType()->getScalarType())
                   ->getElementType())
         return error("Explicit gep operator type does not match pointee type "
                      "of pointer operand");
@@ -4733,10 +4733,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid record");
 
       if (!Ty)
-        Ty = cast<SequentialType>(BasePtr->getType()->getScalarType())
+        Ty = cast<PointerType>(BasePtr->getType()->getScalarType())
                  ->getElementType();
       else if (Ty !=
-               cast<SequentialType>(BasePtr->getType()->getScalarType())
+               cast<PointerType>(BasePtr->getType()->getScalarType())
                    ->getElementType())
         return error(
             "Explicit gep type does not match pointee type of pointer operand");
@@ -6571,13 +6571,13 @@ const std::error_category &llvm::BitcodeErrorCategory() {
 ///
 /// \param[in] MaterializeAll Set to \c true if we should materialize
 /// everything.
-static ErrorOr<std::unique_ptr<Module>>
+static Expected<std::unique_ptr<Module>>
 getLazyBitcodeModuleImpl(MemoryBufferRef Buffer, LLVMContext &Context,
                          bool MaterializeAll,
                          bool ShouldLazyLoadMetadata = false) {
   Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
   if (!StreamOrErr)
-    return errorToErrorCodeAndEmitErrors(Context, StreamOrErr.takeError());
+    return StreamOrErr.takeError();
 
   BitcodeReader *R = new BitcodeReader(std::move(*StreamOrErr), Context);
 
@@ -6587,28 +6587,28 @@ getLazyBitcodeModuleImpl(MemoryBufferRef Buffer, LLVMContext &Context,
 
   // Delay parsing Metadata if ShouldLazyLoadMetadata is true.
   if (Error Err = R->parseBitcodeInto(M.get(), ShouldLazyLoadMetadata))
-    return errorToErrorCodeAndEmitErrors(Context, std::move(Err));
+    return std::move(Err);
 
   if (MaterializeAll) {
     // Read in the entire module, and destroy the BitcodeReader.
     if (Error Err = M->materializeAll())
-      return errorToErrorCodeAndEmitErrors(Context, std::move(Err));
+      return std::move(Err);
   } else {
     // Resolve forward references from blockaddresses.
     if (Error Err = R->materializeForwardReferencedFunctions())
-      return errorToErrorCodeAndEmitErrors(Context, std::move(Err));
+      return std::move(Err);
   }
   return std::move(M);
 }
 
-ErrorOr<std::unique_ptr<Module>>
+Expected<std::unique_ptr<Module>>
 llvm::getLazyBitcodeModule(MemoryBufferRef Buffer,
                            LLVMContext &Context, bool ShouldLazyLoadMetadata) {
   return getLazyBitcodeModuleImpl(Buffer, Context, false,
                                   ShouldLazyLoadMetadata);
 }
 
-ErrorOr<std::unique_ptr<Module>>
+Expected<std::unique_ptr<Module>>
 llvm::getOwningLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
                                  LLVMContext &Context,
                                  bool ShouldLazyLoadMetadata) {
@@ -6618,8 +6618,8 @@ llvm::getOwningLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
   return MOrErr;
 }
 
-ErrorOr<std::unique_ptr<Module>> llvm::parseBitcodeFile(MemoryBufferRef Buffer,
-                                                        LLVMContext &Context) {
+Expected<std::unique_ptr<Module>> llvm::parseBitcodeFile(MemoryBufferRef Buffer,
+                                                         LLVMContext &Context) {
   return getLazyBitcodeModuleImpl(Buffer, Context, true);
   // TODO: Restore the use-lists to the in-memory state when the bitcode was
   // written.  We must defer until the Module has been fully materialized.

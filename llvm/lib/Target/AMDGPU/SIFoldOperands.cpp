@@ -156,13 +156,15 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
                              const SIInstrInfo *TII) {
   if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
 
-    // Special case for v_mac_f32_e64 if we are trying to fold into src2
+    // Special case for v_mac_{f16, f32}_e64 if we are trying to fold into src2
     unsigned Opc = MI->getOpcode();
-    if (Opc == AMDGPU::V_MAC_F32_e64 &&
+    if ((Opc == AMDGPU::V_MAC_F32_e64 || Opc == AMDGPU::V_MAC_F16_e64) &&
         (int)OpNo == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2)) {
-      // Check if changing this to a v_mad_f32 instruction will allow us to
-      // fold the operand.
-      MI->setDesc(TII->get(AMDGPU::V_MAD_F32));
+      bool IsF32  = Opc == AMDGPU::V_MAC_F32_e64;
+
+      // Check if changing this to a v_mad_{f16, f32} instruction will allow us
+      // to fold the operand.
+      MI->setDesc(TII->get(IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16));
       bool FoldAsMAD = tryAddToFoldList(FoldList, MI, OpNo, OpToFold, TII);
       if (FoldAsMAD) {
         MI->untieRegOperand(OpNo);
@@ -239,10 +241,10 @@ static void foldOperand(MachineOperand &OpToFold, MachineInstr *UseMI,
     // make sense. e.g. don't fold:
     //
     // %vreg1 = COPY %vreg0:sub1
-    // %vreg2<tied3> = V_MAC_F32 %vreg3, %vreg4, %vreg1<tied0>
+    // %vreg2<tied3> = V_MAC_{F16, F32} %vreg3, %vreg4, %vreg1<tied0>
     //
     //  into
-    // %vreg2<tied3> = V_MAC_F32 %vreg3, %vreg4, %vreg0:sub1<tied0>
+    // %vreg2<tied3> = V_MAC_{F16, F32} %vreg3, %vreg4, %vreg0:sub1<tied0>
     if (UseOp.isTied() && OpToFold.getSubReg() != AMDGPU::NoSubRegister)
       return;
   }

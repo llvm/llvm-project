@@ -624,7 +624,10 @@ Expected<bool> FunctionImporter::importFunctions(
     // Get the module for the import
     const auto &FunctionsToImportPerModule = ImportList.find(Name);
     assert(FunctionsToImportPerModule != ImportList.end());
-    std::unique_ptr<Module> SrcModule = ModuleLoader(Name);
+    Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(Name);
+    if (!SrcModuleOrErr)
+      return SrcModuleOrErr.takeError();
+    std::unique_ptr<Module> SrcModule = std::move(*SrcModuleOrErr);
     assert(&DestModule.getContext() == &SrcModule->getContext() &&
            "Context mismatch");
 

@@ -258,8 +258,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   bool ShiftLeft = false;
 
   switch (II.getIntrinsicID()) {
-  default:
-    return nullptr;
+  default: llvm_unreachable("Unexpected intrinsic!");
   case Intrinsic::x86_sse2_psra_d:
   case Intrinsic::x86_sse2_psra_w:
   case Intrinsic::x86_sse2_psrai_d:
@@ -393,10 +392,13 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   bool ShiftLeft = false;
 
   switch (II.getIntrinsicID()) {
-  default:
-    return nullptr;
+  default: llvm_unreachable("Unexpected intrinsic!");
   case Intrinsic::x86_avx2_psrav_d:
   case Intrinsic::x86_avx2_psrav_d_256:
+  case Intrinsic::x86_avx512_psrav_q_128:
+  case Intrinsic::x86_avx512_psrav_q_256:
+  case Intrinsic::x86_avx512_psrav_d_512:
+  case Intrinsic::x86_avx512_psrav_q_512:
     LogicalShift = false;
     ShiftLeft = false;
     break;
@@ -404,6 +406,8 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx2_psrlv_d_256:
   case Intrinsic::x86_avx2_psrlv_q:
   case Intrinsic::x86_avx2_psrlv_q_256:
+  case Intrinsic::x86_avx512_psrlv_d_512:
+  case Intrinsic::x86_avx512_psrlv_q_512:
     LogicalShift = true;
     ShiftLeft = false;
     break;
@@ -411,6 +415,8 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx2_psllv_d_256:
   case Intrinsic::x86_avx2_psllv_q:
   case Intrinsic::x86_avx2_psllv_q_256:
+  case Intrinsic::x86_avx512_psllv_d_512:
+  case Intrinsic::x86_avx512_psllv_q_512:
     LogicalShift = true;
     ShiftLeft = true;
     break;
@@ -1873,12 +1879,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_psllv_d_256:
   case Intrinsic::x86_avx2_psllv_q:
   case Intrinsic::x86_avx2_psllv_q_256:
+  case Intrinsic::x86_avx512_psllv_d_512:
+  case Intrinsic::x86_avx512_psllv_q_512:
   case Intrinsic::x86_avx2_psrav_d:
   case Intrinsic::x86_avx2_psrav_d_256:
+  case Intrinsic::x86_avx512_psrav_q_128:
+  case Intrinsic::x86_avx512_psrav_q_256:
+  case Intrinsic::x86_avx512_psrav_d_512:
+  case Intrinsic::x86_avx512_psrav_q_512:
   case Intrinsic::x86_avx2_psrlv_d:
   case Intrinsic::x86_avx2_psrlv_d_256:
   case Intrinsic::x86_avx2_psrlv_q:
   case Intrinsic::x86_avx2_psrlv_q_256:
+  case Intrinsic::x86_avx512_psrlv_d_512:
+  case Intrinsic::x86_avx512_psrlv_q_512:
     if (Value *V = simplifyX86varShift(*II, *Builder))
       return replaceInstUsesWith(*II, V);
     break;
