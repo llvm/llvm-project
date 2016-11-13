@@ -57,9 +57,7 @@ int main(int argc, char **argv) {
       Expected<std::unique_ptr<Module>> ModuleOrErr =
           parseBitcodeFile(BufferPtr.get()->getMemBufferRef(), Context);
       if (Error Err = ModuleOrErr.takeError()) {
-        handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-          ErrorMessage = EIB.message();
-        });
+        ErrorMessage = toString(std::move(Err));
       }
       else
         M = ModuleOrErr.get().release();
