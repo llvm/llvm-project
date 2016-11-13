@@ -34,13 +34,6 @@ LLVMBool LLVMParseBitcode2(LLVMMemoryBufferRef MemBuf,
   return LLVMParseBitcodeInContext2(LLVMGetGlobalContext(), MemBuf, OutModule);
 }
 
-static void diagnosticHandler(const DiagnosticInfo &DI, void *C) {
-  auto *Message = reinterpret_cast<std::string *>(C);
-  raw_string_ostream Stream(*Message);
-  DiagnosticPrinterRawOStream DP(Stream);
-  DI.print(DP);
-}
-
 LLVMBool LLVMParseBitcodeInContext(LLVMContextRef ContextRef,
                                    LLVMMemoryBufferRef MemBuf,
                                    LLVMModuleRef *OutModule,
@@ -48,17 +41,12 @@ LLVMBool LLVMParseBitcodeInContext(LLVMContextRef ContextRef,
   MemoryBufferRef Buf = unwrap(MemBuf)->getMemBufferRef();
   LLVMContext &Ctx = *unwrap(ContextRef);
 
-  LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
-      Ctx.getDiagnosticHandler();
-  void *OldDiagnosticContext = Ctx.getDiagnosticContext();
-  std::string Message;
-  Ctx.setDiagnosticHandler(diagnosticHandler, &Message, true);
-
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(Buf, Ctx);
-
-  Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
-
-  if (ModuleOrErr.getError()) {
+  Expected<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(Buf, Ctx);
+  if (Error Err = ModuleOrErr.takeError()) {
+    std::string Message;
+    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
+      Message = EIB.message();
+    });
     if (OutMessage)
       *OutMessage = strdup(Message.c_str());
     *OutModule = wrap((Module *)nullptr);
@@ -75,7 +63,8 @@ LLVMBool LLVMParseBitcodeInContext2(LLVMContextRef ContextRef,
   MemoryBufferRef Buf = unwrap(MemBuf)->getMemBufferRef();
   LLVMContext &Ctx = *unwrap(ContextRef);
 
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(Buf, Ctx);
+  ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
+      expectedToErrorOrAndEmitErrors(Ctx, parseBitcodeFile(Buf, Ctx));
   if (ModuleOrErr.getError()) {
     *OutModule = wrap((Module *)nullptr);
     return 1;
@@ -92,23 +81,19 @@ LLVMBool LLVMGetBitcodeModuleInContext(LLVMContextRef ContextRef,
                                        LLVMMemoryBufferRef MemBuf,
                                        LLVMModuleRef *OutM, char **OutMessage) {
   LLVMContext &Ctx = *unwrap(ContextRef);
-  LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
-      Ctx.getDiagnosticHandler();
-  void *OldDiagnosticContext = Ctx.getDiagnosticContext();
-
-  std::string Message;
-  Ctx.setDiagnosticHandler(diagnosticHandler, &Message, true);
   std::unique_ptr<MemoryBuffer> Owner(unwrap(MemBuf));
-
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
+  Expected<std::unique_ptr<Module>> ModuleOrErr =
       getOwningLazyBitcodeModule(std::move(Owner), Ctx);
   Owner.release();
-  Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
 
-  if (ModuleOrErr.getError()) {
-    *OutM = wrap((Module *)nullptr);
+  if (Error Err = ModuleOrErr.takeError()) {
+    std::string Message;
+    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
+      Message = EIB.message();
+    });
     if (OutMessage)
       *OutMessage = strdup(Message.c_str());
+    *OutM = wrap((Module *)nullptr);
     return 1;
   }
 
@@ -123,8 +108,8 @@ LLVMBool LLVMGetBitcodeModuleInContext2(LLVMContextRef ContextRef,
   LLVMContext &Ctx = *unwrap(ContextRef);
   std::unique_ptr<MemoryBuffer> Owner(unwrap(MemBuf));
 
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
-      getOwningLazyBitcodeModule(std::move(Owner), Ctx);
+  ErrorOr<std::unique_ptr<Module>> ModuleOrErr = expectedToErrorOrAndEmitErrors(
+      Ctx, getOwningLazyBitcodeModule(std::move(Owner), Ctx));
   Owner.release();
 
   if (ModuleOrErr.getError()) {

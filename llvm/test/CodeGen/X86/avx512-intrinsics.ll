@@ -5742,3 +5742,219 @@ define <8 x i64> @test_x86_avx512_maskz_psrli_q_512(<8 x i64> %a0, i8 %mask) {
 }
 declare <8 x i64> @llvm.x86.avx512.psrli.q.512(<8 x i64>, i32) nounwind readnone
 
+define <16 x i32> @test_x86_avx512_psllv_d_512(<16 x i32> %a0, <16 x i32> %a1) {
+; CHECK-LABEL: test_x86_avx512_psllv_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsllvd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @test_x86_avx512_mask_psllv_d_512(<16 x i32> %a0, <16 x i32> %a1, <16 x i32> %a2, i16 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psllv_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsllvd %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %a2
+  ret <16 x i32> %res2
+}
+
+define <16 x i32> @test_x86_avx512_maskz_psllv_d_512(<16 x i32> %a0, <16 x i32> %a1, i16 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psllv_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsllvd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> zeroinitializer
+  ret <16 x i32> %res2
+}
+
+declare <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32>, <16 x i32>) nounwind readnone
+
+define <8 x i64> @test_x86_avx512_psllv_q_512(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: test_x86_avx512_psllv_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsllvq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psllv.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @test_x86_avx512_mask_psllv_q_512(<8 x i64> %a0, <8 x i64> %a1, <8 x i64> %a2, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psllv_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsllvq %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psllv.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x i64> %res, <8 x i64> %a2
+  ret <8 x i64> %res2
+}
+
+define <8 x i64> @test_x86_avx512_maskz_psllv_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psllv_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsllvq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psllv.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x i64> %res, <8 x i64> zeroinitializer
+  ret <8 x i64> %res2
+}
+
+declare <8 x i64> @llvm.x86.avx512.psllv.q.512(<8 x i64>, <8 x i64>) nounwind readnone
+
+define <16 x i32> @test_x86_avx512_psrav_d_512(<16 x i32> %a0, <16 x i32> %a1) {
+; CHECK-LABEL: test_x86_avx512_psrav_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsravd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psrav.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @test_x86_avx512_mask_psrav_d_512(<16 x i32> %a0, <16 x i32> %a1, <16 x i32> %a2, i16 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psrav_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsravd %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psrav.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %a2
+  ret <16 x i32> %res2
+}
+
+define <16 x i32> @test_x86_avx512_maskz_psrav_d_512(<16 x i32> %a0, <16 x i32> %a1, i16 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psrav_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsravd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psrav.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> zeroinitializer
+  ret <16 x i32> %res2
+}
+
+declare <16 x i32> @llvm.x86.avx512.psrav.d.512(<16 x i32>, <16 x i32>) nounwind readnone
+
+define <8 x i64> @test_x86_avx512_psrav_q_512(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: test_x86_avx512_psrav_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psrav.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @test_x86_avx512_mask_psrav_q_512(<8 x i64> %a0, <8 x i64> %a1, <8 x i64> %a2, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psrav_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsravq %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psrav.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x i64> %res, <8 x i64> %a2
+  ret <8 x i64> %res2
+}
+
+define <8 x i64> @test_x86_avx512_maskz_psrav_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psrav_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsravq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psrav.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x i64> %res, <8 x i64> zeroinitializer
+  ret <8 x i64> %res2
+}
+
+declare <8 x i64> @llvm.x86.avx512.psrav.q.512(<8 x i64>, <8 x i64>) nounwind readnone
+
+define <16 x i32> @test_x86_avx512_psrlv_d_512(<16 x i32> %a0, <16 x i32> %a1) {
+; CHECK-LABEL: test_x86_avx512_psrlv_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsrlvd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psrlv.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @test_x86_avx512_mask_psrlv_d_512(<16 x i32> %a0, <16 x i32> %a1, <16 x i32> %a2, i16 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psrlv_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsrlvd %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psrlv.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %a2
+  ret <16 x i32> %res2
+}
+
+define <16 x i32> @test_x86_avx512_maskz_psrlv_d_512(<16 x i32> %a0, <16 x i32> %a1, i16 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psrlv_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsrlvd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.psrlv.d.512(<16 x i32> %a0, <16 x i32> %a1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> zeroinitializer
+  ret <16 x i32> %res2
+}
+
+declare <16 x i32> @llvm.x86.avx512.psrlv.d.512(<16 x i32>, <16 x i32>) nounwind readnone
+
+define <8 x i64> @test_x86_avx512_psrlv_q_512(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: test_x86_avx512_psrlv_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpsrlvq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psrlv.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @test_x86_avx512_mask_psrlv_q_512(<8 x i64> %a0, <8 x i64> %a1, <8 x i64> %a2, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_mask_psrlv_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsrlvq %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psrlv.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x i64> %res, <8 x i64> %a2
+  ret <8 x i64> %res2
+}
+
+define <8 x i64> @test_x86_avx512_maskz_psrlv_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_x86_avx512_maskz_psrlv_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpsrlvq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.psrlv.q.512(<8 x i64> %a0, <8 x i64> %a1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x i64> %res, <8 x i64> zeroinitializer
+  ret <8 x i64> %res2
+}
+
+declare <8 x i64> @llvm.x86.avx512.psrlv.q.512(<8 x i64>, <8 x i64>) nounwind readnone
+

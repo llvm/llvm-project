@@ -3015,9 +3015,9 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
 }
 
 const SCEV *
-ScalarEvolution::getGEPExpr(Type *PointeeType, const SCEV *BaseExpr,
-                            const SmallVectorImpl<const SCEV *> &IndexExprs,
-                            bool InBounds) {
+ScalarEvolution::getGEPExpr(GEPOperator *GEP,
+                            const SmallVectorImpl<const SCEV *> &IndexExprs) {
+  const SCEV *BaseExpr = getSCEV(GEP->getPointerOperand());
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
   Type *IntPtrTy = getEffectiveSCEVType(BaseExpr->getType());
@@ -3026,12 +3026,13 @@ ScalarEvolution::getGEPExpr(Type *PointeeType, const SCEV *BaseExpr,
   // flow and the no-overflow bits may not be valid for the expression in any
   // context. This can be fixed similarly to how these flags are handled for
   // adds.
-  SCEV::NoWrapFlags Wrap = InBounds ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags Wrap = GEP->isInBounds() ? SCEV::FlagNSW
+                                             : SCEV::FlagAnyWrap;
 
   const SCEV *TotalOffset = getZero(IntPtrTy);
   // The address space is unimportant. The first thing we do on CurTy is getting
   // its element type.
-  Type *CurTy = PointerType::getUnqual(PointeeType);
+  Type *CurTy = PointerType::getUnqual(GEP->getSourceElementType());
   for (const SCEV *IndexExpr : IndexExprs) {
     // Compute the (potentially symbolic) offset in bytes for this index.
     if (StructType *STy = dyn_cast<StructType>(CurTy)) {
@@ -4373,9 +4374,7 @@ const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
   SmallVector<const SCEV *, 4> IndexExprs;
   for (auto Index = GEP->idx_begin(); Index != GEP->idx_end(); ++Index)
     IndexExprs.push_back(getSCEV(*Index));
-  return getGEPExpr(GEP->getSourceElementType(),
-                    getSCEV(GEP->getPointerOperand()),
-                    IndexExprs, GEP->isInBounds());
+  return getGEPExpr(GEP, IndexExprs);
 }
 
 uint32_t

@@ -354,9 +354,8 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs[I] =
         SE->getZeroExtendExpr(IndexExprs[I], GEP->getOperand(I)->getType());
   }
-  const SCEV *CandidateExpr = SE->getGEPExpr(
-      GEP->getSourceElementType(), SE->getSCEV(GEP->getPointerOperand()),
-      IndexExprs, GEP->isInBounds());
+  const SCEV *CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP),
+                                             IndexExprs);
 
   Value *Candidate = findClosestMatchingDominator(CandidateExpr, GEP);
   if (Candidate == nullptr)

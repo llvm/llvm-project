@@ -1386,7 +1386,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     return true;
   }
 
-  if (Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64) {
+  if (Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64 ||
+      Opc == AMDGPU::V_MAD_F16 || Opc == AMDGPU::V_MAC_F16_e64) {
+    bool IsF32 = Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64;
+
     // Don't fold if we are using source modifiers. The new VOP2 instructions
     // don't have them.
     if (hasModifiersSet(UseMI, AMDGPU::OpName::src0_modifiers) ||
@@ -1407,7 +1410,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     MachineOperand *Src1 = getNamedOperand(UseMI, AMDGPU::OpName::src1);
     MachineOperand *Src2 = getNamedOperand(UseMI, AMDGPU::OpName::src2);
 
-    // Multiplied part is the constant: Use v_madmk_f32
+    // Multiplied part is the constant: Use v_madmk_{f16, f32}.
     // We should only expect these to be on src0 due to canonicalizations.
     if (Src0->isReg() && Src0->getReg() == Reg) {
       if (!Src1->isReg() || RI.isSGPRClass(MRI->getRegClass(Src1->getReg())))
@@ -1435,15 +1438,15 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       Src0->setSubReg(Src1SubReg);
       Src0->setIsKill(Src1->isKill());
 
-      if (Opc == AMDGPU::V_MAC_F32_e64) {
+      if (Opc == AMDGPU::V_MAC_F32_e64 ||
+          Opc == AMDGPU::V_MAC_F16_e64)
         UseMI.untieRegOperand(
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2));
-      }
 
       Src1->ChangeToImmediate(Imm);
 
       removeModOperands(UseMI);
-      UseMI.setDesc(get(AMDGPU::V_MADMK_F32));
+      UseMI.setDesc(get(IsF32 ? AMDGPU::V_MADMK_F32 : AMDGPU::V_MADMK_F16));
 
       bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
       if (DeleteDef)
@@ -1452,7 +1455,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       return true;
     }
 
-    // Added part is the constant: Use v_madak_f32
+    // Added part is the constant: Use v_madak_{f16, f32}.
     if (Src2->isReg() && Src2->getReg() == Reg) {
       // Not allowed to use constant bus for another operand.
       // We can however allow an inline immediate as src0.
@@ -1474,17 +1477,17 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       UseMI.RemoveOperand(
           AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp));
 
-      if (Opc == AMDGPU::V_MAC_F32_e64) {
+      if (Opc == AMDGPU::V_MAC_F32_e64 ||
+          Opc == AMDGPU::V_MAC_F16_e64)
         UseMI.untieRegOperand(
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2));
-      }
 
       // ChangingToImmediate adds Src2 back to the instruction.
       Src2->ChangeToImmediate(Imm);
 
       // These come before src2.
       removeModOperands(UseMI);
-      UseMI.setDesc(get(AMDGPU::V_MADAK_F32));
+      UseMI.setDesc(get(IsF32 ? AMDGPU::V_MADAK_F32 : AMDGPU::V_MADAK_F16));
 
       bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
       if (DeleteDef)
@@ -1593,12 +1596,17 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
                                                  MachineInstr &MI,
                                                  LiveVariables *LV) const {
+  bool IsF16 = false;
 
   switch (MI.getOpcode()) {
   default:
     return nullptr;
+  case AMDGPU::V_MAC_F16_e64:
+    IsF16 = true;
   case AMDGPU::V_MAC_F32_e64:
     break;
+  case AMDGPU::V_MAC_F16_e32:
+    IsF16 = true;
   case AMDGPU::V_MAC_F32_e32: {
     const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
     if (Src0->isImm() && !isInlineConstant(*Src0, 4))
@@ -1612,7 +1620,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   const MachineOperand *Src1 = getNamedOperand(MI, AMDGPU::OpName::src1);
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
 
-  return BuildMI(*MBB, MI, MI.getDebugLoc(), get(AMDGPU::V_MAD_F32))
+  return BuildMI(*MBB, MI, MI.getDebugLoc(),
+                 get(IsF16 ? AMDGPU::V_MAD_F16 : AMDGPU::V_MAD_F32))
       .addOperand(*Dst)
       .addImm(0) // Src0 mods
       .addOperand(*Src0)

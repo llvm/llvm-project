@@ -187,6 +187,12 @@ def FeatureScalarStores : SubtargetFeature<"scalar-stores",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
+def FeatureFP16Denormals : SubtargetFeature<"fp16-denormals",
+  "FP16Denormals",
+  "true",
+  "Enable half precision denormal handling"
+>;
+
 // Some instructions do not support denormals despite this flag. Using
 // fp32 denormals also causes instructions to run at the double
 // precision rate for the device.

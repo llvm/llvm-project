@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 
 declare float @llvm.fabs.f32(float) #1
@@ -249,8 +249,10 @@ define void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, float %in) #0 {
 }
 
 ; FUNC-LABEL: {{^}}fp_to_sint_f32_i16:
-; SI: v_cvt_i32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
-; SI: buffer_store_short [[VAL]]
+; SI: v_cvt_i32_f32_e32 v[[VAL:[0-9]+]], s{{[0-9]+}}
+; VI: v_cvt_f16_f32_e32 v[[IN_F16:[0-9]+]], s{{[0-9]+}}
+; VI: v_cvt_i16_f16_e32 v[[VAL:[0-9]+]], v[[IN_F16]]
+; SI: buffer_store_short v[[VAL]]
 define void @fp_to_sint_f32_i16(i16 addrspace(1)* %out, float %in) #0 {
   %sint = fptosi float %in to i16
   store i16 %sint, i16 addrspace(1)* %out
