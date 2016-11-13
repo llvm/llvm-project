@@ -344,12 +344,21 @@ public:
   }
 
   inline uint64_t getArrayNumElements() const;
-  Type *getArrayElementType() const { return getSequentialElementType(); }
+  Type *getArrayElementType() const {
+    assert(getTypeID() == ArrayTyID);
+    return ContainedTys[0];
+  }
 
   inline unsigned getVectorNumElements() const;
-  Type *getVectorElementType() const { return getSequentialElementType(); }
+  Type *getVectorElementType() const {
+    assert(getTypeID() == VectorTyID);
+    return ContainedTys[0];
+  }
 
-  Type *getPointerElementType() const { return getSequentialElementType(); }
+  Type *getPointerElementType() const {
+    assert(getTypeID() == PointerTyID);
+    return ContainedTys[0];
+  }
 
   /// Get the address space of this pointer or pointer vector type.
   inline unsigned getPointerAddressSpace() const;

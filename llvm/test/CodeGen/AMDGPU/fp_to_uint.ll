@@ -240,12 +240,10 @@ define void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, float %in) #0 {
 }
 
 ; FUNC-LABEL: {{^}}fp_to_uint_f32_to_i16:
-; The reason different instructions are used on SI and VI is because for
-; SI fp_to_uint is legalized by the type legalizer and for VI it is
-; legalized by the dag legalizer and they legalize fp_to_uint differently.
-; SI: v_cvt_u32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
-; VI: v_cvt_i32_f32_e32 [[VAL:v[0-9]+]], s{{[0-9]+}}
-; GCN: buffer_store_short [[VAL]]
+; SI: v_cvt_u32_f32_e32 v[[VAL:[0-9]+]], s{{[0-9]+}}
+; VI: v_cvt_f16_f32_e32 v[[IN_F16:[0-9]+]], s{{[0-9]+}}
+; VI: v_cvt_u16_f16_e32 v[[VAL:[0-9]+]], v[[IN_F16]]
+; GCN: buffer_store_short v[[VAL]]
 define void @fp_to_uint_f32_to_i16(i16 addrspace(1)* %out, float %in) #0 {
   %uint = fptoui float %in to i16
   store i16 %uint, i16 addrspace(1)* %out

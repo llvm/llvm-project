@@ -142,9 +142,9 @@ static ExitOnError ExitOnErr;
 static std::unique_ptr<Module> openInputFile(LLVMContext &Context) {
   std::unique_ptr<MemoryBuffer> MB =
       ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
-  std::unique_ptr<Module> M = ExitOnErr(errorOrToExpected(
-      getOwningLazyBitcodeModule(std::move(MB), Context,
-                                 /*ShouldLazyLoadMetadata=*/true)));
+  std::unique_ptr<Module> M =
+      ExitOnErr(getOwningLazyBitcodeModule(std::move(MB), Context,
+                                           /*ShouldLazyLoadMetadata=*/true));
   if (MaterializeMetadata)
     ExitOnErr(M->materializeMetadata());
   else

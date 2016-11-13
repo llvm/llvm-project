@@ -46,6 +46,22 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
 
+  /// \brief Converts \p Op, which must be of floating point type, to the
+  /// floating point type \p VT, by either extending or truncating it.
+  SDValue getFPExtOrFPTrunc(SelectionDAG &DAG,
+                            SDValue Op,
+                            const SDLoc &DL,
+                            EVT VT) const;
+
+  /// \brief Custom lowering for ISD::ConstantFP.
+  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
+
+  /// \brief Custom lowering for ISD::FP_TO_SINT, ISD::FP_TO_UINT.
+  SDValue lowerFpToInt(SDValue Op, SelectionDAG &DAG) const;
+
+  /// \brief Custom lowering for ISD::SINT_TO_FP, ISD::UINT_TO_FP.
+  SDValue lowerIntToFp(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue getSegmentAperture(unsigned AS, SelectionDAG &DAG) const;
   SDValue lowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTRAP(SDValue Op, SelectionDAG &DAG) const;

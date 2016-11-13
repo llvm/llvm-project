@@ -2550,7 +2550,8 @@ unsigned CastInst::isEliminableCastPair(
     case 14:
       // bitcast, addrspacecast -> addrspacecast if the element type of
       // bitcast's source is the same as that of addrspacecast's destination.
-      if (SrcTy->getPointerElementType() == DstTy->getPointerElementType())
+      if (SrcTy->getScalarType()->getPointerElementType() ==
+          DstTy->getScalarType()->getPointerElementType())
         return Instruction::AddrSpaceCast;
       return 0;
 

@@ -55,8 +55,10 @@ static std::unique_ptr<Module> getLazyModuleFromAssembly(LLVMContext &Context,
                                                          SmallString<1024> &Mem,
                                                          const char *Assembly) {
   writeModuleToBuffer(parseAssembly(Context, Assembly), Mem);
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
+  Expected<std::unique_ptr<Module>> ModuleOrErr =
       getLazyBitcodeModule(MemoryBufferRef(Mem.str(), "test"), Context);
+  if (!ModuleOrErr)
+    report_fatal_error("Could not parse bitcode module");
   return std::move(ModuleOrErr.get());
 }
 

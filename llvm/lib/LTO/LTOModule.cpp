@@ -184,18 +184,14 @@ parseBitcodeFileImpl(MemoryBufferRef Buffer, LLVMContext &Context,
 
   if (!ShouldBeLazy) {
     // Parse the full file.
-    ErrorOr<std::unique_ptr<Module>> M = parseBitcodeFile(*MBOrErr, Context);
-    if (std::error_code EC = M.getError())
-      return EC;
-    return std::move(*M);
+    return expectedToErrorOrAndEmitErrors(Context,
+                                          parseBitcodeFile(*MBOrErr, Context));
   }
 
   // Parse lazily.
-  ErrorOr<std::unique_ptr<Module>> M =
-      getLazyBitcodeModule(*MBOrErr, Context, true /*ShouldLazyLoadMetadata*/);
-  if (std::error_code EC = M.getError())
-    return EC;
-  return std::move(*M);
+  return expectedToErrorOrAndEmitErrors(
+      Context,
+      getLazyBitcodeModule(*MBOrErr, Context, true /*ShouldLazyLoadMetadata*/));
 }
 
 ErrorOr<std::unique_ptr<LTOModule>>
