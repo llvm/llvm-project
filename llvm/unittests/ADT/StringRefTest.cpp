@@ -410,21 +410,58 @@ TEST(StringRefTest, ConsumeBack) {
 }
 
 TEST(StringRefTest, Find) {
-  StringRef Str("hello");
-  EXPECT_EQ(2U, Str.find('l'));
-  EXPECT_EQ(StringRef::npos, Str.find('z'));
-  EXPECT_EQ(StringRef::npos, Str.find("helloworld"));
-  EXPECT_EQ(0U, Str.find("hello"));
-  EXPECT_EQ(1U, Str.find("ello"));
-  EXPECT_EQ(StringRef::npos, Str.find("zz"));
-  EXPECT_EQ(2U, Str.find("ll", 2));
-  EXPECT_EQ(StringRef::npos, Str.find("ll", 3));
-  EXPECT_EQ(0U, Str.find(""));
-  StringRef LongStr("hellx xello hell ello world foo bar hello");
-  EXPECT_EQ(36U, LongStr.find("hello"));
-  EXPECT_EQ(28U, LongStr.find("foo"));
-  EXPECT_EQ(12U, LongStr.find("hell", 2));
-  EXPECT_EQ(0U, LongStr.find(""));
+  StringRef Str("helloHELLO");
+  StringRef LongStr("hellx xello hell ello world foo bar hello HELLO");
+
+  struct {
+    StringRef Str;
+    char C;
+    std::size_t From;
+    std::size_t Pos;
+    std::size_t LowerPos;
+  } CharExpectations[] = {
+      {Str, 'h', 0U, 0U, 0U},
+      {Str, 'e', 0U, 1U, 1U},
+      {Str, 'l', 0U, 2U, 2U},
+      {Str, 'l', 3U, 3U, 3U},
+      {Str, 'o', 0U, 4U, 4U},
+      {Str, 'L', 0U, 7U, 2U},
+      {Str, 'z', 0U, StringRef::npos, StringRef::npos},
+  };
+
+  struct {
+    StringRef Str;
+    llvm::StringRef S;
+    std::size_t From;
+    std::size_t Pos;
+    std::size_t LowerPos;
+  } StrExpectations[] = {
+      {Str, "helloword", 0, StringRef::npos, StringRef::npos},
+      {Str, "hello", 0, 0U, 0U},
+      {Str, "ello", 0, 1U, 1U},
+      {Str, "zz", 0, StringRef::npos, StringRef::npos},
+      {Str, "ll", 2U, 2U, 2U},
+      {Str, "ll", 3U, StringRef::npos, 7U},
+      {Str, "LL", 2U, 7U, 2U},
+      {Str, "LL", 3U, 7U, 7U},
+      {Str, "", 0U, 0U, 0U},
+      {LongStr, "hello", 0U, 36U, 36U},
+      {LongStr, "foo", 0U, 28U, 28U},
+      {LongStr, "hell", 2U, 12U, 12U},
+      {LongStr, "HELL", 2U, 42U, 12U},
+      {LongStr, "", 0U, 0U, 0U}};
+
+  for (auto &E : CharExpectations) {
+    EXPECT_EQ(E.Pos, E.Str.find(E.C, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(E.C, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(toupper(E.C), E.From));
+  }
+
+  for (auto &E : StrExpectations) {
+    EXPECT_EQ(E.Pos, E.Str.find(E.S, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(E.S, E.From));
+    EXPECT_EQ(E.LowerPos, E.Str.find_lower(E.S.upper(), E.From));
+  }
 
   EXPECT_EQ(3U, Str.rfind('l'));
   EXPECT_EQ(StringRef::npos, Str.rfind('z'));
@@ -433,10 +470,19 @@ TEST(StringRefTest, Find) {
   EXPECT_EQ(1U, Str.rfind("ello"));
   EXPECT_EQ(StringRef::npos, Str.rfind("zz"));
 
+  EXPECT_EQ(8U, Str.rfind_lower('l'));
+  EXPECT_EQ(8U, Str.rfind_lower('L'));
+  EXPECT_EQ(StringRef::npos, Str.rfind_lower('z'));
+  EXPECT_EQ(StringRef::npos, Str.rfind_lower("HELLOWORLD"));
+  EXPECT_EQ(5U, Str.rfind("HELLO"));
+  EXPECT_EQ(6U, Str.rfind("ELLO"));
+  EXPECT_EQ(StringRef::npos, Str.rfind("ZZ"));
+
   EXPECT_EQ(2U, Str.find_first_of('l'));
   EXPECT_EQ(1U, Str.find_first_of("el"));
   EXPECT_EQ(StringRef::npos, Str.find_first_of("xyz"));
 
+  Str = "hello";
   EXPECT_EQ(1U, Str.find_first_not_of('h'));
   EXPECT_EQ(4U, Str.find_first_not_of("hel"));
   EXPECT_EQ(StringRef::npos, Str.find_first_not_of("hello"));

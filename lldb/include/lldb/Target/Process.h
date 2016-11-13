@@ -214,12 +214,7 @@ public:
     return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
   }
 
-  void SetProcessPluginName(const char *plugin) {
-    if (plugin && plugin[0])
-      m_plugin_name.assign(plugin);
-    else
-      m_plugin_name.clear();
-  }
+  void SetProcessPluginName(llvm::StringRef plugin) { m_plugin_name = plugin; }
 
   void Clear() {
     ProcessInstanceInfo::Clear();
@@ -285,7 +280,7 @@ public:
 
   ~ProcessLaunchCommandOptions() override = default;
 
-  Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                        ExecutionContext *execution_context) override;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {

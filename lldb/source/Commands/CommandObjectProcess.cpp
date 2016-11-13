@@ -337,21 +337,20 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      bool success = false;
       switch (short_option) {
       case 'c':
         attach_info.SetContinueOnceAttached(true);
         break;
 
       case 'p': {
-        lldb::pid_t pid = StringConvert::ToUInt32(
-            option_arg, LLDB_INVALID_PROCESS_ID, 0, &success);
-        if (!success || pid == LLDB_INVALID_PROCESS_ID) {
-          error.SetErrorStringWithFormat("invalid process ID '%s'", option_arg);
+        lldb::pid_t pid;
+        if (option_arg.getAsInteger(0, pid)) {
+          error.SetErrorStringWithFormat("invalid process ID '%s'",
+                                         option_arg.str().c_str());
         } else {
           attach_info.SetProcessID(pid);
         }
@@ -604,18 +603,16 @@ protected:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      bool success = false;
       switch (short_option) {
       case 'i':
-        m_ignore = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-        if (!success)
+        if (option_arg.getAsInteger(0, m_ignore))
           error.SetErrorStringWithFormat(
               "invalid value for ignore option: \"%s\", should be a number.",
-              option_arg);
+              option_arg.str().c_str());
         break;
 
       default:
@@ -755,20 +752,19 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
       switch (short_option) {
       case 's':
         bool tmp_result;
         bool success;
-        tmp_result = Args::StringToBoolean(option_strref, false, &success);
+        tmp_result = Args::StringToBoolean(option_arg, false, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid boolean option: \"%s\"",
-                                         option_arg);
+                                         option_arg.str().c_str());
         else {
           if (tmp_result)
             m_keep_stopped = eLazyBoolYes;
@@ -859,7 +855,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -988,14 +984,14 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
       case 'i':
         do_install = true;
-        if (option_arg && option_arg[0])
+        if (!option_arg.empty())
           install_path.SetFile(option_arg, false);
         break;
       default:
@@ -1382,7 +1378,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;

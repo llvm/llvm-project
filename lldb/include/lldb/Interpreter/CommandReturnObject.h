@@ -91,28 +91,28 @@ public:
 
   void Clear();
 
-  void AppendMessage(const char *in_string);
+  void AppendMessage(llvm::StringRef in_string);
 
   void AppendMessageWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
-  void AppendRawWarning(const char *in_string);
+  void AppendRawWarning(llvm::StringRef in_string);
 
-  void AppendWarning(const char *in_string);
+  void AppendWarning(llvm::StringRef in_string);
 
   void AppendWarningWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
-  void AppendError(const char *in_string);
+  void AppendError(llvm::StringRef in_string);
 
-  void AppendRawError(const char *in_string);
+  void AppendRawError(llvm::StringRef in_string);
 
   void AppendErrorWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
   void SetError(const Error &error, const char *fallback_error_cstr = nullptr);
 
-  void SetError(const char *error_cstr);
+  void SetError(llvm::StringRef error_cstr);
 
   lldb::ReturnStatus GetStatus();
 

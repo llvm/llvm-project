@@ -278,11 +278,11 @@ CommandObjectProxy::CommandObjectProxy(CommandInterpreter &interpreter,
 
 CommandObjectProxy::~CommandObjectProxy() = default;
 
-const char *CommandObjectProxy::GetHelpLong() {
+llvm::StringRef CommandObjectProxy::GetHelpLong() {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->GetHelpLong();
-  return nullptr;
+  return llvm::StringRef();
 }
 
 bool CommandObjectProxy::IsRemovable() const {

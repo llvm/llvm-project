@@ -268,6 +268,16 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx2_psra_w:
   case Intrinsic::x86_avx2_psrai_d:
   case Intrinsic::x86_avx2_psrai_w:
+  case Intrinsic::x86_avx512_psra_q_128:
+  case Intrinsic::x86_avx512_psrai_q_128:
+  case Intrinsic::x86_avx512_psra_q_256:
+  case Intrinsic::x86_avx512_psrai_q_256:
+  case Intrinsic::x86_avx512_psra_d_512:
+  case Intrinsic::x86_avx512_psra_q_512:
+  case Intrinsic::x86_avx512_psra_w_512:
+  case Intrinsic::x86_avx512_psrai_d_512:
+  case Intrinsic::x86_avx512_psrai_q_512:
+  case Intrinsic::x86_avx512_psrai_w_512:
     LogicalShift = false; ShiftLeft = false;
     break;
   case Intrinsic::x86_sse2_psrl_d:
@@ -282,6 +292,12 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx2_psrli_d:
   case Intrinsic::x86_avx2_psrli_q:
   case Intrinsic::x86_avx2_psrli_w:
+  case Intrinsic::x86_avx512_psrl_d_512:
+  case Intrinsic::x86_avx512_psrl_q_512:
+  case Intrinsic::x86_avx512_psrl_w_512:
+  case Intrinsic::x86_avx512_psrli_d_512:
+  case Intrinsic::x86_avx512_psrli_q_512:
+  case Intrinsic::x86_avx512_psrli_w_512:
     LogicalShift = true; ShiftLeft = false;
     break;
   case Intrinsic::x86_sse2_psll_d:
@@ -296,6 +312,12 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   case Intrinsic::x86_avx2_pslli_d:
   case Intrinsic::x86_avx2_pslli_q:
   case Intrinsic::x86_avx2_pslli_w:
+  case Intrinsic::x86_avx512_psll_d_512:
+  case Intrinsic::x86_avx512_psll_q_512:
+  case Intrinsic::x86_avx512_psll_w_512:
+  case Intrinsic::x86_avx512_pslli_d_512:
+  case Intrinsic::x86_avx512_pslli_q_512:
+  case Intrinsic::x86_avx512_pslli_w_512:
     LogicalShift = true; ShiftLeft = true;
     break;
   }
@@ -1776,18 +1798,29 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse2_psrai_w:
   case Intrinsic::x86_avx2_psrai_d:
   case Intrinsic::x86_avx2_psrai_w:
+  case Intrinsic::x86_avx512_psrai_q_128:
+  case Intrinsic::x86_avx512_psrai_q_256:
+  case Intrinsic::x86_avx512_psrai_d_512:
+  case Intrinsic::x86_avx512_psrai_q_512:
+  case Intrinsic::x86_avx512_psrai_w_512:
   case Intrinsic::x86_sse2_psrli_d:
   case Intrinsic::x86_sse2_psrli_q:
   case Intrinsic::x86_sse2_psrli_w:
   case Intrinsic::x86_avx2_psrli_d:
   case Intrinsic::x86_avx2_psrli_q:
   case Intrinsic::x86_avx2_psrli_w:
+  case Intrinsic::x86_avx512_psrli_d_512:
+  case Intrinsic::x86_avx512_psrli_q_512:
+  case Intrinsic::x86_avx512_psrli_w_512:
   case Intrinsic::x86_sse2_pslli_d:
   case Intrinsic::x86_sse2_pslli_q:
   case Intrinsic::x86_sse2_pslli_w:
   case Intrinsic::x86_avx2_pslli_d:
   case Intrinsic::x86_avx2_pslli_q:
   case Intrinsic::x86_avx2_pslli_w:
+  case Intrinsic::x86_avx512_pslli_d_512:
+  case Intrinsic::x86_avx512_pslli_q_512:
+  case Intrinsic::x86_avx512_pslli_w_512:
     if (Value *V = simplifyX86immShift(*II, *Builder))
       return replaceInstUsesWith(*II, V);
     break;
@@ -1796,18 +1829,29 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse2_psra_w:
   case Intrinsic::x86_avx2_psra_d:
   case Intrinsic::x86_avx2_psra_w:
+  case Intrinsic::x86_avx512_psra_q_128:
+  case Intrinsic::x86_avx512_psra_q_256:
+  case Intrinsic::x86_avx512_psra_d_512:
+  case Intrinsic::x86_avx512_psra_q_512:
+  case Intrinsic::x86_avx512_psra_w_512:
   case Intrinsic::x86_sse2_psrl_d:
   case Intrinsic::x86_sse2_psrl_q:
   case Intrinsic::x86_sse2_psrl_w:
   case Intrinsic::x86_avx2_psrl_d:
   case Intrinsic::x86_avx2_psrl_q:
   case Intrinsic::x86_avx2_psrl_w:
+  case Intrinsic::x86_avx512_psrl_d_512:
+  case Intrinsic::x86_avx512_psrl_q_512:
+  case Intrinsic::x86_avx512_psrl_w_512:
   case Intrinsic::x86_sse2_psll_d:
   case Intrinsic::x86_sse2_psll_q:
   case Intrinsic::x86_sse2_psll_w:
   case Intrinsic::x86_avx2_psll_d:
   case Intrinsic::x86_avx2_psll_q:
-  case Intrinsic::x86_avx2_psll_w: {
+  case Intrinsic::x86_avx2_psll_w:
+  case Intrinsic::x86_avx512_psll_d_512:
+  case Intrinsic::x86_avx512_psll_q_512:
+  case Intrinsic::x86_avx512_psll_w_512: {
     if (Value *V = simplifyX86immShift(*II, *Builder))
       return replaceInstUsesWith(*II, V);
 

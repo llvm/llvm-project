@@ -178,11 +178,10 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
-      llvm::StringRef option_strref(option_arg ? option_arg : "");
 
       switch (short_option) {
       case 'a': {
@@ -199,14 +198,11 @@ public:
         m_func_name_type_mask |= eFunctionNameTypeBase;
         break;
 
-      case 'C': {
-        bool success;
-        m_column = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-        if (!success)
+      case 'C':
+        if (option_arg.getAsInteger(0, m_column))
           error.SetErrorStringWithFormat("invalid column number: %s",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
-      }
 
       case 'c':
         m_condition.assign(option_arg);
@@ -217,8 +213,7 @@ public:
         break;
 
       case 'E': {
-        LanguageType language =
-            Language::GetLanguageTypeFromString(option_strref);
+        LanguageType language = Language::GetLanguageTypeFromString(option_arg);
 
         switch (language) {
         case eLanguageTypeC89:
@@ -243,12 +238,12 @@ public:
         case eLanguageTypeUnknown:
           error.SetErrorStringWithFormat(
               "Unknown language type: '%s' for exception breakpoint",
-              option_arg);
+              option_arg.str().c_str());
           break;
         default:
           error.SetErrorStringWithFormat(
               "Unsupported language type: '%s' for exception breakpoint",
-              option_arg);
+              option_arg.str().c_str());
         }
       } break;
 
@@ -263,10 +258,11 @@ public:
 
       case 'h': {
         bool success;
-        m_catch_bp = Args::StringToBoolean(option_strref, true, &success);
+        m_catch_bp = Args::StringToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat(
-              "Invalid boolean value for on-catch option: '%s'", option_arg);
+              "Invalid boolean value for on-catch option: '%s'",
+              option_arg.str().c_str());
       } break;
 
       case 'H':
@@ -274,16 +270,15 @@ public:
         break;
 
       case 'i':
-        m_ignore_count = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
-        if (m_ignore_count == UINT32_MAX)
+        if (option_arg.getAsInteger(0, m_ignore_count))
           error.SetErrorStringWithFormat("invalid ignore count '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'K': {
         bool success;
         bool value;
-        value = Args::StringToBoolean(option_strref, true, &success);
+        value = Args::StringToBoolean(option_arg, true, &success);
         if (value)
           m_skip_prologue = eLazyBoolYes;
         else
@@ -292,29 +287,27 @@ public:
         if (!success)
           error.SetErrorStringWithFormat(
               "Invalid boolean value for skip prologue option: '%s'",
-              option_arg);
+              option_arg.str().c_str());
       } break;
 
-      case 'l': {
-        bool success;
-        m_line_num = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-        if (!success)
+      case 'l':
+        if (option_arg.getAsInteger(0, m_line_num))
           error.SetErrorStringWithFormat("invalid line number: %s.",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
-      }
 
       case 'L':
-        m_language = Language::GetLanguageTypeFromString(option_strref);
+        m_language = Language::GetLanguageTypeFromString(option_arg);
         if (m_language == eLanguageTypeUnknown)
           error.SetErrorStringWithFormat(
-              "Unknown language type: '%s' for breakpoint", option_arg);
+              "Unknown language type: '%s' for breakpoint",
+              option_arg.str().c_str());
         break;
 
       case 'm': {
         bool success;
         bool value;
-        value = Args::StringToBoolean(option_strref, true, &success);
+        value = Args::StringToBoolean(option_arg, true, &success);
         if (value)
           m_move_to_nearest_code = eLazyBoolYes;
         else
@@ -323,7 +316,7 @@ public:
         if (!success)
           error.SetErrorStringWithFormat(
               "Invalid boolean value for move-to-nearest-code option: '%s'",
-              option_arg);
+              option_arg.str().c_str());
         break;
       }
 
@@ -338,11 +331,11 @@ public:
         break;
 
       case 'N': {
-        if (BreakpointID::StringIsBreakpointName(option_strref, error))
+        if (BreakpointID::StringIsBreakpointName(option_arg, error))
           m_breakpoint_names.push_back(option_arg);
         else
           error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
       }
 
@@ -359,8 +352,8 @@ public:
         break;
 
       case 'O':
-        m_exception_extra_args.AppendArgument(llvm::StringRef("-O"));
-        m_exception_extra_args.AppendArgument(option_strref);
+        m_exception_extra_args.AppendArgument("-O");
+        m_exception_extra_args.AppendArgument(option_arg);
         break;
 
       case 'p':
@@ -385,11 +378,9 @@ public:
         break;
 
       case 't':
-        m_thread_id =
-            StringConvert::ToUInt64(option_arg, LLDB_INVALID_THREAD_ID, 0);
-        if (m_thread_id == LLDB_INVALID_THREAD_ID)
+        if (option_arg.getAsInteger(0, m_thread_id))
           error.SetErrorStringWithFormat("invalid thread id string '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'T':
@@ -398,17 +389,17 @@ public:
 
       case 'w': {
         bool success;
-        m_throw_bp = Args::StringToBoolean(option_strref, true, &success);
+        m_throw_bp = Args::StringToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat(
-              "Invalid boolean value for on-throw option: '%s'", option_arg);
+              "Invalid boolean value for on-throw option: '%s'",
+              option_arg.str().c_str());
       } break;
 
       case 'x':
-        m_thread_index = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
-        if (m_thread_id == UINT32_MAX)
+        if (option_arg.getAsInteger(0, m_thread_index))
           error.SetErrorStringWithFormat("invalid thread index string '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
 
       case 'X':
@@ -853,17 +844,14 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'c':
-        if (option_arg != nullptr)
-          m_condition.assign(option_arg);
-        else
-          m_condition.clear();
+        m_condition = option_arg;
         m_condition_passed = true;
         break;
       case 'd':
@@ -878,48 +866,39 @@ public:
         m_enable_value = true;
         break;
       case 'i':
-        m_ignore_count = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
-        if (m_ignore_count == UINT32_MAX)
+        if (option_arg.getAsInteger(0, m_ignore_count))
           error.SetErrorStringWithFormat("invalid ignore count '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
       case 'o': {
         bool value, success;
-        value = Args::StringToBoolean(
-            llvm::StringRef::withNullAsEmpty(option_arg), false, &success);
+        value = Args::StringToBoolean(option_arg, false, &success);
         if (success) {
           m_one_shot_passed = true;
           m_one_shot = value;
         } else
           error.SetErrorStringWithFormat(
-              "invalid boolean value '%s' passed for -o option", option_arg);
+              "invalid boolean value '%s' passed for -o option",
+              option_arg.str().c_str());
       } break;
       case 't':
         if (option_arg[0] == '\0') {
           m_thread_id = LLDB_INVALID_THREAD_ID;
           m_thread_id_passed = true;
         } else {
-          m_thread_id =
-              StringConvert::ToUInt64(option_arg, LLDB_INVALID_THREAD_ID, 0);
-          if (m_thread_id == LLDB_INVALID_THREAD_ID)
+          if (option_arg.getAsInteger(0, m_thread_id))
             error.SetErrorStringWithFormat("invalid thread id string '%s'",
-                                           option_arg);
+                                           option_arg.str().c_str());
           else
             m_thread_id_passed = true;
         }
         break;
       case 'T':
-        if (option_arg != nullptr)
-          m_thread_name.assign(option_arg);
-        else
-          m_thread_name.clear();
+        m_thread_name = option_arg;
         m_name_passed = true;
         break;
       case 'q':
-        if (option_arg != nullptr)
-          m_queue_name.assign(option_arg);
-        else
-          m_queue_name.clear();
+        m_queue_name = option_arg;
         m_queue_passed = true;
         break;
       case 'x':
@@ -927,10 +906,9 @@ public:
           m_thread_index = UINT32_MAX;
           m_thread_index_passed = true;
         } else {
-          m_thread_index = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
-          if (m_thread_id == UINT32_MAX)
+          if (option_arg.getAsInteger(0, m_thread_index))
             error.SetErrorStringWithFormat("invalid thread index string '%s'",
-                                           option_arg);
+                                           option_arg.str().c_str());
           else
             m_thread_index_passed = true;
         }
@@ -1327,7 +1305,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -1474,7 +1452,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -1485,7 +1463,7 @@ public:
         break;
 
       case 'l':
-        m_line_num = StringConvert::ToUInt32(option_arg, 0);
+        option_arg.getAsInteger(0, m_line_num);
         break;
 
       default:
@@ -1633,7 +1611,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -1773,29 +1751,29 @@ public:
     return llvm::makeArrayRef(g_breakpoint_name_options);
   }
 
-  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+  Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                        ExecutionContext *execution_context) override {
     Error error;
     const int short_option = g_breakpoint_name_options[option_idx].short_option;
 
     switch (short_option) {
     case 'N':
-      if (BreakpointID::StringIsBreakpointName(option_value, error) &&
+      if (BreakpointID::StringIsBreakpointName(option_arg, error) &&
           error.Success())
-        m_name.SetValueFromString(option_value);
+        m_name.SetValueFromString(option_arg);
       break;
 
     case 'B':
-      if (m_breakpoint.SetValueFromString(option_value).Fail())
+      if (m_breakpoint.SetValueFromString(option_arg).Fail())
         error.SetErrorStringWithFormat(
             "unrecognized value \"%s\" for breakpoint",
-            option_value.str().c_str());
+            option_arg.str().c_str());
       break;
     case 'D':
-      if (m_use_dummy.SetValueFromString(option_value).Fail())
+      if (m_use_dummy.SetValueFromString(option_arg).Fail())
         error.SetErrorStringWithFormat(
             "unrecognized value \"%s\" for use-dummy",
-            option_value.str().c_str());
+            option_arg.str().c_str());
       break;
 
     default:
@@ -1805,7 +1783,6 @@ public:
     }
     return error;
   }
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_name.Clear();
@@ -2116,7 +2093,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -2246,7 +2223,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;

@@ -33,21 +33,22 @@ using namespace lldb;
 using namespace lldb_private;
 
 ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
-                                        const char *name,
+                                        llvm::StringRef name,
                                         const Address &address,
                                         lldb::TypeSP &type_sp) {
   return (new ValueObjectMemory(exe_scope, name, address, type_sp))->GetSP();
 }
 
 ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
-                                        const char *name,
+                                        llvm::StringRef name,
                                         const Address &address,
                                         const CompilerType &ast_type) {
   return (new ValueObjectMemory(exe_scope, name, address, ast_type))->GetSP();
 }
 
 ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
-                                     const char *name, const Address &address,
+                                     llvm::StringRef name,
+                                     const Address &address,
                                      lldb::TypeSP &type_sp)
     : ValueObject(exe_scope), m_address(address), m_type_sp(type_sp),
       m_compiler_type() {
@@ -73,7 +74,8 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
 }
 
 ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
-                                     const char *name, const Address &address,
+                                     llvm::StringRef name,
+                                     const Address &address,
                                      const CompilerType &ast_type)
     : ValueObject(exe_scope), m_address(address), m_type_sp(),
       m_compiler_type(ast_type) {

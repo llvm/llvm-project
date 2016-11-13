@@ -69,6 +69,11 @@ bool StringRef::endswith_lower(StringRef Suffix) const {
       ascii_strncasecmp(end() - Suffix.Length, Suffix.Data, Suffix.Length) == 0;
 }
 
+size_t StringRef::find_lower(char C, size_t From) const {
+  char L = ascii_tolower(C);
+  return find_if([L](char D) { return ascii_tolower(D) == L; }, From);
+}
+
 /// compare_numeric - Compare strings, handle embedded numbers.
 int StringRef::compare_numeric(StringRef RHS) const {
   for (size_t I = 0, E = std::min(Length, RHS.Length); I != E; ++I) {
@@ -182,6 +187,28 @@ size_t StringRef::find(StringRef Str, size_t From) const {
   return npos;
 }
 
+size_t StringRef::find_lower(StringRef Str, size_t From) const {
+  StringRef This = substr(From);
+  while (This.size() >= Str.size()) {
+    if (This.startswith_lower(Str))
+      return From;
+    This = This.drop_front();
+    ++From;
+  }
+  return npos;
+}
+
+size_t StringRef::rfind_lower(char C, size_t From) const {
+  From = std::min(From, Length);
+  size_t i = From;
+  while (i != 0) {
+    --i;
+    if (ascii_tolower(Data[i]) == ascii_tolower(C))
+      return i;
+  }
+  return npos;
+}
+
 /// rfind - Search for the last string \arg Str in the string.
 ///
 /// \return - The index of the last occurrence of \arg Str, or npos if not
@@ -193,6 +220,18 @@ size_t StringRef::rfind(StringRef Str) const {
   for (size_t i = Length - N + 1, e = 0; i != e;) {
     --i;
     if (substr(i, N).equals(Str))
+      return i;
+  }
+  return npos;
+}
+
+size_t StringRef::rfind_lower(StringRef Str) const {
+  size_t N = Str.size();
+  if (N > Length)
+    return npos;
+  for (size_t i = Length - N + 1, e = 0; i != e;) {
+    --i;
+    if (substr(i, N).equals_lower(Str))
       return i;
   }
   return npos;

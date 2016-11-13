@@ -664,6 +664,8 @@ def skipUnlessThreadSanitizer(func):
         compiler = os.path.basename(compiler_path)
         if not compiler.startswith("clang"):
             return "Test requires clang as compiler"
+        if lldbplatformutil.getPlatform() == 'windows':
+            return "TSAN tests not compatible with 'windows'"
         # rdar://28659145 - TSAN tests don't look like they're supported on i386
         if self.getArchitecture() == 'i386' and platform.system() == 'Darwin':
             return "TSAN tests not compatible with i386 targets"
@@ -684,6 +686,8 @@ def skipUnlessAddressSanitizer(func):
         compiler_path = self.getCompiler()
         compiler = os.path.basename(compiler_path)
         f = tempfile.NamedTemporaryFile()
+        if lldbplatformutil.getPlatform() == 'windows':
+            return "ASAN tests not compatible with 'windows'"
         cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
         if os.popen(cmd).close() is not None:
             return None  # The compiler cannot compile at all, let's *not* skip the test

@@ -1,5 +1,4 @@
-//===-- ClangUserExpression.cpp -------------------------------------*- C++
-//-*-===//
+//===-- ClangUserExpression.cpp ----------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -63,8 +62,8 @@ ClangUtilityFunction::~ClangUtilityFunction() {}
 bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx) {
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityWarning,
-                                  "already installed");
+    diagnostic_manager.PutString(eDiagnosticSeverityWarning,
+                                 "already installed");
     return false;
   }
 
@@ -75,14 +74,14 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
   Target *target = exe_ctx.GetTargetPtr();
 
   if (!target) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError, "invalid target");
+    diagnostic_manager.PutString(eDiagnosticSeverityError, "invalid target");
     return false;
   }
 
   Process *process = exe_ctx.GetProcessPtr();
 
   if (!process) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError, "invalid process");
+    diagnostic_manager.PutString(eDiagnosticSeverityError, "invalid process");
     return false;
   }
 
@@ -95,7 +94,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
   ResetDeclMap(exe_ctx, keep_result_in_memory);
 
   if (!DeclMap()->WillParse(exe_ctx, NULL)) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "current process state is unsuitable for expression parsing");
     return false;
@@ -159,8 +158,8 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
     if (error_cstr && error_cstr[0]) {
       diagnostic_manager.Printf(eDiagnosticSeverityError, "%s", error_cstr);
     } else {
-      diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                    "expression can't be interpreted or run");
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                   "expression can't be interpreted or run");
     }
     return false;
   }

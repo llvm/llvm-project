@@ -66,13 +66,13 @@ size_t FindLongestCommandWord(std::map<std::string, ValueType> &dict) {
 
 class CommandObject {
 public:
-  typedef const char *(ArgumentHelpCallbackFunction)();
+  typedef llvm::StringRef(ArgumentHelpCallbackFunction)();
 
   struct ArgumentHelpCallback {
     ArgumentHelpCallbackFunction *help_callback;
     bool self_formatting;
 
-    const char *operator()() const { return (*help_callback)(); }
+    llvm::StringRef operator()() const { return (*help_callback)(); }
 
     explicit operator bool() const { return (help_callback != nullptr); }
   };
@@ -122,19 +122,19 @@ public:
 
   CommandInterpreter &GetCommandInterpreter() { return m_interpreter; }
 
-  virtual const char *GetHelp();
+  virtual llvm::StringRef GetHelp();
 
-  virtual const char *GetHelpLong();
+  virtual llvm::StringRef GetHelpLong();
 
-  virtual const char *GetSyntax();
+  virtual llvm::StringRef GetSyntax();
 
   llvm::StringRef GetCommandName() const;
 
-  virtual void SetHelp(const char *str);
+  virtual void SetHelp(llvm::StringRef str);
 
-  virtual void SetHelpLong(const char *str);
+  virtual void SetHelpLong(llvm::StringRef str);
 
-  void SetSyntax(const char *str);
+  void SetSyntax(llvm::StringRef str);
 
   // override this to return true if you want to enable the user to delete
   // the Command object from the Command dictionary (aliases have their own
@@ -167,7 +167,7 @@ public:
                                      StringList &commands_found,
                                      StringList &commands_help) {}
 
-  void FormatLongHelpText(Stream &output_strm, const char *long_help);
+  void FormatLongHelpText(Stream &output_strm, llvm::StringRef long_help);
 
   void GenerateHelpText(CommandReturnObject &result);
 
@@ -219,7 +219,7 @@ public:
 
   bool ParseOptions(Args &args, CommandReturnObject &result);
 
-  void SetCommandName(const char *name);
+  void SetCommandName(llvm::StringRef name);
 
   //------------------------------------------------------------------
   /// The input array contains a parsed version of the line.  The insertion

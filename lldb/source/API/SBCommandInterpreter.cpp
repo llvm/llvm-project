@@ -542,11 +542,13 @@ const char *SBCommand::GetName() {
 }
 
 const char *SBCommand::GetHelp() {
-  return (IsValid() ? m_opaque_sp->GetHelp() : nullptr);
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString()
+                    : nullptr);
 }
 
 const char *SBCommand::GetHelpLong() {
-  return (IsValid() ? m_opaque_sp->GetHelpLong() : nullptr);
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString()
+                    : nullptr);
 }
 
 void SBCommand::SetHelp(const char *help) {

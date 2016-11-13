@@ -71,7 +71,7 @@ bool CommandObjectRegexCommand::DoExecute(const char *command,
       }
     }
     result.SetStatus(eReturnStatusFailed);
-    if (GetSyntax() != nullptr)
+    if (!GetSyntax().empty())
       result.AppendError(GetSyntax());
     else
       result.AppendErrorWithFormat("Command contents '%s' failed to match any "

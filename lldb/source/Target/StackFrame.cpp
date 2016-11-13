@@ -1595,7 +1595,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
         name_str.append("()");
         Address return_value_address(return_value.GetAsUInt64());
         ValueObjectSP return_value_sp = ValueObjectMemory::Create(
-            &frame, name_str.c_str(), return_value_address, return_type);
+            &frame, name_str, return_value_address, return_type);
         return GetValueForDereferincingOffset(frame, return_value_sp, offset);
       }
       }

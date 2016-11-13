@@ -97,7 +97,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       llvm::Function *function = m_execution_unit_sp->GetFunction();
 
       if (!module || !function) {
-        diagnostic_manager.PutCString(
+        diagnostic_manager.PutString(
             eDiagnosticSeverityError,
             "supposed to interpret, but nothing is there");
         return lldb::eExpressionSetupError;
@@ -153,7 +153,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
       StreamString ss;
       if (!call_plan_sp || !call_plan_sp->ValidatePlan(&ss)) {
-        diagnostic_manager.PutCString(eDiagnosticSeverityError, ss.GetData());
+        diagnostic_manager.PutString(eDiagnosticSeverityError, ss.GetData());
         return lldb::eExpressionSetupError;
       }
 
@@ -198,8 +198,8 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
                                     "Execution was interrupted, reason: %s.",
                                     error_desc);
         else
-          diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                        "Execution was interrupted.");
+          diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                       "Execution was interrupted.");
 
         if ((execution_result == lldb::eExpressionInterrupted &&
              options.DoesUnwindOnError()) ||
@@ -220,7 +220,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
         return execution_result;
       } else if (execution_result == lldb::eExpressionStoppedForDebug) {
-        diagnostic_manager.PutCString(
+        diagnostic_manager.PutString(
             eDiagnosticSeverityRemark,
             "Execution was halted at the first instruction of the expression "
             "function because \"debug\" was requested.\n"
@@ -243,7 +243,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       return lldb::eExpressionResultUnavailable;
     }
   } else {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "Expression can't be run, because there is no JIT compiled function");
     return lldb::eExpressionSetupError;
@@ -298,7 +298,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   lldb::StackFrameSP frame;
 
   if (!LockAndCheckContext(exe_ctx, target, process, frame)) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "The context has changed before we could JIT the expression!");
     return false;
