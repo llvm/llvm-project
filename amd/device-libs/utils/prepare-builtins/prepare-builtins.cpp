@@ -54,10 +54,11 @@ int main(int argc, char **argv) {
       ErrorMessage = ec.message();
     else {
       std::unique_ptr<MemoryBuffer> &BufferPtr = BufferOrErr.get();
-      ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
+      Expected<std::unique_ptr<Module>> ModuleOrErr =
           parseBitcodeFile(BufferPtr.get()->getMemBufferRef(), Context);
-      if (std::error_code ec = ModuleOrErr.getError())
-        ErrorMessage = ec.message();
+      if (Error Err = ModuleOrErr.takeError()) {
+        ErrorMessage = toString(std::move(Err));
+      }
       else
         M = ModuleOrErr.get().release();
     }
