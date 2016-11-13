@@ -72,10 +72,9 @@ namespace reference {
   }
 
   void edge_cases() {
-    // FIXME: very poor error message
-    int const &b({0}); // expected-error {{could not bind}}
+    int const &b({0}); // expected-error {{list-initializer for non-class type 'const int &' must not be parenthesized}}
+    const int (&arr)[3] ({1, 2, 3}); // expected-error {{list-initializer for non-class type 'const int (&)[3]' must not be parenthesized}}
   }
-
 }
 
 namespace PR12182 {
