@@ -16,6 +16,8 @@ config.executor                 = "@LIBCXXABI_EXECUTOR@"
 config.libcxxabi_shared         = "@LIBCXXABI_ENABLE_SHARED@"
 config.enable_shared            = "@LIBCXX_ENABLE_SHARED@"
 config.enable_exceptions        = "@LIBCXXABI_ENABLE_EXCEPTIONS@"
+config.host_triple              = "@LLVM_HOST_TRIPLE@"
+config.target_triple            = "@TARGET_TRIPLE@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBCXXABI_SOURCE_DIR@/test/lit.cfg")
