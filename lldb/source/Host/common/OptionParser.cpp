@@ -28,7 +28,7 @@ void OptionParser::Prepare(std::unique_lock<std::mutex> &lock) {
 
 void OptionParser::EnableError(bool error) { opterr = error ? 1 : 0; }
 
-int OptionParser::Parse(int argc, char *const argv[], const char *optstring,
+int OptionParser::Parse(int argc, char *const argv[], llvm::StringRef optstring,
                         const Option *longopts, int *longindex) {
   std::vector<option> opts;
   while (longopts->definition != nullptr) {
@@ -41,7 +41,8 @@ int OptionParser::Parse(int argc, char *const argv[], const char *optstring,
     ++longopts;
   }
   opts.push_back(option());
-  return getopt_long_only(argc, argv, optstring, &opts[0], longindex);
+  std::string opt_cstr = optstring;
+  return getopt_long_only(argc, argv, opt_cstr.c_str(), &opts[0], longindex);
 }
 
 char *OptionParser::GetOptionArgument() { return optarg; }

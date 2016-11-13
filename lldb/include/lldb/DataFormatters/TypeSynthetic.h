@@ -90,15 +90,16 @@ public:
 
 protected:
   lldb::ValueObjectSP
-  CreateValueObjectFromExpression(const char *name, const char *expression,
+  CreateValueObjectFromExpression(llvm::StringRef name,
+                                  llvm::StringRef expression,
                                   const ExecutionContext &exe_ctx);
 
   lldb::ValueObjectSP
-  CreateValueObjectFromAddress(const char *name, uint64_t address,
+  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
                                CompilerType type);
 
-  lldb::ValueObjectSP CreateValueObjectFromData(const char *name,
+  lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
                                                 const DataExtractor &data,
                                                 const ExecutionContext &exe_ctx,
                                                 CompilerType type);

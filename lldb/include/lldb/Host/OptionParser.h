@@ -13,6 +13,8 @@
 #include <mutex>
 #include <string>
 
+#include "llvm/ADT/StringRef.h"
+
 struct option;
 
 namespace lldb_private {
@@ -36,7 +38,7 @@ public:
 
   static void EnableError(bool error);
 
-  static int Parse(int argc, char *const argv[], const char *optstring,
+  static int Parse(int argc, char *const argv[], llvm::StringRef optstring,
                    const Option *longopts, int *longindex);
 
   static char *GetOptionArgument();

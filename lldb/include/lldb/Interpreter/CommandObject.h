@@ -152,18 +152,18 @@ public:
   // hint to the help system that one cannot pass options to this command
   virtual bool IsDashDashCommand() { return false; }
 
-  virtual lldb::CommandObjectSP GetSubcommandSP(const char *sub_cmd,
+  virtual lldb::CommandObjectSP GetSubcommandSP(llvm::StringRef sub_cmd,
                                                 StringList *matches = nullptr) {
     return lldb::CommandObjectSP();
   }
 
-  virtual CommandObject *GetSubcommandObject(const char *sub_cmd,
+  virtual CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                              StringList *matches = nullptr) {
     return nullptr;
   }
 
-  virtual void AproposAllSubCommands(const char *prefix,
-                                     const char *search_word,
+  virtual void AproposAllSubCommands(llvm::StringRef prefix,
+                                     llvm::StringRef search_word,
                                      StringList &commands_found,
                                      StringList &commands_help) {}
 
@@ -177,7 +177,7 @@ public:
   // transparently try and load subcommands - it will fail on
   // anything but a multiword command, but it avoids us doing
   // type checkings and casts
-  virtual bool LoadSubCommand(const char *cmd_name,
+  virtual bool LoadSubCommand(llvm::StringRef cmd_name,
                               const lldb::CommandObjectSP &command_obj) {
     return false;
   }
@@ -324,7 +324,7 @@ public:
     return 0;
   }
 
-  bool HelpTextContainsWord(const char *search_word,
+  bool HelpTextContainsWord(llvm::StringRef search_word,
                             bool search_short_help = true,
                             bool search_long_help = true,
                             bool search_syntax = true,

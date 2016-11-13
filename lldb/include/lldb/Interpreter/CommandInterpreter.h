@@ -367,9 +367,8 @@ public:
   const char *ProcessEmbeddedScriptCommands(const char *arg);
 
   void UpdatePrompt(llvm::StringRef prompt);
-  void UpdatePrompt(const char *) = delete;
 
-  bool Confirm(const char *message, bool default_answer);
+  bool Confirm(llvm::StringRef message, bool default_answer);
 
   void LoadCommandDictionary();
 

@@ -316,7 +316,7 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
   }
 }
 
-bool CommandObject::HelpTextContainsWord(const char *search_word,
+bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
                                          bool search_syntax,
@@ -341,9 +341,9 @@ bool CommandObject::HelpTextContainsWord(const char *search_word,
     GetOptions()->GenerateOptionUsage(
         usage_help, this,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-    if (usage_help.GetSize() > 0) {
-      const char *usage_text = usage_help.GetData();
-      if (strcasestr(usage_text, search_word))
+    if (!usage_help.Empty()) {
+      llvm::StringRef usage_text = usage_help.GetString();
+      if (usage_text.contains_lower(search_word))
         found_word = true;
     }
   }
