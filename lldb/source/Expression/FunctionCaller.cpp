@@ -1,5 +1,4 @@
-//===-- FunctionCaller.cpp ---------------------------------------*- C++
-//-*-===//
+//===-- FunctionCaller.cpp ---------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -130,9 +129,9 @@ bool FunctionCaller::WriteFunctionArguments(
   // All the information to reconstruct the struct is provided by the
   // StructExtractor.
   if (!m_struct_valid) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                  "Argument information was not correctly "
-                                  "parsed, so the function cannot be called.");
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "Argument information was not correctly "
+                                 "parsed, so the function cannot be called.");
     return false;
   }
 
@@ -243,7 +242,7 @@ lldb::ThreadPlanSP FunctionCaller::GetThreadPlanToCallFunction(
   // FIXME: Use the errors Stream for better error reporting.
   Thread *thread = exe_ctx.GetThreadPtr();
   if (thread == NULL) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "Can't call a function without a valid thread.");
     return NULL;

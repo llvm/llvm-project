@@ -38,18 +38,19 @@ public:
 
   CommandObjectMultiword *GetAsMultiwordCommand() override { return this; }
 
-  bool LoadSubCommand(const char *cmd_name,
+  bool LoadSubCommand(llvm::StringRef cmd_name,
                       const lldb::CommandObjectSP &command_obj) override;
 
   void GenerateHelpText(Stream &output_stream) override;
 
-  lldb::CommandObjectSP GetSubcommandSP(const char *sub_cmd,
+  lldb::CommandObjectSP GetSubcommandSP(llvm::StringRef sub_cmd,
                                         StringList *matches = nullptr) override;
 
-  CommandObject *GetSubcommandObject(const char *sub_cmd,
+  CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                      StringList *matches = nullptr) override;
 
-  void AproposAllSubCommands(const char *prefix, const char *search_word,
+  void AproposAllSubCommands(llvm::StringRef prefix,
+                             llvm::StringRef search_word,
                              StringList &commands_found,
                              StringList &commands_help) override;
 
@@ -90,7 +91,7 @@ public:
   // used for this object.
   virtual CommandObject *GetProxyCommandObject() = 0;
 
-  const char *GetHelpLong() override;
+  llvm::StringRef GetHelpLong() override;
 
   bool IsRemovable() const override;
 
@@ -100,17 +101,18 @@ public:
 
   void GenerateHelpText(Stream &result) override;
 
-  lldb::CommandObjectSP GetSubcommandSP(const char *sub_cmd,
+  lldb::CommandObjectSP GetSubcommandSP(llvm::StringRef sub_cmd,
                                         StringList *matches = nullptr) override;
 
-  CommandObject *GetSubcommandObject(const char *sub_cmd,
+  CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                      StringList *matches = nullptr) override;
 
-  void AproposAllSubCommands(const char *prefix, const char *search_word,
+  void AproposAllSubCommands(llvm::StringRef prefix,
+                             llvm::StringRef search_word,
                              StringList &commands_found,
                              StringList &commands_help) override;
 
-  bool LoadSubCommand(const char *cmd_name,
+  bool LoadSubCommand(llvm::StringRef cmd_name,
                       const lldb::CommandObjectSP &command_obj) override;
 
   bool WantsRawCommandString() override;

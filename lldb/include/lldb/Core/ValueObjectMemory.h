@@ -28,11 +28,13 @@ public:
   ~ValueObjectMemory() override;
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    const char *name, const Address &address,
+                                    llvm::StringRef name,
+                                    const Address &address,
                                     lldb::TypeSP &type_sp);
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    const char *name, const Address &address,
+                                    llvm::StringRef name,
+                                    const Address &address,
                                     const CompilerType &ast_type);
 
   uint64_t GetByteSize() override;
@@ -59,10 +61,10 @@ protected:
   CompilerType m_compiler_type;
 
 private:
-  ValueObjectMemory(ExecutionContextScope *exe_scope, const char *name,
+  ValueObjectMemory(ExecutionContextScope *exe_scope, llvm::StringRef name,
                     const Address &address, lldb::TypeSP &type_sp);
 
-  ValueObjectMemory(ExecutionContextScope *exe_scope, const char *name,
+  ValueObjectMemory(ExecutionContextScope *exe_scope, llvm::StringRef name,
                     const Address &address, const CompilerType &ast_type);
   //------------------------------------------------------------------
   // For ValueObject only

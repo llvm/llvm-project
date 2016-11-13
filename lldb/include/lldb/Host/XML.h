@@ -139,7 +139,7 @@ public:
   //----------------------------------------------------------------------
   XMLNode GetRootElement(const char *required_name = nullptr);
 
-  const std::string &GetErrors() const;
+  llvm::StringRef GetErrors() const;
 
   static void ErrorCallback(void *ctx, const char *format, ...);
 
@@ -160,7 +160,7 @@ public:
 
   bool ParseFile(const char *path);
 
-  const std::string &GetErrors() const;
+  llvm::StringRef GetErrors() const;
 
   explicit operator bool() const { return IsValid(); }
 

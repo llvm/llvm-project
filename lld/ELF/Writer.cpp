@@ -267,7 +267,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Out<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
 
   // Initialize linker generated sections
-  Symtab<ELFT>::X->Sections.push_back(createCommentSection<ELFT>());
+  if (!Config->Relocatable)
+    Symtab<ELFT>::X->Sections.push_back(createCommentSection<ELFT>());
 
   if (Config->BuildId == BuildIdKind::Fast)
     In<ELFT>::BuildId = make<BuildIdFastHash<ELFT>>();
@@ -777,6 +778,10 @@ static bool canSharePtLoad(const OutputSectionBase &S1,
 }
 
 template <class ELFT> void Writer<ELFT>::sortSections() {
+  // Don't sort if using -r. It is not necessary and we want to preserve the
+  // relative order for SHF_LINK_ORDER sections.
+  if (Config->Relocatable)
+    return;
   if (!ScriptConfig->HasSections) {
     std::stable_sort(OutputSections.begin(), OutputSections.end(),
                      compareSectionsNonScript<ELFT>);

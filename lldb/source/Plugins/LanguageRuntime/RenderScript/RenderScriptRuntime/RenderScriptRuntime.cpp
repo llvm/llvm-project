@@ -4155,23 +4155,23 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_val,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *exe_ctx) override {
       Error err;
       StreamString err_str;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
       case 't':
-        if (!ParseReductionTypes(option_val, err_str))
+        if (!ParseReductionTypes(option_arg, err_str))
           err.SetErrorStringWithFormat(
-              "Unable to deduce reduction types for %s: %s", option_val,
-              err_str.GetData());
+              "Unable to deduce reduction types for %s: %s",
+              option_arg.str().c_str(), err_str.GetData());
         break;
       case 'c': {
         auto coord = RSCoordinate{};
-        if (!ParseCoordinate(option_val, coord))
+        if (!ParseCoordinate(option_arg, coord))
           err.SetErrorStringWithFormat("unable to parse coordinate for %s",
-                                       option_val);
+                                       option_arg.str().c_str());
         else {
           m_have_coord = true;
           m_coord = coord;
@@ -4192,7 +4192,8 @@ public:
       return llvm::makeArrayRef(g_renderscript_reduction_bp_set_options);
     }
 
-    bool ParseReductionTypes(const char *option_val, StreamString &err_str) {
+    bool ParseReductionTypes(llvm::StringRef option_val,
+                             StreamString &err_str) {
       m_kernel_types = RSReduceBreakpointResolver::eKernelTypeNone;
       const auto reduce_name_to_type = [](llvm::StringRef name) -> int {
         return llvm::StringSwitch<int>(name)
@@ -4215,7 +4216,7 @@ public:
 
       assert(match_type_list.IsValid());
 
-      if (!match_type_list.Execute(llvm::StringRef(option_val), &match)) {
+      if (!match_type_list.Execute(option_val, &match)) {
         err_str.PutCString(
             "a comma-separated list of kernel types is required");
         return false;
@@ -4310,7 +4311,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *exe_ctx) override {
       Error err;
       const int short_option = m_getopt_table[option_idx].val;
@@ -4321,7 +4322,7 @@ public:
         if (!ParseCoordinate(option_arg, coord))
           err.SetErrorStringWithFormat(
               "Couldn't parse coordinate '%s', should be in format 'x,y,z'.",
-              option_arg);
+              option_arg.str().c_str());
         else {
           m_have_coord = true;
           m_coord = coord;
@@ -4591,7 +4592,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *exe_ctx) override {
       Error err;
       const int short_option = m_getopt_table[option_idx].val;
@@ -4601,7 +4602,8 @@ public:
         m_outfile.SetFile(option_arg, true);
         if (m_outfile.Exists()) {
           m_outfile.Clear();
-          err.SetErrorStringWithFormat("file already exists: '%s'", option_arg);
+          err.SetErrorStringWithFormat("file already exists: '%s'",
+                                       option_arg.str().c_str());
         }
         break;
       default:
@@ -4712,16 +4714,14 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *exe_ctx) override {
       Error err;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'i':
-        bool success;
-        m_id = StringConvert::ToUInt32(option_arg, 0, 0, &success);
-        if (!success)
+        if (option_arg.getAsInteger(0, m_id))
           err.SetErrorStringWithFormat("invalid integer value for option '%c'",
                                        short_option);
         break;

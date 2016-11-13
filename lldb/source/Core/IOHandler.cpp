@@ -127,7 +127,7 @@ void IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len) {
   }
 }
 
-IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, const char *prompt,
+IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
                                    bool default_response)
     : IOHandlerEditline(
           debugger, IOHandler::Type::Confirm,

@@ -389,7 +389,7 @@ llvm::Error ArchHandler_arm64::getReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-      return llvm::Error::success();
+    return llvm::Error::success();
   case ARM64_RELOC_PAGE21             | rPcRel | rExtern | rLength4:
     // ex: adrp x1, _foo@PAGE
     *kind = page21;

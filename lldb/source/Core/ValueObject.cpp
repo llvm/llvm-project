@@ -3605,32 +3605,33 @@ SymbolContextScope *ValueObject::GetSymbolContextScope() {
   return NULL;
 }
 
-lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
-    const char *name, const char *expression, const ExecutionContext &exe_ctx) {
+lldb::ValueObjectSP
+ValueObject::CreateValueObjectFromExpression(llvm::StringRef name,
+                                             llvm::StringRef expression,
+                                             const ExecutionContext &exe_ctx) {
   return CreateValueObjectFromExpression(name, expression, exe_ctx,
                                          EvaluateExpressionOptions());
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
-    const char *name, const char *expression, const ExecutionContext &exe_ctx,
-    const EvaluateExpressionOptions &options) {
+    llvm::StringRef name, llvm::StringRef expression,
+    const ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options) {
   lldb::ValueObjectSP retval_sp;
   lldb::TargetSP target_sp(exe_ctx.GetTargetSP());
   if (!target_sp)
     return retval_sp;
-  if (!expression || !*expression)
+  if (expression.empty())
     return retval_sp;
   target_sp->EvaluateExpression(expression, exe_ctx.GetFrameSP().get(),
                                 retval_sp, options);
-  if (retval_sp && name && *name)
+  if (retval_sp && !name.empty())
     retval_sp->SetName(ConstString(name));
   return retval_sp;
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromAddress(const char *name, uint64_t address,
-                                          const ExecutionContext &exe_ctx,
-                                          CompilerType type) {
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
+    llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
+    CompilerType type) {
   if (type) {
     CompilerType pointer_type(type.GetPointerType());
     if (pointer_type) {
@@ -3645,7 +3646,7 @@ ValueObject::CreateValueObjectFromAddress(const char *name, uint64_t address,
             Value::eValueTypeLoadAddress);
         Error err;
         ptr_result_valobj_sp = ptr_result_valobj_sp->Dereference(err);
-        if (ptr_result_valobj_sp && name && *name)
+        if (ptr_result_valobj_sp && !name.empty())
           ptr_result_valobj_sp->SetName(ConstString(name));
       }
       return ptr_result_valobj_sp;
@@ -3655,14 +3656,14 @@ ValueObject::CreateValueObjectFromAddress(const char *name, uint64_t address,
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromData(
-    const char *name, const DataExtractor &data,
+    llvm::StringRef name, const DataExtractor &data,
     const ExecutionContext &exe_ctx, CompilerType type) {
   lldb::ValueObjectSP new_value_sp;
   new_value_sp = ValueObjectConstResult::Create(
       exe_ctx.GetBestExecutionContextScope(), type, ConstString(name), data,
       LLDB_INVALID_ADDRESS);
   new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
-  if (new_value_sp && name && *name)
+  if (new_value_sp && !name.empty())
     new_value_sp->SetName(ConstString(name));
   return new_value_sp;
 }

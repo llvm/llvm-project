@@ -197,7 +197,7 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
@@ -561,17 +561,16 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'i':
-        m_ignore_count = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
-        if (m_ignore_count == UINT32_MAX)
+        if (option_arg.getAsInteger(0, m_ignore_count))
           error.SetErrorStringWithFormat("invalid ignore count '%s'",
-                                         option_arg);
+                                         option_arg.str().c_str());
         break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
@@ -690,17 +689,14 @@ public:
 
     ~CommandOptions() override = default;
 
-    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+    Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                          ExecutionContext *execution_context) override {
       Error error;
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
       case 'c':
-        if (option_arg != nullptr)
-          m_condition.assign(option_arg);
-        else
-          m_condition.clear();
+        m_condition = option_arg;
         m_condition_passed = true;
         break;
       default:

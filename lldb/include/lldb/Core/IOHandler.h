@@ -458,7 +458,7 @@ protected:
 // to see how.
 class IOHandlerConfirm : public IOHandlerDelegate, public IOHandlerEditline {
 public:
-  IOHandlerConfirm(Debugger &debugger, const char *prompt,
+  IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
                    bool default_response);
 
   ~IOHandlerConfirm() override;

@@ -412,11 +412,10 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
 }
 
 Error ProcessLaunchCommandOptions::SetOptionValue(
-    uint32_t option_idx, const char *option_arg,
+    uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Error error;
   const int short_option = m_getopt_table[option_idx].val;
-  auto option_strref = llvm::StringRef::withNullAsEmpty(option_arg);
 
   switch (short_option) {
   case 's': // Stop at program entry point
@@ -485,40 +484,38 @@ Error ProcessLaunchCommandOptions::SetOptionValue(
   {
     bool success;
     const bool disable_aslr_arg =
-        Args::StringToBoolean(option_strref, true, &success);
+        Args::StringToBoolean(option_arg, true, &success);
     if (success)
       disable_aslr = disable_aslr_arg ? eLazyBoolYes : eLazyBoolNo;
     else
       error.SetErrorStringWithFormat(
           "Invalid boolean value for disable-aslr option: '%s'",
-          option_arg ? option_arg : "<null>");
+          option_arg.empty() ? "<null>" : option_arg.str().c_str());
     break;
   }
 
   case 'X': // shell expand args.
   {
     bool success;
-    const bool expand_args =
-        Args::StringToBoolean(option_strref, true, &success);
+    const bool expand_args = Args::StringToBoolean(option_arg, true, &success);
     if (success)
       launch_info.SetShellExpandArguments(expand_args);
     else
       error.SetErrorStringWithFormat(
           "Invalid boolean value for shell-expand-args option: '%s'",
-          option_arg ? option_arg : "<null>");
+          option_arg.empty() ? "<null>" : option_arg.str().c_str());
     break;
   }
 
   case 'c':
-    if (option_arg && option_arg[0])
+    if (!option_arg.empty())
       launch_info.SetShell(FileSpec(option_arg, false));
     else
       launch_info.SetShell(HostInfo::GetDefaultShell());
     break;
 
   case 'v':
-    launch_info.GetEnvironmentEntries().AppendArgument(
-        llvm::StringRef::withNullAsEmpty(option_arg));
+    launch_info.GetEnvironmentEntries().AppendArgument(option_arg);
     break;
 
   default:
@@ -4818,29 +4815,29 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock);
 
   if (!thread_plan_sp) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "RunThreadPlan called with empty thread plan.");
     return eExpressionSetupError;
   }
 
   if (!thread_plan_sp->ValidatePlan(nullptr)) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "RunThreadPlan called with an invalid thread plan.");
     return eExpressionSetupError;
   }
 
   if (exe_ctx.GetProcessPtr() != this) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                  "RunThreadPlan called on wrong process.");
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "RunThreadPlan called on wrong process.");
     return eExpressionSetupError;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
   if (thread == nullptr) {
-    diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                  "RunThreadPlan called with invalid thread.");
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "RunThreadPlan called with invalid thread.");
     return eExpressionSetupError;
   }
 
@@ -4867,7 +4864,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   thread_plan_sp->SetOkayToDiscard(false);
 
   if (m_private_state.GetValue() != eStateStopped) {
-    diagnostic_manager.PutCString(
+    diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "RunThreadPlan called while the private state was not stopped.");
     return eExpressionSetupError;
@@ -5031,10 +5028,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         uint64_t computed_one_thread_timeout;
         if (option_one_thread_timeout != 0) {
           if (timeout_usec < option_one_thread_timeout) {
-            diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                          "RunThreadPlan called without one "
-                                          "thread timeout greater than total "
-                                          "timeout");
+            diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                         "RunThreadPlan called without one "
+                                         "thread timeout greater than total "
+                                         "timeout");
             return eExpressionSetupError;
           }
           computed_one_thread_timeout = option_one_thread_timeout;
@@ -5063,7 +5060,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
     Event *other_events = listener_sp->PeekAtNextEvent();
     if (other_events != nullptr) {
-      diagnostic_manager.PutCString(
+      diagnostic_manager.PutString(
           eDiagnosticSeverityError,
           "RunThreadPlan called with pending events on the queue.");
       return eExpressionSetupError;
@@ -5240,9 +5237,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             const bool use_run_lock = false;
             Halt(clear_thread_plans, use_run_lock);
             return_value = eExpressionInterrupted;
-            diagnostic_manager.PutCString(
-                eDiagnosticSeverityRemark,
-                "execution halted by user interrupt.");
+            diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                         "execution halted by user interrupt.");
             if (log)
               log->Printf("Process::RunThreadPlan(): Got  interrupted by "
                           "eBroadcastBitInterrupted, exiting.");
@@ -5353,7 +5349,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               if (stop_state == eStateExited)
                 event_to_broadcast_sp = event_sp;
 
-              diagnostic_manager.PutCString(
+              diagnostic_manager.PutString(
                   eDiagnosticSeverityError,
                   "execution stopped with unexpected state.");
               return_value = eExpressionInterrupted;

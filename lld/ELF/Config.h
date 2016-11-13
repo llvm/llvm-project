@@ -62,6 +62,7 @@ struct VersionDefinition {
   llvm::StringRef Name;
   size_t Id;
   std::vector<SymbolVersion> Globals;
+  std::vector<SymbolVersion> Locals;
   size_t NameOff; // Offset in string table.
 };
 

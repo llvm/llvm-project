@@ -294,7 +294,6 @@ protected:
       }
       return error;
     }
-    Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
     // Instance variables to hold the values for command options.
     OptionValueArray set_indexes;

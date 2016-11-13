@@ -624,8 +624,8 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager) {
 
   if (m_pp_callbacks && m_pp_callbacks->hasErrors()) {
     num_errors++;
-    diagnostic_manager.PutCString(eDiagnosticSeverityError,
-                                  "while importing modules:");
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "while importing modules:");
     diagnostic_manager.AppendMessageToDiagnostic(
         m_pp_callbacks->getErrorString().c_str());
   }
