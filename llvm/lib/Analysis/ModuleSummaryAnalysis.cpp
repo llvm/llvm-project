@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Pass.h"
 using namespace llvm;
 
@@ -255,6 +257,49 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     auto *Summary = Index.getGlobalValueSummary(*V);
     assert(Summary && "Missing summary for global value");
     Summary->setNoRename();
+  }
+
+  if (!M.getModuleInlineAsm().empty()) {
+    // Collect the local values defined by module level asm, and set up
+    // summaries for these symbols so that they can be marked as NoRename,
+    // to prevent export of any use of them in regular IR that would require
+    // renaming within the module level asm. Note we don't need to create a
+    // summary for weak or global defs, as they don't need to be flagged as
+    // NoRename, and defs in module level asm can't be imported anyway.
+    // Also, any values used but not defined within module level asm should
+    // be listed on the llvm.used or llvm.compiler.used global and marked as
+    // referenced from there.
+    // FIXME: Rename CollectAsmUndefinedRefs to something more general, as we
+    // are also using it to find the file-scope locals defined in module asm.
+    object::IRObjectFile::CollectAsmUndefinedRefs(
+        Triple(M.getTargetTriple()), M.getModuleInlineAsm(),
+        [&M, &Index](StringRef Name, object::BasicSymbolRef::Flags Flags) {
+          // Symbols not marked as Weak or Global are local definitions.
+          if (Flags & (object::BasicSymbolRef::SF_Weak ||
+                       object::BasicSymbolRef::SF_Global))
+            return;
+          GlobalValue *GV = M.getNamedValue(Name);
+          if (!GV)
+            return;
+          assert(GV->isDeclaration() && "Def in module asm already has definition");
+          GlobalValueSummary::GVFlags GVFlags(
+              GlobalValue::InternalLinkage,
+              /* NoRename */ true,
+              /* HasInlineAsmMaybeReferencingInternal */ false,
+              /* IsNotViableToInline */ true);
+          // Create the appropriate summary type.
+          if (isa<Function>(GV)) {
+            std::unique_ptr<FunctionSummary> Summary =
+                llvm::make_unique<FunctionSummary>(GVFlags, 0);
+            Summary->setNoRename();
+            Index.addGlobalValueSummary(Name, std::move(Summary));
+          } else {
+            std::unique_ptr<GlobalVarSummary> Summary =
+                llvm::make_unique<GlobalVarSummary>(GVFlags);
+            Summary->setNoRename();
+            Index.addGlobalValueSummary(Name, std::move(Summary));
+          }
+        });
   }
 
   return Index;

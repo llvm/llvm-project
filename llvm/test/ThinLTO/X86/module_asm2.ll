@@ -35,19 +35,18 @@
 ; NM0-DAG: T func2
 ; NM0-DAG: T func3
 
-; Ensure that b and x are likewise not exported (imported as refs
+; Ensure that foo, b and x are likewise not exported (imported as refs
 ; into the other module), since they can't be promoted. Additionally,
 ; referencing functions func2 and func3 should not have been
 ; imported.
-; FIXME: Likewise, foo should not be exported, along with referencing function
-; func1. However, this relies on being able to add a dependence from
-; libAnalysis to libObject, which is currently blocked (see revert of
-; r286297).
+; NM1-NOT: foo
 ; NM1-NOT: b
 ; NM1-NOT: x
+; NM1-DAG: U func1
 ; NM1-DAG: U func2
 ; NM1-DAG: U func3
 ; NM1-DAG: T main
+; NM1-NOT: foo
 ; NM1-NOT: b
 ; NM1-NOT: x
 

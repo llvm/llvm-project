@@ -54,8 +54,7 @@ void IRObjectFile::CollectAsmUndefinedRefs(
 
   std::string Err;
   const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
-  if (!T)
-    return;
+  assert(T && T->hasMCAsmParser());
 
   std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT.str()));
   if (!MRI)
