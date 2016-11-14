@@ -218,6 +218,26 @@ private:
   std::vector<const SymbolBody *> Entries;
 };
 
+template <class ELFT>
+class StringTableSection final : public SyntheticSection<ELFT> {
+public:
+  typedef typename ELFT::uint uintX_t;
+  StringTableSection(StringRef Name, bool Dynamic);
+  unsigned addString(StringRef S, bool HashIt = true);
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return Size; }
+  bool isDynamic() const { return Dynamic; }
+
+private:
+  const bool Dynamic;
+
+  // ELF string tables start with a NUL byte, so 1.
+  uintX_t Size = 1;
+
+  llvm::DenseMap<StringRef, unsigned> StringMap;
+  std::vector<StringRef> Strings;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -226,22 +246,35 @@ template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
 template <class ELFT> struct In {
   static BuildIdSection<ELFT> *BuildId;
   static InputSection<ELFT> *Common;
+  static StringTableSection<ELFT> *DynStrTab;
   static GotSection<ELFT> *Got;
   static GotPltSection<ELFT> *GotPlt;
   static InputSection<ELFT> *Interp;
   static MipsAbiFlagsSection<ELFT> *MipsAbiFlags;
   static MipsOptionsSection<ELFT> *MipsOptions;
   static MipsReginfoSection<ELFT> *MipsReginfo;
+  static StringTableSection<ELFT> *ShStrTab;
+  static StringTableSection<ELFT> *StrTab;
+
+  // Contains list of sections, which size is not known when
+  // createSections() is called. This list is used when output
+  // sections are being finalized to calculate their size correctly.
+  static std::vector<SyntheticSection<ELFT> *> SyntheticSections;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
+template <class ELFT> StringTableSection<ELFT> *In<ELFT>::DynStrTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
 template <class ELFT> MipsAbiFlagsSection<ELFT> *In<ELFT>::MipsAbiFlags;
 template <class ELFT> MipsOptionsSection<ELFT> *In<ELFT>::MipsOptions;
 template <class ELFT> MipsReginfoSection<ELFT> *In<ELFT>::MipsReginfo;
+template <class ELFT> StringTableSection<ELFT> *In<ELFT>::ShStrTab;
+template <class ELFT> StringTableSection<ELFT> *In<ELFT>::StrTab;
+template <class ELFT>
+std::vector<SyntheticSection<ELFT> *> In<ELFT>::SyntheticSections;
 
 } // namespace elf
 } // namespace lld

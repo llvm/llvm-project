@@ -41,10 +41,8 @@ using namespace lld::elf;
 // Create table mapping all options defined in Options.td
 static const opt::OptTable::Info OptInfo[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X6, X7, X8, X9, X10)            \
-  {                                                                            \
-    X1, X2, X9, X10, OPT_##ID, opt::Option::KIND##Class, X8, X7, OPT_##GROUP,  \
-        OPT_##ALIAS, X6                                                        \
-  },
+  {X1, X2, X9,          X10,         OPT_##ID, opt::Option::KIND##Class,       \
+   X8, X7, OPT_##GROUP, OPT_##ALIAS, X6},
 #include "Options.inc"
 #undef OPTION
 };

@@ -317,19 +317,21 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, Loop *L) {
   auto *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
   auto *CalledFunction = CI->getCalledFunction();
   switch (AA.getModRefBehavior(CalledFunction)) {
-  case llvm::FMRB_UnknownModRefBehavior:
+  case FMRB_UnknownModRefBehavior:
     llvm_unreachable("Unknown mod ref behaviour cannot be represented.");
-  case llvm::FMRB_DoesNotAccessMemory:
+  case FMRB_DoesNotAccessMemory:
     return true;
-  case llvm::FMRB_DoesNotReadMemory:
+  case FMRB_DoesNotReadMemory:
+  case FMRB_OnlyAccessesInaccessibleMem:
+  case FMRB_OnlyAccessesInaccessibleOrArgMem:
     return false;
-  case llvm::FMRB_OnlyReadsMemory:
+  case FMRB_OnlyReadsMemory:
     GlobalReads.push_back(CI);
     return true;
-  case llvm::FMRB_OnlyReadsArgumentPointees:
+  case FMRB_OnlyReadsArgumentPointees:
     ReadOnly = true;
   // Fall through
-  case llvm::FMRB_OnlyAccessesArgumentPointees:
+  case FMRB_OnlyAccessesArgumentPointees:
     auto AccType = ReadOnly ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
     for (const auto &Arg : CI->arg_operands()) {
       if (!Arg->getType()->isPointerTy())

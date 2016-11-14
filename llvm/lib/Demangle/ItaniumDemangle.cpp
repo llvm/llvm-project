@@ -4252,6 +4252,16 @@ char *llvm::itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
       *status = invalid_args;
     return nullptr;
   }
+
+  size_t len = std::strlen(mangled_name);
+  if (len < 2 || strncmp(mangled_name, "_Z", 2)) {
+    if (len < 4 || strncmp(mangled_name, "___Z", 4)) {
+      if (status)
+        *status = invalid_mangled_name;
+      return nullptr;
+    }
+  }
+
   size_t internal_size = buf != nullptr ? *n : 0;
   Db db;
   db.cv = 0;
@@ -4263,7 +4273,6 @@ char *llvm::itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
   db.fix_forward_references = false;
   db.try_to_parse_template_args = true;
   int internal_status = success;
-  size_t len = std::strlen(mangled_name);
   demangle(mangled_name, mangled_name + len, db, internal_status);
   if (internal_status == success && db.fix_forward_references &&
       !db.template_param.empty() && !db.template_param.front().empty()) {

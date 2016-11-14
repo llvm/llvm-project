@@ -315,7 +315,7 @@ define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x doubl
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vcvtpd2psy %ymm1, %xmm1
+; AVX-NEXT:    vcvtpd2ps %ymm1, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
 ; AVX-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vorpd %xmm1, %xmm0, %xmm0

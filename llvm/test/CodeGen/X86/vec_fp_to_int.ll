@@ -117,27 +117,15 @@ define <4 x i32> @fptosi_4f64_to_2i32(<2 x double> %a) {
 ; AVX-LABEL: fptosi_4f64_to_2i32:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX-NEXT:    vcvttpd2dqy %ymm0, %xmm0
+; AVX-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: fptosi_4f64_to_2i32:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512F-NEXT:    vcvttpd2dqy %ymm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: fptosi_4f64_to_2i32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512VL-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; AVX512VL-NEXT:    retq
-;
-; AVX512VLDQ-LABEL: fptosi_4f64_to_2i32:
-; AVX512VLDQ:       # BB#0:
-; AVX512VLDQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512VLDQ-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; AVX512VLDQ-NEXT:    retq
+; AVX512-LABEL: fptosi_4f64_to_2i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; AVX512-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX512-NEXT:    retq
   %ext = shufflevector <2 x double> %a, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %cvt = fptosi <4 x double> %ext to <4 x i32>
   ret <4 x i32> %cvt
@@ -252,24 +240,14 @@ define <4 x i32> @fptosi_4f64_to_4i32(<4 x double> %a) {
 ;
 ; AVX-LABEL: fptosi_4f64_to_4i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vcvttpd2dqy %ymm0, %xmm0
+; AVX-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: fptosi_4f64_to_4i32:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vcvttpd2dqy %ymm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: fptosi_4f64_to_4i32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; AVX512VL-NEXT:    retq
-;
-; AVX512VLDQ-LABEL: fptosi_4f64_to_4i32:
-; AVX512VLDQ:       # BB#0:
-; AVX512VLDQ-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; AVX512VLDQ-NEXT:    retq
+; AVX512-LABEL: fptosi_4f64_to_4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX512-NEXT:    retq
   %cvt = fptosi <4 x double> %a to <4 x i32>
   ret <4 x i32> %cvt
 }

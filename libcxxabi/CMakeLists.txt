@@ -249,6 +249,10 @@ add_target_flags_if(LIBCXXABI_GCC_TOOLCHAIN
 add_target_flags_if(LIBCXXABI_SYSROOT
           "--sysroot=${LIBCXXABI_SYSROOT}")
 
+if (LIBCXXABI_TARGET_TRIPLE)
+  set(TARGET_TRIPLE "${LIBCXXABI_TARGET_TRIPLE}")
+endif()
+
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
 

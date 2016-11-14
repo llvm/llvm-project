@@ -1,4 +1,0 @@
-RUN: llvm-cxxfilt _Z1fi abc | FileCheck %s
-
-CHECK: f(int)
-CHECK-NEXT: abc
