@@ -929,7 +929,8 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
     if (Regs.empty())
       continue;
 
-    std::sort(Regs.begin(), Regs.end(), [&](RegAndKill &LHS, RegAndKill &RHS) {
+    std::sort(Regs.begin(), Regs.end(), [&](const RegAndKill &LHS,
+                                            const RegAndKill &RHS) {
       return TRI.getEncodingValue(LHS.first) < TRI.getEncodingValue(RHS.first);
     });
 
