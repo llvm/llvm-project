@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 void *arr[2];
 

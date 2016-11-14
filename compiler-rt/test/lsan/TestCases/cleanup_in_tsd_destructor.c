@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 #include "sanitizer/lsan_interface.h"
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 pthread_key_t key;
 __thread void *p;

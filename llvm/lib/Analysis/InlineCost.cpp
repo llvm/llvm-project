@@ -1255,7 +1255,9 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
       Cost -= InlineConstants::InstrCost;
     }
   }
-
+  // The call instruction also disappears after inlining.
+  Cost -= InlineConstants::InstrCost + InlineConstants::CallPenalty;
+  
   // If there is only one call of the function, and it has internal linkage,
   // the cost of inlining it drops dramatically.
   bool OnlyOneCallAndLocalLinkage =

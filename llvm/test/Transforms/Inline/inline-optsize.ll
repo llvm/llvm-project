@@ -12,6 +12,7 @@
 ; This function should be larger than the inline threshold for -Oz (25), but
 ; smaller than the inline threshold for optsize (75).
 define i32 @inner() {
+  call void @extern()
   %a1 = load volatile i32, i32* @a
   %x1 = add i32 %a1,  %a1
   %a2 = load volatile i32, i32* @a
@@ -42,3 +43,5 @@ define i32 @outer2() minsize {
    %r = call i32 @inner()
    ret i32 %r
 }
+
+declare void @extern()

@@ -266,7 +266,7 @@ public:
   /// \todo When we move to TableGen this should be an array ref.
   typedef SmallVector<InstructionMapping, 4> InstructionMappings;
 
-  /// Helper class use to get/create the virtual registers that will be used
+  /// Helper class used to get/create the virtual registers that will be used
   /// to replace the MachineOperand when applying a mapping.
   class OperandsMapper {
     /// The OpIdx-th cell contains the index in NewVRegs where the VRegs of the
@@ -442,9 +442,9 @@ protected:
   ///
   /// This implementation is able to get the mapping of:
   /// - Target specific instructions by looking at the encoding constraints.
-  /// - Any instruction if all the register operands are already been assigned
+  /// - Any instruction if all the register operands have already been assigned
   ///   a register, a register class, or a register bank.
-  /// - Copies and phis if at least one of the operand has been assigned a
+  /// - Copies and phis if at least one of the operands has been assigned a
   ///   register, a register class, or a register bank.
   /// In other words, this method will likely fail to find a mapping for
   /// any generic opcode that has not been lowered by target specific code.
@@ -603,7 +603,7 @@ public:
   /// This mapping should be the direct translation of \p MI.
   /// In other words, when \p MI is mapped with the returned mapping,
   /// only the register banks of the operands of \p MI need to be updated.
-  /// In particular, neither the opcode or the type of \p MI needs to be
+  /// In particular, neither the opcode nor the type of \p MI needs to be
   /// updated for this direct mapping.
   ///
   /// The target independent implementation gives a mapping based on

@@ -9,7 +9,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 // From glibc: this many keys are stored in the thread descriptor directly.
 const unsigned PTHREAD_KEY_2NDLEVEL_SIZE = 32;

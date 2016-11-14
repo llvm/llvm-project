@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 int main(int argc, char *argv[]) {
   std::string path = std::string(argv[0]) + "-so.so";

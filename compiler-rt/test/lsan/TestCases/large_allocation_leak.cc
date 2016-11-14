@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 int main() {
   // maxsize in primary allocator is always less than this (1 << 25).

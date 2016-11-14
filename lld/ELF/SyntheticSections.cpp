@@ -616,8 +616,7 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 GotPltSection<ELFT>::GotPltSection()
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                             Target->GotPltEntrySize, ".got.plt") {
-}
+                             Target->GotPltEntrySize, ".got.plt") {}
 
 template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
@@ -639,6 +638,38 @@ template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const SymbolBody *B : Entries) {
     Target->writeGotPlt(Buf, *B);
     Buf += sizeof(uintX_t);
+  }
+}
+
+template <class ELFT>
+StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
+    : SyntheticSection<ELFT>(Dynamic ? (uintX_t)SHF_ALLOC : 0, SHT_STRTAB, 1,
+                             Name),
+      Dynamic(Dynamic) {}
+
+// Adds a string to the string table. If HashIt is true we hash and check for
+// duplicates. It is optional because the name of global symbols are already
+// uniqued and hashing them again has a big cost for a small value: uniquing
+// them with some other string that happens to be the same.
+template <class ELFT>
+unsigned StringTableSection<ELFT>::addString(StringRef S, bool HashIt) {
+  if (HashIt) {
+    auto R = StringMap.insert(std::make_pair(S, this->Size));
+    if (!R.second)
+      return R.first->second;
+  }
+  unsigned Ret = this->Size;
+  this->Size = this->Size + S.size() + 1;
+  Strings.push_back(S);
+  return Ret;
+}
+
+template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  // ELF string tables start with NUL byte, so advance the pointer by one.
+  ++Buf;
+  for (StringRef S : Strings) {
+    memcpy(Buf, S.data(), S.size());
+    Buf += S.size() + 1;
   }
 }
 
@@ -711,3 +742,8 @@ template class elf::GotPltSection<ELF32LE>;
 template class elf::GotPltSection<ELF32BE>;
 template class elf::GotPltSection<ELF64LE>;
 template class elf::GotPltSection<ELF64BE>;
+
+template class elf::StringTableSection<ELF32LE>;
+template class elf::StringTableSection<ELF32BE>;
+template class elf::StringTableSection<ELF64LE>;
+template class elf::StringTableSection<ELF64BE>;

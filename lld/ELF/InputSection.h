@@ -232,7 +232,6 @@ public:
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
   std::vector<EhSectionPiece> Pieces;
-
 };
 
 // This corresponds to a non SHF_MERGE section of an input file.

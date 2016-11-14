@@ -12,7 +12,7 @@
 ;  4       return foo();
 ;  5     }
 
-; CHECK:      remark: /tmp/s.c:4:10: foo can be inlined into bar with cost={{[0-9]+}} (threshold={{[0-9]+}}) (hotness: 30)
+; CHECK:      remark: /tmp/s.c:4:10: foo can be inlined into bar with cost={{[0-9\-]+}} (threshold={{[0-9]+}}) (hotness: 30)
 ; CHECK-NEXT: remark: /tmp/s.c:4:10: foo inlined into bar (hotness: 30)
 
 ; YAML:      --- !Analysis
@@ -28,7 +28,7 @@
 ; YAML-NEXT:   - Caller: bar
 ; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 3, Column: 0 }
 ; YAML-NEXT:   - String: ' with cost='
-; YAML-NEXT:   - Cost: '{{[0-9]+}}'
+; YAML-NEXT:   - Cost: '{{[0-9\-]+}}'
 ; YAML-NEXT:   - String: ' (threshold='
 ; YAML-NEXT:   - Threshold: '{{[0-9]+}}'
 ; YAML-NEXT:   - String: ')'
