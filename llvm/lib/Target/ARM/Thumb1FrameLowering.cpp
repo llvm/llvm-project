@@ -579,8 +579,8 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   DebugLoc DL;
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 
-  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPUSH));
-  AddDefaultPred(MIB);
+  typedef std::pair<unsigned, bool> RegAndKill;
+  SmallVector<RegAndKill, 4> Regs;
   for (unsigned i = CSI.size(); i != 0; --i) {
     unsigned Reg = CSI[i-1].getReg();
     bool isKill = true;
@@ -595,12 +595,24 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
         isKill = false;
     }
 
-    if (isKill)
-      MBB.addLiveIn(Reg);
-
-    MIB.addReg(Reg, getKillRegState(isKill));
+    Regs.emplace_back(Reg, isKill);
   }
+
+  std::stable_sort(Regs.begin(), Regs.end(), [&](const RegAndKill &LHS,
+                                                 const RegAndKill &RHS) {
+    return TRI->getEncodingValue(LHS.first) < TRI->getEncodingValue(RHS.first);
+  });
+
+  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPUSH));
+  AddDefaultPred(MIB);
   MIB.setMIFlags(MachineInstr::FrameSetup);
+  for (auto &Reg : Regs) {
+    if (Reg.second)
+      MBB.addLiveIn(Reg.first);
+
+    MIB.addReg(Reg.first, getKillRegState(Reg.second));
+  }
+
   return true;
 }
 
@@ -618,10 +630,8 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   bool isVarArg = AFI->getArgRegsSaveSize() > 0;
   DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
-  MachineInstrBuilder MIB = BuildMI(MF, DL, TII.get(ARM::tPOP));
-  AddDefaultPred(MIB);
-
-  bool NeedsPop = false;
+  SmallVector<unsigned, 4> Regs;
+  unsigned Opcode = ARM::tPOP;
   for (unsigned i = CSI.size(); i != 0; --i) {
     unsigned Reg = CSI[i-1].getReg();
     if (Reg == ARM::LR) {
@@ -633,25 +643,33 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
         if (!STI.hasV5TOps())
           continue;
         Reg = ARM::PC;
-        (*MIB).setDesc(TII.get(ARM::tPOP_RET));
-        if (MI != MBB.end())
-          MIB.copyImplicitOps(*MI);
-        MI = MBB.erase(MI);
+        Opcode = ARM::tPOP_RET;
       } else
         // LR may only be popped into PC, as part of return sequence.
         // If this isn't the return sequence, we'll need emitPopSpecialFixUp
         // to restore LR the hard way.
         continue;
     }
-    MIB.addReg(Reg, getDefRegState(true));
-    NeedsPop = true;
+    Regs.push_back(Reg);
   }
 
-  // It's illegal to emit pop instruction without operands.
-  if (NeedsPop)
-    MBB.insert(MI, &*MIB);
-  else
-    MF.DeleteMachineInstr(MIB);
+  if (Regs.empty())
+    return true;
+
+  std::stable_sort(Regs.begin(), Regs.end(), [&](unsigned LHS, unsigned RHS) {
+    return TRI->getEncodingValue(LHS) < TRI->getEncodingValue(RHS);
+  });
+
+  MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(Opcode));
+  AddDefaultPred(MIB);
+  for (auto Reg : Regs)
+    MIB.addReg(Reg, getDefRegState(true));
+
+  if (Opcode == ARM::tPOP_RET) {
+    if (MI != MBB.end())
+      MIB.copyImplicitOps(*MI);
+    MI = MBB.erase(MI);
+  }
 
   return true;
 }
