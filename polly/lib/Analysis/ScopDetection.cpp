@@ -388,7 +388,7 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
       isa<UndefValue>(ICmp->getOperand(1)))
     return invalid<ReportUndefOperand>(Context, /*Assert=*/true, &BB, ICmp);
 
-  Loop *L = LI->getLoopFor(ICmp->getParent());
+  Loop *L = LI->getLoopFor(&BB);
   const SCEV *LHS = SE->getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE->getSCEVAtScope(ICmp->getOperand(1), L);
 
@@ -491,6 +491,8 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
       Context.AST.add(&CI);
       return true;
     case FMRB_DoesNotReadMemory:
+    case FMRB_OnlyAccessesInaccessibleMem:
+    case FMRB_OnlyAccessesInaccessibleOrArgMem:
       return false;
     }
   }

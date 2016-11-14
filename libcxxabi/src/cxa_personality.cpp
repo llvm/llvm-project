@@ -348,7 +348,10 @@ get_shim_type_info(uint64_t ttypeIndex, const uint8_t* classInfo,
         call_terminate(native_exception, unwind_exception);
     }
 
-    assert(ttypeEncoding == DW_EH_PE_absptr && "Unexpected TTypeEncoding");
+    assert(((ttypeEncoding == DW_EH_PE_absptr) ||  // LLVM or GCC 4.6
+            (ttypeEncoding == DW_EH_PE_pcrel) ||  // GCC 4.7 baremetal
+            (ttypeEncoding == (DW_EH_PE_pcrel | DW_EH_PE_indirect))) &&  // GCC 4.7 linux
+           "Unexpected TTypeEncoding");
     (void)ttypeEncoding;
 
     const uint8_t* ttypePtr = classInfo - ttypeIndex * sizeof(uintptr_t);
@@ -415,7 +418,10 @@ exception_spec_can_catch(int64_t specIndex, const uint8_t* classInfo,
         call_terminate(false, unwind_exception);
     }
 
-    assert(ttypeEncoding == DW_EH_PE_absptr && "Unexpected TTypeEncoding");
+    assert(((ttypeEncoding == DW_EH_PE_absptr) ||  // LLVM or GCC 4.6
+            (ttypeEncoding == DW_EH_PE_pcrel) ||  // GCC 4.7 baremetal
+            (ttypeEncoding == (DW_EH_PE_pcrel | DW_EH_PE_indirect))) &&  // GCC 4.7 linux
+           "Unexpected TTypeEncoding");
     (void)ttypeEncoding;
 
     // specIndex is negative of 1-based byte offset into classInfo;
