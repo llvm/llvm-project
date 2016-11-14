@@ -14,7 +14,7 @@ entry:
 ; CHECK-NEXT:   %tmp1 = load i32, i32* %a, align 4
 ; CHECK-NEXT:   ret i32 %tmp1
 
-declare void @"foo"()
+declare void @"foo"() nounwind
 
 define i32 @"\01-[WithCalls dealloc]"(i32* %a) "sanitize_thread_no_checking_at_run_time" {
 entry:
