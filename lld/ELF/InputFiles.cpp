@@ -118,7 +118,7 @@ ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB) : InputFile(K, MB) {
 
 template <class ELFT>
 typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalSymbols() {
-    return makeArrayRef(Symbols.begin() + FirstNonLocal, Symbols.end());
+  return makeArrayRef(Symbols.begin() + FirstNonLocal, Symbols.end());
 }
 
 template <class ELFT>
@@ -271,9 +271,8 @@ void elf::ObjectFile<ELFT>::initializeSections(
     switch (Sec.sh_type) {
     case SHT_GROUP:
       Sections[I] = &InputSection<ELFT>::Discarded;
-      if (ComdatGroups
-              .insert(
-                  CachedHashStringRef(getShtGroupSignature(ObjSections, Sec)))
+      if (ComdatGroups.insert(CachedHashStringRef(
+                                  getShtGroupSignature(ObjSections, Sec)))
               .second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {

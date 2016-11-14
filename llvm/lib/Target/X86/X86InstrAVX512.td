@@ -3311,6 +3311,93 @@ defm VMOVSSZ : avx512_move_scalar<"vmovss", X86Movss, f32x_info>,
 defm VMOVSDZ : avx512_move_scalar<"vmovsd", X86Movsd, f64x_info>,
                                   VEX_LIG, XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
+
+multiclass avx512_move_scalar_lowering<string InstrStr, SDNode OpNode,
+                                       PatLeaf ZeroFP, X86VectorVTInfo _> {
+
+def : Pat<(_.VT (OpNode _.RC:$src0,
+                        (_.VT (scalar_to_vector 
+                                  (_.EltVT (X86selects (i1 (trunc GR32:$mask)),
+                                                       (_.EltVT _.FRC:$src1),
+                                                       (_.EltVT _.FRC:$src2))))))),
+          (COPY_TO_REGCLASS (!cast<Instruction>(InstrStr#rrk) 
+                                          (COPY_TO_REGCLASS _.FRC:$src2, _.RC),
+                                          (COPY_TO_REGCLASS GR32:$mask, VK1WM),
+                                          (_.VT _.RC:$src0),
+                                          (COPY_TO_REGCLASS _.FRC:$src1, _.RC)),
+                            _.RC)>;
+
+def : Pat<(_.VT (OpNode _.RC:$src0,
+                        (_.VT (scalar_to_vector 
+                                  (_.EltVT (X86selects (i1 (trunc GR32:$mask)),
+                                                       (_.EltVT _.FRC:$src1),
+                                                       (_.EltVT ZeroFP))))))),
+          (COPY_TO_REGCLASS (!cast<Instruction>(InstrStr#rrkz) 
+                                          (COPY_TO_REGCLASS GR32:$mask, VK1WM),
+                                          (_.VT _.RC:$src0),
+                                          (COPY_TO_REGCLASS _.FRC:$src1, _.RC)),
+                            _.RC)>;
+
+}
+
+multiclass avx512_store_scalar_lowering<string InstrStr, AVX512VLVectorVTInfo _,
+                                        dag Mask, RegisterClass MaskRC> {
+
+def : Pat<(masked_store addr:$dst, Mask,
+             (_.info512.VT (insert_subvector undef, 
+                               (_.info256.VT (insert_subvector undef,
+                                                 (_.info128.VT _.info128.RC:$src),
+                                                 (i64 0))),
+                               (i64 0)))),
+          (!cast<Instruction>(InstrStr#mrk) addr:$dst, 
+                      (i1 (COPY_TO_REGCLASS MaskRC:$mask, VK1WM)),
+                      (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>; 
+
+}
+
+multiclass avx512_load_scalar_lowering<string InstrStr, AVX512VLVectorVTInfo _,
+                                       dag Mask, RegisterClass MaskRC> {
+
+def : Pat<(_.info128.VT (extract_subvector
+                         (_.info512.VT (masked_load addr:$srcAddr, Mask,
+                                        (_.info512.VT (bitconvert 
+                                                       (v16i32 immAllZerosV))))),
+                           (i64 0))),
+          (!cast<Instruction>(InstrStr#rmkz) 
+                      (i1 (COPY_TO_REGCLASS MaskRC:$mask, VK1WM)),
+                      addr:$srcAddr)>;
+
+def : Pat<(_.info128.VT (extract_subvector
+                (_.info512.VT (masked_load addr:$srcAddr, Mask,
+                      (_.info512.VT (insert_subvector undef,
+                            (_.info256.VT (insert_subvector undef,
+                                  (_.info128.VT (X86vzmovl _.info128.RC:$src)),
+                                  (i64 0))),
+                            (i64 0))))),
+                (i64 0))),
+          (!cast<Instruction>(InstrStr#rmk) _.info128.RC:$src,
+                      (i1 (COPY_TO_REGCLASS MaskRC:$mask, VK1WM)),
+                      addr:$srcAddr)>;
+
+}
+
+defm : avx512_move_scalar_lowering<"VMOVSSZ", X86Movss, fp32imm0, v4f32x_info>;
+defm : avx512_move_scalar_lowering<"VMOVSDZ", X86Movsd, fp64imm0, v2f64x_info>;
+
+defm : avx512_store_scalar_lowering<"VMOVSSZ", avx512vl_f32_info,
+                   (v16i1 (bitconvert (i16 (trunc (and GR32:$mask, (i32 1)))))), GR32>;
+defm : avx512_store_scalar_lowering<"VMOVSSZ", avx512vl_f32_info,
+                   (v16i1 (bitconvert (i16 (and GR16:$mask, (i16 1))))), GR16>;
+defm : avx512_store_scalar_lowering<"VMOVSDZ", avx512vl_f64_info,
+                   (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))), GR8>;
+
+defm : avx512_load_scalar_lowering<"VMOVSSZ", avx512vl_f32_info,
+                   (v16i1 (bitconvert (i16 (trunc (and GR32:$mask, (i32 1)))))), GR32>;
+defm : avx512_load_scalar_lowering<"VMOVSSZ", avx512vl_f32_info,
+                   (v16i1 (bitconvert (i16 (and GR16:$mask, (i16 1))))), GR16>;
+defm : avx512_load_scalar_lowering<"VMOVSDZ", avx512vl_f64_info,
+                   (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))), GR8>;
+
 def : Pat<(f32 (X86selects VK1WM:$mask, (f32 FR32X:$src1), (f32 FR32X:$src2))),
           (COPY_TO_REGCLASS (VMOVSSZrrk (COPY_TO_REGCLASS FR32X:$src2, VR128X),
            VK1WM:$mask, (v4f32 (IMPLICIT_DEF)),(COPY_TO_REGCLASS FR32X:$src1, VR128X)), FR32X)>;
@@ -5668,6 +5755,11 @@ defm VCVTSI642SDZ: avx512_vcvtsi_common<0x2A, X86SintToFpRnd, GR64,
                                  v2f64x_info, i64mem, loadi64, "cvtsi2sd{q}">,
                                  XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
+def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
+              (VCVTSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
+def : InstAlias<"vcvtsi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
+              (VCVTSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
+
 def : Pat<(f32 (sint_to_fp (loadi32 addr:$src))),
           (VCVTSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
 def : Pat<(f32 (sint_to_fp (loadi64 addr:$src))),
@@ -5698,6 +5790,11 @@ defm VCVTUSI2SDZ   : avx512_vcvtsi<0x7B, X86UintToFpRnd, GR32, v2f64x_info,
 defm VCVTUSI642SDZ : avx512_vcvtsi_common<0x7B, X86UintToFpRnd, GR64,
                                   v2f64x_info, i64mem, loadi64, "cvtusi2sd{q}">,
                                   XD, VEX_W, EVEX_CD8<64, CD8VT1>;
+
+def : InstAlias<"vcvtusi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
+              (VCVTUSI2SSZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
+def : InstAlias<"vcvtusi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
+              (VCVTUSI2SDZrm FR64X:$dst, FR64X:$src1, i32mem:$src), 0>;
 
 def : Pat<(f32 (uint_to_fp (loadi32 addr:$src))),
           (VCVTUSI2SSZrm (f32 (IMPLICIT_DEF)), addr:$src)>;
@@ -6065,6 +6162,15 @@ multiclass avx512_cvtpd2ps<bits<8> opc, string OpcodeStr> {
                                X86vfpround, "{1to2}", "{x}">, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v4f64x_info, fpround,
                                "{1to4}", "{y}">, EVEX_V256;
+
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, f128mem:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, f256mem:$src), 0>;
   }
 }
 
@@ -6168,6 +6274,15 @@ multiclass avx512_cvttpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                OpNode128, "{1to2}", "{x}">, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
                                "{1to4}", "{y}">, EVEX_V256;
+
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, i128mem:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, i256mem:$src), 0>;
   }
 }
 
@@ -6188,6 +6303,15 @@ multiclass avx512_cvtpd2dq<bits<8> opc, string OpcodeStr,
                                "{1to2}", "{x}">, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
                                "{1to4}", "{y}">, EVEX_V256;
+
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, f128mem:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, f256mem:$src), 0>;
   }
 }
 
@@ -6292,6 +6416,15 @@ multiclass avx512_cvtqq2ps<bits<8> opc, string OpcodeStr,
                                "{1to2}", "{x}">, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v4i64x_info, OpNode,
                                "{1to4}", "{y}">, EVEX_V256;
+
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
+    def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst, i128mem:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst, VR256X:$src), 0>;
+    def : InstAlias<OpcodeStr##"y\t{$src, $dst|$dst, $src}",
+                    (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst, i256mem:$src), 0>;
   }
 }
 

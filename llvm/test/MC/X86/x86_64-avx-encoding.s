@@ -3368,7 +3368,7 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc4,0x41,0x79,0xe6,0xd3]
           vcvttpd2dq  %xmm11, %xmm10
 
-// CHECK: vcvttpd2dqy %ymm12, %xmm10
+// CHECK: vcvttpd2dq %ymm12, %xmm10
 // CHECK: encoding: [0xc4,0x41,0x7d,0xe6,0xd4]
           vcvttpd2dq  %ymm12, %xmm10
 
@@ -3380,7 +3380,7 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc5,0x79,0xe6,0x18]
           vcvttpd2dqx  (%rax), %xmm11
 
-// CHECK: vcvttpd2dqy  %ymm12, %xmm11
+// CHECK: vcvttpd2dq  %ymm12, %xmm11
 // CHECK: encoding: [0xc4,0x41,0x7d,0xe6,0xdc]
           vcvttpd2dqy  %ymm12, %xmm11
 
@@ -3388,7 +3388,7 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc5,0x7d,0xe6,0x18]
           vcvttpd2dqy  (%rax), %xmm11
 
-// CHECK: vcvtpd2psy %ymm12, %xmm10
+// CHECK: vcvtpd2ps %ymm12, %xmm10
 // CHECK: encoding: [0xc4,0x41,0x7d,0x5a,0xd4]
           vcvtpd2ps  %ymm12, %xmm10
 
@@ -3400,7 +3400,7 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc5,0x79,0x5a,0x18]
           vcvtpd2psx  (%rax), %xmm11
 
-// CHECK: vcvtpd2psy  %ymm12, %xmm11
+// CHECK: vcvtpd2ps  %ymm12, %xmm11
 // CHECK: encoding: [0xc4,0x41,0x7d,0x5a,0xdc]
           vcvtpd2psy  %ymm12, %xmm11
 
@@ -3408,11 +3408,11 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc5,0x7d,0x5a,0x18]
           vcvtpd2psy  (%rax), %xmm11
 
-// CHECK: vcvtpd2dqy %ymm12, %xmm10
+// CHECK: vcvtpd2dq %ymm12, %xmm10
 // CHECK: encoding: [0xc4,0x41,0x7f,0xe6,0xd4]
           vcvtpd2dq  %ymm12, %xmm10
 
-// CHECK: vcvtpd2dqy  %ymm12, %xmm11
+// CHECK: vcvtpd2dq  %ymm12, %xmm11
 // CHECK: encoding: [0xc4,0x41,0x7f,0xe6,0xdc]
           vcvtpd2dqy  %ymm12, %xmm11
 

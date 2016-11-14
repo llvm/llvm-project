@@ -415,15 +415,15 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   // Add strings to .dynstr early so that .dynstr's size will be
   // fixed early.
   for (StringRef S : Config->AuxiliaryList)
-    Add({DT_AUXILIARY, Out<ELFT>::DynStrTab->addString(S)});
+    Add({DT_AUXILIARY, In<ELFT>::DynStrTab->addString(S)});
   if (!Config->RPath.empty())
     Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
-         Out<ELFT>::DynStrTab->addString(Config->RPath)});
+         In<ELFT>::DynStrTab->addString(Config->RPath)});
   for (SharedFile<ELFT> *F : Symtab<ELFT>::X->getSharedFiles())
     if (F->isNeeded())
-      Add({DT_NEEDED, Out<ELFT>::DynStrTab->addString(F->getSoName())});
+      Add({DT_NEEDED, In<ELFT>::DynStrTab->addString(F->getSoName())});
   if (!Config->SoName.empty())
-    Add({DT_SONAME, Out<ELFT>::DynStrTab->addString(Config->SoName)});
+    Add({DT_SONAME, In<ELFT>::DynStrTab->addString(Config->SoName)});
 
   // Set DT_FLAGS and DT_FLAGS_1.
   uint32_t DtFlags = 0;
@@ -455,7 +455,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (this->Size)
     return; // Already finalized.
 
-  this->Link = Out<ELFT>::DynStrTab->SectionIndex;
+  this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
 
   if (Out<ELFT>::RelaDyn->hasRelocs()) {
     bool IsRela = Config->Rela;
@@ -483,8 +483,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   Add({DT_SYMTAB, Out<ELFT>::DynSymTab});
   Add({DT_SYMENT, sizeof(Elf_Sym)});
-  Add({DT_STRTAB, Out<ELFT>::DynStrTab});
-  Add({DT_STRSZ, Out<ELFT>::DynStrTab->Size});
+  Add({DT_STRTAB, In<ELFT>::DynStrTab});
+  Add({DT_STRSZ, In<ELFT>::DynStrTab->getSize()});
   if (Out<ELFT>::GnuHashTab)
     Add({DT_GNU_HASH, Out<ELFT>::GnuHashTab});
   if (Out<ELFT>::HashTab)
@@ -639,8 +639,7 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
     if (!Config->Relocatable) {
       // SHF_LINK_ORDER only has meaning in relocatable objects
       this->Flags &= ~SHF_LINK_ORDER;
-    }
-    else if (!this->Sections.empty()) {
+    } else if (!this->Sections.empty()) {
       // When doing a relocatable link we must preserve the link order
       // dependency of sections with the SHF_LINK_ORDER flag. The dependency
       // is indicated by the sh_link field. We need to translate the
@@ -650,6 +649,15 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
         this->Link = D->OutSec->SectionIndex;
     }
   }
+
+  // Recalculate input section offsets if we own any synthetic section
+  for (auto *SS : In<ELFT>::SyntheticSections)
+    if (SS && this == SS->OutSec) {
+      this->Size = 0;
+      assignOffsets();
+      break;
+    }
+
   if (Type != SHT_RELA && Type != SHT_REL)
     return;
   this->Link = Out<ELFT>::SymTab->SectionIndex;
@@ -1052,40 +1060,6 @@ template <class ELFT> void MergeOutputSection<ELFT>::finalizePieces() {
 }
 
 template <class ELFT>
-StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
-    : OutputSectionBase(Name, SHT_STRTAB, Dynamic ? (uintX_t)SHF_ALLOC : 0),
-      Dynamic(Dynamic) {
-  // ELF string tables start with a NUL byte, so 1.
-  this->Size = 1;
-}
-
-// Adds a string to the string table. If HashIt is true we hash and check for
-// duplicates. It is optional because the name of global symbols are already
-// uniqued and hashing them again has a big cost for a small value: uniquing
-// them with some other string that happens to be the same.
-template <class ELFT>
-unsigned StringTableSection<ELFT>::addString(StringRef S, bool HashIt) {
-  if (HashIt) {
-    auto R = StringMap.insert(std::make_pair(S, this->Size));
-    if (!R.second)
-      return R.first->second;
-  }
-  unsigned Ret = this->Size;
-  this->Size = this->Size + S.size() + 1;
-  Strings.push_back(S);
-  return Ret;
-}
-
-template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  // ELF string tables start with NUL byte, so advance the pointer by one.
-  ++Buf;
-  for (StringRef S : Strings) {
-    memcpy(Buf, S.data(), S.size());
-    Buf += S.size() + 1;
-  }
-}
-
-template <class ELFT>
 typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
   if (OutputSec)
     return OutputSec->Addr + OffsetInSec;
@@ -1148,7 +1122,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
     return; // Already finalized.
 
   this->Size = getNumSymbols() * sizeof(Elf_Sym);
-  this->Link = StrTabSec.SectionIndex;
+  this->Link = StrTabSec.OutSec->SectionIndex;
   this->Info = NumLocals + 1;
 
   if (Config->Relocatable) {
@@ -1300,12 +1274,12 @@ static StringRef getFileDefName() {
 }
 
 template <class ELFT> void VersionDefinitionSection<ELFT>::finalize() {
-  FileDefNameOff = Out<ELFT>::DynStrTab->addString(getFileDefName());
+  FileDefNameOff = In<ELFT>::DynStrTab->addString(getFileDefName());
   for (VersionDefinition &V : Config->VersionDefinitions)
-    V.NameOff = Out<ELFT>::DynStrTab->addString(V.Name);
+    V.NameOff = In<ELFT>::DynStrTab->addString(V.Name);
 
   this->Size = (sizeof(Elf_Verdef) + sizeof(Elf_Verdaux)) * getVerDefNum();
-  this->Link = Out<ELFT>::DynStrTab->SectionIndex;
+  this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
 
   // sh_info should be set to the number of definitions. This fact is missed in
   // documentation, but confirmed by binutils community:
@@ -1389,13 +1363,13 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
   // to create one by adding it to our needed list and creating a dynstr entry
   // for the soname.
   if (F->VerdefMap.empty())
-    Needed.push_back({F, Out<ELFT>::DynStrTab->addString(F->getSoName())});
+    Needed.push_back({F, In<ELFT>::DynStrTab->addString(F->getSoName())});
   typename SharedFile<ELFT>::NeededVer &NV = F->VerdefMap[SS->Verdef];
   // If we don't already know that we need an Elf_Vernaux for this Elf_Verdef,
   // prepare to create one by allocating a version identifier and creating a
   // dynstr entry for the version name.
   if (NV.Index == 0) {
-    NV.StrTab = Out<ELFT>::DynStrTab->addString(
+    NV.StrTab = In<ELFT>::DynStrTab->addString(
         SS->file()->getStringTable().data() + SS->Verdef->getAux()->vda_name);
     NV.Index = NextIndex++;
   }
@@ -1438,7 +1412,7 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalize() {
-  this->Link = Out<ELFT>::DynStrTab->SectionIndex;
+  this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
   this->Info = Needed.size();
   unsigned Size = Needed.size() * sizeof(Elf_Verneed);
   for (std::pair<SharedFile<ELFT> *, size_t> &P : Needed)
@@ -1589,11 +1563,6 @@ template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;
 template class MergeOutputSection<ELF64LE>;
 template class MergeOutputSection<ELF64BE>;
-
-template class StringTableSection<ELF32LE>;
-template class StringTableSection<ELF32BE>;
-template class StringTableSection<ELF64LE>;
-template class StringTableSection<ELF64BE>;
 
 template class SymbolTableSection<ELF32LE>;
 template class SymbolTableSection<ELF32BE>;

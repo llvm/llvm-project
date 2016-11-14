@@ -470,10 +470,20 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
       case X86::VCMPPSZrmi:  NewOpc = X86::VCMPPSZrmi_alt;  break;
       case X86::VCMPPSZrri:  NewOpc = X86::VCMPPSZrri_alt;  break;
       case X86::VCMPPSZrrib: NewOpc = X86::VCMPPSZrrib_alt; break;
-      case X86::VCMPSDZrm:   NewOpc = X86::VCMPSDZrmi_alt;  break;
-      case X86::VCMPSDZrr:   NewOpc = X86::VCMPSDZrri_alt;  break;
-      case X86::VCMPSSZrm:   NewOpc = X86::VCMPSSZrmi_alt;  break;
-      case X86::VCMPSSZrr:   NewOpc = X86::VCMPSSZrri_alt;  break;
+      case X86::VCMPPDZ128rmi:  NewOpc = X86::VCMPPDZ128rmi_alt;  break;
+      case X86::VCMPPDZ128rri:  NewOpc = X86::VCMPPDZ128rri_alt;  break;
+      case X86::VCMPPSZ128rmi:  NewOpc = X86::VCMPPSZ128rmi_alt;  break;
+      case X86::VCMPPSZ128rri:  NewOpc = X86::VCMPPSZ128rri_alt;  break;
+      case X86::VCMPPDZ256rmi:  NewOpc = X86::VCMPPDZ256rmi_alt;  break;
+      case X86::VCMPPDZ256rri:  NewOpc = X86::VCMPPDZ256rri_alt;  break;
+      case X86::VCMPPSZ256rmi:  NewOpc = X86::VCMPPSZ256rmi_alt;  break;
+      case X86::VCMPPSZ256rri:  NewOpc = X86::VCMPPSZ256rri_alt;  break;
+      case X86::VCMPSDZrm_Int:  NewOpc = X86::VCMPSDZrmi_alt;  break;
+      case X86::VCMPSDZrr_Int:  NewOpc = X86::VCMPSDZrri_alt;  break;
+      case X86::VCMPSDZrrb_Int: NewOpc = X86::VCMPSDZrrb_alt;  break;
+      case X86::VCMPSSZrm_Int:  NewOpc = X86::VCMPSSZrmi_alt;  break;
+      case X86::VCMPSSZrr_Int:  NewOpc = X86::VCMPSSZrri_alt;  break;
+      case X86::VCMPSSZrrb_Int: NewOpc = X86::VCMPSSZrrb_alt;  break;
       }
       // Switch opcode to the one that doesn't get special printing.
       mcInst.setOpcode(NewOpc);

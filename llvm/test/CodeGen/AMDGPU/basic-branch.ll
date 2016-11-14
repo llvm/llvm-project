@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -O0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -O0 -march=amdgcn -mcpu=tonga -amdgpu-spill-sgpr-to-smem=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCNNOOPT -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCNOPT -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCNOPT -check-prefix=GCN %s
 

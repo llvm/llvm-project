@@ -1,16 +1,20 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -amdgpu-spill-sgpr-to-smem=0 -verify-machineinstrs < %s | FileCheck -check-prefix=TOSGPR -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -amdgpu-spill-sgpr-to-smem=1 -verify-machineinstrs < %s | FileCheck -check-prefix=TOSMEM -check-prefix=ALL %s
 
-; CHECK-LABEL: {{^}}max_14_sgprs:
+; If spilling to smem, additional registers are used for the resource
+; descriptor.
+
+; ALL-LABEL: {{^}}max_14_sgprs:
 
 ; FIXME: Should be ablo to skip this copying of the private segment
 ; buffer because all the SGPR spills are to VGPRs.
 
-; CHECK: s_mov_b64 s[6:7], s[2:3]
-; CHECK: s_mov_b64 s[4:5], s[0:1]
-
-; CHECK: SGPRBlocks: 1
-; CHECK: NumSGPRsForWavesPerEU: 14
+; ALL: s_mov_b64 s[6:7], s[2:3]
+; ALL: s_mov_b64 s[4:5], s[0:1]
+; ALL: SGPRBlocks: 1
+; ALL: NumSGPRsForWavesPerEU: 14
 define void @max_14_sgprs(i32 addrspace(1)* %out1,
+
                           i32 addrspace(1)* %out2,
                           i32 addrspace(1)* %out3,
                           i32 addrspace(1)* %out4,
@@ -31,7 +35,7 @@ define void @max_14_sgprs(i32 addrspace(1)* %out1,
 ; ---------------------
 ; total: 14
 
-; + reserved vcc, flat_scratch = 18
+; + reserved vcc, xnack, flat_scratch = 20
 
 ; Because we can't handle re-using the last few input registers as the
 ; special vcc etc. registers (as well as decide to not use the unused
@@ -40,14 +44,14 @@ define void @max_14_sgprs(i32 addrspace(1)* %out1,
 
 ; ALL-LABEL: {{^}}max_12_sgprs_14_input_sgprs:
 ; TOSGPR: SGPRBlocks: 2
-; TOSGPR: NumSGPRsForWavesPerEU: 18
+; TOSGPR: NumSGPRsForWavesPerEU: 20
 
 ; TOSMEM: s_mov_b64 s[6:7], s[2:3]
-; TOSMEM: s_mov_b32 s9, s13
 ; TOSMEM: s_mov_b64 s[4:5], s[0:1]
+; TOSMEM: s_mov_b32 s3, s13
 
 ; TOSMEM: SGPRBlocks: 2
-; TOSMEM: NumSGPRsForWavesPerEU: 18
+; TOSMEM: NumSGPRsForWavesPerEU: 20
 define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
                                         i32 addrspace(1)* %out2,
                                         i32 addrspace(1)* %out3,
@@ -79,12 +83,12 @@ define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
 ; ; swapping the order the registers are copied from what normally
 ; ; happens.
 
-; TOSMEM: s_mov_b64 s[6:7], s[2:3]
-; TOSMEM: s_mov_b64 s[4:5], s[0:1]
-; TOSMEM: s_mov_b32 s3, s11
+; TOSMEM: s_mov_b32 s5, s11
+; TOSMEM: s_add_u32 m0, s5,
+; TOSMEM: s_buffer_store_dword vcc_lo, s[0:3], m0
 
-; ALL: SGPRBlocks: 1
-; ALL: NumSGPRsForWavesPerEU: 16
+; ALL: SGPRBlocks: 2
+; ALL: NumSGPRsForWavesPerEU: 18
 define void @max_12_sgprs_12_input_sgprs(i32 addrspace(1)* %out1,
                                         i32 addrspace(1)* %out2,
                                         i32 addrspace(1)* %out3,

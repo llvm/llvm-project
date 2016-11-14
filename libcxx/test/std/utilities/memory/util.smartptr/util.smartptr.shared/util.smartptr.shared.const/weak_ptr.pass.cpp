@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <memory>
 
 // shared_ptr
@@ -16,6 +15,8 @@
 
 #include <memory>
 #include <cassert>
+
+#include "test_macros.h"
 
 struct B
 {
@@ -42,6 +43,7 @@ int A::count = 0;
 
 int main()
 {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::weak_ptr<A> wp;
         try
@@ -54,6 +56,7 @@ int main()
         }
         assert(A::count == 0);
     }
+#endif
     {
         std::shared_ptr<A> sp0(new A);
         std::weak_ptr<A> wp(sp0);
@@ -63,6 +66,7 @@ int main()
         assert(A::count == 1);
     }
     assert(A::count == 0);
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::shared_ptr<A> sp0(new A);
         std::weak_ptr<A> wp(sp0);
@@ -77,4 +81,5 @@ int main()
         }
     }
     assert(A::count == 0);
+#endif
 }

@@ -8,4 +8,4 @@
 .text
 .global _start, __ehdr_start
 _start:
-	.quad __ehdr_start
+  .quad __ehdr_start

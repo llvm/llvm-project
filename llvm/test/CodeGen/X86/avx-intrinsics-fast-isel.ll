@@ -605,13 +605,13 @@ declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>) nounwind readnone
 define <2 x i64> @test_mm256_cvtpd_epi32(<4 x double> %a0) nounwind {
 ; X32-LABEL: test_mm256_cvtpd_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vcvtpd2dqy %ymm0, %xmm0
+; X32-NEXT:    vcvtpd2dq %ymm0, %xmm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_cvtpd_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vcvtpd2dqy %ymm0, %xmm0
+; X64-NEXT:    vcvtpd2dq %ymm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %cvt = call <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double> %a0)
@@ -623,13 +623,13 @@ declare <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double>) nounwind readnone
 define <4 x float> @test_mm256_cvtpd_ps(<4 x double> %a0) nounwind {
 ; X32-LABEL: test_mm256_cvtpd_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    vcvtpd2psy %ymm0, %xmm0
+; X32-NEXT:    vcvtpd2ps %ymm0, %xmm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_cvtpd_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    vcvtpd2psy %ymm0, %xmm0
+; X64-NEXT:    vcvtpd2ps %ymm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> %a0)
@@ -670,13 +670,13 @@ define <4 x double> @test_mm256_cvtps_pd(<4 x float> %a0) nounwind {
 define <2 x i64> @test_mm256_cvttpd_epi32(<4 x double> %a0) nounwind {
 ; X32-LABEL: test_mm256_cvttpd_epi32:
 ; X32:       # BB#0:
-; X32-NEXT:    vcvttpd2dqy %ymm0, %xmm0
+; X32-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_cvttpd_epi32:
 ; X64:       # BB#0:
-; X64-NEXT:    vcvttpd2dqy %ymm0, %xmm0
+; X64-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %cvt = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %a0)

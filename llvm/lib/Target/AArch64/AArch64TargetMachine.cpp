@@ -247,7 +247,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     I = llvm::make_unique<AArch64Subtarget>(TargetTriple, CPU, FS, *this,
                                             isLittle);
 #ifndef LLVM_BUILD_GLOBAL_ISEL
-   GISelAccessor *GISel = new GISelAccessor();
+    GISelAccessor *GISel = new GISelAccessor();
 #else
     AArch64GISelActualAccessor *GISel =
         new AArch64GISelActualAccessor();

@@ -259,8 +259,7 @@ static uint64_t getAArch64Page(uint64_t Expr) {
   return Expr & (~static_cast<uint64_t>(0xFFF));
 }
 
-static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type,
-                                              uint32_t A,
+static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
                                               uint32_t P) {
   switch (Type) {
   case R_ARM_THM_JUMP11:
@@ -281,8 +280,7 @@ static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type,
   }
 }
 
-static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type,
-                                                  uint64_t A,
+static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
                                                   uint64_t P) {
   switch (Type) {
   case R_AARCH64_CALL26:
