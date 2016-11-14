@@ -11,6 +11,7 @@ macro(find_llvm_parts)
     set(LLVM_CMAKE_PATH "${LLVM_PATH}/cmake/modules")
   elseif(LLVM_CONFIG_PATH)
     message(STATUS "Found LLVM_CONFIG_PATH as ${LLVM_CONFIG_PATH}")
+    set(LIBCXX_USING_INSTALLED_LLVM 1)
     set(CONFIG_COMMAND ${LLVM_CONFIG_PATH}
       "--includedir"
       "--prefix"
@@ -56,20 +57,27 @@ macro(find_llvm_parts)
   set(LLVM_FOUND ON)
 endmacro(find_llvm_parts)
 
-# If this is a standalone build not running as an external project of LLVM
-# we need to later make some decisions differently.
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  # The intent is that this doesn't necessarily mean the LLVM is installed (it
-  # could be a build directory), but it means we need to treat the LLVM
-  # directory as read-only.
-  set(LIBCXX_USING_INSTALLED_LLVM 1)
-endif()
-
-if (LIBCXX_USING_INSTALLED_LLVM OR LIBCXX_STANDALONE_BUILD)
-  set(LIBCXX_STANDALONE_BUILD 1)
+macro(configure_out_of_tree_llvm)
   message(STATUS "Configuring for standalone build.")
+  set(LIBCXX_STANDALONE_BUILD 1)
 
   find_llvm_parts()
+
+  # Add LLVM Functions --------------------------------------------------------
+  if (LLVM_FOUND AND LIBCXX_USING_INSTALLED_LLVM)
+    include(LLVMConfig) # For TARGET_TRIPLE
+  else()
+    if (WIN32)
+      set(LLVM_ON_UNIX 0)
+      set(LLVM_ON_WIN32 1)
+    else()
+      set(LLVM_ON_UNIX 1)
+      set(LLVM_ON_WIN32 0)
+    endif()
+  endif()
+  if (LLVM_FOUND)
+    include(AddLLVM OPTIONAL)
+  endif()
 
   # LLVM Options --------------------------------------------------------------
   include(FindPythonInterp)
@@ -103,30 +111,11 @@ if (LIBCXX_USING_INSTALLED_LLVM OR LIBCXX_STANDALONE_BUILD)
     find_package(Sphinx REQUIRED)
   endif()
 
-  # FIXME - This is cribbed from HandleLLVMOptions.cmake.
-  if(WIN32)
+  if (LLVM_ON_UNIX AND NOT APPLE)
+    set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
+  else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
-    if(CYGWIN)
-      set(LLVM_ON_WIN32 0)
-      set(LLVM_ON_UNIX 1)
-    else(CYGWIN)
-      set(LLVM_ON_WIN32 1)
-      set(LLVM_ON_UNIX 0)
-    endif(CYGWIN)
-  else(WIN32)
-    if(UNIX)
-      set(LLVM_ON_WIN32 0)
-      set(LLVM_ON_UNIX 1)
-      if(APPLE)
-        set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
-      else(APPLE)
-        set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
-      endif(APPLE)
-    else(UNIX)
-      MESSAGE(SEND_ERROR "Unable to determine platform")
-    endif(UNIX)
-  endif(WIN32)
+  endif()
+endmacro(configure_out_of_tree_llvm)
 
-  # Add LLVM Functions --------------------------------------------------------
-  include(AddLLVM OPTIONAL)
-endif()
+configure_out_of_tree_llvm()
