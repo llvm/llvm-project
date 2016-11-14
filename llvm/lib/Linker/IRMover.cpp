@@ -943,8 +943,6 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
 /// Update the initializers in the Dest module now that all globals that may be
 /// referenced are in Dest.
 void IRLinker::linkGlobalVariable(GlobalVariable &Dst, GlobalVariable &Src) {
-  Dst.copyMetadata(&Src, 0);
-
   // Figure out what the initializer looks like in the dest module.
   Mapper.scheduleMapGlobalInitializer(Dst, *Src.getInitializer());
 }
