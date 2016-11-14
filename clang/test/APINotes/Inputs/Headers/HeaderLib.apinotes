@@ -10,6 +10,12 @@ Functions:
   - Name: do_something_with_pointers
     NullabilityOfRet: O
     Nullability: [ N, O ]
+  - Name: do_something_with_arrays
+    Parameters:
+      - Position: 0
+        Nullability: N
+      - Position: 1
+        Nullability: N
   - Name: take_pointer_and_int
     Parameters:
       - Position: 0

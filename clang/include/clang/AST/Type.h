@@ -2263,19 +2263,15 @@ public:
 /// Represents a pointer type decayed from an array or function type.
 class DecayedType : public AdjustedType {
 
-  DecayedType(QualType OriginalType, QualType DecayedPtr, QualType CanonicalPtr)
-      : AdjustedType(Decayed, OriginalType, DecayedPtr, CanonicalPtr) {
-    assert(isa<PointerType>(getAdjustedType()));
-  }
+  inline
+  DecayedType(QualType OriginalType, QualType Decayed, QualType Canonical);
 
   friend class ASTContext;  // ASTContext creates these.
 
 public:
   QualType getDecayedType() const { return getAdjustedType(); }
 
-  QualType getPointeeType() const {
-    return cast<PointerType>(getDecayedType())->getPointeeType();
-  }
+  inline QualType getPointeeType() const;
 
   static bool classof(const Type *T) { return T->getTypeClass() == Decayed; }
 };
@@ -5946,6 +5942,23 @@ inline const ArrayType *Type::castAsArrayTypeUnsafe() const {
   if (const ArrayType *arr = dyn_cast<ArrayType>(this)) return arr;
   return cast<ArrayType>(getUnqualifiedDesugaredType());
 }
+
+DecayedType::DecayedType(QualType OriginalType, QualType DecayedPtr,
+                         QualType CanonicalPtr)
+    : AdjustedType(Decayed, OriginalType, DecayedPtr, CanonicalPtr) {
+#ifndef NDEBUG
+  QualType Adjusted = getAdjustedType();
+  (void)AttributedType::stripOuterNullability(Adjusted);
+  assert(isa<PointerType>(Adjusted));
+#endif
+}
+
+QualType DecayedType::getPointeeType() const {
+  QualType Decayed = getDecayedType();
+  (void)AttributedType::stripOuterNullability(Decayed);
+  return cast<PointerType>(Decayed)->getPointeeType();
+}
+
 
 }  // end namespace clang
 
