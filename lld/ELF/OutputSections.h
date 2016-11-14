@@ -54,7 +54,6 @@ public:
     Plt,
     Regular,
     Reloc,
-    StrTable,
     SymTable,
     VersDef,
     VersNeed,
@@ -424,26 +423,6 @@ private:
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;
 };
 
-template <class ELFT>
-class StringTableSection final : public OutputSectionBase {
-
-public:
-  typedef typename ELFT::uint uintX_t;
-  StringTableSection(StringRef Name, bool Dynamic);
-  unsigned addString(StringRef S, bool HashIt = true);
-  void writeTo(uint8_t *Buf) override;
-  bool isDynamic() const { return Dynamic; }
-  Kind getKind() const override { return StrTable; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == StrTable;
-  }
-
-private:
-  const bool Dynamic;
-  llvm::DenseMap<StringRef, unsigned> StringMap;
-  std::vector<StringRef> Strings;
-};
-
 template <class ELFT> class HashTableSection final : public OutputSectionBase {
   typedef typename ELFT::Word Elf_Word;
 
@@ -600,9 +579,6 @@ template <class ELFT> struct Out {
   static PltSection<ELFT> *Plt;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
-  static StringTableSection<ELFT> *DynStrTab;
-  static StringTableSection<ELFT> *ShStrTab;
-  static StringTableSection<ELFT> *StrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
   static VersionDefinitionSection<ELFT> *VerDef;
@@ -664,9 +640,6 @@ template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
 template <class ELFT> PltSection<ELFT> *Out<ELFT>::Plt;
 template <class ELFT> RelocationSection<ELFT> *Out<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *Out<ELFT>::RelaPlt;
-template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::DynStrTab;
-template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::ShStrTab;
-template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
 template <class ELFT> VersionDefinitionSection<ELFT> *Out<ELFT>::VerDef;

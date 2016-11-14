@@ -50,7 +50,7 @@ define <4 x float> @test3(<4 x double> %x) nounwind {
 ;
 ; AVX-LABEL: test3:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vcvtpd2psy %ymm0, %xmm0
+; AVX-NEXT:    vcvtpd2ps %ymm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
   %y = fptrunc <4 x double> %x to <4 x float>
@@ -72,8 +72,8 @@ define <8 x float> @test4(<8 x double> %x) nounwind {
 ;
 ; AVX-LABEL: test4:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vcvtpd2psy %ymm0, %xmm0
-; AVX-NEXT:    vcvtpd2psy %ymm1, %xmm1
+; AVX-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; AVX-NEXT:    vcvtpd2ps %ymm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retl
   %y = fptrunc <8 x double> %x to <8 x float>

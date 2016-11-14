@@ -6430,9 +6430,7 @@ If the ``nuw`` keyword is present, then the shift produces a :ref:`poison
 value <poisonvalues>` if it shifts out any non-zero bits. If the
 ``nsw`` keyword is present, then the shift produces a :ref:`poison
 value <poisonvalues>` if it shifts out any bits that disagree with the
-resultant sign bit. As such, NUW/NSW have the same semantics as they
-would if the shift were expressed as a mul instruction with the same
-nsw/nuw bits in (mul %op1, (shl 1, %op2)).
+resultant sign bit.
 
 Example:
 """"""""

@@ -29,7 +29,19 @@ static cl::list<std::string> InputFileNames(cl::Positional,
                                             cl::desc("<input object files>"),
                                             cl::ZeroOrMore);
 
-static void strings(raw_ostream &OS, StringRef Contents) {
+static cl::opt<bool>
+    PrintFileName("print-file-name",
+                  cl::desc("Print the name of the file before each string"));
+static cl::alias PrintFileNameShort("f", cl::desc(""),
+                                    cl::aliasopt(PrintFileName));
+
+static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
+  auto print = [&OS, FileName](StringRef L) {
+    if (PrintFileName)
+      OS << FileName << ": ";
+    OS << L << '\n';
+  };
+
   const char *P = nullptr, *E = nullptr, *S = nullptr;
   for (P = Contents.begin(), E = Contents.end(); P < E; ++P) {
     if (std::isgraph(*P) || std::isblank(*P)) {
@@ -37,12 +49,12 @@ static void strings(raw_ostream &OS, StringRef Contents) {
         S = P;
     } else if (S) {
       if (P - S > 3)
-        OS << StringRef(S, P - S) << '\n';
+        print(StringRef(S, P - S));
       S = nullptr;
     }
   }
   if (S && E - S > 3)
-    OS << StringRef(S, E - S) << '\n';
+    print(StringRef(S, E - S));
 }
 
 int main(int argc, char **argv) {
@@ -60,7 +72,8 @@ int main(int argc, char **argv) {
     if (std::error_code EC = Buffer.getError())
       errs() << File << ": " << EC.message() << '\n';
     else
-      strings(llvm::outs(), Buffer.get()->getMemBufferRef().getBuffer());
+      strings(llvm::outs(), File == "-" ? "{standard input}" : File,
+              Buffer.get()->getMemBufferRef().getBuffer());
   }
 
   return EXIT_SUCCESS;

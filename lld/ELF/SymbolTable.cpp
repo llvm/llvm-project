@@ -638,7 +638,7 @@ findAllDemangled(const std::map<std::string, std::vector<SymbolBody *>> &D,
 }
 
 // If there's only one anonymous version definition in a version
-// script file, the script does not actullay define any symbol version,
+// script file, the script does not actually define any symbol version,
 // but just specifies symbols visibilities. We assume that the script was
 // in the form of { global: foo; bar; local *; }. So, local is default.
 // In this function, we make specified symbols global.

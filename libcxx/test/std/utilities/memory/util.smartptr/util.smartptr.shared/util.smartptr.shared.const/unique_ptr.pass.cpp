@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: sanitizer-new-delete
 
 // <memory>
@@ -63,6 +62,7 @@ int main()
         assert(p.get() == raw_ptr);
         assert(ptr.get() == 0);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     assert(A::count == 0);
     {
         std::unique_ptr<A> ptr(new A);
@@ -86,6 +86,7 @@ int main()
 #endif
         }
     }
+#endif
     assert(A::count == 0);
     { // LWG 2399
         fn(std::unique_ptr<int>(new int));

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -mcpu=knl -mattr=+avx512vl,+avx512dq -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
 // CHECK:  vcmppd k3, xmm27, xmm23, 171
 // CHECK:  encoding: [0x62,0xb1,0xa5,0x00,0xc2,0xdf,0xab]
@@ -1120,3 +1120,226 @@
 // CHECK: encoding: [0x62,0xa2,0x7d,0x21,0xa3,0xbc,0xb9,0x00,0x04,0x00,0x00]
           vscatterqps	xmmword ptr [rcx + 4*ymm31 + 1024] {k1}, xmm23 
 
+// CHECK: vcvtpd2ps xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x08,0x5a,0xc7]
+          vcvtpd2ps xmm0, xmm23
+
+// CHECK: vcvtpd2ps xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x08,0x5a,0xc7]
+          vcvtpd2psx xmm0, xmm23
+
+// CHECK: vcvtpd2ps xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x08,0x5a,0x00]
+          vcvtpd2ps xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtpd2ps xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x08,0x5a,0x00]
+          vcvtpd2psx xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtpd2ps xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x28,0x5a,0xc7]
+          vcvtpd2ps xmm0, ymm23
+
+// CHECK: vcvtpd2ps xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x28,0x5a,0xc7]
+          vcvtpd2psy xmm0, ymm23
+
+// CHECK: vcvtpd2ps xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x28,0x5a,0x00]
+          vcvtpd2ps xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtpd2ps xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x28,0x5a,0x00]
+          vcvtpd2psy xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtpd2dq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x08,0xe6,0xc7]
+          vcvtpd2dq xmm0, xmm23
+
+// CHECK: vcvtpd2dq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x08,0xe6,0xc7]
+          vcvtpd2dqx xmm0, xmm23
+
+// CHECK: vcvtpd2dq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x08,0xe6,0x00]
+          vcvtpd2dq xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtpd2dq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x08,0xe6,0x00]
+          vcvtpd2dqx xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtpd2dq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x28,0xe6,0xc7]
+          vcvtpd2dq xmm0, ymm23
+
+// CHECK: vcvtpd2dq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x28,0xe6,0xc7]
+          vcvtpd2dqy xmm0, ymm23
+
+// CHECK: vcvtpd2dq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x28,0xe6,0x00]
+          vcvtpd2dq xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtpd2dq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x28,0xe6,0x00]
+          vcvtpd2dqy xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtpd2udq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x08,0x79,0xc7]
+          vcvtpd2udq xmm0, xmm23
+
+// CHECK: vcvtpd2udq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x08,0x79,0xc7]
+          vcvtpd2udqx xmm0, xmm23
+
+// CHECK: vcvtpd2udq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x08,0x79,0x00]
+          vcvtpd2udq xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtpd2udq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x08,0x79,0x00]
+          vcvtpd2udqx xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtpd2udq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x28,0x79,0xc7]
+          vcvtpd2udq xmm0, ymm23
+
+// CHECK: vcvtpd2udq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x28,0x79,0xc7]
+          vcvtpd2udqy xmm0, ymm23
+
+// CHECK: vcvtpd2udq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x28,0x79,0x00]
+          vcvtpd2udq xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtpd2udq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x28,0x79,0x00]
+          vcvtpd2udqy xmm16, ymmword ptr [rax]
+
+// CHECK: vcvttpd2dq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x08,0xe6,0xc7]
+          vcvttpd2dq xmm0, xmm23
+
+// CHECK: vcvttpd2dq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x08,0xe6,0xc7]
+          vcvttpd2dqx xmm0, xmm23
+
+// CHECK: vcvttpd2dq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x08,0xe6,0x00]
+          vcvttpd2dq xmm16, xmmword ptr [rax]
+
+// CHECK: vcvttpd2dq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x08,0xe6,0x00]
+          vcvttpd2dqx xmm16, xmmword ptr [rax]
+
+// CHECK: vcvttpd2dq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x28,0xe6,0xc7]
+          vcvttpd2dq xmm0, ymm23
+
+// CHECK: vcvttpd2dq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfd,0x28,0xe6,0xc7]
+          vcvttpd2dqy xmm0, ymm23
+
+// CHECK: vcvttpd2dq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x28,0xe6,0x00]
+          vcvttpd2dq xmm16, ymmword ptr [rax]
+
+// CHECK: vcvttpd2dq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfd,0x28,0xe6,0x00]
+          vcvttpd2dqy xmm16, ymmword ptr [rax]
+
+// CHECK: vcvttpd2udq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x08,0x78,0xc7]
+          vcvttpd2udq xmm0, xmm23
+
+// CHECK: vcvttpd2udq xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x08,0x78,0xc7]
+          vcvttpd2udqx xmm0, xmm23
+
+// CHECK: vcvttpd2udq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x08,0x78,0x00]
+          vcvttpd2udq xmm16, xmmword ptr [rax]
+
+// CHECK: vcvttpd2udq xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x08,0x78,0x00]
+          vcvttpd2udqx xmm16, xmmword ptr [rax]
+
+// CHECK: vcvttpd2udq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x28,0x78,0xc7]
+          vcvttpd2udq xmm0, ymm23
+
+// CHECK: vcvttpd2udq xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x28,0x78,0xc7]
+          vcvttpd2udqy xmm0, ymm23
+
+// CHECK: vcvttpd2udq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x28,0x78,0x00]
+          vcvttpd2udq xmm16, ymmword ptr [rax]
+
+// CHECK: vcvttpd2udq xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x28,0x78,0x00]
+          vcvttpd2udqy xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtqq2ps xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x08,0x5b,0xc7]
+          vcvtqq2ps xmm0, xmm23
+
+// CHECK: vcvtqq2ps xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x08,0x5b,0xc7]
+          vcvtqq2psx xmm0, xmm23
+
+// CHECK: vcvtqq2ps xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x08,0x5b,0x00]
+          vcvtqq2ps xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtqq2ps xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x08,0x5b,0x00]
+          vcvtqq2psx xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtqq2ps xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x28,0x5b,0xc7]
+          vcvtqq2ps xmm0, ymm23
+
+// CHECK: vcvtqq2ps xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xfc,0x28,0x5b,0xc7]
+          vcvtqq2psy xmm0, ymm23
+
+// CHECK: vcvtqq2ps xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x28,0x5b,0x00]
+          vcvtqq2ps xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtqq2ps xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xfc,0x28,0x5b,0x00]
+          vcvtqq2psy xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtuqq2ps xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x08,0x7a,0xc7]
+          vcvtuqq2ps xmm0, xmm23
+
+// CHECK: vcvtuqq2ps xmm0, xmm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x08,0x7a,0xc7]
+          vcvtuqq2psx xmm0, xmm23
+
+// CHECK: vcvtuqq2ps xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x08,0x7a,0x00]
+          vcvtuqq2ps xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtuqq2ps xmm16, xmmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x08,0x7a,0x00]
+          vcvtuqq2psx xmm16, xmmword ptr [rax]
+
+// CHECK: vcvtuqq2ps xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x28,0x7a,0xc7]
+          vcvtuqq2ps xmm0, ymm23
+
+// CHECK: vcvtuqq2ps xmm0, ymm23 
+// CHECK: encoding: [0x62,0xb1,0xff,0x28,0x7a,0xc7]
+          vcvtuqq2psy xmm0, ymm23
+
+// CHECK: vcvtuqq2ps xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x28,0x7a,0x00]
+          vcvtuqq2ps xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtuqq2ps xmm16, ymmword ptr [rax]
+// CHECK: encoding: [0x62,0xe1,0xff,0x28,0x7a,0x00]
+          vcvtuqq2psy xmm16, ymmword ptr [rax]

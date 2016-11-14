@@ -858,6 +858,10 @@ def fp32imm0 : PatLeaf<(f32 fpimm), [{
   return N->isExactlyValue(+0.0);
 }]>;
 
+def fp64imm0 : PatLeaf<(f64 fpimm), [{
+  return N->isExactlyValue(+0.0);
+}]>;
+
 def I8Imm : SDNodeXForm<imm, [{
   // Transformation function: get the low 8 bits.
   return getI8Imm((uint8_t)N->getZExtValue(), SDLoc(N));

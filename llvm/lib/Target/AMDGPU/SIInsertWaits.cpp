@@ -532,6 +532,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   IV = getIsaVersion(ST->getFeatureBits());
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   HardwareLimits.Named.VM = getVmcntBitMask(IV);
   HardwareLimits.Named.EXP = getExpcntBitMask(IV);
@@ -543,19 +544,26 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   LastOpcodeType = OTHER;
   LastInstWritesM0 = false;
   IsFlatOutstanding = false;
-  ReturnsVoid = MF.getInfo<SIMachineFunctionInfo>()->returnsVoid();
+  ReturnsVoid = MFI->returnsVoid();
 
   memset(&UsedRegs, 0, sizeof(UsedRegs));
   memset(&DefinedRegs, 0, sizeof(DefinedRegs));
 
   SmallVector<MachineInstr *, 4> RemoveMI;
+  SmallVector<MachineBasicBlock *, 4> EndPgmBlocks;
+
+  bool HaveScalarStores = false;
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
        BI != BE; ++BI) {
 
     MachineBasicBlock &MBB = *BI;
+
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
          I != E; ++I) {
+
+      if (!HaveScalarStores && TII->isScalarStore(*I))
+        HaveScalarStores = true;
 
       if (ST->getGeneration() <= SISubtarget::SEA_ISLANDS) {
         // There is a hardware bug on CI/SI where SMRD instruction may corrupt
@@ -625,10 +633,43 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
 
       pushInstruction(MBB, I, Increment);
       handleSendMsg(MBB, I);
+
+      if (I->getOpcode() == AMDGPU::S_ENDPGM ||
+          I->getOpcode() == AMDGPU::SI_RETURN)
+        EndPgmBlocks.push_back(&MBB);
     }
 
     // Wait for everything at the end of the MBB
     Changes |= insertWait(MBB, MBB.getFirstTerminator(), LastIssued);
+  }
+
+  if (HaveScalarStores) {
+    // If scalar writes are used, the cache must be flushed or else the next
+    // wave to reuse the same scratch memory can be clobbered.
+    //
+    // Insert s_dcache_wb at wave termination points if there were any scalar
+    // stores, and only if the cache hasn't already been flushed. This could be
+    // improved by looking across blocks for flushes in postdominating blocks
+    // from the stores but an explicitly requested flush is probably very rare.
+    for (MachineBasicBlock *MBB : EndPgmBlocks) {
+      bool SeenDCacheWB = false;
+
+      for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end();
+           I != E; ++I) {
+
+        if (I->getOpcode() == AMDGPU::S_DCACHE_WB)
+          SeenDCacheWB = true;
+        else if (TII->isScalarStore(*I))
+          SeenDCacheWB = false;
+
+        // FIXME: It would be better to insert this before a waitcnt if any.
+        if ((I->getOpcode() == AMDGPU::S_ENDPGM ||
+             I->getOpcode() == AMDGPU::SI_RETURN) && !SeenDCacheWB) {
+          Changes = true;
+          BuildMI(*MBB, I, I->getDebugLoc(), TII->get(AMDGPU::S_DCACHE_WB));
+        }
+      }
+    }
   }
 
   for (MachineInstr *I : RemoveMI)

@@ -420,9 +420,9 @@ const RegisterBankInfo::ValueMapping *RegisterBankInfo::getOperandsMapping(
 
 RegisterBankInfo::InstructionMapping
 RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-    RegisterBankInfo::InstructionMapping Mapping = getInstrMappingImpl(MI);
-    if (Mapping.isValid())
-      return Mapping;
+  RegisterBankInfo::InstructionMapping Mapping = getInstrMappingImpl(MI);
+  if (Mapping.isValid())
+    return Mapping;
   llvm_unreachable("The target must implement this");
 }
 

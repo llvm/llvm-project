@@ -665,7 +665,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
       });
 
   if (HeaderSize <= MinVA && FirstPTLoad != Phdrs.end()) {
-    // If linker script specifies program headers and first PT_LOAD doesn't 
+    // If linker script specifies program headers and first PT_LOAD doesn't
     // have both PHDRS and FILEHDR attributes then do nothing
     if (!Opt.PhdrsCommands.empty()) {
       size_t SegNum = std::distance(Phdrs.begin(), FirstPTLoad);
@@ -1728,12 +1728,7 @@ std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {
   std::vector<StringRef> Phdrs;
   while (!Error && peek().startswith(":")) {
     StringRef Tok = next();
-    Tok = (Tok.size() == 1) ? next() : Tok.substr(1);
-    if (Tok.empty()) {
-      setError("section header name is empty");
-      break;
-    }
-    Phdrs.push_back(Tok);
+    Phdrs.push_back((Tok.size() == 1) ? next() : Tok.substr(1));
   }
   return Phdrs;
 }

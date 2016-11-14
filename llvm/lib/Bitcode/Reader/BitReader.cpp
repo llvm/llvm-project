@@ -84,7 +84,9 @@ LLVMBool LLVMGetBitcodeModuleInContext(LLVMContextRef ContextRef,
   std::unique_ptr<MemoryBuffer> Owner(unwrap(MemBuf));
   Expected<std::unique_ptr<Module>> ModuleOrErr =
       getOwningLazyBitcodeModule(std::move(Owner), Ctx);
-  Owner.release();
+  // Release the buffer if we didn't take ownership of it since we never owned
+  // it anyway.
+  (void)Owner.release();
 
   if (Error Err = ModuleOrErr.takeError()) {
     std::string Message;
