@@ -1091,6 +1091,7 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("enumerator_attributes", true)
       .Case("generalized_swift_name", true)
       .Case("nullability", true)
+      .Case("nullability_on_arrays", true)
       .Case("memory_sanitizer", LangOpts.Sanitize.has(SanitizerKind::Memory))
       .Case("thread_sanitizer", LangOpts.Sanitize.has(SanitizerKind::Thread))
       .Case("dataflow_sanitizer", LangOpts.Sanitize.has(SanitizerKind::DataFlow))

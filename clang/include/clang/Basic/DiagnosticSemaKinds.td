@@ -8707,6 +8707,15 @@ def warn_nullability_missing : Warning<
   "%select{pointer|block pointer|member pointer}0 is missing a nullability "
   "type specifier (_Nonnull, _Nullable, or _Null_unspecified)">,
   InGroup<NullabilityCompleteness>;
+def warn_nullability_missing_array : Warning<
+  "array parameter is missing a nullability type specifier (_Nonnull, "
+  "_Nullable, or _Null_unspecified)">,
+  InGroup<NullabilityCompletenessOnArrays>;
+
+def warn_nullability_inferred_on_nested_type : Warning<
+  "inferring '_Nonnull' for pointer type within %select{array|reference}0 is "
+  "deprecated">,
+  InGroup<NullabilityInferredOnNestedType>;
 
 def err_objc_type_arg_explicit_nullability : Error<
   "type argument %0 cannot explicitly specify nullability">;
