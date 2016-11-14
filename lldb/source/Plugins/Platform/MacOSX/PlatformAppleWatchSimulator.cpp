@@ -263,7 +263,7 @@ EnumerateDirectoryCallback(void *baton, FileSpec::FileType file_type,
 }
 
 const char *PlatformAppleWatchSimulator::GetSDKDirectoryAsCString() {
-  std::lock_guard<std::mutex> guard(m_mutex);
+  std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory.empty()) {
     const char *developer_dir = GetDeveloperDirectory();
     if (developer_dir) {
