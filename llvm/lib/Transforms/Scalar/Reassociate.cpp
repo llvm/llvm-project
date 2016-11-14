@@ -508,9 +508,10 @@ static bool LinearizeExprTree(BinaryOperator *I,
           continue;
         }
         // No uses outside the expression, try morphing it.
-      } else if (It != Leaves.end()) {
+      } else {
         // Already in the leaf map.
-        assert(Visited.count(Op) && "In leaf map but not visited!");
+        assert(It != Leaves.end() && Visited.count(Op) &&
+               "In leaf map but not visited!");
 
         // Update the number of paths to the leaf.
         IncorporateWeight(It->second, Weight, Opcode);

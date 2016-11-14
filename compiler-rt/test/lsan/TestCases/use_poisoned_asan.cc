@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <sanitizer/asan_interface.h>
 #include <assert.h>
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 void **p;
 

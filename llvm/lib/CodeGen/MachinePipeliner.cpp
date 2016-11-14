@@ -3805,8 +3805,7 @@ bool SMSchedule::isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi) {
     return true;
   unsigned LoopCycle = cycleScheduled(UseSU);
   int LoopStage = stageScheduled(UseSU);
-  return LoopCycle > DefCycle ||
-         (LoopCycle <= DefCycle && LoopStage <= DefStage);
+  return (LoopCycle > DefCycle) || (LoopStage <= DefStage);
 }
 
 /// Return true if the instruction is a definition that is loop carried

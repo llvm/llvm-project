@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <exception>
 
 // class nested_exception;
@@ -16,6 +15,8 @@
 
 #include <exception>
 #include <cassert>
+
+#include "test_macros.h"
 
 class A
 {
@@ -32,6 +33,7 @@ int main()
         std::nested_exception e;
         assert(e.nested_ptr() == nullptr);
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         try
         {
@@ -53,4 +55,5 @@ int main()
             }
         }
     }
+#endif
 }
