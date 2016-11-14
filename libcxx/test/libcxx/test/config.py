@@ -83,6 +83,10 @@ class Configuration(object):
         conf = self.get_lit_conf(name)
         if conf is None:
             return default
+        if isinstance(conf, bool):
+            return conf
+        if not isinstance(conf, str):
+            raise TypeError('expected bool or string')
         if conf.lower() in ('1', 'true'):
             return True
         if conf.lower() in ('', '0', 'false'):
@@ -375,7 +379,10 @@ class Configuration(object):
         if gcc_toolchain:
             self.cxx.flags += ['-gcc-toolchain', gcc_toolchain]
         if self.use_target:
-            self.cxx.flags += ['-target', self.config.target_triple]
+            if not self.cxx.addFlagIfSupported(
+                    ['-target', self.config.target_triple]):
+                self.lit_config.warning('use_target is true but -target is '\
+                        'not supported by the compiler')
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test/support')
@@ -756,10 +763,12 @@ class Configuration(object):
     def configure_triple(self):
         # Get or infer the target triple.
         self.config.target_triple = self.get_lit_conf('target_triple')
-        self.use_target = bool(self.config.target_triple)
+        self.use_target = self.get_lit_bool('use_target', False)
+        if self.use_target and self.config.target_triple:
+            self.lit_config.warning('use_target is true but no triple is specified')
         # If no target triple was given, try to infer it from the compiler
         # under test.
-        if not self.use_target:
+        if not self.config.target_triple:
             target_triple = self.cxx.getTriple()
             # Drop sub-major version components from the triple, because the
             # current XFAIL handling expects exact matches for feature checks.

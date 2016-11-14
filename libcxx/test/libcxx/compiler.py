@@ -193,6 +193,17 @@ class CXXCompiler(object):
                                          flags=flags)
         return rc == 0
 
+    def addFlagIfSupported(self, flag):
+        if isinstance(flag, list):
+            flags = list(flag)
+        else:
+            flags = [flag]
+        if self.hasCompileFlag(flags):
+            self.flags += flags
+            return True
+        else:
+            return False
+
     def addCompileFlagIfSupported(self, flag):
         if isinstance(flag, list):
             flags = list(flag)

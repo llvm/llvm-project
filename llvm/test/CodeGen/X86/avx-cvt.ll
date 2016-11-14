@@ -44,7 +44,7 @@ define <8 x float> @sitofp02(<8 x i16> %a) {
 define <4 x i32> @fptosi01(<4 x double> %a) {
 ; CHECK-LABEL: fptosi01:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vcvttpd2dqy %ymm0, %xmm0
+; CHECK-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = fptosi <4 x double> %a to <4 x i32>
@@ -54,8 +54,8 @@ define <4 x i32> @fptosi01(<4 x double> %a) {
 define <8 x float> @fptrunc00(<8 x double> %b) nounwind {
 ; CHECK-LABEL: fptrunc00:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vcvtpd2psy %ymm0, %xmm0
-; CHECK-NEXT:    vcvtpd2psy %ymm1, %xmm1
+; CHECK-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; CHECK-NEXT:    vcvtpd2ps %ymm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %a = fptrunc <8 x double> %b to <8 x float>

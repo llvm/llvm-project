@@ -123,3 +123,29 @@ supported by libc++ they may be useful to users.
 Known 3rd Party Implementations Include:
 
 * `Koutheir's libc++ pretty-printers <https://github.com/koutheir/libcxx-pretty-printers>`_.
+
+
+Libc++ Configuration Macros
+===========================
+
+Libc++ provides a number of configuration macros which can be used to enable
+or disable extended libc++ behavior, including enabling "debug mode" or
+thread safety annotations.
+
+**_LIBCPP_DEBUG**:
+  This macro is used to enable assertions and other debugging checks within
+  libc++. All debugging checks are disabled by default.
+
+  **Values**: ``0``, ``1``
+
+  Defining ``_LIBCPP_DEBUG`` to ``0`` or greater enables most of libc++'s
+  assertions. Defining ``_LIBCPP_DEBUG`` to ``1`` enables "iterator debugging"
+  which provides additional assertions about the validity of iterators used by
+  the program.
+
+  Note that this option has no effect on libc++'s ABI
+
+**_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
+  This macro is used to enable -Wthread-safety annotations on libc++'s
+  ``std::mutex`` and ``std::lock_guard``. By default these annotations are
+  disabled and must be manually enabled by the user.

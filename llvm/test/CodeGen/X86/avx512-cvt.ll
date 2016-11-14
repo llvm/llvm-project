@@ -361,15 +361,10 @@ define <8 x i32> @fptosi01(<8 x double> %a) {
 }
 
 define <4 x i32> @fptosi03(<4 x double> %a) {
-; KNL-LABEL: fptosi03:
-; KNL:       ## BB#0:
-; KNL-NEXT:    vcvttpd2dqy %ymm0, %xmm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: fptosi03:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; SKX-NEXT:    retq
+; ALL-LABEL: fptosi03:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; ALL-NEXT:    retq
   %b = fptosi <4 x double> %a to <4 x i32>
   ret <4 x i32> %b
 }
@@ -393,15 +388,10 @@ define <16 x float> @fptrunc00(<16 x double> %b) nounwind {
 }
 
 define <4 x float> @fptrunc01(<4 x double> %b) {
-; KNL-LABEL: fptrunc01:
-; KNL:       ## BB#0:
-; KNL-NEXT:    vcvtpd2psy %ymm0, %xmm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: fptrunc01:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vcvtpd2ps %ymm0, %xmm0
-; SKX-NEXT:    retq
+; ALL-LABEL: fptrunc01:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vcvtpd2ps %ymm0, %xmm0
+; ALL-NEXT:    retq
   %a = fptrunc <4 x double> %b to <4 x float>
   ret <4 x float> %a
 }
@@ -411,7 +401,7 @@ define <4 x float> @fptrunc02(<4 x double> %b, <4 x i1> %mask) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
-; KNL-NEXT:    vcvtpd2psy %ymm0, %xmm0
+; KNL-NEXT:    vcvtpd2ps %ymm0, %xmm0
 ; KNL-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;

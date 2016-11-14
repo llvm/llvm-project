@@ -1822,6 +1822,28 @@ define <16 x i16> @shuffle_zext_16x8_to_16x16(<16 x i8> %a) nounwind readnone {
   ret <16 x i16> %2
 }
 
+define <16 x i16> @shuffle_zext_16x8_to_16x16_mask(<16 x i8> %a, <16 x i1> %mask) nounwind readnone {
+; KNL-LABEL: shuffle_zext_16x8_to_16x16_mask:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; KNL-NEXT:    vpsllw $15, %ymm1, %ymm1
+; KNL-NEXT:    vpsraw $15, %ymm1, %ymm1
+; KNL-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: shuffle_zext_16x8_to_16x16_mask:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $7, %xmm1, %xmm1
+; SKX-NEXT:    vpmovb2m %xmm1, %k1
+; SKX-NEXT:    vpmovzxbw {{.*#+}} ymm0 {%k1} {z} = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; SKX-NEXT:    retq
+  %x   = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <32 x i32> <i32 0, i32 16, i32 1, i32 16, i32 2, i32 16, i32 3, i32 16, i32 4, i32 16, i32 5, i32 16, i32 6, i32 16, i32 7, i32 16, i32 8, i32 16, i32 9, i32 16, i32 10, i32 16, i32 11, i32 16, i32 12, i32 16, i32 13, i32 16, i32 14, i32 16, i32 15, i32 16>
+  %bc  = bitcast <32 x i8> %x to <16 x i16>
+  %ret = select <16 x i1> %mask, <16 x i16> %bc, <16 x i16> zeroinitializer
+  ret <16 x i16> %ret
+}
+
 define <16 x i16> @zext_32x8_to_16x16(<32 x i8> %a) {
 ; ALL-LABEL: zext_32x8_to_16x16:
 ; ALL:       ## BB#0:

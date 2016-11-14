@@ -1,12 +1,13 @@
 ; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -march=amdgcn -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=TOVGPR -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -march=amdgcn -mcpu=tonga -mattr=+vgpr-spilling  -verify-machineinstrs < %s | FileCheck -check-prefix=TOVGPR -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -amdgpu-spill-sgpr-to-smem=0 -march=amdgcn -mcpu=tonga -mattr=+vgpr-spilling  -verify-machineinstrs < %s | FileCheck -check-prefix=TOVGPR -check-prefix=GCN %s
 ; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -march=amdgcn -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=TOVMEM -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -march=amdgcn -mattr=+vgpr-spilling -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=TOVMEM -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-spill-sgpr-to-smem=0 -march=amdgcn -mcpu=tonga -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=TOVMEM -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-spill-sgpr-to-smem=1 -march=amdgcn -mcpu=tonga -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=TOSMEM -check-prefix=GCN %s
 
 ; XXX - Why does it like to use vcc?
 
 ; GCN-LABEL: {{^}}spill_m0:
-; TOSMEM: s_mov_b32 s88, SCRATCH_RSRC_DWORD0
+; TOSMEM: s_mov_b32 s84, SCRATCH_RSRC_DWORD0
 
 ; GCN: s_cmp_lg_u32
 
@@ -16,6 +17,13 @@
 ; TOVMEM: v_mov_b32_e32 [[SPILL_VREG:v[0-9]+]], m0
 ; TOVMEM: buffer_store_dword [[SPILL_VREG]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} ; 4-byte Folded Spill
 ; TOVMEM: s_waitcnt vmcnt(0)
+
+; TOSMEM: s_mov_b32 vcc_hi, m0
+; TOSMEM: s_mov_b32 m0, s3{{$}}
+; TOSMEM-NOT: vcc_hi
+; TOSMEM: s_buffer_store_dword vcc_hi, s[84:87], m0 ; 4-byte Folded Spill
+; TOSMEM: s_waitcnt lgkmcnt(0)
+
 ; GCN: s_cbranch_scc1 [[ENDIF:BB[0-9]+_[0-9]+]]
 
 ; GCN: [[ENDIF]]:
@@ -26,6 +34,11 @@
 ; TOVMEM: s_waitcnt vmcnt(0)
 ; TOVMEM: v_readfirstlane_b32 vcc_hi, [[RELOAD_VREG]]
 ; TOVMEM: s_mov_b32 m0, vcc_hi
+
+; TOSMEM: s_mov_b32 m0, s3{{$}}
+; TOSMEM: s_buffer_load_dword vcc_hi, s[84:87], m0 ; 4-byte Folded Reload
+; TOSMEM-NOT: vcc_hi
+; TOSMEM: s_mov_b32 m0, vcc_hi
 
 ; GCN: s_add_i32 m0, m0, 1
 define void @spill_m0(i32 %cond, i32 addrspace(1)* %out) #0 {
@@ -48,6 +61,8 @@ endif:
 
 ; GCN-LABEL: {{^}}spill_m0_lds:
 ; GCN-NOT: v_readlane_b32 m0
+; GCN-NOT: s_buffer_store_dword m0
+; GCN-NOT: s_buffer_load_dword m0
 define amdgpu_ps void @spill_m0_lds(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) #0 {
 main_body:
   %4 = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %3)

@@ -2833,7 +2833,7 @@ declare <8 x float> @llvm.x86.avx.cmp.ps.256(<8 x float>, <8 x float>, i8) nounw
 define <4 x float> @test_x86_avx_cvt_pd2_ps_256(<4 x double> %a0) {
 ; AVX-LABEL: test_x86_avx_cvt_pd2_ps_256:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vcvtpd2psy %ymm0, %xmm0 ## encoding: [0xc5,0xfd,0x5a,0xc0]
+; AVX-NEXT:    vcvtpd2ps %ymm0, %xmm0 ## encoding: [0xc5,0xfd,0x5a,0xc0]
 ; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX-NEXT:    retl ## encoding: [0xc3]
 ;
@@ -2850,7 +2850,7 @@ declare <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double>) nounwind readnone
 define <4 x i32> @test_x86_avx_cvt_pd2dq_256(<4 x double> %a0) {
 ; AVX-LABEL: test_x86_avx_cvt_pd2dq_256:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vcvtpd2dqy %ymm0, %xmm0 ## encoding: [0xc5,0xff,0xe6,0xc0]
+; AVX-NEXT:    vcvtpd2dq %ymm0, %xmm0 ## encoding: [0xc5,0xff,0xe6,0xc0]
 ; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX-NEXT:    retl ## encoding: [0xc3]
 ;
@@ -2894,7 +2894,7 @@ declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>) nounwind readnone
 define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) {
 ; AVX-LABEL: test_x86_avx_cvtt_pd2dq_256:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vcvttpd2dqy %ymm0, %xmm0 ## encoding: [0xc5,0xfd,0xe6,0xc0]
+; AVX-NEXT:    vcvttpd2dq %ymm0, %xmm0 ## encoding: [0xc5,0xfd,0xe6,0xc0]
 ; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX-NEXT:    retl ## encoding: [0xc3]
 ;
