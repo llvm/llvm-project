@@ -67,30 +67,30 @@ const char *lldb_private::GetVersion() {
   // as the clang tool.
   static std::string g_version_str;
   if (g_version_str.empty()) {
+
+#ifdef LLDB_VERSION_STRING
+    g_version_str += EXPAND_AND_QUOTE(LLDB_VERSION_STRING);
+#else
     g_version_str += "lldb version ";
     g_version_str += CLANG_VERSION_STRING;
+#endif
     const char *lldb_repo = GetLLDBRepository();
-    if (lldb_repo) {
-      g_version_str += " (";
-      g_version_str += lldb_repo;
-    }
-
     const char *lldb_rev = GetLLDBRevision();
-    if (lldb_rev) {
-      g_version_str += " revision ";
-      g_version_str += lldb_rev;
+    if (lldb_repo || lldb_rev) {
+      g_version_str += " (";
+      if (lldb_repo)
+        g_version_str += lldb_repo;
+      if (lldb_rev) {
+        g_version_str += " revision ";
+        g_version_str += lldb_rev;
+      }
       g_version_str += ")";
     }
-#ifdef LLDB_VERSION_STRING
-    g_version_str += " (";
-    g_version_str += EXPAND_AND_QUOTE(LLDB_VERSION_STRING);
+    
 #if LLDB_IS_BUILDBOT_BUILD
-    g_version_str = "buildbot";
     std::string build_date = GetBuildDate();
     if(!build_date.empty())
-      g_version_str += " (" + build_date + ")";
-#endif
-    g_version_str += ")";
+      g_version_str += " (buildbot " + build_date + ")";
 #endif
 
     auto const swift_version = swift::version::getSwiftNumericVersion();
