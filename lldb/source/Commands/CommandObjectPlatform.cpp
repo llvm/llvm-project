@@ -1746,7 +1746,7 @@ public:
 
     // Print out an usage syntax on an empty command line.
     if (raw_command_line[0] == '\0') {
-      result.GetOutputStream().Printf("%s\n", this->GetSyntax());
+      result.GetOutputStream().Printf("%s\n", this->GetSyntax().str().c_str());
       return true;
     }
 

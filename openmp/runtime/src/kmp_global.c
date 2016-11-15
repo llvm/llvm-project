@@ -14,6 +14,7 @@
 
 
 #include "kmp.h"
+#include "kmp_affinity.h"
 
 kmp_key_t __kmp_gtid_threadprivate_key;
 
@@ -27,10 +28,10 @@ kmp_cpuinfo_t   __kmp_cpuinfo = { 0 }; // Not initialized
 kmp_tas_lock_t __kmp_stats_lock;
 
 // global list of per thread stats, the head is a sentinel node which accumulates all stats produced before __kmp_create_worker is called.
-kmp_stats_list __kmp_stats_list;
+kmp_stats_list* __kmp_stats_list;
 
 // thread local pointer to stats node within list
-__thread kmp_stats_list* __kmp_stats_thread_ptr = &__kmp_stats_list;
+__thread kmp_stats_list* __kmp_stats_thread_ptr = NULL;
 
 // gives reference tick for all events (considered the 0 tick)
 tsc_tick_count __kmp_stats_start_time;
@@ -222,21 +223,22 @@ enum mic_type __kmp_mic_type = non_mic;
 
 #if KMP_AFFINITY_SUPPORTED
 
+KMPAffinity* __kmp_affinity_dispatch = NULL;
+
 # if KMP_USE_HWLOC
 int __kmp_hwloc_error = FALSE;
 hwloc_topology_t __kmp_hwloc_topology = NULL;
 # endif
 
-# if KMP_GROUP_AFFINITY
-
+# if KMP_OS_WINDOWS
+#  if KMP_GROUP_AFFINITY
 int __kmp_num_proc_groups = 1;
-
+#  endif /* KMP_GROUP_AFFINITY */
 kmp_GetActiveProcessorCount_t __kmp_GetActiveProcessorCount = NULL;
 kmp_GetActiveProcessorGroupCount_t __kmp_GetActiveProcessorGroupCount = NULL;
 kmp_GetThreadGroupAffinity_t __kmp_GetThreadGroupAffinity = NULL;
 kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity = NULL;
-
-# endif /* KMP_GROUP_AFFINITY */
+# endif /* KMP_OS_WINDOWS */
 
 size_t   __kmp_affin_mask_size = 0;
 enum affinity_type __kmp_affinity_type = affinity_default;

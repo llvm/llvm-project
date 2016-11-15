@@ -102,6 +102,8 @@ public:
                  const allocator_type& a = allocator_type());
     basic_string(const basic_string& str, size_type pos, size_type n,
                  const Allocator& a = Allocator());
+    template<class T>
+        basic_string(const T& t, size_type pos, size_type n, const Allocator& a = Allocator()); // C++17
     explicit basic_string(const basic_string_view<charT, traits> sv, const Allocator& a = Allocator());
     basic_string(const value_type* s, const allocator_type& a = allocator_type());
     basic_string(const value_type* s, size_type n, const allocator_type& a = allocator_type());
@@ -789,6 +791,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_string(const basic_string& __str, size_type __pos,
                  const allocator_type& __a = allocator_type());
+    template<class _Tp>
+        basic_string(const _Tp& __t, size_type __pos, size_type __n, 
+                     const allocator_type& __a = allocator_type(),
+                     typename enable_if<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value, void>::type* = 0);
     _LIBCPP_INLINE_VISIBILITY explicit
     basic_string(__self_view __sv);
     _LIBCPP_INLINE_VISIBILITY
@@ -1714,6 +1720,20 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+template <class _Tp>
+basic_string<_CharT, _Traits, _Allocator>::basic_string(
+             const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a,
+			 typename enable_if<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value, void>::type *)
+    : __r_(__a)
+{
+	__self_view __sv = __self_view(__t).substr(__pos, __n);
+    __init(__sv.data(), __sv.size());
+#if _LIBCPP_DEBUG_LEVEL >= 2
+    __get_db()->__insert_c(this);
+#endif	
 }
 
 template <class _CharT, class _Traits, class _Allocator>

@@ -263,6 +263,7 @@ PlatformRemoteiOS::GetContainedFilesIntoVectorOfStringsCallback(
 
 bool PlatformRemoteiOS::UpdateSDKDirectoryInfosIfNeeded() {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory_infos.empty()) {
     // A --sysroot option was supplied - add it to our list of SDKs to check
     if (m_sdk_sysroot) {

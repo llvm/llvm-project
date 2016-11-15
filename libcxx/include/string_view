@@ -164,7 +164,6 @@ namespace std {
 #include <__config>
 
 #include <__string>
-#include <algorithm>
 #include <iterator>
 #include <__debug>
 
@@ -320,8 +319,8 @@ public:
 	{
 		if (__pos > size())
 			__throw_out_of_range("string_view::copy");
-		size_type __rlen = _VSTD::min( __n, size() - __pos );
-		copy_n(begin() + __pos, __rlen, __s );
+		size_type __rlen = _VSTD::min(__n, size() - __pos);
+		_Traits::copy(__s, data() + __pos, __rlen);
 		return __rlen;
 	}
 

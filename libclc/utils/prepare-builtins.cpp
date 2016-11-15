@@ -41,7 +41,8 @@ int main(int argc, char **argv) {
       ErrorMessage = ec.message();
     else {
       ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
-          parseBitcodeFile(BufferPtr.get()->getMemBufferRef(), Context);
+          expectedToErrorOrAndEmitErrors(Context,
+          parseBitcodeFile(BufferPtr.get()->getMemBufferRef(), Context));
       if (std::error_code ec = ModuleOrErr.getError())
         ErrorMessage = ec.message();
 

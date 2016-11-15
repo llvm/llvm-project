@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <ios>
 
 // template <class charT, class traits> class basic_ios
@@ -18,6 +17,8 @@
 #include <streambuf>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct testbuf : public std::streambuf {};
 
 int main()
@@ -27,6 +28,7 @@ int main()
         assert(ios.exceptions() == std::ios::goodbit);
         ios.exceptions(std::ios::eofbit);
         assert(ios.exceptions() == std::ios::eofbit);
+#ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
             ios.exceptions(std::ios::badbit);
@@ -36,6 +38,7 @@ int main()
         {
         }
         assert(ios.exceptions() == std::ios::badbit);
+#endif
     }
     {
         testbuf sb;

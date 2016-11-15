@@ -872,54 +872,56 @@
 #error SCNxPTR not defined
 #endif
 
+template <class T> void test()
+{
+    T t = 0;
+    ((void)t); // Prevent unused warning
+}
+
 int main()
 {
-    {
-    int8_t  i1 = 0;
-    int16_t i2 = 0;
-    int32_t i3 = 0;
-    int64_t i4 = 0;
-    }
-    {
-    uint8_t  i1 = 0;
-    uint16_t i2 = 0;
-    uint32_t i3 = 0;
-    uint64_t i4 = 0;
-    }
-    {
-    int_least8_t  i1 = 0;
-    int_least16_t i2 = 0;
-    int_least32_t i3 = 0;
-    int_least64_t i4 = 0;
-    }
-    {
-    uint_least8_t  i1 = 0;
-    uint_least16_t i2 = 0;
-    uint_least32_t i3 = 0;
-    uint_least64_t i4 = 0;
-    }
-    {
-    int_fast8_t  i1 = 0;
-    int_fast16_t i2 = 0;
-    int_fast32_t i3 = 0;
-    int_fast64_t i4 = 0;
-    }
-    {
-    uint_fast8_t  i1 = 0;
-    uint_fast16_t i2 = 0;
-    uint_fast32_t i3 = 0;
-    uint_fast64_t i4 = 0;
-    }
-    {
-    intptr_t  i1 = 0;
-    uintptr_t i2 = 0;
-    intmax_t  i3 = 0;
-    uintmax_t i4 = 0;
-    }
+    test<int8_t >();
+    test<int16_t>();
+    test<int32_t>();
+    test<int64_t>();
+
+    test<uint8_t >();
+    test<uint16_t>();
+    test<uint32_t>();
+    test<uint64_t>();
+
+    test<int_least8_t >();
+    test<int_least16_t>();
+    test<int_least32_t>();
+    test<int_least64_t>();
+
+    test<uint_least8_t >();
+    test<uint_least16_t>();
+    test<uint_least32_t>();
+    test<uint_least64_t>();
+
+    test<int_fast8_t >();
+    test<int_fast16_t>();
+    test<int_fast32_t>();
+    test<int_fast64_t>();
+
+    test<uint_fast8_t >();
+    test<uint_fast16_t>();
+    test<uint_fast32_t>();
+    test<uint_fast64_t>();
+
+    test<intptr_t >();
+    test<uintptr_t>();
+    test<intmax_t >();
+    test<uintmax_t>();
+
     {
     imaxdiv_t  i1 = {};
+    ((void)i1); // Prevent unused warning
     }
+
     intmax_t i = 0;
+    ((void)i); // Prevent unused warning
     static_assert((std::is_same<decltype(imaxabs(i)), intmax_t>::value), "");
     static_assert((std::is_same<decltype(imaxdiv(i, i)), imaxdiv_t>::value), "");
     static_assert((std::is_same<decltype(strtoimax("", (char**)0, 0)), intmax_t>::value), "");

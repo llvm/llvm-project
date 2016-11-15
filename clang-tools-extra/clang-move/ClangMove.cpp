@@ -136,6 +136,63 @@ private:
   ClangMoveTool *const MoveTool;
 };
 
+class ClassDeclarationMatch : public MatchFinder::MatchCallback {
+public:
+  explicit ClassDeclarationMatch(ClangMoveTool *MoveTool)
+      : MoveTool(MoveTool) {}
+  void run(const MatchFinder::MatchResult &Result) override {
+    clang::SourceManager* SM = &Result.Context->getSourceManager();
+    if (const auto *CMD =
+            Result.Nodes.getNodeAs<clang::CXXMethodDecl>("class_method"))
+      MatchClassMethod(CMD, SM);
+    else if (const auto *VD = Result.Nodes.getNodeAs<clang::VarDecl>(
+                   "class_static_var_decl"))
+      MatchClassStaticVariable(VD, SM);
+    else if (const auto *CD = Result.Nodes.getNodeAs<clang::CXXRecordDecl>(
+                   "moved_class"))
+      MatchClassDeclaration(CD, SM);
+  }
+
+private:
+  void MatchClassMethod(const clang::CXXMethodDecl* CMD,
+                        clang::SourceManager* SM) {
+    // Skip inline class methods. isInline() ast matcher doesn't ignore this
+    // case.
+    if (!CMD->isInlined()) {
+      MoveTool->getMovedDecls().emplace_back(CMD, SM);
+      MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+      // Get template class method from its method declaration as
+      // UnremovedDecls stores template class method.
+      if (const auto *FTD = CMD->getDescribedFunctionTemplate())
+        MoveTool->getUnremovedDeclsInOldHeader().erase(FTD);
+      else
+        MoveTool->getUnremovedDeclsInOldHeader().erase(CMD);
+    }
+  }
+
+  void MatchClassStaticVariable(const clang::NamedDecl *VD,
+                                clang::SourceManager* SM) {
+    MoveTool->getMovedDecls().emplace_back(VD, SM);
+    MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+    MoveTool->getUnremovedDeclsInOldHeader().erase(VD);
+  }
+
+  void MatchClassDeclaration(const clang::CXXRecordDecl *CD,
+                             clang::SourceManager* SM) {
+    // Get class template from its class declaration as UnremovedDecls stores
+    // class template.
+    if (const auto *TC = CD->getDescribedClassTemplate())
+      MoveTool->getMovedDecls().emplace_back(TC, SM);
+    else
+      MoveTool->getMovedDecls().emplace_back(CD, SM);
+    MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+    MoveTool->getUnremovedDeclsInOldHeader().erase(
+        MoveTool->getMovedDecls().back().Decl);
+  }
+
+  ClangMoveTool *MoveTool;
+};
+
 // Expand to get the end location of the line where the EndLoc of the given
 // Decl.
 SourceLocation
@@ -170,8 +227,8 @@ getLocForEndOfDecl(const clang::Decl *D, const SourceManager *SM,
 clang::CharSourceRange
 GetFullRange(const clang::SourceManager *SM, const clang::Decl *D,
              const clang::LangOptions &options = clang::LangOptions()) {
-  clang::SourceRange Full = D->getSourceRange();
-  Full.setEnd(getLocForEndOfDecl(D, SM));
+  clang::SourceRange Full(SM->getExpansionLoc(D->getLocStart()),
+                          getLocForEndOfDecl(D, SM));
   // Expand to comments that are associated with the Decl.
   if (const auto *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
     if (SM->isBeforeInTranslationUnit(Full.getEnd(), Comment->getLocEnd()))
@@ -350,27 +407,6 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                      this);
 
   //============================================================================
-  // Matchers for old files, including old.h/old.cc
-  //============================================================================
-  // Match moved class declarations.
-  auto MovedClass = cxxRecordDecl(
-      InOldFiles, *InMovedClassNames, isDefinition(),
-      hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())));
-  Finder->addMatcher(MovedClass.bind("moved_class"), this);
-  // Match moved class methods (static methods included) which are defined
-  // outside moved class declaration.
-  Finder->addMatcher(
-      cxxMethodDecl(InOldFiles, ofOutermostEnclosingClass(*InMovedClassNames),
-                    isDefinition())
-          .bind("class_method"),
-      this);
-  // Match static member variable definition of the moved class.
-  Finder->addMatcher(
-      varDecl(InMovedClass, InOldFiles, isDefinition(), isStaticDataMember())
-          .bind("class_static_var_decl"),
-      this);
-
-  //============================================================================
   // Matchers for old cc
   //============================================================================
   auto InOldCCNamedNamespace =
@@ -398,41 +434,38 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                      varDecl(IsOldCCStaticDefinition)))
                          .bind("static_decls"),
                      this);
+
+  //============================================================================
+  // Matchers for old files, including old.h/old.cc
+  //============================================================================
+  // Create a MatchCallback for class declarations.
+  MatchCallbacks.push_back(llvm::make_unique<ClassDeclarationMatch>(this));
+  // Match moved class declarations.
+  auto MovedClass =
+      cxxRecordDecl(
+          InOldFiles, *InMovedClassNames, isDefinition(),
+          hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())))
+          .bind("moved_class");
+  Finder->addMatcher(MovedClass, MatchCallbacks.back().get());
+  // Match moved class methods (static methods included) which are defined
+  // outside moved class declaration.
+  Finder->addMatcher(
+      cxxMethodDecl(InOldFiles, ofOutermostEnclosingClass(*InMovedClassNames),
+                    isDefinition())
+          .bind("class_method"),
+      MatchCallbacks.back().get());
+  // Match static member variable definition of the moved class.
+  Finder->addMatcher(
+      varDecl(InMovedClass, InOldFiles, isDefinition(), isStaticDataMember())
+          .bind("class_static_var_decl"),
+      MatchCallbacks.back().get());
+
 }
 
 void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
   if (const auto *D =
           Result.Nodes.getNodeAs<clang::NamedDecl>("decls_in_header")) {
     UnremovedDeclsInOldHeader.insert(D);
-  } else if (const auto *CMD =
-          Result.Nodes.getNodeAs<clang::CXXMethodDecl>("class_method")) {
-    // Skip inline class methods. isInline() ast matcher doesn't ignore this
-    // case.
-    if (!CMD->isInlined()) {
-      MovedDecls.emplace_back(CMD, &Result.Context->getSourceManager());
-      RemovedDecls.push_back(MovedDecls.back());
-      // Get template class method from its method declaration as
-      // UnremovedDecls stores template class method.
-      if (const auto *FTD = CMD->getDescribedFunctionTemplate())
-        UnremovedDeclsInOldHeader.erase(FTD);
-      else
-        UnremovedDeclsInOldHeader.erase(CMD);
-    }
-  } else if (const auto *VD = Result.Nodes.getNodeAs<clang::VarDecl>(
-                 "class_static_var_decl")) {
-    MovedDecls.emplace_back(VD, &Result.Context->getSourceManager());
-    RemovedDecls.push_back(MovedDecls.back());
-    UnremovedDeclsInOldHeader.erase(MovedDecls.back().Decl);
-  } else if (const auto *CD =
-                 Result.Nodes.getNodeAs<clang::CXXRecordDecl>("moved_class")) {
-    // Get class template from its class declaration as UnremovedDecls stores
-    // class template.
-    if (const auto * TC = CD->getDescribedClassTemplate())
-      MovedDecls.emplace_back(TC, &Result.Context->getSourceManager());
-    else
-      MovedDecls.emplace_back(CD, &Result.Context->getSourceManager());
-    RemovedDecls.push_back(MovedDecls.back());
-    UnremovedDeclsInOldHeader.erase(MovedDecls.back().Decl);
   } else if (const auto *FWD =
                  Result.Nodes.getNodeAs<clang::CXXRecordDecl>("fwd_decl")) {
     // Skip all forwad declarations which appear after moved class declaration.

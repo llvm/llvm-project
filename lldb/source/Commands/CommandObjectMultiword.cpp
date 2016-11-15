@@ -257,7 +257,7 @@ void CommandObjectMultiword::AproposAllSubCommands(llvm::StringRef prefix,
     CommandObject *sub_cmd_obj = pos->second.get();
     StreamString complete_command_name;
 
-    complete_command_name.Printf("%s %s", prefix, command_name);
+    complete_command_name << prefix << " " << command_name;
 
     if (sub_cmd_obj->HelpTextContainsWord(search_word)) {
       commands_found.AppendString(complete_command_name.GetData());

@@ -80,6 +80,9 @@ static std::unique_ptr<InputFile> createFile(MemoryBufferRef MB) {
     return std::unique_ptr<InputFile>(new ArchiveFile(MB));
   if (Magic == file_magic::bitcode)
     return std::unique_ptr<InputFile>(new BitcodeFile(MB));
+  if (Magic == file_magic::coff_cl_gl_object)
+    fatal(MB.getBufferIdentifier() + ": is not a native COFF file. "
+          "Recompile without /GL");
   if (Config->OutputFile == "")
     Config->OutputFile = getOutputPath(MB.getBufferIdentifier());
   return std::unique_ptr<InputFile>(new ObjectFile(MB));

@@ -28,6 +28,7 @@ int main()
     {
         assert(std::has_facet<std::numpunct<char> >(l));
         const std::numpunct<char>& f = std::use_facet<std::numpunct<char> >(l);
+        ((void)f); // Prevent unused warning
         {
             (void)std::numpunct<char>::id;
         }
@@ -38,6 +39,7 @@ int main()
     {
         assert(std::has_facet<std::numpunct<wchar_t> >(l));
         const std::numpunct<wchar_t>& f = std::use_facet<std::numpunct<wchar_t> >(l);
+        ((void)f); // Prevent unused warning
         {
             (void)std::numpunct<wchar_t>::id;
         }

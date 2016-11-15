@@ -36,5 +36,6 @@ int main()
     std::locale l = std::locale::classic();
     assert(std::has_facet<F>(l));
     const F& f = std::use_facet<F>(l);
+    ((void)f); // Prevent unused warning
     (void)F::id;
 }

@@ -12,11 +12,31 @@
 // class istream_iterator
 
 // constexpr istream_iterator();
+// C++17 says: If is_trivially_default_constructible_v<T> is true, then this 
+//    constructor shall beis a constexpr constructor.
 
 #include <iterator>
 #include <cassert>
+#include <string>
 
 #include "test_macros.h"
+
+struct S { S(); }; // not constexpr
+
+#if TEST_STD_VER > 14
+template <typename T, bool isTrivial = std::is_trivially_default_constructible_v<T>>
+struct test_trivial {
+void operator ()() const {
+    constexpr std::istream_iterator<T> it;
+    }
+};
+
+template <typename T>
+struct test_trivial<T, false> {
+void operator ()() const {}
+};
+#endif
+
 
 int main()
 {
@@ -29,4 +49,11 @@ int main()
 #endif
     }
 
+#if TEST_STD_VER > 14
+    test_trivial<int>()();
+    test_trivial<char>()();
+    test_trivial<double>()();   
+    test_trivial<S>()();
+    test_trivial<std::string>()();
+#endif
 }

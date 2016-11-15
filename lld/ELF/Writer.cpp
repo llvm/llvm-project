@@ -129,9 +129,7 @@ template <class ELFT> static bool needsInterpSection() {
          !Script<ELFT>::X->ignoreInterpSection();
 }
 
-template <class ELFT> void elf::writeResult() {
-  Writer<ELFT>().run();
-}
+template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
@@ -209,13 +207,13 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // Create singleton output sections.
   Out<ELFT>::Bss =
       make<OutputSection<ELFT>>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
-  Out<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
+  In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   Out<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
   Out<ELFT>::Plt = make<PltSection<ELFT>>();
   Out<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
-  Out<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
+  In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
   Out<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
   Out<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
 
@@ -232,8 +230,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   }
 
   if (!Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic) {
-    Out<ELFT>::DynSymTab =
-        make<SymbolTableSection<ELFT>>(*Out<ELFT>::DynStrTab);
+    Out<ELFT>::DynSymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::DynStrTab);
   }
 
   if (Config->EhFrameHdr)
@@ -249,8 +246,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   Out<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   if (Config->Strip != StripPolicy::All) {
-    Out<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
-    Out<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*Out<ELFT>::StrTab);
+    In<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
+    Out<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::StrTab);
   }
 
   if (Config->EMachine == EM_MIPS && !Config->Shared) {
@@ -315,6 +312,13 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   In<ELFT>::Got = make<GotSection<ELFT>>();
   In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
+
+  // These sections are filled after createSections() is called.
+  // We use this list to fixup size of output sections, when they
+  // are finalized.
+  In<ELFT>::SyntheticSections = {In<ELFT>::ShStrTab, In<ELFT>::StrTab,
+                                 In<ELFT>::DynStrTab, In<ELFT>::Got,
+                                 In<ELFT>::GotPlt};
 }
 
 template <class ELFT>
@@ -734,6 +738,9 @@ void Writer<ELFT>::forEachRelSec(
 
 template <class ELFT>
 void Writer<ELFT>::addInputSec(InputSectionBase<ELFT> *IS) {
+  if (!IS)
+    return;
+
   if (!IS->Live) {
     reportDiscarded(IS);
     return;
@@ -849,6 +856,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     std::rotate(BestPos, NonScriptI, NonScriptI + 1);
     ++NonScriptI;
   }
+
+  Script<ELFT>::X->adjustSectionsAfterSorting();
 }
 
 // Create output section objects and add them to OutputSections.
@@ -918,7 +927,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   unsigned I = 1;
   for (OutputSectionBase *Sec : OutputSections) {
     Sec->SectionIndex = I++;
-    Sec->ShName = Out<ELFT>::ShStrTab->addString(Sec->getName());
+    Sec->ShName = In<ELFT>::ShStrTab->addString(Sec->getName());
   }
 
   // Finalizers fix each section's size.
@@ -968,8 +977,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   if (Out<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
     Add(Out<ELFT>::GdbIndex);
   Add(Out<ELFT>::SymTab);
-  Add(Out<ELFT>::ShStrTab);
-  Add(Out<ELFT>::StrTab);
+  addInputSec(In<ELFT>::ShStrTab);
+  addInputSec(In<ELFT>::StrTab);
   if (Out<ELFT>::DynSymTab) {
     Add(Out<ELFT>::DynSymTab);
 
@@ -983,7 +992,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     Add(Out<ELFT>::GnuHashTab);
     Add(Out<ELFT>::HashTab);
     Add(Out<ELFT>::Dynamic);
-    Add(Out<ELFT>::DynStrTab);
+    addInputSec(In<ELFT>::DynStrTab);
     if (Out<ELFT>::RelaDyn->hasRelocs())
       Add(Out<ELFT>::RelaDyn);
     Add(Out<ELFT>::MipsRldMap);
@@ -999,13 +1008,10 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   if (needsGot()) {
     In<ELFT>::Got->finalize();
     addInputSec(In<ELFT>::Got);
-    In<ELFT>::Got->OutSec->assignOffsets();
   }
 
-  if (!In<ELFT>::GotPlt->empty()) {
+  if (!In<ELFT>::GotPlt->empty())
     addInputSec(In<ELFT>::GotPlt);
-    In<ELFT>::GotPlt->OutSec->assignOffsets();
-  }
 
   if (!Out<ELFT>::Plt->empty())
     Add(Out<ELFT>::Plt);
@@ -1420,7 +1426,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
   EHdr->e_shnum = OutputSections.size() + 1;
-  EHdr->e_shstrndx = Out<ELFT>::ShStrTab->SectionIndex;
+  EHdr->e_shstrndx = In<ELFT>::ShStrTab->OutSec->SectionIndex;
 
   if (Config->EMachine == EM_ARM)
     // We don't currently use any features incompatible with EF_ARM_EABI_VER5,

@@ -18,7 +18,6 @@
 
 int main()
 {
-    char c = '\0';
     assert(std::char_traits<char>::eq('a', 'a'));
     assert(!std::char_traits<char>::eq('a', 'A'));
 }
