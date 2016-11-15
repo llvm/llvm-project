@@ -88,34 +88,14 @@ class HelpCommandTestCase(TestBase):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",
                     substrs=['Show the LLDB debugger version.'])
-
-        valid_version_patterns = []
-
-        # Add the Swift OSS version pattern
-        valid_version_patterns.extend([
-            # It's okay for the local build to not have a date.  This happens
-            # in Xcode builds.
-            r"^lldb-local(-\d{4}-\d{2}-\d{2})? \((LLDB [^,)]+(, (LLVM|Clang|Swift-\d+\.\d+) [^,)]+){0,3})?\)$",
-            # But it's not okay for the buildbot to be missing a date.  This
-            # shouldn't happen in a build-script-based build.
-            r"^lldb-buildbot-\d{4}-\d{2}-\d{2} \((LLDB [^,)]+(, (LLVM|Clang|Swift-\d+\.\d+) [^,)]+){0,3})?\)$",
-        ]
-        )
-
-        # Add valid llvm.org and official Apple Xcode LLDB version patterns
-        version_str = self.version_number_string()
         import re
+        version_str = self.version_number_string()
         match = re.match('[0-9]+', version_str)
-        if sys.platform.startswith("darwin"):
-            valid_version_patterns.append(
-                '^lldb-' + (version_str if match else '[0-9]+'))
-        else:
-            valid_version_patterns.append('^lldb version (\d|\.)+.*$')
+        search_regexp = ['lldb( version|-' + (version_str if match else '[0-9]+') + ').*\n']
+        search_regexp[0] += '  Swift-\d+\.\d+'
 
-        match = self.match("version", valid_version_patterns)
-        self.assertIsNotNone(
-            match, "version result did not match any valid version string")
-        # print("matched: {}".format(match.re.pattern))
+        self.expect("version",
+                    patterns=search_regexp)
 
     @no_debug_info_test
     def test_help_should_not_crash_lldb(self):
