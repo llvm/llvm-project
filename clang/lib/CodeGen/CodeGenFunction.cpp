@@ -692,6 +692,20 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   if (SanOpts.has(SanitizerKind::SafeStack))
     Fn->addFnAttr(llvm::Attribute::SafeStack);
 
+  // Ignore TSan memory acesses from within ObjC/ObjC++ dealloc, initialize,
+  // .cxx_destruct and all of their calees at run time.
+  if (SanOpts.has(SanitizerKind::Thread)) {
+    if (const auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
+      IdentifierInfo *II = OMD->getSelector().getIdentifierInfoForSlot(0);
+      if (OMD->getMethodFamily() == OMF_dealloc ||
+          OMD->getMethodFamily() == OMF_initialize ||
+          (OMD->getSelector().isUnarySelector() && II->isStr(".cxx_destruct"))) {
+        Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
+        Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
+      }
+    }
+  }
+
   // Apply xray attributes to the function (as a string, for now)
   if (D && ShouldXRayInstrumentFunction()) {
     if (const auto *XRayAttr = D->getAttr<XRayInstrumentAttr>()) {
