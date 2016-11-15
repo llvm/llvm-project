@@ -1,5 +1,6 @@
 // Test that weak symbols stay weak.
 // RUN: %clang_cfi -lm -o %t1 %s && %t1
+// XFAIL: darwin
 
 __attribute__((weak)) void does_not_exist(void);
 

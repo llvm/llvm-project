@@ -621,8 +621,27 @@ void ChangeNamespaceTool::fixTypeLoc(
   const auto *FromDecl = Result.Nodes.getNodeAs<NamedDecl>("from_decl");
   // `hasDeclaration` gives underlying declaration, but if the type is
   // a typedef type, we need to use the typedef type instead.
-  if (auto *Typedef = Type.getType()->getAs<TypedefType>())
+  if (auto *Typedef = Type.getType()->getAs<TypedefType>()) {
     FromDecl = Typedef->getDecl();
+    auto IsInMovedNs = [&](const NamedDecl *D) {
+      if (!llvm::StringRef(D->getQualifiedNameAsString())
+               .startswith(OldNamespace + "::"))
+        return false;
+      auto ExpansionLoc =
+          Result.SourceManager->getExpansionLoc(D->getLocStart());
+      if (ExpansionLoc.isInvalid())
+        return false;
+      llvm::StringRef Filename =
+          Result.SourceManager->getFilename(ExpansionLoc);
+      llvm::Regex RE(FilePattern);
+      return RE.match(Filename);
+    };
+    // Don't fix the \p Type if it refers to a type alias decl in the moved
+    // namespace since the alias decl will be moved along with the type
+    // reference.
+    if (IsInMovedNs(FromDecl))
+      return;
+  }
 
   const Decl *DeclCtx = Result.Nodes.getNodeAs<Decl>("dc");
   assert(DeclCtx && "Empty decl context.");

@@ -14,14 +14,23 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <dbghelp.h>
-#pragma comment(lib, "dbghelp.lib")
 
+#include "sanitizer_dbghelp.h"
 #include "sanitizer_symbolizer_internal.h"
 
 namespace __sanitizer {
+
+decltype(::StackWalk64) *StackWalk64;
+decltype(::SymCleanup) *SymCleanup;
+decltype(::SymFromAddr) *SymFromAddr;
+decltype(::SymFunctionTableAccess64) *SymFunctionTableAccess64;
+decltype(::SymGetLineFromAddr64) *SymGetLineFromAddr64;
+decltype(::SymGetModuleBase64) *SymGetModuleBase64;
+decltype(::SymGetSearchPathW) *SymGetSearchPathW;
+decltype(::SymInitialize) *SymInitialize;
+decltype(::SymSetOptions) *SymSetOptions;
+decltype(::SymSetSearchPathW) *SymSetSearchPathW;
+decltype(::UnDecorateSymbolName) *UnDecorateSymbolName;
 
 namespace {
 
@@ -50,6 +59,29 @@ bool TrySymInitialize() {
 void InitializeDbgHelpIfNeeded() {
   if (is_dbghelp_initialized)
     return;
+
+  HMODULE dbghelp = LoadLibraryA("dbghelp.dll");
+  CHECK(dbghelp && "failed to load dbghelp.dll");
+
+#define DBGHELP_IMPORT(name)                                                  \
+  do {                                                                        \
+    name =                                                                    \
+        reinterpret_cast<decltype(::name) *>(GetProcAddress(dbghelp, #name)); \
+    CHECK(name != nullptr);                                                   \
+  } while (0)
+  DBGHELP_IMPORT(StackWalk64);
+  DBGHELP_IMPORT(SymCleanup);
+  DBGHELP_IMPORT(SymFromAddr);
+  DBGHELP_IMPORT(SymFunctionTableAccess64);
+  DBGHELP_IMPORT(SymGetLineFromAddr64);
+  DBGHELP_IMPORT(SymGetModuleBase64);
+  DBGHELP_IMPORT(SymGetSearchPathW);
+  DBGHELP_IMPORT(SymInitialize);
+  DBGHELP_IMPORT(SymSetOptions);
+  DBGHELP_IMPORT(SymSetSearchPathW);
+  DBGHELP_IMPORT(UnDecorateSymbolName);
+#undef DBGHELP_IMPORT
+
   if (!TrySymInitialize()) {
     // OK, maybe the client app has called SymInitialize already.
     // That's a bit unfortunate for us as all the DbgHelp functions are

@@ -279,15 +279,13 @@ FTN_CREATE_AFFINITY_MASK( void **mask )
         //
         // We really only NEED serial initialization here.
         //
+        kmp_affin_mask_t* mask_internals;
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
-    # if KMP_USE_HWLOC
-        *mask = (hwloc_cpuset_t)hwloc_bitmap_alloc();
-    # else
-        *mask = kmpc_malloc( __kmp_affin_mask_size );
-    # endif
-        KMP_CPU_ZERO( (kmp_affin_mask_t *)(*mask) );
+        mask_internals = __kmp_affinity_dispatch->allocate_mask();
+        KMP_CPU_ZERO( mask_internals );
+        *mask = mask_internals;
     #endif
 }
 
@@ -300,6 +298,7 @@ FTN_DESTROY_AFFINITY_MASK( void **mask )
         //
         // We really only NEED serial initialization here.
         //
+        kmp_affin_mask_t* mask_internals;
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
@@ -308,11 +307,8 @@ FTN_DESTROY_AFFINITY_MASK( void **mask )
 	        KMP_FATAL( AffinityInvalidMask, "kmp_destroy_affinity_mask" );
 	    }
         }
-    # if KMP_USE_HWLOC
-        hwloc_bitmap_free((hwloc_cpuset_t)(*mask));
-    # else
-        kmpc_free( *mask );
-    # endif
+        mask_internals = (kmp_affin_mask_t*)(*mask);
+        __kmp_affinity_dispatch->deallocate_mask(mask_internals);
         *mask = NULL;
     #endif
 }

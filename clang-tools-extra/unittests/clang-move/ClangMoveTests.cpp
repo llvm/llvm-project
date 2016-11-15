@@ -337,6 +337,24 @@ TEST(ClangMove, DontMoveAll) {
   }
 }
 
+TEST(ClangMove, MacroInFunction) {
+  const char TestHeader[] = "#define INT int\n"
+                            "class A {\npublic:\n  int f();\n};\n"
+                            "class B {};\n";
+  const char TestCode[] = "#include \"foo.h\"\n"
+                          "INT A::f() { return 0; }\n";
+  const char ExpectedNewCode[] = "#include \"new_foo.h\"\n\n"
+                                 "INT A::f() { return 0; }\n";
+  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("A");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
+  EXPECT_EQ(ExpectedNewCode, Results[Spec.NewCC]);
+}
+
 } // namespace
 } // namespce move
 } // namespace clang

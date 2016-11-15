@@ -89,8 +89,9 @@ CommandAlias::CommandAlias(CommandInterpreter &interpreter,
       StreamString translation_and_help;
       GetAliasExpansion(sstr);
 
-      translation_and_help.Printf("(%s)  %s", sstr.GetData(),
-                                  GetUnderlyingCommand()->GetHelp());
+      translation_and_help.Printf(
+          "(%s)  %s", sstr.GetData(),
+          GetUnderlyingCommand()->GetHelp().str().c_str());
       SetHelp(translation_and_help.GetData());
     }
   }

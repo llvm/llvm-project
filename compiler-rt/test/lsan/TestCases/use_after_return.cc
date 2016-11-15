@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 int main() {
   void *stack_var = malloc(1337);

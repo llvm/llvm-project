@@ -52,6 +52,7 @@ void f()
     cv.notify_one();
     Clock::time_point t0 = Clock::now();
     bool r = cv.wait_for(lk, milliseconds(250), Pred(test2));
+    ((void)r); // Prevent unused warning
     Clock::time_point t1 = Clock::now();
     if (runs == 0)
     {

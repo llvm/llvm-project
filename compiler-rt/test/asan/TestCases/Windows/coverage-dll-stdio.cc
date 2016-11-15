@@ -4,7 +4,6 @@
 // RUN: rm -rf %t && mkdir %t && cd %t
 // RUN: %clang_cl_asan -fsanitize-coverage=func -O0 %p/dll_host.cc -Fet.exe
 // RUN: %clang_cl_asan -fsanitize-coverage=func -LD -O0 %s -Fet.dll
-// RUN: pwd
 // RUN: %run ./t.exe t.dll 2>&1 | FileCheck %s
 
 #include <stdio.h>

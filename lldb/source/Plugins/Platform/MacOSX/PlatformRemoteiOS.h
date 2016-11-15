@@ -94,6 +94,7 @@ protected:
 
   typedef std::vector<SDKDirectoryInfo> SDKDirectoryInfoCollection;
 
+  std::mutex m_sdk_dir_mutex;
   SDKDirectoryInfoCollection m_sdk_directory_infos;
   std::string m_device_support_directory;
   std::string m_device_support_directory_for_os_version;

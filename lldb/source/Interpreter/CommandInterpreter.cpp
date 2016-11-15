@@ -2245,7 +2245,7 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
 
     if (options.GetPrintResults()) {
       if (tmp_result.Succeeded())
-        result.AppendMessageWithFormat("%s", tmp_result.GetOutputData());
+        result.AppendMessage(tmp_result.GetOutputData());
     }
 
     if (!success || !tmp_result.Succeeded()) {

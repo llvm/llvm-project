@@ -10,7 +10,7 @@
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../tsan/test.h"
+#include "sanitizer_common/print_address.h"
 
 extern "C"
 void *stacks_thread_func(void *arg) {

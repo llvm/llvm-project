@@ -36,6 +36,7 @@ void
 test(S s, typename S::size_type res_arg)
 {
     typename S::size_type old_cap = s.capacity();
+    ((void)old_cap); // Prevent unused warning
     S s0 = s;
     if (res_arg <= s.max_size())
     {

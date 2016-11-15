@@ -28,6 +28,7 @@ int main()
     {
         assert(std::has_facet<std::ctype<char> >(l));
         const std::ctype<char>& f = std::use_facet<std::ctype<char> >(l);
+        ((void)f); // Prevent unused warning
         {
             (void)std::ctype<char>::id;
         }

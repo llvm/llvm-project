@@ -108,15 +108,16 @@ class MiniDumpNewTestCase(TestBase):
         /proc/PID/status which is written in the file
         """
         shutil.copyfile(core, newcore)
-        with open(newcore, "r+") as f:
+        with open(newcore, "rb+") as f:
             f.seek(offset)
-            self.assertEqual(f.read(5), oldpid)
+            currentpid = f.read(5).decode('utf-8')
+            self.assertEqual(currentpid, oldpid)
 
             f.seek(offset)
             if len(newpid) < len(oldpid):
                 newpid += " " * (len(oldpid) - len(newpid))
             newpid += "\n"
-            f.write(newpid)
+            f.write(newpid.encode('utf-8'))
 
     def test_deeper_stack_in_minidump_with_same_pid_running(self):
         """Test that we read the information from the core correctly even if we

@@ -488,6 +488,10 @@ addressof(__unsafe_unretained _Tp& __x) _NOEXCEPT
 }
 #endif
 
+#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_DELETED_FUNCTIONS)
+template <class _Tp> _Tp* addressof(const _Tp&&) noexcept = delete;
+#endif
+
 struct __two {char __lx[2];};
 
 // helper class:

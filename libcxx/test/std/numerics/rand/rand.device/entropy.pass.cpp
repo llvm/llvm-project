@@ -20,4 +20,5 @@ int main()
 {
     std::random_device r;
     double e = r.entropy();
+    ((void)e); // Prevent unused warning
 }

@@ -29,11 +29,11 @@
 #define expandName(name,flags,ignore)  {STRINGIZE(name),flags},
 statInfo timeStat::timerInfo[] = {
     KMP_FOREACH_TIMER(expandName,0)
-    {0,0}
+    {"TIMER_LAST", 0}
 };
 const statInfo counter::counterInfo[] = {
     KMP_FOREACH_COUNTER(expandName,0)
-    {0,0}
+    {"COUNTER_LAST", 0}
 };
 #undef expandName
 
@@ -71,7 +71,7 @@ const kmp_stats_output_module::rgb_color kmp_stats_output_module::globalColorArr
 static uint32_t statsPrinted = 0;
 
 // output interface
-static kmp_stats_output_module __kmp_stats_global_output;
+static kmp_stats_output_module* __kmp_stats_global_output = NULL;
 
 /* ****************************************************** */
 /* ************* statistic member functions ************* */
@@ -164,7 +164,7 @@ void explicitTimer::start(timer_e timerEnumValue) {
     return;
 }
 
-void explicitTimer::stop(timer_e timerEnumValue) {
+void explicitTimer::stop(timer_e timerEnumValue, kmp_stats_list* stats_ptr /* = nullptr */) {
     if (startTime.getValue() == 0)
         return;
 
@@ -174,8 +174,10 @@ void explicitTimer::stop(timer_e timerEnumValue) {
     stat->addSample(((finishTime - startTime) - totalPauseTime).ticks());
 
     if(timeStat::logEvent(timerEnumValue)) {
-        __kmp_stats_thread_ptr->push_event(startTime.getValue() - __kmp_stats_start_time.getValue(), finishTime.getValue() - __kmp_stats_start_time.getValue(), __kmp_stats_thread_ptr->getNestValue(), timerEnumValue);
-        __kmp_stats_thread_ptr->decrementNestValue();
+        if(!stats_ptr)
+            stats_ptr = __kmp_stats_thread_ptr;
+        stats_ptr->push_event(startTime.getValue() - __kmp_stats_start_time.getValue(), finishTime.getValue() - __kmp_stats_start_time.getValue(), __kmp_stats_thread_ptr->getNestValue(), timerEnumValue);
+        stats_ptr->decrementNestValue();
     }
 
     /* We accept the risk that we drop a sample because it really did start at t==0. */
@@ -481,18 +483,18 @@ void kmp_stats_output_module::windupExplicitTimers()
     // and say "it's over".
     // If the timer wasn't running, this won't record anything anyway.
     kmp_stats_list::iterator it;
-    for(it = __kmp_stats_list.begin(); it != __kmp_stats_list.end(); it++) {
+    for(it = __kmp_stats_list->begin(); it != __kmp_stats_list->end(); it++) {
         kmp_stats_list* ptr = *it;
         ptr->getPartitionedTimers()->windup();
         for (int timer=0; timer<EXPLICIT_TIMER_LAST; timer++) {
-            ptr->getExplicitTimer(explicit_timer_e(timer))->stop((timer_e)timer);
+            ptr->getExplicitTimer(explicit_timer_e(timer))->stop((timer_e)timer, ptr);
         }
     }
 }
 
 void kmp_stats_output_module::printPloticusFile() {
     int i;
-    int size = __kmp_stats_list.size();
+    int size = __kmp_stats_list->size();
     FILE* plotOut = fopen(plotFileName, "w+");
 
     fprintf(plotOut, "#proc page\n"
@@ -602,7 +604,7 @@ void kmp_stats_output_module::outputStats(const char* heading)
     fprintf(statsOut, "%s\n",heading);
     // Accumulate across threads.
     kmp_stats_list::iterator it;
-    for (it = __kmp_stats_list.begin(); it != __kmp_stats_list.end(); it++) {
+    for (it = __kmp_stats_list->begin(); it != __kmp_stats_list->end(); it++) {
         int t = (*it)->getGtid();
         // Output per thread stats if requested.
         if (printPerThreadFlag) {
@@ -666,7 +668,7 @@ extern "C" {
 void __kmp_reset_stats()
 {
     kmp_stats_list::iterator it;
-    for(it = __kmp_stats_list.begin(); it != __kmp_stats_list.end(); it++) {
+    for(it = __kmp_stats_list->begin(); it != __kmp_stats_list->end(); it++) {
         timeStat * timers     = (*it)->getTimers();
         counter * counters    = (*it)->getCounters();
         explicitTimer * eTimers = (*it)->getExplicitTimers();
@@ -688,7 +690,7 @@ void __kmp_reset_stats()
 // This function will reset all stats and stop all threads' explicit timers if they haven't been stopped already.
 void __kmp_output_stats(const char * heading)
 {
-    __kmp_stats_global_output.outputStats(heading);
+    __kmp_stats_global_output->outputStats(heading);
     __kmp_reset_stats();
 }
 
@@ -703,6 +705,18 @@ void __kmp_accumulate_stats_at_exit(void)
 
 void __kmp_stats_init(void)
 {
+    __kmp_init_tas_lock( & __kmp_stats_lock );
+    __kmp_stats_start_time = tsc_tick_count::now();
+    __kmp_stats_global_output = new kmp_stats_output_module();
+    __kmp_stats_list = new kmp_stats_list();
+}
+
+void __kmp_stats_fini(void)
+{
+    __kmp_accumulate_stats_at_exit();
+    __kmp_stats_list->deallocate();
+    delete __kmp_stats_global_output;
+    delete __kmp_stats_list;
 }
 
 } // extern "C"
