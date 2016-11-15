@@ -21,7 +21,24 @@
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/ARMUtils.h"
-#include "Utility/ARM64_DWARF_Registers.h"
+#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+
+#define GPR_OFFSET(idx) ((idx)*8)
+#define GPR_OFFSET_NAME(reg) 0
+#define FPU_OFFSET(idx) ((idx)*16)
+#define FPU_OFFSET_NAME(reg) 0
+#define EXC_OFFSET_NAME(reg) 0
+#define DBG_OFFSET_NAME(reg) 0
+#define DBG_OFFSET_NAME(reg) 0
+#define DEFINE_DBG(re, y)                                                      \
+  "na", nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                  \
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
+       LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
+      nullptr, nullptr, nullptr, 0
+
+#define DECLARE_REGISTER_INFOS_ARM64_STRUCT
+
+#include "Plugins/Process/Utility/RegisterInfos_arm64.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h" // for SignExtend32 template function
@@ -31,6 +48,13 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+static bool LLDBTableGetRegisterInfo(uint32_t reg_num, RegisterInfo &reg_info) {
+  if (reg_num >= llvm::array_lengthof(g_register_infos_arm64_le))
+    return false;
+  reg_info = g_register_infos_arm64_le[reg_num];
+  return true;
+}
 
 #define No_VFP 0
 #define VFPv1 (1u << 1)
@@ -168,41 +192,33 @@ bool EmulateInstructionARM64::GetRegisterInfo(RegisterKind reg_kind,
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_num) {
     case LLDB_REGNUM_GENERIC_PC:
-      reg_kind = eRegisterKindDWARF;
-      reg_num = arm64_dwarf::pc;
+      reg_kind = eRegisterKindLLDB;
+      reg_num = gpr_pc_arm64;
       break;
     case LLDB_REGNUM_GENERIC_SP:
-      reg_kind = eRegisterKindDWARF;
-      reg_num = arm64_dwarf::sp;
+      reg_kind = eRegisterKindLLDB;
+      reg_num = gpr_sp_arm64;
       break;
     case LLDB_REGNUM_GENERIC_FP:
-      reg_kind = eRegisterKindDWARF;
-      reg_num = arm64_dwarf::fp;
+      reg_kind = eRegisterKindLLDB;
+      reg_num = gpr_fp_arm64;
       break;
     case LLDB_REGNUM_GENERIC_RA:
-      reg_kind = eRegisterKindDWARF;
-      reg_num = arm64_dwarf::lr;
+      reg_kind = eRegisterKindLLDB;
+      reg_num = gpr_lr_arm64;
       break;
     case LLDB_REGNUM_GENERIC_FLAGS:
-      // There is no DWARF register number for the CPSR right now...
-      reg_info.name = "cpsr";
-      reg_info.alt_name = NULL;
-      reg_info.byte_size = 4;
-      reg_info.byte_offset = 0;
-      reg_info.encoding = eEncodingUint;
-      reg_info.format = eFormatHex;
-      for (uint32_t i = 0; i < lldb::kNumRegisterKinds; ++i)
-        reg_info.kinds[reg_kind] = LLDB_INVALID_REGNUM;
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FLAGS;
-      return true;
+      reg_kind = eRegisterKindLLDB;
+      reg_num = gpr_cpsr_arm64;
+      break;
 
     default:
       return false;
     }
   }
 
-  if (reg_kind == eRegisterKindDWARF)
-    return arm64_dwarf::GetRegisterInfo(reg_num, reg_info);
+  if (reg_kind == eRegisterKindLLDB)
+    return LLDBTableGetRegisterInfo(reg_num, reg_info);
   return false;
 }
 
@@ -429,12 +445,8 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
   bool success = false;
   //    if (m_opcode_cpsr == 0 || m_ignore_conditions == false)
   //    {
-  //        m_opcode_cpsr = ReadRegisterUnsigned (eRegisterKindGeneric,
-  //        // use eRegisterKindDWARF is we ever get a cpsr DWARF register
-  //        number
-  //                                              LLDB_REGNUM_GENERIC_FLAGS,
-  //                                              // use arm64_dwarf::cpsr if we
-  //                                              ever get one
+  //        m_opcode_cpsr = ReadRegisterUnsigned (eRegisterKindLLDB,
+  //                                              gpr_cpsr_arm64,
   //                                              0,
   //                                              &success);
   //    }
@@ -447,7 +459,7 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
   uint32_t orig_pc_value = 0;
   if (auto_advance_pc) {
     orig_pc_value =
-        ReadRegisterUnsigned(eRegisterKindDWARF, arm64_dwarf::pc, 0, &success);
+        ReadRegisterUnsigned(eRegisterKindLLDB, gpr_pc_arm64, 0, &success);
     if (!success)
       return false;
   }
@@ -459,7 +471,7 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
 
   if (auto_advance_pc) {
     uint32_t new_pc_value =
-        ReadRegisterUnsigned(eRegisterKindDWARF, arm64_dwarf::pc, 0, &success);
+        ReadRegisterUnsigned(eRegisterKindLLDB, gpr_pc_arm64, 0, &success);
     if (!success)
       return false;
 
@@ -467,7 +479,7 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
       EmulateInstruction::Context context;
       context.type = eContextAdvancePC;
       context.SetNoArgs();
-      if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, arm64_dwarf::pc,
+      if (!WriteRegisterUnsigned(context, eRegisterKindLLDB, gpr_pc_arm64,
                                  orig_pc_value + 4))
         return false;
     }
@@ -478,18 +490,18 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
 bool EmulateInstructionARM64::CreateFunctionEntryUnwind(
     UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+  unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, 0);
+  row->GetCFAValue().SetIsRegisterPlusOffset(gpr_sp_arm64, 0);
 
   unwind_plan.AppendRow(row);
   unwind_plan.SetSourceName("EmulateInstructionARM64");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
-  unwind_plan.SetReturnAddressRegister(arm64_dwarf::lr);
+  unwind_plan.SetReturnAddressRegister(gpr_lr_arm64);
   return true;
 }
 
@@ -497,7 +509,7 @@ uint32_t EmulateInstructionARM64::GetFramePointerRegisterNumber() const {
   if (m_arch.GetTriple().isAndroid())
     return LLDB_INVALID_REGNUM; // Don't use frame pointer on android
 
-  return arm64_dwarf::fp;
+  return gpr_fp_arm64;
 }
 
 bool EmulateInstructionARM64::UsingAArch32() {
@@ -664,8 +676,8 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
     return false; // UNDEFINED;
   }
   uint64_t result;
-  uint64_t operand1 = ReadRegisterUnsigned(eRegisterKindDWARF,
-                                           arm64_dwarf::x0 + n, 0, &success);
+  uint64_t operand1 =
+      ReadRegisterUnsigned(eRegisterKindLLDB, gpr_x0_arm64 + n, 0, &success);
   uint64_t operand2 = imm;
   bit carry_in;
 
@@ -690,28 +702,26 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
 
   Context context;
   RegisterInfo reg_info_Rn;
-  if (arm64_dwarf::GetRegisterInfo(n, reg_info_Rn))
+  if (GetRegisterInfo(eRegisterKindLLDB, n, reg_info_Rn))
     context.SetRegisterPlusOffset(reg_info_Rn, imm);
 
-  if (n == GetFramePointerRegisterNumber() && d == arm64_dwarf::sp &&
-      !setflags) {
+  if (n == GetFramePointerRegisterNumber() && d == gpr_sp_arm64 && !setflags) {
     // 'mov sp, fp' - common epilogue instruction, CFA is now in terms
     // of the stack pointer, instead of frame pointer.
     context.type = EmulateInstruction::eContextRestoreStackPointer;
-  } else if ((n == arm64_dwarf::sp || n == GetFramePointerRegisterNumber()) &&
-             d == arm64_dwarf::sp && !setflags) {
+  } else if ((n == gpr_sp_arm64 || n == GetFramePointerRegisterNumber()) &&
+             d == gpr_sp_arm64 && !setflags) {
     context.type = EmulateInstruction::eContextAdjustStackPointer;
-  } else if (d == GetFramePointerRegisterNumber() && n == arm64_dwarf::sp &&
+  } else if (d == GetFramePointerRegisterNumber() && n == gpr_sp_arm64 &&
              !setflags) {
     context.type = EmulateInstruction::eContextSetFramePointer;
   } else {
     context.type = EmulateInstruction::eContextImmediate;
   }
 
-  // If setflags && d == arm64_dwarf::sp then d = WZR/XZR. See CMN, CMP
-  if (!setflags || d != arm64_dwarf::sp)
-    WriteRegisterUnsigned(context, eRegisterKindDWARF, arm64_dwarf::x0 + d,
-                          result);
+  // If setflags && d == gpr_sp_arm64 then d = WZR/XZR. See CMN, CMP
+  if (!setflags || d != gpr_sp_arm64)
+    WriteRegisterUnsigned(context, eRegisterKindLLDB, gpr_x0_arm64 + d, result);
 
   return false;
 }
@@ -804,19 +814,18 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
   RegisterInfo reg_info_base;
   RegisterInfo reg_info_Rt;
   RegisterInfo reg_info_Rt2;
-  if (!GetRegisterInfo(eRegisterKindDWARF, arm64_dwarf::x0 + n, reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n, reg_info_base))
     return false;
 
   if (vector) {
-    if (!GetRegisterInfo(eRegisterKindDWARF, arm64_dwarf::v0 + n, reg_info_Rt))
+    if (!GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t, reg_info_Rt))
       return false;
-    if (!GetRegisterInfo(eRegisterKindDWARF, arm64_dwarf::v0 + n, reg_info_Rt2))
+    if (!GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t2, reg_info_Rt2))
       return false;
   } else {
-    if (!GetRegisterInfo(eRegisterKindDWARF, arm64_dwarf::x0 + t, reg_info_Rt))
+    if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t, reg_info_Rt))
       return false;
-    if (!GetRegisterInfo(eRegisterKindDWARF, arm64_dwarf::x0 + t2,
-                         reg_info_Rt2))
+    if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t2, reg_info_Rt2))
       return false;
   }
 
@@ -824,10 +833,10 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
   if (n == 31) {
     // CheckSPAlignment();
     address =
-        ReadRegisterUnsigned(eRegisterKindDWARF, arm64_dwarf::sp, 0, &success);
+        ReadRegisterUnsigned(eRegisterKindLLDB, gpr_sp_arm64, 0, &success);
   } else
-    address = ReadRegisterUnsigned(eRegisterKindDWARF, arm64_dwarf::x0 + n, 0,
-                                   &success);
+    address =
+        ReadRegisterUnsigned(eRegisterKindLLDB, gpr_x0_arm64 + n, 0, &success);
 
   wb_address = address + idx;
   if (a_mode != AddrMode_POST)
@@ -991,10 +1000,10 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
 
   if (n == 31)
     address =
-        ReadRegisterUnsigned(eRegisterKindDWARF, arm64_dwarf::sp, 0, &success);
+        ReadRegisterUnsigned(eRegisterKindLLDB, gpr_sp_arm64, 0, &success);
   else
-    address = ReadRegisterUnsigned(eRegisterKindDWARF, arm64_dwarf::x0 + n, 0,
-                                   &success);
+    address =
+        ReadRegisterUnsigned(eRegisterKindLLDB, gpr_x0_arm64 + n, 0, &success);
 
   if (!success)
     return false;
@@ -1003,11 +1012,11 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
     address += offset;
 
   RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindDWARF, arm64_dwarf::x0 + n, reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + n, reg_info_base))
     return false;
 
   RegisterInfo reg_info_Rt;
-  if (!GetRegisterInfo(eRegisterKindDWARF, arm64_dwarf::x0 + t, reg_info_Rt))
+  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t, reg_info_Rt))
     return false;
 
   Context context;
@@ -1096,8 +1105,7 @@ bool EmulateInstructionARM64::EmulateB(const uint32_t opcode) {
   switch (branch_type) {
   case BranchType_CALL: {
     addr_t x30 = pc + 4;
-    if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, arm64_dwarf::x30,
-                               x30))
+    if (!WriteRegisterUnsigned(context, eRegisterKindLLDB, gpr_lr_arm64, x30))
       return false;
   } break;
   case BranchType_JMP:
@@ -1158,8 +1166,8 @@ bool EmulateInstructionARM64::EmulateCBZ(const uint32_t opcode) {
   bool is_zero = Bit32(opcode, 24) == 0;
   int32_t offset = llvm::SignExtend64<21>(Bits32(opcode, 23, 5) << 2);
 
-  const uint64_t operand = ReadRegisterUnsigned(
-      eRegisterKindDWARF, arm64_dwarf::x0 + t, 0, &success);
+  const uint64_t operand =
+      ReadRegisterUnsigned(eRegisterKindLLDB, gpr_x0_arm64 + t, 0, &success);
   if (!success)
     return false;
 
@@ -1194,8 +1202,8 @@ bool EmulateInstructionARM64::EmulateTBZ(const uint32_t opcode) {
   uint32_t bit_val = Bit32(opcode, 24);
   int64_t offset = llvm::SignExtend64<16>(Bits32(opcode, 18, 5) << 2);
 
-  const uint64_t operand = ReadRegisterUnsigned(
-      eRegisterKindDWARF, arm64_dwarf::x0 + t, 0, &success);
+  const uint64_t operand =
+      ReadRegisterUnsigned(eRegisterKindLLDB, gpr_x0_arm64 + t, 0, &success);
   if (!success)
     return false;
 

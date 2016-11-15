@@ -1137,7 +1137,7 @@ bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
 
     // macOS 10.12 and newer
     if (os_type == llvm::Triple::MacOSX &&
-        (major >= 10 || (major == 10 && minor >= 12))) {
+        (major > 10 || (major == 10 && minor >= 12))) {
       use_new_spi_interface = true;
     }
 
@@ -1156,11 +1156,6 @@ bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
       use_new_spi_interface = true;
     }
   }
-
-  // FIXME: Temporarily force the use of the old DynamicLoader plugin until all
-  // the different use cases have been tested & the updated SPIs are available
-  // everywhere.
-  use_new_spi_interface = false;
 
   if (log) {
     if (use_new_spi_interface)

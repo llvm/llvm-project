@@ -10,6 +10,14 @@ if(NOT LLDB_BUILT_STANDALONE)
   set(swift_depends swift swift-stdlib)
 endif()
 
+if(NOT LLDB_SWIFTC)
+  if(NOT LLDB_BUILT_STANDALONE)
+    set(LLDB_SWIFTC $<TARGET_FILE:swift>c)
+  else()
+    set(LLDB_SWIFTC ${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc)
+  endif()
+endif()
+
 set(swift_compile_cmd "${LLDB_SWIFTC}"
                       -resource-dir "${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift"
                       -module-cache-path "${module_cache_dir}")
