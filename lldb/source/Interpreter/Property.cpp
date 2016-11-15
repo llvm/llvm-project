@@ -249,9 +249,9 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
       }
     }
     if (dump_desc) {
-      const char *desc = GetDescription();
-      if (desc)
-        strm.Printf("-- %s", desc);
+      llvm::StringRef desc = GetDescription();
+      if (!desc.empty())
+        strm << "-- " << desc;
 
       if (transparent && (dump_mask == (OptionValue::eDumpOptionName |
                                         OptionValue::eDumpOptionDescription)))
@@ -264,34 +264,30 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
 void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
                                uint32_t output_width,
                                bool display_qualified_name) const {
-  if (m_value_sp) {
-    const char *desc = GetDescription();
+  if (!m_value_sp)
+    return;
+  llvm::StringRef desc = GetDescription();
 
-    if (desc) {
+  if (desc.empty())
+    return;
+
+  StreamString qualified_name;
+  const OptionValueProperties *sub_properties = m_value_sp->GetAsProperties();
+  if (sub_properties) {
+    strm.EOL();
+
+    if (m_value_sp->DumpQualifiedName(qualified_name))
+      strm.Printf("'%s' variables:\n\n", qualified_name.GetString().c_str());
+    sub_properties->DumpAllDescriptions(interpreter, strm);
+  } else {
+    if (display_qualified_name) {
       StreamString qualified_name;
-      const OptionValueProperties *sub_properties =
-          m_value_sp->GetAsProperties();
-      if (sub_properties) {
-        strm.EOL();
-
-        if (m_value_sp->DumpQualifiedName(qualified_name))
-          strm.Printf("'%s' variables:\n\n",
-                      qualified_name.GetString().c_str());
-        sub_properties->DumpAllDescriptions(interpreter, strm);
-      } else {
-        if (desc) {
-          if (display_qualified_name) {
-            StreamString qualified_name;
-            DumpQualifiedName(qualified_name);
-            interpreter.OutputFormattedHelpText(
-                strm, qualified_name.GetString().c_str(), "--", desc,
-                output_width);
-          } else {
-            interpreter.OutputFormattedHelpText(strm, m_name.GetCString(), "--",
-                                                desc, output_width);
-          }
-        }
-      }
+      DumpQualifiedName(qualified_name);
+      interpreter.OutputFormattedHelpText(
+          strm, qualified_name.GetString().c_str(), "--", desc, output_width);
+    } else {
+      interpreter.OutputFormattedHelpText(strm, m_name.GetCString(), "--", desc,
+                                          output_width);
     }
   }
 }

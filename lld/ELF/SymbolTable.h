@@ -60,9 +60,9 @@ public:
 
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                      uintX_t Value, uintX_t Size, uint8_t Binding,
-                     InputSectionBase<ELFT> *Section);
+                     InputSectionBase<ELFT> *Section, InputFile *File);
   Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
-                     InputSectionBase<ELFT> *Section);
+                     InputSectionBase<ELFT> *Section, InputFile *File);
 
   Symbol *addSynthetic(StringRef N, OutputSectionBase *Section, uintX_t Value,
                        uint8_t StOther);
@@ -98,8 +98,12 @@ private:
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
-  std::map<std::string, std::vector<SymbolBody *>> getDemangledSyms();
+  ArrayRef<SymbolBody *> findDemangled(StringRef Name);
+  std::vector<SymbolBody *> findAllDemangled(const StringMatcher &M);
+
+  void initDemangledSyms();
   void handleAnonymousVersion();
+  void assignWildcardVersion(SymbolVersion Ver, size_t VersionId);
 
   struct SymIndex {
     SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}
@@ -130,6 +134,13 @@ private:
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseSet<StringRef> SoNames;
 
+  // A map from demangled symbol names to their symbol objects.
+  // This mapping is 1:N because two symbols with different versions
+  // can have the same name. We use this map to handle "extern C++ {}"
+  // directive in version scripts.
+  llvm::Optional<llvm::StringMap<std::vector<SymbolBody *>>> DemangledSyms;
+
+  // For LTO.
   std::unique_ptr<BitcodeCompiler> Lto;
 };
 

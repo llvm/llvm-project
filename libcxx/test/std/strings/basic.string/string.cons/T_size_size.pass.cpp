@@ -64,7 +64,7 @@ test(SV sv, unsigned pos, unsigned n, const typename S::allocator_type& a)
 {
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
-    try
+    if (pos <= sv.size())
     {
         S s2(sv, pos, n, a);
         LIBCPP_ASSERT(s2.__invariants());
@@ -75,10 +75,20 @@ test(SV sv, unsigned pos, unsigned n, const typename S::allocator_type& a)
         assert(s2.get_allocator() == a);
         assert(s2.capacity() >= s2.size());
     }
-    catch (std::out_of_range&)
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    else
     {
-        assert(pos > sv.size());
+        try
+        {
+            S s2(sv, pos, n, a);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+            assert(pos > sv.size());
+        }
     }
+#endif
 }
 
 int main()

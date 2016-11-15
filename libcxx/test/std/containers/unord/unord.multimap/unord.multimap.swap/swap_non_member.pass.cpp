@@ -78,7 +78,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.find(10)->second == "ten");
         assert(c1.find(20)->second == "twenty");
@@ -133,7 +133,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 7);
+        assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
         assert(c2.find(1)->second == "one");
         assert(next(c2.find(1))->second == "four");
@@ -179,7 +179,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.find(10)->second == "ten");
         assert(c1.find(20)->second == "twenty");
@@ -196,7 +196,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 7);
+        assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
         assert(c2.find(1)->second == "one");
         assert(next(c2.find(1))->second == "four");
@@ -263,7 +263,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.find(10)->second == "ten");
         assert(c1.find(20)->second == "twenty");
@@ -318,7 +318,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 7);
+        assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
         assert(c2.find(1)->second == "one");
         assert(next(c2.find(1))->second == "four");
@@ -364,7 +364,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.find(10)->second == "ten");
         assert(c1.find(20)->second == "twenty");
@@ -381,7 +381,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 7);
+        assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
         assert(c2.find(1)->second == "one");
         assert(next(c2.find(1))->second == "four");
@@ -448,7 +448,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.find(10)->second == "ten");
         assert(c1.find(20)->second == "twenty");
@@ -503,7 +503,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 7);
+        assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
         assert(c2.find(1)->second == "one");
         assert(next(c2.find(1))->second == "four");
@@ -549,7 +549,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.find(10)->second == "ten");
         assert(c1.find(20)->second == "twenty");
@@ -566,7 +566,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 7);
+        assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
         assert(c2.find(1)->second == "one");
         assert(next(c2.find(1))->second == "four");

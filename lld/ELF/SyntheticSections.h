@@ -72,6 +72,7 @@ public:
 
   virtual void writeTo(uint8_t *Buf) = 0;
   virtual size_t getSize() const { return this->Data.size(); }
+  virtual void finalize() {}
   uintX_t getVA() const {
     return this->OutSec ? this->OutSec->Addr + this->OutSecOff : 0;
   }
@@ -144,7 +145,7 @@ public:
   GotSection();
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return Size; }
-  void finalize();
+  void finalize() override;
   void addEntry(SymbolBody &Sym);
   void addMipsEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
@@ -238,6 +239,54 @@ private:
   std::vector<StringRef> Strings;
 };
 
+template <class ELFT>
+class DynamicSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::Dyn Elf_Dyn;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
+
+  // The .dynamic section contains information for the dynamic linker.
+  // The section consists of fixed size entries, which consist of
+  // type and value fields. Value are one of plain integers, symbol
+  // addresses, or section addresses. This struct represents the entry.
+  struct Entry {
+    int32_t Tag;
+    union {
+      OutputSectionBase *OutSec;
+      InputSection<ELFT> *InSec;
+      uint64_t Val;
+      const SymbolBody *Sym;
+    };
+    enum KindT { SecAddr, SecSize, SymAddr, PlainInt, InSecAddr } Kind;
+    Entry(int32_t Tag, OutputSectionBase *OutSec, KindT Kind = SecAddr)
+        : Tag(Tag), OutSec(OutSec), Kind(Kind) {}
+    Entry(int32_t Tag, InputSection<ELFT> *Sec)
+        : Tag(Tag), InSec(Sec), Kind(InSecAddr) {}
+    Entry(int32_t Tag, uint64_t Val) : Tag(Tag), Val(Val), Kind(PlainInt) {}
+    Entry(int32_t Tag, const SymbolBody *Sym)
+        : Tag(Tag), Sym(Sym), Kind(SymAddr) {}
+  };
+
+  // finalize() fills this vector with the section contents. finalize()
+  // cannot directly create final section contents because when the
+  // function is called, symbol or section addresses are not fixed yet.
+  std::vector<Entry> Entries;
+
+public:
+  DynamicSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return Size; }
+
+private:
+  void addEntries();
+  void Add(Entry E) { Entries.push_back(E); }
+  uintX_t Size = 0;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -246,6 +295,7 @@ template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
 template <class ELFT> struct In {
   static BuildIdSection<ELFT> *BuildId;
   static InputSection<ELFT> *Common;
+  static DynamicSection<ELFT> *Dynamic;
   static StringTableSection<ELFT> *DynStrTab;
   static GotSection<ELFT> *Got;
   static GotPltSection<ELFT> *GotPlt;
@@ -255,15 +305,11 @@ template <class ELFT> struct In {
   static MipsReginfoSection<ELFT> *MipsReginfo;
   static StringTableSection<ELFT> *ShStrTab;
   static StringTableSection<ELFT> *StrTab;
-
-  // Contains list of sections, which size is not known when
-  // createSections() is called. This list is used when output
-  // sections are being finalized to calculate their size correctly.
-  static std::vector<SyntheticSection<ELFT> *> SyntheticSections;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
+template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::DynStrTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
@@ -273,9 +319,6 @@ template <class ELFT> MipsOptionsSection<ELFT> *In<ELFT>::MipsOptions;
 template <class ELFT> MipsReginfoSection<ELFT> *In<ELFT>::MipsReginfo;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::StrTab;
-template <class ELFT>
-std::vector<SyntheticSection<ELFT> *> In<ELFT>::SyntheticSections;
-
 } // namespace elf
 } // namespace lld
 
