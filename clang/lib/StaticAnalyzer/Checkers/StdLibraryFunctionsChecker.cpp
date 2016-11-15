@@ -254,7 +254,7 @@ ProgramStateRef StdLibraryFunctionsChecker::ValueRange::applyAsOutOfRange(
       const llvm::APSInt &Min = BVF.getValue(R[I].first, T);
       const llvm::APSInt &Max = BVF.getValue(R[I].second, T);
       assert(Min <= Max);
-      State = CM.assumeWithinInclusiveRange(State, *N, Min, Max, false);
+      State = CM.assumeInclusiveRange(State, *N, Min, Max, false);
       if (!State)
         break;
     }
@@ -288,7 +288,7 @@ StdLibraryFunctionsChecker::ValueRange::applyAsWithinRange(
     const llvm::APSInt &Left = BVF.getValue(R[0].first - 1ULL, T);
     if (Left != PlusInf) {
       assert(MinusInf <= Left);
-      State = CM.assumeWithinInclusiveRange(State, *N, MinusInf, Left, false);
+      State = CM.assumeInclusiveRange(State, *N, MinusInf, Left, false);
       if (!State)
         return nullptr;
     }
@@ -296,7 +296,7 @@ StdLibraryFunctionsChecker::ValueRange::applyAsWithinRange(
     const llvm::APSInt &Right = BVF.getValue(R[E - 1].second + 1ULL, T);
     if (Right != MinusInf) {
       assert(Right <= PlusInf);
-      State = CM.assumeWithinInclusiveRange(State, *N, Right, PlusInf, false);
+      State = CM.assumeInclusiveRange(State, *N, Right, PlusInf, false);
       if (!State)
         return nullptr;
     }
@@ -305,7 +305,7 @@ StdLibraryFunctionsChecker::ValueRange::applyAsWithinRange(
       const llvm::APSInt &Min = BVF.getValue(R[I - 1].second + 1ULL, T);
       const llvm::APSInt &Max = BVF.getValue(R[I].first - 1ULL, T);
       assert(Min <= Max);
-      State = CM.assumeWithinInclusiveRange(State, *N, Min, Max, false);
+      State = CM.assumeInclusiveRange(State, *N, Min, Max, false);
       if (!State)
         return nullptr;
     }
