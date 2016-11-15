@@ -91,9 +91,11 @@ for (int i = 0; i < argc; ++i) {
   }
 }
 // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
-#pragma omp parallel for
+int r = 0;
+#pragma omp parallel for reduction(+:r)
 for (int i = 0; i < argc; ++i) {
 #pragma omp cancel for
+  r += i;
 }
 // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
   return argc;
@@ -163,6 +165,9 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
+// CHECK: call void @__kmpc_for_static_fini(
+// CHECK: call i32 @__kmpc_reduce_nowait(
+// CHECK: call void @__kmpc_end_reduce_nowait(
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
