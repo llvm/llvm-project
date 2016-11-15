@@ -39,6 +39,7 @@ Expected<std::unique_ptr<SymbolicFile>> SymbolicFile::createSymbolicFile(
     LLVM_FALLTHROUGH;
   case sys::fs::file_magic::unknown:
   case sys::fs::file_magic::archive:
+  case sys::fs::file_magic::coff_cl_gl_object:
   case sys::fs::file_magic::macho_universal_binary:
   case sys::fs::file_magic::windows_resource:
     return errorCodeToError(object_error::invalid_file_type);

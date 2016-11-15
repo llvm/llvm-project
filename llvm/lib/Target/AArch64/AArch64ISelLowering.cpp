@@ -959,8 +959,10 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::ST4LANEpost:       return "AArch64ISD::ST4LANEpost";
   case AArch64ISD::SMULL:             return "AArch64ISD::SMULL";
   case AArch64ISD::UMULL:             return "AArch64ISD::UMULL";
-  case AArch64ISD::FRSQRTE:           return "AArch64ISD::FRSQRTE";
   case AArch64ISD::FRECPE:            return "AArch64ISD::FRECPE";
+  case AArch64ISD::FRECPS:            return "AArch64ISD::FRECPS";
+  case AArch64ISD::FRSQRTE:           return "AArch64ISD::FRSQRTE";
+  case AArch64ISD::FRSQRTS:           return "AArch64ISD::FRSQRTS";
   }
   return nullptr;
 }
@@ -4653,7 +4655,34 @@ SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
       (Enabled == ReciprocalEstimate::Unspecified && Subtarget->useRSqrt()))
     if (SDValue Estimate = getEstimate(Subtarget, AArch64ISD::FRSQRTE, Operand,
                                        DAG, ExtraSteps)) {
-      UseOneConst = true;
+      SDLoc DL(Operand);
+      EVT VT = Operand.getValueType();
+
+      SDNodeFlags Flags;
+      Flags.setUnsafeAlgebra(true);
+
+      // Newton reciprocal square root iteration: E * 0.5 * (3 - X * E^2)
+      // AArch64 reciprocal square root iteration instruction: 0.5 * (3 - M * N)
+      for (int i = ExtraSteps; i > 0; --i) {
+        SDValue Step = DAG.getNode(ISD::FMUL, DL, VT, Estimate, Estimate,
+                                   &Flags);
+        Step = DAG.getNode(AArch64ISD::FRSQRTS, DL, VT, Operand, Step, &Flags);
+        Estimate = DAG.getNode(ISD::FMUL, DL, VT, Estimate, Step, &Flags);
+      }
+
+      if (!Reciprocal) {
+        EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                      VT);
+        SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
+        SDValue Eq = DAG.getSetCC(DL, CCVT, Operand, FPZero, ISD::SETEQ);
+
+        Estimate = DAG.getNode(ISD::FMUL, DL, VT, Operand, Estimate, &Flags);
+        // Correct the result if the operand is 0.0.
+        Estimate = DAG.getNode(VT.isVector() ? ISD::VSELECT : ISD::SELECT, DL,
+                               VT, Eq, Operand, Estimate);
+      }
+
+      ExtraSteps = 0;
       return Estimate;
     }
 
@@ -4665,8 +4694,24 @@ SDValue AArch64TargetLowering::getRecipEstimate(SDValue Operand,
                                                 int &ExtraSteps) const {
   if (Enabled == ReciprocalEstimate::Enabled)
     if (SDValue Estimate = getEstimate(Subtarget, AArch64ISD::FRECPE, Operand,
-                                       DAG, ExtraSteps))
+                                       DAG, ExtraSteps)) {
+      SDLoc DL(Operand);
+      EVT VT = Operand.getValueType();
+
+      SDNodeFlags Flags;
+      Flags.setUnsafeAlgebra(true);
+
+      // Newton reciprocal iteration: E * (2 - X * E)
+      // AArch64 reciprocal iteration instruction: (2 - M * N)
+      for (int i = ExtraSteps; i > 0; --i) {
+        SDValue Step = DAG.getNode(AArch64ISD::FRECPS, DL, VT, Operand,
+                                   Estimate, &Flags);
+        Estimate = DAG.getNode(ISD::FMUL, DL, VT, Estimate, Step, &Flags);
+      }
+
+      ExtraSteps = 0;
       return Estimate;
+    }
 
   return SDValue();
 }
@@ -8769,13 +8814,98 @@ static SDValue performExtendCombine(SDNode *N,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
 }
 
+static SDValue split16BStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
+                                  SDValue SplatVal, unsigned NumVecElts) {
+  assert((NumVecElts == 4 || NumVecElts == 2) && "Unexpected NumVecElts");
+
+  unsigned OrigAlignment = St.getAlignment();
+  unsigned EltOffset = NumVecElts == 4 ? 4 : 8;
+  unsigned Alignment = std::min(OrigAlignment, EltOffset);
+
+  // Create scalar stores. This is at least as good as the code sequence for a
+  // split unaligned store which is a dup.s, ext.b, and two stores.
+  // Most of the time the three stores should be replaced by store pair
+  // instructions (stp).
+  SDLoc DL(&St);
+  SDValue BasePtr = St.getBasePtr();
+  SDValue NewST1 =
+      DAG.getStore(St.getChain(), DL, SplatVal, BasePtr, St.getPointerInfo(),
+                   St.getAlignment(), St.getMemOperand()->getFlags());
+
+  unsigned Offset = EltOffset;
+  while (--NumVecElts) {
+    SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i64, BasePtr,
+                                    DAG.getConstant(Offset, DL, MVT::i64));
+    NewST1 = DAG.getStore(NewST1.getValue(0), DL, SplatVal, OffsetPtr,
+                          St.getPointerInfo(), Alignment,
+                          St.getMemOperand()->getFlags());
+    Offset += EltOffset;
+  }
+  return NewST1;
+}
+
+/// Replace a splat of zeros to a vector store by scalar stores of WZR/XZR.  The
+/// load store optimizer pass will merge them to store pair stores.  This should
+/// be better than a movi to create the vector zero followed by a vector store
+/// if the zero constant is not re-used, since one instructions and one register
+/// live range will be removed.
+///
+/// For example, the final generated code should be:
+///
+///   stp xzr, xzr, [x0]
+///
+/// instead of:
+///
+///   movi v0.2d, #0
+///   str q0, [x0]
+///
+static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
+  SDValue StVal = St.getValue();
+  EVT VT = StVal.getValueType();
+
+  // We can express a splat as store pair(s) for 2 or 4 elements.
+  int NumVecElts = VT.getVectorNumElements();
+  if (NumVecElts != 4 && NumVecElts != 2)
+    return SDValue();
+
+  if (StVal.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  // If the zero constant has more than one use then the vector store could be
+  // better since the constant mov will be amortized and stp q instructions
+  // should be able to be formed.
+  if (!StVal.hasOneUse())
+    return SDValue();
+
+  // If the immediate offset of the address operand is too large for the stp
+  // instruction, then bail out.
+  if (DAG.isBaseWithConstantOffset(St.getBasePtr())) {
+    int64_t Offset = St.getBasePtr()->getConstantOperandVal(1);
+    if (Offset < -512 || Offset > 504)
+      return SDValue();
+  }
+
+  for (int I = 0; I < NumVecElts; ++I) {
+    SDValue EltVal = StVal.getOperand(I);
+    if (!isa<ConstantSDNode>(EltVal) ||
+        !cast<ConstantSDNode>(EltVal)->isNullValue())
+      return SDValue();
+  }
+  // Use WZR/XZR here to prevent DAGCombiner::MergeConsecutiveStores from
+  // undoing this transformation.
+  return split16BStoreSplat(
+      DAG, St, NumVecElts == 4 ? DAG.getRegister(AArch64::WZR, MVT::i32)
+                               : DAG.getRegister(AArch64::XZR, MVT::i64),
+      NumVecElts);
+}
+
 /// Replace a splat of a scalar to a vector store by scalar stores of the scalar
 /// value. The load store optimizer pass will merge them to store pair stores.
 /// This has better performance than a splat of the scalar followed by a split
 /// vector store. Even if the stores are not merged it is four stores vs a dup,
 /// followed by an ext.b and two stores.
-static SDValue replaceSplatVectorStore(SelectionDAG &DAG, StoreSDNode *St) {
-  SDValue StVal = St->getValue();
+static SDValue replaceSplatVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
+  SDValue StVal = St.getValue();
   EVT VT = StVal.getValueType();
 
   // Don't replace floating point stores, they possibly won't be transformed to
@@ -8819,30 +8949,7 @@ static SDValue replaceSplatVectorStore(SelectionDAG &DAG, StoreSDNode *St) {
   if (IndexNotInserted.any())
       return SDValue();
 
-  unsigned OrigAlignment = St->getAlignment();
-  unsigned EltOffset = NumVecElts == 4 ? 4 : 8;
-  unsigned Alignment = std::min(OrigAlignment, EltOffset);
-
-  // Create scalar stores. This is at least as good as the code sequence for a
-  // split unaligned store which is a dup.s, ext.b, and two stores.
-  // Most of the time the three stores should be replaced by store pair
-  // instructions (stp).
-  SDLoc DL(St);
-  SDValue BasePtr = St->getBasePtr();
-  SDValue NewST1 =
-      DAG.getStore(St->getChain(), DL, SplatVal, BasePtr, St->getPointerInfo(),
-                   St->getAlignment(), St->getMemOperand()->getFlags());
-
-  unsigned Offset = EltOffset;
-  while (--NumVecElts) {
-    SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i64, BasePtr,
-                                    DAG.getConstant(Offset, DL, MVT::i64));
-    NewST1 = DAG.getStore(NewST1.getValue(0), DL, SplatVal, OffsetPtr,
-                          St->getPointerInfo(), Alignment,
-                          St->getMemOperand()->getFlags());
-    Offset += EltOffset;
-  }
-  return NewST1;
+  return split16BStoreSplat(DAG, St, SplatVal, NumVecElts);
 }
 
 static SDValue split16BStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
@@ -8855,6 +8962,17 @@ static SDValue split16BStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (S->isVolatile())
     return SDValue();
 
+  SDValue StVal = S->getValue();
+  EVT VT = StVal.getValueType();
+  if (!VT.isVector())
+    return SDValue();
+
+  // If we get a splat of zeros, convert this vector store to a store of
+  // scalars. They will be merged into store pairs of xzr thereby removing one
+  // instruction and one register.
+  if (SDValue ReplacedZeroSplat = replaceZeroVectorStore(DAG, *S))
+    return ReplacedZeroSplat;
+
   // FIXME: The logic for deciding if an unaligned store should be split should
   // be included in TLI.allowsMisalignedMemoryAccesses(), and there should be
   // a call to that function here.
@@ -8866,12 +8984,9 @@ static SDValue split16BStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (DAG.getMachineFunction().getFunction()->optForMinSize())
     return SDValue();
 
-  SDValue StVal = S->getValue();
-  EVT VT = StVal.getValueType();
-
   // Don't split v2i64 vectors. Memcpy lowering produces those and splitting
   // those up regresses performance on micro-benchmarks and olden/bh.
-  if (!VT.isVector() || VT.getVectorNumElements() < 2 || VT == MVT::v2i64)
+  if (VT.getVectorNumElements() < 2 || VT == MVT::v2i64)
     return SDValue();
 
   // Split unaligned 16B stores. They are terrible for performance.
@@ -8886,7 +9001,7 @@ static SDValue split16BStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // If we get a splat of a scalar convert this vector store to a store of
   // scalars. They will be merged into store pairs thereby removing two
   // instructions.
-  if (SDValue ReplacedSplat = replaceSplatVectorStore(DAG, S))
+  if (SDValue ReplacedSplat = replaceSplatVectorStore(DAG, *S))
     return ReplacedSplat;
 
   SDLoc DL(S);

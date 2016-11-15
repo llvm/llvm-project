@@ -30,7 +30,7 @@ static const DWARFUnit *findUnitAndExtractFast(DWARFDebugInfoEntryMinimal &DIE,
                                                const DWARFUnit *Unit,
                                                uint32_t *Offset) {
   Unit = Unit->getUnitSection().getUnitForOffset(*Offset);
-  return (Unit && DIE.extractFast(Unit, Offset)) ? Unit : nullptr;
+  return (Unit && DIE.extractFast(*Unit, Offset)) ? Unit : nullptr;
 }
 
 void DWARFDebugInfoEntryMinimal::dump(raw_ostream &OS, DWARFUnit *u,
@@ -183,11 +183,17 @@ void DWARFDebugInfoEntryMinimal::dumpAttribute(raw_ostream &OS,
   OS << ")\n";
 }
 
-bool DWARFDebugInfoEntryMinimal::extractFast(const DWARFUnit *U,
+bool DWARFDebugInfoEntryMinimal::extractFast(const DWARFUnit &U,
                                              uint32_t *OffsetPtr) {
+  DataExtractor DebugInfoData = U.getDebugInfoExtractor();
+  const uint32_t UEndOffset = U.getNextUnitOffset();
+  return extractFast(U, OffsetPtr, DebugInfoData, UEndOffset);
+}
+bool DWARFDebugInfoEntryMinimal::extractFast(const DWARFUnit &U,
+                                             uint32_t *OffsetPtr,
+                                             const DataExtractor &DebugInfoData,
+                                             uint32_t UEndOffset) {
   Offset = *OffsetPtr;
-  DataExtractor DebugInfoData = U->getDebugInfoExtractor();
-  uint32_t UEndOffset = U->getNextUnitOffset();
   if (Offset >= UEndOffset || !DebugInfoData.isValidOffset(Offset))
     return false;
   uint64_t AbbrCode = DebugInfoData.getULEB128(OffsetPtr);
@@ -196,21 +202,29 @@ bool DWARFDebugInfoEntryMinimal::extractFast(const DWARFUnit *U,
     AbbrevDecl = nullptr;
     return true;
   }
-  AbbrevDecl = U->getAbbreviations()->getAbbreviationDeclaration(AbbrCode);
+  AbbrevDecl = U.getAbbreviations()->getAbbreviationDeclaration(AbbrCode);
   if (nullptr == AbbrevDecl) {
     // Restore the original offset.
     *OffsetPtr = Offset;
     return false;
   }
+  // See if all attributes in this DIE have fixed byte sizes. If so, we can
+  // just add this size to the offset to skip to the next DIE.
+  if (Optional<size_t> FixedSize = AbbrevDecl->getFixedAttributesByteSize(U)) {
+    *OffsetPtr += *FixedSize;
+    return true;
+  }
 
   // Skip all data in the .debug_info for the attributes
   for (const auto &AttrSpec : AbbrevDecl->attributes()) {
-    auto Form = AttrSpec.Form;
-
-    if (Optional<uint8_t> FixedSize = DWARFFormValue::getFixedByteSize(Form, U))
+    // Check if this attribute has a fixed byte size.
+    if (Optional<uint8_t> FixedSize = AttrSpec.getByteSize(U)) {
+      // Attribute byte size if fixed, just add the size to the offset.
       *OffsetPtr += *FixedSize;
-    else if (!DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, U)) {
-      // Restore the original offset.
+    } else if (!DWARFFormValue::skipValue(AttrSpec.Form, DebugInfoData,
+                                          OffsetPtr, &U)) {
+      // We failed to skip this attribute's value, restore the original offset
+      // and return the failure status.
       *OffsetPtr = Offset;
       return false;
     }
@@ -230,27 +244,9 @@ bool DWARFDebugInfoEntryMinimal::isSubroutineDIE() const {
 
 bool DWARFDebugInfoEntryMinimal::getAttributeValue(const DWARFUnit *U, 
     dwarf::Attribute Attr, DWARFFormValue &FormValue) const {
-  if (!AbbrevDecl)
+  if (!AbbrevDecl || !U)
     return false;
-
-  uint32_t AttrIdx = AbbrevDecl->findAttributeIndex(Attr);
-  if (AttrIdx == -1U)
-    return false;
-
-  DataExtractor DebugInfoData = U->getDebugInfoExtractor();
-  uint32_t DebugInfoOffset = getOffset();
-
-  // Skip the abbreviation code so we are at the data for the attributes
-  DebugInfoData.getULEB128(&DebugInfoOffset);
-
-  // Skip preceding attribute values.
-  for (uint32_t i = 0; i < AttrIdx; ++i) {
-    DWARFFormValue::skipValue(AbbrevDecl->getFormByIndex(i),
-                              DebugInfoData, &DebugInfoOffset, U);
-  }
-
-  FormValue = DWARFFormValue(AbbrevDecl->getFormByIndex(AttrIdx));
-  return FormValue.extractValue(DebugInfoData, &DebugInfoOffset, U);
+  return AbbrevDecl->getAttributeValue(Offset, Attr, *U, FormValue);
 }
 
 const char *DWARFDebugInfoEntryMinimal::getAttributeValueAsString(

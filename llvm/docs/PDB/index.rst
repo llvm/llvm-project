@@ -37,6 +37,11 @@ repo <https://github.com/Microsoft/microsoft-pdb>`__.
 File Layout
 ===========
 
+.. important::
+   Unless otherwise specified, all numeric values are encoded in little endian.
+   If you see a type such as ``uint16_t`` or ``uint64_t`` going forward, always
+   assume it is little endian!
+
 .. toctree::
    :hidden:
    

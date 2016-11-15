@@ -39,3 +39,15 @@
 # RUN:   | FileCheck -check-prefix=m0337 %s 
 
 # m0337: mem-crup-0337.macho': truncated or malformed object (section relocation entries at offset 0 with a size of 512, overlaps Mach-O headers at offset 0 with a size of 2048)
+
+RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-nsect 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-NSECT %s
+INVALID-SYMBOL-NSECT: macho-invalid-symbol-nsect': truncated or malformed object (bad section index: 97 for symbol at index 1)
+
+RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-indr 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-INDR %s
+INVALID-SYMBOL-INDR: macho-invalid-symbol-indr': truncated or malformed object (bad n_value: 22 past the end of string table, for N_INDR symbol at index 1)
+
+RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-STRX %s
+INVALID-SYMBOL-STRX: macho-invalid-symbol-strx': truncated or malformed object (bad string table index: 22 past the end of string table, for symbol at index 1)
+
+RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-lib_ordinal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-LIB_ORDINAL %s
+INVALID-SYMBOL-LIB_ORDINAL: macho-invalid-symbol-lib_ordinal': truncated or malformed object (bad library ordinal: 7 for symbol at index 2)

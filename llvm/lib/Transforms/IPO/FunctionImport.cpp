@@ -153,7 +153,11 @@ static bool eligibleForImport(const ModuleSummaryIndex &Index,
 
   // Check references (and potential calls) in the same module. If the current
   // value references a global that can't be externally referenced it is not
-  // eligible for import.
+  // eligible for import. First check the flag set when we have possible
+  // opaque references (e.g. inline asm calls), then check the call and
+  // reference sets.
+  if (Summary.hasInlineAsmMaybeReferencingInternal())
+    return false;
   bool AllRefsCanBeExternallyReferenced =
       llvm::all_of(Summary.refs(), [&](const ValueInfo &VI) {
         return canBeExternallyReferenced(Index, VI.getGUID());
@@ -765,6 +769,17 @@ static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
   FunctionImporter::ImportMapTy ImportList;
   ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
                                     ImportList);
+
+  // Conservatively mark all internal values as promoted. This interface is
+  // only used when doing importing via the function importing pass. The pass
+  // is only enabled when testing importing via the 'opt' tool, which does
+  // not do the ThinLink that would normally determine what values to promote.
+  for (auto &I : *Index) {
+    for (auto &S : I.second) {
+      if (GlobalValue::isLocalLinkage(S->linkage()))
+        S->setLinkage(GlobalValue::ExternalLinkage);
+    }
+  }
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.

@@ -351,7 +351,7 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
     O << "-4.0";
   else if (Imm == 0x3e22f983 &&
            STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
-    O << "1/2pi";
+    O << "0.15915494";
   else
     O << formatHex(static_cast<uint64_t>(Imm));
 }
@@ -385,7 +385,7 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
     O << "-4.0";
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
-    O << "1/2pi";
+  O << "0.15915494";
   else {
     assert(isUInt<32>(Imm) || Imm == 0x3fc45f306dc9c882);
 

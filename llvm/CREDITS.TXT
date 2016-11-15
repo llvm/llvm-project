@@ -401,7 +401,7 @@ D: Fixes and improvements to the AArch64 backend
 
 N: Nadav Rotem
 E: nadav.rotem@me.com
-D: X86 code generation improvements, Loop Vectorizer.
+D: X86 code generation improvements, Loop Vectorizer, SLP Vectorizer
 
 N: Roman Samoilov
 E: roman@codedgers.com

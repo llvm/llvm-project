@@ -187,9 +187,9 @@ enum NodeType : unsigned {
   SMULL,
   UMULL,
 
-  // Reciprocal estimates.
-  FRECPE,
-  FRSQRTE,
+  // Reciprocal estimates and steps.
+  FRECPE, FRECPS,
+  FRSQRTE, FRSQRTS,
 
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,

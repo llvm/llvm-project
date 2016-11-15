@@ -331,6 +331,26 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
     setPICStyle(PICStyles::GOT);
 }
 
+const CallLowering *X86Subtarget::getCallLowering() const {
+  assert(GISel && "Access to GlobalISel APIs not set");
+  return GISel->getCallLowering();
+}
+
+const InstructionSelector *X86Subtarget::getInstructionSelector() const {
+  assert(GISel && "Access to GlobalISel APIs not set");
+  return GISel->getInstructionSelector();
+}
+
+const LegalizerInfo *X86Subtarget::getLegalizerInfo() const {
+  assert(GISel && "Access to GlobalISel APIs not set");
+  return GISel->getLegalizerInfo();
+}
+
+const RegisterBankInfo *X86Subtarget::getRegBankInfo() const {
+  assert(GISel && "Access to GlobalISel APIs not set");
+  return GISel->getRegBankInfo();
+}
+
 bool X86Subtarget::enableEarlyIfConversion() const {
   return hasCMov() && X86EarlyIfConv;
 }

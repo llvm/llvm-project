@@ -1,10 +1,10 @@
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=CIVI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=VI
 
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s -check-prefix=NOVI
 
@@ -429,11 +429,11 @@ v_and_b32_e32 v0, 0xffffffffffffffff, v1
 v_trunc_f32_e32 v0, 0x3fc45f306dc9c882
 
 // NOSICI: error: invalid operand for instruction
-// VI: v_fract_f64_e32 v[0:1], 1/2pi ; encoding: [0xf8,0x64,0x00,0x7e]
+// VI: v_fract_f64_e32 v[0:1], 0.15915494 ; encoding: [0xf8,0x64,0x00,0x7e]
 v_fract_f64_e32 v[0:1], 0x3fc45f306dc9c882
 
 // SICI: v_trunc_f32_e32 v0, 0x3e22f983 ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
-// VI: v_trunc_f32_e32 v0, 1/2pi ; encoding: [0xf8,0x38,0x00,0x7e]
+// VI: v_trunc_f32_e32 v0, 0.15915494 ; encoding: [0xf8,0x38,0x00,0x7e]
 v_trunc_f32_e32 v0, 0x3e22f983
 
 // SICI: v_fract_f64_e32 v[0:1], 0x3e22f983 ; encoding: [0xff,0x7c,0x00,0x7e,0x83,0xf9,0x22,0x3e]
@@ -445,11 +445,11 @@ v_fract_f64_e32 v[0:1], 0x3e22f983
 v_trunc_f32_e64 v0, 0x3fc45f306dc9c882
 
 // NOSICI: error: invalid operand for instruction
-// VI: v_fract_f64_e64 v[0:1], 1/2pi ; encoding: [0x00,0x00,0x72,0xd1,0xf8,0x00,0x00,0x00]
+// VI: v_fract_f64_e64 v[0:1], 0.15915494 ; encoding: [0x00,0x00,0x72,0xd1,0xf8,0x00,0x00,0x00]
 v_fract_f64_e64 v[0:1], 0x3fc45f306dc9c882
 
 // NOSICI: error: invalid operand for instruction
-// VI: v_trunc_f32_e64 v0, 1/2pi ; encoding: [0x00,0x00,0x5c,0xd1,0xf8,0x00,0x00,0x00]
+// VI: v_trunc_f32_e64 v0, 0.15915494 ; encoding: [0x00,0x00,0x5c,0xd1,0xf8,0x00,0x00,0x00]
 v_trunc_f32_e64 v0, 0x3e22f983
 
 // NOSICI: error: invalid operand for instruction
@@ -457,21 +457,21 @@ v_trunc_f32_e64 v0, 0x3e22f983
 v_fract_f64_e64 v[0:1], 0x3e22f983
 
 // NOSICI: error: invalid operand for instruction
-// VI: s_mov_b64 s[0:1], 1/2pi ; encoding: [0xf8,0x01,0x80,0xbe]
+// VI: s_mov_b64 s[0:1], 0.15915494 ; encoding: [0xf8,0x01,0x80,0xbe]
 s_mov_b64_e32 s[0:1], 0.159154943091895317852646485335
 
 // SICI: v_and_b32_e32 v0, 0x3e22f983, v1 ; encoding: [0xff,0x02,0x00,0x36,0x83,0xf9,0x22,0x3e]
-// VI: v_and_b32_e32 v0, 1/2pi, v1 ; encoding: [0xf8,0x02,0x00,0x26]
+// VI: v_and_b32_e32 v0, 0.15915494, v1 ; encoding: [0xf8,0x02,0x00,0x26]
 v_and_b32_e32 v0, 0.159154943091895317852646485335, v1
 
 // NOSICI: error: invalid operand for instruction
-// VI: v_and_b32_e64 v0, 1/2pi, v1 ; encoding: [0x00,0x00,0x13,0xd1,0xf8,0x02,0x02,0x00]
+// VI: v_and_b32_e64 v0, 0.15915494, v1 ; encoding: [0x00,0x00,0x13,0xd1,0xf8,0x02,0x02,0x00]
 v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
 
 // SICI: v_fract_f64_e32 v[0:1], 0x3fc45f30 ; encoding: [0xff,0x7c,0x00,0x7e,0x30,0x5f,0xc4,0x3f]
-// VI: v_fract_f64_e32 v[0:1], 1/2pi ; encoding: [0xf8,0x64,0x00,0x7e]
+// VI: v_fract_f64_e32 v[0:1], 0.15915494 ; encoding: [0xf8,0x64,0x00,0x7e]
 v_fract_f64 v[0:1], 0.159154943091895317852646485335
 
 // SICI: v_trunc_f32_e32 v0, 0x3e22f983 ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
-// VI: v_trunc_f32_e32 v0, 1/2pi ; encoding: [0xf8,0x38,0x00,0x7e]
+// VI: v_trunc_f32_e32 v0, 0.15915494 ; encoding: [0xf8,0x38,0x00,0x7e]
 v_trunc_f32 v0, 0.159154943091895317852646485335

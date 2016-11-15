@@ -181,6 +181,23 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}sample_f32:
+; GCN: image_sample {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x1
+define void @sample_f32(float addrspace(1)* %out) {
+main_body:
+  %r = call float @llvm.amdgcn.image.sample.f32.v2f32.v8i32(<2 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 1, i1 0, i1 0, i1 0, i1 0, i1 0)
+  store float %r, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}sample_v2f32:
+; GCN: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x3
+define void @sample_v2f32(<2 x float> addrspace(1)* %out) {
+main_body:
+  %r = call <2 x float> @llvm.amdgcn.image.sample.v2f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 3, i1 0, i1 0, i1 0, i1 0, i1 0)
+  store <2 x float> %r, <2 x float> addrspace(1)* %out
+  ret void
+}
 
 declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.sample.cl.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
@@ -204,5 +221,7 @@ declare <4 x float> @llvm.amdgcn.image.sample.c.lz.v4f32.v4f32.v8i32(<4 x float>
 declare <4 x float> @llvm.amdgcn.image.sample.c.cd.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 
+declare float @llvm.amdgcn.image.sample.f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
+declare <2 x float> @llvm.amdgcn.image.sample.v2f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 
 attributes #0 = { nounwind readnone }

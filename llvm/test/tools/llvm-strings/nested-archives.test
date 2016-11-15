@@ -1,6 +1,5 @@
-RUN: echo -n abcd > %T/abcd
 RUN: rm -f %T/inner.ar
-RUN: llvm-ar -format gnu crs %T/inner.a %T/abcd
+RUN: llvm-ar -format gnu crs %T/inner.a %S/Inputs/abcd
 RUN: rm -f %T/outer.ar
 RUN: llvm-ar -format gnu crs %T/outer.a %T/inner.a
 RUN: llvm-strings %T/outer.a | FileCheck %s
