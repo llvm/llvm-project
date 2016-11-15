@@ -7093,8 +7093,10 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
                                std::map<uint64_t, SymbolRef> &Symbols,
                                const SectionRef &CompactUnwind) {
 
-  assert(Obj->isLittleEndian() &&
-         "There should not be a big-endian .o with __compact_unwind");
+  if (!Obj->isLittleEndian()) {
+    outs() << "Skipping big-endian __compact_unwind section\n";
+    return;
+  }
 
   bool Is64 = Obj->is64Bit();
   uint32_t PointerSize = Is64 ? sizeof(uint64_t) : sizeof(uint32_t);
@@ -7126,8 +7128,10 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
       Entry.PersonalityReloc = Reloc;
     else if (OffsetInEntry == 2 * PointerSize + 2 * sizeof(uint32_t))
       Entry.LSDAReloc = Reloc;
-    else
-      llvm_unreachable("Unexpected relocation in __compact_unwind section");
+    else {
+      outs() << "Invalid relocation in __compact_unwind section\n";
+      return;
+    }
   }
 
   // Finally, we're ready to print the data we've gathered.
@@ -7233,8 +7237,10 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
                                         std::map<uint64_t, SymbolRef> &Symbols,
                                         const SectionRef &UnwindInfo) {
 
-  assert(Obj->isLittleEndian() &&
-         "There should not be a big-endian .o with __unwind_info");
+  if (!Obj->isLittleEndian()) {
+    outs() << "Skipping big-endian __unwind_info section\n";
+    return;
+  }
 
   outs() << "Contents of __unwind_info section:\n";
 
@@ -7249,7 +7255,10 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
   uint32_t Version = readNext<uint32_t>(Pos);
   outs() << "  Version:                                   "
          << format("0x%" PRIx32, Version) << '\n';
-  assert(Version == 1 && "only understand version 1");
+  if (Version != 1) {
+    outs() << "    Skipping section with unknown version\n";
+    return;
+  }
 
   uint32_t CommonEncodingsStart = readNext<uint32_t>(Pos);
   outs() << "  Common encodings array section offset:     "
@@ -7389,7 +7398,8 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
       printCompressedSecondLevelUnwindPage(Pos, IndexEntries[i].FunctionOffset,
                                            CommonEncodings);
     else
-      llvm_unreachable("Do not know how to print this kind of 2nd level page");
+      outs() << "    Skipping 2nd level page with unknown kind " << Kind
+             << '\n';
   }
 }
 
