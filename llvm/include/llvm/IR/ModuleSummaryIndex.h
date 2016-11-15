@@ -101,17 +101,29 @@ public:
     /// possibly referenced from inline assembly, etc).
     unsigned NoRename : 1;
 
+    /// Indicate if a function contains inline assembly (which is opaque),
+    /// that may reference a local value. This is used to prevent importing
+    /// of this function, since we can't promote and rename the uses of the
+    /// local in the inline assembly. Use a flag rather than bloating the
+    /// summary with references to every possible local value in the
+    /// llvm.used set.
+    unsigned HasInlineAsmMaybeReferencingInternal : 1;
+
     /// Indicate if the function is not viable to inline.
     unsigned IsNotViableToInline : 1;
 
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool NoRename,
+                     bool HasInlineAsmMaybeReferencingInternal,
                      bool IsNotViableToInline)
         : Linkage(Linkage), NoRename(NoRename),
+          HasInlineAsmMaybeReferencingInternal(
+              HasInlineAsmMaybeReferencingInternal),
           IsNotViableToInline(IsNotViableToInline) {}
 
     GVFlags(const GlobalValue &GV)
-        : Linkage(GV.getLinkage()), NoRename(GV.hasSection()) {
+        : Linkage(GV.getLinkage()), NoRename(GV.hasSection()),
+          HasInlineAsmMaybeReferencingInternal(false) {
       IsNotViableToInline = false;
       if (const auto *F = dyn_cast<Function>(&GV))
         // Inliner doesn't handle variadic functions.
@@ -197,6 +209,18 @@ public:
   /// Flag that this global value cannot be renamed (in a specific section,
   /// possibly referenced from inline assembly, etc).
   void setNoRename() { Flags.NoRename = true; }
+
+  /// Return true if this global value possibly references another value
+  /// that can't be renamed.
+  bool hasInlineAsmMaybeReferencingInternal() const {
+    return Flags.HasInlineAsmMaybeReferencingInternal;
+  }
+
+  /// Flag that this global value possibly references another value that
+  /// can't be renamed.
+  void setHasInlineAsmMaybeReferencingInternal() {
+    Flags.HasInlineAsmMaybeReferencingInternal = true;
+  }
 
   /// Record a reference from this global value to the global value identified
   /// by \p RefGUID.

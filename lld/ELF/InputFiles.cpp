@@ -417,13 +417,14 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   InputSectionBase<ELFT> *S = Sections[Index];
 
-  // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03
-  // could generate broken objects. STT_SECTION symbols can be
+  // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could
+  // generate broken objects. STT_SECTION/STT_NOTYPE symbols can be
   // associated with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
-  // In this case it is fine for section to be null here as we
-  // do not allocate sections of these types.
+  // In this case it is fine for section to be null here as we do not
+  // allocate sections of these types.
   if (!S) {
-    if (Index == 0 || Sym.getType() == STT_SECTION)
+    if (Index == 0 || Sym.getType() == STT_SECTION ||
+        Sym.getType() == STT_NOTYPE)
       return nullptr;
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   }
@@ -476,7 +477,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
                                                 /*CanOmitFromDynSym*/ false,
                                                 this)
           ->body();
-    return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec)->body();
+    return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec, this)->body();
   }
 }
 
@@ -804,11 +805,13 @@ template <class ELFT> void BinaryFile::parse() {
   Sections.push_back(Section);
 
   elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, STT_OBJECT, 0, 0,
-                                   STB_GLOBAL, Section);
+                                   STB_GLOBAL, Section, nullptr);
   elf::Symtab<ELFT>::X->addRegular(EndName, STV_DEFAULT, STT_OBJECT,
-                                   Data.size(), 0, STB_GLOBAL, Section);
+                                   Data.size(), 0, STB_GLOBAL, Section,
+                                   nullptr);
   elf::Symtab<ELFT>::X->addRegular(SizeName, STV_DEFAULT, STT_OBJECT,
-                                   Data.size(), 0, STB_GLOBAL, nullptr);
+                                   Data.size(), 0, STB_GLOBAL, nullptr,
+                                   nullptr);
 }
 
 static bool isBitcode(MemoryBufferRef MB) {

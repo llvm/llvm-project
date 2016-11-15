@@ -260,4 +260,86 @@ declare <4 x i32> @llvm.ppc.altivec.vrlwnm(<4 x i32>, <4 x i32>)
 ; Function Attrs: nounwind readnone
 declare <2 x i64> @llvm.ppc.altivec.vrldnm(<2 x i64>, <2 x i64>)
 
+define <4 x i32> @testXVXEXPSP(<4 x float> %a) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.xvxexpsp(<4 x float> %a)
+  ret <4 x i32> %0
+; CHECK-LABEL: testXVXEXPSP
+; CHECK: xvxexpsp 34, 34
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.vsx.xvxexpsp(<4 x float>)
+
+; Function Attrs: nounwind readnone
+define <2 x i64> @testXVXEXPDP(<2 x double> %a) {
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.vsx.xvxexpdp(<2 x double> %a)
+  ret <2 x i64> %0
+; CHECK-LABEL: testXVXEXPDP
+; CHECK xvxexpdp 34, 34
+; CHECK blr
+}
+; Function Attrs: nounwind readnone
+declare <2 x i64>@llvm.ppc.vsx.xvxexpdp(<2 x double>)
+
+; Function Attrs: nounwind readnone
+define <4 x i32> @testXVXSIGSP(<4 x float> %a) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.xvxsigsp(<4 x float> %a)
+  ret <4 x i32> %0
+; CHECK-LABEL: testXVXSIGSP
+; CHECK xvxsigsp 34, 34
+; CHECK blr
+}
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.vsx.xvxsigsp(<4 x float>)
+
+; Function Attrs: nounwind readnone
+define <2 x i64> @testXVXSIGDP(<2 x double> %a) {
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.vsx.xvxsigdp(<2 x double> %a)
+  ret <2 x i64> %0
+; CHECK-LABEL: testXVXSIGDP
+; CHECK xvxsigdp 34, 34
+; CHECK blr
+}
+; Function Attrs: nounwind readnone
+declare <2 x i64> @llvm.ppc.vsx.xvxsigdp(<2 x double>)
+
+; Function Attrs: nounwind readnone
+define <4 x i32> @testXVTSTDCSP(<4 x float> %a) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.xvtstdcsp(<4 x float> %a, i32 127)
+  ret <4 x i32> %0
+; CHECK-LABEL: testXVTSTDCSP
+; CHECK: xvtstdcsp 34, 34, 127
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.vsx.xvtstdcsp(<4 x float> %a, i32 %b)
+
+; Function Attrs: nounwind readnone
+define <2 x i64> @testXVTSTDCDP(<2 x double> %a) {
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.vsx.xvtstdcdp(<2 x double> %a, i32 127)
+  ret <2 x i64> %0
+; CHECK-LABEL: testXVTSTDCDP
+; CHECK: xvtstdcdp 34, 34, 127
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <2 x i64> @llvm.ppc.vsx.xvtstdcdp(<2 x double> %a, i32 %b)
+
+define <4 x float> @testXVCVHPSP(<8 x i16> %a) {
+entry:
+  %0 = tail call <4 x float>@llvm.ppc.vsx.xvcvhpsp(<8 x i16> %a)
+  ret <4 x float> %0
+; CHECK-LABEL: testXVCVHPSP
+; CHECK: xvcvhpsp 34, 34
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <4 x float>@llvm.ppc.vsx.xvcvhpsp(<8 x i16>)
+
 declare void @sink(...)

@@ -568,7 +568,7 @@ Value *IRLinker::materialize(Value *V, bool ForAlias) {
   }
 
   // When linking a global for an alias, it will always be linked. However we
-  // need to check if it was not already scheduled to satify a reference from a
+  // need to check if it was not already scheduled to satisfy a reference from a
   // regular global value initializer. We know if it has been schedule if the
   // "New" GlobalValue that is mapped here for the alias is the same as the one
   // already mapped. If there is an entry in the ValueMap but the value is
@@ -950,8 +950,6 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
 /// Update the initializers in the Dest module now that all globals that may be
 /// referenced are in Dest.
 void IRLinker::linkGlobalVariable(GlobalVariable &Dst, GlobalVariable &Src) {
-  Dst.copyMetadata(&Src, 0);
-
   // Figure out what the initializer looks like in the dest module.
   Mapper.scheduleMapGlobalInitializer(Dst, *Src.getInitializer());
 }

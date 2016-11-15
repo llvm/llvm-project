@@ -119,7 +119,7 @@ public:
 
 private:
   bool isValueExtension(const SDValue &Val, unsigned FromBits, SDValue &Src);
-  bool orIsAdd(const SDNode *N) const;
+  bool isOrEquivalentToAdd(const SDNode *N) const;
   bool isAlignedMemNode(const MemSDNode *N) const;
   bool isPositiveHalfWord(const SDNode *N) const;
 
@@ -1265,7 +1265,7 @@ bool HexagonDAGToDAGISel::isValueExtension(const SDValue &Val,
 }
 
 
-bool HexagonDAGToDAGISel::orIsAdd(const SDNode *N) const {
+bool HexagonDAGToDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
   assert(N->getOpcode() == ISD::OR);
   auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
   assert(C);

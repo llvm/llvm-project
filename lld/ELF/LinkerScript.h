@@ -219,7 +219,9 @@ public:
 
   void processCommands(OutputSectionFactory<ELFT> &Factory);
   void createSections(OutputSectionFactory<ELFT> &Factory);
+  void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
+  void adjustSectionsAfterSorting();
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();
   bool ignoreInterpSection();
@@ -229,6 +231,7 @@ public:
   bool hasLMA(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignOffsets(OutputSectionCommand *Cmd);
+  void placeOrphanSections();
   void assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs);
   bool hasPhdrsCommands();
   uint64_t getOutputSectionAddress(StringRef Name) override;

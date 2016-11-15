@@ -675,6 +675,21 @@ def : Pat <
     sub1)
 >;
 
+def : Pat <
+  (fneg f16:$src),
+  (V_XOR_B32_e32 $src, (V_MOV_B32_e32 (i32 0x00008000)))
+>;
+
+def : Pat <
+  (fabs f16:$src),
+  (V_AND_B32_e64 $src, (V_MOV_B32_e32 (i32 0x00007fff)))
+>;
+
+def : Pat <
+  (fneg (fabs f16:$src)),
+  (S_OR_B32 $src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
+>;
+
 /********** ================== **********/
 /********** Immediate Patterns **********/
 /********** ================== **********/

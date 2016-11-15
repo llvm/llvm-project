@@ -1836,7 +1836,7 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
     ProgramStateRef StateCase;
     if (Optional<NonLoc> NL = CondV.getAs<NonLoc>())
       std::tie(StateCase, DefaultSt) =
-          DefaultSt->assumeWithinInclusiveRange(*NL, V1, V2);
+          DefaultSt->assumeInclusiveRange(*NL, V1, V2);
     else // UnknownVal
       StateCase = DefaultSt;
 

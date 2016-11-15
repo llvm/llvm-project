@@ -125,6 +125,7 @@ public:
   bool parseStandaloneMBB(MachineBasicBlock *&MBB);
   bool parseStandaloneNamedRegister(unsigned &Reg);
   bool parseStandaloneVirtualRegister(VRegInfo *&Info);
+  bool parseStandaloneRegister(unsigned &Reg);
   bool parseStandaloneStackObject(int &FI);
   bool parseStandaloneMDNode(MDNode *&Node);
 
@@ -722,6 +723,22 @@ bool MIParser::parseStandaloneVirtualRegister(VRegInfo *&Info) {
     return error("expected a virtual register");
   if (parseVirtualRegister(Info))
     return true;
+  lex();
+  if (Token.isNot(MIToken::Eof))
+    return error("expected end of string after the register reference");
+  return false;
+}
+
+bool MIParser::parseStandaloneRegister(unsigned &Reg) {
+  lex();
+  if (Token.isNot(MIToken::NamedRegister) &&
+      Token.isNot(MIToken::VirtualRegister))
+    return error("expected either a named or virtual register");
+
+  VRegInfo *Info;
+  if (parseRegister(Reg, Info))
+    return true;
+
   lex();
   if (Token.isNot(MIToken::Eof))
     return error("expected end of string after the register reference");
@@ -2228,6 +2245,12 @@ bool llvm::parseMBBReference(PerFunctionMIParsingState &PFS,
                              MachineBasicBlock *&MBB, StringRef Src,
                              SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMBB(MBB);
+}
+
+bool llvm::parseRegisterReference(PerFunctionMIParsingState &PFS,
+                                  unsigned &Reg, StringRef Src,
+                                  SMDiagnostic &Error) {
+  return MIParser(PFS, Error, Src).parseStandaloneRegister(Reg);
 }
 
 bool llvm::parseNamedRegisterReference(PerFunctionMIParsingState &PFS,

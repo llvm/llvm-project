@@ -78,6 +78,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, sys::fs::file_magic Type) {
   switch (Type) {
   case sys::fs::file_magic::unknown:
   case sys::fs::file_magic::bitcode:
+  case sys::fs::file_magic::coff_cl_gl_object:
   case sys::fs::file_magic::archive:
   case sys::fs::file_magic::macho_universal_binary:
   case sys::fs::file_magic::windows_resource:

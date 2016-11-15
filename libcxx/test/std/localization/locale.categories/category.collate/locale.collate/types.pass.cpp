@@ -29,6 +29,7 @@ int main()
     {
         assert(std::has_facet<std::collate<char> >(l));
         const std::collate<char>& f = std::use_facet<std::collate<char> >(l);
+        ((void)f); // Prevent unused warning
         {
             (void)std::collate<char>::id;
         }
@@ -39,6 +40,7 @@ int main()
     {
         assert(std::has_facet<std::collate<wchar_t> >(l));
         const std::collate<wchar_t>& f = std::use_facet<std::collate<wchar_t> >(l);
+        ((void)f); // Prevent unused warning
         {
             (void)std::collate<wchar_t>::id;
         }

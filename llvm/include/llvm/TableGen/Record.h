@@ -798,7 +798,7 @@ public:
 ///
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum BinaryOp : uint8_t { ADD, AND, SHL, SRA, SRL, LISTCONCAT,
+  enum BinaryOp : uint8_t { ADD, AND, OR, SHL, SRA, SRL, LISTCONCAT,
                             STRCONCAT, CONCAT, EQ };
 
 private:

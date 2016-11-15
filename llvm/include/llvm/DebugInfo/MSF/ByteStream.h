@@ -91,6 +91,9 @@ public:
   uint32_t getLength() const override { return ImmutableStream.getLength(); }
 
   Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) const override {
+    if (Buffer.empty())
+      return Error::success();
+
     if (Data.size() < Buffer.size())
       return make_error<MSFError>(msf_error_code::insufficient_buffer);
     if (Offset > Buffer.size() - Data.size())

@@ -3,7 +3,7 @@
 <!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
 <html>
 <head>
-  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
   <title>libc++ C++1Z Status</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
@@ -97,7 +97,7 @@
 	<tr><td><a href="http://wg21.link/p0032r3">p0032r3</a></td><td>LWG</td><td>Homogeneous interface for variant, any and optional</td><td>Oulu</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/p0040r3">p0040r3</a></td><td>LWG</td><td>Extending memory management tools</td><td>Oulu</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/p0063r3">p0063r3</a></td><td>LWG</td><td>C++17 should refer to C11 instead of C99</td><td>Oulu</td><td><i>Nothing to do</i></td><td>n/a</td></tr>
-	<tr><td><a href="http://wg21.link/p0067r3">p0067r3</a></td><td>LWG</td><td>Elementary string conversions</td><td>Oulu</td><td>Postponed to Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/p0067r3">p0067r3</a></td><td>LWG</td><td>Elementary string conversions</td><td>Oulu</td><td>Now <a href="http://wg21.link/P0067R5">P0067R5</a></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/p0083r3">p0083r3</a></td><td>LWG</td><td>Splicing Maps and Sets</td><td>Oulu</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/p0084r2">p0084r2</a></td><td>LWG</td><td>Emplace Return Type</td><td>Oulu</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/p0088r3">p0088r3</a></td><td>LWG</td><td>Variant: a type-safe union for C++17</td><td>Oulu</td><td></td><td></td></tr>
@@ -121,6 +121,26 @@
 	<tr><td><a href="http://wg21.link/p0392r0">p0392r0</a></td><td>LWG</td><td>Adapting string_view by filesystem paths</td><td>Oulu</td><td>Complete</td><td>4.0</td></tr>
 	<tr><td><a href="http://wg21.link/p0393r3">p0393r3</a></td><td>LWG</td><td>Making Variant Greater Equal</td><td>Oulu</td><td></td><td></td></tr>
 	<tr><td><a href="http://wg21.link/P0394r4">P0394r4</a></td><td>LWG</td><td>Hotel Parallelifornia: terminate() for Parallel Algorithms Exception Handling</td><td>Oulu</td><td></td><td></td></tr>
+  	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0003R5">P0003R5</a></td><td>LWG</td><td>Removing Deprecated Exception Specifications from C++17</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0067R5">P0067R5</a></td><td>LWG</td><td>Elementary string conversions, revision 5</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0403R1">P0403R1</a></td><td>LWG</td><td>Literal suffixes for <tt>basic_string_view</tt></td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0414R2">P0414R2</a></td><td>LWG</td><td>Merging shared_ptr changes from Library Fundamentals to C++17</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0418R2">P0418R2</a></td><td>LWG</td><td>Fail or succeed: there is no atomic lattice</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0426R1">P0426R1</a></td><td>LWG</td><td>Constexpr for <tt>std::char_traits</tt></td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0435R1">P0435R1</a></td><td>LWG</td><td>Resolving LWG Issues re <tt>common_type</tt></td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0502R0">P0502R0</a></td><td>LWG</td><td>Throwing out of a parallel algorithm terminates - but how?</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0503R0">P0503R0</a></td><td>LWG</td><td>Correcting library usage of "literal type"</td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
+	<tr><td><a href="http://wg21.link/P0504R0">P0504R0</a></td><td>LWG</td><td>Revisiting in-place tag types for any/optional/variant</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0505R0">P0505R0</a></td><td>LWG</td><td>Wording for GB 50 - constexpr for chrono</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0508R0">P0508R0</a></td><td>LWG</td><td>Wording for GB 58 - structured bindings for node_handles</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0509R1">P0509R1</a></td><td>LWG</td><td>Updating “Restrictions on exception handling”</td><td>Issaquah</td><td><i>Nothing to do</i></td><td>n/a</td></tr>
+	<tr><td><a href="http://wg21.link/P0510R0">P0510R0</a></td><td>LWG</td><td>Disallowing references, incomplete types, arrays, and empty variants</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0513R0">P0513R0</a></td><td>LWG</td><td>Poisoning the Hash</td><td>Issaquah</td><td></td><td></td></tr>
+	<tr><td><a href="http://wg21.link/P0516R0">P0516R0</a></td><td>LWG</td><td>Clarify That shared_future’s Copy Operations have Wide Contracts</td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
+	<tr><td><a href="http://wg21.link/P0517R0">P0517R0</a></td><td>LWG</td><td>Make future_error Constructible</td><td>Issaquah</td><td>Complete</td><td>4.0</td></tr>
+	<tr><td><a href="http://wg21.link/P0521R0">P0521R0</a></td><td>LWG</td><td>Proposed Resolution for CA 14 (shared_ptr use_count/unique)</td><td>Issaquah</td><td><i>Nothing to do</i></td><td>n/a</td></tr>
+
 <!--  	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr> -->
   </table>
 
@@ -312,6 +332,84 @@
 	<tr><td><a href="http://wg21.link/LWG2726">2726</a></td><td>[recursive_]directory_iterator::increment(error_code&) is underspecified</td><td>Oulu</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2727">2727</a></td><td>Parallel algorithms with constexpr specifier</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2728">2728</a></td><td>status(p).permissions() and symlink_status(p).permissions() are not specified</td><td>Oulu</td><td>Complete</td></tr>
+<!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
+	<tr><td><a href="http://wg21.link/LWG2062">2062</a></td><td>Effect contradictions w/o no-throw guarantee of std::function swaps</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2166">2166</a></td><td>Heap property underspecified?</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2221">2221</a></td><td>No formatted output operator for nullptr</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2223">2223</a></td><td>shrink_to_fit effect on iterator validity</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2261">2261</a></td><td>Are containers required to use their 'pointer' type internally?</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2394">2394</a></td><td>locale::name specification unclear - what is implementation-defined?</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2460">2460</a></td><td>LWG issue 2408 and value categories</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2468">2468</a></td><td>Self-move-assignment of library types</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2475">2475</a></td><td>Allow overwriting of std::basic_string terminator with charT() to allow cleaner interoperation with legacy APIs</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2503">2503</a></td><td>multiline option should be added to syntax_option_type</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2510">2510</a></td><td>Tag types should not be DefaultConstructible</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2514">2514</a></td><td>Type traits must not be final</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2518">2518</a></td><td>[fund.ts.v2] Non-member swap for propagate_const should call member swap</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2519">2519</a></td><td>Iterator operator-= has gratuitous undefined behaviour</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2521">2521</a></td><td>[fund.ts.v2] weak_ptr's converting move constructor should be modified as well for array support</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2525">2525</a></td><td>[fund.ts.v2] get_memory_resource should be const and noexcept</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2527">2527</a></td><td>[fund.ts.v2] ALLOCATOR_OF for function::operator= has incorrect default</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2531">2531</a></td><td>future::get should explicitly state that the shared state is released</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2534">2534</a></td><td>Constrain rvalue stream operators</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2536">2536</a></td><td>What should &lt;complex.h&gt; do?</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2540">2540</a></td><td>unordered_multimap::insert hint iterator</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2543">2543</a></td><td>LWG 2148 (hash support for enum types) seems under-specified</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2544">2544</a></td><td>istreambuf_iterator(basic_streambuf<charT, traits>* s) effects unclear when s is 0</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2556">2556</a></td><td>Wide contract for future::share()</td><td>Issaquah</td><td>Patch ready</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2562">2562</a></td><td>Consistent total ordering of pointers by comparison functors</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2567">2567</a></td><td>Specification of logical operator traits uses BaseCharacteristic, which is defined only for UnaryTypeTraits and BinaryTypeTraits</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2568">2568</a></td><td>[fund.ts.v2] Specification of logical operator traits uses BaseCharacteristic, which is defined only for UnaryTypeTraits and BinaryTypeTraits</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2569">2569</a></td><td>conjunction and disjunction requirements are too strict</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2570">2570</a></td><td>[fund.ts.v2] conjunction and disjunction requirements are too strict</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2578">2578</a></td><td>Iterator requirements should reference iterator traits</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2584">2584</a></td><td><regex> ECMAScript IdentityEscape is ambiguous</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2588">2588</a></td><td>[fund.ts.v2] "Convertible to bool" requirement in conjunction and disjunction</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2589">2589</a></td><td>match_results can't satisfy the requirements of a container</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2591">2591</a></td><td>std::function's member template target() should not lead to undefined behaviour</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2598">2598</a></td><td>addressof works on temporaries</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2664">2664</a></td><td>operator/ (and other append) semantics not useful if argument has root</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2665">2665</a></td><td>remove_filename() post condition is incorrect</td><td>Issaquah</td><td>See Below</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2672">2672</a></td><td>Should is_empty use error_code in its specification?</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2678">2678</a></td><td>std::filesystem enum classes overspecified</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2679">2679</a></td><td>Inconsistent Use of Effects and Equivalent To</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2680">2680</a></td><td>Add "Equivalent to" to filesystem</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2681">2681</a></td><td>filesystem::copy() cannot copy symlinks</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2682">2682</a></td><td>filesystem::copy() won't create a symlink to a directory</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2686">2686</a></td><td>Why is std::hash specialized for error_code, but not error_condition?</td><td>Issaquah</td><td>Patch ready</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2694">2694</a></td><td>Application of LWG 436 accidentally deleted definition of "facet"</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2696">2696</a></td><td>Interaction between make_shared and enable_shared_from_this is underspecified</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2699">2699</a></td><td>Missing restriction in [numeric.requirements]</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2712">2712</a></td><td>copy_file(from, to, ...) has a number of unspecified error conditions</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2722">2722</a></td><td>equivalent incorrectly specifies throws clause</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2729">2729</a></td><td>Missing SFINAE on std::pair::operator=</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2732">2732</a></td><td>Questionable specification of path::operator/= and path::append</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2733">2733</a></td><td>[fund.ts.v2] gcd / lcm and bool</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2735">2735</a></td><td>std::abs(short), std::abs(signed char) and others should return int instead of double in order to be compatible with C++98 and C</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2736">2736</a></td><td>nullopt_t insufficiently constrained</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2738">2738</a></td><td>is_constructible with void types</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2739">2739</a></td><td>Issue with time_point non-member subtraction with an unsigned duration</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2740">2740</a></td><td>constexpr optional<T>::operator-></td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2742">2742</a></td><td>Inconsistent string interface taking string_view</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2744">2744</a></td><td>any's in_place constructors</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2745">2745</a></td><td>[fund.ts.v2] Implementability of LWG 2451</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2747">2747</a></td><td>Possibly redundant std::move in [alg.foreach]</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2748">2748</a></td><td>swappable traits for optionals</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2749">2749</a></td><td>swappable traits for variants</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2750">2750</a></td><td>[fund.ts.v2] LWG 2451 conversion constructor constraint</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2752">2752</a></td><td>"Throws:" clauses of async and packaged_task are unimplementable</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2755">2755</a></td><td>[string.view.io] uses non-existent basic_string_view::to_string function</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2756">2756</a></td><td>C++ WP optional<T> should 'forward' T's implicit conversions</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2758">2758</a></td><td>std::string{}.assign("ABCDE", 0, 1) is ambiguous</td><td>Complete</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2759">2759</a></td><td>gcd / lcm and bool for the WP</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2760">2760</a></td><td>non-const basic_string::data should not invalidate iterators</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2765">2765</a></td><td>Did LWG 1123 go too far?</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2767">2767</a></td><td>not_fn call_wrapper can form invalid types</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2769">2769</a></td><td>Redundant const in the return type of any_cast(const any&)</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2771">2771</a></td><td>Broken Effects of some basic_string::compare functions in terms of basic_string_view</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2773">2773</a></td><td>Making std::ignore constexpr</td><td>Issaquah</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2777">2777</a></td><td>basic_string_view::copy should use char_traits::copy</td><td>Issaquah</td><td>Complete</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2778">2778</a></td><td>basic_string_view is missing constexpr</td><td>Issaquah</td><td></td></tr>
 
 <!--
 	<tr><td><a href="http://wg21.link/LWG1214">1214</a></td><td>Insufficient/inconsistent key immutability requirements for associative containers</td><td>Urbana</td><td></td></tr>
@@ -319,7 +417,7 @@
 <!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
   </table>
 
-  <p>Last Updated: 13-Oct-2016</p>
+  <p>Last Updated: 14-Nov-2016</p>
 </div>
 </body>
 </html>

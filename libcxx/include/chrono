@@ -1026,7 +1026,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type>
 operator-(const time_point<_Clock, _Duration1>& __lhs, const duration<_Rep2, _Period2>& __rhs)
 {
-    return __lhs + (-__rhs);
+    typedef time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type> _Ret;
+    return _Ret(__lhs.time_since_epoch() -__rhs);
 }
 
 // duration operator-(time_point x, time_point y);

@@ -877,7 +877,7 @@ for_each(_InputIterator __first, _InputIterator __last, _Function __f)
 {
     for (; __first != __last; ++__first)
         __f(*__first);
-    return _LIBCPP_EXPLICIT_MOVE(__f);  // explicitly moved for (emulated) C++03
+    return __f;
 }
 
 // find

@@ -50,6 +50,7 @@ int main()
         try
         {
             double i = f.get();
+            ((void)i); // Prevent unused warning
             assert(false);
         }
         catch (const std::future_error& e)

@@ -23,6 +23,7 @@ int main()
     {
         std::random_device r;
         std::random_device::result_type e = r();
+        ((void)e); // Prevent unused warning
     }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS

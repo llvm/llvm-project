@@ -203,6 +203,8 @@ public:
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
 
   // MachO specific.
+  Error checkSymbolTable() const;
+
   std::error_code getIndirectName(DataRefImpl Symb, StringRef &Res) const;
   unsigned getSectionType(SectionRef Sec) const;
 

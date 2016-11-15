@@ -38,7 +38,7 @@ public:
 
   ProgramStateRef assume(ProgramStateRef state, NonLoc Cond, bool Assumption);
 
-  ProgramStateRef assumeWithinInclusiveRange(ProgramStateRef State,
+  ProgramStateRef assumeInclusiveRange(ProgramStateRef State,
                                              NonLoc Value,
                                              const llvm::APSInt &From,
                                              const llvm::APSInt &To,

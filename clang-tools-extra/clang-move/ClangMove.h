@@ -16,6 +16,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -80,6 +81,14 @@ public:
                    clang::CharSourceRange IncludeFilenameRange,
                    const SourceManager &SM);
 
+  std::vector<MovedDecl> &getMovedDecls() { return MovedDecls; }
+
+  std::vector<MovedDecl> &getRemovedDecls() { return RemovedDecls; }
+
+  llvm::SmallPtrSet<const NamedDecl *, 8> &getUnremovedDeclsInOldHeader() {
+    return UnremovedDeclsInOldHeader;
+  }
+
 private:
   // Make the Path absolute using the OrignalRunningDirectory if the Path is not
   // an absolute path. An empty Path will result in an empty string.
@@ -90,6 +99,9 @@ private:
   void moveAll(SourceManager& SM, StringRef OldFile, StringRef NewFile);
 
   MoveDefinitionSpec Spec;
+  // Stores all MatchCallbacks created by this tool.
+  std::vector<std::unique_ptr<ast_matchers::MatchFinder::MatchCallback>>
+      MatchCallbacks;
   // The Key is file path, value is the replacements being applied to the file.
   std::map<std::string, tooling::Replacements> &FileToReplacements;
   // All declarations (the class decl being moved, forward decls) that need to

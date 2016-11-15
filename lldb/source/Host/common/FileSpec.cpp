@@ -277,16 +277,14 @@ void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
   }
 }
 
-FileSpec::FileSpec()
-    : m_directory(), m_filename(), m_syntax(FileSystem::GetNativePathSyntax()) {
-}
+FileSpec::FileSpec() : m_syntax(FileSystem::GetNativePathSyntax()) {}
 
 //------------------------------------------------------------------
 // Default constructor that can take an optional full path to a
 // file on disk.
 //------------------------------------------------------------------
 FileSpec::FileSpec(llvm::StringRef path, bool resolve_path, PathSyntax syntax)
-    : m_directory(), m_filename(), m_is_resolved(false), m_syntax(syntax) {
+    : m_syntax(syntax) {
   SetFile(path, resolve_path, syntax);
 }
 

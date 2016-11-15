@@ -534,6 +534,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
                                    ModuleSummaryIndex &Index) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
+
   // Collect for each module the list of function it defines (GUID -> Summary).
   StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries;
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -550,6 +551,20 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
 
   thinLTOResolveWeakForLinkerModule(
       TheModule, ModuleToDefinedGVSummaries[ModuleIdentifier]);
+
+  // Convert the preserved symbols set from string to GUID
+  auto GUIDPreservedSymbols = computeGUIDPreservedSymbols(
+      PreservedSymbols, Triple(TheModule.getTargetTriple()));
+
+  // Promote the exported values in the index, so that they are promoted
+  // in the module.
+  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
+    const auto &ExportList = ExportLists.find(ModuleIdentifier);
+    return (ExportList != ExportLists.end() &&
+            ExportList->second.count(GUID)) ||
+           GUIDPreservedSymbols.count(GUID);
+  };
+  thinLTOInternalizeAndPromoteInIndex(Index, isExported);
 
   promoteModule(TheModule, Index);
 }

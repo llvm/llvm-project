@@ -48,7 +48,7 @@
 // _Unwind_Backtrace function, but on FreeBSD the configure test passes
 // despite the function not existing, and on Android, <unwind.h> conflicts
 // with <link.h>.
-#ifdef __GLIBC__
+#if defined(__GLIBC__) || defined(__APPLE__)
 #include <unwind.h>
 #else
 #undef HAVE__UNWIND_BACKTRACE

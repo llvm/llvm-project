@@ -1002,6 +1002,14 @@ void ThreadIgnoreEnd(ThreadState *thr, uptr pc) {
   }
 }
 
+#if !SANITIZER_GO
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE
+uptr __tsan_testonly_shadow_stack_current_size() {
+  ThreadState *thr = cur_thread();
+  return thr->shadow_stack_pos - thr->shadow_stack;
+}
+#endif
+
 void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc) {
   DPrintf("#%d: ThreadIgnoreSyncBegin\n", thr->tid);
   thr->ignore_sync++;

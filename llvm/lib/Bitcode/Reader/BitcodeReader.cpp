@@ -946,7 +946,10 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   RawFlags = RawFlags >> 4;
   bool NoRename = RawFlags & 0x1;
   bool IsNotViableToInline = RawFlags & 0x2;
-  return GlobalValueSummary::GVFlags(Linkage, NoRename, IsNotViableToInline);
+  bool HasInlineAsmMaybeReferencingInternal = RawFlags & 0x4;
+  return GlobalValueSummary::GVFlags(Linkage, NoRename,
+                                     HasInlineAsmMaybeReferencingInternal,
+                                     IsNotViableToInline);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {

@@ -3383,7 +3383,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
     } else {
       IRBuilder<> B(LoopBypassBlocks.back()->getTerminator());
       Type *StepType = II.getStep()->getType();
-      Instruction::CastOps CastOp = 
+      Instruction::CastOps CastOp =
         CastInst::getCastOpcode(CountRoundDown, true, StepType, true);
       Value *CRD = B.CreateCast(CastOp, CountRoundDown, StepType, "cast.crd");
       const DataLayout &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
@@ -6469,14 +6469,15 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
 
   for (unsigned int i = 0; i < Index; ++i) {
     Instruction *I = IdxToInstr[i];
-    // Ignore instructions that are never used within the loop.
-    if (!Ends.count(I))
-      continue;
 
     // Remove all of the instructions that end at this location.
     InstrList &List = TransposeEnds[i];
     for (Instruction *ToRemove : List)
       OpenIntervals.erase(ToRemove);
+
+    // Ignore instructions that are never used within the loop.
+    if (!Ends.count(I))
+      continue;
 
     // Skip ignored values.
     if (ValuesToIgnore.count(I))

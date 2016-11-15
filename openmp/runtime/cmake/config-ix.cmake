@@ -49,6 +49,7 @@ endfunction()
 # Checking C, CXX, Linker Flags
 check_cxx_compiler_flag(-std=c++11 LIBOMP_HAVE_STD_CPP11_FLAG)
 check_cxx_compiler_flag(-fno-exceptions LIBOMP_HAVE_FNO_EXCEPTIONS_FLAG)
+check_cxx_compiler_flag(-fno-rtti LIBOMP_HAVE_FNO_RTTI_FLAG)
 check_c_compiler_flag("-x c++" LIBOMP_HAVE_X_CPP_FLAG)
 check_c_compiler_flag(-Werror LIBOMP_HAVE_WERROR_FLAG)
 check_c_compiler_flag(-Wunused-function LIBOMP_HAVE_WNO_UNUSED_FUNCTION_FLAG)

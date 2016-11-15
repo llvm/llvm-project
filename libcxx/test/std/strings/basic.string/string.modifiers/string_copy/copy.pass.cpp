@@ -39,6 +39,7 @@ test(S str, typename S::value_type* s, typename S::size_type n,
         try
         {
             typename S::size_type r = cs.copy(s, n, pos);
+            ((void)r); // Prevent unused warning
             assert(false);
         }
         catch (std::out_of_range&)

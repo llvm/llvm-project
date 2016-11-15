@@ -196,10 +196,11 @@ void DWARFUnit::extractDIEsToVector(
   uint32_t DIEOffset = Offset + getHeaderSize();
   uint32_t NextCUOffset = getNextUnitOffset();
   DWARFDebugInfoEntryMinimal DIE;
+  DataExtractor DebugInfoData = getDebugInfoExtractor();
   uint32_t Depth = 0;
   bool IsCUDie = true;
 
-  while (DIEOffset < NextCUOffset && DIE.extractFast(this, &DIEOffset)) {
+  while (DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset)) {
     if (IsCUDie) {
       if (AppendCUDie)
         Dies.push_back(DIE);

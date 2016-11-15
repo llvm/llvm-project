@@ -190,7 +190,7 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef state,
   } // end switch
 }
 
-ProgramStateRef SimpleConstraintManager::assumeWithinInclusiveRange(
+ProgramStateRef SimpleConstraintManager::assumeInclusiveRange(
     ProgramStateRef State, NonLoc Value, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
 
@@ -207,7 +207,7 @@ ProgramStateRef SimpleConstraintManager::assumeWithinInclusiveRange(
 
   switch (Value.getSubKind()) {
   default:
-    llvm_unreachable("'assumeWithinInclusiveRange' is not implemented"
+    llvm_unreachable("'assumeInclusiveRange' is not implemented"
                      "for this NonLoc");
 
   case nonloc::LocAsIntegerKind:

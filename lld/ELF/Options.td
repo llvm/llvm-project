@@ -288,10 +288,13 @@ def plugin_opt_eq: J<"plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
+def cref: Flag<["--"], "cref">;
 def define_common: F<"define-common">;
 def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def g: Flag<["-"], "g">;
+def M: Flag<["-"], "M">;
+def Map: JS<"Map">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
@@ -316,6 +319,7 @@ def Qy : F<"Qy">;
 def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;
 def alias_define_common_dc: F<"dc">, Alias<define_common>;
 def alias_define_common_dp: F<"dp">, Alias<define_common>;
+def alias_Map_eq: J<"Map=">, Alias<Map>;
 def alias_version_script_version_script: J<"version-script=">,
   Alias<version_script>;
 

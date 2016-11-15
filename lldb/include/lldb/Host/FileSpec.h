@@ -745,9 +745,9 @@ protected:
   //------------------------------------------------------------------
   // Member variables
   //------------------------------------------------------------------
-  ConstString m_directory;    ///< The uniqued directory path
-  ConstString m_filename;     ///< The uniqued filename path
-  mutable bool m_is_resolved; ///< True if this path has been resolved.
+  ConstString m_directory;            ///< The uniqued directory path
+  ConstString m_filename;             ///< The uniqued filename path
+  mutable bool m_is_resolved = false; ///< True if this path has been resolved.
   PathSyntax
       m_syntax; ///< The syntax that this path uses (e.g. Windows / Posix)
 };

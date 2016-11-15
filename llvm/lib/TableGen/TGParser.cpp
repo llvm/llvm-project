@@ -881,6 +881,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XConcat:
   case tgtok::XADD:
   case tgtok::XAND:
+  case tgtok::XOR:
   case tgtok::XSRA:
   case tgtok::XSRL:
   case tgtok::XSHL:
@@ -899,6 +900,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XConcat: Code = BinOpInit::CONCAT;Type = DagRecTy::get(); break;
     case tgtok::XADD:    Code = BinOpInit::ADD;   Type = IntRecTy::get(); break;
     case tgtok::XAND:    Code = BinOpInit::AND;   Type = IntRecTy::get(); break;
+    case tgtok::XOR:     Code = BinOpInit::OR;    Type = IntRecTy::get(); break;
     case tgtok::XSRA:    Code = BinOpInit::SRA;   Type = IntRecTy::get(); break;
     case tgtok::XSRL:    Code = BinOpInit::SRL;   Type = IntRecTy::get(); break;
     case tgtok::XSHL:    Code = BinOpInit::SHL;   Type = IntRecTy::get(); break;
@@ -1446,6 +1448,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XConcat:
   case tgtok::XADD:
   case tgtok::XAND:
+  case tgtok::XOR:
   case tgtok::XSRA:
   case tgtok::XSRL:
   case tgtok::XSHL:

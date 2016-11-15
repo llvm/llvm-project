@@ -65,7 +65,7 @@ ScriptConfiguration *elf::ScriptConfig;
 template <class ELFT> static void addRegular(SymbolAssignment *Cmd) {
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   Symbol *Sym = Symtab<ELFT>::X->addRegular(Cmd->Name, Visibility, STT_NOTYPE,
-                                            0, 0, STB_GLOBAL, nullptr);
+                                            0, 0, STB_GLOBAL, nullptr, nullptr);
   Cmd->Sym = Sym->body();
 
   // If we have no SECTIONS then we don't have '.' and don't call
@@ -513,7 +513,7 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
                 [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
 }
 
-template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
+template <class ELFT> void LinkerScript<ELFT>::removeEmptyCommands() {
   // It is common practice to use very generic linker scripts. So for any
   // given run some of the output sections in the script will be empty.
   // We could create corresponding empty output sections, but that would
@@ -526,17 +526,19 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
         auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
         if (!Cmd)
           return false;
-        std::vector<OutputSectionBase *> Secs =
-            findSections<ELFT>(Cmd->Name, *OutputSections);
-        if (!Secs.empty())
-          return false;
-        for (const std::unique_ptr<BaseCommand> &I : Cmd->Commands)
-          if (!isa<InputSectionDescription>(I.get()))
-            return false;
-        return true;
+        return findSections<ELFT>(Cmd->Name, *OutputSections).empty();
       });
   Opt.Commands.erase(Pos, Opt.Commands.end());
+}
 
+static bool isAllSectionDescription(const OutputSectionCommand &Cmd) {
+  for (const std::unique_ptr<BaseCommand> &I : Cmd.Commands)
+    if (!isa<InputSectionDescription>(*I))
+      return false;
+  return true;
+}
+
+template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The bfd linker seems to only create them if
   // '.' is assigned to, but creating these section should not have any bad
@@ -555,9 +557,43 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
       continue;
     }
 
+    if (isAllSectionDescription(*Cmd))
+      continue;
+
     auto *OutSec = make<OutputSection<ELFT>>(Cmd->Name, Type, Flags);
     OutputSections->push_back(OutSec);
   }
+}
+
+template <class ELFT> void LinkerScript<ELFT>::adjustSectionsAfterSorting() {
+  placeOrphanSections();
+
+  // If output section command doesn't specify any segments,
+  // and we haven't previously assigned any section to segment,
+  // then we simply assign section to the very first load segment.
+  // Below is an example of such linker script:
+  // PHDRS { seg PT_LOAD; }
+  // SECTIONS { .aaa : { *(.aaa) } }
+  std::vector<StringRef> DefPhdrs;
+  auto FirstPtLoad =
+      std::find_if(Opt.PhdrsCommands.begin(), Opt.PhdrsCommands.end(),
+                   [](const PhdrsCommand &Cmd) { return Cmd.Type == PT_LOAD; });
+  if (FirstPtLoad != Opt.PhdrsCommands.end())
+    DefPhdrs.push_back(FirstPtLoad->Name);
+
+  // Walk the commands and propagate the program headers to commands that don't
+  // explicitly specify them.
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
+    if (!Cmd)
+      continue;
+    if (Cmd->Phdrs.empty())
+      Cmd->Phdrs = DefPhdrs;
+    else
+      DefPhdrs = Cmd->Phdrs;
+  }
+
+  removeEmptyCommands();
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -583,14 +619,11 @@ static bool shouldSkip(const BaseCommand &Cmd) {
   return Assign->Name != ".";
 }
 
+// Orphan sections are sections present in the input files which are not
+// explicitly placed into the output file by the linker script. This just
+// places them in the order already decided in OutputSections.
 template <class ELFT>
-void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
-  // Orphan sections are sections present in the input files which
-  // are not explicitly placed into the output file by the linker script.
-  // We place orphan sections at end of file.
-  // Other linkers places them using some heuristics as described in
-  // https://sourceware.org/binutils/docs/ld/Orphan-Sections.html#Orphan-Sections.
-
+void LinkerScript<ELFT>::placeOrphanSections() {
   // The OutputSections are already in the correct order.
   // This loops creates or moves commands as needed so that they are in the
   // correct order.
@@ -622,7 +655,10 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
     // Continue from where we found it.
     CmdIndex = (Pos - Opt.Commands.begin()) + 1;
   }
+}
 
+template <class ELFT>
+void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
 
@@ -702,7 +738,6 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
-  std::vector<size_t> DefPhdrIds;
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
     Ret.emplace_back(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
     PhdrEntry<ELFT> &Phdr = Ret.back();
@@ -716,15 +751,6 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
       Phdr.H.p_paddr = Cmd.LMAExpr(0);
       Phdr.HasLMA = true;
     }
-
-    // If output section command doesn't specify any segments,
-    // and we haven't previously assigned any section to segment,
-    // then we simply assign section to the very first load segment.
-    // Below is an example of such linker script:
-    // PHDRS { seg PT_LOAD; }
-    // SECTIONS { .aaa : { *(.aaa) } }
-    if (DefPhdrIds.empty() && Phdr.H.p_type == PT_LOAD)
-      DefPhdrIds.push_back(Ret.size() - 1);
   }
 
   // Add output sections to program headers.
@@ -732,17 +758,12 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
     if (!(Sec->Flags & SHF_ALLOC))
       break;
 
-    std::vector<size_t> PhdrIds = getPhdrIndices(Sec->getName());
-    if (PhdrIds.empty())
-      PhdrIds = std::move(DefPhdrIds);
-
     // Assign headers specified by linker script
-    for (size_t Id : PhdrIds) {
+    for (size_t Id : getPhdrIndices(Sec->getName())) {
       Ret[Id].add(Sec);
       if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
         Ret[Id].H.p_flags |= Sec->getPhdrFlags();
     }
-    DefPhdrIds = std::move(PhdrIds);
   }
   return Ret;
 }

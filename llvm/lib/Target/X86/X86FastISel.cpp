@@ -2769,7 +2769,9 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     const Function *Callee = II->getCalledFunction();
     auto *Ty = cast<StructType>(Callee->getReturnType());
     Type *RetTy = Ty->getTypeAtIndex(0U);
-    Type *CondTy = Ty->getTypeAtIndex(1);
+    assert(Ty->getTypeAtIndex(1)->isIntegerTy() &&
+           Ty->getTypeAtIndex(1)->getScalarSizeInBits() == 1 &&
+           "Overflow value expected to be an i1");
 
     MVT VT;
     if (!isTypeLegal(RetTy, VT))
@@ -2879,7 +2881,8 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (!ResultReg)
       return false;
 
-    unsigned ResultReg2 = FuncInfo.CreateRegs(CondTy);
+    // Assign to a GPR since the overflow return value is lowered to a SETcc.
+    unsigned ResultReg2 = createResultReg(&X86::GR8RegClass);
     assert((ResultReg+1) == ResultReg2 && "Nonconsecutive result registers.");
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(CondOpc),
             ResultReg2);
