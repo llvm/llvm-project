@@ -23,6 +23,10 @@
 // DEFAULT-NEXT:     Value: 0x12008
 // DEFAULT: ]
 
+// RUN: ld.lld -r %t.o -o %t2
+// RUN: llvm-objdump -t %t2 | FileCheck %s --check-prefix=RELOCATABLE
+// RELOCATABLE: 0000000000000000 *UND* 00000000 _end
+
 .global _start,_end
 .text
 _start:

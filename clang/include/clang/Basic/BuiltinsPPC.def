@@ -383,8 +383,13 @@ BUILTIN(__builtin_vsx_xvcpsgnsp, "V4fV4fV4f", "")
 BUILTIN(__builtin_vsx_xvabssp, "V4fV4f", "")
 BUILTIN(__builtin_vsx_xvabsdp, "V2dV2d", "")
 
+// vector Insert/Extract exponent/significand builtins
 BUILTIN(__builtin_vsx_xviexpdp, "V2dV2ULLiV2ULLi", "")
 BUILTIN(__builtin_vsx_xviexpsp, "V4fV4UiV4Ui", "")
+BUILTIN(__builtin_vsx_xvxexpdp, "V2ULLiV2d", "")
+BUILTIN(__builtin_vsx_xvxexpsp, "V4UiV4f", "")
+BUILTIN(__builtin_vsx_xvxsigdp, "V2ULLiV2d", "")
+BUILTIN(__builtin_vsx_xvxsigsp, "V4UiV4f", "")
 
 // Conversion builtins
 BUILTIN(__builtin_vsx_xvcvdpsxws, "V4SiV2d", "")
@@ -397,6 +402,11 @@ BUILTIN(__builtin_vsx_xvcvuxdsp, "V4fV2ULLi", "")
 BUILTIN(__builtin_vsx_xvcvdpsp, "V4fV2d", "")
 
 BUILTIN(__builtin_vsx_xvcvsphp, "V4fV4f", "")
+BUILTIN(__builtin_vsx_xvcvhpsp, "V4fV8Us", "")
+
+// Vector Test Data Class builtins
+BUILTIN(__builtin_vsx_xvtstdcdp, "V2ULLiV2dIi", "")
+BUILTIN(__builtin_vsx_xvtstdcsp, "V4UiV4fIi", "")
 
 // HTM builtins
 BUILTIN(__builtin_tbegin, "UiUIi", "")

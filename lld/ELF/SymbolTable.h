@@ -60,9 +60,9 @@ public:
 
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                      uintX_t Value, uintX_t Size, uint8_t Binding,
-                     InputSectionBase<ELFT> *Section);
+                     InputSectionBase<ELFT> *Section, InputFile *File);
   Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
-                     InputSectionBase<ELFT> *Section);
+                     InputSectionBase<ELFT> *Section, InputFile *File);
 
   Symbol *addSynthetic(StringRef N, OutputSectionBase *Section, uintX_t Value,
                        uint8_t StOther);

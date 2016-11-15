@@ -294,7 +294,7 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
     }
     GuardName = StringRef(GuardName).upper();
     NewCode += "#ifndef " + GuardName + "\n";
-    NewCode += "#define " + GuardName + "\n";
+    NewCode += "#define " + GuardName + "\n\n";
   }
 
   // Add #Includes.
@@ -306,11 +306,15 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
 
   // Add moved class definition and its related declarations. All declarations
   // in same namespace are grouped together.
+  //
+  // Record namespaces where the current position is in.
   std::vector<std::string> CurrentNamespaces;
   for (const auto &MovedDecl : Decls) {
+    // The namespaces of the declaration being moved.
     std::vector<std::string> DeclNamespaces = GetNamespaces(MovedDecl.Decl);
     auto CurrentIt = CurrentNamespaces.begin();
     auto DeclIt = DeclNamespaces.begin();
+    // Skip the common prefix.
     while (CurrentIt != CurrentNamespaces.end() &&
            DeclIt != DeclNamespaces.end()) {
       if (*CurrentIt != *DeclIt)
@@ -318,19 +322,38 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
       ++CurrentIt;
       ++DeclIt;
     }
+    // Calculate the new namespaces after adding MovedDecl in CurrentNamespace,
+    // which is used for next iteration of this loop.
     std::vector<std::string> NextNamespaces(CurrentNamespaces.begin(),
                                             CurrentIt);
     NextNamespaces.insert(NextNamespaces.end(), DeclIt, DeclNamespaces.end());
+
+
+    // End with CurrentNamespace.
+    bool HasEndCurrentNamespace = false;
     auto RemainingSize = CurrentNamespaces.end() - CurrentIt;
     for (auto It = CurrentNamespaces.rbegin(); RemainingSize > 0;
          --RemainingSize, ++It) {
       assert(It < CurrentNamespaces.rend());
       NewCode += "} // namespace " + *It + "\n";
+      HasEndCurrentNamespace = true;
     }
+    // Add trailing '\n' after the nested namespace definition.
+    if (HasEndCurrentNamespace)
+      NewCode += "\n";
+
+    // If the moved declaration is not in CurrentNamespace, add extra namespace
+    // definitions.
+    bool IsInNewNamespace = false;
     while (DeclIt != DeclNamespaces.end()) {
       NewCode += "namespace " + *DeclIt + " {\n";
+      IsInNewNamespace = true;
       ++DeclIt;
     }
+    // If the moved declaration is in same namespace CurrentNamespace, add
+    // a preceeding `\n' before the moved declaration.
+    if (!IsInNewNamespace)
+      NewCode += "\n";
     NewCode += getDeclarationSourceText(MovedDecl.Decl, MovedDecl.SM);
     CurrentNamespaces = std::move(NextNamespaces);
   }
@@ -339,7 +362,7 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
     NewCode += "} // namespace " + NS + "\n";
 
   if (IsHeader)
-    NewCode += "#endif // " + GuardName + "\n";
+    NewCode += "\n#endif // " + GuardName + "\n";
   return clang::tooling::Replacements(
       clang::tooling::Replacement(FileName, 0, 0, NewCode));
 }
