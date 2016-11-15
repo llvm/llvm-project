@@ -208,3 +208,38 @@ int fn() {
   t = true;
 }
 }
+
+namespace dependent_classes {
+template <bool B, typename X, typename Y>
+struct conditional;
+
+template <typename X, typename Y>
+struct conditional<true, X, Y> { typedef X type; };
+
+template <typename X, typename Y>
+struct conditional<false, X, Y> { typedef Y type; };
+
+template<bool B> struct X {
+  X();
+
+  // B == false triggers error for = default.
+  using T = typename conditional<B, const X &, int>::type;
+  X(T) = default;  // expected-error {{only special member functions}}
+
+  // Either value of B creates a constructor that can be default
+  using U = typename conditional<B, X&&, const X&>::type;
+  X(U) = default;
+};
+
+X<true> x1;
+X<false> x2; // expected-note {{in instantiation}}
+
+template <typename Type>
+class E {
+  explicit E(const int &) = default;
+};
+
+template <typename Type>
+E<Type>::E(const int&) {}  // expected-error {{definition of explicitly defaulted function}}
+
+}
