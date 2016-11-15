@@ -61,6 +61,10 @@ int spawn_child(char **argv) {
 #include <errno.h>
 #include <sys/wait.h>
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
 #if defined(__APPLE__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
 #define USE_NSGETENVIRON 1
 #else

@@ -1037,7 +1037,7 @@ protected:
         }
       } else if (m_options.m_until_addrs.empty()) {
         result.AppendErrorWithFormat("No line number or address provided:\n%s",
-                                     GetSyntax());
+                                     GetSyntax().str().c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }

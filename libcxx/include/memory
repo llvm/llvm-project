@@ -164,6 +164,7 @@ template <class T> pair<T*,ptrdiff_t> get_temporary_buffer(ptrdiff_t n) noexcept
 template <class T> void               return_temporary_buffer(T* p) noexcept;
 
 template <class T> T* addressof(T& r) noexcept;
+template <class T> T* addressof(const T&& r) noexcept = delete;
 
 template <class InputIterator, class ForwardIterator>
 ForwardIterator
@@ -675,7 +676,7 @@ _ValueType __libcpp_acquire_load(_ValueType const* __value) {
 #endif
 }
 
-// addressof moved to <__functional_base>
+// addressof moved to <type_traits>
 
 template <class _Tp> class allocator;
 

@@ -6523,6 +6523,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   SmallVector<uint64_t, 8> FoundFns;
   uint64_t BaseSegmentAddress;
 
+  if (Error Err = MachOOF->checkSymbolTable())
+    report_error(Filename, std::move(Err));
+
   getSectionsAndSymbols(MachOOF, Sections, Symbols, FoundFns,
                         BaseSegmentAddress);
 

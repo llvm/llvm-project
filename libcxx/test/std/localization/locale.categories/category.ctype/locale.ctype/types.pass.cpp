@@ -28,6 +28,7 @@ int main()
     {
         assert(std::has_facet<std::ctype<wchar_t> >(l));
         const std::ctype<wchar_t>& f = std::use_facet<std::ctype<wchar_t> >(l);
+        ((void)f); // Prevent unused warning
         {
             (void)std::ctype<wchar_t>::id;
         }

@@ -40,7 +40,7 @@ struct SS {
     for (a = 0; a < 2; ++a)
 #ifdef LAMBDA
       [&]() {
-        ++this->a, --b, (this)->c /= 1;
+        --this->a, ++b, (this)->c *= 2;
 #pragma omp parallel
 #pragma omp for lastprivate(b)
         for (b = 0; b < 2; ++b)
@@ -189,7 +189,7 @@ int main() {
     // LAMBDA: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
     // LAMBDA: call void @__kmpc_for_static_init_4(
     // LAMBDA-NOT: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
-    // LAMBDA: call void {{.+}} [[SS_LAMBDA:@[^ ]+]]
+    // LAMBDA: call{{.*}} void [[SS_LAMBDA1:@[^ ]+]]
     // LAMBDA: call void @__kmpc_for_static_fini(%
     // LAMBDA: ret
 
@@ -199,7 +199,7 @@ int main() {
     // LAMBDA: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 2
     // LAMBDA: call void @__kmpc_for_static_init_4(
     // LAMBDA-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]*
-    // LAMBDA: call{{.*}} void
+    // LAMBDA: call{{.*}} void [[SS_LAMBDA:@[^ ]+]]
     // LAMBDA: call void @__kmpc_for_static_fini(
     // LAMBDA: br i1
     // LAMBDA: [[B_REF:%.+]] = getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
@@ -233,6 +233,9 @@ int main() {
     // LAMBDA: call void @__kmpc_for_static_fini(
     // LAMBDA: br i1
     // LAMBDA: br label
+    // LAMBDA: ret void
+
+    // LAMBDA: define internal void @{{.+}}(i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
     // LAMBDA: ret void
 
     // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) [[SIVAR:%.+]])

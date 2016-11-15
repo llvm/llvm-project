@@ -23,6 +23,7 @@
 #include "kmp_i18n.h"
 #include "kmp_lock.h"
 #include "kmp_io.h"
+#include "kmp_affinity.h"
 
 static int __kmp_env_toPrint( char const * name, int flag );
 
@@ -5339,44 +5340,12 @@ __kmp_env_initialize( char const * string ) {
         // affinity.
         //
         const char *var = "KMP_AFFINITY";
-# if KMP_USE_HWLOC
-        if(__kmp_hwloc_topology == NULL) {
-            if(hwloc_topology_init(&__kmp_hwloc_topology) < 0) {
-                __kmp_hwloc_error = TRUE;
-                if(__kmp_affinity_verbose)
-                    KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
-            }
-            if(hwloc_topology_load(__kmp_hwloc_topology) < 0) {
-                __kmp_hwloc_error = TRUE;
-                if(__kmp_affinity_verbose)
-                    KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_load()");
-            }
-        }
-# endif
+        KMPAffinity::pick_api();
         if ( __kmp_affinity_type == affinity_disabled ) {
             KMP_AFFINITY_DISABLE();
         }
         else if ( ! KMP_AFFINITY_CAPABLE() ) {
-# if KMP_USE_HWLOC
-            const hwloc_topology_support* topology_support = hwloc_topology_get_support(__kmp_hwloc_topology);
-            // Is the system capable of setting/getting this thread's affinity?
-            // also, is topology discovery possible? (pu indicates ability to discover processing units)
-            // and finally, were there no errors when calling any hwloc_* API functions?
-            if(topology_support && topology_support->cpubind->set_thisthread_cpubind &&
-               topology_support->cpubind->get_thisthread_cpubind &&
-               topology_support->discovery->pu &&
-               !__kmp_hwloc_error)
-            {
-                // enables affinity according to KMP_AFFINITY_CAPABLE() macro
-                KMP_AFFINITY_ENABLE(TRUE);
-            } else {
-                // indicate that hwloc didn't work and disable affinity
-                __kmp_hwloc_error = TRUE;
-                KMP_AFFINITY_DISABLE();
-            }
-# else
-            __kmp_affinity_determine_capable( var );
-# endif // KMP_USE_HWLOC
+            __kmp_affinity_dispatch->determine_capable(var);
             if ( ! KMP_AFFINITY_CAPABLE() ) {
                 if ( __kmp_affinity_verbose || ( __kmp_affinity_warnings
                   && ( __kmp_affinity_type != affinity_default )

@@ -395,177 +395,6 @@ void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
 static unsigned getVerDefNum() { return Config->VersionDefinitions.size() + 1; }
 
 template <class ELFT>
-DynamicSection<ELFT>::DynamicSection()
-    : OutputSectionBase(".dynamic", SHT_DYNAMIC, SHF_ALLOC | SHF_WRITE) {
-  this->Addralign = sizeof(uintX_t);
-  this->Entsize = ELFT::Is64Bits ? 16 : 8;
-
-  // .dynamic section is not writable on MIPS.
-  // See "Special Section" in Chapter 4 in the following document:
-  // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (Config->EMachine == EM_MIPS)
-    this->Flags = SHF_ALLOC;
-
-  addEntries();
-}
-
-// There are some dynamic entries that don't depend on other sections.
-// Such entries can be set early.
-template <class ELFT> void DynamicSection<ELFT>::addEntries() {
-  // Add strings to .dynstr early so that .dynstr's size will be
-  // fixed early.
-  for (StringRef S : Config->AuxiliaryList)
-    Add({DT_AUXILIARY, In<ELFT>::DynStrTab->addString(S)});
-  if (!Config->RPath.empty())
-    Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
-         In<ELFT>::DynStrTab->addString(Config->RPath)});
-  for (SharedFile<ELFT> *F : Symtab<ELFT>::X->getSharedFiles())
-    if (F->isNeeded())
-      Add({DT_NEEDED, In<ELFT>::DynStrTab->addString(F->getSoName())});
-  if (!Config->SoName.empty())
-    Add({DT_SONAME, In<ELFT>::DynStrTab->addString(Config->SoName)});
-
-  // Set DT_FLAGS and DT_FLAGS_1.
-  uint32_t DtFlags = 0;
-  uint32_t DtFlags1 = 0;
-  if (Config->Bsymbolic)
-    DtFlags |= DF_SYMBOLIC;
-  if (Config->ZNodelete)
-    DtFlags1 |= DF_1_NODELETE;
-  if (Config->ZNow) {
-    DtFlags |= DF_BIND_NOW;
-    DtFlags1 |= DF_1_NOW;
-  }
-  if (Config->ZOrigin) {
-    DtFlags |= DF_ORIGIN;
-    DtFlags1 |= DF_1_ORIGIN;
-  }
-
-  if (DtFlags)
-    Add({DT_FLAGS, DtFlags});
-  if (DtFlags1)
-    Add({DT_FLAGS_1, DtFlags1});
-
-  if (!Config->Entry.empty())
-    Add({DT_DEBUG, (uint64_t)0});
-}
-
-// Add remaining entries to complete .dynamic contents.
-template <class ELFT> void DynamicSection<ELFT>::finalize() {
-  if (this->Size)
-    return; // Already finalized.
-
-  this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
-
-  if (Out<ELFT>::RelaDyn->hasRelocs()) {
-    bool IsRela = Config->Rela;
-    Add({IsRela ? DT_RELA : DT_REL, Out<ELFT>::RelaDyn});
-    Add({IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->Size});
-    Add({IsRela ? DT_RELAENT : DT_RELENT,
-         uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
-
-    // MIPS dynamic loader does not support RELCOUNT tag.
-    // The problem is in the tight relation between dynamic
-    // relocations and GOT. So do not emit this tag on MIPS.
-    if (Config->EMachine != EM_MIPS) {
-      size_t NumRelativeRels = Out<ELFT>::RelaDyn->getRelativeRelocCount();
-      if (Config->ZCombreloc && NumRelativeRels)
-        Add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
-    }
-  }
-  if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
-    Add({DT_JMPREL, Out<ELFT>::RelaPlt});
-    Add({DT_PLTRELSZ, Out<ELFT>::RelaPlt->Size});
-    Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
-         In<ELFT>::GotPlt});
-    Add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
-  }
-
-  Add({DT_SYMTAB, Out<ELFT>::DynSymTab});
-  Add({DT_SYMENT, sizeof(Elf_Sym)});
-  Add({DT_STRTAB, In<ELFT>::DynStrTab});
-  Add({DT_STRSZ, In<ELFT>::DynStrTab->getSize()});
-  if (Out<ELFT>::GnuHashTab)
-    Add({DT_GNU_HASH, Out<ELFT>::GnuHashTab});
-  if (Out<ELFT>::HashTab)
-    Add({DT_HASH, Out<ELFT>::HashTab});
-
-  if (Out<ELFT>::PreinitArray) {
-    Add({DT_PREINIT_ARRAY, Out<ELFT>::PreinitArray});
-    Add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray, Entry::SecSize});
-  }
-  if (Out<ELFT>::InitArray) {
-    Add({DT_INIT_ARRAY, Out<ELFT>::InitArray});
-    Add({DT_INIT_ARRAYSZ, Out<ELFT>::InitArray, Entry::SecSize});
-  }
-  if (Out<ELFT>::FiniArray) {
-    Add({DT_FINI_ARRAY, Out<ELFT>::FiniArray});
-    Add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
-  }
-
-  if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Init))
-    Add({DT_INIT, B});
-  if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Fini))
-    Add({DT_FINI, B});
-
-  bool HasVerNeed = Out<ELFT>::VerNeed->getNeedNum() != 0;
-  if (HasVerNeed || Out<ELFT>::VerDef)
-    Add({DT_VERSYM, Out<ELFT>::VerSym});
-  if (Out<ELFT>::VerDef) {
-    Add({DT_VERDEF, Out<ELFT>::VerDef});
-    Add({DT_VERDEFNUM, getVerDefNum()});
-  }
-  if (HasVerNeed) {
-    Add({DT_VERNEED, Out<ELFT>::VerNeed});
-    Add({DT_VERNEEDNUM, Out<ELFT>::VerNeed->getNeedNum()});
-  }
-
-  if (Config->EMachine == EM_MIPS) {
-    Add({DT_MIPS_RLD_VERSION, 1});
-    Add({DT_MIPS_FLAGS, RHF_NOTPOT});
-    Add({DT_MIPS_BASE_ADDRESS, Config->ImageBase});
-    Add({DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
-    Add({DT_MIPS_LOCAL_GOTNO, In<ELFT>::Got->getMipsLocalEntriesNum()});
-    if (const SymbolBody *B = In<ELFT>::Got->getMipsFirstGlobalEntry())
-      Add({DT_MIPS_GOTSYM, B->DynsymIndex});
-    else
-      Add({DT_MIPS_GOTSYM, Out<ELFT>::DynSymTab->getNumSymbols()});
-    Add({DT_PLTGOT, In<ELFT>::Got});
-    if (Out<ELFT>::MipsRldMap)
-      Add({DT_MIPS_RLD_MAP, Out<ELFT>::MipsRldMap});
-  }
-
-  // +1 for DT_NULL
-  this->Size = (Entries.size() + 1) * this->Entsize;
-}
-
-template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
-  auto *P = reinterpret_cast<Elf_Dyn *>(Buf);
-
-  for (const Entry &E : Entries) {
-    P->d_tag = E.Tag;
-    switch (E.Kind) {
-    case Entry::SecAddr:
-      P->d_un.d_ptr = E.OutSec->Addr;
-      break;
-    case Entry::InSecAddr:
-      P->d_un.d_ptr = E.InSec->OutSec->Addr + E.InSec->OutSecOff;
-      break;
-    case Entry::SecSize:
-      P->d_un.d_val = E.OutSec->Size;
-      break;
-    case Entry::SymAddr:
-      P->d_un.d_ptr = E.Sym->template getVA<ELFT>();
-      break;
-    case Entry::PlainInt:
-      P->d_un.d_val = E.Val;
-      break;
-    }
-    ++P;
-  }
-}
-
-template <class ELFT>
 EhFrameHeader<ELFT>::EhFrameHeader()
     : OutputSectionBase(".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC) {}
 
@@ -649,14 +478,6 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
         this->Link = D->OutSec->SectionIndex;
     }
   }
-
-  // Recalculate input section offsets if we own any synthetic section
-  for (auto *SS : In<ELFT>::SyntheticSections)
-    if (SS && this == SS->OutSec) {
-      this->Size = 0;
-      assignOffsets();
-      break;
-    }
 
   if (Type != SHT_RELA && Type != SHT_REL)
     return;
@@ -1543,11 +1364,6 @@ template class HashTableSection<ELF32LE>;
 template class HashTableSection<ELF32BE>;
 template class HashTableSection<ELF64LE>;
 template class HashTableSection<ELF64BE>;
-
-template class DynamicSection<ELF32LE>;
-template class DynamicSection<ELF32BE>;
-template class DynamicSection<ELF64LE>;
-template class DynamicSection<ELF64BE>;
 
 template class OutputSection<ELF32LE>;
 template class OutputSection<ELF32BE>;

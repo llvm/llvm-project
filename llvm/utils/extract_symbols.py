@@ -128,8 +128,12 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
             if match:
                 return match.group(1)
         return symbol
-    # Function template instantiations start with ?$, discard them as it's
-    # assumed that the definition is public
+    # Function template instantiations start with ?$; keep the instantiations of
+    # clang::Type::getAs, as some of them are explipict specializations that are
+    # defined in clang's lib/AST/Type.cpp; discard the rest as it's assumed that
+    # the definition is public
+    elif re.match('\?\?\$getAs@.+@Type@clang@@', symbol):
+        return symbol
     elif symbol.startswith('??$'):
         return None
     # Deleting destructors start with ?_G or ?_E and can be discarded because
@@ -195,8 +199,12 @@ def should_keep_itanium_symbol(symbol, calling_convention_decoration):
     # defined in headers and not required to be kept
     if re.match('[CD][123]', names[-1][0]) and names[-2][1]:
         return None
-    # Discard function template instantiations as it's assumed that the
-    # definition is public
+    # Keep the instantiations of clang::Type::getAs, as some of them are
+    # explipict specializations that are defined in clang's lib/AST/Type.cpp;
+    # discard any other function template instantiations as it's assumed that
+    # the definition is public
+    elif symbol.startswith('_ZNK5clang4Type5getAs'):
+        return symbol
     elif names[-1][1]:
         return None
     # Keep llvm:: and clang:: names

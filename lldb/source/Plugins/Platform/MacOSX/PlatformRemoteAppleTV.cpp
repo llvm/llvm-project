@@ -258,6 +258,7 @@ PlatformRemoteAppleTV::GetContainedFilesIntoVectorOfStringsCallback(
 
 bool PlatformRemoteAppleTV::UpdateSDKDirectoryInfosIfNeeded() {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory_infos.empty()) {
     const char *device_support_dir = GetDeviceSupportDirectory();
     if (log) {

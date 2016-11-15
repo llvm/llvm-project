@@ -23,6 +23,12 @@
 # CHECK-NEXT:  0000000000011001         *ABS* 00000000 _etext
 # CHECK-NEXT:  0000000000011000         .text 00000000 _start
 
+# RUN: ld.lld -r %t.o -o %t2
+# RUN: llvm-objdump -t %t2 | FileCheck %s --check-prefix=RELOCATABLE
+# RELOCATABLE:       0000000000000000 *UND* 00000000 _edata
+# RELOCATABLE-NEXT:  0000000000000000 *UND* 00000000 _end
+# RELOCATABLE-NEXT:  0000000000000000 *UND* 00000000 _etext
+
 .global _start,_end,_etext,_edata
 .text
 _start:

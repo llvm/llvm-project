@@ -5,9 +5,16 @@ from __future__ import print_function
 desc = '''Generate HTML output to visualize optimization records from the YAML files
 generated with -fsave-optimization-record and -fdiagnostics-show-hotness.
 
-The tools requires PyYAML and Pygments Python packages.'''
+The tools requires PyYAML and Pygments Python packages.
+
+For faster parsing, you may want to use libYAML with PyYAML.'''
 
 import yaml
+# Try to use the C parser.
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
 import argparse
 import os.path
 import re
@@ -33,6 +40,9 @@ def demangle(name):
 
 class Remark(yaml.YAMLObject):
     max_hotness = 0
+
+    # Work-around for http://pyyaml.org/ticket/154.
+    yaml_loader = Loader
 
     @classmethod
     def should_display_hotness(cls):
@@ -273,10 +283,10 @@ file_remarks = dict()
 
 for input_file in args.yaml_files:
     f = open(input_file)
-    docs = yaml.load_all(f)
+    docs = yaml.load_all(f, Loader=Loader)
     for remark in docs:
-        # Avoid duplicated remarks
-        if remark.key in all_remarks:
+        # Avoid remarks withoug debug location or if they are duplicated
+        if not hasattr(remark, 'DebugLoc') or remark.key in all_remarks:
             continue
         all_remarks[remark.key] = remark
 

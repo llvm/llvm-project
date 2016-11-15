@@ -34,6 +34,25 @@
 #define __CR6_LT 2
 #define __CR6_LT_REV 3
 
+/* Constants for vec_test_data_class */
+#define __VEC_CLASS_FP_SUBNORMAL_N (1 << 0)
+#define __VEC_CLASS_FP_SUBNORMAL_P (1 << 1)
+#define __VEC_CLASS_FP_SUBNORMAL (__VEC_CLASS_FP_SUBNORMAL_P | \
+                                  __VEC_CLASS_FP_SUBNORMAL_N)
+#define __VEC_CLASS_FP_ZERO_N (1<<2)
+#define __VEC_CLASS_FP_ZERO_P (1<<3)
+#define __VEC_CLASS_FP_ZERO (__VEC_CLASS_FP_ZERO_P           | \
+                             __VEC_CLASS_FP_ZERO_N)
+#define __VEC_CLASS_FP_INFINITY_N (1<<4)
+#define __VEC_CLASS_FP_INFINITY_P (1<<5)
+#define __VEC_CLASS_FP_INFINITY (__VEC_CLASS_FP_INFINITY_P   | \
+                                 __VEC_CLASS_FP_INFINITY_N)
+#define __VEC_CLASS_FP_NAN (1<<6)
+#define __VEC_CLASS_FP_NOT_NORMAL (__VEC_CLASS_FP_NAN        | \
+                                   __VEC_CLASS_FP_SUBNORMAL  | \
+                                   __VEC_CLASS_FP_ZERO       | \
+                                   __VEC_CLASS_FP_INFINITY)
+
 #define __ATTRS_o_ai __attribute__((__overloadable__, __always_inline__))
 
 static __inline__ vector signed char __ATTRS_o_ai vec_perm(
@@ -12277,6 +12296,55 @@ static __inline__ float __ATTRS_o_ai vec_extract(vector float __a, int __b) {
   return __a[__b];
 }
 
+#ifdef __POWER9_VECTOR__
+
+/* vec_extract_exp */
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_extract_exp(vector float __a) {
+  return __builtin_vsx_xvxexpsp(__a);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_extract_exp(vector double __a) {
+  return __builtin_vsx_xvxexpdp(__a);
+}
+
+/* vec_extract_sig */
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_extract_sig(vector float __a) {
+  return __builtin_vsx_xvxsigsp(__a);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_extract_sig (vector double __a) {
+  return __builtin_vsx_xvxsigdp(__a);
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_extract_fp32_from_shorth(vector unsigned short __a) {
+  vector unsigned short __b =
+#ifdef __LITTLE_ENDIAN__
+            __builtin_shufflevector(__a, __a, 0, -1, 1, -1, 2, -1, 3, -1);
+#else
+            __builtin_shufflevector(__a, __a, -1, 0, -1, 1, -1, 2, -1, 3);
+#endif
+  return __builtin_vsx_xvcvhpsp(__b);
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_extract_fp32_from_shortl(vector unsigned short __a) {
+  vector unsigned short __b =
+#ifdef __LITTLE_ENDIAN__
+            __builtin_shufflevector(__a, __a, 4, -1, 5, -1, 6, -1, 7, -1);
+#else
+            __builtin_shufflevector(__a, __a, -1, 4, -1, 5, -1, 6, -1, 7);
+#endif
+  return __builtin_vsx_xvcvhpsp(__b);
+}
+#endif /* __POWER9_VECTOR__ */
+
 /* vec_insert */
 
 static __inline__ vector signed char __ATTRS_o_ai
@@ -15999,7 +16067,6 @@ vec_revb(vector unsigned __int128 __a) {
 }
 #endif /* END __POWER8_VECTOR__ && __powerpc64__ */
 
-
 /* vec_xl */
 
 static inline __ATTRS_o_ai vector signed char vec_xl(signed long long __offset,
@@ -16064,6 +16131,82 @@ static inline __ATTRS_o_ai vector unsigned __int128
 vec_xl(signed long long __offset, unsigned __int128 *__ptr) {
   return *(vector unsigned __int128 *)(__ptr + __offset);
 }
+#endif
+
+/* vec_xl_be */
+
+#ifdef __LITTLE_ENDIAN__
+static __inline__ vector signed char __ATTRS_o_ai
+vec_xl_be(signed long long __offset, signed char *__ptr) {
+  vector signed char __vec = __builtin_vsx_lxvd2x_be(__offset, __ptr);
+  return __builtin_shufflevector(__vec, __vec, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14,
+                                 13, 12, 11, 10, 9, 8);
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_xl_be(signed long long __offset, unsigned char *__ptr) {
+  vector unsigned char __vec = __builtin_vsx_lxvd2x_be(__offset, __ptr);
+  return __builtin_shufflevector(__vec, __vec, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14,
+                                 13, 12, 11, 10, 9, 8);
+}
+
+static __inline__ vector signed short  __ATTRS_o_ai
+vec_xl_be(signed long long __offset, signed short *__ptr) {
+  vector signed short __vec = __builtin_vsx_lxvd2x_be(__offset, __ptr);
+  return __builtin_shufflevector(__vec, __vec, 3, 2, 1, 0, 7, 6, 5, 4);
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_xl_be(signed long long __offset, unsigned short *__ptr) {
+  vector unsigned short __vec = __builtin_vsx_lxvd2x_be(__offset, __ptr);
+  return __builtin_shufflevector(__vec, __vec, 3, 2, 1, 0, 7, 6, 5, 4);
+}
+
+static __inline__ vector signed int __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, signed int *__ptr) {
+  return (vector signed int)__builtin_vsx_lxvw4x_be(__offset, __ptr);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, unsigned int *__ptr) {
+  return (vector unsigned int)__builtin_vsx_lxvw4x_be(__offset, __ptr);
+}
+
+static __inline__ vector float __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, float *__ptr) {
+  return (vector float)__builtin_vsx_lxvw4x_be(__offset, __ptr);
+}
+
+#ifdef __VSX__
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, signed long long *__ptr) {
+  return (vector signed long long)__builtin_vsx_lxvd2x_be(__offset, __ptr);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, unsigned long long *__ptr) {
+  return (vector unsigned long long)__builtin_vsx_lxvd2x_be(__offset, __ptr);
+}
+
+static __inline__ vector double __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, double *__ptr) {
+  return (vector double)__builtin_vsx_lxvd2x_be(__offset, __ptr);
+}
+#endif
+
+#if defined(__POWER8_VECTOR__) && defined(__powerpc64__)
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, signed __int128 *__ptr) {
+  return vec_xl(__offset, __ptr);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_be(signed long long  __offset, unsigned __int128 *__ptr) {
+  return vec_xl(__offset, __ptr);
+}
+#endif
+#else
+  #define vec_xl_be vec_xl
 #endif
 
 /* vec_xst */
@@ -16143,6 +16286,110 @@ static inline __ATTRS_o_ai void vec_xst(vector unsigned __int128 __vec,
   *(vector unsigned __int128 *)(__ptr + __offset) = __vec;
 }
 #endif
+
+/* vec_xst_be */
+
+#ifdef __LITTLE_ENDIAN__
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector signed char __vec,
+                                               signed long long  __offset,
+                                               signed char *__ptr) {
+  vector signed char __tmp =
+     __builtin_shufflevector(__vec, __vec, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14,
+                             13, 12, 11, 10, 9, 8);
+  __builtin_vsx_stxvd2x_be(__tmp, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned char __vec,
+                                               signed long long  __offset,
+                                               unsigned char *__ptr) {
+  vector unsigned char __tmp =
+     __builtin_shufflevector(__vec, __vec, 7, 6, 5, 4, 3, 2, 1, 0, 15, 14,
+                             13, 12, 11, 10, 9, 8);
+  __builtin_vsx_stxvd2x_be(__tmp, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector signed short __vec,
+                                               signed long long  __offset,
+                                               signed short *__ptr) {
+  vector signed short __tmp =
+     __builtin_shufflevector(__vec, __vec, 3, 2, 1, 0, 7, 6, 5, 4);
+  __builtin_vsx_stxvd2x_be(__tmp, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned short __vec,
+                                               signed long long  __offset,
+                                               unsigned short *__ptr) {
+  vector unsigned short __tmp =
+     __builtin_shufflevector(__vec, __vec, 3, 2, 1, 0, 7, 6, 5, 4);
+  __builtin_vsx_stxvd2x_be(__tmp, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector signed int __vec,
+                                               signed long long  __offset,
+                                               signed int *__ptr) {
+  __builtin_vsx_stxvw4x_be(__vec, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned int __vec,
+                                               signed long long  __offset,
+                                               unsigned int *__ptr) {
+  __builtin_vsx_stxvw4x_be(__vec, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector float __vec,
+                                               signed long long  __offset,
+                                               float *__ptr) {
+  __builtin_vsx_stxvw4x_be(__vec, __offset, __ptr);
+}
+
+#ifdef __VSX__
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector signed long long __vec,
+                                               signed long long  __offset,
+                                               signed long long *__ptr) {
+  __builtin_vsx_stxvd2x_be(__vec, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned long long __vec,
+                                               signed long long  __offset,
+                                               unsigned long long *__ptr) {
+  __builtin_vsx_stxvd2x_be(__vec, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector double __vec,
+                                               signed long long  __offset,
+                                               double *__ptr) {
+  __builtin_vsx_stxvd2x_be(__vec, __offset, __ptr);
+}
+#endif
+
+#if defined(__POWER8_VECTOR__) && defined(__powerpc64__)
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector signed __int128 __vec,
+                                               signed long long  __offset,
+                                               signed __int128 *__ptr) {
+  vec_xst(__vec, __offset, __ptr);
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned __int128 __vec,
+                                               signed long long  __offset,
+                                               unsigned __int128 *__ptr) {
+  vec_xst(__vec, __offset, __ptr);
+}
+#endif
+#else
+  #define vec_xst_be vec_xst
+#endif
+
+#ifdef __POWER9_VECTOR__
+#define vec_test_data_class(__a, __b)                                      \
+        _Generic((__a),                                                    \
+           vector float:                                                   \
+             (vector bool int)__builtin_vsx_xvtstdcsp((__a), (__b)),       \
+           vector double:                                                  \
+             (vector bool long long)__builtin_vsx_xvtstdcdp((__a), (__b))  \
+        )
+
+#endif /* #ifdef __POWER9_VECTOR__ */
+
 #undef __ATTRS_o_ai
 
 #endif /* __ALTIVEC_H */

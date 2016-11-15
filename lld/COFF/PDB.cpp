@@ -82,9 +82,8 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   IpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
   // Add Section Contributions.
-  ArrayRef<coff_section> InputSections = getInputSections(Symtab);
   std::vector<pdb::SectionContrib> Contribs =
-      pdb::DbiStreamBuilder::createSectionContribs(InputSections);
+      pdb::DbiStreamBuilder::createSectionContribs(getInputSections(Symtab));
   DbiBuilder.setSectionContribs(Contribs);
 
   // Add Section Map stream.

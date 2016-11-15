@@ -15,6 +15,470 @@
 #ifndef KMP_AFFINITY_H
 #define KMP_AFFINITY_H
 
+#include "kmp_os.h"
+#include "kmp.h"
+
+#if KMP_AFFINITY_SUPPORTED
+#if KMP_USE_HWLOC
+class KMPHwlocAffinity: public KMPAffinity {
+public:
+    class Mask : public KMPAffinity::Mask {
+        hwloc_cpuset_t mask;
+    public:
+        Mask() { mask = hwloc_bitmap_alloc(); this->zero(); }
+        ~Mask() { hwloc_bitmap_free(mask); }
+        void set(int i) override { hwloc_bitmap_set(mask, i); }
+        bool is_set(int i) const override { return hwloc_bitmap_isset(mask, i); }
+        void clear(int i) override { hwloc_bitmap_clr(mask, i); }
+        void zero() override { hwloc_bitmap_zero(mask); }
+        void copy(const KMPAffinity::Mask* src) override {
+            const Mask* convert = static_cast<const Mask*>(src);
+            hwloc_bitmap_copy(mask, convert->mask);
+        }
+        void bitwise_and(const KMPAffinity::Mask* rhs) override {
+            const Mask* convert = static_cast<const Mask*>(rhs);
+            hwloc_bitmap_and(mask, mask, convert->mask);
+        }
+        void bitwise_or(const KMPAffinity::Mask * rhs) override {
+            const Mask* convert = static_cast<const Mask*>(rhs);
+            hwloc_bitmap_or(mask, mask, convert->mask);
+        }
+        void bitwise_not() override { hwloc_bitmap_not(mask, mask); }
+        int begin() const override { return hwloc_bitmap_first(mask); }
+        int end() const override { return -1; }
+        int next(int previous) const override { return hwloc_bitmap_next(mask, previous); }
+        int get_system_affinity(bool abort_on_error) override {
+            KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+              "Illegal get affinity operation when not capable");
+            int retval = hwloc_get_cpubind(__kmp_hwloc_topology, mask, HWLOC_CPUBIND_THREAD);
+            if (retval >= 0) {
+                return 0;
+            }
+            int error = errno;
+            if (abort_on_error) {
+                __kmp_msg(kmp_ms_fatal, KMP_MSG( FatalSysError ), KMP_ERR( error ), __kmp_msg_null);
+            }
+            return error;
+        }
+        int set_system_affinity(bool abort_on_error) const override {
+            KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+              "Illegal get affinity operation when not capable");
+            int retval = hwloc_set_cpubind(__kmp_hwloc_topology, mask, HWLOC_CPUBIND_THREAD);
+            if (retval >= 0) {
+                return 0;
+            }
+            int error = errno;
+            if (abort_on_error) {
+                __kmp_msg(kmp_ms_fatal, KMP_MSG( FatalSysError ), KMP_ERR( error ), __kmp_msg_null);
+            }
+            return error;
+        }
+        int get_proc_group() const override {
+            int i;
+            int group = -1;
+# if KMP_OS_WINDOWS
+            if (__kmp_num_proc_groups == 1) {
+                return 1;
+            }
+            for (i = 0; i < __kmp_num_proc_groups; i++) {
+                // On windows, the long type is always 32 bits
+                unsigned long first_32_bits = hwloc_bitmap_to_ith_ulong(mask, i*2);
+                unsigned long second_32_bits = hwloc_bitmap_to_ith_ulong(mask, i*2+1);
+                if (first_32_bits == 0 && second_32_bits == 0) {
+                    continue;
+                }
+                if (group >= 0) {
+                    return -1;
+                }
+                group = i;
+            }
+# endif /* KMP_OS_WINDOWS */
+            return group;
+        }
+    };
+    void determine_capable(const char* var) override {
+        const hwloc_topology_support* topology_support;
+        if(__kmp_hwloc_topology == NULL) {
+            if(hwloc_topology_init(&__kmp_hwloc_topology) < 0) {
+                __kmp_hwloc_error = TRUE;
+                if(__kmp_affinity_verbose)
+                    KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
+            }
+            if(hwloc_topology_load(__kmp_hwloc_topology) < 0) {
+                __kmp_hwloc_error = TRUE;
+                if(__kmp_affinity_verbose)
+                    KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_load()");
+            }
+        }
+        topology_support = hwloc_topology_get_support(__kmp_hwloc_topology);
+        // Is the system capable of setting/getting this thread's affinity?
+        // also, is topology discovery possible? (pu indicates ability to discover processing units)
+        // and finally, were there no errors when calling any hwloc_* API functions?
+        if(topology_support && topology_support->cpubind->set_thisthread_cpubind &&
+           topology_support->cpubind->get_thisthread_cpubind &&
+           topology_support->discovery->pu &&
+           !__kmp_hwloc_error)
+        {
+            // enables affinity according to KMP_AFFINITY_CAPABLE() macro
+            KMP_AFFINITY_ENABLE(TRUE);
+        } else {
+            // indicate that hwloc didn't work and disable affinity
+            __kmp_hwloc_error = TRUE;
+            KMP_AFFINITY_DISABLE();
+        }
+    }
+    void bind_thread(int which) override {
+        KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+          "Illegal set affinity operation when not capable");
+        KMPAffinity::Mask *mask;
+        KMP_CPU_ALLOC_ON_STACK(mask);
+        KMP_CPU_ZERO(mask);
+        KMP_CPU_SET(which, mask);
+        __kmp_set_system_affinity(mask, TRUE);
+        KMP_CPU_FREE_FROM_STACK(mask);
+    }
+    KMPAffinity::Mask* allocate_mask() override { return new Mask();  }
+    void deallocate_mask(KMPAffinity::Mask* m) override { delete m; }
+    KMPAffinity::Mask* allocate_mask_array(int num) override { return new Mask[num]; }
+    void deallocate_mask_array(KMPAffinity::Mask* array) override {
+        Mask* hwloc_array = static_cast<Mask*>(array);
+        delete[] hwloc_array;
+    }
+    KMPAffinity::Mask* index_mask_array(KMPAffinity::Mask* array, int index) override {
+        Mask* hwloc_array = static_cast<Mask*>(array);
+        return &(hwloc_array[index]);
+    }
+    api_type get_api_type() const override { return HWLOC; }
+};
+#endif /* KMP_USE_HWLOC */
+
+#if KMP_OS_LINUX
+/*
+ * On some of the older OS's that we build on, these constants aren't present
+ * in <asm/unistd.h> #included from <sys.syscall.h>.  They must be the same on
+ * all systems of the same arch where they are defined, and they cannot change.
+ * stone forever.
+ */
+#include <sys/syscall.h>
+# if KMP_ARCH_X86 || KMP_ARCH_ARM
+#  ifndef __NR_sched_setaffinity
+#   define __NR_sched_setaffinity  241
+#  elif __NR_sched_setaffinity != 241
+#   error Wrong code for setaffinity system call.
+#  endif /* __NR_sched_setaffinity */
+#  ifndef __NR_sched_getaffinity
+#   define __NR_sched_getaffinity  242
+#  elif __NR_sched_getaffinity != 242
+#   error Wrong code for getaffinity system call.
+#  endif /* __NR_sched_getaffinity */
+# elif KMP_ARCH_AARCH64
+#  ifndef __NR_sched_setaffinity
+#   define __NR_sched_setaffinity  122
+#  elif __NR_sched_setaffinity != 122
+#   error Wrong code for setaffinity system call.
+#  endif /* __NR_sched_setaffinity */
+#  ifndef __NR_sched_getaffinity
+#   define __NR_sched_getaffinity  123
+#  elif __NR_sched_getaffinity != 123
+#   error Wrong code for getaffinity system call.
+#  endif /* __NR_sched_getaffinity */
+# elif KMP_ARCH_X86_64
+#  ifndef __NR_sched_setaffinity
+#   define __NR_sched_setaffinity  203
+#  elif __NR_sched_setaffinity != 203
+#   error Wrong code for setaffinity system call.
+#  endif /* __NR_sched_setaffinity */
+#  ifndef __NR_sched_getaffinity
+#   define __NR_sched_getaffinity  204
+#  elif __NR_sched_getaffinity != 204
+#   error Wrong code for getaffinity system call.
+#  endif /* __NR_sched_getaffinity */
+# elif KMP_ARCH_PPC64
+#  ifndef __NR_sched_setaffinity
+#   define __NR_sched_setaffinity  222
+#  elif __NR_sched_setaffinity != 222
+#   error Wrong code for setaffinity system call.
+#  endif /* __NR_sched_setaffinity */
+#  ifndef __NR_sched_getaffinity
+#   define __NR_sched_getaffinity  223
+#  elif __NR_sched_getaffinity != 223
+#   error Wrong code for getaffinity system call.
+#  endif /* __NR_sched_getaffinity */
+# else
+#  error Unknown or unsupported architecture
+# endif /* KMP_ARCH_* */
+class KMPNativeAffinity : public KMPAffinity {
+    class Mask : public KMPAffinity::Mask {
+        typedef unsigned char mask_t;
+        static const int BITS_PER_MASK_T = sizeof(mask_t)*CHAR_BIT;
+    public:
+        mask_t* mask;
+        Mask() { mask = (mask_t*)__kmp_allocate(__kmp_affin_mask_size); }
+        ~Mask() { if (mask) __kmp_free(mask); }
+        void set(int i) override { mask[i/BITS_PER_MASK_T] |= ((mask_t)1 << (i % BITS_PER_MASK_T)); }
+        bool is_set(int i) const override { return (mask[i/BITS_PER_MASK_T] & ((mask_t)1 << (i % BITS_PER_MASK_T))); }
+        void clear(int i) override { mask[i/BITS_PER_MASK_T] &= ~((mask_t)1 << (i % BITS_PER_MASK_T)); }
+        void zero() override {
+            for (size_t i=0; i<__kmp_affin_mask_size; ++i)
+                mask[i] = 0;
+        }
+        void copy(const KMPAffinity::Mask* src) override {
+            const Mask * convert = static_cast<const Mask*>(src);
+            for (size_t i=0; i<__kmp_affin_mask_size; ++i)
+                mask[i] = convert->mask[i];
+        }
+        void bitwise_and(const KMPAffinity::Mask* rhs) override {
+            const Mask * convert = static_cast<const Mask*>(rhs);
+            for (size_t i=0; i<__kmp_affin_mask_size; ++i)
+                mask[i] &= convert->mask[i];
+        }
+        void bitwise_or(const KMPAffinity::Mask* rhs) override {
+            const Mask * convert = static_cast<const Mask*>(rhs);
+            for (size_t i=0; i<__kmp_affin_mask_size; ++i)
+                mask[i] |= convert->mask[i];
+        }
+        void bitwise_not() override {
+            for (size_t i=0; i<__kmp_affin_mask_size; ++i)
+                mask[i] = ~(mask[i]);
+        }
+        int begin() const override {
+            int retval = 0;
+            while (retval < end() && !is_set(retval))
+                ++retval;
+            return retval;
+        }
+        int end() const override { return __kmp_affin_mask_size*BITS_PER_MASK_T; }
+        int next(int previous) const override {
+            int retval = previous+1;
+            while (retval < end() && !is_set(retval))
+                ++retval;
+            return retval;
+        }
+        int get_system_affinity(bool abort_on_error) override {
+            KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+              "Illegal get affinity operation when not capable");
+            int retval = syscall( __NR_sched_getaffinity, 0, __kmp_affin_mask_size, mask );
+            if (retval >= 0) {
+                return 0;
+            }
+            int error = errno;
+            if (abort_on_error) {
+                __kmp_msg(kmp_ms_fatal, KMP_MSG( FatalSysError ), KMP_ERR( error ), __kmp_msg_null);
+            }
+            return error;
+        }
+        int set_system_affinity(bool abort_on_error) const override {
+            KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
+              "Illegal get affinity operation when not capable");
+            int retval = syscall( __NR_sched_setaffinity, 0, __kmp_affin_mask_size, mask );
+            if (retval >= 0) {
+                return 0;
+            }
+            int error = errno;
+            if (abort_on_error) {
+                __kmp_msg(kmp_ms_fatal, KMP_MSG( FatalSysError ), KMP_ERR( error ), __kmp_msg_null);
+            }
+            return error;
+        }
+    };
+    void determine_capable(const char* env_var) override {
+        __kmp_affinity_determine_capable(env_var);
+    }
+    void bind_thread(int which) override {
+        __kmp_affinity_bind_thread(which);
+    }
+    KMPAffinity::Mask* allocate_mask() override {
+        KMPNativeAffinity::Mask* retval = new Mask();
+        return retval;
+    }
+    void deallocate_mask(KMPAffinity::Mask* m) override {
+        KMPNativeAffinity::Mask* native_mask = static_cast<KMPNativeAffinity::Mask*>(m);
+        delete m;
+    }
+    KMPAffinity::Mask* allocate_mask_array(int num) override { return new Mask[num]; }
+    void deallocate_mask_array(KMPAffinity::Mask* array) override {
+        Mask* linux_array = static_cast<Mask*>(array);
+        delete[] linux_array;
+    }
+    KMPAffinity::Mask* index_mask_array(KMPAffinity::Mask* array, int index) override {
+        Mask* linux_array = static_cast<Mask*>(array);
+        return &(linux_array[index]);
+    }
+    api_type get_api_type() const override { return NATIVE_OS; }
+};
+#endif /* KMP_OS_LINUX */
+
+#if KMP_OS_WINDOWS
+class KMPNativeAffinity : public KMPAffinity {
+    class Mask : public KMPAffinity::Mask {
+        typedef ULONG_PTR mask_t;
+        static const int BITS_PER_MASK_T = sizeof(mask_t)*CHAR_BIT;
+        mask_t* mask;
+    public:
+        Mask() { mask = (mask_t*)__kmp_allocate(sizeof(mask_t)*__kmp_num_proc_groups); }
+        ~Mask() { if (mask) __kmp_free(mask); }
+        void set(int i) override { mask[i/BITS_PER_MASK_T] |= ((mask_t)1 << (i % BITS_PER_MASK_T)); }
+        bool is_set(int i) const override { return (mask[i/BITS_PER_MASK_T] & ((mask_t)1 << (i % BITS_PER_MASK_T))); }
+        void clear(int i) override { mask[i/BITS_PER_MASK_T] &= ~((mask_t)1 << (i % BITS_PER_MASK_T)); }
+        void zero() override {
+            for (size_t i=0; i<__kmp_num_proc_groups; ++i)
+                mask[i] = 0;
+        }
+        void copy(const KMPAffinity::Mask* src) override {
+            const Mask * convert = static_cast<const Mask*>(src);
+            for (size_t i=0; i<__kmp_num_proc_groups; ++i)
+                mask[i] = convert->mask[i];
+        }
+        void bitwise_and(const KMPAffinity::Mask* rhs) override {
+            const Mask * convert = static_cast<const Mask*>(rhs);
+            for (size_t i=0; i<__kmp_num_proc_groups; ++i)
+                mask[i] &= convert->mask[i];
+        }
+        void bitwise_or(const KMPAffinity::Mask* rhs) override {
+            const Mask * convert = static_cast<const Mask*>(rhs);
+            for (size_t i=0; i<__kmp_num_proc_groups; ++i)
+                mask[i] |= convert->mask[i];
+        }
+        void bitwise_not() override {
+            for (size_t i=0; i<__kmp_num_proc_groups; ++i)
+                mask[i] = ~(mask[i]);
+        }
+        int begin() const override {
+            int retval = 0;
+            while (retval < end() && !is_set(retval))
+                ++retval;
+            return retval;
+        }
+        int end() const override { return __kmp_num_proc_groups*BITS_PER_MASK_T; }
+        int next(int previous) const override {
+            int retval = previous+1;
+            while (retval < end() && !is_set(retval))
+                ++retval;
+            return retval;
+        }
+        int set_system_affinity(bool abort_on_error) const override {
+            if (__kmp_num_proc_groups > 1) {
+                // Check for a valid mask.
+                GROUP_AFFINITY ga;
+                int group = get_proc_group();
+                if (group < 0) {
+                    if (abort_on_error) {
+                        KMP_FATAL(AffinityInvalidMask, "kmp_set_affinity");
+                    }
+                    return -1;
+                }
+                // Transform the bit vector into a GROUP_AFFINITY struct
+                // and make the system call to set affinity.
+                ga.Group = group;
+                ga.Mask = mask[group];
+                ga.Reserved[0] = ga.Reserved[1] = ga.Reserved[2] = 0;
+
+                KMP_DEBUG_ASSERT(__kmp_SetThreadGroupAffinity != NULL);
+                if (__kmp_SetThreadGroupAffinity(GetCurrentThread(), &ga, NULL) == 0) {
+                    DWORD error = GetLastError();
+                    if (abort_on_error) {
+                        __kmp_msg(kmp_ms_fatal, KMP_MSG( CantSetThreadAffMask ),
+                                  KMP_ERR( error ), __kmp_msg_null);
+                    }
+                    return error;
+                }
+            } else {
+                if (!SetThreadAffinityMask( GetCurrentThread(), *mask )) {
+                    DWORD error = GetLastError();
+                    if (abort_on_error) {
+                        __kmp_msg(kmp_ms_fatal, KMP_MSG( CantSetThreadAffMask ),
+                                  KMP_ERR( error ), __kmp_msg_null);
+                    }
+                    return error;
+                }
+            }
+            return 0;
+        }
+        int get_system_affinity(bool abort_on_error) override {
+            if (__kmp_num_proc_groups > 1) {
+                this->zero();
+                GROUP_AFFINITY ga;
+                KMP_DEBUG_ASSERT(__kmp_GetThreadGroupAffinity != NULL);
+                if (__kmp_GetThreadGroupAffinity(GetCurrentThread(), &ga) == 0) {
+                    DWORD error = GetLastError();
+                    if (abort_on_error) {
+                        __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "GetThreadGroupAffinity()"),
+                                  KMP_ERR(error), __kmp_msg_null);
+                    }
+                    return error;
+                }
+                if ((ga.Group < 0) || (ga.Group > __kmp_num_proc_groups) || (ga.Mask == 0)) {
+                    return -1;
+                }
+                mask[ga.Group] = ga.Mask;
+            } else {
+                mask_t newMask, sysMask, retval;
+                if (!GetProcessAffinityMask(GetCurrentProcess(), &newMask, &sysMask)) {
+                    DWORD error = GetLastError();
+                    if (abort_on_error) {
+                        __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "GetProcessAffinityMask()"),
+                                  KMP_ERR(error), __kmp_msg_null);
+                    }
+                    return error;
+                }
+                retval = SetThreadAffinityMask(GetCurrentThread(), newMask);
+                if (! retval) {
+                    DWORD error = GetLastError();
+                    if (abort_on_error) {
+                        __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "SetThreadAffinityMask()"),
+                                  KMP_ERR(error), __kmp_msg_null);
+                    }
+                    return error;
+                }
+                newMask = SetThreadAffinityMask(GetCurrentThread(), retval);
+                if (! newMask) {
+                    DWORD error = GetLastError();
+                    if (abort_on_error) {
+                        __kmp_msg(kmp_ms_fatal, KMP_MSG(FunctionError, "SetThreadAffinityMask()"),
+                                  KMP_ERR(error), __kmp_msg_null);
+                    }
+                }
+                *mask = retval;
+            }
+            return 0;
+        }
+        int get_proc_group() const override {
+            int group = -1;
+            if (__kmp_num_proc_groups == 1) {
+                return 1;
+            }
+            for (int i = 0; i < __kmp_num_proc_groups; i++) {
+                if (mask[i] == 0)
+                    continue;
+                if (group >= 0)
+                    return -1;
+                group = i;
+            }
+            return group;
+        }
+    };
+    void determine_capable(const char* env_var) override {
+        __kmp_affinity_determine_capable(env_var);
+    }
+    void bind_thread(int which) override {
+        __kmp_affinity_bind_thread(which);
+    }
+    KMPAffinity::Mask* allocate_mask() override { return new Mask();  }
+    void deallocate_mask(KMPAffinity::Mask* m) override { delete m; }
+    KMPAffinity::Mask* allocate_mask_array(int num) override { return new Mask[num]; }
+    void deallocate_mask_array(KMPAffinity::Mask* array) override {
+        Mask* windows_array = static_cast<Mask*>(array);
+        delete[] windows_array;
+    }
+    KMPAffinity::Mask* index_mask_array(KMPAffinity::Mask* array, int index) override {
+        Mask* windows_array = static_cast<Mask*>(array);
+        return &(windows_array[index]);
+    }
+    api_type get_api_type() const override { return NATIVE_OS; }
+};
+#endif /* KMP_OS_WINDOWS */
+#endif /* KMP_AFFINITY_SUPPORTED */
+
 class Address {
 public:
     static const unsigned maxDepth = 32;

@@ -124,6 +124,9 @@ namespace llvm {
   // instruction and update the MachineFunctionInfo with that information.
   extern char &ShrinkWrapID;
 
+  /// Greedy register allocator.
+  extern char &RAGreedyID;
+
   /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
   /// assigned in VirtRegMap.
   extern char &VirtRegRewriterID;

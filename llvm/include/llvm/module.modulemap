@@ -113,6 +113,14 @@ module LLVM_ExecutionEngine {
   exclude header "ExecutionEngine/MCJIT.h"
   exclude header "ExecutionEngine/Interpreter.h"
   exclude header "ExecutionEngine/OrcMCJITReplacement.h"
+
+  // FIXME: These exclude directives were added as a workaround for
+  //        <rdar://problem/29247092> and should be removed once it is fixed.
+  exclude header "ExecutionEngine/Orc/RawByteChannel.h"
+  exclude header "ExecutionEngine/Orc/RPCUtils.h"
+  exclude header "ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
+  exclude header "ExecutionEngine/Orc/OrcRemoteTargetClient.h"
+  exclude header "ExecutionEngine/Orc/OrcRemoteTargetServer.h"
 }
 
 module LLVM_Pass {

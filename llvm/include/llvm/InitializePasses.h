@@ -126,6 +126,7 @@ void initializeEarlyIfConverterPass(PassRegistry&);
 void initializeEdgeBundlesPass(PassRegistry&);
 void initializeEfficiencySanitizerPass(PassRegistry&);
 void initializeEliminateAvailableExternallyLegacyPassPass(PassRegistry &);
+void initializeRAGreedyPass(PassRegistry&);
 void initializeGVNHoistLegacyPassPass(PassRegistry &);
 void initializeExpandISelPseudosPass(PassRegistry&);
 void initializeExpandPostRAPass(PassRegistry&);

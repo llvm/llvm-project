@@ -317,12 +317,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
   case Normal: {
     //  -- the bodies of non-exported nonspecialized template functions
     //  -- the bodies of inline functions
-    auto *CD = dyn_cast<CapturedDecl>(CurContext);
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        isInInlineFunction(CurContext) || CD) {
+        isInInlineFunction(CurContext)) {
       ManglingContextDecl = nullptr;
-      return &Context.getManglingNumberContext(CD ? CD->getParent() : DC);
+      while (auto *CD = dyn_cast<CapturedDecl>(DC))
+        DC = CD->getParent();
+      return &Context.getManglingNumberContext(DC);
     }
 
     ManglingContextDecl = nullptr;

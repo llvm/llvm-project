@@ -15,59 +15,59 @@ class InstSI <dag outs, dag ins, string asm = "",
               list<dag> pattern = []> :
   AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
 
-  field bits<1> VM_CNT = 0;
-  field bits<1> EXP_CNT = 0;
-  field bits<1> LGKM_CNT = 0;
+  field bit VM_CNT = 0;
+  field bit EXP_CNT = 0;
+  field bit LGKM_CNT = 0;
 
-  field bits<1> SALU = 0;
-  field bits<1> VALU = 0;
+  field bit SALU = 0;
+  field bit VALU = 0;
 
-  field bits<1> SOP1 = 0;
-  field bits<1> SOP2 = 0;
-  field bits<1> SOPC = 0;
-  field bits<1> SOPK = 0;
-  field bits<1> SOPP = 0;
+  field bit SOP1 = 0;
+  field bit SOP2 = 0;
+  field bit SOPC = 0;
+  field bit SOPK = 0;
+  field bit SOPP = 0;
 
-  field bits<1> VOP1 = 0;
-  field bits<1> VOP2 = 0;
-  field bits<1> VOP3 = 0;
-  field bits<1> VOPC = 0;
-  field bits<1> SDWA = 0;
-  field bits<1> DPP = 0;
+  field bit VOP1 = 0;
+  field bit VOP2 = 0;
+  field bit VOP3 = 0;
+  field bit VOPC = 0;
+  field bit SDWA = 0;
+  field bit DPP = 0;
 
-  field bits<1> MUBUF = 0;
-  field bits<1> MTBUF = 0;
-  field bits<1> SMRD = 0;
-  field bits<1> DS = 0;
-  field bits<1> MIMG = 0;
-  field bits<1> FLAT = 0;
+  field bit MUBUF = 0;
+  field bit MTBUF = 0;
+  field bit SMRD = 0;
+  field bit DS = 0;
+  field bit MIMG = 0;
+  field bit FLAT = 0;
 
   // Whether WQM _must_ be enabled for this instruction.
-  field bits<1> WQM = 0;
-  field bits<1> VGPRSpill = 0;
-  field bits<1> SGPRSpill = 0;
+  field bit WQM = 0;
+  field bit VGPRSpill = 0;
+  field bit SGPRSpill = 0;
 
   // This bit tells the assembler to use the 32-bit encoding in case it
   // is unable to infer the encoding from the operands.
-  field bits<1> VOPAsmPrefer32Bit = 0;
+  field bit VOPAsmPrefer32Bit = 0;
 
-  field bits<1> Gather4 = 0;
+  field bit Gather4 = 0;
 
   // Whether WQM _must_ be disabled for this instruction.
-  field bits<1> DisableWQM = 0;
+  field bit DisableWQM = 0;
 
   // Most sopk treat the immediate as a signed 16-bit, however some
   // use it as unsigned.
-  field bits<1> SOPKZext = 0;
+  field bit SOPKZext = 0;
 
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
   // SMEM instructions like the cache flush ones.
-  field bits<1> ScalarStore = 0;
+  field bit ScalarStore = 0;
 
   // Whether the operands can be ignored when computing the
   // instruction size.
-  field bits<1> FixedSize = 0;
+  field bit FixedSize = 0;
 
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = VM_CNT;

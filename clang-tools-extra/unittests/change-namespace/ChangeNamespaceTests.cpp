@@ -822,22 +822,22 @@ TEST_F(ChangeNamespaceTest, UsingShadowDeclInFunction) {
 }
 
 TEST_F(ChangeNamespaceTest, UsingShadowDeclInClass) {
-  std::string Code = "namespace na { class C_A {};\n }\n"
+  std::string Code = "namespace na { class C_A {}; }\n"
                      "namespace na {\n"
                      "namespace nb {\n"
                      "void f() {\n"
-                     "  using na::CA;\n"
-                     "  CA ca;\n"
+                     "  using ::na::C_A;\n"
+                     "  C_A ca;\n"
                      "}\n"
                      "} // namespace nb\n"
                      "} // namespace na\n";
-  std::string Expected = "namespace na { class C_A {};\n }\n"
+  std::string Expected = "namespace na { class C_A {}; }\n"
                          "\n"
                          "namespace x {\n"
                          "namespace y {\n"
                          "void f() {\n"
-                         "  using na::CA;\n"
-                         "  CA ca;\n"
+                         "  using ::na::C_A;\n"
+                         "  C_A ca;\n"
                          "}\n"
                          "} // namespace y\n"
                          "} // namespace x\n";
@@ -938,6 +938,70 @@ TEST_F(ChangeNamespaceTest, UsingDeclInTheParentOfOldNamespace) {
                          "void d() { A a; }\n"
                          "} // namespace nd\n"
                          "} // nb\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, UsingAliasDecl) {
+  std::string Code =
+      "namespace nx { namespace ny { class X {}; } }\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "using Y = nx::ny::X;\n"
+      "void f() { Y y; }\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+
+  std::string Expected = "namespace nx { namespace ny { class X {}; } }\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "using Y = nx::ny::X;\n"
+                         "void f() { Y y; }\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, UsingAliasDeclInGlobal) {
+  std::string Code =
+      "namespace nx { namespace ny { class X {}; } }\n"
+      "using Y = nx::ny::X;\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "void f() { Y y; }\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+
+  std::string Expected = "namespace nx { namespace ny { class X {}; } }\n"
+                         "using Y = nx::ny::X;\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "void f() { Y y; }\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+
+TEST_F(ChangeNamespaceTest, TypedefAliasDecl) {
+  std::string Code =
+      "namespace nx { namespace ny { class X {}; } }\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "typedef nx::ny::X Y;\n"
+      "void f() { Y y; }\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+
+  std::string Expected = "namespace nx { namespace ny { class X {}; } }\n"
+                         "\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "typedef nx::ny::X Y;\n"
+                         "void f() { Y y; }\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 

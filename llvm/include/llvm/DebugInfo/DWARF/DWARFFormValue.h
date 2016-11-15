@@ -56,6 +56,7 @@ private:
 public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F), U(nullptr) {}
   dwarf::Form getForm() const { return Form; }
+  void setForm(dwarf::Form F) { Form = F; }
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
   void dump(raw_ostream &OS) const;

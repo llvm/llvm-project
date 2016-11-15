@@ -893,10 +893,12 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     unsigned MIFlags) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   DebugLoc DL;
 
-  SmallVector<std::pair<unsigned,bool>, 4> Regs;
+  typedef std::pair<unsigned, bool> RegAndKill;
+  SmallVector<RegAndKill, 4> Regs;
   unsigned i = CSI.size();
   while (i != 0) {
     unsigned LastReg = 0;
@@ -927,6 +929,12 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
 
     if (Regs.empty())
       continue;
+
+    std::sort(Regs.begin(), Regs.end(), [&](const RegAndKill &LHS,
+                                            const RegAndKill &RHS) {
+      return TRI.getEncodingValue(LHS.first) < TRI.getEncodingValue(RHS.first);
+    });
+
     if (Regs.size() > 1 || StrOpc== 0) {
       MachineInstrBuilder MIB =
         AddDefaultPred(BuildMI(MBB, MI, DL, TII.get(StmOpc), ARM::SP)
@@ -960,6 +968,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
                                    unsigned NumAlignedDPRCS2Regs) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   DebugLoc DL;
   bool isTailCall = false;
@@ -1012,6 +1021,11 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
 
     if (Regs.empty())
       continue;
+
+    std::sort(Regs.begin(), Regs.end(), [&](unsigned LHS, unsigned RHS) {
+      return TRI.getEncodingValue(LHS) < TRI.getEncodingValue(RHS);
+    });
+
     if (Regs.size() > 1 || LdrOpc == 0) {
       MachineInstrBuilder MIB =
         AddDefaultPred(BuildMI(MBB, MI, DL, TII.get(LdmOpc), ARM::SP)

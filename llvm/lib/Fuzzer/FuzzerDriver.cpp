@@ -446,9 +446,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Printf("INFO: Seed: %u\n", Seed);
 
   Random Rand(Seed);
-  auto MD = new MutationDispatcher(Rand, Options);
-  auto Corpus = new InputCorpus(Options.OutputCorpus);
-  auto F = new Fuzzer(Callback, *Corpus, *MD, Options);
+  auto *MD = new MutationDispatcher(Rand, Options);
+  auto *Corpus = new InputCorpus(Options.OutputCorpus);
+  auto *F = new Fuzzer(Callback, *Corpus, *MD, Options);
 
   for (auto &U: Dictionary)
     if (U.size() <= Word::GetMaxSize())

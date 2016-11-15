@@ -439,8 +439,9 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
       if (Info.Kind != VRegInfo::NORMAL)
         return error(VReg.Class.SourceRange.Start,
               Twine("preferred register can only be set for normal vregs"));
-      if (parseNamedRegisterReference(PFS, Info.PreferredReg,
-                                      VReg.PreferredRegister.Value, Error))
+
+      if (parseRegisterReference(PFS, Info.PreferredReg,
+                                 VReg.PreferredRegister.Value, Error))
         return error(Error, VReg.PreferredRegister.SourceRange);
     }
   }

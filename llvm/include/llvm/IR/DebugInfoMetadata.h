@@ -128,7 +128,7 @@ public:
   iterator end() const { return N ? iterator(N->op_end()) : iterator(); }
 };
 
-/// \brief Tagged DWARF-like metadata node.
+/// Tagged DWARF-like metadata node.
 ///
 /// A metadata node with a DWARF tag (i.e., a constant named \c DW_TAG_*,
 /// defined in llvm/Support/Dwarf.h).  Called \a DINode because it's
@@ -168,7 +168,7 @@ protected:
 public:
   unsigned getTag() const { return SubclassData16; }
 
-  /// \brief Debug info flags.
+  /// Debug info flags.
   ///
   /// The three accessibility flags are mutually exclusive and rolled together
   /// in the first two bits.
@@ -185,7 +185,7 @@ public:
   static DIFlags getFlag(StringRef Flag);
   static StringRef getFlagString(DIFlags Flag);
 
-  /// \brief Split up a flags bitfield.
+  /// Split up a flags bitfield.
   ///
   /// Split \c Flags into \c SplitFlags, a vector of its components.  Returns
   /// any remaining (unrecognized) bits.
@@ -232,7 +232,7 @@ template <class T>
 struct simplify_type<TypedDINodeRef<T>>
     : simplify_type<const TypedDINodeRef<T>> {};
 
-/// \brief Generic tagged DWARF-like metadata node.
+/// Generic tagged DWARF-like metadata node.
 ///
 /// An un-specialized DWARF-like metadata node.  The first operand is a
 /// (possibly empty) null-separated \a MDString header that contains arbitrary
@@ -280,7 +280,7 @@ public:
                                     ArrayRef<Metadata *> DwarfOps),
                     (Tag, Header, DwarfOps))
 
-  /// \brief Return a (temporary) clone of this.
+  /// Return a (temporary) clone of this.
   TempGenericDINode clone() const { return cloneImpl(); }
 
   unsigned getTag() const { return SubclassData16; }
@@ -306,7 +306,7 @@ public:
   }
 };
 
-/// \brief Array subrange.
+/// Array subrange.
 ///
 /// TODO: Merge into node for DW_TAG_array_type, which should have a custom
 /// type.
@@ -345,7 +345,7 @@ public:
   }
 };
 
-/// \brief Enumeration value.
+/// Enumeration value.
 ///
 /// TODO: Add a pointer to the context (DW_TAG_enumeration_type) once that no
 /// longer creates a type cycle.
@@ -393,7 +393,7 @@ public:
   }
 };
 
-/// \brief Base class for scope-like contexts.
+/// Base class for scope-like contexts.
 ///
 /// Base class for lexical scopes and types (which are also declaration
 /// contexts).
@@ -415,7 +415,7 @@ public:
   StringRef getName() const;
   DIScopeRef getScope() const;
 
-  /// \brief Return the raw underlying file.
+  /// Return the raw underlying file.
   ///
   /// An \a DIFile is an \a DIScope, but it doesn't point at a separate file
   /// (it\em is the file).  If \c this is an \a DIFile, we need to return \c
@@ -446,7 +446,7 @@ public:
   }
 };
 
-/// \brief File.
+/// File.
 ///
 /// TODO: Merge with directory/file node (including users).
 /// TODO: Canonicalize paths on creation.
@@ -504,7 +504,7 @@ StringRef DIScope::getDirectory() const {
   return "";
 }
 
-/// \brief Base class for types.
+/// Base class for types.
 ///
 /// TODO: Remove the hardcoded name and context, since many types don't use
 /// them.
@@ -604,7 +604,7 @@ public:
   }
 };
 
-/// \brief Basic type, like 'int' or 'float'.
+/// Basic type, like 'int' or 'float'.
 ///
 /// TODO: Split out DW_TAG_unspecified_type.
 /// TODO: Drop unused accessors.
@@ -660,7 +660,7 @@ public:
   }
 };
 
-/// \brief Derived types.
+/// Derived types.
 ///
 /// This includes qualified types, pointers, references, friends, typedefs, and
 /// class members.
@@ -726,7 +726,7 @@ public:
   DITypeRef getBaseType() const { return DITypeRef(getRawBaseType()); }
   Metadata *getRawBaseType() const { return getOperand(3); }
 
-  /// \brief Get extra data associated with this derived type.
+  /// Get extra data associated with this derived type.
   ///
   /// Class type for pointer-to-members, objective-c property node for ivars,
   /// or global constant wrapper for static members.
@@ -736,7 +736,7 @@ public:
   Metadata *getExtraData() const { return getRawExtraData(); }
   Metadata *getRawExtraData() const { return getOperand(4); }
 
-  /// \brief Get casted version of extra data.
+  /// Get casted version of extra data.
   /// @{
   DITypeRef getClassType() const {
     assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
@@ -764,7 +764,7 @@ public:
   }
 };
 
-/// \brief Composite types.
+/// Composite types.
 ///
 /// TODO: Detach from DerivedTypeBase (split out MDEnumType?).
 /// TODO: Create a custom, unrelated node for DW_TAG_array_type.
@@ -899,7 +899,7 @@ public:
   Metadata *getRawTemplateParams() const { return getOperand(6); }
   MDString *getRawIdentifier() const { return getOperandAs<MDString>(7); }
 
-  /// \brief Replace operands.
+  /// Replace operands.
   ///
   /// If this \a isUniqued() and not \a isResolved(), on a uniquing collision
   /// this will be RAUW'ed and deleted.  Use a \a TrackingMDRef to keep track
@@ -926,7 +926,7 @@ public:
   }
 };
 
-/// \brief Type array for a subprogram.
+/// Type array for a subprogram.
 ///
 /// TODO: Fold the array of types in directly as operands.
 class DISubroutineType : public DIType {
@@ -981,7 +981,7 @@ public:
   }
 };
 
-/// \brief Compile unit.
+/// Compile unit.
 class DICompileUnit : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -1122,7 +1122,7 @@ public:
   Metadata *getRawImportedEntities() const { return getOperand(7); }
   Metadata *getRawMacros() const { return getOperand(8); }
 
-  /// \brief Replace arrays.
+  /// Replace arrays.
   ///
   /// If this \a isUniqued() and not \a isResolved(), it will be RAUW'ed and
   /// deleted on a uniquing collision.  In practice, uniquing collisions on \a
@@ -1148,7 +1148,7 @@ public:
   }
 };
 
-/// \brief A scope for locals.
+/// A scope for locals.
 ///
 /// A legal scope for lexical blocks, local variables, and debug info
 /// locations.  Subclasses are \a DISubprogram, \a DILexicalBlock, and \a
@@ -1161,7 +1161,7 @@ protected:
   ~DILocalScope() = default;
 
 public:
-  /// \brief Get the subprogram for this scope.
+  /// Get the subprogram for this scope.
   ///
   /// Return this if it's an \a DISubprogram; otherwise, look up the scope
   /// chain.
@@ -1180,7 +1180,7 @@ public:
   }
 };
 
-/// \brief Debug location.
+/// Debug location.
 ///
 /// A debug location in source code, used for debug info and otherwise.
 class DILocation : public MDNode {
@@ -1223,7 +1223,7 @@ public:
                      DILocation *InlinedAt = nullptr),
                     (Line, Column, Scope, InlinedAt))
 
-  /// \brief Return a (temporary) clone of this.
+  /// Return a (temporary) clone of this.
   TempDILocation clone() const { return cloneImpl(); }
 
   unsigned getLine() const { return SubclassData32; }
@@ -1237,7 +1237,7 @@ public:
   StringRef getFilename() const { return getScope()->getFilename(); }
   StringRef getDirectory() const { return getScope()->getDirectory(); }
 
-  /// \brief Get the scope where this is inlined.
+  /// Get the scope where this is inlined.
   ///
   /// Walk through \a getInlinedAt() and return \a getScope() from the deepest
   /// location.
@@ -1247,7 +1247,7 @@ public:
     return getScope();
   }
 
-  /// \brief Check whether this can be discriminated from another location.
+  /// Check whether this can be discriminated from another location.
   ///
   /// Check \c this can be discriminated from \c RHS in a linetable entry.
   /// Scope and inlined-at chains are not recorded in the linetable, so they
@@ -1264,7 +1264,7 @@ public:
     return getFilename() != RHS.getFilename() || getLine() != RHS.getLine();
   }
 
-  /// \brief Get the DWARF discriminator.
+  /// Get the DWARF discriminator.
   ///
   /// DWARF discriminators distinguish identical file locations between
   /// instructions that are on different basic blocks.
@@ -1285,7 +1285,7 @@ public:
   }
 };
 
-/// \brief Subprogram description.
+/// Subprogram description.
 ///
 /// TODO: Remove DisplayName.  It's always equal to Name.
 /// TODO: Split up flags.
@@ -1421,19 +1421,19 @@ public:
   bool isExplicit() const { return getFlags() & FlagExplicit; }
   bool isPrototyped() const { return getFlags() & FlagPrototyped; }
 
-  /// \brief Check if this is reference-qualified.
+  /// Check if this is reference-qualified.
   ///
   /// Return true if this subprogram is a C++11 reference-qualified non-static
   /// member function (void foo() &).
   bool isLValueReference() const { return getFlags() & FlagLValueReference; }
 
-  /// \brief Check if this is rvalue-reference-qualified.
+  /// Check if this is rvalue-reference-qualified.
   ///
   /// Return true if this subprogram is a C++11 rvalue-reference-qualified
   /// non-static member function (void foo() &&).
   bool isRValueReference() const { return getFlags() & FlagRValueReference; }
 
-  /// \brief Check if this is marked as noreturn.
+  /// Check if this is marked as noreturn.
   ///
   /// Return true if this subprogram is C++11 noreturn or C11 _Noreturn
   bool isNoReturn() const { return getFlags() & FlagNoReturn; }
@@ -1478,7 +1478,7 @@ public:
   Metadata *getRawDeclaration() const { return getOperand(9); }
   Metadata *getRawVariables() const { return getOperand(10); }
 
-  /// \brief Check if this subprogram describes the given function.
+  /// Check if this subprogram describes the given function.
   ///
   /// FIXME: Should this be looking through bitcasts?
   bool describes(const Function *F) const;
@@ -1686,7 +1686,7 @@ public:
   }
 };
 
-/// \brief A (clang) module that has been imported by the compile unit.
+/// A (clang) module that has been imported by the compile unit.
 ///
 class DIModule : public DIScope {
   friend class LLVMContextImpl;
@@ -1746,7 +1746,7 @@ public:
   }
 };
 
-/// \brief Base class for template parameters.
+/// Base class for template parameters.
 class DITemplateParameter : public DINode {
 protected:
   DITemplateParameter(LLVMContext &Context, unsigned ID, StorageType Storage,
@@ -1848,7 +1848,7 @@ public:
   }
 };
 
-/// \brief Base class for variables.
+/// Base class for variables.
 class DIVariable : public DINode {
   unsigned Line;
   uint32_t AlignInBits;
@@ -1891,7 +1891,7 @@ public:
   }
 };
 
-/// \brief DWARF expression.
+/// DWARF expression.
 ///
 /// This is (almost) a DWARF expression that modifies the location of a
 /// variable, or the location of a single piece of a variable, or (when using
@@ -2046,7 +2046,7 @@ public:
   }
 };
 
-/// \brief Global variables.
+/// Global variables.
 ///
 /// TODO: Remove DisplayName.  It's always equal to Name.
 class DIGlobalVariable : public DIVariable {
@@ -2135,7 +2135,7 @@ public:
   }
 };
 
-/// \brief Local variable.
+/// Local variable.
 ///
 /// TODO: Split up flags.
 class DILocalVariable : public DIVariable {
@@ -2188,7 +2188,7 @@ public:
 
   TempDILocalVariable clone() const { return cloneImpl(); }
 
-  /// \brief Get the local scope for this variable.
+  /// Get the local scope for this variable.
   ///
   /// Variables must be defined in a local scope.
   DILocalScope *getScope() const {
@@ -2202,7 +2202,7 @@ public:
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isObjectPointer() const { return getFlags() & FlagObjectPointer; }
 
-  /// \brief Check that a location is valid for this variable.
+  /// Check that a location is valid for this variable.
   ///
   /// Check that \c DL exists, is in the same subprogram, and has the same
   /// inlined-at location as \c this.  (Otherwise, it's not a valid attachment
@@ -2297,7 +2297,7 @@ public:
   }
 };
 
-/// \brief An imported module (C++ using directive or similar).
+/// An imported module (C++ using directive or similar).
 class DIImportedEntity : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -2354,7 +2354,7 @@ public:
   }
 };
 
-/// \brief Macro Info DWARF-like metadata node.
+/// Macro Info DWARF-like metadata node.
 ///
 /// A metadata node with a DWARF macro info (i.e., a constant named
 /// \c DW_MACINFO_*, defined in llvm/Support/Dwarf.h).  Called \a DIMacroNode

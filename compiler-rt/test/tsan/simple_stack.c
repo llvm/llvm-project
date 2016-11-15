@@ -81,7 +81,5 @@ int main() {
 // CHECK-FUNC-ENTRY-EXIT-OFF-NEXT:     #0 foo2{{.*}} {{.*}}simple_stack.c:15{{(:20)?}} ({{.*}})
 // CHECK-FUNC-ENTRY-EXIT-OFF:        Thread T1 (tid={{.*}}, running) created by main thread at:
 // CHECK-FUNC-ENTRY-EXIT-OFF-NEXT:     #0 pthread_create {{.*}} ({{.*}})
-// CHECK-FUNC-ENTRY-EXIT-OFF-NEXT:     #1 main{{.*}} {{.*}}simple_stack.c:42{{(:3)?}} ({{.*}})
 // CHECK-FUNC-ENTRY-EXIT-OFF:        Thread T2 ({{.*}}) created by main thread at:
 // CHECK-FUNC-ENTRY-EXIT-OFF-NEXT:     #0 pthread_create {{.*}} ({{.*}})
-// CHECK-FUNC-ENTRY-EXIT-OFF-NEXT:     #1 main{{.*}} {{.*}}simple_stack.c:43{{(:3)?}} ({{.*}})

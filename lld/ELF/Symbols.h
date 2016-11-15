@@ -194,11 +194,6 @@ public:
     this->File = File;
   }
 
-  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, uintX_t Value,
-                 uintX_t Size, InputSectionBase<ELFT> *Section)
-      : DefinedRegular(Name, StOther, Type, Value, Size, Section,
-                       Section ? Section->getFile() : nullptr) {}
-
   DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F)
       : DefinedRegular(Name, StOther, Type, 0, 0, NullInputSection, F) {}
 

@@ -88,13 +88,10 @@ class HelpCommandTestCase(TestBase):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",
                     substrs=['Show the LLDB debugger version.'])
-        version_str = self.version_number_string()
         import re
+        version_str = self.version_number_string()
         match = re.match('[0-9]+', version_str)
-        if sys.platform.startswith("darwin"):
-            search_regexp = ['lldb-' + (version_str if match else '[0-9]+')]
-        else:
-            search_regexp = ['lldb version (\d|\.)+.*\n']
+        search_regexp = ['lldb( version|-' + (version_str if match else '[0-9]+') + ').*\n']
 
         self.expect("version",
                     patterns=search_regexp)

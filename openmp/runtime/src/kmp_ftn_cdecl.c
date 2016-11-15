@@ -14,6 +14,7 @@
 
 
 #include "kmp.h"
+#include "kmp_affinity.h"
 
 #if KMP_OS_WINDOWS
 #   if defined  KMP_WIN_CDECL ||  !defined KMP_DYNAMIC_LIB

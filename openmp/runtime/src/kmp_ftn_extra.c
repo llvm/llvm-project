@@ -14,6 +14,7 @@
 
 
 #include "kmp.h"
+#include "kmp_affinity.h"
 
 #if KMP_OS_WINDOWS
 #   define KMP_FTN_ENTRIES KMP_FTN_PLAIN

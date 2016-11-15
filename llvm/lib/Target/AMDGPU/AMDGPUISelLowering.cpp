@@ -558,13 +558,12 @@ bool AMDGPUTargetLowering::isCheapToSpeculateCtlz() const {
 
 bool AMDGPUTargetLowering::isFAbsFree(EVT VT) const {
   assert(VT.isFloatingPoint());
-  return VT == MVT::f32 || VT == MVT::f64;
+  return VT == MVT::f32 || VT == MVT::f64 || (Subtarget->has16BitInsts() &&
+                                              VT == MVT::f16);
 }
 
 bool AMDGPUTargetLowering::isFNegFree(EVT VT) const {
-  assert(VT.isFloatingPoint());
-  return VT == MVT::f32 || VT == MVT::f64 || (Subtarget->has16BitInsts() &&
-                                              VT == MVT::f16);
+  return isFAbsFree(VT);
 }
 
 bool AMDGPUTargetLowering:: storeOfVectorConstantIsCheap(EVT MemVT,

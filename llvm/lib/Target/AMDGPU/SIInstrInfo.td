@@ -1045,18 +1045,18 @@ multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
 def getVOPe64 : InstrMapping {
   let FilterClass = "VOP";
   let RowFields = ["OpName"];
-  let ColFields = ["Size"];
-  let KeyCol = ["4"];
-  let ValueCols = [["8"]];
+  let ColFields = ["Size", "VOP3"];
+  let KeyCol = ["4", "0"];
+  let ValueCols = [["8", "1"]];
 }
 
 // Maps an opcode in e64 form to its e32 equivalent
 def getVOPe32 : InstrMapping {
   let FilterClass = "VOP";
   let RowFields = ["OpName"];
-  let ColFields = ["Size"];
-  let KeyCol = ["8"];
-  let ValueCols = [["4"]];
+  let ColFields = ["Size", "VOP3"];
+  let KeyCol = ["8", "1"];
+  let ValueCols = [["4", "0"]];
 }
 
 def getMaskedMIMGOp : InstrMapping {

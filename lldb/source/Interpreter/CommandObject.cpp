@@ -862,7 +862,7 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
                                         1);
   } else
     interpreter.OutputFormattedHelpText(output_strm, "", "", GetHelp(), 1);
-  output_strm.Printf("\nSyntax: %s\n", GetSyntax());
+  output_strm << "\nSyntax: " << GetSyntax() << "\n";
   Options *options = GetOptions();
   if (options != nullptr) {
     options->GenerateOptionUsage(

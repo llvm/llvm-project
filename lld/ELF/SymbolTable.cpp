@@ -127,8 +127,8 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
 template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addAbsolute(StringRef Name,
                                                      uint8_t Visibility) {
-  Symbol *Sym =
-      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, STB_GLOBAL, nullptr);
+  Symbol *Sym = addRegular(Name, Visibility, STT_NOTYPE, 0, 0, STB_GLOBAL,
+                           nullptr, nullptr);
   return cast<DefinedRegular<ELFT>>(Sym->body());
 }
 
@@ -397,25 +397,26 @@ static void reportDuplicate(SymbolBody *Existing,
 
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, const Elf_Sym &Sym,
-                                      InputSectionBase<ELFT> *Section) {
+                                      InputSectionBase<ELFT> *Section,
+                                      InputFile *File) {
   return addRegular(Name, Sym.st_other, Sym.getType(), Sym.st_value,
-                    Sym.st_size, Sym.getBinding(), Section);
+                    Sym.st_size, Sym.getBinding(), Section, File);
 }
 
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
                                       uint8_t Type, uintX_t Value, uintX_t Size,
                                       uint8_t Binding,
-                                      InputSectionBase<ELFT> *Section) {
+                                      InputSectionBase<ELFT> *Section,
+                                      InputFile *File) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, Type, StOther & 3,
-                                    /*CanOmitFromDynSym*/ false,
-                                    Section ? Section->getFile() : nullptr);
+                                    /*CanOmitFromDynSym*/ false, File);
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
   if (Cmp > 0)
     replaceBody<DefinedRegular<ELFT>>(S, Name, StOther, Type, Value, Size,
-                                      Section);
+                                      Section, File);
   else if (Cmp == 0)
     reportDuplicate(S->body(), Section, Value);
   return S;
