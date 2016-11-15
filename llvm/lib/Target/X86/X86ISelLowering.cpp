@@ -30913,7 +30913,7 @@ static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
-                              const X86Subtarget &Subtarget) {
+                                 const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   if (VT.is512BitVector() && !Subtarget.hasDQI()) {
     // VXORPS, VORPS, VANDPS, VANDNPS are supported only under DQ extention.
@@ -31752,9 +31752,12 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   EVT InVT = Op0.getValueType();
   EVT InSVT = InVT.getScalarType();
 
+  // SINT_TO_FP(vXi1) -> SINT_TO_FP(SEXT(vXi1 to vXi32))
   // SINT_TO_FP(vXi8) -> SINT_TO_FP(SEXT(vXi8 to vXi32))
   // SINT_TO_FP(vXi16) -> SINT_TO_FP(SEXT(vXi16 to vXi32))
-  if (InVT.isVector() && (InSVT == MVT::i8 || InSVT == MVT::i16)) {
+  if (InVT.isVector() &&
+      (InSVT == MVT::i8 || InSVT == MVT::i16 ||
+       (InSVT == MVT::i1 && !DAG.getTargetLoweringInfo().isTypeLegal(InVT)))) {
     SDLoc dl(N);
     EVT DstVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                  InVT.getVectorNumElements());

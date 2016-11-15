@@ -2237,6 +2237,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
   bool HasLastprivates = false;
   auto &&CodeGen = [&S, Stmt, CS, &HasLastprivates](CodeGenFunction &CGF,
                                                     PrePostActionTy &) {
+    OMPCancelStackRAII CancelRegion(CGF);
     auto &C = CGF.CGM.getContext();
     auto KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
     // Emit helper vars inits.
@@ -2332,11 +2333,11 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
                          [](CodeGenFunction &) {});
     // Tell the runtime we are done.
     SourceLocation ELoc = S.getLocEnd();
-    auto &&CodeGen = [ELoc](CodeGenFunction &CGF) {
+    auto &&FinalCodeGen = [ELoc](CodeGenFunction &CGF) {
       CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, ELoc);
     };
-    CodeGen(CGF);
-    CGF.OMPCancelStack.back().CodeGen = CodeGen;
+    FinalCodeGen(CGF);
+    CGF.OMPCancelStack.back().CodeGen = FinalCodeGen;
     CGF.EmitOMPReductionClauseFinal(S);
     // Emit post-update of the reduction variables if IsLastIter != 0.
     emitPostUpdateForReductionClause(
@@ -2374,7 +2375,6 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
 void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
   {
     OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
-    OMPCancelStackRAII CancelRegion(*this);
     EmitSections(S);
   }
   // Emit an implicit barrier at the end.
@@ -2483,7 +2483,6 @@ void CodeGenFunction::EmitOMPParallelSectionsDirective(
   // Emit directive as a combined directive that consists of two implicit
   // directives: 'parallel' with 'sections' directive.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-    OMPCancelStackRAII CancelRegion(CGF);
     CGF.EmitSections(S);
   };
   emitCommonOMPParallelDirective(*this, S, OMPD_sections, CodeGen);

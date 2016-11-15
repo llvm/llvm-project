@@ -1412,9 +1412,9 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
   }
 
   // Does this user itself evaluate to a recurrence after widening?
-  WidenedRecTy WideAddRec = getWideRecurrence(DU);
+  WidenedRecTy WideAddRec = getExtendedOperandRecurrence(DU);
   if (!WideAddRec.first)
-    WideAddRec = getExtendedOperandRecurrence(DU);
+    WideAddRec = getWideRecurrence(DU);
 
   assert((WideAddRec.first == nullptr) == (WideAddRec.second == Unknown));
   if (!WideAddRec.first) {

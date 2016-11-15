@@ -164,8 +164,9 @@ class Replacements {
   /// it returns an llvm::Error, i.e. there is a conflict between R and the
   /// existing replacements (i.e. they are order-dependent) or R's file path is
   /// different from the filepath of existing replacements. Callers must
-  /// explicitly check the Error returned. This prevents users from adding
-  /// order-dependent replacements. To control the order in which
+  /// explicitly check the Error returned, and the returned error can be
+  /// converted to a string message with `llvm::toString()`. This prevents users
+  /// from adding order-dependent replacements. To control the order in which
   /// order-dependent replacements are applied, use merge({R}) with R referring
   /// to the changed code after applying all existing replacements.
   /// Two replacements A and B are considered order-independent if applying them

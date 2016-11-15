@@ -114,9 +114,7 @@ public:
 
   void tryAddingPcLoadReferenceComment(raw_ostream &cStream,
                                        int64_t Value,
-                                       uint64_t Address) override {
-    assert(false && "Implement if needed");
-  }
+                                       uint64_t Address) override;
 };
 
 } // namespace llvm

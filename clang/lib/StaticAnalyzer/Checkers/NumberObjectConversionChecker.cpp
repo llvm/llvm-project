@@ -265,9 +265,9 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
       expr(ignoringParenImpCasts(expr(hasType(SuspiciousScalarTypeM))));
 
   auto ConversionThroughAssignmentM =
-      binaryOperator(hasOperatorName("="),
-                     hasLHS(SuspiciousScalarExprM),
-                     hasRHS(SuspiciousNumberObjectExprM));
+      binaryOperator(allOf(hasOperatorName("="),
+                           hasLHS(SuspiciousScalarExprM),
+                           hasRHS(SuspiciousNumberObjectExprM)));
 
   auto ConversionThroughBranchingM =
       ifStmt(hasCondition(SuspiciousNumberObjectExprM))
@@ -282,40 +282,40 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
   // in case it was intended to compare a pointer to 0 with a relatively-ok
   // construct "x == 0" or "x != 0".
   auto ConversionThroughEquivalenceM =
-      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
-                     hasEitherOperand(SuspiciousNumberObjectExprM),
-                     hasEitherOperand(SuspiciousScalarExprM
-                                      .bind("check_if_null")))
+      binaryOperator(allOf(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+                           hasEitherOperand(SuspiciousNumberObjectExprM),
+                           hasEitherOperand(SuspiciousScalarExprM
+                                            .bind("check_if_null"))))
       .bind("comparison");
 
   auto ConversionThroughComparisonM =
-      binaryOperator(anyOf(hasOperatorName(">="), hasOperatorName(">"),
-                           hasOperatorName("<="), hasOperatorName("<")),
-                     hasEitherOperand(SuspiciousNumberObjectExprM),
-                     hasEitherOperand(SuspiciousScalarExprM))
+      binaryOperator(allOf(anyOf(hasOperatorName(">="), hasOperatorName(">"),
+                                 hasOperatorName("<="), hasOperatorName("<")),
+                           hasEitherOperand(SuspiciousNumberObjectExprM),
+                           hasEitherOperand(SuspiciousScalarExprM)))
       .bind("comparison");
 
   auto ConversionThroughConditionalOperatorM =
-      conditionalOperator(
+      conditionalOperator(allOf(
           hasCondition(SuspiciousNumberObjectExprM),
           unless(hasTrueExpression(
               hasDescendant(AnotherSuspiciousNumberObjectExprM))),
           unless(hasFalseExpression(
-              hasDescendant(AnotherSuspiciousNumberObjectExprM))))
+              hasDescendant(AnotherSuspiciousNumberObjectExprM)))))
       .bind("pedantic");
 
   auto ConversionThroughExclamationMarkM =
-      unaryOperator(hasOperatorName("!"),
-                    has(expr(SuspiciousNumberObjectExprM)))
+      unaryOperator(allOf(hasOperatorName("!"),
+                          has(expr(SuspiciousNumberObjectExprM))))
       .bind("pedantic");
 
   auto ConversionThroughExplicitBooleanCastM =
-      explicitCastExpr(hasType(SuspiciousScalarBooleanTypeM),
-                       has(expr(SuspiciousNumberObjectExprM)));
+      explicitCastExpr(allOf(hasType(SuspiciousScalarBooleanTypeM),
+                             has(expr(SuspiciousNumberObjectExprM))));
 
   auto ConversionThroughExplicitNumberCastM =
-      explicitCastExpr(hasType(SuspiciousScalarNumberTypeM),
-                       has(expr(SuspiciousNumberObjectExprM)));
+      explicitCastExpr(allOf(hasType(SuspiciousScalarNumberTypeM),
+                             has(expr(SuspiciousNumberObjectExprM))));
 
   auto ConversionThroughInitializerM =
       declStmt(hasSingleDecl(

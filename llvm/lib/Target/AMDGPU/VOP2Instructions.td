@@ -433,8 +433,12 @@ defm : Bits_OpsRev_i16_Pats<srl, V_LSHRREV_B16_e32>;
 defm : Bits_OpsRev_i16_Pats<sra, V_ASHRREV_B16_e32>;
 
 def : ZExt_i16_i1_Pat<zext>;
-def : ZExt_i16_i1_Pat<sext>;
 def : ZExt_i16_i1_Pat<anyext>;
+
+def : Pat <
+  (i16 (sext i1:$src)),
+  (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src)
+>;
 
 } // End Predicates = [isVI]
 

@@ -2333,8 +2333,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                 [(set v2f64:$XT, (load xoaddr:$src))]>;
 
   // Load Vector (Left-justified) with Length
-  def LXVL    : X_XT6_RA5_RB5<31, 269, "lxvl"   , vsrc, []>;
-  def LXVLL   : X_XT6_RA5_RB5<31, 301, "lxvll"  , vsrc, []>;
+  def LXVL : XX1Form<31, 269, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
+                   "lxvl $XT, $src, $rB", IIC_LdStLoad,
+                   [(set v4i32:$XT, (int_ppc_vsx_lxvl addr:$src, i64:$rB))]>,
+                    UseVSXReg;
+  def LXVLL : XX1Form<31,301, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
+                   "lxvll $XT, $src, $rB", IIC_LdStLoad,
+                   [(set v4i32:$XT, (int_ppc_vsx_lxvll addr:$src, i64:$rB))]>,
+                    UseVSXReg;
 
   // Load Vector Word & Splat Indexed
   def LXVWSX  : X_XT6_RA5_RB5<31, 364, "lxvwsx" , vsrc, []>;
@@ -2378,8 +2384,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                  [(store v2f64:$XT, xoaddr:$dst)]>;
 
   // Store Vector (Left-justified) with Length
-  def STXVL    : X_XS6_RA5_RB5<31,  397, "stxvl"   , vsrc, []>;
-  def STXVLL   : X_XS6_RA5_RB5<31,  429, "stxvll"  , vsrc, []>;
+  def STXVL : XX1Form<31, 397, (outs), (ins vsrc:$XT, memr:$dst, g8rc:$rB),
+                   "stxvl $XT, $dst, $rB", IIC_LdStLoad,
+                   [(int_ppc_vsx_stxvl v4i32:$XT, addr:$dst, i64:$rB)]>,
+                    UseVSXReg;
+  def STXVLL : XX1Form<31, 429, (outs), (ins vsrc:$XT, memr:$dst, g8rc:$rB),
+                   "stxvll $XT, $dst, $rB", IIC_LdStLoad,
+                   [(int_ppc_vsx_stxvll v4i32:$XT, addr:$dst, i64:$rB)]>,
+                    UseVSXReg;
   } // mayStore
 
   // Patterns for which instructions from ISA 3.0 are a better match

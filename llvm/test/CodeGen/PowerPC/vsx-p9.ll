@@ -342,4 +342,50 @@ entry:
 ; Function Attrs: nounwind readnone
 declare <4 x float>@llvm.ppc.vsx.xvcvhpsp(<8 x i16>)
 
+; Function Attrs: nounwind readnone
+define <4 x i32> @testLXVL(i8* %a, i64 %b) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.lxvl(i8* %a, i64 %b)
+  ret <4 x i32> %0
+; CHECK-LABEL: testLXVL
+; CHECK: lxvl 34, 3, 4
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.vsx.lxvl(i8*, i64)
+
+define void @testSTXVL(<4 x i32> %a, i8* %b, i64 %c) {
+entry:
+  tail call void @llvm.ppc.vsx.stxvl(<4 x i32> %a, i8* %b, i64 %c)
+  ret void
+; CHECK-LABEL: testSTXVL
+; CHECK: stxvl 34, 5, 6
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare void @llvm.ppc.vsx.stxvl(<4 x i32>, i8*, i64)
+
+; Function Attrs: nounwind readnone
+define <4 x i32> @testLXVLL(i8* %a, i64 %b) {
+entry:
+  %0 = tail call <4 x i32> @llvm.ppc.vsx.lxvll(i8* %a, i64 %b)
+  ret <4 x i32> %0
+; CHECK-LABEL: testLXVLL
+; CHECK: lxvll 34, 3, 4
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare <4 x i32> @llvm.ppc.vsx.lxvll(i8*, i64)
+
+define void @testSTXVLL(<4 x i32> %a, i8* %b, i64 %c) {
+entry:
+  tail call void @llvm.ppc.vsx.stxvll(<4 x i32> %a, i8* %b, i64 %c)
+  ret void
+; CHECK-LABEL: testSTXVLL
+; CHECK: stxvll 34, 5, 6
+; CHECK: blr
+}
+; Function Attrs: nounwind readnone
+declare void @llvm.ppc.vsx.stxvll(<4 x i32>, i8*, i64)
+
 declare void @sink(...)

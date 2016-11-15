@@ -106,8 +106,7 @@ public:
   }
 
   bool isMips64EL() const {
-    return getHeader()->e_machine == ELF::EM_MIPS &&
-           getHeader()->getFileClass() == ELF::ELFCLASS64 &&
+    return isMipsELF64() &&
            getHeader()->getDataEncoding() == ELF::ELFDATA2LSB;
   }
 

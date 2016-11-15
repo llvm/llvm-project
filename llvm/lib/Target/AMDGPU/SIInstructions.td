@@ -147,6 +147,17 @@ def S_ANDN2_B64_term : PseudoInstSI<(outs SReg_64:$dst),
   let isTerminator = 1;
 }
 
+def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
+  [(int_amdgcn_wave_barrier)]> {
+  let SchedRW = [];
+  let hasNoSchedulingInfo = 1;
+  let hasSideEffects = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let isBarrier = 1;
+  let isConvergent = 1;
+}
+
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 

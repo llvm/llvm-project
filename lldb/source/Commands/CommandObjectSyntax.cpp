@@ -76,13 +76,13 @@ bool CommandObjectSyntax::DoExecute(Args &command,
     if (all_okay && (cmd_obj != nullptr)) {
       Stream &output_strm = result.GetOutputStream();
       if (cmd_obj->GetOptions() != nullptr) {
-        output_strm.Printf("\nSyntax: %s\n", cmd_obj->GetSyntax());
+        output_strm.Printf("\nSyntax: %s\n", cmd_obj->GetSyntax().str().c_str());
         output_strm.Printf(
             "(Try 'help %s' for more information on command options syntax.)\n",
             cmd_obj->GetCommandName().str().c_str());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
-        output_strm.Printf("\nSyntax: %s\n", cmd_obj->GetSyntax());
+        output_strm.Printf("\nSyntax: %s\n", cmd_obj->GetSyntax().str().c_str());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     } else {

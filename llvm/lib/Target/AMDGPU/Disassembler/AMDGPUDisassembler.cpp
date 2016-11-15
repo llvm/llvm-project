@@ -230,12 +230,14 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
   // ToDo: unclear if s[88:104] is available on VI. Can we use VCC as SGPR in
   // this bundle?
   default:
-    assert(false);
-    break;
+    llvm_unreachable("unhandled register class");
   }
-  if (Val % (1 << shift))
+
+  if (Val % (1 << shift)) {
     *CommentStream << "Warning: " << getRegClassName(SRegClassID)
                    << ": scalar reg isn't aligned " << Val;
+  }
+
   return createRegOperand(SRegClassID, Val >> shift);
 }
 
@@ -473,6 +475,12 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
     return true;
   }
   return false;
+}
+
+void AMDGPUSymbolizer::tryAddingPcLoadReferenceComment(raw_ostream &cStream,
+                                                       int64_t Value,
+                                                       uint64_t Address) {
+  llvm_unreachable("unimplemented");
 }
 
 //===----------------------------------------------------------------------===//

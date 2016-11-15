@@ -56,6 +56,11 @@ auto autoBlob = new Blob();
 auto autoFunction(){return int();}
 decltype(auto) autoInt = 5;
 
+template <typename T>
+using TypeAlias = outer::Qux<T>;
+
+struct TypeAliasUser { TypeAlias<int> foo; };
+
 // RUN: c-index-test -test-print-type %s -std=c++14 | FileCheck %s
 // CHECK: Namespace=outer:1:11 (Definition) [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: ClassTemplate=Foo:4:8 (Definition) [type=] [typekind=Invalid] [isPOD=0]
@@ -99,7 +104,7 @@ decltype(auto) autoInt = 5;
 // CHECK: TemplateRef=Baz:9:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: IntegerLiteral= [type=int] [typekind=Int] [isPOD=1]
 // CHECK: TemplateRef=Foo:4:8 [type=] [typekind=Invalid] [isPOD=0]
-// CHECK: FieldDecl=qux:28:29 (Definition) [type=Qux<int, char *, Foo<int> >] [typekind=Unexposed] [canonicaltype=outer::Qux<int, char *, outer::Foo<int> >] [canonicaltypekind=Record] [templateargs/1=] [isPOD=1]
+// CHECK: FieldDecl=qux:28:29 (Definition) [type=Qux<int, char *, Foo<int> >] [typekind=Unexposed] [canonicaltype=outer::Qux<int, char *, outer::Foo<int> >] [canonicaltypekind=Record] [templateargs/3= [type=int] [typekind=Int] [type=char *] [typekind=Pointer] [type=Foo<int>] [typekind=Unexposed]] [isPOD=1]
 // CHECK: TemplateRef=Qux:12:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: TemplateRef=Foo:4:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: FunctionTemplate=tbar:35:3 [type=T (int)] [typekind=FunctionProto] [canonicaltype=type-parameter-0-0 (int)] [canonicaltypekind=FunctionProto] [resulttype=T] [resulttypekind=Unexposed] [isPOD=0]
@@ -148,3 +153,7 @@ decltype(auto) autoInt = 5;
 // CHECK: UnexposedExpr= [type=int] [typekind=Int] [isPOD=1]
 // CHECK: VarDecl=autoInt:57:16 (Definition) [type=int] [typekind=Auto] [canonicaltype=int] [canonicaltypekind=Int] [isPOD=1]
 // CHECK: IntegerLiteral= [type=int] [typekind=Int] [isPOD=1]
+// CHECK: TypeAliasTemplateDecl=TypeAlias:60:1 (Definition) [type=] [typekind=Invalid] [isPOD=0]
+// CHECK: TemplateTypeParameter=T:59:20 (Definition) [type=T] [typekind=Unexposed] [canonicaltype=type-parameter-0-0] [canonicaltypekind=Unexposed] [isPOD=0]
+// CHECK: FieldDecl=foo:62:39 (Definition) [type=TypeAlias<int>] [typekind=Unexposed] [canonicaltype=outer::Qux<int>] [canonicaltypekind=Record] [templateargs/1= [type=int] [typekind=Int]] [isPOD=1]
+// CHECK: TemplateRef=TypeAlias:60:1 [type=] [typekind=Invalid] [isPOD=0]

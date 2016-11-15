@@ -196,6 +196,12 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (MI->getOpcode() == AMDGPU::WAVE_BARRIER) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" wave barrier");
+      return;
+    }
+
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);

@@ -303,9 +303,18 @@ BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")
 BUILTIN(__builtin_vsx_lxvw4x, "V4iivC*", "")
+BUILTIN(__builtin_vsx_lxvd2x_be, "V2dSLLivC*", "")
+BUILTIN(__builtin_vsx_lxvw4x_be, "V4iSLLivC*", "")
 
 BUILTIN(__builtin_vsx_stxvd2x, "vV2div*", "")
 BUILTIN(__builtin_vsx_stxvw4x, "vV4iiv*", "")
+BUILTIN(__builtin_vsx_stxvd2x_be, "vV2dSLLivC*", "")
+BUILTIN(__builtin_vsx_stxvw4x_be, "vV4iSLLivC*", "")
+
+BUILTIN(__builtin_vsx_lxvl, "V4ivC*ULLi", "")
+BUILTIN(__builtin_vsx_lxvll, "V4ivC*ULLi", "")
+BUILTIN(__builtin_vsx_stxvl, "vV4iv*ULLi", "")
+BUILTIN(__builtin_vsx_stxvll, "vV4iv*ULLi", "")
 
 BUILTIN(__builtin_vsx_xvmaxdp, "V2dV2dV2d", "")
 BUILTIN(__builtin_vsx_xvmaxsp, "V4fV4fV4f", "")

@@ -2362,6 +2362,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case llvm::Intrinsic::x86_sse_cvttps2pi:
       handleVectorConvertIntrinsic(I, 2);
       break;
+
+    case llvm::Intrinsic::x86_avx512_psll_w_512:
+    case llvm::Intrinsic::x86_avx512_psll_d_512:
+    case llvm::Intrinsic::x86_avx512_psll_q_512:
+    case llvm::Intrinsic::x86_avx512_pslli_w_512:
+    case llvm::Intrinsic::x86_avx512_pslli_d_512:
+    case llvm::Intrinsic::x86_avx512_pslli_q_512:
+    case llvm::Intrinsic::x86_avx512_psrl_w_512:
+    case llvm::Intrinsic::x86_avx512_psrl_d_512:
+    case llvm::Intrinsic::x86_avx512_psrl_q_512:
+    case llvm::Intrinsic::x86_avx512_psra_w_512:
+    case llvm::Intrinsic::x86_avx512_psra_d_512:
+    case llvm::Intrinsic::x86_avx512_psra_q_512:
+    case llvm::Intrinsic::x86_avx512_psrli_w_512:
+    case llvm::Intrinsic::x86_avx512_psrli_d_512:
+    case llvm::Intrinsic::x86_avx512_psrli_q_512:
+    case llvm::Intrinsic::x86_avx512_psrai_w_512:
+    case llvm::Intrinsic::x86_avx512_psrai_d_512:
+    case llvm::Intrinsic::x86_avx512_psrai_q_512:
+    case llvm::Intrinsic::x86_avx512_psra_q_256:
+    case llvm::Intrinsic::x86_avx512_psra_q_128:
+    case llvm::Intrinsic::x86_avx512_psrai_q_256:
+    case llvm::Intrinsic::x86_avx512_psrai_q_128:
     case llvm::Intrinsic::x86_avx2_psll_w:
     case llvm::Intrinsic::x86_avx2_psll_d:
     case llvm::Intrinsic::x86_avx2_psll_q:
@@ -2414,14 +2437,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case llvm::Intrinsic::x86_avx2_psllv_d:
     case llvm::Intrinsic::x86_avx2_psllv_d_256:
+    case llvm::Intrinsic::x86_avx512_psllv_d_512:
     case llvm::Intrinsic::x86_avx2_psllv_q:
     case llvm::Intrinsic::x86_avx2_psllv_q_256:
+    case llvm::Intrinsic::x86_avx512_psllv_q_512:
     case llvm::Intrinsic::x86_avx2_psrlv_d:
     case llvm::Intrinsic::x86_avx2_psrlv_d_256:
+    case llvm::Intrinsic::x86_avx512_psrlv_d_512:
     case llvm::Intrinsic::x86_avx2_psrlv_q:
     case llvm::Intrinsic::x86_avx2_psrlv_q_256:
+    case llvm::Intrinsic::x86_avx512_psrlv_q_512:
     case llvm::Intrinsic::x86_avx2_psrav_d:
     case llvm::Intrinsic::x86_avx2_psrav_d_256:
+    case llvm::Intrinsic::x86_avx512_psrav_d_512:
+    case llvm::Intrinsic::x86_avx512_psrav_q_128:
+    case llvm::Intrinsic::x86_avx512_psrav_q_256:
+    case llvm::Intrinsic::x86_avx512_psrav_q_512:
       handleVectorShiftIntrinsic(I, /* Variable */ true);
       break;
 
