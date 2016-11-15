@@ -806,7 +806,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
   if (!Found.empty()) {
     if (TypeDecl *TD = Found.getAsSingle<TypeDecl>())
       Diag(IdentifierLoc, diag::err_expected_class_or_namespace)
-          << QualType(TD->getTypeForDecl(), 0) << getLangOpts().CPlusPlus;
+          << Context.getTypeDeclType(TD) << getLangOpts().CPlusPlus;
     else {
       Diag(IdentifierLoc, diag::err_expected_class_or_namespace)
           << &Identifier << getLangOpts().CPlusPlus;
