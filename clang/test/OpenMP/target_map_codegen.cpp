@@ -4074,7 +4074,9 @@ int explicit_maps_with_inner_lambda(int a){
 // CK25: [[VAL1:%.+]] = load i32*, i32** [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA01]], [[CA01]]* [[CA:%[^,]+]], i32 0, i32 0
 // CK25: store i32* [[VAL1]], i32** [[VALADDR1]],
-// CK25: call void {{.*}}[[LAMBDA]]{{.*}}([[CA01]]* [[CA]])
+// CK25: call void {{.*}}[[LAMBDA2:@.+]]{{.*}}([[CA01]]* [[CA]])
+
+// CK25: define {{.+}}[[LAMBDA2]]
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -DCK26 -std=c++11 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK26 --check-prefix CK26-64
