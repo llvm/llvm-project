@@ -90,7 +90,21 @@ class Index(object):
 
 def get_args():
     parser = argparse.ArgumentParser(
-        description="Ensure that LLDB's SwiftASTContext class safely uses the underlying swift::ASTContext object")
+        description="Validate that methods of LLDB SwiftASTContext have proper VALID_OR_RETURN macros in place before accessing the underlying swift::ASTContext object (which is unsafe to touch in the face of fatal errors)\n" +
+        "The expected pattern for methods in SwiftASTContext is usually of the form:\n" +
+        "int SwiftASTContext::GetMagicThing(bool doit) {\n" +
+        "  VALID_OR_RETURN(0);\n" +
+        "  return GetASTContext()->getMagicThing(doit);\n"
+        "}\n" +
+        "and a missing VALID_OR_RETURN for methods that do access the AST context can be a source of debugger crashes.\n" +
+        "The script is able to automatically figure out if a method is doing operations that require validation, as well as discern VALID_OR_RETURN vs. VALID_OR_RETURN_VOID as the macro to insert\n"+
+        "For the obvious reason, the script will only validate instance methods of SwiftASTContext as located in SwiftASTContext.h or SwiftASTContext.cpp, so please don't split methods across files without adjusting this script first\n" +
+        "The first run of this script may take up to a minute. Subsequent runs against an unmodified SwiftASTContext.cpp are instantaneous. This is done by storing the MD5 hash of SwiftASTContext.cpp inside check-ast-context.md5 in the build products directory. A missing MD5 file, or any changes in SwiftASTContext.cpp will trigger a full validation.",
+        epilog="For reference to how to pass proper arguments to the script, one should refer to the LLDB Xcode project, namely to the 'Check AST Context' build phase of lldb-core.\n" +
+        "This script is meant to cause the build process of LLDB to fail if it detects missing checks where it expects one. The script is usually right, but sometimes can trigger on a path that is inherently safe, but deciding that requires human smarts. In order to override the automated detection, you should add the name of the method you know to be safe to the whitelist variable in this file.\n" +
+        "This script tries to be smart about the location of build products and sources (for CMake vs. Xcode builds mostly), but any changes to the layout of an LLDB checkout might and probably will require changes here\n" +
+        "Also, keep in mind that this script is only tested to run on macOS. This was deemed a safe tradeoff as nothing in the AST context validation should be platform-specific. If it needs to run on Linux, changes may be required",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         '--file',
         type=str,
@@ -349,7 +363,7 @@ def main():
 
     def emit_fail(method):
         print(
-            '%s:%s:%s: error: %s not found on method \'%s\'; consider adding' %
+            '%s:%s:%s: error: %s not found on method \'%s\'; consider adding (or whitelisting if necessary, --help for further information)' %
             (os.path.basename(
                 method.location.file.name),
                 method.location.line,
