@@ -36,6 +36,7 @@ BUILTIN(__builtin_amdgcn_workitem_id_z, "Ui", "nc")
 // Instruction builtins.
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_s_barrier, "v", "n")
+BUILTIN(__builtin_amdgcn_wave_barrier, "v", "n")
 BUILTIN(__builtin_amdgcn_div_scale, "dddbb*", "n")
 BUILTIN(__builtin_amdgcn_div_scalef, "fffbb*", "n")
 BUILTIN(__builtin_amdgcn_div_fmas, "ddddb", "nc")

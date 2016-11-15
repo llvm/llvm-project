@@ -587,8 +587,29 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
   E.add("/readonly");
   E.add("/nologo");
   E.add("/out:" + Twine(File.Path));
-  for (MemoryBufferRef MB : MBs)
-    E.add(MB.getBufferIdentifier());
+
+  // We must create new files because the memory buffers we have may have no
+  // underlying file still existing on the disk.
+  // It happens if it was created from a TemporaryFile, which usually delete
+  // the file just after creating the MemoryBuffer.
+  std::vector<TemporaryFile> ResFiles;
+  ResFiles.reserve(MBs.size());
+  for (MemoryBufferRef MB : MBs) {
+    // We store the temporary file in a vector to avoid deletion
+    // before running cvtres
+    ResFiles.emplace_back("resource-file", "res");
+    TemporaryFile& ResFile = ResFiles.back();
+    // Write the content of the resource in a temporary file
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(ResFile.Path, EC, sys::fs::F_None);
+    if (EC)
+      fatal(EC, "failed to open " + ResFile.Path);
+    OS << MB.getBuffer();
+    OS.close();
+
+    E.add(ResFile.Path);
+  }
+
   E.run();
   return File.getMemoryBuffer();
 }

@@ -559,42 +559,44 @@ bool lldb_private::formatters::NSURLSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name = descriptor->GetClassName().GetStringRef();
 
-  if (!class_name || !*class_name)
+  if (!class_name.equals("NSURL"))
     return false;
 
-  if (strcmp(class_name, "NSURL") == 0) {
-    uint64_t offset_text = ptr_size + ptr_size +
-                           8; // ISA + pointer + 8 bytes of data (even on 32bit)
-    uint64_t offset_base = offset_text + ptr_size;
-    CompilerType type(valobj.GetCompilerType());
-    ValueObjectSP text(
-        valobj.GetSyntheticChildAtOffset(offset_text, type, true));
-    ValueObjectSP base(
-        valobj.GetSyntheticChildAtOffset(offset_base, type, true));
-    if (!text)
-      return false;
-    if (text->GetValueAsUnsigned(0) == 0)
-      return false;
-    StreamString summary;
-    if (!NSStringSummaryProvider(*text, summary, options))
-      return false;
-    if (base && base->GetValueAsUnsigned(0)) {
-      if (summary.GetSize() > 0)
-        summary.GetString().resize(summary.GetSize() - 1);
-      summary.Printf(" -- ");
-      StreamString base_summary;
-      if (NSURLSummaryProvider(*base, base_summary, options) &&
-          base_summary.GetSize() > 0)
-        summary.Printf("%s", base_summary.GetSize() > 2
-                                 ? base_summary.GetData() + 2
-                                 : base_summary.GetData());
+  uint64_t offset_text = ptr_size + ptr_size +
+                         8; // ISA + pointer + 8 bytes of data (even on 32bit)
+  uint64_t offset_base = offset_text + ptr_size;
+  CompilerType type(valobj.GetCompilerType());
+  ValueObjectSP text(valobj.GetSyntheticChildAtOffset(offset_text, type, true));
+  ValueObjectSP base(valobj.GetSyntheticChildAtOffset(offset_base, type, true));
+  if (!text)
+    return false;
+  if (text->GetValueAsUnsigned(0) == 0)
+    return false;
+  StreamString summary;
+  if (!NSStringSummaryProvider(*text, summary, options))
+    return false;
+  if (base && base->GetValueAsUnsigned(0)) {
+    std::string summary_str = summary.GetString();
+
+    if (!summary_str.empty())
+      summary_str.pop_back();
+    summary_str += " -- ";
+    StreamString base_summary;
+    if (NSURLSummaryProvider(*base, base_summary, options) &&
+        !base_summary.Empty()) {
+      llvm::StringRef base_str = base_summary.GetString();
+      if (base_str.size() > 2)
+        base_str = base_str.drop_front(2);
+      summary_str += base_str;
     }
-    if (summary.GetSize()) {
-      stream.Printf("%s", summary.GetData());
-      return true;
-    }
+    summary.Clear();
+    summary.PutCString(summary_str);
+  }
+  if (!summary.Empty()) {
+    stream.PutCString(summary.GetString());
+    return true;
   }
 
   return false;

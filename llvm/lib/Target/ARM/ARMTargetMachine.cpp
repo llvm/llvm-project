@@ -294,25 +294,25 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = llvm::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle);
-  }
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
-  GISelAccessor *GISel = new GISelAccessor();
+    GISelAccessor *GISel = new GISelAccessor();
 #else
-  ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
-  GISel->CallLoweringInfo.reset(new ARMCallLowering(*I->getTargetLowering()));
-  GISel->Legalizer.reset(new ARMLegalizerInfo());
+    ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
+    GISel->CallLoweringInfo.reset(new ARMCallLowering(*I->getTargetLowering()));
+    GISel->Legalizer.reset(new ARMLegalizerInfo());
 
-  auto *RBI = new ARMRegisterBankInfo(*I->getRegisterInfo());
+    auto *RBI = new ARMRegisterBankInfo(*I->getRegisterInfo());
 
-  // FIXME: At this point, we can't rely on Subtarget having RBI.
-  // It's awkward to mix passing RBI and the Subtarget; should we pass
-  // TII/TRI as well?
-  GISel->InstSelector.reset(new ARMInstructionSelector(*this, *I, *RBI));
+    // FIXME: At this point, we can't rely on Subtarget having RBI.
+    // It's awkward to mix passing RBI and the Subtarget; should we pass
+    // TII/TRI as well?
+    GISel->InstSelector.reset(new ARMInstructionSelector(*I, *RBI));
 
-  GISel->RegBankInfo.reset(RBI);
+    GISel->RegBankInfo.reset(RBI);
 #endif
-  I->setGISelAccessor(*GISel);
+    I->setGISelAccessor(*GISel);
+  }
   return I.get();
 }
 

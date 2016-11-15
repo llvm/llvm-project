@@ -741,6 +741,18 @@ def int_ppc_vsx_lxvw4x_be :
       Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
 def int_ppc_vsx_lxvd2x_be :
       Intrinsic<[llvm_v2f64_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
+def int_ppc_vsx_lxvl :
+      Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem,
+      IntrArgMemOnly]>;
+def int_ppc_vsx_lxvll :
+      Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrReadMem,
+      IntrArgMemOnly]>;
+def int_ppc_vsx_stxvl :
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
+      [IntrArgMemOnly]>;
+def int_ppc_vsx_stxvll :
+      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
+      [IntrArgMemOnly]>;
 
 // Vector store.
 def int_ppc_vsx_stxvw4x :

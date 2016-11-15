@@ -26,6 +26,23 @@ vector double vda, vdb;
 vector unsigned __int128 vui128a, vui128b;
 vector signed __int128 vsi128a, vsi128b;
 
+float f[4] = { 23.4f, 56.7f, 89.0f, 12.3f };
+double d[2] = { 23.4, 56.7 };
+signed char sc[16] = { -8,  9, -10, 11, -12, 13, -14, 15,
+                        -0,  1,  -2,  3,  -4,  5,  -6,  7 };
+unsigned char uc[16] = { 8,  9, 10, 11, 12, 13, 14, 15,
+                          0,  1,  2,  3,  4,  5,  6,  7 };
+signed short ss[8] = { -1, 2, -3, 4, -5, 6, -7, 8 };
+unsigned short us[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+signed int si[4] = { -1, 2, -3, 4 };
+unsigned int ui[4] = { 0, 1, 2, 3 };
+signed long sl[2] = { -1L, 2L };
+unsigned long ul[2] = { 1L, 2L };
+signed long long sll[2] = { 1LL, 1LL };
+unsigned long long ull[2] = { -1LL, 1LL };
+signed __int128 sint128[1] = { -1 };
+unsigned __int128 uint128[1] = { 1 };
+
 unsigned test1(void) {
 // CHECK-BE: @llvm.ppc.altivec.vcmpequb(<16 x i8>
 // CHECK-BE: @llvm.ctlz.v2i64(<2 x i64>
@@ -967,7 +984,185 @@ vector bool long long test87(void) {
 // CHECK-NEXT: ret <2 x i64>
   return vec_test_data_class(vda, __VEC_CLASS_FP_NOT_NORMAL);
 }
-vector float test88(void) {
+vector unsigned char test88(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <16 x i8>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <16 x i8>
+  return vec_xl_len(uc,0);
+}
+vector signed char test89(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <16 x i8>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <16 x i8>
+  return vec_xl_len(sc,0);
+}
+vector unsigned short test90(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <8 x i16>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <8 x i16>
+  return vec_xl_len(us,0);
+}
+vector signed short test91(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <8 x i16>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <8 x i16>
+  return vec_xl_len(ss,0);
+}
+vector unsigned int test92(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT: ret <4 x i32>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT: ret <4 x i32>
+  return vec_xl_len(ui,0);
+}
+
+vector signed int test93(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT: ret <4 x i32>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT: ret <4 x i32>
+  return vec_xl_len(si,0);
+}
+
+vector float test94(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <4 x i32>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <4 x i32>
+  return vec_xl_len(f,0);
+}
+
+vector unsigned long long test95(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <2 x i64>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <2 x i64>
+  return vec_xl_len(ull,0);
+}
+ 
+vector signed long long test96(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <2 x i64>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <2 x i64>
+  return vec_xl_len(sll,0);
+}
+
+vector double test97(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <2 x i64>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <2 x i64>
+  return vec_xl_len(d,0);
+}
+
+vector unsigned __int128 test98(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <1 x i128>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <1 x i128>
+  return vec_xl_len(uint128,0);
+}
+
+vector signed __int128 test99(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-BE-NEXT-NEXT: ret <1 x i128>
+// CHECK: @llvm.ppc.vsx.lxvl(i8* %{{.+}}, i64
+// CHECK-NEXT-NEXT: ret <1 x i128>
+  return vec_xl_len(sint128,0);
+}
+
+void test100(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+  return vec_xst_len(vuca,uc,0);
+}
+
+void test101(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+  return vec_xst_len(vsca,sc,0);
+}
+
+void test102(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vusa,us,0);
+}
+
+void test103(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vssa,ss,0);
+}
+
+void test104(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vuia,ui,0);
+}
+
+void test105(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vsia,si,0);
+}
+
+void test106(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vfa,f,0);
+}
+
+void test107(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vula,ull,0);
+}
+
+void test108(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vsla,sll,0);
+}
+
+void test109(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vda,d,0);
+}
+
+void test110(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vui128a,uint128,0);
+}
+
+void test111(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.stxvl(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+ return vec_xst_len(vsi128a,sint128,0);
+}
+
+vector unsigned char test112(void) {
+// CHECK-BE: @llvm.ppc.vsx.lxvll(i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.vsx.lxvll(i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.altivec.lvsr(i8* %{{.+}}
+// CHECK: @llvm.ppc.altivec.vperm
+  return vec_xl_len_r(uc,0);
+}
+void test113(void) {
+// CHECK-BE: @llvm.ppc.vsx.stxvll(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+// CHECK: @llvm.ppc.altivec.lvsl(i8* %{{.+}}
+// CHECK: @llvm.ppc.altivec.vperm
+// CHECK: @llvm.ppc.vsx.stxvll(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
+  return vec_xst_len_r(vuca,uc,0);
+}
+vector float test114(void) {
 // CHECK-BE: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 undef, i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3>
 // CHECK-BE: @llvm.ppc.vsx.xvcvhpsp(<8 x i16> {{.+}})
 // CHECK-BE-NEXT: ret <4 x float>
@@ -976,7 +1171,7 @@ vector float test88(void) {
 // CHECK-LE-NEXT: ret <4 x float>
   return vec_extract_fp32_from_shorth(vusa);
 }
-vector float test89(void) {
+vector float test115(void) {
 // CHECK-BE: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 undef, i32 4, i32 undef, i32 5, i32 undef, i32 6, i32 undef, i32 7>
 // CHECK-BE: @llvm.ppc.vsx.xvcvhpsp(<8 x i16> {{.+}})
 // CHECK-BE-NEXT: ret <4 x float>

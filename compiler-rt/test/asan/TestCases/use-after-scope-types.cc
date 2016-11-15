@@ -11,9 +11,6 @@
 // RUN: not %run %t 9 2>&1 | FileCheck %s
 // RUN: not %run %t 10 2>&1 | FileCheck %s
 
-// Temporarily disable to fix the bot.
-// UNSUPPORTED: darwin
-
 #include <stdlib.h>
 #include <string>
 #include <vector>

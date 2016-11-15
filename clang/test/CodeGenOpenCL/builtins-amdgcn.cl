@@ -270,6 +270,13 @@ void test_s_barrier()
   __builtin_amdgcn_s_barrier();
 }
 
+// CHECK-LABEL: @test_wave_barrier
+// CHECK: call void @llvm.amdgcn.wave.barrier(
+void test_wave_barrier()
+{
+  __builtin_amdgcn_wave_barrier();
+}
+
 // CHECK-LABEL: @test_s_memtime
 // CHECK: call i64 @llvm.amdgcn.s.memtime()
 void test_s_memtime(global ulong* out)

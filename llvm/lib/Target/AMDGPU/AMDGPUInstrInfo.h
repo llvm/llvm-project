@@ -40,6 +40,7 @@ public:
   explicit AMDGPUInstrInfo(const AMDGPUSubtarget &st);
 
   bool enableClusterLoads() const override;
+  bool enableClusterStores() const override;
 
   bool shouldScheduleLoadsNear(SDNode *Load1, SDNode *Load2,
                                int64_t Offset1, int64_t Offset2,

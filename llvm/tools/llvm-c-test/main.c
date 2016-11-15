@@ -88,6 +88,10 @@ int main(int argc, char **argv) {
     return llvm_add_named_metadata_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--set-metadata")) {
     return llvm_set_metadata();
+  } else if (argc == 2 && !strcmp(argv[1], "--test-function-attributes")) {
+    return llvm_test_function_attributes();
+  } else if (argc == 2 && !strcmp(argv[1], "--test-callsite-attributes")) {
+    return llvm_test_callsite_attributes();
   } else if (argc == 2 && !strcmp(argv[1], "--echo")) {
     return llvm_echo();
   } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {

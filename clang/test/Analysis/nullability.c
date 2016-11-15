@@ -3,10 +3,10 @@
 void it_takes_two(int a, int b);
 void function_pointer_arity_mismatch() {
   void(*fptr)() = it_takes_two;
-  fptr(1); // no-crash expected-warning {{Function taking 2 arguments is called with less (1)}}
+  fptr(1); // no-crash expected-warning {{Function taking 2 arguments is called with fewer (1)}}
 }
 
 void block_arity_mismatch() {
-  void(^b)() = ^(int a, int b) { }; // no-crash
-  b(1);
+  void(^b)() = ^(int a, int b) { };
+  b(1);  // no-crash expected-warning {{Block taking 2 arguments is called with fewer (1)}}
 }

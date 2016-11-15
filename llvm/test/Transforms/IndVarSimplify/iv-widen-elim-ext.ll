@@ -21,8 +21,11 @@ define void @foo(i32* %A, i32* %B, i32* %C, i32 %N) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* %C, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TRUNC0:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[DIV0:%.*]] = udiv i32 5, [[TRUNC0]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[ADD3]], [[DIV0]]
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, i32* %A, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[ADD3]], i32* [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    store i32 [[ADD4]], i32* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label %for.inc
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -51,9 +54,11 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %arrayidx2 = getelementptr inbounds i32, i32* %C, i64 %idxprom1
   %1 = load i32, i32* %arrayidx2, align 4
   %add3 = add nsw i32 %0, %1
+  %div0 = udiv i32 5, %add
+  %add4 = add nsw i32 %add3, %div0
   %idxprom4 = zext i32 %i.02 to i64
   %arrayidx5 = getelementptr inbounds i32, i32* %A, i64 %idxprom4
-  store i32 %add3, i32* %arrayidx5, align 4
+  store i32 %add4, i32* %arrayidx5, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

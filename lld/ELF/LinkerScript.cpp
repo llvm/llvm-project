@@ -986,7 +986,7 @@ private:
   Expr readParenExpr();
 
   // For parsing version script.
-  void readExtern(std::vector<SymbolVersion> *Globals);
+  void readVersionExtern(std::vector<SymbolVersion> *Globals);
   void readVersionDeclaration(StringRef VerStr);
   void readGlobal(StringRef VerStr);
   void readLocal(StringRef VerStr);
@@ -1824,7 +1824,7 @@ void ScriptParser::readLocal(StringRef VerStr) {
   }
 }
 
-void ScriptParser::readExtern(std::vector<SymbolVersion> *Globals) {
+void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *Globals) {
   expect("\"C++\"");
   expect("{");
 
@@ -1849,7 +1849,7 @@ void ScriptParser::readGlobal(StringRef VerStr) {
 
   for (;;) {
     if (consume("extern"))
-      readExtern(Globals);
+      readVersionExtern(Globals);
 
     StringRef Cur = peek();
     if (Cur == "}" || Cur == "local:" || Error)

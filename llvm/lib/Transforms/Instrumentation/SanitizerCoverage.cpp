@@ -514,7 +514,7 @@ void SanitizerCoverageModule::CreateFunctionGuardArray(size_t NumGuards,
   ArrayType *ArrayOfInt32Ty = ArrayType::get(Int32Ty, NumGuards);
   FunctionGuardArray = new GlobalVariable(
       *CurModule, ArrayOfInt32Ty, false, GlobalVariable::PrivateLinkage,
-      Constant::getNullValue(ArrayOfInt32Ty), "__sancov_guard");
+      Constant::getNullValue(ArrayOfInt32Ty), "__sancov_gen_");
   if (auto Comdat = F.getComdat())
     FunctionGuardArray->setComdat(Comdat);
   FunctionGuardArray->setSection(SanCovTracePCGuardSection);

@@ -276,6 +276,30 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "int i;\n"
                    "\n"
                    "}  // namespace"));
+
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.KeepEmptyLinesAtTheStartOfBlocks = false;
+
+  EXPECT_EQ("class Foo\n"
+            "{\n"
+            "  Foo() {}\n"
+            "\n"
+            "  void funk() {}\n"
+            "};",
+            format("class Foo\n"
+                   "{\n"
+                   "  Foo()\n"
+                   "  {\n"
+                   "  }\n"
+                   "\n"
+                   "  void funk() {}\n"
+                   "};",
+                   Style));
 }
 
 TEST_F(FormatTest, RecognizesBinaryOperatorKeywords) {

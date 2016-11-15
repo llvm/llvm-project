@@ -265,7 +265,8 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
   }
 
   if (isMUBUF(LdSt) || isMTBUF(LdSt)) {
-    if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::soffset) != -1)
+    const MachineOperand *SOffset = getNamedOperand(LdSt, AMDGPU::OpName::soffset);
+    if (SOffset && SOffset->isReg())
       return false;
 
     const MachineOperand *AddrReg =
@@ -277,6 +278,10 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
         getNamedOperand(LdSt, AMDGPU::OpName::offset);
     BaseReg = AddrReg->getReg();
     Offset = OffsetImm->getImm();
+
+    if (SOffset) // soffset can be an inline immediate.
+      Offset += SOffset->getImm();
+
     return true;
   }
 
@@ -3491,6 +3496,9 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   // 4, even though they are really 8 bytes if they have a literal operand.
   if (DescSize != 0 && DescSize != 4)
     return DescSize;
+
+  if (Opc == AMDGPU::WAVE_BARRIER)
+    return 0;
 
   // 4-byte instructions may have a 32-bit literal encoded after them. Check
   // operands that coud ever be literals.

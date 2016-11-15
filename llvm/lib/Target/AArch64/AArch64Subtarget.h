@@ -43,6 +43,7 @@ public:
     CortexA73,
     Cyclone,
     ExynosM1,
+    Falkor,
     Kryo,
     Vulcan
   };

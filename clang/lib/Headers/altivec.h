@@ -55,6 +55,10 @@
 
 #define __ATTRS_o_ai __attribute__((__overloadable__, __always_inline__))
 
+#ifdef __POWER9_VECTOR__
+#include <stddef.h>
+#endif
+
 static __inline__ vector signed char __ATTRS_o_ai vec_perm(
     vector signed char __a, vector signed char __b, vector unsigned char __c);
 
@@ -2651,6 +2655,160 @@ vec_insert_exp(vector unsigned int __a, vector unsigned int __b) {
   return __builtin_vsx_xviexpsp(__a,__b);
 }
 
+#if defined(__powerpc64__)
+static __inline__ vector signed char __ATTRS_o_ai vec_xl_len(signed char *__a,
+                                                             size_t __b) {
+  return (vector signed char)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_xl_len(unsigned char *__a, size_t __b) {
+  return (vector unsigned char)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector signed short __ATTRS_o_ai vec_xl_len(signed short *__a,
+                                                              size_t __b) {
+  return (vector signed short)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_xl_len(unsigned short *__a, size_t __b) {
+  return (vector unsigned short)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector signed int __ATTRS_o_ai vec_xl_len(signed int *__a,
+                                                            size_t __b) {
+  return (vector signed int)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai vec_xl_len(unsigned int *__a,
+                                                              size_t __b) {
+  return (vector unsigned int)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector float __ATTRS_o_ai vec_xl_len(float *__a, size_t __b) {
+  return (vector float)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_xl_len(signed __int128 *__a, size_t __b) {
+  return (vector signed __int128)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_len(unsigned __int128 *__a, size_t __b) {
+  return (vector unsigned __int128)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_xl_len(signed long long *__a, size_t __b) {
+  return (vector signed long long)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_xl_len(unsigned long long *__a, size_t __b) {
+  return (vector unsigned long long)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_xl_len(double *__a,
+                                                        size_t __b) {
+  return (vector double)__builtin_vsx_lxvl(__a, (__b << 56));
+}
+
+static __inline__ vector double __ATTRS_o_ai vec_xl_len_r(unsigned char *__a,
+                                                          size_t __b) {
+  vector unsigned char __res =
+      (vector unsigned char)__builtin_vsx_lxvll(__a, (__b << 56));
+#ifdef __LITTLE_ENDIAN__
+  vector unsigned char __mask =
+      (vector unsigned char)__builtin_altivec_lvsr(16 - __b, (int *)NULL);
+  __res = (vector unsigned char)__builtin_altivec_vperm_4si(
+      (vector int)__res, (vector int)__res, __mask);
+#endif
+  return __res;
+}
+
+// vec_xst_len
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector unsigned char __a,
+                                                unsigned char *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector signed char __a,
+                                                signed char *__b, size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector signed short __a,
+                                                signed short *__b, size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector unsigned short __a,
+                                                unsigned short *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector signed int __a,
+                                                signed int *__b, size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector unsigned int __a,
+                                                unsigned int *__b, size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector float __a, float *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector signed __int128 __a,
+                                                signed __int128 *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector unsigned __int128 __a,
+                                                unsigned __int128 *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector signed long long __a,
+                                                signed long long *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector unsigned long long __a,
+                                                unsigned long long *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len(vector double __a, double *__b,
+                                                size_t __c) {
+  return __builtin_vsx_stxvl((vector int)__a, __b, (__c << 56));
+}
+
+static __inline__ void __ATTRS_o_ai vec_xst_len_r(vector unsigned char __a,
+                                                  unsigned char *__b,
+                                                  size_t __c) {
+#ifdef __LITTLE_ENDIAN__
+  vector unsigned char __mask =
+      (vector unsigned char)__builtin_altivec_lvsl(16 - __c, (int *)NULL);
+  vector unsigned char __res =
+      __builtin_altivec_vperm_4si((vector int)__a, (vector int)__a, __mask);
+  return __builtin_vsx_stxvll((vector int)__res, __b, (__c << 56));
+#else
+  return __builtin_vsx_stxvll((vector int)__a, __b, (__c << 56));
+#endif
+}
+#endif
 #endif
 
 /* vec_cpsgn */

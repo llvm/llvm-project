@@ -72,6 +72,35 @@ define void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   ret void
 }
 
+; This purpose of this test is to make sure the i16 = sign_extend i1 node
+; makes it all the way throught the legalizer/optimizer to make sure
+; we select this correctly.  In the s_sext_i1_to_i16, the sign_extend node
+; is optimized to a select very early.
+; GCN-LABEL: {{^}}s_sext_i1_to_i16_with_and:
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1
+; GCN-NEXT: buffer_store_short [[RESULT]]
+define void @s_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+  %cmp0 = icmp eq i32 %a, %b
+  %cmp1 = icmp eq i32 %c, %d
+  %cmp = and i1 %cmp0, %cmp1
+  %sext = sext i1 %cmp to i16
+  store i16 %sext, i16 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_sext_i1_to_i16_with_and:
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1
+; GCN-NEXT: buffer_store_short [[RESULT]]
+define void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) nounwind {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %cmp0 = icmp eq i32 %a, %tid
+  %cmp1 = icmp eq i32 %b, %c
+  %cmp = and i1 %cmp0, %cmp1
+  %sext = sext i1 %cmp to i16
+  store i16 %sext, i16 addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}s_sext_v4i8_to_v4i32:
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 ; GCN-DAG: s_bfe_i32 [[EXT2:s[0-9]+]], [[VAL]], 0x80010
@@ -191,3 +220,7 @@ define void @v_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 addrspace(1)* %in
   store volatile i32 %elt3, i32 addrspace(1)* %out
   ret void
 }
+
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+
+attributes #1 = { nounwind readnone }

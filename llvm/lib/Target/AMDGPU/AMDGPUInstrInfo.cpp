@@ -36,6 +36,10 @@ bool AMDGPUInstrInfo::enableClusterLoads() const {
   return true;
 }
 
+bool AMDGPUInstrInfo::enableClusterStores() const {
+  return true;
+}
+
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
 // the first 16 loads will be interleaved with the stores, and the next 16 will
 // be clustered as expected. It should really split into 2 16 store batches.
