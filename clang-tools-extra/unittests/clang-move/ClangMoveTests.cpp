@@ -127,8 +127,10 @@ const char ExpectedTestCC[] = "#include \"foo.h\"\n"
 
 const char ExpectedNewHeader[] = "#ifndef NEW_FOO_H\n"
                                  "#define NEW_FOO_H\n"
+                                 "\n"
                                  "namespace a {\n"
                                  "class C1; // test\n"
+                                 "\n"
                                  "template <typename T> class C2;\n"
                                  "namespace b {\n"
                                  "// This is a Foo class\n"
@@ -144,6 +146,7 @@ const char ExpectedNewHeader[] = "#ifndef NEW_FOO_H\n"
                                  "}; // abc\n"
                                  "} // namespace b\n"
                                  "} // namespace a\n"
+                                 "\n"
                                  "#endif // NEW_FOO_H\n";
 
 const char ExpectedNewCC[] = "namespace a {\n"
@@ -154,17 +157,21 @@ const char ExpectedNewCC[] = "namespace a {\n"
                              "/// comment2.\n"
                              "int kConstInt1 = 0;\n"
                              "} // namespace\n"
+                             "\n"
                              "/* comment 3*/\n"
                              "static int kConstInt2 = 1;\n"
+                             "\n"
                              "/** comment4\n"
                              "*/\n"
                              "static int help() {\n"
                              "  int a = 0;\n"
                              "  return a;\n"
                              "}\n"
+                             "\n"
                              "// comment5\n"
                              "// comment5\n"
                              "void Foo::f() { f1(); }\n"
+                             "\n"
                              "/////////////\n"
                              "// comment //\n"
                              "/////////////\n"
@@ -312,15 +319,17 @@ TEST(ClangMove, MoveAllMultipleClasses) {
 TEST(ClangMove, DontMoveAll) {
   const char ExpectedHeader[] = "#ifndef NEW_FOO_H\n"
                                 "#define NEW_FOO_H\n"
+                                "\n"
                                 "class A {\npublic:\n  int f();\n};\n"
+                                "\n"
                                 "#endif // NEW_FOO_H\n";
   const char Code[] = "#include \"foo.h\"\nint A::f() { return 0; }";
   std::vector<std::string> TestHeaders = {
-    "typedef int Int;\nclass A {\npublic:\n  int f();\n};",
-    "using Int=int;\nclass A {\npublic:\n  int f();\n};",
-    "class B {};\nclass A {\npublic:\n  int f();\n};",
-    "void f() {};\nclass A {\npublic:\n  int f();\n};",
-    "enum Color { RED };\nclass A {\npublic:\n  int f();\n};",
+    "typedef int Int;\nclass A {\npublic:\n  int f();\n};\n",
+    "using Int=int;\nclass A {\npublic:\n  int f();\n};\n",
+    "class B {};\nclass A {\npublic:\n  int f();\n};\n",
+    "void f() {};\nclass A {\npublic:\n  int f();\n};\n",
+    "enum Color { RED };\nclass A {\npublic:\n  int f();\n};\n",
   };
   move::ClangMoveTool::MoveDefinitionSpec Spec;
   Spec.Names.push_back("A");
@@ -332,7 +341,7 @@ TEST(ClangMove, DontMoveAll) {
     auto Results = runClangMoveOnCode(Spec, Header.c_str(), Code);
     EXPECT_EQ(ExpectedHeader, Results[Spec.NewHeader]);
     // The expected old header should not contain class A definition.
-    std::string ExpectedOldHeader = Header.substr(0, Header.size() - 31);
+    std::string ExpectedOldHeader = Header.substr(0, Header.size() - 32);
     EXPECT_EQ(ExpectedOldHeader, Results[Spec.OldHeader]);
   }
 }
@@ -353,6 +362,61 @@ TEST(ClangMove, MacroInFunction) {
   Spec.NewCC = "new_foo.cc";
   auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
   EXPECT_EQ(ExpectedNewCode, Results[Spec.NewCC]);
+}
+
+TEST(ClangMove, WellFormattedCode) {
+  const std::string CommonHeader =
+      "namespace a {\n"
+      "namespace b {\n"
+      "namespace c {\n"
+      "class C;\n"
+      "\n"
+      "class A {\npublic:\n  void f();\n  void f2();\n};\n"
+      "} // namespace c\n"
+      "} // namespace b\n"
+      "\n"
+      "namespace d {\n"
+      "namespace e {\n"
+      "class B {\npublic:\n  void f();\n};\n"
+      "} // namespace e\n"
+      "} // namespace d\n"
+      "} // namespace a\n";
+  const std::string CommonCode = "\n"
+                                 "namespace a {\n"
+                                 "namespace b {\n"
+                                 "namespace c {\n"
+                                 "void A::f() {}\n"
+                                 "\n"
+                                 "void A::f2() {}\n"
+                                 "} // namespace c\n"
+                                 "} // namespace b\n"
+                                 "\n"
+                                 "namespace d {\n"
+                                 "namespace e {\n"
+                                 "void B::f() {}\n"
+                                 "} // namespace e\n"
+                                 "} // namespace d\n"
+                                 "} // namespace a\n";
+  // Add dummy class to prevent behavior of moving all declarations from header.
+  const std::string TestHeader = CommonHeader + "class D {};\n";
+  const std::string TestCode = "#include \"foo.h\"\n" + CommonCode;
+  const std::string ExpectedNewHeader = "#ifndef NEW_FOO_H\n"
+                                        "#define NEW_FOO_H\n"
+                                        "\n" +
+                                        CommonHeader +
+                                        "\n"
+                                        "#endif // NEW_FOO_H\n";
+  const std::string ExpectedNewCC = "#include \"new_foo.h\"\n" + CommonCode;
+  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("a::b::c::A");
+  Spec.Names.push_back("a::d::e::B");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  auto Results = runClangMoveOnCode(Spec, TestHeader.c_str(), TestCode.c_str());
+  EXPECT_EQ(ExpectedNewCC, Results[Spec.NewCC]);
+  EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
 }
 
 } // namespace

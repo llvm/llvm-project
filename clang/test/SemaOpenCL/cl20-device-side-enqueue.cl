@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -pedantic -fsyntax-only -Wconversion -DWCONV
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir-unknown-unknown" -verify -pedantic -fsyntax-only -DB32
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir64-unknown-unknown" -verify -pedantic -fsyntax-only -Wconversion -DWCONV
 
 // Diagnostic tests for different overloads of enqueue_kernel from Table 6.13.17.1 of OpenCL 2.0 Spec.
 kernel void enqueue_kernel_tests() {
@@ -36,6 +36,14 @@ kernel void enqueue_kernel_tests() {
 
   // Testing the second overload type
   enqueue_kernel(default_queue, flags, ndrange, 1, &event_wait_list, &evt, ^(void) {
+                                                                             return 0;
+                                                                           });
+
+  enqueue_kernel(default_queue, flags, ndrange, 1, 0, 0, ^(void) {
+                                                           return 0;
+                                                         });
+
+  enqueue_kernel(default_queue, flags, ndrange, vptr, &event_wait_list, &evt, ^(void) { // expected-error{{illegal call to enqueue_kernel, expected integer argument type}}
     return 0;
   });
 
@@ -62,16 +70,35 @@ kernel void enqueue_kernel_tests() {
                  ^(local void *a, local void *b) {
                    return 0;
                  },
-                 1024, 1024L); // expected-error{{local memory sizes need to be specified as uint}}
+                 1024L, 1024);
+
+  enqueue_kernel(default_queue, flags, ndrange,
+                 ^(local void *a, local void *b) {
+                   return 0;
+                 },
+                 1024, 4294967296L);
+#ifdef B32
+// expected-warning@-2{{implicit conversion from 'long' to 'unsigned int' changes value from 4294967296 to 0}}
+#endif
 
   char c;
   enqueue_kernel(default_queue, flags, ndrange,
                  ^(local void *a, local void *b) {
                    return 0;
                  },
-                 c, 1024);
+                 c, 1024L);
 #ifdef WCONV
-// expected-warning@-2{{implicit conversion changes signedness: 'char' to 'unsigned int'}}
+// expected-warning-re@-2{{implicit conversion changes signedness: 'char' to 'unsigned {{int|long}}'}}
+#endif
+#define UINT_MAX 4294967295
+
+  enqueue_kernel(default_queue, flags, ndrange,
+                 ^(local void *a, local void *b) {
+                   return 0;
+                 },
+                 sizeof(int), sizeof(int) * UINT_MAX);
+#ifdef B32
+// expected-warning@-2{{implicit conversion from 'long' to 'unsigned int' changes value from 17179869180 to 4294967292}}
 #endif
 
   typedef void (^bl_A_t)(local void *);
@@ -97,13 +124,22 @@ kernel void enqueue_kernel_tests() {
                  ^(local void *a, local void *b) {
                    return 0;
                  },
-                 illegal_mem_size, illegal_mem_size); // expected-error{{local memory sizes need to be specified as uint}} expected-error{{local memory sizes need to be specified as uint}}
-#ifdef WCONV
-// expected-warning@-2{{implicit conversion turns floating-point number into integer: 'float' to 'unsigned int'}} expected-warning@-2{{implicit conversion turns floating-point number into integer: 'float' to 'unsigned int'}}
-#endif
+                 illegal_mem_size, illegal_mem_size); // expected-error{{illegal call to enqueue_kernel, parameter needs to be specified as integer type}} expected-error{{illegal call to enqueue_kernel, parameter needs to be specified as integer type}}
+
+  enqueue_kernel(default_queue, flags, ndrange,
+                 ^(local void *a, local void *b) {
+                   return 0;
+                 },
+                 illegal_mem_size, 1024); // expected-error{{illegal call to enqueue_kernel, parameter needs to be specified as integer type}}
 
   // Testing the forth overload type
   enqueue_kernel(default_queue, flags, ndrange, 1, event_wait_list2, &evt,
+                 ^(local void *a, local void *b) {
+                   return 0;
+                 },
+                 1024, 1024);
+
+  enqueue_kernel(default_queue, flags, ndrange, 1, 0, 0,
                  ^(local void *a, local void *b) {
                    return 0;
                  },

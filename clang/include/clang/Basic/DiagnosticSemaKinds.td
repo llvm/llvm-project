@@ -8239,7 +8239,7 @@ def err_opencl_enqueue_kernel_expected_type : Error<
 def err_opencl_enqueue_kernel_local_size_args : Error<
   "mismatch in number of block parameters and local size arguments passed">;
 def err_opencl_enqueue_kernel_invalid_local_size_type : Error<
-  "local memory sizes need to be specified as uint">;
+  "illegal call to enqueue_kernel, parameter needs to be specified as integer type">;
 def err_opencl_enqueue_kernel_blocks_non_local_void_args : Error<
   "blocks used in device side enqueue are expected to have parameters of type 'local void*'">;
 def err_opencl_enqueue_kernel_blocks_no_args : Error<

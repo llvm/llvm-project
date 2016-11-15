@@ -65,7 +65,7 @@ ScriptConfiguration *elf::ScriptConfig;
 template <class ELFT> static void addRegular(SymbolAssignment *Cmd) {
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   Symbol *Sym = Symtab<ELFT>::X->addRegular(Cmd->Name, Visibility, STT_NOTYPE,
-                                            0, 0, STB_GLOBAL, nullptr);
+                                            0, 0, STB_GLOBAL, nullptr, nullptr);
   Cmd->Sym = Sym->body();
 
   // If we have no SECTIONS then we don't have '.' and don't call
