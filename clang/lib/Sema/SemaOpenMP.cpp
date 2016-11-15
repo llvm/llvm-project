@@ -9133,7 +9133,7 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
     //  for all threads of the team.
     if (!ASE && !OASE && VD) {
       VarDecl *VDDef = VD->getDefinition();
-      if (VD->getType()->isReferenceType() && VDDef) {
+      if (VD->getType()->isReferenceType() && VDDef && VDDef->hasInit()) {
         DSARefChecker Check(DSAStack);
         if (Check.Visit(VDDef->getInit())) {
           Diag(ELoc, diag::err_omp_reduction_ref_type_arg) << ERange;
