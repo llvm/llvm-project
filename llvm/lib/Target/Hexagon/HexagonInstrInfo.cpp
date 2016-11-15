@@ -240,10 +240,6 @@ unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     break;
-  case Hexagon::L2_loadrb_io:
-  case Hexagon::L2_loadrub_io:
-  case Hexagon::L2_loadrh_io:
-  case Hexagon::L2_loadruh_io:
   case Hexagon::L2_loadri_io:
   case Hexagon::L2_loadrd_io:
   case Hexagon::V6_vL32b_ai:
@@ -266,14 +262,6 @@ unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     return MI.getOperand(0).getReg();
   }
 
-  case Hexagon::L2_ploadrbt_io:
-  case Hexagon::L2_ploadrbf_io:
-  case Hexagon::L2_ploadrubt_io:
-  case Hexagon::L2_ploadrubf_io:
-  case Hexagon::L2_ploadrht_io:
-  case Hexagon::L2_ploadrhf_io:
-  case Hexagon::L2_ploadruht_io:
-  case Hexagon::L2_ploadruhf_io:
   case Hexagon::L2_ploadrit_io:
   case Hexagon::L2_ploadrif_io:
   case Hexagon::L2_ploadrdt_io:

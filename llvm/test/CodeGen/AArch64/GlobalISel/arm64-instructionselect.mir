@@ -2511,19 +2511,22 @@ regBankSelected: true
 # CHECK-NEXT:  - { id: 1, class: gpr64 }
 # CHECK-NEXT:  - { id: 2, class: gpr32 }
 # CHECK-NEXT:  - { id: 3, class: gpr32 }
-# CHECK-NEXT:  - { id: 4, class: gpr64 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+# CHECK-NEXT:  - { id: 5, class: gpr64 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
 
 # CHECK:  body:
 # CHECK:    %0 = COPY %w0
-# CHECK:    %4 = SUBREG_TO_REG 0, %0, 15
-# CHECK:    %1 = UBFMXri %4, 0, 31
+# CHECK:    %5 = SUBREG_TO_REG 0, %0, 15
+# CHECK:    %1 = UBFMXri %5, 0, 31
 # CHECK:    %2 = COPY %w0
 # CHECK:    %3 = UBFMWri %2, 0, 7
+# CHECK:    %4 = UBFMWri %2, 0, 7
 body:             |
   bb.0:
     liveins: %w0
@@ -2532,6 +2535,7 @@ body:             |
     %1(s64) = G_ZEXT %0
     %2(s8) = COPY %w0
     %3(s32) = G_ZEXT %2
+    %4(s16)= G_ZEXT %2
 ...
 
 ---
@@ -2545,19 +2549,22 @@ regBankSelected: true
 # CHECK-NEXT:  - { id: 1, class: gpr64 }
 # CHECK-NEXT:  - { id: 2, class: gpr32 }
 # CHECK-NEXT:  - { id: 3, class: gpr32 }
-# CHECK-NEXT:  - { id: 4, class: gpr64 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+# CHECK-NEXT:  - { id: 5, class: gpr64 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
 
 # CHECK:  body:
 # CHECK:    %0 = COPY %w0
-# CHECK:    %4 = SUBREG_TO_REG 0, %0, 15
-# CHECK:    %1 = SBFMXri %4, 0, 31
+# CHECK:    %5 = SUBREG_TO_REG 0, %0, 15
+# CHECK:    %1 = SBFMXri %5, 0, 31
 # CHECK:    %2 = COPY %w0
 # CHECK:    %3 = SBFMWri %2, 0, 7
+# CHECK:    %4 = SBFMWri %2, 0, 7
 body:             |
   bb.0:
     liveins: %w0
@@ -2566,6 +2573,7 @@ body:             |
     %1(s64) = G_SEXT %0
     %2(s8) = COPY %w0
     %3(s32) = G_SEXT %2
+    %4(s16) = G_SEXT %2
 ...
 
 ---

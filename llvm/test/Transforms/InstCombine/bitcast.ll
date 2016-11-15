@@ -70,6 +70,49 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
   ret <2 x i32> %t2
 }
 
+; PR27925 - https://llvm.org/bugs/show_bug.cgi?id=27925
+
+define <4 x i32> @bitcasts_and_bitcast(<4 x i32> %a, <8 x i16> %b) {
+; CHECK-LABEL: @bitcasts_and_bitcast(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> %a to <2 x i64>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> %b to <2 x i64>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[BC2]], [[BC1]]
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast <2 x i64> [[AND]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[BC3]]
+;
+  %bc1 = bitcast <4 x i32> %a to <2 x i64>
+  %bc2 = bitcast <8 x i16> %b to <2 x i64>
+  %and = and <2 x i64> %bc2, %bc1
+  %bc3 = bitcast <2 x i64> %and to <4 x i32>
+  ret <4 x i32> %bc3
+}
+
+define i128 @bitcast_or_bitcast(i128 %a, <2 x i64> %b) {
+; CHECK-LABEL: @bitcast_or_bitcast(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast i128 %a to <2 x i64>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[BC1]], %b
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[OR]] to i128
+; CHECK-NEXT:    ret i128 [[BC2]]
+;
+  %bc1 = bitcast i128 %a to <2 x i64>
+  %or = or <2 x i64> %b, %bc1
+  %bc2 = bitcast <2 x i64> %or to i128
+  ret i128 %bc2
+}
+
+define <4 x i32> @bitcast_xor_bitcast(<4 x i32> %a, i128 %b) {
+; CHECK-LABEL: @bitcast_xor_bitcast(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> %a to i128
+; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[BC1]], %b
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i128 [[XOR]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[BC2]]
+;
+  %bc1 = bitcast <4 x i32> %a to i128
+  %xor = xor i128 %bc1, %b
+  %bc2 = bitcast i128 %xor to <4 x i32>
+  ret <4 x i32> %bc2
+}
+
 ; Optimize bitcasts that are extracting low element of vector.  This happens because of SRoA.
 ; rdar://7892780
 define float @test2(<2 x float> %A, <2 x i32> %B) {

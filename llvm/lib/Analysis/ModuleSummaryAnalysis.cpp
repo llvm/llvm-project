@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Pass.h"
 using namespace llvm;
 
@@ -78,7 +80,7 @@ static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
 static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
                                    const Function &F, BlockFrequencyInfo *BFI,
                                    ProfileSummaryInfo *PSI,
-                                   SmallPtrSetImpl<GlobalValue *> &LocalsUsed) {
+                                   bool HasLocalsInUsed) {
   // Summary not currently supported for anonymous functions, they should
   // have been named.
   assert(F.hasName());
@@ -90,8 +92,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   DenseMap<GlobalValue::GUID, CalleeInfo> IndirectCallEdges;
   DenseSet<const Value *> RefEdges;
   ICallPromotionAnalysis ICallAnalysis;
-  bool HasLocalsInUsed = !LocalsUsed.empty();
 
+  bool HasInlineAsmMaybeReferencingInternal = false;
   SmallPtrSet<const User *, 8> Visited;
   for (const BasicBlock &BB : F)
     for (const Instruction &I : BB) {
@@ -105,11 +107,12 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
 
       const auto *CI = dyn_cast<CallInst>(&I);
       // Since we don't know exactly which local values are referenced in inline
-      // assembly, conservatively reference all of them from this function, to
-      // ensure we don't export a reference (which would require renaming and
-      // promotion).
+      // assembly, conservatively mark the function as possibly referencing
+      // a local value from inline assembly to ensure we don't export a
+      // reference (which would require renaming and promotion of the
+      // referenced value).
       if (HasLocalsInUsed && CI && CI->isInlineAsm())
-        RefEdges.insert(LocalsUsed.begin(), LocalsUsed.end());
+        HasInlineAsmMaybeReferencingInternal = true;
 
       auto *CalledValue = CS.getCalledValue();
       auto *CalledFunction = CS.getCalledFunction();
@@ -162,6 +165,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   FuncSummary->addCallGraphEdges(CallGraphEdges);
   FuncSummary->addCallGraphEdges(IndirectCallEdges);
   FuncSummary->addRefEdges(RefEdges);
+  if (HasInlineAsmMaybeReferencingInternal)
+    FuncSummary->setHasInlineAsmMaybeReferencingInternal();
   Index.addGlobalValueSummary(F.getName(), std::move(FuncSummary));
 }
 
@@ -232,7 +237,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
       BFI = BFIPtr.get();
     }
 
-    computeFunctionSummary(Index, M, F, BFI, PSI, LocalsUsed);
+    computeFunctionSummary(Index, M, F, BFI, PSI, !LocalsUsed.empty());
   }
 
   // Compute summaries for all variables defined in module, and save in the
@@ -252,6 +257,49 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     auto *Summary = Index.getGlobalValueSummary(*V);
     assert(Summary && "Missing summary for global value");
     Summary->setNoRename();
+  }
+
+  if (!M.getModuleInlineAsm().empty()) {
+    // Collect the local values defined by module level asm, and set up
+    // summaries for these symbols so that they can be marked as NoRename,
+    // to prevent export of any use of them in regular IR that would require
+    // renaming within the module level asm. Note we don't need to create a
+    // summary for weak or global defs, as they don't need to be flagged as
+    // NoRename, and defs in module level asm can't be imported anyway.
+    // Also, any values used but not defined within module level asm should
+    // be listed on the llvm.used or llvm.compiler.used global and marked as
+    // referenced from there.
+    // FIXME: Rename CollectAsmUndefinedRefs to something more general, as we
+    // are also using it to find the file-scope locals defined in module asm.
+    object::IRObjectFile::CollectAsmUndefinedRefs(
+        Triple(M.getTargetTriple()), M.getModuleInlineAsm(),
+        [&M, &Index](StringRef Name, object::BasicSymbolRef::Flags Flags) {
+          // Symbols not marked as Weak or Global are local definitions.
+          if (Flags & (object::BasicSymbolRef::SF_Weak ||
+                       object::BasicSymbolRef::SF_Global))
+            return;
+          GlobalValue *GV = M.getNamedValue(Name);
+          if (!GV)
+            return;
+          assert(GV->isDeclaration() && "Def in module asm already has definition");
+          GlobalValueSummary::GVFlags GVFlags(
+              GlobalValue::InternalLinkage,
+              /* NoRename */ true,
+              /* HasInlineAsmMaybeReferencingInternal */ false,
+              /* IsNotViableToInline */ true);
+          // Create the appropriate summary type.
+          if (isa<Function>(GV)) {
+            std::unique_ptr<FunctionSummary> Summary =
+                llvm::make_unique<FunctionSummary>(GVFlags, 0);
+            Summary->setNoRename();
+            Index.addGlobalValueSummary(Name, std::move(Summary));
+          } else {
+            std::unique_ptr<GlobalVarSummary> Summary =
+                llvm::make_unique<GlobalVarSummary>(GVFlags);
+            Summary->setNoRename();
+            Index.addGlobalValueSummary(Name, std::move(Summary));
+          }
+        });
   }
 
   return Index;

@@ -72,8 +72,9 @@ public:
   template<unsigned N>
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   StringSwitch& Case(const char (&S)[N], const T& Value) {
+    assert(N);
     if (!Result && N-1 == Str.size() &&
-        (std::memcmp(S, Str.data(), N-1) == 0)) {
+        (N == 1 || std::memcmp(S, Str.data(), N-1) == 0)) {
       Result = &Value;
     }
     return *this;
@@ -82,8 +83,9 @@ public:
   template<unsigned N>
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   StringSwitch& EndsWith(const char (&S)[N], const T &Value) {
+    assert(N);
     if (!Result && Str.size() >= N-1 &&
-        std::memcmp(S, Str.data() + Str.size() + 1 - N, N-1) == 0) {
+        (N == 1 || std::memcmp(S, Str.data() + Str.size() + 1 - N, N-1) == 0)) {
       Result = &Value;
     }
     return *this;
@@ -92,8 +94,9 @@ public:
   template<unsigned N>
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   StringSwitch& StartsWith(const char (&S)[N], const T &Value) {
+    assert(N);
     if (!Result && Str.size() >= N-1 &&
-        std::memcmp(S, Str.data(), N-1) == 0) {
+        (N == 1 || std::memcmp(S, Str.data(), N-1) == 0)) {
       Result = &Value;
     }
     return *this;

@@ -1,4 +1,3 @@
-RUN: echo -n abcd > %T/abcd
-RUN: llvm-strings -f %T/abcd | FileCheck %s
-RUN: llvm-strings --print-file-name %T/abcd | FileCheck %s
+RUN: llvm-strings -f %S/Inputs/abcd | FileCheck %s
+RUN: llvm-strings --print-file-name %S/Inputs/abcd | FileCheck %s
 CHECK: {{[\\/]}}abcd: abcd

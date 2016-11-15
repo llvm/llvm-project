@@ -2132,6 +2132,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XSCVSDQP  : X_VT5_XO5_VB5_TyVB<63, 10, 836, "xscvsdqp", vfrc, []>;
   def XSCVUDQP  : X_VT5_XO5_VB5_TyVB<63,  2, 836, "xscvudqp", vfrc, []>;
 
+  let UseVSXReg = 1 in {
   //===--------------------------------------------------------------------===//
   // Round to Floating-Point Integer Instructions
 
@@ -2147,6 +2148,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XVCVSPHP : XX2_XT6_XO5_XB6<60, 25, 475, "xvcvsphp", vsrc,
                                  [(set v4f32:$XT,
                                      (int_ppc_vsx_xvcvsphp v4f32:$XB))]>;
+
+  } // UseVSXReg = 1
+
+  // Pattern for matching Vector HP -> Vector SP intrinsic. Defined as a
+  // seperate pattern so that it can convert the input register class from
+  // VRRC(v8i16) to VSRC.
+  def : Pat<(v4f32 (int_ppc_vsx_xvcvhpsp v8i16:$A)),
+            (v4f32 (XVCVHPSP (COPY_TO_REGCLASS $A, VSRC)))>;
 
   class Z23_VT5_R1_VB5_RMC2_EX1<bits<6> opcode, bits<8> xo, bit ex, string opc,
                                 list<dag> pattern>
@@ -2206,10 +2215,18 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
     IIC_VecFP, [(set v4f32: $XT,(int_ppc_vsx_xviexpsp v4i32:$XA, v4i32:$XB))]>;
 
   // Vector Extract Exponent/Significand DP/SP
-  def XVXEXPDP : XX2_XT6_XO5_XB6<60,  0, 475, "xvxexpdp", vsrc, []>;
-  def XVXEXPSP : XX2_XT6_XO5_XB6<60,  8, 475, "xvxexpsp", vsrc, []>;
-  def XVXSIGDP : XX2_XT6_XO5_XB6<60,  1, 475, "xvxsigdp", vsrc, []>;
-  def XVXSIGSP : XX2_XT6_XO5_XB6<60,  9, 475, "xvxsigsp", vsrc, []>;
+  def XVXEXPDP : XX2_XT6_XO5_XB6<60,  0, 475, "xvxexpdp", vsrc,
+                                 [(set v2i64: $XT,
+                                  (int_ppc_vsx_xvxexpdp v2f64:$XB))]>;
+  def XVXEXPSP : XX2_XT6_XO5_XB6<60,  8, 475, "xvxexpsp", vsrc,
+                                 [(set v4i32: $XT,
+                                  (int_ppc_vsx_xvxexpsp v4f32:$XB))]>;
+  def XVXSIGDP : XX2_XT6_XO5_XB6<60,  1, 475, "xvxsigdp", vsrc,
+                                 [(set v2i64: $XT,
+                                  (int_ppc_vsx_xvxsigdp v2f64:$XB))]>;
+  def XVXSIGSP : XX2_XT6_XO5_XB6<60,  9, 475, "xvxsigsp", vsrc,
+                                 [(set v4i32: $XT,
+                                  (int_ppc_vsx_xvxsigsp v4f32:$XB))]>;
 
   //===--------------------------------------------------------------------===//
 
@@ -2230,10 +2247,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   let UseVSXReg = 1 in {
   def XVTSTDCSP : XX2_RD6_DCMX7_RS6<60, 13, 5,
                               (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
-                              "xvtstdcsp $XT, $XB, $DCMX", IIC_VecFP, []>;
+                              "xvtstdcsp $XT, $XB, $DCMX", IIC_VecFP,
+                              [(set v4i32: $XT,
+                               (int_ppc_vsx_xvtstdcsp v4f32:$XB, imm:$DCMX))]>;
   def XVTSTDCDP : XX2_RD6_DCMX7_RS6<60, 15, 5,
                               (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
-                              "xvtstdcdp $XT, $XB, $DCMX", IIC_VecFP, []>;
+                              "xvtstdcdp $XT, $XB, $DCMX", IIC_VecFP,
+                              [(set v2i64: $XT,
+                               (int_ppc_vsx_xvtstdcdp v2f64:$XB, imm:$DCMX))]>;
   } // UseVSXReg = 1
 
   //===--------------------------------------------------------------------===//

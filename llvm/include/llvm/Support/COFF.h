@@ -41,6 +41,11 @@ namespace COFF {
       '\xaf', '\x20', '\xfa', '\xf6', '\x6a', '\xa4', '\xdc', '\xb8',
   };
 
+  static const char ClGlObjMagic[] = {
+      '\x38', '\xfe', '\xb3', '\x0c', '\xa5', '\xd9', '\xab', '\x4d',
+      '\xac', '\x9b', '\xd6', '\xb6', '\x22', '\x26', '\x53', '\xc2',
+  };
+
   // Sizes in bytes of various things in the COFF format.
   enum {
     Header16Size   = 20,

@@ -96,6 +96,10 @@ bool parseMBBReference(PerFunctionMIParsingState &PFS,
                        MachineBasicBlock *&MBB, StringRef Src,
                        SMDiagnostic &Error);
 
+bool parseRegisterReference(PerFunctionMIParsingState &PFS,
+                            unsigned &Reg, StringRef Src,
+                            SMDiagnostic &Error);
+
 bool parseNamedRegisterReference(PerFunctionMIParsingState &PFS, unsigned &Reg,
                                  StringRef Src, SMDiagnostic &Error);
 

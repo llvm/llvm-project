@@ -415,7 +415,7 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
 
 ; CHECK-ARMV7-LABEL: _params_in_reg
 ; Store callee saved registers excluding swifterror.
-; CHECK-ARMV7:  push    {r8, r10, r11, r4, r5, r7, lr}
+; CHECK-ARMV7:  push    {r4, r5, r7, r8, r10, r11, lr}
 ; Store swiftself (r10) and swifterror (r6).
 ; CHECK-ARMV7-DAG:  str     r6, [s[[STK1:.*]]]
 ; CHECK-ARMV7-DAG:  str     r10, [s[[STK2:.*]]]
@@ -440,7 +440,7 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
 ; CHECK-ARMV7:  mov     r2, r5
 ; CHECK-ARMV7:  mov     r3, r4
 ; CHECK-ARMV7:  bl      _params_in_reg2
-; CHECK-ARMV7:  pop     {r8, r10, r11, r4, r5, r7, pc}
+; CHECK-ARMV7:  pop     {r4, r5, r7,  r8, r10, r11, pc}
 define swiftcc void @params_in_reg(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err) {
   %error_ptr_ref = alloca swifterror %swift_error*, align 8
   store %swift_error* null, %swift_error** %error_ptr_ref
@@ -451,7 +451,7 @@ define swiftcc void @params_in_reg(i32, i32, i32, i32, i8* swiftself, %swift_err
 declare swiftcc void @params_in_reg2(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err)
 
 ; CHECK-ARMV7-LABEL: params_and_return_in_reg
-; CHECK-ARMV7:  push    {r8, r10, r11, r4, r5, r7, lr}
+; CHECK-ARMV7:  push    {r4, r5, r7, r8, r10, r11, lr}
 ; Store swifterror and swiftself
 ; CHECK-ARMV7:  mov     r4, r6
 ; CHECK-ARMV7:  str     r10, [s[[STK1:.*]]]
@@ -502,7 +502,7 @@ declare swiftcc void @params_in_reg2(i32, i32, i32, i32, i8* swiftself, %swift_e
 ; CHECK-ARMV7:  mov     r1, r4
 ; CHECK-ARMV7:  mov     r2, r8
 ; CHECK-ARMV7:  mov     r3, r11
-; CHECK-ARMV7:  pop     {r8, r10, r11, r4, r5, r7, pc}
+; CHECK-ARMV7:  pop     {r4, r5, r7, r8, r10, r11, pc}
 define swiftcc { i32, i32, i32, i32} @params_and_return_in_reg(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err) {
   %error_ptr_ref = alloca swifterror %swift_error*, align 8
   store %swift_error* null, %swift_error** %error_ptr_ref

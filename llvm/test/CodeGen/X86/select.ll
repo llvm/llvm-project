@@ -517,24 +517,33 @@ define i32 @trunc_select_miscompile(i32 %a, i1 zeroext %cc) {
 
 ; reproducer for pr29002
 define void @clamp_i8(i32 %src, i8* %dst) {
-; CHECK-LABEL: clamp_i8:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    cmpl $127, %edi
-; CHECK-NEXT:    movl $127, %eax
-; CHECK-NEXT:    cmovlel %edi, %eax
-; CHECK-NEXT:    movb $127, %cl
-; CHECK-NEXT:    jg LBB22_2
-; CHECK-NEXT:  ## BB#1:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:  LBB22_2:
-; CHECK-NEXT:    cmpl $-128, %eax
-; CHECK-NEXT:    movb $-128, %al
-; CHECK-NEXT:    jl LBB22_4
-; CHECK-NEXT:  ## BB#3:
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:  LBB22_4:
-; CHECK-NEXT:    movb %al, (%rsi)
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: clamp_i8:
+; GENERIC:       ## BB#0:
+; GENERIC-NEXT:    cmpl $127, %edi
+; GENERIC-NEXT:    movl $127, %eax
+; GENERIC-NEXT:    cmovlel %edi, %eax
+; GENERIC-NEXT:    cmpl $-128, %eax
+; GENERIC-NEXT:    movb $-128, %cl
+; GENERIC-NEXT:    jl LBB22_2
+; GENERIC-NEXT:  ## BB#1:
+; GENERIC-NEXT:    movl %eax, %ecx
+; GENERIC-NEXT:  LBB22_2:
+; GENERIC-NEXT:    movb %cl, (%rsi)
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: clamp_i8:
+; ATOM:       ## BB#0:
+; ATOM-NEXT:    cmpl $127, %edi
+; ATOM-NEXT:    movl $127, %eax
+; ATOM-NEXT:    cmovlel %edi, %eax
+; ATOM-NEXT:    movb $-128, %cl
+; ATOM-NEXT:    cmpl $-128, %eax
+; ATOM-NEXT:    jl LBB22_2
+; ATOM-NEXT:  ## BB#1:
+; ATOM-NEXT:    movl %eax, %ecx
+; ATOM-NEXT:  LBB22_2:
+; ATOM-NEXT:    movb %cl, (%rsi)
+; ATOM-NEXT:    retq
   %cmp = icmp sgt i32 %src, 127
   %sel1 = select i1 %cmp, i32 127, i32 %src
   %cmp1 = icmp slt i32 %sel1, -128
@@ -551,25 +560,21 @@ define void @clamp(i32 %src, i16* %dst) {
 ; GENERIC-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
 ; GENERIC-NEXT:    movl $32767, %eax ## imm = 0x7FFF
 ; GENERIC-NEXT:    cmovlel %edi, %eax
-; GENERIC-NEXT:    movw $32767, %cx ## imm = 0x7FFF
-; GENERIC-NEXT:    cmovlew %di, %cx
 ; GENERIC-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
-; GENERIC-NEXT:    movw $-32768, %ax ## imm = 0x8000
-; GENERIC-NEXT:    cmovgew %cx, %ax
-; GENERIC-NEXT:    movw %ax, (%rsi)
+; GENERIC-NEXT:    movw $-32768, %cx ## imm = 0x8000
+; GENERIC-NEXT:    cmovgew %ax, %cx
+; GENERIC-NEXT:    movw %cx, (%rsi)
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: clamp:
 ; ATOM:       ## BB#0:
 ; ATOM-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
 ; ATOM-NEXT:    movl $32767, %eax ## imm = 0x7FFF
-; ATOM-NEXT:    movw $32767, %cx ## imm = 0x7FFF
 ; ATOM-NEXT:    cmovlel %edi, %eax
-; ATOM-NEXT:    cmovlew %di, %cx
+; ATOM-NEXT:    movw $-32768, %cx ## imm = 0x8000
 ; ATOM-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
-; ATOM-NEXT:    movw $-32768, %dx ## imm = 0x8000
-; ATOM-NEXT:    cmovgew %cx, %dx
-; ATOM-NEXT:    movw %dx, (%rsi)
+; ATOM-NEXT:    cmovgew %ax, %cx
+; ATOM-NEXT:    movw %cx, (%rsi)
 ; ATOM-NEXT:    retq
   %cmp = icmp sgt i32 %src, 32767
   %sel1 = select i1 %cmp, i32 32767, i32 %src

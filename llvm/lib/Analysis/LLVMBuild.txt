@@ -19,4 +19,4 @@
 type = Library
 name = Analysis
 parent = Libraries
-required_libraries = Core Support ProfileData
+required_libraries = Core Support ProfileData Object

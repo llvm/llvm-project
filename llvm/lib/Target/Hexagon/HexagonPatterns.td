@@ -14,8 +14,8 @@ def F64 : PatLeaf<(f64 DoubleRegs:$R)>;
 def LoReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_lo)>;
 def HiReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_hi)>;
 
-def orisadd: PatFrag<(ops node:$Addr, node:$off),
-    (or node:$Addr, node:$off), [{ return orIsAdd(N); }]>;
+def IsOrAdd: PatFrag<(ops node:$Addr, node:$off),
+    (or node:$Addr, node:$off), [{ return isOrEquivalentToAdd(N); }]>;
 
 def IsPow2_32 : PatLeaf<(i32 imm), [{
   uint32_t V = N->getZExtValue();
@@ -287,7 +287,7 @@ multiclass Loadx_pat<PatFrag Load, ValueType VT, PatLeaf ImmPred,
   def: Pat<(VT (Load AddrFI:$fi)), (VT (MI AddrFI:$fi, 0))>;
   def: Pat<(VT (Load (add (i32 AddrFI:$fi), ImmPred:$Off))),
            (VT (MI AddrFI:$fi, imm:$Off))>;
-  def: Pat<(VT (Load (orisadd (i32 AddrFI:$fi), ImmPred:$Off))),
+  def: Pat<(VT (Load (IsOrAdd (i32 AddrFI:$fi), ImmPred:$Off))),
            (VT (MI AddrFI:$fi, imm:$Off))>;
   def: Pat<(VT (Load (add I32:$Rs, ImmPred:$Off))),
            (VT (MI IntRegs:$Rs, imm:$Off))>;
@@ -438,14 +438,14 @@ multiclass Storex_fi_add_pat<PatFrag Store, PatFrag Value, PatFrag ImmPred,
                              InstHexagon MI> {
   def: Pat<(Store Value:$Rs, (add (i32 AddrFI:$fi), ImmPred:$Off)),
            (MI AddrFI:$fi, imm:$Off, Value:$Rs)>;
-  def: Pat<(Store Value:$Rs, (orisadd (i32 AddrFI:$fi), ImmPred:$Off)),
+  def: Pat<(Store Value:$Rs, (IsOrAdd (i32 AddrFI:$fi), ImmPred:$Off)),
            (MI AddrFI:$fi, imm:$Off, Value:$Rs)>;
 }
 multiclass Storex_add_pat<PatFrag Store, PatFrag Value, PatFrag ImmPred,
                           InstHexagon MI> {
   def: Pat<(Store Value:$Rt, (add I32:$Rs, ImmPred:$Off)),
            (MI IntRegs:$Rs, imm:$Off, Value:$Rt)>;
-  def: Pat<(Store Value:$Rt, (orisadd I32:$Rs, ImmPred:$Off)),
+  def: Pat<(Store Value:$Rt, (IsOrAdd I32:$Rs, ImmPred:$Off)),
            (MI IntRegs:$Rs, imm:$Off, Value:$Rt)>;
 }
 class Storex_simple_pat<PatFrag Store, PatFrag Value, InstHexagon MI>
@@ -463,14 +463,14 @@ multiclass Storexm_fi_add_pat<PatFrag Store, PatFrag Value, PatFrag ImmPred,
                               PatFrag ValueMod, InstHexagon MI> {
   def: Pat<(Store Value:$Rs, (add (i32 AddrFI:$fi), ImmPred:$Off)),
            (MI AddrFI:$fi, imm:$Off, (ValueMod Value:$Rs))>;
-  def: Pat<(Store Value:$Rs, (orisadd (i32 AddrFI:$fi), ImmPred:$Off)),
+  def: Pat<(Store Value:$Rs, (IsOrAdd (i32 AddrFI:$fi), ImmPred:$Off)),
            (MI AddrFI:$fi, imm:$Off, (ValueMod Value:$Rs))>;
 }
 multiclass Storexm_add_pat<PatFrag Store, PatFrag Value, PatFrag ImmPred,
                            PatFrag ValueMod, InstHexagon MI> {
   def: Pat<(Store Value:$Rt, (add I32:$Rs, ImmPred:$Off)),
            (MI IntRegs:$Rs, imm:$Off, (ValueMod Value:$Rt))>;
-  def: Pat<(Store Value:$Rt, (orisadd I32:$Rs, ImmPred:$Off)),
+  def: Pat<(Store Value:$Rt, (IsOrAdd I32:$Rs, ImmPred:$Off)),
            (MI IntRegs:$Rs, imm:$Off, (ValueMod Value:$Rt))>;
 }
 class Storexm_simple_pat<PatFrag Store, PatFrag Value, PatFrag ValueMod,
@@ -682,7 +682,7 @@ def: Pat<(add I32:$Rt, (shl I32:$Rs, u3_0ImmPred:$u3)),
 def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
-def: Pat<(orisadd (i32 AddrFI:$Rs), s32_0ImmPred:$off),
+def: Pat<(IsOrAdd (i32 AddrFI:$Rs), s32_0ImmPred:$off),
          (PS_fi (i32 AddrFI:$Rs), s32_0ImmPred:$off)>;
 
 
@@ -1755,15 +1755,15 @@ multiclass Memopxr_add_pat<PatFrag Load, PatFrag Store, PatFrag ImmPred,
   def: Pat<(Store (Oper (Load (add I32:$Rs, ImmPred:$Off)), I32:$A),
                   (add I32:$Rs, ImmPred:$Off)),
            (MI I32:$Rs, imm:$Off, I32:$A)>;
-  def: Pat<(Store (Oper (Load (orisadd I32:$Rs, ImmPred:$Off)), I32:$A),
-                  (orisadd I32:$Rs, ImmPred:$Off)),
+  def: Pat<(Store (Oper (Load (IsOrAdd I32:$Rs, ImmPred:$Off)), I32:$A),
+                  (IsOrAdd I32:$Rs, ImmPred:$Off)),
            (MI I32:$Rs, imm:$Off, I32:$A)>;
   // Addr: fi
   def: Pat<(Store (Oper (Load (add AddrFI:$Rs, ImmPred:$Off)), I32:$A),
                   (add AddrFI:$Rs, ImmPred:$Off)),
            (MI AddrFI:$Rs, imm:$Off, I32:$A)>;
-  def: Pat<(Store (Oper (Load (orisadd AddrFI:$Rs, ImmPred:$Off)), I32:$A),
-                  (orisadd AddrFI:$Rs, ImmPred:$Off)),
+  def: Pat<(Store (Oper (Load (IsOrAdd AddrFI:$Rs, ImmPred:$Off)), I32:$A),
+                  (IsOrAdd AddrFI:$Rs, ImmPred:$Off)),
            (MI AddrFI:$Rs, imm:$Off, I32:$A)>;
 }
 
@@ -1854,15 +1854,15 @@ multiclass Memopxi_add_pat<PatFrag Load, PatFrag Store, PatFrag ImmPred,
   def: Pat<(Store (Oper (Load (add I32:$Rs, ImmPred:$Off)), Arg:$A),
                   (add I32:$Rs, ImmPred:$Off)),
            (MI I32:$Rs, imm:$Off, (ArgMod Arg:$A))>;
-  def: Pat<(Store (Oper (Load (orisadd I32:$Rs, ImmPred:$Off)), Arg:$A),
-                  (orisadd I32:$Rs, ImmPred:$Off)),
+  def: Pat<(Store (Oper (Load (IsOrAdd I32:$Rs, ImmPred:$Off)), Arg:$A),
+                  (IsOrAdd I32:$Rs, ImmPred:$Off)),
            (MI I32:$Rs, imm:$Off, (ArgMod Arg:$A))>;
   // Addr: fi
   def: Pat<(Store (Oper (Load (add AddrFI:$Rs, ImmPred:$Off)), Arg:$A),
                   (add AddrFI:$Rs, ImmPred:$Off)),
            (MI AddrFI:$Rs, imm:$Off, (ArgMod Arg:$A))>;
-  def: Pat<(Store (Oper (Load (orisadd AddrFI:$Rs, ImmPred:$Off)), Arg:$A),
-                  (orisadd AddrFI:$Rs, ImmPred:$Off)),
+  def: Pat<(Store (Oper (Load (IsOrAdd AddrFI:$Rs, ImmPred:$Off)), Arg:$A),
+                  (IsOrAdd AddrFI:$Rs, ImmPred:$Off)),
            (MI AddrFI:$Rs, imm:$Off, (ArgMod Arg:$A))>;
 }
 

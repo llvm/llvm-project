@@ -35,8 +35,15 @@ static cl::opt<bool>
 static cl::alias PrintFileNameShort("f", cl::desc(""),
                                     cl::aliasopt(PrintFileName));
 
+static cl::opt<int>
+    MinLength("bytes", cl::desc("Print sequences of the specified length"),
+              cl::init(4));
+static cl::alias MinLengthShort("n", cl::desc(""), cl::aliasopt(MinLength));
+
 static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
   auto print = [&OS, FileName](StringRef L) {
+    if (L.size() < static_cast<size_t>(MinLength))
+      return;
     if (PrintFileName)
       OS << FileName << ": ";
     OS << L << '\n';
@@ -48,12 +55,11 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
       if (S == nullptr)
         S = P;
     } else if (S) {
-      if (P - S > 3)
-        print(StringRef(S, P - S));
+      print(StringRef(S, P - S));
       S = nullptr;
     }
   }
-  if (S && E - S > 3)
+  if (S)
     print(StringRef(S, E - S));
 }
 
@@ -62,6 +68,10 @@ int main(int argc, char **argv) {
   PrettyStackTraceProgram X(argc, argv);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm string dumper\n");
+  if (MinLength == 0) {
+    errs() << "invalid minimum string length 0\n";
+    return EXIT_FAILURE;
+  }
 
   if (InputFileNames.empty())
     InputFileNames.push_back("-");
