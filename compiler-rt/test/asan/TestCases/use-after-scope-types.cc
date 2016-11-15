@@ -13,9 +13,6 @@
 
 // RUN: %env_asan_opts=detect_stack_use_after_scope=0 %run %t 11
 
-// Temporarily disable to fix the bot.
-// UNSUPPORTED: darwin
-
 #include <stdlib.h>
 #include <string>
 #include <vector>
