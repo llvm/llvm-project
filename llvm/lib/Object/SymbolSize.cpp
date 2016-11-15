@@ -16,19 +16,13 @@
 using namespace llvm;
 using namespace object;
 
-namespace {
-struct SymEntry {
-  symbol_iterator I;
-  uint64_t Address;
-  unsigned Number;
-  unsigned SectionID;
-};
-}
-
-static int compareAddress(const SymEntry *A, const SymEntry *B) {
+// Orders increasingly by (SectionID, Address).
+int llvm::object::compareAddress(const SymEntry *A, const SymEntry *B) {
   if (A->SectionID != B->SectionID)
-    return A->SectionID - B->SectionID;
-  return A->Address - B->Address;
+    return A->SectionID < B->SectionID ? -1 : 1;
+  if (A->Address != B->Address)
+    return A->Address < B->Address ? -1 : 1;
+  return 0;
 }
 
 static unsigned getSectionID(const ObjectFile &O, SectionRef Sec) {
