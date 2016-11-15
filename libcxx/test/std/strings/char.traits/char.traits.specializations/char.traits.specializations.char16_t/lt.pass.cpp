@@ -22,7 +22,6 @@ int main()
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 #if TEST_STD_VER >= 11
-    char16_t c = u'\0';
     assert(!std::char_traits<char16_t>::lt(u'a', u'a'));
     assert( std::char_traits<char16_t>::lt(u'A', u'a'));
 #endif

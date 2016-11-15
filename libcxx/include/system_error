@@ -219,6 +219,7 @@ bool operator!=(const error_condition& lhs, const error_code& rhs) noexcept;
 bool operator!=(const error_condition& lhs, const error_condition& rhs) noexcept;
 
 template <> struct hash<std::error_code>;
+template <> struct hash<std::error_condition>;
 
 }  // std
 
@@ -624,6 +625,17 @@ struct _LIBCPP_TYPE_VIS_ONLY hash<error_code>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const error_code& __ec) const _NOEXCEPT
+    {
+        return static_cast<size_t>(__ec.value());
+    }
+};
+
+template <>
+struct _LIBCPP_TYPE_VIS_ONLY hash<error_condition>
+    : public unary_function<error_condition, size_t>
+{
+    _LIBCPP_INLINE_VISIBILITY
+    size_t operator()(const error_condition& __ec) const _NOEXCEPT
     {
         return static_cast<size_t>(__ec.value());
     }

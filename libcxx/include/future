@@ -50,7 +50,7 @@ class future_error
 {
 public:
     future_error(error_code ec);  // exposition only
-
+    explicit future_error(future_errc); // C++17
     const error_code& code() const noexcept;
     const char*       what() const noexcept;
 };
@@ -505,7 +505,9 @@ class _LIBCPP_EXCEPTION_ABI future_error
     error_code __ec_;
 public:
     future_error(error_code __ec);
-
+#if _LIBCPP_STD_VERS > 14
+    explicit future_error(future_errc _Ev) : logic_error(), __ec_(make_error_code(_Ev)) {}
+#endif
     _LIBCPP_INLINE_VISIBILITY
     const error_code& code() const _NOEXCEPT {return __ec_;}
 
@@ -2372,7 +2374,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     shared_future() _NOEXCEPT : __state_(nullptr) {}
     _LIBCPP_INLINE_VISIBILITY
-    shared_future(const shared_future& __rhs) : __state_(__rhs.__state_)
+    shared_future(const shared_future& __rhs)  _NOEXCEPT : __state_(__rhs.__state_)
         {if (__state_) __state_->__add_shared();}
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
@@ -2383,7 +2385,7 @@ public:
         {__rhs.__state_ = nullptr;}
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     ~shared_future();
-    shared_future& operator=(const shared_future& __rhs);
+    shared_future& operator=(const shared_future& __rhs) _NOEXCEPT;
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     shared_future& operator=(shared_future&& __rhs) _NOEXCEPT
@@ -2427,7 +2429,7 @@ shared_future<_Rp>::~shared_future()
 
 template <class _Rp>
 shared_future<_Rp>&
-shared_future<_Rp>::operator=(const shared_future& __rhs)
+shared_future<_Rp>::operator=(const shared_future& __rhs) _NOEXCEPT
 {
     if (__rhs.__state_)
         __rhs.__state_->__add_shared();

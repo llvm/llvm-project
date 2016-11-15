@@ -872,54 +872,56 @@
 #error SCNxPTR not defined
 #endif
 
+template <class T> void test()
+{
+    T t = 0;
+    ((void)t); // Prevent unused warning
+}
+
 int main()
 {
-    {
-    std::int8_t  i1 = 0;
-    std::int16_t i2 = 0;
-    std::int32_t i3 = 0;
-    std::int64_t i4 = 0;
-    }
-    {
-    std::uint8_t  i1 = 0;
-    std::uint16_t i2 = 0;
-    std::uint32_t i3 = 0;
-    std::uint64_t i4 = 0;
-    }
-    {
-    std::int_least8_t  i1 = 0;
-    std::int_least16_t i2 = 0;
-    std::int_least32_t i3 = 0;
-    std::int_least64_t i4 = 0;
-    }
-    {
-    std::uint_least8_t  i1 = 0;
-    std::uint_least16_t i2 = 0;
-    std::uint_least32_t i3 = 0;
-    std::uint_least64_t i4 = 0;
-    }
-    {
-    std::int_fast8_t  i1 = 0;
-    std::int_fast16_t i2 = 0;
-    std::int_fast32_t i3 = 0;
-    std::int_fast64_t i4 = 0;
-    }
-    {
-    std::uint_fast8_t  i1 = 0;
-    std::uint_fast16_t i2 = 0;
-    std::uint_fast32_t i3 = 0;
-    std::uint_fast64_t i4 = 0;
-    }
-    {
-    std::intptr_t  i1 = 0;
-    std::uintptr_t i2 = 0;
-    std::intmax_t  i3 = 0;
-    std::uintmax_t i4 = 0;
-    }
+    test<std::int8_t >();
+    test<std::int16_t>();
+    test<std::int32_t>();
+    test<std::int64_t>();
+
+    test<std::uint8_t >();
+    test<std::uint16_t>();
+    test<std::uint32_t>();
+    test<std::uint64_t>();
+
+    test<std::int_least8_t >();
+    test<std::int_least16_t>();
+    test<std::int_least32_t>();
+    test<std::int_least64_t>();
+
+    test<std::uint_least8_t >();
+    test<std::uint_least16_t>();
+    test<std::uint_least32_t>();
+    test<std::uint_least64_t>();
+
+    test<std::int_fast8_t >();
+    test<std::int_fast16_t>();
+    test<std::int_fast32_t>();
+    test<std::int_fast64_t>();
+
+    test<std::uint_fast8_t >();
+    test<std::uint_fast16_t>();
+    test<std::uint_fast32_t>();
+    test<std::uint_fast64_t>();
+
+    test<std::intptr_t >();
+    test<std::uintptr_t>();
+    test<std::intmax_t >();
+    test<std::uintmax_t>();
+
     {
     std::imaxdiv_t  i1 = {};
+    ((void)i1); // Prevent unused warning
     }
+
     std::intmax_t i = 0;
+    ((void)i); // Prevent unused warning
     static_assert((std::is_same<decltype(std::imaxabs(i)), std::intmax_t>::value), "");
     static_assert((std::is_same<decltype(std::imaxdiv(i, i)), std::imaxdiv_t>::value), "");
     static_assert((std::is_same<decltype(std::strtoimax("", (char**)0, 0)), std::intmax_t>::value), "");

@@ -104,8 +104,7 @@ enum stats_state_e {
     macro (OMP_TASKLOOP, 0, arg)                                \
     macro (TASK_executed, 0, arg)                               \
     macro (TASK_cancelled, 0, arg)                              \
-    macro (TASK_stolen, 0, arg)                                 \
-    macro (LAST,0,arg)
+    macro (TASK_stolen, 0, arg)
 
 /*!
  * \brief Add new timers under KMP_FOREACH_TIMER() macro in kmp_stats.h
@@ -123,31 +122,31 @@ enum stats_state_e {
  * @ingroup STATS_GATHERING2
  */
 #define KMP_FOREACH_TIMER(macro, arg)                              \
-    macro (OMP_worker_thread_life, 0, arg)                         \
+    macro (OMP_worker_thread_life, stats_flags_e::logEvent, arg)   \
     macro (FOR_static_scheduling, 0, arg)                          \
     macro (FOR_dynamic_scheduling, 0, arg)                         \
     macro (OMP_critical,  0, arg)                                  \
     macro (OMP_critical_wait,  0, arg)                             \
     macro (OMP_single,    0, arg)                                  \
     macro (OMP_master,    0, arg)                                  \
-    macro (OMP_idle, 0, arg)                                       \
-    macro (OMP_plain_barrier, 0, arg)                              \
-    macro (OMP_fork_join_barrier, 0, arg)                          \
-    macro (OMP_parallel, 0, arg)                                   \
+    macro (OMP_idle, stats_flags_e::logEvent, arg)                 \
+    macro (OMP_plain_barrier, stats_flags_e::logEvent, arg)        \
+    macro (OMP_fork_barrier, stats_flags_e::logEvent, arg)         \
+    macro (OMP_join_barrier, stats_flags_e::logEvent, arg)         \
+    macro (OMP_parallel, stats_flags_e::logEvent, arg)             \
     macro (OMP_task_immediate, 0, arg)                             \
     macro (OMP_task_taskwait, 0, arg)                              \
     macro (OMP_task_taskyield, 0, arg)                             \
     macro (OMP_task_taskgroup, 0, arg)                             \
     macro (OMP_task_join_bar, 0, arg)                              \
     macro (OMP_task_plain_bar, 0, arg)                             \
-    macro (OMP_serial, 0, arg)                                     \
+    macro (OMP_serial, stats_flags_e::logEvent, arg)               \
     macro (OMP_taskloop_scheduling, 0, arg)                        \
     macro (OMP_set_numthreads,    stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     macro (OMP_PARALLEL_args,     stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     macro (FOR_static_iterations, stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     macro (FOR_dynamic_iterations,stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
-    KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                             \
-    macro (LAST,0, arg)
+    KMP_FOREACH_DEVELOPER_TIMER(macro, arg)
 
 
 // OMP_start_end          -- Time from when OpenMP is initialized until the stats are printed at exit
@@ -190,28 +189,22 @@ enum stats_state_e {
 // KMP_tree_release       -- time in __kmp_tree_barrier_release
 // KMP_hyper_gather       -- time in __kmp_hyper_barrier_gather
 // KMP_hyper_release      -- time in __kmp_hyper_barrier_release
-# define KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                        \
-    macro (KMP_fork_call, 0, arg)                                       \
-    macro (KMP_join_call, 0, arg)                                       \
-    macro (KMP_fork_barrier, stats_flags_e::logEvent, arg)              \
-    macro (KMP_join_barrier, stats_flags_e::logEvent, arg)              \
-    macro (KMP_barrier, 0, arg)                                         \
-    macro (KMP_end_split_barrier, 0, arg)                               \
-    macro (KMP_hier_gather, 0, arg)                                     \
-    macro (KMP_hier_release, 0, arg)                                    \
-    macro (KMP_hyper_gather,  stats_flags_e::logEvent, arg)             \
-    macro (KMP_hyper_release,  stats_flags_e::logEvent, arg)            \
-    macro (KMP_linear_gather, 0, arg)                                   \
-    macro (KMP_linear_release, 0, arg)                                  \
-    macro (KMP_tree_gather, 0, arg)                                     \
-    macro (KMP_tree_release, 0, arg)                                    \
-    macro (USER_master_invoke, stats_flags_e::logEvent, arg)            \
-    macro (USER_worker_invoke, stats_flags_e::logEvent, arg)            \
-    macro (USER_resume, stats_flags_e::logEvent, arg)                   \
-    macro (USER_suspend, stats_flags_e::logEvent, arg)                  \
-    macro (USER_launch_thread_loop, stats_flags_e::logEvent, arg)       \
-    macro (KMP_allocate_team, 0, arg)                                   \
-    macro (KMP_setup_icv_copy, 0, arg)                                  \
+# define KMP_FOREACH_DEVELOPER_TIMER(macro, arg) \
+    macro (KMP_fork_call, 0, arg)                \
+    macro (KMP_join_call, 0, arg)                \
+    macro (KMP_end_split_barrier, 0, arg)        \
+    macro (KMP_hier_gather, 0, arg)              \
+    macro (KMP_hier_release, 0, arg)             \
+    macro (KMP_hyper_gather, 0, arg)             \
+    macro (KMP_hyper_release, 0, arg)            \
+    macro (KMP_linear_gather, 0, arg)            \
+    macro (KMP_linear_release, 0, arg)           \
+    macro (KMP_tree_gather, 0, arg)              \
+    macro (KMP_tree_release, 0, arg)             \
+    macro (USER_resume, 0, arg)                  \
+    macro (USER_suspend, 0, arg)                 \
+    macro (KMP_allocate_team, 0, arg)            \
+    macro (KMP_setup_icv_copy, 0, arg)           \
     macro (USER_icv_copy, 0, arg)
 #else
 # define KMP_FOREACH_DEVELOPER_TIMER(macro, arg)
@@ -233,47 +226,23 @@ enum stats_state_e {
  *
  * @ingroup STATS_GATHERING
 */
-#define KMP_FOREACH_EXPLICIT_TIMER(macro, arg)     \
-    macro(OMP_worker_thread_life, 0, arg)          \
-    macro(FOR_static_scheduling, 0, arg)           \
-    macro(FOR_dynamic_scheduling, 0, arg)          \
-    macro(OMP_critical, 0, arg)                    \
-    macro(OMP_critical_wait, 0, arg)               \
-    macro(OMP_single, 0, arg)                      \
-    macro(OMP_master, 0, arg)                      \
-    macro(OMP_idle, 0, arg)                        \
-    macro(OMP_plain_barrier, 0, arg)               \
-    macro(OMP_fork_join_barrier, 0, arg)           \
-    macro(OMP_parallel, 0, arg)                    \
-    macro(OMP_task_immediate, 0, arg)              \
-    macro(OMP_task_taskwait, 0, arg)               \
-    macro(OMP_task_taskyield, 0, arg)              \
-    macro(OMP_task_taskgroup, 0, arg)              \
-    macro(OMP_task_join_bar, 0, arg)               \
-    macro(OMP_task_plain_bar, 0, arg)              \
-    macro(OMP_serial, 0, arg)                      \
-    macro(OMP_taskloop_scheduling, 0, arg)         \
-    KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro,arg)     \
-    macro(LAST, 0, arg)
-
-#if (KMP_DEVELOPER_STATS)
-# define KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro, arg)               \
-    macro(USER_launch_thread_loop, stats_flags_e::logEvent, arg)
-#else
-# define KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro, arg)
-#endif
+#define KMP_FOREACH_EXPLICIT_TIMER(macro, arg) \
+    KMP_FOREACH_TIMER(macro, arg)
 
 #define ENUMERATE(name,ignore,prefix) prefix##name,
 enum timer_e {
     KMP_FOREACH_TIMER(ENUMERATE, TIMER_)
+    TIMER_LAST
 };
 
 enum explicit_timer_e {
     KMP_FOREACH_EXPLICIT_TIMER(ENUMERATE, EXPLICIT_TIMER_)
+    EXPLICIT_TIMER_LAST
 };
 
 enum counter_e {
     KMP_FOREACH_COUNTER(ENUMERATE, COUNTER_)
+    COUNTER_LAST
 };
 #undef ENUMERATE
 
@@ -370,7 +339,7 @@ class explicitTimer
     void start(timer_e timerEnumValue);
     void pause() { pauseStartTime = tsc_tick_count::now(); }
     void resume() { totalPauseTime += (tsc_tick_count::now() - pauseStartTime); }
-    void stop(timer_e timerEnumValue);
+    void stop(timer_e timerEnumValue, kmp_stats_list* stats_ptr = nullptr);
     void reset() { startTime = 0; pauseStartTime = 0; totalPauseTime = 0; }
 };
 
@@ -716,13 +685,14 @@ class kmp_stats_output_module {
 extern "C" {
 #endif
 void __kmp_stats_init();
+void __kmp_stats_fini();
 void __kmp_reset_stats();
 void __kmp_output_stats(const char *);
 void __kmp_accumulate_stats_at_exit(void);
 // thread local pointer to stats node within list
 extern __thread kmp_stats_list* __kmp_stats_thread_ptr;
 // head to stats list.
-extern kmp_stats_list __kmp_stats_list;
+extern kmp_stats_list* __kmp_stats_list;
 // lock for __kmp_stats_list
 extern kmp_tas_lock_t  __kmp_stats_lock;
 // reference start time
@@ -866,6 +836,7 @@ extern kmp_stats_output_module __kmp_stats_output;
 # define KMP_COUNT_DEVELOPER_BLOCK(n)            KMP_COUNT_BLOCK(n)
 # define KMP_START_DEVELOPER_EXPLICIT_TIMER(n)   KMP_START_EXPLICIT_TIMER(n)
 # define KMP_STOP_DEVELOPER_EXPLICIT_TIMER(n)    KMP_STOP_EXPLICIT_TIMER(n)
+# define KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(n) KMP_TIME_PARTITIONED_BLOCK(n)
 #else
 // Null definitions
 # define KMP_TIME_DEVELOPER_BLOCK(n)             ((void)0)
@@ -873,6 +844,7 @@ extern kmp_stats_output_module __kmp_stats_output;
 # define KMP_COUNT_DEVELOPER_BLOCK(n)            ((void)0)
 # define KMP_START_DEVELOPER_EXPLICIT_TIMER(n)   ((void)0)
 # define KMP_STOP_DEVELOPER_EXPLICIT_TIMER(n)    ((void)0)
+# define KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(n) ((void)0)
 #endif
 
 #else // KMP_STATS_ENABLED
@@ -894,6 +866,7 @@ extern kmp_stats_output_module __kmp_stats_output;
 #define KMP_STOP_DEVELOPER_EXPLICIT_TIMER(n)    ((void)0)
 #define KMP_INIT_PARTITIONED_TIMERS(name)       ((void)0)
 #define KMP_TIME_PARTITIONED_BLOCK(name)        ((void)0)
+#define KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(n) ((void)0)
 #define KMP_PUSH_PARTITIONED_TIMER(name)        ((void)0)
 #define KMP_POP_PARTITIONED_TIMER()             ((void)0)
 #define KMP_SET_THREAD_STATE(state_name)        ((void)0)

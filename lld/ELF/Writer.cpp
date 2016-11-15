@@ -856,6 +856,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     std::rotate(BestPos, NonScriptI, NonScriptI + 1);
     ++NonScriptI;
   }
+
+  Script<ELFT>::X->adjustSectionsAfterSorting();
 }
 
 // Create output section objects and add them to OutputSections.

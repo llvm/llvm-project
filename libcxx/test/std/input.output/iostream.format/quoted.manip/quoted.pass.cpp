@@ -32,6 +32,7 @@ void both_ways ( const CharT *p ) {
 
     std::basic_stringstream<CharT, Traits> ss;
     bool skippingws = is_skipws ( ss );
+    ((void)skippingws); // Prevent unused warning
     ss << q;
     ss >> q;
     }

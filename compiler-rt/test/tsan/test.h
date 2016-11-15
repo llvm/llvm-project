@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <sched.h>
 #include <stdarg.h>
+#include "sanitizer_common/print_address.h"
 
 #ifdef __APPLE__
 #include <mach/mach_time.h>
@@ -22,6 +23,7 @@ extern "C" {
 void __tsan_testonly_barrier_init(invisible_barrier_t *barrier,
     unsigned count);
 void __tsan_testonly_barrier_wait(invisible_barrier_t *barrier);
+unsigned long __tsan_testonly_shadow_stack_current_size();
 #ifdef __cplusplus
 }
 #endif
@@ -36,23 +38,6 @@ static inline void barrier_wait(invisible_barrier_t *barrier) {
 
 // Default instance of the barrier, but a test can declare more manually.
 invisible_barrier_t barrier;
-
-void print_address(const char *str, int n, ...) {
-  fprintf(stderr, "%s", str);
-  va_list ap;
-  va_start(ap, n);
-  while (n--) {
-    void *p = va_arg(ap, void *);
-#if defined(__x86_64__) || defined(__aarch64__) || defined(__powerpc64__)
-    // On FreeBSD, the %p conversion specifier works as 0x%x and thus does not
-    // match to the format used in the diagnotic message.
-    fprintf(stderr, "0x%012lx ", (unsigned long) p);
-#elif defined(__mips64)
-    fprintf(stderr, "0x%010lx ", (unsigned long) p);
-#endif
-  }
-  fprintf(stderr, "\n");
-}
 
 #ifdef __APPLE__
 unsigned long long monotonic_clock_ns() {

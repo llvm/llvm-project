@@ -21,6 +21,7 @@
 int main()
 {
     std::time_base::dateorder d = std::time_base::no_order;
+    ((void)d); // Prevent unused warning
     assert(std::time_base::no_order == 0);
     assert(std::time_base::dmy == 1);
     assert(std::time_base::mdy == 2);
