@@ -42,9 +42,10 @@ public:
   Property(const ConstString &name, const ConstString &desc, bool is_global,
            const lldb::OptionValueSP &value_sp);
 
-  const ConstString &GetName() const { return m_name; }
-
-  const char *GetDescription() const { return m_description.GetCString(); }
+  llvm::StringRef GetName() const { return m_name.GetStringRef(); }
+  llvm::StringRef GetDescription() const {
+    return m_description.GetStringRef();
+  }
 
   const lldb::OptionValueSP &GetValue() const { return m_value_sp; }
 

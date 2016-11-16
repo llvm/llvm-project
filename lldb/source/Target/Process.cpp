@@ -4577,8 +4577,7 @@ public:
   IOHandlerProcessSTDIO(Process *process, int write_fd)
       : IOHandler(process->GetTarget().GetDebugger(),
                   IOHandler::Type::ProcessIO),
-        m_process(process), m_read_file(), m_write_file(write_fd, false),
-        m_pipe() {
+        m_process(process), m_write_file(write_fd, false) {
     m_pipe.CreateNew(false);
     m_read_file.SetDescriptor(GetInputFD(), false);
   }
@@ -4710,7 +4709,7 @@ protected:
   File m_write_file; // Write to this file (usually the master pty for getting
                      // io to debuggee)
   Pipe m_pipe;
-  std::atomic<bool> m_is_running;
+  std::atomic<bool> m_is_running{false};
 };
 
 void Process::SetSTDIOFileDescriptor(int fd) {

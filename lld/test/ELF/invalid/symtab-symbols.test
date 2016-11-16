@@ -4,7 +4,7 @@
 # GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could generate
 # broken objects.
 # Verify that lld can handle STT_NOTYPE symbols associated
-# with SHT_SYMTAB section. 
+# with SHT_SYMTAB section.
 
 !ELF
 FileHeader:

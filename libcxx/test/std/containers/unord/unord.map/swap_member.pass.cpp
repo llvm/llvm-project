@@ -77,7 +77,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.at(10) == "ten");
         assert(c1.at(20) == "twenty");
@@ -132,7 +132,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.at(1) == "one");
         assert(c2.at(2) == "two");
@@ -176,7 +176,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.at(10) == "ten");
         assert(c1.at(20) == "twenty");
@@ -193,7 +193,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.at(1) == "one");
         assert(c2.at(2) == "two");
@@ -257,7 +257,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.at(10) == "ten");
         assert(c1.at(20) == "twenty");
@@ -312,7 +312,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.at(1) == "one");
         assert(c2.at(2) == "two");
@@ -356,7 +356,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.at(10) == "ten");
         assert(c1.at(20) == "twenty");
@@ -373,7 +373,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.at(1) == "one");
         assert(c2.at(2) == "two");
@@ -437,7 +437,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.at(10) == "ten");
         assert(c1.at(20) == "twenty");
@@ -492,7 +492,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.at(1) == "one");
         assert(c2.at(2) == "two");
@@ -536,7 +536,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(c1.at(10) == "ten");
         assert(c1.at(20) == "twenty");
@@ -553,7 +553,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.at(1) == "one");
         assert(c2.at(2) == "two");

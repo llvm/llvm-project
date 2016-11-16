@@ -28,20 +28,21 @@ enum class PatchOpcodes : uint32_t {
 };
 
 // 0xUUUUWXYZ -> 0x000W0XYZ
-inline static uint32_t getMovwMask(const uint32_t Value) {
+inline static uint32_t getMovwMask(const uint32_t Value) XRAY_NEVER_INSTRUMENT {
   return (Value & 0xfff) | ((Value & 0xf000) << 4);
 }
 
 // 0xWXYZUUUU -> 0x000W0XYZ
-inline static uint32_t getMovtMask(const uint32_t Value) {
+inline static uint32_t getMovtMask(const uint32_t Value) XRAY_NEVER_INSTRUMENT {
   return getMovwMask(Value >> 16);
 }
 
 // Writes the following instructions:
 //   MOVW R<regNo>, #<lower 16 bits of the |Value|>
 //   MOVT R<regNo>, #<higher 16 bits of the |Value|>
-inline static uint32_t *write32bitLoadReg(uint8_t regNo, uint32_t *Address,
-                                          const uint32_t Value) {
+inline static uint32_t *
+write32bitLoadReg(uint8_t regNo, uint32_t *Address,
+                  const uint32_t Value) XRAY_NEVER_INSTRUMENT {
   // This is a fatal error: we cannot just report it and continue execution.
   assert(regNo <= 15 && "Register number must be 0 to 15.");
   // MOVW R, #0xWXYZ in machine code is 0xE30WRXYZ
@@ -55,21 +56,24 @@ inline static uint32_t *write32bitLoadReg(uint8_t regNo, uint32_t *Address,
 // Writes the following instructions:
 //   MOVW r0, #<lower 16 bits of the |Value|>
 //   MOVT r0, #<higher 16 bits of the |Value|>
-inline static uint32_t *Write32bitLoadR0(uint32_t *Address,
-                                         const uint32_t Value) {
+inline static uint32_t *
+Write32bitLoadR0(uint32_t *Address,
+                 const uint32_t Value) XRAY_NEVER_INSTRUMENT {
   return write32bitLoadReg(0, Address, Value);
 }
 
 // Writes the following instructions:
 //   MOVW ip, #<lower 16 bits of the |Value|>
 //   MOVT ip, #<higher 16 bits of the |Value|>
-inline static uint32_t *Write32bitLoadIP(uint32_t *Address,
-                                         const uint32_t Value) {
+inline static uint32_t *
+Write32bitLoadIP(uint32_t *Address,
+                 const uint32_t Value) XRAY_NEVER_INSTRUMENT {
   return write32bitLoadReg(12, Address, Value);
 }
 
 inline static bool patchSled(const bool Enable, const uint32_t FuncId,
-                             const XRaySledEntry &Sled, void (*TracingHook)()) {
+                             const XRaySledEntry &Sled,
+                             void (*TracingHook)()) XRAY_NEVER_INSTRUMENT {
   // When |Enable| == true,
   // We replace the following compile-time stub (sled):
   //
@@ -118,17 +122,17 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
 }
 
 bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
-                        const XRaySledEntry &Sled) {
+                        const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
   return patchSled(Enable, FuncId, Sled, __xray_FunctionEntry);
 }
 
 bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
-                       const XRaySledEntry &Sled) {
+                       const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
   return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);
 }
 
 bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
-                           const XRaySledEntry &Sled) {
+                           const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
   // FIXME: In the future we'd need to distinguish between non-tail exits and
   // tail exits for better information preservation.
   return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);

@@ -35,6 +35,7 @@ static const int64_t NanosecondsPerSecond = 1000LL * 1000 * 1000;
 
 #include "sanitizer_common/sanitizer_libc.h"
 #include "xray/xray_records.h"
+#include "xray_defs.h"
 #include "xray_flags.h"
 #include "xray_interface_internal.h"
 
@@ -43,14 +44,16 @@ static const int64_t NanosecondsPerSecond = 1000LL * 1000 * 1000;
 // events. We store simple fixed-sized entries in the log for external analysis.
 
 extern "C" {
-void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type);
+void __xray_InMemoryRawLog(int32_t FuncId,
+                           XRayEntryType Type) XRAY_NEVER_INSTRUMENT;
 }
 
 namespace __xray {
 
 std::mutex LogMutex;
 
-static void retryingWriteAll(int Fd, char *Begin, char *End) {
+static void retryingWriteAll(int Fd, char *Begin,
+                             char *End) XRAY_NEVER_INSTRUMENT {
   if (Begin == End)
     return;
   auto TotalBytes = std::distance(Begin, End);
@@ -69,8 +72,8 @@ static void retryingWriteAll(int Fd, char *Begin, char *End) {
 }
 
 #if defined(__x86_64__)
-static std::pair<ssize_t, bool> retryingReadSome(int Fd, char *Begin,
-                                                 char *End) {
+static std::pair<ssize_t, bool>
+retryingReadSome(int Fd, char *Begin, char *End) XRAY_NEVER_INSTRUMENT {
   auto BytesToRead = std::distance(Begin, End);
   ssize_t BytesRead;
   ssize_t TotalBytesRead = 0;
@@ -89,7 +92,8 @@ static std::pair<ssize_t, bool> retryingReadSome(int Fd, char *Begin,
   return std::make_pair(TotalBytesRead, true);
 }
 
-static bool readValueFromFile(const char *Filename, long long *Value) {
+static bool readValueFromFile(const char *Filename,
+                              long long *Value) XRAY_NEVER_INSTRUMENT {
   int Fd = open(Filename, O_RDONLY | O_CLOEXEC);
   if (Fd == -1)
     return false;
@@ -119,10 +123,13 @@ class ThreadExitFlusher {
   size_t &Offset;
 
 public:
-  explicit ThreadExitFlusher(int Fd, XRayRecord *Start, size_t &Offset)
-      : Fd(Fd), Start(Start), Offset(Offset) {}
+  explicit ThreadExitFlusher(int Fd, XRayRecord *Start,
+                             size_t &Offset) XRAY_NEVER_INSTRUMENT
+      : Fd(Fd),
+        Start(Start),
+        Offset(Offset) {}
 
-  ~ThreadExitFlusher() {
+  ~ThreadExitFlusher() XRAY_NEVER_INSTRUMENT {
     std::lock_guard<std::mutex> L(LogMutex);
     if (Fd > 0 && Start != nullptr) {
       retryingWriteAll(Fd, reinterpret_cast<char *>(Start),
@@ -140,9 +147,12 @@ public:
 
 using namespace __xray;
 
-void PrintToStdErr(const char *Buffer) { fprintf(stderr, "%s", Buffer); }
+void PrintToStdErr(const char *Buffer) XRAY_NEVER_INSTRUMENT {
+  fprintf(stderr, "%s", Buffer);
+}
 
-void __xray_InMemoryRawLog(int32_t FuncId, XRayEntryType Type) {
+void __xray_InMemoryRawLog(int32_t FuncId,
+                           XRayEntryType Type) XRAY_NEVER_INSTRUMENT {
   using Buffer =
       std::aligned_storage<sizeof(XRayRecord), alignof(XRayRecord)>::type;
   static constexpr size_t BuffLen = 1024;

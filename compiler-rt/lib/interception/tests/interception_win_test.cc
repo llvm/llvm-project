@@ -204,7 +204,29 @@ const u8 kUnpatchableCode6[] = {
 
 // A buffer holding the dynamically generated code under test.
 u8* ActiveCode;
-size_t ActiveCodeLength = 4096;
+const size_t ActiveCodeLength = 4096;
+
+int InterceptorFunction(int x);
+
+/// Allocate code memory more than 2GB away from Base.
+u8 *AllocateCode2GBAway(u8 *Base) {
+  // Find a 64K aligned location after Base plus 2GB.
+  size_t TwoGB = 0x80000000;
+  size_t AllocGranularity = 0x10000;
+  Base = (u8 *)((((uptr)Base + TwoGB + AllocGranularity)) & ~(AllocGranularity - 1));
+
+  // Check if that location is free, and if not, loop over regions until we find
+  // one that is.
+  MEMORY_BASIC_INFORMATION mbi = {};
+  while (sizeof(mbi) == VirtualQuery(Base, &mbi, sizeof(mbi))) {
+    if (mbi.State & MEM_FREE) break;
+    Base += mbi.RegionSize;
+  }
+
+  // Allocate one RWX page at the free location.
+  return (u8 *)::VirtualAlloc(Base, ActiveCodeLength, MEM_COMMIT | MEM_RESERVE,
+                              PAGE_EXECUTE_READWRITE);
+}
 
 template<class T>
 static void LoadActiveCode(
@@ -212,11 +234,8 @@ static void LoadActiveCode(
     uptr *entry_point,
     FunctionPrefixKind prefix_kind = FunctionPrefixNone) {
   if (ActiveCode == nullptr) {
-    ActiveCode =
-        (u8*)::VirtualAlloc(nullptr, ActiveCodeLength,
-                            MEM_COMMIT | MEM_RESERVE,
-                            PAGE_EXECUTE_READWRITE);
-    ASSERT_NE(ActiveCode, nullptr);
+    ActiveCode = AllocateCode2GBAway((u8*)&InterceptorFunction);
+    ASSERT_NE(ActiveCode, nullptr) << "failed to allocate RWX memory 2GB away";
   }
 
   size_t position = 0;

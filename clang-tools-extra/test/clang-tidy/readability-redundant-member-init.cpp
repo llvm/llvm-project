@@ -87,6 +87,24 @@ struct F7 : S, T {
   // CHECK-FIXES: F7()  {}
 };
 
+namespace Foo {
+inline namespace Bar {
+template <int N>
+struct Template {
+  Template() = default;
+  int i = N;
+};
+}
+}
+
+enum { N_THINGS = 5 };
+
+struct F8 : Foo::Template<N_THINGS> {
+  F8() : Template() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: initializer for base class 'Foo::Template<N_THINGS>' is redundant
+  // CHECK-FIXES: F8()  {}
+};
+
 // Initializer not written
 struct NF1 {
   NF1() {}
