@@ -2306,9 +2306,19 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
   StringRef NameItems[] = {
       PredefinedExpr::getIdentTypeName(E->getIdentType()), FnName};
   std::string GVName = llvm::join(NameItems, NameItems + 2, ".");
-  if (CurCodeDecl && isa<BlockDecl>(CurCodeDecl)) {
-    auto C = CGM.GetAddrOfConstantCString(FnName, GVName.c_str());
-    return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
+  if (auto *BD = dyn_cast<BlockDecl>(CurCodeDecl)) {
+    std::string Name = SL->getString();
+    if (!Name.empty()) {
+      unsigned Discriminator =
+          CGM.getCXXABI().getMangleContext().getBlockId(BD, true);
+      if (Discriminator)
+        Name += "_" + Twine(Discriminator + 1).str();
+      auto C = CGM.GetAddrOfConstantCString(Name, GVName.c_str());
+      return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
+    } else {
+      auto C = CGM.GetAddrOfConstantCString(FnName, GVName.c_str());
+      return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
+    }
   }
   auto C = CGM.GetAddrOfConstantStringFromLiteral(SL, GVName);
   return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
