@@ -6,9 +6,9 @@ class __declspec(dllexport) A {
 // CHECK: define {{.*}}void @"\01??_FA@@AAEXXZ"
 // CHECK-SAME: !dbg ![[SP:[0-9]+]]
 // CHECK-NOT: {{ret }}
-// CHECK: call x86_thiscallcc %class.A* @"\01??0A@@AAE@PAH@Z"(%class.A* %this1, i32* %0)
+// CHECK: call x86_thiscallcc %class.A* @"\01??0A@@AAE@PAH@Z"
 // CHECK-SAME: !dbg ![[DBG:[0-9]+]]
-// CHECK: ret void, !dbg ![[DBG1:[0-9]+]]
+// CHECK: ret void, !dbg
 //
 // CHECK: ![[SP]] = distinct !DISubprogram(
 // CHECK-SAME:          line: 4
@@ -16,5 +16,4 @@ class __declspec(dllexport) A {
 // CHECK-SAME:          DIFlagArtificial
 // CHECK-SAME:          ){{$}}
 //
-// CHECK: ![[DBG1]] = !DILocation(line: 0
 // CHECK: ![[DBG]] = !DILocation(line: 0
