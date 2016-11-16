@@ -1126,6 +1126,14 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       // correctly.
       ScratchArgs = AF.add(ScratchArgs, 12, StopTracking);
       S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    } else if (FName == "VTCompressionSessionEncodeFrame") {
+      // The context argument passed to VTCompressionSessionEncodeFrame()
+      // is passed to the callback specified when creating the session
+      // (e.g. with VTCompressionSessionCreate()) which can release it.
+      // To account for this possibility, conservatively stop tracking
+      // the context.
+      ScratchArgs = AF.add(ScratchArgs, 5, StopTracking);
+      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
     } else if (FName == "dispatch_set_context" ||
                FName == "xpc_connection_set_context") {
       // <rdar://problem/11059275> - The analyzer currently doesn't have
