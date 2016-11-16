@@ -1781,17 +1781,9 @@ void CodeGenFunction::EmitOMPOuterLoop(bool DynamicOrOrdered, bool IsMonotonic,
   EmitBlock(LoopExit.getBlock());
 
   // Tell the runtime we are done.
-  SourceLocation ELoc = S.getLocEnd();
-  auto &&CodeGen = [DynamicOrOrdered, ELoc](CodeGenFunction &CGF) {
-    if (!DynamicOrOrdered)
-      CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, ELoc);
-  };
-  CodeGen(*this);
+  if (!DynamicOrOrdered)
+    RT.emitForStaticFinish(*this, S.getLocEnd());
 
-  OpenMPDirectiveKind DKind = S.getDirectiveKind();
-  if (DKind == OMPD_for || DKind == OMPD_parallel_for ||
-      DKind == OMPD_distribute_parallel_for)
-    OMPCancelStack.back().CodeGen = CodeGen;
 }
 
 void CodeGenFunction::EmitOMPForOuterLoop(
@@ -1903,7 +1895,6 @@ void CodeGenFunction::EmitOMPDistributeOuterLoop(
 void CodeGenFunction::EmitOMPDistributeParallelForDirective(
     const OMPDistributeParallelForDirective &S) {
   OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
-  OMPCancelStackRAII CancelRegion(*this);
   CGM.getOpenMPRuntime().emitInlinedDirective(
       *this, OMPD_distribute_parallel_for,
       [&S](CodeGenFunction &CGF, PrePostActionTy &) {
@@ -2132,15 +2123,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(const OMPLoopDirective &S) {
                          [](CodeGenFunction &) {});
         EmitBlock(LoopExit.getBlock());
         // Tell the runtime we are done.
-        SourceLocation ELoc = S.getLocEnd();
-        auto &&CodeGen = [ELoc](CodeGenFunction &CGF) {
-          CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, ELoc);
-        };
-        CodeGen(*this);
-        OpenMPDirectiveKind DKind = S.getDirectiveKind();
-        if (DKind == OMPD_for || DKind == OMPD_parallel_for ||
-            DKind == OMPD_distribute_parallel_for)
-          OMPCancelStack.back().CodeGen = CodeGen;
+        RT.emitForStaticFinish(*this, S.getLocStart());
       } else {
         const bool IsMonotonic =
             Ordered || ScheduleKind.Schedule == OMPC_SCHEDULE_static ||
@@ -2194,7 +2177,6 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
   };
   {
     OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
-    OMPCancelStackRAII CancelRegion(*this);
     CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_for, CodeGen,
                                                 S.hasCancel());
   }
@@ -2237,7 +2219,6 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
   bool HasLastprivates = false;
   auto &&CodeGen = [&S, Stmt, CS, &HasLastprivates](CodeGenFunction &CGF,
                                                     PrePostActionTy &) {
-    OMPCancelStackRAII CancelRegion(CGF);
     auto &C = CGF.CGM.getContext();
     auto KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
     // Emit helper vars inits.
@@ -2332,12 +2313,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     CGF.EmitOMPInnerLoop(S, /*RequiresCleanup=*/false, &Cond, &Inc, BodyGen,
                          [](CodeGenFunction &) {});
     // Tell the runtime we are done.
-    SourceLocation ELoc = S.getLocEnd();
-    auto &&FinalCodeGen = [ELoc](CodeGenFunction &CGF) {
-      CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, ELoc);
-    };
-    FinalCodeGen(CGF);
-    CGF.OMPCancelStack.back().CodeGen = FinalCodeGen;
+    CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, S.getLocStart());
     CGF.EmitOMPReductionClauseFinal(S);
     // Emit post-update of the reduction variables if IsLastIter != 0.
     emitPostUpdateForReductionClause(
@@ -2462,7 +2438,6 @@ void CodeGenFunction::EmitOMPParallelForDirective(
   // Emit directive as a combined directive that consists of two implicit
   // directives: 'parallel' with 'for' directive.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-    OMPCancelStackRAII CancelRegion(CGF);
     CGF.EmitOMPWorksharingLoop(S);
   };
   emitCommonOMPParallelDirective(*this, S, OMPD_for, CodeGen);
@@ -3463,11 +3438,8 @@ CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_parallel || Kind == OMPD_task)
     return ReturnBlock;
   assert(Kind == OMPD_for || Kind == OMPD_section || Kind == OMPD_sections ||
-         Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for ||
-         Kind == OMPD_distribute_parallel_for);
-  if (!OMPCancelStack.back().ExitBlock.isValid())
-    OMPCancelStack.back().ExitBlock = getJumpDestInCurrentScope("cancel.exit");
-  return OMPCancelStack.back().ExitBlock;
+         Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for);
+  return BreakContinueStack.back().BreakBlock;
 }
 
 void CodeGenFunction::EmitOMPUseDevicePtrClause(

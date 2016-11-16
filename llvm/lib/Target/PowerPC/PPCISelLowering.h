@@ -770,6 +770,15 @@ namespace llvm {
     void insertSSPDeclarations(Module &M) const override;
 
     bool isFPImmLegal(const APFloat &Imm, EVT VT) const override;
+
+    unsigned getJumpTableEncoding() const override;
+    bool isJumpTableRelative() const override;
+    SDValue getPICJumpTableRelocBase(SDValue Table,
+                                     SelectionDAG &DAG) const override;
+    const MCExpr *getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
+                                               unsigned JTI,
+                                               MCContext &Ctx) const override;
+
   private:
     struct ReuseLoadInfo {
       SDValue Ptr;
