@@ -679,9 +679,10 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
     if (Param->isParameterPack())
       break;
 
-    const Expr *ArgExpr = nullptr;
-    if (Idx < Call.getNumArgs())
-      ArgExpr = Call.getArgExpr(Idx);
+    if (Idx >= Call.getNumArgs())
+      break;
+
+    const Expr *ArgExpr = Call.getArgExpr(Idx);
     auto ArgSVal = Call.getArgSVal(Idx++).getAs<DefinedOrUnknownSVal>();
     if (!ArgSVal)
       continue;
