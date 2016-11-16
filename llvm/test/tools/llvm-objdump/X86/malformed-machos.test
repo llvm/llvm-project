@@ -43,11 +43,20 @@
 RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-nsect 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-NSECT %s
 INVALID-SYMBOL-NSECT: macho-invalid-symbol-nsect': truncated or malformed object (bad section index: 97 for symbol at index 1)
 
+RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-nsect-archive 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-NSECT-ARCHIVE %s
+INVALID-SYMBOL-NSECT-ARCHIVE: macho-invalid-symbol-nsect-archive(macho-invalid-symbol-nsect): truncated or malformed object (bad section index: 97 for symbol at index 1)
+
 RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-indr 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-INDR %s
 INVALID-SYMBOL-INDR: macho-invalid-symbol-indr': truncated or malformed object (bad n_value: 22 past the end of string table, for N_INDR symbol at index 1)
 
+RUN: not llvm-objdump -macho -disassemble -arch all %p/Inputs/macho-invalid-symbol-indr-archive-universal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-INDR-ARCHIVE-UNIVERSAL %s
+INVALID-SYMBOL-INDR-ARCHIVE-UNIVERSAL: macho-invalid-symbol-indr-archive-universal(macho-invalid-symbol-indr) (for architecture i386): truncated or malformed object (bad n_value: 22 past the end of string table, for N_INDR symbol at index 1)
+
 RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-STRX %s
 INVALID-SYMBOL-STRX: macho-invalid-symbol-strx': truncated or malformed object (bad string table index: 22 past the end of string table, for symbol at index 1)
+
+RUN: not llvm-objdump -macho -disassemble -arch all %p/Inputs/macho-invalid-symbol-strx-universal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-STRX-UNIVERSAL %s
+INVALID-SYMBOL-STRX-UNIVERSAL: macho-invalid-symbol-strx-universal' (for architecture i386): truncated or malformed object (bad string table index: 22 past the end of string table, for symbol at index 1)
 
 RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-lib_ordinal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-LIB_ORDINAL %s
 INVALID-SYMBOL-LIB_ORDINAL: macho-invalid-symbol-lib_ordinal': truncated or malformed object (bad library ordinal: 7 for symbol at index 2)

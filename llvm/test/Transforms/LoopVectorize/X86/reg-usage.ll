@@ -85,7 +85,7 @@ for.body:                                         ; preds = %for.body, %entry
 define i64 @bar(i64* nocapture %a) {
 ; CHECK-LABEL: bar
 ; CHECK:       LV(REG): VF = 2
-; CHECK:       LV(REG): Found max usage: 4
+; CHECK:       LV(REG): Found max usage: 3
 ;
 entry:
   br label %for.body

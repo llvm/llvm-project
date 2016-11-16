@@ -398,5 +398,42 @@ define void @fcmp_no_fast(double* %x) #1 {
   ret void
 }
 
-attributes #1 = { "target-features"="+avx" }
+declare double @llvm.fabs.f64(double) nounwind readnone
 
+;CHECK-LABEL: @call_fast(
+;CHECK: call fast <2 x double> @llvm.fabs.v2f64
+define void @call_fast(double* %x) {
+  %idx1 = getelementptr inbounds double, double* %x, i64 0
+  %idx2 = getelementptr inbounds double, double* %x, i64 1
+
+  %load1 = load double, double* %idx1, align 8
+  %load2 = load double, double* %idx2, align 8
+
+  %call1 = tail call fast double @llvm.fabs.f64(double %load1) nounwind readnone
+  %call2 = tail call fast double @llvm.fabs.f64(double %load2) nounwind readnone
+
+  store double %call1, double* %idx1, align 8
+  store double %call2, double* %idx2, align 8
+
+  ret void
+}
+
+;CHECK-LABEL: @call_no_fast(
+;CHECK: call <2 x double> @llvm.fabs.v2f64
+define void @call_no_fast(double* %x) {
+  %idx1 = getelementptr inbounds double, double* %x, i64 0
+  %idx2 = getelementptr inbounds double, double* %x, i64 1
+
+  %load1 = load double, double* %idx1, align 8
+  %load2 = load double, double* %idx2, align 8
+
+  %call1 = tail call fast double @llvm.fabs.f64(double %load1) nounwind readnone
+  %call2 = tail call double @llvm.fabs.f64(double %load2) nounwind readnone
+
+  store double %call1, double* %idx1, align 8
+  store double %call2, double* %idx2, align 8
+
+  ret void
+}
+
+attributes #1 = { "target-features"="+avx" }

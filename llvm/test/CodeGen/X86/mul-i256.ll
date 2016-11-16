@@ -15,12 +15,17 @@ entry:
 ; There is a lot of inter-register motion, and so matching the instruction
 ; sequence will be fragile. There should be 6 underlying multiplications.
 ; CHECK: imulq
+; CHECK: mulq
 ; CHECK: imulq
 ; CHECK: imulq
+; CHECK: mulq
 ; CHECK: imulq
-; CHECK: imulq
-; CHECK: imulq
+; CHECK: mulq
+; CHECK: mulq
+; CHECK: mulq
+; CHECK: mulq
 ; CHECK-NOT: imulq
+; CHECK-NOT: mulq
 ; CHECK: retq
 
 attributes #0 = { norecurse nounwind uwtable "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" }

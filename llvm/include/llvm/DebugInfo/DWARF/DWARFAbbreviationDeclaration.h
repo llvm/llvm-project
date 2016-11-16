@@ -65,7 +65,7 @@ public:
   /// Searches the this abbreviation declaration for the index of the specified
   /// attribute.
   ///
-  /// \param Attr DWARF attribute to search for.
+  /// \param attr DWARF attribute to search for.
   /// \returns Optional index of the attribute if found, None otherwise.
   Optional<uint32_t> findAttributeIndex(dwarf::Attribute attr) const;
 

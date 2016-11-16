@@ -205,6 +205,12 @@ static std::string computeRelativePath(StringRef From, StringRef To) {
   for (auto ToE = sys::path::end(To); ToI != ToE; ++ToI)
     sys::path::append(Relative, *ToI);
 
+#ifdef LLVM_ON_WIN32
+  // Replace backslashes with slashes so that the path is portable between *nix
+  // and Windows.
+  std::replace(Relative.begin(), Relative.end(), '\\', '/');
+#endif
+
   return Relative.str();
 }
 

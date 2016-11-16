@@ -836,8 +836,6 @@ define <4 x double> @sitofp_4i1_double(<4 x double> %a) {
 ; KNL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
 ; KNL-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; KNL-NEXT:    retq
 ;
@@ -860,21 +858,8 @@ define <2 x float> @sitofp_2i1_float(<2 x float> %a) {
 ; KNL-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; KNL-NEXT:    vpsllq $32, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm1
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; KNL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    xorl %ecx, %ecx
-; KNL-NEXT:    testb $1, %al
-; KNL-NEXT:    movl $-1, %eax
-; KNL-NEXT:    movl $0, %edx
-; KNL-NEXT:    cmovnel %eax, %edx
-; KNL-NEXT:    vcvtsi2ssl %edx, %xmm2, %xmm1
-; KNL-NEXT:    vmovq %xmm0, %rdx
-; KNL-NEXT:    testb $1, %dl
-; KNL-NEXT:    cmovnel %eax, %ecx
-; KNL-NEXT:    vcvtsi2ssl %ecx, %xmm2, %xmm0
-; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; KNL-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sitofp_2i1_float:

@@ -3566,7 +3566,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         ISD::SEXTLOAD, dl, PTy, Chain, Addr,
         MachinePointerInfo::getJumpTable(DAG.getMachineFunction()), MemVT);
     Addr = LD;
-    if (TM.isPositionIndependent()) {
+    if (TLI.isJumpTableRelative()) {
       // For PIC, the sequence is:
       // BRIND(load(Jumptable + index) + RelocBase)
       // RelocBase can be JumpTable, GOT or some sort of global base.

@@ -155,7 +155,7 @@ multiclass MIMG_Atomic <mimg op, string asm, RegisterClass data_rc = VGPR_32> {
 class MIMG_Sampler_Helper <bits<7> op, string asm,
                            RegisterClass dst_rc,
                            RegisterClass src_rc,
-                           int wqm,
+                           bit wqm,
                            string dns=""> : MIMG_Helper <
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
@@ -168,7 +168,7 @@ class MIMG_Sampler_Helper <bits<7> op, string asm,
 
 multiclass MIMG_Sampler_Src_Helper <bits<7> op, string asm,
                                     RegisterClass dst_rc,
-                                    int channels, int wqm> {
+                                    int channels, bit wqm> {
   def _V1 : MIMG_Sampler_Helper <op, asm, dst_rc, VGPR_32, wqm,
                                  !if(!eq(channels, 1), "AMDGPU", "")>,
             MIMG_Mask<asm#"_V1", channels>;
@@ -182,7 +182,7 @@ multiclass MIMG_Sampler_Src_Helper <bits<7> op, string asm,
             MIMG_Mask<asm#"_V16", channels>;
 }
 
-multiclass MIMG_Sampler <bits<7> op, string asm, int wqm=0> {
+multiclass MIMG_Sampler <bits<7> op, string asm, bit wqm=0> {
   defm _V1 : MIMG_Sampler_Src_Helper<op, asm, VGPR_32, 1, wqm>;
   defm _V2 : MIMG_Sampler_Src_Helper<op, asm, VReg_64, 2, wqm>;
   defm _V3 : MIMG_Sampler_Src_Helper<op, asm, VReg_96, 3, wqm>;
@@ -193,7 +193,7 @@ multiclass MIMG_Sampler_WQM <bits<7> op, string asm> : MIMG_Sampler<op, asm, 1>;
 
 class MIMG_Gather_Helper <bits<7> op, string asm,
                           RegisterClass dst_rc,
-                          RegisterClass src_rc, int wqm> : MIMG <
+                          RegisterClass src_rc, bit wqm> : MIMG <
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
        dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
@@ -219,7 +219,7 @@ class MIMG_Gather_Helper <bits<7> op, string asm,
 
 multiclass MIMG_Gather_Src_Helper <bits<7> op, string asm,
                                     RegisterClass dst_rc,
-                                    int channels, int wqm> {
+                                    int channels, bit wqm> {
   def _V1 : MIMG_Gather_Helper <op, asm, dst_rc, VGPR_32, wqm>,
             MIMG_Mask<asm#"_V1", channels>;
   def _V2 : MIMG_Gather_Helper <op, asm, dst_rc, VReg_64, wqm>,
@@ -232,7 +232,7 @@ multiclass MIMG_Gather_Src_Helper <bits<7> op, string asm,
             MIMG_Mask<asm#"_V16", channels>;
 }
 
-multiclass MIMG_Gather <bits<7> op, string asm, int wqm=0> {
+multiclass MIMG_Gather <bits<7> op, string asm, bit wqm=0> {
   defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1, wqm>;
   defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2, wqm>;
   defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3, wqm>;

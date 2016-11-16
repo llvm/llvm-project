@@ -646,6 +646,9 @@ unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
         evictInterference(VirtReg, Hint, NewVRegs);
         return Hint;
       }
+      // Record the missed hint, we may be able to recover
+      // at the end if the surrounding allocation changed.
+      SetOfBrokenHints.insert(&VirtReg);
     }
 
   // Try to evict interference from a cheaper alternative.

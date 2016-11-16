@@ -98,7 +98,7 @@ entry:
 
 
 ; CHECK: sqrt_libm
-; CHECK: call <2 x double> @llvm.sqrt.v2f64
+; CHECK: call nnan <2 x double> @llvm.sqrt.v2f64
 ; CHECK: ret void
 define void @sqrt_libm(double* %a, double* %b, double* %c) {
 entry:

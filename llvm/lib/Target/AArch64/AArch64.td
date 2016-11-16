@@ -254,6 +254,15 @@ def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    FeatureZCZeroing
                                    ]>;
 
+def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
+                                   "Qualcomm Falkor processors", [
+                                   FeatureCRC,
+                                   FeatureCrypto,
+                                   FeatureFPARMv8,
+                                   FeatureNEON,
+                                   FeaturePerfMon
+                                   ]>;
+
 def ProcVulcan  : SubtargetFeature<"vulcan", "ARMProcFamily", "Vulcan",
                                    "Broadcom Vulcan processors", [
                                    FeatureCRC,
@@ -283,6 +292,7 @@ def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
+def : ProcessorModel<"falkor", NoSchedModel, [ProcFalkor]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;
 def : ProcessorModel<"vulcan", VulcanModel, [ProcVulcan]>;
 

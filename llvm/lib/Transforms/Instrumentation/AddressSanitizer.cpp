@@ -503,8 +503,11 @@ struct AddressSanitizer : public FunctionPass {
 
   /// If it is an interesting memory access, return the PointerOperand
   /// and set IsWrite/Alignment. Otherwise return nullptr.
+  /// MaybeMask is an output parameter for the mask Value, if we're looking at a
+  /// masked load/store.
   Value *isInterestingMemoryAccess(Instruction *I, bool *IsWrite,
-                                   uint64_t *TypeSize, unsigned *Alignment);
+                                   uint64_t *TypeSize, unsigned *Alignment,
+                                   Value **MaybeMask = nullptr);
   void instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis, Instruction *I,
                      bool UseCalls, const DataLayout &DL);
   void instrumentPointerComparisonOrSubtraction(Instruction *I);
@@ -998,12 +1001,11 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   return IsInteresting;
 }
 
-/// If I is an interesting memory access, return the PointerOperand
-/// and set IsWrite/Alignment. Otherwise return nullptr.
 Value *AddressSanitizer::isInterestingMemoryAccess(Instruction *I,
                                                    bool *IsWrite,
                                                    uint64_t *TypeSize,
-                                                   unsigned *Alignment) {
+                                                   unsigned *Alignment,
+                                                   Value **MaybeMask) {
   // Skip memory accesses inserted by another instrumentation.
   if (I->getMetadata("nosanitize")) return nullptr;
 
@@ -1037,6 +1039,33 @@ Value *AddressSanitizer::isInterestingMemoryAccess(Instruction *I,
     *TypeSize = DL.getTypeStoreSizeInBits(XCHG->getCompareOperand()->getType());
     *Alignment = 0;
     PtrOperand = XCHG->getPointerOperand();
+  } else if (auto CI = dyn_cast<CallInst>(I)) {
+    auto *F = dyn_cast<Function>(CI->getCalledValue());
+    if (F && (F->getName().startswith("llvm.masked.load.") ||
+              F->getName().startswith("llvm.masked.store."))) {
+      unsigned OpOffset = 0;
+      if (F->getName().startswith("llvm.masked.store.")) {
+        // Masked store has an initial operand for the value.
+        OpOffset = 1;
+        *IsWrite = true;
+      } else {
+        *IsWrite = false;
+      }
+      // Only instrument if the mask is constant for now.
+      if (isa<ConstantVector>(CI->getOperand(2 + OpOffset))) {
+        auto BasePtr = CI->getOperand(0 + OpOffset);
+        auto Ty = cast<PointerType>(BasePtr->getType())->getElementType();
+        *TypeSize = DL.getTypeStoreSizeInBits(Ty);
+        if (auto AlignmentConstant =
+                dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
+          *Alignment = (unsigned)AlignmentConstant->getZExtValue();
+        else
+          *Alignment = 1; // No alignment guarantees. We probably got Undef
+        if (MaybeMask)
+          *MaybeMask = CI->getOperand(2 + OpOffset);
+        PtrOperand = BasePtr;
+      }
+    }
   }
 
   // Do not instrument acesses from different address spaces; we cannot deal
@@ -1095,13 +1124,55 @@ void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
   IRB.CreateCall(F, Param);
 }
 
+static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
+                                Value *Addr, unsigned Alignment,
+                                unsigned Granularity, uint32_t TypeSize,
+                                bool IsWrite, Value *SizeArgument,
+                                bool UseCalls, uint32_t Exp) {
+  // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
+  // if the data is properly aligned.
+  if ((TypeSize == 8 || TypeSize == 16 || TypeSize == 32 || TypeSize == 64 ||
+       TypeSize == 128) &&
+      (Alignment >= Granularity || Alignment == 0 || Alignment >= TypeSize / 8))
+    return Pass->instrumentAddress(I, I, Addr, TypeSize, IsWrite, nullptr,
+                                   UseCalls, Exp);
+  Pass->instrumentUnusualSizeOrAlignment(I, Addr, TypeSize, IsWrite, nullptr,
+                                         UseCalls, Exp);
+}
+
+static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
+                                        const DataLayout &DL, Type *IntptrTy,
+                                        ConstantVector *Mask, Instruction *I,
+                                        Value *Addr, unsigned Alignment,
+                                        unsigned Granularity, uint32_t TypeSize,
+                                        bool IsWrite, Value *SizeArgument,
+                                        bool UseCalls, uint32_t Exp) {
+  auto *VTy = cast<PointerType>(Addr->getType())->getElementType();
+  uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
+  unsigned Num = VTy->getVectorNumElements();
+  auto Zero = ConstantInt::get(IntptrTy, 0);
+  for (unsigned Idx = 0; Idx < Num; ++Idx) {
+    // dyn_cast as we might get UndefValue
+    auto Masked = dyn_cast<ConstantInt>(Mask->getOperand(Idx));
+    if (Masked && Masked->isAllOnesValue()) {
+      IRBuilder<> IRB(I);
+      auto InstrumentedAddress =
+          IRB.CreateGEP(Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
+      doInstrumentAddress(Pass, I, InstrumentedAddress, Alignment, Granularity,
+                          ElemTypeSize, IsWrite, SizeArgument, UseCalls, Exp);
+    }
+  }
+}
+
 void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
                                      Instruction *I, bool UseCalls,
                                      const DataLayout &DL) {
   bool IsWrite = false;
   unsigned Alignment = 0;
   uint64_t TypeSize = 0;
-  Value *Addr = isInterestingMemoryAccess(I, &IsWrite, &TypeSize, &Alignment);
+  Value *MaybeMask = nullptr;
+  Value *Addr =
+      isInterestingMemoryAccess(I, &IsWrite, &TypeSize, &Alignment, &MaybeMask);
   assert(Addr);
 
   // Optimization experiments.
@@ -1143,15 +1214,15 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     NumInstrumentedReads++;
 
   unsigned Granularity = 1 << Mapping.Scale;
-  // Instrument a 1-, 2-, 4-, 8-, or 16- byte access with one check
-  // if the data is properly aligned.
-  if ((TypeSize == 8 || TypeSize == 16 || TypeSize == 32 || TypeSize == 64 ||
-       TypeSize == 128) &&
-      (Alignment >= Granularity || Alignment == 0 || Alignment >= TypeSize / 8))
-    return instrumentAddress(I, I, Addr, TypeSize, IsWrite, nullptr, UseCalls,
-                             Exp);
-  instrumentUnusualSizeOrAlignment(I, Addr, TypeSize, IsWrite, nullptr,
-                                   UseCalls, Exp);
+  if (MaybeMask) {
+    auto Mask = cast<ConstantVector>(MaybeMask);
+    instrumentMaskedLoadOrStore(this, DL, IntptrTy, Mask, I, Addr, Alignment,
+                                Granularity, TypeSize, IsWrite, nullptr,
+                                UseCalls, Exp);
+  } else {
+    doInstrumentAddress(this, I, Addr, Alignment, Granularity, TypeSize,
+                        IsWrite, nullptr, UseCalls, Exp);
+  }
 }
 
 Instruction *AddressSanitizer::generateCrashCode(Instruction *InsertBefore,

@@ -3,6 +3,7 @@
 declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 declare void @llvm.SI.tbuffer.store.v4i32(<16 x i8>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 declare void @llvm.amdgcn.s.barrier() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 
 @stored_lds_ptr = addrspace(3) global i32 addrspace(3)* undef, align 4
@@ -205,6 +206,46 @@ define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrsp
   ret void
 }
 
+; FUNC-LABEL: {{^}}reorder_global_offsets_addr64_soffset0:
+; GCN: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:12{{$}}
+; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:28{{$}}
+; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:44{{$}}
+
+; GCN: v_mov_b32
+; GCN: v_mov_b32
+
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64{{$}}
+; GCN-NEXT: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:20{{$}}
+
+; GCN: v_add_i32
+; GCN: v_add_i32
+
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:36{{$}}
+; GCN-NEXT: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} 0 addr64 offset:52{{$}}
+define void @reorder_global_offsets_addr64_soffset0(i32 addrspace(1)* noalias nocapture %ptr.base) #0 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %id.ext = sext i32 %id to i64
+
+  %ptr0 = getelementptr inbounds i32, i32 addrspace(1)* %ptr.base, i64 %id.ext
+  %ptr1 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 3
+  %ptr2 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 5
+  %ptr3 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 7
+  %ptr4 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 9
+  %ptr5 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 11
+  %ptr6 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 13
+
+  store i32 789, i32 addrspace(1)* %ptr0, align 4
+  %tmp1 = load i32, i32 addrspace(1)* %ptr1, align 4
+  store i32 123, i32 addrspace(1)* %ptr2, align 4
+  %tmp2 = load i32, i32 addrspace(1)* %ptr3, align 4
+  %add.0 = add nsw i32 %tmp1, %tmp2
+  store i32 %add.0, i32 addrspace(1)* %ptr4, align 4
+  %tmp3 = load i32, i32 addrspace(1)* %ptr5, align 4
+  %add.1 = add nsw i32 %add.0, %tmp3
+  store i32 %add.1, i32 addrspace(1)* %ptr6, align 4
+  ret void
+}
+
 ; XFUNC-LABEL: @reorder_local_load_tbuffer_store_local_load
 ; XCI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}}, 0x4
 ; XCI: TBUFFER_STORE_FORMAT
@@ -232,3 +273,4 @@ define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrsp
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }
+attributes #2 = { nounwind readnone }

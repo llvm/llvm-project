@@ -1057,6 +1057,10 @@ public:
   /// Zero if no limit.
   unsigned getMaximumJumpTableSize() const;
 
+  virtual bool isJumpTableRelative() const {
+    return TM.isPositionIndependent();
+  }
+
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   unsigned getStackPointerRegisterToSaveRestore() const {
