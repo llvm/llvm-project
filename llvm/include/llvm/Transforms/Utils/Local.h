@@ -309,6 +309,13 @@ unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 /// instruction, making it and the rest of the code in the block dead.
 unsigned changeToUnreachable(Instruction *I, bool UseLLVMTrap);
 
+/// Convert the CallInst to InvokeInst with the specified unwind edge basic
+/// block.  This also splits the basic block where CI is located, because
+/// InvokeInst is a terminator instruction.  Returns the newly split basic
+/// block.
+BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
+                                             BasicBlock *UnwindEdge);
+
 /// Replace 'BB's terminator with one that does not have an unwind successor
 /// block. Rewrites `invoke` to `call`, etc. Updates any PHIs in unwind
 /// successor.
