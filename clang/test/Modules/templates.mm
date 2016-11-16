@@ -116,4 +116,9 @@ void testStaticDataMember() {
   (void) getStaticDataMemberRight();
 }
 
-
+void testWithAttributes() {
+  auto a = make_with_attributes_left();
+  auto b = make_with_attributes_right();
+  static_assert(alignof(decltype(a)) == 2, "");
+  static_assert(alignof(decltype(b)) == 2, "");
+}
