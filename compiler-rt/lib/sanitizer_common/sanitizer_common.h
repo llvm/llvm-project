@@ -635,20 +635,19 @@ void InternalSort(Container *v, uptr size, Compare comp) {
   }
 }
 
+// Works like std::lower_bound: finds the first element that is not less
+// than the val.
 template<class Container, class Value, class Compare>
 uptr InternalBinarySearch(const Container &v, uptr first, uptr last,
                           const Value &val, Compare comp) {
-  uptr not_found = last + 1;
-  while (last >= first) {
+  while (last > first) {
     uptr mid = (first + last) / 2;
     if (comp(v[mid], val))
       first = mid + 1;
-    else if (comp(val, v[mid]))
-      last = mid - 1;
     else
-      return mid;
+      last = mid;
   }
-  return not_found;
+  return first;
 }
 
 // Represents a binary loaded into virtual memory (e.g. this can be an
