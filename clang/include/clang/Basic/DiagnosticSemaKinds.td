@@ -6241,8 +6241,8 @@ let CategoryName = "Lambda Issue" in {
   def note_lambda_to_block_conv : Note<
     "implicit capture of lambda object due to conversion to block pointer "
     "here">;
-  def note_var_explicitly_captured_here : Note<"variable %0 is explicitly "
-    "captured here">;
+  def note_var_explicitly_captured_here : Note<"variable %0 is"
+    "%select{| explicitly}1 captured here">;
 
   // C++14 lambda init-captures.
   def warn_cxx11_compat_init_capture : Warning<
