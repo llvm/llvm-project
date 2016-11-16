@@ -21,7 +21,6 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/Symbols.h"
-#include "lldb/Host/TimeValue.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -131,6 +130,25 @@ static uint32_t DumpTargetList(TargetList &target_list,
     }
   }
   return num_targets;
+}
+
+// TODO: Remove this once llvm can pretty-print time points
+static void DumpTimePoint(llvm::sys::TimePoint<> tp, Stream &s, uint32_t width) {
+#ifndef LLDB_DISABLE_POSIX
+  char time_buf[32];
+  time_t time = llvm::sys::toTimeT(tp);
+  char *time_cstr = ::ctime_r(&time, time_buf);
+  if (time_cstr) {
+    char *newline = ::strpbrk(time_cstr, "\n\r");
+    if (newline)
+      *newline = '\0';
+    if (width > 0)
+      s.Printf("%-*s", width, time_cstr);
+    else
+      s.PutCString(time_cstr);
+  } else if (width > 0)
+    s.Printf("%-*s", width, "");
+#endif
 }
 
 #pragma mark CommandObjectTargetCreate

@@ -255,7 +255,6 @@ class ThreadPlanStepRange;
 class ThreadPlanStepThrough;
 class ThreadPlanTracer;
 class ThreadSpec;
-class TimeValue;
 class Type;
 class TypeAndOrName;
 class TypeCategoryMap;

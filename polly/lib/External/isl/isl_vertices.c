@@ -272,7 +272,7 @@ static int is_independent(__isl_keep isl_mat *facets, int n, isl_int *f)
  *
  * If the constraint is (strictly) redundant in the tableau, selecting it would
  * result in an empty tableau, so it can't be selected.
- * If the set variable part of the constraint is not linearly indepedent
+ * If the set variable part of the constraint is not linearly independent
  * of the set variable parts of the already selected constraints,
  * the constraint cannot be selected.
  * If selecting the constraint results in an empty tableau, the constraint
@@ -859,7 +859,7 @@ static int update_todo(struct isl_facet_todo *first, struct isl_tab *tab)
  * set.  As a minor optimization, we only consider those activity domains
  * that contain some arbitrary point.
  *
- * For each of interior facets of the chamber, we construct a todo item,
+ * For each of the interior facets of the chamber, we construct a todo item,
  * containing the facet and a constraint containing the other side of the facet,
  * for constructing the chamber on the other side.
  * While their are any todo items left, we pick a todo item and

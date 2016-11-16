@@ -454,7 +454,6 @@
 		2689007113353E1A00698AC0 /* Host.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A01E1C1236C5D400C660B5 /* Host.cpp */; };
 		2689007313353E1A00698AC0 /* Symbols.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A01E1F1236C5D400C660B5 /* Symbols.cpp */; };
 		2689007413353E1A00698AC0 /* Terminal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268DA873130095ED00C9483A /* Terminal.cpp */; };
-		2689007513353E1A00698AC0 /* TimeValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A01E201236C5D400C660B5 /* TimeValue.cpp */; };
 		2689007613353E1A00698AC0 /* CFCBundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7EED10F1B8AD00F91463 /* CFCBundle.cpp */; };
 		2689007713353E1A00698AC0 /* CFCData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7EEF10F1B8AD00F91463 /* CFCData.cpp */; };
 		2689007813353E1A00698AC0 /* CFCMutableArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7EF110F1B8AD00F91463 /* CFCMutableArray.cpp */; };
@@ -1956,7 +1955,6 @@
 		26B1EFAC154638AF00E2DAC7 /* DWARFDeclContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFDeclContext.cpp; sourceTree = "<group>"; };
 		26B1EFAD154638AF00E2DAC7 /* DWARFDeclContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDeclContext.h; sourceTree = "<group>"; };
 		26B42C4C1187ABA50079C8C8 /* LLDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LLDB.h; path = include/lldb/API/LLDB.h; sourceTree = "<group>"; };
-		26B4E26E112F35F700AB3F64 /* TimeValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TimeValue.h; path = include/lldb/Host/TimeValue.h; sourceTree = "<group>"; };
 		26B7564C14F89356008D9CB3 /* PlatformiOSSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformiOSSimulator.cpp; sourceTree = "<group>"; };
 		26B7564D14F89356008D9CB3 /* PlatformiOSSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformiOSSimulator.h; sourceTree = "<group>"; };
 		26B75B421AD6E29A001F7A57 /* MipsLinuxSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MipsLinuxSignals.cpp; path = Utility/MipsLinuxSignals.cpp; sourceTree = "<group>"; };
@@ -2586,7 +2584,6 @@
 		4CF52AF7142829390051E832 /* SBFileSpecList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBFileSpecList.cpp; path = source/API/SBFileSpecList.cpp; sourceTree = "<group>"; };
 		69A01E1C1236C5D400C660B5 /* Host.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Host.cpp; sourceTree = "<group>"; };
 		69A01E1F1236C5D400C660B5 /* Symbols.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Symbols.cpp; sourceTree = "<group>"; };
-		69A01E201236C5D400C660B5 /* TimeValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimeValue.cpp; sourceTree = "<group>"; };
 		6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DebugMacros.h; path = include/lldb/Symbol/DebugMacros.h; sourceTree = "<group>"; };
 		6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaASTContext.h; path = include/lldb/Symbol/JavaASTContext.h; sourceTree = "<group>"; };
 		6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaASTContext.cpp; path = source/Symbol/JavaASTContext.cpp; sourceTree = "<group>"; };
@@ -5108,7 +5105,6 @@
 				3FDFED0D19B7D269009756A7 /* ThisThread.cpp */,
 				3FDFED0919B7C8C7009756A7 /* ThisThread.h */,
 				3FDFED2319BA6D55009756A7 /* ThreadLauncher.h */,
-				26B4E26E112F35F700AB3F64 /* TimeValue.h */,
 				267A48031B1416080021A5BC /* XML.h */,
 				267A48001B1411E40021A5BC /* XML.cpp */,
 			);
@@ -5906,7 +5902,6 @@
 				69A01E1F1236C5D400C660B5 /* Symbols.cpp */,
 				268DA873130095ED00C9483A /* Terminal.cpp */,
 				3FDFED2619BA6D96009756A7 /* ThreadLauncher.cpp */,
-				69A01E201236C5D400C660B5 /* TimeValue.cpp */,
 			);
 			name = common;
 			path = source/Host/common;
@@ -7254,7 +7249,6 @@
 				26474CBC18D0CB2D0073DEBA /* RegisterContextMach_arm.cpp in Sources */,
 				257E47171AA56C2000A62F81 /* ModuleCache.cpp in Sources */,
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
-				2689007513353E1A00698AC0 /* TimeValue.cpp in Sources */,
 				6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */,
 				2689007613353E1A00698AC0 /* CFCBundle.cpp in Sources */,
 				94BA8B70176F97CE005A91B5 /* CommandHistory.cpp in Sources */,
