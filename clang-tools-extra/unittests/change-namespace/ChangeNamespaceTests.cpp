@@ -43,8 +43,9 @@ public:
     NamespaceTool.registerMatchers(&Finder);
     std::unique_ptr<tooling::FrontendActionFactory> Factory =
         tooling::newFrontendActionFactory(&Finder);
-    tooling::runToolOnCodeWithArgs(Factory->create(), Code, {"-std=c++11"},
-                                   FileName);
+    if (!tooling::runToolOnCodeWithArgs(Factory->create(), Code, {"-std=c++11"},
+                                        FileName))
+      return "";
     formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite);
     return format(Context.getRewrittenText(ID));
   }
@@ -330,19 +331,6 @@ TEST_F(ChangeNamespaceTest, MoveFunctions) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
-TEST_F(ChangeNamespaceTest, DoNotCrashWithLambdaAsParameter) {
-  std::string Code =
-      "#include <functional>\n"
-      "void f(std::function<void(int)> func, int param) { func(param); } "
-      "void g() { f([](int x) {}, 1); }";
-
-  std::string Expected =
-      "#include <functional>\n"
-      "void f(std::function<void(int)> func, int param) { func(param); } "
-      "void g() { f([](int x) {}, 1); }";
-  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
-}
-
 TEST_F(ChangeNamespaceTest, FixUsingShadowDecl) {
   std::string Code = "class GLOB {};\n"
                      "using BLOG = GLOB;\n"
@@ -510,8 +498,8 @@ TEST_F(ChangeNamespaceTest, DoNotFixStaticVariableOfClass) {
                      "public:\n"
                      "static int A1;\n"
                      "static int A2;\n"
-                     "}\n"
-                     "static int A::A1 = 0;\n"
+                     "};\n"
+                     "int A::A1 = 0;\n"
                      "namespace nb {\n"
                      "void f() { int a = A::A1; int b = A::A2; }"
                      "} // namespace nb\n"
@@ -522,8 +510,8 @@ TEST_F(ChangeNamespaceTest, DoNotFixStaticVariableOfClass) {
                          "public:\n"
                          "static int A1;\n"
                          "static int A2;\n"
-                         "}\n"
-                         "static int A::A1 = 0;\n"
+                         "};\n"
+                         "int A::A1 = 0;\n"
                          "\n"
                          "} // namespace na\n"
                          "namespace x {\n"
@@ -1002,6 +990,93 @@ TEST_F(ChangeNamespaceTest, TypedefAliasDecl) {
                          "void f() { Y y; }\n"
                          "} // namespace y\n"
                          "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, DerivedClassWithConstructors) {
+  std::string Code =
+      "namespace nx { namespace ny { class X { public: X(int i) {} }; } }\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "class A : public nx::ny::X {\n"
+      "public:\n"
+      "  A() : X(0) {}\n"
+      "  A(int i);\n"
+      "};\n"
+      "A::A(int i) : X(i) {}\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+  std::string Expected =
+      "namespace nx { namespace ny { class X { public: X(int i) {} }; } }\n"
+      "\n\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "class A : public nx::ny::X {\n"
+      "public:\n"
+      "  A() : X(0) {}\n"
+      "  A(int i);\n"
+      "};\n"
+      "A::A(int i) : X(i) {}\n"
+      "} // namespace y\n"
+      "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, DerivedClassWithQualifiedConstructors) {
+  std::string Code =
+      "namespace nx { namespace ny { class X { public: X(int i) {} }; } }\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "class A : public nx::ny::X {\n"
+      "public:\n"
+      "  A() : X::X(0) {}\n"
+      "  A(int i);\n"
+      "};\n"
+      "A::A(int i) : X::X(i) {}\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+  std::string Expected =
+      "namespace nx { namespace ny { class X { public: X(int i) {} }; } }\n"
+      "\n\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "class A : public nx::ny::X {\n"
+      "public:\n"
+      "  A() : X::X(0) {}\n"
+      "  A(int i);\n"
+      "};\n"
+      "A::A(int i) : X::X(i) {}\n"
+      "} // namespace y\n"
+      "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, DerivedClassWithConstructorsAndTypeRefs) {
+  std::string Code =
+      "namespace nx { namespace ny { class X { public: X(int i) {} }; } }\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "class A : public nx::ny::X {\n"
+      "public:\n"
+      "  A() : X(0) {}\n"
+      "  A(int i);\n"
+      "};\n"
+      "A::A(int i) : X(i) { X x(1);}\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+  std::string Expected =
+      "namespace nx { namespace ny { class X { public: X(int i) {} }; } }\n"
+      "\n\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "class A : public nx::ny::X {\n"
+      "public:\n"
+      "  A() : X(0) {}\n"
+      "  A(int i);\n"
+      "};\n"
+      "A::A(int i) : X(i) { nx::ny::X x(1);}\n"
+      "} // namespace y\n"
+      "} // namespace x\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 

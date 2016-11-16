@@ -453,7 +453,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
-    error("cannot preempt symbol " + Body.getName());
+    error(getLocation(S, RelOff) + ": cannot preempt symbol '" +
+          Body.getName() + "' defined in " + getFilename(Body.File));
     return Expr;
   }
   if (Body.isObject()) {
@@ -487,7 +488,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     Body.NeedsCopyOrPltAddr = true;
     return toPlt(Expr);
   }
-  error("symbol " + Body.getName() + " is missing type");
+  error("symbol '" + Body.getName() + "' defined in " + getFilename(Body.File) +
+        " is missing type");
 
   return Expr;
 }

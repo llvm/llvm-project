@@ -992,6 +992,7 @@ private:
   void readVersionDeclaration(StringRef VerStr);
   void readGlobal(StringRef VerStr);
   void readLocal(StringRef VerStr);
+  void readSymbols(std::vector<SymbolVersion> &V);
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
@@ -1819,6 +1820,20 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   expect(";");
 }
 
+void ScriptParser::readSymbols(std::vector<SymbolVersion> &V) {
+  for (;;) {
+    if (consume("extern"))
+      readVersionExtern(&V);
+
+    StringRef Cur = peek();
+    if (Cur == "}" || Cur == "local:" || Error)
+      return;
+    skip();
+    V.push_back({unquote(Cur), false, hasWildcard(Cur)});
+    expect(";");
+  }
+}
+
 void ScriptParser::readLocal(StringRef VerStr) {
   if (consume("*")) {
     Config->DefaultSymbolVersion = VER_NDX_LOCAL;
@@ -1829,15 +1844,10 @@ void ScriptParser::readLocal(StringRef VerStr) {
   if (VerStr.empty())
     setError("locals list for anonymous version is not supported");
 
-  std::vector<SymbolVersion> &Locals = Config->VersionDefinitions.back().Locals;
-  while (!Error && peek() != "}") {
-    StringRef Tok = next();
-    Locals.push_back({unquote(Tok), false, hasWildcard(Tok)});
-    expect(";");
-  }
+  readSymbols(Config->VersionScriptLocals);
 }
 
-void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *Globals) {
+void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *V) {
   expect("\"C++\"");
   expect("{");
 
@@ -1845,7 +1855,7 @@ void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *Globals) {
     if (peek() == "}" || Error)
       break;
     bool HasWildcard = !peek().startswith("\"") && hasWildcard(peek());
-    Globals->push_back({unquote(next()), true, HasWildcard});
+    V->push_back({unquote(next()), true, HasWildcard});
     expect(";");
   }
 
@@ -1854,23 +1864,10 @@ void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *Globals) {
 }
 
 void ScriptParser::readGlobal(StringRef VerStr) {
-  std::vector<SymbolVersion> *Globals;
   if (VerStr.empty())
-    Globals = &Config->VersionScriptGlobals;
+    readSymbols(Config->VersionScriptGlobals);
   else
-    Globals = &Config->VersionDefinitions.back().Globals;
-
-  for (;;) {
-    if (consume("extern"))
-      readVersionExtern(Globals);
-
-    StringRef Cur = peek();
-    if (Cur == "}" || Cur == "local:" || Error)
-      return;
-    skip();
-    Globals->push_back({unquote(Cur), false, hasWildcard(Cur)});
-    expect(";");
-  }
+    readSymbols(Config->VersionDefinitions.back().Globals);
 }
 
 static bool isUnderSysroot(StringRef Path) {

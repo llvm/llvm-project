@@ -28,11 +28,6 @@
 # MIX-NOT:  foo2
 # MIX-NOT:  foo3
 
-# RUN: echo "VERSION_1.0 { global: *; local: extern \"C++\" { foo*; } };" > %t.script
-# RUN: not ld.lld --version-script %t.script -shared %t.o -o %t.so 2>&1 \
-# RUN:   | FileCheck --check-prefix=EXTERNERR %s
-# EXTERNERR: ; expected, but got "C++"
-
 .globl foo1
 foo1:
   ret

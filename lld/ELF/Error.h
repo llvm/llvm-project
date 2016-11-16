@@ -45,24 +45,22 @@ LLVM_ATTRIBUTE_NORETURN void exitLld(int Val);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(std::error_code EC, const Twine &Prefix);
 
+// check() functions are convenient functions to strip errors
+// from error-or-value objects.
 template <class T> T check(ErrorOr<T> E) {
   if (auto EC = E.getError())
     fatal(EC.message());
   return std::move(*E);
 }
 
-static inline void check(Error E) {
-  handleAllErrors(std::move(E), [&](llvm::ErrorInfoBase &EIB) -> Error {
-    fatal(EIB.message());
-    return Error::success();
-  });
-}
-
 template <class T> T check(Expected<T> E) {
-  if (E)
-    return std::move(*E);
-  check(E.takeError());
-  return T();
+  if (!E)
+    handleAllErrors(std::move(E.takeError()),
+                    [](llvm::ErrorInfoBase &EIB) -> Error {
+                      fatal(EIB.message());
+                      return Error::success();
+                    });
+  return std::move(*E);
 }
 
 template <class T> T check(ErrorOr<T> E, const Twine &Prefix) {
