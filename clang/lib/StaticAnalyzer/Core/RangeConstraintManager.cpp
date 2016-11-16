@@ -398,17 +398,19 @@ ConditionTruthVal RangeConstraintManager::checkNull(ProgramStateRef State,
 ProgramStateRef
 RangeConstraintManager::removeDeadBindings(ProgramStateRef state,
                                            SymbolReaper& SymReaper) {
-
+  bool Changed = false;
   ConstraintRangeTy CR = state->get<ConstraintRange>();
-  ConstraintRangeTy::Factory& CRFactory = state->get_context<ConstraintRange>();
+  ConstraintRangeTy::Factory &CRFactory = state->get_context<ConstraintRange>();
 
   for (ConstraintRangeTy::iterator I = CR.begin(), E = CR.end(); I != E; ++I) {
     SymbolRef sym = I.getKey();
-    if (SymReaper.maybeDead(sym))
+    if (SymReaper.maybeDead(sym)) {
+      Changed = true;
       CR = CRFactory.remove(CR, sym);
+    }
   }
 
-  return state->set<ConstraintRange>(CR);
+  return Changed ? state->set<ConstraintRange>(CR) : state;
 }
 
 RangeSet
