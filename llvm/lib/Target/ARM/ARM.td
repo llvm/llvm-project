@@ -823,7 +823,7 @@ def : ProcNoItin<"exynos-m2",                           [ARMv8a, ProcExynosM1,
                                                          FeatureCrypto,
                                                          FeatureCRC]>;
 
-def : ProcNoItin<"cortex-r52",                          [ARMv8r, ProcR52,
+def : ProcessorModel<"cortex-r52", CortexR52Model,      [ARMv8r, ProcR52,
                                                          FeatureFPAO]>;
 
 //===----------------------------------------------------------------------===//

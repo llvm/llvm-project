@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -2177,6 +2178,55 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
   SDValue CPILo =
     DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(), 0, MOLoFlag);
   return LowerLabelRef(CPIHi, CPILo, IsPIC, DAG);
+}
+
+// For 64-bit PowerPC, prefer the more compact relative encodings.
+// This trades 32 bits per jump table entry for one or two instructions
+// on the jump site.
+unsigned PPCTargetLowering::getJumpTableEncoding() const {
+  if (isJumpTableRelative())
+    return MachineJumpTableInfo::EK_LabelDifference32;
+
+  return TargetLowering::getJumpTableEncoding();
+}
+
+bool PPCTargetLowering::isJumpTableRelative() const {
+  if (Subtarget.isPPC64())
+    return true;
+  return TargetLowering::isJumpTableRelative();
+}
+
+SDValue PPCTargetLowering::getPICJumpTableRelocBase(SDValue Table,
+                                                    SelectionDAG &DAG) const {
+  if (!Subtarget.isPPC64())
+    return TargetLowering::getPICJumpTableRelocBase(Table, DAG);
+
+  switch (getTargetMachine().getCodeModel()) {
+  case CodeModel::Default:
+  case CodeModel::Small:
+  case CodeModel::Medium:
+    return TargetLowering::getPICJumpTableRelocBase(Table, DAG);
+  default:
+    return DAG.getNode(PPCISD::GlobalBaseReg, SDLoc(),
+                       getPointerTy(DAG.getDataLayout()));
+  }
+}
+
+const MCExpr *
+PPCTargetLowering::getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
+                                                unsigned JTI,
+                                                MCContext &Ctx) const {
+  if (!Subtarget.isPPC64())
+    return TargetLowering::getPICJumpTableRelocBaseExpr(MF, JTI, Ctx);
+
+  switch (getTargetMachine().getCodeModel()) {
+  case CodeModel::Default:
+  case CodeModel::Small:
+  case CodeModel::Medium:
+    return TargetLowering::getPICJumpTableRelocBaseExpr(MF, JTI, Ctx);
+  default:
+    return MCSymbolRefExpr::create(MF->getPICBaseSymbol(), Ctx);
+  }
 }
 
 SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
@@ -9784,9 +9834,11 @@ static bool isConsecutiveLS(SDNode *N, LSBaseSDNode *Base,
     case Intrinsic::ppc_altivec_lvx:
     case Intrinsic::ppc_altivec_lvxl:
     case Intrinsic::ppc_vsx_lxvw4x:
+    case Intrinsic::ppc_vsx_lxvw4x_be:
       VT = MVT::v4i32;
       break;
     case Intrinsic::ppc_vsx_lxvd2x:
+    case Intrinsic::ppc_vsx_lxvd2x_be:
       VT = MVT::v2f64;
       break;
     case Intrinsic::ppc_altivec_lvebx:
@@ -9831,6 +9883,12 @@ static bool isConsecutiveLS(SDNode *N, LSBaseSDNode *Base,
       VT = MVT::v4i32;
       break;
     case Intrinsic::ppc_vsx_stxvd2x:
+      VT = MVT::v2f64;
+      break;
+    case Intrinsic::ppc_vsx_stxvw4x_be:
+      VT = MVT::v4i32;
+      break;
+    case Intrinsic::ppc_vsx_stxvd2x_be:
       VT = MVT::v2f64;
       break;
     case Intrinsic::ppc_altivec_stvebx:

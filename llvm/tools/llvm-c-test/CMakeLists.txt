@@ -36,6 +36,7 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 endif ()
 
 add_llvm_tool(llvm-c-test
+  attributes.c
   calc.c
   diagnostic.c
   disassemble.c

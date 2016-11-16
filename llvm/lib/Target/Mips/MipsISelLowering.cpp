@@ -268,7 +268,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   // Mips Custom Operations
-  setOperationAction(ISD::BR_JT,              MVT::Other, Custom);
+  setOperationAction(ISD::BR_JT,              MVT::Other, Expand);
   setOperationAction(ISD::GlobalAddress,      MVT::i32,   Custom);
   setOperationAction(ISD::BlockAddress,       MVT::i32,   Custom);
   setOperationAction(ISD::GlobalTLSAddress,   MVT::i32,   Custom);
@@ -910,7 +910,6 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 {
   switch (Op.getOpcode())
   {
-  case ISD::BR_JT:              return lowerBR_JT(Op, DAG);
   case ISD::BRCOND:             return lowerBRCOND(Op, DAG);
   case ISD::ConstantPool:       return lowerConstantPool(Op, DAG);
   case ISD::GlobalAddress:      return lowerGlobalAddress(Op, DAG);
@@ -1674,40 +1673,6 @@ MachineBasicBlock *MipsTargetLowering::emitSEL_D(MachineInstr &MI,
   MI.getOperand(1).setReg(Fc2);
 
   return BB;
-}
-
-//===----------------------------------------------------------------------===//
-//  Misc Lower Operation implementation
-//===----------------------------------------------------------------------===//
-SDValue MipsTargetLowering::lowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Chain = Op.getOperand(0);
-  SDValue Table = Op.getOperand(1);
-  SDValue Index = Op.getOperand(2);
-  SDLoc DL(Op);
-  auto &TD = DAG.getDataLayout();
-  EVT PTy = getPointerTy(TD);
-  unsigned EntrySize =
-      DAG.getMachineFunction().getJumpTableInfo()->getEntrySize(TD);
-
-  Index = DAG.getNode(ISD::MUL, DL, PTy, Index,
-                      DAG.getConstant(EntrySize, DL, PTy));
-  SDValue Addr = DAG.getNode(ISD::ADD, DL, PTy, Index, Table);
-
-  EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), EntrySize * 8);
-  Addr = DAG.getExtLoad(
-      ISD::SEXTLOAD, DL, PTy, Chain, Addr,
-      MachinePointerInfo::getJumpTable(DAG.getMachineFunction()), MemVT);
-  Chain = Addr.getValue(1);
-
-  if (isPositionIndependent() || ABI.IsN64()) {
-    // For PIC, the sequence is:
-    // BRIND(load(Jumptable + index) + RelocBase)
-    // RelocBase can be JumpTable, GOT or some sort of global base.
-    Addr = DAG.getNode(ISD::ADD, DL, PTy, Addr,
-                       getPICJumpTableRelocBase(Table, DAG));
-  }
-
-  return DAG.getNode(ISD::BRIND, DL, MVT::Other, Chain, Addr);
 }
 
 SDValue MipsTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {

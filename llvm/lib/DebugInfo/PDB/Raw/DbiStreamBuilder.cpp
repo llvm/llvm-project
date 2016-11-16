@@ -107,7 +107,7 @@ uint32_t DbiStreamBuilder::calculateModiSubstreamSize() const {
     Size += M->Mod.size() + 1;
     Size += M->Obj.size() + 1;
   }
-  return Size;
+  return alignTo(Size, sizeof(uint32_t));
 }
 
 uint32_t DbiStreamBuilder::calculateSectionContribsStreamSize() const {
@@ -134,7 +134,7 @@ uint32_t DbiStreamBuilder::calculateFileInfoSubstreamSize() const {
     NumFileInfos += M->SourceFiles.size();
   Size += NumFileInfos * sizeof(ulittle32_t); // FileNameOffsets
   Size += calculateNamesBufferSize();
-  return Size;
+  return alignTo(Size, sizeof(uint32_t));
 }
 
 uint32_t DbiStreamBuilder::calculateNamesBufferSize() const {
@@ -167,7 +167,7 @@ Error DbiStreamBuilder::generateModiSubstream() {
     if (auto EC = ModiWriter.writeZeroString(M->Obj))
       return EC;
   }
-  if (ModiWriter.bytesRemaining() != 0)
+  if (ModiWriter.bytesRemaining() > sizeof(uint32_t))
     return make_error<RawError>(raw_error_code::invalid_format,
                                 "Unexpected bytes in Modi Stream Data");
   return Error::success();
@@ -185,8 +185,8 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
       WritableStreamRef(FileInfoBuffer).keep_front(NamesOffset);
   StreamWriter MetadataWriter(MetadataBuffer);
 
-  uint16_t ModiCount = std::min<uint16_t>(UINT16_MAX, ModuleInfos.size());
-  uint16_t FileCount = std::min<uint16_t>(UINT16_MAX, SourceFileNames.size());
+  uint16_t ModiCount = std::min<uint32_t>(UINT16_MAX, ModuleInfos.size());
+  uint16_t FileCount = std::min<uint32_t>(UINT16_MAX, SourceFileNames.size());
   if (auto EC = MetadataWriter.writeInteger(ModiCount)) // NumModules
     return EC;
   if (auto EC = MetadataWriter.writeInteger(FileCount)) // NumSourceFiles
@@ -228,7 +228,7 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
     return make_error<RawError>(raw_error_code::invalid_format,
                                 "The names buffer contained unexpected data.");
 
-  if (MetadataWriter.bytesRemaining() > 0)
+  if (MetadataWriter.bytesRemaining() > sizeof(uint32_t))
     return make_error<RawError>(
         raw_error_code::invalid_format,
         "The metadata buffer contained unexpected data.");

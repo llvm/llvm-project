@@ -542,9 +542,16 @@ TEST(TargetParserTest, AArch64parseArchExt) {
 }
 
 TEST(TargetParserTest, AArch64parseCPUArch) {
-  const char *CPU[] = {"cortex-a35", "cortex-a53", "cortex-a57",
-                       "cortex-a72", "cortex-a73", "cyclone",
-                       "exynos-m1",  "exynos-m2",  "kryo",
+  const char *CPU[] = {"cortex-a35",
+                       "cortex-a53",
+                       "cortex-a57",
+                       "cortex-a72",
+                       "cortex-a73",
+                       "cyclone",
+                       "exynos-m1",
+                       "exynos-m2",
+                       "falkor",
+                       "kryo",
                        "vulcan"};
 
   for (const auto &AArch64CPUName : kAArch64CPUNames)

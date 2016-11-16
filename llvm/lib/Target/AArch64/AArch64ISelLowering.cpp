@@ -7670,6 +7670,31 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   // future CPUs have a cheaper MADD instruction, this may need to be
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.
+  // More aggressively, some multiplications N0 * C can be lowered to
+  // shift+add+shift if the constant C = A * B where A = 2^N + 1 and B = 2^M,
+  // e.g. 6=3*2=(2+1)*2.
+  // TODO: consider lowering more cases, e.g. C = 14, -6, -14 or even 45
+  // which equals to (1+2)*16-(1+2).
+  SDValue N0 = N->getOperand(0);
+  // TrailingZeroes is used to test if the mul can be lowered to
+  // shift+add+shift.
+  unsigned TrailingZeroes = ConstValue.countTrailingZeros();
+  if (TrailingZeroes) {
+    // Conservatively do not lower to shift+add+shift if the mul might be
+    // folded into smul or umul.
+    if (N0->hasOneUse() && (isSignExtended(N0.getNode(), DAG) ||
+                            isZeroExtended(N0.getNode(), DAG)))
+      return SDValue();
+    // Conservatively do not lower to shift+add+shift if the mul might be
+    // folded into madd or msub.
+    if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ADD ||
+                           N->use_begin()->getOpcode() == ISD::SUB))
+      return SDValue();
+  }
+  // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub
+  // and shift+add+shift.
+  APInt ShiftedConstValue = ConstValue.ashr(TrailingZeroes);
+
   unsigned ShiftAmt, AddSubOpc;
   // Is the shifted value the LHS operand of the add/sub?
   bool ShiftValUseIsN0 = true;
@@ -7679,10 +7704,11 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   if (ConstValue.isNonNegative()) {
     // (mul x, 2^N + 1) => (add (shl x, N), x)
     // (mul x, 2^N - 1) => (sub (shl x, N), x)
-    APInt CVMinus1 = ConstValue - 1;
+    // (mul x, (2^N + 1) * 2^M) => (shl (add (shl x, N), x), M)
+    APInt SCVMinus1 = ShiftedConstValue - 1;
     APInt CVPlus1 = ConstValue + 1;
-    if (CVMinus1.isPowerOf2()) {
-      ShiftAmt = CVMinus1.logBase2();
+    if (SCVMinus1.isPowerOf2()) {
+      ShiftAmt = SCVMinus1.logBase2();
       AddSubOpc = ISD::ADD;
     } else if (CVPlus1.isPowerOf2()) {
       ShiftAmt = CVPlus1.logBase2();
@@ -7708,18 +7734,22 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0);
-  SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+  SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, VT, N0,
                                    DAG.getConstant(ShiftAmt, DL, MVT::i64));
 
   SDValue AddSubN0 = ShiftValUseIsN0 ? ShiftedVal : N0;
   SDValue AddSubN1 = ShiftValUseIsN0 ? N0 : ShiftedVal;
   SDValue Res = DAG.getNode(AddSubOpc, DL, VT, AddSubN0, AddSubN1);
-  if (!NegateResult)
-    return Res;
-
+  assert(!(NegateResult && TrailingZeroes) &&
+         "NegateResult and TrailingZeroes cannot both be true for now.");
   // Negate the result.
-  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Res);
+  if (NegateResult)
+    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Res);
+  // Shift the result.
+  if (TrailingZeroes)
+    return DAG.getNode(ISD::SHL, DL, VT, Res,
+                       DAG.getConstant(TrailingZeroes, DL, MVT::i64));
+  return Res;
 }
 
 static SDValue performVectorCompareAndMaskUnaryOpCombine(SDNode *N,

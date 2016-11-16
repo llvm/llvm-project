@@ -52,6 +52,10 @@ int llvm_echo(void);
 // diagnostic.c
 int llvm_test_diagnostic_handler(void);
 
+// attributes.c
+int llvm_test_function_attributes();
+int llvm_test_callsite_attributes();
+
 #ifdef __cplusplus
 }
 #endif /* !defined(__cplusplus) */

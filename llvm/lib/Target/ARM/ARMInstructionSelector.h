@@ -24,18 +24,14 @@ class ARMSubtarget;
 
 class ARMInstructionSelector : public InstructionSelector {
 public:
-  ARMInstructionSelector(const ARMBaseTargetMachine &TM,
-                         const ARMSubtarget &STI,
+  ARMInstructionSelector(const ARMSubtarget &STI,
                          const ARMRegisterBankInfo &RBI);
 
   virtual bool select(MachineInstr &I) const override;
 
 private:
-  const ARMBaseTargetMachine &TM;
-  const ARMSubtarget &STI;
   const ARMBaseInstrInfo &TII;
   const ARMBaseRegisterInfo &TRI;
-  const ARMRegisterBankInfo &RBI;
 };
 
 } // End llvm namespace.

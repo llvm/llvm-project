@@ -10,14 +10,14 @@ declare %0 @llvm.sadd.with.overflow.i32(i32, i32) nounwind
 
 define fastcc i32 @test() nounwind {
 entry:
-; CHECK-LABEL: _test:
-; CHECK:      ## BB#0:
-; CHECK-NEXT: movl    $1, %eax
-; CHECK-NEXT: addl    $0, %eax
-; CHECK-NEXT: seto    %k0
-; CHECK-NEXT: movl    %eax, -4(%rsp)          ## 4-byte Spill
-; CHECK-NEXT: kmovw   %k0, -6(%rsp)           ## 2-byte Spill
-; CHECK-NEXT: jo      LBB0_2
+; CHECK-LABEL: test:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    addl $0, %eax
+; CHECK-NEXT:    seto %cl
+; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
+; CHECK-NEXT:    movb %cl, -{{[0-9]+}}(%rsp) ## 1-byte Spill
+; CHECK-NEXT:    jo LBB0_2
 	%tmp1 = call %0 @llvm.sadd.with.overflow.i32(i32 1, i32 0)
 	%tmp2 = extractvalue %0 %tmp1, 1
 	br i1 %tmp2, label %.backedge, label %BB3

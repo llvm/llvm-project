@@ -2641,6 +2641,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         ExternalUses.push_back(ExternalUser(ScalarArg, cast<User>(V), 0));
 
       E->VectorizedValue = V;
+      propagateIRFlags(E->VectorizedValue, E->Scalars);
       ++NumVectorInstructions;
       return V;
     }
