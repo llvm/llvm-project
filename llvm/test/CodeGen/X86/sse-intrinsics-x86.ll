@@ -4,22 +4,6 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin -mattr=+avx2 -show-mc-encoding | FileCheck %s --check-prefix=VCHECK --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=i386-apple-darwin -mcpu=skx -show-mc-encoding | FileCheck %s --check-prefix=VCHECK --check-prefix=SKX
 
-define <4 x float> @test_x86_sse_add_ss(<4 x float> %a0, <4 x float> %a1) {
-; SSE-LABEL: test_x86_sse_add_ss:
-; SSE:       ## BB#0:
-; SSE-NEXT:    addss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x58,0xc1]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; VCHECK-LABEL: test_x86_sse_add_ss:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x58,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.sse.add.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.sse.add.ss(<4 x float>, <4 x float>) nounwind readnone
-
-
 define <4 x float> @test_x86_sse_cmp_ps(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: test_x86_sse_cmp_ps:
 ; SSE:       ## BB#0:
@@ -292,22 +276,6 @@ define i32 @test_x86_sse_cvttss2si(<4 x float> %a0) {
 declare i32 @llvm.x86.sse.cvttss2si(<4 x float>) nounwind readnone
 
 
-define <4 x float> @test_x86_sse_div_ss(<4 x float> %a0, <4 x float> %a1) {
-; SSE-LABEL: test_x86_sse_div_ss:
-; SSE:       ## BB#0:
-; SSE-NEXT:    divss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x5e,0xc1]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; VCHECK-LABEL: test_x86_sse_div_ss:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vdivss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x5e,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.sse.div.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.sse.div.ss(<4 x float>, <4 x float>) nounwind readnone
-
-
 define void @test_x86_sse_ldmxcsr(i8* %a0) {
 ; SSE-LABEL: test_x86_sse_ldmxcsr:
 ; SSE:       ## BB#0:
@@ -416,22 +384,6 @@ define i32 @test_x86_sse_movmsk_ps(<4 x float> %a0) {
 }
 declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone
 
-
-
-define <4 x float> @test_x86_sse_mul_ss(<4 x float> %a0, <4 x float> %a1) {
-; SSE-LABEL: test_x86_sse_mul_ss:
-; SSE:       ## BB#0:
-; SSE-NEXT:    mulss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x59,0xc1]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; VCHECK-LABEL: test_x86_sse_mul_ss:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x59,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.sse.mul.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.sse.mul.ss(<4 x float>, <4 x float>) nounwind readnone
 
 
 define <4 x float> @test_x86_sse_rcp_ps(<4 x float> %a0) {
@@ -556,22 +508,6 @@ define void @test_x86_sse_stmxcsr(i8* %a0) {
   ret void
 }
 declare void @llvm.x86.sse.stmxcsr(i8*) nounwind
-
-
-define <4 x float> @test_x86_sse_sub_ss(<4 x float> %a0, <4 x float> %a1) {
-; SSE-LABEL: test_x86_sse_sub_ss:
-; SSE:       ## BB#0:
-; SSE-NEXT:    subss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x5c,0xc1]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; VCHECK-LABEL: test_x86_sse_sub_ss:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x5c,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.sse.sub.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.sse.sub.ss(<4 x float>, <4 x float>) nounwind readnone
 
 
 define i32 @test_x86_sse_ucomieq_ss(<4 x float> %a0, <4 x float> %a1) {

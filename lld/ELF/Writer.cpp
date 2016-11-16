@@ -213,7 +213,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
   Out<ELFT>::Plt = make<PltSection<ELFT>>();
-  Out<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
+  In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
   Out<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
@@ -245,7 +245,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   if (Config->GdbIndex)
     Out<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
 
-  Out<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
+  In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   if (Config->Strip != StripPolicy::All) {
     In<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
@@ -589,11 +589,10 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (Out<ELFT>::DynSymTab)
     return;
   StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
-  addOptionalSynthetic<ELFT>(S, Out<ELFT>::RelaPlt, 0);
+  addOptionalRegular<ELFT>(S, In<ELFT>::RelaPlt, 0);
 
   S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
-  addOptionalSynthetic<ELFT>(S, Out<ELFT>::RelaPlt,
-                             DefinedSynthetic<ELFT>::SectionEnd);
+  addOptionalRegular<ELFT>(S, In<ELFT>::RelaPlt, -1);
 }
 
 // The linker is expected to define some symbols depending on
@@ -945,8 +944,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSectionBase *Sec : OutputSections)
     Sec->finalize();
 
+  // Dynamic section must be the last one in this list.
   finalizeSynthetic<ELFT>({In<ELFT>::ShStrTab, In<ELFT>::StrTab,
                            In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::GotPlt,
+                           In<ELFT>::RelaDyn, In<ELFT>::RelaPlt,
                            In<ELFT>::Dynamic});
 
   // Now that all output offsets are fixed. Finalize mergeable sections
@@ -997,15 +998,15 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     Add(Out<ELFT>::HashTab);
     addInputSec(In<ELFT>::Dynamic);
     addInputSec(In<ELFT>::DynStrTab);
-    if (Out<ELFT>::RelaDyn->hasRelocs())
-      Add(Out<ELFT>::RelaDyn);
+    if (In<ELFT>::RelaDyn->hasRelocs())
+      addInputSec(In<ELFT>::RelaDyn);
     Add(Out<ELFT>::MipsRldMap);
   }
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even during static linking it can contain R_[*]_IRELATIVE relocations.
-  if (Out<ELFT>::RelaPlt->hasRelocs())
-    Add(Out<ELFT>::RelaPlt);
+  if (In<ELFT>::RelaPlt->hasRelocs())
+    addInputSec(In<ELFT>::RelaPlt);
 
   // We fill .got and .got.plt sections in scanRelocs(). This is the
   // reason we don't add it earlier in createSections().

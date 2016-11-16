@@ -124,7 +124,6 @@ add_llvm_library(LLVMSupport
   TargetRegistry.cpp
   ThreadLocal.cpp
   Threading.cpp
-  TimeValue.cpp
   Valgrind.cpp
   Watchdog.cpp
 

@@ -1274,17 +1274,9 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
 
     // Binary scalar-as-vector operations that work column-wise.  A dest element
     // is a function of the corresponding input elements from the two inputs.
-    case Intrinsic::x86_sse_add_ss:
-    case Intrinsic::x86_sse_sub_ss:
-    case Intrinsic::x86_sse_mul_ss:
-    case Intrinsic::x86_sse_div_ss:
     case Intrinsic::x86_sse_min_ss:
     case Intrinsic::x86_sse_max_ss:
     case Intrinsic::x86_sse_cmp_ss:
-    case Intrinsic::x86_sse2_add_sd:
-    case Intrinsic::x86_sse2_sub_sd:
-    case Intrinsic::x86_sse2_mul_sd:
-    case Intrinsic::x86_sse2_div_sd:
     case Intrinsic::x86_sse2_min_sd:
     case Intrinsic::x86_sse2_max_sd:
     case Intrinsic::x86_sse2_cmp_sd:
@@ -1296,62 +1288,6 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(1), DemandedElts,
                                         UndefElts2, Depth + 1);
       if (TmpV) { II->setArgOperand(1, TmpV); MadeChange = true; }
-
-      // If only the low elt is demanded and this is a scalarizable intrinsic,
-      // scalarize it now.
-      if (DemandedElts == 1) {
-        switch (II->getIntrinsicID()) {
-        default: break;
-        case Intrinsic::x86_sse_add_ss:
-        case Intrinsic::x86_sse_sub_ss:
-        case Intrinsic::x86_sse_mul_ss:
-        case Intrinsic::x86_sse_div_ss:
-        case Intrinsic::x86_sse2_add_sd:
-        case Intrinsic::x86_sse2_sub_sd:
-        case Intrinsic::x86_sse2_mul_sd:
-        case Intrinsic::x86_sse2_div_sd:
-          // TODO: Lower MIN/MAX/etc.
-          Value *LHS = II->getArgOperand(0);
-          Value *RHS = II->getArgOperand(1);
-          // Extract the element as scalars.
-          LHS = InsertNewInstWith(ExtractElementInst::Create(LHS,
-            ConstantInt::get(Type::getInt32Ty(I->getContext()), 0U)), *II);
-          RHS = InsertNewInstWith(ExtractElementInst::Create(RHS,
-            ConstantInt::get(Type::getInt32Ty(I->getContext()), 0U)), *II);
-
-          switch (II->getIntrinsicID()) {
-          default: llvm_unreachable("Case stmts out of sync!");
-          case Intrinsic::x86_sse_add_ss:
-          case Intrinsic::x86_sse2_add_sd:
-            TmpV = InsertNewInstWith(BinaryOperator::CreateFAdd(LHS, RHS,
-                                                        II->getName()), *II);
-            break;
-          case Intrinsic::x86_sse_sub_ss:
-          case Intrinsic::x86_sse2_sub_sd:
-            TmpV = InsertNewInstWith(BinaryOperator::CreateFSub(LHS, RHS,
-                                                        II->getName()), *II);
-            break;
-          case Intrinsic::x86_sse_mul_ss:
-          case Intrinsic::x86_sse2_mul_sd:
-            TmpV = InsertNewInstWith(BinaryOperator::CreateFMul(LHS, RHS,
-                                                         II->getName()), *II);
-            break;
-          case Intrinsic::x86_sse_div_ss:
-          case Intrinsic::x86_sse2_div_sd:
-            TmpV = InsertNewInstWith(BinaryOperator::CreateFDiv(LHS, RHS,
-                                                         II->getName()), *II);
-            break;
-          }
-
-          Instruction *New =
-            InsertElementInst::Create(
-              UndefValue::get(II->getType()), TmpV,
-              ConstantInt::get(Type::getInt32Ty(I->getContext()), 0U, false),
-                                      II->getName());
-          InsertNewInstWith(New, *II);
-          return New;
-        }
-      }
 
       // If lowest element of a scalar op isn't used then use Arg0.
       if (DemandedElts.getLoBits(1) != 1)

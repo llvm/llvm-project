@@ -104,8 +104,12 @@ template <class ELFT>
 typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (kind()) {
   case Regular:
-  case Synthetic:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
+  case Synthetic:
+    // For synthetic sections we treat offset -1 as the end of the section.
+    // The same approach is used for synthetic symbols (DefinedSynthetic).
+    return cast<InputSection<ELFT>>(this)->OutSecOff +
+           (Offset == uintX_t(-1) ? getSize() : Offset);
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
     // .eh_frame that is known to be the first in the link. It does that to
@@ -525,6 +529,11 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   if (this->Type == SHT_NOBITS)
     return;
 
+  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
+    S->writeTo(Buf);
+    return;
+  }
+
   // If -r is given, then an InputSection may be a relocation section.
   if (this->Type == SHT_RELA) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rela>());
@@ -532,11 +541,6 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   }
   if (this->Type == SHT_REL) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rel>());
-    return;
-  }
-
-  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
-    S->writeTo(Buf);
     return;
   }
 

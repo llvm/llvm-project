@@ -43,12 +43,19 @@ class InputSectionData;
 struct Expr {
   std::function<uint64_t(uint64_t)> Val;
   std::function<bool()> IsAbsolute;
+
+  // If expression is section-relative the function below is used
+  // to get the output section pointer.
+  std::function<const OutputSectionBase *()> Section;
+
   uint64_t operator()(uint64_t Dot) const { return Val(Dot); }
   operator bool() const { return (bool)Val; }
 
-  Expr(std::function<uint64_t(uint64_t)> Val, std::function<bool()> IsAbsolute)
-      : Val(Val), IsAbsolute(IsAbsolute) {}
-  template <typename T> Expr(T V) : Expr(V, []() { return true; }) {}
+  Expr(std::function<uint64_t(uint64_t)> Val, std::function<bool()> IsAbsolute,
+       std::function<const OutputSectionBase *()> Section)
+      : Val(Val), IsAbsolute(IsAbsolute), Section(Section) {}
+  template <typename T>
+  Expr(T V) : Expr(V, []() { return true; }, []() { return nullptr; }) {}
   Expr() : Expr(nullptr) {}
 };
 
@@ -182,14 +189,12 @@ protected:
   ~LinkerScriptBase() = default;
 
 public:
-  virtual uint64_t getOutputSectionAddress(StringRef Name) = 0;
-  virtual uint64_t getOutputSectionSize(StringRef Name) = 0;
-  virtual uint64_t getOutputSectionAlign(StringRef Name) = 0;
-  virtual uint64_t getOutputSectionLMA(StringRef Name) = 0;
   virtual uint64_t getHeaderSize() = 0;
   virtual uint64_t getSymbolValue(StringRef S) = 0;
   virtual bool isDefined(StringRef S) = 0;
   virtual bool isAbsolute(StringRef S) = 0;
+  virtual const OutputSectionBase *getSymbolSection(StringRef S) = 0;
+  virtual const OutputSectionBase *getOutputSection(StringRef S) = 0;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -234,14 +239,12 @@ public:
   void placeOrphanSections();
   void assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs);
   bool hasPhdrsCommands();
-  uint64_t getOutputSectionAddress(StringRef Name) override;
-  uint64_t getOutputSectionSize(StringRef Name) override;
-  uint64_t getOutputSectionAlign(StringRef Name) override;
-  uint64_t getOutputSectionLMA(StringRef Name) override;
   uint64_t getHeaderSize() override;
   uint64_t getSymbolValue(StringRef S) override;
   bool isDefined(StringRef S) override;
   bool isAbsolute(StringRef S) override;
+  const OutputSectionBase *getSymbolSection(StringRef S) override;
+  const OutputSectionBase *getOutputSection(StringRef S) override;
 
   std::vector<OutputSectionBase *> *OutputSections;
 

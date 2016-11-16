@@ -25,8 +25,9 @@ template <class ELFT> void printProgramHeaders(const ELFFile<ELFT> *o) {
   typedef ELFFile<ELFT> ELFO;
   outs() << "Program Header:\n";
   auto ProgramHeaderOrError = o->program_headers();
-  if (std::error_code EC = ProgramHeaderOrError.getError())
-    report_fatal_error(EC.message());
+  if (!ProgramHeaderOrError)
+    report_fatal_error(
+        errorToErrorCode(ProgramHeaderOrError.takeError()).message());
   for (const typename ELFO::Elf_Phdr &Phdr : *ProgramHeaderOrError) {
     switch (Phdr.p_type) {
     case ELF::PT_LOAD:

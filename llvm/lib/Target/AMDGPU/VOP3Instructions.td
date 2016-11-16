@@ -232,11 +232,6 @@ def V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16>>;
 
 } // End SubtargetPredicate = isVI
 
-def : Pat <
-  (i16 (select i1:$src0, i16:$src1, i16:$src2)),
-  (V_CNDMASK_B32_e64 $src2, $src1, $src0)
->;
-
 let Predicates = [isVI] in {
 
 multiclass Tenary_i16_Pats <SDPatternOperator op1, SDPatternOperator op2,
