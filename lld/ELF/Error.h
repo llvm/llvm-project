@@ -51,10 +51,18 @@ template <class T> T check(ErrorOr<T> E) {
   return std::move(*E);
 }
 
+static inline void check(Error E) {
+  handleAllErrors(std::move(E), [&](llvm::ErrorInfoBase &EIB) -> Error {
+    fatal(EIB.message());
+    return Error::success();
+  });
+}
+
 template <class T> T check(Expected<T> E) {
-  if (!E)
-    fatal(errorToErrorCode(E.takeError()).message());
-  return std::move(*E);
+  if (E)
+    return std::move(*E);
+  check(E.takeError());
+  return T();
 }
 
 template <class T> T check(ErrorOr<T> E, const Twine &Prefix) {

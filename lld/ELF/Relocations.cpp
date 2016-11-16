@@ -445,8 +445,11 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     StringRef Name = getSymbolName(File.getStringTable(), Body);
-    error("can't create dynamic relocation " + getRelName(Type) + " against " +
-          (Name.empty() ? "readonly segment" : "symbol " + Name));
+    error(getLocation(S, RelOff) + ": can't create dynamic relocation " +
+          getRelName(Type) + " against " +
+          ((Name.empty() ? "local symbol in readonly segment"
+                         : "symbol '" + Name + "'")) +
+          " defined in " + getFilename(Body.File));
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {

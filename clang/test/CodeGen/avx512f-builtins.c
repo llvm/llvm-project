@@ -6949,17 +6949,26 @@ __m512 test_mm512_maskz_cvtepu32_ps (__mmask16 __U, __m512i __A)
   return _mm512_maskz_cvtepu32_ps (__U,__A);
 }
 
+__m512d test_mm512_cvtepi32_pd (__m256i __A)
+{
+  // CHECK-LABEL: @test_mm512_cvtepi32_pd
+  // CHECK: sitofp <8 x i32> %{{.*}} to <8 x double>
+  return _mm512_cvtepi32_pd (__A);
+}
+
 __m512d test_mm512_mask_cvtepi32_pd (__m512d __W, __mmask8 __U, __m256i __A)
 {
-  // CHECK-LABEL: @test_mm512_mask_cvtepi32_pd 
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.512
+  // CHECK-LABEL: @test_mm512_mask_cvtepi32_pd
+  // CHECK: sitofp <8 x i32> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_mask_cvtepi32_pd (__W,__U,__A);
 }
 
 __m512d test_mm512_maskz_cvtepi32_pd (__mmask8 __U, __m256i __A)
 {
-  // CHECK-LABEL: @test_mm512_maskz_cvtepi32_pd 
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.512
+  // CHECK-LABEL: @test_mm512_maskz_cvtepi32_pd
+  // CHECK: sitofp <8 x i32> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_maskz_cvtepi32_pd (__U,__A);
 }
 
@@ -6967,7 +6976,7 @@ __m512d test_mm512_cvtepi32lo_pd (__m512i __A)
 {
   // CHECK-LABEL: @test_mm512_cvtepi32lo_pd
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.512
+  // CHECK: sitofp <8 x i32> %{{.*}} to <8 x double>
   return _mm512_cvtepi32lo_pd (__A);
 }
 
@@ -6975,7 +6984,8 @@ __m512d test_mm512_mask_cvtepi32lo_pd (__m512d __W, __mmask8 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_mask_cvtepi32lo_pd
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.512
+  // CHECK: sitofp <8 x i32> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_mask_cvtepi32lo_pd (__W, __U, __A);
 }
 
@@ -7000,17 +7010,26 @@ __m512 test_mm512_maskz_cvtepi32_ps (__mmask16 __U, __m512i __A)
   return _mm512_maskz_cvtepi32_ps (__U,__A);
 }
 
+__m512d test_mm512_cvtepu32_pd(__m256i __A)
+{
+  // CHECK-LABEL: @test_mm512_cvtepu32_pd
+  // CHECK: uitofp <8 x i32> %{{.*}} to <8 x double>
+  return _mm512_cvtepu32_pd(__A);
+}
+
 __m512d test_mm512_mask_cvtepu32_pd (__m512d __W, __mmask8 __U, __m256i __A)
 {
-  // CHECK-LABEL: @test_mm512_mask_cvtepu32_pd 
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.512
+  // CHECK-LABEL: @test_mm512_mask_cvtepu32_pd
+  // CHECK: uitofp <8 x i32> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_mask_cvtepu32_pd (__W,__U,__A);
 }
 
 __m512d test_mm512_maskz_cvtepu32_pd (__mmask8 __U, __m256i __A)
 {
-  // CHECK-LABEL: @test_mm512_maskz_cvtepu32_pd 
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.512
+  // CHECK-LABEL: @test_mm512_maskz_cvtepu32_pd
+  // CHECK: uitofp <8 x i32> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_maskz_cvtepu32_pd (__U,__A);
 }
 
@@ -7018,7 +7037,7 @@ __m512d test_mm512_cvtepu32lo_pd (__m512i __A)
 {
   // CHECK-LABEL: @test_mm512_cvtepu32lo_pd
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.512
+  // CHECK: uitofp <8 x i32> %{{.*}} to <8 x double>
   return _mm512_cvtepu32lo_pd (__A);
 }
 
@@ -7026,7 +7045,8 @@ __m512d test_mm512_mask_cvtepu32lo_pd (__m512d __W, __mmask8 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_mask_cvtepu32lo_pd
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.512
+  // CHECK: uitofp <8 x i32> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_mask_cvtepu32lo_pd (__W, __U, __A);
 }
 
