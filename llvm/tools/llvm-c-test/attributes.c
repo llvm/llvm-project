@@ -24,7 +24,8 @@ int llvm_test_function_attributes(void) {
   LLVMValueRef F = LLVMGetFirstFunction(M);
   while (F) {
     // Read attributes
-    for (int Idx = LLVMAttributeFunctionIndex, ParamCount = LLVMCountParams(F);
+    int Idx, ParamCount;
+    for (Idx = LLVMAttributeFunctionIndex, ParamCount = LLVMCountParams(F);
          Idx <= ParamCount; ++Idx) {
       int AttrCount = LLVMGetAttributeCountAtIndex(F, Idx);
       LLVMAttributeRef *Attrs =
@@ -53,8 +54,9 @@ int llvm_test_callsite_attributes(void) {
       for (I = LLVMGetFirstInstruction(BB); I; I = LLVMGetNextInstruction(I)) {
         if (LLVMIsACallInst(I)) {
           // Read attributes
-          for (int Idx = LLVMAttributeFunctionIndex,
-                   ParamCount = LLVMCountParams(F);
+          int Idx, ParamCount;
+          for (Idx = LLVMAttributeFunctionIndex,
+              ParamCount = LLVMCountParams(F);
                Idx <= ParamCount; ++Idx) {
             int AttrCount = LLVMGetCallSiteAttributeCount(I, Idx);
             LLVMAttributeRef *Attrs = (LLVMAttributeRef *)malloc(

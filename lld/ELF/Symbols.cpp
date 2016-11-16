@@ -216,7 +216,7 @@ Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type,
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
-                                         OutputSectionBase *Section)
+                                         const OutputSectionBase *Section)
     : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 

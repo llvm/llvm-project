@@ -64,8 +64,8 @@ public:
   Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
                      InputSectionBase<ELFT> *Section, InputFile *File);
 
-  Symbol *addSynthetic(StringRef N, OutputSectionBase *Section, uintX_t Value,
-                       uint8_t StOther);
+  Symbol *addSynthetic(StringRef N, const OutputSectionBase *Section,
+                       uintX_t Value, uint8_t StOther);
 
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);

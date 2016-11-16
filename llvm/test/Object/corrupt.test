@@ -2,21 +2,21 @@
 RUN: not llvm-readobj %p/Inputs/corrupt.elf-x86-64 -sections \
 RUN:     2>&1 | FileCheck --check-prefix=SECNAME %s
 
-SECNAME: Error reading file: Invalid data was encountered while parsing the file.
+SECNAME: invalid string offset
 
 
 // Section data offset past end of file.
 RUN: not llvm-readobj %p/Inputs/corrupt.elf-x86-64 -sections -section-data \
 RUN:     2>&1 | FileCheck --check-prefix=SECDATA %s
 
-SECDATA: Error reading file: Invalid data was encountered while parsing the file.
+SECDATA: invalid section offset
 
 
 // Symbol name offset overflows string table.
 RUN: not llvm-readobj %p/Inputs/corrupt.elf-x86-64 -symbols \
 RUN:     2>&1 | FileCheck --check-prefix=SYMNAME %s
 
-SYMNAME: Error reading file: Invalid data was encountered while parsing the file.
+SYMNAME: invalid string offset
 
 
 // Version index in .gnu.version overflows the version map.
@@ -36,7 +36,7 @@ RUN: not llvm-readobj -program-headers \
 RUN:   %p/Inputs/corrupt-invalid-phentsize.elf.x86-64 2>&1 | \
 RUN:   FileCheck --check-prefix=PHENTSIZE %s
 
-PHENTSIZE: Invalid data was encountered while parsing the file.
+PHENTSIZE: invalid e_phentsize
 
 RUN: not llvm-readobj -dynamic-table \
 RUN:   %p/Inputs/corrupt-invalid-virtual-addr.elf.x86-64 2>&1 | \

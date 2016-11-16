@@ -124,6 +124,26 @@ public:
   // CHECK-FIXES: ~Temp() = default;
 };
 
+// Class template out of line with explicit instantiation.
+template <class T>
+class TempODef {
+public:
+  TempODef();
+  ~TempODef();
+};
+
+template <class T>
+TempODef<T>::TempODef() {}
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use '= default'
+// CHECK-FIXES: TempODef<T>::TempODef() = default;
+template <class T>
+TempODef<T>::~TempODef() {}
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use '= default'
+// CHECK-FIXES: TempODef<T>::~TempODef() = default;
+
+template class TempODef<int>;
+template class TempODef<double>;
+
 // Non user-provided constructor/destructor.
 struct Imp {
   int Int;

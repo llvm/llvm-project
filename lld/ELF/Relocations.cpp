@@ -103,9 +103,9 @@ static unsigned handleNoRelaxTlsRelocation(uint32_t Type, SymbolBody &Body,
   if (Expr == R_MIPS_TLSLD || Expr == R_TLSLD_PC) {
     if (In<ELFT>::Got->addTlsIndex() &&
         (Config->Pic || Config->EMachine == EM_ARM))
-      Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, In<ELFT>::Got,
-                                    In<ELFT>::Got->getTlsIndexOff(), false,
-                                    nullptr, 0});
+      In<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, In<ELFT>::Got,
+                                   In<ELFT>::Got->getTlsIndexOff(), false,
+                                   nullptr, 0});
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
@@ -114,12 +114,12 @@ static unsigned handleNoRelaxTlsRelocation(uint32_t Type, SymbolBody &Body,
     if (In<ELFT>::Got->addDynTlsEntry(Body) &&
         (Body.isPreemptible() || Config->EMachine == EM_ARM)) {
       uintX_t Off = In<ELFT>::Got->getGlobalDynOffset(Body);
-      Out<ELFT>::RelaDyn->addReloc(
+      In<ELFT>::RelaDyn->addReloc(
           {Target->TlsModuleIndexRel, In<ELFT>::Got, Off, false, &Body, 0});
       if (Body.isPreemptible())
-        Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::Got,
-                                      Off + (uintX_t)sizeof(uintX_t), false,
-                                      &Body, 0});
+        In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::Got,
+                                     Off + (uintX_t)sizeof(uintX_t), false,
+                                     &Body, 0});
     }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
@@ -149,7 +149,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
       Config->Shared) {
     if (In<ELFT>::Got->addDynTlsEntry(Body)) {
       uintX_t Off = In<ELFT>::Got->getGlobalDynOffset(Body);
-      Out<ELFT>::RelaDyn->addReloc(
+      In<ELFT>::RelaDyn->addReloc(
           {Target->TlsDescRel, In<ELFT>::Got, Off, false, &Body, 0});
     }
     if (Expr != R_TLSDESC_CALL)
@@ -165,9 +165,9 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
       return 2;
     }
     if (In<ELFT>::Got->addTlsIndex())
-      Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, In<ELFT>::Got,
-                                    In<ELFT>::Got->getTlsIndexOff(), false,
-                                    nullptr, 0});
+      In<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, In<ELFT>::Got,
+                                   In<ELFT>::Got->getTlsIndexOff(), false,
+                                   nullptr, 0});
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
@@ -184,15 +184,15 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     if (Config->Shared) {
       if (In<ELFT>::Got->addDynTlsEntry(Body)) {
         uintX_t Off = In<ELFT>::Got->getGlobalDynOffset(Body);
-        Out<ELFT>::RelaDyn->addReloc(
+        In<ELFT>::RelaDyn->addReloc(
             {Target->TlsModuleIndexRel, In<ELFT>::Got, Off, false, &Body, 0});
 
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
         if (isPreemptible(Body, Type))
-          Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::Got,
-                                        Off + (uintX_t)sizeof(uintX_t), false,
-                                        &Body, 0});
+          In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::Got,
+                                       Off + (uintX_t)sizeof(uintX_t), false,
+                                       &Body, 0});
       }
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       return 1;
@@ -206,9 +206,9 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
            Offset, Addend, &Body});
       if (!Body.isInGot()) {
         In<ELFT>::Got->addEntry(Body);
-        Out<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::Got,
-                                      Body.getGotOffset<ELFT>(), false, &Body,
-                                      0});
+        In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::Got,
+                                     Body.getGotOffset<ELFT>(), false, &Body,
+                                     0});
       }
       return Target->TlsGdRelaxSkip;
     }
@@ -417,7 +417,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
     Alias->NeedsCopyOrPltAddr = true;
     Alias->symbol()->IsUsedInRegularObj = true;
   }
-  Out<ELFT>::RelaDyn->addReloc(
+  In<ELFT>::RelaDyn->addReloc(
       {Target->CopyRel, Out<ELFT>::Bss, SS->OffsetInBss, false, SS, 0});
 }
 
@@ -619,7 +619,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   bool IsWrite = C.Flags & SHF_WRITE;
 
   auto AddDyn = [=](const DynamicReloc<ELFT> &Reloc) {
-    Out<ELFT>::RelaDyn->addReloc(Reloc);
+    In<ELFT>::RelaDyn->addReloc(Reloc);
   };
 
   const elf::ObjectFile<ELFT> *File = C.getFile();
@@ -754,9 +754,9 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
         Rel = Target->PltRel;
 
       In<ELFT>::GotPlt->addEntry(Body);
-      Out<ELFT>::RelaPlt->addReloc({Rel, In<ELFT>::GotPlt,
-                                    Body.getGotPltOffset<ELFT>(), !Preemptible,
-                                    &Body, 0});
+      In<ELFT>::RelaPlt->addReloc({Rel, In<ELFT>::GotPlt,
+                                   Body.getGotPltOffset<ELFT>(), !Preemptible,
+                                   &Body, 0});
       continue;
     }
 

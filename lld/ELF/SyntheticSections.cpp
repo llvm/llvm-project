@@ -737,10 +737,10 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
 
-  if (Out<ELFT>::RelaDyn->hasRelocs()) {
+  if (In<ELFT>::RelaDyn->hasRelocs()) {
     bool IsRela = Config->Rela;
-    Add({IsRela ? DT_RELA : DT_REL, Out<ELFT>::RelaDyn});
-    Add({IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->Size});
+    Add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
+    Add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getSize()});
     Add({IsRela ? DT_RELAENT : DT_RELENT,
          uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
 
@@ -748,14 +748,14 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     // The problem is in the tight relation between dynamic
     // relocations and GOT. So do not emit this tag on MIPS.
     if (Config->EMachine != EM_MIPS) {
-      size_t NumRelativeRels = Out<ELFT>::RelaDyn->getRelativeRelocCount();
+      size_t NumRelativeRels = In<ELFT>::RelaDyn->getRelativeRelocCount();
       if (Config->ZCombreloc && NumRelativeRels)
         Add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
     }
   }
-  if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
-    Add({DT_JMPREL, Out<ELFT>::RelaPlt});
-    Add({DT_PLTRELSZ, Out<ELFT>::RelaPlt->Size});
+  if (In<ELFT>::RelaPlt->hasRelocs()) {
+    Add({DT_JMPREL, In<ELFT>::RelaPlt});
+    Add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getSize()});
     Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          In<ELFT>::GotPlt});
     Add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
@@ -848,6 +848,92 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
+template <class ELFT>
+typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
+  if (OutputSec)
+    return OutputSec->Addr + OffsetInSec;
+  return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
+}
+
+template <class ELFT>
+typename ELFT::uint DynamicReloc<ELFT>::getAddend() const {
+  if (UseSymVA)
+    return Sym->getVA<ELFT>(Addend);
+  return Addend;
+}
+
+template <class ELFT> uint32_t DynamicReloc<ELFT>::getSymIndex() const {
+  if (Sym && !UseSymVA)
+    return Sym->DynsymIndex;
+  return 0;
+}
+
+template <class ELFT>
+RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
+    : SyntheticSection<ELFT>(SHF_ALLOC, Config->Rela ? SHT_RELA : SHT_REL,
+                             sizeof(uintX_t), Name),
+      Sort(Sort) {
+  this->Entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+}
+
+template <class ELFT>
+void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
+  if (Reloc.Type == Target->RelativeRel)
+    ++NumRelativeRelocs;
+  Relocs.push_back(Reloc);
+}
+
+template <class ELFT, class RelTy>
+static bool compRelocations(const RelTy &A, const RelTy &B) {
+  bool AIsRel = A.getType(Config->Mips64EL) == Target->RelativeRel;
+  bool BIsRel = B.getType(Config->Mips64EL) == Target->RelativeRel;
+  if (AIsRel != BIsRel)
+    return AIsRel;
+
+  return A.getSymbol(Config->Mips64EL) < B.getSymbol(Config->Mips64EL);
+}
+
+template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
+  uint8_t *BufBegin = Buf;
+  for (const DynamicReloc<ELFT> &Rel : Relocs) {
+    auto *P = reinterpret_cast<Elf_Rela *>(Buf);
+    Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+
+    if (Config->Rela)
+      P->r_addend = Rel.getAddend();
+    P->r_offset = Rel.getOffset();
+    if (Config->EMachine == EM_MIPS && Rel.getInputSec() == In<ELFT>::Got)
+      // Dynamic relocation against MIPS GOT section make deal TLS entries
+      // allocated in the end of the GOT. We need to adjust the offset to take
+      // in account 'local' and 'global' GOT entries.
+      P->r_offset += In<ELFT>::Got->getMipsTlsOffset();
+    P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->Mips64EL);
+  }
+
+  if (Sort) {
+    if (Config->Rela)
+      std::stable_sort((Elf_Rela *)BufBegin,
+                       (Elf_Rela *)BufBegin + Relocs.size(),
+                       compRelocations<ELFT, Elf_Rela>);
+    else
+      std::stable_sort((Elf_Rel *)BufBegin, (Elf_Rel *)BufBegin + Relocs.size(),
+                       compRelocations<ELFT, Elf_Rel>);
+  }
+}
+
+template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
+  return this->Entsize * Relocs.size();
+}
+
+template <class ELFT> void RelocationSection<ELFT>::finalize() {
+  this->Link = Out<ELFT>::DynSymTab ? Out<ELFT>::DynSymTab->SectionIndex
+                                    : Out<ELFT>::SymTab->SectionIndex;
+
+  // Set required output section properties.
+  this->OutSec->Link = this->Link;
+  this->OutSec->Entsize = this->Entsize;
+}
+
 template InputSection<ELF32LE> *elf::createCommonSection();
 template InputSection<ELF32BE> *elf::createCommonSection();
 template InputSection<ELF64LE> *elf::createCommonSection();
@@ -927,3 +1013,8 @@ template class elf::DynamicSection<ELF32LE>;
 template class elf::DynamicSection<ELF32BE>;
 template class elf::DynamicSection<ELF64LE>;
 template class elf::DynamicSection<ELF64BE>;
+
+template class elf::RelocationSection<ELF32LE>;
+template class elf::RelocationSection<ELF32BE>;
+template class elf::RelocationSection<ELF64LE>;
+template class elf::RelocationSection<ELF64BE>;

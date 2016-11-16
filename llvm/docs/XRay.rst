@@ -162,6 +162,19 @@ functions we list below:
 - ``__xray_unpatch()``: Unpatch the instrumentation points defined in the
   binary.
 
+There are some requirements on the logging handler to be installed for the
+thread-safety of operations to be performed by the XRay runtime library:
+
+- The function should be thread-safe, as multiple threads may be invoking the
+  function at the same time. If the logging function needs to do
+  synchronisation, it must do so internally as XRay does not provide any
+  synchronisation guarantees outside from the atomicity of updates to the
+  pointer.
+- The pointer provided to ``__xray_set_handler(...)`` must be live even after
+  calls to ``__xray_remove_handler()`` and ``__xray_unpatch()`` have succeeded.
+  XRay cannot guarantee that all threads that have ever gotten a copy of the
+  pointer will not invoke the function.
+
 
 Trace Analysis Tools
 --------------------

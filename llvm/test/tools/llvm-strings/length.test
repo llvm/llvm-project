@@ -1,7 +1,7 @@
-RUN: sed -n 's/^STDIN: //p' %s | llvm-strings | FileCheck --check-prefix CHECK-DEFAULT %s
-RUN: sed -n 's/^STDIN: //p' %s | not llvm-strings -n 0 2>&1 | FileCheck --check-prefix CHECK-0 %s
-RUN: sed -n 's/^STDIN: //p' %s | llvm-strings -n 1 | FileCheck --check-prefix CHECK-1 %s
-RUN: sed -n 's/^STDIN: //p' %s | llvm-strings -n 2 | FileCheck --check-prefix CHECK-2 %s
+RUN: not llvm-strings -n 0 2>&1 %S/Inputs/variable-length | FileCheck --check-prefix CHECK-0 %s
+RUN: llvm-strings -n 1 %S/Inputs/variable-length | FileCheck --check-prefix CHECK-1 %s
+RUN: llvm-strings -n 2 %S/Inputs/variable-length | FileCheck --check-prefix CHECK-2 %s
+RUN: llvm-strings %S/Inputs/variable-length | FileCheck --check-prefix CHECK-DEFAULT %s
 
 STDIN: a
 STDIN: ab
