@@ -3740,26 +3740,23 @@ _mm512_maskz_cvtepu32_ps (__mmask16 __U, __m512i __A)
 static __inline __m512d __DEFAULT_FN_ATTRS
 _mm512_cvtepi32_pd(__m256i __A)
 {
-  return (__m512d) __builtin_ia32_cvtdq2pd512_mask ((__v8si) __A,
-                (__v8df)
-                _mm512_setzero_pd (),
-                (__mmask8) -1);
+  return (__m512d)__builtin_convertvector((__v8si)__A, __v8df);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_mask_cvtepi32_pd (__m512d __W, __mmask8 __U, __m256i __A)
 {
-  return (__m512d) __builtin_ia32_cvtdq2pd512_mask ((__v8si) __A,
-                (__v8df) __W,
-                (__mmask8) __U);
+  return (__m512d)__builtin_ia32_selectpd_512((__mmask8) __U,
+                                              (__v8df)_mm512_cvtepi32_pd(__A),
+                                              (__v8df)__W);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_maskz_cvtepi32_pd (__mmask8 __U, __m256i __A)
 {
-  return (__m512d) __builtin_ia32_cvtdq2pd512_mask ((__v8si) __A,
-                (__v8df) _mm512_setzero_pd (),
-                (__mmask8) __U);
+  return (__m512d)__builtin_ia32_selectpd_512((__mmask8) __U,
+                                              (__v8df)_mm512_cvtepi32_pd(__A),
+                                              (__v8df)_mm512_setzero_pd());
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
@@ -3804,26 +3801,23 @@ _mm512_maskz_cvtepi32_ps (__mmask16 __U, __m512i __A)
 static __inline __m512d __DEFAULT_FN_ATTRS
 _mm512_cvtepu32_pd(__m256i __A)
 {
-  return (__m512d) __builtin_ia32_cvtudq2pd512_mask ((__v8si) __A,
-                (__v8df)
-                _mm512_setzero_pd (),
-                (__mmask8) -1);
+  return (__m512d)__builtin_convertvector((__v8su)__A, __v8df);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_mask_cvtepu32_pd (__m512d __W, __mmask8 __U, __m256i __A)
 {
-  return (__m512d) __builtin_ia32_cvtudq2pd512_mask ((__v8si) __A,
-                  (__v8df) __W,
-                  (__mmask8) __U);
+  return (__m512d)__builtin_ia32_selectpd_512((__mmask8) __U,
+                                              (__v8df)_mm512_cvtepu32_pd(__A),
+                                              (__v8df)__W);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_maskz_cvtepu32_pd (__mmask8 __U, __m256i __A)
 {
-  return (__m512d) __builtin_ia32_cvtudq2pd512_mask ((__v8si) __A,
-                  (__v8df) _mm512_setzero_pd (),
-                  (__mmask8) __U);
+  return (__m512d)__builtin_ia32_selectpd_512((__mmask8) __U,
+                                              (__v8df)_mm512_cvtepu32_pd(__A),
+                                              (__v8df)_mm512_setzero_pd());
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
