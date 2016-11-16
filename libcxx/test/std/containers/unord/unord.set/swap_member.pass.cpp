@@ -77,7 +77,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(*c1.find(10) == 10);
         assert(*c1.find(20) == 20);
@@ -132,7 +132,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.count(1) == 1);
         assert(c2.count(2) == 1);
@@ -176,7 +176,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(*c1.find(10) == 10);
         assert(*c1.find(20) == 20);
@@ -193,7 +193,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.count(1) == 1);
         assert(c2.count(2) == 1);
@@ -258,7 +258,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(*c1.find(10) == 10);
         assert(*c1.find(20) == 20);
@@ -313,7 +313,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.count(1) == 1);
         assert(c2.count(2) == 1);
@@ -357,7 +357,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(*c1.find(10) == 10);
         assert(*c1.find(20) == 20);
@@ -374,7 +374,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.count(1) == 1);
         assert(c2.count(2) == 1);
@@ -439,7 +439,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(*c1.find(10) == 10);
         assert(*c1.find(20) == 20);
@@ -494,7 +494,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.count(1) == 1);
         assert(c2.count(2) == 1);
@@ -538,7 +538,7 @@ int main()
         c2.max_load_factor(2);
         c1.swap(c2);
 
-        assert(c1.bucket_count() >= 11);
+        assert(c1.bucket_count() >= 8);
         assert(c1.size() == 8);
         assert(*c1.find(10) == 10);
         assert(*c1.find(20) == 20);
@@ -555,7 +555,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() >= 5);
+        assert(c2.bucket_count() >= 4);
         assert(c2.size() == 4);
         assert(c2.count(1) == 1);
         assert(c2.count(2) == 1);

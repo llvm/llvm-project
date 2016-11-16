@@ -210,7 +210,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   Out<ELFT>::Bss =
       make<OutputSection<ELFT>>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
   In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
-  Out<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
+  In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
   Out<ELFT>::Plt = make<PltSection<ELFT>>();
   Out<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
@@ -314,13 +314,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   In<ELFT>::Got = make<GotSection<ELFT>>();
   In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
-
-  // These sections are filled after createSections() is called.
-  // We use this list to fixup size of output sections, when they
-  // are finalized.
-  In<ELFT>::SyntheticSections = {In<ELFT>::ShStrTab, In<ELFT>::StrTab,
-                                 In<ELFT>::DynStrTab, In<ELFT>::Got,
-                                 In<ELFT>::GotPlt};
 }
 
 template <class ELFT>
@@ -434,7 +427,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
     return true;
   if (Sec == In<ELFT>::GotPlt->OutSec)
     return Config->ZNow;
-  if (Sec == Out<ELFT>::Dynamic || Sec == In<ELFT>::Got->OutSec)
+  if (Sec == In<ELFT>::Dynamic->OutSec || Sec == In<ELFT>::Got->OutSec)
     return true;
   StringRef S = Sec->getName();
   return S == ".data.rel.ro" || S == ".ctors" || S == ".dtors" || S == ".jcr" ||
@@ -593,7 +586,7 @@ static Symbol *addOptionalRegular(StringRef Name, InputSectionBase<ELFT> *IS,
 // need these symbols, since IRELATIVE relocs are resolved through GOT
 // and PLT. For details, see http://www.airs.com/blog/archives/403.
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
-  if (Out<ELFT>::DynSymTab || !Out<ELFT>::RelaPlt)
+  if (Out<ELFT>::DynSymTab)
     return;
   StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
   addOptionalSynthetic<ELFT>(S, Out<ELFT>::RelaPlt, 0);
@@ -861,6 +854,17 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   Script<ELFT>::X->adjustSectionsAfterSorting();
 }
 
+template <class ELFT>
+static void
+finalizeSynthetic(const std::vector<SyntheticSection<ELFT> *> &Sections) {
+  for (SyntheticSection<ELFT> *SS : Sections)
+    if (SS && SS->OutSec) {
+      SS->finalize();
+      SS->OutSec->Size = 0;
+      SS->OutSec->assignOffsets();
+    }
+}
+
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::finalizeSections() {
   Out<ELFT>::DebugInfo = findSection(".debug_info");
@@ -882,8 +886,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (Out<ELFT>::DynSymTab)
-    Symtab<ELFT>::X->addSynthetic("_DYNAMIC", Out<ELFT>::Dynamic, 0,
-                                  STV_HIDDEN);
+    addRegular("_DYNAMIC", In<ELFT>::Dynamic, 0);
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
@@ -940,11 +943,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSectionBase *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Dynamic)
-      Sec->finalize();
+    Sec->finalize();
 
-  if (Out<ELFT>::DynSymTab)
-    Out<ELFT>::Dynamic->finalize();
+  finalizeSynthetic<ELFT>({In<ELFT>::ShStrTab, In<ELFT>::StrTab,
+                           In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::GotPlt,
+                           In<ELFT>::Dynamic});
 
   // Now that all output offsets are fixed. Finalize mergeable sections
   // to fix their maps from input offsets to output offsets.
@@ -992,7 +995,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
     Add(Out<ELFT>::GnuHashTab);
     Add(Out<ELFT>::HashTab);
-    Add(Out<ELFT>::Dynamic);
+    addInputSec(In<ELFT>::Dynamic);
     addInputSec(In<ELFT>::DynStrTab);
     if (Out<ELFT>::RelaDyn->hasRelocs())
       Add(Out<ELFT>::RelaDyn);
@@ -1001,15 +1004,13 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even during static linking it can contain R_[*]_IRELATIVE relocations.
-  if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs())
+  if (Out<ELFT>::RelaPlt->hasRelocs())
     Add(Out<ELFT>::RelaPlt);
 
   // We fill .got and .got.plt sections in scanRelocs(). This is the
   // reason we don't add it earlier in createSections().
-  if (needsGot()) {
-    In<ELFT>::Got->finalize();
+  if (needsGot())
     addInputSec(In<ELFT>::Got);
-  }
 
   if (!In<ELFT>::GotPlt->empty())
     addInputSec(In<ELFT>::GotPlt);
@@ -1158,8 +1159,8 @@ template <class ELFT> std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
 
   // Add an entry for .dynamic.
   if (Out<ELFT>::DynSymTab) {
-    Phdr &H = *AddHdr(PT_DYNAMIC, Out<ELFT>::Dynamic->getPhdrFlags());
-    H.add(Out<ELFT>::Dynamic);
+    Phdr &H = *AddHdr(PT_DYNAMIC, In<ELFT>::Dynamic->OutSec->getPhdrFlags());
+    H.add(In<ELFT>::Dynamic->OutSec);
   }
 
   // PT_GNU_RELRO includes all sections that should be marked as

@@ -45,7 +45,6 @@ class OutputSectionBase {
 public:
   enum Kind {
     Base,
-    Dynamic,
     EHFrame,
     EHFrameHdr,
     GnuHashTable,
@@ -478,55 +477,6 @@ private:
   unsigned Shift2;
 };
 
-template <class ELFT> class DynamicSection final : public OutputSectionBase {
-  typedef typename ELFT::Dyn Elf_Dyn;
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::uint uintX_t;
-
-  // The .dynamic section contains information for the dynamic linker.
-  // The section consists of fixed size entries, which consist of
-  // type and value fields. Value are one of plain integers, symbol
-  // addresses, or section addresses. This struct represents the entry.
-  struct Entry {
-    int32_t Tag;
-    union {
-      OutputSectionBase *OutSec;
-      InputSection<ELFT> *InSec;
-      uint64_t Val;
-      const SymbolBody *Sym;
-    };
-    enum KindT { SecAddr, SecSize, SymAddr, PlainInt, InSecAddr } Kind;
-    Entry(int32_t Tag, OutputSectionBase *OutSec, KindT Kind = SecAddr)
-        : Tag(Tag), OutSec(OutSec), Kind(Kind) {}
-    Entry(int32_t Tag, InputSection<ELFT> *Sec)
-        : Tag(Tag), InSec(Sec), Kind(InSecAddr) {}
-    Entry(int32_t Tag, uint64_t Val) : Tag(Tag), Val(Val), Kind(PlainInt) {}
-    Entry(int32_t Tag, const SymbolBody *Sym)
-        : Tag(Tag), Sym(Sym), Kind(SymAddr) {}
-  };
-
-  // finalize() fills this vector with the section contents. finalize()
-  // cannot directly create final section contents because when the
-  // function is called, symbol or section addresses are not fixed yet.
-  std::vector<Entry> Entries;
-
-public:
-  DynamicSection();
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-  Kind getKind() const override { return Dynamic; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == Dynamic;
-  }
-
-private:
-  void addEntries();
-  void Add(Entry E) { Entries.push_back(E); }
-};
-
 // --eh-frame-hdr option tells linker to construct a header for all the
 // .eh_frame sections. This header is placed to a section named .eh_frame_hdr
 // and also to a PT_GNU_EH_FRAME segment.
@@ -566,7 +516,6 @@ template <class ELFT> struct Out {
   typedef typename ELFT::Phdr Elf_Phdr;
 
   static uint8_t First;
-  static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhOutputSection<ELFT> *EhFrame;
   static GdbIndexSection<ELFT> *GdbIndex;
@@ -627,7 +576,6 @@ template <class ELFT> uint64_t getHeaderSize() {
 }
 
 template <class ELFT> uint8_t Out<ELFT>::First;
-template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> GdbIndexSection<ELFT> *Out<ELFT>::GdbIndex;

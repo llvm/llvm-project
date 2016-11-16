@@ -148,10 +148,16 @@ static void InterceptionFailed() {
 }
 
 static bool DistanceIsWithin2Gig(uptr from, uptr target) {
+#if SANITIZER_WINDOWS64
   if (from < target)
     return target - from <= (uptr)0x7FFFFFFFU;
   else
     return from - target <= (uptr)0x80000000U;
+#else
+  // In a 32-bit address space, the address calculation will wrap, so this check
+  // is unnecessary.
+  return true;
+#endif
 }
 
 static uptr GetMmapGranularity() {

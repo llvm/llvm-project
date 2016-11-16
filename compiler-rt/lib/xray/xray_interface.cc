@@ -23,6 +23,7 @@
 #include <sys/mman.h>
 
 #include "sanitizer_common/sanitizer_common.h"
+#include "xray_defs.h"
 
 namespace __xray {
 
@@ -53,11 +54,13 @@ class MProtectHelper {
   bool MustCleanup;
 
 public:
-  explicit MProtectHelper(void *PageAlignedAddr, std::size_t MProtectLen)
-      : PageAlignedAddr(PageAlignedAddr), MProtectLen(MProtectLen),
+  explicit MProtectHelper(void *PageAlignedAddr,
+                          std::size_t MProtectLen) XRAY_NEVER_INSTRUMENT
+      : PageAlignedAddr(PageAlignedAddr),
+        MProtectLen(MProtectLen),
         MustCleanup(false) {}
 
-  int MakeWriteable() {
+  int MakeWriteable() XRAY_NEVER_INSTRUMENT {
     auto R = mprotect(PageAlignedAddr, MProtectLen,
                       PROT_READ | PROT_WRITE | PROT_EXEC);
     if (R != -1)
@@ -65,7 +68,7 @@ public:
     return R;
   }
 
-  ~MProtectHelper() {
+  ~MProtectHelper() XRAY_NEVER_INSTRUMENT {
     if (MustCleanup) {
       mprotect(PageAlignedAddr, MProtectLen, PROT_READ | PROT_EXEC);
     }
@@ -77,7 +80,8 @@ public:
 extern std::atomic<bool> XRayInitialized;
 extern std::atomic<__xray::XRaySledMap> XRayInstrMap;
 
-int __xray_set_handler(void (*entry)(int32_t, XRayEntryType)) {
+int __xray_set_handler(void (*entry)(int32_t,
+                                     XRayEntryType)) XRAY_NEVER_INSTRUMENT {
   if (XRayInitialized.load(std::memory_order_acquire)) {
     __xray::XRayPatchedFunction.store(entry, std::memory_order_release);
     return 1;
@@ -85,7 +89,9 @@ int __xray_set_handler(void (*entry)(int32_t, XRayEntryType)) {
   return 0;
 }
 
-int __xray_remove_handler() { return __xray_set_handler(nullptr); }
+int __xray_remove_handler() XRAY_NEVER_INSTRUMENT {
+  return __xray_set_handler(nullptr);
+}
 
 std::atomic<bool> XRayPatching{false};
 
@@ -97,22 +103,24 @@ template <class Function> class CleanupInvoker {
   Function Fn;
 
 public:
-  explicit CleanupInvoker(Function Fn) : Fn(Fn) {}
-  CleanupInvoker(const CleanupInvoker &) = default;
-  CleanupInvoker(CleanupInvoker &&) = default;
-  CleanupInvoker &operator=(const CleanupInvoker &) = delete;
-  CleanupInvoker &operator=(CleanupInvoker &&) = delete;
-  ~CleanupInvoker() { Fn(); }
+  explicit CleanupInvoker(Function Fn) XRAY_NEVER_INSTRUMENT : Fn(Fn) {}
+  CleanupInvoker(const CleanupInvoker &) XRAY_NEVER_INSTRUMENT = default;
+  CleanupInvoker(CleanupInvoker &&) XRAY_NEVER_INSTRUMENT = default;
+  CleanupInvoker &
+  operator=(const CleanupInvoker &) XRAY_NEVER_INSTRUMENT = delete;
+  CleanupInvoker &operator=(CleanupInvoker &&) XRAY_NEVER_INSTRUMENT = delete;
+  ~CleanupInvoker() XRAY_NEVER_INSTRUMENT { Fn(); }
 };
 
-template <class Function> CleanupInvoker<Function> ScopeCleanup(Function Fn) {
+template <class Function>
+CleanupInvoker<Function> ScopeCleanup(Function Fn) XRAY_NEVER_INSTRUMENT {
   return CleanupInvoker<Function>{Fn};
 }
 
 // ControlPatching implements the common internals of the patching/unpatching
 // implementation. |Enable| defines whether we're enabling or disabling the
 // runtime XRay instrumentation.
-XRayPatchingStatus ControlPatching(bool Enable) {
+XRayPatchingStatus ControlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   if (!XRayInitialized.load(std::memory_order_acquire))
     return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
 
@@ -188,6 +196,10 @@ XRayPatchingStatus ControlPatching(bool Enable) {
   return XRayPatchingStatus::SUCCESS;
 }
 
-XRayPatchingStatus __xray_patch() { return ControlPatching(true); }
+XRayPatchingStatus __xray_patch() XRAY_NEVER_INSTRUMENT {
+  return ControlPatching(true);
+}
 
-XRayPatchingStatus __xray_unpatch() { return ControlPatching(false); }
+XRayPatchingStatus __xray_unpatch() XRAY_NEVER_INSTRUMENT {
+  return ControlPatching(false);
+}

@@ -54,7 +54,7 @@ void RedundantMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
     } else {
       diag(Init->getSourceLocation(),
            "initializer for base class %0 is redundant")
-          << Init->getTypeSourceInfo()->getType()
+          << Construct->getType()
           << FixItHint::CreateRemoval(Init->getSourceRange());
     }
   }
