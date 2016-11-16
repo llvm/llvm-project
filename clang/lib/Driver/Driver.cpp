@@ -543,26 +543,20 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   setLTOMode(Args);
 
-  // Ignore -fembed-bitcode options with LTO
-  // since the output will be bitcode anyway.
-  if (getLTOMode() == LTOK_None) {
-    if (Arg *A = Args.getLastArg(options::OPT_fembed_bitcode_EQ)) {
-      StringRef Name = A->getValue();
-      unsigned Model = llvm::StringSwitch<unsigned>(Name)
-          .Case("off", EmbedNone)
-          .Case("all", EmbedBitcode)
-          .Case("bitcode", EmbedBitcode)
-          .Case("marker", EmbedMarker)
-          .Default(~0U);
-      if (Model == ~0U) {
-        Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                  << Name;
-      } else
-        BitcodeEmbed = static_cast<BitcodeEmbedMode>(Model);
-    }
-  } else {
-    // claim the bitcode option under LTO so no warning is issued.
-    Args.ClaimAllArgs(options::OPT_fembed_bitcode_EQ);
+  // Process -fembed-bitcode= flags.
+  if (Arg *A = Args.getLastArg(options::OPT_fembed_bitcode_EQ)) {
+    StringRef Name = A->getValue();
+    unsigned Model = llvm::StringSwitch<unsigned>(Name)
+        .Case("off", EmbedNone)
+        .Case("all", EmbedBitcode)
+        .Case("bitcode", EmbedBitcode)
+        .Case("marker", EmbedMarker)
+        .Default(~0U);
+    if (Model == ~0U) {
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
+                                                << Name;
+    } else
+      BitcodeEmbed = static_cast<BitcodeEmbedMode>(Model);
   }
 
   std::unique_ptr<llvm::opt::InputArgList> UArgs =
@@ -2218,7 +2212,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
   ActionList CollapsedOffloadActions;
 
   const Tool *T =
-      selectToolForJob(C, isSaveTempsEnabled(), embedBitcodeEnabled(), TC, JA,
+      selectToolForJob(C, isSaveTempsEnabled(), embedBitcodeInObject(), TC, JA,
                        Inputs, CollapsedOffloadActions);
   if (!T)
     return InputInfo();
