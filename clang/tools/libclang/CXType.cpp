@@ -925,31 +925,26 @@ int clang_Type_getNumTemplateArguments(CXType CT) {
   QualType T = GetQualType(CT);
   if (T.isNull())
     return -1;
-  const CXXRecordDecl *RecordDecl = T->getAsCXXRecordDecl();
-  if (!RecordDecl)
+  const TemplateSpecializationType *Specialization =
+    T->getAs<TemplateSpecializationType>();
+  if (!Specialization)
     return -1;
-  const ClassTemplateSpecializationDecl *TemplateDecl =
-      dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
-  if (!TemplateDecl)
-    return -1;
-  return TemplateDecl->getTemplateArgs().size();
+  return Specialization->template_arguments().size();
 }
 
 CXType clang_Type_getTemplateArgumentAsType(CXType CT, unsigned i) {
   QualType T = GetQualType(CT);
   if (T.isNull())
     return MakeCXType(QualType(), GetTU(CT));
-  const CXXRecordDecl *RecordDecl = T->getAsCXXRecordDecl();
-  if (!RecordDecl)
+
+  const TemplateSpecializationType *Specialization =
+    T->getAs<TemplateSpecializationType>();
+  if (!Specialization)
     return MakeCXType(QualType(), GetTU(CT));
-  const ClassTemplateSpecializationDecl *TemplateDecl =
-      dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
-  if (!TemplateDecl)
-    return MakeCXType(QualType(), GetTU(CT));
-  const TemplateArgumentList &TA = TemplateDecl->getTemplateArgs();
+  auto TA = Specialization->template_arguments();
   if (TA.size() <= i)
     return MakeCXType(QualType(), GetTU(CT));
-  const TemplateArgument &A = TA.get(i);
+  const TemplateArgument &A = TA[i];
   if (A.getKind() != TemplateArgument::Type)
     return MakeCXType(QualType(), GetTU(CT));
   return MakeCXType(A.getAsType(), GetTU(CT));
