@@ -9,6 +9,7 @@
 #include "ChangeNamespace.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang::ast_matchers;
 
@@ -336,13 +337,26 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                          .bind("using_with_shadow"),
                      this);
 
-  // Handle types in nested name specifier.
+  // Handle types in nested name specifier. Specifiers that are in a TypeLoc
+  // matched above are not matched, e.g. "A::" in "A::A" is not matched since
+  // "A::A" would have already been fixed.
   Finder->addMatcher(nestedNameSpecifierLoc(
                          hasAncestor(decl(IsInMovedNs).bind("dc")),
                          loc(nestedNameSpecifier(specifiesType(
-                             hasDeclaration(DeclMatcher.bind("from_decl"))))))
+                             hasDeclaration(DeclMatcher.bind("from_decl"))))),
+                         unless(hasAncestor(typeLoc(loc(qualType(hasDeclaration(
+                             decl(equalsBoundNode("from_decl")))))))))
                          .bind("nested_specifier_loc"),
                      this);
+
+  // Matches base class initializers in constructors. TypeLocs of base class
+  // initializers do not need to be fixed. For example,
+  //    class X : public a::b::Y {
+  //      public:
+  //        X() : Y::Y() {} // Y::Y do not need namespace specifier.
+  //    };
+  Finder->addMatcher(
+      cxxCtorInitializer(isBaseInitializer()).bind("base_initializer"), this);
 
   // Handle function.
   // Only handle functions that are defined in a namespace excluding member
@@ -393,6 +407,11 @@ void ChangeNamespaceTool::run(
     SourceLocation Start = Specifier->getBeginLoc();
     SourceLocation End = EndLocationForType(Specifier->getTypeLoc());
     fixTypeLoc(Result, Start, End, Specifier->getTypeLoc());
+  } else if (const auto *BaseInitializer =
+                 Result.Nodes.getNodeAs<CXXCtorInitializer>(
+                     "base_initializer")) {
+    BaseCtorInitializerTypeLocs.push_back(
+        BaseInitializer->getTypeSourceInfo()->getTypeLoc());
   } else if (const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type")) {
     fixTypeLoc(Result, startLocationForType(*TLoc), EndLocationForType(*TLoc),
                *TLoc);
@@ -520,7 +539,9 @@ void ChangeNamespaceTool::moveClassForwardDeclaration(
   // Delete the forward declaration from the code to be moved.
   const auto Deletion =
       createReplacement(Start, End, "", *Result.SourceManager);
-  addOrMergeReplacement(Deletion, &FileToReplacements[Deletion.getFilePath()]);
+  auto Err = FileToReplacements[Deletion.getFilePath()].add(Deletion);
+  if (Err)
+    llvm_unreachable(llvm::toString(std::move(Err)).c_str());
   llvm::StringRef Code = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
           Result.SourceManager->getSpellingLoc(Start),
@@ -606,7 +627,9 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
   if (NestedName == ReplaceName)
     return;
   auto R = createReplacement(Start, End, ReplaceName, *Result.SourceManager);
-  addOrMergeReplacement(R, &FileToReplacements[R.getFilePath()]);
+  auto Err = FileToReplacements[R.getFilePath()].add(R);
+  if (Err)
+    llvm_unreachable(llvm::toString(std::move(Err)).c_str());
 }
 
 // Replace the [Start, End] of `Type` with the shortest qualified name when the
@@ -616,6 +639,9 @@ void ChangeNamespaceTool::fixTypeLoc(
     SourceLocation End, TypeLoc Type) {
   // FIXME: do not rename template parameter.
   if (Start.isInvalid() || End.isInvalid())
+    return;
+  // Types of CXXCtorInitializers do not need to be fixed.
+  if (llvm::is_contained(BaseCtorInitializerTypeLocs, Type))
     return;
   // The declaration which this TypeLoc refers to.
   const auto *FromDecl = Result.Nodes.getNodeAs<NamedDecl>("from_decl");
@@ -667,7 +693,9 @@ void ChangeNamespaceTool::fixUsingShadowDecl(
   // Use fully qualified name in UsingDecl for now.
   auto R = createReplacement(Start, End, "using ::" + TargetDeclName,
                              *Result.SourceManager);
-  addOrMergeReplacement(R, &FileToReplacements[R.getFilePath()]);
+  auto Err = FileToReplacements[R.getFilePath()].add(R);
+  if (Err)
+    llvm_unreachable(llvm::toString(std::move(Err)).c_str());
 }
 
 void ChangeNamespaceTool::onEndOfTranslationUnit() {

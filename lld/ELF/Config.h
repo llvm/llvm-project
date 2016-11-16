@@ -62,7 +62,6 @@ struct VersionDefinition {
   llvm::StringRef Name;
   size_t Id;
   std::vector<SymbolVersion> Globals;
-  std::vector<SymbolVersion> Locals;
   size_t NameOff; // Offset in string table.
 };
 
@@ -92,6 +91,7 @@ struct Configuration {
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
   std::vector<SymbolVersion> VersionScriptGlobals;
+  std::vector<SymbolVersion> VersionScriptLocals;
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
