@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -verify -D=ATTR_TEST -fms-compatibility %s
 
 void test1(image1d_t *i) {} // expected-error{{pointer to type '__read_only image1d_t' is invalid in OpenCL}}
 
@@ -12,3 +13,8 @@ void test2(image1d_t i) {
 }
 
 image1d_t test3() {} // expected-error{{declaring function return value of type '__read_only image1d_t' is not allowed}}
+
+#ifdef ATTR_TEST
+// Test case for an infinite loop bug.
+kernel void foob(read_only __ptr32  image2d_t i) { } // expected-error{{'__ptr32' attribute only applies to pointer arguments}}
+#endif

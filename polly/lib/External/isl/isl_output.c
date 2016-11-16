@@ -32,6 +32,9 @@
 #include <isl_sort.h>
 #include <isl_output_private.h>
 
+#include <bset_to_bmap.c>
+#include <set_to_map.c>
+
 static const char *s_to[2] = { " -> ", " \\to " };
 static const char *s_and[2] = { " and ", " \\wedge " };
 static const char *s_or[2] = { " or ", " \\vee " };
@@ -100,7 +103,7 @@ static __isl_give isl_printer *print_constraints_polylib(
 static __isl_give isl_printer *bset_print_constraints_polylib(
 	struct isl_basic_set *bset, __isl_take isl_printer *p)
 {
-	return print_constraints_polylib((struct isl_basic_map *)bset, p);
+	return print_constraints_polylib(bset_to_bmap(bset), p);
 }
 
 static __isl_give isl_printer *isl_basic_map_print_polylib(
@@ -132,7 +135,7 @@ static __isl_give isl_printer *isl_basic_map_print_polylib(
 static __isl_give isl_printer *isl_basic_set_print_polylib(
 	__isl_keep isl_basic_set *bset, __isl_take isl_printer *p, int ext)
 {
-	return isl_basic_map_print_polylib((struct isl_basic_map *)bset, p, ext);
+	return isl_basic_map_print_polylib(bset_to_bmap(bset), p, ext);
 }
 
 static __isl_give isl_printer *isl_map_print_polylib(__isl_keep isl_map *map,
@@ -154,7 +157,7 @@ static __isl_give isl_printer *isl_map_print_polylib(__isl_keep isl_map *map,
 static __isl_give isl_printer *isl_set_print_polylib(__isl_keep isl_set *set,
 	__isl_take isl_printer *p, int ext)
 {
-	return isl_map_print_polylib((struct isl_map *)set, p, ext);
+	return isl_map_print_polylib(set_to_map(set), p, ext);
 }
 
 static int count_same_name(__isl_keep isl_space *dim,
@@ -1318,7 +1321,7 @@ __isl_give isl_printer *isl_printer_print_set(__isl_take isl_printer *p,
 	if (!p || !set)
 		goto error;
 	if (p->output_format == ISL_FORMAT_ISL)
-		return isl_map_print_isl((isl_map *)set, p);
+		return isl_map_print_isl(set_to_map(set), p);
 	else if (p->output_format == ISL_FORMAT_POLYLIB)
 		return isl_set_print_polylib(set, p, 0);
 	else if (p->output_format == ISL_FORMAT_EXT_POLYLIB)
@@ -1326,7 +1329,7 @@ __isl_give isl_printer *isl_printer_print_set(__isl_take isl_printer *p,
 	else if (p->output_format == ISL_FORMAT_OMEGA)
 		return isl_set_print_omega(set, p);
 	else if (p->output_format == ISL_FORMAT_LATEX)
-		return isl_map_print_latex((isl_map *)set, p);
+		return isl_map_print_latex(set_to_map(set), p);
 	isl_assert(set->ctx, 0, goto error);
 error:
 	isl_printer_free(p);
@@ -1739,7 +1742,7 @@ static __isl_give isl_printer *isl_pwqp_print_isl_body(
 			p = isl_printer_print_str(p, " -> ");
 		}
 		p = print_qpolynomial(p, pwqp->p[i].qp);
-		p = print_disjuncts((isl_map *)pwqp->p[i].set, space, p, 0);
+		p = print_disjuncts(set_to_map(pwqp->p[i].set), space, p, 0);
 		isl_space_free(space);
 	}
 
@@ -1806,7 +1809,7 @@ static __isl_give isl_printer *isl_pwf_print_isl_body(
 			p = isl_printer_print_str(p, " -> ");
 		}
 		p = qpolynomial_fold_print(pwf->p[i].fold, p);
-		p = print_disjuncts((isl_map *)pwf->p[i].set, space, p, 0);
+		p = print_disjuncts(set_to_map(pwf->p[i].set), space, p, 0);
 		isl_space_free(space);
 	}
 
@@ -2407,7 +2410,7 @@ static __isl_give isl_printer *print_pw_aff_body(
 			p = isl_printer_print_str(p, "; ");
 		p = print_aff(p, pa->p[i].aff);
 		space = isl_aff_get_domain_space(pa->p[i].aff);
-		p = print_disjuncts((isl_map *)pa->p[i].set, space, p, 0);
+		p = print_disjuncts(set_to_map(pa->p[i].set), space, p, 0);
 		isl_space_free(space);
 	}
 
@@ -2751,7 +2754,7 @@ static __isl_give isl_printer *print_pw_multi_aff_body(
 			p = isl_printer_print_str(p, "; ");
 		p = print_multi_aff(p, pma->p[i].maff);
 		space = isl_multi_aff_get_domain_space(pma->p[i].maff);
-		p = print_disjuncts((isl_map *)pma->p[i].set, space, p, 0);
+		p = print_disjuncts(set_to_map(pma->p[i].set), space, p, 0);
 		isl_space_free(space);
 	}
 	return p;

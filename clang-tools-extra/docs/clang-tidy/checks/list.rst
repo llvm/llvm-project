@@ -114,6 +114,7 @@ Clang-Tidy Checks
    modernize-use-equals-delete
    modernize-use-nullptr
    modernize-use-override
+   modernize-use-transparent-functors
    modernize-use-using
    mpi-buffer-deref
    mpi-type-mismatch

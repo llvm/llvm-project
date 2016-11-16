@@ -22,7 +22,7 @@
     <li>The analyzer includes new checks for:
       <ul>
         <li>Improper instance cleanup up in Objective-C -dealloc methods under manual retain/release.</li>
-        <li>Inadvertant comparisons of NSNumber, CFNumberRef, and other number object pointers against scalar values.</li>
+        <li>Inadvertent comparisons of NSNumber, CFNumberRef, and other number object pointers against scalar values.</li>
         <li>Unsafe usage of dispatch_once_t predicates stored in Objective-C instance variables and other heap-allocated memory.</li>
         <li>Issues resulting from self-assignment in C++.</li>
         <li>Incorrect usage of MPI APIs in C and C++. This check can be enabled by passing the following command to scan-build: <br />

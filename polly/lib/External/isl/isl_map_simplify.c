@@ -23,6 +23,11 @@
 #include <isl_mat_private.h>
 #include <isl_vec_private.h>
 
+#include <bset_to_bmap.c>
+#include <bset_from_bmap.c>
+#include <set_to_map.c>
+#include <set_from_map.c>
+
 static void swap_equality(struct isl_basic_map *bmap, int a, int b)
 {
 	isl_int *t = bmap->eq[a];
@@ -212,8 +217,8 @@ error:
 __isl_give isl_basic_set *isl_basic_set_drop(__isl_take isl_basic_set *bset,
 	enum isl_dim_type type, unsigned first, unsigned n)
 {
-	return (isl_basic_set *)isl_basic_map_drop((isl_basic_map *)bset,
-							type, first, n);
+	return bset_from_bmap(isl_basic_map_drop(bset_to_bmap(bset),
+							type, first, n));
 }
 
 struct isl_basic_map *isl_basic_map_drop_inputs(
@@ -257,7 +262,7 @@ error:
 struct isl_set *isl_set_drop(struct isl_set *set,
 	enum isl_dim_type type, unsigned first, unsigned n)
 {
-	return (isl_set *)isl_map_drop((isl_map *)set, type, first, n);
+	return set_from_map(isl_map_drop(set_to_map(set), type, first, n));
 }
 
 struct isl_map *isl_map_drop_inputs(
@@ -372,8 +377,8 @@ struct isl_basic_map *isl_basic_map_normalize_constraints(
 struct isl_basic_set *isl_basic_set_normalize_constraints(
 	struct isl_basic_set *bset)
 {
-	return (struct isl_basic_set *)isl_basic_map_normalize_constraints(
-		(struct isl_basic_map *)bset);
+	isl_basic_map *bmap = bset_to_bmap(bset);
+	return bset_from_bmap(isl_basic_map_normalize_constraints(bmap));
 }
 
 /* Assuming the variable at position "pos" has an integer coefficient
@@ -745,8 +750,8 @@ struct isl_basic_map *isl_basic_map_gauss(
 struct isl_basic_set *isl_basic_set_gauss(
 	struct isl_basic_set *bset, int *progress)
 {
-	return (struct isl_basic_set*)isl_basic_map_gauss(
-			(struct isl_basic_map *)bset, progress);
+	return bset_from_bmap(isl_basic_map_gauss(bset_to_bmap(bset),
+							progress));
 }
 
 
@@ -1419,7 +1424,7 @@ __isl_give isl_basic_map *isl_basic_map_detect_inequality_pairs(
  * We skip integral divs, i.e., those with denominator 1, as we would
  * risk eliminating the div from the div constraints.  We do not need
  * to handle those divs here anyway since the div constraints will turn
- * out to form an equality and this equality can then be use to eliminate
+ * out to form an equality and this equality can then be used to eliminate
  * the div from all constraints.
  */
 static __isl_give isl_basic_map *eliminate_unit_divs(
@@ -1508,8 +1513,7 @@ struct isl_basic_map *isl_basic_map_simplify(struct isl_basic_map *bmap)
 
 struct isl_basic_set *isl_basic_set_simplify(struct isl_basic_set *bset)
 {
-	return (struct isl_basic_set *)
-		isl_basic_map_simplify((struct isl_basic_map *)bset);
+	return bset_from_bmap(isl_basic_map_simplify(bset_to_bmap(bset)));
 }
 
 
@@ -1635,8 +1639,7 @@ struct isl_basic_map *isl_basic_map_finalize(struct isl_basic_map *bmap)
 
 struct isl_basic_set *isl_basic_set_finalize(struct isl_basic_set *bset)
 {
-	return (struct isl_basic_set *)
-		isl_basic_map_finalize((struct isl_basic_map *)bset);
+	return bset_from_bmap(isl_basic_map_finalize(bset_to_bmap(bset)));
 }
 
 struct isl_set *isl_set_finalize(struct isl_set *set)
@@ -1799,8 +1802,8 @@ error:
 struct isl_basic_set *isl_basic_set_eliminate_vars(
 	struct isl_basic_set *bset, unsigned pos, unsigned n)
 {
-	return (struct isl_basic_set *)isl_basic_map_eliminate_vars(
-			(struct isl_basic_map *)bset, pos, n);
+	return bset_from_bmap(isl_basic_map_eliminate_vars(bset_to_bmap(bset),
+								pos, n));
 }
 
 /* Eliminate the specified n dimensions starting at first from the
@@ -1949,7 +1952,7 @@ static void compute_elimination_index(struct isl_basic_map *bmap, int *elim)
 
 static void set_compute_elimination_index(struct isl_basic_set *bset, int *elim)
 {
-	compute_elimination_index((struct isl_basic_map *)bset, elim);
+	compute_elimination_index(bset_to_bmap(bset), elim);
 }
 
 static int reduced_using_equalities(isl_int *dst, isl_int *src,
@@ -1978,7 +1981,7 @@ static int set_reduced_using_equalities(isl_int *dst, isl_int *src,
 	struct isl_basic_set *bset, int *elim)
 {
 	return reduced_using_equalities(dst, src,
-					(struct isl_basic_map *)bset, elim);
+					bset_to_bmap(bset), elim);
 }
 
 static struct isl_basic_set *isl_basic_set_reduce_using_equalities(
@@ -3644,15 +3647,15 @@ __isl_give isl_map *isl_map_gist(__isl_take isl_map *map,
 struct isl_basic_set *isl_basic_set_gist(struct isl_basic_set *bset,
 						struct isl_basic_set *context)
 {
-	return (struct isl_basic_set *)isl_basic_map_gist(
-		(struct isl_basic_map *)bset, (struct isl_basic_map *)context);
+	return bset_from_bmap(isl_basic_map_gist(bset_to_bmap(bset),
+						bset_to_bmap(context)));
 }
 
 __isl_give isl_set *isl_set_gist_basic_set(__isl_take isl_set *set,
 	__isl_take isl_basic_set *context)
 {
-	return (struct isl_set *)isl_map_gist_basic_map((struct isl_map *)set,
-					(struct isl_basic_map *)context);
+	return set_from_map(isl_map_gist_basic_map(set_to_map(set),
+					bset_to_bmap(context)));
 }
 
 __isl_give isl_set *isl_set_gist_params_basic_set(__isl_take isl_set *set,
@@ -3667,8 +3670,7 @@ __isl_give isl_set *isl_set_gist_params_basic_set(__isl_take isl_set *set,
 __isl_give isl_set *isl_set_gist(__isl_take isl_set *set,
 	__isl_take isl_set *context)
 {
-	return (struct isl_set *)isl_map_gist((struct isl_map *)set,
-					(struct isl_map *)context);
+	return set_from_map(isl_map_gist(set_to_map(set), set_to_map(context)));
 }
 
 /* Compute the gist of "bmap" with respect to the constraints "context"
@@ -3787,8 +3789,8 @@ error:
 int isl_basic_set_plain_is_disjoint(__isl_keep isl_basic_set *bset1,
 	__isl_keep isl_basic_set *bset2)
 {
-	return isl_basic_map_plain_is_disjoint((struct isl_basic_map *)bset1,
-					      (struct isl_basic_map *)bset2);
+	return isl_basic_map_plain_is_disjoint(bset_to_bmap(bset1),
+					      bset_to_bmap(bset2));
 }
 
 /* Does "test" hold for all pairs of basic maps in "map1" and "map2"?
@@ -3980,8 +3982,7 @@ isl_bool isl_basic_set_is_disjoint(__isl_keep isl_basic_set *bset1,
 isl_bool isl_set_plain_is_disjoint(__isl_keep isl_set *set1,
 	__isl_keep isl_set *set2)
 {
-	return isl_map_plain_is_disjoint((struct isl_map *)set1,
-					(struct isl_map *)set2);
+	return isl_map_plain_is_disjoint(set_to_map(set1), set_to_map(set2));
 }
 
 /* Are "set1" and "set2" disjoint?
@@ -5099,8 +5100,8 @@ __isl_give isl_basic_map *isl_basic_map_drop_redundant_divs(
 struct isl_basic_set *isl_basic_set_drop_redundant_divs(
 	struct isl_basic_set *bset)
 {
-	return (struct isl_basic_set *)
-	    isl_basic_map_drop_redundant_divs((struct isl_basic_map *)bset);
+	isl_basic_map *bmap = bset_to_bmap(bset);
+	return bset_from_bmap(isl_basic_map_drop_redundant_divs(bmap));
 }
 
 struct isl_map *isl_map_drop_redundant_divs(struct isl_map *map)
@@ -5123,8 +5124,7 @@ error:
 
 struct isl_set *isl_set_drop_redundant_divs(struct isl_set *set)
 {
-	return (struct isl_set *)
-	    isl_map_drop_redundant_divs((struct isl_map *)set);
+	return set_from_map(isl_map_drop_redundant_divs(set_to_map(set)));
 }
 
 /* Does "bmap" satisfy any equality that involves more than 2 variables

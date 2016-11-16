@@ -131,6 +131,7 @@ __isl_give isl_aff *isl_constraint_get_aff(
 __isl_give isl_constraint *isl_equality_from_aff(__isl_take isl_aff *aff);
 __isl_give isl_constraint *isl_inequality_from_aff(__isl_take isl_aff *aff);
 
+ISL_DEPRECATED
 __isl_give isl_basic_set *isl_basic_set_drop_constraint(
 	__isl_take isl_basic_set *bset, __isl_take isl_constraint *constraint);
 
