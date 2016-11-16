@@ -83,12 +83,16 @@ static bool insertFastDiv(Instruction *I, IntegerType *BypassType,
   Value *Dividend = I->getOperand(0);
   Value *Divisor = I->getOperand(1);
 
-  if (isa<ConstantInt>(Divisor) ||
-      (isa<ConstantInt>(Dividend) && isa<ConstantInt>(Divisor))) {
-    // Operations with immediate values should have
-    // been solved and replaced during compile time.
+  if (isa<ConstantInt>(Divisor)) {
+    // Division by a constant should have been been solved and replaced earlier
+    // in the pipeline.
     return false;
   }
+
+  // If the numerator is a constant, bail if it doesn't fit into BypassType.
+  if (ConstantInt *ConstDividend = dyn_cast<ConstantInt>(Dividend))
+    if (ConstDividend->getValue().getActiveBits() > BypassType->getBitWidth())
+      return false;
 
   // Basic Block is split before divide
   BasicBlock *MainBB = &*I->getParent();
@@ -151,7 +155,17 @@ static bool insertFastDiv(Instruction *I, IntegerType *BypassType,
   // Combine operands into a single value with OR for value testing below
   MainBB->getInstList().back().eraseFromParent();
   IRBuilder<> MainBuilder(MainBB, MainBB->end());
-  Value *OrV = MainBuilder.CreateOr(Dividend, Divisor);
+
+  // We should have bailed out above if the divisor is a constant, but the
+  // dividend may still be a constant.  Set OrV to our non-constant operands
+  // OR'ed together.
+  assert(!isa<ConstantInt>(Divisor));
+
+  Value *OrV;
+  if (!isa<ConstantInt>(Dividend))
+    OrV = MainBuilder.CreateOr(Dividend, Divisor);
+  else
+    OrV = Divisor;
 
   // BitMask is inverted to check if the operands are
   // larger than the bypass type

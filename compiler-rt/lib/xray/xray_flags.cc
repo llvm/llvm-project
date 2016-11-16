@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "xray_defs.h"
 
 using namespace __sanitizer;
 
@@ -23,20 +24,20 @@ namespace __xray {
 
 Flags xray_flags_dont_use_directly; // use via flags().
 
-void Flags::SetDefaults() {
+void Flags::SetDefaults() XRAY_NEVER_INSTRUMENT {
 #define XRAY_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
 #include "xray_flags.inc"
 #undef XRAY_FLAG
 }
 
-static void RegisterXRayFlags(FlagParser *P, Flags *F) {
+static void RegisterXRayFlags(FlagParser *P, Flags *F) XRAY_NEVER_INSTRUMENT {
 #define XRAY_FLAG(Type, Name, DefaultValue, Description)                       \
   RegisterFlag(P, #Name, Description, &F->Name);
 #include "xray_flags.inc"
 #undef XRAY_FLAG
 }
 
-void InitializeFlags() {
+void InitializeFlags() XRAY_NEVER_INSTRUMENT {
   SetCommonFlagsDefaults();
   auto *F = flags();
   F->SetDefaults();

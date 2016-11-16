@@ -3,7 +3,7 @@
 # RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
 # RUN:   -dbi-stream -ipi-stream %t.pdb | FileCheck %s
 
-# RUN: llvm-pdbdump raw -section-map -section-headers -section-contribs %t.pdb \
+# RUN: llvm-pdbdump raw -modules -section-map -section-headers -section-contribs %t.pdb \
 # RUN:   | FileCheck -check-prefix RAW %s
 
 # CHECK:      MSF:
@@ -18,7 +18,7 @@
 # CHECK-NEXT:     DirectoryBlocks: [ 9 ]
 # CHECK-NEXT:     NumStreams:      6
 # CHECK-NEXT:     FileSize:        40960
-# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 242, 56, 80 ]
+# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 322, 56, 80 ]
 # CHECK-NEXT:   StreamMap:
 # CHECK-NEXT:     - Stream:          [  ]
 # CHECK-NEXT:     - Stream:          [ 5 ]
@@ -44,7 +44,35 @@
 # CHECK-NEXT:     Version:         VC80
 # CHECK-NEXT:     Records:
 
-# RAW:      Section Contributions [
+# RAW:      DBI Stream {
+# RAW-NEXT:   Dbi Version: 20091201
+# RAW-NEXT:   Age: 1
+# RAW-NEXT:   Incremental Linking: No
+# RAW-NEXT:   Has CTypes: No
+# RAW-NEXT:   Is Stripped: No
+# RAW-NEXT:   Machine Type: x86
+# RAW-NEXT:   Symbol Record Stream Index: 65535
+# RAW-NEXT:   Public Symbol Stream Index: 65535
+# RAW-NEXT:   Global Symbol Stream Index: 65535
+# RAW-NEXT:   Toolchain Version: 0.0
+# RAW-NEXT:   mspdb00.dll version: 0.0.0
+# RAW-NEXT:   Modules [
+# RAW-NEXT:     {
+# RAW-NEXT:       Name: * Linker *
+# RAW-NEXT:       Debug Stream Index: 65535
+# RAW-NEXT:       Object File Name:
+# RAW-NEXT:       Num Files: 0
+# RAW-NEXT:       Source File Name Idx: 0
+# RAW-NEXT:       Pdb File Name Idx: 0
+# RAW-NEXT:       Line Info Byte Size: 0
+# RAW-NEXT:       C13 Line Info Byte Size: 0
+# RAW-NEXT:       Symbol Byte Size: 0
+# RAW-NEXT:       Type Server Index: 0
+# RAW-NEXT:       Has EC Info: No
+# RAW-NEXT:     }
+# RAW-NEXT:   ]
+# RAW-NEXT: }
+# RAW-NEXT: Section Contributions [
 # RAW-NEXT:   Contribution {
 # RAW-NEXT:     ISect: 0
 # RAW-NEXT:     Off: 140
@@ -57,6 +85,7 @@
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
 # RAW-NEXT:       Index: 0
+# RAW-NEXT:       Name: * Linker *
 # RAW-NEXT:     }
 # RAW-NEXT:     Data CRC: 0
 # RAW-NEXT:     Reloc CRC: 0
@@ -73,6 +102,7 @@
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
 # RAW-NEXT:       Index: 0
+# RAW-NEXT:       Name: * Linker *
 # RAW-NEXT:     }
 # RAW-NEXT:     Data CRC: 0
 # RAW-NEXT:     Reloc CRC: 0
@@ -89,6 +119,7 @@
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
 # RAW-NEXT:       Index: 0
+# RAW-NEXT:       Name: * Linker *
 # RAW-NEXT:     }
 # RAW-NEXT:     Data CRC: 0
 # RAW-NEXT:     Reloc CRC: 0

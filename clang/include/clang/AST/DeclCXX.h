@@ -993,7 +993,11 @@ public:
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
            !hasUserDeclaredMoveConstructor() &&
-           !hasUserDeclaredDestructor();
+           !hasUserDeclaredDestructor() &&
+           // C++1z [expr.prim.lambda]p21: "the closure type has a deleted copy
+           // assignment operator". The intent is that this counts as a user
+           // declared copy assignment, but we do not model it that way.
+           !isLambda();
   }
 
   /// \brief Determine whether we need to eagerly declare a move assignment

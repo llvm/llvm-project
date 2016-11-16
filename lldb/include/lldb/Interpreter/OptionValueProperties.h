@@ -76,10 +76,6 @@ public:
 
   virtual size_t GetNumProperties() const;
 
-  virtual ConstString GetPropertyNameAtIndex(uint32_t idx) const;
-
-  virtual const char *GetPropertyDescriptionAtIndex(uint32_t idx) const;
-
   //---------------------------------------------------------------------
   // Get the index of a property given its exact name in this property
   // collection, "name" can't be a path to a property path that refers
