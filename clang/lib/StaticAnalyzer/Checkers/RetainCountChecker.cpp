@@ -2367,10 +2367,15 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
       os << "that is annotated as NS_RETURNS_NOT_RETAINED";
     else {
       if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
-        os << "whose name ('" << MD->getSelector().getAsString()
-           << "') does not start with 'copy', 'mutableCopy', 'alloc' or 'new'."
-              "  This violates the naming convention rules"
-              " given in the Memory Management Guide for Cocoa";
+        if (BRC.getASTContext().getLangOpts().ObjCAutoRefCount) {
+          os << "managed by Automatic Reference Counting";
+        } else {
+          os << "whose name ('" << MD->getSelector().getAsString()
+             << "') does not start with "
+                "'copy', 'mutableCopy', 'alloc' or 'new'."
+                "  This violates the naming convention rules"
+                " given in the Memory Management Guide for Cocoa";
+        }
       }
       else {
         const FunctionDecl *FD = cast<FunctionDecl>(D);
