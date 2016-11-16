@@ -325,20 +325,13 @@ class RegionChanges {
     return ((const CHECKER *)checker)->checkRegionChanges(state, invalidated,
                                                       Explicits, Regions, Call);
   }
-  template <typename CHECKER>
-  static bool _wantsRegionChangeUpdate(void *checker,
-                                       ProgramStateRef state) {
-    return ((const CHECKER *)checker)->wantsRegionChangeUpdate(state);
-  }
 
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
     mgr._registerForRegionChanges(
           CheckerManager::CheckRegionChangesFunc(checker,
-                                                 _checkRegionChanges<CHECKER>),
-          CheckerManager::WantsRegionChangeUpdateFunc(checker,
-                                            _wantsRegionChangeUpdate<CHECKER>));
+                                                 _checkRegionChanges<CHECKER>));
   }
 };
 

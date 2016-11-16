@@ -124,10 +124,6 @@ public:
   virtual ProgramStateRef processAssume(ProgramStateRef state,
                                        SVal cond, bool assumption) = 0;
 
-  /// wantsRegionChangeUpdate - Called by ProgramStateManager to determine if a
-  ///  region change should trigger a processRegionChanges update.
-  virtual bool wantsRegionChangeUpdate(ProgramStateRef state) = 0;
-
   /// processRegionChanges - Called by ProgramStateManager whenever a change is
   /// made to the store. Used to update checkers that track region values.
   virtual ProgramStateRef 
