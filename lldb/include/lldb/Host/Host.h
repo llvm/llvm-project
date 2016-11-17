@@ -240,6 +240,7 @@ public:
   //------------------------------------------------------------------
   static Error ShellExpandArguments(ProcessLaunchInfo &launch_info);
 
+  // TODO: Convert this function to take a StringRef.
   static Error RunShellCommand(
       const char *command,         // Shouldn't be NULL
       const FileSpec &working_dir, // Pass empty FileSpec to use the current

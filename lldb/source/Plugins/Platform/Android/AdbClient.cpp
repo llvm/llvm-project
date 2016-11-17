@@ -360,7 +360,7 @@ Error AdbClient::internalShell(const char *command, uint32_t timeout_ms,
 
   StreamString adb_command;
   adb_command.Printf("shell:%s", command);
-  error = SendMessage(adb_command.GetData(), false);
+  error = SendMessage(adb_command.GetString(), false);
   if (error.Fail())
     return error;
 

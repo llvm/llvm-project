@@ -3010,15 +3010,15 @@ public:
         m_discovery_function(discovery_func) {
     StreamString name;
     name.Printf("type %s info", formatter_name);
-    SetCommandName(name.GetData());
+    SetCommandName(name.GetString());
     StreamString help;
     help.Printf("This command evaluates the provided expression and shows "
                 "which %s is applied to the resulting value (if any).",
                 formatter_name);
-    SetHelp(help.GetData());
+    SetHelp(help.GetString());
     StreamString syntax;
     syntax.Printf("type %s info <expr>", formatter_name);
-    SetSyntax(syntax.GetData());
+    SetSyntax(syntax.GetString());
   }
 
   ~CommandObjectFormatterInfo() override = default;

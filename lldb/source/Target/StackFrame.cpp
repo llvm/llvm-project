@@ -639,16 +639,14 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                   error.SetErrorStringWithFormat(
                       "\"%s\" is a pointer and . was used to attempt to access "
                       "\"%s\". Did you mean \"%s->%s\"?",
-                      var_expr_path_strm.GetString().c_str(),
-                      child_name.GetCString(),
-                      var_expr_path_strm.GetString().c_str(), var_path.c_str());
+                      var_expr_path_strm.GetData(), child_name.GetCString(),
+                      var_expr_path_strm.GetData(), var_path.c_str());
                 else
                   error.SetErrorStringWithFormat(
                       "\"%s\" is not a pointer and -> was used to attempt to "
                       "access \"%s\". Did you mean \"%s.%s\"?",
-                      var_expr_path_strm.GetString().c_str(),
-                      child_name.GetCString(),
-                      var_expr_path_strm.GetString().c_str(), var_path.c_str());
+                      var_expr_path_strm.GetData(), child_name.GetCString(),
+                      var_expr_path_strm.GetData(), var_path.c_str());
                 return ValueObjectSP();
               }
             }
@@ -681,11 +679,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                         "\"%s\" is not a member of \"(%s) %s\"",
                         child_name.GetCString(),
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
                   } else {
                     error.SetErrorStringWithFormat(
                         "incomplete expression path after \"%s\" in \"%s\"",
-                        var_expr_path_strm.GetString().c_str(), var_expr_cstr);
+                        var_expr_path_strm.GetData(), var_expr_cstr);
                   }
                 }
                 return ValueObjectSP();
@@ -726,7 +724,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                     error.SetErrorStringWithFormat(
                         "could not dereference \"(%s) %s\"",
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
                     return ValueObjectSP();
                   }
                   valobj_sp = temp;
@@ -745,7 +743,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                     error.SetErrorStringWithFormat(
                         "could not get item 0 for \"(%s) %s\"",
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
                     return ValueObjectSP();
                   }
                   valobj_sp = temp;
@@ -767,7 +765,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                         "\"(%s) %s\" is an Objective-C pointer, and cannot be "
                         "subscripted",
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
 
                     return ValueObjectSP();
                   } else if (is_objc_pointer) {
@@ -782,7 +780,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                       error.SetErrorStringWithFormat(
                           "\"(%s) %s\" is not an array type",
                           valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetString().c_str());
+                          var_expr_path_strm.GetData());
                     } else if (
                         static_cast<uint32_t>(child_index) >=
                         synthetic
@@ -792,7 +790,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                           "array index %ld is not valid for \"(%s) %s\"",
                           child_index,
                           valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetString().c_str());
+                          var_expr_path_strm.GetData());
                     } else {
                       child_valobj_sp =
                           synthetic->GetChildAtIndex(child_index, true);
@@ -802,7 +800,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                             "array index %ld is not valid for \"(%s) %s\"",
                             child_index, valobj_sp->GetTypeName().AsCString(
                                              "<invalid type>"),
-                            var_expr_path_strm.GetString().c_str());
+                            var_expr_path_strm.GetData());
                       }
                     }
                   } else {
@@ -815,7 +813,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                           "\"(%s) %s\"",
                           child_index,
                           valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetString().c_str());
+                          var_expr_path_strm.GetData());
                     }
                   }
                 } else if (valobj_sp->GetCompilerType().IsArrayType(
@@ -836,7 +834,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                         "array index %ld is not valid for \"(%s) %s\"",
                         child_index,
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
                   }
                 } else if (valobj_sp->GetCompilerType().IsScalarType()) {
                   // this is a bitfield asking to display just one bit
@@ -848,7 +846,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                         "bitfield range %ld-%ld is not valid for \"(%s) %s\"",
                         child_index, child_index,
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
                   }
                 } else {
                   ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
@@ -861,7 +859,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                     error.SetErrorStringWithFormat(
                         "\"(%s) %s\" is not an array type",
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
                   } else if (
                       static_cast<uint32_t>(child_index) >=
                       synthetic
@@ -871,7 +869,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                         "array index %ld is not valid for \"(%s) %s\"",
                         child_index,
                         valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetString().c_str());
+                        var_expr_path_strm.GetData());
                   } else {
                     child_valobj_sp =
                         synthetic->GetChildAtIndex(child_index, true);
@@ -881,7 +879,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                           "array index %ld is not valid for \"(%s) %s\"",
                           child_index,
                           valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetString().c_str());
+                          var_expr_path_strm.GetData());
                     }
                   }
                 }
@@ -932,7 +930,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                       error.SetErrorStringWithFormat(
                           "could not dereference \"(%s) %s\"",
                           valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetString().c_str());
+                          var_expr_path_strm.GetData());
                       return ValueObjectSP();
                     }
                     valobj_sp = temp;
@@ -954,7 +952,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                       error.SetErrorStringWithFormat(
                           "could not get item 0 for \"(%s) %s\"",
                           valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetString().c_str());
+                          var_expr_path_strm.GetData());
                       return ValueObjectSP();
                     }
                     valobj_sp = temp;
@@ -977,7 +975,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                   final_index,
                                                           valobj_sp->GetTypeName().AsCString("<invalid
                   type>"),
-                                                          var_expr_path_strm.GetString().c_str());
+                                                          var_expr_path_strm.c_str());
                       }
                   }*/
 
@@ -990,7 +988,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                           "bitfield range %ld-%ld is not valid for \"(%s) %s\"",
                           child_index, final_index,
                           valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetString().c_str());
+                          var_expr_path_strm.GetData());
                     }
                   }
                 }
@@ -1017,7 +1015,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
             } else {
               error.SetErrorStringWithFormat(
                   "invalid square bracket encountered after \"%s\" in \"%s\"",
-                  var_expr_path_strm.GetString().c_str(), var_path.c_str());
+                  var_expr_path_strm.GetData(), var_path.c_str());
             }
             return ValueObjectSP();
 
@@ -1027,7 +1025,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
               valobj_sp->GetExpressionPath(var_expr_path_strm, false);
               error.SetErrorStringWithFormat(
                   "unexpected char '%c' encountered after \"%s\" in \"%s\"",
-                  separator_type, var_expr_path_strm.GetString().c_str(),
+                  separator_type, var_expr_path_strm.GetData(),
                   var_path.c_str());
 
               return ValueObjectSP();
@@ -1753,7 +1751,7 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm,
     frame_format = target->GetDebugger().GetFrameFormat();
   if (frame_format && FormatEntity::Format(*frame_format, s, &m_sc, &exe_ctx,
                                            nullptr, nullptr, false, false)) {
-    strm->Write(s.GetData(), s.GetSize());
+    strm->PutCString(s.GetString());
   } else {
     Dump(strm, true, false);
     strm->EOL();
@@ -1790,8 +1788,10 @@ void StackFrame::UpdateCurrentFrameFromPreviousFrame(StackFrame &prev_frame) {
          prev_frame.GetStackID()); // TODO: remove this after some testing
   m_variable_list_sp = prev_frame.m_variable_list_sp;
   m_variable_list_value_objects.Swap(prev_frame.m_variable_list_value_objects);
-  if (!m_disassembly.GetString().empty())
-    m_disassembly.GetString().swap(m_disassembly.GetString());
+  if (!m_disassembly.GetString().empty()) {
+    m_disassembly.Clear();
+    m_disassembly.PutCString(prev_frame.m_disassembly.GetString());
+  }
 }
 
 void StackFrame::UpdatePreviousFrameFromCurrentFrame(StackFrame &curr_frame) {

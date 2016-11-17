@@ -260,7 +260,7 @@ void CommandObjectMultiword::AproposAllSubCommands(llvm::StringRef prefix,
     complete_command_name << prefix << " " << command_name;
 
     if (sub_cmd_obj->HelpTextContainsWord(search_word)) {
-      commands_found.AppendString(complete_command_name.GetData());
+      commands_found.AppendString(complete_command_name.GetString());
       commands_help.AppendString(sub_cmd_obj->GetHelp());
     }
 

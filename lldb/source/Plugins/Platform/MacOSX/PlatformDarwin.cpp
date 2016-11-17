@@ -133,8 +133,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                     "%s/../Python/%s.py",
                     symfile_spec.GetDirectory().GetCString(),
                     original_module_basename.c_str());
-                FileSpec script_fspec(path_string.GetData(), true);
-                FileSpec orig_script_fspec(original_path_string.GetData(),
+                FileSpec script_fspec(path_string.GetString(), true);
+                FileSpec orig_script_fspec(original_path_string.GetString(),
                                            true);
 
                 // if we did some replacements of reserved characters, and a
@@ -295,7 +295,7 @@ Error PlatformDarwin::ResolveExecutable(
           error.SetErrorStringWithFormat(
               "'%s' doesn't contain any '%s' platform architectures: %s",
               resolved_module_spec.GetFileSpec().GetPath().c_str(),
-              GetPluginName().GetCString(), arch_names.GetString().c_str());
+              GetPluginName().GetCString(), arch_names.GetData());
         } else {
           error.SetErrorStringWithFormat(
               "'%s' is not readable",
@@ -1779,7 +1779,7 @@ ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
 
   StreamString stream;
   stream.Printf("lib%s.dylib", basename.GetCString());
-  return ConstString(stream.GetData());
+  return ConstString(stream.GetString());
 }
 
 bool PlatformDarwin::GetOSVersion(uint32_t &major, uint32_t &minor,

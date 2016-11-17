@@ -2116,7 +2116,7 @@ __isl_give isl_map *isl_map_reaching_path_lengths(__isl_take isl_map *map,
 }
 
 /* Check whether equality i of bset is a pure stride constraint
- * on a single dimensions, i.e., of the form
+ * on a single dimension, i.e., of the form
  *
  *	v = k e
  *

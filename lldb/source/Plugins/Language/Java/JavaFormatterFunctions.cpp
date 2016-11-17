@@ -70,7 +70,7 @@ public:
     DataExtractor data(buffer_sp, process_sp->GetByteOrder(),
                        process_sp->GetAddressByteSize());
     return CreateValueObjectFromData(
-        name.GetData(), data, valobj->GetExecutionContextRef(), element_type);
+        name.GetString(), data, valobj->GetExecutionContextRef(), element_type);
   }
 
   bool Update() override { return false; }

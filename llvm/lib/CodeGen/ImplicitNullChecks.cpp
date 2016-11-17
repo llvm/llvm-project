@@ -187,7 +187,10 @@ void HazardDetector::rememberInstruction(MachineInstr *MI) {
   assert(!isClobbered() &&
          "Don't add instructions to a clobbered hazard detector");
 
-  if (MI->mayStore() || MI->hasUnmodeledSideEffects()) {
+  // There may be readonly calls that we can handle in theory, but for
+  // now we don't bother since we don't handle callee clobbered
+  // registers.
+  if (MI->isCall() || MI->mayStore() || MI->hasUnmodeledSideEffects()) {
     hasSeenClobber = true;
     return;
   }

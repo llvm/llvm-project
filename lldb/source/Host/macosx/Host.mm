@@ -478,7 +478,6 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
   StreamString applescript_source;
 
-  const char *tty_command = command.GetString().c_str();
   //    if (tty_name && tty_name[0])
   //    {
   //        applescript_source.Printf (applscript_in_existing_tty,
@@ -487,13 +486,15 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   //    }
   //    else
   //    {
-  applescript_source.Printf(applscript_in_new_tty, tty_command);
+  applescript_source.Printf(applscript_in_new_tty,
+                            command.GetString().str().c_str());
   //    }
 
-  const char *script_source = applescript_source.GetString().c_str();
   // puts (script_source);
   NSAppleScript *applescript = [[NSAppleScript alloc]
-      initWithSource:[NSString stringWithCString:script_source
+      initWithSource:[NSString stringWithCString:applescript_source.GetString()
+                                                     .str()
+                                                     .c_str()
                                         encoding:NSUTF8StringEncoding]];
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
@@ -557,7 +558,7 @@ void Host::SetCrashDescriptionWithFormat(const char *format, ...) {
   if (format) {
     va_list args;
     va_start(args, format);
-    g_crash_description.GetString().clear();
+    g_crash_description.GetString() = llvm::StringRef("");
     g_crash_description.PrintfVarArg(format, args);
     va_end(args);
     __crashreporter_info__ = g_crash_description.GetData();

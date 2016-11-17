@@ -241,7 +241,7 @@ public:
       if (dumped_something)
         strm.PutCString(", ");
       strm.Printf("object_mod_time = 0x%" PRIx64,
-                  llvm::sys::toTimeT(m_object_mod_time));
+                  uint64_t(llvm::sys::toTimeT(m_object_mod_time)));
     }
   }
 

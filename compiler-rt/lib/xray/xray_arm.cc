@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_common.h"
+#include "xray_defs.h"
 #include "xray_interface_internal.h"
 #include <atomic>
 #include <cassert>

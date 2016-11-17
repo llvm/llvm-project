@@ -51,6 +51,7 @@ Flags &Log::GetMask() { return m_mask_bits; }
 const Flags &Log::GetMask() const { return m_mask_bits; }
 
 void Log::PutCString(const char *cstr) { Printf("%s", cstr); }
+void Log::PutString(llvm::StringRef str) { PutCString(str.str().c_str()); }
 
 //----------------------------------------------------------------------
 // Simple variable argument logging with flags.

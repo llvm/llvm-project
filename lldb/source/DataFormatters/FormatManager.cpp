@@ -1,5 +1,4 @@
-//===-- FormatManager.cpp -------------------------------------------*- C++
-//-*-===//
+//===-- FormatManager.cpp ----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -183,7 +182,7 @@ void FormatManager::GetPossibleMatches(
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
-    ConstString bitfieldname = ConstString(sstring.GetData());
+    ConstString bitfieldname(sstring.GetString());
     entries.push_back(
         {bitfieldname, 0, did_strip_ptr, did_strip_ref, did_strip_typedef});
     reason |= lldb_private::eFormatterChoiceCriterionStrippedBitField;

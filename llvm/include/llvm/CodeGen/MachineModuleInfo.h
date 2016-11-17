@@ -48,14 +48,16 @@ namespace llvm {
 
 //===----------------------------------------------------------------------===//
 // Forward declarations.
+class BlockAddress;
+class CallInst;
 class Constant;
 class GlobalVariable;
-class BlockAddress;
+class LandingPadInst;
 class MDNode;
 class MMIAddrLabelMap;
 class MachineBasicBlock;
-class MachineFunctionInitializer;
 class MachineFunction;
+class MachineFunctionInitializer;
 class Module;
 class PointerType;
 class StructType;
@@ -69,8 +71,7 @@ struct SEHHandler {
 };
 
 //===----------------------------------------------------------------------===//
-/// LandingPadInfo - This structure is used to retain landing pad info for
-/// the current function.
+/// This structure is used to retain landing pad info for the current function.
 ///
 struct LandingPadInfo {
   MachineBasicBlock *LandingPadBlock;      // Landing pad block.
@@ -85,11 +86,11 @@ struct LandingPadInfo {
 };
 
 //===----------------------------------------------------------------------===//
-/// MachineModuleInfoImpl - This class can be derived from and used by targets
-/// to hold private target-specific information for each Module.  Objects of
-/// type are accessed/created with MMI::getInfo and destroyed when the
-/// MachineModuleInfo is destroyed.
-/// 
+/// This class can be derived from and used by targets to hold private
+/// target-specific information for each Module.  Objects of type are
+/// accessed/created with MMI::getInfo and destroyed when the MachineModuleInfo
+/// is destroyed.
+///
 class MachineModuleInfoImpl {
 public:
   typedef PointerIntPair<MCSymbol*, 1, bool> StubValueTy;
@@ -103,20 +104,20 @@ protected:
 };
 
 //===----------------------------------------------------------------------===//
-/// MachineModuleInfo - This class contains meta information specific to a
-/// module.  Queries can be made by different debugging and exception handling
-/// schemes and reformated for specific use.
+/// This class contains meta information specific to a module.  Queries can be
+/// made by different debugging and exception handling schemes and reformated
+/// for specific use.
 ///
 class MachineModuleInfo : public ImmutablePass {
   const TargetMachine &TM;
 
-  /// Context - This is the MCContext used for the entire code generator.
+  /// This is the MCContext used for the entire code generator.
   MCContext Context;
 
-  /// TheModule - This is the LLVM Module being worked on.
+  /// This is the LLVM Module being worked on.
   const Module *TheModule;
 
-  /// ObjFileMMI - This is the object-file-format-specific implementation of
+  /// This is the object-file-format-specific implementation of
   /// MachineModuleInfoImpl, which lets targets accumulate whatever info they
   /// want.
   MachineModuleInfoImpl *ObjFileMMI;
@@ -125,38 +126,35 @@ class MachineModuleInfo : public ImmutablePass {
   /// by debug and exception handling consumers.
   std::vector<MCCFIInstruction> FrameInstructions;
 
-  /// LandingPads - List of LandingPadInfo describing the landing pad
-  /// information in the current function.
+  /// List of LandingPadInfo describing the landing pad information in the
+  /// current function.
   std::vector<LandingPadInfo> LandingPads;
 
-  /// LPadToCallSiteMap - Map a landing pad's EH symbol to the call site
-  /// indexes.
+  /// Map a landing pad's EH symbol to the call site indexes.
   DenseMap<MCSymbol*, SmallVector<unsigned, 4> > LPadToCallSiteMap;
 
-  /// CallSiteMap - Map of invoke call site index values to associated begin
-  /// EH_LABEL for the current function.
+  /// Map of invoke call site index values to associated begin EH_LABEL for the
+  /// current function.
   DenseMap<MCSymbol*, unsigned> CallSiteMap;
 
-  /// CurCallSite - The current call site index being processed, if any. 0 if
-  /// none.
+  /// The current call site index being processed, if any. 0 if none.
   unsigned CurCallSite;
 
-  /// TypeInfos - List of C++ TypeInfo used in the current function.
+  /// List of C++ TypeInfo used in the current function.
   std::vector<const GlobalValue *> TypeInfos;
 
-  /// FilterIds - List of typeids encoding filters used in the current function.
+  /// List of typeids encoding filters used in the current function.
   std::vector<unsigned> FilterIds;
 
-  /// FilterEnds - List of the indices in FilterIds corresponding to filter
-  /// terminators.
+  /// List of the indices in FilterIds corresponding to filter terminators.
   std::vector<unsigned> FilterEnds;
 
-  /// Personalities - Vector of all personality functions ever seen. Used to
-  /// emit common EH frames.
+  /// Vector of all personality functions ever seen. Used to emit common EH
+  /// frames.
   std::vector<const Function *> Personalities;
 
-  /// AddrLabelSymbols - This map keeps track of which symbol is being used for
-  /// the specified basic block's address of label.
+  /// This map keeps track of which symbol is being used for the specified
+  /// basic block's address of label.
   MMIAddrLabelMap *AddrLabelSymbols;
 
   bool CallsEHReturn;
@@ -169,20 +167,18 @@ class MachineModuleInfo : public ImmutablePass {
   // -g. At this moment, there's no way to specify that some CFI directives
   // go into .eh_frame only, while others go into .debug_frame only.
 
-  /// DbgInfoAvailable - True if debugging information is available
-  /// in this module.
+  /// True if debugging information is available in this module.
   bool DbgInfoAvailable;
 
-  /// UsesVAFloatArgument - True if this module calls VarArg function with
-  /// floating-point arguments.  This is used to emit an undefined reference
-  /// to _fltused on Windows targets.
+  /// True if this module calls VarArg function with floating-point arguments.
+  /// This is used to emit an undefined reference to _fltused on Windows
+  /// targets.
   bool UsesVAFloatArgument;
 
-  /// UsesMorestackAddr - True if the module calls the __morestack function
-  /// indirectly, as is required under the large code model on x86. This is used
-  /// to emit a definition of a symbol, __morestack_addr, containing the
-  /// address. See comments in lib/Target/X86/X86FrameLowering.cpp for more
-  /// details.
+  /// True if the module calls the __morestack function indirectly, as is
+  /// required under the large code model on x86. This is used to emit
+  /// a definition of a symbol, __morestack_addr, containing the address. See
+  /// comments in lib/Target/X86/X86FrameLowering.cpp for more details.
   bool UsesMorestackAddr;
 
   EHPersonality PersonalityTypeCache;
@@ -218,8 +214,7 @@ public:
   bool doInitialization(Module &) override;
   bool doFinalization(Module &) override;
 
-  /// EndFunction - Discard function meta information.
-  ///
+  /// Discard function meta information.
   void EndFunction();
 
   const MCContext &getContext() const { return Context; }
@@ -237,13 +232,12 @@ public:
   /// if none exists yet.
   MachineFunction &getMachineFunction(const Function &F);
 
-  /// \brief Delete the MachineFunction \p MF and reset the link in the IR
-  /// Function to Machine Function map.
+  /// Delete the MachineFunction \p MF and reset the link in the IR Function to
+  /// Machine Function map.
   void deleteMachineFunctionFor(Function &F);
 
-  /// getInfo - Keep track of various per-function pieces of information for
-  /// backends that would like to do so.
-  ///
+  /// Keep track of various per-function pieces of information for backends
+  /// that would like to do so.
   template<typename Ty>
   Ty &getObjFileInfo() {
     if (ObjFileMMI == nullptr)
@@ -256,8 +250,7 @@ public:
     return const_cast<MachineModuleInfo*>(this)->getObjFileInfo<Ty>();
   }
 
-  /// hasDebugInfo - Returns true if valid debug info is present.
-  ///
+  /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
   void setDebugInfoAvailability(bool avail) { DbgInfoAvailable = avail; }
 
@@ -286,9 +279,9 @@ public:
     UsesMorestackAddr = b;
   }
 
-  /// \brief Returns a reference to a list of cfi instructions in the current
-  /// function's prologue.  Used to construct frame maps for debug and exception
-  /// handling comsumers.
+  /// Returns a reference to a list of cfi instructions in the current
+  /// function's prologue.  Used to construct frame maps for debug and
+  /// exception handling comsumers.
   const std::vector<MCCFIInstruction> &getFrameInstructions() const {
     return FrameInstructions;
   }
@@ -298,62 +291,56 @@ public:
     return FrameInstructions.size() - 1;
   }
 
-  /// getAddrLabelSymbol - Return the symbol to be used for the specified basic
-  /// block when its address is taken.  This cannot be its normal LBB label
-  /// because the block may be accessed outside its containing function.
+  /// Return the symbol to be used for the specified basic block when its
+  /// address is taken.  This cannot be its normal LBB label because the block
+  /// may be accessed outside its containing function.
   MCSymbol *getAddrLabelSymbol(const BasicBlock *BB) {
     return getAddrLabelSymbolToEmit(BB).front();
   }
 
-  /// getAddrLabelSymbolToEmit - Return the symbol to be used for the specified
-  /// basic block when its address is taken.  If other blocks were RAUW'd to
-  /// this one, we may have to emit them as well, return the whole set.
+  /// Return the symbol to be used for the specified basic block when its
+  /// address is taken.  If other blocks were RAUW'd to this one, we may have
+  /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
-  /// takeDeletedSymbolsForFunction - If the specified function has had any
-  /// references to address-taken blocks generated, but the block got deleted,
-  /// return the symbol now so we can emit it.  This prevents emitting a
-  /// reference to a symbol that has no definition.
+  /// If the specified function has had any references to address-taken blocks
+  /// generated, but the block got deleted, return the symbol now so we can
+  /// emit it.  This prevents emitting a reference to a symbol that has no
+  /// definition.
   void takeDeletedSymbolsForFunction(const Function *F,
                                      std::vector<MCSymbol*> &Result);
 
 
   //===- EH ---------------------------------------------------------------===//
 
-  /// getOrCreateLandingPadInfo - Find or create an LandingPadInfo for the
-  /// specified MachineBasicBlock.
+  /// Find or create an LandingPadInfo for the specified MachineBasicBlock.
   LandingPadInfo &getOrCreateLandingPadInfo(MachineBasicBlock *LandingPad);
 
-  /// addInvoke - Provide the begin and end labels of an invoke style call and
-  /// associate it with a try landing pad block.
+  /// Provide the begin and end labels of an invoke style call and associate it
+  /// with a try landing pad block.
   void addInvoke(MachineBasicBlock *LandingPad,
                  MCSymbol *BeginLabel, MCSymbol *EndLabel);
 
-  /// addLandingPad - Add a new panding pad.  Returns the label ID for the
-  /// landing pad entry.
+  /// Add a new panding pad.  Returns the label ID for the landing pad entry.
   MCSymbol *addLandingPad(MachineBasicBlock *LandingPad);
 
-  /// addPersonality - Provide the personality function for the exception
-  /// information.
+  /// Provide the personality function for the exception information.
   void addPersonality(const Function *Personality);
 
-  /// getPersonalities - Return array of personality functions ever seen.
+  /// Return array of personality functions ever seen.
   const std::vector<const Function *>& getPersonalities() const {
     return Personalities;
   }
 
-  /// addCatchTypeInfo - Provide the catch typeinfo for a landing pad.
-  ///
+  /// Provide the catch typeinfo for a landing pad.
   void addCatchTypeInfo(MachineBasicBlock *LandingPad,
                         ArrayRef<const GlobalValue *> TyInfo);
 
-  /// addFilterTypeInfo - Provide the filter typeinfo for a landing pad.
-  ///
+  /// Provide the filter typeinfo for a landing pad.
   void addFilterTypeInfo(MachineBasicBlock *LandingPad,
                          ArrayRef<const GlobalValue *> TyInfo);
 
-  /// addCleanup - Add a cleanup action for a landing pad.
-  ///
+  /// Add a cleanup action for a landing pad.
   void addCleanup(MachineBasicBlock *LandingPad);
 
   void addSEHCatchHandler(MachineBasicBlock *LandingPad, const Function *Filter,
@@ -362,81 +349,71 @@ public:
   void addSEHCleanupHandler(MachineBasicBlock *LandingPad,
                             const Function *Cleanup);
 
-  /// getTypeIDFor - Return the type id for the specified typeinfo.  This is
-  /// function wide.
+  /// Return the type id for the specified typeinfo.  This is function wide.
   unsigned getTypeIDFor(const GlobalValue *TI);
 
-  /// getFilterIDFor - Return the id of the filter encoded by TyIds.  This is
-  /// function wide.
+  /// Return the id of the filter encoded by TyIds.  This is function wide.
   int getFilterIDFor(std::vector<unsigned> &TyIds);
 
-  /// TidyLandingPads - Remap landing pad labels and remove any deleted landing
-  /// pads.
+  /// Remap landing pad labels and remove any deleted landing pads.
   void TidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap = nullptr);
 
-  /// getLandingPads - Return a reference to the landing pad info for the
-  /// current function.
+  /// Return a reference to the landing pad info for the current function.
   const std::vector<LandingPadInfo> &getLandingPads() const {
     return LandingPads;
   }
 
-  /// setCallSiteLandingPad - Map the landing pad's EH symbol to the call
-  /// site indexes.
+  /// Map the landing pad's EH symbol to the call site indexes.
   void setCallSiteLandingPad(MCSymbol *Sym, ArrayRef<unsigned> Sites);
 
-  /// getCallSiteLandingPad - Get the call site indexes for a landing pad EH
-  /// symbol.
+  /// Get the call site indexes for a landing pad EH symbol.
   SmallVectorImpl<unsigned> &getCallSiteLandingPad(MCSymbol *Sym) {
     assert(hasCallSiteLandingPad(Sym) &&
            "missing call site number for landing pad!");
     return LPadToCallSiteMap[Sym];
   }
 
-  /// hasCallSiteLandingPad - Return true if the landing pad Eh symbol has an
-  /// associated call site.
+  /// Return true if the landing pad Eh symbol has an associated call site.
   bool hasCallSiteLandingPad(MCSymbol *Sym) {
     return !LPadToCallSiteMap[Sym].empty();
   }
 
-  /// setCallSiteBeginLabel - Map the begin label for a call site.
+  /// Map the begin label for a call site.
   void setCallSiteBeginLabel(MCSymbol *BeginLabel, unsigned Site) {
     CallSiteMap[BeginLabel] = Site;
   }
 
-  /// getCallSiteBeginLabel - Get the call site number for a begin label.
+  /// Get the call site number for a begin label.
   unsigned getCallSiteBeginLabel(MCSymbol *BeginLabel) {
     assert(hasCallSiteBeginLabel(BeginLabel) &&
            "Missing call site number for EH_LABEL!");
     return CallSiteMap[BeginLabel];
   }
 
-  /// hasCallSiteBeginLabel - Return true if the begin label has a call site
-  /// number associated with it.
+  /// Return true if the begin label has a call site number associated with it.
   bool hasCallSiteBeginLabel(MCSymbol *BeginLabel) {
     return CallSiteMap[BeginLabel] != 0;
   }
 
-  /// setCurrentCallSite - Set the call site currently being processed.
+  /// Set the call site currently being processed.
   void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
 
-  /// getCurrentCallSite - Get the call site currently being processed, if any.
-  /// return zero if none.
+  /// Get the call site currently being processed, if any.  return zero if
+  /// none.
   unsigned getCurrentCallSite() { return CurCallSite; }
 
-  /// getTypeInfos - Return a reference to the C++ typeinfo for the current
-  /// function.
+  /// Return a reference to the C++ typeinfo for the current function.
   const std::vector<const GlobalValue *> &getTypeInfos() const {
     return TypeInfos;
   }
 
-  /// getFilterIds - Return a reference to the typeids encoding filters used in
-  /// the current function.
+  /// Return a reference to the typeids encoding filters used in the current
+  /// function.
   const std::vector<unsigned> &getFilterIds() const {
     return FilterIds;
   }
 
-  /// setVariableDbgInfo - Collect information used to emit debugging
-  /// information of a variable.
+  /// Collect information used to emit debugging information of a variable.
   void setVariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
                           unsigned Slot, const DILocation *Loc) {
     VariableDbgInfos.emplace_back(Var, Expr, Slot, Loc);
@@ -445,6 +422,20 @@ public:
   VariableDbgInfoMapTy &getVariableDbgInfo() { return VariableDbgInfos; }
 
 }; // End class MachineModuleInfo
+
+//===- MMI building helpers -----------------------------------------------===//
+
+/// Determine if any floating-point values are being passed to this variadic
+/// function, and set the MachineModuleInfo's usesVAFloatArgument flag if so.
+/// This flag is used to emit an undefined reference to _fltused on Windows,
+/// which will link in MSVCRT's floating-point support.
+void computeUsesVAFloatArgument(const CallInst &I, MachineModuleInfo &MMI);
+
+/// Extract the exception handling information from the landingpad instruction
+/// and add them to the specified machine module info.
+void addLandingPadInfo(const LandingPadInst &I, MachineModuleInfo &MMI,
+                       MachineBasicBlock &MBB);
+
 
 } // End llvm namespace
 

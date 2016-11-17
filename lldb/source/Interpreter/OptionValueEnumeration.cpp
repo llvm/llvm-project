@@ -75,7 +75,7 @@ Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
                             m_enumerations.GetCStringAtIndex(i).str().c_str());
         }
       }
-      error.SetErrorString(error_strm.GetData());
+      error.SetErrorString(error_strm.GetString());
     }
     break;
   }

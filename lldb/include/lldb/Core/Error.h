@@ -245,7 +245,7 @@ public:
   /// @param err_str
   ///     The new custom error string to copy and cache.
   //------------------------------------------------------------------
-  void SetErrorString(const char *err_str);
+  void SetErrorString(llvm::StringRef err_str);
 
   //------------------------------------------------------------------
   /// Set the current error string to a formatted error string.

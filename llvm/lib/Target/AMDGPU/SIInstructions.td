@@ -478,32 +478,34 @@ def : Pat <
 // VOP2 Patterns
 //===----------------------------------------------------------------------===//
 
+multiclass FMADPat <ValueType vt, Instruction inst> {
+  def : Pat <
+    (vt (fmad (VOP3NoMods0 vt:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
+              (VOP3NoMods  vt:$src1, i32:$src1_modifiers),
+              (VOP3NoMods  vt:$src2, i32:$src2_modifiers))),
+    (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+          $src2_modifiers, $src2, $clamp, $omod)
+  >;
+}
+
+defm : FMADPat <f16, V_MAC_F16_e64>;
+defm : FMADPat <f32, V_MAC_F32_e64>;
+
+multiclass SelectPat <ValueType vt, Instruction inst> {
+  def : Pat <
+    (vt (select i1:$src0, vt:$src1, vt:$src2)),
+    (inst $src2, $src1, $src0)
+  >;
+}
+
+defm : SelectPat <i16, V_CNDMASK_B32_e64>;
+defm : SelectPat <i32, V_CNDMASK_B32_e64>;
+defm : SelectPat <f16, V_CNDMASK_B32_e64>;
+defm : SelectPat <f32, V_CNDMASK_B32_e64>;
+
 def : Pat <
   (i32 (add (i32 (ctpop i32:$popcnt)), i32:$val)),
   (V_BCNT_U32_B32_e64 $popcnt, $val)
->;
-
-def : Pat <
-  (i32 (select i1:$src0, i32:$src1, i32:$src2)),
-  (V_CNDMASK_B32_e64 $src2, $src1, $src0)
->;
-
-// Pattern for V_MAC_F16
-def : Pat <
-  (f16 (fmad (VOP3NoMods0 f16:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
-             (VOP3NoMods  f16:$src1, i32:$src1_modifiers),
-             (VOP3NoMods  f16:$src2, i32:$src2_modifiers))),
-  (V_MAC_F16_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
-                 $src2_modifiers, $src2, $clamp, $omod)
->;
-
-// Pattern for V_MAC_F32
-def : Pat <
-  (f32 (fmad (VOP3NoMods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
-             (VOP3NoMods  f32:$src1, i32:$src1_modifiers),
-             (VOP3NoMods  f32:$src2, i32:$src2_modifiers))),
-  (V_MAC_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
-                 $src2_modifiers, $src2, $clamp, $omod)
 >;
 
 /********** ============================================ **********/
@@ -998,11 +1000,6 @@ def : Pat <
   (V_BFI_B32 (S_MOV_B32 (i32 0x00ff00ff)),
              (V_ALIGNBIT_B32 $a, $a, (i32 24)),
              (V_ALIGNBIT_B32 $a, $a, (i32 8)))
->;
-
-def : Pat <
-  (f32 (select i1:$src2, f32:$src1, f32:$src0)),
-  (V_CNDMASK_B32_e64 $src0, $src1, $src2)
 >;
 
 multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {

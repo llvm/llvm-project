@@ -241,6 +241,7 @@ void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   if (SpecialFunctionDecl->isDeleted() ||
       SpecialFunctionDecl->isExplicitlyDefaulted() ||
       SpecialFunctionDecl->isLateTemplateParsed() ||
+      SpecialFunctionDecl->isTemplateInstantiation() ||
       !SpecialFunctionDecl->isUserProvided() || !SpecialFunctionDecl->hasBody())
     return;
 

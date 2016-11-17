@@ -440,3 +440,13 @@ void testFoo() {
   foo(1, 0, m, 3); // expected-error{{no matching}}
 }
 }
+
+// Tests that we emit errors at the point of the method call, rather than the
+// beginning of the expression that happens to be a member call.
+namespace member_loc {
+  struct Foo { void bar() __attribute__((enable_if(0, ""))); }; // expected-note{{disabled}}
+  void testFoo() {
+    Foo()
+      .bar(); // expected-error{{no matching member function}}
+  }
+}

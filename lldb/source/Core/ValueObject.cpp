@@ -378,7 +378,7 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
         uint32_t addr_nibble_size = data.GetAddressByteSize() * 2;
         sstr.Printf("0x%*.*llx", addr_nibble_size, addr_nibble_size,
                     value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS));
-        m_location_str.swap(sstr.GetString());
+        m_location_str = sstr.GetString();
       } break;
       }
     }
@@ -944,7 +944,7 @@ bool ValueObject::SetData(DataExtractor &data, Error &error) {
 static bool CopyStringDataToBufferSP(const StreamString &source,
                                      lldb::DataBufferSP &destination) {
   destination.reset(new DataBufferHeap(source.GetSize() + 1, 0));
-  memcpy(destination->GetBytes(), source.GetString().c_str(), source.GetSize());
+  memcpy(destination->GetBytes(), source.GetString().data(), source.GetSize());
   return true;
 }
 
@@ -1137,7 +1137,7 @@ const char *ValueObject::GetObjectDescription() {
   }
 
   if (runtime && runtime->GetObjectDescription(s, *this)) {
-    m_object_desc_str.append(s.GetData());
+    m_object_desc_str.append(s.GetString());
   }
 
   if (m_object_desc_str.empty())
@@ -1414,14 +1414,12 @@ bool ValueObject::DumpPrintableRepresentation(
   bool var_success = false;
 
   {
-    const char *cstr = NULL;
+    llvm::StringRef str;
 
     // this is a local stream that we are using to ensure that the data pointed
-    // to by cstr survives
-    // long enough for us to copy it to its destination - it is necessary to
-    // have this temporary storage
-    // area for cases where our desired output is not backed by some other
-    // longer-term storage
+    // to by cstr survives long enough for us to copy it to its destination - it
+    // is necessary to have this temporary storage area for cases where our
+    // desired output is not backed by some other longer-term storage
     StreamString strm;
 
     if (custom_format != eFormatInvalid)
@@ -1429,55 +1427,55 @@ bool ValueObject::DumpPrintableRepresentation(
 
     switch (val_obj_display) {
     case eValueObjectRepresentationStyleValue:
-      cstr = GetValueAsCString();
+      str = GetValueAsCString();
       break;
 
     case eValueObjectRepresentationStyleSummary:
-      cstr = GetSummaryAsCString();
+      str = GetSummaryAsCString();
       break;
 
     case eValueObjectRepresentationStyleLanguageSpecific:
-      cstr = GetObjectDescription();
+      str = GetObjectDescription();
       break;
 
     case eValueObjectRepresentationStyleLocation:
-      cstr = GetLocationAsCString();
+      str = GetLocationAsCString();
       break;
 
     case eValueObjectRepresentationStyleChildrenCount:
       strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildren());
-      cstr = strm.GetString().c_str();
+      str = strm.GetString();
       break;
 
     case eValueObjectRepresentationStyleType:
-      cstr = GetTypeName().AsCString();
+      str = GetTypeName().GetStringRef();
       break;
 
     case eValueObjectRepresentationStyleName:
-      cstr = GetName().AsCString();
+      str = GetName().GetStringRef();
       break;
 
     case eValueObjectRepresentationStyleExpressionPath:
       GetExpressionPath(strm, false);
-      cstr = strm.GetString().c_str();
+      str = strm.GetString();
       break;
     }
 
-    if (!cstr) {
+    if (str.empty()) {
       if (val_obj_display == eValueObjectRepresentationStyleValue)
-        cstr = GetSummaryAsCString();
+        str = GetSummaryAsCString();
       else if (val_obj_display == eValueObjectRepresentationStyleSummary) {
         if (!CanProvideValue()) {
           strm.Printf("%s @ %s", GetTypeName().AsCString(),
                       GetLocationAsCString());
-          cstr = strm.GetString().c_str();
+          str = strm.GetString();
         } else
-          cstr = GetValueAsCString();
+          str = GetValueAsCString();
       }
     }
 
-    if (cstr)
-      s.PutCString(cstr);
+    if (!str.empty())
+      s << str;
     else {
       if (m_error.Fail()) {
         if (do_dump_error)
@@ -3352,11 +3350,11 @@ ValueObjectSP ValueObject::Dereference(Error &error) {
     if (is_pointer_or_reference_type)
       error.SetErrorStringWithFormat("dereference failed: (%s) %s",
                                      GetTypeName().AsCString("<invalid type>"),
-                                     strm.GetString().c_str());
+                                     strm.GetData());
     else
       error.SetErrorStringWithFormat("not a pointer or reference type: (%s) %s",
                                      GetTypeName().AsCString("<invalid type>"),
-                                     strm.GetString().c_str());
+                                     strm.GetData());
     return ValueObjectSP();
   }
 }
@@ -3375,7 +3373,7 @@ ValueObjectSP ValueObject::AddressOf(Error &error) {
       StreamString expr_path_strm;
       GetExpressionPath(expr_path_strm, true);
       error.SetErrorStringWithFormat("'%s' is not in memory",
-                                     expr_path_strm.GetString().c_str());
+                                     expr_path_strm.GetData());
     } break;
 
     case eAddressTypeFile:
@@ -3398,7 +3396,7 @@ ValueObjectSP ValueObject::AddressOf(Error &error) {
     StreamString expr_path_strm;
     GetExpressionPath(expr_path_strm, true);
     error.SetErrorStringWithFormat("'%s' doesn't have a valid address",
-                                   expr_path_strm.GetString().c_str());
+                                   expr_path_strm.GetData());
   }
 
   return m_addr_of_valobj_sp;

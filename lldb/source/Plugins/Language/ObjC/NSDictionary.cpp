@@ -499,7 +499,7 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetData(), data,
+    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
                                                     m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
@@ -729,7 +729,7 @@ lldb_private::formatters::NSDictionaryMSyntheticFrontEnd::GetChildAtIndex(
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetData(), data,
+    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
                                                     m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;

@@ -567,6 +567,12 @@ public:
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
+  void legalizeGenericOperand(MachineBasicBlock &InsertMBB,
+                              MachineBasicBlock::iterator I,
+                              const TargetRegisterClass *DstRC,
+                              MachineOperand &Op, MachineRegisterInfo &MRI,
+                              const DebugLoc &DL) const;
+
   /// \brief Legalize all operands in this instruction.  This function may
   /// create new instruction and insert them before \p MI.
   void legalizeOperands(MachineInstr &MI) const;

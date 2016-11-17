@@ -14,14 +14,20 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LAZYEMITTINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LAZYEMITTINGLAYER_H
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
 #include <list>
+#include <memory>
+#include <string>
 
 namespace llvm {
 namespace orc {
@@ -39,8 +45,8 @@ public:
 private:
   class EmissionDeferredSet {
   public:
-    EmissionDeferredSet() : EmitState(NotEmitted) {}
-    virtual ~EmissionDeferredSet() {}
+    EmissionDeferredSet() = default;
+    virtual ~EmissionDeferredSet() = default;
 
     JITSymbol find(StringRef Name, bool ExportedSymbolsOnly, BaseLayerT &B) {
       switch (EmitState) {
@@ -106,7 +112,7 @@ private:
     virtual BaseLayerHandleT emitToBaseLayer(BaseLayerT &BaseLayer) = 0;
 
   private:
-    enum { NotEmitted, Emitting, Emitted } EmitState;
+    enum { NotEmitted, Emitting, Emitted } EmitState = NotEmitted;
     BaseLayerHandleT Handle;
   };
 
@@ -121,7 +127,6 @@ private:
           Resolver(std::move(Resolver)) {}
 
   protected:
-
     const GlobalValue* searchGVs(StringRef Name,
                                  bool ExportedSymbolsOnly) const override {
       // FIXME: We could clean all this up if we had a way to reliably demangle
@@ -277,7 +282,6 @@ public:
   void emitAndFinalize(ModuleSetHandleT H) {
     (*H)->emitAndFinalize(BaseLayer);
   }
-
 };
 
 template <typename BaseLayerT>
@@ -293,7 +297,7 @@ LazyEmittingLayer<BaseLayerT>::EmissionDeferredSet::create(
                                 std::move(Resolver));
 }
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_LAZYEMITTINGLAYER_H

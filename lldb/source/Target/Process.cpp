@@ -388,10 +388,10 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
       else
         s.Printf("%-10u ", m_egid);
 
-      s.Printf("%-24s ", arch_strm.GetString().c_str());
+      s.Printf("%-24s ", arch_strm.GetData());
     } else {
       s.Printf("%-10s %-24s ", platform->GetUserName(m_euid),
-               arch_strm.GetString().c_str());
+               arch_strm.GetData());
     }
 
     if (verbose || show_args) {
@@ -5540,7 +5540,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       StreamString s;
       s.PutCString("Thread state after unsuccessful completion: \n");
       thread->GetStackFrameStatus(s, 0, UINT32_MAX, true, UINT32_MAX);
-      log->PutCString(s.GetData());
+      log->PutString(s.GetString());
     }
     // Restore the thread state if we are going to discard the plan execution.
     // There are three cases where this

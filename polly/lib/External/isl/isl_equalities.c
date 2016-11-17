@@ -493,7 +493,7 @@ static __isl_give isl_mat *insert_parameter_rows(__isl_take isl_mat *mat,
  * The number of equality constraints in B is assumed to be smaller than
  * or equal to the number of variables x.
  * "first" is the position of the first x variable.
- * The preceding variables are considered to by y-variables.
+ * The preceding variables are considered to be y-variables.
  * If T2 is not NULL, then *T2 is set to a matrix mapping [1 x] to [1 x'].
  *
  * First compute the (left) Hermite normal form of M,

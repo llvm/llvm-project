@@ -79,6 +79,22 @@
     ret i32 200
   }
 
+  declare void @f() readonly
+
+  define i32 @no_hoist_across_call(i32* %ptr) {
+  entry:
+    %is_null = icmp eq i32* %ptr, null
+    br i1 %is_null, label %leave, label %stay, !make.implicit !0
+
+  stay:
+    call void @f()
+    %val = load i32, i32* %ptr
+    ret i32 %val
+
+  leave:
+    ret i32 0
+  }
+
   !0 = !{}
 ...
 ---
@@ -253,5 +269,46 @@ body:             |
   bb.4.ret_100:
     %eax = MOV32ri 100
     RET 0, %eax
+
+...
+---
+name:            no_hoist_across_call
+# CHECK-LABEL: name:            no_hoist_across_call
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '%rdi' }
+calleeSavedRegisters: [ '%bh', '%bl', '%bp', '%bpl', '%bx', '%ebp', '%ebx',
+                        '%rbp', '%rbx', '%r12', '%r13', '%r14', '%r15',
+                        '%r12b', '%r13b', '%r14b', '%r15b', '%r12d', '%r13d',
+                        '%r14d', '%r15d', '%r12w', '%r13w', '%r14w', '%r15w' ]
+# CHECK: body:
+# CHECK-NOT: FAULTING_LOAD_OP
+# CHECK: bb.1.stay:
+# CHECK: CALL64pcrel32
+body:             |
+  bb.0.entry:
+    successors: %bb.2.leave, %bb.1.stay
+    liveins: %rdi, %rbx
+
+    frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset %rbx, -16
+    %rbx = MOV64rr %rdi
+    TEST64rr %rbx, %rbx, implicit-def %eflags
+    JE_1 %bb.2.leave, implicit killed %eflags
+
+  bb.1.stay:
+    liveins: %rbx
+
+    CALL64pcrel32 @f, csr_64, implicit %rsp, implicit-def %rsp
+    %eax = MOV32rm killed %rbx, 1, _, 0, _ :: (load 4 from %ir.ptr)
+    %rbx = POP64r implicit-def %rsp, implicit %rsp
+    RETQ %eax
+
+  bb.2.leave:
+    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
+    %rbx = POP64r implicit-def %rsp, implicit %rsp
+    RETQ %eax
 
 ...

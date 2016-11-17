@@ -1269,6 +1269,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT,       MVT::v8i32, Legal);
       setOperationAction(ISD::SINT_TO_FP,       MVT::v4i32, Legal);
       setOperationAction(ISD::UINT_TO_FP,       MVT::v4i32, Legal);
+      setOperationAction(ISD::UINT_TO_FP,       MVT::v2i32, Custom);
       setOperationAction(ISD::FP_TO_SINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::FP_TO_UINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v4i32, Custom);
@@ -14028,26 +14029,34 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
 SDValue X86TargetLowering::lowerUINT_TO_FP_vec(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDValue N0 = Op.getOperand(0);
-  MVT SVT = N0.getSimpleValueType();
+  MVT VT = Op.getSimpleValueType();
+  MVT SrcVT = N0.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (SVT.getVectorElementType() == MVT::i1) {
-    if (SVT == MVT::v2i1)
+  if (SrcVT.getVectorElementType() == MVT::i1) {
+    if (SrcVT == MVT::v2i1)
       return DAG.getNode(ISD::UINT_TO_FP, dl, Op.getValueType(),
                          DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v2i64, N0));
-    MVT IntegerVT = MVT::getVectorVT(MVT::i32, SVT.getVectorNumElements());
+    MVT IntegerVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
     return DAG.getNode(ISD::UINT_TO_FP, dl, Op.getValueType(),
                        DAG.getNode(ISD::ZERO_EXTEND, dl, IntegerVT, N0));
   }
 
-  switch (SVT.SimpleTy) {
+  switch (SrcVT.SimpleTy) {
   default:
     llvm_unreachable("Custom UINT_TO_FP is not supported!");
+  case MVT::v2i32: {
+    if (VT == MVT::v2f64)
+      return DAG.getNode(X86ISD::CVTUDQ2PD, dl, VT,
+                         DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, N0,
+                         DAG.getUNDEF(SrcVT)));
+    return SDValue();
+  }
   case MVT::v4i8:
   case MVT::v4i16:
   case MVT::v8i8:
   case MVT::v8i16: {
-    MVT NVT = MVT::getVectorVT(MVT::i32, SVT.getVectorNumElements());
+    MVT NVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
     return DAG.getNode(ISD::SINT_TO_FP, dl, Op.getValueType(),
                        DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, N0));
   }
@@ -26962,11 +26971,10 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   }
 
   // Convert a bitcasted integer logic operation that has one bitcasted
-  // floating-point operand and one constant operand into a floating-point
-  // logic operation. This may create a load of the constant, but that is
-  // cheaper than materializing the constant in an integer register and
-  // transferring it to an SSE register or transferring the SSE operand to
-  // integer register and back.
+  // floating-point operand into a floating-point logic operation. This may
+  // create a load of a constant, but that is cheaper than materializing the
+  // constant in an integer register and transferring it to an SSE register or
+  // transferring the SSE operand to integer register and back.
   unsigned FPOpcode;
   switch (N0.getOpcode()) {
     case ISD::AND: FPOpcode = X86ISD::FAND; break;
@@ -26974,19 +26982,32 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
     default: return SDValue();
   }
-  if (((Subtarget.hasSSE1() && VT == MVT::f32) ||
-       (Subtarget.hasSSE2() && VT == MVT::f64)) &&
-      isa<ConstantSDNode>(N0.getOperand(1)) &&
-      N0.getOperand(0).getOpcode() == ISD::BITCAST &&
-      N0.getOperand(0).getOperand(0).getValueType() == VT) {
-    SDValue N000 = N0.getOperand(0).getOperand(0);
-    SDValue FPConst = DAG.getBitcast(VT, N0.getOperand(1));
-    return DAG.getNode(FPOpcode, SDLoc(N0), VT, N000, FPConst);
+
+  if (!((Subtarget.hasSSE1() && VT == MVT::f32) ||
+        (Subtarget.hasSSE2() && VT == MVT::f64)))
+    return SDValue();
+
+  SDValue LogicOp0 = N0.getOperand(0);
+  SDValue LogicOp1 = N0.getOperand(1);
+  SDLoc DL0(N0);
+
+  // bitcast(logic(bitcast(X), Y)) --> logic'(X, bitcast(Y))
+  if (N0.hasOneUse() && LogicOp0.getOpcode() == ISD::BITCAST &&
+      LogicOp0.hasOneUse() && LogicOp0.getOperand(0).getValueType() == VT &&
+      !isa<ConstantSDNode>(LogicOp0.getOperand(0))) {
+    SDValue CastedOp1 = DAG.getBitcast(VT, LogicOp1);
+    return DAG.getNode(FPOpcode, DL0, VT, LogicOp0.getOperand(0), CastedOp1);
+  }
+  // bitcast(logic(X, bitcast(Y))) --> logic'(bitcast(X), Y)
+  if (N0.hasOneUse() && LogicOp1.getOpcode() == ISD::BITCAST &&
+      LogicOp1.hasOneUse() && LogicOp1.getOperand(0).getValueType() == VT &&
+      !isa<ConstantSDNode>(LogicOp1.getOperand(0))) {
+    SDValue CastedOp0 = DAG.getBitcast(VT, LogicOp0);
+    return DAG.getNode(FPOpcode, DL0, VT, LogicOp1.getOperand(0), CastedOp0);
   }
 
   return SDValue();
 }
-
 
 // Match a binop + shuffle pyramid that represents a horizontal reduction over
 // the elements of a vector.

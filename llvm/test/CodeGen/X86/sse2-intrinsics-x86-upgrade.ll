@@ -186,3 +186,104 @@ define <8 x i16> @min_epi16(<8 x i16> %a0, <8 x i16> %a1) {
 }
 declare <8 x i16> @llvm.x86.sse2.pmins.w(<8 x i16>, <8 x i16>) nounwind readnone
 
+define <2 x double> @test_x86_sse2_add_sd(<2 x double> %a0, <2 x double> %a1) {
+; SSE-LABEL: test_x86_sse2_add_sd:
+; SSE:       ## BB#0:
+; SSE-NEXT:    addsd %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x58,0xc1]
+; SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_add_sd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x58,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_add_sd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xff,0x08,0x58,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_sse2_add_sd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    addsd %xmm1, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <2 x double> @llvm.x86.sse2.add.sd(<2 x double> %a0, <2 x double> %a1) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
+declare <2 x double> @llvm.x86.sse2.add.sd(<2 x double>, <2 x double>) nounwind readnone
+
+
+define <2 x double> @test_x86_sse2_sub_sd(<2 x double> %a0, <2 x double> %a1) {
+; SSE-LABEL: test_x86_sse2_sub_sd:
+; SSE:       ## BB#0:
+; SSE-NEXT:    subsd %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x5c,0xc1]
+; SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_sub_sd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vsubsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5c,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_sub_sd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xff,0x08,0x5c,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_sse2_sub_sd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    subsd %xmm1, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <2 x double> @llvm.x86.sse2.sub.sd(<2 x double> %a0, <2 x double> %a1) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
+declare <2 x double> @llvm.x86.sse2.sub.sd(<2 x double>, <2 x double>) nounwind readnone
+
+
+define <2 x double> @test_x86_sse2_mul_sd(<2 x double> %a0, <2 x double> %a1) {
+; SSE-LABEL: test_x86_sse2_mul_sd:
+; SSE:       ## BB#0:
+; SSE-NEXT:    mulsd %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x59,0xc1]
+; SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_mul_sd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x59,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_mul_sd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xff,0x08,0x59,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_sse2_mul_sd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    mulsd %xmm1, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <2 x double> @llvm.x86.sse2.mul.sd(<2 x double> %a0, <2 x double> %a1) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
+declare <2 x double> @llvm.x86.sse2.mul.sd(<2 x double>, <2 x double>) nounwind readnone
+
+
+define <2 x double> @test_x86_sse2_div_sd(<2 x double> %a0, <2 x double> %a1) {
+; SSE-LABEL: test_x86_sse2_div_sd:
+; SSE:       ## BB#0:
+; SSE-NEXT:    divsd %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x5e,0xc1]
+; SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX2-LABEL: test_x86_sse2_div_sd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vdivsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5e,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_div_sd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xff,0x08,0x5e,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_sse2_div_sd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    divsd %xmm1, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <2 x double> @llvm.x86.sse2.div.sd(<2 x double> %a0, <2 x double> %a1) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
+declare <2 x double> @llvm.x86.sse2.div.sd(<2 x double>, <2 x double>) nounwind readnone
+
+
+

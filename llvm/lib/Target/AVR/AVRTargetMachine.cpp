@@ -106,7 +106,7 @@ void AVRPassConfig::addPreRegAlloc() {
   addPass(createAVRDynAllocaSRPass());
 }
 
-void AVRPassConfig::addPreSched2() { }
+void AVRPassConfig::addPreSched2() { addPass(createAVRExpandPseudoPass()); }
 
 void AVRPassConfig::addPreEmitPass() { }
 

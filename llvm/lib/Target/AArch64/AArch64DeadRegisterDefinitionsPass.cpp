@@ -17,9 +17,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Target/TargetInstrInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-dead-defs"
@@ -32,8 +34,9 @@ namespace {
 class AArch64DeadRegisterDefinitions : public MachineFunctionPass {
 private:
   const TargetRegisterInfo *TRI;
+  const MachineRegisterInfo *MRI;
+  const TargetInstrInfo *TII;
   bool Changed;
-  bool implicitlyDefinesOverlappingReg(unsigned Reg, const MachineInstr &MI);
   void processMachineBasicBlock(MachineBasicBlock &MBB);
 public:
   static char ID; // Pass identification, replacement for typeid.
@@ -43,11 +46,6 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &F) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
-  }
 
   StringRef getPassName() const override { return AARCH64_DEAD_REG_DEF_NAME; }
 
@@ -62,15 +60,6 @@ char AArch64DeadRegisterDefinitions::ID = 0;
 INITIALIZE_PASS(AArch64DeadRegisterDefinitions, "aarch64-dead-defs",
                 AARCH64_DEAD_REG_DEF_NAME, false, false)
 
-bool AArch64DeadRegisterDefinitions::implicitlyDefinesOverlappingReg(
-    unsigned Reg, const MachineInstr &MI) {
-  for (const MachineOperand &MO : MI.implicit_operands())
-    if (MO.isReg() && MO.isDef())
-      if (TRI->regsOverlap(Reg, MO.getReg()))
-        return true;
-  return false;
-}
-
 static bool usesFrameIndex(const MachineInstr &MI) {
   for (const MachineOperand &MO : MI.uses())
     if (MO.isFI())
@@ -80,6 +69,7 @@ static bool usesFrameIndex(const MachineInstr &MI) {
 
 void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
     MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
   for (MachineInstr &MI : MBB) {
     if (usesFrameIndex(MI)) {
       // We need to skip this instruction because while it appears to have a
@@ -97,7 +87,13 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
     const MCInstrDesc &Desc = MI.getDesc();
     for (int I = 0, E = Desc.getNumDefs(); I != E; ++I) {
       MachineOperand &MO = MI.getOperand(I);
-      if (!MO.isReg() || !MO.isDead() || !MO.isDef())
+      if (!MO.isReg() || !MO.isDef())
+        continue;
+      // We should not have any relevant physreg defs that are replacable by
+      // zero before register allocation. So we just check for dead vreg defs.
+      unsigned Reg = MO.getReg();
+      if (!TargetRegisterInfo::isVirtualRegister(Reg) ||
+          (!MO.isDead() && !MRI->use_nodbg_empty(Reg)))
         continue;
       assert(!MO.isImplicit() && "Unexpected implicit def!");
       DEBUG(dbgs() << "  Dead def operand #" << I << " in:\n    ";
@@ -107,28 +103,22 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
         DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
         continue;
       }
-      // Don't change the register if there's an implicit def of a subreg or
-      // superreg.
-      if (implicitlyDefinesOverlappingReg(MO.getReg(), MI)) {
-        DEBUG(dbgs() << "    Ignoring, implicitly defines overlap reg.\n");
-        continue;
-      }
-      // Make sure the instruction take a register class that contains
-      // the zero register and replace it if so.
+      const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
       unsigned NewReg;
-      switch (Desc.OpInfo[I].RegClass) {
-      default:
+      if (RC == nullptr) {
         DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
         continue;
-      case AArch64::GPR32RegClassID:
+      } else if (RC->contains(AArch64::WZR))
         NewReg = AArch64::WZR;
-        break;
-      case AArch64::GPR64RegClassID:
+      else if (RC->contains(AArch64::XZR))
         NewReg = AArch64::XZR;
-        break;
+      else {
+        DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
+        continue;
       }
       DEBUG(dbgs() << "    Replacing with zero register. New:\n      ");
       MO.setReg(NewReg);
+      MO.setIsDead();
       DEBUG(MI.print(dbgs()));
       ++NumDeadDefsReplaced;
       Changed = true;
@@ -145,6 +135,8 @@ bool AArch64DeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TRI = MF.getSubtarget().getRegisterInfo();
+  TII = MF.getSubtarget().getInstrInfo();
+  MRI = &MF.getRegInfo();
   DEBUG(dbgs() << "***** AArch64DeadRegisterDefinitions *****\n");
   Changed = false;
   for (auto &MBB : MF)

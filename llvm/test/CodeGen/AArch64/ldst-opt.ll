@@ -1433,6 +1433,62 @@ entry:
   ret void
 }
 
+; Like merge_zr32, but with 2-vector type.
+define void @merge_zr32_2vec(<2 x i32>* %p) {
+; CHECK-LABEL: merge_zr32_2vec:
+; CHECK: // %entry
+; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
+; CHECK-NEXT: ret
+entry:
+  store <2 x i32> zeroinitializer, <2 x i32>* %p
+  ret void
+}
+
+; Like merge_zr32, but with 3-vector type.
+define void @merge_zr32_3vec(<3 x i32>* %p) {
+; CHECK-LABEL: merge_zr32_3vec:
+; CHECK: // %entry
+; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
+; CHECK-NEXT: str wzr, [x{{[0-9]+}}, #8]
+; CHECK-NEXT: ret
+entry:
+  store <3 x i32> zeroinitializer, <3 x i32>* %p
+  ret void
+}
+
+; Like merge_zr32, but with 4-vector type.
+define void @merge_zr32_4vec(<4 x i32>* %p) {
+; CHECK-LABEL: merge_zr32_4vec:
+; CHECK: // %entry
+; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; CHECK-NEXT: ret
+entry:
+  store <4 x i32> zeroinitializer, <4 x i32>* %p
+  ret void
+}
+
+; Like merge_zr32, but with 2-vector float type.
+define void @merge_zr32_2vecf(<2 x float>* %p) {
+; CHECK-LABEL: merge_zr32_2vecf:
+; CHECK: // %entry
+; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
+; CHECK-NEXT: ret
+entry:
+  store <2 x float> zeroinitializer, <2 x float>* %p
+  ret void
+}
+
+; Like merge_zr32, but with 4-vector float type.
+define void @merge_zr32_4vecf(<4 x float>* %p) {
+; CHECK-LABEL: merge_zr32_4vecf:
+; CHECK: // %entry
+; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; CHECK-NEXT: ret
+entry:
+  store <4 x float> zeroinitializer, <4 x float>* %p
+  ret void
+}
+
 ; Similar to merge_zr32, but for 64-bit values.
 define void @merge_zr64(i64* %p) {
 ; CHECK-LABEL: merge_zr64:
@@ -1462,5 +1518,40 @@ entry:
   store i64 0, i64* %p2
   %p3 = getelementptr i64, i64* %p, i64 3
   store i64 0, i64* %p3
+  ret void
+}
+
+; Like merge_zr64, but with 2-vector double type.
+define void @merge_zr64_2vecd(<2 x double>* %p) {
+; CHECK-LABEL: merge_zr64_2vecd:
+; CHECK: // %entry
+; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; CHECK-NEXT: ret
+entry:
+  store <2 x double> zeroinitializer, <2 x double>* %p
+  ret void
+}
+
+; Like merge_zr64, but with 3-vector i64 type.
+define void @merge_zr64_3vec(<3 x i64>* %p) {
+; CHECK-LABEL: merge_zr64_3vec:
+; CHECK: // %entry
+; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; CHECK-NEXT: str xzr, [x{{[0-9]+}}, #16]
+; CHECK-NEXT: ret
+entry:
+  store <3 x i64> zeroinitializer, <3 x i64>* %p
+  ret void
+}
+
+; Like merge_zr64_2, but with 4-vector double type.
+define void @merge_zr64_4vecd(<4 x double>* %p) {
+; CHECK-LABEL: merge_zr64_4vecd:
+; CHECK: // %entry
+; CHECK-NEXT: movi v[[REG:[0-9]]].2d, #0000000000000000
+; CHECK-NEXT: stp q[[REG]], q[[REG]], [x{{[0-9]+}}]
+; CHECK-NEXT: ret
+entry:
+  store <4 x double> zeroinitializer, <4 x double>* %p
   ret void
 }

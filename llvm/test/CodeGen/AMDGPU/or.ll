@@ -96,9 +96,9 @@ define void @scalar_or_literal_multi_use_i64(i64 addrspace(1)* %out, i64 %a, i64
 ; SI-NOT: or_b32
 ; SI: s_or_b32 s[[VAL_LO]], s[[VAL_LO]], 63
 ; SI-NOT: or_b32
-; SI: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[VAL_LO]]
-; SI-NOT: or_b32
 ; SI: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[VAL_HI]]
+; SI-NOT: or_b32
+; SI: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[VAL_LO]]
 ; SI-NOT: or_b32
 ; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
 define void @scalar_or_inline_imm_i64(i64 addrspace(1)* %out, i64 %a) {

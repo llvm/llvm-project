@@ -561,7 +561,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     StringRef S = Arg->getValue();
     if (S == "md5") {
       Config->BuildId = BuildIdKind::Md5;
-    } else if (S == "sha1") {
+    } else if (S == "sha1" || S == "tree") {
       Config->BuildId = BuildIdKind::Sha1;
     } else if (S == "uuid") {
       Config->BuildId = BuildIdKind::Uuid;

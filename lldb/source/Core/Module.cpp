@@ -316,7 +316,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
         if (m_objfile_sp) {
           StreamString s;
           s.Printf("0x%16.16" PRIx64, header_addr);
-          m_object_name.SetCString(s.GetData());
+          m_object_name.SetString(s.GetString());
 
           // Once we get the object file, update our module with the object
           // file's
@@ -1118,7 +1118,7 @@ void Module::ReportError(const char *format, ...) {
       if (last_char != '\n' || last_char != '\r')
         strm.EOL();
     }
-    Host::SystemLog(Host::eSystemLogError, "%s", strm.GetString().c_str());
+    Host::SystemLog(Host::eSystemLogError, "%s", strm.GetData());
   }
 }
 
@@ -1152,7 +1152,7 @@ void Module::ReportErrorIfModifyDetected(const char *format, ...) {
         }
         strm.PutCString("The debug session should be aborted as the original "
                         "debug information has been overwritten.\n");
-        Host::SystemLog(Host::eSystemLogError, "%s", strm.GetString().c_str());
+        Host::SystemLog(Host::eSystemLogError, "%s", strm.GetData());
       }
     }
   }
@@ -1176,7 +1176,7 @@ void Module::ReportWarning(const char *format, ...) {
       if (last_char != '\n' || last_char != '\r')
         strm.EOL();
     }
-    Host::SystemLog(Host::eSystemLogWarning, "%s", strm.GetString().c_str());
+    Host::SystemLog(Host::eSystemLogWarning, "%s", strm.GetData());
   }
 }
 
@@ -1189,7 +1189,7 @@ void Module::LogMessage(Log *log, const char *format, ...) {
     va_start(args, format);
     log_message.PrintfVarArg(format, args);
     va_end(args);
-    log->PutCString(log_message.GetString().c_str());
+    log->PutCString(log_message.GetData());
   }
 }
 
@@ -1208,7 +1208,7 @@ void Module::LogMessageVerboseBacktrace(Log *log, const char *format, ...) {
       llvm::sys::PrintStackTrace(stream);
       log_message.PutCString(back_trace);
     }
-    log->PutCString(log_message.GetString().c_str());
+    log->PutCString(log_message.GetData());
   }
 }
 

@@ -211,7 +211,7 @@ public:
 
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    child_sp->SetName(ConstString(idx_name.GetData()));
+    child_sp->SetName(ConstString(idx_name.GetString()));
 
     child_sp->SetFormat(m_item_format);
 

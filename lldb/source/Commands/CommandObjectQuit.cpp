@@ -73,7 +73,7 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
     message.Printf("Quitting LLDB will %s one or more processes. Do you really "
                    "want to proceed",
                    (is_a_detach ? "detach from" : "kill"));
-    if (!m_interpreter.Confirm(message.GetData(), true)) {
+    if (!m_interpreter.Confirm(message.GetString(), true)) {
       result.SetStatus(eReturnStatusFailed);
       return false;
     }

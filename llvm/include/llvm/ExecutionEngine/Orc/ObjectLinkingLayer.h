@@ -15,11 +15,22 @@
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
+#include <cassert>
+#include <algorithm>
+#include <functional>
 #include <list>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -34,11 +45,11 @@ protected:
   /// had been provided by this instance. Higher level layers are responsible
   /// for taking any action required to handle the missing symbols.
   class LinkedObjectSet {
-    LinkedObjectSet(const LinkedObjectSet&) = delete;
-    void operator=(const LinkedObjectSet&) = delete;
   public:
     LinkedObjectSet() = default;
-    virtual ~LinkedObjectSet() {}
+    LinkedObjectSet(const LinkedObjectSet&) = delete;
+    void operator=(const LinkedObjectSet&) = delete;
+    virtual ~LinkedObjectSet() = default;
 
     virtual void finalize() = 0;
 
@@ -59,6 +70,7 @@ protected:
                          SymEntry->second.getFlags());
       return JITSymbol(SymEntry->second);
     }
+
   protected:
     StringMap<JITEvaluatedSymbol> SymbolTable;
     bool Finalized = false;
@@ -70,7 +82,6 @@ public:
   /// @brief Handle to a set of loaded objects.
   typedef LinkedObjectSetListT::iterator ObjSetHandleT;
 };
-
 
 /// @brief Default (no-op) action to perform when loading objects.
 class DoNothingOnNotifyLoaded {
@@ -89,12 +100,10 @@ public:
 template <typename NotifyLoadedFtor = DoNothingOnNotifyLoaded>
 class ObjectLinkingLayer : public ObjectLinkingLayerBase {
 public:
-
   /// @brief Functor for receiving finalization notifications.
   typedef std::function<void(ObjSetHandleT)> NotifyFinalizedFtor;
 
 private:
-
   template <typename ObjSetT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT, typename FinalizerFtor>
   class ConcreteLinkedObjectSet : public LinkedObjectSet {
@@ -151,7 +160,6 @@ private:
     }
 
   private:
-
     void buildInitialSymbolTable(const ObjSetT &Objects) {
       for (const auto &Obj : Objects)
         for (auto &Symbol : getObject(*Obj).symbols()) {
@@ -212,7 +220,6 @@ private:
   }
 
 public:
-
   /// @brief LoadedObjectInfo list. Contains a list of owning pointers to
   ///        RuntimeDyld::LoadedObjectInfo instances.
   typedef std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>
@@ -248,7 +255,6 @@ public:
   ObjSetHandleT addObjectSet(ObjSetT Objects,
                              MemoryManagerPtrT MemMgr,
                              SymbolResolverPtrT Resolver) {
-
     auto Finalizer = [&](ObjSetHandleT H, RuntimeDyld &RTDyld,
                          const ObjSetT &Objs,
                          std::function<void()> LOSHandleLoad) {
@@ -334,7 +340,6 @@ public:
   }
 
 private:
-
   static const object::ObjectFile& getObject(const object::ObjectFile &Obj) {
     return Obj;
   }
@@ -351,7 +356,7 @@ private:
   bool ProcessAllSections;
 };
 
-} // End namespace orc.
-} // End namespace llvm
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H

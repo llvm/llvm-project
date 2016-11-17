@@ -242,9 +242,9 @@ protected:
         // a chance to call PushProcessIOHandler().
         process_sp->SyncIOHandler(0, 2000);
 
-        const char *data = stream.GetData();
-        if (data && strlen(data) > 0)
-          result.AppendMessage(stream.GetData());
+        llvm::StringRef data = stream.GetString();
+        if (!data.empty())
+          result.AppendMessage(data);
         const char *archname =
             exe_module_sp->GetArchitecture().GetArchitectureName();
         result.AppendMessageWithFormat(
@@ -504,8 +504,7 @@ protected:
     if (error.Success()) {
       ProcessSP process_sp(target->GetProcessSP());
       if (process_sp) {
-        if (stream.GetData())
-          result.AppendMessage(stream.GetData());
+        result.AppendMessage(stream.GetString());
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
         result.SetDidChangeProcessState(true);
         result.SetAbnormalStopWasExpected(true);
@@ -706,8 +705,7 @@ protected:
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result
-          if (stream.GetData())
-            result.AppendMessage(stream.GetData());
+          result.AppendMessage(stream.GetString());
 
           result.SetDidChangeProcessState(true);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

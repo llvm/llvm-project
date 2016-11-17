@@ -794,5 +794,5 @@ void ConnectionFileDescriptor::InitializeSocket(Socket *socket) {
   StreamString strm;
   strm.Printf("connect://%s:%u", tcp_socket->GetRemoteIPAddress().c_str(),
               tcp_socket->GetRemotePortNumber());
-  m_uri.swap(strm.GetString());
+  m_uri = strm.GetString();
 }

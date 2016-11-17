@@ -152,8 +152,12 @@ constexpr int ConstExpr_variable = MyConstant;
 class my_class {
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'my_class'
 // CHECK-FIXES: {{^}}class CMyClass {{{$}}
+public:
     my_class();
 // CHECK-FIXES: {{^}}    CMyClass();{{$}}
+
+    my_class(void*) : my_class() {}
+// CHECK-FIXES: {{^}}    CMyClass(void*) : CMyClass() {}{{$}}
 
     ~
       my_class();
@@ -161,6 +165,7 @@ class my_class {
 // CHECK-FIXES: {{^}}    ~{{$}}
 // CHECK-FIXES: {{^}}      CMyClass();{{$}}
 
+private:
   const int MEMBER_one_1 = ConstExpr_variable;
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for constant member 'MEMBER_one_1'
 // CHECK-FIXES: {{^}}  const int member_one_1 = const_expr_variable;{{$}}
@@ -210,6 +215,34 @@ class my_derived_class : public virtual my_class {};
 
 class CMyWellNamedClass {};
 // No warning expected as this class is well named.
+
+template <typename t_t>
+class CMyWellNamedClass2 : public my_class {
+  // CHECK-FIXES: {{^}}class CMyWellNamedClass2 : public CMyClass {{{$}}
+  t_t my_Bad_Member;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for private member 'my_Bad_Member'
+  // CHECK-FIXES: {{^}}  t_t __my_Bad_Member;{{$}}
+  int my_Other_Bad_Member = 42;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for private member 'my_Other_Bad_Member'
+  // CHECK-FIXES: {{^}}  int __my_Other_Bad_Member = 42;{{$}}
+public:
+  CMyWellNamedClass2() = default;
+  CMyWellNamedClass2(CMyWellNamedClass2 const&) = default;
+  CMyWellNamedClass2(CMyWellNamedClass2 &&) = default;
+  CMyWellNamedClass2(t_t a_v, void *a_p) : my_class(a_p), my_Bad_Member(a_v) {}
+  // CHECK-FIXES: {{^}}  CMyWellNamedClass2(t_t a_v, void *a_p) : CMyClass(a_p), __my_Bad_Member(a_v) {}{{$}}
+
+  CMyWellNamedClass2(t_t a_v) : my_class(), my_Bad_Member(a_v), my_Other_Bad_Member(11) {}
+  // CHECK-FIXES: {{^}}  CMyWellNamedClass2(t_t a_v) : CMyClass(), __my_Bad_Member(a_v), __my_Other_Bad_Member(11) {}{{$}}
+};
+void InstantiateClassMethods() {
+  // Ensure we trigger the instantiation of each constructor
+  CMyWellNamedClass2<int> x;
+  CMyWellNamedClass2<int> x2 = x;
+  CMyWellNamedClass2<int> x3 = static_cast<CMyWellNamedClass2<int>&&>(x2);
+  CMyWellNamedClass2<int> x4(42);
+  CMyWellNamedClass2<int> x5(42, nullptr);
+}
 
 template<typename T>
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: invalid case style for type template parameter 'T'

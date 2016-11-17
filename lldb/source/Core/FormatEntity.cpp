@@ -829,7 +829,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     bitfield_name.Printf("%s:%d", target->GetTypeName().AsCString(),
                          target->GetBitfieldBitSize());
     lldb::TypeNameSpecifierImplSP type_sp(
-        new TypeNameSpecifierImpl(bitfield_name.GetData(), false));
+        new TypeNameSpecifierImpl(bitfield_name.GetString(), false));
     if (val_obj_display ==
             ValueObject::eValueObjectRepresentationStyleSummary &&
         !DataVisualization::GetSummaryForType(type_sp))
@@ -866,7 +866,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
       // should not happen
       if (success)
-        s << str_temp.GetData();
+        s << str_temp.GetString();
       return true;
     } else {
       if (was_plain_var) // if ${var}
@@ -1507,7 +1507,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
     }
     if (language_plugin_handled) {
-      s.PutCString(ss.GetData());
+      s << ss.GetString();
       return true;
     } else {
       const char *name = nullptr;
@@ -1549,7 +1549,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           ss);
     }
     if (language_plugin_handled) {
-      s.PutCString(ss.GetData());
+      s << ss.GetString();
       return true;
     } else {
       ConstString name;
@@ -1578,7 +1578,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
     }
     if (language_plugin_handled) {
-      s.PutCString(ss.GetData());
+      s << ss.GetString();
       return true;
     } else {
       // Print the function name with arguments in it
@@ -1662,7 +1662,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
               ValueObjectSP var_value_sp(
                   ValueObjectVariable::Create(exe_scope, var_sp));
               StreamString ss;
-              const char *var_representation = nullptr;
+              llvm::StringRef var_representation;
               const char *var_name = var_value_sp->GetName().GetCString();
               if (var_value_sp->GetCompilerType().IsValid()) {
                 if (var_value_sp && exe_scope->CalculateTarget())
@@ -1681,7 +1681,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                       "");
                   format.FormatObject(var_value_sp.get(), buffer,
                                       TypeSummaryOptions());
-                  var_representation = buffer.c_str();
+                  var_representation = buffer;
                 } else
                   var_value_sp->DumpPrintableRepresentation(
                       ss, ValueObject::ValueObjectRepresentationStyle::
@@ -1691,13 +1691,13 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                       false);
               }
 
-              if (ss.GetData() && ss.GetSize())
-                var_representation = ss.GetData();
+              if (!ss.GetString().empty())
+                var_representation = ss.GetString();
               if (arg_idx > 0)
                 s.PutCString(", ");
               if (var_value_sp->GetError().Success()) {
-                if (var_representation)
-                  s.Printf("%s=%s", var_name, var_representation);
+                if (!var_representation.empty())
+                  s.Printf("%s=%s", var_name, var_representation.str().c_str());
                 else
                   s.Printf("%s=%s at %s", var_name,
                            var_value_sp->GetTypeName().GetCString(),
@@ -1888,8 +1888,7 @@ static Error ParseEntry(const llvm::StringRef &format_str,
                               "access one of its children: ",
                               entry_def->name);
             DumpCommaSeparatedChildEntryNames(error_strm, entry_def);
-            error.SetErrorStringWithFormat("%s",
-                                           error_strm.GetString().c_str());
+            error.SetErrorStringWithFormat("%s", error_strm.GetData());
           } else if (sep_char == ':') {
             // Any value whose separator is a with a ':' means this value has a
             // string argument
@@ -1926,7 +1925,7 @@ static Error ParseEntry(const llvm::StringRef &format_str,
     error_strm.Printf("invalid member '%s' in '%s'. Valid members are: ",
                       key.str().c_str(), parent->name);
   DumpCommaSeparatedChildEntryNames(error_strm, parent);
-  error.SetErrorStringWithFormat("%s", error_strm.GetString().c_str());
+  error.SetErrorStringWithFormat("%s", error_strm.GetData());
   return error;
 }
 

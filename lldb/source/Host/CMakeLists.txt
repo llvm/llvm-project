@@ -36,7 +36,6 @@ add_host_subdirectory(common
   common/Terminal.cpp
   common/ThisThread.cpp
   common/ThreadLauncher.cpp
-  common/TimeValue.cpp
   common/XML.cpp
   common/UDPSocket.cpp
   )

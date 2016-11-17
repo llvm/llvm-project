@@ -716,7 +716,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                                        DumpStyleResolvedDescription,
                                        DumpStyleInvalid, addr_size)) {
               s->Address(dereferenced_load_addr, addr_size, " -> ", " ");
-              s->Write(strm.GetData(), strm.GetSize());
+              s->Write(strm.GetString().data(), strm.GetSize());
               return true;
             }
           }

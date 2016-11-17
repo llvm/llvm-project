@@ -1174,7 +1174,8 @@ GDBRemoteCommunicationServerCommon::Handle_jModulesInfo(
   StreamString response;
   response_array_sp->Write(response);
   StreamGDBRemote escaped_response;
-  escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
+  escaped_response.PutEscapedBytes(response.GetString().data(),
+                                   response.GetSize());
   return SendPacketNoLock(escaped_response.GetString());
 }
 
