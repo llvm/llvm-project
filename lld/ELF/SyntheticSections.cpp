@@ -722,15 +722,15 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   // Add strings to .dynstr early so that .dynstr's size will be
   // fixed early.
   for (StringRef S : Config->AuxiliaryList)
-    Add({DT_AUXILIARY, In<ELFT>::DynStrTab->addString(S)});
+    add({DT_AUXILIARY, In<ELFT>::DynStrTab->addString(S)});
   if (!Config->RPath.empty())
-    Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
+    add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
          In<ELFT>::DynStrTab->addString(Config->RPath)});
   for (SharedFile<ELFT> *F : Symtab<ELFT>::X->getSharedFiles())
     if (F->isNeeded())
-      Add({DT_NEEDED, In<ELFT>::DynStrTab->addString(F->getSoName())});
+      add({DT_NEEDED, In<ELFT>::DynStrTab->addString(F->getSoName())});
   if (!Config->SoName.empty())
-    Add({DT_SONAME, In<ELFT>::DynStrTab->addString(Config->SoName)});
+    add({DT_SONAME, In<ELFT>::DynStrTab->addString(Config->SoName)});
 
   // Set DT_FLAGS and DT_FLAGS_1.
   uint32_t DtFlags = 0;
@@ -749,12 +749,12 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   }
 
   if (DtFlags)
-    Add({DT_FLAGS, DtFlags});
+    add({DT_FLAGS, DtFlags});
   if (DtFlags1)
-    Add({DT_FLAGS_1, DtFlags1});
+    add({DT_FLAGS_1, DtFlags1});
 
   if (!Config->Entry.empty())
-    Add({DT_DEBUG, (uint64_t)0});
+    add({DT_DEBUG, (uint64_t)0});
 }
 
 // Add remaining entries to complete .dynamic contents.
@@ -766,9 +766,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   if (In<ELFT>::RelaDyn->hasRelocs()) {
     bool IsRela = Config->Rela;
-    Add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
-    Add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getSize()});
-    Add({IsRela ? DT_RELAENT : DT_RELENT,
+    add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
+    add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getSize()});
+    add({IsRela ? DT_RELAENT : DT_RELENT,
          uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
 
     // MIPS dynamic loader does not support RELCOUNT tag.
@@ -777,69 +777,69 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     if (Config->EMachine != EM_MIPS) {
       size_t NumRelativeRels = In<ELFT>::RelaDyn->getRelativeRelocCount();
       if (Config->ZCombreloc && NumRelativeRels)
-        Add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
+        add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
     }
   }
   if (In<ELFT>::RelaPlt->hasRelocs()) {
-    Add({DT_JMPREL, In<ELFT>::RelaPlt});
-    Add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getSize()});
-    Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
+    add({DT_JMPREL, In<ELFT>::RelaPlt});
+    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getSize()});
+    add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          In<ELFT>::GotPlt});
-    Add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
+    add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
   }
 
-  Add({DT_SYMTAB, Out<ELFT>::DynSymTab});
-  Add({DT_SYMENT, sizeof(Elf_Sym)});
-  Add({DT_STRTAB, In<ELFT>::DynStrTab});
-  Add({DT_STRSZ, In<ELFT>::DynStrTab->getSize()});
+  add({DT_SYMTAB, Out<ELFT>::DynSymTab});
+  add({DT_SYMENT, sizeof(Elf_Sym)});
+  add({DT_STRTAB, In<ELFT>::DynStrTab});
+  add({DT_STRSZ, In<ELFT>::DynStrTab->getSize()});
   if (Out<ELFT>::GnuHashTab)
-    Add({DT_GNU_HASH, Out<ELFT>::GnuHashTab});
+    add({DT_GNU_HASH, Out<ELFT>::GnuHashTab});
   if (Out<ELFT>::HashTab)
-    Add({DT_HASH, Out<ELFT>::HashTab});
+    add({DT_HASH, Out<ELFT>::HashTab});
 
   if (Out<ELFT>::PreinitArray) {
-    Add({DT_PREINIT_ARRAY, Out<ELFT>::PreinitArray});
-    Add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray, Entry::SecSize});
+    add({DT_PREINIT_ARRAY, Out<ELFT>::PreinitArray});
+    add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray, Entry::SecSize});
   }
   if (Out<ELFT>::InitArray) {
-    Add({DT_INIT_ARRAY, Out<ELFT>::InitArray});
-    Add({DT_INIT_ARRAYSZ, Out<ELFT>::InitArray, Entry::SecSize});
+    add({DT_INIT_ARRAY, Out<ELFT>::InitArray});
+    add({DT_INIT_ARRAYSZ, Out<ELFT>::InitArray, Entry::SecSize});
   }
   if (Out<ELFT>::FiniArray) {
-    Add({DT_FINI_ARRAY, Out<ELFT>::FiniArray});
-    Add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
+    add({DT_FINI_ARRAY, Out<ELFT>::FiniArray});
+    add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
   }
 
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Init))
-    Add({DT_INIT, B});
+    add({DT_INIT, B});
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Fini))
-    Add({DT_FINI, B});
+    add({DT_FINI, B});
 
   bool HasVerNeed = Out<ELFT>::VerNeed->getNeedNum() != 0;
   if (HasVerNeed || Out<ELFT>::VerDef)
-    Add({DT_VERSYM, Out<ELFT>::VerSym});
+    add({DT_VERSYM, Out<ELFT>::VerSym});
   if (Out<ELFT>::VerDef) {
-    Add({DT_VERDEF, Out<ELFT>::VerDef});
-    Add({DT_VERDEFNUM, getVerDefNum()});
+    add({DT_VERDEF, Out<ELFT>::VerDef});
+    add({DT_VERDEFNUM, getVerDefNum()});
   }
   if (HasVerNeed) {
-    Add({DT_VERNEED, Out<ELFT>::VerNeed});
-    Add({DT_VERNEEDNUM, Out<ELFT>::VerNeed->getNeedNum()});
+    add({DT_VERNEED, Out<ELFT>::VerNeed});
+    add({DT_VERNEEDNUM, Out<ELFT>::VerNeed->getNeedNum()});
   }
 
   if (Config->EMachine == EM_MIPS) {
-    Add({DT_MIPS_RLD_VERSION, 1});
-    Add({DT_MIPS_FLAGS, RHF_NOTPOT});
-    Add({DT_MIPS_BASE_ADDRESS, Config->ImageBase});
-    Add({DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
-    Add({DT_MIPS_LOCAL_GOTNO, In<ELFT>::MipsGot->getMipsLocalEntriesNum()});
+    add({DT_MIPS_RLD_VERSION, 1});
+    add({DT_MIPS_FLAGS, RHF_NOTPOT});
+    add({DT_MIPS_BASE_ADDRESS, Config->ImageBase});
+    add({DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
+    add({DT_MIPS_LOCAL_GOTNO, In<ELFT>::MipsGot->getMipsLocalEntriesNum()});
     if (const SymbolBody *B = In<ELFT>::MipsGot->getMipsFirstGlobalEntry())
-      Add({DT_MIPS_GOTSYM, B->DynsymIndex});
+      add({DT_MIPS_GOTSYM, B->DynsymIndex});
     else
-      Add({DT_MIPS_GOTSYM, Out<ELFT>::DynSymTab->getNumSymbols()});
-    Add({DT_PLTGOT, In<ELFT>::MipsGot});
+      add({DT_MIPS_GOTSYM, Out<ELFT>::DynSymTab->getNumSymbols()});
+    add({DT_PLTGOT, In<ELFT>::MipsGot});
     if (Out<ELFT>::MipsRldMap)
-      Add({DT_MIPS_RLD_MAP, Out<ELFT>::MipsRldMap});
+      add({DT_MIPS_RLD_MAP, Out<ELFT>::MipsRldMap});
   }
 
   this->OutSec->Entsize = this->Entsize;

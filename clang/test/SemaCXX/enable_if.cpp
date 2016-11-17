@@ -450,3 +450,17 @@ namespace member_loc {
       .bar(); // expected-error{{no matching member function}}
   }
 }
+
+// Prior bug: we wouldn't properly convert conditions to bools when
+// instantiating templates in some cases.
+namespace template_instantiation {
+template <typename T>
+struct Foo {
+  void bar(int a) __attribute__((enable_if(a, ""))); // expected-note{{disabled}}
+};
+
+void runFoo() {
+  Foo<double>().bar(0); // expected-error{{no matching}}
+  Foo<double>().bar(1);
+}
+}

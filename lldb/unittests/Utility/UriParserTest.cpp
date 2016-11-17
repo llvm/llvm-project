@@ -30,16 +30,16 @@ public:
 };
 
 #define VALIDATE                                                               \
-  std::string scheme(kAsdf);                                                   \
-  std::string hostname(kAsdf);                                                 \
+  llvm::StringRef scheme(kAsdf);                                               \
+  llvm::StringRef hostname(kAsdf);                                             \
   int port(1138);                                                              \
-  std::string path(kAsdf);                                                     \
+  llvm::StringRef path(kAsdf);                                                 \
   EXPECT_EQ(testCase.m_result,                                                 \
             UriParser::Parse(testCase.m_uri, scheme, hostname, port, path));   \
-  EXPECT_STREQ(testCase.m_scheme, scheme.c_str());                             \
-  EXPECT_STREQ(testCase.m_hostname, hostname.c_str());                         \
+  EXPECT_STREQ(testCase.m_scheme, scheme.str().c_str());                       \
+  EXPECT_STREQ(testCase.m_hostname, hostname.str().c_str());                   \
   EXPECT_EQ(testCase.m_port, port);                                            \
-  EXPECT_STREQ(testCase.m_path, path.c_str());
+  EXPECT_STREQ(testCase.m_path, path.str().c_str());
 
 TEST_F(UriParserTest, Minimal) {
   const UriTestCase testCase("x://y", "x", "y", -1, "/");
@@ -48,7 +48,17 @@ TEST_F(UriParserTest, Minimal) {
 
 TEST_F(UriParserTest, MinimalPort) {
   const UriTestCase testCase("x://y:1", "x", "y", 1, "/");
-  VALIDATE
+  llvm::StringRef scheme(kAsdf);
+  llvm::StringRef hostname(kAsdf);
+  int port(1138);
+  llvm::StringRef path(kAsdf);
+  bool result = UriParser::Parse(testCase.m_uri, scheme, hostname, port, path);
+  EXPECT_EQ(testCase.m_result, result);
+
+  EXPECT_STREQ(testCase.m_scheme, scheme.str().c_str());
+  EXPECT_STREQ(testCase.m_hostname, hostname.str().c_str());
+  EXPECT_EQ(testCase.m_port, port);
+  EXPECT_STREQ(testCase.m_path, path.str().c_str());
 }
 
 TEST_F(UriParserTest, MinimalPath) {
@@ -69,13 +79,23 @@ TEST_F(UriParserTest, LongPath) {
 TEST_F(UriParserTest, TypicalPortPath) {
   const UriTestCase testCase("connect://192.168.100.132:5432/", "connect",
                              "192.168.100.132", 5432, "/");
-  VALIDATE
+  VALIDATE;
 }
 
 TEST_F(UriParserTest, BracketedHostnamePort) {
   const UriTestCase testCase("connect://[192.168.100.132]:5432/", "connect",
                              "192.168.100.132", 5432, "/");
-  VALIDATE
+  llvm::StringRef scheme(kAsdf);
+  llvm::StringRef hostname(kAsdf);
+  int port(1138);
+  llvm::StringRef path(kAsdf);
+  bool result = UriParser::Parse(testCase.m_uri, scheme, hostname, port, path);
+  EXPECT_EQ(testCase.m_result, result);
+
+  EXPECT_STREQ(testCase.m_scheme, scheme.str().c_str());
+  EXPECT_STREQ(testCase.m_hostname, hostname.str().c_str());
+  EXPECT_EQ(testCase.m_port, port);
+  EXPECT_STREQ(testCase.m_path, path.str().c_str());
 }
 
 TEST_F(UriParserTest, BracketedHostname) {

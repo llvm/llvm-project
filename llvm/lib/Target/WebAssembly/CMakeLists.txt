@@ -42,9 +42,10 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyTargetObjectFile.cpp
   WebAssemblyTargetTransformInfo.cpp
   WebAssemblyUtilities.cpp
-)
 
-add_dependencies(LLVMWebAssemblyCodeGen intrinsics_gen)
+  DEPENDS
+  intrinsics_gen
+)
 
 add_subdirectory(Disassembler)
 add_subdirectory(InstPrinter)

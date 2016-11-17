@@ -244,25 +244,3 @@ TEST(DummyRPC, TestSerialization) {
 
   ServerThread.join();
 }
-
-// Test the synchronous call API.
-// TEST_F(DummyRPC, TestSynchronousCall) {
-//   Queue Q1, Q2;
-//   QueueChannel C1(Q1, Q2);
-//   QueueChannel C2(Q2, Q1);
-//
-//   auto ServerResult =
-//     std::async(std::launch::async,
-//       [&]() {
-//         return expect<IntInt>(C2, [&](int32_t V) { return V; });
-//       });
-//
-//   auto ValOrErr = callST<IntInt>(C1, 42);
-//
-//   EXPECT_FALSE(!!ServerResult.get())
-//     << "Server returned an error.";
-//   EXPECT_TRUE(!!ValOrErr)
-//     << "callST returned an error.";
-//   EXPECT_EQ(*ValOrErr, 42)
-//     << "Incorrect callST<IntInt> result";
-// }

@@ -1023,7 +1023,7 @@ static llvm::StringRef arch_helper() {
   static StreamString g_archs_help;
   if (g_archs_help.Empty()) {
     StringList archs;
-    ArchSpec::AutoComplete(nullptr, archs);
+    ArchSpec::AutoComplete(llvm::StringRef(), archs);
     g_archs_help.Printf("These are the supported architecture names:\n");
     archs.Join("\n", g_archs_help);
   }

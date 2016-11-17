@@ -64,9 +64,10 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetTransformInfo.cpp
   AArch64VectorByElementOpt.cpp
   ${GLOBAL_ISEL_BUILD_FILES}
-)
 
-add_dependencies(LLVMAArch64CodeGen intrinsics_gen)
+  DEPENDS
+  intrinsics_gen
+)
 
 add_subdirectory(TargetInfo)
 add_subdirectory(AsmParser)

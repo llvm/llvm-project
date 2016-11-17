@@ -286,10 +286,6 @@ public:
   ProgramStateRef processAssume(ProgramStateRef state, SVal cond,
                                 bool assumption) override;
 
-  /// wantsRegionChangeUpdate - Called by ProgramStateManager to determine if a
-  ///  region change should trigger a processRegionChanges update.
-  bool wantsRegionChangeUpdate(ProgramStateRef state) override;
-
   /// processRegionChanges - Called by ProgramStateManager whenever a change is made
   ///  to the store. Used to update checkers that track region values.
   ProgramStateRef 

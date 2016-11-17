@@ -16,9 +16,9 @@
 #define LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETSERVER_H
 
 #include "OrcRemoteTargetRPCAPI.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
@@ -68,13 +68,13 @@ public:
     addHandler<CallVoidVoid>(*this, &ThisT::handleCallVoidVoid);
     addHandler<CreateRemoteAllocator>(*this,
                                       &ThisT::handleCreateRemoteAllocator);
-    addHandler<CreateIndirectStubsOwner>(*this,
-                                         &ThisT::handleCreateIndirectStubsOwner);
+    addHandler<CreateIndirectStubsOwner>(
+        *this, &ThisT::handleCreateIndirectStubsOwner);
     addHandler<DeregisterEHFrames>(*this, &ThisT::handleDeregisterEHFrames);
     addHandler<DestroyRemoteAllocator>(*this,
                                        &ThisT::handleDestroyRemoteAllocator);
-    addHandler<DestroyIndirectStubsOwner>(*this,
-                                          &ThisT::handleDestroyIndirectStubsOwner);
+    addHandler<DestroyIndirectStubsOwner>(
+        *this, &ThisT::handleDestroyIndirectStubsOwner);
     addHandler<EmitIndirectStubs>(*this, &ThisT::handleEmitIndirectStubs);
     addHandler<EmitResolverBlock>(*this, &ThisT::handleEmitResolverBlock);
     addHandler<EmitTrampolineBlock>(*this, &ThisT::handleEmitTrampolineBlock);
@@ -95,7 +95,6 @@ public:
 
   OrcRemoteTargetServer(OrcRemoteTargetServer &&Other) = default;
   OrcRemoteTargetServer &operator=(OrcRemoteTargetServer &&) = delete;
-
 
   Expected<JITTargetAddress> requestCompile(JITTargetAddress TrampolineAddr) {
     return callB<RequestCompile>(TrampolineAddr);
@@ -254,12 +253,10 @@ private:
             TargetT::emitIndirectStubsBlock(IS, NumStubsRequired, nullptr))
       return std::move(Err);
 
-    JITTargetAddress StubsBase =
-        static_cast<JITTargetAddress>(
-            reinterpret_cast<uintptr_t>(IS.getStub(0)));
-    JITTargetAddress PtrsBase =
-        static_cast<JITTargetAddress>(
-            reinterpret_cast<uintptr_t>(IS.getPtr(0)));
+    JITTargetAddress StubsBase = static_cast<JITTargetAddress>(
+        reinterpret_cast<uintptr_t>(IS.getStub(0)));
+    JITTargetAddress PtrsBase = static_cast<JITTargetAddress>(
+        reinterpret_cast<uintptr_t>(IS.getPtr(0)));
     uint32_t NumStubsEmitted = IS.getNumStubs();
 
     auto &BlockList = StubOwnerItr->second;
@@ -307,9 +304,8 @@ private:
 
     TrampolineBlocks.push_back(std::move(TrampolineBlock));
 
-    auto TrampolineBaseAddr =
-        static_cast<JITTargetAddress>(
-            reinterpret_cast<uintptr_t>(TrampolineMem));
+    auto TrampolineBaseAddr = static_cast<JITTargetAddress>(
+        reinterpret_cast<uintptr_t>(TrampolineMem));
 
     return std::make_tuple(TrampolineBaseAddr, NumTrampolines);
   }
@@ -340,7 +336,7 @@ private:
 
   Expected<std::vector<uint8_t>> handleReadMem(JITTargetAddress RSrc,
                                                uint64_t Size) {
-    uint8_t *Src = reinterpret_cast<uint8_t*>(static_cast<uintptr_t>(RSrc));
+    uint8_t *Src = reinterpret_cast<uint8_t *>(static_cast<uintptr_t>(RSrc));
 
     DEBUG(dbgs() << "  Reading " << Size << " bytes from "
                  << format("0x%016x", RSrc) << "\n");
@@ -374,15 +370,14 @@ private:
     DEBUG(dbgs() << "  Allocator " << Id << " reserved " << LocalAllocAddr
                  << " (" << Size << " bytes, alignment " << Align << ")\n");
 
-    JITTargetAddress AllocAddr =
-        static_cast<JITTargetAddress>(
-            reinterpret_cast<uintptr_t>(LocalAllocAddr));
+    JITTargetAddress AllocAddr = static_cast<JITTargetAddress>(
+        reinterpret_cast<uintptr_t>(LocalAllocAddr));
 
     return AllocAddr;
   }
 
-  Error handleSetProtections(ResourceIdMgr::ResourceId Id, JITTargetAddress Addr,
-                             uint32_t Flags) {
+  Error handleSetProtections(ResourceIdMgr::ResourceId Id,
+                             JITTargetAddress Addr, uint32_t Flags) {
     auto I = Allocators.find(Id);
     if (I == Allocators.end())
       return orcError(OrcErrorCode::RemoteAllocatorDoesNotExist);

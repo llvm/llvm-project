@@ -109,7 +109,7 @@ public:
   // values in this collection, will have "exact_matches_idx"
   // filled in to match the index, or "exact_matches_idx" will
   // have SIZE_MAX
-  size_t AutoComplete(const char *s, StringList &matches,
+  size_t AutoComplete(llvm::StringRef s, StringList &matches,
                       size_t &exact_matches_idx) const;
 
   // Dump the StringList to the given lldb_private::Log, `log`, one item per

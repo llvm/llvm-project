@@ -53,8 +53,9 @@ CommandCompletions::CommonCompletionElement
 
 bool CommandCompletions::InvokeCommonCompletionCallbacks(
     CommandInterpreter &interpreter, uint32_t completion_mask,
-    const char *completion_str, int match_start_point, int max_return_elements,
-    SearchFilter *searcher, bool &word_complete, StringList &matches) {
+    llvm::StringRef completion_str, int match_start_point,
+    int max_return_elements, SearchFilter *searcher, bool &word_complete,
+    StringList &matches) {
   bool handled = false;
 
   if (completion_mask & eCustomCompletion)
@@ -76,7 +77,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
 }
 
 int CommandCompletions::SourceFiles(CommandInterpreter &interpreter,
-                                    const char *partial_file_name,
+                                    llvm::StringRef partial_file_name,
                                     int match_start_point,
                                     int max_return_elements,
                                     SearchFilter *searcher, bool &word_complete,
@@ -158,7 +159,7 @@ DiskFilesOrDirectoriesCallback(void *baton, FileSpec::FileType file_type,
   return FileSpec::eEnumerateDirectoryResultNext;
 }
 
-static int DiskFilesOrDirectories(const char *partial_file_name,
+static int DiskFilesOrDirectories(llvm::StringRef partial_file_name,
                                   bool only_directories, bool &saw_directory,
                                   StringList &matches) {
   // I'm going to  use the "glob" function with GLOB_TILDE for user directory
@@ -166,23 +167,20 @@ static int DiskFilesOrDirectories(const char *partial_file_name,
   // If it is not defined on your host system, you'll need to implement it
   // yourself...
 
-  size_t partial_name_len = strlen(partial_file_name);
+  size_t partial_name_len = partial_file_name.size();
 
   if (partial_name_len >= PATH_MAX)
     return matches.GetSize();
 
   // This copy of the string will be cut up into the directory part, and the
-  // remainder.  end_ptr
-  // below will point to the place of the remainder in this string.  Then when
-  // we've resolved the
-  // containing directory, and opened it, we'll read the directory contents and
-  // overwrite the
-  // partial_name_copy starting from end_ptr with each of the matches.  Thus we
-  // will preserve
-  // the form the user originally typed.
+  // remainder.  end_ptr below will point to the place of the remainder in this
+  // string.  Then when we've resolved the containing directory, and opened it,
+  // we'll read the directory contents and overwrite the partial_name_copy
+  // starting from end_ptr with each of the matches.  Thus we will preserve the
+  // form the user originally typed.
 
   char partial_name_copy[PATH_MAX];
-  memcpy(partial_name_copy, partial_file_name, partial_name_len);
+  memcpy(partial_name_copy, partial_file_name.data(), partial_name_len);
   partial_name_copy[partial_name_len] = '\0';
 
   // We'll need to save a copy of the remainder for comparison, which we do
@@ -280,7 +278,7 @@ static int DiskFilesOrDirectories(const char *partial_file_name,
 }
 
 int CommandCompletions::DiskFiles(CommandInterpreter &interpreter,
-                                  const char *partial_file_name,
+                                  llvm::StringRef partial_file_name,
                                   int match_start_point,
                                   int max_return_elements,
                                   SearchFilter *searcher, bool &word_complete,
@@ -292,7 +290,7 @@ int CommandCompletions::DiskFiles(CommandInterpreter &interpreter,
 }
 
 int CommandCompletions::DiskDirectories(
-    CommandInterpreter &interpreter, const char *partial_file_name,
+    CommandInterpreter &interpreter, llvm::StringRef partial_file_name,
     int match_start_point, int max_return_elements, SearchFilter *searcher,
     bool &word_complete, StringList &matches) {
   int ret_val =
@@ -302,7 +300,7 @@ int CommandCompletions::DiskDirectories(
 }
 
 int CommandCompletions::Modules(CommandInterpreter &interpreter,
-                                const char *partial_file_name,
+                                llvm::StringRef partial_file_name,
                                 int match_start_point, int max_return_elements,
                                 SearchFilter *searcher, bool &word_complete,
                                 StringList &matches) {
@@ -321,7 +319,7 @@ int CommandCompletions::Modules(CommandInterpreter &interpreter,
 }
 
 int CommandCompletions::Symbols(CommandInterpreter &interpreter,
-                                const char *partial_file_name,
+                                llvm::StringRef partial_file_name,
                                 int match_start_point, int max_return_elements,
                                 SearchFilter *searcher, bool &word_complete,
                                 StringList &matches) {
@@ -340,7 +338,7 @@ int CommandCompletions::Symbols(CommandInterpreter &interpreter,
 }
 
 int CommandCompletions::SettingsNames(
-    CommandInterpreter &interpreter, const char *partial_setting_name,
+    CommandInterpreter &interpreter, llvm::StringRef partial_setting_name,
     int match_start_point, int max_return_elements, SearchFilter *searcher,
     bool &word_complete, StringList &matches) {
   // Cache the full setting name list
@@ -365,7 +363,7 @@ int CommandCompletions::SettingsNames(
 }
 
 int CommandCompletions::PlatformPluginNames(
-    CommandInterpreter &interpreter, const char *partial_name,
+    CommandInterpreter &interpreter, llvm::StringRef partial_name,
     int match_start_point, int max_return_elements, SearchFilter *searcher,
     bool &word_complete, lldb_private::StringList &matches) {
   const uint32_t num_matches =
@@ -375,7 +373,7 @@ int CommandCompletions::PlatformPluginNames(
 }
 
 int CommandCompletions::ArchitectureNames(
-    CommandInterpreter &interpreter, const char *partial_name,
+    CommandInterpreter &interpreter, llvm::StringRef partial_name,
     int match_start_point, int max_return_elements, SearchFilter *searcher,
     bool &word_complete, lldb_private::StringList &matches) {
   const uint32_t num_matches = ArchSpec::AutoComplete(partial_name, matches);
@@ -384,7 +382,7 @@ int CommandCompletions::ArchitectureNames(
 }
 
 int CommandCompletions::VariablePath(
-    CommandInterpreter &interpreter, const char *partial_name,
+    CommandInterpreter &interpreter, llvm::StringRef partial_name,
     int match_start_point, int max_return_elements, SearchFilter *searcher,
     bool &word_complete, lldb_private::StringList &matches) {
   return Variable::AutoComplete(interpreter.GetExecutionContext(), partial_name,
@@ -392,7 +390,7 @@ int CommandCompletions::VariablePath(
 }
 
 CommandCompletions::Completer::Completer(CommandInterpreter &interpreter,
-                                         const char *completion_str,
+                                         llvm::StringRef completion_str,
                                          int match_start_point,
                                          int max_return_elements,
                                          StringList &matches)
@@ -408,8 +406,8 @@ CommandCompletions::Completer::~Completer() = default;
 
 CommandCompletions::SourceFileCompleter::SourceFileCompleter(
     CommandInterpreter &interpreter, bool include_support_files,
-    const char *completion_str, int match_start_point, int max_return_elements,
-    StringList &matches)
+    llvm::StringRef completion_str, int match_start_point,
+    int max_return_elements, StringList &matches)
     : CommandCompletions::Completer(interpreter, completion_str,
                                     match_start_point, max_return_elements,
                                     matches),
@@ -492,13 +490,13 @@ static bool regex_chars(const char comp) {
 }
 
 CommandCompletions::SymbolCompleter::SymbolCompleter(
-    CommandInterpreter &interpreter, const char *completion_str,
+    CommandInterpreter &interpreter, llvm::StringRef completion_str,
     int match_start_point, int max_return_elements, StringList &matches)
     : CommandCompletions::Completer(interpreter, completion_str,
                                     match_start_point, max_return_elements,
                                     matches) {
   std::string regex_str;
-  if (completion_str && completion_str[0]) {
+  if (!completion_str.empty()) {
     regex_str.append("^");
     regex_str.append(completion_str);
   } else {
@@ -555,7 +553,7 @@ size_t CommandCompletions::SymbolCompleter::DoCompletion(SearchFilter *filter) {
 // ModuleCompleter
 //----------------------------------------------------------------------
 CommandCompletions::ModuleCompleter::ModuleCompleter(
-    CommandInterpreter &interpreter, const char *completion_str,
+    CommandInterpreter &interpreter, llvm::StringRef completion_str,
     int match_start_point, int max_return_elements, StringList &matches)
     : CommandCompletions::Completer(interpreter, completion_str,
                                     match_start_point, max_return_elements,

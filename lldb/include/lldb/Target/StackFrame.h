@@ -313,7 +313,7 @@ public:
   ///     A shared pointer to the ValueObject described by var_expr.
   //------------------------------------------------------------------
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
-      const char *var_expr, lldb::DynamicValueType use_dynamic,
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Error &error);
 
   //------------------------------------------------------------------

@@ -56,6 +56,7 @@ add_llvm_library(LLVMCore
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/IR
-  )
 
-add_dependencies(LLVMCore intrinsics_gen)
+  DEPENDS
+  intrinsics_gen
+  )

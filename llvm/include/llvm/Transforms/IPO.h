@@ -225,6 +225,10 @@ ModulePass *createCrossDSOCFIPass();
 /// metadata.
 ModulePass *createWholeProgramDevirtPass();
 
+/// This pass splits globals into pieces for the benefit of whole-program
+/// devirtualization and control-flow integrity.
+ModulePass *createGlobalSplitPass();
+
 //===----------------------------------------------------------------------===//
 // SampleProfilePass - Loads sample profile data from disk and generates
 // IR metadata to reflect the profile.

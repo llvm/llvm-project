@@ -334,7 +334,7 @@ public:
 
 private:
   void addEntries();
-  void Add(Entry E) { Entries.push_back(E); }
+  void add(Entry E) { Entries.push_back(E); }
   uintX_t Size = 0;
 };
 

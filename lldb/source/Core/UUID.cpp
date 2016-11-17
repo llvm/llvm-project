@@ -126,59 +126,60 @@ static inline int xdigit_to_int(char ch) {
   return ch - '0';
 }
 
-size_t UUID::DecodeUUIDBytesFromCString(const char *p, ValueType &uuid_bytes,
-                                        const char **end,
-                                        uint32_t num_uuid_bytes) {
+llvm::StringRef UUID::DecodeUUIDBytesFromString(llvm::StringRef p,
+                                                ValueType &uuid_bytes,
+                                                uint32_t &bytes_decoded,
+                                                uint32_t num_uuid_bytes) {
+  ::memset(uuid_bytes, 0, sizeof(uuid_bytes));
   size_t uuid_byte_idx = 0;
-  if (p) {
-    while (*p) {
-      if (isxdigit(p[0]) && isxdigit(p[1])) {
-        int hi_nibble = xdigit_to_int(p[0]);
-        int lo_nibble = xdigit_to_int(p[1]);
-        // Translate the two hex nibble characters into a byte
-        uuid_bytes[uuid_byte_idx] = (hi_nibble << 4) + lo_nibble;
+  while (!p.empty()) {
+    if (isxdigit(p[0]) && isxdigit(p[1])) {
+      int hi_nibble = xdigit_to_int(p[0]);
+      int lo_nibble = xdigit_to_int(p[1]);
+      // Translate the two hex nibble characters into a byte
+      uuid_bytes[uuid_byte_idx] = (hi_nibble << 4) + lo_nibble;
 
-        // Skip both hex digits
-        p += 2;
+      // Skip both hex digits
+      p = p.drop_front(2);
 
-        // Increment the byte that we are decoding within the UUID value
-        // and break out if we are done
-        if (++uuid_byte_idx == num_uuid_bytes)
-          break;
-      } else if (*p == '-') {
-        // Skip dashes
-        p++;
-      } else {
-        // UUID values can only consist of hex characters and '-' chars
+      // Increment the byte that we are decoding within the UUID value
+      // and break out if we are done
+      if (++uuid_byte_idx == num_uuid_bytes)
         break;
-      }
+    } else if (p.front() == '-') {
+      // Skip dashes
+      p = p.drop_front();
+    } else {
+      // UUID values can only consist of hex characters and '-' chars
+      break;
     }
   }
-  if (end)
-    *end = p;
+
   // Clear trailing bytes to 0.
   for (uint32_t i = uuid_byte_idx; i < sizeof(ValueType); i++)
     uuid_bytes[i] = 0;
-  return uuid_byte_idx;
+  bytes_decoded = uuid_byte_idx;
+  return p;
 }
 size_t UUID::SetFromCString(const char *cstr, uint32_t num_uuid_bytes) {
   if (cstr == NULL)
     return 0;
 
-  const char *p = cstr;
+  llvm::StringRef orig(cstr);
+  llvm::StringRef p = orig;
 
   // Skip leading whitespace characters
-  while (isspace(*p))
-    ++p;
+  p = p.ltrim();
 
-  const size_t uuid_byte_idx =
-      UUID::DecodeUUIDBytesFromCString(p, m_uuid, &p, num_uuid_bytes);
+  uint32_t bytes_decoded = 0;
+  llvm::StringRef rest =
+      UUID::DecodeUUIDBytesFromString(p, m_uuid, bytes_decoded, num_uuid_bytes);
 
   // If we successfully decoded a UUID, return the amount of characters that
   // were consumed
-  if (uuid_byte_idx == num_uuid_bytes) {
+  if (bytes_decoded == num_uuid_bytes) {
     m_num_uuid_bytes = num_uuid_bytes;
-    return p - cstr;
+    return orig.size() - rest.size();
   }
 
   // Else return zero to indicate we were not able to parse a UUID value

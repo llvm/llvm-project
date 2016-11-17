@@ -67,7 +67,6 @@ public:
   bool addInstSelector() override;
   void addPreSched2() override;
   void addPreRegAlloc() override;
-  void addPreEmitPass() override;
 };
 } // namespace
 
@@ -107,7 +106,5 @@ void AVRPassConfig::addPreRegAlloc() {
 }
 
 void AVRPassConfig::addPreSched2() { addPass(createAVRExpandPseudoPass()); }
-
-void AVRPassConfig::addPreEmitPass() { }
 
 } // end of namespace llvm

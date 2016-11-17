@@ -101,11 +101,9 @@ lldb::OptionValueSP OptionValueFileSpec::DeepCopy() const {
   return OptionValueSP(new OptionValueFileSpec(*this));
 }
 
-size_t OptionValueFileSpec::AutoComplete(CommandInterpreter &interpreter,
-                                         const char *s, int match_start_point,
-                                         int max_return_elements,
-                                         bool &word_complete,
-                                         StringList &matches) {
+size_t OptionValueFileSpec::AutoComplete(
+    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
+    int max_return_elements, bool &word_complete, StringList &matches) {
   word_complete = false;
   matches.Clear();
   CommandCompletions::InvokeCommonCompletionCallbacks(

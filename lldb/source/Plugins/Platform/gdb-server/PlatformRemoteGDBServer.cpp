@@ -309,9 +309,12 @@ Error PlatformRemoteGDBServer::ConnectRemote(Args &args) {
       const char *url = args.GetArgumentAtIndex(0);
       if (!url)
         return Error("URL is null.");
-      if (!UriParser::Parse(url, m_platform_scheme, m_platform_hostname, port,
-                            path))
+      llvm::StringRef scheme, hostname, pathname;
+      if (!UriParser::Parse(url, scheme, hostname, port, pathname))
         return Error("Invalid URL: %s", url);
+      m_platform_scheme = scheme;
+      m_platform_hostname = hostname;
+      path = pathname;
 
       const ConnectionStatus status = m_gdb_client.Connect(url, &error);
       if (status == eConnectionStatusSuccess) {
