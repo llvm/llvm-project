@@ -539,7 +539,7 @@ CompareValueComplexity(SmallSet<std::pair<Value *, Value *>, 8> &EqCache,
           CompareValueComplexity(EqCache, LI, LInst->getOperand(Idx),
                                  RInst->getOperand(Idx), DepthLeft - 1);
       if (Result != 0)
-	return Result;
+        return Result;
       EqCache.insert({LV, RV});
     }
   }

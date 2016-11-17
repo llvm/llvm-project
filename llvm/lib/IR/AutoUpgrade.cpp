@@ -295,6 +295,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx512.mask.padd.") || // Added in 4.0
          Name.startswith("avx512.mask.psub.") || // Added in 4.0
          Name.startswith("avx512.mask.pmull.") || // Added in 4.0
+         Name.startswith("avx512.mask.cvtdq2pd.") || // Added in 4.0
+         Name.startswith("avx512.mask.cvtudq2pd.") || // Added in 4.0
          Name == "avx512.mask.add.pd.128" || // Added in 4.0
          Name == "avx512.mask.add.pd.256" || // Added in 4.0
          Name == "avx512.mask.add.ps.128" || // Added in 4.0
@@ -821,7 +823,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     } else if (IsX86 && (Name == "sse2.cvtdq2pd" ||
                          Name == "sse2.cvtps2pd" ||
                          Name == "avx.cvtdq2.pd.256" ||
-                         Name == "avx.cvt.ps2.pd.256")) {
+                         Name == "avx.cvt.ps2.pd.256" ||
+                         Name.startswith("avx512.mask.cvtdq2pd.") ||
+                         Name.startswith("avx512.mask.cvtudq2pd."))) {
       // Lossless i32/float to double conversion.
       // Extract the bottom elements if necessary and convert to double vector.
       Value *Src = CI->getArgOperand(0);
@@ -837,11 +841,18 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                           ShuffleMask);
       }
 
-      bool Int2Double = (StringRef::npos != Name.find("cvtdq2"));
-      if (Int2Double)
+      bool SInt2Double = (StringRef::npos != Name.find("cvtdq2"));
+      bool UInt2Double = (StringRef::npos != Name.find("cvtudq2"));
+      if (SInt2Double)
         Rep = Builder.CreateSIToFP(Rep, DstTy, "cvtdq2pd");
+      else if (UInt2Double)
+        Rep = Builder.CreateUIToFP(Rep, DstTy, "cvtudq2pd");
       else
         Rep = Builder.CreateFPExt(Rep, DstTy, "cvtps2pd");
+
+      if (CI->getNumArgOperands() == 3)
+        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                            CI->getArgOperand(1));
     } else if (IsX86 && Name.startswith("sse4a.movnt.")) {
       Module *M = F->getParent();
       SmallVector<Metadata *, 1> Elts;

@@ -30,9 +30,9 @@ define double @select_fcmp_oeq_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_oeq_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpeqsd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_oeq_f64:
@@ -71,10 +71,10 @@ define double @select_fcmp_ogt_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ogt_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpltsd %xmm0, %xmm1
-; SSE-NEXT:    andpd %xmm1, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm2, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm1, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm1
+; SSE-NEXT:    orps %xmm2, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ogt_f64:
@@ -113,10 +113,10 @@ define double @select_fcmp_oge_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_oge_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmplesd %xmm0, %xmm1
-; SSE-NEXT:    andpd %xmm1, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm2, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm1, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm1
+; SSE-NEXT:    orps %xmm2, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_oge_f64:
@@ -154,9 +154,9 @@ define double @select_fcmp_olt_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_olt_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpltsd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_olt_f64:
@@ -194,9 +194,9 @@ define double @select_fcmp_ole_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ole_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmplesd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ole_f64:
@@ -234,9 +234,9 @@ define double @select_fcmp_ord_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ord_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpordsd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ord_f64:
@@ -274,9 +274,9 @@ define double @select_fcmp_uno_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_uno_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpunordsd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_uno_f64:
@@ -314,9 +314,9 @@ define double @select_fcmp_ugt_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ugt_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpnlesd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ugt_f64:
@@ -354,9 +354,9 @@ define double @select_fcmp_uge_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_uge_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpnltsd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_uge_f64:
@@ -395,10 +395,10 @@ define double @select_fcmp_ult_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ult_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpnlesd %xmm0, %xmm1
-; SSE-NEXT:    andpd %xmm1, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm2, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm1, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm1
+; SSE-NEXT:    orps %xmm2, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ult_f64:
@@ -437,10 +437,10 @@ define double @select_fcmp_ule_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ule_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpnltsd %xmm0, %xmm1
-; SSE-NEXT:    andpd %xmm1, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm2, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm1, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm1
+; SSE-NEXT:    orps %xmm2, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ule_f64:
@@ -478,9 +478,9 @@ define double @select_fcmp_une_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_une_f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    cmpneqsd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    andnpd %xmm3, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_une_f64:

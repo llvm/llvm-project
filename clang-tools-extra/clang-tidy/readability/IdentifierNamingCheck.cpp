@@ -677,6 +677,15 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
 
     addUsage(NamingCheckFailures, Decl->getParent(),
              Decl->getNameInfo().getSourceRange());
+
+    for (const auto *Init : Decl->inits()) {
+      if (!Init->isWritten() || Init->isInClassMemberInitializer())
+        continue;
+      if (const auto *FD = Init->getAnyMember())
+        addUsage(NamingCheckFailures, FD, SourceRange(Init->getMemberLocation()));
+      // Note: delegating constructors and base class initializers are handled
+      // via the "typeLoc" matcher.
+    }
     return;
   }
 

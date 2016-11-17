@@ -1564,12 +1564,9 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
          "Unexpected node type for MOV32ri64");
   N = N.getOperand(0);
 
-  if (N->getOpcode() != ISD::TargetConstantPool &&
-      N->getOpcode() != ISD::TargetJumpTable &&
-      N->getOpcode() != ISD::TargetGlobalAddress &&
-      N->getOpcode() != ISD::TargetExternalSymbol &&
-      N->getOpcode() != ISD::MCSymbol &&
-      N->getOpcode() != ISD::TargetBlockAddress)
+  // At least GNU as does not accept 'movl' for TPOFF relocations.
+  // FIXME: We could use 'movl' when we know we are targeting MC.
+  if (N->getOpcode() == ISD::TargetGlobalTLSAddress)
     return false;
 
   Imm = N;
@@ -1715,16 +1712,8 @@ bool X86DAGToDAGISel::selectRelocImm(SDValue N, SDValue &Op) {
   if (N.getOpcode() != X86ISD::Wrapper)
     return false;
 
-  unsigned Opc = N.getOperand(0)->getOpcode();
-  if (Opc == ISD::TargetConstantPool || Opc == ISD::TargetJumpTable ||
-      Opc == ISD::TargetExternalSymbol || Opc == ISD::TargetGlobalAddress ||
-      Opc == ISD::TargetGlobalTLSAddress || Opc == ISD::MCSymbol ||
-      Opc == ISD::TargetBlockAddress) {
-    Op = N.getOperand(0);
-    return true;
-  }
-
-  return false;
+  Op = N.getOperand(0);
+  return true;
 }
 
 bool X86DAGToDAGISel::tryFoldLoad(SDNode *P, SDValue N,

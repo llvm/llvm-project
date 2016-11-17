@@ -4552,3 +4552,66 @@ define <4 x i64>@test_int_x86_avx512_mask_psrav_q_256(<4 x i64> %x0, <4 x i64> %
   ret <4 x i64> %res4
 }
 
+declare <2 x double> @llvm.x86.avx512.mask.cvtdq2pd.128(<4 x i32>, <2 x double>, i8)
+
+define <2 x double>@test_int_x86_avx512_mask_cvt_dq2pd_128(<4 x i32> %x0, <2 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_cvt_dq2pd_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %xmm2 ## encoding: [0x62,0xf1,0x7e,0x08,0xe6,0xd0]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0x7e,0x09,0xe6,0xc8]
+; CHECK-NEXT:    vaddpd %xmm2, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0xf5,0x08,0x58,0xc2]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <2 x double> @llvm.x86.avx512.mask.cvtdq2pd.128(<4 x i32> %x0, <2 x double> %x1, i8 %x2)
+  %res1 = call <2 x double> @llvm.x86.avx512.mask.cvtdq2pd.128(<4 x i32> %x0, <2 x double> %x1, i8 -1)
+  %res2 = fadd <2 x double> %res, %res1
+  ret <2 x double> %res2
+}
+
+declare <4 x double> @llvm.x86.avx512.mask.cvtdq2pd.256(<4 x i32>, <4 x double>, i8)
+
+define <4 x double>@test_int_x86_avx512_mask_cvt_dq2pd_256(<4 x i32> %x0, <4 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_cvt_dq2pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm2 ## encoding: [0x62,0xf1,0x7e,0x28,0xe6,0xd0]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm1 {%k1} ## encoding: [0x62,0xf1,0x7e,0x29,0xe6,0xc8]
+; CHECK-NEXT:    vaddpd %ymm2, %ymm1, %ymm0 ## encoding: [0x62,0xf1,0xf5,0x28,0x58,0xc2]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <4 x double> @llvm.x86.avx512.mask.cvtdq2pd.256(<4 x i32> %x0, <4 x double> %x1, i8 %x2)
+  %res1 = call <4 x double> @llvm.x86.avx512.mask.cvtdq2pd.256(<4 x i32> %x0, <4 x double> %x1, i8 -1)
+  %res2 = fadd <4 x double> %res, %res1
+  ret <4 x double> %res2
+}
+
+declare <2 x double> @llvm.x86.avx512.mask.cvtudq2pd.128(<4 x i32>, <2 x double>, i8)
+
+define <2 x double>@test_int_x86_avx512_mask_cvt_udq2pd_128(<4 x i32> %x0, <2 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_cvt_udq2pd_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtudq2pd %xmm0, %xmm2 ## encoding: [0x62,0xf1,0x7e,0x08,0x7a,0xd0]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vcvtudq2pd %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0x7e,0x09,0x7a,0xc8]
+; CHECK-NEXT:    vaddpd %xmm2, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0xf5,0x08,0x58,0xc2]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <2 x double> @llvm.x86.avx512.mask.cvtudq2pd.128(<4 x i32> %x0, <2 x double> %x1, i8 %x2)
+  %res1 = call <2 x double> @llvm.x86.avx512.mask.cvtudq2pd.128(<4 x i32> %x0, <2 x double> %x1, i8 -1)
+  %res2 = fadd <2 x double> %res, %res1
+  ret <2 x double> %res2
+}
+
+declare <4 x double> @llvm.x86.avx512.mask.cvtudq2pd.256(<4 x i32>, <4 x double>, i8)
+
+define <4 x double>@test_int_x86_avx512_mask_cvt_udq2pd_256(<4 x i32> %x0, <4 x double> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_cvt_udq2pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtudq2pd %xmm0, %ymm2 ## encoding: [0x62,0xf1,0x7e,0x28,0x7a,0xd0]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vcvtudq2pd %xmm0, %ymm1 {%k1} ## encoding: [0x62,0xf1,0x7e,0x29,0x7a,0xc8]
+; CHECK-NEXT:    vaddpd %ymm2, %ymm1, %ymm0 ## encoding: [0x62,0xf1,0xf5,0x28,0x58,0xc2]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <4 x double> @llvm.x86.avx512.mask.cvtudq2pd.256(<4 x i32> %x0, <4 x double> %x1, i8 %x2)
+  %res1 = call <4 x double> @llvm.x86.avx512.mask.cvtudq2pd.256(<4 x i32> %x0, <4 x double> %x1, i8 -1)
+  %res2 = fadd <4 x double> %res, %res1
+  ret <4 x double> %res2
+}

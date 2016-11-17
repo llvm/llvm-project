@@ -5,6 +5,7 @@ add_llvm_library(LLVMCoroutines
   CoroElide.cpp
   CoroFrame.cpp
   CoroSplit.cpp  
-  )
 
-add_dependencies(LLVMCoroutines intrinsics_gen)
+  DEPENDS
+  intrinsics_gen
+  )

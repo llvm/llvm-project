@@ -148,6 +148,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   switch (MF.getTarget().getTargetTriple().getArch()) {
   case Triple::ArchType::arm:
   case Triple::ArchType::thumb:
+  case Triple::ArchType::aarch64:
     // For the architectures which don't have a single return instruction
     prependRetWithPatchableExit(MF, TII);
     break;

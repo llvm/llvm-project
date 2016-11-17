@@ -180,61 +180,63 @@ int LLLexer::getNextChar() {
 }
 
 lltok::Kind LLLexer::LexToken() {
-  TokStart = CurPtr;
+  while (true) {
+    TokStart = CurPtr;
 
-  int CurChar = getNextChar();
-  switch (CurChar) {
-  default:
-    // Handle letters: [a-zA-Z_]
-    if (isalpha(static_cast<unsigned char>(CurChar)) || CurChar == '_')
-      return LexIdentifier();
+    int CurChar = getNextChar();
+    switch (CurChar) {
+    default:
+      // Handle letters: [a-zA-Z_]
+      if (isalpha(static_cast<unsigned char>(CurChar)) || CurChar == '_')
+        return LexIdentifier();
 
-    return lltok::Error;
-  case EOF: return lltok::Eof;
-  case 0:
-  case ' ':
-  case '\t':
-  case '\n':
-  case '\r':
-    // Ignore whitespace.
-    return LexToken();
-  case '+': return LexPositive();
-  case '@': return LexAt();
-  case '$': return LexDollar();
-  case '%': return LexPercent();
-  case '"': return LexQuote();
-  case '.':
-    if (const char *Ptr = isLabelTail(CurPtr)) {
-      CurPtr = Ptr;
-      StrVal.assign(TokStart, CurPtr-1);
-      return lltok::LabelStr;
+      return lltok::Error;
+    case EOF: return lltok::Eof;
+    case 0:
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+      // Ignore whitespace.
+      continue;
+    case '+': return LexPositive();
+    case '@': return LexAt();
+    case '$': return LexDollar();
+    case '%': return LexPercent();
+    case '"': return LexQuote();
+    case '.':
+      if (const char *Ptr = isLabelTail(CurPtr)) {
+        CurPtr = Ptr;
+        StrVal.assign(TokStart, CurPtr-1);
+        return lltok::LabelStr;
+      }
+      if (CurPtr[0] == '.' && CurPtr[1] == '.') {
+        CurPtr += 2;
+        return lltok::dotdotdot;
+      }
+      return lltok::Error;
+    case ';':
+      SkipLineComment();
+      continue;
+    case '!': return LexExclaim();
+    case '#': return LexHash();
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+    case '-':
+      return LexDigitOrNegative();
+    case '=': return lltok::equal;
+    case '[': return lltok::lsquare;
+    case ']': return lltok::rsquare;
+    case '{': return lltok::lbrace;
+    case '}': return lltok::rbrace;
+    case '<': return lltok::less;
+    case '>': return lltok::greater;
+    case '(': return lltok::lparen;
+    case ')': return lltok::rparen;
+    case ',': return lltok::comma;
+    case '*': return lltok::star;
+    case '|': return lltok::bar;
     }
-    if (CurPtr[0] == '.' && CurPtr[1] == '.') {
-      CurPtr += 2;
-      return lltok::dotdotdot;
-    }
-    return lltok::Error;
-  case ';':
-    SkipLineComment();
-    return LexToken();
-  case '!': return LexExclaim();
-  case '#': return LexHash();
-  case '0': case '1': case '2': case '3': case '4':
-  case '5': case '6': case '7': case '8': case '9':
-  case '-':
-    return LexDigitOrNegative();
-  case '=': return lltok::equal;
-  case '[': return lltok::lsquare;
-  case ']': return lltok::rsquare;
-  case '{': return lltok::lbrace;
-  case '}': return lltok::rbrace;
-  case '<': return lltok::less;
-  case '>': return lltok::greater;
-  case '(': return lltok::lparen;
-  case ')': return lltok::rparen;
-  case ',': return lltok::comma;
-  case '*': return lltok::star;
-  case '|': return lltok::bar;
   }
 }
 

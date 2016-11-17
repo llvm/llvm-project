@@ -136,6 +136,8 @@ a:
         neg       $2, $3         # CHECK: neg  $2, $3            # encoding: [0x00,0x03,0x10,0x22]
         negu      $2             # CHECK: negu $2, $2            # encoding: [0x00,0x02,0x10,0x23]
         negu      $2,$3          # CHECK: negu $2, $3            # encoding: [0x00,0x03,0x10,0x23]
+        not       $3, $4         # CHECK: not $3, $4             # encoding: [0x00,0x80,0x18,0x27]
+        not       $3             # CHECK: not $3, $3             # encoding: [0x00,0x60,0x18,0x27]
         pref    1, 8($5)         # CHECK: pref 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x35]
         # FIXME: Use the code generator in order to print the .set directives
         #        instead of the instruction printer.

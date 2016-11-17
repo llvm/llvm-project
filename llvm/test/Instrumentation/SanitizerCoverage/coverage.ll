@@ -49,7 +49,7 @@ entry:
 
 ; CHECK1-LABEL: define internal void @sancov.module_ctor
 ; CHECK1-NOT: ret
-; CHECK1: call void @__sanitizer_cov_module_init({{.*}}, i64 2,
+; CHECK1: call void @__sanitizer_cov_module_init({{.*}}, i64 2, {{.*}}@__sancov_gen_modname
 ; CHECK1: ret
 
 ; CHECK_WITH_CHECK-LABEL: define void @foo

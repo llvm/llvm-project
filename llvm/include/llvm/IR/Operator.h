@@ -299,9 +299,9 @@ public:
     return FastMathFlags(SubclassOptionalData);
   }
 
-  /// \brief Get the maximum error permitted by this operation in ULPs.  An
-  /// accuracy of 0.0 means that the operation should be performed with the
-  /// default precision.
+  /// Get the maximum error permitted by this operation in ULPs. An accuracy of
+  /// 0.0 means that the operation should be performed with the default
+  /// precision.
   float getFPAccuracy() const;
 
   static inline bool classof(const Instruction *I) {

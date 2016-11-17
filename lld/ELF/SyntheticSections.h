@@ -11,6 +11,7 @@
 #define LLD_ELF_SYNTHETIC_SECTION_H
 
 #include "InputSection.h"
+#include "OutputSections.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace lld {
@@ -147,13 +148,39 @@ public:
   size_t getSize() const override { return Size; }
   void finalize() override;
   void addEntry(SymbolBody &Sym);
-  void addMipsEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
+  bool addDynTlsEntry(SymbolBody &Sym);
+  bool addTlsIndex();
+  bool empty() const { return Entries.empty(); }
+  uintX_t getGlobalDynAddr(const SymbolBody &B) const;
+  uintX_t getGlobalDynOffset(const SymbolBody &B) const;
+
+  uintX_t getTlsIndexVA() { return this->getVA() + TlsIndexOff; }
+  uint32_t getTlsIndexOff() const { return TlsIndexOff; }
+
+  // Flag to force GOT to be in output if we have relocations
+  // that relies on its address.
+  bool HasGotOffRel = false;
+
+private:
+  std::vector<const SymbolBody *> Entries;
+  uint32_t TlsIndexOff = -1;
+  uintX_t Size = 0;
+};
+
+template <class ELFT> class MipsGotSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::uint uintX_t;
+
+public:
+  MipsGotSection();
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return Size; }
+  void finalize() override;
+  void addEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
   bool empty() const { return MipsPageEntries == 0 && Entries.empty(); }
   uintX_t getMipsLocalPageOffset(uintX_t Addr);
   uintX_t getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const;
-  uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
 
   // Returns the symbol which corresponds to the first entry of the global part
@@ -170,12 +197,7 @@ public:
   // after 'local' and 'global' entries.
   uintX_t getMipsTlsOffset() const;
 
-  uintX_t getTlsIndexVA() { return this->getVA() + TlsIndexOff; }
   uint32_t getTlsIndexOff() const { return TlsIndexOff; }
-
-  // Flag to force GOT to be in output if we have relocations
-  // that relies on its address.
-  bool HasGotOffRel = false;
 
 private:
   std::vector<const SymbolBody *> Entries;
@@ -199,9 +221,6 @@ private:
   MipsGotEntries MipsLocal;
   MipsGotEntries MipsLocal32;
   MipsGotEntries MipsGlobal;
-
-  // Write MIPS-specific parts of the GOT.
-  void writeMipsGot(uint8_t *Buf);
 };
 
 template <class ELFT>
@@ -316,7 +335,7 @@ public:
 
 private:
   void addEntries();
-  void Add(Entry E) { Entries.push_back(E); }
+  void add(Entry E) { Entries.push_back(E); }
   uintX_t Size = 0;
 };
 
@@ -342,6 +361,37 @@ private:
   std::vector<DynamicReloc<ELFT>> Relocs;
 };
 
+template <class ELFT>
+class SymbolTableSection final : public SyntheticSection<ELFT> {
+public:
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::SymRange Elf_Sym_Range;
+  typedef typename ELFT::uint uintX_t;
+  SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
+
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return getNumSymbols() * sizeof(Elf_Sym); }
+  void addSymbol(SymbolBody *Body);
+  StringTableSection<ELFT> &getStrTabSec() const { return StrTabSec; }
+  unsigned getNumSymbols() const { return NumLocals + Symbols.size() + 1; }
+
+  ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
+
+  unsigned NumLocals = 0;
+  StringTableSection<ELFT> &StrTabSec;
+
+private:
+  void writeLocalSymbols(uint8_t *&Buf);
+  void writeGlobalSymbols(uint8_t *Buf);
+
+  const OutputSectionBase *getOutputSection(SymbolBody *Sym);
+
+  // A vector of symbols and their string table offsets.
+  std::vector<SymbolTableEntry> Symbols;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -352,7 +402,9 @@ template <class ELFT> struct In {
   static InputSection<ELFT> *Common;
   static DynamicSection<ELFT> *Dynamic;
   static StringTableSection<ELFT> *DynStrTab;
+  static SymbolTableSection<ELFT> *DynSymTab;
   static GotSection<ELFT> *Got;
+  static MipsGotSection<ELFT> *MipsGot;
   static GotPltSection<ELFT> *GotPlt;
   static InputSection<ELFT> *Interp;
   static MipsAbiFlagsSection<ELFT> *MipsAbiFlags;
@@ -362,13 +414,16 @@ template <class ELFT> struct In {
   static RelocationSection<ELFT> *RelaPlt;
   static StringTableSection<ELFT> *ShStrTab;
   static StringTableSection<ELFT> *StrTab;
+  static SymbolTableSection<ELFT> *SymTab;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::DynStrTab;
+template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
+template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
 template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
 template <class ELFT> MipsAbiFlagsSection<ELFT> *In<ELFT>::MipsAbiFlags;
@@ -378,6 +433,7 @@ template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::StrTab;
+template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::SymTab;
 } // namespace elf
 } // namespace lld
 

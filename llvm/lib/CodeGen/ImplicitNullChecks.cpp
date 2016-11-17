@@ -187,7 +187,10 @@ void HazardDetector::rememberInstruction(MachineInstr *MI) {
   assert(!isClobbered() &&
          "Don't add instructions to a clobbered hazard detector");
 
-  if (MI->mayStore() || MI->hasUnmodeledSideEffects()) {
+  // There may be readonly calls that we can handle in theory, but for
+  // now we don't bother since we don't handle callee clobbered
+  // registers.
+  if (MI->isCall() || MI->mayStore() || MI->hasUnmodeledSideEffects()) {
     hasSeenClobber = true;
     return;
   }
@@ -263,9 +266,23 @@ bool HazardDetector::isSafeToHoist(MachineInstr *MI,
             return true;
           if (MO.isUse())
             return false;
-          assert((!MO.isDef() || RegDefs.count(MO.getReg())) &&
+          assert(MO.isDef() &&
+                 "Register MachineOperands must either be uses or be defs.");
+          assert(RegDefs.count(MO.getReg()) &&
                  "All defs must be tracked in RegDefs by now!");
-          return !MO.isDef() || RegDefs.find(MO.getReg())->second == MI;
+
+          for (unsigned Reg : RegUses)
+            if (TRI.regsOverlap(Reg, MO.getReg()))
+              return false; // We found a write-after-read
+
+          for (auto &OtherDef : RegDefs) {
+            unsigned OtherReg = OtherDef.first;
+            MachineInstr *OtherMI = OtherDef.second;
+            if (OtherMI != MI && TRI.regsOverlap(OtherReg, MO.getReg()))
+              return false;
+          }
+
+          return true;
         };
 
         if (!all_of(MI->operands(), IsMIOperandSafe))

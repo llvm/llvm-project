@@ -171,16 +171,9 @@ below).  However, we have heard from implementers that it's possible to get
 into situations where nvcc will omit a call to an ``std::complex`` function,
 especially when compiling without optimizations.
 
-clang does not yet support ``std::complex``.  Because we interpret the
-"wrong-side rule" more strictly than nvcc, ``std::complex`` doesn't work in
-``__device__`` or ``__host__ __device__`` code.
-
-In the meantime, you can get limited ``std::complex`` support in clang by
-building your code for C++14.  In clang, all ``constexpr`` functions are always
-implicitly ``__host__ __device__`` (this corresponds to nvcc's
-``--relaxed-constexpr`` flag).  In C++14, many ``std::complex`` functions are
-``constexpr``, so you can use these with clang.  (nvcc does not currently
-support C++14.)
+As of 2016-11-16, clang supports ``std::complex`` without these caveats.  It is
+tested with libstdc++ 4.8.5 and newer, but is known to work only with libc++
+newer than 2016-11-16.
 
 ``<algorithm>``
 ---------------

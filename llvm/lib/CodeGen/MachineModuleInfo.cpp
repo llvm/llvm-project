@@ -9,6 +9,7 @@
 
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -57,7 +59,7 @@ public:
 class MMIAddrLabelMap {
   MCContext &Context;
   struct AddrLabelSymEntry {
-    /// Symbols - The symbols for the label.
+    /// The symbols for the label.
     TinyPtrVector<MCSymbol *> Symbols;
 
     Function *Fn;   // The containing function of the BasicBlock.
@@ -66,14 +68,13 @@ class MMIAddrLabelMap {
 
   DenseMap<AssertingVH<BasicBlock>, AddrLabelSymEntry> AddrLabelSymbols;
 
-  /// BBCallbacks - Callbacks for the BasicBlock's that we have entries for.  We
-  /// use this so we get notified if a block is deleted or RAUWd.
+  /// Callbacks for the BasicBlock's that we have entries for.  We use this so
+  /// we get notified if a block is deleted or RAUWd.
   std::vector<MMIAddrLabelMapCallbackPtr> BBCallbacks;
 
-  /// DeletedAddrLabelsNeedingEmission - This is a per-function list of symbols
-  /// whose corresponding BasicBlock got deleted.  These symbols need to be
-  /// emitted at some point in the file, so AsmPrinter emits them after the
-  /// function body.
+  /// This is a per-function list of symbols whose corresponding BasicBlock got
+  /// deleted.  These symbols need to be emitted at some point in the file, so
+  /// AsmPrinter emits them after the function body.
   DenseMap<AssertingVH<Function>, std::vector<MCSymbol*> >
     DeletedAddrLabelsNeedingEmission;
 public:
@@ -115,8 +116,7 @@ ArrayRef<MCSymbol *> MMIAddrLabelMap::getAddrLabelSymbolToEmit(BasicBlock *BB) {
   return Entry.Symbols;
 }
 
-/// takeDeletedSymbolsForFunction - If we have any deleted symbols for F, return
-/// them.
+/// If we have any deleted symbols for F, return them.
 void MMIAddrLabelMap::
 takeDeletedSymbolsForFunction(Function *F, std::vector<MCSymbol*> &Result) {
   DenseMap<AssertingVH<Function>, std::vector<MCSymbol*> >::iterator I =
@@ -229,8 +229,6 @@ bool MachineModuleInfo::doFinalization(Module &M) {
   return false;
 }
 
-/// EndFunction - Discard function meta information.
-///
 void MachineModuleInfo::EndFunction() {
   // Clean up frame info.
   FrameInstructions.clear();
@@ -250,9 +248,6 @@ void MachineModuleInfo::EndFunction() {
 
 //===- Address of Block Management ----------------------------------------===//
 
-/// getAddrLabelSymbolToEmit - Return the symbol to be used for the specified
-/// basic block when its address is taken.  If other blocks were RAUW'd to
-/// this one, we may have to emit them as well, return the whole set.
 ArrayRef<MCSymbol *>
 MachineModuleInfo::getAddrLabelSymbolToEmit(const BasicBlock *BB) {
   // Lazily create AddrLabelSymbols.
@@ -261,11 +256,6 @@ MachineModuleInfo::getAddrLabelSymbolToEmit(const BasicBlock *BB) {
  return AddrLabelSymbols->getAddrLabelSymbolToEmit(const_cast<BasicBlock*>(BB));
 }
 
-
-/// takeDeletedSymbolsForFunction - If the specified function has had any
-/// references to address-taken blocks generated, but the block got deleted,
-/// return the symbol now so we can emit it.  This prevents emitting a
-/// reference to a symbol that has no definition.
 void MachineModuleInfo::
 takeDeletedSymbolsForFunction(const Function *F,
                               std::vector<MCSymbol*> &Result) {
@@ -277,8 +267,6 @@ takeDeletedSymbolsForFunction(const Function *F,
 
 //===- EH -----------------------------------------------------------------===//
 
-/// getOrCreateLandingPadInfo - Find or create an LandingPadInfo for the
-/// specified MachineBasicBlock.
 LandingPadInfo &MachineModuleInfo::getOrCreateLandingPadInfo
     (MachineBasicBlock *LandingPad) {
   unsigned N = LandingPads.size();
@@ -292,8 +280,6 @@ LandingPadInfo &MachineModuleInfo::getOrCreateLandingPadInfo
   return LandingPads[N];
 }
 
-/// addInvoke - Provide the begin and end labels of an invoke style call and
-/// associate it with a try landing pad block.
 void MachineModuleInfo::addInvoke(MachineBasicBlock *LandingPad,
                                   MCSymbol *BeginLabel, MCSymbol *EndLabel) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
@@ -301,8 +287,6 @@ void MachineModuleInfo::addInvoke(MachineBasicBlock *LandingPad,
   LP.EndLabels.push_back(EndLabel);
 }
 
-/// addLandingPad - Provide the label of a try LandingPad block.
-///
 MCSymbol *MachineModuleInfo::addLandingPad(MachineBasicBlock *LandingPad) {
   MCSymbol *LandingPadLabel = Context.createTempSymbol();
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
@@ -317,8 +301,6 @@ void MachineModuleInfo::addPersonality(const Function *Personality) {
   Personalities.push_back(Personality);
 }
 
-/// addCatchTypeInfo - Provide the catch typeinfo for a landing pad.
-///
 void MachineModuleInfo::
 addCatchTypeInfo(MachineBasicBlock *LandingPad,
                  ArrayRef<const GlobalValue *> TyInfo) {
@@ -327,8 +309,6 @@ addCatchTypeInfo(MachineBasicBlock *LandingPad,
     LP.TypeIds.push_back(getTypeIDFor(TyInfo[N - 1]));
 }
 
-/// addFilterTypeInfo - Provide the filter typeinfo for a landing pad.
-///
 void MachineModuleInfo::
 addFilterTypeInfo(MachineBasicBlock *LandingPad,
                   ArrayRef<const GlobalValue *> TyInfo) {
@@ -339,8 +319,6 @@ addFilterTypeInfo(MachineBasicBlock *LandingPad,
   LP.TypeIds.push_back(getFilterIDFor(IdsInFilter));
 }
 
-/// addCleanup - Add a cleanup action for a landing pad.
-///
 void MachineModuleInfo::addCleanup(MachineBasicBlock *LandingPad) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
   LP.TypeIds.push_back(0);
@@ -365,8 +343,6 @@ void MachineModuleInfo::addSEHCleanupHandler(MachineBasicBlock *LandingPad,
   LP.SEHHandlers.push_back(Handler);
 }
 
-/// TidyLandingPads - Remap landing pad labels and remove any deleted landing
-/// pads.
 void MachineModuleInfo::TidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap) {
   for (unsigned i = 0; i != LandingPads.size(); ) {
     LandingPadInfo &LandingPad = LandingPads[i];
@@ -411,15 +387,11 @@ void MachineModuleInfo::TidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap) {
   }
 }
 
-/// setCallSiteLandingPad - Map the landing pad's EH symbol to the call site
-/// indexes.
 void MachineModuleInfo::setCallSiteLandingPad(MCSymbol *Sym,
                                               ArrayRef<unsigned> Sites) {
   LPadToCallSiteMap[Sym].append(Sites.begin(), Sites.end());
 }
 
-/// getTypeIDFor - Return the type id for the specified typeinfo.  This is
-/// function wide.
 unsigned MachineModuleInfo::getTypeIDFor(const GlobalValue *TI) {
   for (unsigned i = 0, N = TypeInfos.size(); i != N; ++i)
     if (TypeInfos[i] == TI) return i + 1;
@@ -428,8 +400,6 @@ unsigned MachineModuleInfo::getTypeIDFor(const GlobalValue *TI) {
   return TypeInfos.size();
 }
 
-/// getFilterIDFor - Return the filter id for the specified typeinfos.  This is
-/// function wide.
 int MachineModuleInfo::getFilterIDFor(std::vector<unsigned> &TyIds) {
   // If the new filter coincides with the tail of an existing filter, then
   // re-use the existing filter.  Folding filters more than this requires
@@ -517,3 +487,52 @@ FunctionPass *createFreeMachineFunctionPass() {
   return new FreeMachineFunction();
 }
 } // end namespace llvm
+
+//===- MMI building helpers -----------------------------------------------===//
+
+void llvm::computeUsesVAFloatArgument(const CallInst &I,
+                                      MachineModuleInfo &MMI) {
+  FunctionType *FT =
+      cast<FunctionType>(I.getCalledValue()->getType()->getContainedType(0));
+  if (FT->isVarArg() && !MMI.usesVAFloatArgument()) {
+    for (unsigned i = 0, e = I.getNumArgOperands(); i != e; ++i) {
+      Type *T = I.getArgOperand(i)->getType();
+      for (auto i : post_order(T)) {
+        if (i->isFloatingPointTy()) {
+          MMI.setUsesVAFloatArgument(true);
+          return;
+        }
+      }
+    }
+  }
+}
+
+void llvm::addLandingPadInfo(const LandingPadInst &I, MachineModuleInfo &MMI,
+                             MachineBasicBlock &MBB) {
+  if (const auto *PF = dyn_cast<Function>(
+          I.getParent()->getParent()->getPersonalityFn()->stripPointerCasts()))
+    MMI.addPersonality(PF);
+
+  if (I.isCleanup())
+    MMI.addCleanup(&MBB);
+
+  // FIXME: New EH - Add the clauses in reverse order. This isn't 100% correct,
+  //        but we need to do it this way because of how the DWARF EH emitter
+  //        processes the clauses.
+  for (unsigned i = I.getNumClauses(); i != 0; --i) {
+    Value *Val = I.getClause(i - 1);
+    if (I.isCatch(i - 1)) {
+      MMI.addCatchTypeInfo(&MBB,
+                           dyn_cast<GlobalValue>(Val->stripPointerCasts()));
+    } else {
+      // Add filters in a list.
+      Constant *CVal = cast<Constant>(Val);
+      SmallVector<const GlobalValue *, 4> FilterList;
+      for (User::op_iterator II = CVal->op_begin(), IE = CVal->op_end();
+           II != IE; ++II)
+        FilterList.push_back(cast<GlobalValue>((*II)->stripPointerCasts()));
+
+      MMI.addFilterTypeInfo(&MBB, FilterList);
+    }
+  }
+}

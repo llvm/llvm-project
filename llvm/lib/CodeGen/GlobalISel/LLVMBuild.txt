@@ -19,4 +19,4 @@
 type = Library
 name = GlobalISel
 parent = CodeGen
-required_libraries = Analysis CodeGen Core MC SelectionDAG Support Target TransformUtils
+required_libraries = Analysis CodeGen Core MC Support Target TransformUtils

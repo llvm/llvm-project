@@ -35,6 +35,8 @@ add_lld_library(lldCOFF
   LINK_LIBS
   lldCore
   ${PTHREAD_LIB}
-  )
 
-add_dependencies(lldCOFF COFFOptionsTableGen intrinsics_gen)
+  DEPENDS
+  COFFOptionsTableGen
+  intrinsics_gen
+  )
