@@ -41,9 +41,6 @@ public:
   Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Error
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   bool Clear() override {
     m_values.clear();
@@ -68,11 +65,11 @@ public:
   lldb::OptionValueSP GetValueForKey(const ConstString &key) const;
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
-                                  const char *name, bool will_modify,
+                                  llvm::StringRef name, bool will_modify,
                                   Error &error) const override;
 
   Error SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
-                    const char *name, const char *value) override;
+    llvm::StringRef name, llvm::StringRef value) override;
 
   bool SetValueForKey(const ConstString &key,
                       const lldb::OptionValueSP &value_sp,

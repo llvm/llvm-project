@@ -10,15 +10,22 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAMVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAMVISITOR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamRef.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <cstdint>
 
 namespace llvm {
+
 namespace codeview {
+
 struct LineColumnEntry {
   support::ulittle32_t NameIndex;
   msf::FixedStreamArray<LineNumberEntry> LineNumbers;
@@ -36,7 +43,7 @@ typedef msf::VarStreamArray<FileChecksumEntry> FileChecksumArray;
 
 class IModuleSubstreamVisitor {
 public:
-  virtual ~IModuleSubstreamVisitor() {}
+  virtual ~IModuleSubstreamVisitor() = default;
 
   virtual Error visitUnknown(ModuleSubstreamKind Kind,
                              msf::ReadableStreamRef Data) = 0;
@@ -60,9 +67,10 @@ public:
 
 Error visitModuleSubstream(const ModuleSubstream &R,
                            IModuleSubstreamVisitor &V);
-} // namespace codeview
+} // end namespace codeview
 
 namespace msf {
+
 template <> class VarStreamArrayExtractor<codeview::LineColumnEntry> {
 public:
   VarStreamArrayExtractor(const codeview::LineSubstreamHeader *Header)
@@ -121,7 +129,8 @@ public:
   }
 };
 
-} // namespace msf
-} // namespace llvm
+} // end namespace msf
+
+} // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAMVISITOR_H

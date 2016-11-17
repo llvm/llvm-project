@@ -11,19 +11,18 @@
 #define LLVM_DEBUGINFO_CODEVIEW_CODEVIEWRECORDIO_H
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/Support/Error.h"
-
+#include <cassert>
+#include <cstdint>
 #include <type_traits>
-
-#include <stdint.h>
 
 namespace llvm {
 namespace codeview {
@@ -150,7 +149,8 @@ private:
   msf::StreamReader *Reader = nullptr;
   msf::StreamWriter *Writer = nullptr;
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_CODEVIEWRECORDIO_H

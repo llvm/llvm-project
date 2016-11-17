@@ -18,7 +18,7 @@ headers to behave poorly, and should be fixed before introducing a module
 map.
 
 :program:`modularize` also has an assistant mode option for generating
-a module map file based on the provided header list.  The generated file
+a module map file based on the provided header list. The generated file
 is a functional module map that can be used as a starting point for a
 module.map file.
 
@@ -115,10 +115,10 @@ Module Map Coverage Check
 =========================
 
 The coverage check uses the Clang library to read and parse the
-module map file.  Starting at the module map file directory, or just the
+module map file. Starting at the module map file directory, or just the
 include paths, if specified, it will collect the names of all the files it
 considers headers (no extension, .h, or .inc--if you need more, modify the
-isHeader function).  It then compares the headers against those referenced
+isHeader function). It then compares the headers against those referenced
 in the module map, either explicitly named, or implicitly named via an
 umbrella directory or umbrella file, as parsed by the ModuleMap object.
 If headers are found which are not referenced or covered by an umbrella
@@ -128,7 +128,7 @@ will return an error code of 1. If no problems are found, an error code of
 
 Note that in the case of umbrella headers, this tool invokes the compiler
 to preprocess the file, and uses a callback to collect the header files
-included by the umbrella header or any of its nested includes.  If any
+included by the umbrella header or any of its nested includes. If any
 front end options are needed for these compiler invocations, these
 can be included on the command line after the module map file argument.
 
@@ -154,10 +154,10 @@ Module Map Generation
 
 If you specify the ``-module-map-path=<module map file>``,
 :program:`modularize` will output a module map based on the input header list.
-A module will be created for each header.  Also, if the header in the header
+A module will be created for each header. Also, if the header in the header
 list is a partial path, a nested module hierarchy will be created in which a
 module will be created for each subdirectory component in the header path,
-with the header itself represented by the innermost module.  If other headers
+with the header itself represented by the innermost module. If other headers
 use the same subdirectories, they will be enclosed in these same modules also.
 
 For example, for the header list::
@@ -258,8 +258,8 @@ Clang module mechanism doesn't support headers the rely on other headers
 to be included first.
 
 The module map format defines some keywords which can't be used in module
-names.  If a header has one of these names, an underscore ('_') will be
-prepended to the name.  For example, if the header name is ``header.h``,
+names. If a header has one of these names, an underscore ('_') will be
+prepended to the name. For example, if the header name is ``header.h``,
 because ``header`` is a keyword, the module name will be ``_header``.
 For a list of the module map keywords, please see:
 `Lexical structure <http://clang.llvm.org/docs/Modules.html#lexical-structure>`_

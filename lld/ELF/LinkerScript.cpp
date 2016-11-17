@@ -706,8 +706,10 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
       std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry<ELFT> &E) {
         return E.H.p_type == PT_LOAD;
       });
+  if (FirstPTLoad == Phdrs.end())
+    return;
 
-  if (HeaderSize <= MinVA && FirstPTLoad != Phdrs.end()) {
+  if (HeaderSize <= MinVA) {
     // If linker script specifies program headers and first PT_LOAD doesn't
     // have both PHDRS and FILEHDR attributes then do nothing
     if (!Opt.PhdrsCommands.empty()) {

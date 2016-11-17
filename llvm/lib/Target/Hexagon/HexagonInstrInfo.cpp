@@ -2159,7 +2159,7 @@ bool HexagonInstrInfo::isJumpR(const MachineInstr &MI) const {
 }
 
 
-// Return true if a given MI can accomodate given offset.
+// Return true if a given MI can accommodate given offset.
 // Use abs estimate as oppose to the exact number.
 // TODO: This will need to be changed to use MC level
 // definition of instruction extendable field size.
@@ -3204,7 +3204,7 @@ bool HexagonInstrInfo::getBaseAndOffsetPosition(const MachineInstr &MI,
 }
 
 
-// Inserts branching instructions in reverse order of their occurence.
+// Inserts branching instructions in reverse order of their occurrence.
 // e.g. jump_t t1 (i1)
 // jump t2        (i2)
 // Jumpers = {i2, i1}

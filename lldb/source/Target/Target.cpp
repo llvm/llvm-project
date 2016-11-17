@@ -3694,15 +3694,15 @@ InlineStrategy TargetProperties::GetInlineStrategy() const {
       nullptr, idx, g_properties[idx].default_uint_value);
 }
 
-const char *TargetProperties::GetArg0() const {
+llvm::StringRef TargetProperties::GetArg0() const {
   const uint32_t idx = ePropertyArg0;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, nullptr);
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, llvm::StringRef());
 }
 
-void TargetProperties::SetArg0(const char *arg) {
+void TargetProperties::SetArg0(llvm::StringRef arg) {
   const uint32_t idx = ePropertyArg0;
   m_collection_sp->SetPropertyAtIndexAsString(
-      nullptr, idx, llvm::StringRef::withNullAsEmpty(arg));
+      nullptr, idx, arg);
   m_launch_info.SetArg0(arg);
 }
 

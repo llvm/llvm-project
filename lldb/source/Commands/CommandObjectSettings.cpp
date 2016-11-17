@@ -1011,7 +1011,7 @@ protected:
     }
 
     Error error(m_interpreter.GetDebugger().SetPropertyValue(
-        &m_exe_ctx, eVarSetOperationClear, var_name, nullptr));
+        &m_exe_ctx, eVarSetOperationClear, var_name, llvm::StringRef()));
     if (error.Fail()) {
       result.AppendError(error.AsCString());
       result.SetStatus(eReturnStatusFailed);

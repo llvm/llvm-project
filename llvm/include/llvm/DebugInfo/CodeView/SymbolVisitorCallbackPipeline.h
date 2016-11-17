@@ -1,4 +1,4 @@
-//===- SymbolVisitorCallbackPipeline.h ------------------------ *- C++ --*-===//
+//===- SymbolVisitorCallbackPipeline.h --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,19 +10,19 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORCALLBACKPIPELINE_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORCALLBACKPIPELINE_H
 
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
-
+#include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
 namespace codeview {
+
 class SymbolVisitorCallbackPipeline : public SymbolVisitorCallbacks {
 public:
-  SymbolVisitorCallbackPipeline() {}
+  SymbolVisitorCallbackPipeline() = default;
 
-  virtual Error visitUnknownSymbol(CVSymbol &Record) override {
+  Error visitUnknownSymbol(CVSymbol &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitUnknownSymbol(Record))
         return EC;
@@ -30,14 +30,15 @@ public:
     return Error::success();
   }
 
-  virtual Error visitSymbolBegin(CVSymbol &Record) override {
+  Error visitSymbolBegin(CVSymbol &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitSymbolBegin(Record))
         return EC;
     }
     return Error::success();
   }
-  virtual Error visitSymbolEnd(CVSymbol &Record) override {
+
+  Error visitSymbolEnd(CVSymbol &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitSymbolEnd(Record))
         return EC;
@@ -63,7 +64,8 @@ public:
 private:
   std::vector<SymbolVisitorCallbacks *> Pipeline;
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORCALLBACKPIPELINE_H

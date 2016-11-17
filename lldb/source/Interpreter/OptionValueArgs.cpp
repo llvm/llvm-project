@@ -19,17 +19,12 @@ using namespace lldb;
 using namespace lldb_private;
 
 size_t OptionValueArgs::GetArgs(Args &args) {
-  const uint32_t size = m_values.size();
-  std::vector<const char *> argv;
-  for (uint32_t i = 0; i < size; ++i) {
-    const char *string_value = m_values[i]->GetStringValue();
-    if (string_value)
-      argv.push_back(string_value);
+  args.Clear();
+  for (auto value : m_values) {
+    llvm::StringRef string_value = value->GetStringValue();
+    if (!string_value.empty())
+      args.AppendArgument(string_value);
   }
 
-  if (argv.empty())
-    args.Clear();
-  else
-    args.SetArguments(argv.size(), &argv[0]);
   return args.GetArgumentCount();
 }

@@ -10,19 +10,17 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORCALLBACKS_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORCALLBACKS_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/CodeView/CVRecord.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
+
 class SymbolVisitorCallbacks {
   friend class CVSymbolVisitor;
 
 public:
-  virtual ~SymbolVisitorCallbacks() {}
+  virtual ~SymbolVisitorCallbacks() = default;
 
   /// Action to take on unknown symbols. By default, they are ignored.
   virtual Error visitUnknownSymbol(CVSymbol &Record) {
@@ -43,7 +41,8 @@ public:
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "CVSymbolTypes.def"
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORCALLBACKS_H

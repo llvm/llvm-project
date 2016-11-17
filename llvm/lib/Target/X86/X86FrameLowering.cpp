@@ -615,7 +615,7 @@ void X86FrameLowering::emitStackProbeInline(MachineFunction &MF,
   // lowest touched page on the stack, not the point at which the OS
   // will cause an overflow exception, so this is just an optimization
   // to avoid unnecessarily touching pages that are below the current
-  // SP but already commited to the stack by the OS.
+  // SP but already committed to the stack by the OS.
   BuildMI(&MBB, DL, TII.get(X86::MOV64rm), LimitReg)
       .addReg(0)
       .addImm(1)

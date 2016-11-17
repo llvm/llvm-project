@@ -692,7 +692,7 @@ defm sxth : ALU32_2op_base<"sxth", 0b111>, PredNewRel;
 defm zxth : ALU32_2op_base<"zxth", 0b110>, PredNewRel;
 
 // Rd=zxtb(Rs): assembler mapped to Rd=and(Rs,#255).
-// Compiler would want to generate 'zxtb' instead of 'and' becuase 'zxtb' has
+// Compiler would want to generate 'zxtb' instead of 'and' because 'zxtb' has
 // predicated forms while 'and' doesn't. Since integrated assembler can't
 // handle 'mapped' instructions, we need to encode 'zxtb' same as 'and' where
 // immediate operand is set to '255'.

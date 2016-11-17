@@ -100,9 +100,9 @@ public:
 
   InlineStrategy GetInlineStrategy() const;
 
-  const char *GetArg0() const;
+  llvm::StringRef GetArg0() const;
 
-  void SetArg0(const char *arg);
+  void SetArg0(llvm::StringRef arg);
 
   bool GetRunArguments(Args &args) const;
 

@@ -92,7 +92,7 @@ namespace HexagonII {
 
   // MemAccessSize is represented as 1+log2(N) where N is size in bits.
   enum class MemAccessSize {
-    NoMemAccess = 0,            // Not a memory acces instruction.
+    NoMemAccess = 0,            // Not a memory access instruction.
     ByteAccess = 1,             // Byte access instruction (memb).
     HalfWordAccess = 2,         // Half word access instruction (memh).
     WordAccess = 3,             // Word access instruction (memw).
@@ -201,7 +201,7 @@ namespace HexagonII {
     AccumulatorPos = 54,
     AccumulatorMask = 0x1,
 
-    // Complex XU, prevent xu competition by prefering slot3
+    // Complex XU, prevent xu competition by preferring slot3
     PrefersSlot3Pos = 55,
     PrefersSlot3Mask = 0x1,
 
