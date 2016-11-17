@@ -571,9 +571,8 @@ static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *IS,
   typename ELFT::Sym LocalHidden = {};
   LocalHidden.setBindingAndType(STB_LOCAL, STT_NOTYPE);
   LocalHidden.setVisibility(STV_HIDDEN);
-  Symbol *S = Symtab<ELFT>::X->addRegular(Name, LocalHidden, IS, nullptr);
-  cast<DefinedRegular<ELFT>>(S->body())->Value = Value;
-  return S;
+  LocalHidden.st_value = Value;
+  return Symtab<ELFT>::X->addRegular(Name, LocalHidden, IS, nullptr);
 }
 
 template <class ELFT>

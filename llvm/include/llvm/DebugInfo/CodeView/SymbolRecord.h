@@ -11,7 +11,10 @@
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORD_H
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
@@ -19,6 +22,9 @@
 #include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace codeview {
@@ -270,7 +276,7 @@ struct BinaryAnnotationIterator {
   };
 
   BinaryAnnotationIterator(ArrayRef<uint8_t> Annotations) : Data(Annotations) {}
-  BinaryAnnotationIterator() {}
+  BinaryAnnotationIterator() = default;
   BinaryAnnotationIterator(const BinaryAnnotationIterator &Other)
       : Data(Other.Data) {}
 
@@ -1490,7 +1496,7 @@ public:
 typedef CVRecord<SymbolKind> CVSymbol;
 typedef msf::VarStreamArray<CVSymbol> CVSymbolArray;
 
-} // namespace codeview
-} // namespace llvm
+} // end namespace codeview
+} // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORD_H

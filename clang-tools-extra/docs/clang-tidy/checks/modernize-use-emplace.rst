@@ -75,7 +75,7 @@ For more info read item 42 - "Consider emplacement instead of insertion." of
 Scott Meyers "Effective Modern C++".
 
 The default smart pointers that are considered are ``std::unique_ptr``,
-``std::shared_ptr``, ``std::auto_ptr``.  To specify other smart pointers or
+``std::shared_ptr``, ``std::auto_ptr``. To specify other smart pointers or
 other classes use the :option:`SmartPointers` option.
 
 

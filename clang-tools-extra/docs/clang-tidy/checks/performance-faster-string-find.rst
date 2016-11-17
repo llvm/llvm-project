@@ -4,7 +4,7 @@ performance-faster-string-find
 ==============================
 
 Optimize calls to ``std::string::find()`` and friends when the needle passed is
-a single character string literal.  The character literal overload is more
+a single character string literal. The character literal overload is more
 efficient.
 
 Examples:

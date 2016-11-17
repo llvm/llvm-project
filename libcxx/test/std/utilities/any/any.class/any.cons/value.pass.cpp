@@ -106,13 +106,12 @@ void test_copy_move_value() {
     }
 }
 
-// Test that any(ValueType&&) is *never* selected for a std::in_place type.
+// Test that any(ValueType&&) is *never* selected for a std::in_place_type_t specialization.
 void test_sfinae_constraints() {
     using BadTag = std::in_place_type_t<int>;
     using OKTag = std::in_place_t;
-    using OKDecay = std::decay_t<OKTag>;
     // Test that the tag type is properly handled in SFINAE
-    BadTag t = std::in_place;
+    BadTag t = std::in_place_type<int>;
     OKTag ot = std::in_place;
     {
         std::any a(t);
@@ -124,12 +123,7 @@ void test_sfinae_constraints() {
     }
     {
         std::any a(ot);
-        assertContains<OKDecay>(a, ot);
-    }
-    {
-        OKDecay d = ot;
-        std::any a(d);
-        assertContains<OKDecay>(a, ot);
+        assert(containsType<OKTag>(a));
     }
     {
         struct Dummy { Dummy() = delete; };

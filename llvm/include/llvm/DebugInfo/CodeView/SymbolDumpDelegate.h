@@ -10,20 +10,17 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLDUMPDELEGATE_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLDUMPDELEGATE_H
 
-#include "SymbolVisitorDelegate.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-
-#include <stdint.h>
+#include "llvm/DebugInfo/CodeView/SymbolVisitorDelegate.h"
+#include <cstdint>
 
 namespace llvm {
-
 namespace codeview {
 
 class SymbolDumpDelegate : public SymbolVisitorDelegate {
 public:
-  virtual ~SymbolDumpDelegate() {}
+  ~SymbolDumpDelegate() override = default;
 
   virtual void printRelocatedField(StringRef Label, uint32_t RelocOffset,
                                    uint32_t Offset,
@@ -31,6 +28,7 @@ public:
   virtual void printBinaryBlockWithRelocs(StringRef Label,
                                           ArrayRef<uint8_t> Block) = 0;
 };
+
 } // end namespace codeview
 } // end namespace llvm
 

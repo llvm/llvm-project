@@ -39,7 +39,7 @@ void test_emplace_type() {
     assert(Type::count == 0);
     Type::reset();
     {
-        any a(std::in_place<Tracked>);
+        any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
 
         a.emplace<Type>();
@@ -53,7 +53,7 @@ void test_emplace_type() {
     assert(Type::count == 0);
     Type::reset();
     {
-        any a(std::in_place<Tracked>);
+        any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
 
         a.emplace<Type>(101);
@@ -67,7 +67,7 @@ void test_emplace_type() {
     assert(Type::count == 0);
     Type::reset();
     {
-        any a(std::in_place<Tracked>);
+        any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
 
         a.emplace<Type>(-1, 42, -1);
@@ -87,14 +87,14 @@ void test_emplace_type_tracked() {
     // constructing from a small type should perform no allocations.
     DisableAllocationGuard g(isSmallType<Type>()); ((void)g);
     {
-        any a(std::in_place<Tracked>);
+        any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
         a.emplace<Type>();
         assert(Tracked::count == 0);
         assertArgsMatch<Type>(a);
     }
     {
-        any a(std::in_place<Tracked>);
+        any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
         a.emplace<Type>(-1, 42, -1);
         assert(Tracked::count == 0);
@@ -102,7 +102,7 @@ void test_emplace_type_tracked() {
     }
     // initializer_list constructor tests
     {
-        any a(std::in_place<Tracked>);
+        any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
         a.emplace<Type>({-1, 42, -1});
         assert(Tracked::count == 0);
@@ -110,7 +110,7 @@ void test_emplace_type_tracked() {
     }
     {
         int x = 42;
-        any a(std::in_place<Tracked>);
+        any a(std::in_place_type<Tracked>);
         assert(Tracked::count == 1);
         a.emplace<Type>({-1, 42, -1}, x);
         assert(Tracked::count == 0);

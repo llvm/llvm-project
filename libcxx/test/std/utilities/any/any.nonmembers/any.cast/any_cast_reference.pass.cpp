@@ -192,7 +192,6 @@ void test_cast_to_value() {
     Type::reset();
     {
         any a((Type(42)));
-        any const& ca = a;
         assert(Type::count == 1);
         assert(Type::copied == 0);
         assert(Type::moved == 1);

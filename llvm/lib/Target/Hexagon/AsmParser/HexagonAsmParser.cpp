@@ -895,7 +895,7 @@ bool HexagonAsmParser::ParseDirectiveFalign(unsigned Size, SMLoc L) {
 
   int64_t MaxBytesToFill = 15;
 
-  // if there is an arguement
+  // if there is an argument
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     const MCExpr *Value;
     SMLoc ExprLoc = L;

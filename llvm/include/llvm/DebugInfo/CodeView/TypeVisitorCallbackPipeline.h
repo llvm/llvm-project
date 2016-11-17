@@ -1,4 +1,4 @@
-//===- TypeVisitorCallbackPipeline.h -------------------------- *- C++ --*-===//
+//===- TypeVisitorCallbackPipeline.h ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,16 +13,17 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
-
+#include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
 namespace codeview {
+
 class TypeVisitorCallbackPipeline : public TypeVisitorCallbacks {
 public:
-  TypeVisitorCallbackPipeline() {}
+  TypeVisitorCallbackPipeline() = default;
 
-  virtual Error visitUnknownType(CVRecord<TypeLeafKind> &Record) override {
+  Error visitUnknownType(CVRecord<TypeLeafKind> &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitUnknownType(Record))
         return EC;
@@ -30,7 +31,7 @@ public:
     return Error::success();
   }
 
-  virtual Error visitUnknownMember(CVMemberRecord &Record) override {
+  Error visitUnknownMember(CVMemberRecord &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitUnknownMember(Record))
         return EC;
@@ -38,14 +39,15 @@ public:
     return Error::success();
   }
 
-  virtual Error visitTypeBegin(CVType &Record) override {
+  Error visitTypeBegin(CVType &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitTypeBegin(Record))
         return EC;
     }
     return Error::success();
   }
-  virtual Error visitTypeEnd(CVType &Record) override {
+
+  Error visitTypeEnd(CVType &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitTypeEnd(Record))
         return EC;
@@ -53,14 +55,15 @@ public:
     return Error::success();
   }
 
-  virtual Error visitMemberBegin(CVMemberRecord &Record) override {
+  Error visitMemberBegin(CVMemberRecord &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitMemberBegin(Record))
         return EC;
     }
     return Error::success();
   }
-  virtual Error visitMemberEnd(CVMemberRecord &Record) override {
+
+  Error visitMemberEnd(CVMemberRecord &Record) override {
     for (auto Visitor : Pipeline) {
       if (auto EC = Visitor->visitMemberEnd(Record))
         return EC;
@@ -104,7 +107,8 @@ private:
   }
   std::vector<TypeVisitorCallbacks *> Pipeline;
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_TYPEVISITORCALLBACKPIPELINE_H

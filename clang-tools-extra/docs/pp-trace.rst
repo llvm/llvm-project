@@ -8,11 +8,11 @@ pp-trace User's Manual
    :hidden:
 
 :program:`pp-trace` is a standalone tool that traces preprocessor
-activity.  It's also used as a test of Clang's PPCallbacks interface.
+activity. It's also used as a test of Clang's PPCallbacks interface.
 It runs a given source file through the Clang preprocessor, displaying
 selected information from callback functions overridden in a
 `PPCallbacks <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html>`_
-derivation.  The output is in a high-level YAML format, described in
+derivation. The output is in a high-level YAML format, described in
 :ref:`OutputFormat`.
 
 .. _Usage:
@@ -43,8 +43,8 @@ Command Line Options
 .. option:: -ignore <callback-name-list>
 
   This option specifies a comma-separated list of names of callbacks
-  that shouldn't be traced.  It can be used to eliminate unwanted
-  trace output.  The callback names are the name of the actual
+  that shouldn't be traced. It can be used to eliminate unwanted
+  trace output. The callback names are the name of the actual
   callback function names in the PPCallbacks class:
 
   * FileChanged
@@ -80,7 +80,7 @@ Command Line Options
 
 .. option:: -output <output-file>
 
-  By default, pp-trace outputs the trace information to stdout.  Use this
+  By default, pp-trace outputs the trace information to stdout. Use this
   option to output the trace information to a file.
 
 .. _OutputFormat:
@@ -88,8 +88,8 @@ Command Line Options
 pp-trace Output Format
 ======================
 
-The pp-trace output is formatted as YAML.  See http://yaml.org/ for general
-YAML information.  It's arranged as a sequence of information about the
+The pp-trace output is formatted as YAML. See http://yaml.org/ for general
+YAML information. It's arranged as a sequence of information about the
 callback call, including the callback name and argument information, for
 example:::
 
@@ -135,9 +135,9 @@ The Argument Name field in most (but not all) cases is the same name as the
 callback function parameter.
 
 The Argument Value Syntax field describes the values that will be displayed
-for the argument value.  It uses an ad hoc representation that mixes literal
-and symbolic representations.  Enumeration member symbols are shown as the
-actual enum member in a (member1|member2|...) form.  A name in parentheses
+for the argument value. It uses an ad hoc representation that mixes literal
+and symbolic representations. Enumeration member symbols are shown as the
+actual enum member in a (member1|member2|...) form. A name in parentheses
 can either represent a place holder for the described value, or confusingly,
 it might be a literal, such as (null), for a null pointer.
 Locations are shown as quoted only to avoid confusing the documentation generator.
@@ -154,7 +154,7 @@ instead of trying to display all members of the structure.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 FileChanged is called when the preprocessor enters or exits a file, both the
-top level file being compiled, as well as any #include directives.  It will
+top level file being compiled, as well as any #include directives. It will
 also be called as a result of a system header pragma or in internal renaming
 of a file.
 
@@ -163,9 +163,9 @@ Argument descriptions:
 ==============   ==================================================   ============================== ==============================
 Argument Name    Argument Value Syntax                                Clang C++ Type                 Description           
 ==============   ==================================================   ============================== ==============================
-Loc              "(file):(line):(col)"                                SourceLocation                 The location of the directive.    
-Reason           (EnterFile|ExitFile|SystemHeaderPragma|RenameFile)   PPCallbacks::FileChangeReason  Reason for change.    
-FileType         (C_User|C_System|C_ExternCSystem)                    SrcMgr::CharacteristicKind     Include type.         
+Loc              "(file):(line):(col)"                                SourceLocation                 The location of the directive.
+Reason           (EnterFile|ExitFile|SystemHeaderPragma|RenameFile)   PPCallbacks::FileChangeReason  Reason for change.
+FileType         (C_User|C_System|C_ExternCSystem)                    SrcMgr::CharacteristicKind     Include type.
 PrevFID          ((file)|(invalid))                                   FileID                         Previous file, if any.
 ==============   ==================================================   ============================== ==============================
 
@@ -189,7 +189,7 @@ Argument descriptions:
 Argument Name    Argument Value Syntax                                Clang C++ Type                 Description           
 ==============   ==================================================   ============================== ========================================================
 ParentFile       ("(file)" or (null))                                 const FileEntry                The file that #included the skipped file.
-FilenameTok      (token)                                              const Token                    The token in ParentFile that indicates the skipped file. 
+FilenameTok      (token)                                              const Token                    The token in ParentFile that indicates the skipped file.
 FileType         (C_User|C_System|C_ExternCSystem)                    SrcMgr::CharacteristicKind     The file type.
 ==============   ==================================================   ============================== ========================================================
 
@@ -238,7 +238,7 @@ FilenameRange    "(file)"                                             CharSource
 File             "(file)"                                             const FileEntry                The actual file that may be included by this inclusion directive.
 SearchPath       "(path)"                                             StringRef                      Contains the search path which was used to find the file in the file system.
 RelativePath     "(path)"                                             StringRef                      The path relative to SearchPath, at which the include file was found.
-Imported         ((module name)|(null))                               const Module                   The module, whenever an inclusion directive was automatically turned into a module import or null otherwise. 
+Imported         ((module name)|(null))                               const Module                   The module, whenever an inclusion directive was automatically turned into a module import or null otherwise.
 ==============   ==================================================   ============================== ============================================================================================================
 
 Example:::
@@ -265,7 +265,7 @@ Argument Name    Argument Value Syntax                                Clang C++ 
 ==============   ==================================================   ============================== ===========================================================
 ImportLoc        "(file):(line):(col)"                                SourceLocation                 The location of import directive token.
 Path             "(path)"                                             ModuleIdPath                   The identifiers (and their locations) of the module "path".
-Imported         ((module name)|(null))                               const Module                   The imported module; can be null if importing failed. 
+Imported         ((module name)|(null))                               const Module                   The imported module; can be null if importing failed.
 ==============   ==================================================   ============================== ===========================================================
 
 Example:::
@@ -302,8 +302,8 @@ Argument descriptions:
 ==============   ==================================================   ============================== ==============================
 Argument Name    Argument Value Syntax                                Clang C++ Type                 Description           
 ==============   ==================================================   ============================== ==============================
-Loc              "(file):(line):(col)"                                SourceLocation                 The location of the directive. 
-str              (name)                                               const std::string              The text of the directive. 
+Loc              "(file):(line):(col)"                                SourceLocation                 The location of the directive.
+str              (name)                                               const std::string              The text of the directive.
 ==============   ==================================================   ============================== ==============================
 
 Example:::
@@ -322,7 +322,7 @@ Argument descriptions:
 ==============   ==================================================   ============================== =================================
 Argument Name    Argument Value Syntax                                Clang C++ Type                 Description           
 ==============   ==================================================   ============================== =================================
-Loc              "(file):(line):(col)"                                SourceLocation                 The location of the directive. 
+Loc              "(file):(line):(col)"                                SourceLocation                 The location of the directive.
 Introducer       (PIK_HashPragma|PIK__Pragma|PIK___pragma)            PragmaIntroducerKind           The type of the pragma directive.
 ==============   ==================================================   ============================== =================================
 
@@ -407,9 +407,9 @@ Argument descriptions:
 Argument Name    Argument Value Syntax                                Clang C++ Type                 Description           
 ==============   ==================================================   ============================== =======================================
 Loc              "(file):(line):(col)"                                SourceLocation                 The location of the directive.
-Namespace        (name)                                               StringRef                      The namespace of the message directive. 
-Kind             (PMK_Message|PMK_Warning|PMK_Error)                  PPCallbacks::PragmaMessageKind The type of the message directive. 
-Str              (string)                                             StringRef                      The text of the message directive. 
+Namespace        (name)                                               StringRef                      The namespace of the message directive.
+Kind             (PMK_Message|PMK_Warning|PMK_Error)                  PPCallbacks::PragmaMessageKind The type of the message directive.
+Str              (string)                                             StringRef                      The text of the message directive.
 ==============   ==================================================   ============================== =======================================
 
 Example:::
@@ -581,7 +581,7 @@ Argument Name    Argument Value Syntax                                Clang C++ 
 MacroNameTok     (token)                                              const Token                    The macro name token.
 MacroDirective   (MD_Define|MD_Undefine|MD_Visibility)                const MacroDirective           The kind of macro directive from the MacroDirective structure.
 Range            ["(file):(line):(col)", "(file):(line):(col)"]       SourceRange                    The source range for the expansion.
-Args             [(name)|(number)|<(token name)>[, ...]]              const MacroArgs                The argument tokens.  Names and numbers are literal, everything else is of the form '<' tokenName '>'.
+Args             [(name)|(number)|<(token name)>[, ...]]              const MacroArgs                The argument tokens. Names and numbers are literal, everything else is of the form '<' tokenName '>'.
 ==============   ==================================================   ============================== ======================================================================================================
 
 Example:::

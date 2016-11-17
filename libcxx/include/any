@@ -200,7 +200,7 @@ public:
     , class _Tp = decay_t<_ValueType>
     , class = enable_if_t<
         !is_same<_Tp, any>::value &&
-        !__is_inplace_type_tag<_ValueType>::value &&
+        !__is_inplace_type<_ValueType>::value &&
         is_copy_constructible<_Tp>::value>
     >
   _LIBCPP_INLINE_VISIBILITY
@@ -561,13 +561,13 @@ void swap(any & __lhs, any & __rhs) _NOEXCEPT
 template <class _Tp, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 any make_any(_Args&&... __args) {
-    return any(in_place<_Tp>, _VSTD::forward<_Args>(__args)...);
+    return any(in_place_type<_Tp>, _VSTD::forward<_Args>(__args)...);
 }
 
 template <class _Tp, class _Up, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 any make_any(initializer_list<_Up> __il, _Args&&... __args) {
-    return any(in_place<_Tp>, __il, _VSTD::forward<_Args>(__args)...);
+    return any(in_place_type<_Tp>, __il, _VSTD::forward<_Args>(__args)...);
 }
 
 template <class _ValueType>

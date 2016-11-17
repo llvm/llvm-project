@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 //----------------------------------------------------------------------------//
-//                         Hexagon Intruction Flags +
+//                         Hexagon Instruction Flags +
 //
 //                        *** Must match BaseInfo.h ***
 //----------------------------------------------------------------------------//
@@ -34,7 +34,7 @@ def TypeCVI_VM_NEW_ST  : IType<26>;
 def TypeCVI_VM_STU     : IType<27>;
 def TypeCVI_HIST       : IType<28>;
 //----------------------------------------------------------------------------//
-//                         Intruction Classes Definitions +
+//                         Instruction Classes Definitions +
 //----------------------------------------------------------------------------//
 
 let validSubTargets = HasV60SubT in
