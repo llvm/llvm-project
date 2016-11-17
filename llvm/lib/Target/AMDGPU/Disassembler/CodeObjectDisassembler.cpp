@@ -43,17 +43,17 @@ CodeObjectDisassembler::CodeObjectDisassembler(MCContext *C,
   : Ctx(C), TripleName(TN), InstPrinter(IP),
     AsmStreamer(static_cast<AMDGPUTargetStreamer *>(TS)) {}
 
-ErrorOr<CodeObjectDisassembler::SymbolsTy>
+Expected<CodeObjectDisassembler::SymbolsTy>
 CodeObjectDisassembler::CollectSymbols(const HSACodeObject *CodeObject) {
   SymbolsTy Symbols;
   for (const auto &Symbol : CodeObject->symbols()) {
     auto AddressOr = Symbol.getAddress();
     if (!AddressOr)
-      return object::object_error::parse_failed;
+      return AddressOr.takeError();
 
     auto NameOr = Symbol.getName();
     if (!NameOr)
-      return object::object_error::parse_failed;
+      return NameOr.takeError();
     if (NameOr->empty())
       continue;
 
@@ -64,15 +64,15 @@ CodeObjectDisassembler::CollectSymbols(const HSACodeObject *CodeObject) {
 }
 
 std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObject) {
-  for (const auto &Note: CodeObject->notes()) {
+  for (auto Note : CodeObject->notes()) {
     if (!Note)
-      return Note.getError();
+      return errorToErrorCode(Note.takeError());
 
     switch (Note->type) {
     case NT_AMDGPU_HSA_CODE_OBJECT_VERSION: {
       auto VersionOr = Note->as<amdgpu_hsa_code_object_version>();
       if (!VersionOr)
-        return VersionOr.getError();
+        return errorToErrorCode(VersionOr.takeError());
 
       auto *Version = *VersionOr;
       AsmStreamer->EmitDirectiveHSACodeObjectVersion(
@@ -85,7 +85,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
     case NT_AMDGPU_HSA_ISA: {
       auto IsaOr = Note->as<amdgpu_hsa_isa>();
       if (!IsaOr)
-        return IsaOr.getError();
+        return errorToErrorCode(IsaOr.takeError());
 
       auto *Isa = *IsaOr;
       AsmStreamer->EmitDirectiveHSACodeObjectISA(
@@ -103,7 +103,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
 }
 
 static std::string getCPUName(const HSACodeObject *CodeObject) {
-  for (const auto &Note : CodeObject->notes()) {
+  for (auto Note : CodeObject->notes()) {
     if (!Note)
       return "";
 
@@ -127,7 +127,7 @@ std::error_code CodeObjectDisassembler::printKernels(const HSACodeObject *CodeOb
   // setup disassembler
   auto SymbolsOr = CollectSymbols(CodeObject);
   if (!SymbolsOr)
-    return SymbolsOr.getError();
+    return errorToErrorCode(SymbolsOr.takeError());
   
   const auto &Target = getTheGCNTarget();
   std::unique_ptr<MCSubtargetInfo> STI(
@@ -152,18 +152,22 @@ std::error_code CodeObjectDisassembler::printKernels(const HSACodeObject *CodeOb
 
   // print kernels
   for (const auto &Sym : CodeObject->kernels()) {
-    auto Kernel = KernelSym::asKernelSym(CodeObject->getSymbol(Sym.getRawDataRefImpl())).get();
+    auto ExpectedKernel = KernelSym::asKernelSym(CodeObject->getSymbol(Sym.getRawDataRefImpl()));
+    if (!ExpectedKernel)
+      return errorToErrorCode(ExpectedKernel.takeError());
+
     auto NameEr = Sym.getName();
     if (!NameEr)
       return object::object_error::parse_failed;
 
+    auto Kernel = ExpectedKernel.get();
     auto KernelCodeTOr = Kernel->getAmdKernelCodeT(CodeObject);
     if (!KernelCodeTOr)
-      return KernelCodeTOr.getError();
+      return errorToErrorCode(KernelCodeTOr.takeError());
 
     auto CodeOr = CodeObject->getKernelCode(Kernel);
     if (!CodeOr)
-      return CodeOr.getError();
+      return errorToErrorCode(CodeOr.takeError());
     
     AsmStreamer->EmitAMDGPUSymbolType(*NameEr, Kernel->getType());
     AsmStreamer->getStreamer().EmitRawText("");

@@ -18,6 +18,7 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include <vector>
 
 namespace llvm {
@@ -42,7 +43,7 @@ private:
   
   typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SymbolsTy;
 
-  ErrorOr<SymbolsTy> CollectSymbols(const HSACodeObject *CodeObject);
+  Expected<SymbolsTy> CollectSymbols(const HSACodeObject *CodeObject);
 
   std::error_code printNotes(const HSACodeObject *CodeObject);
   std::error_code printKernels(const HSACodeObject *CodeObject, raw_ostream &ES);

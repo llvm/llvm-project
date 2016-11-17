@@ -78,9 +78,11 @@ struct ELFNote {
     return sizeof(*this) + alignTo(namesz, ALIGN) + alignTo(descsz, ALIGN);
   }
 
-  template <typename D> ErrorOr<const D*> as() const {
-    if (descsz < sizeof(D))
-      return object::object_error::parse_failed;
+  template <typename D> Expected<const D*> as() const {
+    if (descsz < sizeof(D)) {
+      return make_error<StringError>("invalid descsz",
+                                     object::object_error::parse_failed);
+    }
 
     return reinterpret_cast<const D*>(getDesc().data());
   }
@@ -111,9 +113,11 @@ public:
     return Ref.size() >= sizeof(Item) && Ref.size() >= getItemPadSize();
   }
 
-  ErrorOr<const Item&> operator*() const {
-    if (!valid())
-      return object::object_error::parse_failed;
+  Expected<const Item&> operator*() const {
+    if (!valid()) {
+      return make_error<StringError>("invalid item",
+                                     object::object_error::parse_failed);
+    }
 
     return *item();
   }
@@ -143,10 +147,10 @@ class HSACodeObject;
 
 class KernelSym : public object::ELF64LEObjectFile::Elf_Sym {
 public:
-  ErrorOr<const amd_kernel_code_t *> getAmdKernelCodeT(
+  Expected<const amd_kernel_code_t *> getAmdKernelCodeT(
     const HSACodeObject * CodeObject) const;
 
-  static ErrorOr<const KernelSym *> asKernelSym(
+  static Expected<const KernelSym *> asKernelSym(
     const object::ELF64LEObjectFile::Elf_Sym *Sym);
 };
 
@@ -221,15 +225,15 @@ public:
   kernel_sym_iterator kernels_end() const;
   iterator_range<kernel_sym_iterator> kernels() const;
 
-  ErrorOr<ArrayRef<uint8_t>> getKernelCode(const KernelSym *Kernel) const;
+  Expected<ArrayRef<uint8_t>> getKernelCode(const KernelSym *Kernel) const;
 
-  ErrorOr<const Elf_Shdr *> getSectionByName(StringRef Name) const;
+  Expected<const Elf_Shdr *> getSectionByName(StringRef Name) const;
 
-  ErrorOr<uint32_t> getSectionIdxByName(StringRef) const;
-  ErrorOr<uint32_t> getTextSectionIdx() const;
-  ErrorOr<uint32_t> getNoteSectionIdx() const;
-  ErrorOr<const Elf_Shdr *> getTextSection() const;
-  ErrorOr<const Elf_Shdr *> getNoteSection() const;
+  Expected<uint32_t> getSectionIdxByName(StringRef) const;
+  Expected<uint32_t> getTextSectionIdx() const;
+  Expected<uint32_t> getNoteSectionIdx() const;
+  Expected<const Elf_Shdr *> getTextSection() const;
+  Expected<const Elf_Shdr *> getNoteSection() const;
 };
 
 } // namespace llvm

@@ -22,23 +22,23 @@ const ELFNote* getNext(const ELFNote &N) {
     N.getDesc().data() + alignTo(N.descsz, ELFNote::ALIGN));
 }
 
-ErrorOr<const amd_kernel_code_t *> KernelSym::getAmdKernelCodeT(
+Expected<const amd_kernel_code_t *> KernelSym::getAmdKernelCodeT(
   const HSACodeObject *CodeObject) const {
   auto TextOr = CodeObject->getTextSection();
   if (!TextOr) {
-    return TextOr.getError();
+    return TextOr.takeError();
   }
 
   auto ArrayOr = CodeObject->getELFFile()->getSectionContentsAsArray<uint8_t>(*TextOr);
   if (!ArrayOr)
-    return ArrayOr.getError();
+    return ArrayOr.takeError();
 
   return reinterpret_cast<const amd_kernel_code_t *>((*ArrayOr).data() + getValue());
 }
 
-ErrorOr<const KernelSym *> KernelSym::asKernelSym(const HSACodeObject::Elf_Sym *Sym) {
+Expected<const KernelSym *> KernelSym::asKernelSym(const HSACodeObject::Elf_Sym *Sym) {
   if (Sym->getType() != ELF::STT_AMDGPU_HSA_KERNEL)
-    return std::error_code();
+    return createError("invalid symbol type");
 
   return static_cast<const KernelSym *>(Sym);
 }
@@ -51,7 +51,13 @@ void HSACodeObject::InitMarkers() const {
   KernelMarkers.push_back((*TextSecOr)->sh_size);
 
   for (const auto &Sym : kernels()) {
-    auto Kernel = KernelSym::asKernelSym(getSymbol(Sym.getRawDataRefImpl())).get();
+    auto ExpectedKernel = KernelSym::asKernelSym(getSymbol(Sym.getRawDataRefImpl()));
+    if (!ExpectedKernel) {
+      consumeError(ExpectedKernel.takeError());
+      report_fatal_error("invalid kernel symbol");
+    }
+
+    auto Kernel = ExpectedKernel.get();
     KernelMarkers.push_back(Kernel->st_value);
     if (auto KernelCodeOr = Kernel->getAmdKernelCodeT(this)) {
       KernelMarkers.push_back(Kernel->st_value + (*KernelCodeOr)->kernel_code_entry_byte_offset);
@@ -86,8 +92,15 @@ kernel_sym_iterator HSACodeObject::kernels_begin() const {
   auto TextIdx = TextIdxOr.get();
   return kernel_sym_iterator(symbol_begin(), symbol_end(),
     [this, TextIdx](const SymbolRef &Sym)->bool {
-      auto KernelOr = KernelSym::asKernelSym(getSymbol(Sym.getRawDataRefImpl()));
-      if (!KernelOr || (*KernelOr)->st_shndx != TextIdx)
+
+      auto ExpectedKernel = KernelSym::asKernelSym(getSymbol(Sym.getRawDataRefImpl()));
+      if (!ExpectedKernel) {
+        consumeError(ExpectedKernel.takeError());
+        return false;
+      }
+
+      auto Kernel = ExpectedKernel.get();
+      if (Kernel->st_shndx != TextIdx)
         return false;
 
       return true;
@@ -103,18 +116,18 @@ iterator_range<kernel_sym_iterator> HSACodeObject::kernels() const {
   return make_range(kernels_begin(), kernels_end());
 }
 
-ErrorOr<ArrayRef<uint8_t>> HSACodeObject::getKernelCode(const KernelSym *Kernel) const {
+Expected<ArrayRef<uint8_t>> HSACodeObject::getKernelCode(const KernelSym *Kernel) const {
   auto KernelCodeTOr = Kernel->getAmdKernelCodeT(this);
   if (!KernelCodeTOr)
-    return KernelCodeTOr.getError();
+    return KernelCodeTOr.takeError();
 
   auto TextOr = getTextSection();
   if (!TextOr)
-    return TextOr.getError();
+    return TextOr.takeError();
 
   auto SecBytesOr = getELFFile()->getSectionContentsAsArray<uint8_t>(*TextOr);
   if (!SecBytesOr)
-    return SecBytesOr.getError();
+    return SecBytesOr.takeError();
 
   uint64_t CodeStart = Kernel->getValue() +
                        (*KernelCodeTOr)->kernel_code_entry_byte_offset;
@@ -128,68 +141,68 @@ ErrorOr<ArrayRef<uint8_t>> HSACodeObject::getKernelCode(const KernelSym *Kernel)
   return SecBytesOr->slice(CodeStart, CodeEnd - CodeStart);
 }
 
-ErrorOr<const HSACodeObject::Elf_Shdr *> 
+Expected<const HSACodeObject::Elf_Shdr *>
 HSACodeObject::getSectionByName(StringRef Name) const {
   auto ELF = getELFFile();
   auto SectionsOr = ELF->sections();
   if (!SectionsOr)
-    return SectionsOr.getError();
+    return SectionsOr.takeError();
   
   for (const auto &Sec : *SectionsOr) {
     auto SecNameOr = ELF->getSectionName(&Sec);
-    if (std::error_code EC = SecNameOr.getError()) {
-      return EC;
+    if (!SecNameOr) {
+      return SecNameOr.takeError();
     } else if (*SecNameOr == Name) {
-      return ErrorOr<const Elf_Shdr *>(&Sec);
+      return Expected<const Elf_Shdr *>(&Sec);
     }
   }
-  return object_error::invalid_section_index;
+  return createError("invalid section index");
 }
 
-ErrorOr<uint32_t> HSACodeObject::getSectionIdxByName(StringRef Name) const {
+Expected<uint32_t> HSACodeObject::getSectionIdxByName(StringRef Name) const {
   auto ELF = getELFFile();
   uint32_t Idx = 0;
   auto SectionsOr = ELF->sections();
   if (!SectionsOr)
-    return SectionsOr.getError();
+    return SectionsOr.takeError();
 
   for (const auto &Sec : *SectionsOr) {
     auto SecNameOr = ELF->getSectionName(&Sec);
-    if (std::error_code EC = SecNameOr.getError()) {
-      return EC;
+    if (!SecNameOr) {
+      return SecNameOr.takeError();
     } else if (*SecNameOr == Name) {
       return Idx;
     }
     ++Idx;
   }
-  return object_error::invalid_section_index;
+  return createError("invalid section index");
 }
 
-ErrorOr<uint32_t> HSACodeObject::getTextSectionIdx() const {
+Expected<uint32_t> HSACodeObject::getTextSectionIdx() const {
   if (auto IdxOr = getSectionIdxByName(".text")) {
     auto SecOr = getELFFile()->getSection(*IdxOr);
     if (SecOr || isSectionText(toDRI(*SecOr)))
       return IdxOr;
   }
-  return object_error::invalid_section_index;
+  return createError("invalid section index");
 }
 
-ErrorOr<uint32_t> HSACodeObject::getNoteSectionIdx() const {
+Expected<uint32_t> HSACodeObject::getNoteSectionIdx() const {
   return getSectionIdxByName(".note");
 }
 
-ErrorOr<const HSACodeObject::Elf_Shdr *> HSACodeObject::getTextSection() const {
+Expected<const HSACodeObject::Elf_Shdr *> HSACodeObject::getTextSection() const {
   if (auto IdxOr = getTextSectionIdx())
     return getELFFile()->getSection(*IdxOr);
 
-  return object_error::invalid_section_index;
+  return createError("invalid section index");
 }
 
-ErrorOr<const HSACodeObject::Elf_Shdr *> HSACodeObject::getNoteSection() const {
+Expected<const HSACodeObject::Elf_Shdr *> HSACodeObject::getNoteSection() const {
   if (auto IdxOr = getNoteSectionIdx())
     return getELFFile()->getSection(*IdxOr);
 
-  return object_error::invalid_section_index;
+  return createError("invalid section index");
 }
 
 } // namespace llvm
