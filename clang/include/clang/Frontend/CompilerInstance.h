@@ -96,6 +96,9 @@ class CompilerInstance : public ModuleLoader {
   /// The AST context.
   IntrusiveRefCntPtr<ASTContext> Context;
 
+  /// An optional sema source that will be attached to sema.
+  IntrusiveRefCntPtr<ExternalSemaSource> ExternalSemaSrc;
+
   /// The AST consumer.
   std::unique_ptr<ASTConsumer> Consumer;
 
@@ -781,6 +784,8 @@ public:
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));
   }
+
+  void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 };
 
 } // end namespace clang

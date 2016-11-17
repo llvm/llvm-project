@@ -440,3 +440,27 @@ void testFoo() {
   foo(1, 0, m, 3); // expected-error{{no matching}}
 }
 }
+
+// Tests that we emit errors at the point of the method call, rather than the
+// beginning of the expression that happens to be a member call.
+namespace member_loc {
+  struct Foo { void bar() __attribute__((enable_if(0, ""))); }; // expected-note{{disabled}}
+  void testFoo() {
+    Foo()
+      .bar(); // expected-error{{no matching member function}}
+  }
+}
+
+// Prior bug: we wouldn't properly convert conditions to bools when
+// instantiating templates in some cases.
+namespace template_instantiation {
+template <typename T>
+struct Foo {
+  void bar(int a) __attribute__((enable_if(a, ""))); // expected-note{{disabled}}
+};
+
+void runFoo() {
+  Foo<double>().bar(0); // expected-error{{no matching}}
+  Foo<double>().bar(1);
+}
+}

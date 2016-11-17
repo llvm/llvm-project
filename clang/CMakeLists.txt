@@ -511,10 +511,10 @@ if (CLANG_ENABLE_BOOTSTRAP)
   set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-stamps/)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 
-  # If the next stage is LTO we need to depend on LTO and possibly LLVMgold
+  # If the next stage is LTO we need to depend on LTO and possibly lld or LLVMgold
   if(BOOTSTRAP_LLVM_ENABLE_LTO OR LLVM_ENABLE_LTO AND NOT LLVM_BUILD_INSTRUMENTED)
-    add_dependencies(clang-bootstrap-deps LTO)
     if(APPLE)
+      add_dependencies(clang-bootstrap-deps LTO)
       # on Darwin we need to set DARWIN_LTO_LIBRARY so that -flto will work
       # using the just-built compiler, and we need to override DYLD_LIBRARY_PATH
       # so that the host object file tools will use the just-built libLTO.
@@ -526,7 +526,12 @@ if (CLANG_ENABLE_BOOTSTRAP)
       set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
     elseif(NOT WIN32)
-      add_dependencies(clang-bootstrap-deps LLVMgold llvm-ar llvm-ranlib)
+      add_dependencies(clang-bootstrap-deps llvm-ar llvm-ranlib)
+      if(BOOTSTRAP_LLVM_ENABLE_LLD)
+        add_dependencies(clang-bootstrap-deps lld)
+      elseif(LLVM_BINUTILS_INCDIR)
+        add_dependencies(clang-bootstrap-deps LLVMgold)
+      endif()
       set(LTO_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
       set(LTO_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
     endif()

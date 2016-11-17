@@ -320,7 +320,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     // Introduce the parameter into scope.
     bool HasUnparsed = Param->hasUnparsedDefaultArg();
     Actions.ActOnDelayedCXXMethodParameter(getCurScope(), Param);
-    if (CachedTokens *Toks = LM.DefaultArgs[I].Toks) {
+    std::unique_ptr<CachedTokens> Toks = std::move(LM.DefaultArgs[I].Toks);
+    if (Toks) {
       // Mark the end of the default argument so that we know when to stop when
       // we parse it later on.
       Token LastDefaultArgToken = Toks->back();
@@ -378,9 +379,6 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
       if (Tok.is(tok::eof) && Tok.getEofData() == Param)
         ConsumeAnyToken();
-
-      delete Toks;
-      LM.DefaultArgs[I].Toks = nullptr;
     } else if (HasUnparsed) {
       assert(Param->hasInheritedDefaultArg());
       FunctionDecl *Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();

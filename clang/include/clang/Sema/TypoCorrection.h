@@ -230,6 +230,15 @@ public:
   bool requiresImport() const { return RequiresImport; }
   void setRequiresImport(bool Req) { RequiresImport = Req; }
 
+  /// Extra diagnostics are printed after the first diagnostic for the typo.
+  /// This can be used to attach external notes to the diag.
+  void addExtraDiagnostic(PartialDiagnostic PD) {
+    ExtraDiagnostics.push_back(std::move(PD));
+  }
+  ArrayRef<PartialDiagnostic> getExtraDiagnostics() const {
+    return ExtraDiagnostics;
+  }
+
 private:
   bool hasCorrectionDecl() const {
     return (!isKeyword() && !CorrectionDecls.empty());
@@ -245,6 +254,8 @@ private:
   SourceRange CorrectionRange;
   bool ForceSpecifierReplacement;
   bool RequiresImport;
+
+  std::vector<PartialDiagnostic> ExtraDiagnostics;
 };
 
 /// @brief Base class for callback objects used by Sema::CorrectTypo to check

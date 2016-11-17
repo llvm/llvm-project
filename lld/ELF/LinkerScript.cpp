@@ -868,6 +868,20 @@ const OutputSectionBase *LinkerScript<ELFT>::getOutputSection(StringRef Name) {
   return &FakeSec;
 }
 
+// This function is essentially the same as getOutputSection(Name)->Size,
+// but it won't print out an error message if a given section is not found.
+//
+// Linker script does not create an output section if its content is empty.
+// We want to allow SIZEOF(.foo) where .foo is a section which happened to
+// be empty. That is why this function is different from getOutputSection().
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
+  for (OutputSectionBase *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->Size;
+  return 0;
+}
+
 template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
   return elf::getHeaderSize<ELFT>();
 }
@@ -1719,8 +1733,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
-    return
-        [=](uint64_t Dot) { return ScriptBase->getOutputSection(Name)->Size; };
+    return [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
