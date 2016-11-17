@@ -569,7 +569,9 @@ template <class ELFT>
 static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *IS,
                           typename ELFT::uint Value) {
   typename ELFT::Sym LocalHidden = {};
-  LocalHidden.setBindingAndType(STB_LOCAL, STT_NOTYPE);
+  // The linker generated symbols are added as STB_WEAK to allow user defined
+  // ones to override them.
+  LocalHidden.setBindingAndType(STB_WEAK, STT_NOTYPE);
   LocalHidden.setVisibility(STV_HIDDEN);
   LocalHidden.st_value = Value;
   return Symtab<ELFT>::X->addRegular(Name, LocalHidden, IS, nullptr);

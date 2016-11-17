@@ -443,22 +443,22 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, uintX_t Addend,
     // method calculate number of "pages" required to cover all saved output
     // section and allocate appropriate number of GOT entries.
     auto *OutSec = cast<DefinedRegular<ELFT>>(&Sym)->Section->OutSec;
-    MipsOutSections.insert(OutSec);
+    OutSections.insert(OutSec);
     return;
   }
   if (Sym.isTls()) {
     // GOT entries created for MIPS TLS relocations behave like
     // almost GOT entries from other ABIs. They go to the end
     // of the global offset table.
-    Sym.GotIndex = Entries.size();
-    Entries.push_back(&Sym);
+    Sym.GotIndex = TlsEntries.size();
+    TlsEntries.push_back(&Sym);
     return;
   }
-  auto AddEntry = [&](SymbolBody &S, uintX_t A, MipsGotEntries &Items) {
+  auto AddEntry = [&](SymbolBody &S, uintX_t A, GotEntries &Items) {
     if (S.isInGot() && !A)
       return;
     size_t NewIndex = Items.size();
-    if (!MipsGotMap.insert({{&S, A}, NewIndex}).second)
+    if (!EntryIndexMap.insert({{&S, A}, NewIndex}).second)
       return;
     Items.emplace_back(&S, A);
     if (!A)
@@ -466,26 +466,26 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, uintX_t Addend,
   };
   if (Sym.isPreemptible()) {
     // Ignore addends for preemptible symbols. They got single GOT entry anyway.
-    AddEntry(Sym, 0, MipsGlobal);
+    AddEntry(Sym, 0, GlobalEntries);
     Sym.IsInGlobalMipsGot = true;
   } else if (Expr == R_MIPS_GOT_OFF32) {
-    AddEntry(Sym, Addend, MipsLocal32);
+    AddEntry(Sym, Addend, LocalEntries32);
     Sym.Is32BitMipsGot = true;
   } else {
     // Hold local GOT entries accessed via a 16-bit index separately.
     // That allows to write them in the beginning of the GOT and keep
     // their indexes as less as possible to escape relocation's overflow.
-    AddEntry(Sym, Addend, MipsLocal);
+    AddEntry(Sym, Addend, LocalEntries);
   }
 }
 
 template <class ELFT> bool MipsGotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
   if (Sym.GlobalDynIndex != -1U)
     return false;
-  Sym.GlobalDynIndex = Entries.size();
+  Sym.GlobalDynIndex = TlsEntries.size();
   // Global Dynamic TLS entries take two GOT slots.
-  Entries.push_back(nullptr);
-  Entries.push_back(&Sym);
+  TlsEntries.push_back(nullptr);
+  TlsEntries.push_back(&Sym);
   return true;
 }
 
@@ -494,54 +494,56 @@ template <class ELFT> bool MipsGotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym)
 template <class ELFT> bool MipsGotSection<ELFT>::addTlsIndex() {
   if (TlsIndexOff != uint32_t(-1))
     return false;
-  TlsIndexOff = Entries.size() * sizeof(uintX_t);
-  Entries.push_back(nullptr);
-  Entries.push_back(nullptr);
+  TlsIndexOff = TlsEntries.size() * sizeof(uintX_t);
+  TlsEntries.push_back(nullptr);
+  TlsEntries.push_back(nullptr);
   return true;
 }
 
 template <class ELFT>
 typename MipsGotSection<ELFT>::uintX_t
-MipsGotSection<ELFT>::getMipsLocalPageOffset(uintX_t EntryValue) {
+MipsGotSection<ELFT>::getPageEntryOffset(uintX_t EntryValue) {
   // Initialize the entry by the %hi(EntryValue) expression
   // but without right-shifting.
   EntryValue = (EntryValue + 0x8000) & ~0xffff;
   // Take into account MIPS GOT header.
   // See comment in the MipsGotSection::writeTo.
-  size_t NewIndex = MipsLocalGotPos.size() + 2;
-  auto P = MipsLocalGotPos.insert(std::make_pair(EntryValue, NewIndex));
-  assert(!P.second || MipsLocalGotPos.size() <= MipsPageEntries);
+  size_t NewIndex = PageIndexMap.size() + 2;
+  auto P = PageIndexMap.insert(std::make_pair(EntryValue, NewIndex));
+  assert(!P.second || PageIndexMap.size() <= PageEntriesNum);
   return (uintX_t)P.first->second * sizeof(uintX_t) - MipsGPOffset;
 }
 
 template <class ELFT>
 typename MipsGotSection<ELFT>::uintX_t
-MipsGotSection<ELFT>::getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const {
+MipsGotSection<ELFT>::getBodyEntryOffset(const SymbolBody &B,
+                                         uintX_t Addend) const {
   // Calculate offset of the GOT entries block: TLS, global, local.
   uintX_t GotBlockOff;
   if (B.isTls())
-    GotBlockOff = getMipsTlsOffset();
+    GotBlockOff = getTlsOffset();
   else if (B.IsInGlobalMipsGot)
-    GotBlockOff = getMipsLocalEntriesNum() * sizeof(uintX_t);
+    GotBlockOff = getLocalEntriesNum() * sizeof(uintX_t);
   else if (B.Is32BitMipsGot)
-    GotBlockOff = (MipsPageEntries + MipsLocal.size()) * sizeof(uintX_t);
+    GotBlockOff = (PageEntriesNum + LocalEntries.size()) * sizeof(uintX_t);
   else
-    GotBlockOff = MipsPageEntries * sizeof(uintX_t);
+    GotBlockOff = PageEntriesNum * sizeof(uintX_t);
   // Calculate index of the GOT entry in the block.
   uintX_t GotIndex;
   if (B.isInGot())
     GotIndex = B.GotIndex;
   else {
-    auto It = MipsGotMap.find({&B, Addend});
-    assert(It != MipsGotMap.end());
+    auto It = EntryIndexMap.find({&B, Addend});
+    assert(It != EntryIndexMap.end());
     GotIndex = It->second;
   }
   return GotBlockOff + GotIndex * sizeof(uintX_t) - MipsGPOffset;
 }
 
 template <class ELFT>
-typename MipsGotSection<ELFT>::uintX_t MipsGotSection<ELFT>::getMipsTlsOffset() const {
-  return (getMipsLocalEntriesNum() + MipsGlobal.size()) * sizeof(uintX_t);
+typename MipsGotSection<ELFT>::uintX_t
+MipsGotSection<ELFT>::getTlsOffset() const {
+  return (getLocalEntriesNum() + GlobalEntries.size()) * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -551,29 +553,29 @@ MipsGotSection<ELFT>::getGlobalDynOffset(const SymbolBody &B) const {
 }
 
 template <class ELFT>
-const SymbolBody *MipsGotSection<ELFT>::getMipsFirstGlobalEntry() const {
-  return MipsGlobal.empty() ? nullptr : MipsGlobal.front().first;
+const SymbolBody *MipsGotSection<ELFT>::getFirstGlobalEntry() const {
+  return GlobalEntries.empty() ? nullptr : GlobalEntries.front().first;
 }
 
 template <class ELFT>
-unsigned MipsGotSection<ELFT>::getMipsLocalEntriesNum() const {
-  return MipsPageEntries + MipsLocal.size() + MipsLocal32.size();
+unsigned MipsGotSection<ELFT>::getLocalEntriesNum() const {
+  return PageEntriesNum + LocalEntries.size() + LocalEntries32.size();
 }
 
 template <class ELFT> void MipsGotSection<ELFT>::finalize() {
-  size_t EntriesNum = Entries.size();
+  size_t EntriesNum = TlsEntries.size();
   // Take into account MIPS GOT header.
   // See comment in the MipsGotSection::writeTo.
-  MipsPageEntries += 2;
-  for (const OutputSectionBase *OutSec : MipsOutSections) {
+  PageEntriesNum += 2;
+  for (const OutputSectionBase *OutSec : OutSections) {
     // Calculate an upper bound of MIPS GOT entries required to store page
     // addresses of local symbols. We assume the worst case - each 64kb
     // page of the output section has at least one GOT relocation against it.
     // Add 0x8000 to the section's size because the page address stored
     // in the GOT entry is calculated as (value + 0x8000) & ~0xffff.
-    MipsPageEntries += (OutSec->Size + 0x8000 + 0xfffe) / 0xffff;
+    PageEntriesNum += (OutSec->Size + 0x8000 + 0xfffe) / 0xffff;
   }
-  EntriesNum += getMipsLocalEntriesNum() + MipsGlobal.size();
+  EntriesNum += getLocalEntriesNum() + GlobalEntries.size();
   Size = EntriesNum * sizeof(uintX_t);
 }
 
@@ -601,21 +603,21 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *P = reinterpret_cast<typename ELFT::Off *>(Buf);
   P[1] = uintX_t(1) << (ELFT::Is64Bits ? 63 : 31);
   // Write 'page address' entries to the local part of the GOT.
-  for (std::pair<uintX_t, size_t> &L : MipsLocalGotPos) {
+  for (std::pair<uintX_t, size_t> &L : PageIndexMap) {
     uint8_t *Entry = Buf + L.second * sizeof(uintX_t);
     writeUint<ELFT>(Entry, L.first);
   }
-  Buf += MipsPageEntries * sizeof(uintX_t);
-  auto AddEntry = [&](const MipsGotEntry &SA) {
+  Buf += PageEntriesNum * sizeof(uintX_t);
+  auto AddEntry = [&](const GotEntry &SA) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
     const SymbolBody *Body = SA.first;
     uintX_t VA = Body->template getVA<ELFT>(SA.second);
     writeUint<ELFT>(Entry, VA);
   };
-  std::for_each(std::begin(MipsLocal), std::end(MipsLocal), AddEntry);
-  std::for_each(std::begin(MipsLocal32), std::end(MipsLocal32), AddEntry);
-  std::for_each(std::begin(MipsGlobal), std::end(MipsGlobal), AddEntry);
+  std::for_each(std::begin(LocalEntries), std::end(LocalEntries), AddEntry);
+  std::for_each(std::begin(LocalEntries32), std::end(LocalEntries32), AddEntry);
+  std::for_each(std::begin(GlobalEntries), std::end(GlobalEntries), AddEntry);
   // Initialize TLS-related GOT entries. If the entry has a corresponding
   // dynamic relocations, leave it initialized by zero. Write down adjusted
   // TLS symbol's values otherwise. To calculate the adjustments use offsets
@@ -623,7 +625,7 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
   // https://www.linux-mips.org/wiki/NPTL
   if (TlsIndexOff != -1U && !Config->Pic)
     writeUint<ELFT>(Buf + TlsIndexOff, 1);
-  for (const SymbolBody *B : Entries) {
+  for (const SymbolBody *B : TlsEntries) {
     if (!B || B->isPreemptible())
       continue;
     uintX_t VA = B->getVA<ELFT>();
@@ -832,8 +834,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     add({DT_MIPS_FLAGS, RHF_NOTPOT});
     add({DT_MIPS_BASE_ADDRESS, Config->ImageBase});
     add({DT_MIPS_SYMTABNO, In<ELFT>::DynSymTab->getNumSymbols()});
-    add({DT_MIPS_LOCAL_GOTNO, In<ELFT>::MipsGot->getMipsLocalEntriesNum()});
-    if (const SymbolBody *B = In<ELFT>::MipsGot->getMipsFirstGlobalEntry())
+    add({DT_MIPS_LOCAL_GOTNO, In<ELFT>::MipsGot->getLocalEntriesNum()});
+    if (const SymbolBody *B = In<ELFT>::MipsGot->getFirstGlobalEntry())
       add({DT_MIPS_GOTSYM, B->DynsymIndex});
     else
       add({DT_MIPS_GOTSYM, In<ELFT>::DynSymTab->getNumSymbols()});
@@ -933,7 +935,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       // Dynamic relocation against MIPS GOT section make deal TLS entries
       // allocated in the end of the GOT. We need to adjust the offset to take
       // in account 'local' and 'global' GOT entries.
-      P->r_offset += In<ELFT>::MipsGot->getMipsTlsOffset();
+      P->r_offset += In<ELFT>::MipsGot->getTlsOffset();
     P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->Mips64EL);
   }
 
