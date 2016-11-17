@@ -184,7 +184,7 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
   ExpressionResults expr_result = UserExpression::Evaluate(
-      exe_ctx, options, expr.GetData(), "", return_value_sp, eval_error);
+      exe_ctx, options, expr.GetString(), "", return_value_sp, eval_error);
   if (expr_result != eExpressionCompleted) {
     process_sp->GetTarget().GetDebugger().GetAsyncOutputStream()->Printf(
         "Warning: Cannot evaluate AddressSanitizer expression:\n%s\n",

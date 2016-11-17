@@ -5996,7 +5996,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             const size_t LC_THREAD_data_size = LC_THREAD_data.GetSize();
             buffer.PutHex32(LC_THREAD);
             buffer.PutHex32(8 + LC_THREAD_data_size); // cmd + cmdsize + data
-            buffer.Write(LC_THREAD_data.GetData(), LC_THREAD_data_size);
+            buffer.Write(LC_THREAD_data.GetString().data(),
+                         LC_THREAD_data_size);
           }
 
           // Write out all of the segment load commands

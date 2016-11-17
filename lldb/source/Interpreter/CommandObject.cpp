@@ -74,7 +74,7 @@ llvm::StringRef CommandObject::GetSyntax() {
       syntax_str.PutCString("-- ");
     GetFormattedCommandArguments(syntax_str);
   }
-  m_cmd_syntax = syntax_str.GetData();
+  m_cmd_syntax = syntax_str.GetString();
 
   return m_cmd_syntax;
 }
@@ -392,14 +392,14 @@ void CommandObject::GetArgumentHelp(Stream &str, CommandArgumentType arg_type,
   if (entry->help_function) {
     llvm::StringRef help_text = entry->help_function();
     if (!entry->help_function.self_formatting) {
-      interpreter.OutputFormattedHelpText(str, name_str.GetData(), "--",
+      interpreter.OutputFormattedHelpText(str, name_str.GetString(), "--",
                                           help_text, name_str.GetSize());
     } else {
-      interpreter.OutputHelpText(str, name_str.GetData(), "--", help_text,
+      interpreter.OutputHelpText(str, name_str.GetString(), "--", help_text,
                                  name_str.GetSize());
     }
   } else
-    interpreter.OutputFormattedHelpText(str, name_str.GetData(), "--",
+    interpreter.OutputFormattedHelpText(str, name_str.GetString(), "--",
                                         entry->help_text, name_str.GetSize());
 }
 
@@ -416,9 +416,7 @@ const char *CommandObject::GetArgumentName(CommandArgumentType arg_type) {
   if (entry)
     return entry->arg_name;
 
-  StreamString str;
-  str << "Arg name for type (" << arg_type << ") not in arg table!";
-  return str.GetData();
+  return nullptr;
 }
 
 bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
@@ -503,21 +501,23 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
           names.Printf(" | ");
         names.Printf("%s", GetArgumentName(arg_entry[j].arg_type));
       }
+
+      std::string name_str = names.GetString();
       switch (arg_entry[0].arg_repetition) {
       case eArgRepeatPlain:
-        str.Printf("<%s>", names.GetData());
+        str.Printf("<%s>", name_str.c_str());
         break;
       case eArgRepeatPlus:
-        str.Printf("<%s> [<%s> [...]]", names.GetData(), names.GetData());
+        str.Printf("<%s> [<%s> [...]]", name_str.c_str(), name_str.c_str());
         break;
       case eArgRepeatStar:
-        str.Printf("[<%s> [<%s> [...]]]", names.GetData(), names.GetData());
+        str.Printf("[<%s> [<%s> [...]]]", name_str.c_str(), name_str.c_str());
         break;
       case eArgRepeatOptional:
-        str.Printf("[<%s>]", names.GetData());
+        str.Printf("[<%s>]", name_str.c_str());
         break;
       case eArgRepeatRange:
-        str.Printf("<%s_1> .. <%s_n>", names.GetData(), names.GetData());
+        str.Printf("<%s_1> .. <%s_n>", name_str.c_str(), name_str.c_str());
         break;
       // Explicitly test for all the rest of the cases, so if new types get
       // added we will notice the
@@ -1023,7 +1023,7 @@ static llvm::StringRef arch_helper() {
   static StreamString g_archs_help;
   if (g_archs_help.Empty()) {
     StringList archs;
-    ArchSpec::AutoComplete(nullptr, archs);
+    ArchSpec::AutoComplete(llvm::StringRef(), archs);
     g_archs_help.Printf("These are the supported architecture names:\n");
     archs.Join("\n", g_archs_help);
   }

@@ -20,6 +20,10 @@
 #include "lldb/Core/StreamTee.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/StringRef.h"
+
+#include <memory>
+
 namespace lldb_private {
 
 class CommandReturnObject {
@@ -28,19 +32,18 @@ public:
 
   ~CommandReturnObject();
 
-  const char *GetOutputData() {
+  llvm::StringRef GetOutputData() {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
-      return static_cast<StreamString *>(stream_sp.get())->GetData();
-    return "";
+      return static_pointer_cast<StreamString>(stream_sp)->GetString();
+    return llvm::StringRef();
   }
 
-  const char *GetErrorData() {
+  llvm::StringRef GetErrorData() {
     lldb::StreamSP stream_sp(m_err_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
-      return static_cast<StreamString *>(stream_sp.get())->GetData();
-    else
-      return "";
+      return static_pointer_cast<StreamString>(stream_sp)->GetString();
+    return llvm::StringRef();
   }
 
   Stream &GetOutputStream() {

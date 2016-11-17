@@ -3918,7 +3918,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                             NULL);
             GetObjectFile()->GetModule()->ReportError(
                 "0x%8.8x: %s has an invalid location: %s", die.GetOffset(),
-                die.GetTagAsCString(), strm.GetString().c_str());
+                die.GetTagAsCString(), strm.GetData());
           }
         }
         SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();

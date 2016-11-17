@@ -23,6 +23,8 @@
 #include <isl_options_private.h>
 #include <isl_config.h>
 
+#include <bset_to_bmap.c>
+
 /*
  * The implementation of parametric integer linear programming in this file
  * was inspired by the paper "Parametric Integer Programming" and the
@@ -603,7 +605,7 @@ static void sol_map_add_empty_wrap(struct isl_sol *sol,
 	sol_map_add_empty((struct isl_sol_map *)sol, bset);
 }
 
-/* Given a basic map "dom" that represents the context and an affine
+/* Given a basic set "dom" that represents the context and an affine
  * matrix "M" that maps the dimensions of the context to the
  * output variables, construct a basic map with the same parameters
  * and divs as the context, the dimensions of the context as input
@@ -2634,7 +2636,7 @@ static struct isl_tab *context_tab_for_lexmin(struct isl_basic_set *bset)
 
 	if (!bset)
 		return NULL;
-	tab = tab_for_lexmin((struct isl_basic_map *)bset, NULL, 1, 0);
+	tab = tab_for_lexmin(bset_to_bmap(bset), NULL, 1, 0);
 	if (!tab)
 		goto error;
 	if (isl_tab_track_bset(tab, bset) < 0)
@@ -4171,6 +4173,11 @@ error:
  * We make sure the divs in the domain are properly ordered,
  * because they will be added one by one in the given order
  * during the construction of the solution map.
+ * Furthermore, make sure that the known integer divisions
+ * appear before any unknown integer division because the solution
+ * may depend on the known integer divisions, while anything that
+ * depends on any variable starting from the first unknown integer
+ * division is ignored in sol_pma_add.
  */
 static struct isl_sol *basic_map_partial_lexopt_base_sol(
 	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
@@ -4183,7 +4190,7 @@ static struct isl_sol *basic_map_partial_lexopt_base_sol(
 	struct isl_context *context;
 
 	if (dom->n_div) {
-		dom = isl_basic_set_order_divs(dom);
+		dom = isl_basic_set_sort_divs(dom);
 		bmap = align_context_divs(bmap, dom);
 	}
 	sol = init(bmap, dom, !!empty, max);
@@ -4546,7 +4553,7 @@ static int need_split_basic_map(__isl_keep isl_basic_map *bmap,
 static int need_split_basic_set(__isl_keep isl_basic_set *bset,
 	__isl_keep isl_mat *cst)
 {
-	return need_split_basic_map((isl_basic_map *)bset, cst);
+	return need_split_basic_map(bset_to_bmap(bset), cst);
 }
 
 /* Given that the last set variable of "set" represents the minimum
@@ -5356,6 +5363,27 @@ error:
 	sol->sol.error = 1;
 }
 
+/* Check that the final columns of "M", starting at "first", are zero.
+ */
+static isl_stat check_final_columns_are_zero(__isl_keep isl_mat *M,
+	unsigned first)
+{
+	int i;
+	unsigned rows, cols, n;
+
+	if (!M)
+		return isl_stat_error;
+	rows = isl_mat_rows(M);
+	cols = isl_mat_cols(M);
+	n = cols - first;
+	for (i = 0; i < rows; ++i)
+		if (isl_seq_first_non_zero(M->row[i] + first, n) != -1)
+			isl_die(isl_mat_get_ctx(M), isl_error_internal,
+				"final columns should be zero",
+				return isl_stat_error);
+	return isl_stat_ok;
+}
+
 /* Set the affine expressions in "ma" according to the rows in "M", which
  * are defined over the local space "ls".
  * The matrix "M" may have extra (zero) columns beyond the number
@@ -5372,6 +5400,8 @@ static __isl_give isl_multi_aff *set_from_affine_matrix(
 		goto error;
 
 	dim = isl_local_space_dim(ls, isl_dim_all);
+	if (check_final_columns_are_zero(M, 1 + dim) < 0)
+		goto error;
 	for (i = 1; i < M->n_row; ++i) {
 		aff = isl_aff_alloc(isl_local_space_copy(ls));
 		if (aff) {
@@ -5392,7 +5422,7 @@ error:
 	return NULL;
 }
 
-/* Given a basic map "dom" that represents the context and an affine
+/* Given a basic set "dom" that represents the context and an affine
  * matrix "M" that maps the dimensions of the context to the
  * output variables, construct an isl_pw_multi_aff with a single
  * cell corresponding to "dom" and affine expressions copied from "M".
@@ -5401,9 +5431,10 @@ error:
  * existentially quantified variables, in which case they also appear
  * in "dom".  These need to be removed before creating the affine
  * expression because an affine expression cannot be defined in terms
+ * of existentially quantified variables without a known representation.
  * Since newly added integer divisions are inserted before these
  * existentially quantified variables, they are still in the final
- * positions and the corresponding final columns "M" are zero
+ * positions and the corresponding final columns of "M" are zero
  * because align_context_divs adds the existentially quantified
  * variables of the context to the main tableau without any constraints and
  * any equality constraints that are added later on can only serve

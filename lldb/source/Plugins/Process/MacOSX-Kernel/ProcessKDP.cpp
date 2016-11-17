@@ -965,7 +965,7 @@ public:
                 packet.PutBytesAsRawHex8(
                     reply.GetDataStart(), reply.GetByteSize(),
                     endian::InlHostByteOrder(), endian::InlHostByteOrder());
-                result.AppendMessage(packet.GetString().c_str());
+                result.AppendMessage(packet.GetString());
                 result.SetStatus(eReturnStatusSuccessFinishResult);
                 return true;
               } else {

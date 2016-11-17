@@ -185,7 +185,7 @@ Error AdbClient::SetPortForwarding(const uint16_t local_port,
 }
 
 Error AdbClient::SetPortForwarding(const uint16_t local_port,
-                                   const char *remote_socket_name,
+                                   llvm::StringRef remote_socket_name,
                                    const UnixSocketNamespace socket_namespace) {
   char message[PATH_MAX];
   const char *sock_namespace_str =
@@ -193,7 +193,7 @@ Error AdbClient::SetPortForwarding(const uint16_t local_port,
           ? kSocketNamespaceAbstract
           : kSocketNamespaceFileSystem;
   snprintf(message, sizeof(message), "forward:tcp:%d;%s:%s", local_port,
-           sock_namespace_str, remote_socket_name);
+           sock_namespace_str, remote_socket_name.str().c_str());
 
   const auto error = SendDeviceMessage(message);
   if (error.Fail())
@@ -360,7 +360,7 @@ Error AdbClient::internalShell(const char *command, uint32_t timeout_ms,
 
   StreamString adb_command;
   adb_command.Printf("shell:%s", command);
-  error = SendMessage(adb_command.GetData(), false);
+  error = SendMessage(adb_command.GetString(), false);
   if (error.Fail())
     return error;
 

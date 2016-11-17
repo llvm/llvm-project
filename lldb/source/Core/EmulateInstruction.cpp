@@ -194,8 +194,8 @@ bool EmulateInstruction::WriteMemoryUnsigned(const Context &context,
   StreamString strm(Stream::eBinary, GetAddressByteSize(), GetByteOrder());
   strm.PutMaxHex64(uval, uval_byte_size);
 
-  size_t bytes_written = m_write_mem_callback(this, m_baton, context, addr,
-                                              strm.GetData(), uval_byte_size);
+  size_t bytes_written = m_write_mem_callback(
+      this, m_baton, context, addr, strm.GetString().data(), uval_byte_size);
   return (bytes_written == uval_byte_size);
 }
 

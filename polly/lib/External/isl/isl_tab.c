@@ -20,6 +20,9 @@
 #include <isl_seq.h>
 #include <isl_config.h>
 
+#include <bset_to_bmap.c>
+#include <bset_from_bmap.c>
+
 /*
  * The implementation of tableaus in this file was inspired by Section 8
  * of David Detlefs, Greg Nelson and James B. Saxe, "Simplify: a theorem
@@ -2613,8 +2616,8 @@ struct isl_basic_map *isl_basic_map_update_from_tab(struct isl_basic_map *bmap,
 struct isl_basic_set *isl_basic_set_update_from_tab(struct isl_basic_set *bset,
 	struct isl_tab *tab)
 {
-	return (struct isl_basic_set *)isl_basic_map_update_from_tab(
-		(struct isl_basic_map *)bset, tab);
+	return bset_from_bmap(isl_basic_map_update_from_tab(bset_to_bmap(bset),
+								tab));
 }
 
 /* Drop the last constraint added to "tab" in position "r".
@@ -3722,7 +3725,7 @@ error:
 
 int isl_tab_track_bset(struct isl_tab *tab, __isl_take isl_basic_set *bset)
 {
-	return isl_tab_track_bmap(tab, (isl_basic_map *)bset);
+	return isl_tab_track_bmap(tab, bset_to_bmap(bset));
 }
 
 __isl_keep isl_basic_set *isl_tab_peek_bset(struct isl_tab *tab)
@@ -3730,7 +3733,7 @@ __isl_keep isl_basic_set *isl_tab_peek_bset(struct isl_tab *tab)
 	if (!tab)
 		return NULL;
 
-	return (isl_basic_set *)tab->bmap;
+	return bset_from_bmap(tab->bmap);
 }
 
 static void isl_tab_print_internal(__isl_keep struct isl_tab *tab,

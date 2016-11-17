@@ -210,8 +210,8 @@ protected:
         StreamString idx_name;
         idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
 
-        return ValueObjectConstResult::Create(m_process, v,
-                                              ConstString(idx_name.GetData()));
+        return ValueObjectConstResult::Create(
+            m_process, v, ConstString(idx_name.GetString()));
       }
 
       void Clear() {

@@ -264,15 +264,14 @@ void Error::SetErrorToGenericError() {
 // The error string value will remain until the error value is
 // cleared or a new error value/type is assigned.
 //----------------------------------------------------------------------
-void Error::SetErrorString(const char *err_str) {
-  if (err_str != nullptr && err_str[0]) {
-    // If we have an error string, we should always at least have
-    // an error set to a generic value.
+void Error::SetErrorString(llvm::StringRef err_str) {
+  if (!err_str.empty()) {
+    // If we have an error string, we should always at least have an error
+    // set to a generic value.
     if (Success())
       SetErrorToGenericError();
-    m_string = err_str;
-  } else
-    m_string.clear();
+  }
+  m_string = err_str;
 }
 
 //------------------------------------------------------------------

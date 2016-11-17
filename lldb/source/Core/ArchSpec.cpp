@@ -256,8 +256,8 @@ struct ArchDefinition {
   const char *name;
 };
 
-size_t ArchSpec::AutoComplete(const char *name, StringList &matches) {
-  if (name && name[0]) {
+size_t ArchSpec::AutoComplete(llvm::StringRef name, StringList &matches) {
+  if (!name.empty()) {
     for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
       if (NameMatches(g_core_definitions[i].name, eNameMatchStartsWith, name))
         matches.AppendString(g_core_definitions[i].name);

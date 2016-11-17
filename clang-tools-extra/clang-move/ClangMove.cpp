@@ -136,6 +136,27 @@ private:
   ClangMoveTool *const MoveTool;
 };
 
+class FunctionDeclarationMatch : public MatchFinder::MatchCallback {
+public:
+  explicit FunctionDeclarationMatch(ClangMoveTool *MoveTool)
+      : MoveTool(MoveTool) {}
+
+  void run(const MatchFinder::MatchResult &Result) override {
+    const auto *FD = Result.Nodes.getNodeAs<clang::FunctionDecl>("function");
+    assert(FD);
+    const clang::NamedDecl *D = FD;
+    if (const auto *FTD = FD->getDescribedFunctionTemplate())
+      D = FTD;
+    MoveTool->getMovedDecls().emplace_back(D,
+                                           &Result.Context->getSourceManager());
+    MoveTool->getUnremovedDeclsInOldHeader().erase(D);
+    MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+  }
+
+private:
+  ClangMoveTool *MoveTool;
+};
+
 class ClassDeclarationMatch : public MatchFinder::MatchCallback {
 public:
   explicit ClassDeclarationMatch(ClangMoveTool *MoveTool)
@@ -389,15 +410,15 @@ ClangMoveTool::ClangMoveTool(
 }
 
 void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
-  Optional<ast_matchers::internal::Matcher<NamedDecl>> InMovedClassNames;
-  for (StringRef ClassName : Spec.Names) {
-    llvm::StringRef GlobalClassName = ClassName.trim().ltrim(':');
-    const auto HasName = hasName(("::" + GlobalClassName).str());
-    InMovedClassNames =
-        InMovedClassNames ? anyOf(*InMovedClassNames, HasName) : HasName;
+  Optional<ast_matchers::internal::Matcher<NamedDecl>> HasAnySymbolNames;
+  for (StringRef SymbolName: Spec.Names) {
+    llvm::StringRef GlobalSymbolName = SymbolName.trim().ltrim(':');
+    const auto HasName = hasName(("::" + GlobalSymbolName).str());
+    HasAnySymbolNames =
+        HasAnySymbolNames ? anyOf(*HasAnySymbolNames, HasName) : HasName;
   }
-  if (!InMovedClassNames) {
-    llvm::errs() << "No classes being moved.\n";
+  if (!HasAnySymbolNames) {
+    llvm::errs() << "No symbols being moved.\n";
     return;
   }
 
@@ -405,7 +426,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   auto InOldCC = isExpansionInFile(makeAbsolutePath(Spec.OldCC));
   auto InOldFiles = anyOf(InOldHeader, InOldCC);
   auto InMovedClass =
-      hasOutermostEnclosingClass(cxxRecordDecl(*InMovedClassNames));
+      hasOutermostEnclosingClass(cxxRecordDecl(*HasAnySymbolNames));
 
   auto ForwardDecls =
       cxxRecordDecl(unless(anyOf(isImplicit(), isDefinition())));
@@ -466,14 +487,14 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Match moved class declarations.
   auto MovedClass =
       cxxRecordDecl(
-          InOldFiles, *InMovedClassNames, isDefinition(),
+          InOldFiles, *HasAnySymbolNames, isDefinition(),
           hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())))
           .bind("moved_class");
   Finder->addMatcher(MovedClass, MatchCallbacks.back().get());
   // Match moved class methods (static methods included) which are defined
   // outside moved class declaration.
   Finder->addMatcher(
-      cxxMethodDecl(InOldFiles, ofOutermostEnclosingClass(*InMovedClassNames),
+      cxxMethodDecl(InOldFiles, ofOutermostEnclosingClass(*HasAnySymbolNames),
                     isDefinition())
           .bind("class_method"),
       MatchCallbacks.back().get());
@@ -483,6 +504,12 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
           .bind("class_static_var_decl"),
       MatchCallbacks.back().get());
 
+  MatchCallbacks.push_back(llvm::make_unique<FunctionDeclarationMatch>(this));
+  Finder->addMatcher(functionDecl(InOldFiles, *HasAnySymbolNames,
+                                  anyOf(hasDeclContext(namespaceDecl()),
+                                        hasDeclContext(translationUnitDecl())))
+                         .bind("function"),
+                     MatchCallbacks.back().get());
 }
 
 void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {

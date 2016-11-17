@@ -68,19 +68,13 @@ public:
   ///     A buffer of bytes that will contain a full or patially
   ///     decoded UUID.
   ///
-  /// @param[out] end
-  ///     If \a end is not nullptr, it will be filled in with the a
-  ///     pointer to the character after the last successfully decoded
-  ///     byte.
-  ///
   /// @return
-  ///     Returns the number of bytes that were successfully decoded
-  ///     which should be 16 if a full UUID value was properly decoded.
+  ///     The original string, with all decoded bytes removed.
   //------------------------------------------------------------------
-  static size_t DecodeUUIDBytesFromCString(const char *cstr,
-                                           ValueType &uuid_bytes,
-                                           const char **end,
-                                           uint32_t num_uuid_bytes = 16);
+  static llvm::StringRef
+  DecodeUUIDBytesFromString(llvm::StringRef str, ValueType &uuid_bytes,
+                            uint32_t &bytes_decoded,
+                            uint32_t num_uuid_bytes = 16);
 
 protected:
   //------------------------------------------------------------------

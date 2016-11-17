@@ -1961,6 +1961,37 @@ static isl_bool single_is_subset(struct isl_from_pw_aff_data *data,
 	return subset;
 }
 
+/* Is "aff" a rational expression, i.e., does it have a denominator
+ * different from one?
+ */
+static isl_bool aff_is_rational(__isl_keep isl_aff *aff)
+{
+	isl_bool rational;
+	isl_val *den;
+
+	den = isl_aff_get_denominator_val(aff);
+	rational = isl_bool_not(isl_val_is_one(den));
+	isl_val_free(den);
+
+	return rational;
+}
+
+/* Does "list" consist of a single rational affine expression?
+ */
+static isl_bool is_single_rational_aff(__isl_keep isl_aff_list *list)
+{
+	isl_bool rational;
+	isl_aff *aff;
+
+	if (isl_aff_list_n_aff(list) != 1)
+		return isl_bool_false;
+	aff = isl_aff_list_get_aff(list, 0);
+	rational = aff_is_rational(aff);
+	isl_aff_free(aff);
+
+	return rational;
+}
+
 /* Can the list of subpieces in the last piece of "data" be extended with
  * "set" and "aff" based on "test"?
  * In particular, is it the case for each entry (set_i, aff_i) that
@@ -1974,6 +2005,11 @@ static isl_bool single_is_subset(struct isl_from_pw_aff_data *data,
  * This function is used to detect min/max expressions.
  * If the ast_build_detect_min_max option is turned off, then
  * do not even try and perform any detection and return false instead.
+ *
+ * Rational affine expressions are not considered for min/max expressions
+ * since the combined expression will be defined on the union of the domains,
+ * while a rational expression may only yield integer values
+ * on its own definition domain.
  */
 static isl_bool extends(struct isl_from_pw_aff_data *data,
 	__isl_keep isl_set *set, __isl_keep isl_aff *aff,
@@ -1981,8 +2017,15 @@ static isl_bool extends(struct isl_from_pw_aff_data *data,
 		__isl_take isl_aff *aff2))
 {
 	int i, n;
+	isl_bool is_rational;
 	isl_ctx *ctx;
 	isl_set *dom;
+
+	is_rational = aff_is_rational(aff);
+	if (is_rational >= 0 && !is_rational)
+		is_rational = is_single_rational_aff(data->p[data->n].aff_list);
+	if (is_rational < 0 || is_rational)
+		return isl_bool_not(is_rational);
 
 	ctx = isl_ast_build_get_ctx(data->build);
 	if (!isl_options_get_ast_build_detect_min_max(ctx))

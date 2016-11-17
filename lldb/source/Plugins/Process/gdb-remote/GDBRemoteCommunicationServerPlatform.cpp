@@ -124,10 +124,10 @@ Error GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
                 this, std::placeholders::_1),
       false);
 
-  std::string platform_scheme;
-  std::string platform_ip;
+  llvm::StringRef platform_scheme;
+  llvm::StringRef platform_ip;
   int platform_port;
-  std::string platform_path;
+  llvm::StringRef platform_path;
   bool ok = UriParser::Parse(GetConnection()->GetURI(), platform_scheme,
                              platform_ip, platform_port, platform_path);
   UNUSED_IF_ASSERT_DISABLED(ok);
@@ -140,7 +140,7 @@ Error GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 #endif
   uint16_t *port_ptr = &port;
   if (m_socket_protocol == Socket::ProtocolTcp)
-    url << platform_ip << ":" << port;
+    url << platform_ip.str() << ":" << port;
   else {
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;
@@ -246,7 +246,8 @@ GDBRemoteCommunicationServerPlatform::Handle_qQueryGDBServer(
   server_list.Write(response);
 
   StreamGDBRemote escaped_response;
-  escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
+  escaped_response.PutEscapedBytes(response.GetString().data(),
+                                   response.GetSize());
   return SendPacketNoLock(escaped_response.GetString());
 }
 

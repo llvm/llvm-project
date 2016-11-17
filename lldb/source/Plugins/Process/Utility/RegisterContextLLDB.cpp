@@ -218,7 +218,7 @@ void RegisterContextLLDB::InitializeZerothFrame() {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-      UnwindLogMsg("%s", active_row_strm.GetString().c_str());
+      UnwindLogMsg("%s", active_row_strm.GetData());
     }
   }
 
@@ -564,7 +564,7 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-      UnwindLogMsg("active row: %s", active_row_strm.GetString().c_str());
+      UnwindLogMsg("active row: %s", active_row_strm.GetData());
     }
   } else {
     m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
@@ -577,7 +577,7 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
                          &m_thread,
                          m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-        UnwindLogMsg("active row: %s", active_row_strm.GetString().c_str());
+        UnwindLogMsg("active row: %s", active_row_strm.GetData());
       }
     }
   }

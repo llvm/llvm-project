@@ -317,7 +317,7 @@ Error PlatformLinux::ResolveExecutable(
           error.SetErrorStringWithFormat(
               "'%s' doesn't contain any '%s' platform architectures: %s",
               resolved_module_spec.GetFileSpec().GetPath().c_str(),
-              GetPluginName().GetCString(), arch_names.GetString().c_str());
+              GetPluginName().GetCString(), arch_names.GetData());
         } else {
           error.SetErrorStringWithFormat(
               "'%s' is not readable",
@@ -633,7 +633,7 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
     const FileAction *file_action;
     while ((file_action = launch_info.GetFileActionAtIndex(i++)) != nullptr) {
       file_action->Dump(stream);
-      log->PutCString(stream.GetString().c_str());
+      log->PutCString(stream.GetData());
       stream.Clear();
     }
   }
@@ -713,5 +713,5 @@ ConstString PlatformLinux::GetFullNameForDylib(ConstString basename) {
 
   StreamString stream;
   stream.Printf("lib%s.so", basename.GetCString());
-  return ConstString(stream.GetData());
+  return ConstString(stream.GetString());
 }

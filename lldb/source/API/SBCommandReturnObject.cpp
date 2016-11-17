@@ -59,12 +59,14 @@ const char *SBCommandReturnObject::GetOutput() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (m_opaque_ap) {
+    llvm::StringRef output = m_opaque_ap->GetOutputData();
+    ConstString result(output.empty() ? llvm::StringRef("") : output);
+
     if (log)
       log->Printf("SBCommandReturnObject(%p)::GetOutput () => \"%s\"",
-                  static_cast<void *>(m_opaque_ap.get()),
-                  m_opaque_ap->GetOutputData());
+                  static_cast<void *>(m_opaque_ap.get()), result.AsCString());
 
-    return m_opaque_ap->GetOutputData();
+    return result.AsCString();
   }
 
   if (log)
@@ -78,12 +80,13 @@ const char *SBCommandReturnObject::GetError() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (m_opaque_ap) {
+    llvm::StringRef output = m_opaque_ap->GetErrorData();
+    ConstString result(output.empty() ? llvm::StringRef("") : output);
     if (log)
       log->Printf("SBCommandReturnObject(%p)::GetError () => \"%s\"",
-                  static_cast<void *>(m_opaque_ap.get()),
-                  m_opaque_ap->GetErrorData());
+                  static_cast<void *>(m_opaque_ap.get()), result.AsCString());
 
-    return m_opaque_ap->GetErrorData();
+    return result.AsCString();
   }
 
   if (log)
@@ -94,11 +97,11 @@ const char *SBCommandReturnObject::GetError() {
 }
 
 size_t SBCommandReturnObject::GetOutputSize() {
-  return (m_opaque_ap ? strlen(m_opaque_ap->GetOutputData()) : 0);
+  return (m_opaque_ap ? m_opaque_ap->GetOutputData().size() : 0);
 }
 
 size_t SBCommandReturnObject::GetErrorSize() {
-  return (m_opaque_ap ? strlen(m_opaque_ap->GetErrorData()) : 0);
+  return (m_opaque_ap ? m_opaque_ap->GetErrorData().size() : 0);
 }
 
 size_t SBCommandReturnObject::PutOutput(FILE *fh) {

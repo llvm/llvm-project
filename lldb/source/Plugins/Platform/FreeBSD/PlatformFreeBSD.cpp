@@ -227,7 +227,7 @@ Error PlatformFreeBSD::ResolveExecutable(
           error.SetErrorStringWithFormat(
               "'%s' doesn't contain any '%s' platform architectures: %s",
               resolved_module_spec.GetFileSpec().GetPath().c_str(),
-              GetPluginName().GetCString(), arch_names.GetString().c_str());
+              GetPluginName().GetCString(), arch_names.GetData());
         } else {
           error.SetErrorStringWithFormat(
               "'%s' is not readable",

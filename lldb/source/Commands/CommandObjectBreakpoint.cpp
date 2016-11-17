@@ -1558,7 +1558,7 @@ protected:
     if (num_cleared > 0) {
       Stream &output_stream = result.GetOutputStream();
       output_stream.Printf("%d breakpoints cleared:\n", num_cleared);
-      output_stream << ss.GetData();
+      output_stream << ss.GetString();
       output_stream.EOL();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
@@ -1997,7 +1997,7 @@ protected:
           StreamString s;
           bp_sp->GetDescription(&s, eDescriptionLevelBrief);
           s.EOL();
-          result.AppendMessage(s.GetData());
+          result.AppendMessage(s.GetString());
         }
       }
 

@@ -74,7 +74,7 @@ lldb::OptionValueSP OptionValueArch::DeepCopy() const {
 }
 
 size_t OptionValueArch::AutoComplete(CommandInterpreter &interpreter,
-                                     const char *s, int match_start_point,
+                                     llvm::StringRef s, int match_start_point,
                                      int max_return_elements,
                                      bool &word_complete, StringList &matches) {
   word_complete = false;

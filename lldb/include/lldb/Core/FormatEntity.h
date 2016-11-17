@@ -192,7 +192,7 @@ public:
                                    llvm::StringRef &variable_name,
                                    llvm::StringRef &variable_format);
 
-  static size_t AutoComplete(const char *s, int match_start_point,
+  static size_t AutoComplete(llvm::StringRef s, int match_start_point,
                              int max_return_elements, bool &word_complete,
                              StringList &matches);
 

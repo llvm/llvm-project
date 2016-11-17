@@ -22,6 +22,18 @@ Visibility Macros
   Mark a symbol as being exported by the libc++ library. This attribute must
   be applied to the declaration of all functions exported by the libc++ dylib.
 
+**_LIBCPP_OVERRIDABLE_FUNC_VIS**
+  Mark a symbol as being exported by the libc++ library, but allow it to be
+  overridden locally. On non-Windows, this is equivalent to `_LIBCPP_FUNC_VIS`.
+  This macro is applied to all `operator new` and `operator delete` overloads.
+
+  **Windows Behavior**: Any symbol marked `dllimport` cannot be overridden
+  locally, since `dllimport` indicates the symbol should be bound to a separate
+  DLL. All `operator new` and `operator delete` overloads are required to be
+  locally overridable, and therefore must not be marked `dllimport`. On Windows,
+  this macro therefore expands to `__declspec(dllexport)` when building the
+  library and has an empty definition otherwise.
+
 **_LIBCPP_INLINE_VISIBILITY**
   Mark a function as hidden and force inlining whenever possible.
 
@@ -106,20 +118,6 @@ Visibility Macros
   Exception types should be defined directly in namespace `std` and not the
   versioning namespace. This allows throwing and catching some exception types
   between libc++ and libstdc++.
-
-**_LIBCPP_NEW_DELETE_VIS**
-  Mark a symbol as being exported by the libc++ library. This macro must be
-  applied to all `operator new` and `operator delete` overloads.
-
-  **Windows Behavior**: The `operator new` and `operator delete` overloads
-  should not be marked as `dllimport`; if they were, source files including the
-  `<new>` header (either directly or transitively) would lose the ability to use
-  local overloads of `operator new` and `operator delete`. On Windows, this
-  macro therefore expands to `__declspec(dllexport)` when building the library
-  and has an empty definition otherwise. A related caveat is that libc++ must be
-  included on the link line before `msvcrt.lib`, otherwise Microsoft's
-  definitions of `operator new` and `operator delete` inside `msvcrt.lib` will
-  end up being used instead of libc++'s.
 
 Links
 =====

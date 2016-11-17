@@ -339,6 +339,8 @@ EXTRA_DIST = \
 	LICENSE \
 	isl_config_post.h \
 	basis_reduction_templ.c \
+	bset_to_bmap.c \
+	bset_from_bmap.c \
 	isl_list_templ.c \
 	isl_list_templ.h \
 	isl_map_lexopt_templ.c \
@@ -362,6 +364,8 @@ EXTRA_DIST = \
 	isl_pw_hash.c \
 	isl_pw_union_opt.c \
 	read_in_string_templ.c \
+	set_to_map.c \
+	set_from_map.c \
 	isl_tab_lexopt_templ.c \
 	isl_union_macro.h \
 	isl_union_templ.c \

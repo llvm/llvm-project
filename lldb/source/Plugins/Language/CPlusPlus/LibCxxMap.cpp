@@ -399,7 +399,8 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
   auto potential_child_sp = CreateValueObjectFromData(
-      name.GetData(), data, m_backend.GetExecutionContextRef(), m_element_type);
+      name.GetString(), data, m_backend.GetExecutionContextRef(),
+      m_element_type);
   if (potential_child_sp) {
     switch (potential_child_sp->GetNumChildren()) {
     case 1: {
@@ -417,7 +418,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
       break;
     }
     }
-    potential_child_sp->SetName(ConstString(name.GetData()));
+    potential_child_sp->SetName(ConstString(name.GetString()));
   }
   m_iterators[idx] = iterator;
   return potential_child_sp;

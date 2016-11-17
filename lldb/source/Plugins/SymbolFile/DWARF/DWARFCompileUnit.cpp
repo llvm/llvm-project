@@ -265,7 +265,7 @@ size_t DWARFCompileUnit::ExtractDIEsIfNeeded(bool cu_die_only) {
       strm.Printf("error: no DIE for compile unit");
     else
       m_die_array[0].Dump(m_dwarf2Data, this, strm, UINT32_MAX);
-    verbose_log->PutCString(strm.GetString().c_str());
+    verbose_log->PutString(strm.GetString());
   }
 
   if (!m_dwo_symbol_file)

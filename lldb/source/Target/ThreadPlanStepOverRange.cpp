@@ -422,7 +422,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
                   "Stepping over inlined function \"%s\" in inlined stack: ",
                   name);
               DumpRanges(&s);
-              log->PutCString(s.GetData());
+              log->PutString(s.GetString());
             }
           }
         }

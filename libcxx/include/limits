@@ -182,7 +182,7 @@ protected:
     static _LIBCPP_CONSTEXPR const float_round_style round_style = round_toward_zero;
 };
 
-template <class _Tp, int digits, bool is_signed>
+template <class _Tp, int digits, bool _IsSigned>
 struct __libcpp_compute_min
 {
     static _LIBCPP_CONSTEXPR const _Tp value = _Tp(_Tp(1) << digits);

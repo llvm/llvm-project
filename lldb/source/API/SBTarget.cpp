@@ -2133,7 +2133,7 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
           "SBTarget::EvaluateExpression (expr = \"%s\", fetch_dynamic_value = "
           "%u) %s",
           expr, options.GetFetchDynamicValue(),
-          frame_description.GetString().c_str());
+          frame_description.GetString().str().c_str());
 #endif
       exe_results =
           target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());

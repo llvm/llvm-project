@@ -1703,7 +1703,7 @@ bool ABIMacOSX_arm64::PrepareTrivialCall(
     for (size_t i = 0; i < args.size(); ++i)
       s.Printf(", arg%d = 0x%" PRIx64, static_cast<int>(i + 1), args[i]);
     s.PutCString(")");
-    log->PutCString(s.GetString().c_str());
+    log->PutString(s.GetString());
   }
 
   const uint32_t pc_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(

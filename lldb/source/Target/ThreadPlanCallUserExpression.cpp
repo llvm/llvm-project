@@ -1,5 +1,4 @@
-//===-- ThreadPlanCallUserExpression.cpp ------------------------------*- C++
-//-*-===//
+//===-- ThreadPlanCallUserExpression.cpp -------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -31,6 +31,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#include "llvm/ADT/Twine.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -483,24 +485,24 @@ bool Variable::DumpLocationForAddress(Stream *s, const Address &address) {
 }
 
 static void PrivateAutoComplete(
-    StackFrame *frame, const std::string &partial_path,
-    const std::string
+    StackFrame *frame, llvm::StringRef partial_path,
+    const llvm::Twine
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type,
     StringList &matches, bool &word_complete);
 
 static void PrivateAutoCompleteMembers(
     StackFrame *frame, const std::string &partial_member_name,
-    const std::string &partial_path,
-    const std::string
+    llvm::StringRef partial_path,
+    const llvm::Twine
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type,
     StringList &matches, bool &word_complete);
 
 static void PrivateAutoCompleteMembers(
     StackFrame *frame, const std::string &partial_member_name,
-    const std::string &partial_path,
-    const std::string
+    llvm::StringRef partial_path,
+    const llvm::Twine
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type,
     StringList &matches, bool &word_complete) {
@@ -551,7 +553,7 @@ static void PrivateAutoCompleteMembers(
                                          // already will be in here
               member_compiler_type.GetCanonicalType(), matches, word_complete);
         } else {
-          matches.AppendString(prefix_path + member_name);
+          matches.AppendString((prefix_path + member_name).str());
         }
       }
     }
@@ -559,8 +561,8 @@ static void PrivateAutoCompleteMembers(
 }
 
 static void PrivateAutoComplete(
-    StackFrame *frame, const std::string &partial_path,
-    const std::string
+    StackFrame *frame, llvm::StringRef partial_path,
+    const llvm::Twine
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type,
     StringList &matches, bool &word_complete) {
@@ -584,15 +586,15 @@ static void PrivateAutoComplete(
       case eTypeClassReference:
       case eTypeClassTypedef:
       case eTypeClassVector: {
-        matches.AppendString(prefix_path);
+        matches.AppendString(prefix_path.str());
         word_complete = matches.GetSize() == 1;
       } break;
 
       case eTypeClassClass:
       case eTypeClassStruct:
       case eTypeClassUnion:
-        if (prefix_path.back() != '.')
-          matches.AppendString(prefix_path + '.');
+        if (prefix_path.str().back() != '.')
+          matches.AppendString((prefix_path + ".").str());
         break;
 
       case eTypeClassObjCObject:
@@ -602,9 +604,9 @@ static void PrivateAutoComplete(
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
         if (compiler_type.GetNumChildren(omit_empty_base_classes) > 0)
-          matches.AppendString(prefix_path + "->");
+          matches.AppendString((prefix_path + "->").str());
         else {
-          matches.AppendString(prefix_path);
+          matches.AppendString(prefix_path.str());
           word_complete = true;
         }
       } break;
@@ -628,21 +630,21 @@ static void PrivateAutoComplete(
     const char ch = partial_path[0];
     switch (ch) {
     case '*':
-      if (prefix_path.empty()) {
-        PrivateAutoComplete(frame, partial_path.substr(1), std::string("*"),
-                            compiler_type, matches, word_complete);
+      if (prefix_path.str().empty()) {
+        PrivateAutoComplete(frame, partial_path.substr(1), "*", compiler_type,
+                            matches, word_complete);
       }
       break;
 
     case '&':
-      if (prefix_path.empty()) {
+      if (prefix_path.isTriviallyEmpty()) {
         PrivateAutoComplete(frame, partial_path.substr(1), std::string("&"),
                             compiler_type, matches, word_complete);
       }
       break;
 
     case '-':
-      if (partial_path[1] == '>' && !prefix_path.empty()) {
+      if (partial_path[1] == '>' && !prefix_path.str().empty()) {
         switch (type_class) {
         case lldb::eTypeClassPointer: {
           CompilerType pointee_type(compiler_type.GetPointeeType());
@@ -739,10 +741,10 @@ static void PrivateAutoComplete(
                       variable_compiler_type.GetCanonicalType(), matches,
                       word_complete);
                 } else {
-                  matches.AppendString(prefix_path + variable_name);
+                  matches.AppendString((prefix_path + variable_name).str());
                 }
               } else if (remaining_partial_path.empty()) {
-                matches.AppendString(prefix_path + variable_name);
+                matches.AppendString((prefix_path + variable_name).str());
               }
             }
           }
@@ -754,17 +756,13 @@ static void PrivateAutoComplete(
 }
 
 size_t Variable::AutoComplete(const ExecutionContext &exe_ctx,
-                              const char *partial_path_cstr,
-                              StringList &matches, bool &word_complete) {
+                              llvm::StringRef partial_path, StringList &matches,
+                              bool &word_complete) {
   word_complete = false;
-  std::string partial_path;
-  std::string prefix_path;
   CompilerType compiler_type;
-  if (partial_path_cstr && partial_path_cstr[0])
-    partial_path = partial_path_cstr;
 
-  PrivateAutoComplete(exe_ctx.GetFramePtr(), partial_path, prefix_path,
-                      compiler_type, matches, word_complete);
+  PrivateAutoComplete(exe_ctx.GetFramePtr(), partial_path, "", compiler_type,
+                      matches, word_complete);
 
   return matches.GetSize();
 }

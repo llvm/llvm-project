@@ -75,7 +75,7 @@ Error OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
                             m_enumerations.GetCStringAtIndex(i).str().c_str());
         }
       }
-      error.SetErrorString(error_strm.GetData());
+      error.SetErrorString(error_strm.GetString());
     }
     break;
   }
@@ -111,13 +111,13 @@ lldb::OptionValueSP OptionValueEnumeration::DeepCopy() const {
 }
 
 size_t OptionValueEnumeration::AutoComplete(
-    CommandInterpreter &interpreter, const char *s, int match_start_point,
+    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
     int max_return_elements, bool &word_complete, StringList &matches) {
   word_complete = false;
   matches.Clear();
 
   const uint32_t num_enumerators = m_enumerations.GetSize();
-  if (s && s[0]) {
+  if (!s.empty()) {
     for (size_t i = 0; i < num_enumerators; ++i) {
       llvm::StringRef name = m_enumerations.GetCStringAtIndex(i);
       if (name.startswith(s))

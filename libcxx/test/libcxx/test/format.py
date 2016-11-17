@@ -37,6 +37,11 @@ class LibcxxTestFormat(object):
         self.execute_external = execute_external
         self.executor = executor
         self.exec_env = dict(exec_env)
+        self.compile_env = dict(os.environ)
+        # 'CCACHE_CPP2' prevents ccache from stripping comments while
+        # preprocessing. This is required to prevent stripping of '-verify'
+        # comments.
+        self.compile_env['CCACHE_CPP2'] = '1'
 
     # TODO: Move this into lit's FileBasedTest
     def getTestsInDirectory(self, testSuite, path_in_suite,
@@ -127,7 +132,7 @@ class LibcxxTestFormat(object):
             # Compile the test
             cmd, out, err, rc = self.cxx.compileLinkTwoSteps(
                 source_path, out=exec_path, object_file=object_path,
-                cwd=execDir)
+                cwd=execDir, env=self.compile_env)
             compile_cmd = cmd
             if rc != 0:
                 report = libcxx.util.makeReport(cmd, out, err, rc)
@@ -187,7 +192,8 @@ class LibcxxTestFormat(object):
         cmd, out, err, rc = self.cxx.compile(source_path, out=os.devnull,
                                              flags=extra_flags,
                                              disable_ccache=True,
-                                             enable_warnings=False)
+                                             enable_warnings=False,
+                                             env=self.compile_env)
         expected_rc = 0 if use_verify else 1
         if rc == expected_rc:
             return lit.Test.PASS, ''

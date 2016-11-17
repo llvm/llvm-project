@@ -152,8 +152,7 @@ Error TargetList::CreateTargetInternal(
               error.SetErrorStringWithFormat(
                   "the specified architecture '%s' is not compatible with '%s' "
                   "in '%s'",
-                  platform_arch_strm.GetString().c_str(),
-                  module_arch_strm.GetString().c_str(),
+                  platform_arch_strm.GetData(), module_arch_strm.GetData(),
                   module_spec.GetFileSpec().GetPath().c_str());
               return error;
             }
@@ -254,7 +253,7 @@ Error TargetList::CreateTargetInternal(
             }
             error_strm.Printf(
                 "), use the --platform option to specify a platform");
-            error.SetErrorString(error_strm.GetString().c_str());
+            error.SetErrorString(error_strm.GetString());
             return error;
           }
         }

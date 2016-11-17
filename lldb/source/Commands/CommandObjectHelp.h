@@ -35,8 +35,8 @@ public:
                        StringList &matches) override;
 
   static void GenerateAdditionalHelpAvenuesMessage(
-      Stream *s, const char *command, const char *prefix = nullptr,
-      const char *subcommand = nullptr, bool include_apropos = true,
+      Stream *s, llvm::StringRef command, llvm::StringRef prefix,
+      llvm::StringRef subcommand, bool include_apropos = true,
       bool include_type_lookup = true);
 
   class CommandOptions : public Options {

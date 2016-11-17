@@ -96,6 +96,11 @@ Improvements to clang-tidy
 
   Adds ``= delete`` to unimplemented private special member functions.
 
+- New `modernize-use-transparent-functors
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-transparent-functors.html>`_ check
+
+  Replaces uses of non-transparent functors with transparent ones where applicable.
+
 - New `mpi-buffer-deref
   <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
 

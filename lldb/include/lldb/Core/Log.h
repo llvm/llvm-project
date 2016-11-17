@@ -105,6 +105,7 @@ public:
   virtual ~Log();
 
   virtual void PutCString(const char *cstr);
+  virtual void PutString(llvm::StringRef str);
 
   // CLEANUP: Add llvm::raw_ostream &Stream() function.
   virtual void Printf(const char *format, ...)

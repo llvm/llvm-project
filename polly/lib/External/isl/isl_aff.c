@@ -416,6 +416,8 @@ static __isl_give isl_vec *vec_reorder(__isl_take isl_vec *vec,
 
 	res = isl_vec_alloc(vec->ctx,
 			    2 + isl_space_dim(r->dim, isl_dim_all) + n_div);
+	if (!res)
+		goto error;
 	isl_seq_cpy(res->el, vec->el, 2);
 	isl_seq_clr(res->el + 2, res->size - 2);
 	for (i = 0; i < r->len; ++i)

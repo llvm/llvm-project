@@ -93,7 +93,7 @@ bool CommandObjectSyntax::DoExecute(Args &command,
       const bool generate_apropos = true;
       const bool generate_type_lookup = false;
       CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
-          &error_msg_stream, cmd_string.c_str(), nullptr, nullptr,
+          &error_msg_stream, cmd_string, "", "",
           generate_apropos, generate_type_lookup);
       result.AppendErrorWithFormat("%s", error_msg_stream.GetData());
       result.SetStatus(eReturnStatusFailed);

@@ -96,7 +96,7 @@ public:
                           const uint16_t remote_port);
 
   Error SetPortForwarding(const uint16_t local_port,
-                          const char *remote_socket_name,
+                          llvm::StringRef remote_socket_name,
                           const UnixSocketNamespace socket_namespace);
 
   Error DeletePortForwarding(const uint16_t local_port);

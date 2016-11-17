@@ -12,9 +12,10 @@
 
 // C Includes
 // C++ Includes
-#include <string>
 
 // Other libraries and framework includes
+#include "llvm/ADT/StringRef.h"
+
 // Project includes
 
 class UriParser {
@@ -27,8 +28,9 @@ public:
   //
   //   if the url is invalid, function returns false and
   //   output parameters remain unchanged
-  static bool Parse(const std::string &uri, std::string &scheme,
-                    std::string &hostname, int &port, std::string &path);
+  static bool Parse(llvm::StringRef uri, llvm::StringRef &scheme,
+                    llvm::StringRef &hostname, int &port,
+                    llvm::StringRef &path);
 };
 
 #endif // utility_UriParser_h_

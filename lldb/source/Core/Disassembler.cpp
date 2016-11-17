@@ -735,7 +735,7 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     ss.PutCString(" ; ");
     ss.PutCString(m_comment);
   }
-  s->Write(ss.GetData(), ss.GetSize());
+  s->PutCString(ss.GetString());
 }
 
 bool Instruction::DumpEmulation(const ArchSpec &arch) {

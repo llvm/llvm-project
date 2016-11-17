@@ -1,5 +1,4 @@
-//===-- ValueObjectPrinter.cpp -------------------------------------*- C++
-//-*-===//
+//===-- ValueObjectPrinter.cpp -----------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -302,22 +301,22 @@ void ValueObjectPrinter::PrintDecl() {
   }
 
   if (m_options.m_decl_printing_helper) {
-    ConstString type_name_cstr(typeName.GetData());
-    ConstString var_name_cstr(varName.GetData());
+    ConstString type_name_cstr(typeName.GetString());
+    ConstString var_name_cstr(varName.GetString());
 
     StreamString dest_stream;
     if (m_options.m_decl_printing_helper(type_name_cstr, var_name_cstr,
                                          m_options, dest_stream)) {
       decl_printed = true;
-      m_stream->Printf("%s", dest_stream.GetData());
+      m_stream->PutCString(dest_stream.GetString());
     }
   }
 
   // if the helper failed, or there is none, do a default thing
   if (!decl_printed) {
-    if (typeName.GetSize())
+    if (!typeName.Empty())
       m_stream->Printf("(%s) ", typeName.GetData());
-    if (varName.GetSize())
+    if (!varName.Empty())
       m_stream->Printf("%s =", varName.GetData());
     else if (!m_options.m_hide_name)
       m_stream->Printf(" =");

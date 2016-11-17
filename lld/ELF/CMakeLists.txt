@@ -52,6 +52,8 @@ add_lld_library(lldELF
   lldConfig
   lldCore
   ${PTHREAD_LIB}
-  )
 
-add_dependencies(lldELF intrinsics_gen ELFOptionsTableGen)
+  DEPENDS
+  ELFOptionsTableGen
+  intrinsics_gen
+  )
