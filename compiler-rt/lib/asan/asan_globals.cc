@@ -192,6 +192,7 @@ static inline bool UseODRIndicator(const Global *g) {
 // This function may be called more than once for every global
 // so we store the globals in a map.
 static void RegisterGlobal(const Global *g) {
+  CHECK(g->beg);
   CHECK(asan_inited);
   if (flags()->report_globals >= 2)
     ReportGlobal(*g, "Added");
