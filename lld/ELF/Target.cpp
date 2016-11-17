@@ -1933,7 +1933,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
     return R_HINT;
   case R_MIPS_GPREL16:
   case R_MIPS_GPREL32:
-    return R_GOTREL;
+    return R_MIPS_GOTREL;
   case R_MIPS_26:
     return R_PLT;
   case R_MIPS_HI16:

@@ -168,7 +168,7 @@ Error PlatformAndroid::ConnectRemote(Args &args) {
     m_remote_platform_sp = PlatformSP(new PlatformAndroidRemoteGDBServer());
 
   int port;
-  std::string scheme, host, path;
+  llvm::StringRef scheme, host, path;
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
     return Error("URL is null.");

@@ -323,7 +323,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
   for (int i = 0; i < 16; ++i) {
     sstr.Clear();
     sstr.Printf("r%d", i);
-    ConstString reg_name(sstr.GetData());
+    ConstString reg_name(sstr.GetString());
     value_sp = reg_dict->GetValueForKey(reg_name);
     if (value_sp.get() == NULL)
       return false;
@@ -341,7 +341,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
   for (int i = 0; i < 32; ++i) {
     sstr.Clear();
     sstr.Printf("s%d", i);
-    ConstString reg_name(sstr.GetData());
+    ConstString reg_name(sstr.GetString());
     value_sp = reg_dict->GetValueForKey(reg_name);
     if (value_sp.get() == NULL)
       return false;

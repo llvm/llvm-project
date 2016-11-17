@@ -1295,7 +1295,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
               "SBFrame::EvaluateExpression (expr = \"%s\", fetch_dynamic_value "
               "= %u) %s",
               expr, options.GetFetchDynamicValue(),
-              frame_description.GetString().c_str());
+              frame_description.GetData());
         }
 
         exe_results = target->EvaluateExpression(expr, frame, expr_value_sp,

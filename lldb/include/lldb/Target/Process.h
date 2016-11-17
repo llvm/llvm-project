@@ -1918,6 +1918,7 @@ public:
   /// @return
   ///     The number of bytes that were actually written.
   //------------------------------------------------------------------
+  // TODO: change this to take an ArrayRef<uint8_t>
   size_t WriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
                      Error &error);
 

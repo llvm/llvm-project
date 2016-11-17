@@ -1,5 +1,4 @@
-//===-- EmulateInstructionARM64.cpp -------------------------------*- C++
-//-*-===//
+//===-- EmulateInstructionARM64.cpp ------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

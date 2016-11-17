@@ -36,7 +36,6 @@ namespace remote {
 template <typename ChannelT>
 class OrcRemoteTargetClient : public OrcRemoteTargetRPCAPI {
 public:
-
   /// Remote memory manager.
   class RCMemoryManager : public RuntimeDyld::MemoryManager {
   public:
@@ -45,10 +44,10 @@ public:
       DEBUG(dbgs() << "Created remote allocator " << Id << "\n");
     }
 
-    RCMemoryManager(const RCMemoryManager&) = delete;
-    RCMemoryManager& operator=(const RCMemoryManager&) = delete;
-    RCMemoryManager(RCMemoryManager&&) = default;
-    RCMemoryManager& operator=(RCMemoryManager&&) = default;
+    RCMemoryManager(const RCMemoryManager &) = delete;
+    RCMemoryManager &operator=(const RCMemoryManager &) = delete;
+    RCMemoryManager(RCMemoryManager &&) = default;
+    RCMemoryManager &operator=(RCMemoryManager &&) = default;
 
     ~RCMemoryManager() override {
       Client.destroyRemoteAllocator(Id);
@@ -342,10 +341,10 @@ public:
       Alloc(uint64_t Size, unsigned Align)
           : Size(Size), Align(Align), Contents(new char[Size + Align - 1]) {}
 
-      Alloc(const Alloc&) = delete;
-      Alloc& operator=(const Alloc&) = delete;
-      Alloc(Alloc&&) = default;
-      Alloc& operator=(Alloc&&) = default;
+      Alloc(const Alloc &) = delete;
+      Alloc &operator=(const Alloc &) = delete;
+      Alloc(Alloc &&) = default;
+      Alloc &operator=(Alloc &&) = default;
 
       uint64_t getSize() const { return Size; }
 
@@ -373,9 +372,9 @@ public:
     struct ObjectAllocs {
       ObjectAllocs() = default;
       ObjectAllocs(const ObjectAllocs &) = delete;
-      ObjectAllocs& operator=(const ObjectAllocs &) = delete;
-      ObjectAllocs(ObjectAllocs&&) = default;
-      ObjectAllocs& operator=(ObjectAllocs&&) = default;
+      ObjectAllocs &operator=(const ObjectAllocs &) = delete;
+      ObjectAllocs(ObjectAllocs &&) = default;
+      ObjectAllocs &operator=(ObjectAllocs &&) = default;
 
       JITTargetAddress RemoteCodeAddr = 0;
       JITTargetAddress RemoteRODataAddr = 0;
@@ -544,8 +543,8 @@ public:
   static Expected<std::unique_ptr<OrcRemoteTargetClient>>
   Create(ChannelT &Channel) {
     Error Err = Error::success();
-    std::unique_ptr<OrcRemoteTargetClient>
-      Client(new OrcRemoteTargetClient(Channel, Err));
+    std::unique_ptr<OrcRemoteTargetClient> Client(
+        new OrcRemoteTargetClient(Channel, Err));
     if (Err)
       return std::move(Err);
     return std::move(Client);
@@ -631,7 +630,6 @@ public:
   Error terminateSession() { return callB<TerminateSession>(); }
 
 private:
-
   OrcRemoteTargetClient(ChannelT &Channel, Error &Err)
       : OrcRemoteTargetRPCAPI(Channel) {
     ErrorAsOutParameter EAO(&Err);

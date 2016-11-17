@@ -61,7 +61,7 @@ Error OptionValueLanguage::SetValueFromString(llvm::StringRef value,
         error_strm.Printf("%s%s%s", "    ",
                           Language::GetNameForLanguageType(language), "\n");
       }
-      error.SetErrorString(error_strm.GetData());
+      error.SetErrorString(error_strm.GetString());
     }
   } break;
 

@@ -1,5 +1,4 @@
-//===-- TypeCategory.cpp -------------------------------------------*- C++
-//-*-===//
+//===-- TypeCategory.cpp -----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -638,7 +637,7 @@ std::string TypeCategoryImpl::GetDescription() {
                        idx + 1 < GetNumLanguages() ? ", " : "");
   }
   if (print_lang)
-    stream.Printf("%s", lang_stream.GetData());
+    stream.PutCString(lang_stream.GetString());
   stream.PutChar(')');
-  return stream.GetData();
+  return stream.GetString();
 }

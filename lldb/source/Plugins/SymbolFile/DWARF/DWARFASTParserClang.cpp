@@ -2601,7 +2601,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
         if (type_quals & clang::Qualifiers::Const)
           sstr << " const";
 
-        func_name.SetValue(ConstString(sstr.GetData()), false);
+        func_name.SetValue(ConstString(sstr.GetString()), false);
       } else
         func_name.SetValue(ConstString(name), false);
 
@@ -2815,7 +2815,7 @@ bool DWARFASTParserClang::ParseChildMembers(
 
             ss.Printf("set%c%s:", toupper(prop_name[0]), &prop_name[1]);
 
-            fixed_setter.SetCString(ss.GetData());
+            fixed_setter.SetString(ss.GetString());
             prop_setter_name = fixed_setter.GetCString();
           }
         }

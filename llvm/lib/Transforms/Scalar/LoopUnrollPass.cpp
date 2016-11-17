@@ -102,6 +102,12 @@ static cl::opt<unsigned> PragmaUnrollThreshold(
     cl::desc("Unrolled size limit for loops with an unroll(full) or "
              "unroll_count pragma."));
 
+static cl::opt<unsigned> FlatLoopTripCountThreshold(
+    "flat-loop-tripcount-threshold", cl::init(5), cl::Hidden,
+    cl::desc("If the runtime tripcount for the loop is lower than the "
+             "threshold, the loop is considered as flat and will be less "
+             "aggressively unrolled."));
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -747,6 +753,16 @@ static bool computeUnrollCount(
   bool PragmaEnableUnroll = HasUnrollEnablePragma(L);
   bool ExplicitUnroll = PragmaCount > 0 || PragmaFullUnroll ||
                         PragmaEnableUnroll || UserUnrollCount;
+
+  // Check if the runtime trip count is too small when profile is available.
+  if (L->getHeader()->getParent()->getEntryCount() && TripCount == 0) {
+    if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
+      if (*ProfileTripCount < FlatLoopTripCountThreshold)
+        return false;
+      else
+        UP.AllowExpensiveTripCount = true;
+    }
+  }
 
   if (ExplicitUnroll && TripCount != 0) {
     // If the loop has an unrolling pragma, we want to be more aggressive with

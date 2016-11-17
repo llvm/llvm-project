@@ -73,7 +73,7 @@ Error Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
 }
 
 size_t
-Properties::Apropos(const char *keyword,
+Properties::Apropos(llvm::StringRef keyword,
                     std::vector<const Property *> &matching_properties) const {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp) {

@@ -173,6 +173,8 @@ public:
 
   bool requiresStrictAlign() const { return StrictAlign; }
 
+  bool isXRaySupported() const override { return true; }
+
   bool isX18Reserved() const { return ReserveX18; }
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON; }

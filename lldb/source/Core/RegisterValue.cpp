@@ -46,13 +46,13 @@ bool RegisterValue::Dump(Stream *s, const RegisterInfo *reg_info,
       format_string.Printf("%%%us", reg_name_right_align_at);
     else
       format_string.Printf("%%s");
-    const char *fmt = format_string.GetData();
+    std::string fmt = format_string.GetString();
     if (prefix_with_name) {
       if (reg_info->name) {
-        s->Printf(fmt, reg_info->name);
+        s->Printf(fmt.c_str(), reg_info->name);
         name_printed = true;
       } else if (reg_info->alt_name) {
-        s->Printf(fmt, reg_info->alt_name);
+        s->Printf(fmt.c_str(), reg_info->alt_name);
         prefix_with_alt_name = false;
         name_printed = true;
       }
@@ -61,12 +61,12 @@ bool RegisterValue::Dump(Stream *s, const RegisterInfo *reg_info,
       if (name_printed)
         s->PutChar('/');
       if (reg_info->alt_name) {
-        s->Printf(fmt, reg_info->alt_name);
+        s->Printf(fmt.c_str(), reg_info->alt_name);
         name_printed = true;
       } else if (!name_printed) {
         // No alternate name but we were asked to display a name, so show the
         // main name
-        s->Printf(fmt, reg_info->name);
+        s->Printf(fmt.c_str(), reg_info->name);
         name_printed = true;
       }
     }

@@ -97,10 +97,10 @@ entry:
 ; MOVREL: v_movrels_b32_e32 v{{[0-9]}}, v0
 
 ; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
+; IDXMODE-DAG: v_mov_b32_e32 v1,
+; IDXMODE-DAG: v_mov_b32_e32 v2,
+; IDXMODE-DAG: v_mov_b32_e32 v3,
 ; IDXMODE: v_mov_b32_e32 v0,
-; IDXMODE: v_mov_b32_e32 v1,
-; IDXMODE: v_mov_b32_e32 v2,
-; IDXMODE: v_mov_b32_e32 v3,
 ; IDXMODE-NEXT: s_set_gpr_idx_on [[ADD_IDX]], src0{{$}}
 ; IDXMODE-NEXT: v_mov_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; IDXMODE-NEXT: s_set_gpr_idx_off

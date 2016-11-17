@@ -153,7 +153,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
       StreamString ss;
       if (!call_plan_sp || !call_plan_sp->ValidatePlan(&ss)) {
-        diagnostic_manager.PutString(eDiagnosticSeverityError, ss.GetData());
+        diagnostic_manager.PutString(eDiagnosticSeverityError, ss.GetString());
         return lldb::eExpressionSetupError;
       }
 

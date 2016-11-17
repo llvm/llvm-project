@@ -11,8 +11,11 @@
 
 #include "lldb/lldb-private-enumerations.h"
 
+#include "llvm/ADT/StringRef.h"
+
 namespace lldb_private {
-bool NameMatches(const char *name, NameMatchType match_type, const char *match);
+bool NameMatches(llvm::StringRef name, NameMatchType match_type,
+                 llvm::StringRef match);
 }
 
 #endif

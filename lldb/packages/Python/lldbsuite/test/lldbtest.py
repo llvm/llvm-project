@@ -2195,6 +2195,8 @@ class TestBase(Base):
             with recording(self, trace) as sbuf:
                 print("looking at:", output, file=sbuf)
 
+        if output is None:
+            output = ""
         # The heading says either "Expecting" or "Not expecting".
         heading = "Expecting" if matching else "Not expecting"
 

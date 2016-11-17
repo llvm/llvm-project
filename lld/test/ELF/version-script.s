@@ -40,7 +40,7 @@
 # RUN: echo "VERSION_2.0 { global: foo1; local: *; };" >> %t6.script
 # RUN: ld.lld --version-script %t6.script -shared %t.o %t2.so -o %t6.so 2>&1 | \
 # RUN:   FileCheck -check-prefix=WARN2 %s
-# WARN2: duplicate symbol foo1 in version script
+# WARN2: duplicate symbol 'foo1' in version script
 
 # RUN: ld.lld --version-script %t.script --dynamic-list %t.list %t.o %t2.so -o %t2
 # RUN: llvm-readobj %t2 > /dev/null

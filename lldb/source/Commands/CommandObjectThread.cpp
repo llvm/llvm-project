@@ -675,8 +675,8 @@ protected:
       if (synchronous_execution) {
         // If any state changed events had anything to say, add that to the
         // result
-        if (stream.GetData())
-          result.AppendMessage(stream.GetData());
+        if (stream.GetSize() > 0)
+          result.AppendMessage(stream.GetString());
 
         process->GetThreadList().SetSelectedThreadByID(thread->GetID());
         result.SetDidChangeProcessState(true);
@@ -853,8 +853,8 @@ public:
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result
-          if (stream.GetData())
-            result.AppendMessage(stream.GetData());
+          if (stream.GetSize() > 0)
+            result.AppendMessage(stream.GetString());
 
           result.SetDidChangeProcessState(true);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -1183,8 +1183,8 @@ protected:
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result
-          if (stream.GetData())
-            result.AppendMessage(stream.GetData());
+          if (stream.GetSize() > 0)
+            result.AppendMessage(stream.GetString());
 
           result.SetDidChangeProcessState(true);
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

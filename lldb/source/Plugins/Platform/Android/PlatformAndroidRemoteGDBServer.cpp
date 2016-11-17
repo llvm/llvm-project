@@ -27,7 +27,7 @@ static const lldb::pid_t g_remote_platform_pid =
 
 static Error ForwardPortWithAdb(
     const uint16_t local_port, const uint16_t remote_port,
-    const char *remote_socket_name,
+    llvm::StringRef remote_socket_name,
     const llvm::Optional<AdbClient::UnixSocketNamespace> &socket_namespace,
     std::string &device_id) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
@@ -50,7 +50,7 @@ static Error ForwardPortWithAdb(
 
   if (log)
     log->Printf("Forwarding remote socket \"%s\" to local TCP port %d",
-                remote_socket_name, local_port);
+                remote_socket_name.str().c_str(), local_port);
 
   if (!socket_namespace)
     return Error("Invalid socket namespace");
@@ -114,7 +114,7 @@ Error PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
     return Error("\"platform connect\" takes a single argument: <connect-url>");
 
   int remote_port;
-  std::string scheme, host, path;
+  llvm::StringRef scheme, host, path;
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
     return Error("URL is null.");
@@ -132,7 +132,7 @@ Error PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   std::string connect_url;
   auto error =
       MakeConnectURL(g_remote_platform_pid, (remote_port < 0) ? 0 : remote_port,
-                     path.c_str(), connect_url);
+                     path, connect_url);
 
   if (error.Fail())
     return error;
@@ -175,7 +175,7 @@ void PlatformAndroidRemoteGDBServer::DeleteForwardPort(lldb::pid_t pid) {
 
 Error PlatformAndroidRemoteGDBServer::MakeConnectURL(
     const lldb::pid_t pid, const uint16_t remote_port,
-    const char *remote_socket_name, std::string &connect_url) {
+    llvm::StringRef remote_socket_name, std::string &connect_url) {
   static const int kAttempsNum = 5;
 
   Error error;
@@ -214,7 +214,7 @@ lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
   static lldb::pid_t s_remote_gdbserver_fake_pid = 0xffffffffffffffffULL;
 
   int remote_port;
-  std::string scheme, host, path;
+  llvm::StringRef scheme, host, path;
   if (!UriParser::Parse(connect_url, scheme, host, remote_port, path)) {
     error.SetErrorStringWithFormat("Invalid URL: %s", connect_url);
     return nullptr;
@@ -222,7 +222,7 @@ lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
 
   std::string new_connect_url;
   error = MakeConnectURL(s_remote_gdbserver_fake_pid--,
-                         (remote_port < 0) ? 0 : remote_port, path.c_str(),
+                         (remote_port < 0) ? 0 : remote_port, path,
                          new_connect_url);
   if (error.Fail())
     return nullptr;

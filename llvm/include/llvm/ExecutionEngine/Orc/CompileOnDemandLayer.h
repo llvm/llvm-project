@@ -15,15 +15,35 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 
-#include "IndirectionUtils.h"
-#include "LambdaResolver.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <iterator>
 #include <list>
 #include <memory>
 #include <set>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -40,11 +60,11 @@ template <typename BaseLayerT,
           typename IndirectStubsMgrT = IndirectStubsManager>
 class CompileOnDemandLayer {
 private:
-
   template <typename MaterializerFtor>
   class LambdaMaterializer final : public ValueMaterializer {
   public:
     LambdaMaterializer(MaterializerFtor M) : M(std::move(M)) {}
+
     Value *materialize(Value *V) final { return M(V); }
 
   private:
@@ -66,7 +86,8 @@ private:
     ResourceOwner() = default;
     ResourceOwner(const ResourceOwner&) = delete;
     ResourceOwner& operator=(const ResourceOwner&) = delete;
-    virtual ~ResourceOwner() { }
+    virtual ~ResourceOwner() = default;
+
     virtual ResourceT& getResource() const = 0;
   };
 
@@ -75,7 +96,9 @@ private:
   public:
     ResourceOwnerImpl(ResourcePtrT ResourcePtr)
       : ResourcePtr(std::move(ResourcePtr)) {}
+
     ResourceT& getResource() const override { return *ResourcePtr; }
+
   private:
     ResourcePtrT ResourcePtr;
   };
@@ -161,7 +184,6 @@ private:
   typedef std::list<LogicalDylib> LogicalDylibList;
 
 public:
-
   /// @brief Handle to a set of loaded modules.
   typedef typename LogicalDylibList::iterator ModuleSetHandleT;
 
@@ -258,9 +280,8 @@ public:
       if (auto LMResources = LDI->getLogicalModuleResourcesForSymbol(FuncName, false)) {
         Module &SrcM = LMResources->SourceModule->getResource();
         std::string CalledFnName = mangle(FuncName, SrcM.getDataLayout());
-        if (auto EC = LMResources->StubsMgr->updatePointer(CalledFnName, FnBodyAddr)) {
+        if (auto EC = LMResources->StubsMgr->updatePointer(CalledFnName, FnBodyAddr))
           return false;
-        }
         else
           return true;
       }
@@ -269,7 +290,6 @@ public:
   }
 
 private:
-
   template <typename ModulePtrT>
   void addLogicalModule(LogicalDylib &LD, ModulePtrT SrcMPtr) {
 
@@ -547,7 +567,7 @@ private:
   bool CloneStubsIntoPartitions;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H

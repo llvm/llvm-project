@@ -293,6 +293,7 @@ a:
         andi $3, $4, 1234        # CHECK: andi $3, $4, 1234       # encoding: [0xd0,0x64,0x04,0xd2]
         nor $3, $4, $5           # CHECK: nor $3, $4, $5          # encoding: [0x00,0xa4,0x1a,0xd0]
         not $3, $4               # CHECK: not $3, $4              # encoding: [0x00,0x04,0x1a,0xd0]
+        not $3                   # CHECK: not $3, $3              # encoding: [0x00,0x03,0x1a,0xd0]
         or $3, 5                 # CHECK: ori $3, $3, 5           # encoding: [0x50,0x63,0x00,0x05]
         or $3, $4, 5             # CHECK: ori $3, $4, 5           # encoding: [0x50,0x64,0x00,0x05]
         or $3, $4, $5            # CHECK: or $3, $4, $5           # encoding: [0x00,0xa4,0x1a,0x90]

@@ -823,7 +823,7 @@ protected:
         } else {
           result.AppendErrorWithFormat(
               "failed to create a value object for: (%s) %s\n",
-              view_as_type_cstr, name_strm.GetString().c_str());
+              view_as_type_cstr, name_strm.GetData());
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
@@ -1577,7 +1577,7 @@ protected:
 
     if (!buffer.GetString().empty()) {
       Error error;
-      if (process->WriteMemory(addr, buffer.GetString().c_str(),
+      if (process->WriteMemory(addr, buffer.GetString().data(),
                                buffer.GetString().size(),
                                error) == buffer.GetString().size())
         return true;

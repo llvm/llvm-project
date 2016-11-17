@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-UNSAFE %s
+; RUN: llc -march=amdgcn -mcpu=tonga -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN-UNSAFE %s
 
 ; FUNC-LABEL: {{^}}fptrunc_f64_to_f32:
 ; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}
@@ -12,8 +12,8 @@ define void @fptrunc_f64_to_f32(float addrspace(1)* %out, double %in) {
 
 ; FUNC-LABEL: {{^}}fptrunc_f64_to_f16:
 ; GCN-NOT: v_cvt
-; GCN-FAST: v_cvt_f32_f64_e32 [[F32:v[0-9]+]]
-; GCN-FAST: v_cvt_f16_f32_e32 v[0-9]+, [[F32]]
+; GCN-UNSAFE: v_cvt_f32_f64_e32 [[F32:v[0-9]+]]
+; GCN-UNSAFE: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[F32]]
 define void @fptrunc_f64_to_f16(i16 addrspace(1)* %out, double %in) {
   %result = fptrunc double %in to half
   %result_i16 = bitcast half %result to i16

@@ -1,5 +1,4 @@
-//===-- Variable.h ----------------------------------------------*- C++
-//-*-===//
+//===-- Variable.h -----------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -103,8 +102,9 @@ public:
       GetVariableCallback callback, void *baton, VariableList &variable_list,
       ValueObjectList &valobj_list);
 
-  static size_t AutoComplete(const ExecutionContext &exe_ctx, const char *name,
-                             StringList &matches, bool &word_complete);
+  static size_t AutoComplete(const ExecutionContext &exe_ctx,
+                             llvm::StringRef name, StringList &matches,
+                             bool &word_complete);
 
   CompilerDeclContext GetDeclContext();
 

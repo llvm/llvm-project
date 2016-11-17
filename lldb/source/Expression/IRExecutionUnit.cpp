@@ -427,7 +427,7 @@ void IRExecutionUnit::GetRunnableInfo(Error &error, lldb::addr_t &func_addr,
 
     m_failed_lookups.clear();
 
-    error.SetErrorString(ss.GetData());
+    error.SetErrorString(ss.GetString());
 
     return;
   }

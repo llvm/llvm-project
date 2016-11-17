@@ -1226,7 +1226,7 @@ Error ProcessGDBRemote::DoAttachToProcessWithName(
 
       m_async_broadcaster.BroadcastEvent(
           eBroadcastBitAsyncContinue,
-          new EventDataBytes(packet.GetData(), packet.GetSize()));
+          new EventDataBytes(packet.GetString().data(), packet.GetSize()));
 
     } else
       SetExitStatus(-1, error.AsCString());
@@ -1330,7 +1330,7 @@ Error ProcessGDBRemote::DoResume() {
         }
 
         if (continue_packet_error)
-          continue_packet.GetString().clear();
+          continue_packet.Clear();
       }
     } else
       continue_packet_error = true;
@@ -1455,7 +1455,7 @@ Error ProcessGDBRemote::DoResume() {
 
       m_async_broadcaster.BroadcastEvent(
           eBroadcastBitAsyncContinue,
-          new EventDataBytes(continue_packet.GetData(),
+          new EventDataBytes(continue_packet.GetString().data(),
                              continue_packet.GetSize()));
 
       if (listener_sp->WaitForEvent(std::chrono::seconds(5), event_sp) ==
@@ -2812,10 +2812,10 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
     else
       error.SetErrorStringWithFormat(
           "unexpected response to GDB server memory write packet '%s': '%s'",
-          packet.GetString().c_str(), response.GetStringRef().c_str());
+          packet.GetData(), response.GetStringRef().c_str());
   } else {
     error.SetErrorStringWithFormat("failed to send packet: '%s'",
-                                   packet.GetString().c_str());
+                                   packet.GetData());
   }
   return 0;
 }
@@ -4043,8 +4043,7 @@ bool ProcessGDBRemote::GetModuleSpec(const FileSpec &module_file_spec,
     module_spec.Dump(stream);
     log->Printf("ProcessGDBRemote::%s - got module info for (%s:%s) : %s",
                 __FUNCTION__, module_file_spec.GetPath().c_str(),
-                arch.GetTriple().getTriple().c_str(),
-                stream.GetString().c_str());
+                arch.GetTriple().getTriple().c_str(), stream.GetData());
   }
 
   m_cached_module_specs[key] = module_spec;
@@ -4836,7 +4835,7 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
       json_str.Flush();
       log->Printf("ProcessGDBRemote::%s() "
                   "received Async StructuredData packet: %s",
-                  __FUNCTION__, json_str.GetString().c_str());
+                  __FUNCTION__, json_str.GetData());
     } else {
       log->Printf("ProcessGDBRemote::%s"
                   "() received StructuredData packet:"
@@ -5083,7 +5082,7 @@ public:
           packet.GetString(), response, send_async);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       Stream &output_strm = result.GetOutputStream();
-      output_strm.Printf("  packet: %s\n", packet.GetString().c_str());
+      output_strm.Printf("  packet: %s\n", packet.GetData());
       const std::string &response_str = response.GetStringRef();
 
       if (response_str.empty())

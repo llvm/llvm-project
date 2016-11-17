@@ -3397,22 +3397,6 @@ define void @test_int_x86_avx512_mask_pmovus_dw_mem_512(i8* %ptr, <16 x i32> %x1
     ret void
 }
 
-declare <8 x double> @llvm.x86.avx512.mask.cvtdq2pd.512(<8 x i32>, <8 x double>, i8)
-
-define <8 x double>@test_int_x86_avx512_mask_cvt_dq2pd_512(<8 x i32> %x0, <8 x double> %x1, i8 %x2) {
-; CHECK-LABEL: test_int_x86_avx512_mask_cvt_dq2pd_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm1 {%k1}
-; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; CHECK-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.cvtdq2pd.512(<8 x i32> %x0, <8 x double> %x1, i8 %x2)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtdq2pd.512(<8 x i32> %x0, <8 x double> %x1, i8 -1)
-  %res2 = fadd <8 x double> %res, %res1
-  ret <8 x double> %res2
-}
-
 declare <16 x float> @llvm.x86.avx512.mask.cvtdq2ps.512(<16 x i32>, <16 x float>, i16, i32)
 
 define <16 x float>@test_int_x86_avx512_mask_cvt_dq2ps_512(<16 x i32> %x0, <16 x float> %x1, i16 %x2) {
@@ -3540,23 +3524,6 @@ define <8 x i32>@test_int_x86_avx512_mask_cvtt_pd2dq_512(<8 x double> %x0, <8 x 
   %res2 = add <8 x i32> %res, %res1
   ret <8 x i32> %res2
 }
-
-declare <8 x double> @llvm.x86.avx512.mask.cvtudq2pd.512(<8 x i32>, <8 x double>, i8)
-
-define <8 x double>@test_int_x86_avx512_mask_cvt_udq2pd_512(<8 x i32> %x0, <8 x double> %x1, i8 %x2) {
-; CHECK-LABEL: test_int_x86_avx512_mask_cvt_udq2pd_512:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm1 {%k1}
-; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; CHECK-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.cvtudq2pd.512(<8 x i32> %x0, <8 x double> %x1, i8 %x2)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtudq2pd.512(<8 x i32> %x0, <8 x double> %x1, i8 -1)
-  %res2 = fadd <8 x double> %res, %res1
-  ret <8 x double> %res2
-}
-
 
 declare <16 x float> @llvm.x86.avx512.mask.cvtudq2ps.512(<16 x i32>, <16 x float>, i16, i32)
 

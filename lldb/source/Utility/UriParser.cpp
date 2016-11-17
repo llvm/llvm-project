@@ -23,18 +23,19 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // UriParser::Parse
 //----------------------------------------------------------------------
-bool UriParser::Parse(const std::string &uri, std::string &scheme,
-                      std::string &hostname, int &port, std::string &path) {
-  std::string tmp_scheme, tmp_hostname, tmp_port, tmp_path;
+bool UriParser::Parse(llvm::StringRef uri, llvm::StringRef &scheme,
+                      llvm::StringRef &hostname, int &port,
+                      llvm::StringRef &path) {
+  llvm::StringRef tmp_scheme, tmp_hostname, tmp_port, tmp_path;
 
-  static const char *kSchemeSep = "://";
+  const llvm::StringRef kSchemeSep("://");
   auto pos = uri.find(kSchemeSep);
   if (pos == std::string::npos)
     return false;
 
   // Extract path.
   tmp_scheme = uri.substr(0, pos);
-  auto host_pos = pos + strlen(kSchemeSep);
+  auto host_pos = pos + kSchemeSep.size();
   auto path_pos = uri.find('/', host_pos);
   if (path_pos != std::string::npos)
     tmp_path = uri.substr(path_pos);
@@ -53,28 +54,19 @@ bool UriParser::Parse(const std::string &uri, std::string &scheme,
       return false;
 
     tmp_hostname = host_port.substr(1, pos - 1);
-    host_port.erase(0, pos + 1);
+    host_port = host_port.drop_front(pos + 1);
+    if (!host_port.empty() && !host_port.consume_front(":"))
+      return false;
   } else {
-    pos = host_port.find(':');
-    tmp_hostname = host_port.substr(
-        0, (pos != std::string::npos) ? pos : host_port.size());
-    host_port.erase(0, (pos != std::string::npos) ? pos : host_port.size());
+    std::tie(tmp_hostname, host_port) = host_port.split(':');
   }
 
   // Extract port
-  tmp_port = host_port;
-  if (!tmp_port.empty()) {
-    if (tmp_port[0] != ':')
+  if (!host_port.empty()) {
+    uint16_t port_value = 0;
+    if (host_port.getAsInteger(0, port_value))
       return false;
-    tmp_port = tmp_port.substr(1);
-    bool success = false;
-    auto port_tmp =
-        StringConvert::ToUInt32(tmp_port.c_str(), UINT32_MAX, 10, &success);
-    if (!success || port_tmp > 65535) {
-      // there are invalid characters in port_buf
-      return false;
-    }
-    port = port_tmp;
+    port = port_value;
   } else
     port = -1;
 

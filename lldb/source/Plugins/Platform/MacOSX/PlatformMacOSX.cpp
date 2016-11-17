@@ -222,13 +222,13 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
                           versions[1]);
           fspec.SetFile(sdk_path.GetString(), false);
           if (fspec.Exists())
-            return ConstString(sdk_path.GetString().c_str());
+            return ConstString(sdk_path.GetString());
         }
 
         if (!default_xcode_sdk.empty()) {
           fspec.SetFile(default_xcode_sdk, false);
           if (fspec.Exists())
-            return ConstString(default_xcode_sdk.c_str());
+            return ConstString(default_xcode_sdk);
         }
       }
     }

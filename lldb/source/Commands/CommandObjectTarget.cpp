@@ -2463,20 +2463,20 @@ protected:
                   result.AppendErrorWithFormat(
                       "Unable to create the executable or symbol file with "
                       "UUID %s with path %s and symbol file %s",
-                      strm.GetString().c_str(),
+                      strm.GetData(),
                       module_spec.GetFileSpec().GetPath().c_str(),
                       module_spec.GetSymbolFileSpec().GetPath().c_str());
                 } else {
                   result.AppendErrorWithFormat(
                       "Unable to create the executable or symbol file with "
                       "UUID %s with path %s",
-                      strm.GetString().c_str(),
+                      strm.GetData(),
                       module_spec.GetFileSpec().GetPath().c_str());
                 }
               } else {
                 result.AppendErrorWithFormat("Unable to create the executable "
                                              "or symbol file with UUID %s",
-                                             strm.GetString().c_str());
+                                             strm.GetData());
               }
               result.SetStatus(eReturnStatusFailed);
               return false;
@@ -2486,7 +2486,7 @@ protected:
             module_spec.GetUUID().Dump(&strm);
             result.AppendErrorWithFormat(
                 "Unable to locate the executable or symbol file with UUID %s",
-                strm.GetString().c_str());
+                strm.GetData());
             result.SetStatus(eReturnStatusFailed);
             return false;
           }
@@ -4224,7 +4224,7 @@ protected:
             error_strm.PutCString(
                 "unable to find debug symbols for the current frame");
           }
-          result.AppendError(error_strm.GetData());
+          result.AppendError(error_strm.GetString());
         }
       } else {
         result.AppendError("one or more symbol file paths must be specified, "

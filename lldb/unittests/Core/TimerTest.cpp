@@ -64,7 +64,7 @@ TEST(TimerTest, CategoryTimes2) {
   double seconds1, seconds2;
   ASSERT_EQ(2, sscanf(ss.GetData(), "%lf sec for CAT1%*[\n ]%lf sec for CAT2",
                       &seconds1, &seconds2))
-      << "String: " << ss.GetString();
+      << "String: " << ss.GetData();
   EXPECT_LT(0.01, seconds1);
   EXPECT_GT(1, seconds1);
   EXPECT_LT(0.001, seconds2);

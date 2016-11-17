@@ -145,6 +145,7 @@ void initializeGVNLegacyPassPass(PassRegistry&);
 void initializeGlobalDCELegacyPassPass(PassRegistry&);
 void initializeGlobalMergePass(PassRegistry&);
 void initializeGlobalOptLegacyPassPass(PassRegistry&);
+void initializeGlobalSplitPass(PassRegistry&);
 void initializeGlobalsAAWrapperPassPass(PassRegistry&);
 void initializeGuardWideningLegacyPassPass(PassRegistry&);
 void initializeIPCPPass(PassRegistry&);

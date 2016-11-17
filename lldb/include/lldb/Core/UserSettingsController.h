@@ -1,5 +1,4 @@
-//====-- UserSettingsController.h --------------------------------*- C++
-//-*-===//
+//====-- UserSettingsController.h --------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -63,7 +62,7 @@ public:
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
                                    Stream &strm) const;
 
-  size_t Apropos(const char *keyword,
+  size_t Apropos(llvm::StringRef keyword,
                  std::vector<const Property *> &matching_properties) const;
 
   lldb::OptionValuePropertiesSP GetSubProperty(const ExecutionContext *exe_ctx,

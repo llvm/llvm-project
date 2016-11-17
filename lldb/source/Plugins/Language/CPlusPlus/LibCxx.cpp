@@ -153,8 +153,8 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
   ValueObjectSP retval_sp(CreateValueObjectFromData(
-      name.GetData(), DataExtractor(buffer_sp, process_sp->GetByteOrder(),
-                                    process_sp->GetAddressByteSize()),
+      name.GetString(), DataExtractor(buffer_sp, process_sp->GetByteOrder(),
+                                      process_sp->GetAddressByteSize()),
       m_exe_ctx_ref, m_bool_type));
   if (retval_sp)
     m_children[idx] = retval_sp;

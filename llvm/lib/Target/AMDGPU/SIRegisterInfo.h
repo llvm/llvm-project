@@ -172,6 +172,8 @@ public:
   unsigned getSGPRPressureSet() const { return SGPRSetID; };
   unsigned getVGPRPressureSet() const { return VGPRSetID; };
 
+  const TargetRegisterClass *getRegClassForReg(const MachineRegisterInfo &MRI,
+                                               unsigned Reg) const;
   bool isVGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
 
   bool isSGPRPressureSet(unsigned SetID) const {

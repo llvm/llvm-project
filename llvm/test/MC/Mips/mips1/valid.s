@@ -85,6 +85,8 @@ a:
         neg.s     $f1,$f15
         nop
         nor       $a3,$zero,$a3
+        not       $3, $4               # CHECK: not $3, $4             # encoding: [0x00,0x80,0x18,0x27]
+        not       $3                   # CHECK: not $3, $3             # encoding: [0x00,0x60,0x18,0x27]
         or        $12,$s0,$sp
         or        $2, 4                # CHECK: ori $2, $2, 4          # encoding: [0x34,0x42,0x00,0x04]
         sb        $s6,-19857($14)

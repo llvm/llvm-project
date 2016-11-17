@@ -7,13 +7,13 @@ struct OL {
   int Field;
 };
 OL::OL(const OL &Other) : Field(Other.Field) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default' to define a trivial copy constructor [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial copy constructor [modernize-use-default]
 // CHECK-FIXES: OL::OL(const OL &Other)  = default;
 OL &OL::operator=(const OL &Other) {
   Field = Other.Field;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:1: warning: use '= default' to define a trivial copy-assignment operator [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-4]]:9: warning: use '= default' to define a trivial copy-assignment operator [modernize-use-default]
 // CHECK-FIXES: OL &OL::operator=(const OL &Other) = default;
 
 // Inline.
@@ -25,7 +25,7 @@ struct IL {
     Field = Other.Field;
     return *this;
   }
-  // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use '= default'
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: use '= default'
   // CHECK-FIXES: IL &operator=(const IL &Other) = default;
   int Field;
 };
@@ -110,7 +110,7 @@ struct Empty {
   Empty &operator=(const Empty &);
 };
 Empty &Empty::operator=(const Empty &Other) { return *this; }
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use '= default'
 // CHECK-FIXES: Empty &Empty::operator=(const Empty &Other) = default;
 
 // Bit fields.
@@ -137,7 +137,7 @@ BF &BF::operator=(const BF &Other) {
   Field4 = Other.Field4;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-7]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-7]]:9: warning: use '= default'
 // CHECK-FIXES: BF &BF::operator=(const BF &Other) = default;
 
 // Base classes.
@@ -153,7 +153,7 @@ BC &BC::operator=(const BC &Other) {
   BF::operator=(Other);
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-6]]:9: warning: use '= default'
 // CHECK-FIXES: BC &BC::operator=(const BC &Other) = default;
 
 // Base classes with member.
@@ -170,7 +170,7 @@ BCWM &BCWM::operator=(const BCWM &Other) {
   Bf = Other.Bf;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-6]]:13: warning: use '= default'
 // CHECK-FIXES: BCWM &BCWM::operator=(const BCWM &Other) = default;
 
 // Missing base class.
@@ -213,7 +213,7 @@ VBC &VBC::operator=(const VBC &Other) {
   VB::operator=(Other);
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-6]]:11: warning: use '= default'
 // CHECK-FIXES: VBC &VBC::operator=(const VBC &Other) = default;
 
 // Indirect base.
@@ -291,7 +291,7 @@ DA &DA::operator=(const DA &Other) {
   Field2 = Other.Field2;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-5]]:9: warning: use '= default'
 // CHECK-FIXES: DA &DA::operator=(const DA &Other) = default;
 
 struct DA2 {
@@ -324,6 +324,7 @@ SIB &SIB::operator=(const SIB &Other) {
 struct CIB {
   CIB(const CIB &Other) : Field(Other.Field) { /* Don't erase this */
   }
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use '= default'
   CIB &operator=(const CIB &);
   int Field;
 };
@@ -332,7 +333,7 @@ CIB &CIB::operator=(const CIB &Other) {
   // FIXME: don't erase this comment.
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-5]]:11: warning: use '= default'
 // CHECK-FIXES: CIB &CIB::operator=(const CIB &Other) = default;
 
 // Take non-const reference as argument.
@@ -348,7 +349,7 @@ NCRef &NCRef::operator=(NCRef &Other) {
   Field2 = Other.Field2;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-5]]:15: warning: use '= default'
 // CHECK-FIXES: NCRef &NCRef::operator=(NCRef &Other) = default;
 
 // Already defaulted.
@@ -471,3 +472,26 @@ struct NEF {
   NEF &operator=(const NEF &Other) noexcept(false);
 };
 //NEF &NEF::operator=(const NEF &Other) noexcept(false) { return *this; }
+
+#define STRUCT_WITH_COPY_CONSTRUCT(_base, _type) \
+  struct _type {                                 \
+    _type(const _type &v) : value(v.value) {}    \
+    _base value;                                 \
+  };
+
+STRUCT_WITH_COPY_CONSTRUCT(unsigned char, Hex8CopyConstruct)
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default' to define a trivial copy constructor
+// CHECK-MESSAGES: :[[@LINE-6]]:44: note:
+
+#define STRUCT_WITH_COPY_ASSIGN(_base, _type) \
+  struct _type {                              \
+    _type &operator=(const _type &rhs) {      \
+      value = rhs.value;                      \
+      return *this;                           \
+    }                                         \
+    _base value;                              \
+  };
+
+STRUCT_WITH_COPY_ASSIGN(unsigned char, Hex8CopyAssign)
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default' to define a trivial copy-assignment operator
+// CHECK-MESSAGES: :[[@LINE-9]]:40: note:

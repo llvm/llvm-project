@@ -3109,7 +3109,7 @@ void Target::StopHook::GetDescription(Stream *s,
     s->Indent("Thread:\n");
     m_thread_spec_ap->GetDescription(&tmp, level);
     s->SetIndentLevel(indent_level + 4);
-    s->Indent(tmp.GetData());
+    s->Indent(tmp.GetString());
     s->PutCString("\n");
     s->SetIndentLevel(indent_level + 2);
   }

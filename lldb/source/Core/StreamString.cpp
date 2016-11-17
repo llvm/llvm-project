@@ -34,8 +34,6 @@ void StreamString::Clear() { m_packet.clear(); }
 
 bool StreamString::Empty() const { return GetSize() == 0; }
 
-const char *StreamString::GetData() const { return m_packet.c_str(); }
-
 size_t StreamString::GetSize() const { return m_packet.size(); }
 
 size_t StreamString::GetSizeOfLastLine() const {
@@ -49,9 +47,7 @@ size_t StreamString::GetSizeOfLastLine() const {
   }
 }
 
-std::string &StreamString::GetString() { return m_packet; }
-
-const std::string &StreamString::GetString() const { return m_packet; }
+llvm::StringRef StreamString::GetString() const { return m_packet; }
 
 void StreamString::FillLastLineToColumn(uint32_t column, char fill_char) {
   const size_t length = m_packet.size();

@@ -803,7 +803,7 @@ int64_t Args::StringToOptionEnum(llvm::StringRef s,
   for (int i = 0; enum_values[i].string_value != nullptr; i++) {
     strm.Printf("%s\"%s\"", i > 0 ? ", " : "", enum_values[i].string_value);
   }
-  error.SetErrorString(strm.GetData());
+  error.SetErrorString(strm.GetString());
   return fail_value;
 }
 
@@ -859,7 +859,7 @@ Error Args::StringToFormat(const char *s, lldb::Format &format,
       if (byte_size_ptr)
         error_strm.PutCString(
             "An optional byte size can precede the format character.\n");
-      error.SetErrorString(error_strm.GetString().c_str());
+      error.SetErrorString(error_strm.GetString());
     }
 
     if (error.Fail())
@@ -1020,9 +1020,9 @@ std::string Args::ParseAliasOptions(Options &options,
   int val;
   while (1) {
     int long_options_index = -1;
-    val =
-        OptionParser::Parse(GetArgumentCount(), GetArgumentVector(),
-                            sstr.GetData(), long_options, &long_options_index);
+    val = OptionParser::Parse(GetArgumentCount(), GetArgumentVector(),
+                              sstr.GetString(), long_options,
+                              &long_options_index);
 
     if (val == -1)
       break;
@@ -1088,7 +1088,8 @@ std::string Args::ParseAliasOptions(Options &options,
     }
     if (!option_arg)
       option_arg = "<no-argument>";
-    option_arg_vector->emplace_back(option_str.GetData(), has_arg, option_arg);
+    option_arg_vector->emplace_back(option_str.GetString(), has_arg,
+                                    option_arg);
 
     // Find option in the argument list; also see if it was supposed to take
     // an argument and if one was supplied.  Remove option (and argument, if

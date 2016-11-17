@@ -306,7 +306,7 @@ const char *StopInfoMachException::GetDescription() {
     if (m_exc_data_count > 0)
       strm.PutChar(')');
 
-    m_description.swap(strm.GetString());
+    m_description = strm.GetString();
   }
   return m_description.c_str();
 }

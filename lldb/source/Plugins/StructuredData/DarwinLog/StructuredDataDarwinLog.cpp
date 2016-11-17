@@ -796,7 +796,7 @@ protected:
                   " the property and relaunch the target binary to have"
                   " these messages excluded.",
                   source_name, source_name);
-    result.AppendWarning(stream.GetString().c_str());
+    result.AppendWarning(stream.GetString());
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1107,7 +1107,7 @@ bool RunEnableCommand(CommandInterpreter &interpreter) {
 
   // Run the command.
   CommandReturnObject return_object;
-  interpreter.HandleCommand(command_stream.GetString().c_str(), eLazyBoolNo,
+  interpreter.HandleCommand(command_stream.GetData(), eLazyBoolNo,
                             return_object);
   return return_object.Succeeded();
 }
@@ -1173,7 +1173,7 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
     else
       json_stream.PutCString("<null>");
     log->Printf("StructuredDataDarwinLog::%s() called with json: %s",
-                __FUNCTION__, json_stream.GetString().c_str());
+                __FUNCTION__, json_stream.GetData());
   }
 
   // Ignore empty structured data.
@@ -1222,8 +1222,7 @@ static void SetErrorWithJSON(Error &error, const char *message,
   object.Dump(object_stream);
   object_stream.Flush();
 
-  error.SetErrorStringWithFormat("%s: %s", message,
-                                 object_stream.GetString().c_str());
+  error.SetErrorStringWithFormat("%s: %s", message, object_stream.GetData());
 }
 
 Error StructuredDataDarwinLog::GetDescription(
@@ -1862,10 +1861,9 @@ StructuredDataDarwinLog::DumpHeader(Stream &output_stream,
   }
   stream.PutCString("] ");
 
-  auto &result = stream.GetString();
-  output_stream.PutCString(result);
+  output_stream.PutCString(stream.GetString());
 
-  return result.size();
+  return stream.GetSize();
 }
 
 size_t StructuredDataDarwinLog::HandleDisplayOfEvent(

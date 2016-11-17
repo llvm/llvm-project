@@ -1747,8 +1747,7 @@ Error Thread::JumpToLine(const FileSpec &file, uint32_t line,
       StreamString sstr;
       DumpAddressList(sstr, outside_function, target);
       return Error("%s:%i has multiple candidate locations:\n%s",
-                   file.GetFilename().AsCString(), line,
-                   sstr.GetString().c_str());
+                   file.GetFilename().AsCString(), line, sstr.GetData());
     }
   }
 

@@ -320,7 +320,7 @@ Error Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
               stream_sp->Printf("%s\n", error.AsCString());
             }
             if (feedback_stream.GetSize())
-              stream_sp->Printf("%s", feedback_stream.GetData());
+              stream_sp->PutCString(feedback_stream.GetString());
           }
         }
       }

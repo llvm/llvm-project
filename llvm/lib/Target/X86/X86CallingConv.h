@@ -21,6 +21,14 @@
 
 namespace llvm {
 
+/// When regcall calling convention compiled to 32 bit arch, special treatment
+/// is required for 64 bit masks.
+/// The value should be assigned to two GPRs.
+/// @return true if registers were allocated and false otherwise
+bool CC_X86_32_RegCall_Assign2Regs(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                   CCValAssign::LocInfo &LocInfo,
+                                   ISD::ArgFlagsTy &ArgFlags, CCState &State);
+
 inline bool CC_X86_32_VectorCallIndirect(unsigned &ValNo, MVT &ValVT,
                                          MVT &LocVT,
                                          CCValAssign::LocInfo &LocInfo,

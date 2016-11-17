@@ -216,7 +216,7 @@ public:
 
           strm.Printf("breakpoint ");
           bp_site_sp->GetDescription(&strm, eDescriptionLevelBrief);
-          m_description.swap(strm.GetString());
+          m_description = strm.GetString();
         } else {
           StreamString strm;
           if (m_break_id != LLDB_INVALID_BREAK_ID) {
@@ -249,7 +249,7 @@ public:
                         " which has been deleted - was at 0x%" PRIx64,
                         m_value, m_address);
 
-          m_description.swap(strm.GetString());
+          m_description = strm.GetString();
         }
       }
     }
@@ -610,7 +610,7 @@ public:
     if (m_description.empty()) {
       StreamString strm;
       strm.Printf("watchpoint %" PRIi64, m_value);
-      m_description.swap(strm.GetString());
+      m_description = strm.GetString();
     }
     return m_description.c_str();
   }
@@ -950,7 +950,7 @@ public:
           strm.Printf("signal %s", signal_name);
         else
           strm.Printf("signal %" PRIi64, m_value);
-        m_description.swap(strm.GetString());
+        m_description = strm.GetString();
       }
     }
     return m_description.c_str();
@@ -1021,7 +1021,7 @@ public:
     if (m_description.empty()) {
       StreamString strm;
       m_plan_sp->GetDescription(&strm, eDescriptionLevelBrief);
-      m_description.swap(strm.GetString());
+      m_description = strm.GetString();
     }
     return m_description.c_str();
   }

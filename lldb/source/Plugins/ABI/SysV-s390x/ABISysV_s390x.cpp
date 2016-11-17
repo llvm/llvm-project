@@ -232,7 +232,7 @@ bool ABISysV_s390x::PrepareTrivialCall(Thread &thread, addr_t sp,
       s.Printf(", arg%" PRIu64 " = 0x%" PRIx64, static_cast<uint64_t>(i + 1),
                args[i]);
     s.PutCString(")");
-    log->PutCString(s.GetString().c_str());
+    log->PutString(s.GetString());
   }
 
   RegisterContext *reg_ctx = thread.GetRegisterContext().get();

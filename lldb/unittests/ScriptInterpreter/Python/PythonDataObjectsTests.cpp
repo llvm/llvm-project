@@ -255,17 +255,17 @@ TEST_F(PythonDataObjectsTest, TestPythonString) {
   // Test that creating a `PythonString` object works correctly with the
   // string constructor
   PythonString constructed_string(test_string2);
-  EXPECT_STREQ(test_string2, constructed_string.GetString().str().c_str());
+  EXPECT_EQ(test_string2, constructed_string.GetString());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonStringToStr) {
-  const char *c_str = "PythonDataObjectsTest::TestPythonStringToStr";
+  const char *GetString = "PythonDataObjectsTest::TestPythonStringToStr";
 
-  PythonString str(c_str);
-  EXPECT_STREQ(c_str, str.GetString().str().c_str());
+  PythonString str(GetString);
+  EXPECT_EQ(GetString, str.GetString());
 
   PythonString str_str = str.Str();
-  EXPECT_STREQ(c_str, str_str.GetString().str().c_str());
+  EXPECT_EQ(GetString, str_str.GetString());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonIntegerToStr) {}
@@ -281,7 +281,7 @@ TEST_F(PythonDataObjectsTest, TestPythonStringToStructuredString) {
       "PythonDataObjectsTest::TestPythonStringToStructuredString";
   PythonString constructed_string(test_string);
   auto string_sp = constructed_string.CreateStructuredString();
-  EXPECT_STREQ(test_string, string_sp->GetStringValue().c_str());
+  EXPECT_EQ(test_string, string_sp->GetStringValue());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonListValueEquality) {
@@ -315,7 +315,7 @@ TEST_F(PythonDataObjectsTest, TestPythonListValueEquality) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(long_value0, chk_int.GetInteger());
-  EXPECT_STREQ(string_value1, chk_str.GetString().str().c_str());
+  EXPECT_EQ(string_value1, chk_str.GetString());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonListManipulation) {
@@ -343,7 +343,7 @@ TEST_F(PythonDataObjectsTest, TestPythonListManipulation) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(long_value0, chk_int.GetInteger());
-  EXPECT_STREQ(string_value1, chk_str.GetString().str().c_str());
+  EXPECT_EQ(string_value1, chk_str.GetString());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonListToStructuredList) {
@@ -364,7 +364,7 @@ TEST_F(PythonDataObjectsTest, TestPythonListToStructuredList) {
   auto string_sp = array_sp->GetItemAtIndex(1)->GetAsString();
 
   EXPECT_EQ(long_value0, long(int_sp->GetValue()));
-  EXPECT_STREQ(string_value1, string_sp->GetValue().c_str());
+  EXPECT_EQ(string_value1, string_sp->GetValue());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonTupleSize) {
@@ -466,7 +466,7 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryValueEquality) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(value_0, chk_int.GetInteger());
-  EXPECT_STREQ(value_1, chk_str.GetString().str().c_str());
+  EXPECT_EQ(value_1, chk_str.GetString());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonDictionaryManipulation) {
@@ -503,7 +503,7 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryManipulation) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(value_0, chk_int.GetInteger());
-  EXPECT_STREQ(value_1, chk_str.GetString().str().c_str());
+  EXPECT_EQ(value_1, chk_str.GetString());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonDictionaryToStructuredDictionary) {
@@ -526,7 +526,7 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryToStructuredDictionary) {
   auto string_sp = dict_sp->GetValueForKey(string_key0)->GetAsString();
   auto int_sp = dict_sp->GetValueForKey(string_key1)->GetAsInteger();
 
-  EXPECT_STREQ(string_value0, string_sp->GetValue().c_str());
+  EXPECT_EQ(string_value0, string_sp->GetValue());
   EXPECT_EQ(int_value1, long(int_sp->GetValue()));
 }
 

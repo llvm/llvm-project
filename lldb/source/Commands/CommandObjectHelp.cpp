@@ -25,21 +25,26 @@ using namespace lldb_private;
 //-------------------------------------------------------------------------
 
 void CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
-    Stream *s, const char *command, const char *prefix, const char *subcommand,
+    Stream *s, llvm::StringRef command, llvm::StringRef prefix, llvm::StringRef subcommand,
     bool include_apropos, bool include_type_lookup) {
-  if (s && command && *command) {
-    s->Printf("'%s' is not a known command.\n", command);
-    s->Printf("Try '%shelp' to see a current list of commands.\n",
-              prefix ? prefix : "");
-    if (include_apropos) {
-      s->Printf("Try '%sapropos %s' for a list of related commands.\n",
-                prefix ? prefix : "", subcommand ? subcommand : command);
-    }
-    if (include_type_lookup) {
-      s->Printf("Try '%stype lookup %s' for information on types, methods, "
-                "functions, modules, etc.",
-                prefix ? prefix : "", subcommand ? subcommand : command);
-    }
+  if (!s || command.empty())
+    return;
+
+  std::string command_str = command.str();
+  std::string prefix_str = prefix.str();
+  std::string subcommand_str = subcommand.str();
+  const std::string &lookup_str = !subcommand_str.empty() ? subcommand_str : command_str;
+  s->Printf("'%s' is not a known command.\n", command_str.c_str());
+  s->Printf("Try '%shelp' to see a current list of commands.\n",
+            prefix.str().c_str());
+  if (include_apropos) {
+    s->Printf("Try '%sapropos %s' for a list of related commands.\n",
+      prefix_str.c_str(), lookup_str.c_str());
+  }
+  if (include_type_lookup) {
+    s->Printf("Try '%stype lookup %s' for information on types, methods, "
+              "functions, modules, etc.",
+      prefix_str.c_str(), lookup_str.c_str());
   }
 }
 
@@ -148,7 +153,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
             s.Printf("\n\t%s", matches.GetStringAtIndex(match_idx));
           }
           s.Printf("\n");
-          result.AppendError(s.GetData());
+          result.AppendError(s.GetString());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!sub_cmd_obj) {
@@ -156,7 +161,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
           GenerateAdditionalHelpAvenuesMessage(
               &error_msg_stream, cmd_string.c_str(),
               m_interpreter.GetCommandPrefix(), sub_command.c_str());
-          result.AppendErrorWithFormat("%s", error_msg_stream.GetData());
+          result.AppendError(error_msg_stream.GetString());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else {
@@ -198,8 +203,8 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
         StreamString error_msg_stream;
         GenerateAdditionalHelpAvenuesMessage(&error_msg_stream,
                                              command.GetArgumentAtIndex(0),
-                                             m_interpreter.GetCommandPrefix());
-        result.AppendErrorWithFormat("%s", error_msg_stream.GetData());
+                                             m_interpreter.GetCommandPrefix(), "");
+        result.AppendError(error_msg_stream.GetString());
         result.SetStatus(eReturnStatusFailed);
       }
     }

@@ -14,14 +14,26 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H
 
-#include "LambdaResolver.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <map>
+#include <memory>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -55,7 +67,7 @@ public:
   JITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
       : ErrorHandlerAddress(ErrorHandlerAddress) {}
 
-  virtual ~JITCompileCallbackManager() {}
+  virtual ~JITCompileCallbackManager() = default;
 
   /// @brief Execute the callback for the given trampoline id. Called by the JIT
   ///        to compile functions on demand.
@@ -210,7 +222,7 @@ public:
   /// @brief Map type for initializing the manager. See init.
   typedef StringMap<std::pair<JITTargetAddress, JITSymbolFlags>> StubInitsMap;
 
-  virtual ~IndirectStubsManager() {}
+  virtual ~IndirectStubsManager() = default;
 
   /// @brief Create a single stub with the given name, target address and flags.
   virtual Error createStub(StringRef StubName, JITTargetAddress StubAddr,
@@ -419,7 +431,7 @@ GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
 void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
                               ValueToValueMapTy &VMap);
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H

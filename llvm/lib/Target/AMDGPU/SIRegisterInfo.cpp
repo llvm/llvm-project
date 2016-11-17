@@ -1059,17 +1059,6 @@ SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
   return AMDGPU::NoRegister;
 }
 
-bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
-                            unsigned Reg) const {
-  const TargetRegisterClass *RC;
-  if (TargetRegisterInfo::isVirtualRegister(Reg))
-    RC = MRI.getRegClass(Reg);
-  else
-    RC = getPhysRegClass(Reg);
-
-  return hasVGPRs(RC);
-}
-
 unsigned SIRegisterInfo::getTotalNumSGPRs(const SISubtarget &ST) const {
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
     return 800;
@@ -1362,4 +1351,18 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
   default:
     llvm_unreachable("unhandled register size");
   }
+}
+
+const TargetRegisterClass*
+SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
+                                  unsigned Reg) const {
+  if (TargetRegisterInfo::isVirtualRegister(Reg))
+    return  MRI.getRegClass(Reg);
+
+  return getPhysRegClass(Reg);
+}
+
+bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
+                            unsigned Reg) const {
+  return hasVGPRs(getRegClassForReg(MRI, Reg));
 }
