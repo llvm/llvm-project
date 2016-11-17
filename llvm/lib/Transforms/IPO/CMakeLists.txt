@@ -12,6 +12,7 @@ add_llvm_library(LLVMipo
   FunctionImport.cpp
   GlobalDCE.cpp
   GlobalOpt.cpp
+  GlobalSplit.cpp
   IPConstantPropagation.cpp
   IPO.cpp
   InferFunctionAttrs.cpp

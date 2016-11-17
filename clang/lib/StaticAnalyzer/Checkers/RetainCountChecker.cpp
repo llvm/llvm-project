@@ -2649,10 +2649,6 @@ public:
                      ArrayRef<const MemRegion *> Regions,
                      const CallEvent *Call) const;
 
-  bool wantsRegionChangeUpdate(ProgramStateRef state) const {
-    return true;
-  }
-
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
   void checkReturnWithRetEffect(const ReturnStmt *S, CheckerContext &C,
                                 ExplodedNode *Pred, RetEffect RE, RefVal X,

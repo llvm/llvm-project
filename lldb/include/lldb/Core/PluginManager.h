@@ -244,7 +244,7 @@ public:
 
   static const char *GetPlatformPluginDescriptionAtIndex(uint32_t idx);
 
-  static size_t AutoCompletePlatformName(const char *partial_name,
+  static size_t AutoCompletePlatformName(llvm::StringRef partial_name,
                                          StringList &matches);
   //------------------------------------------------------------------
   // Process

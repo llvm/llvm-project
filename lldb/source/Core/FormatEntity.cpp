@@ -2327,60 +2327,69 @@ static void AddMatches(const FormatEntity::Entry::Definition *def,
   }
 }
 
-size_t FormatEntity::AutoComplete(const char *s, int match_start_point,
+size_t FormatEntity::AutoComplete(llvm::StringRef str, int match_start_point,
                                   int max_return_elements, bool &word_complete,
                                   StringList &matches) {
   word_complete = false;
-  llvm::StringRef str(s + match_start_point);
+  str = str.drop_front(match_start_point);
   matches.Clear();
 
   const size_t dollar_pos = str.rfind('$');
-  if (dollar_pos != llvm::StringRef::npos) {
-    // Hitting TAB after $ at the end of the string add a "{"
-    if (dollar_pos == str.size() - 1) {
-      std::string match = str.str();
-      match.append("{");
-      matches.AppendString(std::move(match));
-    } else if (str[dollar_pos + 1] == '{') {
-      const size_t close_pos = str.find('}', dollar_pos + 2);
-      if (close_pos == llvm::StringRef::npos) {
-        const size_t format_pos = str.find('%', dollar_pos + 2);
-        if (format_pos == llvm::StringRef::npos) {
-          llvm::StringRef partial_variable(str.substr(dollar_pos + 2));
-          if (partial_variable.empty()) {
-            // Suggest all top level entites as we are just past "${"
-            AddMatches(&g_root, str, llvm::StringRef(), matches);
-          } else {
-            // We have a partially specified variable, find it
-            llvm::StringRef remainder;
-            const FormatEntity::Entry::Definition *entry_def =
-                FindEntry(partial_variable, &g_root, remainder);
-            if (entry_def) {
-              const size_t n = entry_def->num_children;
+  if (dollar_pos == llvm::StringRef::npos)
+    return 0;
 
-              if (remainder.empty()) {
-                // Exact match
-                if (n > 0) {
-                  // "${thread.info" <TAB>
-                  matches.AppendString(MakeMatch(str, "."));
-                } else {
-                  // "${thread.id" <TAB>
-                  matches.AppendString(MakeMatch(str, "}"));
-                  word_complete = true;
-                }
-              } else if (remainder.equals(".")) {
-                // "${thread." <TAB>
-                AddMatches(entry_def, str, llvm::StringRef(), matches);
-              } else {
-                // We have a partial match
-                // "${thre" <TAB>
-                AddMatches(entry_def, str, remainder, matches);
-              }
-            }
-          }
-        }
-      }
+  // Hitting TAB after $ at the end of the string add a "{"
+  if (dollar_pos == str.size() - 1) {
+    std::string match = str.str();
+    match.append("{");
+    matches.AppendString(match);
+    return 1;
+  }
+
+  if (str[dollar_pos + 1] != '{')
+    return 0;
+
+  const size_t close_pos = str.find('}', dollar_pos + 2);
+  if (close_pos != llvm::StringRef::npos)
+    return 0;
+
+  const size_t format_pos = str.find('%', dollar_pos + 2);
+  if (format_pos != llvm::StringRef::npos)
+    return 0;
+
+  llvm::StringRef partial_variable(str.substr(dollar_pos + 2));
+  if (partial_variable.empty()) {
+    // Suggest all top level entites as we are just past "${"
+    AddMatches(&g_root, str, llvm::StringRef(), matches);
+    return matches.GetSize();
+  }
+
+  // We have a partially specified variable, find it
+  llvm::StringRef remainder;
+  const FormatEntity::Entry::Definition *entry_def =
+      FindEntry(partial_variable, &g_root, remainder);
+  if (!entry_def)
+    return 0;
+
+  const size_t n = entry_def->num_children;
+
+  if (remainder.empty()) {
+    // Exact match
+    if (n > 0) {
+      // "${thread.info" <TAB>
+      matches.AppendString(MakeMatch(str, "."));
+    } else {
+      // "${thread.id" <TAB>
+      matches.AppendString(MakeMatch(str, "}"));
+      word_complete = true;
     }
+  } else if (remainder.equals(".")) {
+    // "${thread." <TAB>
+    AddMatches(entry_def, str, llvm::StringRef(), matches);
+  } else {
+    // We have a partial match
+    // "${thre" <TAB>
+    AddMatches(entry_def, str, remainder, matches);
   }
   return matches.GetSize();
 }

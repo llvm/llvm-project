@@ -607,7 +607,8 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   std::vector<std::string> BundleTags;
 
 public:
-  BitcodeReader(BitstreamCursor Stream, LLVMContext &Context);
+  BitcodeReader(BitstreamCursor Stream, StringRef ProducerIdentification,
+                LLVMContext &Context);
 
   Error materializeForwardReferencedFunctions();
 
@@ -841,9 +842,13 @@ std::error_code llvm::errorToErrorCodeAndEmitErrors(LLVMContext &Ctx,
   return std::error_code();
 }
 
-BitcodeReader::BitcodeReader(BitstreamCursor Stream, LLVMContext &Context)
-    : BitcodeReaderBase(std::move(Stream)), Context(Context), ValueList(Context),
-      MetadataList(Context) {}
+BitcodeReader::BitcodeReader(BitstreamCursor Stream,
+                             StringRef ProducerIdentification,
+                             LLVMContext &Context)
+    : BitcodeReaderBase(std::move(Stream)), Context(Context),
+      ValueList(Context), MetadataList(Context) {
+  this->ProducerIdentification = ProducerIdentification;
+}
 
 Error BitcodeReader::materializeForwardReferencedFunctions() {
   if (WillMaterializeAllForwardRefs)
@@ -4365,36 +4370,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
 Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata) {
   TheModule = M;
-
-  // We expect a number of well-defined blocks, though we don't necessarily
-  // need to understand them all.
-  while (true) {
-    if (Stream.AtEndOfStream()) {
-      // We didn't really read a proper Module.
-      return error("Malformed IR file");
-    }
-
-    BitstreamEntry Entry =
-      Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs);
-
-    if (Entry.Kind != BitstreamEntry::SubBlock)
-      return error("Malformed block");
-
-    if (Entry.ID == bitc::IDENTIFICATION_BLOCK_ID) {
-      Expected<std::string> ProducerIdentificationOrErr =
-          readIdentificationBlock(Stream);
-      if (!ProducerIdentificationOrErr)
-        return ProducerIdentificationOrErr.takeError();
-      ProducerIdentification = *ProducerIdentificationOrErr;
-      continue;
-    }
-
-    if (Entry.ID == bitc::MODULE_BLOCK_ID)
-      return parseModule(0, ShouldLazyLoadMetadata);
-
-    if (Stream.SkipBlock())
-      return error("Invalid record");
-  }
+  return parseModule(0, ShouldLazyLoadMetadata);
 }
 
 Error BitcodeReader::parseGlobalObjectAttachment(GlobalObject &GO,
@@ -6566,26 +6542,76 @@ const std::error_category &llvm::BitcodeErrorCategory() {
 // External interface
 //===----------------------------------------------------------------------===//
 
+Expected<std::vector<BitcodeModule>>
+llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
+  Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
+  if (!StreamOrErr)
+    return StreamOrErr.takeError();
+  BitstreamCursor &Stream = *StreamOrErr;
+
+  uint64_t IdentificationBit = -1ull;
+  std::vector<BitcodeModule> Modules;
+  while (true) {
+    // We may be consuming bitcode from a client that leaves garbage at the end
+    // of the bitcode stream (e.g. Apple's ar tool). If we are close enough to
+    // the end that there cannot possibly be another module, stop looking.
+    if (Stream.getCurrentByteNo() + 8 >= Stream.getBitcodeBytes().size())
+      return Modules;
+
+    BitstreamEntry Entry = Stream.advance();
+    switch (Entry.Kind) {
+    case BitstreamEntry::EndBlock:
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+
+    case BitstreamEntry::SubBlock:
+      if (Entry.ID == bitc::IDENTIFICATION_BLOCK_ID)
+        IdentificationBit = Stream.GetCurrentBitNo();
+      else if (Entry.ID == bitc::MODULE_BLOCK_ID)
+        Modules.push_back({Stream.getBitcodeBytes(),
+                           Buffer.getBufferIdentifier(), IdentificationBit,
+                           Stream.GetCurrentBitNo()});
+
+      if (Stream.SkipBlock())
+        return error("Malformed block");
+      continue;
+    case BitstreamEntry::Record:
+      Stream.skipRecord(Entry.ID);
+      continue;
+    }
+  }
+}
+
 /// \brief Get a lazy one-at-time loading module from bitcode.
 ///
 /// This isn't always used in a lazy context.  In particular, it's also used by
-/// \a parseBitcodeFile().  If this is truly lazy, then we need to eagerly pull
+/// \a parseModule().  If this is truly lazy, then we need to eagerly pull
 /// in forward-referenced functions from block address references.
 ///
 /// \param[in] MaterializeAll Set to \c true if we should materialize
 /// everything.
-static Expected<std::unique_ptr<Module>>
-getLazyBitcodeModuleImpl(MemoryBufferRef Buffer, LLVMContext &Context,
-                         bool MaterializeAll,
-                         bool ShouldLazyLoadMetadata = false) {
-  Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
-  if (!StreamOrErr)
-    return StreamOrErr.takeError();
+Expected<std::unique_ptr<Module>>
+BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
+                             bool ShouldLazyLoadMetadata) {
+  BitstreamCursor Stream(Buffer);
 
-  BitcodeReader *R = new BitcodeReader(std::move(*StreamOrErr), Context);
+  std::string ProducerIdentification;
+  if (IdentificationBit != -1ull) {
+    Stream.JumpToBit(IdentificationBit);
+    Expected<std::string> ProducerIdentificationOrErr =
+        readIdentificationBlock(Stream);
+    if (!ProducerIdentificationOrErr)
+      return ProducerIdentificationOrErr.takeError();
+
+    ProducerIdentification = *ProducerIdentificationOrErr;
+  }
+
+  Stream.JumpToBit(ModuleBit);
+  auto *R =
+      new BitcodeReader(std::move(Stream), ProducerIdentification, Context);
 
   std::unique_ptr<Module> M =
-      llvm::make_unique<Module>(Buffer.getBufferIdentifier(), Context);
+      llvm::make_unique<Module>(ModuleIdentifier, Context);
   M->setMaterializer(R);
 
   // Delay parsing Metadata if ShouldLazyLoadMetadata is true.
@@ -6605,10 +6631,22 @@ getLazyBitcodeModuleImpl(MemoryBufferRef Buffer, LLVMContext &Context,
 }
 
 Expected<std::unique_ptr<Module>>
+BitcodeModule::getLazyModule(LLVMContext &Context,
+                             bool ShouldLazyLoadMetadata) {
+  return getModuleImpl(Context, false, ShouldLazyLoadMetadata);
+}
+
+Expected<std::unique_ptr<Module>>
 llvm::getLazyBitcodeModule(MemoryBufferRef Buffer,
                            LLVMContext &Context, bool ShouldLazyLoadMetadata) {
-  return getLazyBitcodeModuleImpl(Buffer, Context, false,
-                                  ShouldLazyLoadMetadata);
+  Expected<std::vector<BitcodeModule>> MsOrErr = getBitcodeModuleList(Buffer);
+  if (!MsOrErr)
+    return MsOrErr.takeError();
+
+  if (MsOrErr->size() != 1)
+    return error("Expected a single module");
+
+  return (*MsOrErr)[0].getLazyModule(Context, ShouldLazyLoadMetadata);
 }
 
 Expected<std::unique_ptr<Module>>
@@ -6621,11 +6659,23 @@ llvm::getOwningLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
   return MOrErr;
 }
 
-Expected<std::unique_ptr<Module>> llvm::parseBitcodeFile(MemoryBufferRef Buffer,
-                                                         LLVMContext &Context) {
-  return getLazyBitcodeModuleImpl(Buffer, Context, true);
+Expected<std::unique_ptr<Module>>
+BitcodeModule::parseModule(LLVMContext &Context) {
+  return getModuleImpl(Context, true, false);
   // TODO: Restore the use-lists to the in-memory state when the bitcode was
   // written.  We must defer until the Module has been fully materialized.
+}
+
+Expected<std::unique_ptr<Module>> llvm::parseBitcodeFile(MemoryBufferRef Buffer,
+                                                         LLVMContext &Context) {
+  Expected<std::vector<BitcodeModule>> MsOrErr = getBitcodeModuleList(Buffer);
+  if (!MsOrErr)
+    return MsOrErr.takeError();
+
+  if (MsOrErr->size() != 1)
+    return error("Expected a single module");
+
+  return (*MsOrErr)[0].parseModule(Context);
 }
 
 Expected<std::string> llvm::getBitcodeTargetTriple(MemoryBufferRef Buffer) {

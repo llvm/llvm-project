@@ -108,7 +108,7 @@ lldb::OptionValueSP OptionValueFormatEntity::DeepCopy() const {
 }
 
 size_t OptionValueFormatEntity::AutoComplete(
-    CommandInterpreter &interpreter, const char *s, int match_start_point,
+    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
     int max_return_elements, bool &word_complete, StringList &matches) {
   return FormatEntity::AutoComplete(s, match_start_point, max_return_elements,
                                     word_complete, matches);

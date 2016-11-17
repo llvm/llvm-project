@@ -55,7 +55,7 @@ protected:
   void DeleteForwardPort(lldb::pid_t pid);
 
   Error MakeConnectURL(const lldb::pid_t pid, const uint16_t remote_port,
-                       const char *remote_socket_name,
+                       llvm::StringRef remote_socket_name,
                        std::string &connect_url);
 
 private:

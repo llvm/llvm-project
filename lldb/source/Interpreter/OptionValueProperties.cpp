@@ -1,5 +1,4 @@
-//===-- OptionValueProperties.cpp ---------------------------------*- C++
-//-*-===//
+//===-- OptionValueProperties.cpp --------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -635,7 +634,7 @@ void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,
 }
 
 void OptionValueProperties::Apropos(
-    const char *keyword,
+    llvm::StringRef keyword,
     std::vector<const Property *> &matching_properties) const {
   const size_t num_properties = m_properties.size();
   StreamString strm;

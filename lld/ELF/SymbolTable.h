@@ -103,6 +103,8 @@ private:
 
   void initDemangledSyms();
   void handleAnonymousVersion();
+  void assignExactVersion(SymbolVersion Ver, size_t VersionId,
+                          StringRef VersionName);
   void assignWildcardVersion(SymbolVersion Ver, size_t VersionId);
 
   struct SymIndex {

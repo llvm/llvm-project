@@ -692,6 +692,11 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   PM.add(createPostOrderFunctionAttrsLegacyPass());
   PM.add(createReversePostOrderFunctionAttrsPass());
 
+  // Split globals using inrange annotations on GEP indices. This can help
+  // improve the quality of generated code when virtual constant propagation or
+  // control flow integrity are enabled.
+  PM.add(createGlobalSplitPass());
+
   // Apply whole-program devirtualization and virtual constant propagation.
   PM.add(createWholeProgramDevirtPass());
 

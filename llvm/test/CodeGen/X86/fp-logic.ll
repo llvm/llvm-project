@@ -3,13 +3,9 @@
 
 ; PR22428: https://llvm.org/bugs/show_bug.cgi?id=22428
 ; f1, f2, f3, and f4 should use an integer logic instruction.
-; f9 and f10 should use an FP (SSE) logic instruction.
+; f5, f6, f9, and f10 should use an FP (SSE) logic instruction.
 ;
-; f5, f6, f7, and f8 are less clear.
-;
-; For f5 and f6, we can save a register move by using an FP logic instruction,
-; but we may need to calculate the relative costs of an SSE op vs. int op vs.
-; scalar <-> SSE register moves.
+; f7 and f8 are less clear.
 ;
 ; For f7 and f8, the SSE instructions don't take immediate operands, so if we
 ; use one of those, we either have to load a constant from memory or move the
@@ -79,9 +75,8 @@ define i32 @f4(float %x) {
 define float @f5(float %x, i32 %y) {
 ; CHECK-LABEL: f5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    andl %edi, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movd %edi, %xmm1
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast float %x to i32
@@ -95,9 +90,8 @@ define float @f5(float %x, i32 %y) {
 define float @f6(float %x, i32 %y) {
 ; CHECK-LABEL: f6:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    andl %edi, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movd %edi, %xmm1
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast float %x to i32

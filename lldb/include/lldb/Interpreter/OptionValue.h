@@ -100,9 +100,10 @@ public:
 
   virtual lldb::OptionValueSP DeepCopy() const = 0;
 
-  virtual size_t AutoComplete(CommandInterpreter &interpreter, const char *s,
-                              int match_start_point, int max_return_elements,
-                              bool &word_complete, StringList &matches);
+  virtual size_t AutoComplete(CommandInterpreter &interpreter,
+                              llvm::StringRef s, int match_start_point,
+                              int max_return_elements, bool &word_complete,
+                              StringList &matches);
 
   //-----------------------------------------------------------------
   // Subclasses can override these functions

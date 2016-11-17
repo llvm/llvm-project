@@ -262,10 +262,6 @@ ProgramStateRef ExprEngine::processAssume(ProgramStateRef state,
   return getCheckerManager().runCheckersForEvalAssume(state, cond, assumption);
 }
 
-bool ExprEngine::wantsRegionChangeUpdate(ProgramStateRef state) {
-  return getCheckerManager().wantsRegionChangeUpdate(state);
-}
-
 ProgramStateRef
 ExprEngine::processRegionChanges(ProgramStateRef state,
                                  const InvalidatedSymbols *invalidated,

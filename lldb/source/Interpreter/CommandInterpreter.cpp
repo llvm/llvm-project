@@ -2596,19 +2596,19 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
 }
 
 void CommandInterpreter::FindCommandsForApropos(
-    const char *search_word, StringList &commands_found,
+    llvm::StringRef search_word, StringList &commands_found,
     StringList &commands_help, CommandObject::CommandMap &command_map) {
   CommandObject::CommandMap::const_iterator pos;
 
   for (pos = command_map.begin(); pos != command_map.end(); ++pos) {
-    const char *command_name = pos->first.c_str();
+    llvm::StringRef command_name = pos->first;
     CommandObject *cmd_obj = pos->second.get();
 
     const bool search_short_help = true;
     const bool search_long_help = false;
     const bool search_syntax = false;
     const bool search_options = false;
-    if (strcasestr(command_name, search_word) ||
+    if (command_name.contains_lower(search_word) ||
         cmd_obj->HelpTextContainsWord(search_word, search_short_help,
                                       search_long_help, search_syntax,
                                       search_options)) {
@@ -2624,7 +2624,7 @@ void CommandInterpreter::FindCommandsForApropos(
   }
 }
 
-void CommandInterpreter::FindCommandsForApropos(const char *search_word,
+void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                                                 StringList &commands_found,
                                                 StringList &commands_help,
                                                 bool search_builtin_commands,

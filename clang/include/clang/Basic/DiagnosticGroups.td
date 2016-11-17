@@ -543,6 +543,7 @@ def GCCWriteStrings : DiagGroup<"write-strings" , [WritableStrings]>;
 def CharSubscript : DiagGroup<"char-subscripts">;
 def LargeByValueCopy : DiagGroup<"large-by-value-copy">;
 def DuplicateArgDecl : DiagGroup<"duplicate-method-arg">;
+def SignedEnumBitfield : DiagGroup<"signed-enum-bitfield">;
 
 // Unreachable code warning groups.
 //

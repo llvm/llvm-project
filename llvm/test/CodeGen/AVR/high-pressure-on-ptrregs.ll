@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=avr | FileCheck %s
+; XFAIL: *
 
 ; This tests how LLVM handles IR which puts very high
 ; presure on the PTRREGS class for the register allocator.

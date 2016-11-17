@@ -62,7 +62,7 @@ public:
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
                                    Stream &strm) const;
 
-  void Apropos(const char *keyword,
+  void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties) const;
 
   void Initialize(const PropertyDefinition *setting_definitions);

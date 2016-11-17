@@ -221,18 +221,17 @@ bool StackFrame::ChangePC(addr_t pc) {
 
 const char *StackFrame::Disassemble() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_disassembly.GetSize() == 0) {
-    ExecutionContext exe_ctx(shared_from_this());
-    Target *target = exe_ctx.GetTargetPtr();
-    if (target) {
-      const char *plugin_name = nullptr;
-      const char *flavor = nullptr;
-      Disassembler::Disassemble(target->GetDebugger(),
-                                target->GetArchitecture(), plugin_name, flavor,
-                                exe_ctx, 0, false, 0, 0, m_disassembly);
-    }
-    if (m_disassembly.GetSize() == 0)
-      return nullptr;
+  if (m_disassembly.Empty())
+    return nullptr;
+
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
+  if (target) {
+    const char *plugin_name = nullptr;
+    const char *flavor = nullptr;
+    Disassembler::Disassemble(target->GetDebugger(), target->GetArchitecture(),
+                              plugin_name, flavor, exe_ctx, 0, false, 0, 0,
+                              m_disassembly);
   }
   return m_disassembly.GetData();
 }
@@ -485,579 +484,557 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 }
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
-    const char *var_expr_cstr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Error &error) {
+    llvm::StringRef var_expr_cstr, DynamicValueType use_dynamic,
+    uint32_t options, VariableSP &var_sp, Error &error) {
   // We can't fetch variable information for a history stack frame.
   if (m_is_history_frame)
     return ValueObjectSP();
 
-  if (var_expr_cstr && var_expr_cstr[0]) {
-    const bool check_ptr_vs_member =
-        (options & eExpressionPathOptionCheckPtrVsMember) != 0;
-    const bool no_fragile_ivar =
-        (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
-    const bool no_synth_child =
-        (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
-    // const bool no_synth_array = (options &
-    // eExpressionPathOptionsNoSyntheticArrayRange) != 0;
-    error.Clear();
-    bool deref = false;
-    bool address_of = false;
-    ValueObjectSP valobj_sp;
-    const bool get_file_globals = true;
-    // When looking up a variable for an expression, we need only consider the
-    // variables that are in scope.
-    VariableListSP var_list_sp(GetInScopeVariableList(get_file_globals));
-    VariableList *variable_list = var_list_sp.get();
+  if (var_expr_cstr.empty()) {
+    error.SetErrorStringWithFormat("invalid variable path '%s'", var_expr_cstr);
+    return ValueObjectSP();
+  }
 
-    if (variable_list) {
-      // If first character is a '*', then show pointer contents
-      const char *var_expr = var_expr_cstr;
-      if (var_expr[0] == '*') {
-        deref = true;
-        var_expr++; // Skip the '*'
-      } else if (var_expr[0] == '&') {
-        address_of = true;
-        var_expr++; // Skip the '&'
-      }
+  const bool check_ptr_vs_member =
+      (options & eExpressionPathOptionCheckPtrVsMember) != 0;
+  const bool no_fragile_ivar =
+      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
+  const bool no_synth_child =
+      (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
+  // const bool no_synth_array = (options &
+  // eExpressionPathOptionsNoSyntheticArrayRange) != 0;
+  error.Clear();
+  bool deref = false;
+  bool address_of = false;
+  ValueObjectSP valobj_sp;
+  const bool get_file_globals = true;
+  // When looking up a variable for an expression, we need only consider the
+  // variables that are in scope.
+  VariableListSP var_list_sp(GetInScopeVariableList(get_file_globals));
+  VariableList *variable_list = var_list_sp.get();
 
-      std::string var_path(var_expr);
-      size_t separator_idx = var_path.find_first_of(".-[=+~|&^%#@!/?,<>{}");
-      StreamString var_expr_path_strm;
+  if (!variable_list)
+    return ValueObjectSP();
 
-      ConstString name_const_string;
-      if (separator_idx == std::string::npos)
-        name_const_string.SetCString(var_path.c_str());
-      else
-        name_const_string.SetCStringWithLength(var_path.c_str(), separator_idx);
+  // If first character is a '*', then show pointer contents
+  llvm::StringRef var_expr = var_expr_cstr;
+  std::string var_expr_storage;
+  if (var_expr[0] == '*') {
+    deref = true;
+    var_expr = var_expr.drop_front(); // Skip the '*'
+  } else if (var_expr[0] == '&') {
+    address_of = true;
+    var_expr = var_expr.drop_front(); // Skip the '&'
+  }
 
-      var_sp = variable_list->FindVariable(name_const_string, false);
+  size_t separator_idx = var_expr.find_first_of(".-[=+~|&^%#@!/?,<>{}");
+  StreamString var_expr_path_strm;
 
-      bool synthetically_added_instance_object = false;
+  ConstString name_const_string(var_expr.substr(0, separator_idx));
 
-      if (var_sp) {
-        var_path.erase(0, name_const_string.GetLength());
-      }
+  var_sp = variable_list->FindVariable(name_const_string, false);
 
-      if (!var_sp && (options & eExpressionPathOptionsAllowDirectIVarAccess)) {
-        // Check for direct ivars access which helps us with implicit
-        // access to ivars with the "this->" or "self->"
-        GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
-        lldb::LanguageType method_language = eLanguageTypeUnknown;
-        bool is_instance_method = false;
-        ConstString method_object_name;
-        if (m_sc.GetFunctionMethodInfo(method_language, is_instance_method,
-                                       method_object_name)) {
-          if (is_instance_method && method_object_name) {
-            var_sp = variable_list->FindVariable(method_object_name);
-            if (var_sp) {
-              separator_idx = 0;
-              var_path.insert(0, "->");
-              synthetically_added_instance_object = true;
-            }
-          }
+  bool synthetically_added_instance_object = false;
+
+  if (var_sp) {
+    var_expr = var_expr.drop_front(name_const_string.GetLength());
+  }
+
+  if (!var_sp && (options & eExpressionPathOptionsAllowDirectIVarAccess)) {
+    // Check for direct ivars access which helps us with implicit
+    // access to ivars with the "this->" or "self->"
+    GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
+    lldb::LanguageType method_language = eLanguageTypeUnknown;
+    bool is_instance_method = false;
+    ConstString method_object_name;
+    if (m_sc.GetFunctionMethodInfo(method_language, is_instance_method,
+                                   method_object_name)) {
+      if (is_instance_method && method_object_name) {
+        var_sp = variable_list->FindVariable(method_object_name);
+        if (var_sp) {
+          separator_idx = 0;
+          var_expr_storage = "->";
+          var_expr_storage += var_expr;
+          var_expr = var_expr_storage;
+          synthetically_added_instance_object = true;
         }
       }
+    }
+  }
 
-      if (!var_sp && (options & eExpressionPathOptionsInspectAnonymousUnions)) {
-        // Check if any anonymous unions are there which contain a variable with
-        // the name we need
-        for (size_t i = 0; i < variable_list->GetSize(); i++) {
-          if (VariableSP variable_sp = variable_list->GetVariableAtIndex(i)) {
-            if (variable_sp->GetName().IsEmpty()) {
-              if (Type *var_type = variable_sp->GetType()) {
-                if (var_type->GetForwardCompilerType().IsAnonymousType()) {
-                  valobj_sp =
-                      GetValueObjectForFrameVariable(variable_sp, use_dynamic);
-                  if (!valobj_sp)
-                    return valobj_sp;
-                  valobj_sp = valobj_sp->GetChildMemberWithName(
-                      name_const_string, true);
-                  if (valobj_sp)
-                    break;
-                }
-              }
-            }
-          }
+  if (!var_sp && (options & eExpressionPathOptionsInspectAnonymousUnions)) {
+    // Check if any anonymous unions are there which contain a variable with
+    // the name we need
+    for (size_t i = 0; i < variable_list->GetSize(); i++) {
+      VariableSP variable_sp = variable_list->GetVariableAtIndex(i);
+      if (!variable_sp)
+        continue;
+      if (!variable_sp->GetName().IsEmpty())
+        continue;
+
+      Type *var_type = variable_sp->GetType();
+      if (!var_type)
+        continue;
+
+      if (!var_type->GetForwardCompilerType().IsAnonymousType())
+        continue;
+      valobj_sp = GetValueObjectForFrameVariable(variable_sp, use_dynamic);
+      if (!valobj_sp)
+        return valobj_sp;
+      valobj_sp = valobj_sp->GetChildMemberWithName(name_const_string, true);
+      if (valobj_sp)
+        break;
+    }
+  }
+
+  if (var_sp && !valobj_sp) {
+    valobj_sp = GetValueObjectForFrameVariable(var_sp, use_dynamic);
+    if (!valobj_sp)
+      return valobj_sp;
+  }
+  if (!valobj_sp) {
+    error.SetErrorStringWithFormat("no variable named '%s' found in this frame",
+                                   name_const_string.GetCString());
+    return ValueObjectSP();
+  }
+
+  // We are dumping at least one child
+  while (separator_idx != std::string::npos) {
+    // Calculate the next separator index ahead of time
+    ValueObjectSP child_valobj_sp;
+    const char separator_type = var_expr[0];
+    switch (separator_type) {
+    case '-':
+      if (var_expr.size() >= 2 && var_expr[1] != '>')
+        return ValueObjectSP();
+
+      if (no_fragile_ivar) {
+        // Make sure we aren't trying to deref an objective
+        // C ivar if this is not allowed
+        const uint32_t pointer_type_flags =
+            valobj_sp->GetCompilerType().GetTypeInfo(nullptr);
+        if ((pointer_type_flags & eTypeIsObjC) &&
+            (pointer_type_flags & eTypeIsPointer)) {
+          // This was an objective C object pointer and
+          // it was requested we skip any fragile ivars
+          // so return nothing here
+          return ValueObjectSP();
         }
       }
+      var_expr = var_expr.drop_front(); // Remove the '-'
+      LLVM_FALLTHROUGH;
+    case '.': {
+      const bool expr_is_ptr = var_expr[0] == '>';
 
-      if (var_sp && !valobj_sp) {
-        valobj_sp = GetValueObjectForFrameVariable(var_sp, use_dynamic);
-        if (!valobj_sp)
-          return valobj_sp;
+      var_expr = var_expr.drop_front(); // Remove the '.' or '>'
+      separator_idx = var_expr.find_first_of(".-[");
+      ConstString child_name(var_expr.substr(0, var_expr.find_first_of(".-[")));
+
+      if (check_ptr_vs_member) {
+        // We either have a pointer type and need to verify
+        // valobj_sp is a pointer, or we have a member of a
+        // class/union/struct being accessed with the . syntax
+        // and need to verify we don't have a pointer.
+        const bool actual_is_ptr = valobj_sp->IsPointerType();
+
+        if (actual_is_ptr != expr_is_ptr) {
+          // Incorrect use of "." with a pointer, or "->" with
+          // a class/union/struct instance or reference.
+          valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+          if (actual_is_ptr)
+            error.SetErrorStringWithFormat(
+                "\"%s\" is a pointer and . was used to attempt to access "
+                "\"%s\". Did you mean \"%s->%s\"?",
+                var_expr_path_strm.GetData(), child_name.GetCString(),
+                var_expr_path_strm.GetData(), var_expr.str().c_str());
+          else
+            error.SetErrorStringWithFormat(
+                "\"%s\" is not a pointer and -> was used to attempt to "
+                "access \"%s\". Did you mean \"%s.%s\"?",
+                var_expr_path_strm.GetData(), child_name.GetCString(),
+                var_expr_path_strm.GetData(), var_expr.str().c_str());
+          return ValueObjectSP();
+        }
       }
-      if (valobj_sp) {
-        // We are dumping at least one child
-        while (separator_idx != std::string::npos) {
-          // Calculate the next separator index ahead of time
-          ValueObjectSP child_valobj_sp;
-          const char separator_type = var_path[0];
-          switch (separator_type) {
-          case '-':
-            if (var_path.size() >= 2 && var_path[1] != '>')
-              return ValueObjectSP();
-
-            if (no_fragile_ivar) {
-              // Make sure we aren't trying to deref an objective
-              // C ivar if this is not allowed
-              const uint32_t pointer_type_flags =
-                  valobj_sp->GetCompilerType().GetTypeInfo(nullptr);
-              if ((pointer_type_flags & eTypeIsObjC) &&
-                  (pointer_type_flags & eTypeIsPointer)) {
-                // This was an objective C object pointer and
-                // it was requested we skip any fragile ivars
-                // so return nothing here
-                return ValueObjectSP();
-              }
-            }
-            var_path.erase(0, 1); // Remove the '-'
-            LLVM_FALLTHROUGH;
-          case '.': {
-            const bool expr_is_ptr = var_path[0] == '>';
-
-            var_path.erase(0, 1); // Remove the '.' or '>'
-            separator_idx = var_path.find_first_of(".-[");
-            ConstString child_name;
-            if (separator_idx == std::string::npos)
-              child_name.SetCString(var_path.c_str());
-            else
-              child_name.SetCStringWithLength(var_path.c_str(), separator_idx);
-
-            if (check_ptr_vs_member) {
-              // We either have a pointer type and need to verify
-              // valobj_sp is a pointer, or we have a member of a
-              // class/union/struct being accessed with the . syntax
-              // and need to verify we don't have a pointer.
-              const bool actual_is_ptr = valobj_sp->IsPointerType();
-
-              if (actual_is_ptr != expr_is_ptr) {
-                // Incorrect use of "." with a pointer, or "->" with
-                // a class/union/struct instance or reference.
-                valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                if (actual_is_ptr)
-                  error.SetErrorStringWithFormat(
-                      "\"%s\" is a pointer and . was used to attempt to access "
-                      "\"%s\". Did you mean \"%s->%s\"?",
-                      var_expr_path_strm.GetData(), child_name.GetCString(),
-                      var_expr_path_strm.GetData(), var_path.c_str());
-                else
-                  error.SetErrorStringWithFormat(
-                      "\"%s\" is not a pointer and -> was used to attempt to "
-                      "access \"%s\". Did you mean \"%s.%s\"?",
-                      var_expr_path_strm.GetData(), child_name.GetCString(),
-                      var_expr_path_strm.GetData(), var_path.c_str());
-                return ValueObjectSP();
-              }
-            }
+      child_valobj_sp = valobj_sp->GetChildMemberWithName(child_name, true);
+      if (!child_valobj_sp) {
+        if (!no_synth_child) {
+          child_valobj_sp = valobj_sp->GetSyntheticValue();
+          if (child_valobj_sp)
             child_valobj_sp =
-                valobj_sp->GetChildMemberWithName(child_name, true);
-            if (!child_valobj_sp) {
-              if (!no_synth_child) {
-                child_valobj_sp = valobj_sp->GetSyntheticValue();
-                if (child_valobj_sp)
-                  child_valobj_sp =
-                      child_valobj_sp->GetChildMemberWithName(child_name, true);
-              }
+                child_valobj_sp->GetChildMemberWithName(child_name, true);
+        }
 
-              if (no_synth_child || !child_valobj_sp) {
-                // No child member with name "child_name"
-                if (synthetically_added_instance_object) {
-                  // We added a "this->" or "self->" to the beginning of the
-                  // expression
-                  // and this is the first pointer ivar access, so just return
-                  // the normal
-                  // error
-                  error.SetErrorStringWithFormat(
-                      "no variable or instance variable named '%s' found in "
-                      "this frame",
-                      name_const_string.GetCString());
-                } else {
-                  valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                  if (child_name) {
-                    error.SetErrorStringWithFormat(
-                        "\"%s\" is not a member of \"(%s) %s\"",
-                        child_name.GetCString(),
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-                  } else {
-                    error.SetErrorStringWithFormat(
-                        "incomplete expression path after \"%s\" in \"%s\"",
-                        var_expr_path_strm.GetData(), var_expr_cstr);
-                  }
-                }
-                return ValueObjectSP();
-              }
-            }
-            synthetically_added_instance_object = false;
-            // Remove the child name from the path
-            var_path.erase(0, child_name.GetLength());
-            if (use_dynamic != eNoDynamicValues) {
-              ValueObjectSP dynamic_value_sp(
-                  child_valobj_sp->GetDynamicValue(use_dynamic));
-              if (dynamic_value_sp)
-                child_valobj_sp = dynamic_value_sp;
-            }
-          } break;
-
-          case '[':
-            // Array member access, or treating pointer as an array
-            if (var_path.size() > 2) // Need at least two brackets and a number
-            {
-              char *end = nullptr;
-              long child_index = ::strtol(&var_path[1], &end, 0);
-              if (end && *end == ']' &&
-                  *(end - 1) != '[') // this code forces an error in the case of
-                                     // arr[]. as bitfield[] is not a good
-                                     // syntax we're good to go
-              {
-                if (valobj_sp->GetCompilerType().IsPointerToScalarType() &&
-                    deref) {
-                  // what we have is *ptr[low]. the most similar C++ syntax is
-                  // to deref ptr
-                  // and extract bit low out of it. reading array item low
-                  // would be done by saying ptr[low], without a deref * sign
-                  Error error;
-                  ValueObjectSP temp(valobj_sp->Dereference(error));
-                  if (error.Fail()) {
-                    valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                    error.SetErrorStringWithFormat(
-                        "could not dereference \"(%s) %s\"",
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-                    return ValueObjectSP();
-                  }
-                  valobj_sp = temp;
-                  deref = false;
-                } else if (valobj_sp->GetCompilerType().IsArrayOfScalarType() &&
-                           deref) {
-                  // what we have is *arr[low]. the most similar C++ syntax is
-                  // to get arr[0]
-                  // (an operation that is equivalent to deref-ing arr)
-                  // and extract bit low out of it. reading array item low
-                  // would be done by saying arr[low], without a deref * sign
-                  Error error;
-                  ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
-                  if (error.Fail()) {
-                    valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                    error.SetErrorStringWithFormat(
-                        "could not get item 0 for \"(%s) %s\"",
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-                    return ValueObjectSP();
-                  }
-                  valobj_sp = temp;
-                  deref = false;
-                }
-
-                bool is_incomplete_array = false;
-                if (valobj_sp->IsPointerType()) {
-                  bool is_objc_pointer = true;
-
-                  if (valobj_sp->GetCompilerType().GetMinimumLanguage() !=
-                      eLanguageTypeObjC)
-                    is_objc_pointer = false;
-                  else if (!valobj_sp->GetCompilerType().IsPointerType())
-                    is_objc_pointer = false;
-
-                  if (no_synth_child && is_objc_pointer) {
-                    error.SetErrorStringWithFormat(
-                        "\"(%s) %s\" is an Objective-C pointer, and cannot be "
-                        "subscripted",
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-
-                    return ValueObjectSP();
-                  } else if (is_objc_pointer) {
-                    // dereferencing ObjC variables is not valid.. so let's try
-                    // and recur to synthetic children
-                    ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
-                    if (!synthetic                 /* no synthetic */
-                        || synthetic == valobj_sp) /* synthetic is the same as
-                                                      the original object */
-                    {
-                      valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                      error.SetErrorStringWithFormat(
-                          "\"(%s) %s\" is not an array type",
-                          valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-                    } else if (
-                        static_cast<uint32_t>(child_index) >=
-                        synthetic
-                            ->GetNumChildren() /* synthetic does not have that many values */) {
-                      valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                      error.SetErrorStringWithFormat(
-                          "array index %ld is not valid for \"(%s) %s\"",
-                          child_index,
-                          valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-                    } else {
-                      child_valobj_sp =
-                          synthetic->GetChildAtIndex(child_index, true);
-                      if (!child_valobj_sp) {
-                        valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                        error.SetErrorStringWithFormat(
-                            "array index %ld is not valid for \"(%s) %s\"",
-                            child_index, valobj_sp->GetTypeName().AsCString(
-                                             "<invalid type>"),
-                            var_expr_path_strm.GetData());
-                      }
-                    }
-                  } else {
-                    child_valobj_sp =
-                        valobj_sp->GetSyntheticArrayMember(child_index, true);
-                    if (!child_valobj_sp) {
-                      valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                      error.SetErrorStringWithFormat(
-                          "failed to use pointer as array for index %ld for "
-                          "\"(%s) %s\"",
-                          child_index,
-                          valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-                    }
-                  }
-                } else if (valobj_sp->GetCompilerType().IsArrayType(
-                               nullptr, nullptr, &is_incomplete_array)) {
-                  // Pass false to dynamic_value here so we can tell the
-                  // difference between
-                  // no dynamic value and no member of this type...
-                  child_valobj_sp =
-                      valobj_sp->GetChildAtIndex(child_index, true);
-                  if (!child_valobj_sp &&
-                      (is_incomplete_array || !no_synth_child))
-                    child_valobj_sp =
-                        valobj_sp->GetSyntheticArrayMember(child_index, true);
-
-                  if (!child_valobj_sp) {
-                    valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                    error.SetErrorStringWithFormat(
-                        "array index %ld is not valid for \"(%s) %s\"",
-                        child_index,
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-                  }
-                } else if (valobj_sp->GetCompilerType().IsScalarType()) {
-                  // this is a bitfield asking to display just one bit
-                  child_valobj_sp = valobj_sp->GetSyntheticBitFieldChild(
-                      child_index, child_index, true);
-                  if (!child_valobj_sp) {
-                    valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                    error.SetErrorStringWithFormat(
-                        "bitfield range %ld-%ld is not valid for \"(%s) %s\"",
-                        child_index, child_index,
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-                  }
-                } else {
-                  ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
-                  if (no_synth_child /* synthetic is forbidden */ ||
-                      !synthetic                 /* no synthetic */
-                      || synthetic == valobj_sp) /* synthetic is the same as the
-                                                    original object */
-                  {
-                    valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                    error.SetErrorStringWithFormat(
-                        "\"(%s) %s\" is not an array type",
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-                  } else if (
-                      static_cast<uint32_t>(child_index) >=
-                      synthetic
-                          ->GetNumChildren() /* synthetic does not have that many values */) {
-                    valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                    error.SetErrorStringWithFormat(
-                        "array index %ld is not valid for \"(%s) %s\"",
-                        child_index,
-                        valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                        var_expr_path_strm.GetData());
-                  } else {
-                    child_valobj_sp =
-                        synthetic->GetChildAtIndex(child_index, true);
-                    if (!child_valobj_sp) {
-                      valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                      error.SetErrorStringWithFormat(
-                          "array index %ld is not valid for \"(%s) %s\"",
-                          child_index,
-                          valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-                    }
-                  }
-                }
-
-                if (!child_valobj_sp) {
-                  // Invalid array index...
-                  return ValueObjectSP();
-                }
-
-                // Erase the array member specification '[%i]' where
-                // %i is the array index
-                var_path.erase(0, (end - var_path.c_str()) + 1);
-                separator_idx = var_path.find_first_of(".-[");
-                if (use_dynamic != eNoDynamicValues) {
-                  ValueObjectSP dynamic_value_sp(
-                      child_valobj_sp->GetDynamicValue(use_dynamic));
-                  if (dynamic_value_sp)
-                    child_valobj_sp = dynamic_value_sp;
-                }
-                // Break out early from the switch since we were
-                // able to find the child member
-                break;
-              } else if (end && *end == '-') {
-                // this is most probably a BitField, let's take a look
-                char *real_end = nullptr;
-                long final_index = ::strtol(end + 1, &real_end, 0);
-                bool expand_bitfield = true;
-                if (real_end && *real_end == ']') {
-                  // if the format given is [high-low], swap range
-                  if (child_index > final_index) {
-                    long temp = child_index;
-                    child_index = final_index;
-                    final_index = temp;
-                  }
-
-                  if (valobj_sp->GetCompilerType().IsPointerToScalarType() &&
-                      deref) {
-                    // what we have is *ptr[low-high]. the most similar C++
-                    // syntax is to deref ptr
-                    // and extract bits low thru high out of it. reading array
-                    // items low thru high
-                    // would be done by saying ptr[low-high], without a deref *
-                    // sign
-                    Error error;
-                    ValueObjectSP temp(valobj_sp->Dereference(error));
-                    if (error.Fail()) {
-                      valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                      error.SetErrorStringWithFormat(
-                          "could not dereference \"(%s) %s\"",
-                          valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-                      return ValueObjectSP();
-                    }
-                    valobj_sp = temp;
-                    deref = false;
-                  } else if (valobj_sp->GetCompilerType()
-                                 .IsArrayOfScalarType() &&
-                             deref) {
-                    // what we have is *arr[low-high]. the most similar C++
-                    // syntax is to get arr[0]
-                    // (an operation that is equivalent to deref-ing arr)
-                    // and extract bits low thru high out of it. reading array
-                    // items low thru high
-                    // would be done by saying arr[low-high], without a deref *
-                    // sign
-                    Error error;
-                    ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
-                    if (error.Fail()) {
-                      valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                      error.SetErrorStringWithFormat(
-                          "could not get item 0 for \"(%s) %s\"",
-                          valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-                      return ValueObjectSP();
-                    }
-                    valobj_sp = temp;
-                    deref = false;
-                  }
-                  /*else if (valobj_sp->IsArrayType() ||
-                  valobj_sp->IsPointerType())
-                  {
-                      child_valobj_sp =
-                  valobj_sp->GetSyntheticArrayRangeChild(child_index,
-                  final_index, true);
-                      expand_bitfield = false;
-                      if (!child_valobj_sp)
-                      {
-                          valobj_sp->GetExpressionPath (var_expr_path_strm,
-                  false);
-                          error.SetErrorStringWithFormat ("array range %i-%i is
-                  not valid for \"(%s) %s\"",
-                                                          child_index,
-                  final_index,
-                                                          valobj_sp->GetTypeName().AsCString("<invalid
-                  type>"),
-                                                          var_expr_path_strm.c_str());
-                      }
-                  }*/
-
-                  if (expand_bitfield) {
-                    child_valobj_sp = valobj_sp->GetSyntheticBitFieldChild(
-                        child_index, final_index, true);
-                    if (!child_valobj_sp) {
-                      valobj_sp->GetExpressionPath(var_expr_path_strm, false);
-                      error.SetErrorStringWithFormat(
-                          "bitfield range %ld-%ld is not valid for \"(%s) %s\"",
-                          child_index, final_index,
-                          valobj_sp->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-                    }
-                  }
-                }
-
-                if (!child_valobj_sp) {
-                  // Invalid bitfield range...
-                  return ValueObjectSP();
-                }
-
-                // Erase the bitfield member specification '[%i-%i]' where
-                // %i is the index
-                var_path.erase(0, (real_end - var_path.c_str()) + 1);
-                separator_idx = var_path.find_first_of(".-[");
-                if (use_dynamic != eNoDynamicValues) {
-                  ValueObjectSP dynamic_value_sp(
-                      child_valobj_sp->GetDynamicValue(use_dynamic));
-                  if (dynamic_value_sp)
-                    child_valobj_sp = dynamic_value_sp;
-                }
-                // Break out early from the switch since we were
-                // able to find the child member
-                break;
-              }
+        if (no_synth_child || !child_valobj_sp) {
+          // No child member with name "child_name"
+          if (synthetically_added_instance_object) {
+            // We added a "this->" or "self->" to the beginning of the
+            // expression
+            // and this is the first pointer ivar access, so just return
+            // the normal
+            // error
+            error.SetErrorStringWithFormat(
+                "no variable or instance variable named '%s' found in "
+                "this frame",
+                name_const_string.GetCString());
+          } else {
+            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            if (child_name) {
+              error.SetErrorStringWithFormat(
+                  "\"%s\" is not a member of \"(%s) %s\"",
+                  child_name.GetCString(),
+                  valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                  var_expr_path_strm.GetData());
             } else {
               error.SetErrorStringWithFormat(
-                  "invalid square bracket encountered after \"%s\" in \"%s\"",
-                  var_expr_path_strm.GetData(), var_path.c_str());
+                  "incomplete expression path after \"%s\" in \"%s\"",
+                  var_expr_path_strm.GetData(), var_expr_cstr);
             }
-            return ValueObjectSP();
+          }
+          return ValueObjectSP();
+        }
+      }
+      synthetically_added_instance_object = false;
+      // Remove the child name from the path
+      var_expr = var_expr.drop_front(child_name.GetLength());
+      if (use_dynamic != eNoDynamicValues) {
+        ValueObjectSP dynamic_value_sp(
+            child_valobj_sp->GetDynamicValue(use_dynamic));
+        if (dynamic_value_sp)
+          child_valobj_sp = dynamic_value_sp;
+      }
+    } break;
 
-          default:
-            // Failure...
+    case '[': {
+      // Array member access, or treating pointer as an array
+      // Need at least two brackets and a number
+      if (var_expr.size() <= 2) {
+        error.SetErrorStringWithFormat(
+            "invalid square bracket encountered after \"%s\" in \"%s\"",
+            var_expr_path_strm.GetData(), var_expr.str().c_str());
+        return ValueObjectSP();
+      }
+
+      // Drop the open brace.
+      var_expr = var_expr.drop_front();
+      long child_index = 0;
+
+      // If there's no closing brace, this is an invalid expression.
+      size_t end_pos = var_expr.find_first_of(']');
+      if (end_pos == llvm::StringRef::npos) {
+        error.SetErrorStringWithFormat(
+            "missing closing square bracket in expression \"%s\"",
+            var_expr_path_strm.GetData());
+        return ValueObjectSP();
+      }
+      llvm::StringRef index_expr = var_expr.take_front(end_pos);
+      llvm::StringRef original_index_expr = index_expr;
+      // Drop all of "[index_expr]"
+      var_expr = var_expr.drop_front(end_pos + 1);
+
+      if (index_expr.consumeInteger(0, child_index)) {
+        // If there was no integer anywhere in the index expression, this is
+        // erroneous expression.
+        error.SetErrorStringWithFormat("invalid index expression \"%s\"",
+                                       index_expr.str().c_str());
+        return ValueObjectSP();
+      }
+
+      if (index_expr.empty()) {
+        // The entire index expression was a single integer.
+
+        if (valobj_sp->GetCompilerType().IsPointerToScalarType() && deref) {
+          // what we have is *ptr[low]. the most similar C++ syntax is to deref
+          // ptr and extract bit low out of it. reading array item low would be
+          // done by saying ptr[low], without a deref * sign
+          Error error;
+          ValueObjectSP temp(valobj_sp->Dereference(error));
+          if (error.Fail()) {
+            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            error.SetErrorStringWithFormat(
+                "could not dereference \"(%s) %s\"",
+                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                var_expr_path_strm.GetData());
+            return ValueObjectSP();
+          }
+          valobj_sp = temp;
+          deref = false;
+        } else if (valobj_sp->GetCompilerType().IsArrayOfScalarType() &&
+                   deref) {
+          // what we have is *arr[low]. the most similar C++ syntax is
+          // to get arr[0]
+          // (an operation that is equivalent to deref-ing arr)
+          // and extract bit low out of it. reading array item low
+          // would be done by saying arr[low], without a deref * sign
+          Error error;
+          ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
+          if (error.Fail()) {
+            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            error.SetErrorStringWithFormat(
+                "could not get item 0 for \"(%s) %s\"",
+                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                var_expr_path_strm.GetData());
+            return ValueObjectSP();
+          }
+          valobj_sp = temp;
+          deref = false;
+        }
+
+        bool is_incomplete_array = false;
+        if (valobj_sp->IsPointerType()) {
+          bool is_objc_pointer = true;
+
+          if (valobj_sp->GetCompilerType().GetMinimumLanguage() !=
+              eLanguageTypeObjC)
+            is_objc_pointer = false;
+          else if (!valobj_sp->GetCompilerType().IsPointerType())
+            is_objc_pointer = false;
+
+          if (no_synth_child && is_objc_pointer) {
+            error.SetErrorStringWithFormat(
+                "\"(%s) %s\" is an Objective-C pointer, and cannot be "
+                "subscripted",
+                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                var_expr_path_strm.GetData());
+
+            return ValueObjectSP();
+          } else if (is_objc_pointer) {
+            // dereferencing ObjC variables is not valid.. so let's try
+            // and recur to synthetic children
+            ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
+            if (!synthetic                 /* no synthetic */
+                || synthetic == valobj_sp) /* synthetic is the same as
+                                              the original object */
             {
               valobj_sp->GetExpressionPath(var_expr_path_strm, false);
               error.SetErrorStringWithFormat(
-                  "unexpected char '%c' encountered after \"%s\" in \"%s\"",
-                  separator_type, var_expr_path_strm.GetData(),
-                  var_path.c_str());
-
-              return ValueObjectSP();
+                  "\"(%s) %s\" is not an array type",
+                  valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                  var_expr_path_strm.GetData());
+            } else if (
+                static_cast<uint32_t>(child_index) >=
+                synthetic
+                    ->GetNumChildren() /* synthetic does not have that many values */) {
+              valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+              error.SetErrorStringWithFormat(
+                  "array index %ld is not valid for \"(%s) %s\"", child_index,
+                  valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                  var_expr_path_strm.GetData());
+            } else {
+              child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+              if (!child_valobj_sp) {
+                valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+                error.SetErrorStringWithFormat(
+                    "array index %ld is not valid for \"(%s) %s\"", child_index,
+                    valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                    var_expr_path_strm.GetData());
+              }
+            }
+          } else {
+            child_valobj_sp =
+                valobj_sp->GetSyntheticArrayMember(child_index, true);
+            if (!child_valobj_sp) {
+              valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+              error.SetErrorStringWithFormat(
+                  "failed to use pointer as array for index %ld for "
+                  "\"(%s) %s\"",
+                  child_index,
+                  valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                  var_expr_path_strm.GetData());
             }
           }
+        } else if (valobj_sp->GetCompilerType().IsArrayType(
+                       nullptr, nullptr, &is_incomplete_array)) {
+          // Pass false to dynamic_value here so we can tell the
+          // difference between
+          // no dynamic value and no member of this type...
+          child_valobj_sp = valobj_sp->GetChildAtIndex(child_index, true);
+          if (!child_valobj_sp && (is_incomplete_array || !no_synth_child))
+            child_valobj_sp =
+                valobj_sp->GetSyntheticArrayMember(child_index, true);
 
-          if (child_valobj_sp)
-            valobj_sp = child_valobj_sp;
-
-          if (var_path.empty())
-            break;
-        }
-        if (valobj_sp) {
-          if (deref) {
-            ValueObjectSP deref_valobj_sp(valobj_sp->Dereference(error));
-            valobj_sp = deref_valobj_sp;
-          } else if (address_of) {
-            ValueObjectSP address_of_valobj_sp(valobj_sp->AddressOf(error));
-            valobj_sp = address_of_valobj_sp;
+          if (!child_valobj_sp) {
+            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            error.SetErrorStringWithFormat(
+                "array index %ld is not valid for \"(%s) %s\"", child_index,
+                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                var_expr_path_strm.GetData());
+          }
+        } else if (valobj_sp->GetCompilerType().IsScalarType()) {
+          // this is a bitfield asking to display just one bit
+          child_valobj_sp = valobj_sp->GetSyntheticBitFieldChild(
+              child_index, child_index, true);
+          if (!child_valobj_sp) {
+            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            error.SetErrorStringWithFormat(
+                "bitfield range %ld-%ld is not valid for \"(%s) %s\"",
+                child_index, child_index,
+                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                var_expr_path_strm.GetData());
+          }
+        } else {
+          ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
+          if (no_synth_child /* synthetic is forbidden */ ||
+              !synthetic                 /* no synthetic */
+              || synthetic == valobj_sp) /* synthetic is the same as the
+                                            original object */
+          {
+            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            error.SetErrorStringWithFormat(
+                "\"(%s) %s\" is not an array type",
+                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                var_expr_path_strm.GetData());
+          } else if (
+              static_cast<uint32_t>(child_index) >=
+              synthetic
+                  ->GetNumChildren() /* synthetic does not have that many values */) {
+            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            error.SetErrorStringWithFormat(
+                "array index %ld is not valid for \"(%s) %s\"", child_index,
+                valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                var_expr_path_strm.GetData());
+          } else {
+            child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+            if (!child_valobj_sp) {
+              valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+              error.SetErrorStringWithFormat(
+                  "array index %ld is not valid for \"(%s) %s\"", child_index,
+                  valobj_sp->GetTypeName().AsCString("<invalid type>"),
+                  var_expr_path_strm.GetData());
+            }
           }
         }
-        return valobj_sp;
-      } else {
+
+        if (!child_valobj_sp) {
+          // Invalid array index...
+          return ValueObjectSP();
+        }
+
+        separator_idx = var_expr.find_first_of(".-[");
+        if (use_dynamic != eNoDynamicValues) {
+          ValueObjectSP dynamic_value_sp(
+              child_valobj_sp->GetDynamicValue(use_dynamic));
+          if (dynamic_value_sp)
+            child_valobj_sp = dynamic_value_sp;
+        }
+        // Break out early from the switch since we were able to find the child
+        // member
+        break;
+      }
+
+      // this is most probably a BitField, let's take a look
+      if (index_expr.front() != '-') {
+        error.SetErrorStringWithFormat("invalid range expression \"'%s'\"",
+                                       original_index_expr.str().c_str());
+        return ValueObjectSP();
+      }
+
+      index_expr.drop_front();
+      long final_index = 0;
+      if (index_expr.getAsInteger(0, final_index)) {
+        error.SetErrorStringWithFormat("invalid range expression \"'%s'\"",
+                                       original_index_expr.str().c_str());
+        return ValueObjectSP();
+      }
+
+      // if the format given is [high-low], swap range
+      if (child_index > final_index) {
+        long temp = child_index;
+        child_index = final_index;
+        final_index = temp;
+      }
+
+      if (valobj_sp->GetCompilerType().IsPointerToScalarType() && deref) {
+        // what we have is *ptr[low-high]. the most similar C++ syntax is to
+        // deref ptr and extract bits low thru high out of it. reading array
+        // items low thru high would be done by saying ptr[low-high], without
+        // a deref * sign
+        Error error;
+        ValueObjectSP temp(valobj_sp->Dereference(error));
+        if (error.Fail()) {
+          valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+          error.SetErrorStringWithFormat(
+              "could not dereference \"(%s) %s\"",
+              valobj_sp->GetTypeName().AsCString("<invalid type>"),
+              var_expr_path_strm.GetData());
+          return ValueObjectSP();
+        }
+        valobj_sp = temp;
+        deref = false;
+      } else if (valobj_sp->GetCompilerType().IsArrayOfScalarType() && deref) {
+        // what we have is *arr[low-high]. the most similar C++ syntax is to get
+        // arr[0] (an operation that is equivalent to deref-ing arr) and extract
+        // bits low thru high out of it. reading array items low thru high would
+        // be done by saying arr[low-high], without a deref * sign
+        Error error;
+        ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
+        if (error.Fail()) {
+          valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+          error.SetErrorStringWithFormat(
+              "could not get item 0 for \"(%s) %s\"",
+              valobj_sp->GetTypeName().AsCString("<invalid type>"),
+              var_expr_path_strm.GetData());
+          return ValueObjectSP();
+        }
+        valobj_sp = temp;
+        deref = false;
+      }
+
+      child_valobj_sp =
+          valobj_sp->GetSyntheticBitFieldChild(child_index, final_index, true);
+      if (!child_valobj_sp) {
+        valobj_sp->GetExpressionPath(var_expr_path_strm, false);
         error.SetErrorStringWithFormat(
-            "no variable named '%s' found in this frame",
-            name_const_string.GetCString());
+            "bitfield range %ld-%ld is not valid for \"(%s) %s\"", child_index,
+            final_index, valobj_sp->GetTypeName().AsCString("<invalid type>"),
+            var_expr_path_strm.GetData());
+      }
+
+      if (!child_valobj_sp) {
+        // Invalid bitfield range...
+        return ValueObjectSP();
+      }
+
+      separator_idx = var_expr.find_first_of(".-[");
+      if (use_dynamic != eNoDynamicValues) {
+        ValueObjectSP dynamic_value_sp(
+            child_valobj_sp->GetDynamicValue(use_dynamic));
+        if (dynamic_value_sp)
+          child_valobj_sp = dynamic_value_sp;
+      }
+      // Break out early from the switch since we were able to find the child
+      // member
+      break;
+    }
+    default:
+      // Failure...
+      {
+        valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+        error.SetErrorStringWithFormat(
+            "unexpected char '%c' encountered after \"%s\" in \"%s\"",
+            separator_type, var_expr_path_strm.GetData(),
+            var_expr.str().c_str());
+
+        return ValueObjectSP();
       }
     }
-  } else {
-    error.SetErrorStringWithFormat("invalid variable path '%s'", var_expr_cstr);
+
+    if (child_valobj_sp)
+      valobj_sp = child_valobj_sp;
+
+    if (var_expr.empty())
+      break;
   }
-  return ValueObjectSP();
+  if (valobj_sp) {
+    if (deref) {
+      ValueObjectSP deref_valobj_sp(valobj_sp->Dereference(error));
+      valobj_sp = deref_valobj_sp;
+    } else if (address_of) {
+      ValueObjectSP address_of_valobj_sp(valobj_sp->AddressOf(error));
+      valobj_sp = address_of_valobj_sp;
+    }
+  }
+  return valobj_sp;
 }
 
 bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Error *error_ptr) {

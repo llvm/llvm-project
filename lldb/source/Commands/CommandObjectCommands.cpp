@@ -946,7 +946,7 @@ protected:
       const bool generate_apropos = true;
       const bool generate_type_lookup = false;
       CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
-          &error_msg_stream, command_name, nullptr, nullptr, generate_apropos,
+          &error_msg_stream, command_name, llvm::StringRef(), llvm::StringRef(), generate_apropos,
           generate_type_lookup);
       result.AppendError(error_msg_stream.GetString());
       result.SetStatus(eReturnStatusFailed);

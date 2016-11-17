@@ -230,24 +230,25 @@ StringList &StringList::operator=(const std::vector<std::string> &rhs) {
   return *this;
 }
 
-size_t StringList::AutoComplete(const char *s, StringList &matches,
+size_t StringList::AutoComplete(llvm::StringRef s, StringList &matches,
                                 size_t &exact_idx) const {
   matches.Clear();
   exact_idx = SIZE_MAX;
-  if (s && s[0]) {
-    const size_t s_len = strlen(s);
-    const size_t num_strings = m_strings.size();
-
-    for (size_t i = 0; i < num_strings; ++i) {
-      if (m_strings[i].find(s) == 0) {
-        if (exact_idx == SIZE_MAX && m_strings[i].size() == s_len)
-          exact_idx = matches.GetSize();
-        matches.AppendString(m_strings[i]);
-      }
-    }
-  } else {
+  if (s.empty()) {
     // No string, so it matches everything
     matches = *this;
+    return matches.GetSize();
+  }
+
+  const size_t s_len = s.size();
+  const size_t num_strings = m_strings.size();
+
+  for (size_t i = 0; i < num_strings; ++i) {
+    if (m_strings[i].find(s) == 0) {
+      if (exact_idx == SIZE_MAX && m_strings[i].size() == s_len)
+        exact_idx = matches.GetSize();
+      matches.AppendString(m_strings[i]);
+    }
   }
   return matches.GetSize();
 }

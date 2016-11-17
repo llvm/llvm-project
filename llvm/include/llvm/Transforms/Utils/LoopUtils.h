@@ -461,6 +461,11 @@ Optional<const MDOperand *> findStringMetadataForLoop(Loop *TheLoop,
 void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                              unsigned V = 0);
 
+/// \brief Get a loop's estimated trip count based on branch weight metadata.
+/// Returns 0 when the count is estimated to be 0, or None when a meaningful
+/// estimate can not be made.
+Optional<unsigned> getLoopEstimatedTripCount(Loop *L);
+
 /// Helper to consistently add the set of standard passes to a loop pass's \c
 /// AnalysisUsage.
 ///
