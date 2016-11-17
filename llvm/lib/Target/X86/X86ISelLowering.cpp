@@ -2094,6 +2094,46 @@ const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
   return ScratchRegs;
 }
 
+/// Lowers masks values (v*i1) to the local register values
+static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,
+                               const SDLoc &Dl, SelectionDAG &DAG) {
+  EVT ValVT = ValArg.getValueType();
+
+  if (ValVT == MVT::v64i1 && ValLoc == MVT::i64) {
+    // One stage lowering is required
+    // bitcast:   v64i1 -> i64
+    return DAG.getBitcast(MVT::i64, ValArg);
+  } else
+    return DAG.getNode(ISD::SIGN_EXTEND, Dl, ValLoc, ValArg);
+}
+
+/// Breaks v64i1 value into two registers and adds the new node to the DAG
+static void Passv64i1ArgInRegs(
+    const SDLoc &Dl, SelectionDAG &DAG, SDValue Chain, SDValue &Arg,
+    SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass, CCValAssign &VA,
+    CCValAssign &NextVA, const X86Subtarget &Subtarget) {
+  assert((Subtarget.hasBWI() || Subtarget.hasBMI()) &&
+         "Expected AVX512BW or AVX512BMI target!");
+  assert(Subtarget.is32Bit() && "Expecting 32 bit target");
+  assert(Arg.getValueType() == MVT::i64 && "Expecting 64 bit value");
+  assert(VA.isRegLoc() && NextVA.isRegLoc() &&
+         "The value should reside in two registers");
+
+  // Before splitting the value we cast it to i64
+  Arg = DAG.getBitcast(MVT::i64, Arg);
+
+  // Splitting the value into two i32 types
+  SDValue Lo, Hi;
+  Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i32, Arg,
+                   DAG.getConstant(0, Dl, MVT::i32));
+  Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i32, Arg,
+                   DAG.getConstant(1, Dl, MVT::i32));
+
+  // Attach the two i32 types into corresponding registers
+  RegsToPass.push_back(std::make_pair(VA.getLocReg(), Lo));
+  RegsToPass.push_back(std::make_pair(NextVA.getLocReg(), Hi));
+}
+
 SDValue
 X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
@@ -2118,10 +2158,11 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                    MVT::i32));
 
   // Copy the result values into the output registers.
-  for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
-    CCValAssign &VA = RVLocs[i];
+  for (unsigned I = 0, OutsIndex = 0, E = RVLocs.size(); I != E;
+       ++I, ++OutsIndex) {
+    CCValAssign &VA = RVLocs[I];
     assert(VA.isRegLoc() && "Can only return in registers!");
-    SDValue ValToCopy = OutVals[i];
+    SDValue ValToCopy = OutVals[OutsIndex];
     EVT ValVT = ValToCopy.getValueType();
 
     // Promote values to the appropriate types.
@@ -2131,7 +2172,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
       if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
-        ValToCopy = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), ValToCopy);
+        ValToCopy = lowerMasksToReg(ValToCopy, VA.getLocVT(), dl, DAG);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, dl, VA.getLocVT(), ValToCopy);
     }
@@ -2184,9 +2225,27 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       }
     }
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), ValToCopy, Flag);
-    Flag = Chain.getValue(1);
-    RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+    SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+
+    if (VA.needsCustom()) {
+      assert(VA.getValVT() == MVT::v64i1 &&
+             "Currently the only custom case is when we split v64i1 to 2 regs");
+
+      Passv64i1ArgInRegs(dl, DAG, Chain, ValToCopy, RegsToPass, VA, RVLocs[++I],
+                         Subtarget);
+
+      assert(2 == RegsToPass.size() &&
+             "Expecting two registers after Pass64BitArgInRegs");
+    } else {
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), ValToCopy));
+    }
+
+    // Add nodes to the DAG and add the values into the RetOps list
+    for (auto &Reg : RegsToPass) {
+      Chain = DAG.getCopyToReg(Chain, dl, Reg.first, Reg.second, Flag);
+      Flag = Chain.getValue(1);
+      RetOps.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+    }
   }
 
   // Swift calling convention does not require we copy the sret argument
@@ -2314,6 +2373,83 @@ EVT X86TargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
   return VT.bitsLT(MinVT) ? MinVT : VT;
 }
 
+/// Reads two 32 bit registers and creates a 64 bit mask value.
+/// @param VA The current 32 bit value that need to be assigned.
+/// @param NextVA The next 32 bit value that need to be assigned.
+/// @param Root The parent DAG note
+/// @param [inout] InFlag Represents SDvalue in the parent DAG node for
+///                       glue purposes. In the case the DAG is already using
+///                       physical register instead of virtual, we should glue
+///                       our new SDValue to InFlag SDvalue.
+/// @return a new SDvalue of size 64bit.
+static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
+                                SDValue &Root, SelectionDAG &DAG,
+                                const SDLoc &Dl, const X86Subtarget &Subtarget,
+                                SDValue *InFlag = nullptr) {
+  assert((Subtarget.hasBWI()) && "Expected AVX512BW target!");
+  assert(Subtarget.is32Bit() && "Expecting 32 bit target");
+  assert(VA.getValVT() == MVT::v64i1 &&
+         "Expecting first location of 64 bit width type");
+  assert(NextVA.getValVT() == VA.getValVT() &&
+         "The locations should have the same type");
+  assert(VA.isRegLoc() && NextVA.isRegLoc() &&
+         "The values should reside in two registers");
+
+  SDValue Lo, Hi;
+  unsigned Reg;
+  SDValue ArgValueLo, ArgValueHi;
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  const TargetRegisterClass *RC = &X86::GR32RegClass;
+
+  // Read a 32 bit value from the registers
+  if (nullptr == InFlag) {
+    // When no physical register is present,
+    // create an intermediate virtual register
+    Reg = MF.addLiveIn(VA.getLocReg(), RC);
+    ArgValueLo = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
+    Reg = MF.addLiveIn(NextVA.getLocReg(), RC);
+    ArgValueHi = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
+  } else {
+    // When a physical register is available read the value from it and glue
+    // the reads together.
+    ArgValueLo = 
+      DAG.getCopyFromReg(Root, Dl, VA.getLocReg(), MVT::i32, *InFlag);
+    *InFlag = ArgValueLo.getValue(2);
+    ArgValueHi =
+      DAG.getCopyFromReg(Root, Dl, NextVA.getLocReg(), MVT::i32, *InFlag);
+    *InFlag = ArgValueHi.getValue(2);
+  }
+
+  // Convert the i32 type into v32i1 type
+  Lo = DAG.getBitcast(MVT::v32i1, ArgValueLo);
+
+  // Convert the i32 type into v32i1 type
+  Hi = DAG.getBitcast(MVT::v32i1, ArgValueHi);
+
+  // Concantenate the two values together
+  return DAG.getNode(ISD::CONCAT_VECTORS, Dl, MVT::v64i1, Lo, Hi);
+}
+
+static SDValue lowerRegToMasks(const SDValue &ValArg, const EVT &ValVT,
+                               const EVT &ValLoc, const SDLoc &Dl,
+                               SelectionDAG &DAG) {
+  assert((ValLoc == MVT::i64 || ValLoc == MVT::i32) &&
+         "Expecting register location of size 32/64 bit");
+
+  // Currently not referenced - will be used in other mask lowering
+  (void)Dl;
+
+  // In the case of v64i1 no special handling is required due to two reasons:
+  // In 32 bit machine, this case is handled by getv64i1Argument
+  // In 64 bit machine, There is no need to truncate the value only bitcast
+  if (ValVT == MVT::v64i1 && ValLoc == MVT::i32) {
+    llvm_unreachable("Expecting only i64 locations");
+  }
+
+  return DAG.getBitcast(ValVT, ValArg);
+}
+
 /// Lower the result values of a call into the
 /// appropriate copies out of appropriate physical registers.
 ///
@@ -2330,13 +2466,14 @@ SDValue X86TargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
-    CCValAssign &VA = RVLocs[i];
+  for (unsigned I = 0, InsIndex = 0, E = RVLocs.size(); I != E;
+       ++I, ++InsIndex) {
+    CCValAssign &VA = RVLocs[I];
     EVT CopyVT = VA.getLocVT();
 
     // If this is x86-64, and we disabled SSE, we can't return FP values
     if ((CopyVT == MVT::f32 || CopyVT == MVT::f64 || CopyVT == MVT::f128) &&
-        ((Is64Bit || Ins[i].Flags.isInReg()) && !Subtarget.hasSSE1())) {
+        ((Is64Bit || Ins[InsIndex].Flags.isInReg()) && !Subtarget.hasSSE1())) {
       report_fatal_error("SSE register return with SSE disabled");
     }
 
@@ -2351,19 +2488,33 @@ SDValue X86TargetLowering::LowerCallResult(
       RoundAfterCopy = (CopyVT != VA.getLocVT());
     }
 
-    Chain = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(),
-                               CopyVT, InFlag).getValue(1);
-    SDValue Val = Chain.getValue(0);
+    SDValue Val;
+    if (VA.needsCustom()) {
+      assert(VA.getValVT() == MVT::v64i1 &&
+             "Currently the only custom case is when we split v64i1 to 2 regs");
+      Val =
+          getv64i1Argument(VA, RVLocs[++I], Chain, DAG, dl, Subtarget, &InFlag);
+    } else {
+      Chain = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), CopyVT, InFlag)
+                  .getValue(1);
+      Val = Chain.getValue(0);
+      InFlag = Chain.getValue(2);
+    }
 
     if (RoundAfterCopy)
       Val = DAG.getNode(ISD::FP_ROUND, dl, VA.getValVT(), Val,
                         // This truncation won't change the value.
                         DAG.getIntPtrConstant(1, dl));
 
-    if (VA.isExtInLoc() && VA.getValVT().getScalarType() == MVT::i1)
-      Val = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), Val);
+    if (VA.isExtInLoc() && (VA.getValVT().getScalarType() == MVT::i1)) {
+      if (VA.getValVT().isVector() &&
+          (VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::i64)) {
+        // promoting a mask type (v*i1) into a register of type i64/i32
+        Val = lowerRegToMasks(Val, VA.getValVT(), VA.getLocVT(), dl, DAG);
+      } else
+        Val = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), Val);
+    }
 
-    InFlag = Chain.getValue(2);
     InVals.push_back(Val);
   }
 
@@ -2431,7 +2582,8 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
 /// Return true if the calling convention is one that we can guarantee TCO for.
 static bool canGuaranteeTCO(CallingConv::ID CC) {
   return (CC == CallingConv::Fast || CC == CallingConv::GHC ||
-          CC == CallingConv::HiPE || CC == CallingConv::HHVM);
+          CC == CallingConv::X86_RegCall || CC == CallingConv::HiPE ||
+          CC == CallingConv::HHVM);
 }
 
 /// Return true if we might ever do TCO for calls with this calling convention.
@@ -2486,9 +2638,11 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
   EVT ValVT;
 
   // If value is passed by pointer we have address passed instead of the value
-  // itself.
-  bool ExtendedInMem = VA.isExtInLoc() &&
-    VA.getValVT().getScalarType() == MVT::i1;
+  // itself. No need to extend if the mask value and location share the same
+  // absolute size.
+  bool ExtendedInMem =
+      VA.isExtInLoc() && VA.getValVT().getScalarType() == MVT::i1 &&
+      VA.getValVT().getSizeInBits() != VA.getLocVT().getSizeInBits();
 
   if (VA.getLocInfo() == CCValAssign::Indirect || ExtendedInMem)
     ValVT = VA.getLocVT();
@@ -2612,8 +2766,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
   bool Is64Bit = Subtarget.is64Bit();
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
 
-  assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
-         "Var args not supported with calling convention fastcc, ghc or hipe");
+  assert(
+      !(isVarArg && canGuaranteeTCO(CallConv)) &&
+      "Var args not supported with calling conv' regcall, fastcc, ghc or hipe");
 
   if (CallConv == CallingConv::X86_INTR) {
     bool isLegal = Ins.size() == 1 ||
@@ -2633,53 +2788,59 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   CCInfo.AnalyzeFormalArguments(Ins, CC_X86);
 
-  unsigned LastVal = ~0U;
   SDValue ArgValue;
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
-    // TODO: If an arg is passed in two places (e.g. reg and stack), skip later
-    // places.
-    assert(VA.getValNo() != LastVal &&
-           "Don't support value assigned to multiple locs yet");
-    (void)LastVal;
-    LastVal = VA.getValNo();
+  for (unsigned I = 0, InsIndex = 0, E = ArgLocs.size(); I != E;
+       ++I, ++InsIndex) {
+    assert(InsIndex < Ins.size() && "Invalid Ins index");
+    CCValAssign &VA = ArgLocs[I];
 
     if (VA.isRegLoc()) {
       EVT RegVT = VA.getLocVT();
-      const TargetRegisterClass *RC;
-      if (RegVT == MVT::i32)
-        RC = &X86::GR32RegClass;
-      else if (Is64Bit && RegVT == MVT::i64)
-        RC = &X86::GR64RegClass;
-      else if (RegVT == MVT::f32)
-        RC = &X86::FR32RegClass;
-      else if (RegVT == MVT::f64)
-        RC = &X86::FR64RegClass;
-      else if (RegVT == MVT::f128)
-        RC = &X86::FR128RegClass;
-      else if (RegVT.is512BitVector())
-        RC = &X86::VR512RegClass;
-      else if (RegVT.is256BitVector())
-        RC = &X86::VR256RegClass;
-      else if (RegVT.is128BitVector())
-        RC = &X86::VR128RegClass;
-      else if (RegVT == MVT::x86mmx)
-        RC = &X86::VR64RegClass;
-      else if (RegVT == MVT::i1)
-        RC = &X86::VK1RegClass;
-      else if (RegVT == MVT::v8i1)
-        RC = &X86::VK8RegClass;
-      else if (RegVT == MVT::v16i1)
-        RC = &X86::VK16RegClass;
-      else if (RegVT == MVT::v32i1)
-        RC = &X86::VK32RegClass;
-      else if (RegVT == MVT::v64i1)
-        RC = &X86::VK64RegClass;
-      else
-        llvm_unreachable("Unknown argument type!");
+      if (VA.needsCustom()) {
+        assert(
+            VA.getValVT() == MVT::v64i1 &&
+            "Currently the only custom case is when we split v64i1 to 2 regs");
 
-      unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
-      ArgValue = DAG.getCopyFromReg(Chain, dl, Reg, RegVT);
+        // v64i1 values, in regcall calling convention, that are
+        // compiled to 32 bit arch, are splited up into two registers.
+        ArgValue =
+            getv64i1Argument(VA, ArgLocs[++I], Chain, DAG, dl, Subtarget);
+      } else {
+        const TargetRegisterClass *RC;
+        if (RegVT == MVT::i32)
+          RC = &X86::GR32RegClass;
+        else if (Is64Bit && RegVT == MVT::i64)
+          RC = &X86::GR64RegClass;
+        else if (RegVT == MVT::f32)
+          RC = &X86::FR32RegClass;
+        else if (RegVT == MVT::f64)
+          RC = &X86::FR64RegClass;
+        else if (RegVT == MVT::f128)
+          RC = &X86::FR128RegClass;
+        else if (RegVT.is512BitVector())
+          RC = &X86::VR512RegClass;
+        else if (RegVT.is256BitVector())
+          RC = &X86::VR256RegClass;
+        else if (RegVT.is128BitVector())
+          RC = &X86::VR128RegClass;
+        else if (RegVT == MVT::x86mmx)
+          RC = &X86::VR64RegClass;
+        else if (RegVT == MVT::i1)
+          RC = &X86::VK1RegClass;
+        else if (RegVT == MVT::v8i1)
+          RC = &X86::VK8RegClass;
+        else if (RegVT == MVT::v16i1)
+          RC = &X86::VK16RegClass;
+        else if (RegVT == MVT::v32i1)
+          RC = &X86::VK32RegClass;
+        else if (RegVT == MVT::v64i1)
+          RC = &X86::VK64RegClass;
+        else
+          llvm_unreachable("Unknown argument type!");
+
+        unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
+        ArgValue = DAG.getCopyFromReg(Chain, dl, Reg, RegVT);
+      }
 
       // If this is an 8 or 16-bit value, it is really passed promoted to 32
       // bits.  Insert an assert[sz]ext to capture this, then truncate to the
@@ -2697,12 +2858,18 @@ SDValue X86TargetLowering::LowerFormalArguments(
         // Handle MMX values passed in XMM regs.
         if (RegVT.isVector() && VA.getValVT().getScalarType() != MVT::i1)
           ArgValue = DAG.getNode(X86ISD::MOVDQ2Q, dl, VA.getValVT(), ArgValue);
-        else
+        else if (VA.getValVT().isVector() &&
+                 VA.getValVT().getScalarType() == MVT::i1 &&
+                 ((RegVT == MVT::i32) || (RegVT == MVT::i64))) {
+          // Promoting a mask type (v*i1) into a register of type i64/i32
+          ArgValue = lowerRegToMasks(ArgValue, VA.getValVT(), RegVT, dl, DAG);
+        } else
           ArgValue = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), ArgValue);
       }
     } else {
       assert(VA.isMemLoc());
-      ArgValue = LowerMemArgument(Chain, CallConv, Ins, dl, DAG, VA, MFI, i);
+      ArgValue =
+          LowerMemArgument(Chain, CallConv, Ins, dl, DAG, VA, MFI, InsIndex);
     }
 
     // If value is passed via pointer - do a load.
@@ -2713,7 +2880,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
     InVals.push_back(ArgValue);
   }
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
     // Swift calling convention does not require we copy the sret argument
     // into %rax/%eax for the return. We don't set SRetReturnReg for Swift.
     if (CallConv == CallingConv::Swift)
@@ -2723,14 +2890,14 @@ SDValue X86TargetLowering::LowerFormalArguments(
     // sret argument into %rax/%eax (depending on ABI) for the return. Save
     // the argument into a virtual register so that we can access it from the
     // return points.
-    if (Ins[i].Flags.isSRet()) {
+    if (Ins[I].Flags.isSRet()) {
       unsigned Reg = FuncInfo->getSRetReturnReg();
       if (!Reg) {
         MVT PtrTy = getPointerTy(DAG.getDataLayout());
         Reg = MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrTy));
         FuncInfo->setSRetReturnReg(Reg);
       }
-      SDValue Copy = DAG.getCopyToReg(DAG.getEntryNode(), dl, Reg, InVals[i]);
+      SDValue Copy = DAG.getCopyToReg(DAG.getEntryNode(), dl, Reg, InVals[I]);
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Copy, Chain);
       break;
     }
@@ -3122,15 +3289,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Walk the register/memloc assignments, inserting copies/loads.  In the case
   // of tail call optimization arguments are handle later.
   const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (unsigned I = 0, OutIndex = 0, E = ArgLocs.size(); I != E;
+       ++I, ++OutIndex) {
+    assert(OutIndex < Outs.size() && "Invalid Out index");
     // Skip inalloca arguments, they have already been written.
-    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    ISD::ArgFlagsTy Flags = Outs[OutIndex].Flags;
     if (Flags.isInAlloca())
       continue;
 
-    CCValAssign &VA = ArgLocs[i];
+    CCValAssign &VA = ArgLocs[I];
     EVT RegVT = VA.getLocVT();
-    SDValue Arg = OutVals[i];
+    SDValue Arg = OutVals[OutIndex];
     bool isByVal = Flags.isByVal();
 
     // Promote the value if needed.
@@ -3146,7 +3315,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     case CCValAssign::AExt:
       if (Arg.getValueType().isVector() &&
           Arg.getValueType().getVectorElementType() == MVT::i1)
-        Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, RegVT, Arg);
+        Arg = lowerMasksToReg(Arg, RegVT, dl, DAG);
       else if (RegVT.is128BitVector()) {
         // Special case: passing MMX values in XMM registers.
         Arg = DAG.getBitcast(MVT::i64, Arg);
@@ -3170,7 +3339,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
     }
 
-    if (VA.isRegLoc()) {
+    if (VA.needsCustom()) {
+      assert(VA.getValVT() == MVT::v64i1 &&
+             "Currently the only custom case is when we split v64i1 to 2 regs");
+      // Split v64i1 value into two registers
+      Passv64i1ArgInRegs(dl, DAG, Chain, Arg, RegsToPass, VA, ArgLocs[++I],
+                         Subtarget);
+    } else if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       if (isVarArg && IsWin64) {
         // Win64 ABI requires argument XMM reg to be copied to the corresponding
@@ -3270,13 +3445,25 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
     int FI = 0;
-    for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-      CCValAssign &VA = ArgLocs[i];
-      if (VA.isRegLoc())
+    for (unsigned I = 0, OutsIndex = 0, E = ArgLocs.size(); I != E;
+         ++I, ++OutsIndex) {
+      CCValAssign &VA = ArgLocs[I];
+
+      if (VA.isRegLoc()) {
+        if (VA.needsCustom()) {
+          assert((CallConv == CallingConv::X86_RegCall) &&
+                 "Expecting custome case only in regcall calling convention");
+          // This means that we are in special case where one argument was
+          // passed through two register locations - Skip the next location
+          ++I;
+        }
+
         continue;
+      }
+
       assert(VA.isMemLoc());
-      SDValue Arg = OutVals[i];
-      ISD::ArgFlagsTy Flags = Outs[i].Flags;
+      SDValue Arg = OutVals[OutsIndex];
+      ISD::ArgFlagsTy Flags = Outs[OutsIndex].Flags;
       // Skip inalloca arguments.  They don't require any work.
       if (Flags.isInAlloca())
         continue;

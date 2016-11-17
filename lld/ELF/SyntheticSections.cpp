@@ -788,7 +788,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
   }
 
-  add({DT_SYMTAB, Out<ELFT>::DynSymTab});
+  add({DT_SYMTAB, In<ELFT>::DynSymTab});
   add({DT_SYMENT, sizeof(Elf_Sym)});
   add({DT_STRTAB, In<ELFT>::DynStrTab});
   add({DT_STRSZ, In<ELFT>::DynStrTab->getSize()});
@@ -831,12 +831,12 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     add({DT_MIPS_RLD_VERSION, 1});
     add({DT_MIPS_FLAGS, RHF_NOTPOT});
     add({DT_MIPS_BASE_ADDRESS, Config->ImageBase});
-    add({DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
+    add({DT_MIPS_SYMTABNO, In<ELFT>::DynSymTab->getNumSymbols()});
     add({DT_MIPS_LOCAL_GOTNO, In<ELFT>::MipsGot->getMipsLocalEntriesNum()});
     if (const SymbolBody *B = In<ELFT>::MipsGot->getMipsFirstGlobalEntry())
       add({DT_MIPS_GOTSYM, B->DynsymIndex});
     else
-      add({DT_MIPS_GOTSYM, Out<ELFT>::DynSymTab->getNumSymbols()});
+      add({DT_MIPS_GOTSYM, In<ELFT>::DynSymTab->getNumSymbols()});
     add({DT_PLTGOT, In<ELFT>::MipsGot});
     if (Out<ELFT>::MipsRldMap)
       add({DT_MIPS_RLD_MAP, Out<ELFT>::MipsRldMap});
@@ -953,12 +953,191 @@ template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalize() {
-  this->Link = Out<ELFT>::DynSymTab ? Out<ELFT>::DynSymTab->SectionIndex
-                                    : Out<ELFT>::SymTab->SectionIndex;
+  this->Link = In<ELFT>::DynSymTab ? In<ELFT>::DynSymTab->OutSec->SectionIndex
+                                   : In<ELFT>::SymTab->OutSec->SectionIndex;
 
   // Set required output section properties.
   this->OutSec->Link = this->Link;
   this->OutSec->Entsize = this->Entsize;
+}
+
+template <class ELFT>
+SymbolTableSection<ELFT>::SymbolTableSection(
+    StringTableSection<ELFT> &StrTabSec)
+    : SyntheticSection<ELFT>(StrTabSec.isDynamic() ? (uintX_t)SHF_ALLOC : 0,
+                             StrTabSec.isDynamic() ? SHT_DYNSYM : SHT_SYMTAB,
+                             sizeof(uintX_t),
+                             StrTabSec.isDynamic() ? ".dynsym" : ".symtab"),
+      StrTabSec(StrTabSec) {
+  this->Entsize = sizeof(Elf_Sym);
+}
+
+// Orders symbols according to their positions in the GOT,
+// in compliance with MIPS ABI rules.
+// See "Global Offset Table" in Chapter 5 in the following document
+// for detailed description:
+// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+static bool sortMipsSymbols(const SymbolBody *L, const SymbolBody *R) {
+  // Sort entries related to non-local preemptible symbols by GOT indexes.
+  // All other entries go to the first part of GOT in arbitrary order.
+  bool LIsInLocalGot = !L->IsInGlobalMipsGot;
+  bool RIsInLocalGot = !R->IsInGlobalMipsGot;
+  if (LIsInLocalGot || RIsInLocalGot)
+    return !RIsInLocalGot;
+  return L->GotIndex < R->GotIndex;
+}
+
+static uint8_t getSymbolBinding(SymbolBody *Body) {
+  Symbol *S = Body->symbol();
+  if (Config->Relocatable)
+    return S->Binding;
+  uint8_t Visibility = S->Visibility;
+  if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
+    return STB_LOCAL;
+  if (Config->NoGnuUnique && S->Binding == STB_GNU_UNIQUE)
+    return STB_GLOBAL;
+  return S->Binding;
+}
+
+template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
+  this->OutSec->Link = this->Link = StrTabSec.OutSec->SectionIndex;
+  this->OutSec->Info = this->Info = NumLocals + 1;
+  this->OutSec->Entsize = this->Entsize;
+
+  if (Config->Relocatable) {
+    size_t I = NumLocals;
+    for (const SymbolTableEntry &S : Symbols)
+      S.Symbol->DynsymIndex = ++I;
+    return;
+  }
+
+  if (!StrTabSec.isDynamic()) {
+    std::stable_sort(Symbols.begin(), Symbols.end(),
+                     [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+                       return getSymbolBinding(L.Symbol) == STB_LOCAL &&
+                              getSymbolBinding(R.Symbol) != STB_LOCAL;
+                     });
+    return;
+  }
+  if (Out<ELFT>::GnuHashTab)
+    // NB: It also sorts Symbols to meet the GNU hash table requirements.
+    Out<ELFT>::GnuHashTab->addSymbols(Symbols);
+  else if (Config->EMachine == EM_MIPS)
+    std::stable_sort(Symbols.begin(), Symbols.end(),
+                     [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+                       return sortMipsSymbols(L.Symbol, R.Symbol);
+                     });
+  size_t I = 0;
+  for (const SymbolTableEntry &S : Symbols)
+    S.Symbol->DynsymIndex = ++I;
+}
+
+template <class ELFT> void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
+  Symbols.push_back({B, StrTabSec.addString(B->getName(), false)});
+}
+
+template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  Buf += sizeof(Elf_Sym);
+
+  // All symbols with STB_LOCAL binding precede the weak and global symbols.
+  // .dynsym only contains global symbols.
+  if (Config->Discard != DiscardPolicy::All && !StrTabSec.isDynamic())
+    writeLocalSymbols(Buf);
+
+  writeGlobalSymbols(Buf);
+}
+
+template <class ELFT>
+void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
+  // Iterate over all input object files to copy their local symbols
+  // to the output symbol table pointed by Buf.
+  for (ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
+    for (const std::pair<const DefinedRegular<ELFT> *, size_t> &P :
+         File->KeptLocalSyms) {
+      const DefinedRegular<ELFT> &Body = *P.first;
+      InputSectionBase<ELFT> *Section = Body.Section;
+      auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
+
+      if (!Section) {
+        ESym->st_shndx = SHN_ABS;
+        ESym->st_value = Body.Value;
+      } else {
+        const OutputSectionBase *OutSec = Section->OutSec;
+        ESym->st_shndx = OutSec->SectionIndex;
+        ESym->st_value = OutSec->Addr + Section->getOffset(Body);
+      }
+      ESym->st_name = P.second;
+      ESym->st_size = Body.template getSize<ELFT>();
+      ESym->setBindingAndType(STB_LOCAL, Body.Type);
+      Buf += sizeof(*ESym);
+    }
+  }
+}
+
+template <class ELFT>
+void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
+  // Write the internal symbol table contents to the output symbol table
+  // pointed by Buf.
+  auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
+  for (const SymbolTableEntry &S : Symbols) {
+    SymbolBody *Body = S.Symbol;
+    size_t StrOff = S.StrTabOffset;
+
+    uint8_t Type = Body->Type;
+    uintX_t Size = Body->getSize<ELFT>();
+
+    ESym->setBindingAndType(getSymbolBinding(Body), Type);
+    ESym->st_size = Size;
+    ESym->st_name = StrOff;
+    ESym->setVisibility(Body->symbol()->Visibility);
+    ESym->st_value = Body->getVA<ELFT>();
+
+    if (const OutputSectionBase *OutSec = getOutputSection(Body))
+      ESym->st_shndx = OutSec->SectionIndex;
+    else if (isa<DefinedRegular<ELFT>>(Body))
+      ESym->st_shndx = SHN_ABS;
+
+    if (Config->EMachine == EM_MIPS) {
+      // On MIPS we need to mark symbol which has a PLT entry and requires
+      // pointer equality by STO_MIPS_PLT flag. That is necessary to help
+      // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
+      // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+      if (Body->isInPlt() && Body->NeedsCopyOrPltAddr)
+        ESym->st_other |= STO_MIPS_PLT;
+      if (Config->Relocatable) {
+        auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
+        if (D && D->isMipsPIC())
+          ESym->st_other |= STO_MIPS_PIC;
+      }
+    }
+    ++ESym;
+  }
+}
+
+template <class ELFT>
+const OutputSectionBase *
+SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
+  switch (Sym->kind()) {
+  case SymbolBody::DefinedSyntheticKind:
+    return cast<DefinedSynthetic<ELFT>>(Sym)->Section;
+  case SymbolBody::DefinedRegularKind: {
+    auto &D = cast<DefinedRegular<ELFT>>(*Sym);
+    if (D.Section)
+      return D.Section->OutSec;
+    break;
+  }
+  case SymbolBody::DefinedCommonKind:
+    return In<ELFT>::Common->OutSec;
+  case SymbolBody::SharedKind:
+    if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
+      return Out<ELFT>::Bss;
+    break;
+  case SymbolBody::UndefinedKind:
+  case SymbolBody::LazyArchiveKind:
+  case SymbolBody::LazyObjectKind:
+    break;
+  }
+  return nullptr;
 }
 
 template InputSection<ELF32LE> *elf::createCommonSection();
@@ -1050,3 +1229,8 @@ template class elf::RelocationSection<ELF32LE>;
 template class elf::RelocationSection<ELF32BE>;
 template class elf::RelocationSection<ELF64LE>;
 template class elf::RelocationSection<ELF64BE>;
+
+template class elf::SymbolTableSection<ELF32LE>;
+template class elf::SymbolTableSection<ELF32BE>;
+template class elf::SymbolTableSection<ELF64LE>;
+template class elf::SymbolTableSection<ELF64BE>;
