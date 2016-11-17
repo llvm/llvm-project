@@ -23,9 +23,6 @@ namespace elf {
 
 class SymbolBody;
 struct EhSectionPiece;
-template <class ELFT> class SymbolTable;
-template <class ELFT> class SymbolTableSection;
-template <class ELFT> class StringTableSection;
 template <class ELFT> class EhInputSection;
 template <class ELFT> class InputSection;
 template <class ELFT> class InputSectionBase;

@@ -34,6 +34,7 @@ void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(
           PrivateSpecialFn,
           unless(anyOf(hasBody(stmt()), isDefaulted(), isDeleted(),
+                       ast_matchers::isTemplateInstantiation(),
                        // Ensure that all methods except private special member
                        // functions are defined.
                        hasParent(cxxRecordDecl(hasMethod(unless(
