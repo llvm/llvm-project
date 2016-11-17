@@ -26,7 +26,9 @@ struct Derived4 final : Base1 {
 
 // CHECK: [[UBSAN_TI_DERIVED1_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived1 to i8*
 // CHECK: [[UBSAN_TI_DERIVED2_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived2 to i8*
+// CHECK: [[UBSAN_TI_DERIVED2_1_deleter:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived2 to i8*
 // CHECK: [[UBSAN_TI_DERIVED2_2:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived2 to i8*
+// CHECK: [[UBSAN_TI_DERIVED2_2_deleter:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived2 to i8*
 // CHECK: [[UBSAN_TI_DERIVED3:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived3 to i8*
 // CHECK: [[UBSAN_TI_BASE1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI5Base1 to i8*
 // CHECK: [[UBSAN_TI_DERIVED4_1:@[0-9]+]] = private unnamed_addr global {{.*}} i8* bitcast {{.*}} @_ZTI8Derived4 to i8*
