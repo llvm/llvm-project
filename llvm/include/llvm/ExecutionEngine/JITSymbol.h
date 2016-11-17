@@ -14,10 +14,12 @@
 #ifndef LLVM_EXECUTIONENGINE_JITSYMBOL_H
 #define LLVM_EXECUTIONENGINE_JITSYMBOL_H
 
-#include "llvm/Support/DataTypes.h"
-#include <string>
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
+#include <string>
 
 namespace llvm {
 
@@ -25,7 +27,7 @@ class GlobalValue;
 
 namespace object {
   class BasicSymbolRef;
-}
+} // end namespace object
 
 /// @brief Represents an address in the target process's address space.
 typedef uint64_t JITTargetAddress;
@@ -33,7 +35,6 @@ typedef uint64_t JITTargetAddress;
 /// @brief Flags for symbols in the JIT.
 class JITSymbolFlags {
 public:
-
   typedef uint8_t UnderlyingType;
 
   enum FlagNames : UnderlyingType {
@@ -86,7 +87,6 @@ private:
 /// @brief Represents a symbol that has been evaluated to an address already.
 class JITEvaluatedSymbol {
 public:
-
   /// @brief Create a 'null' symbol.
   JITEvaluatedSymbol(std::nullptr_t)
       : Address(0) {}
@@ -112,7 +112,6 @@ private:
 /// @brief Represents a symbol in the JIT.
 class JITSymbol {
 public:
-
   typedef std::function<JITTargetAddress()> GetAddressFtor;
 
   /// @brief Create a 'null' symbol that represents failure to find a symbol
@@ -165,7 +164,7 @@ private:
 /// \brief Symbol resolution.
 class JITSymbolResolver {
 public:
-  virtual ~JITSymbolResolver() {}
+  virtual ~JITSymbolResolver() = default;
 
   /// This method returns the address of the specified symbol if it exists
   /// within the logical dynamic library represented by this JITSymbolResolver.
@@ -193,6 +192,6 @@ private:
   virtual void anchor();
 };
 
-} // End namespace llvm.
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_JITSYMBOL_H

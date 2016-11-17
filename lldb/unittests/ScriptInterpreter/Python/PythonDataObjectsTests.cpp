@@ -255,17 +255,17 @@ TEST_F(PythonDataObjectsTest, TestPythonString) {
   // Test that creating a `PythonString` object works correctly with the
   // string constructor
   PythonString constructed_string(test_string2);
-  EXPECT_STREQ(test_string2, constructed_string.GetString().str().c_str());
+  EXPECT_STREQ(test_string2, constructed_string.c_str());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonStringToStr) {
   const char *c_str = "PythonDataObjectsTest::TestPythonStringToStr";
 
   PythonString str(c_str);
-  EXPECT_STREQ(c_str, str.GetString().str().c_str());
+  EXPECT_STREQ(c_str, str.c_str());
 
   PythonString str_str = str.Str();
-  EXPECT_STREQ(c_str, str_str.GetString().str().c_str());
+  EXPECT_STREQ(c_str, str_str.c_str());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonIntegerToStr) {}
@@ -315,7 +315,7 @@ TEST_F(PythonDataObjectsTest, TestPythonListValueEquality) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(long_value0, chk_int.GetInteger());
-  EXPECT_STREQ(string_value1, chk_str.GetString().str().c_str());
+  EXPECT_STREQ(string_value1, chk_str.c_str());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonListManipulation) {
@@ -343,7 +343,7 @@ TEST_F(PythonDataObjectsTest, TestPythonListManipulation) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(long_value0, chk_int.GetInteger());
-  EXPECT_STREQ(string_value1, chk_str.GetString().str().c_str());
+  EXPECT_STREQ(string_value1, chk_str.c_str());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonListToStructuredList) {
@@ -466,7 +466,7 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryValueEquality) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(value_0, chk_int.GetInteger());
-  EXPECT_STREQ(value_1, chk_str.GetString().str().c_str());
+  EXPECT_STREQ(value_1, chk_str.c_str());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonDictionaryManipulation) {
@@ -503,7 +503,7 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryManipulation) {
   PythonString chk_str(PyRefType::Borrowed, chk_value2.get());
 
   EXPECT_EQ(value_0, chk_int.GetInteger());
-  EXPECT_STREQ(value_1, chk_str.GetString().str().c_str());
+  EXPECT_STREQ(value_1, chk_str.c_str());
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonDictionaryToStructuredDictionary) {

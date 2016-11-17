@@ -27,16 +27,6 @@ define double @test_sqrt_sd_1(double %a) {
   ret double %4
 }
 
-define <2 x double> @test_add_sd(<2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: @test_add_sd(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.sse2.add.sd(<2 x double> %a, <2 x double> %b)
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
-;
-  %1 = insertelement <2 x double> %b, double 2.000000e+00, i32 1
-  %2 = tail call <2 x double> @llvm.x86.sse2.add.sd(<2 x double> %a, <2 x double> %1)
-  ret <2 x double> %2
-}
-
 define double @test_add_sd_0(double %a, double %b) {
 ; CHECK-LABEL: @test_add_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd double %a, %b
@@ -62,16 +52,6 @@ define double @test_add_sd_1(double %a, double %b) {
   %5 = tail call <2 x double> @llvm.x86.sse2.add.sd(<2 x double> %2, <2 x double> %4)
   %6 = extractelement <2 x double> %5, i32 1
   ret double %6
-}
-
-define <2 x double> @test_sub_sd(<2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: @test_sub_sd(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.sse2.sub.sd(<2 x double> %a, <2 x double> %b)
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
-;
-  %1 = insertelement <2 x double> %b, double 2.000000e+00, i32 1
-  %2 = tail call <2 x double> @llvm.x86.sse2.sub.sd(<2 x double> %a, <2 x double> %1)
-  ret <2 x double> %2
 }
 
 define double @test_sub_sd_0(double %a, double %b) {
@@ -101,16 +81,6 @@ define double @test_sub_sd_1(double %a, double %b) {
   ret double %6
 }
 
-define <2 x double> @test_mul_sd(<2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: @test_mul_sd(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.sse2.mul.sd(<2 x double> %a, <2 x double> %b)
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
-;
-  %1 = insertelement <2 x double> %b, double 2.000000e+00, i32 1
-  %2 = tail call <2 x double> @llvm.x86.sse2.mul.sd(<2 x double> %a, <2 x double> %1)
-  ret <2 x double> %2
-}
-
 define double @test_mul_sd_0(double %a, double %b) {
 ; CHECK-LABEL: @test_mul_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul double %a, %b
@@ -136,16 +106,6 @@ define double @test_mul_sd_1(double %a, double %b) {
   %5 = tail call <2 x double> @llvm.x86.sse2.mul.sd(<2 x double> %2, <2 x double> %4)
   %6 = extractelement <2 x double> %5, i32 1
   ret double %6
-}
-
-define <2 x double> @test_div_sd(<2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: @test_div_sd(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.sse2.div.sd(<2 x double> %a, <2 x double> %b)
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
-;
-  %1 = insertelement <2 x double> %b, double 2.000000e+00, i32 1
-  %2 = tail call <2 x double> @llvm.x86.sse2.div.sd(<2 x double> %a, <2 x double> %1)
-  ret <2 x double> %2
 }
 
 define double @test_div_sd_0(double %a, double %b) {

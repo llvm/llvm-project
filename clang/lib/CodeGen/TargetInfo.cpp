@@ -8251,6 +8251,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   }
 
   case llvm::Triple::tce:
+  case llvm::Triple::tcele:
     return SetCGInfo(new TCETargetCodeGenInfo(Types));
 
   case llvm::Triple::x86: {

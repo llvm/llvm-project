@@ -127,6 +127,9 @@ def no_gc_sections: F<"no-gc-sections">,
 def no_gnu_unique: F<"no-gnu-unique">,
   HelpText<"Disable STB_GNU_UNIQUE symbol binding">;
 
+def no_threads: F<"no-threads">,
+  HelpText<"Do not run the linker multi-threaded">;
+
 def no_whole_archive: F<"no-whole-archive">,
   HelpText<"Restores the default behavior of loading archive members">;
 
@@ -188,7 +191,7 @@ def target1_abs: F<"target1-abs">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_AB
 
 def target2: J<"target2=">, MetaVarName<"<type>">, HelpText<"Interpret R_ARM_TARGET2 as <type>, where <type> is one of rel, abs, or got-rel.">;
 
-def threads: F<"threads">, HelpText<"Enable use of threads">;
+def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
 
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
 

@@ -4,6 +4,7 @@
 #include <isl/ctx.h>
 #include <isl/space.h>
 #include <isl/map.h>
+#include <isl_reordering.h>
 
 struct isl_dim_map;
 typedef struct isl_dim_map isl_dim_map;

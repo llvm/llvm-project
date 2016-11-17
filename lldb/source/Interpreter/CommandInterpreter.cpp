@@ -352,8 +352,8 @@ void CommandInterpreter::Initialize() {
     StreamString defaultshell;
     defaultshell.Printf("--shell=%s --",
                         HostInfo::GetDefaultShell().GetPath().c_str());
-    AddAlias("r", cmd_obj_sp, defaultshell.GetData());
-    AddAlias("run", cmd_obj_sp, defaultshell.GetData());
+    AddAlias("r", cmd_obj_sp, defaultshell.GetString());
+    AddAlias("run", cmd_obj_sp, defaultshell.GetString());
 #endif
 #endif
   }
@@ -1327,7 +1327,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
   result_str.Printf("%s", alias_cmd_obj->GetCommandName().str().c_str());
 
   if (!option_arg_vector_sp.get()) {
-    alias_result = result_str.GetData();
+    alias_result = result_str.GetString();
     return alias_cmd_obj;
   }
   OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
@@ -1368,7 +1368,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
     }
   }
 
-  alias_result = result_str.GetData();
+  alias_result = result_str.GetString();
   return alias_cmd_obj;
 }
 
@@ -1437,8 +1437,7 @@ Error CommandInterpreter::PreprocessCommand(std::string &command) {
               scalar.GetValue(&value_strm, show_type);
               size_t value_string_size = value_strm.GetSize();
               if (value_string_size) {
-                command.insert(start_backtick, value_strm.GetData(),
-                               value_string_size);
+                command.insert(start_backtick, value_strm.GetString());
                 pos = start_backtick + value_string_size;
                 continue;
               } else {
@@ -2249,21 +2248,21 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     }
 
     if (!success || !tmp_result.Succeeded()) {
-      const char *error_msg = tmp_result.GetErrorData();
-      if (error_msg == nullptr || error_msg[0] == '\0')
+      llvm::StringRef error_msg = tmp_result.GetErrorData();
+      if (error_msg.empty())
         error_msg = "<unknown error>.\n";
       if (options.GetStopOnError()) {
         result.AppendErrorWithFormat(
             "Aborting reading of commands after command #%" PRIu64
             ": '%s' failed with %s",
-            (uint64_t)idx, cmd, error_msg);
+            (uint64_t)idx, cmd, error_msg.str().c_str());
         result.SetStatus(eReturnStatusFailed);
         m_debugger.SetAsyncExecution(old_async_execution);
         return;
       } else if (options.GetPrintResults()) {
-        result.AppendMessageWithFormat("Command #%" PRIu64
-                                       " '%s' failed with %s",
-                                       (uint64_t)idx + 1, cmd, error_msg);
+        result.AppendMessageWithFormat(
+            "Command #%" PRIu64 " '%s' failed with %s", (uint64_t)idx + 1, cmd,
+            error_msg.str().c_str());
       }
     }
 
@@ -2546,7 +2545,15 @@ void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
   StreamString prefix_stream;
   prefix_stream.Printf("  %-*s %*s ", (int)max_word_len, word_text.data(),
                        (int)separator.size(), separator.data());
-  OutputFormattedHelpText(strm, prefix_stream.GetData(), help_text);
+  OutputFormattedHelpText(strm, prefix_stream.GetString(), help_text);
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+static size_t nextWordLength(llvm::StringRef S) {
+  size_t pos = S.find_first_of(' ');
+  if (pos == llvm::StringRef::npos)
+    return S.size();
+  return pos;
 }
 
 void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
@@ -2563,22 +2570,24 @@ void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
 
   const uint32_t max_columns = m_debugger.GetTerminalWidth();
 
-  size_t len = text_strm.GetSize();
-  const char *text = text_strm.GetData();
+  llvm::StringRef text = text_strm.GetString();
 
   uint32_t chars_left = max_columns;
 
-  for (uint32_t i = 0; i < len; i++) {
-    if ((text[i] == ' ' && ::strchr((text + i + 1), ' ') &&
-         chars_left < static_cast<uint32_t>(::strchr((text + i + 1), ' ') -
-                                            (text + i))) ||
-        text[i] == '\n') {
-      chars_left = max_columns - indent_size;
+  while (!text.empty()) {
+    if (text.front() == '\n' ||
+        (text.front() == ' ' && nextWordLength(text.ltrim(' ')) < chars_left)) {
       strm.EOL();
       strm.Indent();
+      chars_left = max_columns - indent_size;
+      if (text.front() == '\n')
+        text = text.drop_front();
+      else
+        text = text.ltrim(' ');
     } else {
-      strm.PutChar(text[i]);
-      chars_left--;
+      strm.PutChar(text.front());
+      --chars_left;
+      text = text.drop_front();
     }
   }
 
@@ -2707,15 +2716,15 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     GetProcessOutput();
 
     if (!result.GetImmediateOutputStream()) {
-      const char *output = result.GetOutputData();
-      if (output && output[0])
+      llvm::StringRef output = result.GetOutputData();
+      if (!output.empty())
         io_handler.GetOutputStreamFile()->PutCString(output);
     }
 
     // Now emit the command error text from the command we just executed
     if (!result.GetImmediateErrorStream()) {
-      const char *error = result.GetErrorData();
-      if (error && error[0])
+      llvm::StringRef error = result.GetErrorData();
+      if (!error.empty())
         io_handler.GetErrorStreamFile()->PutCString(error);
     }
   }
@@ -2993,7 +3002,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
         for (uint32_t i = 0; i < num_matches; ++i) {
           error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
         }
-        result.AppendRawError(error_msg.GetString().c_str());
+        result.AppendRawError(error_msg.GetString());
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
         assert(num_matches == 0);
@@ -3029,18 +3038,16 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
               std::string gdb_format_option("--gdb-format=");
               gdb_format_option += (suffix.c_str() + 1);
 
-              bool inserted = false;
-              std::string &cmd = revised_command_line.GetString();
+              std::string cmd = revised_command_line.GetString();
               size_t arg_terminator_idx = FindArgumentTerminator(cmd);
               if (arg_terminator_idx != std::string::npos) {
                 // Insert the gdb format option before the "--" that terminates
                 // options
                 gdb_format_option.append(1, ' ');
                 cmd.insert(arg_terminator_idx, gdb_format_option);
-                inserted = true;
-              }
-
-              if (!inserted)
+                revised_command_line.Clear();
+                revised_command_line.PutCString(cmd);
+              } else
                 revised_command_line.Printf(" %s", gdb_format_option.c_str());
 
               if (wants_raw_input &&
@@ -3072,7 +3079,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
     revised_command_line.Printf(" %s", scratch_command.c_str());
 
   if (cmd_obj != NULL)
-    command_line = revised_command_line.GetData();
+    command_line = revised_command_line.GetString();
 
   return cmd_obj;
 }

@@ -11,6 +11,8 @@
 #include <isl_output_private.h>
 #include <isl/deprecated/point_int.h>
 
+#include <set_to_map.c>
+
 isl_ctx *isl_point_get_ctx(__isl_keep isl_point *pnt)
 {
 	return pnt ? isl_space_get_ctx(pnt->dim) : NULL;
@@ -421,7 +423,7 @@ error:
 isl_bool isl_set_contains_point(__isl_keep isl_set *set,
 	__isl_keep isl_point *point)
 {
-	return isl_map_contains_point((isl_map *)set, point);
+	return isl_map_contains_point(set_to_map(set), point);
 }
 
 __isl_give isl_basic_set *isl_basic_set_from_point(__isl_take isl_point *pnt)

@@ -1,5 +1,4 @@
-//===---------------------StructuredData.cpp ---------------------*- C++
-//-*-===//
+//===---------------------StructuredData.cpp ---------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -213,7 +212,7 @@ StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
 void StructuredData::Object::DumpToStdout(bool pretty_print) const {
   StreamString stream;
   Dump(stream, pretty_print);
-  printf("%s\n", stream.GetString().c_str());
+  printf("%s\n", stream.GetData());
 }
 
 void StructuredData::Array::Dump(Stream &s, bool pretty_print) const {

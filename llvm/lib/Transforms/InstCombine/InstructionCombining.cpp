@@ -741,17 +741,18 @@ Value *InstCombiner::dyn_castFNegVal(Value *V, bool IgnoreZeroSign) const {
   return nullptr;
 }
 
-static Value *FoldOperationIntoSelectOperand(Instruction &I, Value *SO,
+static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
                                              InstCombiner *IC) {
-  if (CastInst *CI = dyn_cast<CastInst>(&I)) {
-    return IC->Builder->CreateCast(CI->getOpcode(), SO, I.getType());
-  }
+  if (auto *Cast = dyn_cast<CastInst>(&I))
+    return IC->Builder->CreateCast(Cast->getOpcode(), SO, I.getType());
+
+  assert(I.isBinaryOp() && "Unexpected opcode for select folding");
 
   // Figure out if the constant is the left or the right argument.
   bool ConstIsRHS = isa<Constant>(I.getOperand(1));
   Constant *ConstOperand = cast<Constant>(I.getOperand(ConstIsRHS));
 
-  if (Constant *SOC = dyn_cast<Constant>(SO)) {
+  if (auto *SOC = dyn_cast<Constant>(SO)) {
     if (ConstIsRHS)
       return ConstantExpr::get(I.getOpcode(), SOC, ConstOperand);
     return ConstantExpr::get(I.getOpcode(), ConstOperand, SOC);
@@ -761,21 +762,13 @@ static Value *FoldOperationIntoSelectOperand(Instruction &I, Value *SO,
   if (!ConstIsRHS)
     std::swap(Op0, Op1);
 
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(&I)) {
-    Value *RI = IC->Builder->CreateBinOp(BO->getOpcode(), Op0, Op1,
-                                    SO->getName()+".op");
-    Instruction *FPInst = dyn_cast<Instruction>(RI);
-    if (FPInst && isa<FPMathOperator>(FPInst))
-      FPInst->copyFastMathFlags(BO);
-    return RI;
-  }
-  if (ICmpInst *CI = dyn_cast<ICmpInst>(&I))
-    return IC->Builder->CreateICmp(CI->getPredicate(), Op0, Op1,
-                                   SO->getName()+".cmp");
-  if (FCmpInst *CI = dyn_cast<FCmpInst>(&I))
-    return IC->Builder->CreateICmp(CI->getPredicate(), Op0, Op1,
-                                   SO->getName()+".cmp");
-  llvm_unreachable("Unknown binary instruction type!");
+  auto *BO = cast<BinaryOperator>(&I);
+  Value *RI = IC->Builder->CreateBinOp(BO->getOpcode(), Op0, Op1,
+                                       SO->getName() + ".op");
+  auto *FPInst = dyn_cast<Instruction>(RI);
+  if (FPInst && isa<FPMathOperator>(FPInst))
+    FPInst->copyFastMathFlags(BO);
+  return RI;
 }
 
 /// Given an instruction with a select as one operand and a constant as the
@@ -827,8 +820,8 @@ Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
     }
   }
 
-  Value *SelectTVal = FoldOperationIntoSelectOperand(Op, TV, this);
-  Value *SelectFVal = FoldOperationIntoSelectOperand(Op, FV, this);
+  Value *SelectTVal = foldOperationIntoSelectOperand(Op, TV, this);
+  Value *SelectFVal = foldOperationIntoSelectOperand(Op, FV, this);
   return SelectInst::Create(SI->getCondition(), SelectTVal, SelectFVal);
 }
 

@@ -17,11 +17,27 @@
 
 #include "OrcRemoteTargetRPCAPI.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <map>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
 #define DEBUG_TYPE "orc-remote"
 

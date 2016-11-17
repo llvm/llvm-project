@@ -217,7 +217,7 @@ ConstString ObjCLanguage::MethodName::GetFullNameWithoutCategory(
         strm.PutChar('-');
       strm.Printf("[%s %s]", GetClassName().GetCString(),
                   GetSelector().GetCString());
-      return ConstString(strm.GetString().c_str());
+      return ConstString(strm.GetString());
     }
 
     if (!empty_if_no_category) {
@@ -242,25 +242,25 @@ size_t ObjCLanguage::MethodName::GetFullNames(std::vector<ConstString> &names,
       if (category) {
         strm.Printf("%c[%s %s]", is_class_method ? '+' : '-',
                     GetClassName().GetCString(), GetSelector().GetCString());
-        names.push_back(ConstString(strm.GetString().c_str()));
+        names.emplace_back(strm.GetString());
       }
     } else {
       const ConstString &class_name = GetClassName();
       const ConstString &selector = GetSelector();
       strm.Printf("+[%s %s]", class_name.GetCString(), selector.GetCString());
-      names.push_back(ConstString(strm.GetString().c_str()));
+      names.emplace_back(strm.GetString());
       strm.Clear();
       strm.Printf("-[%s %s]", class_name.GetCString(), selector.GetCString());
-      names.push_back(ConstString(strm.GetString().c_str()));
+      names.emplace_back(strm.GetString());
       strm.Clear();
       if (category) {
         strm.Printf("+[%s(%s) %s]", class_name.GetCString(),
                     category.GetCString(), selector.GetCString());
-        names.push_back(ConstString(strm.GetString().c_str()));
+        names.emplace_back(strm.GetString());
         strm.Clear();
         strm.Printf("-[%s(%s) %s]", class_name.GetCString(),
                     category.GetCString(), selector.GetCString());
-        names.push_back(ConstString(strm.GetString().c_str()));
+        names.emplace_back(strm.GetString());
       }
     }
   }

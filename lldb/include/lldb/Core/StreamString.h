@@ -32,15 +32,13 @@ public:
 
   bool Empty() const;
 
-  const char *GetData() const;
-
   size_t GetSize() const;
 
   size_t GetSizeOfLastLine() const;
 
-  std::string &GetString();
+  llvm::StringRef GetString() const;
 
-  const std::string &GetString() const;
+  const char *GetData() const { return m_packet.c_str(); }
 
   void FillLastLineToColumn(uint32_t column, char fill_char);
 

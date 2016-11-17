@@ -3,20 +3,20 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx  | FileCheck %s --check-prefix=AVX
 
 ; Test that we can replace "scalar" FP-bitwise-logic with the optimal instruction.
-; Scalar x86 FP-logic instructions only exist in your imagination and/or the bowels 
+; Scalar x86 FP-logic instructions only exist in your imagination and/or the bowels
 ; of compilers, but float and double variants of FP-logic instructions are reality
-; and float may be a shorter instruction depending on which flavor of vector ISA 
-; you have...so just prefer float all the time, ok? Yay, x86! 
+; and float may be a shorter instruction depending on which flavor of vector ISA
+; you have...so just prefer float all the time, ok? Yay, x86!
 
 define double @FsANDPSrr(double %x, double %y) {
 ; SSE-LABEL: FsANDPSrr:
 ; SSE:       # BB#0:
-; SSE-NEXT:    andpd %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: FsANDPSrr:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64
@@ -56,12 +56,12 @@ define double @FsANDNPSrr(double %x, double %y) {
 define double @FsORPSrr(double %x, double %y) {
 ; SSE-LABEL: FsORPSrr:
 ; SSE:       # BB#0:
-; SSE-NEXT:    orpd %xmm1, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: FsORPSrr:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vorpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64
@@ -74,12 +74,12 @@ define double @FsORPSrr(double %x, double %y) {
 define double @FsXORPSrr(double %x, double %y) {
 ; SSE-LABEL: FsXORPSrr:
 ; SSE:       # BB#0:
-; SSE-NEXT:    xorpd %xmm1, %xmm0
+; SSE-NEXT:    xorps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: FsXORPSrr:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vxorpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64

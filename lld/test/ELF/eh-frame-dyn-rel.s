@@ -7,4 +7,4 @@
         .cfi_personality 0x8c, foo
         .cfi_endproc
 
-// CHECK: can't create dynamic relocation R_X86_64_64 against symbol foo
+// CHECK: {{.*}}.o  (.eh_frame+0x12): can't create dynamic relocation R_X86_64_64 against symbol 'foo' defined in {{.*}}.o

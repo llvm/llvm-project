@@ -948,7 +948,7 @@ protected:
       CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
           &error_msg_stream, command_name, nullptr, nullptr, generate_apropos,
           generate_type_lookup);
-      result.AppendErrorWithFormat("%s", error_msg_stream.GetData());
+      result.AppendError(error_msg_stream.GetString());
       result.SetStatus(eReturnStatusFailed);
     }
 
@@ -1286,7 +1286,7 @@ public:
     else {
       StreamString stream;
       stream.Printf("For more information run 'help %s'", name.c_str());
-      SetHelp(stream.GetData());
+      SetHelp(stream.GetString());
     }
   }
 
@@ -1332,8 +1332,7 @@ protected:
     } else {
       // Don't change the status if the command already set it...
       if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputData() == nullptr ||
-            result.GetOutputData()[0] == '\0')
+        if (result.GetOutputData().empty())
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         else
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1360,7 +1359,7 @@ public:
         m_fetched_help_long(false) {
     StreamString stream;
     stream.Printf("For more information run 'help %s'", name.c_str());
-    SetHelp(stream.GetData());
+    SetHelp(stream.GetString());
     if (ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter())
       GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
   }
@@ -1421,8 +1420,7 @@ protected:
     } else {
       // Don't change the status if the command already set it...
       if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputData() == nullptr ||
-            result.GetOutputData()[0] == '\0')
+        if (result.GetOutputData().empty())
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         else
           result.SetStatus(eReturnStatusSuccessFinishResult);

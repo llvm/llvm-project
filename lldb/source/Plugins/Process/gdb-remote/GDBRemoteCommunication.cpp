@@ -200,7 +200,9 @@ GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
 
     Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
     ConnectionStatus status = eConnectionStatusSuccess;
-    const char *packet_data = packet.GetData();
+    // TODO: Don't shimmy through a std::string, just use StringRef.
+    std::string packet_str = packet.GetString();
+    const char *packet_data = packet_str.c_str();
     const size_t packet_length = packet.GetSize();
     size_t bytes_written = Write(packet_data, packet_length, status, NULL);
     if (log) {
@@ -236,7 +238,7 @@ GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
           strm.Printf("\\x%2.2x", *p);
         // Print the checksum
         strm.Printf("%*s", (int)3, p);
-        log->PutCString(strm.GetString().c_str());
+        log->PutString(strm.GetString());
       } else
         log->Printf("<%4" PRIu64 "> send packet: %.*s", (uint64_t)bytes_written,
                     (int)packet_length, packet_data);
@@ -867,7 +869,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
           // Packet footer...
           strm.Printf("%c%c%c", m_bytes[total_length - 3],
                       m_bytes[total_length - 2], m_bytes[total_length - 1]);
-          log->PutCString(strm.GetString().c_str());
+          log->PutString(strm.GetString());
         } else {
           if (CompressionIsEnabled())
             log->Printf("<%4" PRIu64 ":%" PRIu64 "> read packet: %.*s",
@@ -1250,7 +1252,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
       Platform *const platform = nullptr;
       launch_info.Dump(string_stream, platform);
       log->Printf("launch info for gdb-remote stub:\n%s",
-                  string_stream.GetString().c_str());
+                  string_stream.GetData());
     }
     error = Host::LaunchProcess(launch_info);
 

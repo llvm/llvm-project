@@ -9,7 +9,7 @@ _start:
 
 
 call bar
-// CHECK: cannot preempt symbol bar
+// CHECK: {{.*}}.o (.text+0x1): cannot preempt symbol 'bar' defined in {{.*}}.so
 
 call zed
-// CHECK: symbol zed is missing type
+// CHECK: symbol 'zed' defined in {{.*}}.so is missing type

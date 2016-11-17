@@ -147,7 +147,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildAggregate(
       if (element.name.empty()) {
         StreamString elem_name;
         elem_name.Printf("__unnamed_%u", count);
-        element.name = std::string(elem_name.GetData());
+        element.name = elem_name.GetString();
       }
       ClangASTContext::AddFieldToRecordType(
           union_type, element.name.c_str(),

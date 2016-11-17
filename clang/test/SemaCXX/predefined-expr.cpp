@@ -33,11 +33,10 @@ int baz() {
   ();
 
   ^{
-    static_assert(sizeof(__func__) == 27, "___Z3bazIiEiv_block_invoke");
-    static_assert(sizeof(__FUNCTION__) == 27, "___Z3bazIiEiv_block_invoke");
-    static_assert(sizeof(__PRETTY_FUNCTION__) == 27, "___Z3bazIiEiv_block_invoke");
-  }
-  ();
+    static_assert(sizeof(__func__) == 17, "baz_block_invoke");
+    static_assert(sizeof(__FUNCTION__) == 17, "baz_block_invoke");
+    static_assert(sizeof(__PRETTY_FUNCTION__) == 33, "int baz() [T = int]_block_invoke");
+  }();
 
   #pragma clang __debug captured
   {
@@ -64,11 +63,10 @@ int main() {
   ();
 
   ^{
-    static_assert(sizeof(__func__) == 20, "__main_block_invoke");
-    static_assert(sizeof(__FUNCTION__) == 20, "__main_block_invoke");
-    static_assert(sizeof(__PRETTY_FUNCTION__) == 20, "__main_block_invoke");
-  }
-  ();
+    static_assert(sizeof(__func__) == 18, "main_block_invoke");
+    static_assert(sizeof(__FUNCTION__) == 18, "main_block_invoke");
+    static_assert(sizeof(__PRETTY_FUNCTION__) == 24, "int main()_block_invoke");
+  }();
 
   #pragma clang __debug captured
   {

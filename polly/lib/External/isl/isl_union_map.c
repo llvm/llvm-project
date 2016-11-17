@@ -25,6 +25,10 @@
 #include <isl/union_set.h>
 #include <isl/deprecated/union_map_int.h>
 
+#include <bset_from_bmap.c>
+#include <set_to_map.c>
+#include <set_from_map.c>
+
 /* Return the number of parameters of "umap", where "type"
  * is required to be set to isl_dim_param.
  */
@@ -381,7 +385,7 @@ error:
 __isl_give isl_union_set *isl_union_set_add_set(__isl_take isl_union_set *uset,
 	__isl_take isl_set *set)
 {
-	return isl_union_map_add_map(uset, (isl_map *)set);
+	return isl_union_map_add_map(uset, set_to_map(set));
 }
 
 __isl_give isl_union_map *isl_union_map_from_map(__isl_take isl_map *map)
@@ -402,7 +406,7 @@ __isl_give isl_union_map *isl_union_map_from_map(__isl_take isl_map *map)
 
 __isl_give isl_union_set *isl_union_set_from_set(__isl_take isl_set *set)
 {
-	return isl_union_map_from_map((isl_map *)set);
+	return isl_union_map_from_map(set_to_map(set));
 }
 
 __isl_give isl_union_map *isl_union_map_from_basic_map(
@@ -522,7 +526,7 @@ error:
 __isl_give isl_set *isl_union_set_extract_set(__isl_keep isl_union_set *uset,
 	__isl_take isl_space *dim)
 {
-	return (isl_set *)isl_union_map_extract_map(uset, dim);
+	return set_from_map(isl_union_map_extract_map(uset, dim));
 }
 
 /* Check if umap contains a map in the given space.
@@ -896,13 +900,13 @@ __isl_give isl_union_set *isl_union_set_gist(__isl_take isl_union_set *uset,
 static __isl_give isl_map *lex_le_set(__isl_take isl_map *set1,
 	__isl_take isl_map *set2)
 {
-	return isl_set_lex_le_set((isl_set *)set1, (isl_set *)set2);
+	return isl_set_lex_le_set(set_from_map(set1), set_from_map(set2));
 }
 
 static __isl_give isl_map *lex_lt_set(__isl_take isl_map *set1,
 	__isl_take isl_map *set2)
 {
-	return isl_set_lex_lt_set((isl_set *)set1, (isl_set *)set2);
+	return isl_set_lex_lt_set(set_from_map(set1), set_from_map(set2));
 }
 
 __isl_give isl_union_map *isl_union_set_lex_lt_union_set(
@@ -2442,7 +2446,7 @@ error:
 
 __isl_give isl_basic_set *isl_union_set_sample(__isl_take isl_union_set *uset)
 {
-	return (isl_basic_set *)isl_union_map_sample(uset);
+	return bset_from_bmap(isl_union_map_sample(uset));
 }
 
 /* Return an element in "uset" in the form of an isl_point.

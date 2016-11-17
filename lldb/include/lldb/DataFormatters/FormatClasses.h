@@ -117,17 +117,16 @@ class TypeNameSpecifierImpl {
 public:
   TypeNameSpecifierImpl() : m_is_regex(false), m_type() {}
 
-  TypeNameSpecifierImpl(const char *name, bool is_regex)
+  TypeNameSpecifierImpl(llvm::StringRef name, bool is_regex)
       : m_is_regex(is_regex), m_type() {
-    if (name)
-      m_type.m_type_name.assign(name);
+    m_type.m_type_name = name;
   }
 
   // if constructing with a given type, is_regex cannot be true since we are
   // giving an exact type to match
   TypeNameSpecifierImpl(lldb::TypeSP type) : m_is_regex(false), m_type() {
     if (type) {
-      m_type.m_type_name.assign(type->GetName().GetCString());
+      m_type.m_type_name = type->GetName().GetStringRef();
       m_type.m_type_pair.SetType(type);
     }
   }

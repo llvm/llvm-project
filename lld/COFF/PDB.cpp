@@ -94,6 +94,8 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
       pdb::DbiStreamBuilder::createSectionMap(Sections);
   DbiBuilder.setSectionMap(SectionMap);
 
+  ExitOnErr(DbiBuilder.addModuleInfo("", "* Linker *"));
+
   // Add COFF section header stream.
   ExitOnErr(
       DbiBuilder.addDbgStream(pdb::DbgHeaderType::SectionHdr, SectionTable));

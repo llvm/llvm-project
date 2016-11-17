@@ -1737,23 +1737,29 @@ void test_mm256_mask_compressstoreu_epi32(void *__P, __mmask8 __U, __m256i __A) 
 }
 __m128d test_mm_mask_cvtepi32_pd(__m128d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_cvtepi32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.128
-  return _mm_mask_cvtepi32_pd(__W,__U,__A); 
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: sitofp <2 x i32> %{{.*}} to <2 x double>
+  // CHECK: select <2 x i1> {{.*}}, <2 x double> {{.*}}, <2 x double> {{.*}}
+  return _mm_mask_cvtepi32_pd(__W,__U,__A);
 }
 __m128d test_mm_maskz_cvtepi32_pd(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtepi32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.128
-  return _mm_maskz_cvtepi32_pd(__U,__A); 
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: sitofp <2 x i32> %{{.*}} to <2 x double>
+  // CHECK: select <2 x i1> {{.*}}, <2 x double> {{.*}}, <2 x double> {{.*}}
+  return _mm_maskz_cvtepi32_pd(__U,__A);
 }
 __m256d test_mm256_mask_cvtepi32_pd(__m256d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm256_mask_cvtepi32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.256
-  return _mm256_mask_cvtepi32_pd(__W,__U,__A); 
+  // CHECK: sitofp <4 x i32> %{{.*}} to <4 x double>
+  // CHECK: select <4 x i1> {{.*}}, <4 x double> {{.*}}, <4 x double> {{.*}}
+  return _mm256_mask_cvtepi32_pd(__W,__U,__A);
 }
 __m256d test_mm256_maskz_cvtepi32_pd(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtepi32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2pd.256
-  return _mm256_maskz_cvtepi32_pd(__U,__A); 
+  // CHECK: sitofp <4 x i32> %{{.*}} to <4 x double>
+  // CHECK: select <4 x i1> {{.*}}, <4 x double> {{.*}}, <4 x double> {{.*}}
+  return _mm256_maskz_cvtepi32_pd(__U,__A);
 }
 __m128 test_mm_mask_cvtepi32_ps(__m128 __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_cvtepi32_ps
@@ -2017,33 +2023,40 @@ __m256i test_mm256_maskz_cvttps_epu32(__mmask8 __U, __m256 __A) {
 }
 __m128d test_mm_cvtepu32_pd(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepu32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.128
-  return _mm_cvtepu32_pd(__A); 
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: uitofp <2 x i32> %{{.*}} to <2 x double>
+  return _mm_cvtepu32_pd(__A);
 }
 __m128d test_mm_mask_cvtepu32_pd(__m128d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_cvtepu32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.128
-  return _mm_mask_cvtepu32_pd(__W,__U,__A); 
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: uitofp <2 x i32> %{{.*}} to <2 x double>
+  // CHECK: select <2 x i1> {{.*}}, <2 x double> {{.*}}, <2 x double> {{.*}}
+  return _mm_mask_cvtepu32_pd(__W,__U,__A);
 }
 __m128d test_mm_maskz_cvtepu32_pd(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtepu32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.128
-  return _mm_maskz_cvtepu32_pd(__U,__A); 
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: uitofp <2 x i32> %{{.*}} to <2 x double>
+  // CHECK: select <2 x i1> {{.*}}, <2 x double> {{.*}}, <2 x double> {{.*}}
+  return _mm_maskz_cvtepu32_pd(__U,__A);
 }
 __m256d test_mm256_cvtepu32_pd(__m128i __A) {
   // CHECK-LABEL: @test_mm256_cvtepu32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.256
-  return _mm256_cvtepu32_pd(__A); 
+  // CHECK: uitofp <4 x i32> %{{.*}} to <4 x double>
+  return _mm256_cvtepu32_pd(__A);
 }
 __m256d test_mm256_mask_cvtepu32_pd(__m256d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm256_mask_cvtepu32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.256
-  return _mm256_mask_cvtepu32_pd(__W,__U,__A); 
+  // CHECK: uitofp <4 x i32> %{{.*}} to <4 x double>
+  // CHECK: select <4 x i1> {{.*}}, <4 x double> {{.*}}, <4 x double> {{.*}}
+  return _mm256_mask_cvtepu32_pd(__W,__U,__A);
 }
 __m256d test_mm256_maskz_cvtepu32_pd(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtepu32_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2pd.256
-  return _mm256_maskz_cvtepu32_pd(__U,__A); 
+  // CHECK: uitofp <4 x i32> %{{.*}} to <4 x double>
+  // CHECK: select <4 x i1> {{.*}}, <4 x double> {{.*}}, <4 x double> {{.*}}
+  return _mm256_maskz_cvtepu32_pd(__U,__A);
 }
 __m128 test_mm_cvtepu32_ps(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepu32_ps

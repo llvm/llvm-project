@@ -289,6 +289,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSIN, MVT::f16, Promote);
 
     // F16 - VOP2 Actions.
+    setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
     setOperationAction(ISD::FDIV, MVT::f16, Promote);

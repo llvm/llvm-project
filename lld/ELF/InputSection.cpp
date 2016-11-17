@@ -104,8 +104,12 @@ template <class ELFT>
 typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (kind()) {
   case Regular:
-  case Synthetic:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
+  case Synthetic:
+    // For synthetic sections we treat offset -1 as the end of the section.
+    // The same approach is used for synthetic symbols (DefinedSynthetic).
+    return cast<InputSection<ELFT>>(this)->OutSecOff +
+           (Offset == uintX_t(-1) ? getSize() : Offset);
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
     // .eh_frame that is known to be the first in the link. It does that to
@@ -378,19 +382,21 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
-    return In<ELFT>::Got->getMipsLocalPageOffset(Body.getVA<ELFT>(A));
+    return In<ELFT>::MipsGot->getMipsLocalPageOffset(Body.getVA<ELFT>(A));
   case R_MIPS_GOT_OFF:
   case R_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend
     // should be applied to the GOT entry content not to the GOT entry offset.
     // That is why we use separate expression type.
-    return In<ELFT>::Got->getMipsGotOffset(Body, A);
+    return In<ELFT>::MipsGot->getMipsGotOffset(Body, A);
+  case R_MIPS_GOTREL:
+    return Body.getVA<ELFT>(A) - In<ELFT>::MipsGot->getVA() - MipsGPOffset;
   case R_MIPS_TLSGD:
-    return In<ELFT>::Got->getGlobalDynOffset(Body) +
-           In<ELFT>::Got->getMipsTlsOffset() - MipsGPOffset;
+    return In<ELFT>::MipsGot->getGlobalDynOffset(Body) +
+           In<ELFT>::MipsGot->getMipsTlsOffset() - MipsGPOffset;
   case R_MIPS_TLSLD:
-    return In<ELFT>::Got->getTlsIndexOff() + In<ELFT>::Got->getMipsTlsOffset() -
-           MipsGPOffset;
+    return In<ELFT>::MipsGot->getTlsIndexOff() +
+           In<ELFT>::MipsGot->getMipsTlsOffset() - MipsGPOffset;
   case R_PPC_OPD: {
     uint64_t SymVA = Body.getVA<ELFT>(A);
     // If we have an undefined weak symbol, we might get here with a symbol
@@ -525,6 +531,11 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   if (this->Type == SHT_NOBITS)
     return;
 
+  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
+    S->writeTo(Buf);
+    return;
+  }
+
   // If -r is given, then an InputSection may be a relocation section.
   if (this->Type == SHT_RELA) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rela>());
@@ -532,11 +543,6 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   }
   if (this->Type == SHT_REL) {
     copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rel>());
-    return;
-  }
-
-  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
-    S->writeTo(Buf);
     return;
   }
 

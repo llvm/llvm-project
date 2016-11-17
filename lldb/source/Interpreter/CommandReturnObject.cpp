@@ -69,7 +69,7 @@ void CommandReturnObject::AppendMessageWithFormat(const char *format, ...) {
   sstrm.PrintfVarArg(format, args);
   va_end(args);
 
-  GetOutputStream().Printf("%s", sstrm.GetData());
+  GetOutputStream() << sstrm.GetString();
 }
 
 void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
@@ -81,7 +81,7 @@ void CommandReturnObject::AppendWarningWithFormat(const char *format, ...) {
   sstrm.PrintfVarArg(format, args);
   va_end(args);
 
-  GetErrorStream().Printf("warning: %s", sstrm.GetData());
+  GetErrorStream() << "warning: " << sstrm.GetString();
 }
 
 void CommandReturnObject::AppendMessage(llvm::StringRef in_string) {

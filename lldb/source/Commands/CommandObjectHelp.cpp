@@ -148,7 +148,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
             s.Printf("\n\t%s", matches.GetStringAtIndex(match_idx));
           }
           s.Printf("\n");
-          result.AppendError(s.GetData());
+          result.AppendError(s.GetString());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!sub_cmd_obj) {
@@ -156,7 +156,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
           GenerateAdditionalHelpAvenuesMessage(
               &error_msg_stream, cmd_string.c_str(),
               m_interpreter.GetCommandPrefix(), sub_command.c_str());
-          result.AppendErrorWithFormat("%s", error_msg_stream.GetData());
+          result.AppendError(error_msg_stream.GetString());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else {
@@ -199,7 +199,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
         GenerateAdditionalHelpAvenuesMessage(&error_msg_stream,
                                              command.GetArgumentAtIndex(0),
                                              m_interpreter.GetCommandPrefix());
-        result.AppendErrorWithFormat("%s", error_msg_stream.GetData());
+        result.AppendError(error_msg_stream.GetString());
         result.SetStatus(eReturnStatusFailed);
       }
     }

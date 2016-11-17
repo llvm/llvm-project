@@ -21,6 +21,9 @@
 #include <isl_options_private.h>
 #include <isl_vec_private.h>
 
+#include <bset_from_bmap.c>
+#include <set_to_map.c>
+
 static struct isl_vec *empty_sample(struct isl_basic_set *bset)
 {
 	struct isl_vec *vec;
@@ -1261,7 +1264,7 @@ error:
 
 __isl_give isl_basic_set *isl_set_sample(__isl_take isl_set *set)
 {
-	return (isl_basic_set *) isl_map_sample((isl_map *)set);
+	return bset_from_bmap(isl_map_sample(set_to_map(set)));
 }
 
 __isl_give isl_point *isl_basic_set_sample_point(__isl_take isl_basic_set *bset)

@@ -132,75 +132,12 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.PltIndex = Entries.size();
-  unsigned RelOff = Out<ELFT>::RelaPlt->getRelocOffset();
+  unsigned RelOff = In<ELFT>::RelaPlt->getRelocOffset();
   Entries.push_back(std::make_pair(&Sym, RelOff));
 }
 
 template <class ELFT> void PltSection<ELFT>::finalize() {
   this->Size = Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
-}
-
-template <class ELFT>
-RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
-    : OutputSectionBase(Name, Config->Rela ? SHT_RELA : SHT_REL, SHF_ALLOC),
-      Sort(Sort) {
-  this->Entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-  this->Addralign = sizeof(uintX_t);
-}
-
-template <class ELFT>
-void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
-  if (Reloc.Type == Target->RelativeRel)
-    ++NumRelativeRelocs;
-  Relocs.push_back(Reloc);
-}
-
-template <class ELFT, class RelTy>
-static bool compRelocations(const RelTy &A, const RelTy &B) {
-  bool AIsRel = A.getType(Config->Mips64EL) == Target->RelativeRel;
-  bool BIsRel = B.getType(Config->Mips64EL) == Target->RelativeRel;
-  if (AIsRel != BIsRel)
-    return AIsRel;
-
-  return A.getSymbol(Config->Mips64EL) < B.getSymbol(Config->Mips64EL);
-}
-
-template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
-  uint8_t *BufBegin = Buf;
-  for (const DynamicReloc<ELFT> &Rel : Relocs) {
-    auto *P = reinterpret_cast<Elf_Rela *>(Buf);
-    Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-
-    if (Config->Rela)
-      P->r_addend = Rel.getAddend();
-    P->r_offset = Rel.getOffset();
-    if (Config->EMachine == EM_MIPS && Rel.getInputSec() == In<ELFT>::Got)
-      // Dynamic relocation against MIPS GOT section make deal TLS entries
-      // allocated in the end of the GOT. We need to adjust the offset to take
-      // in account 'local' and 'global' GOT entries.
-      P->r_offset += In<ELFT>::Got->getMipsTlsOffset();
-    P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->Mips64EL);
-  }
-
-  if (Sort) {
-    if (Config->Rela)
-      std::stable_sort((Elf_Rela *)BufBegin,
-                       (Elf_Rela *)BufBegin + Relocs.size(),
-                       compRelocations<ELFT, Elf_Rela>);
-    else
-      std::stable_sort((Elf_Rel *)BufBegin, (Elf_Rel *)BufBegin + Relocs.size(),
-                       compRelocations<ELFT, Elf_Rel>);
-  }
-}
-
-template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
-  return this->Entsize * Relocs.size();
-}
-
-template <class ELFT> void RelocationSection<ELFT>::finalize() {
-  this->Link = Out<ELFT>::DynSymTab ? Out<ELFT>::DynSymTab->SectionIndex
-                                    : Out<ELFT>::SymTab->SectionIndex;
-  this->Size = Relocs.size() * this->Entsize;
 }
 
 template <class ELFT>
@@ -463,20 +400,21 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
 }
 
 template <class ELFT> void OutputSection<ELFT>::finalize() {
+  if (!Config->Relocatable) {
+    // SHF_LINK_ORDER only has meaning in relocatable objects
+    this->Flags &= ~SHF_LINK_ORDER;
+    return;
+  }
+
   uint32_t Type = this->Type;
-  if (this->Flags & SHF_LINK_ORDER) {
-    if (!Config->Relocatable) {
-      // SHF_LINK_ORDER only has meaning in relocatable objects
-      this->Flags &= ~SHF_LINK_ORDER;
-    } else if (!this->Sections.empty()) {
-      // When doing a relocatable link we must preserve the link order
-      // dependency of sections with the SHF_LINK_ORDER flag. The dependency
-      // is indicated by the sh_link field. We need to translate the
-      // InputSection sh_link to the OutputSection sh_link, all InputSections
-      // in the OutputSection have the same dependency.
-      if (auto *D = this->Sections.front()->getLinkOrderDep())
-        this->Link = D->OutSec->SectionIndex;
-    }
+  if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
+    // When doing a relocatable link we must preserve the link order
+    // dependency of sections with the SHF_LINK_ORDER flag. The dependency
+    // is indicated by the sh_link field. We need to translate the
+    // InputSection sh_link to the OutputSection sh_link, all InputSections
+    // in the OutputSection have the same dependency.
+    if (auto *D = this->Sections.front()->getLinkOrderDep())
+      this->Link = D->OutSec->SectionIndex;
   }
 
   if (Type != SHT_RELA && Type != SHT_REL)
@@ -878,26 +816,6 @@ template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
 template <class ELFT> void MergeOutputSection<ELFT>::finalizePieces() {
   for (MergeInputSection<ELFT> *Sec : Sections)
     Sec->finalizePieces();
-}
-
-template <class ELFT>
-typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
-  if (OutputSec)
-    return OutputSec->Addr + OffsetInSec;
-  return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
-}
-
-template <class ELFT>
-typename ELFT::uint DynamicReloc<ELFT>::getAddend() const {
-  if (UseSymVA)
-    return Sym->getVA<ELFT>(Addend);
-  return Addend;
-}
-
-template <class ELFT> uint32_t DynamicReloc<ELFT>::getSymIndex() const {
-  if (Sym && !UseSymVA)
-    return Sym->DynsymIndex;
-  return 0;
 }
 
 template <class ELFT>
@@ -1349,11 +1267,6 @@ template class PltSection<ELF32LE>;
 template class PltSection<ELF32BE>;
 template class PltSection<ELF64LE>;
 template class PltSection<ELF64BE>;
-
-template class RelocationSection<ELF32LE>;
-template class RelocationSection<ELF32BE>;
-template class RelocationSection<ELF64LE>;
-template class RelocationSection<ELF64BE>;
 
 template class GnuHashTableSection<ELF32LE>;
 template class GnuHashTableSection<ELF32BE>;

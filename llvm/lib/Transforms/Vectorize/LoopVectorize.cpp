@@ -5497,7 +5497,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
   // are pointers that are treated like consecutive pointers during
   // vectorization. The pointer operands of interleaved accesses are an
   // example.
-  SmallPtrSet<Instruction *, 8> ConsecutiveLikePtrs;
+  SmallSetVector<Instruction *, 8> ConsecutiveLikePtrs;
 
   // Holds pointer operands of instructions that are possibly non-uniform.
   SmallPtrSet<Instruction *, 8> PossibleNonUniformPtrs;

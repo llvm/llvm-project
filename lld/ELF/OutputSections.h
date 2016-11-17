@@ -52,7 +52,6 @@ public:
     Merge,
     Plt,
     Regular,
-    Reloc,
     SymTable,
     VersDef,
     VersNeed,
@@ -154,39 +153,6 @@ public:
 
 private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
-};
-
-template <class ELFT> class DynamicReloc {
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  DynamicReloc(uint32_t Type, const InputSectionBase<ELFT> *InputSec,
-               uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
-               uintX_t Addend)
-      : Type(Type), Sym(Sym), InputSec(InputSec), OffsetInSec(OffsetInSec),
-        UseSymVA(UseSymVA), Addend(Addend) {}
-
-  DynamicReloc(uint32_t Type, const OutputSectionBase *OutputSec,
-               uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
-               uintX_t Addend)
-      : Type(Type), Sym(Sym), OutputSec(OutputSec), OffsetInSec(OffsetInSec),
-        UseSymVA(UseSymVA), Addend(Addend) {}
-
-  uintX_t getOffset() const;
-  uintX_t getAddend() const;
-  uint32_t getSymIndex() const;
-  const OutputSectionBase *getOutputSec() const { return OutputSec; }
-  const InputSectionBase<ELFT> *getInputSec() const { return InputSec; }
-
-  uint32_t Type;
-
-private:
-  SymbolBody *Sym;
-  const InputSectionBase<ELFT> *InputSec = nullptr;
-  const OutputSectionBase *OutputSec = nullptr;
-  uintX_t OffsetInSec;
-  bool UseSymVA;
-  uintX_t Addend;
 };
 
 struct SymbolTableEntry {
@@ -303,30 +269,6 @@ public:
   static bool classof(const OutputSectionBase *B) {
     return B->getKind() == VersNeed;
   }
-};
-
-template <class ELFT> class RelocationSection final : public OutputSectionBase {
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  RelocationSection(StringRef Name, bool Sort);
-  void addReloc(const DynamicReloc<ELFT> &Reloc);
-  unsigned getRelocOffset();
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-  bool hasRelocs() const { return !Relocs.empty(); }
-  Kind getKind() const override { return Reloc; }
-  size_t getRelativeRelocCount() const { return NumRelativeRelocs; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == Reloc;
-  }
-
-private:
-  bool Sort;
-  size_t NumRelativeRelocs = 0;
-  std::vector<DynamicReloc<ELFT>> Relocs;
 };
 
 template <class ELFT> class OutputSection final : public OutputSectionBase {
@@ -526,8 +468,6 @@ template <class ELFT> struct Out {
   static OutputSectionBase *Opd;
   static uint8_t *OpdBuf;
   static PltSection<ELFT> *Plt;
-  static RelocationSection<ELFT> *RelaDyn;
-  static RelocationSection<ELFT> *RelaPlt;
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
   static VersionDefinitionSection<ELFT> *VerDef;
@@ -586,8 +526,6 @@ template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;
 template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
 template <class ELFT> PltSection<ELFT> *Out<ELFT>::Plt;
-template <class ELFT> RelocationSection<ELFT> *Out<ELFT>::RelaDyn;
-template <class ELFT> RelocationSection<ELFT> *Out<ELFT>::RelaPlt;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
 template <class ELFT> VersionDefinitionSection<ELFT> *Out<ELFT>::VerDef;

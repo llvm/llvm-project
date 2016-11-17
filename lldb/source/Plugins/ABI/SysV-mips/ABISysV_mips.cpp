@@ -587,7 +587,7 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
     for (size_t i = 0; i < args.size(); ++i)
       s.Printf(", arg%zd = 0x%" PRIx64, i + 1, args[i]);
     s.PutCString(")");
-    log->PutCString(s.GetString().c_str());
+    log->PutString(s.GetString());
   }
 
   RegisterContext *reg_ctx = thread.GetRegisterContext().get();

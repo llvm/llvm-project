@@ -359,7 +359,7 @@ public:
             }
             break;
           }
-          m_mnemonics.swap(mnemonic_strm.GetString());
+          m_mnemonics = mnemonic_strm.GetString();
           return;
         } else {
           if (m_does_branch == eLazyBoolCalculate) {
@@ -834,7 +834,7 @@ public:
         ss.PutCString("\n");
       }
 
-      log->PutCString(ss.GetData());
+      log->PutString(ss.GetString());
     }
 
     return true;
@@ -1351,12 +1351,12 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
           // seen when we
           // have multiple levels of inlined functions at an address, only show
           // the first line.
-          std::string &str(ss.GetString());
+          std::string str = ss.GetString();
           size_t first_eol_char = str.find_first_of("\r\n");
           if (first_eol_char != std::string::npos) {
             str.erase(first_eol_char);
           }
-          m_inst->AppendComment(ss.GetString());
+          m_inst->AppendComment(str);
         }
       }
     }

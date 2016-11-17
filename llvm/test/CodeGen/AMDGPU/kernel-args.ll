@@ -11,10 +11,10 @@
 ; MESA-GCN: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xff
 ; HSA-VI: s_add_u32 [[SPTR_LO:s[0-9]+]], s4, 8
 ; HSA-VI: s_addc_u32 [[SPTR_HI:s[0-9]+]], s5, 0
-; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
-; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
 ; FIXME: Should be using s_load_dword
-; HSA-VI: flat_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
+; HSA-VI: flat_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]
 
 define void @i8_arg(i32 addrspace(1)* nocapture %out, i8 %in) nounwind {
 entry:
@@ -29,8 +29,8 @@ entry:
 ; MESA-VI: s_load_dword s{{[0-9]}}, s[0:1], 0x2c
 ; HSA-VI: s_add_u32 [[SPTR_LO:s[0-9]+]], s4, 8
 ; HSA-VI: s_addc_u32 [[SPTR_HI:s[0-9]+]], s5, 0
-; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
-; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
 ; HSA-VI: flat_load_ubyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
 
@@ -47,8 +47,8 @@ entry:
 ; MESA-VI: s_load_dword s{{[0-9]}}, s[0:1], 0x2c
 ; HSA-VI: s_add_u32 [[SPTR_LO:s[0-9]+]], s4, 8
 ; HSA-VI: s_addc_u32 [[SPTR_HI:s[0-9]+]], s5, 0
-; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
-; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
 ; HSA-VI: flat_load_sbyte v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
 
@@ -66,8 +66,8 @@ entry:
 ; MESA-GCN: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xff
 ; HSA-VI: s_add_u32 [[SPTR_LO:s[0-9]+]], s4, 8
 ; HSA-VI: s_addc_u32 [[SPTR_HI:s[0-9]+]], s5, 0
-; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
-; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
 ; HSA-VI: flat_load_ushort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
 
@@ -84,8 +84,8 @@ entry:
 ; MESA-VI: s_load_dword s{{[0-9]}}, s[0:1], 0x2c
 ; HSA-VI: s_add_u32 [[SPTR_LO:s[0-9]+]], s4, 8
 ; HSA-VI: s_addc_u32 [[SPTR_HI:s[0-9]+]], s5, 0
-; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
-; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
 ; HSA-VI: flat_load_ushort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
 
@@ -102,8 +102,8 @@ entry:
 ; MESA-VI: s_load_dword s{{[0-9]}}, s[0:1], 0x2c
 ; HSA-VI: s_add_u32 [[SPTR_LO:s[0-9]+]], s4, 8
 ; HSA-VI: s_addc_u32 [[SPTR_HI:s[0-9]+]], s5, 0
-; HSA-VI: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
-; HSA-VI: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], [[SPTR_LO]]
+; HSA-VI-DAG: v_mov_b32_e32 v[[VPTR_HI:[0-9]+]], [[SPTR_HI]]
 ; FIXME: Should be using s_load_dword
 ; HSA-VI: flat_load_sshort v{{[0-9]+}}, v{{\[}}[[VPTR_LO]]:[[VPTR_HI]]]
 

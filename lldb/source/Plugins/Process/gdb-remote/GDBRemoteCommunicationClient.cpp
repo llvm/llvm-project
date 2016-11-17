@@ -349,7 +349,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   }
 
   StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(packet.GetData(), response,
+  if (SendPacketAndWaitForResponse(packet.GetString(), response,
                                    /*send_async=*/false) ==
       PacketResult::Success) {
     const char *response_cstr = response.GetStringRef().c_str();
@@ -518,7 +518,7 @@ GDBRemoteCommunicationClient::SendThreadSpecificPacketAndWaitForResponse(
             GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
       log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex "
                   "for %s packet.",
-                  __FUNCTION__, payload.GetString().c_str());
+                  __FUNCTION__, payload.GetData());
     return PacketResult::ErrorNoSequenceLock;
   }
 
@@ -2685,15 +2685,15 @@ Error GDBRemoteCommunicationClient::MakeDirectory(const FileSpec &file_spec,
   stream.PutHex32(file_permissions);
   stream.PutChar(',');
   stream.PutCStringAsRawHex8(path.c_str());
-  const char *packet = stream.GetData();
+  llvm::StringRef packet = stream.GetString();
   StringExtractorGDBRemote response;
 
   if (SendPacketAndWaitForResponse(packet, response, false) !=
       PacketResult::Success)
-    return Error("failed to send '%s' packet", packet);
+    return Error("failed to send '%s' packet", packet.str().c_str());
 
   if (response.GetChar() != 'F')
-    return Error("invalid response to '%s' packet", packet);
+    return Error("invalid response to '%s' packet", packet.str().c_str());
 
   return Error(response.GetU32(UINT32_MAX), eErrorTypePOSIX);
 }
@@ -2706,15 +2706,15 @@ Error GDBRemoteCommunicationClient::SetFilePermissions(
   stream.PutHex32(file_permissions);
   stream.PutChar(',');
   stream.PutCStringAsRawHex8(path.c_str());
-  const char *packet = stream.GetData();
+  llvm::StringRef packet = stream.GetString();
   StringExtractorGDBRemote response;
 
   if (SendPacketAndWaitForResponse(packet, response, false) !=
       PacketResult::Success)
-    return Error("failed to send '%s' packet", packet);
+    return Error("failed to send '%s' packet", stream.GetData());
 
   if (response.GetChar() != 'F')
-    return Error("invalid response to '%s' packet", packet);
+    return Error("invalid response to '%s' packet", stream.GetData());
 
   return Error(response.GetU32(UINT32_MAX), eErrorTypePOSIX);
 }
@@ -2800,7 +2800,7 @@ Error GDBRemoteCommunicationClient::GetFilePermissions(
       PacketResult::Success) {
     if (response.GetChar() != 'F') {
       error.SetErrorStringWithFormat("invalid response to '%s' packet",
-                                     stream.GetString().c_str());
+                                     stream.GetData());
     } else {
       const uint32_t mode = response.GetS32(-1);
       if (static_cast<int32_t>(mode) == -1) {
@@ -2818,7 +2818,7 @@ Error GDBRemoteCommunicationClient::GetFilePermissions(
     }
   } else {
     error.SetErrorStringWithFormat("failed to send '%s' packet",
-                                   stream.GetString().c_str());
+                                   stream.GetData());
   }
   return error;
 }
@@ -3258,7 +3258,7 @@ GDBRemoteCommunicationClient::GetModulesInfo(
   unescaped_payload.PutCString("jModulesInfo:");
   module_array_sp->Write(unescaped_payload);
   StreamGDBRemote payload;
-  payload.PutEscapedBytes(unescaped_payload.GetData(),
+  payload.PutEscapedBytes(unescaped_payload.GetString().data(),
                           unescaped_payload.GetSize());
 
   StringExtractorGDBRemote response;
@@ -3569,7 +3569,7 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins() {
       m_supported_async_json_packets_sp->Dump(stream);
       log->Printf("GDBRemoteCommunicationClient::%s(): supported async "
                   "JSON packets: %s",
-                  __FUNCTION__, stream.GetString().c_str());
+                  __FUNCTION__, stream.GetData());
     }
   }
 
@@ -3600,7 +3600,7 @@ Error GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
     unescaped_stream.Flush();
 
     // Add it to the stream in escaped fashion.
-    stream.PutEscapedBytes(unescaped_stream.GetData(),
+    stream.PutEscapedBytes(unescaped_stream.GetString().data(),
                            unescaped_stream.GetSize());
   }
   stream.Flush();

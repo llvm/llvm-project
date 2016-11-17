@@ -1751,17 +1751,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
-  case Intrinsic::x86_sse_add_ss:
-  case Intrinsic::x86_sse_sub_ss:
-  case Intrinsic::x86_sse_mul_ss:
-  case Intrinsic::x86_sse_div_ss:
   case Intrinsic::x86_sse_min_ss:
   case Intrinsic::x86_sse_max_ss:
   case Intrinsic::x86_sse_cmp_ss:
-  case Intrinsic::x86_sse2_add_sd:
-  case Intrinsic::x86_sse2_sub_sd:
-  case Intrinsic::x86_sse2_mul_sd:
-  case Intrinsic::x86_sse2_div_sd:
   case Intrinsic::x86_sse2_min_sd:
   case Intrinsic::x86_sse2_max_sd:
   case Intrinsic::x86_sse2_cmp_sd: {

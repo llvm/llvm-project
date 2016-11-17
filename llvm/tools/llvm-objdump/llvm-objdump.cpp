@@ -608,22 +608,22 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
 
   const ELFFile<ELFT> &EF = *Obj->getELFFile();
 
-  ErrorOr<const Elf_Shdr *> SecOrErr = EF.getSection(Rel.d.a);
-  if (std::error_code EC = SecOrErr.getError())
-    return EC;
+  auto SecOrErr = EF.getSection(Rel.d.a);
+  if (!SecOrErr)
+    return errorToErrorCode(SecOrErr.takeError());
   const Elf_Shdr *Sec = *SecOrErr;
-  ErrorOr<const Elf_Shdr *> SymTabOrErr = EF.getSection(Sec->sh_link);
-  if (std::error_code EC = SymTabOrErr.getError())
-    return EC;
+  auto SymTabOrErr = EF.getSection(Sec->sh_link);
+  if (!SymTabOrErr)
+    return errorToErrorCode(SymTabOrErr.takeError());
   const Elf_Shdr *SymTab = *SymTabOrErr;
   assert(SymTab->sh_type == ELF::SHT_SYMTAB ||
          SymTab->sh_type == ELF::SHT_DYNSYM);
-  ErrorOr<const Elf_Shdr *> StrTabSec = EF.getSection(SymTab->sh_link);
-  if (std::error_code EC = StrTabSec.getError())
-    return EC;
-  ErrorOr<StringRef> StrTabOrErr = EF.getStringTable(*StrTabSec);
-  if (std::error_code EC = StrTabOrErr.getError())
-    return EC;
+  auto StrTabSec = EF.getSection(SymTab->sh_link);
+  if (!StrTabSec)
+    return errorToErrorCode(StrTabSec.takeError());
+  auto StrTabOrErr = EF.getStringTable(*StrTabSec);
+  if (!StrTabOrErr)
+    return errorToErrorCode(StrTabOrErr.takeError());
   StringRef StrTab = *StrTabOrErr;
   uint8_t type = RelRef.getType();
   StringRef res;
@@ -649,9 +649,9 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     if (!SymSI)
       return errorToErrorCode(SymSI.takeError());
     const Elf_Shdr *SymSec = Obj->getSection((*SymSI)->getRawDataRefImpl());
-    ErrorOr<StringRef> SecName = EF.getSectionName(SymSec);
-    if (std::error_code EC = SecName.getError())
-      return EC;
+    auto SecName = EF.getSectionName(SymSec);
+    if (!SecName)
+      return errorToErrorCode(SecName.takeError());
     Target = *SecName;
   } else {
     Expected<StringRef> SymName = symb->getName(StrTab);

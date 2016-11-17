@@ -529,7 +529,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
         if (cmd->WantsRawCommandString() && !only_print_args)
           strm.Printf(" --");
 
-        strm.Printf(" %s", args_str.GetData());
+        strm << " " << args_str.GetString();
         if (only_print_args)
           break;
       }
@@ -541,7 +541,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
     if (!only_print_args)
       strm.PutChar('\n');
     strm.Indent(name);
-    strm.Printf(" %s", arguments_str.GetData());
+    strm << " " << arguments_str.GetString();
   }
 
   strm.Printf("\n\n");

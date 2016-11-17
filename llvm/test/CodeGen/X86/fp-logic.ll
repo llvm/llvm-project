@@ -223,7 +223,7 @@ define float @f7_xor(float %x) {
 define double @doubles(double %x, double %y) {
 ; CHECK-LABEL: doubles:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andpd %xmm1, %xmm0
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64

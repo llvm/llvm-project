@@ -7,4 +7,4 @@
 
 .quad foo
 
-// CHECK: can't create dynamic relocation R_X86_64_64 against symbol foo
+// CHECK: {{.*}}.o (.text+0x0): can't create dynamic relocation R_X86_64_64 against symbol 'foo' defined in {{.*}}.so

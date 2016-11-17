@@ -98,7 +98,7 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
   if (IsOneLiner()) {
     ValueObjectPrinter printer(valobj, &s, DumpValueObjectOptions());
     printer.PrintChildrenOneLiner(HideNames(valobj));
-    retval.assign(s.GetData());
+    retval = s.GetString();
     return true;
   } else {
     if (FormatEntity::Format(m_format, s, &sc, &exe_ctx,
@@ -141,7 +141,7 @@ bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
   StreamString stream;
   if (!m_impl || m_impl(*valobj, stream, options) == false)
     return false;
-  dest.assign(stream.GetData());
+  dest = stream.GetString();
   return true;
 }
 

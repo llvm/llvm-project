@@ -1438,7 +1438,7 @@ bool ScriptInterpreterPython::GenerateTypeSynthClass(StringList &user_input,
   // Create the function name & definition string.
 
   sstr.Printf("class %s:", auto_generated_class_name.c_str());
-  auto_generated_class.AppendString(sstr.GetData());
+  auto_generated_class.AppendString(sstr.GetString());
 
   // Wrap everything up inside the class, increasing the indentation.
   // we don't need to play any fancy indentation tricks here because there is no
@@ -1446,7 +1446,7 @@ bool ScriptInterpreterPython::GenerateTypeSynthClass(StringList &user_input,
   for (int i = 0; i < num_lines; ++i) {
     sstr.Clear();
     sstr.Printf("     %s", user_input.GetStringAtIndex(i));
-    auto_generated_class.AppendString(sstr.GetData());
+    auto_generated_class.AppendString(sstr.GetString());
   }
 
   // Verify that the results are valid Python.
@@ -2873,7 +2873,7 @@ bool ScriptInterpreterPython::GetDocumentationForItem(const char *item,
     StreamString str_stream;
     str_stream.Printf(
         "Function %s was not found. Containing module might be missing.", item);
-    dest.assign(str_stream.GetData());
+    dest = str_stream.GetString();
     return false;
   }
 }

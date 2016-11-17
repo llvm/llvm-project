@@ -204,7 +204,7 @@ std::string StringList::CopyList(const char *item_preamble,
       strm << item_preamble;
     strm << GetStringAtIndex(i);
   }
-  return std::string(strm.GetData());
+  return strm.GetString();
 }
 
 StringList &StringList::operator<<(const char *str) {

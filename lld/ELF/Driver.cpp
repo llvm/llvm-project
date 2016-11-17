@@ -496,7 +496,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->Target1Rel = getArg(Args, OPT_target1_rel, OPT_target1_abs, false);
-  Config->Threads = Args.hasArg(OPT_threads);
+  Config->Threads = getArg(Args, OPT_threads, OPT_no_threads, false);
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Verbose = Args.hasArg(OPT_verbose);
   Config->WarnCommon = Args.hasArg(OPT_warn_common);
@@ -561,7 +561,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     StringRef S = Arg->getValue();
     if (S == "md5") {
       Config->BuildId = BuildIdKind::Md5;
-    } else if (S == "sha1") {
+    } else if (S == "sha1" || S == "tree") {
       Config->BuildId = BuildIdKind::Sha1;
     } else if (S == "uuid") {
       Config->BuildId = BuildIdKind::Uuid;

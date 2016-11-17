@@ -1074,6 +1074,14 @@ public:
   bool isPICDefaultForced() const override;
 };
 
+/// Toolchain for little endian TCE cores.
+class LLVM_LIBRARY_VISIBILITY TCELEToolChain : public TCEToolChain {
+public:
+  TCELEToolChain(const Driver &D, const llvm::Triple &Triple,
+                 const llvm::opt::ArgList &Args);
+  ~TCELEToolChain() override;
+};
+
 class LLVM_LIBRARY_VISIBILITY MSVCToolChain : public ToolChain {
 public:
   MSVCToolChain(const Driver &D, const llvm::Triple &Triple,

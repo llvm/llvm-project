@@ -8844,13 +8844,10 @@ static SDValue performExtendCombine(SDNode *N,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
 }
 
-static SDValue split16BStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
-                                  SDValue SplatVal, unsigned NumVecElts) {
-  assert((NumVecElts == 4 || NumVecElts == 2) && "Unexpected NumVecElts");
-
+static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
+                               SDValue SplatVal, unsigned NumVecElts) {
   unsigned OrigAlignment = St.getAlignment();
-  unsigned EltOffset = NumVecElts == 4 ? 4 : 8;
-  unsigned Alignment = std::min(OrigAlignment, EltOffset);
+  unsigned EltOffset = SplatVal.getValueType().getSizeInBits() / 8;
 
   // Create scalar stores. This is at least as good as the code sequence for a
   // split unaligned store which is a dup.s, ext.b, and two stores.
@@ -8860,10 +8857,11 @@ static SDValue split16BStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
   SDValue BasePtr = St.getBasePtr();
   SDValue NewST1 =
       DAG.getStore(St.getChain(), DL, SplatVal, BasePtr, St.getPointerInfo(),
-                   St.getAlignment(), St.getMemOperand()->getFlags());
+                   OrigAlignment, St.getMemOperand()->getFlags());
 
   unsigned Offset = EltOffset;
   while (--NumVecElts) {
+    unsigned Alignment = MinAlign(OrigAlignment, Offset);
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i64, BasePtr,
                                     DAG.getConstant(Offset, DL, MVT::i64));
     NewST1 = DAG.getStore(NewST1.getValue(0), DL, SplatVal, OffsetPtr,
@@ -8893,9 +8891,13 @@ static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
   SDValue StVal = St.getValue();
   EVT VT = StVal.getValueType();
 
-  // We can express a splat as store pair(s) for 2 or 4 elements.
+  // It is beneficial to scalarize a zero splat store for 2 or 3 i64 elements or
+  // 2, 3 or 4 i32 elements.
   int NumVecElts = VT.getVectorNumElements();
-  if (NumVecElts != 4 && NumVecElts != 2)
+  if (!(((NumVecElts == 2 || NumVecElts == 3) &&
+         VT.getVectorElementType().getSizeInBits() == 64) ||
+        ((NumVecElts == 2 || NumVecElts == 3 || NumVecElts == 4) &&
+         VT.getVectorElementType().getSizeInBits() == 32)))
     return SDValue();
 
   if (StVal.getOpcode() != ISD::BUILD_VECTOR)
@@ -8917,16 +8919,16 @@ static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
 
   for (int I = 0; I < NumVecElts; ++I) {
     SDValue EltVal = StVal.getOperand(I);
-    if (!isa<ConstantSDNode>(EltVal) ||
-        !cast<ConstantSDNode>(EltVal)->isNullValue())
+    if (!isNullConstant(EltVal) && !isNullFPConstant(EltVal))
       return SDValue();
   }
+
   // Use WZR/XZR here to prevent DAGCombiner::MergeConsecutiveStores from
   // undoing this transformation.
-  return split16BStoreSplat(
-      DAG, St, NumVecElts == 4 ? DAG.getRegister(AArch64::WZR, MVT::i32)
-                               : DAG.getRegister(AArch64::XZR, MVT::i64),
-      NumVecElts);
+  SDValue SplatVal = VT.getVectorElementType().getSizeInBits() == 32
+                         ? DAG.getRegister(AArch64::WZR, MVT::i32)
+                         : DAG.getRegister(AArch64::XZR, MVT::i64);
+  return splitStoreSplat(DAG, St, SplatVal, NumVecElts);
 }
 
 /// Replace a splat of a scalar to a vector store by scalar stores of the scalar
@@ -8979,12 +8981,12 @@ static SDValue replaceSplatVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
   if (IndexNotInserted.any())
       return SDValue();
 
-  return split16BStoreSplat(DAG, St, SplatVal, NumVecElts);
+  return splitStoreSplat(DAG, St, SplatVal, NumVecElts);
 }
 
-static SDValue split16BStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                              SelectionDAG &DAG,
-                              const AArch64Subtarget *Subtarget) {
+static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                           SelectionDAG &DAG,
+                           const AArch64Subtarget *Subtarget) {
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
@@ -9174,7 +9176,7 @@ static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
                                    const AArch64Subtarget *Subtarget) {
-  if (SDValue Split = split16BStores(N, DCI, DAG, Subtarget))
+  if (SDValue Split = splitStores(N, DCI, DAG, Subtarget))
     return Split;
 
   if (Subtarget->supportsAddressTopByteIgnored() &&

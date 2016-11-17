@@ -1269,6 +1269,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT,       MVT::v8i32, Legal);
       setOperationAction(ISD::SINT_TO_FP,       MVT::v4i32, Legal);
       setOperationAction(ISD::UINT_TO_FP,       MVT::v4i32, Legal);
+      setOperationAction(ISD::UINT_TO_FP,       MVT::v2i32, Custom);
       setOperationAction(ISD::FP_TO_SINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::FP_TO_UINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v4i32, Custom);
@@ -14028,26 +14029,34 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
 SDValue X86TargetLowering::lowerUINT_TO_FP_vec(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDValue N0 = Op.getOperand(0);
-  MVT SVT = N0.getSimpleValueType();
+  MVT VT = Op.getSimpleValueType();
+  MVT SrcVT = N0.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (SVT.getVectorElementType() == MVT::i1) {
-    if (SVT == MVT::v2i1)
+  if (SrcVT.getVectorElementType() == MVT::i1) {
+    if (SrcVT == MVT::v2i1)
       return DAG.getNode(ISD::UINT_TO_FP, dl, Op.getValueType(),
                          DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v2i64, N0));
-    MVT IntegerVT = MVT::getVectorVT(MVT::i32, SVT.getVectorNumElements());
+    MVT IntegerVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
     return DAG.getNode(ISD::UINT_TO_FP, dl, Op.getValueType(),
                        DAG.getNode(ISD::ZERO_EXTEND, dl, IntegerVT, N0));
   }
 
-  switch (SVT.SimpleTy) {
+  switch (SrcVT.SimpleTy) {
   default:
     llvm_unreachable("Custom UINT_TO_FP is not supported!");
+  case MVT::v2i32: {
+    if (VT == MVT::v2f64)
+      return DAG.getNode(X86ISD::CVTUDQ2PD, dl, VT,
+                         DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, N0,
+                         DAG.getUNDEF(SrcVT)));
+    return SDValue();
+  }
   case MVT::v4i8:
   case MVT::v4i16:
   case MVT::v8i8:
   case MVT::v8i16: {
-    MVT NVT = MVT::getVectorVT(MVT::i32, SVT.getVectorNumElements());
+    MVT NVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
     return DAG.getNode(ISD::SINT_TO_FP, dl, Op.getValueType(),
                        DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, N0));
   }

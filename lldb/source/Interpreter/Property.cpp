@@ -277,17 +277,17 @@ void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
     strm.EOL();
 
     if (m_value_sp->DumpQualifiedName(qualified_name))
-      strm.Printf("'%s' variables:\n\n", qualified_name.GetString().c_str());
+      strm.Printf("'%s' variables:\n\n", qualified_name.GetData());
     sub_properties->DumpAllDescriptions(interpreter, strm);
   } else {
     if (display_qualified_name) {
       StreamString qualified_name;
       DumpQualifiedName(qualified_name);
-      interpreter.OutputFormattedHelpText(
-          strm, qualified_name.GetString().c_str(), "--", desc, output_width);
+      interpreter.OutputFormattedHelpText(strm, qualified_name.GetString(),
+                                          "--", desc, output_width);
     } else {
-      interpreter.OutputFormattedHelpText(strm, m_name.GetCString(), "--", desc,
-                                          output_width);
+      interpreter.OutputFormattedHelpText(strm, m_name.GetStringRef(), "--",
+                                          desc, output_width);
     }
   }
 }

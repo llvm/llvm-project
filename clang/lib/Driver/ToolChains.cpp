@@ -3435,6 +3435,13 @@ bool TCEToolChain::isPIEDefault() const { return false; }
 
 bool TCEToolChain::isPICDefaultForced() const { return false; }
 
+TCELEToolChain::TCELEToolChain(const Driver &D, const llvm::Triple& Triple,
+                               const ArgList &Args)
+  : TCEToolChain(D, Triple, Args) {
+}
+
+TCELEToolChain::~TCELEToolChain() {}
+
 // CloudABI - CloudABI tool chain which can call ld(1) directly.
 
 CloudABI::CloudABI(const Driver &D, const llvm::Triple &Triple,

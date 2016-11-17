@@ -147,7 +147,7 @@ Error PlatformRemoteGDBServer::ResolveExecutable(
         error.SetErrorStringWithFormat(
             "'%s' doesn't contain any '%s' platform architectures: %s",
             resolved_module_spec.GetFileSpec().GetPath().c_str(),
-            GetPluginName().GetCString(), arch_names.GetString().c_str());
+            GetPluginName().GetCString(), arch_names.GetData());
       } else {
         error.SetErrorStringWithFormat(
             "'%s' is not readable",
@@ -185,7 +185,7 @@ bool PlatformRemoteGDBServer::GetModuleSpec(const FileSpec &module_file_spec,
     log->Printf(
         "PlatformRemoteGDBServer::%s - got module info for (%s:%s) : %s",
         __FUNCTION__, module_path.c_str(), arch.GetTriple().getTriple().c_str(),
-        stream.GetString().c_str());
+        stream.GetData());
   }
 
   return true;

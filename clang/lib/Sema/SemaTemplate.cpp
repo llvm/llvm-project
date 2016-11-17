@@ -2990,12 +2990,10 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
         << Decl;
 
     // Print the matching partial specializations.
-    for (SmallVector<MatchResult, 4>::iterator P = Matched.begin(),
-                                               PEnd = Matched.end();
-         P != PEnd; ++P)
-      Diag(P->Partial->getLocation(), diag::note_partial_spec_match)
-          << getTemplateArgumentBindingsText(
-                 P->Partial->getTemplateParameters(), *P->Args);
+    for (MatchResult P : Matched)
+      Diag(P.Partial->getLocation(), diag::note_partial_spec_match)
+          << getTemplateArgumentBindingsText(P.Partial->getTemplateParameters(),
+                                             *P.Args);
     return true;
   }
 

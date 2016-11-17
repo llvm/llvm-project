@@ -438,7 +438,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
   }
   case Instruction::GetElementPtr: {
     Address SavedAddr = Addr;
-    uint64_t TmpOffset = Addr.getOffset();
+    int64_t TmpOffset = Addr.getOffset();
     // Iterate through the GEP folding the constants into offsets where
     // we can.
     gep_type_iterator GTI = gep_type_begin(U);
@@ -756,7 +756,7 @@ bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
   if (Addr.isFIBase()) {
     unsigned FI = Addr.getFI();
     unsigned Align = 4;
-    unsigned Offset = Addr.getOffset();
+    int64_t Offset = Addr.getOffset();
     MachineFrameInfo &MFI = MF->getFrameInfo();
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
@@ -807,7 +807,7 @@ bool MipsFastISel::emitStore(MVT VT, unsigned SrcReg, Address &Addr,
   if (Addr.isFIBase()) {
     unsigned FI = Addr.getFI();
     unsigned Align = 4;
-    unsigned Offset = Addr.getOffset();
+    int64_t Offset = Addr.getOffset();
     MachineFrameInfo &MFI = MF->getFrameInfo();
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,

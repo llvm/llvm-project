@@ -4189,8 +4189,7 @@ static ASTFileSignature readASTFileSignature(StringRef PCH) {
   ASTReader::RecordData Record;
   while (true) {
     llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
-    if (Entry.Kind == llvm::BitstreamEntry::EndBlock ||
-        Entry.Kind != llvm::BitstreamEntry::Record)
+    if (Entry.Kind != llvm::BitstreamEntry::Record)
       return 0;
 
     Record.clear();
