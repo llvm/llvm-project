@@ -1188,14 +1188,14 @@ struct DeclaratorChunk {
     /// declaration of a member function), it will be stored here as a
     /// sequence of tokens to be parsed once the class definition is
     /// complete. Non-NULL indicates that there is a default argument.
-    CachedTokens *DefaultArgTokens;
+    std::unique_ptr<CachedTokens> DefaultArgTokens;
 
     ParamInfo() = default;
     ParamInfo(IdentifierInfo *ident, SourceLocation iloc,
               Decl *param,
-              CachedTokens *DefArgTokens = nullptr)
+              std::unique_ptr<CachedTokens> DefArgTokens = nullptr)
       : Ident(ident), IdentLoc(iloc), Param(param),
-        DefaultArgTokens(DefArgTokens) {}
+        DefaultArgTokens(std::move(DefArgTokens)) {}
   };
 
   struct TypeAndRange {
@@ -1310,10 +1310,8 @@ struct DeclaratorChunk {
     ///
     /// This is used in various places for error recovery.
     void freeParams() {
-      for (unsigned I = 0; I < NumParams; ++I) {
-        delete Params[I].DefaultArgTokens;
-        Params[I].DefaultArgTokens = nullptr;
-      }
+      for (unsigned I = 0; I < NumParams; ++I)
+        Params[I].DefaultArgTokens.reset();
       if (DeleteParams) {
         delete[] Params;
         DeleteParams = false;

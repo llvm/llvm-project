@@ -2039,7 +2039,8 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,
     LateMethod->DefaultArgs.reserve(FTI.NumParams);
     for (unsigned ParamIdx = 0; ParamIdx < FTI.NumParams; ++ParamIdx)
       LateMethod->DefaultArgs.push_back(LateParsedDefaultArgument(
-        FTI.Params[ParamIdx].Param, FTI.Params[ParamIdx].DefaultArgTokens));
+          FTI.Params[ParamIdx].Param,
+          std::move(FTI.Params[ParamIdx].DefaultArgTokens)));
   }
 }
 

@@ -51,6 +51,7 @@ endif ()
 if (TARGET clangTidyPlugin)
   add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
   list(APPEND LIBS clangTidyPlugin)
+  list(APPEND LIBS clangIncludeFixerPlugin)
 endif ()
 
 find_library(DL_LIBRARY_PATH dl)

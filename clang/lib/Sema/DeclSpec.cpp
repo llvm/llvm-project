@@ -223,13 +223,15 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     if (!TheDeclarator.InlineStorageUsed &&
         NumParams <= llvm::array_lengthof(TheDeclarator.InlineParams)) {
       I.Fun.Params = TheDeclarator.InlineParams;
+      new (I.Fun.Params) ParamInfo[NumParams];
       I.Fun.DeleteParams = false;
       TheDeclarator.InlineStorageUsed = true;
     } else {
       I.Fun.Params = new DeclaratorChunk::ParamInfo[NumParams];
       I.Fun.DeleteParams = true;
     }
-    memcpy(I.Fun.Params, Params, sizeof(Params[0]) * NumParams);
+    for (unsigned i = 0; i < NumParams; i++)
+      I.Fun.Params[i] = std::move(Params[i]);    
   }
 
   // Check what exception specification information we should actually store.
