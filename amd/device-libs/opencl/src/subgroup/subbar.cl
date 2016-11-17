@@ -16,6 +16,9 @@ sub_group_barrier(cl_mem_fence_flags flags)
 __attribute__((overloadable, always_inline)) void
 sub_group_barrier(cl_mem_fence_flags flags, memory_scope scope)
 {
+    // This barrier is a no-op to ensure this function remains convergent
+    __llvm_amdgcn_wave_barrier();
+
     if (flags)
         atomic_work_item_fence(flags, memory_order_acq_rel, scope);
 }

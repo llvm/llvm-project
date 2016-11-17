@@ -337,7 +337,6 @@ GENMAX(ulong)
 // Inclusive scan with operation OP using DPP
 // Input is x, l is lane, output is s
 #define ISCAN_DPP(T,OP,ID) \
-    /* This branch is disabled since it is not working for some reason */ \
     if (ID == (T)0) { \
         T v; \
  \
