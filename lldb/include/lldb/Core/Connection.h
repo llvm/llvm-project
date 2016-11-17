@@ -66,7 +66,8 @@ public:
   ///
   /// @see Error& Communication::GetError ();
   //------------------------------------------------------------------
-  virtual lldb::ConnectionStatus Connect(const char *url, Error *error_ptr) = 0;
+  virtual lldb::ConnectionStatus Connect(llvm::StringRef url,
+                                         Error *error_ptr) = 0;
 
   //------------------------------------------------------------------
   /// Disconnect the communications connection if one is currently

@@ -512,7 +512,7 @@ public:
   void Dump(Stream *s, lldb::DescriptionLevel description_level);
 
   const lldb::ProcessSP &CreateProcess(lldb::ListenerSP listener,
-                                       const char *plugin_name,
+                                       llvm::StringRef plugin_name,
                                        const FileSpec *crash_file);
 
   const lldb::ProcessSP &GetProcessSP() const;

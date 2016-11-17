@@ -155,7 +155,7 @@ public:
 
   virtual Thread &GetThread() { return m_thread; }
 
-  const RegisterInfo *GetRegisterInfoByName(const char *reg_name,
+  const RegisterInfo *GetRegisterInfoByName(llvm::StringRef reg_name,
                                             uint32_t start_idx = 0);
 
   const RegisterInfo *GetRegisterInfo(lldb::RegisterKind reg_kind,

@@ -662,14 +662,15 @@ void ProcessInstanceInfoMatch::Clear() {
   m_match_all_users = false;
 }
 
-ProcessSP Process::FindPlugin(lldb::TargetSP target_sp, const char *plugin_name,
+ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
+                              llvm::StringRef plugin_name,
                               ListenerSP listener_sp,
                               const FileSpec *crash_file_path) {
   static uint32_t g_process_unique_id = 0;
 
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
-  if (plugin_name) {
+  if (!plugin_name.empty()) {
     ConstString const_plugin_name(plugin_name);
     create_callback =
         PluginManager::GetProcessCreateCallbackForPluginName(const_plugin_name);
@@ -3245,13 +3246,12 @@ void Process::CompleteAttach() {
   m_stop_info_override_callback = process_arch.GetStopInfoOverrideCallback();
 }
 
-Error Process::ConnectRemote(Stream *strm, const char *remote_url) {
+Error Process::ConnectRemote(Stream *strm, llvm::StringRef remote_url) {
   m_abi_sp.reset();
   m_process_input_reader.reset();
 
   // Find the process and its architecture.  Make sure it matches the
-  // architecture
-  // of the current Target, and if not adjust it.
+  // architecture of the current Target, and if not adjust it.
 
   Error error(DoConnectRemote(strm, remote_url));
   if (error.Success()) {

@@ -92,17 +92,17 @@ bool ConnectionGenericFile::IsConnected() const {
   return m_file && (m_file != INVALID_HANDLE_VALUE);
 }
 
-lldb::ConnectionStatus ConnectionGenericFile::Connect(const char *s,
+lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
                                                       Error *error_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("%p ConnectionGenericFile::Connect (url = '%s')",
-                static_cast<void *>(this), s);
+                static_cast<void *>(this), path.str().c_str());
 
-  if (strstr(s, "file://") != s) {
+  if (!path.consume_front("file://")) {
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("unsupported connection URL: '%s'",
-                                          s);
+                                          path.str().c_str());
     return eConnectionStatusError;
   }
 
@@ -112,13 +112,10 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(const char *s,
       return status;
   }
 
-  // file://PATH
-  const char *path = s + strlen("file://");
   // Open the file for overlapped access.  If it does not exist, create it.  We
-  // open it overlapped
-  // so that we can issue asynchronous reads and then use WaitForMultipleObjects
-  // to allow the read
-  // to be interrupted by an event object.
+  // open it overlapped so that we can issue asynchronous reads and then use
+  // WaitForMultipleObjects to allow the read to be interrupted by an event
+  // object.
   std::wstring wpath;
   if (!llvm::ConvertUTF8toWide(path, wpath)) {
     if (error_ptr)
@@ -135,7 +132,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(const char *s,
   }
 
   m_owns_file = true;
-  m_uri.assign(s);
+  m_uri.assign(path);
   return eConnectionStatusSuccess;
 }
 

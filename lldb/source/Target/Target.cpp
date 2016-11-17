@@ -170,7 +170,7 @@ void Target::DeleteCurrentProcess() {
 }
 
 const lldb::ProcessSP &Target::CreateProcess(ListenerSP listener_sp,
-                                             const char *plugin_name,
+                                             llvm::StringRef plugin_name,
                                              const FileSpec *crash_file) {
   DeleteCurrentProcess();
   m_process_sp = Process::FindPlugin(shared_from_this(), plugin_name,

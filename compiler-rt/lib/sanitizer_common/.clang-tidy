@@ -8,5 +8,9 @@ CheckOptions:
     value:           CamelCase
   - key:             readability-identifier-naming.UnionCase
     value:           CamelCase
+  - key:             readability-identifier-naming.GlobalConstantCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.GlobalConstantPrefix
+    value:           "k"
   - key:             readability-identifier-naming.VariableCase
     value:           lower_case

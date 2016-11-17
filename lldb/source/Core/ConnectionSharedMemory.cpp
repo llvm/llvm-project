@@ -44,7 +44,7 @@ ConnectionSharedMemory::~ConnectionSharedMemory() { Disconnect(nullptr); }
 
 bool ConnectionSharedMemory::IsConnected() const { return m_fd >= 0; }
 
-ConnectionStatus ConnectionSharedMemory::Connect(const char *s,
+ConnectionStatus ConnectionSharedMemory::Connect(llvm::StringRef s,
                                                  Error *error_ptr) {
   //    if (s && s[0])
   //    {
