@@ -180,6 +180,7 @@ else()
     swiftSILOptimizer
     swiftASTSectionImporter
     swiftRemoteAST
+    swiftSyntax
     )
 endif()
 
