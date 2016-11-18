@@ -176,10 +176,24 @@ struct NamedRegionTimer : public TimeRegion {
 /// destroy a TimerGroup object before all of the Timers in it are gone.  A
 /// TimerGroup can be specified for a newly created timer in its constructor.
 class TimerGroup {
+  struct PrintRecord {
+    TimeRecord Time;
+    std::string Name;
+    std::string Description;
+
+    PrintRecord(const PrintRecord &Other) = default;
+    PrintRecord(const TimeRecord &Time, const std::string &Name,
+                const std::string &Description)
+      : Time(Time), Name(Name), Description(Description) {}
+
+    bool operator <(const PrintRecord &Other) const {
+      return Time < Other.Time;
+    }
+  };
   std::string Name;
   std::string Description;
   Timer *FirstTimer = nullptr; ///< First timer in the group.
-  std::vector<std::pair<TimeRecord, std::string>> TimersToPrint;
+  std::vector<PrintRecord> TimersToPrint;
 
   TimerGroup **Prev; ///< Pointer to Next field of previous timergroup in list.
   TimerGroup *Next;  ///< Pointer to next timergroup in list.
@@ -203,11 +217,21 @@ public:
   /// This static method prints all timers and clears them all out.
   static void printAll(raw_ostream &OS);
 
+  /// Ensure global timer group lists are initialized. This function is mostly
+  /// used by the Statistic code to influence the construction and destruction
+  /// order of the global timer lists.
+  static void ConstructTimerLists();
 private:
   friend class Timer;
+  friend void PrintStatisticsJSON(raw_ostream &OS);
   void addTimer(Timer &T);
   void removeTimer(Timer &T);
+  void prepareToPrintList();
   void PrintQueuedTimers(raw_ostream &OS);
+  void printJSONValue(raw_ostream &OS, const PrintRecord &R,
+                      const char *suffix, double Value);
+  const char *printJSONValues(raw_ostream &OS, const char *delim);
+  static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
 };
 
 } // end namespace llvm
