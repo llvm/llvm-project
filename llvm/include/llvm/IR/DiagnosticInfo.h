@@ -496,6 +496,14 @@ public:
       : DiagnosticInfoOptimizationBase(DK_OptimizationRemark, DS_Remark,
                                        PassName, Fn, DLoc, Msg, Hotness) {}
 
+  /// \p PassName is the name of the pass emitting this diagnostic. If this name
+  /// matches the regular expression given in -Rpass=, then the diagnostic will
+  /// be emitted.  \p RemarkName is a textual identifier for the remark.  \p
+  /// DLoc is the debug location and \p CodeRegion is the region that the
+  /// optimization operates on (currently on block is supported).
+  OptimizationRemark(const char *PassName, StringRef RemarkName,
+                     const DebugLoc &DLoc, Value *CodeRegion);
+
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemark;
   }
@@ -524,7 +532,13 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-missed=, then the
   /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p Inst is the instruction that the optimization operates on.
+  /// remark.  \p DLoc is the debug location and \p CodeRegion is the region
+  /// that the optimization operates on (currently on block is supported).
+  OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
+                           const DebugLoc &DLoc, Value *CodeRegion);
+
+  /// \brief Same as above but \p Inst is used to derive code region and debug
+  /// location.
   OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
                            Instruction *Inst);
 
@@ -552,6 +566,13 @@ public:
                              Optional<uint64_t> Hotness = None)
       : DiagnosticInfoOptimizationBase(DK_OptimizationRemarkAnalysis, DS_Remark,
                                        PassName, Fn, DLoc, Msg, Hotness) {}
+
+  /// \p PassName is the name of the pass emitting this diagnostic. If this name
+  /// matches the regular expression given in -Rpass-analysis=, then the
+  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
+  /// remark.  \p Inst is the instruction that the optimization operates on.
+  OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
+                             Instruction *Inst);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkAnalysis;
