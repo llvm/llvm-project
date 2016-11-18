@@ -82,6 +82,10 @@ class Remark(yaml.YAMLObject):
     def RelativeHotness(self):
         return int(round(self.Hotness * 100 / Remark.max_hotness))
 
+    @property
+    def key(self):
+        return (self.__class__, self.Pass, self.Name, self.File, self.Line, self.Column, self.message)
+
 class Analysis(Remark):
     yaml_tag = '!Analysis'
 
@@ -193,7 +197,7 @@ class IndexRenderer:
 </html>''', file=self.stream)
 
 
-all_remarks = []
+all_remarks = dict()
 file_remarks  = dict()
 
 for input_file in args.yaml_files:
@@ -201,11 +205,16 @@ for input_file in args.yaml_files:
     docs = yaml.load_all(f)
     for remark in docs:
         if hasattr(remark, 'Hotness'):
+            # Avoid duplicated remarks
+            if remark.key in all_remarks:
+                continue
+            all_remarks[remark.key] = remark
+
             file_remarks.setdefault(remark.File, dict()).setdefault(remark.Line, []).append(remark);
-            all_remarks.append(remark)
+
             Remark.max_hotness = max(Remark.max_hotness, remark.Hotness)
 
-all_remarks = sorted(all_remarks, key=lambda r: r.Hotness, reverse=True)
+sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: r.Hotness, reverse=True)
 
 if not os.path.exists(args.output_dir):
     os.mkdir(args.output_dir)
@@ -213,6 +222,6 @@ if not os.path.exists(args.output_dir):
 for (filename, remarks) in file_remarks.iteritems():
     SourceFileRenderer(filename).render(remarks)
 
-IndexRenderer().render(all_remarks)
+IndexRenderer().render(sorted_remarks)
 
 shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)), "style.css"), args.output_dir)
