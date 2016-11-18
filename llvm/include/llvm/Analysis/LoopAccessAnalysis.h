@@ -22,7 +22,6 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
@@ -594,7 +593,7 @@ public:
 
   /// \brief The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
-  const OptimizationRemarkAnalysis *getReport() const { return Report.get(); }
+  const Optional<LoopAccessReport> &getReport() const { return Report; }
 
   /// \brief the Memory Dependence Checker which can determine the
   /// loop-independent and loop-carried dependences between memory accesses.
@@ -645,8 +644,7 @@ private:
   /// LAA does not directly emits the remarks.  Instead it stores it which the
   /// client can retrieve and presents as its own analysis
   /// (e.g. -Rpass-analysis=loop-vectorize).
-  OptimizationRemarkAnalysis &recordAnalysis(StringRef RemarkName,
-                                             Instruction *Instr = nullptr);
+  void recordAnalysis(LoopAccessReport &Message);
 
   /// \brief Collect memory access with loop invariant strides.
   ///
@@ -680,7 +678,7 @@ private:
 
   /// \brief The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
-  std::unique_ptr<OptimizationRemarkAnalysis> Report;
+  Optional<LoopAccessReport> Report;
 
   /// \brief If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
