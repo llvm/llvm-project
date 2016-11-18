@@ -77,6 +77,7 @@ class Timer {
   TimeRecord Time;          ///< The total time captured.
   TimeRecord StartTime;     ///< The time startTimer() was last called.
   std::string Name;         ///< The name of this time variable.
+  std::string Description;  ///< Description of this time variable.
   bool Running;             ///< Is the timer currently running?
   bool Triggered;           ///< Has the timer ever been triggered?
   TimerGroup *TG = nullptr; ///< The TimerGroup this Timer is in.
@@ -84,8 +85,12 @@ class Timer {
   Timer **Prev;             ///< Pointer to \p Next of previous timer in group.
   Timer *Next;              ///< Next timer in the group.
 public:
-  explicit Timer(StringRef N) { init(N); }
-  Timer(StringRef N, TimerGroup &tg) { init(N, tg); }
+  explicit Timer(StringRef Name, StringRef Description) {
+    init(Name, Description);
+  }
+  Timer(StringRef Name, StringRef Description, TimerGroup &tg) {
+    init(Name, Description, tg);
+  }
   Timer(const Timer &RHS) {
     assert(!RHS.TG && "Can only copy uninitialized timers");
   }
@@ -97,10 +102,11 @@ public:
 
   /// Create an uninitialized timer, client must use 'init'.
   explicit Timer() {}
-  void init(StringRef N);
-  void init(StringRef N, TimerGroup &tg);
+  void init(StringRef Name, StringRef Description);
+  void init(StringRef Name, StringRef Description, TimerGroup &tg);
 
   const std::string &getName() const { return Name; }
+  const std::string &getDescription() const { return Description; }
   bool isInitialized() const { return TG != nullptr; }
 
   /// Check if the timer is currently running.
@@ -152,8 +158,9 @@ public:
 /// statement.  All timers with the same name are merged.  This is primarily
 /// used for debugging and for hunting performance problems.
 struct NamedRegionTimer : public TimeRegion {
-  explicit NamedRegionTimer(StringRef Name, StringRef GroupName,
-                            bool Enabled = true);
+  explicit NamedRegionTimer(StringRef Name, StringRef Description,
+                            StringRef GroupName,
+                            StringRef GroupDescription, bool Enabled = true);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
@@ -162,6 +169,7 @@ struct NamedRegionTimer : public TimeRegion {
 /// TimerGroup can be specified for a newly created timer in its constructor.
 class TimerGroup {
   std::string Name;
+  std::string Description;
   Timer *FirstTimer = nullptr; ///< First timer in the group.
   std::vector<std::pair<TimeRecord, std::string>> TimersToPrint;
 
@@ -171,10 +179,13 @@ class TimerGroup {
   void operator=(const TimerGroup &TG) = delete;
 
 public:
-  explicit TimerGroup(StringRef name);
+  explicit TimerGroup(StringRef Name, StringRef Description);
   ~TimerGroup();
 
-  void setName(StringRef name) { Name.assign(name.begin(), name.end()); }
+  void setName(StringRef NewName, StringRef NewDescription) {
+    Name.assign(NewName.begin(), NewName.end());
+    Description.assign(NewDescription.begin(), NewDescription.end());
+  }
 
   /// Print any started timers in this group and zero them.
   void print(raw_ostream &OS);
