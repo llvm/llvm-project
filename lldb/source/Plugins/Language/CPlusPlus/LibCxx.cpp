@@ -280,7 +280,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   // die and free their memory
   m_pair_ptr = valobj_sp
                    ->GetValueForExpressionPath(
-                       ".__i_.__ptr_->__value_", nullptr, nullptr,
+                       ".__i_.__ptr_->__value_", nullptr, nullptr, nullptr,
                        ValueObject::GetValueForExpressionPathOptions()
                            .DontCheckDotVsArrowSyntax()
                            .SetSyntheticChildrenTraversal(
@@ -288,18 +288,16 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
                                    SyntheticChildrenTraversal::None),
                        nullptr)
                    .get();
-
+  
   if (!m_pair_ptr) {
-    m_pair_ptr = valobj_sp
-                     ->GetValueForExpressionPath(
-                         ".__i_.__ptr_", nullptr, nullptr,
-                         ValueObject::GetValueForExpressionPathOptions()
-                             .DontCheckDotVsArrowSyntax()
-                             .SetSyntheticChildrenTraversal(
-                                 ValueObject::GetValueForExpressionPathOptions::
-                                     SyntheticChildrenTraversal::None),
-                         nullptr)
-                     .get();
+    m_pair_ptr = valobj_sp->GetValueForExpressionPath(".__i_.__ptr_", nullptr, nullptr, nullptr,
+                                                      ValueObject::GetValueForExpressionPathOptions()
+                                                      .DontCheckDotVsArrowSyntax()
+                                                      .SetSyntheticChildrenTraversal(
+                                                                                     ValueObject::GetValueForExpressionPathOptions::
+                                                                                     SyntheticChildrenTraversal::None),
+                                                      nullptr)
+    .get();
     if (m_pair_ptr) {
       auto __i_(valobj_sp->GetChildMemberWithName(g___i_, true));
       lldb::TemplateArgumentKind kind;

@@ -11,7 +11,6 @@
 #define LLD_ELF_SYNTHETIC_SECTION_H
 
 #include "InputSection.h"
-#include "OutputSections.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace lld {
@@ -401,6 +400,11 @@ private:
   std::vector<DynamicReloc<ELFT>> Relocs;
 };
 
+struct SymbolTableEntry {
+  SymbolBody *Symbol;
+  size_t StrTabOffset;
+};
+
 template <class ELFT>
 class SymbolTableSection final : public SyntheticSection<ELFT> {
 public:
@@ -432,6 +436,60 @@ private:
   std::vector<SymbolTableEntry> Symbols;
 };
 
+// Outputs GNU Hash section. For detailed explanation see:
+// https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
+template <class ELFT>
+class GnuHashTableSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::Off Elf_Off;
+  typedef typename ELFT::Word Elf_Word;
+  typedef typename ELFT::uint uintX_t;
+
+public:
+  GnuHashTableSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return this->Size; }
+
+  // Adds symbols to the hash table.
+  // Sorts the input to satisfy GNU hash section requirements.
+  void addSymbols(std::vector<SymbolTableEntry> &Symbols);
+
+private:
+  static unsigned calcNBuckets(unsigned NumHashed);
+  static unsigned calcMaskWords(unsigned NumHashed);
+
+  void writeHeader(uint8_t *&Buf);
+  void writeBloomFilter(uint8_t *&Buf);
+  void writeHashTable(uint8_t *Buf);
+
+  struct SymbolData {
+    SymbolBody *Body;
+    size_t STName;
+    uint32_t Hash;
+  };
+
+  std::vector<SymbolData> Symbols;
+
+  unsigned MaskWords;
+  unsigned NBuckets;
+  unsigned Shift2;
+  uintX_t Size = 0;
+};
+
+template <class ELFT>
+class HashTableSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::Word Elf_Word;
+
+public:
+  HashTableSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return this->Size; }
+
+private:
+  size_t Size = 0;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -443,9 +501,11 @@ template <class ELFT> struct In {
   static DynamicSection<ELFT> *Dynamic;
   static StringTableSection<ELFT> *DynStrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
+  static GnuHashTableSection<ELFT> *GnuHashTab;
   static GotSection<ELFT> *Got;
   static MipsGotSection<ELFT> *MipsGot;
   static GotPltSection<ELFT> *GotPlt;
+  static HashTableSection<ELFT> *HashTab;
   static InputSection<ELFT> *Interp;
   static MipsAbiFlagsSection<ELFT> *MipsAbiFlags;
   static MipsOptionsSection<ELFT> *MipsOptions;
@@ -462,9 +522,11 @@ template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::DynStrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
+template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
 template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
+template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
 template <class ELFT> MipsAbiFlagsSection<ELFT> *In<ELFT>::MipsAbiFlags;
 template <class ELFT> MipsOptionsSection<ELFT> *In<ELFT>::MipsOptions;

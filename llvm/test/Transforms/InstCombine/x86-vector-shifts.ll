@@ -1762,6 +1762,116 @@ define <8 x i64> @avx512_psrav_q_512_undef(<8 x i64> %v) {
   ret <8 x i64> %2
 }
 
+define <8 x i16> @avx512_psrav_w_128_0(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_128_0(
+; CHECK-NEXT:    ret <8 x i16> %v
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psrav.w.128(<8 x i16> %v, <8 x i16> zeroinitializer)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psrav_w_128_var(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_128_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psrav.w.128(<8 x i16> %v, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psrav_w_128_allbig(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_128_allbig(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> %v, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 undef>
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psrav.w.128(<8 x i16> %v, <8 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 undef>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psrav_w_128_undef(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_128_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = insertelement <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, i16 undef, i64 0
+  %2 = tail call <8 x i16> @llvm.x86.avx512.psrav.w.128(<8 x i16> %v, <8 x i16> %1)
+  ret <8 x i16> %2
+}
+
+define <16 x i16> @avx512_psrav_w_256_0(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_256_0(
+; CHECK-NEXT:    ret <16 x i16> %v
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psrav.w.256(<16 x i16> %v, <16 x i16> zeroinitializer)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psrav_w_256_var(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_256_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psrav.w.256(<16 x i16> %v, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psrav_w_256_allbig(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_256_allbig(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> %v, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 undef, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psrav.w.256(<16 x i16> %v, <16 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 -7, i16 undef, i16 64, i16 -10, i16 256, i16 16, i16 28, i16 65535, i16 32767>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psrav_w_256_undef(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_256_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = insertelement <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, i16 undef, i64 0
+  %2 = tail call <16 x i16> @llvm.x86.avx512.psrav.w.256(<16 x i16> %v, <16 x i16> %1)
+  ret <16 x i16> %2
+}
+
+define <32 x i16> @avx512_psrav_w_512_0(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_512_0(
+; CHECK-NEXT:    ret <32 x i16> %v
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psrav.w.512(<32 x i16> %v, <32 x i16> zeroinitializer)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psrav_w_512_var(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_512_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psrav.w.512(<32 x i16> %v, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psrav_w_512_allbig(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_512_allbig(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> %v, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 undef, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 undef, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 undef, i16 15, i16 15, i16 undef, i16 15, i16 15>
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psrav.w.512(<32 x i16> %v, <32 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 -7, i16 undef, i16 64, i16 -10, i16 128, i16 16, i16 28, i16 65535, i16 32767, i16 56, i16 -14, i16 undef, i16 16, i16 67, i16 567, i16 -32768, i16 4096, i16 8192, i16 -12345, i16 undef, i16 345, i16 123, i16 undef, i16 1024, i16 54321>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psrav_w_512_undef(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrav_w_512_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = insertelement <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, i16 undef, i64 0
+  %2 = tail call <32 x i16> @llvm.x86.avx512.psrav.w.512(<32 x i16> %v, <32 x i16> %1)
+  ret <32 x i16> %2
+}
+
 ;
 ; LSHR - Constant Per-Element Vector
 ;
@@ -2030,6 +2140,138 @@ define <8 x i64> @avx512_psrlv_q_512_undef(<8 x i64> %v) {
   ret <8 x i64> %2
 }
 
+define <8 x i16> @avx512_psrlv_w_128_0(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_128_0(
+; CHECK-NEXT:    ret <8 x i16> %v
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psrlv.w.128(<8 x i16> %v, <8 x i16> zeroinitializer)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psrlv_w_128_var(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_128_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psrlv.w.128(<8 x i16> %v, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psrlv_w_128_big(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_128_big(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.x86.avx512.psrlv.w.128(<8 x i16> %v, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 16>)
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psrlv.w.128(<8 x i16> %v, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 16>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psrlv_w_128_allbig(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_128_allbig(
+; CHECK-NEXT:    ret <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef>
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psrlv.w.128(<8 x i16> %v, <8 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 undef>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psrlv_w_128_undef(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_128_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = insertelement <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, i16 undef, i64 0
+  %2 = tail call <8 x i16> @llvm.x86.avx512.psrlv.w.128(<8 x i16> %v, <8 x i16> %1)
+  ret <8 x i16> %2
+}
+
+define <16 x i16> @avx512_psrlv_w_256_0(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_256_0(
+; CHECK-NEXT:    ret <16 x i16> %v
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psrlv.w.256(<16 x i16> %v, <16 x i16> zeroinitializer)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psrlv_w_256_var(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_256_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psrlv.w.256(<16 x i16> %v, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psrlv_w_256_big(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_256_big(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.x86.avx512.psrlv.w.256(<16 x i16> %v, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 16>)
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psrlv.w.256(<16 x i16> %v, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 16>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psrlv_w_256_allbig(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_256_allbig(
+; CHECK-NEXT:    ret <16 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psrlv.w.256(<16 x i16> %v, <16 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 -7, i16 undef, i16 64, i16 -10, i16 256, i16 16, i16 28, i16 65535, i16 32767>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psrlv_w_256_undef(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_256_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = insertelement <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, i16 undef, i64 0
+  %2 = tail call <16 x i16> @llvm.x86.avx512.psrlv.w.256(<16 x i16> %v, <16 x i16> %1)
+  ret <16 x i16> %2
+}
+
+define <32 x i16> @avx512_psrlv_w_512_0(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_512_0(
+; CHECK-NEXT:    ret <32 x i16> %v
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psrlv.w.512(<32 x i16> %v, <32 x i16> zeroinitializer)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psrlv_w_512_var(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_512_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <32 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psrlv.w.512(<32 x i16> %v, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psrlv_w_512_big(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_512_big(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i16> @llvm.x86.avx512.psrlv.w.512(<32 x i16> %v, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>)
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psrlv.w.512(<32 x i16> %v, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psrlv_w_512_allbig(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_512_allbig(
+; CHECK-NEXT:    ret <32 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 undef, i16 0, i16 0>
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psrlv.w.512(<32 x i16> %v, <32 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 -7, i16 undef, i16 64, i16 -10, i16 128, i16 16, i16 28, i16 65535, i16 32767, i16 56, i16 -14, i16 undef, i16 16, i16 67, i16 567, i16 -32768, i16 4096, i16 8192, i16 -12345, i16 undef, i16 345, i16 123, i16 undef, i16 1024, i16 54321>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psrlv_w_512_undef(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psrlv_w_512_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <32 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = insertelement <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, i16 undef, i64 0
+  %2 = tail call <32 x i16> @llvm.x86.avx512.psrlv.w.512(<32 x i16> %v, <32 x i16> %1)
+  ret <32 x i16> %2
+}
+
 ;
 ; SHL - Constant Per-Element Vector
 ;
@@ -2296,6 +2538,138 @@ define <8 x i64> @avx512_psllv_q_512_undef(<8 x i64> %v) {
   %1 = insertelement <8 x i64> <i64 0, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>, i64 undef, i64 0
   %2 = tail call <8 x i64> @llvm.x86.avx512.psllv.q.512(<8 x i64> %v, <8 x i64> %1)
   ret <8 x i64> %2
+}
+
+define <8 x i16> @avx512_psllv_w_128_0(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_128_0(
+; CHECK-NEXT:    ret <8 x i16> %v
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psllv.w.128(<8 x i16> %v, <8 x i16> zeroinitializer)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psllv_w_128_var(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_128_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psllv.w.128(<8 x i16> %v, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psllv_w_128_big(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_128_big(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.x86.avx512.psllv.w.128(<8 x i16> %v, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 16>)
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psllv.w.128(<8 x i16> %v, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 16>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psllv_w_128_allbig(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_128_allbig(
+; CHECK-NEXT:    ret <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef>
+;
+  %1 = tail call <8 x i16> @llvm.x86.avx512.psllv.w.128(<8 x i16> %v, <8 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 undef>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @avx512_psllv_w_128_undef(<8 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_128_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = insertelement <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, i16 undef, i64 0
+  %2 = tail call <8 x i16> @llvm.x86.avx512.psllv.w.128(<8 x i16> %v, <8 x i16> %1)
+  ret <8 x i16> %2
+}
+
+define <16 x i16> @avx512_psllv_w_256_0(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_256_0(
+; CHECK-NEXT:    ret <16 x i16> %v
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psllv.w.256(<16 x i16> %v, <16 x i16> zeroinitializer)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psllv_w_256_var(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_256_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psllv.w.256(<16 x i16> %v, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psllv_w_256_big(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_256_big(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.x86.avx512.psllv.w.256(<16 x i16> %v, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 16>)
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psllv.w.256(<16 x i16> %v, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 16>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psllv_w_256_allbig(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_256_allbig(
+; CHECK-NEXT:    ret <16 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+;
+  %1 = tail call <16 x i16> @llvm.x86.avx512.psllv.w.256(<16 x i16> %v, <16 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 -7, i16 undef, i16 64, i16 -10, i16 256, i16 16, i16 28, i16 65535, i16 32767>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @avx512_psllv_w_256_undef(<16 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_256_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = insertelement <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, i16 undef, i64 0
+  %2 = tail call <16 x i16> @llvm.x86.avx512.psllv.w.256(<16 x i16> %v, <16 x i16> %1)
+  ret <16 x i16> %2
+}
+
+define <32 x i16> @avx512_psllv_w_512_0(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_512_0(
+; CHECK-NEXT:    ret <32 x i16> %v
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psllv.w.512(<32 x i16> %v, <32 x i16> zeroinitializer)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psllv_w_512_var(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_512_var(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <32 x i16> %v, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psllv.w.512(<32 x i16> %v, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psllv_w_512_big(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_512_big(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i16> @llvm.x86.avx512.psllv.w.512(<32 x i16> %v, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>)
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psllv.w.512(<32 x i16> %v, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psllv_w_512_allbig(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_512_allbig(
+; CHECK-NEXT:    ret <32 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 undef, i16 0, i16 0>
+;
+  %1 = tail call <32 x i16> @llvm.x86.avx512.psllv.w.512(<32 x i16> %v, <32 x i16> <i16 20, i16 -1, i16 -2, i16 33, i16 44, i16 55, i16 66, i16 -7, i16 undef, i16 64, i16 -10, i16 128, i16 16, i16 28, i16 65535, i16 32767, i16 56, i16 -14, i16 undef, i16 16, i16 67, i16 567, i16 -32768, i16 4096, i16 8192, i16 -12345, i16 undef, i16 345, i16 123, i16 undef, i16 1024, i16 54321>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @avx512_psllv_w_512_undef(<32 x i16> %v) {
+; CHECK-LABEL: @avx512_psllv_w_512_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <32 x i16> %v, <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = insertelement <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, i16 undef, i64 0
+  %2 = tail call <32 x i16> @llvm.x86.avx512.psllv.w.512(<32 x i16> %v, <32 x i16> %1)
+  ret <32 x i16> %2
 }
 
 ;
@@ -3046,5 +3420,15 @@ declare <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64>, <2 x i64>) #1
 declare <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64>, <4 x i64>) #1
 declare <16 x i32> @llvm.x86.avx512.psllv.d.512(<16 x i32>, <16 x i32>) #1
 declare <8 x i64> @llvm.x86.avx512.psllv.q.512(<8 x i64>, <8 x i64>) #1
+
+declare <8 x i16> @llvm.x86.avx512.psrav.w.128(<8 x i16>, <8 x i16>) #1
+declare <16 x i16> @llvm.x86.avx512.psrav.w.256(<16 x i16>, <16 x i16>) #1
+declare <32 x i16> @llvm.x86.avx512.psrav.w.512(<32 x i16>, <32 x i16>) #1
+declare <8 x i16> @llvm.x86.avx512.psrlv.w.128(<8 x i16>, <8 x i16>) #1
+declare <16 x i16> @llvm.x86.avx512.psrlv.w.256(<16 x i16>, <16 x i16>) #1
+declare <32 x i16> @llvm.x86.avx512.psrlv.w.512(<32 x i16>, <32 x i16>) #1
+declare <8 x i16> @llvm.x86.avx512.psllv.w.128(<8 x i16>, <8 x i16>) #1
+declare <16 x i16> @llvm.x86.avx512.psllv.w.256(<16 x i16>, <16 x i16>) #1
+declare <32 x i16> @llvm.x86.avx512.psllv.w.512(<32 x i16>, <32 x i16>) #1
 
 attributes #1 = { nounwind readnone }

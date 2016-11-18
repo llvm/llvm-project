@@ -417,7 +417,7 @@ define i32 @fcopysign(i32 %arg) {
   ; SSE42: cost of 8 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
   ; AVX: cost of 4 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
   ; AVX2: cost of 4 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
-  ; AVX512: cost of 77 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
+  ; AVX512: cost of 2 {{.*}} %V16F32 = call <16 x float> @llvm.copysign.v16f32
   %V16F32 = call <16 x float> @llvm.copysign.v16f32(<16 x float> undef, <16 x float> undef)
 
   ; SSE2: cost of 2 {{.*}} %F64 = call double @llvm.copysign.f64
@@ -442,7 +442,7 @@ define i32 @fcopysign(i32 %arg) {
   ; SSE42: cost of 8 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
   ; AVX: cost of 4 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
   ; AVX2: cost of 4 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
-  ; AVX512: cost of 37 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
+  ; AVX512: cost of 2 {{.*}} %V8F64 = call <8 x double> @llvm.copysign.v8f64
   %V8F64 = call <8 x double> @llvm.copysign.v8f64(<8 x double> undef, <8 x double> undef)
 
   ret i32 undef

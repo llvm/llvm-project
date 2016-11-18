@@ -44,8 +44,6 @@ public:
     Base,
     EHFrame,
     EHFrameHdr,
-    GnuHashTable,
-    HashTable,
     Merge,
     Plt,
     Regular,
@@ -148,11 +146,6 @@ public:
 
 private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
-};
-
-struct SymbolTableEntry {
-  SymbolBody *Symbol;
-  size_t StrTabOffset;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -323,61 +316,6 @@ private:
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;
 };
 
-template <class ELFT> class HashTableSection final : public OutputSectionBase {
-  typedef typename ELFT::Word Elf_Word;
-
-public:
-  HashTableSection();
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-  Kind getKind() const override { return HashTable; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == HashTable;
-  }
-};
-
-// Outputs GNU Hash section. For detailed explanation see:
-// https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
-template <class ELFT>
-class GnuHashTableSection final : public OutputSectionBase {
-  typedef typename ELFT::Off Elf_Off;
-  typedef typename ELFT::Word Elf_Word;
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  GnuHashTableSection();
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-
-  // Adds symbols to the hash table.
-  // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<SymbolTableEntry> &Symbols);
-  Kind getKind() const override { return GnuHashTable; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == GnuHashTable;
-  }
-
-private:
-  static unsigned calcNBuckets(unsigned NumHashed);
-  static unsigned calcMaskWords(unsigned NumHashed);
-
-  void writeHeader(uint8_t *&Buf);
-  void writeBloomFilter(uint8_t *&Buf);
-  void writeHashTable(uint8_t *Buf);
-
-  struct SymbolData {
-    SymbolBody *Body;
-    size_t STName;
-    uint32_t Hash;
-  };
-
-  std::vector<SymbolData> Symbols;
-
-  unsigned MaskWords;
-  unsigned NBuckets;
-  unsigned Shift2;
-};
-
 // --eh-frame-hdr option tells linker to construct a header for all the
 // .eh_frame sections. This header is placed to a section named .eh_frame_hdr
 // and also to a PT_GNU_EH_FRAME segment.
@@ -420,8 +358,6 @@ template <class ELFT> struct Out {
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhOutputSection<ELFT> *EhFrame;
   static GdbIndexSection<ELFT> *GdbIndex;
-  static GnuHashTableSection<ELFT> *GnuHashTab;
-  static HashTableSection<ELFT> *HashTab;
   static OutputSection<ELFT> *Bss;
   static OutputSection<ELFT> *MipsRldMap;
   static OutputSectionBase *Opd;
@@ -476,8 +412,6 @@ template <class ELFT> uint8_t Out<ELFT>::First;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> GdbIndexSection<ELFT> *Out<ELFT>::GdbIndex;
-template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
-template <class ELFT> HashTableSection<ELFT> *Out<ELFT>::HashTab;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;

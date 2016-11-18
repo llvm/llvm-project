@@ -404,8 +404,16 @@ Error Variable::GetValuesForVariableExpressionPath(
                   const char *variable_sub_expr_path =
                       variable_expr_path + variable_name.size();
                   if (*variable_sub_expr_path) {
+                    const char *first_unparsed = nullptr;
+                    ValueObject::ExpressionPathScanEndReason reason_to_stop;
+                    ValueObject::ExpressionPathEndResultType final_value_type;
+                    ValueObject::GetValueForExpressionPathOptions options;
+                    ValueObject::ExpressionPathAftermath final_task_on_target;
+
                     valobj_sp = variable_valobj_sp->GetValueForExpressionPath(
-                        variable_sub_expr_path);
+                        variable_sub_expr_path, &first_unparsed,
+                        &reason_to_stop, &final_value_type, options,
+                        &final_task_on_target);
                     if (!valobj_sp) {
                       error.SetErrorStringWithFormat(
                           "invalid expression path '%s' for variable '%s'",

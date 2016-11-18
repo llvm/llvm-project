@@ -55,7 +55,7 @@ struct Expr {
        std::function<const OutputSectionBase *()> Section)
       : Val(Val), IsAbsolute(IsAbsolute), Section(Section) {}
   template <typename T>
-  Expr(T V) : Expr(V, []() { return true; }, []() { return nullptr; }) {}
+  Expr(T V) : Expr(V, [] { return true; }, [] { return nullptr; }) {}
   Expr() : Expr(nullptr) {}
 };
 

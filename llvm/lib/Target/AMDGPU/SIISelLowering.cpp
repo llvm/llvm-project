@@ -4172,6 +4172,8 @@ std::pair<unsigned, const TargetRegisterClass *>
 SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                StringRef Constraint,
                                                MVT VT) const {
+  if (!isTypeLegal(VT))
+    return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
