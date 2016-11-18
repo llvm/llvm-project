@@ -213,6 +213,32 @@ static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
     cl::desc("The maximum number of SCEV checks allowed with a "
              "vectorize(enable) pragma"));
 
+/// Create an analysis remark that explains why vectorization failed
+///
+/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
+/// RemarkName is the identifier for the remark.  If \p I is passed it is an
+/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
+/// the location of the remark.  \return the remark object that can be
+/// streamed to.
+static OptimizationRemarkAnalysis
+createMissedAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
+                     Instruction *I = nullptr) {
+  Value *CodeRegion = TheLoop->getHeader();
+  DebugLoc DL = TheLoop->getStartLoc();
+
+  if (I) {
+    CodeRegion = I->getParent();
+    // If there is no debug location attached to the instruction, revert back to
+    // using the loop's.
+    if (I->getDebugLoc())
+      DL = I->getDebugLoc();
+  }
+
+  OptimizationRemarkAnalysis R(PassName, RemarkName, DL, CodeRegion);
+  R << "loop not vectorized: ";
+  return R;
+}
+
 namespace {
 
 // Forward declarations.
@@ -294,32 +320,6 @@ static bool hasCyclesInLoopBody(const Loop &L) {
     }
   }
   return false;
-}
-
-/// Create an analysis remark that explains why vectorization failed
-///
-/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
-/// RemarkName is the identifier for the remark.  If \p I is passed it is an
-/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
-/// the location of the remark.  \return the remark object that can be
-/// streamed to.
-static OptimizationRemarkAnalysis
-createMissedAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
-                     Instruction *I = nullptr) {
-  Value *CodeRegion = TheLoop->getHeader();
-  DebugLoc DL = TheLoop->getStartLoc();
-
-  if (I) {
-    CodeRegion = I->getParent();
-    // If there is no debug location attached to the instruction, revert back to
-    // using the loop's.
-    if (I->getDebugLoc())
-      DL = I->getDebugLoc();
-  }
-
-  OptimizationRemarkAnalysis R(PassName, RemarkName, DL, CodeRegion);
-  R << "loop not vectorized: ";
-  return R;
 }
 
 /// \brief This modifies LoopAccessReport to initialize message with
