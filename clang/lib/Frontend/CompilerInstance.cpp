@@ -516,9 +516,11 @@ void CompilerInstance::createCodeCompletionConsumer() {
 }
 
 void CompilerInstance::createFrontendTimer() {
-  FrontendTimerGroup.reset(new llvm::TimerGroup("Clang front-end time report"));
+  FrontendTimerGroup.reset(
+      new llvm::TimerGroup("frontend", "Clang front-end time report"));
   FrontendTimer.reset(
-      new llvm::Timer("Clang front-end timer", *FrontendTimerGroup));
+      new llvm::Timer("frontend", "Clang front-end timer",
+                      *FrontendTimerGroup));
 }
 
 CodeCompleteConsumer *
@@ -1332,7 +1334,8 @@ void CompilerInstance::createModuleManager() {
     const PreprocessorOptions &PPOpts = getPreprocessorOpts();
     std::unique_ptr<llvm::Timer> ReadTimer;
     if (FrontendTimerGroup)
-      ReadTimer = llvm::make_unique<llvm::Timer>("Reading modules",
+      ReadTimer = llvm::make_unique<llvm::Timer>("reading_modules",
+                                                 "Reading modules",
                                                  *FrontendTimerGroup);
     ModuleManager = new ASTReader(
         getPreprocessor(), getASTContext(), getPCHContainerReader(),
@@ -1365,7 +1368,8 @@ void CompilerInstance::createModuleManager() {
 bool CompilerInstance::loadModuleFile(StringRef FileName) {
   llvm::Timer Timer;
   if (FrontendTimerGroup)
-    Timer.init("Preloading " + FileName.str(), *FrontendTimerGroup);
+    Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
+               *FrontendTimerGroup);
   llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
 
   // Helper to recursively read the module names for all modules we're adding.
@@ -1517,7 +1521,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
     llvm::Timer Timer;
     if (FrontendTimerGroup)
-      Timer.init("Loading " + ModuleFileName, *FrontendTimerGroup);
+      Timer.init("loading." + ModuleFileName, "Loading " + ModuleFileName,
+                 *FrontendTimerGroup);
     llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
 
     // Try to load the module file. If we are trying to load from the prebuilt
