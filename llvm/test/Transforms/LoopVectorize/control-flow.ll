@@ -11,7 +11,7 @@
 ; }
 
 ; CHECK: remark: source.cpp:5:9: loop not vectorized: loop control flow is not understood by vectorizer
-; CHECK: remark: source.cpp:5:9: loop not vectorized: use -Rpass-analysis=loop-vectorize for more info
+; CHECK: remark: source.cpp:5:9: loop not vectorized
 
 ; CHECK: _Z4testPii
 ; CHECK-NOT: x i32>

@@ -1261,8 +1261,7 @@ public:
     else {
       OptimizationRemarkMissed R(LV_NAME, "MissedDetails",
                                  TheLoop->getStartLoc(), TheLoop->getHeader());
-      R << "loop not vectorized: use -Rpass-analysis=loop-vectorize for more "
-           "info";
+      R << "loop not vectorized";
       if (Force.Value == LoopVectorizeHints::FK_Enabled) {
         R << " (Force=" << NV("Force", true);
         if (Width.Value != 0)
