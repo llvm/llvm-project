@@ -10,6 +10,7 @@ The tools requires PyYAML and Pygments Python packages.'''
 import yaml
 import argparse
 import os.path
+import re
 import subprocess
 import shutil
 from pygments import highlight
@@ -150,19 +151,23 @@ class SourceFileRenderer:
 <td>{html_line}</td>
 </tr>'''.format(**locals()), file=self.stream)
 
-    def render_inline_remarks(self, r):
+    def render_inline_remarks(self, r, line):
         inlining_context = r.DemangledFunctionName
         dl = Remark.caller_loc.get(r.Function)
         if dl:
             link = Remark.make_link(dl['File'], dl['Line'] - 2)
             inlining_context = "<a href={link}>{r.DemangledFunctionName}</a>".format(**locals())
 
+        # Column is the number of characters *including* tabs, keep those and
+        # replace everything else with spaces.
+        indent = line[:r.Column - 1]
+        indent = re.sub('\S', ' ', indent)
         print('''
 <tr>
 <td></td>
 <td>{r.RelativeHotness}%</td>
 <td class=\"column-entry-{r.color}\">{r.Pass}</td>
-<td class=\"column-entry-yellow\">{r.message}</td>
+<td><pre style="display:inline">{indent}</pre><span class=\"column-entry-yellow\"> {r.message}&nbsp;</span></td>
 <td class=\"column-entry-yellow\">{inlining_context}</td>
 </tr>'''.format(**locals()), file=self.stream)
 
@@ -188,7 +193,7 @@ class SourceFileRenderer:
         for (linenum, line) in enumerate(self.source_stream.readlines(), start=1):
             self.render_source_line(linenum, line)
             for remark in line_remarks.get(linenum, []):
-                self.render_inline_remarks(remark)
+                self.render_inline_remarks(remark, line)
         print('''
 </table>
 </body>
