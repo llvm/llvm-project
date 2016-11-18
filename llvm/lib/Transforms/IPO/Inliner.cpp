@@ -238,11 +238,6 @@ static bool InlineCallIfPossible(
   return true;
 }
 
-static void emitAnalysis(CallSite CS, OptimizationRemarkEmitter &ORE,
-                         const Twine &Msg) {
-  ORE.emitOptimizationRemarkAnalysis(DEBUG_TYPE, CS.getInstruction(), Msg);
-}
-
 /// Return true if inlining of CS can block the caller from being
 /// inlined which is proved to be more beneficial. \p IC is the
 /// estimated inline cost associated with callsite \p CS.
@@ -324,21 +319,26 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
 static bool shouldInline(CallSite CS,
                          function_ref<InlineCost(CallSite CS)> GetInlineCost,
                          OptimizationRemarkEmitter &ORE) {
+  using namespace ore;
   InlineCost IC = GetInlineCost(CS);
+  Instruction *Call = CS.getInstruction();
+  Function *Callee = CS.getCalledFunction();
 
   if (IC.isAlways()) {
     DEBUG(dbgs() << "    Inlining: cost=always"
                  << ", Call: " << *CS.getInstruction() << "\n");
-    emitAnalysis(CS, ORE, Twine(CS.getCalledFunction()->getName()) +
-                              " should always be inlined (cost=always)");
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AlwaysInline", Call)
+             << NV("Callee", Callee)
+             << " should always be inlined (cost=always)");
     return true;
   }
 
   if (IC.isNever()) {
     DEBUG(dbgs() << "    NOT Inlining: cost=never"
                  << ", Call: " << *CS.getInstruction() << "\n");
-    emitAnalysis(CS, ORE, Twine(CS.getCalledFunction()->getName() +
-                                " should never be inlined (cost=never)"));
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "NeverInline", Call)
+             << NV("Callee", Callee)
+             << " should never be inlined (cost=never)");
     return false;
   }
 
@@ -347,10 +347,10 @@ static bool shouldInline(CallSite CS,
     DEBUG(dbgs() << "    NOT Inlining: cost=" << IC.getCost()
                  << ", thres=" << (IC.getCostDelta() + IC.getCost())
                  << ", Call: " << *CS.getInstruction() << "\n");
-    emitAnalysis(CS, ORE, Twine(CS.getCalledFunction()->getName() +
-                                " too costly to inline (cost=") +
-                              Twine(IC.getCost()) + ", threshold=" +
-                              Twine(IC.getCostDelta() + IC.getCost()) + ")");
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "TooCostly", Call)
+             << NV("Callee", Callee) << " too costly to inline (cost="
+             << NV("Cost", IC.getCost()) << ", threshold="
+             << NV("Threshold", IC.getCostDelta() + IC.getCost()) << ")");
     return false;
   }
 
@@ -359,22 +359,22 @@ static bool shouldInline(CallSite CS,
     DEBUG(dbgs() << "    NOT Inlining: " << *CS.getInstruction()
                  << " Cost = " << IC.getCost()
                  << ", outer Cost = " << TotalSecondaryCost << '\n');
-    emitAnalysis(CS, ORE,
-                 Twine("Not inlining. Cost of inlining " +
-                       CS.getCalledFunction()->getName() +
-                       " increases the cost of inlining " +
-                       CS.getCaller()->getName() + " in other contexts"));
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE,
+                                        "IncreaseCostInOtherContexts", Call)
+             << "Not inlining. Cost of inlining " << NV("Callee", Callee)
+             << " increases the cost of inlining " << NV("Caller", Caller)
+             << " in other contexts");
     return false;
   }
 
   DEBUG(dbgs() << "    Inlining: cost=" << IC.getCost()
                << ", thres=" << (IC.getCostDelta() + IC.getCost())
                << ", Call: " << *CS.getInstruction() << '\n');
-  emitAnalysis(CS, ORE, CS.getCalledFunction()->getName() +
-                            Twine(" can be inlined into ") +
-                            CS.getCaller()->getName() + " with cost=" +
-                            Twine(IC.getCost()) + " (threshold=" +
-                            Twine(IC.getCostDelta() + IC.getCost()) + ")");
+  ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "CanBeInlined", Call)
+           << NV("Callee", Callee) << " can be inlined into "
+           << NV("Caller", Caller) << " with cost=" << NV("Cost", IC.getCost())
+           << " (threshold="
+           << NV("Threshold", IC.getCostDelta() + IC.getCost()) << ")");
   return true;
 }
 
@@ -435,9 +435,10 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
   for (CallGraphNode *Node : SCC) {
     Function *F = Node->getFunction();
-    if (!F)
+    if (!F || F->isDeclaration())
       continue;
 
+    OptimizationRemarkEmitter ORE(F);
     for (BasicBlock &BB : *F)
       for (Instruction &I : BB) {
         CallSite CS(cast<Value>(&I));
@@ -450,8 +451,15 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         // it.  If it is an indirect call, inlining may resolve it to be a
         // direct call, so we keep it.
         if (Function *Callee = CS.getCalledFunction())
-          if (Callee->isDeclaration())
+          if (Callee->isDeclaration()) {
+            using namespace ore;
+            ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "NoDefinition", &I)
+                     << NV("Callee", Callee) << " will not be inlined into "
+                     << NV("Caller", CS.getCaller())
+                     << " because its definition is unavailable"
+                     << setIsVerbose());
             continue;
+          }
 
         CallSites.push_back(std::make_pair(CS, -1));
       }
@@ -525,11 +533,12 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
         // If the policy determines that we should inline this function,
         // try to do so.
+        using namespace ore;
         if (!shouldInline(CS, GetInlineCost, ORE)) {
-          ORE.emitOptimizationRemarkMissed(DEBUG_TYPE, DLoc, Block,
-                                           Twine(Callee->getName() +
-                                                 " will not be inlined into " +
-                                                 Caller->getName()));
+          ORE.emit(
+              OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+              << NV("Callee", Callee) << " will not be inlined into "
+              << NV("Caller", Caller));
           continue;
         }
 
@@ -537,18 +546,18 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         if (!InlineCallIfPossible(CS, InlineInfo, InlinedArrayAllocas,
                                   InlineHistoryID, InsertLifetime, AARGetter,
                                   ImportedFunctionsStats)) {
-          ORE.emitOptimizationRemarkMissed(DEBUG_TYPE, DLoc, Block,
-                                           Twine(Callee->getName() +
-                                                 " will not be inlined into " +
-                                                 Caller->getName()));
+          ORE.emit(
+              OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+              << NV("Callee", Callee) << " will not be inlined into "
+              << NV("Caller", Caller));
           continue;
         }
         ++NumInlined;
 
         // Report the inline decision.
-        ORE.emitOptimizationRemark(
-            DEBUG_TYPE, DLoc, Block,
-            Twine(Callee->getName() + " inlined into " + Caller->getName()));
+        ORE.emit(OptimizationRemark(DEBUG_TYPE, "Inlined", DLoc, Block)
+                 << NV("Callee", Callee) << " inlined into "
+                 << NV("Caller", Caller));
 
         // If inlining this function gave us any new call sites, throw them
         // onto our worklist to process.  They are useful inline candidates.

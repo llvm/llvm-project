@@ -812,10 +812,11 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
       }
       if (UP.Count < 2) {
         if (PragmaEnableUnroll)
-          ORE->emitOptimizationRemarkMissed(
-              DEBUG_TYPE, L,
-              "Unable to unroll loop as directed by unroll(enable) pragma "
-              "because unrolled size is too large.");
+          ORE->emit(
+              OptimizationRemarkMissed(DEBUG_TYPE, "UnrollAsDirectedTooLarge",
+                                       L->getStartLoc(), L->getHeader())
+              << "Unable to unroll loop as directed by unroll(enable) pragma "
+                 "because unrolled size is too large.");
         UP.Count = 0;
       }
     } else {
@@ -823,19 +824,22 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     }
     if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
         UP.Count != TripCount)
-      ORE->emitOptimizationRemarkMissed(
-          DEBUG_TYPE, L,
-          "Unable to fully unroll loop as directed by unroll pragma because "
-          "unrolled size is too large.");
+      ORE->emit(
+          OptimizationRemarkMissed(DEBUG_TYPE, "FullUnrollAsDirectedTooLarge",
+                                   L->getStartLoc(), L->getHeader())
+          << "Unable to fully unroll loop as directed by unroll pragma because "
+             "unrolled size is too large.");
     return ExplicitUnroll;
   }
   assert(TripCount == 0 &&
          "All cases when TripCount is constant should be covered here.");
   if (PragmaFullUnroll)
-    ORE->emitOptimizationRemarkMissed(
-        DEBUG_TYPE, L,
-        "Unable to fully unroll loop as directed by unroll(full) pragma "
-        "because loop has a runtime trip count.");
+    ORE->emit(
+        OptimizationRemarkMissed(DEBUG_TYPE,
+                                 "CantFullUnrollAsDirectedRuntimeTripCount",
+                                 L->getStartLoc(), L->getHeader())
+        << "Unable to fully unroll loop as directed by unroll(full) pragma "
+           "because loop has a runtime trip count.");
 
   // 5th priority is runtime unrolling.
   // Don't unroll a runtime trip count loop when it is disabled.
@@ -875,16 +879,19 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                     "multiple, "
                  << TripMultiple << ".  Reducing unroll count from "
                  << OrigCount << " to " << UP.Count << ".\n");
+    using namespace ore;
     if (PragmaCount > 0 && !UP.AllowRemainder)
-      ORE->emitOptimizationRemarkMissed(
-          DEBUG_TYPE, L,
-          Twine("Unable to unroll loop the number of times directed by "
-                "unroll_count pragma because remainder loop is restricted "
-                "(that could architecture specific or because the loop "
-                "contains a convergent instruction) and so must have an unroll "
-                "count that divides the loop trip multiple of ") +
-              Twine(TripMultiple) + ".  Unrolling instead " + Twine(UP.Count) +
-              " time(s).");
+      ORE->emit(
+          OptimizationRemarkMissed(DEBUG_TYPE,
+                                   "DifferentUnrollCountFromDirected",
+                                   L->getStartLoc(), L->getHeader())
+          << "Unable to unroll loop the number of times directed by "
+             "unroll_count pragma because remainder loop is restricted "
+             "(that could architecture specific or because the loop "
+             "contains a convergent instruction) and so must have an unroll "
+             "count that divides the loop trip multiple of "
+          << NV("TripMultiple", TripMultiple) << ".  Unrolling instead "
+          << NV("UnrollCount", UP.Count) << " time(s).");
   }
 
   if (UP.Count > UP.MaxCount)
@@ -1014,7 +1021,10 @@ public:
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
+    // pass.  Function analyses need to be preserved across loop transformations
+    // but ORE cannot be preserved (see comment before the pass definition).
+    OptimizationRemarkEmitter ORE(&F);
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
     return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA,
