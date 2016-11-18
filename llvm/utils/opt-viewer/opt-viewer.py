@@ -24,7 +24,7 @@ def demangle(name):
     return p.stdout.readline().rstrip()
 
 class Remark(yaml.YAMLObject):
-    max_hotness = 0
+    max_hotness = 1
 
     @property
     def File(self):
