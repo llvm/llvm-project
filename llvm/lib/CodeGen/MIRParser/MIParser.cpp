@@ -488,7 +488,8 @@ bool MIParser::parseBasicBlockSuccessors(MachineBasicBlock &MBB) {
     lex();
     unsigned Weight = 0;
     if (consumeIfPresent(MIToken::lparen)) {
-      if (Token.isNot(MIToken::IntegerLiteral))
+      if (Token.isNot(MIToken::IntegerLiteral) &&
+          Token.isNot(MIToken::HexLiteral))
         return error("expected an integer literal after '('");
       if (getUnsigned(Weight))
         return true;

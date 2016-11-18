@@ -614,7 +614,6 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
   if (log)
     log->Printf("[ExpandIndexedExpression] name to deref: %s",
                 ptr_deref_buffer.c_str());
-  const char *first_unparsed;
   ValueObject::GetValueForExpressionPathOptions options;
   ValueObject::ExpressionPathEndResultType final_value_type;
   ValueObject::ExpressionPathScanEndReason reason_to_stop;
@@ -622,20 +621,18 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
       (deref_pointer ? ValueObject::eExpressionPathAftermathDereference
                      : ValueObject::eExpressionPathAftermathNothing);
   ValueObjectSP item = valobj->GetValueForExpressionPath(
-      ptr_deref_buffer.c_str(), &first_unparsed, &reason_to_stop,
-      &final_value_type, options, &what_next);
+      ptr_deref_buffer.c_str(), &reason_to_stop, &final_value_type, options,
+      &what_next);
   if (!item) {
     if (log)
-      log->Printf("[ExpandIndexedExpression] ERROR: unparsed portion = %s, why "
-                  "stopping = %d,"
+      log->Printf("[ExpandIndexedExpression] ERROR: why stopping = %d,"
                   " final_value_type %d",
-                  first_unparsed, reason_to_stop, final_value_type);
+                  reason_to_stop, final_value_type);
   } else {
     if (log)
-      log->Printf("[ExpandIndexedExpression] ALL RIGHT: unparsed portion = %s, "
-                  "why stopping = %d,"
+      log->Printf("[ExpandIndexedExpression] ALL RIGHT: why stopping = %d,"
                   " final_value_type %d",
-                  first_unparsed, reason_to_stop, final_value_type);
+                  reason_to_stop, final_value_type);
   }
   return item;
 }
@@ -724,7 +721,6 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   int64_t index_lower = -1;
   int64_t index_higher = -1;
   bool is_array_range = false;
-  const char *first_unparsed;
   bool was_plain_var = false;
   bool was_var_format = false;
   bool was_var_indexed = false;
@@ -762,25 +758,23 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
       log->Printf("[Debugger::FormatPrompt] symbol to expand: %s",
                   expr_path.c_str());
 
-    target = valobj
-                 ->GetValueForExpressionPath(expr_path.c_str(), &first_unparsed,
-                                             &reason_to_stop, &final_value_type,
-                                             options, &what_next)
-                 .get();
+    target =
+        valobj
+            ->GetValueForExpressionPath(expr_path.c_str(), &reason_to_stop,
+                                        &final_value_type, options, &what_next)
+            .get();
 
     if (!target) {
       if (log)
-        log->Printf("[Debugger::FormatPrompt] ERROR: unparsed portion = %s, "
-                    "why stopping = %d,"
+        log->Printf("[Debugger::FormatPrompt] ERROR: why stopping = %d,"
                     " final_value_type %d",
-                    first_unparsed, reason_to_stop, final_value_type);
+                    reason_to_stop, final_value_type);
       return false;
     } else {
       if (log)
-        log->Printf("[Debugger::FormatPrompt] ALL RIGHT: unparsed portion = "
-                    "%s, why stopping = %d,"
+        log->Printf("[Debugger::FormatPrompt] ALL RIGHT: why stopping = %d,"
                     " final_value_type %d",
-                    first_unparsed, reason_to_stop, final_value_type);
+                    reason_to_stop, final_value_type);
       target = target
                    ->GetQualifiedRepresentationIfAvailable(
                        target->GetDynamicValueType(), true)

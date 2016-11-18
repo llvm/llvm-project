@@ -11,19 +11,16 @@
 #define LLVM_DEBUGINFO_MSF_IMSFFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-
-#include <stdint.h>
+#include <cstdint>
 
 namespace llvm {
 namespace msf {
 
 class IMSFFile {
 public:
-  virtual ~IMSFFile() {}
+  virtual ~IMSFFile() = default;
 
   virtual uint32_t getBlockSize() const = 0;
   virtual uint32_t getBlockCount() const = 0;
@@ -38,7 +35,8 @@ public:
   virtual Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
                              ArrayRef<uint8_t> Data) const = 0;
 };
-}
-}
+
+} // end namespace msf
+} // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_MSF_IMSFFILE_H

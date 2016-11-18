@@ -1329,6 +1329,37 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
+template <class ELFT>
+PltSection<ELFT>::PltSection()
+    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
+                             ".plt") {}
+
+template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
+  // At beginning of PLT, we have code to call the dynamic linker
+  // to resolve dynsyms at runtime. Write such code.
+  Target->writePltHeader(Buf);
+  size_t Off = Target->PltHeaderSize;
+
+  for (auto &I : Entries) {
+    const SymbolBody *B = I.first;
+    unsigned RelOff = I.second;
+    uint64_t Got = B->getGotPltVA<ELFT>();
+    uint64_t Plt = this->getVA() + Off;
+    Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
+    Off += Target->PltEntrySize;
+  }
+}
+
+template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
+  Sym.PltIndex = Entries.size();
+  unsigned RelOff = In<ELFT>::RelaPlt->getRelocOffset();
+  Entries.push_back(std::make_pair(&Sym, RelOff));
+}
+
+template <class ELFT> size_t PltSection<ELFT>::getSize() const {
+  return Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
+}
+
 template InputSection<ELF32LE> *elf::createCommonSection();
 template InputSection<ELF32BE> *elf::createCommonSection();
 template InputSection<ELF64LE> *elf::createCommonSection();
@@ -1433,3 +1464,8 @@ template class elf::HashTableSection<ELF32LE>;
 template class elf::HashTableSection<ELF32BE>;
 template class elf::HashTableSection<ELF64LE>;
 template class elf::HashTableSection<ELF64BE>;
+
+template class elf::PltSection<ELF32LE>;
+template class elf::PltSection<ELF32BE>;
+template class elf::PltSection<ELF64LE>;
+template class elf::PltSection<ELF64BE>;

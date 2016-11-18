@@ -424,9 +424,20 @@ defm : Arithmetic_i16_Pats<smax, V_MAX_I16_e32>;
 defm : Arithmetic_i16_Pats<umin, V_MIN_U16_e32>;
 defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e32>;
 
-defm : Arithmetic_i16_Pats<and, V_AND_B32_e32>;
-defm : Arithmetic_i16_Pats<or, V_OR_B32_e32>;
-defm : Arithmetic_i16_Pats<xor, V_XOR_B32_e32>;
+def : Pat <
+  (and i16:$src0, i16:$src1),
+  (V_AND_B32_e32 $src0, $src1)
+>;
+
+def : Pat <
+  (or i16:$src0, i16:$src1),
+  (V_OR_B32_e32 $src0, $src1)
+>;
+
+def : Pat <
+  (xor i16:$src0, i16:$src1),
+  (V_XOR_B32_e32 $src0, $src1)
+>;
 
 defm : Bits_OpsRev_i16_Pats<shl, V_LSHLREV_B16_e32>;
 defm : Bits_OpsRev_i16_Pats<srl, V_LSHRREV_B16_e32>;

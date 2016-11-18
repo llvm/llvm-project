@@ -753,8 +753,7 @@ void RegisterAggr::print(raw_ostream &OS) const {
 DataFlowGraph::DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
       const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
       const MachineDominanceFrontier &mdf, const TargetOperandInfo &toi)
-    : TimeG("rdf"), LMI(), MF(mf), TII(tii), TRI(tri), MDT(mdt), MDF(mdf),
-      TOI(toi) {
+    : LMI(), MF(mf), TII(tii), TRI(tri), MDT(mdt), MDF(mdf), TOI(toi) {
 }
 
 

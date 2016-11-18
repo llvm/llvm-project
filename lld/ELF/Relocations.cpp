@@ -743,7 +743,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     if (needsPlt(Expr)) {
       if (Body.isInPlt())
         continue;
-      Out<ELFT>::Plt->addEntry(Body);
+      In<ELFT>::Plt->addEntry(Body);
 
       uint32_t Rel;
       if (Body.isGnuIFunc() && !Preemptible)

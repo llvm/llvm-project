@@ -3731,6 +3731,56 @@ def SZ_D_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v2i64,
 def SZ_V_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAnyZero, v16i8,
                                                MSA128B, NoItinerary>;
 
+// Pseudoes used to implement transparent fp16 support.
+
+let Predicates = [HasMSA] in {
+ def ST_F16 : MipsPseudo<(outs), (ins MSA128F16:$ws, mem_simm10:$addr),
+                          [(store (f16 MSA128F16:$ws), (addrimm10:$addr))]> {
+   let usesCustomInserter = 1;
+ }
+
+ def LD_F16 : MipsPseudo<(outs MSA128F16:$ws), (ins mem_simm10:$addr),
+                         [(set MSA128F16:$ws, (f16 (load addrimm10:$addr)))]> {
+   let usesCustomInserter = 1;
+ }
+
+ def MSA_FP_EXTEND_W_PSEUDO : MipsPseudo<(outs FGR32Opnd:$fd),
+                                         (ins MSA128F16:$ws),
+                              [(set FGR32Opnd:$fd,
+                                    (f32 (fpextend MSA128F16:$ws)))]> {
+  let usesCustomInserter = 1;
+ }
+
+ def MSA_FP_ROUND_W_PSEUDO : MipsPseudo<(outs MSA128F16:$wd),
+                                        (ins FGR32Opnd:$fs),
+                              [(set MSA128F16:$wd,
+                                    (f16 (fpround FGR32Opnd:$fs)))]> {
+  let usesCustomInserter = 1;
+ }
+
+ def MSA_FP_EXTEND_D_PSEUDO : MipsPseudo<(outs FGR64Opnd:$fd),
+                                         (ins MSA128F16:$ws),
+                              [(set FGR64Opnd:$fd,
+                                    (f64 (fpextend MSA128F16:$ws)))]> {
+  let usesCustomInserter = 1;
+ }
+
+ def MSA_FP_ROUND_D_PSEUDO : MipsPseudo<(outs MSA128F16:$wd),
+                                        (ins FGR64Opnd:$fs),
+                              [(set MSA128F16:$wd,
+                                    (f16 (fpround FGR64Opnd:$fs)))]> {
+  let usesCustomInserter = 1;
+ }
+
+ def : MipsPat<(MipsTruncIntFP MSA128F16:$ws),
+               (TRUNC_W_D64 (MSA_FP_EXTEND_D_PSEUDO MSA128F16:$ws))>;
+
+ def : MipsPat<(MipsFPCmp MSA128F16:$ws, MSA128F16:$wt, imm:$cond),
+               (FCMP_S32 (MSA_FP_EXTEND_W_PSEUDO MSA128F16:$ws),
+                         (MSA_FP_EXTEND_W_PSEUDO MSA128F16:$wt), imm:$cond)>,
+       ISA_MIPS1_NOT_32R6_64R6;
+}
+
 // Vector extraction with fixed index.
 //
 // Extracting 32-bit values on MSA32 should always use COPY_S_W rather than

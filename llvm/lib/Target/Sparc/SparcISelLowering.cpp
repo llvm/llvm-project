@@ -1208,7 +1208,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
     if (VA.isRegLoc()) {
       if (VA.needsCustom() && VA.getValVT() == MVT::f128
           && VA.getLocVT() == MVT::i128) {
-        // Store and reload into the interger register reg and reg+1.
+        // Store and reload into the integer register reg and reg+1.
         unsigned Offset = 8 * (VA.getLocReg() - SP::I0);
         unsigned StackOffset = Offset + Subtarget->getStackPointerBias() + 128;
         SDValue StackPtr = DAG.getRegister(SP::O6, PtrVT);

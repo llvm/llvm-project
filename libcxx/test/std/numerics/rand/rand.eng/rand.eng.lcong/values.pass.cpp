@@ -37,8 +37,27 @@ test1()
     static_assert((LCE::multiplier == a), "");
     static_assert((LCE::increment == c), "");
     static_assert((LCE::modulus == m), "");
-    /*static_*/assert((LCE::min() == (c == 0u ? 1u: 0u))/*, ""*/);
-    /*static_*/assert((LCE::max() == result_type(m - 1u))/*, ""*/);
+#if TEST_STD_VER >= 11
+    static_assert((LCE::min() == (c == 0u ? 1u: 0u)), "");
+#else
+    assert((LCE::min() == (c == 0u ? 1u: 0u)));
+#endif
+
+#ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning(disable: 4310) // cast truncates constant value
+#endif // _MSC_VER
+
+#if TEST_STD_VER >= 11
+    static_assert((LCE::max() == result_type(m - 1u)), "");
+#else
+    assert((LCE::max() == result_type(m - 1u)));
+#endif
+
+#ifdef _MSC_VER
+    #pragma warning(pop)
+#endif // _MSC_VER
+
     static_assert((LCE::default_seed == 1), "");
     where(LCE::multiplier);
     where(LCE::increment);

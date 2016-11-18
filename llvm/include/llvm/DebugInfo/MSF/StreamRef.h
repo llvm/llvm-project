@@ -10,11 +10,16 @@
 #ifndef LLVM_DEBUGINFO_MSF_STREAMREF_H
 #define LLVM_DEBUGINFO_MSF_STREAMREF_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/DebugInfo/MSF/StreamInterface.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cstdint>
 
 namespace llvm {
 namespace msf {
+
 template <class StreamType, class RefType> class StreamRefBase {
 public:
   StreamRefBase() : Stream(nullptr), ViewOffset(0), Length(0) {}
@@ -62,7 +67,7 @@ protected:
 class ReadableStreamRef
     : public StreamRefBase<ReadableStream, ReadableStreamRef> {
 public:
-  ReadableStreamRef() : StreamRefBase() {}
+  ReadableStreamRef() = default;
   ReadableStreamRef(const ReadableStream &Stream)
       : StreamRefBase(Stream, 0, Stream.getLength()) {}
   ReadableStreamRef(const ReadableStream &Stream, uint32_t Offset,
@@ -104,7 +109,7 @@ public:
 class WritableStreamRef
     : public StreamRefBase<WritableStream, WritableStreamRef> {
 public:
-  WritableStreamRef() : StreamRefBase() {}
+  WritableStreamRef() = default;
   WritableStreamRef(const WritableStream &Stream)
       : StreamRefBase(Stream, 0, Stream.getLength()) {}
   WritableStreamRef(const WritableStream &Stream, uint32_t Offset,
@@ -124,7 +129,7 @@ public:
   Error commit() const { return Stream->commit(); }
 };
 
-} // namespace msf
-} // namespace llvm
+} // end namespace msf
+} // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_MSF_STREAMREF_H

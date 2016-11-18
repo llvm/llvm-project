@@ -1,5 +1,10 @@
 #include "multiple_class_test.h"
 
+using a::Move1;
+using namespace a;
+using A = a::Move1;
+static int g = 0;
+
 namespace a {
 int Move1::f() {
   return 0;

@@ -1,4 +1,4 @@
-//===- StreamArray.h - Array backed by an arbitrary stream ----------------===//
+//===- StreamArray.h - Array backed by an arbitrary stream ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,12 +10,11 @@
 #ifndef LLVM_DEBUGINFO_MSF_STREAMARRAY_H
 #define LLVM_DEBUGINFO_MSF_STREAMARRAY_H
 
-#include "llvm/DebugInfo/MSF/SequencedItemStream.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/Support/Error.h"
-
-#include <functional>
-#include <type_traits>
+#include <cassert>
+#include <cstdint>
 
 namespace llvm {
 namespace msf {
@@ -76,13 +75,14 @@ template <typename ValueType, typename Extractor> class VarStreamArrayIterator;
 
 template <typename ValueType,
           typename Extractor = VarStreamArrayExtractor<ValueType>>
+
 class VarStreamArray {
   friend class VarStreamArrayIterator<ValueType, Extractor>;
 
 public:
   typedef VarStreamArrayIterator<ValueType, Extractor> Iterator;
 
-  VarStreamArray() {}
+  VarStreamArray() = default;
   explicit VarStreamArray(const Extractor &E) : E(E) {}
 
   explicit VarStreamArray(ReadableStreamRef Stream) : Stream(Stream) {}
@@ -125,9 +125,9 @@ public:
       }
     }
   }
-  VarStreamArrayIterator() {}
+  VarStreamArrayIterator() = default;
   explicit VarStreamArrayIterator(const Extractor &E) : Extract(E) {}
-  ~VarStreamArrayIterator() {}
+  ~VarStreamArrayIterator() = default;
 
   bool operator==(const IterType &R) const {
     if (Array && R.Array) {
@@ -206,7 +206,7 @@ template <typename T> class FixedStreamArray {
   friend class FixedStreamArrayIterator<T>;
 
 public:
-  FixedStreamArray() : Stream() {}
+  FixedStreamArray() = default;
   FixedStreamArray(ReadableStreamRef Stream) : Stream(Stream) {
     assert(Stream.getLength() % sizeof(T) == 0);
   }
@@ -229,6 +229,7 @@ public:
   FixedStreamArrayIterator<T> begin() const {
     return FixedStreamArrayIterator<T>(*this, 0);
   }
+
   FixedStreamArrayIterator<T> end() const {
     return FixedStreamArrayIterator<T>(*this, size());
   }

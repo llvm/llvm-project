@@ -19,7 +19,7 @@ namespace msf {
 
 class ReadableStream {
 public:
-  virtual ~ReadableStream() {}
+  virtual ~ReadableStream() = default;
 
   // Given an offset into the stream and a number of bytes, attempt to read
   // the bytes and set the output ArrayRef to point to a reference into the
@@ -37,7 +37,7 @@ public:
 
 class WritableStream : public ReadableStream {
 public:
-  virtual ~WritableStream() {}
+  ~WritableStream() override = default;
 
   // Attempt to write the given bytes into the stream at the desired offset.
   // This will always necessitate a copy.  Cannot shrink or grow the stream,

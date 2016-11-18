@@ -278,7 +278,7 @@ protected:
       Debugger &debugger = m_interpreter.GetDebugger();
 
       TargetSP target_sp;
-      const char *arch_cstr = m_arch_option.GetArchitectureName();
+      llvm::StringRef arch_cstr = m_arch_option.GetArchitectureName();
       const bool get_dependent_files =
           m_add_dependents.GetOptionValue().GetCurrentValue();
       Error error(debugger.GetTargetList().CreateTarget(

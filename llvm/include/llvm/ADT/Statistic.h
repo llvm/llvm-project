@@ -165,7 +165,10 @@ void PrintStatistics();
 /// \brief Print statistics to the given output stream.
 void PrintStatistics(raw_ostream &OS);
 
-/// Print statistics in JSON format.
+/// Print statistics in JSON format. This does include all global timers (\see
+/// Timer, TimerGroup). Note that the timers are cleared after printing and will
+/// not be printed in human readable form or in a second call of
+/// PrintStatisticsJSON().
 void PrintStatisticsJSON(raw_ostream &OS);
 
 } // end namespace llvm

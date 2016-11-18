@@ -474,8 +474,8 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
     FileSpec emptyFileSpec;
     ArchSpec emptyArchSpec;
 
-    error = debugger.GetTargetList().CreateTarget(
-        debugger, nullptr, nullptr, false, nullptr, new_target_sp);
+    error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
+                                                  nullptr, new_target_sp);
     target = new_target_sp.get();
   }
 

@@ -490,6 +490,18 @@ private:
   size_t Size = 0;
 };
 
+template <class ELFT> class PltSection final : public SyntheticSection<ELFT> {
+public:
+  PltSection();
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override;
+  void addEntry(SymbolBody &Sym);
+  bool empty() const { return Entries.empty(); }
+
+private:
+  std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -510,6 +522,7 @@ template <class ELFT> struct In {
   static MipsAbiFlagsSection<ELFT> *MipsAbiFlags;
   static MipsOptionsSection<ELFT> *MipsOptions;
   static MipsReginfoSection<ELFT> *MipsReginfo;
+  static PltSection<ELFT> *Plt;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
   static StringTableSection<ELFT> *ShStrTab;
@@ -531,6 +544,7 @@ template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
 template <class ELFT> MipsAbiFlagsSection<ELFT> *In<ELFT>::MipsAbiFlags;
 template <class ELFT> MipsOptionsSection<ELFT> *In<ELFT>::MipsOptions;
 template <class ELFT> MipsReginfoSection<ELFT> *In<ELFT>::MipsReginfo;
+template <class ELFT> PltSection<ELFT> *In<ELFT>::Plt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::ShStrTab;

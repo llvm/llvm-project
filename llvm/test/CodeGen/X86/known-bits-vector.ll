@@ -323,3 +323,30 @@ define <4 x i32> @knownbits_mask_bswap_shuffle_shl(<4 x i32> %a0) nounwind {
   ret <4 x i32> %4
 }
 declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)
+
+define <8 x float> @knownbits_mask_concat_uitofp(<4 x i32> %a0, <4 x i32> %a1) nounwind {
+; X32-LABEL: knownbits_mask_concat_uitofp:
+; X32:       # BB#0:
+; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm1, %xmm1
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,0,2]
+; X32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,3,1,3]
+; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_concat_uitofp:
+; X64:       # BB#0:
+; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,0,2]
+; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,3,1,3]
+; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 131071, i32 -1, i32 131071, i32 -1>
+  %2 = and <4 x i32> %a1, <i32 -1, i32 131071, i32 -1, i32 131071>
+  %3 = shufflevector <4 x i32> %1, <4 x i32> %2, <8 x i32> <i32 0, i32 2, i32 0, i32 2, i32 5, i32 7, i32 5, i32 7>
+  %4 = uitofp <8 x i32> %3 to <8 x float>
+  ret <8 x float> %4
+}
