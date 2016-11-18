@@ -1,6 +1,8 @@
 ; RUN: opt < %s -S -inline -pass-remarks-missed=inline -pass-remarks-with-hotness \
 ; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
+; RUN: opt < %s -S -inline -pass-remarks-with-hotness -pass-remarks-output=%t
+; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
 ; Check the YAML file generated for inliner remarks for this program:
 ;
