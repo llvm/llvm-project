@@ -177,6 +177,11 @@ private:
   void operator=(const OptimizationRemarkEmitter &) = delete;
 };
 
+/// OptimizationRemarkEmitter legacy analysis pass
+///
+/// Note that this pass shouldn't generally be marked as preserved by other
+/// passes.  It's holding onto BFI, so if the pass does not preserve BFI, BFI
+/// could be freed.
 class OptimizationRemarkEmitterWrapperPass : public FunctionPass {
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
