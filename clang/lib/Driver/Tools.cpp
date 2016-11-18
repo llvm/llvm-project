@@ -6004,6 +6004,39 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-math-builtin");
   }
 
+  if (Args.hasFlag(options::OPT_fsave_optimization_record,
+                   options::OPT_fno_save_optimization_record, false)) {
+    CmdArgs.push_back("-opt-record-file");
+
+    const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+    if (A) {
+      CmdArgs.push_back(A->getValue());
+    } else {
+      SmallString<128> F;
+      if (Output.isFilename() && (Args.hasArg(options::OPT_c) ||
+                                  Args.hasArg(options::OPT_S))) {
+        F = Output.getFilename();
+      } else {
+        // Use the compilation directory.
+        F = llvm::sys::path::stem(Input.getBaseInput());
+
+        // If we're compiling for an offload architecture (i.e. a CUDA device),
+        // we need to make the file name for the device compilation different
+        // from the host compilation.
+        if (!JA.isDeviceOffloading(Action::OFK_None) &&
+            !JA.isDeviceOffloading(Action::OFK_Host)) {
+          llvm::sys::path::replace_extension(F, "");
+          F += JA.getOffloadingFileNamePrefix(Triple.normalize());
+          F += "-";
+          F += JA.getOffloadingArch();
+        }
+      }
+
+      llvm::sys::path::replace_extension(F, "opt.yaml");
+      CmdArgs.push_back(Args.MakeArgString(F));
+    }
+  }
+
 // Default to -fno-builtin-str{cat,cpy} on Darwin for ARM.
 //
 // FIXME: Now that PR4941 has been fixed this can be enabled.

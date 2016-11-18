@@ -33,6 +33,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <memory>
 using namespace clang;
 using namespace llvm;
@@ -181,6 +183,24 @@ namespace clang {
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
       Ctx.setDiagnosticHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
 
+      std::unique_ptr<llvm::tool_output_file> OptRecordFile;
+      if (!CodeGenOpts.OptRecordFile.empty()) {
+        std::error_code EC;
+        OptRecordFile =
+          llvm::make_unique<llvm::tool_output_file>(CodeGenOpts.OptRecordFile,
+                                                    EC, sys::fs::F_None);
+        if (EC) {
+          Diags.Report(diag::err_cannot_open_file) <<
+            CodeGenOpts.OptRecordFile << EC.message();
+          return;
+        }
+
+        Ctx.setDiagnosticsOutputFile(new yaml::Output(OptRecordFile->os()));
+
+        if (CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
+          Ctx.setDiagnosticHotnessRequested(true);
+      }
+
       // Link LinkModule into this module if present, preserving its validity.
       for (auto &I : LinkModules) {
         unsigned LinkFlags = I.first;
@@ -198,6 +218,9 @@ namespace clang {
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 
       Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext);
+
+      if (OptRecordFile)
+        OptRecordFile->keep();
     }
 
     void HandleTagDeclDefinition(TagDecl *D) override {
