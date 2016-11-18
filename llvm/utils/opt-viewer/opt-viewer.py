@@ -60,7 +60,7 @@ class Remark(yaml.YAMLObject):
         # Args is a list of mappings (dictionaries) with each dictionary with
         # exactly one key-value pair.
         values = [self.getArgString(mapping.items()[0]) for mapping in self.Args]
-        return demangle("".join(values))
+        return "".join(values)
 
     @property
     def RelativeHotness(self):
