@@ -180,8 +180,8 @@ NativeRegisterContextLinux::DoReadRegisterValue(uint32_t offset,
             PTRACE_PEEKUSER, m_thread.GetID(), reinterpret_cast<void *>(offset), nullptr, 0, &data);
 
     if (error.Success())
-        // First cast to an unsigned of the same size to avoid sign extension.
-        value.SetUInt64(static_cast<unsigned long>(data));
+      // First cast to an unsigned of the same size to avoid sign extension.
+      value.SetUInt(static_cast<unsigned long>(data), size);
 
     if (log)
         log->Printf ("NativeRegisterContextLinux::%s() reg %s: 0x%lx", __FUNCTION__, reg_name, data);

@@ -652,34 +652,37 @@ RegisterValue::GetAsUInt32 (uint32_t fail_value, bool *success_ptr) const
 uint64_t
 RegisterValue::GetAsUInt64 (uint64_t fail_value, bool *success_ptr) const
 {
-    if (success_ptr)
-        *success_ptr = true;
-    switch (m_type)
-    {
-        default:            break;
-        case eTypeUInt8:
-        case eTypeUInt16:
-        case eTypeUInt32:
-        case eTypeUInt64:
-        case eTypeFloat:
-        case eTypeDouble:
-        case eTypeLongDouble: return m_scalar.ULongLong(fail_value);
-        case eTypeBytes:
-        {
-            switch (buffer.length)
-            {
-            default:    break;
-            case 1:
-            case 2:
-            case 4:
-            case 8:     return *(const uint64_t *)buffer.bytes;
-            }
-        }
-        break;
+  if (success_ptr)
+    *success_ptr = true;
+  switch (m_type) {
+  default:
+    break;
+  case eTypeUInt8:
+  case eTypeUInt16:
+  case eTypeUInt32:
+  case eTypeUInt64:
+  case eTypeFloat:
+  case eTypeDouble:
+  case eTypeLongDouble:
+    return m_scalar.ULongLong(fail_value);
+  case eTypeBytes: {
+    switch (buffer.length) {
+    default:
+      break;
+    case 1:
+      return *(const uint8_t *)buffer.bytes;
+    case 2:
+      return *(const uint16_t *)buffer.bytes;
+    case 4:
+      return *(const uint32_t *)buffer.bytes;
+    case 8:
+      return *(const uint64_t *)buffer.bytes;
     }
-    if (success_ptr)
-        *success_ptr = false;
-    return fail_value;
+  } break;
+  }
+  if (success_ptr)
+    *success_ptr = false;
+  return fail_value;
 }
 
 llvm::APInt
