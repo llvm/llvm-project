@@ -1195,15 +1195,13 @@ public:
   bool allowVectorization(Function *F, Loop *L, bool AlwaysVectorize) const {
     if (getForce() == LoopVectorizeHints::FK_Disabled) {
       DEBUG(dbgs() << "LV: Not vectorizing: #pragma vectorize disable.\n");
-      ORE.emitOptimizationRemarkAnalysis(vectorizeAnalysisPassName(), L,
-                                         emitRemark());
+      emitRemarkWithHints();
       return false;
     }
 
     if (!AlwaysVectorize && getForce() != LoopVectorizeHints::FK_Enabled) {
       DEBUG(dbgs() << "LV: Not vectorizing: No #pragma vectorize enable.\n");
-      ORE.emitOptimizationRemarkAnalysis(vectorizeAnalysisPassName(), L,
-                                         emitRemark());
+      emitRemarkWithHints();
       return false;
     }
 
@@ -1226,23 +1224,28 @@ public:
   }
 
   /// Dumps all the hint information.
-  std::string emitRemark() const {
-    VectorizationReport R;
+  void emitRemarkWithHints() const {
+    using namespace ore;
     if (Force.Value == LoopVectorizeHints::FK_Disabled)
-      R << "vectorization is explicitly disabled";
+      ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedExplicitlyDisabled",
+                                        TheLoop->getStartLoc(),
+                                        TheLoop->getHeader())
+               << "loop not vectorized: vectorization is explicitly disabled");
     else {
-      R << "use -Rpass-analysis=loop-vectorize for more info";
+      OptimizationRemarkMissed R(LV_NAME, "MissedDetails",
+                                 TheLoop->getStartLoc(), TheLoop->getHeader());
+      R << "loop not vectorized: use -Rpass-analysis=loop-vectorize for more "
+           "info";
       if (Force.Value == LoopVectorizeHints::FK_Enabled) {
-        R << " (Force=true";
+        R << " (Force=" << NV("Force", true);
         if (Width.Value != 0)
-          R << ", Vector Width=" << Width.Value;
+          R << ", Vector Width=" << NV("VectorWidth", Width.Value);
         if (Interleave.Value != 0)
-          R << ", Interleave Count=" << Interleave.Value;
+          R << ", Interleave Count=" << NV("InterleaveCount", Interleave.Value);
         R << ")";
       }
+      ORE.emit(R);
     }
-
-    return R.str();
   }
 
   unsigned getWidth() const { return Width.Value; }
@@ -1412,7 +1415,7 @@ static void emitAnalysisDiag(const Loop *TheLoop,
 static void emitMissedWarning(Function *F, Loop *L,
                               const LoopVectorizeHints &LH,
                               OptimizationRemarkEmitter *ORE) {
-  ORE->emitOptimizationRemarkMissed(LV_NAME, L, LH.emitRemark());
+  LH.emitRemarkWithHints();
 
   if (LH.getForce() == LoopVectorizeHints::FK_Enabled) {
     if (LH.getWidth() != 1)
