@@ -10,22 +10,26 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <type_traits>
 
 namespace llvm {
-
 namespace codeview {
 
 class TypeTableBuilder {
 private:
-  TypeTableBuilder(const TypeTableBuilder &) = delete;
-  TypeTableBuilder &operator=(const TypeTableBuilder &) = delete;
-
-  TypeIndex handleError(llvm::Error EC) const {
+  TypeIndex handleError(Error EC) const {
     assert(false && "Couldn't write Type!");
-    llvm::consumeError(std::move(EC));
+    consumeError(std::move(EC));
     return TypeIndex();
   }
 
@@ -35,6 +39,8 @@ private:
 public:
   explicit TypeTableBuilder(BumpPtrAllocator &Allocator)
       : Allocator(Allocator), Serializer(Allocator) {}
+  TypeTableBuilder(const TypeTableBuilder &) = delete;
+  TypeTableBuilder &operator=(const TypeTableBuilder &) = delete;
 
   bool empty() const { return Serializer.records().empty(); }
 
@@ -116,7 +122,8 @@ public:
     return Index;
   }
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H

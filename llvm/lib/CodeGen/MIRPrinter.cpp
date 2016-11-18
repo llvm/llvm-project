@@ -32,6 +32,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -481,7 +482,9 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
         OS << ", ";
       printMBBReference(**I);
       if (MBB.hasSuccessorProbabilities())
-        OS << '(' << MBB.getSuccProbability(I) << ')';
+        OS << '('
+           << format("0x%08" PRIx32, MBB.getSuccProbability(I).getNumerator())
+           << ')';
     }
     OS << "\n";
     HasLineAttributes = true;

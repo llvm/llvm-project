@@ -16,6 +16,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <typename T>
 void test_max(size_t count)
 {
@@ -27,23 +29,19 @@ void test_max(size_t count)
     }
 }
 
+template <typename T>
+void test()
+{
+    // Bug 26812 -- allocating too large
+    std::allocator<T> a;
+    test_max<T> (a.max_size() + 1);                // just barely too large
+    test_max<T> (a.max_size() * 2);                // significantly too large
+    test_max<T> (((size_t) -1) / sizeof(T) + 1);   // multiply will overflow
+    test_max<T> ((size_t) -1);                     // way too large
+}
+
 int main()
 {
-    {  // Bug 26812 -- allocating too large
-        typedef double T;
-        std::allocator<T> a;
-        test_max<T> (a.max_size() + 1);                // just barely too large
-        test_max<T> (a.max_size() * 2);                // significantly too large
-        test_max<T> (((size_t) -1) / sizeof(T) + 1);   // multiply will overflow
-        test_max<T> ((size_t) -1);                     // way too large
-    }
-
-    {
-        typedef const double T;
-        std::allocator<T> a;
-        test_max<T> (a.max_size() + 1);                // just barely too large
-        test_max<T> (a.max_size() * 2);                // significantly too large
-        test_max<T> (((size_t) -1) / sizeof(T) + 1);   // multiply will overflow
-        test_max<T> ((size_t) -1);                     // way too large
-    }
+    test<double>();
+    LIBCPP_ONLY(test<const double>());
 }

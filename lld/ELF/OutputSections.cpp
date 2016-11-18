@@ -108,38 +108,6 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT>
-PltSection<ELFT>::PltSection()
-    : OutputSectionBase(".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR) {
-  this->Addralign = 16;
-}
-
-template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
-  // At beginning of PLT, we have code to call the dynamic linker
-  // to resolve dynsyms at runtime. Write such code.
-  Target->writePltHeader(Buf);
-  size_t Off = Target->PltHeaderSize;
-
-  for (auto &I : Entries) {
-    const SymbolBody *B = I.first;
-    unsigned RelOff = I.second;
-    uint64_t Got = B->getGotPltVA<ELFT>();
-    uint64_t Plt = this->Addr + Off;
-    Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
-    Off += Target->PltEntrySize;
-  }
-}
-
-template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
-  Sym.PltIndex = Entries.size();
-  unsigned RelOff = In<ELFT>::RelaPlt->getRelocOffset();
-  Entries.push_back(std::make_pair(&Sym, RelOff));
-}
-
-template <class ELFT> void PltSection<ELFT>::finalize() {
-  this->Size = Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
-}
-
 // Returns the number of version definition entries. Because the first entry
 // is for the version definition itself, it is the number of versioned symbols
 // plus one. Note that we don't support multiple versions yet.
@@ -213,8 +181,24 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
   this->Entsize = getEntsize<ELFT>(Type);
 }
 
+template <typename ELFT>
+static bool compareByFilePosition(InputSection<ELFT> *A,
+                                  InputSection<ELFT> *B) {
+  auto *LA = cast<InputSection<ELFT>>(A->getLinkOrderDep());
+  auto *LB = cast<InputSection<ELFT>>(B->getLinkOrderDep());
+  OutputSectionBase *AOut = LA->OutSec;
+  OutputSectionBase *BOut = LB->OutSec;
+  if (AOut != BOut)
+    return AOut->SectionIndex < BOut->SectionIndex;
+  return LA->OutSecOff < LB->OutSecOff;
+}
+
 template <class ELFT> void OutputSection<ELFT>::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
+    std::sort(Sections.begin(), Sections.end(), compareByFilePosition<ELFT>);
+    Size = 0;
+    assignOffsets();
+
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
@@ -620,15 +604,11 @@ template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding StringPiece for easy access.
-  if (shouldTailMerge()) {
-    for (MergeInputSection<ELFT> *Sec : Sections) {
-      for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
-        if (!Sec->Pieces[I].Live)
-          continue;
-        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
-      }
-    }
-  }
+  if (shouldTailMerge())
+    for (MergeInputSection<ELFT> *Sec : Sections)
+      for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+        if (Sec->Pieces[I].Live)
+          Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
 }
 
 template <class ELFT>
@@ -893,11 +873,6 @@ template class EhFrameHeader<ELF32LE>;
 template class EhFrameHeader<ELF32BE>;
 template class EhFrameHeader<ELF64LE>;
 template class EhFrameHeader<ELF64BE>;
-
-template class PltSection<ELF32LE>;
-template class PltSection<ELF32BE>;
-template class PltSection<ELF64LE>;
-template class PltSection<ELF64BE>;
 
 template class OutputSection<ELF32LE>;
 template class OutputSection<ELF32BE>;

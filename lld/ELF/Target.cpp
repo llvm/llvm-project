@@ -615,7 +615,7 @@ void X86_64TargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
   };
   memcpy(Buf, PltData, sizeof(PltData));
   uint64_t Got = In<ELFT>::GotPlt->getVA();
-  uint64_t Plt = Out<ELFT>::Plt->Addr;
+  uint64_t Plt = In<ELFT>::Plt->getVA();
   write32le(Buf + 2, Got - Plt + 2); // GOT+8
   write32le(Buf + 8, Got - Plt + 4); // GOT+16
 }
@@ -1255,7 +1255,7 @@ uint32_t AArch64TargetInfo::getDynRel(uint32_t Type) const {
 }
 
 void AArch64TargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
-  write64le(Buf, Out<ELF64LE>::Plt->Addr);
+  write64le(Buf, In<ELF64LE>::Plt->getVA());
 }
 
 static uint64_t getAArch64Page(uint64_t Expr) {
@@ -1276,7 +1276,7 @@ void AArch64TargetInfo::writePltHeader(uint8_t *Buf) const {
   memcpy(Buf, PltData, sizeof(PltData));
 
   uint64_t Got = In<ELF64LE>::GotPlt->getVA();
-  uint64_t Plt = Out<ELF64LE>::Plt->Addr;
+  uint64_t Plt = In<ELF64LE>::Plt->getVA();
   relocateOne(Buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
               getAArch64Page(Got + 16) - getAArch64Page(Plt + 4));
   relocateOne(Buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, Got + 16);
@@ -1617,7 +1617,7 @@ uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
 }
 
 void ARMTargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
-  write32le(Buf, Out<ELF32LE>::Plt->Addr);
+  write32le(Buf, In<ELF32LE>::Plt->getVA());
 }
 
 void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
@@ -1630,7 +1630,7 @@ void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
   };
   memcpy(Buf, PltData, sizeof(PltData));
   uint64_t GotPlt = In<ELF32LE>::GotPlt->getVA();
-  uint64_t L1 = Out<ELF32LE>::Plt->Addr + 8;
+  uint64_t L1 = In<ELF32LE>::Plt->getVA() + 8;
   write32le(Buf + 16, GotPlt - L1 - 8);
 }
 
@@ -1997,7 +1997,7 @@ bool MipsTargetInfo<ELFT>::isTlsGlobalDynamicRel(uint32_t Type) const {
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
-  write32<ELFT::TargetEndianness>(Buf, Out<ELFT>::Plt->Addr);
+  write32<ELFT::TargetEndianness>(Buf, In<ELFT>::Plt->getVA());
 }
 
 template <endianness E, uint8_t BSIZE, uint8_t SHIFT>

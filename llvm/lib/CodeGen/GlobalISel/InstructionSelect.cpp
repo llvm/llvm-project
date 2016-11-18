@@ -164,7 +164,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   MRI.getVRegToType().clear();
 
-  if (!TPC.isGlobalISelAbortEnabled() && (Failed || MF.size() == NumBlocks)) {
+  if (!TPC.isGlobalISelAbortEnabled() && (Failed || MF.size() != NumBlocks)) {
     MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
     return false;
   }

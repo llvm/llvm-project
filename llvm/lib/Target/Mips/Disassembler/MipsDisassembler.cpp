@@ -1044,7 +1044,7 @@ static DecodeStatus DecodeBlezGroupBranch(MCInst &MI, InsnType insn,
 }
 
 /// Read two bytes from the ArrayRef and return 16 bit halfword sorted
-/// according to the given endianess.
+/// according to the given endianness.
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       uint64_t &Size, uint32_t &Insn,
                                       bool IsBigEndian) {
@@ -1064,7 +1064,7 @@ static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
 }
 
 /// Read four bytes from the ArrayRef and return 32 bit word sorted
-/// according to the given endianess
+/// according to the given endianness.
 static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       uint64_t &Size, uint32_t &Insn,
                                       bool IsBigEndian, bool IsMicroMips) {

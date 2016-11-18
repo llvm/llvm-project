@@ -25285,9 +25285,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 }
 
 unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
-  SDValue Op,
-  const SelectionDAG &,
-  unsigned Depth) const {
+    SDValue Op, const SelectionDAG &, unsigned Depth) const {
   // SETCC_CARRY sets the dest to ~0 for true or 0 for false.
   if (Op.getOpcode() == X86ISD::SETCC_CARRY)
     return Op.getScalarValueSizeInBits();

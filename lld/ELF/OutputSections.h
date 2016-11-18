@@ -45,7 +45,6 @@ public:
     EHFrame,
     EHFrameHdr,
     Merge,
-    Plt,
     Regular,
     VersDef,
     VersNeed,
@@ -128,24 +127,6 @@ private:
   void readDwarf(InputSection<ELFT> *I);
 
   uint32_t CuTypesOffset;
-};
-
-template <class ELFT> class PltSection final : public OutputSectionBase {
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  PltSection();
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-  void addEntry(SymbolBody &Sym);
-  bool empty() const { return Entries.empty(); }
-  Kind getKind() const override { return Plt; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == Plt;
-  }
-
-private:
-  std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -362,7 +343,6 @@ template <class ELFT> struct Out {
   static OutputSection<ELFT> *MipsRldMap;
   static OutputSectionBase *Opd;
   static uint8_t *OpdBuf;
-  static PltSection<ELFT> *Plt;
   static VersionDefinitionSection<ELFT> *VerDef;
   static VersionTableSection<ELFT> *VerSym;
   static VersionNeedSection<ELFT> *VerNeed;
@@ -416,7 +396,6 @@ template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;
 template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
-template <class ELFT> PltSection<ELFT> *Out<ELFT>::Plt;
 template <class ELFT> VersionDefinitionSection<ELFT> *Out<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *Out<ELFT>::VerSym;
 template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;

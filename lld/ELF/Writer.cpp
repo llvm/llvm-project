@@ -212,7 +212,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
-  Out<ELFT>::Plt = make<PltSection<ELFT>>();
+  In<ELFT>::Plt = make<PltSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
@@ -955,7 +955,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
        In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
        In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::MipsGot, In<ELFT>::GotPlt,
-       In<ELFT>::RelaDyn, In<ELFT>::RelaPlt, In<ELFT>::Dynamic});
+       In<ELFT>::RelaDyn, In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::Dynamic});
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -1022,8 +1022,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   if (!In<ELFT>::GotPlt->empty())
     addInputSec(In<ELFT>::GotPlt);
 
-  if (!Out<ELFT>::Plt->empty())
-    Add(Out<ELFT>::Plt);
+  if (!In<ELFT>::Plt->empty())
+    addInputSec(In<ELFT>::Plt);
   if (!Out<ELFT>::EhFrame->empty())
     Add(Out<ELFT>::EhFrameHdr);
   if (Out<ELFT>::Bss->Size > 0)
@@ -1478,61 +1478,6 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
       Sec->writeTo(Buf + Sec->Offset);
 }
 
-// Convert the .ARM.exidx table entries that use relative PREL31 offsets to
-// Absolute addresses. This form is internal to LLD and is only used to
-// make reordering the table simpler.
-static void ARMExidxEntryPrelToAbs(uint8_t *Loc, uint64_t EntryVA) {
-  uint64_t Addr = Target->getImplicitAddend(Loc, R_ARM_PREL31) + EntryVA;
-  bool InlineEntry =
-      (read32le(Loc + 4) == 1 || (read32le(Loc + 4) & 0x80000000));
-  if (InlineEntry)
-    // Set flag in unused bit of code address so that when we convert back we
-    // know which table entries to leave alone.
-    Addr |= 0x1;
-  else
-    write32le(Loc + 4,
-              Target->getImplicitAddend(Loc + 4, R_ARM_PREL31) + EntryVA + 4);
-  write32le(Loc, Addr);
-}
-
-// Convert the .ARM.exidx table entries from the internal to LLD form using
-// absolute addresses back to relative PREL31 offsets.
-static void ARMExidxEntryAbsToPrel(uint8_t *Loc, uint64_t EntryVA) {
-  uint64_t Off = read32le(Loc) - EntryVA;
-  // ARMExidxEntryPreltoAbs sets bit 0 if the table entry has inline data
-  // that is not an address
-  bool InlineEntry = Off & 0x1;
-  Target->relocateOne(Loc, R_ARM_PREL31, Off & ~0x1);
-  if (!InlineEntry)
-    Target->relocateOne(Loc + 4, R_ARM_PREL31,
-                        read32le(Loc + 4) - (EntryVA + 4));
-}
-
-// The table formed by the .ARM.exidx OutputSection has entries with two
-// 4-byte fields:
-// | PREL31 offset to function | Action to take for function |
-// The table must be ordered in ascending virtual address of the functions
-// identified by the first field of the table. Instead of using the
-// SHF_LINK_ORDER dependency to reorder the sections prior to relocation we
-// sort the table post-relocation.
-// Ref: Exception handling ABI for the ARM architecture
-static void sortARMExidx(uint8_t *Buf, uint64_t OutSecVA, uint64_t Size) {
-  struct ARMExidxEntry {
-    ulittle32_t Target;
-    ulittle32_t Action;
-  };
-  ARMExidxEntry *Start = (ARMExidxEntry *)Buf;
-  size_t NumEnt = Size / sizeof(ARMExidxEntry);
-  for (uint64_t Off = 0; Off < Size; Off += 8)
-    ARMExidxEntryPrelToAbs(Buf + Off, OutSecVA + Off);
-  std::stable_sort(Start, Start + NumEnt,
-                   [](const ARMExidxEntry &A, const ARMExidxEntry &B) {
-                     return A.Target < B.Target;
-                   });
-  for (uint64_t Off = 0; Off < Size; Off += 8)
-    ARMExidxEntryAbsToPrel(Buf + Off, OutSecVA + Off);
-}
-
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
   uint8_t *Buf = Buffer->getBufferStart();
@@ -1555,11 +1500,6 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSectionBase *Sec : OutputSections)
     if (Sec != Out<ELFT>::Opd && Sec != Out<ELFT>::EhFrameHdr)
       Sec->writeTo(Buf + Sec->Offset);
-
-  OutputSectionBase *ARMExidx = findSection(".ARM.exidx");
-  if (!Config->Relocatable)
-    if (auto *OS = dyn_cast_or_null<OutputSection<ELFT>>(ARMExidx))
-      sortARMExidx(Buf + OS->Offset, OS->Addr, OS->Size);
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.

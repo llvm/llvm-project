@@ -2113,6 +2113,24 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     }
     break;
   }
+  case ISD::CONCAT_VECTORS: {
+    // Split DemandedElts and test each of the demanded subvectors.
+    KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+    EVT SubVectorVT = Op.getOperand(0).getValueType();
+    unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
+    unsigned NumSubVectors = Op.getNumOperands();
+    for (unsigned i = 0; i != NumSubVectors; ++i) {
+      APInt DemandedSub = DemandedElts.lshr(i * NumSubVectorElts);
+      DemandedSub = DemandedSub.trunc(NumSubVectorElts);
+      if (!!DemandedSub) {
+        SDValue Sub = Op.getOperand(i);
+        computeKnownBits(Sub, KnownZero2, KnownOne2, DemandedSub, Depth + 1);
+        KnownOne &= KnownOne2;
+        KnownZero &= KnownZero2;
+      }
+    }
+    break;
+  }
   case ISD::EXTRACT_SUBVECTOR: {
     // If we know the element index, just demand that subvector elements,
     // otherwise demand them all.

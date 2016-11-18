@@ -890,6 +890,17 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB) {
     }
   }
 
+  // If the unconditional branch we replaced contains llvm.loop metadata, we
+  // add the metadata to the branch instructions in the predecessors.
+  unsigned LoopMDKind = BB->getContext().getMDKindID("llvm.loop");
+  Instruction *TI = BB->getTerminator();
+  if (TI)
+    if (MDNode *LoopMD = TI->getMetadata(LoopMDKind))
+      for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
+        BasicBlock *Pred = *PI;
+        Pred->getTerminator()->setMetadata(LoopMDKind, LoopMD);
+      }
+
   // Everything that jumped to BB now goes to Succ.
   BB->replaceAllUsesWith(Succ);
   if (!Succ->hasName()) Succ->takeName(BB);
@@ -1358,12 +1369,13 @@ unsigned llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
   return NumDeadInst;
 }
 
-unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap) {
+unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
+                                   bool PreserveLCSSA) {
   BasicBlock *BB = I->getParent();
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.
   for (BasicBlock *Successor : successors(BB))
-    Successor->removePredecessor(BB);
+    Successor->removePredecessor(BB, PreserveLCSSA);
 
   // Insert a call to llvm.trap right before this.  This turns the undefined
   // behavior into a hard fail instead of falling through into random code.

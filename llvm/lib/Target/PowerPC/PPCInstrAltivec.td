@@ -1315,8 +1315,14 @@ let isCodeGenOnly = 1 in {
 }
 
 // Vector Integer Negate
-def VNEGW : VX_VT5_EO5_VB5<1538, 6, "vnegw", []>;
-def VNEGD : VX_VT5_EO5_VB5<1538, 7, "vnegd", []>;
+def VNEGW : VX_VT5_EO5_VB5<1538, 6, "vnegw",
+                           [(set v4i32:$vD,
+                            (sub (v4i32 immAllZerosV), v4i32:$vB))]>;
+
+def VNEGD : VX_VT5_EO5_VB5<1538, 7, "vnegd",
+                           [(set v2i64:$vD,
+                            (sub (v2i64 (bitconvert (v4i32 immAllZerosV))),
+                                  v2i64:$vB))]>;
 
 // Vector Parity Byte
 def VPRTYBW : VX_VT5_EO5_VB5<1538, 8, "vprtybw", [(set v4i32:$vD,

@@ -12,17 +12,19 @@
 
 namespace llvm {
 namespace pdb {
+
 struct SectionContrib;
 struct SectionContrib2;
 
 class ISectionContribVisitor {
 public:
-  virtual ~ISectionContribVisitor() {}
+  virtual ~ISectionContribVisitor() = default;
 
   virtual void visit(const SectionContrib &C) = 0;
   virtual void visit(const SectionContrib2 &C) = 0;
 };
-} // namespace pdb
-} // namespace llvm
+
+} // end namespace pdb
+} // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_RAW_ISECTIONCONTRIBVISITOR_H

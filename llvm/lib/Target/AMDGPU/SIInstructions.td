@@ -799,7 +799,7 @@ defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
 def : ROTRPattern <V_ALIGNBIT_B32>;
 
 /********** ====================== **********/
-/**********   Indirect adressing   **********/
+/**********   Indirect addressing  **********/
 /********** ====================== **********/
 
 multiclass SI_INDIRECT_Pattern <ValueType vt, ValueType eltvt, string VecSize> {
@@ -926,7 +926,7 @@ def : FPToI1Pat<V_CMP_EQ_F64_e64, CONST.FP64_NEG_ONE, i64, f64, fp_to_sint>;
 
 // If we need to perform a logical operation on i1 values, we need to
 // use vector comparisons since there is only one SCC register. Vector
-// comparisions still write to a pair of SGPRs, so treat these as
+// comparisons still write to a pair of SGPRs, so treat these as
 // 64-bit comparisons. When legalizing SGPR copies, instructions
 // resulting in the copies from SCC to these instructions will be
 // moved to the VALU.

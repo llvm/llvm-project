@@ -8,4 +8,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-split
   llvm-split.cpp
+
+  DEPENDS
+  intrinsics_gen
   )

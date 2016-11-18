@@ -44,7 +44,7 @@ class VOP3Common <dag outs, dag ins, string asm = "",
   VOPAnyCommon <outs, ins, asm, pattern> {
 
   // Using complex patterns gives VOP3 patterns a very high complexity rating,
-  // but standalone patterns are almost always prefered, so we need to adjust the
+  // but standalone patterns are almost always preferred, so we need to adjust the
   // priority lower.  The goal is to use a high number to reduce complexity to
   // zero (or less than zero).
   let AddedComplexity = -1000;
@@ -93,7 +93,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP3On
   let hasPostISelHook = 1;
 
   // Using complex patterns gives VOP3 patterns a very high complexity rating,
-  // but standalone patterns are almost always prefered, so we need to adjust the
+  // but standalone patterns are almost always preferred, so we need to adjust the
   // priority lower.  The goal is to use a high number to reduce complexity to
   // zero (or less than zero).
   let AddedComplexity = -1000;

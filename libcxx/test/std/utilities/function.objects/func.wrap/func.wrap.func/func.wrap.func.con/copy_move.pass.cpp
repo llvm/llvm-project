@@ -132,7 +132,7 @@ int main()
         assert(A::count == 1);
         assert(f2.target<A>() == nullptr);
         assert(f2.target<Ref>());
-        assert(f.target<Ref>()); // f is unchanged because the target is small
+        LIBCPP_ASSERT(f.target<Ref>()); // f is unchanged because the target is small
     }
     {
         // Test that moving a function constructed from a function pointer
@@ -146,7 +146,7 @@ int main()
         std::function<int(int)> f2(std::move(f));
         assert(f2.target<A>() == nullptr);
         assert(f2.target<Ptr>());
-        assert(f.target<Ptr>()); // f is unchanged because the target is small
+        LIBCPP_ASSERT(f.target<Ptr>()); // f is unchanged because the target is small
     }
 #endif  // TEST_STD_VER >= 11
 }
