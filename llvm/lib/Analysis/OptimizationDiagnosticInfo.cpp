@@ -137,7 +137,7 @@ void OptimizationRemarkEmitter::emit(DiagnosticInfoOptimizationBase &OptDiag) {
   computeHotness(OptDiag);
 
   yaml::Output *Out = F->getContext().getDiagnosticsOutputFile();
-  if (Out && OptDiag.isEnabled()) {
+  if (Out) {
     auto *P = &const_cast<DiagnosticInfoOptimizationBase &>(OptDiag);
     *Out << P;
   }
