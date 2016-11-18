@@ -232,6 +232,15 @@ OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
                                      *Inst->getParent()->getParent(),
                                      Inst->getDebugLoc(), Inst->getParent()) {}
 
+OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(enum DiagnosticKind Kind,
+                                                       const char *PassName,
+                                                       StringRef RemarkName,
+                                                       const DebugLoc &DLoc,
+                                                       Value *CodeRegion)
+    : DiagnosticInfoOptimizationBase(Kind, DS_Remark, PassName, RemarkName,
+                                     *cast<BasicBlock>(CodeRegion)->getParent(),
+                                     DLoc, CodeRegion) {}
+
 bool OptimizationRemarkAnalysis::isEnabled() const {
   return shouldAlwaysPrint() ||
          (PassRemarksAnalysisOptLoc.Pattern &&
