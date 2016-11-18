@@ -529,7 +529,7 @@ private:
 public:
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
         duration() = default;
 #else
         duration() {}

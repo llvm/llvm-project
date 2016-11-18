@@ -1004,11 +1004,10 @@ private:
   Expr readParenExpr();
 
   // For parsing version script.
-  void readVersionExtern(std::vector<SymbolVersion> *Globals);
+  std::vector<SymbolVersion> readVersionExtern();
+  void readAnonymousDeclaration();
   void readVersionDeclaration(StringRef VerStr);
-  void readGlobal(StringRef VerStr);
-  void readLocal(StringRef VerStr);
-  void readSymbols(std::vector<SymbolVersion> &V);
+  std::vector<SymbolVersion> readSymbols();
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
@@ -1022,7 +1021,7 @@ void ScriptParser::readVersionScript() {
 
 void ScriptParser::readVersionScriptCommand() {
   if (consume("{")) {
-    readVersionDeclaration("");
+    readAnonymousDeclaration();
     return;
   }
 
@@ -1305,12 +1304,17 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
   return Ret;
 }
 
-// Section pattern grammar can have complex expressions, for example:
-// *(SORT(.foo.* EXCLUDE_FILE (*file1.o) .bar.*) .bar.* SORT(.zed.*))
-// Generally is a sequence of globs and excludes that may be wrapped in a SORT()
-// commands, like: SORT(glob0) glob1 glob2 SORT(glob4)
-// This methods handles wrapping sequences of excluded files and section globs
-// into SORT() if that needed and reads them all.
+// Reads contents of "SECTIONS" directive. That directive contains a
+// list of glob patterns for input sections. The grammar is as follows.
+//
+// <patterns> ::= <section-list>
+//              | <sort> "(" <section-list> ")"
+//              | <sort> "(" <sort> "(" <section-list> ")" ")"
+//
+// <sort>     ::= "SORT" | "SORT_BY_NAME" | "SORT_BY_ALIGNMENT"
+//              | "SORT_BY_INIT_PRIORITY" | "SORT_NONE"
+//
+// <section-list> is parsed by readInputSectionsList().
 InputSectionDescription *
 ScriptParser::readInputSectionRules(StringRef FilePattern) {
   auto *Cmd = new InputSectionDescription(FilePattern);
@@ -1502,7 +1506,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
     // The RHS may be something like "ABSOLUTE(.) & 0xff".
     // Call readExpr1 to read the whole expression.
     E = readExpr1(readParenExpr(), 0);
-    E.IsAbsolute = []() { return true; };
+    E.IsAbsolute = [] { return true; };
   } else {
     E = readExpr();
   }
@@ -1530,8 +1534,8 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
   }
   if (Op == "+")
     return {[=](uint64_t Dot) { return L(Dot) + R(Dot); },
-            [=]() { return L.IsAbsolute() && R.IsAbsolute(); },
-            [=]() {
+            [=] { return L.IsAbsolute() && R.IsAbsolute(); },
+            [=] {
               const OutputSectionBase *S = L.Section();
               return S ? S : R.Section();
             }};
@@ -1565,9 +1569,9 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
 Expr ScriptParser::readExpr1(Expr Lhs, int MinPrec) {
   while (!atEOF() && !Error) {
     // Read an operator and an expression.
-    StringRef Op1 = peek();
-    if (Op1 == "?")
+    if (consume("?"))
       return readTernary(Lhs);
+    StringRef Op1 = peek();
     if (precedence(Op1) < MinPrec)
       break;
     skip();
@@ -1603,17 +1607,21 @@ uint64_t static getConstant(StringRef S) {
 // and decimal numbers. Decimal numbers may have "K" (kilo) or
 // "M" (mega) prefixes.
 static bool readInteger(StringRef Tok, uint64_t &Result) {
+  // Negative number
   if (Tok.startswith("-")) {
     if (!readInteger(Tok.substr(1), Result))
       return false;
     Result = -Result;
     return true;
   }
+
+  // Hexadecimal
   if (Tok.startswith_lower("0x"))
     return !Tok.substr(2).getAsInteger(16, Result);
   if (Tok.endswith_lower("H"))
     return !Tok.drop_back().getAsInteger(16, Result);
 
+  // Decimal
   int Suffix = 1;
   if (Tok.endswith_lower("K")) {
     Suffix = 1024;
@@ -1675,8 +1683,8 @@ Expr ScriptParser::readPrimary() {
     StringRef Name = readParenLiteral();
     return {
         [=](uint64_t Dot) { return ScriptBase->getOutputSection(Name)->Addr; },
-        [=]() { return false; },
-        [=]() { return ScriptBase->getOutputSection(Name); }};
+        [=] { return false; },
+        [=] { return ScriptBase->getOutputSection(Name); }};
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
@@ -1753,12 +1761,11 @@ Expr ScriptParser::readPrimary() {
   if (Tok != "." && !isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
   return {[=](uint64_t Dot) { return getSymbolValue(Tok, Dot); },
-          [=]() { return isAbsolute(Tok); },
-          [=]() { return ScriptBase->getSymbolSection(Tok); }};
+          [=] { return isAbsolute(Tok); },
+          [=] { return ScriptBase->getSymbolSection(Tok); }};
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {
-  skip();
   Expr L = readExpr();
   expect(":");
   Expr R = readExpr();
@@ -1812,73 +1819,93 @@ unsigned ScriptParser::readPhdrType() {
   return Ret;
 }
 
+// Reads a list of symbols, e.g. "{ global: foo; bar; local: *; };".
+void ScriptParser::readAnonymousDeclaration() {
+  // Read global symbols first. "global:" is default, so if there's
+  // no label, we assume global symbols.
+  if (consume("global:") || peek() != "local:")
+    Config->VersionScriptGlobals = readSymbols();
+
+  // Next, read local symbols.
+  if (consume("local:")) {
+    if (consume("*")) {
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+      expect(";");
+    } else {
+      setError("local symbol list for anonymous version is not supported");
+    }
+  }
+  expect("}");
+  expect(";");
+}
+
+// Reads a list of symbols, e.g. "VerStr { global: foo; bar; local: *; };".
 void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   // Identifiers start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
   uint16_t VersionId = Config->VersionDefinitions.size() + 2;
   Config->VersionDefinitions.push_back({VerStr, VersionId});
 
+  // Read global symbols.
   if (consume("global:") || peek() != "local:")
-    readGlobal(VerStr);
-  if (consume("local:"))
-    readLocal(VerStr);
+    Config->VersionDefinitions.back().Globals = readSymbols();
+
+  // Read local symbols.
+  if (consume("local:")) {
+    if (consume("*")) {
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+      expect(";");
+    } else {
+      for (SymbolVersion V : readSymbols())
+        Config->VersionScriptLocals.push_back(V);
+    }
+  }
   expect("}");
 
-  // Each version may have a parent version. For example, "Ver2" defined as
-  // "Ver2 { global: foo; local: *; } Ver1;" has "Ver1" as a parent. This
-  // version hierarchy is, probably against your instinct, purely for human; the
-  // runtime doesn't care about them at all. In LLD, we simply skip the token.
-  if (!VerStr.empty() && peek() != ";")
+  // Each version may have a parent version. For example, "Ver2"
+  // defined as "Ver2 { global: foo; local: *; } Ver1;" has "Ver1"
+  // as a parent. This version hierarchy is, probably against your
+  // instinct, purely for hint; the runtime doesn't care about it
+  // at all. In LLD, we simply ignore it.
+  if (peek() != ";")
     skip();
   expect(";");
 }
 
-void ScriptParser::readSymbols(std::vector<SymbolVersion> &V) {
+// Reads a list of symbols for a versions cript.
+std::vector<SymbolVersion> ScriptParser::readSymbols() {
+  std::vector<SymbolVersion> Ret;
   for (;;) {
     if (consume("extern"))
-      readVersionExtern(&V);
+      for (SymbolVersion V : readVersionExtern())
+        Ret.push_back(V);
 
     if (peek() == "}" || peek() == "local:" || Error)
-      return;
+      break;
     StringRef Tok = next();
-    V.push_back({unquote(Tok), false, hasWildcard(Tok)});
+    Ret.push_back({unquote(Tok), false, hasWildcard(Tok)});
     expect(";");
   }
+  return Ret;
 }
 
-void ScriptParser::readLocal(StringRef VerStr) {
-  if (consume("*")) {
-    Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-    expect(";");
-    return;
-  }
-
-  if (VerStr.empty())
-    setError("locals list for anonymous version is not supported");
-
-  readSymbols(Config->VersionScriptLocals);
-}
-
-void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *V) {
+// Reads an "extern C++" directive, e.g.,
+// "extern "C++" { ns::*; "f(int, double)"; };"
+std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   expect("\"C++\"");
   expect("{");
 
+  std::vector<SymbolVersion> Ret;
   while (!Error && peek() != "}") {
     StringRef Tok = next();
     bool HasWildcard = !Tok.startswith("\"") && hasWildcard(Tok);
-    V->push_back({unquote(Tok), true, HasWildcard});
+    Ret.push_back({unquote(Tok), true, HasWildcard});
     expect(";");
   }
 
   expect("}");
   expect(";");
-}
-
-void ScriptParser::readGlobal(StringRef VerStr) {
-  if (VerStr.empty())
-    readSymbols(Config->VersionScriptGlobals);
-  else
-    readSymbols(Config->VersionDefinitions.back().Globals);
+  return Ret;
 }
 
 static bool isUnderSysroot(StringRef Path) {

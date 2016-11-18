@@ -239,9 +239,9 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Out<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
 
   if (Config->GnuHash)
-    Out<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
+    In<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
   if (Config->SysvHash)
-    Out<ELFT>::HashTab = make<HashTableSection<ELFT>>();
+    In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
   if (Config->GdbIndex)
     Out<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
 
@@ -943,21 +943,17 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Sec->ShName = In<ELFT>::ShStrTab->addString(Sec->getName());
   }
 
-  // FIXME: this should be removed after converting GnuHashTableSection
-  // to input section.
-  // Finalizers fix each section's size.
-  // .dynsym is finalized early since that may fill up .gnu.hash.
-  finalizeSynthetic<ELFT>({In<ELFT>::DynSymTab});
-
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSectionBase *Sec : OutputSections)
     Sec->finalize();
 
-  // Dynamic section must be the last one in this list.
+  // Dynamic section must be the last one in this list and dynamic
+  // symbol table section (DynSymTab) must be the first one.
   finalizeSynthetic<ELFT>(
-      {In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
+      {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
+       In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
        In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::MipsGot, In<ELFT>::GotPlt,
        In<ELFT>::RelaDyn, In<ELFT>::RelaPlt, In<ELFT>::Dynamic});
 }
@@ -1000,8 +996,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     if (HasVerNeed)
       Add(Out<ELFT>::VerNeed);
 
-    Add(Out<ELFT>::GnuHashTab);
-    Add(Out<ELFT>::HashTab);
+    addInputSec(In<ELFT>::GnuHashTab);
+    addInputSec(In<ELFT>::HashTab);
     addInputSec(In<ELFT>::Dynamic);
     addInputSec(In<ELFT>::DynStrTab);
     if (In<ELFT>::RelaDyn->hasRelocs())

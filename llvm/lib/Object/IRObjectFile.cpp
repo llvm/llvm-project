@@ -76,14 +76,14 @@ void IRObjectFile::CollectAsmUndefinedRefs(
   MCObjectFileInfo MOFI;
   MCContext MCCtx(MAI.get(), MRI.get(), &MOFI);
   MOFI.InitMCObjectFileInfo(TT, /*PIC*/ false, CodeModel::Default, MCCtx);
-  std::unique_ptr<RecordStreamer> Streamer(new RecordStreamer(MCCtx));
-  T->createNullTargetStreamer(*Streamer);
+  RecordStreamer Streamer(MCCtx);
+  T->createNullTargetStreamer(Streamer);
 
   std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
   SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, MCCtx, *Streamer, *MAI));
+      createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
 
   MCTargetOptions MCOptions;
   std::unique_ptr<MCTargetAsmParser> TAP(
@@ -95,7 +95,7 @@ void IRObjectFile::CollectAsmUndefinedRefs(
   if (Parser->Run(false))
     return;
 
-  for (auto &KV : *Streamer) {
+  for (auto &KV : Streamer) {
     StringRef Key = KV.first();
     RecordStreamer::State Value = KV.second;
     uint32_t Res = BasicSymbolRef::SF_None;

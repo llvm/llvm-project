@@ -4,12 +4,12 @@ define i32 @test0(i32 %X) {
   %tmp.1 = add i32 %X, 1
   ret i32 %tmp.1
 ; CHECK-LABEL: test0:
-; CHECK: addi r1, 1
+; CHECK: r1 += 1
 }
 
 ; CHECK-LABEL: store_imm:
-; CHECK: stw  0(r1), r{{[03]}}
-; CHECK: stw  4(r2), r{{[03]}}
+; CHECK: *(u32 *)(r1 + 0) = r{{[03]}}
+; CHECK: *(u32 *)(r2 + 4) = r{{[03]}}
 define i32 @store_imm(i32* %a, i32* %b) {
 entry:
   store i32 0, i32* %a, align 4
@@ -23,6 +23,6 @@ define zeroext i8 @loadG() {
   %tmp = load i8, i8* @G
   ret i8 %tmp
 ; CHECK-LABEL: loadG:
-; CHECK: ld_64 r1
-; CHECK: ldb  r0, 0(r1)
+; CHECK: r1 =
+; CHECK: r0 = *(u8 *)(r1 + 0)
 }

@@ -95,6 +95,13 @@ Changes to the AMDGPU Target
 
  During this release ...
 
+Changes to the AVR Target
+-----------------------------
+
+* The entire backend has been merged in-tree with all tests passing. All of
+  the instruction selection code and the machine code backend has landed
+  recently and is fully usable.
+
 Changes to the OCaml bindings
 -----------------------------
 
