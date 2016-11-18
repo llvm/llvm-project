@@ -35,8 +35,9 @@ f2:
 // CHECK:         Section {
 // CHECK:         Name: .ARM.exidx
 // CHECK-NEXT:    Type: SHT_ARM_EXIDX (0x70000001)
-// CHECK-NEXT:    Flags [ (0x2)
-// CHECK-NEXT:      SHF_ALLOC (0x2)
+// CHECK-NEXT:    Flags [
+// CHECK-NEXT:      SHF_ALLOC
+// CHECK-NEXT:      SHF_LINK_ORDER
 // CHECK-NEXT:    ]
 
 // CHECK-NOT:     Name: .ARM.exidx.text.f1

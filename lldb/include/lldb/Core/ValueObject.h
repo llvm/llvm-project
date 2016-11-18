@@ -394,16 +394,7 @@ public:
       GetExpressionPathFormat = eGetExpressionPathFormatDereferencePointers);
 
   lldb::ValueObjectSP GetValueForExpressionPath(
-      const char *expression, const char **first_unparsed = nullptr,
-      ExpressionPathScanEndReason *reason_to_stop = nullptr,
-      ExpressionPathEndResultType *final_value_type = nullptr,
-      const GetValueForExpressionPathOptions &options =
-          GetValueForExpressionPathOptions::DefaultOptions(),
-      ExpressionPathAftermath *final_task_on_target = nullptr);
-
-  int GetValuesForExpressionPath(
-      const char *expression, lldb::ValueObjectListSP &list,
-      const char **first_unparsed = nullptr,
+      const char *expression,
       ExpressionPathScanEndReason *reason_to_stop = nullptr,
       ExpressionPathEndResultType *final_value_type = nullptr,
       const GetValueForExpressionPathOptions &options =
@@ -1011,20 +1002,7 @@ private:
   virtual CompilerType MaybeCalculateCompleteType();
 
   lldb::ValueObjectSP GetValueForExpressionPath_Impl(
-      const char *expression_cstr, const char **first_unparsed,
-      ExpressionPathScanEndReason *reason_to_stop,
-      ExpressionPathEndResultType *final_value_type,
-      const GetValueForExpressionPathOptions &options,
-      ExpressionPathAftermath *final_task_on_target);
-
-  // this method will ONLY expand [] expressions into a VOList and return
-  // the number of elements it added to the VOList
-  // it will NOT loop through expanding the follow-up of the expression_cstr
-  // for all objects in the list
-  int ExpandArraySliceExpression(
-      const char *expression_cstr, const char **first_unparsed,
-      lldb::ValueObjectSP root, lldb::ValueObjectListSP &list,
-      ExpressionPathScanEndReason *reason_to_stop,
+      const char *expression_cstr, ExpressionPathScanEndReason *reason_to_stop,
       ExpressionPathEndResultType *final_value_type,
       const GetValueForExpressionPathOptions &options,
       ExpressionPathAftermath *final_task_on_target);

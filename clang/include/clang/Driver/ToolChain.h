@@ -38,6 +38,7 @@ class FileSystem;
 
 namespace driver {
   class Compilation;
+  class CudaInstallationDetector;
   class Driver;
   class JobAction;
   class RegisterEffectiveTriple;

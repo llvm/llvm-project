@@ -107,21 +107,22 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
   // the .o file from the
   // inlined range, so I left that out too...
   if (m_addr_context.comp_unit) {
-    if (m_addr_context.comp_unit == context.comp_unit) {
-      if (m_addr_context.function &&
-          m_addr_context.function == context.function) {
-        // It is okay to return to a different block of a straight function, we
-        // only have to
-        // be more careful if returning from one inlined block to another.
-        if (m_addr_context.block->GetInlinedFunctionInfo() == nullptr &&
-            context.block->GetInlinedFunctionInfo() == nullptr)
-          return true;
-
-        if (m_addr_context.block && m_addr_context.block == context.block)
-          return true;
-      }
+    if (m_addr_context.comp_unit != context.comp_unit)
+      return false;
+    if (m_addr_context.function) {
+      if (m_addr_context.function != context.function)
+        return false;
+      // It is okay to return to a different block of a straight function, we
+      // only have to
+      // be more careful if returning from one inlined block to another.
+      if (m_addr_context.block->GetInlinedFunctionInfo() == nullptr &&
+          context.block->GetInlinedFunctionInfo() == nullptr)
+        return true;
+      return m_addr_context.block == context.block;
     }
-  } else if (m_addr_context.symbol && m_addr_context.symbol == context.symbol) {
+  }
+  // Fall back to symbol if we have no decision from comp_unit/function/block.
+  if (m_addr_context.symbol && m_addr_context.symbol == context.symbol) {
     return true;
   }
   return false;

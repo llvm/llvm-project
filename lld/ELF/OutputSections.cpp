@@ -400,25 +400,19 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
 }
 
 template <class ELFT> void OutputSection<ELFT>::finalize() {
-  if (!Config->Relocatable) {
-    // SHF_LINK_ORDER only has meaning in relocatable objects
-    this->Flags &= ~SHF_LINK_ORDER;
-    return;
-  }
-
-  uint32_t Type = this->Type;
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
-    // When doing a relocatable link we must preserve the link order
-    // dependency of sections with the SHF_LINK_ORDER flag. The dependency
-    // is indicated by the sh_link field. We need to translate the
-    // InputSection sh_link to the OutputSection sh_link, all InputSections
-    // in the OutputSection have the same dependency.
+    // We must preserve the link order dependency of sections with the
+    // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
+    // need to translate the InputSection sh_link to the OutputSection sh_link,
+    // all InputSections in the OutputSection have the same dependency.
     if (auto *D = this->Sections.front()->getLinkOrderDep())
       this->Link = D->OutSec->SectionIndex;
   }
 
-  if (Type != SHT_RELA && Type != SHT_REL)
+  uint32_t Type = this->Type;
+  if (!Config->Relocatable || (Type != SHT_RELA && Type != SHT_REL))
     return;
+
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
@@ -548,13 +542,11 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
   ArrayRef<uint8_t> Filler = Script<ELFT>::X->getFiller(this->Name);
   if (!Filler.empty())
     fill(Buf, this->Size, Filler);
-  if (Config->Threads) {
-    parallel_for_each(Sections.begin(), Sections.end(),
-                      [=](InputSection<ELFT> *C) { C->writeTo(Buf); });
-  } else {
-    for (InputSection<ELFT> *C : Sections)
-      C->writeTo(Buf);
-  }
+  auto Fn = [=](InputSection<ELFT> *IS) { IS->writeTo(Buf); };
+  if (Config->Threads)
+    parallel_for_each(Sections.begin(), Sections.end(), Fn);
+  else
+    std::for_each(Sections.begin(), Sections.end(), Fn);
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
   Script<ELFT>::X->writeDataBytes(this->Name, Buf);
@@ -780,42 +772,49 @@ void MergeOutputSection<ELFT>::addSection(InputSectionData *C) {
   this->updateAlignment(Sec->Alignment);
   this->Entsize = Sec->Entsize;
   Sections.push_back(Sec);
-
-  auto HashI = Sec->Hashes.begin();
-  for (auto I = Sec->Pieces.begin(), E = Sec->Pieces.end(); I != E; ++I) {
-    SectionPiece &Piece = *I;
-    uint32_t Hash = *HashI;
-    ++HashI;
-    if (!Piece.Live)
-      continue;
-    StringRef Data = toStringRef(Sec->getData(I));
-    CachedHashStringRef V(Data, Hash);
-    uintX_t OutputOffset = Builder.add(V);
-    if (!shouldTailMerge())
-      Piece.OutputOff = OutputOffset;
-  }
-}
-
-template <class ELFT>
-unsigned MergeOutputSection<ELFT>::getOffset(CachedHashStringRef Val) {
-  return Builder.getOffset(Val);
 }
 
 template <class ELFT> bool MergeOutputSection<ELFT>::shouldTailMerge() const {
-  return Config->Optimize >= 2 && this->Flags & SHF_STRINGS;
+  return (this->Flags & SHF_STRINGS) && Config->Optimize >= 2;
 }
 
 template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
+  // Add all string pieces to the string table builder to create section
+  // contents. If we are not tail-optimizing, offsets of strings are fixed
+  // when they are added to the builder (string table builder contains a
+  // hash table from strings to offsets), so we record them if available.
+  for (MergeInputSection<ELFT> *Sec : Sections) {
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
+      if (!Sec->Pieces[I].Live)
+        continue;
+      uint32_t OutputOffset = Builder.add(Sec->getData(I));
+
+      // Save the offset in the generated string table.
+      if (!shouldTailMerge())
+        Sec->Pieces[I].OutputOff = OutputOffset;
+    }
+  }
+
+  // Fix the string table content. After this, the contents
+  // will never change.
   if (shouldTailMerge())
     Builder.finalize();
   else
     Builder.finalizeInOrder();
   this->Size = Builder.getSize();
-}
 
-template <class ELFT> void MergeOutputSection<ELFT>::finalizePieces() {
-  for (MergeInputSection<ELFT> *Sec : Sections)
-    Sec->finalizePieces();
+  // finalize() fixed tail-optimized strings, so we can now get
+  // offsets of strings. Get an offset for each string and save it
+  // to a corresponding StringPiece for easy access.
+  if (shouldTailMerge()) {
+    for (MergeInputSection<ELFT> *Sec : Sections) {
+      for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
+        if (!Sec->Pieces[I].Live)
+          continue;
+        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
+      }
+    }
+  }
 }
 
 template <class ELFT>

@@ -88,7 +88,6 @@ public:
   OutputSectionBase *FirstInPtLoad = nullptr;
 
   virtual void finalize() {}
-  virtual void finalizePieces() {}
   virtual void assignOffsets() {}
   virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
@@ -265,9 +264,7 @@ public:
                      uintX_t Alignment);
   void addSection(InputSectionData *S) override;
   void writeTo(uint8_t *Buf) override;
-  unsigned getOffset(llvm::CachedHashStringRef Val);
   void finalize() override;
-  void finalizePieces() override;
   bool shouldTailMerge() const;
   Kind getKind() const override { return Merge; }
   static bool classof(const OutputSectionBase *B) {

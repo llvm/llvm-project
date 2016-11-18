@@ -347,51 +347,35 @@ Error RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
   return error;
 }
 
-static inline void StripSpaces(llvm::StringRef &Str) {
-  while (!Str.empty() && isspace(Str[0]))
-    Str = Str.substr(1);
-  while (!Str.empty() && isspace(Str.back()))
-    Str = Str.substr(0, Str.size() - 1);
-}
-
-static inline void LStrip(llvm::StringRef &Str, char c) {
-  if (!Str.empty() && Str.front() == c)
-    Str = Str.substr(1);
-}
-
-static inline void RStrip(llvm::StringRef &Str, char c) {
-  if (!Str.empty() && Str.back() == c)
-    Str = Str.substr(0, Str.size() - 1);
-}
-
-// Helper function for RegisterValue::SetValueFromCString()
+// Helper function for RegisterValue::SetValueFromString()
 static bool ParseVectorEncoding(const RegisterInfo *reg_info,
-                                const char *vector_str,
+                                llvm::StringRef vector_str,
                                 const uint32_t byte_size,
                                 RegisterValue *reg_value) {
   // Example: vector_str = "{0x2c 0x4b 0x2a 0x3e 0xd0 0x4f 0x2a 0x3e 0xac 0x4a
   // 0x2a 0x3e 0x84 0x4f 0x2a 0x3e}".
-  llvm::StringRef Str(vector_str);
-  StripSpaces(Str);
-  LStrip(Str, '{');
-  RStrip(Str, '}');
-  StripSpaces(Str);
+  vector_str = vector_str.trim();
+  vector_str.consume_front("{");
+  vector_str.consume_back("}");
+  vector_str = vector_str.trim();
 
   char Sep = ' ';
 
   // The first split should give us:
   // ('0x2c', '0x4b 0x2a 0x3e 0xd0 0x4f 0x2a 0x3e 0xac 0x4a 0x2a 0x3e 0x84 0x4f
   // 0x2a 0x3e').
-  std::pair<llvm::StringRef, llvm::StringRef> Pair = Str.split(Sep);
+  llvm::StringRef car;
+  llvm::StringRef cdr = vector_str;
+  std::tie(car, cdr) = vector_str.split(Sep);
   std::vector<uint8_t> bytes;
   unsigned byte = 0;
 
   // Using radix auto-sensing by passing 0 as the radix.
   // Keep on processing the vector elements as long as the parsing succeeds and
   // the vector size is < byte_size.
-  while (!Pair.first.getAsInteger(0, byte) && bytes.size() < byte_size) {
+  while (!car.getAsInteger(0, byte) && bytes.size() < byte_size) {
     bytes.push_back(byte);
-    Pair = Pair.second.split(Sep);
+    std::tie(car, cdr) = cdr.split(Sep);
   }
 
   // Check for vector of exact byte_size elements.
@@ -402,112 +386,129 @@ static bool ParseVectorEncoding(const RegisterInfo *reg_info,
   return true;
 }
 
-Error RegisterValue::SetValueFromCString(const RegisterInfo *reg_info,
-                                         const char *value_str) {
+Error RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
+                                        llvm::StringRef value_str) {
   Error error;
   if (reg_info == nullptr) {
     error.SetErrorString("Invalid register info argument.");
     return error;
   }
 
-  if (value_str == nullptr || value_str[0] == '\0') {
+  m_type = eTypeInvalid;
+  if (value_str.empty()) {
     error.SetErrorString("Invalid c-string value string.");
     return error;
   }
-  bool success = false;
   const uint32_t byte_size = reg_info->byte_size;
-  static float flt_val;
-  static double dbl_val;
-  static long double ldbl_val;
+
+  uint64_t uval64;
+  int64_t ival64;
+  float flt_val;
+  double dbl_val;
+  long double ldbl_val;
   switch (reg_info->encoding) {
   case eEncodingInvalid:
     error.SetErrorString("Invalid encoding.");
     break;
 
   case eEncodingUint:
-    if (byte_size <= sizeof(uint64_t)) {
-      uint64_t uval64 =
-          StringConvert::ToUInt64(value_str, UINT64_MAX, 0, &success);
-      if (!success)
-        error.SetErrorStringWithFormat(
-            "'%s' is not a valid unsigned integer string value", value_str);
-      else if (!Args::UInt64ValueIsValidForByteSize(uval64, byte_size))
-        error.SetErrorStringWithFormat(
-            "value 0x%" PRIx64
-            " is too large to fit in a %u byte unsigned integer value",
-            uval64, byte_size);
-      else {
-        if (!SetUInt(uval64, reg_info->byte_size))
-          error.SetErrorStringWithFormat(
-              "unsupported unsigned integer byte size: %u", byte_size);
-      }
-    } else {
+    if (byte_size > sizeof(uint64_t)) {
       error.SetErrorStringWithFormat(
           "unsupported unsigned integer byte size: %u", byte_size);
-      return error;
+      break;
     }
+    if (value_str.getAsInteger(0, uval64)) {
+      error.SetErrorStringWithFormat(
+          "'%s' is not a valid unsigned integer string value",
+          value_str.str().c_str());
+      break;
+    }
+
+    if (!Args::UInt64ValueIsValidForByteSize(uval64, byte_size)) {
+      error.SetErrorStringWithFormat(
+          "value 0x%" PRIx64
+          " is too large to fit in a %u byte unsigned integer value",
+          uval64, byte_size);
+      break;
+    }
+
+    if (!SetUInt(uval64, reg_info->byte_size)) {
+      error.SetErrorStringWithFormat(
+          "unsupported unsigned integer byte size: %u", byte_size);
+      break;
+    }
+    // TODO: Shouldn't we be setting m_type here?
     break;
 
   case eEncodingSint:
-    if (byte_size <= sizeof(long long)) {
-      uint64_t sval64 =
-          StringConvert::ToSInt64(value_str, INT64_MAX, 0, &success);
-      if (!success)
-        error.SetErrorStringWithFormat(
-            "'%s' is not a valid signed integer string value", value_str);
-      else if (!Args::SInt64ValueIsValidForByteSize(sval64, byte_size))
-        error.SetErrorStringWithFormat(
-            "value 0x%" PRIx64
-            " is too large to fit in a %u byte signed integer value",
-            sval64, byte_size);
-      else {
-        if (!SetUInt(sval64, reg_info->byte_size))
-          error.SetErrorStringWithFormat(
-              "unsupported signed integer byte size: %u", byte_size);
-      }
-    } else {
+    if (byte_size > sizeof(long long)) {
       error.SetErrorStringWithFormat("unsupported signed integer byte size: %u",
                                      byte_size);
-      return error;
+      break;
     }
+
+    if (value_str.getAsInteger(0, ival64)) {
+      error.SetErrorStringWithFormat(
+          "'%s' is not a valid signed integer string value",
+          value_str.str().c_str());
+      break;
+    }
+
+    if (!Args::SInt64ValueIsValidForByteSize(ival64, byte_size)) {
+      error.SetErrorStringWithFormat(
+          "value 0x%" PRIx64
+          " is too large to fit in a %u byte signed integer value",
+          ival64, byte_size);
+      break;
+    }
+
+    if (!SetUInt(ival64, reg_info->byte_size)) {
+      error.SetErrorStringWithFormat("unsupported signed integer byte size: %u",
+                                     byte_size);
+      break;
+    }
+
+    // TODO: Shouldn't we be setting m_type here?
     break;
 
-  case eEncodingIEEE754:
+  case eEncodingIEEE754: {
+    std::string value_string = value_str;
     if (byte_size == sizeof(float)) {
-      if (::sscanf(value_str, "%f", &flt_val) == 1) {
-        m_scalar = flt_val;
-        m_type = eTypeFloat;
-      } else
+      if (::sscanf(value_string.c_str(), "%f", &flt_val) != 1) {
         error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_str);
+                                       value_string.c_str());
+        break;
+      }
+      m_scalar = flt_val;
+      m_type = eTypeFloat;
     } else if (byte_size == sizeof(double)) {
-      if (::sscanf(value_str, "%lf", &dbl_val) == 1) {
-        m_scalar = dbl_val;
-        m_type = eTypeDouble;
-      } else
+      if (::sscanf(value_string.c_str(), "%lf", &dbl_val) != 1) {
         error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_str);
+                                       value_string.c_str());
+        break;
+      }
+      m_scalar = dbl_val;
+      m_type = eTypeDouble;
     } else if (byte_size == sizeof(long double)) {
-      if (::sscanf(value_str, "%Lf", &ldbl_val) == 1) {
-        m_scalar = ldbl_val;
-        m_type = eTypeLongDouble;
-      } else
+      if (::sscanf(value_string.c_str(), "%Lf", &ldbl_val) != 1) {
         error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_str);
+                                       value_string.c_str());
+        break;
+      }
+      m_scalar = ldbl_val;
+      m_type = eTypeLongDouble;
     } else {
       error.SetErrorStringWithFormat("unsupported float byte size: %u",
                                      byte_size);
       return error;
     }
     break;
-
+  }
   case eEncodingVector:
     if (!ParseVectorEncoding(reg_info, value_str, byte_size, this))
       error.SetErrorString("unrecognized vector encoding string value.");
     break;
   }
-  if (error.Fail())
-    m_type = eTypeInvalid;
 
   return error;
 }

@@ -385,10 +385,11 @@ llvm::Value *getConditionFromTerminator(llvm::TerminatorInst *TI);
 /// @param R     The analyzed region.
 /// @param LI    The loop info.
 /// @param SE    The scalar evolution analysis.
+/// @param DT    The dominator tree of the function.
 ///
 /// @return True if @p LInst can be hoisted in @p R.
 bool isHoistableLoad(llvm::LoadInst *LInst, llvm::Region &R, llvm::LoopInfo &LI,
-                     llvm::ScalarEvolution &SE);
+                     llvm::ScalarEvolution &SE, const llvm::DominatorTree &DT);
 
 /// Return true iff @p V is an intrinsic that we ignore during code
 ///        generation.
