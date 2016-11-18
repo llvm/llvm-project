@@ -523,6 +523,11 @@ public:
   OptimizationRemark(const char *PassName, StringRef RemarkName,
                      const DebugLoc &DLoc, Value *CodeRegion);
 
+  /// Same as above but the debug location and code region is derived from \p
+  /// Instr.
+  OptimizationRemark(const char *PassName, StringRef RemarkName,
+                     Instruction *Inst);
+
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemark;
   }
