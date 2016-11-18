@@ -265,7 +265,7 @@ def usePlatformSdkOnDarwin(config, lit_config):
     # default system root path.
     if isMacOSTriple(config.target_triple):
         try:
-            cmd = subprocess.Popen(['xcrun', '--show-sdk-path'],
+            cmd = subprocess.Popen(['xcrun', '--show-sdk-path', '--sdk', 'macosx'],
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = cmd.communicate()
             out = out.strip()
