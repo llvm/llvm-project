@@ -2,6 +2,9 @@ set(LLVM_LINK_COMPONENTS BitWriter Core Object Support)
 
 add_clang_executable(clang-offload-bundler
   ClangOffloadBundler.cpp
+  
+  DEPENDS
+  intrinsics_gen
   )
 
 set(CLANG_OFFLOAD_BUNDLER_LIB_DEPS
