@@ -17,10 +17,12 @@
 
 #include "llvm-c/Types.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <functional>
 #include <string>
 
@@ -374,6 +376,37 @@ private:
 /// Common features for diagnostics dealing with optimization remarks.
 class DiagnosticInfoOptimizationBase : public DiagnosticInfoWithDebugLocBase {
 public:
+  /// \brief Used to set IsVerbose via the stream interface.
+  struct setIsVerbose {};
+
+  /// \brief Used in the streaming interface as the general argument type.  It
+  /// internally converts everything into a key-value pair.
+  struct Argument {
+    StringRef Key;
+    std::string Val;
+
+    explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
+    explicit Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
+    explicit Argument(StringRef Key, int N);
+  };
+
+  /// \p PassName is the name of the pass emitting this diagnostic. \p
+  /// RemarkName is a textual identifier for the remark.  \p Fn is the function
+  /// where the diagnostic is being emitted. \p DLoc is the location information
+  /// to use in the diagnostic. If line table information is available, the
+  /// diagnostic will include the source code location. \p CodeRegion is IR
+  /// value (currently basic block) that the optimization operates on.  This is
+  /// currently used to provide run-time hotness information with PGO.
+  DiagnosticInfoOptimizationBase(enum DiagnosticKind Kind,
+                                 enum DiagnosticSeverity Severity,
+                                 const char *PassName, StringRef RemarkName,
+                                 const Function &Fn, const DebugLoc &DLoc,
+                                 Value *CodeRegion = nullptr)
+      : DiagnosticInfoWithDebugLocBase(Kind, Severity, Fn, DLoc),
+        PassName(PassName), RemarkName(RemarkName), CodeRegion(CodeRegion),
+        IsVerbose(false) {}
+
+  /// Legacy interface.
   /// \p PassName is the name of the pass emitting this diagnostic.
   /// \p Fn is the function where the diagnostic is being emitted. \p DLoc is
   /// the location information to use in the diagnostic. If line table
@@ -387,7 +420,13 @@ public:
                                  const DebugLoc &DLoc, const Twine &Msg,
                                  Optional<uint64_t> Hotness = None)
       : DiagnosticInfoWithDebugLocBase(Kind, Severity, Fn, DLoc),
-        PassName(PassName), Msg(Msg), Hotness(Hotness) {}
+        PassName(PassName), Hotness(Hotness), IsVerbose(false) {
+    Args.push_back(Argument(Msg.str()));
+  }
+
+  DiagnosticInfoOptimizationBase &operator<<(StringRef S);
+  DiagnosticInfoOptimizationBase &operator<<(Argument A);
+  DiagnosticInfoOptimizationBase &operator<<(setIsVerbose V);
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -400,8 +439,13 @@ public:
   virtual bool isEnabled() const = 0;
 
   const char *getPassName() const { return PassName; }
-  const Twine &getMsg() const { return Msg; }
+  std::string getMsg() const;
   Optional<uint64_t> getHotness() const { return Hotness; }
+  void setHotness(Optional<uint64_t> H) { Hotness = H; }
+
+  Value *getCodeRegion() const { return CodeRegion; }
+
+  bool isVerbose() const { return IsVerbose; }
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() >= DK_FirstRemark &&
@@ -414,12 +458,25 @@ private:
   /// be emitted.
   const char *PassName;
 
-  /// Message to report.
-  const Twine &Msg;
+  /// Textual identifier for the remark.  Can be used by external tools reading
+  /// the YAML output file for optimization remarks to identify the remark.
+  StringRef RemarkName;
 
   /// If profile information is available, this is the number of times the
   /// corresponding code was executed in a profile instrumentation run.
   Optional<uint64_t> Hotness;
+
+  /// The IR value (currently basic block) that the optimization operates on.
+  /// This is currently used to provide run-time hotness information with PGO.
+  Value *CodeRegion;
+
+  /// Arguments collected via the streaming interface.
+  SmallVector<Argument, 4> Args;
+
+  /// The remark is expected to be noisy.
+  bool IsVerbose;
+
+  friend struct yaml::MappingTraits<DiagnosticInfoOptimizationBase *>;
 };
 
 /// Diagnostic information for applied optimization remarks.
@@ -465,6 +522,14 @@ public:
                                          Optional<uint64_t> Hotness = None)
       : DiagnosticInfoOptimizationBase(DK_OptimizationRemarkMissed, DS_Remark,
                                        PassName, Fn, DLoc, Msg, Hotness) {}
+
+  /// \p PassName is the name of the pass emitting this diagnostic. If this name
+  /// matches the regular expression given in -Rpass-missed=, then the
+  /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
+  /// remark.  \p Inst is the instruction that the optimization operates on.
+  DiagnosticInfoOptimizationRemarkMissed(const char *PassName,
+                                         StringRef RemarkName,
+                                         Instruction *Inst);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkMissed;

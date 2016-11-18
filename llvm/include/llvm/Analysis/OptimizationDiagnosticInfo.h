@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
@@ -61,6 +62,9 @@ public:
     BFI = RHS.BFI;
     return *this;
   }
+
+  /// The new interface to emit remarks.
+  void emit(DiagnosticInfoOptimizationBase &OptDiag);
 
   /// Emit an optimization-applied message.
   ///
@@ -198,7 +202,12 @@ private:
   /// If we generate BFI on demand, we need to free it when ORE is freed.
   std::unique_ptr<BlockFrequencyInfo> OwnedBFI;
 
+  /// Compute hotness from IR value (currently assumed to be a block) if PGO is
+  /// available.
   Optional<uint64_t> computeHotness(const Value *V);
+
+  /// Similar but use value from \p OptDiag and update hotness there.
+  void computeHotness(DiagnosticInfoOptimizationBase &OptDiag);
 
   /// \brief Only allow verbose messages if we know we're filtering by hotness
   /// (BFI is only set in this case).
@@ -207,6 +216,14 @@ private:
   OptimizationRemarkEmitter(const OptimizationRemarkEmitter &) = delete;
   void operator=(const OptimizationRemarkEmitter &) = delete;
 };
+
+/// \brief Add a small namespace to avoid name clashes with the classes used in
+/// the streaming interface.  We want these to be short for better
+/// write/readability.
+namespace ore {
+using NV = DiagnosticInfoOptimizationBase::Argument;
+using setIsVerbose = DiagnosticInfoOptimizationBase::setIsVerbose;
+}
 
 /// OptimizationRemarkEmitter legacy analysis pass
 ///
