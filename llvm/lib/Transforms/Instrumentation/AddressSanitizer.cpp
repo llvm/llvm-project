@@ -259,7 +259,7 @@ static cl::opt<bool>
                              cl::desc("Use linker features to support dead "
                                       "code stripping of globals "
                                       "(Mach-O only)"),
-                             cl::Hidden, cl::init(false));
+                             cl::Hidden, cl::init(true));
 
 // Debug flags.
 static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
