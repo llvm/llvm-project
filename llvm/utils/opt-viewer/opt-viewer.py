@@ -19,6 +19,7 @@ from pygments.formatters import HtmlFormatter
 parser = argparse.ArgumentParser(description=desc)
 parser.add_argument('yaml_files', nargs='+')
 parser.add_argument('output_dir')
+parser.add_argument('-source-dir', '-s', default='', help='set source directory')
 args = parser.parse_args()
 
 p = subprocess.Popen(['c++filt', '-n'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -115,8 +116,25 @@ class Missed(Remark):
 
 class SourceFileRenderer:
     def __init__(self, filename):
-        self.source_stream = open(filename)
+        existing_filename = None
+        if os.path.exists(filename):
+            existing_filename = filename
+        else:
+            fn = os.path.join(args.source_dir, filename)
+            if os.path.exists(fn):
+                existing_filename = fn
+
         self.stream = open(os.path.join(args.output_dir, SourceFileRenderer.html_file_name(filename)), 'w')
+        if existing_filename:
+            self.source_stream = open(existing_filename)
+        else:
+            self.source_stream = None
+            print('''
+<html>
+<h1>Unable to locate file {}</h1>
+</html>
+            '''.format(filename), file=self.stream)
+
         self.html_formatter = HtmlFormatter()
         self.cpp_lexer = CppLexer()
 
@@ -140,6 +158,9 @@ class SourceFileRenderer:
 </tr>'''.format(**locals()), file=self.stream)
 
     def render(self, line_remarks):
+        if not self.source_stream:
+            return
+
         print('''
 <html>
 <head>
