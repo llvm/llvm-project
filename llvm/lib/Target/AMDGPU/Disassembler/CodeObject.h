@@ -49,12 +49,6 @@ struct amdgpu_hsa_isa {
   }
 };
 
-enum AMDGPU_NOTES_TYPES {
-  NT_AMDGPU_HSA_CODE_OBJECT_VERSION = 1,
-  NT_AMDGPU_HSA_ISA = 3,
-};
-
-
 struct ELFNote {
   support::ulittle32_t namesz;
   support::ulittle32_t descsz;
@@ -150,6 +144,26 @@ public:
   Expected<const amd_kernel_code_t *> getAmdKernelCodeT(
     const HSACodeObject * CodeObject) const;
 
+  Expected<const amd_kernel_code_t *> getAmdKernelCodeT(
+    const HSACodeObject * CodeObject,
+    const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
+
+  Expected<uint64_t> getAddress(const HSACodeObject *CodeObject) const;
+
+  Expected<uint64_t> getAddress(
+    const HSACodeObject *CodeObject,
+    const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
+
+  Expected<uint64_t> getSectionOffset(const HSACodeObject *CodeObject) const;
+
+  Expected<uint64_t> getSectionOffset(
+    const HSACodeObject *CodeObject,
+    const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
+
+  Expected<uint64_t> getCodeOffset(
+    const HSACodeObject *CodeObject,
+    const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
+
   static Expected<const KernelSym *> asKernelSym(
     const object::ELF64LEObjectFile::Elf_Sym *Sym);
 };
@@ -234,6 +248,8 @@ public:
   Expected<uint32_t> getNoteSectionIdx() const;
   Expected<const Elf_Shdr *> getTextSection() const;
   Expected<const Elf_Shdr *> getNoteSection() const;
+
+  friend class KernelSym;
 };
 
 } // namespace llvm

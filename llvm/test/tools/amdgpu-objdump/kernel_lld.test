@@ -1,0 +1,202 @@
+RUN: amdgpu-objdump %p/Inputs/kernels | FileCheck %s --check-prefix=DIS
+
+DIS:     .hsa_code_object_version 2,0
+DIS:     .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
+DIS:     .amdgpu_hsa_kernel test
+
+DIS: test:
+DIS:     .amd_kernel_code_t
+DIS:         amd_code_version_major = 1
+DIS:         amd_code_version_minor = 0
+DIS:         amd_machine_kind = 1
+DIS:         amd_machine_version_major = 8
+DIS:         amd_machine_version_minor = 0
+DIS:         amd_machine_version_stepping = 1
+DIS:         kernel_code_entry_byte_offset = 256
+DIS:         kernel_code_prefetch_byte_size = 0
+DIS:         max_scratch_backing_memory_byte_size = 0
+DIS:         granulated_workitem_vgpr_count = 3
+DIS:         granulated_wavefront_sgpr_count = 3
+DIS:         priority = 0
+DIS:         float_mode = 0
+DIS:         priv = 0
+DIS:         enable_dx10_clamp = 1
+DIS:         debug_mode = 0
+DIS:         enable_ieee_mode = 0
+DIS:         enable_sgpr_private_segment_wave_byte_offset = 1
+DIS:         user_sgpr_count = 10
+DIS:         enable_sgpr_workgroup_id_x = 1
+DIS:         enable_sgpr_workgroup_id_y = 1
+DIS:         enable_sgpr_workgroup_id_z = 1
+DIS:         enable_sgpr_workgroup_info = 0
+DIS:         enable_vgpr_workitem_id = 2
+DIS:         enable_exception_msb = 0
+DIS:         granulated_lds_size = 0
+DIS:         enable_exception = 0
+DIS:         enable_sgpr_private_segment_buffer = 1
+DIS:         enable_sgpr_dispatch_ptr = 1
+DIS:         enable_sgpr_queue_ptr = 0
+DIS:         enable_sgpr_kernarg_segment_ptr = 1
+DIS:         enable_sgpr_dispatch_id = 0
+DIS:         enable_sgpr_flat_scratch_init = 1
+DIS:         enable_sgpr_private_segment_size = 0
+DIS:         enable_sgpr_grid_workgroup_count_x = 0
+DIS:         enable_sgpr_grid_workgroup_count_y = 0
+DIS:         enable_sgpr_grid_workgroup_count_z = 0
+DIS:         enable_ordered_append_gds = 0
+DIS:         private_element_size = 1
+DIS:         is_ptr64 = 1
+DIS:         is_dynamic_callstack = 0
+DIS:         is_debug_enabled = 1
+DIS:         is_xnack_enabled = 0
+DIS:         workitem_private_segment_byte_size = 88
+DIS:         workgroup_group_segment_byte_size = 0
+DIS:         gds_segment_byte_size = 0
+DIS:         kernarg_segment_byte_size = 28
+DIS:         workgroup_fbarrier_count = 0
+DIS:         wavefront_sgpr_count = 25
+DIS:         workitem_vgpr_count = 15
+DIS:         reserved_vgpr_first = 11
+DIS:         reserved_vgpr_count = 4
+DIS:         reserved_sgpr_first = 0
+DIS:         reserved_sgpr_count = 0
+DIS:         debug_wavefront_private_segment_offset_sgpr = 0
+DIS:         debug_private_segment_buffer_sgpr = 0
+DIS:         kernarg_segment_alignment = 4
+DIS:         group_segment_alignment = 4
+DIS:         private_segment_alignment = 4
+DIS:         wavefront_size = 6
+DIS:         call_convention = 0
+DIS:         runtime_loader_kernel_symbol = 0
+DIS:     .end_amd_kernel_code_t
+
+DIS: // Disassembly:
+DIS:     s_mov_b32 flat_scratch_lo, s9
+DIS:     s_add_u32 s8, s8, s13
+DIS:     s_lshr_b32 flat_scratch_hi, s8, 8
+DIS:     v_mov_b32_e32 v3, s10
+DIS:     s_nop 0
+DIS:     v_mov_b32_e32 v4, s11
+DIS:     s_nop 0
+DIS:     v_mov_b32_e32 v5, s12
+DIS:     s_nop 0
+DIS:     s_waitcnt vmcnt(2) expcnt(0)
+DIS:     v_mov_b32_e32 v1, 32
+DIS:     s_load_dwordx2 s[8:9], s[6:7], 0x0
+DIS:     s_load_dwordx2 s[14:15], s[6:7], 0x8
+DIS:     s_load_dwordx2 s[16:17], s[6:7], 0x10
+DIS:     s_load_dword s11, s[6:7], 0x18
+DIS:     s_waitcnt lgkmcnt(0)
+DIS:     s_mov_b32 s12, s11
+DIS:     s_mov_b32 s18, s9
+DIS:     s_waitcnt vmcnt(0)
+DIS:     v_mov_b32_e32 v2, s18
+DIS:     v_mov_b32_e32 v6, 32
+DIS:     buffer_store_dword v2, v6, s[0:3], s13 offen offset:4
+DIS:     s_mov_b32 s18, s8
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     v_mov_b32_e32 v2, s18
+DIS:     buffer_store_dword v2, v1, s[0:3], s13 offen
+DIS:     s_mov_b32 s18, s15
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     v_mov_b32_e32 v2, s18
+DIS:     buffer_store_dword v2, v1, s[0:3], s13 offen offset:12
+DIS:     s_mov_b32 s18, s14
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     v_mov_b32_e32 v2, s18
+DIS:     buffer_store_dword v2, v1, s[0:3], s13 offen offset:8
+DIS:     s_mov_b32 s18, s17
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     v_mov_b32_e32 v2, s18
+DIS:     buffer_store_dword v2, v1, s[0:3], s13 offen offset:20
+DIS:     s_mov_b32 s18, s16
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     v_mov_b32_e32 v2, s18
+DIS:     buffer_store_dword v2, v1, s[0:3], s13 offen offset:16
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     v_mov_b32_e32 v2, s11
+DIS:     buffer_store_dword v2, v1, s[0:3], s13 offen offset:24
+DIS:     s_nop 0
+DIS:     s_load_dword s11, s[4:5], 0x4
+DIS:     s_mov_b32 s18, 0xffff
+DIS:     s_waitcnt lgkmcnt(0)
+DIS:     s_and_b32 s11, s11, s18
+DIS:     s_mul_i32 s10, s11, s10
+DIS:     v_add_i32_e32 v0, vcc, s10, v0
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     v_mov_b32_e32 v2, v0
+DIS:     buffer_store_dword v2, v1, s[0:3], s13 offen offset:28
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     s_nop 0
+DIS:     buffer_load_dword v2, v1, s[0:3], s13 offen offset:24
+DIS:     s_waitcnt vmcnt(0)
+DIS:     v_cmp_lt_i32_e64 s[4:5], v0, v2
+DIS:     v_writelane_b32 v10, s12, 17
+DIS:     v_writelane_b32 v10, s4, 18
+DIS:     v_writelane_b32 v10, s5, 19
+DIS:     s_waitcnt vmcnt(0) expcnt(0)
+DIS:     s_and_saveexec_b64 s[4:5], s[4:5]
+DIS:     s_xor_b64 s[4:5], exec, s[4:5]
+DIS:     s_cbranch_execz label_00EC
+DIS:     s_nop 0
+DIS:     s_waitcnt vmcnt(0)
+DIS:     buffer_load_dword v1, v0, s[0:3], s13 offen
+DIS:     s_nop 0
+DIS:     buffer_load_dword v2, v0, s[0:3], s13 offen offset:4
+DIS:     s_waitcnt vmcnt(1)
+DIS:     v_mov_b32_e32 v3, v1
+DIS:     s_waitcnt vmcnt(0)
+DIS:     v_mov_b32_e32 v4, v2
+DIS:     buffer_load_dword v1, v0, s[0:3], s13 offen offset:28
+DIS:     s_waitcnt vmcnt(0)
+DIS:     v_mov_b32_e32 v2, v1
+DIS:     v_ashrrev_i32_e32 v2, 31, v2
+DIS:     v_mov_b32_e32 v5, v1
+DIS:     v_mov_b32_e32 v6, v2
+DIS:     s_mov_b32 s4, 2
+DIS:     v_mov_b32_e32 v1, v5
+DIS:     v_mov_b32_e32 v2, v6
+DIS:     v_mov_b32_e32 v7, v3
+DIS:     v_mov_b32_e32 v8, v4
+DIS:     v_add_i32_e32 v7, vcc, v1, v7
+DIS:     v_mov_b32_e32 v9, v2
+DIS:     v_addc_u32_e32 v8, vcc, v8, v9, vcc
+DIS:     v_mov_b32_e32 v3, v7
+DIS:     v_mov_b32_e32 v4, v8
+DIS:     s_nop 0
+DIS:     buffer_load_dword v8, v0, s[0:3], s13 offen offset:8
+DIS:     s_nop 0
+DIS:     buffer_load_dword v9, v0, s[0:3], s13 offen offset:12
+DIS:     s_waitcnt vmcnt(1)
+DIS:     v_mov_b32_e32 v3, v8
+DIS:     s_waitcnt vmcnt(0)
+DIS:     v_mov_b32_e32 v4, v9
+DIS:     v_mov_b32_e32 v8, v3
+DIS:     v_mov_b32_e32 v9, v4
+DIS:     v_add_i32_e32 v8, vcc, v8, v1
+DIS:     v_addc_u32_e32 v9, vcc, v9, v2, vcc
+DIS:     v_mov_b32_e32 v3, v8
+DIS:     v_mov_b32_e32 v4, v9
+DIS:     s_waitcnt vmcnt(0) lgkmcnt(0)
+DIS:     v_add_i32_e32 v7, vcc, v8, v7
+DIS:     buffer_load_dword v8, v0, s[0:3], s13 offen offset:16
+DIS:     s_nop 0
+DIS:     buffer_load_dword v9, v0, s[0:3], s13 offen offset:20
+DIS:     s_waitcnt vmcnt(1)
+DIS:     v_mov_b32_e32 v3, v8
+DIS:     s_waitcnt vmcnt(0)
+DIS:     v_mov_b32_e32 v4, v9
+DIS:     v_mov_b32_e32 v8, v3
+DIS:     v_mov_b32_e32 v9, v4
+DIS:     v_add_i32_e32 v1, vcc, v8, v1
+DIS:     v_addc_u32_e32 v2, vcc, v9, v2, vcc
+DIS:     v_mov_b32_e32 v3, v1
+DIS:     v_mov_b32_e32 v4, v2
+DIS:     s_waitcnt vmcnt(0) lgkmcnt(0)
+DIS: label_00EC:
+DIS:     s_or_b64 exec, exec, s[4:5]
+DIS:     v_readlane_b32 s4, v10, 18
+DIS:     v_readlane_b32 s5, v10, 19
+DIS:     s_nop 0
+DIS:     s_endpgm
+

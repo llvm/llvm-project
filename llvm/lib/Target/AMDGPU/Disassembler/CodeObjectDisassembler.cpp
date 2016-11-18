@@ -34,6 +34,10 @@
 
 #define DEBUG_TYPE "amdgpu-disassembler"
 
+namespace llvm {
+#include "AMDGPUPTNote.h"
+}
+
 using namespace llvm;
 
 CodeObjectDisassembler::CodeObjectDisassembler(MCContext *C,
@@ -69,7 +73,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
       return errorToErrorCode(Note.takeError());
 
     switch (Note->type) {
-    case NT_AMDGPU_HSA_CODE_OBJECT_VERSION: {
+    case AMDGPU::PT_NOTE::NT_AMDGPU_HSA_CODE_OBJECT_VERSION: {
       auto VersionOr = Note->as<amdgpu_hsa_code_object_version>();
       if (!VersionOr)
         return errorToErrorCode(VersionOr.takeError());
@@ -82,7 +86,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
       break;
     }
 
-    case NT_AMDGPU_HSA_ISA: {
+    case AMDGPU::PT_NOTE::NT_AMDGPU_HSA_ISA: {
       auto IsaOr = Note->as<amdgpu_hsa_isa>();
       if (!IsaOr)
         return errorToErrorCode(IsaOr.takeError());
@@ -107,7 +111,7 @@ static std::string getCPUName(const HSACodeObject *CodeObject) {
     if (!Note)
       return "";
 
-    if (Note->type == NT_AMDGPU_HSA_ISA) {
+    if (Note->type == AMDGPU::PT_NOTE::NT_AMDGPU_HSA_ISA) {
       auto IsaOr = Note->as<amdgpu_hsa_isa>();
       if (!IsaOr)
         return "";
@@ -168,6 +172,10 @@ std::error_code CodeObjectDisassembler::printKernels(const HSACodeObject *CodeOb
     auto CodeOr = CodeObject->getKernelCode(Kernel);
     if (!CodeOr)
       return errorToErrorCode(CodeOr.takeError());
+
+    auto KernelAddressOr = Kernel->getAddress(CodeObject);
+    if (!KernelAddressOr)
+      return errorToErrorCode(KernelAddressOr.takeError());
     
     AsmStreamer->EmitAMDGPUSymbolType(*NameEr, Kernel->getType());
     AsmStreamer->getStreamer().EmitRawText("");
@@ -180,7 +188,7 @@ std::error_code CodeObjectDisassembler::printKernels(const HSACodeObject *CodeOb
     printKernelCode(
       *InstDisasm,
       *CodeOr,
-      Kernel->getValue() + (*KernelCodeTOr)->kernel_code_entry_byte_offset,
+      *KernelAddressOr + (*KernelCodeTOr)->kernel_code_entry_byte_offset,
       *SymbolsOr,
       ES);
 
