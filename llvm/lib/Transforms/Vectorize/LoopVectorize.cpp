@@ -1258,7 +1258,7 @@ public:
       return LV_NAME;
     if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth() == 0)
       return LV_NAME;
-    return DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint;
+    return OptimizationRemarkAnalysis::AlwaysPrint;
   }
 
   bool allowReordering() const {

@@ -768,9 +768,8 @@ public:
     // With Rpass-analysis report why.  This is on by default if distribution
     // was requested explicitly.
     ORE->emitOptimizationRemarkAnalysis(
-        Forced ? DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint
-               : LDIST_NAME,
-        L, Twine("loop not distributed: ") + Message);
+        Forced ? OptimizationRemarkAnalysis::AlwaysPrint : LDIST_NAME, L,
+        Twine("loop not distributed: ") + Message);
 
     // Also issue a warning if distribution was requested explicitly but it
     // failed.
