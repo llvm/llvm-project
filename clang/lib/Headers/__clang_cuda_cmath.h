@@ -75,7 +75,10 @@ __DEVICE__ float frexp(float __arg, int *__exp) {
 __DEVICE__ bool isinf(float __x) { return ::__isinff(__x); }
 __DEVICE__ bool isinf(double __x) { return ::__isinf(__x); }
 __DEVICE__ bool isfinite(float __x) { return ::__finitef(__x); }
-__DEVICE__ bool isfinite(double __x) { return ::__finite(__x); }
+// For inscrutable reasons, __finite(), the double-precision version of
+// __finitef, does not exist when compiling for MacOS.  __isfinited is available
+// everywhere and is just as good.
+__DEVICE__ bool isfinite(double __x) { return ::__isfinited(__x); }
 __DEVICE__ bool isgreater(float __x, float __y) {
   return __builtin_isgreater(__x, __y);
 }
@@ -141,7 +144,7 @@ __DEVICE__ double pow(double __base, int __iexp) {
   return ::powi(__base, __iexp);
 }
 __DEVICE__ bool signbit(float __x) { return ::__signbitf(__x); }
-__DEVICE__ bool signbit(double __x) { return ::__signbit(__x); }
+__DEVICE__ bool signbit(double __x) { return ::__signbitd(__x); }
 __DEVICE__ float sin(float __x) { return ::sinf(__x); }
 __DEVICE__ float sinh(float __x) { return ::sinhf(__x); }
 __DEVICE__ float sqrt(float __x) { return ::sqrtf(__x); }

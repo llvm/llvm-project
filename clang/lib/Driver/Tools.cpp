@@ -12017,7 +12017,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Check that our installation's ptxas supports gpu_arch.
   if (!Args.hasArg(options::OPT_no_cuda_version_check)) {
-    TC.cudaInstallation().CheckCudaVersionSupportsArch(gpu_arch);
+    TC.CudaInstallation.CheckCudaVersionSupportsArch(gpu_arch);
   }
 
   ArgStringList CmdArgs;

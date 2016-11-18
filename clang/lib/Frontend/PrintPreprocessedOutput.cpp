@@ -93,13 +93,16 @@ private:
   bool Initialized;
   bool DisableLineMarkers;
   bool DumpDefines;
+  bool DumpIncludeDirectives;
   bool UseLineDirectives;
   bool IsFirstFileEntered;
 public:
   PrintPPOutputPPCallbacks(Preprocessor &pp, raw_ostream &os, bool lineMarkers,
-                           bool defines, bool UseLineDirectives)
+                           bool defines, bool DumpIncludeDirectives,
+                           bool UseLineDirectives)
       : PP(pp), SM(PP.getSourceManager()), ConcatInfo(PP), OS(os),
         DisableLineMarkers(lineMarkers), DumpDefines(defines),
+        DumpIncludeDirectives(DumpIncludeDirectives),
         UseLineDirectives(UseLineDirectives) {
     CurLine = 0;
     CurFilename += "<uninit>";
@@ -320,10 +323,10 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
                                                   StringRef SearchPath,
                                                   StringRef RelativePath,
                                                   const Module *Imported) {
-  // When preprocessing, turn implicit imports into @imports.
-  // FIXME: This is a stop-gap until a more comprehensive "preprocessing with
-  // modules" solution is introduced.
   if (Imported) {
+    // When preprocessing, turn implicit imports into @imports.
+    // FIXME: This is a stop-gap until a more comprehensive "preprocessing with
+    // modules" solution is introduced.
     startNewLineIfNeeded();
     MoveToLine(HashLoc);
     if (PP.getLangOpts().ObjC2) {
@@ -331,9 +334,9 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
          << " /* clang -E: implicit import for \"" << File->getName()
          << "\" */";
     } else {
-      // FIXME: Preseve whether this was a
-      // #include/#include_next/#include_macros/#import.
-      OS << "#include "
+      const std::string TokenText = PP.getSpelling(IncludeTok);
+      assert(!TokenText.empty());
+      OS << "#" << TokenText << " "
          << (IsAngled ? '<' : '"')
          << FileName
          << (IsAngled ? '>' : '"')
@@ -344,6 +347,20 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
     // line immediately.
     EmittedTokensOnThisLine = true;
     startNewLineIfNeeded();
+  } else {
+    // Not a module import; it's a more vanilla inclusion of some file using one
+    // of: #include, #import, #include_next, #include_macros.
+    if (DumpIncludeDirectives) {
+      startNewLineIfNeeded();
+      MoveToLine(HashLoc);
+      const std::string TokenText = PP.getSpelling(IncludeTok);
+      assert(!TokenText.empty());
+      OS << "#" << TokenText << " "
+         << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
+         << " /* clang -E -dI */";
+      setEmittedDirectiveOnThisLine();
+      startNewLineIfNeeded();
+    }
   }
 }
 
@@ -751,7 +768,8 @@ void clang::DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
   PP.SetCommentRetentionState(Opts.ShowComments, Opts.ShowMacroComments);
 
   PrintPPOutputPPCallbacks *Callbacks = new PrintPPOutputPPCallbacks(
-      PP, *OS, !Opts.ShowLineMarkers, Opts.ShowMacros, Opts.UseLineDirectives);
+      PP, *OS, !Opts.ShowLineMarkers, Opts.ShowMacros,
+      Opts.ShowIncludeDirectives, Opts.UseLineDirectives);
 
   // Expand macros in pragmas with -fms-extensions.  The assumption is that
   // the majority of pragmas in such a file will be Microsoft pragmas.

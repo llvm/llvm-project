@@ -960,11 +960,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       {In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
        In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::MipsGot, In<ELFT>::GotPlt,
        In<ELFT>::RelaDyn, In<ELFT>::RelaPlt, In<ELFT>::Dynamic});
-
-  // Now that all output offsets are fixed. Finalize mergeable sections
-  // to fix their maps from input offsets to output offsets.
-  for (OutputSectionBase *Sec : OutputSections)
-    Sec->finalizePieces();
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {

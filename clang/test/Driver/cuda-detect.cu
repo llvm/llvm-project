@@ -5,9 +5,17 @@
 // # Check that we properly detect CUDA installation.
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/no-cuda-there 2>&1 | FileCheck %s -check-prefix NOCUDA
+// RUN: %clang -v --target=i386-apple-macosx \
+// RUN:   --sysroot=%S/no-cuda-there 2>&1 | FileCheck %s -check-prefix NOCUDA
+
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --sysroot=%S/Inputs/CUDA 2>&1 | FileCheck %s
+// RUN: %clang -v --target=i386-apple-macosx \
+// RUN:   --sysroot=%S/Inputs/CUDA 2>&1 | FileCheck %s
+
 // RUN: %clang -v --target=i386-unknown-linux \
+// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 | FileCheck %s
+// RUN: %clang -v --target=i386-apple-macosx \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 | FileCheck %s
 
 // Make sure we map libdevice bitcode files to proper GPUs. These
@@ -51,14 +59,21 @@
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE50
 
-
 // Verify that -nocudainc prevents adding include path to CUDA headers.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
 // RUN:   -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC \
 // RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE35
+// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
+// RUN:   -nocudainc --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC \
+// RUN:     -check-prefix LIBDEVICE -check-prefix LIBDEVICE35
+
 // We should not add any CUDA include paths if there's no valid CUDA installation
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC
+// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOCUDAINC
 
@@ -67,14 +82,25 @@
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_20 \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix MISSINGLIBDEVICE
+// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_20 \
+// RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON -check-prefix MISSINGLIBDEVICE
 
 // Verify that  -nocudalib prevents linking libdevice bitcode in.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
 // RUN:   -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOLIBDEVICE
+// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
+// RUN:   -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON -check-prefix NOLIBDEVICE
+
 // Verify that we don't add include paths, link with libdevice or
 // -include __clang_cuda_runtime_wrapper.h without valid CUDA installation.
 // RUN: %clang -### -v --target=i386-unknown-linux --cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix COMMON \
+// RUN:     -check-prefix NOCUDAINC -check-prefix NOLIBDEVICE
+// RUN: %clang -### -v --target=i386-apple-macosx --cuda-gpu-arch=sm_35 \
 // RUN:   --cuda-path=%S/no-cuda-there %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix NOCUDAINC -check-prefix NOLIBDEVICE

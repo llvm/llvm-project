@@ -180,7 +180,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz) _THROW_BAD_A
 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, const std::nothrow_t&) _NOEXCEPT;
-#ifdef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, std::size_t __sz) _NOEXCEPT;
 #endif
 

@@ -289,19 +289,24 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       continue;
     }
 
+    const char *FatbinConstantName =
+        CGM.getTriple().isMacOSX() ? "__NV_CUDA,__nv_fatbin" : ".nv_fatbin";
+    // NVIDIA's cuobjdump looks for fatbins in this section.
+    const char *FatbinSectionName =
+        CGM.getTriple().isMacOSX() ? "__NV_CUDA,__fatbin" : ".nvFatBinSegment";
+
     // Create initialized wrapper structure that points to the loaded GPU binary
     llvm::Constant *Values[] = {
         llvm::ConstantInt::get(IntTy, 0x466243b1), // Fatbin wrapper magic.
         llvm::ConstantInt::get(IntTy, 1),          // Fatbin version.
         makeConstantString(GpuBinaryOrErr.get()->getBuffer(), // Data.
-                           "", ".nv_fatbin", 8),              //
+                           "", FatbinConstantName, 8),
         llvm::ConstantPointerNull::get(VoidPtrTy)}; // Unused in fatbin v1.
     llvm::GlobalVariable *FatbinWrapper = new llvm::GlobalVariable(
         TheModule, FatbinWrapperTy, true, llvm::GlobalValue::InternalLinkage,
         llvm::ConstantStruct::get(FatbinWrapperTy, Values),
         "__cuda_fatbin_wrapper");
-    // NVIDIA's cuobjdump looks for fatbins in this section.
-    FatbinWrapper->setSection(".nvFatBinSegment");
+    FatbinWrapper->setSection(FatbinSectionName);
 
     // GpuBinaryHandle = __cudaRegisterFatBinary(&FatbinWrapper);
     llvm::CallInst *RegisterFatbinCall = CtorBuilder.CreateCall(

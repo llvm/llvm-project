@@ -677,12 +677,14 @@ MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
   return V;
 }
 
+// Returns I'th piece's data.
 template <class ELFT>
-ArrayRef<uint8_t> MergeInputSection<ELFT>::getData(
-    std::vector<SectionPiece>::const_iterator I) const {
-  auto Next = I + 1;
-  size_t End = Next == Pieces.end() ? this->Data.size() : Next->InputOff;
-  return this->Data.slice(I->InputOff, End - I->InputOff);
+CachedHashStringRef MergeInputSection<ELFT>::getData(size_t I) const {
+  size_t End =
+      (Pieces.size() - 1 == I) ? this->Data.size() : Pieces[I + 1].InputOff;
+  const SectionPiece &P = Pieces[I];
+  StringRef S = toStringRef(this->Data.slice(P.InputOff, End - P.InputOff));
+  return {S, Hashes[I]};
 }
 
 // Split non-SHF_STRINGS section. Such section is a sequence of
@@ -766,6 +768,14 @@ MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
 // it is not just an addition to a base output offset.
 template <class ELFT>
 typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) const {
+  // Initialize OffsetMap lazily.
+  std::call_once(InitOffsetMap, [&] {
+    OffsetMap.reserve(Pieces.size());
+    for (const SectionPiece &Piece : Pieces)
+      OffsetMap[Piece.InputOff] = Piece.OutputOff;
+  });
+
+  // Find a string starting at a given offset.
   auto It = OffsetMap.find(Offset);
   if (It != OffsetMap.end())
     return It->second;
@@ -781,29 +791,6 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) const {
 
   uintX_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;
-}
-
-// Create a map from input offsets to output offsets for all section pieces.
-// It is called after finalize().
-template <class ELFT> void MergeInputSection<ELFT>::finalizePieces() {
-  OffsetMap.reserve(this->Pieces.size());
-  auto HashI = Hashes.begin();
-  for (auto I = Pieces.begin(), E = Pieces.end(); I != E; ++I) {
-    uint32_t Hash = *HashI;
-    ++HashI;
-    SectionPiece &Piece = *I;
-    if (!Piece.Live)
-      continue;
-    if (Piece.OutputOff == -1) {
-      // Offsets of tail-merged strings are computed lazily.
-      auto *OutSec = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
-      ArrayRef<uint8_t> D = this->getData(I);
-      StringRef S((const char *)D.data(), D.size());
-      CachedHashStringRef V(S, Hash);
-      Piece.OutputOff = OutSec->getOffset(V);
-    }
-    OffsetMap[Piece.InputOff] = Piece.OutputOff;
-  }
 }
 
 template class elf::InputSectionBase<ELF32LE>;

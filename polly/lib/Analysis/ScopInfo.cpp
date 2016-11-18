@@ -676,7 +676,7 @@ void MemoryAccess::assumeNoOutOfBound() {
 }
 
 void MemoryAccess::buildMemIntrinsicAccessRelation() {
-  assert(isa<MemIntrinsic>(getAccessInstruction()));
+  assert(isMemoryIntrinsic());
   assert(Subscripts.size() == 2 && Sizes.size() == 1);
 
   auto *SubscriptPWA = getPwAff(Subscripts[0]);
@@ -3487,7 +3487,8 @@ __isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
   auto &Stmt = *Access->getStatement();
   BasicBlock *BB = Stmt.getEntryBlock();
 
-  if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine())
+  if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine() ||
+      Access->isMemoryIntrinsic())
     return nullptr;
 
   // Skip accesses that have an invariant base pointer which is defined but
@@ -3757,6 +3758,20 @@ bool Scop::trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
                            DebugLoc Loc, AssumptionSign Sign) {
   if (PollyRemarksMinimal && !isEffectiveAssumption(Set, Sign))
     return false;
+
+  // Do never emit trivial assumptions as they only clutter the output.
+  if (!PollyRemarksMinimal) {
+    isl_set *Univ = nullptr;
+    if (Sign == AS_ASSUMPTION)
+      Univ = isl_set_universe(isl_set_get_space(Set));
+
+    bool IsTrivial = (Sign == AS_RESTRICTION && isl_set_is_empty(Set)) ||
+                     (Sign == AS_ASSUMPTION && isl_set_is_equal(Univ, Set));
+    isl_set_free(Univ);
+
+    if (IsTrivial)
+      return false;
+  }
 
   switch (Kind) {
   case ALIASING:

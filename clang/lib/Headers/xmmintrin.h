@@ -2084,6 +2084,10 @@ _mm_stream_ps(float *__p, __m128 __a)
   __builtin_nontemporal_store((__v4sf)__a, (__v4sf*)__p);
 }
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /// \brief Forces strong memory ordering (serialization) between store
 ///    instructions preceding this instruction and store instructions following
 ///    this instruction, ensuring the system completes all previous stores
@@ -2093,15 +2097,20 @@ _mm_stream_ps(float *__p, __m128 __a)
 ///
 /// This intrinsic corresponds to the \c SFENCE instruction.
 ///
-#if defined(__cplusplus)
-extern "C"
-#endif
 void _mm_sfence(void);
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif
 
 /// \brief Extracts 16-bit element from a 64-bit vector of [4 x i16] and
 ///    returns it, as specified by the immediate integer operand.
 ///
 /// \headerfile <x86intrin.h>
+///
+/// \code
+/// void _mm_extract_pi(__m64 a, int n);
+/// \endcode
 ///
 /// This intrinsic corresponds to the \c VPEXTRW / PEXTRW instruction.
 ///
@@ -2122,6 +2131,10 @@ void _mm_sfence(void);
 ///    specified by the immediate operand __n.
 ///
 /// \headerfile <x86intrin.h>
+///
+/// \code
+/// void _mm_insert_pi(__m64 a, int d, int n);
+/// \endcode
 ///
 /// This intrinsic corresponds to the \c VPINSRW / PINSRW instruction.
 ///
@@ -2262,11 +2275,11 @@ _mm_mulhi_pu16(__m64 __a, __m64 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PSHUFW instruction.
-///
 /// \code
 /// __m64 _mm_shuffle_pi16(__m64 a, const int n);
 /// \endcode
+///
+/// This intrinsic corresponds to the \c PSHUFW instruction.
 ///
 /// \param a
 ///    A 64-bit integer vector containing the values to be shuffled.

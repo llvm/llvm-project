@@ -747,6 +747,11 @@ public:
   /// Is this a write memory access?
   bool isWrite() const { return isMustWrite() || isMayWrite(); }
 
+  /// Is this a memory intrinsic access (memcpy, memset, memmove)?
+  bool isMemoryIntrinsic() const {
+    return isa<MemIntrinsic>(getAccessInstruction());
+  }
+
   /// Check if a new access relation was imported or set by a pass.
   bool hasNewAccessRelation() const { return NewAccessRelation; }
 
