@@ -52,6 +52,8 @@ Optional<uint64_t> OptimizationRemarkEmitter::computeHotness(const Value *V) {
   return BFI->getBlockProfileCount(cast<BasicBlock>(V));
 }
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(DiagnosticInfoOptimizationBase::Argument)
+
 namespace llvm {
 namespace yaml {
 
@@ -118,8 +120,6 @@ template <> struct ScalarTraits<DiagnosticInfoOptimizationBase::Argument> {
 
 } // end namespace yaml
 } // end namespace llvm
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(DiagnosticInfoOptimizationBase::Argument)
 
 void OptimizationRemarkEmitter::computeHotness(
     DiagnosticInfoOptimizationBase &OptDiag) {
