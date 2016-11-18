@@ -46,20 +46,36 @@ class Remark(yaml.YAMLObject):
     def DemangledFunctionName(self):
         return demangle(self.Function)
 
+    @classmethod
+    def make_link(cls, File, Line):
+        return "{}#L{}".format(SourceFileRenderer.html_file_name(File), Line)
+
     @property
     def Link(self):
-        return "{}#L{}".format(SourceFileRenderer.html_file_name(self.File), self.Line)
+        return Remark.make_link(self.File, self.Line)
 
-    def getArgString(self, pair):
-        if pair[0] == 'Callee' or pair[0] == 'Caller':
-            return demangle(pair[1])
-        return pair[1]
+    def getArgString(self, mapping):
+        mapping = mapping.copy()
+        dl = mapping.get('DebugLoc')
+        if dl:
+            del mapping['DebugLoc']
+
+        assert(len(mapping) == 1)
+        (key, value) = mapping.items()[0]
+
+        if key == 'Caller' or key == 'Callee':
+            value = demangle(value)
+
+        if dl and key != 'Caller':
+            return "<a href={}>{}</a>".format(
+                Remark.make_link(dl['File'], dl['Line']), value)
+        else:
+            return value
 
     @property
     def message(self):
-        # Args is a list of mappings (dictionaries) with each dictionary with
-        # exactly one key-value pair.
-        values = [self.getArgString(mapping.items()[0]) for mapping in self.Args]
+        # Args is a list of mappings (dictionaries)
+        values = [self.getArgString(mapping) for mapping in self.Args]
         return "".join(values)
 
     @property

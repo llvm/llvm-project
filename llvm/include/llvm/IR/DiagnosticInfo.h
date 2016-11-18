@@ -384,6 +384,8 @@ public:
   struct Argument {
     StringRef Key;
     std::string Val;
+    // If set, the debug location corresponding to the value.
+    DebugLoc DLoc;
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
     Argument(StringRef Key, Value *V);
