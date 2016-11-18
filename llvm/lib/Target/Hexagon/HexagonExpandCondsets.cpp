@@ -1134,7 +1134,7 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
 }
 
 
-/// Attempt to coalesce one of the source registers to a MUX intruction with
+/// Attempt to coalesce one of the source registers to a MUX instruction with
 /// the destination register. This could lead to having only one predicated
 /// instruction in the end instead of two.
 bool HexagonExpandCondsets::coalesceSegments(

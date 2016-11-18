@@ -28,6 +28,7 @@ endif()
 add_llvm_library(LLVMGlobalISel
         ${GLOBAL_ISEL_BUILD_FILES}
         GlobalISel.cpp
+        
+        DEPENDS
+        intrinsics_gen
   )
-
-add_dependencies(LLVMGlobalISel intrinsics_gen)

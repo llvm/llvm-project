@@ -58,9 +58,9 @@ struct SymbolVersion {
 // This struct contains symbols version definition that
 // can be found in version script if it is used for link.
 struct VersionDefinition {
-  VersionDefinition(llvm::StringRef Name, size_t Id) : Name(Name), Id(Id) {}
+  VersionDefinition(llvm::StringRef Name, uint16_t Id) : Name(Name), Id(Id) {}
   llvm::StringRef Name;
-  size_t Id;
+  uint16_t Id;
   std::vector<SymbolVersion> Globals;
   size_t NameOff; // Offset in string table.
 };

@@ -11,6 +11,7 @@ add_llvm_library(LLVMObjCARCOpts
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
-  )
 
-add_dependencies(LLVMObjCARCOpts intrinsics_gen)
+  DEPENDS
+  intrinsics_gen
+  )

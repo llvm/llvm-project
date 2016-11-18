@@ -173,17 +173,22 @@ template<class T, class U=T>
     T exchange(T& obj, U&& new_value);
 
 // 20.2.7, in-place construction // C++17
-struct in_place_tag { in_place_tag() = delete; }; // C++17
-using in_place_t = in_place_tag(&)(unspecified );
+struct in_place_t {
+  explicit in_place_t() = default;
+};
+inline constexpr in_place_t in_place{};
 template <class T>
-    using in_place_type_t = in_place_tag(&)(unspecified <T>);
-template <size_t I>
-    using in_place_index_t = in_place_tag(&)(unspecified <I>);
-in_place_tag in_place(unspecified );
+  struct in_place_type_t {
+    explicit in_place_type_t() = default;
+  };
 template <class T>
-    in_place_tag in_place(unspecified <T>);
+  inline constexpr in_place_type_t<T> in_place_type{};
 template <size_t I>
-    in_place_tag in_place(unspecified <I>);
+  struct in_place_index_t {
+    explicit in_place_index_t() = default;
+  };
+template <size_t I>
+  inline constexpr in_place_index_t<I> in_place_index{};
 
 }  // std
 
@@ -889,59 +894,39 @@ _T1 exchange(_T1& __obj, _T2 && __new_value)
 
 #if _LIBCPP_STD_VER > 14
 
-struct _LIBCPP_TYPE_VIS_ONLY __in_place_tag {};
-template <class> struct _LIBCPP_TYPE_VIS_ONLY __in_place_type_tag {};
-template <size_t> struct _LIBCPP_TYPE_VIS_ONLY __in_place_index_tag {};
-
-struct _LIBCPP_TYPE_VIS_ONLY in_place_tag;
-
-using in_place_t = in_place_tag(&)(__in_place_tag);
-template <class _Tp>
-using in_place_type_t = in_place_tag(&)(__in_place_type_tag<_Tp>);
-template <size_t _Nx>
-using in_place_index_t = in_place_tag(&)(__in_place_index_tag<_Nx>);
-
-struct in_place_tag {
-  in_place_tag() = delete;
-private:
-  explicit in_place_tag(__in_place_tag) {}
-
-  friend inline in_place_tag in_place(__in_place_tag __t);
-  template <class _Tp>
-  friend inline in_place_tag in_place(__in_place_type_tag<_Tp>);
-  template <size_t _Nx>
-  friend inline in_place_tag in_place(__in_place_index_tag<_Nx>);
+struct _LIBCPP_TYPE_VIS in_place_t {
+    explicit in_place_t() = default;
 };
-
-inline in_place_tag in_place(__in_place_tag __t) {
-    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
-    return in_place_tag(__t);
-}
-template <class _Tp>
-inline in_place_tag in_place(__in_place_type_tag<_Tp>) {
-    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
-    return in_place_tag(__in_place_tag{});
-}
-template <size_t _Nx>
-inline in_place_tag in_place(__in_place_index_tag<_Nx>) {
-    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
-    return in_place_tag(__in_place_tag{});
-}
-
-template <class _Tp>   struct __is_inplace_tag_imp : false_type {};
-template <>            struct __is_inplace_tag_imp<in_place_tag(__in_place_tag)> : true_type {};
-template <class _Tp>   struct __is_inplace_tag_imp<in_place_tag(__in_place_type_tag<_Tp>)> : true_type {};
-template <size_t _Idx> struct __is_inplace_tag_imp<in_place_tag(__in_place_index_tag<_Idx>)> : true_type {};
+#ifndef _LIBCPP_HAS_NO_INLINE_VARIABLES
+inline
+#endif
+constexpr in_place_t in_place{};
 
 template <class _Tp>
-using __is_inplace_tag = __is_inplace_tag_imp<remove_pointer_t<decay_t<_Tp>>>;
+struct _LIBCPP_TYPE_VIS in_place_type_t {
+    explicit in_place_type_t() = default;
+};
+template <class _Tp>
+#ifndef _LIBCPP_HAS_NO_INLINE_VARIABLES
+inline
+#endif
+constexpr in_place_type_t<_Tp> in_place_type{};
 
-template <class _Tp> struct __is_inplace_type_tag_imp : false_type {};
-template <class _Tp> struct __is_inplace_type_tag_imp<in_place_tag(__in_place_type_tag<_Tp>)> : true_type {};
+template <size_t _Idx>
+struct _LIBCPP_TYPE_VIS in_place_index_t {
+    explicit in_place_index_t() = default;
+};
+template <size_t _Idx>
+#ifndef _LIBCPP_HAS_NO_INLINE_VARIABLES
+inline
+#endif
+constexpr in_place_index_t<_Idx> in_place_index{};
+
+template <class _Tp> struct __is_inplace_type_imp : false_type {};
+template <class _Tp> struct __is_inplace_type_imp<in_place_type_t<_Tp>> : true_type {};
 
 template <class _Tp>
-using __is_inplace_type_tag = __is_inplace_type_tag_imp<remove_pointer_t<decay_t<_Tp>>>;
-
+using __is_inplace_type = __is_inplace_type_imp<__uncvref_t<_Tp>>;
 
 #endif // _LIBCPP_STD_VER > 14
 

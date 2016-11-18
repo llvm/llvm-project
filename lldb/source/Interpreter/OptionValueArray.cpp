@@ -80,75 +80,72 @@ Error OptionValueArray::SetValueFromString(llvm::StringRef value,
 }
 
 lldb::OptionValueSP
-OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx, const char *name,
+OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx, llvm::StringRef name,
                               bool will_modify, Error &error) const {
-  if (name && name[0] == '[') {
-    const char *end_bracket = strchr(name + 1, ']');
-    if (end_bracket) {
-      const char *sub_value = nullptr;
-      if (end_bracket[1])
-        sub_value = end_bracket + 1;
-      std::string index_str(name + 1, end_bracket);
-      const size_t array_count = m_values.size();
-      int32_t idx =
-          StringConvert::ToSInt32(index_str.c_str(), INT32_MAX, 0, nullptr);
-      if (idx != INT32_MAX) {
-        ;
-        uint32_t new_idx = UINT32_MAX;
-        if (idx < 0) {
-          // Access from the end of the array if the index is negative
-          new_idx = array_count - idx;
-        } else {
-          // Just a standard index
-          new_idx = idx;
-        }
+  if (name.empty() || name.front() != '[') {
+    error.SetErrorStringWithFormat(
+      "invalid value path '%s', %s values only support '[<index>]' subvalues "
+      "where <index> is a positive or negative array index",
+      name.str().c_str(), GetTypeAsCString());
+    return nullptr;
+  }
 
-        if (new_idx < array_count) {
-          if (m_values[new_idx]) {
-            if (sub_value)
-              return m_values[new_idx]->GetSubValue(exe_ctx, sub_value,
-                                                    will_modify, error);
-            else
-              return m_values[new_idx];
-          }
-        } else {
-          if (array_count == 0)
-            error.SetErrorStringWithFormat(
-                "index %i is not valid for an empty array", idx);
-          else if (idx > 0)
-            error.SetErrorStringWithFormat(
-                "index %i out of range, valid values are 0 through %" PRIu64,
-                idx, (uint64_t)(array_count - 1));
-          else
-            error.SetErrorStringWithFormat("negative index %i out of range, "
-                                           "valid values are -1 through "
-                                           "-%" PRIu64,
-                                           idx, (uint64_t)array_count);
-        }
-      }
+  name = name.drop_front();
+  llvm::StringRef index, sub_value;
+  std::tie(index, sub_value) = name.split(']');
+  if (index.size() == name.size()) {
+    // Couldn't find a closing bracket
+    return nullptr;
+  }
+
+  const size_t array_count = m_values.size();
+  int32_t idx = 0;
+  if (index.getAsInteger(0, idx))
+    return nullptr;
+
+  uint32_t new_idx = UINT32_MAX;
+  if (idx < 0) {
+    // Access from the end of the array if the index is negative
+    new_idx = array_count - idx;
+  } else {
+    // Just a standard index
+    new_idx = idx;
+  }
+
+  if (new_idx < array_count) {
+    if (m_values[new_idx]) {
+      if (!sub_value.empty())
+        return m_values[new_idx]->GetSubValue(exe_ctx, sub_value,
+                                              will_modify, error);
+      else
+        return m_values[new_idx];
     }
   } else {
-    error.SetErrorStringWithFormat(
-        "invalid value path '%s', %s values only support '[<index>]' subvalues "
-        "where <index> is a positive or negative array index",
-        name, GetTypeAsCString());
+    if (array_count == 0)
+      error.SetErrorStringWithFormat(
+          "index %i is not valid for an empty array", idx);
+    else if (idx > 0)
+      error.SetErrorStringWithFormat(
+          "index %i out of range, valid values are 0 through %" PRIu64,
+          idx, (uint64_t)(array_count - 1));
+    else
+      error.SetErrorStringWithFormat("negative index %i out of range, "
+                                      "valid values are -1 through "
+                                      "-%" PRIu64,
+                                      idx, (uint64_t)array_count);
   }
   return OptionValueSP();
 }
 
 size_t OptionValueArray::GetArgs(Args &args) const {
+  args.Clear();
   const uint32_t size = m_values.size();
-  std::vector<const char *> argv;
   for (uint32_t i = 0; i < size; ++i) {
-    const char *string_value = m_values[i]->GetStringValue();
-    if (string_value)
-      argv.push_back(string_value);
+    llvm::StringRef string_value = m_values[i]->GetStringValue();
+    if (!string_value.empty())
+      args.AppendArgument(string_value);
   }
 
-  if (argv.empty())
-    args.Clear();
-  else
-    args.SetArguments(argv.size(), &argv[0]);
   return args.GetArgumentCount();
 }
 

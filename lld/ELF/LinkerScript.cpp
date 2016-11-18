@@ -706,8 +706,10 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
       std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry<ELFT> &E) {
         return E.H.p_type == PT_LOAD;
       });
+  if (FirstPTLoad == Phdrs.end())
+    return;
 
-  if (HeaderSize <= MinVA && FirstPTLoad != Phdrs.end()) {
+  if (HeaderSize <= MinVA) {
     // If linker script specifies program headers and first PT_LOAD doesn't
     // have both PHDRS and FILEHDR attributes then do nothing
     if (!Opt.PhdrsCommands.empty()) {
@@ -864,6 +866,20 @@ const OutputSectionBase *LinkerScript<ELFT>::getOutputSection(StringRef Name) {
       return Sec;
   error("undefined section " + Name);
   return &FakeSec;
+}
+
+// This function is essentially the same as getOutputSection(Name)->Size,
+// but it won't print out an error message if a given section is not found.
+//
+// Linker script does not create an output section if its content is empty.
+// We want to allow SIZEOF(.foo) where .foo is a section which happened to
+// be empty. That is why this function is different from getOutputSection().
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
+  for (OutputSectionBase *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->Size;
+  return 0;
 }
 
 template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
@@ -1679,10 +1695,8 @@ Expr ScriptParser::readPrimary() {
     return [=](uint64_t Dot) { return getConstant(Name); };
   }
   if (Tok == "DEFINED") {
-    expect("(");
-    StringRef Tok = next();
-    expect(")");
-    return [=](uint64_t Dot) { return ScriptBase->isDefined(Tok) ? 1 : 0; };
+    StringRef Name = readParenLiteral();
+    return [=](uint64_t Dot) { return ScriptBase->isDefined(Name) ? 1 : 0; };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");
@@ -1719,8 +1733,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
-    return
-        [=](uint64_t Dot) { return ScriptBase->getOutputSection(Name)->Size; };
+    return [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
@@ -1802,7 +1815,7 @@ unsigned ScriptParser::readPhdrType() {
 void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   // Identifiers start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
-  size_t VersionId = Config->VersionDefinitions.size() + 2;
+  uint16_t VersionId = Config->VersionDefinitions.size() + 2;
   Config->VersionDefinitions.push_back({VerStr, VersionId});
 
   if (consume("global:") || peek() != "local:")
@@ -1825,11 +1838,10 @@ void ScriptParser::readSymbols(std::vector<SymbolVersion> &V) {
     if (consume("extern"))
       readVersionExtern(&V);
 
-    StringRef Cur = peek();
-    if (Cur == "}" || Cur == "local:" || Error)
+    if (peek() == "}" || peek() == "local:" || Error)
       return;
-    skip();
-    V.push_back({unquote(Cur), false, hasWildcard(Cur)});
+    StringRef Tok = next();
+    V.push_back({unquote(Tok), false, hasWildcard(Tok)});
     expect(";");
   }
 }
@@ -1851,11 +1863,10 @@ void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *V) {
   expect("\"C++\"");
   expect("{");
 
-  for (;;) {
-    if (peek() == "}" || Error)
-      break;
-    bool HasWildcard = !peek().startswith("\"") && hasWildcard(peek());
-    V->push_back({unquote(next()), true, HasWildcard});
+  while (!Error && peek() != "}") {
+    StringRef Tok = next();
+    bool HasWildcard = !Tok.startswith("\"") && hasWildcard(Tok);
+    V->push_back({unquote(Tok), true, HasWildcard});
     expect(";");
   }
 

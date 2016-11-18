@@ -1514,7 +1514,7 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
       return false;
   }
 
-  // By now, we should have successfuly obtained the immediate value defining
+  // By now, we should have successfully obtained the immediate value defining
   // the register referenced in MO. Handle a potential use of a subregister.
   switch (MO.getSubReg()) {
     case Hexagon::isub_lo:

@@ -140,7 +140,7 @@ Options
 .. option:: WarnOnSizeOfConstant
 
    When non-zero, the check will warn on an expression like
-   ``sizeof(CONSTANT)``.  Default is `1`.
+   ``sizeof(CONSTANT)``. Default is `1`.
 
 .. option:: WarnOnSizeOfThis
 

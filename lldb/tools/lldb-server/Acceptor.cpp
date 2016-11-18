@@ -88,12 +88,12 @@ std::unique_ptr<Acceptor> Acceptor::Create(StringRef name,
 
   Socket::SocketProtocol socket_protocol = Socket::ProtocolUnixDomain;
   int port;
-  std::string scheme, host, path;
+  StringRef scheme, host, path;
   // Try to match socket name as URL - e.g., tcp://localhost:5555
   if (UriParser::Parse(name.str(), scheme, host, port, path)) {
-    if (!FindProtocolByScheme(scheme.c_str(), socket_protocol))
+    if (!FindProtocolByScheme(scheme.str().c_str(), socket_protocol))
       error.SetErrorStringWithFormat("Unknown protocol scheme \"%s\"",
-                                     scheme.c_str());
+                                     scheme.str().c_str());
     else
       name = name.drop_front(scheme.size() + strlen("://"));
   } else {

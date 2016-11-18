@@ -68,12 +68,13 @@ const char *ConnectionFileDescriptor::FILE_SCHEME = "file";
 
 namespace {
 
-const char *GetURLAddress(const char *url, const char *scheme) {
-  const auto prefix = std::string(scheme) + "://";
-  if (strstr(url, prefix.c_str()) != url)
-    return nullptr;
-
-  return url + prefix.size();
+llvm::Optional<llvm::StringRef> GetURLAddress(llvm::StringRef url,
+                                              llvm::StringRef scheme) {
+  if (!url.consume_front(scheme))
+    return llvm::None;
+  if (!url.consume_front("://"))
+    return llvm::None;
+  return url;
 }
 }
 
@@ -153,48 +154,47 @@ bool ConnectionFileDescriptor::IsConnected() const {
          (m_write_sp && m_write_sp->IsValid());
 }
 
-ConnectionStatus ConnectionFileDescriptor::Connect(const char *s,
+ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
                                                    Error *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
   if (log)
     log->Printf("%p ConnectionFileDescriptor::Connect (url = '%s')",
-                static_cast<void *>(this), s);
+                static_cast<void *>(this), path.str().c_str());
 
   OpenCommandPipe();
 
-  if (s && s[0]) {
-    const char *addr = nullptr;
-    if ((addr = GetURLAddress(s, LISTEN_SCHEME))) {
+  if (!path.empty()) {
+    llvm::Optional<llvm::StringRef> addr;
+    if ((addr = GetURLAddress(path, LISTEN_SCHEME))) {
       // listen://HOST:PORT
-      return SocketListenAndAccept(addr, error_ptr);
-    } else if ((addr = GetURLAddress(s, ACCEPT_SCHEME))) {
+      return SocketListenAndAccept(*addr, error_ptr);
+    } else if ((addr = GetURLAddress(path, ACCEPT_SCHEME))) {
       // unix://SOCKNAME
-      return NamedSocketAccept(addr, error_ptr);
-    } else if ((addr = GetURLAddress(s, UNIX_ACCEPT_SCHEME))) {
+      return NamedSocketAccept(*addr, error_ptr);
+    } else if ((addr = GetURLAddress(path, UNIX_ACCEPT_SCHEME))) {
       // unix://SOCKNAME
-      return NamedSocketAccept(addr, error_ptr);
-    } else if ((addr = GetURLAddress(s, CONNECT_SCHEME))) {
-      return ConnectTCP(addr, error_ptr);
-    } else if ((addr = GetURLAddress(s, TCP_CONNECT_SCHEME))) {
-      return ConnectTCP(addr, error_ptr);
-    } else if ((addr = GetURLAddress(s, UDP_SCHEME))) {
-      return ConnectUDP(addr, error_ptr);
-    } else if ((addr = GetURLAddress(s, UNIX_CONNECT_SCHEME))) {
+      return NamedSocketAccept(*addr, error_ptr);
+    } else if ((addr = GetURLAddress(path, CONNECT_SCHEME))) {
+      return ConnectTCP(*addr, error_ptr);
+    } else if ((addr = GetURLAddress(path, TCP_CONNECT_SCHEME))) {
+      return ConnectTCP(*addr, error_ptr);
+    } else if ((addr = GetURLAddress(path, UDP_SCHEME))) {
+      return ConnectUDP(*addr, error_ptr);
+    } else if ((addr = GetURLAddress(path, UNIX_CONNECT_SCHEME))) {
       // unix-connect://SOCKNAME
-      return NamedSocketConnect(addr, error_ptr);
-    } else if ((addr = GetURLAddress(s, UNIX_ABSTRACT_CONNECT_SCHEME))) {
+      return NamedSocketConnect(*addr, error_ptr);
+    } else if ((addr = GetURLAddress(path, UNIX_ABSTRACT_CONNECT_SCHEME))) {
       // unix-abstract-connect://SOCKNAME
-      return UnixAbstractSocketConnect(addr, error_ptr);
+      return UnixAbstractSocketConnect(*addr, error_ptr);
     }
 #ifndef LLDB_DISABLE_POSIX
-    else if ((addr = GetURLAddress(s, FD_SCHEME))) {
+    else if ((addr = GetURLAddress(path, FD_SCHEME))) {
       // Just passing a native file descriptor within this current process
       // that is already opened (possibly from a service or other source).
-      bool success = false;
-      int fd = StringConvert::ToSInt32(addr, -1, 0, &success);
+      int fd = -1;
 
-      if (success) {
+      if (!addr->getAsInteger(0, fd)) {
         // We have what looks to be a valid file descriptor, but we
         // should make sure it is. We currently are doing this by trying to
         // get the flags from the file descriptor and making sure it
@@ -203,7 +203,8 @@ ConnectionStatus ConnectionFileDescriptor::Connect(const char *s,
         int flags = ::fcntl(fd, F_GETFL, 0);
         if (flags == -1 || errno == EBADF) {
           if (error_ptr)
-            error_ptr->SetErrorStringWithFormat("stale file descriptor: %s", s);
+            error_ptr->SetErrorStringWithFormat("stale file descriptor: %s",
+                                                path.str().c_str());
           m_read_sp.reset();
           m_write_sp.reset();
           return eConnectionStatusError;
@@ -232,23 +233,23 @@ ConnectionStatus ConnectionFileDescriptor::Connect(const char *s,
             m_read_sp.reset(new File(fd, false));
             m_write_sp.reset(new File(fd, false));
           }
-          m_uri.assign(addr);
+          m_uri = *addr;
           return eConnectionStatusSuccess;
         }
       }
 
       if (error_ptr)
         error_ptr->SetErrorStringWithFormat("invalid file descriptor: \"%s\"",
-                                            s);
+                                            path.str().c_str());
       m_read_sp.reset();
       m_write_sp.reset();
       return eConnectionStatusError;
-    } else if ((addr = GetURLAddress(s, FILE_SCHEME))) {
+    } else if ((addr = GetURLAddress(path, FILE_SCHEME))) {
+      std::string addr_str = addr->str();
       // file:///PATH
-      const char *path = addr;
       int fd = -1;
       do {
-        fd = ::open(path, O_RDWR);
+        fd = ::open(addr_str.c_str(), O_RDWR);
       } while (fd == -1 && errno == EINTR);
 
       if (fd == -1) {
@@ -290,7 +291,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(const char *s,
 #endif
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("unsupported connection URL: '%s'",
-                                          s);
+                                          path.str().c_str());
     return eConnectionStatusError;
   }
   if (error_ptr)
@@ -655,7 +656,7 @@ ConnectionStatus ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec,
 }
 
 ConnectionStatus
-ConnectionFileDescriptor::NamedSocketAccept(const char *socket_name,
+ConnectionFileDescriptor::NamedSocketAccept(llvm::StringRef socket_name,
                                             Error *error_ptr) {
   Socket *socket = nullptr;
   Error error =
@@ -672,7 +673,7 @@ ConnectionFileDescriptor::NamedSocketAccept(const char *socket_name,
 }
 
 ConnectionStatus
-ConnectionFileDescriptor::NamedSocketConnect(const char *socket_name,
+ConnectionFileDescriptor::NamedSocketConnect(llvm::StringRef socket_name,
                                              Error *error_ptr) {
   Socket *socket = nullptr;
   Error error =
@@ -689,7 +690,7 @@ ConnectionFileDescriptor::NamedSocketConnect(const char *socket_name,
 }
 
 lldb::ConnectionStatus
-ConnectionFileDescriptor::UnixAbstractSocketConnect(const char *socket_name,
+ConnectionFileDescriptor::UnixAbstractSocketConnect(llvm::StringRef socket_name,
                                                     Error *error_ptr) {
   Socket *socket = nullptr;
   Error error = Socket::UnixAbstractConnect(socket_name,
@@ -706,7 +707,7 @@ ConnectionFileDescriptor::UnixAbstractSocketConnect(const char *socket_name,
 }
 
 ConnectionStatus
-ConnectionFileDescriptor::SocketListenAndAccept(const char *s,
+ConnectionFileDescriptor::SocketListenAndAccept(llvm::StringRef s,
                                                 Error *error_ptr) {
   m_port_predicate.SetValue(0, eBroadcastNever);
 
@@ -734,7 +735,7 @@ ConnectionFileDescriptor::SocketListenAndAccept(const char *s,
   return eConnectionStatusSuccess;
 }
 
-ConnectionStatus ConnectionFileDescriptor::ConnectTCP(const char *s,
+ConnectionStatus ConnectionFileDescriptor::ConnectTCP(llvm::StringRef s,
                                                       Error *error_ptr) {
   Socket *socket = nullptr;
   Error error = Socket::TcpConnect(s, m_child_processes_inherit, socket);
@@ -749,7 +750,7 @@ ConnectionStatus ConnectionFileDescriptor::ConnectTCP(const char *s,
   return eConnectionStatusSuccess;
 }
 
-ConnectionStatus ConnectionFileDescriptor::ConnectUDP(const char *s,
+ConnectionStatus ConnectionFileDescriptor::ConnectUDP(llvm::StringRef s,
                                                       Error *error_ptr) {
   Socket *send_socket = nullptr;
   Socket *recv_socket = nullptr;

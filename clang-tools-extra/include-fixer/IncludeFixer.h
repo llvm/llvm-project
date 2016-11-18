@@ -13,6 +13,7 @@
 #include "IncludeFixerContext.h"
 #include "SymbolIndexManager.h"
 #include "clang/Format/Format.h"
+#include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include <memory>
@@ -80,6 +81,70 @@ llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(
     const format::FormatStyle &Style = format::getLLVMStyle(),
     bool AddQualifiers = true);
 
+/// Handles callbacks from sema, does the include lookup and turns it into an
+/// IncludeFixerContext.
+class IncludeFixerSemaSource : public clang::ExternalSemaSource {
+public:
+  explicit IncludeFixerSemaSource(SymbolIndexManager &SymbolIndexMgr,
+                                  bool MinimizeIncludePaths,
+                                  bool GenerateDiagnostics)
+      : SymbolIndexMgr(SymbolIndexMgr),
+        MinimizeIncludePaths(MinimizeIncludePaths),
+        GenerateDiagnostics(GenerateDiagnostics) {}
+
+  void setCompilerInstance(CompilerInstance *CI) { this->CI = CI; }
+  void setFilePath(StringRef FilePath) { this->FilePath = FilePath; }
+
+  /// Callback for incomplete types. If we encounter a forward declaration we
+  /// have the fully qualified name ready. Just query that.
+  bool MaybeDiagnoseMissingCompleteType(clang::SourceLocation Loc,
+                                        clang::QualType T) override;
+
+  /// Callback for unknown identifiers. Try to piece together as much
+  /// qualification as we can get and do a query.
+  clang::TypoCorrection CorrectTypo(const DeclarationNameInfo &Typo,
+                                    int LookupKind, Scope *S, CXXScopeSpec *SS,
+                                    CorrectionCandidateCallback &CCC,
+                                    DeclContext *MemberContext,
+                                    bool EnteringContext,
+                                    const ObjCObjectPointerType *OPT) override;
+
+  /// Get the minimal include for a given path.
+  std::string minimizeInclude(StringRef Include,
+                              const clang::SourceManager &SourceManager,
+                              clang::HeaderSearch &HeaderSearch) const;
+
+  /// Get the include fixer context for the queried symbol.
+  IncludeFixerContext
+  getIncludeFixerContext(const clang::SourceManager &SourceManager,
+                         clang::HeaderSearch &HeaderSearch) const;
+
+private:
+  /// Query the database for a given identifier.
+  bool query(StringRef Query, StringRef ScopedQualifiers, tooling::Range Range);
+
+  CompilerInstance *CI;
+
+  /// The client to use to find cross-references.
+  SymbolIndexManager &SymbolIndexMgr;
+
+  /// The information of the symbols being queried.
+  std::vector<IncludeFixerContext::QuerySymbolInfo> QuerySymbolInfos;
+
+  /// All symbol candidates which match QuerySymbol. We only include the first
+  /// discovered identifier to avoid getting caught in results from error
+  /// recovery.
+  std::vector<find_all_symbols::SymbolInfo> MatchedSymbols;
+
+  /// The file path to the file being processed.
+  std::string FilePath;
+
+  /// Whether we should use the smallest possible include path.
+  bool MinimizeIncludePaths = true;
+
+  /// Whether we should generate diagnostics with fixits for missing symbols.
+  bool GenerateDiagnostics = false;
+};
 } // namespace include_fixer
 } // namespace clang
 

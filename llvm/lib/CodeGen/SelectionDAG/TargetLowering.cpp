@@ -3038,7 +3038,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, const APInt &Divisor,
     Q = SDValue(DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(VT, VT), Q,
                             DAG.getConstant(magics.m, dl, VT)).getNode(), 1);
   else
-    return SDValue();       // No mulhu or equvialent
+    return SDValue();       // No mulhu or equivalent
 
   Created->push_back(Q.getNode());
 

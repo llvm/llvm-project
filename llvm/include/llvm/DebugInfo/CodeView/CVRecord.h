@@ -12,27 +12,31 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <cstdint>
 
 namespace llvm {
+
 namespace codeview {
 
 template <typename Kind> class CVRecord {
 public:
-  CVRecord() {}
+  CVRecord() = default;
   CVRecord(Kind K, ArrayRef<uint8_t> Data) : Type(K), RecordData(Data) {}
 
   uint32_t length() const { return RecordData.size(); }
   Kind kind() const { return Type; }
   ArrayRef<uint8_t> data() const { return RecordData; }
+
   ArrayRef<uint8_t> content() const {
     return RecordData.drop_front(sizeof(RecordPrefix));
   }
+
   Optional<uint32_t> hash() const { return Hash; }
 
   void setHash(uint32_t Value) { Hash = Value; }
@@ -41,7 +45,8 @@ public:
   ArrayRef<uint8_t> RecordData;
   Optional<uint32_t> Hash;
 };
-}
+
+} // end namespace codeview
 
 namespace msf {
 
@@ -70,7 +75,9 @@ struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
     return Error::success();
   }
 };
-}
-}
 
-#endif
+} // end namespace msf
+
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_RECORDITERATOR_H

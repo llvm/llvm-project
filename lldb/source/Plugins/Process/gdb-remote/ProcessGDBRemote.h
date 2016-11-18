@@ -89,7 +89,7 @@ public:
   Error WillAttachToProcessWithName(const char *process_name,
                                     bool wait_for_launch) override;
 
-  Error DoConnectRemote(Stream *strm, const char *remote_url) override;
+  Error DoConnectRemote(Stream *strm, llvm::StringRef remote_url) override;
 
   Error WillLaunchOrAttach();
 
@@ -379,7 +379,7 @@ protected:
 
   void DidLaunchOrAttach(ArchSpec &process_arch);
 
-  Error ConnectToDebugserver(const char *host_port);
+  Error ConnectToDebugserver(llvm::StringRef host_port);
 
   const char *GetDispatchQueueNameForThread(lldb::addr_t thread_dispatch_qaddr,
                                             std::string &dispatch_queue_name);

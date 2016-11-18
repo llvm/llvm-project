@@ -4,7 +4,7 @@ modernize-use-auto
 ==================
 
 This check is responsible for using the ``auto`` type specifier for variable
-declarations to *improve code readability and maintainability*.  For example:
+declarations to *improve code readability and maintainability*. For example:
 
 .. code-block:: c++
 

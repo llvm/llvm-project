@@ -23,9 +23,6 @@ namespace elf {
 
 class SymbolBody;
 struct EhSectionPiece;
-template <class ELFT> class SymbolTable;
-template <class ELFT> class SymbolTableSection;
-template <class ELFT> class StringTableSection;
 template <class ELFT> class EhInputSection;
 template <class ELFT> class InputSection;
 template <class ELFT> class InputSectionBase;
@@ -52,7 +49,6 @@ public:
     Merge,
     Plt,
     Regular,
-    SymTable,
     VersDef,
     VersNeed,
     VersTable
@@ -158,40 +154,6 @@ private:
 struct SymbolTableEntry {
   SymbolBody *Symbol;
   size_t StrTabOffset;
-};
-
-template <class ELFT>
-class SymbolTableSection final : public OutputSectionBase {
-  typedef OutputSectionBase Base;
-
-public:
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::SymRange Elf_Sym_Range;
-  typedef typename ELFT::uint uintX_t;
-  SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
-
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-  void addSymbol(SymbolBody *Body);
-  StringTableSection<ELFT> &getStrTabSec() const { return StrTabSec; }
-  unsigned getNumSymbols() const { return NumLocals + Symbols.size() + 1; }
-  typename Base::Kind getKind() const override { return Base::SymTable; }
-  static bool classof(const Base *B) { return B->getKind() == Base::SymTable; }
-
-  ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
-
-  unsigned NumLocals = 0;
-  StringTableSection<ELFT> &StrTabSec;
-
-private:
-  void writeLocalSymbols(uint8_t *&Buf);
-  void writeGlobalSymbols(uint8_t *Buf);
-
-  const OutputSectionBase *getOutputSection(SymbolBody *Sym);
-
-  // A vector of symbols and their string table offsets.
-  std::vector<SymbolTableEntry> Symbols;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -468,8 +430,6 @@ template <class ELFT> struct Out {
   static OutputSectionBase *Opd;
   static uint8_t *OpdBuf;
   static PltSection<ELFT> *Plt;
-  static SymbolTableSection<ELFT> *DynSymTab;
-  static SymbolTableSection<ELFT> *SymTab;
   static VersionDefinitionSection<ELFT> *VerDef;
   static VersionTableSection<ELFT> *VerSym;
   static VersionNeedSection<ELFT> *VerNeed;
@@ -526,8 +486,6 @@ template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;
 template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
 template <class ELFT> PltSection<ELFT> *Out<ELFT>::Plt;
-template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
-template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
 template <class ELFT> VersionDefinitionSection<ELFT> *Out<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *Out<ELFT>::VerSym;
 template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;

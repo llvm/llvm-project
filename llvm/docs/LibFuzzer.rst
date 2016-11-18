@@ -451,12 +451,22 @@ The dictionary syntax is similar to that used by AFL_ for its ``-x`` option::
   # the name of the keyword followed by '=' may be omitted:
   "foo\x0Abar"
 
-Value Profile
----------------
 
-*EXPERIMENTAL*.
+
+Tracing CMP instructions
+------------------------
+
 With an additional compiler flag ``-fsanitize-coverage=trace-cmp``
 (see SanitizerCoverageTraceDataFlow_)
+libFuzzer will intercept CMP instructions and guide mutations based
+on the arguments of intercepted CMP instructions. This may slow down
+the fuzzing but is very likely to improve the results.
+
+Value Profile
+-------------
+
+*EXPERIMENTAL*.
+With  ``-fsanitize-coverage=trace-cmp``
 and extra run-time flag ``-use_value_profile=1`` the fuzzer will
 collect value profiles for the parameters of compare instructions
 and treat some new values as new coverage.

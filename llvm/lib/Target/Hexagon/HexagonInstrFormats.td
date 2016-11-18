@@ -54,7 +54,7 @@ class MemAccessSize<bits<4> value> {
   bits<4> Value = value;
 }
 
-def NoMemAccess      : MemAccessSize<0>;// Not a memory acces instruction.
+def NoMemAccess      : MemAccessSize<0>;// Not a memory access instruction.
 def ByteAccess       : MemAccessSize<1>;// Byte access instruction (memb).
 def HalfWordAccess   : MemAccessSize<2>;// Half word access instruction (memh).
 def WordAccess       : MemAccessSize<3>;// Word access instruction (memw).

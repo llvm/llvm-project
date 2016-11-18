@@ -37,10 +37,10 @@ converted to a raw string literal: ``\\``, ``\'``, ``\"``, ``\?``,
 and octal or hexadecimal escapes for printable ASCII characters.
 
 A string literal containing only escaped newlines is a common way of
-writing lines of text output.  Introducing physical newlines with raw
-string literals in this case is likely to impede readability.  These
+writing lines of text output. Introducing physical newlines with raw
+string literals in this case is likely to impede readability. These
 string literals are left unchanged.
 
 An escaped horizontal tab, form feed, or vertical tab prevents the string
-literal from being converted.  The presence of a horizontal tab, form feed or
+literal from being converted. The presence of a horizontal tab, form feed or
 vertical tab in source code is not visually obvious.

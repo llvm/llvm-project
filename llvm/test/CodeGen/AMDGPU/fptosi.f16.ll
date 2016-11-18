@@ -3,9 +3,8 @@
 
 ; GCN-LABEL: {{^}}fptosi_f16_to_i16
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
-; SI:  v_cvt_i32_f32_e32 v[[R_I16:[0-9]+]], v[[A_F32]]
-; VI:  v_cvt_i16_f16_e32 v[[R_I16:[0-9]+]], v[[A_F16]]
+; GCN: v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
+; GCN: v_cvt_i32_f32_e32 v[[R_I16:[0-9]+]], v[[A_F32]]
 ; GCN: buffer_store_short v[[R_I16]]
 ; GCN: s_endpgm
 define void @fptosi_f16_to_i16(
@@ -54,12 +53,10 @@ entry:
 ; GCN-LABEL: {{^}}fptosi_v2f16_to_v2i16
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
 ; GCN: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
-; SI:  v_cvt_i32_f32_e32 v[[R_I16_0:[0-9]+]], v[[A_F32_0]]
-; SI:  v_cvt_i32_f32_e32 v[[R_I16_1:[0-9]+]], v[[A_F32_1]]
-; VI:  v_cvt_i16_f16_e32 v[[R_I16_0:[0-9]+]], v[[A_V2_F16]]
-; VI:  v_cvt_i16_f16_e32 v[[R_I16_1:[0-9]+]], v[[A_F16_1]]
+; GCN: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
+; GCN: v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
+; GCN: v_cvt_i32_f32_e32 v[[R_I16_0:[0-9]+]], v[[A_F32_0]]
+; GCN: v_cvt_i32_f32_e32 v[[R_I16_1:[0-9]+]], v[[A_F32_1]]
 ; GCN: v_and_b32_e32 v[[R_I16_LO:[0-9]+]], 0xffff, v[[R_I16_0]]
 ; GCN: v_lshlrev_b32_e32 v[[R_I16_HI:[0-9]+]], 16, v[[R_I16_1]]
 ; GCN: v_or_b32_e32 v[[R_V2_I16:[0-9]+]], v[[R_I16_HI]], v[[R_I16_LO]]
@@ -76,13 +73,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fptosi_v2f16_to_v2i32
-; GCN:     buffer_load_dword
-; GCN:     v_cvt_f32_f16_e32
-; GCN:     v_cvt_f32_f16_e32
-; GCN:     v_cvt_i32_f32_e32
-; GCN:     v_cvt_i32_f32_e32
-; GCN:     buffer_store_dwordx2
-; GCN:     s_endpgm
+; GCN: buffer_load_dword
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+; GCN: v_cvt_i32_f32_e32
+; GCN: v_cvt_i32_f32_e32
+; GCN: buffer_store_dwordx2
+; GCN: s_endpgm
 define void @fptosi_v2f16_to_v2i32(
     <2 x i32> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a) {

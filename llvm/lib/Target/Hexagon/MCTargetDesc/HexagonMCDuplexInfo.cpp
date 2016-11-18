@@ -1016,7 +1016,7 @@ HexagonMCInstrInfo::getDuplexPossibilties(MCInstrInfo const &MCII,
                   k = j + distance;
          (j < numInstrInPacket) && (k < numInstrInPacket); ++j, ++k) {
 
-      // Check if reversable.
+      // Check if reversible.
       bool bisReversable = true;
       if (isStoreInst(MCB.getOperand(j).getInst()->getOpcode()) &&
           isStoreInst(MCB.getOperand(k).getInst()->getOpcode())) {

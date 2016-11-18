@@ -157,7 +157,7 @@ public:
         nullptr, idx, g_properties[idx].default_uint_value != 0);
   }
 
-  const char *GetAutoEnableOptions() const {
+  llvm::StringRef GetAutoEnableOptions() const {
     const uint32_t idx = ePropertyAutoEnableOptions;
     return m_collection_sp->GetPropertyAtIndexAsString(
         nullptr, idx, g_properties[idx].default_cstr_value);
@@ -1100,7 +1100,7 @@ bool RunEnableCommand(CommandInterpreter &interpreter) {
 
   command_stream << "plugin structured-data darwin-log enable";
   auto enable_options = GetGlobalProperties()->GetAutoEnableOptions();
-  if (enable_options && (strlen(enable_options) > 0)) {
+  if (!enable_options.empty()) {
     command_stream << ' ';
     command_stream << enable_options;
   }

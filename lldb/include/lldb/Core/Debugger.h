@@ -207,8 +207,8 @@ public:
   };
 
   Error SetPropertyValue(const ExecutionContext *exe_ctx,
-                         VarSetOperationType op, const char *property_path,
-                         const char *value) override;
+                         VarSetOperationType op, llvm::StringRef property_path,
+    llvm::StringRef value) override;
 
   bool GetAutoConfirm() const;
 

@@ -235,7 +235,7 @@ private:
 
   /// \brief Choose the best \p LEA instruction from the \p List to replace
   /// address calculation in \p MI instruction. Return the address displacement
-  /// and the distance between \p MI and the choosen \p BestLEA in
+  /// and the distance between \p MI and the chosen \p BestLEA in
   /// \p AddrDispShift and \p Dist.
   bool chooseBestLEA(const SmallVectorImpl<MachineInstr *> &List,
                      const MachineInstr &MI, MachineInstr *&BestLEA,
@@ -549,10 +549,10 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
         MachineInstr &Last = **I2;
         int64_t AddrDispShift;
 
-        // LEAs should be in occurence order in the list, so we can freely
+        // LEAs should be in occurrence order in the list, so we can freely
         // replace later LEAs with earlier ones.
         assert(calcInstrDist(First, Last) > 0 &&
-               "LEAs must be in occurence order in the list");
+               "LEAs must be in occurrence order in the list");
 
         // Check that the Last LEA instruction can be replaced by the First.
         if (!isReplaceable(First, Last, AddrDispShift)) {

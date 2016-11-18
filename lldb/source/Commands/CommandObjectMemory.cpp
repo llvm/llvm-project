@@ -1062,8 +1062,7 @@ protected:
     DataBufferHeap buffer;
 
     if (m_memory_options.m_string.OptionWasSet())
-      buffer.CopyData(m_memory_options.m_string.GetStringValue(),
-                      strlen(m_memory_options.m_string.GetStringValue()));
+      buffer.CopyData(m_memory_options.m_string.GetStringValue());
     else if (m_memory_options.m_expr.OptionWasSet()) {
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ValueObjectSP result_sp;

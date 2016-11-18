@@ -33,6 +33,6 @@ Options
    to trigger this check.
 
    The number of lines is counted from the end of condition or initial keyword
-   (``do``/``else``) until the last line of the inner statement.  Default value
+   (``do``/``else``) until the last line of the inner statement. Default value
    `0` means that braces will be added to all statements (not having them
    already).

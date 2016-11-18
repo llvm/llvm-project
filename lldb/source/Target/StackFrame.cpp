@@ -484,14 +484,16 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 }
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
-    llvm::StringRef var_expr_cstr, DynamicValueType use_dynamic,
-    uint32_t options, VariableSP &var_sp, Error &error) {
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Error &error) {
+  llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (m_is_history_frame)
     return ValueObjectSP();
 
-  if (var_expr_cstr.empty()) {
-    error.SetErrorStringWithFormat("invalid variable path '%s'", var_expr_cstr);
+  if (var_expr.empty()) {
+    error.SetErrorStringWithFormat("invalid variable path '%s'",
+                                   var_expr.str().c_str());
     return ValueObjectSP();
   }
 
@@ -517,7 +519,6 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     return ValueObjectSP();
 
   // If first character is a '*', then show pointer contents
-  llvm::StringRef var_expr = var_expr_cstr;
   std::string var_expr_storage;
   if (var_expr[0] == '*') {
     deref = true;
@@ -688,7 +689,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
             } else {
               error.SetErrorStringWithFormat(
                   "incomplete expression path after \"%s\" in \"%s\"",
-                  var_expr_path_strm.GetData(), var_expr_cstr);
+                  var_expr_path_strm.GetData(),
+                  original_var_expr.str().c_str());
             }
           }
           return ValueObjectSP();

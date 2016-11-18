@@ -92,20 +92,20 @@ public:
   std::vector<InputSectionBase<ELFT> *> Sections;
 
 private:
-  std::vector<SymbolBody *> findAll(const StringMatcher &M);
+  std::vector<SymbolBody *> findAll(StringRef GlobPat);
   std::pair<Symbol *, bool> insert(StringRef &Name);
   std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
   ArrayRef<SymbolBody *> findDemangled(StringRef Name);
-  std::vector<SymbolBody *> findAllDemangled(const StringMatcher &M);
+  std::vector<SymbolBody *> findAllDemangled(StringRef GlobPat);
 
   void initDemangledSyms();
   void handleAnonymousVersion();
-  void assignExactVersion(SymbolVersion Ver, size_t VersionId,
+  void assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
                           StringRef VersionName);
-  void assignWildcardVersion(SymbolVersion Ver, size_t VersionId);
+  void assignWildcardVersion(SymbolVersion Ver, uint16_t VersionId);
 
   struct SymIndex {
     SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}

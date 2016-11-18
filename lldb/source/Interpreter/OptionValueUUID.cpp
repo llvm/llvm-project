@@ -79,9 +79,8 @@ size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
     const size_t num_modules = target->GetImages().GetSize();
     if (num_modules > 0) {
       UUID::ValueType uuid_bytes;
-      size_t num_bytes_decoded = 0;
-      llvm::StringRef rest =
-          UUID::DecodeUUIDBytesFromString(s, uuid_bytes, num_bytes_decoded);
+      uint32_t num_bytes_decoded = 0;
+      UUID::DecodeUUIDBytesFromString(s, uuid_bytes, num_bytes_decoded);
       for (size_t i = 0; i < num_modules; ++i) {
         ModuleSP module_sp(target->GetImages().GetModuleAtIndex(i));
         if (module_sp) {

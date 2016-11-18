@@ -28,9 +28,10 @@ add_llvm_target(AVRCodeGen
   AVRSubtarget.cpp
   AVRTargetMachine.cpp
   AVRTargetObjectFile.cpp
-)
 
-add_dependencies(LLVMAVRCodeGen intrinsics_gen)
+  DEPENDS
+  intrinsics_gen
+)
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

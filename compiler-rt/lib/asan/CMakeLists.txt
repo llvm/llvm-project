@@ -9,6 +9,7 @@ set(ASAN_SOURCES
   asan_fake_stack.cc
   asan_flags.cc
   asan_globals.cc
+  asan_globals_win.cc
   asan_interceptors.cc
   asan_linux.cc
   asan_mac.cc
@@ -63,6 +64,7 @@ set(ASAN_DYNAMIC_CFLAGS ${ASAN_CFLAGS})
 append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec ASAN_DYNAMIC_CFLAGS)
 append_list_if(MSVC /DEBUG ASAN_DYNAMIC_LINK_FLAGS)
+append_list_if(MSVC /INCREMENTAL:NO ASAN_DYNAMIC_LINK_FLAGS)
 
 append_list_if(COMPILER_RT_HAS_LIBC c ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBDL dl ASAN_DYNAMIC_LIBS)
@@ -205,6 +207,7 @@ else()
         STATIC
         ARCHS ${arch}
         SOURCES asan_win_dll_thunk.cc
+                asan_globals_win.cc
                 $<TARGET_OBJECTS:RTInterception.${arch}>
         CFLAGS ${ASAN_CFLAGS} -DASAN_DLL_THUNK
         DEFS ${ASAN_COMMON_DEFINITIONS}
@@ -221,6 +224,7 @@ else()
         STATIC
         ARCHS ${arch}
         SOURCES asan_win_dynamic_runtime_thunk.cc
+                asan_globals_win.cc
         CFLAGS ${ASAN_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
         DEFS ${ASAN_COMMON_DEFINITIONS}
         PARENT_TARGET asan)

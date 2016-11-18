@@ -116,7 +116,7 @@ An overview of all the command-line options:
                                    prefix add checks with matching names to the
                                    set, globs with the '-' prefix remove checks
                                    with matching names from the set of enabled
-                                   checks.  This option's value is appended to the
+                                   checks. This option's value is appended to the
                                    value of the 'Checks' option in .clang-tidy
                                    file, if any.
     -config=<string>             - 
@@ -544,7 +544,7 @@ The ``check_clang_tidy.py`` script provides an easy way to test both
 diagnostic messages and fix-its. It filters out ``CHECK`` lines from the test
 file, runs :program:`clang-tidy` and verifies messages and fixes with two
 separate `FileCheck`_ invocations. To use the script, put a .cpp file with the
-appropriate ``RUN`` line in the ``test/clang-tidy`` directory.  Use
+appropriate ``RUN`` line in the ``test/clang-tidy`` directory. Use
 ``CHECK-MESSAGES:`` and ``CHECK-FIXES:`` lines to write checks against
 diagnostic messages and fixed code.
 

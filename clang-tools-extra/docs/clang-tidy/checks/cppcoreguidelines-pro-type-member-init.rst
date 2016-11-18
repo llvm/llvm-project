@@ -31,7 +31,7 @@ Options
 
    If set to non-zero, the check will not warn about array members that are not
    zero-initialized during construction. For performance critical code, it may
-   be important to not initialize fixed-size array members.  Default is `0`.
+   be important to not initialize fixed-size array members. Default is `0`.
 
 This rule is part of the "Type safety" profile of the C++ Core
 Guidelines, corresponding to rule Type.6. See
