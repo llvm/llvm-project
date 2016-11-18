@@ -179,6 +179,7 @@ namespace clang {
           Ctx.getDiagnosticHandler();
       void *OldDiagnosticContext = Ctx.getDiagnosticContext();
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
+      Ctx.setDiagnosticHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
 
       // Link LinkModule into this module if present, preserving its validity.
       for (auto &I : LinkModules) {
@@ -259,16 +260,13 @@ namespace clang {
     /// them.
     void EmitOptimizationMessage(const llvm::DiagnosticInfoOptimizationBase &D,
                                  unsigned DiagID);
-    void
-    OptimizationRemarkHandler(const llvm::DiagnosticInfoOptimizationRemark &D);
+    void OptimizationRemarkHandler(const llvm::OptimizationRemark &D);
+    void OptimizationRemarkHandler(const llvm::OptimizationRemarkMissed &D);
+    void OptimizationRemarkHandler(const llvm::OptimizationRemarkAnalysis &D);
     void OptimizationRemarkHandler(
-        const llvm::DiagnosticInfoOptimizationRemarkMissed &D);
+        const llvm::OptimizationRemarkAnalysisFPCommute &D);
     void OptimizationRemarkHandler(
-        const llvm::DiagnosticInfoOptimizationRemarkAnalysis &D);
-    void OptimizationRemarkHandler(
-        const llvm::DiagnosticInfoOptimizationRemarkAnalysisFPCommute &D);
-    void OptimizationRemarkHandler(
-        const llvm::DiagnosticInfoOptimizationRemarkAnalysisAliasing &D);
+        const llvm::OptimizationRemarkAnalysisAliasing &D);
     void OptimizationFailureHandler(
         const llvm::DiagnosticInfoOptimizationFailure &D);
   };
@@ -511,9 +509,16 @@ void BackendConsumer::EmitOptimizationMessage(
   FullSourceLoc Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename,
       Line, Column);
 
+  std::string Msg;
+  raw_string_ostream MsgStream(Msg);
+  MsgStream << D.getMsg();
+
+  if (D.getHotness())
+    MsgStream << " (hotness: " << *D.getHotness() << ")";
+
   Diags.Report(Loc, DiagID)
       << AddFlagValue(D.getPassName() ? D.getPassName() : "")
-      << D.getMsg().str();
+      << MsgStream.str();
 
   if (BadDebugInfo)
     // If we were not able to translate the file:line:col information
@@ -525,7 +530,7 @@ void BackendConsumer::EmitOptimizationMessage(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::DiagnosticInfoOptimizationRemark &D) {
+    const llvm::OptimizationRemark &D) {
   // Optimization remarks are active only if the -Rpass flag has a regular
   // expression that matches the name of the pass name in \p D.
   if (CodeGenOpts.OptimizationRemarkPattern &&
@@ -534,7 +539,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::DiagnosticInfoOptimizationRemarkMissed &D) {
+    const llvm::OptimizationRemarkMissed &D) {
   // Missed optimization remarks are active only if the -Rpass-missed
   // flag has a regular expression that matches the name of the pass
   // name in \p D.
@@ -545,7 +550,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::DiagnosticInfoOptimizationRemarkAnalysis &D) {
+    const llvm::OptimizationRemarkAnalysis &D) {
   // Optimization analysis remarks are active if the pass name is set to
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
@@ -558,7 +563,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::DiagnosticInfoOptimizationRemarkAnalysisFPCommute &D) {
+    const llvm::OptimizationRemarkAnalysisFPCommute &D) {
   // Optimization analysis remarks are active if the pass name is set to
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
@@ -571,7 +576,7 @@ void BackendConsumer::OptimizationRemarkHandler(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::DiagnosticInfoOptimizationRemarkAnalysisAliasing &D) {
+    const llvm::OptimizationRemarkAnalysisAliasing &D) {
   // Optimization analysis remarks are active if the pass name is set to
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
@@ -615,30 +620,27 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
   case llvm::DK_OptimizationRemark:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(cast<DiagnosticInfoOptimizationRemark>(DI));
+    OptimizationRemarkHandler(cast<OptimizationRemark>(DI));
     return;
   case llvm::DK_OptimizationRemarkMissed:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(cast<DiagnosticInfoOptimizationRemarkMissed>(DI));
+    OptimizationRemarkHandler(cast<OptimizationRemarkMissed>(DI));
     return;
   case llvm::DK_OptimizationRemarkAnalysis:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(
-        cast<DiagnosticInfoOptimizationRemarkAnalysis>(DI));
+    OptimizationRemarkHandler(cast<OptimizationRemarkAnalysis>(DI));
     return;
   case llvm::DK_OptimizationRemarkAnalysisFPCommute:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(
-        cast<DiagnosticInfoOptimizationRemarkAnalysisFPCommute>(DI));
+    OptimizationRemarkHandler(cast<OptimizationRemarkAnalysisFPCommute>(DI));
     return;
   case llvm::DK_OptimizationRemarkAnalysisAliasing:
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
-    OptimizationRemarkHandler(
-        cast<DiagnosticInfoOptimizationRemarkAnalysisAliasing>(DI));
+    OptimizationRemarkHandler(cast<OptimizationRemarkAnalysisAliasing>(DI));
     return;
   case llvm::DK_OptimizationFailure:
     // Optimization failures are always handled completely by this
