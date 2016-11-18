@@ -135,7 +135,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<AutoType> AutoTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
   llvm::FoldingSet<AttributedType> AttributedTypes;
-  mutable llvm::FoldingSet<PipeType> PipeTypes;
+  mutable llvm::FoldingSet<ReadPipeType> ReadPipeTypes;
+  mutable llvm::FoldingSet<WritePipeType> WritePipeTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
   mutable llvm::FoldingSet<DependentTemplateName> DependentTemplateNames;
@@ -1120,8 +1121,10 @@ public:
   /// blocks.
   QualType getBlockDescriptorType() const;
 
-  /// \brief Return pipe type for the specified type.
-  QualType getPipeType(QualType T) const;
+  /// \brief Return a read_only pipe type for the specified type.
+  QualType getReadPipeType(QualType T) const;
+  /// \brief Return a write_only pipe type for the specified type.
+  QualType getWritePipeType(QualType T) const;
 
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.

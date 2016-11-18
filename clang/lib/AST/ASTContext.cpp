@@ -3338,29 +3338,53 @@ QualType ASTContext::getFunctionTypeInternal(
   return QualType(FTP, 0);
 }
 
-/// Return pipe type for the specified type.
-QualType ASTContext::getPipeType(QualType T) const {
+QualType ASTContext::getReadPipeType(QualType T) const {
   llvm::FoldingSetNodeID ID;
-  PipeType::Profile(ID, T);
+  ReadPipeType::Profile(ID, T);
 
   void *InsertPos = 0;
-  if (PipeType *PT = PipeTypes.FindNodeOrInsertPos(ID, InsertPos))
+  if (ReadPipeType *PT = ReadPipeTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(PT, 0);
 
   // If the pipe element type isn't canonical, this won't be a canonical type
   // either, so fill in the canonical type field.
   QualType Canonical;
   if (!T.isCanonical()) {
-    Canonical = getPipeType(getCanonicalType(T));
+    Canonical = getReadPipeType(getCanonicalType(T));
 
     // Get the new insert position for the node we care about.
-    PipeType *NewIP = PipeTypes.FindNodeOrInsertPos(ID, InsertPos);
+    ReadPipeType *NewIP = ReadPipeTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!");
     (void)NewIP;
   }
-  PipeType *New = new (*this, TypeAlignment) PipeType(T, Canonical);
+  ReadPipeType *New = new (*this, TypeAlignment) ReadPipeType(T, Canonical);
   Types.push_back(New);
-  PipeTypes.InsertNode(New, InsertPos);
+  ReadPipeTypes.InsertNode(New, InsertPos);
+  return QualType(New, 0);
+}
+
+QualType ASTContext::getWritePipeType(QualType T) const {
+  llvm::FoldingSetNodeID ID;
+  WritePipeType::Profile(ID, T);
+
+  void *InsertPos = 0;
+  if (WritePipeType *PT = WritePipeTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(PT, 0);
+
+  // If the pipe element type isn't canonical, this won't be a canonical type
+  // either, so fill in the canonical type field.
+  QualType Canonical;
+  if (!T.isCanonical()) {
+    Canonical = getWritePipeType(getCanonicalType(T));
+
+    // Get the new insert position for the node we care about.
+    WritePipeType *NewIP = WritePipeTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!NewIP && "Shouldn't be in the map!");
+    (void)NewIP;
+  }
+  WritePipeType *New = new (*this, TypeAlignment) WritePipeType(T, Canonical);
+  Types.push_back(New);
+  WritePipeTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
 
@@ -7715,7 +7739,7 @@ bool ASTContext::typesAreCompatible(QualType LHS, QualType RHS,
                                     bool CompareUnqualified) {
   if (getLangOpts().CPlusPlus)
     return hasSameType(LHS, RHS);
-  
+
   return !mergeTypes(LHS, RHS, false, CompareUnqualified).isNull();
 }
 
@@ -8243,7 +8267,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
       return LHS;
     if (getCanonicalType(RHSValue) == getCanonicalType(ResultType))
       return RHS;
-    return getPipeType(ResultType);
+    return isa<ReadPipeType>(LHS) ? getReadPipeType(ResultType)
+                                  : getWritePipeType(ResultType);
   }
   }
 

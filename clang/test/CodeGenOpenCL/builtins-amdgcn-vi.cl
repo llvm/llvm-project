@@ -55,7 +55,7 @@ void test_frexp_mant_f16(global half* out, half a)
 }
 
 // CHECK-LABEL: @test_frexp_exp_f16
-// CHECK: call i32 @llvm.amdgcn.frexp.exp.f16
+// CHECK: call i16 @llvm.amdgcn.frexp.exp.i16.f16
 void test_frexp_exp_f16(global short* out, half a)
 {
   *out = __builtin_amdgcn_frexp_exph(a);

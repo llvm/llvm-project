@@ -901,6 +901,10 @@ void TypePrinter::printAtomicAfter(const AtomicType *T, raw_ostream &OS) { }
 void TypePrinter::printPipeBefore(const PipeType *T, raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
+  if (T->isReadOnly())
+    OS << "read_only ";
+  else
+    OS << "write_only ";
   OS << "pipe ";
   print(T->getElementType(), OS, StringRef());
   spaceBeforePlaceHolder(OS);
