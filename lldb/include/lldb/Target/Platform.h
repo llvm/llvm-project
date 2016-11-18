@@ -413,8 +413,8 @@ public:
                                // target, else use existing one
                Error &error);
 
-  virtual lldb::ProcessSP ConnectProcess(const char *connect_url,
-                                         const char *plugin_name,
+  virtual lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
+                                         llvm::StringRef plugin_name,
                                          lldb_private::Debugger &debugger,
                                          lldb_private::Target *target,
                                          lldb_private::Error &error);

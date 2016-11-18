@@ -122,7 +122,7 @@ in your ``.emacs``:
  (require 'clang-include-fixer)
 
 Within Emacs the tool can be invoked with the command
-``M-x clang-include-fixer``.  This will insert the header that defines the
+``M-x clang-include-fixer``. This will insert the header that defines the
 first undefined symbol; if there is more than one header that would define the
 symbol, the user is prompted to select one.
 

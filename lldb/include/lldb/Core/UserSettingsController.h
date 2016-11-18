@@ -44,16 +44,16 @@ public:
   }
 
   virtual lldb::OptionValueSP GetPropertyValue(const ExecutionContext *exe_ctx,
-                                               const char *property_path,
+                                               llvm::StringRef property_path,
                                                bool will_modify,
                                                Error &error) const;
 
   virtual Error SetPropertyValue(const ExecutionContext *exe_ctx,
                                  VarSetOperationType op,
-                                 const char *property_path, const char *value);
+    llvm::StringRef property_path, llvm::StringRef value);
 
   virtual Error DumpPropertyValue(const ExecutionContext *exe_ctx, Stream &strm,
-                                  const char *property_path,
+    llvm::StringRef property_path,
                                   uint32_t dump_mask);
 
   virtual void DumpAllPropertyValues(const ExecutionContext *exe_ctx,
@@ -82,7 +82,7 @@ public:
   // real one.
   static const char *GetExperimentalSettingsName();
 
-  static bool IsSettingExperimental(const char *setting);
+  static bool IsSettingExperimental(llvm::StringRef setting);
 
 protected:
   lldb::OptionValuePropertiesSP m_collection_sp;

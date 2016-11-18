@@ -43,8 +43,8 @@ uint64_t OptionValue::GetUInt64Value(uint64_t fail_value, bool *success_ptr) {
 }
 
 Error OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
-                               VarSetOperationType op, const char *name,
-                               const char *value) {
+                               VarSetOperationType op, llvm::StringRef name,
+  llvm::StringRef value) {
   Error error;
   error.SetErrorStringWithFormat("SetSubValue is not supported");
   return error;
@@ -412,10 +412,10 @@ bool OptionValue::SetSInt64Value(int64_t new_value) {
   return false;
 }
 
-const char *OptionValue::GetStringValue(const char *fail_value) const {
+llvm::StringRef OptionValue::GetStringValue(llvm::StringRef fail_value) const {
   const OptionValueString *option_value = GetAsString();
   if (option_value)
-    return option_value->GetCurrentValue();
+    return option_value->GetCurrentValueAsRef();
   return fail_value;
 }
 

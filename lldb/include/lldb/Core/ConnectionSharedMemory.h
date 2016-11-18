@@ -32,7 +32,7 @@ public:
   virtual lldb::ConnectionStatus BytesAvailable(uint32_t timeout_usec,
                                                 Error *error_ptr);
 
-  lldb::ConnectionStatus Connect(const char *s, Error *error_ptr) override;
+  lldb::ConnectionStatus Connect(llvm::StringRef s, Error *error_ptr) override;
 
   lldb::ConnectionStatus Disconnect(Error *error_ptr) override;
 

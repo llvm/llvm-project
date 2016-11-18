@@ -131,7 +131,7 @@ public:
                         const DataExtractor &data,
                         lldb::offset_t data_offset) = 0;
 
-  virtual void SetDescription(const char *) {
+  virtual void SetDescription(llvm::StringRef) {
   } // May be overridden in sub-classes that have descriptions.
 
   lldb::OptionValueSP ReadArray(FILE *in_file, Stream *out_stream,
@@ -290,7 +290,7 @@ public:
 
   void SetOpcode(size_t opcode_size, void *opcode_data);
 
-  void SetDescription(const char *description) override;
+  void SetDescription(llvm::StringRef description) override;
 
 protected:
   std::string m_description;

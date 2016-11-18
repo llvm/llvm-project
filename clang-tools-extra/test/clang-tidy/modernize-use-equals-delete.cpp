@@ -22,6 +22,32 @@ private:
   // CHECK-FIXES: ~PositivePrivate() = delete;
 };
 
+template<typename T>
+struct PositivePrivateTemplate {
+private:
+  PositivePrivateTemplate();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= delete' to prohibit calling of a special member function [modernize-use-equals-delete]
+  // CHECK-FIXES: PositivePrivateTemplate() = delete;
+  PositivePrivateTemplate(const PositivePrivateTemplate &);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= delete' to prohibit calling of a special member function [modernize-use-equals-delete]
+  // CHECK-FIXES: PositivePrivateTemplate(const PositivePrivateTemplate &) = delete;
+  PositivePrivateTemplate &operator=(const PositivePrivateTemplate &);
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use '= delete' to prohibit calling of a special member function [modernize-use-equals-delete]
+  // CHECK-FIXES: PositivePrivateTemplate &operator=(const PositivePrivateTemplate &) = delete;
+  PositivePrivateTemplate(PositivePrivateTemplate &&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= delete' to prohibit calling of a special member function [modernize-use-equals-delete]
+  // CHECK-FIXES: PositivePrivateTemplate(PositivePrivateTemplate &&) = delete;
+  PositivePrivateTemplate &operator=(PositivePrivateTemplate &&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use '= delete' to prohibit calling of a special member function [modernize-use-equals-delete]
+  // CHECK-FIXES: PositivePrivateTemplate &operator=(PositivePrivateTemplate &&) = delete;
+  ~PositivePrivateTemplate();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= delete' to prohibit calling of a special member function [modernize-use-equals-delete]
+  // CHECK-FIXES: ~PositivePrivateTemplate() = delete;
+};
+
+template struct PositivePrivateTemplate<int>;
+template struct PositivePrivateTemplate<char>;
+
 struct NegativePublic {
   NegativePublic(const NegativePublic &);
 };

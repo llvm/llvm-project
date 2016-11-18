@@ -706,8 +706,10 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
       std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry<ELFT> &E) {
         return E.H.p_type == PT_LOAD;
       });
+  if (FirstPTLoad == Phdrs.end())
+    return;
 
-  if (HeaderSize <= MinVA && FirstPTLoad != Phdrs.end()) {
+  if (HeaderSize <= MinVA) {
     // If linker script specifies program headers and first PT_LOAD doesn't
     // have both PHDRS and FILEHDR attributes then do nothing
     if (!Opt.PhdrsCommands.empty()) {
@@ -866,6 +868,20 @@ const OutputSectionBase *LinkerScript<ELFT>::getOutputSection(StringRef Name) {
   return &FakeSec;
 }
 
+// This function is essentially the same as getOutputSection(Name)->Size,
+// but it won't print out an error message if a given section is not found.
+//
+// Linker script does not create an output section if its content is empty.
+// We want to allow SIZEOF(.foo) where .foo is a section which happened to
+// be empty. That is why this function is different from getOutputSection().
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
+  for (OutputSectionBase *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->Size;
+  return 0;
+}
+
 template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
   return elf::getHeaderSize<ELFT>();
 }
@@ -988,11 +1004,10 @@ private:
   Expr readParenExpr();
 
   // For parsing version script.
-  void readVersionExtern(std::vector<SymbolVersion> *Globals);
+  std::vector<SymbolVersion> readVersionExtern();
+  void readAnonymousDeclaration();
   void readVersionDeclaration(StringRef VerStr);
-  void readGlobal(StringRef VerStr);
-  void readLocal(StringRef VerStr);
-  void readSymbols(std::vector<SymbolVersion> &V);
+  std::vector<SymbolVersion> readSymbols();
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
@@ -1006,7 +1021,7 @@ void ScriptParser::readVersionScript() {
 
 void ScriptParser::readVersionScriptCommand() {
   if (consume("{")) {
-    readVersionDeclaration("");
+    readAnonymousDeclaration();
     return;
   }
 
@@ -1717,8 +1732,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
-    return
-        [=](uint64_t Dot) { return ScriptBase->getOutputSection(Name)->Size; };
+    return [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
@@ -1797,73 +1811,93 @@ unsigned ScriptParser::readPhdrType() {
   return Ret;
 }
 
+// Reads a list of symbols, e.g. "{ global: foo; bar; local: *; };".
+void ScriptParser::readAnonymousDeclaration() {
+  // Read global symbols first. "global:" is default, so if there's
+  // no label, we assume global symbols.
+  if (consume("global:") || peek() != "local:")
+    Config->VersionScriptGlobals = readSymbols();
+
+  // Next, read local symbols.
+  if (consume("local:")) {
+    if (consume("*")) {
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+      expect(";");
+    } else {
+      setError("local symbol list for anonymous version is not supported");
+    }
+  }
+  expect("}");
+  expect(";");
+}
+
+// Reads a list of symbols, e.g. "VerStr { global: foo; bar; local: *; };".
 void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   // Identifiers start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
   uint16_t VersionId = Config->VersionDefinitions.size() + 2;
   Config->VersionDefinitions.push_back({VerStr, VersionId});
 
+  // Read global symbols.
   if (consume("global:") || peek() != "local:")
-    readGlobal(VerStr);
-  if (consume("local:"))
-    readLocal(VerStr);
+    Config->VersionDefinitions.back().Globals = readSymbols();
+
+  // Read local symbols.
+  if (consume("local:")) {
+    if (consume("*")) {
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+      expect(";");
+    } else {
+      for (SymbolVersion V : readSymbols())
+        Config->VersionScriptLocals.push_back(V);
+    }
+  }
   expect("}");
 
-  // Each version may have a parent version. For example, "Ver2" defined as
-  // "Ver2 { global: foo; local: *; } Ver1;" has "Ver1" as a parent. This
-  // version hierarchy is, probably against your instinct, purely for human; the
-  // runtime doesn't care about them at all. In LLD, we simply skip the token.
-  if (!VerStr.empty() && peek() != ";")
+  // Each version may have a parent version. For example, "Ver2"
+  // defined as "Ver2 { global: foo; local: *; } Ver1;" has "Ver1"
+  // as a parent. This version hierarchy is, probably against your
+  // instinct, purely for hint; the runtime doesn't care about it
+  // at all. In LLD, we simply ignore it.
+  if (peek() != ";")
     skip();
   expect(";");
 }
 
-void ScriptParser::readSymbols(std::vector<SymbolVersion> &V) {
+// Reads a list of symbols for a versions cript.
+std::vector<SymbolVersion> ScriptParser::readSymbols() {
+  std::vector<SymbolVersion> Ret;
   for (;;) {
     if (consume("extern"))
-      readVersionExtern(&V);
+      for (SymbolVersion V : readVersionExtern())
+        Ret.push_back(V);
 
     if (peek() == "}" || peek() == "local:" || Error)
-      return;
+      break;
     StringRef Tok = next();
-    V.push_back({unquote(Tok), false, hasWildcard(Tok)});
+    Ret.push_back({unquote(Tok), false, hasWildcard(Tok)});
     expect(";");
   }
+  return Ret;
 }
 
-void ScriptParser::readLocal(StringRef VerStr) {
-  if (consume("*")) {
-    Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-    expect(";");
-    return;
-  }
-
-  if (VerStr.empty())
-    setError("locals list for anonymous version is not supported");
-
-  readSymbols(Config->VersionScriptLocals);
-}
-
-void ScriptParser::readVersionExtern(std::vector<SymbolVersion> *V) {
+// Reads an "extern C++" directive, e.g.,
+// "extern "C++" { ns::*; "f(int, double)"; };"
+std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   expect("\"C++\"");
   expect("{");
 
+  std::vector<SymbolVersion> Ret;
   while (!Error && peek() != "}") {
     StringRef Tok = next();
     bool HasWildcard = !Tok.startswith("\"") && hasWildcard(Tok);
-    V->push_back({unquote(Tok), true, HasWildcard});
+    Ret.push_back({unquote(Tok), true, HasWildcard});
     expect(";");
   }
 
   expect("}");
   expect(";");
-}
-
-void ScriptParser::readGlobal(StringRef VerStr) {
-  if (VerStr.empty())
-    readSymbols(Config->VersionScriptGlobals);
-  else
-    readSymbols(Config->VersionDefinitions.back().Globals);
+  return Ret;
 }
 
 static bool isUnderSysroot(StringRef Path) {

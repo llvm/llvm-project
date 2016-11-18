@@ -78,15 +78,12 @@ void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,
   }
 }
 
-const char *ProcessInfo::GetArg0() const {
-  return (m_arg0.empty() ? nullptr : m_arg0.c_str());
+llvm::StringRef ProcessInfo::GetArg0() const {
+  return m_arg0;
 }
 
-void ProcessInfo::SetArg0(const char *arg) {
-  if (arg && arg[0])
-    m_arg0 = arg;
-  else
-    m_arg0.clear();
+void ProcessInfo::SetArg0(llvm::StringRef arg) {
+  m_arg0 = arg;
 }
 
 void ProcessInfo::SetArguments(char const **argv,

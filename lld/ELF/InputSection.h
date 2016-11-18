@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Object/ELF.h"
+#include <mutex>
 
 namespace lld {
 namespace elf {
@@ -187,13 +188,10 @@ public:
   // in the output section.
   uintX_t getOffset(uintX_t Offset) const;
 
-  void finalizePieces();
-
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
   std::vector<SectionPiece> Pieces;
-  ArrayRef<uint8_t> getData(std::vector<SectionPiece>::const_iterator I) const;
-  std::vector<uint32_t> Hashes;
+  llvm::CachedHashStringRef getData(size_t Idx) const;
 
   // Returns the SectionPiece at a given input section offset.
   SectionPiece *getSectionPiece(uintX_t Offset);
@@ -203,7 +201,11 @@ private:
   std::vector<SectionPiece> splitStrings(ArrayRef<uint8_t> A, size_t Size);
   std::vector<SectionPiece> splitNonStrings(ArrayRef<uint8_t> A, size_t Size);
 
-  llvm::DenseMap<uintX_t, uintX_t> OffsetMap;
+  std::vector<uint32_t> Hashes;
+
+  mutable llvm::DenseMap<uintX_t, uintX_t> OffsetMap;
+  mutable std::once_flag InitOffsetMap;
+
   llvm::DenseSet<uintX_t> LiveOffsets;
 };
 

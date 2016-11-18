@@ -377,7 +377,7 @@ protected:
             target_sp->GetExecutableSearchPaths().Append(core_file_dir);
 
             ProcessSP process_sp(target_sp->CreateProcess(
-                m_interpreter.GetDebugger().GetListener(), nullptr,
+                m_interpreter.GetDebugger().GetListener(), llvm::StringRef(),
                 &core_file));
 
             if (process_sp) {

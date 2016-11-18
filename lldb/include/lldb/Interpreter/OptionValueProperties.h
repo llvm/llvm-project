@@ -46,9 +46,6 @@ public:
   Error
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Error
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
@@ -56,7 +53,7 @@ public:
   ConstString GetName() const override { return m_name; }
 
   virtual Error DumpPropertyValue(const ExecutionContext *exe_ctx, Stream &strm,
-                                  const char *property_path,
+    llvm::StringRef property_path,
                                   uint32_t dump_mask);
 
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
@@ -102,7 +99,7 @@ public:
   //---------------------------------------------------------------------
   virtual const Property *GetPropertyAtPath(const ExecutionContext *exe_ctx,
                                             bool will_modify,
-                                            const char *property_path) const;
+    llvm::StringRef property_path) const;
 
   virtual lldb::OptionValueSP
   GetPropertyValueAtIndex(const ExecutionContext *exe_ctx, bool will_modify,
@@ -113,14 +110,14 @@ public:
                                              bool value_will_be_modified) const;
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
-                                  const char *name, bool value_will_be_modified,
+    llvm::StringRef name, bool value_will_be_modified,
                                   Error &error) const override;
 
   Error SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
-                    const char *path, const char *value) override;
+    llvm::StringRef path, llvm::StringRef value) override;
 
   virtual bool PredicateMatches(const ExecutionContext *exe_ctx,
-                                const char *predicate) const {
+    llvm::StringRef predicate) const {
     return false;
   }
 
@@ -179,12 +176,9 @@ public:
   bool SetPropertyAtIndexAsUInt64(const ExecutionContext *exe_ctx, uint32_t idx,
                                   uint64_t new_value);
 
-  const char *GetPropertyAtIndexAsString(const ExecutionContext *exe_ctx,
+  llvm::StringRef GetPropertyAtIndexAsString(const ExecutionContext *exe_ctx,
                                          uint32_t idx,
-                                         const char *fail_value) const;
-
-  bool SetPropertyAtIndexAsString(const ExecutionContext *, uint32_t,
-                                  const char *) = delete;
+                                         llvm::StringRef fail_value) const;
 
   bool SetPropertyAtIndexAsString(const ExecutionContext *exe_ctx, uint32_t idx,
                                   llvm::StringRef new_value);

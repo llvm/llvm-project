@@ -11,7 +11,7 @@ variable that is actually of type X to be accessed as if it were of an unrelated
 type Z. Note that a C-style ``(T)expression`` cast means to perform the first of
 the following that is possible: a ``const_cast``, a ``static_cast``, a
 ``static_cast`` followed by a ``const_cast``, a ``reinterpret_cast``, or a
-``reinterpret_cast`` followed by a ``const_cast``.  This rule bans
+``reinterpret_cast`` followed by a ``const_cast``. This rule bans
 ``(T)expression`` only when used to perform an unsafe cast.
 
 This rule is part of the "Type safety" profile of the C++ Core Guidelines, see

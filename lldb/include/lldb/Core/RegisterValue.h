@@ -233,8 +233,10 @@ public:
 
   bool SignExtend(uint32_t sign_bitpos);
 
-  Error SetValueFromCString(const RegisterInfo *reg_info,
-                            const char *value_str);
+  Error SetValueFromString(const RegisterInfo *reg_info,
+                           llvm::StringRef value_str);
+  Error SetValueFromString(const RegisterInfo *reg_info,
+                           const char *value_str) = delete;
 
   Error SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
                          lldb::offset_t offset, bool partial_data_ok);

@@ -28,7 +28,7 @@ public:
 
   bool IsConnected() const override;
 
-  lldb::ConnectionStatus Connect(const char *s, Error *error_ptr) override;
+  lldb::ConnectionStatus Connect(llvm::StringRef s, Error *error_ptr) override;
 
   lldb::ConnectionStatus Disconnect(Error *error_ptr) override;
 

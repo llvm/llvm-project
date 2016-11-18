@@ -8,10 +8,10 @@ public:
 };
 
 OL::OL() {}
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default' to define a trivial default constructor [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial default constructor [modernize-use-default]
 // CHECK-FIXES: OL::OL() = default;
 OL::~OL() {}
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default' to define a trivial destructor [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial destructor [modernize-use-default]
 // CHECK-FIXES: OL::~OL() = default;
 
 // Inline definitions.
@@ -92,10 +92,10 @@ public:
 class KW {
 public:
   explicit KW() {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use '= default'
   // CHECK-FIXES: explicit KW() = default;
   virtual ~KW() {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use '= default'
   // CHECK-FIXES: virtual ~KW() = default;
 };
 
@@ -134,11 +134,11 @@ public:
 
 template <class T>
 TempODef<T>::TempODef() {}
-// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use '= default'
 // CHECK-FIXES: TempODef<T>::TempODef() = default;
 template <class T>
 TempODef<T>::~TempODef() {}
-// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use '= default'
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use '= default'
 // CHECK-FIXES: TempODef<T>::~TempODef() = default;
 
 template class TempODef<int>;
@@ -178,9 +178,11 @@ struct Comments {
   Comments() {
     // Don't erase comments inside the body.
   }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use '= default'
   ~Comments() {
     // Don't erase comments inside the body.
   }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use '= default'
 };
 
 // Try-catch.
@@ -195,3 +197,13 @@ struct OTC {
 };
 OTC::OTC() try {} catch(...) {}
 OTC::~OTC() try {} catch(...) {}
+
+#define STRUCT_WITH_DEFAULT(_base, _type) \
+  struct _type {                          \
+    _type() {}                            \
+    _base value;                          \
+  };
+
+STRUCT_WITH_DEFAULT(unsigned char, Hex8Default)
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use '= default' to define a trivial default constructor
+// CHECK-MESSAGES: :[[@LINE-6]]:13: note:

@@ -92,14 +92,14 @@ public:
   std::vector<InputSectionBase<ELFT> *> Sections;
 
 private:
-  std::vector<SymbolBody *> findAll(const StringMatcher &M);
+  std::vector<SymbolBody *> findAll(StringRef GlobPat);
   std::pair<Symbol *, bool> insert(StringRef &Name);
   std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
   ArrayRef<SymbolBody *> findDemangled(StringRef Name);
-  std::vector<SymbolBody *> findAllDemangled(const StringMatcher &M);
+  std::vector<SymbolBody *> findAllDemangled(StringRef GlobPat);
 
   void initDemangledSyms();
   void handleAnonymousVersion();

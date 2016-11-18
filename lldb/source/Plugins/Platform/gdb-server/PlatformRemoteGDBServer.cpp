@@ -852,7 +852,7 @@ std::string PlatformRemoteGDBServer::MakeUrl(const char *scheme,
 }
 
 lldb::ProcessSP PlatformRemoteGDBServer::ConnectProcess(
-    const char *connect_url, const char *plugin_name,
+    llvm::StringRef connect_url, llvm::StringRef plugin_name,
     lldb_private::Debugger &debugger, lldb_private::Target *target,
     lldb_private::Error &error) {
   if (!IsRemote() || !IsConnected()) {
@@ -869,8 +869,7 @@ size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,
   GetPendingGdbServerList(connection_urls);
 
   for (size_t i = 0; i < connection_urls.size(); ++i) {
-    ConnectProcess(connection_urls[i].c_str(), nullptr, debugger, nullptr,
-                   error);
+    ConnectProcess(connection_urls[i].c_str(), "", debugger, nullptr, error);
     if (error.Fail())
       return i; // We already connected to i process succsessfully
   }

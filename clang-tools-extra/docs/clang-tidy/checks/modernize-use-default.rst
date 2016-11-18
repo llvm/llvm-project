@@ -4,7 +4,7 @@ modernize-use-default
 =====================
 
 This check replaces default bodies of special member functions with ``=
-default;``.  The explicitly defaulted function declarations enable more
+default;``. The explicitly defaulted function declarations enable more
 opportunities in optimization, because the compiler might treat explicitly
 defaulted functions as trivial.
 

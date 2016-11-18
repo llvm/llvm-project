@@ -796,6 +796,11 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_CONSTEXPR_AFTER_CXX14
 #endif
 
+// FIXME: Remove all usages of this macro once compilers catch up.
+#if !defined(__cpp_inline_variables) || (__cpp_inline_variables < 201606L)
+# define _LIBCPP_HAS_NO_INLINE_VARIABLES
+#endif
+
 #ifdef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #  define _LIBCPP_EXPLICIT_MOVE(x) _VSTD::move(x)
 #else
