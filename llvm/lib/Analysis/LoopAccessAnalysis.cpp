@@ -99,7 +99,10 @@ void LoopAccessReport::emitAnalysis(const LoopAccessReport &Message,
   DebugLoc DL = TheLoop->getStartLoc();
   const Value *V = TheLoop->getHeader();
   if (const Instruction *I = Message.getInstr()) {
-    DL = I->getDebugLoc();
+    // If there is no debug location attached to the instruction, revert back to
+    // using the loop's.
+    if (I->getDebugLoc())
+      DL = I->getDebugLoc();
     V = I->getParent();
   }
   ORE.emitOptimizationRemarkAnalysis(PassName, DL, V, Message.str());
