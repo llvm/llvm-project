@@ -118,6 +118,36 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
     }
     return "";
   }
+
+  /// Display the raw branch weights from PGO.
+  std::string getEdgeAttributes(const BasicBlock *Node, succ_const_iterator I,
+                                const Function *F) {
+    const TerminatorInst *TI = Node->getTerminator();
+    if (TI->getNumSuccessors() == 1)
+      return "";
+
+    MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
+    if (!WeightsNode)
+      return "";
+
+    MDString *MDName = cast<MDString>(WeightsNode->getOperand(0));
+    if (MDName->getString() != "branch_weights")
+      return "";
+
+    unsigned OpNo = I.getSuccessorIndex() + 1;
+    if (OpNo >= WeightsNode->getNumOperands())
+      return "";
+    ConstantInt *Weight =
+        mdconst::dyn_extract<ConstantInt>(WeightsNode->getOperand(OpNo));
+    if (!Weight)
+      return "";
+
+    // Append a 'W' to indicate that these are weights rather than actual
+    // profile
+    // count (due to scaling).
+    Twine Attrs = "label=\"W:" + Twine(Weight->getZExtValue()) + "\"";
+    return Attrs.str();
+  }
 };
 } // End llvm namespace
 
