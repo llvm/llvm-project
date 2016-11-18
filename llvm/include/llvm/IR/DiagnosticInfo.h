@@ -386,8 +386,8 @@ public:
     std::string Val;
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
-    explicit Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
-    explicit Argument(StringRef Key, int N);
+    Argument(StringRef Key, Value *V) : Key(Key), Val(V->getName()) {}
+    Argument(StringRef Key, int N);
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
