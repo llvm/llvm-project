@@ -405,8 +405,7 @@ public:
                                  const Function &Fn, const DebugLoc &DLoc,
                                  Value *CodeRegion = nullptr)
       : DiagnosticInfoWithDebugLocBase(Kind, Severity, Fn, DLoc),
-        PassName(PassName), RemarkName(RemarkName), CodeRegion(CodeRegion),
-        IsVerbose(false) {}
+        PassName(PassName), RemarkName(RemarkName), CodeRegion(CodeRegion) {}
 
   /// Legacy interface.
   /// \p PassName is the name of the pass emitting this diagnostic.
@@ -422,7 +421,7 @@ public:
                                  const DebugLoc &DLoc, const Twine &Msg,
                                  Optional<uint64_t> Hotness = None)
       : DiagnosticInfoWithDebugLocBase(Kind, Severity, Fn, DLoc),
-        PassName(PassName), Hotness(Hotness), IsVerbose(false) {
+        PassName(PassName), Hotness(Hotness) {
     Args.push_back(Argument(Msg.str()));
   }
 
@@ -476,7 +475,7 @@ private:
   SmallVector<Argument, 4> Args;
 
   /// The remark is expected to be noisy.
-  bool IsVerbose;
+  bool IsVerbose = false;
 
   friend struct yaml::MappingTraits<DiagnosticInfoOptimizationBase *>;
 };
