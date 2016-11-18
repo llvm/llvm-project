@@ -109,9 +109,6 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
       new ScheduleDAGMILive(C, make_unique<GCNMaxOccupancySchedStrategy>(C));
 
   const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
-
-  DAG->addMutation(createCopyConstrainDAGMutation(TII, DAG->TRI));
-
   if (TII->enableClusterLoads())
     DAG->addMutation(createLoadClusterDAGMutation(TII, DAG->TRI));
 

@@ -651,7 +651,8 @@ Error ProcessGDBRemote::WillAttachToProcessWithName(const char *process_name,
   return WillLaunchOrAttach();
 }
 
-Error ProcessGDBRemote::DoConnectRemote(Stream *strm, const char *remote_url) {
+Error ProcessGDBRemote::DoConnectRemote(Stream *strm,
+                                        llvm::StringRef remote_url) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   Error error(WillLaunchOrAttach());
 
@@ -695,15 +696,15 @@ Error ProcessGDBRemote::DoConnectRemote(Stream *strm, const char *remote_url) {
       if (state != eStateInvalid) {
         SetPrivateState(state);
       } else
-        error.SetErrorStringWithFormat("Process %" PRIu64
-                                       " was reported after connecting to "
-                                       "'%s', but state was not stopped: %s",
-                                       pid, remote_url, StateAsCString(state));
+        error.SetErrorStringWithFormat(
+            "Process %" PRIu64 " was reported after connecting to "
+            "'%s', but state was not stopped: %s",
+            pid, remote_url.str().c_str(), StateAsCString(state));
     } else
       error.SetErrorStringWithFormat("Process %" PRIu64
                                      " was reported after connecting to '%s', "
                                      "but no stop reply packet was received",
-                                     pid, remote_url);
+                                     pid, remote_url.str().c_str());
   }
 
   if (log)
@@ -963,15 +964,15 @@ Error ProcessGDBRemote::DoLaunch(Module *exe_module,
   return error;
 }
 
-Error ProcessGDBRemote::ConnectToDebugserver(const char *connect_url) {
+Error ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   Error error;
   // Only connect if we have a valid connect URL
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
 
-  if (connect_url && connect_url[0]) {
+  if (!connect_url.empty()) {
     if (log)
       log->Printf("ProcessGDBRemote::%s Connecting to %s", __FUNCTION__,
-                  connect_url);
+                  connect_url.str().c_str());
     std::unique_ptr<ConnectionFileDescriptor> conn_ap(
         new ConnectionFileDescriptor());
     if (conn_ap.get()) {
@@ -3353,7 +3354,7 @@ Error ProcessGDBRemote::LaunchAndConnectToDebugserver(
     if (m_gdb_comm.IsConnected()) {
       // Finish the connection process by doing the handshake without connecting
       // (send NULL URL)
-      ConnectToDebugserver(NULL);
+      ConnectToDebugserver("");
     } else {
       error.SetErrorString("connection failed");
     }

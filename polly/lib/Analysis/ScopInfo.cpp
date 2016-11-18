@@ -61,6 +61,19 @@ using namespace polly;
 
 #define DEBUG_TYPE "polly-scops"
 
+STATISTIC(ASSUMPTION_ALIASING, "Number of aliasing assumptions taken.");
+STATISTIC(ASSUMPTION_INBOUNDS, "Number of inbounds assumptions taken.");
+STATISTIC(ASSUMPTION_WRAPPING, "Number of wrapping assumptions taken.");
+STATISTIC(ASSUMPTION_UNSIGNED, "Number of unsigned assumptions taken.");
+STATISTIC(ASSUMPTION_COMPLEXITY, "Number of too complex SCoPs.");
+STATISTIC(ASSUMPTION_UNPROFITABLE, "Number of unprofitable SCoPs.");
+STATISTIC(ASSUMPTION_ERRORBLOCK, "Number of error block assumptions taken.");
+STATISTIC(ASSUMPTION_INFINITELOOP, "Number of bounded loop assumptions taken.");
+STATISTIC(ASSUMPTION_INVARIANTLOAD,
+          "Number of invariant loads assumptions taken.");
+STATISTIC(ASSUMPTION_DELINERIZATION,
+          "Number of delinearization assumptions taken.");
+
 // The maximal number of basic sets we allow during domain construction to
 // be created. More complex scops will result in very high compile time and
 // are also unlikely to result in good code
@@ -663,7 +676,7 @@ void MemoryAccess::assumeNoOutOfBound() {
 }
 
 void MemoryAccess::buildMemIntrinsicAccessRelation() {
-  assert(isa<MemIntrinsic>(getAccessInstruction()));
+  assert(isMemoryIntrinsic());
   assert(Subscripts.size() == 2 && Sizes.size() == 1);
 
   auto *SubscriptPWA = getPwAff(Subscripts[0]);
@@ -2890,8 +2903,13 @@ bool Scop::buildAliasChecks(AliasAnalysis &AA) {
   if (!PollyUseRuntimeAliasChecks)
     return true;
 
-  if (buildAliasGroups(AA))
+  if (buildAliasGroups(AA)) {
+    // Aliasing assumptions do not go through addAssumption but we still want to
+    // collect statistics so we do it here explicitly.
+    if (MinMaxAliasGroups.size())
+      ASSUMPTION_ALIASING++;
     return true;
+  }
 
   // If a problem occurs while building the alias groups we need to delete
   // this SCoP and pretend it wasn't valid in the first place. To this end
@@ -3469,7 +3487,8 @@ __isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
   auto &Stmt = *Access->getStatement();
   BasicBlock *BB = Stmt.getEntryBlock();
 
-  if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine())
+  if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine() ||
+      Access->isMemoryIntrinsic())
     return nullptr;
 
   // Skip accesses that have an invariant base pointer which is defined but
@@ -3739,6 +3758,53 @@ bool Scop::trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
                            DebugLoc Loc, AssumptionSign Sign) {
   if (PollyRemarksMinimal && !isEffectiveAssumption(Set, Sign))
     return false;
+
+  // Do never emit trivial assumptions as they only clutter the output.
+  if (!PollyRemarksMinimal) {
+    isl_set *Univ = nullptr;
+    if (Sign == AS_ASSUMPTION)
+      Univ = isl_set_universe(isl_set_get_space(Set));
+
+    bool IsTrivial = (Sign == AS_RESTRICTION && isl_set_is_empty(Set)) ||
+                     (Sign == AS_ASSUMPTION && isl_set_is_equal(Univ, Set));
+    isl_set_free(Univ);
+
+    if (IsTrivial)
+      return false;
+  }
+
+  switch (Kind) {
+  case ALIASING:
+    ASSUMPTION_ALIASING++;
+    break;
+  case INBOUNDS:
+    ASSUMPTION_INBOUNDS++;
+    break;
+  case WRAPPING:
+    ASSUMPTION_WRAPPING++;
+    break;
+  case UNSIGNED:
+    ASSUMPTION_UNSIGNED++;
+    break;
+  case COMPLEXITY:
+    ASSUMPTION_COMPLEXITY++;
+    break;
+  case PROFITABLE:
+    ASSUMPTION_UNPROFITABLE++;
+    break;
+  case ERRORBLOCK:
+    ASSUMPTION_ERRORBLOCK++;
+    break;
+  case INFINITELOOP:
+    ASSUMPTION_INFINITELOOP++;
+    break;
+  case INVARIANTLOAD:
+    ASSUMPTION_INVARIANTLOAD++;
+    break;
+  case DELINEARIZATION:
+    ASSUMPTION_DELINERIZATION++;
+    break;
+  }
 
   auto &F = getFunction();
   auto Suffix = Sign == AS_ASSUMPTION ? " assumption:\t" : " restriction:\t";

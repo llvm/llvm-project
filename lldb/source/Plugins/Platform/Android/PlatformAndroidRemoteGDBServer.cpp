@@ -203,7 +203,7 @@ Error PlatformAndroidRemoteGDBServer::MakeConnectURL(
 }
 
 lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
-    const char *connect_url, const char *plugin_name,
+    llvm::StringRef connect_url, llvm::StringRef plugin_name,
     lldb_private::Debugger &debugger, lldb_private::Target *target,
     lldb_private::Error &error) {
   // We don't have the pid of the remote gdbserver when it isn't started by us
@@ -216,7 +216,8 @@ lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
   int remote_port;
   llvm::StringRef scheme, host, path;
   if (!UriParser::Parse(connect_url, scheme, host, remote_port, path)) {
-    error.SetErrorStringWithFormat("Invalid URL: %s", connect_url);
+    error.SetErrorStringWithFormat("Invalid URL: %s",
+                                   connect_url.str().c_str());
     return nullptr;
   }
 
@@ -227,6 +228,6 @@ lldb::ProcessSP PlatformAndroidRemoteGDBServer::ConnectProcess(
   if (error.Fail())
     return nullptr;
 
-  return PlatformRemoteGDBServer::ConnectProcess(
-      new_connect_url.c_str(), plugin_name, debugger, target, error);
+  return PlatformRemoteGDBServer::ConnectProcess(new_connect_url, plugin_name,
+                                                 debugger, target, error);
 }

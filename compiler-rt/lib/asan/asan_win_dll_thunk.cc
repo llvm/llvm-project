@@ -20,6 +20,7 @@
 // simplifies the build procedure.
 #ifdef ASAN_DLL_THUNK
 #include "asan_init_version.h"
+#include "asan_globals_win.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
@@ -471,5 +472,7 @@ static void WINAPI asan_thread_init(void *mod, unsigned long reason,
 #pragma section(".CRT$XLAB", long, read)  // NOLINT
 __declspec(allocate(".CRT$XLAB")) void (WINAPI *__asan_tls_init)(void *,
     unsigned long, void *) = asan_thread_init;
+
+ASAN_LINK_GLOBALS_WIN()
 
 #endif // ASAN_DLL_THUNK

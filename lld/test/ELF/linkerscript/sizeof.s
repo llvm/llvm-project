@@ -24,17 +24,17 @@
 # CHECK-NEXT:  0000000000000010 *ABS* 00000000 _bbb
 # CHECK-NEXT:  0000000000000018 *ABS* 00000000 _ccc
 
-## Check that we error out if trying to get size of
-## section that does not exist.
+## SIZEOF(.nonexistent_section) should return 0.
 # RUN: echo "SECTIONS { \
 # RUN:   .aaa         : { *(.aaa) } \
 # RUN:   .bbb         : { *(.bbb) } \
 # RUN:   .ccc         : { *(.ccc) } \
 # RUN:   _aaa = SIZEOF(.foo); \
 # RUN: }" > %t.script
-# RUN: not ld.lld -o %t1 --script %t.script %t 2>&1 \
-# RUN:  | FileCheck -check-prefix=ERR %s
-# ERR: undefined section .foo
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t -section-headers %t1 | FileCheck -check-prefix=CHECK2 %s
+
+# CHECK2: 0000000000000000 *ABS* 00000000 _aaa
 
 .global _start
 _start:

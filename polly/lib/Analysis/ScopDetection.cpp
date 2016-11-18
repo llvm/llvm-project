@@ -314,7 +314,7 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
     return false;
 
   for (LoadInst *Load : RequiredILS)
-    if (!isHoistableLoad(Load, CurRegion, *LI, *SE))
+    if (!isHoistableLoad(Load, CurRegion, *LI, *SE, *DT))
       return false;
 
   Context.RequiredILS.insert(RequiredILS.begin(), RequiredILS.end());
@@ -680,7 +680,7 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
       auto *V = dyn_cast<Value>(Unknown->getValue());
       if (auto *Load = dyn_cast<LoadInst>(V)) {
         if (Context.CurRegion.contains(Load) &&
-            isHoistableLoad(Load, CurRegion, *LI, *SE))
+            isHoistableLoad(Load, CurRegion, *LI, *SE, *DT))
           Context.RequiredILS.insert(Load);
         continue;
       }
@@ -889,7 +889,7 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
         Instruction *Inst = dyn_cast<Instruction>(Ptr.getValue());
         if (Inst && Context.CurRegion.contains(Inst)) {
           auto *Load = dyn_cast<LoadInst>(Inst);
-          if (Load && isHoistableLoad(Load, Context.CurRegion, *LI, *SE)) {
+          if (Load && isHoistableLoad(Load, Context.CurRegion, *LI, *SE, *DT)) {
             Context.RequiredILS.insert(Load);
             continue;
           }

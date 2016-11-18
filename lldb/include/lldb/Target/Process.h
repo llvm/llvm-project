@@ -691,7 +691,7 @@ public:
   /// @see Process::CanDebug ()
   //------------------------------------------------------------------
   static lldb::ProcessSP FindPlugin(lldb::TargetSP target_sp,
-                                    const char *plugin_name,
+                                    llvm::StringRef plugin_name,
                                     lldb::ListenerSP listener_sp,
                                     const FileSpec *crash_file_path);
 
@@ -882,7 +882,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Error ConnectRemote(Stream *strm, const char *remote_url);
+  virtual Error ConnectRemote(Stream *strm, llvm::StringRef remote_url);
 
   bool GetShouldDetach() const { return m_should_detach; }
 
@@ -1107,7 +1107,7 @@ public:
   /// @return
   ///     Returns an error object.
   //------------------------------------------------------------------
-  virtual Error DoConnectRemote(Stream *strm, const char *remote_url) {
+  virtual Error DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
     Error error;
     error.SetErrorString("remote connections are not supported");
     return error;

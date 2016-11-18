@@ -53,7 +53,7 @@ public:
 
   bool IsConnected() const override;
 
-  lldb::ConnectionStatus Connect(const char *s, Error *error_ptr) override;
+  lldb::ConnectionStatus Connect(llvm::StringRef s, Error *error_ptr) override;
 
   lldb::ConnectionStatus Disconnect(Error *error_ptr) override;
 
@@ -82,21 +82,21 @@ protected:
 
   void CloseCommandPipe();
 
-  lldb::ConnectionStatus SocketListenAndAccept(const char *host_and_port,
+  lldb::ConnectionStatus SocketListenAndAccept(llvm::StringRef host_and_port,
                                                Error *error_ptr);
 
-  lldb::ConnectionStatus ConnectTCP(const char *host_and_port,
+  lldb::ConnectionStatus ConnectTCP(llvm::StringRef host_and_port,
                                     Error *error_ptr);
 
-  lldb::ConnectionStatus ConnectUDP(const char *args, Error *error_ptr);
+  lldb::ConnectionStatus ConnectUDP(llvm::StringRef args, Error *error_ptr);
 
-  lldb::ConnectionStatus NamedSocketConnect(const char *socket_name,
+  lldb::ConnectionStatus NamedSocketConnect(llvm::StringRef socket_name,
                                             Error *error_ptr);
 
-  lldb::ConnectionStatus NamedSocketAccept(const char *socket_name,
+  lldb::ConnectionStatus NamedSocketAccept(llvm::StringRef socket_name,
                                            Error *error_ptr);
 
-  lldb::ConnectionStatus UnixAbstractSocketConnect(const char *socket_name,
+  lldb::ConnectionStatus UnixAbstractSocketConnect(llvm::StringRef socket_name,
                                                    Error *error_ptr);
 
   lldb::IOObjectSP m_read_sp;

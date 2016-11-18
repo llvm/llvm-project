@@ -982,6 +982,94 @@ private:
   };
   SmallVector<BreakContinue, 8> BreakContinueStack;
 
+  /// Handles cancellation exit points in OpenMP-related constructs.
+  class OpenMPCancelExitStack {
+    /// Tracks cancellation exit point and join point for cancel-related exit
+    /// and normal exit.
+    struct CancelExit {
+      CancelExit() = default;
+      CancelExit(OpenMPDirectiveKind Kind, JumpDest ExitBlock,
+                 JumpDest ContBlock)
+          : Kind(Kind), ExitBlock(ExitBlock), ContBlock(ContBlock) {}
+      OpenMPDirectiveKind Kind = OMPD_unknown;
+      /// true if the exit block has been emitted already by the special
+      /// emitExit() call, false if the default codegen is used.
+      bool HasBeenEmitted = false;
+      JumpDest ExitBlock;
+      JumpDest ContBlock;
+    };
+
+    SmallVector<CancelExit, 8> Stack;
+
+  public:
+    OpenMPCancelExitStack() : Stack(1) {}
+    ~OpenMPCancelExitStack() = default;
+    /// Fetches the exit block for the current OpenMP construct.
+    JumpDest getExitBlock() const { return Stack.back().ExitBlock; }
+    /// Emits exit block with special codegen procedure specific for the related
+    /// OpenMP construct + emits code for normal construct cleanup.
+    void emitExit(CodeGenFunction &CGF, OpenMPDirectiveKind Kind,
+                  const llvm::function_ref<void(CodeGenFunction &)> &CodeGen) {
+      if (Stack.back().Kind == Kind && getExitBlock().isValid()) {
+        assert(CGF.getOMPCancelDestination(Kind).isValid());
+        assert(CGF.HaveInsertPoint());
+        assert(!Stack.back().HasBeenEmitted);
+        auto IP = CGF.Builder.saveAndClearIP();
+        CGF.EmitBlock(Stack.back().ExitBlock.getBlock());
+        CodeGen(CGF);
+        CGF.EmitBranchThroughCleanup(Stack.back().ContBlock);
+        CGF.Builder.restoreIP(IP);
+        Stack.back().HasBeenEmitted = true;
+      }
+      CodeGen(CGF);
+    }
+    /// Enter the cancel supporting \a Kind construct.
+    /// \param Kind OpenMP directive that supports cancel constructs.
+    /// \param HasCancel true, if the construct has inner cancel directive,
+    /// false otherwise.
+    void enter(CodeGenFunction &CGF, OpenMPDirectiveKind Kind, bool HasCancel) {
+      Stack.push_back({Kind,
+                       HasCancel ? CGF.getJumpDestInCurrentScope("cancel.exit")
+                                 : JumpDest(),
+                       HasCancel ? CGF.getJumpDestInCurrentScope("cancel.cont")
+                                 : JumpDest()});
+    }
+    /// Emits default exit point for the cancel construct (if the special one
+    /// has not be used) + join point for cancel/normal exits.
+    void exit(CodeGenFunction &CGF) {
+      if (getExitBlock().isValid()) {
+        assert(CGF.getOMPCancelDestination(Stack.back().Kind).isValid());
+        bool HaveIP = CGF.HaveInsertPoint();
+        if (!Stack.back().HasBeenEmitted) {
+          if (HaveIP)
+            CGF.EmitBranchThroughCleanup(Stack.back().ContBlock);
+          CGF.EmitBlock(Stack.back().ExitBlock.getBlock());
+          CGF.EmitBranchThroughCleanup(Stack.back().ContBlock);
+        }
+        CGF.EmitBlock(Stack.back().ContBlock.getBlock());
+        if (!HaveIP) {
+          CGF.Builder.CreateUnreachable();
+          CGF.Builder.ClearInsertionPoint();
+        }
+      }
+      Stack.pop_back();
+    }
+  };
+  OpenMPCancelExitStack OMPCancelStack;
+
+  /// Controls insertion of cancellation exit blocks in worksharing constructs.
+  class OMPCancelStackRAII {
+    CodeGenFunction &CGF;
+
+  public:
+    OMPCancelStackRAII(CodeGenFunction &CGF, OpenMPDirectiveKind Kind,
+                       bool HasCancel)
+        : CGF(CGF) {
+      CGF.OMPCancelStack.enter(CGF, Kind, HasCancel);
+    }
+    ~OMPCancelStackRAII() { CGF.OMPCancelStack.exit(CGF); }
+  };
+
   CodeGenPGO PGO;
 
   /// Calculate branch weights appropriate for PGO data

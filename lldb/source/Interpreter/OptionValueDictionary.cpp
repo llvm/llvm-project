@@ -207,112 +207,67 @@ Error OptionValueDictionary::SetValueFromString(llvm::StringRef value,
 
 lldb::OptionValueSP
 OptionValueDictionary::GetSubValue(const ExecutionContext *exe_ctx,
-                                   const char *name, bool will_modify,
+  llvm::StringRef name, bool will_modify,
                                    Error &error) const {
   lldb::OptionValueSP value_sp;
+  if (name.empty())
+    return nullptr;
 
-  if (name && name[0]) {
-    const char *sub_name = nullptr;
-    ConstString key;
-    const char *open_bracket = ::strchr(name, '[');
-
-    if (open_bracket) {
-      const char *key_start = open_bracket + 1;
-      const char *key_end = nullptr;
-      switch (open_bracket[1]) {
-      case '\'':
-        ++key_start;
-        key_end = strchr(key_start, '\'');
-        if (key_end) {
-          if (key_end[1] == ']') {
-            if (key_end[2])
-              sub_name = key_end + 2;
-          } else {
-            error.SetErrorStringWithFormat("invalid value path '%s', single "
-                                           "quoted key names must be formatted "
-                                           "as ['<key>'] where <key> is a "
-                                           "string that doesn't contain quotes",
-                                           name);
-            return value_sp;
-          }
-        } else {
-          error.SetErrorString(
-              "missing '] key name terminator, key name started with ['");
-          return value_sp;
-        }
-        break;
-      case '"':
-        ++key_start;
-        key_end = strchr(key_start, '"');
-        if (key_end) {
-          if (key_end[1] == ']') {
-            if (key_end[2])
-              sub_name = key_end + 2;
-            break;
-          }
-          error.SetErrorStringWithFormat("invalid value path '%s', double "
-                                         "quoted key names must be formatted "
-                                         "as [\"<key>\"] where <key> is a "
-                                         "string that doesn't contain quotes",
-                                         name);
-          return value_sp;
-        } else {
-          error.SetErrorString(
-              "missing \"] key name terminator, key name started with [\"");
-          return value_sp;
-        }
-        break;
-
-      default:
-        key_end = strchr(key_start, ']');
-        if (key_end) {
-          if (key_end[1])
-            sub_name = key_end + 1;
-        } else {
-          error.SetErrorString(
-              "missing ] key name terminator, key name started with [");
-          return value_sp;
-        }
-        break;
-      }
-
-      if (key_start && key_end) {
-        key.SetCStringWithLength(key_start, key_end - key_start);
-
-        value_sp = GetValueForKey(key);
-        if (value_sp) {
-          if (sub_name)
-            return value_sp->GetSubValue(exe_ctx, sub_name, will_modify, error);
-        } else {
-          error.SetErrorStringWithFormat(
-              "dictionary does not contain a value for the key name '%s'",
-              key.GetCString());
-        }
-      }
-    }
-    if (!value_sp && error.AsCString() == nullptr) {
-      error.SetErrorStringWithFormat("invalid value path '%s', %s values only "
-                                     "support '[<key>]' subvalues where <key> "
-                                     "a string value optionally delimited by "
-                                     "single or double quotes",
-                                     name, GetTypeAsCString());
-    }
+  llvm::StringRef left, temp;
+  std::tie(left, temp) = name.split('[');
+  if (left.size() == name.size()) {
+    error.SetErrorStringWithFormat("invalid value path '%s', %s values only "
+      "support '[<key>]' subvalues where <key> "
+      "a string value optionally delimited by "
+      "single or double quotes",
+      name.str().c_str(), GetTypeAsCString());
+    return nullptr;
   }
-  return value_sp;
+  assert(!temp.empty());
+
+  llvm::StringRef key, value;
+  llvm::StringRef quote_char;
+
+  if (temp[0] == '\"' || temp[0] == '\'') {
+    quote_char = temp.take_front();
+    temp = temp.drop_front();
+  }
+
+  llvm::StringRef sub_name;
+  std::tie(key, sub_name) = temp.split(']');
+
+  if (!key.consume_back(quote_char) || key.empty()) {
+    error.SetErrorStringWithFormat("invalid value path '%s', "
+      "key names must be formatted as ['<key>'] where <key> "
+      "is a string that doesn't contain quotes and the quote"
+      " char is optional", name.str().c_str());
+    return nullptr;
+  }
+
+  value_sp = GetValueForKey(ConstString(key));
+  if (!value_sp) {
+    error.SetErrorStringWithFormat(
+      "dictionary does not contain a value for the key name '%s'",
+      key.str().c_str());
+    return nullptr;
+  }
+
+  if (sub_name.empty())
+    return value_sp;
+  return value_sp->GetSubValue(exe_ctx, sub_name, will_modify, error);
 }
 
 Error OptionValueDictionary::SetSubValue(const ExecutionContext *exe_ctx,
                                          VarSetOperationType op,
-                                         const char *name, const char *value) {
+  llvm::StringRef name, llvm::StringRef value) {
   Error error;
   const bool will_modify = true;
   lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
   if (value_sp)
-    error = value_sp->SetValueFromString(
-        llvm::StringRef::withNullAsEmpty(value), op);
+    error = value_sp->SetValueFromString(value, op);
   else {
     if (error.AsCString() == nullptr)
-      error.SetErrorStringWithFormat("invalid value path '%s'", name);
+      error.SetErrorStringWithFormat("invalid value path '%s'", name.str().c_str());
   }
   return error;
 }

@@ -10,14 +10,18 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEDESERIALIZER_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEDESERIALIZER_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
-#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/Support/Error.h"
+#include <cassert>
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 namespace codeview {
@@ -33,13 +37,14 @@ class TypeDeserializer : public TypeVisitorCallbacks {
   };
 
 public:
-  TypeDeserializer() {}
+  TypeDeserializer() = default;
 
   Error visitTypeBegin(CVType &Record) override {
     assert(!Mapping && "Already in a type mapping!");
     Mapping = llvm::make_unique<MappingInfo>(Record.content());
     return Mapping->Mapping.visitTypeBegin(Record);
   }
+
   Error visitTypeEnd(CVType &Record) override {
     assert(Mapping && "Not in a type mapping!");
     auto EC = Mapping->Mapping.visitTypeEnd(Record);
@@ -82,7 +87,7 @@ public:
     consumeError(Mapping.Mapping.visitTypeBegin(FieldList));
   }
 
-  ~FieldListDeserializer() {
+  ~FieldListDeserializer() override {
     CVType FieldList;
     FieldList.Type = TypeLeafKind::LF_FIELDLIST;
     consumeError(Mapping.Mapping.visitTypeEnd(FieldList));
@@ -92,6 +97,7 @@ public:
     Mapping.StartOffset = Mapping.Reader.getOffset();
     return Mapping.Mapping.visitMemberBegin(Record);
   }
+
   Error visitMemberEnd(CVMemberRecord &Record) override {
     if (auto EC = Mapping.Mapping.visitMemberEnd(Record))
       return EC;
@@ -123,7 +129,8 @@ private:
   }
   MappingInfo Mapping;
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_TYPEDESERIALIZER_H

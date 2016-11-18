@@ -31148,7 +31148,7 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   if (VT.is512BitVector() && !Subtarget.hasDQI()) {
-    // VXORPS, VORPS, VANDPS, VANDNPS are supported only under DQ extention.
+    // VXORPS, VORPS, VANDPS, VANDNPS are supported only under DQ extension.
     // These logic operations may be executed in the integer domain.
     SDLoc dl(N);
 

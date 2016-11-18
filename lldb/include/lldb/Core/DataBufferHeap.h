@@ -112,6 +112,7 @@ public:
   ///     The number of bytes in \a src to copy.
   //------------------------------------------------------------------
   void CopyData(const void *src, lldb::offset_t src_len);
+  void CopyData(llvm::StringRef src) { CopyData(src.data(), src.size()); }
 
   void AppendData(const void *src, uint64_t src_len);
 

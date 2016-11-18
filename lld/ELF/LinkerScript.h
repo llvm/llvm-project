@@ -195,6 +195,7 @@ public:
   virtual bool isAbsolute(StringRef S) = 0;
   virtual const OutputSectionBase *getSymbolSection(StringRef S) = 0;
   virtual const OutputSectionBase *getOutputSection(StringRef S) = 0;
+  virtual uint64_t getOutputSectionSize(StringRef S) = 0;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -245,6 +246,7 @@ public:
   bool isAbsolute(StringRef S) override;
   const OutputSectionBase *getSymbolSection(StringRef S) override;
   const OutputSectionBase *getOutputSection(StringRef S) override;
+  uint64_t getOutputSectionSize(StringRef S) override;
 
   std::vector<OutputSectionBase *> *OutputSections;
 

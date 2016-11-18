@@ -395,7 +395,8 @@ void Sema::CheckExtraCXXDefaultArguments(Declarator &D) {
            ++argIdx) {
         ParmVarDecl *Param = cast<ParmVarDecl>(chunk.Fun.Params[argIdx].Param);
         if (Param->hasUnparsedDefaultArg()) {
-          CachedTokens *Toks = chunk.Fun.Params[argIdx].DefaultArgTokens;
+          std::unique_ptr<CachedTokens> Toks =
+              std::move(chunk.Fun.Params[argIdx].DefaultArgTokens);
           SourceRange SR;
           if (Toks->size() > 1)
             SR = SourceRange((*Toks)[1].getLocation(),
@@ -404,8 +405,6 @@ void Sema::CheckExtraCXXDefaultArguments(Declarator &D) {
             SR = UnparsedDefaultArgLocs[Param];
           Diag(Param->getLocation(), diag::err_param_default_argument_nonfunc)
             << SR;
-          delete Toks;
-          chunk.Fun.Params[argIdx].DefaultArgTokens = nullptr;
         } else if (Param->getDefaultArg()) {
           Diag(Param->getLocation(), diag::err_param_default_argument_nonfunc)
             << Param->getDefaultArg()->getSourceRange();

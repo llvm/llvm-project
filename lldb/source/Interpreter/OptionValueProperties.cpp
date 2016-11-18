@@ -115,102 +115,102 @@ OptionValueProperties::GetValueForKey(const ExecutionContext *exe_ctx,
 
 lldb::OptionValueSP
 OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
-                                   const char *name, bool will_modify,
+  llvm::StringRef name, bool will_modify,
                                    Error &error) const {
   lldb::OptionValueSP value_sp;
+  if (name.empty())
+    return OptionValueSP();
 
-  if (name && name[0]) {
-    const char *sub_name = nullptr;
-    ConstString key;
-    size_t key_len = ::strcspn(name, ".[{");
+  llvm::StringRef sub_name;
+  ConstString key;
+  size_t key_len = name.find_first_of(".[{");
+  if (key_len != llvm::StringRef::npos) {
+    key.SetString(name.take_front(key_len));
+    sub_name = name.drop_front(key_len);
+  } else
+    key.SetString(name);
 
-    if (name[key_len]) {
-      key.SetCStringWithLength(name, key_len);
-      sub_name = name + key_len;
-    } else
-      key.SetCString(name);
+  value_sp = GetValueForKey(exe_ctx, key, will_modify);
+  if (sub_name.empty() || !value_sp)
+    return value_sp;
 
-    value_sp = GetValueForKey(exe_ctx, key, will_modify);
-    if (sub_name && value_sp) {
-      switch (sub_name[0]) {
-      case '.': {
-        lldb::OptionValueSP return_val_sp;
-        return_val_sp =
-            value_sp->GetSubValue(exe_ctx, sub_name + 1, will_modify, error);
-        if (!return_val_sp) {
-          if (Properties::IsSettingExperimental(sub_name + 1)) {
-            size_t experimental_len =
-                strlen(Properties::GetExperimentalSettingsName());
-            if (*(sub_name + experimental_len + 1) == '.')
-              return_val_sp = value_sp->GetSubValue(
-                  exe_ctx, sub_name + experimental_len + 2, will_modify, error);
-            // It isn't an error if an experimental setting is not present.
-            if (!return_val_sp)
-              error.Clear();
-          }
-        }
-        return return_val_sp;
-      }
-      case '{':
-        // Predicate matching for predicates like
-        // "<setting-name>{<predicate>}"
-        // strings are parsed by the current OptionValueProperties subclass
-        // to mean whatever they want to. For instance a subclass of
-        // OptionValueProperties for a lldb_private::Target might implement:
-        // "target.run-args{arch==i386}"   -- only set run args if the arch is
-        // i386
-        // "target.run-args{path=/tmp/a/b/c/a.out}" -- only set run args if the
-        // path matches
-        // "target.run-args{basename==test&&arch==x86_64}" -- only set run args
-        // if executable basename is "test" and arch is "x86_64"
-        if (sub_name[1]) {
-          const char *predicate_start = sub_name + 1;
-          const char *predicate_end = strchr(predicate_start, '}');
-          if (predicate_end) {
-            std::string predicate(predicate_start, predicate_end);
-            if (PredicateMatches(exe_ctx, predicate.c_str())) {
-              if (predicate_end[1]) {
-                // Still more subvalue string to evaluate
-                return value_sp->GetSubValue(exe_ctx, predicate_end + 1,
-                                             will_modify, error);
-              } else {
-                // We have a match!
-                break;
-              }
-            }
-          }
-        }
-        // Predicate didn't match or wasn't correctly formed
-        value_sp.reset();
-        break;
-
-      case '[':
-        // Array or dictionary access for subvalues like:
-        // "[12]"       -- access 12th array element
-        // "['hello']"  -- dictionary access of key named hello
-        return value_sp->GetSubValue(exe_ctx, sub_name, will_modify, error);
-
-      default:
-        value_sp.reset();
-        break;
+  switch (sub_name[0]) {
+  case '.': {
+    lldb::OptionValueSP return_val_sp;
+    return_val_sp =
+        value_sp->GetSubValue(exe_ctx, sub_name.drop_front(), will_modify, error);
+    if (!return_val_sp) {
+      if (Properties::IsSettingExperimental(sub_name.drop_front())) {
+        size_t experimental_len =
+            strlen(Properties::GetExperimentalSettingsName());
+        if (sub_name[experimental_len + 1] == '.')
+          return_val_sp = value_sp->GetSubValue(
+              exe_ctx, sub_name.drop_front(experimental_len + 2), will_modify, error);
+        // It isn't an error if an experimental setting is not present.
+        if (!return_val_sp)
+          error.Clear();
       }
     }
+    return return_val_sp;
+  }
+  case '{':
+    // Predicate matching for predicates like
+    // "<setting-name>{<predicate>}"
+    // strings are parsed by the current OptionValueProperties subclass
+    // to mean whatever they want to. For instance a subclass of
+    // OptionValueProperties for a lldb_private::Target might implement:
+    // "target.run-args{arch==i386}"   -- only set run args if the arch is
+    // i386
+    // "target.run-args{path=/tmp/a/b/c/a.out}" -- only set run args if the
+    // path matches
+    // "target.run-args{basename==test&&arch==x86_64}" -- only set run args
+    // if executable basename is "test" and arch is "x86_64"
+    if (sub_name[1]) {
+      llvm::StringRef predicate_start = sub_name.drop_front();
+      size_t pos = predicate_start.find_first_of('}');
+      if (pos != llvm::StringRef::npos) {
+        auto predicate = predicate_start.take_front(pos);
+        auto rest = predicate_start.drop_front(pos);
+        if (PredicateMatches(exe_ctx, predicate)) {
+          if (!rest.empty()) {
+            // Still more subvalue string to evaluate
+            return value_sp->GetSubValue(exe_ctx, rest,
+                                          will_modify, error);
+          } else {
+            // We have a match!
+            break;
+          }
+        }
+      }
+    }
+    // Predicate didn't match or wasn't correctly formed
+    value_sp.reset();
+    break;
+
+  case '[':
+    // Array or dictionary access for subvalues like:
+    // "[12]"       -- access 12th array element
+    // "['hello']"  -- dictionary access of key named hello
+    return value_sp->GetSubValue(exe_ctx, sub_name, will_modify, error);
+
+  default:
+    value_sp.reset();
+    break;
   }
   return value_sp;
 }
 
 Error OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
                                          VarSetOperationType op,
-                                         const char *name, const char *value) {
+                                         llvm::StringRef name, llvm::StringRef value) {
   Error error;
   const bool will_modify = true;
   lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
   if (value_sp)
-    error = value_sp->SetValueFromString(
-        value ? llvm::StringRef(value) : llvm::StringRef(), op);
+    error = value_sp->SetValueFromString(value, op);
   else {
     if (error.AsCString() == nullptr)
-      error.SetErrorStringWithFormat("invalid value path '%s'", name);
+      error.SetErrorStringWithFormat("invalid value path '%s'", name.str().c_str());
   }
   return error;
 }
@@ -462,9 +462,9 @@ bool OptionValueProperties::SetPropertyAtIndexAsSInt64(
   return false;
 }
 
-const char *OptionValueProperties::GetPropertyAtIndexAsString(
+llvm::StringRef OptionValueProperties::GetPropertyAtIndexAsString(
     const ExecutionContext *exe_ctx, uint32_t idx,
-    const char *fail_value) const {
+    llvm::StringRef fail_value) const {
   const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
   if (property) {
     OptionValue *value = property->GetValue().get();
@@ -565,7 +565,7 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
 
 Error OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
                                                Stream &strm,
-                                               const char *property_path,
+                                               llvm::StringRef property_path,
                                                uint32_t dump_mask) {
   Error error;
   const bool will_modify = false;
@@ -589,32 +589,32 @@ lldb::OptionValueSP OptionValueProperties::DeepCopy() const {
 }
 
 const Property *OptionValueProperties::GetPropertyAtPath(
-    const ExecutionContext *exe_ctx, bool will_modify, const char *name) const {
+    const ExecutionContext *exe_ctx, bool will_modify, llvm::StringRef name) const {
   const Property *property = nullptr;
-  if (name && name[0]) {
-    const char *sub_name = nullptr;
-    ConstString key;
-    size_t key_len = ::strcspn(name, ".[{");
+  if (name.empty())
+    return nullptr;
+  llvm::StringRef sub_name;
+  ConstString key;
+  size_t key_len = name.find_first_of(".[{");
 
-    if (name[key_len]) {
-      key.SetCStringWithLength(name, key_len);
-      sub_name = name + key_len;
-    } else
-      key.SetCString(name);
+  if (key_len != llvm::StringRef::npos) {
+    key.SetString(name.take_front(key_len));
+    sub_name = name.drop_front(key_len);
+  } else
+    key.SetString(name);
 
-    property = GetProperty(exe_ctx, will_modify, key);
-    if (sub_name && property) {
-      if (sub_name[0] == '.') {
-        OptionValueProperties *sub_properties =
-            property->GetValue()->GetAsProperties();
-        if (sub_properties)
-          return sub_properties->GetPropertyAtPath(exe_ctx, will_modify,
-                                                   sub_name + 1);
-      }
-      property = nullptr;
-    }
+  property = GetProperty(exe_ctx, will_modify, key);
+  if (sub_name.empty() || !property)
+    return property;
+
+  if (sub_name[0] == '.') {
+    OptionValueProperties *sub_properties =
+        property->GetValue()->GetAsProperties();
+    if (sub_properties)
+      return sub_properties->GetPropertyAtPath(exe_ctx, will_modify,
+                                                sub_name.drop_front());
   }
-  return property;
+  return nullptr;
 }
 
 void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,

@@ -206,10 +206,9 @@ define void @scalar_xor_literal_multi_use_i64(i64 addrspace(1)* %out, i64 %a, i6
 ; SI-NOT: xor_b32
 ; SI: s_xor_b32 s[[VAL_LO]], s[[VAL_LO]], 63
 ; SI-NOT: xor_b32
-; SI: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[VAL_HI]]
-; SI-NOT: xor_b32
 ; SI: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[VAL_LO]]
-
+; SI-NOT: xor_b32
+; SI: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[VAL_HI]]
 ; SI-NOT: xor_b32
 ; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
 define void @scalar_xor_inline_imm_i64(i64 addrspace(1)* %out, i64 %a) {

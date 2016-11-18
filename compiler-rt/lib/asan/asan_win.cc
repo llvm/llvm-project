@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 
+#include "asan_globals_win.h"
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "asan_report.h"
@@ -367,8 +368,9 @@ __declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(void *,
     unsigned long, void *) = asan_thread_init;
 #endif
 
+ASAN_LINK_GLOBALS_WIN()
 
 // }}}
 }  // namespace __asan
 
-#endif  // _WIN32
+#endif  // SANITIZER_WINDOWS

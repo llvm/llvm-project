@@ -170,7 +170,7 @@ void Target::DeleteCurrentProcess() {
 }
 
 const lldb::ProcessSP &Target::CreateProcess(ListenerSP listener_sp,
-                                             const char *plugin_name,
+                                             llvm::StringRef plugin_name,
                                              const FileSpec *crash_file) {
   DeleteCurrentProcess();
   m_process_sp = Process::FindPlugin(shared_from_this(), plugin_name,
@@ -3694,15 +3694,15 @@ InlineStrategy TargetProperties::GetInlineStrategy() const {
       nullptr, idx, g_properties[idx].default_uint_value);
 }
 
-const char *TargetProperties::GetArg0() const {
+llvm::StringRef TargetProperties::GetArg0() const {
   const uint32_t idx = ePropertyArg0;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, nullptr);
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, llvm::StringRef());
 }
 
-void TargetProperties::SetArg0(const char *arg) {
+void TargetProperties::SetArg0(llvm::StringRef arg) {
   const uint32_t idx = ePropertyArg0;
   m_collection_sp->SetPropertyAtIndexAsString(
-      nullptr, idx, llvm::StringRef::withNullAsEmpty(arg));
+      nullptr, idx, arg);
   m_launch_info.SetArg0(arg);
 }
 
