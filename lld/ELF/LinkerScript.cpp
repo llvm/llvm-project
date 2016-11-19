@@ -787,12 +787,12 @@ template <class ELFT> bool LinkerScript<ELFT>::ignoreInterpSection() {
 }
 
 template <class ELFT>
-ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
+uint32_t LinkerScript<ELFT>::getFiller(StringRef Name) {
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
       if (Cmd->Name == Name)
         return Cmd->Filler;
-  return {};
+  return 0;
 }
 
 template <class ELFT>
@@ -823,11 +823,10 @@ void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
   if (I == INT_MAX)
     return;
 
-  OutputSectionCommand *Cmd =
-      dyn_cast<OutputSectionCommand>(Opt.Commands[I].get());
-  for (const std::unique_ptr<BaseCommand> &Base2 : Cmd->Commands)
-    if (auto *DataCmd = dyn_cast<BytesDataCommand>(Base2.get()))
-      writeInt<ELFT>(&Buf[DataCmd->Offset], DataCmd->Data, DataCmd->Size);
+  auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I].get());
+  for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
+    if (auto *Data = dyn_cast<BytesDataCommand>(Base.get()))
+      writeInt<ELFT>(Buf + Data->Offset, Data->Data, Data->Size);
 }
 
 template <class ELFT> bool LinkerScript<ELFT>::hasLMA(StringRef Name) {
@@ -843,13 +842,10 @@ template <class ELFT> bool LinkerScript<ELFT>::hasLMA(StringRef Name) {
 // were in the script. If a given name did not appear in the script,
 // it returns INT_MAX, so that it will be laid out at end of file.
 template <class ELFT> int LinkerScript<ELFT>::getSectionIndex(StringRef Name) {
-  int I = 0;
-  for (std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
+  for (int I = 0, E = Opt.Commands.size(); I != E; ++I)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I].get()))
       if (Cmd->Name == Name)
         return I;
-    ++I;
-  }
   return INT_MAX;
 }
 
@@ -981,9 +977,9 @@ private:
 
   SymbolAssignment *readAssignment(StringRef Name);
   BytesDataCommand *readBytesDataCommand(StringRef Tok);
-  std::vector<uint8_t> readFill();
+  uint32_t readFill();
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
-  std::vector<uint8_t> readOutputSectionFiller(StringRef Tok);
+  uint32_t readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   StringMatcher readFilePatterns();
@@ -1103,11 +1099,10 @@ void ScriptParser::addFile(StringRef S) {
   } else if (sys::fs::exists(S)) {
     Driver->addFile(S);
   } else {
-    std::string Path = findFromSearchPaths(S);
-    if (Path.empty())
-      setError("unable to find " + S);
+    if (Optional<std::string> Path = findFromSearchPaths(S))
+      Driver->addFile(Saver.save(*Path));
     else
-      Driver->addFile(Saver.save(Path));
+      setError("unable to find " + S);
   }
 }
 
@@ -1387,9 +1382,9 @@ Expr ScriptParser::readAssert() {
 // alias for =fillexp section attribute, which is different from
 // what GNU linkers do.
 // https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
-std::vector<uint8_t> ScriptParser::readFill() {
+uint32_t ScriptParser::readFill() {
   expect("(");
-  std::vector<uint8_t> V = readOutputSectionFiller(next());
+  uint32_t V = readOutputSectionFiller(next());
   expect(")");
   expect(";");
   return V;
@@ -1452,13 +1447,12 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 // hexstrings as blobs of arbitrary sizes, while ld.gold handles them
 // as 32-bit big-endian values. We will do the same as ld.gold does
 // because it's simpler than what ld.bfd does.
-std::vector<uint8_t> ScriptParser::readOutputSectionFiller(StringRef Tok) {
+uint32_t ScriptParser::readOutputSectionFiller(StringRef Tok) {
   uint32_t V;
-  if (Tok.getAsInteger(0, V)) {
-    setError("invalid filler expression: " + Tok);
-    return {};
-  }
-  return {uint8_t(V >> 24), uint8_t(V >> 16), uint8_t(V >> 8), uint8_t(V)};
+  if (!Tok.getAsInteger(0, V))
+    return V;
+  setError("invalid filler expression: " + Tok);
+  return 0;
 }
 
 SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {

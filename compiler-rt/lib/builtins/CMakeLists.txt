@@ -371,7 +371,31 @@ set(arm_Thumb1_SOURCES
   ${arm_Thumb1_VFPv2_SOURCES}
   ${arm_Thumb1_icache_SOURCES})
 
-if(NOT WIN32)
+if(MINGW)
+  set(arm_SOURCES
+      arm/aeabi_idivmod.S
+      arm/aeabi_ldivmod.S
+      arm/aeabi_uidivmod.S
+      arm/aeabi_uldivmod.S
+      divmoddi4.c
+      divmodsi4.c
+      divdi3.c
+      divsi3.c
+      fixdfdi.c
+      fixsfdi.c
+      fixunsdfdi.c
+      fixunssfdi.c
+      floatdidf.c
+      floatdisf.c
+      floatundidf.c
+      floatundisf.c
+      mingw_fixfloat.c
+      moddi3.c
+      udivmoddi4.c
+      udivmodsi4.c
+      udivsi3.c
+      umoddi3.c)
+else(MINGW)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_SOURCES}

@@ -122,7 +122,7 @@ struct OutputSectionCommand : BaseCommand {
   Expr SubalignExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
-  std::vector<uint8_t> Filler;
+  uint32_t Filler = 0;
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
@@ -232,7 +232,7 @@ public:
   std::vector<PhdrEntry<ELFT>> createPhdrs();
   bool ignoreInterpSection();
 
-  ArrayRef<uint8_t> getFiller(StringRef Name);
+  uint32_t getFiller(StringRef Name);
   void writeDataBytes(StringRef Name, uint8_t *Buf);
   bool hasLMA(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);

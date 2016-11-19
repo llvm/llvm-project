@@ -7,9 +7,7 @@
 
 // RUN: %clangxx_asan -O0 -fsanitize-recover=address %s -o %t 2>&1
 // RUN: %env_asan_opts=halt_on_error=false %run %t 2>&1 | FileCheck %s --check-prefix CHECK-RECOVER
-
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: stable-runtime
 
 #include <stdlib.h>
 #include <string.h>

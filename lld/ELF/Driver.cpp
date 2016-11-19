@@ -186,11 +186,10 @@ Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
 
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef Name) {
-  std::string Path = searchLibrary(Name);
-  if (Path.empty())
-    error("unable to find library -l" + Name);
+  if (Optional<std::string> Path = searchLibrary(Name))
+    addFile(*Path);
   else
-    addFile(Path);
+    error("unable to find library -l" + Name);
 }
 
 // This function is called on startup. We need this for LTO since
@@ -290,8 +289,15 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
     printHelp(ArgsArr[0]);
     return;
   }
-  if (Args.hasArg(OPT_version))
+
+  // GNU linkers disagree here. Though both -version and -v are mentioned
+  // in help to print the version information, GNU ld just normally exits,
+  // while gold can continue linking. We are compatible with ld.bfd here.
+  if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v))
     outs() << getLLDVersion() << "\n";
+  if (Args.hasArg(OPT_version))
+    return;
+
   Config->ExitEarly = CanExitEarly && !Args.hasArg(OPT_full_shutdown);
 
   if (const char *Path = getReproduceOption(Args)) {

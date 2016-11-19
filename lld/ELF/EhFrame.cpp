@@ -18,6 +18,7 @@
 
 #include "EhFrame.h"
 #include "Error.h"
+#include "Strings.h"
 
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Dwarf.h"
@@ -47,7 +48,7 @@ template <class ELFT> size_t readEhRecordSize(ArrayRef<uint8_t> D) {
     fatal("CIE/FDE too large");
   uint64_t Size = V + 4;
   if (Size > D.size())
-    fatal("CIE/FIE ends past the end of the section");
+    fatal("CIE/FDE ends past the end of the section");
   return Size;
 }
 
@@ -58,6 +59,16 @@ static uint8_t readByte(ArrayRef<uint8_t> &D) {
   uint8_t B = D.front();
   D = D.slice(1);
   return B;
+}
+
+// Read a null-terminated string.
+static StringRef readString(ArrayRef<uint8_t> &D) {
+  const uint8_t *End = std::find(D.begin(), D.end(), '\0');
+  if (End == D.end())
+    fatal("corrupted CIE");
+  StringRef S = toStringRef(D.slice(0, End - D.begin()));
+  D = D.slice(S.size() + 1);
+  return S;
 }
 
 // Skip an integer encoded in the LEB128 format.
@@ -107,20 +118,14 @@ template <class ELFT> uint8_t getFdeEncoding(ArrayRef<uint8_t> D) {
     fatal("CIE too small");
   D = D.slice(8);
 
-  uint8_t Version = readByte(D);
+  int Version = readByte(D);
   if (Version != 1 && Version != 3)
-    fatal("FDE version 1 or 3 expected, but got " + Twine((unsigned)Version));
+    fatal("FDE version 1 or 3 expected, but got " + Twine(Version));
 
-  const unsigned char *AugEnd = std::find(D.begin(), D.end(), '\0');
-  if (AugEnd == D.end())
-    fatal("corrupted CIE");
-  StringRef Aug(reinterpret_cast<const char *>(D.begin()), AugEnd - D.begin());
-  D = D.slice(Aug.size() + 1);
+  StringRef Aug = readString(D);
 
-  // Skip code alignment factor.
+  // Skip code and data alignment factors.
   skipLeb128(D);
-
-  // Skip data alignment factor.
   skipLeb128(D);
 
   // Skip the return address register. In CIE version 1 this is a single
