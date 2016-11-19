@@ -8107,6 +8107,9 @@ def err_unsupported_unknown_any_call : Error<
 def err_unknown_any_addrof : Error<
   "the address of a declaration with unknown type "
   "can only be cast to a pointer type">;
+def err_unknown_any_addrof_call : Error<
+  "address-of operator cannot be applied to a call to a function with "
+  "unknown return type">;
 def err_unknown_any_var_function_type : Error<
   "variable %0 with unknown type cannot be given a function type">;
 def err_unknown_any_function : Error<
