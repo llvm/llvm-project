@@ -393,12 +393,14 @@ Error Variable::GetValuesForVariableExpressionPath(
     variable_list.Clear();
     if (!g_regex.Execute(variable_expr_path, &regex_match)) {
       error.SetErrorStringWithFormat(
-          "unable to extract a variable name from '%s'", variable_expr_path);
+          "unable to extract a variable name from '%s'",
+          variable_expr_path.str().c_str());
       return error;
     }
     if (!regex_match.GetMatchAtIndex(variable_expr_path, 1, variable_name)) {
       error.SetErrorStringWithFormat(
-          "unable to extract a variable name from '%s'", variable_expr_path);
+          "unable to extract a variable name from '%s'",
+          variable_expr_path.str().c_str());
       return error;
     }
     if (!callback(baton, variable_name.c_str(), variable_list)) {
@@ -434,7 +436,8 @@ Error Variable::GetValuesForVariableExpressionPath(
         if (!valobj_sp) {
           error.SetErrorStringWithFormat(
               "invalid expression path '%s' for variable '%s'",
-              variable_sub_expr_path, var_sp->GetName().GetCString());
+              variable_sub_expr_path.str().c_str(),
+              var_sp->GetName().GetCString());
           variable_list.RemoveVariableAtIndex(i);
           continue;
         }

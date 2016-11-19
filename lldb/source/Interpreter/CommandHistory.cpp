@@ -41,7 +41,7 @@ CommandHistory::FindString(llvm::StringRef input_str) const {
   if (input_str[1] == g_repeat_char) {
     if (m_history.empty())
       return llvm::None;
-    return m_history.back();
+    return llvm::StringRef(m_history.back());
   }
 
   input_str = input_str.drop_front();
@@ -50,20 +50,17 @@ CommandHistory::FindString(llvm::StringRef input_str) const {
   if (input_str.front() == '-') {
     if (input_str.drop_front(2).getAsInteger(0, idx))
       return llvm::None;
-    if (idx > m_history.size())
+    if (idx >= m_history.size())
       return llvm::None;
     idx = m_history.size() - idx;
-    return m_history[idx];
-
   } else {
     if (input_str.drop_front().getAsInteger(0, idx))
       return llvm::None;
-    if (idx > m_history.size())
-      return llvm::None;
     if (idx >= m_history.size())
       return llvm::None;
-    return m_history[idx];
   }
+
+  return llvm::StringRef(m_history[idx]);
 }
 
 llvm::StringRef CommandHistory::GetStringAtIndex(size_t idx) const {

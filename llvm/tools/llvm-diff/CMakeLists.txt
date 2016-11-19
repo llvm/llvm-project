@@ -9,4 +9,7 @@ add_llvm_tool(llvm-diff
   DiffConsumer.cpp
   DiffLog.cpp
   DifferenceEngine.cpp
+
+  DEPENDS
+  intrinsics_gen
   )

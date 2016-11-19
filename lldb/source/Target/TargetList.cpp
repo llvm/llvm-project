@@ -327,7 +327,8 @@ Error TargetList::CreateTargetInternal(Debugger &debugger,
                                        bool is_dummy_target) {
   Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                      "TargetList::CreateTarget (file = '%s', arch = '%s')",
-                     user_exe_path, specified_arch.GetArchitectureName());
+                     user_exe_path.str().c_str(),
+                     specified_arch.GetArchitectureName());
   Error error;
 
   ArchSpec arch(specified_arch);
