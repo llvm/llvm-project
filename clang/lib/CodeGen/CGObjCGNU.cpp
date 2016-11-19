@@ -18,6 +18,7 @@
 #include "CGCleanup.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantBuilder.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -190,45 +191,15 @@ protected:
   /// Generates a global structure, initialized by the elements in the vector.
   /// The element types must match the types of the structure elements in the
   /// first argument.
-  llvm::GlobalVariable *MakeGlobal(llvm::StructType *Ty,
-                                   ArrayRef<llvm::Constant *> V,
+  llvm::GlobalVariable *MakeGlobal(llvm::Constant *C,
                                    CharUnits Align,
                                    StringRef Name="",
                                    llvm::GlobalValue::LinkageTypes linkage
                                          =llvm::GlobalValue::InternalLinkage) {
-    llvm::Constant *C = llvm::ConstantStruct::get(Ty, V);
-    auto GV = new llvm::GlobalVariable(TheModule, Ty, false,
+    auto GV = new llvm::GlobalVariable(TheModule, C->getType(), false,
                                        linkage, C, Name);
     GV->setAlignment(Align.getQuantity());
     return GV;
-  }
-
-  /// Generates a global array.  The vector must contain the same number of
-  /// elements that the array type declares, of the type specified as the array
-  /// element type.
-  llvm::GlobalVariable *MakeGlobal(llvm::ArrayType *Ty,
-                                   ArrayRef<llvm::Constant *> V,
-                                   CharUnits Align,
-                                   StringRef Name="",
-                                   llvm::GlobalValue::LinkageTypes linkage
-                                         =llvm::GlobalValue::InternalLinkage) {
-    llvm::Constant *C = llvm::ConstantArray::get(Ty, V);
-    auto GV = new llvm::GlobalVariable(TheModule, Ty, false,
-                                       linkage, C, Name);
-    GV->setAlignment(Align.getQuantity());
-    return GV;
-  }
-
-  /// Generates a global array, inferring the array type from the specified
-  /// element type and the size of the initialiser.  
-  llvm::GlobalVariable *MakeGlobalArray(llvm::Type *Ty,
-                                        ArrayRef<llvm::Constant *> V,
-                                        CharUnits Align,
-                                        StringRef Name="",
-                                        llvm::GlobalValue::LinkageTypes linkage
-                                         =llvm::GlobalValue::InternalLinkage) {
-    llvm::ArrayType *ArrayTy = llvm::ArrayType::get(Ty, V.size());
-    return MakeGlobal(ArrayTy, V, Align, Name, linkage);
   }
 
   /// Returns a property name and encoding string.
@@ -251,7 +222,7 @@ protected:
   }
 
   /// Push the property attributes into two structure fields. 
-  void PushPropertyAttributes(std::vector<llvm::Constant*> &Fields,
+  void PushPropertyAttributes(ConstantBuilder::StructBuilder &Fields,
       ObjCPropertyDecl *property, bool isSynthesized=true, bool
       isDynamic=true) {
     int attrs = property->getPropertyAttributes();
@@ -263,7 +234,7 @@ protected:
       attrs &= ~ObjCPropertyDecl::OBJC_PR_strong;
     }
     // The first flags field has the same attribute values as clang uses internally
-    Fields.push_back(llvm::ConstantInt::get(Int8Ty, attrs & 0xff));
+    Fields.addInt(Int8Ty, attrs & 0xff);
     attrs >>= 8;
     attrs <<= 2;
     // For protocol properties, synthesized and dynamic have no meaning, so we
@@ -273,10 +244,10 @@ protected:
     attrs |= isDynamic ? (1<<1) : 0;
     // The second field is the next four fields left shifted by two, with the
     // low bit set to indicate whether the field is synthesized or dynamic.
-    Fields.push_back(llvm::ConstantInt::get(Int8Ty, attrs & 0xff));
+    Fields.addInt(Int8Ty, attrs & 0xff);
     // Two padding fields
-    Fields.push_back(llvm::ConstantInt::get(Int8Ty, 0));
-    Fields.push_back(llvm::ConstantInt::get(Int8Ty, 0));
+    Fields.addInt(Int8Ty, 0);
+    Fields.addInt(Int8Ty, 0);
   }
 
   /// Ensures that the value has the required type, by inserting a bitcast if
@@ -1233,14 +1204,15 @@ llvm::Constant *CGObjCGNUstep::GetEHType(QualType T) {
   llvm::Constant *typeName =
     ExportUniqueString(className, "__objc_eh_typename_");
 
-  std::vector<llvm::Constant*> fields;
-  fields.push_back(BVtable);
-  fields.push_back(typeName);
-  llvm::Constant *TI = 
-      MakeGlobal(llvm::StructType::get(PtrToInt8Ty, PtrToInt8Ty, nullptr),
-                 fields, CGM.getPointerAlign(),
-                 "__objc_eh_typeinfo_" + className,
-          llvm::GlobalValue::LinkOnceODRLinkage);
+  ConstantBuilder builder(CGM);
+  auto fields = builder.beginStruct();
+  fields.add(BVtable);
+  fields.add(typeName);
+  llvm::Constant *TI =
+    fields.finishAndCreateGlobal("__objc_eh_typeinfo_" + className,
+                                 CGM.getPointerAlign(),
+                                 /*constant*/ false,
+                                 llvm::GlobalValue::LinkOnceODRLinkage);
   return llvm::ConstantExpr::getBitCast(TI, PtrToInt8Ty);
 }
 
@@ -1270,13 +1242,13 @@ ConstantAddress CGObjCGNU::GenerateConstantString(const StringLiteral *SL) {
   else if (isa->getType() != PtrToIdTy)
     isa = llvm::ConstantExpr::getBitCast(isa, PtrToIdTy);
 
-  std::vector<llvm::Constant*> Ivars;
-  Ivars.push_back(isa);
-  Ivars.push_back(MakeConstantString(Str));
-  Ivars.push_back(llvm::ConstantInt::get(IntTy, Str.size()));
-  llvm::Constant *ObjCStr = MakeGlobal(
-    llvm::StructType::get(PtrToIdTy, PtrToInt8Ty, IntTy, nullptr),
-    Ivars, Align, ".objc_str");
+  ConstantBuilder Builder(CGM);
+  auto Fields = Builder.beginStruct();
+  Fields.add(isa);
+  Fields.add(MakeConstantString(Str));
+  Fields.addInt(IntTy, Str.size());
+  llvm::Constant *ObjCStr =
+    Fields.finishAndCreateGlobal(".objc_str", Align);
   ObjCStr = llvm::ConstantExpr::getBitCast(ObjCStr, PtrToInt8Ty);
   ObjCStrings[Str] = ObjCStr;
   ConstantStrings.push_back(ObjCStr);
@@ -1551,13 +1523,20 @@ GenerateMethodList(StringRef ClassName,
                    bool isClassMethodList) {
   if (MethodSels.empty())
     return NULLPtr;
+
+  ConstantBuilder Builder(CGM);
+
+  auto MethodList = Builder.beginStruct();
+  MethodList.addNullPointer(CGM.Int8PtrTy);
+  MethodList.addInt(Int32Ty, MethodTypes.size());
+
   // Get the method structure type.
   llvm::StructType *ObjCMethodTy = llvm::StructType::get(
     PtrToInt8Ty, // Really a selector, but the runtime creates it us.
     PtrToInt8Ty, // Method types
     IMPTy, //Method pointer
     nullptr);
-  std::vector<llvm::Constant*> Methods;
+  auto Methods = MethodList.beginArray();
   for (unsigned int i = 0, e = MethodTypes.size(); i < e; ++i) {
     llvm::Constant *Method =
       TheModule.getFunction(SymbolNameForMethod(ClassName, CategoryName,
@@ -1567,34 +1546,14 @@ GenerateMethodList(StringRef ClassName,
     llvm::Constant *C = MakeConstantString(MethodSels[i].getAsString());
     Method = llvm::ConstantExpr::getBitCast(Method,
         IMPTy);
-    Methods.push_back(
+    Methods.add(
         llvm::ConstantStruct::get(ObjCMethodTy, {C, MethodTypes[i], Method}));
   }
-
-  // Array of method structures
-  llvm::ArrayType *ObjCMethodArrayTy = llvm::ArrayType::get(ObjCMethodTy,
-                                                            Methods.size());
-  llvm::Constant *MethodArray = llvm::ConstantArray::get(ObjCMethodArrayTy,
-                                                         Methods);
-
-  // Structure containing list pointer, array and array count
-  llvm::StructType *ObjCMethodListTy = llvm::StructType::create(VMContext);
-  llvm::Type *NextPtrTy = llvm::PointerType::getUnqual(ObjCMethodListTy);
-  ObjCMethodListTy->setBody(
-      NextPtrTy,
-      IntTy,
-      ObjCMethodArrayTy,
-      nullptr);
-
-  Methods.clear();
-  Methods.push_back(llvm::ConstantPointerNull::get(
-        llvm::PointerType::getUnqual(ObjCMethodListTy)));
-  Methods.push_back(llvm::ConstantInt::get(Int32Ty, MethodTypes.size()));
-  Methods.push_back(MethodArray);
+  MethodList.add(Methods.finish());
 
   // Create an instance of the structure
-  return MakeGlobal(ObjCMethodListTy, Methods, CGM.getPointerAlign(),
-                    ".objc_method_list");
+  return MethodList.finishAndCreateGlobal(".objc_method_list",
+                                          CGM.getPointerAlign());
 }
 
 /// Generates an IvarList.  Used in construction of a objc_class.
@@ -1602,35 +1561,36 @@ llvm::Constant *CGObjCGNU::
 GenerateIvarList(ArrayRef<llvm::Constant *> IvarNames,
                  ArrayRef<llvm::Constant *> IvarTypes,
                  ArrayRef<llvm::Constant *> IvarOffsets) {
-  if (IvarNames.size() == 0)
+  if (IvarNames.empty())
     return NULLPtr;
-  // Get the method structure type.
+
+  ConstantBuilder Builder(CGM);
+
+  // Structure containing array count followed by array.
+  auto IvarList = Builder.beginStruct();
+  IvarList.addInt(IntTy, (int)IvarNames.size());
+
+  // Get the ivar structure type.
   llvm::StructType *ObjCIvarTy = llvm::StructType::get(
     PtrToInt8Ty,
     PtrToInt8Ty,
     IntTy,
     nullptr);
-  std::vector<llvm::Constant*> Ivars;
+
+  // Array of ivar structures.
+  auto Ivars = IvarList.beginArray(ObjCIvarTy);
   for (unsigned int i = 0, e = IvarNames.size() ; i < e ; i++) {
-    Ivars.push_back(llvm::ConstantStruct::get(
-        ObjCIvarTy, {IvarNames[i], IvarTypes[i], IvarOffsets[i]}));
+    auto Ivar = Ivars.beginStruct(ObjCIvarTy);
+    Ivar.add(IvarNames[i]);
+    Ivar.add(IvarTypes[i]);
+    Ivar.add(IvarOffsets[i]);
+    Ivars.add(Ivar.finish());
   }
-
-  // Array of method structures
-  llvm::ArrayType *ObjCIvarArrayTy = llvm::ArrayType::get(ObjCIvarTy,
-      IvarNames.size());
-
-  llvm::Constant *Elements[] = {
-      llvm::ConstantInt::get(IntTy, (int)IvarNames.size()),
-      llvm::ConstantArray::get(ObjCIvarArrayTy, Ivars)};
-  // Structure containing array and array count
-  llvm::StructType *ObjCIvarListTy = llvm::StructType::get(IntTy,
-    ObjCIvarArrayTy,
-    nullptr);
+  IvarList.add(Ivars.finish());
 
   // Create an instance of the structure
-  return MakeGlobal(ObjCIvarListTy, Elements, CGM.getPointerAlign(),
-                    ".objc_ivar_list");
+  return IvarList.finishAndCreateGlobal(".objc_ivar_list",
+                                        CGM.getPointerAlign());
 }
 
 /// Generate a class structure
@@ -1678,34 +1638,55 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
       IntPtrTy,               // strong_pointers
       IntPtrTy,               // weak_pointers
       nullptr);
-  llvm::Constant *Zero = llvm::ConstantInt::get(LongTy, 0);
+
+  ConstantBuilder Builder(CGM);
+  auto Elements = Builder.beginStruct(ClassTy);
+
   // Fill in the structure
-  std::vector<llvm::Constant*> Elements;
-  Elements.push_back(llvm::ConstantExpr::getBitCast(MetaClass, PtrToInt8Ty));
-  Elements.push_back(SuperClass);
-  Elements.push_back(MakeConstantString(Name, ".class_name"));
-  Elements.push_back(Zero);
-  Elements.push_back(llvm::ConstantInt::get(LongTy, info));
+
+  // isa 
+  Elements.add(llvm::ConstantExpr::getBitCast(MetaClass, PtrToInt8Ty));
+  // super_class
+  Elements.add(SuperClass);
+  // name
+  Elements.add(MakeConstantString(Name, ".class_name"));
+  // version
+  Elements.addInt(LongTy, 0);
+  // info
+  Elements.addInt(LongTy, info);
+  // instance_size
   if (isMeta) {
     llvm::DataLayout td(&TheModule);
-    Elements.push_back(
-        llvm::ConstantInt::get(LongTy,
-                               td.getTypeSizeInBits(ClassTy) /
-                                 CGM.getContext().getCharWidth()));
+    Elements.addInt(LongTy,
+                    td.getTypeSizeInBits(ClassTy) /
+                      CGM.getContext().getCharWidth());
   } else
-    Elements.push_back(InstanceSize);
-  Elements.push_back(IVars);
-  Elements.push_back(Methods);
-  Elements.push_back(NULLPtr);
-  Elements.push_back(NULLPtr);
-  Elements.push_back(NULLPtr);
-  Elements.push_back(llvm::ConstantExpr::getBitCast(Protocols, PtrTy));
-  Elements.push_back(NULLPtr);
-  Elements.push_back(llvm::ConstantInt::get(LongTy, 1));
-  Elements.push_back(IvarOffsets);
-  Elements.push_back(Properties);
-  Elements.push_back(StrongIvarBitmap);
-  Elements.push_back(WeakIvarBitmap);
+    Elements.add(InstanceSize);
+  // ivars
+  Elements.add(IVars);
+  // methods
+  Elements.add(Methods);
+  // These are all filled in by the runtime, so we pretend
+  // dtable
+  Elements.add(NULLPtr);
+  // subclass_list
+  Elements.add(NULLPtr);
+  // sibling_class
+  Elements.add(NULLPtr);
+  // protocols
+  Elements.add(llvm::ConstantExpr::getBitCast(Protocols, PtrTy));
+  // gc_object_type
+  Elements.add(NULLPtr);
+  // abi_version
+  Elements.addInt(LongTy, 1);
+  // ivar_offsets
+  Elements.add(IvarOffsets);
+  // properties
+  Elements.add(Properties);
+  // strong_pointers
+  Elements.add(StrongIvarBitmap);
+  // weak_pointers
+  Elements.add(WeakIvarBitmap);
   // Create an instance of the structure
   // This is now an externally visible symbol, so that we can speed up class
   // messages in the next ABI.  We may already have some weak references to
@@ -1714,13 +1695,13 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
           std::string(Name));
   llvm::GlobalVariable *ClassRef = TheModule.getNamedGlobal(ClassSym);
   llvm::Constant *Class =
-    MakeGlobal(ClassTy, Elements, CGM.getPointerAlign(), ClassSym,
-               llvm::GlobalValue::ExternalLinkage);
+    Elements.finishAndCreateGlobal(ClassSym, CGM.getPointerAlign(), false,
+                                   llvm::GlobalValue::ExternalLinkage);
   if (ClassRef) {
-      ClassRef->replaceAllUsesWith(llvm::ConstantExpr::getBitCast(Class,
+    ClassRef->replaceAllUsesWith(llvm::ConstantExpr::getBitCast(Class,
                   ClassRef->getType()));
-      ClassRef->removeFromParent();
-      Class->setName(ClassSym);
+    ClassRef->removeFromParent();
+    Class->setName(ClassSym);
   }
   return Class;
 }
@@ -1729,38 +1710,33 @@ llvm::Constant *CGObjCGNU::
 GenerateProtocolMethodList(ArrayRef<llvm::Constant *> MethodNames,
                            ArrayRef<llvm::Constant *> MethodTypes) {
   // Get the method structure type.
-  llvm::StructType *ObjCMethodDescTy = llvm::StructType::get(
-    PtrToInt8Ty, // Really a selector, but the runtime does the casting for us.
-    PtrToInt8Ty,
-    nullptr);
-  std::vector<llvm::Constant*> Methods;
+  llvm::StructType *ObjCMethodDescTy =
+    llvm::StructType::get(CGM.getLLVMContext(), { PtrToInt8Ty, PtrToInt8Ty });
+  ConstantBuilder Builder(CGM);
+  auto MethodList = Builder.beginStruct();
+  MethodList.addInt(IntTy, MethodNames.size());
+  auto Methods = MethodList.beginArray(ObjCMethodDescTy);
   for (unsigned int i = 0, e = MethodTypes.size() ; i < e ; i++) {
-    Methods.push_back(llvm::ConstantStruct::get(
-        ObjCMethodDescTy, {MethodNames[i], MethodTypes[i]}));
+    auto Method = Methods.beginStruct(ObjCMethodDescTy);
+    Method.add(MethodNames[i]);
+    Method.add(MethodTypes[i]);
+    Methods.add(Method.finish());
   }
-  llvm::ArrayType *ObjCMethodArrayTy = llvm::ArrayType::get(ObjCMethodDescTy,
-      MethodNames.size());
-  llvm::Constant *Array = llvm::ConstantArray::get(ObjCMethodArrayTy,
-                                                   Methods);
-  llvm::StructType *ObjCMethodDescListTy = llvm::StructType::get(
-      IntTy, ObjCMethodArrayTy, nullptr);
-  Methods.clear();
-  Methods.push_back(llvm::ConstantInt::get(IntTy, MethodNames.size()));
-  Methods.push_back(Array);
-  return MakeGlobal(ObjCMethodDescListTy, Methods, CGM.getPointerAlign(),
-                    ".objc_method_list");
+  MethodList.add(Methods.finish());
+  return MethodList.finishAndCreateGlobal(".objc_method_list",
+                                          CGM.getPointerAlign());
 }
 
 // Create the protocol list structure used in classes, categories and so on
-llvm::Constant *CGObjCGNU::GenerateProtocolList(ArrayRef<std::string>Protocols){
-  llvm::ArrayType *ProtocolArrayTy = llvm::ArrayType::get(PtrToInt8Ty,
-      Protocols.size());
-  llvm::StructType *ProtocolListTy = llvm::StructType::get(
-      PtrTy, //Should be a recurisve pointer, but it's always NULL here.
-      SizeTy,
-      ProtocolArrayTy,
-      nullptr);
-  std::vector<llvm::Constant*> Elements;
+llvm::Constant *
+CGObjCGNU::GenerateProtocolList(ArrayRef<std::string> Protocols) {
+
+  ConstantBuilder Builder(CGM);
+  auto ProtocolList = Builder.beginStruct();
+  ProtocolList.add(NULLPtr);
+  ProtocolList.addInt(LongTy, Protocols.size());
+
+  auto Elements = ProtocolList.beginArray(PtrToInt8Ty);
   for (const std::string *iter = Protocols.begin(), *endIter = Protocols.end();
       iter != endIter ; iter++) {
     llvm::Constant *protocol = nullptr;
@@ -1773,16 +1749,11 @@ llvm::Constant *CGObjCGNU::GenerateProtocolList(ArrayRef<std::string>Protocols){
     }
     llvm::Constant *Ptr = llvm::ConstantExpr::getBitCast(protocol,
                                                            PtrToInt8Ty);
-    Elements.push_back(Ptr);
+    Elements.add(Ptr);
   }
-  llvm::Constant * ProtocolArray = llvm::ConstantArray::get(ProtocolArrayTy,
-      Elements);
-  Elements.clear();
-  Elements.push_back(NULLPtr);
-  Elements.push_back(llvm::ConstantInt::get(LongTy, Protocols.size()));
-  Elements.push_back(ProtocolArray);
-  return MakeGlobal(ProtocolListTy, Elements, CGM.getPointerAlign(),
-                    ".objc_protocol_list");
+  ProtocolList.add(Elements.finish());
+  return ProtocolList.finishAndCreateGlobal(".objc_protocol_list",
+                                            CGM.getPointerAlign());
 }
 
 llvm::Value *CGObjCGNU::GenerateProtocolRef(CodeGenFunction &CGF,
@@ -1793,33 +1764,28 @@ llvm::Value *CGObjCGNU::GenerateProtocolRef(CodeGenFunction &CGF,
   return CGF.Builder.CreateBitCast(protocol, llvm::PointerType::getUnqual(T));
 }
 
-llvm::Constant *CGObjCGNU::GenerateEmptyProtocol(
-  const std::string &ProtocolName) {
-  SmallVector<std::string, 0> EmptyStringVector;
-  SmallVector<llvm::Constant*, 0> EmptyConstantVector;
-
-  llvm::Constant *ProtocolList = GenerateProtocolList(EmptyStringVector);
-  llvm::Constant *MethodList =
-    GenerateProtocolMethodList(EmptyConstantVector, EmptyConstantVector);
+llvm::Constant *
+CGObjCGNU::GenerateEmptyProtocol(const std::string &ProtocolName) {
+  llvm::Constant *ProtocolList = GenerateProtocolList({});
+  llvm::Constant *MethodList = GenerateProtocolMethodList({}, {});
   // Protocols are objects containing lists of the methods implemented and
   // protocols adopted.
-  llvm::StructType *ProtocolTy = llvm::StructType::get(IdTy,
-      PtrToInt8Ty,
-      ProtocolList->getType(),
-      MethodList->getType(),
-      MethodList->getType(),
-      MethodList->getType(),
-      MethodList->getType(),
-      nullptr);
+  ConstantBuilder Builder(CGM);
+  auto Elements = Builder.beginStruct();
+
   // The isa pointer must be set to a magic number so the runtime knows it's
   // the correct layout.
-  llvm::Constant *Elements[] = {
-      llvm::ConstantExpr::getIntToPtr(
-          llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy),
-      MakeConstantString(ProtocolName, ".objc_protocol_name"), ProtocolList,
-      MethodList, MethodList, MethodList, MethodList};
-  return MakeGlobal(ProtocolTy, Elements, CGM.getPointerAlign(),
-                    ".objc_protocol");
+  Elements.add(llvm::ConstantExpr::getIntToPtr(
+          llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy));
+
+  Elements.add(MakeConstantString(ProtocolName, ".objc_protocol_name"));
+  Elements.add(ProtocolList);
+  Elements.add(MethodList);
+  Elements.add(MethodList);
+  Elements.add(MethodList);
+  Elements.add(MethodList);
+  return Elements.finishAndCreateGlobal(".objc_protocol",
+                                        CGM.getPointerAlign());
 }
 
 void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
@@ -1886,142 +1852,143 @@ void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
   // The isSynthesized value is always set to 0 in a protocol.  It exists to
   // simplify the runtime library by allowing it to use the same data
   // structures for protocol metadata everywhere.
-  llvm::StructType *PropertyMetadataTy = llvm::StructType::get(
-          PtrToInt8Ty, Int8Ty, Int8Ty, Int8Ty, Int8Ty, PtrToInt8Ty,
-          PtrToInt8Ty, PtrToInt8Ty, PtrToInt8Ty, nullptr);
-  std::vector<llvm::Constant*> Properties;
-  std::vector<llvm::Constant*> OptionalProperties;
 
-  // Add all of the property methods need adding to the method list and to the
-  // property metadata list.
-  for (auto *property : PD->instance_properties()) {
-    std::vector<llvm::Constant*> Fields;
+  llvm::Constant *PropertyList;
+  llvm::Constant *OptionalPropertyList;
+  {
+    llvm::StructType *propertyMetadataTy =
+      llvm::StructType::get(CGM.getLLVMContext(),
+        { PtrToInt8Ty, Int8Ty, Int8Ty, Int8Ty, Int8Ty, PtrToInt8Ty,
+          PtrToInt8Ty, PtrToInt8Ty, PtrToInt8Ty });
 
-    Fields.push_back(MakePropertyEncodingString(property, nullptr));
-    PushPropertyAttributes(Fields, property);
+    unsigned numReqProperties = 0, numOptProperties = 0;
+    for (auto property : PD->instance_properties()) {
+      if (property->isOptional())
+        numOptProperties++;
+      else
+        numReqProperties++;
+    }
 
-    if (ObjCMethodDecl *getter = property->getGetterMethodDecl()) {
-      std::string TypeStr;
-      Context.getObjCEncodingForMethodDecl(getter,TypeStr);
-      llvm::Constant *TypeEncoding = MakeConstantString(TypeStr);
-      InstanceMethodTypes.push_back(TypeEncoding);
-      Fields.push_back(MakeConstantString(getter->getSelector().getAsString()));
-      Fields.push_back(TypeEncoding);
-    } else {
-      Fields.push_back(NULLPtr);
-      Fields.push_back(NULLPtr);
+    ConstantBuilder reqPropertyListBuilder(CGM);
+    auto reqPropertiesList = reqPropertyListBuilder.beginStruct();
+    reqPropertiesList.addInt(IntTy, numReqProperties);
+    reqPropertiesList.add(NULLPtr);
+    auto reqPropertiesArray = reqPropertiesList.beginArray(propertyMetadataTy);
+
+    ConstantBuilder optPropertyListBuilder(CGM);
+    auto optPropertiesList = optPropertyListBuilder.beginStruct();
+    optPropertiesList.addInt(IntTy, numOptProperties);
+    optPropertiesList.add(NULLPtr);
+    auto optPropertiesArray = optPropertiesList.beginArray(propertyMetadataTy);
+
+    // Add all of the property methods need adding to the method list and to the
+    // property metadata list.
+    for (auto *property : PD->instance_properties()) {
+      auto &propertiesArray =
+        (property->isOptional() ? optPropertiesArray : reqPropertiesArray);
+      auto fields = propertiesArray.beginStruct(propertyMetadataTy);
+
+      fields.add(MakePropertyEncodingString(property, nullptr));
+      PushPropertyAttributes(fields, property);
+
+      if (ObjCMethodDecl *getter = property->getGetterMethodDecl()) {
+        std::string typeStr;
+        Context.getObjCEncodingForMethodDecl(getter, typeStr);
+        llvm::Constant *typeEncoding = MakeConstantString(typeStr);
+        InstanceMethodTypes.push_back(typeEncoding);
+        fields.add(MakeConstantString(getter->getSelector().getAsString()));
+        fields.add(typeEncoding);
+      } else {
+        fields.add(NULLPtr);
+        fields.add(NULLPtr);
+      }
+      if (ObjCMethodDecl *setter = property->getSetterMethodDecl()) {
+        std::string typeStr;
+        Context.getObjCEncodingForMethodDecl(setter, typeStr);
+        llvm::Constant *typeEncoding = MakeConstantString(typeStr);
+        InstanceMethodTypes.push_back(typeEncoding);
+        fields.add(MakeConstantString(setter->getSelector().getAsString()));
+        fields.add(typeEncoding);
+      } else {
+        fields.add(NULLPtr);
+        fields.add(NULLPtr);
+      }
+
+      propertiesArray.add(fields.finish());
     }
-    if (ObjCMethodDecl *setter = property->getSetterMethodDecl()) {
-      std::string TypeStr;
-      Context.getObjCEncodingForMethodDecl(setter,TypeStr);
-      llvm::Constant *TypeEncoding = MakeConstantString(TypeStr);
-      InstanceMethodTypes.push_back(TypeEncoding);
-      Fields.push_back(MakeConstantString(setter->getSelector().getAsString()));
-      Fields.push_back(TypeEncoding);
-    } else {
-      Fields.push_back(NULLPtr);
-      Fields.push_back(NULLPtr);
-    }
-    if (property->getPropertyImplementation() == ObjCPropertyDecl::Optional) {
-      OptionalProperties.push_back(llvm::ConstantStruct::get(PropertyMetadataTy, Fields));
-    } else {
-      Properties.push_back(llvm::ConstantStruct::get(PropertyMetadataTy, Fields));
-    }
+
+    reqPropertiesList.add(reqPropertiesArray.finish());
+    PropertyList =
+      reqPropertiesList.finishAndCreateGlobal(".objc_property_list",
+                                              CGM.getPointerAlign());
+
+    optPropertiesList.add(optPropertiesArray.finish());
+    OptionalPropertyList =
+      optPropertiesList.finishAndCreateGlobal(".objc_property_list",
+                                              CGM.getPointerAlign());
   }
-  llvm::Constant *PropertyArray = llvm::ConstantArray::get(
-      llvm::ArrayType::get(PropertyMetadataTy, Properties.size()), Properties);
-  llvm::Constant* PropertyListInitFields[] =
-    {llvm::ConstantInt::get(IntTy, Properties.size()), NULLPtr, PropertyArray};
-
-  llvm::Constant *PropertyListInit =
-      llvm::ConstantStruct::getAnon(PropertyListInitFields);
-  llvm::Constant *PropertyList = new llvm::GlobalVariable(TheModule,
-      PropertyListInit->getType(), false, llvm::GlobalValue::InternalLinkage,
-      PropertyListInit, ".objc_property_list");
-
-  llvm::Constant *OptionalPropertyArray =
-      llvm::ConstantArray::get(llvm::ArrayType::get(PropertyMetadataTy,
-          OptionalProperties.size()) , OptionalProperties);
-  llvm::Constant* OptionalPropertyListInitFields[] = {
-      llvm::ConstantInt::get(IntTy, OptionalProperties.size()), NULLPtr,
-      OptionalPropertyArray };
-
-  llvm::Constant *OptionalPropertyListInit =
-      llvm::ConstantStruct::getAnon(OptionalPropertyListInitFields);
-  llvm::Constant *OptionalPropertyList = new llvm::GlobalVariable(TheModule,
-          OptionalPropertyListInit->getType(), false,
-          llvm::GlobalValue::InternalLinkage, OptionalPropertyListInit,
-          ".objc_property_list");
 
   // Protocols are objects containing lists of the methods implemented and
   // protocols adopted.
-  llvm::StructType *ProtocolTy = llvm::StructType::get(IdTy,
-      PtrToInt8Ty,
-      ProtocolList->getType(),
-      InstanceMethodList->getType(),
-      ClassMethodList->getType(),
-      OptionalInstanceMethodList->getType(),
-      OptionalClassMethodList->getType(),
-      PropertyList->getType(),
-      OptionalPropertyList->getType(),
-      nullptr);
   // The isa pointer must be set to a magic number so the runtime knows it's
   // the correct layout.
-  llvm::Constant *Elements[] = {
+  ConstantBuilder Builder(CGM);
+  auto Elements = Builder.beginStruct();
+  Elements.add(
       llvm::ConstantExpr::getIntToPtr(
-          llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy),
-      MakeConstantString(ProtocolName, ".objc_protocol_name"), ProtocolList,
-      InstanceMethodList, ClassMethodList, OptionalInstanceMethodList,
-      OptionalClassMethodList, PropertyList, OptionalPropertyList};
+          llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy));
+  Elements.add(
+      MakeConstantString(ProtocolName, ".objc_protocol_name"));
+  Elements.add(ProtocolList);
+  Elements.add(InstanceMethodList);
+  Elements.add(ClassMethodList);
+  Elements.add(OptionalInstanceMethodList);
+  Elements.add(OptionalClassMethodList);
+  Elements.add(PropertyList);
+  Elements.add(OptionalPropertyList);
   ExistingProtocols[ProtocolName] =
-    llvm::ConstantExpr::getBitCast(MakeGlobal(ProtocolTy, Elements,
-          CGM.getPointerAlign(), ".objc_protocol"), IdTy);
+    llvm::ConstantExpr::getBitCast(
+      Elements.finishAndCreateGlobal(".objc_protocol", CGM.getPointerAlign()),
+      IdTy);
 }
 void CGObjCGNU::GenerateProtocolHolderCategory() {
   // Collect information about instance methods
   SmallVector<Selector, 1> MethodSels;
   SmallVector<llvm::Constant*, 1> MethodTypes;
 
-  std::vector<llvm::Constant*> Elements;
+  ConstantBuilder Builder(CGM);
+  auto Elements = Builder.beginStruct();
+
   const std::string ClassName = "__ObjC_Protocol_Holder_Ugly_Hack";
   const std::string CategoryName = "AnotherHack";
-  Elements.push_back(MakeConstantString(CategoryName));
-  Elements.push_back(MakeConstantString(ClassName));
+  Elements.add(MakeConstantString(CategoryName));
+  Elements.add(MakeConstantString(ClassName));
   // Instance method list
-  Elements.push_back(llvm::ConstantExpr::getBitCast(GenerateMethodList(
+  Elements.add(llvm::ConstantExpr::getBitCast(GenerateMethodList(
           ClassName, CategoryName, MethodSels, MethodTypes, false), PtrTy));
   // Class method list
-  Elements.push_back(llvm::ConstantExpr::getBitCast(GenerateMethodList(
+  Elements.add(llvm::ConstantExpr::getBitCast(GenerateMethodList(
           ClassName, CategoryName, MethodSels, MethodTypes, true), PtrTy));
+
   // Protocol list
-  llvm::ArrayType *ProtocolArrayTy = llvm::ArrayType::get(PtrTy,
-      ExistingProtocols.size());
-  llvm::StructType *ProtocolListTy = llvm::StructType::get(
-      PtrTy, //Should be a recurisve pointer, but it's always NULL here.
-      SizeTy,
-      ProtocolArrayTy,
-      nullptr);
-  std::vector<llvm::Constant*> ProtocolElements;
-  for (llvm::StringMapIterator<llvm::Constant*> iter =
-       ExistingProtocols.begin(), endIter = ExistingProtocols.end();
+  ConstantBuilder ProtocolListBuilder(CGM);
+  auto ProtocolList = ProtocolListBuilder.beginStruct();
+  ProtocolList.add(NULLPtr);
+  ProtocolList.addInt(LongTy, ExistingProtocols.size());
+  auto ProtocolElements = ProtocolList.beginArray(PtrTy);
+  for (auto iter = ExistingProtocols.begin(), endIter = ExistingProtocols.end();
        iter != endIter ; iter++) {
     llvm::Constant *Ptr = llvm::ConstantExpr::getBitCast(iter->getValue(),
             PtrTy);
-    ProtocolElements.push_back(Ptr);
+    ProtocolElements.add(Ptr);
   }
-  llvm::Constant * ProtocolArray = llvm::ConstantArray::get(ProtocolArrayTy,
-      ProtocolElements);
-  ProtocolElements.clear();
-  ProtocolElements.push_back(NULLPtr);
-  ProtocolElements.push_back(llvm::ConstantInt::get(LongTy,
-              ExistingProtocols.size()));
-  ProtocolElements.push_back(ProtocolArray);
-  Elements.push_back(llvm::ConstantExpr::getBitCast(MakeGlobal(ProtocolListTy,
-                  ProtocolElements, CGM.getPointerAlign(),
-                  ".objc_protocol_list"), PtrTy));
+  ProtocolList.add(ProtocolElements.finish());
+  Elements.add(llvm::ConstantExpr::getBitCast(
+                   ProtocolList.finishAndCreateGlobal(".objc_protocol_list",
+                                                      CGM.getPointerAlign()),
+                   PtrTy));
   Categories.push_back(llvm::ConstantExpr::getBitCast(
-        MakeGlobal(llvm::StructType::get(PtrToInt8Ty, PtrToInt8Ty,
-            PtrTy, PtrTy, PtrTy, nullptr), Elements, CGM.getPointerAlign()),
+        Elements.finishAndCreateGlobal("", CGM.getPointerAlign()),
         PtrTy));
 }
 
@@ -2056,13 +2023,16 @@ llvm::Constant *CGObjCGNU::MakeBitField(ArrayRef<bool> bits) {
     }
     values.push_back(llvm::ConstantInt::get(Int32Ty, word));
   }
-  llvm::ArrayType *arrayTy = llvm::ArrayType::get(Int32Ty, values.size());
-  llvm::Constant *array = llvm::ConstantArray::get(arrayTy, values);
-  llvm::Constant *fields[2] = {
-      llvm::ConstantInt::get(Int32Ty, values.size()),
-      array };
-  llvm::Constant *GS = MakeGlobal(llvm::StructType::get(Int32Ty, arrayTy,
-        nullptr), fields, CharUnits::fromQuantity(4));
+
+  ConstantBuilder builder(CGM);
+  auto fields = builder.beginStruct();
+  fields.addInt(Int32Ty, values.size());
+  auto array = fields.beginArray();
+  for (auto v : values) array.add(v);
+  fields.add(array.finish());
+
+  llvm::Constant *GS =
+    fields.finishAndCreateGlobal("", CharUnits::fromQuantity(4));
   llvm::Constant *ptr = llvm::ConstantExpr::getPtrToInt(GS, IntPtrTy);
   return ptr;
 }
@@ -2098,23 +2068,25 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
        E = Protos.end(); I != E; ++I)
     Protocols.push_back((*I)->getNameAsString());
 
-  llvm::Constant *Elements[] = {
-      MakeConstantString(CategoryName), MakeConstantString(ClassName),
-      // Instance method list
-      llvm::ConstantExpr::getBitCast(
+  ConstantBuilder Builder(CGM);
+  auto Elements = Builder.beginStruct();
+  Elements.add(MakeConstantString(CategoryName));
+  Elements.add(MakeConstantString(ClassName));
+  // Instance method list
+  Elements.add(llvm::ConstantExpr::getBitCast(
           GenerateMethodList(ClassName, CategoryName, InstanceMethodSels,
                              InstanceMethodTypes, false),
-          PtrTy),
-      // Class method list
-      llvm::ConstantExpr::getBitCast(GenerateMethodList(ClassName, CategoryName,
-                                                        ClassMethodSels,
-                                                        ClassMethodTypes, true),
-                                     PtrTy),
-      // Protocol list
-      llvm::ConstantExpr::getBitCast(GenerateProtocolList(Protocols), PtrTy)};
+          PtrTy));
+  // Class method list
+  Elements.add(llvm::ConstantExpr::getBitCast(
+                 GenerateMethodList(ClassName, CategoryName,
+                                    ClassMethodSels, ClassMethodTypes, true),
+                  PtrTy));
+  // Protocol list
+  Elements.add(llvm::ConstantExpr::getBitCast(
+                 GenerateProtocolList(Protocols), PtrTy));
   Categories.push_back(llvm::ConstantExpr::getBitCast(
-        MakeGlobal(llvm::StructType::get(PtrToInt8Ty, PtrToInt8Ty,
-            PtrTy, PtrTy, PtrTy, nullptr), Elements, CGM.getPointerAlign()),
+        Elements.finishAndCreateGlobal("", CGM.getPointerAlign()),
         PtrTy));
 }
 
@@ -2124,23 +2096,35 @@ llvm::Constant *CGObjCGNU::GeneratePropertyList(const ObjCImplementationDecl *OI
   ASTContext &Context = CGM.getContext();
   // Property metadata: name, attributes, attributes2, padding1, padding2,
   // setter name, setter types, getter name, getter types.
-  llvm::StructType *PropertyMetadataTy = llvm::StructType::get(
-          PtrToInt8Ty, Int8Ty, Int8Ty, Int8Ty, Int8Ty, PtrToInt8Ty,
-          PtrToInt8Ty, PtrToInt8Ty, PtrToInt8Ty, nullptr);
-  std::vector<llvm::Constant*> Properties;
+  llvm::StructType *propertyMetadataTy =
+    llvm::StructType::get(CGM.getLLVMContext(),
+        { PtrToInt8Ty, Int8Ty, Int8Ty, Int8Ty, Int8Ty, PtrToInt8Ty,
+          PtrToInt8Ty, PtrToInt8Ty, PtrToInt8Ty });
+
+  unsigned numProperties = 0;
+  for (auto *propertyImpl : OID->property_impls()) {
+    (void) propertyImpl;
+    numProperties++;
+  }
+
+  ConstantBuilder builder(CGM);
+  auto propertyList = builder.beginStruct();
+  propertyList.addInt(IntTy, numProperties);
+  propertyList.add(NULLPtr);
+  auto properties = propertyList.beginArray(propertyMetadataTy);
 
   // Add all of the property methods need adding to the method list and to the
   // property metadata list.
   for (auto *propertyImpl : OID->property_impls()) {
-    std::vector<llvm::Constant*> Fields;
+    auto fields = properties.beginStruct(propertyMetadataTy);
     ObjCPropertyDecl *property = propertyImpl->getPropertyDecl();
     bool isSynthesized = (propertyImpl->getPropertyImplementation() == 
         ObjCPropertyImplDecl::Synthesize);
     bool isDynamic = (propertyImpl->getPropertyImplementation() == 
         ObjCPropertyImplDecl::Dynamic);
 
-    Fields.push_back(MakePropertyEncodingString(property, OID));
-    PushPropertyAttributes(Fields, property, isSynthesized, isDynamic);
+    fields.add(MakePropertyEncodingString(property, OID));
+    PushPropertyAttributes(fields, property, isSynthesized, isDynamic);
     if (ObjCMethodDecl *getter = property->getGetterMethodDecl()) {
       std::string TypeStr;
       Context.getObjCEncodingForMethodDecl(getter,TypeStr);
@@ -2149,11 +2133,11 @@ llvm::Constant *CGObjCGNU::GeneratePropertyList(const ObjCImplementationDecl *OI
         InstanceMethodTypes.push_back(TypeEncoding);
         InstanceMethodSels.push_back(getter->getSelector());
       }
-      Fields.push_back(MakeConstantString(getter->getSelector().getAsString()));
-      Fields.push_back(TypeEncoding);
+      fields.add(MakeConstantString(getter->getSelector().getAsString()));
+      fields.add(TypeEncoding);
     } else {
-      Fields.push_back(NULLPtr);
-      Fields.push_back(NULLPtr);
+      fields.add(NULLPtr);
+      fields.add(NULLPtr);
     }
     if (ObjCMethodDecl *setter = property->getSetterMethodDecl()) {
       std::string TypeStr;
@@ -2163,26 +2147,18 @@ llvm::Constant *CGObjCGNU::GeneratePropertyList(const ObjCImplementationDecl *OI
         InstanceMethodTypes.push_back(TypeEncoding);
         InstanceMethodSels.push_back(setter->getSelector());
       }
-      Fields.push_back(MakeConstantString(setter->getSelector().getAsString()));
-      Fields.push_back(TypeEncoding);
+      fields.add(MakeConstantString(setter->getSelector().getAsString()));
+      fields.add(TypeEncoding);
     } else {
-      Fields.push_back(NULLPtr);
-      Fields.push_back(NULLPtr);
+      fields.add(NULLPtr);
+      fields.add(NULLPtr);
     }
-    Properties.push_back(llvm::ConstantStruct::get(PropertyMetadataTy, Fields));
+    properties.add(fields.finish());
   }
-  llvm::ArrayType *PropertyArrayTy =
-      llvm::ArrayType::get(PropertyMetadataTy, Properties.size());
-  llvm::Constant *PropertyArray = llvm::ConstantArray::get(PropertyArrayTy,
-          Properties);
-  llvm::Constant* PropertyListInitFields[] =
-    {llvm::ConstantInt::get(IntTy, Properties.size()), NULLPtr, PropertyArray};
+  propertyList.add(properties.finish());
 
-  llvm::Constant *PropertyListInit =
-      llvm::ConstantStruct::getAnon(PropertyListInitFields);
-  return new llvm::GlobalVariable(TheModule, PropertyListInit->getType(), false,
-          llvm::GlobalValue::InternalLinkage, PropertyListInit,
-          ".objc_property_list");
+  return propertyList.finishAndCreateGlobal(".objc_property_list",
+                                            CGM.getPointerAlign());
 }
 
 void CGObjCGNU::RegisterAlias(const ObjCCompatibleAliasDecl *OAD) {
@@ -2231,7 +2207,8 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   SmallVector<llvm::Constant*, 16> IvarTypes;
   SmallVector<llvm::Constant*, 16> IvarOffsets;
 
-  std::vector<llvm::Constant*> IvarOffsetValues;
+  ConstantBuilder IvarOffsetBuilder(CGM);
+  auto IvarOffsetValues = IvarOffsetBuilder.beginArray(PtrToIntTy);
   SmallVector<bool, 16> WeakIvars;
   SmallVector<bool, 16> StrongIvars;
 
@@ -2275,7 +2252,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
           "__objc_ivar_offset_value_" + ClassName +"." +
           IVD->getNameAsString());
       IvarOffsets.push_back(OffsetValue);
-      IvarOffsetValues.push_back(OffsetVar);
+      IvarOffsetValues.add(OffsetVar);
       Qualifiers::ObjCLifetime lt = IVD->getType().getQualifiers().getObjCLifetime();
       switch (lt) {
         case Qualifiers::OCL_Strong:
@@ -2294,8 +2271,8 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   llvm::Constant *StrongIvarBitmap = MakeBitField(StrongIvars);
   llvm::Constant *WeakIvarBitmap = MakeBitField(WeakIvars);
   llvm::GlobalVariable *IvarOffsetArray =
-    MakeGlobalArray(PtrToIntTy, IvarOffsetValues, CGM.getPointerAlign(),
-                    ".ivar.offsets");
+    IvarOffsetValues.finishAndCreateGlobal(".ivar.offsets",
+                                           CGM.getPointerAlign());
 
   // Collect information about instance methods
   SmallVector<Selector, 16> InstanceMethodSels;
@@ -2461,21 +2438,18 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
     if (StringClass.empty()) StringClass = "NXConstantString";
 
     Elements.push_back(MakeConstantString(StringClass,
-                ".objc_static_class_name"));
+                                          ".objc_static_class_name"));
     Elements.push_back(llvm::ConstantArray::get(StaticsArrayTy,
-       ConstantStrings));
-    llvm::StructType *StaticsListTy =
-      llvm::StructType::get(PtrToInt8Ty, StaticsArrayTy, nullptr);
-    llvm::Type *StaticsListPtrTy =
-      llvm::PointerType::getUnqual(StaticsListTy);
-    Statics = MakeGlobal(StaticsListTy, Elements, CGM.getPointerAlign(),
-                         ".objc_statics");
+                                                ConstantStrings));
+    Statics = MakeGlobal(llvm::ConstantStruct::getAnon(Elements),
+                         CGM.getPointerAlign(), ".objc_statics");
+    llvm::Type *StaticsListPtrTy = Statics->getType();
     llvm::ArrayType *StaticsListArrayTy =
       llvm::ArrayType::get(StaticsListPtrTy, 2);
     Elements.clear();
     Elements.push_back(Statics);
     Elements.push_back(llvm::Constant::getNullValue(StaticsListPtrTy));
-    Statics = MakeGlobal(StaticsListArrayTy, Elements,
+    Statics = MakeGlobal(llvm::ConstantArray::get(StaticsListArrayTy, Elements),
                          CGM.getPointerAlign(), ".objc_statics_ptr");
     Statics = llvm::ConstantExpr::getBitCast(Statics, PtrTy);
   }
@@ -2489,7 +2463,8 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
 
   Elements.clear();
   // Pointer to an array of selectors used in this module.
-  std::vector<llvm::Constant*> Selectors;
+  ConstantBuilder SelectorBuilder(CGM);
+  auto Selectors = SelectorBuilder.beginArray(SelStructTy);
   std::vector<llvm::GlobalAlias*> SelectorAliases;
   for (SelectorMap::iterator iter = SelectorTable.begin(),
       iterEnd = SelectorTable.end(); iter != iterEnd ; ++iter) {
@@ -2505,10 +2480,10 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
       if (!i->first.empty())
         SelectorTypeEncoding = MakeConstantString(i->first, ".objc_sel_types");
 
-      Elements.push_back(SelName);
-      Elements.push_back(SelectorTypeEncoding);
-      Selectors.push_back(llvm::ConstantStruct::get(SelStructTy, Elements));
-      Elements.clear();
+      auto SelStruct = Selectors.beginStruct(SelStructTy);
+      SelStruct.add(SelName);
+      SelStruct.add(SelectorTypeEncoding);
+      Selectors.add(SelStruct.finish());
 
       // Store the selector alias for later replacement
       SelectorAliases.push_back(i->second);
@@ -2519,16 +2494,18 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   // because the selector list has a length field.  Unfortunately, the GCC
   // runtime decides to ignore the length field and expects a NULL terminator,
   // and GCC cooperates with this by always setting the length to 0.
-  Elements.push_back(NULLPtr);
-  Elements.push_back(NULLPtr);
-  Selectors.push_back(llvm::ConstantStruct::get(SelStructTy, Elements));
-  Elements.clear();
+  {
+    auto SelStruct = Selectors.beginStruct(SelStructTy);
+    SelStruct.add(NULLPtr);
+    SelStruct.add(NULLPtr);
+    Selectors.add(SelStruct.finish());
+  }
 
   // Number of static selectors
   Elements.push_back(llvm::ConstantInt::get(LongTy, SelectorCount));
   llvm::GlobalVariable *SelectorList =
-      MakeGlobalArray(SelStructTy, Selectors, CGM.getPointerAlign(),
-                      ".objc_selector_list");
+      Selectors.finishAndCreateGlobal(".objc_selector_list",
+                                      CGM.getPointerAlign());
   Elements.push_back(llvm::ConstantExpr::getBitCast(SelectorList,
     SelStructPtrTy));
 
@@ -2562,7 +2539,8 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   Elements.push_back(ClassList);
   // Construct the symbol table
   llvm::Constant *SymTab =
-    MakeGlobal(SymTabTy, Elements, CGM.getPointerAlign());
+    MakeGlobal(llvm::ConstantStruct::get(SymTabTy, Elements),
+               CGM.getPointerAlign());
 
   // The symbol table is contained in a module which has some version-checking
   // constants
@@ -2603,7 +2581,9 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
         break;
     }
 
-  llvm::Value *Module = MakeGlobal(ModuleTy, Elements, CGM.getPointerAlign());
+  llvm::Value *Module =
+    MakeGlobal(llvm::ConstantStruct::get(ModuleTy, Elements),
+               CGM.getPointerAlign());
 
   // Create the load function calling the runtime entry point with the module
   // structure

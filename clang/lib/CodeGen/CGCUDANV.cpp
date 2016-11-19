@@ -15,6 +15,7 @@
 #include "CGCUDARuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantBuilder.h"
 #include "clang/AST/Decl.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -29,7 +30,8 @@ namespace {
 class CGNVCUDARuntime : public CGCUDARuntime {
 
 private:
-  llvm::Type *IntTy, *SizeTy, *VoidTy;
+  llvm::IntegerType *IntTy, *SizeTy;
+  llvm::Type *VoidTy;
   llvm::PointerType *CharPtrTy, *VoidPtrTy, *VoidPtrPtrTy;
 
   /// Convenience reference to LLVM Context
@@ -95,9 +97,9 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   CodeGen::CodeGenTypes &Types = CGM.getTypes();
   ASTContext &Ctx = CGM.getContext();
 
-  IntTy = Types.ConvertType(Ctx.IntTy);
-  SizeTy = Types.ConvertType(Ctx.getSizeType());
-  VoidTy = llvm::Type::getVoidTy(Context);
+  IntTy = CGM.IntTy;
+  SizeTy = CGM.SizeTy;
+  VoidTy = CGM.VoidTy;
 
   CharPtrTy = llvm::PointerType::getUnqual(Types.ConvertType(Ctx.CharTy));
   VoidPtrTy = cast<llvm::PointerType>(Types.ConvertType(Ctx.VoidPtrTy));
@@ -296,16 +298,21 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
         CGM.getTriple().isMacOSX() ? "__NV_CUDA,__fatbin" : ".nvFatBinSegment";
 
     // Create initialized wrapper structure that points to the loaded GPU binary
-    llvm::Constant *Values[] = {
-        llvm::ConstantInt::get(IntTy, 0x466243b1), // Fatbin wrapper magic.
-        llvm::ConstantInt::get(IntTy, 1),          // Fatbin version.
-        makeConstantString(GpuBinaryOrErr.get()->getBuffer(), // Data.
-                           "", FatbinConstantName, 8),
-        llvm::ConstantPointerNull::get(VoidPtrTy)}; // Unused in fatbin v1.
-    llvm::GlobalVariable *FatbinWrapper = new llvm::GlobalVariable(
-        TheModule, FatbinWrapperTy, true, llvm::GlobalValue::InternalLinkage,
-        llvm::ConstantStruct::get(FatbinWrapperTy, Values),
-        "__cuda_fatbin_wrapper");
+    ConstantBuilder Builder(CGM);
+    auto Values = Builder.beginStruct(FatbinWrapperTy);
+    // Fatbin wrapper magic.
+    Values.addInt(IntTy, 0x466243b1);
+    // Fatbin version.
+    Values.addInt(IntTy, 1);
+    // Data.
+    Values.add(makeConstantString(GpuBinaryOrErr.get()->getBuffer(), 
+                                  "", FatbinConstantName, 8));
+    // Unused in fatbin v1.
+    Values.add(llvm::ConstantPointerNull::get(VoidPtrTy));
+    llvm::GlobalVariable *FatbinWrapper =
+      Values.finishAndCreateGlobal("__cuda_fatbin_wrapper",
+                                   CGM.getPointerAlign(),
+                                   /*constant*/ true);
     FatbinWrapper->setSection(FatbinSectionName);
 
     // GpuBinaryHandle = __cudaRegisterFatBinary(&FatbinWrapper);
