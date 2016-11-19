@@ -16,6 +16,10 @@
 //   return {quot, rem};
 // }
 
+#if defined(__MINGW32__)
+#define __aeabi_uldivmod __rt_udiv64
+#endif
+
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_uldivmod)
@@ -23,6 +27,14 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_uldivmod)
         sub	sp, sp, #16
         add	r12, sp, #8
         str	r12, [sp]
+#if defined(__MINGW32__)
+        mov     r12, r0
+        mov     r0, r2
+        mov     r2, r12
+        mov     r12, r1
+        mov     r1, r3
+        mov     r3, r12
+#endif
         bl	SYMBOL_NAME(__udivmoddi4)
         ldr	r2, [sp, #8]
         ldr	r3, [sp, #12]

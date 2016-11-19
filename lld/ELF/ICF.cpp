@@ -64,6 +64,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 
 using namespace lld;
 using namespace lld::elf;
@@ -103,9 +104,8 @@ private:
   static bool relocationEq(ArrayRef<RelTy> RA, ArrayRef<RelTy> RB);
 
   template <class RelTy>
-  static bool variableEq(const InputSection<ELFT> *A,
-                         const InputSection<ELFT> *B, ArrayRef<RelTy> RA,
-                         ArrayRef<RelTy> RB);
+  static bool variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RA,
+                         const InputSection<ELFT> *B, ArrayRef<RelTy> RB);
 
   static bool equalsConstant(const InputSection<ELFT> *A,
                              const InputSection<ELFT> *B);
@@ -119,8 +119,7 @@ private:
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
 template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
-  uint64_t Flags = S->Flags;
-  return hash_combine(Flags, S->getSize(), S->NumRelocations);
+  return hash_combine(S->Flags, S->getSize(), S->NumRelocations);
 }
 
 // Returns true if Sec is subject of ICF.
@@ -190,18 +189,14 @@ void ICF<ELFT>::forEachGroup(std::vector<InputSection<ELFT> *> &V,
 template <class ELFT>
 template <class RelTy>
 bool ICF<ELFT>::relocationEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
-  const RelTy *IA = RelsA.begin();
-  const RelTy *EA = RelsA.end();
-  const RelTy *IB = RelsB.begin();
-  const RelTy *EB = RelsB.end();
-  if (EA - IA != EB - IB)
-    return false;
-  for (; IA != EA; ++IA, ++IB)
-    if (IA->r_offset != IB->r_offset ||
-        IA->getType(Config->Mips64EL) != IB->getType(Config->Mips64EL) ||
-        getAddend<ELFT>(*IA) != getAddend<ELFT>(*IB))
-      return false;
-  return true;
+  auto Eq = [](const RelTy &A, const RelTy &B) {
+    return A.r_offset == B.r_offset &&
+           A.getType(Config->Mips64EL) == B.getType(Config->Mips64EL) &&
+           getAddend<ELFT>(A) == getAddend<ELFT>(B);
+  };
+
+  return RelsA.size() == RelsB.size() &&
+         std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
 }
 
 // Compare "non-moving" part of two InputSections, namely everything
@@ -226,17 +221,13 @@ bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
 
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
-                           const InputSection<ELFT> *B, ArrayRef<RelTy> RelsA,
-                           ArrayRef<RelTy> RelsB) {
-  const RelTy *IA = RelsA.begin();
-  const RelTy *EA = RelsA.end();
-  const RelTy *IB = RelsB.begin();
-  for (; IA != EA; ++IA, ++IB) {
-    SymbolBody &SA = A->File->getRelocTargetSym(*IA);
-    SymbolBody &SB = B->File->getRelocTargetSym(*IB);
+bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
+                           const InputSection<ELFT> *B, ArrayRef<RelTy> RelsB) {
+  auto Eq = [&](const RelTy &RA, const RelTy &RB) {
+    SymbolBody &SA = A->File->getRelocTargetSym(RA);
+    SymbolBody &SB = B->File->getRelocTargetSym(RB);
     if (&SA == &SB)
-      continue;
+      return true;
 
     // Or, the symbols should be pointing to the same section
     // in terms of the group ID.
@@ -248,11 +239,10 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
       return false;
     InputSection<ELFT> *X = dyn_cast<InputSection<ELFT>>(DA->Section);
     InputSection<ELFT> *Y = dyn_cast<InputSection<ELFT>>(DB->Section);
-    if (X && Y && X->GroupId && X->GroupId == Y->GroupId)
-      continue;
-    return false;
-  }
-  return true;
+    return X && Y && X->GroupId && X->GroupId == Y->GroupId;
+  };
+
+  return std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
 }
 
 // Compare "moving" part of two InputSections, namely relocation targets.
@@ -260,8 +250,8 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
                                const InputSection<ELFT> *B) {
   if (A->AreRelocsRela)
-    return variableEq(A, B, A->relas(), B->relas());
-  return variableEq(A, B, A->rels(), B->rels());
+    return variableEq(A, A->relas(), B, B->relas());
+  return variableEq(A, A->rels(), B, B->rels());
 }
 
 // The main function of ICF.

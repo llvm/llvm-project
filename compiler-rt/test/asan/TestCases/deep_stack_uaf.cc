@@ -2,8 +2,7 @@
 
 // RUN: %clangxx_asan -O0 %s -o %t 2>&1
 // RUN: %env_asan_opts=malloc_context_size=120:redzone=512 not %run %t 2>&1 | FileCheck %s
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: stable-runtime
 #include <stdlib.h>
 #include <stdio.h>
 

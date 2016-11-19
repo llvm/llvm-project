@@ -12,8 +12,7 @@
 // Also works if no malloc context is available.
 // RUN: %env_asan_opts=alloc_dealloc_mismatch=1:malloc_context_size=0:fast_unwind_on_malloc=0 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=alloc_dealloc_mismatch=1:malloc_context_size=0:fast_unwind_on_malloc=1 not %run %t 2>&1 | FileCheck %s
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: stable-runtime
 #include <stdlib.h>
 
 static volatile char *x;

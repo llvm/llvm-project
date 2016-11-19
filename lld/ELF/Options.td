@@ -206,9 +206,11 @@ def unresolved_symbols: J<"unresolved-symbols=">,
 def rsp_quoting: J<"rsp-quoting=">,
   HelpText<"Quoting style for response files. Values supported: windows|posix">;
 
+def v: Flag<["-"], "v">, HelpText<"Display the version number">;
+
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
-def version: F<"version">, HelpText<"Display the version number">;
+def version: F<"version">, HelpText<"Display the version number and exit">;
 
 def version_script: S<"version-script">,
   HelpText<"Read a version script">;
@@ -266,7 +268,6 @@ def alias_Ttext: J<"Ttext=">, Alias<Ttext>;
 def alias_undefined_eq: J<"undefined=">, Alias<undefined>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;
-def alias_version_v: Flag<["-"], "v">, Alias<version>;
 def alias_wrap_wrap: J<"wrap=">, Alias<wrap>;
 
 // Our symbol resolution algorithm handles symbols in archive files differently
