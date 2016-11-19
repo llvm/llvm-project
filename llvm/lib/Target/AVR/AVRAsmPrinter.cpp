@@ -107,6 +107,7 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       unsigned OpFlags = MI->getOperand(OpNum - 1).getImm();
       unsigned NumOpRegs = InlineAsm::getNumOperandRegisters(OpFlags);
+      (void)NumOpRegs;
 
       const AVRSubtarget &STI = MF->getSubtarget<AVRSubtarget>();
       const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -143,6 +144,7 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   }
 
   const MachineOperand &MO = MI->getOperand(OpNum);
+  (void)MO;
   assert(MO.isReg() && "Unexpected inline asm memory operand");
 
   // TODO: We can look up the alternative name for the register if it's given.

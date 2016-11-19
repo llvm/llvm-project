@@ -40,7 +40,13 @@ module std [system] {
     }
     // <iso646.h> provided by compiler.
     // <limits.h> provided by compiler or C library.
-    // <locale.h> provided by C library.
+    module locale_h {
+      header "locale.h"
+/*
+      export_macros LC_ALL LC_COLLATE LC_CTYPE LC_MONETARY LC_NUMERIC LC_TIME
+*/
+      export *
+    }
     module math_h {
       header "math.h"
 /*
