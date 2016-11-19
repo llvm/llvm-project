@@ -61,17 +61,17 @@ using namespace polly;
 
 #define DEBUG_TYPE "polly-scops"
 
-STATISTIC(ASSUMPTION_ALIASING, "Number of aliasing assumptions taken.");
-STATISTIC(ASSUMPTION_INBOUNDS, "Number of inbounds assumptions taken.");
-STATISTIC(ASSUMPTION_WRAPPING, "Number of wrapping assumptions taken.");
-STATISTIC(ASSUMPTION_UNSIGNED, "Number of unsigned assumptions taken.");
-STATISTIC(ASSUMPTION_COMPLEXITY, "Number of too complex SCoPs.");
-STATISTIC(ASSUMPTION_UNPROFITABLE, "Number of unprofitable SCoPs.");
-STATISTIC(ASSUMPTION_ERRORBLOCK, "Number of error block assumptions taken.");
-STATISTIC(ASSUMPTION_INFINITELOOP, "Number of bounded loop assumptions taken.");
-STATISTIC(ASSUMPTION_INVARIANTLOAD,
+STATISTIC(AssumptionsAliasing, "Number of aliasing assumptions taken.");
+STATISTIC(AssumptionsInbounds, "Number of inbounds assumptions taken.");
+STATISTIC(AssumptionsWrapping, "Number of wrapping assumptions taken.");
+STATISTIC(AssumptionsUnsigned, "Number of unsigned assumptions taken.");
+STATISTIC(AssumptionsComplexity, "Number of too complex SCoPs.");
+STATISTIC(AssumptionsUnprofitable, "Number of unprofitable SCoPs.");
+STATISTIC(AssumptionsErrorBlock, "Number of error block assumptions taken.");
+STATISTIC(AssumptionsInfiniteLoop, "Number of bounded loop assumptions taken.");
+STATISTIC(AssumptionsInvariantLoad,
           "Number of invariant loads assumptions taken.");
-STATISTIC(ASSUMPTION_DELINERIZATION,
+STATISTIC(AssumptionsDelinearization,
           "Number of delinearization assumptions taken.");
 
 // The maximal number of basic sets we allow during domain construction to
@@ -2907,7 +2907,7 @@ bool Scop::buildAliasChecks(AliasAnalysis &AA) {
     // Aliasing assumptions do not go through addAssumption but we still want to
     // collect statistics so we do it here explicitly.
     if (MinMaxAliasGroups.size())
-      ASSUMPTION_ALIASING++;
+      AssumptionsAliasing++;
     return true;
   }
 
@@ -3775,34 +3775,34 @@ bool Scop::trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
 
   switch (Kind) {
   case ALIASING:
-    ASSUMPTION_ALIASING++;
+    AssumptionsAliasing++;
     break;
   case INBOUNDS:
-    ASSUMPTION_INBOUNDS++;
+    AssumptionsInbounds++;
     break;
   case WRAPPING:
-    ASSUMPTION_WRAPPING++;
+    AssumptionsWrapping++;
     break;
   case UNSIGNED:
-    ASSUMPTION_UNSIGNED++;
+    AssumptionsUnsigned++;
     break;
   case COMPLEXITY:
-    ASSUMPTION_COMPLEXITY++;
+    AssumptionsComplexity++;
     break;
   case PROFITABLE:
-    ASSUMPTION_UNPROFITABLE++;
+    AssumptionsUnprofitable++;
     break;
   case ERRORBLOCK:
-    ASSUMPTION_ERRORBLOCK++;
+    AssumptionsErrorBlock++;
     break;
   case INFINITELOOP:
-    ASSUMPTION_INFINITELOOP++;
+    AssumptionsInfiniteLoop++;
     break;
   case INVARIANTLOAD:
-    ASSUMPTION_INVARIANTLOAD++;
+    AssumptionsInvariantLoad++;
     break;
   case DELINEARIZATION:
-    ASSUMPTION_DELINERIZATION++;
+    AssumptionsDelinearization++;
     break;
   }
 

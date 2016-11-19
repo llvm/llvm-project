@@ -28,7 +28,7 @@ using namespace polly;
 
 STATISTIC(ScopFound, "Number of valid Scops");
 STATISTIC(RichScopFound, "Number of Scops containing a loop");
-STATISTIC(INFEASIBLE_SCOPS,
+STATISTIC(InfeasibleScops,
           "Number of SCoPs with statically infeasible context.");
 
 // If the loop is nonaffine/boxed, return the first non-boxed surrounding loop
@@ -689,7 +689,7 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
   DEBUG(scop->print(dbgs()));
 
   if (!scop->hasFeasibleRuntimeContext()) {
-    INFEASIBLE_SCOPS++;
+    InfeasibleScops++;
     Msg = "SCoP ends here but was dismissed.";
     scop.reset();
   } else {

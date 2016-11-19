@@ -4952,13 +4952,13 @@ struct Db
     sub_type names;
     template_param_type subs;
     Vector<template_param_type> template_param;
-    unsigned cv;
-    unsigned ref;
-    unsigned encoding_depth;
-    bool parsed_ctor_dtor_cv;
-    bool tag_templates;
-    bool fix_forward_references;
-    bool try_to_parse_template_args;
+    unsigned cv = 0;
+    unsigned ref = 0;
+    unsigned encoding_depth = 0;
+    bool parsed_ctor_dtor_cv = false;
+    bool tag_templates = true;
+    bool fix_forward_references = false;
+    bool try_to_parse_template_args = true;
 
     template <size_t N>
     Db(arena<N>& ar) :
@@ -4993,14 +4993,7 @@ __cxa_demangle(const char *mangled_name, char *buf, size_t *n, int *status) {
     size_t internal_size = buf != nullptr ? *n : 0;
     arena<bs> a;
     Db db(a);
-    db.cv = 0;
-    db.ref = 0;
-    db.encoding_depth = 0;
-    db.parsed_ctor_dtor_cv = false;
-    db.tag_templates = true;
     db.template_param.emplace_back(a);
-    db.fix_forward_references = false;
-    db.try_to_parse_template_args = true;
     int internal_status = success;
     demangle(mangled_name, mangled_name + len, db,
              internal_status);

@@ -1304,12 +1304,17 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
   return Ret;
 }
 
-// Section pattern grammar can have complex expressions, for example:
-// *(SORT(.foo.* EXCLUDE_FILE (*file1.o) .bar.*) .bar.* SORT(.zed.*))
-// Generally is a sequence of globs and excludes that may be wrapped in a SORT()
-// commands, like: SORT(glob0) glob1 glob2 SORT(glob4)
-// This methods handles wrapping sequences of excluded files and section globs
-// into SORT() if that needed and reads them all.
+// Reads contents of "SECTIONS" directive. That directive contains a
+// list of glob patterns for input sections. The grammar is as follows.
+//
+// <patterns> ::= <section-list>
+//              | <sort> "(" <section-list> ")"
+//              | <sort> "(" <sort> "(" <section-list> ")" ")"
+//
+// <sort>     ::= "SORT" | "SORT_BY_NAME" | "SORT_BY_ALIGNMENT"
+//              | "SORT_BY_INIT_PRIORITY" | "SORT_NONE"
+//
+// <section-list> is parsed by readInputSectionsList().
 InputSectionDescription *
 ScriptParser::readInputSectionRules(StringRef FilePattern) {
   auto *Cmd = new InputSectionDescription(FilePattern);
@@ -1501,7 +1506,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
     // The RHS may be something like "ABSOLUTE(.) & 0xff".
     // Call readExpr1 to read the whole expression.
     E = readExpr1(readParenExpr(), 0);
-    E.IsAbsolute = []() { return true; };
+    E.IsAbsolute = [] { return true; };
   } else {
     E = readExpr();
   }
@@ -1529,8 +1534,8 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
   }
   if (Op == "+")
     return {[=](uint64_t Dot) { return L(Dot) + R(Dot); },
-            [=]() { return L.IsAbsolute() && R.IsAbsolute(); },
-            [=]() {
+            [=] { return L.IsAbsolute() && R.IsAbsolute(); },
+            [=] {
               const OutputSectionBase *S = L.Section();
               return S ? S : R.Section();
             }};
@@ -1564,9 +1569,9 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
 Expr ScriptParser::readExpr1(Expr Lhs, int MinPrec) {
   while (!atEOF() && !Error) {
     // Read an operator and an expression.
-    StringRef Op1 = peek();
-    if (Op1 == "?")
+    if (consume("?"))
       return readTernary(Lhs);
+    StringRef Op1 = peek();
     if (precedence(Op1) < MinPrec)
       break;
     skip();
@@ -1602,17 +1607,21 @@ uint64_t static getConstant(StringRef S) {
 // and decimal numbers. Decimal numbers may have "K" (kilo) or
 // "M" (mega) prefixes.
 static bool readInteger(StringRef Tok, uint64_t &Result) {
+  // Negative number
   if (Tok.startswith("-")) {
     if (!readInteger(Tok.substr(1), Result))
       return false;
     Result = -Result;
     return true;
   }
+
+  // Hexadecimal
   if (Tok.startswith_lower("0x"))
     return !Tok.substr(2).getAsInteger(16, Result);
   if (Tok.endswith_lower("H"))
     return !Tok.drop_back().getAsInteger(16, Result);
 
+  // Decimal
   int Suffix = 1;
   if (Tok.endswith_lower("K")) {
     Suffix = 1024;
@@ -1674,8 +1683,8 @@ Expr ScriptParser::readPrimary() {
     StringRef Name = readParenLiteral();
     return {
         [=](uint64_t Dot) { return ScriptBase->getOutputSection(Name)->Addr; },
-        [=]() { return false; },
-        [=]() { return ScriptBase->getOutputSection(Name); }};
+        [=] { return false; },
+        [=] { return ScriptBase->getOutputSection(Name); }};
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
@@ -1752,12 +1761,11 @@ Expr ScriptParser::readPrimary() {
   if (Tok != "." && !isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
   return {[=](uint64_t Dot) { return getSymbolValue(Tok, Dot); },
-          [=]() { return isAbsolute(Tok); },
-          [=]() { return ScriptBase->getSymbolSection(Tok); }};
+          [=] { return isAbsolute(Tok); },
+          [=] { return ScriptBase->getSymbolSection(Tok); }};
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {
-  skip();
   Expr L = readExpr();
   expect(":");
   Expr R = readExpr();

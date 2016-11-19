@@ -19,9 +19,11 @@
 
 #include <algorithm>
 #include <random>
+#include <type_traits>
 #include <cassert>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 struct ReservoirSampleExpectations {
   enum { os = 4 };
@@ -60,19 +62,23 @@ void test() {
   const unsigned os = Expectations::os;
   SampleItem oa[os];
   const int *oa1 = Expectations::oa1;
+  ((void)oa1); // Prevent unused warning
   const int *oa2 = Expectations::oa2;
+  ((void)oa2); // Prevent unused warning
   std::minstd_rand g;
   SampleIterator end;
   end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
   assert(end.base() - oa == std::min(os, is));
-  assert(std::equal(oa, oa + os, oa1));
+  // sample() is deterministic but non-reproducible;
+  // its results can vary between implementations.
+  LIBCPP_ASSERT(std::equal(oa, oa + os, oa1));
   end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, std::move(g));
   assert(end.base() - oa == std::min(os, is));
-  assert(std::equal(oa, oa + os, oa2));
+  LIBCPP_ASSERT(std::equal(oa, oa + os, oa2));
 }
 
 template <template<class...> class PopulationIteratorType, class PopulationItem,
@@ -122,7 +128,12 @@ void test_small_population() {
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
   assert(end.base() - oa == std::min(os, is));
-  assert(std::equal(oa, end.base(), oa1));
+  typedef typename std::iterator_traits<PopulationIterator>::iterator_category PopulationCategory;
+  if (std::is_base_of<std::forward_iterator_tag, PopulationCategory>::value) {
+    assert(std::equal(oa, end.base(), oa1));
+  } else {
+    assert(std::is_permutation(oa, end.base(), oa1));
+  }
 }
 
 int main() {

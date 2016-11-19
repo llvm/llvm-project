@@ -167,7 +167,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotPltOffset() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
-  return Out<ELFT>::Plt->Addr + Target->PltHeaderSize +
+  return In<ELFT>::Plt->getVA() + Target->PltHeaderSize +
          PltIndex * Target->PltEntrySize;
 }
 

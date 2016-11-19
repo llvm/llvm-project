@@ -1,8 +1,8 @@
 // RUN: mkdir -p %T/move-multiple-classes
 // RUN: cp %S/Inputs/multiple_class_test*  %T/move-multiple-classes/
 // RUN: cd %T/move-multiple-classes
-// RUN: clang-move -names="c::EnclosingMove5::Nested" -new_cc=%T/move-multiple-classes/new_multiple_class_test.cpp -new_header=%T/move-multiple-classes/new_multiple_class_test.h -old_cc=%T/move-multiple-classes/multiple_class_test.cpp -old_header=../move-multiple-classes/multiple_class_test.h -dump_result %T/move-multiple-classes/multiple_class_test.cpp -- | FileCheck %s -check-prefix=CHECK-EMPTY
-// RUN: clang-move -names="a::Move1, b::Move2,c::Move3,c::Move4,c::EnclosingMove5" -new_cc=%T/move-multiple-classes/new_multiple_class_test.cpp -new_header=%T/move-multiple-classes/new_multiple_class_test.h -old_cc=%T/move-multiple-classes/multiple_class_test.cpp -old_header=../move-multiple-classes/multiple_class_test.h %T/move-multiple-classes/multiple_class_test.cpp --
+// RUN: clang-move -names="c::EnclosingMove5::Nested" -new_cc=%T/move-multiple-classes/new_multiple_class_test.cpp -new_header=%T/move-multiple-classes/new_multiple_class_test.h -old_cc=%T/move-multiple-classes/multiple_class_test.cpp -old_header=../move-multiple-classes/multiple_class_test.h -dump_result %T/move-multiple-classes/multiple_class_test.cpp -- -std=c++11| FileCheck %s -check-prefix=CHECK-EMPTY
+// RUN: clang-move -names="a::Move1, b::Move2,c::Move3,c::Move4,c::EnclosingMove5" -new_cc=%T/move-multiple-classes/new_multiple_class_test.cpp -new_header=%T/move-multiple-classes/new_multiple_class_test.h -old_cc=%T/move-multiple-classes/multiple_class_test.cpp -old_header=../move-multiple-classes/multiple_class_test.h %T/move-multiple-classes/multiple_class_test.cpp -- -std=c++11
 // RUN: FileCheck -input-file=%T/move-multiple-classes/new_multiple_class_test.cpp -check-prefix=CHECK-NEW-TEST-CPP %s
 // RUN: FileCheck -input-file=%T/move-multiple-classes/new_multiple_class_test.h -check-prefix=CHECK-NEW-TEST-H %s
 // RUN: FileCheck -input-file=%T/move-multiple-classes/multiple_class_test.cpp -check-prefix=CHECK-OLD-TEST-CPP %s
@@ -18,6 +18,10 @@
 // CHECK-OLD-TEST-H: } // namespace c
 
 // CHECK-OLD-TEST-CPP: #include "{{.*}}multiple_class_test.h"
+// CHECK-OLD-TEST-CPP: using a::Move1;
+// CHECK-OLD-TEST-CPP: using namespace a;
+// CHECK-OLD-TEST-CPP: using A = a::Move1;
+// CHECK-OLD-TEST-CPP: static int g = 0;
 // CHECK-OLD-TEST-CPP: namespace {
 // CHECK-OLD-TEST-CPP: using a::Move1;
 // CHECK-OLD-TEST-CPP: using namespace a;
@@ -70,6 +74,10 @@
 // CHECK-NEW-TEST-H: #endif // {{.*}}NEW_MULTIPLE_CLASS_TEST_H
 
 // CHECK-NEW-TEST-CPP: #include "{{.*}}new_multiple_class_test.h"
+// CHECK-NEW-TEST-CPP: using a::Move1;
+// CHECK-NEW-TEST-CPP: using namespace a;
+// CHECK-NEW-TEST-CPP: using A = a::Move1;
+// CHECK-NEW-TEST-CPP: static int g = 0;
 // CHECK-NEW-TEST-CPP: namespace a {
 // CHECK-NEW-TEST-CPP: int Move1::f() { return 0; }
 // CHECK-NEW-TEST-CPP: } // namespace a

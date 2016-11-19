@@ -108,224 +108,6 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT>
-PltSection<ELFT>::PltSection()
-    : OutputSectionBase(".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR) {
-  this->Addralign = 16;
-}
-
-template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
-  // At beginning of PLT, we have code to call the dynamic linker
-  // to resolve dynsyms at runtime. Write such code.
-  Target->writePltHeader(Buf);
-  size_t Off = Target->PltHeaderSize;
-
-  for (auto &I : Entries) {
-    const SymbolBody *B = I.first;
-    unsigned RelOff = I.second;
-    uint64_t Got = B->getGotPltVA<ELFT>();
-    uint64_t Plt = this->Addr + Off;
-    Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
-    Off += Target->PltEntrySize;
-  }
-}
-
-template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
-  Sym.PltIndex = Entries.size();
-  unsigned RelOff = In<ELFT>::RelaPlt->getRelocOffset();
-  Entries.push_back(std::make_pair(&Sym, RelOff));
-}
-
-template <class ELFT> void PltSection<ELFT>::finalize() {
-  this->Size = Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
-}
-
-template <class ELFT>
-HashTableSection<ELFT>::HashTableSection()
-    : OutputSectionBase(".hash", SHT_HASH, SHF_ALLOC) {
-  this->Entsize = sizeof(Elf_Word);
-  this->Addralign = sizeof(Elf_Word);
-}
-
-template <class ELFT> void HashTableSection<ELFT>::finalize() {
-  this->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
-
-  unsigned NumEntries = 2;                             // nbucket and nchain.
-  NumEntries += In<ELFT>::DynSymTab->getNumSymbols();  // The chain entries.
-
-  // Create as many buckets as there are symbols.
-  // FIXME: This is simplistic. We can try to optimize it, but implementing
-  // support for SHT_GNU_HASH is probably even more profitable.
-  NumEntries += In<ELFT>::DynSymTab->getNumSymbols();
-  this->Size = NumEntries * sizeof(Elf_Word);
-}
-
-template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  unsigned NumSymbols = In<ELFT>::DynSymTab->getNumSymbols();
-  auto *P = reinterpret_cast<Elf_Word *>(Buf);
-  *P++ = NumSymbols; // nbucket
-  *P++ = NumSymbols; // nchain
-
-  Elf_Word *Buckets = P;
-  Elf_Word *Chains = P + NumSymbols;
-
-  for (const SymbolTableEntry &S : In<ELFT>::DynSymTab->getSymbols()) {
-    SymbolBody *Body = S.Symbol;
-    StringRef Name = Body->getName();
-    unsigned I = Body->DynsymIndex;
-    uint32_t Hash = hashSysV(Name) % NumSymbols;
-    Chains[I] = Buckets[Hash];
-    Buckets[Hash] = I;
-  }
-}
-
-static uint32_t hashGnu(StringRef Name) {
-  uint32_t H = 5381;
-  for (uint8_t C : Name)
-    H = (H << 5) + H + C;
-  return H;
-}
-
-template <class ELFT>
-GnuHashTableSection<ELFT>::GnuHashTableSection()
-    : OutputSectionBase(".gnu.hash", SHT_GNU_HASH, SHF_ALLOC) {
-  this->Entsize = ELFT::Is64Bits ? 0 : 4;
-  this->Addralign = sizeof(uintX_t);
-}
-
-template <class ELFT>
-unsigned GnuHashTableSection<ELFT>::calcNBuckets(unsigned NumHashed) {
-  if (!NumHashed)
-    return 0;
-
-  // These values are prime numbers which are not greater than 2^(N-1) + 1.
-  // In result, for any particular NumHashed we return a prime number
-  // which is not greater than NumHashed.
-  static const unsigned Primes[] = {
-      1,   1,    3,    3,    7,    13,    31,    61,    127,   251,
-      509, 1021, 2039, 4093, 8191, 16381, 32749, 65521, 131071};
-
-  return Primes[std::min<unsigned>(Log2_32_Ceil(NumHashed),
-                                   array_lengthof(Primes) - 1)];
-}
-
-// Bloom filter estimation: at least 8 bits for each hashed symbol.
-// GNU Hash table requirement: it should be a power of 2,
-//   the minimum value is 1, even for an empty table.
-// Expected results for a 32-bit target:
-//   calcMaskWords(0..4)   = 1
-//   calcMaskWords(5..8)   = 2
-//   calcMaskWords(9..16)  = 4
-// For a 64-bit target:
-//   calcMaskWords(0..8)   = 1
-//   calcMaskWords(9..16)  = 2
-//   calcMaskWords(17..32) = 4
-template <class ELFT>
-unsigned GnuHashTableSection<ELFT>::calcMaskWords(unsigned NumHashed) {
-  if (!NumHashed)
-    return 1;
-  return NextPowerOf2((NumHashed - 1) / sizeof(Elf_Off));
-}
-
-template <class ELFT> void GnuHashTableSection<ELFT>::finalize() {
-  unsigned NumHashed = Symbols.size();
-  NBuckets = calcNBuckets(NumHashed);
-  MaskWords = calcMaskWords(NumHashed);
-  // Second hash shift estimation: just predefined values.
-  Shift2 = ELFT::Is64Bits ? 6 : 5;
-
-  this->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
-  this->Size = sizeof(Elf_Word) * 4            // Header
-               + sizeof(Elf_Off) * MaskWords   // Bloom Filter
-               + sizeof(Elf_Word) * NBuckets   // Hash Buckets
-               + sizeof(Elf_Word) * NumHashed; // Hash Values
-}
-
-template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  writeHeader(Buf);
-  if (Symbols.empty())
-    return;
-  writeBloomFilter(Buf);
-  writeHashTable(Buf);
-}
-
-template <class ELFT>
-void GnuHashTableSection<ELFT>::writeHeader(uint8_t *&Buf) {
-  auto *P = reinterpret_cast<Elf_Word *>(Buf);
-  *P++ = NBuckets;
-  *P++ = In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size();
-  *P++ = MaskWords;
-  *P++ = Shift2;
-  Buf = reinterpret_cast<uint8_t *>(P);
-}
-
-template <class ELFT>
-void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *&Buf) {
-  unsigned C = sizeof(Elf_Off) * 8;
-
-  auto *Masks = reinterpret_cast<Elf_Off *>(Buf);
-  for (const SymbolData &Sym : Symbols) {
-    size_t Pos = (Sym.Hash / C) & (MaskWords - 1);
-    uintX_t V = (uintX_t(1) << (Sym.Hash % C)) |
-                (uintX_t(1) << ((Sym.Hash >> Shift2) % C));
-    Masks[Pos] |= V;
-  }
-  Buf += sizeof(Elf_Off) * MaskWords;
-}
-
-template <class ELFT>
-void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
-  Elf_Word *Buckets = reinterpret_cast<Elf_Word *>(Buf);
-  Elf_Word *Values = Buckets + NBuckets;
-
-  int PrevBucket = -1;
-  int I = 0;
-  for (const SymbolData &Sym : Symbols) {
-    int Bucket = Sym.Hash % NBuckets;
-    assert(PrevBucket <= Bucket);
-    if (Bucket != PrevBucket) {
-      Buckets[Bucket] = Sym.Body->DynsymIndex;
-      PrevBucket = Bucket;
-      if (I > 0)
-        Values[I - 1] |= 1;
-    }
-    Values[I] = Sym.Hash & ~1;
-    ++I;
-  }
-  if (I > 0)
-    Values[I - 1] |= 1;
-}
-
-// Add symbols to this symbol hash table. Note that this function
-// destructively sort a given vector -- which is needed because
-// GNU-style hash table places some sorting requirements.
-template <class ELFT>
-void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
-  // Ideally this will just be 'auto' but GCC 6.1 is not able
-  // to deduce it correctly.
-  std::vector<SymbolTableEntry>::iterator Mid =
-      std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
-        return S.Symbol->isUndefined();
-      });
-  if (Mid == V.end())
-    return;
-  for (auto I = Mid, E = V.end(); I != E; ++I) {
-    SymbolBody *B = I->Symbol;
-    size_t StrOff = I->StrTabOffset;
-    Symbols.push_back({B, StrOff, hashGnu(B->getName())});
-  }
-
-  unsigned NBuckets = calcNBuckets(Symbols.size());
-  std::stable_sort(Symbols.begin(), Symbols.end(),
-                   [&](const SymbolData &L, const SymbolData &R) {
-                     return L.Hash % NBuckets < R.Hash % NBuckets;
-                   });
-
-  V.erase(Mid, V.end());
-  for (const SymbolData &Sym : Symbols)
-    V.push_back({Sym.Body, Sym.STName});
-}
-
 // Returns the number of version definition entries. Because the first entry
 // is for the version definition itself, it is the number of versioned symbols
 // plus one. Note that we don't support multiple versions yet.
@@ -399,8 +181,24 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
   this->Entsize = getEntsize<ELFT>(Type);
 }
 
+template <typename ELFT>
+static bool compareByFilePosition(InputSection<ELFT> *A,
+                                  InputSection<ELFT> *B) {
+  auto *LA = cast<InputSection<ELFT>>(A->getLinkOrderDep());
+  auto *LB = cast<InputSection<ELFT>>(B->getLinkOrderDep());
+  OutputSectionBase *AOut = LA->OutSec;
+  OutputSectionBase *BOut = LB->OutSec;
+  if (AOut != BOut)
+    return AOut->SectionIndex < BOut->SectionIndex;
+  return LA->OutSecOff < LB->OutSecOff;
+}
+
 template <class ELFT> void OutputSection<ELFT>::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
+    std::sort(Sections.begin(), Sections.end(), compareByFilePosition<ELFT>);
+    Size = 0;
+    assignOffsets();
+
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
@@ -806,15 +604,11 @@ template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding StringPiece for easy access.
-  if (shouldTailMerge()) {
-    for (MergeInputSection<ELFT> *Sec : Sections) {
-      for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
-        if (!Sec->Pieces[I].Live)
-          continue;
-        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
-      }
-    }
-  }
+  if (shouldTailMerge())
+    for (MergeInputSection<ELFT> *Sec : Sections)
+      for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+        if (Sec->Pieces[I].Live)
+          Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
 }
 
 template <class ELFT>
@@ -1079,21 +873,6 @@ template class EhFrameHeader<ELF32LE>;
 template class EhFrameHeader<ELF32BE>;
 template class EhFrameHeader<ELF64LE>;
 template class EhFrameHeader<ELF64BE>;
-
-template class PltSection<ELF32LE>;
-template class PltSection<ELF32BE>;
-template class PltSection<ELF64LE>;
-template class PltSection<ELF64BE>;
-
-template class GnuHashTableSection<ELF32LE>;
-template class GnuHashTableSection<ELF32BE>;
-template class GnuHashTableSection<ELF64LE>;
-template class GnuHashTableSection<ELF64BE>;
-
-template class HashTableSection<ELF32LE>;
-template class HashTableSection<ELF32BE>;
-template class HashTableSection<ELF64LE>;
-template class HashTableSection<ELF64BE>;
 
 template class OutputSection<ELF32LE>;
 template class OutputSection<ELF32BE>;

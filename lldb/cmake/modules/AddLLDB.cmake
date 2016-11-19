@@ -23,7 +23,7 @@ macro(add_lldb_library name)
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT"
     ""
-    ""
+    "DEPENDS"
     ${ARGN})
   llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
 
@@ -61,14 +61,16 @@ macro(add_lldb_library name)
         llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
                                 -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group
                                 -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group
+                                DEPENDS ${PARAM_DEPENDS}
           )
       else()
         llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
                                 ${LLDB_USED_LIBS} ${CLANG_USED_LIBS}
+                                DEPENDS ${PARAM_DEPENDS}
           )
       endif()
     else()
-      llvm_add_library(${name} ${libking} ${srcs})
+      llvm_add_library(${name} ${libkind} ${srcs} DEPENDS ${PARAM_DEPENDS})
     endif()
 
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "liblldb")

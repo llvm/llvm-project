@@ -472,7 +472,7 @@ protected:
       Error error;
 
       error = m_interpreter.GetDebugger().GetTargetList().CreateTarget(
-          m_interpreter.GetDebugger(), nullptr, nullptr, false,
+          m_interpreter.GetDebugger(), "", "", false,
           nullptr, // No platform options
           new_target_sp);
       target = new_target_sp.get();

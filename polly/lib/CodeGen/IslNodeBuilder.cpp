@@ -52,7 +52,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "polly-codegen"
 
-STATISTIC(VERSIONED_SCOPS, "Number of SCoPs that required versioning.");
+STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
 
 // The maximal number of dimensions we allow during invariant load construction.
 // More complex access ranges will result in very high compile time and are also
@@ -1344,7 +1344,7 @@ Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
   ExprBuilder.setTrackOverflow(false);
 
   if (!isa<ConstantInt>(RTC))
-    VERSIONED_SCOPS++;
+    VersionedScops++;
 
   return RTC;
 }

@@ -43,7 +43,7 @@ class _LIBCPP_TYPE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mut
 public:
     _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_HAS_NO_CONSTEXPR
-    constexpr mutex() _NOEXCEPT _LIBCPP_DEFAULT
+    constexpr mutex() _NOEXCEPT = default;
 #else
     mutex() _NOEXCEPT {__m_ = (__libcpp_mutex_t)_LIBCPP_MUTEX_INITIALIZER;}
 #endif
@@ -300,7 +300,7 @@ class _LIBCPP_TYPE_VIS condition_variable
 public:
     _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_HAS_NO_CONSTEXPR
-    constexpr condition_variable() _NOEXCEPT _LIBCPP_DEFAULT
+    constexpr condition_variable() _NOEXCEPT = default;
 #else
     condition_variable() _NOEXCEPT {__cv_ = (__libcpp_condvar_t)_LIBCPP_CONDVAR_INITIALIZER;}
 #endif

@@ -28,16 +28,26 @@ void
 test1()
 {
     typedef std::independent_bits_engine<std::ranlux24, 32, unsigned> E;
-    /*static_*/assert((E::min() == 0)/*, ""*/);
-    /*static_*/assert((E::max() == 0xFFFFFFFF)/*, ""*/);
+#if TEST_STD_VER >= 11
+    static_assert((E::min() == 0), "");
+    static_assert((E::max() == 0xFFFFFFFF), "");
+#else
+    assert((E::min() == 0));
+    assert((E::max() == 0xFFFFFFFF));
+#endif
 }
 
 void
 test2()
 {
     typedef std::independent_bits_engine<std::ranlux48, 64, unsigned long long> E;
-    /*static_*/assert((E::min() == 0)/*, ""*/);
-    /*static_*/assert((E::max() == 0xFFFFFFFFFFFFFFFFull)/*, ""*/);
+#if TEST_STD_VER >= 11
+    static_assert((E::min() == 0), "");
+    static_assert((E::max() == 0xFFFFFFFFFFFFFFFFull), "");
+#else
+    assert((E::min() == 0));
+    assert((E::max() == 0xFFFFFFFFFFFFFFFFull));
+#endif
 }
 
 int main()

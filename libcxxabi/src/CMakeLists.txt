@@ -1,6 +1,6 @@
 # Get sources
 set(LIBCXXABI_SOURCES
-  abort_message.cpp
+  # C++ABI files
   cxa_aux_runtime.cpp
   cxa_default_handlers.cpp
   cxa_demangle.cpp
@@ -11,11 +11,14 @@ set(LIBCXXABI_SOURCES
   cxa_unexpected.cpp
   cxa_vector.cpp
   cxa_virtual.cpp
-  exception.cpp
+  # C++ STL files
+  stdlib_exception.cpp
+  stdlib_stdexcept.cpp
+  stdlib_typeinfo.cpp
+  # Internal files
+  abort_message.cpp
   fallback_malloc.cpp
   private_typeinfo.cpp
-  stdexcept.cpp
-  typeinfo.cpp
 )
 
 if (LIBCXXABI_ENABLE_EXCEPTIONS)

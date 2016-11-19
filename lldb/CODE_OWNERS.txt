@@ -16,18 +16,14 @@ N: Greg Clayton
 E: clayborg@gmail.com (Phabricator)
 E: gclayton@apple.com (Direct)
 D: Overall LLDB architecture, Host (common+macosx), Symbol, API, ABI, Mac-specific code, 
-D: DynamicLoader, ObjectFile, IOHandler, EditLine, ValueObject, Watchpoints, debugserver
+D: DynamicLoader, ObjectFile, IOHandler, EditLine, Core/Value*, Watchpoints, debugserver
 D: Build scripts, Test suite, Platform, gdb-remote, Anything not covered by this file
-
-N: Enrico Granata
-E: granata.enrico@gmail.com
-D: Data Formatters, Core/Value*, Objective C Language runtime, Test suite, Xcode build
-D: SWIG
 
 N: Jim Ingham
 E: jingham@apple.com
 D: Overall LLDB architecture, Thread plans, Expression parser, ValueObject, Breakpoints, ABI
 D: Watchpoints, Trampolines, Target, Command Interpreter, C++ / Objective C Language runtime
+D: Data Formatters
 
 N: Ilia K
 E: ki.stfu@gmail.com
@@ -48,6 +44,7 @@ D: lldb-mi
 N: Zachary Turner
 E: zturner@google.com
 D: CMake build, Host (common+windows), Plugins/Process/Windows, Anything Windows-specific
+D: Test suite
 
 N: Pavel Labath
 E: labath@google.com
@@ -55,5 +52,5 @@ D: Linux, Android
 
 N: Todd Fiala
 E: todd.fiala@gmail.com
-D: Test Suite subsystems (concurrent test runners, test events, TestResults system), gdb-remote protocol tests
+D: Test Suite, esp. subsystems (concurrent test runners, test events, TestResults system), gdb-remote protocol tests
 

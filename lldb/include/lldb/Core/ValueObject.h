@@ -394,7 +394,7 @@ public:
       GetExpressionPathFormat = eGetExpressionPathFormatDereferencePointers);
 
   lldb::ValueObjectSP GetValueForExpressionPath(
-      const char *expression, const char **first_unparsed = nullptr,
+      llvm::StringRef expression,
       ExpressionPathScanEndReason *reason_to_stop = nullptr,
       ExpressionPathEndResultType *final_value_type = nullptr,
       const GetValueForExpressionPathOptions &options =
@@ -1002,7 +1002,7 @@ private:
   virtual CompilerType MaybeCalculateCompleteType();
 
   lldb::ValueObjectSP GetValueForExpressionPath_Impl(
-      const char *expression_cstr, const char **first_unparsed,
+      llvm::StringRef expression_cstr,
       ExpressionPathScanEndReason *reason_to_stop,
       ExpressionPathEndResultType *final_value_type,
       const GetValueForExpressionPathOptions &options,

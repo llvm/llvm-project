@@ -603,8 +603,7 @@ SBTarget SBDebugger::CreateTarget(const char *filename) {
     Error error;
     const bool add_dependent_modules = true;
     error = m_opaque_sp->GetTargetList().CreateTarget(
-        *m_opaque_sp, filename, nullptr, add_dependent_modules, nullptr,
-        target_sp);
+        *m_opaque_sp, filename, "", add_dependent_modules, nullptr, target_sp);
 
     if (error.Success()) {
       m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp.get());
