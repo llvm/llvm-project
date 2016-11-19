@@ -28,6 +28,9 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
+#include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/TypeList.h"
+#include "lldb/Target/Target.h"
 
 #include "BlockPointer.h"
 #include "CxxStringTypes.h"
@@ -901,6 +904,79 @@ static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp, lldb_private::formatters::Char16SummaryProvider,
       "unichar summary provider", ConstString("unichar"), widechar_flags);
 #endif
+}
+
+std::unique_ptr<Language::TypeScavenger> CPlusPlusLanguage::GetTypeScavenger() {
+  class CPlusPlusTypeScavenger : public Language::TypeScavenger {
+  private:
+    class CPlusPlusTypeScavengerResult : public Language::TypeScavenger::Result {
+    public:
+      CPlusPlusTypeScavengerResult(CompilerType type)
+      : Language::TypeScavenger::Result(), m_compiler_type(type) {}
+      
+      bool IsValid() override { return m_compiler_type.IsValid(); }
+      
+      bool DumpToStream(Stream &stream, bool print_help_if_available) override {
+        if (IsValid()) {
+          m_compiler_type.DumpTypeDescription(&stream);
+          stream.EOL();
+          return true;
+        }
+        return false;
+      }
+      
+      ~CPlusPlusTypeScavengerResult() override = default;
+      
+    private:
+      CompilerType m_compiler_type;
+    };
+    
+  protected:
+    CPlusPlusTypeScavenger() = default;
+    
+    ~CPlusPlusTypeScavenger() override = default;
+    
+    bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
+                   ResultSet &results) override {
+      bool result = false;
+      
+      Target *target = exe_scope->CalculateTarget().get();
+      if (target) {
+        const auto &images(target->GetImages());
+        SymbolContext null_sc;
+        ConstString cs_key(key);
+        llvm::DenseSet<SymbolFile*> searched_sym_files;
+        TypeList matches;
+        images.FindTypes(null_sc,
+                         cs_key,
+                         false,
+                         UINT32_MAX,
+                         searched_sym_files,
+                         matches);
+        for (const auto& match : matches.Types()) {
+          if (match.get()) {
+            CompilerType compiler_type(match->GetFullCompilerType());
+            LanguageType lang_type(compiler_type.GetMinimumLanguage());
+            // other plugins will find types for other languages - here we only do C and C++
+            if (!Language::LanguageIsC(lang_type) && !Language::LanguageIsCPlusPlus(lang_type))
+              continue;
+            if (compiler_type.IsTypedefType())
+              compiler_type = compiler_type.GetTypedefedType();
+            std::unique_ptr<Language::TypeScavenger::Result> scavengeresult(
+                                                                    new CPlusPlusTypeScavengerResult(compiler_type));
+            results.insert(std::move(scavengeresult));
+            result = true;
+          }
+        }
+      }
+      
+      return result;
+    }
+    
+    friend class lldb_private::CPlusPlusLanguage;
+  };
+  
+  return std::unique_ptr<TypeScavenger>(new CPlusPlusTypeScavenger());
 }
 
 lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {

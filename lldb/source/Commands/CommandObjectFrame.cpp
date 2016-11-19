@@ -489,6 +489,28 @@ public:
   }
 
 protected:
+  llvm::StringRef GetScopeString(VariableSP var_sp) {
+    if (!var_sp)
+      return llvm::StringRef::withNullAsEmpty(nullptr);
+
+    switch (var_sp->GetScope()) {
+    case eValueTypeVariableGlobal:
+      return "GLOBAL: ";
+    case eValueTypeVariableStatic:
+      return "STATIC: ";
+    case eValueTypeVariableArgument:
+      return "ARG: ";
+    case eValueTypeVariableLocal:
+      return "LOCAL: ";
+    case eValueTypeVariableThreadLocal:
+      return "THREAD: ";
+    default:
+      break;
+    }
+
+    return llvm::StringRef::withNullAsEmpty(nullptr);
+  }
+
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "frame" for validity as eCommandRequiresFrame ensures it
     // is valid
@@ -564,6 +586,13 @@ protected:
                       //                                                valobj_sp->SetFormat
                       //                                                (format);
 
+                      std::string scope_string;
+                      if (m_option_variable.show_scope)
+                        scope_string = GetScopeString(var_sp).str();
+
+                      if (!scope_string.empty())
+                        s.PutCString(scope_string.c_str());
+
                       if (m_option_variable.show_decl &&
                           var_sp->GetDeclaration().GetFile()) {
                         bool show_fullpaths = false;
@@ -603,6 +632,13 @@ protected:
                 name_cstr, m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
             if (valobj_sp) {
+              std::string scope_string;
+              if (m_option_variable.show_scope)
+                scope_string = GetScopeString(var_sp).str();
+
+              if (!scope_string.empty())
+                s.PutCString(scope_string.c_str());
+
               //                            if (format != eFormatDefault)
               //                                valobj_sp->SetFormat (format);
               if (m_option_variable.show_decl && var_sp &&
@@ -639,41 +675,8 @@ protected:
             var_sp = variable_list->GetVariableAtIndex(i);
             bool dump_variable = true;
             std::string scope_string;
-            switch (var_sp->GetScope()) {
-            case eValueTypeVariableGlobal:
-              // Always dump globals since we only fetched them if
-              // m_option_variable.show_scope was true
-              if (dump_variable && m_option_variable.show_scope)
-                scope_string = "GLOBAL: ";
-              break;
-
-            case eValueTypeVariableStatic:
-              // Always dump globals since we only fetched them if
-              // m_option_variable.show_scope was true, or this is
-              // a static variable from a block in the current scope
-              if (dump_variable && m_option_variable.show_scope)
-                scope_string = "STATIC: ";
-              break;
-
-            case eValueTypeVariableArgument:
-              dump_variable = m_option_variable.show_args;
-              if (dump_variable && m_option_variable.show_scope)
-                scope_string = "   ARG: ";
-              break;
-
-            case eValueTypeVariableLocal:
-              dump_variable = m_option_variable.show_locals;
-              if (dump_variable && m_option_variable.show_scope)
-                scope_string = " LOCAL: ";
-              break;
-
-            case eValueTypeVariableThreadLocal:
-              if (dump_variable && m_option_variable.show_scope)
-                scope_string = "THREAD: ";
-              break;
-            default:
-              break;
-            }
+            if (dump_variable && m_option_variable.show_scope)
+              scope_string = GetScopeString(var_sp).str();
 
             if (dump_variable) {
               // Use the variable object code to make sure we are

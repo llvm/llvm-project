@@ -92,6 +92,8 @@ public:
     return lldb::eLanguageTypeC_plus_plus;
   }
 
+  std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
+  
   lldb::TypeCategoryImplSP GetFormatters() override;
 
   HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
