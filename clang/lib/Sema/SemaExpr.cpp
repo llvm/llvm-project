@@ -14699,6 +14699,13 @@ namespace {
           << E->getSourceRange();
         return ExprError();
       }
+
+      if (isa<CallExpr>(E->getSubExpr())) {
+        S.Diag(E->getOperatorLoc(), diag::err_unknown_any_addrof_call)
+          << E->getSourceRange();
+        return ExprError();
+      }
+
       assert(E->getValueKind() == VK_RValue);
       assert(E->getObjectKind() == OK_Ordinary);
       E->setType(DestType);
