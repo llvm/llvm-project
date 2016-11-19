@@ -1350,7 +1350,7 @@ bool IRMover::IdentifiedStructTypeSet::hasType(StructType *Ty) {
 
 IRMover::IRMover(Module &M) : Composite(M) {
   TypeFinder StructTypes;
-  StructTypes.run(M, true);
+  StructTypes.run(M, /* OnlyNamed */ false);
   for (StructType *Ty : StructTypes) {
     if (Ty->isOpaque())
       IdentifiedStructTypes.addOpaque(Ty);
