@@ -27,8 +27,8 @@ using namespace llvm;
 #define SHA_BIG_ENDIAN
 #endif
 
-static uint32_t rol(uint32_t number, int bits) {
-  return (number << bits) | (number >> (32 - bits));
+static uint32_t rol(uint32_t Number, int Bits) {
+  return (Number << Bits) | (Number >> (32 - Bits));
 }
 
 #ifdef SHA_BIG_ENDIAN
@@ -198,11 +198,11 @@ void SHA1::hashBlock() {
   InternalState.State[4] += E;
 }
 
-void SHA1::addUncounted(uint8_t data) {
+void SHA1::addUncounted(uint8_t Data) {
 #ifdef SHA_BIG_ENDIAN
-  InternalState.Buffer.C[InternalState.BufferOffset] = data;
+  InternalState.Buffer.C[InternalState.BufferOffset] = Data;
 #else
-  InternalState.Buffer.C[InternalState.BufferOffset ^ 3] = data;
+  InternalState.Buffer.C[InternalState.BufferOffset ^ 3] = Data;
 #endif
 
   InternalState.BufferOffset++;
@@ -212,9 +212,9 @@ void SHA1::addUncounted(uint8_t data) {
   }
 }
 
-void SHA1::writebyte(uint8_t data) {
+void SHA1::writebyte(uint8_t Data) {
   ++InternalState.ByteCount;
-  addUncounted(data);
+  addUncounted(Data);
 }
 
 void SHA1::update(ArrayRef<uint8_t> Data) {
