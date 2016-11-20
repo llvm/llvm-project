@@ -31,14 +31,7 @@ static uint32_t rol(uint32_t Number, int Bits) {
   return (Number << Bits) | (Number >> (32 - Bits));
 }
 
-#ifdef SHA_BIG_ENDIAN
-static uint32_t blk0(uint32_t *Buf, int I) {
-  Buf[I] = (rol(Buf[I], 24) & 0xFF00FF00) | (rol(Buf[I], 8) & 0x00FF00FF);
-  return Buf[I];
-}
-#else
 static uint32_t blk0(uint32_t *Buf, int I) { return Buf[I]; }
-#endif
 
 static uint32_t blk(uint32_t *Buf, int I) {
   Buf[I & 15] = rol(Buf[(I + 13) & 15] ^ Buf[(I + 8) & 15] ^ Buf[(I + 2) & 15] ^
