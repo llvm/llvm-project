@@ -29,9 +29,9 @@ using namespace llvm;
 
 static uint32_t rol(uint32_t number, int bits) {
   return (number << bits) | (number >> (32 - bits));
-};
+}
 
-#if SHA_BIG_ENDIAN
+#ifdef SHA_BIG_ENDIAN
 static uint32_t blk0(uint32_t *Buf, int I) {
   Buf[I] = (rol(Buf[I], 24) & 0xFF00FF00) | (rol(Buf[I], 8) & 0x00FF00FF);
   return Buf[I];
