@@ -16,7 +16,6 @@
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "Strings.h"
-#include "SymbolListFile.h"
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
