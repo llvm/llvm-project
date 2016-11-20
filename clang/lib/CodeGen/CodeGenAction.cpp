@@ -195,7 +195,8 @@ namespace clang {
           return;
         }
 
-        Ctx.setDiagnosticsOutputFile(new yaml::Output(OptRecordFile->os()));
+        Ctx.setDiagnosticsOutputFile(
+            llvm::make_unique<yaml::Output>(OptRecordFile->os()));
 
         if (CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
           Ctx.setDiagnosticHotnessRequested(true);

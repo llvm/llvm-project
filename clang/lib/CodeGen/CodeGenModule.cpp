@@ -756,9 +756,15 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
     ctors.add(ctor.finish());
   }
 
-  (void) ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
-                                     /*constant*/ false,
-                                     llvm::GlobalValue::AppendingLinkage);
+  auto list =
+    ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
+                                /*constant*/ false,
+                                llvm::GlobalValue::AppendingLinkage);
+
+  // The LTO linker doesn't seem to like it when we set an alignment
+  // on appending variables.  Take it off as a workaround.
+  list->setAlignment(0);
+
   Fns.clear();
 }
 

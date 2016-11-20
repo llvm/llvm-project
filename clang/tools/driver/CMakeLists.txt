@@ -24,6 +24,10 @@ if(CLANG_PLUGIN_SUPPORT)
   set(LLVM_NO_DEAD_STRIP 1)
 endif()
 
+if(NOT CLANG_BUILT_STANDALONE)
+  set(tablegen_deps intrinsics_gen)
+endif()
+
 add_clang_tool(clang
   driver.cpp
   cc1_main.cpp
@@ -31,7 +35,7 @@ add_clang_tool(clang
   apinotes_main.cpp
 
   DEPENDS
-  intrinsics_gen
+  ${tablegen_deps}
   )
 
 target_link_libraries(clang
