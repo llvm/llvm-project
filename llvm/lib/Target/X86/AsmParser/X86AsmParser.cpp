@@ -1915,7 +1915,7 @@ bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
                           const SMLoc &StartLoc) {
   MCAsmParser &Parser = getParser();
   // Assuming we are just pass the '{' mark, quering the next token
-  // Searched for {z}, but none was found. Return true, as no parsing error was
+  // Searched for {z}, but none was found. Return false, as no parsing error was
   // encountered
   if (!(getLexer().is(AsmToken::Identifier) &&
         (getLexer().getTok().getIdentifier() == "z")))

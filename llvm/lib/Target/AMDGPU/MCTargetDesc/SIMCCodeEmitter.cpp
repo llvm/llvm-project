@@ -36,7 +36,6 @@ namespace {
 class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
   SIMCCodeEmitter(const SIMCCodeEmitter &) = delete;
   void operator=(const SIMCCodeEmitter &) = delete;
-  const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
 
   /// \brief Encode an fp or int literal
@@ -46,7 +45,7 @@ class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
 public:
   SIMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
                   MCContext &ctx)
-    : MCII(mcii), MRI(mri) { }
+      : AMDGPUMCCodeEmitter(mcii), MRI(mri) {}
 
   ~SIMCCodeEmitter() override {}
 
@@ -192,6 +191,8 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
 
   uint64_t Encoding = getBinaryCodeForInstr(MI, Fixups, STI);
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());

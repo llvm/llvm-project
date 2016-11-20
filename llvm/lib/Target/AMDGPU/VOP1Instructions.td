@@ -550,6 +550,7 @@ def V_MOV_B32_indirect : VPseudoInstSI<(outs),
   PseudoInstExpansion<(V_MOV_B32_e32_vi getVALUDstForVT<i32>.ret:$vdst,
                                         getVOPSrc0ForVT<i32>.ret:$src0)> {
   let VOP1 = 1;
+  let SubtargetPredicate = isVI;
 }
 
 // This is a pseudo variant of the v_movreld_b32 instruction in which the

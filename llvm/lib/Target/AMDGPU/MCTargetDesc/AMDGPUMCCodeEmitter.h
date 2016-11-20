@@ -21,11 +21,19 @@
 namespace llvm {
 
 class MCInst;
+class MCInstrInfo;
 class MCOperand;
 class MCSubtargetInfo;
+class FeatureBitset;
 
 class AMDGPUMCCodeEmitter : public MCCodeEmitter {
   virtual void anchor();
+
+protected:
+  const MCInstrInfo &MCII;
+
+  AMDGPUMCCodeEmitter(const MCInstrInfo &mcii) : MCII(mcii) {}
+
 public:
 
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -43,6 +51,11 @@ public:
                                      const MCSubtargetInfo &STI) const {
     return 0;
   }
+
+protected:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
 
 } // End namespace llvm

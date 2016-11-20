@@ -14,6 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
+#include "SubtargetFeatureInfo.h"
+#include "Types.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
@@ -307,6 +309,69 @@ void CodeEmitterGen::run(raw_ostream &o) {
     << "  }\n"
     << "  return Value;\n"
     << "}\n\n";
+
+  const auto &All = SubtargetFeatureInfo::getAll(Records);
+  std::map<Record *, SubtargetFeatureInfo, LessRecordByID> SubtargetFeatures;
+  SubtargetFeatures.insert(All.begin(), All.end());
+
+  o << "#ifdef ENABLE_INSTR_PREDICATE_VERIFIER\n"
+    << "#undef ENABLE_INSTR_PREDICATE_VERIFIER\n"
+    << "#include <sstream>\n\n";
+
+  // Emit the subtarget feature enumeration.
+  SubtargetFeatureInfo::emitSubtargetFeatureFlagEnumeration(SubtargetFeatures,
+                                                            o);
+
+  // Emit the name table for error messages.
+  o << "#ifndef NDEBUG\n";
+  SubtargetFeatureInfo::emitNameTable(SubtargetFeatures, o);
+  o << "#endif // NDEBUG\n";
+
+  // Emit the available features compute function.
+  SubtargetFeatureInfo::emitComputeAvailableFeatures(
+      Target.getName(), "MCCodeEmitter", "computeAvailableFeatures",
+      SubtargetFeatures, o);
+
+  // Emit the predicate verifier.
+  o << "void " << Target.getName()
+    << "MCCodeEmitter::verifyInstructionPredicates(\n"
+    << "    const MCInst &Inst, uint64_t AvailableFeatures) const {\n"
+    << "#ifndef NDEBUG\n"
+    << "  static uint64_t RequiredFeatures[] = {\n";
+  unsigned InstIdx = 0;
+  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+    o << "    ";
+    for (Record *Predicate : Inst->TheDef->getValueAsListOfDefs("Predicates")) {
+      const auto &I = SubtargetFeatures.find(Predicate);
+      if (I != SubtargetFeatures.end())
+        o << I->second.getEnumName() << " | ";
+    }
+    o << "0, // " << Inst->TheDef->getName() << " = " << InstIdx << "\n";
+    InstIdx++;
+  }
+  o << "  };\n\n";
+  o << "  assert(Inst.getOpcode() < " << InstIdx << ");\n";
+  o << "  uint64_t MissingFeatures =\n"
+    << "      (AvailableFeatures & RequiredFeatures[Inst.getOpcode()]) ^\n"
+    << "      RequiredFeatures[Inst.getOpcode()];\n"
+    << "  if (MissingFeatures) {\n"
+    << "    std::ostringstream Msg;\n"
+    << "    Msg << \"Attempting to emit \" << "
+       "MCII.getName(Inst.getOpcode()).str()\n"
+    << "        << \" instruction but the \";\n"
+    << "    for (unsigned i = 0; i < 8 * sizeof(MissingFeatures); ++i)\n"
+    << "      if (MissingFeatures & (1ULL << i))\n"
+    << "        Msg << SubtargetFeatureNames[i] << \" \";\n"
+    << "    Msg << \"predicate(s) are not met\";\n"
+    << "    report_fatal_error(Msg.str());\n"
+    << "  }\n"
+    << "#else\n"
+    << "// Silence unused variable warning on targets that don't use MCII for "
+       "other purposes (e.g. BPF).\n"
+    << "(void)MCII;\n"
+    << "#endif // NDEBUG\n";
+  o << "}\n";
+  o << "#endif\n";
 }
 
 } // End anonymous namespace

@@ -79,6 +79,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LibCallsShrinkWrapLegacyPass, "libcalls-shrinkwrap",
                     "Conditionally eliminate dead library calls", false, false)
 
+namespace {
 class LibCallsShrinkWrap : public InstVisitor<LibCallsShrinkWrap> {
 public:
   LibCallsShrinkWrap(const TargetLibraryInfo &TLI) : TLI(TLI), Changed(false){};
@@ -136,6 +137,7 @@ private:
   SmallVector<CallInst *, 16> WorkList;
   bool Changed;
 };
+} // end anonymous namespace
 
 // Perform the transformation to calls with errno set by domain error.
 bool LibCallsShrinkWrap::performCallDomainErrorOnly(CallInst *CI,
@@ -534,7 +536,7 @@ void LibCallsShrinkWrapLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
-bool runImpl(Function &F, const TargetLibraryInfo &TLI) {
+static bool runImpl(Function &F, const TargetLibraryInfo &TLI) {
   if (F.hasFnAttribute(Attribute::OptimizeForSize))
     return false;
   LibCallsShrinkWrap CCDCE(TLI);

@@ -52,9 +52,9 @@ AArch64ELFObjectWriter::~AArch64ELFObjectWriter() {}
         "supported (LP64 eqv: " #lp64rtype ")"
 
 // assumes IsILP32 is true
-bool isNonILP32reloc(const MCFixup &Fixup, AArch64MCExpr::VariantKind RefKind,
-                     MCContext &Ctx)
-{
+static bool isNonILP32reloc(const MCFixup &Fixup,
+                            AArch64MCExpr::VariantKind RefKind,
+                            MCContext &Ctx) {
   if ((unsigned)Fixup.getKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch(RefKind) {

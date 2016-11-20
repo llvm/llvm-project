@@ -14,6 +14,8 @@
 #include "llvm/TableGen/Record.h"
 
 #include <map>
+#include <string>
+#include <vector>
 
 namespace llvm {
 class Record;
@@ -37,6 +39,16 @@ struct SubtargetFeatureInfo {
   static std::vector<std::pair<Record *, SubtargetFeatureInfo>>
   getAll(const RecordKeeper &Records);
 
+  /// Emit the subtarget feature flag definitions.
+  static void emitSubtargetFeatureFlagEnumeration(
+      std::map<Record *, SubtargetFeatureInfo, LessRecordByID>
+          &SubtargetFeatures,
+      raw_ostream &OS);
+
+  static void emitNameTable(std::map<Record *, SubtargetFeatureInfo,
+                                     LessRecordByID> &SubtargetFeatures,
+                            raw_ostream &OS);
+
   /// Emit the function to compute the list of available features given a
   /// subtarget.
   ///
@@ -44,10 +56,11 @@ struct SubtargetFeatureInfo {
   ///                   <TargetName>Subtarget)
   /// \param ClassName  The name of the class (without the <Target> prefix)
   ///                   that will contain the generated functions.
+  /// \param FuncName   The name of the function to emit.
   /// \param SubtargetFeatures A map of TableGen records to the
   ///                          SubtargetFeatureInfo equivalent.
   static void emitComputeAvailableFeatures(
-      StringRef TargetName, StringRef ClassName,
+      StringRef TargetName, StringRef ClassName, StringRef FuncName,
       std::map<Record *, SubtargetFeatureInfo, LessRecordByID>
           &SubtargetFeatures,
       raw_ostream &OS);

@@ -91,12 +91,12 @@ cl::opt<bool> LTOStripInvalidDebugInfo(
     cl::init(false),
 #endif
     cl::Hidden);
-}
 
-static cl::opt<std::string>
-    RemarksFilename("pass-remarks-output",
-                    cl::desc("Output filename for pass remarks"),
-                    cl::value_desc("filename"));
+cl::opt<std::string>
+    LTORemarksFilename("pass-remarks-output",
+                       cl::desc("Output filename for pass remarks"),
+                       cl::value_desc("filename"));
+}
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
     : Context(Context), MergedModule(new Module("ld-temp.o", Context)),
@@ -502,16 +502,16 @@ void LTOCodeGenerator::verifyMergedModuleOnce() {
 }
 
 bool LTOCodeGenerator::setupOptimizationRemarks() {
-  if (RemarksFilename != "") {
+  if (LTORemarksFilename != "") {
     std::error_code EC;
     DiagnosticOutputFile = llvm::make_unique<tool_output_file>(
-        RemarksFilename, EC, sys::fs::F_None);
+        LTORemarksFilename, EC, sys::fs::F_None);
     if (EC) {
       emitError(EC.message());
       return false;
     }
     Context.setDiagnosticsOutputFile(
-        new yaml::Output(DiagnosticOutputFile->os()));
+        llvm::make_unique<yaml::Output>(DiagnosticOutputFile->os()));
   }
   return true;
 }

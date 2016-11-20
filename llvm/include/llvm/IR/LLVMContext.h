@@ -194,7 +194,7 @@ public:
   /// By default or if invoked with null, diagnostics are not saved in a file
   /// but only emitted via the diagnostic handler.  Even if an output file is
   /// set, the handler is invoked for each diagnostic message.
-  void setDiagnosticsOutputFile(yaml::Output *F);
+  void setDiagnosticsOutputFile(std::unique_ptr<yaml::Output> F);
 
   /// \brief Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity

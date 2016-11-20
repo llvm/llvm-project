@@ -15,6 +15,7 @@
 #include "AsmWriterInst.h"
 #include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
+#include "Types.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -477,15 +478,6 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
   O << "}\n";
 }
 
-static const char *getMinimalTypeForRange(uint64_t Range) {
-  assert(Range < 0xFFFFFFFFULL && "Enum too large");
-  if (Range > 0xFFFF)
-    return "uint32_t";
-  if (Range > 0xFF)
-    return "uint16_t";
-  return "uint8_t";
-}
-
 static void
 emitRegisterNameString(raw_ostream &O, StringRef AltName,
                        const std::deque<CodeGenRegister> &Registers) {
@@ -530,7 +522,7 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
   StringTable.emit(O, printChar);
   O << "  };\n\n";
 
-  O << "  static const " << getMinimalTypeForRange(StringTable.size()-1)
+  O << "  static const " << getMinimalTypeForRange(StringTable.size() - 1, 32)
     << " RegAsmOffset" << AltName << "[] = {";
   for (unsigned i = 0, e = Registers.size(); i != e; ++i) {
     if ((i % 14) == 0)

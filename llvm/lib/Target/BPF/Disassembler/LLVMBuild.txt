@@ -1,4 +1,4 @@
-;===- ./lib/Target/BPF/LLVMBuild.txt ---------------------------*- Conf -*--===;
+;===- ./lib/Target/BPF/Disassembler/LLVMBuild.txt --------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,29 +15,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = InstPrinter Disassembler MCTargetDesc TargetInfo
-
 [component_0]
-type = TargetGroup
-name = BPF
-parent = Target
-has_asmprinter = 1
-has_disassembler = 1
-
-[component_1]
 type = Library
-name = BPFCodeGen
+name = BPFDisassembler
 parent = BPF
-required_libraries =
- AsmPrinter
- CodeGen
- Core
- MC
- BPFAsmPrinter
- BPFDesc
- BPFInfo
- SelectionDAG
- Support
- Target
+required_libraries = MCDisassembler BPFInfo Support
 add_to_library_groups = BPF
