@@ -61,6 +61,7 @@ def FIri : ComplexPattern<i64, 2, "SelectFIAddr", [add, or], []>;
 def MEMri : Operand<i64> {
   let PrintMethod = "printMemOperand";
   let EncoderMethod = "getMemoryOpValue";
+  let DecoderMethod = "decodeMemoryOpValue";
   let MIOperandInfo = (ops GPR, i16imm);
 }
 
@@ -267,6 +268,13 @@ def FI_ri
                [(set i64:$dst, FIri:$addr)]> {
   // This is a tentative instruction, and will be replaced
   // with MOV_rr and ADD_ri in PEI phase
+  let Inst{63-61} = 0;
+  let Inst{60-59} = 3;
+  let Inst{51-48} = 0;
+  let Inst{55-52} = 2;
+  let Inst{47-32} = 0;
+  let Inst{31-0} = 0;
+  let BPFClass = 0;
 }
 
 
@@ -476,13 +484,13 @@ class XADD<bits<2> SizeOp, string OpcodeStr, PatFrag OpNode>
               [(set GPR:$dst, (OpNode ADDRri:$addr, GPR:$val))]> {
   bits<3> mode;
   bits<2> size;
-  bits<4> src;
+  bits<4> dst;
   bits<20> addr;
 
   let Inst{63-61} = mode;
   let Inst{60-59} = size;
   let Inst{51-48} = addr{19-16}; // base reg
-  let Inst{55-52} = src;
+  let Inst{55-52} = dst;
   let Inst{47-32} = addr{15-0}; // offset
 
   let mode = 6;     // BPF_XADD

@@ -79,63 +79,11 @@
 
 #include <inttypes.h>
 
+#include <unwind.h>
+
 #ifndef USE_GLOBAL_STR_CONSTS
 #define USE_GLOBAL_STR_CONSTS true
 #endif
-
-// System C++ ABI unwind types from:
-//     http://mentorembedded.github.com/cxx-abi/abi-eh.html (v1.22)
-
-extern "C" {
-
-  typedef enum {
-    _URC_NO_REASON = 0,
-    _URC_FOREIGN_EXCEPTION_CAUGHT = 1,
-    _URC_FATAL_PHASE2_ERROR = 2,
-    _URC_FATAL_PHASE1_ERROR = 3,
-    _URC_NORMAL_STOP = 4,
-    _URC_END_OF_STACK = 5,
-    _URC_HANDLER_FOUND = 6,
-    _URC_INSTALL_CONTEXT = 7,
-    _URC_CONTINUE_UNWIND = 8
-  } _Unwind_Reason_Code;
-
-  typedef enum {
-    _UA_SEARCH_PHASE = 1,
-    _UA_CLEANUP_PHASE = 2,
-    _UA_HANDLER_FRAME = 4,
-    _UA_FORCE_UNWIND = 8,
-    _UA_END_OF_STACK = 16
-  } _Unwind_Action;
-
-  struct _Unwind_Exception;
-
-  typedef void (*_Unwind_Exception_Cleanup_Fn) (_Unwind_Reason_Code,
-                                                struct _Unwind_Exception *);
-
-  struct _Unwind_Exception {
-    uint64_t exception_class;
-    _Unwind_Exception_Cleanup_Fn exception_cleanup;
-
-    uintptr_t private_1;
-    uintptr_t private_2;
-
-    // @@@ The IA-64 ABI says that this structure must be double-word aligned.
-    //  Taking that literally does not make much sense generically.  Instead
-    //  we provide the maximum alignment required by any type for the machine.
-  } __attribute__((__aligned__));
-
-  struct _Unwind_Context;
-  typedef struct _Unwind_Context *_Unwind_Context_t;
-
-  extern const uint8_t *_Unwind_GetLanguageSpecificData (_Unwind_Context_t c);
-  extern uintptr_t _Unwind_GetGR (_Unwind_Context_t c, int i);
-  extern void _Unwind_SetGR (_Unwind_Context_t c, int i, uintptr_t n);
-  extern void _Unwind_SetIP (_Unwind_Context_t, uintptr_t new_value);
-  extern uintptr_t _Unwind_GetIP (_Unwind_Context_t context);
-  extern uintptr_t _Unwind_GetRegionStart (_Unwind_Context_t context);
-
-} // extern "C"
 
 //
 // Example types
@@ -270,6 +218,16 @@ static llvm::AllocaInst *createEntryBlockAlloca(llvm::Function &function,
 //
 // Runtime C Library functions
 //
+
+namespace {
+template <typename Type_>
+uintptr_t ReadType(const uint8_t *&p) {
+  Type_ value;
+  memcpy(&value, p, sizeof(Type_));
+  p += sizeof(Type_);
+  return static_cast<uintptr_t>(value);
+}
+}
 
 // Note: using an extern "C" block so that static functions can be used
 extern "C" {
@@ -461,8 +419,7 @@ static uintptr_t readEncodedPointer(const uint8_t **data, uint8_t encoding) {
   // first get value
   switch (encoding & 0x0F) {
     case llvm::dwarf::DW_EH_PE_absptr:
-      result = *((uintptr_t*)p);
-      p += sizeof(uintptr_t);
+      result = ReadType<uintptr_t>(p);
       break;
     case llvm::dwarf::DW_EH_PE_uleb128:
       result = readULEB128(&p);
@@ -472,28 +429,22 @@ static uintptr_t readEncodedPointer(const uint8_t **data, uint8_t encoding) {
       result = readSLEB128(&p);
       break;
     case llvm::dwarf::DW_EH_PE_udata2:
-      result = *((uint16_t*)p);
-      p += sizeof(uint16_t);
+      result = ReadType<uint16_t>(p);
       break;
     case llvm::dwarf::DW_EH_PE_udata4:
-      result = *((uint32_t*)p);
-      p += sizeof(uint32_t);
+      result = ReadType<uint32_t>(p);
       break;
     case llvm::dwarf::DW_EH_PE_udata8:
-      result = *((uint64_t*)p);
-      p += sizeof(uint64_t);
+      result = ReadType<uint64_t>(p);
       break;
     case llvm::dwarf::DW_EH_PE_sdata2:
-      result = *((int16_t*)p);
-      p += sizeof(int16_t);
+      result = ReadType<int16_t>(p);
       break;
     case llvm::dwarf::DW_EH_PE_sdata4:
-      result = *((int32_t*)p);
-      p += sizeof(int32_t);
+      result = ReadType<int32_t>(p);
       break;
     case llvm::dwarf::DW_EH_PE_sdata8:
-      result = *((int64_t*)p);
-      p += sizeof(int64_t);
+      result = ReadType<int64_t>(p);
       break;
     default:
       // not supported
@@ -642,12 +593,11 @@ static bool handleActionValue(int64_t *resultAction,
 /// @param exceptionObject thrown _Unwind_Exception instance.
 /// @param context unwind system context
 /// @returns minimally supported unwinding control indicator
-static _Unwind_Reason_Code handleLsda(int version,
-                                      const uint8_t *lsda,
+static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
                                       _Unwind_Action actions,
-                                      uint64_t exceptionClass,
-                                    struct _Unwind_Exception *exceptionObject,
-                                      _Unwind_Context_t context) {
+                                      _Unwind_Exception_Class exceptionClass,
+                                      struct _Unwind_Exception *exceptionObject,
+                                      struct _Unwind_Context *context) {
   _Unwind_Reason_Code ret = _URC_CONTINUE_UNWIND;
 
   if (!lsda)
@@ -826,11 +776,10 @@ static _Unwind_Reason_Code handleLsda(int version,
 /// @param exceptionObject thrown _Unwind_Exception instance.
 /// @param context unwind system context
 /// @returns minimally supported unwinding control indicator
-_Unwind_Reason_Code ourPersonality(int version,
-                                   _Unwind_Action actions,
-                                   uint64_t exceptionClass,
+_Unwind_Reason_Code ourPersonality(int version, _Unwind_Action actions,
+                                   _Unwind_Exception_Class exceptionClass,
                                    struct _Unwind_Exception *exceptionObject,
-                                   _Unwind_Context_t context) {
+                                   struct _Unwind_Context *context) {
 #ifdef DEBUG
   fprintf(stderr,
           "We are in ourPersonality(...):actions is <%d>.\n",

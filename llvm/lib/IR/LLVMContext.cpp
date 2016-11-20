@@ -212,8 +212,8 @@ yaml::Output *LLVMContext::getDiagnosticsOutputFile() {
   return pImpl->DiagnosticsOutputFile.get();
 }
 
-void LLVMContext::setDiagnosticsOutputFile(yaml::Output *F) {
-  pImpl->DiagnosticsOutputFile.reset(F);
+void LLVMContext::setDiagnosticsOutputFile(std::unique_ptr<yaml::Output> F) {
+  pImpl->DiagnosticsOutputFile = std::move(F);
 }
 
 LLVMContext::DiagnosticHandlerTy LLVMContext::getDiagnosticHandler() const {
