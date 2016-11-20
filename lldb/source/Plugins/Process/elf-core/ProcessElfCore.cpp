@@ -400,7 +400,8 @@ enum {
   NT_TASKSTRUCT,
   NT_PLATFORM,
   NT_AUXV,
-  NT_FILE = 0x46494c45
+  NT_FILE = 0x46494c45,
+  NT_PRXFPREG = 0x46e62b7f,
 };
 
 namespace FREEBSD {
@@ -552,7 +553,11 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
         thread_data->gpregset = DataExtractor(note_data, header_size, len);
         break;
       case NT_FPREGSET:
-        thread_data->fpregset = note_data;
+        // In a i386 core file NT_FPREGSET is present, but it's not the result
+        // of the FXSAVE instruction like in 64 bit files.
+        // The result from FXSAVE is in NT_PRXFPREG for i386 core files
+        if (arch.GetCore() == ArchSpec::eCore_x86_64_x86_64)
+          thread_data->fpregset = note_data;
         break;
       case NT_PRPSINFO:
         have_prpsinfo = true;
@@ -585,6 +590,11 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
       } break;
       default:
         break;
+      }
+    } else if (note.n_name == "LINUX") {
+      switch (note.n_type) {
+      case NT_PRXFPREG:
+        thread_data->fpregset = note_data;
       }
     }
 

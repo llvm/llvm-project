@@ -14,7 +14,6 @@
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "Strings.h"
-#include "SymbolListFile.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -329,22 +328,27 @@ template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
   std::stable_sort(Sections.begin(), Sections.end(), compCtors<ELFT>);
 }
 
-static void fill(uint8_t *Buf, size_t Size, ArrayRef<uint8_t> A) {
+// Fill [Buf, Buf + Size) with Filler. Filler is written in big
+// endian order. This is used for linker script "=fillexp" command.
+void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
+  uint8_t V[4];
+  write32be(V, Filler);
   size_t I = 0;
-  for (; I + A.size() < Size; I += A.size())
-    memcpy(Buf + I, A.data(), A.size());
-  memcpy(Buf + I, A.data(), Size - I);
+  for (; I + 4 < Size; I += 4)
+    memcpy(Buf + I, V, 4);
+  memcpy(Buf + I, V, Size - I);
 }
 
 template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  ArrayRef<uint8_t> Filler = Script<ELFT>::X->getFiller(this->Name);
-  if (!Filler.empty())
+  if (uint32_t Filler = Script<ELFT>::X->getFiller(this->Name))
     fill(Buf, this->Size, Filler);
+
   auto Fn = [=](InputSection<ELFT> *IS) { IS->writeTo(Buf); };
   if (Config->Threads)
     parallel_for_each(Sections.begin(), Sections.end(), Fn);
   else
     std::for_each(Sections.begin(), Sections.end(), Fn);
+
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
   Script<ELFT>::X->writeDataBytes(this->Name, Buf);

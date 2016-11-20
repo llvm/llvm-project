@@ -19,7 +19,6 @@
 #include "Error.h"
 #include "LinkerScript.h"
 #include "Memory.h"
-#include "SymbolListFile.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
 

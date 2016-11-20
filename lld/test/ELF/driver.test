@@ -16,8 +16,10 @@
 # RUN: ld.lld --help 2>&1 | FileCheck -check-prefix=HELP %s
 # HELP: USAGE:
 
-# RUN: not ld.lld --version 2>&1 | FileCheck -check-prefix=VERSION %s
+# RUN: ld.lld --version 2>&1 | FileCheck -check-prefix=VERSION %s
 # VERSION: LLD
+
+# RUN: not ld.lld -v 2>&1 | FileCheck -check-prefix=VERSION %s
 
 ## Attempt to link DSO with -r
 # RUN: ld.lld -shared %t -o %t.so
