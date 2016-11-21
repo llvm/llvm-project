@@ -4900,14 +4900,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fxray_instrument,
                    options::OPT_fnoxray_instrument, false)) {
     const char *const XRayInstrumentOption = "-fxray-instrument";
-    if (Triple.getOS() == llvm::Triple::Linux &&
-        (Triple.getArch() == llvm::Triple::arm ||
-         Triple.getArch() == llvm::Triple::x86_64)) {
-      // Supported.
-    } else {
+    if (Triple.getOS() == llvm::Triple::Linux)
+      switch (Triple.getArch()) {
+      case llvm::Triple::x86_64:
+      case llvm::Triple::arm:
+      case llvm::Triple::aarch64:
+        // Supported.
+        break;
+      default:
+        D.Diag(diag::err_drv_clang_unsupported)
+            << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+      }
+    else
       D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on " + Triple.str());
-    }
+          << (std::string(XRayInstrumentOption) + " on non-Linux target OS");
     CmdArgs.push_back(XRayInstrumentOption);
     if (const Arg *A =
             Args.getLastArg(options::OPT_fxray_instruction_threshold_,
