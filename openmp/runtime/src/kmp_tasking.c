@@ -852,7 +852,6 @@ __kmp_init_implicit_task( ident_t *loc_ref, kmp_info_t *this_thr, kmp_team_t *te
     task->td_flags.freed       = 0;
 
 #if OMP_40_ENABLED
-    task->td_dephash = NULL;
     task->td_depnode = NULL;
 #endif
 
@@ -861,6 +860,7 @@ __kmp_init_implicit_task( ident_t *loc_ref, kmp_info_t *this_thr, kmp_team_t *te
         task->td_allocated_child_tasks  = 0; // Not used because do not need to deallocate implicit task
 #if OMP_40_ENABLED
         task->td_taskgroup = NULL;           // An implicit task does not have taskgroup
+        task->td_dephash = NULL;
 #endif
         __kmp_push_current_task_to_thread( this_thr, team, tid );
     } else {
@@ -875,6 +875,39 @@ __kmp_init_implicit_task( ident_t *loc_ref, kmp_info_t *this_thr, kmp_team_t *te
     KF_TRACE(10, ("__kmp_init_implicit_task(exit): T#:%d team=%p task=%p\n",
                   tid, team, task ) );
 }
+
+
+//-----------------------------------------------------------------------------
+//// __kmp_finish_implicit_task: Release resources associated to implicit tasks
+//// at the end of parallel regions. Some resources are kept for reuse in the
+//// next parallel region.
+////
+//// thread:  thread data structure corresponding to implicit task
+//
+void
+__kmp_finish_implicit_task(kmp_info_t *thread)
+{
+    kmp_taskdata_t *task = thread->th.th_current_task;
+    if (task->td_dephash)
+        __kmp_dephash_free_entries(thread, task->td_dephash);
+}
+
+
+//-----------------------------------------------------------------------------
+//// __kmp_free_implicit_task: Release resources associated to implicit tasks
+//// when these are destroyed regions
+////
+//// thread:  thread data structure corresponding to implicit task
+//
+void
+__kmp_free_implicit_task(kmp_info_t *thread)
+{
+    kmp_taskdata_t *task = thread->th.th_current_task;
+    if (task->td_dephash)
+        __kmp_dephash_free(thread, task->td_dephash);
+    task->td_dephash = NULL;
+}
+
 
 // Round up a size to a power of two specified by val
 // Used to insert padding between structures co-allocated using a single malloc() call

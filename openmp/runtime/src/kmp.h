@@ -3327,6 +3327,8 @@ extern kmp_task_t* __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid,
   kmp_routine_entry_t task_entry );
 extern void __kmp_init_implicit_task( ident_t *loc_ref, kmp_info_t *this_thr,
                   kmp_team_t *team, int tid, int set_curr_task );
+extern void __kmp_finish_implicit_task(kmp_info_t *this_thr);
+extern void __kmp_free_implicit_task(kmp_info_t *this_thr);
 
 int __kmp_execute_tasks_32(kmp_info_t *thread, kmp_int32 gtid, kmp_flag_32 *flag, int final_spin,
                            int *thread_finished,
@@ -3496,12 +3498,18 @@ void __kmpc_omp_task_complete( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *tas
 KMP_EXPORT void __kmpc_taskgroup( ident_t * loc, int gtid );
 KMP_EXPORT void __kmpc_end_taskgroup( ident_t * loc, int gtid );
 
-KMP_EXPORT kmp_int32 __kmpc_omp_task_with_deps ( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * new_task,
-                                                 kmp_int32 ndeps, kmp_depend_info_t *dep_list,
-                                                 kmp_int32 ndeps_noalias, kmp_depend_info_t *noalias_dep_list );
-KMP_EXPORT void __kmpc_omp_wait_deps ( ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps, kmp_depend_info_t *dep_list,
-                                          kmp_int32 ndeps_noalias, kmp_depend_info_t *noalias_dep_list );
-extern void __kmp_release_deps ( kmp_int32 gtid, kmp_taskdata_t *task );
+KMP_EXPORT kmp_int32 __kmpc_omp_task_with_deps(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 ndeps_noalias,
+    kmp_depend_info_t *noalias_dep_list);
+KMP_EXPORT void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid,
+                                     kmp_int32 ndeps,
+                                     kmp_depend_info_t *dep_list,
+                                     kmp_int32 ndeps_noalias,
+                                     kmp_depend_info_t *noalias_dep_list);
+extern void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task);
+extern void __kmp_dephash_free_entries(kmp_info_t *thread, kmp_dephash_t *h);
+extern void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h);
 
 extern kmp_int32 __kmp_omp_task( kmp_int32 gtid, kmp_task_t * new_task, bool serialize_immediate );
 
