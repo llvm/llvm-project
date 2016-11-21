@@ -53,20 +53,19 @@ void RegisterContext::InvalidateIfNeeded(bool force) {
   }
 }
 
-const RegisterInfo *RegisterContext::GetRegisterInfoByName(const char *reg_name,
-                                                           uint32_t start_idx) {
-  if (reg_name && reg_name[0]) {
-    const uint32_t num_registers = GetRegisterCount();
-    for (uint32_t reg = start_idx; reg < num_registers; ++reg) {
-      const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
+const RegisterInfo *
+RegisterContext::GetRegisterInfoByName(llvm::StringRef reg_name,
+                                       uint32_t start_idx) {
+  if (reg_name.empty())
+    return nullptr;
 
-      if ((reg_info->name != nullptr &&
-           ::strcasecmp(reg_info->name, reg_name) == 0) ||
-          (reg_info->alt_name != nullptr &&
-           ::strcasecmp(reg_info->alt_name, reg_name) == 0)) {
-        return reg_info;
-      }
-    }
+  const uint32_t num_registers = GetRegisterCount();
+  for (uint32_t reg = start_idx; reg < num_registers; ++reg) {
+    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
+
+    if (reg_name.equals_lower(reg_info->name) ||
+        reg_name.equals_lower(reg_info->alt_name))
+      return reg_info;
   }
   return nullptr;
 }

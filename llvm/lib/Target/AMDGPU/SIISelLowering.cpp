@@ -2047,17 +2047,16 @@ SDValue SITargetLowering::lowerConstantFP(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-  EVT DstVT = Op.getValueType();
-  EVT SrcVT = Op.getOperand(0).getValueType();
-
-  assert(DstVT == MVT::f16 &&
+  assert(Op.getValueType() == MVT::f16 &&
          "Do not know how to custom lower FP_ROUND for non-f16 type");
 
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
   if (SrcVT != MVT::f64)
     return Op;
 
   SDLoc DL(Op);
-  SDValue Src = Op.getOperand(0);
+
   SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
   return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);;
@@ -4172,6 +4171,8 @@ std::pair<unsigned, const TargetRegisterClass *>
 SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                StringRef Constraint,
                                                MVT VT) const {
+  if (!isTypeLegal(VT))
+    return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {

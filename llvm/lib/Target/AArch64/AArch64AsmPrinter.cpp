@@ -223,7 +223,9 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   auto Target = OutContext.createTempSymbol();
 
   // Emit "B #32" instruction, which jumps over the next 28 bytes.
-  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::B).addImm(32));
+  // The operand has to be the number of 4-byte instructions to jump over,
+  // including the current instruction.
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::B).addImm(8));
 
   for (int8_t I = 0; I < NoopsInSledCount; I++)
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));

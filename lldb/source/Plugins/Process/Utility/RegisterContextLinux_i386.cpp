@@ -111,6 +111,10 @@ RegisterContextLinux_i386::RegisterContextLinux_i386(
 
 size_t RegisterContextLinux_i386::GetGPRSize() const { return sizeof(GPR); }
 
+size_t RegisterContextLinux_i386::GetFXSAVEOffset() const {
+  return (LLVM_EXTENSION offsetof(UserArea, i387));
+}
+
 const RegisterInfo *RegisterContextLinux_i386::GetRegisterInfo() const {
   switch (m_target_arch.GetMachine()) {
   case llvm::Triple::x86:

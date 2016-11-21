@@ -629,7 +629,7 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
     if (target == NULL) {
       TargetSP new_target_sp;
 
-      error = debugger.GetTargetList().CreateTarget(debugger, NULL, NULL, false,
+      error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
                                                     NULL, new_target_sp);
       target = new_target_sp.get();
       if (log)

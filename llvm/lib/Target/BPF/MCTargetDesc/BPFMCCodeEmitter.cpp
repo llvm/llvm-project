@@ -30,12 +30,14 @@ namespace {
 class BPFMCCodeEmitter : public MCCodeEmitter {
   BPFMCCodeEmitter(const BPFMCCodeEmitter &) = delete;
   void operator=(const BPFMCCodeEmitter &) = delete;
+  const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
   bool IsLittleEndian;
 
 public:
-  BPFMCCodeEmitter(const MCRegisterInfo &mri, bool IsLittleEndian)
-    : MRI(mri), IsLittleEndian(IsLittleEndian) {}
+  BPFMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
+                   bool IsLittleEndian)
+      : MCII(mcii), MRI(mri), IsLittleEndian(IsLittleEndian) {}
 
   ~BPFMCCodeEmitter() {}
 
@@ -58,19 +60,24 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
+
+private:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
 }
 
 MCCodeEmitter *llvm::createBPFMCCodeEmitter(const MCInstrInfo &MCII,
                                             const MCRegisterInfo &MRI,
                                             MCContext &Ctx) {
-  return new BPFMCCodeEmitter(MRI, true);
+  return new BPFMCCodeEmitter(MCII, MRI, true);
 }
 
 MCCodeEmitter *llvm::createBPFbeMCCodeEmitter(const MCInstrInfo &MCII,
                                               const MCRegisterInfo &MRI,
                                               MCContext &Ctx) {
-  return new BPFMCCodeEmitter(MRI, false);
+  return new BPFMCCodeEmitter(MCII, MRI, false);
 }
 
 unsigned BPFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
@@ -108,6 +115,9 @@ static uint8_t SwapBits(uint8_t Val)
 void BPFMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   unsigned Opcode = MI.getOpcode();
   support::endian::Writer<support::little> LE(OS);
   support::endian::Writer<support::big> BE(OS);
@@ -165,4 +175,5 @@ uint64_t BPFMCCodeEmitter::getMemoryOpValue(const MCInst &MI, unsigned Op,
   return Encoding;
 }
 
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "BPFGenMCCodeEmitter.inc"

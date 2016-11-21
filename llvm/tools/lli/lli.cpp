@@ -306,7 +306,7 @@ private:
 };
 
 // On Mingw and Cygwin, an external symbol named '__main' is called from the
-// generated 'main' function to allow static intialization.  To avoid linking
+// generated 'main' function to allow static initialization.  To avoid linking
 // problems with remote targets (because lli's remote target support does not
 // currently handle external linking) we add a secondary module which defines
 // an empty '__main' function.
@@ -357,6 +357,12 @@ CodeGenOpt::Level getOptLevel() {
   llvm_unreachable("Unrecognized opt level.");
 }
 
+LLVM_ATTRIBUTE_NORETURN
+static void reportError(SMDiagnostic Err, const char *ProgName) {
+  Err.print(ProgName, errs());
+  exit(1);
+}
+
 //===----------------------------------------------------------------------===//
 // main Driver function
 //
@@ -388,20 +394,16 @@ int main(int argc, char **argv, char * const *envp) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Owner = parseIRFile(InputFile, Err, Context);
   Module *Mod = Owner.get();
-  if (!Mod) {
-    Err.print(argv[0], errs());
-    return 1;
-  }
+  if (!Mod)
+    reportError(Err, argv[0]);
 
   if (UseJITKind == JITKind::OrcLazy) {
     std::vector<std::unique_ptr<Module>> Ms;
     Ms.push_back(std::move(Owner));
     for (auto &ExtraMod : ExtraModules) {
       Ms.push_back(parseIRFile(ExtraMod, Err, Context));
-      if (!Ms.back()) {
-        Err.print(argv[0], errs());
-        return 1;
-      }
+      if (!Ms.back())
+        reportError(Err, argv[0]);
     }
     std::vector<std::string> Args;
     Args.push_back(InputFile);
@@ -486,10 +488,8 @@ int main(int argc, char **argv, char * const *envp) {
   // Load any additional modules specified on the command line.
   for (unsigned i = 0, e = ExtraModules.size(); i != e; ++i) {
     std::unique_ptr<Module> XMod = parseIRFile(ExtraModules[i], Err, Context);
-    if (!XMod) {
-      Err.print(argv[0], errs());
-      return 1;
-    }
+    if (!XMod)
+      reportError(Err, argv[0]);
     if (EnableCacheManager) {
       std::string CacheName("file:");
       CacheName.append(ExtraModules[i]);
@@ -504,8 +504,7 @@ int main(int argc, char **argv, char * const *envp) {
     if (!Obj) {
       // TODO: Actually report errors helpfully.
       consumeError(Obj.takeError());
-      Err.print(argv[0], errs());
-      return 1;
+      reportError(Err, argv[0]);
     }
     object::OwningBinary<object::ObjectFile> &O = Obj.get();
     EE->addObjectFile(std::move(O));
@@ -514,10 +513,8 @@ int main(int argc, char **argv, char * const *envp) {
   for (unsigned i = 0, e = ExtraArchives.size(); i != e; ++i) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> ArBufOrErr =
         MemoryBuffer::getFileOrSTDIN(ExtraArchives[i]);
-    if (!ArBufOrErr) {
-      Err.print(argv[0], errs());
-      return 1;
-    }
+    if (!ArBufOrErr)
+      reportError(Err, argv[0]);
     std::unique_ptr<MemoryBuffer> &ArBuf = ArBufOrErr.get();
 
     Expected<std::unique_ptr<object::Archive>> ArOrErr =
@@ -528,7 +525,7 @@ int main(int argc, char **argv, char * const *envp) {
       logAllUnhandledErrors(ArOrErr.takeError(), OS, "");
       OS.flush();
       errs() << Buf;
-      return 1;
+      exit(1);
     }
     std::unique_ptr<object::Archive> &Ar = ArOrErr.get();
 

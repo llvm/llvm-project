@@ -14,11 +14,12 @@
 #include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
 
 namespace llvm {
+
 namespace pdb {
 
 class ModInfo {
@@ -54,8 +55,7 @@ private:
 
 struct ModuleInfoEx {
   ModuleInfoEx(const ModInfo &Info) : Info(Info) {}
-  ModuleInfoEx(const ModuleInfoEx &Ex)
-      : Info(Ex.Info), SourceFiles(Ex.SourceFiles) {}
+  ModuleInfoEx(const ModuleInfoEx &Ex) = default;
 
   ModInfo Info;
   std::vector<StringRef> SourceFiles;
@@ -64,6 +64,7 @@ struct ModuleInfoEx {
 } // end namespace pdb
 
 namespace msf {
+
 template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
   Error operator()(ReadableStreamRef Stream, uint32_t &Length,
                    pdb::ModInfo &Info) const {
@@ -73,6 +74,7 @@ template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
     return Error::success();
   }
 };
+
 } // end namespace msf
 
 } // end namespace llvm

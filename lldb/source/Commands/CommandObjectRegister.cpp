@@ -356,7 +356,7 @@ protected:
       result.SetStatus(eReturnStatusFailed);
     } else {
       const char *reg_name = command.GetArgumentAtIndex(0);
-      const char *value_str = command.GetArgumentAtIndex(1);
+      llvm::StringRef value_str = command.GetArgumentAtIndex(1);
 
       // in most LLDB commands we accept $rbx as the name for register RBX - and
       // here we would
@@ -373,7 +373,7 @@ protected:
       if (reg_info) {
         RegisterValue reg_value;
 
-        Error error(reg_value.SetValueFromCString(reg_info, value_str));
+        Error error(reg_value.SetValueFromString(reg_info, value_str));
         if (error.Success()) {
           if (reg_ctx->WriteRegister(reg_info, reg_value)) {
             // Toss all frames and anything else in the thread
@@ -386,11 +386,11 @@ protected:
         if (error.AsCString()) {
           result.AppendErrorWithFormat(
               "Failed to write register '%s' with value '%s': %s\n", reg_name,
-              value_str, error.AsCString());
+              value_str.str().c_str(), error.AsCString());
         } else {
           result.AppendErrorWithFormat(
               "Failed to write register '%s' with value '%s'", reg_name,
-              value_str);
+              value_str.str().c_str());
         }
         result.SetStatus(eReturnStatusFailed);
       } else {

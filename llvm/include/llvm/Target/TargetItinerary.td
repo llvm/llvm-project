@@ -92,7 +92,7 @@ def NoItinerary : InstrItinClass;
 //
 // OperandCycles are optional "cycle counts". They specify the cycle after
 // instruction issue the values which correspond to specific operand indices
-// are defined or read. Bypasses are optional "pipeline forwarding pathes", if
+// are defined or read. Bypasses are optional "pipeline forwarding paths", if
 // a def by an instruction is available on a specific bypass and the use can
 // read from the same bypass, then the operand use latency is reduced by one.
 //

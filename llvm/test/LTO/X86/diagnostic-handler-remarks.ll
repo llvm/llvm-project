@@ -27,6 +27,13 @@
 ; RUN:     FileCheck %s -allow-empty
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
 
+; Optimization records are collected regardless of the diagnostic handler
+; RUN: llvm-lto -pass-remarks-output=%t.yaml \
+; RUN:          -exported-symbol _func2 \
+; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
+; RUN:     FileCheck %s -allow-empty
+; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
+
 ; REMARKS: remark: {{.*}} foo inlined into main
 ; REMARKS: remark: {{.*}} loop not vectorized: cannot prove it is safe to reorder memory operations
 ; REMARKS_DH: llvm-lto: remark: {{.*}} foo inlined into main
@@ -36,6 +43,16 @@
 ; NM-NOT: foo
 ; NM: func2
 ; NM: main
+
+; YAML: --- !Passed
+; YAML: Pass:            inline
+; YAML: Name:            Inlined
+; YAML: Function:        main
+; YAML: Args:
+; YAML:   - Callee:          foo
+; YAML:   - String:          ' inlined into '
+; YAML:   - Caller:          main
+; YAML: ...
 
 target triple = "x86_64-apple-darwin"
 

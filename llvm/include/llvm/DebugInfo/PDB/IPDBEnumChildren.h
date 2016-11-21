@@ -10,7 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBENUMCHILDREN_H
 #define LLVM_DEBUGINFO_PDB_IPDBENUMCHILDREN_H
 
-#include "PDBTypes.h"
+#include <cstdint>
 #include <memory>
 
 namespace llvm {
@@ -21,7 +21,7 @@ public:
   typedef std::unique_ptr<ChildType> ChildTypePtr;
   typedef IPDBEnumChildren<ChildType> MyType;
 
-  virtual ~IPDBEnumChildren() {}
+  virtual ~IPDBEnumChildren() = default;
 
   virtual uint32_t getChildCount() const = 0;
   virtual ChildTypePtr getChildAtIndex(uint32_t Index) const = 0;
@@ -29,7 +29,8 @@ public:
   virtual void reset() = 0;
   virtual MyType *clone() const = 0;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_IPDBENUMCHILDREN_H

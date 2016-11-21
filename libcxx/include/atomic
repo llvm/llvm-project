@@ -579,11 +579,11 @@ struct __gcc_atomic_t {
 #endif
 
   _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     __gcc_atomic_t() _NOEXCEPT = default;
 #else
     __gcc_atomic_t() _NOEXCEPT : __a_value() {}
-#endif // _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#endif // _LIBCPP_CXX03_LANG
   _LIBCPP_CONSTEXPR explicit __gcc_atomic_t(_Tp value) _NOEXCEPT
     : __a_value(value) {}
   _Tp __a_value;
@@ -935,11 +935,11 @@ struct __atomic_base  // false
         {return __c11_atomic_compare_exchange_strong(&__a_, &__e, __d, __m, __m);}
 
     _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     __atomic_base() _NOEXCEPT = default;
 #else
     __atomic_base() _NOEXCEPT : __a_() {}
-#endif // _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
@@ -1690,11 +1690,11 @@ typedef struct atomic_flag
         {__c11_atomic_store(&__a_, false, __m);}
 
     _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     atomic_flag() _NOEXCEPT = default;
 #else
     atomic_flag() _NOEXCEPT : __a_() {}
-#endif // _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION

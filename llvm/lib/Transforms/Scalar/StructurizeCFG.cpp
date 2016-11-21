@@ -141,7 +141,7 @@ public:
 /// Control flow is expressed as a branch where the true exit goes into the
 /// "Then"/"Else" region, while the false exit skips the region
 /// The condition for the optional "Else" region is expressed as a PHI node.
-/// The incomming values of the PHI node are true for the "If" edge and false
+/// The incoming values of the PHI node are true for the "If" edge and false
 /// for the "Then" edge.
 ///
 /// Additionally to that even complicated loops look like this:

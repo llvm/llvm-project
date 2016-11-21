@@ -4752,6 +4752,10 @@ _mm_castsi128_pd(__m128i __a)
   return (__m128d)__a;
 }
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /// \brief Indicates that a spin loop is being executed for the purposes of
 ///    optimizing power consumption during the loop.
 ///
@@ -4759,11 +4763,11 @@ _mm_castsi128_pd(__m128i __a)
 ///
 /// This intrinsic corresponds to the \c PAUSE instruction.
 ///
-#if defined(__cplusplus)
-extern "C"
-#endif
 void _mm_pause(void);
 
+#if defined(__cplusplus)
+} // extern "C"
+#endif
 #undef __DEFAULT_FN_ATTRS
 
 #define _MM_SHUFFLE2(x, y) (((x) << 1) | (y))

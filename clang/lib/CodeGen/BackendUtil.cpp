@@ -113,9 +113,9 @@ public:
                      const clang::TargetOptions &TOpts,
                      const LangOptions &LOpts, Module *M)
       : Diags(_Diags), CodeGenOpts(CGOpts), TargetOpts(TOpts), LangOpts(LOpts),
-        TheModule(M), PreLinkTime("Pre-Linking Passes Time"),
-        CodeGenerationTime("Code Generation Time"), PreLinkPasses(nullptr) {
-}
+        TheModule(M), PreLinkTime("prelink", "Pre-Linking Passes Time"),
+        CodeGenerationTime("codegen", "Code Generation Time"),
+        PreLinkPasses(nullptr)  {}
 
   ~EmitAssemblyHelper() {
     delete PreLinkPasses;

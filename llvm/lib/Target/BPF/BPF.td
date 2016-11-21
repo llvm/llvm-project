@@ -25,14 +25,20 @@ def BPFInstPrinter : AsmWriter {
   bit isMCAsmWriter = 1;
 }
 
+def BPFAsmParser : AsmParser {
+  bit HasMnemonicFirst = 0;
+}
+
 def BPFAsmParserVariant : AsmParserVariant {
   int Variant = 0;
   string Name = "BPF";
   string BreakCharacters = ".";
+  string TokenizingCharacters = "#()[]=:.<>!+*";
 }
 
 def BPF : Target {
   let InstructionSet = BPFInstrInfo;
   let AssemblyWriters = [BPFInstPrinter];
+  let AssemblyParsers = [BPFAsmParser];
   let AssemblyParserVariants = [BPFAsmParserVariant];
 }

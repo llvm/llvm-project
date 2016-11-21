@@ -373,6 +373,7 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
     }
     // If the moved declaration is in same namespace CurrentNamespace, add
     // a preceeding `\n' before the moved declaration.
+    // FIXME: Don't add empty lines between using declarations.
     if (!IsInNewNamespace)
       NewCode += "\n";
     NewCode += getDeclarationSourceText(MovedDecl.Decl, MovedDecl.SM);
@@ -453,15 +454,17 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   //============================================================================
   // Matchers for old cc
   //============================================================================
-  auto InOldCCNamedNamespace =
-      allOf(hasParent(namespaceDecl(unless(isAnonymous()))), InOldCC);
-  // Matching using decls/type alias decls which are in named namespace. Those
-  // in classes, functions and anonymous namespaces are covered in other
-  // matchers.
+  auto InOldCCNamedOrGlobalNamespace =
+      allOf(hasParent(decl(anyOf(namespaceDecl(unless(isAnonymous())),
+                                 translationUnitDecl()))),
+            InOldCC);
+  // Matching using decls/type alias decls which are in named namespace or
+  // global namespace. Those in classes, functions and anonymous namespaces are
+  // covered in other matchers.
   Finder->addMatcher(
-      namedDecl(anyOf(usingDecl(InOldCCNamedNamespace),
-                      usingDirectiveDecl(InOldCC, InOldCCNamedNamespace),
-                      typeAliasDecl(InOldCC, InOldCCNamedNamespace)))
+      namedDecl(anyOf(usingDecl(InOldCCNamedOrGlobalNamespace),
+                      usingDirectiveDecl(InOldCCNamedOrGlobalNamespace),
+                      typeAliasDecl( InOldCCNamedOrGlobalNamespace)))
           .bind("using_decl"),
       this);
 
@@ -472,7 +475,7 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Match static functions/variable definitions which are defined in named
   // namespaces.
   auto IsOldCCStaticDefinition =
-      allOf(isDefinition(), unless(InMovedClass), InOldCCNamedNamespace,
+      allOf(isDefinition(), unless(InMovedClass), InOldCCNamedOrGlobalNamespace,
             isStaticStorageClass());
   Finder->addMatcher(namedDecl(anyOf(functionDecl(IsOldCCStaticDefinition),
                                      varDecl(IsOldCCStaticDefinition)))

@@ -33,7 +33,6 @@ public:
 
   Error SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                        ExecutionContext *execution_context) override;
-  Error SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
@@ -41,9 +40,7 @@ public:
 
   bool ArchitectureWasSpecified() const { return !m_arch_str.empty(); }
 
-  const char *GetArchitectureName() {
-    return (m_arch_str.empty() ? nullptr : m_arch_str.c_str());
-  }
+  llvm::StringRef GetArchitectureName() const { return m_arch_str; }
 
 protected:
   std::string m_arch_str; // Save the arch triple in case a platform is

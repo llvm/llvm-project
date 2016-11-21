@@ -1147,7 +1147,7 @@ unsigned SIRegisterInfo::getMaxNumSGPRs(const MachineFunction &MF) const {
       Requested = 0;
 
     // If more SGPRs are required to support the input user/system SGPRs,
-    // increase to accomodate them.
+    // increase to accommodate them.
     //
     // FIXME: This really ends up using the requested number of SGPRs + number
     // of reserved special registers in total. Theoretically you could re-use

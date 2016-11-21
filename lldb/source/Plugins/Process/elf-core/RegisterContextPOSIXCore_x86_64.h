@@ -24,8 +24,6 @@ public:
       const lldb_private::DataExtractor &gpregset,
       const lldb_private::DataExtractor &fpregset);
 
-  ~RegisterContextCorePOSIX_x86_64() override;
-
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &value) override;
 
@@ -48,7 +46,8 @@ protected:
   bool WriteFPR() override;
 
 private:
-  uint8_t *m_gpregset;
+  std::unique_ptr<uint8_t[]> m_gpregset;
+  std::unique_ptr<uint8_t[]> m_fpregset;
 };
 
 #endif // liblldb_RegisterContextCorePOSIX_x86_64_h_

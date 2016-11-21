@@ -400,6 +400,8 @@ def FCC : RegisterClass<"Mips", [i32], 32, (sequence "FCC%u", 0, 7)>,
 // This class allows us to represent this in codegen patterns.
 def FGRCC : RegisterClass<"Mips", [i32], 32, (sequence "F%u", 0, 31)>;
 
+def MSA128F16 : RegisterClass<"Mips", [f16], 128, (sequence "W%u", 0, 31)>;
+
 def MSA128B: RegisterClass<"Mips", [v16i8], 128,
                            (sequence "W%u", 0, 31)>;
 def MSA128H: RegisterClass<"Mips", [v8i16, v8f16], 128,
@@ -644,6 +646,10 @@ def COP2Opnd : RegisterOperand<COP2> {
 
 def COP3Opnd : RegisterOperand<COP3> {
   let ParserMatchClass = COP3AsmOperand;
+}
+
+def MSA128F16Opnd : RegisterOperand<MSA128F16> {
+  let ParserMatchClass = MSA128AsmOperand;
 }
 
 def MSA128BOpnd : RegisterOperand<MSA128B> {

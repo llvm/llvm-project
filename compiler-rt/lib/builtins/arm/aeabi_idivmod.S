@@ -15,12 +15,21 @@
 //   return {quot, rem};
 // }
 
+#if defined(__MINGW32__)
+#define __aeabi_idivmod __rt_sdiv
+#endif
+
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_idivmod)
         push    { lr }
         sub     sp, sp, #4
         mov     r2, sp
+#if defined(__MINGW32__)
+        mov     r3, r0
+        mov     r0, r1
+        mov     r1, r3
+#endif
         bl      SYMBOL_NAME(__divmodsi4)
         ldr     r1, [sp]
         add     sp, sp, #4

@@ -41,7 +41,7 @@ void wsr64_2(unsigned long v) {
 }
 
 unsigned rsr_2() {
-  return __builtin_arm_rsr("0:1:2:3:4");
+  return __builtin_arm_rsr("0:1:15:15:4");
 }
 
 void *rsrp_2() {
@@ -49,7 +49,7 @@ void *rsrp_2() {
 }
 
 unsigned long rsr64_2() {
-  return __builtin_arm_rsr64("0:1:2:3:4");
+  return __builtin_arm_rsr64("0:1:15:15:4");
 }
 
 void wsr_3(unsigned v) {
@@ -68,10 +68,34 @@ unsigned rsr_3() {
   return __builtin_arm_rsr("0:1:2"); //expected-error {{invalid special register for builtin}}
 }
 
+unsigned rsr_4() {
+  return __builtin_arm_rsr("0:1:2:3:8"); //expected-error {{invalid special register for builtin}}
+}
+
+unsigned rsr_5() {
+  return __builtin_arm_rsr("0:8:1:2:3"); //expected-error {{invalid special register for builtin}}
+}
+
+unsigned rsr_6() {
+  return __builtin_arm_rsr("0:1:16:16:2"); //expected-error {{invalid special register for builtin}}
+}
+
 void *rsrp_3() {
   return __builtin_arm_rsrp("0:1:2"); //expected-error {{invalid special register for builtin}}
 }
 
 unsigned long rsr64_3() {
   return __builtin_arm_rsr64("0:1:2"); //expected-error {{invalid special register for builtin}}
+}
+
+unsigned long rsr64_4() {
+  return __builtin_arm_rsr64("0:1:2:3:8"); //expected-error {{invalid special register for builtin}}
+}
+
+unsigned long rsr64_5() {
+  return __builtin_arm_rsr64("0:8:2:3:4"); //expected-error {{invalid special register for builtin}}
+}
+
+unsigned long rsr64_6() {
+  return __builtin_arm_rsr64("0:1:16:16:2"); //expected-error {{invalid special register for builtin}}
 }

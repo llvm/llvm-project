@@ -98,7 +98,7 @@ public:
                                         VariableList &var_list);
 
   static Error GetValuesForVariableExpressionPath(
-      const char *variable_expr_path, ExecutionContextScope *scope,
+      llvm::StringRef variable_expr_path, ExecutionContextScope *scope,
       GetVariableCallback callback, void *baton, VariableList &variable_list,
       ValueObjectList &valobj_list);
 

@@ -29,6 +29,8 @@ public:
 
   virtual size_t GetGPRSize() const = 0;
 
+  virtual size_t GetFXSAVEOffset() const { return 0; }
+
   virtual const lldb_private::RegisterInfo *GetRegisterInfo() const = 0;
 
   // Returns the number of registers including the user registers and the

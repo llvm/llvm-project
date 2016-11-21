@@ -30,6 +30,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -911,6 +912,11 @@ static bool ExpandResponseFile(StringRef FName, StringSaver &Saver,
           if (llvm::sys::path::is_relative(FileName)) {
             SmallString<128> ResponseFile;
             ResponseFile.append(1, '@');
+            if (llvm::sys::path::is_relative(FName)) {
+              SmallString<128> curr_dir;
+              llvm::sys::fs::current_path(curr_dir);
+              ResponseFile.append(curr_dir.str());
+            }
             llvm::sys::path::append(
                 ResponseFile, llvm::sys::path::parent_path(FName), FileName);
             NewArgv[I] = Saver.save(ResponseFile.c_str()).data();

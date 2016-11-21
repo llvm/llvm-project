@@ -4900,14 +4900,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fxray_instrument,
                    options::OPT_fnoxray_instrument, false)) {
     const char *const XRayInstrumentOption = "-fxray-instrument";
-    if (Triple.getOS() == llvm::Triple::Linux &&
-        (Triple.getArch() == llvm::Triple::arm ||
-         Triple.getArch() == llvm::Triple::x86_64)) {
-      // Supported.
-    } else {
+    if (Triple.getOS() == llvm::Triple::Linux)
+      switch (Triple.getArch()) {
+      case llvm::Triple::x86_64:
+      case llvm::Triple::arm:
+      case llvm::Triple::aarch64:
+        // Supported.
+        break;
+      default:
+        D.Diag(diag::err_drv_clang_unsupported)
+            << (std::string(XRayInstrumentOption) + " on " + Triple.str());
+      }
+    else
       D.Diag(diag::err_drv_clang_unsupported)
-          << (std::string(XRayInstrumentOption) + " on " + Triple.str());
-    }
+          << (std::string(XRayInstrumentOption) + " on non-Linux target OS");
     CmdArgs.push_back(XRayInstrumentOption);
     if (const Arg *A =
             Args.getLastArg(options::OPT_fxray_instruction_threshold_,
@@ -6225,7 +6231,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                   Args.hasArg(options::OPT_S))) {
         F = Output.getFilename();
       } else {
-        // Use the compilation directory.
+        // Use the input filename.
         F = llvm::sys::path::stem(Input.getBaseInput());
 
         // If we're compiling for an offload architecture (i.e. a CUDA device),
@@ -8415,6 +8421,19 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // I'm not sure why this particular decomposition exists in gcc, but
   // we follow suite for ease of comparison.
   AddLinkArgs(C, Args, CmdArgs, Inputs);
+
+  // For LTO, pass the name of the optimization record file.
+  if (Args.hasFlag(options::OPT_fsave_optimization_record,
+                   options::OPT_fno_save_optimization_record, false)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-pass-remarks-output");
+    CmdArgs.push_back("-mllvm");
+
+    SmallString<128> F;
+    F = Output.getFilename();
+    F += ".opt.yaml";
+    CmdArgs.push_back(Args.MakeArgString(F));
+  }
 
   // It seems that the 'e' option is completely ignored for dynamic executables
   // (the default), and with static executables, the last one wins, as expected.
@@ -11981,7 +12000,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Check that our installation's ptxas supports gpu_arch.
   if (!Args.hasArg(options::OPT_no_cuda_version_check)) {
-    TC.cudaInstallation().CheckCudaVersionSupportsArch(gpu_arch);
+    TC.CudaInstallation.CheckCudaVersionSupportsArch(gpu_arch);
   }
 
   ArgStringList CmdArgs;

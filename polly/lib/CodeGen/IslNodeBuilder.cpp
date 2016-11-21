@@ -18,10 +18,12 @@
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslExprBuilder.h"
 #include "polly/CodeGen/LoopGenerators.h"
+#include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/CodeGen/Utils.h"
 #include "polly/Config/config.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
+#include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
@@ -48,11 +50,20 @@
 using namespace polly;
 using namespace llvm;
 
+#define DEBUG_TYPE "polly-codegen"
+
+STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
+
 // The maximal number of dimensions we allow during invariant load construction.
 // More complex access ranges will result in very high compile time and are also
 // unlikely to result in good code. This value is very high and should only
 // trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
 static int const MaxDimensionsInAccessRange = 9;
+
+static cl::opt<bool> PollyGenerateRTCPrint(
+    "polly-codegen-emit-rtc-print",
+    cl::desc("Emit code that prints the runtime check result dynamically."),
+    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 __isl_give isl_ast_expr *
 IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
@@ -1320,7 +1331,20 @@ Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
     RTC = Builder.CreateIsNotNull(RTC);
   Value *OverflowHappened =
       Builder.CreateNot(ExprBuilder.getOverflowState(), "polly.rtc.overflown");
+
+  if (PollyGenerateRTCPrint) {
+    auto *F = Builder.GetInsertBlock()->getParent();
+    RuntimeDebugBuilder::createCPUPrinter(
+        Builder, "F: " + F->getName().str() + " R: " +
+                     S.getRegion().getNameStr() + " __RTC: ",
+        RTC, " Overflow: ", OverflowHappened);
+  }
+
   RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");
   ExprBuilder.setTrackOverflow(false);
+
+  if (!isa<ConstantInt>(RTC))
+    VersionedScops++;
+
   return RTC;
 }

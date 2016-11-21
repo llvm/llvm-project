@@ -1564,17 +1564,18 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     else if (command_string[non_space] == m_comment_char)
       comment_command = true;
     else if (command_string[non_space] == CommandHistory::g_repeat_char) {
-      const char *history_string =
-          m_command_history.FindString(command_string.c_str() + non_space);
-      if (history_string == nullptr) {
+      llvm::StringRef search_str(command_string);
+      search_str = search_str.drop_front(non_space);
+      if (auto hist_str = m_command_history.FindString(search_str)) {
+        add_to_history = false;
+        command_string = *hist_str;
+        original_command_string = *hist_str;
+      } else {
         result.AppendErrorWithFormat("Could not find entry: %s in history",
                                      command_string.c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-      add_to_history = false;
-      command_string = history_string;
-      original_command_string = history_string;
     }
   }
 
@@ -1794,10 +1795,9 @@ int CommandInterpreter::HandleCompletion(
     if (first_arg[0] == m_comment_char)
       return 0;
     else if (first_arg[0] == CommandHistory::g_repeat_char) {
-      const char *history_string = m_command_history.FindString(first_arg);
-      if (history_string != nullptr) {
+      if (auto hist_str = m_command_history.FindString(first_arg)) {
         matches.Clear();
-        matches.InsertStringAtIndex(0, history_string);
+        matches.InsertStringAtIndex(0, *hist_str);
         return -2;
       } else
         return 0;

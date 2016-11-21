@@ -93,7 +93,6 @@ public:
   void removeModule(ModuleHandle H) {
     CompileLayer.removeModuleSet(H);
   }
-
 };
 
 } // end namespace orc

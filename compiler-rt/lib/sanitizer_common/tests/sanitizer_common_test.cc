@@ -172,7 +172,7 @@ bool UptrLess(uptr a, uptr b) {
   return a < b;
 }
 
-TEST(SanitizerCommon, InternalBinarySearch) {
+TEST(SanitizerCommon, InternalLowerBound) {
   static const uptr kSize = 5;
   int arr[kSize];
   arr[0] = 1;
@@ -181,22 +181,22 @@ TEST(SanitizerCommon, InternalBinarySearch) {
   arr[3] = 7;
   arr[4] = 11;
 
-  EXPECT_EQ(0u, InternalBinarySearch(arr, 0, kSize, 0, UptrLess));
-  EXPECT_EQ(0u, InternalBinarySearch(arr, 0, kSize, 1, UptrLess));
-  EXPECT_EQ(1u, InternalBinarySearch(arr, 0, kSize, 2, UptrLess));
-  EXPECT_EQ(1u, InternalBinarySearch(arr, 0, kSize, 3, UptrLess));
-  EXPECT_EQ(2u, InternalBinarySearch(arr, 0, kSize, 4, UptrLess));
-  EXPECT_EQ(2u, InternalBinarySearch(arr, 0, kSize, 5, UptrLess));
-  EXPECT_EQ(3u, InternalBinarySearch(arr, 0, kSize, 6, UptrLess));
-  EXPECT_EQ(3u, InternalBinarySearch(arr, 0, kSize, 7, UptrLess));
-  EXPECT_EQ(4u, InternalBinarySearch(arr, 0, kSize, 8, UptrLess));
-  EXPECT_EQ(4u, InternalBinarySearch(arr, 0, kSize, 9, UptrLess));
-  EXPECT_EQ(4u, InternalBinarySearch(arr, 0, kSize, 10, UptrLess));
-  EXPECT_EQ(4u, InternalBinarySearch(arr, 0, kSize, 11, UptrLess));
-  EXPECT_EQ(5u, InternalBinarySearch(arr, 0, kSize, 12, UptrLess));
+  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 0, UptrLess));
+  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 1, UptrLess));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 2, UptrLess));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 3, UptrLess));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 4, UptrLess));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 5, UptrLess));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 6, UptrLess));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 7, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 8, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 9, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 10, UptrLess));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 11, UptrLess));
+  EXPECT_EQ(5u, InternalLowerBound(arr, 0, kSize, 12, UptrLess));
 }
 
-TEST(SanitizerCommon, InternalBinarySearchVsLowerBound) {
+TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
   std::vector<int> data;
   auto create_item = [] (size_t i, size_t j) {
     auto v = i * 10000 + j;
@@ -215,8 +215,8 @@ TEST(SanitizerCommon, InternalBinarySearchVsLowerBound) {
       for (auto to_find : {val - 1, val, val + 1}) {
         uptr expected =
             std::lower_bound(data.begin(), data.end(), to_find) - data.begin();
-        EXPECT_EQ(expected, InternalBinarySearch(data.data(), 0, data.size(),
-                                                 to_find, std::less<int>()));
+        EXPECT_EQ(expected, InternalLowerBound(data.data(), 0, data.size(),
+                                               to_find, std::less<int>()));
       }
     }
   }

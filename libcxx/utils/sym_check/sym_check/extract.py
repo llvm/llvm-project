@@ -12,9 +12,11 @@ extract - A set of function that extract symbol lists from shared libraries.
 """
 import distutils.spawn
 import sys
+import re
 
 from sym_check import util
 
+extract_ignore_names = ['_init', '_fini']
 
 class NMExtractor(object):
     """
@@ -65,7 +67,8 @@ class NMExtractor(object):
             return None
         new_sym = {
             'name': bits[0],
-            'type': bits[1]
+            'type': bits[1],
+            'is_defined': (bits[1].lower() != 'u')
         }
         new_sym['name'] = new_sym['name'].replace('@@', '@')
         new_sym = self._transform_sym_type(new_sym)
@@ -80,6 +83,8 @@ class NMExtractor(object):
         Check that s is a valid symbol that we want to keep.
         """
         if sym is None or len(sym) < 2:
+            return False
+        if sym['name'] in extract_ignore_names:
             return False
         bad_types = ['t', 'b', 'r', 'd', 'w']
         return (sym['type'] not in bad_types
@@ -148,8 +153,11 @@ class ReadElfExtractor(object):
                 'name': parts[7],
                 'size': int(parts[2]),
                 'type': parts[3],
+                'is_defined': (parts[6] != 'UND')
             }
             assert new_sym['type'] in ['OBJECT', 'FUNC', 'NOTYPE']
+            if new_sym['name'] in extract_ignore_names:
+                continue
             if new_sym['type'] == 'NOTYPE':
                 continue
             if new_sym['type'] == 'FUNC':

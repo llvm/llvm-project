@@ -824,8 +824,9 @@ CB ProgramState::scanReachableSymbols(const MemRegion * const *beg,
 }
 
 /// \class ScanReachableSymbols
-/// A Utility class that allows to visit the reachable symbols using a custom
-/// SymbolVisitor.
+/// A utility class that visits the reachable symbols using a custom
+/// SymbolVisitor. Terminates recursive traversal when the visitor function
+/// returns false.
 class ScanReachableSymbols {
   typedef llvm::DenseSet<const void*> VisitedItems;
 

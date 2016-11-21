@@ -72,7 +72,7 @@ public:
 };
 
 /// These are templated helper classes used by the format function that
-/// capture the object to be formated and the format string. When actually
+/// capture the object to be formatted and the format string. When actually
 /// printed, this synthesizes the string into a temporary buffer provided and
 /// returns whether or not it is big enough.
 

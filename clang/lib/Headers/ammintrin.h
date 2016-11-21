@@ -114,7 +114,6 @@ _mm_extract_si64(__m128i __x, __m128i __y)
 ///    destination operand x with the specified bitfields replaced by the lower
 ///    bits of source operand y. The upper 64 bits of the return value are
 ///    undefined.
-
 #define _mm_inserti_si64(x, y, len, idx) \
   ((__m128i)__builtin_ia32_insertqi((__v2di)(__m128i)(x), \
                                     (__v2di)(__m128i)(y), \
@@ -146,7 +145,6 @@ _mm_extract_si64(__m128i __x, __m128i __y)
 ///    destination operand __x with the specified bitfields replaced by the
 ///    lower bits of source operand __y. The upper 64 bits of the return value
 ///    are undefined.
-
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_insert_si64(__m128i __x, __m128i __y)
 {

@@ -325,19 +325,9 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx512.mask.pslli") || // Added in 4.0
          Name.startswith("avx512.mask.psrai") || // Added in 4.0
          Name.startswith("avx512.mask.psrli") || // Added in 4.0
-         Name == "avx512.mask.psllv2.di" || // Added in 4.0
-         Name == "avx512.mask.psllv4.di" || // Added in 4.0
-         Name == "avx512.mask.psllv4.si" || // Added in 4.0
-         Name == "avx512.mask.psllv8.si" || // Added in 4.0
-         Name == "avx512.mask.psrav4.si" || // Added in 4.0
-         Name == "avx512.mask.psrav8.si" || // Added in 4.0
-         Name == "avx512.mask.psrlv2.di" || // Added in 4.0
-         Name == "avx512.mask.psrlv4.di" || // Added in 4.0
-         Name == "avx512.mask.psrlv4.si" || // Added in 4.0
-         Name == "avx512.mask.psrlv8.si" || // Added in 4.0
-         Name.startswith("avx512.mask.psllv.") || // Added in 4.0
-         Name.startswith("avx512.mask.psrav.") || // Added in 4.0
-         Name.startswith("avx512.mask.psrlv.") || // Added in 4.0
+         Name.startswith("avx512.mask.psllv") || // Added in 4.0
+         Name.startswith("avx512.mask.psrav") || // Added in 4.0
+         Name.startswith("avx512.mask.psrlv") || // Added in 4.0
          Name.startswith("sse41.pmovsx") || // Added in 3.8
          Name.startswith("sse41.pmovzx") || // Added in 3.9
          Name.startswith("avx2.pmovsx") || // Added in 3.9
@@ -1439,7 +1429,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       bool IsVariable = Name[16] == 'v';
       char Size = Name[16] == '.' ? Name[17] :
                   Name[17] == '.' ? Name[18] :
-                                    Name[19];
+                  Name[18] == '.' ? Name[19] :
+                                    Name[20];
 
       Intrinsic::ID IID;
       if (IsVariable && Name[17] != '.') {
@@ -1451,6 +1442,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
           IID = Intrinsic::x86_avx2_psllv_d;
         else if (Size == 's' && Name[17] == '8') // avx512.mask.psllv8.si
           IID = Intrinsic::x86_avx2_psllv_d_256;
+        else if (Size == 'h' && Name[17] == '8') // avx512.mask.psllv8.hi
+          IID = Intrinsic::x86_avx512_psllv_w_128;
+        else if (Size == 'h' && Name[17] == '1') // avx512.mask.psllv16.hi
+          IID = Intrinsic::x86_avx512_psllv_w_256;
+        else if (Name[17] == '3' && Name[18] == '2') // avx512.mask.psllv32hi
+          IID = Intrinsic::x86_avx512_psllv_w_512;
         else
           llvm_unreachable("Unexpected size");
       } else if (Name.endswith(".128")) {
@@ -1500,7 +1497,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       bool IsVariable = Name[16] == 'v';
       char Size = Name[16] == '.' ? Name[17] :
                   Name[17] == '.' ? Name[18] :
-                                    Name[19];
+                  Name[18] == '.' ? Name[19] :
+                                    Name[20];
 
       Intrinsic::ID IID;
       if (IsVariable && Name[17] != '.') {
@@ -1512,6 +1510,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
           IID = Intrinsic::x86_avx2_psrlv_d;
         else if (Size == 's' && Name[17] == '8') // avx512.mask.psrlv8.si
           IID = Intrinsic::x86_avx2_psrlv_d_256;
+        else if (Size == 'h' && Name[17] == '8') // avx512.mask.psrlv8.hi
+          IID = Intrinsic::x86_avx512_psrlv_w_128;
+        else if (Size == 'h' && Name[17] == '1') // avx512.mask.psrlv16.hi
+          IID = Intrinsic::x86_avx512_psrlv_w_256;
+        else if (Name[17] == '3' && Name[18] == '2') // avx512.mask.psrlv32hi
+          IID = Intrinsic::x86_avx512_psrlv_w_512;
         else
           llvm_unreachable("Unexpected size");
       } else if (Name.endswith(".128")) {
@@ -1561,7 +1565,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       bool IsVariable = Name[16] == 'v';
       char Size = Name[16] == '.' ? Name[17] :
                   Name[17] == '.' ? Name[18] :
-                                    Name[19];
+                  Name[18] == '.' ? Name[19] :
+                                    Name[20];
 
       Intrinsic::ID IID;
       if (IsVariable && Name[17] != '.') {
@@ -1569,6 +1574,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
           IID = Intrinsic::x86_avx2_psrav_d;
         else if (Size == 's' && Name[17] == '8') // avx512.mask.psrav8.si
           IID = Intrinsic::x86_avx2_psrav_d_256;
+        else if (Size == 'h' && Name[17] == '8') // avx512.mask.psrav8.hi
+          IID = Intrinsic::x86_avx512_psrav_w_128;
+        else if (Size == 'h' && Name[17] == '1') // avx512.mask.psrav16.hi
+          IID = Intrinsic::x86_avx512_psrav_w_256;
+        else if (Name[17] == '3' && Name[18] == '2') // avx512.mask.psrav32hi
+          IID = Intrinsic::x86_avx512_psrav_w_512;
         else
           llvm_unreachable("Unexpected size");
       } else if (Name.endswith(".128")) {

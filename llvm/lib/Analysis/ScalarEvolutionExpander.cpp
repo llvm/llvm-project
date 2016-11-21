@@ -1961,7 +1961,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     const SCEV *S, Loop *L, const Instruction *At,
     SmallPtrSetImpl<const SCEV *> &Processed) {
 
-  // If we can find an existing value for this scev avaliable at the point "At"
+  // If we can find an existing value for this scev available at the point "At"
   // then consider the expression cheap.
   if (At && getRelatedExistingExpansion(S, At, L))
     return false;

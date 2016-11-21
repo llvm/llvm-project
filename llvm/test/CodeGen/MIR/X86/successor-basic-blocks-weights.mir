@@ -21,7 +21,7 @@
 name:            foo
 body: |
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:         successors: %bb.1.less({{[0-9a-fx/= ]+}}33.00%), %bb.2.exit({{[0-9a-fx/= ]+}}67.00%)
+  ; CHECK:         successors: %bb.1.less(0x2a3d70a4), %bb.2.exit(0x55c28f5c)
   ; CHECK-LABEL: bb.1.less:
   bb.0.entry:
     successors: %bb.1.less (33), %bb.2.exit(67)

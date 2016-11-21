@@ -193,6 +193,28 @@ if (LIBCXX_ENABLE_STATIC)
       OUTPUT_NAME   "c++"
   )
   list(APPEND LIBCXX_TARGETS "cxx_static")
+  # Attempt to merge the libc++.a archive and the ABI library archive into one.
+  if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+    set(MERGE_ARCHIVES_SEARCH_PATHS "")
+    if (LIBCXX_CXX_ABI_LIBRARY_PATH)
+      set(MERGE_ARCHIVES_SEARCH_PATHS "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
+    endif()
+    if (TARGET ${LIBCXX_CXX_ABI_LIBRARY})
+      set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_ABI_LIBRARY}>")
+    else()
+      set(MERGE_ARCHIVES_ABI_TARGET "lib${LIBCXX_CXX_ABI_LIBRARY}.a")
+    endif()
+    add_custom_command(TARGET cxx_static POST_BUILD
+    COMMAND
+      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/merge_archives.py
+    ARGS
+      -o $<TARGET_LINKER_FILE:cxx_static>
+      "$<TARGET_LINKER_FILE:cxx_static>"
+      "${MERGE_ARCHIVES_ABI_TARGET}"
+      "${MERGE_ARCHIVES_SEARCH_PATHS}"
+    WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
+    )
+  endif()
 endif()
 
 # Add a meta-target for both libraries.

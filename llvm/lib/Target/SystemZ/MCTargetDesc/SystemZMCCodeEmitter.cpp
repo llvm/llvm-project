@@ -113,6 +113,11 @@ private:
     return getPCRelEncoding(MI, OpNum, Fixups,
                             SystemZ::FK_390_PC32DBL, 2, true);
   }
+
+private:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
 } // end anonymous namespace
 
@@ -126,6 +131,9 @@ void SystemZMCCodeEmitter::
 encodeInstruction(const MCInst &MI, raw_ostream &OS,
                   SmallVectorImpl<MCFixup> &Fixups,
                   const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   unsigned Size = MCII.get(MI.getOpcode()).getSize();
   // Big-endian insertion of Size bytes.
@@ -254,4 +262,5 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
   return 0;
 }
 
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SystemZGenMCCodeEmitter.inc"

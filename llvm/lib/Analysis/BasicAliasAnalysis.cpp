@@ -275,7 +275,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
         GetLinearExpression(CastOp, Scale, Offset, ZExtBits, SExtBits, DL,
                             Depth + 1, AC, DT, NSW, NUW);
 
-    // zext(zext(%x)) == zext(%x), and similiarly for sext; we'll handle this
+    // zext(zext(%x)) == zext(%x), and similarly for sext; we'll handle this
     // by just incrementing the number of bits we've extended by.
     unsigned ExtendedBy = NewWidth - SmallWidth;
 

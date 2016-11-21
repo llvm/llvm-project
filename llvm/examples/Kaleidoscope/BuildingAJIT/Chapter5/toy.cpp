@@ -7,29 +7,30 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/GVN.h"
 #include "KaleidoscopeJIT.h"
+#include "RemoteJITUtils.h"
+#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
 #include <netdb.h>
-#include <unistd.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -155,7 +156,8 @@ static int gettok() {
 /// ExprAST - Base class for all expression nodes.
 class ExprAST {
 public:
-  virtual ~ExprAST() {}
+  virtual ~ExprAST() = default;
+
   virtual Value *codegen() = 0;
 };
 
@@ -165,6 +167,7 @@ class NumberExprAST : public ExprAST {
 
 public:
   NumberExprAST(double Val) : Val(Val) {}
+
   Value *codegen() override;
 };
 
@@ -174,8 +177,9 @@ class VariableExprAST : public ExprAST {
 
 public:
   VariableExprAST(const std::string &Name) : Name(Name) {}
-  const std::string &getName() const { return Name; }
+
   Value *codegen() override;
+  const std::string &getName() const { return Name; }
 };
 
 /// UnaryExprAST - Expression class for a unary operator.
@@ -186,6 +190,7 @@ class UnaryExprAST : public ExprAST {
 public:
   UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand)
       : Opcode(Opcode), Operand(std::move(Operand)) {}
+
   Value *codegen() override;
 };
 
@@ -198,6 +203,7 @@ public:
   BinaryExprAST(char Op, std::unique_ptr<ExprAST> LHS,
                 std::unique_ptr<ExprAST> RHS)
       : Op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+
   Value *codegen() override;
 };
 
@@ -210,6 +216,7 @@ public:
   CallExprAST(const std::string &Callee,
               std::vector<std::unique_ptr<ExprAST>> Args)
       : Callee(Callee), Args(std::move(Args)) {}
+
   Value *codegen() override;
 };
 
@@ -221,6 +228,7 @@ public:
   IfExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Then,
             std::unique_ptr<ExprAST> Else)
       : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+
   Value *codegen() override;
 };
 
@@ -235,6 +243,7 @@ public:
              std::unique_ptr<ExprAST> Body)
       : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
         Step(std::move(Step)), Body(std::move(Body)) {}
+
   Value *codegen() override;
 };
 
@@ -248,6 +257,7 @@ public:
       std::vector<std::pair<std::string, std::unique_ptr<ExprAST>>> VarNames,
       std::unique_ptr<ExprAST> Body)
       : VarNames(std::move(VarNames)), Body(std::move(Body)) {}
+
   Value *codegen() override;
 };
 
@@ -265,6 +275,7 @@ public:
                bool IsOperator = false, unsigned Prec = 0)
       : Name(Name), Args(std::move(Args)), IsOperator(IsOperator),
         Precedence(Prec) {}
+
   Function *codegen();
   const std::string &getName() const { return Name; }
 
@@ -1229,9 +1240,9 @@ std::unique_ptr<FDRPCChannel> connect() {
   }
 
   sockaddr_in servAddr;
-  bzero(&servAddr, sizeof(servAddr));
+  memset(&servAddr, 0, sizeof(servAddr));
   servAddr.sin_family = PF_INET;
-  bcopy(server->h_addr, &servAddr.sin_addr.s_addr, server->h_length);
+  memcpy(&servAddr.sin_addr.s_addr, server->h_addr, server->h_length);
   servAddr.sin_port = htons(Port);
   if (connect(sockfd, reinterpret_cast<sockaddr*>(&servAddr),
               sizeof(servAddr)) < 0) {

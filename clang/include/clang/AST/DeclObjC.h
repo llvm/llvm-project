@@ -870,6 +870,9 @@ public:
   PropertyControl getPropertyImplementation() const {
     return PropertyControl(PropertyImplementation);
   }
+  bool isOptional() const {
+    return getPropertyImplementation() == PropertyControl::Optional;
+  }
 
   void setPropertyIvarDecl(ObjCIvarDecl *Ivar) {
     PropertyIvarDecl = Ivar;

@@ -637,9 +637,9 @@ void InternalSort(Container *v, uptr size, Compare comp) {
 
 // Works like std::lower_bound: finds the first element that is not less
 // than the val.
-template<class Container, class Value, class Compare>
-uptr InternalBinarySearch(const Container &v, uptr first, uptr last,
-                          const Value &val, Compare comp) {
+template <class Container, class Value, class Compare>
+uptr InternalLowerBound(const Container &v, uptr first, uptr last,
+                        const Value &val, Compare comp) {
   while (last > first) {
     uptr mid = (first + last) / 2;
     if (comp(v[mid], val))

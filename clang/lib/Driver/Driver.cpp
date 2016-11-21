@@ -473,14 +473,18 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   if (llvm::any_of(Inputs, [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
         return types::isCuda(I.first);
       })) {
-    const ToolChain &TC = getToolChain(
-        C.getInputArgs(),
-        llvm::Triple(C.getSingleOffloadToolChain<Action::OFK_Host>()
-                             ->getTriple()
-                             .isArch64Bit()
-                         ? "nvptx64-nvidia-cuda"
-                         : "nvptx-nvidia-cuda"));
-    C.addOffloadDeviceToolChain(&TC, Action::OFK_Cuda);
+    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+    const llvm::Triple &HostTriple = HostTC->getTriple();
+    llvm::Triple CudaTriple(HostTriple.isArch64Bit() ? "nvptx64-nvidia-cuda"
+                                                     : "nvptx-nvidia-cuda");
+    // Use the CUDA and host triples as the key into the ToolChains map, because
+    // the device toolchain we create depends on both.
+    ToolChain *&CudaTC = ToolChains[CudaTriple.str() + "/" + HostTriple.str()];
+    if (!CudaTC) {
+      CudaTC = new toolchains::CudaToolChain(*this, CudaTriple, *HostTC,
+                                             C.getInputArgs());
+    }
+    C.addOffloadDeviceToolChain(CudaTC, Action::OFK_Cuda);
   }
 
   //
@@ -3717,9 +3721,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       }
       break;
-    case llvm::Triple::CUDA:
-      TC = new toolchains::CudaToolChain(*this, Target, Args);
-      break;
     case llvm::Triple::PS4:
       TC = new toolchains::PS4CPU(*this, Target, Args);
       break;
@@ -3761,6 +3762,12 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       }
     }
   }
+
+  // Intentionally omitted from the switch above: llvm::Triple::CUDA.  CUDA
+  // compiles always need two toolchains, the CUDA toolchain and the host
+  // toolchain.  So the only valid way to create a CUDA toolchain is via
+  // CreateOffloadingDeviceToolChains.
+
   return *TC;
 }
 

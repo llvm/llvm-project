@@ -1058,3 +1058,42 @@ define <32 x i16> @combine_vpermt2var_vpermi2var_32i16_as_permw(<32 x i16> %x0, 
   %res1 = call <32 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.512(<32 x i16> %res0, <32 x i16> <i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0, i16 31, i16 30, i16 29, i16 28, i16 27, i16 26, i16 25, i16 24, i16 23, i16 22, i16 21, i16 20, i16 19, i16 18, i16 17, i16 16>, <32 x i16> %res0, i32 -1)
   ret <32 x i16> %res1
 }
+
+define <8 x double> @combine_vpermi2var_vpermvar_8f64_as_vperm2_zero(<8 x double> %x0) {
+; X32-LABEL: combine_vpermi2var_vpermvar_8f64_as_vperm2_zero:
+; X32:       # BB#0:
+; X32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X32-NEXT:    vmovapd {{.*#+}} zmm2 = [8,0,3,0,10,0,11,0,1,0,7,0,14,0,5,0]
+; X32-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_vpermvar_8f64_as_vperm2_zero:
+; X64:       # BB#0:
+; X64-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vmovapd {{.*#+}} zmm2 = [8,3,10,11,1,7,14,5]
+; X64-NEXT:    vpermt2pd %zmm1, %zmm2, %zmm0
+; X64-NEXT:    retq
+  %res0 = shufflevector <8 x double> %x0, <8 x double> zeroinitializer, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.permvar.df.512(<8 x double> %res0, <8 x i64> <i64 3, i64 2, i64 1, i64 7, i64 0, i64 6, i64 5, i64 4>, <8 x double> %res0, i8 -1)
+  ret <8 x double> %res1
+}
+
+define <16 x float> @combine_vpermi2var_vpermvar_16f32_as_vperm2_zero(<16 x float> %x0) {
+; X32-LABEL: combine_vpermi2var_vpermvar_16f32_as_vperm2_zero:
+; X32:       # BB#0:
+; X32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X32-NEXT:    vmovaps {{.*#+}} zmm2 = [0,13,1,12,4,9,22,12,4,25,26,9,5,29,30,8]
+; X32-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_vpermvar_16f32_as_vperm2_zero:
+; X64:       # BB#0:
+; X64-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; X64-NEXT:    vmovaps {{.*#+}} zmm2 = [0,13,1,12,4,9,22,12,4,25,26,9,5,29,30,8]
+; X64-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; X64-NEXT:    retq
+  %res0 = shufflevector <16 x float> %x0, <16 x float> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %res0, <16 x i32> <i32 0, i32 14, i32 2, i32 12, i32 4, i32 10, i32 3, i32 12, i32 4, i32 11, i32 5, i32 10, i32 6, i32 9, i32 7, i32 8>, <16 x float> %res0, i16 -1)
+  ret <16 x float> %res1
+}
+

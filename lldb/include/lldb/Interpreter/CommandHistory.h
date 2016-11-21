@@ -33,15 +33,15 @@ public:
 
   bool IsEmpty() const;
 
-  const char *FindString(const char *input_str) const;
+  llvm::Optional<llvm::StringRef> FindString(llvm::StringRef input_str) const;
 
-  const char *GetStringAtIndex(size_t idx) const;
+  llvm::StringRef GetStringAtIndex(size_t idx) const;
 
-  const char *operator[](size_t idx) const;
+  llvm::StringRef operator[](size_t idx) const;
 
-  const char *GetRecentmostString() const;
+  llvm::StringRef GetRecentmostString() const;
 
-  void AppendString(const std::string &str, bool reject_if_dupe = true);
+  void AppendString(llvm::StringRef str, bool reject_if_dupe = true);
 
   void Clear();
 

@@ -977,6 +977,11 @@ namespace llvm {
     SDValue DAGCombineTruncBoolExt(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFPToIntToFP(SDNode *N, DAGCombinerInfo &DCI) const;
 
+    /// ConvertSETCCToSubtract - looks at SETCC that compares ints. It replaces
+    /// SETCC with integer subtraction when (1) there is a legal way of doing it
+    /// (2) keeping the result of comparison in GPR has performance benefit.
+    SDValue ConvertSETCCToSubtract(SDNode *N, DAGCombinerInfo &DCI) const;
+
     SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                             int &RefinementSteps, bool &UseOneConstNR,
                             bool Reciprocal) const override;

@@ -565,8 +565,8 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
       log->Printf("PlatformLinux::%s creating new target", __FUNCTION__);
 
     TargetSP new_target_sp;
-    error = debugger.GetTargetList().CreateTarget(
-        debugger, nullptr, nullptr, false, nullptr, new_target_sp);
+    error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
+                                                  nullptr, new_target_sp);
     if (error.Fail()) {
       if (log)
         log->Printf("PlatformLinux::%s failed to create new target: %s",

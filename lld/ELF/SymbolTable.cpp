@@ -19,7 +19,6 @@
 #include "Error.h"
 #include "LinkerScript.h"
 #include "Memory.h"
-#include "SymbolListFile.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -653,7 +652,7 @@ template <class ELFT> void SymbolTable<ELFT>::handleAnonymousVersion() {
 template <class ELFT>
 void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
                                            StringRef VersionName) {
-  if (Ver.HasWildcards)
+  if (Ver.HasWildcard)
     return;
 
   // Get a list of symbols which we need to assign the version to.
@@ -681,7 +680,7 @@ void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId
 template <class ELFT>
 void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
                                               uint16_t VersionId) {
-  if (!Ver.HasWildcards)
+  if (!Ver.HasWildcard)
     return;
   std::vector<SymbolBody *> Syms =
       Ver.IsExternCpp ? findAllDemangled(Ver.Name) : findAll(Ver.Name);

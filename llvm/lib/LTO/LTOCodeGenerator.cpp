@@ -49,6 +49,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
@@ -90,6 +91,11 @@ cl::opt<bool> LTOStripInvalidDebugInfo(
     cl::init(false),
 #endif
     cl::Hidden);
+
+cl::opt<std::string>
+    LTORemarksFilename("pass-remarks-output",
+                       cl::desc("Output filename for pass remarks"),
+                       cl::value_desc("filename"));
 }
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -495,11 +501,37 @@ void LTOCodeGenerator::verifyMergedModuleOnce() {
     report_fatal_error("Broken module found, compilation aborted!");
 }
 
+bool LTOCodeGenerator::setupOptimizationRemarks() {
+  if (LTORemarksFilename != "") {
+    std::error_code EC;
+    DiagnosticOutputFile = llvm::make_unique<tool_output_file>(
+        LTORemarksFilename, EC, sys::fs::F_None);
+    if (EC) {
+      emitError(EC.message());
+      return false;
+    }
+    Context.setDiagnosticsOutputFile(
+        llvm::make_unique<yaml::Output>(DiagnosticOutputFile->os()));
+  }
+  return true;
+}
+
+void LTOCodeGenerator::finishOptimizationRemarks() {
+  if (DiagnosticOutputFile) {
+    DiagnosticOutputFile->keep();
+    // FIXME: LTOCodeGenerator dtor is not invoked on Darwin
+    DiagnosticOutputFile->os().flush();
+  }
+}
+
 /// Optimize merged modules using various IPO passes
 bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
                                 bool DisableGVNLoadPRE,
                                 bool DisableVectorization) {
   if (!this->determineTarget())
+    return false;
+
+  if (!setupOptimizationRemarks())
     return false;
 
   // We always run the verifier once on the merged module, the `DisableVerify`
@@ -534,6 +566,8 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
 
   // Run our queue of passes all at once now, efficiently.
   passes.run(*MergedModule);
+
+  finishOptimizationRemarks();
 
   return true;
 }

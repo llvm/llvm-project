@@ -527,32 +527,17 @@ bool ScanReachableSymbols::scan(nonloc::CompoundVal val) {
 }
 
 bool ScanReachableSymbols::scan(const SymExpr *sym) {
-  bool wasVisited = !visited.insert(sym).second;
-  if (wasVisited)
-    return true;
+  for (SymExpr::symbol_iterator SI = sym->symbol_begin(),
+                                SE = sym->symbol_end();
+       SI != SE; ++SI) {
+    bool wasVisited = !visited.insert(*SI).second;
+    if (wasVisited)
+      continue;
 
-  if (!visitor.VisitSymbol(sym))
-    return false;
-
-  // TODO: should be rewritten using SymExpr::symbol_iterator.
-  switch (sym->getKind()) {
-    case SymExpr::SymbolRegionValueKind:
-    case SymExpr::SymbolConjuredKind:
-    case SymExpr::SymbolDerivedKind:
-    case SymExpr::SymbolExtentKind:
-    case SymExpr::SymbolMetadataKind:
-      break;
-    case SymExpr::SymbolCastKind:
-      return scan(cast<SymbolCast>(sym)->getOperand());
-    case SymExpr::SymIntExprKind:
-      return scan(cast<SymIntExpr>(sym)->getLHS());
-    case SymExpr::IntSymExprKind:
-      return scan(cast<IntSymExpr>(sym)->getRHS());
-    case SymExpr::SymSymExprKind: {
-      const SymSymExpr *x = cast<SymSymExpr>(sym);
-      return scan(x->getLHS()) && scan(x->getRHS());
-    }
+    if (!visitor.VisitSymbol(*SI))
+      return false;
   }
+
   return true;
 }
 

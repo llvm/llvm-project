@@ -61,17 +61,17 @@ using namespace polly;
 
 #define DEBUG_TYPE "polly-scops"
 
-STATISTIC(ASSUMPTION_ALIASING, "Number of aliasing assumptions taken.");
-STATISTIC(ASSUMPTION_INBOUNDS, "Number of inbounds assumptions taken.");
-STATISTIC(ASSUMPTION_WRAPPING, "Number of wrapping assumptions taken.");
-STATISTIC(ASSUMPTION_UNSIGNED, "Number of unsigned assumptions taken.");
-STATISTIC(ASSUMPTION_COMPLEXITY, "Number of too complex SCoPs.");
-STATISTIC(ASSUMPTION_UNPROFITABLE, "Number of unprofitable SCoPs.");
-STATISTIC(ASSUMPTION_ERRORBLOCK, "Number of error block assumptions taken.");
-STATISTIC(ASSUMPTION_INFINITELOOP, "Number of bounded loop assumptions taken.");
-STATISTIC(ASSUMPTION_INVARIANTLOAD,
+STATISTIC(AssumptionsAliasing, "Number of aliasing assumptions taken.");
+STATISTIC(AssumptionsInbounds, "Number of inbounds assumptions taken.");
+STATISTIC(AssumptionsWrapping, "Number of wrapping assumptions taken.");
+STATISTIC(AssumptionsUnsigned, "Number of unsigned assumptions taken.");
+STATISTIC(AssumptionsComplexity, "Number of too complex SCoPs.");
+STATISTIC(AssumptionsUnprofitable, "Number of unprofitable SCoPs.");
+STATISTIC(AssumptionsErrorBlock, "Number of error block assumptions taken.");
+STATISTIC(AssumptionsInfiniteLoop, "Number of bounded loop assumptions taken.");
+STATISTIC(AssumptionsInvariantLoad,
           "Number of invariant loads assumptions taken.");
-STATISTIC(ASSUMPTION_DELINERIZATION,
+STATISTIC(AssumptionsDelinearization,
           "Number of delinearization assumptions taken.");
 
 // The maximal number of basic sets we allow during domain construction to
@@ -676,7 +676,7 @@ void MemoryAccess::assumeNoOutOfBound() {
 }
 
 void MemoryAccess::buildMemIntrinsicAccessRelation() {
-  assert(isa<MemIntrinsic>(getAccessInstruction()));
+  assert(isMemoryIntrinsic());
   assert(Subscripts.size() == 2 && Sizes.size() == 1);
 
   auto *SubscriptPWA = getPwAff(Subscripts[0]);
@@ -2907,7 +2907,7 @@ bool Scop::buildAliasChecks(AliasAnalysis &AA) {
     // Aliasing assumptions do not go through addAssumption but we still want to
     // collect statistics so we do it here explicitly.
     if (MinMaxAliasGroups.size())
-      ASSUMPTION_ALIASING++;
+      AssumptionsAliasing++;
     return true;
   }
 
@@ -3487,7 +3487,8 @@ __isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
   auto &Stmt = *Access->getStatement();
   BasicBlock *BB = Stmt.getEntryBlock();
 
-  if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine())
+  if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine() ||
+      Access->isMemoryIntrinsic())
     return nullptr;
 
   // Skip accesses that have an invariant base pointer which is defined but
@@ -3758,36 +3759,50 @@ bool Scop::trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
   if (PollyRemarksMinimal && !isEffectiveAssumption(Set, Sign))
     return false;
 
+  // Do never emit trivial assumptions as they only clutter the output.
+  if (!PollyRemarksMinimal) {
+    isl_set *Univ = nullptr;
+    if (Sign == AS_ASSUMPTION)
+      Univ = isl_set_universe(isl_set_get_space(Set));
+
+    bool IsTrivial = (Sign == AS_RESTRICTION && isl_set_is_empty(Set)) ||
+                     (Sign == AS_ASSUMPTION && isl_set_is_equal(Univ, Set));
+    isl_set_free(Univ);
+
+    if (IsTrivial)
+      return false;
+  }
+
   switch (Kind) {
   case ALIASING:
-    ASSUMPTION_ALIASING++;
+    AssumptionsAliasing++;
     break;
   case INBOUNDS:
-    ASSUMPTION_INBOUNDS++;
+    AssumptionsInbounds++;
     break;
   case WRAPPING:
-    ASSUMPTION_WRAPPING++;
+    AssumptionsWrapping++;
     break;
   case UNSIGNED:
-    ASSUMPTION_UNSIGNED++;
+    AssumptionsUnsigned++;
     break;
   case COMPLEXITY:
-    ASSUMPTION_COMPLEXITY++;
+    AssumptionsComplexity++;
     break;
   case PROFITABLE:
-    ASSUMPTION_UNPROFITABLE++;
+    AssumptionsUnprofitable++;
     break;
   case ERRORBLOCK:
-    ASSUMPTION_ERRORBLOCK++;
+    AssumptionsErrorBlock++;
     break;
   case INFINITELOOP:
-    ASSUMPTION_INFINITELOOP++;
+    AssumptionsInfiniteLoop++;
     break;
   case INVARIANTLOAD:
-    ASSUMPTION_INVARIANTLOAD++;
+    AssumptionsInvariantLoad++;
     break;
   case DELINEARIZATION:
-    ASSUMPTION_DELINERIZATION++;
+    AssumptionsDelinearization++;
     break;
   }
 

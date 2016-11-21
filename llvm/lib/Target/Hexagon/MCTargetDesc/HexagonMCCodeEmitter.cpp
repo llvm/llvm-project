@@ -78,6 +78,9 @@ void HexagonMCCodeEmitter::encodeInstruction(MCInst const &MI, raw_ostream &OS,
   size_t Last = HexagonMCInstrInfo::bundleSize(HMB) - 1;
   for (auto &I : HexagonMCInstrInfo::bundleInstructions(HMB)) {
     MCInst &HMI = const_cast<MCInst &>(*I.getInst());
+    verifyInstructionPredicates(HMI,
+                                computeAvailableFeatures(STI.getFeatureBits()));
+
     EncodeSingleInstruction(HMI, OS, Fixups, STI,
                             parseBits(Instruction, Last, HMB, HMI),
                             Instruction);
@@ -817,4 +820,5 @@ MCCodeEmitter *llvm::createHexagonMCCodeEmitter(MCInstrInfo const &MII,
   return new HexagonMCCodeEmitter(MII, MCT);
 }
 
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "HexagonGenMCCodeEmitter.inc"

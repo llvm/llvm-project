@@ -58,6 +58,9 @@ type (
 	Metadata struct {
 		C C.LLVMMetadataRef
 	}
+	Attribute struct {
+		C C.LLVMAttributeRef
+	}
 	Opcode           C.LLVMOpcode
 	TypeKind         C.LLVMTypeKind
 	Linkage          C.LLVMLinkage
@@ -78,6 +81,7 @@ func (c ModuleProvider) IsNil() bool { return c.C == nil }
 func (c MemoryBuffer) IsNil() bool   { return c.C == nil }
 func (c PassManager) IsNil() bool    { return c.C == nil }
 func (c Use) IsNil() bool            { return c.C == nil }
+func (c Attribute) IsNil() bool      { return c.C == nil }
 
 // helpers
 func llvmTypeRefPtr(t *Type) *C.LLVMTypeRef    { return (*C.LLVMTypeRef)(unsafe.Pointer(t)) }
@@ -313,6 +317,63 @@ func MDKindID(name string) (id int) {
 	defer C.free(unsafe.Pointer(cname))
 	id = int(C.LLVMGetMDKindID(cname, C.unsigned(len(name))))
 	return
+}
+
+//-------------------------------------------------------------------------
+// llvm.Attribute
+//-------------------------------------------------------------------------
+
+func AttributeKindID(name string) (id uint) {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	id = uint(C.LLVMGetEnumAttributeKindForName(cname, C.size_t(len(name))))
+	return
+}
+
+func (c Context) CreateEnumAttribute(kind uint, val uint64) (a Attribute) {
+  a.C = C.LLVMCreateEnumAttribute(c.C, C.unsigned(kind), C.uint64_t(val))
+  return
+}
+
+func (a Attribute) GetEnumKind() (id int) {
+  id = int(C.LLVMGetEnumAttributeKind(a.C))
+  return
+}
+
+func (a Attribute) GetEnumValue() (val uint64) {
+  val = uint64(C.LLVMGetEnumAttributeValue(a.C))
+  return
+}
+
+func (c Context) CreateStringAttribute(kind string, val string) (a Attribute) {
+  ckind := C.CString(kind)
+  defer C.free(unsafe.Pointer(ckind))
+  cval := C.CString(val)
+  defer C.free(unsafe.Pointer(cval))
+  a.C = C.LLVMCreateStringAttribute(c.C,
+                                    ckind, C.unsigned(len(kind)),
+                                    cval, C.unsigned(len(val)))
+  return
+}
+
+func (a Attribute) GetStringKind() string {
+  length := C.unsigned(0)
+  ckind := C.LLVMGetStringAttributeKind(a.C, &length)
+  return C.GoStringN(ckind, C.int(length))
+}
+
+func (a Attribute) GetStringValue() string {
+  length := C.unsigned(0)
+  ckind := C.LLVMGetStringAttributeValue(a.C, &length)
+  return C.GoStringN(ckind, C.int(length))
+}
+
+func (a Attribute) IsEnum() bool {
+  return C.LLVMIsEnumAttribute(a.C) != 0;
+}
+
+func (a Attribute) IsString() bool {
+  return C.LLVMIsStringAttribute(a.C) != 0;
 }
 
 //-------------------------------------------------------------------------
@@ -993,6 +1054,38 @@ func (v Value) SetGC(name string) {
 	defer C.free(unsafe.Pointer(cname))
 	C.LLVMSetGC(v.C, cname)
 }
+func (v Value) AddAttributeAtIndex(i int, a Attribute) {
+  C.LLVMAddAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), a.C)
+}
+func (v Value) AddFunctionAttr(a Attribute) {
+  v.AddAttributeAtIndex(C.LLVMAttributeFunctionIndex, a);
+}
+func (v Value) GetEnumAttributeAtIndex(i int, kind uint) (a Attribute) {
+  a.C = C.LLVMGetEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+  return
+}
+func (v Value) GetEnumFunctionAttribute(kind uint) Attribute {
+  return v.GetEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind)
+}
+func (v Value) GetStringAttributeAtIndex(i int, kind string) (a Attribute) {
+  ckind := C.CString(kind)
+  defer C.free(unsafe.Pointer(ckind))
+  a.C = C.LLVMGetStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+                                        ckind, C.unsigned(len(kind)))
+  return
+}
+func (v Value) RemoveEnumAttributeAtIndex(i int, kind uint) {
+  C.LLVMRemoveEnumAttributeAtIndex(v.C, C.LLVMAttributeIndex(i), C.unsigned(kind))
+}
+func (v Value) RemoveEnumFunctionAttribute(kind uint) {
+  v.RemoveEnumAttributeAtIndex(C.LLVMAttributeFunctionIndex, kind);
+}
+func (v Value) RemoveStringAttributeAtIndex(i int, kind string) {
+  ckind := C.CString(kind)
+  defer C.free(unsafe.Pointer(ckind))
+  C.LLVMRemoveStringAttributeAtIndex(v.C, C.LLVMAttributeIndex(i),
+                                     ckind, C.unsigned(len(kind)))
+}
 func (v Value) AddTargetDependentFunctionAttr(attr, value string) {
 	cattr := C.CString(attr)
 	defer C.free(unsafe.Pointer(cattr))
@@ -1081,6 +1174,9 @@ func (v Value) SetInstructionCallConv(cc CallConv) {
 }
 func (v Value) InstructionCallConv() CallConv {
 	return CallConv(C.LLVMCallConv(C.LLVMGetInstructionCallConv(v.C)))
+}
+func (v Value) AddCallSiteAttribute(i int, a Attribute) {
+	C.LLVMAddCallSiteAttribute(v.C, C.LLVMAttributeIndex(i), a.C)
 }
 func (v Value) SetInstrParamAlignment(i int, align int) {
 	C.LLVMSetInstrParamAlignment(v.C, C.unsigned(i), C.unsigned(align))

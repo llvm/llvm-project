@@ -38,6 +38,8 @@ public:
 
   virtual size_t GetGPRSize();
 
+  virtual size_t GetFXSAVEOffset();
+
   virtual unsigned GetRegisterSize(unsigned reg);
 
   virtual unsigned GetRegisterOffset(unsigned reg);

@@ -14,12 +14,12 @@
 #include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/DebugInfo/MSF/StreamInterface.h"
 #include "llvm/Support/Error.h"
+#include <cstddef>
 #include <cstdint>
-#include <memory>
-#include <type_traits>
 
 namespace llvm {
 namespace msf {
+
 template <typename T> struct SequencedItemTraits {
   static size_t length(const T &Item) = delete;
   static ArrayRef<uint8_t> bytes(const T &Item) = delete;
@@ -37,7 +37,7 @@ template <typename T> struct SequencedItemTraits {
 template <typename T, typename Traits = SequencedItemTraits<T>>
 class SequencedItemStream : public ReadableStream {
 public:
-  SequencedItemStream() {}
+  SequencedItemStream() = default;
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
@@ -83,8 +83,10 @@ private:
       return make_error<MSFError>(msf_error_code::insufficient_buffer);
     return CurrentIndex;
   }
+
   ArrayRef<T> Items;
 };
+
 } // end namespace msf
 } // end namespace llvm
 

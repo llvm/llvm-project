@@ -120,8 +120,10 @@ static cl::opt<LinkageNameOption>
                                             "Abstract subprograms")),
                       cl::init(DefaultLinkageNames));
 
-static const char *const DWARFGroupName = "DWARF Emission";
-static const char *const DbgTimerName = "DWARF Debug Writer";
+static const char *const DWARFGroupName = "dwarf";
+static const char *const DWARFGroupDescription = "DWARF Emission";
+static const char *const DbgTimerName = "writer";
+static const char *const DbgTimerDescription = "DWARF Debug Writer";
 
 void DebugLocDwarfExpression::EmitOp(uint8_t Op, const char *Comment) {
   BS.EmitInt8(
@@ -464,7 +466,8 @@ void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
 // global DIEs and emit initial debug info sections. This is invoked by
 // the target AsmPrinter.
 void DwarfDebug::beginModule() {
-  NamedRegionTimer T(DbgTimerName, DWARFGroupName, TimePassesIsEnabled);
+  NamedRegionTimer T(DbgTimerName, DbgTimerDescription, DWARFGroupName,
+                     DWARFGroupDescription, TimePassesIsEnabled);
   if (DisableDebugInfoPrinting)
     return;
 

@@ -11,4 +11,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-lto2
   llvm-lto2.cpp
+
+  DEPENDS
+  intrinsics_gen
   )

@@ -53,6 +53,10 @@ Non-comprehensive list of changes in this release
 
 * Minimum compiler version to build has been raised to GCC 4.8 and VS 2015.
 
+* The Timer related APIs now expect a Name and Description. When upgrading code
+  the previously used names should become descriptions and a short name in the
+  style of a programming language identifier should be added.
+
 * ... next change ...
 
 .. NOTE
@@ -94,6 +98,13 @@ Changes to the AMDGPU Target
 -----------------------------
 
  During this release ...
+
+Changes to the AVR Target
+-----------------------------
+
+* The entire backend has been merged in-tree with all tests passing. All of
+  the instruction selection code and the machine code backend has landed
+  recently and is fully usable.
 
 Changes to the OCaml bindings
 -----------------------------

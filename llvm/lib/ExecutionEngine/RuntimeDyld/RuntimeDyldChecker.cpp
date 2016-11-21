@@ -217,7 +217,7 @@ private:
   // given symbol and get the value of the requested operand.
   // Returns an error if the instruction cannot be decoded, or the requested
   // operand is not an immediate.
-  // On success, retuns a pair containing the value of the operand, plus
+  // On success, returns a pair containing the value of the operand, plus
   // the expression remaining to be evaluated.
   std::pair<EvalResult, StringRef> evalDecodeOperand(StringRef Expr) const {
     if (!Expr.startswith("("))
@@ -463,7 +463,7 @@ private:
                           Expr.substr(FirstNonDigit));
   }
 
-  // Evaluate a constant numeric expression (hexidecimal or decimal) and
+  // Evaluate a constant numeric expression (hexadecimal or decimal) and
   // return a pair containing the result, and the expression remaining to be
   // evaluated.
   std::pair<EvalResult, StringRef> evalNumberExpr(StringRef Expr) const {
