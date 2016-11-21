@@ -19,6 +19,11 @@ set(arm_SOURCES
 
 set(armhf_SOURCES ${arm_SOURCES})
 
+set(aarch64_SOURCES
+        xray_AArch64.cc
+        xray_trampoline_AArch64.S
+        ${XRAY_SOURCES})
+
 include_directories(..)
 include_directories(../../include)
 

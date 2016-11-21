@@ -104,11 +104,9 @@ void elf::parseDynamicList(MemoryBufferRef MB) {
     void run() {
       while (!atEOF()) {
         expect("{");
-        while (!Error) {
+        while (!Error && !consume("}")) {
           Config->DynamicList.push_back(unquote(next()));
           expect(";");
-          if (consume("}"))
-            break;
         }
         expect(";");
       }

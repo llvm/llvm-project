@@ -224,7 +224,7 @@ public:
   ~LinkerScript();
 
   void processCommands(OutputSectionFactory<ELFT> &Factory);
-  void createSections(OutputSectionFactory<ELFT> &Factory);
+  void addOrphanSections(OutputSectionFactory<ELFT> &Factory);
   void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();

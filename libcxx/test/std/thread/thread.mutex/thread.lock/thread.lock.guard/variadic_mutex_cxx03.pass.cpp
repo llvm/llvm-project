@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-
 // <mutex>
 
 // template <class ...Mutex> class lock_guard;
