@@ -7644,7 +7644,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   // and 'ld' will use its default mechanism to search for libLTO.dylib.
   if (Version[0] >= 133) {
     // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
-    StringRef P = llvm::sys::path::parent_path(D.getInstalledDir());
+    StringRef P = llvm::sys::path::parent_path(D.Dir);
     SmallString<128> LibLTOPath(P);
     llvm::sys::path::append(LibLTOPath, "lib");
     llvm::sys::path::append(LibLTOPath, "libLTO.dylib");
