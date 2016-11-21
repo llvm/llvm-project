@@ -778,7 +778,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   assert((isPPC64 || !isSVR4ABI || !(!FrameSize && (MustSaveLR || HasFP))) &&
          "FrameSize must be >0 to save/restore the FP or LR for 32-bit SVR4.");
 
-  // Using the same bool variable as below to supress compiler warnings.
+  // Using the same bool variable as below to suppress compiler warnings.
   bool SingleScratchReg =
     findScratchRegister(&MBB, false, twoUniqueScratchRegsRequired(&MBB),
                         &ScratchReg, &TempReg);
@@ -1271,7 +1271,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
   int FPOffset = 0;
 
-  // Using the same bool variable as below to supress compiler warnings.
+  // Using the same bool variable as below to suppress compiler warnings.
   bool SingleScratchReg = findScratchRegister(&MBB, true, false, &ScratchReg,
                                               &TempReg);
   assert(SingleScratchReg &&

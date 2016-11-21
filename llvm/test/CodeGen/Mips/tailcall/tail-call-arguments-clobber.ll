@@ -18,7 +18,14 @@
 ; O32 case: The last two arguments should appear at 16(sp), 20(sp). The order
 ;           of the loads doesn't matter, but they have to become before the
 ;           stores
-declare i32 @func2(i32, i32, i32, i32, i32, i32)
+define internal i32 @func2(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+  %1 = add i32 %a, %b
+  %2 = add i32 %1, %c
+  %3 = add i32 %2, %d
+  %4 = add i32 %3, %e
+  %5 = add i32 %4, %f
+  ret i32 %5
+}
 
 define i32 @func1(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f){
 ; MIPS32-LABEL: func1:
@@ -27,7 +34,7 @@ define i32 @func1(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f){
 ; MIPS32-NEXT: lw ${{[0-9]+}}, {{[0-9]+}}($sp)
 ; MIPS32-NEXT: sw ${{[0-9]+}}, {{[0-9]+}}($sp)
 ; MIPS32-NEXT: sw ${{[0-9]+}}, {{[0-9]+}}($sp)
-  %retval = tail call i32 @func1(i32 %a, i32 %f, i32 %c, i32 %d, i32 %e, i32 %b)
+  %retval = tail call i32 @func2(i32 %a, i32 %f, i32 %c, i32 %d, i32 %e, i32 %b)
 
   ret i32 %retval
 }
@@ -36,8 +43,19 @@ define i32 @func1(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f){
 ;           of the loads doesn't matter, but they have to become before the
 ;           stores
 
-declare i64 @func4(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
-
+define internal i64 @func4(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
+                           i64 %f, i64 %g, i64 %h, i64 %i, i64 %j) {
+  %1 = add i64 %a, %b
+  %2 = add i64 %1, %c
+  %3 = add i64 %2, %d
+  %4 = add i64 %3, %e
+  %5 = add i64 %4, %f
+  %6 = add i64 %1, %g
+  %7 = add i64 %2, %h
+  %8 = add i64 %3, %i
+  %9 = add i64 %4, %j
+  ret i64 %5
+}
 define i64 @func3(i64 %a, i64 %b, i64 %c, i64 %d,
                   i64 %e, i64 %f, i64 %g, i64 %h,
                   i64 %i, i64 %j){
@@ -51,5 +69,3 @@ define i64 @func3(i64 %a, i64 %b, i64 %c, i64 %d,
 
   ret i64 %retval
 }
-
-

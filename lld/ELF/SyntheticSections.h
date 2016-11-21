@@ -10,6 +10,7 @@
 #ifndef LLD_ELF_SYNTHETIC_SECTION_H
 #define LLD_ELF_SYNTHETIC_SECTION_H
 
+#include "GdbIndex.h"
 #include "InputSection.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -502,6 +503,32 @@ private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
 };
 
+template <class ELFT>
+class GdbIndexSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::uint uintX_t;
+
+  const unsigned OffsetTypeSize = 4;
+  const unsigned CuListOffset = 6 * OffsetTypeSize;
+  const unsigned CompilationUnitSize = 16;
+  const unsigned AddressEntrySize = 16 + OffsetTypeSize;
+  const unsigned SymTabEntrySize = 2 * OffsetTypeSize;
+
+public:
+  GdbIndexSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return CuTypesOffset; }
+
+  // Pairs of [CU Offset, CU length].
+  std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
+
+private:
+  void parseDebugSections();
+  void readDwarf(InputSection<ELFT> *I);
+
+  uint32_t CuTypesOffset;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -514,6 +541,7 @@ template <class ELFT> struct In {
   static StringTableSection<ELFT> *DynStrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
   static GnuHashTableSection<ELFT> *GnuHashTab;
+  static GdbIndexSection<ELFT> *GdbIndex;
   static GotSection<ELFT> *Got;
   static MipsGotSection<ELFT> *MipsGot;
   static GotPltSection<ELFT> *GotPlt;
@@ -535,6 +563,7 @@ template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::DynStrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
+template <class ELFT> GdbIndexSection<ELFT> *In<ELFT>::GdbIndex;
 template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;

@@ -53,7 +53,7 @@
 #include <sys/attr.h>
 #endif
 
-// Both stdio.h and cstdio are included via different pathes and
+// Both stdio.h and cstdio are included via different paths and
 // stdcxx's cstdio doesn't include stdio.h, so it doesn't #undef the macros
 // either.
 #undef ferror

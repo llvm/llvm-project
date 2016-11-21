@@ -481,12 +481,9 @@ define <2 x double> @uitofp_2i32_to_2f64(<4 x i32> %a) {
 ;
 ; AVX512F-LABEL: uitofp_2i32_to_2f64:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512F-NEXT:    vcvtusi2sdq %rax, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    vcvtusi2sdq %rax, %xmm2, %xmm0
-; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_2i32_to_2f64:
@@ -2528,12 +2525,9 @@ define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ;
 ; AVX512F-LABEL: uitofp_load_2i32_to_2f64:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512F-NEXT:    vcvtusi2sdq %rax, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    vcvtusi2sdq %rax, %xmm2, %xmm0
-; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: uitofp_load_2i32_to_2f64:

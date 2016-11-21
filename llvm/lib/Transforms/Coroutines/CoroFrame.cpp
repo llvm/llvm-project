@@ -66,9 +66,9 @@ public:
 // passes through a suspend point.
 //
 // For every basic block 'i' it maintains a BlockData that consists of:
-//   Consumes:  a bit vector which contains a set of indicies of blocks that can
+//   Consumes:  a bit vector which contains a set of indices of blocks that can
 //              reach block 'i'
-//   Kills: a bit vector which contains a set of indicies of blocks that can
+//   Kills: a bit vector which contains a set of indices of blocks that can
 //          reach block 'i', but one of the path will cross a suspend point
 //   Suspend: a boolean indicating whether block 'i' contains a suspend point.
 //   End: a boolean indicating whether block 'i' contains a coro.end intrinsic.

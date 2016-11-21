@@ -518,7 +518,7 @@ struct Elf_Phdr_Impl<ELFType<TargetEndianness, true>> {
   Elf_Xword p_align;  // Segment alignment constraint
 };
 
-// ELFT needed for endianess.
+// ELFT needed for endianness.
 template <class ELFT>
 struct Elf_Hash_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)

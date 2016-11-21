@@ -226,7 +226,7 @@ Error collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
                                 std::string &Result, bool doCompression = true);
 class InstrProfSymtab;
 /// \c NameStrings is a string composed of one of more sub-strings encoded in
-/// the format described above. The substrings are seperated by 0 or more zero
+/// the format described above. The substrings are separated by 0 or more zero
 /// bytes. This method decodes the string and populates the \c Symtab.
 Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
 

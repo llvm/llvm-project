@@ -145,7 +145,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
   }
 
   // Return the file index of file 'Name' for the current function.
-  // Add the file into the global map if necesary.
+  // Add the file into the global map if necessary.
   // See also InputFunctionCoverageData::ReverseVirtualFileMapping
   // for additional comments.
   unsigned getFileIndexForFunction(StringRef Name) {

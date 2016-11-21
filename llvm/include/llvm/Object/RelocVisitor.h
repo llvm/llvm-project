@@ -95,6 +95,17 @@ private:
           HasError = true;
           return RelocToApply();
         }
+      case Triple::bpfel:
+      case Triple::bpfeb:
+        switch (RelocType) {
+        case llvm::ELF::R_BPF_64_64:
+          return visitELF_BPF_64_64(R, Value);
+        case llvm::ELF::R_BPF_64_32:
+          return visitELF_BPF_64_32(R, Value);
+        default:
+          HasError = true;
+          return RelocToApply();
+        }
       case Triple::mips64el:
       case Triple::mips64:
         switch (RelocType) {
@@ -314,6 +325,15 @@ private:
     int64_t Addend = getELFAddend(R);
     int32_t Res = (Value + Addend) & 0xFFFFFFFF;
     return RelocToApply(Res, 4);
+  }
+
+  /// BPF ELF
+  RelocToApply visitELF_BPF_64_32(RelocationRef R, uint64_t Value) {
+    uint32_t Res = Value & 0xFFFFFFFF;
+    return RelocToApply(Res, 4);
+  }
+  RelocToApply visitELF_BPF_64_64(RelocationRef R, uint64_t Value) {
+    return RelocToApply(Value, 8);
   }
 
   /// PPC64 ELF

@@ -268,7 +268,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   if (Config->SysvHash)
     In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
   if (Config->GdbIndex)
-    Out<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
+    In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
 
   In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
@@ -979,8 +979,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic<ELFT>(
       {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
        In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
-       In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::MipsGot, In<ELFT>::GotPlt,
-       In<ELFT>::RelaDyn, In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::Dynamic});
+       In<ELFT>::DynStrTab, In<ELFT>::GdbIndex, In<ELFT>::Got,
+       In<ELFT>::MipsGot, In<ELFT>::GotPlt, In<ELFT>::RelaDyn,
+       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::Dynamic});
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -1006,8 +1007,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
-  if (Out<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
-    Add(Out<ELFT>::GdbIndex);
+  if (In<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
+    addInputSec(In<ELFT>::GdbIndex);
   addInputSec(In<ELFT>::SymTab);
   addInputSec(In<ELFT>::ShStrTab);
   addInputSec(In<ELFT>::StrTab);

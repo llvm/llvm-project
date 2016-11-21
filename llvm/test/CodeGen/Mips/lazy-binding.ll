@@ -30,7 +30,7 @@ declare void @foo2()
 ; CHECK: lw $25, %call16(foo2)(${{[0-9]+}})
 ; CHECK: jalr $25
 ; CHECK: lw $25, %call16(foo2)(${{[0-9]+}})
-; CHECK: jr $25
+; CHECK: jalr $25
 
 define void @foo1() {
 entry:

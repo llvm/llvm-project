@@ -41,13 +41,13 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   default:
     llvm_unreachable("invalid fixup kind!");
   case FK_SecRel_8:
-    return ELF::R_X86_64_64;
+    return ELF::R_BPF_64_64;
   case FK_SecRel_4:
-    return ELF::R_X86_64_PC32;
+    return ELF::R_BPF_64_32;
   case FK_Data_8:
-    return IsPCRel ? ELF::R_X86_64_PC64 : ELF::R_X86_64_64;
+    return ELF::R_BPF_64_64;
   case FK_Data_4:
-    return IsPCRel ? ELF::R_X86_64_PC32 : ELF::R_X86_64_32;
+    return ELF::R_BPF_64_32;
   }
 }
 

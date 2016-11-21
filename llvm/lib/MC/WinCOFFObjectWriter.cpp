@@ -791,7 +791,7 @@ void WinCOFFObjectWriter::recordRelocation(
     }
   }
 
-  // The fixed value never makes sense for section indicies, ignore it.
+  // The fixed value never makes sense for section indices, ignore it.
   if (Fixup.getKind() == FK_SecRel_2)
     FixedValue = 0;
 

@@ -54,7 +54,7 @@ struct PointerSumTypeHelper;
 ///
 /// It also default constructs to a zero tag with a null pointer, whatever that
 /// would be. This means that the zero value for the tag type is significant
-/// and may be desireable to set to a state that is particularly desirable to
+/// and may be desirable to set to a state that is particularly desirable to
 /// default construct.
 ///
 /// There is no support for constructing or accessing with a dynamic tag as

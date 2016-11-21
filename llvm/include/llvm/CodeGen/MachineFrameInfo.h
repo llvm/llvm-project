@@ -103,7 +103,7 @@ class MachineFrameInfo {
 
     /// If true, this stack slot is used to spill a value (could be deopt
     /// and/or GC related) over a statepoint. We know that the address of the
-    /// slot can't alias any LLVM IR value.  This is very similiar to a Spill
+    /// slot can't alias any LLVM IR value.  This is very similar to a Spill
     /// Slot, but is created by statepoint lowering is SelectionDAG, not the
     /// register allocator. 
     bool isStatepointSpillSlot;
