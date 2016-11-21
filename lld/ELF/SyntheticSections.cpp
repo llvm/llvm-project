@@ -1360,6 +1360,49 @@ template <class ELFT> size_t PltSection<ELFT>::getSize() const {
   return Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
 }
 
+template <class ELFT>
+GdbIndexSection<ELFT>::GdbIndexSection()
+    : SyntheticSection<ELFT>(0, SHT_PROGBITS, 1, ".gdb_index") {}
+
+template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
+  std::vector<InputSection<ELFT> *> &IS =
+      static_cast<OutputSection<ELFT> *>(Out<ELFT>::DebugInfo)->Sections;
+
+  for (InputSection<ELFT> *I : IS)
+    readDwarf(I);
+}
+
+template <class ELFT>
+void GdbIndexSection<ELFT>::readDwarf(InputSection<ELFT> *I) {
+  std::vector<std::pair<uintX_t, uintX_t>> CuList = readCuList(I);
+  CompilationUnits.insert(CompilationUnits.end(), CuList.begin(), CuList.end());
+}
+
+template <class ELFT> void GdbIndexSection<ELFT>::finalize() {
+  parseDebugSections();
+
+  // GdbIndex header consist from version fields
+  // and 5 more fields with different kinds of offsets.
+  CuTypesOffset = CuListOffset + CompilationUnits.size() * CompilationUnitSize;
+}
+
+template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
+  write32le(Buf, 7);                  // Write Version
+  write32le(Buf + 4, CuListOffset);   // CU list offset
+  write32le(Buf + 8, CuTypesOffset);  // Types CU list offset
+  write32le(Buf + 12, CuTypesOffset); // Address area offset
+  write32le(Buf + 16, CuTypesOffset); // Symbol table offset
+  write32le(Buf + 20, CuTypesOffset); // Constant pool offset
+  Buf += 24;
+
+  // Write the CU list.
+  for (std::pair<uintX_t, uintX_t> CU : CompilationUnits) {
+    write64le(Buf, CU.first);
+    write64le(Buf + 8, CU.second);
+    Buf += 16;
+  }
+}
+
 template InputSection<ELF32LE> *elf::createCommonSection();
 template InputSection<ELF32BE> *elf::createCommonSection();
 template InputSection<ELF64LE> *elf::createCommonSection();
@@ -1469,3 +1512,8 @@ template class elf::PltSection<ELF32LE>;
 template class elf::PltSection<ELF32BE>;
 template class elf::PltSection<ELF64LE>;
 template class elf::PltSection<ELF64BE>;
+
+template class elf::GdbIndexSection<ELF32LE>;
+template class elf::GdbIndexSection<ELF32BE>;
+template class elf::GdbIndexSection<ELF64LE>;
+template class elf::GdbIndexSection<ELF64BE>;

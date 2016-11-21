@@ -918,7 +918,7 @@ void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
 void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 #ifndef NDEBUG
   // Consistency check
-  // We skip this check for relocates not in the same basic block as thier
+  // We skip this check for relocates not in the same basic block as their
   // statepoint. It would be too expensive to preserve validation info through
   // different basic blocks.
   if (Relocate.getStatepoint()->getParent() == Relocate.getParent())

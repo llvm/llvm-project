@@ -206,6 +206,13 @@ namespace {
       RegMap[Reg] = StackTop++;
     }
 
+    // popReg - Pop a register from the stack.
+    void popReg() {
+      if (StackTop == 0)
+        report_fatal_error("Cannot pop empty stack!");
+      RegMap[Stack[--StackTop]] = ~0;     // Update state
+    }
+
     bool isAtTop(unsigned RegNo) const { return getSlot(RegNo) == StackTop-1; }
     void moveToTop(unsigned RegNo, MachineBasicBlock::iterator I) {
       DebugLoc dl = I == MBB->end() ? DebugLoc() : I->getDebugLoc();
@@ -328,6 +335,25 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
   // of the predecessors for every reachable block in the function.
   df_iterator_default_set<MachineBasicBlock*> Processed;
   MachineBasicBlock *Entry = &MF.front();
+
+  LiveBundle &Bundle =
+    LiveBundles[Bundles->getBundle(Entry->getNumber(), false)];
+  
+  // In regcall convention, some FP registers may not be passed through
+  // the stack, so they will need to be assigned to the stack first
+  if ((Entry->getParent()->getFunction()->getCallingConv() ==
+    CallingConv::X86_RegCall) && (Bundle.Mask && !Bundle.FixCount)) {
+    // In the register calling convention, up to one FP argument could be 
+    // saved in the first FP register.
+    // If bundle.mask is non-zero and Bundle.FixCount is zero, it means
+    // that the FP registers contain arguments.
+    // The actual value is passed in FP0.
+    // Here we fix the stack and mark FP0 as pre-assigned register.
+    assert((Bundle.Mask & 0xFE) == 0 &&
+      "Only FP0 could be passed as an argument");
+    Bundle.FixCount = 1;
+    Bundle.FixStack[0] = 0;
+  }
 
   bool Changed = false;
   for (MachineBasicBlock *BB : depth_first_ext(Entry, Processed))
@@ -791,9 +817,8 @@ void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
   MachineInstr &MI = *I;
   const DebugLoc &dl = MI.getDebugLoc();
   ASSERT_SORTED(PopTable);
-  if (StackTop == 0)
-    report_fatal_error("Cannot pop empty stack!");
-  RegMap[Stack[--StackTop]] = ~0;     // Update state
+
+  popReg();
 
   // Check to see if there is a popping version of this instruction...
   int Opcode = Lookup(PopTable, I->getOpcode());
@@ -929,6 +954,7 @@ void FPS::shuffleStackTop(const unsigned char *FixStack,
 
 void FPS::handleCall(MachineBasicBlock::iterator &I) {
   unsigned STReturns = 0;
+  const MachineFunction* MF = I->getParent()->getParent();
 
   for (const auto &MO : I->operands()) {
     if (!MO.isReg())
@@ -937,7 +963,10 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
     unsigned R = MO.getReg() - X86::FP0;
 
     if (R < 8) {
-      assert(MO.isDef() && MO.isImplicit());
+      if (MF->getFunction()->getCallingConv() != CallingConv::X86_RegCall) {
+        assert(MO.isDef() && MO.isImplicit());
+      }
+
       STReturns |= 1 << R;
     }
   }
@@ -945,8 +974,14 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
   unsigned N = countTrailingOnes(STReturns);
 
   // FP registers used for function return must be consecutive starting at
-  // FP0.
+  // FP0
   assert(STReturns == 0 || (isMask_32(STReturns) && N <= 2));
+
+  // Reset the FP Stack - It is required because of possible leftovers from
+  // passed arguments. The caller should assume that the FP stack is 
+  // returned empty (unless the callee returns values on FP stack).
+  while (StackTop > 0)
+    popReg();
 
   for (unsigned I = 0; I < N; ++I)
     pushReg(N - I - 1);

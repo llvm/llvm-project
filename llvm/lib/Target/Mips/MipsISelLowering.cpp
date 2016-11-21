@@ -2650,11 +2650,20 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
 
-  // Check if it's really possible to do a tail call.
-  if (IsTailCall)
+  // Check if it's really possible to do a tail call. Restrict it to functions
+  // that are part of this compilation unit.
+  bool InternalLinkage = false;
+  if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
         CCInfo, NextStackOffset, *MF.getInfo<MipsFunctionInfo>());
-
+     if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+      InternalLinkage = G->getGlobal()->hasInternalLinkage();
+      IsTailCall &= (InternalLinkage || G->getGlobal()->hasLocalLinkage() ||
+                     G->getGlobal()->hasPrivateLinkage() ||
+                     G->getGlobal()->hasHiddenVisibility() ||
+                     G->getGlobal()->hasProtectedVisibility());
+     }
+  }
   if (!IsTailCall && CLI.CS && CLI.CS->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
@@ -2789,9 +2798,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // node so that legalize doesn't hack it.
   bool IsPICCall = (ABI.IsN64() || IsPIC); // true if calls are translated to
                                            // jalr $25
-  bool GlobalOrExternal = false, InternalLinkage = false, IsCallReloc = false;
   SDValue CalleeLo;
   EVT Ty = Callee.getValueType();
+  bool GlobalOrExternal = false, IsCallReloc = false;
 
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     if (IsPICCall) {

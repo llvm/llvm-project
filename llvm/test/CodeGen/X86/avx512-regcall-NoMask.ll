@@ -246,6 +246,44 @@ define x86_regcallcc double @test_CallargRetDouble(double %a)  {
   ret double %d
 }
 
+; X32: test_argRetf80
+; X32-NOT: fldt
+; X32: fadd	%st(0), %st(0)
+; X32: retl
+
+; WIN64: test_argRetf80
+; WIN64-NOT: fldt
+; WIN64: fadd	%st(0), %st(0)
+; WIN64: retq
+
+; Test regcall when receiving/returning long double
+define x86_regcallcc x86_fp80 @test_argRetf80(x86_fp80 %a0) nounwind {
+  %r0 = fadd x86_fp80 %a0, %a0
+  ret x86_fp80 %r0
+}
+
+; X32: test_CallargRetf80
+; X32-NOT: fldt
+; X32: fadd	%st({{[0-7]}}), %st({{[0-7]}})
+; X32: call{{.*}}   {{.*}}test_argRetf80
+; X32: fadd{{.*}}	%st({{[0-7]}})
+; X32: retl
+
+; WIN64: test_CallargRetf80
+; WIN64-NOT: fldt
+; WIN64: fadd	%st({{[0-7]}}), %st({{[0-7]}})
+; WIN64: call{{.*}}   {{.*}}test_argRetf80
+; WIN64: fadd{{.*}}	%st({{[0-7]}})
+; WIN64: retq
+
+; Test regcall when passing/retrieving long double
+define x86_regcallcc x86_fp80 @test_CallargRetf80(x86_fp80 %a)  {
+  %b = fadd x86_fp80 %a, %a
+  %c = call x86_regcallcc x86_fp80 @test_argRetf80(x86_fp80 %b)
+  %d = fadd x86_fp80 %c, %c
+  ret x86_fp80 %d
+}
+
 ; X32-LABEL:  test_argRetPointer:
 ; X32:        incl %eax
 ; X32:        ret{{.*}}

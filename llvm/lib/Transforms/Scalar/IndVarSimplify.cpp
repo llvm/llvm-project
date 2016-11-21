@@ -1635,7 +1635,7 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
 
   BasicBlock *NarrowUserBB = NarrowUser->getParent();
   // If NarrowUserBB is statically unreachable asking dominator queries may 
-  // yield suprising results. (e.g. the block may not have a dom tree node)
+  // yield surprising results. (e.g. the block may not have a dom tree node)
   if (!DT->isReachableFromEntry(NarrowUserBB))
     return;
 

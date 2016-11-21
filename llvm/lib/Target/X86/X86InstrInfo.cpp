@@ -855,6 +855,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
     // AVX-512 foldable instructions
     { X86::VMOV64toPQIZrr,   X86::VMOVQI2PQIZrm,      0 },
+    { X86::VMOVZPQILo2PQIZrr,X86::VMOVZPQILo2PQIZrm,  TB_ALIGN_16 },
     { X86::VMOVDI2SSZrr,     X86::VMOVDI2SSZrm,       0 },
     { X86::VMOVAPDZrr,       X86::VMOVAPDZrm,         TB_ALIGN_64 },
     { X86::VMOVAPSZrr,       X86::VMOVAPSZrm,         TB_ALIGN_64 },

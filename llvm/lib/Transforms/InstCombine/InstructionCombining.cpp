@@ -2576,7 +2576,7 @@ Instruction *InstCombiner::visitLandingPadInst(LandingPadInst &LI) {
           // remove it from the filter.  An unexpected type handler may be
           // set up for a call site which throws an exception of the same
           // type caught.  In order for the exception thrown by the unexpected
-          // handler to propogate correctly, the filter must be correctly
+          // handler to propagate correctly, the filter must be correctly
           // described for the call site.
           //
           // Example:

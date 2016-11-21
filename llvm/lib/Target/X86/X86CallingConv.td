@@ -24,6 +24,8 @@ class RC_X86_RegCall {
   list<Register> GPR_16 = [];
   list<Register> GPR_32 = [];
   list<Register> GPR_64 = [];
+  list<Register> FP_CALL = [FP0];
+  list<Register> FP_RET = [FP0, FP1];
   list<Register> XMM = [];
   list<Register> YMM = [];
   list<Register> ZMM = [];
@@ -90,13 +92,13 @@ def CC_#NAME : CallingConv<[
     // TODO: Handle the case of mask types (v*i1)
     CCIfType<[v8i1, v16i1, v32i1], CCCustom<"CC_X86_RegCall_Error">>,
 
-    // TODO: Handle the case of long double (f80)
-    CCIfType<[f80], CCCustom<"CC_X86_RegCall_Error">>,
-
     // float, double, float128 --> XMM
     // In the case of SSE disabled --> save to stack
     CCIfType<[f32, f64, f128], 
       CCIfSubtarget<"hasSSE1()", CCAssignToReg<RC.XMM>>>,
+
+    // long double --> FP
+    CCIfType<[f80], CCAssignToReg<RC.FP_CALL>>,
 
     // __m128, __m128i, __m128d --> XMM
     // In the case of SSE disabled --> save to stack
@@ -129,7 +131,7 @@ def CC_#NAME : CallingConv<[
 
     // float 128 get stack slots whose size and alignment depends 
     // on the subtarget.
-    CCIfType<[f128], CCAssignToStack<0, 0>>,
+    CCIfType<[f80, f128], CCAssignToStack<0, 0>>,
 
     // Vectors get 16-byte stack slots that are 16-byte aligned.
     CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], 
@@ -166,7 +168,7 @@ def RetCC_#NAME : CallingConv<[
     CCIfType<[v8i1, v16i1, v32i1], CCCustom<"CC_X86_RegCall_Error">>,
 
     // long double --> FP
-    CCIfType<[f80], CCAssignToReg<[FP0]>>,
+    CCIfType<[f80], CCAssignToReg<RC.FP_RET>>,
 
     // float, double, float128 --> XMM
     CCIfType<[f32, f64, f128], 

@@ -1203,6 +1203,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Legal);
+    setOperationAction(ISD::UINT_TO_FP,         MVT::v2i32, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i8, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i16, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i1, Custom);
@@ -1269,8 +1270,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT,       MVT::v8i32, Legal);
       setOperationAction(ISD::FP_TO_UINT,       MVT::v8i32, Legal);
       setOperationAction(ISD::SINT_TO_FP,       MVT::v4i32, Legal);
-      setOperationAction(ISD::UINT_TO_FP,       MVT::v4i32, Legal);
-      setOperationAction(ISD::UINT_TO_FP,       MVT::v2i32, Custom);
       setOperationAction(ISD::FP_TO_SINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::FP_TO_UINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v4i32, Custom);
@@ -2414,7 +2413,7 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
   } else {
     // When a physical register is available read the value from it and glue
     // the reads together.
-    ArgValueLo = 
+    ArgValueLo =
       DAG.getCopyFromReg(Root, Dl, VA.getLocReg(), MVT::i32, *InFlag);
     *InFlag = ArgValueLo.getValue(2);
     ArgValueHi =
@@ -2816,6 +2815,8 @@ SDValue X86TargetLowering::LowerFormalArguments(
           RC = &X86::FR32RegClass;
         else if (RegVT == MVT::f64)
           RC = &X86::FR64RegClass;
+        else if (RegVT == MVT::f80)
+          RC = &X86::RFP80RegClass;
         else if (RegVT == MVT::f128)
           RC = &X86::FR128RegClass;
         else if (RegVT.is512BitVector())
@@ -25958,7 +25959,9 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
           (MaskVT == MVT::v8f64 || MaskVT == MVT::v8i64 ||
            MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
          (Subtarget.hasBWI() && MaskVT == MVT::v32i16) ||
-         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16))) {
+         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16) ||
+         (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
+         (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
       MVT VPermMaskSVT = MVT::getIntegerVT(MaskEltSizeInBits);
       MVT VPermMaskVT = MVT::getVectorVT(VPermMaskSVT, NumMaskElts);
       SDValue VPermMask = getConstVector(Mask, VPermMaskVT, DAG, DL, true);
@@ -25966,6 +25969,39 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       Res = DAG.getBitcast(MaskVT, V1);
       DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(X86ISD::VPERMV, DL, MaskVT, VPermMask, Res);
+      DCI.AddToWorklist(Res.getNode());
+      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                    /*AddTo*/ true);
+      return true;
+    }
+
+    // Lower a unary+zero lane-crossing shuffle as VPERMV3 with a zero
+    // vector as the second source.
+    if (UnaryShuffle && (Depth >= 3 || HasVariableMask) &&
+        ((Subtarget.hasAVX512() &&
+          (MaskVT == MVT::v8f64 || MaskVT == MVT::v8i64 ||
+           MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
+         (Subtarget.hasVLX() &&
+          (MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
+           MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) ||
+         (Subtarget.hasBWI() && MaskVT == MVT::v32i16) ||
+         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16) ||
+         (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
+         (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
+      // Adjust shuffle mask - replace SM_SentinelZero with second source index.
+      for (unsigned i = 0; i != NumMaskElts; ++i)
+        if (Mask[i] == SM_SentinelZero)
+          Mask[i] = NumMaskElts + i;
+
+      MVT VPermMaskSVT = MVT::getIntegerVT(MaskEltSizeInBits);
+      MVT VPermMaskVT = MVT::getVectorVT(VPermMaskSVT, NumMaskElts);
+      SDValue VPermMask = getConstVector(Mask, VPermMaskVT, DAG, DL, true);
+      DCI.AddToWorklist(VPermMask.getNode());
+      Res = DAG.getBitcast(MaskVT, V1);
+      DCI.AddToWorklist(Res.getNode());
+      SDValue Zero = getZeroVector(MaskVT, Subtarget, DAG, DL);
+      DCI.AddToWorklist(Zero.getNode());
+      Res = DAG.getNode(X86ISD::VPERMV3, DL, MaskVT, Res, VPermMask, Zero);
       DCI.AddToWorklist(Res.getNode());
       DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
                     /*AddTo*/ true);
@@ -25981,7 +26017,9 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
           (MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
            MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) ||
          (Subtarget.hasBWI() && MaskVT == MVT::v32i16) ||
-         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16))) {
+         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16) ||
+         (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
+         (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
       MVT VPermMaskSVT = MVT::getIntegerVT(MaskEltSizeInBits);
       MVT VPermMaskVT = MVT::getVectorVT(VPermMaskSVT, NumMaskElts);
       SDValue VPermMask = getConstVector(Mask, VPermMaskVT, DAG, DL, true);

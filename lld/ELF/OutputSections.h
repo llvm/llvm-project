@@ -11,7 +11,6 @@
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
 #include "Config.h"
-#include "GdbIndex.h"
 #include "Relocations.h"
 
 #include "lld/Core/LLVM.h"
@@ -103,30 +102,6 @@ public:
   uint32_t Type = 0;
   uint32_t Info = 0;
   uint32_t Link = 0;
-};
-
-template <class ELFT> class GdbIndexSection final : public OutputSectionBase {
-  typedef typename ELFT::uint uintX_t;
-
-  const unsigned OffsetTypeSize = 4;
-  const unsigned CuListOffset = 6 * OffsetTypeSize;
-  const unsigned CompilationUnitSize = 16;
-  const unsigned AddressEntrySize = 16 + OffsetTypeSize;
-  const unsigned SymTabEntrySize = 2 * OffsetTypeSize;
-
-public:
-  GdbIndexSection();
-  void finalize() override;
-  void writeTo(uint8_t *Buf) override;
-
-  // Pairs of [CU Offset, CU length].
-  std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
-
-private:
-  void parseDebugSections();
-  void readDwarf(InputSection<ELFT> *I);
-
-  uint32_t CuTypesOffset;
 };
 
 // For more information about .gnu.version and .gnu.version_r see:
@@ -338,7 +313,6 @@ template <class ELFT> struct Out {
   static uint8_t First;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhOutputSection<ELFT> *EhFrame;
-  static GdbIndexSection<ELFT> *GdbIndex;
   static OutputSection<ELFT> *Bss;
   static OutputSection<ELFT> *MipsRldMap;
   static OutputSectionBase *Opd;
@@ -391,7 +365,6 @@ template <class ELFT> uint64_t getHeaderSize() {
 template <class ELFT> uint8_t Out<ELFT>::First;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
-template <class ELFT> GdbIndexSection<ELFT> *Out<ELFT>::GdbIndex;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;

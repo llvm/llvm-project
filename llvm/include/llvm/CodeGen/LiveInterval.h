@@ -57,7 +57,7 @@ namespace llvm {
       : id(i), def(d)
     { }
 
-    /// VNInfo construtor, copies values from orig, except for the value number.
+    /// VNInfo constructor, copies values from orig, except for the value number.
     VNInfo(unsigned i, const VNInfo &orig)
       : id(i), def(orig.def)
     { }

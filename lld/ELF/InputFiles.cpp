@@ -482,7 +482,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 }
 
 template <class ELFT> void ArchiveFile::parse() {
-  File = check(Archive::create(MB), "failed to parse archive");
+  File = check(Archive::create(MB),
+               MB.getBufferIdentifier() + ": failed to parse archive");
 
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &Sym : File->symbols())

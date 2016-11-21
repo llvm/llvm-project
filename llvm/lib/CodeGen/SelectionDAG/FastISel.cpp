@@ -570,7 +570,7 @@ bool FastISel::addStackMapLiveVars(SmallVectorImpl<MachineOperand> &Ops,
       Ops.push_back(MachineOperand::CreateImm(StackMaps::ConstantOp));
       Ops.push_back(MachineOperand::CreateImm(0));
     } else if (auto *AI = dyn_cast<AllocaInst>(Val)) {
-      // Values coming from a stack location also require a sepcial encoding,
+      // Values coming from a stack location also require a special encoding,
       // but that is added later on by the target specific frame index
       // elimination implementation.
       auto SI = FuncInfo.StaticAllocaMap.find(AI);

@@ -521,7 +521,7 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
 
     if (const auto *Cleanup = dyn_cast<CleanupPadInst>(Pad)) {
       // Create the entry for this cleanup with the appropriate handler
-      // properties.  Finaly and fault handlers are distinguished by arity.
+      // properties.  Finally and fault handlers are distinguished by arity.
       ClrHandlerType HandlerType =
           (Cleanup->getNumArgOperands() ? ClrHandlerType::Fault
                                         : ClrHandlerType::Finally);
@@ -708,7 +708,7 @@ void WinEHPrepare::demotePHIsOnFunclets(Function &F) {
 
 void WinEHPrepare::cloneCommonBlocks(Function &F) {
   // We need to clone all blocks which belong to multiple funclets.  Values are
-  // remapped throughout the funclet to propogate both the new instructions
+  // remapped throughout the funclet to propagate both the new instructions
   // *and* the new basic blocks themselves.
   for (auto &Funclets : FuncletBlocks) {
     BasicBlock *FuncletPadBB = Funclets.first;
