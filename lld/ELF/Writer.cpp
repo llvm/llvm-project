@@ -133,18 +133,34 @@ template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
+  // Create linker-synthesized sections such as .got or .plt.
+  // Such sections are of type input section.
   createSyntheticSections();
 
+  // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
     addReservedSymbols();
 
+  // Some architectures use small displacements for jump instructions.
+  // It is linker's responsibility to create thunks containing long
+  // jump instructions if jump targets are too far. Create thunks.
   if (Target->NeedsThunks)
     forEachRelSec(createThunks<ELFT>);
 
+  // Create output sections.
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
-    Script<ELFT>::X->createSections(Factory);
+    // If linker script contains SECTIONS commands, let it create sections.
+    Script<ELFT>::X->processCommands(Factory);
+
+    // Linker scripts may have left some input sections unassigned.
+    // Assign such sections using the default rule.
+    Script<ELFT>::X->addOrphanSections(Factory);
   } else {
+    // If linker script does not contain SECTIONS commands, create
+    // output sections by default rules. We still need to give the
+    // linker script a chance to run, because it might contain
+    // non-SECTIONS commands such as ASSERT.
     createSections();
     Script<ELFT>::X->processCommands(Factory);
   }
@@ -152,6 +168,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
 
+  // Now that we have a complete set of output sections. This function
+  // completes section contents. For example, we need to add strings
+  // to the string table, and add entries to .got and .plt.
+  // finalizeSections does that.
   finalizeSections();
   if (HasError)
     return;
@@ -178,6 +198,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     fixAbsoluteSymbols();
   }
 
+  // Write the result down to a file.
   openFile();
   if (HasError)
     return;
@@ -187,17 +208,21 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     writeSectionsBinary();
   }
+
+  // Backfill .note.gnu.build-id section content. This is done at last
+  // because the content is usually a hash value of the entire output file.
   writeBuildId();
   if (HasError)
     return;
+
   if (auto EC = Buffer->commit())
     error(EC, "failed to write to the output file");
-  if (Config->ExitEarly) {
-    // Flush the output streams and exit immediately.  A full shutdown is a good
-    // test that we are keeping track of all allocated memory, but actually
-    // freeing it is a waste of time in a regular linker run.
+
+  // Flush the output streams and exit immediately. A full shutdown
+  // is a good test that we are keeping track of all allocated memory,
+  // but actually freeing it is a waste of time in a regular linker run.
+  if (Config->ExitEarly)
     exitLld(0);
-  }
 }
 
 // Initialize Out<ELFT> members.

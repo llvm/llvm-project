@@ -113,16 +113,16 @@ template <class ELFT> static std::vector<InputSection<ELFT> *> getSections() {
   return V;
 }
 
-// All sections between Begin and End must have the same group ID before
-// you call this function. This function compare sections between Begin
-// and End using Eq and assign new group IDs for new groups.
+// Before calling this function, all sections in Arr must have the
+// same group ID. This function compare sections in Arr using Eq and
+// assign new group IDs for new groups.
 template <class ELFT>
 void ICF<ELFT>::segregate(MutableArrayRef<InputSection<ELFT> *> Arr,
                           Comparator Eq) {
-  // This loop rearranges [Begin, End) so that all sections that are
-  // equal in terms of Eq are contiguous. The algorithm is quadratic in
-  // the worst case, but that is not an issue in practice because the
-  // number of distinct sections in [Begin, End) is usually very small.
+  // This loop rearranges Arr so that all sections that are equal in
+  // terms of Eq are contiguous. The algorithm is quadratic in the
+  // worst case, but that is not an issue in practice because the
+  // number of distinct sections in Arr is usually very small.
   InputSection<ELFT> **I = Arr.begin();
   for (;;) {
     InputSection<ELFT> *Head = *I;
@@ -136,6 +136,7 @@ void ICF<ELFT>::segregate(MutableArrayRef<InputSection<ELFT> *> Arr,
   }
 }
 
+// Call Fn for each section group having the same group ID.
 template <class ELFT>
 void ICF<ELFT>::forEachGroup(
     std::vector<InputSection<ELFT> *> &V,
@@ -177,6 +178,8 @@ static bool equalsConstant(const InputSection<ELFT> *A,
   return relocationEq<ELFT>(A->rels(), B->rels());
 }
 
+// Compare two lists of relocations. Returns true if all pairs of
+// relocations point to the same section in terms of ICF.
 template <class ELFT, class RelTy>
 static bool variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
                        const InputSection<ELFT> *B, ArrayRef<RelTy> RelsB) {
@@ -221,7 +224,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     // Set MSB on to avoid collisions with serial group IDs
     S->GroupId = getHash(S) | (uint64_t(1) << 63);
 
-  // From now on, sections in V are ordered so that sections in
+  // From now on, sections in Sections are ordered so that sections in
   // the same group are consecutive in the vector.
   std::stable_sort(Sections.begin(), Sections.end(),
                    [](InputSection<ELFT> *A, InputSection<ELFT> *B) {

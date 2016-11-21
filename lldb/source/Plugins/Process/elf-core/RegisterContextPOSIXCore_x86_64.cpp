@@ -21,18 +21,27 @@ RegisterContextCorePOSIX_x86_64::RegisterContextCorePOSIX_x86_64(
   size_t size, len;
 
   size = GetGPRSize();
-  m_gpregset = new uint8_t[size];
-  len = gpregset.ExtractBytes(0, size, lldb::eByteOrderLittle, m_gpregset);
-  assert(len == size);
+  m_gpregset.reset(new uint8_t[size]);
+  len =
+      gpregset.ExtractBytes(0, size, lldb::eByteOrderLittle, m_gpregset.get());
+  if (len != size)
+    m_gpregset.reset();
+
+  size = sizeof(FXSAVE);
+  m_fpregset.reset(new uint8_t[size]);
+  len =
+      fpregset.ExtractBytes(0, size, lldb::eByteOrderLittle, m_fpregset.get());
+  if (len != size)
+    m_fpregset.reset();
 }
 
-RegisterContextCorePOSIX_x86_64::~RegisterContextCorePOSIX_x86_64() {
-  delete[] m_gpregset;
+bool RegisterContextCorePOSIX_x86_64::ReadGPR() {
+  return m_gpregset != nullptr;
 }
 
-bool RegisterContextCorePOSIX_x86_64::ReadGPR() { return m_gpregset != NULL; }
-
-bool RegisterContextCorePOSIX_x86_64::ReadFPR() { return false; }
+bool RegisterContextCorePOSIX_x86_64::ReadFPR() {
+  return m_fpregset != nullptr;
+}
 
 bool RegisterContextCorePOSIX_x86_64::WriteGPR() {
   assert(0);
@@ -46,15 +55,27 @@ bool RegisterContextCorePOSIX_x86_64::WriteFPR() {
 
 bool RegisterContextCorePOSIX_x86_64::ReadRegister(const RegisterInfo *reg_info,
                                                    RegisterValue &value) {
-  switch (reg_info->byte_size) {
-  case 4:
-    value = *(uint32_t *)(m_gpregset + reg_info->byte_offset);
-    return true;
-  case 8:
-    value = *(uint64_t *)(m_gpregset + reg_info->byte_offset);
-    return true;
+  const uint8_t *src;
+  size_t offset;
+  const size_t fxsave_offset = reg_info->byte_offset - GetFXSAVEOffset();
+  // make the offset relative to the beginning of the FXSAVE structure
+  // because this is the data that we have (not the entire UserArea)
+
+  if (m_gpregset && reg_info->byte_offset < GetGPRSize()) {
+    src = m_gpregset.get();
+    offset = reg_info->byte_offset;
+  } else if (m_fpregset && fxsave_offset < sizeof(FXSAVE)) {
+    src = m_fpregset.get();
+    offset = fxsave_offset;
+  } else {
+    return false;
   }
-  return false;
+
+  Error error;
+  value.SetFromMemoryData(reg_info, src + offset, reg_info->byte_size,
+                          lldb::eByteOrderLittle, error);
+
+  return error.Success();
 }
 
 bool RegisterContextCorePOSIX_x86_64::ReadAllRegisterValues(

@@ -27,7 +27,7 @@
 
 #if defined(__x86_64__)
 #include <x86intrin.h>
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(__aarch64__)
 static const int64_t NanosecondsPerSecond = 1000LL * 1000 * 1000;
 #else
 #error "Unsupported CPU Architecture"
@@ -195,7 +195,7 @@ void __xray_InMemoryRawLog(int32_t FuncId,
     } else {
       Report("Unable to determine CPU frequency for TSC accounting.");
     }
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(__aarch64__)
     // There is no instruction like RDTSCP in user mode on ARM. ARM's CP15 does
     //   not have a constant frequency like TSC on x86(_64), it may go faster
     //   or slower depending on CPU turbo or power saving mode. Furthermore,
@@ -243,7 +243,7 @@ void __xray_InMemoryRawLog(int32_t FuncId,
     R.TSC = __rdtscp(&CPU);
     R.CPU = CPU;
   }
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(__aarch64__)
   {
     timespec TS;
     int result = clock_gettime(CLOCK_REALTIME, &TS);

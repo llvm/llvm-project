@@ -18,6 +18,8 @@ public:
 
   size_t GetGPRSize() const override;
 
+  size_t GetFXSAVEOffset() const override;
+
   const lldb_private::RegisterInfo *GetRegisterInfo() const override;
 
   uint32_t GetRegisterCount() const override;

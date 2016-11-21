@@ -8,12 +8,6 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains the parser/evaluator of the linker script.
-// It parses a linker script and write the result to Config or ScriptConfig
-// objects.
-//
-// If SECTIONS command is used, a ScriptConfig contains an AST
-// of the command which will later be consumed by createSections() and
-// assignAddresses().
 //
 //===----------------------------------------------------------------------===//
 
@@ -128,17 +122,19 @@ bool BytesDataCommand::classof(const BaseCommand *C) {
 template <class ELFT> LinkerScript<ELFT>::LinkerScript() = default;
 template <class ELFT> LinkerScript<ELFT>::~LinkerScript() = default;
 
+template <class ELFT> static StringRef basename(InputSectionBase<ELFT> *S) {
+  if (S->getFile())
+    return sys::path::filename(S->getFile()->getName());
+  return "";
+}
+
 template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
-  for (InputSectionDescription *ID : Opt.KeptSections) {
-    StringRef Filename = S->getFile()->getName();
-    if (!ID->FilePat.match(sys::path::filename(Filename)))
-      continue;
-
-    for (SectionPattern &P : ID->SectionPatterns)
-      if (P.SectionPat.match(S->Name))
-        return true;
-  }
+  for (InputSectionDescription *ID : Opt.KeptSections)
+    if (ID->FilePat.match(basename(S)))
+      for (SectionPattern &P : ID->SectionPatterns)
+        if (P.SectionPat.match(S->Name))
+          return true;
   return false;
 }
 
@@ -199,16 +195,16 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
     size_t SizeBefore = I->Sections.size();
 
     for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections) {
-      if (!S->Live || S->OutSec)
+      if (!S->Live || S->Assigned)
         continue;
 
-      StringRef Filename;
-      if (elf::ObjectFile<ELFT> *F = S->getFile())
-        Filename = sys::path::filename(F->getName());
-
-      if (I->FilePat.match(Filename) && !Pat.ExcludedFilePat.match(Filename) &&
-          Pat.SectionPat.match(S->Name))
-        I->Sections.push_back(S);
+      StringRef Filename = basename(S);
+      if (!I->FilePat.match(Filename) || Pat.ExcludedFilePat.match(Filename))
+        continue;
+      if (!Pat.SectionPat.match(S->Name))
+        continue;
+      I->Sections.push_back(S);
+      S->Assigned = true;
     }
 
     // Sort sections as instructed by SORT-family commands and --sort-section
@@ -231,13 +227,6 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
         sortSections(Begin, End, Pat.SortInner);
       sortSections(Begin, End, Pat.SortOuter);
     }
-  }
-
-  // We do not add duplicate input sections, so mark them with a dummy output
-  // section for now.
-  for (InputSectionData *S : I->Sections) {
-    auto *S2 = static_cast<InputSectionBase<ELFT> *>(S);
-    S2->OutSec = (OutputSectionBase *)-1;
   }
 }
 
@@ -262,12 +251,6 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
     for (InputSectionData *S : Cmd->Sections)
       Ret.push_back(static_cast<InputSectionBase<ELFT> *>(S));
   }
-
-  // After we created final list we should now set OutSec pointer to null,
-  // instead of -1. Otherwise we may get a crash when writing relocs, in
-  // case section is discarded by linker script
-  for (InputSectionBase<ELFT> *S : Ret)
-    S->OutSec = nullptr;
 
   return Ret;
 }
@@ -319,11 +302,14 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
   for (unsigned I = 0; I < Opt.Commands.size(); ++I) {
     auto Iter = Opt.Commands.begin() + I;
     const std::unique_ptr<BaseCommand> &Base1 = *Iter;
+
+    // Handle symbol assignments outside of any output section.
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
       if (shouldDefine<ELFT>(Cmd))
         addSymbol<ELFT>(Cmd);
       continue;
     }
+
     if (auto *Cmd = dyn_cast<AssertCommand>(Base1.get())) {
       // If we don't have SECTIONS then output sections have already been
       // created by Writer<ELFT>. The LinkerScript<ELFT>::assignAddresses
@@ -336,41 +322,54 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base1.get())) {
       std::vector<InputSectionBase<ELFT> *> V = createInputSectionList(*Cmd);
 
+      // The output section name `/DISCARD/' is special.
+      // Any input section assigned to it is discarded.
       if (Cmd->Name == "/DISCARD/") {
         discard(V);
         continue;
       }
 
+      // This is for ONLY_IF_RO and ONLY_IF_RW. An output section directive
+      // ".foo : ONLY_IF_R[OW] { ... }" is handled only if all member input
+      // sections satisfy a given constraint. If not, a directive is handled
+      // as if it wasn't present from the beginning.
+      //
+      // Because we'll iterate over Commands many more times, the easiest
+      // way to "make it as if it wasn't present" is to just remove it.
       if (!matchConstraints<ELFT>(V, Cmd->Constraint)) {
         for (InputSectionBase<ELFT> *S : V)
-          S->OutSec = nullptr;
+          S->Assigned = false;
         Opt.Commands.erase(Iter);
         --I;
         continue;
       }
 
+      // A directive may contain symbol definitions like this:
+      // ".foo : { ...; bar = .; }". Handle them.
       for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
         if (auto *OutCmd = dyn_cast<SymbolAssignment>(Base.get()))
           if (shouldDefine<ELFT>(OutCmd))
             addSymbol<ELFT>(OutCmd);
 
-      if (V.empty())
-        continue;
-
-      for (InputSectionBase<ELFT> *Sec : V) {
-        addSection(Factory, Sec, Cmd->Name);
-        if (uint32_t Subalign = Cmd->SubalignExpr ? Cmd->SubalignExpr(0) : 0)
-          Sec->Alignment = Subalign;
+      // Handle subalign (e.g. ".foo : SUBALIGN(32) { ... }"). If subalign
+      // is given, input sections are aligned to that value, whether the
+      // given value is larger or smaller than the original section alignment.
+      if (Cmd->SubalignExpr) {
+        uint32_t Subalign = Cmd->SubalignExpr(0);
+        for (InputSectionBase<ELFT> *S : V)
+          S->Alignment = Subalign;
       }
+
+      // Add input sections to an output section.
+      for (InputSectionBase<ELFT> *S : V)
+        addSection(Factory, S, Cmd->Name);
     }
   }
 }
 
+// Add sections that didn't match any sections command.
 template <class ELFT>
-void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
-  processCommands(Factory);
-
-  // Add orphan sections.
+void LinkerScript<ELFT>::addOrphanSections(OutputSectionFactory<ELFT> &Factory) {
   for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
     if (S->Live && !S->OutSec)
       addSection(Factory, S, getOutputSectionName(S->Name));
@@ -496,6 +495,8 @@ findSections(StringRef Name, const std::vector<OutputSectionBase *> &Sections) {
   return Ret;
 }
 
+// This function assigns offsets to input sections and an output section
+// for a single sections command (e.g. ".text { *(.text); }").
 template <class ELFT>
 void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   if (Cmd->LMAExpr)
@@ -505,6 +506,7 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   if (Sections.empty())
     return;
   switchTo(Sections[0]);
+
   // Find the last section output location. We will output orphan sections
   // there so that end symbols point to the correct location.
   auto E = std::find_if(Cmd->Commands.rbegin(), Cmd->Commands.rend(),
@@ -531,10 +533,9 @@ template <class ELFT> void LinkerScript<ELFT>::removeEmptyCommands() {
   auto Pos = std::remove_if(
       Opt.Commands.begin(), Opt.Commands.end(),
       [&](const std::unique_ptr<BaseCommand> &Base) {
-        auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
-        if (!Cmd)
-          return false;
-        return findSections<ELFT>(Cmd->Name, *OutputSections).empty();
+        if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
+          return findSections<ELFT>(Cmd->Name, *OutputSections).empty();
+        return false;
       });
   Opt.Commands.erase(Pos, Opt.Commands.end());
 }
@@ -686,10 +687,8 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
     }
 
     auto *Cmd = cast<OutputSectionCommand>(Base.get());
-
     if (Cmd->AddrExpr)
       Dot = Cmd->AddrExpr(Dot);
-
     assignOffsets(Cmd);
   }
 

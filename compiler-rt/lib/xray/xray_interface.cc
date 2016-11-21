@@ -33,6 +33,8 @@ namespace __xray {
 static const int16_t cSledLength = 12;
 #elif defined(__arm__)
 static const int16_t cSledLength = 28;
+#elif defined(__aarch64__)
+static const int16_t cSledLength = 32;
 #else
 #error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
