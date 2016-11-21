@@ -1788,8 +1788,8 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
             parent = parent->td_parent;  // check generation up to the level of the current task
             KMP_DEBUG_ASSERT(parent != NULL);
         }
-        if ( parent != current && (taskdata->td_flags.tiedness == TASK_TIED) ) { // untied is always allowed to be stolen
-            // If the tail task is not a child, then no other childs can appear in the deque (?).
+        if ( parent != current ) {
+            // If the tail task is not a descendant of the current task then do not steal it.
             __kmp_release_bootstrap_lock( & victim_td -> td.td_deque_lock );
             KA_TRACE(10, ("__kmp_steal_task(exit #2): T#%d could not steal from T#%d: task_team=%p "
                           "ntasks=%d head=%u tail=%u\n",
