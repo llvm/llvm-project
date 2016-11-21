@@ -117,9 +117,12 @@ FunctionPass *llvm::createSIMemoryLegalizerPass() {
 bool SIMemoryLegalizer::InsertBufferWbinvl1Vol(
     const MachineBasicBlock::iterator &MI) const {
   MachineBasicBlock &MBB = *MI->getParent();
+  const SISubtarget &ST = MBB.getParent()->getSubtarget<SISubtarget>();
   DebugLoc DL = MI->getDebugLoc();
 
-  BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBINVL1_VOL));
+  unsigned Opcode = ST.getGeneration() <= AMDGPUSubtarget::SOUTHERN_ISLANDS ?
+      AMDGPU::BUFFER_WBINVL1 : AMDGPU::BUFFER_WBINVL1_VOL;
+  BuildMI(MBB, MI, DL, TII->get(Opcode));
   return true;
 }
 
