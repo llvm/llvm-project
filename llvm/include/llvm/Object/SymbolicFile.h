@@ -137,17 +137,11 @@ public:
 
   virtual uint32_t getSymbolFlags(DataRefImpl Symb) const = 0;
 
-  virtual basic_symbol_iterator symbol_begin_impl() const = 0;
+  virtual basic_symbol_iterator symbol_begin() const = 0;
 
-  virtual basic_symbol_iterator symbol_end_impl() const = 0;
+  virtual basic_symbol_iterator symbol_end() const = 0;
 
   // convenience wrappers.
-  basic_symbol_iterator symbol_begin() const {
-    return symbol_begin_impl();
-  }
-  basic_symbol_iterator symbol_end() const {
-    return symbol_end_impl();
-  }
   typedef iterator_range<basic_symbol_iterator> basic_symbol_iterator_range;
   basic_symbol_iterator_range symbols() const {
     return basic_symbol_iterator_range(symbol_begin(), symbol_end());

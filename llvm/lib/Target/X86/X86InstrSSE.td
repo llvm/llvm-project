@@ -4905,6 +4905,8 @@ def : InstAlias<"vmovq\t{$src, $dst|$dst, $src}",
 let Predicates = [UseAVX], AddedComplexity = 20 in {
   def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
             (VMOVQI2PQIrm addr:$src)>;
+  def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
+            (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4f32 addr:$src)))),
             (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)),
@@ -4918,6 +4920,8 @@ let Predicates = [UseAVX], AddedComplexity = 20 in {
 
 let Predicates = [UseSSE2], AddedComplexity = 20 in {
   def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
+            (MOVQI2PQIrm addr:$src)>;
+  def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
             (MOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4f32 addr:$src)))),
             (MOVQI2PQIrm addr:$src)>;
@@ -4942,24 +4946,6 @@ def MOVZPQILo2PQIrr : I<0x7E, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                     IIC_SSE_MOVQ_RR>,
                       XS, Requires<[UseSSE2]>;
 } // ExeDomain, SchedRW
-
-let ExeDomain = SSEPackedInt, isCodeGenOnly = 1, SchedRW = [WriteVecLogicLd] in {
-let AddedComplexity = 20 in
-def VMOVZPQILo2PQIrm : I<0x7E, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
-                        "vmovq\t{$src, $dst|$dst, $src}",
-                    [(set VR128:$dst, (v2i64 (X86vzmovl
-                                             (loadv2i64 addr:$src))))],
-                                             IIC_SSE_MOVDQ>,
-                      XS, VEX, Requires<[UseAVX]>;
-let AddedComplexity = 20 in {
-def MOVZPQILo2PQIrm : I<0x7E, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
-                        "movq\t{$src, $dst|$dst, $src}",
-                    [(set VR128:$dst, (v2i64 (X86vzmovl
-                                             (loadv2i64 addr:$src))))],
-                                             IIC_SSE_MOVDQ>,
-                      XS, Requires<[UseSSE2]>;
-}
-} // ExeDomain, isCodeGenOnly, SchedRW
 
 let AddedComplexity = 20 in {
   let Predicates = [UseAVX] in {

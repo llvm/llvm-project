@@ -13,15 +13,15 @@ entry:
   br i1 %a, label %Loop.Body, label %Loop.End
 
 Loop.Body:
-; CHECK: 4 = MemoryPhi({entry,1},{Loop.End,3})
-; CHECK-NEXT: 2 = MemoryDef(4)
+; CHECK: 3 = MemoryPhi({entry,1},{Loop.End,4})
+; CHECK-NEXT: 2 = MemoryDef(3)
 ; CHECK-NEXT: store i32 5
   store i32 5, i32* %0, align 4
   br i1 %a, label %Loop.End, label %Loop.End ; WhyDoWeEvenHaveThatLever.gif
 
 Loop.End:
-; CHECK: 3 = MemoryPhi({entry,1},{Loop.Body,2},{Loop.Body,2})
-; CHECK-NEXT: MemoryUse(3)
+; CHECK: 4 = MemoryPhi({entry,1},{Loop.Body,2},{Loop.Body,2})
+; CHECK-NEXT: MemoryUse(4)
 ; CHECK-NEXT: %1 = load
   %1 = load i32, i32* %0, align 4
   %2 = icmp eq i32 5, %1

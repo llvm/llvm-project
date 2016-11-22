@@ -773,6 +773,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
                                   const DataLayout &DL,
                                   const TargetLibraryInfo *TLI) {
   const GEPOperator *InnermostGEP = GEP;
+  bool InBounds = GEP->isInBounds();
 
   Type *SrcElemTy = GEP->getSourceElementType();
   Type *ResElemTy = GEP->getResultElementType();
@@ -825,6 +826,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   // If this is a GEP of a GEP, fold it all into a single GEP.
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
     InnermostGEP = GEP;
+    InBounds &= GEP->isInBounds();
 
     SmallVector<Value *, 4> NestedOps(GEP->op_begin() + 1, GEP->op_end());
 
@@ -946,8 +948,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     }
 
   // Create a GEP.
-  Constant *C = ConstantExpr::getGetElementPtr(
-      SrcElemTy, Ptr, NewIdxs, /*InBounds=*/false, InRangeIndex);
+  Constant *C = ConstantExpr::getGetElementPtr(SrcElemTy, Ptr, NewIdxs,
+                                               InBounds, InRangeIndex);
   assert(C->getType()->getPointerElementType() == Ty &&
          "Computed GetElementPtr has unexpected type!");
 

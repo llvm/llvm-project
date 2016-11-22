@@ -575,6 +575,37 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+define void @gep-indexing(i32* nocapture %x) {
+entry:
+  %call = tail call i32 @foo(i32 0) #1
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %0 = mul nsw i64 %indvars.iv, 3
+  %arrayidx = getelementptr inbounds i32, i32* %x, i64 %0
+  store i32 %call, i32* %arrayidx, align 4
+  %arrayidx4 = getelementptr inbounds i32, i32* %arrayidx, i64 1
+  store i32 %call, i32* %arrayidx4, align 4
+  %arrayidx9 = getelementptr inbounds i32, i32* %arrayidx, i64 2
+  store i32 %call, i32* %arrayidx9, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 500
+  br i1 %exitcond, label %for.end, label %for.body
+
+; CHECK-LABEL: @gep-indexing
+; CHECK:      for.body:
+; CHECK-NEXT:   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+; CHECK-NEXT:   %scevgep = getelementptr i32, i32* %x, i64 %indvars.iv
+; CHECK-NEXT:   store i32 %call, i32* %scevgep, align 4
+; CHECK-NEXT:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+; CHECK-NEXT:   %exitcond2 = icmp eq i32* %scevgep, %scevgep1
+; CHECK-NEXT:   br i1 %exitcond2, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
 
 define void @unordered_atomic_ops(i32* noalias %buf_0, i32* noalias %buf_1) {
 ; CHECK-LABEL: @unordered_atomic_ops(

@@ -150,8 +150,13 @@ public:
   const char *GetArgumentAtIndex(size_t idx) const;
 
   llvm::ArrayRef<ArgEntry> entries() const { return m_entries; }
-
   char GetArgumentQuoteCharAtIndex(size_t idx) const;
+
+  auto begin() const { return m_entries.begin(); }
+  auto end() const { return m_entries.end(); }
+
+  size_t size() const { return GetArgumentCount(); }
+  const ArgEntry &operator[](size_t n) const { return m_entries[n]; }
 
   //------------------------------------------------------------------
   /// Gets the argument vector.

@@ -38,6 +38,7 @@ class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
 class Lazy;
+class SectionChunk;
 class SymbolBody;
 class Undefined;
 
@@ -122,6 +123,7 @@ public:
   void parse() override;
   MachineTypes getMachineType() override;
   std::vector<Chunk *> &getChunks() { return Chunks; }
+  std::vector<SectionChunk *> &getDebugChunks() { return DebugChunks; }
   std::vector<SymbolBody *> &getSymbols() override { return SymbolBodies; }
 
   // Returns a SymbolBody object for the SymbolIndex'th symbol in the
@@ -156,6 +158,9 @@ private:
   // List of all chunks defined by this file. This includes both section
   // chunks and non-section chunks for common symbols.
   std::vector<Chunk *> Chunks;
+
+  // CodeView debug info sections.
+  std::vector<SectionChunk *> DebugChunks;
 
   // This vector contains the same chunks as Chunks, but they are
   // indexed such that you can get a SectionChunk by section index.

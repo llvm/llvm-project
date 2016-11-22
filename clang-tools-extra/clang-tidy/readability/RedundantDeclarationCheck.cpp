@@ -28,6 +28,8 @@ void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Prev = D->getPreviousDecl();
   if (!Prev)
     return;
+  if (!Prev->getLocation().isValid())
+    return;
   if (Prev->getLocation() == D->getLocation())
     return;
 

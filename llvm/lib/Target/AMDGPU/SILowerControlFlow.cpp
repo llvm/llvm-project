@@ -141,8 +141,9 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.
+  unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
   MachineInstr *CopyExec =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), SaveExecReg)
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addReg(AMDGPU::EXEC)
     .addReg(AMDGPU::EXEC, RegState::ImplicitDefine);
 
@@ -150,7 +151,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   MachineInstr *And =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_AND_B64), Tmp)
-    .addReg(SaveExecReg)
+    .addReg(CopyReg)
     //.addReg(AMDGPU::EXEC)
     .addReg(Cond.getReg());
   setImpSCCDefDead(*And, true);
@@ -158,7 +159,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineInstr *Xor =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
     .addReg(Tmp)
-    .addReg(SaveExecReg);
+    .addReg(CopyReg);
   setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
 
   // Use a copy that is a terminator to get correct spill code placement it with
@@ -197,6 +198,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   LIS->removeInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(Tmp);
+  LIS->createAndComputeVirtRegInterval(CopyReg);
 }
 
 void SILowerControlFlow::emitElse(MachineInstr &MI) {
@@ -212,14 +214,17 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // We are running before TwoAddressInstructions, and si_else's operands are
   // tied. In order to correctly tie the registers, split this into a copy of
   // the src like it does.
-  BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), DstReg)
+  unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addOperand(MI.getOperand(1)); // Saved EXEC
 
   // This must be inserted before phis and any spill code inserted before the
   // else.
+  unsigned SaveReg = ExecModified ?
+    MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass) : DstReg;
   MachineInstr *OrSaveExec =
-    BuildMI(MBB, Start, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), DstReg)
-    .addReg(DstReg);
+    BuildMI(MBB, Start, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), SaveReg)
+    .addReg(CopyReg);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -229,7 +234,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
     MachineInstr *And =
       BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_AND_B64), DstReg)
       .addReg(AMDGPU::EXEC)
-      .addReg(DstReg);
+      .addReg(SaveReg);
 
     if (LIS)
       LIS->InsertMachineInstrInMaps(*And);
@@ -260,6 +265,9 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // src reg is tied to dst reg.
   LIS->removeInterval(DstReg);
   LIS->createAndComputeVirtRegInterval(DstReg);
+  LIS->createAndComputeVirtRegInterval(CopyReg);
+  if (ExecModified)
+    LIS->createAndComputeVirtRegInterval(SaveReg);
 
   // Let this be recomputed.
   LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));

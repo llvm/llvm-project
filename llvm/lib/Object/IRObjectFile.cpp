@@ -262,14 +262,14 @@ GlobalValue *IRObjectFile::getSymbolGV(DataRefImpl Symb) { return getGV(Symb); }
 
 std::unique_ptr<Module> IRObjectFile::takeModule() { return std::move(M); }
 
-basic_symbol_iterator IRObjectFile::symbol_begin_impl() const {
+basic_symbol_iterator IRObjectFile::symbol_begin() const {
   Module::const_iterator I = M->begin();
   DataRefImpl Ret;
   Ret.p = skipEmpty(I, *M);
   return basic_symbol_iterator(BasicSymbolRef(Ret, this));
 }
 
-basic_symbol_iterator IRObjectFile::symbol_end_impl() const {
+basic_symbol_iterator IRObjectFile::symbol_end() const {
   DataRefImpl Ret;
   uint64_t NumAsm = AsmSymbols.size();
   NumAsm <<= 2;

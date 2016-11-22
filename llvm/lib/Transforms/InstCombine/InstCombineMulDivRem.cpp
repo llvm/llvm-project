@@ -709,7 +709,6 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
           BuilderTy::FastMathFlagGuard Guard(*Builder);
           Builder->setFastMathFlags(I.getFastMathFlags());
           Value *T = Builder->CreateFMul(Opnd1, Opnd1);
-
           Value *R = Builder->CreateFMul(T, Y);
           R->takeName(&I);
           return replaceInstUsesWith(I, R);

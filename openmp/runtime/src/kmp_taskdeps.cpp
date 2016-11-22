@@ -378,6 +378,7 @@ __kmp_release_deps ( kmp_int32 gtid, kmp_taskdata_t *task )
     if ( task->td_dephash ) {
         KA_TRACE(40, ("__kmp_release_deps: T#%d freeing dependencies hash of task %p.\n", gtid, task ) );
         __kmp_dephash_free(thread,task->td_dephash);
+        task->td_dephash = NULL;
     }
 
     if ( !node ) return;

@@ -4206,18 +4206,19 @@ mapToDimension(__isl_take isl_union_set *USet, int N) {
   return isl_multi_union_pw_aff_from_union_pw_multi_aff(Data.Res);
 }
 
-void Scop::addScopStmt(BasicBlock *BB, Region *R) {
-  if (BB) {
-    Stmts.emplace_back(*this, *BB);
-    auto *Stmt = &Stmts.back();
+void Scop::addScopStmt(BasicBlock *BB) {
+  assert(BB && "Unexpected nullptr!");
+  Stmts.emplace_back(*this, *BB);
+  auto *Stmt = &Stmts.back();
+  StmtMap[BB] = Stmt;
+}
+
+void Scop::addScopStmt(Region *R) {
+  assert(R && "Unexpected nullptr!");
+  Stmts.emplace_back(*this, *R);
+  auto *Stmt = &Stmts.back();
+  for (BasicBlock *BB : R->blocks())
     StmtMap[BB] = Stmt;
-  } else {
-    assert(R && "Either basic block or a region expected.");
-    Stmts.emplace_back(*this, *R);
-    auto *Stmt = &Stmts.back();
-    for (BasicBlock *BB : R->blocks())
-      StmtMap[BB] = Stmt;
-  }
 }
 
 ScopStmt *Scop::addScopStmt(__isl_take isl_map *SourceRel,

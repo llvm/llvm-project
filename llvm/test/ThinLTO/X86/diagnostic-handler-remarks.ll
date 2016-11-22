@@ -3,7 +3,7 @@
 
 ; Optimization records are collected regardless of the diagnostic handler
 ; RUN: llvm-lto -thinlto-action=run \
-; RUN:          -pass-remarks-output=%t.yaml \
+; RUN:          -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -exported-symbol _func2 \
 ; RUN:          -exported-symbol _main %t1.bc %t2.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty

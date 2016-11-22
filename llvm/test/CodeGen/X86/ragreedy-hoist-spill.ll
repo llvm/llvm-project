@@ -177,14 +177,14 @@ for.cond357:
   br label %for.cond357
 
 sw.bb474:
+  ; CHECK: sw.bb474
+  ; spill is hoisted here. Although loop depth1 is even hotter than loop depth2, sw.bb474 is still cold.
+  ; CHECK: movq %r{{.*}}, {{[0-9]+}}(%rsp)
+  ; CHECK: land.rhs485
   %cmp476 = icmp eq i8 undef, 0
   br i1 %cmp476, label %if.end517, label %do.body479.preheader
 
 do.body479.preheader:
-  ; CHECK: do.body479.preheader
-  ; spill is hoisted here. Although loop depth1 is even hotter than loop depth2, do.body479.preheader is cold.
-  ; CHECK: movq %r{{.*}}, {{[0-9]+}}(%rsp)
-  ; CHECK: land.rhs485
   %cmp4833314 = icmp eq i8 undef, 0
   br i1 %cmp4833314, label %if.end517, label %land.rhs485
 

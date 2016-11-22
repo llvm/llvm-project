@@ -1859,9 +1859,8 @@ int CommandInterpreter::HandleCompletion(
     // put an empty string in element 0.
     std::string command_partial_str;
     if (cursor_index >= 0)
-      command_partial_str.assign(parsed_line.GetArgumentAtIndex(cursor_index),
-                                 parsed_line.GetArgumentAtIndex(cursor_index) +
-                                     cursor_char_position);
+      command_partial_str =
+          parsed_line[cursor_index].ref.take_front(cursor_char_position);
 
     std::string common_prefix;
     matches.LongestCommonPrefix(common_prefix);
@@ -1872,7 +1871,7 @@ int CommandInterpreter::HandleCompletion(
     // Only do this if the completer told us this was a complete word,
     // however...
     if (num_command_matches == 1 && word_complete) {
-      char quote_char = parsed_line.GetArgumentQuoteCharAtIndex(cursor_index);
+      char quote_char = parsed_line[cursor_index].quote;
       common_prefix =
           Args::EscapeLLDBCommandArgument(common_prefix, quote_char);
       if (quote_char != '\0')

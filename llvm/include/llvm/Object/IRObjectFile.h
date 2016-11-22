@@ -41,8 +41,8 @@ public:
   const GlobalValue *getSymbolGV(DataRefImpl Symb) const {
     return const_cast<IRObjectFile *>(this)->getSymbolGV(Symb);
   }
-  basic_symbol_iterator symbol_begin_impl() const override;
-  basic_symbol_iterator symbol_end_impl() const override;
+  basic_symbol_iterator symbol_begin() const override;
+  basic_symbol_iterator symbol_end() const override;
 
   const Module &getModule() const {
     return const_cast<IRObjectFile*>(this)->getModule();

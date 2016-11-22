@@ -33,7 +33,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cassert>
@@ -708,24 +707,21 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
   if (FirstPTLoad == Phdrs.end())
     return;
 
-  if (HeaderSize <= MinVA) {
-    // If linker script specifies program headers and first PT_LOAD doesn't
-    // have both PHDRS and FILEHDR attributes then do nothing
-    if (!Opt.PhdrsCommands.empty()) {
-      size_t SegNum = std::distance(Phdrs.begin(), FirstPTLoad);
-      if (!Opt.PhdrsCommands[SegNum].HasPhdrs ||
-          !Opt.PhdrsCommands[SegNum].HasFilehdr)
-        return;
-    }
-    // ELF and Program headers need to be right before the first section in
-    // memory. Set their addresses accordingly.
-    MinVA = alignDown(MinVA - HeaderSize, Target->PageSize);
-    Out<ELFT>::ElfHeader->Addr = MinVA;
-    Out<ELFT>::ProgramHeaders->Addr = Out<ELFT>::ElfHeader->Size + MinVA;
+  // If the linker script doesn't have PHDRS, add ElfHeader and ProgramHeaders
+  // now that we know we have space.
+  if (HeaderSize <= MinVA && !hasPhdrsCommands()) {
     FirstPTLoad->First = Out<ELFT>::ElfHeader;
     if (!FirstPTLoad->Last)
       FirstPTLoad->Last = Out<ELFT>::ProgramHeaders;
-  } else if (!FirstPTLoad->First) {
+  }
+
+  // ELF and Program headers need to be right before the first section in
+  // memory. Set their addresses accordingly.
+  MinVA = alignDown(MinVA - HeaderSize, Config->MaxPageSize);
+  Out<ELFT>::ElfHeader->Addr = MinVA;
+  Out<ELFT>::ProgramHeaders->Addr = Out<ELFT>::ElfHeader->Size + MinVA;
+
+  if (!FirstPTLoad->First) {
     // Sometimes the very first PT_LOAD segment can be empty.
     // This happens if (all conditions met):
     //  - Linker script is used
@@ -948,11 +944,12 @@ size_t LinkerScript<ELFT>::getPhdrIndex(StringRef PhdrName) {
   return 0;
 }
 
-class elf::ScriptParser : public ScriptParserBase {
+class elf::ScriptParser final : public ScriptParserBase {
   typedef void (ScriptParser::*Handler)();
 
 public:
-  ScriptParser(StringRef S, bool B) : ScriptParserBase(S), IsUnderSysroot(B) {}
+  ScriptParser(MemoryBufferRef MB, bool B)
+      : ScriptParserBase(MB), IsUnderSysroot(B) {}
 
   void readLinkerScript();
   void readVersionScript();
@@ -1006,6 +1003,7 @@ private:
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
+  std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
 
 void ScriptParser::readVersionScript() {
@@ -1148,9 +1146,8 @@ void ScriptParser::readInclude() {
     return;
   }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
-  StringRef S = Saver.save(MB->getMemBufferRef().getBuffer());
-  std::vector<StringRef> V = tokenize(S);
-  Tokens.insert(Tokens.begin() + Pos, V.begin(), V.end());
+  tokenize(MB->getMemBufferRef());
+  OwningMBs.push_back(std::move(MB));
 }
 
 void ScriptParser::readOutput() {
@@ -1912,11 +1909,11 @@ static bool isUnderSysroot(StringRef Path) {
 
 void elf::readLinkerScript(MemoryBufferRef MB) {
   StringRef Path = MB.getBufferIdentifier();
-  ScriptParser(MB.getBuffer(), isUnderSysroot(Path)).readLinkerScript();
+  ScriptParser(MB, isUnderSysroot(Path)).readLinkerScript();
 }
 
 void elf::readVersionScript(MemoryBufferRef MB) {
-  ScriptParser(MB.getBuffer(), false).readVersionScript();
+  ScriptParser(MB, false).readVersionScript();
 }
 
 template class elf::LinkerScript<ELF32LE>;

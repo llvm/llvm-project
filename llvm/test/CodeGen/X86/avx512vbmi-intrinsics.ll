@@ -90,8 +90,7 @@ define <64 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_512(<64 x i8> %x0, <64 
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
-; CHECK-NEXT:    vpermt2b %zmm2, %zmm0, %zmm1 {%k1} {z}
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    vpermi2b %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %res = call <64 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2, i64 %x3)
   ret <64 x i8> %res

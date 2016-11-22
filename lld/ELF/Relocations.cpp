@@ -554,11 +554,11 @@ std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
   DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
   if (Encl && Encl->Type == STT_FUNC) {
     StringRef Func = getSymbolName(File->getStringTable(), *Encl);
-    return SrcFile + " (function " + maybeDemangle(Func) + ")";
+    return SrcFile + ":(function " + maybeDemangle(Func) + ")";
   }
 
   // If there's no symbol, print out the offset instead of a symbol name.
-  return (SrcFile + " (" + S.Name + "+0x" + Twine::utohexstr(Offset) + ")")
+  return (SrcFile + ":(" + S.Name + "+0x" + Twine::utohexstr(Offset) + ")")
       .str();
 }
 

@@ -28,7 +28,7 @@
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
 
 ; Optimization records are collected regardless of the diagnostic handler
-; RUN: llvm-lto -pass-remarks-output=%t.yaml \
+; RUN: llvm-lto -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -exported-symbol _func2 \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty

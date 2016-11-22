@@ -568,24 +568,26 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   // If we change such a relocation to use the section, the linker would think
   // that it pointed to another string and subtracting 42 at runtime will
   // produce the wrong value.
-  auto &Sec = cast<MCSectionELF>(Sym->getSection());
-  unsigned Flags = Sec.getFlags();
-  if (Flags & ELF::SHF_MERGE) {
-    if (C != 0)
-      return true;
+  if (Sym->isInSection()) {
+    auto &Sec = cast<MCSectionELF>(Sym->getSection());
+    unsigned Flags = Sec.getFlags();
+    if (Flags & ELF::SHF_MERGE) {
+      if (C != 0)
+        return true;
 
-    // It looks like gold has a bug (http://sourceware.org/PR16794) and can
-    // only handle section relocations to mergeable sections if using RELA.
-    if (!hasRelocationAddend())
+      // It looks like gold has a bug (http://sourceware.org/PR16794) and can
+      // only handle section relocations to mergeable sections if using RELA.
+      if (!hasRelocationAddend())
+        return true;
+    }
+
+    // Most TLS relocations use a got, so they need the symbol. Even those that
+    // are just an offset (@tpoff), require a symbol in gold versions before
+    // 5efeedf61e4fe720fd3e9a08e6c91c10abb66d42 (2014-09-26) which fixed
+    // http://sourceware.org/PR16773.
+    if (Flags & ELF::SHF_TLS)
       return true;
   }
-
-  // Most TLS relocations use a got, so they need the symbol. Even those that
-  // are just an offset (@tpoff), require a symbol in gold versions before
-  // 5efeedf61e4fe720fd3e9a08e6c91c10abb66d42 (2014-09-26) which fixed
-  // http://sourceware.org/PR16773.
-  if (Flags & ELF::SHF_TLS)
-    return true;
 
   // If the symbol is a thumb function the final relocation must set the lowest
   // bit. With a symbol that is done by just having the symbol have that bit

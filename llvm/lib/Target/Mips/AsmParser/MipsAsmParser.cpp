@@ -252,6 +252,12 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                              const MCSubtargetInfo *STI, bool IsLoad);
 
+  bool expandSeq(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                 const MCSubtargetInfo *STI);
+
+  bool expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                  const MCSubtargetInfo *STI);
+
   bool reportParseError(Twine ErrorMsg);
   bool reportParseError(SMLoc Loc, Twine ErrorMsg);
 
@@ -2223,6 +2229,10 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                  Inst.getOpcode() == Mips::LDMacro)
                ? MER_Fail
                : MER_Success;
+  case Mips::SEQMacro:
+    return expandSeq(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SEQIMacro:
+    return expandSeqI(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   }
 }
 
@@ -3912,6 +3922,85 @@ bool MipsAsmParser::expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc,
     TOut.emitRRX(Opcode, FirstReg, BaseReg, FirstOffset, IDLoc, STI);
   }
 
+  return false;
+}
+
+bool MipsAsmParser::expandSeq(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                              const MCSubtargetInfo *STI) {
+
+  warnIfNoMacro(IDLoc);
+  MipsTargetStreamer &TOut = getTargetStreamer();
+
+  if (Inst.getOperand(1).getReg() != Mips::ZERO &&
+      Inst.getOperand(2).getReg() != Mips::ZERO) {
+    TOut.emitRRR(Mips::XOR, Inst.getOperand(0).getReg(),
+                 Inst.getOperand(1).getReg(), Inst.getOperand(2).getReg(),
+                 IDLoc, STI);
+    TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
+                 Inst.getOperand(0).getReg(), 1, IDLoc, STI);
+    return false;
+  }
+
+  unsigned Reg = 0;
+  if (Inst.getOperand(1).getReg() == Mips::ZERO) {
+    Reg = Inst.getOperand(2).getReg();
+  } else {
+    Reg = Inst.getOperand(1).getReg();
+  }
+  TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(), Reg, 1, IDLoc, STI);
+  return false;
+}
+
+bool MipsAsmParser::expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                               const MCSubtargetInfo *STI) {
+
+  warnIfNoMacro(IDLoc);
+  MipsTargetStreamer &TOut = getTargetStreamer();
+
+  unsigned Opc;
+  int64_t Imm = Inst.getOperand(2).getImm();
+  unsigned Reg = Inst.getOperand(1).getReg();
+
+  if (Imm == 0) {
+    TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
+                 Inst.getOperand(1).getReg(), 1, IDLoc, STI);
+    return false;
+  } else {
+
+    if (Reg == Mips::ZERO) {
+      Warning(IDLoc, "comparison is always false");
+      TOut.emitRRR(isGP64bit() ? Mips::DADDu : Mips::ADDu,
+                   Inst.getOperand(0).getReg(), Reg, Reg, IDLoc, STI);
+      return false;
+    }
+
+    if (Imm > -0x8000 && Imm < 0) {
+      Imm = -Imm;
+      Opc = isGP64bit() ? Mips::DADDiu : Mips::ADDiu;
+    } else {
+      Opc = Mips::XORi;
+    }
+  }
+  if (!isUInt<16>(Imm)) {
+    unsigned ATReg = getATReg(IDLoc);
+    if (!ATReg)
+      return true;
+
+    if (loadImmediate(Imm, ATReg, Mips::NoRegister, true, isGP64bit(), IDLoc,
+                      Out, STI))
+      return true;
+
+    TOut.emitRRR(Mips::XOR, Inst.getOperand(0).getReg(),
+                 Inst.getOperand(1).getReg(), ATReg, IDLoc, STI);
+    TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
+                 Inst.getOperand(0).getReg(), 1, IDLoc, STI);
+    return false;
+  }
+
+  TOut.emitRRI(Opc, Inst.getOperand(0).getReg(), Inst.getOperand(1).getReg(),
+               Imm, IDLoc, STI);
+  TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
+               Inst.getOperand(0).getReg(), 1, IDLoc, STI);
   return false;
 }
 
