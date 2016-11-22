@@ -565,109 +565,137 @@ ABISysV_mips64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
         // Any structure of up to 16 bytes in size is returned in the registers.
         if (byte_size <= 16)
         {
-            DataBufferSP data_sp (new DataBufferHeap(16, 0));
-            DataExtractor return_ext (data_sp, 
-                                      target_byte_order, 
-                                      target->GetArchitecture().GetAddressByteSize());
+            DataBufferSP data_sp(new DataBufferHeap(16, 0));
+            DataExtractor return_ext(data_sp, target_byte_order,
+                                     target->GetArchitecture().GetAddressByteSize());
 
             RegisterValue r2_value, r3_value, f0_value, f1_value, f2_value;
+            // Tracks how much bytes of r2 and r3 registers we've consumed so far
+            uint32_t integer_bytes = 0;
 
-            uint32_t integer_bytes = 0;         // Tracks how much bytes of r2 and r3 registers we've consumed so far
-            bool use_fp_regs = 0;               // True if return values are in FP return registers.
-            bool found_non_fp_field = 0;        // True if we found any non floating point field in structure.
-            bool use_r2 = 0;                    // True if return values are in r2 register.
-            bool use_r3 = 0;                    // True if return values are in r3 register.
-            bool sucess = 0;                    // True if the result is copied into our data buffer
-            std::string name;
-            bool is_complex;
-            uint32_t count;
-            const uint32_t num_children = return_compiler_type.GetNumFields ();
+           // True if return values are in FP return registers.
+           bool use_fp_regs = 0;
+           // True if we found any non floating point field in structure.
+           bool found_non_fp_field = 0;
+           // True if return values are in r2 register.
+           bool use_r2 = 0;
+           // True if return values are in r3 register.
+           bool use_r3 = 0;
+           // True if the result is copied into our data buffer
+           bool sucess = 0;
+           std::string name;
+           bool is_complex;
+           uint32_t count;
+           const uint32_t num_children = return_compiler_type.GetNumFields();
 
-            // A structure consisting of one or two FP values (and nothing else) will be
-            // returned in the two FP return-value registers i.e fp0 and fp2.
-            if (num_children <= 2)
-            {
-                uint64_t field_bit_offset = 0;
+           // A structure consisting of one or two FP values (and nothing else) will
+           // be returned in the two FP return-value registers i.e fp0 and fp2.
 
-                // Check if this structure contains only floating point fields
-                for (uint32_t idx = 0; idx < num_children; idx++)
-                {
-                    CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(idx, name, &field_bit_offset, nullptr, nullptr);
-                    
-                    if (field_compiler_type.IsFloatingPointType (count, is_complex))
-                        use_fp_regs = 1;
-                    else
-                        found_non_fp_field = 1;
-                }
+           if (num_children <= 2)
+           {
+               uint64_t field_bit_offset = 0;
 
-                if (use_fp_regs && !found_non_fp_field)
-                {
-                    // We have one or two FP-only values in this structure. Get it from f0/f2 registers.
-                    DataExtractor f0_data, f1_data, f2_data;
-                    const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
-                    const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
-                    const RegisterInfo *f2_info = reg_ctx->GetRegisterInfoByName("f2", 0);
+               // Check if this structure contains only floating point fields
+               for (uint32_t idx = 0; idx < num_children; idx++)
+               {
+                   CompilerType field_compiler_type =
+                   return_compiler_type.GetFieldAtIndex(idx, name, &field_bit_offset,
+                                                        nullptr, nullptr);
 
-                    reg_ctx->ReadRegister (f0_info, f0_value);
-                    reg_ctx->ReadRegister (f2_info, f2_value);
+                   if (field_compiler_type.IsFloatingPointType(count, is_complex))
+                   use_fp_regs = 1;
+                   else
+                   found_non_fp_field = 1;
+               }
 
-                    f0_value.GetData(f0_data);
-                    f2_value.GetData(f2_data);
+               if (use_fp_regs && !found_non_fp_field)
+               {
+                   // We have one or two FP-only values in this structure. Get it from
+                   // f0/f2 registers.
+                   DataExtractor f0_data, f1_data, f2_data;
+                   const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
+                   const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
+                   const RegisterInfo *f2_info = reg_ctx->GetRegisterInfoByName("f2", 0);
 
-                    for (uint32_t idx = 0; idx < num_children; idx++)
-                    {
-                        CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(idx, name, &field_bit_offset, nullptr, nullptr);
-                        const size_t field_byte_width = field_compiler_type.GetByteSize(nullptr);
+                   reg_ctx->ReadRegister(f0_info, f0_value);
+                   reg_ctx->ReadRegister(f2_info, f2_value);
 
-                        DataExtractor *copy_from_extractor = nullptr;
+                   f0_value.GetData(f0_data);
 
-                        if (idx == 0)
-                        {
-                            if (field_byte_width == 16)                 // This case is for long double type.
-                            {
-                                // If structure contains long double type, then it is returned in fp0/fp1 registers.
-                                reg_ctx->ReadRegister (f1_info, f1_value);
-                                f1_value.GetData(f1_data);
-                                
-                                if (target_byte_order == eByteOrderLittle)
-                                {
-                                    f0_data.Append(f1_data);
-                                    copy_from_extractor = &f0_data;
-                                }
-                                else
-                                {
-                                    f1_data.Append(f0_data);
-                                    copy_from_extractor = &f1_data;
-                                }
-                            }
-                            else
-                                copy_from_extractor = &f0_data;        // This is in f0, copy from register to our result structure
-                        }
-                        else
-                            copy_from_extractor = &f2_data;        // This is in f2, copy from register to our result structure
 
-                        // Sanity check to avoid crash
-                        if (!copy_from_extractor || field_byte_width > copy_from_extractor->GetByteSize())
-                            return return_valobj_sp;
+                   for (uint32_t idx = 0; idx < num_children; idx++)
+                   {
+                       CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(idx, name,
+                                                                                               &field_bit_offset,
+                                                                                                nullptr, nullptr);
+                       const size_t field_byte_width = field_compiler_type.GetByteSize(nullptr);
 
-                        // copy the register contents into our data buffer
-                        copy_from_extractor->CopyByteOrderedData (0,
-                                                                  field_byte_width, 
-                                                                  data_sp->GetBytes() + (field_bit_offset/8),
-                                                                  field_byte_width, 
-                                                                  target_byte_order);
-                    }
+                       DataExtractor *copy_from_extractor = nullptr;
+                       uint64_t return_value[2];
+                       offset_t offset = 0;
 
-                    // The result is in our data buffer.  Create a variable object out of it
-                    return_valobj_sp = ValueObjectConstResult::Create (&thread, 
-                                                                       return_compiler_type,
-                                                                       ConstString(""),
-                                                                       return_ext);
+                       if (idx == 0)
+                       {
+                           // This case is for long double type.
+                           if (field_byte_width == 16)
+                           {
 
-                    return return_valobj_sp;
-                }
-            }
+                               // If structure contains long double type, then it is returned
+                               // in fp0/fp1 registers.
 
+
+
+                               if (target_byte_order == eByteOrderLittle)
+                               {
+                                   return_value[0] = f0_data.GetU64(&offset);
+                                   reg_ctx->ReadRegister(f1_info, f1_value);
+                                   f1_value.GetData(f1_data);
+                                   offset = 0;
+                                   return_value[1] = f1_data.GetU64(&offset);
+                               }
+                               else 
+                               {
+                                   return_value[1] = f0_data.GetU64(&offset);
+                                   reg_ctx->ReadRegister(f1_info, f1_value);
+                                   f1_value.GetData(f1_data);
+                                   offset = 0;
+                                   return_value[0] = f1_data.GetU64(&offset);
+                               }
+
+                               f0_data.SetData(return_value, field_byte_width,
+                                               target_byte_order);
+                           }
+                           copy_from_extractor = &f0_data; // This is in f0, copy from
+
+                                              // register to our result
+                                              // structure
+                       }
+                       else
+                       {
+                           f2_value.GetData(f2_data);
+                           // This is in f2, copy from register to our result structure
+                           copy_from_extractor = &f2_data;
+                       }
+
+                       // Sanity check to avoid crash
+                       if (!copy_from_extractor || field_byte_width > copy_from_extractor->GetByteSize())
+                           return return_valobj_sp;
+
+                       // copy the register contents into our data buffer
+                       copy_from_extractor->CopyByteOrderedData(0, field_byte_width,data_sp->GetBytes() + (field_bit_offset / 8),
+                                                               field_byte_width, target_byte_order);
+                   }
+
+                   // The result is in our data buffer.  Create a variable object out of
+                   // it
+                   return_valobj_sp = ValueObjectConstResult::Create(&thread, return_compiler_type, ConstString(""),
+                                                                     return_ext);
+
+                   return return_valobj_sp;
+               }
+           }
+    
+        
             // If we reach here, it means this structure either contains more than two fields or 
             // it contains at least one non floating point type.
             // In that case, all fields are returned in GP return registers.
