@@ -8462,7 +8462,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-pass-remarks-output");
+    CmdArgs.push_back("-lto-pass-remarks-output");
     CmdArgs.push_back("-mllvm");
 
     SmallString<128> F;

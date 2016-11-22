@@ -82,6 +82,7 @@ private:
 
   FriendDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
     : Decl(Decl::Friend, Empty), NextFriend(),
+      UnsupportedFriend(false),
       NumTPLists(NumFriendTypeTPLists) { }
 
   FriendDecl *getNextFriend() {
