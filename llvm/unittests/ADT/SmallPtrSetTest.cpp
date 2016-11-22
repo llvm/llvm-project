@@ -21,10 +21,7 @@ TEST(SmallPtrSetTest, Assignment) {
   for (int i = 0; i < 8; ++i)
     buf[i] = 0;
 
-  SmallPtrSet<int *, 4> s1;
-  s1.insert(&buf[0]);
-  s1.insert(&buf[1]);
-
+  SmallPtrSet<int *, 4> s1 = {&buf[0], &buf[1]};
   SmallPtrSet<int *, 4> s2;
   (s2 = s1).insert(&buf[2]);
 
@@ -38,6 +35,15 @@ TEST(SmallPtrSetTest, Assignment) {
       EXPECT_TRUE(s1.count(&buf[i]));
     else
       EXPECT_FALSE(s1.count(&buf[i]));
+
+  // Assign and insert with initializer lists, and ones that contain both
+  // duplicates and out-of-order elements.
+  (s2 = {&buf[6], &buf[7], &buf[6]}).insert({&buf[5], &buf[4]});
+  for (int i = 0; i < 8; ++i)
+    if (i < 4)
+      EXPECT_FALSE(s2.count(&buf[i]));
+    else
+      EXPECT_TRUE(s2.count(&buf[i]));
 }
 
 TEST(SmallPtrSetTest, GrowthTest) {

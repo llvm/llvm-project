@@ -11,27 +11,27 @@
 
 # RUN: echo foobar > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR1 %s
-# ERR1: line 1: { expected, but got foobar
+# ERR1: {{.*}}:1: { expected, but got foobar
 
 # RUN: echo "{ foobar;" > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR2 %s
-# ERR2: line 1: unexpected EOF
+# ERR2: {{.*}}:1: unexpected EOF
 
 ## Missing ';' before '}'
 # RUN: echo "{ foobar }" > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR3 %s
-# ERR3: line 1: ; expected, but got }
+# ERR3: {{.*}}:1: ; expected, but got }
 
 ## Missing final ';'
 # RUN: echo "{ foobar; }" > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR4 %s
-# ERR4: line 1: unexpected EOF
+# ERR4: {{.*}}:1: unexpected EOF
 
 ## Missing \" in foobar definition
 # RUN echo "{ \"foobar; };" > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR5 %s
-# ERR5: line 1: unexpected EOF
+# ERR5: {{.*}}:1: unexpected EOF
 
 # RUN: echo "{ extern \"BOGUS\" { test }; };" > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR6 %s
-# ERR6: line 1: ; expected, but got "BOGUS"
+# ERR6: {{.*}}:1: ; expected, but got "BOGUS"

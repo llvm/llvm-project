@@ -1,4 +1,4 @@
-; RUN: opt -inline -functionattrs -reassociate %s -S | FileCheck %s
+; RUN: opt < %s -inline -functionattrs -reassociate -S | FileCheck %s
 
 ; CHECK-NOT: func1
 ; CHECK-LABEL: main

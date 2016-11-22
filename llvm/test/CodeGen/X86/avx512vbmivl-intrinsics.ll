@@ -175,8 +175,7 @@ define <16 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_128(<16 x i8> %x0, <16 
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_128:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vpermt2b %xmm2, %xmm0, %xmm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x7d,0xca]
-; CHECK-NEXT:    vmovdqa64 %xmm1, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x6f,0xc1]
+; CHECK-NEXT:    vpermi2b %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0x89,0x75,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
   ret <16 x i8> %res
@@ -188,8 +187,7 @@ define <32 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_256(<32 x i8> %x0, <32 
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
-; CHECK-NEXT:    vpermt2b %ymm2, %ymm0, %ymm1 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x7d,0xca]
-; CHECK-NEXT:    vmovdqa64 %ymm1, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x6f,0xc1]
+; CHECK-NEXT:    vpermi2b %ymm2, %ymm1, %ymm0 {%k1} {z} ## encoding: [0x62,0xf2,0x75,0xa9,0x75,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3)
   ret <32 x i8> %res

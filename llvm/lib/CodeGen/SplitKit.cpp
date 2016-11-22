@@ -1092,13 +1092,19 @@ static bool removeDeadSegment(SlotIndex Def, LiveRange &LR) {
 }
 
 void SplitEditor::extendPHIRange(MachineBasicBlock &B, LiveRangeCalc &LRC,
-                                 LiveRange &LR, ArrayRef<SlotIndex> Undefs) {
+                                 LiveRange &LR, LaneBitmask LM,
+                                 ArrayRef<SlotIndex> Undefs) {
   for (MachineBasicBlock *P : B.predecessors()) {
     SlotIndex End = LIS.getMBBEndIdx(P);
     SlotIndex LastUse = End.getPrevSlot();
     // The predecessor may not have a live-out value. That is OK, like an
     // undef PHI operand.
-    if (Edit->getParent().liveAt(LastUse))
+    LiveInterval &PLI = Edit->getParent();
+    // Need the cast because the inputs to ?: would otherwise be deemed
+    // "incompatible": SubRange vs LiveInterval.
+    LiveRange &PSR = (LM != ~0u) ? getSubRangeForMask(LM, PLI)
+                                 : static_cast<LiveRange&>(PLI);
+    if (PSR.liveAt(LastUse))
       LRC.extend(LR, End, /*PhysReg=*/0, Undefs);
   }
 }
@@ -1120,7 +1126,7 @@ void SplitEditor::extendPHIKillRanges() {
     LiveRangeCalc &LRC = getLRCalc(RegIdx);
     MachineBasicBlock &B = *LIS.getMBBFromIndex(V->def);
     if (!removeDeadSegment(V->def, LI))
-      extendPHIRange(B, LRC, LI, /*Undefs=*/{});
+      extendPHIRange(B, LRC, LI, ~0u, /*Undefs=*/{});
   }
 
   SmallVector<SlotIndex, 4> Undefs;
@@ -1141,7 +1147,7 @@ void SplitEditor::extendPHIKillRanges() {
                    &LIS.getVNInfoAllocator());
       Undefs.clear();
       LI.computeSubRangeUndefs(Undefs, PS.LaneMask, MRI, *LIS.getSlotIndexes());
-      extendPHIRange(B, SubLRC, S, Undefs);
+      extendPHIRange(B, SubLRC, S, PS.LaneMask, Undefs);
     }
   }
 }

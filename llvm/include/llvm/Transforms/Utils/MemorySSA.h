@@ -629,7 +629,8 @@ private:
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
   void removeFromLookups(MemoryAccess *);
 
-  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &);
+  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &,
+                     const DenseMap<const BasicBlock *, unsigned int> &);
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *);
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
                   SmallPtrSet<BasicBlock *, 16> &Visited);

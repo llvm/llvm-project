@@ -247,7 +247,8 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = MMI->getModule()->getCodeViewFlag();
-    if (EmitCodeView && TM.getTargetTriple().isKnownWindowsMSVCEnvironment()) {
+    if (EmitCodeView && (TM.getTargetTriple().isKnownWindowsMSVCEnvironment() ||
+                         TM.getTargetTriple().isWindowsItaniumEnvironment())) {
       Handlers.push_back(HandlerInfo(new CodeViewDebug(this),
                                      DbgTimerName, DbgTimerDescription,
                                      CodeViewLineTablesGroupName,

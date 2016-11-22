@@ -771,13 +771,13 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
   EC = std::error_code();
 }
 
-basic_symbol_iterator COFFObjectFile::symbol_begin_impl() const {
+basic_symbol_iterator COFFObjectFile::symbol_begin() const {
   DataRefImpl Ret;
   Ret.p = getSymbolTable();
   return basic_symbol_iterator(SymbolRef(Ret, this));
 }
 
-basic_symbol_iterator COFFObjectFile::symbol_end_impl() const {
+basic_symbol_iterator COFFObjectFile::symbol_end() const {
   // The symbol table ends where the string table begins.
   DataRefImpl Ret;
   Ret.p = reinterpret_cast<uintptr_t>(StringTable);

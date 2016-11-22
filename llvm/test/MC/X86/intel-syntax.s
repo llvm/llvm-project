@@ -77,6 +77,8 @@ _main:
     vpgatherdd XMM10, XMMWORD PTR [R15 + 2*XMM9], XMM8
 // CHECK: movsd -8, %xmm5
     movsd   XMM5, QWORD PTR [-8]
+// CHECK: movsl (%rsi), %es:(%rdi)
+    movsd
 // CHECK: movl %ecx, (%eax)
     mov [eax], ecx
 // CHECK: movl %ecx, (,%ebx,4)

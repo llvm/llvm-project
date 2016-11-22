@@ -115,13 +115,20 @@ public:
                               clang::HeaderSearch &HeaderSearch) const;
 
   /// Get the include fixer context for the queried symbol.
-  IncludeFixerContext
-  getIncludeFixerContext(const clang::SourceManager &SourceManager,
-                         clang::HeaderSearch &HeaderSearch) const;
+  IncludeFixerContext getIncludeFixerContext(
+      const clang::SourceManager &SourceManager,
+      clang::HeaderSearch &HeaderSearch,
+      ArrayRef<find_all_symbols::SymbolInfo> MatchedSymbols) const;
+
+  /// Get the global matched symbols.
+  ArrayRef<find_all_symbols::SymbolInfo> getMatchedSymbols() const {
+    return MatchedSymbols;
+  }
 
 private:
   /// Query the database for a given identifier.
-  bool query(StringRef Query, StringRef ScopedQualifiers, tooling::Range Range);
+  std::vector<find_all_symbols::SymbolInfo>
+  query(StringRef Query, StringRef ScopedQualifiers, tooling::Range Range);
 
   CompilerInstance *CI;
 

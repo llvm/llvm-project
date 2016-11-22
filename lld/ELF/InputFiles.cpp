@@ -91,7 +91,7 @@ std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
                                  Info);
   if (Info.Line == 0)
     return "";
-  return Info.FileName + " (" + std::to_string(Info.Line) + ")";
+  return Info.FileName + ":" + std::to_string(Info.Line);
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".

@@ -93,7 +93,7 @@ cl::opt<bool> LTOStripInvalidDebugInfo(
     cl::Hidden);
 
 cl::opt<std::string>
-    LTORemarksFilename("pass-remarks-output",
+    LTORemarksFilename("lto-pass-remarks-output",
                        cl::desc("Output filename for pass remarks"),
                        cl::value_desc("filename"));
 }

@@ -50,11 +50,11 @@ public:
     llvm_unreachable("not implemented");
     return 0;
   }
-  basic_symbol_iterator symbol_begin_impl() const override {
+  basic_symbol_iterator symbol_begin() const override {
     llvm_unreachable("not implemented");
     return basic_symbol_iterator(BasicSymbolRef());
   }
-  basic_symbol_iterator symbol_end_impl() const override {
+  basic_symbol_iterator symbol_end() const override {
     llvm_unreachable("not implemented");
     return basic_symbol_iterator(BasicSymbolRef());
   }
