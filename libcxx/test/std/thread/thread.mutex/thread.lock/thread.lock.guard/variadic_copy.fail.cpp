@@ -10,6 +10,10 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
+// FIXME: When modules are enabled we can't affect the contents of <mutex>
+// by defining a macro
+// XFAIL: -fmodules
+
 // <mutex>
 
 // template <class ...Mutex> class lock_guard;

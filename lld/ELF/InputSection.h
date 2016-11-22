@@ -45,8 +45,8 @@ public:
   // If GC is disabled, all sections are considered live by default.
   InputSectionData(Kind SectionKind, StringRef Name, ArrayRef<uint8_t> Data,
                    bool Compressed, bool Live)
-      : SectionKind(SectionKind), Live(Live), Compressed(Compressed),
-        Name(Name), Data(Data) {}
+      : SectionKind(SectionKind), Live(Live), Assigned(false),
+        Compressed(Compressed), Name(Name), Data(Data) {}
 
 private:
   unsigned SectionKind : 3;
@@ -54,8 +54,9 @@ private:
 public:
   Kind kind() const { return (Kind)SectionKind; }
 
-  unsigned Live : 1; // for garbage collection
-  unsigned Compressed : 1;
+  unsigned Live : 1;       // for garbage collection
+  unsigned Assigned : 1;   // for linker script
+  unsigned Compressed : 1; // true if section data is compressed
   uint32_t Alignment;
   StringRef Name;
   ArrayRef<uint8_t> Data;

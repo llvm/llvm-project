@@ -1858,14 +1858,22 @@ private:
   /// @return The representing SCEV for invariant loads or @p S if none.
   const SCEV *getRepresentingInvariantLoadSCEV(const SCEV *S);
 
-  /// Create a new SCoP statement for either @p BB or @p R.
+  /// Create a new SCoP statement for @p BB.
   ///
-  /// Either @p BB or @p R should be non-null. A new statement for the non-null
-  /// argument will be created and added to the statement vector and map.
+  /// A new statement for @p BB will be created and added to the statement
+  /// vector
+  /// and map.
   ///
-  /// @param BB         The basic block we build the statement for (or null)
-  /// @param R          The region we build the statement for (or null).
-  void addScopStmt(BasicBlock *BB, Region *R);
+  /// @param BB         The basic block we build the statement for.
+  void addScopStmt(BasicBlock *BB);
+
+  /// Create a new SCoP statement for @p R.
+  ///
+  /// A new statement for @p R will be created and added to the statement vector
+  /// and map.
+  ///
+  /// @param R          The region we build the statement for.
+  void addScopStmt(Region *R);
 
   /// @param Update access dimensionalities.
   ///

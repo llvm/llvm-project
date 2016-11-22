@@ -43,7 +43,7 @@
 // will only be
 // used in cases where this is true.  This is a compile time dependecy, for now
 // selected per target Platform
-#if defined(__APPLE__) || defined(__NetBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #define LLDB_EDITLINE_USE_WCHAR 1
 #include <codecvt>
 #else

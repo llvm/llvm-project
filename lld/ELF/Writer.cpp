@@ -133,18 +133,34 @@ template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
+  // Create linker-synthesized sections such as .got or .plt.
+  // Such sections are of type input section.
   createSyntheticSections();
 
+  // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
     addReservedSymbols();
 
+  // Some architectures use small displacements for jump instructions.
+  // It is linker's responsibility to create thunks containing long
+  // jump instructions if jump targets are too far. Create thunks.
   if (Target->NeedsThunks)
     forEachRelSec(createThunks<ELFT>);
 
+  // Create output sections.
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
-    Script<ELFT>::X->createSections(Factory);
+    // If linker script contains SECTIONS commands, let it create sections.
+    Script<ELFT>::X->processCommands(Factory);
+
+    // Linker scripts may have left some input sections unassigned.
+    // Assign such sections using the default rule.
+    Script<ELFT>::X->addOrphanSections(Factory);
   } else {
+    // If linker script does not contain SECTIONS commands, create
+    // output sections by default rules. We still need to give the
+    // linker script a chance to run, because it might contain
+    // non-SECTIONS commands such as ASSERT.
     createSections();
     Script<ELFT>::X->processCommands(Factory);
   }
@@ -152,6 +168,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
 
+  // Now that we have a complete set of output sections. This function
+  // completes section contents. For example, we need to add strings
+  // to the string table, and add entries to .got and .plt.
+  // finalizeSections does that.
   finalizeSections();
   if (HasError)
     return;
@@ -178,6 +198,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     fixAbsoluteSymbols();
   }
 
+  // Write the result down to a file.
   openFile();
   if (HasError)
     return;
@@ -187,17 +208,21 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     writeSectionsBinary();
   }
+
+  // Backfill .note.gnu.build-id section content. This is done at last
+  // because the content is usually a hash value of the entire output file.
   writeBuildId();
   if (HasError)
     return;
+
   if (auto EC = Buffer->commit())
     error(EC, "failed to write to the output file");
-  if (Config->ExitEarly) {
-    // Flush the output streams and exit immediately.  A full shutdown is a good
-    // test that we are keeping track of all allocated memory, but actually
-    // freeing it is a waste of time in a regular linker run.
+
+  // Flush the output streams and exit immediately. A full shutdown
+  // is a good test that we are keeping track of all allocated memory,
+  // but actually freeing it is a waste of time in a regular linker run.
+  if (Config->ExitEarly)
     exitLld(0);
-  }
 }
 
 // Initialize Out<ELFT> members.
@@ -216,8 +241,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
-  Out<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
-  Out<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
+  In<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
+  In<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
 
   Out<ELFT>::ElfHeader = make<OutputSectionBase>("", 0, SHF_ALLOC);
   Out<ELFT>::ElfHeader->Size = sizeof(Elf_Ehdr);
@@ -236,14 +261,14 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   }
 
   if (Config->EhFrameHdr)
-    Out<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
+    In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
 
   if (Config->GnuHash)
     In<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
   if (Config->SysvHash)
     In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
   if (Config->GdbIndex)
-    Out<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
+    In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
 
   In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
@@ -263,27 +288,16 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Out<ELFT>::MipsRldMap->updateAlignment(sizeof(uintX_t));
   }
   if (!Config->VersionDefinitions.empty())
-    Out<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
+    In<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
 
   // Initialize linker generated sections
   if (!Config->Relocatable)
     Symtab<ELFT>::X->Sections.push_back(createCommentSection<ELFT>());
 
-  if (Config->BuildId == BuildIdKind::Fast)
-    In<ELFT>::BuildId = make<BuildIdFastHash<ELFT>>();
-  else if (Config->BuildId == BuildIdKind::Md5)
-    In<ELFT>::BuildId = make<BuildIdMd5<ELFT>>();
-  else if (Config->BuildId == BuildIdKind::Sha1)
-    In<ELFT>::BuildId = make<BuildIdSha1<ELFT>>();
-  else if (Config->BuildId == BuildIdKind::Uuid)
-    In<ELFT>::BuildId = make<BuildIdUuid<ELFT>>();
-  else if (Config->BuildId == BuildIdKind::Hexstring)
-    In<ELFT>::BuildId = make<BuildIdHexstring<ELFT>>();
-  else
-    In<ELFT>::BuildId = nullptr;
-
-  if (In<ELFT>::BuildId)
+  if (Config->BuildId != BuildIdKind::None) {
+    In<ELFT>::BuildId = make<BuildIdSection<ELFT>>();
     Symtab<ELFT>::X->Sections.push_back(In<ELFT>::BuildId);
+  }
 
   InputSection<ELFT> *Common = createCommonSection<ELFT>();
   if (!Common->Data.empty()) {
@@ -291,27 +305,18 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Symtab<ELFT>::X->Sections.push_back(Common);
   }
 
+  // Add MIPS-specific sections.
   if (Config->EMachine == EM_MIPS) {
-    // .MIPS.abiflags
-    auto *AbiFlags = make<MipsAbiFlagsSection<ELFT>>();
-    if (AbiFlags->Live) {
-      In<ELFT>::MipsAbiFlags = AbiFlags;
-      Symtab<ELFT>::X->Sections.push_back(AbiFlags);
-    }
-    // .MIPS.options
-    auto *OptSec = make<MipsOptionsSection<ELFT>>();
-    if (OptSec->Live) {
-      In<ELFT>::MipsOptions = OptSec;
-      Symtab<ELFT>::X->Sections.push_back(OptSec);
-    }
-    // MIPS .reginfo
-    auto *RegSec = make<MipsReginfoSection<ELFT>>();
-    if (RegSec->Live) {
-      In<ELFT>::MipsReginfo = RegSec;
-      Symtab<ELFT>::X->Sections.push_back(RegSec);
-    }
+    if (auto *Sec = MipsAbiFlagsSection<ELFT>::create())
+      Symtab<ELFT>::X->Sections.push_back(Sec);
+    if (auto *Sec = MipsOptionsSection<ELFT>::create())
+      Symtab<ELFT>::X->Sections.push_back(Sec);
+    if (auto *Sec = MipsReginfoSection<ELFT>::create())
+      Symtab<ELFT>::X->Sections.push_back(Sec);
   }
 
+  // Add .got. MIPS' .got is so different from the other archs,
+  // it has its own class.
   if (Config->EMachine == EM_MIPS)
     In<ELFT>::MipsGot = make<MipsGotSection<ELFT>>();
   else
@@ -923,7 +928,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       In<ELFT>::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
         if (SS->file()->isNeeded())
-          Out<ELFT>::VerNeed->addSymbol(SS);
+          In<ELFT>::VerNeed->addSymbol(SS);
     }
   }
 
@@ -954,8 +959,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic<ELFT>(
       {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
        In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
-       In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::MipsGot, In<ELFT>::GotPlt,
-       In<ELFT>::RelaDyn, In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::Dynamic});
+       In<ELFT>::DynStrTab, In<ELFT>::GdbIndex, In<ELFT>::Got,
+       In<ELFT>::MipsGot, In<ELFT>::GotPlt, In<ELFT>::RelaDyn,
+       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::EhFrameHdr, In<ELFT>::VerDef,
+       In<ELFT>::VerSym, In<ELFT>::VerNeed, In<ELFT>::Dynamic});
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -981,20 +988,20 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
-  if (Out<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
-    Add(Out<ELFT>::GdbIndex);
+  if (In<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
+    addInputSec(In<ELFT>::GdbIndex);
   addInputSec(In<ELFT>::SymTab);
   addInputSec(In<ELFT>::ShStrTab);
   addInputSec(In<ELFT>::StrTab);
   if (In<ELFT>::DynSymTab) {
     addInputSec(In<ELFT>::DynSymTab);
 
-    bool HasVerNeed = Out<ELFT>::VerNeed->getNeedNum() != 0;
-    if (Out<ELFT>::VerDef || HasVerNeed)
-      Add(Out<ELFT>::VerSym);
-    Add(Out<ELFT>::VerDef);
+    bool HasVerNeed = In<ELFT>::VerNeed->getNeedNum() != 0;
+    if (In<ELFT>::VerDef || HasVerNeed)
+      addInputSec(In<ELFT>::VerSym);
+    addInputSec(In<ELFT>::VerDef);
     if (HasVerNeed)
-      Add(Out<ELFT>::VerNeed);
+      addInputSec(In<ELFT>::VerNeed);
 
     addInputSec(In<ELFT>::GnuHashTab);
     addInputSec(In<ELFT>::HashTab);
@@ -1025,7 +1032,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   if (!In<ELFT>::Plt->empty())
     addInputSec(In<ELFT>::Plt);
   if (!Out<ELFT>::EhFrame->empty())
-    Add(Out<ELFT>::EhFrameHdr);
+    addInputSec(In<ELFT>::EhFrameHdr);
   if (Out<ELFT>::Bss->Size > 0)
     Add(Out<ELFT>::Bss);
 }
@@ -1176,9 +1183,10 @@ template <class ELFT> std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     Ret.push_back(std::move(RelRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
-    Phdr &Hdr = *AddHdr(PT_GNU_EH_FRAME, Out<ELFT>::EhFrameHdr->getPhdrFlags());
-    Hdr.add(Out<ELFT>::EhFrameHdr);
+  if (!Out<ELFT>::EhFrame->empty() && In<ELFT>::EhFrameHdr) {
+    Phdr &Hdr =
+        *AddHdr(PT_GNU_EH_FRAME, In<ELFT>::EhFrameHdr->OutSec->getPhdrFlags());
+    Hdr.add(In<ELFT>::EhFrameHdr->OutSec);
   }
 
   // PT_OPENBSD_RANDOMIZE specifies the location and size of a part of the
@@ -1239,11 +1247,13 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->HasSections ? 0 : Config->ImageBase;
-  Out<ELFT>::ElfHeader->Addr = BaseVA;
-  uintX_t Off = Out<ELFT>::ElfHeader->Size;
-  Out<ELFT>::ProgramHeaders->Addr = Off + BaseVA;
   Out<ELFT>::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
+  // If the script has SECTIONS, assignAddresses will compute the values.
+  if (ScriptConfig->HasSections)
+    return;
+  uintX_t BaseVA = Config->ImageBase;
+  Out<ELFT>::ElfHeader->Addr = BaseVA;
+  Out<ELFT>::ProgramHeaders->Addr = BaseVA + Out<ELFT>::ElfHeader->Size;
 }
 
 // Assign VAs (addresses at run-time) to output sections.
@@ -1482,13 +1492,6 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
 template <class ELFT> void Writer<ELFT>::writeSections() {
   uint8_t *Buf = Buffer->getBufferStart();
 
-  // Finalize MIPS .reginfo and .MIPS.options sections
-  // because they contain offsets to .got and _gp.
-  if (In<ELFT>::MipsReginfo)
-    In<ELFT>::MipsReginfo->finalize();
-  if (In<ELFT>::MipsOptions)
-    In<ELFT>::MipsOptions->finalize();
-
   // PPC64 needs to process relocations in the .opd section
   // before processing relocations in code-containing sections.
   Out<ELFT>::Opd = findSection(".opd");
@@ -1497,14 +1500,16 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     Out<ELFT>::Opd->writeTo(Buf + Out<ELFT>::Opd->Offset);
   }
 
+  OutputSectionBase *EhFrameHdr =
+      In<ELFT>::EhFrameHdr ? In<ELFT>::EhFrameHdr->OutSec : nullptr;
   for (OutputSectionBase *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd && Sec != Out<ELFT>::EhFrameHdr)
+    if (Sec != Out<ELFT>::Opd && Sec != EhFrameHdr)
       Sec->writeTo(Buf + Sec->Offset);
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.
-  if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr)
-    Out<ELFT>::EhFrameHdr->writeTo(Buf + Out<ELFT>::EhFrameHdr->Offset);
+  if (!Out<ELFT>::EhFrame->empty() && EhFrameHdr)
+    EhFrameHdr->writeTo(Buf + EhFrameHdr->Offset);
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {

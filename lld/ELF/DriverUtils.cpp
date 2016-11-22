@@ -99,23 +99,21 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
 void elf::parseDynamicList(MemoryBufferRef MB) {
   class Parser : public ScriptParserBase {
   public:
-    Parser(StringRef S) : ScriptParserBase(S) {}
+    Parser(MemoryBufferRef MB) : ScriptParserBase(MB) {}
 
     void run() {
       while (!atEOF()) {
         expect("{");
-        while (!Error) {
+        while (!Error && !consume("}")) {
           Config->DynamicList.push_back(unquote(next()));
           expect(";");
-          if (consume("}"))
-            break;
         }
         expect(";");
       }
     }
   };
 
-  Parser(MB.getBuffer()).run();
+  Parser(MB).run();
 }
 
 void elf::printHelp(const char *Argv0) {

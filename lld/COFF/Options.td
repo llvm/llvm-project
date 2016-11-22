@@ -94,6 +94,7 @@ def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 def nosymtab : F<"nosymtab">;
 
 // Flags for debugging
+def dumppdb : Joined<["/", "-"], "dumppdb">;
 def lldmap : Joined<["/", "-"], "lldmap:">;
 
 //==============================================================================
