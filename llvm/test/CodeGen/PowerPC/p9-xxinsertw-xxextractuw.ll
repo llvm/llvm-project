@@ -968,3 +968,25 @@ entry:
   %vecins = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 0, i32 1, i32 2, i32 6>
   ret <4 x float> %vecins
 }
+define <4 x float> @insertVarF(<4 x float> %a, float %f, i32 %el) {
+entry:
+; CHECK-LABEL: insertVarF
+; CHECK: stxsspx 1,
+; CHECK: lxvd2x
+; CHECK-BE-LABEL: insertVarF
+; CHECK-BE: stxsspx 1,
+; CHECK-BE: lxvw4x
+  %vecins = insertelement <4 x float> %a, float %f, i32 %el
+  ret <4 x float> %vecins
+}
+define <4 x i32> @insertVarI(<4 x i32> %a, i32 %i, i32 %el) {
+entry:
+; CHECK-LABEL: insertVarI
+; CHECK: stwx
+; CHECK: lxvd2x
+; CHECK-BE-LABEL: insertVarI
+; CHECK-BE: stwx
+; CHECK-BE: lxvw4x
+  %vecins = insertelement <4 x i32> %a, i32 %i, i32 %el
+  ret <4 x i32> %vecins
+}

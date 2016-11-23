@@ -824,6 +824,7 @@ namespace llvm {
     SDValue LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
