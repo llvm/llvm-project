@@ -438,6 +438,7 @@ template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
+
   if (Binding == STB_LOCAL) {
     if (Sym->getType() == STT_FILE)
       SourceFile = check(Sym->getName(this->StringTable));
@@ -452,20 +453,23 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
+  uint8_t StOther = Sym->st_other;
+  uint8_t Type = Sym->getType();
+  uintX_t Value = Sym->st_value;
+  uintX_t Size = Sym->st_size;
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return elf::Symtab<ELFT>::X->addUndefined(Name, Binding, Sym->st_other,
-                                              Sym->getType(),
-                                              /*CanOmitFromDynSym*/ false, this)
+    return elf::Symtab<ELFT>::X
+        ->addUndefined(Name, Binding, StOther, Type,
+                       /*CanOmitFromDynSym=*/false, this)
         ->body();
   case SHN_COMMON:
-    if (Sym->st_value == 0 || Sym->st_value >= UINT32_MAX)
+    if (Value == 0 || Value >= UINT32_MAX)
       fatal(getFilename(this) + ": common symbol '" + Name +
-            "' has invalid alignment: " + Twine(Sym->st_value));
-    return elf::Symtab<ELFT>::X->addCommon(Name, Sym->st_size, Sym->st_value,
-                                           Binding, Sym->st_other,
-                                           Sym->getType(), this)
+            "' has invalid alignment: " + Twine(Value));
+    return elf::Symtab<ELFT>::X
+        ->addCommon(Name, Size, Value, Binding, StOther, Type, this)
         ->body();
   }
 
@@ -476,12 +480,13 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection<ELFT>::Discarded)
-      return elf::Symtab<ELFT>::X->addUndefined(Name, Binding, Sym->st_other,
-                                                Sym->getType(),
-                                                /*CanOmitFromDynSym*/ false,
-                                                this)
+      return elf::Symtab<ELFT>::X
+          ->addUndefined(Name, Binding, StOther, Type,
+                         /*CanOmitFromDynSym=*/false, this)
           ->body();
-    return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec, this)->body();
+    return elf::Symtab<ELFT>::X
+        ->addRegular(Name, StOther, Type, Value, Size, Binding, Sec, this)
+        ->body();
   }
 }
 

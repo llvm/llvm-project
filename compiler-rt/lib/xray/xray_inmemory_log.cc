@@ -61,7 +61,7 @@ static void retryingWriteAll(int Fd, char *Begin,
     if (Written < 0) {
       if (errno == EINTR)
         continue; // Try again.
-      Report("Failed to write; errno = %d", errno);
+      Report("Failed to write; errno = %d\n", errno);
       return;
     }
     TotalBytes -= Written;
@@ -81,7 +81,7 @@ retryingReadSome(int Fd, char *Begin, char *End) XRAY_NEVER_INSTRUMENT {
     if (BytesRead == -1) {
       if (errno == EINTR)
         continue;
-      Report("Read error; errno = %d", errno);
+      Report("Read error; errno = %d\n", errno);
       return std::make_pair(TotalBytesRead, false);
     }
 
@@ -168,14 +168,14 @@ void __xray_InMemoryRawLog(int32_t FuncId,
                               sizeof(TmpFilename) - 10);
     if (static_cast<size_t>((E + 6) - TmpFilename) >
         (sizeof(TmpFilename) - 1)) {
-      Report("XRay log file base too long: %s", flags()->xray_logfile_base);
+      Report("XRay log file base too long: %s\n", flags()->xray_logfile_base);
       return -1;
     }
     internal_strncat(TmpFilename, TmpWildcardPattern,
                      sizeof(TmpWildcardPattern) - 1);
     int Fd = mkstemp(TmpFilename);
     if (Fd == -1) {
-      Report("XRay: Failed opening temporary file '%s'; not logging events.",
+      Report("XRay: Failed opening temporary file '%s'; not logging events.\n",
              TmpFilename);
       return -1;
     }
@@ -193,7 +193,7 @@ void __xray_InMemoryRawLog(int32_t FuncId,
                    &CPUFrequency)) {
       CPUFrequency *= 1000;
     } else {
-      Report("Unable to determine CPU frequency for TSC accounting.");
+      Report("Unable to determine CPU frequency for TSC accounting.\n");
     }
 #elif defined(__arm__) || defined(__aarch64__)
     // There is no instruction like RDTSCP in user mode on ARM. ARM's CP15 does
@@ -248,7 +248,7 @@ void __xray_InMemoryRawLog(int32_t FuncId,
     timespec TS;
     int result = clock_gettime(CLOCK_REALTIME, &TS);
     if (result != 0) {
-      Report("clock_gettime() returned %d, errno=%d.", result, int(errno));
+      Report("clock_gettime() returned %d, errno=%d.\n", result, int(errno));
       TS.tv_sec = 0;
       TS.tv_nsec = 0;
     }

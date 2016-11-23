@@ -367,14 +367,6 @@ static void reportDuplicate(SymbolBody *Existing,
 }
 
 template <typename ELFT>
-Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, const Elf_Sym &Sym,
-                                      InputSectionBase<ELFT> *Section,
-                                      InputFile *File) {
-  return addRegular(Name, Sym.st_other, Sym.getType(), Sym.st_value,
-                    Sym.st_size, Sym.getBinding(), Section, File);
-}
-
-template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
                                       uint8_t Type, uintX_t Value, uintX_t Size,
                                       uint8_t Binding,
