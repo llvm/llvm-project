@@ -47,22 +47,6 @@ Error InfoStreamBuilder::finalizeMsfLayout() {
   return Error::success();
 }
 
-Expected<std::unique_ptr<InfoStream>>
-InfoStreamBuilder::build(PDBFile &File) {
-  auto StreamData = MappedBlockStream::createIndexedStream(
-      File.getMsfLayout(), File.getMsfBuffer(), StreamPDB);
-  auto Info = llvm::make_unique<InfoStream>(std::move(StreamData));
-  Info->Version = Ver;
-  Info->Signature = Sig;
-  Info->Age = Age;
-  Info->Guid = Guid;
-  auto NS = NamedStreams.build();
-  if (!NS)
-    return NS.takeError();
-  Info->NamedStreams = **NS;
-  return std::move(Info);
-}
-
 Error InfoStreamBuilder::commit(const msf::MSFLayout &Layout,
                                 const msf::WritableStream &Buffer) const {
   auto InfoS =

@@ -234,7 +234,10 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandUlh(MCInst &Inst, bool Signed, SMLoc IDLoc, MCStreamer &Out,
                  const MCSubtargetInfo *STI);
 
-  bool expandUlw(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+  bool expandUsh(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                 const MCSubtargetInfo *STI);
+
+  bool expandUxw(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                  const MCSubtargetInfo *STI);
 
   bool expandRotation(MCInst &Inst, SMLoc IDLoc,
@@ -2180,8 +2183,11 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return expandUlh(Inst, true, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::Ulhu:
     return expandUlh(Inst, false, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::Ush:
+    return expandUsh(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::Ulw:
-    return expandUlw(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::Usw:
+    return expandUxw(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::NORImm:
     return expandAliasImmediate(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::ADDi:
@@ -3325,143 +3331,158 @@ bool MipsAsmParser::expandTrunc(MCInst &Inst, bool IsDouble, bool Is64FPU,
 
 bool MipsAsmParser::expandUlh(MCInst &Inst, bool Signed, SMLoc IDLoc,
                               MCStreamer &Out, const MCSubtargetInfo *STI) {
-  MipsTargetStreamer &TOut = getTargetStreamer();
-
   if (hasMips32r6() || hasMips64r6()) {
     return Error(IDLoc, "instruction not supported on mips32r6 or mips64r6");
   }
 
-  warnIfNoMacro(IDLoc);
-
   const MCOperand &DstRegOp = Inst.getOperand(0);
   assert(DstRegOp.isReg() && "expected register operand kind");
-
   const MCOperand &SrcRegOp = Inst.getOperand(1);
   assert(SrcRegOp.isReg() && "expected register operand kind");
-
   const MCOperand &OffsetImmOp = Inst.getOperand(2);
   assert(OffsetImmOp.isImm() && "expected immediate operand kind");
 
+  MipsTargetStreamer &TOut = getTargetStreamer();
   unsigned DstReg = DstRegOp.getReg();
   unsigned SrcReg = SrcRegOp.getReg();
   int64_t OffsetValue = OffsetImmOp.getImm();
 
   // NOTE: We always need AT for ULHU, as it is always used as the source
   // register for one of the LBu's.
+  warnIfNoMacro(IDLoc);
   unsigned ATReg = getATReg(IDLoc);
   if (!ATReg)
     return true;
 
-  // When the value of offset+1 does not fit in 16 bits, we have to load the
-  // offset in AT, (D)ADDu the original source register (if there was one), and
-  // then use AT as the source register for the 2 generated LBu's.
-  bool LoadedOffsetInAT = false;
-  if (!isInt<16>(OffsetValue + 1) || !isInt<16>(OffsetValue)) {
-    LoadedOffsetInAT = true;
-
-    if (loadImmediate(OffsetValue, ATReg, Mips::NoRegister, !ABI.ArePtrs64bit(),
-                      true, IDLoc, Out, STI))
+  bool IsLargeOffset = !(isInt<16>(OffsetValue + 1) && isInt<16>(OffsetValue));
+  if (IsLargeOffset) {
+    if (loadImmediate(OffsetValue, ATReg, SrcReg, !ABI.ArePtrs64bit(), true,
+                      IDLoc, Out, STI))
       return true;
-
-    // NOTE: We do this (D)ADDu here instead of doing it in loadImmediate()
-    // because it will make our output more similar to GAS'. For example,
-    // generating an "ori $1, $zero, 32768" followed by an "addu $1, $1, $9",
-    // instead of just an "ori $1, $9, 32768".
-    // NOTE: If there is no source register specified in the ULHU, the parser
-    // will interpret it as $0.
-    if (SrcReg != Mips::ZERO && SrcReg != Mips::ZERO_64)
-      TOut.emitAddu(ATReg, ATReg, SrcReg, ABI.ArePtrs64bit(), STI);
   }
 
-  unsigned FirstLbuDstReg = LoadedOffsetInAT ? DstReg : ATReg;
-  unsigned SecondLbuDstReg = LoadedOffsetInAT ? ATReg : DstReg;
-  unsigned LbuSrcReg = LoadedOffsetInAT ? ATReg : SrcReg;
+  int64_t FirstOffset = IsLargeOffset ? 0 : OffsetValue;
+  int64_t SecondOffset = IsLargeOffset ? 1 : (OffsetValue + 1);
+  if (isLittle())
+    std::swap(FirstOffset, SecondOffset);
 
-  int64_t FirstLbuOffset = 0, SecondLbuOffset = 0;
-  if (isLittle()) {
-    FirstLbuOffset = LoadedOffsetInAT ? 1 : (OffsetValue + 1);
-    SecondLbuOffset = LoadedOffsetInAT ? 0 : OffsetValue;
-  } else {
-    FirstLbuOffset = LoadedOffsetInAT ? 0 : OffsetValue;
-    SecondLbuOffset = LoadedOffsetInAT ? 1 : (OffsetValue + 1);
-  }
+  unsigned FirstLbuDstReg = IsLargeOffset ? DstReg : ATReg;
+  unsigned SecondLbuDstReg = IsLargeOffset ? ATReg : DstReg;
 
-  unsigned SllReg = LoadedOffsetInAT ? DstReg : ATReg;
+  unsigned LbuSrcReg = IsLargeOffset ? ATReg : SrcReg;
+  unsigned SllReg = IsLargeOffset ? DstReg : ATReg;
 
   TOut.emitRRI(Signed ? Mips::LB : Mips::LBu, FirstLbuDstReg, LbuSrcReg,
-               FirstLbuOffset, IDLoc, STI);
-
-  TOut.emitRRI(Mips::LBu, SecondLbuDstReg, LbuSrcReg, SecondLbuOffset, IDLoc,
-               STI);
-
+               FirstOffset, IDLoc, STI);
+  TOut.emitRRI(Mips::LBu, SecondLbuDstReg, LbuSrcReg, SecondOffset, IDLoc, STI);
   TOut.emitRRI(Mips::SLL, SllReg, SllReg, 8, IDLoc, STI);
-
   TOut.emitRRR(Mips::OR, DstReg, DstReg, ATReg, IDLoc, STI);
 
   return false;
 }
 
-bool MipsAsmParser::expandUlw(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+bool MipsAsmParser::expandUsh(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                               const MCSubtargetInfo *STI) {
-  MipsTargetStreamer &TOut = getTargetStreamer();
-
-  if (hasMips32r6() || hasMips64r6())
+  if (hasMips32r6() || hasMips64r6()) {
     return Error(IDLoc, "instruction not supported on mips32r6 or mips64r6");
+  }
 
   const MCOperand &DstRegOp = Inst.getOperand(0);
   assert(DstRegOp.isReg() && "expected register operand kind");
-
   const MCOperand &SrcRegOp = Inst.getOperand(1);
   assert(SrcRegOp.isReg() && "expected register operand kind");
-
   const MCOperand &OffsetImmOp = Inst.getOperand(2);
   assert(OffsetImmOp.isImm() && "expected immediate operand kind");
 
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned DstReg = DstRegOp.getReg();
   unsigned SrcReg = SrcRegOp.getReg();
   int64_t OffsetValue = OffsetImmOp.getImm();
-  unsigned ATReg = 0;
 
-  // When the value of offset+3 does not fit in 16 bits, we have to load the
-  // offset in AT, (D)ADDu the original source register (if there was one), and
-  // then use AT as the source register for the generated LWL and LWR.
-  bool LoadedOffsetInAT = false;
-  if (!isInt<16>(OffsetValue + 3) || !isInt<16>(OffsetValue)) {
-    ATReg = getATReg(IDLoc);
-    if (!ATReg)
+  warnIfNoMacro(IDLoc);
+  unsigned ATReg = getATReg(IDLoc);
+  if (!ATReg)
+    return true;
+
+  bool IsLargeOffset = !(isInt<16>(OffsetValue + 1) && isInt<16>(OffsetValue));
+  if (IsLargeOffset) {
+    if (loadImmediate(OffsetValue, ATReg, SrcReg, !ABI.ArePtrs64bit(), true,
+                      IDLoc, Out, STI))
       return true;
-    LoadedOffsetInAT = true;
-
-    warnIfNoMacro(IDLoc);
-
-    if (loadImmediate(OffsetValue, ATReg, Mips::NoRegister, !ABI.ArePtrs64bit(),
-                      true, IDLoc, Out, STI))
-      return true;
-
-    // NOTE: We do this (D)ADDu here instead of doing it in loadImmediate()
-    // because it will make our output more similar to GAS'. For example,
-    // generating an "ori $1, $zero, 32768" followed by an "addu $1, $1, $9",
-    // instead of just an "ori $1, $9, 32768".
-    // NOTE: If there is no source register specified in the ULW, the parser
-    // will interpret it as $0.
-    if (SrcReg != Mips::ZERO && SrcReg != Mips::ZERO_64)
-      TOut.emitAddu(ATReg, ATReg, SrcReg, ABI.ArePtrs64bit(), STI);
   }
 
-  unsigned FinalSrcReg = LoadedOffsetInAT ? ATReg : SrcReg;
-  int64_t LeftLoadOffset = 0, RightLoadOffset  = 0;
-  if (isLittle()) {
-    LeftLoadOffset = LoadedOffsetInAT ? 3 : (OffsetValue + 3);
-    RightLoadOffset  = LoadedOffsetInAT ? 0 : OffsetValue;
+  int64_t FirstOffset = IsLargeOffset ? 1 : (OffsetValue + 1);
+  int64_t SecondOffset = IsLargeOffset ? 0 : OffsetValue;
+  if (isLittle())
+    std::swap(FirstOffset, SecondOffset);
+
+  if (IsLargeOffset) {
+    TOut.emitRRI(Mips::SB, DstReg, ATReg, FirstOffset, IDLoc, STI);
+    TOut.emitRRI(Mips::SRL, DstReg, DstReg, 8, IDLoc, STI);
+    TOut.emitRRI(Mips::SB, DstReg, ATReg, SecondOffset, IDLoc, STI);
+    TOut.emitRRI(Mips::LBu, ATReg, ATReg, 0, IDLoc, STI);
+    TOut.emitRRI(Mips::SLL, DstReg, DstReg, 8, IDLoc, STI);
+    TOut.emitRRR(Mips::OR, DstReg, DstReg, ATReg, IDLoc, STI);
   } else {
-    LeftLoadOffset = LoadedOffsetInAT ? 0 : OffsetValue;
-    RightLoadOffset  = LoadedOffsetInAT ? 3 : (OffsetValue + 3);
+    TOut.emitRRI(Mips::SB, DstReg, SrcReg, FirstOffset, IDLoc, STI);
+    TOut.emitRRI(Mips::SRL, ATReg, DstReg, 8, IDLoc, STI);
+    TOut.emitRRI(Mips::SB, ATReg, SrcReg, SecondOffset, IDLoc, STI);
   }
 
-  TOut.emitRRI(Mips::LWL, DstRegOp.getReg(), FinalSrcReg, LeftLoadOffset, IDLoc,
-               STI);
+  return false;
+}
 
-  TOut.emitRRI(Mips::LWR, DstRegOp.getReg(), FinalSrcReg, RightLoadOffset,
-               IDLoc, STI);
+bool MipsAsmParser::expandUxw(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                              const MCSubtargetInfo *STI) {
+  if (hasMips32r6() || hasMips64r6()) {
+    return Error(IDLoc, "instruction not supported on mips32r6 or mips64r6");
+  }
+
+  const MCOperand &DstRegOp = Inst.getOperand(0);
+  assert(DstRegOp.isReg() && "expected register operand kind");
+  const MCOperand &SrcRegOp = Inst.getOperand(1);
+  assert(SrcRegOp.isReg() && "expected register operand kind");
+  const MCOperand &OffsetImmOp = Inst.getOperand(2);
+  assert(OffsetImmOp.isImm() && "expected immediate operand kind");
+
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned DstReg = DstRegOp.getReg();
+  unsigned SrcReg = SrcRegOp.getReg();
+  int64_t OffsetValue = OffsetImmOp.getImm();
+
+  // Compute left/right load/store offsets.
+  bool IsLargeOffset = !(isInt<16>(OffsetValue + 3) && isInt<16>(OffsetValue));
+  int64_t LxlOffset = IsLargeOffset ? 0 : OffsetValue;
+  int64_t LxrOffset = IsLargeOffset ? 3 : (OffsetValue + 3);
+  if (isLittle())
+    std::swap(LxlOffset, LxrOffset);
+
+  bool IsLoadInst = (Inst.getOpcode() == Mips::Ulw);
+  bool DoMove = IsLoadInst && (SrcReg == DstReg) && !IsLargeOffset;
+  unsigned TmpReg = SrcReg;
+  if (IsLargeOffset || DoMove) {
+    warnIfNoMacro(IDLoc);
+    TmpReg = getATReg(IDLoc);
+    if (!TmpReg)
+      return true;
+  }
+
+  if (IsLargeOffset) {
+    if (loadImmediate(OffsetValue, TmpReg, SrcReg, !ABI.ArePtrs64bit(), true,
+                      IDLoc, Out, STI))
+      return true;
+  }
+
+  if (DoMove)
+    std::swap(DstReg, TmpReg);
+
+  unsigned XWL = IsLoadInst ? Mips::LWL : Mips::SWL;
+  unsigned XWR = IsLoadInst ? Mips::LWR : Mips::SWR;
+  TOut.emitRRI(XWL, DstReg, TmpReg, LxlOffset, IDLoc, STI);
+  TOut.emitRRI(XWR, DstReg, TmpReg, LxrOffset, IDLoc, STI);
+
+  if (DoMove)
+    TOut.emitRRR(Mips::OR, TmpReg, DstReg, Mips::ZERO, IDLoc, STI);
 
   return false;
 }

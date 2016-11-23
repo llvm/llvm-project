@@ -1183,4 +1183,8 @@ let Predicates = [InMicroMips] in {
                       (BNE_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>;
   def : MipsInstAlias<"beqz $rs,$offset",
                       (BEQ_MM GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>;
+  def : MipsInstAlias<"seh $rd", (SEH_MM GPR32Opnd:$rd, GPR32Opnd:$rd), 0>,
+                     ISA_MIPS32R2_NOT_32R6_64R6;
+  def : MipsInstAlias<"seb $rd", (SEB_MM GPR32Opnd:$rd, GPR32Opnd:$rd), 0>,
+                     ISA_MIPS32R2_NOT_32R6_64R6;
 }

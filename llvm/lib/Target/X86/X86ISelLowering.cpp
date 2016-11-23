@@ -6023,14 +6023,11 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   return SDValue();
 }
 
-/// Attempt to use the vbroadcast instruction to generate a splat value for the
-/// following cases:
-/// 1. A splat BUILD_VECTOR which uses a single scalar load, or a constant.
-/// 2. A splat shuffle which uses a scalar_to_vector node which comes from
-/// a scalar load, or a constant.
+/// Attempt to use the vbroadcast instruction to generate a splat value for a
+/// splat BUILD_VECTOR which uses a single scalar load, or a constant.
 /// The VBROADCAST node is returned when a pattern is found,
 /// or SDValue() otherwise.
-static SDValue LowerVectorBroadcast(SDValue Op, const X86Subtarget &Subtarget,
+static SDValue LowerVectorBroadcast(BuildVectorSDNode *BVOp, const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG) {
   // VBROADCAST requires AVX.
   // TODO: Splats could be generated for non-AVX CPUs using SSE
@@ -6038,79 +6035,27 @@ static SDValue LowerVectorBroadcast(SDValue Op, const X86Subtarget &Subtarget,
   if (!Subtarget.hasAVX())
     return SDValue();
 
-  MVT VT = Op.getSimpleValueType();
-  SDLoc dl(Op);
+  MVT VT = BVOp->getSimpleValueType(0);
+  SDLoc dl(BVOp);
 
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Unsupported vector type for broadcast.");
 
-  SDValue Ld;
-  bool ConstSplatVal;
+  BitVector UndefElements;
+  SDValue Ld = BVOp->getSplatValue(&UndefElements);
 
-  switch (Op.getOpcode()) {
-    default:
-      // Unknown pattern found.
-      return SDValue();
+  // We need a splat of a single value to use broadcast, and it doesn't
+  // make any sense if the value is only in one element of the vector.
+  if (!Ld || (VT.getVectorNumElements() - UndefElements.count()) <= 1)
+    return SDValue();
 
-    case ISD::BUILD_VECTOR: {
-      auto *BVOp = cast<BuildVectorSDNode>(Op.getNode());
-      BitVector UndefElements;
-      SDValue Splat = BVOp->getSplatValue(&UndefElements);
+  bool ConstSplatVal =
+      (Ld.getOpcode() == ISD::Constant || Ld.getOpcode() == ISD::ConstantFP);
 
-      // We need a splat of a single value to use broadcast, and it doesn't
-      // make any sense if the value is only in one element of the vector.
-      if (!Splat || (VT.getVectorNumElements() - UndefElements.count()) <= 1)
-        return SDValue();
-
-      Ld = Splat;
-      ConstSplatVal = (Ld.getOpcode() == ISD::Constant ||
-                       Ld.getOpcode() == ISD::ConstantFP);
-
-      // Make sure that all of the users of a non-constant load are from the
-      // BUILD_VECTOR node.
-      if (!ConstSplatVal && !BVOp->isOnlyUserOf(Ld.getNode()))
-        return SDValue();
-      break;
-    }
-
-    case ISD::VECTOR_SHUFFLE: {
-      ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(Op);
-
-      // Shuffles must have a splat mask where the first element is
-      // broadcasted.
-      if ((!SVOp->isSplat()) || SVOp->getMaskElt(0) != 0)
-        return SDValue();
-
-      SDValue Sc = Op.getOperand(0);
-      if (Sc.getOpcode() != ISD::SCALAR_TO_VECTOR &&
-          Sc.getOpcode() != ISD::BUILD_VECTOR) {
-
-        if (!Subtarget.hasInt256())
-          return SDValue();
-
-        // Use the register form of the broadcast instruction available on AVX2.
-        if (VT.getSizeInBits() >= 256)
-          Sc = extract128BitVector(Sc, 0, DAG, dl);
-        return DAG.getNode(X86ISD::VBROADCAST, dl, VT, Sc);
-      }
-
-      Ld = Sc.getOperand(0);
-      ConstSplatVal = (Ld.getOpcode() == ISD::Constant ||
-                       Ld.getOpcode() == ISD::ConstantFP);
-
-      // The scalar_to_vector node and the suspected
-      // load node must have exactly one user.
-      // Constants may have multiple users.
-
-      // AVX-512 has register version of the broadcast
-      bool hasRegVer = Subtarget.hasAVX512() && VT.is512BitVector() &&
-                       Ld.getValueSizeInBits() >= 32;
-      if (!ConstSplatVal && ((!Sc.hasOneUse() || !Ld.hasOneUse()) &&
-          !hasRegVer))
-        return SDValue();
-      break;
-    }
-  }
+  // Make sure that all of the users of a non-constant load are from the
+  // BUILD_VECTOR node.
+  if (!ConstSplatVal && !BVOp->isOnlyUserOf(Ld.getNode()))
+    return SDValue();
 
   unsigned ScalarSize = Ld.getValueSizeInBits();
   bool IsGE256 = (VT.getSizeInBits() >= 256);
@@ -6787,17 +6732,18 @@ static SDValue LowerToHorizontalOp(const BuildVectorSDNode *BV,
 /// NOTE: Its not in our interest to start make a general purpose vectorizer
 /// from this, but enough scalar bit operations are created from the later
 /// legalization + scalarization stages to need basic support.
-static SDValue lowerBuildVectorToBitOp(SDValue Op, SelectionDAG &DAG) {
+static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op,
+                                       SelectionDAG &DAG) {
   SDLoc DL(Op);
-  MVT VT = Op.getSimpleValueType();
+  MVT VT = Op->getSimpleValueType(0);
   unsigned NumElems = VT.getVectorNumElements();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Check that all elements have the same opcode.
   // TODO: Should we allow UNDEFS and if so how many?
-  unsigned Opcode = Op.getOperand(0).getOpcode();
+  unsigned Opcode = Op->getOperand(0).getOpcode();
   for (unsigned i = 1; i < NumElems; ++i)
-    if (Opcode != Op.getOperand(i).getOpcode())
+    if (Opcode != Op->getOperand(i).getOpcode())
       return SDValue();
 
   // TODO: We may be able to add support for other Ops (ADD/SUB + shifts).
@@ -6881,9 +6827,9 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return AddSub;
   if (SDValue HorizontalOp = LowerToHorizontalOp(BV, Subtarget, DAG))
     return HorizontalOp;
-  if (SDValue Broadcast = LowerVectorBroadcast(Op, Subtarget, DAG))
+  if (SDValue Broadcast = LowerVectorBroadcast(BV, Subtarget, DAG))
     return Broadcast;
-  if (SDValue BitOp = lowerBuildVectorToBitOp(Op, DAG))
+  if (SDValue BitOp = lowerBuildVectorToBitOp(BV, DAG))
     return BitOp;
 
   unsigned EVTBits = ExtVT.getSizeInBits();
@@ -7681,16 +7627,11 @@ static SDValue lowerVectorShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
                                            SDValue V2, ArrayRef<int> Mask,
                                            const SmallBitVector &Zeroable,
                                            SelectionDAG &DAG) {
+  assert(!VT.isFloatingPoint() && "Floating point types are not supported");
   MVT EltVT = VT.getVectorElementType();
-  int NumEltBits = EltVT.getSizeInBits();
-  MVT IntEltVT = MVT::getIntegerVT(NumEltBits);
-  SDValue Zero = DAG.getConstant(0, DL, IntEltVT);
-  SDValue AllOnes = DAG.getConstant(APInt::getAllOnesValue(NumEltBits), DL,
-                                    IntEltVT);
-  if (EltVT.isFloatingPoint()) {
-    Zero = DAG.getBitcast(EltVT, Zero);
-    AllOnes = DAG.getBitcast(EltVT, AllOnes);
-  }
+  SDValue Zero = DAG.getConstant(0, DL, EltVT);
+  SDValue AllOnes =
+      DAG.getConstant(APInt::getAllOnesValue(EltVT.getSizeInBits()), DL, EltVT);
   SmallVector<SDValue, 16> VMaskOps(Mask.size(), Zero);
   SDValue V;
   for (int i = 0, Size = Mask.size(); i < Size; ++i) {
@@ -7709,10 +7650,7 @@ static SDValue lowerVectorShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
     return SDValue(); // No non-zeroable elements!
 
   SDValue VMask = DAG.getBuildVector(VT, DL, VMaskOps);
-  V = DAG.getNode(VT.isFloatingPoint()
-                  ? (unsigned) X86ISD::FAND : (unsigned) ISD::AND,
-                  DL, VT, V, VMask);
-  return V;
+  return DAG.getNode(ISD::AND, DL, VT, V, VMask);
 }
 
 /// \brief Try to emit a blend instruction for a shuffle using bit math.
@@ -26655,6 +26593,17 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     assert(Mask.size() == 4);
     break;
   case X86ISD::UNPCKL: {
+    auto Op0 = N.getOperand(0);
+    auto Op1 = N.getOperand(1);
+    unsigned Opcode0 = Op0.getOpcode();
+    unsigned Opcode1 = Op1.getOpcode();
+
+    // Combine X86ISD::UNPCKL with 2 X86ISD::FHADD inputs into a single
+    // X86ISD::FHADD. This is generated by UINT_TO_FP v2f64 scalarization.
+    // TODO: Add other horizontal operations as required.
+    if (VT == MVT::v2f64 && Opcode0 == Opcode1 && Opcode0 == X86ISD::FHADD)
+      return DAG.getNode(Opcode0, DL, VT, Op0.getOperand(0), Op1.getOperand(0));
+
     // Combine X86ISD::UNPCKL and ISD::VECTOR_SHUFFLE into X86ISD::UNPCKH, in
     // which X86ISD::UNPCKL has a ISD::UNDEF operand, and ISD::VECTOR_SHUFFLE
     // moves upper half elements into the lower half part. For example:
@@ -26672,9 +26621,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     if (!VT.is128BitVector())
       return SDValue();
 
-    auto Op0 = N.getOperand(0);
-    auto Op1 = N.getOperand(1);
-    if (Op0.isUndef() && Op1.getNode()->getOpcode() == ISD::VECTOR_SHUFFLE) {
+    if (Op0.isUndef() && Opcode1 == ISD::VECTOR_SHUFFLE) {
       ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Op1.getNode())->getMask();
 
       unsigned NumElts = VT.getVectorNumElements();

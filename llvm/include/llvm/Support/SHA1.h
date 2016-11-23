@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <array>
 #include <cstdint>
 
 namespace llvm {
@@ -52,6 +53,9 @@ public:
   /// any time without invalidating the internal state so that more calls can be
   /// made into update.
   StringRef result();
+
+  /// Returns a raw 160-bit SHA1 hash for the given data.
+  static std::array<uint8_t, 20> hash(ArrayRef<uint8_t> Data);
 
 private:
   /// Define some constants.

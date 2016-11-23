@@ -152,6 +152,7 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case SCEI: return "scei";
   case BGP: return "bgp";
   case BGQ: return "bgq";
+  case Facebook: return "facebook";
   case Freescale: return "fsl";
   case IBM: return "ibm";
   case ImaginationTechnologies: return "img";
@@ -434,6 +435,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
     .Case("scei", Triple::SCEI)
     .Case("bgp", Triple::BGP)
     .Case("bgq", Triple::BGQ)
+    .Case("facebook", Triple::Facebook)
     .Case("fsl", Triple::Freescale)
     .Case("ibm", Triple::IBM)
     .Case("img", Triple::ImaginationTechnologies)

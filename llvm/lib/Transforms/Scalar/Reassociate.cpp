@@ -1778,6 +1778,12 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
     return nullptr; // All distinct factors, so nothing left for us to do.
 
   IRBuilder<> Builder(I);
+  // The reassociate transformation for FP operations is performed only
+  // if unsafe algebra is permitted by FastMathFlags. Propagate those flags
+  // to the newly generated operations.
+  if (auto FPI = dyn_cast<FPMathOperator>(I))
+    Builder.setFastMathFlags(FPI->getFastMathFlags());
+
   Value *V = buildMinimalMultiplyDAG(Builder, Factors);
   if (Ops.empty())
     return V;

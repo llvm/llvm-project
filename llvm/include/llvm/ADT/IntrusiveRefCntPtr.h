@@ -27,9 +27,6 @@
 
 namespace llvm {
 
-  template <class T>
-  class IntrusiveRefCntPtr;
-
 //===----------------------------------------------------------------------===//
 /// RefCountedBase - A generic base class for objects that wish to
 ///  have their lifetimes managed using reference counts. Classes
@@ -42,10 +39,10 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
   template <class Derived>
   class RefCountedBase {
-    mutable unsigned ref_cnt;
+    mutable unsigned ref_cnt = 0;
 
   public:
-    RefCountedBase() : ref_cnt(0) {}
+    RefCountedBase() = default;
     RefCountedBase(const RefCountedBase &) : ref_cnt(0) {}
 
     void Retain() const { ++ref_cnt; }
@@ -64,14 +61,15 @@ namespace llvm {
 ///  attempting to do this will produce a compile error.
 //===----------------------------------------------------------------------===//
   class RefCountedBaseVPTR {
-    mutable unsigned ref_cnt;
+    mutable unsigned ref_cnt = 0;
+
     virtual void anchor();
 
   protected:
-    RefCountedBaseVPTR() : ref_cnt(0) {}
+    RefCountedBaseVPTR() = default;
     RefCountedBaseVPTR(const RefCountedBaseVPTR &) : ref_cnt(0) {}
 
-    virtual ~RefCountedBaseVPTR() {}
+    virtual ~RefCountedBaseVPTR() = default;
 
     void Retain() const { ++ref_cnt; }
     void Release() const {
@@ -133,12 +131,12 @@ public:
 //===----------------------------------------------------------------------===//
   template <typename T>
   class IntrusiveRefCntPtr {
-    T* Obj;
+    T* Obj = nullptr;
 
   public:
     typedef T element_type;
 
-    explicit IntrusiveRefCntPtr() : Obj(nullptr) {}
+    explicit IntrusiveRefCntPtr() = default;
 
     IntrusiveRefCntPtr(T* obj) : Obj(obj) {
       retain();
@@ -269,14 +267,14 @@ public:
 
   template <typename From> struct simplify_type;
 
-  template<class T> struct simplify_type<IntrusiveRefCntPtr<T> > {
+  template<class T> struct simplify_type<IntrusiveRefCntPtr<T>> {
     typedef T* SimpleType;
     static SimpleType getSimplifiedValue(IntrusiveRefCntPtr<T>& Val) {
       return Val.get();
     }
   };
 
-  template<class T> struct simplify_type<const IntrusiveRefCntPtr<T> > {
+  template<class T> struct simplify_type<const IntrusiveRefCntPtr<T>> {
     typedef /*const*/ T* SimpleType;
     static SimpleType getSimplifiedValue(const IntrusiveRefCntPtr<T>& Val) {
       return Val.get();

@@ -43,6 +43,15 @@ def IntrWriteMem : IntrinsicProperty;
 // reads from and (possibly volatile) writes to memory, it has no side effects.
 def IntrArgMemOnly : IntrinsicProperty;
 
+// IntrInaccessibleMemOnly -- This intrinsic only accesses memory that is not
+// accessible by the module being compiled. This is a weaker form of IntrNoMem.
+def IntrInaccessibleMemOnly : IntrinsicProperty;
+
+// IntrInaccessibleMemOrArgMemOnly -- This intrinsic only accesses memory that
+// its pointer-typed arguments point to or memory that is not accessible
+// by the module being compiled. This is a weaker form of IntrArgMemOnly.
+def IntrInaccessibleMemOrArgMemOnly : IntrinsicProperty;
+
 // Commutative - This intrinsic is commutative: X op Y == Y op X.
 def Commutative : IntrinsicProperty;
 

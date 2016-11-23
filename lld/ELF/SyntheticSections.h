@@ -89,7 +89,8 @@ private:
   uint8_t *HashBuf;
 };
 
-template <class ELFT> class MipsGotSection final : public SyntheticSection<ELFT> {
+template <class ELFT>
+class MipsGotSection final : public SyntheticSection<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
 public:

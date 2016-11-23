@@ -134,6 +134,11 @@ public:
     return getOpcode() == AShr;
   }
 
+  /// Return true if this is and/or/xor.
+  inline bool isBitwiseLogicOp() const {
+    return getOpcode() == And || getOpcode() == Or || getOpcode() == Xor;
+  }
+
   /// Determine if the OpCode is one of the CastInst instructions.
   static inline bool isCast(unsigned OpCode) {
     return OpCode >= CastOpsBegin && OpCode < CastOpsEnd;

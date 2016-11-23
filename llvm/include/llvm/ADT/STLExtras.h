@@ -347,8 +347,8 @@ make_filter_range(RangeT &&Range, PredicateT Pred) {
 }
 
 // forward declarations required by zip_shortest/zip_first
-template <typename R, class UnaryPredicate>
-bool all_of(R &&range, UnaryPredicate &&P);
+template <typename R, typename UnaryPredicate>
+bool all_of(R &&range, UnaryPredicate P);
 
 template <size_t... I> struct index_sequence;
 
@@ -570,8 +570,8 @@ inline void array_pod_sort(
 /// container.
 template<typename Container>
 void DeleteContainerPointers(Container &C) {
-  for (typename Container::iterator I = C.begin(), E = C.end(); I != E; ++I)
-    delete *I;
+  for (auto V : C)
+    delete V;
   C.clear();
 }
 
@@ -579,77 +579,79 @@ void DeleteContainerPointers(Container &C) {
 /// deletes the second elements and then clears the container.
 template<typename Container>
 void DeleteContainerSeconds(Container &C) {
-  for (typename Container::iterator I = C.begin(), E = C.end(); I != E; ++I)
-    delete I->second;
+  for (auto &V : C)
+    delete V.second;
   C.clear();
 }
 
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
 /// begin/end explicitly.
-template<typename R, class UnaryPredicate>
-bool all_of(R &&Range, UnaryPredicate &&P) {
-  return std::all_of(Range.begin(), Range.end(),
-                     std::forward<UnaryPredicate>(P));
+template <typename R, typename UnaryPredicate>
+bool all_of(R &&Range, UnaryPredicate P) {
+  return std::all_of(std::begin(Range), std::end(Range), P);
 }
 
 /// Provide wrappers to std::any_of which take ranges instead of having to pass
 /// begin/end explicitly.
-template <typename R, class UnaryPredicate>
-bool any_of(R &&Range, UnaryPredicate &&P) {
-  return std::any_of(Range.begin(), Range.end(),
-                     std::forward<UnaryPredicate>(P));
+template <typename R, typename UnaryPredicate>
+bool any_of(R &&Range, UnaryPredicate P) {
+  return std::any_of(std::begin(Range), std::end(Range), P);
 }
 
 /// Provide wrappers to std::none_of which take ranges instead of having to pass
 /// begin/end explicitly.
-template <typename R, class UnaryPredicate>
-bool none_of(R &&Range, UnaryPredicate &&P) {
-  return std::none_of(Range.begin(), Range.end(),
-                      std::forward<UnaryPredicate>(P));
+template <typename R, typename UnaryPredicate>
+bool none_of(R &&Range, UnaryPredicate P) {
+  return std::none_of(std::begin(Range), std::end(Range), P);
 }
 
 /// Provide wrappers to std::find which take ranges instead of having to pass
 /// begin/end explicitly.
-template<typename R, class T>
-auto find(R &&Range, const T &val) -> decltype(Range.begin()) {
-  return std::find(Range.begin(), Range.end(), val);
+template <typename R, typename T>
+auto find(R &&Range, const T &Val) -> decltype(std::begin(Range)) {
+  return std::find(std::begin(Range), std::end(Range), Val);
 }
 
 /// Provide wrappers to std::find_if which take ranges instead of having to pass
 /// begin/end explicitly.
-template <typename R, class T>
-auto find_if(R &&Range, const T &Pred) -> decltype(Range.begin()) {
-  return std::find_if(Range.begin(), Range.end(), Pred);
+template <typename R, typename UnaryPredicate>
+auto find_if(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
+  return std::find_if(std::begin(Range), std::end(Range), P);
+}
+
+template <typename R, typename UnaryPredicate>
+auto find_if_not(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
+  return std::find_if_not(std::begin(Range), std::end(Range), P);
 }
 
 /// Provide wrappers to std::remove_if which take ranges instead of having to
 /// pass begin/end explicitly.
-template<typename R, class UnaryPredicate>
-auto remove_if(R &&Range, UnaryPredicate &&P) -> decltype(Range.begin()) {
-  return std::remove_if(Range.begin(), Range.end(), P);
+template <typename R, typename UnaryPredicate>
+auto remove_if(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
+  return std::remove_if(std::begin(Range), std::end(Range), P);
 }
 
 /// Wrapper function around std::find to detect if an element exists
 /// in a container.
 template <typename R, typename E>
 bool is_contained(R &&Range, const E &Element) {
-  return std::find(Range.begin(), Range.end(), Element) != Range.end();
+  return std::find(std::begin(Range), std::end(Range), Element) !=
+         std::end(Range);
 }
 
 /// Wrapper function around std::count_if to count the number of times an
 /// element satisfying a given predicate occurs in a range.
 template <typename R, typename UnaryPredicate>
-auto count_if(R &&Range, UnaryPredicate &&P)
-    -> typename std::iterator_traits<decltype(Range.begin())>::difference_type {
-  return std::count_if(Range.begin(), Range.end(), P);
+auto count_if(R &&Range, UnaryPredicate P) -> typename std::iterator_traits<
+    decltype(std::begin(Range))>::difference_type {
+  return std::count_if(std::begin(Range), std::end(Range), P);
 }
 
 /// Wrapper function around std::transform to apply a function to a range and
 /// store the result elsewhere.
-template <typename R, class OutputIt, typename UnaryPredicate>
-OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate &&P) {
-  return std::transform(Range.begin(), Range.end(), d_first,
-                        std::forward<UnaryPredicate>(P));
+template <typename R, typename OutputIt, typename UnaryPredicate>
+OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate P) {
+  return std::transform(std::begin(Range), std::end(Range), d_first, P);
 }
 
 //===----------------------------------------------------------------------===//

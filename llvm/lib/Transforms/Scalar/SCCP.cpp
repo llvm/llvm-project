@@ -928,25 +928,17 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
       NonOverdefVal = &V2State;
 
     if (NonOverdefVal) {
-      if (NonOverdefVal->isUnknown()) {
-        // Could annihilate value.
-        if (I.getOpcode() == Instruction::And)
-          markConstant(IV, &I, Constant::getNullValue(I.getType()));
-        else if (VectorType *PT = dyn_cast<VectorType>(I.getType()))
-          markConstant(IV, &I, Constant::getAllOnesValue(PT));
-        else
-          markConstant(IV, &I,
-                       Constant::getAllOnesValue(I.getType()));
+      if (NonOverdefVal->isUnknown())
         return;
-      }
 
       if (I.getOpcode() == Instruction::And) {
         // X and 0 = 0
         if (NonOverdefVal->getConstant()->isNullValue())
           return markConstant(IV, &I, NonOverdefVal->getConstant());
       } else {
+        // X or -1 = -1
         if (ConstantInt *CI = NonOverdefVal->getConstantInt())
-          if (CI->isAllOnesValue())     // X or -1 = -1
+          if (CI->isAllOnesValue())
             return markConstant(IV, &I, NonOverdefVal->getConstant());
       }
     }

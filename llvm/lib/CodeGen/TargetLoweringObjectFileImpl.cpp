@@ -55,9 +55,9 @@ MCSymbol *TargetLoweringObjectFileELF::getCFIPersonalitySymbol(
   unsigned Encoding = getPersonalityEncoding();
   if ((Encoding & 0x80) == dwarf::DW_EH_PE_indirect)
     return getContext().getOrCreateSymbol(StringRef("DW.ref.") +
-                                          TM.getSymbol(GV, getMangler())->getName());
+                                          TM.getSymbol(GV)->getName());
   if ((Encoding & 0x70) == dwarf::DW_EH_PE_absptr)
-    return TM.getSymbol(GV, getMangler());
+    return TM.getSymbol(GV);
   report_fatal_error("We do not support this DWARF encoding yet!");
 }
 
@@ -96,7 +96,7 @@ const MCExpr *TargetLoweringObjectFileELF::getTTypeGlobalReference(
     // gets emitted by the asmprinter.
     MachineModuleInfoImpl::StubValueTy &StubSym = ELFMMI.getGVStubEntry(SSym);
     if (!StubSym.getPointer()) {
-      MCSymbol *Sym = TM.getSymbol(GV, getMangler());
+      MCSymbol *Sym = TM.getSymbol(GV);
       StubSym = MachineModuleInfoImpl::StubValueTy(Sym, !GV->hasLocalLinkage());
     }
 
@@ -443,10 +443,9 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
     return nullptr;
 
   return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS, getMangler()), PLTRelativeVariantKind,
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeVariantKind,
                               getContext()),
-      MCSymbolRefExpr::create(TM.getSymbol(RHS, getMangler()), getContext()),
-      getContext());
+      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
 
 void
@@ -712,7 +711,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getTTypeGlobalReference(
     // gets emitted by the asmprinter.
     MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(SSym);
     if (!StubSym.getPointer()) {
-      MCSymbol *Sym = TM.getSymbol(GV, getMangler());
+      MCSymbol *Sym = TM.getSymbol(GV);
       StubSym = MachineModuleInfoImpl::StubValueTy(Sym, !GV->hasLocalLinkage());
     }
 
@@ -738,7 +737,7 @@ MCSymbol *TargetLoweringObjectFileMachO::getCFIPersonalitySymbol(
   // gets emitted by the asmprinter.
   MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(SSym);
   if (!StubSym.getPointer()) {
-    MCSymbol *Sym = TM.getSymbol(GV, getMangler());
+    MCSymbol *Sym = TM.getSymbol(GV);
     StubSym = MachineModuleInfoImpl::StubValueTy(Sym, !GV->hasLocalLinkage());
   }
 
@@ -929,7 +928,7 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
       ComdatGV = GO;
 
     if (!ComdatGV->hasPrivateLinkage()) {
-      MCSymbol *Sym = TM.getSymbol(ComdatGV, getMangler());
+      MCSymbol *Sym = TM.getSymbol(ComdatGV);
       COMDATSymName = Sym->getName();
       Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
     } else {
@@ -982,7 +981,7 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       UniqueID = NextUniqueID++;
 
     if (!ComdatGV->hasPrivateLinkage()) {
-      MCSymbol *Sym = TM.getSymbol(ComdatGV, getMangler());
+      MCSymbol *Sym = TM.getSymbol(ComdatGV);
       StringRef COMDATSymName = Sym->getName();
       return getContext().getCOFFSection(Name, Characteristics, Kind,
                                          COMDATSymName, Selection, UniqueID);
@@ -1037,7 +1036,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
   if (F.hasPrivateLinkage())
     return ReadOnlySection;
 
-  MCSymbol *Sym = TM.getSymbol(&F, getMangler());
+  MCSymbol *Sym = TM.getSymbol(&F);
   StringRef COMDATSymName = Sym->getName();
 
   SectionKind Kind = SectionKind::getReadOnly();

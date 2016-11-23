@@ -260,8 +260,10 @@ a:
         sdl       $a3,-20961($s8)
         sdr       $11,-20423($12)
         sdxc1     $f11,$10($14)
-        seb       $25,$15
-        seh       $v1,$12
+        seb       $25, $15             # CHECK: seb $25, $15           # encoding: [0x7c,0x0f,0xcc,0x20]
+        seb       $25                  # CHECK: seb $25, $25           # encoding: [0x7c,0x19,0xcc,0x20]
+        seh       $3, $12              # CHECK: seh $3, $12            # encoding: [0x7c,0x0c,0x1e,0x20]
+        seh       $3                   # CHECK: seh $3, $3             # encoding: [0x7c,0x03,0x1e,0x20]
         sh        $14,-6704($15)
         sll       $a3,18               # CHECK: sll $7, $7, 18         # encoding: [0x00,0x07,0x3c,0x80]
         sll       $a3,$zero,18         # CHECK: sll $7, $zero, 18      # encoding: [0x00,0x00,0x3c,0x80]

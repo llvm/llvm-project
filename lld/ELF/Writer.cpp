@@ -374,7 +374,6 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   if (!In<ELFT>::SymTab)
     return;
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-    StringRef StrTab = F->getStringTable();
     for (SymbolBody *B : F->getLocalSymbols()) {
       if (!B->IsLocal)
         fatal(getFilename(F) +
@@ -385,17 +384,14 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         continue;
       if (!includeInSymtab<ELFT>(*B))
         continue;
-      if (B->getNameOffset() >= StrTab.size())
-        fatal(getFilename(F) + ": invalid symbol name offset");
-      StringRef SymName(StrTab.data() + B->getNameOffset());
       InputSectionBase<ELFT> *Sec = DR->Section;
-      if (!shouldKeepInSymtab<ELFT>(Sec, SymName, *B))
+      if (!shouldKeepInSymtab<ELFT>(Sec, B->getName(), *B))
         continue;
       ++In<ELFT>::SymTab->NumLocals;
       if (Config->Relocatable)
         B->DynsymIndex = In<ELFT>::SymTab->NumLocals;
-      F->KeptLocalSyms.push_back(
-          std::make_pair(DR, In<ELFT>::SymTab->StrTabSec.addString(SymName)));
+      F->KeptLocalSyms.push_back(std::make_pair(
+          DR, In<ELFT>::SymTab->StrTabSec.addString(B->getName())));
     }
   }
 }
@@ -701,8 +697,8 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> V) {
       auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
       if (!D || !D->Section)
         continue;
-      StringRef SymName = getSymbolName(File->getStringTable(), *Body);
-      auto It = Config->SymbolOrderingFile.find(CachedHashString(SymName));
+      auto It =
+          Config->SymbolOrderingFile.find(CachedHashString(Body->getName()));
       if (It == Config->SymbolOrderingFile.end())
         continue;
 

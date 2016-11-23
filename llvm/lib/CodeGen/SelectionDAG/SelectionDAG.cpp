@@ -2843,10 +2843,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
     if (Tmp == 1) return 1;  // Early out.
     return std::min(Tmp, Tmp2)-1;
-  case ISD::TRUNCATE:
-    // FIXME: it's tricky to do anything useful for this, but it is an important
-    // case for targets like X86.
+  case ISD::TRUNCATE: {
+    // Check if the sign bits of source go down as far as the truncated value.
+    unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
+    unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (NumSrcSignBits > (NumSrcBits - VTBits))
+      return NumSrcSignBits - (NumSrcBits - VTBits);
     break;
+  }
   case ISD::EXTRACT_ELEMENT: {
     const int KnownSign = ComputeNumSignBits(Op.getOperand(0), Depth+1);
     const int BitWidth = Op.getValueSizeInBits();

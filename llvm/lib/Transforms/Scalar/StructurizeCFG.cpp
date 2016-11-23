@@ -163,7 +163,6 @@ public:
 /// breaks and the false values expresses continue states.
 class StructurizeCFG : public RegionPass {
   bool SkipUniformRegions;
-  DivergenceAnalysis *DA;
 
   Type *Boolean;
   ConstantInt *BoolTrue;
@@ -176,7 +175,7 @@ class StructurizeCFG : public RegionPass {
   DominatorTree *DT;
   LoopInfo *LI;
 
-  RNVector Order;
+  SmallVector<RegionNode *, 8> Order;
   BBSet Visited;
 
   BBPhiMap DeletedPhis;
@@ -236,22 +235,14 @@ class StructurizeCFG : public RegionPass {
 
   void rebuildSSA();
 
-  bool hasOnlyUniformBranches(const Region *R);
-
 public:
   static char ID;
 
-  StructurizeCFG() :
-    RegionPass(ID), SkipUniformRegions(false) {
+  explicit StructurizeCFG(bool SkipUniformRegions = false)
+      : RegionPass(ID), SkipUniformRegions(SkipUniformRegions) {
     initializeStructurizeCFGPass(*PassRegistry::getPassRegistry());
   }
 
-  StructurizeCFG(bool SkipUniformRegions) :
-    RegionPass(ID), SkipUniformRegions(SkipUniformRegions) {
-    initializeStructurizeCFGPass(*PassRegistry::getPassRegistry());
-  }
-
-  using Pass::doInitialization;
   bool doInitialization(Region *R, RGPassManager &RGM) override;
 
   bool runOnRegion(Region *R, RGPassManager &RGM) override;
@@ -264,6 +255,7 @@ public:
     AU.addRequiredID(LowerSwitchID);
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
+
     AU.addPreserved<DominatorTreeWrapperPass>();
     RegionPass::getAnalysisUsage(AU);
   }
@@ -296,17 +288,13 @@ bool StructurizeCFG::doInitialization(Region *R, RGPassManager &RGM) {
 
 /// \brief Build up the general order of nodes
 void StructurizeCFG::orderNodes() {
-  RNVector TempOrder;
   ReversePostOrderTraversal<Region*> RPOT(ParentRegion);
-  TempOrder.append(RPOT.begin(), RPOT.end());
-
-  std::map<Loop*, unsigned> LoopBlocks;
-
+  SmallDenseMap<Loop*, unsigned, 8> LoopBlocks;
 
   // The reverse post-order traversal of the list gives us an ordering close
   // to what we want.  The only problem with it is that sometimes backedges
   // for outer loops will be visited before backedges for inner loops.
-  for (RegionNode *RN : TempOrder) {
+  for (RegionNode *RN : RPOT) {
     BasicBlock *BB = RN->getEntry();
     Loop *Loop = LI->getLoopFor(BB);
     ++LoopBlocks[Loop];
@@ -314,8 +302,7 @@ void StructurizeCFG::orderNodes() {
 
   unsigned CurrentLoopDepth = 0;
   Loop *CurrentLoop = nullptr;
-  BBSet TempVisited;
-  for (RNVector::iterator I = TempOrder.begin(), E = TempOrder.end(); I != E; ++I) {
+  for (auto I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
     BasicBlock *BB = (*I)->getEntry();
     unsigned LoopDepth = LI->getLoopDepth(BB);
 
@@ -326,7 +313,7 @@ void StructurizeCFG::orderNodes() {
       // Make sure we have visited all blocks in this loop before moving back to
       // the outer loop.
 
-      RNVector::iterator LoopI = I;
+      auto LoopI = I;
       while (unsigned &BlockCount = LoopBlocks[CurrentLoop]) {
         LoopI++;
         BasicBlock *LoopBB = (*LoopI)->getEntry();
@@ -338,9 +325,8 @@ void StructurizeCFG::orderNodes() {
     }
 
     CurrentLoop = LI->getLoopFor(BB);
-    if (CurrentLoop) {
+    if (CurrentLoop)
       LoopBlocks[CurrentLoop]--;
-    }
 
     CurrentLoopDepth = LoopDepth;
     Order.push_back(*I);
@@ -912,13 +898,14 @@ void StructurizeCFG::rebuildSSA() {
     }
 }
 
-bool StructurizeCFG::hasOnlyUniformBranches(const Region *R) {
+static bool hasOnlyUniformBranches(const Region *R,
+                                   const DivergenceAnalysis &DA) {
   for (const BasicBlock *BB : R->blocks()) {
     const BranchInst *Br = dyn_cast<BranchInst>(BB->getTerminator());
     if (!Br || !Br->isConditional())
       continue;
 
-    if (!DA->isUniform(Br->getCondition()))
+    if (!DA.isUniform(Br->getCondition()))
       return false;
     DEBUG(dbgs() << "BB: " << BB->getName() << " has uniform terminator\n");
   }
@@ -931,9 +918,9 @@ bool StructurizeCFG::runOnRegion(Region *R, RGPassManager &RGM) {
     return false;
 
   if (SkipUniformRegions) {
-    DA = &getAnalysis<DivergenceAnalysis>();
     // TODO: We could probably be smarter here with how we handle sub-regions.
-    if (hasOnlyUniformBranches(R)) {
+    auto &DA = getAnalysis<DivergenceAnalysis>();
+    if (hasOnlyUniformBranches(R, DA)) {
       DEBUG(dbgs() << "Skipping region with uniform control flow: " << *R << '\n');
 
       // Mark all direct child block terminators as having been treated as
@@ -941,12 +928,11 @@ bool StructurizeCFG::runOnRegion(Region *R, RGPassManager &RGM) {
       // sub-regions are treated more cleverly, indirect children are not
       // marked as uniform.
       MDNode *MD = MDNode::get(R->getEntry()->getParent()->getContext(), {});
-      Region::element_iterator E = R->element_end();
-      for (Region::element_iterator I = R->element_begin(); I != E; ++I) {
-        if (I->isSubRegion())
+      for (RegionNode *E : R->elements()) {
+        if (E->isSubRegion())
           continue;
 
-        if (Instruction *Term = I->getEntry()->getTerminator())
+        if (Instruction *Term = E->getEntry()->getTerminator())
           Term->setMetadata("structurizecfg.uniform", MD);
       }
 

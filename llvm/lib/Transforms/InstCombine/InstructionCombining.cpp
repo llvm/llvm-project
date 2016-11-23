@@ -177,11 +177,10 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1) {
     return false;
 
   // TODO: Enhance logic for other BinOps and remove this check.
-  auto AssocOpcode = BinOp1->getOpcode();
-  if (AssocOpcode != Instruction::Xor && AssocOpcode != Instruction::And &&
-      AssocOpcode != Instruction::Or)
+  if (!BinOp1->isBitwiseLogicOp())
     return false;
 
+  auto AssocOpcode = BinOp1->getOpcode();
   auto *BinOp2 = dyn_cast<BinaryOperator>(Cast->getOperand(0));
   if (!BinOp2 || !BinOp2->hasOneUse() || BinOp2->getOpcode() != AssocOpcode)
     return false;

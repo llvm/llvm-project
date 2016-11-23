@@ -1,4 +1,5 @@
 ; RUN: llc -filetype=asm -o - -mtriple=armv7-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -filetype=asm -o - -mtriple=armv7-apple-ios6.0.0    < %s | FileCheck %s
 
 define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align	2
@@ -48,6 +49,6 @@ define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-NEXT:  nop
 ; CHECK-LABEL: Ltmp3:
   %retval = tail call i32 @callee()
-; CHECK:       b	callee
+; CHECK:       b	{{.*}}callee
   ret i32 %retval
 }
