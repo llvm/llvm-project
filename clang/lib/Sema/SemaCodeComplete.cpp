@@ -2264,9 +2264,13 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
     QualType Type = Param->getType().getUnqualifiedType();
     
     if (ObjCMethodParam) {
-      Result = "(" + formatObjCParamQualifiers(Param->getObjCDeclQualifier(),
-                                               Type);
-      Result += Type.getAsString(Policy) + Result + ")";
+      Result = Type.getAsString(Policy);
+      std::string Quals =
+          formatObjCParamQualifiers(Param->getObjCDeclQualifier(), Type);
+      if (!Quals.empty())
+        Result = "(" + Quals + " " + Result + ")";
+      if (Result.back() != ')')
+        Result += " ";
       if (Param->getIdentifier())
         Result += Param->getIdentifier()->getName();
     } else {
@@ -2275,7 +2279,7 @@ static std::string FormatFunctionParameter(const PrintingPolicy &Policy,
       
     return Result;
   }
-    
+
   // We have the function prototype behind the block pointer type, as it was
   // written in the source.
   return formatBlockPlaceholder(Policy, Param, Block, BlockProto,
