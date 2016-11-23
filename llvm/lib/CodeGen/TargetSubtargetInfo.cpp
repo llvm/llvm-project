@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes the general parts of a Subtarget.
+/// \file This file describes the general parts of a Subtarget.
 //
 //===----------------------------------------------------------------------===//
 

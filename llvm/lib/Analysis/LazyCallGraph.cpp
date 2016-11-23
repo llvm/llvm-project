@@ -187,6 +187,57 @@ void LazyCallGraph::SCC::verify() {
 }
 #endif
 
+bool LazyCallGraph::SCC::isParentOf(const SCC &C) const {
+  if (this == &C)
+    return false;
+
+  for (Node &N : *this)
+    for (Edge &E : N.calls())
+      if (Node *CalleeN = E.getNode())
+        if (OuterRefSCC->G->lookupSCC(*CalleeN) == &C)
+          return true;
+
+  // No edges found.
+  return false;
+}
+
+bool LazyCallGraph::SCC::isAncestorOf(const SCC &TargetC) const {
+  if (this == &TargetC)
+    return false;
+
+  LazyCallGraph &G = *OuterRefSCC->G;
+
+  // Start with this SCC.
+  SmallPtrSet<const SCC *, 16> Visited = {this};
+  SmallVector<const SCC *, 16> Worklist = {this};
+
+  // Walk down the graph until we run out of edges or find a path to TargetC.
+  do {
+    const SCC &C = *Worklist.pop_back_val();
+    for (Node &N : C)
+      for (Edge &E : N.calls()) {
+        Node *CalleeN = E.getNode();
+        if (!CalleeN)
+          continue;
+        SCC *CalleeC = G.lookupSCC(*CalleeN);
+        if (!CalleeC)
+          continue;
+
+        // If the callee's SCC is the TargetC, we're done.
+        if (CalleeC == &TargetC)
+          return true;
+
+        // If this is the first time we've reached this SCC, put it on the
+        // worklist to recurse through.
+        if (Visited.insert(CalleeC).second)
+          Worklist.push_back(CalleeC);
+      }
+  } while (!Worklist.empty());
+
+  // No paths found.
+  return false;
+}
+
 LazyCallGraph::RefSCC::RefSCC(LazyCallGraph &G) : G(&G) {}
 
 void LazyCallGraph::RefSCC::dump() const {
@@ -1354,6 +1405,13 @@ void LazyCallGraph::RefSCC::insertTrivialCallEdge(Node &SourceN,
 #ifndef NDEBUG
   // Check that the RefSCC is still valid when we finish.
   auto ExitVerifier = make_scope_exit([this] { verify(); });
+
+  // Check that we aren't breaking some invariants of the SCC graph.
+  SCC &SourceC = *G->lookupSCC(SourceN);
+  SCC &TargetC = *G->lookupSCC(TargetN);
+  if (&SourceC != &TargetC)
+    assert(SourceC.isAncestorOf(TargetC) &&
+           "Call edge is not trivial in the SCC graph!");
 #endif
   // First insert it into the source or find the existing edge.
   auto InsertResult = SourceN.EdgeIndexMap.insert(
@@ -1377,6 +1435,13 @@ void LazyCallGraph::RefSCC::insertTrivialRefEdge(Node &SourceN, Node &TargetN) {
 #ifndef NDEBUG
   // Check that the RefSCC is still valid when we finish.
   auto ExitVerifier = make_scope_exit([this] { verify(); });
+
+  // Check that we aren't breaking some invariants of the RefSCC graph.
+  RefSCC &SourceRC = *G->lookupRefSCC(SourceN);
+  RefSCC &TargetRC = *G->lookupRefSCC(TargetN);
+  if (&SourceRC != &TargetRC)
+    assert(SourceRC.isAncestorOf(TargetRC) &&
+           "Ref edge is not trivial in the RefSCC graph!");
 #endif
   // First insert it into the source or find the existing edge.
   auto InsertResult = SourceN.EdgeIndexMap.insert(

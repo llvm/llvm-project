@@ -246,12 +246,8 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm1
 ; KNL-NEXT:    vpmovqd %zmm1, %ymm1
-; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
-; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;

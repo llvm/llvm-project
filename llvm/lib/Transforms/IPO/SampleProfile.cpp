@@ -651,6 +651,8 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       InvokeInst *II = dyn_cast<InvokeInst>(I);
       Function *CalledFunction =
           (CI == nullptr ? II->getCalledFunction() : CI->getCalledFunction());
+      if (!CalledFunction || !CalledFunction->getSubprogram())
+        continue;
       DebugLoc DLoc = I->getDebugLoc();
       uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
       if ((CI && InlineFunction(CI, IFI)) || (II && InlineFunction(II, IFI))) {

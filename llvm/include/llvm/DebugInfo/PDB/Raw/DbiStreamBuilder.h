@@ -60,7 +60,6 @@ public:
 
   Error finalizeMsfLayout();
 
-  Expected<std::unique_ptr<DbiStream>> build(PDBFile &File);
   Error commit(const msf::MSFLayout &Layout,
                const msf::WritableStream &Buffer);
 

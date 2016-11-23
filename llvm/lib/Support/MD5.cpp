@@ -283,4 +283,14 @@ void MD5::stringifyResult(MD5Result &Result, SmallString<32> &Str) {
     Res << format("%.2x", Result[i]);
 }
 
+std::array<uint8_t, 16> MD5::hash(ArrayRef<uint8_t> Data) {
+  MD5 Hash;
+  Hash.update(Data);
+  MD5::MD5Result Res;
+  Hash.final(Res);
+
+  std::array<uint8_t, 16> Arr;
+  memcpy(Arr.data(), Res, sizeof(Res));
+  return Arr;
+}
 }

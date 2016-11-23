@@ -34,10 +34,13 @@
 #define LLVM_ADT_DEPTHFIRSTITERATOR_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
+#include <iterator>
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -55,6 +58,7 @@ class df_iterator_storage<SetType, true> {
 public:
   df_iterator_storage(SetType &VSet) : Visited(VSet) {}
   df_iterator_storage(const df_iterator_storage &S) : Visited(S.Visited) {}
+
   SetType &Visited;
 };
 
@@ -63,8 +67,8 @@ public:
 // node have been processed. It is intended to distinguish of back and
 // cross edges in the spanning tree but is not used in the common case.
 template <typename NodeRef, unsigned SmallSize=8>
-struct df_iterator_default_set : public llvm::SmallPtrSet<NodeRef, SmallSize> {
-  typedef llvm::SmallPtrSet<NodeRef, SmallSize>  BaseSet;
+struct df_iterator_default_set : public SmallPtrSet<NodeRef, SmallSize> {
+  typedef SmallPtrSet<NodeRef, SmallSize>  BaseSet;
   typedef typename BaseSet::iterator iterator;
   std::pair<iterator,bool> insert(NodeRef N) { return BaseSet::insert(N) ; }
   template <typename IterT>
@@ -99,9 +103,7 @@ private:
     this->Visited.insert(Node);
     VisitStack.push_back(StackElement(Node, None));
   }
-  inline df_iterator() {
-    // End is when stack is empty
-  }
+  inline df_iterator() = default; // End is when stack is empty
   inline df_iterator(NodeRef Node, SetType &S)
       : df_iterator_storage<SetType, ExtStorage>(S) {
     if (this->Visited.insert(Node).second)
@@ -298,6 +300,6 @@ iterator_range<idf_ext_iterator<T, SetTy>> inverse_depth_first_ext(const T& G,
   return make_range(idf_ext_begin(G, S), idf_ext_end(G, S));
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_DEPTHFIRSTITERATOR_H

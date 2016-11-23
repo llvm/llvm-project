@@ -509,6 +509,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Verbose = Args.hasArg(OPT_verbose);
   Config->WarnCommon = Args.hasArg(OPT_warn_common);
 
+  if (Config->EMachine == EM_MIPS)
+    // For now MipsGotSection class is not ready for concurent access
+    // from multiple thread. The problem is in the getPageEntryOffset
+    // method. So turn Threads off for this target.
+    Config->Threads = false;
+
   Config->DynamicLinker = getString(Args, OPT_dynamic_linker);
   Config->Entry = getString(Args, OPT_entry);
   Config->Fini = getString(Args, OPT_fini, "_fini");

@@ -601,16 +601,13 @@ define void @test13(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX1-NEXT:    vxorps %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtd %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpacksswb %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpsllw $15, %xmm3, %xmm3
-; AVX1-NEXT:    vpsraw $15, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm5, %xmm2, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpandn %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -625,13 +622,10 @@ define void @test13(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX2-NEXT:    vpsraw $15, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -984,8 +978,6 @@ define void @test15(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX1-NEXT:    vxorps %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm6, %xmm3
 ; AVX1-NEXT:    vpacksswb %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpsllw $15, %xmm3, %xmm3
-; AVX1-NEXT:    vpsraw $15, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm5, %xmm2, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
@@ -1007,8 +999,6 @@ define void @test15(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX2-NEXT:    vpsraw $15, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
@@ -1118,8 +1108,6 @@ define void @test16(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX1-NEXT:    vxorps %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm6, %xmm3
 ; AVX1-NEXT:    vpacksswb %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpsllw $15, %xmm3, %xmm3
-; AVX1-NEXT:    vpsraw $15, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm5, %xmm2, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
@@ -1141,8 +1129,6 @@ define void @test16(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX2-NEXT:    vpsraw $15, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]

@@ -93,8 +93,8 @@ public:
 
 private:
   std::vector<SymbolBody *> findAll(StringRef GlobPat);
-  std::pair<Symbol *, bool> insert(StringRef &Name);
-  std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
+  std::pair<Symbol *, bool> insert(StringRef Name);
+  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 

@@ -69,15 +69,9 @@ public:
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isLocal() const { return IsLocal; }
   bool isPreemptible() const;
-
   StringRef getName() const;
-
-  uint32_t getNameOffset() const {
-    assert(isLocal());
-    return NameOffset;
-  }
-
   uint8_t getVisibility() const { return StOther & 0x3; }
+  void parseSymbolVersion();
 
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
@@ -105,8 +99,7 @@ public:
 
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
-
-  SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
+  SymbolBody(Kind K, const char *Name, uint8_t StOther, uint8_t Type);
 
   const unsigned SymbolKind : 8;
 
@@ -143,21 +136,17 @@ public:
   bool isFile() const { return Type == llvm::ELF::STT_FILE; }
 
 protected:
-  struct Str {
-    const char *S;
-    size_t Len;
-  };
-  union {
-    Str Name;
-    uint32_t NameOffset;
-  };
+  // Local symbols are not inserted to the symbol table, so we usually
+  // don't need their names at all. We read symbol names lazily if possible.
+  mutable uint32_t NameLen = (uint32_t)-1;
+  const char *Name;
 };
 
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
   Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
-  Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
+  Defined(Kind K, const char *Name, uint8_t StOther, uint8_t Type);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
@@ -194,11 +183,9 @@ public:
     this->File = File;
   }
 
-  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F)
-      : DefinedRegular(Name, StOther, Type, 0, 0, NullInputSection, F) {}
-
-  DefinedRegular(const Elf_Sym &Sym, InputSectionBase<ELFT> *Section)
-      : Defined(SymbolBody::DefinedRegularKind, Sym.st_name, Sym.st_other,
+  DefinedRegular(const char *Name, const Elf_Sym &Sym,
+                 InputSectionBase<ELFT> *Section)
+      : Defined(SymbolBody::DefinedRegularKind, Name, Sym.st_other,
                 Sym.getType()),
         Value(Sym.st_value), Size(Sym.st_size),
         Section(Section ? Section->Repl : NullInputSection) {
@@ -262,7 +249,7 @@ public:
 class Undefined : public SymbolBody {
 public:
   Undefined(StringRef Name, uint8_t StOther, uint8_t Type, InputFile *F);
-  Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type, InputFile *F);
+  Undefined(const char *Name, uint8_t StOther, uint8_t Type, InputFile *F);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
@@ -461,8 +448,6 @@ inline Symbol *SymbolBody::symbol() {
   return reinterpret_cast<Symbol *>(reinterpret_cast<char *>(this) -
                                     offsetof(Symbol, Body));
 }
-
-StringRef getSymbolName(StringRef SymTab, SymbolBody &Body);
 
 } // namespace elf
 } // namespace lld

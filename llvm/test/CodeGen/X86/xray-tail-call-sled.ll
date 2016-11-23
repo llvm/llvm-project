@@ -1,4 +1,5 @@
 ; RUN: llc -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -filetype=asm -o - -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
 
 define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align 1, 0x90
@@ -13,11 +14,11 @@ define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
 }
 ; CHECK:       .p2align 4, 0x90
-; CHECK-NEXT:  .quad .Lxray_synthetic_0
-; CHECK-NEXT:  .section xray_instr_map,{{.*}}
+; CHECK-NEXT:  .quad {{.*}}xray_synthetic_0
+; CHECK-NEXT:  .section {{.*}}xray_instr_map
 ; CHECK-LABEL: Lxray_synthetic_0:
-; CHECK:       .quad .Lxray_sled_0
-; CHECK:       .quad .Lxray_sled_1
+; CHECK:       .quad {{.*}}xray_sled_0
+; CHECK:       .quad {{.*}}xray_sled_1
 
 define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align 1, 0x90
@@ -31,11 +32,11 @@ define i32 @caller() nounwind noinline uwtable "function-instrument"="xray-alway
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
 ; CHECK-LABEL: Ltmp2:
   %retval = tail call i32 @callee()
-; CHECK:       jmp callee  # TAILCALL
+; CHECK:       jmp {{.*}}callee {{.*}}# TAILCALL
   ret i32 %retval
 }
 ; CHECK:       .p2align 4, 0x90
-; CHECK-NEXT:  .quad .Lxray_synthetic_1
+; CHECK-NEXT:  .quad {{.*}}xray_synthetic_1
 ; CHECK-LABEL: Lxray_synthetic_1:
-; CHECK:       .quad .Lxray_sled_2
-; CHECK:       .quad .Lxray_sled_3
+; CHECK:       .quad {{.*}}xray_sled_2
+; CHECK:       .quad {{.*}}xray_sled_3

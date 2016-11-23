@@ -174,39 +174,9 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
-// Parses a symbol in the form of <name>@<version> or <name>@@<version>.
-static std::pair<StringRef, uint16_t> getSymbolVersion(StringRef S) {
-  if (Config->VersionDefinitions.empty())
-    return {S, Config->DefaultSymbolVersion};
-
-  size_t Pos = S.find('@');
-  if (Pos == 0 || Pos == StringRef::npos)
-    return {S, Config->DefaultSymbolVersion};
-
-  StringRef Name = S.substr(0, Pos);
-  StringRef Verstr = S.substr(Pos + 1);
-  if (Verstr.empty())
-    return {S, Config->DefaultSymbolVersion};
-
-  // '@@' in a symbol name means the default version.
-  // It is usually the most recent one.
-  bool IsDefault = (Verstr[0] == '@');
-  if (IsDefault)
-    Verstr = Verstr.substr(1);
-
-  for (VersionDefinition &V : Config->VersionDefinitions) {
-    if (V.Name == Verstr)
-      return {Name, IsDefault ? V.Id : (V.Id | VERSYM_HIDDEN)};
-  }
-
-  // It is an error if the specified version was not defined.
-  error("symbol " + S + " has undefined version " + Verstr);
-  return {S, Config->DefaultSymbolVersion};
-}
-
 // Find an existing symbol or create and insert a new one.
 template <class ELFT>
-std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
+std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
   auto P = Symtab.insert(
       {CachedHashStringRef(Name), SymIndex((int)SymVector.size(), false)});
   SymIndex &V = P.first->second;
@@ -225,7 +195,7 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
     Sym->Traced = V.Traced;
-    std::tie(Name, Sym->VersionId) = getSymbolVersion(Name);
+    Sym->VersionId = Config->DefaultSymbolVersion;
     SymVector.push_back(Sym);
   } else {
     Sym = SymVector[V.Idx];
@@ -244,7 +214,7 @@ static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
 // attributes.
 template <class ELFT>
 std::pair<Symbol *, bool>
-SymbolTable<ELFT>::insert(StringRef &Name, uint8_t Type, uint8_t Visibility,
+SymbolTable<ELFT>::insert(StringRef Name, uint8_t Type, uint8_t Visibility,
                           bool CanOmitFromDynSym, InputFile *File) {
   bool IsUsedInRegularObj = !File || File->kind() == InputFile::ObjectKind;
   Symbol *S;
@@ -470,7 +440,7 @@ Symbol *SymbolTable<ELFT>::addBitcode(StringRef Name, uint8_t Binding,
       insert(Name, Type, StOther & 3, CanOmitFromDynSym, F);
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
   if (Cmp > 0)
-    replaceBody<DefinedRegular<ELFT>>(S, Name, StOther, Type, F);
+    replaceBody<DefinedRegular<ELFT>>(S, Name, StOther, Type, 0, 0, nullptr, F);
   else if (Cmp == 0)
     reportDuplicate(S->body(), F);
   return S;
@@ -696,6 +666,13 @@ void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
 // This function processes version scripts by updating VersionId
 // member of symbols.
 template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
+  // Symbol themselves might know their versions because symbols
+  // can contain versions in the form of <name>@<version>.
+  // Let them parse their names.
+  if (!Config->VersionDefinitions.empty())
+    for (Symbol *Sym : SymVector)
+      Sym->body()->parseSymbolVersion();
+
   // Handle edge cases first.
   if (!Config->VersionScriptGlobals.empty()) {
     handleAnonymousVersion();

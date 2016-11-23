@@ -443,7 +443,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    StringRef Name = getSymbolName(File.getStringTable(), Body);
+    StringRef Name = Body.getName();
     error(getLocation(S, RelOff) + ": can't create dynamic relocation " +
           getRelName(Type) + " against " +
           ((Name.empty() ? "local symbol in readonly segment"
@@ -552,10 +552,8 @@ std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
 
   // Find a symbol at a given location.
   DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
-  if (Encl && Encl->Type == STT_FUNC) {
-    StringRef Func = getSymbolName(File->getStringTable(), *Encl);
-    return SrcFile + ":(function " + maybeDemangle(Func) + ")";
-  }
+  if (Encl && Encl->Type == STT_FUNC)
+    return SrcFile + ":(function " + maybeDemangle(Encl->getName()) + ")";
 
   // If there's no symbol, print out the offset instead of a symbol name.
   return (SrcFile + ":(" + S.Name + "+0x" + Twine::utohexstr(Offset) + ")")

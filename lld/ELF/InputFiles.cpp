@@ -441,10 +441,14 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   if (Binding == STB_LOCAL) {
     if (Sym->getType() == STT_FILE)
       SourceFile = check(Sym->getName(this->StringTable));
+
+    if (this->StringTable.size() <= Sym->st_name)
+      fatal(getFilename(this) + ": invalid symbol name offset");
+
+    const char *Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (BAlloc)
-          Undefined(Sym->st_name, Sym->st_other, Sym->getType(), this);
-    return new (BAlloc) DefinedRegular<ELFT>(*Sym, Sec);
+      return new (BAlloc) Undefined(Name, Sym->st_other, Sym->getType(), this);
+    return new (BAlloc) DefinedRegular<ELFT>(Name, *Sym, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
