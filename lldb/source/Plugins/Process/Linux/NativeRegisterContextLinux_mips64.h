@@ -63,6 +63,9 @@ namespace process_linux {
         Error
         IsWatchpointHit (uint32_t wp_index, bool &is_hit) override;
 
+        uint8_t *ReturnFPOffset(uint8_t reg_index, uint32_t byte_offset);
+
+
         Error
         GetWatchpointHitIndex(uint32_t &wp_index, lldb::addr_t trap_addr) override;
 
@@ -93,19 +96,20 @@ namespace process_linux {
         IsMSAAvailable();
 
     protected:
-        Error
-        DoReadRegisterValue(uint32_t offset,
-                            const char* reg_name,
-                            uint32_t size,
-                            RegisterValue &value) override;
 
         Error
-        DoWriteRegisterValue(uint32_t offset,
-                             const char* reg_name,
-                             const RegisterValue &value) override;
+        Read_SR_Config(uint32_t offset, const char *reg_name, uint32_t size,
+                       RegisterValue &value);
+
+        Error
+        ReadRegisterRaw(uint32_t reg_index, RegisterValue &value) override;
 
         Error
         DoReadWatchPointRegisterValue(lldb::tid_t tid, void* watch_readback);
+
+        Error
+        WriteRegisterRaw(uint32_t reg_index,
+                         const RegisterValue &value) override;
 
         Error
         DoWriteWatchPointRegisterValue(lldb::tid_t tid, void* watch_readback);

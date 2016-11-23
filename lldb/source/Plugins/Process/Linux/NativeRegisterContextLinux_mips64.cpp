@@ -22,6 +22,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Core/EmulateInstruction.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
@@ -569,10 +570,14 @@ NativeRegisterContextLinux_mips64::ReadRegister (const RegisterInfo *reg_info, R
     }
 
     const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+    uint8_t byte_size = reg_info->byte_size;
     if (reg == LLDB_INVALID_REGNUM)
     {
-        // This is likely an internal register for lldb use only and should not be directly queried.
-        error.SetErrorStringWithFormat ("register \"%s\" is an internal-only lldb register, cannot read directly", reg_info->name);
+        // This is likely an internal register for lldb use only and should not be
+        // directly queried.
+        error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
+                                       "register, cannot read directly",
+                                       reg_info->name);
         return error;
     }
 
@@ -584,7 +589,8 @@ NativeRegisterContextLinux_mips64::ReadRegister (const RegisterInfo *reg_info, R
 
     if (IsMSA(reg) || IsFPR(reg))
     {
-        uint8_t *src;
+        uint8_t *src = nullptr;
+        lldbassert(reg_info->byte_offset < sizeof(UserArea));
 
         error = ReadCP1();
 
@@ -596,29 +602,35 @@ NativeRegisterContextLinux_mips64::ReadRegister (const RegisterInfo *reg_info, R
 
         if (IsFPR(reg))
         {
-            assert (reg_info->byte_offset < sizeof(UserArea));
-            src = (uint8_t *)&m_fpr + reg_info->byte_offset - (sizeof(m_gpr));
+            if (IsFR0() && (byte_size != 4))
+            {
+                byte_size = 4;
+                uint8_t ptrace_index;
+                ptrace_index = reg_info->kinds[lldb::eRegisterKindProcessPlugin];
+                src = ReturnFPOffset(ptrace_index, reg_info->byte_offset);
+            }
+            else
+                src = (uint8_t *)&m_fpr + reg_info->byte_offset - sizeof(m_gpr);
         }
         else
-        {
-            assert (reg_info->byte_offset < sizeof(UserArea));
-            src = (uint8_t *)&m_msa + reg_info->byte_offset - (sizeof(m_gpr) + sizeof(m_fpr));
-        }
-        switch (reg_info->byte_size)
+            src = (uint8_t *)&m_msa + reg_info->byte_offset -
+                   (sizeof(m_gpr) + sizeof(m_fpr));
+        switch (byte_size)
         {
             case 4:
-                reg_value.SetUInt32(*(uint32_t *)src);
-                break;
+            reg_value.SetUInt32(*(uint32_t *)src);
+            break;
             case 8:
-                reg_value.SetUInt64(*(uint64_t *)src);
-                break;
+            reg_value.SetUInt64(*(uint64_t *)src);
+            break;
             case 16:
-                reg_value.SetBytes((const void *)src, 16, GetByteOrder());
-                break;
+            reg_value.SetBytes((const void *)src, 16, GetByteOrder());
+            break;
             default:
-                assert(false && "Unhandled data size.");
-                error.SetErrorStringWithFormat ("unhandled byte size: %" PRIu32, reg_info->byte_size);
-                break;
+            assert(false && "Unhandled data size.");
+            error.SetErrorStringWithFormat("unhandled byte size: %" PRIu32,
+                                          reg_info->byte_size);
+            break;
         }
     }
     else
@@ -649,44 +661,52 @@ NativeRegisterContextLinux_mips64::WriteRegister (const RegisterInfo *reg_info, 
 
     if (IsFPR(reg_index) || IsMSA(reg_index))
     {
-        uint8_t *dst;
-        uint64_t *src;
+        uint8_t *dst = nullptr;
+        uint64_t *src = nullptr;
+        uint8_t byte_size = reg_info->byte_size;
+        lldbassert(reg_info->byte_offset < sizeof(UserArea));
 
         // Initialise the FP and MSA buffers by reading all co-processor 1 registers
         ReadCP1();
 
         if (IsFPR(reg_index))
         {
-            assert (reg_info->byte_offset < sizeof(UserArea));
-            dst = (uint8_t *)&m_fpr + reg_info->byte_offset - (sizeof(m_gpr));
+            if (IsFR0() && (byte_size != 4))
+            {
+                byte_size = 4;
+                uint8_t ptrace_index;
+                ptrace_index = reg_info->kinds[lldb::eRegisterKindProcessPlugin];
+                dst = ReturnFPOffset(ptrace_index, reg_info->byte_offset);
+            }
+            else
+                dst = (uint8_t *)&m_fpr + reg_info->byte_offset - sizeof(m_gpr);
         }
         else
-        {
-            assert (reg_info->byte_offset < sizeof(UserArea));
-            dst = (uint8_t *)&m_msa + reg_info->byte_offset - (sizeof(m_gpr) + sizeof(m_fpr));
-        }
-        switch (reg_info->byte_size)
+            dst = (uint8_t *)&m_msa + reg_info->byte_offset -
+                   (sizeof(m_gpr) + sizeof(m_fpr));
+        switch (byte_size)
         {
             case 4:
-                *(uint32_t *)dst = reg_value.GetAsUInt32();
-                break;
+            *(uint32_t *)dst = reg_value.GetAsUInt32();
+            break;
             case 8:
-                *(uint64_t *)dst = reg_value.GetAsUInt64();
-                break;
+            *(uint64_t *)dst = reg_value.GetAsUInt64();
+            break;
             case 16:
-                src = (uint64_t *)reg_value.GetBytes();
-                *(uint64_t *)dst = *src;
-                *(uint64_t *)(dst + 8) = *(src + 1);
-                break;
+            src = (uint64_t *)reg_value.GetBytes();
+            *(uint64_t *)dst = *src;
+            *(uint64_t *)(dst + 8) = *(src + 1);
+            break;
             default:
-                assert(false && "Unhandled data size.");
-                error.SetErrorStringWithFormat ("unhandled byte size: %" PRIu32, reg_info->byte_size);
-                break;
+            assert(false && "Unhandled data size.");
+            error.SetErrorStringWithFormat("unhandled byte size: %" PRIu32,
+                                            reg_info->byte_size);
+            break;
         }
         error = WriteCP1();
         if (!error.Success())
         {
-            error.SetErrorString ("failed to write co-processor 1 register");
+            error.SetErrorString("failed to write co-processor 1 register");
             return error;
         }
     }
@@ -797,11 +817,12 @@ NativeRegisterContextLinux_mips64::ReadCP1()
 {
     Error error;
 
-    uint8_t *src, *dst;
+    uint8_t *src = nullptr;
+    uint8_t *dst = nullptr;
 
     lldb::ByteOrder byte_order = GetByteOrder();
 
-    uint32_t IsBigEndian = (byte_order == lldb::eByteOrderBig);
+    bool IsBigEndian = (byte_order == lldb::eByteOrderBig);
 
     if (IsMSAAvailable())
     {
@@ -823,22 +844,28 @@ NativeRegisterContextLinux_mips64::ReadCP1()
     {
         error = NativeRegisterContextLinux::ReadFPR();
     }
+  return error;
+}
 
-    // TODO: Add support for FRE
-    if (IsFR0())
+uint8_t *
+NativeRegisterContextLinux_mips64::ReturnFPOffset(uint8_t reg_index,
+                                                  uint32_t byte_offset)
+{
+    uint8_t *fp_buffer_ptr = nullptr;
+    lldb::ByteOrder byte_order = GetByteOrder();
+    bool IsBigEndian = (byte_order == lldb::eByteOrderBig);
+    if (reg_index % 2)
     {
-         src = (uint8_t *)&m_fpr + 4 + (IsBigEndian * 4);
-         dst = (uint8_t *)&m_fpr + 8 + (IsBigEndian * 4);
-         for (int i = 0; i < (NUM_REGISTERS / 2); i++)
-         {
-              // copy odd single from top of neighbouring even double
-              *(uint32_t *) dst = *(uint32_t *) src;
-              src = src + 16;
-              dst = dst + 16;
-         }
+        uint8_t offset_diff = (IsBigEndian) ? 8 : 4;
+        fp_buffer_ptr = (uint8_t *)&m_fpr + byte_offset
+                         - offset_diff - sizeof(m_gpr);
     }
-
-    return error;
+    else
+    {
+        fp_buffer_ptr = (uint8_t *)&m_fpr + byte_offset +
+                         4 * (IsBigEndian) - sizeof(m_gpr);
+    }
+    return fp_buffer_ptr;
 }
 
 Error
@@ -846,25 +873,12 @@ NativeRegisterContextLinux_mips64::WriteCP1()
 {
     Error error;
 
-    uint8_t *src, *dst;
+    uint8_t *src = nullptr;
+    uint8_t *dst = nullptr;
 
     lldb::ByteOrder byte_order = GetByteOrder();
 
-    uint32_t IsBigEndian = (byte_order == lldb::eByteOrderBig);
-
-    // TODO: Add support for FRE
-    if (IsFR0())
-    {
-        src = (uint8_t *)&m_fpr + 8 + (IsBigEndian * 4);
-        dst = (uint8_t *)&m_fpr + 4 + (IsBigEndian * 4);
-        for (int i = 0; i < (NUM_REGISTERS / 2); i++)
-        {
-             // copy odd single to top of neighbouring even double
-             *(uint32_t *) dst = *(uint32_t *) src;
-             src = src + 16;
-             dst = dst + 16;
-        }
-    }
+    bool IsBigEndian = (byte_order == lldb::eByteOrderBig);
 
     if (IsMSAAvailable())
     {
@@ -1374,51 +1388,58 @@ NativeRegisterContextLinux_mips64::NumSupportedHardwareWatchpoints ()
     }
     return num_valid;
 }
-Error
-NativeRegisterContextLinux_mips64::DoReadRegisterValue(uint32_t offset,
-                                                       const char* reg_name,
-                                                       uint32_t size,
-                                                       RegisterValue &value)
+
+Error NativeRegisterContextLinux_mips64::ReadRegisterRaw(uint32_t reg_index,
+                                                         RegisterValue &value)
+{
+    const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
+
+    if (!reg_info)
+        return Error("register %" PRIu32 " not found", reg_index);
+
+    uint32_t offset = reg_info->kinds[lldb::eRegisterKindProcessPlugin];
+
+    if ((offset == ptrace_sr_mips) || (offset == ptrace_config5_mips))
+        return Read_SR_Config(reg_info->byte_offset, reg_info->name,
+                              reg_info->byte_size, value);
+
+    return DoReadRegisterValue(offset, reg_info->name, reg_info->byte_size,
+                               value);
+}
+
+Error NativeRegisterContextLinux_mips64::WriteRegisterRaw(
+    uint32_t reg_index, const RegisterValue &value)
+{
+    const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
+
+    if (!reg_info)
+        return Error("register %" PRIu32 " not found", reg_index);
+
+    if (reg_info->invalidate_regs)
+        lldbassert(false && "reg_info->invalidate_regs is unhandled");
+
+    uint32_t offset = reg_info->kinds[lldb::eRegisterKindProcessPlugin];
+    return DoWriteRegisterValue(offset, reg_info->name, value);
+}
+
+Error NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
+                                                        const char *reg_name,
+                                                        uint32_t size,
+                                                        RegisterValue &value)
 {
     GPR_linux_mips regs;
     ::memset(&regs, 0, sizeof(GPR_linux_mips));
 
-    // Clear all bits in RegisterValue before writing actual value read from ptrace to avoid garbage value in 32-bit MSB 
-    value.SetBytes((void *)(((unsigned char *)&regs) + offset), 8, GetByteOrder());
-    Error error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
+    Error error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGS, m_thread.GetID(),
+                                                    NULL, &regs, sizeof regs);
     if (error.Success())
     {
         lldb_private::ArchSpec arch;
         if (m_thread.GetProcess()->GetArchitecture(arch))
         {
-            void* target_address = ((uint8_t*)&regs) + offset + 4 * (arch.GetMachine() == llvm::Triple::mips);
-            uint32_t target_size;
-            if ((::strcmp(reg_name, "sr") == 0) || (::strcmp(reg_name, "cause") == 0) || (::strcmp(reg_name, "config5") == 0))
-                target_size = 4;
-            else
-                target_size = arch.GetFlags() & lldb_private::ArchSpec::eMIPSABI_O32 ? 4 : 8;
-            value.SetBytes(target_address, target_size, arch.GetByteOrder());
-        }
-        else
-            error.SetErrorString("failed to get architecture");
-    }
-    return error;
-}
-
-Error
-NativeRegisterContextLinux_mips64::DoWriteRegisterValue(uint32_t offset,
-                                                        const char* reg_name,
-                                                        const RegisterValue &value)
-{
-    GPR_linux_mips regs;
-    Error error = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
-    if (error.Success())
-    {
-        lldb_private::ArchSpec arch;
-        if (m_thread.GetProcess()->GetArchitecture(arch))
-        {
-            ::memcpy((void *)(((unsigned char *)(&regs)) + offset), value.GetBytes(), arch.GetFlags() & lldb_private::ArchSpec::eMIPSABI_O32 ? 4 : 8);
-            error = NativeProcessLinux::PtraceWrapper(PTRACE_SETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
+            void *target_address = ((uint8_t *)&regs) + offset +
+                                    4 * (arch.GetMachine() == llvm::Triple::mips);
+            value.SetUInt(*(uint32_t *)target_address, size);
         }
         else
             error.SetErrorString("failed to get architecture");
