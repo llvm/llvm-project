@@ -29,5 +29,15 @@
 # RUN: ld.lld -shared -o %t5 --script %t5.script %t1.o
 # RUN: llvm-readobj %t5 > /dev/null
 
+## Test assertions inside of output section decriptions.
+# RUN: echo "SECTIONS { .foo : { *(.foo) ASSERT(SIZEOF(.foo) == 8, \"true\"); } }" > %t6.script
+# RUN: ld.lld -shared -o %t6 --script %t6.script %t1.o
+# RUN: llvm-readobj %t6 > /dev/null
+
+# RUN: echo "SECTIONS { .foo : { ASSERT(1, \"true\") } }" > %t7.script
+# RUN: not ld.lld -shared -o %t7 --script %t7.script %t1.o > %t.log 2>&1
+# RUN: FileCheck %s -check-prefix=CHECK-SEMI < %t.log
+# CHECK-SEMI: error: {{.*}}.script:1: ; expected, but got }
+
 .section .foo, "a"
  .quad 0

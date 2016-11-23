@@ -1891,11 +1891,17 @@ isl_bool isl_space_is_range(__isl_keep isl_space *space1,
 	return isl_space_is_range_internal(space1, space2);
 }
 
-int isl_space_compatible(__isl_keep isl_space *dim1,
+int isl_space_compatible_internal(__isl_keep isl_space *dim1,
 	__isl_keep isl_space *dim2)
 {
 	return dim1->nparam == dim2->nparam &&
 	       dim1->n_in + dim1->n_out == dim2->n_in + dim2->n_out;
+}
+
+int isl_space_compatible(__isl_keep isl_space *space1,
+	__isl_keep isl_space *space2)
+{
+	return isl_space_compatible_internal(space1, space2);
 }
 
 /* Update "hash" by hashing in "space".

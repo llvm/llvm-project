@@ -11,25 +11,38 @@
 
 // size_type max_size() const;
 
-#include <forward_list>
 #include <cassert>
+#include <forward_list>
+#include <limits>
+#include <type_traits>
 
-#include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
 int main()
 {
     {
-        typedef int T;
-        typedef std::forward_list<T> C;
-        C c;
-        assert(c.max_size() > 0);
+      typedef limited_allocator<int, 10> A;
+      typedef std::forward_list<int, A> C;
+      C c;
+      assert(c.max_size() <= 10);
+      LIBCPP_ASSERT(c.max_size() == 10);
     }
-#if TEST_STD_VER >= 11
     {
-        typedef int T;
-        typedef std::forward_list<T, min_allocator<T>> C;
-        C c;
-        assert(c.max_size() > 0);
+      typedef limited_allocator<int, (size_t)-1> A;
+      typedef std::forward_list<int, A> C;
+      const C::difference_type max_dist =
+          std::numeric_limits<C::difference_type>::max();
+      C c;
+      assert(c.max_size() <= max_dist);
+      LIBCPP_ASSERT(c.max_size() == max_dist);
     }
-#endif
+    {
+      typedef std::forward_list<char> C;
+      const C::difference_type max_dist =
+          std::numeric_limits<C::difference_type>::max();
+      C c;
+      assert(c.max_size() <= max_dist);
+      assert(c.max_size() <= alloc_max_size(c.get_allocator()));
+    }
 }

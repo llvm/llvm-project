@@ -1,1 +1,7 @@
 BasedOnStyle: LLVM
+
+---
+Language: Cpp
+
+AlwaysBreakTemplateDeclarations: true
+---

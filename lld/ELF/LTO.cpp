@@ -103,9 +103,6 @@ static void undefine(Symbol *S) {
 
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
-  if (Obj.getDataLayoutStr().empty())
-    fatal("invalid bitcode file: " + F.getName() + " has no datalayout");
-
   unsigned SymNum = 0;
   std::vector<Symbol *> Syms = F.getSymbols();
   std::vector<lto::SymbolResolution> Resols(Syms.size());

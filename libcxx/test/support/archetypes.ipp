@@ -42,7 +42,6 @@ struct AllCtors : DEFINE_BASE(AllCtors) {
 
 struct NoCtors : DEFINE_BASE(NoCtors) {
   using Base = DEFINE_BASE(NoCtors);
-  using Base::Base;
   DEFINE_EXPLICIT NoCtors() = delete;
   DEFINE_EXPLICIT NoCtors(NoCtors const&) = delete;
   NoCtors& operator=(NoCtors const&) = delete;

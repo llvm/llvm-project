@@ -22,11 +22,14 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <set>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace clang {
@@ -135,6 +138,59 @@ private:
   std::string FilePath;
   Range ReplacementRange;
   std::string ReplacementText;
+};
+
+enum class replacement_error {
+  fail_to_apply = 0,
+  wrong_file_path,
+  overlap_conflict,
+  insert_conflict,
+};
+
+/// \brief Carries extra error information in replacement-related llvm::Error,
+/// e.g. fail applying replacements and replacements conflict.
+class ReplacementError : public llvm::ErrorInfo<ReplacementError> {
+public:
+  ReplacementError(replacement_error Err) : Err(Err) {}
+
+  /// \brief Constructs an error related to an existing replacement.
+  ReplacementError(replacement_error Err, Replacement Existing)
+      : Err(Err), ExistingReplacement(std::move(Existing)) {}
+
+  /// \brief Constructs an error related to a new replacement and an existing
+  /// replacement in a set of replacements.
+  ReplacementError(replacement_error Err, Replacement New, Replacement Existing)
+      : Err(Err), NewReplacement(std::move(New)),
+        ExistingReplacement(std::move(Existing)) {}
+
+  std::string message() const override;
+
+  void log(raw_ostream &OS) const override { OS << message(); }
+
+  replacement_error get() const { return Err; }
+
+  static char ID;
+
+  const llvm::Optional<Replacement> &getNewReplacement() const {
+    return NewReplacement;
+  }
+
+  const llvm::Optional<Replacement> &getExistingReplacement() const {
+    return ExistingReplacement;
+  }
+
+private:
+  // Users are not expected to use error_code.
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+  replacement_error Err;
+  // A new replacement, which is to expected be added into a set of
+  // replacements, that is causing problem.
+  llvm::Optional<Replacement> NewReplacement;
+  // An existing replacement in a replacements set that is causing problem.
+  llvm::Optional<Replacement> ExistingReplacement;
 };
 
 /// \brief Less-than operator between two Replacements.

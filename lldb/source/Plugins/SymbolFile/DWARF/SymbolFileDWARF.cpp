@@ -3873,6 +3873,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       const DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
       SymbolContextScope *symbol_context_scope = NULL;
 
+      bool has_explicit_mangled = mangled != nullptr;
       if (!mangled) {
         // LLDB relies on the mangled name (DW_TAG_linkage_name or
         // DW_AT_MIPS_linkage_name) to
@@ -3894,23 +3895,24 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         }
       }
 
-      // DWARF doesn't specify if a DW_TAG_variable is a local, global
-      // or static variable, so we have to do a little digging by
-      // looking at the location of a variable to see if it contains
-      // a DW_OP_addr opcode _somewhere_ in the definition. I say
-      // somewhere because clang likes to combine small global variables
-      // into the same symbol and have locations like:
-      // DW_OP_addr(0x1000), DW_OP_constu(2), DW_OP_plus
-      // So if we don't have a DW_TAG_formal_parameter, we can look at
-      // the location to see if it contains a DW_OP_addr opcode, and
-      // then we can correctly classify  our variables.
       if (tag == DW_TAG_formal_parameter)
         scope = eValueTypeVariableArgument;
       else {
-        bool op_error = false;
+        // DWARF doesn't specify if a DW_TAG_variable is a local, global
+        // or static variable, so we have to do a little digging:
+        // 1) DW_AT_linkage_name implies static lifetime (but may be missing)
+        // 2) An empty DW_AT_location is an (optimized-out) static lifetime var.
+        // 3) DW_AT_location containing a DW_OP_addr implies static lifetime.
+        // Clang likes to combine small global variables into the same symbol
+        // with locations like: DW_OP_addr(0x1000), DW_OP_constu(2), DW_OP_plus
+        // so we need to look through the whole expression.
+        bool is_static_lifetime =
+            has_explicit_mangled ||
+            (has_explicit_location && !location.IsValid());
         // Check if the location has a DW_OP_addr with any address value...
         lldb::addr_t location_DW_OP_addr = LLDB_INVALID_ADDRESS;
         if (!location_is_const_value_data) {
+          bool op_error = false;
           location_DW_OP_addr = location.GetLocation_DW_OP_addr(0, op_error);
           if (op_error) {
             StreamString strm;
@@ -3920,10 +3922,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                 "0x%8.8x: %s has an invalid location: %s", die.GetOffset(),
                 die.GetTagAsCString(), strm.GetData());
           }
+          if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
+            is_static_lifetime = true;
         }
         SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
 
-        if (location_DW_OP_addr != LLDB_INVALID_ADDRESS) {
+        if (is_static_lifetime) {
           if (is_external)
             scope = eValueTypeVariableGlobal;
           else

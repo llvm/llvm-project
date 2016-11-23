@@ -2198,14 +2198,10 @@ bool Sema::InstantiateInClassInitializer(
   if (!OldInit) {
     RecordDecl *PatternRD = Pattern->getParent();
     RecordDecl *OutermostClass = PatternRD->getOuterLexicalRecordContext();
-    if (OutermostClass == PatternRD) {
-      Diag(Pattern->getLocEnd(), diag::err_in_class_initializer_not_yet_parsed)
-          << PatternRD << Pattern;
-    } else {
-      Diag(Pattern->getLocEnd(),
-           diag::err_in_class_initializer_not_yet_parsed_outer_class)
-          << PatternRD << OutermostClass << Pattern;
-    }
+    Diag(PointOfInstantiation,
+         diag::err_in_class_initializer_not_yet_parsed)
+        << OutermostClass << Pattern;
+    Diag(Pattern->getLocEnd(), diag::note_in_class_initializer_not_yet_parsed);
     Instantiation->setInvalidDecl();
     return true;
   }

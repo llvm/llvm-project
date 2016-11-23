@@ -599,6 +599,17 @@ private:
   Elf_Mips_RegInfo Reginfo;
 };
 
+// This is a MIPS specific section to hold a space within the data segment
+// of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
+// See "Dynamic section" in Chapter 5 in the following document:
+// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+template <class ELFT> class MipsRldMapSection : public SyntheticSection<ELFT> {
+public:
+  MipsRldMapSection();
+  size_t getSize() const override { return sizeof(typename ELFT::uint); }
+  void writeTo(uint8_t *Buf) override;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -618,6 +629,7 @@ template <class ELFT> struct In {
   static GotPltSection<ELFT> *GotPlt;
   static HashTableSection<ELFT> *HashTab;
   static InputSection<ELFT> *Interp;
+  static MipsRldMapSection<ELFT> *MipsRldMap;
   static PltSection<ELFT> *Plt;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
@@ -642,6 +654,7 @@ template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
 template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
 template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
+template <class ELFT> MipsRldMapSection<ELFT> *In<ELFT>::MipsRldMap;
 template <class ELFT> PltSection<ELFT> *In<ELFT>::Plt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;

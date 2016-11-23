@@ -597,8 +597,6 @@ private:
   isl_map *NewAccessRelation;
   // @}
 
-  bool isAffine() const { return IsAffine; }
-
   __isl_give isl_basic_map *createBasicAccessMap(ScopStmt *Statement);
 
   void assumeNoOutOfBound();
@@ -1037,6 +1035,9 @@ public:
 
   /// Print the MemoryAccess to stderr.
   void dump() const;
+
+  /// Is the memory access affine?
+  bool isAffine() const { return IsAffine; }
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
