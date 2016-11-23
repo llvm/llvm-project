@@ -27,14 +27,20 @@
 # define MAP_32BIT 0
 #endif
 
+#ifdef __APPLE__
+# define TSAN_MAP_ANON MAP_ANON
+#else
+# define TSAN_MAP_ANON MAP_ANONYMOUS
+#endif
+
 void *thr(void *arg) {
   // This thread creates lots of separate mappings in /proc/self/maps before
   // the ignored library.
   for (int i = 0; i < 10000; i++) {
     if (i == 5000)
       barrier_wait(&barrier);
-    mmap(0, 4096, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE | MAP_32BIT, -1 , 0);
-    mmap(0, 4096, PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_32BIT, -1 , 0);
+    mmap(0, 4096, PROT_READ, TSAN_MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1 , 0);
+    mmap(0, 4096, PROT_WRITE, TSAN_MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1 , 0);
   }
   return 0;
 }

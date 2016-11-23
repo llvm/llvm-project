@@ -134,7 +134,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
     Sec->Live = false;
     Create = true;
 
-    std::string Filename = getFilename(Sec->getFile());
+    std::string Filename = toString(Sec->getFile());
     if (Sec->Data.size() != sizeof(Elf_Mips_ABIFlags)) {
       error(Filename + ": invalid size of .MIPS.abiflags section");
       return nullptr;
@@ -177,8 +177,8 @@ template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *Buf) {
   Options->size = getSize();
 
   if (!Config->Relocatable)
-    Reginfo.ri_gp_value = In<ELFT>::MipsGot->getVA() + MipsGPOffset;
-  memcpy(Buf + sizeof(Options), &Reginfo, sizeof(Reginfo));
+    Reginfo.ri_gp_value = In<ELFT>::MipsGot->getGp();
+  memcpy(Buf + sizeof(typename ELFT::uint), &Reginfo, sizeof(Reginfo));
 }
 
 template <class ELFT>
@@ -196,7 +196,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
     Sec->Live = false;
     Create = true;
 
-    std::string Filename = getFilename(Sec->getFile());
+    std::string Filename = toString(Sec->getFile());
     ArrayRef<uint8_t> D = Sec->Data;
 
     while (!D.empty()) {
@@ -233,7 +233,7 @@ MipsReginfoSection<ELFT>::MipsReginfoSection(Elf_Mips_RegInfo Reginfo)
 
 template <class ELFT> void MipsReginfoSection<ELFT>::writeTo(uint8_t *Buf) {
   if (!Config->Relocatable)
-    Reginfo.ri_gp_value = In<ELFT>::MipsGot->getVA() + MipsGPOffset;
+    Reginfo.ri_gp_value = In<ELFT>::MipsGot->getGp();
   memcpy(Buf, &Reginfo, sizeof(Reginfo));
 }
 
@@ -253,12 +253,12 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
     Create = true;
 
     if (Sec->Data.size() != sizeof(Elf_Mips_RegInfo)) {
-      error(getFilename(Sec->getFile()) + ": invalid size of .reginfo section");
+      error(toString(Sec->getFile()) + ": invalid size of .reginfo section");
       return nullptr;
     }
     auto *R = reinterpret_cast<const Elf_Mips_RegInfo *>(Sec->Data.data());
     if (Config->Relocatable && R->ri_gp_value)
-      error(getFilename(Sec->getFile()) + ": unsupported non-zero ri_gp_value");
+      error(toString(Sec->getFile()) + ": unsupported non-zero ri_gp_value");
 
     Reginfo.ri_gprmask |= R->ri_gprmask;
     Sec->getFile()->MipsGp0 = R->ri_gp_value;
@@ -359,18 +359,12 @@ void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
     break;
   case BuildIdKind::Md5:
     computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      MD5 Hash;
-      Hash.update(Arr);
-      MD5::MD5Result Res;
-      Hash.final(Res);
-      memcpy(Dest, Res, 16);
+      memcpy(Dest, MD5::hash(Arr).data(), 16);
     });
     break;
   case BuildIdKind::Sha1:
     computeHash(Buf, [](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      SHA1 Hash;
-      Hash.update(Arr);
-      memcpy(Dest, Hash.final().data(), 20);
+      memcpy(Dest, SHA1::hash(Arr).data(), 20);
     });
     break;
   case BuildIdKind::Uuid:
@@ -552,7 +546,7 @@ MipsGotSection<ELFT>::getPageEntryOffset(uintX_t EntryValue) {
   size_t NewIndex = PageIndexMap.size() + 2;
   auto P = PageIndexMap.insert(std::make_pair(EntryValue, NewIndex));
   assert(!P.second || PageIndexMap.size() <= PageEntriesNum);
-  return (uintX_t)P.first->second * sizeof(uintX_t) - MipsGPOffset;
+  return (uintX_t)P.first->second * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -578,7 +572,7 @@ MipsGotSection<ELFT>::getBodyEntryOffset(const SymbolBody &B,
     assert(It != EntryIndexMap.end());
     GotIndex = It->second;
   }
-  return GotBlockOff + GotIndex * sizeof(uintX_t) - MipsGPOffset;
+  return GotBlockOff + GotIndex * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -618,6 +612,10 @@ template <class ELFT> void MipsGotSection<ELFT>::finalize() {
   }
   EntriesNum += getLocalEntriesNum() + GlobalEntries.size();
   Size = EntriesNum * sizeof(uintX_t);
+}
+
+template <class ELFT> unsigned MipsGotSection<ELFT>::getGp() const {
+  return ElfSym<ELFT>::MipsGp->template getVA<ELFT>(0);
 }
 
 template <class ELFT>

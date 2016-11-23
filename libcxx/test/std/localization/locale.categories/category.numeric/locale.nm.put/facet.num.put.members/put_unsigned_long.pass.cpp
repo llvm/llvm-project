@@ -61,7 +61,7 @@ int main()
     }
     {
         std::ios ios(0);
-        unsigned long v = -1;
+        unsigned long v = static_cast<unsigned long>(-1);
         char str[50];
         output_iterator<char*> iter = f.put(output_iterator<char*>(str), ios, '*', v);
         std::string ex(str, iter.base());
@@ -69,7 +69,7 @@ int main()
     }
     {
         std::ios ios(0);
-        unsigned long v = -1000;
+        unsigned long v = static_cast<unsigned long>(-1000);
         char str[50];
         output_iterator<char*> iter = f.put(output_iterator<char*>(str), ios, '*', v);
         std::string ex(str, iter.base());
@@ -307,7 +307,7 @@ int main()
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        unsigned long v = -1000;
+        unsigned long v = static_cast<unsigned long>(-1000);
         right(ios);
         showpos(ios);
         ios.width(10);
@@ -321,7 +321,7 @@ int main()
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        unsigned long v = -1000;
+        unsigned long v = static_cast<unsigned long>(-1000);
         left(ios);
         ios.width(10);
         char str[50];
@@ -334,7 +334,7 @@ int main()
     {
         std::ios ios(0);
         ios.imbue(std::locale(std::locale::classic(), new my_numpunct));
-        unsigned long v = -1000;
+        unsigned long v = static_cast<unsigned long>(-1000);
         internal(ios);
         ios.width(10);
         char str[50];

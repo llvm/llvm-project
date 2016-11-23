@@ -6,7 +6,7 @@
 # RUN: llvm-readobj -dyn-relocations %t | FileCheck %s
 
 # CHECK:      Dynamic Relocations {
-# CHECK-NEXT:   0x120B0 R_X86_64_GLOB_DAT foo 0x0
+# CHECK-NEXT:   0x2020B0 R_X86_64_GLOB_DAT foo 0x0
 # CHECK-NEXT: }
 
 .globl _start

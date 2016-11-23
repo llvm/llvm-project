@@ -6,8 +6,8 @@
 # CHECK:      ProgramHeader {
 # CHECK:        Type: PT_OPENBSD_RANDOMIZE (0x65A3DBE6)
 # CHECK-NEXT:   Offset: 0x158
-# CHECK-NEXT:   VirtualAddress: 0x10158
-# CHECK-NEXT:   PhysicalAddress: 0x10158
+# CHECK-NEXT:   VirtualAddress: 0x200158
+# CHECK-NEXT:   PhysicalAddress: 0x200158
 # CHECK-NEXT:   FileSize: 8
 # CHECK-NEXT:   MemSize: 8
 # CHECK-NEXT:   Flags [ (0x4)

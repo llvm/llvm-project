@@ -32,6 +32,7 @@ namespace lld {
 namespace elf {
 
 extern bool HasError;
+extern uint64_t ErrorCount;
 extern llvm::raw_ostream *ErrorOS;
 extern llvm::StringRef Argv0;
 

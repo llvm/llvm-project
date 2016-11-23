@@ -27,7 +27,7 @@
 
 template <class Iter>
 void
-test_larger_sorts(unsigned N, unsigned M)
+test_larger_sorts(int N, int M)
 {
     int* input = new int[N];
     int* output = new int[M];
@@ -47,7 +47,7 @@ test_larger_sorts(unsigned N, unsigned M)
 
 template <class Iter>
 void
-test_larger_sorts(unsigned N)
+test_larger_sorts(int N)
 {
     test_larger_sorts<Iter>(N, 0);
     test_larger_sorts<Iter>(N, 1);

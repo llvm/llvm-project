@@ -18,19 +18,17 @@
 
 namespace lldb_private {
 
-class ProcessWindowsLive;
-typedef std::shared_ptr<ProcessWindowsLive> ProcessWindowsLiveSP;
+class ProcessWindows;
+typedef std::shared_ptr<ProcessWindows> ProcessWindowsSP;
 
 //----------------------------------------------------------------------
 // LocalDebugDelegate
 //
-// LocalDebugDelegate creates a connection between a ProcessWindowsLive and the
-// debug driver.  This serves to decouple ProcessWindowsLive from the debug
-// driver.
-// It would be possible to get a similar decoupling by just having
-// ProcessWindowsLive implement this interface directly.  There are two reasons
-// why
-// we don't do this:
+// LocalDebugDelegate creates a connection between a ProcessWindows and the
+// debug driver.  This serves to decouple ProcessWindows from the debug
+// driver.  It would be possible to get a similar decoupling by just having
+// ProcessWindows implement this interface directly.  There are two reasons
+// why we don't do this:
 //
 // 1) In the future when we add support for local debugging through LLGS, and we
 //    go through the Native*Protocol interface, it is likely we will need the
@@ -60,7 +58,7 @@ public:
   void OnDebuggerError(const Error &error, uint32_t type) override;
 
 private:
-  ProcessWindowsLiveSP GetProcessPointer();
+  ProcessWindowsSP GetProcessPointer();
 
   lldb::ProcessWP m_process;
 };

@@ -13,6 +13,7 @@
 
 #include <deque>
 #include <cassert>
+#include <cstddef>
 
 #include "min_allocator.h"
 
@@ -48,7 +49,7 @@ test(C& c1)
     assert(c1.size() == c1_osize - 1);
     assert(distance(c1.begin(), c1.end()) == c1.size());
     I i = c1.begin();
-    for (int j = 0; j < c1.size(); ++j, ++i)
+    for (int j = 0; static_cast<std::size_t>(j) < c1.size(); ++j, ++i)
         assert(*i == j);
 }
 

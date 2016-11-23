@@ -15,6 +15,7 @@
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
@@ -30,6 +31,12 @@ using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf;
+
+// Returns a string to construct an error message.
+template <class ELFT>
+std::string elf::toString(const InputSectionBase<ELFT> *Sec) {
+  return (Sec->getFile()->getName() + ":(" + Sec->Name + ")").str();
+}
 
 template <class ELFT>
 static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
@@ -64,13 +71,13 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   // no alignment constraits.
   uint64_t V = std::max<uint64_t>(Addralign, 1);
   if (!isPowerOf2_64(V))
-    fatal(getFilename(File) + ": section sh_addralign is not a power of 2");
+    fatal(toString(File) + ": section sh_addralign is not a power of 2");
 
   // We reject object files having insanely large alignments even though
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
   if (V > UINT32_MAX)
-    fatal(getFilename(File) + ": section sh_addralign is too large");
+    fatal(toString(File) + ": section sh_addralign is too large");
   Alignment = V;
 }
 
@@ -97,7 +104,7 @@ template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
 
 // Returns a string for an error message.
 template <class SectionT> static std::string getName(SectionT *Sec) {
-  return (Sec->getFile()->getName() + "(" + Sec->Name + ")").str();
+  return (Sec->getFile()->getName() + ":(" + Sec->Name + ")").str();
 }
 
 template <class ELFT>
@@ -127,10 +134,10 @@ std::pair<ArrayRef<uint8_t>, uint64_t>
 InputSectionBase<ELFT>::getElfCompressedData(ArrayRef<uint8_t> Data) {
   // Compressed section with Elf_Chdr is the ELF standard.
   if (Data.size() < sizeof(Elf_Chdr))
-    fatal(getName(this) + ": corrupted compressed section");
+    fatal(toString(this) + ": corrupted compressed section");
   auto *Hdr = reinterpret_cast<const Elf_Chdr *>(Data.data());
   if (Hdr->ch_type != ELFCOMPRESS_ZLIB)
-    fatal(getName(this) + ": unsupported compression type");
+    fatal(toString(this) + ": unsupported compression type");
   return {Data.slice(sizeof(*Hdr)), Hdr->ch_size};
 }
 
@@ -146,16 +153,16 @@ InputSectionBase<ELFT>::getRawCompressedData(ArrayRef<uint8_t> Data) {
   };
 
   if (Data.size() < sizeof(ZlibHeader))
-    fatal(getName(this) + ": corrupted compressed section");
+    fatal(toString(this) + ": corrupted compressed section");
   auto *Hdr = reinterpret_cast<const ZlibHeader *>(Data.data());
   if (memcmp(Hdr->Magic, "ZLIB", 4))
-    fatal(getName(this) + ": broken ZLIB-compressed section");
+    fatal(toString(this) + ": broken ZLIB-compressed section");
   return {Data.slice(sizeof(*Hdr)), read64be(Hdr->Size)};
 }
 
 template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
   if (!zlib::isAvailable())
-    fatal(getName(this) +
+    fatal(toString(this) +
           ": build lld with zlib to enable compressed sections support");
 
   // This section is compressed. Here we decompress it. Ideally, all
@@ -174,7 +181,7 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
   // Uncompress Buf.
   char *OutputBuf = BAlloc.Allocate<char>(Size);
   if (zlib::uncompress(toStringRef(Buf), OutputBuf, Size) != zlib::StatusOK)
-    fatal(getName(this) + ": error while uncompressing section");
+    fatal(toString(this) + ": error while uncompressing section");
   Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
 }
 
@@ -382,21 +389,26 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
-    return In<ELFT>::MipsGot->getPageEntryOffset(Body.getVA<ELFT>(A));
+    return In<ELFT>::MipsGot->getVA() +
+           In<ELFT>::MipsGot->getPageEntryOffset(Body.getVA<ELFT>(A)) -
+           In<ELFT>::MipsGot->getGp();
   case R_MIPS_GOT_OFF:
   case R_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend
     // should be applied to the GOT entry content not to the GOT entry offset.
     // That is why we use separate expression type.
-    return In<ELFT>::MipsGot->getBodyEntryOffset(Body, A);
+    return In<ELFT>::MipsGot->getVA() +
+           In<ELFT>::MipsGot->getBodyEntryOffset(Body, A) -
+           In<ELFT>::MipsGot->getGp();
   case R_MIPS_GOTREL:
-    return Body.getVA<ELFT>(A) - In<ELFT>::MipsGot->getVA() - MipsGPOffset;
+    return Body.getVA<ELFT>(A) - In<ELFT>::MipsGot->getGp();
   case R_MIPS_TLSGD:
-    return In<ELFT>::MipsGot->getGlobalDynOffset(Body) +
-           In<ELFT>::MipsGot->getTlsOffset() - MipsGPOffset;
+    return In<ELFT>::MipsGot->getVA() + In<ELFT>::MipsGot->getTlsOffset() +
+           In<ELFT>::MipsGot->getGlobalDynOffset(Body) -
+           In<ELFT>::MipsGot->getGp();
   case R_MIPS_TLSLD:
-    return In<ELFT>::MipsGot->getTlsIndexOff() +
-           In<ELFT>::MipsGot->getTlsOffset() - MipsGPOffset;
+    return In<ELFT>::MipsGot->getVA() + In<ELFT>::MipsGot->getTlsOffset() +
+           In<ELFT>::MipsGot->getTlsIndexOff() - In<ELFT>::MipsGot->getGp();
   case R_PPC_OPD: {
     uint64_t SymVA = Body.getVA<ELFT>(A);
     // If we have an undefined weak symbol, we might get here with a symbol
@@ -455,7 +467,7 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
     SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
     if (Target->getRelExpr(Type, Sym) != R_ABS) {
-      error(getName(this) + " has non-ABS reloc");
+      error(getLocation(*this, Offset) + ": has non-ABS reloc");
       return;
     }
 
@@ -532,7 +544,7 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
     return;
 
   if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
-    S->writeTo(Buf);
+    S->writeTo(Buf + OutSecOff);
     return;
   }
 
@@ -632,9 +644,8 @@ void EhInputSection<ELFT>::split(ArrayRef<RelTy> Rels) {
   ArrayRef<uint8_t> Data = this->Data;
   unsigned RelI = 0;
   for (size_t Off = 0, End = Data.size(); Off != End;) {
-    size_t Size = readEhRecordSize<ELFT>(Data.slice(Off));
-    this->Pieces.emplace_back(Off, Data.slice(Off, Size),
-                              getReloc(Off, Size, Rels, RelI));
+    size_t Size = readEhRecordSize<ELFT>(this, Off);
+    this->Pieces.emplace_back(Off, this, Size, getReloc(Off, Size, Rels, RelI));
     // The empty record is the end marker.
     if (Size == 4)
       break;
@@ -667,7 +678,7 @@ MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
   while (!Data.empty()) {
     size_t End = findNull(Data, EntSize);
     if (End == StringRef::npos)
-      fatal(getName(this) + ": string is not null terminated");
+      fatal(toString(this) + ": string is not null terminated");
     size_t Size = End + EntSize;
     V.emplace_back(Off, !IsAlloca);
     Hashes.push_back(hash_value(toStringRef(Data.slice(0, Size))));
@@ -753,7 +764,7 @@ const SectionPiece *
 MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
   uintX_t Size = this->Data.size();
   if (Offset >= Size)
-    fatal(getName(this) + ": entry is past the end of the section");
+    fatal(toString(this) + ": entry is past the end of the section");
 
   // Find the element this offset points to.
   auto I = fastUpperBound(

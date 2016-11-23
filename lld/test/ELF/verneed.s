@@ -10,7 +10,7 @@
 # CHECK-NEXT:    Flags [ (0x2)
 # CHECK-NEXT:      SHF_ALLOC (0x2)
 # CHECK-NEXT:    ]
-# CHECK-NEXT:    Address: 0x101C8
+# CHECK-NEXT:    Address: 0x2001C8
 # CHECK-NEXT:    Offset: 0x1C8
 # CHECK-NEXT:    Size: 96
 # CHECK-NEXT:    Link: 5
@@ -24,7 +24,7 @@
 # CHECK-NEXT:   Flags [ (0x2)
 # CHECK-NEXT:     SHF_ALLOC (0x2)
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x10228
+# CHECK-NEXT:   Address: 0x200228
 # CHECK-NEXT:   Offset: 0x228
 # CHECK-NEXT:   Size: 8
 # CHECK-NEXT:   Link: 1
@@ -38,7 +38,7 @@
 # CHECK-NEXT:   Flags [ (0x2)
 # CHECK-NEXT:     SHF_ALLOC (0x2)
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x10230
+# CHECK-NEXT:   Address: 0x200230
 # CHECK-NEXT:   Offset: 0x230
 # CHECK-NEXT:   Size: 80
 # CHECK-NEXT:   Link: 5
@@ -52,7 +52,7 @@
 # CHECK-NEXT:   Flags [ (0x2)
 # CHECK-NEXT:     SHF_ALLOC (0x2)
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x102A8
+# CHECK-NEXT:   Address: 0x2002A8
 # CHECK-NEXT:   Offset: 0x2A8
 # CHECK-NEXT:   Size: 47
 # CHECK-NEXT:   Link: 0
@@ -105,13 +105,13 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# CHECK:      0x000000006FFFFFF0 VERSYM               0x10228
-# CHECK-NEXT: 0x000000006FFFFFFE VERNEED              0x10230
+# CHECK:      0x000000006FFFFFF0 VERSYM               0x200228
+# CHECK-NEXT: 0x000000006FFFFFFE VERNEED              0x200230
 # CHECK-NEXT: 0x000000006FFFFFFF VERNEEDNUM           2
 
 # CHECK:      Version symbols {
 # CHECK-NEXT:    Section Name: .gnu.version
-# CHECK-NEXT:    Address: 0x10228
+# CHECK-NEXT:    Address: 0x200228
 # CHECK-NEXT:    Offset: 0x228
 # CHECK-NEXT:    Link: 1
 # CHECK-NEXT:    Symbols [

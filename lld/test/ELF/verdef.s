@@ -70,7 +70,7 @@
 
 # MAIN:      Version symbols {
 # MAIN-NEXT:   Section Name: .gnu.version
-# MAIN-NEXT:   Address: 0x10228
+# MAIN-NEXT:   Address: 0x200228
 # MAIN-NEXT:   Offset: 0x228
 # MAIN-NEXT:   Link: 1
 # MAIN-NEXT:   Symbols [

@@ -1822,7 +1822,7 @@ int main()
     s.insert(0, sv, 0);  // calls insert(T, pos, npos)
     assert(s == sv);
     s.clear();
-    
+
     s.insert(0, sv, 0, std::string::npos);   // calls insert(T, pos, npos)
     assert(s == sv);
     s.clear();

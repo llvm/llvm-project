@@ -19,14 +19,22 @@ namespace __asan {
 #pragma section(".ASAN$GA", read, write)  // NOLINT
 #pragma section(".ASAN$GZ", read, write)  // NOLINT
 extern "C" __declspec(allocate(".ASAN$GA"))
-uptr __asan_globals_start = 0;
+__asan_global __asan_globals_start = {};
 extern "C" __declspec(allocate(".ASAN$GZ"))
-uptr __asan_globals_end = 0;
+__asan_global __asan_globals_end = {};
 #pragma comment(linker, "/merge:.ASAN=.data")
 
 static void call_on_globals(void (*hook)(__asan_global *, uptr)) {
-  __asan_global *start = (__asan_global *)(&__asan_globals_start + 1);
-  __asan_global *end = (__asan_global *)&__asan_globals_end;
+  __asan_global *start = &__asan_globals_start + 1;
+  __asan_global *end = &__asan_globals_end;
+  uptr bytediff = (uptr)end - (uptr)start;
+  if (bytediff % sizeof(__asan_global) != 0) {
+#ifdef ASAN_DLL_THUNK
+    __debugbreak();
+#else
+    CHECK("corrupt asan global array");
+#endif
+  }
   // We know end >= start because the linker sorts the portion after the dollar
   // sign alphabetically.
   uptr n = end - start;

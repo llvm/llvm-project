@@ -63,7 +63,7 @@ _start:
 // CHECK-NEXT: ]
 
 // CHECK:        Name: __fini_array_end
-// CHECK-NEXT:   Value: 0x1201B
+// CHECK-NEXT:   Value: 0x20201B
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
@@ -85,7 +85,7 @@ _start:
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: __init_array_end
-// CHECK-NEXT:   Value: 0x12008
+// CHECK-NEXT:   Value: 0x202008
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
@@ -107,7 +107,7 @@ _start:
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: __preinit_array_end
-// CHECK-NEXT:   Value: 0x12011
+// CHECK-NEXT:   Value: 0x202011
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
@@ -137,16 +137,16 @@ _start:
 // CHECK: FINI_ARRAYSZ         [[FINI_SIZE]] (bytes)
 
 
-// 0x12008 - (0x11000 + 5) = 4099
-// 0x12011 - (0x11005 + 5) = 4103
-// 0x12000 - (0x1100a + 5) = 4081
-// 0x12008 - (0x1100f + 5) = 4084
-// 0x12011 - (0x11014 + 5) = 4088
-// 0x1201B - (0x11019 + 5) = 4093
+// 0x202008 - (0x201000 + 5) = 4099
+// 0x202011 - (0x201005 + 5) = 4103
+// 0x202000 - (0x20100a + 5) = 4081
+// 0x202008 - (0x20100f + 5) = 4084
+// 0x202011 - (0x201014 + 5) = 4088
+// 0x20201B - (0x201019 + 5) = 4093
 // DISASM:      _start:
-// DISASM-NEXT:   11000:  e8 {{.*}}  callq  4099
-// DISASM-NEXT:   11005:  e8 {{.*}}  callq  4103
-// DISASM-NEXT:   1100a:  e8 {{.*}}  callq  4081
-// DISASM-NEXT:   1100f:  e8 {{.*}}  callq  4084
-// DISASM-NEXT:   11014:  e8 {{.*}}  callq  4088
-// DISASM-NEXT:   11019:  e8 {{.*}}  callq  4093
+// DISASM-NEXT:   201000:  e8 {{.*}}  callq  4099
+// DISASM-NEXT:   201005:  e8 {{.*}}  callq  4103
+// DISASM-NEXT:   20100a:  e8 {{.*}}  callq  4081
+// DISASM-NEXT:   20100f:  e8 {{.*}}  callq  4084
+// DISASM-NEXT:   201014:  e8 {{.*}}  callq  4088
+// DISASM-NEXT:   201019:  e8 {{.*}}  callq  4093

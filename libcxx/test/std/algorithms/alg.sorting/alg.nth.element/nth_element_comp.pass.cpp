@@ -19,6 +19,7 @@
 #include <functional>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
 
@@ -32,7 +33,7 @@ struct indirect_less
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 void
-test_one(unsigned N, unsigned M)
+test_one(int N, int M)
 {
     assert(N != 0);
     assert(M < N);
@@ -47,7 +48,7 @@ test_one(unsigned N, unsigned M)
 }
 
 void
-test(unsigned N)
+test(int N)
 {
     test_one(N, 0);
     test_one(N, 1);
@@ -77,7 +78,7 @@ int main()
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     std::vector<std::unique_ptr<int> > v(1000);
-    for (int i = 0; i < v.size(); ++i)
+    for (int i = 0; static_cast<std::size_t>(i) < v.size(); ++i)
         v[i].reset(new int(i));
     std::nth_element(v.begin(), v.begin() + v.size()/2, v.end(), indirect_less());
     assert(*v[v.size()/2] == v.size()/2);

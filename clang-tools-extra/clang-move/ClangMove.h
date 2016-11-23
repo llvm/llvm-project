@@ -15,6 +15,7 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -52,6 +53,12 @@ public:
     std::string NewHeader;
     // The file path of new cc, can be relative path and absolute path.
     std::string NewCC;
+    // Whether old.h depends on new.h. If true, #include "new.h" will be added
+    // in old.h.
+    bool OldDependOnNew = false;
+    // Whether new.h depends on old.h. If true, #include "old.h" will be added
+    // in new.h.
+    bool NewDependOnOld = false;
   };
 
   ClangMoveTool(
@@ -83,7 +90,10 @@ public:
 
   std::vector<MovedDecl> &getMovedDecls() { return MovedDecls; }
 
-  std::vector<MovedDecl> &getRemovedDecls() { return RemovedDecls; }
+  /// Add declarations being removed from old.h/cc. For each declarations, the
+  /// method also records the mapping relationship between the corresponding
+  /// FilePath and its FileID.
+  void addRemovedDecl(const MovedDecl &Decl);
 
   llvm::SmallPtrSet<const NamedDecl *, 8> &getUnremovedDeclsInOldHeader() {
     return UnremovedDeclsInOldHeader;
@@ -127,6 +137,9 @@ private:
   /// #include "old.h") in old.cc,  including the enclosing quotes or angle
   /// brackets.
   clang::CharSourceRange OldHeaderIncludeRange;
+  /// Mapping from FilePath to FileID, which can be used in post processes like
+  /// cleanup around replacements.
+  llvm::StringMap<FileID> FilePathToFileID;
 };
 
 class ClangMoveAction : public clang::ASTFrontendAction {

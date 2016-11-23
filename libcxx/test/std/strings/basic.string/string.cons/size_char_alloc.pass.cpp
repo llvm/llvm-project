@@ -62,7 +62,7 @@ test(Tp n, Tp c)
     S s2(n, c);
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);
-    for (unsigned i = 0; i < n; ++i)
+    for (int i = 0; i < n; ++i)
         assert(s2[i] == c);
     assert(s2.get_allocator() == A());
     assert(s2.capacity() >= s2.size());
@@ -78,7 +78,7 @@ test(Tp n, Tp c, const A& a)
     S s2(n, c, a);
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);
-    for (unsigned i = 0; i < n; ++i)
+    for (int i = 0; i < n; ++i)
         assert(s2[i] == c);
     assert(s2.get_allocator() == a);
     assert(s2.capacity() >= s2.size());

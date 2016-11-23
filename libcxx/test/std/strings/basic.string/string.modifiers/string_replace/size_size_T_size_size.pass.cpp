@@ -10,7 +10,7 @@
 // <string>
 
 // template <class T>
-//    basic_string& replace(size_type pos1, size_type n1, const T& t, 
+//    basic_string& replace(size_type pos1, size_type n1, const T& t,
 //                          size_type pos2, size_type n=npos);
 //
 //  Mostly we're testing string_view here

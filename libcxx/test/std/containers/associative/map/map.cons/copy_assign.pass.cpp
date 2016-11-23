@@ -36,7 +36,7 @@ public:
     int foo{0};
     counting_allocatorT(int f) noexcept : foo(f) {}
 
-    using propagate_on_container_copy_assignment = std::true_type;    
+    using propagate_on_container_copy_assignment = std::true_type;
     template <class U> counting_allocatorT(const counting_allocatorT<U>& other) noexcept {foo = other.foo;}
     template <class U> bool operator==(const counting_allocatorT<U>& other) const noexcept { return foo == other.foo; }
     template <class U> bool operator!=(const counting_allocatorT<U>& other) const noexcept { return foo != other.foo; }
@@ -59,7 +59,7 @@ public:
     int foo{0};
     counting_allocatorF(int f) noexcept : foo(f) {}
 
-    using propagate_on_container_copy_assignment = std::false_type;    
+    using propagate_on_container_copy_assignment = std::false_type;
     template <class U> counting_allocatorF(const counting_allocatorF<U>& other) noexcept {foo = other.foo;}
     template <class U> bool operator==(const counting_allocatorF<U>& other) const noexcept { return foo == other.foo; }
     template <class U> bool operator!=(const counting_allocatorF<U>& other) const noexcept { return foo != other.foo; }
@@ -77,7 +77,7 @@ public:
 
 bool balanced_allocs() {
     std::vector<int> temp1, temp2;
-    
+
     std::cout << "Allocations = " << ca_allocs.size() << ", deallocatons = " << ca_deallocs.size() << std::endl;
     if (ca_allocs.size() != ca_deallocs.size())
         return false;
@@ -87,13 +87,13 @@ bool balanced_allocs() {
     temp2.clear();
     std::unique_copy(temp1.begin(), temp1.end(), std::back_inserter<std::vector<int>>(temp2));
     std::cout << "There were " << temp2.size() << " different allocators\n";
-    
+
     for (std::vector<int>::const_iterator it = temp2.begin(); it != temp2.end(); ++it ) {
         std::cout << *it << ": " << std::count(ca_allocs.begin(), ca_allocs.end(), *it) << " vs " << std::count(ca_deallocs.begin(), ca_deallocs.end(), *it) << std::endl;
         if ( std::count(ca_allocs.begin(), ca_allocs.end(), *it) != std::count(ca_deallocs.begin(), ca_deallocs.end(), *it))
             return false;
         }
-        
+
     temp1 = ca_allocs;
     std::sort(temp1.begin(), temp1.end());
     temp2.clear();
@@ -104,7 +104,7 @@ bool balanced_allocs() {
         if ( std::count(ca_allocs.begin(), ca_allocs.end(), *it) != std::count(ca_deallocs.begin(), ca_deallocs.end(), *it))
             return false;
         }
-    
+
     return true;
     }
 #endif

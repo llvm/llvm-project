@@ -85,7 +85,7 @@ private:
 };
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-std::string getFilename(const InputFile *F);
+std::string toString(const InputFile *F);
 
 template <typename ELFT> class ELFFileBase : public InputFile {
 public:
@@ -150,7 +150,7 @@ public:
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
     if (SymbolIndex >= SymbolBodies.size())
-      fatal(getFilename(this) + ": invalid symbol index");
+      fatal(toString(this) + ": invalid symbol index");
     return *SymbolBodies[SymbolIndex];
   }
 

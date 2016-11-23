@@ -7,7 +7,7 @@
 ; RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
 
 ; CHECK:      Name:     __progname@
-; CHECK-NEXT: Value:    0x11010
+; CHECK-NEXT: Value:    0x201010
 ; CHECK-NEXT: Size:     1
 ; CHECK-NEXT: Binding:  Global (0x1)
 ; CHECK-NEXT: Type:     Function

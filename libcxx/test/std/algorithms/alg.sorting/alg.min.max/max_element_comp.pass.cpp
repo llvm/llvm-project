@@ -36,7 +36,7 @@ test(Iter first, Iter last)
 
 template <class Iter>
 void
-test(unsigned N)
+test(int N)
 {
     int* a = new int[N];
     for (int i = 0; i < N; ++i)

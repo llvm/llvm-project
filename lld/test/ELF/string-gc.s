@@ -14,7 +14,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: s3
-// CHECK-NEXT:     Value: 0x10125
+// CHECK-NEXT:     Value: 0x200125
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local (0x0)
 // CHECK-NEXT:     Type: Object (0x1)
@@ -23,7 +23,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: s1
-// CHECK-NEXT:     Value: 0x10120
+// CHECK-NEXT:     Value: 0x200120
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local (0x0)
 // CHECK-NEXT:     Type: Object (0x1)
@@ -34,7 +34,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: _start
-// CHECK-NEXT:     Value: 0x11000
+// CHECK-NEXT:     Value: 0x201000
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global (0x1)
 // CHECK-NEXT:     Type: Function (0x2)

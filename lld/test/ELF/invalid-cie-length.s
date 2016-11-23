@@ -6,4 +6,4 @@
         .section .eh_frame
         .byte 0
 
-// CHECK: CIE/FDE too small
+// CHECK: {{.*}}:(.eh_frame+0x0): CIE/FDE too small

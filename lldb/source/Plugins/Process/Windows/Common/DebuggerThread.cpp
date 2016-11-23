@@ -1,5 +1,5 @@
 //===-- DebuggerThread.DebuggerThread --------------------------------------*-
-//C++ -*-===//
+// C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
