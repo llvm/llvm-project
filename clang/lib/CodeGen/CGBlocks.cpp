@@ -189,9 +189,6 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   };
  */
 
-/// The number of fields in a block header.
-const static unsigned BlockHeaderSize = 5;
-
 namespace {
   /// A chunk of data that we actually have to capture in the block.
   struct BlockLayoutChunk {
@@ -319,8 +316,6 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
   elementTypes.push_back(CGM.IntTy);
   elementTypes.push_back(CGM.VoidPtrTy);
   elementTypes.push_back(CGM.getBlockDescriptorType());
-
-  assert(elementTypes.size() == BlockHeaderSize);
 }
 
 /// Compute the layout of the given block.  Attempts to lay the block

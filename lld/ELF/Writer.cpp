@@ -277,16 +277,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::StrTab);
   }
 
-  if (Config->EMachine == EM_MIPS && !Config->Shared) {
-    // This is a MIPS specific section to hold a space within the data segment
-    // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
-    // See "Dynamic section" in Chapter 5 in the following document:
-    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    Out<ELFT>::MipsRldMap = make<OutputSection<ELFT>>(".rld_map", SHT_PROGBITS,
-                                                      SHF_ALLOC | SHF_WRITE);
-    Out<ELFT>::MipsRldMap->Size = sizeof(uintX_t);
-    Out<ELFT>::MipsRldMap->updateAlignment(sizeof(uintX_t));
-  }
   if (!Config->VersionDefinitions.empty())
     In<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
 
@@ -307,6 +297,10 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   // Add MIPS-specific sections.
   if (Config->EMachine == EM_MIPS) {
+    if (!Config->Shared && In<ELFT>::DynSymTab) {
+      In<ELFT>::MipsRldMap = make<MipsRldMapSection<ELFT>>();
+      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::MipsRldMap);
+    }
     if (auto *Sec = MipsAbiFlagsSection<ELFT>::create())
       Symtab<ELFT>::X->Sections.push_back(Sec);
     if (auto *Sec = MipsOptionsSection<ELFT>::create())
@@ -958,11 +952,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // symbol table section (DynSymTab) must be the first one.
   finalizeSynthetic<ELFT>(
       {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
-       In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
+       In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab, In<ELFT>::VerDef,
        In<ELFT>::DynStrTab, In<ELFT>::GdbIndex, In<ELFT>::Got,
        In<ELFT>::MipsGot, In<ELFT>::GotPlt, In<ELFT>::RelaDyn,
-       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::EhFrameHdr, In<ELFT>::VerDef,
-       In<ELFT>::VerSym, In<ELFT>::VerNeed, In<ELFT>::Dynamic});
+       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,
+       In<ELFT>::VerNeed, In<ELFT>::Dynamic});
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -1009,7 +1003,6 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     addInputSec(In<ELFT>::DynStrTab);
     if (In<ELFT>::RelaDyn->hasRelocs())
       addInputSec(In<ELFT>::RelaDyn);
-    Add(Out<ELFT>::MipsRldMap);
   }
 
   // We always need to add rel[a].plt to output if it has entries.

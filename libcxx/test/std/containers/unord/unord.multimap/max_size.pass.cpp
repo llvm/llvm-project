@@ -9,28 +9,47 @@
 
 // <unordered_map>
 
-// template <class Key, class T, class Hash = hash<Key>, class Pred = equal_to<Key>,
-//           class Alloc = allocator<pair<const Key, T>>>
 // class unordered_multimap
 
 // size_type max_size() const;
 
-#include <unordered_map>
 #include <cassert>
+#include <limits>
+#include <type_traits>
+#include <unordered_map>
 
-#include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
 int main()
 {
-    {
-        std::unordered_multimap<int, int> u;
-        assert(u.max_size() > 0);
+  typedef std::pair<const int, int> KV;
+  {
+    typedef limited_allocator<KV, 10> A;
+    typedef std::unordered_multimap<int, int, std::hash<int>,
+                                    std::equal_to<int>, A>
+        C;
+    C c;
+    assert(c.max_size() <= 10);
+    LIBCPP_ASSERT(c.max_size() == 10);
+  }
+  {
+    typedef limited_allocator<KV, (size_t)-1> A;
+    typedef std::unordered_multimap<int, int, std::hash<int>,
+                                    std::equal_to<int>, A>
+        C;
+    const C::difference_type max_dist =
+        std::numeric_limits<C::difference_type>::max();
+    C c;
+    assert(c.max_size() <= max_dist);
+    LIBCPP_ASSERT(c.max_size() == max_dist);
     }
-#if TEST_STD_VER >= 11
     {
-        std::unordered_multimap<int, int, std::hash<int>, std::equal_to<int>,
-                            min_allocator<std::pair<const int, int>>> u;
-        assert(u.max_size() > 0);
+      typedef std::unordered_multimap<char, int> C;
+      const C::difference_type max_dist =
+          std::numeric_limits<C::difference_type>::max();
+      C c;
+      assert(c.max_size() <= max_dist);
+      assert(c.max_size() <= alloc_max_size(c.get_allocator()));
     }
-#endif
 }

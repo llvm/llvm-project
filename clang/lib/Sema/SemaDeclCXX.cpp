@@ -12381,14 +12381,9 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // constructor before the initializer is lexically complete will ultimately
   // come here at which point we can diagnose it.
   RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
-  if (OutermostClass == ParentRD) {
-    Diag(Field->getLocEnd(), diag::err_in_class_initializer_not_yet_parsed)
-        << ParentRD << Field;
-  } else {
-    Diag(Field->getLocEnd(),
-         diag::err_in_class_initializer_not_yet_parsed_outer_class)
-        << ParentRD << OutermostClass << Field;
-  }
+  Diag(Loc, diag::err_in_class_initializer_not_yet_parsed)
+      << OutermostClass << Field;
+  Diag(Field->getLocEnd(), diag::note_in_class_initializer_not_yet_parsed);
 
   return ExprError();
 }

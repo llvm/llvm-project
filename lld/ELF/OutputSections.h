@@ -201,7 +201,6 @@ template <class ELFT> struct Out {
   static uint8_t First;
   static EhOutputSection<ELFT> *EhFrame;
   static OutputSection<ELFT> *Bss;
-  static OutputSection<ELFT> *MipsRldMap;
   static OutputSectionBase *Opd;
   static uint8_t *OpdBuf;
   static Elf_Phdr *TlsPhdr;
@@ -249,7 +248,6 @@ template <class ELFT> uint64_t getHeaderSize() {
 template <class ELFT> uint8_t Out<ELFT>::First;
 template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
-template <class ELFT> OutputSection<ELFT> *Out<ELFT>::MipsRldMap;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;
 template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
 template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;

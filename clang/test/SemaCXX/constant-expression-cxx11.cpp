@@ -1862,8 +1862,8 @@ namespace ZeroSizeTypes {
 namespace BadDefaultInit {
   template<int N> struct X { static const int n = N; };
 
-  struct A {
-    int k = // expected-error {{cannot use defaulted default constructor of 'A' within the class outside of member functions because 'k' has an initializer}}
+  struct A { // expected-error {{default member initializer for 'k' needed within definition of enclosing class}}
+    int k = // expected-note {{default member initializer declared here}}
         X<A().k>::n; // expected-error {{not a constant expression}} expected-note {{implicit default constructor for 'BadDefaultInit::A' first required here}}
   };
 

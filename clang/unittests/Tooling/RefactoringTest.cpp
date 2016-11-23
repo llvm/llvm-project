@@ -100,21 +100,71 @@ TEST_F(ReplacementTest, ReturnsInvalidPath) {
   EXPECT_TRUE(Replace2.getFilePath().empty());
 }
 
+// Checks that an llvm::Error instance contains a ReplacementError with expected
+// error code, expected new replacement, and expected existing replacement.
+static bool checkReplacementError(
+    llvm::Error&& Error, replacement_error ExpectedErr,
+    llvm::Optional<Replacement> ExpectedExisting,
+    llvm::Optional<Replacement> ExpectedNew) {
+  if (!Error) {
+    llvm::errs() << "Error is a success.";
+    return false;
+  }
+  std::string ErrorMessage;
+  llvm::raw_string_ostream OS(ErrorMessage);
+  llvm::handleAllErrors(std::move(Error), [&](const ReplacementError &RE) {
+    llvm::errs() << "Handling error...\n";
+    if (ExpectedErr != RE.get())
+      OS << "Unexpected error code: " << int(RE.get()) << "\n";
+    if (ExpectedExisting != RE.getExistingReplacement()) {
+      OS << "Expected Existing != Actual Existing.\n";
+      if (ExpectedExisting.hasValue())
+        OS << "Expected existing replacement: " << ExpectedExisting->toString()
+           << "\n";
+      if (RE.getExistingReplacement().hasValue())
+        OS << "Actual existing replacement: "
+           << RE.getExistingReplacement()->toString() << "\n";
+    }
+    if (ExpectedNew != RE.getNewReplacement()) {
+      OS << "Expected New != Actual New.\n";
+      if (ExpectedNew.hasValue())
+        OS << "Expected new replacement: " << ExpectedNew->toString() << "\n";
+      if (RE.getNewReplacement().hasValue())
+        OS << "Actual new replacement: " << RE.getNewReplacement()->toString()
+           << "\n";
+    }
+  });
+  OS.flush();
+  if (ErrorMessage.empty()) return true;
+  llvm::errs() << ErrorMessage;
+  return false;
+}
+
 TEST_F(ReplacementTest, FailAddReplacements) {
   Replacements Replaces;
   Replacement Deletion("x.cc", 0, 10, "3");
   auto Err = Replaces.add(Deletion);
   EXPECT_TRUE(!Err);
   llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 0, 2, "a"));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 2, 2, "a"));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("y.cc", 20, 2, ""));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
+
+  Replacement OverlappingReplacement("x.cc", 0, 2, "a");
+  Err = Replaces.add(OverlappingReplacement);
+  EXPECT_TRUE(checkReplacementError(std::move(Err),
+                                    replacement_error::overlap_conflict,
+                                    Deletion, OverlappingReplacement));
+
+  Replacement ContainedReplacement("x.cc", 2, 2, "a");
+  Err = Replaces.add(Replacement(ContainedReplacement));
+  EXPECT_TRUE(checkReplacementError(std::move(Err),
+                                    replacement_error::overlap_conflict,
+                                    Deletion, ContainedReplacement));
+
+  Replacement WrongPathReplacement("y.cc", 20, 2, "");
+  Err = Replaces.add(WrongPathReplacement);
+  EXPECT_TRUE(checkReplacementError(std::move(Err),
+                                    replacement_error::wrong_file_path,
+                                    Deletion, WrongPathReplacement));
+
   EXPECT_EQ(1u, Replaces.size());
   EXPECT_EQ(Deletion, *Replaces.begin());
 }
@@ -299,9 +349,11 @@ TEST_F(ReplacementTest, FailAddRegression) {
 
   // Make sure we find the overlap with the first entry when inserting a
   // replacement that ends exactly at the seam of the existing replacements.
-  Err = Replaces.add(Replacement("x.cc", 5, 5, "fail"));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
+  Replacement OverlappingReplacement("x.cc", 5, 5, "fail");
+  Err = Replaces.add(OverlappingReplacement);
+  EXPECT_TRUE(checkReplacementError(std::move(Err),
+                                    replacement_error::overlap_conflict,
+                                    *Replaces.begin(), OverlappingReplacement));
 
   Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
   EXPECT_TRUE(!Err);
@@ -333,9 +385,11 @@ TEST_F(ReplacementTest, AddInsertAtOtherInsertWhenOderIndependent) {
   auto Err = Replaces.add(Replacement("x.cc", 10, 0, "a"));
   EXPECT_TRUE(!Err);
   llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 10, 0, "b"));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
+  Replacement ConflictInsertion("x.cc", 10, 0, "b");
+  Err = Replaces.add(ConflictInsertion);
+  EXPECT_TRUE(checkReplacementError(std::move(Err),
+                                    replacement_error::insert_conflict,
+                                    *Replaces.begin(), ConflictInsertion));
 
   Replaces.clear();
   Err = Replaces.add(Replacement("x.cc", 10, 0, "a"));
@@ -436,10 +490,12 @@ TEST_F(ReplacementTest, FailOrderDependentReplacements) {
   auto Replaces = toReplacements({Replacement(
       Context.Sources, Context.getLocation(ID, 2, 1), 5, "other")});
 
-  auto Err = Replaces.add(Replacement(
-      Context.Sources, Context.getLocation(ID, 2, 1), 5, "rehto"));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
+  Replacement ConflictReplacement(Context.Sources,
+                                  Context.getLocation(ID, 2, 1), 5, "rehto");
+  auto Err = Replaces.add(ConflictReplacement);
+  EXPECT_TRUE(checkReplacementError(std::move(Err),
+                                    replacement_error::overlap_conflict,
+                                    *Replaces.begin(), ConflictReplacement));
 
   EXPECT_TRUE(applyAllReplacements(Replaces, Context.Rewrite));
   EXPECT_EQ("line1\nother\nline3\nline4", Context.getRewrittenText(ID));

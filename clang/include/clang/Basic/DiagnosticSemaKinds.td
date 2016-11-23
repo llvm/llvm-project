@@ -7167,12 +7167,11 @@ def err_in_class_initializer_literal_type : Error<
   "'constexpr' specifier">;
 def err_in_class_initializer_non_constant : Error<
   "in-class initializer for static data member is not a constant expression">;
-def err_in_class_initializer_not_yet_parsed
-    : Error<"cannot use defaulted default constructor of %0 within the class "
-            "outside of member functions because %1 has an initializer">;
-def err_in_class_initializer_not_yet_parsed_outer_class
-    : Error<"cannot use defaulted default constructor of %0 within "
-            "%1 outside of member functions because %2 has an initializer">;
+def err_in_class_initializer_not_yet_parsed : Error<
+  "default member initializer for %1 needed within definition of enclosing "
+  "class %0 outside of member functions">;
+def note_in_class_initializer_not_yet_parsed : Note<
+  "default member initializer declared here">;
 def err_in_class_initializer_cycle
     : Error<"default member initializer for %0 uses itself">;
 def err_exception_spec_cycle
