@@ -10680,6 +10680,25 @@ static bool CheckMapConflicts(
           if (CI->getAssociatedDeclaration() != SI->getAssociatedDeclaration())
             break;
         }
+        // Check if the extra components of the expressions in the enclosing
+        // data environment are redundant for the current base declaration.
+        // If they are, the maps completely overlap, which is legal.
+        for (; SI != SE; ++SI) {
+          QualType Type;
+          if (auto *ASE =
+              dyn_cast<ArraySubscriptExpr>(SI->getAssociatedExpression())) {
+            Type = ASE->getBase()->IgnoreParenImpCasts()->getType();
+          } else if (auto *OASE =
+              dyn_cast<OMPArraySectionExpr>(SI->getAssociatedExpression())) {
+            auto *E = OASE->getBase()->IgnoreParenImpCasts();
+            Type =
+                OMPArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
+          }
+          if (Type.isNull() || Type->isAnyPointerType() ||
+              CheckArrayExpressionDoesNotReferToWholeSize(
+                  SemaRef, SI->getAssociatedExpression(), Type))
+            break;
+        }
 
         // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.4]
         //  List items of map clauses in the same construct must not share
