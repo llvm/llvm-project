@@ -9,7 +9,7 @@
 
 // <set>
 
-// Check that std::set fails to instantiate if the comparison predicate is 
+// Check that std::set fails to instantiate if the comparison predicate is
 // not copy-constructible. This is LWG issue 2436
 
 #include <set>

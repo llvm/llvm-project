@@ -452,7 +452,7 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   // we obtain two addresses and pass them to EhFrameHdr object.
   if (In<ELFT>::EhFrameHdr) {
     for (CieRecord *Cie : Cies) {
-      uint8_t Enc = getFdeEncoding<ELFT>(Cie->Piece->data());
+      uint8_t Enc = getFdeEncoding<ELFT>(Cie->Piece);
       for (SectionPiece *Fde : Cie->FdePieces) {
         uintX_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
         uintX_t FdeVA = this->Addr + Fde->OutputOff;

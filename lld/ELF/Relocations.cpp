@@ -271,8 +271,8 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
     return ((read32<E>(BufLoc) & 0xffff) << 16) +
            readSignedLo16<E>(Buf + RI->r_offset);
   }
-  warn("can't find matching " + getRelName(Type) + " relocation for " +
-       getRelName(Rel->getType(Config->Mips64EL)));
+  warn("can't find matching " + toString(Type) + " relocation for " +
+       toString(Rel->getType(Config->Mips64EL)));
   return 0;
 }
 
@@ -343,9 +343,9 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (AbsVal && RelE) {
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
       return true;
-    error(getLocation(S, RelOff) + ": relocation " + getRelName(Type) +
+    error(getLocation(S, RelOff) + ": relocation " + toString(Type) +
           " cannot refer to absolute symbol '" + Body.getName() +
-          "' defined in " + getFilename(Body.File));
+          "' defined in " + toString(Body.File));
     return true;
   }
 
@@ -445,15 +445,15 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     StringRef Name = Body.getName();
     error(getLocation(S, RelOff) + ": can't create dynamic relocation " +
-          getRelName(Type) + " against " +
+          toString(Type) + " against " +
           ((Name.empty() ? "local symbol in readonly segment"
                          : "symbol '" + Name + "'")) +
-          " defined in " + getFilename(Body.File));
+          " defined in " + toString(Body.File));
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
     error(getLocation(S, RelOff) + ": cannot preempt symbol '" +
-          Body.getName() + "' defined in " + getFilename(Body.File));
+          Body.getName() + "' defined in " + toString(Body.File));
     return Expr;
   }
   if (Body.isObject()) {
@@ -487,7 +487,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     Body.NeedsCopyOrPltAddr = true;
     return toPlt(Expr);
   }
-  error("symbol '" + Body.getName() + "' defined in " + getFilename(Body.File) +
+  error("symbol '" + Body.getName() + "' defined in " + toString(Body.File) +
         " is missing type");
 
   return Expr;
@@ -548,7 +548,7 @@ std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
   // missing, we use an actual filename.
   std::string SrcFile = File->SourceFile;
   if (SrcFile.empty())
-    SrcFile = getFilename(File);
+    SrcFile = toString(File);
 
   // Find a symbol at a given location.
   DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
@@ -556,8 +556,7 @@ std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
     return SrcFile + ":(function " + maybeDemangle(Encl->getName()) + ")";
 
   // If there's no symbol, print out the offset instead of a symbol name.
-  return (SrcFile + ":(" + S.Name + "+0x" + Twine::utohexstr(Offset) + ")")
-      .str();
+  return (SrcFile + ":(" + S.Name + "+0x" + utohexstr(Offset) + ")").str();
 }
 
 template <class ELFT>

@@ -150,7 +150,7 @@ public:
     MoveTool->getMovedDecls().emplace_back(D,
                                            &Result.Context->getSourceManager());
     MoveTool->getUnremovedDeclsInOldHeader().erase(D);
-    MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+    MoveTool->addRemovedDecl(MoveTool->getMovedDecls().back());
   }
 
 private:
@@ -181,7 +181,7 @@ private:
     // case.
     if (!CMD->isInlined()) {
       MoveTool->getMovedDecls().emplace_back(CMD, SM);
-      MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+      MoveTool->addRemovedDecl(MoveTool->getMovedDecls().back());
       // Get template class method from its method declaration as
       // UnremovedDecls stores template class method.
       if (const auto *FTD = CMD->getDescribedFunctionTemplate())
@@ -194,7 +194,7 @@ private:
   void MatchClassStaticVariable(const clang::NamedDecl *VD,
                                 clang::SourceManager* SM) {
     MoveTool->getMovedDecls().emplace_back(VD, SM);
-    MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+    MoveTool->addRemovedDecl(MoveTool->getMovedDecls().back());
     MoveTool->getUnremovedDeclsInOldHeader().erase(VD);
   }
 
@@ -206,7 +206,7 @@ private:
       MoveTool->getMovedDecls().emplace_back(TC, SM);
     else
       MoveTool->getMovedDecls().emplace_back(CD, SM);
-    MoveTool->getRemovedDecls().push_back(MoveTool->getMovedDecls().back());
+    MoveTool->addRemovedDecl(MoveTool->getMovedDecls().back());
     MoveTool->getUnremovedDeclsInOldHeader().erase(
         MoveTool->getMovedDecls().back().Decl);
   }
@@ -305,7 +305,8 @@ std::vector<std::string> GetNamespaces(const clang::Decl *D) {
 clang::tooling::Replacements
 createInsertedReplacements(const std::vector<std::string> &Includes,
                            const std::vector<ClangMoveTool::MovedDecl> &Decls,
-                           llvm::StringRef FileName, bool IsHeader = false) {
+                           llvm::StringRef FileName, bool IsHeader = false,
+                           StringRef OldHeaderInclude = "") {
   std::string NewCode;
   std::string GuardName(FileName);
   if (IsHeader) {
@@ -318,6 +319,7 @@ createInsertedReplacements(const std::vector<std::string> &Includes,
     NewCode += "#define " + GuardName + "\n\n";
   }
 
+  NewCode += OldHeaderInclude;
   // Add #Includes.
   for (const auto &Include : Includes)
     NewCode += Include;
@@ -408,6 +410,14 @@ ClangMoveTool::ClangMoveTool(
       FallbackStyle(FallbackStyle) {
   if (!Spec.NewHeader.empty())
     CCIncludes.push_back("#include \"" + Spec.NewHeader + "\"\n");
+}
+
+void ClangMoveTool::addRemovedDecl(const MovedDecl &Decl) {
+  const auto &SM = *Decl.SM;
+  auto Loc = Decl.Decl->getLocation();
+  StringRef FilePath = SM.getFilename(Loc);
+  FilePathToFileID[FilePath] = SM.getFileID(Loc);
+  RemovedDecls.push_back(Decl);
 }
 
 void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
@@ -575,22 +585,40 @@ void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
 }
 
 void ClangMoveTool::removeClassDefinitionInOldFiles() {
+  if (RemovedDecls.empty()) return;
   for (const auto &MovedDecl : RemovedDecls) {
     const auto &SM = *MovedDecl.SM;
     auto Range = GetFullRange(&SM, MovedDecl.Decl);
     clang::tooling::Replacement RemoveReplacement(
-        *MovedDecl.SM,
+        SM,
         clang::CharSourceRange::getCharRange(Range.getBegin(), Range.getEnd()),
         "");
     std::string FilePath = RemoveReplacement.getFilePath().str();
     auto Err = FileToReplacements[FilePath].add(RemoveReplacement);
-    if (Err) {
+    if (Err)
       llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-      continue;
+  }
+  const SourceManager* SM = RemovedDecls[0].SM;
+
+  // Post process of cleanup around all the replacements.
+  for (auto& FileAndReplacements: FileToReplacements) {
+    StringRef FilePath = FileAndReplacements.first;
+    // Add #include of new header to old header.
+    if (Spec.OldDependOnNew &&
+        MakeAbsolutePath(*SM, FilePath) == makeAbsolutePath(Spec.OldHeader)) {
+      // FIXME: Minimize the include path like include-fixer.
+      std::string IncludeNewH = "#include \""  + Spec.NewHeader + "\"\n";
+      // This replacment for inserting header will be cleaned up at the end.
+      auto Err = FileAndReplacements.second.add(
+          tooling::Replacement(FilePath, UINT_MAX, 0, IncludeNewH));
+      if (Err)
+        llvm::errs() << llvm::toString(std::move(Err)) << "\n";
     }
 
-    llvm::StringRef Code =
-        SM.getBufferData(SM.getFileID(MovedDecl.Decl->getLocation()));
+    auto SI = FilePathToFileID.find(FilePath);
+    // Ignore replacements for new.h/cc.
+    if (SI == FilePathToFileID.end()) continue;
+    llvm::StringRef Code = SM->getBufferData(SI->second);
     format::FormatStyle Style =
         format::getStyle("file", FilePath, FallbackStyle);
     auto CleanReplacements = format::cleanupAroundReplacements(
@@ -615,9 +643,13 @@ void ClangMoveTool::moveClassDefinitionToNewFiles() {
       NewCCDecls.push_back(MovedDecl);
   }
 
-  if (!Spec.NewHeader.empty())
+  if (!Spec.NewHeader.empty()) {
+    std::string OldHeaderInclude =
+        Spec.NewDependOnOld ? "#include \"" + Spec.OldHeader + "\"\n" : "";
     FileToReplacements[Spec.NewHeader] = createInsertedReplacements(
-        HeaderIncludes, NewHeaderDecls, Spec.NewHeader, /*IsHeader=*/true);
+        HeaderIncludes, NewHeaderDecls, Spec.NewHeader, /*IsHeader=*/true,
+        OldHeaderInclude);
+  }
   if (!Spec.NewCC.empty())
     FileToReplacements[Spec.NewCC] =
         createInsertedReplacements(CCIncludes, NewCCDecls, Spec.NewCC);

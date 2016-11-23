@@ -74,7 +74,7 @@ template <class ELFT> void SymbolTable<ELFT>::addFile(InputFile *File) {
   }
 
   if (Config->Trace)
-    outs() << getFilename(File) << "\n";
+    outs() << toString(File) << "\n";
 
   // .so file
   if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {
@@ -207,7 +207,7 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
 // Used to construct an error message.
 static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
   return "'" + maybeDemangle(Existing->getName()) + "' in " +
-         getFilename(Existing->File) + " and " + getFilename(NewFile);
+         toString(Existing->File) + " and " + toString(NewFile);
 }
 
 // Find an existing symbol or create and insert a new one, then apply the given

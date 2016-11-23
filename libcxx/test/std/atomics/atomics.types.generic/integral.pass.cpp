@@ -195,7 +195,7 @@ int main()
 	test<std::atomic_uint32_t, uint32_t>();
 	test<std::atomic_int64_t,   int64_t>();
 	test<std::atomic_uint64_t, uint64_t>();
-	
+
     test<volatile std::atomic_char, char>();
     test<volatile std::atomic_schar, signed char>();
     test<volatile std::atomic_uchar, unsigned char>();

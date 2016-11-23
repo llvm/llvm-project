@@ -22,6 +22,7 @@
 #include <iterator>
 #include <numeric>
 #include <cassert>
+#include <cstddef>
 
 template <class T>
 inline
@@ -53,7 +54,7 @@ int main()
         }
         std::vector<double> prob(std::begin(p), std::end(p));
         double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-        for (int i = 0; i < prob.size(); ++i)
+        for (std::size_t i = 0; i < prob.size(); ++i)
             prob[i] /= s;
         std::sort(u.begin(), u.end());
         for (int i = 0; i < Np; ++i)

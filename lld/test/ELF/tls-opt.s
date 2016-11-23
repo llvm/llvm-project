@@ -7,36 +7,36 @@
 // NORELOC-NEXT: ]
 
 // DISASM:      _start:
-// DISASM-NEXT: 11000: 48 c7 c0 f8 ff ff ff  movq $-8, %rax
-// DISASM-NEXT: 11007: 49 c7 c7 f8 ff ff ff  movq $-8, %r15
-// DISASM-NEXT: 1100e: 48 8d 80 f8 ff ff ff  leaq -8(%rax), %rax
-// DISASM-NEXT: 11015: 4d 8d bf f8 ff ff ff  leaq -8(%r15), %r15
-// DISASM-NEXT: 1101c: 48 81 c4 f8 ff ff ff  addq $-8, %rsp
-// DISASM-NEXT: 11023: 49 81 c4 f8 ff ff ff  addq $-8, %r12
-// DISASM-NEXT: 1102a: 48 c7 c0 fc ff ff ff  movq $-4, %rax
-// DISASM-NEXT: 11031: 49 c7 c7 fc ff ff ff  movq $-4, %r15
-// DISASM-NEXT: 11038: 48 8d 80 fc ff ff ff  leaq -4(%rax), %rax
-// DISASM-NEXT: 1103f: 4d 8d bf fc ff ff ff  leaq -4(%r15), %r15
-// DISASM-NEXT: 11046: 48 81 c4 fc ff ff ff  addq $-4, %rsp
-// DISASM-NEXT: 1104d: 49 81 c4 fc ff ff ff  addq $-4, %r12
+// DISASM-NEXT: 201000: 48 c7 c0 f8 ff ff ff  movq $-8, %rax
+// DISASM-NEXT: 201007: 49 c7 c7 f8 ff ff ff  movq $-8, %r15
+// DISASM-NEXT: 20100e: 48 8d 80 f8 ff ff ff  leaq -8(%rax), %rax
+// DISASM-NEXT: 201015: 4d 8d bf f8 ff ff ff  leaq -8(%r15), %r15
+// DISASM-NEXT: 20101c: 48 81 c4 f8 ff ff ff  addq $-8, %rsp
+// DISASM-NEXT: 201023: 49 81 c4 f8 ff ff ff  addq $-8, %r12
+// DISASM-NEXT: 20102a: 48 c7 c0 fc ff ff ff  movq $-4, %rax
+// DISASM-NEXT: 201031: 49 c7 c7 fc ff ff ff  movq $-4, %r15
+// DISASM-NEXT: 201038: 48 8d 80 fc ff ff ff  leaq -4(%rax), %rax
+// DISASM-NEXT: 20103f: 4d 8d bf fc ff ff ff  leaq -4(%r15), %r15
+// DISASM-NEXT: 201046: 48 81 c4 fc ff ff ff  addq $-4, %rsp
+// DISASM-NEXT: 20104d: 49 81 c4 fc ff ff ff  addq $-4, %r12
 
 // LD to LE:
-// DISASM-NEXT: 11054: 66 66 66 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
-// DISASM-NEXT: 11060: 48 8d 88 f8 ff ff ff                 leaq -8(%rax), %rcx
-// DISASM-NEXT: 11067: 66 66 66 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
-// DISASM-NEXT: 11073: 48 8d 88 fc ff ff ff                 leaq -4(%rax), %rcx
+// DISASM-NEXT: 201054: 66 66 66 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 201060: 48 8d 88 f8 ff ff ff                 leaq -8(%rax), %rcx
+// DISASM-NEXT: 201067: 66 66 66 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 201073: 48 8d 88 fc ff ff ff                 leaq -4(%rax), %rcx
 
 // GD to LE:
-// DISASM-NEXT: 1107a: 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
-// DISASM-NEXT: 11083: 48 8d 80 f8 ff ff ff        leaq -8(%rax), %rax
-// DISASM-NEXT: 1108a: 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
-// DISASM-NEXT: 11093: 48 8d 80 fc ff ff ff        leaq -4(%rax), %rax
+// DISASM-NEXT: 20107a: 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 201083: 48 8d 80 f8 ff ff ff        leaq -8(%rax), %rax
+// DISASM-NEXT: 20108a: 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 201093: 48 8d 80 fc ff ff ff        leaq -4(%rax), %rax
 
 // LD to LE:
 // DISASM:     _DTPOFF64_1:
-// DISASM-NEXT: 1109a: f8 clc
+// DISASM-NEXT: 20109a: f8 clc
 // DISASM:      _DTPOFF64_2:
-// DISASM-NEXT: 110a3: fc cld
+// DISASM-NEXT: 2010a3: fc cld
 
 .type tls0,@object
 .section .tbss,"awT",@nobits

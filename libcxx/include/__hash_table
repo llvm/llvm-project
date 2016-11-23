@@ -1005,8 +1005,7 @@ public:
     size_type max_size() const _NOEXCEPT
     {
         return std::min<size_type>(
-            allocator_traits<__pointer_allocator>::max_size(
-              __bucket_list_.get_deleter().__alloc()),
+            __node_traits::max_size(__node_alloc()),
             numeric_limits<difference_type >::max()
         );
     }

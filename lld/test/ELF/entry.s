@@ -23,7 +23,7 @@
 # WARN2: warning: entry symbol _start not found, assuming 0
 
 # NOENTRY: Entry: 0x0
-# SYM: Entry: 0x11000
+# SYM: Entry: 0x201000
 # DSO: Entry: 0x1000
 # DEC: Entry: 0x1000
 # HEX: Entry: 0xCAFE

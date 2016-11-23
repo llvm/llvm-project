@@ -43,6 +43,7 @@ LinkerDriver *elf::Driver;
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
   HasError = false;
+  ErrorCount = 0;
   ErrorOS = &Error;
   Argv0 = Args[0];
 
@@ -490,6 +491,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Discard = getDiscardOption(Args);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
+  Config->ErrorLimit = getInteger(Args, OPT_error_limit, 20);
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
   Config->FatalWarnings = Args.hasArg(OPT_fatal_warnings);
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);

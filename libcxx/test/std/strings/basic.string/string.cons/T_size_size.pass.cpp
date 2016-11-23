@@ -10,7 +10,7 @@
 // <string>
 
 // template<class _Tp>
-//   basic_string(const _Tp& __t, size_type __pos, size_type __n, 
+//   basic_string(const _Tp& __t, size_type __pos, size_type __n,
 //                const allocator_type& __a = allocator_type());
 //
 //  Mostly we're testing string_view here

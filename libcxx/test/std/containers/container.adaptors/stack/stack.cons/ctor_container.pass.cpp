@@ -13,6 +13,7 @@
 
 #include <stack>
 #include <cassert>
+#include <cstddef>
 
 template <class C>
 C
@@ -29,7 +30,7 @@ int main()
     std::deque<int> d = make<std::deque<int> >(5);
     std::stack<int> q(d);
     assert(q.size() == 5);
-    for (int i = 0; i < d.size(); ++i)
+    for (std::size_t i = 0; i < d.size(); ++i)
     {
         assert(q.top() == d[d.size() - i - 1]);
         q.pop();

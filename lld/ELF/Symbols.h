@@ -361,8 +361,10 @@ template <class ELFT> struct ElfSym {
   static DefinedRegular<ELFT> *End;
   static DefinedRegular<ELFT> *End2;
 
-  // The content for _gp_disp symbol for MIPS target.
-  static SymbolBody *MipsGpDisp;
+  // The content for _gp_disp/__gnu_local_gp symbols for MIPS target.
+  static DefinedRegular<ELFT> *MipsGpDisp;
+  static DefinedRegular<ELFT> *MipsLocalGp;
+  static SymbolBody *MipsGp;
 };
 
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::EhdrStart;
@@ -372,7 +374,9 @@ template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata2;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End2;
-template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsGpDisp;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGpDisp;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsLocalGp;
+template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsGp;
 
 // A real symbol object, SymbolBody, is usually stored within a Symbol. There's
 // always one Symbol for each symbol name. The resolver updates the SymbolBody

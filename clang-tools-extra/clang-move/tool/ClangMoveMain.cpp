@@ -61,6 +61,20 @@ cl::opt<std::string>
     NewCC("new_cc", cl::desc("The relative/absolute file path of new cc."),
           cl::cat(ClangMoveCategory));
 
+cl::opt<bool> OldDependOnNew(
+    "old_depend_on_new",
+    cl::desc(
+        "Whether old header will depend on new header. If true, clang-move will "
+        "add #include of new header to old header."),
+    cl::init(false), cl::cat(ClangMoveCategory));
+
+cl::opt<bool> NewDependOnOld(
+    "new_depend_on_old",
+    cl::desc(
+        "Whether new header will depend on old header. If true, clang-move will "
+        "add #include of old header to new header."),
+    cl::init(false), cl::cat(ClangMoveCategory));
+
 cl::opt<std::string>
     Style("style",
           cl::desc("The style name used for reformatting. Default is \"llvm\""),
@@ -87,6 +101,13 @@ int main(int argc, const char **argv) {
   tooling::CommonOptionsParser OptionsParser(Argc, RawExtraArgs.get(),
                                              ClangMoveCategory);
 
+  if (OldDependOnNew && NewDependOnOld) {
+    llvm::errs() << "Provide either --old_depend_on_new or "
+                    "--new_depend_on_old. clang-move doesn't support these two "
+                    "options at same time (It will introduce include cycle).\n";
+    return 1;
+  }
+
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(),
                                 OptionsParser.getSourcePathList());
   move::ClangMoveTool::MoveDefinitionSpec Spec;
@@ -95,6 +116,8 @@ int main(int argc, const char **argv) {
   Spec.NewHeader = NewHeader;
   Spec.OldCC = OldCC;
   Spec.NewCC = NewCC;
+  Spec.OldDependOnNew = OldDependOnNew;
+  Spec.NewDependOnOld = NewDependOnOld;
 
   llvm::SmallString<128> InitialDirectory;
   if (std::error_code EC = llvm::sys::fs::current_path(InitialDirectory))

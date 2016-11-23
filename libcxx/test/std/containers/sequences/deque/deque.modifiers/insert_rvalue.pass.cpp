@@ -15,6 +15,7 @@
 
 #include <deque>
 #include <cassert>
+#include <cstddef>
 
 #include "MoveOnly.h"
 #include "min_allocator.h"
@@ -57,7 +58,7 @@ test(int P, C& c1, int x)
         assert(*i == MoveOnly(j));
     assert(*i == MoveOnly(x));
     ++i;
-    for (int j = P; j < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
         assert(*i == MoveOnly(j));
 }
 

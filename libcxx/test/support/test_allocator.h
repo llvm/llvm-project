@@ -21,7 +21,8 @@
 #include "test_macros.h"
 
 template <class Alloc>
-inline size_t alloc_max_size(Alloc const &a) {
+inline typename std::allocator_traits<Alloc>::size_type
+alloc_max_size(Alloc const &a) {
   typedef std::allocator_traits<Alloc> AT;
   return AT::max_size(a);
 }

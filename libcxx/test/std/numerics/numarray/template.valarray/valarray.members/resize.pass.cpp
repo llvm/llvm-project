@@ -15,6 +15,7 @@
 
 #include <valarray>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -25,17 +26,17 @@ int main()
         std::valarray<T> v1(a1, N1);
         v1.resize(8);
         assert(v1.size() == 8);
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == 0);
         v1.resize(0);
         assert(v1.size() == 0);
         v1.resize(80);
         assert(v1.size() == 80);
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == 0);
         v1.resize(40);
         assert(v1.size() == 40);
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == 0);
     }
 }

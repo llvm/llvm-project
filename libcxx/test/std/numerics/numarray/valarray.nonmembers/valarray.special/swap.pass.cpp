@@ -17,6 +17,7 @@
 
 #include <valarray>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -32,10 +33,10 @@ int main()
         std::valarray<T> v2_save = v2;
         swap(v1, v2);
         assert(v1.size() == v2_save.size());
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == v2_save[i]);
         assert(v2.size() == v1_save.size());
-        for (int i = 0; i < v2.size(); ++i)
+        for (std::size_t i = 0; i < v2.size(); ++i)
             assert(v2[i] == v1_save[i]);
     }
     {
@@ -49,10 +50,10 @@ int main()
         std::valarray<T> v2_save = v2;
         swap(v1, v2);
         assert(v1.size() == v2_save.size());
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == v2_save[i]);
         assert(v2.size() == v1_save.size());
-        for (int i = 0; i < v2.size(); ++i)
+        for (std::size_t i = 0; i < v2.size(); ++i)
             assert(v2[i] == v1_save[i]);
     }
     {
@@ -66,10 +67,10 @@ int main()
         std::valarray<T> v2_save = v2;
         swap(v1, v2);
         assert(v1.size() == v2_save.size());
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == v2_save[i]);
         assert(v2.size() == v1_save.size());
-        for (int i = 0; i < v2.size(); ++i)
+        for (std::size_t i = 0; i < v2.size(); ++i)
             assert(v2[i] == v1_save[i]);
     }
     {
@@ -82,10 +83,10 @@ int main()
         std::valarray<T> v2_save = v2;
         swap(v1, v2);
         assert(v1.size() == v2_save.size());
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v1[i] == v2_save[i]);
         assert(v2.size() == v1_save.size());
-        for (int i = 0; i < v2.size(); ++i)
+        for (std::size_t i = 0; i < v2.size(); ++i)
             assert(v2[i] == v1_save[i]);
     }
 }

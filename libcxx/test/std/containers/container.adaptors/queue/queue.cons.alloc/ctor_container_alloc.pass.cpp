@@ -14,6 +14,7 @@
 
 #include <queue>
 #include <cassert>
+#include <cstddef>
 
 #include "test_allocator.h"
 
@@ -49,7 +50,7 @@ int main()
     test q(d, test_allocator<int>(4));
     assert(q.get_allocator() == test_allocator<int>(4));
     assert(q.size() == 5);
-    for (int i = 0; i < d.size(); ++i)
+    for (std::size_t i = 0; i < d.size(); ++i)
     {
         assert(q.front() == d[i]);
         q.pop();

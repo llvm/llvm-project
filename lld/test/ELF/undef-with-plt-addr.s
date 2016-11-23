@@ -19,13 +19,13 @@ movabsq	$set_data, %rax
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x11010
+// CHECK-NEXT: Address: 0x201010
 
 // CHECK:      Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:   0x13000 R_X86_64_64 foo 0x0
+// CHECK-NEXT:   0x203000 R_X86_64_64 foo 0x0
 // CHECK-NEXT: }
 // CHECK-NEXT: Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:   0x13020 R_X86_64_JUMP_SLOT set_data 0x0
+// CHECK-NEXT:   0x203020 R_X86_64_JUMP_SLOT set_data 0x0
 // CHECK-NEXT: }
 
 // CHECK:      Name: foo
@@ -37,7 +37,7 @@ movabsq	$set_data, %rax
 // CHECK-NEXT: Section: Undefined
 
 // CHECK:      Name:    set_data
-// CHECK-NEXT: Value:   0x11020
+// CHECK-NEXT: Value:   0x201020
 // CHECK-NEXT: Size: 0
 // CHECK-NEXT: Binding: Global
 // CHECK-NEXT: Type: Function

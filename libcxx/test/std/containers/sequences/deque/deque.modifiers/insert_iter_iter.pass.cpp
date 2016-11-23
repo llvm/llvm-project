@@ -16,6 +16,7 @@
 
 #include <deque>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -61,9 +62,9 @@ test(int P, const C& c0, const C& c2)
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
-    for (int j = 0; j < c2.size(); ++j, ++i)
+    for (int j = 0; static_cast<std::size_t>(j) < c2.size(); ++j, ++i)
         assert(*i == j);
-    for (int j = P; j < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
         assert(*i == j);
     }
     {
@@ -78,9 +79,9 @@ test(int P, const C& c0, const C& c2)
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
-    for (int j = 0; j < c2.size(); ++j, ++i)
+    for (int j = 0; static_cast<std::size_t>(j) < c2.size(); ++j, ++i)
         assert(*i == j);
-    for (int j = P; j < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
         assert(*i == j);
     }
     {
@@ -95,9 +96,9 @@ test(int P, const C& c0, const C& c2)
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
-    for (int j = 0; j < c2.size(); ++j, ++i)
+    for (int j = 0; static_cast<std::size_t>(j) < c2.size(); ++j, ++i)
         assert(*i == j);
-    for (int j = P; j < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
         assert(*i == j);
     }
 }
@@ -176,9 +177,9 @@ testI(int P, C& c1, const C& c2)
     i = c1.begin();
     for (int j = 0; j < P; ++j, ++i)
         assert(*i == j);
-    for (int j = 0; j < c2.size(); ++j, ++i)
+    for (int j = 0; static_cast<std::size_t>(j) < c2.size(); ++j, ++i)
         assert(*i == j);
-    for (int j = P; j < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
         assert(*i == j);
 }
 

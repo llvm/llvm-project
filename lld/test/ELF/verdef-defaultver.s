@@ -122,7 +122,7 @@
 # EXE-NEXT:    }
 # EXE-NEXT:    Symbol {
 # EXE-NEXT:      Name: a@V1
-# EXE-NEXT:      Value: 0x11020
+# EXE-NEXT:      Value: 0x201020
 # EXE-NEXT:      Size: 0
 # EXE-NEXT:      Binding: Global
 # EXE-NEXT:      Type: Function
@@ -131,7 +131,7 @@
 # EXE-NEXT:    }
 # EXE-NEXT:    Symbol {
 # EXE-NEXT:      Name: b@V2
-# EXE-NEXT:      Value: 0x11030
+# EXE-NEXT:      Value: 0x201030
 # EXE-NEXT:      Size: 0
 # EXE-NEXT:      Binding: Global
 # EXE-NEXT:      Type: Function
@@ -140,7 +140,7 @@
 # EXE-NEXT:    }
 # EXE-NEXT:    Symbol {
 # EXE-NEXT:      Name: c@V2
-# EXE-NEXT:      Value: 0x11040
+# EXE-NEXT:      Value: 0x201040
 # EXE-NEXT:      Size: 0
 # EXE-NEXT:      Binding: Global
 # EXE-NEXT:      Type: Function
@@ -150,7 +150,7 @@
 # EXE-NEXT:  ]
 # EXE-NEXT:  Version symbols {
 # EXE-NEXT:    Section Name: .gnu.version
-# EXE-NEXT:    Address: 0x10228
+# EXE-NEXT:    Address: 0x200228
 # EXE-NEXT:    Offset: 0x228
 # EXE-NEXT:    Link: 1
 # EXE-NEXT:    Symbols [

@@ -64,7 +64,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     uintX_t VA = (SC->OutSec ? SC->OutSec->Addr : 0) + SC->getOffset(Offset);
     if (D.isTls() && !Config->Relocatable) {
       if (!Out<ELFT>::TlsPhdr)
-        fatal(getFilename(D.File) +
+        fatal(toString(D.File) +
               " has a STT_TLS symbol but doesn't have a PT_TLS section");
       return VA - Out<ELFT>::TlsPhdr->p_vaddr;
     }
@@ -307,7 +307,7 @@ bool Symbol::includeInDynsym() const {
 // Print out a log message for --trace-symbol.
 void elf::printTraceSymbol(Symbol *Sym) {
   SymbolBody *B = Sym->body();
-  outs() << getFilename(B->File);
+  outs() << toString(B->File);
 
   if (B->isUndefined())
     outs() << ": reference to ";
