@@ -23,6 +23,10 @@
 #include <string>
 #include "test.h"
 
+#ifndef MAP_32BIT
+# define MAP_32BIT 0
+#endif
+
 void *thr(void *arg) {
   // This thread creates lots of separate mappings in /proc/self/maps before
   // the ignored library.

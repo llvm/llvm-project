@@ -561,15 +561,13 @@ static Symbol *addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
 }
 
 template <class ELFT>
-static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *IS,
+static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *Sec,
                           typename ELFT::uint Value) {
-  typename ELFT::Sym LocalHidden = {};
   // The linker generated symbols are added as STB_WEAK to allow user defined
   // ones to override them.
-  LocalHidden.setBindingAndType(STB_WEAK, STT_NOTYPE);
-  LocalHidden.setVisibility(STV_HIDDEN);
-  LocalHidden.st_value = Value;
-  return Symtab<ELFT>::X->addRegular(Name, LocalHidden, IS, nullptr);
+  return Symtab<ELFT>::X->addRegular(Name, STV_HIDDEN, STT_NOTYPE, Value,
+                                     /*Size=*/0, STB_WEAK, Sec,
+                                     /*File=*/nullptr);
 }
 
 template <class ELFT>
