@@ -1235,12 +1235,12 @@ GDBRemoteCommunicationServerCommon::CreateProcessInfoResponse_DebugServerStyle (
                 break;
         }
 
-        if (proc_triple.isArch64Bit ())
-            response.PutCString ("ptrsize:8;");
-        else if (proc_triple.isArch32Bit ())
-            response.PutCString ("ptrsize:4;");
-        else if (proc_triple.isArch16Bit ())
-            response.PutCString ("ptrsize:2;");
+        // In case of MIPS64, pointer size is depend on ELF ABI
+        // For N32 the pointer size is 4 and for N64 it is 8
+        std::string abi = proc_arch.GetTargetABI();
+        if (!abi.empty())
+            response.Printf("elf_abi:%s;", abi.c_str());
+        response.Printf("ptrsize:%d;", proc_arch.GetAddressByteSize());
     }
 }
 

@@ -2856,6 +2856,7 @@ GDBRemoteCommunicationClient::GetCurrentProcessInfo (bool allow_lazy)
             std::string os_name;
             std::string vendor_name;
             std::string triple;
+            std::string elf_abi;
             uint32_t pointer_byte_size = 0;
             StringExtractor extractor;
             ByteOrder byte_order = eByteOrderInvalid;
@@ -2917,6 +2918,11 @@ GDBRemoteCommunicationClient::GetCurrentProcessInfo (bool allow_lazy)
                     if (pid != LLDB_INVALID_PROCESS_ID)
                         ++num_keys_decoded;
                 }
+                else if (name.compare("elf_abi") == 0)
+                {
+                    elf_abi = value;
+                    ++num_keys_decoded;
+                }
             }
             if (num_keys_decoded > 0)
                 m_qProcessInfo_is_valid = eLazyBoolYes;
@@ -2930,6 +2936,7 @@ GDBRemoteCommunicationClient::GetCurrentProcessInfo (bool allow_lazy)
             if (!triple.empty ())
             {
                 m_process_arch.SetTriple (triple.c_str ());
+                m_process_arch.SetFlags(elf_abi);
                 if (pointer_byte_size)
                 {
                     assert (pointer_byte_size == m_process_arch.GetAddressByteSize());

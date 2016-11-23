@@ -382,6 +382,14 @@ public:
         return m_core >= eCore_arm_generic && m_core < kNumCores;
     }
 
+    //------------------------------------------------------------------
+    /// Return a string representing target application ABI.
+    ///
+    /// @return A string representing target application ABI.
+    //------------------------------------------------------------------
+    std::string GetTargetABI() const;
+
+
     bool
     TripleVendorWasSpecified() const
     {
@@ -676,6 +684,8 @@ public:
     {
         m_flags = flags;
     }
+
+  void SetFlags(std::string elf_abi);
 
 protected:
     bool
