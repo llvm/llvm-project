@@ -3869,11 +3869,11 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
     Args.add(RValue::get(SrcVal), SrcParam.getType());
 
   // Add the rest of the default arguments.
-  std::vector<Stmt *> ArgVec;
-  for (unsigned I = IsCopy ? 1 : 0, E = CD->getNumParams(); I != E; ++I) {
-    Stmt *DefaultArg = getContext().getDefaultArgExprForConstructor(CD, I);
-    assert(DefaultArg && "sema forgot to instantiate default args");
-    ArgVec.push_back(DefaultArg);
+  SmallVector<const Stmt *, 4> ArgVec;
+  ArrayRef<ParmVarDecl *> params = CD->parameters().drop_front(IsCopy ? 1 : 0);
+  for (const ParmVarDecl *PD : params) {
+    assert(PD->hasDefaultArg() && "ctor closure lacks default args");
+    ArgVec.push_back(PD->getDefaultArg());
   }
 
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);

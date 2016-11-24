@@ -51,3 +51,22 @@ typedef int (^BarBlock)(int *);
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText performB}{LeftParen (}{Placeholder int x}{Comma , }{Placeholder int y}{RightParen )} (35)
 
 @end
+
+// rdar://25224416
+
+@interface NoQualifierParens
+
+@property(copy) void (^blockProperty)(void);
+@property BarBlock blockProperty2;
+
+@end
+
+void noQualifierParens(NoQualifierParens *f) {
+  [f setBlockProperty: ^{}];
+}
+
+// RUN: c-index-test -code-completion-at=%s:65:6 %s | FileCheck -check-prefix=CHECK-CC2 %s
+//CHECK-CC2: ObjCInstanceMethodDecl:{ResultType void (^)(void)}{TypedText blockProperty} (35)
+//CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType BarBlock}{TypedText blockProperty2} (35)
+//CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty2:}{Placeholder BarBlock blockProperty2} (35)
+//CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty:}{Placeholder void (^)(void)blockProperty} (35)

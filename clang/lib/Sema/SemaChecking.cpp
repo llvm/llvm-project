@@ -2868,6 +2868,9 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
           Ty = Context.getPointerDiffType();
         else {
           Expr *ValArg = TheCall->getArg(i);
+          // Treat this argument as _Nonnull as we want to show a warning if
+          // NULL is passed into it.
+          CheckNonNullArgument(*this, ValArg, DRE->getLocStart());
           unsigned AS = 0;
           // Keep address space of non-atomic pointer type.
           if (const PointerType *PtrTy =

@@ -2452,12 +2452,6 @@ public:
   void addCopyConstructorForExceptionObject(CXXRecordDecl *RD,
                                             CXXConstructorDecl *CD);
 
-  void addDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                       unsigned ParmIdx, Expr *DAE);
-
-  Expr *getDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                        unsigned ParmIdx);
-
   void addTypedefNameForUnnamedTagDecl(TagDecl *TD, TypedefNameDecl *TND);
 
   TypedefNameDecl *getTypedefNameForUnnamedTagDecl(const TagDecl *TD);
