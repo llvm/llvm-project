@@ -6517,7 +6517,7 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
 
 static void
 emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
-                           llvm::APSInt VLENVal,
+                           const llvm::APSInt &VLENVal,
                            ArrayRef<ParamAttrTy> ParamAttrs,
                            OMPDeclareSimdDeclAttr::BranchStateTy State) {
   struct ISADataTy {

@@ -88,6 +88,10 @@ OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
 template <typename ELFT>
 static bool compareByFilePosition(InputSection<ELFT> *A,
                                   InputSection<ELFT> *B) {
+  // Synthetic doesn't have link order dependecy, stable_sort will keep it last
+  if (A->kind() == InputSectionData::Synthetic ||
+      B->kind() == InputSectionData::Synthetic)
+    return false;
   auto *LA = cast<InputSection<ELFT>>(A->getLinkOrderDep());
   auto *LB = cast<InputSection<ELFT>>(B->getLinkOrderDep());
   OutputSectionBase *AOut = LA->OutSec;

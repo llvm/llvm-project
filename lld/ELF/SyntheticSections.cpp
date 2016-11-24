@@ -1666,6 +1666,26 @@ template <class ELFT> void MipsRldMapSection<ELFT>::writeTo(uint8_t *Buf) {
   memcpy(Buf, &Filler, getSize());
 }
 
+template <class ELFT>
+ARMExidxSentinelSection<ELFT>::ARMExidxSentinelSection()
+    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
+                             sizeof(typename ELFT::uint), ".ARM.exidx") {}
+
+// Write a terminating sentinel entry to the end of the .ARM.exidx table.
+// This section will have been sorted last in the .ARM.exidx table.
+// This table entry will have the form:
+// | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
+template <class ELFT> void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf){
+  // Get the InputSection before us, we are by definition last
+  auto RI = cast<OutputSection<ELFT>>(this->OutSec)->Sections.rbegin();
+  InputSection<ELFT> *LE = *(++RI);
+  InputSection<ELFT> *LC = cast<InputSection<ELFT>>(LE->getLinkOrderDep());
+  uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());
+  uint64_t P = this->getVA();
+  Target->relocateOne(Buf, R_ARM_PREL31, S - P);
+  write32le(Buf + 4, 0x1);
+}
+
 template InputSection<ELF32LE> *elf::createCommonSection();
 template InputSection<ELF32BE> *elf::createCommonSection();
 template InputSection<ELF64LE> *elf::createCommonSection();
@@ -1780,3 +1800,8 @@ template class elf::MipsRldMapSection<ELF32LE>;
 template class elf::MipsRldMapSection<ELF32BE>;
 template class elf::MipsRldMapSection<ELF64LE>;
 template class elf::MipsRldMapSection<ELF64BE>;
+
+template class elf::ARMExidxSentinelSection<ELF32LE>;
+template class elf::ARMExidxSentinelSection<ELF32BE>;
+template class elf::ARMExidxSentinelSection<ELF64LE>;
+template class elf::ARMExidxSentinelSection<ELF64BE>;

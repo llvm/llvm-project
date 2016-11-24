@@ -101,7 +101,6 @@ public:
   void addEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
-  bool empty() const { return PageEntriesNum == 0 && TlsEntries.empty(); }
   uintX_t getPageEntryOffset(uintX_t Addr);
   uintX_t getBodyEntryOffset(const SymbolBody &B, uintX_t Addend) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
@@ -610,6 +609,13 @@ template <class ELFT> class MipsRldMapSection : public SyntheticSection<ELFT> {
 public:
   MipsRldMapSection();
   size_t getSize() const override { return sizeof(typename ELFT::uint); }
+  void writeTo(uint8_t *Buf) override;
+};
+
+template <class ELFT> class ARMExidxSentinelSection : public SyntheticSection<ELFT> {
+public:
+  ARMExidxSentinelSection();
+  size_t getSize() const override { return 8; }
   void writeTo(uint8_t *Buf) override;
 };
 

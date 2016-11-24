@@ -73,13 +73,6 @@ void test1() {
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vmaxsd(<2 x i64> %{{[0-9]*}}, <2 x i64>
 // CHECK-PPC: error: call to 'vec_abs' is ambiguous
 
-  res_vd = vec_abs(vda);
-// CHECK: call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
-// CHECK: store <2 x double> %{{.*}}, <2 x double>* @res_vd
-// CHECK-LE: call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
-// CHECK-LE: store <2 x double> %{{.*}}, <2 x double>* @res_vd
-// CHECK-PPC: error: call to 'vec_abs' is ambiguous
-
   /* vec_add */
   res_vsll = vec_add(vsll, vsll);
 // CHECK: add <2 x i64>
@@ -1556,4 +1549,77 @@ void test1() {
 // CHECK: llvm.ppc.altivec.vbpermq
 // CHECK-LE: llvm.ppc.altivec.vbpermq
 // CHECK-PPC: warning: implicit declaration of function 'vec_bperm'
+
+  res_vsll = vec_neg(vsll);
+// CHECK: sub <2 x i64> zeroinitializer, {{%[0-9]+}}
+// CHECK-LE: sub <2 x i64> zeroinitializer, {{%[0-9]+}}
+// CHECK_PPC: call to 'vec_neg' is ambiguous
+
+
+}
+
+
+vector signed int test_vec_addec_signed (vector signed int a, vector signed int b, vector signed int c) {
+  return vec_addec(a, b, c);
+// CHECK-LABEL: @test_vec_addec_signed
+// CHECK: icmp slt i32 {{%[0-9]+}}, 4
+// CHECK: extractelement
+// CHECK: extractelement
+// CHECK: extractelement
+// CHECK: and i32 {{%[0-9]+}}, 1
+// CHECK: zext
+// CHECK: zext
+// CHECK: zext
+// CHECK: add i64
+// CHECK: add i64
+// CHECK: lshr i64
+// CHECK: and i64
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: zext i32
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: sext i32
+// CHECK: add nsw i32
+// CHECK: br label
+// CHECK: ret <4 x i32>
+
+}
+
+
+vector unsigned int test_vec_addec_unsigned (vector unsigned int a, vector unsigned int b, vector unsigned int c) {
+  return vec_addec(a, b, c);
+
+// CHECK-LABEL: @test_vec_addec_unsigned
+// CHECK: icmp slt i32 {{%[0-9]+}}, 4
+// CHECK: extractelement
+// CHECK: and i32
+// CHECK: extractelement
+// CHECK: zext i32
+// CHECK: extractelement
+// CHECK: zext i32
+// CHECK: zext i32
+// CHECK: add i64
+// CHECK: lshr i64
+// CHECK: and i64
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: zext i32
+// CHECK: trunc i64 {{%[0-9]+}} to i32
+// CHECK: sext i32
+// CHECK: add nsw i32
+// CHECK: br label
+// CHECK: ret <4 x i32>
+}
+
+vector signed int test_vec_subec_signed (vector signed int a, vector signed int b, vector signed int c) {
+  return vec_subec(a, b, c);
+// CHECK-LABEL: @test_vec_subec_signed
+// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: ret <4 x i32>
+}
+
+vector unsigned int test_vec_subec_unsigned (vector unsigned int a, vector unsigned int b, vector unsigned int c) {
+  return vec_subec(a, b, c);
+
+// CHECK-LABEL: @test_vec_subec_unsigned
+// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: ret <4 x i32>
 }
