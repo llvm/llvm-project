@@ -109,7 +109,7 @@ public:
   Result run(Function &F, FunctionAnalysisManager &FAM);
 
 private:
-  static char PassID;
+  static AnalysisKey Key;
   friend struct AnalysisInfoMixin<LazyValueAnalysis>;
 };
 

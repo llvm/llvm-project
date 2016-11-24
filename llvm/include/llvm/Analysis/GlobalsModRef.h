@@ -120,7 +120,7 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class GlobalsAA : public AnalysisInfoMixin<GlobalsAA> {
   friend AnalysisInfoMixin<GlobalsAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef GlobalsAAResult Result;

@@ -12,8 +12,8 @@
 // Fatal makes the program exit immediately with an error message.
 // You shouldn't use it except for reporting a corrupted input file.
 //
-// Error prints out an error message and set a global variable HasError
-// to true to record the fact that we met an error condition. It does
+// Error prints out an error message and increment a global variable
+// ErrorCount to record the fact that we met an error condition. It does
 // not exit, so it is safe for a lld-as-a-library use case. It is generally
 // useful because it can report more than one errors in a single run.
 //
@@ -31,7 +31,6 @@
 namespace lld {
 namespace elf {
 
-extern bool HasError;
 extern uint64_t ErrorCount;
 extern llvm::raw_ostream *ErrorOS;
 extern llvm::StringRef Argv0;

@@ -343,7 +343,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<TargetLibraryAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
   Optional<TargetLibraryInfoImpl> PresetInfoImpl;
 

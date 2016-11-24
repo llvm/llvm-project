@@ -7,14 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/Support/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Path.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <cstdio>
+#include <vector>
 
 namespace llvm {
+
 using namespace dwarf;
 
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
@@ -49,8 +60,7 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
   clear();
 }
 
-DWARFUnit::~DWARFUnit() {
-}
+DWARFUnit::~DWARFUnit() = default;
 
 bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
                                                 uint64_t &Result) const {
@@ -121,7 +131,7 @@ bool DWARFUnit::extract(DataExtractor debug_info, uint32_t *offset_ptr) {
 bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
                                         DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.
-  assert(DieArray.size() > 0);
+  assert(!DieArray.empty());
   DataExtractor RangesData(RangeSection, isLittleEndian, AddrSize);
   uint32_t ActualRangeListOffset = RangeSectionBase + RangeListOffset;
   return RangeList.extract(RangesData, &ActualRangeListOffset);
@@ -238,11 +248,11 @@ void DWARFUnit::extractDIEsToVector(
 }
 
 size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
-  if ((CUDieOnly && DieArray.size() > 0) ||
+  if ((CUDieOnly && !DieArray.empty()) ||
       DieArray.size() > 1)
     return 0; // Already parsed.
 
-  bool HasCUDie = DieArray.size() > 0;
+  bool HasCUDie = !DieArray.empty();
   extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
 
   if (DieArray.empty())
@@ -268,7 +278,7 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath)
-    : DWOFile(), DWOContext(), DWOU(nullptr) {
+    : DWOU(nullptr) {
   auto Obj = object::ObjectFile::createObjectFile(DWOPath);
   if (!Obj) {
     // TODO: Actually report errors helpfully.
@@ -404,4 +414,5 @@ const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
   assert(Kind == DW_SECT_TYPES);
   return Context.getTUIndex();
 }
-}
+
+} // end namespace llvm

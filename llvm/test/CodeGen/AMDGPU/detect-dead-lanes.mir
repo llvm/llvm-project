@@ -27,9 +27,9 @@
 # CHECK: S_NOP 0, implicit undef %5.sub0
 name: test0
 registers:
-  - { id: 0, class: sreg_32 }
-  - { id: 1, class: sreg_32 }
-  - { id: 2, class: sreg_32 }
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sreg_32_xm0 }
   - { id: 3, class: sreg_128 }
   - { id: 4, class: sreg_64 }
   - { id: 5, class: sreg_64 }
@@ -87,13 +87,13 @@ registers:
   - { id: 0, class: sreg_128 }
   - { id: 1, class: sreg_128 }
   - { id: 2, class: sreg_64 }
-  - { id: 3, class: sreg_32 }
+  - { id: 3, class: sreg_32_xm0 }
   - { id: 4, class: sreg_128 }
   - { id: 5, class: sreg_64 }
-  - { id: 6, class: sreg_32 }
-  - { id: 7, class: sreg_32 }
+  - { id: 6, class: sreg_32_xm0 }
+  - { id: 7, class: sreg_32_xm0 }
   - { id: 8, class: sreg_64 }
-  - { id: 9, class: sreg_32 }
+  - { id: 9, class: sreg_32_xm0 }
   - { id: 10, class: sreg_128 }
 body: |
   bb.0:
@@ -162,12 +162,12 @@ body: |
 
 name: test2
 registers:
-  - { id: 0, class: sreg_32 }
-  - { id: 1, class: sreg_32 }
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
   - { id: 2, class: sreg_64 }
   - { id: 3, class: sreg_128 }
-  - { id: 4, class: sreg_32 }
-  - { id: 5, class: sreg_32 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
   - { id: 6, class: sreg_64 }
   - { id: 7, class: sreg_128 }
   - { id: 8, class: sreg_64 }
@@ -260,7 +260,7 @@ body: |
 name: test5
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_32 }
+  - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_64 }
 body: |
   bb.0:
@@ -286,9 +286,9 @@ body: |
 name: loop0
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_32 }
-  - { id: 1, class: sreg_32 }
-  - { id: 2, class: sreg_32 }
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sreg_32_xm0 }
   - { id: 3, class: sreg_128 }
   - { id: 4, class: sreg_128 }
   - { id: 5, class: sreg_128 }
@@ -339,10 +339,10 @@ body: |
 name: loop1
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_32 }
-  - { id: 1, class: sreg_32 }
-  - { id: 2, class: sreg_32 }
-  - { id: 3, class: sreg_32 }
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sreg_32_xm0 }
+  - { id: 3, class: sreg_32_xm0 }
   - { id: 4, class: sreg_128 }
   - { id: 5, class: sreg_128 }
   - { id: 6, class: sreg_128 }
@@ -390,7 +390,7 @@ body: |
 name: loop2
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_32 }
+  - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_128 }
   - { id: 2, class: sreg_128 }
   - { id: 3, class: sreg_128 }

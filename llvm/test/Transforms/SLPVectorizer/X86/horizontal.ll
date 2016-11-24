@@ -510,3 +510,305 @@ for.end:
   ret i32 0
 }
 
+@arr_i32 = global [32 x i32] zeroinitializer, align 16
+@arr_float = global [32 x float] zeroinitializer, align 16
+
+define void @float_red_example4(float* %res) {
+; STORE-LABEL: @float_red_example4(
+; STORE:         [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([32 x float]* @arr_float to <4 x float>*), align 16
+; STORE:         [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP0]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
+; STORE:         store float [[TMP1]], float* %res, align 16
+; STORE-NEXT:    ret void
+;
+entry:
+  %0 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 0), align 16
+  %1 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 1), align 4
+  %add = fadd fast float %1, %0
+  %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 2), align 8
+  %add.1 = fadd fast float %2, %add
+  %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 3), align 4
+  %add.2 = fadd fast float %3, %add.1
+  store float %add.2, float* %res, align 16
+  ret void
+}
+
+define void @float_red_example8(float* %res) {
+; STORE-LABEL: @float_red_example8(
+; STORE:         [[TMP0:%.*]] = load <8 x float>, <8 x float>* bitcast ([32 x float]* @arr_float to <8 x float>*), align 16
+; STORE:         [[RDX_SHUF:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <8 x float> [[TMP0]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x float> [[BIN_RDX]], <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <8 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
+; STORE-NEXT:    [[TMP1:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
+; STORE:         store float [[TMP1]], float* %res, align 16
+; STORE-NEXT:    ret void
+;
+entry:
+  %0 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 0), align 16
+  %1 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 1), align 4
+  %add = fadd fast float %1, %0
+  %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 2), align 8
+  %add.1 = fadd fast float %2, %add
+  %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 3), align 4
+  %add.2 = fadd fast float %3, %add.1
+  %4 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 4), align 16
+  %add.3 = fadd fast float %4, %add.2
+  %5 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 5), align 4
+  %add.4 = fadd fast float %5, %add.3
+  %6 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 6), align 8
+  %add.5 = fadd fast float %6, %add.4
+  %7 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 7), align 4
+  %add.6 = fadd fast float %7, %add.5
+  store float %add.6, float* %res, align 16
+  ret void
+}
+
+define void @float_red_example16(float* %res) {
+; STORE-LABEL: @float_red_example16(
+; STORE:         [[TMP0:%.*]] = load <16 x float>, <16 x float>* bitcast ([32 x float]* @arr_float to <16 x float>*), align 16
+; STORE:         [[RDX_SHUF:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <16 x float> [[TMP0]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x float> [[BIN_RDX]], <16 x float> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <16 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <16 x float> [[BIN_RDX2]], <16 x float> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <16 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
+; STORE-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x float> [[BIN_RDX4]], <16 x float> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX6:%.*]] = fadd fast <16 x float> [[BIN_RDX4]], [[RDX_SHUF5]]
+; STORE-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[BIN_RDX6]], i32 0
+; STORE:         store float [[TMP1]], float* %res, align 16
+; STORE-NEXT:    ret void
+;
+entry:
+  %0 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 0), align 16
+  %1 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 1), align 4
+  %add = fadd fast float %1, %0
+  %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 2), align 8
+  %add.1 = fadd fast float %2, %add
+  %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 3), align 4
+  %add.2 = fadd fast float %3, %add.1
+  %4 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 4), align 16
+  %add.3 = fadd fast float %4, %add.2
+  %5 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 5), align 4
+  %add.4 = fadd fast float %5, %add.3
+  %6 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 6), align 8
+  %add.5 = fadd fast float %6, %add.4
+  %7 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 7), align 4
+  %add.6 = fadd fast float %7, %add.5
+  %8 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 8), align 16
+  %add.7 = fadd fast float %8, %add.6
+  %9 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 9), align 4
+  %add.8 = fadd fast float %9, %add.7
+  %10 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 10), align 8
+  %add.9 = fadd fast float %10, %add.8
+  %11 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 11), align 4
+  %add.10 = fadd fast float %11, %add.9
+  %12 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 12), align 16
+  %add.11 = fadd fast float %12, %add.10
+  %13 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 13), align 4
+  %add.12 = fadd fast float %13, %add.11
+  %14 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 14), align 8
+  %add.13 = fadd fast float %14, %add.12
+  %15 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr_float, i64 0, i64 15), align 4
+  %add.14 = fadd fast float %15, %add.13
+  store float %add.14, float* %res, align 16
+  ret void
+}
+
+define void @i32_red_example4(i32* %res) {
+; STORE-LABEL: @i32_red_example4(
+; STORE:         [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
+; STORE:         [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP0]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
+; STORE:         store i32 [[TMP1]], i32* %res, align 16
+; STORE-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %add = add nsw i32 %1, %0
+  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %add.1 = add nsw i32 %2, %add
+  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %add.2 = add nsw i32 %3, %add.1
+  store i32 %add.2, i32* %res, align 16
+  ret void
+}
+
+define void @i32_red_example8(i32* %res) {
+; STORE-LABEL: @i32_red_example8(
+; STORE:         [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
+; STORE:         [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP0]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = add <8 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
+; STORE-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
+; STORE:         store i32 [[TMP1]], i32* %res, align 16
+; STORE-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %add = add nsw i32 %1, %0
+  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %add.1 = add nsw i32 %2, %add
+  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %add.2 = add nsw i32 %3, %add.1
+  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %add.3 = add nsw i32 %4, %add.2
+  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %add.4 = add nsw i32 %5, %add.3
+  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %add.5 = add nsw i32 %6, %add.4
+  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %add.6 = add nsw i32 %7, %add.5
+  store i32 %add.6, i32* %res, align 16
+  ret void
+}
+
+define void @i32_red_example16(i32* %res) {
+; STORE-LABEL: @i32_red_example16(
+; STORE:         [[TMP0:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([32 x i32]* @arr_i32 to <16 x i32>*), align 16
+; STORE:         [[RDX_SHUF:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP0]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x i32> [[BIN_RDX]], <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = add <16 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <16 x i32> [[BIN_RDX2]], <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX4:%.*]] = add <16 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
+; STORE-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x i32> [[BIN_RDX4]], <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX6:%.*]] = add <16 x i32> [[BIN_RDX4]], [[RDX_SHUF5]]
+; STORE-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[BIN_RDX6]], i32 0
+; STORE:         store i32 [[TMP1]], i32* %res, align 16
+; STORE-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %add = add nsw i32 %1, %0
+  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %add.1 = add nsw i32 %2, %add
+  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %add.2 = add nsw i32 %3, %add.1
+  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %add.3 = add nsw i32 %4, %add.2
+  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %add.4 = add nsw i32 %5, %add.3
+  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %add.5 = add nsw i32 %6, %add.4
+  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %add.6 = add nsw i32 %7, %add.5
+  %8 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 8), align 16
+  %add.7 = add nsw i32 %8, %add.6
+  %9 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 9), align 4
+  %add.8 = add nsw i32 %9, %add.7
+  %10 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 10), align 8
+  %add.9 = add nsw i32 %10, %add.8
+  %11 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 11), align 4
+  %add.10 = add nsw i32 %11, %add.9
+  %12 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 12), align 16
+  %add.11 = add nsw i32 %12, %add.10
+  %13 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 13), align 4
+  %add.12 = add nsw i32 %13, %add.11
+  %14 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 14), align 8
+  %add.13 = add nsw i32 %14, %add.12
+  %15 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 15), align 4
+  %add.14 = add nsw i32 %15, %add.13
+  store i32 %add.14, i32* %res, align 16
+  ret void
+}
+
+define void @i32_red_example32(i32* %res) {
+; STORE-LABEL: @i32_red_example32(
+; STORE:         [[TMP0:%.*]] = load <32 x i32>, <32 x i32>* bitcast ([32 x i32]* @arr_i32 to <32 x i32>*), align 16
+; STORE:         [[RDX_SHUF:%.*]] = shufflevector <32 x i32> [[TMP0]], <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX:%.*]] = add <32 x i32> [[TMP0]], [[RDX_SHUF]]
+; STORE-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <32 x i32> [[BIN_RDX]], <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX2:%.*]] = add <32 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
+; STORE-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <32 x i32> [[BIN_RDX2]], <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX4:%.*]] = add <32 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
+; STORE-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <32 x i32> [[BIN_RDX4]], <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX6:%.*]] = add <32 x i32> [[BIN_RDX4]], [[RDX_SHUF5]]
+; STORE-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <32 x i32> [[BIN_RDX6]], <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; STORE-NEXT:    [[BIN_RDX8:%.*]] = add <32 x i32> [[BIN_RDX6]], [[RDX_SHUF7]]
+; STORE-NEXT:    [[TMP1:%.*]] = extractelement <32 x i32> [[BIN_RDX8]], i32 0
+; STORE:         store i32 [[TMP1]], i32* %res, align 16
+; STORE-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %add = add nsw i32 %1, %0
+  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %add.1 = add nsw i32 %2, %add
+  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %add.2 = add nsw i32 %3, %add.1
+  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %add.3 = add nsw i32 %4, %add.2
+  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %add.4 = add nsw i32 %5, %add.3
+  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %add.5 = add nsw i32 %6, %add.4
+  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %add.6 = add nsw i32 %7, %add.5
+  %8 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 8), align 16
+  %add.7 = add nsw i32 %8, %add.6
+  %9 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 9), align 4
+  %add.8 = add nsw i32 %9, %add.7
+  %10 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 10), align 8
+  %add.9 = add nsw i32 %10, %add.8
+  %11 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 11), align 4
+  %add.10 = add nsw i32 %11, %add.9
+  %12 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 12), align 16
+  %add.11 = add nsw i32 %12, %add.10
+  %13 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 13), align 4
+  %add.12 = add nsw i32 %13, %add.11
+  %14 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 14), align 8
+  %add.13 = add nsw i32 %14, %add.12
+  %15 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 15), align 4
+  %add.14 = add nsw i32 %15, %add.13
+  %16 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 16), align 16
+  %add.15 = add nsw i32 %16, %add.14
+  %17 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 17), align 4
+  %add.16 = add nsw i32 %17, %add.15
+  %18 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 18), align 8
+  %add.17 = add nsw i32 %18, %add.16
+  %19 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 19), align 4
+  %add.18 = add nsw i32 %19, %add.17
+  %20 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 20), align 16
+  %add.19 = add nsw i32 %20, %add.18
+  %21 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 21), align 4
+  %add.20 = add nsw i32 %21, %add.19
+  %22 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 22), align 8
+  %add.21 = add nsw i32 %22, %add.20
+  %23 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 23), align 4
+  %add.22 = add nsw i32 %23, %add.21
+  %24 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 24), align 16
+  %add.23 = add nsw i32 %24, %add.22
+  %25 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 25), align 4
+  %add.24 = add nsw i32 %25, %add.23
+  %26 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 26), align 8
+  %add.25 = add nsw i32 %26, %add.24
+  %27 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 27), align 4
+  %add.26 = add nsw i32 %27, %add.25
+  %28 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 28), align 16
+  %add.27 = add nsw i32 %28, %add.26
+  %29 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 29), align 4
+  %add.28 = add nsw i32 %29, %add.27
+  %30 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 30), align 8
+  %add.29 = add nsw i32 %30, %add.28
+  %31 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 31), align 4
+  %add.30 = add nsw i32 %31, %add.29
+  store i32 %add.30, i32* %res, align 16
+  ret void
+}
+

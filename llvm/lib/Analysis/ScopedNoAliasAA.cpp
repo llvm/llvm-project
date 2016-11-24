@@ -173,7 +173,7 @@ bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
   return true;
 }
 
-char ScopedNoAliasAA::PassID;
+AnalysisKey ScopedNoAliasAA::Key;
 
 ScopedNoAliasAAResult ScopedNoAliasAA::run(Function &F,
                                            FunctionAnalysisManager &AM) {

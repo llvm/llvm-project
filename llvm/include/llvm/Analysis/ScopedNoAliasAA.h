@@ -43,7 +43,7 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class ScopedNoAliasAA : public AnalysisInfoMixin<ScopedNoAliasAA> {
   friend AnalysisInfoMixin<ScopedNoAliasAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef ScopedNoAliasAAResult Result;

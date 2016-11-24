@@ -1626,7 +1626,7 @@ private:
 class ScalarEvolutionAnalysis
     : public AnalysisInfoMixin<ScalarEvolutionAnalysis> {
   friend AnalysisInfoMixin<ScalarEvolutionAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef ScalarEvolution Result;

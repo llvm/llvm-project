@@ -130,7 +130,6 @@ public:
     SCEI,
     BGP,
     BGQ,
-    Facebook,
     Freescale,
     IBM,
     ImaginationTechnologies,

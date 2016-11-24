@@ -7,16 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/NameMapBuilder.h"
-
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
+#include "llvm/DebugInfo/PDB/Raw/NameMapBuilder.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::pdb;
 
-NameMapBuilder::NameMapBuilder() {}
+NameMapBuilder::NameMapBuilder() = default;
 
 void NameMapBuilder::addMapping(StringRef Name, uint32_t Mapping) {
   StringDataBytes += Name.size() + 1;

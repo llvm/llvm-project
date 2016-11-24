@@ -26,15 +26,13 @@ define <8 x i16> @bar(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: bar:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpeqw %xmm1, %xmm0
-; SSE-NEXT:    psrlw $15, %xmm0
-; SSE-NEXT:    psllw $5, %xmm0
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: bar:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpsllw $5, %xmm0, %xmm0
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
   %icmp = icmp eq <8 x i16> %a, %b

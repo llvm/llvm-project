@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,5 +31,4 @@ void DWARFCompileUnit::dump(raw_ostream &OS) {
 }
 
 // VTable anchor.
-DWARFCompileUnit::~DWARFCompileUnit() {
-}
+DWARFCompileUnit::~DWARFCompileUnit() = default;

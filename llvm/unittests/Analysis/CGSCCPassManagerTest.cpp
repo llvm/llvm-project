@@ -22,15 +22,12 @@ using namespace llvm;
 
 namespace {
 
-class TestModuleAnalysis {
+class TestModuleAnalysis : public AnalysisInfoMixin<TestModuleAnalysis> {
 public:
   struct Result {
     Result(int Count) : FunctionCount(Count) {}
     int FunctionCount;
   };
-
-  static void *ID() { return (void *)&PassID; }
-  static StringRef name() { return "TestModuleAnalysis"; }
 
   TestModuleAnalysis(int &Runs) : Runs(Runs) {}
 
@@ -40,22 +37,20 @@ public:
   }
 
 private:
-  static char PassID;
+  friend AnalysisInfoMixin<TestModuleAnalysis>;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestModuleAnalysis::PassID;
+AnalysisKey TestModuleAnalysis::Key;
 
-class TestSCCAnalysis {
+class TestSCCAnalysis : public AnalysisInfoMixin<TestSCCAnalysis> {
 public:
   struct Result {
     Result(int Count) : FunctionCount(Count) {}
     int FunctionCount;
   };
-
-  static void *ID() { return (void *)&PassID; }
-  static StringRef name() { return "TestSCCAnalysis"; }
 
   TestSCCAnalysis(int &Runs) : Runs(Runs) {}
 
@@ -65,22 +60,20 @@ public:
   }
 
 private:
-  static char PassID;
+  friend AnalysisInfoMixin<TestSCCAnalysis>;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestSCCAnalysis::PassID;
+AnalysisKey TestSCCAnalysis::Key;
 
-class TestFunctionAnalysis {
+class TestFunctionAnalysis : public AnalysisInfoMixin<TestFunctionAnalysis> {
 public:
   struct Result {
     Result(int Count) : InstructionCount(Count) {}
     int InstructionCount;
   };
-
-  static void *ID() { return (void *)&PassID; }
-  static StringRef name() { return "TestFunctionAnalysis"; }
 
   TestFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
@@ -95,21 +88,20 @@ public:
   }
 
 private:
-  static char PassID;
+  friend AnalysisInfoMixin<TestFunctionAnalysis>;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestFunctionAnalysis::PassID;
+AnalysisKey TestFunctionAnalysis::Key;
 
-class TestImmutableFunctionAnalysis {
+class TestImmutableFunctionAnalysis
+    : public AnalysisInfoMixin<TestImmutableFunctionAnalysis> {
 public:
   struct Result {
     bool invalidate(Function &, const PreservedAnalyses &) { return false; }
   };
-
-  static void *ID() { return (void *)&PassID; }
-  static StringRef name() { return "TestImmutableFunctionAnalysis"; }
 
   TestImmutableFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
@@ -119,12 +111,13 @@ public:
   }
 
 private:
-  static char PassID;
+  friend AnalysisInfoMixin<TestImmutableFunctionAnalysis>;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestImmutableFunctionAnalysis::PassID;
+AnalysisKey TestImmutableFunctionAnalysis::Key;
 
 struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
   template <typename T> LambdaSCCPass(T &&Arg) : Func(std::forward<T>(Arg)) {}

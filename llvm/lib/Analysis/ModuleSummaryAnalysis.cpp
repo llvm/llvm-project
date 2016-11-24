@@ -305,7 +305,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
   return Index;
 }
 
-char ModuleSummaryIndexAnalysis::PassID;
+AnalysisKey ModuleSummaryIndexAnalysis::Key;
 
 ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {

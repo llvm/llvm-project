@@ -256,7 +256,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
     UseAllLinkageNames = DwarfLinkageNames == AllLinkageNames;
 
   unsigned DwarfVersionNumber = Asm->TM.Options.MCOptions.DwarfVersion;
-  DwarfVersion = DwarfVersionNumber ? DwarfVersionNumber
+  unsigned DwarfVersion = DwarfVersionNumber ? DwarfVersionNumber
                                     : MMI->getModule()->getDwarfVersion();
   // Use dwarf 4 by default if nothing is requested.
   DwarfVersion = DwarfVersion ? DwarfVersion : dwarf::DWARF_VERSION;
@@ -1197,7 +1197,7 @@ void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
     Fn = Scope->getFilename();
     Dir = Scope->getDirectory();
     if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
-      if (DwarfVersion >= 4)
+      if (getDwarfVersion() >= 4)
         Discriminator = LBF->getDiscriminator();
 
     unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
@@ -1415,8 +1415,7 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                               const DebugLocEntry::Value &Value,
                               unsigned PieceOffsetInBits) {
   DIExpressionCursor ExprCursor(Value.getExpression());
-  DebugLocDwarfExpression DwarfExpr(AP.getDwarfDebug()->getDwarfVersion(),
-                                    Streamer);
+  DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer);
   // Regular entry.
   if (Value.isInt()) {
     if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
@@ -1467,8 +1466,7 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
       assert(Offset <= PieceOffset && "overlapping or duplicate pieces");
       if (Offset < PieceOffset) {
         // The DWARF spec seriously mandates pieces with no locations for gaps.
-        DebugLocDwarfExpression Expr(AP.getDwarfDebug()->getDwarfVersion(),
-                                     Streamer);
+        DebugLocDwarfExpression Expr(AP.getDwarfVersion(), Streamer);
         Expr.AddOpPiece(PieceOffset-Offset, 0);
         Offset += PieceOffset-Offset;
       }
@@ -1982,4 +1980,8 @@ void DwarfDebug::addAccelType(StringRef Name, const DIE &Die, char Flags) {
   if (!useDwarfAccelTables())
     return;
   AccelTypes.AddName(InfoHolder.getStringPool().getEntry(*Asm, Name), &Die);
+}
+
+uint16_t DwarfDebug::getDwarfVersion() const {
+  return Asm->OutStreamer->getContext().getDwarfVersion();
 }

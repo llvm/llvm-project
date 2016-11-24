@@ -47,7 +47,7 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
   friend AnalysisInfoMixin<TypeBasedAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef TypeBasedAAResult Result;

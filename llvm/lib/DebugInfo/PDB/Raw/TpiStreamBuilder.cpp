@@ -1,14 +1,32 @@
-#include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
+//===- TpiStreamBuilder.cpp -   -------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::msf;
@@ -19,7 +37,7 @@ TpiStreamBuilder::TpiStreamBuilder(MSFBuilder &Msf, uint32_t StreamIdx)
     : Msf(Msf), Allocator(Msf.getAllocator()), Header(nullptr), Idx(StreamIdx) {
 }
 
-TpiStreamBuilder::~TpiStreamBuilder() {}
+TpiStreamBuilder::~TpiStreamBuilder() = default;
 
 void TpiStreamBuilder::setVersionHeader(PdbRaw_TpiVer Version) {
   VerHeader = Version;

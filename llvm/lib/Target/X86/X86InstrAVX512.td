@@ -6546,13 +6546,20 @@ def : Pat<(v2f64 (X86cvtudq2pd (v4i32 VR128X:$src1))),
 }
 
 let Predicates = [HasAVX512, HasVLX] in {
-  let AddedComplexity = 15 in
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttpd2dq (v2f64 VR128X:$src)))))),
-            (VCVTTPD2DQZ128rr VR128:$src)>;
-  def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttpd2udq (v2f64 VR128X:$src)))))))),
-            (VCVTTPD2UDQZ128rr VR128:$src)>;
+  let AddedComplexity = 15 in {
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                (v4i32 (X86cvtp2Int (v2f64 VR128X:$src)))))),
+              (VCVTPD2DQZ128rr VR128:$src)>;
+    def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvtp2UInt (v2f64 VR128X:$src)))))))),
+              (VCVTPD2UDQZ128rr VR128:$src)>;
+    def : Pat<(X86vzmovl (v2i64 (bitconvert
+                                (v4i32 (X86cvttpd2dq (v2f64 VR128X:$src)))))),
+              (VCVTTPD2DQZ128rr VR128:$src)>;
+    def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
+                                 (v4i32 (X86cvttpd2udq (v2f64 VR128X:$src)))))))),
+              (VCVTTPD2UDQZ128rr VR128:$src)>;
+  }
 }
 
 let Predicates = [HasAVX512] in {
@@ -6560,6 +6567,48 @@ let Predicates = [HasAVX512] in {
             (VCVTPD2PSZrm addr:$src)>;
   def : Pat<(v8f64 (extloadv8f32 addr:$src)),
             (VCVTPS2PDZrm addr:$src)>;
+}
+
+let Predicates = [HasDQI, NoVLX] in {
+def : Pat<(v4i64 (fp_to_sint (v4f32 VR128X:$src1))),
+          (EXTRACT_SUBREG (v8i64 (VCVTTPS2QQZrr
+           (v8f32 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR128X:$src1, sub_xmm)))), sub_ymm)>;
+
+def : Pat<(v4i64 (fp_to_sint (v4f64 VR256X:$src1))),
+          (EXTRACT_SUBREG (v8i64 (VCVTTPD2QQZrr
+           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
+
+def : Pat<(v4i64 (fp_to_uint (v4f32 VR128X:$src1))),
+          (EXTRACT_SUBREG (v8i64 (VCVTTPS2UQQZrr
+           (v8f32 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR128X:$src1, sub_xmm)))), sub_ymm)>;
+
+def : Pat<(v4i64 (fp_to_uint (v4f64 VR256X:$src1))),
+          (EXTRACT_SUBREG (v8i64 (VCVTTPD2UQQZrr
+           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
+
+def : Pat<(v4f32 (sint_to_fp (v4i64 VR256X:$src1))),
+          (EXTRACT_SUBREG (v8f32 (VCVTQQ2PSZrr
+           (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_xmm)>;
+
+def : Pat<(v4f64 (sint_to_fp (v4i64 VR256X:$src1))),
+          (EXTRACT_SUBREG (v8f64 (VCVTQQ2PDZrr
+           (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
+
+def : Pat<(v4f32 (uint_to_fp (v4i64 VR256X:$src1))),
+          (EXTRACT_SUBREG (v8f32 (VCVTUQQ2PSZrr
+           (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_xmm)>;
+
+def : Pat<(v4f64 (uint_to_fp (v4i64 VR256X:$src1))),
+          (EXTRACT_SUBREG (v8f64 (VCVTUQQ2PDZrr
+           (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
+                                  VR256X:$src1, sub_ymm)))), sub_ymm)>;
 }
 
 //===----------------------------------------------------------------------===//

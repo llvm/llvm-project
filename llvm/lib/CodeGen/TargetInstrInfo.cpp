@@ -515,6 +515,31 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   assert(MBB && "foldMemoryOperand needs an inserted instruction");
   MachineFunction &MF = *MBB->getParent();
 
+  // If we're not folding a load into a subreg, the size of the load is the
+  // size of the spill slot. But if we are, we need to figure out what the
+  // actual load size is.
+  int64_t MemSize = 0;
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  if (Flags & MachineMemOperand::MOStore) {
+    MemSize = MFI.getObjectSize(FI);
+  } else {
+    for (unsigned Idx : Ops) {
+      int64_t OpSize = MFI.getObjectSize(FI);
+
+      if (auto SubReg = MI.getOperand(Idx).getSubReg()) {
+        unsigned SubRegSize = TRI->getSubRegIdxSize(SubReg);
+        if (SubRegSize > 0 && !(SubRegSize % 8))
+          OpSize = SubRegSize / 8;
+      }
+
+      MemSize = std::max(MemSize, OpSize);
+    }
+  }
+
+  assert(MemSize && "Did not expect a zero-sized stack slot");
+
   MachineInstr *NewMI = nullptr;
 
   if (MI.getOpcode() == TargetOpcode::STACKMAP ||
@@ -538,10 +563,9 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     assert((!(Flags & MachineMemOperand::MOLoad) ||
             NewMI->mayLoad()) &&
            "Folded a use to a non-load!");
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
     assert(MFI.getObjectOffset(FI) != -1);
     MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), Flags, MFI.getObjectSize(FI),
+        MachinePointerInfo::getFixedStack(MF, FI), Flags, MemSize,
         MFI.getObjectAlignment(FI));
     NewMI->addMemOperand(MF, MMO);
 
@@ -558,7 +582,6 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
 
   const MachineOperand &MO = MI.getOperand(1 - Ops[0]);
   MachineBasicBlock::iterator Pos = MI;
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   if (Flags == MachineMemOperand::MOStore)
     storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI);

@@ -1128,7 +1128,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<TargetIRAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
   /// \brief The callback used to produce a result.
   ///

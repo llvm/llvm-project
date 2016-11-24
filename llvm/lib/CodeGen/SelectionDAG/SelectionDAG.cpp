@@ -3498,25 +3498,22 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   EVT SVT = VT.getScalarType();
   SmallVector<SDValue, 4> Outputs;
   for (unsigned I = 0, E = BV1->getNumOperands(); I != E; ++I) {
-    ConstantSDNode *V1 = dyn_cast<ConstantSDNode>(BV1->getOperand(I));
-    ConstantSDNode *V2 = dyn_cast<ConstantSDNode>(BV2->getOperand(I));
-    if (!V1 || !V2) // Not a constant, bail.
-      return SDValue();
-
-    if (V1->isOpaque() || V2->isOpaque())
-      return SDValue();
+    SDValue V1 = BV1->getOperand(I);
+    SDValue V2 = BV2->getOperand(I);
 
     // Avoid BUILD_VECTOR nodes that perform implicit truncation.
-    // FIXME: This is valid and could be handled by truncating the APInts.
+    // FIXME: This is valid and could be handled by truncation.
     if (V1->getValueType(0) != SVT || V2->getValueType(0) != SVT)
       return SDValue();
 
     // Fold one vector element.
-    std::pair<APInt, bool> Folded = FoldValue(Opcode, V1->getAPIntValue(),
-                                              V2->getAPIntValue());
-    if (!Folded.second)
+    SDValue ScalarResult = getNode(Opcode, DL, SVT, V1, V2);
+
+    // Scalar folding only succeeded if the result is a constant or UNDEF.
+    if (!ScalarResult.isUndef() && ScalarResult.getOpcode() != ISD::Constant &&
+        ScalarResult.getOpcode() != ISD::ConstantFP)
       return SDValue();
-    Outputs.push_back(getConstant(Folded.first, DL, SVT));
+    Outputs.push_back(ScalarResult);
   }
 
   assert(VT.getVectorNumElements() == Outputs.size() &&

@@ -14,6 +14,7 @@
 #ifndef LLVM_OBJECT_IROBJECTFILE_H
 #define LLVM_OBJECT_IROBJECTFILE_H
 
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Object/SymbolicFile.h"
 
 namespace llvm {
@@ -28,7 +29,14 @@ class ObjectFile;
 class IRObjectFile : public SymbolicFile {
   std::unique_ptr<Module> M;
   std::unique_ptr<Mangler> Mang;
-  std::vector<std::pair<std::string, uint32_t>> AsmSymbols;
+  typedef std::pair<std::string, uint32_t> AsmSymbol;
+  SpecificBumpPtrAllocator<AsmSymbol> AsmSymbols;
+
+  typedef PointerUnion<GlobalValue *, AsmSymbol *> Sym;
+  std::vector<Sym> SymTab;
+  static Sym getSym(DataRefImpl &Symb) {
+    return *reinterpret_cast<Sym *>(Symb.p);
+  }
 
 public:
   IRObjectFile(MemoryBufferRef Object, std::unique_ptr<Module> M);
@@ -51,6 +59,8 @@ public:
     return *M;
   }
   std::unique_ptr<Module> takeModule();
+
+  StringRef getTargetTriple() const;
 
   static inline bool classof(const Binary *v) {
     return v->isIR();

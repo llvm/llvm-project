@@ -6843,6 +6843,14 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   if (!MF.getFunction()->optForSize() && hasPartialRegUpdate(MI.getOpcode()))
     return nullptr;
 
+  // Don't fold subreg spills, or reloads that use a high subreg.
+  for (auto Op : Ops) {
+    MachineOperand &MO = MI.getOperand(Op);
+    auto SubReg = MO.getSubReg();
+    if (SubReg && (MO.isDef() || SubReg == X86::sub_8bit_hi))
+      return nullptr;
+  }
+
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Size = MFI.getObjectSize(FrameIndex);
   unsigned Alignment = MFI.getObjectAlignment(FrameIndex);
@@ -6967,6 +6975,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
     LiveIntervals *LIS) const {
+
+  // TODO: Support the case where LoadMI loads a wide register, but MI
+  // only uses a subreg.
+  for (auto Op : Ops) {
+    if (MI.getOperand(Op).getSubReg())
+      return nullptr;
+  }
+
   // If loading from a FrameIndex, fold directly from the FrameIndex.
   unsigned NumOps = LoadMI.getDesc().getNumOperands();
   int FrameIndex;

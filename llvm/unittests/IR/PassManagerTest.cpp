@@ -41,12 +41,12 @@ public:
 
 private:
   friend AnalysisInfoMixin<TestFunctionAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestFunctionAnalysis::PassID;
+AnalysisKey TestFunctionAnalysis::Key;
 
 class TestModuleAnalysis : public AnalysisInfoMixin<TestModuleAnalysis> {
 public:
@@ -67,12 +67,12 @@ public:
 
 private:
   friend AnalysisInfoMixin<TestModuleAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestModuleAnalysis::PassID;
+AnalysisKey TestModuleAnalysis::Key;
 
 struct TestModulePass : PassInfoMixin<TestModulePass> {
   TestModulePass(int &RunCount) : RunCount(RunCount) {}
@@ -351,10 +351,10 @@ public:
 
 private:
   friend AnalysisInfoMixin<CustomizedAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 };
 
-char CustomizedAnalysis::PassID;
+AnalysisKey CustomizedAnalysis::Key;
 
 struct CustomizedPass : PassInfoMixin<CustomizedPass> {
   std::function<void(CustomizedAnalysis::Result &, int &)> Callback;

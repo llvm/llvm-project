@@ -120,6 +120,11 @@ def SCC_CLASS : RegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
   let isAllocatable = 0;
 }
 
+def M0_CLASS : RegisterClass<"AMDGPU", [i32], 32, (add M0)> {
+  let CopyCost = 1;
+  let isAllocatable = 0;
+}
+
 // TODO: Do we need to set DwarfRegAlias on register tuples?
 
 // SGPR 32-bit registers
@@ -259,8 +264,9 @@ def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32, i16, f16], 32,
 
 // Register class for all scalar registers (SGPRs + Special Registers)
 def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16], 32,
-  (add SReg_32_XM0, M0, VCC_LO, VCC_HI, EXEC_LO, EXEC_HI, FLAT_SCR_LO, FLAT_SCR_HI)> {
+  (add SReg_32_XM0, M0_CLASS)> {
   let AllocationPriority = 1;
+  let isAllocatable = 0;
 }
 
 def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add SGPR_64Regs)> {

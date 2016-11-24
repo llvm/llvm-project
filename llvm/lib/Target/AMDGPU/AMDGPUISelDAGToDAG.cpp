@@ -253,7 +253,7 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N) const {
 static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
   switch (NumVectorElts) {
   case 1:
-    return AMDGPU::SReg_32RegClassID;
+    return AMDGPU::SReg_32_XM0RegClassID;
   case 2:
     return AMDGPU::SReg_64RegClassID;
   case 4:

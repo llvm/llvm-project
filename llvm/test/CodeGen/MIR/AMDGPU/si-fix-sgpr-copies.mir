@@ -6,14 +6,14 @@
 name: phi_visit_order
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_32 }
+  - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_64 }
-  - { id: 2, class: sreg_32 }
+  - { id: 2, class: sreg_32_xm0 }
   - { id: 7, class: vgpr_32 }
-  - { id: 8, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
   - { id: 9, class: vgpr_32 }
   - { id: 10, class: sreg_64 }
-  - { id: 11, class: sreg_32 }
+  - { id: 11, class: sreg_32_xm0 }
 
 body: |
   ; GCN-LABEL: name: phi_visit_order
