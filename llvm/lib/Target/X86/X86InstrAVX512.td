@@ -2124,7 +2124,7 @@ let Predicates = [HasAVX512] in {
             (COPY_TO_REGCLASS (i16 (EXTRACT_SUBREG $src, sub_16bit)), VK1)>;
 
   def : Pat<(i1 (trunc (i8 GR8:$src))),
-            (COPY_TO_REGCLASS (i16 (SUBREG_TO_REG (i64 0), (AND8ri8 $src, (i8 1)),
+            (COPY_TO_REGCLASS (i16 (SUBREG_TO_REG (i64 0), (AND8ri $src, (i8 1)),
                                     sub_8bit)), VK1)>;
 
   def : Pat<(i1 (trunc (i8 (assertzext_i1 GR8:$src)))),
