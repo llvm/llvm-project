@@ -1025,6 +1025,10 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     addInputSec(In<ELFT>::EhFrameHdr);
   if (Out<ELFT>::Bss->Size > 0)
     Add(Out<ELFT>::Bss);
+
+  auto OS = dyn_cast_or_null<OutputSection<ELFT>>(findSection(".ARM.exidx"));
+  if (OS && !OS->Sections.empty() && !Config->Relocatable)
+    OS->addSection(make<ARMExidxSentinelSection<ELFT>>());
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end

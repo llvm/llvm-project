@@ -175,14 +175,14 @@ protected:
   /// string value.  This allows the linker to combine the strings between
   /// different modules.  Used for EH typeinfo names, selector strings, and a
   /// few other things.
-  llvm::Constant *ExportUniqueString(const std::string &Str,
-                                     const std::string prefix) {
-    std::string name = prefix + Str;
-    auto *ConstStr = TheModule.getGlobalVariable(name);
+  llvm::Constant *ExportUniqueString(const std::string &Str, StringRef Prefix) {
+    std::string Name = Prefix.str() + Str;
+    auto *ConstStr = TheModule.getGlobalVariable(Name);
     if (!ConstStr) {
       llvm::Constant *value = llvm::ConstantDataArray::getString(VMContext,Str);
       ConstStr = new llvm::GlobalVariable(TheModule, value->getType(), true,
-              llvm::GlobalValue::LinkOnceODRLinkage, value, prefix + Str);
+                                          llvm::GlobalValue::LinkOnceODRLinkage,
+                                          value, Name);
     }
     return llvm::ConstantExpr::getGetElementPtr(ConstStr->getValueType(),
                                                 ConstStr, Zeros);

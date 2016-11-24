@@ -89,6 +89,43 @@ void test1() {
 // CHECK-NOALTIVEC: error: use of undeclared identifier 'vf'
 // CHECK-NOALTIVEC: vf = vec_abs(vf) 
 
+  vsc = vec_nabs(vsc);
+// CHECK: sub <16 x i8> zeroinitializer
+// CHECK: @llvm.ppc.altivec.vminsb
+// CHECK-LE: sub <16 x i8> zeroinitializer
+// CHECK-LE: @llvm.ppc.altivec.vminsb
+
+  vs = vec_nabs(vs);
+// CHECK: sub <8 x i16> zeroinitializer
+// CHECK: @llvm.ppc.altivec.vminsh
+// CHECK-LE: sub <8 x i16> zeroinitializer
+// CHECK-LE: @llvm.ppc.altivec.vminsh
+
+  vi = vec_nabs(vi);
+// CHECK: sub <4 x i32> zeroinitializer
+// CHECK: @llvm.ppc.altivec.vminsw
+// CHECK-LE: sub <4 x i32> zeroinitializer
+// CHECK-LE: @llvm.ppc.altivec.vminsw
+
+  res_vi = vec_neg(vi);
+// CHECK: sub <4 x i32> zeroinitializer, {{%[0-9]+}}
+// CHECK-LE: sub <4 x i32> zeroinitializer, {{%[0-9]+}}
+// CHECK-NOALTIVEC: error: use of undeclared identifier 'vi'
+// CHECK-NOALTIVEC: vi = vec_neg(vi);
+
+  res_vs = vec_neg(vs);
+// CHECK: sub <8 x i16> zeroinitializer, {{%[0-9]+}}
+// CHECK-LE: sub <8 x i16> zeroinitializer, {{%[0-9]+}}
+// CHECK-NOALTIVEC: error: use of undeclared identifier 'vs'
+// CHECK-NOALTIVEC: res_vs = vec_neg(vs);
+
+  res_vsc = vec_neg(vsc);
+// CHECK: sub <16 x i8> zeroinitializer, {{%[0-9]+}}
+// CHECK-LE: sub <16 x i8> zeroinitializer, {{%[0-9]+}}
+// CHECK-NOALTIVEC: error: use of undeclared identifier 'vsc'
+// CHECK-NOALTIVEC: res_vsc = vec_neg(vsc);
+
+
   /* vec_abs */
   vsc = vec_abss(vsc);
 // CHECK: @llvm.ppc.altivec.vsubsbs
@@ -184,6 +221,22 @@ void test1() {
   res_vf  = vec_add(vf, vf);
 // CHECK: fadd <4 x float>
 // CHECK-LE: fadd <4 x float>
+
+  res_vi  = vec_adde(vi, vi, vi);
+// CHECK: and <4 x i32>
+// CHECK: add <4 x i32>
+// CHECK: add <4 x i32>
+// CHECK-LE: and <4 x i32>
+// CHECK-LE: add <4 x i32>
+// CHECK-LE: add <4 x i32>
+
+  res_vui  = vec_adde(vui, vui, vui);
+// CHECK: and <4 x i32>
+// CHECK: add <4 x i32>
+// CHECK: add <4 x i32>
+// CHECK-LE: and <4 x i32>
+// CHECK-LE: add <4 x i32>
+// CHECK-LE: add <4 x i32>
 
   res_vsc = vec_vaddubm(vsc, vsc);
 // CHECK: add <16 x i8>
@@ -5273,6 +5326,8 @@ void test6() {
 // CHECK: fsub <4 x float>
 // CHECK-LE: fsub <4 x float>
 
+  
+
   res_vsc = vec_vsububm(vsc, vsc);
 // CHECK: sub <16 x i8>
 // CHECK-LE: sub <16 x i8>
@@ -5354,6 +5409,10 @@ void test6() {
 // CHECK: @llvm.ppc.altivec.vsubcuw
 // CHECK-LE: @llvm.ppc.altivec.vsubcuw
 
+  res_vi = vec_subc(vi, vi);
+// CHECK: @llvm.ppc.altivec.vsubcuw
+// CHECK-LE: @llvm.ppc.altivec.vsubcuw
+
   res_vui = vec_vsubcuw(vui, vui);
 // CHECK: @llvm.ppc.altivec.vsubcuw
 // CHECK-LE: @llvm.ppc.altivec.vsubcuw
@@ -5430,6 +5489,26 @@ void test6() {
   res_vui = vec_subs(vui, vbi);
 // CHECK: @llvm.ppc.altivec.vsubuws
 // CHECK-LE: @llvm.ppc.altivec.vsubuws
+
+  res_vi = vec_sube(vi, vi, vi);
+// CHECK: and <4 x i32>
+// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: add <4 x i32>
+// CHECK: add <4 x i32>
+// CHECK-LE: and <4 x i32>
+// CHECK-LE: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: add <4 x i32>
+// CHECK-LE: add <4 x i32>
+
+  res_vui = vec_sube(vui, vui, vui);
+// CHECK: and <4 x i32>
+// CHECK: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: add <4 x i32>
+// CHECK: add <4 x i32>
+// CHECK-LE: and <4 x i32>
+// CHECK-LE: xor <4 x i32> {{%[0-9]+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: add <4 x i32>
+// CHECK-LE: add <4 x i32>
 
   res_vsc = vec_vsubsbs(vsc, vsc);
 // CHECK: @llvm.ppc.altivec.vsubsbs

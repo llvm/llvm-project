@@ -24,11 +24,78 @@
 namespace clang {
 namespace move {
 
-// FIXME: Make it support more types, e.g. function definitions.
-// Currently only support moving class definition.
+// A reporter which collects and reports declarations in old header.
+class DeclarationReporter {
+public:
+  DeclarationReporter() = default;
+  ~DeclarationReporter() = default;
+
+  void reportDeclaration(llvm::StringRef DeclarationName,
+                         llvm::StringRef Type) {
+    DeclarationList.emplace_back(DeclarationName, Type);
+  };
+
+  // A <DeclarationName, DeclarationKind> pair.
+  // The DeclarationName is a fully qualified name for the declaration, like
+  // A::B::Foo. The DeclarationKind is a string represents the kind of the
+  // declaration, currently only "Function" and "Class" are supported.
+  typedef std::pair<std::string, std::string> DeclarationPair;
+
+  const std::vector<DeclarationPair> getDeclarationList() const {
+    return DeclarationList;
+  }
+
+private:
+  std::vector<DeclarationPair> DeclarationList;
+};
+
+// Specify declarations being moved. It contains all information of the moved
+// declarations.
+struct MoveDefinitionSpec {
+  // The list of fully qualified names, e.g. Foo, a::Foo, b::Foo.
+  SmallVector<std::string, 4> Names;
+  // The file path of old header, can be relative path and absolute path.
+  std::string OldHeader;
+  // The file path of old cc, can be relative path and absolute path.
+  std::string OldCC;
+  // The file path of new header, can be relative path and absolute path.
+  std::string NewHeader;
+  // The file path of new cc, can be relative path and absolute path.
+  std::string NewCC;
+  // Whether old.h depends on new.h. If true, #include "new.h" will be added
+  // in old.h.
+  bool OldDependOnNew = false;
+  // Whether new.h depends on old.h. If true, #include "old.h" will be added
+  // in new.h.
+  bool NewDependOnOld = false;
+};
+
+// A Context which contains extra options which are used in ClangMoveTool.
+struct ClangMoveContext {
+  MoveDefinitionSpec Spec;
+  // The Key is file path, value is the replacements being applied to the file.
+  std::map<std::string, tooling::Replacements> &FileToReplacements;
+  // The original working directory where the local clang-move binary runs.
+  //
+  // clang-move will change its current working directory to the build
+  // directory when analyzing the source file. We save the original working
+  // directory in order to get the absolute file path for the fields in Spec.
+  std::string OriginalRunningDirectory;
+  // The name of a predefined code style.
+  std::string FallbackStyle;
+  // Whether dump all declarations in old header.
+  bool DumpDeclarations;
+};
+
+// This tool is used to move class/function definitions from the given source
+// files (old.h/cc) to new files (new.h/cc). When moving a class, all its
+// members are also moved. In addition, all helper functions (anonymous
+// namespace declarations, static declarations, using declarations) in old.cc
+// and forward class declarations in old.h are copied to the new files.
+// The goal of this tool is to make the new files as compliable as possible.
 //
-// When moving all class declarations in old header, all code in old.h/cc will
-// be moved.
+// Note: When all declarations in old header are being moved, all code in
+// old.h/cc will be moved, which means old.h/cc are empty.
 class ClangMoveTool : public ast_matchers::MatchFinder::MatchCallback {
 public:
   // Information about the declaration being moved.
@@ -42,29 +109,8 @@ public:
         : Decl(Decl), SM(SM) {}
   };
 
-  struct MoveDefinitionSpec {
-    // The list of fully qualified names, e.g. Foo, a::Foo, b::Foo.
-    SmallVector<std::string, 4> Names;
-    // The file path of old header, can be relative path and absolute path.
-    std::string OldHeader;
-    // The file path of old cc, can be relative path and absolute path.
-    std::string OldCC;
-    // The file path of new header, can be relative path and absolute path.
-    std::string NewHeader;
-    // The file path of new cc, can be relative path and absolute path.
-    std::string NewCC;
-    // Whether old.h depends on new.h. If true, #include "new.h" will be added
-    // in old.h.
-    bool OldDependOnNew = false;
-    // Whether new.h depends on old.h. If true, #include "old.h" will be added
-    // in new.h.
-    bool NewDependOnOld = false;
-  };
-
-  ClangMoveTool(
-      const MoveDefinitionSpec &MoveSpec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements,
-      llvm::StringRef OriginalRunningDirectory, llvm::StringRef Style);
+  ClangMoveTool(ClangMoveContext *const Context,
+                DeclarationReporter *const Reporter);
 
   void registerMatchers(ast_matchers::MatchFinder *Finder);
 
@@ -80,8 +126,8 @@ public:
   /// \param SearchPath The search path which was used to find the IncludeHeader
   /// in the file system. It can be a relative path or an absolute path.
   /// \param FileName The name of file where the IncludeHeader comes from.
-  /// \param IncludeFilenameRange The source range for the written file name in #include
-  ///  (i.e. "old.h" for #include "old.h") in old.cc.
+  /// \param IncludeFilenameRange The source range for the written file name in
+  /// #include (i.e. "old.h" for #include "old.h") in old.cc.
   /// \param SM The SourceManager.
   void addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
                    llvm::StringRef SearchPath, llvm::StringRef FileName,
@@ -108,12 +154,9 @@ private:
   void moveClassDefinitionToNewFiles();
   void moveAll(SourceManager& SM, StringRef OldFile, StringRef NewFile);
 
-  MoveDefinitionSpec Spec;
   // Stores all MatchCallbacks created by this tool.
   std::vector<std::unique_ptr<ast_matchers::MatchFinder::MatchCallback>>
       MatchCallbacks;
-  // The Key is file path, value is the replacements being applied to the file.
-  std::map<std::string, tooling::Replacements> &FileToReplacements;
   // All declarations (the class decl being moved, forward decls) that need to
   // be moved/copy to the new files, saving in an AST-visited order.
   std::vector<MovedDecl> MovedDecls;
@@ -123,14 +166,6 @@ private:
   std::vector<std::string> HeaderIncludes;
   // The #includes in old_cc.cc.
   std::vector<std::string> CCIncludes;
-  // The original working directory where the local clang-move binary runs.
-  //
-  // clang-move will change its current working directory to the build
-  // directory when analyzing the source file. We save the original working
-  // directory in order to get the absolute file path for the fields in Spec.
-  std::string OriginalRunningDirectory;
-  // The name of a predefined code style.
-  std::string FallbackStyle;
   // The unmoved named declarations in old header.
   llvm::SmallPtrSet<const NamedDecl*, 8> UnremovedDeclsInOldHeader;
   /// The source range for the written file name in #include (i.e. "old.h" for
@@ -140,16 +175,17 @@ private:
   /// Mapping from FilePath to FileID, which can be used in post processes like
   /// cleanup around replacements.
   llvm::StringMap<FileID> FilePathToFileID;
+  /// A context contains all running options. It is not owned.
+  ClangMoveContext *const Context;
+  /// A reporter to report all declarations from old header. It is not owned.
+  DeclarationReporter *const Reporter;
 };
 
 class ClangMoveAction : public clang::ASTFrontendAction {
 public:
-  ClangMoveAction(
-      const ClangMoveTool::MoveDefinitionSpec &spec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements,
-      llvm::StringRef OriginalRunningDirectory, llvm::StringRef FallbackStyle)
-      : MoveTool(spec, FileToReplacements, OriginalRunningDirectory,
-                 FallbackStyle) {
+  ClangMoveAction(ClangMoveContext *const Context,
+                  DeclarationReporter *const Reporter)
+      : MoveTool(Context, Reporter) {
     MoveTool.registerMatchers(&MatchFinder);
   }
 
@@ -166,24 +202,18 @@ private:
 
 class ClangMoveActionFactory : public tooling::FrontendActionFactory {
 public:
-  ClangMoveActionFactory(
-      const ClangMoveTool::MoveDefinitionSpec &Spec,
-      std::map<std::string, tooling::Replacements> &FileToReplacements,
-      llvm::StringRef OriginalRunningDirectory, llvm::StringRef FallbackStyle)
-      : Spec(Spec), FileToReplacements(FileToReplacements),
-        OriginalRunningDirectory(OriginalRunningDirectory),
-        FallbackStyle(FallbackStyle) {}
+  ClangMoveActionFactory(ClangMoveContext *const Context,
+                         DeclarationReporter *const Reporter = nullptr)
+      : Context(Context), Reporter(Reporter) {}
 
   clang::FrontendAction *create() override {
-    return new ClangMoveAction(Spec, FileToReplacements,
-                               OriginalRunningDirectory, FallbackStyle);
+    return new ClangMoveAction(Context, Reporter);
   }
 
 private:
-  const ClangMoveTool::MoveDefinitionSpec &Spec;
-  std::map<std::string, tooling::Replacements> &FileToReplacements;
-  std::string OriginalRunningDirectory;
-  std::string FallbackStyle;
+  // Not owned.
+  ClangMoveContext *const Context;
+  DeclarationReporter *const Reporter;
 };
 
 } // namespace move

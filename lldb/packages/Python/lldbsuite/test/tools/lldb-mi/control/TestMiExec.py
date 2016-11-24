@@ -215,9 +215,6 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureAll(
-        archs=["i[3-6]86"],
-        bugnumber="xfail to get buildbot green, failing config: i386 binary running on ubuntu 14.04 x86_64")
     def test_lldbmi_exec_next_instruction(self):
         """Test that 'lldb-mi --interpreter' works for instruction stepping."""
 
@@ -255,7 +252,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^running")
         # Depending on compiler, it can stop at different line
         self.expect(
-            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(29|30)\"")
+            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(28|29|30)\"")
 
         # Test that both --thread and --frame are optional
         self.runCmd("-exec-next-instruction")

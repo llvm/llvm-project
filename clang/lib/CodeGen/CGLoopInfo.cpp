@@ -20,7 +20,8 @@ using namespace clang::CodeGen;
 using namespace llvm;
 
 static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
-                              llvm::DebugLoc StartLoc, llvm::DebugLoc EndLoc) {
+                              const llvm::DebugLoc &StartLoc,
+                              const llvm::DebugLoc &EndLoc) {
 
   if (!Attrs.IsParallel && Attrs.VectorizeWidth == 0 &&
       Attrs.InterleaveCount == 0 && Attrs.UnrollCount == 0 &&
@@ -121,13 +122,13 @@ void LoopAttributes::clear() {
 }
 
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
-                   llvm::DebugLoc StartLoc, llvm::DebugLoc EndLoc)
+                   const llvm::DebugLoc &StartLoc, const llvm::DebugLoc &EndLoc)
     : LoopID(nullptr), Header(Header), Attrs(Attrs) {
   LoopID = createMetadata(Header->getContext(), Attrs, StartLoc, EndLoc);
 }
 
-void LoopInfoStack::push(BasicBlock *Header, llvm::DebugLoc StartLoc,
-                         llvm::DebugLoc EndLoc) {
+void LoopInfoStack::push(BasicBlock *Header, const llvm::DebugLoc &StartLoc,
+                         const llvm::DebugLoc &EndLoc) {
   Active.push_back(LoopInfo(Header, StagedAttrs, StartLoc, EndLoc));
   // Clear the attributes so nested loops do not inherit them.
   StagedAttrs.clear();
@@ -135,7 +136,8 @@ void LoopInfoStack::push(BasicBlock *Header, llvm::DebugLoc StartLoc,
 
 void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
                          ArrayRef<const clang::Attr *> Attrs,
-                         llvm::DebugLoc StartLoc, llvm::DebugLoc EndLoc) {
+                         const llvm::DebugLoc &StartLoc,
+                         const llvm::DebugLoc &EndLoc) {
 
   // Identify loop hint attributes from Attrs.
   for (const auto *Attr : Attrs) {
