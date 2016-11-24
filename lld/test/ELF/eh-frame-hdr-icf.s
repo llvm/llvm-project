@@ -5,10 +5,10 @@
 # RUN: llvm-objdump -s %t2 | FileCheck %s
 
 # CHECK: Contents of section .eh_frame_hdr:
-# CHECK-NEXT: 101a0 011b033b b4ffffff 01000000 600e0000
-#                                     ^ FDE count
-# CHECK-NEXT: 101b0 d0ffffff 00000000 00000000
-#                   ^ FDE for f2
+# CHECK-NEXT: 2001a0 011b033b b4ffffff 01000000 600e0000
+#                                      ^ FDE count
+# CHECK-NEXT: 2001b0 d0ffffff 00000000 00000000
+#                    ^ FDE for f2
 
 .globl _start, f1, f2
 _start:

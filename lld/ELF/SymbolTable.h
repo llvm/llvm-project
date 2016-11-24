@@ -61,8 +61,6 @@ public:
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                      uintX_t Value, uintX_t Size, uint8_t Binding,
                      InputSectionBase<ELFT> *Section, InputFile *File);
-  Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
-                     InputSectionBase<ELFT> *Section, InputFile *File);
 
   Symbol *addSynthetic(StringRef N, const OutputSectionBase *Section,
                        uintX_t Value, uint8_t StOther);
@@ -93,8 +91,8 @@ public:
 
 private:
   std::vector<SymbolBody *> findAll(StringRef GlobPat);
-  std::pair<Symbol *, bool> insert(StringRef &Name);
-  std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
+  std::pair<Symbol *, bool> insert(StringRef Name);
+  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 

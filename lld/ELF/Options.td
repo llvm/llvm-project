@@ -68,6 +68,9 @@ def end_lib: F<"end-lib">,
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
 
+def error_limit: S<"error-limit">,
+  HelpText<"Maximum number of errors to emit before stopping (0 = no limit)">;
+
 def export_dynamic: F<"export-dynamic">,
   HelpText<"Put symbols in the dynamic symbol table">;
 
@@ -189,7 +192,7 @@ def target1_rel: F<"target1-rel">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_RE
 
 def target1_abs: F<"target1-abs">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_ABS32">;
 
-def target2: J<"target2=">, MetaVarName<"<type>">, HelpText<"Interpret R_ARM_TARGET2 as <type>, where <type> is one of rel, abs, or got-rel.">;
+def target2: J<"target2=">, MetaVarName<"<type>">, HelpText<"Interpret R_ARM_TARGET2 as <type>, where <type> is one of rel, abs, or got-rel">;
 
 def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
 
@@ -240,6 +243,7 @@ def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: J<"dynamic-list=">, Alias<dynamic_list>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_entry_entry: J<"entry=">, Alias<entry>;
+def alias_error_limit: J<"error-limit=">, Alias<error_limit>;
 def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_export_dynamic_symbol: J<"export-dynamic-symbol=">,
   Alias<export_dynamic_symbol>;
@@ -258,6 +262,7 @@ def alias_script_T: JoinedOrSeparate<["-"], "T">, Alias<script>;
 def alias_shared_Bshareable: F<"Bshareable">, Alias<shared>;
 def alias_soname_h: JoinedOrSeparate<["-"], "h">, Alias<soname>;
 def alias_soname_soname: S<"soname">, Alias<soname>;
+def alias_script: J<"script=">, Alias<script>;
 def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
 def alias_Tbss: J<"Tbss=">, Alias<Tbss>;

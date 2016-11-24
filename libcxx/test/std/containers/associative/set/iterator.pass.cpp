@@ -28,6 +28,7 @@
 
 #include <set>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -70,7 +71,7 @@ int main()
         i = m.begin();
         std::set<int>::const_iterator k = i;
         assert(i == k);
-        for (int j = 1; j <= m.size(); ++j, ++i)
+        for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i)
             assert(*i == j);
     }
     {
@@ -109,7 +110,7 @@ int main()
         assert(std::distance(m.crbegin(), m.crend()) == m.size());
         std::set<int>::const_iterator i;
         i = m.begin();
-        for (int j = 1; j <= m.size(); ++j, ++i)
+        for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i)
             assert(*i == j);
     }
 #if TEST_STD_VER >= 11
@@ -149,7 +150,7 @@ int main()
         i = m.begin();
         std::set<int, std::less<int>, min_allocator<int>>::const_iterator k = i;
         assert(i == k);
-        for (int j = 1; j <= m.size(); ++j, ++i)
+        for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i)
             assert(*i == j);
     }
     {
@@ -188,7 +189,7 @@ int main()
         assert(std::distance(m.crbegin(), m.crend()) == m.size());
         std::set<int, std::less<int>, min_allocator<int>>::const_iterator i;
         i = m.begin();
-        for (int j = 1; j <= m.size(); ++j, ++i)
+        for (int j = 1; static_cast<std::size_t>(j) <= m.size(); ++j, ++i)
             assert(*i == j);
     }
 #endif

@@ -14,13 +14,13 @@
 // DEFAULT-NEXT:       SHF_ALLOC
 // DEFAULT-NEXT:       SHF_WRITE
 // DEFAULT-NEXT:     ]
-// DEFAULT-NEXT:     Address: 0x12002
+// DEFAULT-NEXT:     Address: 0x202002
 // DEFAULT-NEXT:     Offset:
 // DEFAULT-NEXT:     Size: 6
 // DEFAULT: ]
 // DEFAULT: Symbols [
 // DEFAULT:     Name: _end
-// DEFAULT-NEXT:     Value: 0x12008
+// DEFAULT-NEXT:     Value: 0x202008
 // DEFAULT: ]
 
 // RUN: ld.lld -r %t.o -o %t2

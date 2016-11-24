@@ -15,6 +15,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/lldb-forward.h"
 
+#include "RegisterContextWindows.h"
+
 namespace lldb_private {
 class ProcessWindows;
 class HostThread;
@@ -29,6 +31,9 @@ public:
   void RefreshStateAfterStop() override;
   void WillResume(lldb::StateType resume_state) override;
   void DidStop() override;
+  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(StackFrame *frame) override;
   bool CalculateStopInfo() override;
   Unwind *GetUnwinder() override;
 
@@ -37,6 +42,8 @@ public:
   HostThread GetHostThread() const { return m_host_thread; }
 
 private:
+  lldb::RegisterContextSP CreateRegisterContextForFrameIndex(uint32_t idx);
+
   HostThread m_host_thread;
 };
 }

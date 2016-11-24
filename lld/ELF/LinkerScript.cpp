@@ -470,6 +470,11 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
     return;
   }
 
+  if (auto *AssertCmd = dyn_cast<AssertCommand>(&Base)) {
+    AssertCmd->Expression(Dot);
+    return;
+  }
+
   // It handles single input section description command,
   // calculates and assigns the offsets for each section and also
   // updates the output section size.
@@ -1310,7 +1315,7 @@ InputSectionDescription *
 ScriptParser::readInputSectionRules(StringRef FilePattern) {
   auto *Cmd = new InputSectionDescription(FilePattern);
   expect("(");
-  while (!HasError && !consume(")")) {
+  while (!Error && !consume(")")) {
     SortSectionPolicy Outer = readSortKind();
     SortSectionPolicy Inner = SortSectionPolicy::Default;
     std::vector<SectionPattern> V;
@@ -1413,18 +1418,22 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   while (!Error && !consume("}")) {
     StringRef Tok = next();
-    if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok))
+    if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok)) {
       Cmd->Commands.emplace_back(Assignment);
-    else if (BytesDataCommand *Data = readBytesDataCommand(Tok))
+    } else if (BytesDataCommand *Data = readBytesDataCommand(Tok)) {
       Cmd->Commands.emplace_back(Data);
-    else if (Tok == "FILL")
+    } else if (Tok == "ASSERT") {
+      Cmd->Commands.emplace_back(new AssertCommand(readAssert()));
+      expect(";");
+    } else if (Tok == "FILL") {
       Cmd->Filler = readFill();
-    else if (Tok == "SORT")
+    } else if (Tok == "SORT") {
       readSort();
-    else if (peek() == "(")
+    } else if (peek() == "(") {
       Cmd->Commands.emplace_back(readInputSectionDescription(Tok));
-    else
+    } else {
       setError("unknown command " + Tok);
+    }
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
 

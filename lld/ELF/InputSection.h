@@ -210,14 +210,15 @@ private:
 };
 
 struct EhSectionPiece : public SectionPiece {
-  EhSectionPiece(size_t Off, ArrayRef<uint8_t> Data, unsigned FirstRelocation)
-      : SectionPiece(Off, false), Data(Data.data()), Size(Data.size()),
+  EhSectionPiece(size_t Off, InputSectionData *ID, uint32_t Size,
+                 unsigned FirstRelocation)
+      : SectionPiece(Off, false), ID(ID), Size(Size),
         FirstRelocation(FirstRelocation) {}
-  const uint8_t *Data;
+  InputSectionData *ID;
   uint32_t Size;
   uint32_t size() const { return Size; }
 
-  ArrayRef<uint8_t> data() { return {Data, Size}; }
+  ArrayRef<uint8_t> data() { return {ID->Data.data() + this->InputOff, Size}; }
   unsigned FirstRelocation;
 };
 
@@ -298,6 +299,8 @@ private:
 };
 
 template <class ELFT> InputSection<ELFT> InputSection<ELFT>::Discarded;
+
+template <class ELFT> std::string toString(const InputSectionBase<ELFT> *);
 
 } // namespace elf
 } // namespace lld

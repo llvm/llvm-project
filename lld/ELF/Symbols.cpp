@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -63,7 +64,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     uintX_t VA = (SC->OutSec ? SC->OutSec->Addr : 0) + SC->getOffset(Offset);
     if (D.isTls() && !Config->Relocatable) {
       if (!Out<ELFT>::TlsPhdr)
-        fatal(getFilename(D.File) +
+        fatal(toString(D.File) +
               " has a STT_TLS symbol but doesn't have a PT_TLS section");
       return VA - Out<ELFT>::TlsPhdr->p_vaddr;
     }
@@ -90,20 +91,20 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   llvm_unreachable("invalid symbol kind");
 }
 
-SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther,
-                       uint8_t Type)
+SymbolBody::SymbolBody(Kind K, const char *Name, uint8_t StOther, uint8_t Type)
     : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(true),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
-      StOther(StOther), NameOffset(NameOffset) {}
+      StOther(StOther), Name(Name) {}
 
 SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
     : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(false),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
-      StOther(StOther), Name({Name.data(), Name.size()}) {}
+      StOther(StOther), NameLen(Name.size()), Name(Name.data()) {}
 
 StringRef SymbolBody::getName() const {
-  assert(!isLocal());
-  return StringRef(Name.S, Name.Len);
+  if (NameLen == (uint32_t)-1)
+    NameLen = strlen(Name);
+  return StringRef(Name, NameLen);
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -189,11 +190,46 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   return 0;
 }
 
+// If a symbol name contains '@', the characters after that is
+// a symbol version name. This function parses that.
+void SymbolBody::parseSymbolVersion() {
+  StringRef S = getName();
+  size_t Pos = S.find('@');
+  if (Pos == 0 || Pos == StringRef::npos)
+    return;
+  StringRef Verstr = S.substr(Pos + 1);
+  if (Verstr.empty())
+    return;
+
+  // Truncate the symbol name so that it doesn't include the version string.
+  NameLen = Pos;
+
+  // '@@' in a symbol name means the default version.
+  // It is usually the most recent one.
+  bool IsDefault = (Verstr[0] == '@');
+  if (IsDefault)
+    Verstr = Verstr.substr(1);
+
+  for (VersionDefinition &Ver : Config->VersionDefinitions) {
+    if (Ver.Name != Verstr)
+      continue;
+
+    if (IsDefault)
+      symbol()->VersionId = Ver.Id;
+    else
+      symbol()->VersionId = Ver.Id | VERSYM_HIDDEN;
+    return;
+  }
+
+  // It is an error if the specified version is not defined.
+  error("symbol " + S + " has undefined version " + Verstr);
+}
+
 Defined::Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
     : SymbolBody(K, Name, StOther, Type) {}
 
-Defined::Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type)
-    : SymbolBody(K, NameOffset, StOther, Type) {}
+Defined::Defined(Kind K, const char *Name, uint8_t StOther, uint8_t Type)
+    : SymbolBody(K, Name, StOther, Type) {}
 
 template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
   if (!Section || !isFunc())
@@ -208,9 +244,9 @@ Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type,
   this->File = File;
 }
 
-Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type,
+Undefined::Undefined(const char *Name, uint8_t StOther, uint8_t Type,
                      InputFile *File)
-    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type) {
+    : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {
   this->File = File;
 }
 
@@ -271,7 +307,7 @@ bool Symbol::includeInDynsym() const {
 // Print out a log message for --trace-symbol.
 void elf::printTraceSymbol(Symbol *Sym) {
   SymbolBody *B = Sym->body();
-  outs() << getFilename(B->File);
+  outs() << toString(B->File);
 
   if (B->isUndefined())
     outs() << ": reference to ";
@@ -280,14 +316,6 @@ void elf::printTraceSymbol(Symbol *Sym) {
   else
     outs() << ": definition of ";
   outs() << B->getName() << "\n";
-}
-
-StringRef elf::getSymbolName(StringRef SymTab, SymbolBody &Body) {
-  if (Body.isLocal() && Body.getNameOffset())
-    return SymTab.data() + Body.getNameOffset();
-  if (!Body.isLocal())
-    return Body.getName();
-  return "";
 }
 
 template bool SymbolBody::hasThunk<ELF32LE>() const;

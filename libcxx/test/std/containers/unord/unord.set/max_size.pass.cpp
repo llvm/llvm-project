@@ -9,28 +9,42 @@
 
 // <unordered_set>
 
-// template <class Value, class Hash = hash<Value>, class Pred = equal_to<Value>,
-//           class Alloc = allocator<Value>>
 // class unordered_set
 
 // size_type max_size() const;
 
-#include <unordered_set>
 #include <cassert>
+#include <limits>
+#include <type_traits>
+#include <unordered_set>
 
-#include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
 int main()
 {
     {
-        std::unordered_set<int> u;
-        assert(u.max_size() > 0);
+      typedef limited_allocator<int, 10> A;
+      typedef std::unordered_set<int, std::hash<int>, std::equal_to<int>, A> C;
+      C c;
+      assert(c.max_size() <= 10);
+      LIBCPP_ASSERT(c.max_size() == 10);
     }
-#if TEST_STD_VER >= 11
     {
-        std::unordered_set<int, std::hash<int>,
-                                      std::equal_to<int>, min_allocator<int>> u;
-        assert(u.max_size() > 0);
+      typedef limited_allocator<int, (size_t)-1> A;
+      typedef std::unordered_set<int, std::hash<int>, std::equal_to<int>, A> C;
+      const C::difference_type max_dist =
+          std::numeric_limits<C::difference_type>::max();
+      C c;
+      assert(c.max_size() <= max_dist);
+      LIBCPP_ASSERT(c.max_size() == max_dist);
     }
-#endif
+    {
+      typedef std::unordered_set<char> C;
+      const C::difference_type max_dist =
+          std::numeric_limits<C::difference_type>::max();
+      C c;
+      assert(c.max_size() <= max_dist);
+      assert(c.max_size() <= alloc_max_size(c.get_allocator()));
+    }
 }

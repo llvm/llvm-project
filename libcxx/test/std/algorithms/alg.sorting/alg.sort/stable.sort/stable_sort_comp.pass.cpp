@@ -19,6 +19,7 @@
 #include <functional>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
 
@@ -71,7 +72,7 @@ int main()
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     std::vector<std::unique_ptr<int> > v(1000);
-    for (int i = 0; i < v.size(); ++i)
+    for (int i = 0; static_cast<std::size_t>(i) < v.size(); ++i)
         v[i].reset(new int(i));
     std::stable_sort(v.begin(), v.end(), indirect_less());
     assert(std::is_sorted(v.begin(), v.end(), indirect_less()));

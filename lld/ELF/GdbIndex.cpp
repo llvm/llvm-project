@@ -81,8 +81,7 @@ lld::elf::readCuList(InputSection<ELFT> *DebugInfoSec) {
     Dwarf.reset(new DWARFContextInMemory(*Obj.get()));
 
   if (!Dwarf) {
-    error(getFilename(DebugInfoSec->getFile()) +
-          ": error creating DWARF context");
+    error(toString(DebugInfoSec->getFile()) + ": error creating DWARF context");
     return {};
   }
 

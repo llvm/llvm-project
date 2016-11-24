@@ -50,7 +50,7 @@
 
 # Check that we can do the same as above inside SECTIONS block.
 # RUN: echo "SECTIONS { \
-# RUN:        . = 0x11000; \
+# RUN:        . = 0x201000; \
 # RUN:        .text : { *(.text) } \
 # RUN:        PROVIDE_HIDDEN(_begin_sec = ADDR(.text)); \
 # RUN:        PROVIDE_HIDDEN(_end_sec = ADDR(.text) + SIZEOF(.text)); }" > %t.script
@@ -74,11 +74,11 @@
 # SIMPLE-NEXT: 0000000000001018         .eh_frame_hdr     00000000 __eh_frame_hdr_end
 # SIMPLE-NEXT: 0000000000001020         *ABS*             00000000 __eh_frame_hdr_end2
 
-# NO-SEC:       0000000000011000         .text     00000000 .hidden _begin_sec
-# NO-SEC-NEXT:  0000000000011001         .text     00000000 .hidden _end_sec
+# NO-SEC:       0000000000201000         .text     00000000 .hidden _begin_sec
+# NO-SEC-NEXT:  0000000000201001         .text     00000000 .hidden _end_sec
 
-# IN-SEC:       0000000000011000         .text     00000000 .hidden _begin_sec
-# IN-SEC-NEXT:  0000000000011001         .text     00000000 .hidden _end_sec
+# IN-SEC:       0000000000201000         .text     00000000 .hidden _begin_sec
+# IN-SEC-NEXT:  0000000000201001         .text     00000000 .hidden _end_sec
 
 .global _start
 _start:

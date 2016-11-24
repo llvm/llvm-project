@@ -419,6 +419,54 @@ TEST(ClangMove, WellFormattedCode) {
   EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
 }
 
+TEST(ClangMove, AddDependentNewHeader) {
+  const char TestHeader[] = "class A {};\n"
+                            "class B {};\n";
+  const char TestCode[] = "#include \"foo.h\"\n";
+  const char ExpectedOldHeader[] = "#include \"new_foo.h\"\nclass B {};\n";
+  const char ExpectedNewHeader[] = "#ifndef NEW_FOO_H\n"
+                                   "#define NEW_FOO_H\n"
+                                   "\n"
+                                   "class A {};\n"
+                                   "\n"
+                                   "#endif // NEW_FOO_H\n";
+  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("A");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  Spec.OldDependOnNew = true;
+  auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
+  EXPECT_EQ(ExpectedOldHeader, Results[Spec.OldHeader]);
+  EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
+}
+
+TEST(ClangMove, AddDependentOldHeader) {
+  const char TestHeader[] = "class A {};\n"
+                            "class B {};\n";
+  const char TestCode[] = "#include \"foo.h\"\n";
+  const char ExpectedNewHeader[] = "#ifndef NEW_FOO_H\n"
+                                   "#define NEW_FOO_H\n"
+                                   "\n"
+                                   "#include \"foo.h\"\n"
+                                   "\n"
+                                   "class B {};\n"
+                                   "\n"
+                                   "#endif // NEW_FOO_H\n";
+  const char ExpectedOldHeader[] = "class A {};\n";
+  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("B");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  Spec.NewDependOnOld = true;
+  auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
+  EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
+  EXPECT_EQ(ExpectedOldHeader, Results[Spec.OldHeader]);
+}
+
 } // namespace
 } // namespce move
 } // namespace clang

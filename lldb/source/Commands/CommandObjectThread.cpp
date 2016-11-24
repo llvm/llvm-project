@@ -979,7 +979,7 @@ public:
             "current or specified thread.  Stops when returning from "
             "the current function as a safety measure.  "
             "The target line number(s) are given as arguments, and if more than one"
-            " is provided, stepping will stop when the first one is hit.",
+            " is provided, stepping will stop when the first one is hit.",
             nullptr,
             eCommandRequiresThread | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),

@@ -6,7 +6,7 @@
 // RUN: llvm-readobj -t %t.exe | FileCheck %s
 
 // CHECK:      Name: bar
-// CHECK-NEXT: Value: 0x11020
+// CHECK-NEXT: Value: 0x201020
 // CHECK-NEXT: Size: 0
 // CHECK-NEXT: Binding: Weak
 // CHECK-NEXT: Type: Function

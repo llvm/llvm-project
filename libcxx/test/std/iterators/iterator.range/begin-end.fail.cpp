@@ -39,13 +39,13 @@ namespace Foo {
 	FakeIter crbegin(const FakeContainer &) { return 13; }
 	FakeIter crend  (const FakeContainer &) { return 14; }
 }
-	
+
 
 int main(){
 // Bug #28927 - shouldn't find these via ADL
 	(void) std::cbegin (Foo::FakeContainer());
 	(void) std::cend   (Foo::FakeContainer());
 	(void) std::crbegin(Foo::FakeContainer());
-	(void) std::crend  (Foo::FakeContainer());	
+	(void) std::crend  (Foo::FakeContainer());
 }
 #endif

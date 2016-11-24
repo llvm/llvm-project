@@ -51,32 +51,32 @@ TargetInfo *Target;
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 
-StringRef getRelName(uint32_t Type) {
+std::string toString(uint32_t Type) {
   return getELFRelocationTypeName(Config->EMachine, Type);
 }
 
 template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
   if (!isInt<N>(V))
-    error("relocation " + getRelName(Type) + " out of range");
+    error("relocation " + toString(Type) + " out of range");
 }
 
 template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
   if (!isUInt<N>(V))
-    error("relocation " + getRelName(Type) + " out of range");
+    error("relocation " + toString(Type) + " out of range");
 }
 
 template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
   if (!isInt<N>(V) && !isUInt<N>(V))
-    error("relocation " + getRelName(Type) + " out of range");
+    error("relocation " + toString(Type) + " out of range");
 }
 
 template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   if ((V & (N - 1)) != 0)
-    error("improper alignment for relocation " + getRelName(Type));
+    error("improper alignment for relocation " + toString(Type));
 }
 
 static void errorDynRel(uint32_t Type) {
-  error("relocation " + getRelName(Type) +
+  error("relocation " + toString(Type) +
         " cannot be used against shared object; recompile with -fPIC.");
 }
 
@@ -558,6 +558,9 @@ template <class ELFT> X86_64TargetInfo<ELFT>::X86_64TargetInfo() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
+  // Align to the large page size (known as a superpage or huge page).
+  // FreeBSD automatically promotes large, superpage-aligned allocations.
+  DefaultImageBase = 0x200000;
 }
 
 template <class ELFT>

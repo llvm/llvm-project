@@ -8,17 +8,17 @@
 # RELOC:    Relocations [
 # RELOC:    ]
 
-# 0x11003 + 7 - 10 = 0x11000
-# 0x1100a + 7 - 17 = 0x11000
-# 0x11011 + 7 - 23 = 0x11001
-# 0x11018 + 7 - 30 = 0x11001
+# 0x201003 + 7 - 10 = 0x201000
+# 0x20100a + 7 - 17 = 0x201000
+# 0x201011 + 7 - 23 = 0x201001
+# 0x201018 + 7 - 30 = 0x201001
 # DISASM:      Disassembly of section .text:
 # DISASM-NEXT: foo:
-# DISASM-NEXT:   11000: 90 nop
+# DISASM-NEXT:   201000: 90 nop
 # DISASM:      hid:
-# DISASM-NEXT:   11001: 90 nop
+# DISASM-NEXT:   201001: 90 nop
 # DISASM:      ifunc:
-# DISASM-NEXT:   11002: c3 retq
+# DISASM-NEXT:   201002: c3 retq
 # DISASM:      _start:
 # DISASM-NEXT: leaq -10(%rip), %rax
 # DISASM-NEXT: leaq -17(%rip), %rax

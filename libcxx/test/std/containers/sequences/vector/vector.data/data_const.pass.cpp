@@ -21,7 +21,7 @@ struct Nasty {
 	Nasty() : i_(0) {}
 	Nasty(int i) : i_(i) {}
 	~Nasty() {}
-	
+
 	Nasty * operator&() const { assert(false); return nullptr; }
 	int i_;
 	};

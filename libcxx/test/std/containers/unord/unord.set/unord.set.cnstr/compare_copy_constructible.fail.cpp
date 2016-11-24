@@ -9,7 +9,7 @@
 
 // <unordered_set>
 
-// Check that std::unordered_set fails to instantiate if the comparison predicate is 
+// Check that std::unordered_set fails to instantiate if the comparison predicate is
 // not copy-constructible. This is LWG issue 2436
 
 #include <unordered_set>

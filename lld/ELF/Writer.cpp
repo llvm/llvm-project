@@ -82,6 +82,7 @@ private:
   void addRelIpltSymbols();
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSectionBase *Sec);
+  uintX_t getEntryAddr();
   OutputSectionBase *findSection(StringRef Name);
 
   std::vector<Phdr> Phdrs;
@@ -173,7 +174,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // to the string table, and add entries to .got and .plt.
   // finalizeSections does that.
   finalizeSections();
-  if (HasError)
+  if (ErrorCount)
     return;
 
   if (Config->Relocatable) {
@@ -200,7 +201,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   // Write the result down to a file.
   openFile();
-  if (HasError)
+  if (ErrorCount)
     return;
   if (!Config->OFormatBinary) {
     writeHeader();
@@ -212,7 +213,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Backfill .note.gnu.build-id section content. This is done at last
   // because the content is usually a hash value of the entire output file.
   writeBuildId();
-  if (HasError)
+  if (ErrorCount)
     return;
 
   if (auto EC = Buffer->commit())
@@ -277,16 +278,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::StrTab);
   }
 
-  if (Config->EMachine == EM_MIPS && !Config->Shared) {
-    // This is a MIPS specific section to hold a space within the data segment
-    // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
-    // See "Dynamic section" in Chapter 5 in the following document:
-    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    Out<ELFT>::MipsRldMap = make<OutputSection<ELFT>>(".rld_map", SHT_PROGBITS,
-                                                      SHF_ALLOC | SHF_WRITE);
-    Out<ELFT>::MipsRldMap->Size = sizeof(uintX_t);
-    Out<ELFT>::MipsRldMap->updateAlignment(sizeof(uintX_t));
-  }
   if (!Config->VersionDefinitions.empty())
     In<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
 
@@ -307,6 +298,10 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   // Add MIPS-specific sections.
   if (Config->EMachine == EM_MIPS) {
+    if (!Config->Shared && In<ELFT>::DynSymTab) {
+      In<ELFT>::MipsRldMap = make<MipsRldMapSection<ELFT>>();
+      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::MipsRldMap);
+    }
     if (auto *Sec = MipsAbiFlagsSection<ELFT>::create())
       Symtab<ELFT>::X->Sections.push_back(Sec);
     if (auto *Sec = MipsOptionsSection<ELFT>::create())
@@ -380,28 +375,26 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   if (!In<ELFT>::SymTab)
     return;
   for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
-    StringRef StrTab = F->getStringTable();
     for (SymbolBody *B : F->getLocalSymbols()) {
       if (!B->IsLocal)
-        fatal(getFilename(F) +
+        fatal(toString(F) +
               ": broken object: getLocalSymbols returns a non-local symbol");
       auto *DR = dyn_cast<DefinedRegular<ELFT>>(B);
+
       // No reason to keep local undefined symbol in symtab.
       if (!DR)
         continue;
       if (!includeInSymtab<ELFT>(*B))
         continue;
-      if (B->getNameOffset() >= StrTab.size())
-        fatal(getFilename(F) + ": invalid symbol name offset");
-      StringRef SymName(StrTab.data() + B->getNameOffset());
+
       InputSectionBase<ELFT> *Sec = DR->Section;
-      if (!shouldKeepInSymtab<ELFT>(Sec, SymName, *B))
+      if (!shouldKeepInSymtab<ELFT>(Sec, B->getName(), *B))
         continue;
       ++In<ELFT>::SymTab->NumLocals;
       if (Config->Relocatable)
         B->DynsymIndex = In<ELFT>::SymTab->NumLocals;
-      F->KeptLocalSyms.push_back(
-          std::make_pair(DR, In<ELFT>::SymTab->StrTabSec.addString(SymName)));
+      F->KeptLocalSyms.push_back(std::make_pair(
+          DR, In<ELFT>::SymTab->StrTabSec.addString(B->getName())));
     }
   }
 }
@@ -571,15 +564,13 @@ static Symbol *addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
 }
 
 template <class ELFT>
-static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *IS,
+static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *Sec,
                           typename ELFT::uint Value) {
-  typename ELFT::Sym LocalHidden = {};
   // The linker generated symbols are added as STB_WEAK to allow user defined
   // ones to override them.
-  LocalHidden.setBindingAndType(STB_WEAK, STT_NOTYPE);
-  LocalHidden.setVisibility(STV_HIDDEN);
-  LocalHidden.st_value = Value;
-  return Symtab<ELFT>::X->addRegular(Name, LocalHidden, IS, nullptr);
+  return Symtab<ELFT>::X->addRegular(Name, STV_HIDDEN, STT_NOTYPE, Value,
+                                     /*Size=*/0, STB_WEAK, Sec,
+                                     /*File=*/nullptr);
 }
 
 template <class ELFT>
@@ -615,22 +606,22 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (Config->EMachine == EM_MIPS) {
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which is relative to GOT.
+    // Default offset is 0x7ff0.
     // See "Global Data Symbols" in Chapter 6 in the following document:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    addRegular("_gp", In<ELFT>::MipsGot, MipsGPOffset);
+    ElfSym<ELFT>::MipsGp = addRegular("_gp", In<ELFT>::MipsGot, 0x7ff0)->body();
 
     // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
     // start of function and 'gp' pointer into GOT.
-    Symbol *Sym =
-        addOptionalRegular("_gp_disp", In<ELFT>::MipsGot, MipsGPOffset);
-    if (Sym)
-      ElfSym<ELFT>::MipsGpDisp = Sym->body();
+    if (Symbol *S = addOptionalRegular("_gp_disp", In<ELFT>::MipsGot, 0))
+      ElfSym<ELFT>::MipsGpDisp = cast<DefinedRegular<ELFT>>(S->body());
 
     // The __gnu_local_gp is a magic symbol equal to the current value of 'gp'
     // pointer. This symbol is used in the code generated by .cpload pseudo-op
     // in case of using -mno-shared option.
     // https://sourceware.org/ml/binutils/2004-12/msg00094.html
-    addOptionalRegular("__gnu_local_gp", In<ELFT>::MipsGot, MipsGPOffset);
+    if (Symbol *S = addOptionalRegular("__gnu_local_gp", In<ELFT>::MipsGot, 0))
+      ElfSym<ELFT>::MipsLocalGp = cast<DefinedRegular<ELFT>>(S->body());
   }
 
   // In the assembly for 32 bit x86 the _GLOBAL_OFFSET_TABLE_ symbol
@@ -707,8 +698,8 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> V) {
       auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
       if (!D || !D->Section)
         continue;
-      StringRef SymName = getSymbolName(File->getStringTable(), *Body);
-      auto It = Config->SymbolOrderingFile.find(CachedHashString(SymName));
+      auto It =
+          Config->SymbolOrderingFile.find(CachedHashString(Body->getName()));
       if (It == Config->SymbolOrderingFile.end())
         continue;
 
@@ -933,7 +924,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   }
 
   // Do not proceed if there was an undefined symbol.
-  if (HasError)
+  if (ErrorCount)
     return;
 
   // So far we have added sections from input object files.
@@ -958,11 +949,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // symbol table section (DynSymTab) must be the first one.
   finalizeSynthetic<ELFT>(
       {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
-       In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
+       In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab, In<ELFT>::VerDef,
        In<ELFT>::DynStrTab, In<ELFT>::GdbIndex, In<ELFT>::Got,
        In<ELFT>::MipsGot, In<ELFT>::GotPlt, In<ELFT>::RelaDyn,
-       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::EhFrameHdr, In<ELFT>::VerDef,
-       In<ELFT>::VerSym, In<ELFT>::VerNeed, In<ELFT>::Dynamic});
+       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,
+       In<ELFT>::VerNeed, In<ELFT>::Dynamic});
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -1009,7 +1000,6 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     addInputSec(In<ELFT>::DynStrTab);
     if (In<ELFT>::RelaDyn->hasRelocs())
       addInputSec(In<ELFT>::RelaDyn);
-    Add(Out<ELFT>::MipsRldMap);
   }
 
   // We always need to add rel[a].plt to output if it has entries.
@@ -1371,12 +1361,30 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
   }
 }
 
-template <class ELFT> static typename ELFT::uint getEntryAddr() {
+// The entry point address is chosen in the following ways.
+//
+// 1. the '-e' entry command-line option;
+// 2. the ENTRY(symbol) command in a linker control script;
+// 3. the value of the symbol start, if present;
+// 4. the address of the first byte of the .text section, if present;
+// 5. the address 0.
+template <class ELFT> typename ELFT::uint Writer<ELFT>::getEntryAddr() {
+  // Case 1, 2 or 3
   if (Config->Entry.empty())
     return Config->EntryAddr;
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Entry))
     return B->getVA<ELFT>();
-  warn("entry symbol " + Config->Entry + " not found, assuming 0");
+
+  // Case 4
+  if (OutputSectionBase *Sec = findSection(".text")) {
+    warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
+         utohexstr(Sec->Addr));
+    return Sec->Addr;
+  }
+
+  // Case 5
+  warn("cannot find entry symbol " + Config->Entry +
+       "; not setting start address");
   return 0;
 }
 
@@ -1424,6 +1432,16 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
     else
       Set(ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2, Val);
   }
+
+  // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
+  // be equal to the _gp symbol's value.
+  if (Config->EMachine == EM_MIPS) {
+    uintX_t GpDisp = In<ELFT>::MipsGot->getGp() - In<ELFT>::MipsGot->getVA();
+    if (ElfSym<ELFT>::MipsGpDisp)
+      ElfSym<ELFT>::MipsGpDisp->Value = GpDisp;
+    if (ElfSym<ELFT>::MipsLocalGp)
+      ElfSym<ELFT>::MipsLocalGp->Value = GpDisp;
+  }
 }
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {
@@ -1439,7 +1457,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_type = getELFType();
   EHdr->e_machine = Config->EMachine;
   EHdr->e_version = EV_CURRENT;
-  EHdr->e_entry = getEntryAddr<ELFT>();
+  EHdr->e_entry = getEntryAddr();
   EHdr->e_shoff = SectionHeaderOff;
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
   EHdr->e_phnum = Phdrs.size();

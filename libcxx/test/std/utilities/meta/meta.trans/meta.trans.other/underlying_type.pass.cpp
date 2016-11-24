@@ -29,11 +29,11 @@ int main()
     static_assert((std::is_same<std::underlying_type<E>::type, int>::value),
                   "E has the wrong underlying type");
     static_assert((std::is_same<std::underlying_type<F>::type, ExpectUnsigned>::value),
-                  "F has the wrong underlying type"); 
+                  "F has the wrong underlying type");
 
 #if TEST_STD_VER > 11
     static_assert((std::is_same<std::underlying_type_t<E>, int>::value), "");
-    static_assert((std::is_same<std::underlying_type_t<F>, ExpectUnsigned>::value), ""); 
+    static_assert((std::is_same<std::underlying_type_t<F>, ExpectUnsigned>::value), "");
 #endif
 
 #if TEST_STD_VER >= 11

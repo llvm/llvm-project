@@ -39,13 +39,13 @@ namespace std
   struct is_error_condition_enum<A> : public std::true_type {};
 }
 
-	
+
 int main()
 {
     test<false, void>();
     test<false, int>();
     test<false, std::nullptr_t>();
     test<false, std::string>();
-    
+
     test<true, A>();
 }

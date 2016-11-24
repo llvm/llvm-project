@@ -6,4 +6,4 @@
  .section .eh_frame
  .long 0xFFFFFFFC
 
-// CHECK: CIE/FDE ends past the end of the section
+// CHECK: {{.*}}:(.eh_frame+0x0): CIE/FDE ends past the end of the section

@@ -22,8 +22,8 @@
 // CHECK-NEXT: }
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     0x12018 R_X86_64_IRELATIVE
-// CHECK-NEXT:     0x12020 R_X86_64_IRELATIVE
+// CHECK-NEXT:     0x202018 R_X86_64_IRELATIVE
+// CHECK-NEXT:     0x202020 R_X86_64_IRELATIVE
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:      Symbols [
@@ -38,7 +38,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: __rela_iplt_end
-// CHECK-NEXT:    Value: 0x10188
+// CHECK-NEXT:    Value: 0x200188
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Local
 // CHECK-NEXT:    Type: None
@@ -60,7 +60,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: _start
-// CHECK-NEXT:    Value: 0x11002
+// CHECK-NEXT:    Value: 0x201002
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: None
@@ -69,7 +69,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: bar
-// CHECK-NEXT:    Value: 0x11001
+// CHECK-NEXT:    Value: 0x201001
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -78,7 +78,7 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: foo
-// CHECK-NEXT:    Value: 0x11000
+// CHECK-NEXT:    Value: 0x201000
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
 // CHECK-NEXT:    Type: GNU_IFunc
@@ -89,26 +89,26 @@
 
 // DISASM:      Disassembly of section .text:
 // DISASM-NEXT: foo:
-// DISASM-NEXT:    11000: c3 retq
+// DISASM-NEXT:   201000: {{.*}} retq
 // DISASM:      bar:
-// DISASM-NEXT:    11001: c3 retq
+// DISASM-NEXT:   201001: {{.*}} retq
 // DISASM:      _start:
-// DISASM-NEXT:    11002: e8 29 00 00 00 callq 41
-// DISASM-NEXT:    11007: e8 34 00 00 00 callq 52
-// DISASM-NEXT:    1100c: ba 58 01 01 00 movl $65880, %edx
-// DISASM-NEXT:    11011: ba 88 01 01 00 movl $65928, %edx
-// DISASM-NEXT:    11016: ba 89 01 01 00 movl $65929, %edx
+// DISASM-NEXT:   201002: {{.*}} callq 41
+// DISASM-NEXT:   201007: {{.*}} callq 52
+// DISASM-NEXT:   20100c: {{.*}} movl $2097496, %edx
+// DISASM-NEXT:   201011: {{.*}} movl $2097544, %edx
+// DISASM-NEXT:   201016: {{.*}} movl $2097545, %edx
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:    11020: ff 35 e2 0f 00 00 pushq 4066(%rip)
-// DISASM-NEXT:    11026: ff 25 e4 0f 00 00 jmpq *4068(%rip)
-// DISASM-NEXT:    1102c: 0f 1f 40 00       nopl (%rax)
-// DISASM-NEXT:    11030: ff 25 e2 0f 00 00 jmpq *4066(%rip)
-// DISASM-NEXT:    11036: 68 00 00 00 00    pushq $0
-// DISASM-NEXT:    1103b: e9 e0 ff ff ff    jmp -32
-// DISASM-NEXT:    11040: ff 25 da 0f 00 00 jmpq *4058(%rip)
-// DISASM-NEXT:    11046: 68 01 00 00 00    pushq $1
-// DISASM-NEXT:    1104b: e9 d0 ff ff ff    jmp -48
+// DISASM-NEXT:   201020: {{.*}} pushq 4066(%rip)
+// DISASM-NEXT:   201026: {{.*}} jmpq *4068(%rip)
+// DISASM-NEXT:   20102c: {{.*}} nopl (%rax)
+// DISASM-NEXT:   201030: {{.*}} jmpq *4066(%rip)
+// DISASM-NEXT:   201036: {{.*}} pushq $0
+// DISASM-NEXT:   20103b: {{.*}} jmp -32
+// DISASM-NEXT:   201040: {{.*}} jmpq *4058(%rip)
+// DISASM-NEXT:   201046: {{.*}} pushq $1
+// DISASM-NEXT:   20104b: {{.*}} jmp -48
 
 .text
 .type foo STT_GNU_IFUNC

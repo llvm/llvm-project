@@ -13,7 +13,9 @@
 #include "Error.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
@@ -63,13 +65,27 @@ static void dumpCodeView(SymbolTable *Symtab) {
   ScopedPrinter W(outs());
 
   for (ObjectFile *File : Symtab->ObjectFiles) {
-    SectionChunk *C = findByName(File->getDebugChunks(), ".debug$T");
-    if (!C)
+    SectionChunk *DebugT = findByName(File->getDebugChunks(), ".debug$T");
+    if (!DebugT)
       continue;
 
     CVTypeDumper TypeDumper(&W, false);
-    if (auto EC = TypeDumper.dump(C->getContents()))
+    if (auto EC = TypeDumper.dump(DebugT->getContents()))
       fatal(EC, "CVTypeDumper::dump failed");
+
+    SectionChunk *DebugS = findByName(File->getDebugChunks(), ".debug$S");
+    if (!DebugS)
+      continue;
+
+    msf::ByteStream Stream(DebugS->getContents());
+    CVSymbolArray Symbols;
+    msf::StreamReader Reader(Stream);
+    if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
+      fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
+
+    CVSymbolDumper SymbolDumper(W, TypeDumper, nullptr, false);
+    if (auto EC = SymbolDumper.dump(Symbols))
+      fatal(EC, "CVSymbolDumper::dump failed");
   }
 }
 

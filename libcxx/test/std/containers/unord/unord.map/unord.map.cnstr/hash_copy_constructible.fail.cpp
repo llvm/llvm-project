@@ -12,7 +12,7 @@
 
 // <unordered_map>
 
-// Check that std::unordered_map fails to instantiate if the hash function is 
+// Check that std::unordered_map fails to instantiate if the hash function is
 // not copy-constructible. This is mentioned in LWG issue 2436
 
 #include <unordered_map>

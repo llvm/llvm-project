@@ -15,10 +15,10 @@
 # meet symbol should be used.
 
 # CHECK: _bar:
-# CHECK-NEXT: 11000:   b8 01 00 00 00   movl   $1, %eax
+# CHECK-NEXT: 201000:   b8 01 00 00 00   movl   $1, %eax
 
 # REVERT: _bar:
-# REVERT-NEXT: 11000:   b8 02 00 00 00   movl   $2, %eax
+# REVERT-NEXT: 201000:   b8 02 00 00 00   movl   $2, %eax
 
 .globl _bar
 .type _bar, @function

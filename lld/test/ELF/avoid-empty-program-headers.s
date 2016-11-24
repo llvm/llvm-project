@@ -16,8 +16,8 @@ _start:
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_PHDR (0x6)
 // CHECK-NEXT:     Offset: 0x40
-// CHECK-NEXT:     VirtualAddress: 0x10040
-// CHECK-NEXT:     PhysicalAddress: 0x10040
+// CHECK-NEXT:     VirtualAddress: 0x200040
+// CHECK-NEXT:     PhysicalAddress: 0x200040
 // CHECK-NEXT:     FileSize: 280
 // CHECK-NEXT:     MemSize: 280
 // CHECK-NEXT:     Flags [ (0x4)
@@ -28,8 +28,8 @@ _start:
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_LOAD (0x1)
 // CHECK-NEXT:     Offset: 0x0
-// CHECK-NEXT:     VirtualAddress: 0x10000
-// CHECK-NEXT:     PhysicalAddress: 0x10000
+// CHECK-NEXT:     VirtualAddress: 0x200000
+// CHECK-NEXT:     PhysicalAddress: 0x200000
 // CHECK-NEXT:     FileSize: 344
 // CHECK-NEXT:     MemSize: 344
 // CHECK-NEXT:     Flags [ (0x4)
@@ -40,8 +40,8 @@ _start:
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_LOAD (0x1)
 // CHECK-NEXT:     Offset: 0x1000
-// CHECK-NEXT:     VirtualAddress: 0x11000
-// CHECK-NEXT:     PhysicalAddress: 0x11000
+// CHECK-NEXT:     VirtualAddress: 0x201000
+// CHECK-NEXT:     PhysicalAddress: 0x201000
 // CHECK-NEXT:     FileSize: 1
 // CHECK-NEXT:     MemSize: 1
 // CHECK-NEXT:     Flags [ (0x5)
@@ -53,8 +53,8 @@ _start:
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_TLS (0x7)
 // CHECK-NEXT:     Offset: 0x1001
-// CHECK-NEXT:     VirtualAddress: 0x11001
-// CHECK-NEXT:     PhysicalAddress: 0x11001
+// CHECK-NEXT:     VirtualAddress: 0x201001
+// CHECK-NEXT:     PhysicalAddress: 0x201001
 // CHECK-NEXT:     FileSize: 0
 // CHECK-NEXT:     MemSize: 4
 // CHECK-NEXT:     Flags [ (0x4)

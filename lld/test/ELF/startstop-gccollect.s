@@ -12,13 +12,13 @@
 # RUN: llvm-objdump -d %tout | FileCheck -check-prefix=DISASM %s
 
 # DISASM:      _start:
-# DISASM-NEXT:    11000:       90      nop
+# DISASM-NEXT:    201000:       90      nop
 # DISASM-NEXT: Disassembly of section foo:
 # DISASM-NEXT: foo:
-# DISASM-NEXT:    11001:       90      nop
+# DISASM-NEXT:    201001:       90      nop
 # DISASM-NEXT: Disassembly of section bar:
 # DISASM-NEXT: bar:
-# DISASM-NEXT:    11002:       90      nop
+# DISASM-NEXT:    201002:       90      nop
 
 .global _start
 .text

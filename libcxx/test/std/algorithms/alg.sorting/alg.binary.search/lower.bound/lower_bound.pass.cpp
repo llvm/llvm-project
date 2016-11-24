@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 #include "test_iterators.h"
 
@@ -39,7 +40,7 @@ test()
     const unsigned M = 10;
     std::vector<int> v(N);
     int x = 0;
-    for (int i = 0; i < v.size(); ++i)
+    for (std::size_t i = 0; i < v.size(); ++i)
     {
         v[i] = x;
         if (++x == M)

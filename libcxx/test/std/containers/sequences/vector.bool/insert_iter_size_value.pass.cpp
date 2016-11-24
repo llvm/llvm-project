@@ -14,6 +14,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 #include "min_allocator.h"
 
@@ -24,7 +25,7 @@ int main()
         std::vector<bool>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
         assert(v.size() == 105);
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (; j < 15; ++j)
@@ -39,7 +40,7 @@ int main()
         std::vector<bool>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
         assert(v.size() == sz + 5);
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (; j < 15; ++j)
@@ -55,7 +56,7 @@ int main()
         std::vector<bool>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
         assert(v.size() == sz + 5);
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (; j < 15; ++j)
@@ -69,7 +70,7 @@ int main()
         std::vector<bool, min_allocator<bool>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
         assert(v.size() == 105);
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (; j < 15; ++j)

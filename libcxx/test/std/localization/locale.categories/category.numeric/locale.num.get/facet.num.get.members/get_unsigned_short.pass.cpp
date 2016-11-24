@@ -45,7 +45,7 @@ int main()
 {
     const my_facet f(1);
     std::ios ios(0);
-    unsigned short v = -1;
+    unsigned short v = static_cast<unsigned short>(-1);
     {
         const char str[] = "0";
         std::ios_base::iostate err = ios.goodbit;

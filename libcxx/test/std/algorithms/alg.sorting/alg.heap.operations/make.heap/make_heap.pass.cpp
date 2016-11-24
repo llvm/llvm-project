@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <cassert>
 
-void test(unsigned N)
+void test(int N)
 {
     int* ia = new int [N];
     for (int i = 0; i < N; ++i)

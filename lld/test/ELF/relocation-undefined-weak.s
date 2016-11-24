@@ -18,10 +18,10 @@ _start:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x11000
+// CHECK-NEXT: Address: 0x201000
 
 // Unfortunately FileCheck can't do math, so we have to check for explicit
 // values:
-// R_86_64_PC32 = 0 + (-8 - (0x11000 + 2)) = -69642
+// R_86_64_PC32 = 0 + (-8 - (0x201000 + 2)) = -2101258
 
-// DISASM: movl    $1, -69642(%rip)
+// DISASM: movl    $1, -2101258(%rip)

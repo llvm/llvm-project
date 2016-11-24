@@ -10,17 +10,17 @@
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x10120
+// CHECK-NEXT: Address: 0x200120
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 48
 // CHECK-NOT: .eh_frame
 
-// 0x10120 = 65824
-// 0x10120 + 5 = 65829
+// 0x200120 = 2097440
+// 0x200120 + 5 = 2097445
 // DISASM:      Disassembly of section .text:
 // DISASM-NEXT: _start:
-// DISASM-NEXT:    11000: {{.*}} movq 65824, %rax
-// DISASM-NEXT:    11008: {{.*}} movq 65829, %rax
+// DISASM-NEXT:   201000: {{.*}} movq 2097440, %rax
+// DISASM-NEXT:   201008: {{.*}} movq 2097445, %rax
 
 .section .eh_frame,"ax",@unwind
 

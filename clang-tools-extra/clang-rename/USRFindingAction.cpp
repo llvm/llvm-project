@@ -150,21 +150,20 @@ private:
   bool FindSymbol(ASTContext &Context, const SourceManager &SourceMgr,
                   unsigned SymbolOffset, const std::string &QualifiedName) {
     DiagnosticsEngine &Engine = Context.getDiagnostics();
+    const FileID MainFileID = SourceMgr.getMainFileID();
 
-    const SourceLocation Point =
-        SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
-            .getLocWithOffset(SymbolOffset);
-
-    if (!Point.isValid()) {
+    if (SymbolOffset >= SourceMgr.getFileIDSize(MainFileID)) {
       ErrorOccurred = true;
       unsigned InvalidOffset = Engine.getCustomDiagID(
           DiagnosticsEngine::Error,
           "SourceLocation in file %0 at offset %1 is invalid");
-      Engine.Report(Point, InvalidOffset) << SourceMgr.getFilename(Point)
-                                          << SymbolOffset;
+      Engine.Report(SourceLocation(), InvalidOffset)
+          << SourceMgr.getFileEntryForID(MainFileID)->getName() << SymbolOffset;
       return false;
     }
 
+    const SourceLocation Point = SourceMgr.getLocForStartOfFile(MainFileID)
+                                     .getLocWithOffset(SymbolOffset);
     const NamedDecl *FoundDecl = QualifiedName.empty()
                                      ? getNamedDeclAt(Context, Point)
                                      : getNamedDeclFor(Context, QualifiedName);

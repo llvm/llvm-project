@@ -1,4 +1,5 @@
-namespace A {
+#define NAMESPACE namespace A
+NAMESPACE {
 int Foo;          /* Test 1 */        // CHECK: int Bar;
 }
 int Foo;                              // CHECK: int Foo;
@@ -20,13 +21,13 @@ void fun() {
 }
 
 // Test 1.
-// RUN: clang-rename -offset=18 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// RUN: clang-rename -offset=46 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
 // Test 2.
-// RUN: clang-rename -offset=206 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// RUN: clang-rename -offset=234 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
 // Test 3.
-// RUN: clang-rename -offset=613 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// RUN: clang-rename -offset=641 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
 // Test 4.
-// RUN: clang-rename -offset=688 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// RUN: clang-rename -offset=716 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
 
 // To find offsets after modifying the file, use:
 //   grep -Ubo 'Foo.*' <file>

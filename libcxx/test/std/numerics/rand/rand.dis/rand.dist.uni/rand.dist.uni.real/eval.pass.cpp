@@ -20,6 +20,7 @@
 #include <cassert>
 #include <vector>
 #include <numeric>
+#include <cstddef>
 
 template <class T>
 inline
@@ -49,7 +50,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -89,7 +90,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -129,7 +130,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -169,7 +170,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -209,7 +210,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -249,7 +250,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -289,7 +290,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -329,7 +330,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -369,7 +370,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -409,7 +410,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
@@ -449,7 +450,7 @@ int main()
         D::result_type var = 0;
         D::result_type skew = 0;
         D::result_type kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             D::result_type dbl = (u[i] - mean);
             D::result_type d2 = sqr(dbl);
