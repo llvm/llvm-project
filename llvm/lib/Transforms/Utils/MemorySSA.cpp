@@ -2067,7 +2067,7 @@ bool MemorySSAPrinterLegacyPass::runOnFunction(Function &F) {
   return false;
 }
 
-char MemorySSAAnalysis::PassID;
+AnalysisKey MemorySSAAnalysis::Key;
 
 MemorySSAAnalysis::Result MemorySSAAnalysis::run(Function &F,
                                                  FunctionAnalysisManager &AM) {

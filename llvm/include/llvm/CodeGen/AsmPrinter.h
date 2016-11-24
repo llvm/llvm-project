@@ -149,6 +149,9 @@ public:
   DwarfDebug *getDwarfDebug() { return DD; }
   DwarfDebug *getDwarfDebug() const { return DD; }
 
+  uint16_t getDwarfVersion() const;
+  void setDwarfVersion(uint16_t Version);
+
   bool isPositionIndependent() const;
 
   /// Return true if assembly output should contain comments.

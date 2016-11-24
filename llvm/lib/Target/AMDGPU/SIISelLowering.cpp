@@ -59,7 +59,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i1, &AMDGPU::VReg_1RegClass);
   addRegisterClass(MVT::i64, &AMDGPU::SReg_64RegClass);
 
-  addRegisterClass(MVT::i32, &AMDGPU::SReg_32RegClass);
+  addRegisterClass(MVT::i32, &AMDGPU::SReg_32_XM0RegClass);
   addRegisterClass(MVT::f32, &AMDGPU::VGPR_32RegClass);
 
   addRegisterClass(MVT::f64, &AMDGPU::VReg_64RegClass);
@@ -79,8 +79,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v16f32, &AMDGPU::VReg_512RegClass);
 
   if (Subtarget->has16BitInsts()) {
-    addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
-    addRegisterClass(MVT::f16, &AMDGPU::SReg_32RegClass);
+    addRegisterClass(MVT::i16, &AMDGPU::SReg_32_XM0RegClass);
+    addRegisterClass(MVT::f16, &AMDGPU::SReg_32_XM0RegClass);
   }
 
   computeRegisterProperties(STI.getRegisterInfo());
@@ -941,25 +941,25 @@ SDValue SITargetLowering::LowerFormalArguments(
   // Start adding system SGPRs.
   if (Info->hasWorkGroupIDX()) {
     unsigned Reg = Info->addWorkGroupIDX();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info->hasWorkGroupIDY()) {
     unsigned Reg = Info->addWorkGroupIDY();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info->hasWorkGroupIDZ()) {
     unsigned Reg = Info->addWorkGroupIDZ();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info->hasWorkGroupInfo()) {
     unsigned Reg = Info->addWorkGroupInfo();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
@@ -2414,15 +2414,15 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
   case Intrinsic::r600_read_tgid_x:
-    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
+    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32_XM0RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_X), VT);
   case Intrinsic::amdgcn_workgroup_id_y:
   case Intrinsic::r600_read_tgid_y:
-    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
+    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32_XM0RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_Y), VT);
   case Intrinsic::amdgcn_workgroup_id_z:
   case Intrinsic::r600_read_tgid_z:
-    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
+    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32_XM0RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_Z), VT);
   case Intrinsic::amdgcn_workitem_id_x:
   case Intrinsic::r600_read_tidig_x:
@@ -4182,7 +4182,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       default:
         return std::make_pair(0U, nullptr);
       case 32:
-        return std::make_pair(0U, &AMDGPU::SReg_32RegClass);
+        return std::make_pair(0U, &AMDGPU::SReg_32_XM0RegClass);
       case 64:
         return std::make_pair(0U, &AMDGPU::SGPR_64RegClass);
       case 128:

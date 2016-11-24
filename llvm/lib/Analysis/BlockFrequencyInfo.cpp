@@ -252,7 +252,7 @@ bool BlockFrequencyInfoWrapperPass::runOnFunction(Function &F) {
   return false;
 }
 
-char BlockFrequencyAnalysis::PassID;
+AnalysisKey BlockFrequencyAnalysis::Key;
 BlockFrequencyInfo BlockFrequencyAnalysis::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   BlockFrequencyInfo BFI;

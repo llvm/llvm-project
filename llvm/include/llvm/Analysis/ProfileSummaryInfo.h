@@ -94,7 +94,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<ProfileSummaryAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 };
 
 /// \brief Printer pass that uses \c ProfileSummaryAnalysis.

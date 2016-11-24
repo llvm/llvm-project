@@ -103,7 +103,7 @@ private:
 /// in particular to leverage invalidation to trigger re-computation.
 class CFLAndersAA : public AnalysisInfoMixin<CFLAndersAA> {
   friend AnalysisInfoMixin<CFLAndersAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef CFLAndersAAResult Result;

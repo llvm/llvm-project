@@ -649,7 +649,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     bool Preemptible = isPreemptible(Body, Type);
     Expr = adjustExpr(*File, Body, IsWrite, Expr, Type, Buf + RI.r_offset, C,
                       RI.r_offset);
-    if (HasError)
+    if (ErrorCount)
       continue;
 
     // Skip a relocation that points to a dead piece

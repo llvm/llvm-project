@@ -179,8 +179,8 @@ extern OptionCategory GeneralCategory;
 //
 class SubCommand {
 private:
-  StringRef Name = "";
-  StringRef Description = "";
+  StringRef Name;
+  StringRef Description;
 
 protected:
   void registerSubCommand();
@@ -304,8 +304,8 @@ protected:
                   enum OptionHidden Hidden)
       : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
         HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0), Position(0),
-        AdditionalVals(0), ArgStr(""), HelpStr(""), ValueStr(""),
-        Category(&GeneralCategory), FullyInitialized(false) {}
+        AdditionalVals(0), Category(&GeneralCategory), FullyInitialized(false) {
+  }
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 

@@ -63,7 +63,7 @@ public:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class ObjCARCAA : public AnalysisInfoMixin<ObjCARCAA> {
   friend AnalysisInfoMixin<ObjCARCAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef ObjCARCAAResult Result;

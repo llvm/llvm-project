@@ -485,7 +485,7 @@ private:
 class MemoryDependenceAnalysis
     : public AnalysisInfoMixin<MemoryDependenceAnalysis> {
   friend AnalysisInfoMixin<MemoryDependenceAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef MemoryDependenceResults Result;

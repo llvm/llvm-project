@@ -7,24 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
-
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/DebugInfo/MSF/StreamInterface.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
-#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -33,13 +36,13 @@ using namespace llvm::pdb;
 
 namespace {
 typedef FixedStreamArray<support::ulittle32_t> ulittle_array;
-}
+} // end anonymous namespace
 
 PDBFile::PDBFile(std::unique_ptr<ReadableStream> PdbFileBuffer,
                  BumpPtrAllocator &Allocator)
     : Allocator(Allocator), Buffer(std::move(PdbFileBuffer)) {}
 
-PDBFile::~PDBFile() {}
+PDBFile::~PDBFile() = default;
 
 uint32_t PDBFile::getBlockSize() const { return ContainerLayout.SB->BlockSize; }
 
@@ -214,7 +217,7 @@ Error PDBFile::parseStreamData() {
   return Error::success();
 }
 
-llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
+ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
   return ContainerLayout.DirectoryBlocks;
 }
 

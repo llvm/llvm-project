@@ -805,7 +805,7 @@ template <> struct GraphTraits<Loop*> {
 /// \brief Analysis pass that exposes the \c LoopInfo for a function.
 class LoopAnalysis : public AnalysisInfoMixin<LoopAnalysis> {
   friend AnalysisInfoMixin<LoopAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef LoopInfo Result;

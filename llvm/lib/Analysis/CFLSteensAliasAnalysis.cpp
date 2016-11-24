@@ -341,7 +341,7 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
   return NoAlias;
 }
 
-char CFLSteensAA::PassID;
+AnalysisKey CFLSteensAA::Key;
 
 CFLSteensAAResult CFLSteensAA::run(Function &F, FunctionAnalysisManager &AM) {
   return CFLSteensAAResult(AM.getResult<TargetLibraryAnalysis>(F));

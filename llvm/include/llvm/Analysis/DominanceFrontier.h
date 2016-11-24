@@ -171,7 +171,7 @@ extern template class ForwardDominanceFrontierBase<BasicBlock>;
 class DominanceFrontierAnalysis
     : public AnalysisInfoMixin<DominanceFrontierAnalysis> {
   friend AnalysisInfoMixin<DominanceFrontierAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   /// \brief Provide the result typedef for this analysis pass.

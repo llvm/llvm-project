@@ -1265,7 +1265,7 @@ TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-char TargetLibraryAnalysis::PassID;
+AnalysisKey TargetLibraryAnalysis::Key;
 
 // Register the basic pass.
 INITIALIZE_PASS(TargetLibraryInfoWrapperPass, "targetlibinfo",

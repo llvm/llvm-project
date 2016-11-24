@@ -42,7 +42,6 @@ LinkerDriver *elf::Driver;
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
-  HasError = false;
   ErrorCount = 0;
   ErrorOS = &Error;
   Argv0 = Args[0];
@@ -56,7 +55,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 
   Driver->main(Args, CanExitEarly);
   freeArena();
-  return !HasError;
+  return !ErrorCount;
 }
 
 // Parses a linker -m option.
@@ -321,7 +320,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   createFiles(Args);
   inferMachineType();
   checkOptions(Args);
-  if (HasError)
+  if (ErrorCount)
     return;
 
   switch (Config->EKind) {
@@ -670,7 +669,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     }
   }
 
-  if (Files.empty() && !HasError)
+  if (Files.empty() && ErrorCount == 0)
     error("no input files");
 }
 
@@ -767,7 +766,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (Symtab.find(Config->Entry))
     Symtab.addUndefined(Config->Entry);
 
-  if (HasError)
+  if (ErrorCount)
     return; // There were duplicate symbols or incompatible files
 
   Symtab.scanUndefinedFlags();
@@ -776,7 +775,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanVersionScript();
 
   Symtab.addCombinedLtoObject();
-  if (HasError)
+  if (ErrorCount)
     return;
 
   for (auto *Arg : Args.filtered(OPT_wrap))

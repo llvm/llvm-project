@@ -37,11 +37,11 @@ using namespace dwarf;
 class llvm::FrameEntry {
 public:
   enum FrameKind {FK_CIE, FK_FDE};
+
   FrameEntry(FrameKind K, uint64_t Offset, uint64_t Length)
       : Kind(K), Offset(Offset), Length(Length) {}
 
-  virtual ~FrameEntry() {
-  }
+  virtual ~FrameEntry() = default;
 
   FrameKind getKind() const { return Kind; }
   virtual uint64_t getOffset() const { return Offset; }
@@ -220,7 +220,7 @@ public:
         FDEPointerEncoding(FDEPointerEncoding),
         LSDAPointerEncoding(LSDAPointerEncoding) {}
 
-  ~CIE() override {}
+  ~CIE() override = default;
 
   StringRef getAugmentationString() const { return Augmentation; }
   uint64_t getCodeAlignmentFactor() const { return CodeAlignmentFactor; }
@@ -294,7 +294,7 @@ public:
         InitialLocation(InitialLocation), AddressRange(AddressRange),
         LinkedCIE(Cie) {}
 
-  ~FDE() override {}
+  ~FDE() override = default;
 
   CIE *getLinkedCIE() const { return LinkedCIE; }
 
@@ -468,8 +468,7 @@ void FrameEntry::dumpInstructions(raw_ostream &OS) const {
 DWARFDebugFrame::DWARFDebugFrame(bool IsEH) : IsEH(IsEH) {
 }
 
-DWARFDebugFrame::~DWARFDebugFrame() {
-}
+DWARFDebugFrame::~DWARFDebugFrame() = default;
 
 static void LLVM_ATTRIBUTE_UNUSED dumpDataAux(DataExtractor Data,
                                               uint32_t Offset, int Length) {
@@ -620,12 +619,14 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
         }
       }
 
-      auto Cie = make_unique<CIE>(StartOffset, Length, Version,
-                                  AugmentationString, AddressSize,
-                                  SegmentDescriptorSize, CodeAlignmentFactor,
-                                  DataAlignmentFactor, ReturnAddressRegister,
-                                  AugmentationData, FDEPointerEncoding,
-                                  LSDAPointerEncoding);
+      auto Cie = llvm::make_unique<CIE>(StartOffset, Length, Version,
+                                        AugmentationString, AddressSize,
+                                        SegmentDescriptorSize,
+                                        CodeAlignmentFactor,
+                                        DataAlignmentFactor,
+                                        ReturnAddressRegister,
+                                        AugmentationData, FDEPointerEncoding,
+                                        LSDAPointerEncoding);
       CIEs[StartOffset] = Cie.get();
       Entries.emplace_back(std::move(Cie));
     } else {

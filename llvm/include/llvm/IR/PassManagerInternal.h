@@ -20,6 +20,8 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include <memory>
+#include <utility>
 
 namespace llvm {
 
@@ -34,7 +36,7 @@ namespace detail {
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
 struct PassConcept {
   // Boiler plate necessary for the container of derived classes.
-  virtual ~PassConcept() {}
+  virtual ~PassConcept() = default;
 
   /// \brief The polymorphic API which runs the pass over a given IR entity.
   ///
@@ -61,10 +63,12 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   // refuses to generate them.
   PassModel(const PassModel &Arg) : Pass(Arg.Pass) {}
   PassModel(PassModel &&Arg) : Pass(std::move(Arg.Pass)) {}
+
   friend void swap(PassModel &LHS, PassModel &RHS) {
     using std::swap;
     swap(LHS.Pass, RHS.Pass);
   }
+
   PassModel &operator=(PassModel RHS) {
     swap(*this, RHS);
     return *this;
@@ -74,7 +78,9 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
                          ExtraArgTs... ExtraArgs) override {
     return Pass.run(IR, AM, ExtraArgs...);
   }
+
   StringRef name() override { return PassT::name(); }
+
   PassT Pass;
 };
 
@@ -83,7 +89,7 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
 /// This concept is parameterized over the IR unit that this result pertains
 /// to.
 template <typename IRUnitT> struct AnalysisResultConcept {
-  virtual ~AnalysisResultConcept() {}
+  virtual ~AnalysisResultConcept() = default;
 
   /// \brief Method to try and mark a result as invalid.
   ///
@@ -158,10 +164,12 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT, false>
   AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
   AnalysisResultModel(AnalysisResultModel &&Arg)
       : Result(std::move(Arg.Result)) {}
+
   friend void swap(AnalysisResultModel &LHS, AnalysisResultModel &RHS) {
     using std::swap;
     swap(LHS.Result, RHS.Result);
   }
+
   AnalysisResultModel &operator=(AnalysisResultModel RHS) {
     swap(*this, RHS);
     return *this;
@@ -191,10 +199,12 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT, true>
   AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
   AnalysisResultModel(AnalysisResultModel &&Arg)
       : Result(std::move(Arg.Result)) {}
+
   friend void swap(AnalysisResultModel &LHS, AnalysisResultModel &RHS) {
     using std::swap;
     swap(LHS.Result, RHS.Result);
   }
+
   AnalysisResultModel &operator=(AnalysisResultModel RHS) {
     swap(*this, RHS);
     return *this;
@@ -213,7 +223,7 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT, true>
 /// This concept is parameterized over the IR unit that it can run over and
 /// produce an analysis result.
 template <typename IRUnitT, typename... ExtraArgTs> struct AnalysisPassConcept {
-  virtual ~AnalysisPassConcept() {}
+  virtual ~AnalysisPassConcept() = default;
 
   /// \brief Method to run this analysis over a unit of IR.
   /// \returns A unique_ptr to the analysis result object to be queried by
@@ -238,10 +248,12 @@ struct AnalysisPassModel : AnalysisPassConcept<IRUnitT, ExtraArgTs...> {
   // refuses to generate them.
   AnalysisPassModel(const AnalysisPassModel &Arg) : Pass(Arg.Pass) {}
   AnalysisPassModel(AnalysisPassModel &&Arg) : Pass(std::move(Arg.Pass)) {}
+
   friend void swap(AnalysisPassModel &LHS, AnalysisPassModel &RHS) {
     using std::swap;
     swap(LHS.Pass, RHS.Pass);
   }
+
   AnalysisPassModel &operator=(AnalysisPassModel RHS) {
     swap(*this, RHS);
     return *this;
@@ -268,7 +280,8 @@ struct AnalysisPassModel : AnalysisPassConcept<IRUnitT, ExtraArgTs...> {
   PassT Pass;
 };
 
-} // End namespace detail
-}
+} // end namespace detail
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_IR_PASSMANAGERINTERNAL_H

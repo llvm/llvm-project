@@ -45,20 +45,21 @@ declare void @callee3(float, %struct.S3* byval, %struct.S1* byval)
 define void @f2(float %f, %struct.S1* nocapture byval %s1) nounwind {
 entry:
 ; CHECK: addiu $sp, $sp, -48
-; CHECK: sw  $7, 60($sp)
+; CHECK: sw  $[[R7:[0-9]+]], 60($sp)
 ; CHECK: sw  $6, 56($sp)
 ; CHECK: lw  $4, 80($sp)
 ; CHECK: ldc1 $f[[F0:[0-9]+]], 72($sp)
-; CHECK: lw  $[[R3:[0-9]+]], 64($sp)
-; CHECK: lw  $[[R4:[0-9]+]], 68($sp)
-; CHECK: lw  $[[R2:[0-9]+]], 60($sp)
-; CHECK: lh  $[[R1:[0-9]+]], 58($sp)
-; CHECK: lb  $[[R0:[0-9]+]], 56($sp)
-; CHECK: sw  $[[R0]], 32($sp)
-; CHECK: sw  $[[R1]], 28($sp)
-; CHECK: sw  $[[R2]], 24($sp)
-; CHECK: sw  $[[R4]], 20($sp)
-; CHECK: sw  $[[R3]], 16($sp)
+
+; CHECK: lw  $[[R1:[0-9]+]], 64($sp)
+; CHECK: lw  $[[R2:[0-9]+]], 68($sp)
+; CHECK: lh  $[[R3:[0-9]+]], 58($sp)
+; CHECK: lb  $[[R5:[0-9]+]], 56($sp)
+
+; CHECK-DAG: sw  $[[R5]], 32($sp)
+; CHECK-DAG: sw  $[[R3]], 28($sp)
+; CHECK-DAG: sw  $[[R7]], 24($sp)
+; CHECK-DAG: sw  $[[R2]], 20($sp)
+; CHECK-DAG: sw  $[[R1]], 16($sp)
 ; CHECK: mfc1 $6, $f[[F0]]
 
   %i2 = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 5
@@ -86,9 +87,7 @@ entry:
 ; CHECK: sw  $6, 56($sp)
 ; CHECK: sw  $5, 52($sp)
 ; CHECK: sw  $4, 48($sp)
-; CHECK: lw  $4, 48($sp)
-; CHECK: lw  $[[R0:[0-9]+]], 60($sp)
-; CHECK: sw  $[[R0]], 24($sp)
+; CHECK: sw  $7, 24($sp)
 
   %arrayidx = getelementptr inbounds %struct.S2, %struct.S2* %s2, i32 0, i32 0, i32 0
   %tmp = load i32, i32* %arrayidx, align 4
@@ -104,7 +103,6 @@ entry:
 ; CHECK: sw  $7, 60($sp)
 ; CHECK: sw  $6, 56($sp)
 ; CHECK: sw  $5, 52($sp)
-; CHECK: lw  $4, 60($sp)
 ; CHECK: lw  $[[R1:[0-9]+]], 80($sp)
 ; CHECK: lb  $[[R0:[0-9]+]], 52($sp)
 ; CHECK: sw  $[[R0]], 32($sp)

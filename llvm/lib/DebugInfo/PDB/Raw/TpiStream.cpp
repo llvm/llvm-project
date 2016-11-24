@@ -7,12 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
-
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -22,8 +19,12 @@
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiHashing.h"
-
+#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cstdint>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -35,7 +36,7 @@ TpiStream::TpiStream(const PDBFile &File,
                      std::unique_ptr<MappedBlockStream> Stream)
     : Pdb(File), Stream(std::move(Stream)) {}
 
-TpiStream::~TpiStream() {}
+TpiStream::~TpiStream() = default;
 
 // Verifies that a given type record matches with a given hash value.
 // Currently we only verify SRC_LINE records.
@@ -170,7 +171,7 @@ TpiStream::getHashAdjustments() const {
 
 iterator_range<CVTypeArray::Iterator>
 TpiStream::types(bool *HadError) const {
-  return llvm::make_range(TypeRecords.begin(HadError), TypeRecords.end());
+  return make_range(TypeRecords.begin(HadError), TypeRecords.end());
 }
 
 Error TpiStream::commit() { return Error::success(); }

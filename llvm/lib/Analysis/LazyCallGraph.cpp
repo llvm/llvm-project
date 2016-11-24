@@ -1833,7 +1833,7 @@ bool LazyCallGraph::buildNextRefSCCInPostOrder() {
   }
 }
 
-char LazyCallGraphAnalysis::PassID;
+AnalysisKey LazyCallGraphAnalysis::Key;
 
 LazyCallGraphPrinterPass::LazyCallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
 

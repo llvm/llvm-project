@@ -1145,7 +1145,7 @@ template <> struct GraphTraits<LazyCallGraph *> {
 /// An analysis pass which computes the call graph for a module.
 class LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
   friend AnalysisInfoMixin<LazyCallGraphAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   /// Inform generic clients of the result type.

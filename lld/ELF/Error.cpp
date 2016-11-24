@@ -24,7 +24,6 @@ using namespace llvm;
 
 namespace lld {
 
-bool elf::HasError;
 uint64_t elf::ErrorCount;
 raw_ostream *elf::ErrorOS;
 StringRef elf::Argv0;
@@ -59,7 +58,6 @@ void elf::error(const Twine &Msg) {
       exitLld(1);
   }
 
-  HasError = true;
   ++ErrorCount;
 }
 

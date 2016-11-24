@@ -82,6 +82,7 @@ private:
   void addRelIpltSymbols();
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSectionBase *Sec);
+  uintX_t getEntryAddr();
   OutputSectionBase *findSection(StringRef Name);
 
   std::vector<Phdr> Phdrs;
@@ -173,7 +174,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // to the string table, and add entries to .got and .plt.
   // finalizeSections does that.
   finalizeSections();
-  if (HasError)
+  if (ErrorCount)
     return;
 
   if (Config->Relocatable) {
@@ -200,7 +201,7 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   // Write the result down to a file.
   openFile();
-  if (HasError)
+  if (ErrorCount)
     return;
   if (!Config->OFormatBinary) {
     writeHeader();
@@ -212,7 +213,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Backfill .note.gnu.build-id section content. This is done at last
   // because the content is usually a hash value of the entire output file.
   writeBuildId();
-  if (HasError)
+  if (ErrorCount)
     return;
 
   if (auto EC = Buffer->commit())
@@ -923,7 +924,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   }
 
   // Do not proceed if there was an undefined symbol.
-  if (HasError)
+  if (ErrorCount)
     return;
 
   // So far we have added sections from input object files.
@@ -1360,12 +1361,30 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
   }
 }
 
-template <class ELFT> static typename ELFT::uint getEntryAddr() {
+// The entry point address is chosen in the following ways.
+//
+// 1. the '-e' entry command-line option;
+// 2. the ENTRY(symbol) command in a linker control script;
+// 3. the value of the symbol start, if present;
+// 4. the address of the first byte of the .text section, if present;
+// 5. the address 0.
+template <class ELFT> typename ELFT::uint Writer<ELFT>::getEntryAddr() {
+  // Case 1, 2 or 3
   if (Config->Entry.empty())
     return Config->EntryAddr;
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Entry))
     return B->getVA<ELFT>();
-  warn("entry symbol " + Config->Entry + " not found, assuming 0");
+
+  // Case 4
+  if (OutputSectionBase *Sec = findSection(".text")) {
+    warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
+         utohexstr(Sec->Addr));
+    return Sec->Addr;
+  }
+
+  // Case 5
+  warn("cannot find entry symbol " + Config->Entry +
+       "; not setting start address");
   return 0;
 }
 
@@ -1438,7 +1457,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_type = getELFType();
   EHdr->e_machine = Config->EMachine;
   EHdr->e_version = EV_CURRENT;
-  EHdr->e_entry = getEntryAddr<ELFT>();
+  EHdr->e_entry = getEntryAddr();
   EHdr->e_shoff = SectionHeaderOff;
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
   EHdr->e_phnum = Phdrs.size();

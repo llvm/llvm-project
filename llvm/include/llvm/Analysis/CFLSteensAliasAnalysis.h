@@ -122,7 +122,7 @@ private:
 /// in particular to leverage invalidation to trigger re-computation of sets.
 class CFLSteensAA : public AnalysisInfoMixin<CFLSteensAA> {
   friend AnalysisInfoMixin<CFLSteensAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef CFLSteensAAResult Result;

@@ -672,7 +672,7 @@ public:
 ///
 class MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {
   friend AnalysisInfoMixin<MemorySSAAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   // Wrap MemorySSA result to ensure address stability of internal MemorySSA

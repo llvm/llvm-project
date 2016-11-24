@@ -110,14 +110,14 @@ define i32 @sitofp_i64_double() {
   ; AVX1: cost of 13 {{.*}} sitofp <4 x i64>
   ; AVX2: cost of 13 {{.*}} sitofp <4 x i64>
   ; AVX512F: cost of 13 {{.*}} sitofp <4 x i64>
-  ; AVX512DQ: cost of 13 {{.*}} sitofp <4 x i64>
+  ; AVX512DQ: cost of 1 {{.*}} sitofp <4 x i64>
   %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
 
   ; SSE2: cost of 80 {{.*}} sitofp <8 x i64>
   ; AVX1: cost of 27 {{.*}} sitofp <8 x i64>
   ; AVX2: cost of 27 {{.*}} sitofp <8 x i64>
   ; AVX512F: cost of 22 {{.*}} sitofp <8 x i64>
-  ; AVX512DQ: cost of 22 {{.*}} sitofp <8 x i64>
+  ; AVX512DQ: cost of 1 {{.*}} sitofp <8 x i64>
   %cvt_v8i64_v8f64 = sitofp <8 x i64> undef to <8 x double>
 
   ret i32 undef
@@ -229,21 +229,21 @@ define i32 @sitofp_i64_float() {
   ; AVX1: cost of 10 {{.*}} sitofp <4 x i64>
   ; AVX2: cost of 10 {{.*}} sitofp <4 x i64>
   ; AVX512F: cost of 10 {{.*}} sitofp <4 x i64>
-  ; AVX512DQ: cost of 10 {{.*}} sitofp <4 x i64>
+  ; AVX512DQ: cost of 1 {{.*}} sitofp <4 x i64>
   %cvt_v4i64_v4f32 = sitofp <4 x i64> undef to <4 x float>
 
   ; SSE2: cost of 60 {{.*}} sitofp <8 x i64>
   ; AVX1: cost of 21 {{.*}} sitofp <8 x i64>
   ; AVX2: cost of 21 {{.*}} sitofp <8 x i64>
   ; AVX512F: cost of 22 {{.*}} sitofp <8 x i64>
-  ; AVX512DQ: cost of 22 {{.*}} sitofp <8 x i64>
+  ; AVX512DQ: cost of 1 {{.*}} sitofp <8 x i64>
   %cvt_v8i64_v8f32 = sitofp <8 x i64> undef to <8 x float>
 
   ; SSE2: cost of 120 {{.*}} sitofp <16 x i64>
   ; AVX1: cost of 43 {{.*}} sitofp <16 x i64>
   ; AVX2: cost of 43 {{.*}} sitofp <16 x i64>
   ; AVX512F: cost of 45 {{.*}} sitofp <16 x i64>
-  ; AVX512DQ: cost of 45 {{.*}} sitofp <16 x i64>
+  ; AVX512DQ: cost of 3 {{.*}} sitofp <16 x i64>
   %cvt_v16i64_v16f32 = sitofp <16 x i64> undef to <16 x float>
 
   ret i32 undef

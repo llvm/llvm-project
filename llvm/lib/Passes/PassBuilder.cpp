@@ -152,7 +152,7 @@ struct NoOpModulePass {
 /// \brief No-op module analysis.
 class NoOpModuleAnalysis : public AnalysisInfoMixin<NoOpModuleAnalysis> {
   friend AnalysisInfoMixin<NoOpModuleAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   struct Result {};
@@ -172,7 +172,7 @@ struct NoOpCGSCCPass {
 /// \brief No-op CGSCC analysis.
 class NoOpCGSCCAnalysis : public AnalysisInfoMixin<NoOpCGSCCAnalysis> {
   friend AnalysisInfoMixin<NoOpCGSCCAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   struct Result {};
@@ -193,7 +193,7 @@ struct NoOpFunctionPass {
 /// \brief No-op function analysis.
 class NoOpFunctionAnalysis : public AnalysisInfoMixin<NoOpFunctionAnalysis> {
   friend AnalysisInfoMixin<NoOpFunctionAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   struct Result {};
@@ -212,7 +212,7 @@ struct NoOpLoopPass {
 /// \brief No-op loop analysis.
 class NoOpLoopAnalysis : public AnalysisInfoMixin<NoOpLoopAnalysis> {
   friend AnalysisInfoMixin<NoOpLoopAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   struct Result {};
@@ -220,10 +220,10 @@ public:
   static StringRef name() { return "NoOpLoopAnalysis"; }
 };
 
-char NoOpModuleAnalysis::PassID;
-char NoOpCGSCCAnalysis::PassID;
-char NoOpFunctionAnalysis::PassID;
-char NoOpLoopAnalysis::PassID;
+AnalysisKey NoOpModuleAnalysis::Key;
+AnalysisKey NoOpCGSCCAnalysis::Key;
+AnalysisKey NoOpFunctionAnalysis::Key;
+AnalysisKey NoOpLoopAnalysis::Key;
 
 } // End anonymous namespace.
 

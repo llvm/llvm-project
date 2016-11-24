@@ -364,7 +364,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC == &AMDGPU::SReg_32RegClass) {
+  if (RC == &AMDGPU::SReg_32_XM0RegClass ||
+      RC == &AMDGPU::SReg_32RegClass) {
     if (SrcReg == AMDGPU::SCC) {
       BuildMI(MBB, MI, DL, get(AMDGPU::S_CSELECT_B32), DestReg)
           .addImm(-1)

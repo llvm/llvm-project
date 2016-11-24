@@ -739,9 +739,12 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
   bool WasCopy = MI->isCopy();
   unsigned ImpReg = 0;
 
-  bool SpillSubRegs = (MI->getOpcode() == TargetOpcode::STATEPOINT ||
-                       MI->getOpcode() == TargetOpcode::PATCHPOINT ||
-                       MI->getOpcode() == TargetOpcode::STACKMAP);
+  // Spill subregs if the target allows it.
+  // We always want to spill subregs for stackmap/patchpoint pseudos.
+  bool SpillSubRegs = TII.isSubregFoldable() ||
+                      MI->getOpcode() == TargetOpcode::STATEPOINT ||
+                      MI->getOpcode() == TargetOpcode::PATCHPOINT ||
+                      MI->getOpcode() == TargetOpcode::STACKMAP;
 
   // TargetInstrInfo::foldMemoryOperand only expects explicit, non-tied
   // operands.
@@ -754,7 +757,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
       ImpReg = MO.getReg();
       continue;
     }
-    // FIXME: Teach targets to deal with subregs.
+
     if (!SpillSubRegs && MO.getSubReg())
       return false;
     // We cannot fold a load instruction into a def.

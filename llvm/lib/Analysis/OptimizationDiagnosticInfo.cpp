@@ -237,7 +237,7 @@ void OptimizationRemarkEmitterWrapperPass::getAnalysisUsage(
   AU.setPreservesAll();
 }
 
-char OptimizationRemarkEmitterAnalysis::PassID;
+AnalysisKey OptimizationRemarkEmitterAnalysis::Key;
 
 OptimizationRemarkEmitter
 OptimizationRemarkEmitterAnalysis::run(Function &F,

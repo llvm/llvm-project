@@ -10013,7 +10013,7 @@ void ScalarEvolution::verify() const {
   // TODO: Verify more things.
 }
 
-char ScalarEvolutionAnalysis::PassID;
+AnalysisKey ScalarEvolutionAnalysis::Key;
 
 ScalarEvolution ScalarEvolutionAnalysis::run(Function &F,
                                              FunctionAnalysisManager &AM) {

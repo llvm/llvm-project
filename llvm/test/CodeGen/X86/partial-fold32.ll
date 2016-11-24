@@ -3,8 +3,7 @@
 define fastcc i8 @fold32to8(i32 %add, i8 %spill) {
 ; CHECK-LABEL: fold32to8:
 ; CHECK:    movl %ecx, (%esp) # 4-byte Spill
-; CHECK:    movl (%esp), %eax # 4-byte Reload
-; CHECK:    subb %al, %dl
+; CHECK:    subb (%esp), %dl  # 1-byte Folded Reload
 entry:
   tail call void asm sideeffect "", "~{eax},~{ebx},~{ecx},~{edi},~{esi},~{ebp},~{dirflag},~{fpsr},~{flags}"()
   %trunc = trunc i32 %add to i8

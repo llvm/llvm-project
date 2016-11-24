@@ -941,7 +941,7 @@ GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
   return Result;
 }
 
-char GlobalsAA::PassID;
+AnalysisKey GlobalsAA::Key;
 
 GlobalsAAResult GlobalsAA::run(Module &M, ModuleAnalysisManager &AM) {
   return GlobalsAAResult::analyzeModule(M,
