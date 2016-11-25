@@ -102,7 +102,7 @@
 # INT-PHDRS-NEXT:        PF_W
 # INT-PHDRS-NEXT:        PF_X
 # INT-PHDRS-NEXT:      ]
-# INT-PHDRS-NEXT:      Alignment: 4
+# INT-PHDRS-NEXT:      Alignment:
 # INT-PHDRS-NEXT:    }
 # INT-PHDRS-NEXT:  ]
 

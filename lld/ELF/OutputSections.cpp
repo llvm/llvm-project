@@ -273,11 +273,11 @@ EhOutputSection<ELFT>::EhOutputSection()
 template <class ELFT>
 template <class RelTy>
 CieRecord *EhOutputSection<ELFT>::addCie(EhSectionPiece &Piece,
-                                         EhInputSection<ELFT> *Sec,
                                          ArrayRef<RelTy> Rels) {
+  auto *Sec = cast<EhInputSection<ELFT>>(Piece.ID);
   const endianness E = ELFT::TargetEndianness;
   if (read32<E>(Piece.data().data() + 4) != 0)
-    fatal("CIE expected at beginning of .eh_frame: " + Sec->Name);
+    fatal(toString(Sec) + ": CIE expected at beginning of .eh_frame");
 
   SymbolBody *Personality = nullptr;
   unsigned FirstRelI = Piece.FirstRelocation;
@@ -300,11 +300,11 @@ CieRecord *EhOutputSection<ELFT>::addCie(EhSectionPiece &Piece,
 template <class ELFT>
 template <class RelTy>
 bool EhOutputSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
-                                      EhInputSection<ELFT> *Sec,
                                       ArrayRef<RelTy> Rels) {
+  auto *Sec = cast<EhInputSection<ELFT>>(Piece.ID);
   unsigned FirstRelI = Piece.FirstRelocation;
   if (FirstRelI == (unsigned)-1)
-    fatal("FDE doesn't reference another section");
+    fatal(toString(Sec) + ": FDE doesn't reference another section");
   const RelTy &Rel = Rels[FirstRelI];
   SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
@@ -333,16 +333,16 @@ void EhOutputSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
     size_t Offset = Piece.InputOff;
     uint32_t ID = read32<E>(Piece.data().data() + 4);
     if (ID == 0) {
-      OffsetToCie[Offset] = addCie(Piece, Sec, Rels);
+      OffsetToCie[Offset] = addCie(Piece, Rels);
       continue;
     }
 
     uint32_t CieOffset = Offset + 4 - ID;
     CieRecord *Cie = OffsetToCie[CieOffset];
     if (!Cie)
-      fatal("invalid CIE reference");
+      fatal(toString(Sec) + ": invalid CIE reference");
 
-    if (!isFdeLive(Piece, Sec, Rels))
+    if (!isFdeLive(Piece, Rels))
       continue;
     Cie->FdePieces.push_back(&Piece);
     NumFdes++;

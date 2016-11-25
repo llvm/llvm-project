@@ -10,12 +10,14 @@
 #ifndef liblldb_Connection_h_
 #define liblldb_Connection_h_
 
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Utility/Timeout.h"
+#include "lldb/lldb-private.h"
+
 // C Includes
 // C++ Includes
 #include <string>
-// Other libraries and framework includes
-// Project includes
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -107,7 +109,7 @@ public:
   ///     The number of bytes to attempt to read, and also the max
   ///     number of bytes that can be placed into \a dst.
   ///
-  /// @param[in] timeout_usec
+  /// @param[in] timeout
   ///     The number of microseconds to wait for the data.
   ///
   /// @param[out] status
@@ -124,7 +126,8 @@ public:
   ///
   /// @see size_t Communication::Read (void *, size_t, uint32_t);
   //------------------------------------------------------------------
-  virtual size_t Read(void *dst, size_t dst_len, uint32_t timeout_usec,
+  virtual size_t Read(void *dst, size_t dst_len,
+                      const Timeout<std::micro> &timeout,
                       lldb::ConnectionStatus &status, Error *error_ptr) = 0;
 
   //------------------------------------------------------------------

@@ -343,7 +343,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (AbsVal && RelE) {
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
       return true;
-    error(getLocation(S, RelOff) + ": relocation " + toString(Type) +
+    error(S.getLocation(RelOff) + ": relocation " + toString(Type) +
           " cannot refer to absolute symbol '" + toString(Body) +
           "' defined in " + toString(Body.File));
     return true;
@@ -443,7 +443,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    error(getLocation(S, RelOff) + ": can't create dynamic relocation " +
+    error(S.getLocation(RelOff) + ": can't create dynamic relocation " +
           toString(Type) + " against " +
           (Body.getName().empty() ? "local symbol in readonly segment"
                                   : "symbol '" + toString(Body) + "'") +
@@ -451,8 +451,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
-    error(getLocation(S, RelOff) + ": cannot preempt symbol '" +
-          toString(Body) + "' defined in " + toString(Body.File));
+    error(S.getLocation(RelOff) + ": cannot preempt symbol '" + toString(Body) +
+          "' defined in " + toString(Body.File));
     return Expr;
   }
   if (Body.isObject()) {
@@ -521,43 +521,6 @@ static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
   return Addend;
 }
 
-// Find symbol that encloses given offset. Used for error reporting.
-template <class ELFT>
-static DefinedRegular<ELFT> *getSymbolAt(InputSectionBase<ELFT> *S,
-                                         typename ELFT::uint Offset) {
-  for (SymbolBody *B : S->getFile()->getSymbols())
-    if (auto *D = dyn_cast<DefinedRegular<ELFT>>(B))
-      if (D->Value <= Offset && D->Value + D->Size > Offset && D->Section == S)
-        return D;
-
-  return nullptr;
-}
-
-template <class ELFT>
-std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
-  ObjectFile<ELFT> *File = S.getFile();
-
-  // First check if we can get desired values from debugging information.
-  std::string LineInfo = File->getLineInfo(&S, Offset);
-  if (!LineInfo.empty())
-    return LineInfo;
-
-  // File->SourceFile contains STT_FILE symbol contents which is a
-  // filename. Compilers usually create STT_FILE symbols. If it's
-  // missing, we use an actual filename.
-  std::string SrcFile = File->SourceFile;
-  if (SrcFile.empty())
-    SrcFile = toString(File);
-
-  // Find a symbol at a given location.
-  DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
-  if (Encl && Encl->Type == STT_FUNC)
-    return SrcFile + ":(function " + toString(*Encl) + ")";
-
-  // If there's no symbol, print out the offset instead of a symbol name.
-  return (SrcFile + ":(" + S.Name + "+0x" + utohexstr(Offset) + ")").str();
-}
-
 template <class ELFT>
 static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
                             typename ELFT::uint Offset) {
@@ -569,7 +532,7 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
     return;
 
   std::string Msg =
-      getLocation(S, Offset) + ": undefined symbol '" + toString(Sym) + "'";
+      S.getLocation(Offset) + ": undefined symbol '" + toString(Sym) + "'";
 
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
     warn(Msg);
@@ -711,7 +674,11 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     } else {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
+      if (!Target->isPicRel(Type))
+        error(C.getLocation(Offset) + ": relocation " + toString(Type) +
+              " cannot be used against shared object; recompile with -fPIC.");
       AddDyn({Target->getDynRel(Type), &C, Offset, false, &Body, Addend});
+
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
       // MIPS ABI requires dynamic linker to fills up GOT entries using
@@ -833,14 +800,5 @@ template void createThunks<ELF32LE>(InputSectionBase<ELF32LE> &);
 template void createThunks<ELF32BE>(InputSectionBase<ELF32BE> &);
 template void createThunks<ELF64LE>(InputSectionBase<ELF64LE> &);
 template void createThunks<ELF64BE>(InputSectionBase<ELF64BE> &);
-
-template std::string getLocation<ELF32LE>(InputSectionBase<ELF32LE> &S,
-                                          uint32_t Offset);
-template std::string getLocation<ELF32BE>(InputSectionBase<ELF32BE> &S,
-                                          uint32_t Offset);
-template std::string getLocation<ELF64LE>(InputSectionBase<ELF64LE> &S,
-                                          uint64_t Offset);
-template std::string getLocation<ELF64BE>(InputSectionBase<ELF64BE> &S,
-                                          uint64_t Offset);
 }
 }

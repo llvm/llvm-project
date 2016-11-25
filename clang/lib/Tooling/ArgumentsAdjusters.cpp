@@ -17,7 +17,7 @@
 namespace clang {
 namespace tooling {
 
-/// Add -fsyntax-only option to the commnand line arguments.
+/// Add -fsyntax-only option to the command line arguments.
 ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
     CommandLineArguments AdjustedArgs;

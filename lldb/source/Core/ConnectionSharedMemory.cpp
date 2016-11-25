@@ -79,7 +79,7 @@ ConnectionStatus ConnectionSharedMemory::Disconnect(Error *error_ptr) {
 }
 
 size_t ConnectionSharedMemory::Read(void *dst, size_t dst_len,
-                                    uint32_t timeout_usec,
+                                    const Timeout<std::micro> &timeout,
                                     ConnectionStatus &status,
                                     Error *error_ptr) {
   status = eConnectionStatusSuccess;

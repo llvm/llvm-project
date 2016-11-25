@@ -535,8 +535,6 @@ SharedFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 // Partially parse the shared object file so that we can call
 // getSoName on this object.
 template <class ELFT> void SharedFile<ELFT>::parseSoName() {
-  typedef typename ELFT::Dyn Elf_Dyn;
-  typedef typename ELFT::uint uintX_t;
   const Elf_Shdr *DynamicSec = nullptr;
 
   const ELFFile<ELFT> Obj = this->getObj();

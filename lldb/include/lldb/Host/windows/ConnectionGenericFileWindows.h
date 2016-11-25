@@ -32,7 +32,7 @@ public:
 
   lldb::ConnectionStatus Disconnect(Error *error_ptr) override;
 
-  size_t Read(void *dst, size_t dst_len, uint32_t timeout_usec,
+  size_t Read(void *dst, size_t dst_len, const Timeout<std::micro> &timeout,
               lldb::ConnectionStatus &status, Error *error_ptr) override;
 
   size_t Write(const void *src, size_t src_len, lldb::ConnectionStatus &status,

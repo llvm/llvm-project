@@ -516,11 +516,11 @@ int Editline::GetCharacter(EditLineCharType *c) {
     // mutex again and
     // check if we were interrupted.
     m_output_mutex.unlock();
-    int read_count = m_input_connection.Read(&ch, 1, UINT32_MAX, status, NULL);
+    int read_count = m_input_connection.Read(&ch, 1, llvm::None, status, NULL);
     m_output_mutex.lock();
     if (m_editor_status == EditorStatus::Interrupted) {
       while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
-        read_count = m_input_connection.Read(&ch, 1, UINT32_MAX, status, NULL);
+        read_count = m_input_connection.Read(&ch, 1, llvm::None, status, NULL);
       lldbassert(status == lldb::eConnectionStatusInterrupted);
       return 0;
     }

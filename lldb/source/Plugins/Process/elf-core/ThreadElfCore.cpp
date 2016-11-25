@@ -15,16 +15,15 @@
 #include "lldb/Target/Unwind.h"
 
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_arm.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_arm.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "ProcessElfCore.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
@@ -86,7 +85,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::FreeBSD: {
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
-        reg_interface = new RegisterContextFreeBSD_arm64(arch);
+        reg_interface = new RegisterInfoPOSIX_arm64(arch);
         break;
       case llvm::Triple::arm:
         reg_interface = new RegisterContextFreeBSD_arm(arch);
@@ -118,7 +117,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
         reg_interface = new RegisterContextLinux_arm(arch);
         break;
       case llvm::Triple::aarch64:
-        reg_interface = new RegisterContextLinux_arm64(arch);
+        reg_interface = new RegisterInfoPOSIX_arm64(arch);
         break;
       case llvm::Triple::systemz:
         reg_interface = new RegisterContextLinux_s390x(arch);

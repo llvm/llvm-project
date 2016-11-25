@@ -1,4 +1,4 @@
-//===-- RegisterContextLinux_arm64.h ----------------------------*- C++ -*-===//
+//===-- RegisterInfoPOSIX_arm64.h -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextLinux_arm64 : public lldb_private::RegisterInfoInterface {
+class RegisterInfoPOSIX_arm64 : public lldb_private::RegisterInfoInterface {
 public:
   // based on RegisterContextDarwin_arm64.h
   struct GPR {
@@ -54,7 +54,7 @@ public:
     uint64_t mdscr_el1;
   };
 
-  RegisterContextLinux_arm64(const lldb_private::ArchSpec &target_arch);
+  RegisterInfoPOSIX_arm64(const lldb_private::ArchSpec &target_arch);
 
   size_t GetGPRSize() const override;
 

@@ -175,12 +175,10 @@ private:
   void addSectionAux(EhInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
 
   template <class RelTy>
-  CieRecord *addCie(EhSectionPiece &Piece, EhInputSection<ELFT> *Sec,
-                    ArrayRef<RelTy> Rels);
+  CieRecord *addCie(EhSectionPiece &Piece, ArrayRef<RelTy> Rels);
 
   template <class RelTy>
-  bool isFdeLive(EhSectionPiece &Piece, EhInputSection<ELFT> *Sec,
-                 ArrayRef<RelTy> Rels);
+  bool isFdeLive(EhSectionPiece &Piece, ArrayRef<RelTy> Rels);
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 

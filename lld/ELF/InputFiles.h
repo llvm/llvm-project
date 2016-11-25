@@ -263,12 +263,14 @@ private:
 // .so file.
 template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   typedef ELFFileBase<ELFT> Base;
+  typedef typename ELFT::Dyn Elf_Dyn;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::SymRange Elf_Sym_Range;
-  typedef typename ELFT::Versym Elf_Versym;
   typedef typename ELFT::Verdef Elf_Verdef;
+  typedef typename ELFT::Versym Elf_Versym;
+  typedef typename ELFT::Word Elf_Word;
+  typedef typename ELFT::uint uintX_t;
 
   std::vector<StringRef> Undefs;
   StringRef SoName;
