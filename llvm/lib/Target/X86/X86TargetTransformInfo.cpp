@@ -716,6 +716,8 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
   // potential massive combinations (elem_num x src_type x dst_type).
 
   static const TypeConversionCostTblEntry AVX512DQConversionTbl[] = {
+    { ISD::SINT_TO_FP,  MVT::v2f32,  MVT::v2i64,  1 },
+    { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  1 },
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i64,  1 },
     { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  1 },
     { ISD::SINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  1 },
@@ -728,8 +730,10 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
     { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i64,  1 },
     { ISD::UINT_TO_FP,  MVT::v8f64,  MVT::v8i64,  1 },
 
+    { ISD::FP_TO_SINT,  MVT::v2i64,  MVT::v2f32,  1 },
     { ISD::FP_TO_SINT,  MVT::v4i64,  MVT::v4f32,  1 },
     { ISD::FP_TO_SINT,  MVT::v8i64,  MVT::v8f32,  1 },
+    { ISD::FP_TO_SINT,  MVT::v2i64,  MVT::v2f64,  1 },
     { ISD::FP_TO_SINT,  MVT::v4i64,  MVT::v4f64,  1 },
     { ISD::FP_TO_SINT,  MVT::v8i64,  MVT::v8f64,  1 },
 

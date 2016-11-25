@@ -344,7 +344,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
       return true;
     error(getLocation(S, RelOff) + ": relocation " + toString(Type) +
-          " cannot refer to absolute symbol '" + Body.getName() +
+          " cannot refer to absolute symbol '" + toString(Body) +
           "' defined in " + toString(Body.File));
     return true;
   }
@@ -394,7 +394,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // Copy relocation against zero-sized symbol doesn't make sense.
   uintX_t SymSize = SS->template getSize<ELFT>();
   if (SymSize == 0)
-    fatal("cannot create a copy relocation for symbol " + SS->getName());
+    fatal("cannot create a copy relocation for symbol " + toString(*SS));
 
   uintX_t Alignment = getAlignment(SS);
   uintX_t Off = alignTo(Out<ELFT>::Bss->Size, Alignment);
@@ -443,17 +443,16 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    StringRef Name = Body.getName();
     error(getLocation(S, RelOff) + ": can't create dynamic relocation " +
           toString(Type) + " against " +
-          ((Name.empty() ? "local symbol in readonly segment"
-                         : "symbol '" + Name + "'")) +
+          (Body.getName().empty() ? "local symbol in readonly segment"
+                                  : "symbol '" + toString(Body) + "'") +
           " defined in " + toString(Body.File));
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
     error(getLocation(S, RelOff) + ": cannot preempt symbol '" +
-          Body.getName() + "' defined in " + toString(Body.File));
+          toString(Body) + "' defined in " + toString(Body.File));
     return Expr;
   }
   if (Body.isObject()) {
@@ -487,7 +486,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     Body.NeedsCopyOrPltAddr = true;
     return toPlt(Expr);
   }
-  error("symbol '" + Body.getName() + "' defined in " + toString(Body.File) +
+  error("symbol '" + toString(Body) + "' defined in " + toString(Body.File) +
         " is missing type");
 
   return Expr;
@@ -553,7 +552,7 @@ std::string getLocation(InputSectionBase<ELFT> &S, typename ELFT::uint Offset) {
   // Find a symbol at a given location.
   DefinedRegular<ELFT> *Encl = getSymbolAt(&S, Offset);
   if (Encl && Encl->Type == STT_FUNC)
-    return SrcFile + ":(function " + maybeDemangle(Encl->getName()) + ")";
+    return SrcFile + ":(function " + toString(*Encl) + ")";
 
   // If there's no symbol, print out the offset instead of a symbol name.
   return (SrcFile + ":(" + S.Name + "+0x" + utohexstr(Offset) + ")").str();
@@ -569,8 +568,8 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
       Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
     return;
 
-  std::string Msg = getLocation(S, Offset) + ": undefined symbol '" +
-                    maybeDemangle(Sym.getName()) + "'";
+  std::string Msg =
+      getLocation(S, Offset) + ": undefined symbol '" + toString(Sym) + "'";
 
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
     warn(Msg);

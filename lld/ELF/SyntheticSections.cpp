@@ -178,7 +178,7 @@ template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *Buf) {
 
   if (!Config->Relocatable)
     Reginfo.ri_gp_value = In<ELFT>::MipsGot->getGp();
-  memcpy(Buf + sizeof(typename ELFT::uint), &Reginfo, sizeof(Reginfo));
+  memcpy(Buf + sizeof(Elf_Mips_Options), &Reginfo, sizeof(Reginfo));
 }
 
 template <class ELFT>

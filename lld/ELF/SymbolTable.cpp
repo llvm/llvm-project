@@ -35,17 +35,18 @@ using namespace lld::elf;
 template <class ELFT> static bool isCompatible(InputFile *F) {
   if (!isa<ELFFileBase<ELFT>>(F) && !isa<BitcodeFile>(F))
     return true;
+
   if (F->EKind == Config->EKind && F->EMachine == Config->EMachine) {
     if (Config->EMachine != EM_MIPS)
       return true;
     if (isMipsN32Abi(F) == Config->MipsN32Abi)
       return true;
   }
-  StringRef A = F->getName();
-  StringRef B = Config->Emulation;
-  if (B.empty())
-    B = Config->FirstElf->getName();
-  error(A + " is incompatible with " + B);
+
+  if (!Config->Emulation.empty())
+    error(toString(F) + " is incompatible with " + Config->Emulation);
+  else
+    error(toString(F) + " is incompatible with " + toString(Config->FirstElf));
   return false;
 }
 
@@ -206,8 +207,8 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
 // Construct a string in the form of "Sym in File1 and File2".
 // Used to construct an error message.
 static std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile) {
-  return "'" + maybeDemangle(Existing->getName()) + "' in " +
-         toString(Existing->File) + " and " + toString(NewFile);
+  return "'" + toString(*Existing) + "' in " + toString(Existing->File) +
+         " and " + toString(NewFile);
 }
 
 // Find an existing symbol or create and insert a new one, then apply the given
@@ -361,8 +362,7 @@ static void reportDuplicate(SymbolBody *Existing,
   std::string OldLoc = getLocation(*D->Section, D->Value);
   std::string NewLoc = getLocation(*ErrSec, ErrOffset);
 
-  print(NewLoc + ": duplicate symbol '" + maybeDemangle(Existing->getName()) +
-        "'");
+  print(NewLoc + ": duplicate symbol '" + toString(*Existing) + "'");
   print(OldLoc + ": previous definition was here");
 }
 

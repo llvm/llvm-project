@@ -67,9 +67,6 @@ private:
 // it returns an unmodified string.
 std::string demangle(StringRef Name);
 
-// Demangle if Config->Demangle is true.
-std::string maybeDemangle(StringRef Name);
-
 inline StringRef toStringRef(ArrayRef<uint8_t> Arr) {
   return {(const char *)Arr.data(), Arr.size()};
 }

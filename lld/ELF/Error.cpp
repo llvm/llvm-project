@@ -53,7 +53,8 @@ void elf::error(const Twine &Msg) {
   if (Config->ErrorLimit == 0 || ErrorCount < Config->ErrorLimit) {
     *ErrorOS << Argv0 << ": error: " << Msg << "\n";
   } else if (ErrorCount == Config->ErrorLimit) {
-    *ErrorOS << Argv0 << ": error: too many errors emitted, stopping now\n";
+    *ErrorOS << Argv0 << ": error: too many errors emitted, stopping now"
+             << " (use -error-limit=0 to see all errors)\n";
     if (Config->ExitEarly)
       exitLld(1);
   }

@@ -90,8 +90,7 @@ define <2 x float> @sltof2f32(<2 x i64> %a) {
 ;
 ; SKX-LABEL: sltof2f32:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; SKX-NEXT:    vcvtqq2ps %ymm0, %xmm0
+; SKX-NEXT:    vcvtqq2ps %xmm0, %xmm0
 ; SKX-NEXT:    retq
   %b = sitofp <2 x i64> %a to <2 x float>
   ret <2 x float>%b

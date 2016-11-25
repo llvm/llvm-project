@@ -1940,7 +1940,7 @@ bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
     return Error(getLexer().getLoc(), "Expected } at this point");
   Parser.Lex(); // Eat '}'
   // Assign Z with the {z} mark opernad
-  Z.reset(X86Operand::CreateToken("{z}", StartLoc).release());
+  Z = X86Operand::CreateToken("{z}", StartLoc);
   return false;
 }
 

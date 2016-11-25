@@ -177,6 +177,21 @@ define <4 x float>@test_int_x86_avx512_mask_cvt_qq2ps_128(<2 x i64> %x0, <4 x fl
   ret <4 x float> %res2
 }
 
+define <4 x float>@test_int_x86_avx512_mask_cvt_qq2ps_128_zext(<2 x i64> %x0, <4 x float> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_cvt_qq2ps_128_zext:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovb %edi, %k1 ## encoding: [0xc5,0xf9,0x92,0xcf]
+; CHECK-NEXT:    vcvtqq2ps %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xfc,0x09,0x5b,0xc8]
+; CHECK-NEXT:    vcvtqq2ps %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfc,0x08,0x5b,0xc0]
+; CHECK-NEXT:    vaddps %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x74,0x08,0x58,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <4 x float> @llvm.x86.avx512.mask.cvtqq2ps.128(<2 x i64> %x0, <4 x float> %x1, i8 %x2)
+  %res1 = call <4 x float> @llvm.x86.avx512.mask.cvtqq2ps.128(<2 x i64> %x0, <4 x float> %x1, i8 -1)
+  %res2 = shufflevector <4 x float> %res1, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res3 = fadd <4 x float> %res, %res2
+  ret <4 x float> %res3
+}
+
 declare <4 x float> @llvm.x86.avx512.mask.cvtqq2ps.256(<4 x i64>, <4 x float>, i8)
 
 define <4 x float>@test_int_x86_avx512_mask_cvt_qq2ps_256(<4 x i64> %x0, <4 x float> %x1, i8 %x2) {
@@ -335,6 +350,21 @@ define <4 x float>@test_int_x86_avx512_mask_cvt_uqq2ps_128(<2 x i64> %x0, <4 x f
   %res1 = call <4 x float> @llvm.x86.avx512.mask.cvtuqq2ps.128(<2 x i64> %x0, <4 x float> %x1, i8 -1)
   %res2 = fadd <4 x float> %res, %res1
   ret <4 x float> %res2
+}
+
+define <4 x float>@test_int_x86_avx512_mask_cvt_uqq2ps_128_zext(<2 x i64> %x0, <4 x float> %x1, i8 %x2) {
+; CHECK-LABEL: test_int_x86_avx512_mask_cvt_uqq2ps_128_zext:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovb %edi, %k1 ## encoding: [0xc5,0xf9,0x92,0xcf]
+; CHECK-NEXT:    vcvtuqq2ps %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xff,0x09,0x7a,0xc8]
+; CHECK-NEXT:    vcvtuqq2ps %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xff,0x08,0x7a,0xc0]
+; CHECK-NEXT:    vaddps %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x74,0x08,0x58,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <4 x float> @llvm.x86.avx512.mask.cvtuqq2ps.128(<2 x i64> %x0, <4 x float> %x1, i8 %x2)
+  %res1 = call <4 x float> @llvm.x86.avx512.mask.cvtuqq2ps.128(<2 x i64> %x0, <4 x float> %x1, i8 -1)
+  %res2 = shufflevector <4 x float> %res1, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res3 = fadd <4 x float> %res, %res2
+  ret <4 x float> %res3
 }
 
 declare <4 x float> @llvm.x86.avx512.mask.cvtuqq2ps.256(<4 x i64>, <4 x float>, i8)

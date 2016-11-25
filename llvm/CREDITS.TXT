@@ -8,7 +8,6 @@ beautification by scripts.  The fields are: name (N), email (E), web-address
 (W), PGP key ID and fingerprint (P), description (D), snail-mail address
 (S), and (I) IRC handle.
 
-
 N: Vikram Adve
 E: vadve@cs.uiuc.edu
 W: http://www.cs.uiuc.edu/~vadve/

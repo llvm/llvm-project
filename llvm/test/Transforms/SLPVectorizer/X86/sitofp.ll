@@ -20,14 +20,29 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;
 
 define void @sitofp_2i64_2f64() #0 {
-; CHECK-LABEL: @sitofp_2i64_2f64(
-; CHECK-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; CHECK-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[CVT0:%.*]] = sitofp i64 [[LD0]] to double
-; CHECK-NEXT:    [[CVT1:%.*]] = sitofp i64 [[LD1]] to double
-; CHECK-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; CHECK-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @sitofp_2i64_2f64(
+; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
+; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
+; SSE-NEXT:    [[CVT0:%.*]] = sitofp i64 [[LD0]] to double
+; SSE-NEXT:    [[CVT1:%.*]] = sitofp i64 [[LD1]] to double
+; SSE-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
+; SSE-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
+; SSE-NEXT:    ret void
+;
+; AVX256-LABEL: @sitofp_2i64_2f64(
+; AVX256-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
+; AVX256-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
+; AVX256-NEXT:    [[CVT0:%.*]] = sitofp i64 [[LD0]] to double
+; AVX256-NEXT:    [[CVT1:%.*]] = sitofp i64 [[LD1]] to double
+; AVX256-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
+; AVX256-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
+; AVX256-NEXT:    ret void
+;
+; AVX512-LABEL: @sitofp_2i64_2f64(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @src64 to <2 x i64>*), align 64
+; AVX512-NEXT:    [[TMP2:%.*]] = sitofp <2 x i64> [[TMP1]] to <2 x double>
+; AVX512-NEXT:    store <2 x double> [[TMP2]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
+; AVX512-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
   %ld1 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
