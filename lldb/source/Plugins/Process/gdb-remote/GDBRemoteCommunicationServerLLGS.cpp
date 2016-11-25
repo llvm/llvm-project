@@ -926,8 +926,8 @@ void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
   bool done = false;
   Error error;
   while (true) {
-    const PacketResult result =
-        GetPacketAndSendResponse(0, error, interrupt, done);
+    const PacketResult result = GetPacketAndSendResponse(
+        std::chrono::microseconds(0), error, interrupt, done);
     if (result == PacketResult::ErrorReplyTimeout)
       break; // No more packets in the queue
 

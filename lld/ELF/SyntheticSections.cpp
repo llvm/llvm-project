@@ -178,7 +178,7 @@ template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *Buf) {
 
   if (!Config->Relocatable)
     Reginfo.ri_gp_value = In<ELFT>::MipsGot->getGp();
-  memcpy(Buf + sizeof(typename ELFT::uint), &Reginfo, sizeof(Reginfo));
+  memcpy(Buf + sizeof(Elf_Mips_Options), &Reginfo, sizeof(Reginfo));
 }
 
 template <class ELFT>
@@ -426,6 +426,12 @@ template <class ELFT> void GotSection<ELFT>::finalize() {
   Size = Entries.size() * sizeof(uintX_t);
 }
 
+template <class ELFT> bool GotSection<ELFT>::empty() const {
+  // If we have a relocation that is relative to GOT (such as GOTOFFREL),
+  // we need to emit a GOT even if it's empty.
+  return Entries.empty() && !HasGotOffRel;
+}
+
 template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const SymbolBody *B : Entries) {
     uint8_t *Entry = Buf;
@@ -614,6 +620,12 @@ template <class ELFT> void MipsGotSection<ELFT>::finalize() {
   Size = EntriesNum * sizeof(uintX_t);
 }
 
+template <class ELFT> bool MipsGotSection<ELFT>::empty() const {
+  // We add the .got section to the result for dynamic MIPS target because
+  // its address and properties are mentioned in the .dynamic section.
+  return Config->Relocatable;
+}
+
 template <class ELFT> unsigned MipsGotSection<ELFT>::getGp() const {
   return ElfSym<ELFT>::MipsGp->template getVA<ELFT>(0);
 }
@@ -689,10 +701,6 @@ GotPltSection<ELFT>::GotPltSection()
 template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
   Entries.push_back(&Sym);
-}
-
-template <class ELFT> bool GotPltSection<ELFT>::empty() const {
-  return Entries.empty();
 }
 
 template <class ELFT> size_t GotPltSection<ELFT>::getSize() const {
@@ -808,7 +816,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
 
-  if (In<ELFT>::RelaDyn->hasRelocs()) {
+  if (!In<ELFT>::RelaDyn->empty()) {
     bool IsRela = Config->Rela;
     add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
     add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getSize()});
@@ -824,7 +832,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
         add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
     }
   }
-  if (In<ELFT>::RelaPlt->hasRelocs()) {
+  if (!In<ELFT>::RelaPlt->empty()) {
     add({DT_JMPREL, In<ELFT>::RelaPlt});
     add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getSize()});
     add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
@@ -1490,6 +1498,10 @@ void EhFrameHeader<ELFT>::addFde(uint32_t Pc, uint32_t FdeVA) {
   Fdes.push_back({Pc, FdeVA});
 }
 
+template <class ELFT> bool EhFrameHeader<ELFT>::empty() const {
+  return Out<ELFT>::EhFrame->empty();
+}
+
 template <class ELFT>
 VersionDefinitionSection<ELFT>::VersionDefinitionSection()
     : SyntheticSection<ELFT>(SHF_ALLOC, SHT_GNU_verdef, sizeof(uint32_t),
@@ -1573,6 +1585,10 @@ template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
+template <class ELFT> bool VersionTableSection<ELFT>::empty() const {
+  return !In<ELFT>::VerDef && In<ELFT>::VerNeed->empty();
+}
+
 template <class ELFT>
 VersionNeedSection<ELFT>::VersionNeedSection()
     : SyntheticSection<ELFT>(SHF_ALLOC, SHT_GNU_verneed, sizeof(uint32_t),
@@ -1654,6 +1670,10 @@ template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {
   return Size;
 }
 
+template <class ELFT> bool VersionNeedSection<ELFT>::empty() const {
+  return getNeedNum() == 0;
+}
+
 template <class ELFT>
 MipsRldMapSection<ELFT>::MipsRldMapSection()
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
@@ -1664,6 +1684,26 @@ template <class ELFT> void MipsRldMapSection<ELFT>::writeTo(uint8_t *Buf) {
   uint64_t Filler = Script<ELFT>::X->getFiller(this->Name);
   Filler = (Filler << 32) | Filler;
   memcpy(Buf, &Filler, getSize());
+}
+
+template <class ELFT>
+ARMExidxSentinelSection<ELFT>::ARMExidxSentinelSection()
+    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
+                             sizeof(typename ELFT::uint), ".ARM.exidx") {}
+
+// Write a terminating sentinel entry to the end of the .ARM.exidx table.
+// This section will have been sorted last in the .ARM.exidx table.
+// This table entry will have the form:
+// | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
+template <class ELFT> void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf){
+  // Get the InputSection before us, we are by definition last
+  auto RI = cast<OutputSection<ELFT>>(this->OutSec)->Sections.rbegin();
+  InputSection<ELFT> *LE = *(++RI);
+  InputSection<ELFT> *LC = cast<InputSection<ELFT>>(LE->getLinkOrderDep());
+  uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());
+  uint64_t P = this->getVA();
+  Target->relocateOne(Buf, R_ARM_PREL31, S - P);
+  write32le(Buf + 4, 0x1);
 }
 
 template InputSection<ELF32LE> *elf::createCommonSection();
@@ -1780,3 +1820,8 @@ template class elf::MipsRldMapSection<ELF32LE>;
 template class elf::MipsRldMapSection<ELF32BE>;
 template class elf::MipsRldMapSection<ELF64LE>;
 template class elf::MipsRldMapSection<ELF64BE>;
+
+template class elf::ARMExidxSentinelSection<ELF32LE>;
+template class elf::ARMExidxSentinelSection<ELF32BE>;
+template class elf::ARMExidxSentinelSection<ELF64LE>;
+template class elf::ARMExidxSentinelSection<ELF64BE>;

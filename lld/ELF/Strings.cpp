@@ -225,9 +225,3 @@ std::string elf::demangle(StringRef Name) {
   free(Buf);
   return S;
 }
-
-std::string elf::maybeDemangle(StringRef Name) {
-  if (Config->Demangle)
-    return demangle(Name);
-  return Name;
-}

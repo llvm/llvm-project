@@ -38,7 +38,7 @@ std::error_code CreateNewFile(const llvm::Twine &path) {
 
 cl::OptionCategory ClangMoveCategory("clang-move options");
 
-cl::list<std::string> Names("names", cl::CommaSeparated, cl::OneOrMore,
+cl::list<std::string> Names("names", cl::CommaSeparated,
                             cl::desc("The list of the names of classes being "
                                      "moved, e.g. \"Foo,a::Foo,b::Foo\"."),
                             cl::cat(ClangMoveCategory));
@@ -84,6 +84,13 @@ cl::opt<bool> Dump("dump_result",
                    cl::desc("Dump results in JSON format to stdout."),
                    cl::cat(ClangMoveCategory));
 
+cl::opt<bool> DumpDecls(
+    "dump_decls",
+    cl::desc("Dump all declarations in old header (JSON format) to stdout. If "
+             "the option is specified, other command options will be ignored. "
+             "An empty JSON will be returned if old header isn't specified."),
+    cl::cat(ClangMoveCategory));
+
 } // namespace
 
 int main(int argc, const char **argv) {
@@ -110,7 +117,7 @@ int main(int argc, const char **argv) {
 
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(),
                                 OptionsParser.getSourcePathList());
-  move::ClangMoveTool::MoveDefinitionSpec Spec;
+  move::MoveDefinitionSpec Spec;
   Spec.Names = {Names.begin(), Names.end()};
   Spec.OldHeader = OldHeader;
   Spec.NewHeader = NewHeader;
@@ -124,12 +131,33 @@ int main(int argc, const char **argv) {
     llvm::report_fatal_error("Cannot detect current path: " +
                              Twine(EC.message()));
 
+  move::ClangMoveContext Context{Spec, Tool.getReplacements(),
+                                 InitialDirectory.str(), Style, DumpDecls};
+  move::DeclarationReporter Reporter;
   auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
-      Spec, Tool.getReplacements(), InitialDirectory.str(), Style);
+      &Context, &Reporter);
 
   int CodeStatus = Tool.run(Factory.get());
   if (CodeStatus)
     return CodeStatus;
+
+  if (DumpDecls) {
+    llvm::outs() << "[\n";
+    const auto &Declarations = Reporter.getDeclarationList();
+    for (auto DeclPair : Declarations) {
+      llvm::outs() << "  {\n";
+      llvm::outs() << "    \"DeclarationName\": \"" << DeclPair.first
+                   << "\",\n";
+      llvm::outs() << "    \"DeclarationType\": \"" << DeclPair.second
+                   << "\"\n";
+      llvm::outs() << "  }";
+      // Don't print trailing "," at the end of last element.
+      if (DeclPair != *(--Declarations.end()))
+        llvm::outs() << ",\n";
+    }
+    llvm::outs() << "\n]\n";
+    return 0;
+  }
 
   if (!NewCC.empty()) {
     std::error_code EC = CreateNewFile(NewCC);

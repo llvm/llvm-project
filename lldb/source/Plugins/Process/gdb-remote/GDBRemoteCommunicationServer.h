@@ -43,8 +43,9 @@ public:
   RegisterPacketHandler(StringExtractorGDBRemote::ServerPacketType packet_type,
                         PacketHandler handler);
 
-  PacketResult GetPacketAndSendResponse(uint32_t timeout_usec, Error &error,
-                                        bool &interrupt, bool &quit);
+  PacketResult GetPacketAndSendResponse(Timeout<std::micro> timeout,
+                                        Error &error, bool &interrupt,
+                                        bool &quit);
 
   // After connecting, do a little handshake with the client to make sure
   // we are at least communicating

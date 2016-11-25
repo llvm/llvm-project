@@ -32,6 +32,7 @@ public:
   virtual void writeTo(uint8_t *Buf) = 0;
   virtual size_t getSize() const = 0;
   virtual void finalize() {}
+  virtual bool empty() const { return false; }
 
   uintX_t getVA() const {
     return this->OutSec ? this->OutSec->Addr + this->OutSecOff : 0;
@@ -50,10 +51,11 @@ public:
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return Size; }
   void finalize() override;
+  bool empty() const override;
+
   void addEntry(SymbolBody &Sym);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
-  bool empty() const { return Entries.empty(); }
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
 
@@ -98,6 +100,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return Size; }
   void finalize() override;
+  bool empty() const override;
   void addEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
@@ -194,9 +197,9 @@ class GotPltSection final : public SyntheticSection<ELFT> {
 public:
   GotPltSection();
   void addEntry(SymbolBody &Sym);
-  bool empty() const;
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
+  bool empty() const override { return Entries.empty(); }
 
 private:
   std::vector<const SymbolBody *> Entries;
@@ -315,8 +318,8 @@ public:
   unsigned getRelocOffset();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
+  bool empty() const override { return Relocs.empty(); }
   size_t getSize() const override { return Relocs.size() * this->Entsize; }
-  bool hasRelocs() const { return !Relocs.empty(); }
   size_t getRelativeRelocCount() const { return NumRelativeRelocs; }
 
 private:
@@ -421,7 +424,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
   void addEntry(SymbolBody &Sym);
-  bool empty() const { return Entries.empty(); }
+  bool empty() const override { return Entries.empty(); }
 
 private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
@@ -471,6 +474,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
   void addFde(uint32_t Pc, uint32_t FdeVA);
+  bool empty() const override;
 
 private:
   struct FdeData {
@@ -521,6 +525,7 @@ public:
   void finalize() override;
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) override;
+  bool empty() const override;
 };
 
 // The .gnu.version_r section defines the version identifiers used by
@@ -547,6 +552,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
   size_t getNeedNum() const { return Needed.size(); }
+  bool empty() const override;
 };
 
 // .MIPS.abiflags section.
@@ -609,6 +615,13 @@ template <class ELFT> class MipsRldMapSection : public SyntheticSection<ELFT> {
 public:
   MipsRldMapSection();
   size_t getSize() const override { return sizeof(typename ELFT::uint); }
+  void writeTo(uint8_t *Buf) override;
+};
+
+template <class ELFT> class ARMExidxSentinelSection : public SyntheticSection<ELFT> {
+public:
+  ARMExidxSentinelSection();
+  size_t getSize() const override { return 8; }
   void writeTo(uint8_t *Buf) override;
 };
 
