@@ -3,7 +3,7 @@ RUN:   21 22 2>&1 | FileCheck -check-prefix=DEFAULT %s
 
 DEFAULT:      cannot open 01
 DEFAULT:      cannot open 20
-DEFAULT-NEXT: too many errors emitted, stopping now
+DEFAULT-NEXT: too many errors emitted, stopping now (use -error-limit=0 to see all errors)
 DEFAULT-NOT:  cannot open 21
 
 RUN: not ld.lld -error-limit=5 01 02 03 04 05 06 07 08 09 10 2>&1 \
@@ -13,7 +13,7 @@ RUN:   | FileCheck -check-prefix=LIMIT5 %s
 
 LIMIT5:      cannot open 01
 LIMIT5:      cannot open 05
-LIMIT5-NEXT: too many errors emitted, stopping now
+LIMIT5-NEXT: too many errors emitted, stopping now (use -error-limit=0 to see all errors)
 LIMIT5-NOT:  cannot open 06
 
 RUN: not ld.lld -error-limit=0 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 \
@@ -23,4 +23,4 @@ UNLIMITED:     cannot open 01
 UNLIMITED:     cannot open 20
 UNLIMITED:     cannot open 21
 UNLIMITED:     cannot open 22
-UNLIMITED-NOT: too many errors emitted, stopping now
+UNLIMITED-NOT: too many errors emitted, stopping now (use -error-limit=0 to see all errors)

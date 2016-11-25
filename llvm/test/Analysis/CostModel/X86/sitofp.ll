@@ -103,7 +103,7 @@ define i32 @sitofp_i64_double() {
   ; AVX1: cost of 20 {{.*}} sitofp <2 x i64>
   ; AVX2: cost of 20 {{.*}} sitofp <2 x i64>
   ; AVX512F: cost of 20 {{.*}} sitofp <2 x i64>
-  ; AVX512DQ: cost of 20 {{.*}} sitofp <2 x i64>
+  ; AVX512DQ: cost of 1 {{.*}} sitofp <2 x i64>
   %cvt_v2i64_v2f64 = sitofp <2 x i64> undef to <2 x double>
 
   ; SSE2: cost of 40 {{.*}} sitofp <4 x i64>
@@ -222,7 +222,7 @@ define i32 @sitofp_i64_float() {
   ; AVX1: cost of 4 {{.*}} sitofp <2 x i64>
   ; AVX2: cost of 4 {{.*}} sitofp <2 x i64>
   ; AVX512F: cost of 4 {{.*}} sitofp <2 x i64>
-  ; AVX512DQ: cost of 4 {{.*}} sitofp <2 x i64>
+  ; AVX512DQ: cost of 1 {{.*}} sitofp <2 x i64>
   %cvt_v2i64_v2f32 = sitofp <2 x i64> undef to <2 x float>
 
   ; SSE2: cost of 30 {{.*}} sitofp <4 x i64>

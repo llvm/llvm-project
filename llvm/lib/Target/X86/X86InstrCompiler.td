@@ -723,7 +723,7 @@ defm LOCK_DEC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM1m, -1, "dec">;
 multiclass LCMPXCHG_UnOp<bits<8> Opc, Format Form, string mnemonic,
                          SDPatternOperator frag, X86MemOperand x86memop,
                          InstrItinClass itin> {
-let isCodeGenOnly = 1 in {
+let isCodeGenOnly = 1, usesCustomInserter = 1 in {
   def NAME : I<Opc, Form, (outs), (ins x86memop:$ptr),
                !strconcat(mnemonic, "\t$ptr"),
                [(frag addr:$ptr)], itin>, TB, LOCK;

@@ -453,6 +453,8 @@ inline Symbol *SymbolBody::symbol() {
                                     offsetof(Symbol, Body));
 }
 
+std::string toString(const SymbolBody &B);
+
 } // namespace elf
 } // namespace lld
 

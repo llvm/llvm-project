@@ -12,6 +12,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
+#include "Strings.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 
@@ -316,6 +317,13 @@ void elf::printTraceSymbol(Symbol *Sym) {
   else
     outs() << ": definition of ";
   outs() << B->getName() << "\n";
+}
+
+// Returns a symbol for an error message.
+std::string elf::toString(const SymbolBody &B) {
+  if (Config->Demangle)
+    return demangle(B.getName());
+  return B.getName();
 }
 
 template bool SymbolBody::hasThunk<ELF32LE>() const;

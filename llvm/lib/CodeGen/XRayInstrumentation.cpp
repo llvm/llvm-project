@@ -44,6 +44,7 @@ private:
   //   like x86/x86_64.
   void replaceRetWithPatchableRet(MachineFunction &MF,
     const TargetInstrInfo *TII);
+
   // Prepend the original return instruction with the exit sled code ("patchable
   //   function exit" pseudo-instruction), preserving the original return
   //   instruction just after the exit sled code.

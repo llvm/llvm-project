@@ -17,7 +17,8 @@ define i32 @fptosi_double_i64(i32 %arg) {
   ; SSE42: cost of 6 {{.*}} %V2I64 = fptosi
   ; AVX1: cost of 6 {{.*}} %V2I64 = fptosi
   ; AVX2: cost of 6 {{.*}} %V2I64 = fptosi
-  ; AVX512: cost of 6 {{.*}} %V2I64 = fptosi
+  ; AVX512F: cost of 6 {{.*}} %V2I64 = fptosi
+  ; AVX512DQ: cost of 1 {{.*}} %V2I64 = fptosi
   %V2I64 = fptosi <2 x double> undef to <2 x i64>
   ; SSE2: cost of 13 {{.*}} %V4I64 = fptosi
   ; SSE42: cost of 13 {{.*}} %V4I64 = fptosi
@@ -79,7 +80,8 @@ define i32 @fptosi_double_i16(i32 %arg) {
   ; SSE42: cost of 6 {{.*}} %V2I16 = fptosi
   ; AVX1: cost of 6 {{.*}} %V2I16 = fptosi
   ; AVX2: cost of 6 {{.*}} %V2I16 = fptosi
-  ; AVX512: cost of 6 {{.*}} %V2I16 = fptosi
+  ; AVX512F: cost of 6 {{.*}} %V2I16 = fptosi
+  ; AVX512DQ: cost of 1 {{.*}} %V2I16 = fptosi
   %V2I16 = fptosi <2 x double> undef to <2 x i16>
   ; SSE2: cost of 13 {{.*}} %V4I16 = fptosi
   ; SSE42: cost of 13 {{.*}} %V4I16 = fptosi
@@ -109,7 +111,8 @@ define i32 @fptosi_double_i8(i32 %arg) {
   ; SSE42: cost of 6 {{.*}} %V2I8 = fptosi
   ; AVX1: cost of 6 {{.*}} %V2I8 = fptosi
   ; AVX2: cost of 6 {{.*}} %V2I8 = fptosi
-  ; AVX512: cost of 6 {{.*}} %V2I8 = fptosi
+  ; AVX512F: cost of 6 {{.*}} %V2I8 = fptosi
+  ; AVX512DQ: cost of 1 {{.*}} %V2I8 = fptosi
   %V2I8 = fptosi <2 x double> undef to <2 x i8>
   ; SSE2: cost of 13 {{.*}} %V4I8 = fptosi
   ; SSE42: cost of 13 {{.*}} %V4I8 = fptosi
@@ -140,7 +143,7 @@ define i32 @fptosi_float_i64(i32 %arg) {
   ; AVX1: cost of 6 {{.*}} %V2I64 = fptosi
   ; AVX2: cost of 6 {{.*}} %V2I64 = fptosi
   ; AVX512F: cost of 6 {{.*}} %V2I64 = fptosi
-  ; AVX512DQ: cost of 6 {{.*}} %V2I64 = fptosi
+  ; AVX512DQ: cost of 1 {{.*}} %V2I64 = fptosi
   %V2I64 = fptosi <2 x float> undef to <2 x i64>
   ; SSE2: cost of 13 {{.*}} %V4I64 = fptosi
   ; SSE42: cost of 13 {{.*}} %V4I64 = fptosi

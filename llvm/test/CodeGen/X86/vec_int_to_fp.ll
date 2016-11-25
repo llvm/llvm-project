@@ -58,11 +58,9 @@ define <2 x double> @sitofp_2i64_to_2f64(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: sitofp_2i64_to_2f64:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtsi2sdq %rax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vmovq %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm0
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512DQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: sitofp_2i64_to_2f64:
@@ -497,11 +495,9 @@ define <2 x double> @uitofp_2i64_to_2f64(<2 x i64> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_2i64_to_2f64:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtusi2sdq %rax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vmovq %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtusi2sdq %rax, %xmm2, %xmm0
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512DQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_2i64_to_2f64:
@@ -515,33 +511,24 @@ define <2 x double> @uitofp_2i64_to_2f64(<2 x i64> %a) {
 define <2 x double> @uitofp_2i32_to_2f64(<4 x i32> %a) {
 ; SSE-LABEL: uitofp_2i32_to_2f64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
-; SSE-NEXT:    subpd %xmm3, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE-NEXT:    addpd %xmm4, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE-NEXT:    subpd %xmm3, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
-; SSE-NEXT:    addpd %xmm2, %xmm1
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE-NEXT:    psrld $16, %xmm0
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    mulpd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    addpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: uitofp_2i32_to_2f64:
 ; VEX:       # BB#0:
-; VEX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; VEX-NEXT:    vmovdqa {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
-; VEX-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; VEX-NEXT:    vmovapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
-; VEX-NEXT:    vsubpd %xmm3, %xmm2, %xmm2
-; VEX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; VEX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; VEX-NEXT:    vsubpd %xmm3, %xmm0, %xmm0
-; VEX-NEXT:    vhaddpd %xmm0, %xmm2, %xmm0
+; VEX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VEX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; VEX-NEXT:    vcvtdq2pd %xmm1, %xmm1
+; VEX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; VEX-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; VEX-NEXT:    vmulpd {{.*}}(%rip), %xmm0, %xmm0
+; VEX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; VEX-NEXT:    retq
 ;
 ; AVX512F-LABEL: uitofp_2i32_to_2f64:
@@ -575,20 +562,13 @@ define <2 x double> @uitofp_2i32_to_2f64(<4 x i32> %a) {
 define <2 x double> @uitofp_4i32_to_2f64(<4 x i32> %a) {
 ; SSE-LABEL: uitofp_4i32_to_2f64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
-; SSE-NEXT:    subpd %xmm3, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE-NEXT:    addpd %xmm4, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE-NEXT:    subpd %xmm3, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
-; SSE-NEXT:    addpd %xmm2, %xmm1
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE-NEXT:    psrld $16, %xmm0
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    mulpd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    addpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_4i32_to_2f64:
@@ -872,32 +852,23 @@ define <4 x double> @uitofp_4i64_to_4f64(<4 x i64> %a) {
 define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ; SSE-LABEL: uitofp_4i32_to_4f64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1127219200,1160773632,0,0]
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
+; SSE-NEXT:    mulpd %xmm2, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm5 = [4.503600e+15,1.934281e+25]
-; SSE-NEXT:    subpd %xmm5, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[2,3,0,1]
-; SSE-NEXT:    addpd %xmm6, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; SSE-NEXT:    subpd %xmm5, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,3,0,1]
-; SSE-NEXT:    addpd %xmm4, %xmm6
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm6[0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[2,3,0,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; SSE-NEXT:    subpd %xmm5, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
-; SSE-NEXT:    addpd %xmm2, %xmm1
-; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; SSE-NEXT:    subpd %xmm5, %xmm4
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[2,3,0,1]
-; SSE-NEXT:    addpd %xmm4, %xmm2
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    addpd %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm5
+; SSE-NEXT:    mulpd %xmm2, %xmm5
+; SSE-NEXT:    pand %xmm3, %xmm4
+; SSE-NEXT:    cvtdq2pd %xmm4, %xmm1
+; SSE-NEXT:    addpd %xmm5, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_4i32_to_4f64:
@@ -1123,8 +1094,7 @@ define <4 x float> @sitofp_2i64_to_4f32(<2 x i64> %a) {
 ;
 ; AVX512VLDQ-LABEL: sitofp_2i64_to_4f32:
 ; AVX512VLDQ:       # BB#0:
-; AVX512VLDQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512VLDQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
+; AVX512VLDQ-NEXT:    vcvtqq2ps %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %cvt = sitofp <2 x i64> %a to <2 x float>
   %ext = shufflevector <2 x float> %cvt, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -1182,9 +1152,7 @@ define <4 x float> @sitofp_2i64_to_4f32_zero(<2 x i64> %a) {
 ;
 ; AVX512VLDQ-LABEL: sitofp_2i64_to_4f32_zero:
 ; AVX512VLDQ:       # BB#0:
-; AVX512VLDQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512VLDQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
-; AVX512VLDQ-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512VLDQ-NEXT:    vcvtqq2ps %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %cvt = sitofp <2 x i64> %a to <2 x float>
   %ext = shufflevector <2 x float> %cvt, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1740,8 +1708,7 @@ define <4 x float> @uitofp_2i64_to_4f32(<2 x i64> %a) {
 ;
 ; AVX512VLDQ-LABEL: uitofp_2i64_to_4f32:
 ; AVX512VLDQ:       # BB#0:
-; AVX512VLDQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512VLDQ-NEXT:    vcvtuqq2ps %ymm0, %xmm0
+; AVX512VLDQ-NEXT:    vcvtuqq2ps %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %cvt = uitofp <2 x i64> %a to <2 x float>
   %ext = shufflevector <2 x float> %cvt, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -1849,9 +1816,7 @@ define <4 x float> @uitofp_2i64_to_2f32(<2 x i64> %a) {
 ;
 ; AVX512VLDQ-LABEL: uitofp_2i64_to_2f32:
 ; AVX512VLDQ:       # BB#0:
-; AVX512VLDQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; AVX512VLDQ-NEXT:    vcvtuqq2ps %ymm0, %xmm0
-; AVX512VLDQ-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512VLDQ-NEXT:    vcvtuqq2ps %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %cvt = uitofp <2 x i64> %a to <2 x float>
   %ext = shufflevector <2 x float> %cvt, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2649,12 +2614,9 @@ define <2 x double> @sitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 ;
 ; AVX512DQ-LABEL: sitofp_load_2i64_to_2f64:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512DQ-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtsi2sdq %rax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vmovq %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtsi2sdq %rax, %xmm2, %xmm0
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
+; AVX512DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: sitofp_load_2i64_to_2f64:
@@ -2971,12 +2933,9 @@ define <2 x double> @uitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 ;
 ; AVX512DQ-LABEL: uitofp_load_2i64_to_2f64:
 ; AVX512DQ:       # BB#0:
-; AVX512DQ-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512DQ-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtusi2sdq %rax, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vmovq %xmm0, %rax
-; AVX512DQ-NEXT:    vcvtusi2sdq %rax, %xmm2, %xmm0
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
+; AVX512DQ-NEXT:    vcvtuqq2pd %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_load_2i64_to_2f64:
@@ -2991,34 +2950,26 @@ define <2 x double> @uitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 define <2 x double> @uitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; SSE-LABEL: uitofp_load_2i32_to_2f64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm4 = [4.503600e+15,1.934281e+25]
-; SSE-NEXT:    subpd %xmm4, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE-NEXT:    psrld $16, %xmm0
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    mulpd {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    addpd %xmm1, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE-NEXT:    subpd %xmm4, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[2,3,0,1]
-; SSE-NEXT:    addpd %xmm3, %xmm1
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: uitofp_load_2i32_to_2f64:
 ; VEX:       # BB#0:
-; VEX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
-; VEX-NEXT:    vmovdqa {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
-; VEX-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; VEX-NEXT:    vmovapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
-; VEX-NEXT:    vsubpd %xmm3, %xmm2, %xmm2
-; VEX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; VEX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; VEX-NEXT:    vsubpd %xmm3, %xmm0, %xmm0
-; VEX-NEXT:    vhaddpd %xmm0, %xmm2, %xmm0
+; VEX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; VEX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VEX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; VEX-NEXT:    vcvtdq2pd %xmm1, %xmm1
+; VEX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; VEX-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; VEX-NEXT:    vmulpd {{.*}}(%rip), %xmm0, %xmm0
+; VEX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; VEX-NEXT:    retq
 ;
 ; AVX512F-LABEL: uitofp_load_2i32_to_2f64:
@@ -3282,33 +3233,24 @@ define <4 x double> @uitofp_load_4i64_to_4f64(<4 x i64> *%a) {
 define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; SSE-LABEL: uitofp_load_4i32_to_4f64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movdqa (%rdi), %xmm2
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [1127219200,1160773632,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[2,3,0,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm6 = [4.503600e+15,1.934281e+25]
-; SSE-NEXT:    subpd %xmm6, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,0,1]
-; SSE-NEXT:    addpd %xmm3, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
-; SSE-NEXT:    subpd %xmm6, %xmm5
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[2,3,0,1]
-; SSE-NEXT:    addpd %xmm5, %xmm3
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,0,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
-; SSE-NEXT:    subpd %xmm6, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
-; SSE-NEXT:    addpd %xmm2, %xmm1
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; SSE-NEXT:    subpd %xmm6, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[2,3,0,1]
-; SSE-NEXT:    addpd %xmm3, %xmm2
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE-NEXT:    movdqa (%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
+; SSE-NEXT:    mulpd %xmm2, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    addpd %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm5
+; SSE-NEXT:    mulpd %xmm2, %xmm5
+; SSE-NEXT:    pand %xmm3, %xmm4
+; SSE-NEXT:    cvtdq2pd %xmm4, %xmm1
+; SSE-NEXT:    addpd %xmm5, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_load_4i32_to_4f64:
