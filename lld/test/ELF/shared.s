@@ -119,7 +119,6 @@
 // CHECK-NEXT:   EntrySize: 8
 // CHECK-NEXT:   SectionData (
 // CHECK:        )
-// CHECK-NEXT: }
 
 // CHECK:      Name: .symtab
 // CHECK-NEXT: Type: SHT_SYMTAB
