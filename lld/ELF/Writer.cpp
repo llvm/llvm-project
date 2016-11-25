@@ -58,7 +58,6 @@ private:
   void sortSections();
   void finalizeSections();
   void addPredefinedSections();
-  bool needsGot();
 
   std::vector<Phdr> createPhdrs();
   void assignAddresses();
@@ -242,8 +241,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
-  In<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
-  In<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
 
   Out<ELFT>::ElfHeader = make<OutputSectionBase>("", 0, SHF_ALLOC);
   Out<ELFT>::ElfHeader->Size = sizeof(Elf_Ehdr);
@@ -257,17 +254,9 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::Interp = nullptr;
   }
 
-  if (!Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic) {
-    In<ELFT>::DynSymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::DynStrTab);
-  }
-
   if (Config->EhFrameHdr)
     In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
 
-  if (Config->GnuHash)
-    In<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
-  if (Config->SysvHash)
-    In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
   if (Config->GdbIndex)
     In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
 
@@ -277,9 +266,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
     In<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::StrTab);
   }
-
-  if (!Config->VersionDefinitions.empty())
-    In<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
 
   // Initialize linker generated sections
   if (!Config->Relocatable)
@@ -297,8 +283,9 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   }
 
   // Add MIPS-specific sections.
+  bool HasDynSymTab = !Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic;
   if (Config->EMachine == EM_MIPS) {
-    if (!Config->Shared && In<ELFT>::DynSymTab) {
+    if (!Config->Shared && HasDynSymTab) {
       In<ELFT>::MipsRldMap = make<MipsRldMapSection<ELFT>>();
       Symtab<ELFT>::X->Sections.push_back(In<ELFT>::MipsRldMap);
     }
@@ -310,14 +297,48 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
       Symtab<ELFT>::X->Sections.push_back(Sec);
   }
 
+  if (HasDynSymTab) {
+    In<ELFT>::DynSymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::DynStrTab);
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::DynSymTab);
+
+    In<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::VerSym);
+
+    if (!Config->VersionDefinitions.empty()) {
+      In<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
+      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::VerDef);
+    }
+
+    In<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::VerNeed);
+
+    if (Config->GnuHash) {
+      In<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
+      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GnuHashTab);
+    }
+
+    if (Config->SysvHash) {
+      In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
+      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::HashTab);
+    }
+
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Dynamic);
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::DynStrTab);
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::RelaDyn);
+  }
+
   // Add .got. MIPS' .got is so different from the other archs,
   // it has its own class.
-  if (Config->EMachine == EM_MIPS)
+  if (Config->EMachine == EM_MIPS) {
     In<ELFT>::MipsGot = make<MipsGotSection<ELFT>>();
-  else
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::MipsGot);
+  } else {
     In<ELFT>::Got = make<GotSection<ELFT>>();
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Got);
+  }
 
   In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
+  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GotPlt);
 }
 
 template <class ELFT>
@@ -870,6 +891,30 @@ finalizeSynthetic(const std::vector<SyntheticSection<ELFT> *> &Sections) {
     }
 }
 
+// We need to add input synthetic sections early in createSyntheticSections()
+// to make them visible from linkescript side. But not all sections are always
+// required to be in output. For example we don't need dynamic section content
+// sometimes. This function filters out such unused sections from output.
+template <class ELFT>
+static void removeUnusedSyntheticSections(std::vector<OutputSectionBase *> &V) {
+  // Input synthetic sections are placed after all regular ones. We iterate over
+  // them all and exit at first non-synthetic.
+  for (InputSectionBase<ELFT> *S : llvm::reverse(Symtab<ELFT>::X->Sections)) {
+    SyntheticSection<ELFT> *SS = dyn_cast<SyntheticSection<ELFT>>(S);
+    if (!SS)
+      return;
+    if (!SS->empty() || !SS->OutSec)
+      continue;
+
+    OutputSection<ELFT> *OutSec = cast<OutputSection<ELFT>>(SS->OutSec);
+    OutSec->Sections.erase(
+        std::find(OutSec->Sections.begin(), OutSec->Sections.end(), SS));
+    // If there is no other sections in output section, remove it from output.
+    if (OutSec->Sections.empty())
+      V.erase(std::find(V.begin(), V.end(), OutSec));
+  }
+}
+
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::finalizeSections() {
   Out<ELFT>::DebugInfo = findSection(".debug_info");
@@ -930,6 +975,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // So far we have added sections from input object files.
   // This function adds linker-created Out<ELFT>::* sections.
   addPredefinedSections();
+  removeUnusedSyntheticSections<ELFT>(OutputSections);
 
   sortSections();
 
@@ -956,20 +1002,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
        In<ELFT>::VerNeed, In<ELFT>::Dynamic});
 }
 
-template <class ELFT> bool Writer<ELFT>::needsGot() {
-  // We add the .got section to the result for dynamic MIPS target because
-  // its address and properties are mentioned in the .dynamic section.
-  if (Config->EMachine == EM_MIPS)
-    return !Config->Relocatable;
-
-  if (!In<ELFT>::Got->empty())
-    return true;
-
-  // If we have a relocation that is relative to GOT (such as GOTOFFREL),
-  // we need to emit a GOT even if it's empty.
-  return In<ELFT>::Got->HasGotOffRel;
-}
-
 // This function add Out<ELFT>::* sections to OutputSections.
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   auto Add = [&](OutputSectionBase *OS) {
@@ -984,40 +1016,11 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   addInputSec(In<ELFT>::SymTab);
   addInputSec(In<ELFT>::ShStrTab);
   addInputSec(In<ELFT>::StrTab);
-  if (In<ELFT>::DynSymTab) {
-    addInputSec(In<ELFT>::DynSymTab);
-
-    bool HasVerNeed = In<ELFT>::VerNeed->getNeedNum() != 0;
-    if (In<ELFT>::VerDef || HasVerNeed)
-      addInputSec(In<ELFT>::VerSym);
-    addInputSec(In<ELFT>::VerDef);
-    if (HasVerNeed)
-      addInputSec(In<ELFT>::VerNeed);
-
-    addInputSec(In<ELFT>::GnuHashTab);
-    addInputSec(In<ELFT>::HashTab);
-    addInputSec(In<ELFT>::Dynamic);
-    addInputSec(In<ELFT>::DynStrTab);
-    if (In<ELFT>::RelaDyn->hasRelocs())
-      addInputSec(In<ELFT>::RelaDyn);
-  }
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even during static linking it can contain R_[*]_IRELATIVE relocations.
-  if (In<ELFT>::RelaPlt->hasRelocs())
+  if (!In<ELFT>::RelaPlt->empty())
     addInputSec(In<ELFT>::RelaPlt);
-
-  // We fill .got and .got.plt sections in scanRelocs(). This is the
-  // reason we don't add it earlier in createSections().
-  if (needsGot()) {
-    if (Config->EMachine == EM_MIPS)
-      addInputSec(In<ELFT>::MipsGot);
-    else
-      addInputSec(In<ELFT>::Got);
-  }
-
-  if (!In<ELFT>::GotPlt->empty())
-    addInputSec(In<ELFT>::GotPlt);
 
   if (!In<ELFT>::Plt->empty())
     addInputSec(In<ELFT>::Plt);

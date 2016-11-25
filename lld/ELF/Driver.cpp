@@ -20,6 +20,7 @@
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Config/Version.h"
+#include "lld/Core/Parallel.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -800,14 +801,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // MergeInputSection::splitIntoPieces needs to be called before
   // any call of MergeInputSection::getOffset. Do that.
-  for (InputSectionBase<ELFT> *S : Symtab.Sections) {
-    if (!S->Live)
-      continue;
-    if (S->Compressed)
-      S->uncompress();
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
-      MS->splitIntoPieces();
-  }
+  parallel_for_each(Symtab.Sections.begin(), Symtab.Sections.end(),
+                    [](InputSectionBase<ELFT> *S) {
+                      if (!S->Live)
+                        return;
+                      if (S->Compressed)
+                        S->uncompress();
+                      if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+                        MS->splitIntoPieces();
+                    });
 
   // Write the result to the file.
   writeResult<ELFT>();

@@ -141,6 +141,9 @@ public:
 
   void uncompress();
 
+  // Returns a source location string. Used to construct an error message.
+  std::string getLocation(uintX_t Offset);
+
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
 
 private:

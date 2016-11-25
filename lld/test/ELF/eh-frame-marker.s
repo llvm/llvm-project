@@ -8,10 +8,10 @@
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x200
+// CHECK-NEXT: Address: 0x229
 
 // CHECK:      Name: foo
-// CHECK-NEXT: Value: 0x200
+// CHECK-NEXT: Value: 0x229
 
         .section .eh_frame
 foo:

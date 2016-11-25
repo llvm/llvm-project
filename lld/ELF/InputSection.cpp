@@ -22,6 +22,7 @@
 
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -160,6 +161,8 @@ InputSectionBase<ELFT>::getRawCompressedData(ArrayRef<uint8_t> Data) {
   return {Data.slice(sizeof(*Hdr)), read64be(Hdr->Size)};
 }
 
+// Uncompress section contents. Note that this function is called
+// from parallel_for_each, so it must be thread-safe.
 template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
   if (!zlib::isAvailable())
     fatal(toString(this) +
@@ -179,7 +182,12 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
     std::tie(Buf, Size) = getRawCompressedData(Data);
 
   // Uncompress Buf.
-  char *OutputBuf = BAlloc.Allocate<char>(Size);
+  char *OutputBuf;
+  {
+    static std::mutex Mu;
+    std::lock_guard<std::mutex> Lock(Mu);
+    OutputBuf = BAlloc.Allocate<char>(Size);
+  }
   if (zlib::uncompress(toStringRef(Buf), OutputBuf, Size) != zlib::StatusOK)
     fatal(toString(this) + ": error while uncompressing section");
   Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
@@ -196,6 +204,31 @@ InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
   if ((Flags & SHF_LINK_ORDER) && Link != 0)
     return getFile()->getSections()[Link];
   return nullptr;
+}
+
+// Returns a source location string. Used to construct an error message.
+template <class ELFT>
+std::string InputSectionBase<ELFT>::getLocation(typename ELFT::uint Offset) {
+  // First check if we can get desired values from debugging information.
+  std::string LineInfo = File->getLineInfo(this, Offset);
+  if (!LineInfo.empty())
+    return LineInfo;
+
+  // File->SourceFile contains STT_FILE symbol that contains a
+  // source file name. If it's missing, we use an object file name.
+  std::string SrcFile = File->SourceFile;
+  if (SrcFile.empty())
+    SrcFile = toString(File);
+
+  // Find a function symbol that encloses a given location.
+  for (SymbolBody *B : File->getSymbols())
+    if (auto *D = dyn_cast<DefinedRegular<ELFT>>(B))
+      if (D->Section == this && D->Type == STT_FUNC)
+        if (D->Value <= Offset && Offset < D->Value + D->Size)
+          return SrcFile + ":(function " + toString(*D) + ")";
+
+  // If there's no symbol, print out the offset in the section.
+  return (SrcFile + ":(" + Name + "+0x" + utohexstr(Offset) + ")").str();
 }
 
 template <class ELFT>
@@ -467,7 +500,7 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
     SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
     if (Target->getRelExpr(Type, Sym) != R_ABS) {
-      error(getLocation(*this, Offset) + ": has non-ABS reloc");
+      error(this->getLocation(Offset) + ": has non-ABS reloc");
       return;
     }
 
@@ -721,6 +754,12 @@ MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
                                            StringRef Name)
     : InputSectionBase<ELFT>(F, Header, Name, InputSectionBase<ELFT>::Merge) {}
 
+// This function is called after we obtain a complete list of input sections
+// that need to be linked. This is responsible to split section contents
+// into small chunks for further processing.
+//
+// Note that this function is called from parallel_for_each. This must be
+// thread-safe (i.e. no memory allocation from the pools).
 template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   ArrayRef<uint8_t> Data = this->Data;
   uintX_t EntSize = this->Entsize;
@@ -823,3 +862,8 @@ template class elf::MergeInputSection<ELF32LE>;
 template class elf::MergeInputSection<ELF32BE>;
 template class elf::MergeInputSection<ELF64LE>;
 template class elf::MergeInputSection<ELF64BE>;
+
+template std::string elf::toString(const InputSectionBase<ELF32LE> *);
+template std::string elf::toString(const InputSectionBase<ELF32BE> *);
+template std::string elf::toString(const InputSectionBase<ELF64LE> *);
+template std::string elf::toString(const InputSectionBase<ELF64BE> *);

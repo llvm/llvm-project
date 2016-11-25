@@ -81,6 +81,15 @@ template <class ELFT> static void addSynthetic(SymbolAssignment *Cmd) {
         Cmd->Expression(0) - Sec->Addr;
 }
 
+static bool isUnderSysroot(StringRef Path) {
+  if (Config->Sysroot == "")
+    return false;
+  for (; !Path.empty(); Path = sys::path::parent_path(Path))
+    if (sys::fs::equivalent(Config->Sysroot, Path))
+      return true;
+  return false;
+}
+
 template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Expression.IsAbsolute())
     addRegular<ELFT>(Cmd);
@@ -953,8 +962,9 @@ class elf::ScriptParser final : public ScriptParserBase {
   typedef void (ScriptParser::*Handler)();
 
 public:
-  ScriptParser(MemoryBufferRef MB, bool B)
-      : ScriptParserBase(MB), IsUnderSysroot(B) {}
+  ScriptParser(MemoryBufferRef MB)
+      : ScriptParserBase(MB),
+        IsUnderSysroot(isUnderSysroot(MB.getBufferIdentifier())) {}
 
   void readLinkerScript();
   void readVersionScript();
@@ -1907,22 +1917,12 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   return Ret;
 }
 
-static bool isUnderSysroot(StringRef Path) {
-  if (Config->Sysroot == "")
-    return false;
-  for (; !Path.empty(); Path = sys::path::parent_path(Path))
-    if (sys::fs::equivalent(Config->Sysroot, Path))
-      return true;
-  return false;
-}
-
 void elf::readLinkerScript(MemoryBufferRef MB) {
-  StringRef Path = MB.getBufferIdentifier();
-  ScriptParser(MB, isUnderSysroot(Path)).readLinkerScript();
+  ScriptParser(MB).readLinkerScript();
 }
 
 void elf::readVersionScript(MemoryBufferRef MB) {
-  ScriptParser(MB, false).readVersionScript();
+  ScriptParser(MB).readVersionScript();
 }
 
 template class elf::LinkerScript<ELF32LE>;
