@@ -72,7 +72,7 @@ public:
   }
 
   void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
-    registerEHFramesInProcess(Addr, Size);
+    deregisterEHFramesInProcess(Addr, Size);
   }
 
   /// This method returns the address of the specified function or variable in
