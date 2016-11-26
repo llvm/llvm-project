@@ -489,39 +489,46 @@ template <class ELFT> bool MergeOutputSection<ELFT>::shouldTailMerge() const {
   return (this->Flags & SHF_STRINGS) && Config->Optimize >= 2;
 }
 
-template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
+template <class ELFT> void MergeOutputSection<ELFT>::finalizeTailMerge() {
   // Add all string pieces to the string table builder to create section
-  // contents. If we are not tail-optimizing, offsets of strings are fixed
-  // when they are added to the builder (string table builder contains a
-  // hash table from strings to offsets), so we record them if available.
-  for (MergeInputSection<ELFT> *Sec : Sections) {
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I) {
-      if (!Sec->Pieces[I].Live)
-        continue;
-      uint32_t OutputOffset = Builder.add(Sec->getData(I));
+  // contents.
+  for (MergeInputSection<ELFT> *Sec : Sections)
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Builder.add(Sec->getData(I));
 
-      // Save the offset in the generated string table.
-      if (!shouldTailMerge())
-        Sec->Pieces[I].OutputOff = OutputOffset;
-    }
-  }
-
-  // Fix the string table content. After this, the contents
-  // will never change.
-  if (shouldTailMerge())
-    Builder.finalize();
-  else
-    Builder.finalizeInOrder();
+  // Fix the string table content. After this, the contents will never change.
+  Builder.finalize();
   this->Size = Builder.getSize();
 
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding StringPiece for easy access.
+  for (MergeInputSection<ELFT> *Sec : Sections)
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
+}
+
+template <class ELFT> void MergeOutputSection<ELFT>::finalizeNoTailMerge() {
+  // Add all string pieces to the string table builder to create section
+  // contents. Because we are not tail-optimizing, offsets of strings are
+  // fixed when they are added to the builder (string table builder contains
+  // a hash table from strings to offsets).
+  for (MergeInputSection<ELFT> *Sec : Sections)
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Sec->Pieces[I].OutputOff = Builder.add(Sec->getData(I));
+
+  Builder.finalizeInOrder();
+  this->Size = Builder.getSize();
+}
+
+template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
   if (shouldTailMerge())
-    for (MergeInputSection<ELFT> *Sec : Sections)
-      for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
-        if (Sec->Pieces[I].Live)
-          Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
+    finalizeTailMerge();
+  else
+    finalizeNoTailMerge();
 }
 
 template <class ELFT>

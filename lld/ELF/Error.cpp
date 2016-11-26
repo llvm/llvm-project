@@ -13,7 +13,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
@@ -34,17 +33,9 @@ StringRef elf::Argv0;
 // but outs() or errs() are not thread-safe. We protect them using a mutex.
 static std::mutex Mu;
 
-static bool useColor() {
-  if (Config->ColorDiagnostics == ColorPolicy::Always)
-    return true;
-  if (Config->ColorDiagnostics == ColorPolicy::Never)
-    return false;
-  return ErrorOS == &errs() && sys::Process::StandardErrHasColors();
-}
-
 static void print(StringRef S, raw_ostream::Colors C) {
   *ErrorOS << Argv0 + ": ";
-  if (useColor()) {
+  if (Config->ColorDiagnostics) {
     ErrorOS->changeColor(C, true);
     *ErrorOS << S;
     ErrorOS->resetColor();
