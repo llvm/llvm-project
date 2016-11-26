@@ -2815,9 +2815,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
         else if (Is64Bit && RegVT == MVT::i64)
           RC = &X86::GR64RegClass;
         else if (RegVT == MVT::f32)
-          RC = &X86::FR32RegClass;
+          RC = Subtarget.hasAVX512() ? &X86::FR32XRegClass : &X86::FR32RegClass;
         else if (RegVT == MVT::f64)
-          RC = &X86::FR64RegClass;
+          RC = Subtarget.hasAVX512() ? &X86::FR64XRegClass : &X86::FR64RegClass;
         else if (RegVT == MVT::f80)
           RC = &X86::RFP80RegClass;
         else if (RegVT == MVT::f128)
@@ -2825,9 +2825,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
         else if (RegVT.is512BitVector())
           RC = &X86::VR512RegClass;
         else if (RegVT.is256BitVector())
-          RC = &X86::VR256RegClass;
+          RC = Subtarget.hasVLX() ? &X86::VR256XRegClass : &X86::VR256RegClass;
         else if (RegVT.is128BitVector())
-          RC = &X86::VR128RegClass;
+          RC = Subtarget.hasVLX() ? &X86::VR128XRegClass : &X86::VR128RegClass;
         else if (RegVT == MVT::x86mmx)
           RC = &X86::VR64RegClass;
         else if (RegVT == MVT::i1)
@@ -15319,7 +15319,7 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
         goto default_case;
 
     if (ConstantSDNode *C =
-        dyn_cast<ConstantSDNode>(ArithOp.getNode()->getOperand(1))) {
+        dyn_cast<ConstantSDNode>(ArithOp.getOperand(1))) {
       // An add of one will be selected as an INC.
       if (C->isOne() && !Subtarget.slowIncDec()) {
         Opcode = X86ISD::INC;
@@ -16322,7 +16322,7 @@ SDValue X86TargetLowering::LowerSETCCE(SDValue Op, SelectionDAG &DAG) const {
 
 /// Return true if opcode is a X86 logical comparison.
 static bool isX86LogicalCmp(SDValue Op) {
-  unsigned Opc = Op.getNode()->getOpcode();
+  unsigned Opc = Op.getOpcode();
   if (Opc == X86ISD::CMP || Opc == X86ISD::COMI || Opc == X86ISD::UCOMI ||
       Opc == X86ISD::SAHF)
     return true;
@@ -17243,7 +17243,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       case X86::COND_B:
         // These can only come from an arithmetic instruction with overflow,
         // e.g. SADDO, UADDO.
-        Cond = Cond.getNode()->getOperand(1);
+        Cond = Cond.getOperand(1);
         addTest = false;
         break;
       }
@@ -17600,7 +17600,7 @@ SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
 SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   assert(Subtarget.is64Bit() &&
          "LowerVAARG only handles 64-bit va_arg!");
-  assert(Op.getNode()->getNumOperands() == 4);
+  assert(Op.getNumOperands() == 4);
 
   MachineFunction &MF = DAG.getMachineFunction();
   if (Subtarget.isCallingConvWin64(MF.getFunction()->getCallingConv()))
@@ -27520,7 +27520,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       InputVector.getValueType() == MVT::v2i32 &&
       isa<ConstantSDNode>(N->getOperand(1)) &&
       N->getConstantOperandVal(1) == 0) {
-    SDValue MMXSrc = InputVector.getNode()->getOperand(0);
+    SDValue MMXSrc = InputVector.getOperand(0);
 
     // The bitcast source is a direct mmx result.
     if (MMXSrc.getValueType() == MVT::x86mmx)
@@ -27834,11 +27834,24 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
   MVT EltVT = VT.getVectorElementType();
   SDLoc DL(Op.getNode());
 
-  switch (Op.getOpcode()) {
+  auto BitcastAndCombineShuffle = [&](unsigned Opcode, SDValue Op0, SDValue Op1,
+                                      SDValue Op2) {
+    Op0 = DAG.getBitcast(VT, Op0);
+    DCI.AddToWorklist(Op0.getNode());
+    Op1 = DAG.getBitcast(VT, Op1);
+    DCI.AddToWorklist(Op1.getNode());
+    DCI.CombineTo(OrigOp.getNode(),
+                  DAG.getNode(Opcode, DL, VT, Op0, Op1, Op2));
+    return true;
+  };
+
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
   case X86ISD::PALIGNR:
     // PALIGNR can be converted to VALIGND/Q for 128-bit vectors.
     if (!VT.is128BitVector())
       return false;
+    Opcode = X86ISD::VALIGN;
     LLVM_FALLTHROUGH;
   case X86ISD::VALIGN: {
     if (EltVT != MVT::i32 && EltVT != MVT::i64)
@@ -27851,14 +27864,17 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
     if ((ShiftAmt % EltSize) != 0)
       return false;
     Imm = ShiftAmt / EltSize;
-    SDValue Op0 = DAG.getBitcast(VT, Op.getOperand(0));
-    DCI.AddToWorklist(Op0.getNode());
-    SDValue Op1 = DAG.getBitcast(VT, Op.getOperand(1));
-    DCI.AddToWorklist(Op1.getNode());
-    DCI.CombineTo(OrigOp.getNode(),
-                  DAG.getNode(X86ISD::VALIGN, DL, VT, Op0, Op1,
-                              DAG.getConstant(Imm, DL, MVT::i8)));
-    return true;
+    return BitcastAndCombineShuffle(Opcode, Op.getOperand(0), Op.getOperand(1),
+                                    DAG.getConstant(Imm, DL, MVT::i8));
+  }
+  case X86ISD::SHUF128: {
+    if (EltVT.getSizeInBits() != 32 && EltVT.getSizeInBits() != 64)
+      return false;
+    // Only change element size, not type.
+    if (VT.isInteger() != Op.getSimpleValueType().isInteger())
+      return false;
+    return BitcastAndCombineShuffle(Opcode, Op.getOperand(0), Op.getOperand(1),
+                                    Op.getOperand(2));
   }
   }
 

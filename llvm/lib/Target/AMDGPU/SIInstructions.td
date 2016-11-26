@@ -52,7 +52,7 @@ multiclass V_INTERP_P1_F32_m : VINTRP_m <
   (outs VGPR_32:$dst),
   (ins VGPR_32:$i, i32imm:$attr_chan, i32imm:$attr),
   "v_interp_p1_f32 $dst, $i, $attr_chan, $attr, [m0]",
-  [(set f32:$dst, (AMDGPUinterp_p1 i32:$i, (i32 imm:$attr_chan),
+  [(set f32:$dst, (AMDGPUinterp_p1 f32:$i, (i32 imm:$attr_chan),
                                            (i32 imm:$attr)))]
 >;
 
@@ -75,7 +75,7 @@ defm V_INTERP_P2_F32 : VINTRP_m <
   (outs VGPR_32:$dst),
   (ins VGPR_32:$src0, VGPR_32:$j, i32imm:$attr_chan, i32imm:$attr),
   "v_interp_p2_f32 $dst, [$src0], $j, $attr_chan, $attr, [m0]",
-  [(set f32:$dst, (AMDGPUinterp_p2 f32:$src0, i32:$j, (i32 imm:$attr_chan),
+  [(set f32:$dst, (AMDGPUinterp_p2 f32:$src0, f32:$j, (i32 imm:$attr_chan),
                                                      (i32 imm:$attr)))]>;
 
 } // End DisableEncoding = "$src0", Constraints = "$src0 = $dst"

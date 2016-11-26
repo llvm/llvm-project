@@ -62,43 +62,42 @@ class RejectLog;
 void emitRejectionRemarks(const BBPair &P, const RejectLog &Log);
 
 // Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
-enum RejectReasonKind {
+enum class RejectReasonKind {
   // CFG Category
-  rrkCFG,
-  rrkInvalidTerminator,
-  rrkCondition,
-  rrkLastCFG,
-  rrkIrreducibleRegion,
+  CFG,
+  InvalidTerminator,
+  IrreducibleRegion,
+  LastCFG,
 
   // Non-Affinity
-  rrkAffFunc,
-  rrkUndefCond,
-  rrkInvalidCond,
-  rrkUndefOperand,
-  rrkNonAffBranch,
-  rrkNoBasePtr,
-  rrkUndefBasePtr,
-  rrkVariantBasePtr,
-  rrkNonAffineAccess,
-  rrkDifferentElementSize,
-  rrkLastAffFunc,
+  AffFunc,
+  UndefCond,
+  InvalidCond,
+  UndefOperand,
+  NonAffBranch,
+  NoBasePtr,
+  UndefBasePtr,
+  VariantBasePtr,
+  NonAffineAccess,
+  DifferentElementSize,
+  LastAffFunc,
 
-  rrkLoopBound,
-  rrkLoopHasNoExit,
+  LoopBound,
+  LoopHasNoExit,
 
-  rrkFuncCall,
-  rrkNonSimpleMemoryAccess,
+  FuncCall,
+  NonSimpleMemoryAccess,
 
-  rrkAlias,
+  Alias,
 
   // Other
-  rrkOther,
-  rrkIntToPtr,
-  rrkAlloca,
-  rrkUnknownInst,
-  rrkEntry,
-  rrkUnprofitable,
-  rrkLastOther
+  Other,
+  IntToPtr,
+  Alloca,
+  UnknownInst,
+  Entry,
+  Unprofitable,
+  LastOther
 };
 
 //===----------------------------------------------------------------------===//
@@ -118,7 +117,7 @@ protected:
 public:
   RejectReasonKind getKind() const { return Kind; }
 
-  RejectReason(RejectReasonKind K) : Kind(K) {}
+  RejectReason(RejectReasonKind K);
 
   virtual ~RejectReason() {}
 
@@ -193,7 +192,7 @@ class ReportInvalidTerminator : public ReportCFG {
 
 public:
   ReportInvalidTerminator(BasicBlock *BB)
-      : ReportCFG(rrkInvalidTerminator), BB(BB) {}
+      : ReportCFG(RejectReasonKind::InvalidTerminator), BB(BB) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -215,7 +214,7 @@ class ReportIrreducibleRegion : public ReportCFG {
 
 public:
   ReportIrreducibleRegion(Region *R, DebugLoc DbgLoc)
-      : ReportCFG(rrkIrreducibleRegion), R(R), DbgLoc(DbgLoc) {}
+      : ReportCFG(RejectReasonKind::IrreducibleRegion), R(R), DbgLoc(DbgLoc) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -267,7 +266,7 @@ class ReportUndefCond : public ReportAffFunc {
 
 public:
   ReportUndefCond(const Instruction *Inst, BasicBlock *BB)
-      : ReportAffFunc(rrkUndefCond, Inst), BB(BB) {}
+      : ReportAffFunc(RejectReasonKind::UndefCond, Inst), BB(BB) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -292,7 +291,7 @@ class ReportInvalidCond : public ReportAffFunc {
 
 public:
   ReportInvalidCond(const Instruction *Inst, BasicBlock *BB)
-      : ReportAffFunc(rrkInvalidCond, Inst), BB(BB) {}
+      : ReportAffFunc(RejectReasonKind::InvalidCond, Inst), BB(BB) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -315,7 +314,7 @@ class ReportUndefOperand : public ReportAffFunc {
 
 public:
   ReportUndefOperand(BasicBlock *BB, const Instruction *Inst)
-      : ReportAffFunc(rrkUndefOperand, Inst), BB(BB) {}
+      : ReportAffFunc(RejectReasonKind::UndefOperand, Inst), BB(BB) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -345,7 +344,8 @@ class ReportNonAffBranch : public ReportAffFunc {
 public:
   ReportNonAffBranch(BasicBlock *BB, const SCEV *LHS, const SCEV *RHS,
                      const Instruction *Inst)
-      : ReportAffFunc(rrkNonAffBranch, Inst), BB(BB), LHS(LHS), RHS(RHS) {}
+      : ReportAffFunc(RejectReasonKind::NonAffBranch, Inst), BB(BB), LHS(LHS),
+        RHS(RHS) {}
 
   const SCEV *lhs() { return LHS; }
   const SCEV *rhs() { return RHS; }
@@ -367,7 +367,7 @@ class ReportNoBasePtr : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 public:
   ReportNoBasePtr(const Instruction *Inst)
-      : ReportAffFunc(rrkNoBasePtr, Inst) {}
+      : ReportAffFunc(RejectReasonKind::NoBasePtr, Inst) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -386,7 +386,7 @@ class ReportUndefBasePtr : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 public:
   ReportUndefBasePtr(const Instruction *Inst)
-      : ReportAffFunc(rrkUndefBasePtr, Inst) {}
+      : ReportAffFunc(RejectReasonKind::UndefBasePtr, Inst) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -409,7 +409,8 @@ class ReportVariantBasePtr : public ReportAffFunc {
 
 public:
   ReportVariantBasePtr(Value *BaseValue, const Instruction *Inst)
-      : ReportAffFunc(rrkVariantBasePtr, Inst), BaseValue(BaseValue) {}
+      : ReportAffFunc(RejectReasonKind::VariantBasePtr, Inst),
+        BaseValue(BaseValue) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -437,8 +438,8 @@ class ReportNonAffineAccess : public ReportAffFunc {
 public:
   ReportNonAffineAccess(const SCEV *AccessFunction, const Instruction *Inst,
                         const Value *V)
-      : ReportAffFunc(rrkNonAffineAccess, Inst), AccessFunction(AccessFunction),
-        BaseValue(V) {}
+      : ReportAffFunc(RejectReasonKind::NonAffineAccess, Inst),
+        AccessFunction(AccessFunction), BaseValue(V) {}
 
   const SCEV *get() { return AccessFunction; }
 
@@ -464,7 +465,8 @@ class ReportDifferentArrayElementSize : public ReportAffFunc {
 
 public:
   ReportDifferentArrayElementSize(const Instruction *Inst, const Value *V)
-      : ReportAffFunc(rrkDifferentElementSize, Inst), BaseValue(V) {}
+      : ReportAffFunc(RejectReasonKind::DifferentElementSize, Inst),
+        BaseValue(V) {}
 
   /// @name LLVM-RTTI interface
   //@{
@@ -522,7 +524,8 @@ class ReportLoopHasNoExit : public RejectReason {
 
 public:
   ReportLoopHasNoExit(Loop *L)
-      : RejectReason(rrkLoopHasNoExit), L(L), Loc(L->getStartLoc()) {}
+      : RejectReason(RejectReasonKind::LoopHasNoExit), L(L),
+        Loc(L->getStartLoc()) {}
 
   /// @name LLVM-RTTI interface
   //@{
