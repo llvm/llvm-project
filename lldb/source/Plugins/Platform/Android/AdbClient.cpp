@@ -74,10 +74,9 @@ Error ReadAllBytes(Connection &conn, void *buffer, size_t size) {
   const auto deadline = now + kReadTimeout;
   size_t total_read_bytes = 0;
   while (total_read_bytes < size && now < deadline) {
-    uint32_t timeout_usec = duration_cast<microseconds>(deadline - now).count();
     auto read_bytes =
         conn.Read(read_buffer + total_read_bytes, size - total_read_bytes,
-                  timeout_usec, status, &error);
+                  duration_cast<microseconds>(deadline - now), status, &error);
     if (error.Fail())
       return error;
     total_read_bytes += read_bytes;
@@ -276,9 +275,9 @@ Error AdbClient::ReadMessageStream(std::vector<char> &message,
     if (elapsed >= timeout)
       return Error("Timed out");
 
-    size_t n = m_conn->Read(
-        buffer, sizeof(buffer),
-        duration_cast<microseconds>(timeout - elapsed).count(), status, &error);
+    size_t n = m_conn->Read(buffer, sizeof(buffer),
+                            duration_cast<microseconds>(timeout - elapsed),
+                            status, &error);
     if (n > 0)
       message.insert(message.end(), &buffer[0], &buffer[n]);
   }

@@ -1,4 +1,4 @@
-//===-- ExpressionOpts.cpp --------------------------------------*- C++ -*-===//
+//===-- RenderScriptExpressionOpts.cpp --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

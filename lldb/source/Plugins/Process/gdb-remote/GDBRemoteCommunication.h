@@ -53,32 +53,6 @@ enum class CompressionType {
 
 class ProcessGDBRemote;
 
-template <typename Ratio>
-class Timeout : public llvm::Optional<std::chrono::duration<int64_t, Ratio>> {
-private:
-  template <typename Ratio2> using Dur = std::chrono::duration<int64_t, Ratio2>;
-  template <typename Rep2, typename Ratio2>
-  using EnableIf = std::enable_if<
-      std::is_convertible<std::chrono::duration<Rep2, Ratio2>,
-                          std::chrono::duration<int64_t, Ratio>>::value>;
-
-  using Base = llvm::Optional<Dur<Ratio>>;
-
-public:
-  Timeout(llvm::NoneType none) : Base(none) {}
-  Timeout(const Timeout &other) = default;
-
-  template <typename Ratio2,
-            typename = typename EnableIf<int64_t, Ratio2>::type>
-  Timeout(const Timeout<Ratio2> &other)
-      : Base(other ? Base(Dur<Ratio>(*other)) : llvm::None) {}
-
-  template <typename Rep2, typename Ratio2,
-            typename = typename EnableIf<Rep2, Ratio2>::type>
-  Timeout(const std::chrono::duration<Rep2, Ratio2> &other)
-      : Base(Dur<Ratio>(other)) {}
-};
-
 class GDBRemoteCommunication : public Communication {
 public:
   enum {

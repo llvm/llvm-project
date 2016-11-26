@@ -1,4 +1,4 @@
-//===-- RegisterContextCorePOSIX_x86_64.h -----------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_x86_64.h -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

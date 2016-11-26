@@ -1,4 +1,4 @@
-//===-- x86ABIFixups.h ------------------------------------------*- C++ -*-===//
+//===-- RenderScriptx86ABIFixups.h ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

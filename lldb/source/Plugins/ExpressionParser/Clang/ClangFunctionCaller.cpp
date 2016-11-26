@@ -1,4 +1,4 @@
-//===-- ClangFunctionCallerCaller.cpp ---------------------------*- C++ -*-===//
+//===-- ClangFunctionCaller.cpp ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -34,6 +34,9 @@ enum ELFKind {
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
 
+// For --color-diagnostics.
+enum class ColorPolicy { Auto, Always, Never };
+
 // For --discard-{all,locals,none}.
 enum class DiscardPolicy { Default, All, Locals, None };
 
@@ -135,6 +138,7 @@ struct Configuration {
   bool ZRelro;
   bool ExitEarly;
   bool ZWxneeded;
+  ColorPolicy ColorDiagnostics = ColorPolicy::Auto;
   DiscardPolicy Discard;
   SortSectionPolicy SortSection;
   StripPolicy Strip = StripPolicy::None;

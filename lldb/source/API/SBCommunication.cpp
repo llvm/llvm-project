@@ -119,8 +119,11 @@ size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
                 static_cast<void *>(m_opaque), static_cast<void *>(dst),
                 static_cast<uint64_t>(dst_len), timeout_usec);
   size_t bytes_read = 0;
+  Timeout<std::micro> timeout = timeout_usec == UINT32_MAX
+                                    ? Timeout<std::micro>(llvm::None)
+                                    : std::chrono::microseconds(timeout_usec);
   if (m_opaque)
-    bytes_read = m_opaque->Read(dst, dst_len, timeout_usec, status, NULL);
+    bytes_read = m_opaque->Read(dst, dst_len, timeout, status, NULL);
   else
     status = eConnectionStatusNoConnection;
 

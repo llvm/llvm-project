@@ -1021,8 +1021,8 @@ void GDBRemoteCommunicationServerLLGS::SendProcessOutput() {
   ConnectionStatus status;
   Error error;
   while (true) {
-    size_t bytes_read =
-        m_stdio_communication.Read(buffer, sizeof buffer, 0, status, &error);
+    size_t bytes_read = m_stdio_communication.Read(
+        buffer, sizeof buffer, std::chrono::microseconds(0), status, &error);
     switch (status) {
     case eConnectionStatusSuccess:
       SendONotification(buffer, bytes_read);

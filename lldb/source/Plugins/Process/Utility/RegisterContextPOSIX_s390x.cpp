@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_x86.cpp ----------------------------*- C++ -*-===//
+//===-- RegisterContextPOSIX_s390x.cpp --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -44,8 +44,7 @@ public:
 
 private:
   template <class P> void failOn(const P *Loc, const Twine &Msg) {
-    fatal(getLocation(*IS, (const uint8_t *)Loc - IS->Data.data()) + ": " +
-          Msg);
+    fatal(IS->getLocation((const uint8_t *)Loc - IS->Data.data()) + ": " + Msg);
   }
 
   uint8_t readByte();

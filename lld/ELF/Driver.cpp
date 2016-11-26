@@ -20,6 +20,7 @@
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Config/Version.h"
+#include "lld/Core/Parallel.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -391,6 +392,24 @@ static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
   return Default;
 }
 
+// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
+static ColorPolicy getColorDiagnostics(opt::InputArgList &Args) {
+  auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_no_color_diagnostics);
+  if (!Arg)
+    return ColorPolicy::Auto;
+  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
+    return ColorPolicy::Never;
+
+  StringRef S = Arg->getValue();
+  if (S == "auto")
+    return ColorPolicy::Auto;
+  if (S == "always")
+    return ColorPolicy::Always;
+  if (S != "never")
+    error("unknown -color-diagnostics value: " + S);
+  return ColorPolicy::Never;
+}
+
 static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
   auto *Arg =
       Args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
@@ -485,6 +504,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
+  Config->ColorDiagnostics = getColorDiagnostics(Args);
   Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscardOption(Args);
@@ -800,14 +820,18 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // MergeInputSection::splitIntoPieces needs to be called before
   // any call of MergeInputSection::getOffset. Do that.
-  for (InputSectionBase<ELFT> *S : Symtab.Sections) {
+  auto Fn = [](InputSectionBase<ELFT> *S) {
     if (!S->Live)
-      continue;
+      return;
     if (S->Compressed)
       S->uncompress();
     if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
       MS->splitIntoPieces();
-  }
+  };
+  if (Config->Threads)
+    parallel_for_each(Symtab.Sections.begin(), Symtab.Sections.end(), Fn);
+  else
+    std::for_each(Symtab.Sections.begin(), Symtab.Sections.end(), Fn);
 
   // Write the result to the file.
   writeResult<ELFT>();

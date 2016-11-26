@@ -39,6 +39,9 @@ def allow_multiple_definition: F<"allow-multiple-definition">,
 def as_needed: F<"as-needed">,
   HelpText<"Only set DT_NEEDED for shared libraries if used">;
 
+def color_diagnostics: S<"color-diagnostics">,
+  HelpText<"Use colors in diagnostics">;
+
 def disable_new_dtags: F<"disable-new-dtags">,
   HelpText<"Disable new dynamic tags">;
 
@@ -120,6 +123,9 @@ def nostdlib: F<"nostdlib">,
 
 def no_as_needed: F<"no-as-needed">,
   HelpText<"Always DT_NEEDED for shared libraries">;
+
+def no_color_diagnostics: F<"no-color-diagnostics">,
+  HelpText<"Do not use colors in diagnostics">;
 
 def no_demangle: F<"no-demangle">,
   HelpText<"Do not demangle symbol names">;
@@ -238,6 +244,7 @@ def alias_Bstatic_dn: F<"dn">, Alias<Bstatic>;
 def alias_Bstatic_non_shared: F<"non_shared">, Alias<Bstatic>;
 def alias_Bstatic_static: F<"static">, Alias<Bstatic>;
 def alias_L__library_path: J<"library-path=">, Alias<L>;
+def alias_color_diagnostics: J<"color-diagnostics=">, Alias<color_diagnostics>;
 def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
 def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: J<"dynamic-list=">, Alias<dynamic_list>;

@@ -1,4 +1,4 @@
-//===-- ARM_DWARF_Registers.c -----------------------------------*- C++ -*-===//
+//===-- ARM_DWARF_Registers.cpp ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
