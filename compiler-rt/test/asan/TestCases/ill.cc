@@ -3,7 +3,6 @@
 // RUN: %clangxx_asan %s -o %t && %env_asan_opts=handle_sigill=0 not --crash %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
 // RUN: %clangxx_asan %s -o %t && %env_asan_opts=handle_sigill=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
 // REQUIRES: x86-target-arch
-// UNSUPPORTED: darwin
 
 #ifdef _WIN32
 #include <windows.h>

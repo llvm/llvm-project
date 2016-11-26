@@ -798,6 +798,8 @@ struct SignalContext {
         is_memory_access(is_memory_access),
         write_flag(write_flag) {}
 
+  static void DumpAllRegisters(void *context);
+
   // Creates signal context in a platform-specific manner.
   static SignalContext Create(void *siginfo, void *context);
 
