@@ -707,13 +707,13 @@ std::vector<SectionPiece>
 MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
   std::vector<SectionPiece> V;
   size_t Off = 0;
-  bool IsAlloca = this->Flags & SHF_ALLOC;
+  bool IsAlloc = this->Flags & SHF_ALLOC;
   while (!Data.empty()) {
     size_t End = findNull(Data, EntSize);
     if (End == StringRef::npos)
       fatal(toString(this) + ": string is not null terminated");
     size_t Size = End + EntSize;
-    V.emplace_back(Off, !IsAlloca);
+    V.emplace_back(Off, !IsAlloc);
     Hashes.push_back(hash_value(toStringRef(Data.slice(0, Size))));
     Data = Data.slice(Size);
     Off += Size;
@@ -740,10 +740,10 @@ MergeInputSection<ELFT>::splitNonStrings(ArrayRef<uint8_t> Data,
   std::vector<SectionPiece> V;
   size_t Size = Data.size();
   assert((Size % EntSize) == 0);
-  bool IsAlloca = this->Flags & SHF_ALLOC;
+  bool IsAlloc = this->Flags & SHF_ALLOC;
   for (unsigned I = 0, N = Size; I != N; I += EntSize) {
     Hashes.push_back(hash_value(toStringRef(Data.slice(I, EntSize))));
-    V.emplace_back(I, !IsAlloca);
+    V.emplace_back(I, !IsAlloc);
   }
   return V;
 }
