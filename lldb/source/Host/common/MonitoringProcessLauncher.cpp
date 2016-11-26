@@ -1,4 +1,4 @@
-//===-- ProcessLauncherWindows.cpp ------------------------------*- C++ -*-===//
+//===-- MonitoringProcessLauncher.cpp ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

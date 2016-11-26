@@ -1806,7 +1806,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     // FIXME: Add support for label+offset operands (currently causes an error).
     // FIXME: Add support for forward-declared local symbols.
     // FIXME: Add expansion for when the LargeGOT option is enabled.
-    if (JalSym->isInSection() || JalSym->isTemporary()) {
+    if (JalSym->isInSection() || JalSym->isTemporary() ||
+        (JalSym->isELF() && cast<MCSymbolELF>(JalSym)->getBinding() == ELF::STB_LOCAL)) {
       if (isABI_O32()) {
         // If it's a local symbol and the O32 ABI is being used, we expand to:
         //  lw $25, 0($gp)

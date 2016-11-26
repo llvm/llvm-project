@@ -108,16 +108,16 @@ template <class ELFT> void SymbolTable<ELFT>::addFile(InputFile *File) {
 // using LLVM functions and replaces bitcode symbols with the results.
 // Because all bitcode files that consist of a program are passed
 // to the compiler at once, it can do whole-program optimization.
-template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
+template <class ELFT> void SymbolTable<ELFT>::addCombinedLTOObject() {
   if (BitcodeFiles.empty())
     return;
 
   // Compile bitcode files and replace bitcode symbols.
-  Lto.reset(new BitcodeCompiler);
+  LTO.reset(new BitcodeCompiler);
   for (BitcodeFile *F : BitcodeFiles)
-    Lto->add(*F);
+    LTO->add(*F);
 
-  for (InputFile *File : Lto->compile()) {
+  for (InputFile *File : LTO->compile()) {
     ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(File);
     DenseSet<CachedHashStringRef> DummyGroups;
     Obj->parse(DummyGroups);

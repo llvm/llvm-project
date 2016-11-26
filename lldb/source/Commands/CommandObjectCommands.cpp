@@ -1,4 +1,4 @@
-//===-- CommandObjectSource.cpp ---------------------------------*- C++ -*-===//
+//===-- CommandObjectCommands.cpp -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

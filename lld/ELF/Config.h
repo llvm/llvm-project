@@ -82,8 +82,8 @@ struct Configuration {
   llvm::StringRef Emulation;
   llvm::StringRef Fini;
   llvm::StringRef Init;
-  llvm::StringRef LtoAAPipeline;
-  llvm::StringRef LtoNewPmPasses;
+  llvm::StringRef LTOAAPipeline;
+  llvm::StringRef LTONewPmPasses;
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
@@ -153,10 +153,10 @@ struct Configuration {
   uint64_t ImageBase;
   uint64_t MaxPageSize;
   uint64_t ZStackSize;
-  unsigned LtoPartitions;
-  unsigned LtoO;
+  unsigned LTOPartitions;
+  unsigned LTOO;
   unsigned Optimize;
-  unsigned ThinLtoJobs;
+  unsigned ThinLTOJobs;
 };
 
 // The only instance of Configuration struct.

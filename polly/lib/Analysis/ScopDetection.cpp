@@ -188,7 +188,31 @@ StringRef polly::PollySkipFnAttr = "polly.skip.fn";
 //===----------------------------------------------------------------------===//
 // Statistics.
 
-STATISTIC(ValidRegion, "Number of regions that a valid part of Scop");
+STATISTIC(NumScopRegions, "Number of scops");
+STATISTIC(NumLoopsInScop, "Number of loops in scops");
+STATISTIC(NumScopsDepthOne, "Number of scops with maximal loop depth 1");
+STATISTIC(NumScopsDepthTwo, "Number of scops with maximal loop depth 2");
+STATISTIC(NumScopsDepthThree, "Number of scops with maximal loop depth 3");
+STATISTIC(NumScopsDepthFour, "Number of scops with maximal loop depth 4");
+STATISTIC(NumScopsDepthFive, "Number of scops with maximal loop depth 5");
+STATISTIC(NumScopsDepthLarger,
+          "Number of scops with maximal loop depth 6 and larger");
+STATISTIC(NumProfScopRegions, "Number of scops (profitable scops only)");
+STATISTIC(NumLoopsInProfScop,
+          "Number of loops in scops (profitable scops only)");
+STATISTIC(NumLoopsOverall, "Number of total loops");
+STATISTIC(NumProfScopsDepthOne,
+          "Number of scops with maximal loop depth 1 (profitable scops only)");
+STATISTIC(NumProfScopsDepthTwo,
+          "Number of scops with maximal loop depth 2 (profitable scops only)");
+STATISTIC(NumProfScopsDepthThree,
+          "Number of scops with maximal loop depth 3 (profitable scops only)");
+STATISTIC(NumProfScopsDepthFour,
+          "Number of scops with maximal loop depth 4 (profitable scops only)");
+STATISTIC(NumProfScopsDepthFive,
+          "Number of scops with maximal loop depth 5 (profitable scops only)");
+STATISTIC(NumProfScopsDepthLarger, "Number of scops with maximal loop depth 6 "
+                                   "and larger (profitable scops only)");
 
 class DiagnosticScopFound : public DiagnosticInfo {
 private:
@@ -1042,24 +1066,33 @@ bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) const {
 }
 
 /// Return the number of loops in @p L (incl. @p L) that have a trip
-///        count that is not known to be less than MIN_LOOP_TRIP_COUNT.
-static int countBeneficialSubLoops(Loop *L, ScalarEvolution &SE) {
+///        count that is not known to be less than @MinProfitableTrips.
+ScopDetection::LoopStats
+ScopDetection::countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
+                                       unsigned MinProfitableTrips) const {
   auto *TripCount = SE.getBackedgeTakenCount(L);
 
-  int count = 1;
+  int NumLoops = 1;
+  int MaxLoopDepth = 1;
   if (auto *TripCountC = dyn_cast<SCEVConstant>(TripCount))
     if (TripCountC->getType()->getScalarSizeInBits() <= 64)
-      if (TripCountC->getValue()->getZExtValue() < MIN_LOOP_TRIP_COUNT)
-        count -= 1;
+      if (TripCountC->getValue()->getZExtValue() <= MinProfitableTrips)
+        NumLoops -= 1;
 
-  for (auto &SubLoop : *L)
-    count += countBeneficialSubLoops(SubLoop, SE);
+  for (auto &SubLoop : *L) {
+    LoopStats Stats = countBeneficialSubLoops(SubLoop, SE, MinProfitableTrips);
+    NumLoops += Stats.NumLoops;
+    MaxLoopDepth += std::max(MaxLoopDepth, Stats.MaxDepth + 1);
+  }
 
-  return count;
+  return {NumLoops, MaxLoopDepth};
 }
 
-int ScopDetection::countBeneficialLoops(Region *R) const {
+ScopDetection::LoopStats
+ScopDetection::countBeneficialLoops(Region *R,
+                                    unsigned MinProfitableTrips) const {
   int LoopNum = 0;
+  int MaxLoopDepth = 0;
 
   auto L = LI->getLoopFor(R->getEntry());
   L = L ? R->outermostLoopInRegion(L) : nullptr;
@@ -1069,10 +1102,14 @@ int ScopDetection::countBeneficialLoops(Region *R) const {
       L ? L->getSubLoopsVector() : std::vector<Loop *>(LI->begin(), LI->end());
 
   for (auto &SubLoop : SubLoops)
-    if (R->contains(SubLoop))
-      LoopNum += countBeneficialSubLoops(SubLoop, *SE);
+    if (R->contains(SubLoop)) {
+      LoopStats Stats =
+          countBeneficialSubLoops(SubLoop, *SE, MinProfitableTrips);
+      LoopNum += Stats.NumLoops;
+      MaxLoopDepth = std::max(MaxLoopDepth, Stats.MaxDepth);
+    }
 
-  return LoopNum;
+  return {LoopNum, MaxLoopDepth};
 }
 
 Region *ScopDetection::expandRegion(Region &R) {
@@ -1138,16 +1175,13 @@ static bool regionWithoutLoops(Region &R, LoopInfo *LI) {
   return true;
 }
 
-unsigned ScopDetection::removeCachedResultsRecursively(const Region &R) {
-  unsigned Count = 0;
+void ScopDetection::removeCachedResultsRecursively(const Region &R) {
   for (auto &SubRegion : R) {
     if (ValidRegions.count(SubRegion.get())) {
       removeCachedResults(*SubRegion.get());
-      ++Count;
     } else
-      Count += removeCachedResultsRecursively(*SubRegion);
+      removeCachedResultsRecursively(*SubRegion);
   }
-  return Count;
 }
 
 void ScopDetection::removeCachedResults(const Region &R) {
@@ -1170,7 +1204,6 @@ void ScopDetection::findScops(Region &R) {
   if (HasErrors) {
     removeCachedResults(R);
   } else {
-    ++ValidRegion;
     ValidRegions.insert(&R);
     return;
   }
@@ -1208,10 +1241,7 @@ void ScopDetection::findScops(Region &R) {
     R.addSubRegion(ExpandedR, true);
     ValidRegions.insert(ExpandedR);
     removeCachedResults(*CurrentRegion);
-
-    // Erase all (direct and indirect) children of ExpandedR from the valid
-    // regions and update the number of valid regions.
-    ValidRegion -= removeCachedResultsRecursively(*ExpandedR);
+    removeCachedResultsRecursively(*ExpandedR);
   }
 }
 
@@ -1295,7 +1325,7 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   if (!Context.hasStores || !Context.hasLoads)
     return invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
 
-  int NumLoops = countBeneficialLoops(&CurRegion);
+  int NumLoops = countBeneficialLoops(&CurRegion, MIN_LOOP_TRIP_COUNT).NumLoops;
   int NumAffineLoops = NumLoops - Context.BoxedLoopsSet.size();
 
   // Scops with at least two loops may allow either loop fusion or tiling and
@@ -1456,6 +1486,39 @@ bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
   return true;
 }
 
+void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
+                              bool OnlyProfitable) {
+  if (!OnlyProfitable) {
+    NumLoopsInScop += Stats.NumLoops;
+    if (Stats.MaxDepth == 1)
+      NumScopsDepthOne++;
+    else if (Stats.MaxDepth == 2)
+      NumScopsDepthTwo++;
+    else if (Stats.MaxDepth == 3)
+      NumScopsDepthThree++;
+    else if (Stats.MaxDepth == 4)
+      NumScopsDepthFour++;
+    else if (Stats.MaxDepth == 5)
+      NumScopsDepthFive++;
+    else
+      NumScopsDepthLarger++;
+  } else {
+    NumLoopsInProfScop += Stats.NumLoops;
+    if (Stats.MaxDepth == 1)
+      NumProfScopsDepthOne++;
+    else if (Stats.MaxDepth == 2)
+      NumProfScopsDepthTwo++;
+    else if (Stats.MaxDepth == 3)
+      NumProfScopsDepthThree++;
+    else if (Stats.MaxDepth == 4)
+      NumProfScopsDepthFour++;
+    else if (Stats.MaxDepth == 5)
+      NumProfScopsDepthFive++;
+    else
+      NumProfScopsDepthLarger++;
+  }
+}
+
 bool ScopDetection::runOnFunction(llvm::Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
@@ -1477,6 +1540,8 @@ bool ScopDetection::runOnFunction(llvm::Function &F) {
 
   findScops(*TopRegion);
 
+  NumScopRegions += ValidRegions.size();
+
   // Prune non-profitable regions.
   for (auto &DIt : DetectionContextMap) {
     auto &DC = DIt.getSecond();
@@ -1484,11 +1549,18 @@ bool ScopDetection::runOnFunction(llvm::Function &F) {
       continue;
     if (!ValidRegions.count(&DC.CurRegion))
       continue;
-    if (isProfitableRegion(DC))
+    LoopStats Stats = countBeneficialLoops(&DC.CurRegion, 0);
+    updateLoopCountStatistic(Stats, false /* OnlyProfitable */);
+    if (isProfitableRegion(DC)) {
+      updateLoopCountStatistic(Stats, true /* OnlyProfitable */);
       continue;
+    }
 
     ValidRegions.remove(&DC.CurRegion);
   }
+
+  NumProfScopRegions += ValidRegions.size();
+  NumLoopsOverall += countBeneficialLoops(TopRegion, 0).NumLoops;
 
   // Only makes sense when we tracked errors.
   if (PollyTrackFailures)

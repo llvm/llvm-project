@@ -2476,6 +2476,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                             DAG.getConstant(0, DL, MVT::i32));
     SDValue J = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, IJ,
                             DAG.getConstant(1, DL, MVT::i32));
+    I = DAG.getNode(ISD::BITCAST, DL, MVT::f32, I);
+    J = DAG.getNode(ISD::BITCAST, DL, MVT::f32, J);
     SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(3));
     SDValue Glue = M0.getValue(1);
     SDValue P1 = DAG.getNode(AMDGPUISD::INTERP_P1, DL,

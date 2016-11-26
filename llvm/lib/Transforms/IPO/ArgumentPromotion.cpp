@@ -885,8 +885,8 @@ DoPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
       cast<CallInst>(New)->setAttributes(AttributeSet::get(New->getContext(),
                                                           AttributesVec));
-      if (cast<CallInst>(Call)->isTailCall())
-        cast<CallInst>(New)->setTailCall();
+      cast<CallInst>(New)->setTailCallKind(
+          cast<CallInst>(Call)->getTailCallKind());
     }
     New->setDebugLoc(Call->getDebugLoc());
     Args.clear();

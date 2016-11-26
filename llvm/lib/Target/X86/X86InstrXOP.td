@@ -105,6 +105,13 @@ multiclass xop3op<bits<8> opc, string OpcodeStr, SDNode OpNode,
               (vt128 (OpNode (vt128 (bitconvert (loadv2i64 addr:$src1))),
                              (vt128 VR128:$src2))))]>,
              XOP, Sched<[WriteVarVecShift, ReadAfterLd]>;
+  // For disassembler
+  let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+  def rr_REV : IXOP<opc, MRMSrcReg, (outs VR128:$dst),
+               (ins VR128:$src1, VR128:$src2),
+               !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+               []>,
+               XOP_4V, VEX_W, Sched<[WriteVarVecShift]>;
 }
 
 let ExeDomain = SSEPackedInt in {

@@ -1,3 +1,12 @@
+//===-- GetOptInc.cpp -------------------------------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "lldb/Host/common/GetOptInc.h"
 
 #if defined(REPLACE_GETOPT) || defined(REPLACE_GETOPT_LONG) ||                 \

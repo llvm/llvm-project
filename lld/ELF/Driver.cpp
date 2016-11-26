@@ -540,21 +540,21 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Entry = getString(Args, OPT_entry);
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
-  Config->LtoAAPipeline = getString(Args, OPT_lto_aa_pipeline);
-  Config->LtoNewPmPasses = getString(Args, OPT_lto_newpm_passes);
+  Config->LTOAAPipeline = getString(Args, OPT_lto_aa_pipeline);
+  Config->LTONewPmPasses = getString(Args, OPT_lto_newpm_passes);
   Config->OutputFile = getString(Args, OPT_o);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 
   Config->Optimize = getInteger(Args, OPT_O, 1);
-  Config->LtoO = getInteger(Args, OPT_lto_O, 2);
-  if (Config->LtoO > 3)
+  Config->LTOO = getInteger(Args, OPT_lto_O, 2);
+  if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
-  Config->LtoPartitions = getInteger(Args, OPT_lto_partitions, 1);
-  if (Config->LtoPartitions == 0)
+  Config->LTOPartitions = getInteger(Args, OPT_lto_partitions, 1);
+  if (Config->LTOPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");
-  Config->ThinLtoJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
-  if (Config->ThinLtoJobs == 0)
+  Config->ThinLTOJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
+  if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
@@ -794,7 +794,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
 
-  Symtab.addCombinedLtoObject();
+  Symtab.addCombinedLTOObject();
   if (ErrorCount)
     return;
 

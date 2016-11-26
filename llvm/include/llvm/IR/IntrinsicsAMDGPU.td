@@ -479,7 +479,7 @@ def int_amdgcn_s_getreg :
 def int_amdgcn_interp_p1 :
   GCCBuiltin<"__builtin_amdgcn_interp_p1">,
   Intrinsic<[llvm_float_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem]>;  // This intrinsic reads from lds, but the memory
                            // values are constant, so it behaves like IntrNoMem.
 
@@ -487,7 +487,7 @@ def int_amdgcn_interp_p1 :
 def int_amdgcn_interp_p2 :
   GCCBuiltin<"__builtin_amdgcn_interp_p2">,
   Intrinsic<[llvm_float_ty],
-            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem]>;  // See int_amdgcn_v_interp_p1 for why this is
                            // IntrNoMem.
 

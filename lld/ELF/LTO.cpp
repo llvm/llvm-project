@@ -75,24 +75,24 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.RelocModel = Config->Pic ? Reloc::PIC_ : Reloc::Static;
   Conf.DisableVerify = Config->DisableVerify;
   Conf.DiagHandler = diagnosticHandler;
-  Conf.OptLevel = Config->LtoO;
+  Conf.OptLevel = Config->LTOO;
 
   // Set up a custom pipeline if we've been asked to.
-  Conf.OptPipeline = Config->LtoNewPmPasses;
-  Conf.AAPipeline = Config->LtoAAPipeline;
+  Conf.OptPipeline = Config->LTONewPmPasses;
+  Conf.AAPipeline = Config->LTOAAPipeline;
 
   if (Config->SaveTemps)
     checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
                                  /*UseInputModulePath*/ true));
 
   lto::ThinBackend Backend;
-  if (Config->ThinLtoJobs != -1u)
-    Backend = lto::createInProcessThinBackend(Config->ThinLtoJobs);
+  if (Config->ThinLTOJobs != -1u)
+    Backend = lto::createInProcessThinBackend(Config->ThinLTOJobs);
   return llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
-                                     Config->LtoPartitions);
+                                     Config->LTOPartitions);
 }
 
-BitcodeCompiler::BitcodeCompiler() : LtoObj(createLTO()) {}
+BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
@@ -128,17 +128,17 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     if (R.Prevailing)
       undefine(Sym);
   }
-  checkError(LtoObj->add(std::move(F.Obj), Resols));
+  checkError(LTOObj->add(std::move(F.Obj), Resols));
 }
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile(s).
 std::vector<InputFile *> BitcodeCompiler::compile() {
   std::vector<InputFile *> Ret;
-  unsigned MaxTasks = LtoObj->getMaxTasks();
+  unsigned MaxTasks = LTOObj->getMaxTasks();
   Buff.resize(MaxTasks);
 
-  checkError(LtoObj->run([&](size_t Task) {
+  checkError(LTOObj->run([&](size_t Task) {
     return llvm::make_unique<lto::NativeObjectStream>(
         llvm::make_unique<raw_svector_ostream>(Buff[Task]));
   }));

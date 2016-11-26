@@ -210,7 +210,7 @@ namespace {
 
     bool runOnLoop(Loop *L, LPPassManager &LPM) override;
     bool processCurrentLoop();
-
+    bool isUnreachableDueToPreviousUnswitching(BasicBlock *);
     /// This transformation requires natural loop information & requires that
     /// loop preheaders be inserted into the CFG.
     ///
@@ -483,6 +483,35 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
   return Changed;
 }
 
+// Return true if the BasicBlock BB is unreachable from the loop header.
+// Return false, otherwise.
+bool LoopUnswitch::isUnreachableDueToPreviousUnswitching(BasicBlock *BB) {
+  auto *Node = DT->getNode(BB)->getIDom();
+  BasicBlock *DomBB = Node->getBlock();
+  while (currentLoop->contains(DomBB)) {
+    BranchInst *BInst = dyn_cast<BranchInst>(DomBB->getTerminator());
+
+    Node = DT->getNode(DomBB)->getIDom();
+    DomBB = Node->getBlock();
+
+    if (!BInst || !BInst->isConditional())
+      continue;
+
+    Value *Cond = BInst->getCondition();
+    if (!isa<ConstantInt>(Cond))
+      continue;
+
+    BasicBlock *UnreachableSucc =
+        Cond == ConstantInt::getTrue(Cond->getContext())
+            ? BInst->getSuccessor(1)
+            : BInst->getSuccessor(0);
+
+    if (DT->dominates(UnreachableSucc, BB))
+      return true;
+  }
+  return false;
+}
+
 /// Do actual work and unswitch loop if possible and profitable.
 bool LoopUnswitch::processCurrentLoop() {
   bool Changed = false;
@@ -593,6 +622,12 @@ bool LoopUnswitch::processCurrentLoop() {
       continue;
 
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
+      // Some branches may be rendered unreachable because of previous
+      // unswitching.
+      // Unswitch only those branches that are reachable.
+      if (isUnreachableDueToPreviousUnswitching(*I))
+        continue;
+ 
       // If this isn't branching on an invariant condition, we can't unswitch
       // it.
       if (BI->isConditional()) {

@@ -913,42 +913,57 @@ return:
 
 ; We build lookup tables for switches with three or more cases.
 define i32 @threecases(i32 %c) {
+; CHECK-LABEL: @threecases(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 %c, 0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 3
+; CHECK-NEXT:    br i1 [[TMP0]], label %switch.lookup, label %return
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @switch.table.10, i32 0, i32 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]]
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 3
+;
 entry:
   switch i32 %c, label %sw.default [
-    i32 0, label %return
-    i32 1, label %sw.bb1
-    i32 2, label %sw.bb2
+  i32 0, label %return
+  i32 1, label %sw.bb1
+  i32 2, label %sw.bb2
   ]
-sw.bb1: br label %return
-sw.bb2: br label %return
-sw.default: br label %return
+sw.bb1:
+  br label %return
+sw.bb2:
+  br label %return
+sw.default:
+  br label %return
 return:
   %x = phi i32 [ 3, %sw.default ], [ 5, %sw.bb2 ], [ 7, %sw.bb1 ], [ 10, %entry ]
   ret i32 %x
-; CHECK-LABEL: @threecases(
-; CHECK-NOT: switch i32
-; CHECK: @switch.table
 }
 
 ; We don't build tables for switches with two cases.
 define i32 @twocases(i32 %c) {
+; CHECK-LABEL: @twocases(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 %c, 1
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP:%.*]], i32 7, i32 3
+; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp eq i32 %c, 0
+; CHECK-NEXT:    [[SWITCH_SELECT2:%.*]] = select i1 [[SWITCH_SELECTCMP1]], i32 9, i32 [[SWITCH_SELECT]]
+; CHECK-NEXT:    ret i32 [[SWITCH_SELECT2]]
+;
 entry:
   switch i32 %c, label %sw.default [
-    i32 0, label %return
-    i32 1, label %sw.bb1
+  i32 0, label %return
+  i32 1, label %sw.bb1
   ]
-sw.bb1: br label %return
-sw.default: br label %return
+sw.bb1:
+  br label %return
+sw.default:
+  br label %return
 return:
   %x = phi i32 [ 3, %sw.default ], [ 7, %sw.bb1 ], [ 9, %entry ]
   ret i32 %x
-; CHECK-LABEL: @twocases(
-; CHECK-NOT: switch i32
-; CHECK-NOT: @switch.table
-; CHECK: %switch.selectcmp
-; CHECK-NEXT: %switch.select
-; CHECK-NEXT: %switch.selectcmp1
-; CHECK-NEXT: %switch.select2
 }
 
 ; Don't build tables for switches with TLS variables.
@@ -1194,7 +1209,7 @@ return:
   %retval.0 = phi i32 [ %r.0, %if.then ], [ 100, %if.end ]
   ret i32 %retval.0
 ; CHECK-LABEL: @no_reuse_cmp(
-; CHECK:  [[S:%.+]] = select 
+; CHECK:  [[S:%.+]] = select
 ; CHECK-NEXT:  %cmp = icmp ne i32 [[S]], 0
 ; CHECK-NEXT:  [[R:%.+]] = select i1 %cmp, i32 [[S]], i32 100
 ; CHECK-NEXT:  ret i32 [[R]]

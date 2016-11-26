@@ -350,3 +350,32 @@ define <8 x float> @knownbits_mask_concat_uitofp(<4 x i32> %a0, <4 x i32> %a1) n
   %4 = uitofp <8 x i32> %3 to <8 x float>
   ret <8 x float> %4
 }
+
+define <4 x float> @knownbits_lshr_bitcast_shuffle_uitofp(<2 x i64> %a0, <4 x i32> %a1) nounwind {
+; X32-LABEL: knownbits_lshr_bitcast_shuffle_uitofp:
+; X32:       # BB#0:
+; X32-NEXT:    vpsrlq $1, %xmm0, %xmm0
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X32-NEXT:    vpsrld $16, %xmm0, %xmm0
+; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X32-NEXT:    vaddps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_lshr_bitcast_shuffle_uitofp:
+; X64:       # BB#0:
+; X64-NEXT:    vpsrlq $1, %xmm0, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; X64-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X64-NEXT:    vpsrld $16, %xmm0, %xmm0
+; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; X64-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X64-NEXT:    retq
+  %1 = lshr <2 x i64> %a0, <i64 1, i64 1>
+  %2 = bitcast <2 x i64> %1 to <4 x i32>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %4 = uitofp <4 x i32> %3 to <4 x float>
+  ret <4 x float> %4
+}

@@ -190,8 +190,8 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
       New = CallInst::Create(NF, Args, OpBundles, "", Call);
       cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
       cast<CallInst>(New)->setAttributes(PAL);
-      if (cast<CallInst>(Call)->isTailCall())
-        cast<CallInst>(New)->setTailCall();
+      cast<CallInst>(New)->setTailCallKind(
+          cast<CallInst>(Call)->getTailCallKind());
     }
     New->setDebugLoc(Call->getDebugLoc());
 
@@ -896,8 +896,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       New = CallInst::Create(NF, Args, OpBundles, "", Call);
       cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
       cast<CallInst>(New)->setAttributes(NewCallPAL);
-      if (cast<CallInst>(Call)->isTailCall())
-        cast<CallInst>(New)->setTailCall();
+      cast<CallInst>(New)->setTailCallKind(
+          cast<CallInst>(Call)->getTailCallKind());
     }
     New->setDebugLoc(Call->getDebugLoc());
 

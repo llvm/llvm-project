@@ -1,4 +1,4 @@
-//===-- ClangUserExpression.cpp ----------------------------------*- C++-*-===//
+//===-- ClangUtilityFunction.cpp ---------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
