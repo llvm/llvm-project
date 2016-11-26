@@ -400,6 +400,8 @@ bool IsHandledDeadlySignal(int signum) {
     return false;
   if (common_flags()->handle_abort && signum == SIGABRT)
     return true;
+  if (common_flags()->handle_sigill && signum == SIGILL)
+    return true;
   return (signum == SIGSEGV || signum == SIGBUS) && common_flags()->handle_segv;
 }
 
