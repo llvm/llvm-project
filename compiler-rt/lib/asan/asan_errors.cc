@@ -53,6 +53,11 @@ static void MaybeDumpInstructionBytes(uptr pc) {
   Report("%s", str.data());
 }
 
+static void MaybeDumpRegisters(void *context) {
+  if (!flags()->dump_registers) return;
+  SignalContext::DumpAllRegisters(context);
+}
+
 void ErrorDeadlySignal::Print() {
   Decorator d;
   Printf("%s", d.Warning());
@@ -78,6 +83,7 @@ void ErrorDeadlySignal::Print() {
                                   common_flags()->fast_unwind_on_fatal);
   stack.Print();
   MaybeDumpInstructionBytes(pc);
+  MaybeDumpRegisters(context);
   Printf("AddressSanitizer can not provide additional info.\n");
   ReportErrorSummary(description, &stack);
 }

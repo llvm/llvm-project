@@ -795,6 +795,56 @@ uptr FindAvailableMemoryRange(uptr shadow_size,
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
 
+void SignalContext::DumpAllRegisters(void *context) {
+  Report("Register values:\n");
+
+  ucontext_t *ucontext = (ucontext_t*)context;
+# define DUMPREG64(r) \
+    Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
+# define DUMPREG32(r) \
+    Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
+# define DUMPREG_(r)   Printf(" "); DUMPREG(r);
+# define DUMPREG__(r)  Printf("  "); DUMPREG(r);
+# define DUMPREG___(r) Printf("   "); DUMPREG(r);
+
+# if defined(__x86_64__)
+#  define DUMPREG(r) DUMPREG64(r)
+  DUMPREG(rax); DUMPREG(rbx); DUMPREG(rcx); DUMPREG(rdx); Printf("\n");
+  DUMPREG(rdi); DUMPREG(rsi); DUMPREG(rbp); DUMPREG(rsp); Printf("\n");
+  DUMPREG_(r8); DUMPREG_(r9); DUMPREG(r10); DUMPREG(r11); Printf("\n");
+  DUMPREG(r12); DUMPREG(r13); DUMPREG(r14); DUMPREG(r15); Printf("\n");
+# elif defined(__i386__)
+#  define DUMPREG(r) DUMPREG32(r)
+  DUMPREG(eax); DUMPREG(ebx); DUMPREG(ecx); DUMPREG(edx); Printf("\n");
+  DUMPREG(edi); DUMPREG(esi); DUMPREG(ebp); DUMPREG(esp); Printf("\n");
+# elif defined(__aarch64__)
+#  define DUMPREG(r) DUMPREG64(r)
+  DUMPREG_(x[0]); DUMPREG_(x[1]); DUMPREG_(x[2]); DUMPREG_(x[3]); Printf("\n");
+  DUMPREG_(x[4]); DUMPREG_(x[5]); DUMPREG_(x[6]); DUMPREG_(x[7]); Printf("\n");
+  DUMPREG_(x[8]); DUMPREG_(x[9]); DUMPREG(x[10]); DUMPREG(x[11]); Printf("\n");
+  DUMPREG(x[12]); DUMPREG(x[13]); DUMPREG(x[14]); DUMPREG(x[15]); Printf("\n");
+  DUMPREG(x[16]); DUMPREG(x[17]); DUMPREG(x[18]); DUMPREG(x[19]); Printf("\n");
+  DUMPREG(x[20]); DUMPREG(x[21]); DUMPREG(x[22]); DUMPREG(x[23]); Printf("\n");
+  DUMPREG(x[24]); DUMPREG(x[25]); DUMPREG(x[26]); DUMPREG(x[27]); Printf("\n");
+  DUMPREG(x[28]); DUMPREG___(fp); DUMPREG___(lr); DUMPREG___(sp); Printf("\n");
+# elif defined(__arm__)
+#  define DUMPREG(r) DUMPREG32(r)
+  DUMPREG_(r[0]); DUMPREG_(r[1]); DUMPREG_(r[2]); DUMPREG_(r[3]); Printf("\n");
+  DUMPREG_(r[4]); DUMPREG_(r[5]); DUMPREG_(r[6]); DUMPREG_(r[7]); Printf("\n");
+  DUMPREG_(r[8]); DUMPREG_(r[9]); DUMPREG(r[10]); DUMPREG(r[11]); Printf("\n");
+  DUMPREG(r[12]); DUMPREG___(sp); DUMPREG___(lr); DUMPREG___(pc); Printf("\n");
+# else
+# error "Unknown architecture"
+# endif
+
+# undef DUMPREG64
+# undef DUMPREG32
+# undef DUMPREG_
+# undef DUMPREG__
+# undef DUMPREG___
+# undef DUMPREG
+}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_MAC
