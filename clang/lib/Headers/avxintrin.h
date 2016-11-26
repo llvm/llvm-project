@@ -57,7 +57,7 @@ typedef long long __m256i __attribute__((__vector_size__(32)));
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VADDPD / ADDPD instruction.
+/// This intrinsic corresponds to the \c VADDPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the source operands.
@@ -75,7 +75,7 @@ _mm256_add_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VADDPS / ADDPS instruction.
+/// This intrinsic corresponds to the \c VADDPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the source operands.
@@ -93,7 +93,7 @@ _mm256_add_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSUBPD / SUBPD instruction.
+/// This intrinsic corresponds to the \c VSUBPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing the minuend.
@@ -111,7 +111,7 @@ _mm256_sub_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSUBPS / SUBPS instruction.
+/// This intrinsic corresponds to the \c VSUBPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing the minuend.
@@ -130,7 +130,7 @@ _mm256_sub_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VADDSUBPD / ADDSUBPD instruction.
+/// This intrinsic corresponds to the \c VADDSUBPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing the left source operand.
@@ -149,7 +149,7 @@ _mm256_addsub_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VADDSUBPS / ADDSUBPS instruction.
+/// This intrinsic corresponds to the \c VADDSUBPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing the left source operand.
@@ -167,7 +167,7 @@ _mm256_addsub_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VDIVPD / DIVPD instruction.
+/// This intrinsic corresponds to the \c VDIVPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing the dividend.
@@ -185,7 +185,7 @@ _mm256_div_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VDIVPS / DIVPS instruction.
+/// This intrinsic corresponds to the \c VDIVPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing the dividend.
@@ -204,7 +204,7 @@ _mm256_div_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMAXPD / MAXPD instruction.
+/// This intrinsic corresponds to the \c VMAXPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the operands.
@@ -223,7 +223,7 @@ _mm256_max_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMAXPS / MAXPS instruction.
+/// This intrinsic corresponds to the \c VMAXPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the operands.
@@ -242,7 +242,7 @@ _mm256_max_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMINPD / MINPD instruction.
+/// This intrinsic corresponds to the \c VMINPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the operands.
@@ -261,7 +261,7 @@ _mm256_min_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMINPS / MINPS instruction.
+/// This intrinsic corresponds to the \c VMINPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the operands.
@@ -279,7 +279,7 @@ _mm256_min_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMULPD / MULPD instruction.
+/// This intrinsic corresponds to the \c VMULPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the operands.
@@ -297,7 +297,7 @@ _mm256_mul_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMULPS / MULPS instruction.
+/// This intrinsic corresponds to the \c VMULPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the operands.
@@ -316,7 +316,7 @@ _mm256_mul_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSQRTPD / SQRTPD instruction.
+/// This intrinsic corresponds to the \c VSQRTPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double].
@@ -333,7 +333,7 @@ _mm256_sqrt_pd(__m256d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSQRTPS / SQRTPS instruction.
+/// This intrinsic corresponds to the \c VSQRTPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float].
@@ -350,7 +350,7 @@ _mm256_sqrt_ps(__m256 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VRSQRTPS / RSQRTPS instruction.
+/// This intrinsic corresponds to the \c VRSQRTPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float].
@@ -367,7 +367,7 @@ _mm256_rsqrt_ps(__m256 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VRCPPS / RCPPS instruction.
+/// This intrinsic corresponds to the \c VRCPPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float].
@@ -389,24 +389,24 @@ _mm256_rcp_ps(__m256 __a)
 /// __m256d _mm256_round_pd(__m256d V, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VROUNDPD / ROUNDPD instruction.
+/// This intrinsic corresponds to the \c VROUNDPD instruction.
 ///
 /// \param V
 ///    A 256-bit vector of [4 x double].
 /// \param M
-///    An integer value that specifies the rounding operation.
-///    Bits [7:4] are reserved.
-///    Bit [3] is a precision exception value:
-///    0: A normal PE exception is used.
-///    1: The PE field is not updated.
-///    Bit [2] is the rounding control source:
-///    0: Use bits [1:0] of M.
-///    1: Use the current MXCSR setting.
-///    Bits [1:0] contain the rounding control definition:
-///    00: Nearest.
-///    01: Downward (toward negative infinity).
-///    10: Upward (toward positive infinity).
-///    11: Truncated.
+///    An integer value that specifies the rounding operation. \n
+///    Bits [7:4] are reserved. \n
+///    Bit [3] is a precision exception value: \n
+///    0: A normal PE exception is used. \n
+///    1: The PE field is not updated. \n
+///    Bit [2] is the rounding control source: \n
+///    0: Use bits [1:0] of M. \n
+///    1: Use the current MXCSR setting. \n
+///    Bits [1:0] contain the rounding control definition: \n
+///    00: Nearest. \n
+///    01: Downward (toward negative infinity). \n
+///    10: Upward (toward positive infinity). \n
+///    11: Truncated. 
 /// \returns A 256-bit vector of [4 x double] containing the rounded values.
 #define _mm256_round_pd(V, M) __extension__ ({ \
     (__m256d)__builtin_ia32_roundpd256((__v4df)(__m256d)(V), (M)); })
@@ -421,24 +421,24 @@ _mm256_rcp_ps(__m256 __a)
 /// __m256 _mm256_round_ps(__m256 V, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VROUNDPS / ROUNDPS instruction.
+/// This intrinsic corresponds to the \c VROUNDPS instruction.
 ///
 /// \param V
 ///    A 256-bit vector of [8 x float].
 /// \param M
-///    An integer value that specifies the rounding operation.
-///    Bits [7:4] are reserved.
-///    Bit [3] is a precision exception value:
-///    0: A normal PE exception is used.
-///    1: The PE field is not updated.
-///    Bit [2] is the rounding control source:
-///    0: Use bits [1:0] of M.
-///    1: Use the current MXCSR setting.
-///    Bits [1:0] contain the rounding control definition:
-///    00: Nearest.
-///    01: Downward (toward negative infinity).
-///    10: Upward (toward positive infinity).
-///    11: Truncated.
+///    An integer value that specifies the rounding operation. \n
+///    Bits [7:4] are reserved. \n
+///    Bit [3] is a precision exception value: \n
+///      0: A normal PE exception is used. \n
+///      1: The PE field is not updated. \n
+///    Bit [2] is the rounding control source: \n
+///      0: Use bits [1:0] of M. \n
+///      1: Use the current MXCSR setting. \n
+///    Bits [1:0] contain the rounding control definition: \n
+///      00: Nearest. \n
+///      01: Downward (toward negative infinity). \n
+///      10: Upward (toward positive infinity). \n
+///      11: Truncated. \n
 /// \returns A 256-bit vector of [8 x float] containing the rounded values.
 #define _mm256_round_ps(V, M) __extension__ ({ \
   (__m256)__builtin_ia32_roundps256((__v8sf)(__m256)(V), (M)); })
@@ -453,7 +453,7 @@ _mm256_rcp_ps(__m256 __a)
 /// __m256d _mm256_ceil_pd(__m256d V);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VROUNDPD / ROUNDPD instruction.
+/// This intrinsic corresponds to the \c VROUNDPD instruction.
 ///
 /// \param V
 ///    A 256-bit vector of [4 x double].
@@ -470,7 +470,7 @@ _mm256_rcp_ps(__m256 __a)
 /// __m256d _mm256_floor_pd(__m256d V);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VROUNDPD / ROUNDPD instruction.
+/// This intrinsic corresponds to the \c VROUNDPD instruction.
 ///
 /// \param V
 ///    A 256-bit vector of [4 x double].
@@ -488,7 +488,7 @@ _mm256_rcp_ps(__m256 __a)
 /// __m256 _mm256_ceil_ps(__m256 V);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VROUNDPS / ROUNDPS instruction.
+/// This intrinsic corresponds to the \c VROUNDPS instruction.
 ///
 /// \param V
 ///    A 256-bit vector of [8 x float].
@@ -505,7 +505,7 @@ _mm256_rcp_ps(__m256 __a)
 /// __m256 _mm256_floor_ps(__m256 V);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VROUNDPS / ROUNDPS instruction.
+/// This intrinsic corresponds to the \c VROUNDPS instruction.
 ///
 /// \param V
 ///    A 256-bit vector of [8 x float].
@@ -517,7 +517,7 @@ _mm256_rcp_ps(__m256 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VANDPD / ANDPD instruction.
+/// This intrinsic corresponds to the \c VANDPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the source operands.
@@ -535,7 +535,7 @@ _mm256_and_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VANDPS / ANDPS instruction.
+/// This intrinsic corresponds to the \c VANDPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the source operands.
@@ -554,7 +554,7 @@ _mm256_and_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VANDNPD / ANDNPD instruction.
+/// This intrinsic corresponds to the \c VANDNPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing the left source operand. The
@@ -575,7 +575,7 @@ _mm256_andnot_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VANDNPS / ANDNPS instruction.
+/// This intrinsic corresponds to the \c VANDNPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing the left source operand. The
@@ -595,7 +595,7 @@ _mm256_andnot_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VORPD / ORPD instruction.
+/// This intrinsic corresponds to the \c VORPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the source operands.
@@ -613,7 +613,7 @@ _mm256_or_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VORPS / ORPS instruction.
+/// This intrinsic corresponds to the \c VORPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the source operands.
@@ -631,7 +631,7 @@ _mm256_or_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VXORPD / XORPD instruction.
+/// This intrinsic corresponds to the \c VXORPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the source operands.
@@ -649,7 +649,7 @@ _mm256_xor_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VXORPS / XORPS instruction.
+/// This intrinsic corresponds to the \c VXORPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the source operands.
@@ -669,7 +669,7 @@ _mm256_xor_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VHADDPD / HADDPD instruction.
+/// This intrinsic corresponds to the \c VHADDPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the source operands.
@@ -692,7 +692,7 @@ _mm256_hadd_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VHADDPS / HADDPS instruction.
+/// This intrinsic corresponds to the \c VHADDPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the source operands.
@@ -715,7 +715,7 @@ _mm256_hadd_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VHSUBPD / HSUBPD instruction.
+/// This intrinsic corresponds to the \c VHSUBPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing one of the source operands.
@@ -738,7 +738,7 @@ _mm256_hsub_pd(__m256d __a, __m256d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VHSUBPS / HSUBPS instruction.
+/// This intrinsic corresponds to the \c VHSUBPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing one of the source operands.
@@ -762,22 +762,22 @@ _mm256_hsub_ps(__m256 __a, __m256 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPERMILPD / PERMILPD instruction.
+/// This intrinsic corresponds to the \c VPERMILPD instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
 /// \param __c
-///    A 128-bit integer vector operand specifying how the values are to be
+///    \li A 128-bit integer vector operand specifying how the values are to be
 ///    copied.
-///    Bit [1]:
-///    0: Bits [63:0] of the source are copied to bits [63:0] of the
+///    \li Bit [1]:
+///    \li 0: Bits [63:0] of the source are copied to bits [63:0] of the
 ///    returned vector.
-///    1: Bits [127:64] of the source are copied to bits [63:0] of the
+///    \li 1: Bits [127:64] of the source are copied to bits [63:0] of the
 ///    returned vector.
-///    Bit [65]:
-///    0: Bits [63:0] of the source are copied to bits [127:64] of the
+///    \li Bit [65]:
+///    \li 0: Bits [63:0] of the source are copied to bits [127:64] of the
 ///    returned vector.
-///    1: Bits [127:64] of the source are copied to bits [127:64] of the
+///    \li 1: Bits [127:64] of the source are copied to bits [127:64] of the
 ///    returned vector.
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
 static __inline __m128d __DEFAULT_FN_ATTRS
@@ -791,32 +791,32 @@ _mm_permutevar_pd(__m128d __a, __m128i __c)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPERMILPD / PERMILPD instruction.
+/// This intrinsic corresponds to the \c VPERMILPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double].
 /// \param __c
 ///    A 256-bit integer vector operand specifying how the values are to be
-///    copied.
-///    Bit [1]:
-///    0: Bits [63:0] of the source are copied to bits [63:0] of the
+///    copied. \n
+///    Bit [1]: \n
+///    \li 0: Bits [63:0] of the source are copied to bits [63:0] of the
 ///    returned vector.
-///    1: Bits [127:64] of the source are copied to bits [63:0] of the
+///    \li 1: Bits [127:64] of the source are copied to bits [63:0] of the
 ///    returned vector.
-///    Bit [65]:
-///    0: Bits [63:0] of the source are copied to bits [127:64] of the
+///    Bit [65]: \n
+///    \li 0: Bits [63:0] of the source are copied to bits [127:64] of the
 ///    returned vector.
-///    1: Bits [127:64] of the source are copied to bits [127:64] of the
+///    \li 1: Bits [127:64] of the source are copied to bits [127:64] of the
 ///    returned vector.
-///    Bit [129]:
-///    0: Bits [191:128] of the source are copied to bits [191:128] of the
+///    Bit [129]: \n 
+///    \li 0: Bits [191:128] of the source are copied to bits [191:128] of the
 ///    returned vector.
-///    1: Bits [255:192] of the source are copied to bits [191:128] of the
+///    \li 1: Bits [255:192] of the source are copied to bits [191:128] of the
 ///    returned vector.
-///    Bit [193]:
-///    0: Bits [191:128] of the source are copied to bits [255:192] of the
+///    Bit [193]: \n 
+///    \li 0: Bits [191:128] of the source are copied to bits [255:192] of the
 ///    returned vector.
-///    1: Bits [255:192] of the source are copied to bits [255:192] of the
+///    \li 1: Bits [255:192] of the source are copied to bits [255:192] of the
 ///    returned vector.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 static __inline __m256d __DEFAULT_FN_ATTRS
@@ -830,49 +830,66 @@ _mm256_permutevar_pd(__m256d __a, __m256i __c)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPERMILPS / PERMILPS instruction.
+/// This intrinsic corresponds to the \c VPERMILPS instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x float].
 /// \param __c
-///    A 128-bit integer vector operand specifying how the values are to be
-///    copied.
-///    Bits [1:0]:
-///    00: Bits [31:0] of the source are copied to bits [31:0] of the
-///    returned vector.
-///    01: Bits [63:32] of the source are copied to bits [31:0] of the
-///    returned vector.
-///    10: Bits [95:64] of the source are copied to bits [31:0] of the
-///    returned vector.
-///    11: Bits [127:96] of the source are copied to bits [31:0] of the
-///    returned vector.
-///    Bits [33:32]:
-///    00: Bits [31:0] of the source are copied to bits [63:32] of the
-///    returned vector.
-///    01: Bits [63:32] of the source are copied to bits [63:32] of the
-///    returned vector.
-///    10: Bits [95:64] of the source are copied to bits [63:32] of the
-///    returned vector.
-///    11: Bits [127:96] of the source are copied to bits [63:32] of the
-///    returned vector.
-///    Bits [65:64]:
-///    00: Bits [31:0] of the source are copied to bits [95:64] of the
-///    returned vector.
-///    01: Bits [63:32] of the source are copied to bits [95:64] of the
-///    returned vector.
-///    10: Bits [95:64] of the source are copied to bits [95:64] of the
-///    returned vector.
-///    11: Bits [127:96] of the source are copied to bits [95:64] of the
-///    returned vector.
-///    Bits [97:96]:
-///    00: Bits [31:0] of the source are copied to bits [127:96] of the
-///    returned vector.
-///    01: Bits [63:32] of the source are copied to bits [127:96] of the
-///    returned vector.
-///    10: Bits [95:64] of the source are copied to bits [127:96] of the
-///    returned vector.
-///    11: Bits [127:96] of the source are copied to bits [127:96] of the
-///    returned vector.
+///    <ul>
+///    <li> A 128-bit integer vector operand specifying how the values are to be
+///         copied. 
+///    </li>
+///    <li> Bits [1:0]:
+///      <ul> 
+///      <li> 00: Bits [31:0] of the source are copied to bits [31:0] of the
+///           returned vector. </li>
+///      <li> 01: Bits [63:32] of the source are copied to bits [31:0] of the
+///           returned vector. </li>
+///      <li> 10: Bits [95:64] of the source are copied to bits [31:0] of the
+///           returned vector. </li>
+///      <li> 11: Bits [127:96] of the source are copied to bits [31:0] of the
+///           returned vector. </li>
+///      </ul>
+///    </li>
+///    <li> Bits [33:32]:
+///      <ul>
+///      <li> 00: Bits [31:0] of the source are copied to bits [63:32] of the
+///           returned vector. </li>
+///      <li> 01: Bits [63:32] of the source are copied to bits [63:32] of the
+///           returned vector. </li>
+///      <li> 10: Bits [95:64] of the source are copied to bits [63:32] of the
+///           returned vector. </li>
+///      <li> 11: Bits [127:96] of the source are copied to bits [63:32] of the
+///           returned vector. </li>
+///      </ul>
+///    </li> 
+///    <li> Bits [65:64]:
+///      <ul>
+///      <li> 00: Bits [31:0] of the source are copied to bits [95:64] of the
+///           returned vector. </li>
+///      <li> 01: Bits [63:32] of the source are copied to bits [95:64] of the
+///           returned vector. </li>
+///      <li> 10: Bits [95:64] of the source are copied to bits [95:64] of the
+///           returned vector. </li>
+///      <li> 11: Bits [127:96] of the source are copied to bits [95:64] of the
+///           returned vector. </li>
+///      </ul>
+///    </li>
+///    <li> Bits [97:96]:
+///      <ul>
+///      <li> 00: Bits [31:0] of the source are copied to bits [127:96] of the
+///           returned vector. </li>
+///      <li> 01: Bits [63:32] of the source are copied to bits [127:96] of the
+///           returned vector. </li>
+///      <li> 10: Bits [95:64] of the source are copied to bits [127:96] of the
+///           returned vector. </li>
+///      <li> 11: Bits [127:96] of the source are copied to bits [127:96] of the
+///           returned vector. </li>
+///      <li> 11: Bits [127:96] of the source are copied to bits [95:64] of the
+///           returned vector. </li>
+///      </ul>
+///    </li>
+///    </ul> 
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
 static __inline __m128 __DEFAULT_FN_ATTRS
 _mm_permutevar_ps(__m128 __a, __m128i __c)
@@ -885,7 +902,7 @@ _mm_permutevar_ps(__m128 __a, __m128i __c)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPERMILPS / PERMILPS instruction.
+/// This intrinsic corresponds to the \c VPERMILPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float].
@@ -980,11 +997,12 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m128d _mm_permute_pd(__m128d A, const int C);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPERMILPD / PERMILPD instruction.
+/// This intrinsic corresponds to the \c VPERMILPD instruction.
 ///
 /// \param A
 ///    A 128-bit vector of [2 x double].
 /// \param C
+/// \parblock
 ///    An immediate integer operand specifying how the values are to be copied.
 ///    Bit [0]:
 ///    0: Bits [63:0] of the source are copied to bits [63:0] of the
@@ -996,6 +1014,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    returned vector.
 ///    1: Bits [127:64] of the source are copied to bits [127:64] of the
 ///    returned vector.
+/// \endparblock
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
 #define _mm_permute_pd(A, C) __extension__ ({ \
   (__m128d)__builtin_shufflevector((__v2df)(__m128d)(A), \
@@ -1011,7 +1030,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m256d _mm256_permute_pd(__m256d A, const int C);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPERMILPD / PERMILPD instruction.
+/// This intrinsic corresponds to the \c VPERMILPD instruction.
 ///
 /// \param A
 ///    A 256-bit vector of [4 x double].
@@ -1055,7 +1074,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m128 _mm_permute_ps(__m128 A, const int C);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPERMILPS / PERMILPS instruction.
+/// This intrinsic corresponds to the \c VPERMILPS instruction.
 ///
 /// \param A
 ///    A 128-bit vector of [4 x float].
@@ -1113,7 +1132,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m256 _mm256_permute_ps(__m256 A, const int C);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPERMILPS / PERMILPS instruction.
+/// This intrinsic corresponds to the \c VPERMILPS instruction.
 ///
 /// \param A
 ///    A 256-bit vector of [8 x float].
@@ -1213,7 +1232,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m256d _mm256_permute2f128_pd(__m256d V1, __m256d V2, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPERM2F128 / PERM2F128 instruction.
+/// This intrinsic corresponds to the \c VPERM2F128 instruction.
 ///
 /// \param V1
 ///    A 256-bit vector of [4 x double].
@@ -1254,7 +1273,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m256 _mm256_permute2f128_ps(__m256 V1, __m256 V2, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPERM2F128 / PERM2F128 instruction.
+/// This intrinsic corresponds to the \c VPERM2F128 instruction.
 ///
 /// \param V1
 ///    A 256-bit vector of [8 x float].
@@ -1295,7 +1314,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m256i _mm256_permute2f128_si256(__m256i V1, __m256i V2, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPERM2F128 / PERM2F128 instruction.
+/// This intrinsic corresponds to the \c VPERM2F128 instruction.
 ///
 /// \param V1
 ///    A 256-bit integer vector.
@@ -1337,7 +1356,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m256d _mm256_blend_pd(__m256d V1, __m256d V2, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VBLENDPD / BLENDPD instruction.
+/// This intrinsic corresponds to the \c VBLENDPD instruction.
 ///
 /// \param V1
 ///    A 256-bit vector of [4 x double].
@@ -1369,7 +1388,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// __m256 _mm256_blend_ps(__m256 V1, __m256 V2, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VBLENDPS / BLENDPS instruction.
+/// This intrinsic corresponds to the \c VBLENDPS instruction.
 ///
 /// \param V1
 ///    A 256-bit vector of [8 x float].
@@ -1401,7 +1420,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VBLENDVPD / BLENDVPD instruction.
+/// This intrinsic corresponds to the \c VBLENDVPD instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double].
@@ -1413,7 +1432,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    to the most significant bit of a copied value. When a mask bit is 0, the
 ///    corresponding 64-bit element in operand __a is copied to the same
 ///    position in the destination. When a mask bit is 1, the corresponding
-///    64-bit element in operand __b is copied to the same position in the
+///    64-bit element in operand \a __b is copied to the same position in the
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 static __inline __m256d __DEFAULT_FN_ATTRS
@@ -1429,7 +1448,7 @@ _mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VBLENDVPS / BLENDVPS instruction.
+/// This intrinsic corresponds to the \c VBLENDVPS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float].
@@ -1468,7 +1487,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m256 _mm256_dp_ps(__m256 V1, __m256 V2, const int M);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VDPPS / DPPS instruction.
+/// This intrinsic corresponds to the \c VDPPS instruction.
 ///
 /// \param V1
 ///    A vector of [8 x float] values, treated as two [4 x float] vectors.
@@ -1510,7 +1529,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m256 _mm256_shuffle_ps(__m256 a, __m256 b, const int mask);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VSHUFPS / SHUFPS instruction.
+/// This intrinsic corresponds to the \c VSHUFPS instruction.
 ///
 /// \param a
 ///    A 256-bit vector of [8 x float]. The four selected elements in this
@@ -1522,7 +1541,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    destination, according to the bits specified in the immediate operand.
 /// \param mask
 ///    An immediate value containing an 8-bit value specifying which elements to
-///    copy from a and b. Bits [3:0] specify the values copied from operand a.
+///    copy from a and b. 
+///    Bits [3:0] specify the values copied from operand a.
 ///    Bits [7:4] specify the values copied from operand b.
 ///    The destinations within the 256-bit destination are assigned values as
 ///    follows, according to the bit value assignments described below:
@@ -1567,7 +1587,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m256d _mm256_shuffle_pd(__m256d a, __m256d b, const int mask);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VSHUFPD / SHUFPD instruction.
+/// This intrinsic corresponds to the \c VSHUFPD instruction.
 ///
 /// \param a
 ///    A 256-bit vector of [4 x double].
@@ -1647,25 +1667,35 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCMPPD / CMPPD instruction.
+/// This intrinsic corresponds to the \c VCMPPD instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [2 x double].
 /// \param b
 ///    A 128-bit vector of [2 x double].
 /// \param c
+/// \parblock
 ///    An immediate integer operand, with bits [4:0] specifying which comparison
 ///    operation to use:
+///
 ///    00h, 08h, 10h, 18h: Equal
+///
 ///    01h, 09h, 11h, 19h: Less than
+///
 ///    02h, 0Ah, 12h, 1Ah: Less than or equal / Greater than or equal (swapped
 ///                        operands)
+///
 ///    03h, 0Bh, 13h, 1Bh: Unordered
+///
 ///    04h, 0Ch, 14h, 1Ch: Not equal
+///
 ///    05h, 0Dh, 15h, 1Dh: Not less than / Not greater than (swapped operands)
+///
 ///    06h, 0Eh, 16h, 1Eh: Not less than or equal / Not greater than or equal
 ///                        (swapped operands)
+///
 ///    07h, 0Fh, 17h, 1Fh: Ordered
+/// \endparblock
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
 #define _mm_cmp_pd(a, b, c) __extension__ ({ \
   (__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
@@ -1683,7 +1713,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m128 _mm_cmp_ps(__m128 a, __m128 b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCMPPS / CMPPS instruction.
+/// This intrinsic corresponds to the \c VCMPPS instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [4 x float].
@@ -1719,7 +1749,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m256d _mm256_cmp_pd(__m256d a, __m256d b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCMPPD / CMPPD instruction.
+/// This intrinsic corresponds to the \c VCMPPD instruction.
 ///
 /// \param a
 ///    A 256-bit vector of [4 x double].
@@ -1755,7 +1785,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m256 _mm256_cmp_ps(__m256 a, __m256 b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCMPPS / CMPPS instruction.
+/// This intrinsic corresponds to the \c VCMPPS instruction.
 ///
 /// \param a
 ///    A 256-bit vector of [8 x float].
@@ -1790,7 +1820,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCMPSD / CMPSD instruction.
+/// This intrinsic corresponds to the \c VCMPSD instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [2 x double].
@@ -1825,7 +1855,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// __m128 _mm_cmp_ss(__m128 a, __m128 b, const int c);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCMPSS / CMPSS instruction.
+/// This intrinsic corresponds to the \c VCMPSS instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [4 x float].
@@ -1854,8 +1884,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE /
-///   EXTRACTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x i32].
@@ -1876,8 +1905,7 @@ _mm256_extract_epi32(__m256i __a, const int __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE /
-///    EXTRACTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A 256-bit integer vector of [16 x i16].
@@ -1898,8 +1926,7 @@ _mm256_extract_epi16(__m256i __a, const int __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE /
-///    EXTRACTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A 256-bit integer vector of [32 x i8].
@@ -1921,8 +1948,7 @@ _mm256_extract_epi8(__m256i __a, const int __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE /
-///    EXTRACTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VEXTRACTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A 256-bit integer vector of [4 x i64].
@@ -1945,8 +1971,7 @@ _mm256_extract_epi64(__m256i __a, const int __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE /
-///    INSERTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A vector of [8 x i32] to be used by the insert operation.
@@ -1972,8 +1997,7 @@ _mm256_insert_epi32(__m256i __a, int __b, int const __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE /
-///    INSERTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A vector of [16 x i16] to be used by the insert operation.
@@ -1998,8 +2022,7 @@ _mm256_insert_epi16(__m256i __a, int __b, int const __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE /
-///    INSERTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A vector of [32 x i8] to be used by the insert operation.
@@ -2025,8 +2048,7 @@ _mm256_insert_epi8(__m256i __a, int __b, int const __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE /
-///    INSERTF128+COMPOSITE instruction.
+/// This intrinsic corresponds to the \c VINSERTF128+COMPOSITE instruction.
 ///
 /// \param __a
 ///    A vector of [4 x i64] to be used by the insert operation.
@@ -2051,7 +2073,7 @@ _mm256_insert_epi64(__m256i __a, long long __b, int const __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTDQ2PD / CVTDQ2PD instruction.
+/// This intrinsic corresponds to the \c VCVTDQ2PD instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector of [4 x i32].
@@ -2066,7 +2088,7 @@ _mm256_cvtepi32_pd(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTDQ2PS / CVTDQ2PS instruction.
+/// This intrinsic corresponds to the \c VCVTDQ2PS instruction.
 ///
 /// \param __a
 ///    A 256-bit integer vector.
@@ -2082,7 +2104,7 @@ _mm256_cvtepi32_ps(__m256i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPD2PS / CVTPD2PS instruction.
+/// This intrinsic corresponds to the \c VCVTPD2PS instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [4 x double].
@@ -2097,7 +2119,7 @@ _mm256_cvtpd_ps(__m256d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPS2DQ / CVTPS2DQ instruction.
+/// This intrinsic corresponds to the \c VCVTPS2DQ instruction.
 ///
 /// \param __a
 ///    A 256-bit vector of [8 x float].
