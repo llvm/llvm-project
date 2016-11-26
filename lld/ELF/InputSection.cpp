@@ -703,9 +703,8 @@ static size_t findNull(ArrayRef<uint8_t> A, size_t EntSize) {
 // Split SHF_STRINGS section. Such section is a sequence of
 // null-terminated strings.
 template <class ELFT>
-std::vector<SectionPiece>
-MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
-  std::vector<SectionPiece> V;
+void MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data,
+                                           size_t EntSize) {
   size_t Off = 0;
   bool IsAlloc = this->Flags & SHF_ALLOC;
   while (!Data.empty()) {
@@ -713,12 +712,11 @@ MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
     if (End == StringRef::npos)
       fatal(toString(this) + ": string is not null terminated");
     size_t Size = End + EntSize;
-    V.emplace_back(Off, !IsAlloc);
+    Pieces.emplace_back(Off, !IsAlloc);
     Hashes.push_back(hash_value(toStringRef(Data.slice(0, Size))));
     Data = Data.slice(Size);
     Off += Size;
   }
-  return V;
 }
 
 // Returns I'th piece's data.
@@ -734,18 +732,15 @@ CachedHashStringRef MergeInputSection<ELFT>::getData(size_t I) const {
 // Split non-SHF_STRINGS section. Such section is a sequence of
 // fixed size records.
 template <class ELFT>
-std::vector<SectionPiece>
-MergeInputSection<ELFT>::splitNonStrings(ArrayRef<uint8_t> Data,
-                                         size_t EntSize) {
-  std::vector<SectionPiece> V;
+void MergeInputSection<ELFT>::splitNonStrings(ArrayRef<uint8_t> Data,
+                                              size_t EntSize) {
   size_t Size = Data.size();
   assert((Size % EntSize) == 0);
   bool IsAlloc = this->Flags & SHF_ALLOC;
   for (unsigned I = 0, N = Size; I != N; I += EntSize) {
     Hashes.push_back(hash_value(toStringRef(Data.slice(I, EntSize))));
-    V.emplace_back(I, !IsAlloc);
+    Pieces.emplace_back(I, !IsAlloc);
   }
-  return V;
 }
 
 template <class ELFT>
@@ -764,9 +759,9 @@ template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   ArrayRef<uint8_t> Data = this->Data;
   uintX_t EntSize = this->Entsize;
   if (this->Flags & SHF_STRINGS)
-    this->Pieces = splitStrings(Data, EntSize);
+    splitStrings(Data, EntSize);
   else
-    this->Pieces = splitNonStrings(Data, EntSize);
+    splitNonStrings(Data, EntSize);
 
   if (Config->GcSections && (this->Flags & SHF_ALLOC))
     for (uintX_t Off : LiveOffsets)

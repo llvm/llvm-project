@@ -140,6 +140,9 @@ public:
   }
 
 private:
+  void finalizeTailMerge();
+  void finalizeNoTailMerge();
+
   llvm::StringTableBuilder Builder;
   std::vector<MergeInputSection<ELFT> *> Sections;
 };
