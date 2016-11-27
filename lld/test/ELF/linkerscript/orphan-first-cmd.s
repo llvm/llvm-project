@@ -1,6 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: echo "SECTIONS { \
+# RUN:         foo = 123; \
 # RUN:         . = 0x1000; \
 # RUN:         . = 0x2000; \
 # RUN:         .bar : { . = . + 1; } \
