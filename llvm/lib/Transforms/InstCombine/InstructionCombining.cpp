@@ -819,9 +819,9 @@ Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
     }
   }
 
-  Value *SelectTVal = foldOperationIntoSelectOperand(Op, TV, this);
-  Value *SelectFVal = foldOperationIntoSelectOperand(Op, FV, this);
-  return SelectInst::Create(SI->getCondition(), SelectTVal, SelectFVal);
+  Value *NewTV = foldOperationIntoSelectOperand(Op, TV, this);
+  Value *NewFV = foldOperationIntoSelectOperand(Op, FV, this);
+  return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
 /// Given a binary operator, cast instruction, or select which has a PHI node as

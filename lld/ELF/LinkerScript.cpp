@@ -632,13 +632,21 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsAfterSorting() {
 //  /* The RW PT_LOAD starts here*/
 //  rw_sec : { *(rw_sec) }
 // would mean that the RW PT_LOAD would become unaligned.
-static bool shouldSkip(const BaseCommand &Cmd) {
+static bool shouldSkip(int CmdIndex) {
+  auto CmdIter = ScriptConfig->Commands.begin() + CmdIndex;
+  const BaseCommand &Cmd = **CmdIter;
   if (isa<OutputSectionCommand>(Cmd))
     return false;
   const auto *Assign = dyn_cast<SymbolAssignment>(&Cmd);
   if (!Assign)
     return true;
-  return Assign->Name != ".";
+  if (Assign->Name != ".")
+    return true;
+  // As a horrible special case, skip a . assignment if it is the first thing in
+  // the script. We do this because it is common to set a load address by
+  // starting the script with ". = 0xabcd" and the expectation is that every
+  // section is after that.
+  return CmdIndex == 0;
 }
 
 // Orphan sections are sections present in the input files which are not
@@ -657,7 +665,7 @@ void LinkerScript<ELFT>::placeOrphanSections() {
     // correct result.
     auto CmdIter = Opt.Commands.begin() + CmdIndex;
     auto E = Opt.Commands.end();
-    while (CmdIter != E && shouldSkip(**CmdIter)) {
+    while (CmdIter != E && shouldSkip(CmdIndex)) {
       ++CmdIter;
       ++CmdIndex;
     }

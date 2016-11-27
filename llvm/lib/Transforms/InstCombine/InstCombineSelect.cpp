@@ -531,8 +531,7 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
     std::swap(LHS, RHS);
 
   Value *NewCmp = Builder.CreateICmp(NewPred, LHS, RHS);
-  SelectInst *NewSel = SelectInst::Create(NewCmp, LHS, RHS);
-  NewSel->copyMetadata(Sel);
+  SelectInst *NewSel = SelectInst::Create(NewCmp, LHS, RHS, "", nullptr, &Sel);
 
   // We swapped the select operands, so swap the metadata too.
   NewSel->swapProfMetadata();
@@ -995,21 +994,18 @@ Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
   // If one arm of the select is the extend of the condition, replace that arm
   // with the extension of the appropriate known bool value.
   if (Cond == X) {
-    SelectInst *NewSel;
     if (ExtInst == Sel.getTrueValue()) {
       // select X, (sext X), C --> select X, -1, C
       // select X, (zext X), C --> select X,  1, C
       Constant *One = ConstantInt::getTrue(SmallType);
       Constant *AllOnesOrOne = ConstantExpr::getCast(ExtOpcode, One, SelType);
-      NewSel = SelectInst::Create(Cond, AllOnesOrOne, C);
+      return SelectInst::Create(Cond, AllOnesOrOne, C, "", nullptr, &Sel);
     } else {
       // select X, C, (sext X) --> select X, C, 0
       // select X, C, (zext X) --> select X, C, 0
       Constant *Zero = ConstantInt::getNullValue(SelType);
-      NewSel = SelectInst::Create(Cond, C, Zero);
+      return SelectInst::Create(Cond, C, Zero, "", nullptr, &Sel);
     }
-    NewSel->copyMetadata(Sel);
-    return NewSel;
   }
 
   return nullptr;

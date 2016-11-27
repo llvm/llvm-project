@@ -381,33 +381,37 @@ define <4 x float> @double_fold(float* %x, <4 x float> %y) {
 ; X32-LABEL: double_fold:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movaps %xmm0, %xmm1
-; X32-NEXT:    minss (%eax), %xmm1
-; X32-NEXT:    maxss (%eax), %xmm0
-; X32-NEXT:    addps %xmm1, %xmm0
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    movaps %xmm0, %xmm2
+; X32-NEXT:    minss %xmm1, %xmm2
+; X32-NEXT:    maxss %xmm1, %xmm0
+; X32-NEXT:    addps %xmm2, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: double_fold:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    movaps %xmm0, %xmm1
-; X64-NEXT:    minss (%rdi), %xmm1
-; X64-NEXT:    maxss (%rdi), %xmm0
-; X64-NEXT:    addps %xmm1, %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    movaps %xmm0, %xmm2
+; X64-NEXT:    minss %xmm1, %xmm2
+; X64-NEXT:    maxss %xmm1, %xmm0
+; X64-NEXT:    addps %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X32_AVX-LABEL: double_fold:
 ; X32_AVX:       ## BB#0: ## %entry
 ; X32_AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32_AVX-NEXT:    vminss (%eax), %xmm0, %xmm1
-; X32_AVX-NEXT:    vmaxss (%eax), %xmm0, %xmm0
-; X32_AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X32_AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32_AVX-NEXT:    vminss %xmm1, %xmm0, %xmm2
+; X32_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; X32_AVX-NEXT:    vaddps %xmm0, %xmm2, %xmm0
 ; X32_AVX-NEXT:    retl
 ;
 ; X64_AVX-LABEL: double_fold:
 ; X64_AVX:       ## BB#0: ## %entry
-; X64_AVX-NEXT:    vminss (%rdi), %xmm0, %xmm1
-; X64_AVX-NEXT:    vmaxss (%rdi), %xmm0, %xmm0
-; X64_AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X64_AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64_AVX-NEXT:    vminss %xmm1, %xmm0, %xmm2
+; X64_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; X64_AVX-NEXT:    vaddps %xmm0, %xmm2, %xmm0
 ; X64_AVX-NEXT:    retq
 entry:
   %0 = load float, float* %x, align 1
