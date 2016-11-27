@@ -17,6 +17,17 @@ define i32 @foo(i32) local_unnamed_addr #0  {
   ret i32 %5
 }
 
+define i8 @shrink_select(i1 %cond, i32 %x) {
+; CHECK-LABEL: @shrink_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %x to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = select i1 %cond, i8 [[TMP1]], i8 42, !prof ![[MD1]]
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+  %sel = select i1 %cond, i32 %x, i32 42, !prof !1
+  %trunc = trunc i32 %sel to i8
+  ret i8 %trunc
+}
+
 define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, <4 x i32>* %ptr1, <4 x i32>* %ptr2) {
 ; CHECK-LABEL: @min_max_bitcast(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x float> %a, %b
