@@ -91,3 +91,15 @@ void test(int some_number) {  // expected-note {{'some_number' declared here}}
   Foo(lambda);
 }
 }
+
+namespace pr29091 {
+  struct X{ X(const X &x); };
+  struct Y: X { using X::X; };
+  bool foo() { return __has_nothrow_constructor(Y); }
+  bool bar() { return __has_nothrow_copy(Y); }
+
+  struct A { template <typename T> A(); };
+  struct B : A { using A::A; };
+  bool baz() { return __has_nothrow_constructor(B); }
+  bool qux() { return __has_nothrow_copy(B); }
+}

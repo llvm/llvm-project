@@ -632,21 +632,13 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsAfterSorting() {
 //  /* The RW PT_LOAD starts here*/
 //  rw_sec : { *(rw_sec) }
 // would mean that the RW PT_LOAD would become unaligned.
-static bool shouldSkip(int CmdIndex) {
-  auto CmdIter = ScriptConfig->Commands.begin() + CmdIndex;
-  const BaseCommand &Cmd = **CmdIter;
+static bool shouldSkip(const BaseCommand &Cmd) {
   if (isa<OutputSectionCommand>(Cmd))
     return false;
   const auto *Assign = dyn_cast<SymbolAssignment>(&Cmd);
   if (!Assign)
     return true;
-  if (Assign->Name != ".")
-    return true;
-  // As a horrible special case, skip a . assignment if it is the first thing in
-  // the script. We do this because it is common to set a load address by
-  // starting the script with ". = 0xabcd" and the expectation is that every
-  // section is after that.
-  return CmdIndex == 0;
+  return Assign->Name != ".";
 }
 
 // Orphan sections are sections present in the input files which are not
@@ -658,6 +650,27 @@ void LinkerScript<ELFT>::placeOrphanSections() {
   // This loops creates or moves commands as needed so that they are in the
   // correct order.
   int CmdIndex = 0;
+
+  // As a horrible special case, skip the first . assignment if it is before any
+  // section. We do this because it is common to set a load address by starting
+  // the script with ". = 0xabcd" and the expectation is that every section is
+  // after that.
+  auto FirstSectionOrDotAssignment =
+      std::find_if(Opt.Commands.begin(), Opt.Commands.end(),
+                   [](const std::unique_ptr<BaseCommand> &Cmd) {
+                     if (isa<OutputSectionCommand>(*Cmd))
+                       return true;
+                     const auto *Assign = dyn_cast<SymbolAssignment>(Cmd.get());
+                     if (!Assign)
+                       return false;
+                     return Assign->Name == ".";
+                   });
+  if (FirstSectionOrDotAssignment != Opt.Commands.end()) {
+    CmdIndex = FirstSectionOrDotAssignment - Opt.Commands.begin();
+    if (isa<SymbolAssignment>(**FirstSectionOrDotAssignment))
+      ++CmdIndex;
+  }
+
   for (OutputSectionBase *Sec : *OutputSections) {
     StringRef Name = Sec->getName();
 
@@ -665,7 +678,7 @@ void LinkerScript<ELFT>::placeOrphanSections() {
     // correct result.
     auto CmdIter = Opt.Commands.begin() + CmdIndex;
     auto E = Opt.Commands.end();
-    while (CmdIter != E && shouldSkip(CmdIndex)) {
+    while (CmdIter != E && shouldSkip(**CmdIter)) {
       ++CmdIter;
       ++CmdIndex;
     }
