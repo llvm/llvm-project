@@ -172,6 +172,13 @@ void ScriptParserBase::expect(StringRef Expect) {
     setError(Expect + " expected, but got " + Tok);
 }
 
+std::string ScriptParserBase::currentLocation() {
+  MemoryBufferRef MB = currentBuffer();
+  return (MB.getBufferIdentifier() + ":" +
+          Twine(getPos(MB.getBuffer(), Tokens[Pos - 1]).first))
+      .str();
+}
+
 // Returns true if string 'Bigger' contains string 'Shorter'.
 static bool containsString(StringRef Bigger, StringRef Shorter) {
   const char *BiggerEnd = Bigger.data() + Bigger.size();

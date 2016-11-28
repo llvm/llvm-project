@@ -240,13 +240,15 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
   // This is because src1 is tied to dest, and the scalar intrinsics
   // require the pass-through values to come from the first source
   // operand, not the second.
-  def : Pat<(IntF32 VR128:$src1, VR128:$src2, VR128:$src3),
-            (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"213SSr_Int")
-             $src1, $src2, $src3), VR128)>;
+  let Predicates = [HasFMA] in {
+    def : Pat<(IntF32 VR128:$src1, VR128:$src2, VR128:$src3),
+              (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"213SSr_Int")
+               $src1, $src2, $src3), VR128)>;
 
-  def : Pat<(IntF64 VR128:$src1, VR128:$src2, VR128:$src3),
-            (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"213SDr_Int")
-             $src1, $src2, $src3), VR128)>;
+    def : Pat<(IntF64 VR128:$src1, VR128:$src2, VR128:$src3),
+              (COPY_TO_REGCLASS(!cast<Instruction>(NAME#"213SDr_Int")
+               $src1, $src2, $src3), VR128)>;
+  }
 }
 
 defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", int_x86_fma_vfmadd_ss,
@@ -299,7 +301,6 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
 multiclass fma4s_int<bits<8> opc, string OpcodeStr, Operand memop,
                      ComplexPattern mem_cpat, Intrinsic Int> {
 let isCodeGenOnly = 1 in {
-  let isCommutable = 1 in
   def rr_Int : FMA4<opc, MRMSrcRegOp4, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,

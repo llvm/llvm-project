@@ -296,6 +296,48 @@ define <16 x i8> @combine_pshufb_as_psrldq(<16 x i8> %a0) {
   ret <16 x i8> %res0
 }
 
+define <16 x i8> @combine_pshufb_as_psrlw(<16 x i8> %a0) {
+; SSE-LABEL: combine_pshufb_as_psrlw:
+; SSE:       # BB#0:
+; SSE-NEXT:    psrlw $8, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_as_psrlw:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 1, i8 128, i8 3, i8 128, i8 5, i8 128, i8 7, i8 128, i8 9, i8 128, i8 11, i8 128, i8 13, i8 128, i8 15, i8 128>)
+  ret <16 x i8> %res0
+}
+
+define <16 x i8> @combine_pshufb_as_pslld(<16 x i8> %a0) {
+; SSE-LABEL: combine_pshufb_as_pslld:
+; SSE:       # BB#0:
+; SSE-NEXT:    pslld $24, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_as_pslld:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpslld $24, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 128, i8 128, i8 128, i8 0, i8 128, i8 128, i8 128, i8 4, i8 128, i8 128, i8 128, i8 8, i8 128, i8 128, i8 128, i8 12>)
+  ret <16 x i8> %res0
+}
+
+define <16 x i8> @combine_pshufb_as_psrlq(<16 x i8> %a0) {
+; SSE-LABEL: combine_pshufb_as_psrlq:
+; SSE:       # BB#0:
+; SSE-NEXT:    psrlq $40, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_as_psrlq:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpsrlq $40, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 5, i8 6, i8 7, i8 128, i8 128, i8 128, i8 128, i8 128, i8 13, i8 14, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128>)
+  ret <16 x i8> %res0
+}
+
 define <16 x i8> @combine_pshufb_as_pshuflw(<16 x i8> %a0) {
 ; SSE-LABEL: combine_pshufb_as_pshuflw:
 ; SSE:       # BB#0:

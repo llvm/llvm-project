@@ -32,6 +32,7 @@ public:
   void skip();
   bool consume(StringRef Tok);
   void expect(StringRef Expect);
+  std::string currentLocation();
 
   std::vector<MemoryBufferRef> MBs;
   std::vector<StringRef> Tokens;

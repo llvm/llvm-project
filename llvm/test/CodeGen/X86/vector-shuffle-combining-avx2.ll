@@ -511,6 +511,48 @@ define <32 x i8> @combine_pshufb_as_psrldq(<32 x i8> %a0) {
   ret <32 x i8> %res0
 }
 
+define <32 x i8> @combine_pshufb_as_psrlw(<32 x i8> %a0) {
+; X32-LABEL: combine_pshufb_as_psrlw:
+; X32:       # BB#0:
+; X32-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_psrlw:
+; X64:       # BB#0:
+; X64-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %res0 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 1, i8 128, i8 3, i8 128, i8 5, i8 128, i8 7, i8 128, i8 9, i8 128, i8 11, i8 128, i8 13, i8 128, i8 15, i8 128, i8 17, i8 128, i8 19, i8 128, i8 21, i8 128, i8 23, i8 128, i8 25, i8 128, i8 27, i8 128, i8 29, i8 128, i8 31, i8 128>)
+  ret <32 x i8> %res0
+}
+
+define <32 x i8> @combine_pshufb_as_pslld(<32 x i8> %a0) {
+; X32-LABEL: combine_pshufb_as_pslld:
+; X32:       # BB#0:
+; X32-NEXT:    vpslld $24, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_pslld:
+; X64:       # BB#0:
+; X64-NEXT:    vpslld $24, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %res0 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 128, i8 128, i8 128, i8 0, i8 128, i8 128, i8 128, i8 4, i8 128, i8 128, i8 128, i8 8, i8 128, i8 128, i8 128, i8 12, i8 128, i8 128, i8 128, i8 16, i8 128, i8 128, i8 128, i8 20, i8 128, i8 128, i8 128, i8 24, i8 128, i8 128, i8 128, i8 28>)
+  ret <32 x i8> %res0
+}
+
+define <32 x i8> @combine_pshufb_as_psrlq(<32 x i8> %a0) {
+; X32-LABEL: combine_pshufb_as_psrlq:
+; X32:       # BB#0:
+; X32-NEXT:    vpsrlq $40, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_psrlq:
+; X64:       # BB#0:
+; X64-NEXT:    vpsrlq $40, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %res0 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 5, i8 6, i8 7, i8 128, i8 128, i8 128, i8 128, i8 128, i8 13, i8 14, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 21, i8 22, i8 23, i8 128, i8 128, i8 128, i8 128, i8 128, i8 29, i8 30, i8 31, i8 128, i8 128, i8 128, i8 128, i8 128>)
+  ret <32 x i8> %res0
+}
+
 define <32 x i8> @combine_pshufb_as_pshuflw(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_as_pshuflw:
 ; X32:       # BB#0:

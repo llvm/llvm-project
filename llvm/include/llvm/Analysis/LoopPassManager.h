@@ -94,19 +94,19 @@ public:
 
       // We know that the loop pass couldn't have invalidated any other loop's
       // analyses (that's the contract of a loop pass), so directly handle the
-      // loop analysis manager's invalidation here.  Also, update the
-      // preserved analyses to reflect that once invalidated these can again
-      // be preserved.
-      PassPA = LAM.invalidate(*L, std::move(PassPA));
+      // loop analysis manager's invalidation here.
+      LAM.invalidate(*L, PassPA);
 
       // Then intersect the preserved set so that invalidation of module
       // analyses will eventually occur when the module pass completes.
       PA.intersect(std::move(PassPA));
     }
 
-    // By definition we preserve the proxy. This precludes *any* invalidation of
-    // loop analyses by the proxy, but that's OK because we've taken care to
-    // invalidate analyses in the loop analysis manager incrementally above.
+    // By definition we preserve the proxy. We also preserve all analyses on
+    // Loops. This precludes *any* invalidation of loop analyses by the proxy,
+    // but that's OK because we've taken care to invalidate analyses in the
+    // loop analysis manager incrementally above.
+    PA.preserve<AllAnalysesOn<Loop>>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
     return PA;
   }

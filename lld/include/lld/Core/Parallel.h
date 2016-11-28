@@ -270,33 +270,63 @@ template <class T> void parallel_sort(T *start, T *end) {
 }
 
 #if !defined(LLVM_ENABLE_THREADS) || LLVM_ENABLE_THREADS == 0
-template <class Iterator, class Func>
-void parallel_for_each(Iterator begin, Iterator end, Func func) {
-  std::for_each(begin, end, func);
+template <class IterTy, class FuncTy>
+void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
+  std::for_each(Begin, End, Fn);
+}
+
+template <class IndexTy, class FuncTy>
+void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
+  for (IndexTy I = Begin; I != End; ++I)
+    Fn(I);
 }
 #elif defined(_MSC_VER)
 // Use ppl parallel_for_each on Windows.
-template <class Iterator, class Func>
-void parallel_for_each(Iterator begin, Iterator end, Func func) {
-  concurrency::parallel_for_each(begin, end, func);
+template <class IterTy, class FuncTy>
+void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
+  concurrency::parallel_for_each(Begin, End, Fn);
+}
+
+template <class IndexTy, class FuncTy>
+void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
+  concurrency::parallel_for(Begin, End, Fn);
 }
 #else
-template <class Iterator, class Func>
-void parallel_for_each(Iterator begin, Iterator end, Func func) {
+template <class IterTy, class FuncTy>
+void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
   // TaskGroup has a relatively high overhead, so we want to reduce
   // the number of spawn() calls. We'll create up to 1024 tasks here.
   // (Note that 1024 is an arbitrary number. This code probably needs
   // improving to take the number of available cores into account.)
-  ptrdiff_t taskSize = std::distance(begin, end) / 1024;
-  if (taskSize == 0)
-    taskSize = 1;
+  ptrdiff_t TaskSize = std::distance(Begin, End) / 1024;
+  if (TaskSize == 0)
+    TaskSize = 1;
 
-  TaskGroup tg;
-  while (taskSize <= std::distance(begin, end)) {
-    tg.spawn([=, &func] { std::for_each(begin, begin + taskSize, func); });
-    begin += taskSize;
+  TaskGroup Tg;
+  while (TaskSize <= std::distance(Begin, End)) {
+    Tg.spawn([=, &Fn] { std::for_each(Begin, Begin + TaskSize, Fn); });
+    Begin += TaskSize;
   }
-  std::for_each(begin, end, func);
+  std::for_each(Begin, End, Fn);
+}
+
+template <class IndexTy, class FuncTy>
+void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
+  ptrdiff_t TaskSize = (End - Begin) / 1024;
+  if (TaskSize == 0)
+    TaskSize = 1;
+
+  TaskGroup Tg;
+  IndexTy I = Begin;
+  for (; I < End; I += TaskSize) {
+    Tg.spawn([=, &Fn] {
+      for (IndexTy J = I, E = I + TaskSize; J != E; ++J)
+        Fn(J);
+    });
+    Begin += TaskSize;
+  }
+  for (; I < End; ++I)
+    Fn(I);
 }
 #endif
 } // end namespace lld

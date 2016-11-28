@@ -281,13 +281,11 @@ public:
       PreservedAnalyses PassPA = Passes[Idx]->run(IR, AM, ExtraArgs...);
 
       // Update the analysis manager as each pass runs and potentially
-      // invalidates analyses. We also update the preserved set of analyses
-      // based on what analyses we have already handled the invalidation for
-      // here and don't need to invalidate when finished.
-      PassPA = AM.invalidate(IR, std::move(PassPA));
+      // invalidates analyses.
+      AM.invalidate(IR, PassPA);
 
-      // Finally, we intersect the final preserved analyses to compute the
-      // aggregate preserved set for this pass manager.
+      // Finally, we intersect the preserved analyses to compute the aggregate
+      // preserved set for this pass manager.
       PA.intersect(std::move(PassPA));
 
       // FIXME: Historically, the pass managers all called the LLVM context's
@@ -476,13 +474,10 @@ public:
   ///
   /// Walk through all of the analyses pertaining to this unit of IR and
   /// invalidate them unless they are preserved by the PreservedAnalyses set.
-  /// We accept the PreservedAnalyses set by value and update it with each
-  /// analyis pass which has been successfully invalidated and thus can be
-  /// preserved going forward. The updated set is returned.
-  PreservedAnalyses invalidate(IRUnitT &IR, PreservedAnalyses PA) {
+  void invalidate(IRUnitT &IR, const PreservedAnalyses &PA) {
     // Short circuit for common cases of all analyses being preserved.
     if (PA.areAllPreserved() || PA.preserved<AllAnalysesOn<IRUnitT>>())
-      return PA;
+      return;
 
     if (DebugLogging)
       dbgs() << "Invalidating all non-preserved analyses for: " << IR.getName()
@@ -510,18 +505,13 @@ public:
       } else {
         ++I;
       }
-
-      // After handling each pass, we mark it as preserved. Once we've
-      // invalidated any stale results, the rest of the system is allowed to
-      // start preserving this analysis again.
-      PA.preserve(ID);
     }
     while (!InvalidatedIDs.empty())
       AnalysisResults.erase(std::make_pair(InvalidatedIDs.pop_back_val(), &IR));
     if (ResultsList.empty())
       AnalysisResultLists.erase(&IR);
 
-    return PA;
+    return;
   }
 
 private:
@@ -846,20 +836,19 @@ public:
 
       // We know that the function pass couldn't have invalidated any other
       // function's analyses (that's the contract of a function pass), so
-      // directly handle the function analysis manager's invalidation here and
-      // update our preserved set to reflect that these have already been
-      // handled.
-      PassPA = FAM.invalidate(F, std::move(PassPA));
+      // directly handle the function analysis manager's invalidation here.
+      FAM.invalidate(F, PassPA);
 
       // Then intersect the preserved set so that invalidation of module
       // analyses will eventually occur when the module pass completes.
       PA.intersect(std::move(PassPA));
     }
 
-    // By definition we preserve the proxy. This precludes *any* invalidation
-    // of function analyses by the proxy, but that's OK because we've taken
-    // care to invalidate analyses in the function analysis manager
-    // incrementally above.
+    // By definition we preserve the proxy. We also preserve all analyses on
+    // Function units. This precludes *any* invalidation of function analyses
+    // by the proxy, but that's OK because we've taken care to invalidate
+    // analyses in the function analysis manager incrementally above.
+    PA.preserve<AllAnalysesOn<Function>>();
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
   }
