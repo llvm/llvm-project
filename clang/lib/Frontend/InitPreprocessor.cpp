@@ -561,6 +561,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
         Builder.defineMacro("OBJC_ZEROCOST_EXCEPTIONS");
     }
 
+    Builder.defineMacro("__OBJC_BOOL_IS_BOOL",
+                        Twine(TI.useSignedCharForObjCBool() ? "0" : "1"));
+
     if (LangOpts.getGC() != LangOptions::NonGC)
       Builder.defineMacro("__OBJC_GC__");
 
