@@ -4,11 +4,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// FIXME: Doesn't work with DLLs
+// XFAIL: win32-dynamic-asan
+
+// If we use %p with MSVC, it comes out all upper case. Use %08x to get
+// lowercase hex.
+#ifdef _MSC_VER
+# ifdef _WIN64
+#  define PTR_FMT "0x%08llx"
+# else
+#  define PTR_FMT "0x%08x"
+# endif
+#else
+# define PTR_FMT "%p"
+#endif
+
 char *heap_ptr;
 
 int main() {
+  // Disable stderr buffering. Needed on Windows.
+  setvbuf(stderr, NULL, _IONBF, 0);
+
   heap_ptr = (char *)malloc(10);
-  fprintf(stderr, "heap_ptr: %p\n", heap_ptr);
+  fprintf(stderr, "heap_ptr: " PTR_FMT "\n", heap_ptr);
   // CHECK: heap_ptr: 0x[[ADDR:[0-9a-f]+]]
 
   free(heap_ptr);
@@ -23,7 +41,7 @@ void __asan_on_error() {
 
   fprintf(stderr, "%s\n", (present == 1) ? "report present" : "");
   // CHECK: report present
-  fprintf(stderr, "addr: %p\n", addr);
+  fprintf(stderr, "addr: " PTR_FMT "\n", addr);
   // CHECK: addr: {{0x0*}}[[ADDR]]
   fprintf(stderr, "description: %s\n", description);
   // CHECK: description: double-free
