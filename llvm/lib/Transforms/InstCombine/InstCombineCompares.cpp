@@ -634,7 +634,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
       }
 
       if (!isa<IntToPtrInst>(V) && !isa<PtrToIntInst>(V) &&
-          !isa<GEPOperator>(V) && !isa<PHINode>(V))
+          !isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
         // We've found some value that we can't explore which is different from
         // the base. Therefore we can't do this transformation.
         return false;
