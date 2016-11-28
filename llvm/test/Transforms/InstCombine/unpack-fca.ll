@@ -179,6 +179,14 @@ define [2 x %B] @loadArrayOfB([2 x %B]* %ab.ptr) {
   ret [2 x %B] %1
 }
 
+define [2000 x %B] @loadLargeArrayOfB([2000 x %B]* %ab.ptr) {
+; CHECK-LABEL: loadLargeArrayOfB
+; CHECK-NEXT: load [2000 x %B], [2000 x %B]* %ab.ptr, align 8
+; CHECK-NEXT: ret [2000 x %B]
+  %1 = load [2000 x %B], [2000 x %B]* %ab.ptr, align 8
+  ret [2000 x %B] %1
+}
+
 %struct.S = type <{ i8, %struct.T }>
 %struct.T = type { i32, i32 }
 

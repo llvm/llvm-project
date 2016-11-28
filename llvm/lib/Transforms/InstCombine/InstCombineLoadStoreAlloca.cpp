@@ -579,6 +579,13 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
         UndefValue::get(T), NewLoad, 0, Name));
     }
 
+    // Bail out if the array is too large. Ideally we would like to optimize
+    // arrays of arbitrary size but this has a terrible impact on compile time.
+    // The threshold here is chosen arbitrarily, maybe needs a little bit of
+    // tuning.
+    if (NumElements > 1024)
+      return nullptr;
+
     const DataLayout &DL = IC.getDataLayout();
     auto EltSize = DL.getTypeAllocSize(ET);
     auto Align = LI.getAlignment();
