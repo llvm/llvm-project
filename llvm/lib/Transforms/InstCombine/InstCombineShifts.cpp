@@ -580,13 +580,13 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
 
     // Check for (X << c1) << c2  and  (X >> c1) >> c2
     if (I.getOpcode() == ShiftOp->getOpcode()) {
-      uint32_t AmtSum = ShiftAmt1+ShiftAmt2;   // Fold into one big shift.
-      // If this is oversized composite shift, then unsigned shifts get 0, ashr
-      // saturates.
+      uint32_t AmtSum = ShiftAmt1 + ShiftAmt2;   // Fold into one big shift.
+      // If this is an oversized composite shift, then unsigned shifts become
+      // zero (handled in InstSimplify) and ashr saturates.
       if (AmtSum >= TypeBits) {
         if (I.getOpcode() != Instruction::AShr)
-          return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
-        AmtSum = TypeBits-1;  // Saturate to 31 for i32 ashr.
+          return nullptr;
+        AmtSum = TypeBits - 1;  // Saturate to 31 for i32 ashr.
       }
 
       return BinaryOperator::Create(I.getOpcode(), X,

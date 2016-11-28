@@ -120,6 +120,7 @@ struct Configuration {
   bool Rela;
   bool Relocatable;
   bool SaveTemps;
+  bool SingleRoRx;
   bool Shared;
   bool Static = false;
   bool SysvHash = true;

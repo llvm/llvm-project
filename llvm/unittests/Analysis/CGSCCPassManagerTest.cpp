@@ -177,38 +177,55 @@ protected:
 public:
   CGSCCPassManagerTest()
       : FAM(/*DebugLogging*/ true), CGAM(/*DebugLogging*/ true),
-        MAM(/*DebugLogging*/ true), M(parseIR("define void @f() {\n"
-                                              "entry:\n"
-                                              "  call void @g()\n"
-                                              "  call void @h1()\n"
-                                              "  ret void\n"
-                                              "}\n"
-                                              "define void @g() {\n"
-                                              "entry:\n"
-                                              "  call void @g()\n"
-                                              "  call void @x()\n"
-                                              "  ret void\n"
-                                              "}\n"
-                                              "define void @h1() {\n"
-                                              "entry:\n"
-                                              "  call void @h2()\n"
-                                              "  ret void\n"
-                                              "}\n"
-                                              "define void @h2() {\n"
-                                              "entry:\n"
-                                              "  call void @h3()\n"
-                                              "  call void @x()\n"
-                                              "  ret void\n"
-                                              "}\n"
-                                              "define void @h3() {\n"
-                                              "entry:\n"
-                                              "  call void @h1()\n"
-                                              "  ret void\n"
-                                              "}\n"
-                                              "define void @x() {\n"
-                                              "entry:\n"
-                                              "  ret void\n"
-                                              "}\n")) {
+        MAM(/*DebugLogging*/ true),
+        M(parseIR(
+            // Define a module with the following call graph, where calls go
+            // out the bottom of nodes and enter the top:
+            //
+            // f
+            // |\   _
+            // | \ / |
+            // g  h1 |
+            // |  |  |
+            // |  h2 |
+            // |  |  |
+            // |  h3 |
+            // | / \_/
+            // |/
+            // x
+            //
+            "define void @f() {\n"
+            "entry:\n"
+            "  call void @g()\n"
+            "  call void @h1()\n"
+            "  ret void\n"
+            "}\n"
+            "define void @g() {\n"
+            "entry:\n"
+            "  call void @g()\n"
+            "  call void @x()\n"
+            "  ret void\n"
+            "}\n"
+            "define void @h1() {\n"
+            "entry:\n"
+            "  call void @h2()\n"
+            "  ret void\n"
+            "}\n"
+            "define void @h2() {\n"
+            "entry:\n"
+            "  call void @h3()\n"
+            "  call void @x()\n"
+            "  ret void\n"
+            "}\n"
+            "define void @h3() {\n"
+            "entry:\n"
+            "  call void @h1()\n"
+            "  ret void\n"
+            "}\n"
+            "define void @x() {\n"
+            "entry:\n"
+            "  ret void\n"
+            "}\n")) {
     MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
     MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
     MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });

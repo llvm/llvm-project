@@ -147,6 +147,8 @@ def noinhibit_exec: F<"noinhibit-exec">,
 
 def nopie: F<"nopie">, HelpText<"Do not create a position independent executable">;
 
+def no_rosegment: F<"no-rosegment">, HelpText<"Do not put read-only non-executable sections in their own segment">;
+
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 

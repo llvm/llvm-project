@@ -334,16 +334,14 @@ void BuildIdSection<ELFT>::computeHash(
   std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
   std::vector<uint8_t> Hashes(Chunks.size() * HashSize);
 
-  auto Fn = [&](ArrayRef<uint8_t> &Chunk) {
-    size_t Idx = &Chunk - Chunks.data();
-    HashFn(Hashes.data() + Idx * HashSize, Chunk);
-  };
+  auto Fn = [&](size_t I) { HashFn(Hashes.data() + I * HashSize, Chunks[I]); };
 
   // Compute hash values.
   if (Config->Threads)
-    parallel_for_each(Chunks.begin(), Chunks.end(), Fn);
+    parallel_for(size_t(0), Chunks.size(), Fn);
   else
-    std::for_each(Chunks.begin(), Chunks.end(), Fn);
+    for (size_t I = 0, E = Chunks.size(); I != E; ++I)
+      Fn(I);
 
   // Write to the final output buffer.
   HashFn(HashBuf, Hashes);

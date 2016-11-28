@@ -345,8 +345,7 @@ public:
             // whatever was updating the call graph. This SCC gets invalidated
             // late as it contains the nodes that were actively being
             // processed.
-            PassPA = CGAM.invalidate(*(UR.UpdatedC ? UR.UpdatedC : C),
-                                     std::move(PassPA));
+            CGAM.invalidate(*(UR.UpdatedC ? UR.UpdatedC : C), PassPA);
 
             // Then intersect the preserved set so that invalidation of module
             // analyses will eventually occur when the module pass completes.
@@ -373,10 +372,11 @@ public:
       } while (!RCWorklist.empty());
     }
 
-    // By definition we preserve the proxy. This precludes *any* invalidation
-    // of CGSCC analyses by the proxy, but that's OK because we've taken
-    // care to invalidate analyses in the CGSCC analysis manager
-    // incrementally above.
+    // By definition we preserve the proxy. We also preserve all analyses on
+    // SCCs. This precludes *any* invalidation of CGSCC analyses by the proxy,
+    // but that's OK because we've taken care to invalidate analyses in the
+    // CGSCC analysis manager incrementally above.
+    PA.preserve<AllAnalysesOn<LazyCallGraph::SCC>>();
     PA.preserve<CGSCCAnalysisManagerModuleProxy>();
     return PA;
   }
@@ -479,9 +479,7 @@ public:
       // We know that the function pass couldn't have invalidated any other
       // function's analyses (that's the contract of a function pass), so
       // directly handle the function analysis manager's invalidation here.
-      // Also, update the preserved analyses to reflect that once invalidated
-      // these can again be preserved.
-      PassPA = FAM.invalidate(N->getFunction(), std::move(PassPA));
+      FAM.invalidate(N->getFunction(), PassPA);
 
       // Then intersect the preserved set so that invalidation of module
       // analyses will eventually occur when the module pass completes.
@@ -495,10 +493,11 @@ public:
              "Current SCC not updated to the SCC containing the current node!");
     }
 
-    // By definition we preserve the proxy. This precludes *any* invalidation
-    // of function analyses by the proxy, but that's OK because we've taken
-    // care to invalidate analyses in the function analysis manager
-    // incrementally above.
+    // By definition we preserve the proxy. And we preserve all analyses on
+    // Functions. This precludes *any* invalidation of function analyses by the
+    // proxy, but that's OK because we've taken care to invalidate analyses in
+    // the function analysis manager incrementally above.
+    PA.preserve<AllAnalysesOn<Function>>();
     PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
 
     // We've also ensured that we updated the call graph along the way.
