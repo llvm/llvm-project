@@ -19,6 +19,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
@@ -171,9 +172,9 @@ public:
   }
 
   /// EmitPointerToBoolConversion - Perform a pointer to boolean conversion.
-  Value *EmitPointerToBoolConversion(Value *V) {
-    Value *Zero = llvm::ConstantPointerNull::get(
-                                      cast<llvm::PointerType>(V->getType()));
+  Value *EmitPointerToBoolConversion(Value *V, QualType QT) {
+    Value *Zero = CGF.CGM.getNullPtr(cast<llvm::PointerType>(V->getType()), QT);
+
     return Builder.CreateICmpNE(V, Zero, "tobool");
   }
 
@@ -591,7 +592,7 @@ Value *ScalarExprEmitter::EmitConversionToBool(Value *Src, QualType SrcType) {
     return EmitIntToBoolConversion(Src);
 
   assert(isa<llvm::PointerType>(Src->getType()));
-  return EmitPointerToBoolConversion(Src);
+  return EmitPointerToBoolConversion(Src, SrcType);
 }
 
 void ScalarExprEmitter::EmitFloatConversionCheck(
@@ -1394,6 +1395,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Builder.CreateBitCast(Src, DstTy);
   }
   case CK_AddressSpaceConversion: {
+    Expr::EvalResult Result;
+    if (E->EvaluateAsRValue(Result, CGF.getContext()) &&
+        Result.Val.isNullPtr() && !Result.HasSideEffects)
+      return CGF.CGM.getNullPtr(cast<llvm::PointerType>(ConvertType(DestTy)),
+                                DestTy);
     Value *Src = Visit(const_cast<Expr*>(E));
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
@@ -1453,8 +1459,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     if (MustVisitNullValue(E))
       (void) Visit(E);
 
-    return llvm::ConstantPointerNull::get(
-                               cast<llvm::PointerType>(ConvertType(DestTy)));
+    return CGF.CGM.getNullPtr(cast<llvm::PointerType>(ConvertType(DestTy)),
+                              DestTy);
 
   case CK_NullToMemberPointer: {
     if (MustVisitNullValue(E))
@@ -1518,9 +1524,15 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
     return Builder.CreateIntToPtr(IntResult, DestLLVMTy);
   }
-  case CK_PointerToIntegral:
+  case CK_PointerToIntegral: {
+    Expr::EvalResult Result;
+    if (E->EvaluateAsRValue(Result, CGF.getContext()) &&
+        Result.Val.isNullPtr() && !Result.HasSideEffects)
+      return llvm::ConstantInt::get(ConvertType(DestTy),
+          CGF.getContext().getTargetNullPtrValue(E->getType()));
     assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
     return Builder.CreatePtrToInt(Visit(E), ConvertType(DestTy));
+  }
 
   case CK_ToVoid: {
     CGF.EmitIgnoredExpr(E);
@@ -1547,7 +1559,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntegralToBoolean:
     return EmitIntToBoolConversion(Visit(E));
   case CK_PointerToBoolean:
-    return EmitPointerToBoolConversion(Visit(E));
+    return EmitPointerToBoolConversion(Visit(E), E->getType());
   case CK_FloatingToBoolean:
     return EmitFloatToBoolConversion(Visit(E));
   case CK_MemberPointerToBoolean: {

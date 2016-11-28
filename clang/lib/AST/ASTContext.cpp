@@ -9437,6 +9437,16 @@ ASTContext::ObjCMethodsAreEqual(const ObjCMethodDecl *MethodDecl,
   
 }
 
+uint64_t ASTContext::getTargetNullPtrValue(QualType QT) const {
+  unsigned AS;
+  if (QT->getUnqualifiedDesugaredType()->isNullPtrType())
+    AS = 0;
+  else
+    AS = QT->getPointeeType().getAddressSpace();
+
+  return getTargetInfo().getNullPtrValue(AS);
+}
+
 // Explicitly instantiate this in case a Redeclarable<T> is used from a TU that
 // doesn't include ASTContext.h
 template

@@ -220,6 +220,13 @@ public:
 
   /// Get LLVM calling convention for OpenCL kernel.
   virtual unsigned getOpenCLKernelCallingConv() const;
+
+  /// Get target specific null pointer.
+  /// \return ConstantPointerNull with the given type \p T.
+  /// Each target can override it to return its own desired constant value.
+  virtual llvm::Constant *getNullPtr(const CodeGen::CodeGenModule &CGM,
+      llvm::PointerType *T, QualType QT) const;
+
 };
 
 } // namespace CodeGen
