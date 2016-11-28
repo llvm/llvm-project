@@ -92,7 +92,7 @@ for (int i = 0; i < argc; ++i) {
 }
 // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 int r = 0;
-#pragma omp parallel for reduction(+:r)
+#pragma omp parallel for reduction(+: r)
 for (int i = 0; i < argc; ++i) {
 #pragma omp cancel for
   r += i;
