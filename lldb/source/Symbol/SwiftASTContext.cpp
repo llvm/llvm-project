@@ -152,8 +152,7 @@ static inline swift::Type GetSwiftType(void *opaque_ptr) {
 }
 
 static inline swift::CanType GetCanonicalSwiftType(void *opaque_ptr) {
-  return swift::Type(((swift::TypeBase *)opaque_ptr)->getDesugaredType())
-      ->getCanonicalType();
+  return ((swift::TypeBase *)opaque_ptr)->getCanonicalType();
 }
 
 static inline swift::Type GetSwiftType(CompilerType type) {
@@ -161,9 +160,7 @@ static inline swift::Type GetSwiftType(CompilerType type) {
 }
 
 static inline swift::CanType GetCanonicalSwiftType(CompilerType type) {
-  return swift::Type(
-             ((swift::TypeBase *)type.GetOpaqueQualType())->getDesugaredType())
-      ->getCanonicalType();
+  return ((swift::TypeBase *)type.GetOpaqueQualType())->getCanonicalType();
 }
 
 enum class MemberType : uint32_t { Invalid, BaseClass, Field };
@@ -5712,7 +5709,7 @@ SwiftASTContext::GetReferentType(const CompilerType &compiler_type) {
       swift::TypeBase *referent_type = ref_type->getReferentType().getPointer();
       if (referent_type) {
         swift::CanType referent_can_type(
-            referent_type->getDesugaredType()->getCanonicalType());
+            referent_type->getCanonicalType());
         return CompilerType(GetASTContext(), referent_can_type.getPointer());
       }
     } else
