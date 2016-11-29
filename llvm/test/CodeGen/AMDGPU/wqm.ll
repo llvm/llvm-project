@@ -374,6 +374,47 @@ break:
   ret <4 x float> %c.iv
 }
 
+; Only intrinsic stores need exact execution -- other stores do not have
+; externally visible effects and may require WQM for correctness.
+;
+; CHECK-LABEL: {{^}}test_alloca:
+; CHECK: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_wqm_b64 exec, exec
+
+; CHECK: s_and_b64 exec, exec, [[LIVE]]
+; CHECK: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0
+; CHECK: s_wqm_b64 exec, exec
+; CHECK: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen
+; CHECK: s_and_b64 exec, exec, [[LIVE]]
+; CHECK: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen
+; CHECK: s_wqm_b64 exec, exec
+; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen
+
+; CHECK: image_sample
+; CHECK: s_and_b64 exec, exec, [[LIVE]]
+; CHECK: buffer_store_dwordx4
+define amdgpu_ps void @test_alloca(float %data, i32 %a, i32 %idx) nounwind {
+entry:
+  %array = alloca [32 x i32], align 4
+
+  call void @llvm.amdgcn.buffer.store.f32(float %data, <4 x i32> undef, i32 0, i32 0, i1 0, i1 0)
+
+  %s.gep = getelementptr [32 x i32], [32 x i32]* %array, i32 0, i32 0
+  store volatile i32 %a, i32* %s.gep, align 4
+
+  call void @llvm.amdgcn.buffer.store.f32(float %data, <4 x i32> undef, i32 1, i32 0, i1 0, i1 0)
+
+  %c.gep = getelementptr [32 x i32], [32 x i32]* %array, i32 0, i32 %idx
+  %c = load i32, i32* %c.gep, align 4
+
+  %t = call <4 x float> @llvm.SI.image.sample.i32(i32 %c, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+
+  call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %t, <4 x i32> undef, i32 0, i32 0, i1 0, i1 0)
+
+  ret void
+}
+
+
 declare void @llvm.amdgcn.image.store.v4i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
