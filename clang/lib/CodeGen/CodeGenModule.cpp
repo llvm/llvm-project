@@ -24,6 +24,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
 #include "CodeGenTBAA.h"
+#include "ConstantBuilder.h"
 #include "CoverageMappingGen.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -731,6 +732,8 @@ void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority) {
 }
 
 void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
+  if (Fns.empty()) return;
+
   // Ctor function type is void()*.
   llvm::FunctionType* CtorFTy = llvm::FunctionType::get(VoidTy, false);
   llvm::Type *CtorPFTy = llvm::PointerType::getUnqual(CtorFTy);
@@ -740,24 +743,28 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
       Int32Ty, llvm::PointerType::getUnqual(CtorFTy), VoidPtrTy, nullptr);
 
   // Construct the constructor and destructor arrays.
-  SmallVector<llvm::Constant *, 8> Ctors;
+  ConstantBuilder builder(*this);
+  auto ctors = builder.beginArray(CtorStructTy);
   for (const auto &I : Fns) {
-    llvm::Constant *S[] = {
-        llvm::ConstantInt::get(Int32Ty, I.Priority, false),
-        llvm::ConstantExpr::getBitCast(I.Initializer, CtorPFTy),
-        (I.AssociatedData
-             ? llvm::ConstantExpr::getBitCast(I.AssociatedData, VoidPtrTy)
-             : llvm::Constant::getNullValue(VoidPtrTy))};
-    Ctors.push_back(llvm::ConstantStruct::get(CtorStructTy, S));
+    auto ctor = ctors.beginStruct(CtorStructTy);
+    ctor.addInt(Int32Ty, I.Priority);
+    ctor.add(llvm::ConstantExpr::getBitCast(I.Initializer, CtorPFTy));
+    if (I.AssociatedData)
+      ctor.add(llvm::ConstantExpr::getBitCast(I.AssociatedData, VoidPtrTy));
+    else
+      ctor.addNullPointer(VoidPtrTy);
+    ctors.add(ctor.finish());
   }
 
-  if (!Ctors.empty()) {
-    llvm::ArrayType *AT = llvm::ArrayType::get(CtorStructTy, Ctors.size());
-    new llvm::GlobalVariable(TheModule, AT, false,
-                             llvm::GlobalValue::AppendingLinkage,
-                             llvm::ConstantArray::get(AT, Ctors),
-                             GlobalName);
-  }
+  auto list =
+    ctors.finishAndCreateGlobal(GlobalName, getPointerAlign(),
+                                /*constant*/ false,
+                                llvm::GlobalValue::AppendingLinkage);
+
+  // The LTO linker doesn't seem to like it when we set an alignment
+  // on appending variables.  Take it off as a workaround.
+  list->setAlignment(0);
+
   Fns.clear();
 }
 
@@ -3190,15 +3197,14 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
   auto *STy = cast<llvm::StructType>(getTypes().ConvertType(CFTy));
 
-  llvm::Constant *Fields[4];
+  ConstantBuilder Builder(*this);
+  auto Fields = Builder.beginStruct(STy);
 
   // Class pointer.
-  Fields[0] = cast<llvm::ConstantExpr>(CFConstantStringClassRef);
+  Fields.add(cast<llvm::ConstantExpr>(CFConstantStringClassRef));
 
   // Flags.
-  llvm::Type *Ty = getTypes().ConvertType(getContext().UnsignedIntTy);
-  Fields[1] = isUTF16 ? llvm::ConstantInt::get(Ty, 0x07d0)
-                      : llvm::ConstantInt::get(Ty, 0x07C8);
+  Fields.addInt(IntTy, isUTF16 ? 0x07d0 : 0x07C8);
 
   // String pointer.
   llvm::Constant *C = nullptr;
@@ -3232,25 +3238,24 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
                            : "__TEXT,__cstring,cstring_literals");
 
   // String.
-  Fields[2] =
+  llvm::Constant *Str =
       llvm::ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zeros);
 
   if (isUTF16)
     // Cast the UTF16 string to the correct type.
-    Fields[2] = llvm::ConstantExpr::getBitCast(Fields[2], Int8PtrTy);
+    Str = llvm::ConstantExpr::getBitCast(Str, Int8PtrTy);
+  Fields.add(Str);
 
   // String length.
-  Ty = getTypes().ConvertType(getContext().LongTy);
-  Fields[3] = llvm::ConstantInt::get(Ty, StringLength);
+  auto Ty = getTypes().ConvertType(getContext().LongTy);
+  Fields.addInt(cast<llvm::IntegerType>(Ty), StringLength);
 
   CharUnits Alignment = getPointerAlign();
 
   // The struct.
-  C = llvm::ConstantStruct::get(STy, Fields);
-  GV = new llvm::GlobalVariable(getModule(), C->getType(), /*isConstant=*/false,
-                                llvm::GlobalVariable::PrivateLinkage, C,
-                                "_unnamed_cfstring_");
-  GV->setAlignment(Alignment.getQuantity());
+  GV = Fields.finishAndCreateGlobal("_unnamed_cfstring_", Alignment,
+                                    /*isConstant=*/false,
+                                    llvm::GlobalVariable::PrivateLinkage);
   switch (getTriple().getObjectFormat()) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
@@ -3338,19 +3343,18 @@ CodeGenModule::GetAddrOfConstantString(const StringLiteral *Literal) {
     NSConstantStringType = cast<llvm::StructType>(getTypes().ConvertType(NSTy));
   }
   
-  llvm::Constant *Fields[3];
+  ConstantBuilder Builder(*this);
+  auto Fields = Builder.beginStruct(NSConstantStringType);
   
   // Class pointer.
-  Fields[0] = cast<llvm::ConstantExpr>(V);
+  Fields.add(cast<llvm::ConstantExpr>(V));
   
   // String pointer.
   llvm::Constant *C =
       llvm::ConstantDataArray::getString(VMContext, Entry.first());
 
-  llvm::GlobalValue::LinkageTypes Linkage;
-  bool isConstant;
-  Linkage = llvm::GlobalValue::PrivateLinkage;
-  isConstant = !LangOpts.WritableStrings;
+  llvm::GlobalValue::LinkageTypes Linkage = llvm::GlobalValue::PrivateLinkage;
+  bool isConstant = !LangOpts.WritableStrings;
 
   auto *GV = new llvm::GlobalVariable(getModule(), C->getType(), isConstant,
                                       Linkage, C, ".str");
@@ -3359,20 +3363,17 @@ CodeGenModule::GetAddrOfConstantString(const StringLiteral *Literal) {
   // of the string is via this class initializer.
   CharUnits Align = getContext().getTypeAlignInChars(getContext().CharTy);
   GV->setAlignment(Align.getQuantity());
-  Fields[1] =
-      llvm::ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zeros);
+  Fields.add(
+      llvm::ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zeros));
 
   // String length.
-  llvm::Type *Ty = getTypes().ConvertType(getContext().UnsignedIntTy);
-  Fields[2] = llvm::ConstantInt::get(Ty, StringLength);
+  Fields.addInt(IntTy, StringLength);
   
   // The struct.
   CharUnits Alignment = getPointerAlign();
-  C = llvm::ConstantStruct::get(NSConstantStringType, Fields);
-  GV = new llvm::GlobalVariable(getModule(), C->getType(), true,
-                                llvm::GlobalVariable::PrivateLinkage, C,
-                                "_unnamed_nsstring_");
-  GV->setAlignment(Alignment.getQuantity());
+  GV = Fields.finishAndCreateGlobal("_unnamed_nsstring_", Alignment,
+                                    /*constant*/ true,
+                                    llvm::GlobalVariable::PrivateLinkage);
   const char *NSStringSection = "__OBJC,__cstring_object,regular,no_dead_strip";
   const char *NSStringNonFragileABISection =
       "__DATA,__objc_stringobj,regular,no_dead_strip";

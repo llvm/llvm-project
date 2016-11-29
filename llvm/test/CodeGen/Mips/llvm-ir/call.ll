@@ -80,48 +80,6 @@ define float @call_float_void() {
   ret float %2
 }
 
-define void @musttail_call_void_void() {
-; ALL-LABEL: musttail_call_void_void:
-
-; O32:           lw $[[TGT:[0-9]+]], %call16(extern_void_void)($gp)
-
-; N64:           ld $[[TGT:[0-9]+]], %call16(extern_void_void)($gp)
-
-; NOT-R6C:       jr   $[[TGT]]
-; R6C:           jrc  $[[TGT]]
-
-  musttail call void @extern_void_void()
-  ret void
-}
-
-define i32 @musttail_call_i32_void() {
-; ALL-LABEL: musttail_call_i32_void:
-
-; O32:           lw $[[TGT:[0-9]+]], %call16(extern_i32_void)($gp)
-
-; N64:           ld $[[TGT:[0-9]+]], %call16(extern_i32_void)($gp)
-
-; NOT-R6C:       jr   $[[TGT]]
-; R6C:           jrc  $[[TGT]]
-
-  %1 = musttail call i32 @extern_i32_void()
-  ret i32 %1
-}
-
-define float @musttail_call_float_void() {
-; ALL-LABEL: musttail_call_float_void:
-
-; O32:           lw $[[TGT:[0-9]+]], %call16(extern_float_void)($gp)
-
-; N64:           ld $[[TGT:[0-9]+]], %call16(extern_float_void)($gp)
-
-; NOT-R6C:       jr   $[[TGT]]
-; R6C:           jrc  $[[TGT]]
-
-  %1 = musttail call float @extern_float_void()
-  ret float %1
-}
-
 define i32 @indirect_call_void_void(void ()* %addr) {
 ; ALL-LABEL: indirect_call_void_void:
 

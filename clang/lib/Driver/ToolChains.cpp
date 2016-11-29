@@ -52,7 +52,8 @@ MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
 /// Darwin - Darwin tool chain for i386 and x86_64.
 Darwin::Darwin(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
-    : MachO(D, Triple, Args), TargetInitialized(false) {}
+    : MachO(D, Triple, Args), TargetInitialized(false),
+      CudaInstallation(D, Triple, Args) {}
 
 types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
   types::ID Ty = types::lookupTypeForExtension(Ext);
@@ -97,6 +98,11 @@ bool Darwin::hasBlocksRuntime() const {
     assert(isTargetMacOS() && "unexpected darwin target");
     return !isMacosxVersionLT(10, 6);
   }
+}
+
+void Darwin::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                                ArgStringList &CC1Args) const {
+  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 // This is just a MachO name translation routine and there's no
@@ -1296,6 +1302,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   return Res;
 }
 
+void Darwin::printVerboseInfo(raw_ostream &OS) const {
+  CudaInstallation.print(OS);
+}
+
 /// Generic_GCC - A tool chain using the 'gcc' command to perform
 /// all subcommands; this relies on gcc translating the majority of
 /// command line options.
@@ -1811,10 +1821,10 @@ static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
   return CudaVersion::UNKNOWN;
 }
 
-// \brief -- try common CUDA installation paths looking for files we need for
-// CUDA compilation.
-void Generic_GCC::CudaInstallationDetector::init(
-    const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args) {
+CudaInstallationDetector::CudaInstallationDetector(
+    const Driver &D, const llvm::Triple &TargetTriple,
+    const llvm::opt::ArgList &Args)
+    : D(D) {
   SmallVector<std::string, 4> CudaPathCandidates;
 
   if (Args.hasArg(options::OPT_cuda_path_EQ))
@@ -1835,11 +1845,23 @@ void Generic_GCC::CudaInstallationDetector::init(
     BinPath = CudaPath + "/bin";
     IncludePath = InstallPath + "/include";
     LibDevicePath = InstallPath + "/nvvm/libdevice";
-    LibPath = InstallPath + (TargetTriple.isArch64Bit() ? "/lib64" : "/lib");
 
     auto &FS = D.getVFS();
-    if (!(FS.exists(IncludePath) && FS.exists(BinPath) && FS.exists(LibPath) &&
+    if (!(FS.exists(IncludePath) && FS.exists(BinPath) &&
           FS.exists(LibDevicePath)))
+      continue;
+
+    // On Linux, we have both lib and lib64 directories, and we need to choose
+    // based on our triple.  On MacOS, we have only a lib directory.
+    //
+    // It's sufficient for our purposes to be flexible: If both lib and lib64
+    // exist, we choose whichever one matches our triple.  Otherwise, if only
+    // lib exists, we use it.
+    if (TargetTriple.isArch64Bit() && FS.exists(InstallPath + "/lib64"))
+      LibPath = InstallPath + "/lib64";
+    else if (FS.exists(InstallPath + "/lib"))
+      LibPath = InstallPath + "/lib";
+    else
       continue;
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
@@ -1898,7 +1920,33 @@ void Generic_GCC::CudaInstallationDetector::init(
   }
 }
 
-void Generic_GCC::CudaInstallationDetector::CheckCudaVersionSupportsArch(
+void CudaInstallationDetector::AddCudaIncludeArgs(
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    // Add cuda_wrappers/* to our system include path.  This lets us wrap
+    // standard library headers.
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    llvm::sys::path::append(P, "cuda_wrappers");
+    CC1Args.push_back("-internal-isystem");
+    CC1Args.push_back(DriverArgs.MakeArgString(P));
+  }
+
+  if (DriverArgs.hasArg(options::OPT_nocudainc))
+    return;
+
+  if (!isValid()) {
+    D.Diag(diag::err_drv_no_cuda_installation);
+    return;
+  }
+
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
+  CC1Args.push_back("-include");
+  CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
+}
+
+void CudaInstallationDetector::CheckCudaVersionSupportsArch(
     CudaArch Arch) const {
   if (Arch == CudaArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
       ArchsWithVersionTooLowErrors.count(Arch) > 0)
@@ -1913,7 +1961,7 @@ void Generic_GCC::CudaInstallationDetector::CheckCudaVersionSupportsArch(
   }
 }
 
-void Generic_GCC::CudaInstallationDetector::print(raw_ostream &OS) const {
+void CudaInstallationDetector::print(raw_ostream &OS) const {
   if (isValid())
     OS << "Found CUDA installation: " << InstallPath << ", version "
        << CudaVersionToString(Version) << "\n";
@@ -2756,7 +2804,8 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
 
 Generic_GCC::Generic_GCC(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
-    : ToolChain(D, Triple, Args), GCCInstallation(D), CudaInstallation(D) {
+    : ToolChain(D, Triple, Args), GCCInstallation(D),
+      CudaInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
@@ -4162,7 +4211,6 @@ static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
 Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
-  CudaInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   llvm::Triple::ArchType Arch = Triple.getArch();
   std::string SysRoot = computeSysRoot();
@@ -4767,26 +4815,7 @@ void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 
 void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
-    // Add cuda_wrappers/* to our system include path.  This lets us wrap
-    // standard library headers.
-    SmallString<128> P(getDriver().ResourceDir);
-    llvm::sys::path::append(P, "include");
-    llvm::sys::path::append(P, "cuda_wrappers");
-    addSystemInclude(DriverArgs, CC1Args, P);
-  }
-
-  if (DriverArgs.hasArg(options::OPT_nocudainc))
-    return;
-
-  if (!CudaInstallation.isValid()) {
-    getDriver().Diag(diag::err_drv_no_cuda_installation);
-    return;
-  }
-
-  addSystemInclude(DriverArgs, CC1Args, CudaInstallation.getIncludePath());
-  CC1Args.push_back("-include");
-  CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
+  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
@@ -4968,16 +4997,18 @@ Tool *DragonFly::buildLinker() const {
 /// together object files from the assembler into a single blob.
 
 CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
-                             const ArgList &Args)
-    : Linux(D, Triple, Args) {
+                             const ToolChain &HostTC, const ArgList &Args)
+    : ToolChain(D, Triple, Args), HostTC(HostTC),
+      CudaInstallation(D, Triple, Args) {
   if (CudaInstallation.isValid())
     getProgramPaths().push_back(CudaInstallation.getBinPath());
 }
 
-void
-CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args) const {
-  Linux::addClangTargetOptions(DriverArgs, CC1Args);
+void CudaToolChain::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args);
+
   CC1Args.push_back("-fcuda-is-device");
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
@@ -5019,13 +5050,18 @@ void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
     assert(!Arch.empty() && "Must have an explicit GPU arch.");
     CudaInstallation.CheckCudaVersionSupportsArch(StringToCudaArch(Arch));
   }
-  Linux::AddCudaIncludeArgs(DriverArgs, CC1Args);
+  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 llvm::opt::DerivedArgList *
 CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch, Action::OffloadKind) const {
-  DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
+                             StringRef BoundArch,
+                             Action::OffloadKind DeviceOffloadKind) const {
+  DerivedArgList *DAL =
+      HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+  if (!DAL)
+    DAL = new DerivedArgList(Args.getBaseArgs());
+
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
@@ -5075,6 +5111,30 @@ Tool *CudaToolChain::buildAssembler() const {
 
 Tool *CudaToolChain::buildLinker() const {
   return new tools::NVPTX::Linker(*this);
+}
+
+void CudaToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  HostTC.addClangWarningOptions(CC1Args);
+}
+
+ToolChain::CXXStdlibType
+CudaToolChain::GetCXXStdlibType(const ArgList &Args) const {
+  return HostTC.GetCXXStdlibType(Args);
+}
+
+void CudaToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                              ArgStringList &CC1Args) const {
+  HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+}
+
+void CudaToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
+                                                 ArgStringList &CC1Args) const {
+  HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+}
+
+void CudaToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
+                                        ArgStringList &CC1Args) const {
+  HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
 /// XCore tool chain

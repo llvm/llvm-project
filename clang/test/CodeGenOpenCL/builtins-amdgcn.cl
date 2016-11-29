@@ -166,14 +166,14 @@ void test_frexp_mant_f64(global double* out, double a)
 }
 
 // CHECK-LABEL: @test_frexp_exp_f32
-// CHECK: call i32 @llvm.amdgcn.frexp.exp.f32
+// CHECK: call i32 @llvm.amdgcn.frexp.exp.i32.f32
 void test_frexp_exp_f32(global int* out, float a)
 {
   *out = __builtin_amdgcn_frexp_expf(a);
 }
 
 // CHECK-LABEL: @test_frexp_exp_f64
-// CHECK: call i32 @llvm.amdgcn.frexp.exp.f64
+// CHECK: call i32 @llvm.amdgcn.frexp.exp.i32.f64
 void test_frexp_exp_f64(global int* out, double a)
 {
   *out = __builtin_amdgcn_frexp_exp(a);

@@ -429,6 +429,8 @@ def fno_cuda_approx_transcendentals : Flag<["-"], "fno-cuda-approx-transcendenta
 def dA : Flag<["-"], "dA">, Group<d_Group>;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode in addition to normal output">;
+def dI : Flag<["-"], "dI">, Group<d_Group>, Flags<[CC1Option]>,
+  HelpText<"Print include directives in -E mode in addition to normal output">;
 def dM : Flag<["-"], "dM">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;

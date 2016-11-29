@@ -5,8 +5,7 @@
 // Sanity checking a test in pure C with -pie.
 // RUN: %clang_asan -O2 %s -pie -fPIE -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: stable-runtime
 
 #include <stdlib.h>
 int main() {

@@ -6,4 +6,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-dis
   llvm-dis.cpp
+
+  DEPENDS
+  intrinsics_gen
   )

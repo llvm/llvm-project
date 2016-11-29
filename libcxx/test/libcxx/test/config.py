@@ -13,6 +13,7 @@ import platform
 import pkgutil
 import re
 import shlex
+import shutil
 import sys
 
 import lit.Test  # pylint: disable=import-error,no-name-in-module
@@ -64,6 +65,7 @@ class Configuration(object):
         self.cxx_library_root = None
         self.cxx_runtime_root = None
         self.abi_library_root = None
+        self.module_cache_path = None
         self.env = {}
         self.use_target = False
         self.use_system_cxx_lib = False
@@ -117,6 +119,7 @@ class Configuration(object):
         self.configure_warnings()
         self.configure_sanitizer()
         self.configure_coverage()
+        self.configure_modules()
         self.configure_substitutions()
         self.configure_features()
 
@@ -721,6 +724,27 @@ class Configuration(object):
             self.cxx.flags += ['-g', '--coverage']
             self.cxx.compile_flags += ['-O0']
 
+    def configure_modules(self):
+        supports_modules = self.cxx.hasCompileFlag('-fmodules')
+        enable_modules = self.get_lit_bool('enable_modules', False)
+        if enable_modules and not supports_modules:
+            self.lit_config.fatal(
+                '-fmodules is enabled but not supported by the compiler')
+        if not supports_modules:
+            return
+        self.config.available_features.add('modules-support')
+        module_cache = os.path.join(self.config.test_exec_root,
+                                   'modules.cache')
+        module_cache = os.path.realpath(module_cache)
+        if os.path.isdir(module_cache):
+            shutil.rmtree(module_cache)
+        os.makedirs(module_cache)
+        self.module_cache_path = module_cache
+        if enable_modules:
+            self.config.available_features.add('-fmodules')
+            self.cxx.compile_flags += ['-fmodules',
+                                       '-fmodules-cache-path=' + module_cache]
+
     def configure_substitutions(self):
         sub = self.config.substitutions
         # Configure compiler substitutions
@@ -734,6 +758,13 @@ class Configuration(object):
         sub.append(('%compile_flags', compile_flags_str))
         sub.append(('%link_flags', link_flags_str))
         sub.append(('%all_flags', all_flags))
+
+        module_flags = None
+        if not self.module_cache_path is None:
+            module_flags = '-fmodules -fmodules-cache-path=' \
+                           + self.module_cache_path + ' '
+
+
         # Add compile and link shortcuts
         compile_str = (self.cxx.path + ' -o %t.o %s -c ' + flags_str
                        + compile_flags_str)
@@ -743,6 +774,8 @@ class Configuration(object):
         build_str = self.cxx.path + ' -o %t.exe %s ' + all_flags
         sub.append(('%compile', compile_str))
         sub.append(('%link', link_str))
+        if not module_flags is None:
+            sub.append(('%build_module', build_str + ' ' + module_flags))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
         exec_env_str = 'env ' if len(self.env) != 0 else ''

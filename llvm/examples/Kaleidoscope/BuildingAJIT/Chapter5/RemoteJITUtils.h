@@ -15,8 +15,10 @@
 #define LLVM_TOOLS_LLI_REMOTEJITUTILS_H
 
 #include "llvm/ExecutionEngine/Orc/RawByteChannel.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include <mutex>
+#include "llvm/Support/Error.h"
+#include <cassert>
+#include <cerrno>
+#include <system_error>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -71,4 +73,4 @@ private:
   int InFD, OutFD;
 };
 
-#endif
+#endif // LLVM_TOOLS_LLI_REMOTEJITUTILS_H

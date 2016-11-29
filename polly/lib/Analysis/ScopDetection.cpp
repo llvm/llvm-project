@@ -458,17 +458,17 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
 
   if (AllowModrefCall) {
     switch (AA->getModRefBehavior(CalledFunction)) {
-    case llvm::FMRB_UnknownModRefBehavior:
+    case FMRB_UnknownModRefBehavior:
       return false;
-    case llvm::FMRB_DoesNotAccessMemory:
-    case llvm::FMRB_OnlyReadsMemory:
+    case FMRB_DoesNotAccessMemory:
+    case FMRB_OnlyReadsMemory:
       // Implicitly disable delinearization since we have an unknown
       // accesses with an unknown access function.
       Context.HasUnknownAccess = true;
       Context.AST.add(&CI);
       return true;
-    case llvm::FMRB_OnlyReadsArgumentPointees:
-    case llvm::FMRB_OnlyAccessesArgumentPointees:
+    case FMRB_OnlyReadsArgumentPointees:
+    case FMRB_OnlyAccessesArgumentPointees:
       for (const auto &Arg : CI.arg_operands()) {
         if (!Arg->getType()->isPointerTy())
           continue;
@@ -943,7 +943,7 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
     return invalid<ReportFuncCall>(Context, /*Assert=*/true, &Inst);
   }
 
-  if (!Inst.mayWriteToMemory() && !Inst.mayReadFromMemory()) {
+  if (!Inst.mayReadOrWriteMemory()) {
     if (!isa<AllocaInst>(Inst))
       return true;
 

@@ -230,7 +230,7 @@ _start:
 # CANNOT_OPEN: cannot open {{.*}}.no.such.file: {{[Nn]}}o such file or directory
 
 # RUN: not ld.lld %t -o 2>&1 | FileCheck --check-prefix=NO_O_VAL %s
-# NO_O_VAL: missing arg value for "-o", expected 1 argument.
+# NO_O_VAL: -o: missing argument
 
 # RUN: not ld.lld --foo 2>&1 | FileCheck --check-prefix=UNKNOWN %s
 # UNKNOWN: unknown argument: --foo

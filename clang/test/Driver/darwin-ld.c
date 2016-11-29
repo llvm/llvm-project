@@ -327,3 +327,12 @@
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2.6'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.a'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1a'
+
+// Check that we're passing -pass-remarks-output for LTO
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -### -o foo/bar.out 2> %t.log
+// RUN: FileCheck -check-prefix=PASS_REMARKS_OUTPUT %s < %t.log
+// PASS_REMARKS_OUTPUT: "-mllvm" "-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml"
+
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -### 2> %t.log
+// RUN: FileCheck -check-prefix=PASS_REMARKS_OUTPUT_NO_O %s < %t.log
+// PASS_REMARKS_OUTPUT_NO_O: "-mllvm" "-pass-remarks-output" "-mllvm" "a.out.opt.yaml"

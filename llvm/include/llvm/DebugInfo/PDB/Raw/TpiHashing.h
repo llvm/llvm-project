@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_TPIHASHING_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
@@ -18,12 +19,15 @@
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
+#include <string>
 
 namespace llvm {
 namespace pdb {
+
 class TpiHashUpdater : public codeview::TypeVisitorCallbacks {
 public:
-  TpiHashUpdater() {}
+  TpiHashUpdater() = default;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   virtual Error visitKnownRecord(codeview::CVType &CVR,                        \
@@ -84,7 +88,8 @@ private:
   uint32_t NumHashBuckets;
   uint32_t Index = -1;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_TPIHASHING_H

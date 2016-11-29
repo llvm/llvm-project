@@ -29,57 +29,59 @@ bool CommandHistory::IsEmpty() const {
   return m_history.empty();
 }
 
-const char *CommandHistory::FindString(const char *input_str) const {
+llvm::Optional<llvm::StringRef>
+CommandHistory::FindString(llvm::StringRef input_str) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (!input_str)
-    return nullptr;
-  if (input_str[0] != g_repeat_char)
-    return nullptr;
-  if (input_str[1] == '-') {
-    bool success;
-    size_t idx = StringConvert::ToUInt32(input_str + 2, 0, 0, &success);
-    if (!success)
-      return nullptr;
-    if (idx > m_history.size())
-      return nullptr;
-    idx = m_history.size() - idx;
-    return m_history[idx].c_str();
+  if (input_str.size() < 2)
+    return llvm::None;
 
-  } else if (input_str[1] == g_repeat_char) {
+  if (input_str[0] != g_repeat_char)
+    return llvm::None;
+
+  if (input_str[1] == g_repeat_char) {
     if (m_history.empty())
-      return nullptr;
-    else
-      return m_history.back().c_str();
-  } else {
-    bool success;
-    uint32_t idx = StringConvert::ToUInt32(input_str + 1, 0, 0, &success);
-    if (!success)
-      return nullptr;
-    if (idx >= m_history.size())
-      return nullptr;
-    return m_history[idx].c_str();
+      return llvm::None;
+    return llvm::StringRef(m_history.back());
   }
+
+  input_str = input_str.drop_front();
+
+  size_t idx = 0;
+  if (input_str.front() == '-') {
+    if (input_str.drop_front(2).getAsInteger(0, idx))
+      return llvm::None;
+    if (idx >= m_history.size())
+      return llvm::None;
+    idx = m_history.size() - idx;
+  } else {
+    if (input_str.drop_front().getAsInteger(0, idx))
+      return llvm::None;
+    if (idx >= m_history.size())
+      return llvm::None;
+  }
+
+  return llvm::StringRef(m_history[idx]);
 }
 
-const char *CommandHistory::GetStringAtIndex(size_t idx) const {
+llvm::StringRef CommandHistory::GetStringAtIndex(size_t idx) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (idx < m_history.size())
-    return m_history[idx].c_str();
-  return nullptr;
+    return m_history[idx];
+  return "";
 }
 
-const char *CommandHistory::operator[](size_t idx) const {
+llvm::StringRef CommandHistory::operator[](size_t idx) const {
   return GetStringAtIndex(idx);
 }
 
-const char *CommandHistory::GetRecentmostString() const {
+llvm::StringRef CommandHistory::GetRecentmostString() const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_history.empty())
-    return nullptr;
-  return m_history.back().c_str();
+    return "";
+  return m_history.back();
 }
 
-void CommandHistory::AppendString(const std::string &str, bool reject_if_dupe) {
+void CommandHistory::AppendString(llvm::StringRef str, bool reject_if_dupe) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (reject_if_dupe) {
     if (!m_history.empty()) {
@@ -87,7 +89,7 @@ void CommandHistory::AppendString(const std::string &str, bool reject_if_dupe) {
         return;
     }
   }
-  m_history.push_back(std::string(str));
+  m_history.push_back(str);
 }
 
 void CommandHistory::Clear() {

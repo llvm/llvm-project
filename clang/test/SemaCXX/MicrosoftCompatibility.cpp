@@ -99,23 +99,39 @@ int jump_over_indirect_goto() {
 namespace PR11826 {
   struct pair {
     pair(int v) { }
+#if _MSC_VER >= 1900
+    void operator=(pair&& rhs) { } // expected-note {{copy constructor is implicitly deleted because 'pair' has a user-declared move assignment operator}}
+#else
     void operator=(pair&& rhs) { }
+#endif
   };
   void f() {
     pair p0(3);
+#if _MSC_VER >= 1900
+    pair p = p0; // expected-error {{call to implicitly-deleted copy constructor of 'PR11826::pair'}}
+#else
     pair p = p0;
+#endif
   }
 }
 
 namespace PR11826_for_symmetry {
   struct pair {
     pair(int v) { }
+#if _MSC_VER >= 1900
+    pair(pair&& rhs) { } // expected-note {{copy assignment operator is implicitly deleted because 'pair' has a user-declared move constructor}}
+#else
     pair(pair&& rhs) { }
+#endif
   };
   void f() {
     pair p0(3);
     pair p(4);
+#if _MSC_VER >= 1900
+    p = p0; // expected-error {{object of type 'PR11826_for_symmetry::pair' cannot be assigned because its copy assignment operator is implicitly deleted}}
+#else
     p = p0;
+#endif
   }
 }
 

@@ -77,11 +77,11 @@ using namespace llvm;
 //   The block creation algorithm is divided into several steps, and several
 //   variants can be tried during the scheduling process.
 //
-// Second the order of the instructions inside the blocks is choosen.
+// Second the order of the instructions inside the blocks is chosen.
 //   At that step we do take into account only register usage and hiding
 //   low latency instructions
 //
-// Third the block order is choosen, there we try to hide high latencies
+// Third the block order is chosen, there we try to hide high latencies
 // and keep register usage low.
 //
 // After the third step, a pass is done to improve the hiding of low
@@ -89,7 +89,7 @@ using namespace llvm;
 //
 // Actually when talking about 'low latency' or 'high latency' it includes
 // both the latency to get the cache (or global mem) data go to the register,
-// and the bandwith limitations.
+// and the bandwidth limitations.
 // Increasing the number of active wavefronts helps hide the former, but it
 // doesn't solve the latter, thus why even if wavefront count is high, we have
 // to try have as many instructions hiding high latencies as possible.
@@ -209,7 +209,7 @@ void SIScheduleBlock::tryCandidateTopDown(SISchedCandidate &Cand,
   //   we haven't waited for
   // . Low latencies
   // . All other instructions
-  // Goal is to get: low latency instructions - independant instructions
+  // Goal is to get: low latency instructions - independent instructions
   //     - (eventually some more low latency instructions)
   //     - instructions that depend on the first low latency instructions.
   // If in the block there is a lot of constant loads, the SGPR usage
@@ -1216,7 +1216,7 @@ void SIScheduleBlockCreator::scheduleInsideBlocks() {
         DAG->getBB()->splice(CurrentTopFastSched, DAG->getBB(), MI);
 
         // Update LiveIntervals.
-        // Note: Moving all instructions and calling handleMove everytime
+        // Note: Moving all instructions and calling handleMove every time
         // is the most cpu intensive operation of the scheduler.
         // It would gain a lot if there was a way to recompute the
         // LiveIntervals for the entire scheduling region.

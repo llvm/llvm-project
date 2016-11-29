@@ -160,7 +160,7 @@ void WinException::endFunction(const MachineFunction *MF) {
   }
 }
 
-/// Retreive the MCSymbol for a GlobalValue or MachineBasicBlock.
+/// Retrieve the MCSymbol for a GlobalValue or MachineBasicBlock.
 static MCSymbol *getMCSymbolForMBB(AsmPrinter *Asm,
                                    const MachineBasicBlock *MBB) {
   if (!MBB)

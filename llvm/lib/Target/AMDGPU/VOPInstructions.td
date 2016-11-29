@@ -35,6 +35,7 @@ class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let hasSideEffects = 0;
   let UseNamedOperandTable = 1;
   let VALU = 1;
+  let Uses = [EXEC];
 }
 
 class VOP3Common <dag outs, dag ins, string asm = "",
@@ -43,14 +44,12 @@ class VOP3Common <dag outs, dag ins, string asm = "",
   VOPAnyCommon <outs, ins, asm, pattern> {
 
   // Using complex patterns gives VOP3 patterns a very high complexity rating,
-  // but standalone patterns are almost always prefered, so we need to adjust the
+  // but standalone patterns are almost always preferred, so we need to adjust the
   // priority lower.  The goal is to use a high number to reduce complexity to
   // zero (or less than zero).
   let AddedComplexity = -1000;
 
   let VOP3 = 1;
-  let VALU = 1;
-  let Uses = [EXEC];
 
   let AsmMatchConverter =
     !if(!eq(VOP3Only,1),
@@ -68,7 +67,6 @@ class VOP3Common <dag outs, dag ins, string asm = "",
   // violating constant bus requirements.
   let hasPostISelHook = 1;
 }
-
 
 class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP3Only = 0> :
   InstSI <P.Outs64, P.Ins64, "", pattern>,
@@ -95,7 +93,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP3On
   let hasPostISelHook = 1;
 
   // Using complex patterns gives VOP3 patterns a very high complexity rating,
-  // but standalone patterns are almost always prefered, so we need to adjust the
+  // but standalone patterns are almost always preferred, so we need to adjust the
   // priority lower.  The goal is to use a high number to reduce complexity to
   // zero (or less than zero).
   let AddedComplexity = -1000;

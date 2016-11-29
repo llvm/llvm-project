@@ -2288,22 +2288,22 @@ declare <32 x i16> @llvm.x86.avx512.mask.psrlv32hi(<32 x i16>, <32 x i16>, <32 x
 define <32 x i16>@test_int_x86_avx512_mask_psrlv32hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_psrlv32hi:
 ; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm3
 ; AVX512BW-NEXT:    kmovd %edi, %k1
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm2 {%k1}
-; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm3 {%k1} {z}
-; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpaddw %zmm3, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_psrlv32hi:
 ; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm3
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm2 {%k1}
-; AVX512F-32-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm3 {%k1} {z}
-; AVX512F-32-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
-; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm2, %zmm1
-; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
   %res = call <32 x i16> @llvm.x86.avx512.mask.psrlv32hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3)
   %res1 = call <32 x i16> @llvm.x86.avx512.mask.psrlv32hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> zeroinitializer, i32 %x3)
@@ -2318,22 +2318,22 @@ declare <32 x i16> @llvm.x86.avx512.mask.psrav32.hi(<32 x i16>, <32 x i16>, <32 
 define <32 x i16>@test_int_x86_avx512_mask_psrav32_hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_psrav32_hi:
 ; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm3
 ; AVX512BW-NEXT:    kmovd %edi, %k1
 ; AVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm2 {%k1}
-; AVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm3 {%k1} {z}
-; AVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpaddw %zmm3, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_psrav32_hi:
 ; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    vpsravw %zmm1, %zmm0, %zmm3
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpsravw %zmm1, %zmm0, %zmm2 {%k1}
-; AVX512F-32-NEXT:    vpsravw %zmm1, %zmm0, %zmm3 {%k1} {z}
-; AVX512F-32-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
-; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm2, %zmm1
-; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    vpsravw %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
   %res = call <32 x i16> @llvm.x86.avx512.mask.psrav32.hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3)
   %res1 = call <32 x i16> @llvm.x86.avx512.mask.psrav32.hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> zeroinitializer, i32 %x3)
@@ -2366,22 +2366,22 @@ declare <32 x i16> @llvm.x86.avx512.mask.psllv32hi(<32 x i16>, <32 x i16>, <32 x
 define <32 x i16>@test_int_x86_avx512_mask_psllv32hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_psllv32hi:
 ; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm3
 ; AVX512BW-NEXT:    kmovd %edi, %k1
 ; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm2 {%k1}
-; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm3 {%k1} {z}
-; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpaddw %zmm3, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_psllv32hi:
 ; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    vpsllvw %zmm1, %zmm0, %zmm3
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpsllvw %zmm1, %zmm0, %zmm2 {%k1}
-; AVX512F-32-NEXT:    vpsllvw %zmm1, %zmm0, %zmm3 {%k1} {z}
-; AVX512F-32-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
-; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm2, %zmm1
-; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
   %res = call <32 x i16> @llvm.x86.avx512.mask.psllv32hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3)
   %res1 = call <32 x i16> @llvm.x86.avx512.mask.psllv32hi(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> zeroinitializer, i32 %x3)

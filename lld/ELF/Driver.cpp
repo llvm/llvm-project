@@ -16,7 +16,6 @@
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "Strings.h"
-#include "SymbolListFile.h"
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
@@ -100,21 +99,24 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
 std::vector<MemoryBufferRef>
 LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
-      check(Archive::create(MB), "failed to parse archive");
+      check(Archive::create(MB),
+            MB.getBufferIdentifier() + ": failed to parse archive");
 
   std::vector<MemoryBufferRef> V;
   Error Err = Error::success();
   for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
-    Archive::Child C = check(COrErr, "could not get the child of the archive " +
-                                         File->getFileName());
+    Archive::Child C =
+        check(COrErr, MB.getBufferIdentifier() +
+                          ": could not get the child of the archive");
     MemoryBufferRef MBRef =
         check(C.getMemoryBufferRef(),
-              "could not get the buffer for a child of the archive " +
-                  File->getFileName());
+              MB.getBufferIdentifier() +
+                  ": could not get the buffer for a child of the archive");
     V.push_back(MBRef);
   }
   if (Err)
-    fatal("Archive::children failed: " + toString(std::move(Err)));
+    fatal(MB.getBufferIdentifier() + ": Archive::children failed: " +
+          toString(std::move(Err)));
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
@@ -186,11 +188,10 @@ Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
 
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef Name) {
-  std::string Path = searchLibrary(Name);
-  if (Path.empty())
-    error("unable to find library -l" + Name);
+  if (Optional<std::string> Path = searchLibrary(Name))
+    addFile(*Path);
   else
-    addFile(Path);
+    error("unable to find library -l" + Name);
 }
 
 // This function is called on startup. We need this for LTO since
@@ -290,8 +291,15 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
     printHelp(ArgsArr[0]);
     return;
   }
-  if (Args.hasArg(OPT_version))
+
+  // GNU linkers disagree here. Though both -version and -v are mentioned
+  // in help to print the version information, GNU ld just normally exits,
+  // while gold can continue linking. We are compatible with ld.bfd here.
+  if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v))
     outs() << getLLDVersion() << "\n";
+  if (Args.hasArg(OPT_version))
+    return;
+
   Config->ExitEarly = CanExitEarly && !Args.hasArg(OPT_full_shutdown);
 
   if (const char *Path = getReproduceOption(Args)) {

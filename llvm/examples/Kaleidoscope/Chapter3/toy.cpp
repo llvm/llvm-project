@@ -9,6 +9,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -94,11 +95,14 @@ static int gettok() {
 //===----------------------------------------------------------------------===//
 // Abstract Syntax Tree (aka Parse Tree)
 //===----------------------------------------------------------------------===//
+
 namespace {
+
 /// ExprAST - Base class for all expression nodes.
 class ExprAST {
 public:
-  virtual ~ExprAST() {}
+  virtual ~ExprAST() = default;
+
   virtual Value *codegen() = 0;
 };
 
@@ -108,6 +112,7 @@ class NumberExprAST : public ExprAST {
 
 public:
   NumberExprAST(double Val) : Val(Val) {}
+
   Value *codegen() override;
 };
 
@@ -117,6 +122,7 @@ class VariableExprAST : public ExprAST {
 
 public:
   VariableExprAST(const std::string &Name) : Name(Name) {}
+
   Value *codegen() override;
 };
 
@@ -129,6 +135,7 @@ public:
   BinaryExprAST(char Op, std::unique_ptr<ExprAST> LHS,
                 std::unique_ptr<ExprAST> RHS)
       : Op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+
   Value *codegen() override;
 };
 
@@ -141,6 +148,7 @@ public:
   CallExprAST(const std::string &Callee,
               std::vector<std::unique_ptr<ExprAST>> Args)
       : Callee(Callee), Args(std::move(Args)) {}
+
   Value *codegen() override;
 };
 
@@ -154,6 +162,7 @@ class PrototypeAST {
 public:
   PrototypeAST(const std::string &Name, std::vector<std::string> Args)
       : Name(Name), Args(std::move(Args)) {}
+
   Function *codegen();
   const std::string &getName() const { return Name; }
 };
@@ -167,8 +176,10 @@ public:
   FunctionAST(std::unique_ptr<PrototypeAST> Proto,
               std::unique_ptr<ExprAST> Body)
       : Proto(std::move(Proto)), Body(std::move(Body)) {}
+
   Function *codegen();
 };
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//

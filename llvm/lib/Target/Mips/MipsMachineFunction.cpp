@@ -68,7 +68,7 @@ void MipsFunctionInfo::createEhDataRegsFI() {
 void MipsFunctionInfo::createISRRegFI() {
   // ISRs require spill slots for Status & ErrorPC Coprocessor 0 registers.
   // The current implementation only supports Mips32r2+ not Mips64rX. Status
-  // is always 32 bits, ErrorPC is 32 or 64 bits dependant on architecture,
+  // is always 32 bits, ErrorPC is 32 or 64 bits dependent on architecture,
   // however Mips32r2+ is the supported architecture.
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
 

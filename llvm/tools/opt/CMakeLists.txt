@@ -30,6 +30,9 @@ add_llvm_tool(opt
   PassPrinters.cpp
   PrintSCC.cpp
   opt.cpp
+
+  DEPENDS
+  intrinsics_gen
   )
 export_executable_symbols(opt)
 

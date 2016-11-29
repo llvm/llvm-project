@@ -16,7 +16,7 @@ set(SOURCES
 
 set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/lto.exports)
 
-add_llvm_library(LTO SHARED ${SOURCES})
+add_llvm_library(LTO SHARED ${SOURCES} DEPENDS intrinsics_gen)
 
 install(FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/lto.h
   DESTINATION include/llvm-c

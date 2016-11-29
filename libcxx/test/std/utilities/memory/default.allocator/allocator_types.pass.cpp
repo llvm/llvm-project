@@ -32,6 +32,8 @@
 #include <type_traits>
 #include <cstddef>
 
+#include "test_macros.h"
+
 int main()
 {
     static_assert((std::is_same<std::allocator<char>::size_type, std::size_t>::value), "");
@@ -45,7 +47,7 @@ int main()
                                 std::allocator<int> >::value), "");
 
     static_assert((std::is_same<std::allocator<      char>::is_always_equal, std::true_type>::value), "");
-    static_assert((std::is_same<std::allocator<const char>::is_always_equal, std::true_type>::value), "");
+    LIBCPP_STATIC_ASSERT((std::is_same<std::allocator<const char>::is_always_equal, std::true_type>::value), "");
 
     std::allocator<char> a;
     std::allocator<char> a2 = a;

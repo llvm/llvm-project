@@ -11,21 +11,20 @@
 #define LLVM_DEBUGINFO_MSF_STREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/DebugInfo/MSF/StreamArray.h"
-#include "llvm/DebugInfo/MSF/StreamInterface.h"
 #include "llvm/DebugInfo/MSF/StreamRef.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-
-#include <string>
+#include <cstdint>
+#include <type_traits>
 
 namespace llvm {
 namespace msf {
 
 class StreamWriter {
 public:
-  StreamWriter() {}
+  StreamWriter() = default;
   explicit StreamWriter(WritableStreamRef Stream);
 
   Error writeBytes(ArrayRef<uint8_t> Buffer);
@@ -57,7 +56,7 @@ public:
   }
 
   template <typename T> Error writeArray(ArrayRef<T> Array) {
-    if (Array.size() == 0)
+    if (Array.empty())
       return Error::success();
 
     if (Array.size() > UINT32_MAX / sizeof(T))
@@ -86,7 +85,8 @@ private:
   WritableStreamRef Stream;
   uint32_t Offset = 0;
 };
-} // namespace msf
-} // namespace llvm
+
+} // end namespace msf
+} // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_MSF_STREAMWRITER_H

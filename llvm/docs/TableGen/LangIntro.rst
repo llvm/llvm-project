@@ -98,9 +98,6 @@ supported include:
     Note that this is sized by the number of bits given and will not be
     silently extended/truncated.
 
-``07654321``
-    octal integer value (indicated by a leading 0)
-
 ``7``
     decimal integer value
 

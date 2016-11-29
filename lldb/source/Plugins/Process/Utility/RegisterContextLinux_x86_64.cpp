@@ -179,6 +179,11 @@ RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
 
 size_t RegisterContextLinux_x86_64::GetGPRSize() const { return sizeof(GPR); }
 
+size_t RegisterContextLinux_x86_64::GetFXSAVEOffset() const {
+  return (LLVM_EXTENSION offsetof(UserArea, fpr) +
+          LLVM_EXTENSION offsetof(FPR, xstate));
+}
+
 const std::vector<lldb_private::RegisterInfo> *
 RegisterContextLinux_x86_64::GetDynamicRegisterInfoP() const {
   return &d_register_infos;

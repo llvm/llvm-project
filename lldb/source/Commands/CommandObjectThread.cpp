@@ -977,7 +977,9 @@ public:
             interpreter, "thread until",
             "Continue until a line number or address is reached by the "
             "current or specified thread.  Stops when returning from "
-            "the current function as a safety measure.",
+            "the current function as a safety measure.  "
+            "The target line number(s) are given as arguments, and if more than one"
+            " is provided, stepping will stop when the first one is hit.",
             nullptr,
             eCommandRequiresThread | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
@@ -1025,11 +1027,11 @@ protected:
         size_t num_args = command.GetArgumentCount();
         for (size_t i = 0; i < num_args; i++) {
           uint32_t line_number;
-          line_number = StringConvert::ToUInt32(command.GetArgumentAtIndex(0),
+          line_number = StringConvert::ToUInt32(command.GetArgumentAtIndex(i),
                                                 UINT32_MAX);
           if (line_number == UINT32_MAX) {
             result.AppendErrorWithFormat("invalid line number: '%s'.\n",
-                                         command.GetArgumentAtIndex(0));
+                                         command.GetArgumentAtIndex(i));
             result.SetStatus(eReturnStatusFailed);
             return false;
           } else

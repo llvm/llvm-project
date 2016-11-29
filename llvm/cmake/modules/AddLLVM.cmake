@@ -377,8 +377,6 @@ function(llvm_add_library name)
     endif()
   endif()
 
-  setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
-
   # Generate objlib
   if((ARG_SHARED AND ARG_STATIC) OR ARG_OBJECT)
     # Generate an obj library for both targets.
@@ -423,6 +421,8 @@ function(llvm_add_library name)
   else()
     add_library(${name} STATIC ${ALL_FILES})
   endif()
+
+  setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
   if(DEFINED windows_resource_file)
     set_windows_version_resource_properties(${name} ${windows_resource_file})
@@ -672,14 +672,14 @@ macro(add_llvm_executable name)
     # it forces Xcode to properly link the static library.
     list(APPEND ALL_FILES "${LLVM_MAIN_SRC_DIR}/cmake/dummy.cpp")
   endif()
-
-  setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
   
   if( EXCLUDE_FROM_ALL )
     add_executable(${name} EXCLUDE_FROM_ALL ${ALL_FILES})
   else()
     add_executable(${name} ${ALL_FILES})
   endif()
+
+  setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
   if(NOT ARG_NO_INSTALL_RPATH)
     llvm_setup_rpath(${name})
@@ -1397,5 +1397,5 @@ function(setup_dependency_debugging name)
   set(deny_intrinsics_gen "(deny file* (literal \"${LLVM_BINARY_DIR}/include/llvm/IR/Intrinsics.gen\"))")
 
   set(sandbox_command "sandbox-exec -p '(version 1) (allow default) ${deny_attributes_gen} ${deny_intrinsics_gen}'")
-  set_property(DIRECTORY PROPERTY RULE_LAUNCH_COMPILE ${sandbox_command})
+  set_target_properties(${name} PROPERTIES RULE_LAUNCH_COMPILE ${sandbox_command})
 endfunction()

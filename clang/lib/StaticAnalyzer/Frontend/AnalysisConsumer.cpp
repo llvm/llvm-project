@@ -201,7 +201,7 @@ public:
     DigestAnalyzerOptions();
     if (Opts->PrintStats) {
       llvm::EnableStatistics(false);
-      TUTotalTimer = new llvm::Timer("Analyzer Total Time");
+      TUTotalTimer = new llvm::Timer("time", "Analyzer Total Time");
     }
   }
 

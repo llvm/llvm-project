@@ -4,8 +4,7 @@
 // RUN: %clangxx_asan -DSHARED %s -shared -o %T/stack_trace_dlclose.so -fPIC
 // RUN: %clangxx_asan -DSO_DIR=\"%T\" %s %libdl -o %t
 // RUN: %env_asan_opts=exitcode=0 %run %t 2>&1 | FileCheck %s
-// XFAIL: arm-linux-gnueabi
-// XFAIL: armv7l-unknown-linux-gnueabihf
+// REQUIRES: stable-runtime
 
 #include <assert.h>
 #include <dlfcn.h>

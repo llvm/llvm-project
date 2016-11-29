@@ -19,6 +19,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -35,10 +36,12 @@ namespace {
 class SparcMCCodeEmitter : public MCCodeEmitter {
   SparcMCCodeEmitter(const SparcMCCodeEmitter &) = delete;
   void operator=(const SparcMCCodeEmitter &) = delete;
+  const MCInstrInfo &MCII;
   MCContext &Ctx;
 
 public:
-  SparcMCCodeEmitter(MCContext &ctx): Ctx(ctx) {}
+  SparcMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
+      : MCII(mcii), Ctx(ctx) {}
 
   ~SparcMCCodeEmitter() override {}
 
@@ -71,18 +74,25 @@ public:
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const;
 
+private:
+  uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
+  void verifyInstructionPredicates(const MCInst &MI,
+                                   uint64_t AvailableFeatures) const;
 };
 } // end anonymous namespace
 
 MCCodeEmitter *llvm::createSparcMCCodeEmitter(const MCInstrInfo &MCII,
                                               const MCRegisterInfo &MRI,
                                               MCContext &Ctx) {
-  return new SparcMCCodeEmitter(Ctx);
+  return new SparcMCCodeEmitter(MCII, Ctx);
 }
 
 void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   unsigned Bits = getBinaryCodeForInstr(MI, Fixups, STI);
 
   if (Ctx.getAsmInfo()->isLittleEndian()) {
@@ -215,6 +225,5 @@ getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-
-
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SparcGenMCCodeEmitter.inc"

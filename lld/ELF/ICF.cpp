@@ -57,13 +57,12 @@
 
 #include "ICF.h"
 #include "Config.h"
-#include "OutputSections.h"
 #include "SymbolTable.h"
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
-#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 
 using namespace lld;
 using namespace lld::elf;
@@ -71,101 +70,65 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 
-namespace lld {
-namespace elf {
+namespace {
 template <class ELFT> class ICF {
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::uint uintX_t;
-  typedef Elf_Rel_Impl<ELFT, false> Elf_Rel;
-
-  using Comparator = std::function<bool(const InputSection<ELFT> *,
-                                        const InputSection<ELFT> *)>;
-
 public:
   void run();
 
 private:
   uint64_t NextId = 1;
 
-  static void setLive(SymbolTable<ELFT> *S);
-  static uint64_t relSize(InputSection<ELFT> *S);
-  static uint64_t getHash(InputSection<ELFT> *S);
-  static bool isEligible(InputSectionBase<ELFT> *Sec);
-  static std::vector<InputSection<ELFT> *> getSections();
+  using Comparator = std::function<bool(const InputSection<ELFT> *,
+                                        const InputSection<ELFT> *)>;
 
-  void segregate(InputSection<ELFT> **Begin, InputSection<ELFT> **End,
-                 Comparator Eq);
+  void segregate(MutableArrayRef<InputSection<ELFT> *> Arr, Comparator Eq);
 
-  void forEachGroup(std::vector<InputSection<ELFT> *> &V, Comparator Eq);
-
-  template <class RelTy>
-  static bool relocationEq(ArrayRef<RelTy> RA, ArrayRef<RelTy> RB);
-
-  template <class RelTy>
-  static bool variableEq(const InputSection<ELFT> *A,
-                         const InputSection<ELFT> *B, ArrayRef<RelTy> RA,
-                         ArrayRef<RelTy> RB);
-
-  static bool equalsConstant(const InputSection<ELFT> *A,
-                             const InputSection<ELFT> *B);
-
-  static bool equalsVariable(const InputSection<ELFT> *A,
-                             const InputSection<ELFT> *B);
+  void
+  forEachGroup(std::vector<InputSection<ELFT> *> &V,
+               std::function<void(MutableArrayRef<InputSection<ELFT> *>)> Fn);
 };
-}
 }
 
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
-template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
-  uint64_t Flags = S->Flags;
-  return hash_combine(Flags, S->getSize(), S->NumRelocations);
+template <class ELFT> static uint64_t getHash(InputSection<ELFT> *S) {
+  return hash_combine(S->Flags, S->getSize(), S->NumRelocations);
 }
 
-// Returns true if Sec is subject of ICF.
-template <class ELFT> bool ICF<ELFT>::isEligible(InputSectionBase<ELFT> *Sec) {
-  if (!Sec->Live)
-    return false;
-  auto *S = dyn_cast<InputSection<ELFT>>(Sec);
-  if (!S)
-    return false;
-
+// Returns true if section S is subject of ICF.
+template <class ELFT> static bool isEligible(InputSection<ELFT> *S) {
   // .init and .fini contains instructions that must be executed to
   // initialize and finalize the process. They cannot and should not
   // be merged.
-  StringRef Name = S->Name;
-  if (Name == ".init" || Name == ".fini")
-    return false;
-
-  return (S->Flags & SHF_ALLOC) && !(S->Flags & SHF_WRITE);
+  return S->Live && (S->Flags & SHF_ALLOC) && !(S->Flags & SHF_WRITE) &&
+         S->Name != ".init" && S->Name != ".fini";
 }
 
-template <class ELFT>
-std::vector<InputSection<ELFT> *> ICF<ELFT>::getSections() {
+template <class ELFT> static std::vector<InputSection<ELFT> *> getSections() {
   std::vector<InputSection<ELFT> *> V;
-  for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
-    if (isEligible(S))
-      V.push_back(cast<InputSection<ELFT>>(S));
+  for (InputSectionBase<ELFT> *Sec : Symtab<ELFT>::X->Sections)
+    if (auto *S = dyn_cast<InputSection<ELFT>>(Sec))
+      if (isEligible(S))
+        V.push_back(S);
   return V;
 }
 
-// All sections between Begin and End must have the same group ID before
-// you call this function. This function compare sections between Begin
-// and End using Eq and assign new group IDs for new groups.
+// Before calling this function, all sections in Arr must have the
+// same group ID. This function compare sections in Arr using Eq and
+// assign new group IDs for new groups.
 template <class ELFT>
-void ICF<ELFT>::segregate(InputSection<ELFT> **Begin, InputSection<ELFT> **End,
+void ICF<ELFT>::segregate(MutableArrayRef<InputSection<ELFT> *> Arr,
                           Comparator Eq) {
-  // This loop rearranges [Begin, End) so that all sections that are
-  // equal in terms of Eq are contiguous. The algorithm is quadratic in
-  // the worst case, but that is not an issue in practice because the
-  // number of distinct sections in [Begin, End) is usually very small.
-  InputSection<ELFT> **I = Begin;
+  // This loop rearranges Arr so that all sections that are equal in
+  // terms of Eq are contiguous. The algorithm is quadratic in the
+  // worst case, but that is not an issue in practice because the
+  // number of distinct sections in Arr is usually very small.
+  InputSection<ELFT> **I = Arr.begin();
   for (;;) {
     InputSection<ELFT> *Head = *I;
     auto Bound = std::stable_partition(
-        I + 1, End, [&](InputSection<ELFT> *S) { return Eq(Head, S); });
-    if (Bound == End)
+        I + 1, Arr.end(), [&](InputSection<ELFT> *S) { return Eq(Head, S); });
+    if (Bound == Arr.end())
       return;
     uint64_t Id = NextId++;
     for (; I != Bound; ++I)
@@ -173,70 +136,58 @@ void ICF<ELFT>::segregate(InputSection<ELFT> **Begin, InputSection<ELFT> **End,
   }
 }
 
+// Call Fn for each section group having the same group ID.
 template <class ELFT>
-void ICF<ELFT>::forEachGroup(std::vector<InputSection<ELFT> *> &V,
-                             Comparator Eq) {
+void ICF<ELFT>::forEachGroup(
+    std::vector<InputSection<ELFT> *> &V,
+    std::function<void(MutableArrayRef<InputSection<ELFT> *>)> Fn) {
   for (InputSection<ELFT> **I = V.data(), **E = I + V.size(); I != E;) {
     InputSection<ELFT> *Head = *I;
     auto Bound = std::find_if(I + 1, E, [&](InputSection<ELFT> *S) {
       return S->GroupId != Head->GroupId;
     });
-    segregate(I, Bound, Eq);
+    Fn({I, Bound});
     I = Bound;
   }
 }
 
 // Compare two lists of relocations.
-template <class ELFT>
-template <class RelTy>
-bool ICF<ELFT>::relocationEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
-  const RelTy *IA = RelsA.begin();
-  const RelTy *EA = RelsA.end();
-  const RelTy *IB = RelsB.begin();
-  const RelTy *EB = RelsB.end();
-  if (EA - IA != EB - IB)
-    return false;
-  for (; IA != EA; ++IA, ++IB)
-    if (IA->r_offset != IB->r_offset ||
-        IA->getType(Config->Mips64EL) != IB->getType(Config->Mips64EL) ||
-        getAddend<ELFT>(*IA) != getAddend<ELFT>(*IB))
-      return false;
-  return true;
+template <class ELFT, class RelTy>
+static bool relocationEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
+  auto Eq = [](const RelTy &A, const RelTy &B) {
+    return A.r_offset == B.r_offset &&
+           A.getType(Config->Mips64EL) == B.getType(Config->Mips64EL) &&
+           getAddend<ELFT>(A) == getAddend<ELFT>(B);
+  };
+
+  return RelsA.size() == RelsB.size() &&
+         std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
 }
 
 // Compare "non-moving" part of two InputSections, namely everything
 // except relocation targets.
 template <class ELFT>
-bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
-                               const InputSection<ELFT> *B) {
-  if (A->NumRelocations != B->NumRelocations)
+static bool equalsConstant(const InputSection<ELFT> *A,
+                           const InputSection<ELFT> *B) {
+  if (A->NumRelocations != B->NumRelocations || A->Flags != B->Flags ||
+      A->getSize() != B->getSize() || A->Data != B->Data)
     return false;
 
-  if (A->AreRelocsRela) {
-    if (!relocationEq(A->relas(), B->relas()))
-      return false;
-  } else {
-    if (!relocationEq(A->rels(), B->rels()))
-      return false;
-  }
-
-  return A->Flags == B->Flags && A->getSize() == B->getSize() &&
-         A->Data == B->Data;
+  if (A->AreRelocsRela)
+    return relocationEq<ELFT>(A->relas(), B->relas());
+  return relocationEq<ELFT>(A->rels(), B->rels());
 }
 
-template <class ELFT>
-template <class RelTy>
-bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
-                           const InputSection<ELFT> *B, ArrayRef<RelTy> RelsA,
-                           ArrayRef<RelTy> RelsB) {
-  const RelTy *IA = RelsA.begin();
-  const RelTy *EA = RelsA.end();
-  const RelTy *IB = RelsB.begin();
-  for (; IA != EA; ++IA, ++IB) {
-    SymbolBody &SA = A->File->getRelocTargetSym(*IA);
-    SymbolBody &SB = B->File->getRelocTargetSym(*IB);
+// Compare two lists of relocations. Returns true if all pairs of
+// relocations point to the same section in terms of ICF.
+template <class ELFT, class RelTy>
+static bool variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
+                       const InputSection<ELFT> *B, ArrayRef<RelTy> RelsB) {
+  auto Eq = [&](const RelTy &RA, const RelTy &RB) {
+    SymbolBody &SA = A->getFile()->getRelocTargetSym(RA);
+    SymbolBody &SB = B->getFile()->getRelocTargetSym(RB);
     if (&SA == &SB)
-      continue;
+      return true;
 
     // Or, the symbols should be pointing to the same section
     // in terms of the group ID.
@@ -246,22 +197,21 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
       return false;
     if (DA->Value != DB->Value)
       return false;
-    InputSection<ELFT> *X = dyn_cast<InputSection<ELFT>>(DA->Section);
-    InputSection<ELFT> *Y = dyn_cast<InputSection<ELFT>>(DB->Section);
-    if (X && Y && X->GroupId && X->GroupId == Y->GroupId)
-      continue;
-    return false;
-  }
-  return true;
+    auto *X = dyn_cast<InputSection<ELFT>>(DA->Section);
+    auto *Y = dyn_cast<InputSection<ELFT>>(DB->Section);
+    return X && Y && X->GroupId && X->GroupId == Y->GroupId;
+  };
+
+  return std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
 }
 
 // Compare "moving" part of two InputSections, namely relocation targets.
 template <class ELFT>
-bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
-                               const InputSection<ELFT> *B) {
+static bool equalsVariable(const InputSection<ELFT> *A,
+                           const InputSection<ELFT> *B) {
   if (A->AreRelocsRela)
-    return variableEq(A, B, A->relas(), B->relas());
-  return variableEq(A, B, A->rels(), B->rels());
+    return variableEq(A, A->relas(), B, B->relas());
+  return variableEq(A, A->rels(), B, B->rels());
 }
 
 // The main function of ICF.
@@ -269,14 +219,14 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values as section group IDs. Therefore,
   // if two sections have the same ID, they are likely (but not
   // guaranteed) to have the same static contents in terms of ICF.
-  std::vector<InputSection<ELFT> *> V = getSections();
-  for (InputSection<ELFT> *S : V)
+  std::vector<InputSection<ELFT> *> Sections = getSections<ELFT>();
+  for (InputSection<ELFT> *S : Sections)
     // Set MSB on to avoid collisions with serial group IDs
     S->GroupId = getHash(S) | (uint64_t(1) << 63);
 
-  // From now on, sections in V are ordered so that sections in
+  // From now on, sections in Sections are ordered so that sections in
   // the same group are consecutive in the vector.
-  std::stable_sort(V.begin(), V.end(),
+  std::stable_sort(Sections.begin(), Sections.end(),
                    [](InputSection<ELFT> *A, InputSection<ELFT> *B) {
                      if (A->GroupId != B->GroupId)
                        return A->GroupId < B->GroupId;
@@ -286,34 +236,31 @@ template <class ELFT> void ICF<ELFT>::run() {
                    });
 
   // Compare static contents and assign unique IDs for each static content.
-  forEachGroup(V, equalsConstant);
+  forEachGroup(Sections, [&](MutableArrayRef<InputSection<ELFT> *> V) {
+    segregate(V, equalsConstant<ELFT>);
+  });
 
   // Split groups by comparing relocations until we get a convergence.
   int Cnt = 1;
   for (;;) {
     ++Cnt;
     uint64_t Id = NextId;
-    forEachGroup(V, equalsVariable);
+    forEachGroup(Sections, [&](MutableArrayRef<InputSection<ELFT> *> V) {
+      segregate(V, equalsVariable<ELFT>);
+    });
     if (Id == NextId)
       break;
   }
   log("ICF needed " + Twine(Cnt) + " iterations.");
 
   // Merge sections in the same group.
-  for (auto I = V.begin(), E = V.end(); I != E;) {
-    InputSection<ELFT> *Head = *I++;
-    auto Bound = std::find_if(I, E, [&](InputSection<ELFT> *S) {
-      return Head->GroupId != S->GroupId;
-    });
-    if (I == Bound)
-      continue;
-    log("selected " + Head->Name);
-    while (I != Bound) {
-      InputSection<ELFT> *S = *I++;
+  forEachGroup(Sections, [](MutableArrayRef<InputSection<ELFT> *> V) {
+    log("selected " + V[0]->Name);
+    for (InputSection<ELFT> *S : V.slice(1)) {
       log("  removed " + S->Name);
-      Head->replace(S);
+      V[0]->replace(S);
     }
-  }
+  });
 }
 
 // ICF entry point function.

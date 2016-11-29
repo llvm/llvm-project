@@ -34,12 +34,11 @@ namespace {
 class R600MCCodeEmitter : public AMDGPUMCCodeEmitter {
   R600MCCodeEmitter(const R600MCCodeEmitter &) = delete;
   void operator=(const R600MCCodeEmitter &) = delete;
-  const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
 
 public:
   R600MCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri)
-    : MCII(mcii), MRI(mri) { }
+    : AMDGPUMCCodeEmitter(mcii), MRI(mri) { }
 
   /// \brief Encode the instruction and write it to the OS.
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -86,6 +85,9 @@ MCCodeEmitter *llvm::createR600MCCodeEmitter(const MCInstrInfo &MCII,
 void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (MI.getOpcode() == AMDGPU::RETURN ||
     MI.getOpcode() == AMDGPU::FETCH_CLAUSE ||
@@ -178,4 +180,5 @@ uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return MO.getImm();
 }
 
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "AMDGPUGenMCCodeEmitter.inc"

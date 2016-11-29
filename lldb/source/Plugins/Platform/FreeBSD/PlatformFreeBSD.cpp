@@ -582,9 +582,9 @@ lldb::ProcessSP PlatformFreeBSD::Attach(ProcessAttachInfo &attach_info,
       TargetSP new_target_sp;
       ArchSpec emptyArchSpec;
 
-      error = debugger.GetTargetList().CreateTarget(
-          debugger, NULL, emptyArchSpec, false, m_remote_platform_sp,
-          new_target_sp);
+      error = debugger.GetTargetList().CreateTarget(debugger, "", emptyArchSpec,
+                                                    false, m_remote_platform_sp,
+                                                    new_target_sp);
       target = new_target_sp.get();
     } else
       error.Clear();

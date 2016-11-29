@@ -15,6 +15,7 @@
 
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
+#include "Types.h"
 #include "SequenceToOffsetTable.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -103,7 +104,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
   OS << "namespace llvm {\n\n";
 
   OS << "class MCRegisterClass;\n"
-     << "extern const MCRegisterClass " << Namespace
+     << "extern const MCRegisterClass " << Target.getName()
      << "MCRegisterClasses[];\n\n";
 
   if (!Namespace.empty())
@@ -175,15 +176,6 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
 
 static void printInt(raw_ostream &OS, int Val) {
   OS << Val;
-}
-
-static const char *getMinimalTypeForRange(uint64_t Range) {
-  assert(Range < 0xFFFFFFFFULL && "Enum too large");
-  if (Range > 0xFFFF)
-    return "uint32_t";
-  if (Range > 0xFF)
-    return "uint16_t";
-  return "uint8_t";
 }
 
 void RegisterInfoEmitter::
@@ -264,8 +256,9 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
   OS << "// Get the register unit pressure limit for this dimension.\n"
      << "// This limit must be adjusted dynamically for reserved registers.\n"
      << "unsigned " << ClassName << "::\n"
-     << "getRegPressureSetLimit(const MachineFunction &MF, unsigned Idx) const {\n"
-     << "  static const " << getMinimalTypeForRange(MaxRegUnitWeight)
+     << "getRegPressureSetLimit(const MachineFunction &MF, unsigned Idx) const "
+        "{\n"
+     << "  static const " << getMinimalTypeForRange(MaxRegUnitWeight, 32)
      << " PressureLimitTable[] = {\n";
   for (unsigned i = 0; i < NumSets; ++i ) {
     const RegUnitSet &RegUnits = RegBank.getRegSetAt(i);
@@ -306,7 +299,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
      << "/// Returns a -1 terminated array of pressure set IDs\n"
      << "const int* " << ClassName << "::\n"
      << "getRegClassPressureSets(const TargetRegisterClass *RC) const {\n";
-  OS << "  static const " << getMinimalTypeForRange(PSetsSeqs.size()-1)
+  OS << "  static const " << getMinimalTypeForRange(PSetsSeqs.size() - 1, 32)
      << " RCSetStartTable[] = {\n    ";
   for (unsigned i = 0, e = NumRCs; i != e; ++i) {
     OS << PSetsSeqs.get(PSets[i]) << ",";
@@ -322,7 +315,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
      << "getRegUnitPressureSets(unsigned RegUnit) const {\n"
      << "  assert(RegUnit < " << RegBank.getNumNativeRegUnits()
      << " && \"invalid register unit\");\n";
-  OS << "  static const " << getMinimalTypeForRange(PSetsSeqs.size()-1)
+  OS << "  static const " << getMinimalTypeForRange(PSetsSeqs.size() - 1, 32)
      << " RUSetStartTable[] = {\n    ";
   for (unsigned UnitIdx = 0, UnitEnd = RegBank.getNumNativeRegUnits();
        UnitIdx < UnitEnd; ++UnitIdx) {
@@ -683,15 +676,15 @@ RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
 
   // Output the row map if there is multiple rows.
   if (Rows.size() > 1) {
-    OS << "  static const " << getMinimalTypeForRange(Rows.size()) << " RowMap["
-       << SubRegIndicesSize << "] = {\n    ";
+    OS << "  static const " << getMinimalTypeForRange(Rows.size(), 32)
+       << " RowMap[" << SubRegIndicesSize << "] = {\n    ";
     for (unsigned i = 0, e = SubRegIndicesSize; i != e; ++i)
       OS << RowMap[i] << ", ";
     OS << "\n  };\n";
   }
 
   // Output the rows.
-  OS << "  static const " << getMinimalTypeForRange(SubRegIndicesSize + 1)
+  OS << "  static const " << getMinimalTypeForRange(SubRegIndicesSize + 1, 32)
      << " Rows[" << Rows.size() << "][" << SubRegIndicesSize << "] = {\n";
   for (unsigned r = 0, re = Rows.size(); r != re; ++r) {
     OS << "    { ";

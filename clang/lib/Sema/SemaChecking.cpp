@@ -4194,7 +4194,7 @@ bool Sema::SemaBuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
 
     SmallVector<int, 5> Ranges;
     if (FiveFields)
-      Ranges.append({IsAArch64Builtin ? 1 : 15, 7, 7, 15, 15});
+      Ranges.append({IsAArch64Builtin ? 1 : 15, 7, 15, 15, 7});
     else
       Ranges.append({15, 7, 15});
 

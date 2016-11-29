@@ -246,7 +246,7 @@ private:
   RecurrenceKind Kind;
   // If this a min/max recurrence the kind of recurrence.
   MinMaxRecurrenceKind MinMaxKind;
-  // First occurance of unasfe algebra in the PHI's use-chain.
+  // First occurrence of unasfe algebra in the PHI's use-chain.
   Instruction *UnsafeAlgebraInst;
   // The type of the recurrence.
   Type *RecurrenceType;

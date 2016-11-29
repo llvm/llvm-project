@@ -133,18 +133,34 @@ template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
+  // Create linker-synthesized sections such as .got or .plt.
+  // Such sections are of type input section.
   createSyntheticSections();
 
+  // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
     addReservedSymbols();
 
+  // Some architectures use small displacements for jump instructions.
+  // It is linker's responsibility to create thunks containing long
+  // jump instructions if jump targets are too far. Create thunks.
   if (Target->NeedsThunks)
     forEachRelSec(createThunks<ELFT>);
 
+  // Create output sections.
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
-    Script<ELFT>::X->createSections(Factory);
+    // If linker script contains SECTIONS commands, let it create sections.
+    Script<ELFT>::X->processCommands(Factory);
+
+    // Linker scripts may have left some input sections unassigned.
+    // Assign such sections using the default rule.
+    Script<ELFT>::X->addOrphanSections(Factory);
   } else {
+    // If linker script does not contain SECTIONS commands, create
+    // output sections by default rules. We still need to give the
+    // linker script a chance to run, because it might contain
+    // non-SECTIONS commands such as ASSERT.
     createSections();
     Script<ELFT>::X->processCommands(Factory);
   }
@@ -152,6 +168,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
 
+  // Now that we have a complete set of output sections. This function
+  // completes section contents. For example, we need to add strings
+  // to the string table, and add entries to .got and .plt.
+  // finalizeSections does that.
   finalizeSections();
   if (HasError)
     return;
@@ -178,6 +198,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     fixAbsoluteSymbols();
   }
 
+  // Write the result down to a file.
   openFile();
   if (HasError)
     return;
@@ -187,17 +208,21 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     writeSectionsBinary();
   }
+
+  // Backfill .note.gnu.build-id section content. This is done at last
+  // because the content is usually a hash value of the entire output file.
   writeBuildId();
   if (HasError)
     return;
+
   if (auto EC = Buffer->commit())
     error(EC, "failed to write to the output file");
-  if (Config->ExitEarly) {
-    // Flush the output streams and exit immediately.  A full shutdown is a good
-    // test that we are keeping track of all allocated memory, but actually
-    // freeing it is a waste of time in a regular linker run.
+
+  // Flush the output streams and exit immediately. A full shutdown
+  // is a good test that we are keeping track of all allocated memory,
+  // but actually freeing it is a waste of time in a regular linker run.
+  if (Config->ExitEarly)
     exitLld(0);
-  }
 }
 
 // Initialize Out<ELFT> members.
@@ -212,7 +237,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
-  Out<ELFT>::Plt = make<PltSection<ELFT>>();
+  In<ELFT>::Plt = make<PltSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
@@ -239,11 +264,11 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Out<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
 
   if (Config->GnuHash)
-    Out<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
+    In<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
   if (Config->SysvHash)
-    Out<ELFT>::HashTab = make<HashTableSection<ELFT>>();
+    In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
   if (Config->GdbIndex)
-    Out<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
+    In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
 
   In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
@@ -943,28 +968,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Sec->ShName = In<ELFT>::ShStrTab->addString(Sec->getName());
   }
 
-  // FIXME: this should be removed after converting GnuHashTableSection
-  // to input section.
-  // Finalizers fix each section's size.
-  // .dynsym is finalized early since that may fill up .gnu.hash.
-  finalizeSynthetic<ELFT>({In<ELFT>::DynSymTab});
-
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSectionBase *Sec : OutputSections)
     Sec->finalize();
 
-  // Dynamic section must be the last one in this list.
+  // Dynamic section must be the last one in this list and dynamic
+  // symbol table section (DynSymTab) must be the first one.
   finalizeSynthetic<ELFT>(
-      {In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
-       In<ELFT>::DynStrTab, In<ELFT>::Got, In<ELFT>::MipsGot, In<ELFT>::GotPlt,
-       In<ELFT>::RelaDyn, In<ELFT>::RelaPlt, In<ELFT>::Dynamic});
-
-  // Now that all output offsets are fixed. Finalize mergeable sections
-  // to fix their maps from input offsets to output offsets.
-  for (OutputSectionBase *Sec : OutputSections)
-    Sec->finalizePieces();
+      {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
+       In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab,
+       In<ELFT>::DynStrTab, In<ELFT>::GdbIndex, In<ELFT>::Got,
+       In<ELFT>::MipsGot, In<ELFT>::GotPlt, In<ELFT>::RelaDyn,
+       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::Dynamic});
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -990,8 +1007,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
-  if (Out<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
-    Add(Out<ELFT>::GdbIndex);
+  if (In<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
+    addInputSec(In<ELFT>::GdbIndex);
   addInputSec(In<ELFT>::SymTab);
   addInputSec(In<ELFT>::ShStrTab);
   addInputSec(In<ELFT>::StrTab);
@@ -1005,8 +1022,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     if (HasVerNeed)
       Add(Out<ELFT>::VerNeed);
 
-    Add(Out<ELFT>::GnuHashTab);
-    Add(Out<ELFT>::HashTab);
+    addInputSec(In<ELFT>::GnuHashTab);
+    addInputSec(In<ELFT>::HashTab);
     addInputSec(In<ELFT>::Dynamic);
     addInputSec(In<ELFT>::DynStrTab);
     if (In<ELFT>::RelaDyn->hasRelocs())
@@ -1031,8 +1048,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   if (!In<ELFT>::GotPlt->empty())
     addInputSec(In<ELFT>::GotPlt);
 
-  if (!Out<ELFT>::Plt->empty())
-    Add(Out<ELFT>::Plt);
+  if (!In<ELFT>::Plt->empty())
+    addInputSec(In<ELFT>::Plt);
   if (!Out<ELFT>::EhFrame->empty())
     Add(Out<ELFT>::EhFrameHdr);
   if (Out<ELFT>::Bss->Size > 0)
@@ -1487,61 +1504,6 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
       Sec->writeTo(Buf + Sec->Offset);
 }
 
-// Convert the .ARM.exidx table entries that use relative PREL31 offsets to
-// Absolute addresses. This form is internal to LLD and is only used to
-// make reordering the table simpler.
-static void ARMExidxEntryPrelToAbs(uint8_t *Loc, uint64_t EntryVA) {
-  uint64_t Addr = Target->getImplicitAddend(Loc, R_ARM_PREL31) + EntryVA;
-  bool InlineEntry =
-      (read32le(Loc + 4) == 1 || (read32le(Loc + 4) & 0x80000000));
-  if (InlineEntry)
-    // Set flag in unused bit of code address so that when we convert back we
-    // know which table entries to leave alone.
-    Addr |= 0x1;
-  else
-    write32le(Loc + 4,
-              Target->getImplicitAddend(Loc + 4, R_ARM_PREL31) + EntryVA + 4);
-  write32le(Loc, Addr);
-}
-
-// Convert the .ARM.exidx table entries from the internal to LLD form using
-// absolute addresses back to relative PREL31 offsets.
-static void ARMExidxEntryAbsToPrel(uint8_t *Loc, uint64_t EntryVA) {
-  uint64_t Off = read32le(Loc) - EntryVA;
-  // ARMExidxEntryPreltoAbs sets bit 0 if the table entry has inline data
-  // that is not an address
-  bool InlineEntry = Off & 0x1;
-  Target->relocateOne(Loc, R_ARM_PREL31, Off & ~0x1);
-  if (!InlineEntry)
-    Target->relocateOne(Loc + 4, R_ARM_PREL31,
-                        read32le(Loc + 4) - (EntryVA + 4));
-}
-
-// The table formed by the .ARM.exidx OutputSection has entries with two
-// 4-byte fields:
-// | PREL31 offset to function | Action to take for function |
-// The table must be ordered in ascending virtual address of the functions
-// identified by the first field of the table. Instead of using the
-// SHF_LINK_ORDER dependency to reorder the sections prior to relocation we
-// sort the table post-relocation.
-// Ref: Exception handling ABI for the ARM architecture
-static void sortARMExidx(uint8_t *Buf, uint64_t OutSecVA, uint64_t Size) {
-  struct ARMExidxEntry {
-    ulittle32_t Target;
-    ulittle32_t Action;
-  };
-  ARMExidxEntry *Start = (ARMExidxEntry *)Buf;
-  size_t NumEnt = Size / sizeof(ARMExidxEntry);
-  for (uint64_t Off = 0; Off < Size; Off += 8)
-    ARMExidxEntryPrelToAbs(Buf + Off, OutSecVA + Off);
-  std::stable_sort(Start, Start + NumEnt,
-                   [](const ARMExidxEntry &A, const ARMExidxEntry &B) {
-                     return A.Target < B.Target;
-                   });
-  for (uint64_t Off = 0; Off < Size; Off += 8)
-    ARMExidxEntryAbsToPrel(Buf + Off, OutSecVA + Off);
-}
-
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
   uint8_t *Buf = Buffer->getBufferStart();
@@ -1564,11 +1526,6 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSectionBase *Sec : OutputSections)
     if (Sec != Out<ELFT>::Opd && Sec != Out<ELFT>::EhFrameHdr)
       Sec->writeTo(Buf + Sec->Offset);
-
-  OutputSectionBase *ARMExidx = findSection(".ARM.exidx");
-  if (!Config->Relocatable)
-    if (auto *OS = dyn_cast_or_null<OutputSection<ELFT>>(ARMExidx))
-      sortARMExidx(Buf + OS->Offset, OS->Addr, OS->Size);
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore
   // it should be written after .eh_frame is written.

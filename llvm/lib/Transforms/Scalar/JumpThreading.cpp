@@ -1603,7 +1603,7 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
 }
 
 /// Create a new basic block that will be the predecessor of BB and successor of
-/// all blocks in Preds. When profile data is availble, update the frequency of
+/// all blocks in Preds. When profile data is available, update the frequency of
 /// this new block.
 BasicBlock *JumpThreadingPass::SplitBlockPreds(BasicBlock *BB,
                                                ArrayRef<BasicBlock *> Preds,

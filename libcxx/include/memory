@@ -2105,44 +2105,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp(_T1_param __t1, _T2_param __t2)
         : __first_(_VSTD::forward<_T1_param>(__t1)), __second_(_VSTD::forward<_T2_param>(__t2)) {}
 
-#if defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_constructible<_T1>::value &&
-                   is_nothrow_copy_constructible<_T2>::value)
-        : __first_(__p.first()),
-          __second_(__p.second()) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_assignable<_T1>::value &&
-                   is_nothrow_copy_assignable<_T2>::value)
-        {
-            __first_ = __p.first();
-            __second_ = __p.second();
-            return *this;
-        }
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_constructible<_T1>::value &&
-                   is_nothrow_move_constructible<_T2>::value)
-        : __first_(_VSTD::forward<_T1>(__p.first())),
-          __second_(_VSTD::forward<_T2>(__p.second())) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_assignable<_T1>::value &&
-                   is_nothrow_move_assignable<_T2>::value)
-        {
-            __first_ = _VSTD::forward<_T1>(__p.first());
-            __second_ = _VSTD::forward<_T2>(__p.second());
-            return *this;
-        }
-
-#endif  // defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
@@ -2197,42 +2159,6 @@ public:
         : __second_(_VSTD::forward<_T2_param>(__t2)) {}
     _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp(_T1_param __t1, _T2_param __t2)
         : _T1(_VSTD::forward<_T1_param>(__t1)), __second_(_VSTD::forward<_T2_param>(__t2)) {}
-
-#if defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_constructible<_T1>::value &&
-                   is_nothrow_copy_constructible<_T2>::value)
-        : _T1(__p.first()), __second_(__p.second()) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_assignable<_T1>::value &&
-                   is_nothrow_copy_assignable<_T2>::value)
-        {
-            _T1::operator=(__p.first());
-            __second_ = __p.second();
-            return *this;
-        }
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_constructible<_T1>::value &&
-                   is_nothrow_move_constructible<_T2>::value)
-        : _T1(_VSTD::move(__p.first())), __second_(_VSTD::forward<_T2>(__p.second())) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_assignable<_T1>::value &&
-                   is_nothrow_move_assignable<_T2>::value)
-        {
-            _T1::operator=(_VSTD::move(__p.first()));
-            __second_ = _VSTD::forward<_T2>(__p.second());
-            return *this;
-        }
-
-#endif  // defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
@@ -2290,42 +2216,6 @@ public:
                    is_nothrow_move_constructible<_T2>::value)
         : _T2(_VSTD::forward<_T2_param>(__t2)), __first_(_VSTD::forward<_T1_param>(__t1)) {}
 
-#if defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_constructible<_T1>::value &&
-                   is_nothrow_copy_constructible<_T2>::value)
-        : _T2(__p.second()), __first_(__p.first()) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_assignable<_T1>::value &&
-                   is_nothrow_copy_assignable<_T2>::value)
-        {
-            _T2::operator=(__p.second());
-            __first_ = __p.first();
-            return *this;
-        }
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_constructible<_T1>::value &&
-                   is_nothrow_move_constructible<_T2>::value)
-        : _T2(_VSTD::forward<_T2>(__p.second())), __first_(_VSTD::move(__p.first())) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_assignable<_T1>::value &&
-                   is_nothrow_move_assignable<_T2>::value)
-        {
-            _T2::operator=(_VSTD::forward<_T2>(__p.second()));
-            __first_ = _VSTD::move(__p.first());
-            return *this;
-        }
-
-#endif  // defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
@@ -2380,42 +2270,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY __libcpp_compressed_pair_imp(_T1_param __t1, _T2_param __t2)
         : _T1(_VSTD::forward<_T1_param>(__t1)), _T2(_VSTD::forward<_T2_param>(__t2)) {}
 
-#if defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_constructible<_T1>::value &&
-                   is_nothrow_copy_constructible<_T2>::value)
-        : _T1(__p.first()), _T2(__p.second()) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(const __libcpp_compressed_pair_imp& __p)
-        _NOEXCEPT_(is_nothrow_copy_assignable<_T1>::value &&
-                   is_nothrow_copy_assignable<_T2>::value)
-        {
-            _T1::operator=(__p.first());
-            _T2::operator=(__p.second());
-            return *this;
-        }
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_constructible<_T1>::value &&
-                   is_nothrow_move_constructible<_T2>::value)
-        : _T1(_VSTD::move(__p.first())), _T2(_VSTD::move(__p.second())) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __libcpp_compressed_pair_imp& operator=(__libcpp_compressed_pair_imp&& __p)
-        _NOEXCEPT_(is_nothrow_move_assignable<_T1>::value &&
-                   is_nothrow_move_assignable<_T2>::value)
-        {
-            _T1::operator=(_VSTD::move(__p.first()));
-            _T2::operator=(_VSTD::move(__p.second()));
-            return *this;
-        }
-
-#endif  // defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
@@ -2466,40 +2320,6 @@ public:
         : base(_VSTD::forward<_T2_param>(__t2)) {}
     _LIBCPP_INLINE_VISIBILITY __compressed_pair(_T1_param __t1, _T2_param __t2)
         : base(_VSTD::forward<_T1_param>(__t1), _VSTD::forward<_T2_param>(__t2)) {}
-
-#if defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-
-    _LIBCPP_INLINE_VISIBILITY
-    __compressed_pair(const __compressed_pair& __p)
-        _NOEXCEPT_(is_nothrow_copy_constructible<_T1>::value &&
-                   is_nothrow_copy_constructible<_T2>::value)
-        : base(__p) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __compressed_pair& operator=(const __compressed_pair& __p)
-        _NOEXCEPT_(is_nothrow_copy_assignable<_T1>::value &&
-                   is_nothrow_copy_assignable<_T2>::value)
-        {
-            base::operator=(__p);
-            return *this;
-        }
-
-    _LIBCPP_INLINE_VISIBILITY
-    __compressed_pair(__compressed_pair&& __p)
-        _NOEXCEPT_(is_nothrow_move_constructible<_T1>::value &&
-                   is_nothrow_move_constructible<_T2>::value)
-        : base(_VSTD::move(__p)) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __compressed_pair& operator=(__compressed_pair&& __p)
-        _NOEXCEPT_(is_nothrow_move_assignable<_T1>::value &&
-                   is_nothrow_move_assignable<_T2>::value)
-        {
-            base::operator=(_VSTD::move(__p));
-            return *this;
-        }
-
-#endif  // defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
@@ -2563,7 +2383,7 @@ struct __same_or_less_cv_qualified<_Ptr1, _Ptr2, false>
 template <class _Tp>
 struct _LIBCPP_TYPE_VIS_ONLY default_delete
 {
-#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
 #else
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT {}
@@ -2583,7 +2403,7 @@ template <class _Tp>
 struct _LIBCPP_TYPE_VIS_ONLY default_delete<_Tp[]>
 {
 public:
-#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
 #else
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT {}

@@ -388,4 +388,26 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.ppc.vsx.stxvll(<4 x i32>, i8*, i64)
 
+define <4 x i32> @test0(<4 x i32> %a) local_unnamed_addr #0 {
+entry:
+  %sub.i = sub <4 x i32> zeroinitializer, %a
+  ret <4 x i32> %sub.i
+
+; CHECK-LABEL: @test0
+; CHECK: vnegw 2, 2
+; CHECK: blr
+
+}
+
+define <2 x i64> @test1(<2 x i64> %a) local_unnamed_addr #0 {
+entry:
+  %sub.i = sub <2 x i64> zeroinitializer, %a
+  ret <2 x i64> %sub.i
+
+; CHECK-LABEL: @test1
+; CHECK: vnegd 2, 2
+; CHECK: blr
+
+}
+
 declare void @sink(...)

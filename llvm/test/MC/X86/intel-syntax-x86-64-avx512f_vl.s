@@ -1343,3 +1343,32 @@
 // CHECK: vcvtuqq2ps xmm16, ymmword ptr [rax]
 // CHECK: encoding: [0x62,0xe1,0xff,0x28,0x7a,0x00]
           vcvtuqq2psy xmm16, ymmword ptr [rax]
+
+// CHECK: vcvtps2pd xmm1 {k2} {z}, qword ptr [rcx + 128]
+// CHECK:  encoding: [0x62,0xf1,0x7c,0x8a,0x5a,0x49,0x10]
+          vcvtps2pd xmm1 {k2} {z}, qword ptr [rcx+0x80]
+
+// CHECK: vcvtps2pd xmm1 {k2}, qword ptr [rcx + 128]
+// CHECK:  encoding: [0x62,0xf1,0x7c,0x0a,0x5a,0x49,0x10]
+          vcvtps2pd xmm1 {k2}, qword ptr [rcx+0x80]
+
+// CHECK: vcvtudq2pd xmm2 {k2} {z}, qword ptr [rcx + 128]
+// CHECK: encoding: [0x62,0xf1,0x7e,0x8a,0x7a,0x51,0x10]
+          vcvtudq2pd xmm2 {k2} {z}, qword ptr [rcx+0x80]
+
+// CHECK: vcvtudq2pd xmm2 {k2}, qword ptr [rcx + 128]
+// CHECK: encoding: [0x62,0xf1,0x7e,0x0a,0x7a,0x51,0x10]
+          vcvtudq2pd xmm2 {k2}, qword ptr [rcx+0x80]
+
+// CHECK: vcvtudq2pd xmm2, qword ptr [rcx + 128]
+// CHECK: encoding: [0x62,0xf1,0x7e,0x08,0x7a,0x51,0x10]
+          vcvtudq2pd xmm2, qword ptr [rcx+0x80]
+
+// CHECK: vcvtdq2pd xmm2 {k1}, qword ptr [rcx]
+// CHECK: encoding: [0x62,0xf1,0x7e,0x09,0xe6,0x11]
+          vcvtdq2pd xmm2 {k1}, qword ptr [rcx]
+
+// CHECK: vcvtdq2pd xmm2 {k1} {z}, qword ptr [rcx]
+// CHECK: encoding: [0x62,0xf1,0x7e,0x89,0xe6,0x11]
+          vcvtdq2pd xmm2 {k1} {z}, qword ptr [rcx]
+

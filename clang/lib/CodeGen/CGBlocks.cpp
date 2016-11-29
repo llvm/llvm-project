@@ -16,6 +16,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantBuilder.h"
 #include "clang/AST/DeclObjC.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/CallSite.h"
@@ -77,63 +78,63 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
                                             const CGBlockInfo &blockInfo) {
   ASTContext &C = CGM.getContext();
 
-  llvm::Type *ulong = CGM.getTypes().ConvertType(C.UnsignedLongTy);
-  llvm::Type *i8p = nullptr;
+  llvm::IntegerType *ulong =
+    cast<llvm::IntegerType>(CGM.getTypes().ConvertType(C.UnsignedLongTy));
+  llvm::PointerType *i8p = nullptr;
   if (CGM.getLangOpts().OpenCL)
     i8p = 
       llvm::Type::getInt8PtrTy(
            CGM.getLLVMContext(), C.getTargetAddressSpace(LangAS::opencl_constant));
   else
-    i8p = CGM.getTypes().ConvertType(C.VoidPtrTy);
+    i8p = CGM.VoidPtrTy;
 
-  SmallVector<llvm::Constant*, 6> elements;
+  ConstantBuilder builder(CGM);
+  auto elements = builder.beginStruct();
 
   // reserved
-  elements.push_back(llvm::ConstantInt::get(ulong, 0));
+  elements.addInt(ulong, 0);
 
   // Size
   // FIXME: What is the right way to say this doesn't fit?  We should give
   // a user diagnostic in that case.  Better fix would be to change the
   // API to size_t.
-  elements.push_back(llvm::ConstantInt::get(ulong,
-                                            blockInfo.BlockSize.getQuantity()));
+  elements.addInt(ulong, blockInfo.BlockSize.getQuantity());
 
   // Optional copy/dispose helpers.
   if (blockInfo.NeedsCopyDispose) {
     // copy_func_helper_decl
-    elements.push_back(buildCopyHelper(CGM, blockInfo));
+    elements.add(buildCopyHelper(CGM, blockInfo));
 
     // destroy_func_decl
-    elements.push_back(buildDisposeHelper(CGM, blockInfo));
+    elements.add(buildDisposeHelper(CGM, blockInfo));
   }
 
   // Signature.  Mandatory ObjC-style method descriptor @encode sequence.
   std::string typeAtEncoding =
     CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
-  elements.push_back(llvm::ConstantExpr::getBitCast(
+  elements.add(llvm::ConstantExpr::getBitCast(
     CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer(), i8p));
   
   // GC layout.
   if (C.getLangOpts().ObjC1) {
     if (CGM.getLangOpts().getGC() != LangOptions::NonGC)
-      elements.push_back(CGM.getObjCRuntime().BuildGCBlockLayout(CGM, blockInfo));
+      elements.add(CGM.getObjCRuntime().BuildGCBlockLayout(CGM, blockInfo));
     else
-      elements.push_back(CGM.getObjCRuntime().BuildRCBlockLayout(CGM, blockInfo));
+      elements.add(CGM.getObjCRuntime().BuildRCBlockLayout(CGM, blockInfo));
   }
   else
-    elements.push_back(llvm::Constant::getNullValue(i8p));
-
-  llvm::Constant *init = llvm::ConstantStruct::getAnon(elements);
+    elements.addNullPointer(i8p);
 
   unsigned AddrSpace = 0;
   if (C.getLangOpts().OpenCL)
     AddrSpace = C.getTargetAddressSpace(LangAS::opencl_constant);
+
   llvm::GlobalVariable *global =
-    new llvm::GlobalVariable(CGM.getModule(), init->getType(), true,
-                             llvm::GlobalValue::InternalLinkage,
-                             init, "__block_descriptor_tmp", nullptr,
-                             llvm::GlobalValue::NotThreadLocal,
-                             AddrSpace);
+    elements.finishAndCreateGlobal("__block_descriptor_tmp",
+                                   CGM.getPointerAlign(),
+                                   /*constant*/ true,
+                                   llvm::GlobalValue::InternalLinkage,
+                                   AddrSpace);
 
   return llvm::ConstantExpr::getBitCast(global, CGM.getBlockDescriptorType());
 }
@@ -1080,36 +1081,31 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
   assert(blockInfo.CanBeGlobal);
 
   // Generate the constants for the block literal initializer.
-  llvm::Constant *fields[BlockHeaderSize];
+  ConstantBuilder builder(CGM);
+  auto fields = builder.beginStruct();
 
   // isa
-  fields[0] = CGM.getNSConcreteGlobalBlock();
+  fields.add(CGM.getNSConcreteGlobalBlock());
 
   // __flags
   BlockFlags flags = BLOCK_IS_GLOBAL | BLOCK_HAS_SIGNATURE;
   if (blockInfo.UsesStret) flags |= BLOCK_USE_STRET;
                                       
-  fields[1] = llvm::ConstantInt::get(CGM.IntTy, flags.getBitMask());
+  fields.addInt(CGM.IntTy, flags.getBitMask());
 
   // Reserved
-  fields[2] = llvm::Constant::getNullValue(CGM.IntTy);
+  fields.addInt(CGM.IntTy, 0);
 
   // Function
-  fields[3] = blockFn;
+  fields.add(blockFn);
 
   // Descriptor
-  fields[4] = buildBlockDescriptor(CGM, blockInfo);
+  fields.add(buildBlockDescriptor(CGM, blockInfo));
 
-  llvm::Constant *init = llvm::ConstantStruct::getAnon(fields);
-
-  llvm::GlobalVariable *literal =
-    new llvm::GlobalVariable(CGM.getModule(),
-                             init->getType(),
-                             /*constant*/ true,
-                             llvm::GlobalVariable::InternalLinkage,
-                             init,
-                             "__block_literal_global");
-  literal->setAlignment(blockInfo.BlockAlign.getQuantity());
+  llvm::Constant *literal =
+    fields.finishAndCreateGlobal("__block_literal_global",
+                                 blockInfo.BlockAlign,
+                                 /*constant*/ true);
 
   // Return a constant of the appropriately-casted type.
   llvm::Type *requiredType =

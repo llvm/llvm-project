@@ -4902,43 +4902,26 @@ def MOVPQI2QIrr : S2I<0xD6, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
 def : InstAlias<"vmovq\t{$src, $dst|$dst, $src}",
                 (VMOVPQI2QIrr VR128L:$dst, VR128H:$src), 0>;
 
-//===---------------------------------------------------------------------===//
-// Store / copy lower 64-bits of a XMM register.
-//
-let ExeDomain = SSEPackedInt, isCodeGenOnly = 1, AddedComplexity = 20 in {
-def VMOVZQI2PQIrm : I<0x7E, MRMSrcMem, (outs VR128:$dst), (ins i64mem:$src),
-                     "vmovq\t{$src, $dst|$dst, $src}",
-                     [(set VR128:$dst,
-                       (v2i64 (X86vzmovl (v2i64 (scalar_to_vector
-                                                 (loadi64 addr:$src))))))],
-                                                 IIC_SSE_MOVDQ>,
-                     XS, VEX, Requires<[UseAVX]>, Sched<[WriteLoad]>;
-
-def MOVZQI2PQIrm : I<0x7E, MRMSrcMem, (outs VR128:$dst), (ins i64mem:$src),
-                     "movq\t{$src, $dst|$dst, $src}",
-                     [(set VR128:$dst,
-                       (v2i64 (X86vzmovl (v2i64 (scalar_to_vector
-                                                 (loadi64 addr:$src))))))],
-                                                 IIC_SSE_MOVDQ>,
-                     XS, Requires<[UseSSE2]>, Sched<[WriteLoad]>;
-} // ExeDomain, isCodeGenOnly, AddedComplexity
-
 let Predicates = [UseAVX], AddedComplexity = 20 in {
+  def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
+            (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4f32 addr:$src)))),
-            (VMOVZQI2PQIrm addr:$src)>;
+            (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)),
-            (VMOVZQI2PQIrm addr:$src)>;
+            (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v4i64 (X86vzmovl (insert_subvector undef,
               (v2i64 (scalar_to_vector (loadi64 addr:$src))), (iPTR 0)))),
-            (SUBREG_TO_REG (i64 0), (VMOVZQI2PQIrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (i64 0), (VMOVQI2PQIrm addr:$src), sub_xmm)>;
   def : Pat<(v4i64 (X86vzload addr:$src)),
-            (SUBREG_TO_REG (i64 0), (VMOVZQI2PQIrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (i64 0), (VMOVQI2PQIrm addr:$src), sub_xmm)>;
 }
 
 let Predicates = [UseSSE2], AddedComplexity = 20 in {
+  def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
+            (MOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4f32 addr:$src)))),
-            (MOVZQI2PQIrm addr:$src)>;
-  def : Pat<(v2i64 (X86vzload addr:$src)), (MOVZQI2PQIrm addr:$src)>;
+            (MOVQI2PQIrm addr:$src)>;
+  def : Pat<(v2i64 (X86vzload addr:$src)), (MOVQI2PQIrm addr:$src)>;
 }
 
 //===---------------------------------------------------------------------===//

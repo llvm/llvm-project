@@ -16,8 +16,10 @@
 #include "Driver.h"
 #include "Error.h"
 #include "Memory.h"
+#include "ScriptParser.h"
 #include "lld/Config/Version.h"
 #include "lld/Core/Reproduce.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
@@ -81,13 +83,37 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Parse options and then do error checking.
   Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
   if (MissingCount)
-    error(Twine("missing arg value for \"") + Args.getArgString(MissingIndex) +
-          "\", expected " + Twine(MissingCount) +
-          (MissingCount == 1 ? " argument.\n" : " arguments"));
+    error(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
 
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + Arg->getSpelling());
   return Args;
+}
+
+// Parse the --dynamic-list argument.  A dynamic list is in the form
+//
+//  { symbol1; symbol2; [...]; symbolN };
+//
+// Multiple groups can be defined in the same file, and they are merged
+// into a single group.
+void elf::parseDynamicList(MemoryBufferRef MB) {
+  class Parser : public ScriptParserBase {
+  public:
+    Parser(StringRef S) : ScriptParserBase(S) {}
+
+    void run() {
+      while (!atEOF()) {
+        expect("{");
+        while (!Error && !consume("}")) {
+          Config->DynamicList.push_back(unquote(next()));
+          expect(";");
+        }
+        expect(";");
+      }
+    }
+  };
+
+  Parser(MB.getBuffer()).run();
 }
 
 void elf::printHelp(const char *Argv0) {
@@ -125,41 +151,39 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
   return Data.str();
 }
 
-std::string elf::findFromSearchPaths(StringRef Path) {
-  for (StringRef Dir : Config->SearchPaths) {
-    std::string FullPath = buildSysrootedPath(Dir, Path);
-    if (fs::exists(FullPath))
-      return FullPath;
-  }
-  return "";
+// Find a file by concatenating given paths. If a resulting path
+// starts with "=", the character is replaced with a --sysroot value.
+static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
+  SmallString<128> S;
+  if (Path1.startswith("="))
+    path::append(S, Config->Sysroot, Path1.substr(1), Path2);
+  else
+    path::append(S, Path1, Path2);
+
+  if (fs::exists(S))
+    return S.str().str();
+  return None;
 }
 
-// Searches a given library from input search paths, which are filled
-// from -L command line switches. Returns a path to an existent library file.
-std::string elf::searchLibrary(StringRef Path) {
-  if (Path.startswith(":"))
-    return findFromSearchPaths(Path.substr(1));
+Optional<std::string> elf::findFromSearchPaths(StringRef Path) {
+  for (StringRef Dir : Config->SearchPaths)
+    if (Optional<std::string> S = findFile(Dir, Path))
+      return S;
+  return None;
+}
+
+// This is for -lfoo. We'll look for libfoo.so or libfoo.a from
+// search paths.
+Optional<std::string> elf::searchLibrary(StringRef Name) {
+  if (Name.startswith(":"))
+    return findFromSearchPaths(Name.substr(1));
+
   for (StringRef Dir : Config->SearchPaths) {
-    if (!Config->Static) {
-      std::string S = buildSysrootedPath(Dir, ("lib" + Path + ".so").str());
-      if (fs::exists(S))
+    if (!Config->Static)
+      if (Optional<std::string> S = findFile(Dir, "lib" + Name + ".so"))
         return S;
-    }
-    std::string S = buildSysrootedPath(Dir, ("lib" + Path + ".a").str());
-    if (fs::exists(S))
+    if (Optional<std::string> S = findFile(Dir, "lib" + Name + ".a"))
       return S;
   }
-  return "";
-}
-
-// Makes a path by concatenating Dir and File.
-// If Dir starts with '=' the result will be preceded by Sysroot,
-// which can be set with --sysroot command line switch.
-std::string elf::buildSysrootedPath(StringRef Dir, StringRef File) {
-  SmallString<128> Path;
-  if (Dir.startswith("="))
-    path::append(Path, Config->Sysroot, Dir.substr(1), File);
-  else
-    path::append(Path, Dir, File);
-  return Path.str();
+  return None;
 }

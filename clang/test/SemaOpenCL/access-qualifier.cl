@@ -63,7 +63,14 @@ kernel void k11(read_only write_only image1d_t i){} // expected-error{{multiple 
 kernel void k12(read_only read_only image1d_t i){} // expected-error{{multiple access qualifiers}}
 
 #if __OPENCL_C_VERSION__ >= 200
-kernel void k13(read_write pipe int i){} // expected-error{{access qualifier 'read_write' can not be used for 'pipe int'}}
+kernel void k13(read_write pipe int i){} // expected-error{{access qualifier 'read_write' can not be used for 'read_only pipe int'}}
 #else
 kernel void k13(__read_write image1d_t i){} // expected-error{{access qualifier '__read_write' can not be used for '__read_write image1d_t' prior to OpenCL version 2.0}}
+#endif
+
+#if __OPENCL_C_VERSION__ >= 200
+void myPipeWrite(write_only pipe int); // expected-note {{passing argument to parameter here}}
+kernel void k14(read_only pipe int p) {
+  myPipeWrite(p); // expected-error {{passing 'read_only pipe int' to parameter of incompatible type 'write_only pipe int'}}
+}
 #endif

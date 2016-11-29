@@ -17,16 +17,17 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <memory>
-#include <type_traits>
 
 namespace llvm {
 namespace msf {
 
 class ByteStream : public ReadableStream {
 public:
-  ByteStream() {}
+  ByteStream() = default;
   explicit ByteStream(ArrayRef<uint8_t> Data) : Data(Data) {}
   explicit ByteStream(StringRef Data)
       : Data(Data.bytes_begin(), Data.bytes_end()) {}
@@ -40,6 +41,7 @@ public:
     Buffer = Data.slice(Offset, Size);
     return Error::success();
   }
+
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) const override {
     if (Offset >= Data.size())
@@ -75,7 +77,7 @@ public:
 
 class MutableByteStream : public WritableStream {
 public:
-  MutableByteStream() {}
+  MutableByteStream() = default;
   explicit MutableByteStream(MutableArrayRef<uint8_t> Data)
       : Data(Data), ImmutableStream(Data) {}
 
@@ -83,6 +85,7 @@ public:
                   ArrayRef<uint8_t> &Buffer) const override {
     return ImmutableStream.readBytes(Offset, Size, Buffer);
   }
+
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) const override {
     return ImmutableStream.readLongestContiguousChunk(Offset, Buffer);
@@ -142,6 +145,7 @@ public:
                   ArrayRef<uint8_t> &Buffer) const override {
     return Impl.readBytes(Offset, Size, Buffer);
   }
+
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) const override {
     return Impl.readLongestContiguousChunk(Offset, Buffer);
@@ -152,12 +156,12 @@ public:
   Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const override {
     return Impl.writeBytes(Offset, Data);
   }
+
   Error commit() const override { return Impl.commit(); }
 
 private:
   StreamImpl Impl;
 };
-
 
 } // end namespace msf
 } // end namespace llvm

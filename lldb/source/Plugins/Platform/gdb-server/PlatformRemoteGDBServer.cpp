@@ -505,8 +505,8 @@ lldb::ProcessSP PlatformRemoteGDBServer::DebugProcess(
         if (target == NULL) {
           TargetSP new_target_sp;
 
-          error = debugger.GetTargetList().CreateTarget(
-              debugger, NULL, NULL, false, NULL, new_target_sp);
+          error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
+                                                        NULL, new_target_sp);
           target = new_target_sp.get();
         } else
           error.Clear();
@@ -592,8 +592,8 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
         if (target == NULL) {
           TargetSP new_target_sp;
 
-          error = debugger.GetTargetList().CreateTarget(
-              debugger, NULL, NULL, false, NULL, new_target_sp);
+          error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
+                                                        NULL, new_target_sp);
           target = new_target_sp.get();
         } else
           error.Clear();

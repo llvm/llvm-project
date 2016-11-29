@@ -419,6 +419,10 @@ size_t RegisterContextPOSIX_x86::GetGPRSize() {
   return m_register_info_ap->GetGPRSize();
 }
 
+size_t RegisterContextPOSIX_x86::GetFXSAVEOffset() {
+  return m_register_info_ap->GetFXSAVEOffset();
+}
+
 const RegisterInfo *RegisterContextPOSIX_x86::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized.

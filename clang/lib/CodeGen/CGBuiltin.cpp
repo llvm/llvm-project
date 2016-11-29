@@ -8250,9 +8250,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_frexp_manth:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_frexp_mant);
   case AMDGPU::BI__builtin_amdgcn_frexp_exp:
-  case AMDGPU::BI__builtin_amdgcn_frexp_expf:
-  case AMDGPU::BI__builtin_amdgcn_frexp_exph:
-    return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_frexp_exp);
+  case AMDGPU::BI__builtin_amdgcn_frexp_expf: {
+    Value *Src0 = EmitScalarExpr(E->getArg(0));
+    Value *F = CGM.getIntrinsic(Intrinsic::amdgcn_frexp_exp,
+                                { Builder.getInt32Ty(), Src0->getType() });
+    return Builder.CreateCall(F, Src0);
+  }
+  case AMDGPU::BI__builtin_amdgcn_frexp_exph: {
+    Value *Src0 = EmitScalarExpr(E->getArg(0));
+    Value *F = CGM.getIntrinsic(Intrinsic::amdgcn_frexp_exp,
+                                { Builder.getInt16Ty(), Src0->getType() });
+    return Builder.CreateCall(F, Src0);
+  }
   case AMDGPU::BI__builtin_amdgcn_fract:
   case AMDGPU::BI__builtin_amdgcn_fractf:
   case AMDGPU::BI__builtin_amdgcn_fracth:

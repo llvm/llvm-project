@@ -959,7 +959,6 @@ def VOP_F32_I32 : VOPProfile <[f32, i32, untyped, untyped]>;
 def VOP_F64_F32 : VOPProfile <[f64, f32, untyped, untyped]>;
 def VOP_F64_F64 : VOPProfile <[f64, f64, untyped, untyped]>;
 def VOP_F64_I32 : VOPProfile <[f64, i32, untyped, untyped]>;
-def VOP_I32_F16 : VOPProfile <[i32, f16, untyped, untyped]>;
 def VOP_I32_F32 : VOPProfile <[i32, f32, untyped, untyped]>;
 def VOP_I32_F64 : VOPProfile <[i32, f64, untyped, untyped]>;
 def VOP_I32_I32 : VOPProfile <[i32, i32, untyped, untyped]>;

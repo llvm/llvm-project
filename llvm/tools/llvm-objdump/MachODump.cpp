@@ -2060,7 +2060,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     // If we have a branch that is not an external relocation entry then
     // return 0 so the code in tryAddingSymbolicOperand() can use the
     // SymbolLookUp call back with the branch target address to look up the
-    // symbol and possiblity add an annotation for a symbol stub.
+    // symbol and possibility add an annotation for a symbol stub.
     if (isExtern == 0 && (r_type == MachO::ARM_RELOC_BR24 ||
                           r_type == MachO::ARM_THUMB_RELOC_BR22))
       return 0;

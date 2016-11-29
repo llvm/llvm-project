@@ -10,8 +10,8 @@
 #ifndef LLD_ELF_SYNTHETIC_SECTION_H
 #define LLD_ELF_SYNTHETIC_SECTION_H
 
+#include "GdbIndex.h"
 #include "InputSection.h"
-#include "OutputSections.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace lld {
@@ -401,6 +401,11 @@ private:
   std::vector<DynamicReloc<ELFT>> Relocs;
 };
 
+struct SymbolTableEntry {
+  SymbolBody *Symbol;
+  size_t StrTabOffset;
+};
+
 template <class ELFT>
 class SymbolTableSection final : public SyntheticSection<ELFT> {
 public:
@@ -432,6 +437,98 @@ private:
   std::vector<SymbolTableEntry> Symbols;
 };
 
+// Outputs GNU Hash section. For detailed explanation see:
+// https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
+template <class ELFT>
+class GnuHashTableSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::Off Elf_Off;
+  typedef typename ELFT::Word Elf_Word;
+  typedef typename ELFT::uint uintX_t;
+
+public:
+  GnuHashTableSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return this->Size; }
+
+  // Adds symbols to the hash table.
+  // Sorts the input to satisfy GNU hash section requirements.
+  void addSymbols(std::vector<SymbolTableEntry> &Symbols);
+
+private:
+  static unsigned calcNBuckets(unsigned NumHashed);
+  static unsigned calcMaskWords(unsigned NumHashed);
+
+  void writeHeader(uint8_t *&Buf);
+  void writeBloomFilter(uint8_t *&Buf);
+  void writeHashTable(uint8_t *Buf);
+
+  struct SymbolData {
+    SymbolBody *Body;
+    size_t STName;
+    uint32_t Hash;
+  };
+
+  std::vector<SymbolData> Symbols;
+
+  unsigned MaskWords;
+  unsigned NBuckets;
+  unsigned Shift2;
+  uintX_t Size = 0;
+};
+
+template <class ELFT>
+class HashTableSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::Word Elf_Word;
+
+public:
+  HashTableSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return this->Size; }
+
+private:
+  size_t Size = 0;
+};
+
+template <class ELFT> class PltSection final : public SyntheticSection<ELFT> {
+public:
+  PltSection();
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override;
+  void addEntry(SymbolBody &Sym);
+  bool empty() const { return Entries.empty(); }
+
+private:
+  std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
+};
+
+template <class ELFT>
+class GdbIndexSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::uint uintX_t;
+
+  const unsigned OffsetTypeSize = 4;
+  const unsigned CuListOffset = 6 * OffsetTypeSize;
+  const unsigned CompilationUnitSize = 16;
+  const unsigned AddressEntrySize = 16 + OffsetTypeSize;
+  const unsigned SymTabEntrySize = 2 * OffsetTypeSize;
+
+public:
+  GdbIndexSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override { return CuTypesOffset; }
+
+  // Pairs of [CU Offset, CU length].
+  std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
+
+private:
+  void parseDebugSections();
+  void readDwarf(InputSection<ELFT> *I);
+
+  uint32_t CuTypesOffset;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
@@ -443,13 +540,17 @@ template <class ELFT> struct In {
   static DynamicSection<ELFT> *Dynamic;
   static StringTableSection<ELFT> *DynStrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
+  static GnuHashTableSection<ELFT> *GnuHashTab;
+  static GdbIndexSection<ELFT> *GdbIndex;
   static GotSection<ELFT> *Got;
   static MipsGotSection<ELFT> *MipsGot;
   static GotPltSection<ELFT> *GotPlt;
+  static HashTableSection<ELFT> *HashTab;
   static InputSection<ELFT> *Interp;
   static MipsAbiFlagsSection<ELFT> *MipsAbiFlags;
   static MipsOptionsSection<ELFT> *MipsOptions;
   static MipsReginfoSection<ELFT> *MipsReginfo;
+  static PltSection<ELFT> *Plt;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
   static StringTableSection<ELFT> *ShStrTab;
@@ -462,13 +563,17 @@ template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::DynStrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
+template <class ELFT> GdbIndexSection<ELFT> *In<ELFT>::GdbIndex;
+template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
 template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
+template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
 template <class ELFT> MipsAbiFlagsSection<ELFT> *In<ELFT>::MipsAbiFlags;
 template <class ELFT> MipsOptionsSection<ELFT> *In<ELFT>::MipsOptions;
 template <class ELFT> MipsReginfoSection<ELFT> *In<ELFT>::MipsReginfo;
+template <class ELFT> PltSection<ELFT> *In<ELFT>::Plt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::ShStrTab;

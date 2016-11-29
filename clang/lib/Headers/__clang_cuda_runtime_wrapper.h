@@ -121,6 +121,15 @@
 #undef __cxa_vec_delete3
 #undef __cxa_pure_virtual
 
+// math_functions.hpp expects this host function be defined on MacOS, but it
+// ends up not being there because of the games we play here.  Just define it
+// ourselves; it's simple enough.
+#ifdef __APPLE__
+inline __host__ double __signbitd(double x) {
+  return std::signbit(x);
+}
+#endif
+
 // We need decls for functions in CUDA's libdevice with __device__
 // attribute only. Alas they come either as __host__ __device__ or
 // with no attributes at all. To work around that, define __CUDA_RTC__

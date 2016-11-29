@@ -251,9 +251,9 @@ private:
   /// other reproducer related files (.sh, .cache, etc). If not found, suggest a
   /// directory for the user to look at.
   ///
-  /// \param The file path to copy the .crash to.
-  /// \param The suggested directory for the user to look at in case the search
-  /// or copy fails.
+  /// \param ReproCrashFilename The file path to copy the .crash to.
+  /// \param CrashDiagDir       The suggested directory for the user to look at
+  ///                           in case the search or copy fails.
   ///
   /// \returns If the .crash is found and successfully copied return true,
   /// otherwise false and return the suggested directory in \p CrashDiagDir.

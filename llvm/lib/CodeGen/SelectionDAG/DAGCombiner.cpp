@@ -5281,7 +5281,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // The code in this block deals with the following 2 equivalences:
     //    select(C0|C1, x, y) <=> select(C0, x, select(C1, x, y))
     //    select(C0&C1, x, y) <=> select(C0, select(C1, x, y), y)
-    // The target can specify its prefered form with the
+    // The target can specify its preferred form with the
     // shouldNormalizeToSelectSequence() callback. However we always transform
     // to the right anyway if we find the inner select exists in the DAG anyway
     // and we always transform to the left side if we know that we can further
@@ -10569,7 +10569,7 @@ struct LoadedSlice {
     assert(Inst && Origin && "Unable to replace a non-existing slice.");
     const SDValue &OldBaseAddr = Origin->getBasePtr();
     SDValue BaseAddr = OldBaseAddr;
-    // Get the offset in that chunk of bytes w.r.t. the endianess.
+    // Get the offset in that chunk of bytes w.r.t. the endianness.
     int64_t Offset = static_cast<int64_t>(getOffsetFromBase());
     assert(Offset >= 0 && "Offset too big to fit in int64_t!");
     if (Offset) {

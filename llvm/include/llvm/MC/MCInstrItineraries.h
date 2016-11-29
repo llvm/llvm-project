@@ -111,7 +111,7 @@ public:
   MCSchedModel          SchedModel;     ///< Basic machine properties.
   const InstrStage     *Stages;         ///< Array of stages selected
   const unsigned       *OperandCycles;  ///< Array of operand cycles selected
-  const unsigned       *Forwardings;    ///< Array of pipeline forwarding pathes
+  const unsigned       *Forwardings;    ///< Array of pipeline forwarding paths
   const InstrItinerary *Itineraries;    ///< Array of itineraries selected
 
   /// Ctors.

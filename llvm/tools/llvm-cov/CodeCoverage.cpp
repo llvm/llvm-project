@@ -89,7 +89,7 @@ private:
   std::unique_ptr<SourceCoverageView>
   createSourceFileView(StringRef SourceFile, const CoverageMapping &Coverage);
 
-  /// \brief Load the coverage mapping data. Return nullptr if an error occured.
+  /// \brief Load the coverage mapping data. Return nullptr if an error occurred.
   std::unique_ptr<CoverageMapping> load();
 
   /// \brief Remove input source files which aren't mapped by \p Coverage.

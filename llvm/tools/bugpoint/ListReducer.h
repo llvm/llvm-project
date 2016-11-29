@@ -71,7 +71,7 @@ template <typename ElTy> struct ListReducer {
     const unsigned MaxIterationsWithoutProgress = 3;
 
     // Maximal number of allowed single-element trim iterations. We add a
-    // threshhold here as single-element reductions may otherwise take a
+    // threshold here as single-element reductions may otherwise take a
     // very long time to complete.
     const unsigned MaxTrimIterationsWithoutBackJump = 3;
     bool ShufflingEnabled = true;
@@ -106,7 +106,7 @@ template <typename ElTy> struct ListReducer {
           TheList.swap(ShuffledList);
           MidTop = TheList.size();
           // Must increase the shuffling treshold to avoid the small
-          // probability of inifinite looping without making progress.
+          // probability of infinite looping without making progress.
           MaxIterations += 2;
           errs() << "\n\n*** Shuffling does not hide the bug...\n\n";
         } else {

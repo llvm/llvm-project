@@ -22,7 +22,7 @@ if (LIBCXX_HAS_ABILIST_CONFIGURATION)
     set(ABILIST_FILE "${CMAKE_CURRENT_LIST_DIR}/${TARGET_TRIPLE}.abilist")
     set(SYMDIFF_EXE "${LIBCXX_SOURCE_DIR}/utils/sym_check/sym_diff.py")
     add_custom_target(check-cxx-abilist
-            ${SYMDIFF_EXE} ${ABILIST_FILE} $<TARGET_SONAME_FILE:cxx_shared>
+            ${SYMDIFF_EXE} --only-stdlib-symbols ${ABILIST_FILE} $<TARGET_SONAME_FILE:cxx_shared>
             DEPENDS cxx_shared
             COMMENT "Testing ABI compatibility...")
 endif()

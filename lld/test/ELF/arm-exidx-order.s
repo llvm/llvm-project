@@ -103,8 +103,9 @@ f3:
 // the .ARM.exidx output section
 // CHECK-PT:          Name: .ARM.exidx
 // CHECK-PT-NEXT:     Type: SHT_ARM_EXIDX (0x70000001)
-// CHECK-PT-NEXT:     Flags [ (0x2)
-// CHECK-PT-NEXT:       SHF_ALLOC (0x2)
+// CHECK-PT-NEXT:     Flags [
+// CHECK-PT-NEXT:       SHF_ALLOC
+// CHECK-PT-NEXT:       SHF_LINK_ORDER
 // CHECK-PT-NEXT:     ]
 // CHECK-PT-NEXT:     Address: 0x100D4
 // CHECK-PT-NEXT:     Offset: 0xD4

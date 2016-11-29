@@ -41,6 +41,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
@@ -205,6 +206,9 @@ private:
   void emitError(const std::string &ErrMsg);
   void emitWarning(const std::string &ErrMsg);
 
+  bool setupOptimizationRemarks();
+  void finishOptimizationRemarks();
+
   LLVMContext &Context;
   std::unique_ptr<Module> MergedModule;
   std::unique_ptr<Linker> TheLinker;
@@ -232,6 +236,7 @@ private:
   bool ShouldEmbedUselists = false;
   bool ShouldRestoreGlobalsLinkage = false;
   TargetMachine::CodeGenFileType FileType = TargetMachine::CGFT_ObjectFile;
+  std::unique_ptr<tool_output_file> DiagnosticOutputFile;
 };
 }
 #endif
