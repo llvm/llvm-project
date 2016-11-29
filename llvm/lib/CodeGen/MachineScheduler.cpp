@@ -230,11 +230,6 @@ static cl::opt<bool> EnablePostRAMachineSched(
     cl::desc("Enable the post-ra machine instruction scheduling pass."),
     cl::init(true), cl::Hidden);
 
-/// Forward declare the standard machine scheduler. This will be used as the
-/// default scheduler if the target does not set a default.
-static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C);
-static ScheduleDAGInstrs *createGenericSchedPostRA(MachineSchedContext *C);
-
 /// Decrement this iterator until reaching the top or a non-debug instr.
 static MachineBasicBlock::const_iterator
 priorNonDebug(MachineBasicBlock::const_iterator I,
@@ -1451,13 +1446,15 @@ namespace llvm {
 std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
                              const TargetRegisterInfo *TRI) {
-  return make_unique<LoadClusterMutation>(TII, TRI);
+  return EnableMemOpCluster ? make_unique<LoadClusterMutation>(TII, TRI)
+                            : nullptr;
 }
 
 std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
                               const TargetRegisterInfo *TRI) {
-  return make_unique<StoreClusterMutation>(TII, TRI);
+  return EnableMemOpCluster ? make_unique<StoreClusterMutation>(TII, TRI)
+                            : nullptr;
 }
 
 } // namespace llvm
@@ -1566,7 +1563,7 @@ namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation>
 createMacroFusionDAGMutation(const TargetInstrInfo *TII) {
-  return make_unique<MacroFusion>(*TII);
+  return EnableMacroFusion ? make_unique<MacroFusion>(*TII) : nullptr;
 }
 
 } // namespace llvm
@@ -3156,7 +3153,7 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
 
 /// Create the standard converging machine scheduler. This will be used as the
 /// default scheduler if the target does not set a default.
-static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C) {
+ScheduleDAGMILive *llvm::createGenericSchedLive(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG = new ScheduleDAGMILive(C, make_unique<GenericScheduler>(C));
   // Register DAG post-processors.
   //
@@ -3164,20 +3161,16 @@ static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C) {
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
-  if (EnableMemOpCluster) {
-    if (DAG->TII->enableClusterLoads())
-      DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-    if (DAG->TII->enableClusterStores())
-      DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  }
-  if (EnableMacroFusion)
-    DAG->addMutation(createMacroFusionDAGMutation(DAG->TII));
   return DAG;
+}
+
+static ScheduleDAGInstrs *createConveringSched(MachineSchedContext *C) {
+  return createGenericSchedLive(C);
 }
 
 static MachineSchedRegistry
 GenericSchedRegistry("converge", "Standard converging scheduler.",
-                     createGenericSchedLive);
+                     createConveringSched);
 
 //===----------------------------------------------------------------------===//
 // PostGenericScheduler - Generic PostRA implementation of MachineSchedStrategy.
@@ -3308,8 +3301,7 @@ void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   Top.bumpNode(SU);
 }
 
-/// Create a generic scheduler with no vreg liveness or DAG mutation passes.
-static ScheduleDAGInstrs *createGenericSchedPostRA(MachineSchedContext *C) {
+ScheduleDAGMI *llvm::createGenericSchedPostRA(MachineSchedContext *C) {
   return new ScheduleDAGMI(C, make_unique<PostGenericScheduler>(C),
                            /*RemoveKillFlags=*/true);
 }

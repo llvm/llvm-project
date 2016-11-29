@@ -279,9 +279,9 @@ clang::TypoCorrection IncludeFixerSemaSource::CorrectTypo(
   std::vector<find_all_symbols::SymbolInfo> MatchedSymbols =
       query(QueryString, TypoScopeString, SymbolRange);
 
-  clang::TypoCorrection Correction(Typo.getName());
-  Correction.setCorrectionRange(SS, Typo);
   if (!MatchedSymbols.empty() && GenerateDiagnostics) {
+    TypoCorrection Correction(Typo.getName());
+    Correction.setCorrectionRange(SS, Typo);
     FileID FID = SM.getFileID(Typo.getLoc());
     StringRef Code = SM.getBufferData(FID);
     SourceLocation StartOfFile = SM.getLocForStartOfFile(FID);
@@ -290,8 +290,9 @@ clang::TypoCorrection IncludeFixerSemaSource::CorrectTypo(
         getIncludeFixerContext(SM, CI->getPreprocessor().getHeaderSearchInfo(),
                                MatchedSymbols),
         Code, StartOfFile, CI->getASTContext());
+    return Correction;
   }
-  return Correction;
+  return TypoCorrection();
 }
 
 /// Get the minimal include for a given path.

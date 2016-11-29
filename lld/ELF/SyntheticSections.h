@@ -67,7 +67,7 @@ public:
   bool HasGotOffRel = false;
 
 private:
-  std::vector<const SymbolBody *> Entries;
+  size_t NumEntries = 0;
   uint32_t TlsIndexOff = -1;
   uintX_t Size = 0;
 };

@@ -15,6 +15,7 @@ using namespace llvm;
 namespace llvm {
 
 // Explicit instantiations for the core proxy templates.
+template class AllAnalysesOn<LazyCallGraph::SCC>;
 template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>;

@@ -43,77 +43,58 @@ typedef SmallPtrSet<BasicBlock *, 8> BBSet;
 typedef MapVector<PHINode *, BBValueVector> PhiMap;
 typedef MapVector<BasicBlock *, BBVector> BB2BBVecMap;
 
-typedef DenseMap<DomTreeNode *, unsigned> DTN2UnsignedMap;
 typedef DenseMap<BasicBlock *, PhiMap> BBPhiMap;
 typedef DenseMap<BasicBlock *, Value *> BBPredicates;
 typedef DenseMap<BasicBlock *, BBPredicates> PredMap;
 typedef DenseMap<BasicBlock *, BasicBlock*> BB2BBMap;
 
 // The name for newly created blocks.
-
 static const char *const FlowBlockName = "Flow";
 
-/// @brief Find the nearest common dominator for multiple BasicBlocks
+/// Finds the nearest common dominator of a set of BasicBlocks.
 ///
-/// Helper class for StructurizeCFG
-/// TODO: Maybe move into common code
+/// For every BB you add to the set, you can specify whether we "remember" the
+/// block.  When you get the common dominator, you can also ask whether it's one
+/// of the blocks we remembered.
 class NearestCommonDominator {
   DominatorTree *DT;
+  BasicBlock *Result = nullptr;
+  bool ResultIsRemembered = false;
 
-  DTN2UnsignedMap IndexMap;
-
-  BasicBlock *Result;
-  unsigned ResultIndex;
-  bool ExplicitMentioned;
-
-public:
-  /// \brief Start a new query
-  NearestCommonDominator(DominatorTree *DomTree) {
-    DT = DomTree;
-    Result = nullptr;
-  }
-
-  /// \brief Add BB to the resulting dominator
-  void addBlock(BasicBlock *BB, bool Remember = true) {
-    DomTreeNode *Node = DT->getNode(BB);
-
+  /// Add BB to the resulting dominator.
+  void addBlock(BasicBlock *BB, bool Remember) {
     if (!Result) {
-      unsigned Numbering = 0;
-      for (;Node;Node = Node->getIDom())
-        IndexMap[Node] = ++Numbering;
       Result = BB;
-      ResultIndex = 1;
-      ExplicitMentioned = Remember;
+      ResultIsRemembered = Remember;
       return;
     }
 
-    for (;Node;Node = Node->getIDom())
-      if (IndexMap.count(Node))
-        break;
-      else
-        IndexMap[Node] = 0;
-
-    assert(Node && "Dominator tree invalid!");
-
-    unsigned Numbering = IndexMap[Node];
-    if (Numbering > ResultIndex) {
-      Result = Node->getBlock();
-      ResultIndex = Numbering;
-      ExplicitMentioned = Remember && (Result == BB);
-    } else if (Numbering == ResultIndex) {
-      ExplicitMentioned |= Remember;
-    }
+    BasicBlock *NewResult = DT->findNearestCommonDominator(Result, BB);
+    if (NewResult != Result)
+      ResultIsRemembered = false;
+    if (NewResult == BB)
+      ResultIsRemembered |= Remember;
+    Result = NewResult;
   }
 
-  /// \brief Is "Result" one of the BBs added with "Remember" = True?
-  bool wasResultExplicitMentioned() {
-    return ExplicitMentioned;
+public:
+  explicit NearestCommonDominator(DominatorTree *DomTree) : DT(DomTree) {}
+
+  void addBlock(BasicBlock *BB) {
+    addBlock(BB, /* Remember = */ false);
   }
 
-  /// \brief Get the query result
-  BasicBlock *getResult() {
-    return Result;
+  void addAndRememberBlock(BasicBlock *BB) {
+    addBlock(BB, /* Remember = */ true);
   }
+
+  /// Get the nearest common dominator of all the BBs added via addBlock() and
+  /// addAndRememberBlock().
+  BasicBlock *result() { return Result; }
+
+  /// Is the BB returned by getResult() one of the blocks we added to the set
+  /// with addAndRememberBlock()?
+  bool resultIsRememberedBlock() { return ResultIsRemembered; }
 };
 
 /// @brief Transforms the control flow graph on one single entry/exit region
@@ -410,46 +391,40 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
   BBPredicates &Pred = Predicates[BB];
   BBPredicates &LPred = LoopPreds[BB];
 
-  for (pred_iterator PI = pred_begin(BB), PE = pred_end(BB);
-       PI != PE; ++PI) {
-
+  for (BasicBlock *P : predecessors(BB)) {
     // Ignore it if it's a branch from outside into our region entry
-    if (!ParentRegion->contains(*PI))
+    if (!ParentRegion->contains(P))
       continue;
 
-    Region *R = RI->getRegionFor(*PI);
+    Region *R = RI->getRegionFor(P);
     if (R == ParentRegion) {
-
       // It's a top level block in our region
-      BranchInst *Term = cast<BranchInst>((*PI)->getTerminator());
+      BranchInst *Term = cast<BranchInst>(P->getTerminator());
       for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
         BasicBlock *Succ = Term->getSuccessor(i);
         if (Succ != BB)
           continue;
 
-        if (Visited.count(*PI)) {
+        if (Visited.count(P)) {
           // Normal forward edge
           if (Term->isConditional()) {
             // Try to treat it like an ELSE block
             BasicBlock *Other = Term->getSuccessor(!i);
             if (Visited.count(Other) && !Loops.count(Other) &&
-                !Pred.count(Other) && !Pred.count(*PI)) {
+                !Pred.count(Other) && !Pred.count(P)) {
 
               Pred[Other] = BoolFalse;
-              Pred[*PI] = BoolTrue;
+              Pred[P] = BoolTrue;
               continue;
             }
           }
-          Pred[*PI] = buildCondition(Term, i, false);
-
+          Pred[P] = buildCondition(Term, i, false);
         } else {
           // Back edge
-          LPred[*PI] = buildCondition(Term, i, true);
+          LPred[P] = buildCondition(Term, i, true);
         }
       }
-
     } else {
-
       // It's an exit from a sub region
       while (R->getParent() != ParentRegion)
         R = R->getParent();
@@ -480,7 +455,6 @@ void StructurizeCFG::collectInfos() {
   Visited.clear();
 
   for (RegionNode *RN : reverse(Order)) {
-
     DEBUG(dbgs() << "Visiting: "
                  << (RN->isSubRegion() ? "SubRegion with entry: " : "")
                  << RN->getEntry()->getName() << " Loop Depth: "
@@ -517,25 +491,26 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
 
     NearestCommonDominator Dominator(DT);
-    Dominator.addBlock(Parent, false);
+    Dominator.addBlock(Parent);
 
     Value *ParentValue = nullptr;
-    for (BBPredicates::iterator PI = Preds.begin(), PE = Preds.end();
-         PI != PE; ++PI) {
+    for (std::pair<BasicBlock *, Value *> BBAndPred : Preds) {
+      BasicBlock *BB = BBAndPred.first;
+      Value *Pred = BBAndPred.second;
 
-      if (PI->first == Parent) {
-        ParentValue = PI->second;
+      if (BB == Parent) {
+        ParentValue = Pred;
         break;
       }
-      PhiInserter.AddAvailableValue(PI->first, PI->second);
-      Dominator.addBlock(PI->first);
+      PhiInserter.AddAvailableValue(BB, Pred);
+      Dominator.addAndRememberBlock(BB);
     }
 
     if (ParentValue) {
       Term->setCondition(ParentValue);
     } else {
-      if (!Dominator.wasResultExplicitMentioned())
-        PhiInserter.AddAvailableValue(Dominator.getResult(), Default);
+      if (!Dominator.resultIsRememberedBlock())
+        PhiInserter.AddAvailableValue(Dominator.result(), Default);
 
       Term->setCondition(PhiInserter.GetValueInMiddleOfBlock(Parent));
     }
@@ -546,10 +521,10 @@ void StructurizeCFG::insertConditions(bool Loops) {
 /// them in DeletedPhis
 void StructurizeCFG::delPhiValues(BasicBlock *From, BasicBlock *To) {
   PhiMap &Map = DeletedPhis[To];
-  for (BasicBlock::iterator I = To->begin(), E = To->end();
-       I != E && isa<PHINode>(*I);) {
-
-    PHINode &Phi = cast<PHINode>(*I++);
+  for (Instruction &I : *To) {
+    if (!isa<PHINode>(I))
+      break;
+    PHINode &Phi = cast<PHINode>(I);
     while (Phi.getBasicBlockIndex(From) != -1) {
       Value *Deleted = Phi.removeIncomingValue(From, false);
       Map[&Phi].push_back(std::make_pair(From, Deleted));
@@ -559,10 +534,10 @@ void StructurizeCFG::delPhiValues(BasicBlock *From, BasicBlock *To) {
 
 /// \brief Add a dummy PHI value as soon as we knew the new predecessor
 void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
-  for (BasicBlock::iterator I = To->begin(), E = To->end();
-       I != E && isa<PHINode>(*I);) {
-
-    PHINode &Phi = cast<PHINode>(*I++);
+  for (Instruction &I : *To) {
+    if (!isa<PHINode>(I))
+      break;
+    PHINode &Phi = cast<PHINode>(I);
     Value *Undef = UndefValue::get(Phi.getType());
     Phi.addIncoming(Undef, From);
   }
@@ -573,7 +548,6 @@ void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
 void StructurizeCFG::setPhiValues() {
   SSAUpdater Updater;
   for (const auto &AddedPhi : AddedPhis) {
-
     BasicBlock *To = AddedPhi.first;
     const BBVector &From = AddedPhi.second;
 
@@ -582,7 +556,6 @@ void StructurizeCFG::setPhiValues() {
 
     PhiMap &Map = DeletedPhis[To];
     for (const auto &PI : Map) {
-
       PHINode *Phi = PI.first;
       Value *Undef = UndefValue::get(Phi->getType());
       Updater.Initialize(Phi->getType(), "");
@@ -590,18 +563,16 @@ void StructurizeCFG::setPhiValues() {
       Updater.AddAvailableValue(To, Undef);
 
       NearestCommonDominator Dominator(DT);
-      Dominator.addBlock(To, false);
+      Dominator.addBlock(To);
       for (const auto &VI : PI.second) {
-
         Updater.AddAvailableValue(VI.first, VI.second);
-        Dominator.addBlock(VI.first);
+        Dominator.addAndRememberBlock(VI.first);
       }
 
-      if (!Dominator.wasResultExplicitMentioned())
-        Updater.AddAvailableValue(Dominator.getResult(), Undef);
+      if (!Dominator.resultIsRememberedBlock())
+        Updater.AddAvailableValue(Dominator.result(), Undef);
 
       for (BasicBlock *FI : From) {
-
         int Idx = Phi->getBasicBlockIndex(FI);
         assert(Idx != -1);
         Phi->setIncomingValue(Idx, Updater.GetValueAtEndOfBlock(FI));
@@ -620,10 +591,8 @@ void StructurizeCFG::killTerminator(BasicBlock *BB) {
     return;
 
   for (succ_iterator SI = succ_begin(BB), SE = succ_end(BB);
-       SI != SE; ++SI) {
-
+       SI != SE; ++SI)
     delPhiValues(BB, *SI);
-  }
 
   Term->eraseFromParent();
 }
@@ -637,10 +606,10 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     BasicBlock *Dominator = nullptr;
 
     // Find all the edges from the sub region to the exit
-    for (pred_iterator I = pred_begin(OldExit), E = pred_end(OldExit);
-         I != E;) {
+    for (auto BBI = pred_begin(OldExit), E = pred_end(OldExit); BBI != E;) {
+      // Incrememt BBI before mucking with BB's terminator.
+      BasicBlock *BB = *BBI++;
 
-      BasicBlock *BB = *I++;
       if (!SubRegion->contains(BB))
         continue;
 
@@ -664,7 +633,6 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
 
     // Update the region info
     SubRegion->replaceExit(NewExit);
-
   } else {
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
     killTerminator(BB);
@@ -695,7 +663,6 @@ BasicBlock *StructurizeCFG::needPrefix(bool NeedEmpty) {
     killTerminator(Entry);
     if (!NeedEmpty || Entry->getFirstInsertionPt() == Entry->end())
       return Entry;
-
   }
 
   // create a new flow node
@@ -710,13 +677,13 @@ BasicBlock *StructurizeCFG::needPrefix(bool NeedEmpty) {
 /// \brief Returns the region exit if possible, otherwise just a new flow node
 BasicBlock *StructurizeCFG::needPostfix(BasicBlock *Flow,
                                         bool ExitUseAllowed) {
-  if (Order.empty() && ExitUseAllowed) {
-    BasicBlock *Exit = ParentRegion->getExit();
-    DT->changeImmediateDominator(Exit, Flow);
-    addPhiValues(Flow, Exit);
-    return Exit;
-  }
-  return getNextFlow(Flow);
+  if (!Order.empty() || !ExitUseAllowed)
+    return getNextFlow(Flow);
+
+  BasicBlock *Exit = ParentRegion->getExit();
+  DT->changeImmediateDominator(Exit, Flow);
+  addPhiValues(Flow, Exit);
+  return Exit;
 }
 
 /// \brief Set the previous node
@@ -725,16 +692,12 @@ void StructurizeCFG::setPrevNode(BasicBlock *BB) {
                                         : nullptr;
 }
 
-/// \brief Does BB dominate all the predicates of Node ?
+/// \brief Does BB dominate all the predicates of Node?
 bool StructurizeCFG::dominatesPredicates(BasicBlock *BB, RegionNode *Node) {
   BBPredicates &Preds = Predicates[Node->getEntry()];
-  for (BBPredicates::iterator PI = Preds.begin(), PE = Preds.end();
-       PI != PE; ++PI) {
-
-    if (!DT->dominates(BB, PI->first))
-      return false;
-  }
-  return true;
+  return llvm::all_of(Preds, [&](std::pair<BasicBlock *, Value *> Pred) {
+    return DT->dominates(BB, Pred.first);
+  });
 }
 
 /// \brief Can we predict that this node will always be called?
@@ -746,13 +709,14 @@ bool StructurizeCFG::isPredictableTrue(RegionNode *Node) {
   if (!PrevNode)
     return true;
 
-  for (BBPredicates::iterator I = Preds.begin(), E = Preds.end();
-       I != E; ++I) {
+  for (std::pair<BasicBlock*, Value*> Pred : Preds) {
+    BasicBlock *BB = Pred.first;
+    Value *V = Pred.second;
 
-    if (I->second != BoolTrue)
+    if (V != BoolTrue)
       return false;
 
-    if (!Dominated && DT->dominates(I->first, PrevNode->getEntry()))
+    if (!Dominated && DT->dominates(BB, PrevNode->getEntry()))
       Dominated = true;
   }
 
@@ -867,30 +831,26 @@ void StructurizeCFG::createFlow() {
 /// no longer dominate all their uses. Not sure if this is really nessasary
 void StructurizeCFG::rebuildSSA() {
   SSAUpdater Updater;
-  for (auto *BB : ParentRegion->blocks())
-    for (BasicBlock::iterator II = BB->begin(), IE = BB->end();
-         II != IE; ++II) {
-
+  for (BasicBlock *BB : ParentRegion->blocks())
+    for (Instruction &I : *BB) {
       bool Initialized = false;
-      for (auto I = II->use_begin(), E = II->use_end(); I != E;) {
-        Use &U = *I++;
+      for (Use &U : I.uses()) {
         Instruction *User = cast<Instruction>(U.getUser());
         if (User->getParent() == BB) {
           continue;
-
         } else if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
           if (UserPN->getIncomingBlock(U) == BB)
             continue;
         }
 
-        if (DT->dominates(&*II, User))
+        if (DT->dominates(&I, User))
           continue;
 
         if (!Initialized) {
-          Value *Undef = UndefValue::get(II->getType());
-          Updater.Initialize(II->getType(), "");
+          Value *Undef = UndefValue::get(I.getType());
+          Updater.Initialize(I.getType(), "");
           Updater.AddAvailableValue(&Func->getEntryBlock(), Undef);
-          Updater.AddAvailableValue(BB, &*II);
+          Updater.AddAvailableValue(BB, &I);
           Initialized = true;
         }
         Updater.RewriteUseAfterInsertions(U);

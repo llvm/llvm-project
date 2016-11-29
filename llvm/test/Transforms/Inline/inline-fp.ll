@@ -132,5 +132,5 @@ declare float @fabsf(float) optsize minsize
 
 declare float @llvm.pow.f32(float, float) optsize minsize
 
-attributes #0 = { minsize optsize }
-attributes #1 = { minsize optsize "use-soft-float"="true" }
+attributes #0 = { optsize }
+attributes #1 = { optsize "use-soft-float"="true" }

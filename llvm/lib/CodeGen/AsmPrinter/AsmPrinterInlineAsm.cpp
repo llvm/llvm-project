@@ -193,6 +193,23 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
       }
       if (Done) break;
 
+      // If we have ${:foo}, then this is not a real operand reference, it is a
+      // "magic" string reference, just like in .td files.  Arrange to call
+      // PrintSpecial.
+      if (LastEmitted[0] == '{' && LastEmitted[1] == ':') {
+        LastEmitted += 2;
+        const char *StrStart = LastEmitted;
+        const char *StrEnd = strchr(StrStart, '}');
+        if (!StrEnd)
+          report_fatal_error("Unterminated ${:foo} operand in inline asm"
+                             " string: '" + Twine(AsmStr) + "'");
+
+        std::string Val(StrStart, StrEnd);
+        AP->PrintSpecial(MI, OS, Val.c_str());
+        LastEmitted = StrEnd+1;
+        break;
+      }
+
       const char *IDStart = LastEmitted;
       const char *IDEnd = IDStart;
       while (*IDEnd >= '0' && *IDEnd <= '9') ++IDEnd;

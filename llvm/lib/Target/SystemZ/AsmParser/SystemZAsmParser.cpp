@@ -484,8 +484,14 @@ public:
   OperandMatchResultTy parseBDVAddr64(OperandVector &Operands) {
     return parseAddress(Operands, BDVMem, SystemZMC::GR64Regs, ADDR64Reg);
   }
+  OperandMatchResultTy parsePCRel12(OperandVector &Operands) {
+    return parsePCRel(Operands, -(1LL << 12), (1LL << 12) - 1, false);
+  }
   OperandMatchResultTy parsePCRel16(OperandVector &Operands) {
     return parsePCRel(Operands, -(1LL << 16), (1LL << 16) - 1, false);
+  }
+  OperandMatchResultTy parsePCRel24(OperandVector &Operands) {
+    return parsePCRel(Operands, -(1LL << 24), (1LL << 24) - 1, false);
   }
   OperandMatchResultTy parsePCRel32(OperandVector &Operands) {
     return parsePCRel(Operands, -(1LL << 32), (1LL << 32) - 1, false);

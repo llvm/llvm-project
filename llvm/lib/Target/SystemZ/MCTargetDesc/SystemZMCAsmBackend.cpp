@@ -25,7 +25,9 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value) {
     return Value;
 
   switch (unsigned(Kind)) {
+  case SystemZ::FK_390_PC12DBL:
   case SystemZ::FK_390_PC16DBL:
+  case SystemZ::FK_390_PC24DBL:
   case SystemZ::FK_390_PC32DBL:
     return (int64_t)Value / 2;
 
@@ -72,7 +74,9 @@ public:
 const MCFixupKindInfo &
 SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[SystemZ::NumTargetFixupKinds] = {
+    { "FK_390_PC12DBL",  4, 12, MCFixupKindInfo::FKF_IsPCRel },
     { "FK_390_PC16DBL",  0, 16, MCFixupKindInfo::FKF_IsPCRel },
+    { "FK_390_PC24DBL",  0, 24, MCFixupKindInfo::FKF_IsPCRel },
     { "FK_390_PC32DBL",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
     { "FK_390_TLS_CALL", 0, 0, 0 }
   };

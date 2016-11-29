@@ -2876,6 +2876,17 @@ private:
     // Record this instruction for deletion.
     Pass.DeadInsts.insert(&II);
 
+    // Lifetime intrinsics are only promotable if they cover the whole alloca.
+    // Therefore, we drop lifetime intrinsics which don't cover the whole
+    // alloca.
+    // (In theory, intrinsics which partially cover an alloca could be
+    // promoted, but PromoteMemToReg doesn't handle that case.)
+    // FIXME: Check whether the alloca is promotable before dropping the
+    // lifetime intrinsics?
+    if (NewBeginOffset != NewAllocaBeginOffset ||
+        NewEndOffset != NewAllocaEndOffset)
+      return true;
+
     ConstantInt *Size =
         ConstantInt::get(cast<IntegerType>(II.getArgOperand(0)->getType()),
                          NewEndOffset - NewBeginOffset);
@@ -2889,12 +2900,7 @@ private:
     (void)New;
     DEBUG(dbgs() << "          to: " << *New << "\n");
 
-    // Lifetime intrinsics are only promotable if they cover the whole alloca.
-    // (In theory, intrinsics which partially cover an alloca could be
-    // promoted, but PromoteMemToReg doesn't handle that case.)
-    bool IsWholeAlloca = NewBeginOffset == NewAllocaBeginOffset &&
-                         NewEndOffset == NewAllocaEndOffset;
-    return IsWholeAlloca;
+    return true;
   }
 
   bool visitPHINode(PHINode &PN) {

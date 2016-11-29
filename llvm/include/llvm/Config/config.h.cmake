@@ -333,9 +333,6 @@
 /* Doesn't use `cmakedefine` because it is allowed to be empty. */
 #define LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
 
-/* Define to enable checks that alter the LLVM C++ ABI */
-#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS
-
 /* Define if threads enabled */
 #cmakedefine01 LLVM_ENABLE_THREADS
 

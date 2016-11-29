@@ -2306,7 +2306,10 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
         assert(GO);
       }
 
-      uint64_t FuncWordOffset = Record[1];
+      // Note that we subtract 1 here because the offset is relative to one word
+      // before the start of the identification or module block, which was
+      // historically always the start of the regular bitcode header.
+      uint64_t FuncWordOffset = Record[1] - 1;
       Function *F = dyn_cast<Function>(GO);
       assert(F);
       uint64_t FuncBitOffset = FuncWordOffset * 32;
@@ -4371,7 +4374,10 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     case bitc::MODULE_CODE_VSTOFFSET:
       if (Record.size() < 1)
         return error("Invalid record");
-      VSTOffset = Record[0];
+      // Note that we subtract 1 here because the offset is relative to one word
+      // before the start of the identification or module block, which was
+      // historically always the start of the regular bitcode header.
+      VSTOffset = Record[0] - 1;
       break;
     /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
     case bitc::MODULE_CODE_SOURCE_FILENAME:
@@ -6566,13 +6572,14 @@ llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
     return StreamOrErr.takeError();
   BitstreamCursor &Stream = *StreamOrErr;
 
-  uint64_t IdentificationBit = -1ull;
   std::vector<BitcodeModule> Modules;
   while (true) {
+    uint64_t BCBegin = Stream.getCurrentByteNo();
+
     // We may be consuming bitcode from a client that leaves garbage at the end
     // of the bitcode stream (e.g. Apple's ar tool). If we are close enough to
     // the end that there cannot possibly be another module, stop looking.
-    if (Stream.getCurrentByteNo() + 8 >= Stream.getBitcodeBytes().size())
+    if (BCBegin + 8 >= Stream.getBitcodeBytes().size())
       return Modules;
 
     BitstreamEntry Entry = Stream.advance();
@@ -6581,17 +6588,35 @@ llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
     case BitstreamEntry::Error:
       return error("Malformed block");
 
-    case BitstreamEntry::SubBlock:
-      if (Entry.ID == bitc::IDENTIFICATION_BLOCK_ID)
-        IdentificationBit = Stream.GetCurrentBitNo();
-      else if (Entry.ID == bitc::MODULE_BLOCK_ID)
-        Modules.push_back({Stream.getBitcodeBytes(),
+    case BitstreamEntry::SubBlock: {
+      uint64_t IdentificationBit = -1ull;
+      if (Entry.ID == bitc::IDENTIFICATION_BLOCK_ID) {
+        IdentificationBit = Stream.GetCurrentBitNo() - BCBegin * 8;
+        if (Stream.SkipBlock())
+          return error("Malformed block");
+
+        Entry = Stream.advance();
+        if (Entry.Kind != BitstreamEntry::SubBlock ||
+            Entry.ID != bitc::MODULE_BLOCK_ID)
+          return error("Malformed block");
+      }
+
+      if (Entry.ID == bitc::MODULE_BLOCK_ID) {
+        uint64_t ModuleBit = Stream.GetCurrentBitNo() - BCBegin * 8;
+        if (Stream.SkipBlock())
+          return error("Malformed block");
+
+        Modules.push_back({Stream.getBitcodeBytes().slice(
+                               BCBegin, Stream.getCurrentByteNo() - BCBegin),
                            Buffer.getBufferIdentifier(), IdentificationBit,
-                           Stream.GetCurrentBitNo()});
+                           ModuleBit});
+        continue;
+      }
 
       if (Stream.SkipBlock())
         return error("Malformed block");
       continue;
+    }
     case BitstreamEntry::Record:
       Stream.skipRecord(Entry.ID);
       continue;

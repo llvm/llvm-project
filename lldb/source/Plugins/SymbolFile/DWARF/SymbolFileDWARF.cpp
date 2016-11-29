@@ -2046,7 +2046,8 @@ void SymbolFileDWARF::Index() {
     m_global_index.Dump(&s);
     s.Printf("\nTypes:\n");
     m_type_index.Dump(&s);
-    s.Printf("\nNamespaces:\n") m_namespace_index.Dump(&s);
+    s.Printf("\nNamespaces:\n");
+    m_namespace_index.Dump(&s);
 #endif
   }
 }

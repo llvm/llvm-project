@@ -23,7 +23,7 @@ def ZEC12Model : SchedMachineModel {
     let PostRAScheduler = 1;
 
     // Extra cycles for a mispredicted branch.
-    let MispredictPenalty  = 8;
+    let MispredictPenalty = 16;
 }
 
 let SchedModel = ZEC12Model in  {
@@ -93,7 +93,10 @@ def : InstRW<[VBU], (instregex "(Call)?J(G)?(Asm.*)?$")>;
 def : InstRW<[LSU, Lat4], (instregex "(Call)?BC(R)?(Asm.*)?$")>;
 def : InstRW<[LSU, Lat4], (instregex "(Call)?B(R)?(Asm.*)?$")>;
 def : InstRW<[FXU, EndGroup], (instregex "BRCT(G)?$")>;
-def : InstRW<[FXU, FXU, FXU, LSU, Lat7, GroupAlone], (instregex "BRX(H|LE)$")>;
+def : InstRW<[FXU, LSU, Lat5, GroupAlone], (instregex "BRCTH$")>;
+def : InstRW<[FXU, LSU, Lat5, GroupAlone], (instregex "BCT(G)?(R)?$")>;
+def : InstRW<[FXU, FXU, FXU, LSU, Lat7, GroupAlone],
+             (instregex "B(R)?X(H|L).*$")>;
 
 // Compare and branch
 def : InstRW<[FXU], (instregex "C(L)?(G)?(I|R)J(Asm.*)?$")>;
@@ -172,6 +175,9 @@ def : InstRW<[FXU], (instregex "LG(F|H)I$")>;
 def : InstRW<[FXU], (instregex "LHI(Mux)?$")>;
 def : InstRW<[FXU], (instregex "LR(Mux)?$")>;
 
+// Load and trap
+def : InstRW<[FXU, LSU, Lat5], (instregex "L(FH|G)?AT$")>;
+
 // Load and test
 def : InstRW<[FXU, LSU, Lat5], (instregex "LT(G)?$")>;
 def : InstRW<[FXU], (instregex "LT(G)?R$")>;
@@ -189,7 +195,6 @@ def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVST$")>;
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[FXU, Lat2], (instregex "LOC(G)?R(Asm.*)?$")>;
-def : InstRW<[FXU, Lat2], (instregex "LOC(G)?HI(Asm.*)?$")>;
 def : InstRW<[FXU, LSU, Lat6], (instregex "LOC(G)?(Asm.*)?$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "STOC(G)?(Asm.*)?$")>;
 
@@ -221,6 +226,9 @@ def : InstRW<[LSU], (instregex "LLH(Mux)?$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "LL(C|H)H$")>;
 def : InstRW<[LSU], (instregex "LLHRL$")>;
 def : InstRW<[LSU], (instregex "LLG(C|H|F|T|HRL|FRL)$")>;
+
+// Load and trap
+def : InstRW<[FXU, LSU, Lat5], (instregex "LLG(F|T)?AT$")>;
 
 //===----------------------------------------------------------------------===//
 // Truncations
@@ -437,11 +445,11 @@ def : InstRW<[FXU, FXU, Lat3, GroupAlone], (instregex "R(N|O|X)SBG$")>;
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[FXU, LSU, Lat5], (instregex "C(G|Y|Mux|RL)?$")>;
-def : InstRW<[FXU], (instregex "CFI(Mux)?$")>;
+def : InstRW<[FXU], (instregex "C(F|H)I(Mux)?$")>;
 def : InstRW<[FXU], (instregex "CG(F|H)I$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "CG(HSI|RL)$")>;
 def : InstRW<[FXU], (instregex "C(G)?R$")>;
-def : InstRW<[FXU], (instregex "C(HI|IH)$")>;
+def : InstRW<[FXU], (instregex "CIH$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "CH(F|SI)$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "CL(Y|Mux|FHSI)?$")>;
 def : InstRW<[FXU], (instregex "CLFI(Mux)?$")>;
@@ -479,10 +487,12 @@ def : InstRW<[FXU], (instregex "TMLH(64)?$")>;
 def : InstRW<[FXU], (instregex "TMLL(64)?$")>;
 
 //===----------------------------------------------------------------------===//
-// Prefetch
+// Prefetch and execution hint
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[LSU], (instregex "PFD(RL)?$")>;
+def : InstRW<[LSU], (instregex "BP(R)?P$")>;
+def : InstRW<[FXU], (instregex "NIAI$")>;
 
 //===----------------------------------------------------------------------===//
 // Atomic operations

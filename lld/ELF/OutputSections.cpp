@@ -249,6 +249,7 @@ void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
 }
 
 template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  Loc = Buf;
   if (uint32_t Filler = Script<ELFT>::X->getFiller(this->Name))
     fill(Buf, this->Size, Filler);
 

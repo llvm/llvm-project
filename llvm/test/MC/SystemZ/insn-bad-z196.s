@@ -34,6 +34,30 @@
 	aih	%r0, (-1 << 31) - 1
 	aih	%r0, (1 << 31)
 
+#CHECK: error: instruction requires: execution-hint
+#CHECK: bpp	0, 0, 0
+
+	bpp	0, 0, 0
+
+#CHECK: error: instruction requires: execution-hint
+#CHECK: bprp	0, 0, 0
+
+	bprp	0, 0, 0
+
+#CHECK: error: offset out of range
+#CHECK: brcth   %r0, -0x1000000002
+#CHECK: error: offset out of range
+#CHECK: brcth   %r0, -1
+#CHECK: error: offset out of range
+#CHECK: brcth   %r0, 1
+#CHECK: error: offset out of range
+#CHECK: brcth   %r0, 0x100000000
+
+        brcth   %r0, -0x1000000002
+        brcth   %r0, -1
+        brcth   %r0, 1
+        brcth   %r0, 0x100000000
+
 #CHECK: error: invalid operand
 #CHECK: cdfbra	%f0, 0, %r0, -1
 #CHECK: error: invalid operand
@@ -732,6 +756,11 @@
 
 	locr	%r0,%r0,-1
 	locr	%r0,%r0,16
+
+#CHECK: error: instruction requires: execution-hint
+#CHECK: niai	0, 0
+
+	niai	0, 0
 
 #CHECK: error: instruction requires: transactional-execution
 #CHECK: ntstg	%r0, 524287(%r1,%r15)

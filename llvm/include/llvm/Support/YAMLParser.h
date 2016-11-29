@@ -42,6 +42,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SMLoc.h"
 #include <map>
+#include <system_error>
 #include <utility>
 
 namespace llvm {
@@ -75,9 +76,11 @@ std::string escape(StringRef Input);
 class Stream {
 public:
   /// \brief This keeps a reference to the string referenced by \p Input.
-  Stream(StringRef Input, SourceMgr &, bool ShowColors = true);
+  Stream(StringRef Input, SourceMgr &, bool ShowColors = true,
+         std::error_code *EC = nullptr);
 
-  Stream(MemoryBufferRef InputBuffer, SourceMgr &, bool ShowColors = true);
+  Stream(MemoryBufferRef InputBuffer, SourceMgr &, bool ShowColors = true,
+         std::error_code *EC = nullptr);
   ~Stream();
 
   document_iterator begin();

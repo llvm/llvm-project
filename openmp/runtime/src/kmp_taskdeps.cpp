@@ -248,7 +248,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
                      bool dep_barrier,kmp_int32 ndeps, kmp_depend_info_t *dep_list,
                      kmp_task_t *task )
 {
-    KA_TRACE(30, ("__kmp_process_deps<%d>: T#%d processing %d depencies : dep_barrier = %d\n", filter, gtid, ndeps, dep_barrier ) );
+    KA_TRACE(30, ("__kmp_process_deps<%d>: T#%d processing %d dependencies : dep_barrier = %d\n", filter, gtid, ndeps, dep_barrier ) );
 
     kmp_info_t *thread = __kmp_threads[ gtid ];
     kmp_int32 npredecessors=0;

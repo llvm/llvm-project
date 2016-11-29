@@ -383,17 +383,16 @@ GotSection<ELFT>::GotSection()
                              Target->GotEntrySize, ".got") {}
 
 template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
-  Sym.GotIndex = Entries.size();
-  Entries.push_back(&Sym);
+  Sym.GotIndex = NumEntries;
+  ++NumEntries;
 }
 
 template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
   if (Sym.GlobalDynIndex != -1U)
     return false;
-  Sym.GlobalDynIndex = Entries.size();
+  Sym.GlobalDynIndex = NumEntries;
   // Global Dynamic TLS entries take two GOT slots.
-  Entries.push_back(nullptr);
-  Entries.push_back(&Sym);
+  NumEntries += 2;
   return true;
 }
 
@@ -402,9 +401,8 @@ template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
 template <class ELFT> bool GotSection<ELFT>::addTlsIndex() {
   if (TlsIndexOff != uint32_t(-1))
     return false;
-  TlsIndexOff = Entries.size() * sizeof(uintX_t);
-  Entries.push_back(nullptr);
-  Entries.push_back(nullptr);
+  TlsIndexOff = NumEntries * sizeof(uintX_t);
+  NumEntries += 2;
   return true;
 }
 
@@ -421,26 +419,17 @@ GotSection<ELFT>::getGlobalDynOffset(const SymbolBody &B) const {
 }
 
 template <class ELFT> void GotSection<ELFT>::finalize() {
-  Size = Entries.size() * sizeof(uintX_t);
+  Size = NumEntries * sizeof(uintX_t);
 }
 
 template <class ELFT> bool GotSection<ELFT>::empty() const {
   // If we have a relocation that is relative to GOT (such as GOTOFFREL),
   // we need to emit a GOT even if it's empty.
-  return Entries.empty() && !HasGotOffRel;
+  return NumEntries == 0 && !HasGotOffRel;
 }
 
 template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
-  for (const SymbolBody *B : Entries) {
-    uint8_t *Entry = Buf;
-    Buf += sizeof(uintX_t);
-    if (!B)
-      continue;
-    if (B->isPreemptible())
-      continue; // The dynamic linker will take care of it.
-    uintX_t VA = B->getVA<ELFT>();
-    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, VA);
-  }
+  this->relocate(Buf, Buf + Size);
 }
 
 template <class ELFT>

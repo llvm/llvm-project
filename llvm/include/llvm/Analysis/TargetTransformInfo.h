@@ -87,7 +87,8 @@ public:
   /// When used as a result of \c TargetIRAnalysis this method will be called
   /// when the function this was computed for changes. When it returns false,
   /// the information is preserved across those changes.
-  bool invalidate(Function &, const PreservedAnalyses &) {
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
     // FIXME: We should probably in some way ensure that the subtarget
     // information for a function hasn't changed.
     return false;

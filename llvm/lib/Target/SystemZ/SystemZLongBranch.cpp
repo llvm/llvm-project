@@ -226,6 +226,10 @@ TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
       // Relaxes to A(G)HI and BRCL, which is 6 bytes longer.
       Terminator.ExtraRelaxSize = 6;
       break;
+    case SystemZ::BRCTH:
+      // Never needs to be relaxed.
+      Terminator.ExtraRelaxSize = 0;
+      break;
     case SystemZ::CRJ:
     case SystemZ::CLRJ:
       // Relaxes to a C(L)R/BRCL sequence, which is 2 bytes longer.

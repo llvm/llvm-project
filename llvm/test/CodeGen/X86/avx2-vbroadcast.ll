@@ -279,15 +279,15 @@ define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
 ; X32-AVX2-LABEL: broadcast_mem_v4i16_v16i16:
 ; X32-AVX2:       ## BB#0:
 ; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; X32-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X32-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,4,5,6,7,6,7],zero,zero
 ; X32-AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: broadcast_mem_v4i16_v16i16:
 ; X64-AVX2:       ## BB#0:
-; X64-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; X64-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X64-AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,4,5,6,7,6,7],zero,zero
 ; X64-AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;

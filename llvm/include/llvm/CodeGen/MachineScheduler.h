@@ -42,8 +42,8 @@
 //
 // ScheduleDAGInstrs *<Target>PassConfig::
 // createMachineScheduler(MachineSchedContext *C) {
-//   ScheduleDAGMI *DAG = new ScheduleDAGMI(C, CustomStrategy(C));
-//   DAG->addMutation(new CustomDependencies(DAG->TII, DAG->TRI));
+//   ScheduleDAGMI *DAG = createGenericSchedLive(C);
+//   DAG->addMutation(new CustomDAGMutation(...));
 //   return DAG;
 // }
 //
@@ -295,7 +295,8 @@ public:
   ///
   /// ScheduleDAGMI takes ownership of the Mutation object.
   void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation) {
-    Mutations.push_back(std::move(Mutation));
+    if (Mutation)
+      Mutations.push_back(std::move(Mutation));
   }
 
   /// \brief True if an edge can be added from PredSU to SuccSU without creating
@@ -1014,6 +1015,14 @@ protected:
 
   void pickNodeFromQueue(SchedCandidate &Cand);
 };
+
+/// Create the standard converging machine scheduler. This will be used as the
+/// default scheduler if the target does not set a default.
+/// Adds default DAG mutations.
+ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C);
+
+/// Create a generic scheduler with no vreg liveness or DAG mutation passes.
+ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C);
 
 std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,

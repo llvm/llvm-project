@@ -1558,6 +1558,34 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   In<ELFT>::BuildId->writeBuildId({Start, End});
 }
 
+template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
+  for (InputSectionData *D : Symtab<ELFT>::X->Sections) {
+    auto *IS = dyn_cast_or_null<InputSection<ELFT>>(D);
+    if (!IS || !IS->OutSec)
+      continue;
+
+    uint8_t *ISLoc = cast<OutputSection<ELFT>>(IS->OutSec)->Loc + IS->OutSecOff;
+    if (ISLoc <= Loc && ISLoc + IS->getSize() > Loc)
+      return IS->getLocation(Loc - ISLoc) + ": ";
+  }
+  return "";
+}
+
+std::string elf::getErrorLocation(uint8_t *Loc) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return getErrorLoc<ELF32LE>(Loc);
+  case ELF32BEKind:
+    return getErrorLoc<ELF32BE>(Loc);
+  case ELF64LEKind:
+    return getErrorLoc<ELF64LE>(Loc);
+  case ELF64BEKind:
+    return getErrorLoc<ELF64BE>(Loc);
+  default:
+    llvm_unreachable("unknown ELF type");
+  }
+}
+
 template void elf::writeResult<ELF32LE>();
 template void elf::writeResult<ELF32BE>();
 template void elf::writeResult<ELF64LE>();

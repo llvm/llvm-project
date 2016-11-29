@@ -2,6 +2,10 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
 
+; Run the test again to make sure it still works the same even
+; in the presence of the load-store-on-condition-2 facility.
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
+
 declare i32 @foo(i32 *)
 
 ; Test the simple case.

@@ -521,7 +521,8 @@ TEST(ClangMove, DumpDecls) {
   const auto& Results = Reporter.getDeclarationList();
   auto ActualDeclIter = Results.begin();
   auto ExpectedDeclIter = ExpectedDeclarations.begin();
-  while (ActualDeclIter != Results.end() && ExpectedDeclIter != Results.end()) {
+  while (ActualDeclIter != Results.end() &&
+         ExpectedDeclIter != ExpectedDeclarations.end()) {
     EXPECT_EQ(*ActualDeclIter, *ExpectedDeclIter);
     ++ActualDeclIter;
     ++ExpectedDeclIter;

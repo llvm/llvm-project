@@ -5395,8 +5395,9 @@ static bool setTargetShuffleZeroElements(SDValue N,
   bool IsUnary;
   if (!isTargetShuffle(N.getOpcode()))
     return false;
-  if (!getTargetShuffleMask(N.getNode(), N.getSimpleValueType(), true, Ops,
-                            Mask, IsUnary))
+
+  MVT VT = N.getSimpleValueType();
+  if (!getTargetShuffleMask(N.getNode(), VT, true, Ops, Mask, IsUnary))
     return false;
 
   SDValue V1 = Ops[0];
@@ -5458,7 +5459,68 @@ static bool setTargetShuffleZeroElements(SDValue N,
     }
   }
 
+  assert(VT.getVectorNumElements() == Mask.size() &&
+         "Different mask size from vector size!");
   return true;
+}
+
+// Attempt to decode ops that could be represented as a shuffle mask.
+// The decoded shuffle mask may contain a different number of elements to the
+// destination value type.
+static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
+                               SmallVectorImpl<SDValue> &Ops) {
+  Mask.clear();
+  Ops.clear();
+
+  MVT VT = N.getSimpleValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  unsigned Opcode = N.getOpcode();
+  switch (Opcode) {
+  case X86ISD::VSHLI:
+  case X86ISD::VSRLI: {
+    uint64_t ShiftVal = N.getConstantOperandVal(1);
+    // Out of range bit shifts are guaranteed to be zero.
+    if (VT.getScalarSizeInBits() <= ShiftVal) {
+      Mask.append(NumElts, SM_SentinelZero);
+      return true;
+    }
+
+    // We can only decode 'whole byte' bit shifts as shuffles.
+    if ((ShiftVal % 8) != 0)
+      break;
+
+    uint64_t ByteShift = ShiftVal / 8;
+    unsigned NumBytes = VT.getSizeInBits() / 8;
+    unsigned NumBytesPerElt = VT.getScalarSizeInBits() / 8;
+    Ops.push_back(N.getOperand(0));
+
+    // Clear mask to all zeros and insert the shifted byte indices.
+    Mask.append(NumBytes, SM_SentinelZero);
+
+    if (X86ISD::VSHLI == Opcode) {
+      for (unsigned i = 0; i != NumBytes; i += NumBytesPerElt)
+        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
+          Mask[i + j] = i + j - ByteShift;
+    } else {
+      for (unsigned i = 0; i != NumBytes; i += NumBytesPerElt)
+        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
+          Mask[i + j - ByteShift] = i + j;
+    }
+    return true;
+  }
+  case X86ISD::VZEXT: {
+    // TODO - add support for VPMOVZX with smaller input vector types.
+    SDValue Op0 = N.getOperand(0);
+    if (VT.getSizeInBits() != Op0.getValueSizeInBits())
+      break;
+    DecodeZeroExtendMask(Op0.getSimpleValueType().getScalarType(), VT, Mask);
+    Ops.push_back(Op0);
+    return true;
+  }
+  }
+
+  return false;
 }
 
 /// Calls setTargetShuffleZeroElements to resolve a target shuffle mask's inputs
@@ -5470,7 +5532,8 @@ static bool resolveTargetShuffleInputs(SDValue Op, SDValue &Op0, SDValue &Op1,
                                        SmallVectorImpl<int> &Mask) {
   SmallVector<SDValue, 2> Ops;
   if (!setTargetShuffleZeroElements(Op, Mask, Ops))
-    return false;
+    if (!getFauxShuffleMask(Op, Mask, Ops))
+      return false;
 
   int NumElts = Mask.size();
   bool Op0InUse = any_of(Mask, [NumElts](int Idx) {
@@ -26299,8 +26362,6 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
     Ops.push_back(Input1);
   }
 
-  assert(VT.getVectorNumElements() == OpMask.size() &&
-         "Different mask size from vector size!");
   assert(((RootMask.size() > OpMask.size() &&
            RootMask.size() % OpMask.size() == 0) ||
           (OpMask.size() > RootMask.size() &&
@@ -29955,7 +30016,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Generate NEG and CMOV for integer abs.
+/// Generate NEG and CMOV for integer abs.
 static SDValue combineIntegerAbs(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
@@ -29971,21 +30032,19 @@ static SDValue combineIntegerAbs(SDNode *N, SelectionDAG &DAG) {
   // Check pattern of XOR(ADD(X,Y), Y) where Y is SRA(X, size(X)-1)
   // and change it to SUB and CMOV.
   if (VT.isInteger() && N->getOpcode() == ISD::XOR &&
-      N0.getOpcode() == ISD::ADD &&
-      N0.getOperand(1) == N1 &&
-      N1.getOpcode() == ISD::SRA &&
-      N1.getOperand(0) == N0.getOperand(0))
-    if (ConstantSDNode *Y1C = dyn_cast<ConstantSDNode>(N1.getOperand(1)))
-      if (Y1C->getAPIntValue() == VT.getSizeInBits()-1) {
-        // Generate SUB & CMOV.
-        SDValue Neg = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32),
-                                  DAG.getConstant(0, DL, VT), N0.getOperand(0));
-
-        SDValue Ops[] = { N0.getOperand(0), Neg,
-                          DAG.getConstant(X86::COND_GE, DL, MVT::i8),
-                          SDValue(Neg.getNode(), 1) };
-        return DAG.getNode(X86ISD::CMOV, DL, DAG.getVTList(VT, MVT::Glue), Ops);
-      }
+      N0.getOpcode() == ISD::ADD && N0.getOperand(1) == N1 &&
+      N1.getOpcode() == ISD::SRA && N1.getOperand(0) == N0.getOperand(0)) {
+    auto *Y1C = dyn_cast<ConstantSDNode>(N1.getOperand(1));
+    if (Y1C && Y1C->getAPIntValue() == VT.getSizeInBits() - 1) {
+      // Generate SUB & CMOV.
+      SDValue Neg = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32),
+                                DAG.getConstant(0, DL, VT), N0.getOperand(0));
+      SDValue Ops[] = {N0.getOperand(0), Neg,
+                       DAG.getConstant(X86::COND_GE, DL, MVT::i8),
+                       SDValue(Neg.getNode(), 1)};
+      return DAG.getNode(X86ISD::CMOV, DL, DAG.getVTList(VT, MVT::Glue), Ops);
+    }
+  }
   return SDValue();
 }
 

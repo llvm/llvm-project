@@ -62,10 +62,10 @@ unequal:
 }
 
 ; CHECK-LABEL: func2:
-; CHECK: cmpld 4, [[REG:[0-9]+]]
-; CHECK: mr 3, [[REG]]
-; CHECK-DAG: std 3, -[[OFFSET1:[0-9]+]](1)
-; CHECK-DAG: std 4, -[[OFFSET2:[0-9]+]](1)
+; CHECK: ld [[REG2:[0-9]+]], 72(1)
+; CHECK: cmpld {{([0-9]+,)?}}4, [[REG2]]
+; CHECK-DAG: std [[REG2]], -[[OFFSET1:[0-9]+]]
+; CHECK-DAG: std 4, -[[OFFSET2:[0-9]+]]
 ; CHECK: ld 3, -[[OFFSET2]](1)
 ; CHECK: ld 3, -[[OFFSET1]](1)
 
@@ -106,11 +106,11 @@ unequal:
 }
 
 ; CHECK-LABEL: func3:
-; CHECK: cmpld 4, 6
-; CHECK: mr [[REGA:[0-9]+]], 6
-; CHECK: mr [[REGB:[0-9]+]], 4
-; CHECK-DAG: std [[REGA]], -[[OFFSET1:[0-9]+]](1)
-; CHECK-DAG: std [[REGB]], -[[OFFSET2:[0-9]+]](1)
+; CHECK: ld [[REG3:[0-9]+]], 72(1)
+; CHECK: ld [[REG4:[0-9]+]], 56(1)
+; CHECK: cmpld {{([0-9]+,)?}}[[REG4]], [[REG3]]
+; CHECK: std [[REG3]], -[[OFFSET1:[0-9]+]](1)
+; CHECK: std [[REG4]], -[[OFFSET2:[0-9]+]](1)
 ; CHECK: ld 3, -[[OFFSET2]](1)
 ; CHECK: ld 3, -[[OFFSET1]](1)
 
