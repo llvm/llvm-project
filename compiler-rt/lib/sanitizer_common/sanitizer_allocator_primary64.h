@@ -69,7 +69,7 @@ class SizeClassAllocator64 {
     return base + (static_cast<uptr>(ptr32) << kCompactPtrScale);
   }
 
-  void Init() {
+  void Init(s32 release_to_os_interval_ms) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
     if (kUsingConstantSpaceBeg) {
       CHECK_EQ(kSpaceBeg, reinterpret_cast<uptr>(
@@ -79,7 +79,17 @@ class SizeClassAllocator64 {
           reinterpret_cast<uptr>(MmapNoAccess(TotalSpaceSize));
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
+    SetReleaseToOSIntervalMs(release_to_os_interval_ms);
     MapWithCallback(SpaceEnd(), AdditionalSize());
+  }
+
+  s32 ReleaseToOSIntervalMs() const {
+    return atomic_load(&release_to_os_interval_ms_, memory_order_relaxed);
+  }
+
+  void SetReleaseToOSIntervalMs(s32 release_to_os_interval_ms) {
+    atomic_store(&release_to_os_interval_ms_, release_to_os_interval_ms,
+                 memory_order_relaxed);
   }
 
   void MapWithCallback(uptr beg, uptr size) {
@@ -111,6 +121,8 @@ class SizeClassAllocator64 {
       free_array[old_num_chunks + i] = chunks[i];
     region->num_freed_chunks = new_num_freed_chunks;
     region->n_freed += n_chunks;
+
+    MaybeReleaseToOS(class_id);
   }
 
   NOINLINE void GetFromAllocator(AllocatorStats *stat, uptr class_id,
@@ -284,11 +296,6 @@ class SizeClassAllocator64 {
                      GetPageSizeCached());
   }
 
-  void ReleaseToOS() {
-    for (uptr class_id = 1; class_id < kNumClasses; class_id++)
-      ReleaseToOS(class_id);
-  }
-
   typedef SizeClassMap SizeClassMapT;
   static const uptr kNumClasses = SizeClassMap::kNumClasses;
   static const uptr kNumClassesRounded = SizeClassMap::kNumClassesRounded;
@@ -317,12 +324,13 @@ class SizeClassAllocator64 {
   static const uptr kMetaMapSize = 1 << 16;
   // Call mmap for free array memory with at least this size.
   static const uptr kFreeArrayMapSize = 1 << 16;
-  // Granularity of ReleaseToOs (aka madvise).
-  static const uptr kReleaseToOsGranularity = 1 << 12;
+
+  atomic_sint32_t release_to_os_interval_ms_;
 
   struct ReleaseToOsInfo {
     uptr n_freed_at_last_release;
     uptr num_releases;
+    u64 last_release_at_ns;
   };
 
   struct RegionInfo {
@@ -454,50 +462,63 @@ class SizeClassAllocator64 {
                               CompactPtrT first, CompactPtrT last) {
     uptr beg_ptr = CompactPtrToPointer(region_beg, first);
     uptr end_ptr = CompactPtrToPointer(region_beg, last) + chunk_size;
-    CHECK_GE(end_ptr - beg_ptr, kReleaseToOsGranularity);
-    beg_ptr = RoundUpTo(beg_ptr, kReleaseToOsGranularity);
-    end_ptr = RoundDownTo(end_ptr, kReleaseToOsGranularity);
+    const uptr page_size = GetPageSizeCached();
+    CHECK_GE(end_ptr - beg_ptr, page_size);
+    beg_ptr = RoundUpTo(beg_ptr, page_size);
+    end_ptr = RoundDownTo(end_ptr, page_size);
     if (end_ptr == beg_ptr) return false;
     ReleaseMemoryToOS(beg_ptr, end_ptr - beg_ptr);
     return true;
   }
 
-  // Releases some RAM back to OS.
+  // Attempts to release some RAM back to OS. The region is expected to be
+  // locked.
   // Algorithm:
-  // * Lock the region.
   // * Sort the chunks.
   // * Find ranges fully covered by free-d chunks
   // * Release them to OS with madvise.
-  //
-  // TODO(kcc): make sure we don't do it too frequently.
-  void ReleaseToOS(uptr class_id) {
+  void MaybeReleaseToOS(uptr class_id) {
     RegionInfo *region = GetRegionInfo(class_id);
+    const uptr chunk_size = ClassIdToSize(class_id);
+    const uptr page_size = GetPageSizeCached();
+
+    uptr n = region->num_freed_chunks;
+    if (n * chunk_size < page_size)
+      return;  // No chance to release anything.
+    if ((region->n_freed - region->rtoi.n_freed_at_last_release) * chunk_size <
+        page_size) {
+      return;  // Nothing new to release.
+    }
+
+    s32 interval_ms = ReleaseToOSIntervalMs();
+    if (interval_ms < 0)
+      return;
+
+    u64 now_ns = NanoTime();
+    if (region->rtoi.last_release_at_ns + interval_ms * 1000000ULL > now_ns)
+      return;  // Memory was returned recently.
+    region->rtoi.last_release_at_ns = now_ns;
+
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
     CompactPtrT *free_array = GetFreeArray(region_beg);
-    uptr chunk_size = ClassIdToSize(class_id);
-    uptr scaled_chunk_size = chunk_size >> kCompactPtrScale;
-    const uptr kScaledGranularity = kReleaseToOsGranularity >> kCompactPtrScale;
-    BlockingMutexLock l(&region->mutex);
-    uptr n = region->num_freed_chunks;
-    if (n * chunk_size < kReleaseToOsGranularity)
-      return;   // No chance to release anything.
-    if ((region->rtoi.n_freed_at_last_release - region->n_freed) * chunk_size <
-        kReleaseToOsGranularity)
-      return;  // Nothing new to release.
     SortArray(free_array, n);
-    uptr beg = free_array[0];
+
+    const uptr scaled_chunk_size = chunk_size >> kCompactPtrScale;
+    const uptr kScaledGranularity = page_size >> kCompactPtrScale;
+
+    uptr range_beg = free_array[0];
     uptr prev = free_array[0];
     for (uptr i = 1; i < n; i++) {
       uptr chunk = free_array[i];
       CHECK_GT(chunk, prev);
       if (chunk - prev != scaled_chunk_size) {
         CHECK_GT(chunk - prev, scaled_chunk_size);
-        if (prev + scaled_chunk_size - beg >= kScaledGranularity) {
-          MaybeReleaseChunkRange(region_beg, chunk_size, beg, prev);
+        if (prev + scaled_chunk_size - range_beg >= kScaledGranularity) {
+          MaybeReleaseChunkRange(region_beg, chunk_size, range_beg, prev);
           region->rtoi.n_freed_at_last_release = region->n_freed;
           region->rtoi.num_releases++;
         }
-        beg = chunk;
+        range_beg = chunk;
       }
       prev = chunk;
     }

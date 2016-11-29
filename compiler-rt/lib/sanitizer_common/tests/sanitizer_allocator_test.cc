@@ -141,7 +141,7 @@ TEST(SanitizerCommon, InternalSizeClassMap) {
 template <class Allocator>
 void TestSizeClassAllocator() {
   Allocator *a = new Allocator;
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   SizeClassAllocatorLocalCache<Allocator> cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -238,7 +238,7 @@ TEST(SanitizerCommon, SizeClassAllocator32Compact) {
 template <class Allocator>
 void SizeClassAllocatorMetadataStress() {
   Allocator *a = new Allocator;
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   SizeClassAllocatorLocalCache<Allocator> cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -292,7 +292,7 @@ TEST(SanitizerCommon, SizeClassAllocator32CompactMetadataStress) {
 template <class Allocator>
 void SizeClassAllocatorGetBlockBeginStress(u64 TotalSize) {
   Allocator *a = new Allocator;
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   SizeClassAllocatorLocalCache<Allocator> cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -366,7 +366,7 @@ TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
   TestMapUnmapCallback::unmap_count = 0;
   typedef SizeClassAllocator64<AP64WithCallback> Allocator64WithCallBack;
   Allocator64WithCallBack *a = new Allocator64WithCallBack;
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 1);  // Allocator state.
   SizeClassAllocatorLocalCache<Allocator64WithCallBack> cache;
   memset(&cache, 0, sizeof(cache));
@@ -397,7 +397,7 @@ TEST(SanitizerCommon, SizeClassAllocator32MapUnmapCallback) {
       TestMapUnmapCallback>
     Allocator32WithCallBack;
   Allocator32WithCallBack *a = new Allocator32WithCallBack;
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 0);
   SizeClassAllocatorLocalCache<Allocator32WithCallBack>  cache;
   memset(&cache, 0, sizeof(cache));
@@ -430,7 +430,7 @@ TEST(SanitizerCommon, LargeMmapAllocatorMapUnmapCallback) {
 template<class Allocator>
 void FailInAssertionOnOOM() {
   Allocator a;
-  a.Init();
+  a.Init(kReleaseToOSIntervalNever);
   SizeClassAllocatorLocalCache<Allocator> cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -538,7 +538,7 @@ void TestCombinedAllocator() {
       CombinedAllocator<PrimaryAllocator, AllocatorCache, SecondaryAllocator>
       Allocator;
   Allocator *a = new Allocator;
-  a->Init(/* may_return_null */ true);
+  a->Init(/* may_return_null */ true, kReleaseToOSIntervalNever);
 
   AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
@@ -627,7 +627,7 @@ void TestSizeClassAllocatorLocalCache() {
   typedef typename AllocatorCache::Allocator Allocator;
   Allocator *a = new Allocator();
 
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
 
@@ -702,7 +702,7 @@ void *AllocatorLeakTestWorker(void *arg) {
 TEST(SanitizerCommon, AllocatorLeakTest) {
   typedef AllocatorCache::Allocator Allocator;
   Allocator a;
-  a.Init();
+  a.Init(kReleaseToOSIntervalNever);
   uptr total_used_memory = 0;
   for (int i = 0; i < 100; i++) {
     pthread_t t;
@@ -735,7 +735,7 @@ static void *DeallocNewThreadWorker(void *arg) {
 // able to call Deallocate on a zeroed cache, and it will self-initialize.
 TEST(Allocator, AllocatorCacheDeallocNewThread) {
   AllocatorCache::Allocator allocator;
-  allocator.Init();
+  allocator.Init(kReleaseToOSIntervalNever);
   AllocatorCache main_cache;
   AllocatorCache child_cache;
   memset(&main_cache, 0, sizeof(main_cache));
@@ -806,7 +806,7 @@ void IterationTestCallback(uptr chunk, void *arg) {
 template <class Allocator>
 void TestSizeClassAllocatorIteration() {
   Allocator *a = new Allocator;
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   SizeClassAllocatorLocalCache<Allocator> cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -947,7 +947,7 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   const uptr kRegionSize =
       kAllocatorSize / SpecialSizeClassMap::kNumClassesRounded;
   SpecialAllocator64 *a = new SpecialAllocator64;
-  a->Init();
+  a->Init(kReleaseToOSIntervalNever);
   SizeClassAllocatorLocalCache<SpecialAllocator64> cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);

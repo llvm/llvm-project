@@ -70,18 +70,11 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
   SoftRssLimitExceededCallback = Callback;
 }
 
-static AllocatorReleaseToOSCallback ReleseCallback;
-void SetAllocatorReleaseToOSCallback(AllocatorReleaseToOSCallback Callback) {
-  CHECK_EQ(ReleseCallback, nullptr);
-  ReleseCallback = Callback;
-}
-
 #if SANITIZER_LINUX && !SANITIZER_GO
 void BackgroundThread(void *arg) {
   uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
   uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
   bool heap_profile = common_flags()->heap_profile;
-  bool allocator_release_to_os = common_flags()->allocator_release_to_os;
   uptr prev_reported_rss = 0;
   uptr prev_reported_stack_depot_size = 0;
   bool reached_soft_rss_limit = false;
@@ -127,7 +120,6 @@ void BackgroundThread(void *arg) {
           SoftRssLimitExceededCallback(false);
       }
     }
-    if (allocator_release_to_os && ReleseCallback) ReleseCallback();
     if (heap_profile &&
         current_rss_mb > rss_during_last_reported_profile * 1.1) {
       Printf("\n\nHEAP PROFILE at RSS %zdMb\n", current_rss_mb);
@@ -162,7 +154,6 @@ void MaybeStartBackgroudThread() {
   // Start the background thread if one of the rss limits is given.
   if (!common_flags()->hard_rss_limit_mb &&
       !common_flags()->soft_rss_limit_mb &&
-      !common_flags()->allocator_release_to_os &&
       !common_flags()->heap_profile) return;
   if (!&real_pthread_create) return;  // Can't spawn the thread anyway.
   internal_start_thread(BackgroundThread, nullptr);
