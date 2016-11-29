@@ -74,6 +74,9 @@ static cl::opt<bool> FullLeadingAddr("full-leading-addr",
 static cl::opt<bool> NoLeadingAddr("no-leading-addr",
                                    cl::desc("Print no leading address"));
 
+static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
+                                      cl::desc("Print no leading headers"));
+
 cl::opt<bool> llvm::UniversalHeaders("universal-headers",
                                      cl::desc("Print Mach-O universal headers "
                                               "(requires -macho)"));
@@ -1232,12 +1235,14 @@ static void ProcessMachO(StringRef Filename, MachOObjectFile *MachOOF,
   if (Disassemble || PrivateHeaders || ExportsTrie || Rebase || Bind || SymbolTable ||
       LazyBind || WeakBind || IndirectSymbols || DataInCode || LinkOptHints ||
       DylibsUsed || DylibId || ObjcMetaData || (FilterSections.size() != 0)) {
-    outs() << Filename;
-    if (!ArchiveMemberName.empty())
-      outs() << '(' << ArchiveMemberName << ')';
-    if (!ArchitectureName.empty())
-      outs() << " (architecture " << ArchitectureName << ")";
-    outs() << ":\n";
+    if (!NoLeadingHeaders) {
+      outs() << Filename;
+      if (!ArchiveMemberName.empty())
+        outs() << '(' << ArchiveMemberName << ')';
+      if (!ArchitectureName.empty())
+        outs() << " (architecture " << ArchitectureName << ")";
+      outs() << ":\n";
+    }
   }
 
   if (Disassemble)
