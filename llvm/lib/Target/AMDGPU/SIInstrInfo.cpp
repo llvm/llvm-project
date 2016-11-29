@@ -2203,7 +2203,8 @@ void SIInstrInfo::legalizeOperandsSMRD(MachineRegisterInfo &MRI,
 }
 
 void SIInstrInfo::legalizeOperands(MachineInstr &MI) const {
-  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Legalize VOP2
   if (isVOP2(MI) || isVOPC(MI)) {
@@ -2321,8 +2322,14 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI) const {
     return;
   }
 
-  // Legalize MIMG
-  if (isMIMG(MI)) {
+  // Legalize MIMG and MUBUF/MTBUF for shaders.
+  //
+  // Shaders only generate MUBUF/MTBUF instructions via intrinsics or via
+  // scratch memory access. In both cases, the legalization never involves
+  // conversion to the addr64 form.
+  if (isMIMG(MI) ||
+      (AMDGPU::isShader(MF.getFunction()->getCallingConv()) &&
+       (isMUBUF(MI) || isMTBUF(MI)))) {
     MachineOperand *SRsrc = getNamedOperand(MI, AMDGPU::OpName::srsrc);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg()))) {
       unsigned SGPR = readlaneVGPRToSGPR(SRsrc->getReg(), MI, MRI);
@@ -2337,9 +2344,10 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI) const {
     return;
   }
 
-  // Legalize MUBUF* instructions
+  // Legalize MUBUF* instructions by converting to addr64 form.
   // FIXME: If we start using the non-addr64 instructions for compute, we
-  // may need to legalize them here.
+  // may need to legalize them as above. This especially applies to the
+  // buffer_load_format_* variants and variants with idxen (or bothen).
   int SRsrcIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::srsrc);
   if (SRsrcIdx != -1) {
