@@ -4931,7 +4931,21 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
   // and then put it to the stream, otherwise just dump the diagnostics to the
   // stream.
 
-  VALID_OR_RETURN_VOID();
+
+   // N.B. you cannot use VALID_OR_RETURN_VOID here since that exits if you have
+   // fatal errors, which are what we are trying to print here.
+  if (!m_ast_context_ap.get()) {
+    SymbolFile *sym_file = GetSymbolFile();
+    if (sym_file) {
+      ConstString name 
+              = sym_file->GetObjectFile()->GetModule()->GetObjectName();
+      m_fatal_errors.SetErrorStringWithFormat(
+                  "Null context for %s.", name.AsCString());
+    } else {
+      m_fatal_errors.SetErrorString("Unknown fatal error occurred.");
+    }
+    return;
+  }
 
   if (m_ast_context_ap->Diags.hasFatalErrorOccurred() &&
       !m_reported_fatal_error) {
@@ -5728,6 +5742,7 @@ bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
     switch (type_kind) {
     case swift::TypeKind::Archetype:
     case swift::TypeKind::UnboundGeneric:
+    case swift::TypeKind::AssociatedType:
       return false;
     case swift::TypeKind::Paren: {
       swift::ParenType *paren_type =

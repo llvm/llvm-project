@@ -212,8 +212,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     uint64_t location = valobj_addr + 2 * ptr_size;
     if (is_inline) {
       if (!has_explicit_length) {
-        stream.Printf("found new combo");
-        return true;
+        return false;
       } else
         location += ptr_size;
     } else {

@@ -188,7 +188,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
       get_item_info_caller = m_get_item_info_impl_code->MakeFunctionCaller(
           get_item_info_return_type, get_item_info_arglist,
           thread.shared_from_this(), error);
-      if (error.Fail()) {
+      if (error.Fail() || get_item_info_caller == nullptr) {
         if (log)
           log->Printf("Error Inserting get-item-info function: \"%s\".",
                       error.AsCString());

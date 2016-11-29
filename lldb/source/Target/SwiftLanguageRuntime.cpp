@@ -2065,7 +2065,7 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
                     llvm::dyn_cast_or_null<swift::ArchetypeType>(
                         candidate_type.getPointer())) {
               llvm::StringRef candidate_name =
-                  candidate_archetype->getName().str();
+                  candidate_archetype->getFullName();
 
               CompilerType concrete_type = this->GetConcreteType(
                   &stack_frame, ConstString(candidate_name));
