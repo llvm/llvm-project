@@ -2,8 +2,8 @@
 //
 
 // RUN: %clangxx_asan -std=c++11 %s -o %t
-// RUN: %env_asan_opts=allocator_release_to_os=1 %run %t 2>&1 | FileCheck %s --check-prefix=RELEASE
-// RUN: %env_asan_opts=allocator_release_to_os=0 %run %t 2>&1 | FileCheck %s --check-prefix=NO_RELEASE
+// RUN: %env_asan_opts=allocator_release_to_os_interval_ms=0 %run %t 2>&1 | FileCheck %s --check-prefix=RELEASE
+// RUN: %env_asan_opts=allocator_release_to_os_interval_ms=-1 %run %t 2>&1 | FileCheck %s --check-prefix=NO_RELEASE
 //
 // REQUIRES: x86_64-target-arch
 #include <stdlib.h>
