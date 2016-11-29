@@ -22,7 +22,7 @@
 #include "UnwindLLDB.h"
 
 #if defined(_WIN64)
-#include "x86/RegisterContextWindows_x64.h"
+#include "x64/RegisterContextWindows_x64.h"
 #else
 #include "x86/RegisterContextWindows_x86.h"
 #endif

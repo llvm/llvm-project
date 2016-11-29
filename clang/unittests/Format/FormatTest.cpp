@@ -1137,6 +1137,12 @@ TEST_F(FormatTest, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
             format("SomeFunction(a,     // comment\n"
                    "          b,\n"
                    "      c); // comment"));
+  EXPECT_EQ("aaaaaaaaaa(aaaa(aaaa,\n"
+            "                aaaa), //\n"
+            "           aaaa, bbbbb);",
+            format("aaaaaaaaaa(aaaa(aaaa,\n"
+                   "aaaa), //\n"
+                   "aaaa, bbbbb);"));
 }
 
 TEST_F(FormatTest, RemovesTrailingWhitespaceOfComments) {
@@ -4571,12 +4577,13 @@ TEST_F(FormatTest, ParenthesesAndOperandAlignment) {
 
 TEST_F(FormatTest, BreaksConditionalExpressions) {
   verifyFormat(
-      "aaaa(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "                               ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "                               : aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+      "aaaa(aaaaaaaaaaaaaaaaaaaa,\n"
+      "     aaaaaaaaaaaaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "                                : aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
   verifyFormat(
-      "aaaa(aaaaaaaaaaaaaaaaaaaa, aaaaaaa ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "                                   : aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+      "aaaa(aaaaaaaaaaaaaaaaaaaa,\n"
+      "     aaaaaaa ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "             : aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
   verifyFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaa ? aaaa(aaaaaa)\n"
       "                                                    : aaaaaaaaaaaaa);");
@@ -4626,11 +4633,12 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "           ? aaaa\n"
                "           : bbbb;");
   verifyFormat("unsigned Indent =\n"
-               "    format(TheLine.First, IndentForLevel[TheLine.Level] >= 0\n"
-               "                              ? IndentForLevel[TheLine.Level]\n"
-               "                              : TheLine * 2,\n"
+               "    format(TheLine.First,\n"
+               "           IndentForLevel[TheLine.Level] >= 0\n"
+               "               ? IndentForLevel[TheLine.Level]\n"
+               "               : TheLine * 2,\n"
                "           TheLine.InPPDirective, PreviousEndOfLineColumn);",
-               getLLVMStyleWithColumns(70));
+               getLLVMStyleWithColumns(60));
   verifyFormat("bool aaaaaa = aaaaaaaaaaaaa //\n"
                "                  ? aaaaaaaaaaaaaaa\n"
                "                  : bbbbbbbbbbbbbbb //\n"
@@ -4705,13 +4713,14 @@ TEST_F(FormatTest, BreaksConditionalExpressionsAfterOperator) {
   Style.BreakBeforeTernaryOperators = false;
   Style.ColumnLimit = 70;
   verifyFormat(
-      "aaaa(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaa ?\n"
-      "                               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa :\n"
-      "                               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
+      "aaaa(aaaaaaaaaaaaaaaaaaaa,\n"
+      "     aaaaaaaaaaaaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa :\n"
+      "                                  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
       Style);
   verifyFormat(
-      "aaaa(aaaaaaaaaaaaaaaaaaaa, aaaaaaa ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa :\n"
-      "                                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
+      "aaaa(aaaaaaaaaaaaaaaaaaaa,\n"
+      "     aaaaaaa ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa :\n"
+      "               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
       Style);
   verifyFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaa ? aaaa(aaaaaa) :\n"
@@ -4767,13 +4776,13 @@ TEST_F(FormatTest, BreaksConditionalExpressionsAfterOperator) {
                "      b :\n"
                "      c);",
                Style);
-  verifyFormat(
-      "unsigned Indent =\n"
-      "    format(TheLine.First, IndentForLevel[TheLine.Level] >= 0 ?\n"
-      "                              IndentForLevel[TheLine.Level] :\n"
-      "                              TheLine * 2,\n"
-      "           TheLine.InPPDirective, PreviousEndOfLineColumn);",
-      Style);
+  verifyFormat("unsigned Indent =\n"
+               "    format(TheLine.First,\n"
+               "           IndentForLevel[TheLine.Level] >= 0 ?\n"
+               "               IndentForLevel[TheLine.Level] :\n"
+               "               TheLine * 2,\n"
+               "           TheLine.InPPDirective, PreviousEndOfLineColumn);",
+               Style);
   verifyFormat("bool aaaaaa = aaaaaaaaaaaaa ? //\n"
                "                  aaaaaaaaaaaaaaa :\n"
                "                  bbbbbbbbbbbbbbb ? //\n"
@@ -5893,11 +5902,12 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("foo<b & 1>();");
   verifyFormat("decltype(*::std::declval<const T &>()) void F();");
   verifyFormat(
-      "template <class T, class = typename std::enable_if<\n"
-      "                       std::is_integral<T>::value &&\n"
-      "                       (sizeof(T) > 1 || sizeof(T) < 8)>::type>\n"
+      "template <class T,\n"
+      "          class = typename std::enable_if<\n"
+      "              std::is_integral<T>::value &&\n"
+      "              (sizeof(T) > 1 || sizeof(T) < 8)>::type>\n"
       "void F();",
-      getLLVMStyleWithColumns(76));
+      getLLVMStyleWithColumns(70));
   verifyFormat(
       "template <class T,\n"
       "          class = typename ::std::enable_if<\n"

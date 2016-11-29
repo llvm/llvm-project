@@ -298,7 +298,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
         CGM.getTriple().isMacOSX() ? "__NV_CUDA,__fatbin" : ".nvFatBinSegment";
 
     // Create initialized wrapper structure that points to the loaded GPU binary
-    ConstantBuilder Builder(CGM);
+    ConstantInitBuilder Builder(CGM);
     auto Values = Builder.beginStruct(FatbinWrapperTy);
     // Fatbin wrapper magic.
     Values.addInt(IntTy, 0x466243b1);

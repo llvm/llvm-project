@@ -2103,15 +2103,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   Result->addAttribute(llvm::AttributeSet::FunctionIndex,
                        llvm::Attribute::NoUnwind);
 
-  if (isa<MSAsmStmt>(&S)) {
-    // If the assembly contains any labels, mark the call noduplicate to prevent
-    // defining the same ASM label twice (PR23715). This is pretty hacky, but it
-    // works.
-    if (AsmString.find("__MSASMLABEL_") != std::string::npos)
-      Result->addAttribute(llvm::AttributeSet::FunctionIndex,
-                           llvm::Attribute::NoDuplicate);
-  }
-
   // Attach readnone and readonly attributes.
   if (!HasSideEffect) {
     if (ReadNone)

@@ -259,6 +259,13 @@ TEST_F(FormatTestJS, ContainerLiterals) {
                "  b: b,\n"
                "  'c': c,\n"
                "};");
+
+  // Dict literals can skip the label names.
+  verifyFormat("var x = {\n"
+               "  aaa,\n"
+               "  aaa,\n"
+               "  aaa,\n"
+               "};");
 }
 
 TEST_F(FormatTestJS, MethodsInObjectLiterals) {

@@ -19,6 +19,7 @@
 #include "CGVTables.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
+#include "ConstantBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -1584,9 +1585,10 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
                [](const VTableComponent &VTC) { return VTC.isRTTIKind(); }))
       RTTI = getMSCompleteObjectLocator(RD, *Info);
 
-    llvm::Constant *Init = CGVT.CreateVTableInitializer(VTLayout, RTTI);
-
-    VTable->setInitializer(Init);
+    ConstantInitBuilder Builder(CGM);
+    auto Components = Builder.beginArray(CGM.Int8PtrTy);
+    CGVT.createVTableInitializer(Components, VTLayout, RTTI);
+    Components.finishAndSetAsInitializer(VTable);
 
     emitVTableTypeMetadata(*Info, RD, VTable);
   }

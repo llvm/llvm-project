@@ -26,7 +26,7 @@ volatile double g;
 // CHECK-DAG: [[KMP_TASK_T_TY:%.+]] = type { i8*, i32 (i32, i8*)*, i32, %union{{.+}}, %union{{.+}} }
 // CHECK-DAG: [[S_DOUBLE_TY:%.+]] = type { double }
 // CHECK-DAG: [[PRIVATES_MAIN_TY:%.+]] = type {{.?}}{ [2 x [[S_DOUBLE_TY]]], [[S_DOUBLE_TY]], i32, [2 x i32]
-// CHECK-DAG: [[CAP_MAIN_TY:%.+]] = type {{.*}}{ [2 x i32]*, i32, {{.*}}[2 x [[S_DOUBLE_TY]]]*, [[S_DOUBLE_TY]]*, i{{[0-9]+}}
+// CHECK-DAG: [[CAP_MAIN_TY:%.+]] = type {{.*}}{ [[S_DOUBLE_TY]]*, [2 x i32]*, i32, {{.*}}[2 x [[S_DOUBLE_TY]]]*, i{{[0-9]+}}
 // CHECK-DAG: [[KMP_TASK_MAIN_TY:%.+]] = type { [[KMP_TASK_T_TY]], [[PRIVATES_MAIN_TY]] }
 // CHECK-DAG: [[S_INT_TY:%.+]] = type { i32 }
 // CHECK-DAG: [[CAP_TMAIN_TY:%.+]] = type { [2 x i32]*, i32*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]* }
@@ -149,10 +149,11 @@ int main() {
   int vec[] = {1, 2};
   S<double> s_arr[] = {1, 2};
   S<double> var(3);
-#pragma omp task firstprivate(var, t_var, s_arr, vec, s_arr, var, sivar)
+#pragma omp task firstprivate(t_var, s_arr, vec, sivar)
   {
+    var.f = 1;
     vec[0] = t_var;
-    s_arr[0] = var;
+    s_arr[0] = S<double>(3);
     sivar = 33;
   }
   return tmain<int>();
@@ -172,15 +173,15 @@ int main() {
 // CHECK: call {{.*}} [[S_DOUBLE_TY_COPY_CONSTR:@.+]]([[S_DOUBLE_TY]]* [[TEST]],
 
 // Store original variables in capture struct.
-// CHECK: [[VEC_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// CHECK: [[VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// CHECK: store [[S_DOUBLE_TY]]* [[VAR_ADDR]], [[S_DOUBLE_TY]]** [[VAR_REF]],
+// CHECK: [[VEC_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 1
 // CHECK: store [2 x i32]* [[VEC_ADDR]], [2 x i32]** [[VEC_REF]],
-// CHECK: [[T_VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 1
+// CHECK: [[T_VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: [[T_VAR:%.+]] = load i32, i32* [[T_VAR_ADDR]],
 // CHECK: store i32 [[T_VAR]], i32* [[T_VAR_REF]],
-// CHECK: [[S_ARR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 3
+// CHECK: [[S_ARR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 4
 // CHECK: store [2 x [[S_DOUBLE_TY]]]* [[S_ARR_ADDR]], [2 x [[S_DOUBLE_TY]]]** [[S_ARR_REF]],
-// CHECK: [[VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 4
-// CHECK: store [[S_DOUBLE_TY]]* [[VAR_ADDR]], [[S_DOUBLE_TY]]** [[VAR_REF]],
 // CHECK: [[SIVAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 5
 // CHECK: [[SIVAR_VAL:%.+]] = load i32, i32* [[SIVAR]],
 // CHECK: store i{{[0-9]+}} [[SIVAR_VAL]], i{{[0-9]+}}* [[SIVAR_REF]],
@@ -208,7 +209,7 @@ int main() {
 // Constructors for s_arr and var.
 // s_arr;
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-// CHECK: [[S_ARR_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 3
+// CHECK: [[S_ARR_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 4
 // CHECK: load [2 x [[S_DOUBLE_TY]]]*, [2 x [[S_DOUBLE_TY]]]** [[S_ARR_ADDR_REF]],
 // CHECK: call void [[S_DOUBLE_TY_COPY_CONSTR]]([[S_DOUBLE_TY]]* [[S_ARR_CUR:%[^,]+]],
 // CHECK: getelementptr [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* [[S_ARR_CUR]], i{{.+}} 1
@@ -218,19 +219,19 @@ int main() {
 
 // var;
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
-// CHECK: [[VAR_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 4
+// CHECK: [[VAR_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[VAR_REF:%.+]] = load [[S_DOUBLE_TY]]*, [[S_DOUBLE_TY]]** [[VAR_ADDR_REF]],
 // CHECK: call void [[S_DOUBLE_TY_COPY_CONSTR]]([[S_DOUBLE_TY]]* [[PRIVATE_VAR_REF]], [[S_DOUBLE_TY]]* {{.*}}[[VAR_REF]],
 
 // t_var;
 // CHECK: [[PRIVATE_T_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
-// CHECK: [[T_VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 1
+// CHECK: [[T_VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 2
 // CHECK: [[T_VAR:%.+]] = load i{{.+}}, i{{.+}}* [[T_VAR_REF]],
 // CHECK: store i32 [[T_VAR]], i32* [[PRIVATE_T_VAR_REF]],
 
 // vec;
 // CHECK: [[PRIVATE_VEC_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
-// CHECK: [[VEC_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[VEC_ADDR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* [[SHAREDS]], i{{.+}} 0, i{{.+}} 1
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 // sivar;
@@ -258,7 +259,7 @@ int main() {
 // CHECK: ret
 //
 
-// CHECK: define internal void [[PRIVATES_MAP_FN:@.+]]([[PRIVATES_MAIN_TY]]* noalias, [[S_DOUBLE_TY]]** noalias, i32** noalias, [2 x [[S_DOUBLE_TY]]]** noalias, [2 x i32]** noalias, i32** noalias)
+// CHECK: define internal void [[PRIVATES_MAP_FN:@.+]]([[PRIVATES_MAIN_TY]]* noalias, i32** noalias, [2 x [[S_DOUBLE_TY]]]** noalias, [2 x i32]** noalias, i32** noalias, [[S_DOUBLE_TY]]** noalias)
 // CHECK: [[PRIVATES:%.+]] = load [[PRIVATES_MAIN_TY]]*, [[PRIVATES_MAIN_TY]]**
 // CHECK: [[PRIV_S_VAR:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i32 0, i32 0
 // CHECK: [[ARG3:%.+]] = load [2 x [[S_DOUBLE_TY]]]**, [2 x [[S_DOUBLE_TY]]]*** %{{.+}},
@@ -279,21 +280,22 @@ int main() {
 
 // CHECK: define internal i32 [[TASK_ENTRY]](i32, [[KMP_TASK_MAIN_TY]]* noalias)
 
-// CHECK: [[PRIV_VAR_ADDR:%.+]] = alloca [[S_DOUBLE_TY]]*,
+// CHECK: alloca i32*,
 // CHECK: [[PRIV_T_VAR_ADDR:%.+]] = alloca i32*,
 // CHECK: [[PRIV_S_ARR_ADDR:%.+]] = alloca [2 x [[S_DOUBLE_TY]]]*,
 // CHECK: [[PRIV_VEC_ADDR:%.+]] = alloca [2 x i32]*,
 // CHECK: [[PRIV_SIVAR_ADDR:%.+]] = alloca i32*,
-// CHECK: store void (i8*, ...)* bitcast (void ([[PRIVATES_MAIN_TY]]*, [[S_DOUBLE_TY]]**, i32**, [2 x [[S_DOUBLE_TY]]]**, [2 x i32]**, i32**)* [[PRIVATES_MAP_FN]] to void (i8*, ...)*), void (i8*, ...)** [[MAP_FN_ADDR:%.+]],
+// CHECK: [[PRIV_VAR_ADDR:%.+]] = alloca [[S_DOUBLE_TY]]*,
+// CHECK: store void (i8*, ...)* bitcast (void ([[PRIVATES_MAIN_TY]]*, i32**, [2 x [[S_DOUBLE_TY]]]**, [2 x i32]**, i32**, [[S_DOUBLE_TY]]**)* [[PRIVATES_MAP_FN]] to void (i8*, ...)*), void (i8*, ...)** [[MAP_FN_ADDR:%.+]],
 // CHECK: [[MAP_FN:%.+]] = load void (i8*, ...)*, void (i8*, ...)** [[MAP_FN_ADDR]],
 
-// CHECK: call void (i8*, ...) [[MAP_FN]](i8* %{{.+}}, [[S_DOUBLE_TY]]** [[PRIV_VAR_ADDR]], i32** [[PRIV_T_VAR_ADDR]], [2 x [[S_DOUBLE_TY]]]** [[PRIV_S_ARR_ADDR]], [2 x i32]** [[PRIV_VEC_ADDR]], i32** [[PRIV_SIVAR_ADDR]])
+// CHECK: call void (i8*, ...) [[MAP_FN]](i8* %{{.+}}, i32** [[PRIV_T_VAR_ADDR]], [2 x [[S_DOUBLE_TY]]]** [[PRIV_S_ARR_ADDR]], [2 x i32]** [[PRIV_VEC_ADDR]], i32** [[PRIV_SIVAR_ADDR]], [[S_DOUBLE_TY]]** [[PRIV_VAR_ADDR]])
 
-// CHECK: [[PRIV_VAR:%.+]] = load [[S_DOUBLE_TY]]*, [[S_DOUBLE_TY]]** [[PRIV_VAR_ADDR]],
 // CHECK: [[PRIV_T_VAR:%.+]] = load i32*, i32** [[PRIV_T_VAR_ADDR]],
 // CHECK: [[PRIV_S_ARR:%.+]] = load [2 x [[S_DOUBLE_TY]]]*, [2 x [[S_DOUBLE_TY]]]** [[PRIV_S_ARR_ADDR]],
 // CHECK: [[PRIV_VEC:%.+]] = load [2 x i32]*, [2 x i32]** [[PRIV_VEC_ADDR]],
 // CHECK: [[PRIV_SIVAR:%.+]] = load i32*, i32** [[PRIV_SIVAR_ADDR]],
+// CHECK: [[PRIV_VAR:%.+]] = load [[S_DOUBLE_TY]]*, [[S_DOUBLE_TY]]** [[PRIV_VAR_ADDR]],
 
 // Privates actually are used.
 // CHECK-DAG: [[PRIV_VAR]]

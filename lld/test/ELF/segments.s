@@ -74,6 +74,26 @@
 # NOROSEGMENT-NEXT: ProgramHeader {
 # NOROSEGMENT-NEXT:   Type: PT_GNU_STACK
 
+# RUN: ld.lld -N %t -o %t3
+# RUN: llvm-readobj --program-headers %t3 | FileCheck --check-prefix=OMAGIC %s
+
+# OMAGIC:     ProgramHeader {
+# OMAGIC:      Type: PT_LOAD
+# OMAGIC-NEXT:   Offset: 0x0
+# OMAGIC-NEXT:   VirtualAddress:
+# OMAGIC-NEXT:   PhysicalAddress:
+# OMAGIC-NEXT:   FileSize:
+# OMAGIC-NEXT:   MemSize:
+# OMAGIC-NEXT:   Flags [
+# OMAGIC-NEXT:     PF_R
+# OMAGIC-NEXT:     PF_W
+# OMAGIC-NEXT:     PF_X
+# OMAGIC-NEXT:   ]
+# OMAGIC-NEXT:   Alignment: 4096
+# OMAGIC-NEXT: }
+# OMAGIC-NEXT: ProgramHeader {
+# OMAGIC-NEXT:   Type: PT_GNU_STACK
+
 .global _start
 _start:
  nop
