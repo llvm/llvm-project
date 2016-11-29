@@ -86,6 +86,7 @@ public:
   }
 
 protected:
+  std::mutex m_sdk_dir_mutex;
   std::string m_sdk_directory;
   std::string m_build_update;
 
