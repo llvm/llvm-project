@@ -325,7 +325,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::ArraySlice:
     case swift::TypeKind::LValue:
     case swift::TypeKind::UnboundGeneric:
@@ -5273,7 +5272,6 @@ bool SwiftASTContext::IsAggregateType(void *type) {
     case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::ProtocolComposition:
       break;
     case swift::TypeKind::LValue:
@@ -5328,7 +5326,6 @@ bool SwiftASTContext::IsFunctionType(void *type, bool *is_variadic_ptr) {
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
     case swift::TypeKind::Function:
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::GenericFunction:
       return true;
     case swift::TypeKind::SILFunction:
@@ -5475,7 +5472,6 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
     case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::ArraySlice:
     case swift::TypeKind::ProtocolComposition:
     case swift::TypeKind::DynamicSelf:
@@ -5751,7 +5747,6 @@ bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
       }
       return true;
     } break;
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::BoundGenericClass:
     case swift::TypeKind::BoundGenericStruct:
     case swift::TypeKind::BoundGenericEnum: {
@@ -6016,7 +6011,6 @@ SwiftASTContext::GetTypeInfo(void *type,
 
   case swift::TypeKind::GenericFunction:
     swift_flags |= eTypeIsGeneric;
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::Function:
     swift_flags |=
         eTypeIsBuiltIn | eTypeHasValue | eTypeIsScalar | eTypeInstanceIsPointer;
@@ -6230,8 +6224,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   case swift::TypeKind::Function:
     return lldb::eTypeClassFunction;
   case swift::TypeKind::GenericFunction:
-    return lldb::eTypeClassFunction;
-  case swift::TypeKind::PolymorphicFunction:
     return lldb::eTypeClassFunction;
   case swift::TypeKind::ArraySlice:
     return lldb::eTypeClassArray;
@@ -6890,7 +6882,6 @@ uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     case swift::TypeKind::Archetype:
     case swift::TypeKind::LValue:
     case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::Function:
       return GetPointerByteSize() * 8;
@@ -6983,7 +6974,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::Metatype:
     return lldb::eEncodingUint;
 
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::Function:
     return lldb::eEncodingUint;
@@ -7077,7 +7067,6 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::BoundGenericEnum:
     return eFormatUnsigned;
 
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::Function:
     return lldb::eFormatAddressInfo;
@@ -7136,7 +7125,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
@@ -7349,7 +7337,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::ArraySlice:
   case swift::TypeKind::LValue:
   case swift::TypeKind::UnboundGeneric:
@@ -7505,7 +7492,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::ArraySlice:
   case swift::TypeKind::LValue:
   case swift::TypeKind::UnboundGeneric:
@@ -7601,8 +7587,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   case swift::TypeKind::Function:
     return 0;
   case swift::TypeKind::GenericFunction:
-    return 0;
-  case swift::TypeKind::PolymorphicFunction:
     return 0;
   case swift::TypeKind::ArraySlice:
     return 0;
@@ -8034,7 +8018,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::ArraySlice:
     break;
   case swift::TypeKind::LValue:
@@ -8248,7 +8231,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::ArraySlice:
       break;
     case swift::TypeKind::LValue: {
@@ -8398,7 +8380,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
     case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::ArraySlice:
       break;
     case swift::TypeKind::LValue: {
@@ -8457,13 +8438,6 @@ size_t SwiftASTContext::GetNumTemplateArguments(void *type) {
       break;
     return bound_generic_type->getGenericArgs().size();
   }
-  case swift::TypeKind::PolymorphicFunction: {
-    swift::PolymorphicFunctionType *polymorhpic_func_type =
-        swift_can_type->getAs<swift::PolymorphicFunctionType>();
-    if (!polymorhpic_func_type)
-      break;
-    return polymorhpic_func_type->getGenericParameters().size();
-  } break;
   default:
     break;
   }
@@ -8613,21 +8587,6 @@ SwiftASTContext::GetTemplateArgument(void *type, size_t arg_idx,
       return CompilerType(GetASTContext(),
                           substitution.getReplacement().getPointer());
     }
-    case swift::TypeKind::PolymorphicFunction: {
-      swift::PolymorphicFunctionType *polymorphic_func_type =
-          swift_can_type->getAs<swift::PolymorphicFunctionType>();
-      if (!polymorphic_func_type)
-        break;
-      if (arg_idx >= polymorphic_func_type->getGenericParameters().size())
-        break;
-      auto paramDecl = polymorphic_func_type->getGenericParameters()[arg_idx];
-      auto paramType = paramDecl->getDeclaredInterfaceType()
-          ->castTo<swift::GenericTypeParamType>();
-      return CompilerType(
-          GetASTContext(),
-          swift::ArchetypeBuilder::mapTypeIntoContext(
-              paramDecl->getDeclContext(), paramType).getPointer());
-    } break;
     default:
       break;
     }
@@ -8723,7 +8682,6 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Archetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
-  case swift::TypeKind::PolymorphicFunction:
   case swift::TypeKind::LValue: {
     uint32_t item_count = 1;
     // A few formats, we might need to modify our size and count for depending
@@ -9108,7 +9066,6 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
         }
       }
     } break;
-    case swift::TypeKind::PolymorphicFunction:
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::Function: {
       swift::AnyFunctionType *any_function_type =
