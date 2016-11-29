@@ -97,6 +97,9 @@ namespace llvm {
 
 struct CGSCCUpdateResult;
 
+/// Extern template declaration for the analysis set for this IR unit.
+extern template class AllAnalysesOn<LazyCallGraph::SCC>;
+
 extern template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 /// \brief The CGSCC analysis manager.
 ///

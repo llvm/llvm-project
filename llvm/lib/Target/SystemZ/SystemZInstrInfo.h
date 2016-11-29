@@ -142,6 +142,10 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned LowOpcodeK, unsigned HighOpcode) const;
   void expandRXYPseudo(MachineInstr &MI, unsigned LowOpcode,
                        unsigned HighOpcode) const;
+  void expandLOCPseudo(MachineInstr &MI, unsigned LowOpcode,
+                       unsigned HighOpcode) const;
+  void expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
+                        unsigned HighOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
   void expandLoadStackGuard(MachineInstr *MI) const;
@@ -149,7 +153,23 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                      const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                      unsigned LowLowOpcode, unsigned Size, bool KillSrc) const;
   virtual void anchor();
-  
+
+protected:
+  /// Commutes the operands in the given instruction by changing the operands
+  /// order and/or changing the instruction's opcode and/or the immediate value
+  /// operand.
+  ///
+  /// The arguments 'CommuteOpIdx1' and 'CommuteOpIdx2' specify the operands
+  /// to be commuted.
+  ///
+  /// Do not call this method for a non-commutable instruction or
+  /// non-commutable operands.
+  /// Even though the instruction is commutable, the method may still
+  /// fail to commute the operands, null pointer is returned in such cases.
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
+                                       unsigned CommuteOpIdx1,
+                                       unsigned CommuteOpIdx2) const override;
+
 public:
   explicit SystemZInstrInfo(SystemZSubtarget &STI);
 
@@ -175,6 +195,14 @@ public:
   bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
                             unsigned SrcReg2, int Mask, int Value,
                             const MachineRegisterInfo *MRI) const override;
+  bool canInsertSelect(const MachineBasicBlock&, ArrayRef<MachineOperand> Cond,
+                       unsigned, unsigned, int&, int&, int&) const override;
+  void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                    const DebugLoc &DL, unsigned DstReg,
+                    ArrayRef<MachineOperand> Cond, unsigned TrueReg,
+                    unsigned FalseReg) const override;
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+                     MachineRegisterInfo *MRI) const override;
   bool isPredicable(MachineInstr &MI) const override;
   bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
                            unsigned ExtraPredCycles,
@@ -257,6 +285,10 @@ public:
   unsigned getFusedCompare(unsigned Opcode,
                            SystemZII::FusedCompareType Type,
                            const MachineInstr *MI = nullptr) const;
+
+  // If Opcode is a LOAD opcode for with an associated LOAD AND TRAP
+  // operation exists, returh the opcode for the latter, otherwise return 0.
+  unsigned getLoadAndTrap(unsigned Opcode) const;
 
   // Emit code before MBBI in MI to move immediate value Value into
   // physical register Reg.

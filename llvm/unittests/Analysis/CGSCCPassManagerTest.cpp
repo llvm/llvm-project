@@ -100,7 +100,10 @@ class TestImmutableFunctionAnalysis
     : public AnalysisInfoMixin<TestImmutableFunctionAnalysis> {
 public:
   struct Result {
-    bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+    bool invalidate(Function &, const PreservedAnalyses &,
+                    FunctionAnalysisManager::Invalidator &) {
+      return false;
+    }
   };
 
   TestImmutableFunctionAnalysis(int &Runs) : Runs(Runs) {}

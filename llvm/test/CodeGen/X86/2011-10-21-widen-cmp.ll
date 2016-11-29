@@ -9,9 +9,7 @@ define void @cmp_2_floats(<2 x float> %a, <2 x float> %b) {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    cmpordps %xmm0, %xmm0
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; CHECK-NEXT:    psllq $32, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[1]
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    blendvps %xmm2, %xmm1
 ; CHECK-NEXT:    movlps %xmm1, (%rax)
@@ -26,7 +24,7 @@ entry:
 define void @cmp_2_doubles(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: cmp_2_doubles:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movapd	%xmm0, %xmm2
+; CHECK-NEXT:    movapd %xmm0, %xmm2
 ; CHECK-NEXT:    cmpordpd %xmm0, %xmm0
 ; CHECK-NEXT:    blendvpd %xmm2, %xmm1
 ; CHECK-NEXT:    movapd %xmm1, (%rax)

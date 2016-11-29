@@ -1290,6 +1290,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (SP->isExplicit())
     addFlag(SPDie, dwarf::DW_AT_explicit);
+
+  if (SP->isMainSubprogram())
+    addFlag(SPDie, dwarf::DW_AT_main_subprogram);
 }
 
 void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,

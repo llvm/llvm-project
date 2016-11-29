@@ -121,6 +121,9 @@ public:
     return B->getKind() == Regular;
   }
   std::vector<InputSection<ELFT> *> Sections;
+
+  // Location in the output buffer.
+  uint8_t *Loc = nullptr;
 };
 
 template <class ELFT>

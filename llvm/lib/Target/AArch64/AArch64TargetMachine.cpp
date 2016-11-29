@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -297,6 +298,15 @@ public:
 
   AArch64TargetMachine &getAArch64TargetMachine() const {
     return getTM<AArch64TargetMachine>();
+  }
+
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override {
+    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
+    DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createMacroFusionDAGMutation(DAG->TII));
+    return DAG;
   }
 
   void addIRPasses()  override;

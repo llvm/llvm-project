@@ -2368,3 +2368,11 @@ TEST(YAMLIO, TestMapWithContext) {
             out);
   out.clear();
 }
+
+TEST(YAMLIO, InvalidInput) {
+  // polluting 1 value in the sequence
+  Input yin("---\n- foo:  3\n  bar:  5\n1\n- foo:  3\n  bar:  5\n...\n");
+  std::vector<FooBar> Data;
+  yin >> Data;
+  EXPECT_TRUE((bool)yin.error());
+}

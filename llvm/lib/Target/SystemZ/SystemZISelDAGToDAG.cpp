@@ -1296,8 +1296,14 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     SDValue Op0 = Node->getOperand(0);
     SDValue Op1 = Node->getOperand(1);
     // Prefer to put any load first, so that it can be matched as a
-    // conditional load.
-    if (Op1.getOpcode() == ISD::LOAD && Op0.getOpcode() != ISD::LOAD) {
+    // conditional load.  Likewise for constants in range for LOCHI.
+    if ((Op1.getOpcode() == ISD::LOAD && Op0.getOpcode() != ISD::LOAD) ||
+        (Subtarget->hasLoadStoreOnCond2() &&
+         Node->getValueType(0).isInteger() &&
+         Op1.getOpcode() == ISD::Constant &&
+         isInt<16>(cast<ConstantSDNode>(Op1)->getSExtValue()) &&
+         !(Op0.getOpcode() == ISD::Constant &&
+           isInt<16>(cast<ConstantSDNode>(Op0)->getSExtValue())))) {
       SDValue CCValid = Node->getOperand(2);
       SDValue CCMask = Node->getOperand(3);
       uint64_t ConstCCValid =

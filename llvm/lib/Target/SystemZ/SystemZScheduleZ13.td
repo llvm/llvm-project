@@ -23,7 +23,7 @@ def Z13Model : SchedMachineModel {
     let PostRAScheduler = 1;
 
     // Extra cycles for a mispredicted branch.
-    let MispredictPenalty = 8;
+    let MispredictPenalty = 20;
 }
 
 let SchedModel = Z13Model in  {
@@ -116,7 +116,10 @@ def : InstRW<[VBU], (instregex "(Call)?J(G)?(Asm.*)?$")>;
 def : InstRW<[FXb], (instregex "(Call)?BC(R)?(Asm.*)?$")>;
 def : InstRW<[FXb], (instregex "(Call)?B(R)?(Asm.*)?$")>;
 def : InstRW<[FXa, EndGroup], (instregex "BRCT(G)?$")>;
-def : InstRW<[FXa, FXa, FXb, FXb, Lat4, GroupAlone], (instregex "BRX(H|LE)$")>;
+def : InstRW<[FXb, FXa, Lat2, GroupAlone], (instregex "BRCTH$")>;
+def : InstRW<[FXb, FXa, Lat2, GroupAlone], (instregex "BCT(G)?(R)?$")>;
+def : InstRW<[FXa, FXa, FXb, FXb, Lat4, GroupAlone],
+             (instregex "B(R)?X(H|L).*$")>;
 
 // Compare and branch
 def : InstRW<[FXb], (instregex "C(L)?(G)?(I|R)J(Asm.*)?$")>;
@@ -161,6 +164,7 @@ def : InstRW<[FXa], (instregex "Select(32|64|32Mux)$")>;
 def : InstRW<[FXa], (instregex "CondStore16(Inv)?$")>;
 def : InstRW<[FXa], (instregex "CondStore16Mux(Inv)?$")>;
 def : InstRW<[FXa], (instregex "CondStore32(Inv)?$")>;
+def : InstRW<[FXa], (instregex "CondStore32Mux(Inv)?$")>;
 def : InstRW<[FXa], (instregex "CondStore64(Inv)?$")>;
 def : InstRW<[FXa], (instregex "CondStore8(Inv)?$")>;
 def : InstRW<[FXa], (instregex "CondStore8Mux(Inv)?$")>;
@@ -198,6 +202,9 @@ def : InstRW<[FXa], (instregex "LR(Mux)?$")>;
 // Load and zero rightmost byte
 def : InstRW<[LSU], (instregex "LZR(F|G)$")>;
 
+// Load and trap
+def : InstRW<[FXb, LSU, Lat5], (instregex "L(FH|G)?AT$")>;
+
 // Load and test
 def : InstRW<[FXa, LSU, Lat5], (instregex "LT(G)?$")>;
 def : InstRW<[FXa], (instregex "LT(G)?R$")>;
@@ -214,10 +221,11 @@ def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVST$")>;
 // Conditional move instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, Lat2], (instregex "LOC(G)?R(Asm.*)?$")>;
-def : InstRW<[FXa, Lat2], (instregex "LOC(G)?HI(Asm.*)?$")>;
-def : InstRW<[FXa, LSU, Lat6], (instregex "LOC(G)?(Asm.*)?$")>;
-def : InstRW<[FXb, LSU, Lat5], (instregex "STOC(G)?(Asm.*)?$")>;
+def : InstRW<[FXa, Lat2], (instregex "LOCRMux$")>;
+def : InstRW<[FXa, Lat2], (instregex "LOC(G|FH)?R(Asm.*)?$")>;
+def : InstRW<[FXa, Lat2], (instregex "LOC(G|H)?HI(Asm.*)?$")>;
+def : InstRW<[FXa, LSU, Lat6], (instregex "LOC(G|FH|Mux)?(Asm.*)?$")>;
+def : InstRW<[FXb, LSU, Lat5], (instregex "STOC(G|FH|Mux)?(Asm.*)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Sign extensions
@@ -250,6 +258,9 @@ def : InstRW<[LSU], (instregex "LLG(C|H|F|T|HRL|FRL)$")>;
 
 // Load and zero rightmost byte
 def : InstRW<[LSU], (instregex "LLZRGF$")>;
+
+// Load and trap
+def : InstRW<[FXb, LSU, Lat5], (instregex "LLG(F|T)?AT$")>;
 
 //===----------------------------------------------------------------------===//
 // Truncations
@@ -464,11 +475,11 @@ def : InstRW<[FXa, FXa, Lat3, BeginGroup], (instregex "R(N|O|X)SBG$")>;
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[FXb, LSU, Lat5], (instregex "C(G|Y|Mux|RL)?$")>;
-def : InstRW<[FXb], (instregex "CFI(Mux)?$")>;
+def : InstRW<[FXb], (instregex "C(F|H)I(Mux)?$")>;
 def : InstRW<[FXb], (instregex "CG(F|H)I$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "CG(HSI|RL)$")>;
 def : InstRW<[FXb], (instregex "C(G)?R$")>;
-def : InstRW<[FXb], (instregex "C(HI|IH)$")>;
+def : InstRW<[FXb], (instregex "CIH$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "CH(F|SI)$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "CL(Y|Mux|FHSI)?$")>;
 def : InstRW<[FXb], (instregex "CLFI(Mux)?$")>;
@@ -506,10 +517,13 @@ def : InstRW<[FXb], (instregex "TMLH(64)?$")>;
 def : InstRW<[FXb], (instregex "TMLL(64)?$")>;
 
 //===----------------------------------------------------------------------===//
-// Prefetch
+// Prefetch and execution hint
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[LSU], (instregex "PFD(RL)?$")>;
+def : InstRW<[FXb, Lat2], (instregex "BPP$")>;
+def : InstRW<[FXb, EndGroup], (instregex "BPRP$")>;
+def : InstRW<[FXb], (instregex "NIAI$")>;
 
 //===----------------------------------------------------------------------===//
 // Atomic operations

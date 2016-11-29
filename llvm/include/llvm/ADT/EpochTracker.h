@@ -16,6 +16,7 @@
 #ifndef LLVM_ADT_EPOCH_TRACKER_H
 #define LLVM_ADT_EPOCH_TRACKER_H
 
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Config/llvm-config.h"
 
 #include <cstdint>

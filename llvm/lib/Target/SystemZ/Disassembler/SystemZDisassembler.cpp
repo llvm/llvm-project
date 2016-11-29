@@ -247,10 +247,22 @@ static DecodeStatus decodePCDBLOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodePC12DBLBranchOperand(MCInst &Inst, uint64_t Imm,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodePCDBLOperand<12>(Inst, Imm, Address, true, Decoder);
+}
+
 static DecodeStatus decodePC16DBLBranchOperand(MCInst &Inst, uint64_t Imm,
                                                uint64_t Address,
                                                const void *Decoder) {
   return decodePCDBLOperand<16>(Inst, Imm, Address, true, Decoder);
+}
+
+static DecodeStatus decodePC24DBLBranchOperand(MCInst &Inst, uint64_t Imm,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodePCDBLOperand<24>(Inst, Imm, Address, true, Decoder);
 }
 
 static DecodeStatus decodePC32DBLBranchOperand(MCInst &Inst, uint64_t Imm,

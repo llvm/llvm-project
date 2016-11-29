@@ -17,8 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -126,11 +124,6 @@ static cl::opt<bool> ProfileGuidedSectionPrefix(
     "profile-guided-section-prefix", cl::Hidden, cl::init(true),
     cl::desc("Use profile info to add section prefix for hot/cold functions"));
 
-static cl::opt<unsigned> FreqRatioToSkipMerge(
-    "cgp-freq-ratio-to-skip-merge", cl::Hidden, cl::init(2),
-    cl::desc("Skip merging empty blocks if (frequency of empty block) / "
-             "(frequency of destination block) is greater than this ratio"));
-
 namespace {
 typedef SmallPtrSet<Instruction *, 16> SetOfInstrs;
 typedef PointerIntPair<Type *, 1, bool> TypeIsSExt;
@@ -143,8 +136,6 @@ class TypePromotionTransaction;
     const TargetTransformInfo *TTI;
     const TargetLibraryInfo *TLInfo;
     const LoopInfo *LI;
-    std::unique_ptr<BlockFrequencyInfo> BFI;
-    std::unique_ptr<BranchProbabilityInfo> BPI;
 
     /// As we scan instructions optimizing them, this is the next instruction
     /// to optimize. Transforms that can invalidate this should update it.
@@ -191,11 +182,8 @@ class TypePromotionTransaction;
   private:
     bool eliminateFallThrough(Function &F);
     bool eliminateMostlyEmptyBlocks(Function &F);
-    BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
     bool canMergeBlocks(const BasicBlock *BB, const BasicBlock *DestBB) const;
     void eliminateMostlyEmptyBlock(BasicBlock *BB);
-    bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
-                                       bool isPreheader);
     bool optimizeBlock(BasicBlock &BB, bool& ModifiedDT);
     bool optimizeInst(Instruction *I, bool& ModifiedDT);
     bool optimizeMemoryInst(Instruction *I, Value *Addr,
@@ -243,8 +231,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   // Clear per function information.
   InsertedInsts.clear();
   PromotedInsts.clear();
-  BFI.reset();
-  BPI.reset();
 
   ModifiedDT = false;
   if (TM)
@@ -397,38 +383,6 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
   return Changed;
 }
 
-/// Find a destination block from BB if BB is mergeable empty block.
-BasicBlock *CodeGenPrepare::findDestBlockOfMergeableEmptyBlock(BasicBlock *BB) {
-  // If this block doesn't end with an uncond branch, ignore it.
-  BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isUnconditional())
-    return nullptr;
-
-  // If the instruction before the branch (skipping debug info) isn't a phi
-  // node, then other stuff is happening here.
-  BasicBlock::iterator BBI = BI->getIterator();
-  if (BBI != BB->begin()) {
-    --BBI;
-    while (isa<DbgInfoIntrinsic>(BBI)) {
-      if (BBI == BB->begin())
-        break;
-      --BBI;
-    }
-    if (!isa<DbgInfoIntrinsic>(BBI) && !isa<PHINode>(BBI))
-      return nullptr;
-  }
-
-  // Do not break infinite loops.
-  BasicBlock *DestBB = BI->getSuccessor(0);
-  if (DestBB == BB)
-    return nullptr;
-
-  if (!canMergeBlocks(BB, DestBB))
-    DestBB = nullptr;
-
-  return DestBB;
-}
-
 /// Eliminate blocks that contain only PHI nodes, debug info directives, and an
 /// unconditional branch. Passes before isel (e.g. LSR/loopsimplify) often split
 /// edges in ways that are non-optimal for isel. Start by eliminating these
@@ -447,103 +401,46 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   // Note that this intentionally skips the entry block.
   for (Function::iterator I = std::next(F.begin()), E = F.end(); I != E;) {
     BasicBlock *BB = &*I++;
-    BasicBlock *DestBB = findDestBlockOfMergeableEmptyBlock(BB);
-    if (!DestBB ||
-        !isMergingEmptyBlockProfitable(BB, DestBB, Preheaders.count(BB)))
+
+    // If this block doesn't end with an uncond branch, ignore it.
+    BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!BI || !BI->isUnconditional())
       continue;
+
+    // If the instruction before the branch (skipping debug info) isn't a phi
+    // node, then other stuff is happening here.
+    BasicBlock::iterator BBI = BI->getIterator();
+    if (BBI != BB->begin()) {
+      --BBI;
+      while (isa<DbgInfoIntrinsic>(BBI)) {
+        if (BBI == BB->begin())
+          break;
+        --BBI;
+      }
+      if (!isa<DbgInfoIntrinsic>(BBI) && !isa<PHINode>(BBI))
+        continue;
+    }
+
+    // Do not break infinite loops.
+    BasicBlock *DestBB = BI->getSuccessor(0);
+    if (DestBB == BB)
+      continue;
+
+    if (!canMergeBlocks(BB, DestBB))
+      continue;
+
+    // Do not delete loop preheaders if doing so would create a critical edge.
+    // Loop preheaders can be good locations to spill registers. If the
+    // preheader is deleted and we create a critical edge, registers may be
+    // spilled in the loop body instead.
+    if (!DisablePreheaderProtect && Preheaders.count(BB) &&
+        !(BB->getSinglePredecessor() && BB->getSinglePredecessor()->getSingleSuccessor()))
+     continue;
 
     eliminateMostlyEmptyBlock(BB);
     MadeChange = true;
   }
   return MadeChange;
-}
-
-bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
-                                                   BasicBlock *DestBB,
-                                                   bool isPreheader) {
-  // Do not delete loop preheaders if doing so would create a critical edge.
-  // Loop preheaders can be good locations to spill registers. If the
-  // preheader is deleted and we create a critical edge, registers may be
-  // spilled in the loop body instead.
-  if (!DisablePreheaderProtect && isPreheader &&
-      !(BB->getSinglePredecessor() &&
-        BB->getSinglePredecessor()->getSingleSuccessor()))
-    return false;
-
-  // Try to skip merging if the unique predecessor of BB is terminated by a
-  // switch or indirect branch instruction, and BB is used as an incoming block
-  // of PHIs in DestBB. In such case, merging BB and DestBB would cause ISel to
-  // add COPY instructions in the predecessor of BB instead of BB (if it is not
-  // merged). Note that the critical edge created by merging such blocks wont be
-  // split in MachineSink because the jump table is not analyzable. By keeping
-  // such empty block (BB), ISel will place COPY instructions in BB, not in the
-  // predecessor of BB.
-  BasicBlock *Pred = BB->getUniquePredecessor();
-  if (!Pred ||
-      !(isa<SwitchInst>(Pred->getTerminator()) ||
-        isa<IndirectBrInst>(Pred->getTerminator())))
-    return true;
-
-  if (BB->getTerminator() != BB->getFirstNonPHI())
-    return true;
-
-  // We use a simple cost heuristic which determine skipping merging is
-  // profitable if the cost of skipping merging is less than the cost of
-  // merging : Cost(skipping merging) < Cost(merging BB), where the
-  // Cost(skipping merging) is Freq(BB) * (Cost(Copy) + Cost(Branch)), and
-  // the Cost(merging BB) is Freq(Pred) * Cost(Copy).
-  // Assuming Cost(Copy) == Cost(Branch), we could simplify it to :
-  //   Freq(Pred) / Freq(BB) > 2.
-  // Note that if there are multiple empty blocks sharing the same incoming
-  // value for the PHIs in the DestBB, we consider them together. In such
-  // case, Cost(merging BB) will be the sum of their frequencies.
-
-  if (!isa<PHINode>(DestBB->begin()))
-    return true;
-
-  if (!BFI) {
-    BPI.reset(new BranchProbabilityInfo(*BB->getParent(), *LI));
-    BFI.reset(new BlockFrequencyInfo(*BB->getParent(), *BPI, *LI));
-  }
-
-  BlockFrequency PredFreq = BFI->getBlockFreq(Pred);
-  BlockFrequency BBFreq = BFI->getBlockFreq(BB);
-  SmallPtrSet<BasicBlock *, 16> SameIncomingValueBBs;
-
-  // Find all other incoming blocks from which incoming values of all PHIs in
-  // DestBB are the same as the ones from BB.
-  for (pred_iterator PI = pred_begin(DestBB), E = pred_end(DestBB); PI != E;
-       ++PI) {
-    BasicBlock *DestBBPred = *PI;
-    if (DestBBPred == BB)
-      continue;
-
-    bool HasAllSameValue = true;
-    BasicBlock::const_iterator DestBBI = DestBB->begin();
-    while (const PHINode *DestPN = dyn_cast<PHINode>(DestBBI++)) {
-      if (DestPN->getIncomingValueForBlock(BB) !=
-          DestPN->getIncomingValueForBlock(DestBBPred)) {
-        HasAllSameValue = false;
-        break;
-      }
-    }
-    if (HasAllSameValue)
-      SameIncomingValueBBs.insert(DestBBPred);
-  }
-
-  // See if all BB's incoming values are same as the value from Pred. In this
-  // case, no reason to skip merging because COPYs are expected to be place in
-  // Pred already.
-  if (SameIncomingValueBBs.count(Pred))
-    return true;
-
-  for (auto SameValueBB : SameIncomingValueBBs)
-    if (SameValueBB->getUniquePredecessor() == Pred &&
-        DestBB == findDestBlockOfMergeableEmptyBlock(SameValueBB))
-      BBFreq += BFI->getBlockFreq(SameValueBB);
-
-  return PredFreq.getFrequency() <=
-         BBFreq.getFrequency() * FreqRatioToSkipMerge;
 }
 
 /// Return true if we can merge BB into DestBB if there is a single

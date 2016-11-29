@@ -109,13 +109,13 @@ __kmp_i18n_do_catopen(
     KMP_DEBUG_ASSERT( cat    == KMP_I18N_NULLCAT );
 
     english =
-	lang == NULL                       ||  // In all these cases English language is used.
-	strcmp( lang, "" )            == 0 ||
+        lang == NULL                       ||  // In all these cases English language is used.
+        strcmp( lang, "" )            == 0 ||
         strcmp( lang, " " )           == 0 ||
-              // Workaround for Fortran RTL bug DPD200137873 "Fortran runtime resets LANG env var
-              // to space if it is not set".
-	strcmp( lang, "C" )           == 0 ||
-	strcmp( lang, "POSIX" )       == 0;
+        // Workaround for Fortran RTL bug DPD200137873 "Fortran runtime resets LANG env var
+        // to space if it is not set".
+        strcmp( lang, "C" )           == 0 ||
+        strcmp( lang, "POSIX" )       == 0;
 
     if ( ! english ) {  // English language is not yet detected, let us continue.
         // Format of LANG is: [language[_territory][.codeset][@modifier]]
@@ -132,8 +132,8 @@ __kmp_i18n_do_catopen(
     // Do not try to open English catalog because internal messages are
     // exact copy of messages in English catalog.
     if ( english ) {
-	status = KMP_I18N_ABSENT;  // mark catalog as absent so it will not be re-opened.
-	return;
+        status = KMP_I18N_ABSENT;  // mark catalog as absent so it will not be re-opened.
+        return;
     }
 
     cat = catopen( name, 0 );
@@ -141,36 +141,41 @@ __kmp_i18n_do_catopen(
     status = ( cat == KMP_I18N_NULLCAT ? KMP_I18N_ABSENT : KMP_I18N_OPENED );
 
     if ( status == KMP_I18N_ABSENT ) {
-      if (__kmp_generate_warnings > kmp_warnings_low) { // AC: only issue warning in case explicitly asked to
-        int    error   = errno; // Save errno immediately.
-	char * nlspath = __kmp_env_get( "NLSPATH" );
-        char * lang    = __kmp_env_get( "LANG" );
+        if (__kmp_generate_warnings > kmp_warnings_low) { // AC: only issue warning in case explicitly asked to
+            int    error   = errno; // Save errno immediately.
+            char * nlspath = __kmp_env_get( "NLSPATH" );
+            char * lang    = __kmp_env_get( "LANG" );
 
-	// Infinite recursion will not occur -- status is KMP_I18N_ABSENT now, so
-	// __kmp_i18n_catgets() will not try to open catalog, but will return default message.
-	__kmp_msg(
-	    kmp_ms_warning,
-	    KMP_MSG( CantOpenMessageCatalog, name ),
-	    KMP_ERR( error ),
-	    KMP_HNT( CheckEnvVar, "NLSPATH", nlspath ),
-            KMP_HNT( CheckEnvVar, "LANG", lang ),
-	    __kmp_msg_null
-	);
-	KMP_INFORM( WillUseDefaultMessages );
-        KMP_INTERNAL_FREE( nlspath );
-        KMP_INTERNAL_FREE( lang );
-      }
+            // Infinite recursion will not occur -- status is KMP_I18N_ABSENT now, so
+            // __kmp_i18n_catgets() will not try to open catalog, but will return default message.
+            kmp_msg_t err_code = KMP_ERR( error );
+            __kmp_msg(
+                kmp_ms_warning,
+                KMP_MSG( CantOpenMessageCatalog, name ),
+                err_code,
+                KMP_HNT( CheckEnvVar, "NLSPATH", nlspath ),
+                KMP_HNT( CheckEnvVar, "LANG", lang ),
+                __kmp_msg_null
+            );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+                __kmp_str_free(&err_code.str);
+            }
+
+            KMP_INFORM( WillUseDefaultMessages );
+            KMP_INTERNAL_FREE( nlspath );
+            KMP_INTERNAL_FREE( lang );
+        }
     } else { // status == KMP_I18N_OPENED
 
         int section = get_section( kmp_i18n_prp_Version );
         int number  = get_number( kmp_i18n_prp_Version );
         char const * expected = __kmp_i18n_default_table.sect[ section ].str[ number ];
-            // Expected version of the catalog.
+        // Expected version of the catalog.
         kmp_str_buf_t version;   // Actual version of the catalog.
         __kmp_str_buf_init( & version );
         __kmp_str_buf_print( & version, "%s", catgets( cat, section, number, NULL ) );
 
-            // String returned by catgets is invalid after closing the catalog, so copy it.
+        // String returned by catgets is invalid after closing the catalog, so copy it.
         if ( strcmp( version.str, expected ) != 0 ) {
             __kmp_i18n_catclose();     // Close bad catalog.
             status = KMP_I18N_ABSENT;  // And mark it as absent.
@@ -317,7 +322,7 @@ kmp_i18n_table_free(
     table->size = 0;
     KMP_INTERNAL_FREE( (void *) table->sect );
     table->sect = NULL;
-} // kmp_i8n_table_free
+} // kmp_i18n_table_free
 
 
 void
@@ -325,7 +330,7 @@ __kmp_i18n_do_catopen(
 ) {
 
     LCID          locale_id = GetThreadLocale();
-    WORD 	  lang_id = LANGIDFROMLCID( locale_id );
+    WORD          lang_id = LANGIDFROMLCID( locale_id );
     WORD          primary_lang_id = PRIMARYLANGID( lang_id );
     kmp_str_buf_t path;
 
@@ -337,8 +342,8 @@ __kmp_i18n_do_catopen(
     // Do not try to open English catalog because internal messages are
     // exact copy of messages in English catalog.
     if ( primary_lang_id == LANG_ENGLISH ) {
-	status = KMP_I18N_ABSENT;  // mark catalog as absent so it will not be re-opened.
-	goto end;
+        status = KMP_I18N_ABSENT;  // mark catalog as absent so it will not be re-opened.
+        goto end;
     }; // if
 
     // Construct resource DLL name.
@@ -395,30 +400,35 @@ __kmp_i18n_do_catopen(
 
     if ( status == KMP_I18N_ABSENT ) {
       if (__kmp_generate_warnings > kmp_warnings_low) { // AC: only issue warning in case explicitly asked to
-	DWORD error = GetLastError();
-	// Infinite recursion will not occur -- status is KMP_I18N_ABSENT now, so
-	// __kmp_i18n_catgets() will not try to open catalog but will return default message.
+        DWORD error = GetLastError();
+        // Infinite recursion will not occur -- status is KMP_I18N_ABSENT now, so
+        // __kmp_i18n_catgets() will not try to open catalog but will return default message.
         /*
-         If message catalog for another architecture found (e.g. OpenMP RTL
-	 for IA-32 architecture opens libompui.dll for Intel(R) 64)
-	 Windows* OS returns error 193 (ERROR_BAD_EXE_FORMAT). However,
-         FormatMessage fails to return a message for this error, so user
-	 will see:
+          If message catalog for another architecture found (e.g. OpenMP RTL
+          for IA-32 architecture opens libompui.dll for Intel(R) 64)
+          Windows* OS returns error 193 (ERROR_BAD_EXE_FORMAT). However,
+          FormatMessage fails to return a message for this error, so user
+          will see:
 
-         OMP: Warning #2: Cannot open message catalog "1041\libompui.dll":
-         OMP: System error #193: (No system error message available)
-         OMP: Info #3: Default messages will be used.
+          OMP: Warning #2: Cannot open message catalog "1041\libompui.dll":
+          OMP: System error #193: (No system error message available)
+          OMP: Info #3: Default messages will be used.
 
-         Issue a hint in this case to let cause of trouble more understandable.
+          Issue a hint in this case to let cause of trouble more understandable.
         */
-	__kmp_msg(
-	    kmp_ms_warning,
-	    KMP_MSG( CantOpenMessageCatalog, path.str ),
-	    KMP_SYSERRCODE( error ),
+        __kmp_msg_t err_code = KMP_SYSERRCODE(error);
+        __kmp_msg(
+            kmp_ms_warning,
+            KMP_MSG( CantOpenMessageCatalog, path.str ),
+            err_code,
             ( error == ERROR_BAD_EXE_FORMAT ? KMP_HNT( BadExeFormat, path.str, KMP_ARCH_STR ) : __kmp_msg_null ),
-	    __kmp_msg_null
-	);
-	KMP_INFORM( WillUseDefaultMessages );
+            __kmp_msg_null
+        );
+        if (__kmp_generate_warnings == kmp_warnings_off) {
+            __kmp_str_free(&err_code.str);
+        }
+
+        KMP_INFORM( WillUseDefaultMessages );
       }
     } else { // status == KMP_I18N_OPENED
 
@@ -824,7 +834,6 @@ sys_error(
             // XSI version of strerror_r.
 
             int    size   = 2048;
-            // TODO: Add checking result of malloc().
             char * buffer = (char *) KMP_INTERNAL_MALLOC( size );
             int    rc;
             if (buffer == NULL) {
@@ -932,9 +941,9 @@ __kmp_msg(
         };
     }; // switch
     fmsg = __kmp_msg_format( format, message.num, message.str );
-    KMP_INTERNAL_FREE( (void *) message.str );
+    __kmp_str_free(&message.str);
     __kmp_str_buf_cat( & buffer, fmsg.str, fmsg.len );
-    KMP_INTERNAL_FREE( (void *) fmsg.str );
+    __kmp_str_free(&fmsg.str);
 
     // Format other messages.
     va_start( args, message );
@@ -958,9 +967,9 @@ __kmp_msg(
             };
         }; // switch
         fmsg = __kmp_msg_format( format, message.num, message.str );
-        KMP_INTERNAL_FREE( (void *) message.str );
+        __kmp_str_free(&message.str);
         __kmp_str_buf_cat( & buffer, fmsg.str, fmsg.len );
-        KMP_INTERNAL_FREE( (void *) fmsg.str );
+        __kmp_str_free(&fmsg.str);
     }; // forever
     va_end( args );
 

@@ -331,7 +331,6 @@ def IntRegs : RegisterClass<"SP", [i32, i64], 32,
                                  (sequence "L%u", 0, 7),
                                  (sequence "O%u", 0, 7))>;
 
-
 // Should be in the same order as IntRegs.
 def IntPair : RegisterClass<"SP", [v2i32], 64,
     (add I0_I1, I2_I3, I4_I5, I6_I7,

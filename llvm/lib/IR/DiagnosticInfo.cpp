@@ -170,14 +170,31 @@ const std::string DiagnosticInfoWithDebugLocBase::getLocationStr() const {
     getLocation(&Filename, &Line, &Column);
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
+
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, Value *V)
-    : Key(Key), Val(GlobalValue::getRealLinkageName(V->getName())) {
+    : Key(Key) {
   if (auto *F = dyn_cast<Function>(V)) {
     if (DISubprogram *SP = F->getSubprogram())
       DLoc = DebugLoc::get(SP->getScopeLine(), 0, SP);
   }
   else if (auto *I = dyn_cast<Instruction>(V))
     DLoc = I->getDebugLoc();
+
+  // Only include names that correspond to user variables.  FIXME: we should use
+  // debug info if available to get the name of the user variable.
+  if (isa<llvm::Argument>(V) || isa<GlobalValue>(V))
+    Val = GlobalValue::getRealLinkageName(V->getName());
+  else if (isa<Constant>(V)) {
+    raw_string_ostream OS(Val);
+    V->printAsOperand(OS, /*PrintType=*/false);
+  } else if (auto *I = dyn_cast<Instruction>(V))
+    Val = I->getOpcodeName();
+}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, Type *T)
+    : Key(Key) {
+  raw_string_ostream OS(Val);
+  OS << *T;
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, int N)
@@ -353,10 +370,19 @@ operator<<(setIsVerbose V) {
   return *this;
 }
 
+DiagnosticInfoOptimizationBase &DiagnosticInfoOptimizationBase::
+operator<<(setExtraArgs EA) {
+  FirstExtraArgIndex = Args.size();
+  return *this;
+}
+
 std::string DiagnosticInfoOptimizationBase::getMsg() const {
   std::string Str;
   raw_string_ostream OS(Str);
-  for (const DiagnosticInfoOptimizationBase::Argument &Arg : Args)
+  for (const DiagnosticInfoOptimizationBase::Argument &Arg :
+       make_range(Args.begin(), FirstExtraArgIndex == -1
+                                    ? Args.end()
+                                    : Args.begin() + FirstExtraArgIndex))
     OS << Arg.Val;
   return OS.str();
 }

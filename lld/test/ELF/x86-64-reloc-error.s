@@ -6,5 +6,5 @@
   movl $big, %edx
   movq $foo - 0x1000000000000, %rdx
 
-# CHECK: R_X86_64_32 out of range
-# CHECK: R_X86_64_32S out of range
+# CHECK: {{.*}}:(.text+0x1): relocation R_X86_64_32 out of range
+# CHECK: {{.*}}:(.text+0x8): relocation R_X86_64_32S out of range

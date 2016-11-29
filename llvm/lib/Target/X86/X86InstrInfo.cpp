@@ -8023,8 +8023,8 @@ bool X86InstrInfo::shouldScheduleLoadsNear(SDNode *Load1, SDNode *Load2,
   return true;
 }
 
-bool X86InstrInfo::shouldScheduleAdjacent(MachineInstr &First,
-                                          MachineInstr &Second) const {
+bool X86InstrInfo::shouldScheduleAdjacent(const MachineInstr &First,
+                                          const MachineInstr &Second) const {
   // Check if this processor supports macro-fusion. Since this is a minor
   // heuristic, we haven't specifically reserved a feature. hasAVX is a decent
   // proxy for SandyBridge+.

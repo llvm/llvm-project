@@ -188,10 +188,13 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
+        uintX_t OffsetOff = Off + (uintX_t)sizeof(uintX_t);
         if (isPreemptible(Body, Type))
           In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::Got,
-                                       Off + (uintX_t)sizeof(uintX_t), false,
-                                       &Body, 0});
+                                       OffsetOff, false, &Body, 0});
+        else
+          In<ELFT>::Got->Relocations.push_back(
+              {R_ABS, Target->TlsOffsetRel, OffsetOff, 0, &Body});
       }
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       return 1;
@@ -741,17 +744,19 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
         continue;
 
       In<ELFT>::Got->addEntry(Body);
-      if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body))) {
-        uint32_t DynType;
-        if (Body.isTls())
-          DynType = Target->TlsGotRel;
-        else if (Preemptible)
-          DynType = Target->GotRel;
-        else
-          DynType = Target->RelativeRel;
-        AddDyn({DynType, In<ELFT>::Got, Body.getGotOffset<ELFT>(), !Preemptible,
-                &Body, 0});
-      }
+      uintX_t Off = Body.getGotOffset<ELFT>();
+      uint32_t DynType;
+      if (Body.isTls())
+        DynType = Target->TlsGotRel;
+      else if (!Preemptible && Config->Pic && !isAbsolute<ELFT>(Body))
+        DynType = Target->RelativeRel;
+      else
+        DynType = Target->GotRel;
+
+      if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body)))
+        AddDyn({DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
+      else
+        In<ELFT>::Got->Relocations.push_back({R_ABS, DynType, Off, 0, &Body});
       continue;
     }
   }

@@ -1878,8 +1878,8 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
   return Offset1 + 1 == Offset2;
 }
 
-bool AArch64InstrInfo::shouldScheduleAdjacent(MachineInstr &First,
-                                              MachineInstr &Second) const {
+bool AArch64InstrInfo::shouldScheduleAdjacent(
+    const MachineInstr &First, const MachineInstr &Second) const {
   if (Subtarget.hasArithmeticBccFusion()) {
     // Fuse CMN, CMP, TST followed by Bcc.
     unsigned SecondOpcode = Second.getOpcode();

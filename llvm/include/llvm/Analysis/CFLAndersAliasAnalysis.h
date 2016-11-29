@@ -42,7 +42,10 @@ public:
 
   /// Handle invalidation events from the new pass manager.
   /// By definition, this result is stateless and so remains valid.
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
   /// Evict the given function from cache
   void evict(const Function &Fn);
 

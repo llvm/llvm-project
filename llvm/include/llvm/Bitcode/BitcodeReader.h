@@ -42,6 +42,7 @@ namespace llvm {
 
   /// Represents a module in a bitcode file.
   class BitcodeModule {
+    // This covers the identification (if present) and module blocks.
     ArrayRef<uint8_t> Buffer;
     StringRef ModuleIdentifier;
 

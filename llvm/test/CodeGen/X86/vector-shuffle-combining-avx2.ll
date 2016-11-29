@@ -596,6 +596,54 @@ define <32 x i8> @combine_pshufb_not_as_pshufw(<32 x i8> %a0) {
   ret <32 x i8> %res1
 }
 
+define <32 x i8> @combine_psrlw_pshufb(<16 x i16> %a0) {
+; X32-LABEL: combine_psrlw_pshufb:
+; X32:       # BB#0:
+; X32-NEXT:    vpshufb {{.*#+}} ymm0 = zero,ymm0[1],zero,ymm0[3],zero,ymm0[5],zero,ymm0[7],zero,ymm0[9],zero,ymm0[11],zero,ymm0[13],zero,ymm0[15],zero,ymm0[17],zero,ymm0[19],zero,ymm0[21],zero,ymm0[23],zero,ymm0[25],zero,ymm0[27],zero,ymm0[29],zero,ymm0[31]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_psrlw_pshufb:
+; X64:       # BB#0:
+; X64-NEXT:    vpshufb {{.*#+}} ymm0 = zero,ymm0[1],zero,ymm0[3],zero,ymm0[5],zero,ymm0[7],zero,ymm0[9],zero,ymm0[11],zero,ymm0[13],zero,ymm0[15],zero,ymm0[17],zero,ymm0[19],zero,ymm0[21],zero,ymm0[23],zero,ymm0[25],zero,ymm0[27],zero,ymm0[29],zero,ymm0[31]
+; X64-NEXT:    retq
+  %1 = lshr <16 x i16> %a0, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %2 = bitcast <16 x i16> %1 to <32 x i8>
+  %3 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %2, <32 x i8> <i8 1, i8 0, i8 3, i8 2, i8 5, i8 4, i8 7, i8 6, i8 9, i8 8, i8 11, i8 10, i8 13, i8 12, i8 15, i8 14, i8 17, i8 16, i8 19, i8 18, i8 21, i8 20, i8 23, i8 22, i8 25, i8 24, i8 27, i8 26, i8 29, i8 28, i8 31, i8 30>)
+  ret <32 x i8> %3
+}
+
+define <32 x i8> @combine_pslld_pshufb(<8 x i32> %a0) {
+; X32-LABEL: combine_pslld_pshufb:
+; X32:       # BB#0:
+; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0],zero,zero,zero,ymm0[4],zero,zero,zero,ymm0[8],zero,zero,zero,ymm0[12],zero,zero,zero,ymm0[16],zero,zero,zero,ymm0[20],zero,zero,zero,ymm0[24],zero,zero,zero,ymm0[28],zero,zero,zero
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pslld_pshufb:
+; X64:       # BB#0:
+; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0],zero,zero,zero,ymm0[4],zero,zero,zero,ymm0[8],zero,zero,zero,ymm0[12],zero,zero,zero,ymm0[16],zero,zero,zero,ymm0[20],zero,zero,zero,ymm0[24],zero,zero,zero,ymm0[28],zero,zero,zero
+; X64-NEXT:    retq
+  %1 = shl <8 x i32> %a0, <i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24>
+  %2 = bitcast <8 x i32> %1 to <32 x i8>
+  %3 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %2, <32 x i8> <i8 3, i8 2, i8 1, i8 0, i8 7, i8 6, i8 5, i8 4, i8 11, i8 10, i8 9, i8 8, i8 15, i8 14, i8 13, i8 12, i8 19, i8 18, i8 17, i8 16, i8 23, i8 22, i8 21, i8 20, i8 27, i8 26, i8 25, i8 24, i8 31, i8 30, i8 29, i8 28>)
+  ret <32 x i8> %3
+}
+
+define <32 x i8> @combine_psrlq_pshufb(<4 x i64> %a0) {
+; X32-LABEL: combine_psrlq_pshufb:
+; X32:       # BB#0:
+; X32-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[7,6,5,4],zero,zero,zero,zero,ymm0[15,14,13,12],zero,zero,zero,zero,ymm0[23,22,21],zero,zero,zero,zero,ymm0[31,30,29,28],zero
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_psrlq_pshufb:
+; X64:       # BB#0:
+; X64-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[7,6,5,4],zero,zero,zero,zero,ymm0[15,14,13,12],zero,zero,zero,zero,ymm0[23,22,21],zero,zero,zero,zero,ymm0[31,30,29,28],zero
+; X64-NEXT:    retq
+  %1 = lshr <4 x i64> %a0, <i64 32, i64 32, i64 32, i64 32>
+  %2 = bitcast <4 x i64> %1 to <32 x i8>
+  %3 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %2, <32 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 23, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 31, i8 30, i8 29, i8 28, i8 27, i8 26, i8 25, i8 24, i8 23>)
+  ret <32 x i8> %3
+}
+
 define <8 x i32> @constant_fold_permd() {
 ; X32-LABEL: constant_fold_permd:
 ; X32:       # BB#0:
