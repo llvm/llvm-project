@@ -13,7 +13,7 @@ MATH_MANGLE(logb)(half x)
     half ret;
 
     if (AMD_OPT()) {
-        ret = (half)(BUILTIN_FREXP_EXP_F16(x) - 1);
+        ret = (half)(BUILTIN_FREXP_EXP_F16(x) - (short)1);
     } else {
         int ix = (int)AS_USHORT(x);
         int r = ((ix >> 10) & 0x1f) - EXPBIAS_HP16;

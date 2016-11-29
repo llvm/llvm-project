@@ -209,9 +209,9 @@ extern __attribute__((const)) half __llvm_amdgcn_frexp_mant_f16(half) __asm("llv
 extern __attribute__((const)) float __llvm_amdgcn_frexp_mant_f32(float) __asm("llvm.amdgcn.frexp.mant.f32");
 extern __attribute__((const)) double __llvm_amdgcn_frexp_mant_f64(double) __asm("llvm.amdgcn.frexp.mant.f64");
 
-extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f16(half) __asm("llvm.amdgcn.frexp.exp.f16");
-extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f32(float) __asm("llvm.amdgcn.frexp.exp.f32");
-extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f64(double) __asm("llvm.amdgcn.frexp.exp.f64");
+extern __attribute__((const)) short __llvm_amdgcn_frexp_exp_i16_f16(half) __asm("llvm.amdgcn.frexp.exp.i16,f16");
+extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_i32_f32(float) __asm("llvm.amdgcn.frexp.exp.i32.f32");
+extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_i32_f64(double) __asm("llvm.amdgcn.frexp.exp.i32.f64");
 
 extern __attribute__((const)) double __llvm_amdgcn_trig_preop_f64(double, int) __asm("llvm.amdgcn.trig.preop.f64");
 

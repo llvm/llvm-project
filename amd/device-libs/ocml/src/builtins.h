@@ -173,9 +173,9 @@
 #define BUILTIN_FLDEXP_F64 __llvm_amdgcn_ldexp_f64
 #define BUILTIN_FLDEXP_F16 __llvm_amdgcn_ldexp_f16
 
-#define BUILTIN_FREXP_EXP_F32 __llvm_amdgcn_frexp_exp_f32
-#define BUILTIN_FREXP_EXP_F64 __llvm_amdgcn_frexp_exp_f64
-#define BUILTIN_FREXP_EXP_F16 __llvm_amdgcn_frexp_exp_f16
+#define BUILTIN_FREXP_EXP_F32 __llvm_amdgcn_frexp_exp_i32_f32
+#define BUILTIN_FREXP_EXP_F64 __llvm_amdgcn_frexp_exp_i32_f64
+#define BUILTIN_FREXP_EXP_F16 __llvm_amdgcn_frexp_exp_i16_f16
 
 #define BUILTIN_FREXP_MANT_F32 __llvm_amdgcn_frexp_mant_f32
 #define BUILTIN_FREXP_MANT_F64 __llvm_amdgcn_frexp_mant_f64

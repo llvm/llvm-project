@@ -11,7 +11,7 @@ INLINEATTR half
 MATH_MANGLE(frexp)(half x, __private int *ep)
 {
     if (AMD_OPT()) {
-        int e = BUILTIN_FREXP_EXP_F16(x);
+        int e = (int)BUILTIN_FREXP_EXP_F16(x);
         half r = BUILTIN_FREXP_MANT_F16(x);
         bool c = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF|CLASS_SNAN|CLASS_QNAN);
         *ep = c ? 0 : e;
