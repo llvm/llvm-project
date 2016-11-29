@@ -5728,6 +5728,7 @@ bool SwiftASTContext::IsFullyRealized(const CompilerType &compiler_type) {
     switch (type_kind) {
     case swift::TypeKind::Archetype:
     case swift::TypeKind::UnboundGeneric:
+    case swift::TypeKind::AssociatedType:
       return false;
     case swift::TypeKind::Paren: {
       swift::ParenType *paren_type =
