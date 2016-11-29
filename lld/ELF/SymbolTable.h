@@ -42,7 +42,7 @@ template <class ELFT> class SymbolTable {
 
 public:
   void addFile(InputFile *File);
-  void addCombinedLtoObject();
+  void addCombinedLTOObject();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   ArrayRef<ObjectFile<ELFT> *> getObjectFiles() const { return ObjectFiles; }
@@ -141,7 +141,7 @@ private:
   llvm::Optional<llvm::StringMap<std::vector<SymbolBody *>>> DemangledSyms;
 
   // For LTO.
-  std::unique_ptr<BitcodeCompiler> Lto;
+  std::unique_ptr<BitcodeCompiler> LTO;
 };
 
 template <class ELFT> struct Symtab { static SymbolTable<ELFT> *X; };

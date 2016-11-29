@@ -360,7 +360,7 @@ __kmp_stg_parse_str(
     char const *      value,
     char const * *    out
 ) {
-    KMP_INTERNAL_FREE( (void *) * out );
+    __kmp_str_free(out);
     * out = __kmp_str_format( "%s", value );
 } // __kmp_stg_parse_str
 #endif
@@ -418,12 +418,12 @@ __kmp_stg_parse_file(
     char buffer[256];
     char *t;
     int hasSuffix;
-    KMP_INTERNAL_FREE( (void *) * out );
+    __kmp_str_free(out);
     t = (char *) strrchr(value, '.');
     hasSuffix = t && __kmp_str_eqf( t, suffix );
     t = __kmp_str_format( "%s%s", value, hasSuffix ? "" : suffix );
     __kmp_expand_file_name( buffer, sizeof(buffer), t);
-    KMP_INTERNAL_FREE(t);
+    __kmp_str_free(&t);
     * out = __kmp_str_format( "%s", buffer );
 } // __kmp_stg_parse_file
 #endif
@@ -2235,7 +2235,7 @@ __kmp_parse_affinity_env( char const * name, char const * value,
     #undef set_respect
     #undef set_granularity
 
-    KMP_INTERNAL_FREE( buffer );
+    __kmp_str_free((const char **) &buffer);
 
     if ( proclist ) {
         if ( ! type ) {

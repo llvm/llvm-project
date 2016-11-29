@@ -201,8 +201,8 @@ public:
   const SectionPiece *getSectionPiece(uintX_t Offset) const;
 
 private:
-  std::vector<SectionPiece> splitStrings(ArrayRef<uint8_t> A, size_t Size);
-  std::vector<SectionPiece> splitNonStrings(ArrayRef<uint8_t> A, size_t Size);
+  void splitStrings(ArrayRef<uint8_t> A, size_t Size);
+  void splitNonStrings(ArrayRef<uint8_t> A, size_t Size);
 
   std::vector<uint32_t> Hashes;
 

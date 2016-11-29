@@ -23,7 +23,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld -o %t1 --script %t.script %t 2>&1 \
 # RUN:  | FileCheck -check-prefix=ERR %s
-# ERR: undefined section .foo
+# ERR: {{.*}}.script:1: undefined section .foo
 .global _start
 _start:
  nop

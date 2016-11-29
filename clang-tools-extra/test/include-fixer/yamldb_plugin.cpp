@@ -10,8 +10,7 @@ unknown u;
 // CHECK: Number FIX-ITs = 1
 // CHECK: FIX-IT: Replace [3:1 - 3:4] with "#include "foo.h"
 // CHECK: yamldb_plugin.cpp:4:1:
-// CHECK: error: unknown type name 'unknown'; did you mean 'unknown'?
-// CHECK: Number FIX-ITs = 1
-// CHECK: FIX-IT: Replace [4:1 - 4:8] with "unknown"
+// CHECK: error: unknown type name 'unknown'
+// CHECK: Number FIX-ITs = 0
 // CHECK-NOT: error
 // CHECK-NOT: FIX-IT

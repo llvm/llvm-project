@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -285,9 +286,35 @@ static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
   return Default;
 }
 
+// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
+static bool getColorDiagnostics(opt::InputArgList &Args) {
+  bool Default = (ErrorOS == &errs() && Process::StandardErrHasColors());
+
+  auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_no_color_diagnostics);
+  if (!Arg)
+    return Default;
+  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
+    return false;
+
+  StringRef S = Arg->getValue();
+  if (S == "auto")
+    return Default;
+  if (S == "always")
+    return true;
+  if (S != "never")
+    error("unknown -color-diagnostics value: " + S);
+  return false;
+}
+
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
+
+  // Read some flags early because error() depends on them.
+  Config->ErrorLimit = getInteger(Args, OPT_error_limit, 20);
+  Config->ColorDiagnostics = getColorDiagnostics(Args);
+
+  // Handle -help
   if (Args.hasArg(OPT_help)) {
     printHelp(ArgsArr[0]);
     return;
@@ -392,24 +419,6 @@ static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
   return Default;
 }
 
-// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
-static ColorPolicy getColorDiagnostics(opt::InputArgList &Args) {
-  auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_no_color_diagnostics);
-  if (!Arg)
-    return ColorPolicy::Auto;
-  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
-    return ColorPolicy::Never;
-
-  StringRef S = Arg->getValue();
-  if (S == "auto")
-    return ColorPolicy::Auto;
-  if (S == "always")
-    return ColorPolicy::Always;
-  if (S != "never")
-    error("unknown -color-diagnostics value: " + S);
-  return ColorPolicy::Never;
-}
-
 static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
   auto *Arg =
       Args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
@@ -504,13 +513,11 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
-  Config->ColorDiagnostics = getColorDiagnostics(Args);
   Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscardOption(Args);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
-  Config->ErrorLimit = getInteger(Args, OPT_error_limit, 20);
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
   Config->FatalWarnings = Args.hasArg(OPT_fatal_warnings);
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
@@ -523,6 +530,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
+  Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->Target1Rel = getArg(Args, OPT_target1_rel, OPT_target1_abs, false);
   Config->Threads = getArg(Args, OPT_threads, OPT_no_threads, true);
@@ -540,21 +548,21 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Entry = getString(Args, OPT_entry);
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
-  Config->LtoAAPipeline = getString(Args, OPT_lto_aa_pipeline);
-  Config->LtoNewPmPasses = getString(Args, OPT_lto_newpm_passes);
+  Config->LTOAAPipeline = getString(Args, OPT_lto_aa_pipeline);
+  Config->LTONewPmPasses = getString(Args, OPT_lto_newpm_passes);
   Config->OutputFile = getString(Args, OPT_o);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 
   Config->Optimize = getInteger(Args, OPT_O, 1);
-  Config->LtoO = getInteger(Args, OPT_lto_O, 2);
-  if (Config->LtoO > 3)
+  Config->LTOO = getInteger(Args, OPT_lto_O, 2);
+  if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
-  Config->LtoPartitions = getInteger(Args, OPT_lto_partitions, 1);
-  if (Config->LtoPartitions == 0)
+  Config->LTOPartitions = getInteger(Args, OPT_lto_partitions, 1);
+  if (Config->LTOPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");
-  Config->ThinLtoJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
-  if (Config->ThinLtoJobs == 0)
+  Config->ThinLTOJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
+  if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
@@ -794,7 +802,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
 
-  Symtab.addCombinedLtoObject();
+  Symtab.addCombinedLTOObject();
   if (ErrorCount)
     return;
 

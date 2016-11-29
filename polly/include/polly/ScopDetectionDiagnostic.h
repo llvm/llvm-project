@@ -117,7 +117,7 @@ protected:
 public:
   RejectReasonKind getKind() const { return Kind; }
 
-  RejectReason(RejectReasonKind K) : Kind(K) {}
+  RejectReason(RejectReasonKind K);
 
   virtual ~RejectReason() {}
 

@@ -121,6 +121,9 @@ public:
     return B->getKind() == Regular;
   }
   std::vector<InputSection<ELFT> *> Sections;
+
+  // Location in the output buffer.
+  uint8_t *Loc = nullptr;
 };
 
 template <class ELFT>
@@ -140,6 +143,9 @@ public:
   }
 
 private:
+  void finalizeTailMerge();
+  void finalizeNoTailMerge();
+
   llvm::StringTableBuilder Builder;
   std::vector<MergeInputSection<ELFT> *> Sections;
 };

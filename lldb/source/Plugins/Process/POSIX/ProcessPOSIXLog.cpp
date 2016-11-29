@@ -95,7 +95,7 @@ void ProcessPOSIXLog::DisableLog(const char **args, Stream *feedback_strm) {
     uint32_t flag_bits = 0;
 
     flag_bits = log->GetMask().Get();
-    for (; args[0]; args++) {
+    for (; args && args[0]; args++) {
       const char *arg = args[0];
       uint32_t bits = GetFlagBits(arg);
 
@@ -134,7 +134,7 @@ Log *ProcessPOSIXLog::EnableLog(StreamSP &log_stream_sp, uint32_t log_options,
 
   if (g_log) {
     bool got_unknown_category = false;
-    for (; args[0]; args++) {
+    for (; args && args[0]; args++) {
       const char *arg = args[0];
       uint32_t bits = GetFlagBits(arg);
 

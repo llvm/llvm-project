@@ -38,15 +38,36 @@
 
 using namespace llvm;
 
-#define BADSCOP_STAT(NAME, DESC)                                               \
-  STATISTIC(Bad##NAME##ForScop, "Number of bad regions for Scop: " DESC)
+#define SCOP_STAT(NAME, DESC)                                                  \
+  { "polly-detect", "NAME", "Number of rejected regions: " DESC, {0}, false }
 
-BADSCOP_STAT(CFG, "CFG too complex");
-BADSCOP_STAT(LoopBound, "Loop bounds can not be computed");
-BADSCOP_STAT(FuncCall, "Function call with side effects appeared");
-BADSCOP_STAT(AffFunc, "Expression not affine");
-BADSCOP_STAT(Alias, "Found base address alias");
-BADSCOP_STAT(Other, "Others");
+llvm::Statistic RejectStatistics[] = {
+    SCOP_STAT(CFG, ""),
+    SCOP_STAT(InvalidTerminator, "Unsupported terminator instruction"),
+    SCOP_STAT(IrreducibleRegion, "Irreducible loops"), SCOP_STAT(LastCFG, ""),
+    SCOP_STAT(AffFunc, ""), SCOP_STAT(UndefCond, "Undefined branch condition"),
+    SCOP_STAT(InvalidCond, "Non-integer branch condition"),
+    SCOP_STAT(UndefOperand, "Undefined operands in comparison"),
+    SCOP_STAT(NonAffBranch, "Non-affine branch condition"),
+    SCOP_STAT(NoBasePtr, "No base pointer"),
+    SCOP_STAT(UndefBasePtr, "Undefined base pointer"),
+    SCOP_STAT(VariantBasePtr, "Variant base pointer"),
+    SCOP_STAT(NonAffineAccess, "Non-affine memory accesses"),
+    SCOP_STAT(DifferentElementSize, "Accesses with differing sizes"),
+    SCOP_STAT(LastAffFunc, ""),
+    SCOP_STAT(LoopBound, "Uncomputable loop bounds"),
+    SCOP_STAT(LoopHasNoExit, "Loop without exit"),
+    SCOP_STAT(FuncCall, "Function call with side effects"),
+    SCOP_STAT(NonSimpleMemoryAccess,
+              "Compilated access semantics (volatile or atomic)"),
+    SCOP_STAT(Alias, "Base address aliasing"), SCOP_STAT(Other, ""),
+    SCOP_STAT(IntToPtr, "Integer to pointer conversions"),
+    SCOP_STAT(Alloca, "Stack allocations"),
+    SCOP_STAT(UnknownInst, "Unknown Instructions"),
+    SCOP_STAT(Entry, "Contains entry block"),
+    SCOP_STAT(Unprofitable, "Assumed to be unprofitable"),
+    SCOP_STAT(LastOther, ""),
+};
 
 namespace polly {
 /// Small string conversion via raw_string_stream.
@@ -118,6 +139,11 @@ void emitRejectionRemarks(const BBPair &P, const RejectLog &Log) {
 
 //===----------------------------------------------------------------------===//
 // RejectReason.
+
+RejectReason::RejectReason(RejectReasonKind K) : Kind(K) {
+  RejectStatistics[static_cast<int>(K)]++;
+}
+
 const DebugLoc RejectReason::Unknown = DebugLoc();
 
 const llvm::DebugLoc &RejectReason::getDebugLoc() const {
@@ -135,9 +161,7 @@ void RejectLog::print(raw_ostream &OS, int level) const {
 //===----------------------------------------------------------------------===//
 // ReportCFG.
 
-ReportCFG::ReportCFG(const RejectReasonKind K) : RejectReason(K) {
-  ++BadCFGForScop;
-}
+ReportCFG::ReportCFG(const RejectReasonKind K) : RejectReason(K) {}
 
 bool ReportCFG::classof(const RejectReason *RR) {
   return RR->getKind() >= RejectReasonKind::CFG &&
@@ -180,9 +204,7 @@ bool ReportIrreducibleRegion::classof(const RejectReason *RR) {
 // ReportAffFunc.
 
 ReportAffFunc::ReportAffFunc(const RejectReasonKind K, const Instruction *Inst)
-    : RejectReason(K), Inst(Inst) {
-  ++BadAffFuncForScop;
-}
+    : RejectReason(K), Inst(Inst) {}
 
 bool ReportAffFunc::classof(const RejectReason *RR) {
   return RR->getKind() >= RejectReasonKind::AffFunc &&
@@ -310,9 +332,7 @@ std::string ReportNonAffineAccess::getEndUserMessage() const {
 
 ReportLoopBound::ReportLoopBound(Loop *L, const SCEV *LoopCount)
     : RejectReason(RejectReasonKind::LoopBound), L(L), LoopCount(LoopCount),
-      Loc(L->getStartLoc()) {
-  ++BadLoopBoundForScop;
-}
+      Loc(L->getStartLoc()) {}
 
 std::string ReportLoopBound::getMessage() const {
   return "Non affine loop bound '" + *LoopCount + "' in loop: " +
@@ -350,9 +370,7 @@ std::string ReportLoopHasNoExit::getEndUserMessage() const {
 // ReportFuncCall.
 
 ReportFuncCall::ReportFuncCall(Instruction *Inst)
-    : RejectReason(RejectReasonKind::FuncCall), Inst(Inst) {
-  ++BadFuncCallForScop;
-}
+    : RejectReason(RejectReasonKind::FuncCall), Inst(Inst) {}
 
 std::string ReportFuncCall::getMessage() const {
   return "Call instruction: " + *Inst;
@@ -402,8 +420,6 @@ ReportAlias::ReportAlias(Instruction *Inst, AliasSet &AS)
 
   for (const auto &I : AS)
     Pointers.push_back(I.getValue());
-
-  ++BadAliasForScop;
 }
 
 std::string ReportAlias::formatInvalidAlias(std::string Prefix,
@@ -457,9 +473,7 @@ bool ReportAlias::classof(const RejectReason *RR) {
 
 std::string ReportOther::getMessage() const { return "Unknown reject reason"; }
 
-ReportOther::ReportOther(const RejectReasonKind K) : RejectReason(K) {
-  ++BadOtherForScop;
-}
+ReportOther::ReportOther(const RejectReasonKind K) : RejectReason(K) {}
 
 bool ReportOther::classof(const RejectReason *RR) {
   return RR->getKind() >= RejectReasonKind::Other &&

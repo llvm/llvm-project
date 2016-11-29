@@ -658,16 +658,17 @@ llvm::opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
   }
 
   if (MissingCount)
-    fatal("missing arg value for \"" + Twine(Args.getArgString(MissingIndex)) +
-          "\", expected " + Twine(MissingCount) +
-          (MissingCount == 1 ? " argument." : " arguments."));
+    fatal(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
   return Args;
 }
 
+// link.exe has an interesting feature. If LINK environment exists,
+// its contents are handled as a command line string. So you can pass
+// extra arguments using the environment variable.
 llvm::opt::InputArgList ArgParser::parseLINK(ArrayRef<const char *> Args) {
-  // Concatenate LINK env and given arguments and parse them.
+  // Concatenate LINK env and command line arguments, and then parse them.
   Optional<std::string> Env = Process::GetEnv("LINK");
   if (!Env)
     return parse(Args);
