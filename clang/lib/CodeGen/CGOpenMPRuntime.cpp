@@ -908,7 +908,7 @@ Address CGOpenMPRuntime::getOrCreateDefaultLocation(unsigned Flags) {
           llvm::ConstantExpr::getBitCast(DefaultOpenMPPSource, CGM.Int8PtrTy);
     }
 
-    ConstantBuilder builder(CGM);
+    ConstantInitBuilder builder(CGM);
     auto fields = builder.beginStruct(IdentTy);
     fields.addInt(CGM.Int32Ty, 0);
     fields.addInt(CGM.Int32Ty, Flags);
@@ -2814,7 +2814,7 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   // Create all device images
   auto *DeviceImageTy = cast<llvm::StructType>(
       CGM.getTypes().ConvertTypeForMem(getTgtDeviceImageQTy()));
-  ConstantBuilder DeviceImagesBuilder(CGM);
+  ConstantInitBuilder DeviceImagesBuilder(CGM);
   auto DeviceImagesEntries = DeviceImagesBuilder.beginArray(DeviceImageTy);
 
   for (unsigned i = 0; i < Devices.size(); ++i) {
@@ -2832,7 +2832,7 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
     Dev.add(ImgEnd);
     Dev.add(HostEntriesBegin);
     Dev.add(HostEntriesEnd);
-    DeviceImagesEntries.add(Dev.finish());
+    Dev.finishAndAddTo(DeviceImagesEntries);
   }
 
   // Create device images global array.
@@ -2849,7 +2849,7 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
   // Create the target region descriptor.
   auto *BinaryDescriptorTy = cast<llvm::StructType>(
       CGM.getTypes().ConvertTypeForMem(getTgtBinaryDescriptorQTy()));
-  ConstantBuilder DescBuilder(CGM);
+  ConstantInitBuilder DescBuilder(CGM);
   auto DescInit = DescBuilder.beginStruct(BinaryDescriptorTy);
   DescInit.addInt(CGM.Int32Ty, Devices.size());
   DescInit.add(llvm::ConstantExpr::getGetElementPtr(DeviceImages->getValueType(),
@@ -2913,7 +2913,7 @@ void CGOpenMPRuntime::createOffloadEntry(llvm::Constant *ID,
   auto Align = CharUnits::fromQuantity(1);
 
   // Create the entry struct.
-  ConstantBuilder EntryBuilder(CGM);
+  ConstantInitBuilder EntryBuilder(CGM);
   auto EntryInit = EntryBuilder.beginStruct(TgtOffloadEntryType);
   EntryInit.add(AddrPtr);
   EntryInit.add(StrPtr);

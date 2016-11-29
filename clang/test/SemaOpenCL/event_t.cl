@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only
 
-event_t glb_evt; // expected-error {{the event_t type cannot be used to declare a program scope variable}}
+event_t glb_evt; // expected-error {{the 'event_t' type cannot be used to declare a program scope variable}}
 
 constant struct evt_s {
   event_t evt; // expected-error {{the 'event_t' type cannot be used to declare a structure or union field}}

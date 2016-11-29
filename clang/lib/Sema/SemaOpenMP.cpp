@@ -1556,7 +1556,8 @@ public:
             !Stack->isLoopControlVariable(FD).first)
           ImplicitFirstprivate.push_back(E);
       }
-    }
+    } else
+      Visit(E->getBase());
   }
   void VisitOMPExecutableDirective(OMPExecutableDirective *S) {
     for (auto *C : S->clauses()) {

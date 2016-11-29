@@ -4325,7 +4325,7 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
     DependentDecltypeType *Canon
       = DependentDecltypeTypes.FindNodeOrInsertPos(ID, InsertPos);
     if (!Canon) {
-      // Build a new, canonical typeof(expr) type.
+      // Build a new, canonical decltype(expr) type.
       Canon = new (*this, TypeAlignment) DependentDecltypeType(*this, e);
       DependentDecltypeTypes.InsertNode(Canon, InsertPos);
     }

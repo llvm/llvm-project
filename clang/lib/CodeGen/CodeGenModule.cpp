@@ -743,7 +743,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
       Int32Ty, llvm::PointerType::getUnqual(CtorFTy), VoidPtrTy, nullptr);
 
   // Construct the constructor and destructor arrays.
-  ConstantBuilder builder(*this);
+  ConstantInitBuilder builder(*this);
   auto ctors = builder.beginArray(CtorStructTy);
   for (const auto &I : Fns) {
     auto ctor = ctors.beginStruct(CtorStructTy);
@@ -753,7 +753,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
       ctor.add(llvm::ConstantExpr::getBitCast(I.AssociatedData, VoidPtrTy));
     else
       ctor.addNullPointer(VoidPtrTy);
-    ctors.add(ctor.finish());
+    ctor.finishAndAddTo(ctors);
   }
 
   auto list =
@@ -3190,7 +3190,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
   auto *STy = cast<llvm::StructType>(getTypes().ConvertType(CFTy));
 
-  ConstantBuilder Builder(*this);
+  ConstantInitBuilder Builder(*this);
   auto Fields = Builder.beginStruct(STy);
 
   // Class pointer.
@@ -3338,7 +3338,7 @@ CodeGenModule::GetAddrOfConstantString(const StringLiteral *Literal) {
     NSConstantStringType = cast<llvm::StructType>(getTypes().ConvertType(NSTy));
   }
   
-  ConstantBuilder Builder(*this);
+  ConstantInitBuilder Builder(*this);
   auto Fields = Builder.beginStruct(NSConstantStringType);
   
   // Class pointer.

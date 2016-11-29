@@ -13,18 +13,19 @@ using namespace clang;
 
 namespace {
 struct GetDeclsVisitor : TestVisitor<GetDeclsVisitor> {
-  std::function<void(CallExpr *)> OnCall = [&](CallExpr *Expr) {};
-  std::function<void(RecordTypeLoc)> OnRecordTypeLoc = [&](RecordTypeLoc Type) {
-  };
+  std::function<void(CallExpr *)> OnCall;
+  std::function<void(RecordTypeLoc)> OnRecordTypeLoc;
   SmallVector<Decl *, 4> DeclStack;
 
   bool VisitCallExpr(CallExpr *Expr) {
-    OnCall(Expr);
+    if (OnCall)
+      OnCall(Expr);
     return true;
   }
 
   bool VisitRecordTypeLoc(RecordTypeLoc Loc) {
-    OnRecordTypeLoc(Loc);
+    if (OnRecordTypeLoc)
+      OnRecordTypeLoc(Loc);
     return true;
   }
 

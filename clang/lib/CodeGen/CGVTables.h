@@ -27,6 +27,7 @@ namespace clang {
 
 namespace CodeGen {
   class CodeGenModule;
+  class ConstantArrayBuilder;
 
 class CodeGenVTables {
   CodeGenModule &CGM;
@@ -62,16 +63,17 @@ class CodeGenVTables {
   /// the ABI.
   void maybeEmitThunkForVTable(GlobalDecl GD, const ThunkInfo &Thunk);
 
-  llvm::Constant *CreateVTableComponent(unsigned Idx,
-                                        const VTableLayout &VTLayout,
-                                        llvm::Constant *RTTI,
-                                        unsigned &NextVTableThunkIndex);
+  void addVTableComponent(ConstantArrayBuilder &builder,
+                          const VTableLayout &layout, unsigned idx,
+                          llvm::Constant *rtti,
+                          unsigned &nextVTableThunkIndex);
 
 public:
-  /// CreateVTableInitializer - Create a vtable initializer with the given
-  /// layout.
-  llvm::Constant *CreateVTableInitializer(const VTableLayout &VTLayout,
-                                          llvm::Constant *RTTI);
+  /// Add vtable components for the given vtable layout to the given
+  /// global initializer.
+  void createVTableInitializer(ConstantArrayBuilder &builder,
+                               const VTableLayout &layout,
+                               llvm::Constant *rtti);
 
   CodeGenVTables(CodeGenModule &CGM);
 

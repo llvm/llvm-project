@@ -14,6 +14,7 @@
 #include "CGCXXABI.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantBuilder.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -524,29 +525,29 @@ void CodeGenVTables::EmitThunks(GlobalDecl GD)
     emitThunk(GD, Thunk, /*ForVTable=*/false);
 }
 
-llvm::Constant *CodeGenVTables::CreateVTableComponent(
-    unsigned Idx, const VTableLayout &VTLayout, llvm::Constant *RTTI,
-    unsigned &NextVTableThunkIndex) {
-  VTableComponent Component = VTLayout.vtable_components()[Idx];
+void CodeGenVTables::addVTableComponent(
+    ConstantArrayBuilder &builder, const VTableLayout &layout,
+    unsigned idx, llvm::Constant *rtti, unsigned &nextVTableThunkIndex) {
+  auto &component = layout.vtable_components()[idx];
 
-  auto OffsetConstant = [&](CharUnits Offset) {
-    return llvm::ConstantExpr::getIntToPtr(
-        llvm::ConstantInt::get(CGM.PtrDiffTy, Offset.getQuantity()),
-        CGM.Int8PtrTy);
+  auto addOffsetConstant = [&](CharUnits offset) {
+    builder.add(llvm::ConstantExpr::getIntToPtr(
+        llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
+        CGM.Int8PtrTy));
   };
 
-  switch (Component.getKind()) {
+  switch (component.getKind()) {
   case VTableComponent::CK_VCallOffset:
-    return OffsetConstant(Component.getVCallOffset());
+    return addOffsetConstant(component.getVCallOffset());
 
   case VTableComponent::CK_VBaseOffset:
-    return OffsetConstant(Component.getVBaseOffset());
+    return addOffsetConstant(component.getVBaseOffset());
 
   case VTableComponent::CK_OffsetToTop:
-    return OffsetConstant(Component.getOffsetToTop());
+    return addOffsetConstant(component.getOffsetToTop());
 
   case VTableComponent::CK_RTTI:
-    return RTTI;
+    return builder.add(llvm::ConstantExpr::getBitCast(rtti, CGM.Int8PtrTy));
 
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
@@ -554,17 +555,17 @@ llvm::Constant *CodeGenVTables::CreateVTableComponent(
     GlobalDecl GD;
 
     // Get the right global decl.
-    switch (Component.getKind()) {
+    switch (component.getKind()) {
     default:
       llvm_unreachable("Unexpected vtable component kind");
     case VTableComponent::CK_FunctionPointer:
-      GD = Component.getFunctionDecl();
+      GD = component.getFunctionDecl();
       break;
     case VTableComponent::CK_CompleteDtorPointer:
-      GD = GlobalDecl(Component.getDestructorDecl(), Dtor_Complete);
+      GD = GlobalDecl(component.getDestructorDecl(), Dtor_Complete);
       break;
     case VTableComponent::CK_DeletingDtorPointer:
-      GD = GlobalDecl(Component.getDestructorDecl(), Dtor_Deleting);
+      GD = GlobalDecl(component.getDestructorDecl(), Dtor_Deleting);
       break;
     }
 
@@ -580,68 +581,69 @@ llvm::Constant *CodeGenVTables::CreateVTableComponent(
               ? MD->hasAttr<CUDADeviceAttr>()
               : (MD->hasAttr<CUDAHostAttr>() || !MD->hasAttr<CUDADeviceAttr>());
       if (!CanEmitMethod)
-        return llvm::ConstantExpr::getNullValue(CGM.Int8PtrTy);
+        return builder.addNullPointer(CGM.Int8PtrTy);
       // Method is acceptable, continue processing as usual.
     }
 
-    auto SpecialVirtualFn = [&](llvm::Constant *&Cache, StringRef Name) {
-      if (!Cache) {
-        llvm::FunctionType *Ty =
-            llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-        Cache = CGM.CreateRuntimeFunction(Ty, Name);
-        if (auto *F = dyn_cast<llvm::Function>(Cache))
-          F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-        Cache = llvm::ConstantExpr::getBitCast(Cache, CGM.Int8PtrTy);
-      }
-      return Cache;
+    auto getSpecialVirtualFn = [&](StringRef name) {
+      llvm::FunctionType *fnTy =
+          llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
+      llvm::Constant *fn = CGM.CreateRuntimeFunction(fnTy, name);
+      if (auto f = dyn_cast<llvm::Function>(fn))
+        f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+      return llvm::ConstantExpr::getBitCast(fn, CGM.Int8PtrTy);
     };
 
-    if (cast<CXXMethodDecl>(GD.getDecl())->isPure())
-      // We have a pure virtual member function.
-      return SpecialVirtualFn(PureVirtualFn,
-                              CGM.getCXXABI().GetPureVirtualCallName());
+    llvm::Constant *fnPtr;
 
-    if (cast<CXXMethodDecl>(GD.getDecl())->isDeleted())
-      return SpecialVirtualFn(DeletedVirtualFn,
-                              CGM.getCXXABI().GetDeletedVirtualCallName());
+    // Pure virtual member functions.
+    if (cast<CXXMethodDecl>(GD.getDecl())->isPure()) {
+      if (!PureVirtualFn)
+        PureVirtualFn =
+          getSpecialVirtualFn(CGM.getCXXABI().GetPureVirtualCallName());
+      fnPtr = PureVirtualFn;
 
-    // Check if we should use a thunk.
-    if (NextVTableThunkIndex < VTLayout.vtable_thunks().size() &&
-        VTLayout.vtable_thunks()[NextVTableThunkIndex].first == Idx) {
-      const ThunkInfo &Thunk =
-          VTLayout.vtable_thunks()[NextVTableThunkIndex].second;
+    // Deleted virtual member functions.
+    } else if (cast<CXXMethodDecl>(GD.getDecl())->isDeleted()) {
+      if (!DeletedVirtualFn)
+        DeletedVirtualFn =
+          getSpecialVirtualFn(CGM.getCXXABI().GetDeletedVirtualCallName());
+      fnPtr = DeletedVirtualFn;
 
-      maybeEmitThunkForVTable(GD, Thunk);
-      NextVTableThunkIndex++;
-      return CGM.GetAddrOfThunk(GD, Thunk);
+    // Thunks.
+    } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
+               layout.vtable_thunks()[nextVTableThunkIndex].first == idx) {
+      auto &thunkInfo = layout.vtable_thunks()[nextVTableThunkIndex].second;
+
+      maybeEmitThunkForVTable(GD, thunkInfo);
+      nextVTableThunkIndex++;
+      fnPtr = CGM.GetAddrOfThunk(GD, thunkInfo);
+
+    // Otherwise we can use the method definition directly.
+    } else {
+      llvm::Type *fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
+      fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
     }
 
-    llvm::Type *Ty = CGM.getTypes().GetFunctionTypeForVTable(GD);
-    return CGM.GetAddrOfFunction(GD, Ty, /*ForVTable=*/true);
+    fnPtr = llvm::ConstantExpr::getBitCast(fnPtr, CGM.Int8PtrTy);
+    builder.add(fnPtr);
+    return;
   }
 
   case VTableComponent::CK_UnusedFunctionPointer:
-    return llvm::ConstantExpr::getNullValue(CGM.Int8PtrTy);
+    return builder.addNullPointer(CGM.Int8PtrTy);
   }
 
   llvm_unreachable("Unexpected vtable component kind");
 }
 
-llvm::Constant *
-CodeGenVTables::CreateVTableInitializer(const VTableLayout &VTLayout,
-                                        llvm::Constant *RTTI) {
-  SmallVector<llvm::Constant *, 64> Inits;
-  unsigned NextVTableThunkIndex = 0;
-
-  for (unsigned I = 0, E = VTLayout.vtable_components().size(); I != E; ++I) {
-    llvm::Constant *Init =
-        CreateVTableComponent(I, VTLayout, RTTI, NextVTableThunkIndex);
-    Inits.push_back(llvm::ConstantExpr::getBitCast(Init, CGM.Int8PtrTy));
+void CodeGenVTables::createVTableInitializer(ConstantArrayBuilder &builder,
+                                             const VTableLayout &layout,
+                                             llvm::Constant *rtti) {
+  unsigned nextVTableThunkIndex = 0;
+  for (unsigned i = 0, e = layout.vtable_components().size(); i != e; ++i) {
+    addVTableComponent(builder, layout, i, rtti, nextVTableThunkIndex);
   }
-
-  llvm::ArrayType *ArrayType =
-      llvm::ArrayType::get(CGM.Int8PtrTy, VTLayout.vtable_components().size());
-  return llvm::ConstantArray::get(ArrayType, Inits);
 }
 
 llvm::GlobalVariable *
@@ -691,8 +693,10 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
       CGM.getContext().getTagDeclType(Base.getBase()));
 
   // Create and set the initializer.
-  llvm::Constant *Init = CreateVTableInitializer(*VTLayout, RTTI);
-  VTable->setInitializer(Init);
+  ConstantInitBuilder builder(CGM);
+  auto components = builder.beginArray(CGM.Int8PtrTy);
+  createVTableInitializer(components, *VTLayout, RTTI);
+  components.finishAndSetAsInitializer(VTable);
 
   CGM.EmitVTableTypeMetadata(VTable, *VTLayout.get());
 

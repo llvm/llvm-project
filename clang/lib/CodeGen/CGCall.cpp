@@ -2884,13 +2884,13 @@ static AggValueSlot createPlaceholderSlot(CodeGenFunction &CGF,
   // FIXME: Generate IR in one pass, rather than going back and fixing up these
   // placeholders.
   llvm::Type *IRTy = CGF.ConvertTypeForMem(Ty);
-  llvm::Value *Placeholder =
-    llvm::UndefValue::get(IRTy->getPointerTo()->getPointerTo());
-  Placeholder = CGF.Builder.CreateDefaultAlignedLoad(Placeholder);
+  llvm::Type *IRPtrTy = IRTy->getPointerTo();
+  llvm::Value *Placeholder = llvm::UndefValue::get(IRPtrTy->getPointerTo());
 
   // FIXME: When we generate this IR in one pass, we shouldn't need
   // this win32-specific alignment hack.
   CharUnits Align = CharUnits::fromQuantity(4);
+  Placeholder = CGF.Builder.CreateAlignedLoad(IRPtrTy, Placeholder, Align);
 
   return AggValueSlot::forAddr(Address(Placeholder, Align),
                                Ty.getQualifiers(),

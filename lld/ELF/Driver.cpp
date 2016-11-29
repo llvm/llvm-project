@@ -526,6 +526,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
+  Config->OMagic = Args.hasArg(OPT_omagic);
   Config->Pie = getArg(Args, OPT_pie, OPT_nopie, false);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);

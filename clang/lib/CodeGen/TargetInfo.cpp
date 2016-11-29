@@ -3548,15 +3548,17 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     llvm::Value *RegHiAddr = TyLo->isFPOrFPVectorTy() ? GPAddr : FPAddr;
 
     // Copy the first element.
-    llvm::Value *V =
-      CGF.Builder.CreateDefaultAlignedLoad(
-                               CGF.Builder.CreateBitCast(RegLoAddr, PTyLo));
+    // FIXME: Our choice of alignment here and below is probably pessimistic.
+    llvm::Value *V = CGF.Builder.CreateAlignedLoad(
+        TyLo, CGF.Builder.CreateBitCast(RegLoAddr, PTyLo),
+        CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyLo)));
     CGF.Builder.CreateStore(V,
                     CGF.Builder.CreateStructGEP(Tmp, 0, CharUnits::Zero()));
 
     // Copy the second element.
-    V = CGF.Builder.CreateDefaultAlignedLoad(
-                               CGF.Builder.CreateBitCast(RegHiAddr, PTyHi));
+    V = CGF.Builder.CreateAlignedLoad(
+        TyHi, CGF.Builder.CreateBitCast(RegHiAddr, PTyHi),
+        CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyHi)));
     CharUnits Offset = CharUnits::fromQuantity(
                    getDataLayout().getStructLayout(ST)->getElementOffset(1));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1, Offset));
