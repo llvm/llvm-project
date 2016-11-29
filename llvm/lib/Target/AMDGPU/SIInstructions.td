@@ -2029,6 +2029,7 @@ def SI_RETURN : PseudoInstSI <
   let hasSideEffects = 1;
   let SALU = 1;
   let hasNoSchedulingInfo = 1;
+  let DisableWQM = 1;
 }
 
 let Uses = [EXEC], Defs = [EXEC, VCC, M0],

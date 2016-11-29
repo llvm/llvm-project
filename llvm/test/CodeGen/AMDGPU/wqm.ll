@@ -17,17 +17,18 @@ main_body:
 ;CHECK-LABEL: {{^}}test2:
 ;CHECK-NEXT: ; %main_body
 ;CHECK-NEXT: s_wqm_b64 exec, exec
-;CHECK: image_sample
 ;CHECK-NOT: exec
-;CHECK: _load_dword v0,
-define amdgpu_ps float @test2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x i32> %c) {
+define amdgpu_ps void @test2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x i32> %c) {
 main_body:
   %c.1 = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %c, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %c.2 = bitcast <4 x float> %c.1 to <4 x i32>
   %c.3 = extractelement <4 x i32> %c.2, i32 0
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %c.3
   %data = load float, float addrspace(1)* %gep
-  ret float %data
+
+  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %data, float undef, float undef, float undef)
+
+  ret void
 }
 
 ; ... but disabled for stores (and, in this simple case, not re-enabled).
@@ -414,6 +415,46 @@ entry:
   ret void
 }
 
+; Must return to exact at the end of a non-void returning shader,
+; otherwise the EXEC mask exported by the epilog will be wrong. This is true
+; even if the shader has no kills, because a kill could have happened in a
+; previous shader fragment.
+;
+; CHECK-LABEL: {{^}}test_nonvoid_return:
+; CHECK: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_wqm_b64 exec, exec
+;
+; CHECK: s_and_b64 exec, exec, [[LIVE]]
+; CHECK-NOT: exec
+define amdgpu_ps <4 x float> @test_nonvoid_return() nounwind {
+  %tex = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tex.i = bitcast <4 x float> %tex to <4 x i32>
+  %dtex = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %tex.i, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  ret <4 x float> %dtex
+}
+
+; CHECK-LABEL: {{^}}test_nonvoid_return_unreachable:
+; CHECK: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_wqm_b64 exec, exec
+;
+; CHECK: s_and_b64 exec, exec, [[LIVE]]
+; CHECK-NOT: exec
+define amdgpu_ps <4 x float> @test_nonvoid_return_unreachable(i32 inreg %c) nounwind {
+entry:
+  %tex = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tex.i = bitcast <4 x float> %tex to <4 x i32>
+  %dtex = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %tex.i, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+
+  %cc = icmp sgt i32 %c, 0
+  br i1 %cc, label %if, label %else
+
+if:
+  store volatile <4 x float> %dtex, <4 x float>* undef
+  unreachable
+
+else:
+  ret <4 x float> %dtex
+}
 
 declare void @llvm.amdgcn.image.store.v4i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #1
