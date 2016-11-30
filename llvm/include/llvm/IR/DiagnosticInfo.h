@@ -15,15 +15,19 @@
 #ifndef LLVM_IR_DIAGNOSTICINFO_H
 #define LLVM_IR_DIAGNOSTICINFO_H
 
-#include "llvm-c/Types.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm-c/Types.h"
 #include <functional>
+#include <algorithm>
+#include <cstdint>
+#include <iterator>
 #include <string>
 
 namespace llvm {
@@ -97,7 +101,7 @@ public:
   DiagnosticInfo(/* DiagnosticKind */ int Kind, DiagnosticSeverity Severity)
       : Kind(Kind), Severity(Severity) {}
 
-  virtual ~DiagnosticInfo() {}
+  virtual ~DiagnosticInfo() = default;
 
   /* DiagnosticKind */ int getKind() const { return Kind; }
   DiagnosticSeverity getSeverity() const { return Severity; }
@@ -273,7 +277,6 @@ public:
     return DI->getKind() == DK_DebugMetadataInvalid;
   }
 };
-
 
 /// Diagnostic information for the sample profiler.
 class DiagnosticInfoSampleProfile : public DiagnosticInfo {

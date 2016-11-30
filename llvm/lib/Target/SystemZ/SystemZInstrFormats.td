@@ -177,6 +177,35 @@ class InstI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}  = I1;
 }
 
+class InstIE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<4, outs, ins, asmstr, pattern> {
+  field bits<32> Inst;
+  field bits<32> SoftFail = 0;
+
+  bits<4> I1;
+  bits<4> I2;
+
+  let Inst{31-16} = op;
+  let Inst{15-8}  = 0;
+  let Inst{7-4}   = I1;
+  let Inst{3-0}   = I2;
+}
+
+class InstMII<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<4> M1;
+  bits<12> RI2;
+  bits<24> RI3;
+
+  let Inst{47-40} = op;
+  let Inst{39-36} = M1;
+  let Inst{35-24} = RI2;
+  let Inst{23-0}  = RI3;
+}
+
 class InstRIa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
@@ -287,6 +316,23 @@ class InstRIEd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{39-36} = R1;
   let Inst{35-32} = R3;
   let Inst{31-16} = I2;
+  let Inst{15-8}  = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstRIEe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<4> R1;
+  bits<4> R3;
+  bits<16> RI2;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = R1;
+  let Inst{35-32} = R3;
+  let Inst{31-16} = RI2;
   let Inst{15-8}  = 0;
   let Inst{7-0}   = op{7-0};
 }
@@ -740,6 +786,22 @@ class InstSIY<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 
   let Has20BitOffset = 1;
+}
+
+class InstSMI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<4> M1;
+  bits<16> RI2;
+  bits<16> BD3;
+
+  let Inst{47-40} = op;
+  let Inst{39-36} = M1;
+  let Inst{35-32} = 0;
+  let Inst{31-16} = BD3;
+  let Inst{15-0}  = RI2;
 }
 
 class InstSSa<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
@@ -1506,15 +1568,14 @@ class ICV<string name>
 //     compares the two input operands and branches or traps on the result.
 //
 //   BranchUnary:
-//     One register output operand, one register input operand and
-//     one branch displacement.  The instructions stores a modified
-//     form of the source register in the destination register and
-//     branches on the result.
+//     One register output operand, one register input operand and one branch
+//     target.  The instructions stores a modified form of the source register
+//     in the destination register and branches on the result.
 //
 //   BranchBinary:
 //     One register output operand, two register input operands and one branch
-//     displacement. The instructions stores a modified form of one of the
-//     source registers in the destination register and branches on the result.
+//     target. The instructions stores a modified form of one of the source
+//     registers in the destination register and branches on the result.
 //
 //   LoadMultiple:
 //     One address input operand and two explicit output operands.
@@ -1588,6 +1649,9 @@ class ICV<string name>
 //   Prefetch:
 //     One 4-bit immediate operand and one address operand.  The immediate
 //     operand is 1 for a load prefetch and 2 for a store prefetch.
+//
+//   BranchPreload:
+//     One 4-bit immediate operand and two address operands.
 //
 // The format determines which input operands are tied to output operands,
 // and also determines the shape of any address operand.
@@ -1911,9 +1975,68 @@ class BranchUnaryRI<string mnemonic, bits<12> opcode, RegisterOperand cls>
   let DisableEncoding = "$R1src";
 }
 
+class BranchUnaryRIL<string mnemonic, bits<12> opcode, RegisterOperand cls>
+  : InstRILb<opcode, (outs cls:$R1), (ins cls:$R1src, brtarget32:$RI2),
+             mnemonic##"\t$R1, $RI2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+class BranchUnaryRR<string mnemonic, bits<8> opcode, RegisterOperand cls>
+  : InstRR<opcode, (outs cls:$R1), (ins cls:$R1src, GR64:$R2),
+           mnemonic##"\t$R1, $R2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+class BranchUnaryRRE<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstRRE<opcode, (outs cls:$R1), (ins cls:$R1src, GR64:$R2),
+            mnemonic##"\t$R1, $R2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+class BranchUnaryRX<string mnemonic, bits<8> opcode, RegisterOperand cls>
+  : InstRXa<opcode, (outs cls:$R1), (ins cls:$R1src, bdxaddr12only:$XBD2),
+            mnemonic##"\t$R1, $XBD2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+class BranchUnaryRXY<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstRXYa<opcode, (outs cls:$R1), (ins cls:$R1src, bdxaddr20only:$XBD2),
+             mnemonic##"\t$R1, $XBD2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
 class BranchBinaryRSI<string mnemonic, bits<8> opcode, RegisterOperand cls>
   : InstRSI<opcode, (outs cls:$R1), (ins cls:$R1src, cls:$R3, brtarget16:$RI2),
             mnemonic##"\t$R1, $R3, $RI2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+class BranchBinaryRIEe<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstRIEe<opcode, (outs cls:$R1),
+             (ins cls:$R1src, cls:$R3, brtarget16:$RI2),
+             mnemonic##"\t$R1, $R3, $RI2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+class BranchBinaryRS<string mnemonic, bits<8> opcode, RegisterOperand cls>
+  : InstRSa<opcode, (outs cls:$R1),
+            (ins cls:$R1src, cls:$R3, bdaddr12only:$BD2),
+            mnemonic##"\t$R1, $R3, $BD2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+class BranchBinaryRSY<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstRSYa<opcode,
+             (outs cls:$R1), (ins cls:$R1src, cls:$R3, bdaddr20only:$BD2),
+             mnemonic##"\t$R1, $R3, $BD2", []> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
@@ -2201,77 +2324,6 @@ class UnaryRRE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let OpType = "reg";
 }
 
-// These instructions are generated by if conversion.  The old value of R1
-// is added as an implicit use.
-class CondUnaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
-                   RegisterOperand cls2>
-  : InstRRFc<opcode, (outs cls1:$R1), (ins cls2:$R2, cond4:$valid, cond4:$M3),
-             mnemonic#"$M3\t$R1, $R2", []> {
-  let CCMaskLast = 1;
-}
-
-class CondUnaryRIE<string mnemonic, bits<16> opcode, RegisterOperand cls,
-                   Immediate imm>
-  : InstRIEg<opcode, (outs cls:$R1), (ins imm:$I2, cond4:$valid, cond4:$M3),
-             mnemonic#"$M3\t$R1, $I2", []> {
-  let CCMaskLast = 1;
-}
-
-// Like CondUnaryRRF, but used for the raw assembly form.  The condition-code
-// mask is the third operand rather than being part of the mnemonic.
-class AsmCondUnaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
-                      RegisterOperand cls2>
-  : InstRRFc<opcode, (outs cls1:$R1),
-             (ins cls1:$R1src, cls2:$R2, imm32zx4:$M3),
-             mnemonic#"\t$R1, $R2, $M3", []> {
-  let Constraints = "$R1 = $R1src";
-  let DisableEncoding = "$R1src";
-}
-
-class AsmCondUnaryRIE<string mnemonic, bits<16> opcode, RegisterOperand cls,
-                   Immediate imm>
-  : InstRIEg<opcode, (outs cls:$R1),
-             (ins cls:$R1src, imm:$I2, imm32zx4:$M3),
-             mnemonic#"\t$R1, $I2, $M3", []> {
-  let Constraints = "$R1 = $R1src";
-  let DisableEncoding = "$R1src";
-}
-
-// Like CondUnaryRRF, but with a fixed CC mask.
-class FixedCondUnaryRRF<CondVariant V, string mnemonic, bits<16> opcode,
-                        RegisterOperand cls1, RegisterOperand cls2>
-  : InstRRFc<opcode, (outs cls1:$R1), (ins cls1:$R1src, cls2:$R2),
-             mnemonic#V.suffix#"\t$R1, $R2", []> {
-  let Constraints = "$R1 = $R1src";
-  let DisableEncoding = "$R1src";
-  let isAsmParserOnly = V.alternate;
-  let M3 = V.ccmask;
-}
-
-class FixedCondUnaryRIE<CondVariant V, string mnemonic, bits<16> opcode,
-                        RegisterOperand cls, Immediate imm>
-  : InstRIEg<opcode, (outs cls:$R1), (ins cls:$R1src, imm:$I2),
-             mnemonic#V.suffix#"\t$R1, $I2", []> {
-  let Constraints = "$R1 = $R1src";
-  let DisableEncoding = "$R1src";
-  let isAsmParserOnly = V.alternate;
-  let M3 = V.ccmask;
-}
-
-multiclass CondUnaryRRFPair<string mnemonic, bits<16> opcode,
-                            RegisterOperand cls1, RegisterOperand cls2> {
-  let isCodeGenOnly = 1 in
-    def "" : CondUnaryRRF<mnemonic, opcode, cls1, cls2>;
-  def Asm : AsmCondUnaryRRF<mnemonic, opcode, cls1, cls2>;
-}
-
-multiclass CondUnaryRIEPair<string mnemonic, bits<16> opcode,
-                            RegisterOperand cls, Immediate imm> {
-  let isCodeGenOnly = 1 in
-    def "" : CondUnaryRIE<mnemonic, opcode, cls, imm>;
-  def Asm : AsmCondUnaryRIE<mnemonic, opcode, cls, imm>;
-}
-
 class UnaryRI<string mnemonic, bits<12> opcode, SDPatternOperator operator,
               RegisterOperand cls, Immediate imm>
   : InstRIa<opcode, (outs cls:$R1), (ins imm:$I2),
@@ -2500,6 +2552,13 @@ class SideEffectBinaryRILPC<string mnemonic, bits<12> opcode,
   let AddedComplexity = 7;
 }
 
+class SideEffectBinaryIE<string mnemonic, bits<16> opcode,
+                         Immediate imm1, Immediate imm2>
+  : InstIE<opcode, (outs), (ins imm1:$I1, imm2:$I2),
+           mnemonic#"\t$I1, $I2", []> {
+  let hasSideEffects = 1;
+}
+
 class SideEffectBinarySIL<string mnemonic, bits<16> opcode,
                           SDPatternOperator operator, Immediate imm>
   : InstSIL<opcode, (outs), (ins bdaddr12only:$BD1, imm:$I2),
@@ -2578,6 +2637,45 @@ class BinaryRRFe<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let M4 = 0;
 }
 
+class CondBinaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
+                   RegisterOperand cls2>
+  : InstRRFc<opcode, (outs cls1:$R1),
+             (ins cls1:$R1src, cls2:$R2, cond4:$valid, cond4:$M3),
+             mnemonic#"$M3\t$R1, $R2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let CCMaskLast = 1;
+}
+
+// Like CondBinaryRRF, but used for the raw assembly form.  The condition-code
+// mask is the third operand rather than being part of the mnemonic.
+class AsmCondBinaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
+                       RegisterOperand cls2>
+  : InstRRFc<opcode, (outs cls1:$R1),
+             (ins cls1:$R1src, cls2:$R2, imm32zx4:$M3),
+             mnemonic#"\t$R1, $R2, $M3", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+// Like CondBinaryRRF, but with a fixed CC mask.
+class FixedCondBinaryRRF<CondVariant V, string mnemonic, bits<16> opcode,
+                         RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRFc<opcode, (outs cls1:$R1), (ins cls1:$R1src, cls2:$R2),
+             mnemonic#V.suffix#"\t$R1, $R2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let isAsmParserOnly = V.alternate;
+  let M3 = V.ccmask;
+}
+
+multiclass CondBinaryRRFPair<string mnemonic, bits<16> opcode,
+                             RegisterOperand cls1, RegisterOperand cls2> {
+  let isCodeGenOnly = 1 in
+    def "" : CondBinaryRRF<mnemonic, opcode, cls1, cls2>;
+  def Asm : AsmCondBinaryRRF<mnemonic, opcode, cls1, cls2>;
+}
+
 class BinaryRI<string mnemonic, bits<12> opcode, SDPatternOperator operator,
                RegisterOperand cls, Immediate imm>
   : InstRIa<opcode, (outs cls:$R1), (ins cls:$R1src, imm:$I2),
@@ -2603,6 +2701,47 @@ multiclass BinaryRIAndK<string mnemonic, bits<12> opcode1, bits<16> opcode2,
     let NumOpsValue = "2", isConvertibleToThreeAddress = 1 in
       def "" : BinaryRI<mnemonic, opcode1, operator, cls, imm>;
   }
+}
+
+class CondBinaryRIE<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                    Immediate imm>
+  : InstRIEg<opcode, (outs cls:$R1),
+             (ins cls:$R1src, imm:$I2, cond4:$valid, cond4:$M3),
+             mnemonic#"$M3\t$R1, $I2",
+             [(set cls:$R1, (z_select_ccmask imm:$I2, cls:$R1src,
+                                             cond4:$valid, cond4:$M3))]> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let CCMaskLast = 1;
+}
+
+// Like CondBinaryRIE, but used for the raw assembly form.  The condition-code
+// mask is the third operand rather than being part of the mnemonic.
+class AsmCondBinaryRIE<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                       Immediate imm>
+  : InstRIEg<opcode, (outs cls:$R1),
+             (ins cls:$R1src, imm:$I2, imm32zx4:$M3),
+             mnemonic#"\t$R1, $I2, $M3", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
+// Like CondBinaryRIE, but with a fixed CC mask.
+class FixedCondBinaryRIE<CondVariant V, string mnemonic, bits<16> opcode,
+                         RegisterOperand cls, Immediate imm>
+  : InstRIEg<opcode, (outs cls:$R1), (ins cls:$R1src, imm:$I2),
+             mnemonic#V.suffix#"\t$R1, $I2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let isAsmParserOnly = V.alternate;
+  let M3 = V.ccmask;
+}
+
+multiclass CondBinaryRIEPair<string mnemonic, bits<16> opcode,
+                             RegisterOperand cls, Immediate imm> {
+  let isCodeGenOnly = 1 in
+    def "" : CondBinaryRIE<mnemonic, opcode, cls, imm>;
+  def Asm : AsmCondBinaryRIE<mnemonic, opcode, cls, imm>;
 }
 
 class BinaryRIL<string mnemonic, bits<12> opcode, SDPatternOperator operator,
@@ -3536,6 +3675,16 @@ class PrefetchRILPC<string mnemonic, bits<12> opcode,
   let AddedComplexity = 7;
 }
 
+class BranchPreloadSMI<string mnemonic, bits<8> opcode>
+  : InstSMI<opcode, (outs),
+            (ins imm32zx4:$M1, brtarget16bpp:$RI2, bdxaddr12only:$BD3),
+            mnemonic#"\t$M1, $RI2, $BD3", []>;
+
+class BranchPreloadMII<string mnemonic, bits<8> opcode>
+  : InstMII<opcode, (outs),
+            (ins imm32zx4:$M1, brtarget12bpp:$RI2, brtarget24bpp:$RI3),
+            mnemonic#"\t$M1, $RI2, $RI3", []>;
+
 // A floating-point load-and test operation.  Create both a normal unary
 // operation and one that acts as a comparison against zero.
 // Note that the comparison against zero operation is not available if we
@@ -3630,7 +3779,9 @@ multiclass BinaryRIAndKPseudo<string key, SDPatternOperator operator,
 // Like CompareRI, but expanded after RA depending on the choice of register.
 class CompareRIPseudo<SDPatternOperator operator, RegisterOperand cls,
                       Immediate imm>
-  : Pseudo<(outs), (ins cls:$R1, imm:$I2), [(operator cls:$R1, imm:$I2)]>;
+  : Pseudo<(outs), (ins cls:$R1, imm:$I2), [(operator cls:$R1, imm:$I2)]> {
+  let isCompare = 1;
+}
 
 // Like CompareRXY, but expanded after RA depending on the choice of register.
 class CompareRXYPseudo<SDPatternOperator operator, RegisterOperand cls,
@@ -3642,6 +3793,54 @@ class CompareRXYPseudo<SDPatternOperator operator, RegisterOperand cls,
   let Has20BitOffset = 1;
   let HasIndex = 1;
   let AccessBytes = bytes;
+}
+
+// Like CondBinaryRRF, but expanded after RA depending on the choice of
+// register.
+class CondBinaryRRFPseudo<RegisterOperand cls1, RegisterOperand cls2>
+  : Pseudo<(outs cls1:$R1),
+           (ins cls1:$R1src, cls2:$R2, cond4:$valid, cond4:$M3), []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let CCMaskLast = 1;
+}
+
+// Like CondBinaryRIE, but expanded after RA depending on the choice of
+// register.
+class CondBinaryRIEPseudo<RegisterOperand cls, Immediate imm>
+  : Pseudo<(outs cls:$R1),
+           (ins cls:$R1src, imm:$I2, cond4:$valid, cond4:$M3),
+           [(set cls:$R1, (z_select_ccmask imm:$I2, cls:$R1src,
+                                           cond4:$valid, cond4:$M3))]> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let CCMaskLast = 1;
+}
+
+// Like CondUnaryRSY, but expanded after RA depending on the choice of
+// register.
+class CondUnaryRSYPseudo<SDPatternOperator operator, RegisterOperand cls,
+                         bits<5> bytes, AddressingMode mode = bdaddr20only>
+  : Pseudo<(outs cls:$R1),
+           (ins cls:$R1src, mode:$BD2, cond4:$valid, cond4:$R3),
+           [(set cls:$R1,
+                 (z_select_ccmask (operator mode:$BD2), cls:$R1src,
+                                  cond4:$valid, cond4:$R3))]> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+  let CCMaskLast = 1;
+}
+
+// Like CondStoreRSY, but expanded after RA depending on the choice of
+// register.
+class CondStoreRSYPseudo<RegisterOperand cls, bits<5> bytes,
+                         AddressingMode mode = bdaddr20only>
+  : Pseudo<(outs), (ins cls:$R1, mode:$BD2, cond4:$valid, cond4:$R3), []> {
+  let mayStore = 1;
+  let AccessBytes = bytes;
+  let CCMaskLast = 1;
 }
 
 // Like StoreRXY, but expanded after RA depending on the choice of register.

@@ -1,5 +1,4 @@
-//===-- CXXFormatterFunctions.cpp---------------------------------*- C++
-//-*-===//
+//===-- CXXFunctionPointer.cpp-----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

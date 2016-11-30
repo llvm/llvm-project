@@ -386,7 +386,7 @@ FunctionPass *llvm::createDemandedBitsWrapperPass() {
   return new DemandedBitsWrapperPass();
 }
 
-char DemandedBitsAnalysis::PassID;
+AnalysisKey DemandedBitsAnalysis::Key;
 
 DemandedBits DemandedBitsAnalysis::run(Function &F,
                                              FunctionAnalysisManager &AM) {

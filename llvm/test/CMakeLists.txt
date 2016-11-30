@@ -32,6 +32,7 @@ set(LLVM_TEST_DEPENDS
           llvm-as
           llvm-bcanalyzer
           llvm-c-test
+          llvm-cat
           llvm-cxxfilt
           llvm-config
           llvm-cov
@@ -47,6 +48,7 @@ set(LLVM_TEST_DEPENDS
           llvm-lto2
           llvm-mc
           llvm-mcmarkup
+          llvm-modextract
           llvm-nm
           llvm-objdump
           llvm-opt-report

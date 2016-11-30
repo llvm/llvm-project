@@ -117,6 +117,10 @@ private:
   // TRI->requiresFrameIndexScavenging() for the current function.
   bool FrameIndexVirtualScavenging;
 
+  // Flag to control whether the scavenger should be passed even though
+  // FrameIndexVirtualScavenging is used.
+  bool FrameIndexEliminationScavenging;
+
   void calculateCallFrameInfo(MachineFunction &Fn);
   void calculateSaveRestoreBlocks(MachineFunction &Fn);
 
@@ -176,6 +180,8 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
 
   RS = TRI->requiresRegisterScavenging(Fn) ? new RegScavenger() : nullptr;
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(Fn);
+  FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
+    TRI->requiresFrameIndexReplacementScavenging(Fn);
 
   // Calculate the MaxCallFrameSize and AdjustsStack variables for the
   // function's frame information. Also eliminates call frame pseudo
@@ -1046,7 +1052,8 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
   unsigned FrameSetupOpcode = TII.getCallFrameSetupOpcode();
   unsigned FrameDestroyOpcode = TII.getCallFrameDestroyOpcode();
 
-  if (RS && !FrameIndexVirtualScavenging) RS->enterBasicBlock(*BB);
+  if (RS && FrameIndexEliminationScavenging)
+    RS->enterBasicBlock(*BB);
 
   bool InsideCallSequence = false;
 
@@ -1115,7 +1122,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
       // use that target machine register info object to eliminate
       // it.
       TRI.eliminateFrameIndex(MI, SPAdj, i,
-                              FrameIndexVirtualScavenging ?  nullptr : RS);
+                              FrameIndexEliminationScavenging ?  RS : nullptr);
 
       // Reset the iterator if we were at the beginning of the BB.
       if (AtBeginning) {
@@ -1131,7 +1138,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
     // the SP adjustment made by each instruction in the sequence.
     // This includes both the frame setup/destroy pseudos (handled above),
     // as well as other instructions that have side effects w.r.t the SP.
-    // Note that this must come after eliminateFrameIndex, because 
+    // Note that this must come after eliminateFrameIndex, because
     // if I itself referred to a frame index, we shouldn't count its own
     // adjustment.
     if (DidFinishLoop && InsideCallSequence)
@@ -1140,7 +1147,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
     if (DoIncr && I != BB->end()) ++I;
 
     // Update register states.
-    if (RS && !FrameIndexVirtualScavenging && DidFinishLoop)
+    if (RS && FrameIndexEliminationScavenging && DidFinishLoop)
       RS->forward(MI);
   }
 }

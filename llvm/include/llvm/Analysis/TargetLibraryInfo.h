@@ -51,6 +51,7 @@ class TargetLibraryInfoImpl {
   unsigned char AvailableArray[(LibFunc::NumLibFuncs+3)/4];
   llvm::DenseMap<unsigned, std::string> CustomNames;
   static StringRef const StandardNames[LibFunc::NumLibFuncs];
+  bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
@@ -172,6 +173,26 @@ public:
   ///
   /// Set VF to the vectorization factor.
   StringRef getScalarizedFunction(StringRef F, unsigned &VF) const;
+
+  /// Set to true iff i32 parameters to library functions should have signext
+  /// or zeroext attributes if they correspond to C-level int or unsigned int,
+  /// respectively.
+  void setShouldExtI32Param(bool Val) {
+    ShouldExtI32Param = Val;
+  }
+
+  /// Set to true iff i32 results from library functions should have signext
+  /// or zeroext attributes if they correspond to C-level int or unsigned int,
+  /// respectively.
+  void setShouldExtI32Return(bool Val) {
+    ShouldExtI32Return = Val;
+  }
+
+  /// Set to true iff i32 parameters to library functions should have signext
+  /// attribute if they correspond to C-level int or unsigned int.
+  void setShouldSignExtI32Param(bool Val) {
+    ShouldSignExtI32Param = Val;
+  }
 };
 
 /// Provides information about what library functions are available for
@@ -268,12 +289,38 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
+  /// Returns extension attribute kind to be used for i32 parameters
+  /// correpsonding to C-level int or unsigned int.  May be zeroext, signext,
+  /// or none.
+  Attribute::AttrKind getExtAttrForI32Param(bool Signed = true) const {
+    if (Impl->ShouldExtI32Param)
+      return Signed ? Attribute::SExt : Attribute::ZExt;
+    if (Impl->ShouldSignExtI32Param)
+      return Attribute::SExt;
+    return Attribute::None;
+  }
+
+  /// Returns extension attribute kind to be used for i32 return values
+  /// correpsonding to C-level int or unsigned int.  May be zeroext, signext,
+  /// or none.
+  Attribute::AttrKind getExtAttrForI32Return(bool Signed = true) const {
+    if (Impl->ShouldExtI32Return)
+      return Signed ? Attribute::SExt : Attribute::ZExt;
+    return Attribute::None;
+  }
+
   /// Handle invalidation from the pass manager.
   ///
   /// If we try to invalidate this info, just return false. It cannot become
   /// invalid even if the module or function changes.
-  bool invalidate(Module &, const PreservedAnalyses &) { return false; }
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Module &, const PreservedAnalyses &,
+                  ModuleAnalysisManager::Invalidator &) {
+    return false;
+  }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.
@@ -302,7 +349,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<TargetLibraryAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
   Optional<TargetLibraryInfoImpl> PresetInfoImpl;
 

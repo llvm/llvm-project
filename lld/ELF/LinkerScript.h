@@ -194,7 +194,8 @@ public:
   virtual bool isDefined(StringRef S) = 0;
   virtual bool isAbsolute(StringRef S) = 0;
   virtual const OutputSectionBase *getSymbolSection(StringRef S) = 0;
-  virtual const OutputSectionBase *getOutputSection(StringRef S) = 0;
+  virtual const OutputSectionBase *getOutputSection(const Twine &Loc,
+                                                    StringRef S) = 0;
   virtual uint64_t getOutputSectionSize(StringRef S) = 0;
 };
 
@@ -245,7 +246,8 @@ public:
   bool isDefined(StringRef S) override;
   bool isAbsolute(StringRef S) override;
   const OutputSectionBase *getSymbolSection(StringRef S) override;
-  const OutputSectionBase *getOutputSection(StringRef S) override;
+  const OutputSectionBase *getOutputSection(const Twine &Loc,
+                                            StringRef S) override;
   uint64_t getOutputSectionSize(StringRef S) override;
 
   std::vector<OutputSectionBase *> *OutputSections;

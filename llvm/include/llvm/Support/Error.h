@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -223,7 +224,7 @@ public:
 
 private:
   void assertIsChecked() {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (!getChecked() || getPtr()) {
       dbgs() << "Program aborted due to an unhandled Error:\n";
       if (getPtr())
@@ -244,7 +245,7 @@ private:
   }
 
   void setPtr(ErrorInfoBase *EI) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     Payload = reinterpret_cast<ErrorInfoBase*>(
                 (reinterpret_cast<uintptr_t>(EI) &
                  ~static_cast<uintptr_t>(0x1)) |
@@ -255,7 +256,7 @@ private:
   }
 
   bool getChecked() const {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     return (reinterpret_cast<uintptr_t>(Payload) & 0x1) == 0;
 #else
     return true;
@@ -636,17 +637,11 @@ private:
 public:
   /// Create an Expected<T> error value from the given Error.
   Expected(Error Err)
-      : HasError(true),
-#ifndef NDEBUG
+      : HasError(true)
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
-        Unchecked(true)
-#else
-        // Expected's unchecked flag is set to false in Release builds. This
-        // allows Expected values constructed in a Release build library to be
-        // consumed by a Debug build application.
-        Unchecked(false)
+        , Unchecked(true)
 #endif
-
   {
     assert(Err && "Cannot create Expected<T> from Error success value.");
     new (getErrorStorage()) error_type(Err.takePayload());
@@ -663,15 +658,10 @@ public:
   Expected(OtherT &&Val,
            typename std::enable_if<std::is_convertible<OtherT, T>::value>::type
                * = nullptr)
-      : HasError(false),
-#ifndef NDEBUG
+      : HasError(false)
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
-        Unchecked(true)
-#else
-        // Expected's 'unchecked' flag is set to false in Release builds. This
-        // allows Expected values constructed in a Release build library to be
-        // consumed by a Debug build application.
-        Unchecked(false)
+        , Unchecked(true)
 #endif
   {
     new (getStorage()) storage_type(std::forward<OtherT>(Val));
@@ -716,7 +706,7 @@ public:
 
   /// \brief Return false if there is an error.
   explicit operator bool() {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     Unchecked = HasError;
 #endif
     return !HasError;
@@ -744,7 +734,7 @@ public:
   /// only be safely destructed. No further calls (beside the destructor) should
   /// be made on the Expected<T> vaule.
   Error takeError() {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     Unchecked = false;
 #endif
     return HasError ? Error(std::move(*getErrorStorage())) : Error::success();
@@ -787,8 +777,10 @@ private:
 
   template <class OtherT> void moveConstruct(Expected<OtherT> &&Other) {
     HasError = Other.HasError;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     Unchecked = true;
     Other.Unchecked = false;
+#endif
 
     if (!HasError)
       new (getStorage()) storage_type(std::move(*Other.getStorage()));
@@ -830,7 +822,7 @@ private:
   }
 
   void assertIsChecked() {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (Unchecked) {
       dbgs() << "Expected<T> must be checked before access or destruction.\n";
       if (HasError) {
@@ -850,7 +842,9 @@ private:
     AlignedCharArrayUnion<error_type> ErrorStorage;
   };
   bool HasError : 1;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   bool Unchecked : 1;
+#endif
 };
 
 /// This class wraps a std::error_code in a Error.

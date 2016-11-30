@@ -155,15 +155,33 @@ let isBranch = 1, isTerminator = 1 in {
 }
 
 // Decrement a register and branch if it is nonzero.  These don't clobber CC,
-// but we might need to split long branches into sequences that do.
-let isBranch = 1, isTerminator = 1, Defs = [CC] in {
-  def BRCT  : BranchUnaryRI<"brct",  0xA76, GR32>;
-  def BRCTG : BranchUnaryRI<"brctg", 0xA77, GR64>;
+// but we might need to split long relative branches into sequences that do.
+let isBranch = 1, isTerminator = 1 in {
+  let Defs = [CC] in {
+    def BRCT  : BranchUnaryRI<"brct",  0xA76, GR32>;
+    def BRCTG : BranchUnaryRI<"brctg", 0xA77, GR64>;
+  }
+  // This doesn't need to clobber CC since we never need to split it.
+  def BRCTH : BranchUnaryRIL<"brcth", 0xCC6, GRH32>,
+              Requires<[FeatureHighWord]>;
+
+  def BCT   : BranchUnaryRX<"bct",  0x46,GR32>;
+  def BCTR  : BranchUnaryRR<"bctr", 0x06, GR32>;
+  def BCTG  : BranchUnaryRXY<"bctg",  0xE346, GR64>;
+  def BCTGR : BranchUnaryRRE<"bctgr", 0xB946, GR64>;
 }
 
-let isBranch = 1, isTerminator = 1, Defs = [CC] in {
-  def BRXH  : BranchBinaryRSI<"brxh",  0x84, GR32>;
-  def BRXLE : BranchBinaryRSI<"brxle", 0x85, GR32>;
+let isBranch = 1, isTerminator = 1 in {
+  let Defs = [CC] in {
+    def BRXH  : BranchBinaryRSI<"brxh",  0x84, GR32>;
+    def BRXLE : BranchBinaryRSI<"brxle", 0x85, GR32>;
+    def BRXHG : BranchBinaryRIEe<"brxhg", 0xEC44, GR64>;
+    def BRXLG : BranchBinaryRIEe<"brxlg", 0xEC45, GR64>;
+  }
+  def BXH   : BranchBinaryRS<"bxh",  0x86, GR32>;
+  def BXLE  : BranchBinaryRS<"bxle", 0x87, GR32>;
+  def BXHG  : BranchBinaryRSY<"bxhg",  0xEB44, GR64>;
+  def BXLEG : BranchBinaryRSY<"bxleg", 0xEB45, GR64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -305,14 +323,17 @@ def Select32Mux : SelectWrapper<GRX32>, Requires<[FeatureHighWord]>;
 def Select32    : SelectWrapper<GR32>;
 def Select64    : SelectWrapper<GR64>;
 
-// We don't define 32-bit Mux stores because the low-only STOC should
-// always be used if possible.
+// We don't define 32-bit Mux stores if we don't have STOCFH, because the
+// low-only STOC should then always be used if possible.
 defm CondStore8Mux  : CondStores<GRX32, nonvolatile_truncstorei8,
                                  nonvolatile_anyextloadi8, bdxaddr20only>,
                       Requires<[FeatureHighWord]>;
 defm CondStore16Mux : CondStores<GRX32, nonvolatile_truncstorei16,
                                  nonvolatile_anyextloadi16, bdxaddr20only>,
                       Requires<[FeatureHighWord]>;
+defm CondStore32Mux : CondStores<GRX32, nonvolatile_store,
+                                 nonvolatile_load, bdxaddr20only>,
+                      Requires<[FeatureLoadStoreOnCond2]>;
 defm CondStore8     : CondStores<GR32, nonvolatile_truncstorei8,
                                  nonvolatile_anyextloadi8, bdxaddr20only>;
 defm CondStore16    : CondStores<GR32, nonvolatile_truncstorei16,
@@ -405,6 +426,13 @@ let Predicates = [FeatureLoadAndZeroRightmostByte] in {
             (LZRG bdxaddr20only:$src)>;
 }
 
+// Load and trap.
+let Predicates = [FeatureLoadAndTrap] in {
+  def LAT   : UnaryRXY<"lat",   0xE39F, null_frag, GR32, 4>;
+  def LFHAT : UnaryRXY<"lfhat", 0xE3C8, null_frag, GRH32, 4>;
+  def LGAT  : UnaryRXY<"lgat",  0xE385, null_frag, GR64, 8>;
+}
+
 // Register stores.
 let SimpleBDXStore = 1 in {
   // Expands to ST, STY or STFH, depending on the choice of register.
@@ -446,24 +474,57 @@ let mayLoad = 1, mayStore = 1, Defs = [CC] in
 //===----------------------------------------------------------------------===//
 
 let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
-  // Load immediate on condition.  Created by if-conversion.
-  defm LOCHI  : CondUnaryRIEPair<"lochi",  0xEC42, GR32, imm32sx16>;
-  defm LOCGHI : CondUnaryRIEPair<"locghi", 0xEC46, GR64, imm64sx16>;
+  // Load immediate on condition.  Matched via DAG pattern and created
+  // by the PeepholeOptimizer via FoldImmediate.
+  let hasSideEffects = 0 in {
+    // Expands to LOCHI or LOCHHI, depending on the choice of register.
+    def LOCHIMux : CondBinaryRIEPseudo<GRX32, imm32sx16>;
+    defm LOCHHI  : CondBinaryRIEPair<"lochhi", 0xEC4E, GRH32, imm32sx16>;
+    defm LOCHI   : CondBinaryRIEPair<"lochi",  0xEC42, GR32, imm32sx16>;
+    defm LOCGHI  : CondBinaryRIEPair<"locghi", 0xEC46, GR64, imm64sx16>;
+  }
+
+  // Move register on condition.  Expanded from Select* pseudos and
+  // created by early if-conversion.
+  let hasSideEffects = 0, isCommutable = 1 in {
+    // Expands to LOCR or LOCFHR or a branch-and-move sequence,
+    // depending on the choice of registers.
+    def LOCRMux : CondBinaryRRFPseudo<GRX32, GRX32>;
+    defm LOCFHR : CondBinaryRRFPair<"locfhr", 0xB9E0, GRH32, GRH32>;
+  }
+
+  // Load on condition.  Matched via DAG pattern.
+  // Expands to LOC or LOCFH, depending on the choice of register.
+  def LOCMux : CondUnaryRSYPseudo<nonvolatile_load, GRX32, 4>;
+  defm LOCFH : CondUnaryRSYPair<"locfh", 0xEBE0, nonvolatile_load, GRH32, 4>;
+
+  // Store on condition.  Expanded from CondStore* pseudos.
+  // Expands to STOC or STOCFH, depending on the choice of register.
+  def STOCMux : CondStoreRSYPseudo<GRX32, 4>;
+  defm STOCFH : CondStoreRSYPair<"stocfh", 0xEBE1, GRH32, 4>;
 
   // Define AsmParser extended mnemonics for each general condition-code mask.
   foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
                 "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
-    def LOCHIAsm#V  : FixedCondUnaryRIE<CV<V>, "lochi",  0xEC42, GR32,
-                                        imm32sx16>;
-    def LOCGHIAsm#V : FixedCondUnaryRIE<CV<V>, "locghi", 0xEC46, GR64,
-                                        imm64sx16>;
+    def LOCHIAsm#V  : FixedCondBinaryRIE<CV<V>, "lochi",  0xEC42, GR32,
+                                         imm32sx16>;
+    def LOCGHIAsm#V : FixedCondBinaryRIE<CV<V>, "locghi", 0xEC46, GR64,
+                                         imm64sx16>;
+    def LOCHHIAsm#V : FixedCondBinaryRIE<CV<V>, "lochhi", 0xEC4E, GRH32,
+                                         imm32sx16>;
+    def LOCFHRAsm#V : FixedCondBinaryRRF<CV<V>, "locfhr", 0xB9E0, GRH32, GRH32>;
+    def LOCFHAsm#V  : FixedCondUnaryRSY<CV<V>, "locfh",  0xEBE0, GRH32, 4>;
+    def STOCFHAsm#V : FixedCondStoreRSY<CV<V>, "stocfh", 0xEBE1, GRH32, 4>;
   }
 }
 
 let Predicates = [FeatureLoadStoreOnCond], Uses = [CC] in {
-  // Move register on condition.  Created by if-conversion.
-  defm LOCR  : CondUnaryRRFPair<"locr",  0xB9F2, GR32, GR32>;
-  defm LOCGR : CondUnaryRRFPair<"locgr", 0xB9E2, GR64, GR64>;
+  // Move register on condition.  Expanded from Select* pseudos and
+  // created by early if-conversion.
+  let hasSideEffects = 0, isCommutable = 1 in {
+    defm LOCR  : CondBinaryRRFPair<"locr",  0xB9F2, GR32, GR32>;
+    defm LOCGR : CondBinaryRRFPair<"locgr", 0xB9E2, GR64, GR64>;
+  }
 
   // Load on condition.  Matched via DAG pattern.
   defm LOC  : CondUnaryRSYPair<"loc",  0xEBF2, nonvolatile_load, GR32, 4>;
@@ -476,8 +537,8 @@ let Predicates = [FeatureLoadStoreOnCond], Uses = [CC] in {
   // Define AsmParser extended mnemonics for each general condition-code mask.
   foreach V = [ "E", "NE", "H", "NH", "L", "NL", "HE", "NHE", "LE", "NLE",
                 "Z", "NZ", "P", "NP", "M", "NM", "LH", "NLH", "O", "NO" ] in {
-    def LOCRAsm#V   : FixedCondUnaryRRF<CV<V>, "locr",  0xB9F2, GR32, GR32>;
-    def LOCGRAsm#V  : FixedCondUnaryRRF<CV<V>, "locgr", 0xB9E2, GR64, GR64>;
+    def LOCRAsm#V   : FixedCondBinaryRRF<CV<V>, "locr",  0xB9F2, GR32, GR32>;
+    def LOCGRAsm#V  : FixedCondBinaryRRF<CV<V>, "locgr", 0xB9E2, GR64, GR64>;
     def LOCAsm#V    : FixedCondUnaryRSY<CV<V>, "loc",   0xEBF2, GR32, 4>;
     def LOCGAsm#V   : FixedCondUnaryRSY<CV<V>, "locg",  0xEBE2, GR64, 8>;
     def STOCAsm#V   : FixedCondStoreRSY<CV<V>, "stoc",  0xEBF3, GR32, 4>;
@@ -606,6 +667,12 @@ let Predicates = [FeatureLoadAndZeroRightmostByte] in {
   def LLZRGF : UnaryRXY<"llzrgf", 0xE33A, null_frag, GR64, 4>;
   def : Pat<(and (i64 (azextloadi32 bdxaddr20only:$src)), 0xffffff00),
             (LLZRGF bdxaddr20only:$src)>;
+}
+
+// Load and trap.
+let Predicates = [FeatureLoadAndTrap] in {
+  def LLGFAT : UnaryRXY<"llgfat", 0xE39D, null_frag, GR64, 4>;
+  def LLGTAT : UnaryRXY<"llgtat", 0xE39C, null_frag, GR64, 4>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1108,17 +1175,19 @@ def MLG : BinaryRXY<"mlg", 0xE386, z_umul_lohi64, GR128, load, 8>;
 // Division and remainder
 //===----------------------------------------------------------------------===//
 
-// Division and remainder, from registers.
-def DSGFR : BinaryRRE<"dsgfr", 0xB91D, z_sdivrem32, GR128, GR32>;
-def DSGR  : BinaryRRE<"dsgr",  0xB90D, z_sdivrem64, GR128, GR64>;
-def DLR   : BinaryRRE<"dlr",   0xB997, z_udivrem32, GR128, GR32>;
-def DLGR  : BinaryRRE<"dlgr",  0xB987, z_udivrem64, GR128, GR64>;
+let hasSideEffects = 1 in {  // Do not speculatively execute.
+  // Division and remainder, from registers.
+  def DSGFR : BinaryRRE<"dsgfr", 0xB91D, z_sdivrem32, GR128, GR32>;
+  def DSGR  : BinaryRRE<"dsgr",  0xB90D, z_sdivrem64, GR128, GR64>;
+  def DLR   : BinaryRRE<"dlr",   0xB997, z_udivrem32, GR128, GR32>;
+  def DLGR  : BinaryRRE<"dlgr",  0xB987, z_udivrem64, GR128, GR64>;
 
-// Division and remainder, from memory.
-def DSGF : BinaryRXY<"dsgf", 0xE31D, z_sdivrem32, GR128, load, 4>;
-def DSG  : BinaryRXY<"dsg",  0xE30D, z_sdivrem64, GR128, load, 8>;
-def DL   : BinaryRXY<"dl",   0xE397, z_udivrem32, GR128, load, 4>;
-def DLG  : BinaryRXY<"dlg",  0xE387, z_udivrem64, GR128, load, 8>;
+  // Division and remainder, from memory.
+  def DSGF : BinaryRXY<"dsgf", 0xE31D, z_sdivrem32, GR128, load, 4>;
+  def DSG  : BinaryRXY<"dsg",  0xE30D, z_sdivrem64, GR128, load, 8>;
+  def DL   : BinaryRXY<"dl",   0xE397, z_udivrem32, GR128, load, 4>;
+  def DLG  : BinaryRXY<"dlg",  0xE387, z_udivrem64, GR128, load, 8>;
+}
 
 //===----------------------------------------------------------------------===//
 // Shifts
@@ -1197,7 +1266,10 @@ let Defs = [CC], CCValues = 0xE in {
   def CGFR : CompareRRE<"cgfr", 0xB930, null_frag, GR64, GR32>;
   def CGR  : CompareRRE<"cgr",  0xB920, z_scmp,    GR64, GR64>;
 
-  // Comparison with a signed 16-bit immediate.
+  // Comparison with a signed 16-bit immediate.  CHIMux expands to CHI or CIH,
+  // depending on the choice of register.
+  def CHIMux : CompareRIPseudo<z_scmp, GRX32, imm32sx16>,
+               Requires<[FeatureHighWord]>;
   def CHI  : CompareRI<"chi",  0xA7E, z_scmp, GR32, imm32sx16>;
   def CGHI : CompareRI<"cghi", 0xA7F, z_scmp, GR64, imm64sx16>;
 
@@ -1310,11 +1382,20 @@ def TML : InstAlias<"tml\t$R, $I", (TMLL GR32:$R, imm32ll16:$I), 0>;
 def TMH : InstAlias<"tmh\t$R, $I", (TMLH GR32:$R, imm32lh16:$I), 0>;
 
 //===----------------------------------------------------------------------===//
-// Prefetch
+// Prefetch and execution hint
 //===----------------------------------------------------------------------===//
 
 def PFD : PrefetchRXY<"pfd", 0xE336, z_prefetch>;
 def PFDRL : PrefetchRILPC<"pfdrl", 0xC62, z_prefetch>;
+
+let Predicates = [FeatureExecutionHint] in {
+  // Branch Prediction Preload
+  def BPP : BranchPreloadSMI<"bpp", 0xC7>;
+  def BPRP : BranchPreloadMII<"bprp", 0xC5>;
+
+  // Next Instruction Access Intent
+  def NIAI : SideEffectBinaryIE<"niai", 0xB2FA, imm32zx4, imm32zx4>;
+}
 
 //===----------------------------------------------------------------------===//
 // Atomic operations

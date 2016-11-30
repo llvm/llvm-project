@@ -95,7 +95,7 @@ public:
 /// assumption caches for a given function.
 class AssumptionAnalysis : public AnalysisInfoMixin<AssumptionAnalysis> {
   friend AnalysisInfoMixin<AssumptionAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef AssumptionCache Result;

@@ -6934,73 +6934,81 @@ __m256i test_mm256_mask_permutexvar_epi32(__m256i __W, __mmask8 __M, __m256i __X
 
 __m128i test_mm_alignr_epi32(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_alignr_epi32
-  // CHECK: @llvm.x86.avx512.mask.valign.d.128
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   return _mm_alignr_epi32(__A, __B, 1);
 }
 
 __m128i test_mm_mask_alignr_epi32(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_alignr_epi32
-  // CHECK: @llvm.x86.avx512.mask.valign.d.128
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_mask_alignr_epi32(__W, __U, __A, __B, 1);
 }
 
 __m128i test_mm_maskz_alignr_epi32(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_alignr_epi32
-  // CHECK: @llvm.x86.avx512.mask.valign.d.128
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_maskz_alignr_epi32(__U, __A, __B, 1);
 }
 
 __m256i test_mm256_alignr_epi32(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_alignr_epi32
-  // CHECK: @llvm.x86.avx512.mask.valign.d.256
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   return _mm256_alignr_epi32(__A, __B, 1);
 }
 
 __m256i test_mm256_mask_alignr_epi32(__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_alignr_epi32
-  // CHECK: @llvm.x86.avx512.mask.valign.d.256
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_alignr_epi32(__W, __U, __A, __B, 1);
 }
 
 __m256i test_mm256_maskz_alignr_epi32(__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_alignr_epi32
-  // CHECK: @llvm.x86.avx512.mask.valign.d.256
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_alignr_epi32(__U, __A, __B, 1);
 }
 
 __m128i test_mm_alignr_epi64(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_alignr_epi64
-  // CHECK: @llvm.x86.avx512.mask.valign.q.128
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 1, i32 2>
   return _mm_alignr_epi64(__A, __B, 1);
 }
 
 __m128i test_mm_mask_alignr_epi64(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_alignr_epi64
-  // CHECK: @llvm.x86.avx512.mask.valign.q.128
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 1, i32 2>
+  // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_alignr_epi64(__W, __U, __A, __B, 1);
 }
 
 __m128i test_mm_maskz_alignr_epi64(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_alignr_epi64
-  // CHECK: @llvm.x86.avx512.mask.valign.q.128
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 1, i32 2>
+  // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_alignr_epi64(__U, __A, __B, 1);
 }
 
 __m256i test_mm256_alignr_epi64(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_alignr_epi64
-  // CHECK: @llvm.x86.avx512.mask.valign.q.256
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   return _mm256_alignr_epi64(__A, __B, 1);
 }
 
 __m256i test_mm256_mask_alignr_epi64(__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_alignr_epi64
-  // CHECK: @llvm.x86.avx512.mask.valign.q.256
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_alignr_epi64(__W, __U, __A, __B, 1);
 }
 
 __m256i test_mm256_maskz_alignr_epi64(__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_alignr_epi64
-  // CHECK: @llvm.x86.avx512.mask.valign.q.256
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_alignr_epi64(__U, __A, __B, 1);
 }
 

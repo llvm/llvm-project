@@ -95,14 +95,14 @@
 # INT-PHDRS-NEXT:      Offset: 0xB0
 # INT-PHDRS-NEXT:      VirtualAddress: 0xB0
 # INT-PHDRS-NEXT:      PhysicalAddress: 0xB0
-# INT-PHDRS-NEXT:      FileSize: 9
-# INT-PHDRS-NEXT:      MemSize: 9
+# INT-PHDRS-NEXT:      FileSize:
+# INT-PHDRS-NEXT:      MemSize:
 # INT-PHDRS-NEXT:      Flags [
 # INT-PHDRS-NEXT:        PF_R
 # INT-PHDRS-NEXT:        PF_W
 # INT-PHDRS-NEXT:        PF_X
 # INT-PHDRS-NEXT:      ]
-# INT-PHDRS-NEXT:      Alignment: 4
+# INT-PHDRS-NEXT:      Alignment:
 # INT-PHDRS-NEXT:    }
 # INT-PHDRS-NEXT:  ]
 

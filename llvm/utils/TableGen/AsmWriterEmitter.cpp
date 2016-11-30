@@ -879,7 +879,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
           IAP.addCond(Op + ".isImm()");
 
           Cond = Op + ".getImm() == " +
-                 llvm::utostr(CGA.ResultOperands[i].getImm());
+                 llvm::itostr(CGA.ResultOperands[i].getImm());
           IAP.addCond(Cond);
           break;
         }

@@ -76,7 +76,7 @@ int main()
         testbuf<char> sb;
         std::ostream os(&sb);
         hex(os);
-        unsigned long long n = -10;
+        unsigned long long n = static_cast<unsigned long long>(-10);
         os << n;
         assert(sb.str() == "fffffffffffffff6");
     }

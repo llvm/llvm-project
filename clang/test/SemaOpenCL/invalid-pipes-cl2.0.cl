@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL2.0
 
+global pipe int gp;            // expected-error {{type '__global read_only pipe int' can only be used as a function parameter in OpenCL}}
+global reserve_id_t rid;          // expected-error {{the '__global reserve_id_t' type cannot be used to declare a program scope variable}}
+
 void test1(pipe int *p) {// expected-error {{pipes packet types cannot be of reference type}}
 }
 void test2(pipe p) {// expected-error {{missing actual type specifier for pipe}}
@@ -20,3 +23,8 @@ void test5(pipe int p) {
 
 typedef pipe int pipe_int_t;
 pipe_int_t test6() {} // expected-error{{declaring function return value of type 'pipe_int_t' (aka 'read_only pipe int') is not allowed}}
+
+bool test_id_comprision(void) {
+  reserve_id_t id1, id2;
+  return (id1 == id2);          // expected-error {{invalid operands to binary expression ('reserve_id_t' and 'reserve_id_t')}}
+}

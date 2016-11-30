@@ -29,6 +29,7 @@
 //  f -> float
 //  d -> double
 //  z -> size_t
+//  w -> wchar_t
 //  F -> constant CFString
 //  G -> id
 //  H -> SEL
@@ -456,6 +457,12 @@ BUILTIN(__builtin_strpbrk, "c*cC*cC*", "nF")
 BUILTIN(__builtin_strrchr, "c*cC*i", "nF")
 BUILTIN(__builtin_strspn, "zcC*cC*", "nF")
 BUILTIN(__builtin_strstr, "c*cC*cC*", "nF")
+BUILTIN(__builtin_wcschr, "w*wC*w", "nF")
+BUILTIN(__builtin_wcscmp, "iwC*wC*", "nF")
+BUILTIN(__builtin_wcslen, "zwC*", "nF")
+BUILTIN(__builtin_wcsncmp, "iwC*wC*z", "nF")
+BUILTIN(__builtin_wmemchr, "w*wC*wz", "nF")
+BUILTIN(__builtin_wmemcmp, "iwC*wC*z", "nF")
 BUILTIN(__builtin_return_address, "v*IUi", "n")
 BUILTIN(__builtin_extract_return_addr, "v*v*", "n")
 BUILTIN(__builtin_frame_address, "v*IUi", "n")
@@ -830,6 +837,15 @@ LIBBUILTIN(isupper, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
 LIBBUILTIN(isxdigit, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
 LIBBUILTIN(tolower, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
 LIBBUILTIN(toupper, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+// C99 wchar.h
+// FIXME: This list is incomplete. We should cover at least the functions that
+// take format strings.
+LIBBUILTIN(wcschr,  "w*wC*w",   "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wcscmp,  "iwC*wC*",  "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wcslen,  "zwC*",     "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wcsncmp, "iwC*wC*z", "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wmemchr, "w*wC*wz",  "f", "wchar.h", ALL_LANGUAGES)
+LIBBUILTIN(wmemcmp, "iwC*wC*z", "f", "wchar.h", ALL_LANGUAGES)
 
 // C99
 // In some systems setjmp is a macro that expands to _setjmp. We undefine

@@ -20,10 +20,12 @@
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Config/Version.h"
+#include "lld/Core/Parallel.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -42,7 +44,7 @@ LinkerDriver *elf::Driver;
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
-  HasError = false;
+  ErrorCount = 0;
   ErrorOS = &Error;
   Argv0 = Args[0];
 
@@ -55,7 +57,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 
   Driver->main(Args, CanExitEarly);
   freeArena();
-  return !HasError;
+  return !ErrorCount;
 }
 
 // Parses a linker -m option.
@@ -99,21 +101,24 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
 std::vector<MemoryBufferRef>
 LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
-      check(Archive::create(MB), "failed to parse archive");
+      check(Archive::create(MB),
+            MB.getBufferIdentifier() + ": failed to parse archive");
 
   std::vector<MemoryBufferRef> V;
   Error Err = Error::success();
   for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
-    Archive::Child C = check(COrErr, "could not get the child of the archive " +
-                                         File->getFileName());
+    Archive::Child C =
+        check(COrErr, MB.getBufferIdentifier() +
+                          ": could not get the child of the archive");
     MemoryBufferRef MBRef =
         check(C.getMemoryBufferRef(),
-              "could not get the buffer for a child of the archive " +
-                  File->getFileName());
+              MB.getBufferIdentifier() +
+                  ": could not get the buffer for a child of the archive");
     V.push_back(MBRef);
   }
   if (Err)
-    fatal("Archive::children failed: " + toString(std::move(Err)));
+    fatal(MB.getBufferIdentifier() + ": Archive::children failed: " +
+          toString(std::move(Err)));
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
@@ -281,9 +286,35 @@ static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
   return Default;
 }
 
+// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
+static bool getColorDiagnostics(opt::InputArgList &Args) {
+  bool Default = (ErrorOS == &errs() && Process::StandardErrHasColors());
+
+  auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_no_color_diagnostics);
+  if (!Arg)
+    return Default;
+  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
+    return false;
+
+  StringRef S = Arg->getValue();
+  if (S == "auto")
+    return Default;
+  if (S == "always")
+    return true;
+  if (S != "never")
+    error("unknown -color-diagnostics value: " + S);
+  return false;
+}
+
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
+
+  // Read some flags early because error() depends on them.
+  Config->ErrorLimit = getInteger(Args, OPT_error_limit, 20);
+  Config->ColorDiagnostics = getColorDiagnostics(Args);
+
+  // Handle -help
   if (Args.hasArg(OPT_help)) {
     printHelp(ArgsArr[0]);
     return;
@@ -317,7 +348,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   createFiles(Args);
   inferMachineType();
   checkOptions(Args);
-  if (HasError)
+  if (ErrorCount)
     return;
 
   switch (Config->EKind) {
@@ -495,10 +526,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
+  Config->OMagic = Args.hasArg(OPT_omagic);
   Config->Pie = getArg(Args, OPT_pie, OPT_nopie, false);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
+  Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->Target1Rel = getArg(Args, OPT_target1_rel, OPT_target1_abs, false);
   Config->Threads = getArg(Args, OPT_threads, OPT_no_threads, true);
@@ -510,21 +543,21 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Entry = getString(Args, OPT_entry);
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
-  Config->LtoAAPipeline = getString(Args, OPT_lto_aa_pipeline);
-  Config->LtoNewPmPasses = getString(Args, OPT_lto_newpm_passes);
+  Config->LTOAAPipeline = getString(Args, OPT_lto_aa_pipeline);
+  Config->LTONewPmPasses = getString(Args, OPT_lto_newpm_passes);
   Config->OutputFile = getString(Args, OPT_o);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 
   Config->Optimize = getInteger(Args, OPT_O, 1);
-  Config->LtoO = getInteger(Args, OPT_lto_O, 2);
-  if (Config->LtoO > 3)
+  Config->LTOO = getInteger(Args, OPT_lto_O, 2);
+  if (Config->LTOO > 3)
     error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
-  Config->LtoPartitions = getInteger(Args, OPT_lto_partitions, 1);
-  if (Config->LtoPartitions == 0)
+  Config->LTOPartitions = getInteger(Args, OPT_lto_partitions, 1);
+  if (Config->LTOPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");
-  Config->ThinLtoJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
-  if (Config->ThinLtoJobs == 0)
+  Config->ThinLTOJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
+  if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
@@ -659,7 +692,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     }
   }
 
-  if (Files.empty() && !HasError)
+  if (Files.empty() && ErrorCount == 0)
     error("no input files");
 }
 
@@ -756,7 +789,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (Symtab.find(Config->Entry))
     Symtab.addUndefined(Config->Entry);
 
-  if (HasError)
+  if (ErrorCount)
     return; // There were duplicate symbols or incompatible files
 
   Symtab.scanUndefinedFlags();
@@ -764,8 +797,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
 
-  Symtab.addCombinedLtoObject();
-  if (HasError)
+  Symtab.addCombinedLTOObject();
+  if (ErrorCount)
     return;
 
   for (auto *Arg : Args.filtered(OPT_wrap))
@@ -790,14 +823,18 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // MergeInputSection::splitIntoPieces needs to be called before
   // any call of MergeInputSection::getOffset. Do that.
-  for (InputSectionBase<ELFT> *S : Symtab.Sections) {
+  auto Fn = [](InputSectionBase<ELFT> *S) {
     if (!S->Live)
-      continue;
+      return;
     if (S->Compressed)
       S->uncompress();
     if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
       MS->splitIntoPieces();
-  }
+  };
+  if (Config->Threads)
+    parallel_for_each(Symtab.Sections.begin(), Symtab.Sections.end(), Fn);
+  else
+    std::for_each(Symtab.Sections.begin(), Symtab.Sections.end(), Fn);
 
   // Write the result to the file.
   writeResult<ELFT>();

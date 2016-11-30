@@ -177,11 +177,10 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1) {
     return false;
 
   // TODO: Enhance logic for other BinOps and remove this check.
-  auto AssocOpcode = BinOp1->getOpcode();
-  if (AssocOpcode != Instruction::Xor && AssocOpcode != Instruction::And &&
-      AssocOpcode != Instruction::Or)
+  if (!BinOp1->isBitwiseLogicOp())
     return false;
 
+  auto AssocOpcode = BinOp1->getOpcode();
   auto *BinOp2 = dyn_cast<BinaryOperator>(Cast->getOperand(0));
   if (!BinOp2 || !BinOp2->hasOneUse() || BinOp2->getOpcode() != AssocOpcode)
     return false;
@@ -820,9 +819,9 @@ Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
     }
   }
 
-  Value *SelectTVal = foldOperationIntoSelectOperand(Op, TV, this);
-  Value *SelectFVal = foldOperationIntoSelectOperand(Op, FV, this);
-  return SelectInst::Create(SI->getCondition(), SelectTVal, SelectFVal);
+  Value *NewTV = foldOperationIntoSelectOperand(Op, TV, this);
+  Value *NewFV = foldOperationIntoSelectOperand(Op, FV, this);
+  return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
 /// Given a binary operator, cast instruction, or select which has a PHI node as

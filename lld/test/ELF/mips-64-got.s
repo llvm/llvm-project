@@ -14,9 +14,9 @@
 
 # CHECK-NEXT:    20000:   df 82 80 20   ld      $2, -32736($gp)
 # CHECK-NEXT:    20004:   64 42 00 18   daddiu  $2,  $2, 24
-# CHECK-NEXT:    20008:   24 42 80 38   addiu   $2,  $2, -32712
-# CHECK-NEXT:    2000c:   24 42 80 28   addiu   $2,  $2, -32728
-# CHECK-NEXT:    20010:   24 42 80 30   addiu   $2,  $2, -32720
+# CHECK-NEXT:    20008:   24 42 80 40   addiu   $2,  $2, -32704
+# CHECK-NEXT:    2000c:   24 42 80 30   addiu   $2,  $2, -32720
+# CHECK-NEXT:    20010:   24 42 80 38   addiu   $2,  $2, -32712
 
 # CHECK: 0000000000020018   .text   00000000 foo
 # CHECK: 0000000000037ff0   .got    00000000 .hidden _gp
@@ -50,18 +50,23 @@
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address: 0x30018
 # GOT-NEXT:       Access: -32728
-# GOT-NEXT:       Initial: 0x20014
+# GOT-NEXT:       Initial: 0x30000
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address: 0x30020
 # GOT-NEXT:       Access: -32720
+# GOT-NEXT:       Initial: 0x20014
+# GOT-NEXT:     }
+# GOT-NEXT:     Entry {
+# GOT-NEXT:       Address: 0x30028
+# GOT-NEXT:       Access: -32712
 # GOT-NEXT:       Initial: 0x20018
 # GOT-NEXT:     }
 # GOT-NEXT:   ]
 # GOT-NEXT:   Global entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x30028
-# GOT-NEXT:       Access: -32712
+# GOT-NEXT:       Address: 0x30030
+# GOT-NEXT:       Access: -32704
 # GOT-NEXT:       Initial: 0x0
 # GOT-NEXT:       Value: 0x0
 # GOT-NEXT:       Type: Function

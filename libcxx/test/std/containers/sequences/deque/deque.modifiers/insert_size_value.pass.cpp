@@ -15,6 +15,7 @@
 
 #include <deque>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -56,7 +57,7 @@ test(int P, C& c1, int size, int x)
         assert(*i == j);
     for (int j = 0; j < size; ++j, ++i)
         assert(*i == x);
-    for (int j = P; j < c1_osize; ++j, ++i)
+    for (int j = P; static_cast<std::size_t>(j) < c1_osize; ++j, ++i)
         assert(*i == j);
 }
 

@@ -442,6 +442,9 @@ private:
               Style.Language == FormatStyle::LK_JavaScript)
             Left->Type = TT_DictLiteral;
         }
+        if (CurrentToken->is(tok::comma) &&
+            Style.Language == FormatStyle::LK_JavaScript)
+          Left->Type = TT_DictLiteral;
         if (!consumeToken())
           return false;
       }

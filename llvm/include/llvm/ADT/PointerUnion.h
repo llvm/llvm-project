@@ -17,7 +17,10 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
+#include <cassert>
+#include <cstdint>
+#include <cstddef>
 
 namespace llvm {
 
@@ -57,6 +60,7 @@ template <typename PT1, typename PT2> class PointerUnionUIntTraits {
 public:
   static inline void *getAsVoidPointer(void *P) { return P; }
   static inline void *getFromVoidPointer(void *P) { return P; }
+
   enum {
     PT1BitsAv = (int)(PointerLikeTypeTraits<PT1>::NumLowBitsAvailable),
     PT2BitsAv = (int)(PointerLikeTypeTraits<PT2>::NumLowBitsAvailable),
@@ -97,7 +101,7 @@ private:
   template <typename T> struct UNION_DOESNT_CONTAIN_TYPE {};
 
 public:
-  PointerUnion() {}
+  PointerUnion() = default;
 
   PointerUnion(PT1 V)
       : Val(const_cast<void *>(
@@ -208,6 +212,7 @@ public:
   static inline void *getAsVoidPointer(const PointerUnion<PT1, PT2> &P) {
     return P.getOpaqueValue();
   }
+
   static inline PointerUnion<PT1, PT2> getFromVoidPointer(void *P) {
     return PointerUnion<PT1, PT2>::getFromOpaqueValue(P);
   }
@@ -249,7 +254,7 @@ private:
   };
 
 public:
-  PointerUnion3() {}
+  PointerUnion3() = default;
 
   PointerUnion3(PT1 V) { Val = InnerUnion(V); }
   PointerUnion3(PT2 V) { Val = InnerUnion(V); }
@@ -328,6 +333,7 @@ public:
   static inline void *getAsVoidPointer(const PointerUnion3<PT1, PT2, PT3> &P) {
     return P.getOpaqueValue();
   }
+
   static inline PointerUnion3<PT1, PT2, PT3> getFromVoidPointer(void *P) {
     return PointerUnion3<PT1, PT2, PT3>::getFromOpaqueValue(P);
   }
@@ -352,7 +358,7 @@ private:
   ValTy Val;
 
 public:
-  PointerUnion4() {}
+  PointerUnion4() = default;
 
   PointerUnion4(PT1 V) { Val = InnerUnion1(V); }
   PointerUnion4(PT2 V) { Val = InnerUnion1(V); }
@@ -435,6 +441,7 @@ public:
   getAsVoidPointer(const PointerUnion4<PT1, PT2, PT3, PT4> &P) {
     return P.getOpaqueValue();
   }
+
   static inline PointerUnion4<PT1, PT2, PT3, PT4> getFromVoidPointer(void *P) {
     return PointerUnion4<PT1, PT2, PT3, PT4>::getFromOpaqueValue(P);
   }
@@ -469,6 +476,6 @@ template <typename T, typename U> struct DenseMapInfo<PointerUnion<T, U>> {
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_POINTERUNION_H

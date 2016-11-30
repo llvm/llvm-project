@@ -28,12 +28,12 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x11000
+// CHECK-NEXT: Address: 0x201000
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x13018
+// CHECK-NEXT:       Offset: 0x203018
 // CHECK-NEXT:       Type: R_X86_64_JUMP_SLOT
 // CHECK-NEXT:       Symbol: bar
 // CHECK-NEXT:       Addend: 0x0

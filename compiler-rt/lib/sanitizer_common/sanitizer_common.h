@@ -375,12 +375,6 @@ void SetCheckFailedCallback(CheckFailedCallbackType callback);
 // The callback should be registered once at the tool init time.
 void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
 
-// Callback to be called when we want to try releasing unused allocator memory
-// back to the OS.
-typedef void (*AllocatorReleaseToOSCallback)();
-// The callback should be registered once at the tool init time.
-void SetAllocatorReleaseToOSCallback(AllocatorReleaseToOSCallback Callback);
-
 // Functions related to signal handling.
 typedef void (*SignalHandlerType)(int, void *, void *);
 bool IsHandledDeadlySignal(int signum);
@@ -798,6 +792,8 @@ struct SignalContext {
         is_memory_access(is_memory_access),
         write_flag(write_flag) {}
 
+  static void DumpAllRegisters(void *context);
+
   // Creates signal context in a platform-specific manner.
   static SignalContext Create(void *siginfo, void *context);
 
@@ -840,6 +836,10 @@ struct StackDepotStats {
   uptr n_uniq_ids;
   uptr allocated;
 };
+
+// The default value for allocator_release_to_os_interval_ms common flag to
+// indicate that sanitizer allocator should not attempt to release memory to OS.
+const s32 kReleaseToOSIntervalNever = -1;
 
 }  // namespace __sanitizer
 

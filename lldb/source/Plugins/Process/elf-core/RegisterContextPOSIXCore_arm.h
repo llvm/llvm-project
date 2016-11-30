@@ -1,4 +1,4 @@
-//===-- RegisterContextCorePOSIX_arm.h --------------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_arm.h --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

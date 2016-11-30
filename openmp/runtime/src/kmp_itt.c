@@ -103,13 +103,21 @@ __itt_error_handler(
     switch ( err ) {
         case __itt_error_no_module : {
             char const * library = va_arg( args, char const * );
-            #if KMP_OS_WINDOWS
-                int sys_err = va_arg( args, int );
-                __kmp_msg( kmp_ms_warning, KMP_MSG( IttLoadLibFailed, library ), KMP_SYSERRCODE( sys_err ), __kmp_msg_null );
-            #else
-                char const * sys_err = va_arg( args, char const * );
-                __kmp_msg( kmp_ms_warning, KMP_MSG( IttLoadLibFailed, library ), KMP_SYSERRMESG( sys_err ), __kmp_msg_null );
-            #endif
+#if KMP_OS_WINDOWS
+            int sys_err = va_arg( args, int );
+            kmp_msg_t err_code = KMP_SYSERRCODE( sys_err );
+            __kmp_msg( kmp_ms_warning, KMP_MSG( IttLoadLibFailed, library ), err_code, __kmp_msg_null );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+              __kmp_str_free(&err_code.str);
+            }
+#else
+            char const * sys_err = va_arg( args, char const * );
+            kmp_msg_t err_code = KMP_SYSERRMESG( sys_err );
+            __kmp_msg( kmp_ms_warning, KMP_MSG( IttLoadLibFailed, library ), err_code, __kmp_msg_null );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+              __kmp_str_free(&err_code.str);
+            }
+#endif
         } break;
         case __itt_error_no_symbol : {
             char const * library = va_arg( args, char const * );
@@ -130,12 +138,20 @@ __itt_error_handler(
         case __itt_error_cant_read_env : {
             char const * var     = va_arg( args, char const * );
             int          sys_err = va_arg( args, int );
-            __kmp_msg( kmp_ms_warning, KMP_MSG( CantGetEnvVar, var ), KMP_ERR( sys_err ), __kmp_msg_null );
+            kmp_msg_t err_code = KMP_ERR( sys_err );
+            __kmp_msg( kmp_ms_warning, KMP_MSG( CantGetEnvVar, var ), err_code, __kmp_msg_null );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+              __kmp_str_free(&err_code.str);
+            }
         } break;
         case __itt_error_system : {
             char const * func    = va_arg( args, char const * );
             int          sys_err = va_arg( args, int );
-            __kmp_msg( kmp_ms_warning, KMP_MSG( IttFunctionError, func ), KMP_SYSERRCODE( sys_err ), __kmp_msg_null );
+            kmp_msg_t err_code = KMP_SYSERRCODE( sys_err );
+            __kmp_msg( kmp_ms_warning, KMP_MSG( IttFunctionError, func ), err_code, __kmp_msg_null );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+              __kmp_str_free(&err_code.str);
+            }
         } break;
         default : {
             KMP_WARNING( IttUnknownError, err );

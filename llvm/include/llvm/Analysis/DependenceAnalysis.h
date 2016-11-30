@@ -921,7 +921,7 @@ template <typename T> class ArrayRef;
     Result run(Function &F, FunctionAnalysisManager &FAM);
 
   private:
-    static char PassID;
+    static AnalysisKey Key;
     friend struct AnalysisInfoMixin<DependenceAnalysis>;
   }; // class DependenceAnalysis
 

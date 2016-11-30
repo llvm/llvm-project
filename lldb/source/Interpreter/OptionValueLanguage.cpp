@@ -1,4 +1,4 @@
-//===-- OptionValueFormat.cpp -----------------------------------*- C++ -*-===//
+//===-- OptionValueLanguage.cpp ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

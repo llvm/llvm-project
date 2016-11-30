@@ -374,6 +374,22 @@
 	brcl	-1, bar
 	brcl	16, bar
 
+#CHECK: error: invalid operand
+#CHECK: bct	%r0, -1
+#CHECK: error: invalid operand
+#CHECK: bct	%r0, 4096
+
+	bct	%r0, -1
+	bct	%r0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: bctg	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: bctg	%r0, 524288
+
+	bctg	%r0, -524289
+	bctg	%r0, 524288
+
 #CHECK: error: offset out of range
 #CHECK: brct	%r0, -0x100002
 #CHECK: error: offset out of range
@@ -402,6 +418,30 @@
 	brctg	%r0, 1
 	brctg	%r0, 0x10000
 
+#CHECK: error: instruction requires: high-word
+#CHECK: brcth	%r0, 0
+
+	brcth	%r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: bxh	%r0, %r0, 4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: bxh	%r0, %r0, 0(%r1,%r2)
+
+	bxh	%r0, %r0, 4096
+	bxh	%r0, %r0, 0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: bxhg	%r0, %r0, -524289
+#CHECK: error: invalid operand
+#CHECK: bxhg	%r0, %r0, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: bxhg	%r0, %r0, 0(%r1,%r2)
+
+	bxhg	%r0, %r0, -524289
+	bxhg	%r0, %r0, 524288
+	bxhg	%r0, %r0, 0(%r1,%r2)
+
 #CHECK: error: offset out of range
 #CHECK: brxh	%r0, %r2, -0x100002
 #CHECK: error: offset out of range
@@ -417,6 +457,39 @@
 	brxh	%r0, %r2, 0x10000
 
 #CHECK: error: offset out of range
+#CHECK: brxhg	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: brxhg	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: brxhg	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: brxhg	%r0, %r2, 0x10000
+
+	brxhg	%r0, %r2, -0x100002
+	brxhg	%r0, %r2, -1
+	brxhg	%r0, %r2, 1
+	brxhg	%r0, %r2, 0x10000
+
+#CHECK: error: invalid operand
+#CHECK: bxle	%r0, %r0, 4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: bxle	%r0, %r0, 0(%r1,%r2)
+
+	bxle	%r0, %r0, 4096
+	bxle	%r0, %r0, 0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: bxhg	%r0, %r0, -524289
+#CHECK: error: invalid operand
+#CHECK: bxhg	%r0, %r0, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: bxhg	%r0, %r0, 0(%r1,%r2)
+
+	bxhg	%r0, %r0, -524289
+	bxhg	%r0, %r0, 524288
+	bxhg	%r0, %r0, 0(%r1,%r2)
+
+#CHECK: error: offset out of range
 #CHECK: brxle	%r0, %r2, -0x100002
 #CHECK: error: offset out of range
 #CHECK: brxle	%r0, %r2, -1
@@ -429,6 +502,20 @@
 	brxle	%r0, %r2, -1
 	brxle	%r0, %r2, 1
 	brxle	%r0, %r2, 0x10000
+
+#CHECK: error: offset out of range
+#CHECK: brxlg	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: brxlg	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: brxlg	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: brxlg	%r0, %r2, 0x10000
+
+	brxlg	%r0, %r2, -0x100002
+	brxlg	%r0, %r2, -1
+	brxlg	%r0, %r2, 1
+	brxlg	%r0, %r2, 0x10000
 
 #CHECK: error: invalid operand
 #CHECK: c	%r0, -1

@@ -20,7 +20,7 @@ R_X86_64_32:
 // constants in hex.
 // CHECK: Disassembly of section .text2:
 // CHECK-NEXT: R_X86_64_32:
-// CHECK-NEXT:  11009: {{.*}} movl $69641, %edx
+// CHECK-NEXT:  201009: {{.*}} movl $2101257, %edx
 
 .section .R_X86_64_32S,"ax",@progbits
 R_X86_64_32S:
@@ -28,11 +28,11 @@ R_X86_64_32S:
 
 // CHECK: Disassembly of section .R_X86_64_32S:
 // CHECK-NEXT: R_X86_64_32S:
-// CHECK-NEXT:  {{.*}}: {{.*}} movq -978935, %rdx
+// CHECK-NEXT:  {{.*}}: {{.*}} movq 1052681, %rdx
 
 .section .R_X86_64_64,"a",@progbits
 R_X86_64_64:
  .quad R_X86_64_64
 
 // CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   10120 20010100 00000000
+// CHECK-NEXT:   200120 20012000 00000000

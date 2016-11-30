@@ -106,9 +106,9 @@
 
 ; PLAIN: @Y = global [3 x { i32, i32 }]* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
 ; PLAIN: @Z = global i32* getelementptr inbounds (i32, i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 0), i64 1)
-; OPT: @Y = local_unnamed_addr global [3 x { i32, i32 }]* getelementptr ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
+; OPT: @Y = local_unnamed_addr global [3 x { i32, i32 }]* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
 ; OPT: @Z = local_unnamed_addr global i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
-; TO: @Y = local_unnamed_addr global [3 x { i32, i32 }]* getelementptr ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
+; TO: @Y = local_unnamed_addr global [3 x { i32, i32 }]* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
 ; TO: @Z = local_unnamed_addr global i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
 
 @ext = external global [3 x { i32, i32 }]

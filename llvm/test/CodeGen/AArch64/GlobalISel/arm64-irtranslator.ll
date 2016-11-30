@@ -55,7 +55,7 @@ define void @allocai64() {
 ; CHECK: {{[0-9a-zA-Z._-]+}}:
 ;
 ; Make sure we have one successor and only one.
-; CHECK-NEXT: successors: %[[END:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 100.00%)
+; CHECK-NEXT: successors: %[[END:[0-9a-zA-Z._-]+]](0x80000000)
 ;
 ; Check that we emit the correct branch.
 ; CHECK: G_BR %[[END]]
@@ -77,8 +77,8 @@ end:
 ; CHECK: {{[0-9a-zA-Z._-]+}}:
 ;
 ; Make sure we have two successors
-; CHECK-NEXT: successors: %[[TRUE:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 50.00%),
-; CHECK:                  %[[FALSE:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 50.00%)
+; CHECK-NEXT: successors: %[[TRUE:[0-9a-zA-Z._-]+]](0x40000000),
+; CHECK:                  %[[FALSE:[0-9a-zA-Z._-]+]](0x40000000)
 ;
 ; Check that we emit the correct branch.
 ; CHECK: [[ADDR:%.*]](p0) = COPY %x0

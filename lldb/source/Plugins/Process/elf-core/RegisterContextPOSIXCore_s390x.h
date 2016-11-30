@@ -1,4 +1,4 @@
-//===-- RegisterContextCorePOSIX_s390x.h ------------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_s390x.h ------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

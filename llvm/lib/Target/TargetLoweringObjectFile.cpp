@@ -118,7 +118,7 @@ MCSymbol *TargetLoweringObjectFile::getSymbolWithGlobalValueBase(
 MCSymbol *TargetLoweringObjectFile::getCFIPersonalitySymbol(
     const GlobalValue *GV, const TargetMachine &TM,
     MachineModuleInfo *MMI) const {
-  return TM.getSymbol(GV, *Mang);
+  return TM.getSymbol(GV);
 }
 
 void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
@@ -288,7 +288,7 @@ const MCExpr *TargetLoweringObjectFile::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   const MCSymbolRefExpr *Ref =
-      MCSymbolRefExpr::create(TM.getSymbol(GV, *Mang), getContext());
+      MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
 
   return getTTypeReference(Ref, Encoding, Streamer);
 }

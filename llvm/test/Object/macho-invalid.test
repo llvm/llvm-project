@@ -484,3 +484,24 @@ INVALID-LAZY_BIND-OVERLAP: macho-invalid-lazy_bind-overlap': truncated or malfor
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-export-overlap 2>&1 | FileCheck -check-prefix INVALID-EXPORT-OVERLAP %s
 INVALID-EXPORT-OVERLAP: macho-invalid-export-overlap': truncated or malformed object (dyld export info at offset 200 with a size of 32, overlaps dyld lazy bind info at offset 176 with a size of 32)
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-header 2>&1 | FileCheck -check-prefix INVALID-FAT-HEADER %s
+INVALID-FAT-HEADER: macho-invalid-fat-header': truncated or malformed fat file (contains zero architecture types)
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-arch-size 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-SIZE %s
+INVALID-FAT-ARCH-SIZE: macho-invalid-fat-arch-size': truncated or malformed fat file (offset plus size of cputype (7) cpusubtype (3) extends past the end of the file)
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-arch-bigalign 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-BIGALIGN %s
+INVALID-FAT-ARCH-BIGALIGN: macho-invalid-fat-arch-bigalign': truncated or malformed fat file (align (2^212) too large for cputype (7) cpusubtype (3) (maximum 2^15))
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-arch-badalign 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-BADALIGN %s
+INVALID-FAT-ARCH-BADALIGN: macho-invalid-fat-arch-badalign': truncated or malformed fat file (offset: 28 for cputype (7) cpusubtype (3) not aligned on it's alignment (2^4))
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-arch-twosame 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-TWOSAME %s
+INVALID-FAT-ARCH-TWOSAME: macho-invalid-fat-arch-twosame': truncated or malformed fat file (contains two of the same architecture (cputype (7) cpusubtype (3)))
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-arch-overlap 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-OVERLAP %s
+INVALID-FAT-ARCH-OVERLAP: macho-invalid-fat-arch-overlap': truncated or malformed fat file (cputype (7) cpusubtype (5) at offset 48 with a size of 28, overlaps cputype (7) cpusubtype (3) at offset 52 with a size of 28)
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-arch-overlapheaders 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-OVERLAPHEADERS %s
+INVALID-FAT-ARCH-OVERLAPHEADERS: macho-invalid-fat-arch-overlapheaders': truncated or malformed fat file (cputype (7) cpusubtype (3) offset 12 overlaps universal headers)

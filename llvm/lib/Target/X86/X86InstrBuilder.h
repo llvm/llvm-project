@@ -90,29 +90,30 @@ struct X86AddressMode {
 
 /// Compute the addressing mode from an machine instruction starting with the
 /// given operand.
-static inline X86AddressMode getAddressFromInstr(MachineInstr *MI,
+static inline X86AddressMode getAddressFromInstr(const MachineInstr *MI,
                                                  unsigned Operand) {
   X86AddressMode AM;
-  MachineOperand &Op = MI->getOperand(Operand);
-  if (Op.isReg()) {
+  const MachineOperand &Op0 = MI->getOperand(Operand);
+  if (Op0.isReg()) {
     AM.BaseType = X86AddressMode::RegBase;
-    AM.Base.Reg = Op.getReg();
+    AM.Base.Reg = Op0.getReg();
   } else {
     AM.BaseType = X86AddressMode::FrameIndexBase;
-    AM.Base.FrameIndex = Op.getIndex();
+    AM.Base.FrameIndex = Op0.getIndex();
   }
-  Op = MI->getOperand(Operand + 1);
-  if (Op.isImm())
-    AM.Scale = Op.getImm();
-  Op = MI->getOperand(Operand + 2);
-  if (Op.isImm())
-    AM.IndexReg = Op.getImm();
-  Op = MI->getOperand(Operand + 3);
-  if (Op.isGlobal()) {
-    AM.GV = Op.getGlobal();
-  } else {
-    AM.Disp = Op.getImm();
-  }
+
+  const MachineOperand &Op1 = MI->getOperand(Operand + 1);
+  AM.Scale = Op1.getImm();
+
+  const MachineOperand &Op2 = MI->getOperand(Operand + 2);
+  AM.IndexReg = Op2.getReg();
+
+  const MachineOperand &Op3 = MI->getOperand(Operand + 3);
+  if (Op3.isGlobal())
+    AM.GV = Op3.getGlobal();
+  else
+    AM.Disp = Op3.getImm();
+
   return AM;
 }
 
@@ -127,6 +128,17 @@ addDirectMem(const MachineInstrBuilder &MIB, unsigned Reg) {
   return MIB.addReg(Reg).addImm(1).addReg(0).addImm(0).addReg(0);
 }
 
+/// Replace the address used in the instruction with the direct memory
+/// reference.
+static inline void setDirectAddressInInstr(MachineInstr *MI, unsigned Operand,
+                                           unsigned Reg) {
+  // Direct memory address is in a form of: Reg, 1 (Scale), NoReg, 0, NoReg.
+  MI->getOperand(Operand).setReg(Reg);
+  MI->getOperand(Operand + 1).setImm(1);
+  MI->getOperand(Operand + 2).setReg(0);
+  MI->getOperand(Operand + 3).setImm(0);
+  MI->getOperand(Operand + 4).setReg(0);
+}
 
 static inline const MachineInstrBuilder &
 addOffset(const MachineInstrBuilder &MIB, int Offset) {

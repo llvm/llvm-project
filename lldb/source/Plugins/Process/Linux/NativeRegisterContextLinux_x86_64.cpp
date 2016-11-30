@@ -20,6 +20,8 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 
+#include <linux/elf.h>
+
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
@@ -217,6 +219,12 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 #ifndef NT_PRXFPREG
 #define NT_PRXFPREG 0x46e62b7f
 #endif
+
+// On x86_64 NT_PRFPREG is used to access the FXSAVE area. On i386, we need to
+// use NT_PRXFPREG.
+static inline unsigned int fxsr_regset(const ArchSpec &arch) {
+  return arch.GetAddressByteSize() == 8 ? NT_PRFPREG : NT_PRXFPREG;
+}
 
 // ----------------------------------------------------------------------------
 // Required MPX define.
@@ -852,8 +860,9 @@ bool NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index) const {
 Error NativeRegisterContextLinux_x86_64::WriteFPR() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
-      return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
-                              NT_PRXFPREG);
+    return WriteRegisterSet(
+        &m_iovec, sizeof(m_fpr.xstate.xsave),
+        fxsr_regset(GetRegisterInfoInterface().GetTargetArchitecture()));
   case XStateType::XSAVE:
     return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
                             NT_X86_XSTATE);
@@ -957,7 +966,9 @@ Error NativeRegisterContextLinux_x86_64::ReadFPR() {
       return error;
     }
   }
-  error = ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_PRXFPREG);
+  error = ReadRegisterSet(
+      &m_iovec, sizeof(m_fpr.xstate.xsave),
+      fxsr_regset(GetRegisterInfoInterface().GetTargetArchitecture()));
   if (!error.Fail()) {
     m_xstate_type = XStateType::FXSAVE;
     return error;

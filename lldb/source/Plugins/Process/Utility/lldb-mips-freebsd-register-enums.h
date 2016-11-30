@@ -1,5 +1,4 @@
-//===-- lldb-mips-frebsd-register-enums.h -------------------------------*- C++
-//-*-===//
+//===-- lldb-mips-freebsd-register-enums.h ----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

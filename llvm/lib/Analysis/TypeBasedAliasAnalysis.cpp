@@ -550,7 +550,7 @@ bool TypeBasedAAResult::Aliases(const MDNode *A, const MDNode *B) const {
   return false;
 }
 
-char TypeBasedAA::PassID;
+AnalysisKey TypeBasedAA::Key;
 
 TypeBasedAAResult TypeBasedAA::run(Function &F, FunctionAnalysisManager &AM) {
   return TypeBasedAAResult();

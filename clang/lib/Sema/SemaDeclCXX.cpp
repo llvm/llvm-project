@@ -814,7 +814,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
 static bool checkSimpleDecomposition(
     Sema &S, ArrayRef<BindingDecl *> Bindings, ValueDecl *Src,
-    QualType DecompType, llvm::APSInt NumElems, QualType ElemType,
+    QualType DecompType, const llvm::APSInt &NumElems, QualType ElemType,
     llvm::function_ref<ExprResult(SourceLocation, Expr *, unsigned)> GetInit) {
   if ((int64_t)Bindings.size() != NumElems) {
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
@@ -841,7 +841,7 @@ static bool checkSimpleDecomposition(
 static bool checkArrayLikeDecomposition(Sema &S,
                                         ArrayRef<BindingDecl *> Bindings,
                                         ValueDecl *Src, QualType DecompType,
-                                        llvm::APSInt NumElems,
+                                        const llvm::APSInt &NumElems,
                                         QualType ElemType) {
   return checkSimpleDecomposition(
       S, Bindings, Src, DecompType, NumElems, ElemType,
@@ -1064,7 +1064,7 @@ struct BindingDiagnosticTrap {
 static bool checkTupleLikeDecomposition(Sema &S,
                                         ArrayRef<BindingDecl *> Bindings,
                                         VarDecl *Src, QualType DecompType,
-                                        llvm::APSInt TupleSize) {
+                                        const llvm::APSInt &TupleSize) {
   if ((int64_t)Bindings.size() != TupleSize) {
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
         << DecompType << (unsigned)Bindings.size() << TupleSize.toString(10)
@@ -7396,6 +7396,17 @@ void Sema::AddImplicitlyDeclaredMembersToClass(CXXRecordDecl *ClassDecl) {
     if (ClassDecl->needsOverloadResolutionForCopyConstructor() ||
         ClassDecl->hasInheritedConstructor())
       DeclareImplicitCopyConstructor(ClassDecl);
+    // For the MS ABI we need to know whether the copy ctor is deleted. A
+    // prerequisite for deleting the implicit copy ctor is that the class has a
+    // move ctor or move assignment that is either user-declared or whose
+    // semantics are inherited from a subobject. FIXME: We should provide a more
+    // direct way for CodeGen to ask whether the constructor was deleted.
+    else if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+             (ClassDecl->hasUserDeclaredMoveConstructor() ||
+              ClassDecl->needsOverloadResolutionForMoveConstructor() ||
+              ClassDecl->hasUserDeclaredMoveAssignment() ||
+              ClassDecl->needsOverloadResolutionForMoveAssignment()))
+      DeclareImplicitCopyConstructor(ClassDecl);
   }
 
   if (getLangOpts().CPlusPlus11 && ClassDecl->needsImplicitMoveConstructor()) {
@@ -10354,7 +10365,7 @@ void Sema::ActOnFinishCXXMemberDecls() {
   }
 }
 
-static void getDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
+static void checkDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
   // Don't do anything for template patterns.
   if (Class->getDescribedClassTemplate())
     return;
@@ -10368,7 +10379,7 @@ static void getDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
     if (!CD) {
       // Recurse on nested classes.
       if (auto *NestedRD = dyn_cast<CXXRecordDecl>(Member))
-        getDefaultArgExprsForConstructors(S, NestedRD);
+        checkDefaultArgExprsForConstructors(S, NestedRD);
       continue;
     } else if (!CD->isDefaultConstructor() || !CD->hasAttr<DLLExportAttr>()) {
       continue;
@@ -10393,14 +10404,9 @@ static void getDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
     LastExportedDefaultCtor = CD;
 
     for (unsigned I = 0; I != NumParams; ++I) {
-      // Skip any default arguments that we've already instantiated.
-      if (S.Context.getDefaultArgExprForConstructor(CD, I))
-        continue;
-
-      Expr *DefaultArg = S.BuildCXXDefaultArgExpr(Class->getLocation(), CD,
-                                                  CD->getParamDecl(I)).get();
+      (void)S.CheckCXXDefaultArgExpr(Class->getLocation(), CD,
+                                     CD->getParamDecl(I));
       S.DiscardCleanupsInEvaluationContext();
-      S.Context.addDefaultArgExprForConstructor(CD, I, DefaultArg);
     }
   }
 }
@@ -10412,7 +10418,7 @@ void Sema::ActOnFinishCXXNonNestedClass(Decl *D) {
   // have default arguments or don't use the standard calling convention are
   // wrapped with a thunk called the default constructor closure.
   if (RD && Context.getTargetInfo().getCXXABI().isMicrosoft())
-    getDefaultArgExprsForConstructors(*this, RD);
+    checkDefaultArgExprsForConstructors(*this, RD);
 
   referenceDLLExportedClassMethods();
 }
@@ -12367,14 +12373,9 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // constructor before the initializer is lexically complete will ultimately
   // come here at which point we can diagnose it.
   RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
-  if (OutermostClass == ParentRD) {
-    Diag(Field->getLocEnd(), diag::err_in_class_initializer_not_yet_parsed)
-        << ParentRD << Field;
-  } else {
-    Diag(Field->getLocEnd(),
-         diag::err_in_class_initializer_not_yet_parsed_outer_class)
-        << ParentRD << OutermostClass << Field;
-  }
+  Diag(Loc, diag::err_in_class_initializer_not_yet_parsed)
+      << OutermostClass << Field;
+  Diag(Field->getLocEnd(), diag::note_in_class_initializer_not_yet_parsed);
 
   return ExprError();
 }

@@ -1,4 +1,4 @@
-//===-- EmulateInstruction.h ------------------------------------*- C++ -*-===//
+//===-- EmulateInstruction.cpp ----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

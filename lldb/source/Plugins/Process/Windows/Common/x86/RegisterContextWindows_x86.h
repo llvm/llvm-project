@@ -40,6 +40,9 @@ public:
   bool ReadRegister(const RegisterInfo *reg_info,
                     RegisterValue &reg_value) override;
 
+  bool WriteRegister(const RegisterInfo *reg_info,
+                     const RegisterValue &reg_value) override;
+
 private:
   bool ReadRegisterHelper(DWORD flags_required, const char *reg_name,
                           DWORD value, RegisterValue &reg_value) const;

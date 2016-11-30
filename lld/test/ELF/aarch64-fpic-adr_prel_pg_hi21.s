@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-freebsd %s -o %t.o
 // RUN: not ld.lld -shared %t.o -o %t.so 2>&1 | FileCheck %s
-// CHECK: {{.*}}.o (.text+0x0): can't create dynamic relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol 'dat' defined in {{.*}}.o
+// CHECK: {{.*}}.o:(.text+0x0): can't create dynamic relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol 'dat' defined in {{.*}}.o
 
   adrp x0, dat
 .data

@@ -68,6 +68,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -82,6 +83,9 @@ using namespace llvm;
 namespace {
 
 class SIFixSGPRCopies : public MachineFunctionPass {
+
+  MachineDominatorTree *MDT;
+
 public:
   static char ID;
 
@@ -92,6 +96,8 @@ public:
   StringRef getPassName() const override { return "SI Fix SGPR copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTree>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -99,8 +105,12 @@ public:
 
 } // End anonymous namespace
 
-INITIALIZE_PASS(SIFixSGPRCopies, DEBUG_TYPE,
-                "SI Fix SGPR copies", false, false)
+INITIALIZE_PASS_BEGIN(SIFixSGPRCopies, DEBUG_TYPE,
+                     "SI Fix SGPR copies", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
+INITIALIZE_PASS_END(SIFixSGPRCopies, DEBUG_TYPE,
+                     "SI Fix SGPR copies", false, false)
+
 
 char SIFixSGPRCopies::ID = 0;
 
@@ -274,11 +284,22 @@ static bool phiHasBreakDef(const MachineInstr &PHI,
   return false;
 }
 
+static bool hasTerminatorThatModifiesExec(const MachineBasicBlock &MBB,
+                                          const TargetRegisterInfo &TRI) {
+  for (MachineBasicBlock::const_iterator I = MBB.getFirstTerminator(),
+       E = MBB.end(); I != E; ++I) {
+    if (I->modifiesRegister(AMDGPU::EXEC, &TRI))
+      return true;
+  }
+  return false;
+}
+
 bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
+  MDT = &getAnalysis<MachineDominatorTree>();
 
   SmallVector<MachineInstr *, 16> Worklist;
 
@@ -309,10 +330,22 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
       case AMDGPU::PHI: {
-        DEBUG(dbgs() << "Fixing PHI: " << MI);
         unsigned Reg = MI.getOperand(0).getReg();
         if (!TRI->isSGPRClass(MRI.getRegClass(Reg)))
           break;
+
+        // We don't need to fix the PHI if the common dominator of the
+        // two incoming blocks terminates with a uniform branch.
+        if (MI.getNumExplicitOperands() == 5) {
+          MachineBasicBlock *MBB0 = MI.getOperand(2).getMBB();
+          MachineBasicBlock *MBB1 = MI.getOperand(4).getMBB();
+
+          MachineBasicBlock *NCD = MDT->findNearestCommonDominator(MBB0, MBB1);
+          if (NCD && !hasTerminatorThatModifiesExec(*NCD, *TRI)) {
+            DEBUG(dbgs() << "Not fixing PHI for uniform branch: " << MI << '\n');
+            break;
+          }
+        }
 
         // If a PHI node defines an SGPR and any of its operands are VGPRs,
         // then we need to move it to the VALU.
@@ -340,10 +373,6 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         // ...
         // use sgpr2
         //
-        // FIXME: This is OK if the branching decision is made based on an
-        // SGPR value.
-        bool SGPRBranch = false;
-
         // The one exception to this rule is when one of the operands
         // is defined by a SI_BREAK, SI_IF_BREAK, or SI_ELSE_BREAK
         // instruction.  In this case, there we know the program will
@@ -353,7 +382,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         SmallSet<unsigned, 8> Visited;
         if (phiHasVGPROperands(MI, MRI, TRI, TII) ||
-            (!SGPRBranch && !phiHasBreakDef(MI, MRI, Visited))) {
+            !phiHasBreakDef(MI, MRI, Visited)) {
+          DEBUG(dbgs() << "Fixing PHI: " << MI);
           TII->moveToVALU(MI);
         }
         break;

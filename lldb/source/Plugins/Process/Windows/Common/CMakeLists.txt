@@ -2,9 +2,11 @@ include_directories(.)
 include_directories(../../Utility)
 
 set(PROC_WINDOWS_COMMON_SOURCES
-  RegisterContextWindows.cpp
+  DebuggerThread.cpp
+  LocalDebugDelegate.cpp
   ProcessWindows.cpp
   ProcessWindowsLog.cpp
+  RegisterContextWindows.cpp
   TargetThreadWindows.cpp
   )
 

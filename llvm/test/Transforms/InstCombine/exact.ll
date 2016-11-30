@@ -88,19 +88,32 @@ define i32 @udiv2(i32 %x, i32 %w) {
   ret i32 %z
 }
 
-define i64 @ashr1(i64 %X) nounwind {
+define i64 @ashr1(i64 %X) {
 ; CHECK-LABEL: @ashr1(
 ; CHECK-NEXT:    [[A:%.*]] = shl i64 %X, 8
 ; CHECK-NEXT:    [[B:%.*]] = ashr exact i64 [[A]], 2
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %A = shl i64 %X, 8
-  %B = ashr i64 %A, 2   ; X/4
+  %B = ashr i64 %A, 2
   ret i64 %B
 }
 
+; FIXME: The ashr should be exact (like it is in the preceding test).
+
+define <2 x i64> @ashr1_vec(<2 x i64> %X) {
+; CHECK-LABEL: @ashr1_vec(
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i64> %X, <i64 8, i64 8>
+; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[A]], <i64 2, i64 2>
+; CHECK-NEXT:    ret <2 x i64> [[B]]
+;
+  %A = shl <2 x i64> %X, <i64 8, i64 8>
+  %B = ashr <2 x i64> %A, <i64 2, i64 2>
+  ret <2 x i64> %B
+}
+
 ; PR9120
-define i1 @ashr_icmp1(i64 %X) nounwind {
+define i1 @ashr_icmp1(i64 %X) {
 ; CHECK-LABEL: @ashr_icmp1(
 ; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 %X, 0
 ; CHECK-NEXT:    ret i1 [[B]]

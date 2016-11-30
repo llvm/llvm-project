@@ -163,6 +163,7 @@ isl_bool isl_space_match(__isl_keep isl_space *space1, enum isl_dim_type type1,
 ISL_DEPRECATED
 int isl_space_tuple_match(__isl_keep isl_space *space1, enum isl_dim_type type1,
 	__isl_keep isl_space *space2, enum isl_dim_type type2);
+ISL_DEPRECATED
 int isl_space_compatible(__isl_keep isl_space *dim1,
 	__isl_keep isl_space *dim2);
 unsigned isl_space_dim(__isl_keep isl_space *dim, enum isl_dim_type type);

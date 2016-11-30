@@ -213,9 +213,9 @@ void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
   TLOF->getNameWithPrefix(Name, GV, *this);
 }
 
-MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV, Mangler &Mang) const {
-  SmallString<128> NameStr;
-  getNameWithPrefix(NameStr, GV, Mang);
+MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   const TargetLoweringObjectFile *TLOF = getObjFileLowering();
+  SmallString<128> NameStr;
+  getNameWithPrefix(NameStr, GV, TLOF->getMangler());
   return TLOF->getContext().getOrCreateSymbol(NameStr);
 }

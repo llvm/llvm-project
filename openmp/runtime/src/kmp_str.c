@@ -420,8 +420,7 @@ __kmp_str_loc_free(
     kmp_str_loc_t * loc
 ) {
     __kmp_str_fname_free( & loc->fname );
-    KMP_INTERNAL_FREE( loc->_bulk );
-    loc->_bulk = NULL;
+    __kmp_str_free((const char **) &(loc->_bulk));
     loc->file  = NULL;
     loc->func  = NULL;
 } // kmp_str_loc_free
@@ -477,8 +476,6 @@ __kmp_str_eqf(         // True, if strings are equal, false otherwise.
            __kmp_register_library_startup()) when no thread structures are allocated yet.
     So standard malloc() is the only available option.
 */
-
-// TODO: Find and replace all regular free() with __kmp_str_free().
 
 char *
 __kmp_str_format(           // Allocated string.

@@ -5674,44 +5674,6 @@ let TargetPrefix = "x86" in {
                     [IntrNoMem]>;
 }
 
-let TargetPrefix = "x86" in {
-  def int_x86_avx512_mask_valign_q_512 :
-        GCCBuiltin<"__builtin_ia32_alignq512_mask">,
-        Intrinsic<[llvm_v8i64_ty],
-                  [llvm_v8i64_ty, llvm_v8i64_ty, llvm_i32_ty, llvm_v8i64_ty,
-                   llvm_i8_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_mask_valign_d_512 :
-        GCCBuiltin<"__builtin_ia32_alignd512_mask">,
-        Intrinsic<[llvm_v16i32_ty],
-                  [llvm_v16i32_ty, llvm_v16i32_ty, llvm_i32_ty, llvm_v16i32_ty,
-                   llvm_i16_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_mask_valign_q_256 :
-        GCCBuiltin<"__builtin_ia32_alignq256_mask">,
-        Intrinsic<[llvm_v4i64_ty],
-                  [llvm_v4i64_ty, llvm_v4i64_ty, llvm_i32_ty, llvm_v4i64_ty,
-                   llvm_i8_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_mask_valign_d_256 :
-        GCCBuiltin<"__builtin_ia32_alignd256_mask">,
-        Intrinsic<[llvm_v8i32_ty],
-                  [llvm_v8i32_ty, llvm_v8i32_ty, llvm_i32_ty, llvm_v8i32_ty,
-                   llvm_i8_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_mask_valign_q_128 :
-        GCCBuiltin<"__builtin_ia32_alignq128_mask">,
-        Intrinsic<[llvm_v2i64_ty],
-                  [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i32_ty, llvm_v2i64_ty,
-                   llvm_i8_ty], [IntrNoMem]>;
-
-  def int_x86_avx512_mask_valign_d_128 :
-        GCCBuiltin<"__builtin_ia32_alignd128_mask">,
-        Intrinsic<[llvm_v4i32_ty],
-                  [llvm_v4i32_ty, llvm_v4i32_ty, llvm_i32_ty, llvm_v4i32_ty,
-                   llvm_i8_ty], [IntrNoMem]>;
-}
-
 // Compares
 let TargetPrefix = "x86" in {
   // 512-bit

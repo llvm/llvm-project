@@ -1,4 +1,4 @@
-//===-- NativeRegisterContex.cpp --------------------------------*- C++ -*-===//
+//===-- NativeRegisterContextRegisterInfo.cpp -------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -109,14 +109,14 @@ f3:
 // CHECK-PT-NEXT:     ]
 // CHECK-PT-NEXT:     Address: 0x100D4
 // CHECK-PT-NEXT:     Offset: 0xD4
-// CHECK-PT-NEXT:     Size: 72
+// CHECK-PT-NEXT:     Size: 80
 
 // CHECK-PT:          Type: PT_ARM_EXIDX (0x70000001)
 // CHECK-PT-NEXT:     Offset: 0xD4
 // CHECK-PT-NEXT:     VirtualAddress: 0x100D4
 // CHECK-PT-NEXT:     PhysicalAddress: 0x100D4
-// CHECK-PT-NEXT:     FileSize: 72
-// CHECK-PT-NEXT:     MemSize: 72
+// CHECK-PT-NEXT:     FileSize: 80
+// CHECK-PT-NEXT:     MemSize: 80
 // CHECK-PT-NEXT:     Flags [ (0x4)
 // CHECK-PT-NEXT:       PF_R (0x4)
 // CHECK-PT-NEXT:     ]
@@ -142,28 +142,28 @@ f3:
 // CHECK-SCRIPT-NEXT:    11014:       1e ff 2f e1     bx      lr
 // CHECK-SCRIPT-NEXT: Disassembly of section .func1:
 // CHECK-SCRIPT-NEXT: func1:
-// CHECK-SCRIPT-NEXT:    11060:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11068:       1e ff 2f e1     bx      lr
 // CHECK-SCRIPT-NEXT: Disassembly of section .func2:
 // CHECK-SCRIPT-NEXT: func2:
-// CHECK-SCRIPT-NEXT:    11064:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    1106c:       1e ff 2f e1     bx      lr
 // CHECK-SCRIPT-NEXT: Disassembly of section .func3:
 // CHECK-SCRIPT-NEXT: func3:
-// CHECK-SCRIPT-NEXT:    11068:       1e ff 2f e1     bx      lr
+// CHECK-SCRIPT-NEXT:    11070:       1e ff 2f e1     bx      lr
 
 // Check that the .ARM.exidx section is sorted in order as the functions
 // The offset in field 1, is 32-bit so in the binary the most significant bit
-// CHECK-SCRIPT-EXIDX: Contents of section .ARM.exidx:
 // 11018 - 18 = 11000 func4
 // 11020 - 1c = 11004 func5
-// CHECK-SCRIPT-EXIDX-NEXT:  11018 e8ffff7f 01000000 e4ffff7f 01000000
+// CHECK-SCRIPT-EXIDX:       11018 e8ffff7f 01000000 e4ffff7f 01000000
 // 11028 - 20 = 11008 _start
 // 11030 - 24 = 1100c f1
 // CHECK-SCRIPT-EXIDX-NEXT:  11028 e0ffff7f 01000000 dcffff7f 01000000
 // 11038 - 28 = 11010 f2
 // 11040 - 2c = 11014 f3
 // CHECK-SCRIPT-EXIDX-NEXT:  11038 d8ffff7f 01000000 d4ffff7f 01000000
-// 11048 + 18 = 11060 = func1
-// 11050 + 14 = 11064 = func2
-// CHECK-SCRIPT-EXIDX-NEXT:  11048 18000000 01000000 14000000 01000000
-// 11058 + 10 = 11068 = func3
-// CHECK-SCRIPT-EXIDX-NEXT:  11058 10000000 01000000
+// 11048 + 20 = 11068 func1
+// 11050 + 1c = 1106c func2
+// CHECK-SCRIPT-EXIDX-NEXT:  11048 20000000 01000000 1c000000 01000000
+// 11058 + 18 = 11070 func3
+// 11060 + 14 = 11074 func3 + sizeof(func3)
+// CHECK-SCRIPT-EXIDX-NEXT:  11058 18000000 01000000 14000000 01000000

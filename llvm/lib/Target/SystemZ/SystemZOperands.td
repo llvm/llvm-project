@@ -460,7 +460,9 @@ def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
 //===----------------------------------------------------------------------===//
 
 // PC-relative asm operands.
+def PCRel12 : PCRelAsmOperand<"12">;
 def PCRel16 : PCRelAsmOperand<"16">;
+def PCRel24 : PCRelAsmOperand<"24">;
 def PCRel32 : PCRelAsmOperand<"32">;
 def PCRelTLS16 : PCRelTLSAsmOperand<"16">;
 def PCRelTLS32 : PCRelTLSAsmOperand<"32">;
@@ -474,6 +476,20 @@ def brtarget16 : PCRelOperand<OtherVT, PCRel16> {
 def brtarget32 : PCRelOperand<OtherVT, PCRel32> {
   let EncoderMethod = "getPC32DBLEncoding";
   let DecoderMethod = "decodePC32DBLBranchOperand";
+}
+
+// Variants of brtarget for use with branch prediction preload.
+def brtarget12bpp : PCRelOperand<OtherVT, PCRel12> {
+  let EncoderMethod = "getPC12DBLBPPEncoding";
+  let DecoderMethod = "decodePC12DBLBranchOperand";
+}
+def brtarget16bpp : PCRelOperand<OtherVT, PCRel16> {
+  let EncoderMethod = "getPC16DBLBPPEncoding";
+  let DecoderMethod = "decodePC16DBLBranchOperand";
+}
+def brtarget24bpp : PCRelOperand<OtherVT, PCRel24> {
+  let EncoderMethod = "getPC24DBLBPPEncoding";
+  let DecoderMethod = "decodePC24DBLBranchOperand";
 }
 
 // Variants of brtarget16/32 with an optional additional TLS symbol.

@@ -120,13 +120,6 @@ class BitfieldsTestCase(TestBase):
     # BitFields exhibit crashes in record layout on Windows
     # (http://llvm.org/pr21800)
     @skipIfWindows
-    @expectedFailureAll(
-        "llvm.org/pr27510",
-        oslist=["linux"],
-        compiler="clang",
-        compiler_version=[
-            ">=",
-            "3.9"])
     def test_and_python_api(self):
         """Use Python APIs to inspect a bitfields variable."""
         self.build()

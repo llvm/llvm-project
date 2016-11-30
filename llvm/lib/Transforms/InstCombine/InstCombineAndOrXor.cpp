@@ -98,12 +98,11 @@ Value *InstCombiner::SimplifyBSwap(BinaryOperator &I) {
   IntegerType *ITy = dyn_cast<IntegerType>(I.getType());
 
   // Can't do vectors.
-  if (I.getType()->isVectorTy()) return nullptr;
+  if (I.getType()->isVectorTy())
+    return nullptr;
 
   // Can only do bitwise ops.
-  unsigned Op = I.getOpcode();
-  if (Op != Instruction::And && Op != Instruction::Or &&
-      Op != Instruction::Xor)
+  if (!I.isBitwiseLogicOp())
     return nullptr;
 
   Value *OldLHS = I.getOperand(0);
@@ -132,14 +131,7 @@ Value *InstCombiner::SimplifyBSwap(BinaryOperator &I) {
   Value *NewRHS = IsBswapRHS ? IntrRHS->getOperand(0) :
                   Builder->getInt(ConstRHS->getValue().byteSwap());
 
-  Value *BinOp = nullptr;
-  if (Op == Instruction::And)
-    BinOp = Builder->CreateAnd(NewLHS, NewRHS);
-  else if (Op == Instruction::Or)
-    BinOp = Builder->CreateOr(NewLHS, NewRHS);
-  else //if (Op == Instruction::Xor)
-    BinOp = Builder->CreateXor(NewLHS, NewRHS);
-
+  Value *BinOp = Builder->CreateBinOp(I.getOpcode(), NewLHS, NewRHS);
   Function *F = Intrinsic::getDeclaration(I.getModule(), Intrinsic::bswap, ITy);
   return Builder->CreateCall(F, BinOp);
 }
@@ -1172,9 +1164,7 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
 /// Fold {and,or,xor} (cast X), Y.
 Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   auto LogicOpc = I.getOpcode();
-  assert((LogicOpc == Instruction::And || LogicOpc == Instruction::Or ||
-          LogicOpc == Instruction::Xor) &&
-         "Unexpected opcode for bitwise logic folding");
+  assert(I.isBitwiseLogicOp() && "Unexpected opcode for bitwise logic folding");
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   CastInst *Cast0 = dyn_cast<CastInst>(Op0);

@@ -104,10 +104,13 @@
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include <algorithm>
+#include <cassert>
 #include <iterator>
+#include <new>
+#include <utility>
 
 namespace llvm {
-
 
 //===----------------------------------------------------------------------===//
 //---                              Key traits                              ---//
@@ -131,7 +134,6 @@ namespace llvm {
 
 template <typename T>
 struct IntervalMapInfo {
-
   /// startLess - Return true if x is not in [a;b].
   /// This is x < a both for closed intervals and for [a;b) half-open intervals.
   static inline bool startLess(const T &x, const T &a) {
@@ -155,12 +157,10 @@ struct IntervalMapInfo {
   static inline bool nonEmpty(const T &a, const T &b) {
     return a <= b;
   }
-
 };
 
 template <typename T>
 struct IntervalMapHalfOpenInfo {
-
   /// startLess - Return true if x is not in [a;b).
   static inline bool startLess(const T &x, const T &a) {
     return x < a;
@@ -180,19 +180,13 @@ struct IntervalMapHalfOpenInfo {
   static inline bool nonEmpty(const T &a, const T &b) {
     return a < b;
   }
-
 };
 
 /// IntervalMapImpl - Namespace used for IntervalMap implementation details.
 /// It should be considered private to the implementation.
 namespace IntervalMapImpl {
 
-// Forward declarations.
-template <typename, typename, unsigned, typename> class LeafNode;
-template <typename, typename, unsigned, typename> class BranchNode;
-
 typedef std::pair<unsigned,unsigned> IdxPair;
-
 
 //===----------------------------------------------------------------------===//
 //---                    IntervalMapImpl::NodeBase                         ---//
@@ -417,7 +411,6 @@ IdxPair distribute(unsigned Nodes, unsigned Elements, unsigned Capacity,
                    const unsigned *CurSize, unsigned NewSize[],
                    unsigned Position, bool Grow);
 
-
 //===----------------------------------------------------------------------===//
 //---                   IntervalMapImpl::NodeSizer                         ---//
 //===----------------------------------------------------------------------===//
@@ -470,9 +463,7 @@ struct NodeSizer {
   /// different kinds of maps.
   typedef RecyclingAllocator<BumpPtrAllocator, char,
                              AllocBytes, CacheLineBytes> Allocator;
-
 };
-
 
 //===----------------------------------------------------------------------===//
 //---                     IntervalMapImpl::NodeRef                         ---//
@@ -505,7 +496,7 @@ class NodeRef {
 
 public:
   /// NodeRef - Create a null ref.
-  NodeRef() {}
+  NodeRef() = default;
 
   /// operator bool - Detect a null ref.
   explicit operator bool() const { return pip.getOpaqueValue(); }
@@ -684,7 +675,6 @@ insertFrom(unsigned &Pos, unsigned Size, KeyT a, KeyT b, ValT y) {
   value(i) = y;
   return Size + 1;
 }
-
 
 //===----------------------------------------------------------------------===//
 //---                   IntervalMapImpl::BranchNode                        ---//
@@ -930,8 +920,7 @@ public:
   }
 };
 
-} // namespace IntervalMapImpl
-
+} // end namespace IntervalMapImpl
 
 //===----------------------------------------------------------------------===//
 //---                          IntervalMap                                ----//
@@ -939,7 +928,7 @@ public:
 
 template <typename KeyT, typename ValT,
           unsigned N = IntervalMapImpl::NodeSizer<KeyT, ValT>::LeafSize,
-          typename Traits = IntervalMapInfo<KeyT> >
+          typename Traits = IntervalMapInfo<KeyT>>
 class IntervalMap {
   typedef IntervalMapImpl::NodeSizer<KeyT, ValT> Sizer;
   typedef IntervalMapImpl::LeafNode<KeyT, ValT, Sizer::LeafSize, Traits> Leaf;
@@ -1006,6 +995,7 @@ private:
     assert(!branched() && "Cannot acces leaf data in branched root");
     return dataAs<RootLeaf>();
   }
+
   RootBranchData &rootBranchData() const {
     assert(branched() && "Cannot access branch data in non-branched root");
     return dataAs<RootBranchData>();
@@ -1014,6 +1004,7 @@ private:
     assert(branched() && "Cannot access branch data in non-branched root");
     return dataAs<RootBranchData>();
   }
+
   const RootBranch &rootBranch() const { return rootBranchData().node; }
   RootBranch &rootBranch()             { return rootBranchData().node; }
   KeyT rootBranchStart() const { return rootBranchData().start; }
@@ -1160,7 +1151,6 @@ treeSafeLookup(KeyT x, ValT NotFound) const {
   return NR.get<Leaf>().safeLookup(x, NotFound);
 }
 
-
 // branchRoot - Switch from a leaf root to a branched root.
 // Return the new (root offset, node offset) corresponding to Position.
 template <typename KeyT, typename ValT, unsigned N, typename Traits>
@@ -1295,6 +1285,7 @@ clear() {
 template <typename KeyT, typename ValT, unsigned N, typename Traits>
 class IntervalMap<KeyT, ValT, N, Traits>::const_iterator :
   public std::iterator<std::bidirectional_iterator_tag, ValT> {
+
 protected:
   friend class IntervalMap;
 
@@ -1447,7 +1438,6 @@ public:
       path.leafOffset() =
         map->rootLeaf().findFrom(path.leafOffset(), map->rootSize, x);
   }
-
 };
 
 /// pathFillFind - Complete path by searching for x.
@@ -1534,7 +1524,7 @@ class IntervalMap<KeyT, ValT, N, Traits>::iterator : public const_iterator {
 
 public:
   /// iterator - Create null iterator.
-  iterator() {}
+  iterator() = default;
 
   /// setStart - Move the start of the current interval.
   /// This may cause coalescing with the previous interval.
@@ -1600,7 +1590,6 @@ public:
     operator--();
     return tmp;
   }
-
 };
 
 /// canCoalesceLeft - Can the current interval coalesce to the left after
@@ -1800,7 +1789,6 @@ iterator::insert(KeyT a, KeyT b, ValT y) {
   // Now it fits in the new leaf.
   treeInsert(a, b, y);
 }
-
 
 template <typename KeyT, typename ValT, unsigned N, typename Traits>
 void IntervalMap<KeyT, ValT, N, Traits>::
@@ -2162,6 +2150,6 @@ public:
   }
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_INTERVALMAP_H

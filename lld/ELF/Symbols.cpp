@@ -12,11 +12,13 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
+#include "Strings.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -63,7 +65,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     uintX_t VA = (SC->OutSec ? SC->OutSec->Addr : 0) + SC->getOffset(Offset);
     if (D.isTls() && !Config->Relocatable) {
       if (!Out<ELFT>::TlsPhdr)
-        fatal(getFilename(D.File) +
+        fatal(toString(D.File) +
               " has a STT_TLS symbol but doesn't have a PT_TLS section");
       return VA - Out<ELFT>::TlsPhdr->p_vaddr;
     }
@@ -90,21 +92,11 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   llvm_unreachable("invalid symbol kind");
 }
 
-SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther,
+SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(true),
+    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
-      StOther(StOther), NameOffset(NameOffset) {}
-
-SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
-    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(false),
-      IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
-      StOther(StOther), Name({Name.data(), Name.size()}) {}
-
-StringRef SymbolBody::getName() const {
-  assert(!isLocal());
-  return StringRef(Name.S, Name.Len);
-}
+      StOther(StOther), Name(Name) {}
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
@@ -189,11 +181,44 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   return 0;
 }
 
-Defined::Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
-    : SymbolBody(K, Name, StOther, Type) {}
+// If a symbol name contains '@', the characters after that is
+// a symbol version name. This function parses that.
+void SymbolBody::parseSymbolVersion() {
+  StringRef S = getName();
+  size_t Pos = S.find('@');
+  if (Pos == 0 || Pos == StringRef::npos)
+    return;
+  StringRef Verstr = S.substr(Pos + 1);
+  if (Verstr.empty())
+    return;
 
-Defined::Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type)
-    : SymbolBody(K, NameOffset, StOther, Type) {}
+  // Truncate the symbol name so that it doesn't include the version string.
+  Name = {S.data(), Pos};
+
+  // '@@' in a symbol name means the default version.
+  // It is usually the most recent one.
+  bool IsDefault = (Verstr[0] == '@');
+  if (IsDefault)
+    Verstr = Verstr.substr(1);
+
+  for (VersionDefinition &Ver : Config->VersionDefinitions) {
+    if (Ver.Name != Verstr)
+      continue;
+
+    if (IsDefault)
+      symbol()->VersionId = Ver.Id;
+    else
+      symbol()->VersionId = Ver.Id | VERSYM_HIDDEN;
+    return;
+  }
+
+  // It is an error if the specified version is not defined.
+  error("symbol " + S + " has undefined version " + Verstr);
+}
+
+Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
+                 uint8_t Type)
+    : SymbolBody(K, Name, IsLocal, StOther, Type) {}
 
 template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
   if (!Section || !isFunc())
@@ -202,27 +227,23 @@ template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
          (Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC);
 }
 
-Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type,
-                     InputFile *File)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {
-  this->File = File;
-}
-
-Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type,
-                     InputFile *File)
-    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type) {
+Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
+                     uint8_t Type, InputFile *File)
+    : SymbolBody(SymbolBody::UndefinedKind, Name, IsLocal, StOther, Type) {
   this->File = File;
 }
 
 template <typename ELFT>
-DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
+DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef Name, uintX_t Value,
                                          const OutputSectionBase *Section)
-    : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
+    : Defined(SymbolBody::DefinedSyntheticKind, Name, /*IsLocal=*/false,
+              STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 
-DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
+DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint64_t Alignment,
                              uint8_t StOther, uint8_t Type, InputFile *File)
-    : Defined(SymbolBody::DefinedCommonKind, N, StOther, Type),
+    : Defined(SymbolBody::DefinedCommonKind, Name, /*IsLocal=*/false, StOther,
+              Type),
       Alignment(Alignment), Size(Size) {
   this->File = File;
 }
@@ -271,7 +292,7 @@ bool Symbol::includeInDynsym() const {
 // Print out a log message for --trace-symbol.
 void elf::printTraceSymbol(Symbol *Sym) {
   SymbolBody *B = Sym->body();
-  outs() << getFilename(B->File);
+  outs() << toString(B->File);
 
   if (B->isUndefined())
     outs() << ": reference to ";
@@ -282,12 +303,11 @@ void elf::printTraceSymbol(Symbol *Sym) {
   outs() << B->getName() << "\n";
 }
 
-StringRef elf::getSymbolName(StringRef SymTab, SymbolBody &Body) {
-  if (Body.isLocal() && Body.getNameOffset())
-    return SymTab.data() + Body.getNameOffset();
-  if (!Body.isLocal())
-    return Body.getName();
-  return "";
+// Returns a symbol for an error message.
+std::string elf::toString(const SymbolBody &B) {
+  if (Config->Demangle)
+    return demangle(B.getName());
+  return B.getName();
 }
 
 template bool SymbolBody::hasThunk<ELF32LE>() const;

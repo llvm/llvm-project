@@ -15,6 +15,7 @@
 
 #include <valarray>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -45,7 +46,7 @@ int main()
         for (int i = 0; i < N; ++i)
         {
             assert(v[i].size() == a[i].size());
-            for (int j = 0; j < v[i].size(); ++j)
+            for (std::size_t j = 0; j < v[i].size(); ++j)
                 assert(v[i][j] == a[i][j]);
         }
     }

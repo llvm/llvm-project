@@ -238,10 +238,6 @@ public:
                             symbol_iterator(Obj->symbol_end(), this));
   }
 
-  StringRef getDataLayoutStr() const {
-    return Obj->getModule().getDataLayoutStr();
-  }
-
   StringRef getSourceFileName() const {
     return Obj->getModule().getSourceFileName();
   }

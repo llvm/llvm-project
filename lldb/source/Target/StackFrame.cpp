@@ -931,7 +931,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         return ValueObjectSP();
       }
 
-      index_expr.drop_front();
+      index_expr = index_expr.drop_front();
       long final_index = 0;
       if (index_expr.getAsInteger(0, final_index)) {
         error.SetErrorStringWithFormat("invalid range expression \"'%s'\"",

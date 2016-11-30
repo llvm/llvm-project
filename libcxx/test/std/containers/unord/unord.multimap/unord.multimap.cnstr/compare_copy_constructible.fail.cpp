@@ -12,7 +12,7 @@
 
 // <unordered_map>
 
-// Check that std::unordered_multimap fails to instantiate if the comparison predicate is 
+// Check that std::unordered_multimap fails to instantiate if the comparison predicate is
 // not copy-constructible. This is LWG issue 2436
 
 #include <unordered_map>

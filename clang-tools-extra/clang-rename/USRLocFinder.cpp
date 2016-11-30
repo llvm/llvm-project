@@ -18,10 +18,16 @@
 #include "USRFinder.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include <cstddef>
+#include <set>
+#include <string>
+#include <vector>
 
 using namespace llvm;
 
@@ -29,6 +35,7 @@ namespace clang {
 namespace rename {
 
 namespace {
+
 // \brief This visitor recursively searches for all instances of a USR in a
 // translation unit and stores them for later usage.
 class USRLocFindingASTVisitor
@@ -140,6 +147,7 @@ private:
   std::vector<clang::SourceLocation> LocationsFound;
   const ASTContext &Context;
 };
+
 } // namespace
 
 std::vector<SourceLocation>

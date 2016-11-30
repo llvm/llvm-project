@@ -24,21 +24,22 @@ template <class PrimaryAllocator, class AllocatorCache,
           class SecondaryAllocator>  // NOLINT
 class CombinedAllocator {
  public:
-  void InitCommon(bool may_return_null) {
-    primary_.Init();
+  void InitCommon(bool may_return_null, s32 release_to_os_interval_ms) {
+    primary_.Init(release_to_os_interval_ms);
     atomic_store(&may_return_null_, may_return_null, memory_order_relaxed);
   }
 
-  void InitLinkerInitialized(bool may_return_null) {
+  void InitLinkerInitialized(
+      bool may_return_null, s32 release_to_os_interval_ms) {
     secondary_.InitLinkerInitialized(may_return_null);
     stats_.InitLinkerInitialized();
-    InitCommon(may_return_null);
+    InitCommon(may_return_null, release_to_os_interval_ms);
   }
 
-  void Init(bool may_return_null) {
+  void Init(bool may_return_null, s32 release_to_os_interval_ms) {
     secondary_.Init(may_return_null);
     stats_.Init();
-    InitCommon(may_return_null);
+    InitCommon(may_return_null, release_to_os_interval_ms);
   }
 
   void *Allocate(AllocatorCache *cache, uptr size, uptr alignment,
@@ -81,6 +82,14 @@ class CombinedAllocator {
   void SetMayReturnNull(bool may_return_null) {
     secondary_.SetMayReturnNull(may_return_null);
     atomic_store(&may_return_null_, may_return_null, memory_order_release);
+  }
+
+  s32 ReleaseToOSIntervalMs() const {
+    return primary_.ReleaseToOSIntervalMs();
+  }
+
+  void SetReleaseToOSIntervalMs(s32 release_to_os_interval_ms) {
+    primary_.SetReleaseToOSIntervalMs(release_to_os_interval_ms);
   }
 
   bool RssLimitIsExceeded() {
@@ -192,8 +201,6 @@ class CombinedAllocator {
     secondary_.ForceUnlock();
     primary_.ForceUnlock();
   }
-
-  void ReleaseToOS() { primary_.ReleaseToOS(); }
 
   // Iterate over all existing chunks.
   // The allocator must be locked when calling this function.

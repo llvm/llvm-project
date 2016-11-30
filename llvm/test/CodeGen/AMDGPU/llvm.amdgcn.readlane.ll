@@ -22,7 +22,8 @@ define void @test_readlane_imm_sreg(i32 addrspace(1)* %out, i32 %src1) #1 {
 ; TODO: m0 should be folded.
 ; CHECK-LABEL: {{^}}test_readlane_m0_sreg:
 ; CHECK: s_mov_b32 m0, -1
-; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], m0
+; CHECK: s_mov_b32 [[COPY_M0:s[0-9]+]], m0
+; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], [[COPY_M0]]
 ; CHECK: v_readlane_b32 s{{[0-9]+}}, [[VVAL]], s{{[0-9]+}}
 define void @test_readlane_m0_sreg(i32 addrspace(1)* %out, i32 %src1) #1 {
   %m0 = call i32 asm "s_mov_b32 m0, -1", "={M0}"()

@@ -617,9 +617,11 @@ def skipIfHostIncompatibleWithRemote(func):
                 'i386') and host_arch != target_arch:
             return "skipping because target %s is not compatible with host architecture %s" % (
                 target_arch, host_arch)
-        elif target_platform != host_platform:
+        if target_platform != host_platform:
             return "skipping because target is %s but host is %s" % (
                 target_platform, host_platform)
+        if lldbplatformutil.match_android_device(target_arch):
+            return "skipping because target is android"
         return None
     return skipTestIfFn(is_host_incompatible_with_remote)(func)
 

@@ -22,11 +22,11 @@ struct Tag {
     Tag() : val(0), tag("Default") {}
     Tag(int a, const char *b) : val(a), tag(b) {}
     ~Tag() {}
-        
+
     int val;
     const char *tag;
     };
-    
+
 bool eq(const Tag& rhs, const Tag& lhs) { return rhs.val == lhs.val && rhs.tag == lhs.tag; }
 // bool operator==(const Tag& rhs, const Tag& lhs) { return rhs.val == lhs.val; }
 bool comp (const Tag& rhs, const Tag& lhs) { return rhs.val <  lhs.val; }

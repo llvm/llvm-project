@@ -1555,9 +1555,9 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
 }
 
 bool isDeletedHeader(llvm::StringRef HeaderName,
-                     const std::set<llvm::StringRef> HeadersToDelete) {
-  return HeadersToDelete.find(HeaderName) != HeadersToDelete.end() ||
-         HeadersToDelete.find(HeaderName.trim("\"<>")) != HeadersToDelete.end();
+                     const std::set<llvm::StringRef> &HeadersToDelete) {
+  return HeadersToDelete.count(HeaderName) ||
+         HeadersToDelete.count(HeaderName.trim("\"<>"));
 }
 
 // FIXME: we also need to insert a '\n' at the end of the code if we have an

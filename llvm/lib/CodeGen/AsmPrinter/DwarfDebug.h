@@ -254,9 +254,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// Whether to emit all linkage names, or just abstract subprograms.
   bool UseAllLinkageNames;
 
-  /// Version of dwarf we're emitting.
-  unsigned DwarfVersion;
-
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
@@ -515,7 +512,7 @@ public:
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
   /// Returns the Dwarf Version.
-  unsigned getDwarfVersion() const { return DwarfVersion; }
+  uint16_t getDwarfVersion() const;
 
   /// Returns the previous CU that was being updated
   const DwarfCompileUnit *getPrevCU() const { return PrevCU; }

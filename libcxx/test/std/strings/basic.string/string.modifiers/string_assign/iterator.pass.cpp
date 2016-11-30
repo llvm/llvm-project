@@ -184,12 +184,12 @@ int main()
     typedef std::string S;
 	S s_short = "123/";
 	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
-	
+
 	s_short.assign(s_short.begin(), s_short.end());
 	assert(s_short == "123/");
 	s_short.assign(s_short.begin() + 2, s_short.end());
 	assert(s_short == "3/");
-	
+
 	s_long.assign(s_long.begin(), s_long.end());
 	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/");
 

@@ -119,9 +119,11 @@ COMMON_FLAG(uptr, soft_rss_limit_mb, 0,
             " This limit does not affect memory allocations other than"
             " malloc/new.")
 COMMON_FLAG(bool, heap_profile, false, "Experimental heap profiler, asan-only")
-COMMON_FLAG(bool, allocator_release_to_os, false,
-            "Experimental. If true, try to periodically release unused"
-            " memory to the OS.\n")
+COMMON_FLAG(s32, allocator_release_to_os_interval_ms, kReleaseToOSIntervalNever,
+            "Experimental. Only affects a 64-bit allocator. If set, tries to "
+            "release unused memory to the OS, but not more often than this "
+            "interval (in milliseconds). Negative values mean do not attempt "
+            "to release memory to the OS.\n")
 COMMON_FLAG(bool, can_use_proc_maps_statm, true,
             "If false, do not attempt to read /proc/maps/statm."
             " Mostly useful for testing sanitizers.")

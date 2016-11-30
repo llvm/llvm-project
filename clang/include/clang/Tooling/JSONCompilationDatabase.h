@@ -73,7 +73,7 @@ public:
   loadFromBuffer(StringRef DatabaseString, std::string &ErrorMessage,
                  JSONCommandLineSyntax Syntax);
 
-  /// \brief Returns all compile comamnds in which the specified file was
+  /// \brief Returns all compile commands in which the specified file was
   /// compiled.
   ///
   /// FIXME: Currently FilePath must be an absolute path inside the

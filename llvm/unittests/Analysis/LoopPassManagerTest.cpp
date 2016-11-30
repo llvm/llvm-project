@@ -21,9 +21,9 @@ using namespace llvm;
 
 namespace {
 
-class TestLoopAnalysis {
-  /// \brief Private static data to provide unique ID.
-  static char PassID;
+class TestLoopAnalysis : public AnalysisInfoMixin<TestLoopAnalysis> {
+  friend AnalysisInfoMixin<TestLoopAnalysis>;
+  static AnalysisKey Key;
 
   int &Runs;
 
@@ -32,12 +32,6 @@ public:
     Result(int Count) : BlockCount(Count) {}
     int BlockCount;
   };
-
-  /// \brief Returns an opaque, unique ID for this pass type.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Returns the name of the analysis.
-  static StringRef name() { return "TestLoopAnalysis"; }
 
   TestLoopAnalysis(int &Runs) : Runs(Runs) {}
 
@@ -52,7 +46,7 @@ public:
   }
 };
 
-char TestLoopAnalysis::PassID;
+AnalysisKey TestLoopAnalysis::Key;
 
 class TestLoopPass {
   std::vector<StringRef> &VisitedLoops;

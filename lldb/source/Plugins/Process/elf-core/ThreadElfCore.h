@@ -82,6 +82,38 @@ struct ELFLinuxPrStatus {
 static_assert(sizeof(ELFLinuxPrStatus) == 112,
               "sizeof ELFLinuxPrStatus is not correct!");
 
+struct ELFLinuxSigInfo {
+  int32_t si_signo;
+  int32_t si_code;
+  int32_t si_errno;
+
+  ELFLinuxSigInfo();
+
+  lldb_private::Error Parse(lldb_private::DataExtractor &data,
+                            const lldb_private::ArchSpec &arch);
+
+  // Return the bytesize of the structure
+  // 64 bit - just sizeof
+  // 32 bit - hardcoded because we are reusing the struct, but some of the
+  // members are smaller -
+  // so the layout is not the same
+  static size_t GetSize(const lldb_private::ArchSpec &arch) {
+    switch (arch.GetCore()) {
+    case lldb_private::ArchSpec::eCore_x86_64_x86_64:
+      return sizeof(ELFLinuxSigInfo);
+    case lldb_private::ArchSpec::eCore_s390x_generic:
+    case lldb_private::ArchSpec::eCore_x86_32_i386:
+    case lldb_private::ArchSpec::eCore_x86_32_i486:
+      return 12;
+    default:
+      return 0;
+    }
+  }
+};
+
+static_assert(sizeof(ELFLinuxSigInfo) == 12,
+              "sizeof ELFLinuxSigInfo is not correct!");
+
 // PRPSINFO structure's size differs based on architecture.
 // This is the layout in the x86-64 arch case.
 // In the i386 case we parse it manually and fill it again
@@ -133,7 +165,8 @@ struct ThreadData {
   lldb_private::DataExtractor fpregset;
   lldb_private::DataExtractor vregset;
   lldb::tid_t tid;
-  int signo;
+  int signo = 0;
+  int prstatus_sig = 0;
   std::string name;
 };
 

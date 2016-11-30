@@ -2843,10 +2843,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
     if (Tmp == 1) return 1;  // Early out.
     return std::min(Tmp, Tmp2)-1;
-  case ISD::TRUNCATE:
-    // FIXME: it's tricky to do anything useful for this, but it is an important
-    // case for targets like X86.
+  case ISD::TRUNCATE: {
+    // Check if the sign bits of source go down as far as the truncated value.
+    unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
+    unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (NumSrcSignBits > (NumSrcBits - VTBits))
+      return NumSrcSignBits - (NumSrcBits - VTBits);
     break;
+  }
   case ISD::EXTRACT_ELEMENT: {
     const int KnownSign = ComputeNumSignBits(Op.getOperand(0), Depth+1);
     const int BitWidth = Op.getValueSizeInBits();
@@ -2874,6 +2878,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
       return ComputeNumSignBits(Op.getOperand(0), Depth+1);
     break;
   }
+  case ISD::CONCAT_VECTORS:
+    // Determine the minimum number of sign bits across all input vectors.
+    // Early out if the result is already 1.
+    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    for (unsigned i = 1, e = Op.getNumOperands(); (i < e) && (Tmp > 1); ++i)
+      Tmp = std::min(Tmp, ComputeNumSignBits(Op.getOperand(i), Depth + 1));
+    return Tmp;
   }
 
   // If we are looking at the loaded value of the SDNode.
@@ -3487,25 +3498,22 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   EVT SVT = VT.getScalarType();
   SmallVector<SDValue, 4> Outputs;
   for (unsigned I = 0, E = BV1->getNumOperands(); I != E; ++I) {
-    ConstantSDNode *V1 = dyn_cast<ConstantSDNode>(BV1->getOperand(I));
-    ConstantSDNode *V2 = dyn_cast<ConstantSDNode>(BV2->getOperand(I));
-    if (!V1 || !V2) // Not a constant, bail.
-      return SDValue();
-
-    if (V1->isOpaque() || V2->isOpaque())
-      return SDValue();
+    SDValue V1 = BV1->getOperand(I);
+    SDValue V2 = BV2->getOperand(I);
 
     // Avoid BUILD_VECTOR nodes that perform implicit truncation.
-    // FIXME: This is valid and could be handled by truncating the APInts.
+    // FIXME: This is valid and could be handled by truncation.
     if (V1->getValueType(0) != SVT || V2->getValueType(0) != SVT)
       return SDValue();
 
     // Fold one vector element.
-    std::pair<APInt, bool> Folded = FoldValue(Opcode, V1->getAPIntValue(),
-                                              V2->getAPIntValue());
-    if (!Folded.second)
+    SDValue ScalarResult = getNode(Opcode, DL, SVT, V1, V2);
+
+    // Scalar folding only succeeded if the result is a constant or UNDEF.
+    if (!ScalarResult.isUndef() && ScalarResult.getOpcode() != ISD::Constant &&
+        ScalarResult.getOpcode() != ISD::ConstantFP)
       return SDValue();
-    Outputs.push_back(getConstant(Folded.first, DL, SVT));
+    Outputs.push_back(ScalarResult);
   }
 
   assert(VT.getVectorNumElements() == Outputs.size() &&

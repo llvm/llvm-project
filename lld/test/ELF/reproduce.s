@@ -35,7 +35,7 @@
 # RUN: echo > file2
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o 'foo bar'
 # RUN: ld.lld --reproduce repro2 'foo bar' -L"foo bar" -Lfile -Tfile2 \
-# RUN:   --dynamic-list dyn -rpath file --script file --version-script ver \
+# RUN:   --dynamic-list dyn -rpath file --script=file --version-script ver \
 # RUN:   --dynamic-linker "some unusual/path" -soname 'foo bar' -soname='foo bar'
 # RUN: cpio -id < repro2.cpio
 # RUN: FileCheck %s --check-prefix=RSP2 < repro2/response.txt

@@ -63,6 +63,10 @@ brackets as described below:
   y[2] = 6
   y[3] = 8
 
+On MacOS, replace `-lcudart_static` with `-lcudart`; otherwise, you may get
+"CUDA driver version is insufficient for CUDA runtime version" errors when you
+run your program.
+
 * ``<CUDA install path>`` -- the directory where you installed CUDA SDK.
   Typically, ``/usr/local/cuda``.
 

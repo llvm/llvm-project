@@ -902,12 +902,11 @@ CXString clang_getDeclObjCTypeEncoding(CXCursor C) {
   std::string encoding;
 
   if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D))  {
-    if (Ctx.getObjCEncodingForMethodDecl(OMD, encoding))
-      return cxstring::createRef("?");
+    encoding = Ctx.getObjCEncodingForMethodDecl(OMD);
   } else if (const ObjCPropertyDecl *OPD = dyn_cast<ObjCPropertyDecl>(D))
-    Ctx.getObjCEncodingForPropertyDecl(OPD, nullptr, encoding);
+    encoding = Ctx.getObjCEncodingForPropertyDecl(OPD, nullptr);
   else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-    Ctx.getObjCEncodingForFunctionDecl(FD, encoding);
+    encoding = Ctx.getObjCEncodingForFunctionDecl(FD);
   else {
     QualType Ty;
     if (const TypeDecl *TD = dyn_cast<TypeDecl>(D))

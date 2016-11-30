@@ -200,8 +200,15 @@ static void FactorNodes(std::unique_ptr<Matcher> &MatcherPtr) {
     std::unique_ptr<Matcher> Child(Scope->takeChild(i));
     FactorNodes(Child);
     
-    if (Matcher *N = Child.release())
-      OptionsToMatch.push_back(N);
+    if (Child) {
+      // If the child is a ScopeMatcher we can just merge its contents.
+      if (auto *SM = dyn_cast<ScopeMatcher>(Child.get())) {
+        for (unsigned j = 0, e = SM->getNumChildren(); j != e; ++j)
+          OptionsToMatch.push_back(SM->takeChild(j));
+      } else {
+        OptionsToMatch.push_back(Child.release());
+      }
+    }
   }
   
   SmallVector<Matcher*, 32> NewOptionsToMatch;
@@ -414,9 +421,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &MatcherPtr) {
         }
         
         Matcher *Entries[2] = { PrevMatcher, MatcherWithoutCTM };
-        std::unique_ptr<Matcher> Case(new ScopeMatcher(Entries));
-        FactorNodes(Case);
-        Cases[Entry-1].second = Case.release();
+        Cases[Entry-1].second = new ScopeMatcher(Entries);
         continue;
       }
       
@@ -424,6 +429,16 @@ static void FactorNodes(std::unique_ptr<Matcher> &MatcherPtr) {
       Cases.push_back(std::make_pair(CTMTy, MatcherWithoutCTM));
     }
     
+    // Make sure we recursively factor any scopes we may have created.
+    for (auto &M : Cases) {
+      if (ScopeMatcher *SM = dyn_cast<ScopeMatcher>(M.second)) {
+        std::unique_ptr<Matcher> Scope(SM);
+        FactorNodes(Scope);
+        M.second = Scope.release();
+        assert(M.second && "null matcher");
+      }
+    }
+
     if (Cases.size() != 1) {
       MatcherPtr.reset(new SwitchTypeMatcher(Cases));
     } else {

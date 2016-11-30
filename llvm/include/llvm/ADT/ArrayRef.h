@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
 #include <vector>
@@ -165,18 +166,15 @@ namespace llvm {
       return std::equal(begin(), end(), RHS.begin());
     }
 
-    /// slice(n) - Chop off the first N elements of the array.
-    ArrayRef<T> slice(size_t N) const {
-      assert(N <= size() && "Invalid specifier");
-      return ArrayRef<T>(data()+N, size()-N);
-    }
-
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
     ArrayRef<T> slice(size_t N, size_t M) const {
       assert(N+M <= size() && "Invalid specifier");
       return ArrayRef<T>(data()+N, M);
     }
+
+    /// slice(n) - Chop off the first N elements of the array.
+    ArrayRef<T> slice(size_t N) const { return slice(N, size() - N); }
 
     /// \brief Drop the first \p N elements of the array.
     ArrayRef<T> drop_front(size_t N = 1) const {
@@ -188,6 +186,18 @@ namespace llvm {
     ArrayRef<T> drop_back(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return slice(0, size() - N);
+    }
+
+    /// \brief Return a copy of *this with the first N elements satisfying the
+    /// given predicate removed.
+    template <class PredicateT> ArrayRef<T> drop_while(PredicateT Pred) const {
+      return ArrayRef<T>(find_if_not(*this, Pred), end());
+    }
+
+    /// \brief Return a copy of *this with the first N elements not satisfying
+    /// the given predicate removed.
+    template <class PredicateT> ArrayRef<T> drop_until(PredicateT Pred) const {
+      return ArrayRef<T>(find_if(*this, Pred), end());
     }
 
     /// \brief Return a copy of *this with only the first \p N elements.
@@ -202,6 +212,18 @@ namespace llvm {
       if (N >= size())
         return *this;
       return drop_front(size() - N);
+    }
+
+    /// \brief Return the first N elements of this Array that satisfy the given
+    /// predicate.
+    template <class PredicateT> ArrayRef<T> take_while(PredicateT Pred) const {
+      return ArrayRef<T>(begin(), find_if_not(*this, Pred));
+    }
+
+    /// \brief Return the first N elements of this Array that don't satisfy the
+    /// given predicate.
+    template <class PredicateT> ArrayRef<T> take_until(PredicateT Pred) const {
+      return ArrayRef<T>(begin(), find_if(*this, Pred));
     }
 
     /// @}
@@ -317,17 +339,16 @@ namespace llvm {
       return data()[this->size()-1];
     }
 
-    /// slice(n) - Chop off the first N elements of the array.
-    MutableArrayRef<T> slice(size_t N) const {
-      assert(N <= this->size() && "Invalid specifier");
-      return MutableArrayRef<T>(data()+N, this->size()-N);
-    }
-
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
     MutableArrayRef<T> slice(size_t N, size_t M) const {
-      assert(N+M <= this->size() && "Invalid specifier");
-      return MutableArrayRef<T>(data()+N, M);
+      assert(N + M <= this->size() && "Invalid specifier");
+      return MutableArrayRef<T>(this->data() + N, M);
+    }
+
+    /// slice(n) - Chop off the first N elements of the array.
+    MutableArrayRef<T> slice(size_t N) const {
+      return slice(N, this->size() - N);
     }
 
     /// \brief Drop the first \p N elements of the array.
@@ -339,6 +360,20 @@ namespace llvm {
     MutableArrayRef<T> drop_back(size_t N = 1) const {
       assert(this->size() >= N && "Dropping more elements than exist");
       return slice(0, this->size() - N);
+    }
+
+    /// \brief Return a copy of *this with the first N elements satisfying the
+    /// given predicate removed.
+    template <class PredicateT>
+    MutableArrayRef<T> drop_while(PredicateT Pred) const {
+      return MutableArrayRef<T>(find_if_not(*this, Pred), end());
+    }
+
+    /// \brief Return a copy of *this with the first N elements not satisfying
+    /// the given predicate removed.
+    template <class PredicateT>
+    MutableArrayRef<T> drop_until(PredicateT Pred) const {
+      return MutableArrayRef<T>(find_if(*this, Pred), end());
     }
 
     /// \brief Return a copy of *this with only the first \p N elements.
@@ -353,6 +388,20 @@ namespace llvm {
       if (N >= this->size())
         return *this;
       return drop_front(this->size() - N);
+    }
+
+    /// \brief Return the first N elements of this Array that satisfy the given
+    /// predicate.
+    template <class PredicateT>
+    MutableArrayRef<T> take_while(PredicateT Pred) const {
+      return MutableArrayRef<T>(begin(), find_if_not(*this, Pred));
+    }
+
+    /// \brief Return the first N elements of this Array that don't satisfy the
+    /// given predicate.
+    template <class PredicateT>
+    MutableArrayRef<T> take_until(PredicateT Pred) const {
+      return MutableArrayRef<T>(begin(), find_if(*this, Pred));
     }
 
     /// @}

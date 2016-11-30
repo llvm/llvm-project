@@ -210,8 +210,11 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
   bool timed_out = false;
   while (IsConnected() && !timed_out) {
     lldb::ConnectionStatus status = eConnectionStatusNoConnection;
-    size_t bytes_read =
-        Read(buffer, sizeof(buffer), timeout_usec, status, &error);
+    size_t bytes_read = Read(buffer, sizeof(buffer),
+                             timeout_usec == UINT32_MAX
+                                 ? Timeout<std::micro>(llvm::None)
+                                 : std::chrono::microseconds(timeout_usec),
+                             status, &error);
 
     if (log)
       log->Printf("%s: Read (buffer, (sizeof(buffer), timeout_usec = 0x%x, "

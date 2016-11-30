@@ -17,6 +17,7 @@
 #include <numeric>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 template <class T>
 inline
@@ -42,7 +43,7 @@ int main()
         double var = 0;
         double skew = 0;
         double kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             double dbl = (u[i] - mean);
             double d2 = sqr(dbl);
@@ -78,7 +79,7 @@ int main()
         double var = 0;
         double skew = 0;
         double kurtosis = 0;
-        for (int i = 0; i < u.size(); ++i)
+        for (std::size_t i = 0; i < u.size(); ++i)
         {
             double dbl = (u[i] - mean);
             double d2 = sqr(dbl);

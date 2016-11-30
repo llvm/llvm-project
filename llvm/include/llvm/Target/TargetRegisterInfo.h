@@ -87,7 +87,7 @@ public:
 
   /// Return the number of registers in this class.
   unsigned getNumRegs() const { return MC->getNumRegs(); }
-  
+
   iterator_range<SmallVectorImpl<MCPhysReg>::const_iterator>
   getRegisters() const {
     return make_range(MC->begin(), MC->end());
@@ -810,6 +810,13 @@ public:
   /// Returns true if the target requires post PEI scavenging of registers for
   /// materializing frame index constants.
   virtual bool requiresFrameIndexScavenging(const MachineFunction &MF) const {
+    return false;
+  }
+
+  /// Returns true if the target requires using the RegScavenger directly for
+  /// frame elimination despite using requiresFrameIndexScavenging.
+  virtual bool requiresFrameIndexReplacementScavenging(
+      const MachineFunction &MF) const {
     return false;
   }
 

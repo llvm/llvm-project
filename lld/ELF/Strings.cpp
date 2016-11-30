@@ -16,6 +16,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Demangle/Demangle.h"
 #include <algorithm>
+#include <cstring>
 
 using namespace llvm;
 using namespace lld;
@@ -224,10 +225,4 @@ std::string elf::demangle(StringRef Name) {
   std::string S(Buf);
   free(Buf);
   return S;
-}
-
-std::string elf::maybeDemangle(StringRef Name) {
-  if (Config->Demangle)
-    return demangle(Name);
-  return Name;
 }

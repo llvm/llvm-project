@@ -327,6 +327,7 @@ def immZExt16  : PatLeaf<(imm), [{
   return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
 }], LO16>;
 def immSExt8 : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
+def immSExt5NonZero : ImmLeaf<i32, [{ return Imm && isInt<5>(Imm); }]>;
 
 // imm16Shifted* - These match immediates where the low 16-bits are zero.  There
 // are two forms: imm16ShiftedSExt and imm16ShiftedZExt.  These two forms are

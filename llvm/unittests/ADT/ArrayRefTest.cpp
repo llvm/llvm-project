@@ -102,6 +102,28 @@ TEST(ArrayRefTest, DropFront) {
   EXPECT_EQ(1U, AR3.drop_front(AR3.size() - 1).size());
 }
 
+TEST(ArrayRefTest, DropWhile) {
+  static const int TheNumbers[] = {1, 3, 5, 8, 10, 11};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> Expected = AR1.drop_front(3);
+  EXPECT_EQ(Expected, AR1.drop_while([](const int &N) { return N % 2 == 1; }));
+
+  EXPECT_EQ(AR1, AR1.drop_while([](const int &N) { return N < 0; }));
+  EXPECT_EQ(ArrayRef<int>(),
+            AR1.drop_while([](const int &N) { return N > 0; }));
+}
+
+TEST(ArrayRefTest, DropUntil) {
+  static const int TheNumbers[] = {1, 3, 5, 8, 10, 11};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> Expected = AR1.drop_front(3);
+  EXPECT_EQ(Expected, AR1.drop_until([](const int &N) { return N % 2 == 0; }));
+
+  EXPECT_EQ(ArrayRef<int>(),
+            AR1.drop_until([](const int &N) { return N < 0; }));
+  EXPECT_EQ(AR1, AR1.drop_until([](const int &N) { return N > 0; }));
+}
+
 TEST(ArrayRefTest, TakeBack) {
   static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
   ArrayRef<int> AR1(TheNumbers);
@@ -114,6 +136,28 @@ TEST(ArrayRefTest, TakeFront) {
   ArrayRef<int> AR1(TheNumbers);
   ArrayRef<int> AR2(AR1.data(), 2);
   EXPECT_TRUE(AR1.take_front(2).equals(AR2));
+}
+
+TEST(ArrayRefTest, TakeWhile) {
+  static const int TheNumbers[] = {1, 3, 5, 8, 10, 11};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> Expected = AR1.take_front(3);
+  EXPECT_EQ(Expected, AR1.take_while([](const int &N) { return N % 2 == 1; }));
+
+  EXPECT_EQ(ArrayRef<int>(),
+            AR1.take_while([](const int &N) { return N < 0; }));
+  EXPECT_EQ(AR1, AR1.take_while([](const int &N) { return N > 0; }));
+}
+
+TEST(ArrayRefTest, TakeUntil) {
+  static const int TheNumbers[] = {1, 3, 5, 8, 10, 11};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> Expected = AR1.take_front(3);
+  EXPECT_EQ(Expected, AR1.take_until([](const int &N) { return N % 2 == 0; }));
+
+  EXPECT_EQ(AR1, AR1.take_until([](const int &N) { return N < 0; }));
+  EXPECT_EQ(ArrayRef<int>(),
+            AR1.take_until([](const int &N) { return N > 0; }));
 }
 
 TEST(ArrayRefTest, Equals) {

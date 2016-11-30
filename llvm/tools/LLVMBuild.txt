@@ -24,6 +24,7 @@ subdirectories =
  llvm-ar
  llvm-as
  llvm-bcanalyzer
+ llvm-cat
  llvm-cov
  llvm-diff
  llvm-dis
@@ -35,6 +36,7 @@ subdirectories =
  llvm-lto
  llvm-mc
  llvm-mcmarkup
+ llvm-modextract
  llvm-nm
  llvm-objdump
  llvm-pdbdump

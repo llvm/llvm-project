@@ -10,15 +10,9 @@ entry:
 ; The FIXME below is due to the lowering for BUILD_VECTOR needing a re-vamp
 ; which will happen in a subsequent patch.
 ; CHECK-LABEL: test1
-; FIXME: mtvsrdd 34, 4, 3
-; CHECK: mtvsrd {{[0-9]+}}, 3
-; CHECK: mtvsrd {{[0-9]+}}, 4
-; CHECK: xxmrgld
+; CHECK: mtvsrdd 34, 4, 3
 ; CHECK-BE-LABEL: test1
-; FIXME-BE: mtvsrdd 34, 3, 4
-; CHECK-BE: mtvsrd {{[0-9]+}}, 4
-; CHECK-BE: mtvsrd {{[0-9]+}}, 3
-; CHECK-BE: xxmrghd
+; CHECK-BE: mtvsrdd 34, 3, 4
   %vecins = insertelement <2 x i64> undef, i64 %a, i32 0
   %vecins1 = insertelement <2 x i64> %vecins, i64 %b, i32 1
   ret <2 x i64> %vecins1
@@ -162,10 +156,14 @@ define <4 x i32> @test14(<4 x i32> %a, i32* nocapture readonly %b) {
 entry:
 ; CHECK-LABEL: test14
 ; CHECK: lwz [[LD:[0-9]+]],
-; CHECK: mtvsrws 34, [[LD]]
+; FIXME: mtvsrws 34, [[LD]]
+; CHECK: mtvsrws [[SPLT:[0-9]+]], [[LD]]
+; CHECK: xxspltw 34, [[SPLT]], 3
 ; CHECK-BE-LABEL: test14
 ; CHECK-BE: lwz [[LD:[0-9]+]],
-; CHECK-BE: mtvsrws 34, [[LD]]
+; FIXME: mtvsrws 34, [[LD]]
+; CHECK-BE: mtvsrws [[SPLT:[0-9]+]], [[LD]]
+; CHECK-BE: xxspltw 34, [[SPLT]], 0
   %0 = load i32, i32* %b, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer

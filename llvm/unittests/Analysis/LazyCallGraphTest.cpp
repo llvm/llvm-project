@@ -594,13 +594,21 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
   LazyCallGraph::RefSCC &CRC = *CG.lookupRefSCC(C);
   LazyCallGraph::RefSCC &DRC = *CG.lookupRefSCC(D);
   EXPECT_TRUE(ARC.isParentOf(BRC));
+  EXPECT_TRUE(AC.isParentOf(BC));
   EXPECT_TRUE(ARC.isParentOf(CRC));
+  EXPECT_TRUE(AC.isParentOf(CC));
   EXPECT_FALSE(ARC.isParentOf(DRC));
+  EXPECT_FALSE(AC.isParentOf(DC));
   EXPECT_TRUE(ARC.isAncestorOf(DRC));
+  EXPECT_TRUE(AC.isAncestorOf(DC));
   EXPECT_FALSE(DRC.isChildOf(ARC));
+  EXPECT_FALSE(DC.isChildOf(AC));
   EXPECT_TRUE(DRC.isDescendantOf(ARC));
+  EXPECT_TRUE(DC.isDescendantOf(AC));
   EXPECT_TRUE(DRC.isChildOf(BRC));
+  EXPECT_TRUE(DC.isChildOf(BC));
   EXPECT_TRUE(DRC.isChildOf(CRC));
+  EXPECT_TRUE(DC.isChildOf(CC));
 
   EXPECT_EQ(2, std::distance(A.begin(), A.end()));
   ARC.insertOutgoingEdge(A, D, LazyCallGraph::Edge::Call);
@@ -613,9 +621,13 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
   // Only the parent and child tests sholud have changed. The rest of the graph
   // remains the same.
   EXPECT_TRUE(ARC.isParentOf(DRC));
+  EXPECT_TRUE(AC.isParentOf(DC));
   EXPECT_TRUE(ARC.isAncestorOf(DRC));
+  EXPECT_TRUE(AC.isAncestorOf(DC));
   EXPECT_TRUE(DRC.isChildOf(ARC));
+  EXPECT_TRUE(DC.isChildOf(AC));
   EXPECT_TRUE(DRC.isDescendantOf(ARC));
+  EXPECT_TRUE(DC.isDescendantOf(AC));
   EXPECT_EQ(&AC, CG.lookupSCC(A));
   EXPECT_EQ(&BC, CG.lookupSCC(B));
   EXPECT_EQ(&CC, CG.lookupSCC(C));
@@ -628,11 +640,15 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
   ARC.switchOutgoingEdgeToRef(A, D);
   EXPECT_FALSE(NewE.isCall());
 
-  // Verify the graph remains the same.
+  // Verify the reference graph remains the same but the SCC graph is updated.
   EXPECT_TRUE(ARC.isParentOf(DRC));
+  EXPECT_FALSE(AC.isParentOf(DC));
   EXPECT_TRUE(ARC.isAncestorOf(DRC));
+  EXPECT_TRUE(AC.isAncestorOf(DC));
   EXPECT_TRUE(DRC.isChildOf(ARC));
+  EXPECT_FALSE(DC.isChildOf(AC));
   EXPECT_TRUE(DRC.isDescendantOf(ARC));
+  EXPECT_TRUE(DC.isDescendantOf(AC));
   EXPECT_EQ(&AC, CG.lookupSCC(A));
   EXPECT_EQ(&BC, CG.lookupSCC(B));
   EXPECT_EQ(&CC, CG.lookupSCC(C));
@@ -645,11 +661,15 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
   ARC.switchOutgoingEdgeToCall(A, D);
   EXPECT_TRUE(NewE.isCall());
 
-  // Verify the graph remains the same.
+  // Verify the reference graph remains the same but the SCC graph is updated.
   EXPECT_TRUE(ARC.isParentOf(DRC));
+  EXPECT_TRUE(AC.isParentOf(DC));
   EXPECT_TRUE(ARC.isAncestorOf(DRC));
+  EXPECT_TRUE(AC.isAncestorOf(DC));
   EXPECT_TRUE(DRC.isChildOf(ARC));
+  EXPECT_TRUE(DC.isChildOf(AC));
   EXPECT_TRUE(DRC.isDescendantOf(ARC));
+  EXPECT_TRUE(DC.isDescendantOf(AC));
   EXPECT_EQ(&AC, CG.lookupSCC(A));
   EXPECT_EQ(&BC, CG.lookupSCC(B));
   EXPECT_EQ(&CC, CG.lookupSCC(C));
@@ -664,9 +684,13 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
 
   // Now the parent and child tests fail again but the rest remains the same.
   EXPECT_FALSE(ARC.isParentOf(DRC));
+  EXPECT_FALSE(AC.isParentOf(DC));
   EXPECT_TRUE(ARC.isAncestorOf(DRC));
+  EXPECT_TRUE(AC.isAncestorOf(DC));
   EXPECT_FALSE(DRC.isChildOf(ARC));
+  EXPECT_FALSE(DC.isChildOf(AC));
   EXPECT_TRUE(DRC.isDescendantOf(ARC));
+  EXPECT_TRUE(DC.isDescendantOf(AC));
   EXPECT_EQ(&AC, CG.lookupSCC(A));
   EXPECT_EQ(&BC, CG.lookupSCC(B));
   EXPECT_EQ(&CC, CG.lookupSCC(C));

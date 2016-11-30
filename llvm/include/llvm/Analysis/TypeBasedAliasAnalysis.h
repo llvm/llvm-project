@@ -30,7 +30,10 @@ public:
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal);
@@ -47,7 +50,7 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
   friend AnalysisInfoMixin<TypeBasedAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef TypeBasedAAResult Result;

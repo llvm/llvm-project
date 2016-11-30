@@ -18,6 +18,7 @@
 #include <valarray>
 #include <cassert>
 #include <sstream>
+#include <cstddef>
 
 bool is_about(double x, double y, int p)
 {
@@ -45,7 +46,7 @@ int main()
         std::valarray<T> v1(a1, N);
         std::valarray<T> v3 = log10(v1);
         assert(v3.size() == v1.size());
-        for (int i = 0; i < v3.size(); ++i)
+        for (std::size_t i = 0; i < v3.size(); ++i)
             assert(is_about(v3[i], a3[i], 10));
     }
 }

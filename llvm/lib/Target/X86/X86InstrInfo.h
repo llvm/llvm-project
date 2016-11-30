@@ -378,6 +378,10 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
+  /// Check whether the target can fold a load that feeds a subreg operand
+  /// (or a subreg operand that feeds a store).
+  bool isSubregFoldable() const override { return true; }
+
   /// foldMemoryOperand - If this target supports it, fold a load or store of
   /// the specified stack slot into the specified machine instruction for the
   /// specified operand(s).  If this is possible, the target should perform the
@@ -439,8 +443,8 @@ public:
                                int64_t Offset1, int64_t Offset2,
                                unsigned NumLoads) const override;
 
-  bool shouldScheduleAdjacent(MachineInstr &First,
-                              MachineInstr &Second) const override;
+  bool shouldScheduleAdjacent(const MachineInstr &First,
+                              const MachineInstr &Second) const override;
 
   void getNoopForMachoTarget(MCInst &NopInst) const override;
 

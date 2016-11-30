@@ -144,8 +144,9 @@ include "AArch64SystemOperands.td"
 include "AArch64SchedA53.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
-include "AArch64SchedM1.td"
+include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
+include "AArch64SchedM1.td"
 include "AArch64SchedVulcan.td"
 
 def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
@@ -292,7 +293,7 @@ def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
-def : ProcessorModel<"falkor", NoSchedModel, [ProcFalkor]>;
+def : ProcessorModel<"falkor", FalkorModel, [ProcFalkor]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;
 def : ProcessorModel<"vulcan", VulcanModel, [ProcVulcan]>;
 

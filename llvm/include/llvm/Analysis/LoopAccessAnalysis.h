@@ -749,7 +749,7 @@ private:
 class LoopAccessAnalysis
     : public AnalysisInfoMixin<LoopAccessAnalysis> {
   friend AnalysisInfoMixin<LoopAccessAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef LoopAccessInfo Result;

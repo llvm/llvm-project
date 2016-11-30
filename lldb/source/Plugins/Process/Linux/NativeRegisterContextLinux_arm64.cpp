@@ -25,7 +25,7 @@
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 // System includes - They have to be included after framework includes because
 // they define some
@@ -138,7 +138,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
     uint32_t concrete_frame_idx)
     : NativeRegisterContextLinux(native_thread, concrete_frame_idx,
-                                 new RegisterContextLinux_arm64(target_arch)) {
+                                 new RegisterInfoPOSIX_arm64(target_arch)) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::aarch64:
     m_reg_info.num_registers = k_num_registers_arm64;

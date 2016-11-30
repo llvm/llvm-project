@@ -189,6 +189,12 @@ public:
     }
   };
 
+  /// Helper data structure to collect statistics about loop counts.
+  struct LoopStats {
+    int NumLoops;
+    int MaxDepth;
+  };
+
 private:
   //===--------------------------------------------------------------------===//
   ScopDetection(const ScopDetection &) = delete;
@@ -211,9 +217,7 @@ private:
   void removeCachedResults(const Region &R);
 
   /// Remove cached results for the children of @p R recursively.
-  ///
-  /// @returns The number of regions erased regions.
-  unsigned removeCachedResultsRecursively(const Region &R);
+  void removeCachedResultsRecursively(const Region &R);
 
   /// Add the region @p AR as over approximated sub-region in @p Context.
   ///
@@ -464,10 +468,28 @@ private:
   /// @return True if the loop is valid in the region.
   bool isValidLoop(Loop *L, DetectionContext &Context) const;
 
-  /// Count the number of beneficial loops in @p R.
+  /// Count the number of loops and the maximal loop depth in @p L.
+  ///
+  /// @param L The loop to check.
+  /// @param SE The scalar evolution analysis.
+  /// @param MinProfitableTrips The minimum number of trip counts from which
+  ///                           a loop is assumed to be profitable and
+  ///                           consequently is counted.
+  /// returns A tuple of number of loops and their maximal depth.
+  ScopDetection::LoopStats
+  countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
+                          unsigned MinProfitableTrips) const;
+
+  /// Count the number of loops and the maximal loop depth in @p R.
   ///
   /// @param R The region to check
-  int countBeneficialLoops(Region *R) const;
+  /// @param SE The scalar evolution analysis.
+  /// @param MinProfitableTrips The minimum number of trip counts from which
+  ///                           a loop is assumed to be profitable and
+  ///                           consequently is counted.
+  /// returns A tuple of number of loops and their maximal depth.
+  ScopDetection::LoopStats
+  countBeneficialLoops(Region *R, unsigned MinProfitableTrips) const;
 
   /// Check if the function @p F is marked as invalid.
   ///

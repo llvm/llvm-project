@@ -1114,11 +1114,10 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
                          Alignment, MLD->getAAInfo(), MLD->getRanges());
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, MaskLo, Src0Lo, LoMemVT, MMO,
-                         ExtType);
+                         ExtType, MLD->isExpandingLoad());
 
-  unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
-  Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                    DAG.getConstant(IncrementSize, dl, Ptr.getValueType()));
+  Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, dl, LoMemVT, DAG,
+                                   MLD->isExpandingLoad());
 
   MMO = DAG.getMachineFunction().
     getMachineMemOperand(MLD->getPointerInfo(),
@@ -1126,7 +1125,7 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
                          SecondHalfAlignment, MLD->getAAInfo(), MLD->getRanges());
 
   Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, MaskHi, Src0Hi, HiMemVT, MMO,
-                         ExtType);
+                         ExtType, MLD->isExpandingLoad());
 
 
   // Build a factor node to remember that this load is independent of the
@@ -1769,19 +1768,18 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
                          Alignment, N->getAAInfo(), N->getRanges());
 
   Lo = DAG.getMaskedStore(Ch, DL, DataLo, Ptr, MaskLo, LoMemVT, MMO,
-                          N->isTruncatingStore());
+                          N->isTruncatingStore(),
+                          N->isCompressingStore());
 
-  unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
-  Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                    DAG.getConstant(IncrementSize, DL, Ptr.getValueType()));
-
+  Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, DL, LoMemVT, DAG,
+                                   N->isCompressingStore());
   MMO = DAG.getMachineFunction().
     getMachineMemOperand(N->getPointerInfo(),
                          MachineMemOperand::MOStore,  HiMemVT.getStoreSize(),
                          SecondHalfAlignment, N->getAAInfo(), N->getRanges());
 
   Hi = DAG.getMaskedStore(Ch, DL, DataHi, Ptr, MaskHi, HiMemVT, MMO,
-                          N->isTruncatingStore());
+                          N->isTruncatingStore(), N->isCompressingStore());
 
   // Build a factor node to remember that this store is independent of the
   // other one.
@@ -2881,7 +2879,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
 
   SDValue Res = DAG.getMaskedLoad(WidenVT, dl, N->getChain(), N->getBasePtr(),
                                   Mask, Src0, N->getMemoryVT(),
-                                  N->getMemOperand(), ExtType);
+                                  N->getMemOperand(), ExtType,
+	                                N->isExpandingLoad());
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -3317,7 +3316,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
          "Mask and data vectors should have the same number of elements");
   return DAG.getMaskedStore(MST->getChain(), dl, WideVal, MST->getBasePtr(),
                             Mask, MST->getMemoryVT(), MST->getMemOperand(),
-                            false);
+                            false, MST->isCompressingStore());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_MSCATTER(SDNode *N, unsigned OpNo) {

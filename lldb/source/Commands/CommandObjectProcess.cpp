@@ -1558,9 +1558,8 @@ protected:
     int num_signals_set = 0;
 
     if (num_args > 0) {
-      for (size_t i = 0; i < num_args; ++i) {
-        int32_t signo = signals_sp->GetSignalNumberFromName(
-            signal_args.GetArgumentAtIndex(i));
+      for (const auto &arg : signal_args) {
+        int32_t signo = signals_sp->GetSignalNumberFromName(arg.c_str());
         if (signo != LLDB_INVALID_SIGNAL_NUMBER) {
           // Casting the actions as bools here should be okay, because
           // VerifyCommandOptionValue guarantees
@@ -1576,7 +1575,7 @@ protected:
           ++num_signals_set;
         } else {
           result.AppendErrorWithFormat("Invalid signal name '%s'\n",
-                                       signal_args.GetArgumentAtIndex(i));
+                                       arg.c_str());
         }
       }
     } else {

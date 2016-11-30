@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
-
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolAnnotation.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolBlock.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
@@ -42,12 +42,9 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolUnknown.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolUsingNamespace.h"
-#include "llvm/DebugInfo/PDB/PDBSymDumper.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include <algorithm>
 #include <memory>
-#include <utility>
-
-#include <memory>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -56,7 +53,7 @@ PDBSymbol::PDBSymbol(const IPDBSession &PDBSession,
                      std::unique_ptr<IPDBRawSymbol> Symbol)
     : Session(PDBSession), RawSymbol(std::move(Symbol)) {}
 
-PDBSymbol::~PDBSymbol() {}
+PDBSymbol::~PDBSymbol() = default;
 
 #define FACTORY_SYMTAG_CASE(Tag, Type)                                         \
   case PDB_SymType::Tag:                                                       \

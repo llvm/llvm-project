@@ -45,8 +45,8 @@ define i64 @t3(i64 %x, i32 %y) {
 
 define i32 @t4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t4(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 %y, 5
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i32 5, i32 %y
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 %y, 5
+; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i32 %y, i32 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 %x, [[DOTV]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;

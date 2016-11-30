@@ -188,7 +188,7 @@ public:
 /// Analysis pass that exposes the \c IVUsers for a loop.
 class IVUsersAnalysis : public AnalysisInfoMixin<IVUsersAnalysis> {
   friend AnalysisInfoMixin<IVUsersAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef IVUsers Result;

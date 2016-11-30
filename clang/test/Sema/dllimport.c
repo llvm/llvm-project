@@ -210,6 +210,10 @@ __declspec(dllimport) void redecl6();
                       void redecl7();
 __declspec(dllimport) inline void redecl7() {}
 
+// PR31069: Don't crash trying to merge attributes for redeclaration of invalid decl.
+void __declspec(dllimport) redecl8(unknowntype X); // expected-error{{unknown type name 'unknowntype'}}
+void redecl8(unknowntype X) { } // expected-error{{unknown type name 'unknowntype'}}
+
 // External linkage is required.
 __declspec(dllimport) static int staticFunc(); // expected-error{{'staticFunc' must have external linkage when declared 'dllimport'}}
 

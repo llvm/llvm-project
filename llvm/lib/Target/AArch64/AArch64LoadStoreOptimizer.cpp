@@ -863,8 +863,10 @@ static void trackRegDefsUses(const MachineInstr &MI, BitVector &ModifiedRegs,
     if (!Reg)
       continue;
     if (MO.isDef()) {
-      for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-        ModifiedRegs.set(*AI);
+      // WZR/XZR are not modified even when used as a destination register.
+      if (Reg != AArch64::WZR && Reg != AArch64::XZR)
+        for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+          ModifiedRegs.set(*AI);
     } else {
       assert(MO.isUse() && "Reg operand not a def and not a use?!?");
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)

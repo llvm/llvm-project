@@ -571,6 +571,10 @@ protected:
         {return __size_alloc_.second();}
 
     _LIBCPP_INLINE_VISIBILITY
+    size_type __node_alloc_max_size() const _NOEXCEPT {
+        return __node_alloc_traits::max_size(__node_alloc());
+    }
+    _LIBCPP_INLINE_VISIBILITY
     static void __unlink_nodes(__link_pointer __f, __link_pointer __l) _NOEXCEPT;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -904,7 +908,11 @@ public:
     bool empty() const _NOEXCEPT         {return base::empty();}
     _LIBCPP_INLINE_VISIBILITY
     size_type max_size() const _NOEXCEPT
-        {return numeric_limits<difference_type>::max();}
+        {
+            return std::min<size_type>(
+                base::__node_alloc_max_size(),
+                numeric_limits<difference_type >::max());
+        }
 
     _LIBCPP_INLINE_VISIBILITY
           iterator begin() _NOEXCEPT        {return base::begin();}

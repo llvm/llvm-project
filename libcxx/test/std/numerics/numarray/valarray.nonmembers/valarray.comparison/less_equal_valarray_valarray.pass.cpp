@@ -17,6 +17,7 @@
 
 #include <valarray>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -31,7 +32,7 @@ int main()
         std::valarray<bool> v3 = v1 <= v2;
         assert(v1.size() == v2.size());
         assert(v1.size() == v3.size());
-        for (int i = 0; i < v1.size(); ++i)
+        for (std::size_t i = 0; i < v1.size(); ++i)
             assert(v3[i] == a3[i]);
     }
 }

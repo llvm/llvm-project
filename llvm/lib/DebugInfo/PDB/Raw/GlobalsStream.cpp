@@ -7,15 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/GlobalsStream.h"
-
 #include "GSI.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
-
-#include "llvm/Support/Endian.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/PDB/Raw/GlobalsStream.h"
 #include "llvm/Support/Error.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::msf;
@@ -24,7 +20,7 @@ using namespace llvm::pdb;
 GlobalsStream::GlobalsStream(std::unique_ptr<MappedBlockStream> Stream)
     : Stream(std::move(Stream)) {}
 
-GlobalsStream::~GlobalsStream() {}
+GlobalsStream::~GlobalsStream() = default;
 
 Error GlobalsStream::reload() {
   StreamReader Reader(*Stream);

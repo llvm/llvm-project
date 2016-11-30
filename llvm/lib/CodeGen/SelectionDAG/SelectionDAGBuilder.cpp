@@ -4061,8 +4061,12 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 /// node.
 void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
                                                unsigned Intrinsic) {
-  bool HasChain = !I.doesNotAccessMemory();
-  bool OnlyLoad = HasChain && I.onlyReadsMemory();
+  // Ignore the callsite's attributes. A specific call site may be marked with
+  // readnone, but the lowering code will expect the chain based on the
+  // definition.
+  const Function *F = I.getCalledFunction();
+  bool HasChain = !F->doesNotAccessMemory();
+  bool OnlyLoad = HasChain && F->onlyReadsMemory();
 
   // Build the operand list.
   SmallVector<SDValue, 8> Ops;

@@ -47,8 +47,6 @@ else()
 endif()
 if(MSVC)
   list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -gcodeview)
-  # Incremental linking appears to break our global registration mechanism.
-  list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS -Wl,-incremental:no)
 endif()
 list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS -g)
 

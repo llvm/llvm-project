@@ -69,6 +69,9 @@ void AArch64Subtarget::initializeProperties() {
     PrefFunctionAlignment = 4;
     PrefLoopAlignment = 3;
     break;
+  case Falkor:
+    MaxInterleaveFactor = 4;
+    break;
   case Kryo:
     MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
@@ -84,7 +87,6 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA53: break;
   case CortexA72: break;
   case CortexA73: break;
-  case Falkor: break;
   case Others: break;
   }
 }

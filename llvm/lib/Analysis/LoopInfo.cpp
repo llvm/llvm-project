@@ -669,7 +669,7 @@ void LoopInfo::markAsRemoved(Loop *Unloop) {
   }
 }
 
-char LoopAnalysis::PassID;
+AnalysisKey LoopAnalysis::Key;
 
 LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: Currently we create a LoopInfo from scratch for every function.

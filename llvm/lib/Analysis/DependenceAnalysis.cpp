@@ -122,7 +122,7 @@ DependenceAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
   return DependenceInfo(&F, &AA, &SE, &LI);
 }
 
-char DependenceAnalysis::PassID;
+AnalysisKey DependenceAnalysis::Key;
 
 INITIALIZE_PASS_BEGIN(DependenceAnalysisWrapperPass, "da",
                       "Dependence Analysis", true, true)

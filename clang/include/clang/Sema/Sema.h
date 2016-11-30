@@ -788,9 +788,6 @@ public:
   /// \brief will hold 'respondsToSelector:'
   Selector RespondsToSelectorSel;
 
-  /// \brief counter for internal MS Asm label names.
-  unsigned MSAsmLabelNameCounter;
-
   /// A flag to remember whether the implicit forms of operator new and delete
   /// have been declared.
   bool GlobalNewDeleteDeclared;
@@ -4407,6 +4404,12 @@ public:
                         unsigned ConstructKind, SourceRange ParenRange);
 
   ExprResult BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
+
+
+  /// Instantiate or parse a C++ default argument expression as necessary.
+  /// Return true on error.
+  bool CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
+                              ParmVarDecl *Param);
 
   /// BuildCXXDefaultArgExpr - Creates a CXXDefaultArgExpr, instantiating
   /// the default expr if needed.

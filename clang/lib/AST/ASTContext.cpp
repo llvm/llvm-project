@@ -4330,7 +4330,7 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
     DependentDecltypeType *Canon
       = DependentDecltypeTypes.FindNodeOrInsertPos(ID, InsertPos);
     if (!Canon) {
-      // Build a new, canonical typeof(expr) type.
+      // Build a new, canonical decltype(expr) type.
       Canon = new (*this, TypeAlignment) DependentDecltypeType(*this, e);
       DependentDecltypeTypes.InsertNode(Canon, InsertPos);
     }
@@ -5578,8 +5578,9 @@ std::string ASTContext::getObjCEncodingForBlock(const BlockExpr *Expr) const {
   return S;
 }
 
-bool ASTContext::getObjCEncodingForFunctionDecl(const FunctionDecl *Decl,
-                                                std::string& S) {
+std::string
+ASTContext::getObjCEncodingForFunctionDecl(const FunctionDecl *Decl) const {
+  std::string S;
   // Encode result type.
   getObjCEncodingForType(Decl->getReturnType(), S);
   CharUnits ParmOffset;
@@ -5590,8 +5591,8 @@ bool ASTContext::getObjCEncodingForFunctionDecl(const FunctionDecl *Decl,
     if (sz.isZero())
       continue;
  
-    assert (sz.isPositive() && 
-        "getObjCEncodingForFunctionDecl - Incomplete param type");
+    assert(sz.isPositive() && 
+           "getObjCEncodingForFunctionDecl - Incomplete param type");
     ParmOffset += sz;
   }
   S += charUnitsToString(ParmOffset);
@@ -5613,7 +5614,7 @@ bool ASTContext::getObjCEncodingForFunctionDecl(const FunctionDecl *Decl,
     ParmOffset += getObjCEncodingTypeSize(PType);
   }
   
-  return false;
+  return S;
 }
 
 /// getObjCEncodingForMethodParameter - Return the encoded type for a single
@@ -5635,11 +5636,11 @@ void ASTContext::getObjCEncodingForMethodParameter(Decl::ObjCDeclQualifier QT,
 
 /// getObjCEncodingForMethodDecl - Return the encoded type for this method
 /// declaration.
-bool ASTContext::getObjCEncodingForMethodDecl(const ObjCMethodDecl *Decl,
-                                              std::string& S, 
-                                              bool Extended) const {
+std::string ASTContext::getObjCEncodingForMethodDecl(const ObjCMethodDecl *Decl,
+                                                     bool Extended) const {
   // FIXME: This is not very efficient.
   // Encode return type.
+  std::string S;
   getObjCEncodingForMethodParameter(Decl->getObjCDeclQualifier(),
                                     Decl->getReturnType(), S, Extended);
   // Compute size of all parameters.
@@ -5685,7 +5686,7 @@ bool ASTContext::getObjCEncodingForMethodDecl(const ObjCMethodDecl *Decl,
     ParmOffset += getObjCEncodingTypeSize(PType);
   }
   
-  return false;
+  return S;
 }
 
 ObjCPropertyImplDecl *
@@ -5733,9 +5734,9 @@ ASTContext::getObjCPropertyImplDeclForPropertyDecl(
 /// kPropertyNonAtomic = 'N'         // property non-atomic
 /// };
 /// @endcode
-void ASTContext::getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
-                                                const Decl *Container,
-                                                std::string& S) const {
+std::string
+ASTContext::getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
+                                           const Decl *Container) const {
   // Collect information from the property implementation decl(s).
   bool Dynamic = false;
   ObjCPropertyImplDecl *SynthesizePID = nullptr;
@@ -5749,7 +5750,7 @@ void ASTContext::getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
   }
 
   // FIXME: This is not very efficient.
-  S = "T";
+  std::string S = "T";
 
   // Encode result type.
   // GCC has some special rules regarding encoding of properties which
@@ -5798,6 +5799,7 @@ void ASTContext::getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
   }
 
   // FIXME: OBJCGC: weak & strong
+  return S;
 }
 
 /// getLegacyIntegralTypeEncoding -
@@ -8554,6 +8556,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'z'!");
     Type = Context.getSizeType();
     break;
+  case 'w':  // wchar_t.
+    assert(HowLong == 0 && !Signed && !Unsigned && "Bad modifiers for 'w'!");
+    Type = Context.getWideCharType();
+    break;
   case 'F':
     Type = Context.getCFConstantStringType();
     break;
@@ -9170,18 +9176,6 @@ void ASTContext::addCopyConstructorForExceptionObject(CXXRecordDecl *RD,
   return ABI->addCopyConstructorForExceptionObject(
       cast<CXXRecordDecl>(RD->getFirstDecl()),
       cast<CXXConstructorDecl>(CD->getFirstDecl()));
-}
-
-void ASTContext::addDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                                 unsigned ParmIdx, Expr *DAE) {
-  ABI->addDefaultArgExprForConstructor(
-      cast<CXXConstructorDecl>(CD->getFirstDecl()), ParmIdx, DAE);
-}
-
-Expr *ASTContext::getDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                                  unsigned ParmIdx) {
-  return ABI->getDefaultArgExprForConstructor(
-      cast<CXXConstructorDecl>(CD->getFirstDecl()), ParmIdx);
 }
 
 void ASTContext::addTypedefNameForUnnamedTagDecl(TagDecl *TD,

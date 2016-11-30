@@ -1,4 +1,4 @@
-//===-- ThreadPlan.cpp ------------------------------------------*- C++ -*-===//
+//===-- ThreadPlanTracer.cpp ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

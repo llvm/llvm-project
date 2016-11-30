@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -27,7 +28,7 @@ int main()
     vecis.back().str("hub started at [00 6b 8b 45 69]");
     vecis.push_back(std::istringstream());
     vecis.back().str("hub started at [00 6b 8b 45 69]");
-    for (int n = 0; n < vecis.size(); n++)
+    for (std::size_t n = 0; n < vecis.size(); n++)
     {
         assert(vecis[n].str().size() == 31);
         vecis[n].seekg(0, std::ios_base::beg);

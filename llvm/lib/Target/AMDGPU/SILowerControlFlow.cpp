@@ -80,6 +80,11 @@ private:
   void emitLoop(MachineInstr &MI);
   void emitEndCf(MachineInstr &MI);
 
+  void findMaskOperands(MachineInstr &MI, unsigned OpNo,
+                        SmallVectorImpl<MachineOperand> &Src) const;
+
+  void combineMasks(MachineInstr &MI);
+
 public:
   static char ID;
 
@@ -141,8 +146,9 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.
+  unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
   MachineInstr *CopyExec =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), SaveExecReg)
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addReg(AMDGPU::EXEC)
     .addReg(AMDGPU::EXEC, RegState::ImplicitDefine);
 
@@ -150,7 +156,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   MachineInstr *And =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_AND_B64), Tmp)
-    .addReg(SaveExecReg)
+    .addReg(CopyReg)
     //.addReg(AMDGPU::EXEC)
     .addReg(Cond.getReg());
   setImpSCCDefDead(*And, true);
@@ -158,7 +164,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineInstr *Xor =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
     .addReg(Tmp)
-    .addReg(SaveExecReg);
+    .addReg(CopyReg);
   setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
 
   // Use a copy that is a terminator to get correct spill code placement it with
@@ -197,6 +203,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   LIS->removeInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(SaveExecReg);
   LIS->createAndComputeVirtRegInterval(Tmp);
+  LIS->createAndComputeVirtRegInterval(CopyReg);
 }
 
 void SILowerControlFlow::emitElse(MachineInstr &MI) {
@@ -212,14 +219,17 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // We are running before TwoAddressInstructions, and si_else's operands are
   // tied. In order to correctly tie the registers, split this into a copy of
   // the src like it does.
-  BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), DstReg)
+  unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addOperand(MI.getOperand(1)); // Saved EXEC
 
   // This must be inserted before phis and any spill code inserted before the
   // else.
+  unsigned SaveReg = ExecModified ?
+    MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass) : DstReg;
   MachineInstr *OrSaveExec =
-    BuildMI(MBB, Start, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), DstReg)
-    .addReg(DstReg);
+    BuildMI(MBB, Start, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), SaveReg)
+    .addReg(CopyReg);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -229,7 +239,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
     MachineInstr *And =
       BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_AND_B64), DstReg)
       .addReg(AMDGPU::EXEC)
-      .addReg(DstReg);
+      .addReg(SaveReg);
 
     if (LIS)
       LIS->InsertMachineInstrInMaps(*And);
@@ -260,6 +270,9 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // src reg is tied to dst reg.
   LIS->removeInterval(DstReg);
   LIS->createAndComputeVirtRegInterval(DstReg);
+  LIS->createAndComputeVirtRegInterval(CopyReg);
+  if (ExecModified)
+    LIS->createAndComputeVirtRegInterval(SaveReg);
 
   // Let this be recomputed.
   LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
@@ -328,6 +341,62 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
     LIS->handleMove(*NewMI);
 }
 
+// Returns replace operands for a logical operation, either single result
+// for exec or two operands if source was another equivalent operation.
+void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
+       SmallVectorImpl<MachineOperand> &Src) const {
+  MachineOperand &Op = MI.getOperand(OpNo);
+  if (!Op.isReg() || !TargetRegisterInfo::isVirtualRegister(Op.getReg())) {
+    Src.push_back(Op);
+    return;
+  }
+
+  MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
+  if (!Def || Def->getParent() != MI.getParent() ||
+      !(Def->isFullCopy() || (Def->getOpcode() == MI.getOpcode())))
+    return;
+
+  // Make sure we do not modify exec between def and use.
+  // A copy with implcitly defined exec inserted earlier is an exclusion, it
+  // does not really modify exec.
+  for (auto I = Def->getIterator(); I != MI.getIterator(); ++I)
+    if (I->modifiesRegister(AMDGPU::EXEC, TRI) &&
+        !(I->isCopy() && I->getOperand(0).getReg() != AMDGPU::EXEC))
+      return;
+
+  for (const auto &SrcOp : Def->explicit_operands())
+    if (SrcOp.isUse() && (!SrcOp.isReg() ||
+        TargetRegisterInfo::isVirtualRegister(SrcOp.getReg()) ||
+        SrcOp.getReg() == AMDGPU::EXEC))
+      Src.push_back(SrcOp);
+}
+
+// Search and combine pairs of equivalent instructions, like
+// S_AND_B64 x, (S_AND_B64 x, y) => S_AND_B64 x, y
+// S_OR_B64  x, (S_OR_B64  x, y) => S_OR_B64  x, y
+// One of the operands is exec mask.
+void SILowerControlFlow::combineMasks(MachineInstr &MI) {
+  assert(MI.getNumExplicitOperands() == 3);
+  SmallVector<MachineOperand, 4> Ops;
+  unsigned OpToReplace = 1;
+  findMaskOperands(MI, 1, Ops);
+  if (Ops.size() == 1) OpToReplace = 2; // First operand can be exec or its copy
+  findMaskOperands(MI, 2, Ops);
+  if (Ops.size() != 3) return;
+
+  unsigned UniqueOpndIdx;
+  if (Ops[0].isIdenticalTo(Ops[1])) UniqueOpndIdx = 2;
+  else if (Ops[0].isIdenticalTo(Ops[2])) UniqueOpndIdx = 1;
+  else if (Ops[1].isIdenticalTo(Ops[2])) UniqueOpndIdx = 1;
+  else return;
+
+  unsigned Reg = MI.getOperand(OpToReplace).getReg();
+  MI.RemoveOperand(OpToReplace);
+  MI.addOperand(Ops[UniqueOpndIdx]);
+  if (MRI->use_empty(Reg))
+    MRI->getUniqueVRegDef(Reg)->eraseFromParent();
+}
+
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   TII = ST.getInstrInfo();
@@ -343,9 +412,9 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     NextBB = std::next(BI);
     MachineBasicBlock &MBB = *BI;
 
-    MachineBasicBlock::iterator I, Next;
+    MachineBasicBlock::iterator I, Next, Last;
 
-    for (I = MBB.begin(); I != MBB.end(); I = Next) {
+    for (I = MBB.begin(), Last = MBB.end(); I != MBB.end(); I = Next) {
       Next = std::next(I);
       MachineInstr &MI = *I;
 
@@ -378,9 +447,20 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         emitEndCf(MI);
         break;
 
+      case AMDGPU::S_AND_B64:
+      case AMDGPU::S_OR_B64:
+        // Cleanup bit manipulations on exec mask
+        combineMasks(MI);
+        Last = I;
+        continue;
+
       default:
-        break;
+        Last = I;
+        continue;
       }
+
+      // Replay newly inserted code to combine masks
+      Next = (Last == MBB.end()) ? MBB.begin() : Last;
     }
   }
 

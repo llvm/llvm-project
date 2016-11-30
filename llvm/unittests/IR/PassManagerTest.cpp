@@ -41,12 +41,12 @@ public:
 
 private:
   friend AnalysisInfoMixin<TestFunctionAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestFunctionAnalysis::PassID;
+AnalysisKey TestFunctionAnalysis::Key;
 
 class TestModuleAnalysis : public AnalysisInfoMixin<TestModuleAnalysis> {
 public:
@@ -67,12 +67,12 @@ public:
 
 private:
   friend AnalysisInfoMixin<TestModuleAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
   int &Runs;
 };
 
-char TestModuleAnalysis::PassID;
+AnalysisKey TestModuleAnalysis::Key;
 
 struct TestModulePass : PassInfoMixin<TestModulePass> {
   TestModulePass(int &RunCount) : RunCount(RunCount) {}
@@ -351,10 +351,10 @@ public:
 
 private:
   friend AnalysisInfoMixin<CustomizedAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 };
 
-char CustomizedAnalysis::PassID;
+AnalysisKey CustomizedAnalysis::Key;
 
 struct CustomizedPass : PassInfoMixin<CustomizedPass> {
   std::function<void(CustomizedAnalysis::Result &, int &)> Callback;
@@ -387,5 +387,108 @@ TEST_F(PassManagerTest, CustomizedPassManagerArgs) {
 
   // And ensure that we accumulated the correct result.
   EXPECT_EQ(42 * (int)M->size(), Result);
+}
+
+/// A test analysis pass which caches in its result another analysis pass and
+/// uses it to serve queries. This requires the result to invalidate itself
+/// when its dependency is invalidated.
+struct TestIndirectFunctionAnalysis
+    : public AnalysisInfoMixin<TestIndirectFunctionAnalysis> {
+  struct Result {
+    Result(TestFunctionAnalysis::Result &Dep) : Dep(Dep) {}
+    TestFunctionAnalysis::Result &Dep;
+
+    bool invalidate(Function &F, const PreservedAnalyses &PA,
+                    FunctionAnalysisManager::Invalidator &Inv) {
+      return !PA.preserved<TestIndirectFunctionAnalysis>() ||
+             Inv.invalidate<TestFunctionAnalysis>(F, PA);
+    }
+  };
+
+  TestIndirectFunctionAnalysis(int &Runs) : Runs(Runs) {}
+
+  /// Run the analysis pass over the function and return a result.
+  Result run(Function &F, FunctionAnalysisManager &AM) {
+    ++Runs;
+    return Result(AM.getResult<TestFunctionAnalysis>(F));
+  }
+
+private:
+  friend AnalysisInfoMixin<TestIndirectFunctionAnalysis>;
+  static AnalysisKey Key;
+
+  int &Runs;
+};
+
+AnalysisKey TestIndirectFunctionAnalysis::Key;
+
+struct LambdaPass : public PassInfoMixin<LambdaPass> {
+  using FuncT = std::function<PreservedAnalyses(Function &, FunctionAnalysisManager &)>;
+
+  LambdaPass(FuncT Func) : Func(std::move(Func)) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
+    return Func(F, AM);
+  }
+
+  FuncT Func;
+};
+
+TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
+  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
+  int AnalysisRuns = 0, IndirectAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(AnalysisRuns); });
+  FAM.registerPass(
+      [&] { return TestIndirectFunctionAnalysis(IndirectAnalysisRuns); });
+
+  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+
+  int InstrCount = 0;
+  ModulePassManager MPM(/*DebugLogging*/ true);
+  FunctionPassManager FPM(/*DebugLogging*/ true);
+  // First just use the analysis to get the instruction count, and preserve
+  // everything.
+  FPM.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
+    InstrCount +=
+        AM.getResult<TestIndirectFunctionAnalysis>(F).Dep.InstructionCount;
+    return PreservedAnalyses::all();
+  }));
+  // Next, invalidate
+  //   - both analyses for "f",
+  //   - just the underlying (indirect) analysis for "g", and
+  //   - just the direct analysis for "h".
+  FPM.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
+    InstrCount +=
+        AM.getResult<TestIndirectFunctionAnalysis>(F).Dep.InstructionCount;
+    auto PA = PreservedAnalyses::none();
+    if (F.getName() == "g")
+      PA.preserve<TestFunctionAnalysis>();
+    else if (F.getName() == "h")
+      PA.preserve<TestIndirectFunctionAnalysis>();
+    return PA;
+  }));
+  // Finally, use the analysis again on each function, forcing re-computation
+  // for all of them.
+  FPM.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
+    InstrCount +=
+        AM.getResult<TestIndirectFunctionAnalysis>(F).Dep.InstructionCount;
+    return PreservedAnalyses::all();
+  }));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  MPM.run(*M, MAM);
+
+  // There are generally two possible runs for each of the three functions. But
+  // for one function, we only invalidate the indirect analysis so the base one
+  // only gets run five times.
+  EXPECT_EQ(5, AnalysisRuns);
+  // The indirect analysis is invalidated for each function (either directly or
+  // indirectly) and run twice for each.
+  EXPECT_EQ(6, IndirectAnalysisRuns);
+
+  // There are five instructions in the module and we add the count three
+  // times.
+  EXPECT_EQ(5 * 3, InstrCount);
 }
 }

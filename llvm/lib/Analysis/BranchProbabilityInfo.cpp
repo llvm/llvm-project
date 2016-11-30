@@ -711,7 +711,7 @@ void BranchProbabilityInfoWrapperPass::print(raw_ostream &OS,
   BPI.print(OS);
 }
 
-char BranchProbabilityAnalysis::PassID;
+AnalysisKey BranchProbabilityAnalysis::Key;
 BranchProbabilityInfo
 BranchProbabilityAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   BranchProbabilityInfo BPI;

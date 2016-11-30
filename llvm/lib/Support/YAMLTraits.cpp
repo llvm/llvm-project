@@ -44,13 +44,10 @@ void IO::setContext(void *Context) {
 //  Input
 //===----------------------------------------------------------------------===//
 
-Input::Input(StringRef InputContent,
-             void *Ctxt,
-             SourceMgr::DiagHandlerTy DiagHandler,
-             void *DiagHandlerCtxt)
-  : IO(Ctxt),
-    Strm(new Stream(InputContent, SrcMgr)),
-    CurrentNode(nullptr) {
+Input::Input(StringRef InputContent, void *Ctxt,
+             SourceMgr::DiagHandlerTy DiagHandler, void *DiagHandlerCtxt)
+    : IO(Ctxt), Strm(new Stream(InputContent, SrcMgr, false, &EC)),
+      CurrentNode(nullptr) {
   if (DiagHandler)
     SrcMgr.setDiagHandler(DiagHandler, DiagHandlerCtxt);
   DocIterator = Strm->begin();

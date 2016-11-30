@@ -1,11 +1,11 @@
-//===--- PPCallbacksTracker.h - Preprocessor tracking -*- C++ -*---------===//
+//===--- PPCallbacksTracker.h - Preprocessor tracking -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 ///
 /// \file
 /// \brief Classes and definitions for preprocessor tracking.
@@ -17,13 +17,19 @@
 /// record the preprocessor callback name and arguments in high-level string
 /// form for later inspection.
 ///
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef PPTRACE_PPCALLBACKSTRACKER_H
 #define PPTRACE_PPCALLBACKSTRACKER_H
 
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringRef.h"
+#include <string>
+#include <vector>
 
 /// \brief This class represents one callback function argument by name
 ///   and value.
@@ -31,7 +37,7 @@ class Argument {
 public:
   Argument(llvm::StringRef Name, llvm::StringRef Value)
       : Name(Name), Value(Value) {}
-  Argument() {}
+  Argument() = default;
 
   std::string Name;
   std::string Value;
@@ -42,7 +48,7 @@ public:
 class CallbackCall {
 public:
   CallbackCall(llvm::StringRef Name) : Name(Name) {}
-  CallbackCall() {}
+  CallbackCall() = default;
 
   std::string Name;
   std::vector<Argument> Arguments;

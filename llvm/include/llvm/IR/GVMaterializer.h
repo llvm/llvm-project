@@ -21,15 +21,14 @@
 #include <vector>
 
 namespace llvm {
+
 class Error;
-class Function;
 class GlobalValue;
-class Module;
 class StructType;
 
 class GVMaterializer {
 protected:
-  GVMaterializer() {}
+  GVMaterializer() = default;
 
 public:
   virtual ~GVMaterializer();
@@ -48,6 +47,6 @@ public:
   virtual std::vector<StructType *> getIdentifiedStructTypes() const = 0;
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GVMATERIALIZER_H

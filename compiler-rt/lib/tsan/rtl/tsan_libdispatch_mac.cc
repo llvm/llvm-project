@@ -706,6 +706,15 @@ TSAN_INTERCEPTOR(void, dispatch_io_close, dispatch_io_t channel,
   return REAL(dispatch_io_close)(channel, flags);
 }
 
+// Resuming a suspended queue needs to synchronize with all subsequent
+// executions of blocks in that queue.
+TSAN_INTERCEPTOR(void, dispatch_resume, dispatch_object_t o) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_resume, o);
+  Release(thr, pc, (uptr)o);  // Synchronizes with the Acquire() on serial_sync
+                              // in dispatch_sync_pre_execute
+  return REAL(dispatch_resume)(o);
+}
+
 }  // namespace __tsan
 
 #endif  // SANITIZER_MAC

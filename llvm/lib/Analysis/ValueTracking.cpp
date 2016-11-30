@@ -1025,7 +1025,6 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     break; // Can't work with floating point.
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
-  case Instruction::AddrSpaceCast: // Pointers could be different sizes.
     // Fall through and handle them the same as zext/trunc.
     LLVM_FALLTHROUGH;
   case Instruction::ZExt:

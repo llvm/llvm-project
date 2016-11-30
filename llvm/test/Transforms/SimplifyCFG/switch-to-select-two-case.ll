@@ -11,15 +11,18 @@
 ; }
 
 define i32 @foo1_with_default(i32 %a) {
-; CHECK-LABEL: @foo1_with_default
-; CHECK: %switch.selectcmp = icmp eq i32 %a, 20
-; CHECK-NEXT: %switch.select = select i1 %switch.selectcmp, i32 2, i32 4
-; CHECK-NEXT: %switch.selectcmp1 = icmp eq i32 %a, 10
-; CHECK-NEXT: %switch.select2 = select i1 %switch.selectcmp1, i32 10, i32 %switch.select
+; CHECK-LABEL: @foo1_with_default(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 %a, 20
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP:%.*]], i32 2, i32 4
+; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp eq i32 %a, 10
+; CHECK-NEXT:    [[SWITCH_SELECT2:%.*]] = select i1 [[SWITCH_SELECTCMP1]], i32 10, i32 [[SWITCH_SELECT]]
+; CHECK-NEXT:    ret i32 [[SWITCH_SELECT2]]
+;
 entry:
   switch i32 %a, label %sw.epilog [
-    i32 10, label %sw.bb
-    i32 20, label %sw.bb1
+  i32 10, label %sw.bb
+  i32 20, label %sw.bb1
   ]
 
 sw.bb:
@@ -35,3 +38,4 @@ return:
   %retval.0 = phi i32 [ 4, %sw.epilog ], [ 2, %sw.bb1 ], [ 10, %sw.bb ]
   ret i32 %retval.0
 }
+

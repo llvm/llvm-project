@@ -163,15 +163,13 @@ bb3:
   ret void
 }
 
-; FIXME: Should be able to use s_cbranch_scc0
 ; GCN-LABEL: {{^}}long_backward_sbranch:
-; GCN: v_mov_b32_e32 [[LOOPIDX:v[0-9]+]], 0{{$}}
+; GCN: s_mov_b32 [[LOOPIDX:s[0-9]+]], 0{{$}}
 
 ; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]: ; %bb2
 ; GCN-NEXT: ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT: v_add_i32_e32 [[INC:v[0-9]+]], vcc, 1, [[LOOPIDX]]
-; GCN-NEXT: v_cmp_gt_i32_e32 vcc, 10, [[INC]]
-; GCN-NEXT: s_and_b64 vcc, exec, vcc
+; GCN-NEXT: s_add_i32 [[INC:s[0-9]+]], [[LOOPIDX]], 1
+; GCN-NEXT: s_cmp_lt_i32 [[INC]], 10
 
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: v_nop_e64
@@ -179,7 +177,7 @@ bb3:
 ; GCN-NEXT: v_nop_e64
 ; GCN-NEXT: ;;#ASMEND
 
-; GCN-NEXT: s_cbranch_vccz [[ENDBB:BB[0-9]+_[0-9]+]]
+; GCN-NEXT: s_cbranch_scc0 [[ENDBB:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[LONG_JUMP:BB[0-9]+_[0-9]+]]: ; %bb2
 ; GCN-NEXT: ; in Loop: Header=[[LOOPBB]] Depth=1
@@ -493,9 +491,9 @@ ret:
 ; GCN: s_setpc_b64
 
 ; GCN: [[LONG_BR_DEST0]]
-; GCN: s_cmp_eq_u32
+; GCN: v_cmp_ne_u32_e32
 ; GCN-NEXT: ; implicit-def
-; GCN-NEXT: s_cbranch_scc0
+; GCN-NEXT: s_cbranch_vccz
 ; GCN: s_setpc_b64
 
 ; GCN: s_endpgm

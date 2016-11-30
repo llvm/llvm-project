@@ -143,16 +143,16 @@ void LinkerDriver::parseDirectives(StringRef S) {
 // Find file from search paths. You can omit ".obj", this function takes
 // care of that. Note that the returned path is not guaranteed to exist.
 StringRef LinkerDriver::doFindFile(StringRef Filename) {
-  bool hasPathSep = (Filename.find_first_of("/\\") != StringRef::npos);
-  if (hasPathSep)
+  bool HasPathSep = (Filename.find_first_of("/\\") != StringRef::npos);
+  if (HasPathSep)
     return Filename;
-  bool hasExt = (Filename.find('.') != StringRef::npos);
+  bool HasExt = (Filename.find('.') != StringRef::npos);
   for (StringRef Dir : SearchPaths) {
     SmallString<128> Path = Dir;
     llvm::sys::path::append(Path, Filename);
     if (llvm::sys::fs::exists(Path.str()))
       return Alloc.save(Path.str());
-    if (!hasExt) {
+    if (!HasExt) {
       Path.append(".obj");
       if (llvm::sys::fs::exists(Path.str()))
         return Alloc.save(Path.str());
@@ -174,8 +174,8 @@ Optional<StringRef> LinkerDriver::findFile(StringRef Filename) {
 // Find library file from search path.
 StringRef LinkerDriver::doFindLib(StringRef Filename) {
   // Add ".lib" to Filename if that has no file extension.
-  bool hasExt = (Filename.find('.') != StringRef::npos);
-  if (!hasExt)
+  bool HasExt = (Filename.find('.') != StringRef::npos);
+  if (!HasExt)
     Filename = Alloc.save(Filename + ".lib");
   return doFindFile(Filename);
 }
@@ -528,6 +528,7 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
     Config->TerminalServerAware = false;
   if (Args.hasArg(OPT_nosymtab))
     Config->WriteSymtab = false;
+  Config->DumpPdb = Args.hasArg(OPT_dumppdb);
 
   // Create a list of input files. Files can be given as arguments
   // for /defaultlib option.

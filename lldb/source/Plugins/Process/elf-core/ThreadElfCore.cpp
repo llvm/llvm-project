@@ -15,16 +15,15 @@
 #include "lldb/Target/Unwind.h"
 
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_arm.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_arm.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "ProcessElfCore.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
@@ -86,7 +85,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::FreeBSD: {
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
-        reg_interface = new RegisterContextFreeBSD_arm64(arch);
+        reg_interface = new RegisterInfoPOSIX_arm64(arch);
         break;
       case llvm::Triple::arm:
         reg_interface = new RegisterContextFreeBSD_arm(arch);
@@ -118,7 +117,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
         reg_interface = new RegisterContextLinux_arm(arch);
         break;
       case llvm::Triple::aarch64:
-        reg_interface = new RegisterContextLinux_arm64(arch);
+        reg_interface = new RegisterInfoPOSIX_arm64(arch);
         break;
       case llvm::Triple::systemz:
         reg_interface = new RegisterContextLinux_s390x(arch);
@@ -314,6 +313,48 @@ Error ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch) {
   }
   default:
     error.SetErrorStringWithFormat("ELFLinuxPrPsInfo::%s Unknown architecture",
+                                   __FUNCTION__);
+    break;
+  }
+
+  return error;
+}
+
+//----------------------------------------------------------------
+// Parse SIGINFO from NOTE entry
+//----------------------------------------------------------------
+ELFLinuxSigInfo::ELFLinuxSigInfo() {
+  memset(this, 0, sizeof(ELFLinuxSigInfo));
+}
+
+Error ELFLinuxSigInfo::Parse(DataExtractor &data, const ArchSpec &arch) {
+  Error error;
+  ByteOrder byteorder = data.GetByteOrder();
+  if (GetSize(arch) > data.GetByteSize()) {
+    error.SetErrorStringWithFormat(
+        "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
+        GetSize(arch), data.GetByteSize());
+    return error;
+  }
+
+  switch (arch.GetCore()) {
+  case ArchSpec::eCore_x86_64_x86_64:
+    data.ExtractBytes(0, sizeof(ELFLinuxPrStatus), byteorder, this);
+    break;
+  case ArchSpec::eCore_s390x_generic:
+  case ArchSpec::eCore_x86_32_i386:
+  case ArchSpec::eCore_x86_32_i486: {
+    // Parsing from a 32 bit ELF core file, and populating/reusing the structure
+    // properly, because the struct is for the 64 bit version
+    offset_t offset = 0;
+    si_signo = data.GetU32(&offset);
+    si_code = data.GetU32(&offset);
+    si_errno = data.GetU32(&offset);
+
+    break;
+  }
+  default:
+    error.SetErrorStringWithFormat("ELFLinuxSigInfo::%s Unknown architecture",
                                    __FUNCTION__);
     break;
   }

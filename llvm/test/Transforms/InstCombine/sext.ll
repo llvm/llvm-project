@@ -229,10 +229,10 @@ define i32 @test17(i1 %x) {
 
 define i32 @test18(i16 %x) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 %x, 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 0, i16 %x
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[SEL]] to i32
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i16 %x, 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], i16 %x, i16 0
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[SEL]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %cmp = icmp slt i16 %x, 0
   %sel = select i1 %cmp, i16 0, i16 %x

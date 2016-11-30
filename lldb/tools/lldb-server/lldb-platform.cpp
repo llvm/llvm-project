@@ -364,7 +364,7 @@ int main_platform(int argc, char *argv[]) {
         bool interrupt = false;
         bool done = false;
         while (!interrupt && !done) {
-          if (platform.GetPacketAndSendResponse(UINT32_MAX, error, interrupt,
+          if (platform.GetPacketAndSendResponse(llvm::None, error, interrupt,
                                                 done) !=
               GDBRemoteCommunication::PacketResult::Success)
             break;

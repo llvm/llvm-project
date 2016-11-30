@@ -10,20 +10,13 @@
 #ifndef liblldb_AdbClient_h_
 #define liblldb_AdbClient_h_
 
-// C Includes
-
-// C++ Includes
-
+#include "lldb/Core/Error.h"
+#include <chrono>
 #include <functional>
 #include <list>
 #include <memory>
 #include <string>
 #include <vector>
-
-// Other libraries and framework includes
-// Project includes
-
-#include "lldb/Core/Error.h"
 
 namespace lldb_private {
 
@@ -101,9 +94,10 @@ public:
 
   Error DeletePortForwarding(const uint16_t local_port);
 
-  Error Shell(const char *command, uint32_t timeout_ms, std::string *output);
+  Error Shell(const char *command, std::chrono::milliseconds timeout,
+              std::string *output);
 
-  Error ShellToFile(const char *command, uint32_t timeout_ms,
+  Error ShellToFile(const char *command, std::chrono::milliseconds timeout,
                     const FileSpec &output_file_spec);
 
   std::unique_ptr<SyncService> GetSyncService(Error &error);
@@ -121,7 +115,7 @@ private:
 
   Error ReadMessage(std::vector<char> &message);
 
-  Error ReadMessageStream(std::vector<char> &message, uint32_t timeout_ms);
+  Error ReadMessageStream(std::vector<char> &message, std::chrono::milliseconds timeout);
 
   Error GetResponseError(const char *response_id);
 
@@ -131,7 +125,7 @@ private:
 
   Error StartSync();
 
-  Error internalShell(const char *command, uint32_t timeout_ms,
+  Error internalShell(const char *command, std::chrono::milliseconds timeout,
                       std::vector<char> &output_buf);
 
   Error ReadAllBytes(void *buffer, size_t size);

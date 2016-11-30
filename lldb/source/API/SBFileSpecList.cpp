@@ -1,5 +1,4 @@
-//===-- SBFileSpecListList.cpp ------------------------------------------*- C++
-//-*-===//
+//===-- SBFileSpecList.cpp --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

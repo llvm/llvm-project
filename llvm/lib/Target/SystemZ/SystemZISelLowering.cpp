@@ -5224,7 +5224,8 @@ static unsigned forceReg(MachineInstr &MI, MachineOperand &Base,
 // Implement EmitInstrWithCustomInserter for pseudo Select* instruction MI.
 MachineBasicBlock *
 SystemZTargetLowering::emitSelect(MachineInstr &MI,
-                                  MachineBasicBlock *MBB) const {
+                                  MachineBasicBlock *MBB,
+                                  unsigned LOCROpcode) const {
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
 
@@ -5234,6 +5235,15 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   unsigned CCValid = MI.getOperand(3).getImm();
   unsigned CCMask = MI.getOperand(4).getImm();
   DebugLoc DL = MI.getDebugLoc();
+
+  // Use LOCROpcode if possible.
+  if (LOCROpcode && Subtarget.hasLoadStoreOnCond()) {
+    BuildMI(*MBB, MI, DL, TII->get(LOCROpcode), DestReg)
+      .addReg(FalseReg).addReg(TrueReg)
+      .addImm(CCValid).addImm(CCMask);
+    MI.eraseFromParent();
+    return MBB;
+  }
 
   MachineBasicBlock *StartMBB = MBB;
   MachineBasicBlock *JoinMBB  = splitBlockBefore(MI, MBB);
@@ -6020,12 +6030,16 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
   case SystemZ::Select32Mux:
+    return emitSelect(MI, MBB,
+                      Subtarget.hasLoadStoreOnCond2()? SystemZ::LOCRMux : 0);
   case SystemZ::Select32:
-  case SystemZ::SelectF32:
+    return emitSelect(MI, MBB, SystemZ::LOCR);
   case SystemZ::Select64:
+    return emitSelect(MI, MBB, SystemZ::LOCGR);
+  case SystemZ::SelectF32:
   case SystemZ::SelectF64:
   case SystemZ::SelectF128:
-    return emitSelect(MI, MBB);
+    return emitSelect(MI, MBB, 0);
 
   case SystemZ::CondStore8Mux:
     return emitCondStore(MI, MBB, SystemZ::STCMux, 0, false);
@@ -6035,6 +6049,10 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitCondStore(MI, MBB, SystemZ::STHMux, 0, false);
   case SystemZ::CondStore16MuxInv:
     return emitCondStore(MI, MBB, SystemZ::STHMux, 0, true);
+  case SystemZ::CondStore32Mux:
+    return emitCondStore(MI, MBB, SystemZ::STMux, SystemZ::STOCMux, false);
+  case SystemZ::CondStore32MuxInv:
+    return emitCondStore(MI, MBB, SystemZ::STMux, SystemZ::STOCMux, true);
   case SystemZ::CondStore8:
     return emitCondStore(MI, MBB, SystemZ::STC, 0, false);
   case SystemZ::CondStore8Inv:

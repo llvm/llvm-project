@@ -24,6 +24,7 @@
 #include "CGVTables.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/Type.h"
@@ -1479,8 +1480,10 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
       CGM.GetAddrOfRTTIDescriptor(CGM.getContext().getTagDeclType(RD));
 
   // Create and set the initializer.
-  llvm::Constant *Init = CGVT.CreateVTableInitializer(VTLayout, RTTI);
-  VTable->setInitializer(Init);
+  ConstantInitBuilder Builder(CGM);
+  auto Components = Builder.beginArray(CGM.Int8PtrTy);
+  CGVT.createVTableInitializer(Components, VTLayout, RTTI);
+  Components.finishAndSetAsInitializer(VTable);
 
   // Set the correct linkage.
   VTable->setLinkage(Linkage);

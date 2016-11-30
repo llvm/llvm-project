@@ -37,7 +37,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
   // won't reference using the GOT, so we need this target-specific
   // version.
   if (Encoding & (DW_EH_PE_indirect | DW_EH_PE_pcrel)) {
-    const MCSymbol *Sym = TM.getSymbol(GV, getMangler());
+    const MCSymbol *Sym = TM.getSymbol(GV);
     const MCExpr *Res =
         MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
     MCSymbol *PCSym = getContext().createTempSymbol();
@@ -53,7 +53,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
 MCSymbol *AArch64_MachoTargetObjectFile::getCFIPersonalitySymbol(
     const GlobalValue *GV, const TargetMachine &TM,
     MachineModuleInfo *MMI) const {
-  return TM.getSymbol(GV, getMangler());
+  return TM.getSymbol(GV);
 }
 
 const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(

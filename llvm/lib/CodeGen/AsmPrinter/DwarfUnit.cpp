@@ -51,7 +51,7 @@ GenerateDwarfTypeUnits("generate-type-units", cl::Hidden,
 
 DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU,
                                        DIELoc &DIE)
-    : DwarfExpression(AP.getDwarfDebug()->getDwarfVersion()), AP(AP), DU(DU),
+    : DwarfExpression(AP.getDwarfVersion()), AP(AP), DU(DU),
       DIE(DIE) {}
 
 void DIEDwarfExpression::EmitOp(uint8_t Op, const char* Comment) {
@@ -1282,6 +1282,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (SP->isExplicit())
     addFlag(SPDie, dwarf::DW_AT_explicit);
+
+  if (SP->isMainSubprogram())
+    addFlag(SPDie, dwarf::DW_AT_main_subprogram);
 }
 
 void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,

@@ -226,16 +226,15 @@ protected:
   PacketResult SendPacketNoLock(llvm::StringRef payload);
 
   PacketResult ReadPacket(StringExtractorGDBRemote &response,
-                          uint32_t timeout_usec, bool sync_on_timeout);
+                          Timeout<std::micro> timeout, bool sync_on_timeout);
 
   // Pop a packet from the queue in a thread safe manner
   PacketResult PopPacketFromQueue(StringExtractorGDBRemote &response,
-                                  uint32_t timeout_usec);
+                                  Timeout<std::micro> timeout);
 
-  PacketResult
-  WaitForPacketWithTimeoutMicroSecondsNoLock(StringExtractorGDBRemote &response,
-                                             uint32_t timeout_usec,
-                                             bool sync_on_timeout);
+  PacketResult WaitForPacketNoLock(StringExtractorGDBRemote &response,
+                                   Timeout<std::micro> timeout,
+                                   bool sync_on_timeout);
 
   bool CompressionIsEnabled() {
     return m_compression_type != CompressionType::None;

@@ -1,4 +1,4 @@
-//===-- ThreadPlan.cpp ------------------------------------------*- C++ -*-===//
+//===-- ThreadPlanPython.cpp ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

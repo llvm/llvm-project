@@ -30,8 +30,7 @@ namespace tooling {
 
 static const char * const InvalidLocation = "";
 
-Replacement::Replacement()
-  : FilePath(InvalidLocation) {}
+Replacement::Replacement() : FilePath(InvalidLocation) {}
 
 Replacement::Replacement(StringRef FilePath, unsigned Offset, unsigned Length,
                          StringRef ReplacementText)
@@ -144,13 +143,32 @@ Replacements::getReplacementInChangedCode(const Replacement &R) const {
                      R.getReplacementText());
 }
 
-static llvm::Error makeConflictReplacementsError(const Replacement &New,
-                                                 const Replacement &Existing) {
-  return llvm::make_error<llvm::StringError>(
-      "New replacement:\n" + New.toString() +
-          "\nconflicts with existing replacement:\n" + Existing.toString(),
-      llvm::inconvertibleErrorCode());
+static std::string getReplacementErrString(replacement_error Err) {
+  switch (Err) {
+  case replacement_error::fail_to_apply:
+    return "Failed to apply a replacement.";
+  case replacement_error::wrong_file_path:
+    return "The new replacement's file path is different from the file path of "
+           "existing replacements";
+  case replacement_error::overlap_conflict:
+    return "The new replacement overlaps with an existing replacement.";
+  case replacement_error::insert_conflict:
+    return "The new insertion has the same insert location as an existing "
+           "replacement.";
+  }
+  llvm_unreachable("A value of replacement_error has no message.");
 }
+
+std::string ReplacementError::message() const {
+  std::string Message = getReplacementErrString(Err);
+  if (NewReplacement.hasValue())
+    Message += "\nNew replacement: " + NewReplacement->toString();
+  if (ExistingReplacement.hasValue())
+    Message += "\nExisting replacement: " + ExistingReplacement->toString();
+  return Message;
+}
+
+char ReplacementError::ID = 0;
 
 Replacements Replacements::getCanonicalReplacements() const {
   std::vector<Replacement> NewReplaces;
@@ -202,17 +220,15 @@ Replacements::mergeIfOrderIndependent(const Replacement &R) const {
   if (MergeShiftedRs.getCanonicalReplacements() ==
       MergeShiftedReplaces.getCanonicalReplacements())
     return MergeShiftedRs;
-  return makeConflictReplacementsError(R, *Replaces.begin());
+  return llvm::make_error<ReplacementError>(replacement_error::overlap_conflict,
+                                            R, *Replaces.begin());
 }
 
 llvm::Error Replacements::add(const Replacement &R) {
   // Check the file path.
   if (!Replaces.empty() && R.getFilePath() != Replaces.begin()->getFilePath())
-    return llvm::make_error<llvm::StringError>(
-        "All replacements must have the same file path. New replacement: " +
-            R.getFilePath() + ", existing replacements: " +
-            Replaces.begin()->getFilePath() + "\n",
-        llvm::inconvertibleErrorCode());
+    return llvm::make_error<ReplacementError>(
+        replacement_error::wrong_file_path, R, *Replaces.begin());
 
   // Special-case header insertions.
   if (R.getOffset() == UINT_MAX) {
@@ -239,9 +255,9 @@ llvm::Error Replacements::add(const Replacement &R) {
       // Check if two insertions are order-indepedent: if inserting them in
       // either order produces the same text, they are order-independent.
       if ((R.getReplacementText() + I->getReplacementText()).str() !=
-          (I->getReplacementText() + R.getReplacementText()).str()) {
-        return makeConflictReplacementsError(R, *I);
-      }
+          (I->getReplacementText() + R.getReplacementText()).str())
+        return llvm::make_error<ReplacementError>(
+            replacement_error::insert_conflict, R, *I);
       // If insertions are order-independent, we can merge them.
       Replacement NewR(
           R.getFilePath(), R.getOffset(), 0,
@@ -555,9 +571,8 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
     Replacement Replace("<stdin>", I->getOffset(), I->getLength(),
                         I->getReplacementText());
     if (!Replace.apply(Rewrite))
-      return llvm::make_error<llvm::StringError>(
-          "Failed to apply replacement: " + Replace.toString(),
-          llvm::inconvertibleErrorCode());
+      return llvm::make_error<ReplacementError>(
+          replacement_error::fail_to_apply, Replace);
   }
   std::string Result;
   llvm::raw_string_ostream OS(Result);

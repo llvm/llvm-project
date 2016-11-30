@@ -17,6 +17,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstddef>
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
@@ -45,7 +46,7 @@ int main()
         assert(v.size() == sz + 5);
         assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (; j < 15; ++j)
@@ -61,7 +62,7 @@ int main()
         assert(v.size() == sz + 5);
         assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (; j < 15; ++j)

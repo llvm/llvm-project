@@ -12,7 +12,7 @@
 // SEC-NEXT:   SHF_ALLOC
 // SEC-NEXT:   SHF_EXECINSTR
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x11030
+// SEC-NEXT: Address: 0x201030
 // SEC-NEXT: Offset: 0x1030
 // SEC-NEXT: Size: 48
 
@@ -22,7 +22,7 @@
 // SEC-NEXT:     SHF_ALLOC
 // SEC-NEXT:     SHF_WRITE
 // SEC-NEXT:   ]
-// SEC-NEXT:   Address: 0x120F0
+// SEC-NEXT:   Address: 0x2020F0
 // SEC-NEXT:   Offset:
 // SEC-NEXT:   Size: 8
 // SEC-NEXT:   Link: 0
@@ -37,7 +37,7 @@
 // SEC-NEXT:     SHF_ALLOC
 // SEC-NEXT:     SHF_WRITE
 // SEC-NEXT:   ]
-// SEC-NEXT:   Address: 0x13000
+// SEC-NEXT:   Address: 0x203000
 // SEC-NEXT:   Offset: 0x3000
 // SEC-NEXT:   Size: 40
 // SEC-NEXT:   Link: 0
@@ -59,11 +59,11 @@ lulz:
 
 // CHECK: Disassembly of section .text:
 // CHECK-NEXT: _start:
-// CHECK-NEXT:   11000:  e8 04 00 00 00   callq 4
-// CHECK-NEXT:   11005:
+// CHECK-NEXT:   201000:  e8 04 00 00 00   callq 4
+// CHECK-NEXT:   201005:
 
 // CHECK:      lulz:
-// CHECK-NEXT:   11009:  90  nop
+// CHECK-NEXT:   201009:  90  nop
 
 
 .section       .text2,"ax",@progbits
@@ -75,7 +75,7 @@ R_X86_64_32:
 // constants in hex.
 // CHECK: Disassembly of section .text2:
 // CHECK-NEXT: R_X86_64_32:
-// CHECK-NEXT:  1100a: {{.*}} movl $69642, %edx
+// CHECK-NEXT:  20100a: {{.*}} movl $2101258, %edx
 
 .section .R_X86_64_32S,"ax",@progbits
 .global R_X86_64_32S
@@ -84,7 +84,7 @@ R_X86_64_32S:
 
 // CHECK: Disassembly of section .R_X86_64_32S:
 // CHECK-NEXT: R_X86_64_32S:
-// CHECK-NEXT:  {{.*}}: {{.*}} movq -978935, %rdx
+// CHECK-NEXT:  {{.*}}: {{.*}} movq 1052681, %rdx
 
 .section .R_X86_64_PC32,"ax",@progbits
 .global R_X86_64_PC32
@@ -92,20 +92,20 @@ R_X86_64_PC32:
  call bar
  movl $bar, %eax
 //16 is a size of PLT[0]
-// 0x11030 + 16 - (0x11017 + 5) = 20
+// 0x201030 + 16 - (0x201017 + 5) = 20
 // CHECK:      Disassembly of section .R_X86_64_PC32:
 // CHECK-NEXT: R_X86_64_PC32:
-// CHECK-NEXT:  11017:   {{.*}}  callq  36
-// CHECK-NEXT:  1101c:   {{.*}}  movl $69696, %eax
+// CHECK-NEXT:  201017:   {{.*}}  callq  36
+// CHECK-NEXT:  20101c:   {{.*}}  movl $2101312, %eax
 
 .section .R_X86_64_32S_2,"ax",@progbits
 .global R_X86_64_32S_2
 R_X86_64_32S_2:
   mov bar2, %eax
-// plt is  at 0x11030. The second plt entry is at 0x11050 == 69712
+// plt is  at 0x201030. The second plt entry is at 0x201050 == 69712
 // CHECK:      Disassembly of section .R_X86_64_32S_2:
 // CHECK-NEXT: R_X86_64_32S_2:
-// CHECK-NEXT: 11021: {{.*}}  movl    69712, %eax
+// CHECK-NEXT: 201021: {{.*}}  movl    2101328, %eax
 
 .section .R_X86_64_64,"a",@progbits
 .global R_X86_64_64
@@ -113,17 +113,17 @@ R_X86_64_64:
  .quad R_X86_64_64
 
 // CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   101c8 c8010100 00000000
+// CHECK-NEXT:   2001c8 c8012000 00000000
 
 .section .R_X86_64_GOTPCREL,"a",@progbits
 .global R_X86_64_GOTPCREL
 R_X86_64_GOTPCREL:
  .long zed@gotpcrel
 
-// 0x120F8 - 0x101D8 = 7952
+// 0x2020F8 - 0x2001D8 = 7952
 // 7952 = 0x101f0000 in little endian
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   101d0 201f0000
+// CHECK-NEXT:   2001d0 201f0000
 
 .section .R_X86_64_GOT32,"a",@progbits
 .global R_X86_64_GOT32

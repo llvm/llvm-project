@@ -42,6 +42,7 @@ static T getUniversalBinaryStruct(const char *Ptr) {
 MachOUniversalBinary::ObjectForArch::ObjectForArch(
     const MachOUniversalBinary *Parent, uint32_t Index)
     : Parent(Parent), Index(Index) {
+  // The iterators use Parent as a nullptr and an Index+1 == NumberOfObjects.
   if (!Parent || Index >= Parent->getNumberOfObjects()) {
     clear();
   } else {
@@ -51,16 +52,10 @@ MachOUniversalBinary::ObjectForArch::ObjectForArch(
       const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
                               Index * sizeof(MachO::fat_arch);
       Header = getUniversalBinaryStruct<MachO::fat_arch>(HeaderPos);
-      if (ParentData.size() < Header.offset + Header.size) {
-        clear();
-      }
     } else { // Parent->getMagic() == MachO::FAT_MAGIC_64
       const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
                               Index * sizeof(MachO::fat_arch_64);
       Header64 = getUniversalBinaryStruct<MachO::fat_arch_64>(HeaderPos);
-      if (ParentData.size() < Header64.offset + Header64.size) {
-        clear();
-      }
     }
   }
 }
@@ -131,6 +126,10 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
       getUniversalBinaryStruct<MachO::fat_header>(Buf.begin());
   Magic = H.magic;
   NumberOfObjects = H.nfat_arch;
+  if (NumberOfObjects == 0) {
+    Err = malformedError("contains zero architecture types");
+    return;
+  }
   uint32_t MinSize = sizeof(MachO::fat_header);
   if (Magic == MachO::FAT_MAGIC)
     MinSize += sizeof(MachO::fat_arch) * NumberOfObjects;
@@ -145,6 +144,68 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
                          Twine(Magic == MachO::FAT_MAGIC ? "" : "_64") +
                          " structs would extend past the end of the file");
     return;
+  }
+  for (uint32_t i = 0; i < NumberOfObjects; i++) {
+    ObjectForArch A(this, i);
+    uint64_t bigSize = A.getOffset();
+    bigSize += A.getSize();
+    if (bigSize > Buf.size()) {
+      Err = malformedError("offset plus size of cputype (" +
+        Twine(A.getCPUType()) + ") cpusubtype (" +
+        Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +
+        ") extends past the end of the file");
+      return;
+    }
+#define MAXSECTALIGN 15 /* 2**15 or 0x8000 */
+    if (A.getAlign() > MAXSECTALIGN) {
+      Err = malformedError("align (2^" + Twine(A.getAlign()) + ") too large "
+        "for cputype (" + Twine(A.getCPUType()) + ") cpusubtype (" +
+        Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +
+        ") (maximum 2^" + Twine(MAXSECTALIGN) + ")");
+      return;
+    }
+    if(A.getOffset() % (1 << A.getAlign()) != 0){
+      Err = malformedError("offset: " + Twine(A.getOffset()) +
+        " for cputype (" + Twine(A.getCPUType()) + ") cpusubtype (" +
+        Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +
+        ") not aligned on it's alignment (2^" + Twine(A.getAlign()) + ")");
+      return;
+    }
+    if (A.getOffset() < MinSize) {
+      Err =  malformedError("cputype (" + Twine(A.getCPUType()) + ") "
+        "cpusubtype (" + Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +
+        ") offset " + Twine(A.getOffset()) + " overlaps universal headers");
+      return;
+    }
+  }
+  for (uint32_t i = 0; i < NumberOfObjects; i++) {
+    ObjectForArch A(this, i);
+    for (uint32_t j = i + 1; j < NumberOfObjects; j++) {
+      ObjectForArch B(this, j);
+      if (A.getCPUType() == B.getCPUType() &&
+          (A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) ==
+          (B.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK)) {
+        Err = malformedError("contains two of the same architecture (cputype "
+          "(" + Twine(A.getCPUType()) + ") cpusubtype (" +
+          Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) + "))");
+        return;
+      }
+      if ((A.getOffset() >= B.getOffset() &&
+           A.getOffset() < B.getOffset() + B.getSize()) ||
+          (A.getOffset() + A.getSize() > B.getOffset() &&
+           A.getOffset() + A.getSize() < B.getOffset() + B.getSize()) ||
+          (A.getOffset() <= B.getOffset() &&
+           A.getOffset() + A.getSize() >= B.getOffset() + B.getSize())) {
+        Err =  malformedError("cputype (" + Twine(A.getCPUType()) + ") "
+          "cpusubtype (" + Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +
+          ") at offset " + Twine(A.getOffset()) + " with a size of " +
+          Twine(A.getSize()) + ", overlaps cputype (" + Twine(B.getCPUType()) +
+          ") cpusubtype (" + Twine(B.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK)
+          + ") at offset " + Twine(B.getOffset()) + " with a size of "
+          + Twine(B.getSize()));
+        return;
+      }
+    }
   }
   Err = Error::success();
 }

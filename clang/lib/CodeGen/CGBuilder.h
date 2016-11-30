@@ -124,19 +124,6 @@ public:
   
   // FIXME: these "default-aligned" APIs should be removed,
   // but I don't feel like fixing all the builtin code right now.
-  llvm::LoadInst *CreateDefaultAlignedLoad(llvm::Value *Addr,
-                                           const llvm::Twine &Name = "") {
-    return CGBuilderBaseTy::CreateLoad(Addr, false, Name);
-  }
-  llvm::LoadInst *CreateDefaultAlignedLoad(llvm::Value *Addr,
-                                           const char *Name) {
-    return CGBuilderBaseTy::CreateLoad(Addr, false, Name);
-  }
-  llvm::LoadInst *CreateDefaultAlignedLoad(llvm::Value *Addr, bool IsVolatile,
-                                           const llvm::Twine &Name = "") {
-    return CGBuilderBaseTy::CreateLoad(Addr, IsVolatile, Name);
-  }
-
   llvm::StoreInst *CreateDefaultAlignedStore(llvm::Value *Val,
                                              llvm::Value *Addr,
                                              bool IsVolatile = false) {

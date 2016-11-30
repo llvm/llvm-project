@@ -30,7 +30,7 @@ _start:
 // CHECK-NEXT:   SHF_TLS
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x12000
+// CHECK-NEXT: Address: 0x202000
 // CHECK-NEXT: Offset: 0x2000
 // CHECK-NEXT: Size: 4
 
@@ -41,7 +41,7 @@ _start:
 // CHECK-NEXT:   SHF_TLS
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x12010
+// CHECK-NEXT: Address: 0x202010
 // CHECK-NEXT: Offset: 0x2004
 // CHECK-NEXT: Size: 16
 
@@ -51,6 +51,6 @@ _start:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x12004
+// CHECK-NEXT: Address: 0x202004
 // CHECK-NEXT: Offset: 0x2004
 // CHECK-NEXT: Size: 4

@@ -474,5 +474,20 @@ TEST(ImportExpr, ImportVAArgExpr) {
 }
 
 
+TEST(ImportType, ImportAtomicType) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(testImport("void declToImport() { typedef _Atomic(int) a_int; }",
+                         Lang_CXX11, "", Lang_CXX11, Verifier,
+                         functionDecl(
+                           hasBody(
+                             compoundStmt(
+                               has(
+                                 declStmt(
+                                   has(
+                                     typedefDecl(
+                                       has(atomicType()))))))))));
+}
+
+
 } // end namespace ast_matchers
 } // end namespace clang

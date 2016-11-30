@@ -1,20 +1,12 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: echo "LIBSAMPLE_1.0 { \
-# RUN:   global:             \
-# RUN:      extern \"C++\" { \
-# RUN:         \"foo(int)\"; \
-# RUN:         \"zed(int)\"; \
-# RUN:         \"abc::abc()\"; \
-# RUN:   };                  \
-# RUN: };                    \
-# RUN: LIBSAMPLE_2.0 {       \
-# RUN:   global:             \
-# RUN:     extern \"C++\" {  \
-# RUN:       \"bar(int)\";   \
-# RUN:   };                  \
-# RUN: }; " > %t.script
+# RUN: echo "LIBSAMPLE_1.0 { global:" > %t.script
+# RUN: echo '  extern "C++" { "foo(int)"; "zed(int)"; "abc::abc()"; };' >> %t.script
+# RUN: echo "};" >> %t.script
+# RUN: echo "LIBSAMPLE_2.0 { global:" >> %t.script
+# RUN: echo '  extern "C++" { "bar(int)"; };' >> %t.script
+# RUN: echo "};" >> %t.script
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj -V -dyn-symbols %t.so | FileCheck --check-prefix=DSO %s
 

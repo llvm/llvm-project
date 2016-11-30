@@ -249,7 +249,7 @@ void t23() {
   the_label:
   }
 // CHECK: t23
-// CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.0__the_label:", "~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.${:uid}__the_label:", "~{dirflag},~{fpsr},~{flags}"()
 }
 
 void t24_helper(void) {}
@@ -595,7 +595,7 @@ void label1() {
     jmp label
   }
   // CHECK-LABEL: define void @label1()
-  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.1__label:\0A\09jmp {{.*}}__MSASMLABEL_.1__label", "~{dirflag},~{fpsr},~{flags}"() [[ATTR1:#[0-9]+]]
+  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.${:uid}__label:\0A\09jmp {{.*}}__MSASMLABEL_.${:uid}__label", "~{dirflag},~{fpsr},~{flags}"() [[ATTR1:#[0-9]+]]
 }
 
 void label2() {
@@ -604,7 +604,7 @@ void label2() {
     label:
   }
   // CHECK-LABEL: define void @label2
-  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.2__label\0A\09{{.*}}__MSASMLABEL_.2__label:", "~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.${:uid}__label\0A\09{{.*}}__MSASMLABEL_.${:uid}__label:", "~{dirflag},~{fpsr},~{flags}"()
 }
 
 void label3() {
@@ -613,7 +613,7 @@ void label3() {
     mov eax, label
   }
   // CHECK-LABEL: define void @label3
-  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.3__label:\0A\09mov eax, {{.*}}__MSASMLABEL_.3__label", "~{eax},~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.${:uid}__label:\0A\09mov eax, {{.*}}__MSASMLABEL_.${:uid}__label", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void label4() {
@@ -622,7 +622,7 @@ void label4() {
     mov eax, [label]
   }
   // CHECK-LABEL: define void @label4
-  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.4__label:\0A\09mov eax, {{.*}}__MSASMLABEL_.4__label", "~{eax},~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect "{{.*}}__MSASMLABEL_.${:uid}__label:\0A\09mov eax, {{.*}}__MSASMLABEL_.${:uid}__label", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void label5() {
@@ -631,7 +631,7 @@ void label5() {
     dollar_label$:
   }
   // CHECK-LABEL: define void @label5
-  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.5__dollar_label$$\0A\09{{.*}}__MSASMLABEL_.5__dollar_label$$:", "~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.${:uid}__dollar_label$$\0A\09{{.*}}__MSASMLABEL_.${:uid}__dollar_label$$:", "~{dirflag},~{fpsr},~{flags}"()
 }
 
 void label6(){
@@ -640,7 +640,7 @@ void label6(){
     label:
   }
   // CHECK-LABEL: define void @label6
-  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.6__label\0A\09{{.*}}__MSASMLABEL_.6__label:", "~{dirflag},~{fpsr},~{flags}"()
+  // CHECK: call void asm sideeffect inteldialect "jmp {{.*}}__MSASMLABEL_.${:uid}__label\0A\09{{.*}}__MSASMLABEL_.${:uid}__label:", "~{dirflag},~{fpsr},~{flags}"()
 }
 
 typedef union _LARGE_INTEGER {
@@ -662,4 +662,6 @@ int test_indirect_field(LARGE_INTEGER LargeInteger) {
 // CHECK: call i32 asm sideeffect inteldialect "mov eax, dword ptr $1",
 
 // MS ASM containing labels must not be duplicated (PR23715).
-// CHECK: attributes [[ATTR1]] = { {{.*}}noduplicate{{.*}} }
+// CHECK: attributes [[ATTR1]] = {
+// CHECK-NOT: noduplicate
+// CHECK-SAME: }{{$}}

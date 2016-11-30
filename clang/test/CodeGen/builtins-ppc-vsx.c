@@ -70,6 +70,18 @@ void test1() {
 // CHECK: call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{[0-9]*}})
 // CHECK-LE: call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{[0-9]*}})
 
+  res_vd = vec_abs(vd);
+// CHECK: call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{[0-9]*}})
+// CHECK-LE: call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{[0-9]*}})
+
+  res_vf = vec_nabs(vf);
+// CHECK: [[VEC:%[0-9]+]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{[0-9]*}})
+// CHECK-NEXT: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[VEC]]
+
+  res_vd = vec_nabs(vd);
+// CHECK: [[VECD:%[0-9]+]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{[0-9]*}})
+// CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[VECD]]
+
   dummy();
 // CHECK: call void @dummy()
 // CHECK-LE: call void @dummy()
@@ -1671,4 +1683,12 @@ vec_xst_be(vull, sll, aull);
 vec_xst_be(vd, sll, ad);
 // CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
+
+  res_vf = vec_neg(vf);
+// CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, {{%[0-9]+}}
+// CHECK-LE: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, {{%[0-9]+}}
+
+  res_vd = vec_neg(vd);
+// CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, {{%[0-9]+}}
+// CHECK-LE: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, {{%[0-9]+}}
 }

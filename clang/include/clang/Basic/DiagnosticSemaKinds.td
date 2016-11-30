@@ -646,6 +646,8 @@ def warn_main_one_arg : Warning<"only one parameter on 'main' declaration">,
 def err_main_arg_wrong : Error<"%select{first|second|third|fourth}0 "
     "parameter of 'main' (%select{argument count|argument array|environment|"
     "platform-specific data}0) must be of type %1">;
+def warn_main_returns_bool_literal : Warning<"bool literal returned from "
+    "'main'">, InGroup<Main>;
 def err_main_global_variable :
     Error<"main cannot be declared as global variable">;
 def warn_main_redefined : Warning<"variable named 'main' with external linkage "
@@ -7099,12 +7101,11 @@ def err_in_class_initializer_literal_type : Error<
   "'constexpr' specifier">;
 def err_in_class_initializer_non_constant : Error<
   "in-class initializer for static data member is not a constant expression">;
-def err_in_class_initializer_not_yet_parsed
-    : Error<"cannot use defaulted default constructor of %0 within the class "
-            "outside of member functions because %1 has an initializer">;
-def err_in_class_initializer_not_yet_parsed_outer_class
-    : Error<"cannot use defaulted default constructor of %0 within "
-            "%1 outside of member functions because %2 has an initializer">;
+def err_in_class_initializer_not_yet_parsed : Error<
+  "default member initializer for %1 needed within definition of enclosing "
+  "class %0 outside of member functions">;
+def note_in_class_initializer_not_yet_parsed : Note<
+  "default member initializer declared here">;
 def err_in_class_initializer_cycle
     : Error<"default member initializer for %0 uses itself">;
 def err_exception_spec_cycle
@@ -8074,8 +8075,6 @@ def note_within_field_of_type : Note<
   "within field of type %0 declared here">;
 def note_illegal_field_declared_here : Note<
   "field of illegal %select{type|pointer type}0 %1 declared here">;
-def err_event_t_global_var : Error<
-  "the event_t type cannot be used to declare a program scope variable">;
 def err_opencl_type_struct_or_union_field : Error<
   "the %0 type cannot be used to declare a structure or union field">;
 def err_event_t_addr_space_qual : Error<
@@ -8588,6 +8587,8 @@ def note_related_result_type_inferred : Note<
 def note_related_result_type_explicit : Note<
   "%select{overridden|current}0 method is explicitly declared 'instancetype'"
   "%select{| and is expected to return an instance of its class type}0">;
+def err_invalid_type_for_program_scope_var : Error<
+  "the %0 type cannot be used to declare a program scope variable">;
 
 }
 

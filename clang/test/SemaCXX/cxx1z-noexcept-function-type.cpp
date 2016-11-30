@@ -97,3 +97,13 @@ namespace ImplicitExceptionSpec {
   };
   S::~S() {}
 }
+
+namespace Builtins {
+  // Pick two functions that ought to have the same noexceptness.
+  extern "C" int strcmp(const char *, const char *);
+  extern "C" int strncmp(const char *, const char *, decltype(sizeof(0))) noexcept;
+
+  // Check we recognized both as builtins.
+  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)];
+  typedef int arr[3];
+}

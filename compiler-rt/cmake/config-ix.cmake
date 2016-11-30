@@ -128,6 +128,24 @@ function(get_target_flags_for_arch arch out_var)
   endif()
 endfunction()
 
+# Returns a compiler and CFLAGS that should be used to run tests for the
+# specific architecture.  When cross-compiling, this is controled via
+# COMPILER_RT_TEST_COMPILER and COMPILER_RT_TEST_COMPILER_CFLAGS.
+macro(get_test_cc_for_arch arch cc_out cflags_out)
+  if(ANDROID OR ${arch} MATCHES "arm|aarch64")
+    # This is only true if we are cross-compiling.
+    # Build all tests with host compiler and use host tools.
+    set(${cc_out} ${COMPILER_RT_TEST_COMPILER})
+    set(${cflags_out} ${COMPILER_RT_TEST_COMPILER_CFLAGS})
+  else()
+    get_target_flags_for_arch(${arch} ${cflags_out})
+    if(APPLE)
+      list(APPEND ${cflags_out} ${DARWIN_osx_CFLAGS})
+    endif()
+    string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
+  endif()
+endmacro()
+
 set(ARM64 aarch64)
 set(ARM32 arm armhf)
 set(X86 i386 i686)
@@ -148,12 +166,12 @@ endif()
 set(ALL_SANITIZER_COMMON_SUPPORTED_ARCH ${X86} ${X86_64} ${PPC64}
     ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} ${S390X})
 set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
-    ${MIPS32} ${MIPS64} ${PPC64})
+    ${MIPS32} ${MIPS64} ${PPC64} ${S390X})
 set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64})
 set(ALL_LSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64})
 set(ALL_MSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${PPC64})
 set(ALL_PROFILE_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${PPC64}
-    ${MIPS32} ${MIPS64})
+    ${MIPS32} ${MIPS64} ${S390X})
 set(ALL_TSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${PPC64})
 set(ALL_UBSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X})

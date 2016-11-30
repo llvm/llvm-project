@@ -5124,8 +5124,7 @@ void RewriteObjCFragileABI::RewriteObjCProtocolMetaData(
       else
         Result += "\t  ,{(struct objc_selector *)\"";
       Result += (*I)->getSelector().getAsString();
-      std::string MethodTypeString;
-      Context->getObjCEncodingForMethodDecl((*I), MethodTypeString);
+      std::string MethodTypeString = Context->getObjCEncodingForMethodDecl(*I);
       Result += "\", \"";
       Result += MethodTypeString;
       Result += "\"}\n";
@@ -5162,8 +5161,7 @@ void RewriteObjCFragileABI::RewriteObjCProtocolMetaData(
       else
         Result += "\t  ,{(struct objc_selector *)\"";
       Result += (*I)->getSelector().getAsString();
-      std::string MethodTypeString;
-      Context->getObjCEncodingForMethodDecl((*I), MethodTypeString);
+      std::string MethodTypeString = Context->getObjCEncodingForMethodDecl(*I);
       Result += "\", \"";
       Result += MethodTypeString;
       Result += "\"}\n";
@@ -5773,8 +5771,8 @@ void RewriteObjCFragileABI::RewriteObjCMethodsMetaData(MethodIterator MethodBegi
   
   Result += "\t,{{(SEL)\"";
   Result += (*MethodBegin)->getSelector().getAsString();
-  std::string MethodTypeString;
-  Context->getObjCEncodingForMethodDecl(*MethodBegin, MethodTypeString);
+  std::string MethodTypeString =
+    Context->getObjCEncodingForMethodDecl(*MethodBegin);
   Result += "\", \"";
   Result += MethodTypeString;
   Result += "\", (void *)";
@@ -5783,8 +5781,8 @@ void RewriteObjCFragileABI::RewriteObjCMethodsMetaData(MethodIterator MethodBegi
   for (++MethodBegin; MethodBegin != MethodEnd; ++MethodBegin) {
     Result += "\t  ,{(SEL)\"";
     Result += (*MethodBegin)->getSelector().getAsString();
-    std::string MethodTypeString;
-    Context->getObjCEncodingForMethodDecl(*MethodBegin, MethodTypeString);
+    std::string MethodTypeString =
+      Context->getObjCEncodingForMethodDecl(*MethodBegin);
     Result += "\", \"";
     Result += MethodTypeString;
     Result += "\", (void *)";

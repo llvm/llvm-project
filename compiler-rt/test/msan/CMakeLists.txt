@@ -10,16 +10,7 @@ endif()
 foreach(arch ${MSAN_TEST_ARCH})
   set(MSAN_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}" MSAN_TEST_CONFIG_SUFFIX)
-  if(ANDROID OR ${arch} MATCHES "arm|aarch64")
-    # This is only true if we are cross-compiling.
-    # Build all tests with host compiler and use host tools.
-    set(MSAN_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
-    set(MSAN_TEST_TARGET_CFLAGS ${COMPILER_RT_TEST_COMPILER_CFLAGS})
-  else()
-    get_target_flags_for_arch(${arch} MSAN_TEST_TARGET_CFLAGS)
-    string(REPLACE ";" " " MSAN_TEST_TARGET_CFLAGS "${MSAN_TEST_TARGET_CFLAGS}")
-  endif()
-
+  get_test_cc_for_arch(${arch} MSAN_TEST_TARGET_CC MSAN_TEST_TARGET_CFLAGS)
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}Config)
 

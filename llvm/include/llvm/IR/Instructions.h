@@ -1904,9 +1904,14 @@ protected:
 public:
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr = "",
-                            Instruction *InsertBefore = nullptr) {
-    return new(3) SelectInst(C, S1, S2, NameStr, InsertBefore);
+                            Instruction *InsertBefore = nullptr,
+                            Instruction *MDFrom = nullptr) {
+    SelectInst *Sel = new(3) SelectInst(C, S1, S2, NameStr, InsertBefore);
+    if (MDFrom)
+      Sel->copyMetadata(*MDFrom);
+    return Sel;
   }
+
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr,
                             BasicBlock *InsertAtEnd) {

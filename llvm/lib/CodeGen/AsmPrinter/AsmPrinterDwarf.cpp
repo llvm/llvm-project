@@ -177,7 +177,7 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
 /// EmitDwarfRegOp - Emit dwarf register operation.
 void AsmPrinter::EmitDwarfRegOp(ByteStreamer &Streamer,
                                 const MachineLocation &MLoc) const {
-  DebugLocDwarfExpression Expr(getDwarfDebug()->getDwarfVersion(), Streamer);
+  DebugLocDwarfExpression Expr(getDwarfVersion(), Streamer);
   const MCRegisterInfo *MRI = MMI->getContext().getRegisterInfo();
   int Reg = MRI->getDwarfRegNum(MLoc.getReg(), false);
   if (Reg < 0) {

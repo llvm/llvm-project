@@ -357,27 +357,6 @@ std::vector<SecMapEntry> DbiStreamBuilder::createSectionMap(
   return Ret;
 }
 
-Expected<std::unique_ptr<DbiStream>>
-DbiStreamBuilder::build(PDBFile &File) {
-  if (!VerHeader.hasValue())
-    return make_error<RawError>(raw_error_code::unspecified,
-                                "Missing DBI Stream Version");
-  if (auto EC = finalize())
-    return std::move(EC);
-
-  auto StreamData = MappedBlockStream::createIndexedStream(
-      File.getMsfLayout(), File.getMsfBuffer(), StreamDBI);
-  auto Dbi = llvm::make_unique<DbiStream>(File, std::move(StreamData));
-  Dbi->Header = Header;
-  Dbi->FileInfoSubstream = ReadableStreamRef(FileInfoBuffer);
-  Dbi->ModInfoSubstream = ReadableStreamRef(ModInfoBuffer);
-  if (auto EC = Dbi->initializeModInfoArray())
-    return std::move(EC);
-  if (auto EC = Dbi->initializeFileInfo())
-    return std::move(EC);
-  return std::move(Dbi);
-}
-
 Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
                                const msf::WritableStream &Buffer) {
   if (auto EC = finalize())
