@@ -84,6 +84,10 @@ ModulePass *createAMDGPUConvertAtomicLibCallsPass();
 void initializeAMDGPUConvertAtomicLibCallsPass(PassRegistry &);
 extern char &AMDGPUConvertAtomicLibCallsID;
 
+ModulePass *createAMDGPUclpVectorExpansionPass();
+void initializeAMDGPUclpVectorExpansionPass(PassRegistry &);
+extern char &AMDGPUclpVectorExpansionID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca(const TargetMachine *TM = nullptr);
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
