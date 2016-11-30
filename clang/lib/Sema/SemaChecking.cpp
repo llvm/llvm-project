@@ -9727,6 +9727,19 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
   return HasInvalidParm;
 }
 
+/// A helper function to get the alignment of a Decl referred to by DeclRefExpr
+/// or MemberExpr.
+static CharUnits getDeclAlign(Expr *E, CharUnits TypeAlign,
+                              ASTContext &Context) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return Context.getDeclAlign(DRE->getDecl());
+
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return Context.getDeclAlign(ME->getMemberDecl());
+
+  return TypeAlign;
+}
+
 /// CheckCastAlign - Implements -Wcast-align, which warns when a
 /// pointer cast increases the alignment requirements.
 void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
@@ -9761,6 +9774,15 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
   if (SrcPointee->isIncompleteType()) return;
 
   CharUnits SrcAlign = Context.getTypeAlignInChars(SrcPointee);
+
+  if (auto *CE = dyn_cast<CastExpr>(Op)) {
+    if (CE->getCastKind() == CK_ArrayToPointerDecay)
+      SrcAlign = getDeclAlign(CE->getSubExpr(), SrcAlign, Context);
+  } else if (auto *UO = dyn_cast<UnaryOperator>(Op)) {
+    if (UO->getOpcode() == UO_AddrOf)
+      SrcAlign = getDeclAlign(UO->getSubExpr(), SrcAlign, Context);
+  }
+
   if (SrcAlign >= DestAlign) return;
 
   Diag(TRange.getBegin(), diag::warn_cast_align)
