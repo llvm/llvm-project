@@ -110,7 +110,7 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
     }
 
     // Replace * with .*
-    for (size_t pos = 0; (pos = Regexp.find("*", pos)) != std::string::npos;
+    for (size_t pos = 0; (pos = Regexp.find('*', pos)) != std::string::npos;
          pos += strlen(".*")) {
       Regexp.replace(pos, strlen("*"), ".*");
     }

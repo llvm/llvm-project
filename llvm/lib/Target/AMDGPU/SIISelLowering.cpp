@@ -817,31 +817,31 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   if (Info->hasDispatchPtr()) {
     unsigned DispatchPtrReg = Info->addDispatchPtr(*TRI);
-    MF.addLiveIn(DispatchPtrReg, &AMDGPU::SReg_64RegClass);
+    MF.addLiveIn(DispatchPtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
   if (Info->hasQueuePtr()) {
     unsigned QueuePtrReg = Info->addQueuePtr(*TRI);
-    MF.addLiveIn(QueuePtrReg, &AMDGPU::SReg_64RegClass);
+    MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
   }
 
   if (Info->hasKernargSegmentPtr()) {
     unsigned InputPtrReg = Info->addKernargSegmentPtr(*TRI);
-    MF.addLiveIn(InputPtrReg, &AMDGPU::SReg_64RegClass);
+    MF.addLiveIn(InputPtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(InputPtrReg);
   }
 
   if (Info->hasDispatchID()) {
     unsigned DispatchIDReg = Info->addDispatchID(*TRI);
-    MF.addLiveIn(DispatchIDReg, &AMDGPU::SReg_64RegClass);
+    MF.addLiveIn(DispatchIDReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(DispatchIDReg);
   }
 
   if (Info->hasFlatScratchInit()) {
     unsigned FlatScratchInitReg = Info->addFlatScratchInit(*TRI);
-    MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SReg_64RegClass);
+    MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(FlatScratchInitReg);
   }
 
@@ -896,8 +896,8 @@ SDValue SITargetLowering::LowerFormalArguments(
     if (VT == MVT::i64) {
       // For now assume it is a pointer
       Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0,
-                                     &AMDGPU::SReg_64RegClass);
-      Reg = MF.addLiveIn(Reg, &AMDGPU::SReg_64RegClass);
+                                     &AMDGPU::SGPR_64RegClass);
+      Reg = MF.addLiveIn(Reg, &AMDGPU::SGPR_64RegClass);
       SDValue Copy = DAG.getCopyFromReg(Chain, DL, Reg, VT);
       InVals.push_back(Copy);
       continue;

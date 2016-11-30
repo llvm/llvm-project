@@ -53,10 +53,10 @@ namespace llvm {
 
   private:
     /// The start of the string, in an external buffer.
-    const char *Data;
+    const char *Data = nullptr;
 
     /// The length of the string.
-    size_t Length;
+    size_t Length = 0;
 
     // Workaround memcmp issue with null pointers (undefined behavior)
     // by providing a specialized version
@@ -71,7 +71,7 @@ namespace llvm {
     /// @{
 
     /// Construct an empty string ref.
-    /*implicit*/ StringRef() : Data(nullptr), Length(0) {}
+    /*implicit*/ StringRef() = default;
 
     /// Disable conversion from nullptr.  This prevents things like
     /// if (S == nullptr)

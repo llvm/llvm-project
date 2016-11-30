@@ -427,7 +427,7 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   }
 
   if (TII->isFLAT(MI)) {
-    int DataIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::data);
+    int DataIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdata);
     if (AMDGPU::getRegBitWidth(Desc.OpInfo[DataIdx].RegClass) > 64)
       return DataIdx;
   }

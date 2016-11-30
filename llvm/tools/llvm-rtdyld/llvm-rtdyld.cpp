@@ -606,7 +606,7 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
 
   // Add dummy symbols to the memory manager.
   for (const auto &Mapping : DummySymbolMappings) {
-    size_t EqualsIdx = Mapping.find_first_of("=");
+    size_t EqualsIdx = Mapping.find_first_of('=');
 
     if (EqualsIdx == StringRef::npos)
       report_fatal_error("Invalid dummy symbol specification '" + Mapping +

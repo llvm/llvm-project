@@ -18,8 +18,35 @@
 #include <string>
 
 namespace llvm {
+  class BitstreamWriter;
   class Module;
   class raw_ostream;
+
+  class BitcodeWriter {
+    SmallVectorImpl<char> &Buffer;
+    std::unique_ptr<BitstreamWriter> Stream;
+
+   public:
+    /// Create a BitcodeWriter that writes to Buffer.
+    BitcodeWriter(SmallVectorImpl<char> &Buffer);
+
+    ~BitcodeWriter();
+
+    /// Write the specified module to the buffer specified at construction time.
+    ///
+    /// If \c ShouldPreserveUseListOrder, encode the use-list order for each \a
+    /// Value in \c M.  These will be reconstructed exactly when \a M is
+    /// deserialized.
+    ///
+    /// If \c Index is supplied, the bitcode will contain the summary index
+    /// (currently for use in ThinLTO optimization).
+    ///
+    /// \p GenerateHash enables hashing the Module and including the hash in the
+    /// bitcode (currently for use in ThinLTO incremental build).
+    void writeModule(const Module *M, bool ShouldPreserveUseListOrder = false,
+                     const ModuleSummaryIndex *Index = nullptr,
+                     bool GenerateHash = false);
+  };
 
   /// \brief Write the specified module to the specified raw output stream.
   ///

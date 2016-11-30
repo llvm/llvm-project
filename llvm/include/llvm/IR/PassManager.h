@@ -399,13 +399,11 @@ public:
     template <typename PassT>
     bool invalidate(IRUnitT &IR, const PreservedAnalyses &PA) {
       AnalysisKey *ID = PassT::ID();
-      SmallDenseMap<AnalysisKey *, bool, 8>::iterator IMapI;
-      bool Inserted;
-      std::tie(IMapI, Inserted) = IsResultInvalidated.insert({ID, false});
 
       // If we've already visited this pass, return true if it was invalidated
       // and false otherwise.
-      if (!Inserted)
+      auto IMapI = IsResultInvalidated.find(ID);
+      if (IMapI != IsResultInvalidated.end())
         return IMapI->second;
 
       // Otherwise look up the result object.
@@ -421,9 +419,16 @@ public:
           ResultModelT;
       auto &ResultModel = static_cast<ResultModelT &>(*RI->second->second);
 
-      // Mark in the map whether the result should be invalidated and return
-      // that.
-      IMapI->second = ResultModel.invalidate(IR, PA, *this);
+      // Insert into the map whether the result should be invalidated and
+      // return that. Note that we cannot re-use IMapI and must do a fresh
+      // insert here as calling the invalidate routine could (recursively)
+      // insert things into the map making any iterator or reference invalid.
+      bool Inserted;
+      std::tie(IMapI, Inserted) = IsResultInvalidated.insert(
+          {ID, ResultModel.invalidate(IR, PA, *this)});
+      (void)Inserted;
+      assert(Inserted && "Should not have already inserted this ID, likely "
+                         "indicates a dependency cycle!");
       return IMapI->second;
     }
 
@@ -593,16 +598,22 @@ public:
       AnalysisKey *ID = AnalysisResultPair.first;
       auto &Result = *AnalysisResultPair.second;
 
-      SmallDenseMap<AnalysisKey *, bool, 8>::iterator IMapI;
-      bool Inserted;
-      std::tie(IMapI, Inserted) = IsResultInvalidated.insert({ID, false});
-      if (!Inserted)
+      auto IMapI = IsResultInvalidated.find(ID);
+      if (IMapI != IsResultInvalidated.end())
         // This result was already handled via the Invalidator.
         continue;
 
       // Try to invalidate the result, giving it the Invalidator so it can
       // recursively query for any dependencies it has and record the result.
-      IMapI->second = Result.invalidate(IR, PA, Inv);
+      // Note that we cannot re-use 'IMapI' here or pre-insert the ID as the
+      // invalidate method may insert things into the map as well, invalidating
+      // any iterator or pointer.
+      bool Inserted =
+          IsResultInvalidated.insert({ID, Result.invalidate(IR, PA, Inv)})
+              .second;
+      (void)Inserted;
+      assert(Inserted && "Should never have already inserted this ID, likely "
+                         "indicates a cycle!");
     }
 
     // Now erase the results that were marked above as invalidated.

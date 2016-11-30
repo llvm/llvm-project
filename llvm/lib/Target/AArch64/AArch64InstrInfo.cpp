@@ -2598,6 +2598,31 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     }
   }
 
+  // Handle the case where a WZR/XZR copy is being spilled but the destination
+  // register class doesn't contain WZR/XZR.  For example:
+  //
+  //   %vreg0<def> = COPY %XZR; GPR64common:%vreg0
+  //
+  // In this case we can still safely fold away the COPY and generate the
+  // following spill code:
+  //
+  //   STRXui %XZR, <fi#0>
+  //
+  if (MI.isFullCopy() && Ops.size() == 1 && Ops[0] == 0) {
+    MachineBasicBlock &MBB = *MI.getParent();
+    const MachineOperand &SrcMO = MI.getOperand(1);
+    unsigned SrcReg = SrcMO.getReg();
+    if (SrcReg == AArch64::WZR || SrcReg == AArch64::XZR) {
+      const TargetRegisterInfo &TRI = getRegisterInfo();
+      const TargetRegisterClass &RC = SrcReg == AArch64::WZR
+                                          ? AArch64::GPR32RegClass
+                                          : AArch64::GPR64RegClass;
+      storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
+                          &RC, &TRI);
+      return &*--InsertPt;
+    }
+  }
+
   // Cannot fold.
   return nullptr;
 }

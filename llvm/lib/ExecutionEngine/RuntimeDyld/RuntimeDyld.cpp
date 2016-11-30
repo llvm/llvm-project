@@ -205,6 +205,10 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
        ++I) {
     uint32_t Flags = I->getFlags();
 
+    // Skip undefined symbols.
+    if (Flags & SymbolRef::SF_Undefined)
+      continue;
+
     if (Flags & SymbolRef::SF_Common)
       CommonSymbols.push_back(*I);
     else {

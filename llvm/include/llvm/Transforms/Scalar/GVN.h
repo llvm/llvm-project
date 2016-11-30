@@ -28,7 +28,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class OptimizationRemarkEmitter;
 
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
@@ -110,7 +109,6 @@ private:
   const TargetLibraryInfo *TLI;
   AssumptionCache *AC;
   SetVector<BasicBlock *> DeadBlocks;
-  OptimizationRemarkEmitter *ORE;
 
   ValueTable VN;
 
@@ -136,7 +134,7 @@ private:
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                const TargetLibraryInfo &RunTLI, AAResults &RunAA,
-               MemoryDependenceResults *RunMD, OptimizationRemarkEmitter *ORE);
+               MemoryDependenceResults *RunMD);
 
   /// Push a new Value to the LeaderTable onto the list for its value number.
   void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {

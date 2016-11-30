@@ -24,6 +24,8 @@
 #pragma detect_mismatch("LLVM_ENABLE_ABI_BREAKING_CHECKS", LLVM_XSTR(LLVM_ENABLE_ABI_BREAKING_CHECKS))
 #undef LLVM_XSTR
 #undef LLVM_STR
+#elif defined(_WIN32) || defined(__CYGWIN__) // Win32 w/o #pragma detect_mismatch
+// FIXME: Implement checks without weak.
 #elif defined(__cplusplus)
 namespace llvm {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS

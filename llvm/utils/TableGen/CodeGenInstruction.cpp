@@ -165,7 +165,7 @@ CGIOperandList::ParseOperandName(const std::string &Op, bool AllowWholeOp) {
   std::string SubOpName;
 
   // Check to see if this is $foo.bar.
-  std::string::size_type DotIdx = OpName.find_first_of(".");
+  std::string::size_type DotIdx = OpName.find_first_of('.');
   if (DotIdx != std::string::npos) {
     SubOpName = OpName.substr(DotIdx+1);
     if (SubOpName.empty())

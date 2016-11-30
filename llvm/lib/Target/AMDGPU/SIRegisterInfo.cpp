@@ -245,12 +245,17 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   unsigned UnusedCarry = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
   unsigned OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
+  unsigned FIReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
   BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_MOV_B32), OffsetReg)
     .addImm(Offset);
+  BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::V_MOV_B32_e32), FIReg)
+    .addFrameIndex(FrameIdx);
+
   BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::V_ADD_I32_e64), BaseReg)
     .addReg(UnusedCarry, RegState::Define | RegState::Dead)
     .addReg(OffsetReg, RegState::Kill)
-    .addFrameIndex(FrameIdx);
+    .addReg(FIReg);
 }
 
 void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,

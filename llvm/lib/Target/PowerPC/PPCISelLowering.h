@@ -990,6 +990,10 @@ namespace llvm {
     unsigned combineRepeatedFPDivisors() const override;
 
     CCAssignFn *useFastISelCCs(unsigned Flag) const;
+
+    SDValue
+      combineElementTruncationToVectorTruncation(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const;
   };
 
   namespace PPC {

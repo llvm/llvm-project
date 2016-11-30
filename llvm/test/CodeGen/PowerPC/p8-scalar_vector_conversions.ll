@@ -46,10 +46,10 @@ entry:
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
-; CHECK: sldi [[REG1:[0-9]+]], 3, 32
-; CHECK: mtvsrd {{[0-9]+}}, [[REG1]]
-; CHECK-LE: mtvsrd [[REG1:[0-9]+]], 3
-; CHECK-LE: xxswapd {{[0-9]+}}, [[REG1]]
+; CHECK: mtvsrwz [[REG1:[0-9]+]], 3
+; CHECK: xxspltw 34, [[REG1]]
+; CHECK-LE: mtvsrwz [[REG1:[0-9]+]], 3
+; CHECK-LE: xxspltw 34, [[REG1]]
 }
 
 ; Function Attrs: nounwind
