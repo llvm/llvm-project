@@ -7,13 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <locale>
 
 // template <class Facet> const Facet& use_facet(const locale& loc);
 
 #include <locale>
 #include <cassert>
+
+#include "test_macros.h"
 
 int facet_count = 0;
 
@@ -32,6 +33,7 @@ std::locale::id my_facet::id;
 
 int main()
 {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
         const my_facet& f = std::use_facet<my_facet>(std::locale());
@@ -41,6 +43,7 @@ int main()
     catch (std::bad_cast&)
     {
     }
+#endif
     const my_facet* fp = 0;
     {
         std::locale loc(std::locale(), new my_facet);

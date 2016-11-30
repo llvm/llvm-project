@@ -8,7 +8,8 @@ unknown u;
 // CHECK: FIX-IT: Replace [3:1 - 3:4] with "foo"
 // CHECK: yamldb_plugin.cpp:3:1: note: Add '#include "foo.h"' to provide the missing declaration [clang-include-fixer]
 // CHECK: Number FIX-ITs = 1
-// CHECK: FIX-IT: Replace [3:1 - 3:4] with "#include "foo.h"
+// CHECK: FIX-IT: Insert "#include "foo.h"
+// CHECK: " at 3:1
 // CHECK: yamldb_plugin.cpp:4:1:
 // CHECK: error: unknown type name 'unknown'
 // CHECK: Number FIX-ITs = 0

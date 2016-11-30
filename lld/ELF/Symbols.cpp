@@ -92,21 +92,11 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   llvm_unreachable("invalid symbol kind");
 }
 
-SymbolBody::SymbolBody(Kind K, const char *Name, uint8_t StOther, uint8_t Type)
-    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(true),
+SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
+                       uint8_t Type)
+    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
       StOther(StOther), Name(Name) {}
-
-SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
-    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(false),
-      IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
-      StOther(StOther), NameLen(Name.size()), Name(Name.data()) {}
-
-StringRef SymbolBody::getName() const {
-  if (NameLen == (uint32_t)-1)
-    NameLen = strlen(Name);
-  return StringRef(Name, NameLen);
-}
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
@@ -203,7 +193,7 @@ void SymbolBody::parseSymbolVersion() {
     return;
 
   // Truncate the symbol name so that it doesn't include the version string.
-  NameLen = Pos;
+  Name = {S.data(), Pos};
 
   // '@@' in a symbol name means the default version.
   // It is usually the most recent one.
@@ -226,11 +216,9 @@ void SymbolBody::parseSymbolVersion() {
   error("symbol " + S + " has undefined version " + Verstr);
 }
 
-Defined::Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
-    : SymbolBody(K, Name, StOther, Type) {}
-
-Defined::Defined(Kind K, const char *Name, uint8_t StOther, uint8_t Type)
-    : SymbolBody(K, Name, StOther, Type) {}
+Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
+                 uint8_t Type)
+    : SymbolBody(K, Name, IsLocal, StOther, Type) {}
 
 template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
   if (!Section || !isFunc())
@@ -239,27 +227,23 @@ template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
          (Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC);
 }
 
-Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type,
-                     InputFile *File)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {
-  this->File = File;
-}
-
-Undefined::Undefined(const char *Name, uint8_t StOther, uint8_t Type,
-                     InputFile *File)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {
+Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
+                     uint8_t Type, InputFile *File)
+    : SymbolBody(SymbolBody::UndefinedKind, Name, IsLocal, StOther, Type) {
   this->File = File;
 }
 
 template <typename ELFT>
-DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
+DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef Name, uintX_t Value,
                                          const OutputSectionBase *Section)
-    : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
+    : Defined(SymbolBody::DefinedSyntheticKind, Name, /*IsLocal=*/false,
+              STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 
-DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
+DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint64_t Alignment,
                              uint8_t StOther, uint8_t Type, InputFile *File)
-    : Defined(SymbolBody::DefinedCommonKind, N, StOther, Type),
+    : Defined(SymbolBody::DefinedCommonKind, Name, /*IsLocal=*/false, StOther,
+              Type),
       Alignment(Alignment), Size(Size) {
   this->File = File;
 }

@@ -16,6 +16,7 @@
 #define LLD_ELF_SYMBOLS_H
 
 #include "InputSection.h"
+#include "Strings.h"
 
 #include "lld/Core/LLVM.h"
 #include "llvm/Object/Archive.h"
@@ -28,7 +29,6 @@ class ArchiveFile;
 class BitcodeFile;
 class InputFile;
 class LazyObjectFile;
-class SymbolBody;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 class OutputSectionBase;
@@ -69,7 +69,7 @@ public:
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isLocal() const { return IsLocal; }
   bool isPreemptible() const;
-  StringRef getName() const;
+  StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
   void parseSymbolVersion();
 
@@ -98,8 +98,8 @@ public:
   uint32_t GlobalDynIndex = -1;
 
 protected:
-  SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
-  SymbolBody(Kind K, const char *Name, uint8_t StOther, uint8_t Type);
+  SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
+             uint8_t Type);
 
   const unsigned SymbolKind : 8;
 
@@ -136,17 +136,13 @@ public:
   bool isFile() const { return Type == llvm::ELF::STT_FILE; }
 
 protected:
-  // Local symbols are not inserted to the symbol table, so we usually
-  // don't need their names at all. We read symbol names lazily if possible.
-  mutable uint32_t NameLen = (uint32_t)-1;
-  const char *Name;
+  StringRefZ Name;
 };
 
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
-  Defined(Kind K, const char *Name, uint8_t StOther, uint8_t Type);
+  Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
@@ -175,23 +171,13 @@ template <class ELFT> class DefinedRegular : public Defined {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, uintX_t Value,
-                 uintX_t Size, InputSectionBase<ELFT> *Section, InputFile *File)
-      : Defined(SymbolBody::DefinedRegularKind, Name, StOther, Type),
+  DefinedRegular(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
+                 uintX_t Value, uintX_t Size, InputSectionBase<ELFT> *Section,
+                 InputFile *File)
+      : Defined(SymbolBody::DefinedRegularKind, Name, IsLocal, StOther, Type),
         Value(Value), Size(Size),
         Section(Section ? Section->Repl : NullInputSection) {
     this->File = File;
-  }
-
-  DefinedRegular(const char *Name, const Elf_Sym &Sym,
-                 InputSectionBase<ELFT> *Section)
-      : Defined(SymbolBody::DefinedRegularKind, Name, Sym.st_other,
-                Sym.getType()),
-        Value(Sym.st_value), Size(Sym.st_size),
-        Section(Section ? Section->Repl : NullInputSection) {
-    assert(isLocal());
-    if (Section)
-      this->File = Section->getFile();
   }
 
   // Return true if the symbol is a PIC function.
@@ -248,8 +234,8 @@ public:
 
 class Undefined : public SymbolBody {
 public:
-  Undefined(StringRef Name, uint8_t StOther, uint8_t Type, InputFile *F);
-  Undefined(const char *Name, uint8_t StOther, uint8_t Type, InputFile *F);
+  Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
+            InputFile *F);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
@@ -270,7 +256,8 @@ public:
 
   SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                const Elf_Verdef *Verdef)
-      : Defined(SymbolBody::SharedKind, Name, Sym.st_other, Sym.getType()),
+      : Defined(SymbolBody::SharedKind, Name, /*IsLocal=*/false, Sym.st_other,
+                Sym.getType()),
         Sym(Sym), Verdef(Verdef) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
@@ -309,7 +296,7 @@ public:
 
 protected:
   Lazy(SymbolBody::Kind K, StringRef Name, uint8_t Type)
-      : SymbolBody(K, Name, llvm::ELF::STV_DEFAULT, Type) {}
+      : SymbolBody(K, Name, /*IsLocal=*/false, llvm::ELF::STV_DEFAULT, Type) {}
 };
 
 // LazyArchive symbols represents symbols in archive files.

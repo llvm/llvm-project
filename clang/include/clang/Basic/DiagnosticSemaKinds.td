@@ -1306,6 +1306,8 @@ def err_mismatched_exception_spec : Error<
   "exception specification in declaration does not match previous declaration">;
 def ext_mismatched_exception_spec : ExtWarn<err_mismatched_exception_spec.Text>,
   InGroup<MicrosoftExceptionSpec>;
+def warn_mismatched_exception_spec_no_exceptions : ExtWarn<err_mismatched_exception_spec.Text>,
+  InGroup<DiagGroup<"exception-spec-no-exceptions">>;
 def err_override_exception_spec : Error<
   "exception specification of overriding function is more lax than "
   "base version">;

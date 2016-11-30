@@ -207,6 +207,14 @@ Sema::UpdateExceptionSpec(FunctionDecl *FD,
     Context.adjustExceptionSpec(cast<FunctionDecl>(Redecl), ESI);
 }
 
+static bool CheckEquivalentExceptionSpecImpl(
+    Sema &S, const PartialDiagnostic &DiagID, const PartialDiagnostic &NoteID,
+    const FunctionProtoType *Old, SourceLocation OldLoc,
+    const FunctionProtoType *New, SourceLocation NewLoc,
+    bool *MissingExceptionSpecification = nullptr,
+    bool *MissingEmptyExceptionSpecification = nullptr,
+    bool AllowNoexceptAllMatchWithNoSpec = false, bool IsOperatorNew = false);
+
 /// Determine whether a function has an implicitly-generated exception
 /// specification.
 static bool hasImplicitExceptionSpec(FunctionDecl *Decl) {
@@ -229,6 +237,12 @@ static bool hasImplicitExceptionSpec(FunctionDecl *Decl) {
 }
 
 bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
+  // Just completely ignore this under -fno-exceptions prior to C++1z.
+  // In C++1z onwards, the exception specification is part of the type and
+  // we will diagnose mismatches anyway, so it's better to check for them here.
+  if (!getLangOpts().CXXExceptions && !getLangOpts().CPlusPlus1z)
+    return false;
+
   OverloadedOperatorKind OO = New->getDeclName().getCXXOverloadedOperator();
   bool IsOperatorNew = OO == OO_New || OO == OO_Array_New;
   bool MissingExceptionSpecification = false;
@@ -243,8 +257,8 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
 
   // Check the types as written: they must match before any exception
   // specification adjustment is applied.
-  if (!CheckEquivalentExceptionSpec(
-        PDiag(DiagID), PDiag(diag::note_previous_declaration),
+  if (!CheckEquivalentExceptionSpecImpl(
+        *this, PDiag(DiagID), PDiag(diag::note_previous_declaration),
         Old->getType()->getAs<FunctionProtoType>(), Old->getLocation(),
         New->getType()->getAs<FunctionProtoType>(), New->getLocation(),
         &MissingExceptionSpecification, &MissingEmptyExceptionSpecification,
@@ -395,11 +409,15 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
 bool Sema::CheckEquivalentExceptionSpec(
     const FunctionProtoType *Old, SourceLocation OldLoc,
     const FunctionProtoType *New, SourceLocation NewLoc) {
+  if (!getLangOpts().CXXExceptions)
+    return false;
+
   unsigned DiagID = diag::err_mismatched_exception_spec;
   if (getLangOpts().MicrosoftExt)
     DiagID = diag::ext_mismatched_exception_spec;
-  bool Result = CheckEquivalentExceptionSpec(PDiag(DiagID),
-      PDiag(diag::note_previous_declaration), Old, OldLoc, New, NewLoc);
+  bool Result = CheckEquivalentExceptionSpecImpl(
+      *this, PDiag(DiagID), PDiag(diag::note_previous_declaration),
+      Old, OldLoc, New, NewLoc);
 
   // In Microsoft mode, mismatching exception specifications just cause a warning.
   if (getLangOpts().MicrosoftExt)
@@ -413,30 +431,23 @@ bool Sema::CheckEquivalentExceptionSpec(
 /// \return \c false if the exception specifications match, \c true if there is
 /// a problem. If \c true is returned, either a diagnostic has already been
 /// produced or \c *MissingExceptionSpecification is set to \c true.
-bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
-                                        const PartialDiagnostic &NoteID,
-                                        const FunctionProtoType *Old,
-                                        SourceLocation OldLoc,
-                                        const FunctionProtoType *New,
-                                        SourceLocation NewLoc,
-                                        bool *MissingExceptionSpecification,
-                                        bool*MissingEmptyExceptionSpecification,
-                                        bool AllowNoexceptAllMatchWithNoSpec,
-                                        bool IsOperatorNew) {
-  // Just completely ignore this under -fno-exceptions.
-  if (!getLangOpts().CXXExceptions)
-    return false;
-
+static bool CheckEquivalentExceptionSpecImpl(
+    Sema &S, const PartialDiagnostic &DiagID, const PartialDiagnostic &NoteID,
+    const FunctionProtoType *Old, SourceLocation OldLoc,
+    const FunctionProtoType *New, SourceLocation NewLoc,
+    bool *MissingExceptionSpecification,
+    bool *MissingEmptyExceptionSpecification,
+    bool AllowNoexceptAllMatchWithNoSpec, bool IsOperatorNew) {
   if (MissingExceptionSpecification)
     *MissingExceptionSpecification = false;
 
   if (MissingEmptyExceptionSpecification)
     *MissingEmptyExceptionSpecification = false;
 
-  Old = ResolveExceptionSpec(NewLoc, Old);
+  Old = S.ResolveExceptionSpec(NewLoc, Old);
   if (!Old)
     return false;
-  New = ResolveExceptionSpec(NewLoc, New);
+  New = S.ResolveExceptionSpec(NewLoc, New);
   if (!New)
     return false;
 
@@ -470,8 +481,8 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
   if (OldEST == EST_None && NewEST == EST_None)
     return false;
 
-  FunctionProtoType::NoexceptResult OldNR = Old->getNoexceptSpec(Context);
-  FunctionProtoType::NoexceptResult NewNR = New->getNoexceptSpec(Context);
+  FunctionProtoType::NoexceptResult OldNR = Old->getNoexceptSpec(S.Context);
+  FunctionProtoType::NoexceptResult NewNR = New->getNoexceptSpec(S.Context);
   if (OldNR == FunctionProtoType::NR_BadNoexcept ||
       NewNR == FunctionProtoType::NR_BadNoexcept)
     return false;
@@ -486,9 +497,9 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
   if (OldNR != NewNR &&
       OldNR != FunctionProtoType::NR_NoNoexcept &&
       NewNR != FunctionProtoType::NR_NoNoexcept) {
-    Diag(NewLoc, DiagID);
+    S.Diag(NewLoc, DiagID);
     if (NoteID.getDiagID() != 0 && OldLoc.isValid())
-      Diag(OldLoc, NoteID);
+      S.Diag(OldLoc, NoteID);
     return true;
   }
 
@@ -526,7 +537,7 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
   // As a special compatibility feature, under C++0x we accept no spec and
   // throw(std::bad_alloc) as equivalent for operator new and operator new[].
   // This is because the implicit declaration changed, but old code would break.
-  if (getLangOpts().CPlusPlus11 && IsOperatorNew) {
+  if (S.getLangOpts().CPlusPlus11 && IsOperatorNew) {
     const FunctionProtoType *WithExceptions = nullptr;
     if (OldEST == EST_None && NewEST == EST_Dynamic)
       WithExceptions = New;
@@ -567,9 +578,9 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
       return true;
     }
 
-    Diag(NewLoc, DiagID);
+    S.Diag(NewLoc, DiagID);
     if (NoteID.getDiagID() != 0 && OldLoc.isValid())
-      Diag(OldLoc, NoteID);
+      S.Diag(OldLoc, NoteID);
     return true;
   }
 
@@ -581,11 +592,11 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
   // to the second.
   llvm::SmallPtrSet<CanQualType, 8> OldTypes, NewTypes;
   for (const auto &I : Old->exceptions())
-    OldTypes.insert(Context.getCanonicalType(I).getUnqualifiedType());
+    OldTypes.insert(S.Context.getCanonicalType(I).getUnqualifiedType());
 
   for (const auto &I : New->exceptions()) {
-    CanQualType TypePtr = Context.getCanonicalType(I).getUnqualifiedType();
-    if(OldTypes.count(TypePtr))
+    CanQualType TypePtr = S.Context.getCanonicalType(I).getUnqualifiedType();
+    if (OldTypes.count(TypePtr))
       NewTypes.insert(TypePtr);
     else
       Success = false;
@@ -596,10 +607,22 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
   if (Success) {
     return false;
   }
-  Diag(NewLoc, DiagID);
+  S.Diag(NewLoc, DiagID);
   if (NoteID.getDiagID() != 0 && OldLoc.isValid())
-    Diag(OldLoc, NoteID);
+    S.Diag(OldLoc, NoteID);
   return true;
+}
+
+bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
+                                        const PartialDiagnostic &NoteID,
+                                        const FunctionProtoType *Old,
+                                        SourceLocation OldLoc,
+                                        const FunctionProtoType *New,
+                                        SourceLocation NewLoc) {
+  if (!getLangOpts().CXXExceptions)
+    return false;
+  return CheckEquivalentExceptionSpecImpl(*this, DiagID, NoteID, Old, OldLoc,
+                                          New, NewLoc);
 }
 
 /// CheckExceptionSpecSubset - Check whether the second function type's

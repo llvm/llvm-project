@@ -1617,16 +1617,15 @@ public:
   ///
   /// \returns true if an error occurred (e.g., because one of the parameter
   /// types is incomplete), false otherwise.
-  bool getObjCEncodingForFunctionDecl(const FunctionDecl *Decl, std::string& S);
+  std::string getObjCEncodingForFunctionDecl(const FunctionDecl *Decl) const;
 
   /// \brief Emit the encoded type for the method declaration \p Decl into
   /// \p S.
   ///
   /// \returns true if an error occurred (e.g., because one of the parameter
   /// types is incomplete), false otherwise.
-  bool getObjCEncodingForMethodDecl(const ObjCMethodDecl *Decl, std::string &S,
-                                    bool Extended = false)
-    const;
+  std::string getObjCEncodingForMethodDecl(const ObjCMethodDecl *Decl,
+                                           bool Extended = false) const;
 
   /// \brief Return the encoded type for this block declaration.
   std::string getObjCEncodingForBlock(const BlockExpr *blockExpr) const;
@@ -1635,9 +1634,8 @@ public:
   /// this method declaration. If non-NULL, Container must be either
   /// an ObjCCategoryImplDecl or ObjCImplementationDecl; it should
   /// only be NULL when getting encodings for protocol properties.
-  void getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
-                                      const Decl *Container,
-                                      std::string &S) const;
+  std::string getObjCEncodingForPropertyDecl(const ObjCPropertyDecl *PD,
+                                             const Decl *Container) const;
 
   bool ProtocolCompatibleWithProtocol(ObjCProtocolDecl *lProto,
                                       ObjCProtocolDecl *rProto) const;

@@ -438,6 +438,11 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
 
+  uint8_t StOther = Sym->st_other;
+  uint8_t Type = Sym->getType();
+  uintX_t Value = Sym->st_value;
+  uintX_t Size = Sym->st_size;
+
   if (Binding == STB_LOCAL) {
     if (Sym->getType() == STT_FILE)
       SourceFile = check(Sym->getName(this->StringTable));
@@ -445,22 +450,21 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
     if (this->StringTable.size() <= Sym->st_name)
       fatal(toString(this) + ": invalid symbol name offset");
 
-    const char *Name = this->StringTable.data() + Sym->st_name;
+    StringRefZ Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (BAlloc) Undefined(Name, Sym->st_other, Sym->getType(), this);
-    return new (BAlloc) DefinedRegular<ELFT>(Name, *Sym, Sec);
+      return new (BAlloc)
+          Undefined(Name, /*IsLocal=*/true, StOther, Type, this);
+
+    return new (BAlloc) DefinedRegular<ELFT>(Name, /*IsLocal=*/true, StOther,
+                                             Type, Value, Size, Sec, this);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
-  uint8_t StOther = Sym->st_other;
-  uint8_t Type = Sym->getType();
-  uintX_t Value = Sym->st_value;
-  uintX_t Size = Sym->st_size;
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
     return elf::Symtab<ELFT>::X
-        ->addUndefined(Name, Binding, StOther, Type,
+        ->addUndefined(Name, /*IsLocal=*/false, Binding, StOther, Type,
                        /*CanOmitFromDynSym=*/false, this)
         ->body();
   case SHN_COMMON:
@@ -480,7 +484,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection<ELFT>::Discarded)
       return elf::Symtab<ELFT>::X
-          ->addUndefined(Name, Binding, StOther, Type,
+          ->addUndefined(Name, /*IsLocal=*/false, Binding, StOther, Type,
                          /*CanOmitFromDynSym=*/false, this)
           ->body();
     return elf::Symtab<ELFT>::X
@@ -723,12 +727,14 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
 
   int C = check(ObjSym.getComdatIndex());
   if (C != -1 && !KeptComdats[C])
-    return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                         CanOmitFromDynSym, F);
+    return Symtab<ELFT>::X->addUndefined(NameRef, /*IsLocal=*/false, Binding,
+                                         Visibility, Type, CanOmitFromDynSym,
+                                         F);
 
   if (Flags & BasicSymbolRef::SF_Undefined)
-    return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                         CanOmitFromDynSym, F);
+    return Symtab<ELFT>::X->addUndefined(NameRef, /*IsLocal=*/false, Binding,
+                                         Visibility, Type, CanOmitFromDynSym,
+                                         F);
 
   if (Flags & BasicSymbolRef::SF_Common)
     return Symtab<ELFT>::X->addCommon(NameRef, ObjSym.getCommonSize(),

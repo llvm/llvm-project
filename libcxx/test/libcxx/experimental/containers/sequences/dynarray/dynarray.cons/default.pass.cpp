@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // UNSUPPORTED: c++98, c++03, c++11
 
 // dynarray.cons
@@ -28,6 +27,8 @@
 #include <limits>
 #include <new>
 #include <string>
+
+#include "test_macros.h"
 
 
 using std::experimental::dynarray;
@@ -61,12 +62,14 @@ void test ( const T &val, bool DefaultValueIsIndeterminate = false) {
     assert ( std::all_of ( d3.begin (), d3.end (), [&val]( const T &item ){ return item == val; } ));
     }
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
 void test_bad_length () {
     try { dynarray<int> ( std::numeric_limits<size_t>::max() / sizeof ( int ) + 1 ); }
     catch ( std::bad_array_length & ) { return ; }
     catch (...) { assert(false); }
     assert ( false );
 }
+#endif
 
 
 int main()
@@ -87,5 +90,7 @@ int main()
     assert ( d1.size() == 20 );
     assert ( std::all_of ( d1.begin (), d1.end (), []( long item ){ return item == 3L; } ));
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
     test_bad_length ();
+#endif
 }

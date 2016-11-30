@@ -2,7 +2,7 @@
 // RUN: ld.lld %t1 --shared -o %t1.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
 // RUN: ld.lld %t1.so %t.o -o %t
-// RUN: llvm-readobj -s -dyn-relocations %t | FileCheck %s
+// RUN: llvm-objdump -s %t | FileCheck %s
 // REQUIRES: arm
 
 // This tls global-dynamic sequence is with respect to a non-preemptible
@@ -31,7 +31,7 @@ x:
  .space 4
  .type  x, %object
 
-// CHECK: Dynamic Relocations {
-// CHECK-NEXT:   0x12078 R_ARM_TLS_DTPMOD32
-// CHECK-NEXT:   0x1300C R_ARM_JUMP_SLOT __tls_get_addr
+// CHECK:       Contents of section .got:
+// Module index is always 1 for executable
+// CHECK-NEXT:  12060 01000000 00000000
 

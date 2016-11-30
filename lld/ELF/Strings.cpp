@@ -16,6 +16,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Demangle/Demangle.h"
 #include <algorithm>
+#include <cstring>
 
 using namespace llvm;
 using namespace lld;

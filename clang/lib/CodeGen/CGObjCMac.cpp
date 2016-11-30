@@ -2762,8 +2762,6 @@ llvm::Constant *CGObjCMac::GetOrEmitProtocol(const ObjCProtocolDecl *PD) {
   std::vector<llvm::Constant*> MethodTypesExt, OptMethodTypesExt;
   for (const auto *MD : PD->instance_methods()) {
     llvm::Constant *C = GetMethodDescriptionConstant(MD);
-    if (!C)
-      return GetOrEmitProtocolRef(PD);
     
     if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
       OptInstanceMethods.push_back(C);
@@ -2776,8 +2774,6 @@ llvm::Constant *CGObjCMac::GetOrEmitProtocol(const ObjCProtocolDecl *PD) {
 
   for (const auto *MD : PD->class_methods()) {
     llvm::Constant *C = GetMethodDescriptionConstant(MD);
-    if (!C)
-      return GetOrEmitProtocolRef(PD);
 
     if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
       OptClassMethods.push_back(C);
@@ -3078,8 +3074,6 @@ CGObjCMac::GetMethodDescriptionConstant(const ObjCMethodDecl *MD) {
                                    ObjCTypes.SelectorPtrTy),
     GetMethodVarType(MD)
   };
-  if (!Desc[1])
-    return nullptr;
 
   return llvm::ConstantStruct::get(ObjCTypes.MethodDescriptionTy,
                                    Desc);
@@ -5180,9 +5174,8 @@ llvm::Constant *CGObjCCommonMac::GetMethodVarType(const FieldDecl *Field) {
 
 llvm::Constant *CGObjCCommonMac::GetMethodVarType(const ObjCMethodDecl *D,
                                                   bool Extended) {
-  std::string TypeStr;
-  if (CGM.getContext().getObjCEncodingForMethodDecl(D, TypeStr, Extended))
-    return nullptr;
+  std::string TypeStr =
+    CGM.getContext().getObjCEncodingForMethodDecl(D, Extended);
 
   llvm::GlobalVariable *&Entry = MethodVarTypes[TypeStr];
   if (!Entry)
@@ -5203,8 +5196,8 @@ llvm::Constant *CGObjCCommonMac::GetPropertyName(IdentifierInfo *Ident) {
 llvm::Constant *
 CGObjCCommonMac::GetPropertyTypeString(const ObjCPropertyDecl *PD,
                                        const Decl *Container) {
-  std::string TypeStr;
-  CGM.getContext().getObjCEncodingForPropertyDecl(PD, Container, TypeStr);
+  std::string TypeStr =
+    CGM.getContext().getObjCEncodingForPropertyDecl(PD, Container);
   return GetPropertyName(&CGM.getContext().Idents.get(TypeStr));
 }
 
@@ -6644,8 +6637,6 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
   std::vector<llvm::Constant*> MethodTypesExt, OptMethodTypesExt;
   for (const auto *MD : PD->instance_methods()) {
     llvm::Constant *C = GetMethodDescriptionConstant(MD);
-    if (!C)
-      return GetOrEmitProtocolRef(PD);
     
     if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
       OptInstanceMethods.push_back(C);
@@ -6658,8 +6649,6 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
 
   for (const auto *MD : PD->class_methods()) {
     llvm::Constant *C = GetMethodDescriptionConstant(MD);
-    if (!C)
-      return GetOrEmitProtocolRef(PD);
 
     if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
       OptClassMethods.push_back(C);
@@ -6825,8 +6814,6 @@ CGObjCNonFragileABIMac::GetMethodDescriptionConstant(const ObjCMethodDecl *MD) {
     llvm::ConstantExpr::getBitCast(GetMethodVarName(MD->getSelector()),
                                    ObjCTypes.SelectorPtrTy);
   Desc[1] = GetMethodVarType(MD);
-  if (!Desc[1])
-    return nullptr;
 
   // Protocol methods have no implementation. So, this entry is always NULL.
   Desc[2] = llvm::Constant::getNullValue(ObjCTypes.Int8PtrTy);
