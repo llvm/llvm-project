@@ -42,7 +42,6 @@ bool GetInfoForAddressIfGlobal(uptr addr, AddressDescription *descr);
 // on the memory type (shadow/heap/stack/global).
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars);
-bool DescribeAddressIfStack(uptr addr, uptr access_size);
 
 // Different kinds of error reports.
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
