@@ -647,15 +647,13 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
     }
     for (auto I : CIS) {
       InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
-      CallInst *CI = dyn_cast<CallInst>(I);
-      InvokeInst *II = dyn_cast<InvokeInst>(I);
-      Function *CalledFunction =
-          (CI == nullptr ? II->getCalledFunction() : CI->getCalledFunction());
+      CallSite CS(I);
+      Function *CalledFunction = CS.getCalledFunction();
       if (!CalledFunction || !CalledFunction->getSubprogram())
         continue;
       DebugLoc DLoc = I->getDebugLoc();
       uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
-      if ((CI && InlineFunction(CI, IFI)) || (II && InlineFunction(II, IFI))) {
+      if (InlineFunction(CS, IFI)) {
         LocalChanged = true;
         emitOptimizationRemark(Ctx, DEBUG_TYPE, F, DLoc,
                                Twine("inlined hot callee '") +

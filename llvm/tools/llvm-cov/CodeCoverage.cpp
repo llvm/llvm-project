@@ -742,7 +742,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
   auto ModifiedTime = Status.getLastModificationTime();
   std::string ModifiedTimeStr = to_string(ModifiedTime);
-  size_t found = ModifiedTimeStr.rfind(":");
+  size_t found = ModifiedTimeStr.rfind(':');
   ViewOpts.CreatedTimeStr = (found != std::string::npos)
                                 ? "Created: " + ModifiedTimeStr.substr(0, found)
                                 : "Created: " + ModifiedTimeStr;

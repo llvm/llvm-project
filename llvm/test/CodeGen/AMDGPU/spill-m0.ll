@@ -60,21 +60,22 @@ endif:
 
 @lds = internal addrspace(3) global [64 x float] undef
 
-; GCN-LABEL: {{^}}spill_m0_lds:
+; m0 is killed, so it isn't necessary during the entry block spill to preserve it
+; GCN-LABEL: {{^}}spill_kill_m0_lds:
 ; GCN: s_mov_b32 m0, s6
 ; GCN: v_interp_mov_f32
 
-; TOSMEM: s_mov_b32 vcc_hi, m0
+; TOSMEM-NOT: s_m0
 ; TOSMEM: s_mov_b32 m0, s7
 ; TOSMEM-NEXT: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
-; TOSMEM: s_mov_b32 m0, vcc_hi
+; TOSMEM-NOT: m0
 
-; TOSMEM: s_mov_b32 vcc_hi, m0
+; TOSMEM-NOT: m0
 ; TOSMEM: s_add_u32 m0, s7, 0x100
 ; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
 ; TOSMEM: s_add_u32 m0, s7, 0x200
 ; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
-; TOSMEM: s_mov_b32 m0, vcc_hi
+; TOSMEM-NOT: m0
 
 ; TOSMEM: s_mov_b64 exec,
 ; TOSMEM: s_cbranch_execz
@@ -88,35 +89,89 @@ endif:
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define amdgpu_ps void @spill_m0_lds(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) #0 {
+define amdgpu_ps void @spill_kill_m0_lds(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %arg3) #0 {
 main_body:
-  %4 = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %3)
-  %cmp = fcmp ueq float 0.0, %4
+  %tmp = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %arg3)
+  %cmp = fcmp ueq float 0.000000e+00, %tmp
   br i1 %cmp, label %if, label %else
 
-if:
+if:                                               ; preds = %main_body
   %lds_ptr = getelementptr [64 x float], [64 x float] addrspace(3)* @lds, i32 0, i32 0
   %lds_data = load float, float addrspace(3)* %lds_ptr
   br label %endif
 
-else:
-  %interp = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %3)
+else:                                             ; preds = %main_body
+  %interp = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %arg3)
+  br label %endif
+
+endif:                                            ; preds = %else, %if
+  %export = phi float [ %lds_data, %if ], [ %interp, %else ]
+  %tmp4 = call i32 @llvm.SI.packf16(float %export, float %export)
+  %tmp5 = bitcast i32 %tmp4 to float
+  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %tmp5, float %tmp5, float %tmp5, float %tmp5)
+  ret void
+}
+
+; Force save and restore of m0 during SMEM spill
+; GCN-LABEL: {{^}}m0_unavailable_spill:
+
+; GCN: ; def m0, 1
+
+; GCN: s_mov_b32 m0, s2
+; GCN: v_interp_mov_f32
+
+; GCN: ; clobber m0
+
+; TOSMEM: s_mov_b32 vcc_hi, m0
+; TOSMEM: s_mov_b32 m0, s3
+; TOSMEM-NEXT: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
+; TOSMEM: s_add_u32 m0, s3, 0x100
+; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
+; TOSMEM: s_mov_b32 m0, vcc_hi
+
+; TOSMEM: s_mov_b64 exec,
+; TOSMEM: s_cbranch_execz
+; TOSMEM: s_branch
+
+; TOSMEM: BB{{[0-9]+_[0-9]+}}:
+; TOSMEM-NEXT: s_mov_b32 m0, s3
+; TOSMEM-NEXT: s_buffer_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Reload
+; TOSMEM-NEXT: s_add_u32 m0, s3, 0x100
+
+; FIXME: Could delay this wait
+; TOSMEM-NEXT: s_waitcnt lgkmcnt(0)
+; TOSMEM-NEXT: s_buffer_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Reload
+
+
+; GCN-NOT: v_readlane_b32 m0
+; GCN-NOT: s_buffer_store_dword m0
+; GCN-NOT: s_buffer_load_dword m0
+define void @m0_unavailable_spill(i32 %arg3) #0 {
+main_body:
+  %m0 = call i32 asm sideeffect "; def $0, 1", "={M0}"() #0
+  %tmp = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %arg3)
+  call void asm sideeffect "; clobber $0", "~{M0}"() #0
+  %cmp = fcmp ueq float 0.000000e+00, %tmp
+   br i1 %cmp, label %if, label %else
+
+if:                                               ; preds = %main_body
+  store volatile i32 8, i32 addrspace(1)* undef
+  br label %endif
+
+else:                                             ; preds = %main_body
+  store volatile i32 11, i32 addrspace(1)* undef
   br label %endif
 
 endif:
-  %export = phi float [%lds_data, %if], [%interp, %else]
-  %5 = call i32 @llvm.SI.packf16(float %export, float %export)
-  %6 = bitcast i32 %5 to float
-  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %6, float %6, float %6, float %6)
   ret void
 }
 
 ; GCN-LABEL: {{^}}restore_m0_lds:
 ; TOSMEM: s_cmp_eq_u32
-; TOSMEM: s_mov_b32 vcc_hi, m0
+; TOSMEM-NOT: m0
 ; TOSMEM: s_mov_b32 m0, s3
 ; TOSMEM: s_buffer_store_dword s4, s[84:87], m0 ; 4-byte Folded Spill
-; TOSMEM: s_mov_b32 m0, vcc_hi
+; TOSMEM-NOT: m0
 ; TOSMEM: s_cbranch_scc1
 
 ; TOSMEM: s_mov_b32 m0, -1
@@ -132,11 +187,12 @@ endif:
 
 ; TOSMEM: ds_write_b64
 
-; TOSMEM: s_mov_b32 vcc_hi, m0
+; TOSMEM-NOT: m0
 ; TOSMEM: s_add_u32 m0, s3, 0x200
 ; TOSMEM: s_buffer_load_dword s0, s[84:87], m0 ; 4-byte Folded Reload
-; TOSMEM: s_mov_b32 m0, vcc_hi
+; TOSMEM-NOT: m0
 ; TOSMEM: s_waitcnt lgkmcnt(0)
+; TOSMEM-NOT: m0
 ; TOSMEM: s_mov_b32 m0, s0
 ; TOSMEM: ; use m0
 

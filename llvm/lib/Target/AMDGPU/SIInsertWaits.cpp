@@ -252,12 +252,6 @@ bool SIInsertWaits::isOpRelevant(MachineOperand &Op) {
   // operand comes before the value operand and it may have
   // multiple data operands.
 
-  if (TII->isDS(MI) || TII->isFLAT(MI)) {
-    MachineOperand *Data = TII->getNamedOperand(MI, AMDGPU::OpName::data);
-    if (Data && Op.isIdenticalTo(*Data))
-      return true;
-  }
-
   if (TII->isDS(MI)) {
     MachineOperand *Data0 = TII->getNamedOperand(MI, AMDGPU::OpName::data0);
     if (Data0 && Op.isIdenticalTo(*Data0))
@@ -265,6 +259,12 @@ bool SIInsertWaits::isOpRelevant(MachineOperand &Op) {
 
     MachineOperand *Data1 = TII->getNamedOperand(MI, AMDGPU::OpName::data1);
     return Data1 && Op.isIdenticalTo(*Data1);
+  }
+
+  if (TII->isFLAT(MI)) {
+    MachineOperand *Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata);
+    if (Data && Op.isIdenticalTo(*Data))
+      return true;
   }
 
   // NOTE: This assumes that the value operand is before the

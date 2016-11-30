@@ -834,7 +834,10 @@ void StructurizeCFG::rebuildSSA() {
   for (BasicBlock *BB : ParentRegion->blocks())
     for (Instruction &I : *BB) {
       bool Initialized = false;
-      for (Use &U : I.uses()) {
+      // We may modify the use list as we iterate over it, so be careful to
+      // compute the next element in the use list at the top of the loop.
+      for (auto UI = I.use_begin(), E = I.use_end(); UI != E;) {
+        Use &U = *UI++;
         Instruction *User = cast<Instruction>(U.getUser());
         if (User->getParent() == BB) {
           continue;

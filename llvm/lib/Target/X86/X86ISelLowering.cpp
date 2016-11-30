@@ -5018,6 +5018,25 @@ static SDValue peekThroughOneUseBitcasts(SDValue V) {
   return V;
 }
 
+static const Constant *getTargetConstantFromNode(SDValue Op) {
+  Op = peekThroughBitcasts(Op);
+
+  auto *Load = dyn_cast<LoadSDNode>(Op);
+  if (!Load)
+    return nullptr;
+
+  SDValue Ptr = Load->getBasePtr();
+  if (Ptr->getOpcode() == X86ISD::Wrapper ||
+      Ptr->getOpcode() == X86ISD::WrapperRIP)
+    Ptr = Ptr->getOperand(0);
+
+  auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
+  if (!CNode || CNode->isMachineConstantPoolEntry())
+    return nullptr;
+
+  return dyn_cast<Constant>(CNode->getConstVal());
+}
+
 static bool getTargetShuffleMaskIndices(SDValue MaskNode,
                                         unsigned MaskEltSizeInBits,
                                         SmallVectorImpl<uint64_t> &RawMask) {
@@ -5099,25 +5118,6 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
   }
 
   return true;
-}
-
-static const Constant *getTargetConstantFromNode(SDValue Op) {
-  Op = peekThroughBitcasts(Op);
-
-  auto *Load = dyn_cast<LoadSDNode>(Op);
-  if (!Load)
-    return nullptr;
-
-  SDValue Ptr = Load->getBasePtr();
-  if (Ptr->getOpcode() == X86ISD::Wrapper ||
-      Ptr->getOpcode() == X86ISD::WrapperRIP)
-    Ptr = Ptr->getOperand(0);
-
-  auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
-  if (!CNode || CNode->isMachineConstantPoolEntry())
-    return nullptr;
-
-  return dyn_cast<Constant>(CNode->getConstVal());
 }
 
 /// Calculates the shuffle mask corresponding to the target-specific opcode.
@@ -5474,6 +5474,10 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
 
   MVT VT = N.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumSizeInBits = VT.getSizeInBits();
+  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
+  assert((NumBitsPerElt % 8) == 0 && (NumSizeInBits % 8) == 0 &&
+         "Expected byte aligned value types");
 
   unsigned Opcode = N.getOpcode();
   switch (Opcode) {
@@ -5481,7 +5485,7 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
   case X86ISD::VSRLI: {
     uint64_t ShiftVal = N.getConstantOperandVal(1);
     // Out of range bit shifts are guaranteed to be zero.
-    if (VT.getScalarSizeInBits() <= ShiftVal) {
+    if (NumBitsPerElt <= ShiftVal) {
       Mask.append(NumElts, SM_SentinelZero);
       return true;
     }
@@ -5491,8 +5495,8 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       break;
 
     uint64_t ByteShift = ShiftVal / 8;
-    unsigned NumBytes = VT.getSizeInBits() / 8;
-    unsigned NumBytesPerElt = VT.getScalarSizeInBits() / 8;
+    unsigned NumBytes = NumSizeInBits / 8;
+    unsigned NumBytesPerElt = NumBitsPerElt / 8;
     Ops.push_back(N.getOperand(0));
 
     // Clear mask to all zeros and insert the shifted byte indices.
@@ -5511,11 +5515,12 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
   }
   case X86ISD::VZEXT: {
     // TODO - add support for VPMOVZX with smaller input vector types.
-    SDValue Op0 = N.getOperand(0);
-    if (VT.getSizeInBits() != Op0.getValueSizeInBits())
+    SDValue Src = N.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+    if (NumSizeInBits != SrcVT.getSizeInBits())
       break;
-    DecodeZeroExtendMask(Op0.getSimpleValueType().getScalarType(), VT, Mask);
-    Ops.push_back(Op0);
+    DecodeZeroExtendMask(SrcVT.getScalarType(), VT, Mask);
+    Ops.push_back(Src);
     return true;
   }
   }
@@ -25445,19 +25450,40 @@ bool X86TargetLowering::isGAPlusOffset(SDNode *N,
 // TODO: Investigate sharing more of this with shuffle lowering.
 static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                     const X86Subtarget &Subtarget,
-                                    unsigned &Shuffle, MVT &ShuffleVT) {
+                                    unsigned &Shuffle, MVT &SrcVT, MVT &DstVT) {
   unsigned NumMaskElts = Mask.size();
+  unsigned MaskEltSize = MaskVT.getScalarSizeInBits();
   bool FloatDomain = MaskVT.isFloatingPoint() ||
                      (!Subtarget.hasAVX2() && MaskVT.is256BitVector());
 
   // Match against a VZEXT_MOVL instruction, SSE1 only supports 32-bits (MOVSS).
-  if (((MaskVT.getScalarSizeInBits() == 32) ||
-       (MaskVT.getScalarSizeInBits() == 64 && Subtarget.hasSSE2())) &&
+  if (((MaskEltSize == 32) || (MaskEltSize == 64 && Subtarget.hasSSE2())) &&
       isUndefOrEqual(Mask[0], 0) &&
       isUndefOrZeroInRange(Mask, 1, NumMaskElts - 1)) {
     Shuffle = X86ISD::VZEXT_MOVL;
-    ShuffleVT = !Subtarget.hasSSE2() ? MVT::v4f32 : MaskVT;
+    SrcVT = DstVT = !Subtarget.hasSSE2() ? MVT::v4f32 : MaskVT;
     return true;
+  }
+
+  // Match against a VZEXT instruction.
+  // TODO: Add 256/512-bit vector support.
+  if (!FloatDomain && MaskVT.is128BitVector() && Subtarget.hasSSE41()) {
+    unsigned MaxScale = 64 / MaskEltSize;
+    for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
+      bool Match = true;
+      unsigned NumDstElts = NumMaskElts / Scale;
+      for (unsigned i = 0; i != NumDstElts && Match; ++i) {
+        Match &= isUndefOrEqual(Mask[i * Scale], (int)i);
+        Match &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
+      }
+      if (Match) {
+        SrcVT = MaskVT;
+        DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
+        DstVT = MVT::getVectorVT(DstVT, NumDstElts);
+        Shuffle = X86ISD::VZEXT;
+        return true;
+      }
+    }
   }
 
   // Check if we have SSE3 which will let us use MOVDDUP etc. The
@@ -25466,17 +25492,17 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   if (MaskVT.is128BitVector() && Subtarget.hasSSE3() && FloatDomain) {
     if (isTargetShuffleEquivalent(Mask, {0, 0})) {
       Shuffle = X86ISD::MOVDDUP;
-      ShuffleVT = MVT::v2f64;
+      SrcVT = DstVT = MVT::v2f64;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2})) {
       Shuffle = X86ISD::MOVSLDUP;
-      ShuffleVT = MVT::v4f32;
+      SrcVT = DstVT = MVT::v4f32;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {1, 1, 3, 3})) {
       Shuffle = X86ISD::MOVSHDUP;
-      ShuffleVT = MVT::v4f32;
+      SrcVT = DstVT = MVT::v4f32;
       return true;
     }
   }
@@ -25485,17 +25511,17 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
     assert(Subtarget.hasAVX() && "AVX required for 256-bit vector shuffles");
     if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2})) {
       Shuffle = X86ISD::MOVDDUP;
-      ShuffleVT = MVT::v4f64;
+      SrcVT = DstVT = MVT::v4f64;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2, 4, 4, 6, 6})) {
       Shuffle = X86ISD::MOVSLDUP;
-      ShuffleVT = MVT::v8f32;
+      SrcVT = DstVT = MVT::v8f32;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {1, 1, 3, 3, 5, 5, 7, 7})) {
       Shuffle = X86ISD::MOVSHDUP;
-      ShuffleVT = MVT::v8f32;
+      SrcVT = DstVT = MVT::v8f32;
       return true;
     }
   }
@@ -25505,19 +25531,19 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
            "AVX512 required for 512-bit vector shuffles");
     if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2, 4, 4, 6, 6})) {
       Shuffle = X86ISD::MOVDDUP;
-      ShuffleVT = MVT::v8f64;
+      SrcVT = DstVT = MVT::v8f64;
       return true;
     }
     if (isTargetShuffleEquivalent(
             Mask, {0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14})) {
       Shuffle = X86ISD::MOVSLDUP;
-      ShuffleVT = MVT::v16f32;
+      SrcVT = DstVT = MVT::v16f32;
       return true;
     }
     if (isTargetShuffleEquivalent(
             Mask, {1, 1, 3, 3, 5, 5, 7, 7, 9, 9, 11, 11, 13, 13, 15, 15})) {
       Shuffle = X86ISD::MOVSHDUP;
-      ShuffleVT = MVT::v16f32;
+      SrcVT = DstVT = MVT::v16f32;
       return true;
     }
   }
@@ -25526,7 +25552,7 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   if (Subtarget.hasAVX2()) {
     SmallVector<int, 64> BroadcastMask(NumMaskElts, 0);
     if (isTargetShuffleEquivalent(Mask, BroadcastMask)) {
-      ShuffleVT = MaskVT;
+      SrcVT = DstVT = MaskVT;
       Shuffle = X86ISD::VBROADCAST;
       return true;
     }
@@ -25954,7 +25980,7 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   MaskVT = MVT::getVectorVT(MaskVT, NumMaskElts);
 
   // Attempt to match the mask against known shuffle patterns.
-  MVT ShuffleVT;
+  MVT ShuffleSrcVT, ShuffleVT;
   unsigned Shuffle, PermuteImm;
 
   if (UnaryShuffle) {
@@ -25973,12 +25999,13 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       }
     }
 
-    if (matchUnaryVectorShuffle(MaskVT, Mask, Subtarget, Shuffle, ShuffleVT)) {
+    if (matchUnaryVectorShuffle(MaskVT, Mask, Subtarget, Shuffle, ShuffleSrcVT,
+                                ShuffleVT)) {
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
       if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
         return false; // AVX512 Writemask clash.
-      Res = DAG.getBitcast(ShuffleVT, V1);
+      Res = DAG.getBitcast(ShuffleSrcVT, V1);
       DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
       DCI.AddToWorklist(Res.getNode());

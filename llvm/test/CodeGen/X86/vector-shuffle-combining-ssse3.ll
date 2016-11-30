@@ -105,6 +105,26 @@ define <4 x float> @combine_pshufb_as_movss(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %4
 }
 
+define <4 x i32> @combine_pshufb_as_zext(<16 x i8> %a0) {
+; SSSE3-LABEL: combine_pshufb_as_zext:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_pshufb_as_zext:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_as_zext:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 -1, i8 -1, i8 -1, i8 1, i8 -1, i8 -1, i8 -1, i8 2, i8 -1, i8 -1, i8 -1, i8 3, i8 -1, i8 -1, i8 -1>)
+  %2 = bitcast <16 x i8> %1 to <4 x i32>
+  ret <4 x i32> %2
+}
+
 define <2 x double> @combine_pshufb_as_vzmovl_64(<2 x double> %a0) {
 ; SSE-LABEL: combine_pshufb_as_vzmovl_64:
 ; SSE:       # BB#0:

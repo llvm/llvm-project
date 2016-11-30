@@ -563,10 +563,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v8i16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v4i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v4f32, Custom);
-    if (Subtarget.hasP8Altivec())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
-    if (Subtarget.hasVSX())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v2f64, Custom);
 
     // Altivec does not contain unordered floating-point compare instructions
     setCondCodeAction(ISD::SETUO, MVT::v4f32, Expand);
@@ -676,6 +672,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FABS, MVT::v4f32, Legal);
       setOperationAction(ISD::FABS, MVT::v2f64, Legal);
 
+      if (Subtarget.hasDirectMove())
+        setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v2f64, Custom);
+
       addRegisterClass(MVT::v2i64, &PPC::VSRCRegClass);
     }
 
@@ -688,9 +688,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
     }
-
-    if (Subtarget.isISA3_0() && Subtarget.hasDirectMove())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
   }
 
   if (Subtarget.hasQPX()) {
@@ -7129,14 +7126,55 @@ static SDValue BuildVSLDOI(SDValue LHS, SDValue RHS, unsigned Amt, EVT VT,
   return DAG.getNode(ISD::BITCAST, dl, VT, T);
 }
 
-static bool isNonConstSplatBV(BuildVectorSDNode *BVN, EVT Type) {
-  if (BVN->isConstant() || BVN->getValueType(0) != Type)
+/// Do we have an efficient pattern in a .td file for this node?
+///
+/// \param V - pointer to the BuildVectorSDNode being matched
+/// \param HasDirectMove - does this subtarget have VSR <-> GPR direct moves?
+///
+/// There are some patterns where it is beneficial to keep a BUILD_VECTOR
+/// node as a BUILD_VECTOR node rather than expanding it. The patterns where
+/// the opposite is true (expansion is beneficial) are:
+/// - The node builds a vector out of integers that are not 32 or 64-bits
+/// - The node builds a vector out of constants
+/// - The node is a "load-and-splat"
+/// In all other cases, we will choose to keep the BUILD_VECTOR.
+static bool haveEfficientBuildVectorPattern(BuildVectorSDNode *V,
+                                            bool HasDirectMove) {
+  EVT VecVT = V->getValueType(0);
+  bool RightType = VecVT == MVT::v2f64 || VecVT == MVT::v4f32 ||
+    (HasDirectMove && (VecVT == MVT::v2i64 || VecVT == MVT::v4i32));
+  if (!RightType)
     return false;
-  auto OpZero = BVN->getOperand(0);
-  for (int i = 1, e = BVN->getNumOperands(); i < e; i++)
-    if (BVN->getOperand(i) != OpZero)
+
+  bool IsSplat = true;
+  bool IsLoad = false;
+  SDValue Op0 = V->getOperand(0);
+
+  // This function is called in a block that confirms the node is not a constant
+  // splat. So a constant BUILD_VECTOR here means the vector is built out of
+  // different constants.
+  if (V->isConstant())
+    return false;
+  for (int i = 0, e = V->getNumOperands(); i < e; ++i) {
+    if (V->getOperand(i).isUndef())
       return false;
-  return true;
+    // We want to expand nodes that represent load-and-splat even if the
+    // loaded value is a floating point truncation or conversion to int.
+    if (V->getOperand(i).getOpcode() == ISD::LOAD ||
+        (V->getOperand(i).getOpcode() == ISD::FP_ROUND &&
+         V->getOperand(i).getOperand(0).getOpcode() == ISD::LOAD) ||
+        (V->getOperand(i).getOpcode() == ISD::FP_TO_SINT &&
+         V->getOperand(i).getOperand(0).getOpcode() == ISD::LOAD) ||
+        (V->getOperand(i).getOpcode() == ISD::FP_TO_UINT &&
+         V->getOperand(i).getOperand(0).getOpcode() == ISD::LOAD))
+      IsLoad = true;
+    // If the operands are different or the input is not a load and has more
+    // uses than just this BV node, then it isn't a splat.
+    if (V->getOperand(i) != Op0 ||
+        (!IsLoad && !V->isOnlyUserOf(V->getOperand(i).getNode())))
+      IsSplat = false;
+  }
+  return !(IsSplat && IsLoad);
 }
 
 // If this is a case we can't handle, return null and let the default
@@ -7261,14 +7299,11 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   if (! BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
                              HasAnyUndefs, 0, !Subtarget.isLittleEndian()) ||
       SplatBitSize > 32) {
-    // We can splat a non-const value on CPU's that implement ISA 3.0
-    // in two ways: LXVWSX (load and splat) and MTVSRWS(move and splat).
-    auto OpZero = BVN->getOperand(0);
-    bool CanLoadAndSplat = OpZero.getOpcode() == ISD::LOAD &&
-      BVN->isOnlyUserOf(OpZero.getNode());
-    if (Subtarget.isISA3_0() && !CanLoadAndSplat &&
-        (isNonConstSplatBV(BVN, MVT::v4i32) ||
-         isNonConstSplatBV(BVN, MVT::v2i64)))
+    // BUILD_VECTOR nodes that are not constant splats of up to 32-bits can be
+    // lowered to VSX instructions under certain conditions.
+    // Without VSX, there is no pattern more efficient than expanding the node.
+    if (Subtarget.hasVSX() &&
+        haveEfficientBuildVectorPattern(BVN, Subtarget.hasDirectMove()))
       return Op;
     return SDValue();
   }
@@ -7290,8 +7325,20 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   // We have XXSPLTIB for constant splats one byte wide
-  if (Subtarget.isISA3_0() && Op.getValueType() == MVT::v16i8)
+  if (Subtarget.hasP9Vector() && SplatSize == 1) {
+    // This is a splat of 1-byte elements with some elements potentially undef.
+    // Rather than trying to match undef in the SDAG patterns, ensure that all
+    // elements are the same constant.
+    if (HasAnyUndefs || ISD::isBuildVectorAllOnes(BVN)) {
+      SmallVector<SDValue, 16> Ops(16, DAG.getConstant(SplatBits,
+                                                       dl, MVT::i32));
+      SDValue NewBV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
+      if (Op.getValueType() != MVT::v16i8)
+        return DAG.getBitcast(Op.getValueType(), NewBV);
+      return NewBV;
+    }
     return Op;
+  }
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
   int32_t SextVal= (int32_t(SplatBits << (32-SplatBitSize)) >>
@@ -7539,7 +7586,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
       // If the source for the shuffle is a scalar_to_vector that came from a
       // 32-bit load, it will have used LXVWSX so we don't need to splat again.
-      if (Subtarget.isISA3_0() &&
+      if (Subtarget.hasP9Vector() &&
           ((isLittleEndian && SplatIdx == 3) ||
            (!isLittleEndian && SplatIdx == 0))) {
         SDValue Src = V1.getOperand(0);
@@ -10623,6 +10670,173 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       ShiftCst);
 }
 
+/// \brief Reduces the number of fp-to-int conversion when building a vector.
+///
+/// If this vector is built out of floating to integer conversions,
+/// transform it to a vector built out of floating point values followed by a
+/// single floating to integer conversion of the vector.
+/// Namely  (build_vector (fptosi $A), (fptosi $B), ...)
+/// becomes (fptosi (build_vector ($A, $B, ...)))
+SDValue PPCTargetLowering::
+combineElementTruncationToVectorTruncation(SDNode *N,
+                                           DAGCombinerInfo &DCI) const {
+  assert(N->getOpcode() == ISD::BUILD_VECTOR &&
+         "Should be called with a BUILD_VECTOR node");
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc dl(N);
+
+  SDValue FirstInput = N->getOperand(0);
+  assert(FirstInput.getOpcode() == PPCISD::MFVSR &&
+         "The input operand must be an fp-to-int conversion.");
+
+  // This combine happens after legalization so the fp_to_[su]i nodes are
+  // already converted to PPCSISD nodes.
+  unsigned FirstConversion = FirstInput.getOperand(0).getOpcode();
+  if (FirstConversion == PPCISD::FCTIDZ ||
+      FirstConversion == PPCISD::FCTIDUZ ||
+      FirstConversion == PPCISD::FCTIWZ ||
+      FirstConversion == PPCISD::FCTIWUZ) {
+    bool IsSplat = true;
+    bool Is32Bit = FirstConversion == PPCISD::FCTIWZ ||
+      FirstConversion == PPCISD::FCTIWUZ;
+    EVT SrcVT = FirstInput.getOperand(0).getValueType();
+    SmallVector<SDValue, 4> Ops;
+    EVT TargetVT = N->getValueType(0);
+    for (int i = 0, e = N->getNumOperands(); i < e; ++i) {
+      if (N->getOperand(i).getOpcode() != PPCISD::MFVSR)
+        return SDValue();
+      unsigned NextConversion = N->getOperand(i).getOperand(0).getOpcode();
+      if (NextConversion != FirstConversion)
+        return SDValue();
+      if (N->getOperand(i) != FirstInput)
+        IsSplat = false;
+    }
+
+    // If this is a splat, we leave it as-is since there will be only a single
+    // fp-to-int conversion followed by a splat of the integer. This is better
+    // for 32-bit and smaller ints and neutral for 64-bit ints.
+    if (IsSplat)
+      return SDValue();
+
+    // Now that we know we have the right type of node, get its operands
+    for (int i = 0, e = N->getNumOperands(); i < e; ++i) {
+      SDValue In = N->getOperand(i).getOperand(0);
+      // For 32-bit values, we need to add an FP_ROUND node.
+      if (Is32Bit) {
+        if (In.isUndef())
+          Ops.push_back(DAG.getUNDEF(SrcVT));
+        else {
+          SDValue Trunc = DAG.getNode(ISD::FP_ROUND, dl,
+                                      MVT::f32, In.getOperand(0),
+                                      DAG.getIntPtrConstant(1, dl));
+          Ops.push_back(Trunc);
+        }
+      } else
+        Ops.push_back(In.isUndef() ? DAG.getUNDEF(SrcVT) : In.getOperand(0));
+    }
+
+    unsigned Opcode;
+    if (FirstConversion == PPCISD::FCTIDZ ||
+        FirstConversion == PPCISD::FCTIWZ)
+      Opcode = ISD::FP_TO_SINT;
+    else
+      Opcode = ISD::FP_TO_UINT;
+
+    EVT NewVT = TargetVT == MVT::v2i64 ? MVT::v2f64 : MVT::v4f32;
+    SDValue BV = DAG.getBuildVector(NewVT, dl, Ops);
+    return DAG.getNode(Opcode, dl, TargetVT, BV);
+  }
+  return SDValue();
+}
+
+/// \brief Reduce the number of loads when building a vector.
+///
+/// Building a vector out of multiple loads can be converted to a load
+/// of the vector type if the loads are consecutive. If the loads are
+/// consecutive but in descending order, a shuffle is added at the end
+/// to reorder the vector.
+static SDValue combineBVOfConsecutiveLoads(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::BUILD_VECTOR &&
+         "Should be called with a BUILD_VECTOR node");
+
+  SDLoc dl(N);
+  bool InputsAreConsecutiveLoads = true;
+  bool InputsAreReverseConsecutive = true;
+  unsigned ElemSize = N->getValueType(0).getScalarSizeInBits() / 8;
+  SDValue FirstInput = N->getOperand(0);
+  bool IsRoundOfExtLoad = false;
+
+  if (FirstInput.getOpcode() == ISD::FP_ROUND &&
+      FirstInput.getOperand(0).getOpcode() == ISD::LOAD) {
+    LoadSDNode *LD = dyn_cast<LoadSDNode>(FirstInput.getOperand(0));
+    IsRoundOfExtLoad = LD->getExtensionType() == ISD::EXTLOAD;
+  }
+  // Not a build vector of (possibly fp_rounded) loads.
+  if (!IsRoundOfExtLoad && FirstInput.getOpcode() != ISD::LOAD)
+    return SDValue();
+
+  for (int i = 1, e = N->getNumOperands(); i < e; ++i) {
+    // If any inputs are fp_round(extload), they all must be.
+    if (IsRoundOfExtLoad && N->getOperand(i).getOpcode() != ISD::FP_ROUND)
+      return SDValue();
+
+    SDValue NextInput = IsRoundOfExtLoad ? N->getOperand(i).getOperand(0) :
+      N->getOperand(i);
+    if (NextInput.getOpcode() != ISD::LOAD)
+      return SDValue();
+
+    SDValue PreviousInput =
+      IsRoundOfExtLoad ? N->getOperand(i-1).getOperand(0) : N->getOperand(i-1);
+    LoadSDNode *LD1 = dyn_cast<LoadSDNode>(PreviousInput);
+    LoadSDNode *LD2 = dyn_cast<LoadSDNode>(NextInput);
+
+    // If any inputs are fp_round(extload), they all must be.
+    if (IsRoundOfExtLoad && LD2->getExtensionType() != ISD::EXTLOAD)
+      return SDValue();
+
+    if (!isConsecutiveLS(LD2, LD1, ElemSize, 1, DAG))
+      InputsAreConsecutiveLoads = false;
+    if (!isConsecutiveLS(LD1, LD2, ElemSize, 1, DAG))
+      InputsAreReverseConsecutive = false;
+
+    // Exit early if the loads are neither consecutive nor reverse consecutive.
+    if (!InputsAreConsecutiveLoads && !InputsAreReverseConsecutive)
+      return SDValue();
+  }
+
+  assert(!(InputsAreConsecutiveLoads && InputsAreReverseConsecutive) &&
+         "The loads cannot be both consecutive and reverse consecutive.");
+
+  SDValue FirstLoadOp =
+    IsRoundOfExtLoad ? FirstInput.getOperand(0) : FirstInput;
+  SDValue LastLoadOp =
+    IsRoundOfExtLoad ? N->getOperand(N->getNumOperands()-1).getOperand(0) :
+                       N->getOperand(N->getNumOperands()-1);
+
+  LoadSDNode *LD1 = dyn_cast<LoadSDNode>(FirstLoadOp);
+  LoadSDNode *LDL = dyn_cast<LoadSDNode>(LastLoadOp);
+  if (InputsAreConsecutiveLoads) {
+    assert(LD1 && "Input needs to be a LoadSDNode.");
+    return DAG.getLoad(N->getValueType(0), dl, LD1->getChain(),
+                       LD1->getBasePtr(), LD1->getPointerInfo(),
+                       LD1->getAlignment());
+  }
+  if (InputsAreReverseConsecutive) {
+    assert(LDL && "Input needs to be a LoadSDNode.");
+    SDValue Load = DAG.getLoad(N->getValueType(0), dl, LDL->getChain(),
+                               LDL->getBasePtr(), LDL->getPointerInfo(),
+                               LDL->getAlignment());
+    SmallVector<int, 16> Ops;
+    for (int i = N->getNumOperands() - 1; i >= 0; i--)
+      Ops.push_back(i);
+
+    return DAG.getVectorShuffle(N->getValueType(0), dl, Load,
+                                DAG.getUNDEF(N->getValueType(0)), Ops);
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::DAGCombineBuildVector(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::BUILD_VECTOR &&
@@ -10630,21 +10844,41 @@ SDValue PPCTargetLowering::DAGCombineBuildVector(SDNode *N,
 
   SelectionDAG &DAG = DCI.DAG;
   SDLoc dl(N);
-  if (N->getValueType(0) != MVT::v2f64 || !Subtarget.hasVSX())
+
+  if (!Subtarget.hasVSX())
+    return SDValue();
+
+  // The target independent DAG combiner will leave a build_vector of
+  // float-to-int conversions intact. We can generate MUCH better code for
+  // a float-to-int conversion of a vector of floats.
+  SDValue FirstInput = N->getOperand(0);
+  if (FirstInput.getOpcode() == PPCISD::MFVSR) {
+    SDValue Reduced = combineElementTruncationToVectorTruncation(N, DCI);
+    if (Reduced)
+      return Reduced;
+  }
+
+  // If we're building a vector out of consecutive loads, just load that
+  // vector type.
+  SDValue Reduced = combineBVOfConsecutiveLoads(N, DAG);
+  if (Reduced)
+    return Reduced;
+
+  if (N->getValueType(0) != MVT::v2f64)
     return SDValue();
 
   // Looking for:
   // (build_vector ([su]int_to_fp (extractelt 0)), [su]int_to_fp (extractelt 1))
-  if (N->getOperand(0).getOpcode() != ISD::SINT_TO_FP &&
-      N->getOperand(0).getOpcode() != ISD::UINT_TO_FP)
+  if (FirstInput.getOpcode() != ISD::SINT_TO_FP &&
+      FirstInput.getOpcode() != ISD::UINT_TO_FP)
     return SDValue();
   if (N->getOperand(1).getOpcode() != ISD::SINT_TO_FP &&
       N->getOperand(1).getOpcode() != ISD::UINT_TO_FP)
     return SDValue();
-  if (N->getOperand(0).getOpcode() != N->getOperand(1).getOpcode())
+  if (FirstInput.getOpcode() != N->getOperand(1).getOpcode())
     return SDValue();
 
-  SDValue Ext1 = N->getOperand(0).getOperand(0);
+  SDValue Ext1 = FirstInput.getOperand(0);
   SDValue Ext2 = N->getOperand(1).getOperand(0);
   if(Ext1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
      Ext2.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
@@ -10814,14 +11048,6 @@ SDValue PPCTargetLowering::expandVSXLoadForLE(SDNode *N,
   }
 
   MVT VecTy = N->getValueType(0).getSimpleVT();
-
-  // Do not expand to PPCISD::LXVD2X + PPCISD::XXSWAPD when the load is
-  // aligned and the type is a vector with elements up to 4 bytes
-  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
-      && VecTy.getScalarSizeInBits() <= 32 ) {
-    return SDValue();
-  }
-
   SDValue LoadOps[] = { Chain, Base };
   SDValue Load = DAG.getMemIntrinsicNode(PPCISD::LXVD2X, dl,
                                          DAG.getVTList(MVT::v2f64, MVT::Other),
@@ -10885,13 +11111,6 @@ SDValue PPCTargetLowering::expandVSXStoreForLE(SDNode *N,
 
   SDValue Src = N->getOperand(SrcOpnd);
   MVT VecTy = Src.getValueType().getSimpleVT();
-
-  // Do not expand to PPCISD::XXSWAPD and PPCISD::STXVD2X when the load is
-  // aligned and the type is a vector with elements up to 4 bytes
-  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
-      && VecTy.getScalarSizeInBits() <= 32 ) {
-    return SDValue();
-  }
 
   // All stores are done as v2f64 and possible bit cast.
   if (VecTy != MVT::v2f64) {

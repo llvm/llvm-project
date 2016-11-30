@@ -224,7 +224,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm5 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm5, %xmm5
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
@@ -236,7 +236,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm3 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm3, %xmm3
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
@@ -354,7 +354,7 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm5 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm5, %xmm5
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
@@ -366,7 +366,7 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm3 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm3, %xmm3
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0

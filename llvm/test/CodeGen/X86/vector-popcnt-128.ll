@@ -175,24 +175,22 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ;
 ; SSE41-LABEL: testv4i32:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm3, %xmm4
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    pshufb %xmm2, %xmm4
 ; SSE41-NEXT:    psrlw $4, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    pshufb %xmm0, %xmm1
-; SSE41-NEXT:    paddb %xmm4, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    movdqa %xmm1, %xmm2
-; SSE41-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; SSE41-NEXT:    psadbw %xmm0, %xmm2
-; SSE41-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE41-NEXT:    psadbw %xmm0, %xmm1
-; SSE41-NEXT:    packuswb %xmm2, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm0, %xmm3
+; SSE41-NEXT:    paddb %xmm4, %xmm3
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm3[0],zero,xmm3[1],zero
+; SSE41-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm1[2],xmm3[3],xmm1[3]
+; SSE41-NEXT:    psadbw %xmm1, %xmm3
+; SSE41-NEXT:    psadbw %xmm1, %xmm0
+; SSE41-NEXT:    packuswb %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: testv4i32:
@@ -208,7 +206,7 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
-; AVX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq

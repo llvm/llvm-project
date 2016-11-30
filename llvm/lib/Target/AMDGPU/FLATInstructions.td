@@ -57,8 +57,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let AsmMatchConverter  = ps.AsmMatchConverter;
 
   // encoding fields
-  bits<8> addr;
-  bits<8> data;
+  bits<8> vaddr;
+  bits<8> vdata;
   bits<8> vdst;
   bits<1> slc;
   bits<1> glc;
@@ -69,8 +69,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let Inst{17}    = slc;
   let Inst{24-18} = op;
   let Inst{31-26} = 0x37; // Encoding.
-  let Inst{39-32} = addr;
-  let Inst{47-40} = !if(ps.has_data, data, ?);
+  let Inst{39-32} = vaddr;
+  let Inst{47-40} = !if(ps.has_data, vdata, ?);
   // 54-48 is reserved.
   let Inst{55}    = tfe;
   let Inst{63-56} = !if(ps.has_vdst, vdst, ?);
@@ -79,8 +79,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
 class FLAT_Load_Pseudo <string opName, RegisterClass regClass> : FLAT_Pseudo<
   opName,
   (outs regClass:$vdst),
-  (ins VReg_64:$addr, GLC:$glc, slc:$slc, tfe:$tfe),
-  " $vdst, $addr$glc$slc$tfe"> {
+  (ins VReg_64:$vaddr, GLC:$glc, slc:$slc, tfe:$tfe),
+  " $vdst, $vaddr$glc$slc$tfe"> {
   let has_data = 0;
   let mayLoad = 1;
 }
@@ -88,8 +88,8 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass> : FLAT_Pseudo<
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass> : FLAT_Pseudo<
   opName,
   (outs),
-  (ins VReg_64:$addr, vdataClass:$data, GLC:$glc, slc:$slc, tfe:$tfe),
-  " $addr, $data$glc$slc$tfe"> {
+  (ins VReg_64:$vaddr, vdataClass:$vdata, GLC:$glc, slc:$slc, tfe:$tfe),
+  " $vaddr, $vdata$glc$slc$tfe"> {
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
@@ -105,8 +105,8 @@ multiclass FLAT_Atomic_Pseudo<
 
   def "" : FLAT_Pseudo <opName,
     (outs),
-    (ins VReg_64:$addr, data_rc:$data, slc:$slc, tfe:$tfe),
-    " $addr, $data$slc$tfe",
+    (ins VReg_64:$vaddr, data_rc:$vdata, slc:$slc, tfe:$tfe),
+    " $vaddr, $vdata$slc$tfe",
     []>,
     AtomicNoRet <NAME, 0> {
     let mayLoad = 1;
@@ -119,10 +119,10 @@ multiclass FLAT_Atomic_Pseudo<
 
   def _RTN : FLAT_Pseudo <opName,
     (outs vdst_rc:$vdst),
-    (ins VReg_64:$addr, data_rc:$data, slc:$slc, tfe:$tfe),
-    " $vdst, $addr, $data glc$slc$tfe",
+    (ins VReg_64:$vaddr, data_rc:$vdata, slc:$slc, tfe:$tfe),
+    " $vdst, $vaddr, $vdata glc$slc$tfe",
     [(set vt:$vdst,
-      (atomic (FLATAtomic i64:$addr, i1:$slc, i1:$tfe), data_vt:$data))]>,
+      (atomic (FLATAtomic i64:$vaddr, i1:$slc, i1:$tfe), data_vt:$vdata))]>,
     AtomicNoRet <NAME, 1> {
     let mayLoad  = 1;
     let mayStore = 1;

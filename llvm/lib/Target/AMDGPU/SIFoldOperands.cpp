@@ -507,13 +507,6 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       if (!FoldingImm && !OpToFold.isReg())
         continue;
 
-      // Folding immediates with more than one use will increase program size.
-      // FIXME: This will also reduce register usage, which may be better
-      // in some cases.  A better heuristic is needed.
-      if (FoldingImm && !TII->isInlineConstant(OpToFold, OpSize) &&
-          !MRI.hasOneUse(MI.getOperand(0).getReg()))
-        continue;
-
       if (OpToFold.isReg() &&
           !TargetRegisterInfo::isVirtualRegister(OpToFold.getReg()))
         continue;
@@ -535,14 +528,57 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       SmallVector<MachineInstr *, 4> CopiesToReplace;
 
       std::vector<FoldCandidate> FoldList;
-      for (MachineRegisterInfo::use_iterator
-           Use = MRI.use_begin(MI.getOperand(0).getReg()), E = MRI.use_end();
-           Use != E; ++Use) {
+      if (FoldingImm) {
+        unsigned NumLiteralUses = 0;
+        MachineOperand *NonInlineUse = nullptr;
+        int NonInlineUseOpNo = -1;
 
-        MachineInstr *UseMI = Use->getParent();
+        // Try to fold any inline immediate uses, and then only fold other
+        // constants if they have one use.
+        //
+        // The legality of the inline immediate must be checked based on the use
+        // operand, not the defining instruction, because 32-bit instructions
+        // with 32-bit inline immediate sources may be used to materialize
+        // constants used in 16-bit operands.
+        //
+        // e.g. it is unsafe to fold:
+        //  s_mov_b32 s0, 1.0    // materializes 0x3f800000
+        //  v_add_f16 v0, v1, s0 // 1.0 f16 inline immediate sees 0x00003c00
 
-        foldOperand(OpToFold, UseMI, Use.getOperandNo(), FoldList,
-                    CopiesToReplace, TII, TRI, MRI);
+        // Folding immediates with more than one use will increase program size.
+        // FIXME: This will also reduce register usage, which may be better
+        // in some cases. A better heuristic is needed.
+        for (MachineRegisterInfo::use_iterator
+               Use = MRI.use_begin(Dst.getReg()), E = MRI.use_end();
+             Use != E; ++Use) {
+          MachineInstr *UseMI = Use->getParent();
+
+          if (TII->isInlineConstant(OpToFold, OpSize)) {
+            foldOperand(OpToFold, UseMI, Use.getOperandNo(), FoldList,
+                        CopiesToReplace, TII, TRI, MRI);
+          } else {
+            if (++NumLiteralUses == 1) {
+              NonInlineUse = &*Use;
+              NonInlineUseOpNo = Use.getOperandNo();
+            }
+          }
+        }
+
+        if (NumLiteralUses == 1) {
+          MachineInstr *UseMI = NonInlineUse->getParent();
+          foldOperand(OpToFold, UseMI, NonInlineUseOpNo, FoldList,
+                      CopiesToReplace, TII, TRI, MRI);
+        }
+      } else {
+        // Folding register.
+        for (MachineRegisterInfo::use_iterator
+               Use = MRI.use_begin(Dst.getReg()), E = MRI.use_end();
+             Use != E; ++Use) {
+          MachineInstr *UseMI = Use->getParent();
+
+          foldOperand(OpToFold, UseMI, Use.getOperandNo(), FoldList,
+                      CopiesToReplace, TII, TRI, MRI);
+        }
       }
 
       // Make sure we add EXEC uses to any new v_mov instructions created.
