@@ -352,20 +352,8 @@ void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
 
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  char tname[128];
-  u32 curr_tid = GetCurrentTidOrInvalid();
-  Report("ERROR: AddressSanitizer: attempting free on address "
-             "which was not malloc()-ed: %p in thread T%d%s\n", addr,
-         curr_tid, ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
-  Printf("%s", d.EndWarning());
-  CHECK_GT(free_stack->size, 0);
-  ScarinessScore::PrintSimple(40, "bad-free");
-  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
-  stack.Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("bad-free", &stack);
+  ErrorFreeNotMalloced error(GetCurrentTidOrInvalid(), free_stack, addr);
+  in_report.ReportError(error);
 }
 
 void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
