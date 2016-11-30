@@ -241,6 +241,27 @@ struct ErrorStringFunctionSizeOverflow : ErrorBase {
   void Print();
 };
 
+struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
+  // ErrorBadParamsToAnnotateContiguousContainer doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  uptr beg, end, old_mid, new_mid;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorBadParamsToAnnotateContiguousContainer() = default;
+  // PS4: Do we want an AddressDescription for beg?
+  ErrorBadParamsToAnnotateContiguousContainer(u32 tid,
+                                              BufferedStackTrace *stack_,
+                                              uptr beg_, uptr end_,
+                                              uptr old_mid_, uptr new_mid_)
+      : ErrorBase(tid),
+        stack(stack_),
+        beg(beg_),
+        end(end_),
+        old_mid(old_mid_),
+        new_mid(new_mid_) {}
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro)    \
   macro(StackOverflow)                     \
@@ -252,7 +273,8 @@ struct ErrorStringFunctionSizeOverflow : ErrorBase {
   macro(MallocUsableSizeNotOwned)          \
   macro(SanitizerGetAllocatedSizeNotOwned) \
   macro(StringFunctionMemoryRangesOverlap) \
-  macro(StringFunctionSizeOverflow)
+  macro(StringFunctionSizeOverflow)        \
+  macro(BadParamsToAnnotateContiguousContainer)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,
