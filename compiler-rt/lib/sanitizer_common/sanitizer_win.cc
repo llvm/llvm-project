@@ -234,8 +234,7 @@ bool MprotectNoAccess(uptr addr, uptr size) {
   return VirtualProtect((LPVOID)addr, size, PAGE_NOACCESS, &old_protection);
 }
 
-
-void ReleaseMemoryToOS(uptr addr, uptr size) {
+void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   // This is almost useless on 32-bits.
   // FIXME: add madvise-analog when we move to 64-bits.
 }

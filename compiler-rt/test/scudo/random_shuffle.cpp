@@ -7,6 +7,7 @@
 // RUN: %run %t 10000 > %T/random_shuffle_tmp_dir/out2
 // RUN: not diff %T/random_shuffle_tmp_dir/out?
 // RUN: rm -rf %T/random_shuffle_tmp_dir
+// UNSUPPORTED: i386-linux,i686-linux
 
 // Tests that the allocator shuffles the chunks before returning to the user.
 

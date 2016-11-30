@@ -234,9 +234,7 @@ static void StopBackgroundThread() {
 #endif
 
 void DontNeedShadowFor(uptr addr, uptr size) {
-  uptr shadow_beg = MemToShadow(addr);
-  uptr shadow_end = MemToShadow(addr + size);
-  ReleaseMemoryToOS(shadow_beg, shadow_end - shadow_beg);
+  ReleaseMemoryPagesToOS(MemToShadow(addr), MemToShadow(addr + size));
 }
 
 void MapShadow(uptr addr, uptr size) {

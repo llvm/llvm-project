@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     free((void *)p);
   }
   if (!strcmp(argv[1], "memaligndel")) {
-    int *p = (int *)memalign(0x10, 0x10);
+    int *p = (int *)memalign(16, 16);
     if (!p)
       return 1;
     delete p;

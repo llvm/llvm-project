@@ -11,12 +11,13 @@
 int main(int argc, char **argv)
 {
   assert(argc == 2);
+  ssize_t offset = sizeof(void *) == 8 ? 8 : 0;
   if (!strcmp(argv[1], "malloc")) {
     // Simulate a header corruption of an allocated chunk (1-bit)
     void *p = malloc(1U << 4);
     if (!p)
       return 1;
-    ((char *)p)[-1] ^= 1;
+    ((char *)p)[-(offset + 1)] ^= 1;
     free(p);
   }
   if (!strcmp(argv[1], "quarantine")) {
@@ -25,7 +26,7 @@ int main(int argc, char **argv)
       return 1;
     free(p);
     // Simulate a header corruption of a quarantined chunk
-    ((char *)p)[-2] ^= 1;
+    ((char *)p)[-(offset + 2)] ^= 1;
     // Trigger the quarantine recycle
     for (int i = 0; i < 0x100; i++) {
       p = malloc(1U << 16);

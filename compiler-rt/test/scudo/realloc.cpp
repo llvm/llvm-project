@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 {
   void *p, *old_p;
   // Those sizes will exercise both allocators (Primary & Secondary).
-  std::vector<size_t> sizes{1, 1 << 5, 1 << 10, 1 << 15, 1 << 20};
+  std::vector<size_t> sizes{1, 16, 1024, 32768, 1 << 16, 1 << 17, 1 << 20};
 
   assert(argc == 2);
   for (size_t size : sizes) {
