@@ -24,22 +24,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
-#include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
+
 using namespace llvm;
 
 namespace {
@@ -74,6 +84,7 @@ enum ClassKind {
 /// builtins.  These must be kept in sync with the flags in
 /// include/clang/Basic/TargetBuiltins.h.
 namespace NeonTypeFlags {
+
 enum { EltTypeMask = 0xf, UnsignedFlag = 0x10, QuadFlag = 0x20 };
 
 enum EltType {
@@ -89,12 +100,10 @@ enum EltType {
   Float32,
   Float64
 };
-}
 
-class Intrinsic;
+} // end namespace NeonTypeFlags
+
 class NeonEmitter;
-class Type;
-class Variable;
 
 //===----------------------------------------------------------------------===//
 // TypeSpec
@@ -190,6 +199,7 @@ public:
   //
   void makeUnsigned() { Signed = false; }
   void makeSigned() { Signed = true; }
+
   void makeInteger(unsigned ElemWidth, bool Sign) {
     Float = false;
     Poly = false;
@@ -197,6 +207,7 @@ public:
     Immediate = false;
     ElementBitwidth = ElemWidth;
   }
+
   void makeImmediate(unsigned ElemWidth) {
     Float = false;
     Poly = false;
@@ -204,18 +215,22 @@ public:
     Immediate = true;
     ElementBitwidth = ElemWidth;
   }
+
   void makeScalar() {
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
   }
+
   void makeOneVector() {
     assert(isVector());
     NumVectors = 1;
   }
+
   void doubleLanes() {
     assert_with_loc(Bitwidth != 128, "Can't get bigger than 128!");
     Bitwidth = 128;
   }
+
   void halveLanes() {
     assert_with_loc(Bitwidth != 64, "Can't get smaller than 64!");
     Bitwidth = 64;
@@ -367,6 +382,7 @@ public:
   bool hasImmediate() const {
     return Proto.find('i') != std::string::npos;
   }
+
   /// Return the parameter index of the immediate operand.
   unsigned getImmediateIdx() const {
     assert(hasImmediate());
@@ -377,6 +393,7 @@ public:
 
   /// Return true if the intrinsic takes an splat operand.
   bool hasSplat() const { return Proto.find('a') != std::string::npos; }
+
   /// Return the parameter index of the splat operand.
   unsigned getSplatIdx() const {
     assert(hasSplat());
@@ -412,7 +429,7 @@ public:
     return Idx;
   }
 
-  bool hasBody() const { return Body && Body->getValues().size() > 0; }
+  bool hasBody() const { return Body && !Body->getValues().empty(); }
 
   void setNeededEarly() { NeededEarly = true; }
 
@@ -485,7 +502,6 @@ private:
     std::pair<Type, std::string> emitDagOp(DagInit *DI);
     std::pair<Type, std::string> emitDag(DagInit *DI);
   };
-
 };
 
 //===----------------------------------------------------------------------===//
@@ -1069,7 +1085,7 @@ std::string Intrinsic::mangleName(std::string Name, ClassKind LocalCK) const {
       Name == "vcvt_f32_f64" || Name == "vcvt_f64_f32")
     return Name;
 
-  if (typeCode.size() > 0) {
+  if (!typeCode.empty()) {
     // If the name ends with _xN (N = 2,3,4), insert the typeCode before _xN.
     if (Name.size() >= 3 && isdigit(Name.back()) &&
         Name[Name.length() - 2] == 'x' && Name[Name.length() - 3] == '_')
@@ -1244,7 +1260,6 @@ void Intrinsic::emitReturnReversal() {
   emitReverseVariable(RetVar, RetVar);
 }
 
-
 void Intrinsic::emitShadowedArgs() {
   // Macro arguments are not type-checked like inline function arguments,
   // so assign them to local temporaries to get the right type checking.
@@ -1395,7 +1410,7 @@ void Intrinsic::emitBody(StringRef CallPrefix) {
     emitNewLine();
   }
 
-  if (!Body || Body->getValues().size() == 0) {
+  if (!Body || Body->getValues().empty()) {
     // Nothing specific to output - must output a builtin.
     emitBodyAsBuiltinCall();
     return;
@@ -1525,7 +1540,7 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagCast(DagInit *DI,
     //   4. The value "U" or "S" to switch the signedness.
     //   5. The value "H" or "D" to half or double the bitwidth.
     //   6. The value "8" to convert to 8-bit (signed) integer lanes.
-    if (DI->getArgName(ArgIdx).size()) {
+    if (!DI->getArgName(ArgIdx).empty()) {
       assert_with_loc(Intr.Variables.find(DI->getArgName(ArgIdx)) !=
                       Intr.Variables.end(),
                       "Variable not found");
@@ -1587,6 +1602,7 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagShuffle(DagInit *DI){
       Elts.insert(Elts2.begin(), Elts2.begin() + (Elts2.size() / 2));
     }
   };
+
   class HighHalf : public SetTheory::Operator {
   public:
     void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
@@ -1596,11 +1612,13 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagShuffle(DagInit *DI){
       Elts.insert(Elts2.begin() + (Elts2.size() / 2), Elts2.end());
     }
   };
+
   class Rev : public SetTheory::Operator {
     unsigned ElementSize;
 
   public:
     Rev(unsigned ElementSize) : ElementSize(ElementSize) {}
+
     void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
                ArrayRef<SMLoc> Loc) override {
       SetTheory::RecSet Elts2;
@@ -1619,11 +1637,13 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagShuffle(DagInit *DI){
       Elts.insert(Revved.begin(), Revved.end());
     }
   };
+
   class MaskExpander : public SetTheory::Expander {
     unsigned N;
 
   public:
     MaskExpander(unsigned N) : N(N) {}
+
     void expand(SetTheory &ST, Record *R, SetTheory::RecSet &Elts) override {
       unsigned Addend = 0;
       if (R->getName() == "mask0")
@@ -1724,7 +1744,8 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagSaveTemp(DagInit *DI)
                   "Argument to save_temp() must have non-void type!");
 
   std::string N = DI->getArgName(0);
-  assert_with_loc(N.size(), "save_temp() expects a name as the first argument");
+  assert_with_loc(!N.empty(),
+                  "save_temp() expects a name as the first argument");
 
   assert_with_loc(Intr.Variables.find(N) == Intr.Variables.end(),
                   "Variable already defined!");
@@ -1760,7 +1781,7 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagLiteral(DagInit *DI){
 
 std::pair<Type, std::string>
 Intrinsic::DagEmitter::emitDagArg(Init *Arg, std::string ArgName) {
-  if (ArgName.size()) {
+  if (!ArgName.empty()) {
     assert_with_loc(!Arg->isComplete(),
                     "Arguments must either be DAGs or names, not both!");
     assert_with_loc(Intr.Variables.find(ArgName) != Intr.Variables.end(),
@@ -1898,7 +1919,7 @@ Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types) {
       GoodVec.push_back(&I);
   }
 
-  assert_with_loc(GoodVec.size() > 0,
+  assert_with_loc(!GoodVec.empty(),
                   "No compatible intrinsic found - " + ErrMsg);
   assert_with_loc(GoodVec.size() == 1, "Multiple overloads found - " + ErrMsg);
 
@@ -2155,9 +2176,9 @@ NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
 
     OS << "case NEON::BI__builtin_neon_" << Def->getMangledName() << ": "
        << "i = " << Idx << ";";
-    if (LowerBound.size())
+    if (!LowerBound.empty())
       OS << " l = " << LowerBound << ";";
-    if (UpperBound.size())
+    if (!UpperBound.empty())
       OS << " u = " << UpperBound << ";";
     OS << " break;\n";
 
@@ -2348,7 +2369,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   // Only emit a def when its requirements have been met.
   // FIXME: This loop could be made faster, but it's fast enough for now.
   bool MadeProgress = true;
-  std::string InGuard = "";
+  std::string InGuard;
   while (!Defs.empty() && MadeProgress) {
     MadeProgress = false;
 
@@ -2391,13 +2412,17 @@ void NeonEmitter::run(raw_ostream &OS) {
 }
 
 namespace clang {
+
 void EmitNeon(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).run(OS);
 }
+
 void EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runHeader(OS);
 }
+
 void EmitNeonTest(RecordKeeper &Records, raw_ostream &OS) {
   llvm_unreachable("Neon test generation no longer implemented!");
 }
-} // End namespace clang
+
+} // end namespace clang

@@ -21,6 +21,7 @@ using namespace lldb_private;
 TEST(BroadcasterTest, BroadcastEvent) {
   EventSP event_sp;
   Broadcaster broadcaster(nullptr, "test-broadcaster");
+  std::chrono::seconds timeout(0);
 
   // Create a listener, sign it up, make sure it recieves an event.
   ListenerSP listener1_sp = Listener::MakeListener("test-listener1");
@@ -28,7 +29,7 @@ TEST(BroadcasterTest, BroadcastEvent) {
   EXPECT_EQ(event_mask1,
             listener1_sp->StartListeningForEvents(&broadcaster, event_mask1));
   broadcaster.BroadcastEvent(event_mask1, nullptr);
-  EXPECT_TRUE(listener1_sp->GetNextEvent(event_sp));
+  EXPECT_TRUE(listener1_sp->GetEvent(event_sp, timeout));
   EXPECT_EQ(event_mask1, event_sp->GetType());
 
   {
@@ -38,20 +39,20 @@ TEST(BroadcasterTest, BroadcastEvent) {
     EXPECT_EQ(event_mask2, listener2_sp->StartListeningForEvents(
                                &broadcaster, event_mask1 | event_mask2));
     broadcaster.BroadcastEvent(event_mask2, nullptr);
-    EXPECT_TRUE(listener2_sp->GetNextEvent(event_sp));
+    EXPECT_TRUE(listener2_sp->GetEvent(event_sp, timeout));
     EXPECT_EQ(event_mask2, event_sp->GetType());
 
     // Both listeners should get this event.
     broadcaster.BroadcastEvent(event_mask1, nullptr);
-    EXPECT_TRUE(listener1_sp->GetNextEvent(event_sp));
+    EXPECT_TRUE(listener1_sp->GetEvent(event_sp, timeout));
     EXPECT_EQ(event_mask1, event_sp->GetType());
-    EXPECT_TRUE(listener2_sp->GetNextEvent(event_sp));
+    EXPECT_TRUE(listener2_sp->GetEvent(event_sp, timeout));
     EXPECT_EQ(event_mask2, event_sp->GetType());
   }
 
   // Now again only one listener should be active.
   broadcaster.BroadcastEvent(event_mask1, nullptr);
-  EXPECT_TRUE(listener1_sp->GetNextEvent(event_sp));
+  EXPECT_TRUE(listener1_sp->GetEvent(event_sp, timeout));
   EXPECT_EQ(event_mask1, event_sp->GetType());
 }
 

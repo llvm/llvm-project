@@ -1459,8 +1459,7 @@ Error ProcessGDBRemote::DoResume() {
           new EventDataBytes(continue_packet.GetString().data(),
                              continue_packet.GetSize()));
 
-      if (listener_sp->WaitForEvent(std::chrono::seconds(5), event_sp) ==
-          false) {
+      if (listener_sp->GetEvent(event_sp, std::chrono::seconds(5)) == false) {
         error.SetErrorString("Resume timed out.");
         if (log)
           log->Printf("ProcessGDBRemote::DoResume: Resume timed out.");
@@ -3534,8 +3533,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
       log->Printf("ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
                   ") listener.WaitForEvent (NULL, event_sp)...",
                   __FUNCTION__, arg, process->GetID());
-    if (process->m_async_listener_sp->WaitForEvent(std::chrono::microseconds(0),
-                                                   event_sp)) {
+    if (process->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&process->m_async_broadcaster)) {
         if (log)

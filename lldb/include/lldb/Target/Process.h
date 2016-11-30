@@ -2415,7 +2415,7 @@ public:
   // false
   // will avoid this behavior.
   lldb::StateType
-  WaitForProcessToStop(const std::chrono::microseconds &timeout,
+  WaitForProcessToStop(const Timeout<std::micro> &timeout,
                        lldb::EventSP *event_sp_ptr = nullptr,
                        bool wait_always = true,
                        lldb::ListenerSP hijack_listener = lldb::ListenerSP(),
@@ -2436,8 +2436,8 @@ public:
   //--------------------------------------------------------------------------------------
   void SyncIOHandler(uint32_t iohandler_id, uint64_t timeout_msec);
 
-  lldb::StateType WaitForStateChangedEvents(
-      const std::chrono::microseconds &timeout, lldb::EventSP &event_sp,
+  lldb::StateType GetStateChangedEvents(
+      lldb::EventSP &event_sp, const Timeout<std::micro> &timeout,
       lldb::ListenerSP
           hijack_listener); // Pass an empty ListenerSP to use builtin listener
 
@@ -3105,24 +3105,19 @@ protected:
 
   Error HaltPrivate();
 
-  lldb::StateType
-  WaitForProcessStopPrivate(const std::chrono::microseconds &timeout,
-                            lldb::EventSP &event_sp);
+  lldb::StateType WaitForProcessStopPrivate(lldb::EventSP &event_sp,
+                                            const Timeout<std::micro> &timeout);
 
   // This waits for both the state change broadcaster, and the control
   // broadcaster.
   // If control_only, it only waits for the control broadcaster.
 
-  bool WaitForEventsPrivate(const std::chrono::microseconds &timeout,
-                            lldb::EventSP &event_sp, bool control_only);
+  bool GetEventsPrivate(lldb::EventSP &event_sp,
+                        const Timeout<std::micro> &timeout, bool control_only);
 
   lldb::StateType
-  WaitForStateChangedEventsPrivate(const std::chrono::microseconds &timeout,
-                                   lldb::EventSP &event_sp);
-
-  lldb::StateType WaitForState(const std::chrono::microseconds &timeout,
-                               const lldb::StateType *match_states,
-                               const uint32_t num_match_states);
+  GetStateChangedEventsPrivate(lldb::EventSP &event_sp,
+                               const Timeout<std::micro> &timeout);
 
   size_t WriteMemoryPrivate(lldb::addr_t addr, const void *buf, size_t size,
                             Error &error);

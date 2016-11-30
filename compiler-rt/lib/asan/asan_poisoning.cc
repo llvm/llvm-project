@@ -412,7 +412,7 @@ const void *__sanitizer_contiguous_container_find_bad_address(
   // ending with end.
   uptr kMaxRangeToCheck = 32;
   uptr r1_beg = beg;
-  uptr r1_end = Min(end + kMaxRangeToCheck, mid);
+  uptr r1_end = Min(beg + kMaxRangeToCheck, mid);
   uptr r2_beg = Max(beg, mid - kMaxRangeToCheck);
   uptr r2_end = Min(end, mid + kMaxRangeToCheck);
   uptr r3_beg = Max(end - kMaxRangeToCheck, mid);

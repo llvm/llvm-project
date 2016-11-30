@@ -87,7 +87,7 @@ public:
     }
 
     ~AggregateBuilderBase() {
-      assert(Finished && "didn't claim value from aggregate builder");
+      assert(Finished && "didn't finish aggregate builder");
     }
 
     void markFinished() {
@@ -119,22 +119,79 @@ public:
     }
     AggregateBuilderBase &operator=(AggregateBuilderBase &&other) = delete;
 
+    /// Abandon this builder completely.
+    void abandon() {
+      markFinished();
+      auto &buffer = Builder.Buffer;
+      buffer.erase(buffer.begin() + Begin, buffer.end());
+    }
+
+    /// Add a new value to this initializer.
     void add(llvm::Constant *value) {
+      assert(value && "adding null value to constant initializer");
       assert(!Finished && "cannot add more values after finishing builder");
+      assert(!Frozen && "cannot add values while subbuilder is active");
       Builder.Buffer.push_back(value);
     }
 
+    /// Add an integer value of type size_t.
     void addSize(CharUnits size) {
       add(Builder.CGM.getSize(size));
     }
 
+    /// Add an integer value of a specific type.
     void addInt(llvm::IntegerType *intTy, uint64_t value,
                 bool isSigned = false) {
       add(llvm::ConstantInt::get(intTy, value, isSigned));
     }
 
+    /// Add a null pointer of a specific type.
     void addNullPointer(llvm::PointerType *ptrTy) {
       add(llvm::ConstantPointerNull::get(ptrTy));
+    }
+
+    /// Add a bitcast of a value to a specific type.
+    void addBitCast(llvm::Constant *value, llvm::Type *type) {
+      add(llvm::ConstantExpr::getBitCast(value, type));
+    }
+
+    /// An opaque class to hold the abstract position of a placeholder.
+    class PlaceholderPosition {
+      size_t Index;
+      friend class AggregateBuilderBase;
+      PlaceholderPosition(size_t index) : Index(index) {}
+    };
+
+    /// Add a placeholder value to the structure.  The returned position
+    /// can be used to set the value later; it will not be invalidated by
+    /// any intermediate operations except (1) filling the same position or
+    /// (2) finishing the entire builder.
+    ///
+    /// This is useful for emitting certain kinds of structure which
+    /// contain some sort of summary field, generaly a count, before any
+    /// of the data.  By emitting a placeholder first, the structure can
+    /// be emitted eagerly.
+    PlaceholderPosition addPlaceholder() {
+      assert(!Finished && "cannot add more values after finishing builder");
+      assert(!Frozen && "cannot add values while subbuilder is active");
+      Builder.Buffer.push_back(nullptr);
+      return Builder.Buffer.size() - 1;
+    }
+
+    /// Fill a previously-added placeholder.
+    void fillPlaceholderWithInt(PlaceholderPosition position,
+                                llvm::IntegerType *type, uint64_t value,
+                                bool isSigned = false) {
+      fillPlaceholder(position, llvm::ConstantInt::get(type, value, isSigned));
+    }
+
+    /// Fill a previously-added placeholder.
+    void fillPlaceholder(PlaceholderPosition position, llvm::Constant *value) {
+      assert(!Finished && "cannot change values after finishing builder");
+      assert(!Frozen && "cannot add values while subbuilder is active");
+      llvm::Constant *&slot = Builder.Buffer[position.Index];
+      assert(slot == nullptr && "placeholder already filled");
+      slot = value;
     }
 
     ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
@@ -214,7 +271,7 @@ public:
 
 private:
   llvm::GlobalVariable *createGlobal(llvm::Constant *initializer,
-                                     StringRef name,
+                                     const llvm::Twine &name,
                                      CharUnits alignment,
                                      bool constant = false,
                                      llvm::GlobalValue::LinkageTypes linkage
@@ -255,6 +312,10 @@ public:
     assert(!Frozen);
     assert(Begin <= getBuffer().size());
     return getBuffer().size() - Begin;
+  }
+
+  bool empty() const {
+    return size() == 0;
   }
 
 private:

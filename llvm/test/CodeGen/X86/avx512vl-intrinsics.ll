@@ -3054,14 +3054,17 @@ define <4 x i32>@test_int_x86_avx512_mask_cvt_pd2dq_128_zext(<2 x double> %x0, <
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vcvtpd2dq %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xff,0x09,0xe6,0xc8]
+; CHECK-NEXT:    vmovq %xmm1, %xmm1 ## encoding: [0x62,0xf1,0xfe,0x08,0x7e,0xc9]
+; CHECK-NEXT:    ## xmm1 = xmm1[0],zero
 ; CHECK-NEXT:    vcvtpd2dq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xff,0x08,0xe6,0xc0]
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x75,0x08,0xfe,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.cvtpd2dq.128(<2 x double> %x0, <4 x i32> %x1, i8 %x2)
-  %res1 = call <4 x i32> @llvm.x86.avx512.mask.cvtpd2dq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
-  %res2 = shufflevector <4 x i32> %res1, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %res3 = add <4 x i32> %res, %res2
-  ret <4 x i32> %res3
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res2 = call <4 x i32> @llvm.x86.avx512.mask.cvtpd2dq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
+  %res3 = shufflevector <4 x i32> %res2, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res4 = add <4 x i32> %res1, %res3
+  ret <4 x i32> %res4
 }
 
 declare <4 x i32> @llvm.x86.avx512.mask.cvtpd2dq.256(<4 x double>, <4 x i32>, i8)
@@ -3117,14 +3120,17 @@ define <4 x float>@test_int_x86_avx512_mask_cvt_pd2ps_zext(<2 x double> %x0, <4 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xfd,0x09,0x5a,0xc8]
+; CHECK-NEXT:    vmovq %xmm1, %xmm1 ## encoding: [0x62,0xf1,0xfe,0x08,0x7e,0xc9]
+; CHECK-NEXT:    ## xmm1 = xmm1[0],zero
 ; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x5a,0xc0]
 ; CHECK-NEXT:    vaddps %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x74,0x08,0x58,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.mask.cvtpd2ps(<2 x double> %x0, <4 x float> %x1, i8 %x2)
-  %res1 = call <4 x float> @llvm.x86.avx512.mask.cvtpd2ps(<2 x double> %x0, <4 x float> %x1, i8 -1)
-  %res2 = shufflevector <4 x float> %res1, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %res3 = fadd <4 x float> %res, %res2
-  ret <4 x float> %res3
+  %res1 = shufflevector <4 x float> %res, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res2 = call <4 x float> @llvm.x86.avx512.mask.cvtpd2ps(<2 x double> %x0, <4 x float> %x1, i8 -1)
+  %res3 = shufflevector <4 x float> %res2, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res4 = fadd <4 x float> %res1, %res3
+  ret <4 x float> %res4
 }
 
 declare <4 x i32> @llvm.x86.avx512.mask.cvtpd2udq.128(<2 x double>, <4 x i32>, i8)
@@ -3148,14 +3154,17 @@ define <4 x i32>@test_int_x86_avx512_mask_cvt_pd2udq_128_zext(<2 x double> %x0, 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vcvtpd2udq %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xfc,0x09,0x79,0xc8]
+; CHECK-NEXT:    vmovq %xmm1, %xmm1 ## encoding: [0x62,0xf1,0xfe,0x08,0x7e,0xc9]
+; CHECK-NEXT:    ## xmm1 = xmm1[0],zero
 ; CHECK-NEXT:    vcvtpd2udq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfc,0x08,0x79,0xc0]
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x75,0x08,0xfe,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.cvtpd2udq.128(<2 x double> %x0, <4 x i32> %x1, i8 %x2)
-  %res1 = call <4 x i32> @llvm.x86.avx512.mask.cvtpd2udq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
-  %res2 = shufflevector <4 x i32> %res1, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %res3 = add <4 x i32> %res, %res2
-  ret <4 x i32> %res3
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res2 = call <4 x i32> @llvm.x86.avx512.mask.cvtpd2udq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
+  %res3 = shufflevector <4 x i32> %res2, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res4 = add <4 x i32> %res1, %res3
+  ret <4 x i32> %res4
 }
 
 declare <4 x i32> @llvm.x86.avx512.mask.cvtpd2udq.256(<4 x double>, <4 x i32>, i8)
@@ -3291,14 +3300,17 @@ define <4 x i32>@test_int_x86_avx512_mask_cvtt_pd2dq_128_zext(<2 x double> %x0, 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vcvttpd2dq %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xfd,0x09,0xe6,0xc8]
+; CHECK-NEXT:    vmovq %xmm1, %xmm1 ## encoding: [0x62,0xf1,0xfe,0x08,0x7e,0xc9]
+; CHECK-NEXT:    ## xmm1 = xmm1[0],zero
 ; CHECK-NEXT:    vcvttpd2dq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xe6,0xc0]
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x75,0x08,0xfe,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.cvttpd2dq.128(<2 x double> %x0, <4 x i32> %x1, i8 %x2)
-  %res1 = call <4 x i32> @llvm.x86.avx512.mask.cvttpd2dq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
-  %res2 = shufflevector <4 x i32> %res1, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %res3 = add <4 x i32> %res, %res2
-  ret <4 x i32> %res3
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res2 = call <4 x i32> @llvm.x86.avx512.mask.cvttpd2dq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
+  %res3 = shufflevector <4 x i32> %res2, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res4 = add <4 x i32> %res1, %res3
+  ret <4 x i32> %res4
 }
 
 declare <4 x i32> @llvm.x86.avx512.mask.cvttpd2dq.256(<4 x double>, <4 x i32>, i8)
@@ -3338,14 +3350,17 @@ define <4 x i32>@test_int_x86_avx512_mask_cvtt_pd2udq_128_zext(<2 x double> %x0,
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vcvttpd2udq %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xfc,0x09,0x78,0xc8]
+; CHECK-NEXT:    vmovq %xmm1, %xmm1 ## encoding: [0x62,0xf1,0xfe,0x08,0x7e,0xc9]
+; CHECK-NEXT:    ## xmm1 = xmm1[0],zero
 ; CHECK-NEXT:    vcvttpd2udq %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfc,0x08,0x78,0xc0]
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x75,0x08,0xfe,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx512.mask.cvttpd2udq.128(<2 x double> %x0, <4 x i32> %x1, i8 %x2)
-  %res1 = call <4 x i32> @llvm.x86.avx512.mask.cvttpd2udq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
-  %res2 = shufflevector <4 x i32> %res1, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %res3 = add <4 x i32> %res, %res2
-  ret <4 x i32> %res3
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res2 = call <4 x i32> @llvm.x86.avx512.mask.cvttpd2udq.128(<2 x double> %x0, <4 x i32> %x1, i8 -1)
+  %res3 = shufflevector <4 x i32> %res2, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %res4 = add <4 x i32> %res1, %res3
+  ret <4 x i32> %res4
 }
 
 declare <4 x i32> @llvm.x86.avx512.mask.cvttpd2udq.256(<4 x double>, <4 x i32>, i8)
