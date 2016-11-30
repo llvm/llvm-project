@@ -22,13 +22,7 @@ endif()
 
 foreach(arch ${UBSAN_TEST_ARCH})
   set(UBSAN_TEST_TARGET_ARCH ${arch})
-  if(${arch} MATCHES "arm|aarch64")
-    # This is only true if we're cross-compiling.
-    set(UBSAN_TEST_TARGET_CFLAGS ${COMPILER_RT_TEST_COMPILER_CFLAGS})
-  else()
-    get_target_flags_for_arch(${arch} UBSAN_TEST_TARGET_CFLAGS)
-    string(REPLACE ";" " " UBSAN_TEST_TARGET_CFLAGS "${UBSAN_TEST_TARGET_CFLAGS}")
-  endif()
+  get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
   add_ubsan_testsuite("Standalone" ubsan ${arch})
 
   if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
