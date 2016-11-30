@@ -97,8 +97,8 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
 BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type,
-                         nullptr);
+  replaceBody<Undefined>(S, S->body()->getName(), /*IsLocal=*/false,
+                         STV_DEFAULT, S->body()->Type, nullptr);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {

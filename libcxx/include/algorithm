@@ -1494,9 +1494,9 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
     if (__len1 < __len2)
         return make_pair(__last1, __last1);
     const _RandomAccessIterator1 __s = __last1 - (__len2 - 1);  // Start of pattern match can't go beyond here
+
     while (true)
     {
-#if !_LIBCPP_UNROLL_LOOPS
         while (true)
         {
             if (__first1 == __s)
@@ -1505,40 +1505,9 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
                 break;
             ++__first1;
         }
-#else  // !_LIBCPP_UNROLL_LOOPS
-        for (_D1 __loop_unroll = (__s - __first1) / 4; __loop_unroll > 0; --__loop_unroll)
-        {
-            if (__pred(*__first1, *__first2))
-                goto __phase2;
-            if (__pred(*++__first1, *__first2))
-                goto __phase2;
-            if (__pred(*++__first1, *__first2))
-                goto __phase2;
-            if (__pred(*++__first1, *__first2))
-                goto __phase2;
-            ++__first1;
-        }
-        switch (__s - __first1)
-        {
-        case 3:
-            if (__pred(*__first1, *__first2))
-                break;
-            ++__first1;
-        case 2:
-            if (__pred(*__first1, *__first2))
-                break;
-            ++__first1;
-        case 1:
-            if (__pred(*__first1, *__first2))
-                break;
-        case 0:
-            return make_pair(__last1, __last1);
-        }
-    __phase2:
-#endif  // !_LIBCPP_UNROLL_LOOPS
+
         _RandomAccessIterator1 __m1 = __first1;
         _RandomAccessIterator2 __m2 = __first2;
-#if !_LIBCPP_UNROLL_LOOPS
          while (true)
          {
              if (++__m2 == __last2)
@@ -1550,43 +1519,6 @@ __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
                  break;
              }
          }
-#else  // !_LIBCPP_UNROLL_LOOPS
-        ++__m2;
-        ++__m1;
-        for (_D2 __loop_unroll = (__last2 - __m2) / 4; __loop_unroll > 0; --__loop_unroll)
-        {
-            if (!__pred(*__m1, *__m2))
-                goto __continue;
-            if (!__pred(*++__m1, *++__m2))
-                goto __continue;
-            if (!__pred(*++__m1, *++__m2))
-                goto __continue;
-            if (!__pred(*++__m1, *++__m2))
-                goto __continue;
-            ++__m1;
-            ++__m2;
-        }
-        switch (__last2 - __m2)
-        {
-        case 3:
-            if (!__pred(*__m1, *__m2))
-                break;
-            ++__m1;
-            ++__m2;
-        case 2:
-            if (!__pred(*__m1, *__m2))
-                break;
-            ++__m1;
-            ++__m2;
-        case 1:
-            if (!__pred(*__m1, *__m2))
-                break;
-        case 0:
-            return make_pair(__first1, __first1 + __len2);
-        }
-    __continue:
-        ++__first1;
-#endif  // !_LIBCPP_UNROLL_LOOPS
     }
 }
 

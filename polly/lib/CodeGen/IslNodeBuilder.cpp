@@ -203,8 +203,7 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   for (const Instruction &Inst : *BB)
     for (Value *SrcVal : Inst.operands()) {
       auto *Scope = References.LI.getLoopFor(BB);
-      if (canSynthesize(SrcVal, References.S, &References.LI, &References.SE,
-                        Scope)) {
+      if (canSynthesize(SrcVal, References.S, &References.SE, Scope)) {
         References.SCEVs.insert(References.SE.getSCEVAtScope(SrcVal, Scope));
         continue;
       } else if (Value *NewVal = References.GlobalMap.lookup(SrcVal))
@@ -1357,10 +1356,11 @@ Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
 
   if (PollyGenerateRTCPrint) {
     auto *F = Builder.GetInsertBlock()->getParent();
-    RuntimeDebugBuilder::createCPUPrinter(
-        Builder, "F: " + F->getName().str() + " R: " +
-                     S.getRegion().getNameStr() + " __RTC: ",
-        RTC, " Overflow: ", OverflowHappened);
+    RuntimeDebugBuilder::createCPUPrinter(Builder,
+                                          "F: " + F->getName().str() + " R: " +
+                                              S.getRegion().getNameStr() +
+                                              " __RTC: ",
+                                          RTC, " Overflow: ", OverflowHappened);
   }
 
   RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");

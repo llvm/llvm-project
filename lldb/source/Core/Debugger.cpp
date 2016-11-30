@@ -1535,7 +1535,7 @@ void Debugger::DefaultEventHandler() {
   bool done = false;
   while (!done) {
     EventSP event_sp;
-    if (listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp)) {
+    if (listener_sp->GetEvent(event_sp, llvm::None)) {
       if (event_sp) {
         Broadcaster *broadcaster = event_sp->GetBroadcaster();
         if (broadcaster) {
@@ -1616,7 +1616,7 @@ bool Debugger::StartEventHandlerThread() {
     // to wait an infinite amount of time for it (nullptr timeout as the first
     // parameter)
     lldb::EventSP event_sp;
-    listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp);
+    listener_sp->GetEvent(event_sp, llvm::None);
   }
   return m_event_handler_thread.IsJoinable();
 }

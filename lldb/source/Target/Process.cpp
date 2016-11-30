@@ -68,6 +68,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
+// A temporary function to convert between old representations of timeouts (0
+// means infinite wait) and new Timeout class (0 means "poll").
+// TODO(labath): Fix up all callers and remove this.
+static Timeout<std::micro> ConvertTimeout(std::chrono::microseconds t) {
+  if (t == std::chrono::microseconds(0))
+    return llvm::None;
+  return t;
+}
+
 // Comment out line below to disable memory caching, overriding the process
 // setting
 // target.process.disable-memory-cache
@@ -937,7 +946,9 @@ void Process::SynchronouslyNotifyStateChanged(StateType state) {
 StateType Process::GetNextEvent(EventSP &event_sp) {
   StateType state = eStateInvalid;
 
-  if (m_listener_sp->GetNextEventForBroadcaster(this, event_sp) && event_sp)
+  if (m_listener_sp->GetEventForBroadcaster(this, event_sp,
+                                            std::chrono::seconds(0)) &&
+      event_sp)
     state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
   return state;
@@ -1289,9 +1300,9 @@ Process::WaitForStateChangedEvents(const std::chrono::microseconds &timeout,
     listener_sp = m_listener_sp;
 
   StateType state = eStateInvalid;
-  if (listener_sp->WaitForEventForBroadcasterWithType(
-          timeout, this, eBroadcastBitStateChanged | eBroadcastBitInterrupt,
-          event_sp)) {
+  if (listener_sp->GetEventForBroadcasterWithType(
+          this, eBroadcastBitStateChanged | eBroadcastBitInterrupt, event_sp,
+          ConvertTimeout(timeout))) {
     if (event_sp && event_sp->GetType() == eBroadcastBitStateChanged)
       state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
     else if (log)
@@ -1335,9 +1346,10 @@ StateType Process::WaitForStateChangedEventsPrivate(
                 static_cast<unsigned long long>(timeout.count()));
 
   StateType state = eStateInvalid;
-  if (m_private_state_listener_sp->WaitForEventForBroadcasterWithType(
-          timeout, &m_private_state_broadcaster,
-          eBroadcastBitStateChanged | eBroadcastBitInterrupt, event_sp))
+  if (m_private_state_listener_sp->GetEventForBroadcasterWithType(
+          &m_private_state_broadcaster,
+          eBroadcastBitStateChanged | eBroadcastBitInterrupt, event_sp,
+          ConvertTimeout(timeout)))
     if (event_sp && event_sp->GetType() == eBroadcastBitStateChanged)
       state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
@@ -1360,10 +1372,12 @@ bool Process::WaitForEventsPrivate(const std::chrono::microseconds &timeout,
                 static_cast<unsigned long long>(timeout.count()));
 
   if (control_only)
-    return m_private_state_listener_sp->WaitForEventForBroadcaster(
-        timeout, &m_private_state_control_broadcaster, event_sp);
+    return m_private_state_listener_sp->GetEventForBroadcaster(
+        &m_private_state_control_broadcaster, event_sp,
+        ConvertTimeout(timeout));
   else
-    return m_private_state_listener_sp->WaitForEvent(timeout, event_sp);
+    return m_private_state_listener_sp->GetEvent(event_sp,
+                                                 ConvertTimeout(timeout));
 }
 
 bool Process::IsRunning() const {
@@ -2881,7 +2895,7 @@ Error Process::LoadCore() {
 
     // Wait indefinitely for a stopped event since we just posted one above...
     lldb::EventSP event_sp;
-    listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp);
+    listener_sp->GetEvent(event_sp, llvm::None);
     StateType state = ProcessEventData::GetStateFromEvent(event_sp.get());
 
     if (!StateIsStoppedState(state, false)) {
@@ -5116,8 +5130,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           }
         }
 
-        got_event = listener_sp->WaitForEvent(std::chrono::microseconds(500000),
-                                              event_sp);
+        got_event =
+            listener_sp->GetEvent(event_sp, std::chrono::milliseconds(500));
         if (!got_event) {
           if (log)
             log->Printf("Process::RunThreadPlan(): didn't get any event after "
@@ -5226,7 +5240,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         got_event = false;
       } else
 #endif
-        got_event = listener_sp->WaitForEvent(timeout, event_sp);
+        got_event = listener_sp->GetEvent(event_sp, ConvertTimeout(timeout));
 
       if (got_event) {
         if (event_sp) {
@@ -5426,8 +5440,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             if (log)
               log->PutCString("Process::RunThreadPlan(): Halt succeeded.");
 
-            got_event = listener_sp->WaitForEvent(
-                std::chrono::microseconds(500000), event_sp);
+            got_event =
+                listener_sp->GetEvent(event_sp, std::chrono::milliseconds(500));
 
             if (got_event) {
               stop_state =

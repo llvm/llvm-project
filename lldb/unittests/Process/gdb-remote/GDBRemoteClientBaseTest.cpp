@@ -67,9 +67,8 @@ struct ContinueFixture {
 
   void WaitForRunEvent() {
     EventSP event_sp;
-    listener_sp->WaitForEventForBroadcasterWithType(
-        std::chrono::microseconds(0), &client,
-        TestClient::eBroadcastBitRunPacketSent, event_sp);
+    listener_sp->GetEventForBroadcasterWithType(
+        &client, TestClient::eBroadcastBitRunPacketSent, event_sp, llvm::None);
   }
 };
 

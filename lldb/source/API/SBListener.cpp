@@ -156,14 +156,14 @@ bool SBListener::WaitForEvent(uint32_t timeout_secs, SBEvent &event) {
   bool success = false;
 
   if (m_opaque_sp) {
-    std::chrono::microseconds timeout = std::chrono::microseconds(0);
+    Timeout<std::micro> timeout(llvm::None);
     if (timeout_secs != UINT32_MAX) {
       assert(timeout_secs != 0); // Take this out after all calls with timeout
                                  // set to zero have been removed....
       timeout = std::chrono::seconds(timeout_secs);
     }
     EventSP event_sp;
-    if (m_opaque_sp->WaitForEvent(timeout, event_sp)) {
+    if (m_opaque_sp->GetEvent(event_sp, timeout)) {
       event.reset(event_sp);
       success = true;
     }
@@ -191,12 +191,12 @@ bool SBListener::WaitForEventForBroadcaster(uint32_t num_seconds,
                                             const SBBroadcaster &broadcaster,
                                             SBEvent &event) {
   if (m_opaque_sp && broadcaster.IsValid()) {
-    std::chrono::microseconds timeout = std::chrono::microseconds(0);
+    Timeout<std::micro> timeout(llvm::None);
     if (num_seconds != UINT32_MAX)
       timeout = std::chrono::seconds(num_seconds);
     EventSP event_sp;
-    if (m_opaque_sp->WaitForEventForBroadcaster(timeout, broadcaster.get(),
-                                                event_sp)) {
+    if (m_opaque_sp->GetEventForBroadcaster(broadcaster.get(), event_sp,
+                                            timeout)) {
       event.reset(event_sp);
       return true;
     }
@@ -209,12 +209,12 @@ bool SBListener::WaitForEventForBroadcasterWithType(
     uint32_t num_seconds, const SBBroadcaster &broadcaster,
     uint32_t event_type_mask, SBEvent &event) {
   if (m_opaque_sp && broadcaster.IsValid()) {
-    std::chrono::microseconds timeout = std::chrono::microseconds(0);
+    Timeout<std::micro> timeout(llvm::None);
     if (num_seconds != UINT32_MAX)
       timeout = std::chrono::seconds(num_seconds);
     EventSP event_sp;
-    if (m_opaque_sp->WaitForEventForBroadcasterWithType(
-            timeout, broadcaster.get(), event_type_mask, event_sp)) {
+    if (m_opaque_sp->GetEventForBroadcasterWithType(
+            broadcaster.get(), event_type_mask, event_sp, timeout)) {
       event.reset(event_sp);
       return true;
     }
@@ -257,7 +257,7 @@ bool SBListener::PeekAtNextEventForBroadcasterWithType(
 bool SBListener::GetNextEvent(SBEvent &event) {
   if (m_opaque_sp) {
     EventSP event_sp;
-    if (m_opaque_sp->GetNextEvent(event_sp)) {
+    if (m_opaque_sp->GetEvent(event_sp, std::chrono::seconds(0))) {
       event.reset(event_sp);
       return true;
     }
@@ -270,7 +270,8 @@ bool SBListener::GetNextEventForBroadcaster(const SBBroadcaster &broadcaster,
                                             SBEvent &event) {
   if (m_opaque_sp && broadcaster.IsValid()) {
     EventSP event_sp;
-    if (m_opaque_sp->GetNextEventForBroadcaster(broadcaster.get(), event_sp)) {
+    if (m_opaque_sp->GetEventForBroadcaster(broadcaster.get(), event_sp,
+                                            std::chrono::seconds(0))) {
       event.reset(event_sp);
       return true;
     }
@@ -284,8 +285,9 @@ bool SBListener::GetNextEventForBroadcasterWithType(
     SBEvent &event) {
   if (m_opaque_sp && broadcaster.IsValid()) {
     EventSP event_sp;
-    if (m_opaque_sp->GetNextEventForBroadcasterWithType(
-            broadcaster.get(), event_type_mask, event_sp)) {
+    if (m_opaque_sp->GetEventForBroadcasterWithType(broadcaster.get(),
+                                                    event_type_mask, event_sp,
+                                                    std::chrono::seconds(0))) {
       event.reset(event_sp);
       return true;
     }

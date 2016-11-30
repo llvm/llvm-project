@@ -80,6 +80,12 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   if (V > UINT32_MAX)
     fatal(toString(File) + ": section sh_addralign is too large");
   Alignment = V;
+
+  // If it is not a mergeable section, overwrite the flag so that the flag
+  // is consistent with the class. This inconsistency could occur when
+  // string merging is disabled using -O0 flag.
+  if (!Config->Relocatable && !isa<MergeInputSection<ELFT>>(this))
+    this->Flags &= ~(SHF_MERGE | SHF_STRINGS);
 }
 
 template <class ELFT>
@@ -423,7 +429,7 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
     return In<ELFT>::MipsGot->getVA() +
-           In<ELFT>::MipsGot->getPageEntryOffset(Body.getVA<ELFT>(A)) -
+           In<ELFT>::MipsGot->getPageEntryOffset(Body, A) -
            In<ELFT>::MipsGot->getGp();
   case R_MIPS_GOT_OFF:
   case R_MIPS_GOT_OFF32:

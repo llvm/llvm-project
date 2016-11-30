@@ -239,7 +239,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   Out<ELFT>::EhFrame = make<EhOutputSection<ELFT>>();
-  In<ELFT>::Plt = make<PltSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
@@ -256,22 +255,13 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::Interp = nullptr;
   }
 
-  if (Config->EhFrameHdr)
-    In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
+  if (!Config->Relocatable)
+    Symtab<ELFT>::X->Sections.push_back(createCommentSection<ELFT>());
 
-  if (Config->GdbIndex)
-    In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
-
-  In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
-      Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   if (Config->Strip != StripPolicy::All) {
     In<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
     In<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::StrTab);
   }
-
-  // Initialize linker generated sections
-  if (!Config->Relocatable)
-    Symtab<ELFT>::X->Sections.push_back(createCommentSection<ELFT>());
 
   if (Config->BuildId != BuildIdKind::None) {
     In<ELFT>::BuildId = make<BuildIdSection<ELFT>>();
@@ -341,6 +331,25 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
   Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GotPlt);
+
+  if (Config->GdbIndex) {
+    In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GdbIndex);
+  }
+
+  // We always need to add rel[a].plt to output if it has entries.
+  // Even for static linking it can contain R_[*]_IRELATIVE relocations.
+  In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
+      Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
+  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::RelaPlt);
+
+  In<ELFT>::Plt = make<PltSection<ELFT>>();
+  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Plt);
+
+  if (Config->EhFrameHdr) {
+    In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::EhFrameHdr);
+  }
 }
 
 template <class ELFT>
@@ -886,7 +895,7 @@ template <class ELFT>
 static void
 finalizeSynthetic(const std::vector<SyntheticSection<ELFT> *> &Sections) {
   for (SyntheticSection<ELFT> *SS : Sections)
-    if (SS && SS->OutSec) {
+    if (SS && SS->OutSec && !SS->empty()) {
       SS->finalize();
       SS->OutSec->Size = 0;
       SS->OutSec->assignOffsets();
@@ -1004,36 +1013,17 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
        In<ELFT>::VerNeed, In<ELFT>::Dynamic});
 }
 
-// This function add Out<ELFT>::* sections to OutputSections.
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
-  auto Add = [&](OutputSectionBase *OS) {
-    if (OS)
-      OutputSections.push_back(OS);
-  };
-
-  // This order is not the same as the final output order
-  // because we sort the sections using their attributes below.
-  if (In<ELFT>::GdbIndex && Out<ELFT>::DebugInfo)
-    addInputSec(In<ELFT>::GdbIndex);
-  addInputSec(In<ELFT>::SymTab);
-  addInputSec(In<ELFT>::ShStrTab);
-  addInputSec(In<ELFT>::StrTab);
-
-  // We always need to add rel[a].plt to output if it has entries.
-  // Even during static linking it can contain R_[*]_IRELATIVE relocations.
-  if (!In<ELFT>::RelaPlt->empty())
-    addInputSec(In<ELFT>::RelaPlt);
-
-  if (!In<ELFT>::Plt->empty())
-    addInputSec(In<ELFT>::Plt);
-  if (!Out<ELFT>::EhFrame->empty())
-    addInputSec(In<ELFT>::EhFrameHdr);
   if (Out<ELFT>::Bss->Size > 0)
-    Add(Out<ELFT>::Bss);
+    OutputSections.push_back(Out<ELFT>::Bss);
 
   auto OS = dyn_cast_or_null<OutputSection<ELFT>>(findSection(".ARM.exidx"));
   if (OS && !OS->Sections.empty() && !Config->Relocatable)
     OS->addSection(make<ARMExidxSentinelSection<ELFT>>());
+
+  addInputSec(In<ELFT>::SymTab);
+  addInputSec(In<ELFT>::ShStrTab);
+  addInputSec(In<ELFT>::StrTab);
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
@@ -1096,6 +1086,8 @@ template <class ELFT> static bool needsPtLoad(OutputSectionBase *Sec) {
 // cannot create a PT_LOAD there.
 template <class ELFT>
 static typename ELFT::uint computeFlags(typename ELFT::uint F) {
+  if (Config->OMagic)
+    return PF_R | PF_W | PF_X;
   if (Config->SingleRoRx && !(F & PF_W))
     return F | PF_X;
   return F;

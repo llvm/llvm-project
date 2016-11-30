@@ -8,11 +8,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopConvertCheck.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h" 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
+#include <cstring>
+#include <utility>
 
-using namespace clang;
 using namespace clang::ast_matchers;
 using namespace llvm;
 
