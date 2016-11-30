@@ -4,7 +4,6 @@
 // Verifies that calling malloc in a preinit_array function succeeds, and that
 // the resulting pointer can be freed at program termination.
 
-#include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
 

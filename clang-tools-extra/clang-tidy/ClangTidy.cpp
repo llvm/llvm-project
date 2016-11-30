@@ -88,13 +88,13 @@ private:
 
 class ErrorReporter {
 public:
-  ErrorReporter(bool ApplyFixes)
+  ErrorReporter(bool ApplyFixes, StringRef FormatStyle)
       : Files(FileSystemOptions()), DiagOpts(new DiagnosticOptions()),
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), &*DiagOpts)),
         Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
               DiagPrinter),
         SourceMgr(Diags, Files), ApplyFixes(ApplyFixes), TotalFixes(0),
-        AppliedFixes(0), WarningsAsErrors(0) {
+        AppliedFixes(0), WarningsAsErrors(0), FormatStyle(FormatStyle) {
     DiagOpts->ShowColors = llvm::sys::Process::StandardOutHasColors();
     DiagPrinter->BeginSourceFile(LangOpts);
   }
@@ -196,8 +196,7 @@ public:
           continue;
         }
         StringRef Code = Buffer.get()->getBuffer();
-        // FIXME: Make the style customizable.
-        format::FormatStyle Style = format::getStyle("file", File, "LLVM");
+        format::FormatStyle Style = format::getStyle("file", File, FormatStyle);
         llvm::Expected<Replacements> CleanReplacements =
             format::cleanupAroundReplacements(Code, FileAndReplacements.second,
                                               Style);
@@ -248,6 +247,7 @@ private:
   unsigned TotalFixes;
   unsigned AppliedFixes;
   unsigned WarningsAsErrors;
+  StringRef FormatStyle;
 };
 
 class ClangTidyASTConsumer : public MultiplexConsumer {
@@ -538,8 +538,8 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
 }
 
 void handleErrors(const std::vector<ClangTidyError> &Errors, bool Fix,
-                  unsigned &WarningsAsErrorsCount) {
-  ErrorReporter Reporter(Fix);
+                  StringRef FormatStyle, unsigned &WarningsAsErrorsCount) {
+  ErrorReporter Reporter(Fix, FormatStyle);
   vfs::FileSystem &FileSystem =
       *Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();

@@ -24,7 +24,7 @@ using namespace __scudo;
 // Fake std::nothrow_t to avoid including <new>.
 namespace std {
 struct nothrow_t {};
-} // namespace std
+}  // namespace std
 
 CXX_OPERATOR_ATTRIBUTE
 void *operator new(size_t size) {

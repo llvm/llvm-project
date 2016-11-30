@@ -3093,19 +3093,37 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
   if (!HasMULHU && !HasMULHS && !HasUMUL_LOHI && !HasSMUL_LOHI)
     return false;
 
-  unsigned OuterBitSize = VT.getSizeInBits();
-  unsigned InnerBitSize = HiLoVT.getSizeInBits();
-  unsigned LHSSB = DAG.ComputeNumSignBits(N->getOperand(0));
-  unsigned RHSSB = DAG.ComputeNumSignBits(N->getOperand(1));
+  unsigned OuterBitSize = VT.getScalarSizeInBits();
+  unsigned InnerBitSize = HiLoVT.getScalarSizeInBits();
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  unsigned LHSSB = DAG.ComputeNumSignBits(LHS);
+  unsigned RHSSB = DAG.ComputeNumSignBits(RHS);
 
   // LL, LH, RL, and RH must be either all NULL or all set to a value.
   assert((LL.getNode() && LH.getNode() && RL.getNode() && RH.getNode()) ||
          (!LL.getNode() && !LH.getNode() && !RL.getNode() && !RH.getNode()));
 
+  SDVTList VTs = DAG.getVTList(HiLoVT, HiLoVT);
+  auto MakeMUL_LOHI = [&](SDValue L, SDValue R, SDValue &Lo, SDValue &Hi,
+                          bool Signed) -> bool {
+    if ((Signed && HasSMUL_LOHI) || (!Signed && HasUMUL_LOHI)) {
+      Lo = DAG.getNode(Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI, dl, VTs, L, R);
+      Hi = SDValue(Lo.getNode(), 1);
+      return true;
+    }
+    if ((Signed && HasMULHS) || (!Signed && HasMULHU)) {
+      Lo = DAG.getNode(ISD::MUL, dl, HiLoVT, L, R);
+      Hi = DAG.getNode(Signed ? ISD::MULHS : ISD::MULHU, dl, HiLoVT, L, R);
+      return true;
+    }
+    return false;
+  };
+
   if (!LL.getNode() && !RL.getNode() &&
       isOperationLegalOrCustom(ISD::TRUNCATE, HiLoVT)) {
-    LL = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, N->getOperand(0));
-    RL = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, N->getOperand(1));
+    LL = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, LHS);
+    RL = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, RHS);
   }
 
   if (!LL.getNode())
@@ -3115,67 +3133,31 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
   if (DAG.MaskedValueIsZero(N->getOperand(0), HighMask) &&
       DAG.MaskedValueIsZero(N->getOperand(1), HighMask)) {
     // The inputs are both zero-extended.
-    if (HasUMUL_LOHI) {
-      // We can emit a umul_lohi.
-      Lo = DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(HiLoVT, HiLoVT), LL,
-                       RL);
-      Hi = SDValue(Lo.getNode(), 1);
+    if (MakeMUL_LOHI(LL, RL, Lo, Hi, false))
       return true;
-    }
-    if (HasMULHU) {
-      // We can emit a mulhu+mul.
-      Lo = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RL);
-      Hi = DAG.getNode(ISD::MULHU, dl, HiLoVT, LL, RL);
-      return true;
-    }
   }
   if (LHSSB > InnerBitSize && RHSSB > InnerBitSize) {
     // The input values are both sign-extended.
-    if (HasSMUL_LOHI) {
-      // We can emit a smul_lohi.
-      Lo = DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(HiLoVT, HiLoVT), LL,
-                       RL);
-      Hi = SDValue(Lo.getNode(), 1);
+    if (MakeMUL_LOHI(LL, RL, Lo, Hi, true))
       return true;
-    }
-    if (HasMULHS) {
-      // We can emit a mulhs+mul.
-      Lo = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RL);
-      Hi = DAG.getNode(ISD::MULHS, dl, HiLoVT, LL, RL);
-      return true;
-    }
   }
+
+  SDValue Shift = DAG.getConstant(OuterBitSize - InnerBitSize, dl,
+                                  getShiftAmountTy(VT, DAG.getDataLayout()));
 
   if (!LH.getNode() && !RH.getNode() &&
       isOperationLegalOrCustom(ISD::SRL, VT) &&
       isOperationLegalOrCustom(ISD::TRUNCATE, HiLoVT)) {
-    auto &DL = DAG.getDataLayout();
-    unsigned ShiftAmt = VT.getSizeInBits() - HiLoVT.getSizeInBits();
-    SDValue Shift = DAG.getConstant(ShiftAmt, dl, getShiftAmountTy(VT, DL));
-    LH = DAG.getNode(ISD::SRL, dl, VT, N->getOperand(0), Shift);
+    LH = DAG.getNode(ISD::SRL, dl, VT, LHS, Shift);
     LH = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, LH);
-    RH = DAG.getNode(ISD::SRL, dl, VT, N->getOperand(1), Shift);
+    RH = DAG.getNode(ISD::SRL, dl, VT, RHS, Shift);
     RH = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, RH);
   }
 
   if (!LH.getNode())
     return false;
 
-  if (HasUMUL_LOHI) {
-    // Lo,Hi = umul LHS, RHS.
-    SDValue UMulLOHI = DAG.getNode(ISD::UMUL_LOHI, dl,
-                                   DAG.getVTList(HiLoVT, HiLoVT), LL, RL);
-    Lo = UMulLOHI;
-    Hi = UMulLOHI.getValue(1);
-    RH = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RH);
-    LH = DAG.getNode(ISD::MUL, dl, HiLoVT, LH, RL);
-    Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, RH);
-    Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, LH);
-    return true;
-  }
-  if (HasMULHU) {
-    Lo = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RL);
-    Hi = DAG.getNode(ISD::MULHU, dl, HiLoVT, LL, RL);
+  if (MakeMUL_LOHI(LL, RL, Lo, Hi, false)) {
     RH = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RH);
     LH = DAG.getNode(ISD::MUL, dl, HiLoVT, LH, RL);
     Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, RH);

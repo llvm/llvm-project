@@ -179,6 +179,9 @@ An overview of all the command-line options:
                                    List all enabled checks and exit. Use with
                                    -checks=* to list all available checks.
     -p=<string>                  - Build path
+    -style=<string>              -
+                                   Fallback style for reformatting after inserting fixes
+                                   if there is no clang-format config file found.
     -system-headers              - Display the errors from system headers.
     -warnings-as-errors=<string> - 
                                    Upgrades warnings to errors. Same format as

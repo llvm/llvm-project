@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -105,6 +106,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, sys::fs::file_magic Type) {
   case sys::fs::file_magic::coff_import_library:
   case sys::fs::file_magic::pecoff_executable:
     return errorOrToExpected(createCOFFObjectFile(Object));
+  case sys::fs::file_magic::wasm_object:
+    return createWasmObjectFile(Object);
   }
   llvm_unreachable("Unexpected Object File Type");
 }

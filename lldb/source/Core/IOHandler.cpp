@@ -1847,7 +1847,7 @@ public:
           // Just a timeout from using halfdelay(), check for events
           EventSP event_sp;
           while (listener_sp->PeekAtNextEvent()) {
-            listener_sp->GetNextEvent(event_sp);
+            listener_sp->GetEvent(event_sp, std::chrono::seconds(0));
 
             if (event_sp) {
               Broadcaster *broadcaster = event_sp->GetBroadcaster();

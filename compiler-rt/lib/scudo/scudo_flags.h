@@ -28,6 +28,6 @@ Flags *getFlags();
 
 void initFlags();
 
-} // namespace __scudo
+}  // namespace __scudo
 
 #endif  // SCUDO_FLAGS_H_

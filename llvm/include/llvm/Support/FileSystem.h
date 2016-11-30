@@ -262,7 +262,8 @@ struct file_magic {
     coff_object,              ///< COFF object file
     coff_import_library,      ///< COFF import library
     pecoff_executable,        ///< PECOFF executable file
-    windows_resource          ///< Windows compiled resource file (.rc)
+    windows_resource,         ///< Windows compiled resource file (.rc)
+    wasm_object               ///< WebAssembly Object file
   };
 
   bool is_object() const {
