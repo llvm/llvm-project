@@ -323,7 +323,8 @@ void ShadowAddressDescription::Print() const {
 void GlobalAddressDescription::Print(const char *bug_type) const {
   for (int i = 0; i < size; i++) {
     DescribeAddressRelativeToGlobal(addr, access_size, globals[i]);
-    if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
+    if (bug_type &&
+        0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
         reg_sites[i]) {
       Printf("  registered at:\n");
       StackDepotGet(reg_sites[i]).Print();
