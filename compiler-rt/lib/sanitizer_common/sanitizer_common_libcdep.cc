@@ -46,7 +46,7 @@ void SetSandboxingCallback(void (*f)()) {
   sandboxing_callback = f;
 }
 
-void ReportErrorSummary(const char *error_type, StackTrace *stack) {
+void ReportErrorSummary(const char *error_type, const StackTrace *stack) {
 #if !SANITIZER_GO
   if (!common_flags()->print_summary)
     return;

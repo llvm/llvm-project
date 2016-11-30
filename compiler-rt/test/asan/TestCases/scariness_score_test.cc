@@ -1,7 +1,9 @@
 // Test how we produce the scariness score.
 
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: export %env_asan_opts=detect_stack_use_after_return=1:handle_abort=1:print_scariness=1
+// On OSX and Windows, alloc_dealloc_mismatch=1 isn't 100% reliable, so it's
+// off by default. It's safe for these tests, though, so we turn it on.
+// RUN: export %env_asan_opts=detect_stack_use_after_return=1:handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
 // Make sure the stack is limited (may not be the default under GNU make)
 // RUN: ulimit -s 4096
 // RUN: not %run %t  1 2>&1 | FileCheck %s --check-prefix=CHECK1
@@ -155,12 +157,12 @@ int main(int argc, char **argv) {
     case 19: *zero_ptr = 0; break;
     case 20: *wild_addr = 0; break;
     case 21: zero = *wild_addr; break;
-    case 22: abort(); break;
-    case 23: ((void (*)(void))wild_addr)(); break;
-    case 24: delete (new int[10]); break;
-    case 25: free((char*)malloc(100) + 10); break;
-    case 26: memcpy(arr, arr+10, 20);  break;
-    case 27: UseAfterPoison(); break;
+    case 22: ((void (*)(void))wild_addr)(); break;
+    case 23: delete (new int[10]); break;
+    case 24: free((char*)malloc(100) + 10); break;
+    case 25: memcpy(arr, arr+10, 20);  break;
+    case 26: UseAfterPoison(); break;
+    case 27: abort();
     // CHECK1: SCARINESS: 12 (1-byte-read-heap-buffer-overflow)
     // CHECK2: SCARINESS: 17 (4-byte-read-heap-buffer-overflow)
     // CHECK3: SCARINESS: 33 (2-byte-write-heap-buffer-overflow)
@@ -182,11 +184,11 @@ int main(int argc, char **argv) {
     // CHECK19: SCARINESS: 10 (null-deref)
     // CHECK20: SCARINESS: 30 (wild-addr-write)
     // CHECK21: SCARINESS: 20 (wild-addr-read)
-    // CHECK22: SCARINESS: 10 (signal)
-    // CHECK23: SCARINESS: 60 (wild-jump)
-    // CHECK24: SCARINESS: 10 (alloc-dealloc-mismatch)
-    // CHECK25: SCARINESS: 40 (bad-free)
-    // CHECK26: SCARINESS: 10 (memcpy-param-overlap)
-    // CHECK27: SCARINESS: 27 (4-byte-read-use-after-poison)
+    // CHECK22: SCARINESS: 60 (wild-jump)
+    // CHECK23: SCARINESS: 10 (alloc-dealloc-mismatch)
+    // CHECK24: SCARINESS: 40 (bad-free)
+    // CHECK25: SCARINESS: 10 (memcpy-param-overlap)
+    // CHECK26: SCARINESS: 27 (4-byte-read-use-after-poison)
+    // CHECK27: SCARINESS: 10 (signal)
   }
 }
