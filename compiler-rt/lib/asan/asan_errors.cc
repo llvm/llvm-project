@@ -271,12 +271,13 @@ void ErrorInvalidPointerPair::Print() {
   const char *bug_type = "invalid-pointer-pair";
   Decorator d;
   Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: invalid-pointer-pair: %p %p\n", p1, p2);
+  Report("ERROR: AddressSanitizer: invalid-pointer-pair: %p %p\n",
+         addr1_description.Address(), addr2_description.Address());
   Printf("%s", d.EndWarning());
   GET_STACK_TRACE_FATAL(pc, bp);
   stack.Print();
-  PrintAddressDescription(p1, 1, bug_type);
-  PrintAddressDescription(p2, 1, bug_type);
+  addr1_description.Print();
+  addr2_description.Print();
   ReportErrorSummary(bug_type, &stack);
 }
 
