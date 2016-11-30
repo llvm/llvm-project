@@ -141,4 +141,27 @@ void ErrorFreeNotMalloced::Print() {
   ReportErrorSummary("bad-free", &stack);
 }
 
+void ErrorAllocTypeMismatch::Print() {
+  static const char *alloc_names[] = {"INVALID", "malloc", "operator new",
+                                      "operator new []"};
+  static const char *dealloc_names[] = {"INVALID", "free", "operator delete",
+                                        "operator delete []"};
+  CHECK_NE(alloc_type, dealloc_type);
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: alloc-dealloc-mismatch (%s vs %s) on %p\n",
+         alloc_names[alloc_type], dealloc_names[dealloc_type],
+         addr_description.addr);
+  Printf("%s", d.EndWarning());
+  CHECK_GT(dealloc_stack->size, 0);
+  scariness.Print();
+  GET_STACK_TRACE_FATAL(dealloc_stack->trace[0], dealloc_stack->top_frame_bp);
+  stack.Print();
+  addr_description.Print();
+  ReportErrorSummary("alloc-dealloc-mismatch", &stack);
+  Report(
+      "HINT: if you don't care about these errors you may set "
+      "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
+}
+
 }  // namespace __asan
