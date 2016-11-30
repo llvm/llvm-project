@@ -21,19 +21,21 @@
 namespace __asan {
 
 struct ErrorBase {
+  ErrorBase() = default;
+  explicit ErrorBase(u32 tid_) : tid(tid_) {}
   ScarinessScoreBase scariness;
+  u32 tid;
 };
 
 struct ErrorStackOverflow : ErrorBase {
-  u32 tid;
   uptr addr, pc, bp, sp;
   // ErrorStackOverflow never owns the context.
   void *context;
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
   // constructor
   ErrorStackOverflow() = default;
-  ErrorStackOverflow(const SignalContext &sig, u32 tid_)
-      : tid(tid_),
+  ErrorStackOverflow(u32 tid, const SignalContext &sig)
+      : ErrorBase(tid),
         addr(sig.addr),
         pc(sig.pc),
         bp(sig.bp),
@@ -46,26 +48,25 @@ struct ErrorStackOverflow : ErrorBase {
 };
 
 struct ErrorDeadlySignal : ErrorBase {
-  u32 tid;
   uptr addr, pc, bp, sp;
+  // ErrorDeadlySignal never owns the context.
+  void *context;
   int signo;
   SignalContext::WriteFlag write_flag;
   bool is_memory_access;
-  // ErrorDeadlySignal never owns the context.
-  void *context;
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
   // constructor
   ErrorDeadlySignal() = default;
-  ErrorDeadlySignal(int signo_, const SignalContext &sig, u32 tid_)
-      : tid(tid_),
+  ErrorDeadlySignal(u32 tid, const SignalContext &sig, int signo_)
+      : ErrorBase(tid),
         addr(sig.addr),
         pc(sig.pc),
         bp(sig.bp),
         sp(sig.sp),
+        context(sig.context),
         signo(signo_),
         write_flag(sig.write_flag),
-        is_memory_access(sig.is_memory_access),
-        context(sig.context) {
+        is_memory_access(sig.is_memory_access) {
     scariness.Clear();
     if (is_memory_access) {
       if (addr < GetPageSizeCached()) {
@@ -87,15 +88,14 @@ struct ErrorDeadlySignal : ErrorBase {
 };
 
 struct ErrorDoubleFree : ErrorBase {
-  u32 tid;
-  HeapAddressDescription addr_description;
   // ErrorDoubleFree doesn't own the stack trace.
-  BufferedStackTrace *second_free_stack;
+  const BufferedStackTrace *second_free_stack;
+  HeapAddressDescription addr_description;
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
   // constructor
   ErrorDoubleFree() = default;
-  ErrorDoubleFree(uptr addr, u32 tid_, BufferedStackTrace *stack)
-      : tid(tid_), second_free_stack(stack) {
+  ErrorDoubleFree(u32 tid, BufferedStackTrace *stack, uptr addr)
+      : ErrorBase(tid), second_free_stack(stack) {
     CHECK_GT(second_free_stack->size, 0);
     GetHeapAddressInformation(addr, 1, &addr_description);
     scariness.Clear();
@@ -105,17 +105,16 @@ struct ErrorDoubleFree : ErrorBase {
 };
 
 struct ErrorNewDeleteSizeMismatch : ErrorBase {
-  u32 tid;
+  // ErrorNewDeleteSizeMismatch doesn't own the stack trace.
+  const BufferedStackTrace *free_stack;
   HeapAddressDescription addr_description;
   uptr delete_size;
-  // ErrorNewDeleteSizeMismatch doesn't own the stack trace.
-  BufferedStackTrace *free_stack;
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
   // constructor
   ErrorNewDeleteSizeMismatch() = default;
-  ErrorNewDeleteSizeMismatch(uptr addr, u32 tid_, uptr delete_size_,
-                             BufferedStackTrace *stack)
-      : tid(tid_), delete_size(delete_size_), free_stack(stack) {
+  ErrorNewDeleteSizeMismatch(u32 tid, BufferedStackTrace *stack, uptr addr,
+                             uptr delete_size_)
+      : ErrorBase(tid), free_stack(stack), delete_size(delete_size_) {
     GetHeapAddressInformation(addr, 1, &addr_description);
     scariness.Clear();
     scariness.Scare(10, "new-delete-type-mismatch");
