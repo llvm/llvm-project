@@ -126,7 +126,7 @@ multiclass SM_Pseudo_Stores<string opName,
 }
 
 class SM_Time_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
-  opName, (outs SReg_64:$sdst), (ins),
+  opName, (outs SReg_64_XEXEC:$sdst), (ins),
   " $sdst", [(set i64:$sdst, (node))]> {
   let hasSideEffects = 1;
   // FIXME: mayStore = ? is a workaround for tablegen bug for different
@@ -155,18 +155,23 @@ class SM_Inval_Pseudo <string opName, SDPatternOperator node> : SM_Pseudo<
 // We are using the SReg_32_XM0 and not the SReg_32 register class for 32-bit
 // SMRD instructions, because the SReg_32_XM0 register class does not include M0
 // and writing to M0 from an SMRD instruction will hang the GPU.
-defm S_LOAD_DWORD    : SM_Pseudo_Loads <"s_load_dword", SReg_64, SReg_32_XM0>;
-defm S_LOAD_DWORDX2  : SM_Pseudo_Loads <"s_load_dwordx2", SReg_64, SReg_64>;
+
+// XXX - SMEM instructions do not allow exec for data operand, but
+// does sdst for SMRD on SI/CI?
+defm S_LOAD_DWORD    : SM_Pseudo_Loads <"s_load_dword", SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_DWORDX2  : SM_Pseudo_Loads <"s_load_dwordx2", SReg_64, SReg_64_XEXEC>;
 defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <"s_load_dwordx4", SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <"s_load_dwordx8", SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <"s_load_dwordx16", SReg_64, SReg_512>;
 
 defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <
-  "s_buffer_load_dword", SReg_128, SReg_32_XM0
+  "s_buffer_load_dword", SReg_128, SReg_32_XM0_XEXEC
 >;
 
+// FIXME: exec_lo/exec_hi appear to be allowed for SMRD loads on
+// SI/CI, bit disallowed for SMEM on VI.
 defm S_BUFFER_LOAD_DWORDX2 : SM_Pseudo_Loads <
-  "s_buffer_load_dwordx2", SReg_128, SReg_64
+  "s_buffer_load_dwordx2", SReg_128, SReg_64_XEXEC
 >;
 
 defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <
@@ -181,16 +186,16 @@ defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <
   "s_buffer_load_dwordx16", SReg_128, SReg_512
 >;
 
-defm S_STORE_DWORD : SM_Pseudo_Stores <"s_store_dword", SReg_64, SReg_32_XM0>;
-defm S_STORE_DWORDX2 : SM_Pseudo_Stores <"s_store_dwordx2", SReg_64, SReg_64>;
+defm S_STORE_DWORD : SM_Pseudo_Stores <"s_store_dword", SReg_64, SReg_32_XM0_XEXEC>;
+defm S_STORE_DWORDX2 : SM_Pseudo_Stores <"s_store_dwordx2", SReg_64, SReg_64_XEXEC>;
 defm S_STORE_DWORDX4 : SM_Pseudo_Stores <"s_store_dwordx4", SReg_64, SReg_128>;
 
 defm S_BUFFER_STORE_DWORD : SM_Pseudo_Stores <
-  "s_buffer_store_dword", SReg_128, SReg_32_XM0
+  "s_buffer_store_dword", SReg_128, SReg_32_XM0_XEXEC
 >;
 
 defm S_BUFFER_STORE_DWORDX2 : SM_Pseudo_Stores <
-  "s_buffer_store_dwordx2", SReg_128, SReg_64
+  "s_buffer_store_dwordx2", SReg_128, SReg_64_XEXEC
 >;
 
 defm S_BUFFER_STORE_DWORDX4 : SM_Pseudo_Stores <

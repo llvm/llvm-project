@@ -1,10 +1,38 @@
+; RUN: opt %loadPolly -S -polly-scops -analyze \
+; RUN:   -polly-invariant-load-hoisting=true %s \
+; RUN: | FileCheck %s -check-prefix=SCOPS
 ; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
 ;
 ; Check we generate valid code.
-;
+
+; SCOPS:         Statements {
+; SCOPS-NEXT:     	Stmt_if_then2457
+; SCOPS-NEXT:             Domain :=
+; SCOPS-NEXT:                 [p_0] -> { Stmt_if_then2457[] : p_0 = 1 };
+; SCOPS-NEXT:             Schedule :=
+; SCOPS-NEXT:                 [p_0] -> { Stmt_if_then2457[] -> [1] };
+; SCOPS-NEXT:             MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 1]
+; SCOPS-NEXT:                 [p_0] -> { Stmt_if_then2457[] -> MemRef_sub2464[] };
+; SCOPS-NEXT:     	Stmt_cond_false2468
+; SCOPS-NEXT:             Domain :=
+; SCOPS-NEXT:                 [p_0] -> { Stmt_cond_false2468[] : p_0 = 1 };
+; SCOPS-NEXT:             Schedule :=
+; SCOPS-NEXT:                 [p_0] -> { Stmt_cond_false2468[] -> [2] };
+; SCOPS-NEXT:             ReadAccess :=	[Reduction Type: NONE] [Scalar: 1]
+; SCOPS-NEXT:                 [p_0] -> { Stmt_cond_false2468[] -> MemRef_sub2464[] };
+; SCOPS-NEXT:             MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; SCOPS-NEXT:                 [p_0] -> { Stmt_cond_false2468[] -> MemRef_A[0] };
+; SCOPS-NEXT:     	Stmt_if_else2493
+; SCOPS-NEXT:             Domain :=
+; SCOPS-NEXT:                 [p_0] -> { Stmt_if_else2493[] : p_0 >= 2 or p_0 = 0 };
+; SCOPS-NEXT:             Schedule :=
+; SCOPS-NEXT:                 [p_0] -> { Stmt_if_else2493[] -> [0] : p_0 >= 2 or p_0 = 0 };
+; SCOPS-NEXT:             MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; SCOPS-NEXT:                 [p_0] -> { Stmt_if_else2493[] -> MemRef_B[0] };
+; SCOPS-NEXT:     }
+
 ; CHECK: polly.start
-;
-; ModuleID = 'preload_bug.ll'
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -13,7 +41,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @enc_picture = external global %struct.s*, align 8
 
 ; Function Attrs: nounwind uwtable
-define void @compute_colocated(%struct.s*** %listX) #0 {
+define void @compute_colocated(%struct.s*** %listX, i1* %A, i32* %B) #0 {
 entry:
   br label %for.body2414
 
@@ -23,11 +51,9 @@ for.body2414:                                     ; preds = %for.inc2621, %entry
 
 if.else2454:                                      ; preds = %for.body2414
   %cmp2455 = icmp eq i64 %indvars.iv902, 2
-  %tmp = load %struct.s*, %struct.s** @enc_picture, align 8, !tbaa !1
   br i1 %cmp2455, label %if.then2457, label %if.else2493
 
 if.then2457:                                      ; preds = %if.else2454
-  %top_poc = getelementptr inbounds %struct.s, %struct.s* %tmp, i64 0, i32 2
   %arrayidx2461 = getelementptr inbounds %struct.s**, %struct.s*** %listX, i64 %indvars.iv902
   %tmp1 = load %struct.s**, %struct.s*** %arrayidx2461, align 8, !tbaa !1
   %arrayidx2462 = getelementptr inbounds %struct.s*, %struct.s** %tmp1, i64 0
@@ -39,6 +65,7 @@ if.then2457:                                      ; preds = %if.else2454
 
 cond.false2468:                                   ; preds = %if.then2457
   %cmp2477 = icmp sgt i32 %sub2464, 127
+  store i1 %cmp2477, i1* %A
   br label %for.inc2621
 
 if.else2493:                                      ; preds = %if.else2454
@@ -48,6 +75,7 @@ if.else2493:                                      ; preds = %if.else2454
   %tmp5 = load %struct.s*, %struct.s** %arrayidx2498, align 8, !tbaa !1
   %poc2499 = getelementptr inbounds %struct.s, %struct.s* %tmp5, i64 0, i32 1
   %tmp6 = load i32, i32* %poc2499, align 4, !tbaa !5
+  store i32 %tmp6, i32* %B
   br label %for.inc2621
 
 for.inc2621:                                      ; preds = %if.else2493, %cond.false2468

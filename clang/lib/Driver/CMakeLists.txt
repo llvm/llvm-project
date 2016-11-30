@@ -12,6 +12,7 @@ add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
   CrossWindowsToolChain.cpp
+  Distro.cpp
   Driver.cpp
   DriverOptions.cpp
   Job.cpp

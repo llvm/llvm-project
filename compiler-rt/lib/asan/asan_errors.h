@@ -172,6 +172,7 @@ struct ErrorMallocUsableSizeNotOwned : ErrorBase {
         stack(stack_),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {
     scariness.Clear();
+    scariness.Scare(10, "bad-malloc_usable_size");
   }
   void Print();
 };
@@ -189,6 +190,7 @@ struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
         stack(stack_),
         addr_description(addr, /*shouldLockThreadRegistry=*/false) {
     scariness.Clear();
+    scariness.Scare(10, "bad-__sanitizer_get_allocated_size");
   }
   void Print();
 };
@@ -258,7 +260,10 @@ struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
         beg(beg_),
         end(end_),
         old_mid(old_mid_),
-        new_mid(new_mid_) {}
+        new_mid(new_mid_) {
+    scariness.Clear();
+    scariness.Scare(10, "bad-__sanitizer_annotate_contiguous_container");
+  }
   void Print();
 };
 
@@ -274,7 +279,10 @@ struct ErrorODRViolation : ErrorBase {
         global1(*g1),
         global2(*g2),
         stack_id1(stack_id1_),
-        stack_id2(stack_id2_) {}
+        stack_id2(stack_id2_) {
+    scariness.Clear();
+    scariness.Scare(10, "odr-violation");
+  }
   void Print();
 };
 
@@ -292,7 +300,10 @@ struct ErrorInvalidPointerPair : ErrorBase {
         bp(bp_),
         sp(sp_),
         addr1_description(p1, 1, /*shouldLockThreadRegistry=*/false),
-        addr2_description(p2, 1, /*shouldLockThreadRegistry=*/false) {}
+        addr2_description(p2, 1, /*shouldLockThreadRegistry=*/false)  {
+    scariness.Clear();
+    scariness.Scare(10, "invalid-pointer-pair");
+  }
   void Print();
 };
 
@@ -350,6 +361,7 @@ struct ErrorDescription {
   // We can add a wrapper around it to make it "more c++-like", but that would
   // add a lot of code and the benefit wouldn't be that big.
   union {
+    ErrorBase Base;
     ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DESCRIPTION_MEMBER)
   };
 

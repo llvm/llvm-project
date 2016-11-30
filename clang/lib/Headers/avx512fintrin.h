@@ -3416,40 +3416,56 @@ _mm512_maskz_permutex2var_epi64 (__mmask8 __U, __m512i __A,
 }
 
 #define _mm512_alignr_epi64(A, B, I) __extension__ ({ \
-  (__m512i)__builtin_ia32_alignq512_mask((__v8di)(__m512i)(A), \
-                                         (__v8di)(__m512i)(B), (int)(I), \
-                                         (__v8di)_mm512_setzero_si512(), \
-                                         (__mmask8)-1); })
+  (__m512i)__builtin_shufflevector((__v8di)(__m512i)(B), \
+                                   (__v8di)(__m512i)(A), \
+                                   ((int)(I) & 0x7) + 0, \
+                                   ((int)(I) & 0x7) + 1, \
+                                   ((int)(I) & 0x7) + 2, \
+                                   ((int)(I) & 0x7) + 3, \
+                                   ((int)(I) & 0x7) + 4, \
+                                   ((int)(I) & 0x7) + 5, \
+                                   ((int)(I) & 0x7) + 6, \
+                                   ((int)(I) & 0x7) + 7); })
 
 #define _mm512_mask_alignr_epi64(W, U, A, B, imm) __extension__({\
-  (__m512i)__builtin_ia32_alignq512_mask((__v8di)(__m512i)(A), \
-                                         (__v8di)(__m512i)(B), (int)(imm), \
-                                         (__v8di)(__m512i)(W), \
-                                         (__mmask8)(U)); })
+  (__m512i)__builtin_ia32_selectq_512((__mmask8)(U), \
+                                 (__v8di)_mm512_alignr_epi64((A), (B), (imm)), \
+                                 (__v8di)(__m512i)(W)); })
 
 #define _mm512_maskz_alignr_epi64(U, A, B, imm) __extension__({\
-  (__m512i)__builtin_ia32_alignq512_mask((__v8di)(__m512i)(A), \
-                                         (__v8di)(__m512i)(B), (int)(imm), \
-                                         (__v8di)_mm512_setzero_si512(), \
-                                         (__mmask8)(U)); })
+  (__m512i)__builtin_ia32_selectq_512((__mmask8)(U), \
+                                 (__v8di)_mm512_alignr_epi64((A), (B), (imm)), \
+                                 (__v8di)_mm512_setzero_si512()); })
 
 #define _mm512_alignr_epi32(A, B, I) __extension__ ({ \
-  (__m512i)__builtin_ia32_alignd512_mask((__v16si)(__m512i)(A), \
-                                         (__v16si)(__m512i)(B), (int)(I), \
-                                         (__v16si)_mm512_setzero_si512(), \
-                                         (__mmask16)-1); })
+  (__m512i)__builtin_shufflevector((__v16si)(__m512i)(B), \
+                                   (__v16si)(__m512i)(A), \
+                                   ((int)(I) & 0xf) + 0, \
+                                   ((int)(I) & 0xf) + 1, \
+                                   ((int)(I) & 0xf) + 2, \
+                                   ((int)(I) & 0xf) + 3, \
+                                   ((int)(I) & 0xf) + 4, \
+                                   ((int)(I) & 0xf) + 5, \
+                                   ((int)(I) & 0xf) + 6, \
+                                   ((int)(I) & 0xf) + 7, \
+                                   ((int)(I) & 0xf) + 8, \
+                                   ((int)(I) & 0xf) + 9, \
+                                   ((int)(I) & 0xf) + 10, \
+                                   ((int)(I) & 0xf) + 11, \
+                                   ((int)(I) & 0xf) + 12, \
+                                   ((int)(I) & 0xf) + 13, \
+                                   ((int)(I) & 0xf) + 14, \
+                                   ((int)(I) & 0xf) + 15); })
 
 #define _mm512_mask_alignr_epi32(W, U, A, B, imm) __extension__ ({\
-  (__m512i)__builtin_ia32_alignd512_mask((__v16si)(__m512i)(A), \
-                                         (__v16si)(__m512i)(B), (int)(imm), \
-                                         (__v16si)(__m512i)(W), \
-                                         (__mmask16)(U)); })
+  (__m512i)__builtin_ia32_selectd_512((__mmask16)(U), \
+                                (__v16si)_mm512_alignr_epi32((A), (B), (imm)), \
+                                (__v16si)(__m512i)(W)); })
 
 #define _mm512_maskz_alignr_epi32(U, A, B, imm) __extension__({\
-  (__m512i)__builtin_ia32_alignd512_mask((__v16si)(__m512i)(A), \
-                                         (__v16si)(__m512i)(B), (int)(imm), \
-                                         (__v16si)_mm512_setzero_si512(), \
-                                         (__mmask16)(U)); })
+  (__m512i)__builtin_ia32_selectd_512((__mmask16)(U), \
+                                (__v16si)_mm512_alignr_epi32((A), (B), (imm)), \
+                                (__v16si)_mm512_setzero_si512()); })
 /* Vector Extract */
 
 #define _mm512_extractf64x4_pd(A, I) __extension__ ({             \

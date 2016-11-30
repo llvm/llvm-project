@@ -970,10 +970,13 @@ void StringLiteral::outputString(raw_ostream &OS) const {
     // Handle some common non-printable cases to make dumps prettier.
     case '\\': OS << "\\\\"; break;
     case '"': OS << "\\\""; break;
-    case '\n': OS << "\\n"; break;
-    case '\t': OS << "\\t"; break;
     case '\a': OS << "\\a"; break;
     case '\b': OS << "\\b"; break;
+    case '\f': OS << "\\f"; break;
+    case '\n': OS << "\\n"; break;
+    case '\r': OS << "\\r"; break;
+    case '\t': OS << "\\t"; break;
+    case '\v': OS << "\\v"; break;
     }
   }
   OS << '"';

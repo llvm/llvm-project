@@ -61,13 +61,11 @@ entry:
 }
 
 ; Here we have four stores, with an aliasing load before the last one.  We can
-; vectorize the first two stores as <2 x float>, but this vectorized store must
-; be inserted at the location of the second scalar store, not the fourth one.
+; vectorize the first three stores as <3 x float>, but this vectorized store must
+; be inserted at the location of the third scalar store, not the fourth one.
 ;
 ; CHECK-LABEL: @insert_store_point_alias
-; CHECK: store <2 x float>
-; CHECK: store float
-; CHECK-SAME: %a.idx.2
+; CHECK: store <3 x float>
 ; CHECK: load float, float addrspace(1)* %a.idx.2
 ; CHECK: store float
 ; CHECK-SAME: %a.idx.3

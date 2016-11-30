@@ -1337,9 +1337,7 @@ define <2 x float> @test_maxps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 ; STRICT-NEXT:    movaps %xmm0, %xmm2
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    cmpleps %xmm2, %xmm0
-; STRICT-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; STRICT-NEXT:    psllq $32, %xmm0
-; STRICT-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; STRICT-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[1]
 ; STRICT-NEXT:    pslld $31, %xmm0
 ; STRICT-NEXT:    blendvps %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
@@ -1360,9 +1358,7 @@ define <2 x float> @test_minps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movaps %xmm0, %xmm2
 ; STRICT-NEXT:    cmpleps %xmm1, %xmm0
-; STRICT-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; STRICT-NEXT:    psllq $32, %xmm0
-; STRICT-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; STRICT-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[1]
 ; STRICT-NEXT:    pslld $31, %xmm0
 ; STRICT-NEXT:    blendvps %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0

@@ -33,6 +33,7 @@ namespace coff {
 class Chunk;
 class Defined;
 class Lazy;
+class SectionChunk;
 class SymbolBody;
 struct Symbol;
 

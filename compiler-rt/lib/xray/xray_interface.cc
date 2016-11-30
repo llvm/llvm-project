@@ -148,7 +148,7 @@ XRayPatchingStatus ControlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
 
   const uint64_t PageSize = GetPageSizeCached();
   if ((PageSize == 0) || ((PageSize & (PageSize - 1)) != 0)) {
-    Report("System page size is not a power of two: %lld", PageSize);
+    Report("System page size is not a power of two: %lld\n", PageSize);
     return XRayPatchingStatus::FAILED;
   }
 
@@ -188,7 +188,7 @@ XRayPatchingStatus ControlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
       Success = patchFunctionTailExit(Enable, FuncId, Sled);
       break;
     default:
-      Report("Unsupported sled kind: %d", int(Sled.Kind));
+      Report("Unsupported sled kind: %d\n", int(Sled.Kind));
       continue;
     }
     (void)Success;

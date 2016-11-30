@@ -36,10 +36,9 @@ struct MockServer : public GDBRemoteCommunicationServer {
   }
 
   PacketResult GetPacket(StringExtractorGDBRemote &response) {
-    const unsigned timeout_usec = 1000000; // 1s
     const bool sync_on_timeout = false;
-    return WaitForPacketWithTimeoutMicroSecondsNoLock(response, timeout_usec,
-                                                      sync_on_timeout);
+    return WaitForPacketNoLock(response, std::chrono::seconds(1),
+                               sync_on_timeout);
   }
 
   using GDBRemoteCommunicationServer::SendOKResponse;

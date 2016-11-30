@@ -593,7 +593,12 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
     else if (Property->getName() == "IntrWriteMem")
       ModRef = ModRefBehavior(ModRef & ~MR_Ref);
     else if (Property->getName() == "IntrArgMemOnly")
-      ModRef = ModRefBehavior(ModRef & ~MR_Anywhere);
+      ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_ArgMem);
+    else if (Property->getName() == "IntrInaccessibleMemOnly")
+      ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_InaccessibleMem);
+    else if (Property->getName() == "IntrInaccessibleMemOrArgMemOnly")
+      ModRef = ModRefBehavior((ModRef & ~MR_Anywhere) | MR_ArgMem |
+                              MR_InaccessibleMem);
     else if (Property->getName() == "Commutative")
       isCommutative = true;
     else if (Property->getName() == "Throws")

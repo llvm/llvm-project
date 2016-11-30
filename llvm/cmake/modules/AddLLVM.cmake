@@ -412,6 +412,7 @@ function(llvm_add_library name)
 
   if(ARG_MODULE)
     add_library(${name} MODULE ${ALL_FILES})
+    llvm_setup_rpath(${name})
   elseif(ARG_SHARED)
     add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
     add_library(${name} SHARED ${ALL_FILES})

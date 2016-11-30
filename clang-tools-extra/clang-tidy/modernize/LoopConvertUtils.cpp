@@ -8,11 +8,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopConvertUtils.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/Lambda.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Lexer.h" 
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <string>
+#include <utility>
 
 using namespace clang::ast_matchers;
-using namespace clang::tooling;
-using namespace clang;
-using namespace llvm;
 
 namespace clang {
 namespace tidy {
@@ -462,7 +475,7 @@ void ForLoopIndexUseVisitor::addComponents(const ComponentVector &Components) {
 }
 
 void ForLoopIndexUseVisitor::addComponent(const Expr *E) {
-  FoldingSetNodeID ID;
+  llvm::FoldingSetNodeID ID;
   const Expr *Node = E->IgnoreParenImpCasts();
   Node->Profile(ID, *Context, true);
   DependentExprs.push_back(std::make_pair(Node, ID));

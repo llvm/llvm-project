@@ -15,12 +15,17 @@
 #ifndef LLVM_IR_GETELEMENTPTRTYPEITERATOR_H
 #define LLVM_IR_GETELEMENTPTRTYPEITERATOR_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Casting.h"
+#include <cstddef>
+#include <iterator>
 
 namespace llvm {
+
   template<typename ItTy = User::const_op_iterator>
   class generic_gep_type_iterator
     : public std::iterator<std::forward_iterator_tag, Type *, ptrdiff_t> {
@@ -30,9 +35,10 @@ namespace llvm {
     ItTy OpIt;
     PointerIntPair<Type *, 1> CurTy;
     unsigned AddrSpace;
-    generic_gep_type_iterator() {}
-  public:
 
+    generic_gep_type_iterator() = default;
+
+  public:
     static generic_gep_type_iterator begin(Type *Ty, unsigned AddrSpace,
                                            ItTy It) {
       generic_gep_type_iterator I;
@@ -42,6 +48,7 @@ namespace llvm {
       I.OpIt = It;
       return I;
     }
+
     static generic_gep_type_iterator end(ItTy It) {
       generic_gep_type_iterator I;
       I.OpIt = It;
@@ -51,6 +58,7 @@ namespace llvm {
     bool operator==(const generic_gep_type_iterator& x) const {
       return OpIt == x.OpIt;
     }
+
     bool operator!=(const generic_gep_type_iterator& x) const {
       return !operator==(x);
     }
@@ -102,9 +110,11 @@ namespace llvm {
             ->getAddressSpace(),
         GEP->op_begin() + 1);
   }
+
   inline gep_type_iterator gep_type_end(const User *GEP) {
     return gep_type_iterator::end(GEP->op_end());
   }
+
   inline gep_type_iterator gep_type_begin(const User &GEP) {
     auto &GEPOp = cast<GEPOperator>(GEP);
     return gep_type_iterator::begin(
@@ -113,6 +123,7 @@ namespace llvm {
             ->getAddressSpace(),
         GEP.op_begin() + 1);
   }
+
   inline gep_type_iterator gep_type_end(const User &GEP) {
     return gep_type_iterator::end(GEP.op_end());
   }
@@ -128,6 +139,7 @@ namespace llvm {
   gep_type_end(Type * /*Op0*/, unsigned /*AS*/, ArrayRef<T> A) {
     return generic_gep_type_iterator<const T *>::end(A.end());
   }
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GETELEMENTPTRTYPEITERATOR_H

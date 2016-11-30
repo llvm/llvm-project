@@ -149,6 +149,37 @@ void SystemZInstrInfo::expandRXYPseudo(MachineInstr &MI, unsigned LowOpcode,
   MI.setDesc(get(Opcode));
 }
 
+// MI is a load-on-condition pseudo instruction with a single register
+// (source or destination) operand.  Replace it with LowOpcode if the
+// register is a low GR32 and HighOpcode if the register is a high GR32.
+void SystemZInstrInfo::expandLOCPseudo(MachineInstr &MI, unsigned LowOpcode,
+                                       unsigned HighOpcode) const {
+  unsigned Reg = MI.getOperand(0).getReg();
+  unsigned Opcode = isHighReg(Reg) ? HighOpcode : LowOpcode;
+  MI.setDesc(get(Opcode));
+}
+
+// MI is a load-register-on-condition pseudo instruction.  Replace it with
+// LowOpcode if source and destination are both low GR32s and HighOpcode if
+// source and destination are both high GR32s.
+void SystemZInstrInfo::expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
+                                        unsigned HighOpcode) const {
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned SrcReg = MI.getOperand(2).getReg();
+  bool DestIsHigh = isHighReg(DestReg);
+  bool SrcIsHigh = isHighReg(SrcReg);
+
+  if (!DestIsHigh && !SrcIsHigh)
+    MI.setDesc(get(LowOpcode));
+  else if (DestIsHigh && SrcIsHigh)
+    MI.setDesc(get(HighOpcode));
+
+  // If we were unable to implement the pseudo with a single instruction, we
+  // need to convert it back into a branch sequence.  This cannot be done here
+  // since the caller of expandPostRAPseudo does not handle changes to the CFG
+  // correctly.  This change is defered to the SystemZExpandPseudo pass.
+}
+
 // MI is an RR-style pseudo instruction that zero-extends the low Size bits
 // of one GRX32 into another.  Replace it with LowOpcode if both operands
 // are low registers, otherwise use RISB[LH]G.
@@ -221,6 +252,36 @@ void SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
     .addReg(SrcReg, getKillRegState(KillSrc))
     .addImm(32 - Size).addImm(128 + 31).addImm(Rotate);
 }
+
+
+MachineInstr *SystemZInstrInfo::commuteInstructionImpl(MachineInstr &MI,
+                                                       bool NewMI,
+                                                       unsigned OpIdx1,
+                                                       unsigned OpIdx2) const {
+  auto cloneIfNew = [NewMI](MachineInstr &MI) -> MachineInstr & {
+    if (NewMI)
+      return *MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    return MI;
+  };
+
+  switch (MI.getOpcode()) {
+  case SystemZ::LOCRMux:
+  case SystemZ::LOCFHR:
+  case SystemZ::LOCR:
+  case SystemZ::LOCGR: {
+    auto &WorkingMI = cloneIfNew(MI);
+    // Invert condition.
+    unsigned CCValid = WorkingMI.getOperand(3).getImm();
+    unsigned CCMask = WorkingMI.getOperand(4).getImm();
+    WorkingMI.getOperand(4).setImm(CCMask ^ CCValid);
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                   OpIdx1, OpIdx2);
+  }
+  default:
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+  }
+}
+
 
 // If MI is a simple load or store for a frame object, return the register
 // it loads or stores and set FrameIndex to the index of the frame object.
@@ -525,30 +586,128 @@ bool SystemZInstrInfo::optimizeCompareInstr(
          removeIPMBasedCompare(Compare, SrcReg, MRI, &RI);
 }
 
-// If Opcode is a move that has a conditional variant, return that variant,
-// otherwise return 0.
-static unsigned getConditionalMove(unsigned Opcode) {
-  switch (Opcode) {
-  case SystemZ::LR:  return SystemZ::LOCR;
-  case SystemZ::LGR: return SystemZ::LOCGR;
-  default:           return 0;
+
+bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
+                                       ArrayRef<MachineOperand> Pred,
+                                       unsigned TrueReg, unsigned FalseReg,
+                                       int &CondCycles, int &TrueCycles,
+                                       int &FalseCycles) const {
+  // Not all subtargets have LOCR instructions.
+  if (!STI.hasLoadStoreOnCond())
+    return false;
+  if (Pred.size() != 2)
+    return false;
+
+  // Check register classes.
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const TargetRegisterClass *RC =
+    RI.getCommonSubClass(MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg));
+  if (!RC)
+    return false;
+
+  // We have LOCR instructions for 32 and 64 bit general purpose registers.
+  if ((STI.hasLoadStoreOnCond2() &&
+       SystemZ::GRX32BitRegClass.hasSubClassEq(RC)) ||
+      SystemZ::GR32BitRegClass.hasSubClassEq(RC) ||
+      SystemZ::GR64BitRegClass.hasSubClassEq(RC)) {
+    CondCycles = 2;
+    TrueCycles = 2;
+    FalseCycles = 2;
+    return true;
   }
+
+  // Can't do anything else.
+  return false;
 }
 
-static unsigned getConditionalLoadImmediate(unsigned Opcode) {
-  switch (Opcode) {
-  case SystemZ::LHI:  return SystemZ::LOCHI;
-  case SystemZ::LGHI: return SystemZ::LOCGHI;
-  default:           return 0;
+void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator I,
+                                    const DebugLoc &DL, unsigned DstReg,
+                                    ArrayRef<MachineOperand> Pred,
+                                    unsigned TrueReg,
+                                    unsigned FalseReg) const {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
+
+  assert(Pred.size() == 2 && "Invalid condition");
+  unsigned CCValid = Pred[0].getImm();
+  unsigned CCMask = Pred[1].getImm();
+
+  unsigned Opc;
+  if (SystemZ::GRX32BitRegClass.hasSubClassEq(RC)) {
+    if (STI.hasLoadStoreOnCond2())
+      Opc = SystemZ::LOCRMux;
+    else {
+      Opc = SystemZ::LOCR;
+      MRI.constrainRegClass(DstReg, &SystemZ::GR32BitRegClass);
+    }
+  } else if (SystemZ::GR64BitRegClass.hasSubClassEq(RC))
+    Opc = SystemZ::LOCGR;
+  else
+    llvm_unreachable("Invalid register class");
+
+  BuildMI(MBB, I, DL, get(Opc), DstReg)
+    .addReg(FalseReg).addReg(TrueReg)
+    .addImm(CCValid).addImm(CCMask);
+}
+
+bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+                                     unsigned Reg,
+                                     MachineRegisterInfo *MRI) const {
+  unsigned DefOpc = DefMI.getOpcode();
+  if (DefOpc != SystemZ::LHIMux && DefOpc != SystemZ::LHI &&
+      DefOpc != SystemZ::LGHI)
+    return false;
+  if (DefMI.getOperand(0).getReg() != Reg)
+    return false;
+  int32_t ImmVal = (int32_t)DefMI.getOperand(1).getImm();
+
+  unsigned UseOpc = UseMI.getOpcode();
+  unsigned NewUseOpc;
+  unsigned UseIdx;
+  int CommuteIdx = -1;
+  switch (UseOpc) {
+  case SystemZ::LOCRMux:
+    if (!STI.hasLoadStoreOnCond2())
+      return false;
+    NewUseOpc = SystemZ::LOCHIMux;
+    if (UseMI.getOperand(2).getReg() == Reg)
+      UseIdx = 2;
+    else if (UseMI.getOperand(1).getReg() == Reg)
+      UseIdx = 2, CommuteIdx = 1;
+    else
+      return false;
+    break;
+  case SystemZ::LOCGR:
+    if (!STI.hasLoadStoreOnCond2())
+      return false;
+    NewUseOpc = SystemZ::LOCGHI;
+    if (UseMI.getOperand(2).getReg() == Reg)
+      UseIdx = 2;
+    else if (UseMI.getOperand(1).getReg() == Reg)
+      UseIdx = 2, CommuteIdx = 1;
+    else
+      return false;
+    break;
+  default:
+    return false;
   }
+
+  if (CommuteIdx != -1)
+    if (!commuteInstruction(UseMI, false, CommuteIdx, UseIdx))
+      return false;
+
+  bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+  UseMI.setDesc(get(NewUseOpc));
+  UseMI.getOperand(UseIdx).ChangeToImmediate(ImmVal);
+  if (DeleteDef)
+    DefMI.eraseFromParent();
+
+  return true;
 }
 
 bool SystemZInstrInfo::isPredicable(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
-  if (STI.hasLoadStoreOnCond() && getConditionalMove(Opcode))
-    return true;
-  if (STI.hasLoadStoreOnCond2() && getConditionalLoadImmediate(Opcode))
-    return true;
   if (Opcode == SystemZ::Return ||
       Opcode == SystemZ::Trap ||
       Opcode == SystemZ::CallJG ||
@@ -600,26 +759,6 @@ bool SystemZInstrInfo::PredicateInstruction(
   unsigned CCMask = Pred[1].getImm();
   assert(CCMask > 0 && CCMask < 15 && "Invalid predicate");
   unsigned Opcode = MI.getOpcode();
-  if (STI.hasLoadStoreOnCond()) {
-    if (unsigned CondOpcode = getConditionalMove(Opcode)) {
-      MI.setDesc(get(CondOpcode));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addImm(CCValid)
-          .addImm(CCMask)
-          .addReg(SystemZ::CC, RegState::Implicit);
-      return true;
-    }
-  }
-  if (STI.hasLoadStoreOnCond2()) {
-    if (unsigned CondOpcode = getConditionalLoadImmediate(Opcode)) {
-      MI.setDesc(get(CondOpcode));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addImm(CCValid)
-          .addImm(CCMask)
-          .addReg(SystemZ::CC, RegState::Implicit);
-      return true;
-    }
-  }
   if (Opcode == SystemZ::Trap) {
     MI.setDesc(get(SystemZ::CondTrap));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
@@ -1090,6 +1229,18 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandRXYPseudo(MI, SystemZ::L, SystemZ::LFH);
     return true;
 
+  case SystemZ::LOCMux:
+    expandLOCPseudo(MI, SystemZ::LOC, SystemZ::LOCFH);
+    return true;
+
+  case SystemZ::LOCHIMux:
+    expandLOCPseudo(MI, SystemZ::LOCHI, SystemZ::LOCHHI);
+    return true;
+
+  case SystemZ::LOCRMux:
+    expandLOCRPseudo(MI, SystemZ::LOCR, SystemZ::LOCFHR);
+    return true;
+
   case SystemZ::STCMux:
     expandRXYPseudo(MI, SystemZ::STC, SystemZ::STCH);
     return true;
@@ -1100,6 +1251,10 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   case SystemZ::STMux:
     expandRXYPseudo(MI, SystemZ::ST, SystemZ::STFH);
+    return true;
+
+  case SystemZ::STOCMux:
+    expandLOCPseudo(MI, SystemZ::STOC, SystemZ::STOCFH);
     return true;
 
   case SystemZ::LHIMux:
@@ -1164,6 +1319,10 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   case SystemZ::AFIMux:
     expandRIPseudo(MI, SystemZ::AFI, SystemZ::AIH, false);
+    return true;
+
+  case SystemZ::CHIMux:
+    expandRIPseudo(MI, SystemZ::CHI, SystemZ::CIH, false);
     return true;
 
   case SystemZ::CFIMux:
@@ -1231,6 +1390,7 @@ SystemZInstrInfo::getBranchInfo(const MachineInstr &MI) const {
                              MI.getOperand(1).getImm(), &MI.getOperand(2));
 
   case SystemZ::BRCT:
+  case SystemZ::BRCTH:
     return SystemZII::Branch(SystemZII::BranchCT, SystemZ::CCMASK_ICMP,
                              SystemZ::CCMASK_CMP_NE, &MI.getOperand(2));
 
@@ -1514,6 +1674,25 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
     default:
       return 0;
     }
+  }
+  return 0;
+}
+
+unsigned SystemZInstrInfo::getLoadAndTrap(unsigned Opcode) const {
+  if (!STI.hasLoadAndTrap())
+    return 0;
+  switch (Opcode) {
+  case SystemZ::L:
+  case SystemZ::LY:
+    return SystemZ::LAT;
+  case SystemZ::LG:
+    return SystemZ::LGAT;
+  case SystemZ::LFH:
+    return SystemZ::LFHAT;
+  case SystemZ::LLGF:
+    return SystemZ::LLGFAT;
+  case SystemZ::LLGT:
+    return SystemZ::LLGTAT;
   }
   return 0;
 }

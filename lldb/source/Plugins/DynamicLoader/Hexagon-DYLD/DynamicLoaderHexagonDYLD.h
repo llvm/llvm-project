@@ -1,4 +1,4 @@
-//===-- DynamicLoaderHexagon.h ----------------------------------*- C++ -*-===//
+//===-- DynamicLoaderHexagonDYLD.h ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

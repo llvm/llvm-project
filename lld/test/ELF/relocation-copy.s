@@ -22,7 +22,7 @@ movl $z, %edx
 // CHECK-NEXT:   SHF_ALLOC (0x2)
 // CHECK-NEXT:   SHF_WRITE (0x1)
 // CHECK-NEXT:  ]
-// CHECK-NEXT:  Address: 0x13000
+// CHECK-NEXT:  Address: 0x203000
 // CHECK-NEXT:  Offset:
 // CHECK-NEXT:  Size: 24
 // CHECK-NEXT:  Link: 0
@@ -53,15 +53,15 @@ movl $z, %edx
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
-// 77824 = 0x13000
+// 2109440 = 0x203000
 // 16 is alignment here
-// 77840 = 0x13000 + 16
-// 77844 = 0x13000 + 16 + 4
+// 2109456 = 0x203000 + 16
+// 2109460 = 0x203000 + 16 + 4
 // CODE: Disassembly of section .text:
 // CODE-NEXT: _start:
-// CODE-NEXT: 11000: c7 04 25 00 30 01 00 05 00 00 00 movl $5, 77824
-// CODE-NEXT: 1100b: c7 04 25 10 30 01 00 07 00 00 00 movl $7, 77840
-// CODE-NEXT: 11016: c7 04 25 14 30 01 00 09 00 00 00 movl $9, 77844
-// CODE-NEXT: 11021: ba 00 30 01 00                   movl $77824, %edx
-// CODE-NEXT: 11026: ba 10 30 01 00                   movl $77840, %edx
-// CODE-NEXT: 1102b: ba 14 30 01 00                   movl $77844, %edx
+// CODE-NEXT: 201000: {{.*}} movl $5, 2109440
+// CODE-NEXT: 20100b: {{.*}} movl $7, 2109456
+// CODE-NEXT: 201016: {{.*}} movl $9, 2109460
+// CODE-NEXT: 201021: {{.*}} movl $2109440, %edx
+// CODE-NEXT: 201026: {{.*}} movl $2109456, %edx
+// CODE-NEXT: 20102b: {{.*}} movl $2109460, %edx

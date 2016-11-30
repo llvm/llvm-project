@@ -38,7 +38,7 @@ ModuleSummaryIndex buildModuleSummaryIndex(
 class ModuleSummaryIndexAnalysis
     : public AnalysisInfoMixin<ModuleSummaryIndexAnalysis> {
   friend AnalysisInfoMixin<ModuleSummaryIndexAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef ModuleSummaryIndex Result;

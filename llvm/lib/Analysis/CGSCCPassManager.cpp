@@ -15,6 +15,7 @@ using namespace llvm;
 namespace llvm {
 
 // Explicit instantiations for the core proxy templates.
+template class AllAnalysesOn<LazyCallGraph::SCC>;
 template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>;
@@ -56,10 +57,8 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     assert(C->begin() != C->end() && "Cannot have an empty SCC!");
 
     // Update the analysis manager as each pass runs and potentially
-    // invalidates analyses. We also update the preserved set of analyses
-    // based on what analyses we have already handled the invalidation for
-    // here and don't need to invalidate when finished.
-    PassPA = AM.invalidate(*C, std::move(PassPA));
+    // invalidates analyses.
+    AM.invalidate(*C, PassPA);
 
     // Finally, we intersect the final preserved analyses to compute the
     // aggregate preserved set for this pass manager.
@@ -71,6 +70,12 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // in the new pass manager so it is currently omitted.
     // ...getContext().yield();
   }
+
+  // Invaliadtion was handled after each pass in the above loop for the current
+  // SCC. Therefore, the remaining analysis results in the AnalysisManager are
+  // preserved. We mark this with a set so that we don't need to inspect each
+  // one individually.
+  PA.preserve<AllAnalysesOn<LazyCallGraph::SCC>>();
 
   if (DebugLogging)
     dbgs() << "Finished CGSCC pass manager run.\n";

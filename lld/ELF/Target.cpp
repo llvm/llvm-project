@@ -51,33 +51,36 @@ TargetInfo *Target;
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 
-StringRef getRelName(uint32_t Type) {
+std::string toString(uint32_t Type) {
   return getELFRelocationTypeName(Config->EMachine, Type);
 }
 
-template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
+template <unsigned N>
+static void checkInt(uint8_t *Loc, int64_t V, uint32_t Type) {
   if (!isInt<N>(V))
-    error("relocation " + getRelName(Type) + " out of range");
+    error(getErrorLocation(Loc) + "relocation " + toString(Type) +
+          " out of range");
 }
 
-template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
+template <unsigned N>
+static void checkUInt(uint8_t *Loc, uint64_t V, uint32_t Type) {
   if (!isUInt<N>(V))
-    error("relocation " + getRelName(Type) + " out of range");
+    error(getErrorLocation(Loc) + "relocation " + toString(Type) +
+          " out of range");
 }
 
-template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
+template <unsigned N>
+static void checkIntUInt(uint8_t *Loc, uint64_t V, uint32_t Type) {
   if (!isInt<N>(V) && !isUInt<N>(V))
-    error("relocation " + getRelName(Type) + " out of range");
+    error(getErrorLocation(Loc) + "relocation " + toString(Type) +
+          " out of range");
 }
 
-template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
+template <unsigned N>
+static void checkAlignment(uint8_t *Loc, uint64_t V, uint32_t Type) {
   if ((V & (N - 1)) != 0)
-    error("improper alignment for relocation " + getRelName(Type));
-}
-
-static void errorDynRel(uint32_t Type) {
-  error("relocation " + getRelName(Type) +
-        " cannot be used against shared object; recompile with -fPIC.");
+    error(getErrorLocation(Loc) + "improper alignment for relocation " +
+          toString(Type));
 }
 
 namespace {
@@ -109,7 +112,7 @@ template <class ELFT> class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
-  uint32_t getDynRel(uint32_t Type) const override;
+  bool isPicRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
@@ -153,7 +156,7 @@ class AArch64TargetInfo final : public TargetInfo {
 public:
   AArch64TargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
-  uint32_t getDynRel(uint32_t Type) const override;
+  bool isPicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
@@ -179,6 +182,7 @@ class ARMTargetInfo final : public TargetInfo {
 public:
   ARMTargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
@@ -198,6 +202,7 @@ public:
   MipsTargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
@@ -446,7 +451,7 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
 
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
-  checkInt<32>(Val, Type);
+  checkInt<32>(Loc, Val, Type);
   write32le(Loc, Val);
 }
 
@@ -558,6 +563,9 @@ template <class ELFT> X86_64TargetInfo<ELFT>::X86_64TargetInfo() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
+  // Align to the large page size (known as a superpage or huge page).
+  // FreeBSD automatically promotes large, superpage-aligned allocations.
+  DefaultImageBase = 0x200000;
 }
 
 template <class ELFT>
@@ -637,10 +645,8 @@ void X86_64TargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 template <class ELFT>
-uint32_t X86_64TargetInfo<ELFT>::getDynRel(uint32_t Type) const {
-  if (Type == R_X86_64_PC32 || Type == R_X86_64_32)
-    errorDynRel(Type);
-  return Type;
+bool X86_64TargetInfo<ELFT>::isPicRel(uint32_t Type) const {
+  return Type != R_X86_64_PC32 && Type != R_X86_64_32;
 }
 
 template <class ELFT>
@@ -739,7 +745,8 @@ void X86_64TargetInfo<ELFT>::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
     memcpy(Inst, "\x48\xc7", 2);
     *RegSlot = 0xc0 | Reg;
   } else {
-    fatal("R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
+    fatal(getErrorLocation(Loc - 3) +
+          "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
   }
 
   // The original code used a PC relative relocation.
@@ -781,7 +788,7 @@ void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
                                          uint64_t Val) const {
   switch (Type) {
   case R_X86_64_32:
-    checkUInt<32>(Val, Type);
+    checkUInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
     break;
   case R_X86_64_32S:
@@ -797,17 +804,18 @@ void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_TLSLD:
   case R_X86_64_DTPOFF32:
   case R_X86_64_SIZE32:
-    checkInt<32>(Val, Type);
+    checkInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
     break;
   case R_X86_64_64:
   case R_X86_64_DTPOFF64:
-  case R_X86_64_SIZE64:
+  case R_X86_64_GLOB_DAT:
   case R_X86_64_PC64:
+  case R_X86_64_SIZE64:
     write64le(Loc, Val);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -976,7 +984,7 @@ void PPCTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32be(Loc, Val & 0x3FFFFFC);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1096,18 +1104,18 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
 
   switch (Type) {
   case R_PPC64_ADDR14: {
-    checkAlignment<4>(Val, Type);
+    checkAlignment<4>(Loc, Val, Type);
     // Preserve the AA/LK bits in the branch instruction
     uint8_t AALK = Loc[3];
     write16be(Loc + 2, (AALK & 3) | (Val & 0xfffc));
     break;
   }
   case R_PPC64_ADDR16:
-    checkInt<16>(Val, Type);
+    checkInt<16>(Loc, Val, Type);
     write16be(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
-    checkInt<16>(Val, Type);
+    checkInt<16>(Loc, Val, Type);
     write16be(Loc, (read16be(Loc) & 3) | (Val & ~3));
     break;
   case R_PPC64_ADDR16_HA:
@@ -1139,7 +1147,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_PPC64_ADDR32:
   case R_PPC64_REL32:
-    checkInt<32>(Val, Type);
+    checkInt<32>(Loc, Val, Type);
     write32be(Loc, Val);
     break;
   case R_PPC64_ADDR64:
@@ -1149,12 +1157,12 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_PPC64_REL24: {
     uint32_t Mask = 0x03FFFFFC;
-    checkInt<24>(Val, Type);
+    checkInt<24>(Loc, Val, Type);
     write32be(Loc, (read32be(Loc) & ~Mask) | (Val & Mask));
     break;
   }
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1246,12 +1254,8 @@ bool AArch64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
          Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
 }
 
-uint32_t AArch64TargetInfo::getDynRel(uint32_t Type) const {
-  if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
-    return Type;
-  // Keep it going with a dummy value so that we can find more reloc errors.
-  errorDynRel(Type);
-  return R_AARCH64_ABS32;
+bool AArch64TargetInfo::isPicRel(uint32_t Type) const {
+  return Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64;
 }
 
 void AArch64TargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
@@ -1316,15 +1320,16 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   switch (Type) {
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
-    checkIntUInt<16>(Val, Type);
+    checkIntUInt<16>(Loc, Val, Type);
     write16le(Loc, Val);
     break;
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
-    checkIntUInt<32>(Val, Type);
+    checkIntUInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
     break;
   case R_AARCH64_ABS64:
+  case R_AARCH64_GLOB_DAT:
   case R_AARCH64_PREL64:
     write64le(Loc, Val);
     break;
@@ -1339,26 +1344,26 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
-    checkInt<33>(Val, Type);
+    checkInt<33>(Loc, Val, Type);
     updateAArch64Addr(Loc, Val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
-    checkInt<21>(Val, Type);
+    checkInt<21>(Loc, Val, Type);
     updateAArch64Addr(Loc, Val);
     break;
   case R_AARCH64_CALL26:
   case R_AARCH64_JUMP26:
-    checkInt<28>(Val, Type);
+    checkInt<28>(Loc, Val, Type);
     or32le(Loc, (Val & 0x0FFFFFFC) >> 2);
     break;
   case R_AARCH64_CONDBR19:
-    checkInt<21>(Val, Type);
+    checkInt<21>(Loc, Val, Type);
     or32le(Loc, (Val & 0x1FFFFC) << 3);
     break;
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case R_AARCH64_TLSDESC_LD64_LO12_NC:
-    checkAlignment<8>(Val, Type);
+    checkAlignment<8>(Loc, Val, Type);
     or32le(Loc, (Val & 0xFF8) << 7);
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
@@ -1389,11 +1394,11 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32le(Loc, (Val & 0xFFFF000000000000) >> 43);
     break;
   case R_AARCH64_TSTBR14:
-    checkInt<16>(Val, Type);
+    checkInt<16>(Loc, Val, Type);
     or32le(Loc, (Val & 0xFFFC) << 3);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
-    checkInt<24>(Val, Type);
+    checkInt<24>(Loc, Val, Type);
     updateAArch64Add(Loc, Val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
@@ -1401,7 +1406,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     updateAArch64Add(Loc, Val);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1418,7 +1423,7 @@ void AArch64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
   //   movk    x0, #0x10
   //   nop
   //   nop
-  checkUInt<32>(Val, Type);
+  checkUInt<32>(Loc, Val, Type);
 
   switch (Type) {
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
@@ -1470,7 +1475,7 @@ void AArch64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
 
 void AArch64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
                                        uint64_t Val) const {
-  checkUInt<32>(Val, Type);
+  checkUInt<32>(Loc, Val, Type);
 
   if (Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) {
     // Generate MOVZ.
@@ -1511,7 +1516,7 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write32le(Loc, Val >> 32);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1606,13 +1611,17 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   }
 }
 
+bool ARMTargetInfo::isPicRel(uint32_t Type) const {
+  return (Type == R_ARM_TARGET1 && !Config->Target1Rel) ||
+         (Type == R_ARM_ABS32);
+}
+
 uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_ARM_TARGET1 && !Config->Target1Rel)
     return R_ARM_ABS32;
   if (Type == R_ARM_ABS32)
     return Type;
   // Keep it going with a dummy value so that we can find more reloc errors.
-  errorDynRel(Type);
   return R_ARM_ABS32;
 }
 
@@ -1687,6 +1696,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   switch (Type) {
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
+  case R_ARM_GLOB_DAT:
   case R_ARM_GOTOFF32:
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
@@ -1698,10 +1708,14 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_TLS_LDM32:
   case R_ARM_TLS_LDO32:
   case R_ARM_TLS_LE32:
+  case R_ARM_TLS_TPOFF32:
     write32le(Loc, Val);
     break;
+  case R_ARM_TLS_DTPMOD32:
+    write32le(Loc, 1);
+    break;
   case R_ARM_PREL31:
-    checkInt<31>(Val, Type);
+    checkInt<31>(Loc, Val, Type);
     write32le(Loc, (read32le(Loc) & 0x80000000) | (Val & ~0x80000000));
     break;
   case R_ARM_CALL:
@@ -1710,7 +1724,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     if (Val & 1) {
       // If bit 0 of Val is 1 the target is Thumb, we must select a BLX.
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
-      checkInt<26>(Val, Type);
+      checkInt<26>(Loc, Val, Type);
       write32le(Loc, 0xfa000000 |                    // opcode
                          ((Val & 2) << 23) |         // H
                          ((Val >> 2) & 0x00ffffff)); // imm24
@@ -1724,16 +1738,16 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
-    checkInt<26>(Val, Type);
+    checkInt<26>(Loc, Val, Type);
     write32le(Loc, (read32le(Loc) & ~0x00ffffff) | ((Val >> 2) & 0x00ffffff));
     break;
   case R_ARM_THM_JUMP11:
-    checkInt<12>(Val, Type);
+    checkInt<12>(Loc, Val, Type);
     write16le(Loc, (read32le(Loc) & 0xf800) | ((Val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
-    checkInt<21>(Val, Type);
+    checkInt<21>(Loc, Val, Type);
     write16le(Loc,
               (read16le(Loc) & 0xfbc0) |   // opcode cond
                   ((Val >> 10) & 0x0400) | // S
@@ -1758,7 +1772,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_THM_JUMP24:
     // Encoding B  T4, BL T1, BLX T2: Val = S:I1:I2:imm10:imm11:0
     // FIXME: Use of I1 and I2 require v6T2ops
-    checkInt<25>(Val, Type);
+    checkInt<25>(Loc, Val, Type);
     write16le(Loc,
               0xf000 |                     // opcode
                   ((Val >> 14) & 0x0400) | // S
@@ -1776,14 +1790,14 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_ARM_MOVT_ABS:
   case R_ARM_MOVT_PREL:
-    checkInt<32>(Val, Type);
+    checkInt<32>(Loc, Val, Type);
     write32le(Loc, (read32le(Loc) & ~0x000f0fff) |
                        (((Val >> 16) & 0xf000) << 4) | ((Val >> 16) & 0xfff));
     break;
   case R_ARM_THM_MOVT_ABS:
   case R_ARM_THM_MOVT_PREL:
     // Encoding T1: A = imm4:i:imm3:imm8
-    checkInt<32>(Val, Type);
+    checkInt<32>(Loc, Val, Type);
     write16le(Loc,
               0xf2c0 |                     // opcode
                   ((Val >> 17) & 0x0400) | // i
@@ -1806,7 +1820,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                   (Val & 0x00ff));           // imm8
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1976,13 +1990,13 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   }
 }
 
+template <class ELFT> bool MipsTargetInfo<ELFT>::isPicRel(uint32_t Type) const {
+  return Type == R_MIPS_32 || Type == R_MIPS_64;
+}
+
 template <class ELFT>
 uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
-  if (Type == R_MIPS_32 || Type == R_MIPS_64)
-    return RelativeRel;
-  // Keep it going with a dummy value so that we can find more reloc errors.
-  errorDynRel(Type);
-  return R_MIPS_32;
+  return RelativeRel;
 }
 
 template <class ELFT>
@@ -2012,8 +2026,8 @@ static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t V) {
   uint32_t Mask = 0xffffffff >> (32 - BSIZE);
   uint32_t Instr = read32<E>(Loc);
   if (SHIFT > 0)
-    checkAlignment<(1 << SHIFT)>(V, Type);
-  checkInt<BSIZE + SHIFT>(V, Type);
+    checkAlignment<(1 << SHIFT)>(Loc, V, Type);
+  checkInt<BSIZE + SHIFT>(Loc, V, Type);
   write32<E>(Loc, (Instr & ~Mask) | ((V >> SHIFT) & Mask));
 }
 
@@ -2146,8 +2160,8 @@ uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
   }
 }
 
-static std::pair<uint32_t, uint64_t> calculateMipsRelChain(uint32_t Type,
-                                                           uint64_t Val) {
+static std::pair<uint32_t, uint64_t>
+calculateMipsRelChain(uint8_t *Loc, uint32_t Type, uint64_t Val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -2168,7 +2182,8 @@ static std::pair<uint32_t, uint64_t> calculateMipsRelChain(uint32_t Type,
     return std::make_pair(Type2, Val);
   if (Type2 == R_MIPS_SUB && (Type3 == R_MIPS_HI16 || Type3 == R_MIPS_LO16))
     return std::make_pair(Type3, -Val);
-  error("unsupported relocations combination " + Twine(Type));
+  error(getErrorLocation(Loc) + "unsupported relocations combination " +
+        Twine(Type));
   return std::make_pair(Type & 0xff, Val);
 }
 
@@ -2185,7 +2200,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
            Type == R_MIPS_TLS_TPREL32 || Type == R_MIPS_TLS_TPREL64)
     Val -= 0x7000;
   if (ELFT::Is64Bits || Config->MipsN32Abi)
-    std::tie(Type, Val) = calculateMipsRelChain(Type, Val);
+    std::tie(Type, Val) = calculateMipsRelChain(Loc, Type, Val);
   switch (Type) {
   case R_MIPS_32:
   case R_MIPS_GPREL32:
@@ -2207,7 +2222,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_GPREL16:
   case R_MIPS_TLS_GD:
   case R_MIPS_TLS_LDM:
-    checkInt<16>(Val, Type);
+    checkInt<16>(Loc, Val, Type);
   // fallthrough
   case R_MIPS_CALL16:
   case R_MIPS_CALL_LO16:
@@ -2253,7 +2268,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     applyMipsPcReloc<E, 32, 0>(Loc, Type, Val);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 

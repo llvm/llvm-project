@@ -20,45 +20,59 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
 
-// Returns the line that the character S[Pos] is in.
-static StringRef getLine(StringRef S, size_t Pos) {
-  size_t Begin = S.rfind('\n', Pos);
-  size_t End = S.find('\n', Pos);
+// Returns the line that the token Tok is in.
+static StringRef getLine(StringRef Data, StringRef Tok) {
+  size_t Pos = Tok.data() - Data.data();
+  size_t Begin = Data.rfind('\n', Pos);
+  size_t End = Data.find('\n', Pos);
   Begin = (Begin == StringRef::npos) ? 0 : Begin + 1;
   if (End == StringRef::npos)
-    End = S.size();
+    End = Data.size();
   // rtrim for DOS-style newlines.
-  return S.substr(Begin, End - Begin).rtrim();
+  return Data.substr(Begin, End - Begin).rtrim();
 }
 
-void ScriptParserBase::printErrorPos() {
-  StringRef Tok = Tokens[Pos == 0 ? 0 : Pos - 1];
-  StringRef Line = getLine(Input, Tok.data() - Input.data());
-  size_t Col = Tok.data() - Line.data();
-  error(Line);
-  error(std::string(Col, ' ') + "^");
+static std::pair<size_t, size_t> getPos(StringRef Data, StringRef Tok) {
+  StringRef Line = getLine(Data, Tok);
+  size_t LineNo =
+      StringRef(Data.data(), Tok.data() - Data.data()).count('\n') + 1;
+  return {LineNo, Tok.data() - Line.data()};
 }
+
+ScriptParserBase::ScriptParserBase(MemoryBufferRef MB) { tokenize(MB); }
 
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptParserBase::setError(const Twine &Msg) {
   if (Error)
     return;
-  if (Input.empty() || Tokens.empty()) {
-    error(Msg);
-  } else {
-    error("line " + Twine(getPos()) + ": " + Msg);
-    printErrorPos();
+
+  std::pair<size_t, size_t> ErrPos;
+  MemoryBufferRef MB = currentBuffer();
+  std::string Location = MB.getBufferIdentifier();
+  if (Pos) {
+    ErrPos = getPos(MB.getBuffer(), Tokens[Pos - 1]);
+    Location += ":";
+    Location += std::to_string(ErrPos.first);
   }
+  error(Location + ": " + Msg);
+  if (Pos) {
+    error(Location + ": " + getLine(MB.getBuffer(), Tokens[Pos - 1]));
+    error(Location + ": " + std::string(ErrPos.second, ' ') + "^");
+  }
+
   Error = true;
 }
 
 // Split S into linker script tokens.
-std::vector<StringRef> ScriptParserBase::tokenize(StringRef S) {
+void ScriptParserBase::tokenize(MemoryBufferRef MB) {
   std::vector<StringRef> Ret;
+  MBs.push_back(MB);
+  StringRef S = MB.getBuffer();
+  StringRef Begin = S;
   for (;;) {
     S = skipSpace(S);
     if (S.empty())
-      return Ret;
+      break;
 
     // Quoted token. Note that double-quote characters are parts of a token
     // because, in a glob match context, only unquoted tokens are interpreted
@@ -67,8 +81,10 @@ std::vector<StringRef> ScriptParserBase::tokenize(StringRef S) {
     if (S.startswith("\"")) {
       size_t E = S.find("\"", 1);
       if (E == StringRef::npos) {
-        error("unclosed quote");
-        return {};
+        auto ErrPos = getPos(Begin, S);
+        error(MB.getBufferIdentifier() + ":" + Twine(ErrPos.first) +
+              ": unclosed quote");
+        return;
       }
       Ret.push_back(S.take_front(E + 1));
       S = S.substr(E + 1);
@@ -88,6 +104,7 @@ std::vector<StringRef> ScriptParserBase::tokenize(StringRef S) {
     Ret.push_back(S.substr(0, Pos));
     S = S.substr(Pos);
   }
+  Tokens.insert(Tokens.begin() + Pos, Ret.begin(), Ret.end());
 }
 
 // Skip leading whitespace characters or comments.
@@ -155,11 +172,28 @@ void ScriptParserBase::expect(StringRef Expect) {
     setError(Expect + " expected, but got " + Tok);
 }
 
-// Returns the current line number.
-size_t ScriptParserBase::getPos() {
-  if (Pos == 0)
-    return 1;
-  const char *Begin = Input.data();
-  const char *Tok = Tokens[Pos - 1].data();
-  return StringRef(Begin, Tok - Begin).count('\n') + 1;
+std::string ScriptParserBase::currentLocation() {
+  MemoryBufferRef MB = currentBuffer();
+  return (MB.getBufferIdentifier() + ":" +
+          Twine(getPos(MB.getBuffer(), Tokens[Pos - 1]).first))
+      .str();
+}
+
+// Returns true if string 'Bigger' contains string 'Shorter'.
+static bool containsString(StringRef Bigger, StringRef Shorter) {
+  const char *BiggerEnd = Bigger.data() + Bigger.size();
+  const char *ShorterEnd = Shorter.data() + Shorter.size();
+
+  return Bigger.data() <= Shorter.data() && BiggerEnd >= ShorterEnd;
+}
+
+MemoryBufferRef ScriptParserBase::currentBuffer() {
+  // Find input buffer containing the current token.
+  assert(!MBs.empty());
+  if (Pos)
+    for (MemoryBufferRef MB : MBs)
+      if (containsString(MB.getBuffer(), Tokens[Pos - 1]))
+        return MB;
+
+  return MBs.front();
 }

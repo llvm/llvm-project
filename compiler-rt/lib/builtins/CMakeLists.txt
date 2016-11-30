@@ -451,7 +451,7 @@ if (APPLE)
 else ()
   set(BUILTIN_CFLAGS "")
 
-  append_list_if(COMPILER_RT_HAS_STD_C99_FLAG -std=gnu99 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
 
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
   # cmake step. Add them manually if this is a standalone build.

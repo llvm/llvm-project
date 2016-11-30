@@ -743,7 +743,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
       Int32Ty, llvm::PointerType::getUnqual(CtorFTy), VoidPtrTy, nullptr);
 
   // Construct the constructor and destructor arrays.
-  ConstantBuilder builder(*this);
+  ConstantInitBuilder builder(*this);
   auto ctors = builder.beginArray(CtorStructTy);
   for (const auto &I : Fns) {
     auto ctor = ctors.beginStruct(CtorStructTy);
@@ -753,7 +753,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
       ctor.add(llvm::ConstantExpr::getBitCast(I.AssociatedData, VoidPtrTy));
     else
       ctor.addNullPointer(VoidPtrTy);
-    ctors.add(ctor.finish());
+    ctor.finishAndAddTo(ctors);
   }
 
   auto list =
@@ -818,14 +818,7 @@ llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
   llvm::MDString *MDS = dyn_cast<llvm::MDString>(MD);
   if (!MDS) return nullptr;
 
-  llvm::MD5 md5;
-  llvm::MD5::MD5Result result;
-  md5.update(MDS->getString());
-  md5.final(result);
-  uint64_t id = 0;
-  for (int i = 0; i < 8; ++i)
-    id |= static_cast<uint64_t>(result[i]) << (i * 8);
-  return llvm::ConstantInt::get(Int64Ty, id);
+  return llvm::ConstantInt::get(Int64Ty, llvm::MD5Hash(MDS->getString()));
 }
 
 void CodeGenModule::setFunctionDefinitionAttributes(const FunctionDecl *D,
@@ -3197,7 +3190,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
   auto *STy = cast<llvm::StructType>(getTypes().ConvertType(CFTy));
 
-  ConstantBuilder Builder(*this);
+  ConstantInitBuilder Builder(*this);
   auto Fields = Builder.beginStruct(STy);
 
   // Class pointer.
@@ -3343,7 +3336,7 @@ CodeGenModule::GetAddrOfConstantString(const StringLiteral *Literal) {
     NSConstantStringType = cast<llvm::StructType>(getTypes().ConvertType(NSTy));
   }
   
-  ConstantBuilder Builder(*this);
+  ConstantInitBuilder Builder(*this);
   auto Fields = Builder.beginStruct(NSConstantStringType);
   
   // Class pointer.

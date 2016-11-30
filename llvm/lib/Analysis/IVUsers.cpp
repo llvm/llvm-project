@@ -34,7 +34,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "iv-users"
 
-char IVUsersAnalysis::PassID;
+AnalysisKey IVUsersAnalysis::Key;
 
 IVUsers IVUsersAnalysis::run(Loop &L, LoopAnalysisManager &AM) {
   const auto &FAM =

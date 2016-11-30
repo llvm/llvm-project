@@ -108,7 +108,7 @@
 #endif
 
 #if defined(_MSC_VER)
-#include "Plugins/Process/Windows/Live/ProcessWindowsLive.h"
+#include "Plugins/Process/Windows/Common/ProcessWindows.h"
 #include "lldb/Host/windows/windows.h"
 #endif
 
@@ -333,7 +333,7 @@ void SystemInitializerFull::Initialize() {
   OCamlLanguage::Initialize();
 
 #if defined(_MSC_VER)
-  ProcessWindowsLive::Initialize();
+  ProcessWindows::Initialize();
 #endif
 #if defined(__FreeBSD__)
   ProcessFreeBSD::Initialize();

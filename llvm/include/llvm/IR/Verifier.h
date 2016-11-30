@@ -58,13 +58,12 @@ FunctionPass *createVerifierPass(bool FatalErrors = true);
 /// and debug info errors.
 class VerifierAnalysis : public AnalysisInfoMixin<VerifierAnalysis> {
   friend AnalysisInfoMixin<VerifierAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   struct Result {
     bool IRBroken, DebugInfoBroken;
   };
-  static void *ID() { return (void *)&PassID; }
   Result run(Module &M, ModuleAnalysisManager &);
   Result run(Function &F, FunctionAnalysisManager &);
 };

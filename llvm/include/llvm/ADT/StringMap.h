@@ -17,10 +17,17 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
+#include <utility>
+#include <initializer_list>
+#include <new>
 #include <utility>
 
 namespace llvm {
+
   template<typename ValueT>
   class StringMapConstIterator;
   template<typename ValueT>
@@ -119,8 +126,6 @@ public:
 /// and data.
 template<typename ValueTy>
 class StringMapEntry : public StringMapEntryBase {
-  StringMapEntry(StringMapEntry &E) = delete;
-
 public:
   ValueTy second;
 
@@ -129,6 +134,7 @@ public:
   template <typename... InitTy>
   StringMapEntry(unsigned strLen, InitTy &&... InitVals)
       : StringMapEntryBase(strLen), second(std::forward<InitTy>(InitVals)...) {}
+  StringMapEntry(StringMapEntry &E) = delete;
 
   StringRef getKey() const {
     return StringRef(getKeyData(), getKeyLength());
@@ -440,12 +446,12 @@ public:
 
 template <typename ValueTy> class StringMapConstIterator {
 protected:
-  StringMapEntryBase **Ptr;
+  StringMapEntryBase **Ptr = nullptr;
 
 public:
   typedef StringMapEntry<ValueTy> value_type;
 
-  StringMapConstIterator() : Ptr(nullptr) { }
+  StringMapConstIterator() = default;
 
   explicit StringMapConstIterator(StringMapEntryBase **Bucket,
                                   bool NoAdvance = false)
@@ -486,11 +492,13 @@ private:
 template<typename ValueTy>
 class StringMapIterator : public StringMapConstIterator<ValueTy> {
 public:
-  StringMapIterator() {}
+  StringMapIterator() = default;
+
   explicit StringMapIterator(StringMapEntryBase **Bucket,
                              bool NoAdvance = false)
     : StringMapConstIterator<ValueTy>(Bucket, NoAdvance) {
   }
+
   StringMapEntry<ValueTy> &operator*() const {
     return *static_cast<StringMapEntry<ValueTy>*>(*this->Ptr);
   }
@@ -498,6 +506,7 @@ public:
     return static_cast<StringMapEntry<ValueTy>*>(*this->Ptr);
   }
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_ADT_STRINGMAP_H

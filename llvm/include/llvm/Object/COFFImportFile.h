@@ -47,11 +47,11 @@ public:
     return SymbolRef::SF_Global;
   }
 
-  basic_symbol_iterator symbol_begin_impl() const override {
+  basic_symbol_iterator symbol_begin() const override {
     return BasicSymbolRef(DataRefImpl(), this);
   }
 
-  basic_symbol_iterator symbol_end_impl() const override {
+  basic_symbol_iterator symbol_end() const override {
     DataRefImpl Symb;
     Symb.p = isCode() ? 2 : 1;
     return BasicSymbolRef(Symb, this);

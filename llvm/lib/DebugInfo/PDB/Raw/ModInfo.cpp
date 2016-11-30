@@ -7,25 +7,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
-
 #include "llvm/DebugInfo/MSF/StreamReader.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 using namespace llvm::support;
 
+ModInfo::ModInfo() = default;
 
-ModInfo::ModInfo() : Layout(nullptr) {}
+ModInfo::ModInfo(const ModInfo &Info) = default;
 
-ModInfo::ModInfo(const ModInfo &Info)
-    : ModuleName(Info.ModuleName), ObjFileName(Info.ObjFileName),
-      Layout(Info.Layout) {}
-
-ModInfo::~ModInfo() {}
+ModInfo::~ModInfo() = default;
 
 Error ModInfo::initialize(ReadableStreamRef Stream, ModInfo &Info) {
   StreamReader Reader(Stream);
@@ -77,6 +76,6 @@ uint32_t ModInfo::getRecordLength() const {
   uint32_t M = ModuleName.str().size() + 1;
   uint32_t O = ObjFileName.str().size() + 1;
   uint32_t Size = sizeof(ModuleInfoHeader) + M + O;
-  Size = llvm::alignTo(Size, 4);
+  Size = alignTo(Size, 4);
   return Size;
 }

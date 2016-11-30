@@ -58,7 +58,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm5 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm5, %xmm5
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm5
@@ -69,7 +69,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0

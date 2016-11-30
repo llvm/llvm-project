@@ -165,12 +165,16 @@ __kmp_affinity_determine_capable(const char *env_var)
           && (__kmp_affinity_type != affinity_default)
           && (__kmp_affinity_type != affinity_disabled))) {
             int error = errno;
+            kmp_msg_t err_code = KMP_ERR( error );
             __kmp_msg(
                 kmp_ms_warning,
                 KMP_MSG( GetAffSysCallNotSupported, env_var ),
-                KMP_ERR( error ),
+                err_code,
                 __kmp_msg_null
             );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+                __kmp_str_free(&err_code.str);
+            }
         }
         KMP_AFFINITY_DISABLE();
         KMP_INTERNAL_FREE(buf);
@@ -193,12 +197,16 @@ __kmp_affinity_determine_capable(const char *env_var)
                   && (__kmp_affinity_type != affinity_default)
                   && (__kmp_affinity_type != affinity_disabled))) {
                     int error = errno;
+                    kmp_msg_t err_code = KMP_ERR( error );
                     __kmp_msg(
                         kmp_ms_warning,
                         KMP_MSG( SetAffSysCallNotSupported, env_var ),
-                        KMP_ERR( error ),
+                        err_code,
                         __kmp_msg_null
                     );
+                    if (__kmp_generate_warnings == kmp_warnings_off) {
+                        __kmp_str_free(&err_code.str);
+                    }
                 }
                 KMP_AFFINITY_DISABLE();
                 KMP_INTERNAL_FREE(buf);
@@ -241,12 +249,16 @@ __kmp_affinity_determine_capable(const char *env_var)
                   && (__kmp_affinity_type != affinity_default)
                   && (__kmp_affinity_type != affinity_disabled))) {
                     int error = errno;
+                    kmp_msg_t err_code = KMP_ERR( error );
                     __kmp_msg(
                         kmp_ms_warning,
                         KMP_MSG( GetAffSysCallNotSupported, env_var ),
-                        KMP_ERR( error ),
+                        err_code,
                         __kmp_msg_null
                     );
+                    if (__kmp_generate_warnings == kmp_warnings_off) {
+                        __kmp_str_free(&err_code.str);
+                    }
                 }
                 KMP_AFFINITY_DISABLE();
                 KMP_INTERNAL_FREE(buf);
@@ -272,12 +284,16 @@ __kmp_affinity_determine_capable(const char *env_var)
                   && (__kmp_affinity_type != affinity_default)
                   && (__kmp_affinity_type != affinity_disabled))) {
                     int error = errno;
+                    kmp_msg_t err_code = KMP_ERR( error );
                     __kmp_msg(
                         kmp_ms_warning,
                         KMP_MSG( SetAffSysCallNotSupported, env_var ),
-                        KMP_ERR( error ),
+                        err_code,
                         __kmp_msg_null
                     );
+                    if (__kmp_generate_warnings == kmp_warnings_off) {
+                        __kmp_str_free(&err_code.str);
+                    }
                 }
                 KMP_AFFINITY_DISABLE();
                 KMP_INTERNAL_FREE(buf);
@@ -710,13 +726,17 @@ __kmp_launch_monitor( void *thr )
                 rc = sched_setscheduler( 0, sched, & param );
                 if ( rc != 0 ) {
                     int error = errno;
-                  __kmp_msg(
-                      kmp_ms_warning,
-                      KMP_MSG( CantChangeMonitorPriority ),
-                      KMP_ERR( error ),
-                      KMP_MSG( MonitorWillStarve ),
-                      __kmp_msg_null
-                  );
+                    kmp_msg_t err_code = KMP_ERR( error );
+                    __kmp_msg(
+                        kmp_ms_warning,
+                        KMP_MSG( CantChangeMonitorPriority ),
+                        err_code,
+                        KMP_MSG( MonitorWillStarve ),
+                        __kmp_msg_null
+                    );
+                    if (__kmp_generate_warnings == kmp_warnings_off) {
+                        __kmp_str_free(&err_code.str);
+                    }
                 }; // if
             } else {
                 // We cannot abort here, because number of CPUs may be enough for all the threads,
@@ -959,7 +979,11 @@ __kmp_create_worker( int gtid, kmp_info_t *th, size_t stack_size )
 #ifdef KMP_THREAD_ATTR
     status = pthread_attr_destroy( & thread_attr );
     if ( status ) {
-        __kmp_msg(kmp_ms_warning, KMP_MSG( CantDestroyThreadAttrs ), KMP_ERR( status ), __kmp_msg_null);
+        kmp_msg_t err_code = KMP_ERR( status );
+        __kmp_msg(kmp_ms_warning, KMP_MSG( CantDestroyThreadAttrs ), err_code, __kmp_msg_null);
+        if (__kmp_generate_warnings == kmp_warnings_off) {
+            __kmp_str_free(&err_code.str);
+        }
     }; // if
 #endif /* KMP_THREAD_ATTR */
 
@@ -1055,13 +1079,17 @@ __kmp_create_monitor( kmp_info_t *th )
                 __kmp_monitor_stksize *= 2;
                 goto retry;
             }
+            kmp_msg_t err_code = KMP_ERR( status );
             __kmp_msg(
                 kmp_ms_warning,  // should this be fatal?  BB
                 KMP_MSG( CantSetMonitorStackSize, (long int) __kmp_monitor_stksize ),
-                KMP_ERR( status ),
+                err_code,
                 KMP_HNT( ChangeMonitorStackSize ),
                 __kmp_msg_null
             );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+                __kmp_str_free(&err_code.str);
+            }
         }; // if
     #endif /* _POSIX_THREAD_ATTR_STACKSIZE */
 
@@ -1117,12 +1145,16 @@ __kmp_create_monitor( kmp_info_t *th )
     #ifdef KMP_THREAD_ATTR
         status = pthread_attr_destroy( & thread_attr );
         if ( status != 0 ) {
-            __kmp_msg(    //
+            kmp_msg_t err_code = KMP_ERR( status );
+            __kmp_msg( 
                 kmp_ms_warning,
                 KMP_MSG( CantDestroyThreadAttrs ),
-                KMP_ERR( status ),
+                err_code,
                 __kmp_msg_null
             );
+            if (__kmp_generate_warnings == kmp_warnings_off) {
+                __kmp_str_free(&err_code.str);
+            }
         }; // if
     #endif
 

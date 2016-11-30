@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <string>
 
 // size_type capacity() const;
@@ -18,21 +17,27 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
+#include "test_macros.h"
+
 template <class S>
 void
 test(S s)
 {
     S::allocator_type::throw_after = 0;
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try
+#endif
     {
         while (s.size() < s.capacity())
             s.push_back(typename S::value_type());
         assert(s.size() == s.capacity());
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
     catch (...)
     {
         assert(false);
     }
+#endif
     S::allocator_type::throw_after = INT_MAX;
 }
 

@@ -48,7 +48,7 @@ class MemoryAccess;
 /// query only specific parts.
 struct Dependences {
   // Granularities of the current dependence analysis
-  enum AnalyisLevel {
+  enum AnalysisLevel {
     AL_Statement = 0,
     // Distinguish accessed memory references in the same statement
     AL_Reference,
@@ -142,7 +142,7 @@ struct Dependences {
   void dump() const;
 
   /// Return the granularity of this dependence analysis.
-  AnalyisLevel getDependenceLevel() { return Level; }
+  AnalysisLevel getDependenceLevel() { return Level; }
 
   /// Allow the DependenceInfo access to private members and methods.
   ///
@@ -157,7 +157,7 @@ struct Dependences {
 private:
   /// Create an empty dependences struct.
   explicit Dependences(const std::shared_ptr<isl_ctx> &IslCtx,
-                       AnalyisLevel Level)
+                       AnalysisLevel Level)
       : RAW(nullptr), WAR(nullptr), WAW(nullptr), RED(nullptr), TC_RED(nullptr),
         IslCtx(IslCtx), Level(Level) {}
 
@@ -193,7 +193,7 @@ private:
   std::shared_ptr<isl_ctx> IslCtx;
 
   /// Granularity of this dependence analysis.
-  const AnalyisLevel Level;
+  const AnalysisLevel Level;
 };
 
 class DependenceInfo : public ScopPass {
@@ -209,10 +209,10 @@ public:
   ///
   /// @return The dependence analysis result
   ///
-  const Dependences &getDependences(Dependences::AnalyisLevel Level);
+  const Dependences &getDependences(Dependences::AnalysisLevel Level);
 
   /// Recompute dependences from schedule and memory accesses.
-  const Dependences &recomputeDependences(Dependences::AnalyisLevel Level);
+  const Dependences &recomputeDependences(Dependences::AnalysisLevel Level);
 
   /// Compute the dependence information for the SCoP @p S.
   bool runOnScop(Scop &S) override;
@@ -251,11 +251,11 @@ public:
   ///
   /// @return The dependence analysis result
   ///
-  const Dependences &getDependences(Scop *S, Dependences::AnalyisLevel Level);
+  const Dependences &getDependences(Scop *S, Dependences::AnalysisLevel Level);
 
   /// Recompute dependences from schedule and memory accesses.
   const Dependences &recomputeDependences(Scop *S,
-                                          Dependences::AnalyisLevel Level);
+                                          Dependences::AnalysisLevel Level);
 
   /// Compute the dependence information on-the-fly for the function.
   bool runOnFunction(Function &F) override;

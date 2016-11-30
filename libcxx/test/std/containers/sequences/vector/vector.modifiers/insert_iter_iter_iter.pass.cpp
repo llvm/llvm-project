@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstddef>
 #include "test_allocator.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
@@ -69,7 +70,7 @@ int main()
                                         forward_iterator<const int*>(a+N));
         assert(v.size() == sz + N);
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (int k = 0; k < N; ++j, ++k)
@@ -87,7 +88,7 @@ int main()
                                         forward_iterator<const int*>(a+N));
         assert(v.size() == sz + N);
         assert(i == v.begin() + 10);
-        int j;
+        std::size_t j;
         for (j = 0; j < 10; ++j)
             assert(v[j] == 0);
         for (int k = 0; k < N; ++j, ++k)

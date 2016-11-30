@@ -2815,7 +2815,7 @@ void LSRInstance::FinalizeChain(IVChain &Chain) {
   DEBUG(dbgs() << "Final Chain: " << *Chain.Incs[0].UserInst << "\n");
 
   for (const IVInc &Inc : Chain) {
-    DEBUG(dbgs() << "        Inc: " << Inc.UserInst << "\n");
+    DEBUG(dbgs() << "        Inc: " << *Inc.UserInst << "\n");
     auto UseI = find(Inc.UserInst->operands(), Inc.IVOperand);
     assert(UseI != Inc.UserInst->op_end() && "cannot find IV operand");
     IVIncSet.insert(UseI);

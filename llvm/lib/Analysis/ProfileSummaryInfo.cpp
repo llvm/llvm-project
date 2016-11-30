@@ -159,7 +159,7 @@ bool ProfileSummaryInfoWrapperPass::doFinalization(Module &M) {
   return false;
 }
 
-char ProfileSummaryAnalysis::PassID;
+AnalysisKey ProfileSummaryAnalysis::Key;
 ProfileSummaryInfo ProfileSummaryAnalysis::run(Module &M,
                                                ModuleAnalysisManager &) {
   return ProfileSummaryInfo(M);

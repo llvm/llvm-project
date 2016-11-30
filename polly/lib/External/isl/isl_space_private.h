@@ -34,6 +34,8 @@ isl_bool isl_space_is_domain_internal(__isl_keep isl_space *space1,
 	__isl_keep isl_space *space2);
 isl_bool isl_space_is_range_internal(__isl_keep isl_space *space1,
 	__isl_keep isl_space *space2);
+int isl_space_compatible_internal(__isl_keep isl_space *dim1,
+	__isl_keep isl_space *dim2);
 
 __isl_give isl_space *isl_space_as_set_space(__isl_take isl_space *dim);
 

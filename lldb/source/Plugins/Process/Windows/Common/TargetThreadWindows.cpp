@@ -21,6 +21,12 @@
 #include "TargetThreadWindows.h"
 #include "UnwindLLDB.h"
 
+#if defined(_WIN64)
+#include "x64/RegisterContextWindows_x64.h"
+#else
+#include "x86/RegisterContextWindows_x86.h"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -40,6 +46,44 @@ void TargetThreadWindows::RefreshStateAfterStop() {
 void TargetThreadWindows::WillResume(lldb::StateType resume_state) {}
 
 void TargetThreadWindows::DidStop() {}
+
+RegisterContextSP TargetThreadWindows::GetRegisterContext() {
+  if (!m_reg_context_sp)
+    m_reg_context_sp = CreateRegisterContextForFrameIndex(0);
+
+  return m_reg_context_sp;
+}
+
+RegisterContextSP
+TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
+  return CreateRegisterContextForFrameIndex(frame->GetConcreteFrameIndex());
+}
+
+RegisterContextSP
+TargetThreadWindows::CreateRegisterContextForFrameIndex(uint32_t idx) {
+  if (!m_reg_context_sp) {
+    ArchSpec arch = HostInfo::GetArchitecture();
+    switch (arch.GetMachine()) {
+    case llvm::Triple::x86:
+#if defined(_WIN64)
+// FIXME: This is a Wow64 process, create a RegisterContextWindows_Wow64
+#else
+      m_reg_context_sp.reset(new RegisterContextWindows_x86(*this, idx));
+#endif
+      break;
+    case llvm::Triple::x86_64:
+#if defined(_WIN64)
+      m_reg_context_sp.reset(new RegisterContextWindows_x64(*this, idx));
+#else
+// LLDB is 32-bit, but the target process is 64-bit.  We probably can't debug
+// this.
+#endif
+    default:
+      break;
+    }
+  }
+  return m_reg_context_sp;
+}
 
 bool TargetThreadWindows::CalculateStopInfo() {
   SetStopInfo(m_stop_info_sp);

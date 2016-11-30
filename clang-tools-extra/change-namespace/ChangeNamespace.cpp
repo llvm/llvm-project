@@ -369,11 +369,13 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                 hasAncestor(namespaceDecl(isAnonymous())),
                                 hasAncestor(cxxRecordDecl()))),
                    hasParent(namespaceDecl()));
-  Finder->addMatcher(
-      decl(forEachDescendant(callExpr(callee(FuncMatcher)).bind("call")),
-           IsInMovedNs, unless(isImplicit()))
-          .bind("dc"),
-      this);
+  Finder->addMatcher(decl(forEachDescendant(expr(anyOf(
+                              callExpr(callee(FuncMatcher)).bind("call"),
+                              declRefExpr(to(FuncMatcher.bind("func_decl")))
+                                  .bind("func_ref")))),
+                          IsInMovedNs, unless(isImplicit()))
+                         .bind("dc"),
+                     this);
 
   auto GlobalVarMatcher = varDecl(
       hasGlobalStorage(), hasParent(namespaceDecl()),
@@ -421,26 +423,32 @@ void ChangeNamespaceTool::run(
     assert(Var);
     if (Var->getCanonicalDecl()->isStaticDataMember())
       return;
-    const clang::Decl *Context = Result.Nodes.getNodeAs<clang::Decl>("dc");
+    const auto *Context = Result.Nodes.getNodeAs<Decl>("dc");
     assert(Context && "Empty decl context.");
-    clang::SourceRange VarRefRange = VarRef->getSourceRange();
-    replaceQualifiedSymbolInDeclContext(
-        Result, Context->getDeclContext(), VarRefRange.getBegin(),
-        VarRefRange.getEnd(), llvm::cast<NamedDecl>(Var));
+    fixDeclRefExpr(Result, Context->getDeclContext(),
+                   llvm::cast<NamedDecl>(Var), VarRef);
+  } else if (const auto *FuncRef =
+                 Result.Nodes.getNodeAs<DeclRefExpr>("func_ref")) {
+    const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func_decl");
+    assert(Func);
+    const auto *Context = Result.Nodes.getNodeAs<Decl>("dc");
+    assert(Context && "Empty decl context.");
+    fixDeclRefExpr(Result, Context->getDeclContext(),
+                   llvm::cast<NamedDecl>(Func), FuncRef);
   } else {
-    const auto *Call = Result.Nodes.getNodeAs<clang::CallExpr>("call");
+    const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
     assert(Call != nullptr && "Expecting callback for CallExpr.");
-    const clang::FunctionDecl *Func = Call->getDirectCallee();
+    const FunctionDecl *Func = Call->getDirectCallee();
     assert(Func != nullptr);
     // Ignore out-of-line static methods since they will be handled by nested
     // name specifiers.
     if (Func->getCanonicalDecl()->getStorageClass() ==
-            clang::StorageClass::SC_Static &&
+            StorageClass::SC_Static &&
         Func->isOutOfLine())
       return;
-    const clang::Decl *Context = Result.Nodes.getNodeAs<clang::Decl>("dc");
+    const auto *Context = Result.Nodes.getNodeAs<Decl>("dc");
     assert(Context && "Empty decl context.");
-    clang::SourceRange CalleeRange = Call->getCallee()->getSourceRange();
+    SourceRange CalleeRange = Call->getCallee()->getSourceRange();
     replaceQualifiedSymbolInDeclContext(
         Result, Context->getDeclContext(), CalleeRange.getBegin(),
         CalleeRange.getEnd(), llvm::cast<NamedDecl>(Func));
@@ -696,6 +704,15 @@ void ChangeNamespaceTool::fixUsingShadowDecl(
   auto Err = FileToReplacements[R.getFilePath()].add(R);
   if (Err)
     llvm_unreachable(llvm::toString(std::move(Err)).c_str());
+}
+
+void ChangeNamespaceTool::fixDeclRefExpr(
+    const ast_matchers::MatchFinder::MatchResult &Result,
+    const DeclContext *UseContext, const NamedDecl *From,
+    const DeclRefExpr *Ref) {
+  SourceRange RefRange = Ref->getSourceRange();
+  replaceQualifiedSymbolInDeclContext(Result, UseContext, RefRange.getBegin(),
+                                      RefRange.getEnd(), From);
 }
 
 void ChangeNamespaceTool::onEndOfTranslationUnit() {

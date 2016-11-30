@@ -7,4 +7,4 @@
  .long 0xFFFFFFFF
  .byte 0
 
-// CHECK: CIE/FDE too large
+// CHECK: {{.*}}:(.eh_frame+0x0): CIE/FDE too large

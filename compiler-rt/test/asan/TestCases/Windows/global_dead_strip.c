@@ -3,9 +3,6 @@
 // RUN: %clang_cl_asan /O2 %s /Fe%t.exe -link -opt:ref
 // RUN: %env_asan_opts=report_globals=2 %t.exe 2>&1 | FileCheck %s --check-prefix=STRIP
 
-// FIXME: Remove the XFAIL once the LLVM instrumentation change lands.
-// XFAIL: *
-
 #include <stdio.h>
 int dead_global = 42;
 int live_global = 0;

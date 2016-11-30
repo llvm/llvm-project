@@ -1,6 +1,6 @@
 // Check the value profiling instrinsics emitted by instrumentation.
 
-// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument=clang -mllvm -enable-value-profiling -fexceptions -fcxx-exceptions -triple %itanium_abi_triple | FileCheck %s
+// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument=clang -mllvm -enable-value-profiling -fexceptions -fcxx-exceptions -triple x86_64-apple-macosx10.9 | FileCheck %s
 
 void (*foo) (void);
 

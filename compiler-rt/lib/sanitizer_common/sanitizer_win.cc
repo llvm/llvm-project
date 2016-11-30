@@ -872,6 +872,10 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
                        write_flag);
 }
 
+void SignalContext::DumpAllRegisters(void *context) {
+  // FIXME: Implement this.
+}
+
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
   // FIXME: Actually implement this function.
   CHECK_GT(buf_len, 0);

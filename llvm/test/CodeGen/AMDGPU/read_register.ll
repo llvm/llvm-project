@@ -3,9 +3,11 @@
 declare i32 @llvm.read_register.i32(metadata) #0
 declare i64 @llvm.read_register.i64(metadata) #0
 
+; FIXME: Should be able to eliminate copy
 ; CHECK-LABEL: {{^}}test_read_m0:
 ; CHECK: s_mov_b32 m0, -1
-; CHECK: v_mov_b32_e32 [[COPY:v[0-9]+]], m0
+; CHECK: s_mov_b32 [[COPY_M0:s[0-9]+]], m0
+; CHECK: v_mov_b32_e32 [[COPY:v[0-9]+]], [[COPY_M0]]
 ; CHECK: buffer_store_dword [[COPY]]
 define void @test_read_m0(i32 addrspace(1)* %out) #0 {
   store volatile i32 0, i32 addrspace(3)* undef

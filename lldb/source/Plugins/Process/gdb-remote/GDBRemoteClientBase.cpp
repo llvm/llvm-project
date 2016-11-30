@@ -20,8 +20,9 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
+using namespace std::chrono;
 
-static const std::chrono::seconds kInterruptTimeout(5);
+static const seconds kInterruptTimeout(5);
 
 /////////////////////////
 // GDBRemoteClientBase //
@@ -51,18 +52,13 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
   OnRunPacketSent(true);
 
   for (;;) {
-    PacketResult read_result = ReadPacket(
-        response,
-        std::chrono::duration_cast<std::chrono::microseconds>(kInterruptTimeout)
-            .count(),
-        false);
+    PacketResult read_result = ReadPacket(response, kInterruptTimeout, false);
     switch (read_result) {
     case PacketResult::ErrorReplyTimeout: {
       std::lock_guard<std::mutex> lock(m_mutex);
       if (m_async_count == 0)
         continue;
-      if (std::chrono::steady_clock::now() >=
-          m_interrupt_time + kInterruptTimeout)
+      if (steady_clock::now() >= m_interrupt_time + kInterruptTimeout)
         return eStateInvalid;
     }
     case PacketResult::Success:
@@ -188,11 +184,7 @@ GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(
 
   const size_t max_response_retries = 3;
   for (size_t i = 0; i < max_response_retries; ++i) {
-    packet_result = ReadPacket(
-        response, std::chrono::duration_cast<std::chrono::microseconds>(
-                      GetPacketTimeout())
-                      .count(),
-        true);
+    packet_result = ReadPacket(response, GetPacketTimeout(), true);
     // Make sure we received a response
     if (packet_result != PacketResult::Success)
       return packet_result;
@@ -232,7 +224,7 @@ bool GDBRemoteClientBase::SendvContPacket(llvm::StringRef payload,
   OnRunPacketSent(true);
 
   // wait for the response to the vCont
-  if (ReadPacket(response, UINT32_MAX, false) == PacketResult::Success) {
+  if (ReadPacket(response, llvm::None, false) == PacketResult::Success) {
     if (response.IsOKResponse())
       return true;
   }
@@ -254,8 +246,7 @@ bool GDBRemoteClientBase::ShouldStop(const UnixSignals &signals,
   // additional packet to make sure the packet sequence does not get
   // skewed.
   StringExtractorGDBRemote extra_stop_reply_packet;
-  uint32_t timeout_usec = 100000; // 100ms
-  ReadPacket(extra_stop_reply_packet, timeout_usec, false);
+  ReadPacket(extra_stop_reply_packet, milliseconds(100), false);
 
   // Interrupting is typically done using SIGSTOP or SIGINT, so if
   // the process stops with some other signal, we definitely want to
@@ -268,11 +259,9 @@ bool GDBRemoteClientBase::ShouldStop(const UnixSignals &signals,
   // We probably only stopped to perform some async processing, so continue
   // after that is done.
   // TODO: This is not 100% correct, as the process may have been stopped with
-  // SIGINT or SIGSTOP
-  // that was not caused by us (e.g. raise(SIGINT)). This will normally cause a
-  // stop, but if it's
-  // done concurrently with a async interrupt, that stop will get eaten
-  // (llvm.org/pr20231).
+  // SIGINT or SIGSTOP that was not caused by us (e.g. raise(SIGINT)). This will
+  // normally cause a stop, but if it's done concurrently with a async
+  // interrupt, that stop will get eaten (llvm.org/pr20231).
   return false;
 }
 
@@ -368,7 +357,7 @@ void GDBRemoteClientBase::Lock::SyncWithContinueThread(bool interrupt) {
       }
       if (log)
         log->PutCString("GDBRemoteClientBase::Lock::Lock sent packet: \\x03");
-      m_comm.m_interrupt_time = std::chrono::steady_clock::now();
+      m_comm.m_interrupt_time = steady_clock::now();
     }
     m_comm.m_cv.wait(lock, [this] { return m_comm.m_is_running == false; });
     m_did_interrupt = true;

@@ -4380,13 +4380,13 @@ Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
 
   // In general, it is possible for computeKnownBits to determine all bits in a
   // value even when the operands are not all constants.
-  if (!Result && I->getType()->isIntegerTy()) {
+  if (!Result && I->getType()->isIntOrIntVectorTy()) {
     unsigned BitWidth = I->getType()->getScalarSizeInBits();
     APInt KnownZero(BitWidth, 0);
     APInt KnownOne(BitWidth, 0);
     computeKnownBits(I, KnownZero, KnownOne, DL, /*Depth*/0, AC, I, DT);
     if ((KnownZero | KnownOne).isAllOnesValue())
-      Result = ConstantInt::get(I->getContext(), KnownOne);
+      Result = ConstantInt::get(I->getType(), KnownOne);
   }
 
   /// If called on unreachable code, the above logic may report that the

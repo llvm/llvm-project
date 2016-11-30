@@ -9,7 +9,7 @@ Description
 ===========
 
 LLVM features powerful intermodular optimizations which can be used at link
-time.  Link Time Optimization (LTO) is another name for intermodular
+time. Link Time Optimization (LTO) is another name for intermodular
 optimization when performed during the link stage. This document describes the
 interface and design between the LTO optimizer and the linker.
 
@@ -21,7 +21,7 @@ intermodular optimization, in the compiler tool chain. Its main goal is to let
 the developer take advantage of intermodular optimizations without making any
 significant changes to the developer's makefiles or build system. This is
 achieved through tight integration with the linker. In this model, the linker
-treates LLVM bitcode files like native object files and allows mixing and
+treats LLVM bitcode files like native object files and allows mixing and
 matching among them. The linker uses `libLTO`_, a shared object, to handle LLVM
 bitcode files. This tight integration between the linker and LLVM optimizer
 helps to do optimizations that are not possible in other models. The linker
@@ -34,7 +34,7 @@ Example of link time optimization
 
 The following example illustrates the advantages of LTO's integrated approach
 and clean interface. This example requires a system linker which supports LTO
-through the interface described in this document.  Here, clang transparently
+through the interface described in this document. Here, clang transparently
 invokes system linker.
 
 * Input source file ``a.c`` is compiled into LLVM bitcode form.
@@ -64,7 +64,7 @@ invokes system linker.
   int foo1(void) {
     int data = 0;
 
-    if (i < 0) 
+    if (i < 0)
       data = foo3();
 
     data = data + 42;
@@ -121,12 +121,12 @@ Alternative Approaches
     In this model, a new, separate, tool or library replicates the linker's
     capability to collect information for link time optimization. Not only is
     this code duplication difficult to justify, but it also has several other
-    disadvantages.  For example, the linking semantics and the features provided
+    disadvantages. For example, the linking semantics and the features provided
     by the linker on various platform are not unique. This means, this new tool
     needs to support all such features and platforms in one super tool or a
     separate tool per platform is required. This increases maintenance cost for
     link time optimizer significantly, which is not necessary. This approach
-    also requires staying synchronized with linker developements on various
+    also requires staying synchronized with linker developments on various
     platforms, which is not the main focus of the link time optimizer. Finally,
     this approach increases end user's build time due to the duplication of work
     done by this separate tool and the linker itself.
@@ -136,12 +136,12 @@ Multi-phase communication between ``libLTO`` and linker
 
 The linker collects information about symbol definitions and uses in various
 link objects which is more accurate than any information collected by other
-tools during typical build cycles.  The linker collects this information by
+tools during typical build cycles. The linker collects this information by
 looking at the definitions and uses of symbols in native .o files and using
 symbol visibility information. The linker also uses user-supplied information,
 such as a list of exported symbols. LLVM optimizer collects control flow
 information, data flow information and knows much more about program structure
-from the optimizer's point of view.  Our goal is to take advantage of tight
+from the optimizer's point of view. Our goal is to take advantage of tight
 integration between the linker and the optimizer by sharing this information
 during various linking phases.
 
@@ -152,33 +152,33 @@ The linker first reads all object files in natural order and collects symbol
 information. This includes native object files as well as LLVM bitcode files.
 To minimize the cost to the linker in the case that all .o files are native
 object files, the linker only calls ``lto_module_create()`` when a supplied
-object file is found to not be a native object file.  If ``lto_module_create()``
+object file is found to not be a native object file. If ``lto_module_create()``
 returns that the file is an LLVM bitcode file, the linker then iterates over the
 module using ``lto_module_get_symbol_name()`` and
 ``lto_module_get_symbol_attribute()`` to get all symbols defined and referenced.
 This information is added to the linker's global symbol table.
 
 
-The lto* functions are all implemented in a shared object libLTO.  This allows
-the LLVM LTO code to be updated independently of the linker tool.  On platforms
+The lto* functions are all implemented in a shared object libLTO. This allows
+the LLVM LTO code to be updated independently of the linker tool. On platforms
 that support it, the shared object is lazily loaded.
 
 Phase 2 : Symbol Resolution
 ---------------------------
 
-In this stage, the linker resolves symbols using global symbol table.  It may
+In this stage, the linker resolves symbols using global symbol table. It may
 report undefined symbol errors, read archive members, replace weak symbols, etc.
 The linker is able to do this seamlessly even though it does not know the exact
-content of input LLVM bitcode files.  If dead code stripping is enabled then the
+content of input LLVM bitcode files. If dead code stripping is enabled then the
 linker collects the list of live symbols.
 
 Phase 3 : Optimize Bitcode Files
 --------------------------------
 
 After symbol resolution, the linker tells the LTO shared object which symbols
-are needed by native object files.  In the example above, the linker reports
+are needed by native object files. In the example above, the linker reports
 that only ``foo1()`` is used by native object files using
-``lto_codegen_add_must_preserve_symbol()``.  Next the linker invokes the LLVM
+``lto_codegen_add_must_preserve_symbol()``. Next the linker invokes the LLVM
 optimizer and code generators using ``lto_codegen_compile()`` which returns a
 native object file creating by merging the LLVM bitcode files and applying
 various optimization passes.
@@ -212,7 +212,7 @@ their object files and the standard linker tool.
 ``lto_module_t``
 ----------------
 
-A non-native object file is handled via an ``lto_module_t``.  The following
+A non-native object file is handled via an ``lto_module_t``. The following
 functions allow the linker to check if a file (on disk or in a memory buffer) is
 a file which libLTO can process:
 
@@ -254,7 +254,7 @@ The attributes of a symbol include the alignment, visibility, and kind.
 
 Once the linker has loaded each non-native object files into an
 ``lto_module_t``, it can request ``libLTO`` to process them all and generate a
-native object file.  This is done in a couple of steps.  First, a code generator
+native object file. This is done in a couple of steps. First, a code generator
 is created with:
 
 .. code-block:: c
@@ -267,19 +267,19 @@ Then, each non-native object file is added to the code generator with:
 
   lto_codegen_add_module(lto_code_gen_t, lto_module_t)
 
-The linker then has the option of setting some codegen options.  Whether or not
+The linker then has the option of setting some codegen options. Whether or not
 to generate DWARF debug info is set with:
-  
+
 .. code-block:: c
 
   lto_codegen_set_debug_model(lto_code_gen_t)
 
-Which kind of position independence is set with:
+which kind of position independence is set with:
 
 .. code-block:: c
 
   lto_codegen_set_pic_model(lto_code_gen_t)
-  
+
 And each symbol that is referenced by a native object file or otherwise must not
 be optimized away is set with:
 

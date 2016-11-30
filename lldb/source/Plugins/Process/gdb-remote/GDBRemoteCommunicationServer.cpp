@@ -38,14 +38,11 @@ void GDBRemoteCommunicationServer::RegisterPacketHandler(
 }
 
 GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServer::GetPacketAndSendResponse(uint32_t timeout_usec,
-                                                       Error &error,
-                                                       bool &interrupt,
-                                                       bool &quit) {
+GDBRemoteCommunicationServer::GetPacketAndSendResponse(
+    Timeout<std::micro> timeout, Error &error, bool &interrupt, bool &quit) {
   StringExtractorGDBRemote packet;
 
-  PacketResult packet_result =
-      WaitForPacketWithTimeoutMicroSecondsNoLock(packet, timeout_usec, false);
+  PacketResult packet_result = WaitForPacketNoLock(packet, timeout, false);
   if (packet_result == PacketResult::Success) {
     const StringExtractorGDBRemote::ServerPacketType packet_type =
         packet.GetServerPacketType();

@@ -563,10 +563,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v8i16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v4i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v4f32, Custom);
-    if (Subtarget.hasP8Altivec())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
-    if (Subtarget.hasVSX())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v2f64, Custom);
 
     // Altivec does not contain unordered floating-point compare instructions
     setCondCodeAction(ISD::SETUO, MVT::v4f32, Expand);
@@ -676,6 +672,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FABS, MVT::v4f32, Legal);
       setOperationAction(ISD::FABS, MVT::v2f64, Legal);
 
+      if (Subtarget.hasDirectMove())
+        setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v2f64, Custom);
+
       addRegisterClass(MVT::v2i64, &PPC::VSRCRegClass);
     }
 
@@ -688,9 +688,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
     }
-
-    if (Subtarget.isISA3_0() && Subtarget.hasDirectMove())
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
   }
 
   if (Subtarget.hasQPX()) {
@@ -7129,14 +7126,55 @@ static SDValue BuildVSLDOI(SDValue LHS, SDValue RHS, unsigned Amt, EVT VT,
   return DAG.getNode(ISD::BITCAST, dl, VT, T);
 }
 
-static bool isNonConstSplatBV(BuildVectorSDNode *BVN, EVT Type) {
-  if (BVN->isConstant() || BVN->getValueType(0) != Type)
+/// Do we have an efficient pattern in a .td file for this node?
+///
+/// \param V - pointer to the BuildVectorSDNode being matched
+/// \param HasDirectMove - does this subtarget have VSR <-> GPR direct moves?
+///
+/// There are some patterns where it is beneficial to keep a BUILD_VECTOR
+/// node as a BUILD_VECTOR node rather than expanding it. The patterns where
+/// the opposite is true (expansion is beneficial) are:
+/// - The node builds a vector out of integers that are not 32 or 64-bits
+/// - The node builds a vector out of constants
+/// - The node is a "load-and-splat"
+/// In all other cases, we will choose to keep the BUILD_VECTOR.
+static bool haveEfficientBuildVectorPattern(BuildVectorSDNode *V,
+                                            bool HasDirectMove) {
+  EVT VecVT = V->getValueType(0);
+  bool RightType = VecVT == MVT::v2f64 || VecVT == MVT::v4f32 ||
+    (HasDirectMove && (VecVT == MVT::v2i64 || VecVT == MVT::v4i32));
+  if (!RightType)
     return false;
-  auto OpZero = BVN->getOperand(0);
-  for (int i = 1, e = BVN->getNumOperands(); i < e; i++)
-    if (BVN->getOperand(i) != OpZero)
+
+  bool IsSplat = true;
+  bool IsLoad = false;
+  SDValue Op0 = V->getOperand(0);
+
+  // This function is called in a block that confirms the node is not a constant
+  // splat. So a constant BUILD_VECTOR here means the vector is built out of
+  // different constants.
+  if (V->isConstant())
+    return false;
+  for (int i = 0, e = V->getNumOperands(); i < e; ++i) {
+    if (V->getOperand(i).isUndef())
       return false;
-  return true;
+    // We want to expand nodes that represent load-and-splat even if the
+    // loaded value is a floating point truncation or conversion to int.
+    if (V->getOperand(i).getOpcode() == ISD::LOAD ||
+        (V->getOperand(i).getOpcode() == ISD::FP_ROUND &&
+         V->getOperand(i).getOperand(0).getOpcode() == ISD::LOAD) ||
+        (V->getOperand(i).getOpcode() == ISD::FP_TO_SINT &&
+         V->getOperand(i).getOperand(0).getOpcode() == ISD::LOAD) ||
+        (V->getOperand(i).getOpcode() == ISD::FP_TO_UINT &&
+         V->getOperand(i).getOperand(0).getOpcode() == ISD::LOAD))
+      IsLoad = true;
+    // If the operands are different or the input is not a load and has more
+    // uses than just this BV node, then it isn't a splat.
+    if (V->getOperand(i) != Op0 ||
+        (!IsLoad && !V->isOnlyUserOf(V->getOperand(i).getNode())))
+      IsSplat = false;
+  }
+  return !(IsSplat && IsLoad);
 }
 
 // If this is a case we can't handle, return null and let the default
@@ -7261,14 +7299,11 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   if (! BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
                              HasAnyUndefs, 0, !Subtarget.isLittleEndian()) ||
       SplatBitSize > 32) {
-    // We can splat a non-const value on CPU's that implement ISA 3.0
-    // in two ways: LXVWSX (load and splat) and MTVSRWS(move and splat).
-    auto OpZero = BVN->getOperand(0);
-    bool CanLoadAndSplat = OpZero.getOpcode() == ISD::LOAD &&
-      BVN->isOnlyUserOf(OpZero.getNode());
-    if (Subtarget.isISA3_0() && !CanLoadAndSplat &&
-        (isNonConstSplatBV(BVN, MVT::v4i32) ||
-         isNonConstSplatBV(BVN, MVT::v2i64)))
+    // BUILD_VECTOR nodes that are not constant splats of up to 32-bits can be
+    // lowered to VSX instructions under certain conditions.
+    // Without VSX, there is no pattern more efficient than expanding the node.
+    if (Subtarget.hasVSX() &&
+        haveEfficientBuildVectorPattern(BVN, Subtarget.hasDirectMove()))
       return Op;
     return SDValue();
   }
@@ -7290,8 +7325,20 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   // We have XXSPLTIB for constant splats one byte wide
-  if (Subtarget.isISA3_0() && Op.getValueType() == MVT::v16i8)
+  if (Subtarget.hasP9Vector() && SplatSize == 1) {
+    // This is a splat of 1-byte elements with some elements potentially undef.
+    // Rather than trying to match undef in the SDAG patterns, ensure that all
+    // elements are the same constant.
+    if (HasAnyUndefs || ISD::isBuildVectorAllOnes(BVN)) {
+      SmallVector<SDValue, 16> Ops(16, DAG.getConstant(SplatBits,
+                                                       dl, MVT::i32));
+      SDValue NewBV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
+      if (Op.getValueType() != MVT::v16i8)
+        return DAG.getBitcast(Op.getValueType(), NewBV);
+      return NewBV;
+    }
     return Op;
+  }
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
   int32_t SextVal= (int32_t(SplatBits << (32-SplatBitSize)) >>
@@ -7539,7 +7586,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
       // If the source for the shuffle is a scalar_to_vector that came from a
       // 32-bit load, it will have used LXVWSX so we don't need to splat again.
-      if (Subtarget.isISA3_0() &&
+      if (Subtarget.hasP9Vector() &&
           ((isLittleEndian && SplatIdx == 3) ||
            (!isLittleEndian && SplatIdx == 0))) {
         SDValue Src = V1.getOperand(0);
@@ -10814,6 +10861,14 @@ SDValue PPCTargetLowering::expandVSXLoadForLE(SDNode *N,
   }
 
   MVT VecTy = N->getValueType(0).getSimpleVT();
+
+  // Do not expand to PPCISD::LXVD2X + PPCISD::XXSWAPD when the load is
+  // aligned and the type is a vector with elements up to 4 bytes
+  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
+      && VecTy.getScalarSizeInBits() <= 32 ) {
+    return SDValue();
+  }
+
   SDValue LoadOps[] = { Chain, Base };
   SDValue Load = DAG.getMemIntrinsicNode(PPCISD::LXVD2X, dl,
                                          DAG.getVTList(MVT::v2f64, MVT::Other),
@@ -10877,6 +10932,13 @@ SDValue PPCTargetLowering::expandVSXStoreForLE(SDNode *N,
 
   SDValue Src = N->getOperand(SrcOpnd);
   MVT VecTy = Src.getValueType().getSimpleVT();
+
+  // Do not expand to PPCISD::XXSWAPD and PPCISD::STXVD2X when the load is
+  // aligned and the type is a vector with elements up to 4 bytes
+  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
+      && VecTy.getScalarSizeInBits() <= 32 ) {
+    return SDValue();
+  }
 
   // All stores are done as v2f64 and possible bit cast.
   if (VecTy != MVT::v2f64) {

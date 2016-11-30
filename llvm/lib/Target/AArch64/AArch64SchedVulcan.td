@@ -49,15 +49,12 @@ def VulcanP5 : ProcResource<1>;
 
 let SchedModel = VulcanModel in {
 
-// Define groups for the functional units on each
-// issue port.  Each group created will be used
-// by a WriteRes later on.
+// Define groups for the functional units on each issue port.  Each group
+// created will be used by a WriteRes later on.
 //
-// NOTE: Some groups only contain one member.  This
-// is a way to create names for the various functional
-// units that share a single issue port.  For example,
-// "VulcanI1" for ALU ops on port 1 and "VulcanF1" for
-// FP ops on port 1.
+// NOTE: Some groups only contain one member.  This is a way to create names for
+// the various functional units that share a single issue port.  For example,
+// "VulcanI1" for ALU ops on port 1 and "VulcanF1" for FP ops on port 1.
 
 // Integer divide and multiply micro-ops only on port 1.
 def VulcanI1 : ProcResGroup<[VulcanP1]>;

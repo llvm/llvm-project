@@ -835,8 +835,9 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
 
   if (Offset) {
     Size = Builder.CreateSub(
-        Size, Builder.CreateMul(
-                  Offset, Builder.getInt64(ScopArray->getElemSizeInBytes())));
+        Size,
+        Builder.CreateMul(Offset,
+                          Builder.getInt64(ScopArray->getElemSizeInBytes())));
   }
 
   if (Direction == HOST_TO_DEVICE)

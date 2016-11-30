@@ -1643,7 +1643,7 @@ void MemoryDependenceResults::verifyRemoved(Instruction *D) const {
 #endif
 }
 
-char MemoryDependenceAnalysis::PassID;
+AnalysisKey MemoryDependenceAnalysis::Key;
 
 MemoryDependenceResults
 MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {

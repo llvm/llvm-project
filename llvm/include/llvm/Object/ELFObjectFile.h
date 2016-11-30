@@ -336,8 +336,8 @@ public:
     return reinterpret_cast<const Elf_Shdr *>(Sec.p);
   }
 
-  basic_symbol_iterator symbol_begin_impl() const override;
-  basic_symbol_iterator symbol_end_impl() const override;
+  basic_symbol_iterator symbol_begin() const override;
+  basic_symbol_iterator symbol_end() const override;
 
   elf_symbol_iterator dynamic_symbol_begin() const;
   elf_symbol_iterator dynamic_symbol_end() const;
@@ -843,16 +843,16 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, std::error_code &EC)
 }
 
 template <class ELFT>
-basic_symbol_iterator ELFObjectFile<ELFT>::symbol_begin_impl() const {
+basic_symbol_iterator ELFObjectFile<ELFT>::symbol_begin() const {
   DataRefImpl Sym = toDRI(DotSymtabSec, 0);
   return basic_symbol_iterator(SymbolRef(Sym, this));
 }
 
 template <class ELFT>
-basic_symbol_iterator ELFObjectFile<ELFT>::symbol_end_impl() const {
+basic_symbol_iterator ELFObjectFile<ELFT>::symbol_end() const {
   const Elf_Shdr *SymTab = DotSymtabSec;
   if (!SymTab)
-    return symbol_begin_impl();
+    return symbol_begin();
   DataRefImpl Sym = toDRI(SymTab, SymTab->sh_size / sizeof(Elf_Sym));
   return basic_symbol_iterator(SymbolRef(Sym, this));
 }

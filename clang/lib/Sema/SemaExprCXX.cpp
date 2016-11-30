@@ -863,13 +863,8 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
       // We don't keep the instantiated default argument expressions around so
       // we must rebuild them here.
       for (unsigned I = 1, E = CD->getNumParams(); I != E; ++I) {
-        // Skip any default arguments that we've already instantiated.
-        if (Context.getDefaultArgExprForConstructor(CD, I))
-          continue;
-
-        Expr *DefaultArg =
-            BuildCXXDefaultArgExpr(ThrowLoc, CD, CD->getParamDecl(I)).get();
-        Context.addDefaultArgExprForConstructor(CD, I, DefaultArg);
+        if (CheckCXXDefaultArgExpr(ThrowLoc, CD, CD->getParamDecl(I)))
+          return true;
       }
     }
   }
@@ -4421,9 +4416,12 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         // A template constructor is never a copy constructor.
         // FIXME: However, it may actually be selected at the actual overload
         // resolution point.
-        if (isa<FunctionTemplateDecl>(ND))
+        if (isa<FunctionTemplateDecl>(ND->getUnderlyingDecl()))
           continue;
-        const CXXConstructorDecl *Constructor = cast<CXXConstructorDecl>(ND);
+        // UsingDecl itself is not a constructor
+        if (isa<UsingDecl>(ND))
+          continue;
+        auto *Constructor = cast<CXXConstructorDecl>(ND->getUnderlyingDecl());
         if (Constructor->isCopyConstructor(FoundTQs)) {
           FoundConstructor = true;
           const FunctionProtoType *CPT
@@ -4457,9 +4455,12 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       bool FoundConstructor = false;
       for (const auto *ND : Self.LookupConstructors(RD)) {
         // FIXME: In C++0x, a constructor template can be a default constructor.
-        if (isa<FunctionTemplateDecl>(ND))
+        if (isa<FunctionTemplateDecl>(ND->getUnderlyingDecl()))
           continue;
-        const CXXConstructorDecl *Constructor = cast<CXXConstructorDecl>(ND);
+        // UsingDecl itself is not a constructor
+        if (isa<UsingDecl>(ND))
+          continue;
+        auto *Constructor = cast<CXXConstructorDecl>(ND->getUnderlyingDecl());
         if (Constructor->isDefaultConstructor()) {
           FoundConstructor = true;
           const FunctionProtoType *CPT

@@ -4788,9 +4788,8 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    orl %ebx, %r14d
 ; AVX1-NEXT:    shlq $32, %r14
 ; AVX1-NEXT:    orq %r15, %r14
-; AVX1-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    # xmm0 = mem[1,0]
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movw %ax, %bx
 ; AVX1-NEXT:    shll $16, %ebx
@@ -4856,9 +4855,8 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    orl %ebx, %r14d
 ; AVX2-NEXT:    shlq $32, %r14
 ; AVX2-NEXT:    orq %r15, %r14
-; AVX2-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    # xmm0 = mem[1,0]
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movw %ax, %bx
 ; AVX2-NEXT:    shll $16, %ebx
@@ -5585,9 +5583,8 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX1-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpermilpd $1, {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    # xmm0 = mem[1,0]
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movl %eax, %r12d
 ; AVX1-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
@@ -5654,9 +5651,8 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movw %ax, {{[0-9]+}}(%rsp) # 2-byte Spill
-; AVX2-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    vpermilpd $1, {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    # xmm0 = mem[1,0]
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movl %eax, %r12d
 ; AVX2-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload

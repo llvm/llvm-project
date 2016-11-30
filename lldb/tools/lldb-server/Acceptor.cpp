@@ -90,7 +90,7 @@ std::unique_ptr<Acceptor> Acceptor::Create(StringRef name,
   int port;
   StringRef scheme, host, path;
   // Try to match socket name as URL - e.g., tcp://localhost:5555
-  if (UriParser::Parse(name.str(), scheme, host, port, path)) {
+  if (UriParser::Parse(name, scheme, host, port, path)) {
     if (!FindProtocolByScheme(scheme.str().c_str(), socket_protocol))
       error.SetErrorStringWithFormat("Unknown protocol scheme \"%s\"",
                                      scheme.str().c_str());

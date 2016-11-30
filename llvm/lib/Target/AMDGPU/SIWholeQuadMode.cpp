@@ -437,7 +437,7 @@ bool SIWholeQuadMode::requiresCorrectState(const MachineInstr &MI) const {
 MachineBasicBlock::iterator
 SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator Before) {
-  unsigned SaveReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  unsigned SaveReg = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
   MachineInstr *Save =
       BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), SaveReg)

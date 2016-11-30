@@ -17,26 +17,26 @@
 ; Make sure scratch wave offset register is correctly incremented and
 ; then restored.
 ; SMEM: s_mov_b32 m0, s91{{$}}
-; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Spill
+; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Spill
 ; SMEM: s_add_u32 m0, s91, 0x100{{$}}
-; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Spill
+; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Spill
 ; SMEM: s_add_u32 m0, s91, 0x200{{$}}
-; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Spill
+; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Spill
 ; SMEM: s_add_u32 m0, s91, 0x300{{$}}
-; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Spill
+; SMEM: s_buffer_store_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Spill
 
 
 ; SMEM: s_mov_b32 m0, s91{{$}}
-; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Reload
+; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Reload
 ; SMEM: s_add_u32 m0, s91, 0x100{{$}}
 ; SMEM: s_waitcnt lgkmcnt(0)
-; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Reload
+; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Reload
 ; SMEM: s_add_u32 m0, s91, 0x200{{$}}
 ; SMEM: s_waitcnt lgkmcnt(0)
-; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Reload
+; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Reload
 ; SMEM: s_add_u32 m0, s91, 0x300{{$}}
 ; SMEM: s_waitcnt lgkmcnt(0)
-; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 16-byte Folded Reload
+; SMEM: s_buffer_load_dword s{{[0-9]+}}, s[92:95], m0 ; 4-byte Folded Reload
 
 ; ALL: s_endpgm
 define void @test(i32 addrspace(1)* %out, i32 %in) {

@@ -59,7 +59,7 @@ void ScopBuilder::buildPHIAccesses(PHINode *PHI, Region *NonAffineSubRegion,
   // the region. If it is not it can only be in the exit block of the region.
   // In this case we model the operands but not the PHI itself.
   auto *Scope = LI.getLoopFor(PHI->getParent());
-  if (!IsExitBlock && canSynthesize(PHI, *scop, &LI, &SE, Scope))
+  if (!IsExitBlock && canSynthesize(PHI, *scop, &SE, Scope))
     return;
 
   // PHI nodes are modeled as if they had been demoted prior to the SCoP
@@ -430,7 +430,7 @@ void ScopBuilder::buildAccessFunctions(Region &SR) {
 void ScopBuilder::buildStmts(Region &SR) {
 
   if (scop->isNonAffineSubRegion(&SR)) {
-    scop->addScopStmt(nullptr, &SR);
+    scop->addScopStmt(&SR);
     return;
   }
 
@@ -438,7 +438,7 @@ void ScopBuilder::buildStmts(Region &SR) {
     if (I->isSubRegion())
       buildStmts(*I->getNodeAs<Region>());
     else
-      scop->addScopStmt(I->getNodeAs<BasicBlock>(), nullptr);
+      scop->addScopStmt(I->getNodeAs<BasicBlock>());
 }
 
 void ScopBuilder::buildAccessFunctions(BasicBlock &BB,
@@ -562,7 +562,7 @@ void ScopBuilder::ensureValueRead(Value *V, BasicBlock *UserBB) {
   // If the instruction can be synthesized and the user is in the region we do
   // not need to add a value dependences.
   auto *Scope = LI.getLoopFor(UserBB);
-  if (canSynthesize(V, *scop, &LI, &SE, Scope))
+  if (canSynthesize(V, *scop, &SE, Scope))
     return;
 
   // Do not build scalar dependences for required invariant loads as we will

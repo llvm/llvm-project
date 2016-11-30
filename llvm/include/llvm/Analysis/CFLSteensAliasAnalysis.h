@@ -45,7 +45,10 @@ public:
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
 
   /// \brief Inserts the given Function into the cache.
   void scan(Function *Fn);
@@ -122,7 +125,7 @@ private:
 /// in particular to leverage invalidation to trigger re-computation of sets.
 class CFLSteensAA : public AnalysisInfoMixin<CFLSteensAA> {
   friend AnalysisInfoMixin<CFLSteensAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef CFLSteensAAResult Result;

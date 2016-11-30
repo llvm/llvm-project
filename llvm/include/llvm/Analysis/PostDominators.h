@@ -32,7 +32,7 @@ struct PostDominatorTree : public DominatorTreeBase<BasicBlock> {
 class PostDominatorTreeAnalysis
     : public AnalysisInfoMixin<PostDominatorTreeAnalysis> {
   friend AnalysisInfoMixin<PostDominatorTreeAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   /// \brief Provide the result typedef for this analysis pass.

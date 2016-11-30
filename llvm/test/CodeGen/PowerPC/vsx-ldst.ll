@@ -14,8 +14,10 @@
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O2 \
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s > %t
-; RUN: grep lxvd2x < %t | count 6
-; RUN: grep stxvd2x < %t | count 6
+; RUN: grep lxvd2x < %t | count 3
+; RUN: grep lvx < %t | count 3
+; RUN: grep stxvd2x < %t | count 3
+; RUN: grep stvx < %t | count 3
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O2 \
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s > %t

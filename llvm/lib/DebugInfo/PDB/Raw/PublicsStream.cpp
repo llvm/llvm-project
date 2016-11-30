@@ -22,28 +22,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
-
 #include "GSI.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
-
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
-
 
 // This is PSGSIHDR struct defined in
 // https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
@@ -62,7 +58,7 @@ PublicsStream::PublicsStream(PDBFile &File,
                              std::unique_ptr<MappedBlockStream> Stream)
     : Pdb(File), Stream(std::move(Stream)) {}
 
-PublicsStream::~PublicsStream() {}
+PublicsStream::~PublicsStream() = default;
 
 uint32_t PublicsStream::getSymHash() const { return Header->SymHash; }
 uint32_t PublicsStream::getAddrMap() const { return Header->AddrMap; }
@@ -125,7 +121,7 @@ PublicsStream::getSymbols(bool *HadError) const {
   auto SymbolS = Pdb.getPDBSymbolStream();
   if (SymbolS.takeError()) {
     codeview::CVSymbolArray::Iterator Iter;
-    return llvm::make_range(Iter, Iter);
+    return make_range(Iter, Iter);
   }
   SymbolStream &SS = SymbolS.get();
 

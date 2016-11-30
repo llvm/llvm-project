@@ -214,6 +214,29 @@ Error ProcessElfCore::DoLoadCore() {
 
   SetUnixSignals(UnixSignals::Create(GetArchitecture()));
 
+  // Ensure we found at least one thread that was stopped on a signal.
+  bool siginfo_signal_found = false;
+  bool prstatus_signal_found = false;
+  // Check we found a signal in a SIGINFO note.
+  for (const auto &thread_data: m_thread_data) {
+    if (thread_data.signo != 0)
+      siginfo_signal_found = true;
+    if (thread_data.prstatus_sig != 0)
+      prstatus_signal_found = true;
+  }
+  if (!siginfo_signal_found) {
+    // If we don't have signal from SIGINFO use the signal from each threads
+    // PRSTATUS note.
+    if (prstatus_signal_found) {
+      for (auto &thread_data: m_thread_data)
+        thread_data.signo = thread_data.prstatus_sig;
+    } else if (m_thread_data.size() > 0) {
+      // If all else fails force the first thread to be SIGSTOP
+      m_thread_data.begin()->signo =
+          GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
+    }
+  }
+
   // Core files are useless without the main executable. See if we can locate
   // the main
   // executable using data we found in the core file notes.
@@ -402,6 +425,7 @@ enum {
   NT_AUXV,
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,
+  NT_SIGINFO = 0x53494749,
 };
 
 namespace FREEBSD {
@@ -485,6 +509,7 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   ArchSpec arch = GetArchitecture();
   ELFLinuxPrPsInfo prpsinfo;
   ELFLinuxPrStatus prstatus;
+  ELFLinuxSigInfo siginfo;
   size_t header_size;
   size_t len;
   Error error;
@@ -546,7 +571,7 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
         error = prstatus.Parse(note_data, arch);
         if (error.Fail())
           return error;
-        thread_data->signo = prstatus.pr_cursig;
+        thread_data->prstatus_sig = prstatus.pr_cursig;
         thread_data->tid = prstatus.pr_pid;
         header_size = ELFLinuxPrStatus::GetSize(arch);
         len = note_data.GetByteSize() - header_size;
@@ -587,6 +612,12 @@ Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
           if (path && path[0])
             m_nt_file_entries[i].path.SetCString(path);
         }
+      } break;
+      case NT_SIGINFO: {
+        error = siginfo.Parse(note_data, arch);
+        if (error.Fail())
+          return error;
+        thread_data->signo = siginfo.si_signo;
       } break;
       default:
         break;

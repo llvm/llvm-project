@@ -12,6 +12,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <type_traits>
 
 namespace llvm {
 
@@ -264,7 +265,7 @@ class pointer_iterator
   mutable T Ptr;
 
 public:
-  pointer_iterator() {}
+  pointer_iterator() = default;
 
   explicit pointer_iterator(WrappedIteratorT u)
       : pointer_iterator::iterator_adaptor_base(std::move(u)) {}
@@ -273,6 +274,6 @@ public:
   const T &operator*() const { return Ptr = &*this->I; }
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_ITERATOR_H

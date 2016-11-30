@@ -28,7 +28,7 @@ define void @_Z3foov() #0 personality i8* bitcast (i32 (...)* @__gxx_personality
 }
 
 ; Function Attrs: nounwind uwtable
-define internal void @_ZL3barv() #1 {
+define internal void @_ZL3barv() !dbg !12 {
   ret void
 }
 
@@ -45,3 +45,4 @@ declare i32 @__gxx_personality_v0(...)
 !9 = !DILocation(line: 6, column: 3, scope: !6)
 !10 = !DILocation(line: 8, column: 5, scope: !11)
 !11 = distinct !DILexicalBlock(scope: !6, file: !1, line: 7, column: 7)
+!12 = distinct !DISubprogram(linkageName: "_ZL3barv", scope: !1, line: 20, scopeLine: 20, unit: !0)

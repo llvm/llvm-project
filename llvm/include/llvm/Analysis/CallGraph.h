@@ -297,7 +297,7 @@ private:
 /// resulting data.
 class CallGraphAnalysis : public AnalysisInfoMixin<CallGraphAnalysis> {
   friend AnalysisInfoMixin<CallGraphAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   /// \brief A formulaic typedef to inform clients of the result type.

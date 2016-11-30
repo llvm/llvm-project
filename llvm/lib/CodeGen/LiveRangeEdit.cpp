@@ -272,7 +272,8 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
   bool ReadsPhysRegs = false;
   bool isOrigDef = false;
   unsigned Dest;
-  if (VRM && MI->getOperand(0).isReg()) {
+  if (VRM && MI->getOperand(0).isReg() && MI->getOperand(0).isDef()) {
+    assert(MI->getDesc().getNumDefs() == 1);
     Dest = MI->getOperand(0).getReg();
     unsigned Original = VRM->getOriginal(Dest);
     LiveInterval &OrigLI = LIS.getInterval(Original);

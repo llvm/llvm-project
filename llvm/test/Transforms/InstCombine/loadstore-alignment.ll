@@ -14,33 +14,6 @@ define <2 x i64> @static_hem() {
   ret <2 x i64> %tmp1
 }
 
-; CHECK-LABEL: @static_hem_addrspacecast(
-; CHECK: , align 16
-define <2 x i64> @static_hem_addrspacecast() {
-  %t = getelementptr <2 x i64>, <2 x i64>* @x, i32 7
-  %t.asc = addrspacecast <2 x i64>* %t to <2 x i64> addrspace(1)*
-  %tmp1 = load <2 x i64>, <2 x i64> addrspace(1)* %t.asc, align 1
-  ret <2 x i64> %tmp1
-}
-
-; CHECK-LABEL: @static_hem_addrspacecast_smaller_ptr(
-; CHECK: , align 16
-define <2 x i64> @static_hem_addrspacecast_smaller_ptr() {
-  %t = getelementptr <2 x i64>, <2 x i64>* @x, i32 7
-  %t.asc = addrspacecast <2 x i64>* %t to <2 x i64> addrspace(2)*
-  %tmp1 = load <2 x i64>, <2 x i64> addrspace(2)* %t.asc, align 1
-  ret <2 x i64> %tmp1
-}
-
-; CHECK-LABEL: @static_hem_addrspacecast_larger_ptr(
-; CHECK: , align 16
-define <2 x i64> @static_hem_addrspacecast_larger_ptr() {
-  %t = getelementptr <2 x i64>, <2 x i64> addrspace(2)* @x.as2, i32 7
-  %t.asc = addrspacecast <2 x i64> addrspace(2)* %t to <2 x i64> addrspace(1)*
-  %tmp1 = load <2 x i64>, <2 x i64> addrspace(1)* %t.asc, align 1
-  ret <2 x i64> %tmp1
-}
-
 ; CHECK-LABEL: @hem(
 ; CHECK: , align 16
 define <2 x i64> @hem(i32 %i) {

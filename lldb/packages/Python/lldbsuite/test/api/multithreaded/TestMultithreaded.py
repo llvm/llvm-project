@@ -52,14 +52,6 @@ class SBBreakpointCallbackCase(TestBase):
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     @expectedFlakeyFreeBSD
-    @expectedFailureAll(
-        "llvm.org/pr23139",
-        oslist=["linux"],
-        compiler="gcc",
-        compiler_version=[
-            ">=",
-            "4.9"],
-        archs=["x86_64"])
     def test_sb_api_listener_event_process_state(self):
         """ Test that a registered SBListener receives events when a process
             changes state.

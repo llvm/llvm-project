@@ -93,7 +93,7 @@ cl::opt<bool> LTOStripInvalidDebugInfo(
     cl::Hidden);
 
 cl::opt<std::string>
-    LTORemarksFilename("pass-remarks-output",
+    LTORemarksFilename("lto-pass-remarks-output",
                        cl::desc("Output filename for pass remarks"),
                        cl::value_desc("filename"));
 }
@@ -567,8 +567,6 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
   // Run our queue of passes all at once now, efficiently.
   passes.run(*MergedModule);
 
-  finishOptimizationRemarks();
-
   return true;
 }
 
@@ -603,6 +601,8 @@ bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
   // If statistics were requested, print them out after codegen.
   if (llvm::AreStatisticsEnabled())
     llvm::PrintStatistics();
+
+  finishOptimizationRemarks();
 
   return true;
 }

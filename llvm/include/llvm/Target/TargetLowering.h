@@ -1153,6 +1153,12 @@ public:
     return false;
   }
 
+  /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
+  /// are happy to sink it into basic blocks.
+  virtual bool isCheapAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
+    return isNoopAddrSpaceCast(SrcAS, DestAS);
+  }
+
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the
   /// minimum size the object must be to be aligned and PrefAlign is set to the
@@ -3068,6 +3074,17 @@ public:
   /// Expands an unaligned store to 2 half-size stores for integer values, and
   /// possibly more for vectors.
   SDValue expandUnalignedStore(StoreSDNode *ST, SelectionDAG &DAG) const;
+
+  /// Increments memory address \p Addr according to the type of the value
+  /// \p DataVT that should be stored. If the data is stored in compressed
+  /// form, the memory address should be incremented according to the number of
+  /// the stored elements. This number is equal to the number of '1's bits
+  /// in the \p Mask.
+  /// \p DataVT is a vector type. \p Mask is a vector value.
+  /// \p DataVT and \p Mask have the same number of vector elements.
+  SDValue IncrementMemoryAddress(SDValue Addr, SDValue Mask, const SDLoc &DL,
+                                 EVT DataVT, SelectionDAG &DAG,
+                                 bool IsCompressedMemory) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

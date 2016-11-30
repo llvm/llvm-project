@@ -24,3 +24,5 @@ template class AnalysisManager<Function>;
 template class InnerAnalysisManagerProxy<FunctionAnalysisManager, Module>;
 template class OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 }
+
+AnalysisKey PreservedAnalyses::AllAnalysesKey;

@@ -150,6 +150,9 @@ struct Configuration {
   bool TerminalServerAware = true;
   bool LargeAddressAware = false;
   bool HighEntropyVA = false;
+
+  // This is for debugging.
+  bool DumpPdb = false;
 };
 
 extern Configuration *Config;

@@ -6,7 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// 
+//
 // UNSUPPORTED: c++98, c++03, c++11
 // <numeric>
 

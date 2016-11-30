@@ -34,14 +34,14 @@ using namespace llvm;
 
 STATISTIC(NumSimplified, "Number of redundant instructions removed");
 
-static bool runImpl(Function &F, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-                    AssumptionCache *AC) {
+static bool runImpl(Function &F, const DominatorTree *DT,
+                    const TargetLibraryInfo *TLI, AssumptionCache *AC) {
   const DataLayout &DL = F.getParent()->getDataLayout();
-  SmallPtrSet<const Instruction*, 8> S1, S2, *ToSimplify = &S1, *Next = &S2;
+  SmallPtrSet<const Instruction *, 8> S1, S2, *ToSimplify = &S1, *Next = &S2;
   bool Changed = false;
 
   do {
-    for (BasicBlock *BB : depth_first(&F.getEntryBlock()))
+    for (BasicBlock *BB : depth_first(&F.getEntryBlock())) {
       // Here be subtlety: the iterator must be incremented before the loop
       // body (not sure why), so a range-for loop won't work here.
       for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
@@ -51,8 +51,9 @@ static bool runImpl(Function &F, const DominatorTree *DT, const TargetLibraryInf
         // empty and we only bother simplifying instructions that are in it.
         if (!ToSimplify->empty() && !ToSimplify->count(I))
           continue;
+
         // Don't waste time simplifying unused instructions.
-        if (!I->use_empty())
+        if (!I->use_empty()) {
           if (Value *V = SimplifyInstruction(I, DL, TLI, DT, AC)) {
             // Mark all uses for resimplification next time round the loop.
             for (User *U : I->users())
@@ -61,16 +62,17 @@ static bool runImpl(Function &F, const DominatorTree *DT, const TargetLibraryInf
             ++NumSimplified;
             Changed = true;
           }
-        bool res = RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
-        if (res)  {
-          // RecursivelyDeleteTriviallyDeadInstruction can remove
-          // more than one instruction, so simply incrementing the
-          // iterator does not work. When instructions get deleted
-          // re-iterate instead.
-          BI = BB->begin(); BE = BB->end();
-          Changed |= res;
+        }
+        if (RecursivelyDeleteTriviallyDeadInstructions(I, TLI)) {
+          // RecursivelyDeleteTriviallyDeadInstruction can remove more than one
+          // instruction, so simply incrementing the iterator does not work.
+          // When instructions get deleted re-iterate instead.
+          BI = BB->begin();
+          BE = BB->end();
+          Changed = true;
         }
       }
+    }
 
     // Place the list of instructions to simplify on the next loop iteration
     // into ToSimplify.

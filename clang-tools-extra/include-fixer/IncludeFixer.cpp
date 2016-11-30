@@ -62,7 +62,8 @@ public:
   IncludeFixerContext
   getIncludeFixerContext(const clang::SourceManager &SourceManager,
                          clang::HeaderSearch &HeaderSearch) const {
-    return SemaSource.getIncludeFixerContext(SourceManager, HeaderSearch);
+    return SemaSource.getIncludeFixerContext(SourceManager, HeaderSearch,
+                                             SemaSource.getMatchedSymbols());
   }
 
 private:
@@ -135,10 +136,10 @@ static void addDiagnosticsForContext(TypoCorrection &Correction,
   const tooling::Replacement &Placed = *Reps->begin();
 
   auto Begin = StartOfFile.getLocWithOffset(Placed.getOffset());
-  auto End = Begin.getLocWithOffset(Placed.getLength());
+  auto End = Begin.getLocWithOffset(std::max(0, (int)Placed.getLength() - 1));
   PartialDiagnostic PD(DiagID, Ctx.getDiagAllocator());
   PD << Context.getHeaderInfos().front().Header
-     << FixItHint::CreateReplacement(SourceRange(Begin, End),
+     << FixItHint::CreateReplacement(CharSourceRange::getCharRange(Begin, End),
                                      Placed.getReplacementText());
   Correction.addExtraDiagnostic(std::move(PD));
 }
@@ -156,9 +157,10 @@ bool IncludeFixerSemaSource::MaybeDiagnoseMissingCompleteType(
       T.getUnqualifiedType().getAsString(context.getPrintingPolicy());
   DEBUG(llvm::dbgs() << "Query missing complete type '" << QueryString << "'");
   // Pass an empty range here since we don't add qualifier in this case.
-  query(QueryString, "", tooling::Range());
+  std::vector<find_all_symbols::SymbolInfo> MatchedSymbols =
+      query(QueryString, "", tooling::Range());
 
-  if (GenerateDiagnostics) {
+  if (!MatchedSymbols.empty() && GenerateDiagnostics) {
     TypoCorrection Correction;
     FileID FID = CI->getSourceManager().getFileID(Loc);
     StringRef Code = CI->getSourceManager().getBufferData(FID);
@@ -167,7 +169,8 @@ bool IncludeFixerSemaSource::MaybeDiagnoseMissingCompleteType(
     addDiagnosticsForContext(
         Correction,
         getIncludeFixerContext(CI->getSourceManager(),
-                               CI->getPreprocessor().getHeaderSearchInfo()),
+                               CI->getPreprocessor().getHeaderSearchInfo(),
+                               MatchedSymbols),
         Code, StartOfFile, CI->getASTContext());
     for (const PartialDiagnostic &PD : Correction.getExtraDiagnostics())
       CI->getSema().Diag(Loc, PD);
@@ -273,20 +276,23 @@ clang::TypoCorrection IncludeFixerSemaSource::CorrectTypo(
   }
 
   DEBUG(llvm::dbgs() << "TypoScopeQualifiers: " << TypoScopeString << "\n");
-  query(QueryString, TypoScopeString, SymbolRange);
+  std::vector<find_all_symbols::SymbolInfo> MatchedSymbols =
+      query(QueryString, TypoScopeString, SymbolRange);
 
-  clang::TypoCorrection Correction(Typo.getName());
-  Correction.setCorrectionRange(SS, Typo);
-  if (GenerateDiagnostics) {
+  if (!MatchedSymbols.empty() && GenerateDiagnostics) {
+    TypoCorrection Correction(Typo.getName());
+    Correction.setCorrectionRange(SS, Typo);
     FileID FID = SM.getFileID(Typo.getLoc());
     StringRef Code = SM.getBufferData(FID);
     SourceLocation StartOfFile = SM.getLocForStartOfFile(FID);
     addDiagnosticsForContext(
         Correction,
-        getIncludeFixerContext(SM, CI->getPreprocessor().getHeaderSearchInfo()),
+        getIncludeFixerContext(SM, CI->getPreprocessor().getHeaderSearchInfo(),
+                               MatchedSymbols),
         Code, StartOfFile, CI->getASTContext());
+    return Correction;
   }
-  return Correction;
+  return TypoCorrection();
 }
 
 /// Get the minimal include for a given path.
@@ -316,7 +322,8 @@ std::string IncludeFixerSemaSource::minimizeInclude(
 /// Get the include fixer context for the queried symbol.
 IncludeFixerContext IncludeFixerSemaSource::getIncludeFixerContext(
     const clang::SourceManager &SourceManager,
-    clang::HeaderSearch &HeaderSearch) const {
+    clang::HeaderSearch &HeaderSearch,
+    ArrayRef<find_all_symbols::SymbolInfo> MatchedSymbols) const {
   std::vector<find_all_symbols::SymbolInfo> SymbolCandidates;
   for (const auto &Symbol : MatchedSymbols) {
     std::string FilePath = Symbol.getFilePath().str();
@@ -332,8 +339,9 @@ IncludeFixerContext IncludeFixerSemaSource::getIncludeFixerContext(
   return IncludeFixerContext(FilePath, QuerySymbolInfos, SymbolCandidates);
 }
 
-bool IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
-                                   tooling::Range Range) {
+std::vector<find_all_symbols::SymbolInfo>
+IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
+                              tooling::Range Range) {
   assert(!Query.empty() && "Empty query!");
 
   // Save all instances of an unidentified symbol.
@@ -347,7 +355,7 @@ bool IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
         Query == QuerySymbolInfos.front().RawIdentifier) {
       QuerySymbolInfos.push_back({Query.str(), ScopedQualifiers, Range});
     }
-    return false;
+    return {};
   }
 
   DEBUG(llvm::dbgs() << "Looking up '" << Query << "' at ");
@@ -375,12 +383,16 @@ bool IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
   // It's unsafe to do nested search for the identifier with scoped namespace
   // context, it might treat the identifier as a nested class of the scoped
   // namespace.
-  MatchedSymbols = SymbolIndexMgr.search(QueryString, /*IsNestedSearch=*/false);
+  std::vector<find_all_symbols::SymbolInfo> MatchedSymbols =
+      SymbolIndexMgr.search(QueryString, /*IsNestedSearch=*/false);
   if (MatchedSymbols.empty())
     MatchedSymbols = SymbolIndexMgr.search(Query);
   DEBUG(llvm::dbgs() << "Having found " << MatchedSymbols.size()
                      << " symbols\n");
-  return !MatchedSymbols.empty();
+  // We store a copy of MatchedSymbols in a place where it's globally reachable.
+  // This is used by the standalone version of the tool.
+  this->MatchedSymbols = MatchedSymbols;
+  return MatchedSymbols;
 }
 
 llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(

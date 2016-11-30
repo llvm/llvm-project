@@ -211,6 +211,7 @@ void AllocatorOptions::SetFrom(const Flags *f, const CommonFlags *cf) {
   max_redzone = f->max_redzone;
   may_return_null = cf->allocator_may_return_null;
   alloc_dealloc_mismatch = f->alloc_dealloc_mismatch;
+  release_to_os_interval_ms = cf->allocator_release_to_os_interval_ms;
 }
 
 void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
@@ -219,6 +220,7 @@ void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
   f->max_redzone = max_redzone;
   cf->allocator_may_return_null = may_return_null;
   f->alloc_dealloc_mismatch = alloc_dealloc_mismatch;
+  cf->allocator_release_to_os_interval_ms = release_to_os_interval_ms;
 }
 
 struct Allocator {
@@ -262,7 +264,7 @@ struct Allocator {
   }
 
   void Initialize(const AllocatorOptions &options) {
-    allocator.Init(options.may_return_null);
+    allocator.Init(options.may_return_null, options.release_to_os_interval_ms);
     SharedInitCode(options);
   }
 
@@ -291,6 +293,7 @@ struct Allocator {
 
   void ReInitialize(const AllocatorOptions &options) {
     allocator.SetMayReturnNull(options.may_return_null);
+    allocator.SetReleaseToOSIntervalMs(options.release_to_os_interval_ms);
     SharedInitCode(options);
 
     // Poison all existing allocation's redzones.
@@ -312,6 +315,7 @@ struct Allocator {
     options->may_return_null = allocator.MayReturnNull();
     options->alloc_dealloc_mismatch =
         atomic_load(&alloc_dealloc_mismatch, memory_order_acquire);
+    options->release_to_os_interval_ms = allocator.ReleaseToOSIntervalMs();
   }
 
   // -------------------- Helper methods. -------------------------
@@ -687,8 +691,6 @@ struct Allocator {
     fallback_mutex.Unlock();
     allocator.ForceUnlock();
   }
-
-  void ReleaseToOS() { allocator.ReleaseToOS(); }
 };
 
 static Allocator instance(LINKER_INITIALIZED);
@@ -730,11 +732,8 @@ StackTrace AsanChunkView::GetFreeStack() {
   return GetStackTraceFromId(GetFreeStackId());
 }
 
-void ReleaseToOS() { instance.ReleaseToOS(); }
-
 void InitializeAllocator(const AllocatorOptions &options) {
   instance.Initialize(options);
-  SetAllocatorReleaseToOSCallback(ReleaseToOS);
 }
 
 void ReInitializeAllocator(const AllocatorOptions &options) {

@@ -196,7 +196,7 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class BasicAA : public AnalysisInfoMixin<BasicAA> {
   friend AnalysisInfoMixin<BasicAA>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef BasicAAResult Result;

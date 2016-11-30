@@ -48,6 +48,9 @@ module std [system] {
     module stdint_h {
       header "stdint.h"
       export *
+      // FIXME: This module only exists on OS X and for some reason the
+      // wildcard above doesn't export it.
+      export Darwin.C.stdint
     }
     module stdio_h {
       // <stdio.h>'s __need_* macros require textual inclusion.
@@ -210,7 +213,6 @@ module std [system] {
   module atomic {
     header "atomic"
     export *
-    requires cplusplus11
   }
   module bitset {
     header "bitset"

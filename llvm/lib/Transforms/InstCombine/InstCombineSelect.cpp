@@ -500,9 +500,50 @@ static bool adjustMinMax(SelectInst &Sel, ICmpInst &Cmp) {
   return true;
 }
 
+/// If this is an integer min/max where the select's 'true' operand is a
+/// constant, canonicalize that constant to the 'false' operand:
+/// select (icmp Pred X, C), C, X --> select (icmp Pred' X, C), X, C
+static Instruction *
+canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
+                               InstCombiner::BuilderTy &Builder) {
+  // TODO: We should also canonicalize min/max when the select has a different
+  // constant value than the cmp constant, but we need to fix the backend first.
+  if (!Cmp.hasOneUse() || !isa<Constant>(Cmp.getOperand(1)) ||
+      !isa<Constant>(Sel.getTrueValue()) ||
+      isa<Constant>(Sel.getFalseValue()) ||
+      Cmp.getOperand(1) != Sel.getTrueValue())
+    return nullptr;
+
+  // Canonicalize the compare predicate based on whether we have min or max.
+  Value *LHS, *RHS;
+  ICmpInst::Predicate NewPred;
+  SelectPatternResult SPR = matchSelectPattern(&Sel, LHS, RHS);
+  switch (SPR.Flavor) {
+  case SPF_SMIN: NewPred = ICmpInst::ICMP_SLT; break;
+  case SPF_UMIN: NewPred = ICmpInst::ICMP_ULT; break;
+  case SPF_SMAX: NewPred = ICmpInst::ICMP_SGT; break;
+  case SPF_UMAX: NewPred = ICmpInst::ICMP_UGT; break;
+  default: return nullptr;
+  }
+
+  // Canonicalize the constant to the right side.
+  if (isa<Constant>(LHS))
+    std::swap(LHS, RHS);
+
+  Value *NewCmp = Builder.CreateICmp(NewPred, LHS, RHS);
+  SelectInst *NewSel = SelectInst::Create(NewCmp, LHS, RHS, "", nullptr, &Sel);
+
+  // We swapped the select operands, so swap the metadata too.
+  NewSel->swapProfMetadata();
+  return NewSel;
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
                                                   ICmpInst *ICI) {
+  if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *Builder))
+    return NewSel;
+
   bool Changed = adjustMinMax(SI, *ICI);
 
   ICmpInst::Predicate Pred = ICI->getPredicate();
@@ -953,21 +994,18 @@ Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
   // If one arm of the select is the extend of the condition, replace that arm
   // with the extension of the appropriate known bool value.
   if (Cond == X) {
-    SelectInst *NewSel;
     if (ExtInst == Sel.getTrueValue()) {
       // select X, (sext X), C --> select X, -1, C
       // select X, (zext X), C --> select X,  1, C
       Constant *One = ConstantInt::getTrue(SmallType);
       Constant *AllOnesOrOne = ConstantExpr::getCast(ExtOpcode, One, SelType);
-      NewSel = SelectInst::Create(Cond, AllOnesOrOne, C);
+      return SelectInst::Create(Cond, AllOnesOrOne, C, "", nullptr, &Sel);
     } else {
       // select X, C, (sext X) --> select X, C, 0
       // select X, C, (zext X) --> select X, C, 0
       Constant *Zero = ConstantInt::getNullValue(SelType);
-      NewSel = SelectInst::Create(Cond, C, Zero);
+      return SelectInst::Create(Cond, C, Zero, "", nullptr, &Sel);
     }
-    NewSel->copyMetadata(Sel);
-    return NewSel;
   }
 
   return nullptr;

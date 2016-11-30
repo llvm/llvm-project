@@ -8638,76 +8638,78 @@ _mm256_permutexvar_epi32 (__m256i __X, __m256i __Y)
 }
 
 #define _mm_alignr_epi32(A, B, imm) __extension__ ({ \
-  (__m128i)__builtin_ia32_alignd128_mask((__v4si)(__m128i)(A), \
-                                         (__v4si)(__m128i)(B), (int)(imm), \
-                                         (__v4si)_mm_undefined_si128(), \
-                                         (__mmask8)-1); })
+  (__m128i)__builtin_shufflevector((__v4si)(__m128i)(B), \
+                                   (__v4si)(__m128i)(A), \
+                                   ((int)(imm) & 0x3) + 0, \
+                                   ((int)(imm) & 0x3) + 1, \
+                                   ((int)(imm) & 0x3) + 2, \
+                                   ((int)(imm) & 0x3) + 3); })
 
 #define _mm_mask_alignr_epi32(W, U, A, B, imm) __extension__ ({ \
-  (__m128i)__builtin_ia32_alignd128_mask((__v4si)(__m128i)(A), \
-                                         (__v4si)(__m128i)(B), (int)(imm), \
-                                         (__v4si)(__m128i)(W), \
-                                         (__mmask8)(U)); })
+  (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
+                                    (__v4si)_mm_alignr_epi32((A), (B), (imm)), \
+                                    (__v4si)(__m128i)(W)); })
 
 #define _mm_maskz_alignr_epi32(U, A, B, imm) __extension__ ({ \
-  (__m128i)__builtin_ia32_alignd128_mask((__v4si)(__m128i)(A), \
-                                         (__v4si)(__m128i)(B), (int)(imm), \
-                                         (__v4si)_mm_setzero_si128(), \
-                                         (__mmask8)(U)); })
+  (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
+                                    (__v4si)_mm_alignr_epi32((A), (B), (imm)), \
+                                    (__v4si)_mm_setzero_si128()); })
 
 #define _mm256_alignr_epi32(A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_alignd256_mask((__v8si)(__m256i)(A), \
-                                         (__v8si)(__m256i)(B), (int)(imm), \
-                                         (__v8si)_mm256_undefined_si256(), \
-                                         (__mmask8)-1); })
+  (__m256i)__builtin_shufflevector((__v8si)(__m256i)(B), \
+                                   (__v8si)(__m256i)(A), \
+                                   ((int)(imm) & 0x7) + 0, \
+                                   ((int)(imm) & 0x7) + 1, \
+                                   ((int)(imm) & 0x7) + 2, \
+                                   ((int)(imm) & 0x7) + 3, \
+                                   ((int)(imm) & 0x7) + 4, \
+                                   ((int)(imm) & 0x7) + 5, \
+                                   ((int)(imm) & 0x7) + 6, \
+                                   ((int)(imm) & 0x7) + 7); })
 
 #define _mm256_mask_alignr_epi32(W, U, A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_alignd256_mask((__v8si)(__m256i)(A), \
-                                         (__v8si)(__m256i)(B), (int)(imm), \
-                                         (__v8si)(__m256i)(W), \
-                                         (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
+                                 (__v8si)_mm256_alignr_epi32((A), (B), (imm)), \
+                                 (__v8si)(__m256i)(W)); })
 
 #define _mm256_maskz_alignr_epi32(U, A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_alignd256_mask((__v8si)(__m256i)(A), \
-                                         (__v8si)(__m256i)(B), (int)(imm), \
-                                         (__v8si)_mm256_setzero_si256(), \
-                                         (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
+                                 (__v8si)_mm256_alignr_epi32((A), (B), (imm)), \
+                                 (__v8si)_mm256_setzero_si256()); })
 
 #define _mm_alignr_epi64(A, B, imm) __extension__ ({ \
-  (__m128i)__builtin_ia32_alignq128_mask((__v2di)(__m128i)(A), \
-                                         (__v2di)(__m128i)(B), (int)(imm), \
-                                         (__v2di)_mm_setzero_di(), \
-                                         (__mmask8)-1); })
+  (__m128i)__builtin_shufflevector((__v2di)(__m128i)(B), \
+                                   (__v2di)(__m128i)(A), \
+                                   ((int)(imm) & 0x1) + 0, \
+                                   ((int)(imm) & 0x1) + 1); })
 
 #define _mm_mask_alignr_epi64(W, U, A, B, imm) __extension__ ({ \
-  (__m128i)__builtin_ia32_alignq128_mask((__v2di)(__m128i)(A), \
-                                         (__v2di)(__m128i)(B), (int)(imm), \
-                                         (__v2di)(__m128i)(W), \
-                                         (__mmask8)(U)); })
+  (__m128i)__builtin_ia32_selectq_128((__mmask8)(U), \
+                                    (__v2di)_mm_alignr_epi64((A), (B), (imm)), \
+                                    (__v2di)(__m128i)(W)); })
 
 #define _mm_maskz_alignr_epi64(U, A, B, imm) __extension__ ({ \
-  (__m128i)__builtin_ia32_alignq128_mask((__v2di)(__m128i)(A), \
-                                         (__v2di)(__m128i)(B), (int)(imm), \
-                                         (__v2di)_mm_setzero_di(), \
-                                         (__mmask8)(U)); })
+  (__m128i)__builtin_ia32_selectq_128((__mmask8)(U), \
+                                    (__v2di)_mm_alignr_epi64((A), (B), (imm)), \
+                                    (__v2di)_mm_setzero_di()); })
 
 #define _mm256_alignr_epi64(A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_alignq256_mask((__v4di)(__m256i)(A), \
-                                         (__v4di)(__m256i)(B), (int)(imm), \
-                                         (__v4di)_mm256_undefined_pd(), \
-                                         (__mmask8)-1); })
+  (__m256i)__builtin_shufflevector((__v4di)(__m256i)(B), \
+                                   (__v4di)(__m256i)(A), \
+                                   ((int)(imm) & 0x3) + 0, \
+                                   ((int)(imm) & 0x3) + 1, \
+                                   ((int)(imm) & 0x3) + 2, \
+                                   ((int)(imm) & 0x3) + 3); })
 
 #define _mm256_mask_alignr_epi64(W, U, A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_alignq256_mask((__v4di)(__m256i)(A), \
-                                         (__v4di)(__m256i)(B), (int)(imm), \
-                                         (__v4di)(__m256i)(W), \
-                                         (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectq_256((__mmask8)(U), \
+                                 (__v4di)_mm256_alignr_epi64((A), (B), (imm)), \
+                                 (__v4di)(__m256i)(W)); })
 
 #define _mm256_maskz_alignr_epi64(U, A, B, imm) __extension__ ({ \
-  (__m256i)__builtin_ia32_alignq256_mask((__v4di)(__m256i)(A), \
-                                         (__v4di)(__m256i)(B), (int)(imm), \
-                                         (__v4di)_mm256_setzero_si256(), \
-                                         (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectq_256((__mmask8)(U), \
+                                 (__v4di)_mm256_alignr_epi64((A), (B), (imm)), \
+                                 (__v4di)_mm256_setzero_si256()); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_movehdup_ps (__m128 __W, __mmask8 __U, __m128 __A)

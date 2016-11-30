@@ -6,6 +6,6 @@
 // We used to crash when
 // * The first object seen by the symbol table is from an archive.
 // * -m was not used.
-// CHECK: a.o is incompatible with {{.*}}b.o
+// CHECK: .a({{.*}}a.o) is incompatible with {{.*}}b.o
 
 // REQUIRES: x86

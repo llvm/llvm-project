@@ -509,6 +509,7 @@ public:
   void EnterBlockInfoBlock() {
     EnterSubblock(bitc::BLOCKINFO_BLOCK_ID, 2);
     BlockInfoCurBID = ~0U;
+    BlockInfoRecords.clear();
   }
 private:
   /// SwitchToBlockID - If we aren't already talking about the specified block

@@ -54,12 +54,6 @@ public:
   virtual const CXXConstructorDecl *
   getCopyConstructorForExceptionObject(CXXRecordDecl *) = 0;
 
-  virtual void addDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                               unsigned ParmIdx, Expr *DAE) = 0;
-
-  virtual Expr *getDefaultArgExprForConstructor(const CXXConstructorDecl *CD,
-                                                unsigned ParmIdx) = 0;
-
   virtual void addTypedefNameForUnnamedTagDecl(TagDecl *TD,
                                                TypedefNameDecl *DD) = 0;
 

@@ -19,6 +19,7 @@
 #include "CGVTables.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
+#include "ConstantBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -830,25 +831,32 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
         getContext().getTypeSize(RD->getTypeForDecl()) > 64)
       return RAA_Indirect;
 
-    // We have a trivial copy constructor or no copy constructors, but we have
-    // to make sure it isn't deleted.
-    bool CopyDeleted = false;
+    // If this is true, the implicit copy constructor that Sema would have
+    // created would not be deleted. FIXME: We should provide a more direct way
+    // for CodeGen to ask whether the constructor was deleted.
+    if (!RD->hasUserDeclaredCopyConstructor() &&
+        !RD->hasUserDeclaredMoveConstructor() &&
+        !RD->needsOverloadResolutionForMoveConstructor() &&
+        !RD->hasUserDeclaredMoveAssignment() &&
+        !RD->needsOverloadResolutionForMoveAssignment())
+      return RAA_Default;
+
+    // Otherwise, Sema should have created an implicit copy constructor if
+    // needed.
+    assert(!RD->needsImplicitCopyConstructor());
+
+    // We have to make sure the trivial copy constructor isn't deleted.
     for (const CXXConstructorDecl *CD : RD->ctors()) {
       if (CD->isCopyConstructor()) {
         assert(CD->isTrivial());
         // We had at least one undeleted trivial copy ctor.  Return directly.
         if (!CD->isDeleted())
           return RAA_Default;
-        CopyDeleted = true;
       }
     }
 
     // The trivial copy constructor was deleted.  Return indirectly.
-    if (CopyDeleted)
-      return RAA_Indirect;
-
-    // There were no copy ctors.  Return in RAX.
-    return RAA_Default;
+    return RAA_Indirect;
   }
 
   llvm_unreachable("invalid enum");
@@ -1577,9 +1585,10 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
                [](const VTableComponent &VTC) { return VTC.isRTTIKind(); }))
       RTTI = getMSCompleteObjectLocator(RD, *Info);
 
-    llvm::Constant *Init = CGVT.CreateVTableInitializer(VTLayout, RTTI);
-
-    VTable->setInitializer(Init);
+    ConstantInitBuilder Builder(CGM);
+    auto Components = Builder.beginArray(CGM.Int8PtrTy);
+    CGVT.createVTableInitializer(Components, VTLayout, RTTI);
+    Components.finishAndSetAsInitializer(VTable);
 
     emitVTableTypeMetadata(*Info, RD, VTable);
   }
@@ -3862,11 +3871,11 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
     Args.add(RValue::get(SrcVal), SrcParam.getType());
 
   // Add the rest of the default arguments.
-  std::vector<Stmt *> ArgVec;
-  for (unsigned I = IsCopy ? 1 : 0, E = CD->getNumParams(); I != E; ++I) {
-    Stmt *DefaultArg = getContext().getDefaultArgExprForConstructor(CD, I);
-    assert(DefaultArg && "sema forgot to instantiate default args");
-    ArgVec.push_back(DefaultArg);
+  SmallVector<const Stmt *, 4> ArgVec;
+  ArrayRef<ParmVarDecl *> params = CD->parameters().drop_front(IsCopy ? 1 : 0);
+  for (const ParmVarDecl *PD : params) {
+    assert(PD->hasDefaultArg() && "ctor closure lacks default args");
+    ArgVec.push_back(PD->getDefaultArg());
   }
 
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);

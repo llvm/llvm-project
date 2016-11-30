@@ -50,7 +50,8 @@ define i32 @fptoui_double_i32(i32 %arg) {
   ; SSE42: cost of 6 {{.*}} %V2I32 = fptoui
   ; AVX1: cost of 6 {{.*}} %V2I32 = fptoui
   ; AVX2: cost of 6 {{.*}} %V2I32 = fptoui
-  ; AVX512: cost of 6 {{.*}} %V2I32 = fptoui
+  ; AVX512F: cost of 6 {{.*}} %V2I32 = fptoui
+  ; AVX512DQ: cost of 1 {{.*}} %V2I32 = fptoui
   %V2I32 = fptoui <2 x double> undef to <2 x i32>
   ; SSE2: cost of 13 {{.*}} %V4I32 = fptoui
   ; SSE42: cost of 13 {{.*}} %V4I32 = fptoui
@@ -80,7 +81,8 @@ define i32 @fptoui_double_i16(i32 %arg) {
   ; SSE42: cost of 6 {{.*}} %V2I16 = fptoui
   ; AVX1: cost of 6 {{.*}} %V2I16 = fptoui
   ; AVX2: cost of 6 {{.*}} %V2I16 = fptoui
-  ; AVX512: cost of 6 {{.*}} %V2I16 = fptoui
+  ; AVX512F: cost of 6 {{.*}} %V2I16 = fptoui
+  ; AVX512DQ: cost of 1 {{.*}} %V2I16 = fptoui
   %V2I16 = fptoui <2 x double> undef to <2 x i16>
   ; SSE2: cost of 13 {{.*}} %V4I16 = fptoui
   ; SSE42: cost of 13 {{.*}} %V4I16 = fptoui
@@ -110,7 +112,8 @@ define i32 @fptoui_double_i8(i32 %arg) {
   ; SSE42: cost of 6 {{.*}} %V2I8 = fptoui
   ; AVX1: cost of 6 {{.*}} %V2I8 = fptoui
   ; AVX2: cost of 6 {{.*}} %V2I8 = fptoui
-  ; AVX512: cost of 6 {{.*}} %V2I8 = fptoui
+  ; AVX512F: cost of 6 {{.*}} %V2I8 = fptoui
+  ; AVX512DQ: cost of 1 {{.*}} %V2I8 = fptoui
   %V2I8 = fptoui <2 x double> undef to <2 x i8>
   ; SSE2: cost of 13 {{.*}} %V4I8 = fptoui
   ; SSE42: cost of 13 {{.*}} %V4I8 = fptoui
@@ -136,6 +139,13 @@ define i32 @fptoui_float_i64(i32 %arg) {
   ; AVX2: cost of 4 {{.*}} %I64 = fptoui
   ; AVX512: cost of 1 {{.*}} %I64 = fptoui
   %I64 = fptoui float undef to i64
+  ; SSE2: cost of 12 {{.*}} %V2I64 = fptoui
+  ; SSE42: cost of 12 {{.*}} %V2I64 = fptoui
+  ; AVX1: cost of 12 {{.*}} %V2I64 = fptoui
+  ; AVX2: cost of 12 {{.*}} %V2I64 = fptoui
+  ; AVX512F: cost of 6 {{.*}} %V2I64 = fptoui
+  ; AVX512DQ: cost of 1 {{.*}} %V2I64 = fptoui
+  %V2I64 = fptoui <2 x float> undef to <2 x i64>
   ; SSE2: cost of 25 {{.*}} %V4I64 = fptoui
   ; SSE42: cost of 25 {{.*}} %V4I64 = fptoui
   ; AVX1: cost of 24 {{.*}} %V4I64 = fptoui

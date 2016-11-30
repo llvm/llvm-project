@@ -1,4 +1,4 @@
-//===-- RegisterContextCorePOSIX_mips64.cpp ---------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_mips64.cpp ---------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -948,7 +948,11 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                             Optional<bool> ProvidedUpperBound) {
   DEBUG(dbgs() << "Loop Unroll: F[" << L->getHeader()->getParent()->getName()
                << "] Loop %" << L->getHeader()->getName() << "\n");
-  if (HasUnrollDisablePragma(L)) {
+  if (HasUnrollDisablePragma(L)) 
+    return false;
+  if (!L->isLoopSimplifyForm()) { 
+    DEBUG(
+        dbgs() << "  Not unrolling loop which is not in loop-simplify form.\n");
     return false;
   }
 
@@ -958,6 +962,9 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
       L, TTI, ProvidedThreshold, ProvidedCount, ProvidedAllowPartial,
       ProvidedRuntime, ProvidedUpperBound);
+  // Exit early if unrolling is disabled.
+  if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
+    return false;
   unsigned LoopSize = ApproximateLoopSize(
       L, NumInlineCandidates, NotDuplicatable, Convergent, TTI, &AC, UP.BEInsns);
   DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
@@ -968,11 +975,6 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   }
   if (NumInlineCandidates != 0) {
     DEBUG(dbgs() << "  Not unrolling loop with inlinable calls.\n");
-    return false;
-  }
-  if (!L->isLoopSimplifyForm()) {
-    DEBUG(
-        dbgs() << "  Not unrolling loop which is not in loop-simplify form.\n");
     return false;
   }
 
@@ -990,10 +992,6 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
     TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
   }
-
-  // Exit early if unrolling is disabled.
-  if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
-    return false;
 
   // If the loop contains a convergent operation, the prelude we'd add
   // to do the first few instructions before we hit the unrolled loop

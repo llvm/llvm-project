@@ -23,7 +23,7 @@
 # CHECK-NEXT: 0000000000003000         *ABS*     00000000 ccc_lma
 # CHECK-NEXT: 0000000000004000         *ABS*     00000000 ddd_lma
 # CHECK-NEXT: 0000000000004008         *ABS*     00000000 txt_lma
-# ERROR: undefined section .zzz
+# ERROR: {{.*}}.script:1: undefined section .zzz
 
 .global _start
 _start:

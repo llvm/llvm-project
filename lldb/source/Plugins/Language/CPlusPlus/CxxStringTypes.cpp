@@ -1,4 +1,4 @@
-//===-- CXXStringTypes.cpp --------------------------------------*- C++ -*-===//
+//===-- CxxStringTypes.cpp --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

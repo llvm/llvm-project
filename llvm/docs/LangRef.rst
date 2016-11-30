@@ -10827,7 +10827,7 @@ bitpattern of an integer value; for example ``0b10110110`` becomes
 Semantics:
 """"""""""
 
-The ``llvm.bitreverse.iN`` intrinsic returns an i16 value that has bit
+The ``llvm.bitreverse.iN`` intrinsic returns an iN value that has bit
 ``M`` in the input moved to bit ``N-M`` in the output.
 
 '``llvm.bswap.*``' Intrinsics

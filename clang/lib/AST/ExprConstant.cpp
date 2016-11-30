@@ -5346,16 +5346,20 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BIstrchr:
+  case Builtin::BIwcschr:
   case Builtin::BImemchr:
+  case Builtin::BIwmemchr:
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
         << /*isConstexpr*/0 << /*isConstructor*/0
-        << (BuiltinOp == Builtin::BIstrchr ? "'strchr'" : "'memchr'");
+        << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     // Fall through.
   case Builtin::BI__builtin_strchr:
-  case Builtin::BI__builtin_memchr: {
+  case Builtin::BI__builtin_wcschr:
+  case Builtin::BI__builtin_memchr:
+  case Builtin::BI__builtin_wmemchr: {
     if (!Visit(E->getArg(0)))
       return false;
     APSInt Desired;
@@ -5363,29 +5367,51 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     uint64_t MaxLength = uint64_t(-1);
     if (BuiltinOp != Builtin::BIstrchr &&
-        BuiltinOp != Builtin::BI__builtin_strchr) {
+        BuiltinOp != Builtin::BIwcschr &&
+        BuiltinOp != Builtin::BI__builtin_strchr &&
+        BuiltinOp != Builtin::BI__builtin_wcschr) {
       APSInt N;
       if (!EvaluateInteger(E->getArg(2), N, Info))
         return false;
       MaxLength = N.getExtValue();
     }
 
-    QualType CharTy = Info.Ctx.CharTy;
-    bool IsStrchr = (BuiltinOp != Builtin::BImemchr &&
-                     BuiltinOp != Builtin::BI__builtin_memchr);
+    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
 
-    // strchr compares directly to the passed integer, and therefore
-    // always fails if given an int that is not a char.
-    if (IsStrchr &&
-        !APSInt::isSameValue(HandleIntToIntCast(Info, E, CharTy,
-                                                E->getArg(1)->getType(),
-                                                Desired),
-                             Desired))
-      return ZeroInitialization(E);
+    // Figure out what value we're actually looking for (after converting to
+    // the corresponding unsigned type if necessary).
+    uint64_t DesiredVal;
+    bool StopAtNull = false;
+    switch (BuiltinOp) {
+    case Builtin::BIstrchr:
+    case Builtin::BI__builtin_strchr:
+      // strchr compares directly to the passed integer, and therefore
+      // always fails if given an int that is not a char.
+      if (!APSInt::isSameValue(HandleIntToIntCast(Info, E, CharTy,
+                                                  E->getArg(1)->getType(),
+                                                  Desired),
+                               Desired))
+        return ZeroInitialization(E);
+      StopAtNull = true;
+      // Fall through.
+    case Builtin::BImemchr:
+    case Builtin::BI__builtin_memchr:
+      // memchr compares by converting both sides to unsigned char. That's also
+      // correct for strchr if we get this far (to cope with plain char being
+      // unsigned in the strchr case).
+      DesiredVal = Desired.trunc(Info.Ctx.getCharWidth()).getZExtValue();
+      break;
 
-    // memchr compares by converting both sides to unsigned char. That's also
-    // correct for strchr if we get this far.
-    uint64_t DesiredVal = Desired.trunc(Info.Ctx.getCharWidth()).getZExtValue();
+    case Builtin::BIwcschr:
+    case Builtin::BI__builtin_wcschr:
+      StopAtNull = true;
+      // Fall through.
+    case Builtin::BIwmemchr:
+    case Builtin::BI__builtin_wmemchr:
+      // wcschr and wmemchr are given a wchar_t to look for. Just use it.
+      DesiredVal = Desired.getZExtValue();
+      break;
+    }
 
     for (; MaxLength; --MaxLength) {
       APValue Char;
@@ -5394,7 +5420,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         return false;
       if (Char.getInt().getZExtValue() == DesiredVal)
         return true;
-      if (IsStrchr && !Char.getInt())
+      if (StopAtNull && !Char.getInt())
         break;
       if (!HandleLValueArrayAdjustment(Info, E, Result, CharTy, 1))
         return false;
@@ -7117,19 +7143,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BIstrlen:
+  case Builtin::BIwcslen:
     // A call to strlen is not a constant expression.
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
-        << /*isConstexpr*/0 << /*isConstructor*/0 << "'strlen'";
+        << /*isConstexpr*/0 << /*isConstructor*/0
+        << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     // Fall through.
-  case Builtin::BI__builtin_strlen: {
+  case Builtin::BI__builtin_strlen:
+  case Builtin::BI__builtin_wcslen: {
     // As an extension, we support __builtin_strlen() as a constant expression,
     // and support folding strlen() to a constant.
     LValue String;
     if (!EvaluatePointer(E->getArg(0), String, Info))
       return false;
+
+    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
 
     // Fast path: if it's a string literal, search the string value.
     if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
@@ -7139,7 +7170,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       StringRef Str = S->getBytes();
       int64_t Off = String.Offset.getQuantity();
       if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size() &&
-          S->getCharByteWidth() == 1) {
+          S->getCharByteWidth() == 1 &&
+          // FIXME: Add fast-path for wchar_t too.
+          Info.Ctx.hasSameUnqualifiedType(CharTy, Info.Ctx.CharTy)) {
         Str = Str.substr(Off);
 
         StringRef::size_type Pos = Str.find(0);
@@ -7153,7 +7186,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     // Slow path: scan the bytes of the string looking for the terminating 0.
-    QualType CharTy = Info.Ctx.CharTy;
     for (uint64_t Strlen = 0; /**/; ++Strlen) {
       APValue Char;
       if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
@@ -7167,36 +7199,46 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BIstrcmp:
+  case Builtin::BIwcscmp:
   case Builtin::BIstrncmp:
+  case Builtin::BIwcsncmp:
   case Builtin::BImemcmp:
+  case Builtin::BIwmemcmp:
     // A call to strlen is not a constant expression.
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
         << /*isConstexpr*/0 << /*isConstructor*/0
-        << (BuiltinOp == Builtin::BIstrncmp ? "'strncmp'" :
-            BuiltinOp == Builtin::BImemcmp ? "'memcmp'" :
-            "'strcmp'");
+        << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     // Fall through.
   case Builtin::BI__builtin_strcmp:
+  case Builtin::BI__builtin_wcscmp:
   case Builtin::BI__builtin_strncmp:
-  case Builtin::BI__builtin_memcmp: {
+  case Builtin::BI__builtin_wcsncmp:
+  case Builtin::BI__builtin_memcmp:
+  case Builtin::BI__builtin_wmemcmp: {
     LValue String1, String2;
     if (!EvaluatePointer(E->getArg(0), String1, Info) ||
         !EvaluatePointer(E->getArg(1), String2, Info))
       return false;
+
+    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
+
     uint64_t MaxLength = uint64_t(-1);
     if (BuiltinOp != Builtin::BIstrcmp &&
-        BuiltinOp != Builtin::BI__builtin_strcmp) {
+        BuiltinOp != Builtin::BIwcscmp &&
+        BuiltinOp != Builtin::BI__builtin_strcmp &&
+        BuiltinOp != Builtin::BI__builtin_wcscmp) {
       APSInt N;
       if (!EvaluateInteger(E->getArg(2), N, Info))
         return false;
       MaxLength = N.getExtValue();
     }
     bool StopAtNull = (BuiltinOp != Builtin::BImemcmp &&
-                       BuiltinOp != Builtin::BI__builtin_memcmp);
-    QualType CharTy = Info.Ctx.CharTy;
+                       BuiltinOp != Builtin::BIwmemcmp &&
+                       BuiltinOp != Builtin::BI__builtin_memcmp &&
+                       BuiltinOp != Builtin::BI__builtin_wmemcmp);
     for (; MaxLength; --MaxLength) {
       APValue Char1, Char2;
       if (!handleLValueToRValueConversion(Info, E, CharTy, String1, Char1) ||

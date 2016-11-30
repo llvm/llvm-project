@@ -9,9 +9,13 @@
 
 #include "PDB.h"
 #include "Chunks.h"
+#include "Config.h"
 #include "Error.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "llvm/DebugInfo/CodeView/SymbolDumper.h"
+#include "llvm/DebugInfo/CodeView/TypeDumper.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
@@ -25,11 +29,13 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <memory>
 
 using namespace lld;
 using namespace lld::coff;
 using namespace llvm;
+using namespace llvm::codeview;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 
@@ -46,9 +52,49 @@ static std::vector<coff_section> getInputSections(SymbolTable *Symtab) {
   return V;
 }
 
+static SectionChunk *findByName(std::vector<SectionChunk *> &Sections,
+                                StringRef Name) {
+  for (SectionChunk *C : Sections)
+    if (C->getSectionName() == Name)
+      return C;
+  return nullptr;
+}
+
+// Dump CodeView debug info. This is for debugging.
+static void dumpCodeView(SymbolTable *Symtab) {
+  ScopedPrinter W(outs());
+
+  for (ObjectFile *File : Symtab->ObjectFiles) {
+    SectionChunk *DebugT = findByName(File->getDebugChunks(), ".debug$T");
+    if (!DebugT)
+      continue;
+
+    CVTypeDumper TypeDumper(&W, false);
+    if (auto EC = TypeDumper.dump(DebugT->getContents()))
+      fatal(EC, "CVTypeDumper::dump failed");
+
+    SectionChunk *DebugS = findByName(File->getDebugChunks(), ".debug$S");
+    if (!DebugS)
+      continue;
+
+    msf::ByteStream Stream(DebugS->getContents());
+    CVSymbolArray Symbols;
+    msf::StreamReader Reader(Stream);
+    if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
+      fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
+
+    CVSymbolDumper SymbolDumper(W, TypeDumper, nullptr, false);
+    if (auto EC = SymbolDumper.dump(Symbols))
+      fatal(EC, "CVSymbolDumper::dump failed");
+  }
+}
+
 // Creates a PDB file.
 void coff::createPDB(StringRef Path, SymbolTable *Symtab,
                      ArrayRef<uint8_t> SectionTable) {
+  if (Config->DumpPdb)
+    dumpCodeView(Symtab);
+
   BumpPtrAllocator Alloc;
   pdb::PDBFileBuilder Builder(Alloc);
   ExitOnErr(Builder.initialize(4096)); // 4096 is blocksize

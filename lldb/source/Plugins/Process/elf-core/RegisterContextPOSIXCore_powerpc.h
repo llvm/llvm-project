@@ -1,4 +1,4 @@
-//===-- RegisterContextCorePOSIX_powerpc.h ----------------------*- C++ -*-===//
+//===-- RegisterContextPOSIXCore_powerpc.h ----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

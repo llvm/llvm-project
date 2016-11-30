@@ -79,10 +79,9 @@ ELF:          U SomeOtherFunction
 ELF: 00000000 T main
 ELF:          U puts
 
-FIXME: we should not print the size of undefined symbols.
-ELF-SIZE:               00000000 U SomeOtherFunction
+ELF-SIZE:                        U SomeOtherFunction
 ELF-SIZE-NEXT: 00000000 00000024 T main
-ELF-SIZE-NEXT:          00000000 U puts
+ELF-SIZE-NEXT:                   U puts
 
 ELF-o: {{.*}}/trivial-object-test.elf-i386:          U SomeOtherFunction
 ELF-o: {{.*}}/trivial-object-test.elf-i386: 00000000 T main

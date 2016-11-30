@@ -85,7 +85,7 @@ private:
 };
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-std::string getFilename(const InputFile *F);
+std::string toString(const InputFile *F);
 
 template <typename ELFT> class ELFFileBase : public InputFile {
 public:
@@ -150,7 +150,7 @@ public:
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
     if (SymbolIndex >= SymbolBodies.size())
-      fatal(getFilename(this) + ": invalid symbol index");
+      fatal(toString(this) + ": invalid symbol index");
     return *SymbolBodies[SymbolIndex];
   }
 
@@ -263,12 +263,14 @@ private:
 // .so file.
 template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   typedef ELFFileBase<ELFT> Base;
+  typedef typename ELFT::Dyn Elf_Dyn;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::SymRange Elf_Sym_Range;
-  typedef typename ELFT::Versym Elf_Versym;
   typedef typename ELFT::Verdef Elf_Verdef;
+  typedef typename ELFT::Versym Elf_Versym;
+  typedef typename ELFT::Word Elf_Word;
+  typedef typename ELFT::uint uintX_t;
 
   std::vector<StringRef> Undefs;
   StringRef SoName;

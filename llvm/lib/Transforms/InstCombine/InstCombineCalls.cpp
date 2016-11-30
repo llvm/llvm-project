@@ -3043,8 +3043,7 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
     CallInst *CI = cast<CallInst>(Caller);
     NC = Builder->CreateCall(Callee, Args, OpBundles);
     NC->takeName(CI);
-    if (CI->isTailCall())
-      cast<CallInst>(NC)->setTailCall();
+    cast<CallInst>(NC)->setTailCallKind(CI->getTailCallKind());
     cast<CallInst>(NC)->setCallingConv(CI->getCallingConv());
     cast<CallInst>(NC)->setAttributes(NewCallerPAL);
   }
@@ -3228,10 +3227,10 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
         cast<InvokeInst>(NewCaller)->setAttributes(NewPAL);
       } else {
         NewCaller = CallInst::Create(NewCallee, NewArgs, OpBundles);
-        if (cast<CallInst>(Caller)->isTailCall())
-          cast<CallInst>(NewCaller)->setTailCall();
-        cast<CallInst>(NewCaller)->
-          setCallingConv(cast<CallInst>(Caller)->getCallingConv());
+        cast<CallInst>(NewCaller)->setTailCallKind(
+            cast<CallInst>(Caller)->getTailCallKind());
+        cast<CallInst>(NewCaller)->setCallingConv(
+            cast<CallInst>(Caller)->getCallingConv());
         cast<CallInst>(NewCaller)->setAttributes(NewPAL);
       }
 

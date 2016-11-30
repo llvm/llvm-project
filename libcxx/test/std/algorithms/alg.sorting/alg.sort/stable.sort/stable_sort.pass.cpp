@@ -72,7 +72,7 @@ test_sort_()
 }
 
 void
-test_larger_sorts(unsigned N, unsigned M)
+test_larger_sorts(int N, int M)
 {
     assert(N != 0);
     assert(M != 0);
@@ -112,7 +112,7 @@ test_larger_sorts(unsigned N, unsigned M)
 }
 
 void
-test_larger_sorts(unsigned N)
+test_larger_sorts(int N)
 {
     test_larger_sorts(N, 1);
     test_larger_sorts(N, 2);

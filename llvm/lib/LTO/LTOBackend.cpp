@@ -168,7 +168,7 @@ static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
 }
 
 static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
-                           bool IsThinLto) {
+                           bool IsThinLTO) {
   legacy::PassManager passes;
   passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
 
@@ -182,7 +182,7 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
   PMB.OptLevel = Conf.OptLevel;
-  if (IsThinLto)
+  if (IsThinLTO)
     PMB.populateThinLTOPassManager(passes);
   else
     PMB.populateLTOPassManager(passes);
@@ -190,10 +190,10 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
 }
 
 bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
-         bool IsThinLto) {
+         bool IsThinLTO) {
   Mod.setDataLayout(TM->createDataLayout());
   if (Conf.OptPipeline.empty())
-    runOldPMPasses(Conf, Mod, TM, IsThinLto);
+    runOldPMPasses(Conf, Mod, TM, IsThinLTO);
   else
     runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
@@ -302,7 +302,7 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
   handleAsmUndefinedRefs(*Mod, *TM);
 
   if (!C.CodeGenOnly)
-    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLto=*/false))
+    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false))
       return Error::success();
 
   if (ParallelCodeGenParallelismLevel == 1) {
@@ -364,7 +364,7 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return Error::success();
 
-  if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLto=*/true))
+  if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLTO=*/true))
     return Error::success();
 
   codegen(Conf, TM.get(), AddStream, Task, Mod);

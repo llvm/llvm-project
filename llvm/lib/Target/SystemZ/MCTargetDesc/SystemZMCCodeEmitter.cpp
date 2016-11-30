@@ -113,6 +113,24 @@ private:
     return getPCRelEncoding(MI, OpNum, Fixups,
                             SystemZ::FK_390_PC32DBL, 2, true);
   }
+  uint64_t getPC12DBLBPPEncoding(const MCInst &MI, unsigned OpNum,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const {
+    return getPCRelEncoding(MI, OpNum, Fixups,
+                            SystemZ::FK_390_PC12DBL, 1, false);
+  }
+  uint64_t getPC16DBLBPPEncoding(const MCInst &MI, unsigned OpNum,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const {
+    return getPCRelEncoding(MI, OpNum, Fixups,
+                            SystemZ::FK_390_PC16DBL, 4, false);
+  }
+  uint64_t getPC24DBLBPPEncoding(const MCInst &MI, unsigned OpNum,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const {
+    return getPCRelEncoding(MI, OpNum, Fixups,
+                            SystemZ::FK_390_PC24DBL, 3, false);
+  }
 
 private:
   uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;

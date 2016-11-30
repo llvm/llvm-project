@@ -49,7 +49,7 @@ const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
 
   assert(Encoding == DW_EH_PE_absptr && "Can handle absptr encoding only");
 
-  return MCSymbolRefExpr::create(TM.getSymbol(GV, getMangler()),
+  return MCSymbolRefExpr::create(TM.getSymbol(GV),
                                  MCSymbolRefExpr::VK_ARM_TARGET2, getContext());
 }
 

@@ -14,9 +14,21 @@
 #ifndef LLVM_IR_DEBUGINFOMETADATA_H
 #define LLVM_IR_DEBUGINFOMETADATA_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Dwarf.h"
+#include <cassert>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <type_traits>
+#include <vector>
 
 // Helper macros for defining get() overrides.
 #define DEFINE_MDNODE_GET_UNPACK_IMPL(...) __VA_ARGS__
@@ -109,16 +121,20 @@ public:
   public:
     iterator() = default;
     explicit iterator(MDNode::op_iterator I) : I(I) {}
+
     DITypeRef operator*() const { return DITypeRef(*I); }
+
     iterator &operator++() {
       ++I;
       return *this;
     }
+
     iterator operator++(int) {
       iterator Temp(*this);
       ++I;
       return Temp;
     }
+
     bool operator==(const iterator &X) const { return I == X.I; }
     bool operator!=(const iterator &X) const { return I != X.I; }
   };
@@ -985,6 +1001,7 @@ public:
 class DICompileUnit : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
+
 public:
   enum DebugEmissionKind : unsigned {
     NoDebug = 0,
@@ -992,6 +1009,7 @@ public:
     LineTablesOnly,
     LastEmissionKind = LineTablesOnly
   };
+
   static Optional<DebugEmissionKind> getEmissionKind(StringRef Str);
   static const char *EmissionKindString(DebugEmissionKind EK);
 
@@ -1050,10 +1068,10 @@ private:
                         getMacros(), DWOId, getSplitDebugInlining());
   }
 
+public:
   static void get() = delete;
   static void getIfExists() = delete;
 
-public:
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, DIFile *File, StringRef Producer,
@@ -1210,10 +1228,10 @@ class DILocation : public MDNode {
                         getRawInlinedAt());
   }
 
+public:
   // Disallow replacing operands.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
-public:
   DEFINE_MDNODE_GET(DILocation,
                     (unsigned Line, unsigned Column, Metadata *Scope,
                      Metadata *InlinedAt = nullptr),
@@ -1420,6 +1438,7 @@ public:
   }
   bool isExplicit() const { return getFlags() & FlagExplicit; }
   bool isPrototyped() const { return getFlags() & FlagPrototyped; }
+  bool isMainSubprogram() const { return getFlags() & FlagMainSubprogram; }
 
   /// Check if this is reference-qualified.
   ///
@@ -1694,7 +1713,7 @@ class DIModule : public DIScope {
 
   DIModule(LLVMContext &Context, StorageType Storage, ArrayRef<Metadata *> Ops)
       : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops) {}
-  ~DIModule() {}
+  ~DIModule() = default;
 
   static DIModule *getImpl(LLVMContext &Context, DIScope *Scope,
                            StringRef Name, StringRef ConfigurationMacros,
@@ -2519,4 +2538,4 @@ public:
 #undef DEFINE_MDNODE_GET_UNPACK
 #undef DEFINE_MDNODE_GET
 
-#endif
+#endif // LLVM_IR_DEBUGINFOMETADATA_H

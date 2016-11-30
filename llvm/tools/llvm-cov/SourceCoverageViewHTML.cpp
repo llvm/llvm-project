@@ -307,13 +307,17 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
     std::string S;
     {
       raw_string_ostream RSO{S};
-      RSO << format("%*.2f", 7, Pctg) << "% (" << Hit << '/' << Total << ')';
+      if (Total)
+        RSO << format("%*.2f", 7, Pctg) << "% ";
+      else
+        RSO << "- ";
+      RSO << '(' << Hit << '/' << Total << ')';
     }
     const char *CellClass = "column-entry-yellow";
-    if (Pctg < 80.0)
-      CellClass = "column-entry-red";
-    else if (Hit == Total)
+    if (Hit == Total)
       CellClass = "column-entry-green";
+    else if (Pctg < 80.0)
+      CellClass = "column-entry-red";
     Columns.emplace_back(tag("td", tag("pre", S), CellClass));
   };
 

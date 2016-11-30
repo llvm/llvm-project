@@ -23,7 +23,7 @@ def Z196Model : SchedMachineModel {
     let PostRAScheduler = 1;
 
     // Extra cycles for a mispredicted branch.
-    let MispredictPenalty  = 8;
+    let MispredictPenalty = 16;
 }
 
 let SchedModel = Z196Model in  {
@@ -90,8 +90,10 @@ def : InstRW<[LSU, EndGroup], (instregex "(Call)?BRC(L)?(Asm.*)?$")>;
 def : InstRW<[LSU, EndGroup], (instregex "(Call)?J(G)?(Asm.*)?$")>;
 def : InstRW<[LSU, EndGroup], (instregex "(Call)?BC(R)?(Asm.*)?$")>;
 def : InstRW<[LSU, EndGroup], (instregex "(Call)?B(R)?(Asm.*)?$")>;
-def : InstRW<[FXU, LSU, Lat5, GroupAlone], (instregex "BRCT(G)?$")>;
-def : InstRW<[FXU, FXU, FXU, LSU, Lat7, GroupAlone], (instregex "BRX(H|LE)$")>;
+def : InstRW<[FXU, LSU, Lat5, GroupAlone], (instregex "BRCT(G|H)?$")>;
+def : InstRW<[FXU, LSU, Lat5, GroupAlone], (instregex "BCT(G)?(R)?$")>;
+def : InstRW<[FXU, FXU, FXU, LSU, Lat7, GroupAlone],
+             (instregex "B(R)?X(H|L).*$")>;
 
 // Compare and branch
 def : InstRW<[FXU, LSU, Lat5, GroupAlone],
@@ -187,7 +189,6 @@ def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVST$")>;
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[FXU, Lat2, EndGroup], (instregex "LOC(G)?R(Asm.*)?$")>;
-def : InstRW<[FXU, Lat2, EndGroup], (instregex "LOC(G)?HI(Asm.*)?$")>;
 def : InstRW<[FXU, LSU, Lat6, EndGroup], (instregex "LOC(G)?(Asm.*)?$")>;
 def : InstRW<[FXU, LSU, Lat5, EndGroup], (instregex "STOC(G)?(Asm.*)?$")>;
 
@@ -434,11 +435,11 @@ def : InstRW<[FXU, FXU, Lat3, GroupAlone], (instregex "R(N|O|X)SBG$")>;
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[FXU, LSU, Lat5], (instregex "C(G|Y|Mux|RL)?$")>;
-def : InstRW<[FXU], (instregex "CFI(Mux)?$")>;
+def : InstRW<[FXU], (instregex "C(F|H)I(Mux)?$")>;
 def : InstRW<[FXU], (instregex "CG(F|H)I$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "CG(HSI|RL)$")>;
 def : InstRW<[FXU], (instregex "C(G)?R$")>;
-def : InstRW<[FXU], (instregex "C(HI|IH)$")>;
+def : InstRW<[FXU], (instregex "CIH$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "CH(F|SI)$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "CL(Y|Mux|FHSI)?$")>;
 def : InstRW<[FXU], (instregex "CLFI(Mux)?$")>;

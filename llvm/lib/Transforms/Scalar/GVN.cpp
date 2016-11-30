@@ -1731,7 +1731,12 @@ static void patchReplacementInstruction(Instruction *I, Value *Repl) {
 
   // Patch the replacement so that it is not more restrictive than the value
   // being replaced.
-  ReplInst->andIRFlags(I);
+  // Note that if 'I' is a load being replaced by some operation, 
+  // for example, by an arithmetic operation, then andIRFlags()
+  // would just erase all math flags from the original arithmetic
+  // operation, which is clearly not wanted and not needed.
+  if (!isa<LoadInst>(I))
+    ReplInst->andIRFlags(I);
 
   // FIXME: If both the original and replacement value are part of the
   // same control-flow region (meaning that the execution of one

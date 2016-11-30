@@ -9,8 +9,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; waitcnt should be inserted after exec modification
 ; SI: v_cmp_lt_i32_e32 vcc, 0,
-; SI-NEXT: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], vcc
-; SI-NEXT: s_xor_b64 [[SAVE]], exec, [[SAVE]]
+; SI-NEXT: s_and_saveexec_b64 [[SAVE1:s\[[0-9]+:[0-9]+\]]], vcc
+; SI-NEXT: s_xor_b64 [[SAVE2:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE1]]
 ; SI-NEXT: s_waitcnt lgkmcnt(0)
 ; SI-NEXT: ; mask branch [[FLOW_BB:BB[0-9]+_[0-9]+]]
 ; SI-NEXT: s_cbranch_execz [[FLOW_BB]]
@@ -24,9 +24,9 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; v_mov should be after exec modification
 ; SI: [[FLOW_BB]]:
-; SI-NEXT: s_or_saveexec_b64 [[SAVE]], [[SAVE]]
+; SI-NEXT: s_or_saveexec_b64 [[SAVE3:s\[[0-9]+:[0-9]+\]]], [[SAVE2]]
 ; SI-NEXT: v_mov_b32_e32 v{{[0-9]+}}
-; SI-NEXT: s_xor_b64 exec, exec, [[SAVE]]
+; SI-NEXT: s_xor_b64 exec, exec, [[SAVE3]]
 ; SI-NEXT: ; mask branch
 ;
 define void @test_if(i32 %b, i32 addrspace(1)* %src, i32 addrspace(1)* %dst) #1 {
@@ -101,9 +101,8 @@ exit:
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword
 ; SI-DAG: buffer_store_dword
-; SI-DAG: v_cmp_eq_u32_e32 vcc,
-; SI-DAG: s_and_b64 vcc, exec, vcc
-; SI: s_cbranch_vccz [[LABEL_LOOP]]
+; SI-DAG: s_cmpk_eq_i32 s{{[0-9]+}}, 0x100
+; SI: s_cbranch_scc0 [[LABEL_LOOP]]
 ; SI: [[LABEL_EXIT]]:
 ; SI: s_endpgm
 
@@ -152,7 +151,7 @@ exit:
 ; SI-DAG: v_cmp_ne_u32_e32 [[NEG1_CHECK_1:vcc]], -1, [[B]]
 ; SI: s_and_b64 [[ORNEG1:s\[[0-9]+:[0-9]+\]]], [[NEG1_CHECK_1]], [[NEG1_CHECK_0]]
 ; SI: s_and_saveexec_b64 [[ORNEG2:s\[[0-9]+:[0-9]+\]]], [[ORNEG1]]
-; SI: s_xor_b64 [[ORNEG2]], exec, [[ORNEG2]]
+; SI: s_xor_b64 [[ORNEG3:s\[[0-9]+:[0-9]+\]]], exec, [[ORNEG2]]
 ; SI: s_cbranch_execz [[LABEL_FLOW:BB[0-9]+_[0-9]+]]
 
 ; SI: BB{{[0-9]+_[0-9]+}}: ; %bb20
@@ -162,8 +161,8 @@ exit:
 
 ; SI: [[LABEL_FLOW]]:
 ; SI-NEXT: ; in Loop: Header=[[LABEL_LOOP]]
-; SI-NEXT: s_or_b64 exec, exec, [[ORNEG2]]
-; SI-NEXT: s_or_b64 [[COND_STATE]], [[ORNEG2]], [[TMP]]
+; SI-NEXT: s_or_b64 exec, exec, [[ORNEG3]]
+; SI-NEXT: s_or_b64 [[COND_STATE]], [[ORNEG3]], [[TMP]]
 ; SI-NEXT: s_andn2_b64 exec, exec, [[COND_STATE]]
 ; SI-NEXT: s_cbranch_execnz [[LABEL_LOOP]]
 

@@ -11,13 +11,24 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+
+using namespace llvm;
 
 namespace lld {
 namespace coff {
 
 void fatal(const Twine &Msg) {
-  llvm::errs() << Msg << "\n";
+  if (sys::Process::StandardErrHasColors()) {
+    errs().changeColor(raw_ostream::RED, /*bold=*/true);
+    errs() << "error: ";
+    errs().resetColor();
+  } else {
+    errs() << "error: ";
+  }
+
+  errs() << Msg << "\n";
   exit(1);
 }
 

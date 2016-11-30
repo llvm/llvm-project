@@ -299,7 +299,7 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
   }
 
   if (isFLAT(LdSt)) {
-    const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::addr);
+    const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     BaseReg = AddrReg->getReg();
     Offset = 0;
     return true;
@@ -314,20 +314,16 @@ bool SIInstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
   const MachineOperand *FirstDst = nullptr;
   const MachineOperand *SecondDst = nullptr;
 
-  if (isDS(FirstLdSt) && isDS(SecondLdSt)) {
-    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
-    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdst);
-  }
-
-  if (isSMRD(FirstLdSt) && isSMRD(SecondLdSt)) {
-    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::sdst);
-    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::sdst);
-  }
-
   if ((isMUBUF(FirstLdSt) && isMUBUF(SecondLdSt)) ||
       (isMTBUF(FirstLdSt) && isMTBUF(SecondLdSt))) {
     FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdata);
     SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdata);
+  } else if (isSMRD(FirstLdSt) && isSMRD(SecondLdSt)) {
+    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::sdst);
+    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::sdst);
+  } else if (isDS(FirstLdSt) && isDS(SecondLdSt)) {
+    FirstDst = getNamedOperand(FirstLdSt, AMDGPU::OpName::vdst);
+    SecondDst = getNamedOperand(SecondLdSt, AMDGPU::OpName::vdst);
   }
 
   if (!FirstDst || !SecondDst)
@@ -364,7 +360,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC == &AMDGPU::SReg_32RegClass) {
+  if (RC == &AMDGPU::SReg_32_XM0RegClass ||
+      RC == &AMDGPU::SReg_32RegClass) {
     if (SrcReg == AMDGPU::SCC) {
       BuildMI(MBB, MI, DL, get(AMDGPU::S_CSELECT_B32), DestReg)
           .addImm(-1)

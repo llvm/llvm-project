@@ -425,6 +425,32 @@ public:
 
     RefSCC &getOuterRefSCC() const { return *OuterRefSCC; }
 
+    /// Test if this SCC is a parent of \a C.
+    ///
+    /// Note that this is linear in the number of edges departing the current
+    /// SCC.
+    bool isParentOf(const SCC &C) const;
+
+    /// Test if this SCC is an ancestor of \a C.
+    ///
+    /// Note that in the worst case this is linear in the number of edges
+    /// departing the current SCC and every SCC in the entire graph reachable
+    /// from this SCC. Thus this very well may walk every edge in the entire
+    /// call graph! Do not call this in a tight loop!
+    bool isAncestorOf(const SCC &C) const;
+
+    /// Test if this SCC is a child of \a C.
+    ///
+    /// See the comments for \c isParentOf for detailed notes about the
+    /// complexity of this routine.
+    bool isChildOf(const SCC &C) const { return C.isParentOf(*this); }
+
+    /// Test if this SCC is a descendant of \a C.
+    ///
+    /// See the comments for \c isParentOf for detailed notes about the
+    /// complexity of this routine.
+    bool isDescendantOf(const SCC &C) const { return C.isAncestorOf(*this); }
+
     /// Provide a short name by printing this SCC to a std::string.
     ///
     /// This copes with the fact that we don't have a name per-se for an SCC
@@ -1119,7 +1145,7 @@ template <> struct GraphTraits<LazyCallGraph *> {
 /// An analysis pass which computes the call graph for a module.
 class LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
   friend AnalysisInfoMixin<LazyCallGraphAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   /// Inform generic clients of the result type.

@@ -1395,7 +1395,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
         StatepointID, NumPatchBytes, CallTarget, Flags, CallArgs,
         TransitionArgs, DeoptArgs, GCArgs, "safepoint_token");
 
-    Call->setTailCall(ToReplace->isTailCall());
+    Call->setTailCallKind(ToReplace->getTailCallKind());
     Call->setCallingConv(ToReplace->getCallingConv());
 
     // Currently we will fail on parameter attributes and on certain

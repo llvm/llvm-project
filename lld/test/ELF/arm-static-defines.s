@@ -23,7 +23,7 @@ _start:
  .fnend
 
 // CHECK:          Name: __exidx_end
-// CHECK-NEXT:     Value: 0x100DC
+// CHECK-NEXT:     Value: 0x100E4
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None

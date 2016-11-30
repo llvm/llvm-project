@@ -100,12 +100,12 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &MF) {
       const TargetRegisterClass *DstRC = MRI.getRegClass(Dst.getReg());
       const TargetRegisterClass *SrcRC = MRI.getRegClass(Src.getReg());
 
+      DebugLoc DL = MI.getDebugLoc();
+      MachineInstr *DefInst = MRI.getUniqueVRegDef(Src.getReg());
       if (DstRC == &AMDGPU::VReg_1RegClass &&
           TRI->getCommonSubClass(SrcRC, &AMDGPU::SGPR_64RegClass)) {
         I1Defs.push_back(Dst.getReg());
-        DebugLoc DL = MI.getDebugLoc();
 
-        MachineInstr *DefInst = MRI.getUniqueVRegDef(Src.getReg());
         if (DefInst->getOpcode() == AMDGPU::S_MOV_B64) {
           if (DefInst->getOperand(1).isImm()) {
             I1Defs.push_back(Dst.getReg());
@@ -129,10 +129,26 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &MF) {
         MI.eraseFromParent();
       } else if (TRI->getCommonSubClass(DstRC, &AMDGPU::SGPR_64RegClass) &&
                  SrcRC == &AMDGPU::VReg_1RegClass) {
-        BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::V_CMP_NE_U32_e64))
-          .addOperand(Dst)
-          .addOperand(Src)
-          .addImm(0);
+        if (DefInst->getOpcode() == AMDGPU::V_CNDMASK_B32_e64 &&
+            DefInst->getOperand(1).isImm() && DefInst->getOperand(2).isImm() &&
+            DefInst->getOperand(1).getImm() == 0 &&
+            DefInst->getOperand(2).getImm() != 0 &&
+            DefInst->getOperand(3).isReg() &&
+            TargetRegisterInfo::isVirtualRegister(
+              DefInst->getOperand(3).getReg()) &&
+            TRI->getCommonSubClass(
+              MRI.getRegClass(DefInst->getOperand(3).getReg()),
+              &AMDGPU::SGPR_64RegClass)) {
+          BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_AND_B64))
+            .addOperand(Dst)
+            .addReg(AMDGPU::EXEC)
+            .addOperand(DefInst->getOperand(3));
+        } else {
+          BuildMI(MBB, &MI, DL, TII->get(AMDGPU::V_CMP_NE_U32_e64))
+            .addOperand(Dst)
+            .addOperand(Src)
+            .addImm(0);
+        }
         MI.eraseFromParent();
       }
     }

@@ -50,7 +50,7 @@
 // RUN: llvm-ar rc %t.a %ta.o
 // RUN: llvm-mc -filetype=obj -triple=i686-linux %s -o %tb.o
 // RUN: not ld.lld %t.a %tb.o 2>&1 | FileCheck --check-prefix=ARCHIVE %s
-// ARCHIVE: a.o is incompatible with {{.*}}b.o
+// ARCHIVE: .a({{.*}}a.o) is incompatible with {{.*}}b.o
 .global _start
 _start:
 .data

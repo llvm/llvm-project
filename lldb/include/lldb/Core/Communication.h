@@ -21,7 +21,7 @@
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/lldb-private.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -196,15 +196,15 @@ public:
   ///     The number of bytes to attempt to read, and also the max
   ///     number of bytes that can be placed into \a dst.
   ///
-  /// @param[in] timeout_usec
-  ///     A timeout value in micro-seconds.
+  /// @param[in] timeout
+  ///     A timeout value or llvm::None for no timeout.
   ///
   /// @return
   ///     The number of bytes actually read.
   ///
   /// @see size_t Connection::Read (void *, size_t);
   //------------------------------------------------------------------
-  size_t Read(void *dst, size_t dst_len, uint32_t timeout_usec,
+  size_t Read(void *dst, size_t dst_len, const Timeout<std::micro> &timeout,
               lldb::ConnectionStatus &status, Error *error_ptr);
 
   //------------------------------------------------------------------
@@ -347,7 +347,8 @@ protected:
   void *m_callback_baton;
   bool m_close_on_eof;
 
-  size_t ReadFromConnection(void *dst, size_t dst_len, uint32_t timeout_usec,
+  size_t ReadFromConnection(void *dst, size_t dst_len,
+                            const Timeout<std::micro> &timeout,
                             lldb::ConnectionStatus &status, Error *error_ptr);
 
   //------------------------------------------------------------------

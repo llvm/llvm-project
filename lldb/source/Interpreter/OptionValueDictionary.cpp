@@ -101,73 +101,74 @@ Error OptionValueDictionary::SetArgs(const Args &args, VarSetOperationType op) {
   case eVarSetOperationAppend:
   case eVarSetOperationReplace:
   case eVarSetOperationAssign:
-    if (argc > 0) {
-      for (size_t i = 0; i < argc; ++i) {
-        llvm::StringRef key_and_value(args.GetArgumentAtIndex(i));
-        if (!key_and_value.empty()) {
-          if (key_and_value.find('=') == llvm::StringRef::npos) {
-            error.SetErrorString(
-                "assign operation takes one or more key=value arguments");
-            return error;
-          }
-
-          std::pair<llvm::StringRef, llvm::StringRef> kvp(
-              key_and_value.split('='));
-          llvm::StringRef key = kvp.first;
-          bool key_valid = false;
-          if (!key.empty()) {
-            if (key.front() == '[') {
-              // Key name starts with '[', so the key value must be in single or
-              // double quotes like:
-              // ['<key>']
-              // ["<key>"]
-              if ((key.size() > 2) && (key.back() == ']')) {
-                // Strip leading '[' and trailing ']'
-                key = key.substr(1, key.size() - 2);
-                const char quote_char = key.front();
-                if ((quote_char == '\'') || (quote_char == '"')) {
-                  if ((key.size() > 2) && (key.back() == quote_char)) {
-                    // Strip the quotes
-                    key = key.substr(1, key.size() - 2);
-                    key_valid = true;
-                  }
-                } else {
-                  // square brackets, no quotes
-                  key_valid = true;
-                }
-              }
-            } else {
-              // No square brackets or quotes
-              key_valid = true;
-            }
-          }
-          if (!key_valid) {
-            error.SetErrorStringWithFormat(
-                "invalid key \"%s\", the key must be a bare string or "
-                "surrounded by brackets with optional quotes: [<key>] or "
-                "['<key>'] or [\"<key>\"]",
-                kvp.first.str().c_str());
-            return error;
-          }
-
-          lldb::OptionValueSP value_sp(CreateValueFromCStringForTypeMask(
-              kvp.second.data(), m_type_mask, error));
-          if (value_sp) {
-            if (error.Fail())
-              return error;
-            m_value_was_set = true;
-            SetValueForKey(ConstString(key), value_sp, true);
-          } else {
-            error.SetErrorString("dictionaries that can contain multiple types "
-                                 "must subclass OptionValueArray");
-          }
-        } else {
-          error.SetErrorString("empty argument");
-        }
-      }
-    } else {
+    if (argc == 0) {
       error.SetErrorString(
           "assign operation takes one or more key=value arguments");
+      return error;
+    }
+    for (const auto &entry : args) {
+      if (entry.ref.empty()) {
+        error.SetErrorString("empty argument");
+        return error;
+      }
+      if (!entry.ref.contains('=')) {
+        error.SetErrorString(
+            "assign operation takes one or more key=value arguments");
+        return error;
+      }
+
+      llvm::StringRef key, value;
+      std::tie(key, value) = entry.ref.split('=');
+      bool key_valid = false;
+      if (key.empty()) {
+        error.SetErrorString("empty dictionary key");
+        return error;
+      }
+
+      if (key.front() == '[') {
+        // Key name starts with '[', so the key value must be in single or
+        // double quotes like:
+        // ['<key>']
+        // ["<key>"]
+        if ((key.size() > 2) && (key.back() == ']')) {
+          // Strip leading '[' and trailing ']'
+          key = key.substr(1, key.size() - 2);
+          const char quote_char = key.front();
+          if ((quote_char == '\'') || (quote_char == '"')) {
+            if ((key.size() > 2) && (key.back() == quote_char)) {
+              // Strip the quotes
+              key = key.substr(1, key.size() - 2);
+              key_valid = true;
+            }
+          } else {
+            // square brackets, no quotes
+            key_valid = true;
+          }
+        }
+      } else {
+        // No square brackets or quotes
+        key_valid = true;
+      }
+      if (!key_valid) {
+        error.SetErrorStringWithFormat(
+            "invalid key \"%s\", the key must be a bare string or "
+            "surrounded by brackets with optional quotes: [<key>] or "
+            "['<key>'] or [\"<key>\"]",
+            key.str().c_str());
+        return error;
+      }
+
+      lldb::OptionValueSP value_sp(CreateValueFromCStringForTypeMask(
+          value.str().c_str(), m_type_mask, error));
+      if (value_sp) {
+        if (error.Fail())
+          return error;
+        m_value_was_set = true;
+        SetValueForKey(ConstString(key), value_sp, true);
+      } else {
+        error.SetErrorString("dictionaries that can contain multiple types "
+                             "must subclass OptionValueArray");
+      }
     }
     break;
 

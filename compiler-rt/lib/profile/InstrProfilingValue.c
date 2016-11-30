@@ -192,7 +192,7 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
      * the runtime can wipe out more than one lowest count entries
      * to give space for hot targets.
      */
-    if (!(--MinCountVNode->Count)) {
+    if (!MinCountVNode->Count || !(--MinCountVNode->Count)) {
       CurVNode = MinCountVNode;
       CurVNode->Value = TargetValue;
       CurVNode->Count++;

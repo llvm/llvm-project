@@ -1,4 +1,4 @@
-//===-- ClangExpression.h ---------------------------------------*- C++ -*-===//
+//===-- ClangExpressionHelper.h ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

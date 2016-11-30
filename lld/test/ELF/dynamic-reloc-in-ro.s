@@ -5,4 +5,4 @@
 foo:
 .quad foo
 
-// CHECK: {{.*}}.o (.text+0x0): can't create dynamic relocation R_X86_64_64 against local symbol in readonly segment defined in {{.*}}.o
+// CHECK: {{.*}}.o:(.text+0x0): can't create dynamic relocation R_X86_64_64 against local symbol in readonly segment defined in {{.*}}.o

@@ -126,7 +126,7 @@
 # EXE-NEXT:   }
 # EXE-NEXT:   Symbol {
 # EXE-NEXT:     Name: foo1@
-# EXE-NEXT:     Value: 0x11000
+# EXE-NEXT:     Value: 0x201000
 # EXE-NEXT:     Size: 0
 # EXE-NEXT:     Binding: Global (0x1)
 # EXE-NEXT:     Type: None (0x0)

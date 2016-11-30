@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstddef>
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
@@ -24,27 +25,27 @@ int main()
         c.push_back(0);
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(1);
         assert(c.size() == 2);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(2);
         assert(c.size() == 3);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(3);
         assert(c.size() == 4);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(4);
         assert(c.size() == 5);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
     }
     {
@@ -55,27 +56,27 @@ int main()
         c.push_back(0);
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(1);
         assert(c.size() == 2);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(2);
         assert(c.size() == 3);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(3);
         assert(c.size() == 4);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(4);
         assert(c.size() == 5);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
     }
 #if TEST_STD_VER >= 11
@@ -84,27 +85,27 @@ int main()
         c.push_back(0);
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(1);
         assert(c.size() == 2);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(2);
         assert(c.size() == 3);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(3);
         assert(c.size() == 4);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
         c.push_back(4);
         assert(c.size() == 5);
         assert(is_contiguous_container_asan_correct(c));
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; static_cast<std::size_t>(j) < c.size(); ++j)
             assert(c[j] == j);
     }
 #endif

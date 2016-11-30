@@ -136,6 +136,7 @@ add_llvm_library(LLVMCodeGen
   TargetPassConfig.cpp
   TargetRegisterInfo.cpp
   TargetSchedule.cpp
+  TargetSubtargetInfo.cpp
   TwoAddressInstructionPass.cpp
   UnreachableBlockElim.cpp
   VirtRegMap.cpp

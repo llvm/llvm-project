@@ -523,7 +523,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
           Style.ContinuationIndentWidth;
   }
 
-  if ((Previous.isOneOf(tok::comma, tok::semi) &&
+  if ((PreviousNonComment &&
+       PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
        !State.Stack.back().AvoidBinPacking) ||
       Previous.is(TT_BinaryOperator))
     State.Stack.back().BreakBeforeParameter = false;
@@ -865,7 +866,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     // Exclude relational operators, as there, it is always more desirable to
     // have the LHS 'left' of the RHS.
     if (Previous && Previous->getPrecedence() != prec::Assignment &&
-        Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) &&
+        Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr, tok::comma) &&
         Previous->getPrecedence() != prec::Relational) {
       bool BreakBeforeOperator =
           Previous->is(tok::lessless) ||

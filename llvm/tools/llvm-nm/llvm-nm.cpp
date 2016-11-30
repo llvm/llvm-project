@@ -265,14 +265,8 @@ static bool compareSymbolName(const NMSymbol &A, const NMSymbol &B) {
 }
 
 static char isSymbolList64Bit(SymbolicFile &Obj) {
-  if (isa<IRObjectFile>(Obj)) {
-    IRObjectFile *IRobj = dyn_cast<IRObjectFile>(&Obj);
-    Module &M = IRobj->getModule();
-    if (M.getTargetTriple().empty())
-      return false;
-    Triple T(M.getTargetTriple());
-    return T.isArch64Bit();
-  }
+  if (auto *IRObj = dyn_cast<IRObjectFile>(&Obj))
+    return Triple(IRObj->getTargetTriple()).isArch64Bit();
   if (isa<COFFObjectFile>(Obj))
     return false;
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
@@ -597,6 +591,10 @@ static void darwinPrintStab(MachOObjectFile *MachO, SymbolListT::iterator I) {
   outs() << Str;
 }
 
+static bool symbolIsDefined(const NMSymbol &Sym) {
+  return Sym.TypeChar != 'U' && Sym.TypeChar != 'w' && Sym.TypeChar != 'v';
+}
+
 static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
                                    const std::string &ArchiveName,
                                    const std::string &ArchitectureName) {
@@ -683,24 +681,28 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     char SymbolAddrStr[18] = "";
     char SymbolSizeStr[18] = "";
 
-    if (OutputFormat == sysv || I->TypeChar == 'U') {
-      if (OutputFormat == posix)
+    // If the format is SysV or the symbol isn't defined, then print spaces.
+    if (OutputFormat == sysv || !symbolIsDefined(*I)) {
+      if (OutputFormat == posix) {
         format(printFormat, I->Address)
           .print(SymbolAddrStr, sizeof(SymbolAddrStr));
-      else
+        format(printFormat, I->Size)
+            .print(SymbolSizeStr, sizeof(SymbolSizeStr));
+      } else {
         strcpy(SymbolAddrStr, printBlanks);
+        strcpy(SymbolSizeStr, printBlanks);
+      }
     }
-    if (OutputFormat == sysv)
-      strcpy(SymbolSizeStr, printBlanks);
 
-    if (I->TypeChar != 'U') {
+    // Otherwise, print the symbol address and size.
+    if (symbolIsDefined(*I)) {
       if (Obj.isIR())
         strcpy(SymbolAddrStr, printDashes);
       else
         format(printFormat, I->Address)
           .print(SymbolAddrStr, sizeof(SymbolAddrStr));
+      format(printFormat, I->Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
     }
-    format(printFormat, I->Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
 
     // If OutputFormat is darwin or we are printing Mach-O symbols in hex and
     // we have a MachOObjectFile, call darwinPrintSymbol to print as darwin's
@@ -770,6 +772,9 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
       break;
     case ELF::SHT_NOBITS:
       return 'b';
+    case ELF::SHT_INIT_ARRAY:
+    case ELF::SHT_FINI_ARRAY:
+      return 't';
     }
   }
 

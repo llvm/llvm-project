@@ -61,6 +61,25 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
                         }) &&
          "TargetLibraryInfoImpl function names must be sorted");
 
+  bool ShouldExtI32Param = false, ShouldExtI32Return = false,
+       ShouldSignExtI32Param = false;
+  // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+  // returns corresponding to C-level ints and unsigned ints.
+  if (T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le ||
+      T.getArch() == Triple::sparcv9 || T.getArch() == Triple::systemz) {
+    ShouldExtI32Param = true;
+    ShouldExtI32Return = true;
+  }
+  // Mips, on the other hand, needs signext on i32 parameters corresponding
+  // to both signed and unsigned ints.
+  if (T.getArch() == Triple::mips || T.getArch() == Triple::mipsel ||
+      T.getArch() == Triple::mips64 || T.getArch() == Triple::mips64el) {
+    ShouldSignExtI32Param = true;
+  }
+  TLI.setShouldExtI32Param(ShouldExtI32Param);
+  TLI.setShouldExtI32Return(ShouldExtI32Return);
+  TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
+
   if (T.getArch() == Triple::r600 ||
       T.getArch() == Triple::amdgcn) {
     TLI.setUnavailable(LibFunc::ldexp);
@@ -431,14 +450,19 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
-    : CustomNames(TLI.CustomNames) {
+    : CustomNames(TLI.CustomNames), ShouldExtI32Param(TLI.ShouldExtI32Param),
+      ShouldExtI32Return(TLI.ShouldExtI32Return),
+      ShouldSignExtI32Param(TLI.ShouldSignExtI32Param) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
-    : CustomNames(std::move(TLI.CustomNames)) {
+    : CustomNames(std::move(TLI.CustomNames)),
+      ShouldExtI32Param(TLI.ShouldExtI32Param),
+      ShouldExtI32Return(TLI.ShouldExtI32Return),
+      ShouldSignExtI32Param(TLI.ShouldSignExtI32Param) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -447,12 +471,18 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
 
 TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoImpl &TLI) {
   CustomNames = TLI.CustomNames;
+  ShouldExtI32Param = TLI.ShouldExtI32Param;
+  ShouldExtI32Return = TLI.ShouldExtI32Return;
+  ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
 }
 
 TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&TLI) {
   CustomNames = std::move(TLI.CustomNames);
+  ShouldExtI32Param = TLI.ShouldExtI32Param;
+  ShouldExtI32Return = TLI.ShouldExtI32Return;
+  ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   return *this;
@@ -1235,7 +1265,7 @@ TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-char TargetLibraryAnalysis::PassID;
+AnalysisKey TargetLibraryAnalysis::Key;
 
 // Register the basic pass.
 INITIALIZE_PASS(TargetLibraryInfoWrapperPass, "targetlibinfo",

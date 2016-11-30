@@ -20,6 +20,13 @@
 
 #include "test_macros.h"
 
+template <class Alloc>
+inline typename std::allocator_traits<Alloc>::size_type
+alloc_max_size(Alloc const &a) {
+  typedef std::allocator_traits<Alloc> AT;
+  return AT::max_size(a);
+}
+
 class test_alloc_base
 {
 protected:

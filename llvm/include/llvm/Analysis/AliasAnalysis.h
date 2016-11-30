@@ -911,7 +911,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<AAManager>;
-  static char PassID;
+  static AnalysisKey Key;
 
   SmallVector<void (*)(Function &F, FunctionAnalysisManager &AM,
                        AAResults &AAResults),

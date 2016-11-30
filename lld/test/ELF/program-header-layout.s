@@ -35,8 +35,8 @@ _start:
 # CHECK-NEXT:   ProgramHeader {
 # CHECK-NEXT:     Type: PT_PHDR (0x6)
 # CHECK-NEXT:     Offset: 0x40
-# CHECK-NEXT:     VirtualAddress: 0x10040
-# CHECK-NEXT:     PhysicalAddress: 0x10040
+# CHECK-NEXT:     VirtualAddress: 0x200040
+# CHECK-NEXT:     PhysicalAddress: 0x200040
 # CHECK-NEXT:     FileSize: 280
 # CHECK-NEXT:     MemSize: 280
 # CHECK-NEXT:     Flags [ (0x4)

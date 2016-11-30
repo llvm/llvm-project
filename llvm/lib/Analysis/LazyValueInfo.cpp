@@ -51,7 +51,7 @@ namespace llvm {
   FunctionPass *createLazyValueInfoPass() { return new LazyValueInfoWrapperPass(); }
 }
 
-char LazyValueAnalysis::PassID;
+AnalysisKey LazyValueAnalysis::Key;
 
 //===----------------------------------------------------------------------===//
 //                               LVILatticeVal

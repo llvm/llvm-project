@@ -39,7 +39,7 @@ namespace std
   struct is_error_code_enum<A> : public std::true_type {};
 }
 
-	
+
 int main()
 {
     test<false, void>();

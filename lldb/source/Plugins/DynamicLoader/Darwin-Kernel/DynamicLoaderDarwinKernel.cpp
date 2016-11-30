@@ -400,7 +400,7 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
   const uint32_t magicks[] = { llvm::MachO::MH_MAGIC_64, llvm::MachO::MH_MAGIC, llvm::MachO::MH_CIGAM, llvm::MachO::MH_CIGAM_64};
 
   bool found_matching_pattern = false;
-  for (int i = 0; i < llvm::array_lengthof (magicks); i++)
+  for (size_t i = 0; i < llvm::array_lengthof (magicks); i++)
     if (::memcmp (magicbuf, &magicks[i], sizeof (magicbuf)) == 0)
         found_matching_pattern = true;
 

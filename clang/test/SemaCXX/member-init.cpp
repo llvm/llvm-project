@@ -13,8 +13,8 @@ public:
 
 bool b();
 int k;
-struct Recurse {
-  int &n = // expected-error {{cannot use defaulted default constructor of 'Recurse' within the class outside of member functions because 'n' has an initializer}}
+struct Recurse { // expected-error {{initializer for 'n' needed}}
+  int &n = // expected-note {{declared here}}
       b() ?
       Recurse().n : // expected-note {{implicit default constructor for 'Recurse' first required here}}
       k;
@@ -128,8 +128,8 @@ A::A() {}
 namespace template_default_ctor {
 struct A {
   template <typename T>
-  struct B {
-    int m1 = 0; // expected-error {{cannot use defaulted default constructor of 'B' within 'A' outside of member functions because 'm1' has an initializer}}
+  struct B { // expected-error {{initializer for 'm1' needed}}
+    int m1 = 0; // expected-note {{declared here}}
   };
   // expected-note@+1 {{implicit default constructor for 'template_default_ctor::A::B<int>' first required here}}
   enum { NOE = noexcept(B<int>()) };
@@ -138,8 +138,8 @@ struct A {
 
 namespace default_ctor {
 struct A {
-  struct B {
-    int m1 = 0; // expected-error {{cannot use defaulted default constructor of 'B' within 'A' outside of member functions because 'm1' has an initializer}}
+  struct B { // expected-error {{initializer for 'm1' needed}}
+    int m1 = 0; // expected-note {{declared here}}
   };
   // expected-note@+1 {{implicit default constructor for 'default_ctor::A::B' first required here}}
   enum { NOE = noexcept(B()) };
@@ -150,12 +150,12 @@ namespace member_template {
 struct A {
   template <typename T>
   struct B {
-    struct C {
-      int m1 = 0; // expected-error {{cannot use defaulted default constructor of 'C' within 'A' outside of member functions because 'm1' has an initializer}}
+    struct C { // expected-error {{initializer for 'm1' needed}}
+      int m1 = 0; // expected-note {{declared here}}
     };
     template <typename U>
-    struct D {
-      int m1 = 0; // expected-error {{cannot use defaulted default constructor of 'D' within 'A' outside of member functions because 'm1' has an initializer}}
+    struct D { // expected-error {{initializer for 'm1' needed}}
+      int m1 = 0; // expected-note {{declared here}}
     };
   };
   enum {

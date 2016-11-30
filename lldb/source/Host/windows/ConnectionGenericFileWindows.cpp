@@ -168,7 +168,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Disconnect(Error *error_ptr) {
 }
 
 size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
-                                   uint32_t timeout_usec,
+                                   const Timeout<std::micro> &timeout,
                                    lldb::ConnectionStatus &status,
                                    Error *error_ptr) {
   ReturnInfo return_info;
@@ -191,7 +191,11 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
       // The expected return path.  The operation is pending.  Wait for the
       // operation to complete
       // or be interrupted.
-      DWORD milliseconds = timeout_usec/1000;
+      DWORD milliseconds =
+          timeout
+              ? std::chrono::duration_cast<std::chrono::milliseconds>(*timeout)
+                    .count()
+              : INFINITE;
       DWORD wait_result =
           ::WaitForMultipleObjects(llvm::array_lengthof(m_event_handles),
                                    m_event_handles, FALSE, milliseconds);

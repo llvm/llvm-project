@@ -5707,6 +5707,8 @@ __kmp_reap_thread(
         --__kmp_thread_pool_nth;
     }; // if
 
+    __kmp_free_implicit_task(thread);
+
     // Free the fast memory for tasking
     #if USE_FAST_MEMORY
         __kmp_free_fast_memory( thread );
@@ -5762,7 +5764,6 @@ __kmp_reap_thread(
     }; // if
 #endif /* KMP_AFFINITY_SUPPORTED */
 
-    __kmp_free_implicit_task(thread);
     __kmp_reap_team( thread->th.th_serial_team );
     thread->th.th_serial_team = NULL;
     __kmp_free( thread );

@@ -181,7 +181,7 @@ namespace llvm {
 // RegionInfoAnalysis implementation
 //
 
-char RegionInfoAnalysis::PassID;
+AnalysisKey RegionInfoAnalysis::Key;
 
 RegionInfo RegionInfoAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   RegionInfo RI;

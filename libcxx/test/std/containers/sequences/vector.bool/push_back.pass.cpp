@@ -14,6 +14,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 #include "min_allocator.h"
 
@@ -27,7 +28,7 @@ int main()
         {
             c.push_back(a[i]);
             assert(c.size() == i+1);
-            for (int j = 0; j < c.size(); ++j)
+            for (std::size_t j = 0; j < c.size(); ++j)
                 assert(c[j] == a[j]);
         }
     }
@@ -40,7 +41,7 @@ int main()
         {
             c.push_back(a[i]);
             assert(c.size() == i+1);
-            for (int j = 0; j < c.size(); ++j)
+            for (std::size_t j = 0; j < c.size(); ++j)
                 assert(c[j] == a[j]);
         }
     }

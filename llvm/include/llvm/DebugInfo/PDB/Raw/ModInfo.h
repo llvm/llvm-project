@@ -50,7 +50,7 @@ public:
 private:
   StringRef ModuleName;
   StringRef ObjFileName;
-  const ModuleInfoHeader *Layout;
+  const ModuleInfoHeader *Layout = nullptr;
 };
 
 struct ModuleInfoEx {

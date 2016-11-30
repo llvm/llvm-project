@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <cstring>
 #include <cstdlib>
+#include <initializer_list>
 #include <iterator>
 #include <utility>
 
@@ -336,6 +337,10 @@ public:
       insert(*I);
   }
 
+  void insert(std::initializer_list<PtrType> IL) {
+    insert(IL.begin(), IL.end());
+  }
+
   inline iterator begin() const {
     return iterator(CurArray, EndPointer());
   }
@@ -374,6 +379,11 @@ public:
     this->insert(I, E);
   }
 
+  SmallPtrSet(std::initializer_list<PtrType> IL)
+      : BaseT(SmallStorage, SmallSizePowTwo) {
+    this->insert(IL.begin(), IL.end());
+  }
+
   SmallPtrSet<PtrType, SmallSize> &
   operator=(const SmallPtrSet<PtrType, SmallSize> &RHS) {
     if (&RHS != this)
@@ -385,6 +395,13 @@ public:
   operator=(SmallPtrSet<PtrType, SmallSize> &&RHS) {
     if (&RHS != this)
       this->MoveFrom(SmallSizePowTwo, std::move(RHS));
+    return *this;
+  }
+
+  SmallPtrSet<PtrType, SmallSize> &
+  operator=(std::initializer_list<PtrType> IL) {
+    this->clear();
+    this->insert(IL.begin(), IL.end());
     return *this;
   }
 

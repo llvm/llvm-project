@@ -2209,7 +2209,7 @@ MachOObjectFile::getRelocationRelocatedSection(relocation_iterator Rel) const {
   return section_iterator(SectionRef(Sec, this));
 }
 
-basic_symbol_iterator MachOObjectFile::symbol_begin_impl() const {
+basic_symbol_iterator MachOObjectFile::symbol_begin() const {
   DataRefImpl DRI;
   MachO::symtab_command Symtab = getSymtabLoadCommand();
   if (!SymtabLoadCmd || Symtab.nsyms == 0)
@@ -2218,7 +2218,7 @@ basic_symbol_iterator MachOObjectFile::symbol_begin_impl() const {
   return getSymbolByIndex(0);
 }
 
-basic_symbol_iterator MachOObjectFile::symbol_end_impl() const {
+basic_symbol_iterator MachOObjectFile::symbol_end() const {
   DataRefImpl DRI;
   MachO::symtab_command Symtab = getSymtabLoadCommand();
   if (!SymtabLoadCmd || Symtab.nsyms == 0)

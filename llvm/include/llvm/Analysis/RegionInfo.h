@@ -933,7 +933,7 @@ public:
 /// \brief Analysis pass that exposes the \c RegionInfo for a function.
 class RegionInfoAnalysis : public AnalysisInfoMixin<RegionInfoAnalysis> {
   friend AnalysisInfoMixin<RegionInfoAnalysis>;
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   typedef RegionInfo Result;

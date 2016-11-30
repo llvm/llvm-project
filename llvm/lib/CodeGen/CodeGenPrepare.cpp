@@ -824,6 +824,14 @@ static bool SinkCast(CastInst *CI) {
 ///
 static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
                                        const DataLayout &DL) {
+  // Sink only "cheap" (or nop) address-space casts.  This is a weaker condition
+  // than sinking only nop casts, but is helpful on some platforms.
+  if (auto *ASC = dyn_cast<AddrSpaceCastInst>(CI)) {
+    if (!TLI.isCheapAddrSpaceCast(ASC->getSrcAddressSpace(),
+                                  ASC->getDestAddressSpace()))
+      return false;
+  }
+
   // If this is a noop copy,
   EVT SrcVT = TLI.getValueType(DL, CI->getOperand(0)->getType());
   EVT DstVT = TLI.getValueType(DL, CI->getType());
@@ -3806,18 +3814,10 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   }
   TPT.commit();
 
-  // Check to see if any of the instructions supersumed by this addr mode are
-  // non-local to I's BB.
-  bool AnyNonLocal = false;
-  for (unsigned i = 0, e = AddrModeInsts.size(); i != e; ++i) {
-    if (IsNonLocalValue(AddrModeInsts[i], MemoryInst->getParent())) {
-      AnyNonLocal = true;
-      break;
-    }
-  }
-
   // If all the instructions matched are already in this BB, don't do anything.
-  if (!AnyNonLocal) {
+  if (none_of(AddrModeInsts, [&](Value *V) {
+        return IsNonLocalValue(V, MemoryInst->getParent());
+      })) {
     DEBUG(dbgs() << "CGP: Found      local addrmode: " << AddrMode << "\n");
     return false;
   }
