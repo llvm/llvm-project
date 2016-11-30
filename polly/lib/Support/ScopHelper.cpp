@@ -495,8 +495,7 @@ bool polly::isIgnoredIntrinsic(const Value *V) {
   return false;
 }
 
-bool polly::canSynthesize(const Value *V, const Scop &S,
-                          const llvm::LoopInfo *LI, ScalarEvolution *SE,
+bool polly::canSynthesize(const Value *V, const Scop &S, ScalarEvolution *SE,
                           Loop *Scope) {
   if (!V || !SE->isSCEVable(V->getType()))
     return false;

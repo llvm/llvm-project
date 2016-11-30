@@ -209,8 +209,8 @@ protected:
     if ((R.getKind() == ObjCRuntime::GNUstep) &&
         (R.getVersion() >= VersionTuple(1, 6))) {
       std::string NameAndAttributes;
-      std::string TypeStr;
-      CGM.getContext().getObjCEncodingForPropertyDecl(PD, Container, TypeStr);
+      std::string TypeStr =
+        CGM.getContext().getObjCEncodingForPropertyDecl(PD, Container);
       NameAndAttributes += '\0';
       NameAndAttributes += TypeStr.length() + 3;
       NameAndAttributes += TypeStr;
@@ -1123,8 +1123,7 @@ llvm::Value *CGObjCGNU::GetSelector(CodeGenFunction &CGF, Selector Sel) {
 
 llvm::Value *CGObjCGNU::GetSelector(CodeGenFunction &CGF,
                                     const ObjCMethodDecl *Method) {
-  std::string SelTypes;
-  CGM.getContext().getObjCEncodingForMethodDecl(Method, SelTypes);
+  std::string SelTypes = CGM.getContext().getObjCEncodingForMethodDecl(Method);
   return GetSelector(CGF, Method->getSelector(), SelTypes);
 }
 
@@ -1804,8 +1803,7 @@ void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
   SmallVector<llvm::Constant*, 16> OptionalInstanceMethodNames;
   SmallVector<llvm::Constant*, 16> OptionalInstanceMethodTypes;
   for (const auto *I : PD->instance_methods()) {
-    std::string TypeStr;
-    Context.getObjCEncodingForMethodDecl(I, TypeStr);
+    std::string TypeStr = Context.getObjCEncodingForMethodDecl(I);
     if (I->getImplementationControl() == ObjCMethodDecl::Optional) {
       OptionalInstanceMethodNames.push_back(
           MakeConstantString(I->getSelector().getAsString()));
@@ -1822,8 +1820,7 @@ void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
   SmallVector<llvm::Constant*, 16> OptionalClassMethodNames;
   SmallVector<llvm::Constant*, 16> OptionalClassMethodTypes;
   for (const auto *I : PD->class_methods()) {
-    std::string TypeStr;
-    Context.getObjCEncodingForMethodDecl(I,TypeStr);
+    std::string TypeStr = Context.getObjCEncodingForMethodDecl(I);
     if (I->getImplementationControl() == ObjCMethodDecl::Optional) {
       OptionalClassMethodNames.push_back(
           MakeConstantString(I->getSelector().getAsString()));
@@ -1892,8 +1889,7 @@ void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
       PushPropertyAttributes(fields, property);
 
       if (ObjCMethodDecl *getter = property->getGetterMethodDecl()) {
-        std::string typeStr;
-        Context.getObjCEncodingForMethodDecl(getter, typeStr);
+        std::string typeStr = Context.getObjCEncodingForMethodDecl(getter);
         llvm::Constant *typeEncoding = MakeConstantString(typeStr);
         InstanceMethodTypes.push_back(typeEncoding);
         fields.add(MakeConstantString(getter->getSelector().getAsString()));
@@ -1903,8 +1899,7 @@ void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
         fields.add(NULLPtr);
       }
       if (ObjCMethodDecl *setter = property->getSetterMethodDecl()) {
-        std::string typeStr;
-        Context.getObjCEncodingForMethodDecl(setter, typeStr);
+        std::string typeStr = Context.getObjCEncodingForMethodDecl(setter);
         llvm::Constant *typeEncoding = MakeConstantString(typeStr);
         InstanceMethodTypes.push_back(typeEncoding);
         fields.add(MakeConstantString(setter->getSelector().getAsString()));
@@ -2045,8 +2040,7 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   SmallVector<llvm::Constant*, 16> InstanceMethodTypes;
   for (const auto *I : OCD->instance_methods()) {
     InstanceMethodSels.push_back(I->getSelector());
-    std::string TypeStr;
-    CGM.getContext().getObjCEncodingForMethodDecl(I,TypeStr);
+    std::string TypeStr = CGM.getContext().getObjCEncodingForMethodDecl(I);
     InstanceMethodTypes.push_back(MakeConstantString(TypeStr));
   }
 
@@ -2055,8 +2049,7 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   SmallVector<llvm::Constant*, 16> ClassMethodTypes;
   for (const auto *I : OCD->class_methods()) {
     ClassMethodSels.push_back(I->getSelector());
-    std::string TypeStr;
-    CGM.getContext().getObjCEncodingForMethodDecl(I,TypeStr);
+    std::string TypeStr = CGM.getContext().getObjCEncodingForMethodDecl(I);
     ClassMethodTypes.push_back(MakeConstantString(TypeStr));
   }
 
@@ -2126,8 +2119,7 @@ llvm::Constant *CGObjCGNU::GeneratePropertyList(const ObjCImplementationDecl *OI
     fields.add(MakePropertyEncodingString(property, OID));
     PushPropertyAttributes(fields, property, isSynthesized, isDynamic);
     if (ObjCMethodDecl *getter = property->getGetterMethodDecl()) {
-      std::string TypeStr;
-      Context.getObjCEncodingForMethodDecl(getter,TypeStr);
+      std::string TypeStr = Context.getObjCEncodingForMethodDecl(getter);
       llvm::Constant *TypeEncoding = MakeConstantString(TypeStr);
       if (isSynthesized) {
         InstanceMethodTypes.push_back(TypeEncoding);
@@ -2140,8 +2132,7 @@ llvm::Constant *CGObjCGNU::GeneratePropertyList(const ObjCImplementationDecl *OI
       fields.add(NULLPtr);
     }
     if (ObjCMethodDecl *setter = property->getSetterMethodDecl()) {
-      std::string TypeStr;
-      Context.getObjCEncodingForMethodDecl(setter,TypeStr);
+      std::string TypeStr = Context.getObjCEncodingForMethodDecl(setter);
       llvm::Constant *TypeEncoding = MakeConstantString(TypeStr);
       if (isSynthesized) {
         InstanceMethodTypes.push_back(TypeEncoding);
@@ -2279,8 +2270,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   SmallVector<llvm::Constant*, 16> InstanceMethodTypes;
   for (const auto *I : OID->instance_methods()) {
     InstanceMethodSels.push_back(I->getSelector());
-    std::string TypeStr;
-    Context.getObjCEncodingForMethodDecl(I,TypeStr);
+    std::string TypeStr = Context.getObjCEncodingForMethodDecl(I);
     InstanceMethodTypes.push_back(MakeConstantString(TypeStr));
   }
 
@@ -2292,8 +2282,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   SmallVector<llvm::Constant*, 16> ClassMethodTypes;
   for (const auto *I : OID->class_methods()) {
     ClassMethodSels.push_back(I->getSelector());
-    std::string TypeStr;
-    Context.getObjCEncodingForMethodDecl(I,TypeStr);
+    std::string TypeStr = Context.getObjCEncodingForMethodDecl(I);
     ClassMethodTypes.push_back(MakeConstantString(TypeStr));
   }
   // Collect the names of referenced protocols

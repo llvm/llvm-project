@@ -457,6 +457,40 @@ TEST_F(ChangeNamespaceTest, FixFunctionNameSpecifiers) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, FixNonCallingFunctionReferences) {
+  std::string Code = "namespace na {\n"
+                     "class A {\n"
+                     "public:\n"
+                     "  static void f() {}\n"
+                     "};\n"
+                     "void a_f() {}\n"
+                     "static void s_f() {}\n"
+                     "namespace nb {\n"
+                     "void f() {\n"
+                     "auto *ref1 = A::f; auto *ref2 = a_f; auto *ref3 = s_f;\n"
+                     "}\n"
+                     "}  // namespace nb\n"
+                     "}  // namespace na\n";
+  std::string Expected =
+      "namespace na {\n"
+      "class A {\n"
+      "public:\n"
+      "  static void f() {}\n"
+      "};\n"
+      "void a_f() {}\n"
+      "static void s_f() {}\n"
+      "\n"
+      "}  // namespace na\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "void f() {\n"
+      "auto *ref1 = na::A::f; auto *ref2 = na::a_f; auto *ref3 = na::s_f;\n"
+      "}\n"
+      "}  // namespace y\n"
+      "}  // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 TEST_F(ChangeNamespaceTest, MoveAndFixGlobalVariables) {
   std::string Code = "namespace na {\n"
                      "int GlobA;\n"

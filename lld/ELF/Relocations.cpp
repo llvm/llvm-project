@@ -90,28 +90,36 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
 // support any relaxations for TLS relocations so by factoring out ARM and MIPS
 // handling in to the separate function we can simplify the code and do not
 // pollute `handleTlsRelocation` by ARM and MIPS `ifs` statements.
-// FIXME: The ARM implementation always adds the module index dynamic
-// relocation even for non-preemptible symbols in applications. For static
-// linking support we must either resolve the module index relocation at static
-// link time, or hard code the module index (1) for the application in the GOT.
 template <class ELFT, class GOT>
 static unsigned handleNoRelaxTlsRelocation(
     GOT *Got, uint32_t Type, SymbolBody &Body, InputSectionBase<ELFT> &C,
     typename ELFT::uint Offset, typename ELFT::uint Addend, RelExpr Expr) {
+  typedef typename ELFT::uint uintX_t;
+  auto addModuleReloc = [](SymbolBody &Body, GOT *Got, uintX_t Off, bool LD) {
+    // The Dynamic TLS Module Index Relocation can be statically resolved to 1
+    // if we know that we are linking an executable. For ARM we resolve the
+    // relocation when writing the Got. MIPS has a custom Got implementation
+    // that writes the Module index in directly.
+    if (!Body.isPreemptible() && !Config->Pic && Config->EMachine == EM_ARM)
+      Got->Relocations.push_back(
+          {R_ABS, Target->TlsModuleIndexRel, Off, 0, &Body});
+    else {
+      SymbolBody *Dest = LD ? nullptr : &Body;
+      In<ELFT>::RelaDyn->addReloc(
+          {Target->TlsModuleIndexRel, Got, Off, false, Dest, 0});
+    }
+  };
   if (Expr == R_MIPS_TLSLD || Expr == R_TLSLD_PC) {
     if (Got->addTlsIndex() && (Config->Pic || Config->EMachine == EM_ARM))
-      In<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Got,
-                                   Got->getTlsIndexOff(), false, nullptr, 0});
+      addModuleReloc(Body, Got, Got->getTlsIndexOff(), true);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
-  typedef typename ELFT::uint uintX_t;
   if (Target->isTlsGlobalDynamicRel(Type)) {
     if (Got->addDynTlsEntry(Body) &&
         (Body.isPreemptible() || Config->EMachine == EM_ARM)) {
       uintX_t Off = Got->getGlobalDynOffset(Body);
-      In<ELFT>::RelaDyn->addReloc(
-          {Target->TlsModuleIndexRel, Got, Off, false, &Body, 0});
+      addModuleReloc(Body, Got, Off, false);
       if (Body.isPreemptible())
         In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Got,
                                      Off + (uintX_t)sizeof(uintX_t), false,
@@ -746,9 +754,11 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       In<ELFT>::Got->addEntry(Body);
       uintX_t Off = Body.getGotOffset<ELFT>();
       uint32_t DynType;
-      if (Body.isTls())
+      RelExpr GotRE = R_ABS;
+      if (Body.isTls()) {
         DynType = Target->TlsGotRel;
-      else if (!Preemptible && Config->Pic && !isAbsolute<ELFT>(Body))
+        GotRE = R_TLS;
+      } else if (!Preemptible && Config->Pic && !isAbsolute<ELFT>(Body))
         DynType = Target->RelativeRel;
       else
         DynType = Target->GotRel;
@@ -756,7 +766,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body)))
         AddDyn({DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
       else
-        In<ELFT>::Got->Relocations.push_back({R_ABS, DynType, Off, 0, &Body});
+        In<ELFT>::Got->Relocations.push_back({GotRE, DynType, Off, 0, &Body});
       continue;
     }
   }

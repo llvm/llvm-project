@@ -1711,6 +1711,9 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_TLS_TPOFF32:
     write32le(Loc, Val);
     break;
+  case R_ARM_TLS_DTPMOD32:
+    write32le(Loc, 1);
+    break;
   case R_ARM_PREL31:
     checkInt<31>(Loc, Val, Type);
     write32le(Loc, (read32le(Loc) & 0x80000000) | (Val & ~0x80000000));

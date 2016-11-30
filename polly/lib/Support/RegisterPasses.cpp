@@ -23,6 +23,7 @@
 #include "polly/Canonicalization.h"
 #include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/CodegenCleanup.h"
+#include "polly/DeLICM.h"
 #include "polly/DependenceInfo.h"
 #include "polly/FlattenSchedule.h"
 #include "polly/LinkAllPasses.h"
@@ -159,6 +160,11 @@ static cl::opt<bool>
                          cl::desc("Enable polyhedral interface of Polly"),
                          cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    EnableDeLICM("polly-enable-delicm",
+                 cl::desc("Eliminate scalar loop carried dependences"),
+                 cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
 namespace polly {
 void initializePollyPasses(PassRegistry &Registry) {
   initializeCodeGenerationPass(Registry);
@@ -181,6 +187,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeScopInfoWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
+  initializeDeLICMPass(Registry);
 }
 
 /// Register Polly passes such that they form a polyhedral optimizer.
@@ -227,6 +234,9 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   PM.add(polly::createScopInfoRegionPassPass());
   if (EnablePolyhedralInfo)
     PM.add(polly::createPolyhedralInfoPass());
+
+  if (EnableDeLICM)
+    PM.add(polly::createDeLICMPass());
 
   if (ImportJScop)
     PM.add(polly::createJSONImporterPass());

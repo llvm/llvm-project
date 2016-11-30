@@ -21,6 +21,7 @@
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
@@ -489,6 +490,14 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
   // updates the output section size.
   auto &ICmd = cast<InputSectionDescription>(Base);
   for (InputSectionData *ID : ICmd.Sections) {
+    // We tentatively added all synthetic sections at the beginning and removed
+    // empty ones afterwards (because there is no way to know whether they were
+    // going be empty or not other than actually running linker scripts.)
+    // We need to ignore remains of empty sections.
+    if (auto *Sec = dyn_cast<SyntheticSection<ELFT>>(ID))
+      if (Sec->empty())
+        continue;
+
     auto *IB = static_cast<InputSectionBase<ELFT> *>(ID);
     switchTo(IB->OutSec);
     if (auto *I = dyn_cast<InputSection<ELFT>>(IB))

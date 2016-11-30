@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <array>
 
 // reference operator[] (size_type)
@@ -40,8 +39,14 @@ int main()
         r2 = 7.5;
         assert(c.back() == 7.5);
 
-        try { (void) c.at(3); }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try
+        {
+            (void) c.at(3);
+            assert(false);
+        }
         catch (const std::out_of_range &) {}
+#endif
     }
     {
         typedef double T;
@@ -53,8 +58,14 @@ int main()
         C::const_reference r2 = c.at(2);
         assert(r2 == 3.5);
 
-        try { (void) c.at(3); }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try
+        {
+            (void) c.at(3);
+            assert(false);
+        }
         catch (const std::out_of_range &) {}
+#endif
     }
 
 #if TEST_STD_VER > 11

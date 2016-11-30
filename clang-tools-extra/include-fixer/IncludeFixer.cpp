@@ -136,10 +136,10 @@ static void addDiagnosticsForContext(TypoCorrection &Correction,
   const tooling::Replacement &Placed = *Reps->begin();
 
   auto Begin = StartOfFile.getLocWithOffset(Placed.getOffset());
-  auto End = Begin.getLocWithOffset(Placed.getLength());
+  auto End = Begin.getLocWithOffset(std::max(0, (int)Placed.getLength() - 1));
   PartialDiagnostic PD(DiagID, Ctx.getDiagAllocator());
   PD << Context.getHeaderInfos().front().Header
-     << FixItHint::CreateReplacement(SourceRange(Begin, End),
+     << FixItHint::CreateReplacement(CharSourceRange::getCharRange(Begin, End),
                                      Placed.getReplacementText());
   Correction.addExtraDiagnostic(std::move(PD));
 }

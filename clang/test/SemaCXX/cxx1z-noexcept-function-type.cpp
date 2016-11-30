@@ -10,10 +10,9 @@ template<typename T> void redecl1() noexcept(noexcept(T())) {} // expected-error
 template<bool A, bool B> void redecl2() noexcept(A); // expected-note {{previous}}
 template<bool A, bool B> void redecl2() noexcept(B); // expected-error {{conflicting types}}
 
-// These have the same canonical type.
-// FIXME: It's not clear whether this is supposed to be valid.
-template<typename A, typename B> void redecl3() throw(A);
-template<typename A, typename B> void redecl3() throw(B);
+// These have the same canonical type, but are still different.
+template<typename A, typename B> void redecl3() throw(A); // expected-note {{previous}}
+template<typename A, typename B> void redecl3() throw(B); // expected-error {{does not match previous}}
 
 typedef int I;
 template<bool B> void redecl4(I) noexcept(B);
@@ -96,4 +95,14 @@ namespace ImplicitExceptionSpec {
     void f(const S &s = S());
   };
   S::~S() {}
+}
+
+namespace Builtins {
+  // Pick two functions that ought to have the same noexceptness.
+  extern "C" int strcmp(const char *, const char *);
+  extern "C" int strncmp(const char *, const char *, decltype(sizeof(0))) noexcept;
+
+  // Check we recognized both as builtins.
+  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)];
+  typedef int arr[3];
 }

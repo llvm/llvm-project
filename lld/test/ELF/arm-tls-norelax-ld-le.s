@@ -2,7 +2,7 @@
 // RUN: ld.lld %t1 --shared -o %t1.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
 // RUN: ld.lld %t1.so %t.o -o %t
-// RUN: llvm-readobj -s -dyn-relocations %t | FileCheck %s
+// RUN: llvm-objdump -s %t | FileCheck %s
 // REQUIRES: arm
 
  .global __tls_get_addr
@@ -31,6 +31,5 @@ y:
 x:
  .word   10
 
-// CHECK: Dynamic Relocations {
-// CHECK-NEXT:   0x1207C R_ARM_TLS_DTPMOD32 - 0x0
-// CHECK-NEXT:   0x1300C R_ARM_JUMP_SLOT __tls_get_addr 0x0
+// CHECK: Contents of section .got:
+// CHECK-NEXT:  12064 01000000 00000000

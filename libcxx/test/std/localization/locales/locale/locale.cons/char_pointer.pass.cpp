@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // REQUIRES: locale.ru_RU.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
 
@@ -21,6 +20,8 @@
 
 #include "count_new.hpp"
 #include "platform_support.h" // locale name macros
+
+#include "test_macros.h"
 
 
 void check(const std::locale& loc)
@@ -70,6 +71,7 @@ int main()
         check(loc3);
         assert(!(loc == loc3));
         assert(loc != loc3);
+#ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
             std::locale((const char*)0);
@@ -86,6 +88,7 @@ int main()
         catch (std::runtime_error&)
         {
         }
+#endif
         std::locale ok("");
     }
     assert(globalMemCounter.checkOutstandingNewEq(0));

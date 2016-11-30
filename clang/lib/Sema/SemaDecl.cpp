@@ -2955,15 +2955,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     // but do not necessarily update the type of New.
     if (CheckEquivalentExceptionSpec(Old, New))
       return true;
-    // If exceptions are disabled, we might not have resolved the exception spec
-    // of one or both declarations. Do so now in C++1z, so that we can properly
-    // compare the types.
-    if (getLangOpts().CPlusPlus1z) {
-      for (QualType T : {Old->getType(), New->getType()})
-        if (auto *FPT = T->getAs<FunctionProtoType>())
-          if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
-            ResolveExceptionSpec(New->getLocation(), FPT);
-    }
     OldQType = Context.getCanonicalType(Old->getType());
     NewQType = Context.getCanonicalType(New->getType());
 
@@ -5657,6 +5648,9 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
                                            NamedDecl *NewDecl,
                                            bool IsSpecialization,
                                            bool IsDefinition) {
+  if (OldDecl->isInvalidDecl())
+    return;
+
   if (TemplateDecl *OldTD = dyn_cast<TemplateDecl>(OldDecl)) {
     OldDecl = OldTD->getTemplatedDecl();
     if (!IsSpecialization)
@@ -9031,9 +9025,25 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       LookupPredefedObjCSuperType(*this, S, NewFD->getIdentifier());
       QualType T = Context.GetBuiltinType(BuiltinID, Error);
       if (!T.isNull() && !Context.hasSameType(T, NewFD->getType())) {
-        // The type of this function differs from the type of the builtin,
-        // so forget about the builtin entirely.
-        Context.BuiltinInfo.forgetBuiltin(BuiltinID, Context.Idents);
+        auto WithoutExceptionSpec = [&](QualType T) -> QualType {
+          auto *Proto = T->getAs<FunctionProtoType>();
+          if (!Proto)
+            return T;
+          return Context.getFunctionType(
+              Proto->getReturnType(), Proto->getParamTypes(),
+              Proto->getExtProtoInfo().withExceptionSpec(EST_None));
+        };
+
+        // If the type of the builtin differs only in its exception
+        // specification, that's OK.
+        // FIXME: If the types do differ in this way, it would be better to
+        // retain the 'noexcept' form of the type.
+        if (!getLangOpts().CPlusPlus1z ||
+            !Context.hasSameType(WithoutExceptionSpec(T),
+                                 WithoutExceptionSpec(NewFD->getType())))
+          // The type of this function differs from the type of the builtin,
+          // so forget about the builtin entirely.
+          Context.BuiltinInfo.forgetBuiltin(BuiltinID, Context.Idents);
       }
     }
 
