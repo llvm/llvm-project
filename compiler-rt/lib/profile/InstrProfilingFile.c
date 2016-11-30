@@ -300,18 +300,18 @@ static int parseFilenamePattern(const char *FilenamePat,
       if (FilenamePat[++I] == 'p') {
         if (!NumPids++) {
           if (snprintf(PidChars, MAX_PID_SIZE, "%d", getpid()) <= 0) {
-            PROF_WARN(
-                "Unable to parse filename pattern %s. Using the default name.",
-                FilenamePat);
+            PROF_WARN("Unable to get pid for filename pattern %s. Using the "
+                      "default name.",
+                      FilenamePat);
             return -1;
           }
         }
       } else if (FilenamePat[I] == 'h') {
         if (!NumHosts++)
           if (COMPILER_RT_GETHOSTNAME(Hostname, COMPILER_RT_MAX_HOSTLEN)) {
-            PROF_WARN(
-                "Unable to parse filename pattern %s. Using the default name.",
-                FilenamePat);
+            PROF_WARN("Unable to get hostname for filename pattern %s. Using "
+                      "the default name.",
+                      FilenamePat);
             return -1;
           }
       } else if (containsMergeSpecifier(FilenamePat, I)) {
