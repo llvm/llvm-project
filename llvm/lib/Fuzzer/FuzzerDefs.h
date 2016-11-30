@@ -20,14 +20,22 @@
 
 // Platform detection.
 #ifdef __linux__
-#define LIBFUZZER_LINUX 1
 #define LIBFUZZER_APPLE 0
+#define LIBFUZZER_LINUX 1
+#define LIBFUZZER_WINDOWS 0
 #elif __APPLE__
-#define LIBFUZZER_LINUX 0
 #define LIBFUZZER_APPLE 1
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_WINDOWS 0
+#elif _WIN32
+#define LIBFUZZER_APPLE 0
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_WINDOWS 1
 #else
 #error "Support for your platform has not been implemented"
 #endif
+
+#define LIBFUZZER_POSIX LIBFUZZER_APPLE || LIBFUZZER_LINUX
 
 #ifdef __x86_64
 #define ATTRIBUTE_TARGET_POPCNT __attribute__((target("popcnt")))

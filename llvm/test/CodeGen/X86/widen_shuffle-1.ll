@@ -111,16 +111,14 @@ define void @shuf5(<8 x i8>* %p) nounwind {
 ; X86-LABEL: shuf5:
 ; X86:       # BB#0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movdqa {{.*#+}} xmm0 = [33,33,33,33,33,33,33,33]
-; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; X86-NEXT:    movq %xmm0, (%eax)
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf5:
 ; X64:       # BB#0:
-; X64-NEXT:    movdqa {{.*#+}} xmm0 = [33,33,33,33,33,33,33,33]
-; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; X64-NEXT:    movq %xmm0, (%rdi)
+; X64-NEXT:    movq {{.*}}(%rip), %rax
+; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    retq
   %v = shufflevector <2 x i8> <i8 4, i8 33>, <2 x i8> undef, <8 x i32> <i32 1, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   store <8 x i8> %v, <8 x i8>* %p, align 8

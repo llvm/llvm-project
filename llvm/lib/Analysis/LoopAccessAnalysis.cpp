@@ -12,19 +12,61 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPassManager.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-accesses"
@@ -467,6 +509,7 @@ void RuntimePointerChecking::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 namespace {
+
 /// \brief Analyses memory accesses in a loop.
 ///
 /// Checks whether run time pointer checks are needed and builds sets for data
@@ -1806,6 +1849,7 @@ static Instruction *getFirstInst(Instruction *FirstInst, Value *V,
 }
 
 namespace {
+
 /// \brief IR Values for the lower and upper bounds of a pointer evolution.  We
 /// need to use value-handles because SCEV expansion can invalidate previously
 /// expanded values.  Thus expansion of a pointer can invalidate the bounds for
@@ -1814,6 +1858,7 @@ struct PointerBounds {
   TrackingVH<Value> Start;
   TrackingVH<Value> End;
 };
+
 } // end anonymous namespace
 
 /// \brief Expand code for the lower and upper bound of the pointer group \p CG
@@ -2101,7 +2146,9 @@ PreservedAnalyses LoopAccessInfoPrinterPass::run(Loop &L,
 }
 
 namespace llvm {
+
   Pass *createLAAPass() {
     return new LoopAccessLegacyAnalysis();
   }
-}
+
+} // end namespace llvm

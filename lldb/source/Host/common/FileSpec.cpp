@@ -544,7 +544,8 @@ bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full,
 FileSpec FileSpec::GetNormalizedPath() const {
   // Fast path. Do nothing if the path is not interesting.
   if (!m_directory.GetStringRef().contains(".") &&
-      (m_filename.GetStringRef() != ".." && m_filename.GetStringRef() != "."))
+      !m_directory.GetStringRef().contains("//") &&
+      m_filename.GetStringRef() != ".." && m_filename.GetStringRef() != ".")
     return *this;
 
   llvm::SmallString<64> path, result;

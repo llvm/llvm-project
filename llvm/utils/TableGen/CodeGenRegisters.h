@@ -18,20 +18,28 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
-#include <cstdlib>
+#include <cassert>
+#include <cstdint>
 #include <deque>
 #include <list>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
+
   class CodeGenRegBank;
   template <typename T, typename Vector, typename Set> class SetVector;
 
@@ -41,6 +49,7 @@ namespace llvm {
   struct MaskRolPair {
     unsigned Mask;
     uint8_t RotateLeft;
+
     bool operator==(const MaskRolPair Other) const {
       return Mask == Other.Mask && RotateLeft == Other.RotateLeft;
     }
@@ -266,7 +275,7 @@ namespace llvm {
   class CodeGenRegisterClass {
     CodeGenRegister::Vec Members;
     // Allocation orders. Order[0] always contains all registers in Members.
-    std::vector<SmallVector<Record*, 16> > Orders;
+    std::vector<SmallVector<Record*, 16>> Orders;
     // Bit mask of sub-classes including this, indexed by their EnumValue.
     BitVector SubClasses;
     // List of super-classes, topologocally ordered to have the larger classes
@@ -463,10 +472,10 @@ namespace llvm {
 
     std::string Name;
     std::vector<unsigned> Units;
-    unsigned Weight; // Cache the sum of all unit weights.
-    unsigned Order;  // Cache the sort key.
+    unsigned Weight = 0; // Cache the sum of all unit weights.
+    unsigned Order = 0;  // Cache the sort key.
 
-    RegUnitSet() : Weight(0), Order(0) {}
+    RegUnitSet() = default;
   };
 
   // Base vector for identifying TopoSigs. The contents uniquely identify a
@@ -515,7 +524,7 @@ namespace llvm {
     // NOTE: This could grow beyond the number of register classes when we map
     // register units to lists of unit sets. If the list of unit sets does not
     // already exist for a register class, we create a new entry in this vector.
-    std::vector<std::vector<unsigned> > RegClassUnitSets;
+    std::vector<std::vector<unsigned>> RegClassUnitSets;
 
     // Give each register unit set an order based on sorting criteria.
     std::vector<unsigned> RegUnitSetOrder;
@@ -532,6 +541,7 @@ namespace llvm {
     void computeInferredRegisterClasses();
     void inferCommonSubClass(CodeGenRegisterClass *RC);
     void inferSubClassWithSubReg(CodeGenRegisterClass *RC);
+
     void inferMatchingSuperRegClass(CodeGenRegisterClass *RC) {
       inferMatchingSuperRegClass(RC, RegClasses.begin());
     }
@@ -590,6 +600,7 @@ namespace llvm {
     }
 
     const std::deque<CodeGenRegister> &getRegisters() { return Registers; }
+
     const StringMap<CodeGenRegister*> &getRegistersByName() {
       return RegistersByName;
     }
@@ -674,6 +685,7 @@ namespace llvm {
     unsigned getRegSetIDAt(unsigned Order) const {
       return RegUnitSetOrder[Order];
     }
+
     const RegUnitSet &getRegSetAt(unsigned Order) const {
       return RegUnitSets[RegUnitSetOrder[Order]];
     }
@@ -723,6 +735,7 @@ namespace llvm {
     // another sub-register with the same or larger lane mask.
     unsigned CoveringLanes;
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H

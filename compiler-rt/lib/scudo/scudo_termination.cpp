@@ -39,4 +39,4 @@ void NORETURN CheckFailed(const char *File, int Line, const char *Condition,
                           File, Line, Condition, Value1, Value2);
 }
 
-} // namespace __sanitizer
+}  // namespace __sanitizer

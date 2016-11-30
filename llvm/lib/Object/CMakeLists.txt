@@ -15,6 +15,7 @@ add_llvm_library(LLVMObject
   RecordStreamer.cpp
   SymbolicFile.cpp
   SymbolSize.cpp
+  WasmObjectFile.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Object
