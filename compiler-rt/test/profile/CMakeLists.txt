@@ -14,13 +14,7 @@ endif()
 
 foreach(arch ${PROFILE_TEST_ARCH})
   set(PROFILE_TEST_TARGET_ARCH ${arch})
-  if(${arch} MATCHES "arm|aarch64")
-    # This is only true if we're cross-compiling.
-    set(PROFILE_TEST_TARGET_CFLAGS ${COMPILER_RT_TEST_COMPILER_CFLAGS})
-  else()
-    get_target_flags_for_arch(${arch} PROFILE_TEST_TARGET_CFLAGS)
-    string(REPLACE ";" " " PROFILE_TEST_TARGET_CFLAGS "${PROFILE_TEST_TARGET_CFLAGS}")
-  endif()
+  get_test_cc_for_arch(${arch} PROFILE_TEST_TARGET_CC PROFILE_TEST_TARGET_CFLAGS)
   set(CONFIG_NAME Profile-${arch})
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
