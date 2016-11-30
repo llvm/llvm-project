@@ -262,19 +262,36 @@ struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
   void Print();
 };
 
+struct ErrorODRViolation : ErrorBase {
+  __asan_global global1, global2;
+  u32 stack_id1, stack_id2;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorODRViolation() = default;
+  ErrorODRViolation(u32 tid, const __asan_global *g1, u32 stack_id1_,
+                    const __asan_global *g2, u32 stack_id2_)
+      : ErrorBase(tid),
+        global1(*g1),
+        global2(*g2),
+        stack_id1(stack_id1_),
+        stack_id2(stack_id2_) {}
+  void Print();
+};
+
 // clang-format off
-#define ASAN_FOR_EACH_ERROR_KIND(macro)    \
-  macro(StackOverflow)                     \
-  macro(DeadlySignal)                      \
-  macro(DoubleFree)                        \
-  macro(NewDeleteSizeMismatch)             \
-  macro(FreeNotMalloced)                   \
-  macro(AllocTypeMismatch)                 \
-  macro(MallocUsableSizeNotOwned)          \
-  macro(SanitizerGetAllocatedSizeNotOwned) \
-  macro(StringFunctionMemoryRangesOverlap) \
-  macro(StringFunctionSizeOverflow)        \
-  macro(BadParamsToAnnotateContiguousContainer)
+#define ASAN_FOR_EACH_ERROR_KIND(macro)         \
+  macro(StackOverflow)                          \
+  macro(DeadlySignal)                           \
+  macro(DoubleFree)                             \
+  macro(NewDeleteSizeMismatch)                  \
+  macro(FreeNotMalloced)                        \
+  macro(AllocTypeMismatch)                      \
+  macro(MallocUsableSizeNotOwned)               \
+  macro(SanitizerGetAllocatedSizeNotOwned)      \
+  macro(StringFunctionMemoryRangesOverlap)      \
+  macro(StringFunctionSizeOverflow)             \
+  macro(BadParamsToAnnotateContiguousContainer) \
+  macro(ODRViolation)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,
