@@ -463,6 +463,9 @@ public:
   ImplementationControl getImplementationControl() const {
     return ImplementationControl(DeclImplementation);
   }
+  bool isOptional() const {
+    return getImplementationControl() == Optional;
+  }
 
   /// Returns true if this specific method declaration is marked with the
   /// designated initializer attribute.
