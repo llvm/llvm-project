@@ -8,10 +8,8 @@
 /// \brief vector builtin expansion engine for clp.
 //
 //===----------------------------------------------------------------------===//
-#define DEBUG_TYPE "amdclpvectorexpansion"
-
+#include "AMDGPU.h"
 #include "llvm/Config/config.h"
-
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -23,16 +21,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "AMDGPU.h"
-
 #include <sstream>
 
+#define DEBUG_TYPE "amdclpvectorexpansion"
+
 using namespace llvm;
-
-//===----------------------------------------------------------------------===//
-// macro for verbose output
-
-#define PRIVATE_ADDRESS (0)
 
 // Copied from amd_ocl_builtindef.h
 // descriptor for a parameter type or return type
@@ -67,7 +60,7 @@ typedef enum {
 #define MaxNumPara (3)
 
 struct a_builtinfunc {
-  char *name;    // the name of the opencl builtin function
+  const char *name;    // the name of the opencl builtin function
   char leaderId; // this is the id for the leading parameter, range from
                  // 1..LastParam,
   //-1 indicate nonoverloading
@@ -98,185 +91,185 @@ typedef struct a_builtinfunc a_builtinfunc_t;
 // (NULL not available)
 //
 static a_builtinfunc_t mathFunc[] = {
-    {(char *)"acos", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"acosh", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"acospi", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"asin", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"asinh", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"asinpi", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"atan", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"atan2", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"atanh", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"atanpi", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"atan2pi", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"acos", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"acosh", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"acospi", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"asin", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"asinh", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"asinpi", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"atan", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"atan2", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"atanh", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"atanpi", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"atan2pi", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
 
-    {(char *)"cbrt", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"ceil", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"copysign", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"cos", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"cosh", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"cospi", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"erfc", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"erf", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"cbrt", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"ceil", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"copysign", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"cos", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"cosh", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"cospi", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"erfc", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"erf", 1, prttype1(tdFollow, tdAnyFloat)},
 
-    {(char *)"exp", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"exp2", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"exp10", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"expm1", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"fabs", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"fdim", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"floor", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"exp", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"exp2", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"exp10", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"expm1", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"fabs", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"fdim", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"floor", 1, prttype1(tdFollow, tdAnyFloat)},
 
-    {(char *)"fma", 1, prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
-    {(char *)"__builtin_fma", 1,
+    {(const char *)"fma", 1, prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
+    {(const char *)"__builtin_fma", 1,
      prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
     // in the spec, fmax/fmin is lised in three entry
     // we cover the last two entry by allowing scalar=>vector promotion
-    {(char *)"fmax", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"fmin", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"fmod", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"fmax", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"fmin", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"fmod", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
 
-    {(char *)"fract", 2, prttype2(tdFollowPele, tdFollowPele, tdAnyFloat_PLG)},
+    {(const char *)"fract", 2, prttype2(tdFollowPele, tdFollowPele, tdAnyFloat_PLG)},
     // fexp is described in group2
-    {(char *)"hypot", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"ilogb", 1, prttype1(tdFollowVsInt, tdAnyFloat)},
-    {(char *)"ldexp", 1, prttype2(tdFollow, tdAnyFloat, tdFollowVsInt)},
-    {(char *)"lgamma", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"hypot", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"ilogb", 1, prttype1(tdFollowVsInt, tdAnyFloat)},
+    {(const char *)"ldexp", 1, prttype2(tdFollow, tdAnyFloat, tdFollowVsInt)},
+    {(const char *)"lgamma", 1, prttype1(tdFollow, tdAnyFloat)},
     // lgamma_r is described in group2
-    {(char *)"log", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"log2", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"log10", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"log1p", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"logb", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"mad", 1, prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
-    {(char *)"maxmag", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"minmag", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"modf", 2, prttype2(tdFollowPele, tdFollowPele, tdAnyFloat_PLG)},
-    {(char *)"nan", 1,
+    {(const char *)"log", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"log2", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"log10", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"log1p", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"logb", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"mad", 1, prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
+    {(const char *)"maxmag", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"minmag", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"modf", 2, prttype2(tdFollowPele, tdFollowPele, tdAnyFloat_PLG)},
+    {(const char *)"nan", 1,
      prttype1(tdFollowVsHalfFloatDoublen, tdAnyUintk16_32_64)},
-    {(char *)"nextafter", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"pow", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"pown", 1, prttype2(tdFollow, tdAnyFloat, tdFollowVsInt)},
-    {(char *)"powr", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"remainder", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"nextafter", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"pow", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"pown", 1, prttype2(tdFollow, tdAnyFloat, tdFollowVsInt)},
+    {(const char *)"powr", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"remainder", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
     // remquo is described in group2
-    {(char *)"rint", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"rootn", 1, prttype2(tdFollow, tdAnyFloat, tdFollowVsInt)},
-    {(char *)"round", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"rsqrt", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"sin", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"sincos", 2, prttype2(tdFollowPele, tdFollowPele, tdAnyFloat_PLG)},
-    {(char *)"sinh", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"sinpi", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"sqrt", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"tan", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"tanh", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"tanpi", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"tgamma", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"trunc", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"rint", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"rootn", 1, prttype2(tdFollow, tdAnyFloat, tdFollowVsInt)},
+    {(const char *)"round", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"rsqrt", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"sin", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"sincos", 2, prttype2(tdFollowPele, tdFollowPele, tdAnyFloat_PLG)},
+    {(const char *)"sinh", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"sinpi", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"sqrt", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"tan", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"tanh", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"tanpi", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"tgamma", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"trunc", 1, prttype1(tdFollow, tdAnyFloat)},
 
-    {(char *)"half_cos", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_divide", 1, prttype2(tdFollow, tdAnySingle, tdFollow)},
-    {(char *)"half_exp", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_exp2", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_exp10", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_log", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_log2", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_log10", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_powr", 1, prttype2(tdFollow, tdAnySingle, tdFollow)},
-    {(char *)"half_recip", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_rsqrt", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_sin", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_sqrt", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"half_tan", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_cos", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_divide", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"native_exp", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_exp2", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_exp10", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_log", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_log2", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_log10", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_powr", 1, prttype2(tdFollow, tdAnySingle, tdFollow)},
-    {(char *)"native_recip", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"native_rsqrt", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"native_sin", 1, prttype1(tdFollow, tdAnySingle)},
-    {(char *)"native_sqrt", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"native_tan", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_cos", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_divide", 1, prttype2(tdFollow, tdAnySingle, tdFollow)},
+    {(const char *)"half_exp", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_exp2", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_exp10", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_log", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_log2", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_log10", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_powr", 1, prttype2(tdFollow, tdAnySingle, tdFollow)},
+    {(const char *)"half_recip", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_rsqrt", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_sin", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_sqrt", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"half_tan", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_cos", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_divide", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"native_exp", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_exp2", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_exp10", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_log", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_log2", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_log10", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_powr", 1, prttype2(tdFollow, tdAnySingle, tdFollow)},
+    {(const char *)"native_recip", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"native_rsqrt", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"native_sin", 1, prttype1(tdFollow, tdAnySingle)},
+    {(const char *)"native_sqrt", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"native_tan", 1, prttype1(tdFollow, tdAnySingle)},
     endFuncGroups};
 
 // section 6.12.3 integer functions
 static a_builtinfunc_t integerFunc[] = {
-    {(char *)"abs", 1, prttype1(tdFollowKu, tdAnyInt)},
-    {(char *)"abs_diff", 1, prttype2(tdFollowKu, tdAnyInt, tdFollow)},
-    {(char *)"add_sat", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
-    {(char *)"hadd", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
-    {(char *)"rhadd", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
-    {(char *)"clamp", 1, prttype3(tdFollow, tdAnyIntFloat, tdFollow, tdFollow)},
-    {(char *)"clz", 1, prttype1(tdFollow, tdAnyInt)},
-    {(char *)"ctz", 1, prttype1(tdFollow, tdAnyInt)},
-    {(char *)"mad_hi", 1, prttype3(tdFollow, tdAnyInt, tdFollow, tdFollow)},
-    {(char *)"mad_sat", 1, prttype3(tdFollow, tdAnyInt, tdFollow, tdFollow)},
-    {(char *)"max", 1, prttype2(tdFollow, tdAnyIntFloat, tdFollow)},
-    {(char *)"min", 1, prttype2(tdFollow, tdAnyIntFloat, tdFollow)},
-    {(char *)"mul_hi", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
-    {(char *)"rotate", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
-    {(char *)"sub_sat", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
-    {(char *)"upsample", 1, prttype2(tdFollowKn, tdAnyIntk8_32, tdFollowKu)},
-    {(char *)"popcount", 1, prttype1(tdFollow, tdAnyInt)},
-    {(char *)"mad24", 1,
+    {(const char *)"abs", 1, prttype1(tdFollowKu, tdAnyInt)},
+    {(const char *)"abs_diff", 1, prttype2(tdFollowKu, tdAnyInt, tdFollow)},
+    {(const char *)"add_sat", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
+    {(const char *)"hadd", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
+    {(const char *)"rhadd", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
+    {(const char *)"clamp", 1, prttype3(tdFollow, tdAnyIntFloat, tdFollow, tdFollow)},
+    {(const char *)"clz", 1, prttype1(tdFollow, tdAnyInt)},
+    {(const char *)"ctz", 1, prttype1(tdFollow, tdAnyInt)},
+    {(const char *)"mad_hi", 1, prttype3(tdFollow, tdAnyInt, tdFollow, tdFollow)},
+    {(const char *)"mad_sat", 1, prttype3(tdFollow, tdAnyInt, tdFollow, tdFollow)},
+    {(const char *)"max", 1, prttype2(tdFollow, tdAnyIntFloat, tdFollow)},
+    {(const char *)"min", 1, prttype2(tdFollow, tdAnyIntFloat, tdFollow)},
+    {(const char *)"mul_hi", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
+    {(const char *)"rotate", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
+    {(const char *)"sub_sat", 1, prttype2(tdFollow, tdAnyInt, tdFollow)},
+    {(const char *)"upsample", 1, prttype2(tdFollowKn, tdAnyIntk8_32, tdFollowKu)},
+    {(const char *)"popcount", 1, prttype1(tdFollow, tdAnyInt)},
+    {(const char *)"mad24", 1,
      prttype3(tdFollow, tdAnyIntk32_32, tdFollow, tdFollow)},
-    {(char *)"mul24", 1, prttype2(tdFollow, tdAnyIntk32_32, tdFollow)},
+    {(const char *)"mul24", 1, prttype2(tdFollow, tdAnyIntk32_32, tdFollow)},
     endFuncGroups};
 
 // section 6.12.4 common functions
 static a_builtinfunc_t commonFunc[] = {
     // clamp is described in integer function
-    {(char *)"degrees", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"degrees", 1, prttype1(tdFollow, tdAnyFloat)},
     // max, min is described in integer function
-    {(char *)"mix", 1, prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
-    {(char *)"radians", 1, prttype1(tdFollow, tdAnyFloat)},
-    {(char *)"step", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
-    {(char *)"smoothstep", 1,
+    {(const char *)"mix", 1, prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
+    {(const char *)"radians", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"step", 1, prttype2(tdFollow, tdAnyFloat, tdFollow)},
+    {(const char *)"smoothstep", 1,
      prttype3(tdFollow, tdAnyFloat, tdFollow, tdFollow)},
-    {(char *)"sign", 1, prttype1(tdFollow, tdAnyFloat)},
+    {(const char *)"sign", 1, prttype1(tdFollow, tdAnyFloat)},
     endFuncGroups};
 
 // section 6.12.6 relational functions
 // 1.2 spec has a problem in isequal(double, double) return type
 static a_builtinfunc_t relationalFunc[] = {
-    {(char *)"isequal", 1,
+    {(const char *)"isequal", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"isnotequal", 1,
+    {(const char *)"isnotequal", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"isgreater", 1,
+    {(const char *)"isgreater", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"isgreaterequal", 1,
+    {(const char *)"isgreaterequal", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"isless", 1,
+    {(const char *)"isless", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"islessequal", 1,
+    {(const char *)"islessequal", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"islessgreater", 1,
+    {(const char *)"islessgreater", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"isfinite", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
-    {(char *)"isinf", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
-    {(char *)"isnan", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
-    {(char *)"isnormal", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
-    {(char *)"isordered", 1,
+    {(const char *)"isfinite", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
+    {(const char *)"isinf", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
+    {(const char *)"isnan", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
+    {(const char *)"isnormal", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
+    {(const char *)"isordered", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"isunordered", 1,
+    {(const char *)"isunordered", 1,
      prttype2(tdFollowVsShortIntLongn, tdAnyFloat, tdFollow)},
-    {(char *)"signbit", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
-    {(char *)"any", 1, prttype1(tdInt, tdAnySint)},
-    {(char *)"all", 1, prttype1(tdInt, tdAnySint)},
-    {(char *)"bitselect", 1,
+    {(const char *)"signbit", 1, prttype1(tdFollowVsShortIntLongn, tdAnyFloat)},
+    {(const char *)"any", 1, prttype1(tdInt, tdAnySint)},
+    {(const char *)"all", 1, prttype1(tdInt, tdAnySint)},
+    {(const char *)"bitselect", 1,
      prttype3(tdFollow, tdAnyIntFloat, tdFollow, tdFollow)},
     // select is described in group2
     endFuncGroups};
 
 static a_builtinfunc_t pragmaEnableFunc[] = {
-    {(char *)"popcnt", 1, prttype1(tdFollow, tdAnyInt)}, endFuncGroups};
+    {(const char *)"popcnt", 1, prttype1(tdFollow, tdAnyInt)}, endFuncGroups};
 
 //===----------------------------------------------------------------------===//
 // info that describes what to expand
@@ -351,10 +344,6 @@ an_typedes_t handledOtherTypeDes[] = {
     tdInvalid // 0
 };
 
-static bool OtherTypeDesFollowPointer(an_typedes_t typeDes) {
-  return typeDes == tdFollowPele;
-} // typeDesFollowPointer
-
 static bool leadTypeDesIsPointer(an_typedes_t typeDes) {
   return typeDes == tdAnyFloat_PLG;
 } // leadTypeDesIsPointer
@@ -392,8 +381,8 @@ static Type *getNextTypeImp(Type *curTy, int curVecSize, int nextVecSize,
 static Type *getNextLeadType(Type *curLeadTy, an_typedes_t typeDes,
                              int curVecSize, int nextVecSize,
                              char nextAddrSpace) {
-  assert((leadTypeDesIsPointer(typeDes) && isa<PointerType>(curLeadTy)) ||
-         isa<PointerType>(curLeadTy) == false &&
+  assert(((leadTypeDesIsPointer(typeDes) && isa<PointerType>(curLeadTy)) ||
+         isa<PointerType>(curLeadTy) == false) &&
              "problem with builtin description");
 
   return getNextTypeImp(curLeadTy, curVecSize, nextVecSize,
@@ -425,14 +414,14 @@ static bool canHandled(an_typedes_t typeDes, an_typedes_t *parray) {
 } // canHandled
 
 // data structure to collect use of builtin functions
-typedef struct _a_funcuse_t {
+struct a_funcuse_t {
   Function *llvmFunc;
   a_builtinfunc_t *builtin;
   int vecSize; // number of vector elements
-  _a_funcuse_t() : llvmFunc(0), builtin(0), vecSize(0) {}
-  _a_funcuse_t(Function *f, int v, a_builtinfunc_t *b)
+  a_funcuse_t() : llvmFunc(0), builtin(0), vecSize(0) {}
+  a_funcuse_t(Function *f, int v, a_builtinfunc_t *b)
       : llvmFunc(f), builtin(b), vecSize(v) {}
-} a_funcuse_t;
+};
 
 namespace llvm {
 class AMDGPUclpVectorExpansion : public ModulePass {
@@ -547,7 +536,7 @@ char AMDGPUclpVectorExpansion::getAddrSpaceCode(StringRef curFuncName) {
   // make sure it's a pointer to private address space
   else {
     assert(curFuncName.rfind('P') != StringRef::npos);
-    addrSpaceCode = (PRIVATE_ADDRESS + '0');
+    addrSpaceCode = (AMDGPUAS::PRIVATE_ADDRESS + '0');
   }
   return addrSpaceCode;
 } // AMDGPUclpVectorExpansion::getAddrSpaceCode
@@ -623,7 +612,7 @@ void AMDGPUclpVectorExpansion::checkAndAddToExpansion(Function *theFunc) {
       subStr = subStr.substr(1);
     }
 
-    DEBUG(errs() << "check " << subStr << "\n");
+    DEBUG(dbgs() << "check " << subStr << "\n");
 
     a_builtinfunc_t *builtin = getBuiltinInfo(subStr);
     if (builtin) {
@@ -642,16 +631,16 @@ void AMDGPUclpVectorExpansion::checkAndAddToExpansion(Function *theFunc) {
 /// check the consistency between need expansion and builtin info
 ///
 void AMDGPUclpVectorExpansion::checkExpansionInfo() {
-  DEBUG(errs() << "checkExpansionInfo\n");
+  DEBUG(dbgs() << "checkExpansionInfo\n");
 
   for (const auto &iter : expansionInfo) {
     // check other info?
-    DEBUG(errs() << iter.getKey() << "\n");
+    DEBUG(dbgs() << iter.getKey() << "\n");
     assert(iter.second != nullptr && "missing builtin info");
     assert(canHandlePattern(iter.second) && "can't handle builtin info");
   }
 
-  DEBUG(errs() << "checkExpansionInfo end\n");
+  DEBUG(dbgs() << "checkExpansionInfo end\n");
 } // AMDGPUclpVectorExpansion::checkExpansionInfo
 
 bool AMDGPUclpVectorExpansion::canHandlePattern(a_builtinfunc_t *tbl) {
@@ -678,16 +667,16 @@ bool AMDGPUclpVectorExpansion::canHandlePattern(a_builtinfunc_t *tbl) {
 //
 void AMDGPUclpVectorExpansion::addNeedExpansion(const char **table) {
   int idx = 0;
-  DEBUG(errs() << "addNeedExpansion\n");
+  DEBUG(dbgs() << "addNeedExpansion\n");
   while (table[idx]) {
     StringRef name(table[idx]);
-    DEBUG(errs() << name << "\n");
+    DEBUG(dbgs() << name << "\n");
     assert(expansionInfo.find(name) == expansionInfo.end() &&
            "builtin is specified multiple times");
     expansionInfo[name] = nullptr;
     ++idx;
   }
-  DEBUG(errs() << "addNeedExpansion end\n");
+  DEBUG(dbgs() << "addNeedExpansion end\n");
 } // AMDGPUclpVectorExpansion::addNeedExpansion
 
 /// loop through the input builtin info table
@@ -695,17 +684,17 @@ void AMDGPUclpVectorExpansion::addNeedExpansion(const char **table) {
 ///
 void AMDGPUclpVectorExpansion::addBuiltinInfo(a_builtinfunc_t *table) {
   int idx = 0;
-  DEBUG(errs() << "addBuiltinInfo\n");
+  DEBUG(dbgs() << "addBuiltinInfo\n");
   while (table[idx].name) {
     StringRef name(table[idx].name);
     auto iter = expansionInfo.find(name);
     if (iter != expansionInfo.end()) {
       iter->second = &table[idx];
-      DEBUG(errs() << name << " filled\n");
+      DEBUG(dbgs() << name << " filled\n");
     }
     ++idx;
   }
-  DEBUG(errs() << "addBuiltinInfo end\n");
+  DEBUG(dbgs() << "addBuiltinInfo end\n");
 } // AMDGPUclpVectorExpansion::addBuiltinInfo
 
 /// get the builtinInfo associated with an unmangled name
@@ -725,7 +714,7 @@ a_builtinfunc_t *AMDGPUclpVectorExpansion::getBuiltinInfo(StringRef &name) {
 void AMDGPUclpVectorExpansion::addFuncuseInfo(Function *theFunc,
                                               StringRef &name, int vecSize,
                                               a_builtinfunc_t *builtin) {
-  DEBUG(errs() << "addFuncuseInfo " << name);
+  DEBUG(dbgs() << "addFuncuseInfo " << name);
   a_funcuse_t funcuse(theFunc, vecSize, builtin);
   checkAndExpand(&funcuse);
 } // AMDGPUclpVectorExpansion::addFuncuseInfo
@@ -1028,7 +1017,6 @@ bool AMDGPUclpVectorExpansion::runOnModule(Module &theModule) {
   tmpModule->setDataLayout(theModule.getDataLayout());
   // loop through all Function to collect funcuseInfo
   for (auto &func : theModule) {
-    StringRef funcName = func.getName();
     // Function must be a prototype and is used.
     if (func.isDeclaration() && func.use_empty() == false) {
       checkAndAddToExpansion(&func);
