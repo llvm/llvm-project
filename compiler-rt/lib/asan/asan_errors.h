@@ -176,6 +176,23 @@ struct ErrorMallocUsableSizeNotOwned : ErrorBase {
   void Print();
 };
 
+struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
+  // ErrorSanitizerGetAllocatedSizeNotOwned doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  AddressDescription addr_description;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorSanitizerGetAllocatedSizeNotOwned() = default;
+  ErrorSanitizerGetAllocatedSizeNotOwned(u32 tid, BufferedStackTrace *stack_,
+                                         uptr addr)
+      : ErrorBase(tid),
+        stack(stack_),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false) {
+    scariness.Clear();
+  }
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro) \
   macro(StackOverflow)                  \
@@ -184,7 +201,8 @@ struct ErrorMallocUsableSizeNotOwned : ErrorBase {
   macro(NewDeleteSizeMismatch)          \
   macro(FreeNotMalloced)                \
   macro(AllocTypeMismatch)              \
-  macro(MallocUsableSizeNotOwned)
+  macro(MallocUsableSizeNotOwned)       \
+  macro(SanitizerGetAllocatedSizeNotOwned)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,
