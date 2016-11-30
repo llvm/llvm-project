@@ -1770,7 +1770,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
     m_module = swift::performIRGeneration(
-        m_swift_ast_context->GetIRGenOptions(), module, sil_module.get(),
+        m_swift_ast_context->GetIRGenOptions(), module, std::move(sil_module),
         "lldb_module", SwiftASTContext::GetGlobalLLVMContext());
   }
 
