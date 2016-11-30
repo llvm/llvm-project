@@ -27,14 +27,7 @@ foreach(tool ${SUPPORTED_TOOLS})
   foreach(arch ${TEST_ARCH})
     set(SANITIZER_COMMON_LIT_TEST_MODE ${tool})
     set(SANITIZER_COMMON_TEST_TARGET_ARCH ${arch})
-    if(${arch} MATCHES "arm|aarch64")
-      # This is only true if we're cross-compiling.
-      set(SANITIZER_COMMON_TEST_TARGET_CFLAGS
-          ${COMPILER_RT_TEST_COMPILER_CFLAGS})
-    else()
-      get_target_flags_for_arch(${arch} SANITIZER_COMMON_TEST_TARGET_CFLAGS)
-      string(REPLACE ";" " " SANITIZER_COMMON_TEST_TARGET_CFLAGS "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
-    endif()
+    get_test_cc_for_arch(${arch} SANITIZER_COMMON_TEST_TARGET_CC SANITIZER_COMMON_TEST_TARGET_CFLAGS)
     set(CONFIG_NAME ${tool}-${arch}-${OS_NAME})
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in

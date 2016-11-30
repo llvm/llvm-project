@@ -40,13 +40,13 @@
 #endif
 
 #define COMPILER_RT_MAX_HOSTLEN 128
-#ifdef _MSC_VER
-#define COMPILER_RT_GETHOSTNAME(Name, Len) gethostname(Name, Len)
-#elif defined(__ORBIS__)
+#ifdef __ORBIS__
 #define COMPILER_RT_GETHOSTNAME(Name, Len) ((void)(Name), (void)(Len), (-1))
 #else
 #define COMPILER_RT_GETHOSTNAME(Name, Len) lprofGetHostName(Name, Len)
+#ifndef _MSC_VER
 #define COMPILER_RT_HAS_UNAME 1
+#endif
 #endif
 
 #if COMPILER_RT_HAS_ATOMICS == 1
