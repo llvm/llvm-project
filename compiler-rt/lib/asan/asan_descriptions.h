@@ -91,7 +91,7 @@ struct ShadowAddressDescription {
   ShadowKind kind;
   u8 shadow_byte;
 
-  void Print();
+  void Print() const;
 };
 
 bool GetShadowAddressInformation(uptr addr, ShadowAddressDescription *descr);
@@ -121,7 +121,7 @@ struct HeapAddressDescription {
   u32 free_stack_id;
   ChunkAccess chunk_access;
 
-  void Print();
+  void Print() const;
 };
 
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
@@ -135,11 +135,10 @@ struct StackAddressDescription {
   uptr frame_pc;
   const char *frame_descr;
 
-  void Print(uptr access_size = 1);
+  void Print(uptr access_size = 1) const;
 };
 
 bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr);
-bool DescribeAddressIfStack(uptr addr, uptr access_size);
 
 struct GlobalAddressDescription {
   uptr addr;
@@ -149,7 +148,7 @@ struct GlobalAddressDescription {
   u32 reg_sites[kMaxGlobals];
   u8 size;
 
-  void Print(uptr access_size = 1, const char *bug_type = "");
+  void Print(uptr access_size = 1, const char *bug_type = "") const;
 };
 
 bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr);
@@ -165,6 +164,85 @@ bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
 // may take access_size and bug_type parameters if needed.
 void PrintAddressDescription(uptr addr, uptr access_size = 1,
                              const char *bug_type = "");
+
+enum AddressKind {
+  kAddressKindWild,
+  kAddressKindShadow,
+  kAddressKindHeap,
+  kAddressKindStack,
+  kAddressKindGlobal,
+};
+
+class AddressDescription {
+  struct AddressDescriptionData {
+    AddressKind kind;
+    union {
+      ShadowAddressDescription shadow;
+      HeapAddressDescription heap;
+      StackAddressDescription stack;
+      GlobalAddressDescription global;
+      uptr addr;
+    };
+  };
+
+  AddressDescriptionData data;
+
+ public:
+  AddressDescription() = default;
+  // shouldLockThreadRegistry allows us to skip locking if we're sure we already
+  // have done it.
+  AddressDescription(uptr addr, bool shouldLockThreadRegistry = true)
+      : AddressDescription(addr, 1, shouldLockThreadRegistry) {}
+  AddressDescription(uptr addr, uptr access_size,
+                     bool shouldLockThreadRegistry = true);
+
+  uptr Address() const {
+    switch (data.kind) {
+      case kAddressKindWild:
+        return data.addr;
+      case kAddressKindShadow:
+        return data.shadow.addr;
+      case kAddressKindHeap:
+        return data.heap.addr;
+      case kAddressKindStack:
+        return data.stack.addr;
+      case kAddressKindGlobal:
+        return data.global.addr;
+    }
+    UNREACHABLE("AddressInformation kind is invalid");
+  }
+  void Print() const {
+    switch (data.kind) {
+      case kAddressKindWild:
+        Printf("Address %p is a wild pointer.\n", data.addr);
+        return;
+      case kAddressKindShadow:
+        return data.shadow.Print();
+      case kAddressKindHeap:
+        return data.heap.Print();
+      case kAddressKindStack:
+        return data.stack.Print();
+      case kAddressKindGlobal:
+        return data.global.Print();
+    }
+    UNREACHABLE("AddressInformation kind is invalid");
+  }
+
+  void StoreTo(AddressDescriptionData *dst) const { *dst = data; }
+
+  const ShadowAddressDescription *AsShadow() const {
+    return data.kind == kAddressKindShadow ? &data.shadow : nullptr;
+  }
+  const HeapAddressDescription *AsHeap() const {
+    return data.kind == kAddressKindHeap ? &data.heap : nullptr;
+  }
+  const StackAddressDescription *AsStack() const {
+    return data.kind == kAddressKindStack ? &data.stack : nullptr;
+  }
+  const GlobalAddressDescription *AsGlobal() const {
+    return data.kind == kAddressKindGlobal ? &data.global : nullptr;
+  }
+};
 
 }  // namespace __asan
 
