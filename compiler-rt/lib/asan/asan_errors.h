@@ -16,6 +16,7 @@
 
 #include "asan_descriptions.h"
 #include "asan_scariness_score.h"
+#include "sanitizer_common/sanitizer_common.h"
 
 namespace __asan {
 
@@ -40,6 +41,47 @@ struct ErrorStackOverflow : ErrorBase {
         context(sig.context) {
     scariness.Clear();
     scariness.Scare(10, "stack-overflow");
+  }
+  void Print();
+};
+
+struct ErrorDeadlySignal : ErrorBase {
+  u32 tid;
+  uptr addr, pc, bp, sp;
+  int signo;
+  SignalContext::WriteFlag write_flag;
+  bool is_memory_access;
+  // ErrorDeadlySignal never owns the context.
+  void *context;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorDeadlySignal() = default;
+  ErrorDeadlySignal(int signo_, const SignalContext &sig, u32 tid_)
+      : tid(tid_),
+        addr(sig.addr),
+        pc(sig.pc),
+        bp(sig.bp),
+        sp(sig.sp),
+        signo(signo_),
+        write_flag(sig.write_flag),
+        is_memory_access(sig.is_memory_access),
+        context(sig.context) {
+    scariness.Clear();
+    if (is_memory_access) {
+      if (addr < GetPageSizeCached()) {
+        scariness.Scare(10, "null-deref");
+      } else if (addr == pc) {
+        scariness.Scare(60, "wild-jump");
+      } else if (write_flag == SignalContext::WRITE) {
+        scariness.Scare(30, "wild-addr-write");
+      } else if (write_flag == SignalContext::READ) {
+        scariness.Scare(20, "wild-addr-read");
+      } else {
+        scariness.Scare(25, "wild-addr");
+      }
+    } else {
+      scariness.Scare(10, "signal");
+    }
   }
   void Print();
 };
@@ -84,6 +126,7 @@ struct ErrorNewDeleteSizeMismatch : ErrorBase {
 enum ErrorKind {
   kErrorKindInvalid = 0,
   kErrorKindStackOverflow,
+  kErrorKindDeadlySignal,
   kErrorKindDoubleFree,
   kErrorKindNewDeleteSizeMismatch,
 };
@@ -97,6 +140,7 @@ struct ErrorDescription {
   // add a lot of code and the benefit wouldn't be that big.
   union {
     ErrorStackOverflow stack_overflow;
+    ErrorDeadlySignal deadly_signal;
     ErrorDoubleFree double_free;
     ErrorNewDeleteSizeMismatch new_delete_size_mismatch;
   };
@@ -104,6 +148,9 @@ struct ErrorDescription {
   ErrorDescription(const ErrorStackOverflow &e)  // NOLINT
       : kind(kErrorKindStackOverflow),
         stack_overflow(e) {}
+  ErrorDescription(const ErrorDeadlySignal &e)  // NOLINT
+      : kind(kErrorKindDeadlySignal),
+        deadly_signal(e) {}
   ErrorDescription(const ErrorDoubleFree &e)  // NOLINT
       : kind(kErrorKindDoubleFree),
         double_free(e) {}
@@ -116,6 +163,9 @@ struct ErrorDescription {
     switch (kind) {
       case kErrorKindStackOverflow:
         stack_overflow.Print();
+        return;
+      case kErrorKindDeadlySignal:
+        deadly_signal.Print();
         return;
       case kErrorKindDoubleFree:
         double_free.Print();

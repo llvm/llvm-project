@@ -65,6 +65,9 @@ void AsanInitFromRtl();
 // asan_win.cc
 void InitializePlatformExceptionHandlers();
 
+// asan_win.cc / asan_posix.cc
+const char *DescribeSignalOrException(int signo);
+
 // asan_rtl.cc
 void NORETURN ShowStatsAndAbort();
 
