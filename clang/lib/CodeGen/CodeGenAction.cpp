@@ -53,6 +53,11 @@ namespace clang {
     Timer LLVMIRGeneration;
     unsigned LLVMIRGenerationRefCount;
 
+    /// True if we've finished generating IR. This prevents us from generating
+    /// additional LLVM IR after emitting output in HandleTranslationUnit. This
+    /// can happen when Clang plugins trigger additional AST deserialization.
+    bool IRGenFinished = false;
+
     std::unique_ptr<CodeGenerator> Gen;
 
     SmallVector<std::pair<unsigned, std::unique_ptr<llvm::Module>>, 4>
@@ -147,6 +152,12 @@ namespace clang {
         LLVMIRGeneration.stopTimer();
     }
 
+    void HandleInterestingDecl(DeclGroupRef D) override {
+      // Ignore interesting decls from the AST reader after IRGen is finished.
+      if (!IRGenFinished)
+        HandleTopLevelDecl(D);
+    }
+
     void HandleTranslationUnit(ASTContext &C) override {
       {
         PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
@@ -163,6 +174,8 @@ namespace clang {
           if (LLVMIRGenerationRefCount == 0)
             LLVMIRGeneration.stopTimer();
         }
+
+	IRGenFinished = true;
       }
 
       // Silently ignore if we weren't initialized for some reason.

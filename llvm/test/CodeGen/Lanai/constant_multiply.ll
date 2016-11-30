@@ -81,18 +81,18 @@ define i32 @fm8(i32 inreg %a) #0 {
 }
 
 ; CHECK-LABEL: fm9:
-; CHECK: sh %r6, 0x3, %r{{[0-9]+}}
-; CHECK: sub %r{{[0-9]+}}, %r6, %r{{[0-9]+}}
-; CHECK: sub %r{{[0-9]+}}, %r{{[0-9]+}}, %rv
+; CHECK: sub	%r0, %r6, %r{{[0-9]+}}
+; CHECK: sh	%r6, 0x3, %r9
+; CHECK: sub	%r{{[0-9]+}}, %r9, %rv
 define i32 @fm9(i32 inreg %a) #0 {
   %1 = mul nsw i32 %a, -9
   ret i32 %1
 }
 
 ; CHECK-LABEL: fm10:
-; CHECK: sh %r6, 0x3, %r{{[0-9]+}}
 ; CHECK: sh %r6, 0x1, %r{{[0-9]+}}
 ; CHECK: sub %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}
+; CHECK: sh %r6, 0x3, %r{{[0-9]+}}
 ; CHECK: sub %r{{[0-9]+}}, %r{{[0-9]+}}, %rv
 define i32 @fm10(i32 inreg %a) #0 {
   %1 = mul nsw i32 %a, -10

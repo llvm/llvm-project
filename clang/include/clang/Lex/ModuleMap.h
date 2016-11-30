@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_CLANG_LEX_MODULEMAP_H
 #define LLVM_CLANG_LEX_MODULEMAP_H
 
@@ -20,12 +19,18 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include <algorithm>
+#include <memory>
 #include <string>
+#include <utility>
 
 namespace clang {
 
@@ -41,7 +46,7 @@ class ModuleMapParser;
 /// reads module map files.
 class ModuleMapCallbacks {
 public:
-  virtual ~ModuleMapCallbacks() {}
+  virtual ~ModuleMapCallbacks() = default;
 
   /// \brief Called when a module map file has been read.
   ///
@@ -154,7 +159,7 @@ public:
   typedef llvm::SmallPtrSet<const FileEntry *, 1> AdditionalModMapsSet;
 
 private:
-  typedef llvm::DenseMap<const FileEntry *, SmallVector<KnownHeader, 1> >
+  typedef llvm::DenseMap<const FileEntry *, SmallVector<KnownHeader, 1>>
   HeadersMap;
 
   /// \brief Mapping from each header to the module that owns the contents of
@@ -549,5 +554,6 @@ public:
   module_iterator module_end()   const { return Modules.end(); }
 };
   
-}
-#endif
+} // end namespace clang
+
+#endif // LLVM_CLANG_LEX_MODULEMAP_H

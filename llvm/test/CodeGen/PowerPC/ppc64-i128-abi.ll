@@ -1,6 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-LE \
-; RUN:   --implicit-check-not xxswapd
+; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-LE
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-BE
@@ -9,15 +8,13 @@
 ; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX \
-; RUN:   --implicit-check-not xxswapd
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-BE-NOVSX
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | \
-; RUN:   FileCheck %s -check-prefix=CHECK-LE-NOVSX --implicit-check-not xxswapd
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-LE-NOVSX
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -ppc-vsr-nums-as-vr < %s | FileCheck %s \
@@ -29,7 +26,7 @@
 
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-power9-vector -mattr=-direct-move < %s | \
-; RUN:   FileCheck %s -check-prefix=CHECK-LE --implicit-check-not xxswapd
+; RUN:   FileCheck %s -check-prefix=CHECK-LE
 
 @x = common global <1 x i128> zeroinitializer, align 16
 @y = common global <1 x i128> zeroinitializer, align 16
@@ -202,7 +199,8 @@ define <1 x i128> @call_v1i128_increment_by_one() nounwind {
        ret <1 x i128> %ret
 
 ; CHECK-LE-LABEL: @call_v1i128_increment_by_one
-; CHECK-LE: lvx 2, {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: lxvd2x [[PARAM:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: xxswapd 34, [[PARAM]]
 ; CHECK-LE: bl v1i128_increment_by_one
 ; CHECK-LE: blr
 
@@ -231,8 +229,10 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
        ret <1 x i128> %ret
 
 ; CHECK-LE-LABEL: @call_v1i128_increment_by_val
-; CHECK-LE: lvx 2, {{[0-9]+}}, {{[0-9]+}}
-; CHECK-LE: lvx 3, {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: lxvd2x [[PARAM1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: lxvd2x [[PARAM2:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE-DAG: xxswapd 34, [[PARAM1]]
+; CHECK-LE-DAG: xxswapd 35, [[PARAM2]]
 ; CHECK-LE: bl v1i128_increment_by_val
 ; CHECK-LE: blr
 
