@@ -393,15 +393,9 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
 void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
                                       BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  const char *bug_type = "negative-size-param";
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: %s: (size=%zd)\n", bug_type, size);
-  Printf("%s", d.EndWarning());
-  ScarinessScore::PrintSimple(10, bug_type);
-  stack->Print();
-  PrintAddressDescription(offset, size, bug_type);
-  ReportErrorSummary(bug_type, stack);
+  ErrorStringFunctionSizeOverflow error(GetCurrentTidOrInvalid(), stack, offset,
+                                        size);
+  in_report.ReportError(error);
 }
 
 void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,

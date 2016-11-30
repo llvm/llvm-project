@@ -221,6 +221,26 @@ struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
   void Print();
 };
 
+struct ErrorStringFunctionSizeOverflow : ErrorBase {
+  // ErrorStringFunctionSizeOverflow doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  AddressDescription addr_description;
+  uptr size;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorStringFunctionSizeOverflow() = default;
+  ErrorStringFunctionSizeOverflow(u32 tid, BufferedStackTrace *stack_,
+                                  uptr addr, uptr size_)
+      : ErrorBase(tid),
+        stack(stack_),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false),
+        size(size_) {
+    scariness.Clear();
+    scariness.Scare(10, "negative-size-param");
+  }
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro)    \
   macro(StackOverflow)                     \
@@ -231,7 +251,8 @@ struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
   macro(AllocTypeMismatch)                 \
   macro(MallocUsableSizeNotOwned)          \
   macro(SanitizerGetAllocatedSizeNotOwned) \
-  macro(StringFunctionMemoryRangesOverlap)
+  macro(StringFunctionMemoryRangesOverlap) \
+  macro(StringFunctionSizeOverflow)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

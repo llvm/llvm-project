@@ -209,4 +209,16 @@ void ErrorStringFunctionMemoryRangesOverlap::Print() {
   ReportErrorSummary(bug_type, stack);
 }
 
+void ErrorStringFunctionSizeOverflow::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  const char *bug_type = "negative-size-param";
+  Report("ERROR: AddressSanitizer: %s: (size=%zd)\n", bug_type, size);
+  Printf("%s", d.EndWarning());
+  scariness.Print();
+  stack->Print();
+  addr_description.Print();
+  ReportErrorSummary(bug_type, stack);
+}
+
 }  // namespace __asan
