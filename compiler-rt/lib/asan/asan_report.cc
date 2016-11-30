@@ -367,15 +367,8 @@ void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
 
 void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: attempting to call "
-             "malloc_usable_size() for pointer which is "
-             "not owned: %p\n", addr);
-  Printf("%s", d.EndWarning());
-  stack->Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("bad-malloc_usable_size", stack);
+  ErrorMallocUsableSizeNotOwned error(GetCurrentTidOrInvalid(), stack, addr);
+  in_report.ReportError(error);
 }
 
 void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,

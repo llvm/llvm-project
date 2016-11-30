@@ -160,6 +160,22 @@ struct ErrorAllocTypeMismatch : ErrorBase {
   void Print();
 };
 
+struct ErrorMallocUsableSizeNotOwned : ErrorBase {
+  // ErrorMallocUsableSizeNotOwned doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  AddressDescription addr_description;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorMallocUsableSizeNotOwned() = default;
+  ErrorMallocUsableSizeNotOwned(u32 tid, BufferedStackTrace *stack_, uptr addr)
+      : ErrorBase(tid),
+        stack(stack_),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false) {
+    scariness.Clear();
+  }
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro) \
   macro(StackOverflow)                  \
@@ -167,7 +183,8 @@ struct ErrorAllocTypeMismatch : ErrorBase {
   macro(DoubleFree)                     \
   macro(NewDeleteSizeMismatch)          \
   macro(FreeNotMalloced)                \
-  macro(AllocTypeMismatch)
+  macro(AllocTypeMismatch)              \
+  macro(MallocUsableSizeNotOwned)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,
