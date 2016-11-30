@@ -71,6 +71,10 @@ public:
 
   bool IsEnabled() const;
 
+  // This doesn't really enable/disable the watchpoint.  
+  // It is currently just for use in the Process plugin's
+  // {Enable,Disable}Watchpoint, which should be used instead.
+  
   void SetEnabled(bool enabled, bool notify = true);
 
   bool IsHardware() const override;

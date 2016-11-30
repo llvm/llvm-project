@@ -6019,6 +6019,16 @@ bool Process::RunPreResumeActions() {
 
 void Process::ClearPreResumeActions() { m_pre_resume_actions.clear(); }
 
+void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton)
+{
+    PreResumeCallbackAndBaton element(callback, baton);
+    auto found_iter = std::find(m_pre_resume_actions.begin(), m_pre_resume_actions.end(), element);
+    if (found_iter != m_pre_resume_actions.end())
+    {
+        m_pre_resume_actions.erase(found_iter);
+    }
+}
+
 ProcessRunLock &Process::GetRunLock() {
   if (m_private_state_thread.EqualsThread(Host::GetCurrentThread()))
     return m_private_run_lock;
