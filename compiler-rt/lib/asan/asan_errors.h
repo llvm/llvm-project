@@ -193,16 +193,45 @@ struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
   void Print();
 };
 
+struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
+  // ErrorStringFunctionMemoryRangesOverlap doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  uptr length1, length2;
+  AddressDescription addr1_description;
+  AddressDescription addr2_description;
+  const char *function;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorStringFunctionMemoryRangesOverlap() = default;
+  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace *stack_,
+                                         uptr addr1, uptr length1_, uptr addr2,
+                                         uptr length2_, const char *function_)
+      : ErrorBase(tid),
+        stack(stack_),
+        length1(length1_),
+        length2(length2_),
+        addr1_description(addr1, length1, /*shouldLockThreadRegistry=*/false),
+        addr2_description(addr2, length2, /*shouldLockThreadRegistry=*/false),
+        function(function_) {
+    char bug_type[100];
+    internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
+    scariness.Clear();
+    scariness.Scare(10, bug_type);
+  }
+  void Print();
+};
+
 // clang-format off
-#define ASAN_FOR_EACH_ERROR_KIND(macro) \
-  macro(StackOverflow)                  \
-  macro(DeadlySignal)                   \
-  macro(DoubleFree)                     \
-  macro(NewDeleteSizeMismatch)          \
-  macro(FreeNotMalloced)                \
-  macro(AllocTypeMismatch)              \
-  macro(MallocUsableSizeNotOwned)       \
-  macro(SanitizerGetAllocatedSizeNotOwned)
+#define ASAN_FOR_EACH_ERROR_KIND(macro)    \
+  macro(StackOverflow)                     \
+  macro(DeadlySignal)                      \
+  macro(DoubleFree)                        \
+  macro(NewDeleteSizeMismatch)             \
+  macro(FreeNotMalloced)                   \
+  macro(AllocTypeMismatch)                 \
+  macro(MallocUsableSizeNotOwned)          \
+  macro(SanitizerGetAllocatedSizeNotOwned) \
+  macro(StringFunctionMemoryRangesOverlap)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

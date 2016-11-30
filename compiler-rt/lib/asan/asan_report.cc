@@ -384,19 +384,10 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
                                              const char *offset2, uptr length2,
                                              BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  char bug_type[100];
-  internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: %s: "
-             "memory ranges [%p,%p) and [%p, %p) overlap\n", \
-             bug_type, offset1, offset1 + length1, offset2, offset2 + length2);
-  Printf("%s", d.EndWarning());
-  ScarinessScore::PrintSimple(10, bug_type);
-  stack->Print();
-  PrintAddressDescription((uptr)offset1, length1, bug_type);
-  PrintAddressDescription((uptr)offset2, length2, bug_type);
-  ReportErrorSummary(bug_type, stack);
+  ErrorStringFunctionMemoryRangesOverlap error(
+      GetCurrentTidOrInvalid(), stack, (uptr)offset1, length1, (uptr)offset2,
+      length2, function);
+  in_report.ReportError(error);
 }
 
 void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
