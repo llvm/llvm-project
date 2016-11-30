@@ -101,4 +101,124 @@ bool GetShadowAddressInformation(uptr addr, ShadowAddressDescription *descr) {
   return true;
 }
 
+// Heap descriptions
+static void GetAccessToHeapChunkInformation(ChunkAccess *descr,
+                                            AsanChunkView chunk, uptr addr,
+                                            uptr access_size) {
+  descr->bad_addr = addr;
+  if (chunk.AddrIsAtLeft(addr, access_size, &descr->offset)) {
+    descr->access_type = kAccessTypeLeft;
+  } else if (chunk.AddrIsAtRight(addr, access_size, &descr->offset)) {
+    descr->access_type = kAccessTypeRight;
+    if (descr->offset < 0) {
+      descr->bad_addr -= descr->offset;
+      descr->offset = 0;
+    }
+  } else if (chunk.AddrIsInside(addr, access_size, &descr->offset)) {
+    descr->access_type = kAccessTypeInside;
+  } else {
+    descr->access_type = kAccessTypeUnknown;
+  }
+  descr->chunk_begin = chunk.Beg();
+  descr->chunk_size = chunk.UsedSize();
+  descr->alloc_type = chunk.AllocType();
+}
+
+static void PrintHeapChunkAccess(uptr addr, const ChunkAccess &descr) {
+  Decorator d;
+  InternalScopedString str(4096);
+  str.append("%s", d.Location());
+  switch (descr.access_type) {
+    case kAccessTypeLeft:
+      str.append("%p is located %zd bytes to the left of",
+                 (void *)descr.bad_addr, descr.offset);
+      break;
+    case kAccessTypeRight:
+      str.append("%p is located %zd bytes to the right of",
+                 (void *)descr.bad_addr, descr.offset);
+      break;
+    case kAccessTypeInside:
+      str.append("%p is located %zd bytes inside of", (void *)descr.bad_addr,
+                 descr.offset);
+      break;
+    case kAccessTypeUnknown:
+      str.append(
+          "%p is located somewhere around (this is AddressSanitizer bug!)",
+          (void *)descr.bad_addr);
+  }
+  str.append(" %zu-byte region [%p,%p)\n", descr.chunk_size,
+             (void *)descr.chunk_begin,
+             (void *)(descr.chunk_begin + descr.chunk_size));
+  str.append("%s", d.EndLocation());
+  Printf("%s", str.data());
+}
+
+bool GetHeapAddressInformation(uptr addr, uptr access_size,
+                               HeapAddressDescription *descr) {
+  AsanChunkView chunk = FindHeapChunkByAddress(addr);
+  if (!chunk.IsValid()) {
+    return false;
+  }
+  descr->addr = addr;
+  GetAccessToHeapChunkInformation(&descr->chunk_access, chunk, addr,
+                                  access_size);
+  CHECK_NE(chunk.AllocTid(), kInvalidTid);
+  descr->alloc_tid = chunk.AllocTid();
+  descr->alloc_stack_id = chunk.GetAllocStackId();
+  descr->free_tid = chunk.FreeTid();
+  if (descr->free_tid != kInvalidTid)
+    descr->free_stack_id = chunk.GetFreeStackId();
+  return true;
+}
+
+static StackTrace GetStackTraceFromId(u32 id) {
+  CHECK(id);
+  StackTrace res = StackDepotGet(id);
+  CHECK(res.trace);
+  return res;
+}
+
+bool DescribeAddressIfHeap(uptr addr, uptr access_size) {
+  HeapAddressDescription descr;
+  if (!GetHeapAddressInformation(addr, access_size, &descr)) {
+    Printf(
+        "AddressSanitizer can not describe address in more detail "
+        "(wild memory access suspected).\n");
+    return false;
+  }
+  PrintHeapChunkAccess(addr, descr.chunk_access);
+
+  asanThreadRegistry().CheckLocked();
+  AsanThreadContext *alloc_thread =
+      GetThreadContextByTidLocked(descr.alloc_tid);
+  StackTrace alloc_stack = GetStackTraceFromId(descr.alloc_stack_id);
+
+  char tname[128];
+  Decorator d;
+  AsanThreadContext *free_thread = nullptr;
+  if (descr.free_tid != kInvalidTid) {
+    free_thread = GetThreadContextByTidLocked(descr.free_tid);
+    Printf("%sfreed by thread T%d%s here:%s\n", d.Allocation(),
+           free_thread->tid,
+           ThreadNameWithParenthesis(free_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+    StackTrace free_stack = GetStackTraceFromId(descr.free_stack_id);
+    free_stack.Print();
+    Printf("%spreviously allocated by thread T%d%s here:%s\n", d.Allocation(),
+           alloc_thread->tid,
+           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+  } else {
+    Printf("%sallocated by thread T%d%s here:%s\n", d.Allocation(),
+           alloc_thread->tid,
+           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+  }
+  alloc_stack.Print();
+  DescribeThread(GetCurrentThread());
+  if (free_thread) DescribeThread(free_thread);
+  DescribeThread(alloc_thread);
+  return true;
+}
+
 }  // namespace __asan
