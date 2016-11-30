@@ -56,8 +56,12 @@ uptr GetThreadSelf() {
   return (uptr)pthread_self();
 }
 
-void ReleaseMemoryToOS(uptr addr, uptr size) {
-  madvise((void*)addr, size, MADV_DONTNEED);
+void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
+  uptr page_size = GetPageSizeCached();
+  uptr beg_aligned = RoundUpTo(beg, page_size);
+  uptr end_aligned = RoundDownTo(end, page_size);
+  if (beg_aligned < end_aligned)
+    madvise((void*)beg_aligned, end_aligned - beg_aligned, MADV_DONTNEED);
 }
 
 void NoHugePagesInRegion(uptr addr, uptr size) {

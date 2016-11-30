@@ -49,9 +49,9 @@ Configuration files:
 
 )");
 
-const char DefaultChecks[] =  // Enable these checks by default:
-    "clang-diagnostic-*,"     //   * compiler diagnostics
-    "clang-analyzer-*";       //   * Static Analyzer checks
+const char DefaultChecks[] = // Enable these checks by default:
+    "clang-diagnostic-*,"    //   * compiler diagnostics
+    "clang-analyzer-*";      //   * Static Analyzer checks
 
 static cl::opt<std::string> Checks("checks", cl::desc(R"(
 Comma-separated list of globs with optional '-'
@@ -119,6 +119,13 @@ attached fix-its, clang-tidy will apply them as
 well.
 )"),
                                cl::init(false), cl::cat(ClangTidyCategory));
+
+static cl::opt<std::string> FormatStyle("style", cl::desc(R"(
+Fallback style for reformatting after inserting fixes
+if there is no clang-format config file found.
+)"),
+                                        cl::init("llvm"),
+                                        cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> ListChecks("list-checks", cl::desc(R"(
 List all enabled checks and exit. Use with
@@ -386,7 +393,8 @@ static int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   // -fix-errors implies -fix.
-  handleErrors(Errors, (FixErrors || Fix) && !DisableFixes, WErrorCount);
+  handleErrors(Errors, (FixErrors || Fix) && !DisableFixes, FormatStyle,
+               WErrorCount);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;

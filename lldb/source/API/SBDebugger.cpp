@@ -368,8 +368,8 @@ void SBDebugger::HandleCommand(const char *command) {
       if (process_sp) {
         EventSP event_sp;
         ListenerSP lldb_listener_sp = m_opaque_sp->GetListener();
-        while (lldb_listener_sp->GetNextEventForBroadcaster(process_sp.get(),
-                                                            event_sp)) {
+        while (lldb_listener_sp->GetEventForBroadcaster(
+            process_sp.get(), event_sp, std::chrono::seconds(0))) {
           SBEvent event(event_sp);
           HandleProcessEvent(process, event, GetOutputFileHandle(),
                              GetErrorFileHandle());

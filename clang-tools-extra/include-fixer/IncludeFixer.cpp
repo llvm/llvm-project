@@ -350,7 +350,7 @@ IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
   // here. The symbols which have the same ScopedQualifier and RawIdentifier
   // are considered equal. So that include-fixer avoids false positives, and
   // always adds missing qualifiers to correct symbols.
-  if (!QuerySymbolInfos.empty()) {
+  if (!GenerateDiagnostics && !QuerySymbolInfos.empty()) {
     if (ScopedQualifiers == QuerySymbolInfos.front().ScopedQualifiers &&
         Query == QuerySymbolInfos.front().RawIdentifier) {
       QuerySymbolInfos.push_back({Query.str(), ScopedQualifiers, Range});

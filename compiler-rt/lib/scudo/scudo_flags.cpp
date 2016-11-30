@@ -90,4 +90,4 @@ Flags *getFlags() {
   return &ScudoFlags;
 }
 
-}
+}  // namespace __scudo

@@ -458,17 +458,11 @@ class SizeClassAllocator64 {
     }
   }
 
-  bool MaybeReleaseChunkRange(uptr region_beg, uptr chunk_size,
+  void MaybeReleaseChunkRange(uptr region_beg, uptr chunk_size,
                               CompactPtrT first, CompactPtrT last) {
     uptr beg_ptr = CompactPtrToPointer(region_beg, first);
     uptr end_ptr = CompactPtrToPointer(region_beg, last) + chunk_size;
-    const uptr page_size = GetPageSizeCached();
-    CHECK_GE(end_ptr - beg_ptr, page_size);
-    beg_ptr = RoundUpTo(beg_ptr, page_size);
-    end_ptr = RoundDownTo(end_ptr, page_size);
-    if (end_ptr == beg_ptr) return false;
-    ReleaseMemoryToOS(beg_ptr, end_ptr - beg_ptr);
-    return true;
+    ReleaseMemoryPagesToOS(beg_ptr, end_ptr);
   }
 
   // Attempts to release some RAM back to OS. The region is expected to be

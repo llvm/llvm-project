@@ -796,7 +796,7 @@ void *ProcessKDP::AsyncThread(void *arg) {
         log->Printf("ProcessKDP::AsyncThread (pid = %" PRIu64
                     ") listener.WaitForEvent (NULL, event_sp)...",
                     pid);
-      if (listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp)) {
+      if (listener_sp->GetEvent(event_sp, llvm::None)) {
         uint32_t event_type = event_sp->GetType();
         if (log)
           log->Printf("ProcessKDP::AsyncThread (pid = %" PRIu64
@@ -831,7 +831,8 @@ void *ProcessKDP::AsyncThread(void *arg) {
               // Check to see if we are supposed to exit. There is no way to
               // interrupt a running kernel, so all we can do is wait for an
               // exception or detach...
-              if (listener_sp->GetNextEvent(event_sp)) {
+              if (listener_sp->GetEvent(event_sp,
+                                        std::chrono::microseconds(0))) {
                 // We got an event, go through the loop again
                 event_type = event_sp->GetType();
               }
