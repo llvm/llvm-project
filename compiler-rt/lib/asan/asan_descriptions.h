@@ -50,7 +50,6 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
       case kAsanStackLeftRedzoneMagic:
       case kAsanStackMidRedzoneMagic:
       case kAsanStackRightRedzoneMagic:
-      case kAsanStackPartialRedzoneMagic:
         return Red();
       case kAsanStackAfterReturnMagic:
         return Magenta();
