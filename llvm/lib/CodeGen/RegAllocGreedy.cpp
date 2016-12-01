@@ -859,7 +859,8 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
                             AllocationOrder &Order,
                             SmallVectorImpl<unsigned> &NewVRegs,
                             unsigned CostPerUseLimit) {
-  NamedRegionTimer T("Evict", TimerGroupName, TimePassesIsEnabled);
+  NamedRegionTimer T("evict", "Evict", TimerGroupName, TimerGroupDescription,
+                     TimePassesIsEnabled);
 
   // Keep track of the cheapest interference seen so far.
   EvictionCost BestCost;
@@ -1957,7 +1958,8 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
 
   // Local intervals are handled separately.
   if (LIS->intervalIsInOneMBB(VirtReg)) {
-    NamedRegionTimer T("Local Splitting", TimerGroupName, TimePassesIsEnabled);
+    NamedRegionTimer T("local_split", "Local Splitting", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
     SA->analyze(&VirtReg);
     unsigned PhysReg = tryLocalSplit(VirtReg, Order, NewVRegs);
     if (PhysReg || !NewVRegs.empty())
@@ -1965,7 +1967,8 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
     return tryInstructionSplit(VirtReg, Order, NewVRegs);
   }
 
-  NamedRegionTimer T("Global Splitting", TimerGroupName, TimePassesIsEnabled);
+  NamedRegionTimer T("global_split", "Global Splitting", TimerGroupName,
+                     TimerGroupDescription, TimePassesIsEnabled);
 
   SA->analyze(&VirtReg);
 
@@ -2552,7 +2555,8 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     DEBUG(dbgs() << "Do as if this register is in memory\n");
     NewVRegs.push_back(VirtReg.reg);
   } else {
-    NamedRegionTimer T("Spiller", TimerGroupName, TimePassesIsEnabled);
+    NamedRegionTimer T("spill", "Spiller", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
     LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
     spiller().spill(LRE);
     setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);

@@ -1474,8 +1474,6 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
 
   bool Timing = OptTiming, TimingDetail = Timing && OptTimingDetail;
   bool Changed = false;
-  TimerGroup __G("hexinsert");
-  NamedRegionTimer __T("hexinsert", Timing && !TimingDetail);
 
   // Sanity check: one, but not both.
   assert(!OptSelectAll0 || !OptSelectHas0);
@@ -1521,8 +1519,12 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   MachineBasicBlock *RootB = MDT->getRoot();
   OrderedRegisterList AvailR(CellOrd);
 
+  const char *const TGName = "hexinsert";
+  const char *const TGDesc = "Generate Insert Instructions";
+
   {
-    NamedRegionTimer _T("collection", "hexinsert", TimingDetail);
+    NamedRegionTimer _T("collection", "collection", TGName, TGDesc,
+                        TimingDetail);
     collectInBlock(RootB, AvailR);
     // Complete the information gathered in IFMap.
     computeRemovableRegisters();
@@ -1537,7 +1539,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
     return Changed;
 
   {
-    NamedRegionTimer _T("pruning", "hexinsert", TimingDetail);
+    NamedRegionTimer _T("pruning", "pruning", TGName, TGDesc, TimingDetail);
     pruneCandidates();
   }
 
@@ -1550,7 +1552,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
     return Changed;
 
   {
-    NamedRegionTimer _T("selection", "hexinsert", TimingDetail);
+    NamedRegionTimer _T("selection", "selection", TGName, TGDesc, TimingDetail);
     selectCandidates();
   }
 
@@ -1576,7 +1578,8 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
     return Changed;
 
   {
-    NamedRegionTimer _T("generation", "hexinsert", TimingDetail);
+    NamedRegionTimer _T("generation", "generation", TGName, TGDesc,
+                        TimingDetail);
     generateInserts();
   }
 
