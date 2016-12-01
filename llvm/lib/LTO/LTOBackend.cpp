@@ -280,7 +280,7 @@ static void handleAsmUndefinedRefs(Module &Mod, TargetMachine &TM) {
   // Collect the list of undefined symbols used in asm and update
   // llvm.compiler.used to prevent optimization to drop these from the output.
   StringSet<> AsmUndefinedRefs;
-  object::IRObjectFile::CollectAsmUndefinedRefs(
+  ModuleSymbolTable::CollectAsmSymbols(
       Triple(Mod.getTargetTriple()), Mod.getModuleInlineAsm(),
       [&AsmUndefinedRefs](StringRef Name, object::BasicSymbolRef::Flags Flags) {
         if (Flags & object::BasicSymbolRef::SF_Undefined)

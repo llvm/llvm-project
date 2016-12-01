@@ -169,6 +169,7 @@ class MCStreamer {
   MCDwarfFrameInfo *getCurrentDwarfFrameInfo();
   void EnsureValidDwarfFrame();
 
+  MCSymbol *EmitCFILabel();
   MCSymbol *EmitCFICommon();
 
   std::vector<WinEH::FrameInfo *> WinFrameInfos;

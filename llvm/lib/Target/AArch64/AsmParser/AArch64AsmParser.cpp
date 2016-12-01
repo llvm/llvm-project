@@ -4137,9 +4137,9 @@ static const struct {
   { "fp", {AArch64::FeatureFPARMv8} },
   { "simd", {AArch64::FeatureNEON} },
   { "ras", {AArch64::FeatureRAS} },
+  { "lse", {AArch64::FeatureLSE} },
 
   // FIXME: Unsupported extensions
-  { "lse", {} },
   { "pan", {} },
   { "lor", {} },
   { "rdma", {} },

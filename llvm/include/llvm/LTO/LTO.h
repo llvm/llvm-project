@@ -38,31 +38,6 @@ class Module;
 class Target;
 class raw_pwrite_stream;
 
-/// Helper to load a module from bitcode.
-std::unique_ptr<Module> loadModuleFromBuffer(const MemoryBufferRef &Buffer,
-                                             LLVMContext &Context, bool Lazy);
-
-/// Provide a "loader" for the FunctionImporter to access function from other
-/// modules.
-class ModuleLoader {
-  /// The context that will be used for importing.
-  LLVMContext &Context;
-
-  /// Map from Module identifier to MemoryBuffer. Used by clients like the
-  /// FunctionImported to request loading a Module.
-  StringMap<MemoryBufferRef> &ModuleMap;
-
-public:
-  ModuleLoader(LLVMContext &Context, StringMap<MemoryBufferRef> &ModuleMap)
-      : Context(Context), ModuleMap(ModuleMap) {}
-
-  /// Load a module on demand.
-  std::unique_ptr<Module> operator()(StringRef Identifier) {
-    return loadModuleFromBuffer(ModuleMap[Identifier], Context, /*Lazy*/ true);
-  }
-};
-
-
 /// Resolve Weak and LinkOnce values in the \p Index. Linkage changes recorded
 /// in the index and the ThinLTO backends must apply the changes to the Module
 /// via thinLTOResolveWeakForLinkerModule.
@@ -162,12 +137,9 @@ public:
       skip();
     }
 
+    /// Returns the mangled name of the global.
     StringRef getName() const { return Name; }
-    StringRef getIRName() const {
-      if (GV)
-        return GV->getName();
-      return StringRef();
-    }
+
     uint32_t getFlags() const { return Flags; }
     GlobalValue::VisibilityTypes getVisibility() const {
       if (GV)

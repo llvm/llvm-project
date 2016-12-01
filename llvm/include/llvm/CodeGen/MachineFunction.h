@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/Compiler.h"
@@ -245,6 +246,10 @@ class MachineFunction {
   // Allocation management for pseudo source values.
   std::unique_ptr<PseudoSourceValueManager> PSVManager;
 
+  /// List of moves done by a function's prolog.  Used to construct frame maps
+  /// by debug and exception handling consumers.
+  std::vector<MCCFIInstruction> FrameInstructions;
+
   MachineFunction(const MachineFunction &) = delete;
   void operator=(const MachineFunction&) = delete;
 
@@ -259,6 +264,20 @@ class MachineFunction {
   /// \pre Fn, Target, MMI, and FunctionNumber are properly set.
   void init();
 public:
+
+  struct VariableDbgInfo {
+    const DILocalVariable *Var;
+    const DIExpression *Expr;
+    unsigned Slot;
+    const DILocation *Loc;
+
+    VariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
+                    unsigned Slot, const DILocation *Loc)
+        : Var(Var), Expr(Expr), Slot(Slot), Loc(Loc) {}
+  };
+  typedef SmallVector<VariableDbgInfo, 4> VariableDbgInfoMapTy;
+  VariableDbgInfoMapTy VariableDbgInfos;
+
   MachineFunction(const Function *Fn, const TargetMachine &TM,
                   unsigned FunctionNum, MachineModuleInfo &MMI);
   ~MachineFunction();
@@ -640,6 +659,29 @@ public:
   /// getPICBaseSymbol - Return a function-local symbol to represent the PIC
   /// base.
   MCSymbol *getPICBaseSymbol() const;
+
+  /// Returns a reference to a list of cfi instructions in the function's
+  /// prologue.  Used to construct frame maps for debug and exception handling
+  /// comsumers.
+  const std::vector<MCCFIInstruction> &getFrameInstructions() const {
+    return FrameInstructions;
+  }
+
+  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst) {
+    FrameInstructions.push_back(Inst);
+    return FrameInstructions.size() - 1;
+  }
+
+  /// Collect information used to emit debugging information of a variable.
+  void setVariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
+                          unsigned Slot, const DILocation *Loc) {
+    VariableDbgInfos.emplace_back(Var, Expr, Slot, Loc);
+  }
+
+  VariableDbgInfoMapTy &getVariableDbgInfo() { return VariableDbgInfos; }
+  const VariableDbgInfoMapTy &getVariableDbgInfo() const {
+    return VariableDbgInfos;
+  }
 };
 
 //===--------------------------------------------------------------------===//

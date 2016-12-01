@@ -58,6 +58,7 @@ Expected<std::unique_ptr<SymbolicFile>> SymbolicFile::createSymbolicFile(
   case sys::fs::file_magic::macho_dsym_companion:
   case sys::fs::file_magic::macho_kext_bundle:
   case sys::fs::file_magic::pecoff_executable:
+  case sys::fs::file_magic::wasm_object:
     return ObjectFile::createObjectFile(Object, Type);
   case sys::fs::file_magic::coff_import_library:
     return std::unique_ptr<SymbolicFile>(new COFFImportFile(Object));

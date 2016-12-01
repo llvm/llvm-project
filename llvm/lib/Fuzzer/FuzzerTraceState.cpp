@@ -9,17 +9,17 @@
 // Data tracing.
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerInternal.h"
 #include "FuzzerDictionary.h"
+#include "FuzzerInternal.h"
+#include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
 #include "FuzzerTracePC.h"
-
 #include <algorithm>
 #include <cstring>
-#include <thread>
 #include <map>
 #include <set>
+#include <thread>
 
 namespace fuzzer {
 

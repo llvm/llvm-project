@@ -23,7 +23,7 @@ declare void @x2(i8*)
 attributes #0 = { optsize }
 
 ; CHECK-LABEL: x3:
-; CHECK:         addl    $_GLOBAL_OFFSET_TABLE_+(.Ltmp4-.L0$pb), %[[REG:.*]]
+; CHECK:         addl    $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %[[REG:.*]]
 ; CHECK-NEXT:    leal    x1@TLSGD(,%[[REG]]), %eax
 ; CHECK-NEXT:    calll   ___tls_get_addr@PLT
 ; CHECK-NEXT:    cmpl    $92, (%eax)

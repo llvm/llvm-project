@@ -18,13 +18,10 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @test(<4 x i16>* %a, <4 x i16>* %b) {
 ; AVX-LABEL: test:
 ; AVX:       ## BB#0: ## %body
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [65533,124,125,14807]
-; AVX-NEXT:    vpshufb %xmm0, %xmm1, %xmm1
-; AVX-NEXT:    vmovq %xmm1, (%rdi)
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,0,0,65535]
-; AVX-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, (%rsi)
+; AVX-NEXT:    movq {{.*}}(%rip), %rax
+; AVX-NEXT:    movq %rax, (%rdi)
+; AVX-NEXT:    movq {{.*}}(%rip), %rax
+; AVX-NEXT:    movq %rax, (%rsi)
 ; AVX-NEXT:    retq
 body:
   %predphi = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> <i16 -3, i16 545, i16 4385, i16 14807>, <4 x i16> <i16 123, i16 124, i16 125, i16 127>

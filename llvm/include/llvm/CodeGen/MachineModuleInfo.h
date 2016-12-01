@@ -122,10 +122,6 @@ class MachineModuleInfo : public ImmutablePass {
   /// want.
   MachineModuleInfoImpl *ObjFileMMI;
 
-  /// List of moves done by a function's prolog.  Used to construct frame maps
-  /// by debug and exception handling consumers.
-  std::vector<MCCFIInstruction> FrameInstructions;
-
   /// List of LandingPadInfo describing the landing pad information in the
   /// current function.
   std::vector<LandingPadInfo> LandingPads;
@@ -193,19 +189,6 @@ class MachineModuleInfo : public ImmutablePass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-
-  struct VariableDbgInfo {
-    const DILocalVariable *Var;
-    const DIExpression *Expr;
-    unsigned Slot;
-    const DILocation *Loc;
-
-    VariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
-                    unsigned Slot, const DILocation *Loc)
-        : Var(Var), Expr(Expr), Slot(Slot), Loc(Loc) {}
-  };
-  typedef SmallVector<VariableDbgInfo, 4> VariableDbgInfoMapTy;
-  VariableDbgInfoMapTy VariableDbgInfos;
 
   explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
   ~MachineModuleInfo() override;
@@ -277,18 +260,6 @@ public:
 
   void setUsesMorestackAddr(bool b) {
     UsesMorestackAddr = b;
-  }
-
-  /// Returns a reference to a list of cfi instructions in the current
-  /// function's prologue.  Used to construct frame maps for debug and
-  /// exception handling comsumers.
-  const std::vector<MCCFIInstruction> &getFrameInstructions() const {
-    return FrameInstructions;
-  }
-
-  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst) {
-    FrameInstructions.push_back(Inst);
-    return FrameInstructions.size() - 1;
   }
 
   /// Return the symbol to be used for the specified basic block when its
@@ -412,15 +383,6 @@ public:
   const std::vector<unsigned> &getFilterIds() const {
     return FilterIds;
   }
-
-  /// Collect information used to emit debugging information of a variable.
-  void setVariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
-                          unsigned Slot, const DILocation *Loc) {
-    VariableDbgInfos.emplace_back(Var, Expr, Slot, Loc);
-  }
-
-  VariableDbgInfoMapTy &getVariableDbgInfo() { return VariableDbgInfos; }
-
 }; // End class MachineModuleInfo
 
 //===- MMI building helpers -----------------------------------------------===//

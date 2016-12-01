@@ -36,11 +36,11 @@ entry:
 define i32 @f3() {
 ; X32-LABEL: f3:
 ; X32:      calll .L{{[0-9]+}}$pb
-; X32-NEXT: .Ltmp{{[0-9]+}}:
+; X32-NEXT: .Lcfi{{[0-9]+}}:
 ; X32-NEXT: .cfi_adjust_cfa_offset 4
 ; X32-NEXT: .L{{[0-9]+}}$pb:
 ; X32-NEXT: popl %eax
-; X32-NEXT: .Ltmp{{[0-9]+}}:
+; X32-NEXT: .Lcfi{{[0-9]+}}:
 ; X32-NEXT: .cfi_adjust_cfa_offset -4
 ; X32-NEXT: .Ltmp{{[0-9]+}}:
 ; X32-NEXT: addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp{{[0-9]+}}-.L{{[0-9]+}}$pb), %eax
@@ -60,11 +60,11 @@ entry:
 define i32* @f4() {
 ; X32-LABEL: f4:
 ; X32:      calll .L{{[0-9]+}}$pb
-; X32-NEXT: .Ltmp{{[0-9]+}}:
+; X32-NEXT: .Lcfi{{[0-9]+}}:
 ; X32-NEXT: .cfi_adjust_cfa_offset 4
 ; X32-NEXT: .L{{[0-9]+}}$pb:
 ; X32-NEXT: popl %ecx
-; X32-NEXT: .Ltmp{{[0-9]+}}:
+; X32-NEXT: .Lcfi{{[0-9]+}}:
 ; X32-NEXT: .cfi_adjust_cfa_offset -4
 ; X32-NEXT: .Ltmp{{[0-9]+}}:
 ; X32-NEXT: addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp{{[0-9]+}}-.L{{[0-9]+}}$pb), %ecx

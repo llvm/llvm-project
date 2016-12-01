@@ -12,16 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <map>
-#include <set>
-#include <sstream>
-
 #include "FuzzerCorpus.h"
 #include "FuzzerDefs.h"
 #include "FuzzerDictionary.h"
 #include "FuzzerExtFunctions.h"
+#include "FuzzerIO.h"
 #include "FuzzerTracePC.h"
 #include "FuzzerValueBitMap.h"
+#include <map>
+#include <set>
+#include <sstream>
 
 namespace fuzzer {
 
@@ -131,7 +131,8 @@ void TracePC::PrintCoverage() {
   }
   std::map<std::string, std::vector<uintptr_t>> CoveredPCsPerModule;
   std::map<std::string, uintptr_t> ModuleOffsets;
-  std::set<std::string> CoveredFiles, CoveredFunctions, CoveredLines;
+  std::set<std::string> CoveredDirs, CoveredFiles, CoveredFunctions,
+      CoveredLines;
   Printf("COVERAGE:\n");
   for (size_t i = 1; i < GetNumPCs(); i++) {
     if (!PCs[i]) continue;
@@ -150,11 +151,20 @@ void TracePC::PrintCoverage() {
     CoveredPCsPerModule[Module].push_back(PcOffset);
     CoveredFunctions.insert(FunctionStr);
     CoveredFiles.insert(FileStr);
+    CoveredDirs.insert(DirName(FileStr));
     if (!CoveredLines.insert(FileStr + ":" + LineStr).second)
       continue;
     Printf("COVERED: %s %s:%s\n", FunctionStr.c_str(),
            FileStr.c_str(), LineStr.c_str());
   }
+
+  std::string CoveredDirsStr;
+  for (auto &Dir : CoveredDirs) {
+    if (!CoveredDirsStr.empty())
+      CoveredDirsStr += ",";
+    CoveredDirsStr += Dir;
+  }
+  Printf("COVERED_DIRS: %s\n", CoveredDirsStr.c_str());
 
   for (auto &M : CoveredPCsPerModule) {
     std::set<std::string> UncoveredFiles, UncoveredFunctions;

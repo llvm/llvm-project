@@ -1875,23 +1875,52 @@ static void getUsefulBitsFromBFM(SDValue Op, SDValue Orig, APInt &UsefulBits,
   uint64_t MSB =
       cast<const ConstantSDNode>(Op.getOperand(3).getNode())->getZExtValue();
 
-  if (Op.getOperand(1) == Orig)
-    return getUsefulBitsFromBitfieldMoveOpd(Op, UsefulBits, Imm, MSB, Depth);
-
   APInt OpUsefulBits(UsefulBits);
   OpUsefulBits = 1;
 
+  APInt ResultUsefulBits(UsefulBits.getBitWidth(), 0);
+  ResultUsefulBits.flipAllBits();
+  APInt Mask(UsefulBits.getBitWidth(), 0);
+
+  getUsefulBits(Op, ResultUsefulBits, Depth + 1);
+
   if (MSB >= Imm) {
-    OpUsefulBits = OpUsefulBits.shl(MSB - Imm + 1);
+    // The instruction is a BFXIL.
+    uint64_t Width = MSB - Imm + 1;
+    uint64_t LSB = Imm;
+
+    OpUsefulBits = OpUsefulBits.shl(Width);
     --OpUsefulBits;
-    UsefulBits &= ~OpUsefulBits;
-    getUsefulBits(Op, UsefulBits, Depth + 1);
+
+    if (Op.getOperand(1) == Orig) {
+      // Copy the low bits from the result to bits starting from LSB.
+      Mask = ResultUsefulBits & OpUsefulBits;
+      Mask = Mask.shl(LSB);
+    }
+
+    if (Op.getOperand(0) == Orig)
+      // Bits starting from LSB in the input contribute to the result.
+      Mask |= (ResultUsefulBits & ~OpUsefulBits);
   } else {
-    OpUsefulBits = OpUsefulBits.shl(MSB + 1);
+    // The instruction is a BFI.
+    uint64_t Width = MSB + 1;
+    uint64_t LSB = UsefulBits.getBitWidth() - Imm;
+
+    OpUsefulBits = OpUsefulBits.shl(Width);
     --OpUsefulBits;
-    UsefulBits = ~(OpUsefulBits.shl(OpUsefulBits.getBitWidth() - Imm));
-    getUsefulBits(Op, UsefulBits, Depth + 1);
+    OpUsefulBits = OpUsefulBits.shl(LSB);
+
+    if (Op.getOperand(1) == Orig) {
+      // Copy the bits from the result to the zero bits.
+      Mask = ResultUsefulBits & OpUsefulBits;
+      Mask = Mask.lshr(LSB);
+    }
+
+    if (Op.getOperand(0) == Orig)
+      Mask |= (ResultUsefulBits & ~OpUsefulBits);
   }
+
+  UsefulBits &= Mask;
 }
 
 static void getUsefulBitsForUse(SDNode *UserNode, APInt &UsefulBits,

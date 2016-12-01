@@ -258,7 +258,7 @@ define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) {
 ; SSE2-LABEL: avg_v64i8:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    subq $152, %rsp
-; SSE2-NEXT:  .Ltmp0:
+; SSE2-NEXT:  .Lcfi0:
 ; SSE2-NEXT:    .cfi_def_cfa_offset 160
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
 ; SSE2-NEXT:    movdqa 16(%rdi), %xmm2

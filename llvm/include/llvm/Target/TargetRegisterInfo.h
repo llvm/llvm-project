@@ -486,8 +486,14 @@ public:
 
   /// Returns a bitset indexed by physical register number indicating if a
   /// register is a special register that has particular uses and should be
-  /// considered unavailable at all times, e.g. SP, RA. This is
-  /// used by register scavenger to determine what registers are free.
+  /// considered unavailable at all times, e.g. stack pointer, return address.
+  /// A reserved register:
+  /// - is not allocatable
+  /// - is considered always live
+  /// - is ignored by liveness tracking
+  /// It is often necessary to reserve the super registers of a reserved
+  /// register as well, to avoid them getting allocated indirectly. You may use
+  /// markSuperRegs() and checkAllSuperRegsMarked() in this case.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
 
   /// Returns true if PhysReg is unallocatable and constant throughout the
@@ -942,6 +948,14 @@ public:
   /// getFrameRegister - This method should return the register used as a base
   /// for values allocated in the current stack frame.
   virtual unsigned getFrameRegister(const MachineFunction &MF) const = 0;
+
+  /// Mark a register and all its aliases as reserved in the given set.
+  void markSuperRegs(BitVector &RegisterSet, unsigned Reg) const;
+
+  /// Returns true if for every register in the set all super registers are part
+  /// of the set as well.
+  bool checkAllSuperRegsMarked(const BitVector &RegisterSet,
+      ArrayRef<MCPhysReg> Exceptions = ArrayRef<MCPhysReg>()) const;
 };
 
 

@@ -567,7 +567,7 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
     ++BlockStats.NumRecords;
 
     StringRef Blob;
-    unsigned CurrentRecordPos = Stream.getCurrentByteNo();
+    unsigned CurrentRecordPos = Stream.GetCurrentBitNo();
     unsigned Code = Stream.readRecord(Entry.ID, Record, &Blob);
 
     // Increment the # occurrences of this code.
@@ -608,7 +608,7 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
           SHA1 Hasher;
           StringRef Hash;
           {
-            int BlockSize = CurrentRecordPos - BlockEntryPos;
+            int BlockSize = (CurrentRecordPos / 8) - BlockEntryPos;
             auto Ptr = Stream.getPointerToByte(BlockEntryPos, BlockSize);
             Hasher.update(ArrayRef<uint8_t>(Ptr, BlockSize));
             Hash = Hasher.result();
@@ -675,6 +675,10 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
 
       outs() << "\n";
     }
+
+    // Make sure that we can skip the current record.
+    Stream.JumpToBit(CurrentRecordPos);
+    Stream.skipRecord(Entry.ID);
   }
 }
 

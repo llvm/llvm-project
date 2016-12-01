@@ -527,16 +527,6 @@ void MachineVerifier::visitMachineFunctionBefore() {
   lastIndex = SlotIndex();
   regsReserved = MRI->getReservedRegs();
 
-  // A sub-register of a reserved register is also reserved
-  for (int Reg = regsReserved.find_first(); Reg>=0;
-       Reg = regsReserved.find_next(Reg)) {
-    for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
-      // FIXME: This should probably be:
-      // assert(regsReserved.test(*SubRegs) && "Non-reserved sub-register");
-      regsReserved.set(*SubRegs);
-    }
-  }
-
   markReachable(&MF->front());
 
   // Build a set of the basic blocks in the function.

@@ -79,6 +79,7 @@ void printCOFFSymbolTable(const object::COFFImportFile *i);
 void printCOFFSymbolTable(const object::COFFObjectFile *o);
 void printMachOFileHeader(const object::ObjectFile *o);
 void printMachOLoadCommands(const object::ObjectFile *o);
+void printWasmFileHeader(const object::ObjectFile *o);
 void printExportsTrie(const object::ObjectFile *o);
 void printRebaseTable(const object::ObjectFile *o);
 void printBindTable(const object::ObjectFile *o);

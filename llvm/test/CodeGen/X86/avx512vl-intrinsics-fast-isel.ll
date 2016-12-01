@@ -24,7 +24,7 @@ define <2 x i64> @test_mm_mask_broadcastd_epi32(<2 x i64> %a0, i8 %a1, <2 x i64>
 ; X32-LABEL: test_mm_mask_broadcastd_epi32:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp0:
+; X32-NEXT:  .Lcfi0:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -57,7 +57,7 @@ define <2 x i64> @test_mm_maskz_broadcastd_epi32(i8 %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_maskz_broadcastd_epi32:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp1:
+; X32-NEXT:  .Lcfi1:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -162,7 +162,7 @@ define <2 x i64> @test_mm_mask_broadcastq_epi64(<2 x i64> %a0, i8 %a1, <2 x i64>
 ; X32-LABEL: test_mm_mask_broadcastq_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp2:
+; X32-NEXT:  .Lcfi2:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -192,7 +192,7 @@ define <2 x i64> @test_mm_maskz_broadcastq_epi64(i8 %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_maskz_broadcastq_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp3:
+; X32-NEXT:  .Lcfi3:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -236,7 +236,7 @@ define <4 x i64> @test_mm256_mask_broadcastq_epi64(<4 x i64> %a0, i8 %a1, <2 x i
 ; X32-LABEL: test_mm256_mask_broadcastq_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp4:
+; X32-NEXT:  .Lcfi4:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -266,7 +266,7 @@ define <4 x i64> @test_mm256_maskz_broadcastq_epi64(i8 %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm256_maskz_broadcastq_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp5:
+; X32-NEXT:  .Lcfi5:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -310,7 +310,7 @@ define <2 x double> @test_mm_mask_broadcastsd_pd(<2 x double> %a0, i8 %a1, <2 x 
 ; X32-LABEL: test_mm_mask_broadcastsd_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp6:
+; X32-NEXT:  .Lcfi6:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -340,7 +340,7 @@ define <2 x double> @test_mm_maskz_broadcastsd_pd(i8 %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_maskz_broadcastsd_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp7:
+; X32-NEXT:  .Lcfi7:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -384,7 +384,7 @@ define <4 x double> @test_mm256_mask_broadcastsd_pd(<4 x double> %a0, i8 %a1, <2
 ; X32-LABEL: test_mm256_mask_broadcastsd_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp8:
+; X32-NEXT:  .Lcfi8:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -414,7 +414,7 @@ define <4 x double> @test_mm256_maskz_broadcastsd_pd(i8 %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm256_maskz_broadcastsd_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp9:
+; X32-NEXT:  .Lcfi9:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -458,7 +458,7 @@ define <4 x float> @test_mm_mask_broadcastss_ps(<4 x float> %a0, i8 %a1, <4 x fl
 ; X32-LABEL: test_mm_mask_broadcastss_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp10:
+; X32-NEXT:  .Lcfi10:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -488,7 +488,7 @@ define <4 x float> @test_mm_maskz_broadcastss_ps(i8 %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_maskz_broadcastss_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp11:
+; X32-NEXT:  .Lcfi11:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -584,7 +584,7 @@ define <2 x double> @test_mm_mask_movddup_pd(<2 x double> %a0, i8 %a1, <2 x doub
 ; X32-LABEL: test_mm_mask_movddup_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp12:
+; X32-NEXT:  .Lcfi12:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -614,7 +614,7 @@ define <2 x double> @test_mm_maskz_movddup_pd(i8 %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_maskz_movddup_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp13:
+; X32-NEXT:  .Lcfi13:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -658,7 +658,7 @@ define <4 x double> @test_mm256_mask_movddup_pd(<4 x double> %a0, i8 %a1, <4 x d
 ; X32-LABEL: test_mm256_mask_movddup_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp14:
+; X32-NEXT:  .Lcfi14:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -688,7 +688,7 @@ define <4 x double> @test_mm256_maskz_movddup_pd(i8 %a0, <4 x double> %a1) {
 ; X32-LABEL: test_mm256_maskz_movddup_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp15:
+; X32-NEXT:  .Lcfi15:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -732,7 +732,7 @@ define <4 x float> @test_mm_mask_movehdup_ps(<4 x float> %a0, i8 %a1, <4 x float
 ; X32-LABEL: test_mm_mask_movehdup_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp16:
+; X32-NEXT:  .Lcfi16:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -762,7 +762,7 @@ define <4 x float> @test_mm_maskz_movehdup_ps(i8 %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_maskz_movehdup_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp17:
+; X32-NEXT:  .Lcfi17:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -858,7 +858,7 @@ define <4 x float> @test_mm_mask_moveldup_ps(<4 x float> %a0, i8 %a1, <4 x float
 ; X32-LABEL: test_mm_mask_moveldup_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp18:
+; X32-NEXT:  .Lcfi18:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -888,7 +888,7 @@ define <4 x float> @test_mm_maskz_moveldup_ps(i8 %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_maskz_moveldup_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp19:
+; X32-NEXT:  .Lcfi19:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -984,7 +984,7 @@ define <4 x i64> @test_mm256_mask_permutex_epi64(<4 x i64> %a0, i8 %a1, <4 x i64
 ; X32-LABEL: test_mm256_mask_permutex_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp20:
+; X32-NEXT:  .Lcfi20:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -1014,7 +1014,7 @@ define <4 x i64> @test_mm256_maskz_permutex_epi64(i8 %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_maskz_permutex_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp21:
+; X32-NEXT:  .Lcfi21:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -1058,7 +1058,7 @@ define <4 x double> @test_mm256_mask_permutex_pd(<4 x double> %a0, i8 %a1, <4 x 
 ; X32-LABEL: test_mm256_mask_permutex_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp22:
+; X32-NEXT:  .Lcfi22:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -1088,7 +1088,7 @@ define <4 x double> @test_mm256_maskz_permutex_pd(i8 %a0, <4 x double> %a1) {
 ; X32-LABEL: test_mm256_maskz_permutex_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp23:
+; X32-NEXT:  .Lcfi23:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -1132,7 +1132,7 @@ define <2 x double> @test_mm_mask_shuffle_pd(<2 x double> %a0, i8 %a1, <2 x doub
 ; X32-LABEL: test_mm_mask_shuffle_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp24:
+; X32-NEXT:  .Lcfi24:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -1162,7 +1162,7 @@ define <2 x double> @test_mm_maskz_shuffle_pd(i8 %a0, <2 x double> %a1, <2 x dou
 ; X32-LABEL: test_mm_maskz_shuffle_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp25:
+; X32-NEXT:  .Lcfi25:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $3, %al
@@ -1206,7 +1206,7 @@ define <4 x double> @test_mm256_mask_shuffle_pd(<4 x double> %a0, i8 %a1, <4 x d
 ; X32-LABEL: test_mm256_mask_shuffle_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp26:
+; X32-NEXT:  .Lcfi26:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -1236,7 +1236,7 @@ define <4 x double> @test_mm256_maskz_shuffle_pd(i8 %a0, <4 x double> %a1, <4 x 
 ; X32-LABEL: test_mm256_maskz_shuffle_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp27:
+; X32-NEXT:  .Lcfi27:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -1280,7 +1280,7 @@ define <4 x float> @test_mm_mask_shuffle_ps(<4 x float> %a0, i8 %a1, <4 x float>
 ; X32-LABEL: test_mm_mask_shuffle_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp28:
+; X32-NEXT:  .Lcfi28:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al
@@ -1310,7 +1310,7 @@ define <4 x float> @test_mm_maskz_shuffle_ps(i8 %a0, <4 x float> %a1, <4 x float
 ; X32-LABEL: test_mm_maskz_shuffle_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:  .Ltmp29:
+; X32-NEXT:  .Lcfi29:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $15, %al

@@ -408,7 +408,7 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 ; ALL-LABEL: broadcast_ss_spill:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    pushq %rax
-; ALL-NEXT:  .Ltmp0:
+; ALL-NEXT:  .Lcfi0:
 ; ALL-NEXT:    .cfi_def_cfa_offset 16
 ; ALL-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; ALL-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
@@ -428,7 +428,7 @@ define <8 x double> @broadcast_sd_spill(double %x) {
 ; ALL-LABEL: broadcast_sd_spill:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    pushq %rax
-; ALL-NEXT:  .Ltmp1:
+; ALL-NEXT:  .Lcfi1:
 ; ALL-NEXT:    .cfi_def_cfa_offset 16
 ; ALL-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
 ; ALL-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill

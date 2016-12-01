@@ -12,7 +12,7 @@ define i64 @caller_1() {
 ; CHECK-NEXT: {{.+cfi.+}}
 ; CHECK-NEXT: ##{{.+}}
 ; CHECK-NEXT: pushq	%rax
-; CHECK-NEXT: {{Ltmp[0-9]+}}:
+; CHECK-NEXT: {{Lcfi[0-9]+}}:
 ; CHECK-NEXT: {{.+cfi.+}}
 ; CHECK-NEXT: movl	$1140457472, (%rsp)     ## imm = 0x43FA0000
 ; CHECK-NEXT: movl	$42, %eax
