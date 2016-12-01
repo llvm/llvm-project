@@ -500,7 +500,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
   Constant *numBytes_arg = ConstantInt::get(
       m_intptr_ty, cstr ? (string_array->getNumElements() - 1) * string_array->getElementByteSize() : 0, false);
  int encoding_flags = 0;
- switch (string_array->getElementByteSize()) {
+ switch (cstr ? string_array->getElementByteSize() : 1) {
  case 1:
    encoding_flags = 0x08000100; /* 0x08000100 is kCFStringEncodingUTF8 */
    break;
