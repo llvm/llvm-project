@@ -26,19 +26,10 @@ using namespace lldb_private;
 
 static const char *GetLLDBRevision() {
 #ifdef LLDB_REVISION
-  static const char *s_revision = LLDB_REVISION;
+  return LLDB_REVISION;
 #else
-  static const char *s_revision = nullptr;
+  return nullptr;
 #endif
-
-  // If LLDB_REVISION is defined but isn't set to a string, it
-  // can still be the equivalent of NULL.  Hence we always do
-  // this check below and return an empty string when we don't
-  // otherwise have a valid const string for it.
-  if (s_revision != nullptr)
-    return s_revision;
-  else
-    return "";
 }
 
 static const char *GetLLDBRepository() {
