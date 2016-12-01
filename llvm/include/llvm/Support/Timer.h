@@ -166,6 +166,9 @@ struct NamedRegionTimer : public TimeRegion {
   explicit NamedRegionTimer(StringRef Name, StringRef Description,
                             StringRef GroupName,
                             StringRef GroupDescription, bool Enabled = true);
+  /// Compatibility constructor.
+  explicit NamedRegionTimer(StringRef Name, StringRef GroupName,
+                            bool Enabled = true);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
@@ -185,6 +188,8 @@ class TimerGroup {
 
 public:
   explicit TimerGroup(StringRef Name, StringRef Description);
+  /// Compatibility constructor.
+  explicit TimerGroup(StringRef Name);
   ~TimerGroup();
 
   void setName(StringRef NewName, StringRef NewDescription) {
