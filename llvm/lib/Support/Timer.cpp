@@ -230,6 +230,9 @@ NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef GroupName)
 /// ctor/dtor and is protected by the TimerLock lock.
 static TimerGroup *TimerGroupList = nullptr;
 
+TimerGroup::TimerGroup(StringRef Name)
+  : TimerGroup(Name, Name) { }
+
 TimerGroup::TimerGroup(StringRef Name, StringRef Description)
   : Name(Name.begin(), Name.end()),
     Description(Description.begin(), Description.end()) {
