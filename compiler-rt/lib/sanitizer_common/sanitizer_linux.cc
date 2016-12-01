@@ -1304,6 +1304,10 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
 #endif
 }
 
+void SignalContext::DumpAllRegisters(void *context) {
+  // FIXME: Implement this.
+}
+
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #if defined(__arm__)
   ucontext_t *ucontext = (ucontext_t*)context;
