@@ -1,7 +1,11 @@
 RUN: llvm-size -m %p/Inputs/darwin-m.o | FileCheck --check-prefix="DARWIN" %s
+RUN: llvm-size -m %p/Inputs/darwin-m.o %p/Inputs/darwin-m1.o | FileCheck --check-prefix="DARWIN2" %s
 
 DARWIN: Segment : 8
 DARWIN-NEXT:	Section (__TEXT, __text): 4
 DARWIN-NEXT:	Section (__DATA, __data): 4
 DARWIN-NEXT:	total 8
 DARWIN-NEXT: total 8
+
+DARWIN2: Inputs/darwin-m.o:
+DARWIN2: Inputs/darwin-m1.o:
