@@ -3109,6 +3109,10 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
   for (ScopStmt &Stmt : Stmts)
     Stmt.init(LI);
 
+  // Check early for a feasible runtime context.
+  if (!hasFeasibleRuntimeContext())
+    return;
+
   // Check early for profitability. Afterwards it cannot change anymore,
   // only the runtime context could become infeasible.
   if (!isProfitable()) {
@@ -3137,10 +3141,8 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
 
   // Check late for a feasible runtime context because profitability did not
   // change.
-  if (!hasFeasibleRuntimeContext()) {
-    invalidate(PROFITABLE, DebugLoc());
+  if (!hasFeasibleRuntimeContext())
     return;
-  }
 }
 
 Scop::~Scop() {
@@ -3611,9 +3613,6 @@ __isl_give isl_set *Scop::getAssumedContext() const {
 bool Scop::isProfitable() const {
   if (PollyProcessUnprofitable)
     return true;
-
-  if (!hasFeasibleRuntimeContext())
-    return false;
 
   if (isEmpty())
     return false;

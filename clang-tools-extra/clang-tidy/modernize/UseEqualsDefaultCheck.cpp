@@ -1,4 +1,4 @@
-//===--- UseDefaultCheck.cpp - clang-tidy----------------------------------===//
+//===--- UseEqualsDefaultCheck.cpp - clang-tidy----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UseDefaultCheck.h"
+#include "UseEqualsDefaultCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -197,7 +197,7 @@ static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
   return !Invalid && std::strspn(Text.data(), " \t\r\n") == Text.size();
 }
 
-void UseDefaultCheck::registerMatchers(MatchFinder *Finder) {
+void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
   if (getLangOpts().CPlusPlus) {
     // Destructor.
     Finder->addMatcher(cxxDestructorDecl(isDefinition()).bind(SpecialFunction),
@@ -229,7 +229,7 @@ void UseDefaultCheck::registerMatchers(MatchFinder *Finder) {
   }
 }
 
-void UseDefaultCheck::check(const MatchFinder::MatchResult &Result) {
+void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   std::string SpecialFunctionName;
 
   // Both CXXConstructorDecl and CXXDestructorDecl inherit from CXXMethodDecl.

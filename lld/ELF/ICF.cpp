@@ -59,10 +59,12 @@
 #include "Config.h"
 #include "SymbolTable.h"
 
+#include "lld/Core/Parallel.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
 #include <algorithm>
+#include <mutex>
 
 using namespace lld;
 using namespace lld::elf;
@@ -95,16 +97,16 @@ private:
 
   std::vector<InputSection<ELFT> *> Sections;
   std::vector<Range> Ranges;
+  std::mutex Mu;
 
-  // The main loop is repeated until we get a convergence.
-  bool Repeat = false; // If Repeat is true, we need to repeat.
-  int Cnt = 0;         // Counter for the main loop.
+  uint32_t NextId = 1;
+  int Cnt = 0;
 };
 }
 
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
-template <class ELFT> static uint64_t getHash(InputSection<ELFT> *S) {
+template <class ELFT> static uint32_t getHash(InputSection<ELFT> *S) {
   return hash_combine(S->Flags, S->getSize(), S->NumRelocations);
 }
 
@@ -128,33 +130,54 @@ template <class ELFT> void ICF<ELFT>::segregate(Range *R, bool Constant) {
   // issue in practice because the number of the distinct sections in
   // [R.Begin, R.End] is usually very small.
   while (R->End - R->Begin > 1) {
+    size_t Begin = R->Begin;
+    size_t End = R->End;
+
     // Divide range R into two. Let Mid be the start index of the
     // second group.
     auto Bound = std::stable_partition(
-        Sections.begin() + R->Begin + 1, Sections.begin() + R->End,
+        Sections.begin() + Begin + 1, Sections.begin() + End,
         [&](InputSection<ELFT> *S) {
           if (Constant)
-            return equalsConstant(Sections[R->Begin], S);
-          return equalsVariable(Sections[R->Begin], S);
+            return equalsConstant(Sections[Begin], S);
+          return equalsVariable(Sections[Begin], S);
         });
     size_t Mid = Bound - Sections.begin();
 
-    if (Mid == R->End)
+    if (Mid == End)
       return;
 
-    // Now we split [R.Begin, R.End) into [R.Begin, Mid) and [Mid, R.End).
-    if (Mid - R->Begin > 1)
-      Ranges.push_back({R->Begin, Mid});
-    R->Begin = Mid;
+    // Now we split [Begin, End) into [Begin, Mid) and [Mid, End).
+    uint32_t Id;
+    Range *NewRange;
+    {
+      std::lock_guard<std::mutex> Lock(Mu);
+      Ranges.push_back({Mid, End});
+      NewRange = &Ranges.back();
+      Id = NextId++;
+    }
+    R->End = Mid;
 
-    // Update GroupIds for the new group members. We use the index of
-    // the group first member as a group ID because that is unique.
-    for (size_t I = Mid; I < R->End; ++I)
-      Sections[I]->GroupId = Mid;
+    // Update GroupIds for the new group members.
+    //
+    // Note on GroupId[0] and GroupId[1]: we have two storages for
+    // group IDs. At the beginning of each iteration of the main loop,
+    // both have the same ID. GroupId[0] contains the current ID, and
+    // GroupId[1] contains the next ID which will be used in the next
+    // iteration.
+    //
+    // Recall that other threads may be working on other ranges. They
+    // may be reading group IDs that we are about to update. We cannot
+    // update group IDs in place because it breaks the invariance that
+    // all sections in the same group must have the same ID. In other
+    // words, the following for loop is not an atomic operation, and
+    // that is observable from other threads.
+    //
+    // By writing new IDs to write-only places, we can keep the invariance.
+    for (size_t I = Mid; I < End; ++I)
+      Sections[I]->GroupId[(Cnt + 1) % 2] = Id;
 
-    // Since we have split a group, we need to repeat the main loop
-    // later to obtain a convergence. Remember that.
-    Repeat = true;
+    R = NewRange;
   }
 }
 
@@ -211,7 +234,16 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
     auto *Y = dyn_cast<InputSection<ELFT>>(DB->Section);
     if (!X || !Y)
       return false;
-    return X->GroupId != 0 && X->GroupId == Y->GroupId;
+    if (X->GroupId[Cnt % 2] == 0)
+      return false;
+
+    // Performance hack for single-thread. If no other threads are
+    // running, we can safely read next GroupIDs as there is no race
+    // condition. This optimization may reduce the number of
+    // iterations of the main loop because we can see results of the
+    // same iteration.
+    size_t Idx = (Config->Threads ? Cnt : Cnt + 1) % 2;
+    return X->GroupId[Idx] == Y->GroupId[Idx];
   };
 
   return std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
@@ -224,6 +256,14 @@ bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
   if (A->AreRelocsRela)
     return variableEq(A, A->relas(), B, B->relas());
   return variableEq(A, A->rels(), B, B->rels());
+}
+
+template <class IterTy, class FuncTy>
+static void foreach(IterTy Begin, IterTy End, FuncTy Fn) {
+  if (Config->Threads)
+    parallel_for_each(Begin, End, Fn);
+  else
+    std::for_each(Begin, End, Fn);
 }
 
 // The main function of ICF.
@@ -239,14 +279,14 @@ template <class ELFT> void ICF<ELFT>::run() {
   // guaranteed) to have the same static contents in terms of ICF.
   for (InputSection<ELFT> *S : Sections)
     // Set MSB to 1 to avoid collisions with non-hash IDs.
-    S->GroupId = getHash(S) | (uint64_t(1) << 63);
+    S->GroupId[0] = S->GroupId[1] = getHash(S) | (1 << 31);
 
   // From now on, sections in Sections are ordered so that sections in
   // the same group are consecutive in the vector.
   std::stable_sort(Sections.begin(), Sections.end(),
                    [](InputSection<ELFT> *A, InputSection<ELFT> *B) {
-                     if (A->GroupId != B->GroupId)
-                       return A->GroupId < B->GroupId;
+                     if (A->GroupId[0] != B->GroupId[0])
+                       return A->GroupId[0] < B->GroupId[0];
                      // Within a group, put the highest alignment
                      // requirement first, so that's the one we'll keep.
                      return B->Alignment < A->Alignment;
@@ -260,25 +300,37 @@ template <class ELFT> void ICF<ELFT>::run() {
   for (size_t I = 0, E = Sections.size(); I < E - 1;) {
     // Let J be the first index whose element has a different ID.
     size_t J = I + 1;
-    while (J < E && Sections[I]->GroupId == Sections[J]->GroupId)
+    while (J < E && Sections[I]->GroupId[0] == Sections[J]->GroupId[0])
       ++J;
     if (J - I > 1)
       Ranges.push_back({I, J});
     I = J;
   }
 
+  // This function copies new GroupIds from former write-only space to
+  // former read-only space, so that we can flip GroupId[0] and GroupId[1].
+  // Note that new GroupIds are always be added to end of Ranges.
+  auto Copy = [&](Range &R) {
+    for (size_t I = R.Begin; I < R.End; ++I)
+      Sections[I]->GroupId[Cnt % 2] = Sections[I]->GroupId[(Cnt + 1) % 2];
+  };
+
   // Compare static contents and assign unique IDs for each static content.
-  std::for_each(Ranges.begin(), Ranges.end(),
-                [&](Range &R) { segregate(&R, true); });
+  auto End = Ranges.end();
+  foreach(Ranges.begin(), End, [&](Range &R) { segregate(&R, true); });
+  foreach(End, Ranges.end(), Copy);
   ++Cnt;
 
   // Split groups by comparing relocations until convergence is obtained.
-  do {
-    Repeat = false;
-    std::for_each(Ranges.begin(), Ranges.end(),
-                  [&](Range &R) { segregate(&R, false); });
+  for (;;) {
+    auto End = Ranges.end();
+    foreach(Ranges.begin(), End, [&](Range &R) { segregate(&R, false); });
+    foreach(End, Ranges.end(), Copy);
     ++Cnt;
-  } while (Repeat);
+
+    if (End == Ranges.end())
+      break;
+  }
 
   log("ICF needed " + Twine(Cnt) + " iterations");
 

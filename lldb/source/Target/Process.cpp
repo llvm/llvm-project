@@ -13,6 +13,7 @@
 #include <mutex>
 
 // Other libraries and framework includes
+#include "llvm/Support/ScopedPrinter.h"
 // Project includes
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -4799,6 +4800,45 @@ private:
 };
 } // anonymous namespace
 
+static microseconds
+GetOneThreadExpressionTimeout(const EvaluateExpressionOptions &options) {
+  const milliseconds default_one_thread_timeout(250);
+
+  // If the overall wait is forever, then we don't need to worry about it.
+  if (options.GetTimeoutUsec() == 0) {
+    if (options.GetOneThreadTimeoutUsec() != 0)
+      return microseconds(options.GetOneThreadTimeoutUsec());
+    return default_one_thread_timeout;
+  }
+
+  // If the one thread timeout is set, use it.
+  if (options.GetOneThreadTimeoutUsec() != 0)
+    return microseconds(options.GetOneThreadTimeoutUsec());
+
+  // Otherwise use half the total timeout, bounded by the
+  // default_one_thread_timeout.
+  return std::min<microseconds>(default_one_thread_timeout,
+                                microseconds(options.GetTimeoutUsec()) / 2);
+}
+
+static Timeout<std::micro>
+GetExpressionTimeout(const EvaluateExpressionOptions &options,
+                     bool before_first_timeout) {
+  // If we are going to run all threads the whole time, or if we are only
+  // going to run one thread, we can just return the overall timeout.
+  if (!options.GetStopOthers() || !options.GetTryAllThreads())
+    return ConvertTimeout(microseconds(options.GetTimeoutUsec()));
+
+  if (before_first_timeout)
+    return GetOneThreadExpressionTimeout(options);
+
+  if (options.GetTimeoutUsec() == 0)
+    return llvm::None;
+  else
+    return microseconds(options.GetTimeoutUsec()) -
+           GetOneThreadExpressionTimeout(options);
+}
+
 ExpressionResults
 Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        lldb::ThreadPlanSP &thread_plan_sp,
@@ -4877,6 +4917,16 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           thread_idx_id);
       return eExpressionSetupError;
     }
+  }
+
+  // Make sure the timeout values make sense. The one thread timeout needs to be
+  // smaller than the overall timeout.
+  if (options.GetOneThreadTimeoutUsec() != 0 && options.GetTimeoutUsec() != 0 &&
+      options.GetTimeoutUsec() < options.GetOneThreadTimeoutUsec()) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "RunThreadPlan called with one thread "
+                                 "timeout greater than total timeout");
+    return eExpressionSetupError;
   }
 
   StackID ctx_frame_id = selected_frame_sp->GetStackID();
@@ -4985,67 +5035,20 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                                       // that we have to halt the target.
     bool do_resume = true;
     bool handle_running_event = true;
-    const uint64_t default_one_thread_timeout_usec = 250000;
 
     // This is just for accounting:
     uint32_t num_resumes = 0;
 
-    uint32_t timeout_usec = options.GetTimeoutUsec();
-    uint32_t one_thread_timeout_usec;
-    uint32_t all_threads_timeout_usec = 0;
-
     // If we are going to run all threads the whole time, or if we are only
-    // going to run one thread,
-    // then we don't need the first timeout.  So we set the final timeout, and
-    // pretend we are after the
-    // first timeout already.
-
-    if (!options.GetStopOthers() || !options.GetTryAllThreads()) {
+    // going to run one thread, then we don't need the first timeout.  So we
+    // pretend we are after the first timeout already.
+    if (!options.GetStopOthers() || !options.GetTryAllThreads())
       before_first_timeout = false;
-      one_thread_timeout_usec = 0;
-      all_threads_timeout_usec = timeout_usec;
-    } else {
-      uint32_t option_one_thread_timeout = options.GetOneThreadTimeoutUsec();
-
-      // If the overall wait is forever, then we only need to set the one thread
-      // timeout:
-      if (timeout_usec == 0) {
-        if (option_one_thread_timeout != 0)
-          one_thread_timeout_usec = option_one_thread_timeout;
-        else
-          one_thread_timeout_usec = default_one_thread_timeout_usec;
-      } else {
-        // Otherwise, if the one thread timeout is set, make sure it isn't
-        // longer than the overall timeout,
-        // and use it, otherwise use half the total timeout, bounded by the
-        // default_one_thread_timeout_usec.
-        uint64_t computed_one_thread_timeout;
-        if (option_one_thread_timeout != 0) {
-          if (timeout_usec < option_one_thread_timeout) {
-            diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                         "RunThreadPlan called without one "
-                                         "thread timeout greater than total "
-                                         "timeout");
-            return eExpressionSetupError;
-          }
-          computed_one_thread_timeout = option_one_thread_timeout;
-        } else {
-          computed_one_thread_timeout = timeout_usec / 2;
-          if (computed_one_thread_timeout > default_one_thread_timeout_usec)
-            computed_one_thread_timeout = default_one_thread_timeout_usec;
-        }
-        one_thread_timeout_usec = computed_one_thread_timeout;
-        all_threads_timeout_usec = timeout_usec - one_thread_timeout_usec;
-      }
-    }
 
     if (log)
-      log->Printf(
-          "Stop others: %u, try all: %u, before_first: %u, one thread: %" PRIu32
-          " - all threads: %" PRIu32 ".\n",
-          options.GetStopOthers(), options.GetTryAllThreads(),
-          before_first_timeout, one_thread_timeout_usec,
-          all_threads_timeout_usec);
+      log->Printf("Stop others: %u, try all: %u, before_first: %u.\n",
+                  options.GetStopOthers(), options.GetTryAllThreads(),
+                  before_first_timeout);
 
     // This isn't going to work if there are unfetched events on the queue.
     // Are there cases where we might want to run the remaining events here, and
@@ -5083,8 +5086,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // The expression evaluation should still succeed.
     bool miss_first_event = true;
 #endif
-    std::chrono::microseconds timeout = std::chrono::microseconds(0);
-
     while (true) {
       // We usually want to resume the process if we get to the top of the loop.
       // The only exception is if we get two running events with no intervening
@@ -5178,36 +5179,21 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           log->PutCString("Process::RunThreadPlan(): waiting for next event.");
       }
 
-      if (before_first_timeout) {
-        if (options.GetTryAllThreads())
-          timeout = std::chrono::microseconds(one_thread_timeout_usec);
-        else
-          timeout = std::chrono::microseconds(timeout_usec);
-      } else {
-        if (timeout_usec == 0)
-          timeout = std::chrono::microseconds(0);
-        else
-          timeout = std::chrono::microseconds(all_threads_timeout_usec);
-      }
-
       do_resume = true;
       handle_running_event = true;
 
       // Now wait for the process to stop again:
       event_sp.reset();
 
+      Timeout<std::micro> timeout =
+          GetExpressionTimeout(options, before_first_timeout);
       if (log) {
-        if (timeout.count()) {
-          log->Printf(
-              "Process::RunThreadPlan(): about to wait - now is %llu - "
-              "endpoint is %llu",
-              static_cast<unsigned long long>(
-                  std::chrono::system_clock::now().time_since_epoch().count()),
-              static_cast<unsigned long long>(
-                  std::chrono::time_point<std::chrono::system_clock,
-                                          std::chrono::microseconds>(timeout)
-                      .time_since_epoch()
-                      .count()));
+        if (timeout) {
+          auto now = system_clock::now();
+          log->Printf("Process::RunThreadPlan(): about to wait - now is %s - "
+                      "endpoint is %s",
+                      llvm::to_string(now).c_str(),
+                      llvm::to_string(now + *timeout).c_str());
         } else {
           log->Printf("Process::RunThreadPlan(): about to wait forever.");
         }
@@ -5221,7 +5207,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         got_event = false;
       } else
 #endif
-        got_event = listener_sp->GetEvent(event_sp, ConvertTimeout(timeout));
+        got_event = listener_sp->GetEvent(event_sp, timeout);
 
       if (got_event) {
         if (event_sp) {
@@ -5371,27 +5357,19 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         if (log) {
           if (options.GetTryAllThreads()) {
             if (before_first_timeout) {
-              if (timeout_usec != 0) {
-                log->Printf("Process::RunThreadPlan(): Running function with "
-                            "one thread timeout timed out, "
-                            "running for %" PRIu32
-                            " usec with all threads enabled.",
-                            all_threads_timeout_usec);
-              } else {
-                log->Printf("Process::RunThreadPlan(): Running function with "
-                            "one thread timeout timed out, "
-                            "running forever with all threads enabled.");
-              }
+              log->Printf("Process::RunThreadPlan(): Running function with "
+                          "one thread timeout timed out.");
             } else
               log->Printf("Process::RunThreadPlan(): Restarting function with "
                           "all threads enabled "
-                          "and timeout: %u timed out, abandoning execution.",
-                          timeout_usec);
+                          "and timeout: %" PRIu64
+                          " timed out, abandoning execution.",
+                          timeout ? timeout->count() : -1);
           } else
             log->Printf("Process::RunThreadPlan(): Running function with "
-                        "timeout: %u timed out, "
+                        "timeout: %" PRIu64 " timed out, "
                         "abandoning execution.",
-                        timeout_usec);
+                        timeout ? timeout->count() : -1);
         }
 
         // It is possible that between the time we issued the Halt, and we get

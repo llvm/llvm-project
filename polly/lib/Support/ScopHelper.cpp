@@ -454,6 +454,9 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
       continue;
 
     auto &BB = *UserI->getParent();
+    if (DT.dominates(&BB, LInst->getParent()))
+      return false;
+
     bool DominatesAllPredecessors = true;
     for (auto Pred : predecessors(R.getExit()))
       if (R.contains(Pred) && !DT.dominates(&BB, Pred))

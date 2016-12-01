@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <ostream>
 
 // template <class charT, class traits = char_traits<charT> >
@@ -17,6 +16,8 @@
 
 #include <ostream>
 #include <cassert>
+
+#include "test_macros.h"
 
 int sync_called = 0;
 
@@ -58,6 +59,7 @@ int main()
         unitbuf(os);
     }
     assert(sync_called == 1);
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         testbuf1<char> sb;
         std::ostream os(&sb);
@@ -73,4 +75,5 @@ int main()
         }
         assert(sync_called == 1);
     }
+#endif
 }
