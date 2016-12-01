@@ -29,7 +29,9 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <cstring>
 using namespace llvm;
@@ -60,6 +62,7 @@ class StatisticInfo {
   /// Sort statistics by debugtype,name,description.
   void sort();
 public:
+  StatisticInfo();
   ~StatisticInfo();
 
   void addStatistic(const Statistic *S) {
@@ -88,6 +91,11 @@ void Statistic::RegisterStatistic() {
     Initialized = true;
     TsanIgnoreWritesEnd();
   }
+}
+
+StatisticInfo::StatisticInfo() {
+  // Ensure timergroup lists are created first so they are destructed after us.
+  TimerGroup::ConstructTimerLists();
 }
 
 // Print information when destroyed, iff command line option is specified.
@@ -148,17 +156,6 @@ void llvm::PrintStatistics(raw_ostream &OS) {
   OS.flush();
 }
 
-static void write_json_string_escaped(raw_ostream &OS, const char *string) {
-  // Out current usage should not need any escaping. Keep it simple and just
-  // check that the input is pure ASCII without special characers.
-#ifndef NDEBUG
-  for (const unsigned char *c = (const unsigned char*)string; *c != '\0'; ++c) {
-    assert(*c != '\\' && *c != '\"' && *c >= 0x20 && *c < 0x80);
-  }
-#endif
-  OS << string;
-}
-
 void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   StatisticInfo &Stats = *StatInfo;
 
@@ -169,13 +166,16 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   const char *delim = "";
   for (const Statistic *Stat : Stats.Stats) {
     OS << delim;
-    OS << "\t\"";
-    write_json_string_escaped(OS, Stat->getDebugType());
-    OS << '.';
-    write_json_string_escaped(OS, Stat->getName());
-    OS << "\": " << Stat->getValue();
+    assert(!yaml::needsQuotes(Stat->getDebugType()) &&
+           "Statistic group/type name is simple.");
+    assert(!yaml::needsQuotes(Stat->getName()) && "Statistic name is simple");
+    OS << "\t\"" << Stat->getDebugType() << '.' << Stat->getName() << "\": "
+       << Stat->getValue();
     delim = ",\n";
   }
+  // Print timers.
+  TimerGroup::printAllJSONValues(OS, delim);
+
   OS << "\n}\n";
   OS.flush();
 }

@@ -21,6 +21,7 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/YAMLTraits.h"
 using namespace llvm;
 
 // This ugly hack is brought to you courtesy of constructor/destructor ordering
@@ -267,7 +268,7 @@ void TimerGroup::removeTimer(Timer &T) {
 
   // If the timer was started, move its data to TimersToPrint.
   if (T.hasTriggered())
-    TimersToPrint.emplace_back(T.Time, T.Description);
+    TimersToPrint.emplace_back(T.Time, T.Name, T.Description);
 
   T.TG = nullptr;
 
@@ -301,8 +302,8 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   std::sort(TimersToPrint.begin(), TimersToPrint.end());
 
   TimeRecord Total;
-  for (auto &RecordNamePair : TimersToPrint)
-    Total += RecordNamePair.first;
+  for (const PrintRecord &Record : TimersToPrint)
+    Total += Record.Time;
 
   // Print out timing header.
   OS << "===" << std::string(73, '-') << "===\n";
@@ -332,10 +333,10 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   OS << "  --- Name ---\n";
 
   // Loop through all of the timing data, printing it out.
-  for (unsigned i = 0, e = TimersToPrint.size(); i != e; ++i) {
-    const std::pair<TimeRecord, std::string> &Entry = TimersToPrint[e-i-1];
-    Entry.first.print(Total, OS);
-    OS << Entry.second << '\n';
+  for (const PrintRecord &Record : make_range(TimersToPrint.rbegin(),
+                                              TimersToPrint.rend())) {
+    Record.Time.print(Total, OS);
+    OS << Record.Description << '\n';
   }
 
   Total.print(Total, OS);
@@ -345,18 +346,22 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   TimersToPrint.clear();
 }
 
-void TimerGroup::print(raw_ostream &OS) {
-  sys::SmartScopedLock<true> L(*TimerLock);
-
+void TimerGroup::prepareToPrintList() {
   // See if any of our timers were started, if so add them to TimersToPrint and
   // reset them.
   for (Timer *T = FirstTimer; T; T = T->Next) {
     if (!T->hasTriggered()) continue;
-    TimersToPrint.emplace_back(T->Time, T->Description);
+    TimersToPrint.emplace_back(T->Time, T->Name, T->Description);
 
     // Clear out the time.
     T->clear();
   }
+}
+
+void TimerGroup::print(raw_ostream &OS) {
+  sys::SmartScopedLock<true> L(*TimerLock);
+
+  prepareToPrintList();
 
   // If any timers were started, print the group.
   if (!TimersToPrint.empty())
@@ -368,4 +373,39 @@ void TimerGroup::printAll(raw_ostream &OS) {
 
   for (TimerGroup *TG = TimerGroupList; TG; TG = TG->Next)
     TG->print(OS);
+}
+
+void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
+                                const char *suffix, double Value) {
+  assert(!yaml::needsQuotes(Name) && "TimerGroup name needs no quotes");
+  assert(!yaml::needsQuotes(R.Name) && "Timer name needs no quotes");
+  OS << "\t\"time." << Name << '.' << R.Name << suffix << "\": " << Value;
+}
+
+const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
+  prepareToPrintList();
+  for (const PrintRecord &R : TimersToPrint) {
+    OS << delim;
+    delim = ",\n";
+
+    const TimeRecord &T = R.Time;
+    printJSONValue(OS, R, ".wall", T.getWallTime());
+    OS << delim;
+    printJSONValue(OS, R, ".user", T.getUserTime());
+    OS << delim;
+    printJSONValue(OS, R, ".sys", T.getSystemTime());
+  }
+  TimersToPrint.clear();
+  return delim;
+}
+
+const char *TimerGroup::printAllJSONValues(raw_ostream &OS, const char *delim) {
+  sys::SmartScopedLock<true> L(*TimerLock);
+  for (TimerGroup *TG = TimerGroupList; TG; TG = TG->Next)
+    delim = TG->printJSONValues(OS, delim);
+  return delim;
+}
+
+void TimerGroup::ConstructTimerLists() {
+  (void)*NamedGroupedTimers;
 }
