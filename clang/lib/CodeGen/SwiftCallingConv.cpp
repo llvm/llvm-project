@@ -828,3 +828,8 @@ void swiftcall::computeABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
     argInfo.info = classifyArgumentType(CGM, argInfo.type);
   }
 }
+
+// Is swifterror lowered to a register by the target ABI.
+bool swiftcall::isSwiftErrorLoweredInRegister(CodeGenModule &CGM) {
+  return getSwiftABIInfo(CGM).isSwiftErrorInRegister();
+}
