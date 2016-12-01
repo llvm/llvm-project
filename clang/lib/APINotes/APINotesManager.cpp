@@ -25,6 +25,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include <sys/stat.h>
