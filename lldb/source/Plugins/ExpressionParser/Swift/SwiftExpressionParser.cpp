@@ -1780,6 +1780,10 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     return 1;
   }
 
+  if (!m_module) {
+    diagnostic_manager.PutCString(DiagnosticSeverity.Error, "Couldn't IRGen expression, no additional error");
+  }
+
   if (log) {
     std::string s;
     llvm::raw_string_ostream ss(s);
