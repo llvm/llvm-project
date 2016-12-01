@@ -219,6 +219,9 @@ NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
                  : &NamedGroupedTimers->get(Name, Description, GroupName,
                                             GroupDescription)) {}
 
+NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef GroupName)
+  : TimeRegion(&NamedGroupedTimers->get(Name, Name, GroupName, GroupName)) {}
+
 //===----------------------------------------------------------------------===//
 //   TimerGroup Implementation
 //===----------------------------------------------------------------------===//
@@ -226,6 +229,9 @@ NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
 /// This is the global list of TimerGroups, maintained by the TimerGroup
 /// ctor/dtor and is protected by the TimerLock lock.
 static TimerGroup *TimerGroupList = nullptr;
+
+TimerGroup::TimerGroup(StringRef Name)
+  : TimerGroup(Name, Name) { }
 
 TimerGroup::TimerGroup(StringRef Name, StringRef Description)
   : Name(Name.begin(), Name.end()),
