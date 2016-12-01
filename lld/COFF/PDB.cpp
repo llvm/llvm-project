@@ -60,32 +60,47 @@ static SectionChunk *findByName(std::vector<SectionChunk *> &Sections,
   return nullptr;
 }
 
+static void dumpDebugT(ScopedPrinter &W, ObjectFile *File) {
+  SectionChunk *Sec = findByName(File->getDebugChunks(), ".debug$T");
+  if (!Sec)
+    return;
+
+  // First 4 bytes are section magic.
+  ArrayRef<uint8_t> Data = Sec->getContents();
+  if (Data.size() < 4)
+    fatal(".debug$T too short");
+  if (read32le(Data.data()) != COFF::DEBUG_SECTION_MAGIC)
+    fatal(".debug$T has an invalid magic");
+
+  CVTypeDumper TypeDumper(&W, false);
+  if (auto EC = TypeDumper.dump(Data.slice(4)))
+    fatal(EC, "CVTypeDumper::dump failed");
+}
+
+static void dumpDebugS(ScopedPrinter &W, ObjectFile *File) {
+  SectionChunk *Sec = findByName(File->getDebugChunks(), ".debug$S");
+  if (!Sec)
+    return;
+
+  msf::ByteStream Stream(Sec->getContents());
+  CVSymbolArray Symbols;
+  msf::StreamReader Reader(Stream);
+  if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
+    fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
+
+  CVTypeDumper TypeDumper(&W, false);
+  CVSymbolDumper SymbolDumper(W, TypeDumper, nullptr, false);
+  if (auto EC = SymbolDumper.dump(Symbols))
+    fatal(EC, "CVSymbolDumper::dump failed");
+}
+
 // Dump CodeView debug info. This is for debugging.
 static void dumpCodeView(SymbolTable *Symtab) {
   ScopedPrinter W(outs());
 
   for (ObjectFile *File : Symtab->ObjectFiles) {
-    SectionChunk *DebugT = findByName(File->getDebugChunks(), ".debug$T");
-    if (!DebugT)
-      continue;
-
-    CVTypeDumper TypeDumper(&W, false);
-    if (auto EC = TypeDumper.dump(DebugT->getContents()))
-      fatal(EC, "CVTypeDumper::dump failed");
-
-    SectionChunk *DebugS = findByName(File->getDebugChunks(), ".debug$S");
-    if (!DebugS)
-      continue;
-
-    msf::ByteStream Stream(DebugS->getContents());
-    CVSymbolArray Symbols;
-    msf::StreamReader Reader(Stream);
-    if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
-      fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
-
-    CVSymbolDumper SymbolDumper(W, TypeDumper, nullptr, false);
-    if (auto EC = SymbolDumper.dump(Symbols))
-      fatal(EC, "CVSymbolDumper::dump failed");
+    dumpDebugT(W, File);
+    dumpDebugS(W, File);
   }
 }
 

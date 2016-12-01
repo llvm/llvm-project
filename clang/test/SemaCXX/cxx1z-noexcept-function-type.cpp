@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++14 -verify %s
-// RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++14 -verify -fexceptions -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++1z -verify -fexceptions -fcxx-exceptions %s
 
 #if __cplusplus > 201402L
 
@@ -105,4 +105,48 @@ namespace Builtins {
   // Check we recognized both as builtins.
   typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)];
   typedef int arr[3];
+}
+
+namespace ExplicitInstantiation {
+  template<typename T> void f() noexcept {}
+  template<typename T> struct X { void f() noexcept {} };
+  template void f<int>();
+  template void X<int>::f();
+}
+
+namespace ConversionFunction {
+  struct A { template<typename T> operator T() noexcept; };
+  int a = A().operator int();
+}
+
+using size_t = decltype(sizeof(0));
+
+namespace OperatorDelete {
+  struct W {};
+  struct X {};
+  struct Y {};
+  struct Z {};
+  template<bool N, bool D> struct T {};
+}
+void *operator new(size_t, OperatorDelete::W) noexcept(false);
+void operator delete(void*, OperatorDelete::W) noexcept(false) = delete; // expected-note {{here}}
+void *operator new(size_t, OperatorDelete::X) noexcept(false);
+void operator delete(void*, OperatorDelete::X) noexcept(true) = delete; // expected-note {{here}}
+void *operator new(size_t, OperatorDelete::Y) noexcept(true);
+void operator delete(void*, OperatorDelete::Y) noexcept(false) = delete; // expected-note {{here}}
+void *operator new(size_t, OperatorDelete::Z) noexcept(true);
+void operator delete(void*, OperatorDelete::Z) noexcept(true) = delete; // expected-note {{here}}
+template<bool N, bool D> void *operator new(size_t, OperatorDelete::T<N, D>) noexcept(N);
+template<bool N, bool D> void operator delete(void*, OperatorDelete::T<N, D>) noexcept(D) = delete; // expected-note 4{{here}}
+namespace OperatorDelete {
+  struct A { A(); };
+  A *w = new (W{}) A; // expected-error {{deleted function}}
+  A *x = new (X{}) A; // expected-error {{deleted function}}
+  A *y = new (Y{}) A; // expected-error {{deleted function}}
+  A *z = new (Z{}) A; // expected-error {{deleted function}}
+
+  A *t00 = new (T<false, false>{}) A; // expected-error {{deleted function}}
+  A *t01 = new (T<false, true>{}) A; // expected-error {{deleted function}}
+  A *t10 = new (T<true, false>{}) A; // expected-error {{deleted function}}
+  A *t11 = new (T<true, true>{}) A; // expected-error {{deleted function}}
 }
