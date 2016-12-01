@@ -161,6 +161,8 @@ struct NamedRegionTimer : public TimeRegion {
   explicit NamedRegionTimer(StringRef Name, StringRef Description,
                             StringRef GroupName,
                             StringRef GroupDescription, bool Enabled = true);
+  /// Backward compatibility cludge to unbreak the swift build.
+  explicit NamedRegionTimer(StringRef Name, StringRef GroupName);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
