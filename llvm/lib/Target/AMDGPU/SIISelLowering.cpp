@@ -34,6 +34,9 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "amdgpu-isel"
 
 using namespace llvm;
 
@@ -2134,6 +2137,8 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   }
 
   // global <-> flat are no-ops and never emitted.
+  DEBUG(dbgs() << "Invalid addrspacecast:\n";
+        ASC->dump());
 
   const MachineFunction &MF = DAG.getMachineFunction();
   DiagnosticInfoUnsupported InvalidAddrSpaceCast(
