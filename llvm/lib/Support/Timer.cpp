@@ -208,21 +208,7 @@ public:
 
 }
 
-static ManagedStatic<Name2TimerMap> NamedTimers;
 static ManagedStatic<Name2PairMap> NamedGroupedTimers;
-
-static Timer &getNamedRegionTimer(StringRef Name) {
-  sys::SmartScopedLock<true> L(*TimerLock);
-
-  Timer &T = (*NamedTimers)[Name];
-  if (!T.isInitialized())
-    T.init(Name);
-  return T;
-}
-
-NamedRegionTimer::NamedRegionTimer(StringRef Name,
-                                   bool Enabled)
-  : TimeRegion(!Enabled ? nullptr : &getNamedRegionTimer(Name)) {}
 
 NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef GroupName,
                                    bool Enabled)
