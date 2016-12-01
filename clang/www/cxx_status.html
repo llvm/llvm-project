@@ -612,7 +612,7 @@ as the draft C++1z standard evolves.
     <tr>
       <td>Make exception specifications part of the type system</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0012r1.html">P0012R1</a></td>
-      <td class="svn" align="center">SVN <a href="#p0012">(9)</a></td>
+      <td class="svn" align="center">SVN</td>
     </tr>
     <tr>
       <td><tt>__has_include</tt> in preprocessor conditionals</td>
@@ -622,7 +622,7 @@ as the draft C++1z standard evolves.
     <tr>
       <td>New specification for inheriting constructors (<a href="cxx_dr_status.html#1941">DR1941</a> et al)</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0136r1.html">P0136R1</a></td>
-      <td class="full" align="center">Clang 3.9 <a href="#p0136">(10)</a></td>
+      <td class="full" align="center">Clang 3.9 <a href="#p0136">(9)</a></td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
@@ -699,7 +699,7 @@ as the draft C++1z standard evolves.
     <tr>
       <td rowspan=2>Stricter expression evaluation order</td>
       <td><a href="http://wg21.link/p0145r3">P0145R3</a></td>
-      <td class="svn" align="center" rowspan=2>SVN <a href="#p0145">(11)</a></td>
+      <td class="svn" align="center" rowspan=2>SVN <a href="#p0145">(10)</a></td>
     </tr>
     <tr>
       <td><a href="http://wg21.link/p0400r0">P0400R0</a></td>
@@ -755,18 +755,10 @@ all language versions that allow type deduction from <tt>auto</tt>
 (per the request of the C++ committee).
 In Clang 3.7, a warning is emitted for all cases that would change meaning.
 </span><br>
-<span id="p0012">(9): Support for throwing a noexcept function pointer and
-catching it as a non-noexcept function pointer requires an ABI library with
-C++17 support. Currently, only libc++abi 4.0 provides this support, so this
-portion of the feature is disabled by default. If you are using a sufficiently
-recent ABI library, you can enable support for this feature with the
-<code>-Xclang -mqualified-function-type-info</code> flag. This flag is likely
-to be removed or replaced in future Clang releases.
-</span><br>
-<span id="p0136">(10): This is the resolution to a Defect Report, so is applied
+<span id="p0136">(9): This is the resolution to a Defect Report, so is applied
 to all language versions supporting inheriting constructors.
 </span><br>
-<span id="p0145">(11): Under the MS ABI, function parameters are destroyed from
+<span id="p0145">(10): Under the MS ABI, function parameters are destroyed from
 left to right in the callee. As a result, function parameters in calls to
 <tt>operator&lt;&lt;</tt>, <tt>operator&gt;&gt;</tt>, <tt>operator-&gt;*</tt>,
 <tt>operator&amp;&amp;</tt>, <tt>operator||</tt>, and <tt>operator,</tt>

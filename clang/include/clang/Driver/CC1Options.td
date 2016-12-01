@@ -251,8 +251,6 @@ def munwind_tables : Flag<["-"], "munwind-tables">,
   HelpText<"Generate unwinding tables for all functions">;
 def mconstructor_aliases : Flag<["-"], "mconstructor-aliases">,
   HelpText<"Emit complete constructors and destructors as aliases when possible">;
-def mqualified_function_type_info : Flag<["-"], "mqualified-function-type-info">,
-  HelpText<"Emit __qualified_function_type_info for qualified function types">;
 def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
   HelpText<"Link the given bitcode file before performing optimizations.">;
 def mlink_cuda_bitcode : Separate<["-"], "mlink-cuda-bitcode">,

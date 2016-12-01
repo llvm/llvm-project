@@ -2,10 +2,75 @@
 # RUN: lld-link /debug /pdb:%t.pdb /dumppdb /dll /out:%t.dll /entry:main \
 # RUN:   /nodefaultlib %t.obj | FileCheck %s
 
-# CHECK:      UnknownLeaf (0x1000) {
-# CHECK-NEXT:   TypeLeafKind: 0x0
-# CHECK-NEXT:   Kind: 0x0
-# CHECK-NEXT:   Length: 2
+# CHECK:      ArgList (0x1000) {
+# CHECK-NEXT:   TypeLeafKind: LF_ARGLIST (0x1201)
+# CHECK-NEXT:   NumArgs: 1
+# CHECK-NEXT:   Arguments [
+# CHECK-NEXT:     ArgType: 0x0
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
+# CHECK-NEXT: Procedure (0x1001) {
+# CHECK-NEXT:   TypeLeafKind: LF_PROCEDURE (0x1008)
+# CHECK-NEXT:   ReturnType: int (0x74)
+# CHECK-NEXT:   CallingConvention: NearC (0x0)
+# CHECK-NEXT:   FunctionOptions [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   NumParameters: 0
+# CHECK-NEXT:   ArgListType: (<no type>) (0x1000)
+# CHECK-NEXT: }
+# CHECK-NEXT: FuncId (0x1002) {
+# CHECK-NEXT:   TypeLeafKind: LF_FUNC_ID (0x1601)
+# CHECK-NEXT:   ParentScope: 0x0
+# CHECK-NEXT:   FunctionType: int (<no type>) (0x1001)
+# CHECK-NEXT:   Name: main
+# CHECK-NEXT: }
+# CHECK-NEXT: StringId (0x1003) {
+# CHECK-NEXT:   TypeLeafKind: LF_STRING_ID (0x1605)
+# CHECK-NEXT:   Id: 0x0
+# CHECK-NEXT:   StringData: D:\b
+# CHECK-NEXT: }
+# CHECK-NEXT: StringId (0x1004) {
+# CHECK-NEXT:   TypeLeafKind: LF_STRING_ID (0x1605)
+# CHECK-NEXT:   Id: 0x0
+# CHECK-NEXT:   StringData: C:\vs14\VC\BIN\amd64\cl.exe
+# CHECK-NEXT: }
+# CHECK-NEXT: StringId (0x1005) {
+# CHECK-NEXT:   TypeLeafKind: LF_STRING_ID (0x1605)
+# CHECK-NEXT:   Id: 0x0
+# CHECK-NEXT:   StringData: -Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared"
+# CHECK-NEXT: }
+# CHECK-NEXT: StringList (0x1006) {
+# CHECK-NEXT:   TypeLeafKind: LF_SUBSTR_LIST (0x1604)
+# CHECK-NEXT:   NumArgs: 1
+# CHECK-NEXT:   Arguments [
+# CHECK-NEXT:     ArgType: -Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" (0x1005)
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
+# CHECK-NEXT: StringId (0x1007) {
+# CHECK-NEXT:   TypeLeafKind: LF_STRING_ID (0x1605)
+# CHECK-NEXT:   Id: (-Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared") (0x1006)
+# CHECK-NEXT:   StringData:  -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X
+# CHECK-NEXT: }
+# CHECK-NEXT: StringId (0x1008) {
+# CHECK-NEXT:   TypeLeafKind: LF_STRING_ID (0x1605)
+# CHECK-NEXT:   Id: 0x0
+# CHECK-NEXT:   StringData: ret42.c
+# CHECK-NEXT: }
+# CHECK-NEXT: StringId (0x1009) {
+# CHECK-NEXT:   TypeLeafKind: LF_STRING_ID (0x1605)
+# CHECK-NEXT:   Id: 0x0
+# CHECK-NEXT:   StringData: D:\b\vc140.pdb
+# CHECK-NEXT: }
+# CHECK-NEXT: BuildInfo (0x100A) {
+# CHECK-NEXT:   TypeLeafKind: LF_BUILDINFO (0x1603)
+# CHECK-NEXT:   NumArgs: 5
+# CHECK-NEXT:   Arguments [
+# CHECK-NEXT:     ArgType: D:\b (0x1003)
+# CHECK-NEXT:     ArgType: C:\vs14\VC\BIN\amd64\cl.exe (0x1004)
+# CHECK-NEXT:     ArgType: ret42.c (0x1008)
+# CHECK-NEXT:     ArgType: D:\b\vc140.pdb (0x1009)
+# CHECK-NEXT:     ArgType:  -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X (0x1007)
+# CHECK-NEXT:   ]
 # CHECK-NEXT: }
 # CHECK-NEXT: UnknownSym {
 # CHECK-NEXT:   Kind: 0x0

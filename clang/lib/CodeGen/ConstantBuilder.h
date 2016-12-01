@@ -21,6 +21,8 @@
 
 #include "CodeGenModule.h"
 
+#include <vector>
+
 namespace clang {
 namespace CodeGen {
 
@@ -47,8 +49,15 @@ class ConstantArrayBuilder;
 ///    auto global = toplevel.finishAndCreateGlobal("WIDGET_LIST", Align,
 ///                                                 /*constant*/ true);
 class ConstantInitBuilder {
+  struct SelfReference {
+    llvm::GlobalVariable *Dummy;
+    llvm::SmallVector<llvm::Constant*, 4> Indices;
+
+    SelfReference(llvm::GlobalVariable *dummy) : Dummy(dummy) {}
+  };
   CodeGenModule &CGM;
   llvm::SmallVector<llvm::Constant*, 16> Buffer;
+  std::vector<SelfReference> SelfReferences;
   bool Frozen = false;
 
 public:
@@ -201,6 +210,25 @@ public:
       slot = value;
     }
 
+    /// Produce an address which will eventually point to the the next
+    /// position to be filled.  This is computed with an indexed
+    /// getelementptr rather than by computing offsets.
+    ///
+    /// The returned pointer will have type T*, where T is the given
+    /// position.
+    llvm::Constant *getAddrOfCurrentPosition(llvm::Type *type) {
+      // Make a global variable.  We will replace this with a GEP to this
+      // position after installing the initializer.
+      auto dummy =
+        new llvm::GlobalVariable(Builder.CGM.getModule(), type, true,
+                                 llvm::GlobalVariable::PrivateLinkage,
+                                 nullptr, "");
+      Builder.SelfReferences.emplace_back(dummy);
+      auto &entry = Builder.SelfReferences.back();
+      (void) getGEPIndicesToCurrentPosition(entry.Indices);
+      return dummy;
+    }
+
     ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
                              llvm::SmallVectorImpl<llvm::Constant*> &indices) {
       getGEPIndicesTo(indices, Builder.Buffer.size());
@@ -294,12 +322,24 @@ private:
                                        llvm::GlobalValue::NotThreadLocal,
                                        addressSpace);
     GV->setAlignment(alignment.getQuantity());
+    resolveSelfReferences(GV);
     return GV;
   }
 
   void setGlobalInitializer(llvm::GlobalVariable *GV,
                             llvm::Constant *initializer) {
     GV->setInitializer(initializer);
+    resolveSelfReferences(GV);
+  }
+
+  void resolveSelfReferences(llvm::GlobalVariable *GV) {
+    for (auto &entry : SelfReferences) {
+      llvm::Constant *resolvedReference =
+        llvm::ConstantExpr::getInBoundsGetElementPtr(
+          GV->getValueType(), GV, entry.Indices);
+      entry.Dummy->replaceAllUsesWith(resolvedReference);
+      entry.Dummy->eraseFromParent();
+    }
   }
 };
 

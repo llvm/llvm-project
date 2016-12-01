@@ -6556,7 +6556,12 @@ public:
   // C++ Template Argument Deduction (C++ [temp.deduct])
   //===--------------------------------------------------------------------===//
 
-  QualType adjustCCAndNoReturn(QualType ArgFunctionType, QualType FunctionType);
+  /// Adjust the type \p ArgFunctionType to match the calling convention,
+  /// noreturn, and optionally the exception specification of \p FunctionType.
+  /// Deduction often wants to ignore these properties when matching function
+  /// types.
+  QualType adjustCCAndNoReturn(QualType ArgFunctionType, QualType FunctionType,
+                               bool AdjustExceptionSpec = false);
 
   /// \brief Describes the result of template argument deduction.
   ///
@@ -6665,7 +6670,7 @@ public:
                           QualType ArgFunctionType,
                           FunctionDecl *&Specialization,
                           sema::TemplateDeductionInfo &Info,
-                          bool InOverloadResolution = false);
+                          bool IsAddressOfFunction = false);
 
   TemplateDeductionResult
   DeduceTemplateArguments(FunctionTemplateDecl *FunctionTemplate,
@@ -6678,7 +6683,7 @@ public:
                           TemplateArgumentListInfo *ExplicitTemplateArgs,
                           FunctionDecl *&Specialization,
                           sema::TemplateDeductionInfo &Info,
-                          bool InOverloadResolution = false);
+                          bool IsAddressOfFunction = false);
 
   /// \brief Substitute Replacement for \p auto in \p TypeWithAuto
   QualType SubstAutoType(QualType TypeWithAuto, QualType Replacement);
