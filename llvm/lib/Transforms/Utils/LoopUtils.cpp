@@ -1090,16 +1090,16 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
   // from the raw counts to provide a better probability estimate. Remove
   // the adjustment by subtracting 1 from both weights.
   uint64_t TrueVal, FalseVal;
-  if (!LatchBR->extractProfMetadata(TrueVal, FalseVal) || (TrueVal <= 1) ||
-      (FalseVal <= 1))
+  if (!LatchBR->extractProfMetadata(TrueVal, FalseVal))
     return None;
 
-  TrueVal -= 1;
-  FalseVal -= 1;
+  if (!TrueVal || !FalseVal)
+    return 0;
 
-  // Divide the count of the backedge by the count of the edge exiting the loop.
+  // Divide the count of the backedge by the count of the edge exiting the loop,
+  // rounding to nearest.
   if (LatchBR->getSuccessor(0) == L->getHeader())
-    return TrueVal / FalseVal;
+    return (TrueVal + (FalseVal / 2)) / FalseVal;
   else
-    return FalseVal / TrueVal;
+    return (FalseVal + (TrueVal / 2)) / TrueVal;
 }

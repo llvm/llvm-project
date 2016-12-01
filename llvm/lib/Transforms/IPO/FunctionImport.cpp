@@ -555,7 +555,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
   // Parse inline ASM and collect the list of symbols that are not defined in
   // the current module.
   StringSet<> AsmUndefinedRefs;
-  object::IRObjectFile::CollectAsmUndefinedRefs(
+  ModuleSymbolTable::CollectAsmSymbols(
       Triple(TheModule.getTargetTriple()), TheModule.getModuleInlineAsm(),
       [&AsmUndefinedRefs](StringRef Name, object::BasicSymbolRef::Flags Flags) {
         if (Flags & object::BasicSymbolRef::SF_Undefined)

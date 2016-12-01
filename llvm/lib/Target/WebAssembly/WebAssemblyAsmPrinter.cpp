@@ -133,6 +133,11 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
                                                     Results);
     }
   }
+  for (const auto &G : M.globals()) {
+    if (!G.hasInitializer() && G.hasExternalLinkage()) {
+      getTargetStreamer()->emitGlobalImport(G.getGlobalIdentifier());
+    }
+  }
 }
 
 void WebAssemblyAsmPrinter::EmitConstantPool() {

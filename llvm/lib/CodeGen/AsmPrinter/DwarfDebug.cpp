@@ -726,10 +726,10 @@ void DwarfDebug::ensureAbstractVariableIsCreatedIfScoped(
     createAbstractVariable(Cleansed, Scope);
 }
 
-// Collect variable information from side table maintained by MMI.
-void DwarfDebug::collectVariableInfoFromMMITable(
+// Collect variable information from side table maintained by MF.
+void DwarfDebug::collectVariableInfoFromMFTable(
     DenseSet<InlinedVariable> &Processed) {
-  for (const auto &VI : MMI->getVariableDbgInfo()) {
+  for (const auto &VI : Asm->MF->getVariableDbgInfo()) {
     if (!VI.Var)
       continue;
     assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
@@ -939,7 +939,7 @@ void DwarfDebug::collectVariableInfo(DwarfCompileUnit &TheCU,
                                      const DISubprogram *SP,
                                      DenseSet<InlinedVariable> &Processed) {
   // Grab the variable info that was squirreled away in the MMI side-table.
-  collectVariableInfoFromMMITable(Processed);
+  collectVariableInfoFromMFTable(Processed);
 
   for (const auto &I : DbgValues) {
     InlinedVariable IV = I.first;

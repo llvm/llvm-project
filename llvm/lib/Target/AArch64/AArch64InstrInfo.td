@@ -26,6 +26,8 @@ def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
                                  AssemblerPredicate<"FeatureCrypto", "crypto">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
                                  AssemblerPredicate<"FeatureCRC", "crc">;
+def HasLSE           : Predicate<"Subtarget->hasLSE()">,
+                                 AssemblerPredicate<"FeatureLSE", "lse">;
 def HasRAS           : Predicate<"Subtarget->hasRAS()">,
                                  AssemblerPredicate<"FeatureRAS", "ras">;
 def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;

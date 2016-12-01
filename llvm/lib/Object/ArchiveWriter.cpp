@@ -45,6 +45,7 @@ NewArchiveMember::getOldMember(const object::Archive::Child &OldMember,
     return BufOrErr.takeError();
 
   NewArchiveMember M;
+  assert(M.IsNew == false);
   M.Buf = MemoryBuffer::getMemBuffer(*BufOrErr, false);
   if (!Deterministic) {
     auto ModTimeOrErr = OldMember.getLastModified();
@@ -93,6 +94,7 @@ Expected<NewArchiveMember> NewArchiveMember::getFile(StringRef FileName,
     return errorCodeToError(std::error_code(errno, std::generic_category()));
 
   NewArchiveMember M;
+  M.IsNew = true;
   M.Buf = std::move(*MemberBufferOrErr);
   if (!Deterministic) {
     M.ModTime = std::chrono::time_point_cast<std::chrono::seconds>(
@@ -231,9 +233,12 @@ static void writeStringTable(raw_fd_ostream &Out, StringRef ArcName,
     }
     StringMapIndexes.push_back(Out.tell() - StartOffset);
 
-    if (Thin)
-      Out << computeRelativePath(ArcName, Path);
-    else
+    if (Thin) {
+      if (M.IsNew)
+        Out << computeRelativePath(ArcName, Path);
+      else
+        Out << M.Buf->getBufferIdentifier();
+    } else
       Out << Name;
 
     Out << "/\n";

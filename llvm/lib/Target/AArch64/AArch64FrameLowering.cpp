@@ -204,9 +204,9 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const MCRegisterInfo *MRI = STI.getRegisterInfo();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
   DebugLoc DL = MBB.findDebugLoc(MBBI);
 
   // Add callee saved registers to move list.
@@ -219,7 +219,7 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
     int64_t Offset =
         MFI.getObjectOffset(Info.getFrameIdx()) - getOffsetOfLocalArea();
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-    unsigned CFIIndex = MMI.addFrameInst(
+    unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
@@ -446,7 +446,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       // Label used to tie together the PROLOG_LABEL and the MachineMoves.
       MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
       // Encode the stack size of the leaf function.
-      unsigned CFIIndex = MMI.addFrameInst(
+      unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfaOffset(FrameLabel, -NumBytes));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
@@ -621,14 +621,14 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     if (HasFP) {
       // Define the current CFA rule to use the provided FP.
       unsigned Reg = RegInfo->getDwarfRegNum(FramePtr, true);
-      unsigned CFIIndex = MMI.addFrameInst(
+      unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfa(nullptr, Reg, 2 * StackGrowth));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
     } else {
       // Encode the stack size of the leaf function.
-      unsigned CFIIndex = MMI.addFrameInst(
+      unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfaOffset(nullptr, -MFI.getStackSize()));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)

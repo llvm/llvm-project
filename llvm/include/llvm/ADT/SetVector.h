@@ -20,12 +20,13 @@
 #ifndef LLVM_ADT_SETVECTOR_H
 #define LLVM_ADT_SETVECTOR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
-#include <utility>
+#include <iterator>
 #include <vector>
 
 namespace llvm {
@@ -52,7 +53,7 @@ public:
   typedef typename vector_type::size_type size_type;
 
   /// \brief Construct an empty SetVector
-  SetVector() {}
+  SetVector() = default;
 
   /// \brief Initialize a SetVector with a range of elements
   template<typename It>
@@ -285,7 +286,7 @@ template <typename T, unsigned N>
 class SmallSetVector
     : public SetVector<T, SmallVector<T, N>, SmallDenseSet<T, N>> {
 public:
-  SmallSetVector() {}
+  SmallSetVector() = default;
 
   /// \brief Initialize a SmallSetVector with a range of elements
   template<typename It>
@@ -294,7 +295,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-// vim: sw=2 ai
-#endif
+#endif // LLVM_ADT_SETVECTOR_H

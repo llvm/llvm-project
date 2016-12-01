@@ -40,6 +40,36 @@ TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
 
 TargetRegisterInfo::~TargetRegisterInfo() {}
 
+void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet, unsigned Reg)
+    const {
+  for (MCSuperRegIterator AI(Reg, this, true); AI.isValid(); ++AI)
+    RegisterSet.set(*AI);
+}
+
+bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
+    ArrayRef<MCPhysReg> Exceptions) const {
+  // Check that all super registers of reserved regs are reserved as well.
+  BitVector Checked(getNumRegs());
+  for (int Reg = RegisterSet.find_first(); Reg>=0;
+       Reg = RegisterSet.find_next(Reg)) {
+    if (Checked[Reg])
+      continue;
+    for (MCSuperRegIterator SR(Reg, this); SR.isValid(); ++SR) {
+      if (!RegisterSet[*SR] && !is_contained(Exceptions, Reg)) {
+        dbgs() << "Error: Super register " << PrintReg(*SR, this)
+               << " of reserved register " << PrintReg(Reg, this)
+               << " is not reserved.\n";
+        return false;
+      }
+
+      // We transitively check superregs. So we can remember this for later
+      // to avoid compiletime explosion in deep register hierarchies.
+      Checked.set(*SR);
+    }
+  }
+  return true;
+}
+
 namespace llvm {
 
 Printable PrintReg(unsigned Reg, const TargetRegisterInfo *TRI,

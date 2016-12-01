@@ -1,0 +1,405 @@
+//===-- UnrollLoopPeel.cpp - Loop peeling utilities -----------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements some loop unrolling utilities for peeling loops
+// with dynamically inferred (from PGO) trip counts. See LoopUnroll.cpp for
+// unrolling loops with compile-time constant trip counts.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
+#include <algorithm>
+
+using namespace llvm;
+
+#define DEBUG_TYPE "loop-unroll"
+STATISTIC(NumPeeled, "Number of loops peeled");
+
+static cl::opt<unsigned> UnrollPeelMaxCount(
+    "unroll-peel-max-count", cl::init(7), cl::Hidden,
+    cl::desc("Max average trip count which will cause loop peeling."));
+
+static cl::opt<unsigned> UnrollForcePeelCount(
+    "unroll-force-peel-count", cl::init(0), cl::Hidden,
+    cl::desc("Force a peel count regardless of profiling information."));
+
+// Check whether we are capable of peeling this loop.
+static bool canPeel(Loop *L) {
+  // Make sure the loop is in simplified form
+  if (!L->isLoopSimplifyForm())
+    return false;
+
+  // Only peel loops that contain a single exit
+  if (!L->getExitingBlock() || !L->getUniqueExitBlock())
+    return false;
+
+  return true;
+}
+
+// Return the number of iterations we want to peel off.
+void llvm::computePeelCount(Loop *L, unsigned LoopSize,
+                            TargetTransformInfo::UnrollingPreferences &UP) {
+  UP.PeelCount = 0;
+  if (!canPeel(L))
+    return;
+
+  // Only try to peel innermost loops.
+  if (!L->empty())
+    return;
+
+  // If the user provided a peel count, use that.
+  bool UserPeelCount = UnrollForcePeelCount.getNumOccurrences() > 0;
+  if (UserPeelCount) {
+    DEBUG(dbgs() << "Force-peeling first " << UnrollForcePeelCount
+                 << " iterations.\n");
+    UP.PeelCount = UnrollForcePeelCount;
+    return;
+  }
+
+  // If we don't know the trip count, but have reason to believe the average
+  // trip count is low, peeling should be beneficial, since we will usually
+  // hit the peeled section.
+  // We only do this in the presence of profile information, since otherwise
+  // our estimates of the trip count are not reliable enough.
+  if (UP.AllowPeeling && L->getHeader()->getParent()->getEntryCount()) {
+    Optional<unsigned> PeelCount = getLoopEstimatedTripCount(L);
+    if (!PeelCount)
+      return;
+
+    DEBUG(dbgs() << "Profile-based estimated trip count is " << *PeelCount
+                 << "\n");
+
+    if (*PeelCount) {
+      if ((*PeelCount <= UnrollPeelMaxCount) &&
+          (LoopSize * (*PeelCount + 1) <= UP.Threshold)) {
+        DEBUG(dbgs() << "Peeling first " << *PeelCount << " iterations.\n");
+        UP.PeelCount = *PeelCount;
+        return;
+      }
+      DEBUG(dbgs() << "Requested peel count: " << *PeelCount << "\n");
+      DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
+      DEBUG(dbgs() << "Peel cost: " << LoopSize * (*PeelCount + 1) << "\n");
+      DEBUG(dbgs() << "Max peel cost: " << UP.Threshold << "\n");
+    }
+  }
+
+  return;
+}
+
+/// \brief Update the branch weights of the latch of a peeled-off loop
+/// iteration.
+/// This sets the branch weights for the latch of the recently peeled off loop
+/// iteration correctly. 
+/// Our goal is to make sure that:
+/// a) The total weight of all the copies of the loop body is preserved.
+/// b) The total weight of the loop exit is preserved.
+/// c) The body weight is reasonably distributed between the peeled iterations.
+///
+/// \param Header The copy of the header block that belongs to next iteration.
+/// \param LatchBR The copy of the latch branch that belongs to this iteration.
+/// \param IterNumber The serial number of the iteration that was just
+/// peeled off.
+/// \param AvgIters The average number of iterations we expect the loop to have.
+/// \param[in,out] PeeledHeaderWeight The total number of dynamic loop
+/// iterations that are unaccounted for. As an input, it represents the number
+/// of times we expect to enter the header of the iteration currently being
+/// peeled off. The output is the number of times we expect to enter the
+/// header of the next iteration.
+static void updateBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
+                                unsigned IterNumber, unsigned AvgIters,
+                                uint64_t &PeeledHeaderWeight) {
+
+  // FIXME: Pick a more realistic distribution.
+  // Currently the proportion of weight we assign to the fall-through
+  // side of the branch drops linearly with the iteration number, and we use
+  // a 0.9 fudge factor to make the drop-off less sharp...
+  if (PeeledHeaderWeight) {
+    uint64_t FallThruWeight =
+        PeeledHeaderWeight * ((float)(AvgIters - IterNumber) / AvgIters * 0.9);
+    uint64_t ExitWeight = PeeledHeaderWeight - FallThruWeight;
+    PeeledHeaderWeight -= ExitWeight;
+
+    unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
+    MDBuilder MDB(LatchBR->getContext());
+    MDNode *WeightNode =
+        HeaderIdx ? MDB.createBranchWeights(ExitWeight, FallThruWeight)
+                  : MDB.createBranchWeights(FallThruWeight, ExitWeight);
+    LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
+  }
+}
+
+/// \brief Clones the body of the loop L, putting it between \p InsertTop and \p
+/// InsertBot.
+/// \param IterNumber The serial number of the iteration currently being
+/// peeled off.
+/// \param Exit The exit block of the original loop.
+/// \param[out] NewBlocks A list of the the blocks in the newly created clone
+/// \param[out] VMap The value map between the loop and the new clone.
+/// \param LoopBlocks A helper for DFS-traversal of the loop.
+/// \param LVMap A value-map that maps instructions from the original loop to
+/// instructions in the last peeled-off iteration.
+static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
+                            BasicBlock *InsertBot, BasicBlock *Exit,
+                            SmallVectorImpl<BasicBlock *> &NewBlocks,
+                            LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
+                            ValueToValueMapTy &LVMap, LoopInfo *LI) {
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *Latch = L->getLoopLatch();
+  BasicBlock *PreHeader = L->getLoopPreheader();
+
+  Function *F = Header->getParent();
+  LoopBlocksDFS::RPOIterator BlockBegin = LoopBlocks.beginRPO();
+  LoopBlocksDFS::RPOIterator BlockEnd = LoopBlocks.endRPO();
+  Loop *ParentLoop = L->getParentLoop();
+
+  // For each block in the original loop, create a new copy,
+  // and update the value map with the newly created values.
+  for (LoopBlocksDFS::RPOIterator BB = BlockBegin; BB != BlockEnd; ++BB) {
+    BasicBlock *NewBB = CloneBasicBlock(*BB, VMap, ".peel", F);
+    NewBlocks.push_back(NewBB);
+
+    if (ParentLoop)
+      ParentLoop->addBasicBlockToLoop(NewBB, *LI);
+
+    VMap[*BB] = NewBB;
+  }
+
+  // Hook-up the control flow for the newly inserted blocks.
+  // The new header is hooked up directly to the "top", which is either
+  // the original loop preheader (for the first iteration) or the previous
+  // iteration's exiting block (for every other iteration)
+  InsertTop->getTerminator()->setSuccessor(0, cast<BasicBlock>(VMap[Header]));
+
+  // Similarly, for the latch:
+  // The original exiting edge is still hooked up to the loop exit.
+  // The backedge now goes to the "bottom", which is either the loop's real
+  // header (for the last peeled iteration) or the copied header of the next
+  // iteration (for every other iteration)
+  BranchInst *LatchBR =
+      cast<BranchInst>(cast<BasicBlock>(VMap[Latch])->getTerminator());
+  unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
+  LatchBR->setSuccessor(HeaderIdx, InsertBot);
+  LatchBR->setSuccessor(1 - HeaderIdx, Exit);
+
+  // The new copy of the loop body starts with a bunch of PHI nodes
+  // that pick an incoming value from either the preheader, or the previous
+  // loop iteration. Since this copy is no longer part of the loop, we
+  // resolve this statically:
+  // For the first iteration, we use the value from the preheader directly.
+  // For any other iteration, we replace the phi with the value generated by
+  // the immediately preceding clone of the loop body (which represents
+  // the previous iteration).
+  for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
+    PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
+    if (IterNumber == 0) {
+      VMap[&*I] = NewPHI->getIncomingValueForBlock(PreHeader);
+    } else {
+      Value *LatchVal = NewPHI->getIncomingValueForBlock(Latch);
+      Instruction *LatchInst = dyn_cast<Instruction>(LatchVal);
+      if (LatchInst && L->contains(LatchInst))
+        VMap[&*I] = LVMap[LatchInst];
+      else
+        VMap[&*I] = LatchVal;
+    }
+    cast<BasicBlock>(VMap[Header])->getInstList().erase(NewPHI);
+  }
+
+  // Fix up the outgoing values - we need to add a value for the iteration
+  // we've just created. Note that this must happen *after* the incoming
+  // values are adjusted, since the value going out of the latch may also be
+  // a value coming into the header.
+  for (BasicBlock::iterator I = Exit->begin(); isa<PHINode>(I); ++I) {
+    PHINode *PHI = cast<PHINode>(I);
+    Value *LatchVal = PHI->getIncomingValueForBlock(Latch);
+    Instruction *LatchInst = dyn_cast<Instruction>(LatchVal);
+    if (LatchInst && L->contains(LatchInst))
+      LatchVal = VMap[LatchVal];
+    PHI->addIncoming(LatchVal, cast<BasicBlock>(VMap[Latch]));
+  }
+
+  // LastValueMap is updated with the values for the current loop
+  // which are used the next time this function is called.
+  for (const auto &KV : VMap)
+    LVMap[KV.first] = KV.second;
+}
+
+/// \brief Peel off the first \p PeelCount iterations of loop \p L.
+///
+/// Note that this does not peel them off as a single straight-line block.
+/// Rather, each iteration is peeled off separately, and needs to check the
+/// exit condition.
+/// For loops that dynamically execute \p PeelCount iterations or less
+/// this provides a benefit, since the peeled off iterations, which account
+/// for the bulk of dynamic execution, can be further simplified by scalar
+/// optimizations.
+bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
+                    ScalarEvolution *SE, DominatorTree *DT,
+                    bool PreserveLCSSA) {
+  if (!canPeel(L))
+    return false;
+
+  LoopBlocksDFS LoopBlocks(L);
+  LoopBlocks.perform(LI);
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *PreHeader = L->getLoopPreheader();
+  BasicBlock *Latch = L->getLoopLatch();
+  BasicBlock *Exit = L->getUniqueExitBlock();
+
+  Function *F = Header->getParent();
+
+  // Set up all the necessary basic blocks. It is convenient to split the
+  // preheader into 3 parts - two blocks to anchor the peeled copy of the loop
+  // body, and a new preheader for the "real" loop.
+
+  // Peeling the first iteration transforms.
+  //
+  // PreHeader:
+  // ...
+  // Header:
+  //   LoopBody
+  //   If (cond) goto Header
+  // Exit:
+  //
+  // into
+  //
+  // InsertTop:
+  //   LoopBody
+  //   If (!cond) goto Exit
+  // InsertBot:
+  // NewPreHeader:
+  // ...
+  // Header:
+  //  LoopBody
+  //  If (cond) goto Header
+  // Exit:
+  //
+  // Each following iteration will split the current bottom anchor in two,
+  // and put the new copy of the loop body between these two blocks. That is,
+  // after peeling another iteration from the example above, we'll split 
+  // InsertBot, and get:
+  //
+  // InsertTop:
+  //   LoopBody
+  //   If (!cond) goto Exit
+  // InsertBot:
+  //   LoopBody
+  //   If (!cond) goto Exit
+  // InsertBot.next:
+  // NewPreHeader:
+  // ...
+  // Header:
+  //  LoopBody
+  //  If (cond) goto Header
+  // Exit:
+
+  BasicBlock *InsertTop = SplitEdge(PreHeader, Header, DT, LI);
+  BasicBlock *InsertBot =
+      SplitBlock(InsertTop, InsertTop->getTerminator(), DT, LI);
+  BasicBlock *NewPreHeader =
+      SplitBlock(InsertBot, InsertBot->getTerminator(), DT, LI);
+
+  InsertTop->setName(Header->getName() + ".peel.begin");
+  InsertBot->setName(Header->getName() + ".peel.next");
+  NewPreHeader->setName(PreHeader->getName() + ".peel.newph");
+
+  ValueToValueMapTy LVMap;
+
+  // If we have branch weight information, we'll want to update it for the
+  // newly created branches.
+  BranchInst *LatchBR =
+      cast<BranchInst>(cast<BasicBlock>(Latch)->getTerminator());
+  unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
+
+  uint64_t TrueWeight, FalseWeight;
+  uint64_t ExitWeight = 0, BackEdgeWeight = 0;
+  if (LatchBR->extractProfMetadata(TrueWeight, FalseWeight)) {
+    ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;
+    BackEdgeWeight = HeaderIdx ? FalseWeight : TrueWeight;
+  }
+
+  // For each peeled-off iteration, make a copy of the loop.
+  for (unsigned Iter = 0; Iter < PeelCount; ++Iter) {
+    SmallVector<BasicBlock *, 8> NewBlocks;
+    ValueToValueMapTy VMap;
+
+    // The exit weight of the previous iteration is the header entry weight
+    // of the current iteration. So this is exactly how many dynamic iterations
+    // the current peeled-off static iteration uses up.
+    // FIXME: due to the way the distribution is constructed, we need a
+    // guard here to make sure we don't end up with non-positive weights.
+    if (ExitWeight < BackEdgeWeight)
+      BackEdgeWeight -= ExitWeight;
+    else
+      BackEdgeWeight = 1;
+
+    cloneLoopBlocks(L, Iter, InsertTop, InsertBot, Exit,
+                    NewBlocks, LoopBlocks, VMap, LVMap, LI);
+    updateBranchWeights(InsertBot, cast<BranchInst>(VMap[LatchBR]), Iter,
+                        PeelCount, ExitWeight);
+
+    InsertTop = InsertBot;
+    InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), DT, LI);
+    InsertBot->setName(Header->getName() + ".peel.next");
+
+    F->getBasicBlockList().splice(InsertTop->getIterator(),
+                                  F->getBasicBlockList(),
+                                  NewBlocks[0]->getIterator(), F->end());
+
+    // Remap to use values from the current iteration instead of the
+    // previous one.
+    remapInstructionsInBlocks(NewBlocks, VMap);
+  }
+
+  // Now adjust the phi nodes in the loop header to get their initial values
+  // from the last peeled-off iteration instead of the preheader.
+  for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
+    PHINode *PHI = cast<PHINode>(I);
+    Value *NewVal = PHI->getIncomingValueForBlock(Latch);
+    Instruction *LatchInst = dyn_cast<Instruction>(NewVal);
+    if (LatchInst && L->contains(LatchInst))
+      NewVal = LVMap[LatchInst];
+
+    PHI->setIncomingValue(PHI->getBasicBlockIndex(NewPreHeader), NewVal);
+  }
+
+  // Adjust the branch weights on the loop exit.
+  if (ExitWeight) {
+    MDBuilder MDB(LatchBR->getContext());
+    MDNode *WeightNode =
+        HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
+                  : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
+    LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
+  }
+
+  // If the loop is nested, we changed the parent loop, update SE.
+  if (Loop *ParentLoop = L->getParentLoop())
+    SE->forgetLoop(ParentLoop);
+
+  NumPeeled++;
+
+  return true;
+}

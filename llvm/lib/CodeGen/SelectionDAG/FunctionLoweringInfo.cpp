@@ -236,7 +236,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                 StaticAllocaMap.find(AI);
               if (SI != StaticAllocaMap.end()) { // Check for VLAs.
                 int FI = SI->second;
-                MMI.setVariableDbgInfo(DI->getVariable(), DI->getExpression(),
+                MF->setVariableDbgInfo(DI->getVariable(), DI->getExpression(),
                                        FI, DI->getDebugLoc());
               }
             }

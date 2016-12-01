@@ -624,34 +624,34 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) {
 ; SSE3-LABEL: avx2_vphadd_w_test:
 ; SSE3:       # BB#0:
 ; SSE3-NEXT:    pushq %rbp
-; SSE3-NEXT:  .Ltmp0:
+; SSE3-NEXT:  .Lcfi0:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    pushq %r15
-; SSE3-NEXT:  .Ltmp1:
+; SSE3-NEXT:  .Lcfi1:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 24
 ; SSE3-NEXT:    pushq %r14
-; SSE3-NEXT:  .Ltmp2:
+; SSE3-NEXT:  .Lcfi2:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 32
 ; SSE3-NEXT:    pushq %r13
-; SSE3-NEXT:  .Ltmp3:
+; SSE3-NEXT:  .Lcfi3:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 40
 ; SSE3-NEXT:    pushq %r12
-; SSE3-NEXT:  .Ltmp4:
+; SSE3-NEXT:  .Lcfi4:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 48
 ; SSE3-NEXT:    pushq %rbx
-; SSE3-NEXT:  .Ltmp5:
+; SSE3-NEXT:  .Lcfi5:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 56
-; SSE3-NEXT:  .Ltmp6:
+; SSE3-NEXT:  .Lcfi6:
 ; SSE3-NEXT:    .cfi_offset %rbx, -56
-; SSE3-NEXT:  .Ltmp7:
+; SSE3-NEXT:  .Lcfi7:
 ; SSE3-NEXT:    .cfi_offset %r12, -48
-; SSE3-NEXT:  .Ltmp8:
+; SSE3-NEXT:  .Lcfi8:
 ; SSE3-NEXT:    .cfi_offset %r13, -40
-; SSE3-NEXT:  .Ltmp9:
+; SSE3-NEXT:  .Lcfi9:
 ; SSE3-NEXT:    .cfi_offset %r14, -32
-; SSE3-NEXT:  .Ltmp10:
+; SSE3-NEXT:  .Lcfi10:
 ; SSE3-NEXT:    .cfi_offset %r15, -24
-; SSE3-NEXT:  .Ltmp11:
+; SSE3-NEXT:  .Lcfi11:
 ; SSE3-NEXT:    .cfi_offset %rbp, -16
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    pextrw $1, %xmm0, %ecx
@@ -1263,34 +1263,34 @@ define <16 x i16> @avx2_hadd_w(<16 x i16> %a, <16 x i16> %b) {
 ; SSE3-LABEL: avx2_hadd_w:
 ; SSE3:       # BB#0:
 ; SSE3-NEXT:    pushq %rbp
-; SSE3-NEXT:  .Ltmp12:
+; SSE3-NEXT:  .Lcfi12:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    pushq %r15
-; SSE3-NEXT:  .Ltmp13:
+; SSE3-NEXT:  .Lcfi13:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 24
 ; SSE3-NEXT:    pushq %r14
-; SSE3-NEXT:  .Ltmp14:
+; SSE3-NEXT:  .Lcfi14:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 32
 ; SSE3-NEXT:    pushq %r13
-; SSE3-NEXT:  .Ltmp15:
+; SSE3-NEXT:  .Lcfi15:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 40
 ; SSE3-NEXT:    pushq %r12
-; SSE3-NEXT:  .Ltmp16:
+; SSE3-NEXT:  .Lcfi16:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 48
 ; SSE3-NEXT:    pushq %rbx
-; SSE3-NEXT:  .Ltmp17:
+; SSE3-NEXT:  .Lcfi17:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 56
-; SSE3-NEXT:  .Ltmp18:
+; SSE3-NEXT:  .Lcfi18:
 ; SSE3-NEXT:    .cfi_offset %rbx, -56
-; SSE3-NEXT:  .Ltmp19:
+; SSE3-NEXT:  .Lcfi19:
 ; SSE3-NEXT:    .cfi_offset %r12, -48
-; SSE3-NEXT:  .Ltmp20:
+; SSE3-NEXT:  .Lcfi20:
 ; SSE3-NEXT:    .cfi_offset %r13, -40
-; SSE3-NEXT:  .Ltmp21:
+; SSE3-NEXT:  .Lcfi21:
 ; SSE3-NEXT:    .cfi_offset %r14, -32
-; SSE3-NEXT:  .Ltmp22:
+; SSE3-NEXT:  .Lcfi22:
 ; SSE3-NEXT:    .cfi_offset %r15, -24
-; SSE3-NEXT:  .Ltmp23:
+; SSE3-NEXT:  .Lcfi23:
 ; SSE3-NEXT:    .cfi_offset %rbp, -16
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    pextrw $1, %xmm0, %ecx

@@ -21,15 +21,15 @@ AARCH64_ARCH("invalid", AK_INVALID, nullptr, nullptr,
 AARCH64_ARCH("armv8-a", AK_ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
              FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD))
+              AArch64::AEK_SIMD | AArch64::AEK_LSE))
 AARCH64_ARCH("armv8.1-a", AK_ARMV8_1A, "8.1-A", "v8.1a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD))
+              AArch64::AEK_SIMD | AArch64::AEK_LSE))
 AARCH64_ARCH("armv8.2-a", AK_ARMV8_2A, "8.2-A", "v8.2a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD | AArch64::AEK_RAS))
+              AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE))
 #undef AARCH64_ARCH
 
 #ifndef AARCH64_ARCH_EXT_NAME
@@ -39,6 +39,7 @@ AARCH64_ARCH("armv8.2-a", AK_ARMV8_2A, "8.2-A", "v8.2a",
 AARCH64_ARCH_EXT_NAME("invalid",  AArch64::AEK_INVALID,  nullptr,  nullptr)
 AARCH64_ARCH_EXT_NAME("none",     AArch64::AEK_NONE,     nullptr,  nullptr)
 AARCH64_ARCH_EXT_NAME("crc",      AArch64::AEK_CRC,      "+crc",   "-crc")
+AARCH64_ARCH_EXT_NAME("lse",      AArch64::AEK_LSE,      "+lse",   "-lse")
 AARCH64_ARCH_EXT_NAME("crypto",   AArch64::AEK_CRYPTO,   "+crypto","-crypto")
 AARCH64_ARCH_EXT_NAME("fp",       AArch64::AEK_FP,       "+fp-armv8",  "-fp-armv8")
 AARCH64_ARCH_EXT_NAME("simd",     AArch64::AEK_SIMD,     "+neon",  "-neon")

@@ -361,12 +361,12 @@ define <4 x float> @combine_vpermilvar_4f32_as_insertps(<4 x float> %a0) {
 define <2 x double> @constant_fold_vpermilvar_pd() {
 ; X32-LABEL: constant_fold_vpermilvar_pd:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermilpd {{.*#+}} xmm0 = mem[1,0]
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [2.000000e+00,1.000000e+00]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermilvar_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermilpd {{.*#+}} xmm0 = mem[1,0]
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [2.000000e+00,1.000000e+00]
 ; X64-NEXT:    retq
   %1 = call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> <double 1.0, double 2.0>, <2 x i64> <i64 2, i64 0>)
   ret <2 x double> %1
@@ -375,12 +375,12 @@ define <2 x double> @constant_fold_vpermilvar_pd() {
 define <4 x double> @constant_fold_vpermilvar_pd_256() {
 ; X32-LABEL: constant_fold_vpermilvar_pd_256:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermilpd {{.*#+}} ymm0 = mem[1,0,2,3]
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [2.000000e+00,1.000000e+00,3.000000e+00,4.000000e+00]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermilvar_pd_256:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermilpd {{.*#+}} ymm0 = mem[1,0,2,3]
+; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [2.000000e+00,1.000000e+00,3.000000e+00,4.000000e+00]
 ; X64-NEXT:    retq
   %1 = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, <4 x i64> <i64 2, i64 0, i64 0, i64 2>)
   ret <4 x double> %1
@@ -389,12 +389,12 @@ define <4 x double> @constant_fold_vpermilvar_pd_256() {
 define <4 x float> @constant_fold_vpermilvar_ps() {
 ; X32-LABEL: constant_fold_vpermilvar_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,0,2,1]
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [4.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermilvar_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = mem[3,0,2,1]
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [4.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00]
 ; X64-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, <4 x i32> <i32 3, i32 0, i32 2, i32 1>)
   ret <4 x float> %1
@@ -403,14 +403,12 @@ define <4 x float> @constant_fold_vpermilvar_ps() {
 define <8 x float> @constant_fold_vpermilvar_ps_256() {
 ; X32-LABEL: constant_fold_vpermilvar_ps_256:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00,5.000000e+00,6.000000e+00,7.000000e+00,8.000000e+00]
-; X32-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,2,1,4,5,5,5]
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [1.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00,5.000000e+00,6.000000e+00,6.000000e+00,6.000000e+00]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermilvar_ps_256:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00,5.000000e+00,6.000000e+00,7.000000e+00,8.000000e+00]
-; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,2,1,4,5,5,5]
+; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [1.000000e+00,1.000000e+00,3.000000e+00,2.000000e+00,5.000000e+00,6.000000e+00,6.000000e+00,6.000000e+00]
 ; X64-NEXT:    retq
   %1 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, <8 x i32> <i32 4, i32 0, i32 2, i32 1, i32 0, i32 1, i32 1, i32 1>)
   ret <8 x float> %1

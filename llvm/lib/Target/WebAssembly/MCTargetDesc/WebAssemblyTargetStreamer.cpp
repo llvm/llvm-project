@@ -80,6 +80,10 @@ void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
   OS << '\n';
 }
 
+void WebAssemblyTargetAsmStreamer::emitGlobalImport(StringRef name) {
+  OS << "\t.import_global\t" << name << '\n';
+}
+
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
   OS << "\t.indidx  \t" << *Value << '\n';
 }
@@ -110,4 +114,7 @@ void WebAssemblyTargetELFStreamer::emitIndirectFunctionType(
     StringRef name, SmallVectorImpl<MVT> &Params, SmallVectorImpl<MVT> &Results) {
   // Nothing to emit here. TODO: Re-design how linking works and re-evaluate
   // whether it's necessary for .o files to declare indirect function types.
+}
+
+void WebAssemblyTargetELFStreamer::emitGlobalImport(StringRef name) {
 }

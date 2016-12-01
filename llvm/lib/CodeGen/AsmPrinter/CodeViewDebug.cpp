@@ -864,14 +864,14 @@ CodeViewDebug::createDefRangeGeneral(uint16_t CVRegister, bool InMemory,
   return DR;
 }
 
-void CodeViewDebug::collectVariableInfoFromMMITable(
+void CodeViewDebug::collectVariableInfoFromMFTable(
     DenseSet<InlinedVariable> &Processed) {
-  const TargetSubtargetInfo &TSI = Asm->MF->getSubtarget();
+  const MachineFunction &MF = *Asm->MF;
+  const TargetSubtargetInfo &TSI = MF.getSubtarget();
   const TargetFrameLowering *TFI = TSI.getFrameLowering();
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
-  for (const MachineModuleInfo::VariableDbgInfo &VI :
-       MMI->getVariableDbgInfo()) {
+  for (const MachineFunction::VariableDbgInfo &VI : MF.getVariableDbgInfo()) {
     if (!VI.Var)
       continue;
     assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
@@ -908,7 +908,7 @@ void CodeViewDebug::collectVariableInfoFromMMITable(
 void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
   DenseSet<InlinedVariable> Processed;
   // Grab the variable info that was squirreled away in the MMI side-table.
-  collectVariableInfoFromMMITable(Processed);
+  collectVariableInfoFromMFTable(Processed);
 
   const TargetRegisterInfo *TRI = Asm->MF->getSubtarget().getRegisterInfo();
 

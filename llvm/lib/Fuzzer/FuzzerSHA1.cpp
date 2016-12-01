@@ -16,12 +16,15 @@
 // For the same reason we do not want to depend on SHA1 from LLVM tree.
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerSHA1.h"
 #include "FuzzerDefs.h"
 
 /* This code is public-domain - it is based on libcrypt
  * placed in the public domain by Wei Dai and other contributors.
  */
 
+#include <iomanip>
+#include <sstream>
 #include <stdint.h>
 #include <string.h>
 
@@ -193,10 +196,27 @@ uint8_t* sha1_result(sha1nfo *s) {
 
 }  // namespace; Added for LibFuzzer
 
+namespace fuzzer {
+
 // The rest is added for LibFuzzer
-void fuzzer::ComputeSHA1(const uint8_t *Data, size_t Len, uint8_t *Out) {
+void ComputeSHA1(const uint8_t *Data, size_t Len, uint8_t *Out) {
   sha1nfo s;
   sha1_init(&s);
   sha1_write(&s, (const char*)Data, Len);
   memcpy(Out, sha1_result(&s), HASH_LENGTH);
+}
+
+std::string Sha1ToString(const uint8_t Sha1[kSHA1NumBytes]) {
+  std::stringstream SS;
+  for (int i = 0; i < kSHA1NumBytes; i++)
+    SS << std::hex << std::setfill('0') << std::setw(2) << (unsigned)Sha1[i];
+  return SS.str();
+}
+
+std::string Hash(const Unit &U) {
+  uint8_t Hash[kSHA1NumBytes];
+  ComputeSHA1(U.data(), U.size(), Hash);
+  return Sha1ToString(Hash);
+}
+
 }

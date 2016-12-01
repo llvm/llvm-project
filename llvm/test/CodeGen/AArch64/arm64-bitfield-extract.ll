@@ -530,3 +530,33 @@ define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 
   ret i16 %conv19
 }
+
+; The following test excercises the case where we have a BFI
+; instruction with the same input in both operands. We need to
+; track the useful bits through both operands.
+; CHECK-LABEL: sameOperandBFI
+; CHECK: lsr
+; CHECK: and
+; CHECK: bfi
+; CHECK: bfi
+define void @sameOperandBFI(i64 %src, i64 %src2, i16 *%ptr) {
+entry:
+  %shr47 = lshr i64 %src, 47
+  %src2.trunc = trunc i64 %src2 to i32
+  br i1 undef, label %end, label %if.else
+
+if.else:
+  %and3 = and i32 %src2.trunc, 3
+  %shl2 = shl nuw nsw i64 %shr47, 2
+  %shl2.trunc = trunc i64 %shl2 to i32
+  %and12 = and i32 %shl2.trunc, 12
+  %BFISource = or i32 %and3, %and12         ; ...00000ABCD
+  %BFIRHS = shl nuw nsw i32 %BFISource, 4   ; ...0ABCD0000
+  %BFI = or i32 %BFIRHS, %BFISource         ; ...0ABCDABCD
+  %BFItrunc = trunc i32 %BFI to i16
+  store i16 %BFItrunc, i16* %ptr, align 4
+  br label %end
+
+end:
+  ret void
+}

@@ -778,10 +778,9 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   unsigned FixedInstr = 0;
   unsigned FixedMemOp = 0;
   unsigned FixedDbg = 0;
-  MachineModuleInfo *MMI = &MF->getMMI();
 
   // Remap debug information that refers to stack slots.
-  for (auto &VI : MMI->getVariableDbgInfo()) {
+  for (auto &VI : MF->getVariableDbgInfo()) {
     if (!VI.Var)
       continue;
     if (SlotRemap.count(VI.Slot)) {

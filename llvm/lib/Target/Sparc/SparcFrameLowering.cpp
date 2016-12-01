@@ -154,24 +154,23 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
 
   emitSPAdjustment(MF, MBB, MBBI, -NumBytes, SAVErr, SAVEri);
 
-  MachineModuleInfo &MMI = MF.getMMI();
   unsigned regFP = RegInfo.getDwarfRegNum(SP::I6, true);
 
   // Emit ".cfi_def_cfa_register 30".
   unsigned CFIIndex =
-      MMI.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, regFP));
+      MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, regFP));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
   // Emit ".cfi_window_save".
-  CFIIndex = MMI.addFrameInst(MCCFIInstruction::createWindowSave(nullptr));
+  CFIIndex = MF.addFrameInst(MCCFIInstruction::createWindowSave(nullptr));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
   unsigned regInRA = RegInfo.getDwarfRegNum(SP::I7, true);
   unsigned regOutRA = RegInfo.getDwarfRegNum(SP::O7, true);
   // Emit ".cfi_register 15, 31".
-  CFIIndex = MMI.addFrameInst(
+  CFIIndex = MF.addFrameInst(
       MCCFIInstruction::createRegister(nullptr, regOutRA, regInRA));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);

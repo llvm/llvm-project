@@ -162,11 +162,34 @@ static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index) {
     report_fatal_error("renameModuleForThinLTO failed");
 }
 
+static std::unique_ptr<Module>
+loadModuleFromBuffer(const MemoryBufferRef &Buffer, LLVMContext &Context,
+                     bool Lazy) {
+  SMDiagnostic Err;
+  Expected<std::unique_ptr<Module>> ModuleOrErr =
+      Lazy ? getLazyBitcodeModule(Buffer, Context,
+                                  /* ShouldLazyLoadMetadata */ true)
+           : parseBitcodeFile(Buffer, Context);
+  if (!ModuleOrErr) {
+    handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
+      SMDiagnostic Err = SMDiagnostic(Buffer.getBufferIdentifier(),
+                                      SourceMgr::DK_Error, EIB.message());
+      Err.print("ThinLTO", errs());
+    });
+    report_fatal_error("Can't load module, abort.");
+  }
+  return std::move(ModuleOrErr.get());
+}
+
 static void
 crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
                       StringMap<MemoryBufferRef> &ModuleMap,
                       const FunctionImporter::ImportMapTy &ImportList) {
-  ModuleLoader Loader(TheModule.getContext(), ModuleMap);
+  auto Loader = [&](StringRef Identifier) {
+    return loadModuleFromBuffer(ModuleMap[Identifier], TheModule.getContext(),
+                                /*Lazy=*/true);
+  };
+
   FunctionImporter Importer(Index, Loader);
   if (!Importer.importFunctions(TheModule, ImportList))
     report_fatal_error("importFunctions failed");

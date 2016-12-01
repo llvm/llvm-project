@@ -230,9 +230,6 @@ bool MachineModuleInfo::doFinalization(Module &M) {
 }
 
 void MachineModuleInfo::EndFunction() {
-  // Clean up frame info.
-  FrameInstructions.clear();
-
   // Clean up exception info.
   LandingPads.clear();
   PersonalityTypeCache = EHPersonality::Unknown;
@@ -243,7 +240,6 @@ void MachineModuleInfo::EndFunction() {
   CallsEHReturn = false;
   CallsUnwindInit = false;
   HasEHFunclets = false;
-  VariableDbgInfos.clear();
 }
 
 //===- Address of Block Management ----------------------------------------===//

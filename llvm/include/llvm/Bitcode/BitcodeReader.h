@@ -77,6 +77,12 @@ namespace llvm {
 
     /// Read the entire bitcode module and return it.
     Expected<std::unique_ptr<Module>> parseModule(LLVMContext &Context);
+
+    /// Check if the given bitcode buffer contains a summary block.
+    Expected<bool> hasSummary();
+
+    /// Parse the specified bitcode buffer, returning the module summary index.
+    Expected<std::unique_ptr<ModuleSummaryIndex>> getSummary();
   };
 
   /// Returns a list of modules in the specified bitcode buffer.
