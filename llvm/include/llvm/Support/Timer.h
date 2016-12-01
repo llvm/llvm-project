@@ -180,8 +180,6 @@ class TimerGroup {
 
 public:
   explicit TimerGroup(StringRef Name, StringRef Description);
-  /// Backward compatibility cludge to unbreak the swift build.
-  explicit TimerGroup(StringRef Name);
   ~TimerGroup();
 
   void setName(StringRef NewName, StringRef NewDescription) {
