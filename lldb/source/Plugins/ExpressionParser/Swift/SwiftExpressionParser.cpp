@@ -1781,7 +1781,10 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   }
 
   if (!m_module) {
-    diagnostic_manager.PutCString(DiagnosticSeverity.Error, "Couldn't IRGen expression, no additional error");
+    diagnostic_manager.PutCString(
+        DiagnosticSeverity.Error,
+        "Couldn't IRGen expression, no additional error");
+    return 1;
   }
 
   if (log) {
