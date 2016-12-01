@@ -148,19 +148,9 @@ MATH_MANGLE(erfc)(double x)
 
             double pbyq = MATH_DIV(P,Q);
             const double erx = 8.45062911510467529297e-01;
-#if 1
             double retn = erx + pbyq + 1.0;
             double retp = 1.0 - erx - pbyq;
             ret = x < 0.0 ? retn : retp;
-#else
-            if (x < 0.0) {
-                double z = erx + pbyq;
-                ret = 1.0 + z;
-            } else {
-                double z = 1.0 - erx;
-                ret = z - pbyq;
-            }
-#endif
         } else if (ax >= 0x1.0p-56) {
             double z = x * x;
 
@@ -184,14 +174,9 @@ MATH_MANGLE(erfc)(double x)
 
             double y = MATH_DIV(r , s);
 
-#if 1
             double retl = 1.0 - MATH_MAD(x, y, x);
             double retg = 0.5 - MATH_MAD(x, y, x - 0.5);
             ret = x < 0.25 ? retl : retg;
-#else
-            ret = (x < 0.25) ?  1.0 - MATH_MAD(x, y, x) :
-                                0.5 - MATH_MAD(x, y, x - 0.5);
-#endif
         } else { // |x| < 2**-56
             ret = 1.0 - x; // In fact, this should be 1.0
         }
