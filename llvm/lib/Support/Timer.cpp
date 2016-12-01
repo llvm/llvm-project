@@ -219,6 +219,12 @@ NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
                  : &NamedGroupedTimers->get(Name, Description, GroupName,
                                             GroupDescription)) {}
 
+NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef GroupName,
+                                   bool Enabled)
+  : TimeRegion(!Enabled ? nullptr
+                 : &NamedGroupedTimers->get(Name, Name, GroupName,
+                                            GroupName)) {}
+
 //===----------------------------------------------------------------------===//
 //   TimerGroup Implementation
 //===----------------------------------------------------------------------===//
@@ -237,6 +243,9 @@ TimerGroup::TimerGroup(StringRef Name, StringRef Description)
   Next = TimerGroupList;
   Prev = &TimerGroupList;
   TimerGroupList = this;
+}
+
+TimerGroup::TimerGroup(StringRef Name) : TimerGroup(Name, Name) {
 }
 
 TimerGroup::~TimerGroup() {
