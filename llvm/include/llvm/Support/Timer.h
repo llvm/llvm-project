@@ -91,6 +91,7 @@ public:
   Timer(StringRef Name, StringRef Description, TimerGroup &tg) {
     init(Name, Description, tg);
   }
+  explicit Timer(StringRef Name) : Timer(Name, Name) { }
   Timer(const Timer &RHS) {
     assert(!RHS.TG && "Can only copy uninitialized timers");
   }
@@ -161,8 +162,6 @@ struct NamedRegionTimer : public TimeRegion {
   explicit NamedRegionTimer(StringRef Name, StringRef Description,
                             StringRef GroupName,
                             StringRef GroupDescription, bool Enabled = true);
-  /// Backward compatibility cludge to unbreak the swift build.
-  explicit NamedRegionTimer(StringRef Name, StringRef GroupName);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
@@ -182,8 +181,6 @@ class TimerGroup {
 
 public:
   explicit TimerGroup(StringRef Name, StringRef Description);
-  /// Backward compatibility cludge to unbreak the swift build.
-  explicit TimerGroup(StringRef Name);
   ~TimerGroup();
 
   void setName(StringRef NewName, StringRef NewDescription) {
