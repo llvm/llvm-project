@@ -164,7 +164,7 @@ namespace {
     AvailabilityItem() : Mode(APIAvailability::Available), Msg("") {}
   };
 
-  static llvm::Optional<NullabilityKind> AbsentNullability = llvm::None;
+  static llvm::Optional<NullabilityKind> AbsentNullability {};
   static llvm::Optional<NullabilityKind> DefaultNullability =
     NullabilityKind::NonNull;
   typedef std::vector<clang::NullabilityKind> NullabilitySeq;

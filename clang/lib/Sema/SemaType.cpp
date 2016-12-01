@@ -3522,7 +3522,7 @@ static void recordNullabilitySeen(Sema &S, SourceLocation loc) {
     S.Diag(fileNullability.PointerLoc, diag::warn_nullability_missing_array);
   } else {
     S.Diag(fileNullability.PointerLoc, diag::warn_nullability_missing)
-      << fileNullability.PointerKind;
+      << static_cast<unsigned>(fileNullability.PointerKind);
   }
 }
 
