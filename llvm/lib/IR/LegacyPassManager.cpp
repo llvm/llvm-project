@@ -454,7 +454,7 @@ class TimingInfo {
   TimerGroup TG;
 public:
   // Use 'create' member to get this.
-  TimingInfo() : TG("... Pass execution timing report ...") {}
+  TimingInfo() : TG("pass", "... Pass execution timing report ...") {}
 
   // TimingDtor - Print out information about timing information
   ~TimingInfo() {
@@ -477,8 +477,10 @@ public:
 
     sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
     Timer *&T = TimingData[P];
-    if (!T)
-      T = new Timer(P->getPassName(), TG);
+    if (!T) {
+      StringRef PassName = P->getPassName();
+      T = new Timer(PassName, PassName, TG);
+    }
     return T;
   }
 };

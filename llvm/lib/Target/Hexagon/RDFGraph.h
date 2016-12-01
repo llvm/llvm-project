@@ -795,7 +795,6 @@ namespace rdf {
       return BlockNodes[BB];
     }
 
-    TimerGroup TimeG;
     NodeAddr<FuncNode*> Func;
     NodeAllocator Memory;
     // Local map:  MachineBasicBlock -> NodeAddr<BlockNode*>

@@ -41,6 +41,10 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The Timer related APIs now expect a Name and Description. When upgrading code
+  the previously used names should become descriptions and a short name in the
+  style of a programming language identifier should be added.
+
 * ... next change ...
 
 .. NOTE
