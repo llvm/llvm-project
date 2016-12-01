@@ -91,7 +91,11 @@ public:
   Timer(StringRef Name, StringRef Description, TimerGroup &tg) {
     init(Name, Description, tg);
   }
+  /// Compatibility constructor.
   explicit Timer(StringRef Name) : Timer(Name, Name) { }
+  /// Compatibility constructor.
+  Timer(StringRef Name, TimerGroup &TG) : Timer(Name, Name, TG) { }
+
   Timer(const Timer &RHS) {
     assert(!RHS.TG && "Can only copy uninitialized timers");
   }
