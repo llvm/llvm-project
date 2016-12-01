@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -120,12 +121,8 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
 // underscores. For example, __foo, foo__, __foo__ would
 // become foo.
 static StringRef NormalizeAttrName(StringRef AttrName) {
-  if (AttrName.startswith("__"))
-    AttrName = AttrName.substr(2, AttrName.size());
-
-  if (AttrName.endswith("__"))
-    AttrName = AttrName.substr(0, AttrName.size() - 2);
-
+  AttrName.consume_front("__");
+  AttrName.consume_back("__");
   return AttrName;
 }
 
@@ -723,13 +720,10 @@ namespace {
   std::vector<std::string>
   uniqueEnumsInOrder(const std::vector<std::string> &enums) {
     std::vector<std::string> uniques;
-    std::set<std::string> unique_set(enums.begin(), enums.end());
+    SmallDenseSet<StringRef, 8> unique_set;
     for (const auto &i : enums) {
-      auto set_i = unique_set.find(i);
-      if (set_i != unique_set.end()) {
+      if (unique_set.insert(i).second)
         uniques.push_back(i);
-        unique_set.erase(set_i);
-      }
     }
     return uniques;
   }
@@ -841,7 +835,7 @@ namespace {
       OS << "  static const char *Convert" << type << "ToStr("
          << type << " Val) {\n"
          << "    switch(Val) {\n";
-      std::set<std::string> Uniques;
+      SmallDenseSet<StringRef, 8> Uniques;
       for (size_t I = 0; I < enums.size(); ++I) {
         if (Uniques.insert(enums[I]).second)
           OS << "    case " << getAttrName() << "Attr::" << enums[I]
@@ -949,7 +943,7 @@ namespace {
       OS << "  static const char *Convert" << type << "ToStr("
         << type << " Val) {\n"
         << "    switch(Val) {\n";
-      std::set<std::string> Uniques;
+      SmallDenseSet<StringRef, 8> Uniques;
       for (size_t I = 0; I < enums.size(); ++I) {
         if (Uniques.insert(enums[I]).second)
           OS << "    case " << getAttrName() << "Attr::" << enums[I]
@@ -1353,11 +1347,8 @@ writePrettyPrintFunction(Record &R,
 
     // Fake arguments aren't part of the parsed form and should not be
     // pretty-printed.
-    bool hasNonFakeArgs = false;
-    for (const auto &arg : Args) {
-      if (arg->isFake()) continue;
-      hasNonFakeArgs = true;
-    }
+    bool hasNonFakeArgs = llvm::any_of(
+        Args, [](const std::unique_ptr<Argument> &A) { return !A->isFake(); });
 
     // FIXME: always printing the parenthesis isn't the correct behavior for
     // attributes which have optional arguments that were not provided. For
@@ -1417,18 +1408,20 @@ getSpellingListIndex(const std::vector<FlattenedSpelling> &SpellingList,
 
 static void writeAttrAccessorDefinition(const Record &R, raw_ostream &OS) {
   std::vector<Record*> Accessors = R.getValueAsListOfDefs("Accessors");
+  if (Accessors.empty())
+    return;
+
+  const std::vector<FlattenedSpelling> SpellingList = GetFlattenedSpellings(R);
+  assert(!SpellingList.empty() &&
+         "Attribute with empty spelling list can't have accessors!");
   for (const auto *Accessor : Accessors) {
     std::string Name = Accessor->getValueAsString("Name");
-    std::vector<FlattenedSpelling> Spellings = 
-      GetFlattenedSpellings(*Accessor);
-    std::vector<FlattenedSpelling> SpellingList = GetFlattenedSpellings(R);
-    assert(!SpellingList.empty() &&
-           "Attribute with empty spelling list can't have accessors!");
+    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Accessor);
 
     OS << "  bool " << Name << "() const { return SpellingListIndex == ";
     for (unsigned Index = 0; Index < Spellings.size(); ++Index) {
       OS << getSpellingListIndex(SpellingList, Spellings[Index]);
-      if (Index != Spellings.size() -1)
+      if (Index != Spellings.size() - 1)
         OS << " ||\n    SpellingListIndex == ";
       else
         OS << "; }\n";
@@ -1530,6 +1523,16 @@ static void emitClangAttrLateParsedList(RecordKeeper &Records, raw_ostream &OS) 
   OS << "#endif // CLANG_ATTR_LATE_PARSED_LIST\n\n";
 }
 
+template <typename Fn>
+static void forEachUniqueSpelling(const Record &Attr, Fn &&F) {
+  std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attr);
+  SmallDenseSet<StringRef, 8> Seen;
+  for (const FlattenedSpelling &S : Spellings) {
+    if (Seen.insert(S.name()).second)
+      F(S);
+  }
+}
+
 /// \brief Emits the first-argument-is-type property for attributes.
 static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#if defined(CLANG_ATTR_TYPE_ARG_LIST)\n";
@@ -1545,12 +1548,9 @@ static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
       continue;
 
     // All these spellings take a single type argument.
-    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
-    std::set<std::string> Emitted;
-    for (const auto &S : Spellings) {
-      if (Emitted.insert(S.name()).second)
-        OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
-    }
+    forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
+    });
   }
   OS << "#endif // CLANG_ATTR_TYPE_ARG_LIST\n\n";
 }
@@ -1567,12 +1567,9 @@ static void emitClangAttrArgContextList(RecordKeeper &Records, raw_ostream &OS) 
       continue;
 
     // All these spellings take are parsed unevaluated.
-    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attr);
-    std::set<std::string> Emitted;
-    for (const auto &S : Spellings) {
-      if (Emitted.insert(S.name()).second)
-        OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
-    }
+    forEachUniqueSpelling(Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
+    });
   }
   OS << "#endif // CLANG_ATTR_ARG_CONTEXT_LIST\n\n";
 }
@@ -1598,12 +1595,9 @@ static void emitClangAttrIdentifierArgList(RecordKeeper &Records, raw_ostream &O
       continue;
 
     // All these spellings take an identifier argument.
-    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
-    std::set<std::string> Emitted;
-    for (const auto &S : Spellings) {
-      if (Emitted.insert(S.name()).second)
-        OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
-    }
+    forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", " << "true" << ")\n";
+    });
   }
   OS << "#endif // CLANG_ATTR_IDENTIFIER_ARG_LIST\n\n";
 }
@@ -1891,8 +1885,7 @@ static void emitAttrList(raw_ostream &OS, StringRef Class,
 // Determines if an attribute has a Pragma spelling.
 static bool AttrHasPragmaSpelling(const Record *R) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*R);
-  return std::find_if(Spellings.begin(), Spellings.end(),
-                      [](const FlattenedSpelling &S) {
+  return llvm::find_if(Spellings, [](const FlattenedSpelling &S) {
            return S.variety() == "Pragma";
          }) != Spellings.end();
 }
@@ -2690,7 +2683,7 @@ static std::string CalculateDiagnostic(const Record &S) {
 }
 
 static std::string GetSubjectWithSuffix(const Record *R) {
-  std::string B = R->getName();
+  const std::string &B = R->getName();
   if (B == "DeclBase")
     return "Decl";
   return B + "Decl";
@@ -2870,7 +2863,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
       if (I.first == APK) {
         std::vector<std::string> DA = I.second->getValueAsDef("Target")
                                           ->getValueAsListOfStrings("Arches");
-        std::copy(DA.begin(), DA.end(), std::back_inserter(Arches));
+        std::move(DA.begin(), DA.end(), std::back_inserter(Arches));
       }
     }
   }
@@ -2932,12 +2925,9 @@ static std::string GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
 static bool IsKnownToGCC(const Record &Attr) {
   // Look at the spellings for this subject; if there are any spellings which
   // claim to be known to GCC, the attribute is known to GCC.
-  std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attr);
-  for (const auto &I : Spellings) {
-    if (I.knownToGCC())
-      return true;
-  }
-  return false;
+  return llvm::any_of(
+      GetFlattenedSpellings(Attr),
+      [](const FlattenedSpelling &S) { return S.knownToGCC(); });
 }
 
 /// Emits the parsed attribute helpers

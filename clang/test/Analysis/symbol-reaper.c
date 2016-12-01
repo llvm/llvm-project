@@ -2,6 +2,7 @@
 
 void clang_analyzer_eval(int);
 void clang_analyzer_warnOnDeadSymbol(int);
+void clang_analyzer_numTimesReached();
 
 int conjure_index();
 
@@ -10,6 +11,9 @@ void test_that_expr_inspection_works() {
     int x = conjure_index();
     clang_analyzer_warnOnDeadSymbol(x);
   } while(0); // expected-warning{{SYMBOL DEAD}}
+
+  // Make sure we don't accidentally split state in ExprInspection.
+  clang_analyzer_numTimesReached(); // expected-warning{{1}}
 }
 
 // These tests verify the reaping of symbols that are only referenced as
