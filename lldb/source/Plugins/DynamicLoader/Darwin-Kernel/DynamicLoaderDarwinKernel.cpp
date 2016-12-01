@@ -244,7 +244,9 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
       0xffffff8000004010ULL, // 2014-2015-ish arm64 devices
       0xffffff8000002010ULL, // oldest arm64 devices
       LLDB_INVALID_ADDRESS};
-  addr_t kernel_addresses_32[] = {0xffff0110, LLDB_INVALID_ADDRESS};
+  addr_t kernel_addresses_32[] = {0xffff0110, // 2016 and earlier armv7 devices
+                                  0xffff1010, 
+                                  LLDB_INVALID_ADDRESS};
 
   uint8_t uval[8];
   if (process->GetAddressByteSize() == 8) {

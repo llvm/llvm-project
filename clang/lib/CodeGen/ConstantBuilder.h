@@ -155,6 +155,13 @@ public:
       add(llvm::ConstantExpr::getBitCast(value, type));
     }
 
+    /// Add a bunch of new values to this initializer.
+    void addAll(ArrayRef<llvm::Constant *> values) {
+      assert(!Finished && "cannot add more values after finishing builder");
+      assert(!Frozen && "cannot add values while subbuilder is active");
+      Builder.Buffer.append(values.begin(), values.end());
+    }
+
     /// An opaque class to hold the abstract position of a placeholder.
     class PlaceholderPosition {
       size_t Index;

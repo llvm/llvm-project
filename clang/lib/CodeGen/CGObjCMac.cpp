@@ -888,6 +888,15 @@ protected:
   /// DefinedNonLazyCategories - List of defined "non-lazy" categories.
   SmallVector<llvm::GlobalValue*, 16> DefinedNonLazyCategories;
 
+  /// Cached reference to the class for constant strings. This value has type
+  /// int * but is actually an Obj-C class pointer.
+  llvm::WeakVH ConstantStringClassRef;
+
+  /// \brief The LLVM type corresponding to NSConstantString.
+  llvm::StructType *NSConstantStringType = nullptr;
+
+  llvm::StringMap<llvm::GlobalVariable *> NSConstantStringMap;
+
   /// GetNameForMethod - Return a name for the given method.
   /// \param[out] NameOut - The return value.
   void GetNameForMethod(const ObjCMethodDecl *OMD,
@@ -1054,6 +1063,7 @@ public:
   }
 
   ConstantAddress GenerateConstantString(const StringLiteral *SL) override;
+  ConstantAddress GenerateConstantNSString(const StringLiteral *SL);
 
   llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                  const ObjCContainerDecl *CD=nullptr) override;
@@ -1070,6 +1080,9 @@ public:
   /// forward references will be filled in with empty bodies if no
   /// definition is seen. The return value has type ProtocolPtrTy.
   virtual llvm::Constant *GetOrEmitProtocolRef(const ObjCProtocolDecl *PD)=0;
+
+  virtual llvm::Constant *getNSConstantStringClassRef() = 0;
+
   llvm::Constant *BuildGCBlockLayout(CodeGen::CodeGenModule &CGM,
                                      const CGBlockInfo &blockInfo) override;
   llvm::Constant *BuildRCBlockLayout(CodeGen::CodeGenModule &CGM,
@@ -1266,6 +1279,8 @@ private:
 public:
   CGObjCMac(CodeGen::CodeGenModule &cgm);
 
+  llvm::Constant *getNSConstantStringClassRef() override;
+
   llvm::Function *ModuleInitFunction() override;
 
   CodeGen::RValue GenerateMessageSend(CodeGen::CodeGenFunction &CGF,
@@ -1345,15 +1360,6 @@ public:
   llvm::Value *EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
                               const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar) override;
-
-  /// GetClassGlobal - Return the global variable for the Objective-C
-  /// class of the given name.
-  llvm::Constant *GetClassGlobal(StringRef Name,
-                                 bool ForDefinition,
-                                 bool Weak = false,
-                                 bool DLLImport = false) override {
-    llvm_unreachable("CGObjCMac::GetClassGlobal");
-  }
 };
 
 class CGObjCNonFragileABIMac : public CGObjCCommonMac {
@@ -1396,12 +1402,12 @@ private:
                                               unsigned InstanceStart,
                                               unsigned InstanceSize,
                                               const ObjCImplementationDecl *ID);
-  llvm::GlobalVariable * BuildClassMetaData(const std::string &ClassName,
-                                            llvm::Constant *IsAGV,
-                                            llvm::Constant *SuperClassGV,
-                                            llvm::Constant *ClassRoGV,
-                                            bool HiddenVisibility,
-                                            bool Weak);
+  llvm::GlobalVariable *BuildClassObject(const ObjCInterfaceDecl *CI,
+                                         bool isMetaclass,
+                                         llvm::Constant *IsAGV,
+                                         llvm::Constant *SuperClassGV,
+                                         llvm::Constant *ClassRoGV,
+                                         bool HiddenVisibility);
 
   void emitMethodConstant(ConstantArrayBuilder &builder,
                             const ObjCMethodDecl *MD,
@@ -1452,8 +1458,12 @@ private:
   
   /// GetClassGlobal - Return the global variable for the Objective-C
   /// class of the given name.
-  llvm::Constant *GetClassGlobal(StringRef Name, bool ForDefinition,
-                                 bool Weak, bool DLLImport) override;
+  llvm::Constant *GetClassGlobal(StringRef Name,
+                                 ForDefinition_t IsForDefinition,
+                                 bool Weak = false, bool DLLImport = false);
+  llvm::Constant *GetClassGlobal(const ObjCInterfaceDecl *ID,
+                                 bool isMetaclass,
+                                 ForDefinition_t isForDefinition);
 
   /// EmitClassRef - Return a Value*, of type ObjCTypes.ClassPtrTy,
   /// for the given class reference.
@@ -1461,7 +1471,7 @@ private:
                             const ObjCInterfaceDecl *ID);
   
   llvm::Value *EmitClassRefFromId(CodeGenFunction &CGF,
-                                  IdentifierInfo *II, bool Weak,
+                                  IdentifierInfo *II,
                                   const ObjCInterfaceDecl *ID);
 
   llvm::Value *EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) override;
@@ -1491,7 +1501,7 @@ private:
   /// GetInterfaceEHType - Get the cached ehtype for the given Objective-C
   /// interface. The return value has type EHTypePtrTy.
   llvm::Constant *GetInterfaceEHType(const ObjCInterfaceDecl *ID,
-                                  bool ForDefinition);
+                                     ForDefinition_t IsForDefinition);
 
   StringRef getMetaclassSymbolPrefix() const { return "OBJC_METACLASS_$_"; }
 
@@ -1538,7 +1548,9 @@ private:
 
 public:
   CGObjCNonFragileABIMac(CodeGen::CodeGenModule &cgm);
-  // FIXME. All stubs for now!
+
+  llvm::Constant *getNSConstantStringClassRef() override;
+
   llvm::Function *ModuleInitFunction() override;
 
   CodeGen::RValue GenerateMessageSend(CodeGen::CodeGenFunction &CGF,
@@ -1848,11 +1860,115 @@ llvm::Constant *CGObjCMac::GetEHType(QualType T) {
    };
 */
 
-ConstantAddress CGObjCCommonMac::GenerateConstantString(
-  const StringLiteral *SL) {
-  return (CGM.getLangOpts().NoConstantCFStrings == 0 ? 
-          CGM.GetAddrOfConstantCFString(SL) :
-          CGM.GetAddrOfConstantString(SL));
+ConstantAddress
+CGObjCCommonMac::GenerateConstantString(const StringLiteral *SL) {
+  return (!CGM.getLangOpts().NoConstantCFStrings
+            ? CGM.GetAddrOfConstantCFString(SL)
+            : GenerateConstantNSString(SL));
+}
+
+static llvm::StringMapEntry<llvm::GlobalVariable *> &
+GetConstantStringEntry(llvm::StringMap<llvm::GlobalVariable *> &Map,
+                       const StringLiteral *Literal, unsigned &StringLength) {
+  StringRef String = Literal->getString();
+  StringLength = String.size();
+  return *Map.insert(std::make_pair(String, nullptr)).first;
+}
+
+llvm::Constant *CGObjCMac::getNSConstantStringClassRef() {
+  if (llvm::Value *V = ConstantStringClassRef)
+    return cast<llvm::Constant>(V);
+
+  auto &StringClass = CGM.getLangOpts().ObjCConstantStringClass;
+  std::string str =
+    StringClass.empty() ? "_NSConstantStringClassReference"
+                        : "_" + StringClass + "ClassReference";
+
+  llvm::Type *PTy = llvm::ArrayType::get(CGM.IntTy, 0);
+  auto GV = CGM.CreateRuntimeVariable(PTy, str);
+  auto V = llvm::ConstantExpr::getBitCast(GV, CGM.IntTy->getPointerTo());
+  ConstantStringClassRef = V;
+  return V;
+}
+
+llvm::Constant *CGObjCNonFragileABIMac::getNSConstantStringClassRef() {
+  if (llvm::Value *V = ConstantStringClassRef)
+    return cast<llvm::Constant>(V);
+
+  auto &StringClass = CGM.getLangOpts().ObjCConstantStringClass;
+  std::string str = 
+    StringClass.empty() ? "OBJC_CLASS_$_NSConstantString" 
+                        : "OBJC_CLASS_$_" + StringClass;
+  auto GV = GetClassGlobal(str, NotForDefinition);
+
+  // Make sure the result is of the correct type.
+  auto V = llvm::ConstantExpr::getBitCast(GV, CGM.IntTy->getPointerTo());
+
+  ConstantStringClassRef = V;
+  return V;
+}
+
+ConstantAddress
+CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
+  unsigned StringLength = 0;
+  llvm::StringMapEntry<llvm::GlobalVariable *> &Entry =
+    GetConstantStringEntry(NSConstantStringMap, Literal, StringLength);
+
+  if (auto *C = Entry.second)
+    return ConstantAddress(C, CharUnits::fromQuantity(C->getAlignment()));
+
+  // If we don't already have it, get _NSConstantStringClassReference.
+  llvm::Constant *Class = getNSConstantStringClassRef();
+
+  // If we don't already have it, construct the type for a constant NSString.
+  if (!NSConstantStringType) {
+    NSConstantStringType =
+      llvm::StructType::create({
+        CGM.Int32Ty->getPointerTo(),
+        CGM.Int8PtrTy,
+        CGM.IntTy
+      }, "struct.__builtin_NSString");
+  }
+
+  ConstantInitBuilder Builder(CGM);
+  auto Fields = Builder.beginStruct(NSConstantStringType);
+
+  // Class pointer.
+  Fields.add(Class);
+
+  // String pointer.
+  llvm::Constant *C =
+    llvm::ConstantDataArray::getString(VMContext, Entry.first());
+
+  llvm::GlobalValue::LinkageTypes Linkage = llvm::GlobalValue::PrivateLinkage;
+  bool isConstant = !CGM.getLangOpts().WritableStrings;
+
+  auto *GV = new llvm::GlobalVariable(CGM.getModule(), C->getType(), isConstant,
+                                      Linkage, C, ".str");
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  // Don't enforce the target's minimum global alignment, since the only use
+  // of the string is via this class initializer.
+  GV->setAlignment(1);
+  Fields.addBitCast(GV, CGM.Int8PtrTy);
+
+  // String length.
+  Fields.addInt(CGM.IntTy, StringLength);
+
+  // The struct.
+  CharUnits Alignment = CGM.getPointerAlign();
+  GV = Fields.finishAndCreateGlobal("_unnamed_nsstring_", Alignment,
+                                    /*constant*/ true,
+                                    llvm::GlobalVariable::PrivateLinkage);
+  const char *NSStringSection = "__OBJC,__cstring_object,regular,no_dead_strip";
+  const char *NSStringNonFragileABISection =
+      "__DATA,__objc_stringobj,regular,no_dead_strip";
+  // FIXME. Fix section.
+  GV->setSection(CGM.getLangOpts().ObjCRuntime.isNonFragile()
+                     ? NSStringNonFragileABISection
+                     : NSStringSection);
+  Entry.second = GV;
+
+  return ConstantAddress(GV, Alignment);
 }
 
 enum {
@@ -6042,8 +6158,8 @@ llvm::GlobalVariable * CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   return CLASS_RO_GV;
 }
 
-/// BuildClassMetaData - This routine defines that to-level meta-data
-/// for the given ClassName for:
+/// Build the metaclass object for a class.
+///
 /// struct _class_t {
 ///   struct _class_t *isa;
 ///   struct _class_t * const superclass;
@@ -6052,9 +6168,13 @@ llvm::GlobalVariable * CGObjCNonFragileABIMac::BuildClassRoTInitializer(
 ///   struct class_ro_t *ro;
 /// }
 ///
-llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassMetaData(
-    const std::string &ClassName, llvm::Constant *IsAGV, llvm::Constant *SuperClassGV,
-    llvm::Constant *ClassRoGV, bool HiddenVisibility, bool Weak) {
+llvm::GlobalVariable *
+CGObjCNonFragileABIMac::BuildClassObject(const ObjCInterfaceDecl *CI,
+                                         bool isMetaclass,
+                                         llvm::Constant *IsAGV,
+                                         llvm::Constant *SuperClassGV,
+                                         llvm::Constant *ClassRoGV,
+                                         bool HiddenVisibility) {
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.ClassnfABITy);
   values.add(IsAGV);
@@ -6067,12 +6187,8 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassMetaData(
   values.add(ObjCEmptyVtableVar);
   values.add(ClassRoGV);
 
-  llvm::GlobalVariable *GV = cast<llvm::GlobalVariable>(
-                               GetClassGlobal(ClassName,
-                                              /*ForDefinition=*/true,
-                                              Weak,
-                                              /*DLLImport (ignored on def)*/ false));
-
+  llvm::GlobalVariable *GV =
+    cast<llvm::GlobalVariable>(GetClassGlobal(CI, isMetaclass, ForDefinition));
   values.finishAndSetAsInitializer(GV);
 
   if (CGM.getTriple().isOSBinFormatMachO())
@@ -6155,7 +6271,6 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
 
   llvm::Constant *SuperClassGV, *IsAGV;
 
-  StringRef ClassName = ID->getObjCRuntimeNameAsString();
   const auto *CI = ID->getClassInterface();
   assert(CI && "CGObjCNonFragileABIMac::GenerateClass - class is 0");
 
@@ -6178,17 +6293,8 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
     // class is root
     flags |= NonFragileABI_Class_Root;
 
-    SuperClassGV = GetClassGlobal((getClassSymbolPrefix() + ClassName).str(),
-                                  /*ForDefinition=*/false,
-                                  CI->isWeakImported(),
-                                  CGM.getTriple().isOSBinFormatCOFF()
-                                    && CI->hasAttr<DLLImportAttr>());
-
-    IsAGV = GetClassGlobal((getMetaclassSymbolPrefix() + ClassName).str(),
-                           /*ForDefinition=*/false,
-                           CI->isWeakImported(),
-                           CGM.getTriple().isOSBinFormatCOFF()
-                             && CI->hasAttr<DLLImportAttr>());
+    SuperClassGV = GetClassGlobal(CI, /*metaclass*/ false, NotForDefinition);
+    IsAGV = GetClassGlobal(CI, /*metaclass*/ true, NotForDefinition);
   } else {
     // Has a root. Current class is not a root.
     const ObjCInterfaceDecl *Root = ID->getClassInterface();
@@ -6196,31 +6302,16 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
       Root = Super;
 
     const auto *Super = CI->getSuperClass();
-    StringRef RootClassName = Root->getObjCRuntimeNameAsString();
-    StringRef SuperClassName = Super->getObjCRuntimeNameAsString();
-
-    IsAGV = GetClassGlobal((getMetaclassSymbolPrefix() + RootClassName).str(),
-                           /*ForDefinition=*/false,
-                           Root->isWeakImported(),
-                           CGM.getTriple().isOSBinFormatCOFF()
-                             && Super->hasAttr<DLLImportAttr>());
-
-    // work on super class metadata symbol.
-    SuperClassGV =
-        GetClassGlobal((getMetaclassSymbolPrefix() + SuperClassName).str(),
-                       /*ForDefinition=*/false,
-                       Super->isWeakImported(),
-                       CGM.getTriple().isOSBinFormatCOFF()
-                         && Super->hasAttr<DLLImportAttr>());
+    IsAGV = GetClassGlobal(Root, /*metaclass*/ true, NotForDefinition);
+    SuperClassGV = GetClassGlobal(Super, /*metaclass*/ true, NotForDefinition);
   }
 
   llvm::GlobalVariable *CLASS_RO_GV =
       BuildClassRoTInitializer(flags, InstanceStart, InstanceSize, ID);
 
   llvm::GlobalVariable *MetaTClass =
-      BuildClassMetaData((getMetaclassSymbolPrefix() + ClassName).str(), IsAGV,
-                         SuperClassGV, CLASS_RO_GV, classIsHidden,
-                         CI->isWeakImported());
+    BuildClassObject(CI, /*metaclass*/ true,
+                     IsAGV, SuperClassGV, CLASS_RO_GV, classIsHidden);
   if (CGM.getTriple().isOSBinFormatCOFF())
     if (CI->hasAttr<DLLExportAttr>())
       MetaTClass->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
@@ -6253,14 +6344,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
   } else {
     // Has a root. Current class is not a root.
     const auto *Super = CI->getSuperClass();
-    StringRef SuperClassName = Super->getObjCRuntimeNameAsString();
-
-    SuperClassGV =
-        GetClassGlobal((getClassSymbolPrefix() + SuperClassName).str(),
-                       /*ForDefinition=*/false,
-                       Super->isWeakImported(),
-                       CGM.getTriple().isOSBinFormatCOFF()
-                         && Super->hasAttr<DLLImportAttr>());
+    SuperClassGV = GetClassGlobal(Super, /*metaclass*/ false, NotForDefinition);
   }
 
   GetClassSizeInfo(ID, InstanceStart, InstanceSize);
@@ -6268,9 +6352,8 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
       BuildClassRoTInitializer(flags, InstanceStart, InstanceSize, ID);
 
   llvm::GlobalVariable *ClassMD =
-    BuildClassMetaData((getClassSymbolPrefix() + ClassName).str(), MetaTClass,
-                       SuperClassGV, CLASS_RO_GV, classIsHidden,
-                       CI->isWeakImported());
+    BuildClassObject(CI, /*metaclass*/ false,
+                     MetaTClass, SuperClassGV, CLASS_RO_GV, classIsHidden);
   if (CGM.getTriple().isOSBinFormatCOFF())
     if (CI->hasAttr<DLLExportAttr>())
       ClassMD->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
@@ -6283,7 +6366,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
 
   // Force the definition of the EHType if necessary.
   if (flags & NonFragileABI_Class_Exception)
-    GetInterfaceEHType(CI, true);
+    (void) GetInterfaceEHType(CI, ForDefinition);
   // Make sure method definition entries are all clear for next implementation.
   MethodDefinitions.clear();
 }
@@ -6348,20 +6431,11 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   ExtCatName += "_$_";
   ExtCatName += OCD->getNameAsString();
     
-  llvm::SmallString<64> ExtClassName(getClassSymbolPrefix());
-  ExtClassName += Interface->getObjCRuntimeNameAsString();
-
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.CategorynfABITy);
   values.add(GetClassName(OCD->getIdentifier()->getName()));
   // meta-class entry symbol
-  llvm::Constant *ClassGV = GetClassGlobal(ExtClassName.str(),
-                                           /*ForDefinition=*/false,
-                                           Interface->isWeakImported(),
-                                           CGM.getTriple().isOSBinFormatCOFF()
-                                             && Interface->hasAttr<DLLImportAttr>());
-
-  values.add(ClassGV);
+  values.add(GetClassGlobal(Interface, /*metaclass*/ false, NotForDefinition));
   std::string listName =
       (Interface->getObjCRuntimeNameAsString() + "_$_" + OCD->getName()).str();
 
@@ -7039,21 +7113,38 @@ CGObjCNonFragileABIMac::GenerateMessageSend(CodeGen::CodeGenFunction &CGF,
                       false, CallArgs, Method, Class, ObjCTypes);
 }
 
-llvm::Constant *CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
-                                                       bool ForDefinition,
-                                                       bool Weak, bool DLLImport) {
+llvm::Constant *
+CGObjCNonFragileABIMac::GetClassGlobal(const ObjCInterfaceDecl *ID,
+                                       bool metaclass,
+                                       ForDefinition_t isForDefinition) {
+  auto prefix =
+    (metaclass ? getMetaclassSymbolPrefix() : getClassSymbolPrefix());
+  return GetClassGlobal((prefix + ID->getObjCRuntimeNameAsString()).str(),
+                        isForDefinition,
+                        ID->isWeakImported(),
+                        !isForDefinition
+                          && CGM.getTriple().isOSBinFormatCOFF()
+                          && ID->hasAttr<DLLImportAttr>());
+}
+
+llvm::Constant *
+CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
+                                       ForDefinition_t IsForDefinition,
+                                       bool Weak, bool DLLImport) {
   llvm::GlobalValue::LinkageTypes L =
       Weak ? llvm::GlobalValue::ExternalWeakLinkage
            : llvm::GlobalValue::ExternalLinkage;
 
-  llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name);
 
-  if (!GV)
+
+  llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name);
+  if (!GV) {
     GV = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassnfABITy,
                                   false, L, nullptr, Name);
 
-  if (DLLImport)
-    GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+    if (DLLImport)
+      GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+  }
 
   assert(GV->getLinkage() == L);
 
@@ -7064,20 +7155,22 @@ llvm::Constant *CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
   return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.ClassnfABIPtrTy);
 }
 
-llvm::Value *CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
-                                                        IdentifierInfo *II,
-                                                        bool Weak,
-                                                        const ObjCInterfaceDecl *ID) {
+llvm::Value *
+CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
+                                           IdentifierInfo *II,
+                                           const ObjCInterfaceDecl *ID) {
   CharUnits Align = CGF.getPointerAlign();
   llvm::GlobalVariable *&Entry = ClassReferences[II];
   
   if (!Entry) {
-    StringRef Name = ID ? ID->getObjCRuntimeNameAsString() : II->getName();
-    std::string ClassName = (getClassSymbolPrefix() + Name).str();
-    llvm::Constant *ClassGV = GetClassGlobal(ClassName,
-                                             /*ForDefinition=*/false,
-                                             Weak,
-                                             /*FIXME:DLLImport*/ false);
+    llvm::Constant *ClassGV;
+    if (ID) {
+      ClassGV = GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition);
+    } else {
+      ClassGV = GetClassGlobal((getClassSymbolPrefix() + II->getName()).str(),
+                               NotForDefinition);
+    }
+
     Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassnfABIPtrTy,
                                      false, llvm::GlobalValue::PrivateLinkage,
                                      ClassGV, "OBJC_CLASSLIST_REFERENCES_$_");
@@ -7095,13 +7188,13 @@ llvm::Value *CGObjCNonFragileABIMac::EmitClassRef(CodeGenFunction &CGF,
   if (ID->hasAttr<ObjCRuntimeVisibleAttr>())
     return EmitClassRefViaRuntime(CGF, ID, ObjCTypes);
 
-  return EmitClassRefFromId(CGF, ID->getIdentifier(), ID->isWeakImported(), ID);
+  return EmitClassRefFromId(CGF, ID->getIdentifier(), ID);
 }
 
 llvm::Value *CGObjCNonFragileABIMac::EmitNSAutoreleasePoolClassRef(
                                                     CodeGenFunction &CGF) {
   IdentifierInfo *II = &CGM.getContext().Idents.get("NSAutoreleasePool");
-  return EmitClassRefFromId(CGF, II, false, nullptr);
+  return EmitClassRefFromId(CGF, II, nullptr);
 }
 
 llvm::Value *
@@ -7111,14 +7204,7 @@ CGObjCNonFragileABIMac::EmitSuperClassRef(CodeGenFunction &CGF,
   llvm::GlobalVariable *&Entry = SuperClassReferences[ID->getIdentifier()];
 
   if (!Entry) {
-    llvm::SmallString<64> ClassName(getClassSymbolPrefix());
-    ClassName += ID->getObjCRuntimeNameAsString();
-    llvm::Constant *ClassGV = GetClassGlobal(ClassName.str(),
-                                             /*ForDefinition=*/false,
-                                             ID->isWeakImported(),
-                                             CGM.getTriple().isOSBinFormatCOFF()
-                                               && ID->hasAttr<DLLImportAttr>());
-
+    auto ClassGV = GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition);
     Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassnfABIPtrTy,
                                      false, llvm::GlobalValue::PrivateLinkage,
                                      ClassGV, "OBJC_CLASSLIST_SUP_REFS_$_");
@@ -7138,13 +7224,7 @@ llvm::Value *CGObjCNonFragileABIMac::EmitMetaClassRef(CodeGenFunction &CGF,
   CharUnits Align = CGF.getPointerAlign();
   llvm::GlobalVariable * &Entry = MetaClassReferences[ID->getIdentifier()];
   if (!Entry) {
-    llvm::SmallString<64> MetaClassName(getMetaclassSymbolPrefix());
-    MetaClassName += ID->getObjCRuntimeNameAsString();
-    llvm::Constant *MetaClassGV = GetClassGlobal(MetaClassName.str(),
-                                                 /*ForDefinition=*/false,
-                                                 Weak,
-                                                 CGM.getTriple().isOSBinFormatCOFF()
-                                                   && ID->hasAttr<DLLImportAttr>());
+    auto MetaClassGV = GetClassGlobal(ID, /*metaclass*/ true, NotForDefinition);
 
     Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassnfABIPtrTy,
                                      false, llvm::GlobalValue::PrivateLinkage,
@@ -7163,15 +7243,10 @@ llvm::Value *CGObjCNonFragileABIMac::EmitMetaClassRef(CodeGenFunction &CGF,
 llvm::Value *CGObjCNonFragileABIMac::GetClass(CodeGenFunction &CGF,
                                               const ObjCInterfaceDecl *ID) {
   if (ID->isWeakImported()) {
-    llvm::SmallString<64> ClassName(getClassSymbolPrefix());
-    ClassName += ID->getObjCRuntimeNameAsString();
-    llvm::GlobalVariable *ClassGV = cast<llvm::GlobalVariable>(
-                                      GetClassGlobal(ClassName.str(),
-                                                     /*ForDefinition=*/true,
-                                                     /*Weak=*/true,
-                                                     /*DLLImport*/false));
+    auto ClassGV = GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition);
     (void)ClassGV;
-    assert(ClassGV->hasExternalWeakLinkage());
+    assert(!isa<llvm::GlobalVariable>(ClassGV) ||
+           cast<llvm::GlobalVariable>(ClassGV)->hasExternalWeakLinkage());
   }
   
   return EmitClassRef(CGF, ID);
@@ -7404,7 +7479,7 @@ CGObjCNonFragileABIMac::GetEHType(QualType T) {
   const ObjCInterfaceType *IT = PT->getInterfaceType();
   assert(IT && "Invalid @catch type.");
 
-  return GetInterfaceEHType(IT->getDecl(), false);
+  return GetInterfaceEHType(IT->getDecl(), NotForDefinition);
 }
 
 void CGObjCNonFragileABIMac::EmitTryStmt(CodeGen::CodeGenFunction &CGF,
@@ -7436,13 +7511,13 @@ void CGObjCNonFragileABIMac::EmitThrowStmt(CodeGen::CodeGenFunction &CGF,
 
 llvm::Constant *
 CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
-                                           bool ForDefinition) {
+                                           ForDefinition_t IsForDefinition) {
   llvm::GlobalVariable * &Entry = EHTypeReferences[ID->getIdentifier()];
   StringRef ClassName = ID->getObjCRuntimeNameAsString();
 
   // If we don't need a definition, return the entry if found or check
   // if we use an external reference.
-  if (!ForDefinition) {
+  if (!IsForDefinition) {
     if (Entry)
       return Entry;
 
@@ -7482,14 +7557,10 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
   auto values = builder.beginStruct(ObjCTypes.EHTypeTy);
   values.add(llvm::ConstantExpr::getGetElementPtr(VTableGV->getValueType(),
                                                   VTableGV, VTableIdx));
-  values.add(GetClassName(ID->getObjCRuntimeNameAsString()));
-  values.add(GetClassGlobal((getClassSymbolPrefix() + ClassName).str(), 
-                            /*ForDefinition*/false,
-                            /*Weak*/ID->isWeakImported(),
-                            /*DLLImport*/CGM.getTriple().isOSBinFormatCOFF()
-                                      && ID->hasAttr<DLLImportAttr>()));
+  values.add(GetClassName(ClassName));
+  values.add(GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition));
 
-  llvm::GlobalValue::LinkageTypes L = ForDefinition
+  llvm::GlobalValue::LinkageTypes L = IsForDefinition
                                           ? llvm::GlobalValue::ExternalLinkage
                                           : llvm::GlobalValue::WeakAnyLinkage;
   if (Entry) {
@@ -7511,7 +7582,7 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
     if (ID->getVisibility() == HiddenVisibility)
       Entry->setVisibility(llvm::GlobalValue::HiddenVisibility);
 
-  if (ForDefinition)
+  if (IsForDefinition)
     if (CGM.getTriple().isOSBinFormatMachO())
       Entry->setSection("__DATA,__objc_const");
 
