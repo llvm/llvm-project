@@ -7,43 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Identical COMDAT Folding is a feature to merge COMDAT sections not by
-// name (which is regular COMDAT handling) but by contents. If two COMDAT
-// sections have the same data, relocations, attributes, etc., then the two
-// are considered identical and merged by the linker. This optimization
-// makes outputs smaller.
+// ICF is short for Identical Code Folding. That is a size optimization to
+// identify and merge two or more read-only sections (typically functions)
+// that happened to have the same contents. It usually reduces output size
+// by a few percent.
 //
-// ICF is theoretically a problem of reducing graphs by merging as many
-// identical subgraphs as possible, if we consider sections as vertices and
-// relocations as edges. This may be a bit more complicated problem than you
-// might think. The order of processing sections matters since merging two
-// sections can make other sections, whose relocations now point to the same
-// section, mergeable. Graphs may contain cycles, which is common in COFF.
-// We need a sophisticated algorithm to do this properly and efficiently.
+// On Windows, ICF is enabled by default.
 //
-// What we do in this file is this. We split sections into groups. Sections
-// in the same group are considered identical.
-//
-// First, all sections are grouped by their "constant" values. Constant
-// values are values that are never changed by ICF, such as section contents,
-// section name, number of relocations, type and offset of each relocation,
-// etc. Because we do not care about some relocation targets in this step,
-// two sections in the same group may not be identical, but at least two
-// sections in different groups can never be identical.
-//
-// Then, we try to split each group by relocation targets. Relocations are
-// considered identical if and only if the relocation targets are in the
-// same group. Splitting a group may make more groups to be splittable,
-// because two relocations that were previously considered identical might
-// now point to different groups. We repeat this step until the convergence
-// is obtained.
-//
-// This algorithm is so-called "optimistic" algorithm described in
-// http://research.google.com/pubs/pub36912.html.
+// See ELF/ICF.cpp for the details about the algortihm.
 //
 //===----------------------------------------------------------------------===//
 
 #include "Chunks.h"
+#include "Error.h"
 #include "Symbols.h"
 #include "lld/Core/Parallel.h"
 #include "llvm/ADT/Hashing.h"
@@ -58,29 +34,34 @@ using namespace llvm;
 namespace lld {
 namespace coff {
 
-typedef std::vector<SectionChunk *>::iterator ChunkIterator;
-typedef bool (*Comparator)(const SectionChunk *, const SectionChunk *);
-
 class ICF {
 public:
   void run(const std::vector<Chunk *> &V);
 
 private:
-  static uint64_t getHash(SectionChunk *C);
-  static bool equalsConstant(const SectionChunk *A, const SectionChunk *B);
-  static bool equalsVariable(const SectionChunk *A, const SectionChunk *B);
-  bool forEachGroup(std::vector<SectionChunk *> &Chunks, Comparator Eq);
-  bool segregate(ChunkIterator Begin, ChunkIterator End, Comparator Eq);
+  void segregate(size_t Begin, size_t End, bool Constant);
 
-  std::atomic<uint64_t> NextID = { 1 };
+  bool equalsConstant(const SectionChunk *A, const SectionChunk *B);
+  bool equalsVariable(const SectionChunk *A, const SectionChunk *B);
+
+  uint32_t getHash(SectionChunk *C);
+  bool isEligible(SectionChunk *C);
+
+  size_t findBoundary(size_t Begin, size_t End);
+
+  void forEachColorRange(size_t Begin, size_t End,
+                         std::function<void(size_t, size_t)> Fn);
+
+  void forEachColor(std::function<void(size_t, size_t)> Fn);
+
+  std::vector<SectionChunk *> Chunks;
+  int Cnt = 0;
+  std::atomic<uint32_t> NextId = {1};
+  std::atomic<bool> Repeat = {false};
 };
 
-// Entry point to ICF.
-void doICF(const std::vector<Chunk *> &Chunks) {
-  ICF().run(Chunks);
-}
-
-uint64_t ICF::getHash(SectionChunk *C) {
+// Returns a hash value for S.
+uint32_t ICF::getHash(SectionChunk *C) {
   return hash_combine(C->getPermissions(),
                       hash_value(C->SectionName),
                       C->NumRelocs,
@@ -89,11 +70,44 @@ uint64_t ICF::getHash(SectionChunk *C) {
                       C->Checksum);
 }
 
-bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
-  if (A->AssocChildren.size() != B->AssocChildren.size() ||
-      A->NumRelocs != B->NumRelocs) {
-    return false;
+// Returns true if section S is subject of ICF.
+bool ICF::isEligible(SectionChunk *C) {
+  bool Global = C->Sym && C->Sym->isExternal();
+  bool Writable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
+  return C->isCOMDAT() && C->isLive() && Global && !Writable;
+}
+
+// Split a range into smaller ranges by recoloring sections
+void ICF::segregate(size_t Begin, size_t End, bool Constant) {
+  while (Begin < End) {
+    // Divide [Begin, End) into two. Let Mid be the start index of the
+    // second group.
+    auto Bound = std::stable_partition(
+        Chunks.begin() + Begin + 1, Chunks.begin() + End, [&](SectionChunk *S) {
+          if (Constant)
+            return equalsConstant(Chunks[Begin], S);
+          return equalsVariable(Chunks[Begin], S);
+        });
+    size_t Mid = Bound - Chunks.begin();
+
+    // Split [Begin, End) into [Begin, Mid) and [Mid, End).
+    uint32_t Id = NextId++;
+    for (size_t I = Begin; I < Mid; ++I)
+      Chunks[I]->Color[(Cnt + 1) % 2] = Id;
+
+    // If we created a group, we need to iterate the main loop again.
+    if (Mid != End)
+      Repeat = true;
+
+    Begin = Mid;
   }
+}
+
+// Compare "non-moving" part of two sections, namely everything
+// except relocation targets.
+bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
+  if (A->NumRelocs != B->NumRelocs)
+    return false;
 
   // Compare relocations.
   auto Eq = [&](const coff_relocation &R1, const coff_relocation &R2) {
@@ -108,7 +122,7 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
     if (auto *D1 = dyn_cast<DefinedRegular>(B1))
       if (auto *D2 = dyn_cast<DefinedRegular>(B2))
         return D1->getValue() == D2->getValue() &&
-               D1->getChunk()->GroupID == D2->getChunk()->GroupID;
+               D1->getChunk()->Color[Cnt % 2] == D2->getChunk()->Color[Cnt % 2];
     return false;
   };
   if (!std::equal(A->Relocs.begin(), A->Relocs.end(), B->Relocs.begin(), Eq))
@@ -123,6 +137,7 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
          A->getContents() == B->getContents();
 }
 
+// Compare "moving" part of two sections, namely relocation targets.
 bool ICF::equalsVariable(const SectionChunk *A, const SectionChunk *B) {
   // Compare relocations.
   auto Eq = [&](const coff_relocation &R1, const coff_relocation &R2) {
@@ -132,40 +147,47 @@ bool ICF::equalsVariable(const SectionChunk *A, const SectionChunk *B) {
       return true;
     if (auto *D1 = dyn_cast<DefinedRegular>(B1))
       if (auto *D2 = dyn_cast<DefinedRegular>(B2))
-        return D1->getChunk()->GroupID == D2->getChunk()->GroupID;
+        return D1->getChunk()->Color[Cnt % 2] == D2->getChunk()->Color[Cnt % 2];
     return false;
   };
   return std::equal(A->Relocs.begin(), A->Relocs.end(), B->Relocs.begin(), Eq);
 }
 
-bool ICF::segregate(ChunkIterator Begin, ChunkIterator End, Comparator Eq) {
-  bool R = false;
-  for (auto It = Begin;;) {
-    SectionChunk *Head = *It;
-    auto Bound = std::partition(It + 1, End, [&](SectionChunk *SC) {
-      return Eq(Head, SC);
-    });
-    if (Bound == End)
-      return R;
-    uint64_t ID = NextID++;
-    std::for_each(It, Bound, [&](SectionChunk *SC) { SC->GroupID = ID; });
-    It = Bound;
-    R = true;
+size_t ICF::findBoundary(size_t Begin, size_t End) {
+  for (size_t I = Begin + 1; I < End; ++I)
+    if (Chunks[Begin]->Color[Cnt % 2] != Chunks[I]->Color[Cnt % 2])
+      return I;
+  return End;
+}
+
+void ICF::forEachColorRange(size_t Begin, size_t End,
+                            std::function<void(size_t, size_t)> Fn) {
+  if (Begin > 0)
+    Begin = findBoundary(Begin - 1, End);
+
+  while (Begin < End) {
+    size_t Mid = findBoundary(Begin, Chunks.size());
+    Fn(Begin, Mid);
+    Begin = Mid;
   }
 }
 
-bool ICF::forEachGroup(std::vector<SectionChunk *> &Chunks, Comparator Eq) {
-  bool R = false;
-  for (auto It = Chunks.begin(), End = Chunks.end(); It != End;) {
-    SectionChunk *Head = *It;
-    auto Bound = std::find_if(It + 1, End, [&](SectionChunk *SC) {
-      return SC->GroupID != Head->GroupID;
-    });
-    if (segregate(It, Bound, Eq))
-      R = true;
-    It = Bound;
+// Call Fn on each color group.
+void ICF::forEachColor(std::function<void(size_t, size_t)> Fn) {
+  // If the number of sections are too small to use threading,
+  // call Fn sequentially.
+  if (Chunks.size() < 1024) {
+    forEachColorRange(0, Chunks.size(), Fn);
+    return;
   }
-  return R;
+
+  // Split sections into 256 shards and call Fn in parallel.
+  size_t NumShards = 256;
+  size_t Step = Chunks.size() / NumShards;
+  parallel_for(size_t(0), NumShards, [&](size_t I) {
+    forEachColorRange(I * Step, (I + 1) * Step, Fn);
+  });
+  forEachColorRange(Step * NumShards, Chunks.size(), Fn);
 }
 
 // Merge identical COMDAT sections.
@@ -173,62 +195,62 @@ bool ICF::forEachGroup(std::vector<SectionChunk *> &Chunks, Comparator Eq) {
 // contents and relocations are all the same.
 void ICF::run(const std::vector<Chunk *> &Vec) {
   // Collect only mergeable sections and group by hash value.
-  parallel_for_each(Vec.begin(), Vec.end(), [&](Chunk *C) {
-    if (auto *SC = dyn_cast<SectionChunk>(C)) {
-      bool Global = SC->Sym && SC->Sym->isExternal();
-      bool Writable = SC->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
-      if (SC->isCOMDAT() && SC->isLive() && Global && !Writable)
-        SC->GroupID = getHash(SC) | (uint64_t(1) << 63);
-    }
-  });
-  std::vector<SectionChunk *> Chunks;
   for (Chunk *C : Vec) {
-    if (auto *SC = dyn_cast<SectionChunk>(C)) {
-      if (SC->GroupID) {
-        Chunks.push_back(SC);
-      } else {
-        SC->GroupID = NextID++;
-      }
+    auto *SC = dyn_cast<SectionChunk>(C);
+    if (!SC)
+      continue;
+
+    if (isEligible(SC)) {
+      // Set MSB to 1 to avoid collisions with non-hash colors.
+      SC->Color[0] = getHash(SC) | (1 << 31);
+      Chunks.push_back(SC);
+    } else {
+      SC->Color[0] = NextId++;
     }
   }
+
+  if (Chunks.empty())
+    return;
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
-  std::sort(Chunks.begin(), Chunks.end(),
-            [](SectionChunk *A, SectionChunk *B) {
-              return A->GroupID < B->GroupID;
-            });
+  std::stable_sort(Chunks.begin(), Chunks.end(),
+                   [](SectionChunk *A, SectionChunk *B) {
+                     return A->Color[0] < B->Color[0];
+                   });
 
-  // Split groups until we get a convergence.
-  int Cnt = 1;
-  forEachGroup(Chunks, equalsConstant);
+  // Compare static contents and assign unique IDs for each static content.
+  forEachColor([&](size_t Begin, size_t End) { segregate(Begin, End, true); });
+  ++Cnt;
 
-  for (;;) {
-    if (!forEachGroup(Chunks, equalsVariable))
-      break;
+  // Split groups by comparing relocations until convergence is obtained.
+  do {
+    Repeat = false;
+    forEachColor(
+        [&](size_t Begin, size_t End) { segregate(Begin, End, false); });
     ++Cnt;
-  }
-  if (Config->Verbose)
-    llvm::outs() << "\nICF needed " << Cnt << " iterations.\n";
+  } while (Repeat);
 
-  // Merge sections in the same group.
-  for (auto It = Chunks.begin(), End = Chunks.end(); It != End;) {
-    SectionChunk *Head = *It++;
-    auto Bound = std::find_if(It, End, [&](SectionChunk *SC) {
-      return Head->GroupID != SC->GroupID;
-    });
-    if (It == Bound)
-      continue;
+  if (Config->Verbose)
+    outs() << "\nICF needed " << Cnt << " iterations\n";
+
+  // Merge sections in the same colors.
+  forEachColor([&](size_t Begin, size_t End) {
+    if (End - Begin == 1)
+      return;
+
     if (Config->Verbose)
-      llvm::outs() << "Selected " << Head->getDebugName() << "\n";
-    while (It != Bound) {
-      SectionChunk *SC = *It++;
+      outs() << "Selected " << Chunks[Begin]->getDebugName() << "\n";
+    for (size_t I = Begin + 1; I < End; ++I) {
       if (Config->Verbose)
-        llvm::outs() << "  Removed " << SC->getDebugName() << "\n";
-      Head->replace(SC);
+        outs() << "  Removed " << Chunks[I]->getDebugName() << "\n";
+      Chunks[Begin]->replace(Chunks[I]);
     }
-  }
+  });
 }
+
+// Entry point to ICF.
+void doICF(const std::vector<Chunk *> &Chunks) { ICF().run(Chunks); }
 
 } // namespace coff
 } // namespace lld
