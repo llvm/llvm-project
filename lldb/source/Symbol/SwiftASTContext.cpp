@@ -8946,7 +8946,7 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
                   llvm::dyn_cast_or_null<swift::TypeDecl>(decl);
               if (type_decl) {
                 CompilerType clang_type(&module->getASTContext(),
-                                        type_decl->getDeclaredType().getPointer());
+                                        type_decl->getDeclaredInterfaceType().getPointer());
                 if (clang_type) {
                   Flags clang_type_flags(clang_type.GetTypeInfo());
                   DumpTypeDescription(clang_type.GetOpaqueQualType(), s,
