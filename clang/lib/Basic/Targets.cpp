@@ -8019,6 +8019,10 @@ private:
         SIMDLevel = std::min(SIMDLevel, SIMDEnum(SIMD128 - 1));
         continue;
       }
+      if (Feature == "+direct")
+        continue;
+      if (Feature == "-direct")
+        continue;
 
       Diags.Report(diag::err_opt_not_valid_with_opt) << Feature
                                                      << "-target-feature";

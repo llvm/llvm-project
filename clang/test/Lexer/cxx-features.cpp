@@ -34,8 +34,7 @@
 #error "wrong value for __cpp_aligned_new"
 #endif
 
-#if check(noexcept_function_type, 0, 0, 0, 0)
-// FIXME: value shuld be 201510 for cxx1z once implemented
+#if check(noexcept_function_type, 0, 0, 0, 201510)
 #error "wrong value for __cpp_noexcept_function_type"
 #endif
 

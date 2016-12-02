@@ -36,7 +36,6 @@ TemplateParameterList::TemplateParameterList(SourceLocation TemplateLoc,
   : TemplateLoc(TemplateLoc), LAngleLoc(LAngleLoc), RAngleLoc(RAngleLoc),
     NumParams(Params.size()), ContainsUnexpandedParameterPack(false),
     HasRequiresClause(static_cast<bool>(RequiresClause)) {
-  assert(this->NumParams == NumParams && "Too many template parameters");
   for (unsigned Idx = 0; Idx < NumParams; ++Idx) {
     NamedDecl *P = Params[Idx];
     begin()[Idx] = P;

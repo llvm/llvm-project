@@ -3115,6 +3115,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value.startswith("-mcpu") || Value.startswith("-mfpu") ||
                  Value.startswith("-mhwdiv") || Value.startswith("-march")) {
         // Do nothing, we'll validate it later.
+      } else if (Value == "-defsym") {
+          CmdArgs.push_back(Value.data());
+          TakeNextArg = true;
       } else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;
@@ -9977,7 +9980,7 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
       return "elf32_x86_64";
     return "elf_x86_64";
   default:
-    llvm_unreachable("Unexpected arch");
+    return nullptr;
   }
 }
 
@@ -10050,8 +10053,13 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--eh-frame-hdr");
   }
 
-  CmdArgs.push_back("-m");
-  CmdArgs.push_back(getLDMOption(ToolChain.getTriple(), Args));
+  if (const char *LDMOption = getLDMOption(ToolChain.getTriple(), Args)) {
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(LDMOption);
+  } else {
+    D.Diag(diag::err_target_unknown_triple) << Triple.str();
+    return;
+  }
 
   if (Args.hasArg(options::OPT_static)) {
     if (Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||

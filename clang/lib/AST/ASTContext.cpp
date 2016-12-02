@@ -3338,54 +3338,37 @@ QualType ASTContext::getFunctionTypeInternal(
   return QualType(FTP, 0);
 }
 
-QualType ASTContext::getReadPipeType(QualType T) const {
+QualType ASTContext::getPipeType(QualType T, bool ReadOnly) const {
   llvm::FoldingSetNodeID ID;
-  ReadPipeType::Profile(ID, T);
+  PipeType::Profile(ID, T, ReadOnly);
 
   void *InsertPos = 0;
-  if (ReadPipeType *PT = ReadPipeTypes.FindNodeOrInsertPos(ID, InsertPos))
+  if (PipeType *PT = PipeTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(PT, 0);
 
   // If the pipe element type isn't canonical, this won't be a canonical type
   // either, so fill in the canonical type field.
   QualType Canonical;
   if (!T.isCanonical()) {
-    Canonical = getReadPipeType(getCanonicalType(T));
+    Canonical = getPipeType(getCanonicalType(T), ReadOnly);
 
     // Get the new insert position for the node we care about.
-    ReadPipeType *NewIP = ReadPipeTypes.FindNodeOrInsertPos(ID, InsertPos);
+    PipeType *NewIP = PipeTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!");
     (void)NewIP;
   }
-  ReadPipeType *New = new (*this, TypeAlignment) ReadPipeType(T, Canonical);
+  PipeType *New = new (*this, TypeAlignment) PipeType(T, Canonical, ReadOnly);
   Types.push_back(New);
-  ReadPipeTypes.InsertNode(New, InsertPos);
+  PipeTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
 
+QualType ASTContext::getReadPipeType(QualType T) const {
+  return getPipeType(T, true);
+}
+
 QualType ASTContext::getWritePipeType(QualType T) const {
-  llvm::FoldingSetNodeID ID;
-  WritePipeType::Profile(ID, T);
-
-  void *InsertPos = 0;
-  if (WritePipeType *PT = WritePipeTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(PT, 0);
-
-  // If the pipe element type isn't canonical, this won't be a canonical type
-  // either, so fill in the canonical type field.
-  QualType Canonical;
-  if (!T.isCanonical()) {
-    Canonical = getWritePipeType(getCanonicalType(T));
-
-    // Get the new insert position for the node we care about.
-    WritePipeType *NewIP = WritePipeTypes.FindNodeOrInsertPos(ID, InsertPos);
-    assert(!NewIP && "Shouldn't be in the map!");
-    (void)NewIP;
-  }
-  WritePipeType *New = new (*this, TypeAlignment) WritePipeType(T, Canonical);
-  Types.push_back(New);
-  WritePipeTypes.InsertNode(New, InsertPos);
-  return QualType(New, 0);
+  return getPipeType(T, false);
 }
 
 #ifndef NDEBUG
@@ -8255,22 +8238,9 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
   }
   case Type::Pipe:
   {
-    // Merge two pointer types, while trying to preserve typedef info
-    QualType LHSValue = LHS->getAs<PipeType>()->getElementType();
-    QualType RHSValue = RHS->getAs<PipeType>()->getElementType();
-    if (Unqualified) {
-      LHSValue = LHSValue.getUnqualifiedType();
-      RHSValue = RHSValue.getUnqualifiedType();
-    }
-    QualType ResultType = mergeTypes(LHSValue, RHSValue, false,
-                                     Unqualified);
-    if (ResultType.isNull()) return QualType();
-    if (getCanonicalType(LHSValue) == getCanonicalType(ResultType))
-      return LHS;
-    if (getCanonicalType(RHSValue) == getCanonicalType(ResultType))
-      return RHS;
-    return isa<ReadPipeType>(LHS) ? getReadPipeType(ResultType)
-                                  : getWritePipeType(ResultType);
+    assert(LHS != RHS &&
+           "Equivalent pipe types should have already been handled!");
+    return QualType();
   }
   }
 
