@@ -57,6 +57,14 @@ if(LLDB_TEST_CLANG)
   set(LLDB_TEST_COMPILER $<TARGET_FILE:clang>)
 endif()
 
+if(LLDB_TEST_SWIFT)
+  set(LLDB_TEST_SWIFT_COMPILER $<TARGET_FILE:swift>c)
+endif()
+
+if(LLDB_TEST_SWIFT_COMPILER)
+  set(SWIFT_TEST_ARGS --swift-compiler ${LLDB_TEST_SWIFT_COMPILER})
+endif()
+
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   "${LLDB_TEST_USER_ARGS_New}"
@@ -71,6 +79,7 @@ set(LLDB_TEST_COMMON_ARGS
   -u CXXFLAGS
   -u CFLAGS
   -C ${LLDB_TEST_COMPILER}
+  ${SWIFT_TEST_ARGS}
   )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
