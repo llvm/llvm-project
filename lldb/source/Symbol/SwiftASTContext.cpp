@@ -316,7 +316,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     case swift::TypeKind::WeakStorage:
     case swift::TypeKind::UnmanagedStorage:
     case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::AssociatedType:
     case swift::TypeKind::DependentMember:
     case swift::TypeKind::Optional:
     case swift::TypeKind::ImplicitlyUnwrappedOptional:
@@ -5207,7 +5206,6 @@ bool SwiftASTContext::IsAggregateType(void *type) {
     case swift::TypeKind::Optional:
     case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::AssociatedType:
     case swift::TypeKind::DependentMember:
     case swift::TypeKind::NameAlias:
       break;
@@ -5408,7 +5406,6 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
     case swift::TypeKind::Optional:
     case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::AssociatedType:
     case swift::TypeKind::DependentMember:
     case swift::TypeKind::Enum:
     case swift::TypeKind::Struct:
@@ -5955,7 +5952,6 @@ SwiftASTContext::GetTypeInfo(void *type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   uint32_t swift_flags = eTypeIsSwift;
   switch (type_kind) {
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
   case swift::TypeKind::Error:
   case swift::TypeKind::GenericTypeParam:
@@ -6158,8 +6154,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   case swift::TypeKind::ImplicitlyUnwrappedOptional:
     return lldb::eTypeClassEnumeration;
   case swift::TypeKind::GenericTypeParam:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::AssociatedType:
     return lldb::eTypeClassOther;
   case swift::TypeKind::DependentMember:
     return lldb::eTypeClassOther;
@@ -6924,7 +6918,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::Optional:
   case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
     break;
 
@@ -7017,7 +7010,6 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::Optional:
   case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
     break;
 
@@ -7105,7 +7097,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::Optional:
   case swift::TypeKind::ImplicitlyUnwrappedOptional:
   case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
     break;
 
@@ -7245,7 +7236,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
                             .getPointer())
         .GetNumFields();
   case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
   case swift::TypeKind::Optional:
   case swift::TypeKind::ImplicitlyUnwrappedOptional:
@@ -7377,7 +7367,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
         .GetFieldAtIndex(idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
                          is_bitfield_ptr);
   case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
   case swift::TypeKind::Optional:
   case swift::TypeKind::ImplicitlyUnwrappedOptional:
@@ -7515,8 +7504,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   case swift::TypeKind::Tuple:
     return 0;
   case swift::TypeKind::GenericTypeParam:
-    return 0;
-  case swift::TypeKind::AssociatedType:
     return 0;
   case swift::TypeKind::DependentMember:
     return 0;
@@ -7881,7 +7868,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
             child_is_base_class, child_is_deref_of_parent, valobj,
             language_flags);
   case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
   case swift::TypeKind::Optional:
   case swift::TypeKind::ImplicitlyUnwrappedOptional:
@@ -8087,7 +8073,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
           .GetIndexOfChildMemberWithName(name, omit_empty_base_classes,
                                          child_indexes);
     case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::AssociatedType:
     case swift::TypeKind::DependentMember:
     case swift::TypeKind::Optional:
     case swift::TypeKind::ImplicitlyUnwrappedOptional:
@@ -8256,7 +8241,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
                               .getPointer())
           .GetIndexOfChildWithName(name, omit_empty_base_classes);
     case swift::TypeKind::GenericTypeParam:
-    case swift::TypeKind::AssociatedType:
     case swift::TypeKind::DependentMember:
     case swift::TypeKind::Optional:
     case swift::TypeKind::ImplicitlyUnwrappedOptional:
@@ -8766,7 +8750,6 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Struct:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::AssociatedType:
   case swift::TypeKind::DependentMember:
     return false;
 
