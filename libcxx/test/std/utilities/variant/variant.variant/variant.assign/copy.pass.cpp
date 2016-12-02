@@ -385,6 +385,29 @@ void test_copy_assignment_different_index() {
 #endif
 }
 
+template <size_t NewIdx, class ValueType>
+constexpr bool test_constexpr_assign_extension_imp(
+    std::variant<long, void*, const int>&& v, ValueType&& new_value)
+{
+  const std::variant<long, void*, const int> cp(
+      std::forward<ValueType>(new_value));
+  v = cp;
+  return v.index() == NewIdx &&
+        std::get<NewIdx>(v) == std::get<NewIdx>(cp);
+}
+
+void test_constexpr_move_ctor_extension() {
+#ifdef _LIBCPP_VERSION
+  using V = std::variant<long, void*, int>;
+  static_assert(std::is_trivially_copyable<V>::value, "");
+  static_assert(std::is_trivially_copy_assignable<V>::value, "");
+  static_assert(test_constexpr_assign_extension_imp<0>(V(42l), 101l), "");
+  static_assert(test_constexpr_assign_extension_imp<0>(V(nullptr), 101l), "");
+  static_assert(test_constexpr_assign_extension_imp<1>(V(42l), nullptr), "");
+  static_assert(test_constexpr_assign_extension_imp<2>(V(42l), 101), "");
+#endif
+}
+
 int main() {
   test_copy_assignment_empty_empty();
   test_copy_assignment_non_empty_empty();
@@ -393,4 +416,5 @@ int main() {
   test_copy_assignment_different_index();
   test_copy_assignment_sfinae();
   test_copy_assignment_not_noexcept();
+  test_constexpr_copy_assignment_extension();
 }

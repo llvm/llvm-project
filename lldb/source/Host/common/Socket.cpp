@@ -33,7 +33,7 @@
 #include "lldb/Host/linux/AbstractSocket.h"
 #endif
 
-#ifdef __ANDROID_NDK__
+#ifdef __ANDROID__
 #include <arpa/inet.h>
 #include <asm-generic/errno-base.h>
 #include <bits/error_constants.h>
@@ -44,7 +44,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif // ANDROID_ARM_BUILD_STATIC || ANDROID_MIPS_BUILD_STATIC
-#endif // __ANDROID_NDK__
+#endif // __ANDROID__
 
 using namespace lldb;
 using namespace lldb_private;

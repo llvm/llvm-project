@@ -259,9 +259,18 @@ void LoadedModule::set(const char *module_name, uptr base_address) {
   base_address_ = base_address;
 }
 
+void LoadedModule::set(const char *module_name, uptr base_address,
+                       ModuleArch arch, u8 uuid[kModuleUUIDSize]) {
+  set(module_name, base_address);
+  arch_ = arch;
+  internal_memcpy(uuid_, uuid, sizeof(uuid_));
+}
+
 void LoadedModule::clear() {
   InternalFree(full_name_);
   full_name_ = nullptr;
+  arch_ = kModuleArchUnknown;
+  internal_memset(uuid_, 0, kModuleUUIDSize);
   while (!ranges_.empty()) {
     AddressRange *r = ranges_.front();
     ranges_.pop_front();

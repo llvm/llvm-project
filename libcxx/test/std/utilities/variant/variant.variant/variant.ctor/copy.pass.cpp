@@ -130,8 +130,30 @@ void test_copy_ctor_valueless_by_exception() {
 #endif
 }
 
+template <size_t Idx>
+constexpr bool test_constexpr_copy_ctor_extension_imp(
+    std::variant<long, void*, const int> const& v)
+{
+  auto v2 = v;
+  return v2.index() == v.index() &&
+         v2.index() == Idx &&
+        std::get<Idx>(v2) == std::get<Idx>(v);
+}
+
+void test_constexpr_copy_ctor_extension() {
+#ifdef _LIBCPP_VERSION
+  using V = std::variant<long, void*, const int>;
+  static_assert(std::is_trivially_copyable<V>::value, "");
+  static_assert(std::is_trivially_copy_constructible<V>::value, "");
+  static_assert(test_constexpr_copy_ctor_extension_imp<0>(V(42l)), "");
+  static_assert(test_constexpr_copy_ctor_extension_imp<1>(V(nullptr)), "");
+  static_assert(test_constexpr_copy_ctor_extension_imp<2>(V(101)), "");
+#endif
+}
+
 int main() {
   test_copy_ctor_basic();
   test_copy_ctor_valueless_by_exception();
   test_copy_ctor_sfinae();
+  test_constexpr_copy_ctor_extension();
 }

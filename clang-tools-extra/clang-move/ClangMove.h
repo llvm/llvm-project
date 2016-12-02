@@ -98,17 +98,6 @@ struct ClangMoveContext {
 // old.h/cc will be moved, which means old.h/cc are empty.
 class ClangMoveTool : public ast_matchers::MatchFinder::MatchCallback {
 public:
-  // Information about the declaration being moved.
-  struct MovedDecl {
-    // FIXME: Replace Decl with SourceRange to get rid of calculating range for
-    // the Decl duplicately.
-    const clang::NamedDecl *Decl = nullptr;
-    clang::SourceManager *SM = nullptr;
-    MovedDecl() = default;
-    MovedDecl(const clang::NamedDecl *Decl, clang::SourceManager *SM)
-        : Decl(Decl), SM(SM) {}
-  };
-
   ClangMoveTool(ClangMoveContext *const Context,
                 DeclarationReporter *const Reporter);
 
@@ -134,12 +123,12 @@ public:
                    clang::CharSourceRange IncludeFilenameRange,
                    const SourceManager &SM);
 
-  std::vector<MovedDecl> &getMovedDecls() { return MovedDecls; }
+  std::vector<const NamedDecl *> &getMovedDecls() { return MovedDecls; }
 
   /// Add declarations being removed from old.h/cc. For each declarations, the
   /// method also records the mapping relationship between the corresponding
   /// FilePath and its FileID.
-  void addRemovedDecl(const MovedDecl &Decl);
+  void addRemovedDecl(const NamedDecl *Decl);
 
   llvm::SmallPtrSet<const NamedDecl *, 8> &getUnremovedDeclsInOldHeader() {
     return UnremovedDeclsInOldHeader;
@@ -150,8 +139,8 @@ private:
   // an absolute path. An empty Path will result in an empty string.
   std::string makeAbsolutePath(StringRef Path);
 
-  void removeClassDefinitionInOldFiles();
-  void moveClassDefinitionToNewFiles();
+  void removeDeclsInOldFiles();
+  void moveDeclsToNewFiles();
   void moveAll(SourceManager& SM, StringRef OldFile, StringRef NewFile);
 
   // Stores all MatchCallbacks created by this tool.
@@ -159,9 +148,9 @@ private:
       MatchCallbacks;
   // All declarations (the class decl being moved, forward decls) that need to
   // be moved/copy to the new files, saving in an AST-visited order.
-  std::vector<MovedDecl> MovedDecls;
+  std::vector<const NamedDecl *> MovedDecls;
   // The declarations that needs to be removed in old.cc/h.
-  std::vector<MovedDecl> RemovedDecls;
+  std::vector<const NamedDecl *> RemovedDecls;
   // The #includes in old_header.h.
   std::vector<std::string> HeaderIncludes;
   // The #includes in old_cc.cc.
