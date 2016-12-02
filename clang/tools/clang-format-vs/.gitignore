@@ -1,0 +1,11 @@
+# Visual Studio files
+.vs/
+/packages/
+/ClangFormat/obj/
+/ClangFormat/bin/
+
+# Generated and copied files
+/ClangFormat/Key.snk
+/ClangFormat/license.txt
+/ClangFormat/clang-format.exe
+/ClangFormat/source.extension.vsixmanifest

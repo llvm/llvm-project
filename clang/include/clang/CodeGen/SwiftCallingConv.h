@@ -160,6 +160,9 @@ ABIArgInfo classifyArgumentType(CodeGenModule &CGM, CanQualType type);
 /// private interface for Clang.
 void computeABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 
+/// Is swifterror lowered to a register by the target ABI.
+bool isSwiftErrorLoweredInRegister(CodeGenModule &CGM);
+
 } // end namespace swiftcall
 } // end namespace CodeGen
 } // end namespace clang

@@ -4973,6 +4973,15 @@ void CudaToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
   HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
+SanitizerMask CudaToolChain::getSupportedSanitizers() const {
+  // The CudaToolChain only supports address sanitization in the sense that it
+  // allows ASAN arguments on the command line. It must not error out on these
+  // command line arguments because the host code compilation supports them.
+  // However, it doesn't actually do any address sanitization for device code;
+  // instead, it just ignores any ASAN command line arguments it sees.
+  return SanitizerKind::Address;
+}
+
 /// XCore tool chain
 XCoreToolChain::XCoreToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)

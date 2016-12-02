@@ -2540,6 +2540,10 @@ static void emitArgInfo(const Record &R, std::stringstream &OS) {
   unsigned ArgCount = 0, OptCount = 0;
   bool HasVariadic = false;
   for (const auto *Arg : Args) {
+    // If the arg is fake, it's the user's job to supply it: general parsing
+    // logic shouldn't need to know anything about it.
+    if (Arg->getValueAsBit("Fake"))
+      continue;
     Arg->getValueAsBit("Optional") ? ++OptCount : ++ArgCount;
     if (!HasVariadic && isArgVariadic(*Arg, R.getName()))
       HasVariadic = true;

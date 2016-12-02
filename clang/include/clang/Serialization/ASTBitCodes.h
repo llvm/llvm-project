@@ -905,12 +905,10 @@ namespace clang {
       TYPE_DECAYED               = 41,
       /// \brief An AdjustedType record.
       TYPE_ADJUSTED              = 42,
-      /// \brief A ReadPipeType record.
-      TYPE_READ_PIPE             = 43,
+      /// \brief A PipeType record.
+      TYPE_PIPE                  = 43,
       /// \brief An ObjCTypeParamType record.
-      TYPE_OBJC_TYPE_PARAM       = 44,
-      /// \brief A WritePipeType record.
-      TYPE_WRITE_PIPE            = 45,
+      TYPE_OBJC_TYPE_PARAM       = 44
     };
 
     /// \brief The type IDs for special types constructed by semantic

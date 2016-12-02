@@ -2462,8 +2462,14 @@ static void display_evaluate_results(CXEvalResult result) {
   switch (clang_EvalResult_getKind(result)) {
     case CXEval_Int:
     {
-      int val = clang_EvalResult_getAsInt(result);
-      printf("Kind: Int , Value: %d", val);
+      printf("Kind: Int, ");
+      if (clang_EvalResult_isUnsignedInt(result)) {
+        unsigned long long val = clang_EvalResult_getAsUnsigned(result);
+        printf("unsigned, Value: %llu", val);
+      } else {
+        long long val = clang_EvalResult_getAsLongLong(result);
+        printf("Value: %lld", val);
+      }
       break;
     }
     case CXEval_Float:

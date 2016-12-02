@@ -248,11 +248,13 @@ public:
       // Otherwise, add an index to drill into the first level of pointer. 
       } else {
         assert(indices.empty());
-        indices.push_back(llvm::ConstantInt::get(Builder.CGM.SizeTy, 0));
+        indices.push_back(llvm::ConstantInt::get(Builder.CGM.Int32Ty, 0));
       }
 
       assert(position >= Begin);
-      indices.push_back(llvm::ConstantInt::get(Builder.CGM.SizeTy,
+      // We have to use i32 here because struct GEPs demand i32 indices.
+      // It's rather unlikely to matter in practice.
+      indices.push_back(llvm::ConstantInt::get(Builder.CGM.Int32Ty,
                                                position - Begin));
     }
   };
