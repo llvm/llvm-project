@@ -147,7 +147,7 @@ define void @memset_256_nonzero_bytes(i8* %x) {
 ; SSE-LABEL: memset_256_nonzero_bytes:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:  .Ltmp0:
+; SSE-NEXT:  .Lcfi0:
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movl $42, %esi
 ; SSE-NEXT:    movl $256, %edx # imm = 0x100

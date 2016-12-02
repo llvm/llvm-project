@@ -62,12 +62,10 @@ namespace lld {
 namespace elf {
 
 static bool refersToGotEntry(RelExpr Expr) {
-  return Expr == R_GOT || Expr == R_GOT_OFF || Expr == R_MIPS_GOT_LOCAL_PAGE ||
-         Expr == R_MIPS_GOT_OFF || Expr == R_MIPS_GOT_OFF32 ||
-         Expr == R_MIPS_TLSGD || Expr == R_MIPS_TLSLD ||
-         Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC || Expr == R_GOT_FROM_END ||
-         Expr == R_TLSGD || Expr == R_TLSGD_PC || Expr == R_TLSDESC ||
-         Expr == R_TLSDESC_PAGE;
+  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
+                        R_MIPS_GOT_OFF32, R_MIPS_TLSGD, R_MIPS_TLSLD,
+                        R_GOT_PAGE_PC, R_GOT_PC, R_GOT_FROM_END, R_TLSGD,
+                        R_TLSGD_PC, R_TLSDESC, R_TLSDESC_PAGE>(Expr);
 }
 
 static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
@@ -302,16 +300,16 @@ template <class ELFT> static bool isAbsoluteValue(const SymbolBody &Body) {
 }
 
 static bool needsPlt(RelExpr Expr) {
-  return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT ||
-         Expr == R_PLT_PAGE_PC || Expr == R_THUNK_PLT_PC;
+  return isRelExprOneOf<R_PLT_PC, R_PPC_PLT_OPD, R_PLT, R_PLT_PAGE_PC,
+                        R_THUNK_PLT_PC>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
-  return Expr == R_PC || Expr == R_GOTREL || Expr == R_GOTREL_FROM_END ||
-         Expr == R_MIPS_GOTREL || Expr == R_PAGE_PC || Expr == R_RELAX_GOT_PC ||
-         Expr == R_THUNK_PC || Expr == R_THUNK_PLT_PC;
+  return isRelExprOneOf<R_PC, R_GOTREL, R_GOTREL_FROM_END, R_MIPS_GOTREL,
+                        R_PAGE_PC, R_RELAX_GOT_PC, R_THUNK_PC, R_THUNK_PLT_PC>(
+      Expr);
 }
 
 template <class ELFT>
@@ -320,12 +318,11 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
                                      InputSectionBase<ELFT> &S,
                                      typename ELFT::uint RelOff) {
   // These expressions always compute a constant
-  if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
-      E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF ||
-      E == R_MIPS_GOT_OFF32 || E == R_MIPS_TLSGD || E == R_GOT_PAGE_PC ||
-      E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC || E == R_TLSGD ||
-      E == R_PPC_PLT_OPD || E == R_TLSDESC_CALL || E == R_TLSDESC_PAGE ||
-      E == R_HINT || E == R_THUNK_PC || E == R_THUNK_PLT_PC)
+  if (isRelExprOneOf<R_SIZE, R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
+                     R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_TLSGD,
+                     R_GOT_PAGE_PC, R_GOT_PC, R_PLT_PC, R_TLSGD_PC, R_TLSGD,
+                     R_PPC_PLT_OPD, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT,
+                     R_THUNK_PC, R_THUNK_PLT_PC>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -659,12 +656,12 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     // Ignore "hint" and TLS Descriptor call relocation because they are
     // only markers for relaxation.
-    if (Expr == R_HINT || Expr == R_TLSDESC_CALL)
+    if (isRelExprOneOf<R_HINT, R_TLSDESC_CALL>(Expr))
       continue;
 
-    if (needsPlt(Expr) || Expr == R_THUNK_ABS || Expr == R_THUNK_PC ||
-        Expr == R_THUNK_PLT_PC || refersToGotEntry(Expr) ||
-        !isPreemptible(Body, Type)) {
+    if (needsPlt(Expr) ||
+        isRelExprOneOf<R_THUNK_ABS, R_THUNK_PC, R_THUNK_PLT_PC>(Expr) ||
+        refersToGotEntry(Expr) || !isPreemptible(Body, Type)) {
       // If the relocation points to something in the file, we can process it.
       bool Constant =
           isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, C, RI.r_offset);
@@ -763,9 +760,11 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       else
         DynType = Target->GotRel;
 
-      if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body)))
+      // FIXME: this logic is almost duplicated above.
+      bool Constant = !Preemptible && !(Config->Pic && !isAbsolute<ELFT>(Body));
+      if (!Constant)
         AddDyn({DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
-      else
+      if (Constant || !RelTy::IsRela)
         In<ELFT>::Got->Relocations.push_back({GotRE, DynType, Off, 0, &Body});
       continue;
     }

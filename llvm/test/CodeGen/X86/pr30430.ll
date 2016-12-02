@@ -5,12 +5,12 @@ define <16 x float> @makefloat(float %f1, float %f2, float %f3, float %f4, float
 ; CHECK-LABEL: makefloat:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Lcfi1:
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Lcfi2:
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $256, %rsp # imm = 0x100

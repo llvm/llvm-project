@@ -14,7 +14,8 @@
 ; constant variable need promotion).
 ; RUN: llvm-link %t.bc -summary-index=%t3.thinlto.bc -S | FileCheck %s --check-prefix=EXPORTSTATIC
 ; EXPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = hidden global
-; EXPORTSTATIC-DAG: @staticconstvar = internal unnamed_addr constant
+; Eventually @staticconstvar can be exported as a copy and not promoted
+; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = hidden unnamed_addr constant
 ; EXPORTSTATIC-DAG: @P.llvm.{{.*}} = hidden global void ()* null
 ; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.
 ; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.
@@ -68,7 +69,8 @@
 ; promoted and renamed (including static constant variable).
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=referencestatics:%t.bc -S | FileCheck %s --check-prefix=IMPORTSTATIC
 ; IMPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = external hidden global
-; IMPORTSTATIC-DAG: @staticconstvar.llvm.{{.*}} = internal unnamed_addr constant
+; Eventually @staticconstvar can be imported as a copy
+; IMPORTSTATIC-DAG: @staticconstvar.llvm.{{.*}} = external hidden unnamed_addr constant
 ; IMPORTSTATIC-DAG: define available_externally i32 @referencestatics
 ; IMPORTSTATIC-DAG: %call = call i32 @staticfunc.llvm.
 ; IMPORTSTATIC-DAG: %0 = load i32, i32* @staticvar.llvm.

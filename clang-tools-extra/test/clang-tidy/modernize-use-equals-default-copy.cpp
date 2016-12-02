@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-default %t -- -- -std=c++11 -fno-delayed-template-parsing -fexceptions
+// RUN: %check_clang_tidy %s modernize-use-equals-default %t -- -- -std=c++11 -fno-delayed-template-parsing -fexceptions
 
 // Out of line definition.
 struct OL {
@@ -7,13 +7,13 @@ struct OL {
   int Field;
 };
 OL::OL(const OL &Other) : Field(Other.Field) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial copy constructor [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial copy constructor [modernize-use-equals-default]
 // CHECK-FIXES: OL::OL(const OL &Other)  = default;
 OL &OL::operator=(const OL &Other) {
   Field = Other.Field;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:9: warning: use '= default' to define a trivial copy-assignment operator [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-4]]:9: warning: use '= default' to define a trivial copy-assignment operator [modernize-use-equals-default]
 // CHECK-FIXES: OL &OL::operator=(const OL &Other) = default;
 
 // Inline.

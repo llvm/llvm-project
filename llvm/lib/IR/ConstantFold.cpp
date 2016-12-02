@@ -2019,22 +2019,8 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
 }
 
 /// Test whether a given ConstantInt is in-range for a SequentialType.
-static bool isIndexInRangeOfSequentialType(SequentialType *STy,
-                                           const ConstantInt *CI) {
-  // And indices are valid when indexing along a pointer
-  if (isa<PointerType>(STy))
-    return true;
-
-  uint64_t NumElements = 0;
-  // Determine the number of elements in our sequential type.
-  if (auto *ATy = dyn_cast<ArrayType>(STy))
-    NumElements = ATy->getNumElements();
-  else if (auto *VTy = dyn_cast<VectorType>(STy))
-    NumElements = VTy->getNumElements();
-
-  assert((isa<ArrayType>(STy) || NumElements > 0) &&
-         "didn't expect non-array type to have zero elements!");
-
+static bool isIndexInRangeOfArrayType(uint64_t NumElements,
+                                      const ConstantInt *CI) {
   // We cannot bounds check the index if it doesn't fit in an int64_t.
   if (CI->getValue().getActiveBits() > 64)
     return false;
@@ -2089,10 +2075,10 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     // getelementptr instructions into a single instruction.
     //
     if (CE->getOpcode() == Instruction::GetElementPtr) {
-      Type *LastTy = nullptr;
+      gep_type_iterator LastI = gep_type_end(CE);
       for (gep_type_iterator I = gep_type_begin(CE), E = gep_type_end(CE);
            I != E; ++I)
-        LastTy = *I;
+        LastI = I;
 
       // We cannot combine indices if doing so would take us outside of an
       // array or vector.  Doing otherwise could trick us if we evaluated such a
@@ -2115,9 +2101,11 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       bool PerformFold = false;
       if (Idx0->isNullValue())
         PerformFold = true;
-      else if (SequentialType *STy = dyn_cast_or_null<SequentialType>(LastTy))
+      else if (LastI.isSequential())
         if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx0))
-          PerformFold = isIndexInRangeOfSequentialType(STy, CI);
+          PerformFold =
+              !LastI.isBoundedSequential() ||
+              isIndexInRangeOfArrayType(LastI.getSequentialNumElements(), CI);
 
       if (PerformFold) {
         SmallVector<Value*, 16> NewIndices;
@@ -2228,7 +2216,10 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       Unknown = true;
       continue;
     }
-    if (isIndexInRangeOfSequentialType(STy, CI))
+    if (isIndexInRangeOfArrayType(isa<ArrayType>(STy)
+                                      ? cast<ArrayType>(STy)->getNumElements()
+                                      : cast<VectorType>(STy)->getNumElements(),
+                                  CI))
       // It's in range, skip to the next index.
       continue;
     if (!isa<SequentialType>(Prev)) {

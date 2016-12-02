@@ -440,9 +440,8 @@ class DwarfDebug : public DebugHandlerBase {
   void buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                          const DbgValueHistoryMap::InstrRanges &Ranges);
 
-  /// Collect variable information from the side table maintained
-  /// by MMI.
-  void collectVariableInfoFromMMITable(DenseSet<InlinedVariable> &P);
+  /// Collect variable information from the side table maintained by MF.
+  void collectVariableInfoFromMFTable(DenseSet<InlinedVariable> &P);
 
 public:
   //===--------------------------------------------------------------------===//
@@ -532,11 +531,6 @@ public:
   /// Find the MDNode for the given reference.
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
     return Ref.resolve();
-  }
-
-  /// Find the DwarfCompileUnit for the given CU Die.
-  DwarfCompileUnit *lookupUnit(const DIE *CU) const {
-    return CUDieMap.lookup(CU);
   }
 
   void addSubprogramNames(const DISubprogram *SP, DIE &Die);

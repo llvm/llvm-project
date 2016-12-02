@@ -105,45 +105,6 @@ __function_type_info::~__function_type_info()
 {
 }
 
-// __qualified_function_type_info
-
-__qualified_function_type_info::~__qualified_function_type_info()
-{
-}
-
-// Determine if a function pointer conversion can convert a pointer (or pointer
-// to member) to type x into a pointer (or pointer to member) to type y.
-static bool is_function_pointer_conversion(const std::type_info* x,
-                                           const std::type_info* y)
-{
-    const unsigned int discardable_quals =
-        __qualified_function_type_info::__noexcept_mask |
-        __qualified_function_type_info::__transaction_safe_mask |
-        __qualified_function_type_info::__noreturn_mask;
-
-    // If x has only discardable qualifiers and y is unqualified, then
-    // conversion is permitted.
-    const __qualified_function_type_info* qual_x =
-        dynamic_cast<const __qualified_function_type_info *>(x);
-    if (!qual_x)
-        return false;
-    if ((qual_x->__qualifiers & ~discardable_quals) == 0 &&
-        is_equal(qual_x->__base_type, y, false))
-        return true;
-
-    // Otherwise, x's qualifiers must be the same as y's, plus some discardable
-    // ones.
-    const __qualified_function_type_info* qual_y =
-        dynamic_cast<const __qualified_function_type_info *>(y);
-    if (!qual_y)
-        return false;
-    if (qual_y->__qualifiers & ~qual_x->__qualifiers)
-        return false;
-    if (qual_x->__qualifiers & ~qual_y->__qualifiers & ~discardable_quals)
-        return false;
-    return is_equal(qual_x->__base_type, qual_y->__base_type, false);
-}
-
 // __enum_type_info
 
 __enum_type_info::~__enum_type_info()
@@ -429,15 +390,13 @@ __pointer_type_info::can_catch(const __shim_type_info* thrown_type,
     // Do the dereference adjustment
     if (adjustedPtr != NULL)
         adjustedPtr = *static_cast<void**>(adjustedPtr);
-    // bullet 3B
-    if (thrown_pointer_type->__flags & ~__flags)
+    // bullet 3B and 3C
+    if (thrown_pointer_type->__flags & ~__flags & __no_remove_flags_mask)
+        return false;
+    if (__flags & ~thrown_pointer_type->__flags & __no_add_flags_mask)
         return false;
     if (is_equal(__pointee, thrown_pointer_type->__pointee, false))
         return true;
-    // bullet 3C
-    if (is_function_pointer_conversion(thrown_pointer_type->__pointee,
-                                       __pointee))
-      return true;
     // bullet 3A
     if (is_equal(__pointee, &typeid(void), false)) {
         // pointers to functions cannot be converted to void*.
@@ -543,11 +502,11 @@ bool __pointer_to_member_type_info::can_catch(
         dynamic_cast<const __pointer_to_member_type_info*>(thrown_type);
     if (thrown_pointer_type == 0)
         return false;
-    if (thrown_pointer_type->__flags & ~__flags)
+    if (thrown_pointer_type->__flags & ~__flags & __no_remove_flags_mask)
         return false;
-    if (!is_equal(__pointee, thrown_pointer_type->__pointee, false) &&
-        !is_function_pointer_conversion(thrown_pointer_type->__pointee,
-                                        __pointee))
+    if (__flags & ~thrown_pointer_type->__flags & __no_add_flags_mask)
+        return false;
+    if (!is_equal(__pointee, thrown_pointer_type->__pointee, false))
         return false;
     if (is_equal(__context, thrown_pointer_type->__context, false))
         return true;

@@ -38,6 +38,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include <memory>
 #include <string>
 #include <tuple>
 
@@ -197,8 +198,11 @@ public:
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
               StringRef ClangModuleName)
-      : OrigUnit(OrigUnit), ID(ID), LowPc(UINT64_MAX), HighPc(0), RangeAlloc(),
-        Ranges(RangeAlloc), ClangModuleName(ClangModuleName) {
+      : OrigUnit(OrigUnit), ID(ID), NewUnit(OrigUnit.getVersion(),
+                                            OrigUnit.getAddressByteSize(),
+                                            OrigUnit.getUnitDIE()->getTag()),
+          LowPc(UINT64_MAX), HighPc(0), RangeAlloc(), Ranges(RangeAlloc),
+          ClangModuleName(ClangModuleName) {
     Info.resize(OrigUnit.getNumDIEs());
 
     const auto *CUDie = OrigUnit.getUnitDIE(false);
@@ -211,21 +215,13 @@ public:
                            Lang == dwarf::DW_LANG_ObjC_plus_plus);
   }
 
-  CompileUnit(CompileUnit &&RHS)
-      : OrigUnit(RHS.OrigUnit), Info(std::move(RHS.Info)),
-        CUDie(std::move(RHS.CUDie)), StartOffset(RHS.StartOffset),
-        NextUnitOffset(RHS.NextUnitOffset), RangeAlloc(), Ranges(RangeAlloc) {
-    // The CompileUnit container has been 'reserve()'d with the right
-    // size. We cannot move the IntervalMap anyway.
-    llvm_unreachable("CompileUnits should not be moved.");
-  }
-
   DWARFUnit &getOrigUnit() const { return OrigUnit; }
 
   unsigned getUniqueID() const { return ID; }
 
-  DIE *getOutputUnitDIE() const { return CUDie; }
-  void setOutputUnitDIE(DIE *Die) { CUDie = Die; }
+  DIE *getOutputUnitDIE() const {
+    return &const_cast<DIEUnit &>(NewUnit).getUnitDie();
+  }
 
   bool hasODR() const { return HasODR; }
   bool isClangModule() const { return !ClangModuleName.empty(); }
@@ -333,7 +329,7 @@ private:
   DWARFUnit &OrigUnit;
   unsigned ID;
   std::vector<DIEInfo> Info; ///< DIE info indexed by DIE index.
-  DIE *CUDie;                ///< Root of the linked DIE tree.
+  DIEUnit NewUnit;
 
   uint64_t StartOffset;
   uint64_t NextUnitOffset;
@@ -401,8 +397,7 @@ uint64_t CompileUnit::computeNextUnitOffset() {
   // The root DIE might be null, meaning that the Unit had nothing to
   // contribute to the linked output. In that case, we will emit the
   // unit header without any actual DIE.
-  if (CUDie)
-    NextUnitOffset += CUDie->getSize();
+  NextUnitOffset += NewUnit.getUnitDie().getSize();
   return NextUnitOffset;
 }
 
@@ -1266,13 +1261,14 @@ private:
     RelocationManager &RelocMgr;
     /// Allocator used for all the DIEValue objects.
     BumpPtrAllocator &DIEAlloc;
-    MutableArrayRef<CompileUnit> CompileUnits;
+    std::vector<std::unique_ptr<CompileUnit>> &CompileUnits;
     LinkOptions Options;
 
   public:
     DIECloner(DwarfLinker &Linker, RelocationManager &RelocMgr,
               BumpPtrAllocator &DIEAlloc,
-              MutableArrayRef<CompileUnit> CompileUnits, LinkOptions &Options)
+              std::vector<std::unique_ptr<CompileUnit>> &CompileUnits,
+              LinkOptions &Options)
         : Linker(Linker), RelocMgr(RelocMgr), DIEAlloc(DIEAlloc),
           CompileUnits(CompileUnits), Options(Options) {}
 
@@ -1285,10 +1281,11 @@ private:
     /// compile unit.
     /// \param PCOffset (while cloning a function scope) is the offset
     /// applied to the entry point of the function to get the linked address.
-    ///
+    /// \param Die the output DIE to use, pass NULL to create one.
     /// \returns the root of the cloned tree or null if nothing was selected.
     DIE *cloneDIE(const DWARFDebugInfoEntryMinimal &InputDIE, CompileUnit &U,
-                  int64_t PCOffset, uint32_t OutOffset, unsigned Flags);
+                  int64_t PCOffset, uint32_t OutOffset, unsigned Flags,
+                  DIE *Die = nullptr);
 
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
@@ -1433,7 +1430,8 @@ private:
   unsigned UnitID; ///< A unique ID that identifies each compile unit.
 
   /// The units of the current debug map object.
-  std::vector<CompileUnit> Units;
+  std::vector<std::unique_ptr<CompileUnit>> Units;
+
 
   /// The debug map object currently under consideration.
   DebugMapObject *CurrentDebugObject;
@@ -1468,14 +1466,14 @@ private:
 
 /// Similar to DWARFUnitSection::getUnitForOffset(), but returning our
 /// CompileUnit object instead.
-static CompileUnit *getUnitForOffset(MutableArrayRef<CompileUnit> Units,
-                                     unsigned Offset) {
+static CompileUnit *getUnitForOffset(
+    std::vector<std::unique_ptr<CompileUnit>> &Units, unsigned Offset) {
   auto CU =
       std::upper_bound(Units.begin(), Units.end(), Offset,
-                       [](uint32_t LHS, const CompileUnit &RHS) {
-                         return LHS < RHS.getOrigUnit().getNextUnitOffset();
+                       [](uint32_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
+                         return LHS < RHS->getOrigUnit().getNextUnitOffset();
                        });
-  return CU != Units.end() ? &*CU : nullptr;
+  return CU != Units.end() ? CU->get() : nullptr;
 }
 
 /// Resolve the DIE attribute reference that has been
@@ -1483,7 +1481,7 @@ static CompileUnit *getUnitForOffset(MutableArrayRef<CompileUnit> Units,
 /// CompileUnit which is stored into \p ReferencedCU.
 /// \returns null if resolving fails for any reason.
 static const DWARFDebugInfoEntryMinimal *resolveDIEReference(
-    const DwarfLinker &Linker, MutableArrayRef<CompileUnit> Units,
+    const DwarfLinker &Linker, std::vector<std::unique_ptr<CompileUnit>> &Units,
     const DWARFFormValue &RefValue, const DWARFUnit &Unit,
     const DWARFDebugInfoEntryMinimal &DIE, CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
@@ -1839,7 +1837,6 @@ static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
 }
 
 void DwarfLinker::startDebugObject(DWARFContext &Dwarf, DebugMapObject &Obj) {
-  Units.reserve(Dwarf.getNumCompileUnits());
   // Iterate over the debug map entries and put all the ones that are
   // functions (because they have a size) into the Ranges map. This
   // map is very similar to the FunctionRanges that are stored in each
@@ -2185,6 +2182,8 @@ unsigned DwarfLinker::shouldKeepDIE(RelocationManager &RelocMgr,
   case dwarf::DW_TAG_imported_unit:
     // We always want to keep these.
     return Flags | TF_Keep;
+  default:
+    break;
   }
 
   return Flags;
@@ -2233,8 +2232,7 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
     Val.extractValue(Data, &Offset, &Unit);
     CompileUnit *ReferencedCU;
     if (const auto *RefDIE =
-            resolveDIEReference(*this, MutableArrayRef<CompileUnit>(Units), Val,
-                                Unit, Die, ReferencedCU)) {
+            resolveDIEReference(*this, Units, Val, Unit, Die, ReferencedCU)) {
       uint32_t RefIdx = ReferencedCU->getOrigUnit().getDIEIndex(RefDIE);
       CompileUnit::DIEInfo &Info = ReferencedCU->getInfo(RefIdx);
       // If the referenced DIE has a DeclContext that has already been
@@ -2704,7 +2702,7 @@ shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
 
 DIE *DwarfLinker::DIECloner::cloneDIE(
     const DWARFDebugInfoEntryMinimal &InputDIE, CompileUnit &Unit,
-    int64_t PCOffset, uint32_t OutOffset, unsigned Flags) {
+    int64_t PCOffset, uint32_t OutOffset, unsigned Flags, DIE *Die) {
   DWARFUnit &U = Unit.getOrigUnit();
   unsigned Idx = U.getDIEIndex(&InputDIE);
   CompileUnit::DIEInfo &Info = Unit.getInfo(Idx);
@@ -2714,11 +2712,15 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
     return nullptr;
 
   uint32_t Offset = InputDIE.getOffset();
-  // The DIE might have been already created by a forward reference
-  // (see cloneDieReferenceAttribute()).
-  DIE *Die = Info.Clone;
-  if (!Die)
-    Die = Info.Clone = DIE::get(DIEAlloc, dwarf::Tag(InputDIE.getTag()));
+  assert(!(Die && Info.Clone) && "Can't supply a DIE and a cloned DIE");
+  if (!Die) {
+    // The DIE might have been already created by a forward reference
+    // (see cloneDieReferenceAttribute()).
+    if (!Info.Clone)
+      Info.Clone = DIE::get(DIEAlloc, dwarf::Tag(InputDIE.getTag()));
+    Die = Info.Clone;
+  }
+
   assert(Die->getTag() == InputDIE.getTag());
   Die->setOffset(OutOffset);
   if ((Unit.hasODR() || Unit.isClangModule()) &&
@@ -3374,8 +3376,9 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
     outs() << "cloning .debug_info from " << Filename << "\n";
   }
 
-  DIECloner(*this, RelocMgr, DIEAlloc, MutableArrayRef<CompileUnit>(*Unit),
-            Options)
+  std::vector<std::unique_ptr<CompileUnit>> CompileUnits;
+  CompileUnits.push_back(std::move(Unit));
+  DIECloner(*this, RelocMgr, DIEAlloc, CompileUnits, Options)
       .cloneAllCompileUnits(DwarfContext);
 }
 
@@ -3385,23 +3388,24 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
     return;
 
   for (auto &CurrentUnit : CompileUnits) {
-    const auto *InputDIE = CurrentUnit.getOrigUnit().getUnitDIE();
-    CurrentUnit.setStartOffset(Linker.OutputDebugInfoSize);
-    DIE *OutputDIE = cloneDIE(*InputDIE, CurrentUnit, 0 /* PC offset */,
-                              11 /* Unit Header size */, 0);
-    CurrentUnit.setOutputUnitDIE(OutputDIE);
-    Linker.OutputDebugInfoSize = CurrentUnit.computeNextUnitOffset();
+    const auto *InputDIE = CurrentUnit->getOrigUnit().getUnitDIE();
+    CurrentUnit->setStartOffset(Linker.OutputDebugInfoSize);
+    // Clonse the InputDIE into your Unit DIE in our compile unit since it
+    // already has a DIE inside of it.
+    if (!cloneDIE(*InputDIE, *CurrentUnit, 0 /* PC offset */,
+                  11 /* Unit Header size */, 0,
+                  CurrentUnit->getOutputUnitDIE()))
+      continue;
+    Linker.OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
     if (Linker.Options.NoOutput)
       continue;
     // FIXME: for compatibility with the classic dsymutil, we emit
     // an empty line table for the unit, even if the unit doesn't
     // actually exist in the DIE tree.
-    Linker.patchLineTableForUnit(CurrentUnit, DwarfContext);
-    if (!OutputDIE)
-      continue;
-    Linker.patchRangesForUnit(CurrentUnit, DwarfContext);
-    Linker.Streamer->emitLocationsForUnit(CurrentUnit, DwarfContext);
-    Linker.emitAcceleratorEntriesForUnit(CurrentUnit);
+    Linker.patchLineTableForUnit(*CurrentUnit, DwarfContext);
+    Linker.patchRangesForUnit(*CurrentUnit, DwarfContext);
+    Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
+    Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
   }
 
   if (Linker.Options.NoOutput)
@@ -3409,12 +3413,12 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
 
   // Emit all the compile unit's debug information.
   for (auto &CurrentUnit : CompileUnits) {
-    Linker.generateUnitRanges(CurrentUnit);
-    CurrentUnit.fixupForwardReferences();
-    Linker.Streamer->emitCompileUnitHeader(CurrentUnit);
-    if (!CurrentUnit.getOutputUnitDIE())
+    Linker.generateUnitRanges(*CurrentUnit);
+    CurrentUnit->fixupForwardReferences();
+    Linker.Streamer->emitCompileUnitHeader(*CurrentUnit);
+    if (!CurrentUnit->getOutputUnitDIE())
       continue;
-    Linker.Streamer->emitDIE(*CurrentUnit.getOutputUnitDIE());
+    Linker.Streamer->emitDIE(*CurrentUnit->getOutputUnitDIE());
   }
 }
 
@@ -3459,12 +3463,13 @@ bool DwarfLinker::link(const DebugMap &Map) {
       }
 
       if (!registerModuleReference(*CUDie, *CU, ModuleMap))
-        Units.emplace_back(*CU, UnitID++, !Options.NoODR, "");
+        Units.push_back(llvm::make_unique<CompileUnit>(*CU, UnitID++,
+                                                       !Options.NoODR, ""));
     }
 
     // Now build the DIE parent links that we will use during the next phase.
     for (auto &CurrentUnit : Units)
-      analyzeContextInfo(CurrentUnit.getOrigUnit().getUnitDIE(), 0, CurrentUnit,
+      analyzeContextInfo(CurrentUnit->getOrigUnit().getUnitDIE(), 0, *CurrentUnit,
                          &ODRContexts.getRoot(), StringPool, ODRContexts);
 
     // Then mark all the DIEs that need to be present in the linked
@@ -3473,8 +3478,8 @@ bool DwarfLinker::link(const DebugMap &Map) {
     // references require the ParentIdx to be setup for every CU in
     // the object file before calling this.
     for (auto &CurrentUnit : Units)
-      lookForDIEsToKeep(RelocMgr, *CurrentUnit.getOrigUnit().getUnitDIE(), *Obj,
-                        CurrentUnit, 0);
+      lookForDIEsToKeep(RelocMgr, *CurrentUnit->getOrigUnit().getUnitDIE(), *Obj,
+                        *CurrentUnit, 0);
 
     // The calls to applyValidRelocs inside cloneDIE will walk the
     // reloc array again (in the same way findValidRelocsInDebugInfo()
@@ -3485,7 +3490,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
           .cloneAllCompileUnits(DwarfContext);
     if (!Options.NoOutput && !Units.empty())
       patchFrameInfoForObject(*Obj, DwarfContext,
-                              Units[0].getOrigUnit().getAddressByteSize());
+                              Units[0]->getOrigUnit().getAddressByteSize());
 
     // Clean-up before starting working on the next object.
     endDebugObject();

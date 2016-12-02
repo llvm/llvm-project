@@ -2598,8 +2598,8 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     }
   }
 
-  // Handle the case where a WZR/XZR copy is being spilled but the destination
-  // register class doesn't contain WZR/XZR.  For example:
+  // Handle the case where a copy is being spilled or refilled but the source
+  // and destination register class don't match.  For example:
   //
   //   %vreg0<def> = COPY %XZR; GPR64common:%vreg0
   //
@@ -2608,17 +2608,43 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   //
   //   STRXui %XZR, <fi#0>
   //
-  if (MI.isFullCopy() && Ops.size() == 1 && Ops[0] == 0) {
+  // This also eliminates spilled cross register class COPYs (e.g. between x and
+  // d regs) of the same size.  For example:
+  //
+  //   %vreg0<def> = COPY %vreg1; GPR64:%vreg0, FPR64:%vreg1
+  //
+  // will be refilled as
+  //
+  //   LDRDui %vreg0, fi<#0>
+  //
+  // instead of
+  //
+  //   LDRXui %vregTemp, fi<#0>
+  //   %vreg0 = FMOV %vregTemp
+  //
+  if (MI.isFullCopy() && Ops.size() == 1 &&
+      // Make sure we're only folding the explicit COPY defs/uses.
+      (Ops[0] == 0 || Ops[0] == 1)) {
+    const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
     MachineBasicBlock &MBB = *MI.getParent();
+    const MachineOperand &DstMO = MI.getOperand(0);
     const MachineOperand &SrcMO = MI.getOperand(1);
+    unsigned DstReg = DstMO.getReg();
     unsigned SrcReg = SrcMO.getReg();
-    if (SrcReg == AArch64::WZR || SrcReg == AArch64::XZR) {
-      const TargetRegisterInfo &TRI = getRegisterInfo();
-      const TargetRegisterClass &RC = SrcReg == AArch64::WZR
-                                          ? AArch64::GPR32RegClass
-                                          : AArch64::GPR64RegClass;
-      storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
-                          &RC, &TRI);
+    auto getRegClass = [&](unsigned Reg) {
+      return TargetRegisterInfo::isVirtualRegister(Reg)
+                 ? MRI.getRegClass(Reg)
+                 : TRI.getMinimalPhysRegClass(Reg);
+    };
+    const TargetRegisterClass &DstRC = *getRegClass(DstReg);
+    const TargetRegisterClass &SrcRC = *getRegClass(SrcReg);
+    if (DstRC.getSize() == SrcRC.getSize()) {
+      if (Ops[0] == 0)
+        storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
+                            &SrcRC, &TRI);
+      else
+        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, &DstRC, &TRI);
       return &*--InsertPt;
     }
   }

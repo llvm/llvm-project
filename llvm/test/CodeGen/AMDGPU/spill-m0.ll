@@ -72,9 +72,7 @@ endif:
 
 ; TOSMEM-NOT: m0
 ; TOSMEM: s_add_u32 m0, s7, 0x100
-; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
-; TOSMEM: s_add_u32 m0, s7, 0x200
-; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
+; TOSMEM: s_buffer_store_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 8-byte Folded Spill
 ; TOSMEM-NOT: m0
 
 ; TOSMEM: s_mov_b64 exec,
@@ -83,7 +81,7 @@ endif:
 
 ; TOSMEM: BB{{[0-9]+_[0-9]+}}:
 ; TOSMEM-NEXT: s_add_u32 m0, s7, 0x100
-; TOSMEM-NEXT: s_buffer_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Reload
+; TOSMEM-NEXT: s_buffer_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 8-byte Folded Reload
 
 
 ; GCN-NOT: v_readlane_b32 m0
@@ -124,9 +122,7 @@ endif:                                            ; preds = %else, %if
 
 ; TOSMEM: s_mov_b32 vcc_hi, m0
 ; TOSMEM: s_mov_b32 m0, s3
-; TOSMEM-NEXT: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
-; TOSMEM: s_add_u32 m0, s3, 0x100
-; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Spill
+; TOSMEM-NEXT: s_buffer_store_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 8-byte Folded Spill
 ; TOSMEM: s_mov_b32 m0, vcc_hi
 
 ; TOSMEM: s_mov_b64 exec,
@@ -135,13 +131,7 @@ endif:                                            ; preds = %else, %if
 
 ; TOSMEM: BB{{[0-9]+_[0-9]+}}:
 ; TOSMEM-NEXT: s_mov_b32 m0, s3
-; TOSMEM-NEXT: s_buffer_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Reload
-; TOSMEM-NEXT: s_add_u32 m0, s3, 0x100
-
-; FIXME: Could delay this wait
-; TOSMEM-NEXT: s_waitcnt lgkmcnt(0)
-; TOSMEM-NEXT: s_buffer_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 4-byte Folded Reload
-
+; TOSMEM-NEXT: s_buffer_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, m0 ; 8-byte Folded Reload
 
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
@@ -167,10 +157,14 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}restore_m0_lds:
+; TOSMEM: s_load_dwordx2 [[REG:s\[[0-9]+:[0-9]+\]]]
 ; TOSMEM: s_cmp_eq_u32
 ; TOSMEM-NOT: m0
 ; TOSMEM: s_mov_b32 m0, s3
-; TOSMEM: s_buffer_store_dword s4, s[84:87], m0 ; 4-byte Folded Spill
+; TOSMEM: s_buffer_store_dwordx2 [[REG]], s[84:87], m0 ; 8-byte Folded Spill
+; TOSMEM-NOT: m0
+; TOSMEM: s_add_u32 m0, s3, 0x200
+; TOSMEM: s_buffer_store_dword s{{[0-9]+}}, s[84:87], m0 ; 4-byte Folded Spill
 ; TOSMEM-NOT: m0
 ; TOSMEM: s_cbranch_scc1
 
@@ -178,10 +172,7 @@ endif:
 
 ; TOSMEM: s_mov_b32 vcc_hi, m0
 ; TOSMEM: s_mov_b32 m0, s3
-; TOSMEM: s_buffer_load_dword s4, s[84:87], m0 ; 4-byte Folded Reload
-; TOSMEM: s_add_u32 m0, s3, 0x100
-; TOSMEM: s_waitcnt lgkmcnt(0)
-; TOSMEM: s_buffer_load_dword s5, s[84:87], m0 ; 4-byte Folded Reload
+; TOSMEM: s_buffer_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[84:87], m0 ; 8-byte Folded Reload
 ; TOSMEM: s_mov_b32 m0, vcc_hi
 ; TOSMEM: s_waitcnt lgkmcnt(0)
 

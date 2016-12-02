@@ -11,19 +11,27 @@
 #define LLVM_SUPPORT_YAMLTRAITS_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <new>
+#include <string>
 #include <system_error>
+#include <type_traits>
+#include <vector>
 
 namespace llvm {
 namespace yaml {
@@ -139,7 +147,6 @@ struct ScalarTraits {
   //static bool mustQuote(StringRef);
 };
 
-
 /// This class should be specialized by type that requires custom conversion
 /// to/from a YAML literal block scalar. For example:
 ///
@@ -172,7 +179,7 @@ struct BlockScalarTraits {
 /// to/from a YAML sequence.  For example:
 ///
 ///    template<>
-///    struct SequenceTraits< std::vector<MyType> > {
+///    struct SequenceTraits< std::vector<MyType>> {
 ///      static size_t size(IO &io, std::vector<MyType> &seq) {
 ///        return seq.size();
 ///      }
@@ -220,7 +227,7 @@ struct has_ScalarEnumerationTraits
 
 public:
   static bool const value =
-    (sizeof(test<ScalarEnumerationTraits<T> >(nullptr)) == 1);
+    (sizeof(test<ScalarEnumerationTraits<T>>(nullptr)) == 1);
 };
 
 // Test if ScalarBitSetTraits<T> is defined on type T.
@@ -236,7 +243,7 @@ struct has_ScalarBitSetTraits
   static double test(...);
 
 public:
-  static bool const value = (sizeof(test<ScalarBitSetTraits<T> >(nullptr)) == 1);
+  static bool const value = (sizeof(test<ScalarBitSetTraits<T>>(nullptr)) == 1);
 };
 
 // Test if ScalarTraits<T> is defined on type T.
@@ -348,7 +355,7 @@ struct has_SequenceMethodTraits
   static double test(...);
 
 public:
-  static bool const value =  (sizeof(test<SequenceTraits<T> >(nullptr)) == 1);
+  static bool const value =  (sizeof(test<SequenceTraits<T>>(nullptr)) == 1);
 };
 
 // has_FlowTraits<int> will cause an error with some compilers because
@@ -398,7 +405,7 @@ struct has_DocumentListTraits
   static double test(...);
 
 public:
-  static bool const value = (sizeof(test<DocumentListTraits<T> >(nullptr))==1);
+  static bool const value = (sizeof(test<DocumentListTraits<T>>(nullptr))==1);
 };
 
 inline bool isNumber(StringRef S) {
@@ -503,7 +510,6 @@ struct unvalidatedMappingTraits
 // Base class for Input and Output.
 class IO {
 public:
-
   IO(void *Ctxt=nullptr);
   virtual ~IO();
 
@@ -701,6 +707,7 @@ private:
 };
 
 namespace detail {
+
 template <typename T, typename Context>
 void doMapping(IO &io, T &Val, Context &Ctx) {
   MappingContextTraits<T, Context>::mapping(io, Val, Ctx);
@@ -709,7 +716,8 @@ void doMapping(IO &io, T &Val, Context &Ctx) {
 template <typename T> void doMapping(IO &io, T &Val, EmptyContext &Ctx) {
   MappingTraits<T>::mapping(io, Val);
 }
-}
+
+} // end namespace detail
 
 template <typename T>
 typename std::enable_if<has_ScalarEnumerationTraits<T>::value, void>::type
@@ -950,6 +958,7 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
                      llvm::raw_ostream &Stream) {
     ScalarTraits<value_type>::output(static_cast<value_type>(E), Ctx, Stream);
   }
+
   static StringRef input(StringRef Str, void *Ctx, endian_type &E) {
     value_type V;
     auto R = ScalarTraits<value_type>::input(Str, Ctx, V);
@@ -1089,9 +1098,11 @@ private:
 
   class HNode {
     virtual void anchor();
+
   public:
     HNode(Node *n) : _node(n) { }
-    virtual ~HNode() { }
+    virtual ~HNode() = default;
+
     static inline bool classof(const HNode *) { return true; }
 
     Node *_node;
@@ -1099,16 +1110,20 @@ private:
 
   class EmptyHNode : public HNode {
     void anchor() override;
+
   public:
     EmptyHNode(Node *n) : HNode(n) { }
+
     static inline bool classof(const HNode *n) {
       return NullNode::classof(n->_node);
     }
+
     static inline bool classof(const EmptyHNode *) { return true; }
   };
 
   class ScalarHNode : public HNode {
     void anchor() override;
+
   public:
     ScalarHNode(Node *n, StringRef s) : HNode(n), _value(s) { }
 
@@ -1118,7 +1133,9 @@ private:
       return ScalarNode::classof(n->_node) ||
              BlockScalarNode::classof(n->_node);
     }
+
     static inline bool classof(const ScalarHNode *) { return true; }
+
   protected:
     StringRef _value;
   };
@@ -1132,6 +1149,7 @@ private:
     static inline bool classof(const HNode *n) {
       return MappingNode::classof(n->_node);
     }
+
     static inline bool classof(const MapHNode *) { return true; }
 
     typedef llvm::StringMap<std::unique_ptr<HNode>> NameToNode;
@@ -1151,6 +1169,7 @@ private:
     static inline bool classof(const HNode *n) {
       return SequenceNode::classof(n->_node);
     }
+
     static inline bool classof(const SequenceHNode *) { return true; }
 
     std::vector<std::unique_ptr<HNode>> Entries;
@@ -1217,7 +1236,7 @@ public:
   void blockScalarString(StringRef &) override;
   void setError(const Twine &message) override;
   bool canElideEmptySequence() override;
-public:
+
   // These are only used by operator<<. They could be private
   // if that templated operator could be made a friend.
   void beginDocuments();
@@ -1264,10 +1283,10 @@ private:
 /// Based on BOOST_STRONG_TYPEDEF
 #define LLVM_YAML_STRONG_TYPEDEF(_base, _type)                                 \
     struct _type {                                                             \
-        _type() { }                                                            \
-        _type(const _base v) : value(v) { }                                    \
-        _type(const _type &v) : value(v.value) {}                              \
-        _type &operator=(const _type &rhs) { value = rhs.value; return *this; }\
+        _type() = default;                                                     \
+        _type(const _base v) : value(v) {}                                     \
+        _type(const _type &v) = default;                                       \
+        _type &operator=(const _type &rhs) = default;                          \
         _type &operator=(const _base &rhs) { value = rhs; return *this; }      \
         operator const _base & () const { return value; }                      \
         bool operator==(const _type &rhs) const { return value == rhs.value; } \
@@ -1457,8 +1476,8 @@ template <typename T> struct SequenceTraitsImpl {
   }
 };
 
-} // namespace yaml
-} // namespace llvm
+} // end namespace yaml
+} // end namespace llvm
 
 /// Utility for declaring that a std::vector of a particular type
 /// should be considered a YAML sequence.

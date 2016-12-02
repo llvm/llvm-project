@@ -37,162 +37,27 @@ using namespace object;
 
 IRObjectFile::IRObjectFile(MemoryBufferRef Object, std::unique_ptr<Module> Mod)
     : SymbolicFile(Binary::ID_IR, Object), M(std::move(Mod)) {
-  Mang.reset(new Mangler());
-
-  for (Function &F : *M)
-    SymTab.push_back(&F);
-  for (GlobalVariable &GV : M->globals())
-    SymTab.push_back(&GV);
-  for (GlobalAlias &GA : M->aliases())
-    SymTab.push_back(&GA);
-
-  CollectAsmUndefinedRefs(Triple(M->getTargetTriple()), M->getModuleInlineAsm(),
-                          [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-                            SymTab.push_back(new (AsmSymbols.Allocate())
-                                                 AsmSymbol(Name, Flags));
-                          });
-}
-
-// Parse inline ASM and collect the list of symbols that are not defined in
-// the current module. This is inspired from IRObjectFile.
-void IRObjectFile::CollectAsmUndefinedRefs(
-    const Triple &TT, StringRef InlineAsm,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmUndefinedRefs) {
-  if (InlineAsm.empty())
-    return;
-
-  std::string Err;
-  const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
-  assert(T && T->hasMCAsmParser());
-
-  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT.str()));
-  if (!MRI)
-    return;
-
-  std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT.str()));
-  if (!MAI)
-    return;
-
-  std::unique_ptr<MCSubtargetInfo> STI(
-      T->createMCSubtargetInfo(TT.str(), "", ""));
-  if (!STI)
-    return;
-
-  std::unique_ptr<MCInstrInfo> MCII(T->createMCInstrInfo());
-  if (!MCII)
-    return;
-
-  MCObjectFileInfo MOFI;
-  MCContext MCCtx(MAI.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(TT, /*PIC*/ false, CodeModel::Default, MCCtx);
-  RecordStreamer Streamer(MCCtx);
-  T->createNullTargetStreamer(Streamer);
-
-  std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
-  SourceMgr SrcMgr;
-  SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
-  std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
-
-  MCTargetOptions MCOptions;
-  std::unique_ptr<MCTargetAsmParser> TAP(
-      T->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
-  if (!TAP)
-    return;
-
-  Parser->setTargetParser(*TAP);
-  if (Parser->Run(false))
-    return;
-
-  for (auto &KV : Streamer) {
-    StringRef Key = KV.first();
-    RecordStreamer::State Value = KV.second;
-    uint32_t Res = BasicSymbolRef::SF_None;
-    switch (Value) {
-    case RecordStreamer::NeverSeen:
-      llvm_unreachable("NeverSeen should have been replaced earlier");
-    case RecordStreamer::DefinedGlobal:
-      Res |= BasicSymbolRef::SF_Global;
-      break;
-    case RecordStreamer::Defined:
-      break;
-    case RecordStreamer::Global:
-    case RecordStreamer::Used:
-      Res |= BasicSymbolRef::SF_Undefined;
-      Res |= BasicSymbolRef::SF_Global;
-      break;
-    case RecordStreamer::DefinedWeak:
-      Res |= BasicSymbolRef::SF_Weak;
-      Res |= BasicSymbolRef::SF_Global;
-      break;
-    case RecordStreamer::UndefinedWeak:
-      Res |= BasicSymbolRef::SF_Weak;
-      Res |= BasicSymbolRef::SF_Undefined;
-    }
-    AsmUndefinedRefs(Key, BasicSymbolRef::Flags(Res));
-  }
+  SymTab.addModule(M.get());
 }
 
 IRObjectFile::~IRObjectFile() {}
 
+static ModuleSymbolTable::Symbol getSym(DataRefImpl &Symb) {
+  return *reinterpret_cast<ModuleSymbolTable::Symbol *>(Symb.p);
+}
+
 void IRObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
-  Symb.p += sizeof(Sym);
+  Symb.p += sizeof(ModuleSymbolTable::Symbol);
 }
 
 std::error_code IRObjectFile::printSymbolName(raw_ostream &OS,
                                               DataRefImpl Symb) const {
-  Sym S = getSym(Symb);
-  if (S.is<AsmSymbol *>()) {
-    OS << S.get<AsmSymbol *>()->first;
-    return std::error_code();
-  }
-
-  auto *GV = S.get<GlobalValue *>();
-  if (GV->hasDLLImportStorageClass())
-    OS << "__imp_";
-
-  if (Mang)
-    Mang->getNameWithPrefix(OS, GV, false);
-  else
-    OS << GV->getName();
-
+  SymTab.printSymbolName(OS, getSym(Symb));
   return std::error_code();
 }
 
 uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
-  Sym S = getSym(Symb);
-  if (S.is<AsmSymbol *>())
-    return S.get<AsmSymbol *>()->second;
-
-  auto *GV = S.get<GlobalValue *>();
-
-  uint32_t Res = BasicSymbolRef::SF_None;
-  if (GV->isDeclarationForLinker())
-    Res |= BasicSymbolRef::SF_Undefined;
-  else if (GV->hasHiddenVisibility() && !GV->hasLocalLinkage())
-    Res |= BasicSymbolRef::SF_Hidden;
-  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
-    if (GVar->isConstant())
-      Res |= BasicSymbolRef::SF_Const;
-  }
-  if (GV->hasPrivateLinkage())
-    Res |= BasicSymbolRef::SF_FormatSpecific;
-  if (!GV->hasLocalLinkage())
-    Res |= BasicSymbolRef::SF_Global;
-  if (GV->hasCommonLinkage())
-    Res |= BasicSymbolRef::SF_Common;
-  if (GV->hasLinkOnceLinkage() || GV->hasWeakLinkage() ||
-      GV->hasExternalWeakLinkage())
-    Res |= BasicSymbolRef::SF_Weak;
-
-  if (GV->getName().startswith("llvm."))
-    Res |= BasicSymbolRef::SF_FormatSpecific;
-  else if (auto *Var = dyn_cast<GlobalVariable>(GV)) {
-    if (Var->getSection() == "llvm.metadata")
-      Res |= BasicSymbolRef::SF_FormatSpecific;
-  }
-
-  return Res;
+  return SymTab.getSymbolFlags(getSym(Symb));
 }
 
 GlobalValue *IRObjectFile::getSymbolGV(DataRefImpl Symb) {
@@ -203,13 +68,14 @@ std::unique_ptr<Module> IRObjectFile::takeModule() { return std::move(M); }
 
 basic_symbol_iterator IRObjectFile::symbol_begin() const {
   DataRefImpl Ret;
-  Ret.p = reinterpret_cast<uintptr_t>(SymTab.data());
+  Ret.p = reinterpret_cast<uintptr_t>(SymTab.symbols().data());
   return basic_symbol_iterator(BasicSymbolRef(Ret, this));
 }
 
 basic_symbol_iterator IRObjectFile::symbol_end() const {
   DataRefImpl Ret;
-  Ret.p = reinterpret_cast<uintptr_t>(SymTab.data() + SymTab.size());
+  Ret.p = reinterpret_cast<uintptr_t>(SymTab.symbols().data() +
+                                      SymTab.symbols().size());
   return basic_symbol_iterator(BasicSymbolRef(Ret, this));
 }
 

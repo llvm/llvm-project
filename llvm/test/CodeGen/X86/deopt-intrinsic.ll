@@ -13,7 +13,7 @@ define i32 @caller_0() {
 ; CHECK-NEXT: {{.+cfi.+}}
 ; CHECK-NEXT: ##{{.+}}
 ; CHECK-NEXT: pushq   %rax
-; CHECK-NEXT: {{Ltmp[0-9]+}}:
+; CHECK-NEXT: {{Lcfi[0-9]+}}:
 ; CHECK-NEXT: {{.+cfi.+}}
 ; CHECK-NEXT: callq	___llvm_deoptimize
 ; CHECK-NEXT: {{Ltmp[0-9]+}}:
@@ -27,7 +27,7 @@ define i8 @caller_1() {
 ; CHECK-NEXT: {{.+cfi.+}}
 ; CHECK-NEXT: ##{{.+}}
 ; CHECK-NEXT: pushq	%rax
-; CHECK-NEXT: {{Ltmp[0-9]+}}:
+; CHECK-NEXT: {{Lcfi[0-9]+}}:
 ; CHECK-NEXT: {{.+cfi.+}}
 ; CHECK-NEXT: movss	{{[a-zA-Z0-9_]+}}(%rip), %xmm0    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT: movl	$42, %edi

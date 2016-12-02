@@ -10,6 +10,7 @@ add_llvm_library(LLVMObject
   MachOObjectFile.cpp
   MachOUniversal.cpp
   ModuleSummaryIndexObjectFile.cpp
+  ModuleSymbolTable.cpp
   Object.cpp
   ObjectFile.cpp
   RecordStreamer.cpp

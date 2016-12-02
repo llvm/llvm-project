@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 36
+#define CINDEX_VERSION_MINOR 37
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -2346,7 +2346,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPTeamsDistributeSimdDirective = 272,
 
-  CXCursor_LastStmt = CXCursor_OMPTeamsDistributeSimdDirective,
+  /** \brief OpenMP teams distribute parallel for simd directive.
+   */
+  CXCursor_OMPTeamsDistributeParallelForSimdDirective = 273,
+
+  CXCursor_LastStmt = CXCursor_OMPTeamsDistributeParallelForSimdDirective,
 
   /**
    * \brief Cursor that represents the translation unit itself.
@@ -5260,6 +5264,25 @@ CINDEX_LINKAGE CXEvalResultKind clang_EvalResult_getKind(CXEvalResult E);
  * kind is Int.
  */
 CINDEX_LINKAGE int clang_EvalResult_getAsInt(CXEvalResult E);
+
+/**
+ * \brief Returns the evaluation result as a long long integer if the
+ * kind is Int. This prevents overflows that may happen if the result is
+ * returned with clang_EvalResult_getAsInt.
+ */
+CINDEX_LINKAGE long long clang_EvalResult_getAsLongLong(CXEvalResult E);
+
+/**
+ * \brief Returns a non-zero value if the kind is Int and the evaluation
+ * result resulted in an unsigned integer.
+ */
+CINDEX_LINKAGE unsigned clang_EvalResult_isUnsignedInt(CXEvalResult E);
+
+/**
+ * \brief Returns the evaluation result as an unsigned integer if
+ * the kind is Int and clang_EvalResult_isUnsignedInt is non-zero.
+ */
+CINDEX_LINKAGE unsigned long long clang_EvalResult_getAsUnsigned(CXEvalResult E);
 
 /**
  * \brief Returns the evaluation result as double if the

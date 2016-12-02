@@ -1044,12 +1044,12 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; KNL-LABEL: test_insertelement_v32i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp0:
+; KNL-NEXT:  Lcfi0:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Ltmp1:
+; KNL-NEXT:  Lcfi1:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Ltmp2:
+; KNL-NEXT:  Lcfi2:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $32, %rsp

@@ -737,15 +737,12 @@ int64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
                                            ArrayRef<Value *> Indices) const {
   int64_t Result = 0;
 
-  // We can use 0 as the address space as we don't need
-  // to get pointer types back from gep_type_iterator.
-  unsigned AS = 0;
   generic_gep_type_iterator<Value* const*>
-    GTI = gep_type_begin(ElemTy, AS, Indices),
-    GTE = gep_type_end(ElemTy, AS, Indices);
+    GTI = gep_type_begin(ElemTy, Indices),
+    GTE = gep_type_end(ElemTy, Indices);
   for (; GTI != GTE; ++GTI) {
     Value *Idx = GTI.getOperand();
-    if (auto *STy = dyn_cast<StructType>(*GTI)) {
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
       assert(Idx->getType()->isIntegerTy(32) && "Illegal struct idx");
       unsigned FieldNo = cast<ConstantInt>(Idx)->getZExtValue();
 

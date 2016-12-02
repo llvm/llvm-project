@@ -415,6 +415,7 @@ protected:
   class SDNodeBitfields {
     friend class SDNode;
     friend class MemIntrinsicSDNode;
+    friend class MemSDNode;
 
     uint16_t HasDebugValue : 1;
     uint16_t IsMemIntrinsic : 1;
@@ -1134,11 +1135,19 @@ public:
     return MMO->getAlignment();
   }
 
-  /// Return the SubclassData value, which contains an
+  /// Return the SubclassData value, without HasDebugValue. This contains an
   /// encoding of the volatile flag, as well as bits used by subclasses. This
   /// function should only be used to compute a FoldingSetNodeID value.
+  /// The HasDebugValue bit is masked out because CSE map needs to match
+  /// nodes with debug info with nodes without debug info.
   unsigned getRawSubclassData() const {
     uint16_t Data;
+    union {
+      char RawSDNodeBits[sizeof(uint16_t)];
+      SDNodeBitfields SDNodeBits;
+    };
+    memcpy(&RawSDNodeBits, &this->RawSDNodeBits, sizeof(this->RawSDNodeBits));
+    SDNodeBits.HasDebugValue = 0;
     memcpy(&Data, &RawSDNodeBits, sizeof(RawSDNodeBits));
     return Data;
   }

@@ -513,6 +513,22 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   }
 }
 
+static std::pair<unsigned, unsigned> getSpillEltSize(unsigned SuperRegSize,
+                                                     bool Store) {
+  if (SuperRegSize % 16 == 0) {
+    return { 16, Store ? AMDGPU::S_BUFFER_STORE_DWORDX4_SGPR :
+                         AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR };
+  }
+
+  if (SuperRegSize % 8 == 0) {
+    return { 8, Store ? AMDGPU::S_BUFFER_STORE_DWORDX2_SGPR :
+                        AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR };
+  }
+
+  return { 4, Store ? AMDGPU::S_BUFFER_STORE_DWORD_SGPR :
+                      AMDGPU::S_BUFFER_LOAD_DWORD_SGPR};
+}
+
 void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                int Index,
                                RegScavenger *RS) const {
@@ -522,7 +538,6 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   const SISubtarget &ST =  MF->getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
-  unsigned NumSubRegs = getNumSubRegsForSpillOp(MI->getOpcode());
   unsigned SuperReg = MI->getOperand(0).getReg();
   bool IsKill = MI->getOperand(0).isKill();
   const DebugLoc &DL = MI->getDebugLoc();
@@ -534,7 +549,6 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
 
   assert(SuperReg != AMDGPU::M0 && "m0 should never spill");
 
-  const unsigned EltSize = 4;
   unsigned OffsetReg = AMDGPU::M0;
   unsigned M0CopyReg = AMDGPU::NoRegister;
 
@@ -546,14 +560,40 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
     }
   }
 
+  unsigned ScalarStoreOp;
+  unsigned EltSize = 4;
+  const TargetRegisterClass *RC = getPhysRegClass(SuperReg);
+  if (SpillToSMEM && isSGPRClass(RC)) {
+    // XXX - if private_element_size is larger than 4 it might be useful to be
+    // able to spill wider vmem spills.
+    std::tie(EltSize, ScalarStoreOp) = getSpillEltSize(RC->getSize(), true);
+  }
+
+  const TargetRegisterClass *SubRC = nullptr;
+  unsigned NumSubRegs = 1;
+  ArrayRef<int16_t> SplitParts = getRegSplitParts(RC, EltSize);
+
+  if (!SplitParts.empty()) {
+    NumSubRegs = SplitParts.size();
+    SubRC = getSubRegClass(RC, SplitParts[0]);
+  }
+
   // SubReg carries the "Kill" flag when SubReg == SuperReg.
   unsigned SubKillState = getKillRegState((NumSubRegs == 1) && IsKill);
   for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
     unsigned SubReg = NumSubRegs == 1 ?
-      SuperReg : getSubReg(SuperReg, getSubRegFromChannel(i));
+      SuperReg : getSubReg(SuperReg, SplitParts[i]);
 
     if (SpillToSMEM) {
       int64_t FrOffset = FrameInfo.getObjectOffset(Index);
+
+      // The allocated memory size is really the wavefront size * the frame
+      // index size. The widest register class is 64 bytes, so a 4-byte scratch
+      // allocation is enough to spill this in a single stack object.
+      //
+      // FIXME: Frame size/offsets are computed earlier than this, so the extra
+      // space is still unnecessarily allocated.
+
       unsigned Align = FrameInfo.getObjectAlignment(Index);
       MachinePointerInfo PtrInfo
         = MachinePointerInfo::getFixedStack(*MF, Index, EltSize * i);
@@ -561,12 +601,10 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
         = MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
                                    EltSize, MinAlign(Align, EltSize * i));
 
-      // Add i * 4 wave offset.
-      //
       // SMEM instructions only support a single offset, so increment the wave
       // offset.
 
-      int64_t Offset = ST.getWavefrontSize() * (FrOffset + 4 * i);
+      int64_t Offset = (ST.getWavefrontSize() * FrOffset) + (EltSize * i);
       if (Offset != 0) {
         BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_U32), OffsetReg)
           .addReg(MFI->getScratchWaveOffsetReg())
@@ -576,7 +614,7 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
           .addReg(MFI->getScratchWaveOffsetReg());
       }
 
-      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_BUFFER_STORE_DWORD_SGPR))
+      BuildMI(*MBB, MI, DL, TII->get(ScalarStoreOp))
         .addReg(SubReg, getKillRegState(IsKill)) // sdata
         .addReg(MFI->getScratchRSrcReg())        // sbase
         .addReg(OffsetReg, RegState::Kill)       // soff
@@ -656,7 +694,6 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   const SIInstrInfo *TII = ST.getInstrInfo();
   const DebugLoc &DL = MI->getDebugLoc();
 
-  unsigned NumSubRegs = getNumSubRegsForSpillOp(MI->getOpcode());
   unsigned SuperReg = MI->getOperand(0).getReg();
   bool SpillToSMEM = ST.hasScalarStores() && EnableSpillSGPRToSMEM;
 
@@ -673,16 +710,34 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
     }
   }
 
+  unsigned EltSize = 4;
+  unsigned ScalarLoadOp;
+
+  const TargetRegisterClass *RC = getPhysRegClass(SuperReg);
+  if (SpillToSMEM && isSGPRClass(RC)) {
+    // XXX - if private_element_size is larger than 4 it might be useful to be
+    // able to spill wider vmem spills.
+    std::tie(EltSize, ScalarLoadOp) = getSpillEltSize(RC->getSize(), false);
+  }
+
+  const TargetRegisterClass *SubRC = nullptr;
+  unsigned NumSubRegs = 1;
+  ArrayRef<int16_t> SplitParts = getRegSplitParts(RC, EltSize);
+
+  if (!SplitParts.empty()) {
+    NumSubRegs = SplitParts.size();
+    SubRC = getSubRegClass(RC, SplitParts[0]);
+  }
+
   // SubReg carries the "Kill" flag when SubReg == SuperReg.
   int64_t FrOffset = FrameInfo.getObjectOffset(Index);
 
-  const unsigned EltSize = 4;
-
   for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
     unsigned SubReg = NumSubRegs == 1 ?
-      SuperReg : getSubReg(SuperReg, getSubRegFromChannel(i));
+      SuperReg : getSubReg(SuperReg, SplitParts[i]);
 
     if (SpillToSMEM) {
+      // FIXME: Size may be > 4 but extra bytes wasted.
       unsigned Align = FrameInfo.getObjectAlignment(Index);
       MachinePointerInfo PtrInfo
         = MachinePointerInfo::getFixedStack(*MF, Index, EltSize * i);
@@ -691,7 +746,7 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                                    EltSize, MinAlign(Align, EltSize * i));
 
       // Add i * 4 offset
-      int64_t Offset = ST.getWavefrontSize() * (FrOffset + 4 * i);
+      int64_t Offset = (ST.getWavefrontSize() * FrOffset) + (EltSize * i);
       if (Offset != 0) {
         BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_U32), OffsetReg)
           .addReg(MFI->getScratchWaveOffsetReg())
@@ -702,14 +757,14 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
       }
 
       auto MIB =
-        BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_BUFFER_LOAD_DWORD_SGPR), SubReg)
+        BuildMI(*MBB, MI, DL, TII->get(ScalarLoadOp), SubReg)
         .addReg(MFI->getScratchRSrcReg()) // sbase
         .addReg(OffsetReg, RegState::Kill)                // soff
         .addImm(0)                        // glc
         .addMemOperand(MMO);
 
       if (NumSubRegs > 1)
-        MIB.addReg(MI->getOperand(0).getReg(), RegState::ImplicitDefine);
+        MIB.addReg(SuperReg, RegState::ImplicitDefine);
 
       continue;
     }
@@ -725,7 +780,7 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
         .addImm(Spill.Lane);
 
       if (NumSubRegs > 1)
-        MIB.addReg(MI->getOperand(0).getReg(), RegState::ImplicitDefine);
+        MIB.addReg(SuperReg, RegState::ImplicitDefine);
     } else {
       // Restore SGPR from a stack slot.
       // FIXME: We should use S_LOAD_DWORD here for VI.

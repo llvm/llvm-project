@@ -103,7 +103,9 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding);
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
-void ReleaseMemoryToOS(uptr addr, uptr size);
+// Releases memory pages entirely within the [beg, end] address range. Noop if
+// the provided range does not contain at least one entire page.
+void ReleaseMemoryPagesToOS(uptr beg, uptr end);
 void IncreaseTotalMmap(uptr size);
 void DecreaseTotalMmap(uptr size);
 uptr GetRSS();

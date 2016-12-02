@@ -534,6 +534,49 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR) const {
   return ConstantRange(L, U);
 }
 
+ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
+                                    uint32_t ResultBitWidth) const {
+  switch (CastOp) {
+  default:
+    llvm_unreachable("unsupported cast type");
+  case Instruction::Trunc:
+    return truncate(ResultBitWidth);
+  case Instruction::SExt:
+    return signExtend(ResultBitWidth);
+  case Instruction::ZExt:
+    return zeroExtend(ResultBitWidth);
+  case Instruction::BitCast:
+    return *this;
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+    if (getBitWidth() == ResultBitWidth)
+      return *this;
+    else
+      return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+  case Instruction::UIToFP: {
+    // TODO: use input range if available
+    auto BW = getBitWidth();
+    APInt Min = APInt::getMinValue(BW).zextOrSelf(ResultBitWidth);
+    APInt Max = APInt::getMaxValue(BW).zextOrSelf(ResultBitWidth);
+    return ConstantRange(Min, Max);
+  }
+  case Instruction::SIToFP: {
+    // TODO: use input range if available
+    auto BW = getBitWidth();
+    APInt SMin = APInt::getSignedMinValue(BW).sextOrSelf(ResultBitWidth);
+    APInt SMax = APInt::getSignedMaxValue(BW).sextOrSelf(ResultBitWidth);
+    return ConstantRange(SMin, SMax);
+  }
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::IntToPtr:
+  case Instruction::PtrToInt:
+  case Instruction::AddrSpaceCast:
+    // Conservatively return full set.
+    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+  };
+}
+
 /// zeroExtend - Return a new range in the specified integer type, which must
 /// be strictly larger than the current type.  The returned range will
 /// correspond to the possible range of values as if the source range had been
@@ -651,6 +694,42 @@ ConstantRange ConstantRange::sextOrTrunc(uint32_t DstTySize) const {
   if (SrcTySize < DstTySize)
     return signExtend(DstTySize);
   return *this;
+}
+
+ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
+                                      const ConstantRange &Other) const {
+  assert(BinOp >= Instruction::BinaryOpsBegin &&
+         BinOp < Instruction::BinaryOpsEnd && "Binary operators only!");
+
+  switch (BinOp) {
+  case Instruction::Add:
+    return add(Other);
+  case Instruction::Sub:
+    return sub(Other);
+  case Instruction::Mul:
+    return multiply(Other);
+  case Instruction::UDiv:
+    return udiv(Other);
+  case Instruction::Shl:
+    return shl(Other);
+  case Instruction::LShr:
+    return lshr(Other);
+  case Instruction::And:
+    return binaryAnd(Other);
+  case Instruction::Or:
+    return binaryOr(Other);
+  // Note: floating point operations applied to abstract ranges are just
+  // ideal integer operations with a lossy representation
+  case Instruction::FAdd:
+    return add(Other);
+  case Instruction::FSub:
+    return sub(Other);
+  case Instruction::FMul:
+    return multiply(Other);
+  default:
+    // Conservatively return full set.
+    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+  }
 }
 
 ConstantRange

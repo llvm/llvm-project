@@ -109,7 +109,11 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
 
-  std::map<std::pair<std::string, std::string>, SymbolResolution>
+  // FIXME: Workaround PR30396 which means that a symbol can appear
+  // more than once if it is defined in module-level assembly and
+  // has a GV declaration. We allow (file, symbol) pairs to have multiple
+  // resolutions and apply them in the order observed.
+  std::map<std::pair<std::string, std::string>, std::list<SymbolResolution>>
       CommandLineResolutions;
   for (std::string R : SymbolResolutions) {
     StringRef Rest = R;
@@ -132,7 +136,7 @@ int main(int argc, char **argv) {
         llvm::errs() << "invalid character " << C << " in resolution: " << R
                      << '\n';
     }
-    CommandLineResolutions[{FileName, SymbolName}] = Res;
+    CommandLineResolutions[{FileName, SymbolName}].push_back(Res);
   }
 
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
@@ -166,12 +170,6 @@ int main(int argc, char **argv) {
         check(InputFile::create(MB->getMemBufferRef()), F);
 
     std::vector<SymbolResolution> Res;
-    // FIXME: Workaround PR30396 which means that a symbol can appear
-    // more than once if it is defined in module-level assembly and
-    // has a GV declaration. Keep track of the resolutions found in this
-    // file and remove them from the CommandLineResolutions map afterwards,
-    // so that we don't flag the second one as missing.
-    std::map<std::string, SymbolResolution> CurrentFileSymResolutions;
     for (const InputFile::Symbol &Sym : Input->symbols()) {
       auto I = CommandLineResolutions.find({F, Sym.getName()});
       if (I == CommandLineResolutions.end()) {
@@ -179,16 +177,11 @@ int main(int argc, char **argv) {
                      << ',' << Sym.getName() << '\n';
         HasErrors = true;
       } else {
-        Res.push_back(I->second);
-        CurrentFileSymResolutions[Sym.getName()] = I->second;
+        Res.push_back(I->second.front());
+        I->second.pop_front();
+        if (I->second.empty())
+          CommandLineResolutions.erase(I);
       }
-    }
-    for (auto I : CurrentFileSymResolutions) {
-#ifndef NDEBUG
-      auto NumErased =
-#endif
-          CommandLineResolutions.erase({F, I.first});
-      assert(NumErased > 0);
     }
 
     if (HasErrors)

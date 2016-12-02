@@ -19,9 +19,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
-#include <utility>
+#include <cstddef>
 #include <vector>
 
 namespace llvm {
@@ -60,7 +61,7 @@ public:
   typedef typename MapT::size_type size_type;
 
   /// Construct an empty PriorityWorklist
-  PriorityWorklist() {}
+  PriorityWorklist() = default;
 
   /// Determine if the PriorityWorklist is empty or not.
   bool empty() const {
@@ -217,9 +218,9 @@ class SmallPriorityWorklist
     : public PriorityWorklist<T, SmallVector<T, N>,
                               SmallDenseMap<T, ptrdiff_t>> {
 public:
-  SmallPriorityWorklist() {}
+  SmallPriorityWorklist() = default;
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_PRIORITYWORKLIST_H

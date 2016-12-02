@@ -77,6 +77,9 @@ struct AssemblerInvocation {
   /// be a list of strings starting with '+' or '-'.
   std::vector<std::string> Features;
 
+  /// The list of symbol definitions.
+  std::vector<std::string> SymbolDefs;
+
   /// @}
   /// @name Language Options
   /// @{
@@ -252,6 +255,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.RelocationModel = Args.getLastArgValue(OPT_mrelocation_model, "pic");
   Opts.IncrementalLinkerCompatible =
       Args.hasArg(OPT_mincremental_linker_compatible);
+  Opts.SymbolDefs = Args.getAllArgValues(OPT_defsym);
 
   return Success;
 }
@@ -419,6 +423,14 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
       TheTarget->createMCAsmParser(*STI, *Parser, *MCII, Options));
   if (!TAP)
     Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+
+  // Set values for symbols, if any.
+  for (auto &S : Opts.SymbolDefs) {
+    if (Ctx.setSymbolValue(Parser->getStreamer(), S)) {
+      Failed = true;
+      break;
+    }
+  }
 
   if (!Failed) {
     Parser->setTargetParser(*TAP.get());

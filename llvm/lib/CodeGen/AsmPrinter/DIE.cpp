@@ -108,6 +108,10 @@ void DIEAbbrev::print(raw_ostream &O) {
 LLVM_DUMP_METHOD
 void DIEAbbrev::dump() { print(dbgs()); }
 
+DIE *DIE::getParent() const {
+  return Owner.dyn_cast<DIE*>();
+}
+
 DIEAbbrev DIE::generateAbbrev() const {
   DIEAbbrev Abbrev(Tag, hasChildren());
   for (const DIEValue &V : values())
@@ -115,17 +119,13 @@ DIEAbbrev DIE::generateAbbrev() const {
   return Abbrev;
 }
 
-/// Climb up the parent chain to get the unit DIE to which this DIE
-/// belongs.
-const DIE *DIE::getUnit() const {
-  const DIE *Cu = getUnitOrNull();
-  assert(Cu && "We should not have orphaned DIEs.");
-  return Cu;
+unsigned DIE::getDebugSectionOffset() const {
+  const DIEUnit *Unit = getUnit();
+  assert(Unit && "DIE must be owned by a DIEUnit to get its absolute offset");
+  return Unit->getDebugSectionOffset() + getOffset();
 }
 
-/// Climb up the parent chain to get the unit DIE this DIE belongs
-/// to. Return NULL if DIE is not added to an owner yet.
-const DIE *DIE::getUnitOrNull() const {
+const DIE *DIE::getUnitDie() const {
   const DIE *p = this;
   while (p) {
     if (p->getTag() == dwarf::DW_TAG_compile_unit ||
@@ -133,6 +133,13 @@ const DIE *DIE::getUnitOrNull() const {
       return p;
     p = p->getParent();
   }
+  return nullptr;
+}
+
+const DIEUnit *DIE::getUnit() const {
+  const DIE *UnitDie = getUnitDie();
+  if (UnitDie)
+    return UnitDie->Owner.dyn_cast<DIEUnit*>();
   return nullptr;
 }
 
@@ -189,6 +196,16 @@ void DIE::print(raw_ostream &O, unsigned IndentCount) const {
 LLVM_DUMP_METHOD
 void DIE::dump() {
   print(dbgs());
+}
+
+DIEUnit::DIEUnit(uint16_t V, uint8_t A, dwarf::Tag UnitTag)
+    : Die(UnitTag), Section(nullptr), Offset(0), Length(0), Version(V),
+      AddrSize(A)
+{
+  Die.Owner = this;
+  assert((UnitTag == dwarf::DW_TAG_compile_unit ||
+          UnitTag == dwarf::DW_TAG_type_unit ||
+          UnitTag == dwarf::DW_TAG_partial_unit) && "expected a unit TAG");
 }
 
 void DIEValue::EmitValue(const AsmPrinter *AP) const {
@@ -443,19 +460,19 @@ void DIEString::print(raw_ostream &O) const {
 void DIEEntry::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
 
   if (Form == dwarf::DW_FORM_ref_addr) {
-    const DwarfDebug *DD = AP->getDwarfDebug();
-    unsigned Addr = Entry->getOffset();
-    assert(!DD->useSplitDwarf() && "TODO: dwo files can't have relocations.");
-    // For DW_FORM_ref_addr, output the offset from beginning of debug info
-    // section. Entry->getOffset() returns the offset from start of the
-    // compile unit.
-    DwarfCompileUnit *CU = DD->lookupUnit(Entry->getUnit());
-    assert(CU && "CUDie should belong to a CU.");
-    Addr += CU->getDebugInfoOffset();
-    if (AP->MAI->doesDwarfUseRelocationsAcrossSections())
-      AP->EmitLabelPlusOffset(CU->getSectionSym(), Addr,
-                              DIEEntry::getRefAddrSize(AP));
-    else
+    // Get the absolute offset for this DIE within the debug info/types section.
+    unsigned Addr = Entry->getDebugSectionOffset();
+    if (AP->MAI->doesDwarfUseRelocationsAcrossSections()) {
+      const DwarfDebug *DD = AP->getDwarfDebug();
+      if (DD)
+        assert(!DD->useSplitDwarf() && "TODO: dwo files can't have relocations.");
+      const DIEUnit *Unit = Entry->getUnit();
+      assert(Unit && "CUDie should belong to a CU.");
+      MCSection *Section = Unit->getSection();
+      assert(Section && "Must have a section if we are doing relocations");
+      const MCSymbol *SectionSym = Section->getBeginSymbol();
+      AP->EmitLabelPlusOffset(SectionSym, Addr, DIEEntry::getRefAddrSize(AP));
+    } else
       AP->OutStreamer->EmitIntValue(Addr, DIEEntry::getRefAddrSize(AP));
   } else
     AP->EmitInt32(Entry->getOffset());

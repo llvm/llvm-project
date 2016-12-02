@@ -18,6 +18,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
@@ -34,7 +35,10 @@
 namespace llvm {
 
 class AsmPrinter;
+class DIE;
+class DIEUnit;
 class MCExpr;
+class MCSection;
 class MCSymbol;
 class raw_ostream;
 
@@ -585,12 +589,13 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-/// DIE - A structured debug information entry.  Has an abbreviation which
+/// A structured debug information entry.  Has an abbreviation which
 /// describes its organization.
 class DIE : IntrusiveBackListNode, public DIEValueList {
   friend class IntrusiveBackList<DIE>;
+  friend class DIEUnit;
 
-  /// Offset - Offset in debug info section.
+  /// Offset - Dwarf unit relative offset.
   ///
   unsigned Offset;
 
@@ -607,7 +612,9 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   /// Children DIEs.
   IntrusiveBackList<DIE> Children;
 
-  DIE *Parent = nullptr;
+  /// The owner is either the parent DIE for children of other DIEs, or a
+  /// DIEUnit which contains this DIE as its unit DIE.
+  PointerUnion<DIE *, DIEUnit *> Owner;
 
   DIE() = delete;
   explicit DIE(dwarf::Tag Tag) : Offset(0), Size(0), Tag(Tag) {}
@@ -617,9 +624,15 @@ public:
     return new (Alloc) DIE(Tag);
   }
 
+  DIE(const DIE &RHS) = delete;
+  DIE(DIE &&RHS) = delete;
+  void operator=(const DIE &RHS) = delete;
+  void operator=(const DIE &&RHS) = delete;
+
   // Accessors.
   unsigned getAbbrevNumber() const { return AbbrevNumber; }
   dwarf::Tag getTag() const { return Tag; }
+  /// Get the compile/type unit relative offset of this DIE.
   unsigned getOffset() const { return Offset; }
   unsigned getSize() const { return Size; }
   bool hasChildren() const { return !Children.empty(); }
@@ -636,7 +649,7 @@ public:
     return make_range(Children.begin(), Children.end());
   }
 
-  DIE *getParent() const { return Parent; }
+  DIE *getParent() const;
 
   /// Generate the abbreviation for this DIE.
   ///
@@ -647,19 +660,31 @@ public:
   /// Set the abbreviation number for this DIE.
   void setAbbrevNumber(unsigned I) { AbbrevNumber = I; }
 
-  /// Climb up the parent chain to get the compile or type unit DIE this DIE
-  /// belongs to.
-  const DIE *getUnit() const;
-  /// Similar to getUnit, returns null when DIE is not added to an
-  /// owner yet.
-  const DIE *getUnitOrNull() const;
+  /// Get the absolute offset within the .debug_info or .debug_types section
+  /// for this DIE.
+  unsigned getDebugSectionOffset() const;
+
+  /// Climb up the parent chain to get the compile unit or type unit DIE that
+  /// this DIE belongs to.
+  ///
+  /// \returns the compile or type unit DIE that owns this DIE, or NULL if
+  /// this DIE hasn't been added to a unit DIE.
+  const DIE *getUnitDie() const;
+
+  /// Climb up the parent chain to get the compile unit or type unit that this
+  /// DIE belongs to.
+  ///
+  /// \returns the DIEUnit that represents the compile or type unit that owns
+  /// this DIE, or NULL if this DIE hasn't been added to a unit DIE.
+  const DIEUnit *getUnit() const;
+
   void setOffset(unsigned O) { Offset = O; }
   void setSize(unsigned S) { Size = S; }
 
   /// Add a child to the DIE.
   DIE &addChild(DIE *Child) {
     assert(!Child->getParent() && "Child should be orphaned");
-    Child->Parent = this;
+    Child->Owner = this;
     Children.push_back(*Child);
     return Children.back();
   }
@@ -674,6 +699,52 @@ public:
   void dump();
 };
 
+//===--------------------------------------------------------------------===//
+/// Represents a compile or type unit.
+class DIEUnit {
+  /// The compile unit or type unit DIE. This variable must be an instance of
+  /// DIE so that we can calculate the DIEUnit from any DIE by traversing the
+  /// parent backchain and getting the Unit DIE, and then casting itself to a
+  /// DIEUnit. This allows us to be able to find the DIEUnit for any DIE without
+  /// having to store a pointer to the DIEUnit in each DIE instance.
+  DIE Die;
+  /// The section this unit will be emitted in. This may or may not be set to
+  /// a valid section depending on the client that is emitting DWARF.
+  MCSection *Section;
+  uint64_t Offset; /// .debug_info or .debug_types absolute section offset.
+  uint32_t Length; /// The length in bytes of all of the DIEs in this unit.
+  const uint16_t Version; /// The Dwarf version number for this unit.
+  const uint8_t AddrSize; /// The size in bytes of an address for this unit.
+public:
+  DIEUnit(uint16_t Version, uint8_t AddrSize, dwarf::Tag UnitTag);
+  DIEUnit(const DIEUnit &RHS) = delete;
+  DIEUnit(DIEUnit &&RHS) = delete;
+  void operator=(const DIEUnit &RHS) = delete;
+  void operator=(const DIEUnit &&RHS) = delete;
+  /// Set the section that this DIEUnit will be emitted into.
+  ///
+  /// This function is used by some clients to set the section. Not all clients
+  /// that emit DWARF use this section variable.
+  void setSection(MCSection *Section) {
+    assert(!this->Section);
+    this->Section = Section;
+  }
+
+  /// Return the section that this DIEUnit will be emitted into.
+  ///
+  /// \returns Section pointer which can be NULL.
+  MCSection *getSection() const { return Section; }
+  void setDebugSectionOffset(unsigned O) { Offset = O; }
+  unsigned getDebugSectionOffset() const { return Offset; }
+  void setLength(uint64_t L) { Length = L; }
+  uint64_t getLength() const { return Length; }
+  uint16_t getDwarfVersion() const { return Version; }
+  uint16_t getAddressSize() const { return AddrSize; }
+  DIE &getUnitDie() { return Die; }
+  const DIE &getUnitDie() const { return Die; }
+};
+
+  
 //===--------------------------------------------------------------------===//
 /// DIELoc - Represents an expression location.
 //

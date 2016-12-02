@@ -1,11 +1,11 @@
 ; RUN: llc < %s -relocation-model=pic | FileCheck %s
 
 ; CHECK:        calll L0$pb
-; CHECK-NEXT: Ltmp{{[0-9]+}}:
+; CHECK-NEXT: Lcfi{{[0-9]+}}:
 ; CHECK-NEXT: .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT: L0$pb:
 ; CHECK-NEXT:   popl %eax
-; CHECK-NEXT: Ltmp{{[0-9]+}}:
+; CHECK-NEXT: Lcfi{{[0-9]+}}:
 ; CHECK-NEXT: .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:   addl LJTI0_0(,%ecx,4), %eax
 ; CHECK-NEXT:   jmpl *%eax

@@ -129,18 +129,18 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 
 ; X64-LABEL: nested_cleanup:
 ; X64: .Lfunc_begin1:
-; X64: .Ltmp13:
+; X64: .Ltmp2:
 ; X64: movl    $1, %ecx
 ; X64: callq   f
-; X64: .Ltmp15:
+; X64: .Ltmp4:
 ; X64: movl    $2, %ecx
 ; X64: callq   f
-; X64: .Ltmp16:
+; X64: .Ltmp5:
 ; X64: callq   "??1Dtor@@QAE@XZ"
-; X64: .Ltmp17:
+; X64: .Ltmp6:
 ; X64: movl    $3, %ecx
 ; X64: callq   f
-; X64: .Ltmp18:
+; X64: .Ltmp7:
 
 ; X64: "?dtor$[[cleanup_inner:[0-9]+]]@?0?nested_cleanup@4HA":
 ; X64: LBB1_[[cleanup_inner]]: # %cleanup.inner{{$}}
@@ -185,13 +185,13 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64: $ip2state$nested_cleanup:
 ; X64-NEXT: .long   .Lfunc_begin1@IMGREL
 ; X64-NEXT: .long   -1
-; X64-NEXT: .long   .Ltmp13@IMGREL
+; X64-NEXT: .long   .Ltmp2@IMGREL
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp15@IMGREL
+; X64-NEXT: .long   .Ltmp4@IMGREL
 ; X64-NEXT: .long   1
-; X64-NEXT: .long   .Ltmp17@IMGREL
+; X64-NEXT: .long   .Ltmp6@IMGREL
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp18@IMGREL+1
+; X64-NEXT: .long   .Ltmp7@IMGREL+1
 ; X64-NEXT: .long   -1
 
 attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

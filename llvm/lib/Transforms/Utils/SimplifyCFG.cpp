@@ -1416,7 +1416,7 @@ static bool canReplaceOperandWithVariable(const Instruction *I,
     if (OpIdx == 0)
       return true;
     gep_type_iterator It = std::next(gep_type_begin(I), OpIdx - 1);
-    return !It->isStructTy();
+    return It.isSequential();
   }
 }
 

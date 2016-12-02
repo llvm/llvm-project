@@ -94,6 +94,7 @@ add_llvm_library(LLVMSupport
   ThreadPool.cpp
   Timer.cpp
   ToolOutputFile.cpp
+  TrigramIndex.cpp
   Triple.cpp
   Twine.cpp
   Unicode.cpp

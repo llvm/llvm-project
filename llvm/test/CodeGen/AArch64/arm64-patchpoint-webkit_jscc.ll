@@ -13,7 +13,7 @@
 define void @jscall_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 entry:
 ; CHECK-LABEL: jscall_patchpoint_codegen:
-; CHECK:       Ltmp
+; CHECK:       Lcfi
 ; CHECK:       str x{{.+}}, [sp]
 ; CHECK-NEXT:  mov  x0, x{{.+}}
 ; CHECK:       Ltmp
@@ -22,7 +22,7 @@ entry:
 ; CHECK:  movk  x16, #48879
 ; CHECK-NEXT:  blr x16
 ; FAST-LABEL:  jscall_patchpoint_codegen:
-; FAST:        Ltmp
+; FAST:        Lcfi
 ; FAST:        str x{{.+}}, [sp]
 ; FAST:        Ltmp
 ; FAST-NEXT:   mov   x16, #281470681743360
@@ -40,7 +40,7 @@ entry:
 define i64 @jscall_patchpoint_codegen2(i64 %callee) {
 entry:
 ; CHECK-LABEL: jscall_patchpoint_codegen2:
-; CHECK:       Ltmp
+; CHECK:       Lcfi
 ; CHECK:       orr w[[REG:[0-9]+]], wzr, #0x6
 ; CHECK-NEXT:  str x[[REG]], [sp, #24]
 ; CHECK-NEXT:  orr w[[REG:[0-9]+]], wzr, #0x4
@@ -53,7 +53,7 @@ entry:
 ; CHECK-NEXT:  movk  x16, #48879
 ; CHECK-NEXT:  blr x16
 ; FAST-LABEL:  jscall_patchpoint_codegen2:
-; FAST:        Ltmp
+; FAST:        Lcfi
 ; FAST:        orr [[REG1:x[0-9]+]], xzr, #0x2
 ; FAST-NEXT:   orr [[REG2:w[0-9]+]], wzr, #0x4
 ; FAST-NEXT:   orr [[REG3:x[0-9]+]], xzr, #0x6
@@ -74,7 +74,7 @@ entry:
 define i64 @jscall_patchpoint_codegen3(i64 %callee) {
 entry:
 ; CHECK-LABEL: jscall_patchpoint_codegen3:
-; CHECK:       Ltmp
+; CHECK:       Lcfi
 ; CHECK:       mov  w[[REG:[0-9]+]], #10
 ; CHECK-NEXT:  str x[[REG]], [sp, #48]
 ; CHECK-NEXT:  orr w[[REG:[0-9]+]], wzr, #0x8
@@ -91,7 +91,7 @@ entry:
 ; CHECK-NEXT:  movk  x16, #48879
 ; CHECK-NEXT:  blr x16
 ; FAST-LABEL:  jscall_patchpoint_codegen3:
-; FAST:        Ltmp
+; FAST:        Lcfi
 ; FAST:        orr [[REG1:x[0-9]+]], xzr, #0x2
 ; FAST-NEXT:   orr [[REG2:w[0-9]+]], wzr, #0x4
 ; FAST-NEXT:   orr [[REG3:x[0-9]+]], xzr, #0x6

@@ -1713,7 +1713,7 @@ Expr ScriptParser::readPrimary() {
     return readParenExpr();
 
   StringRef Tok = next();
-  std::string Location = currentLocation();
+  std::string Location = getCurrentLocation();
 
   if (Tok == "~") {
     Expr E = readPrimary();

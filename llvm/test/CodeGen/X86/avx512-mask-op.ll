@@ -498,12 +498,12 @@ define <64 x i8> @test16(i64 %x) {
 ; KNL-LABEL: test16:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp0:
+; KNL-NEXT:  Lcfi0:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Ltmp1:
+; KNL-NEXT:  Lcfi1:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Ltmp2:
+; KNL-NEXT:  Lcfi2:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -562,12 +562,12 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; KNL-LABEL: test17:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp3:
+; KNL-NEXT:  Lcfi3:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Ltmp4:
+; KNL-NEXT:  Lcfi4:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Ltmp5:
+; KNL-NEXT:  Lcfi5:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
@@ -1033,12 +1033,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-LABEL: ktest_2:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp6:
+; KNL-NEXT:  Lcfi6:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Ltmp7:
+; KNL-NEXT:  Lcfi7:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Ltmp8:
+; KNL-NEXT:  Lcfi8:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $32, %rsp
@@ -1630,34 +1630,34 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-LABEL: store_64i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp9:
+; KNL-NEXT:  Lcfi9:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    pushq %r15
-; KNL-NEXT:  Ltmp10:
+; KNL-NEXT:  Lcfi10:
 ; KNL-NEXT:    .cfi_def_cfa_offset 24
 ; KNL-NEXT:    pushq %r14
-; KNL-NEXT:  Ltmp11:
+; KNL-NEXT:  Lcfi11:
 ; KNL-NEXT:    .cfi_def_cfa_offset 32
 ; KNL-NEXT:    pushq %r13
-; KNL-NEXT:  Ltmp12:
+; KNL-NEXT:  Lcfi12:
 ; KNL-NEXT:    .cfi_def_cfa_offset 40
 ; KNL-NEXT:    pushq %r12
-; KNL-NEXT:  Ltmp13:
+; KNL-NEXT:  Lcfi13:
 ; KNL-NEXT:    .cfi_def_cfa_offset 48
 ; KNL-NEXT:    pushq %rbx
-; KNL-NEXT:  Ltmp14:
+; KNL-NEXT:  Lcfi14:
 ; KNL-NEXT:    .cfi_def_cfa_offset 56
-; KNL-NEXT:  Ltmp15:
+; KNL-NEXT:  Lcfi15:
 ; KNL-NEXT:    .cfi_offset %rbx, -56
-; KNL-NEXT:  Ltmp16:
+; KNL-NEXT:  Lcfi16:
 ; KNL-NEXT:    .cfi_offset %r12, -48
-; KNL-NEXT:  Ltmp17:
+; KNL-NEXT:  Lcfi17:
 ; KNL-NEXT:    .cfi_offset %r13, -40
-; KNL-NEXT:  Ltmp18:
+; KNL-NEXT:  Lcfi18:
 ; KNL-NEXT:    .cfi_offset %r14, -32
-; KNL-NEXT:  Ltmp19:
+; KNL-NEXT:  Lcfi19:
 ; KNL-NEXT:    .cfi_offset %r15, -24
-; KNL-NEXT:  Ltmp20:
+; KNL-NEXT:  Lcfi20:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0

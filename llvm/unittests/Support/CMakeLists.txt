@@ -48,6 +48,7 @@ add_llvm_unittest(SupportTests
   TimerTest.cpp
   TypeNameTest.cpp
   TrailingObjectsTest.cpp
+  TrigramIndexTest.cpp
   UnicodeTest.cpp
   YAMLIOTest.cpp
   YAMLParserTest.cpp

@@ -52,7 +52,7 @@ D: llgo, libLTO (lib/LTO/* tools/lto/*)
 
 N: Quentin Colombet
 E: qcolombet@apple.com
-D: Register allocators
+D: Loop Strength Reduction, Register allocators
 
 N: Simon Dardis
 E: simon.dardis@imgtec.com
@@ -194,7 +194,7 @@ D: X86 Backend
 
 N: Andrew Trick
 E: atrick@apple.com
-D: Loop Strength Reduction, Instruction Scheduling
+D: Instruction Scheduling
 
 N: Ulrich Weigand
 E: uweigand@de.ibm.com

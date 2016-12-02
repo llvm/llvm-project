@@ -56,17 +56,6 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   if (!isPerformingImport() && !isModuleExporting())
     return false;
 
-  // Local const variables never need to be promoted unless they are address
-  // taken. The imported uses can simply use the clone created in this module.
-  // For now we are conservative in determining which variables are not
-  // address taken by checking the unnamed addr flag. To be more aggressive,
-  // the address taken information must be checked earlier during parsing
-  // of the module and recorded in the summary index for use when importing
-  // from that module.
-  auto *GVar = dyn_cast<GlobalVariable>(SGV);
-  if (GVar && GVar->isConstant() && GVar->hasGlobalUnnamedAddr())
-    return false;
-
   // If we are exporting, we need to see whether this value is marked
   // as NoRename in the summary. If we are importing, we may not have
   // a summary in the distributed backend case (only summaries for values
