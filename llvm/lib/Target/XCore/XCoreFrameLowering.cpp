@@ -548,7 +548,7 @@ void XCoreFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // We force the LR to be saved so these instructions are used.
     LRUsed = true;
 
-  if (MF.getMMI().callsUnwindInit() || MF.getMMI().callsEHReturn()) {
+  if (MF.callsUnwindInit() || MF.callsEHReturn()) {
     // The unwinder expects to find spill slots for the exception info regs R0
     // & R1. These are used during llvm.eh.return() to 'restore' the exception
     // info. N.B. we do not spill or restore R0, R1 during normal operation.

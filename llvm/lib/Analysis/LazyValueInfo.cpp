@@ -1160,25 +1160,8 @@ bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
   LVILatticeVal Result;
-  switch (BBI->getOpcode()) {
-  case Instruction::Trunc:
-    Result.markConstantRange(LHSRange.truncate(ResultBitWidth));
-    break;
-  case Instruction::SExt:
-    Result.markConstantRange(LHSRange.signExtend(ResultBitWidth));
-    break;
-  case Instruction::ZExt:
-    Result.markConstantRange(LHSRange.zeroExtend(ResultBitWidth));
-    break;
-  case Instruction::BitCast:
-    Result.markConstantRange(LHSRange);
-    break;
-  default:
-    // Should be dead if the code above is correct
-    llvm_unreachable("inconsistent with above");
-    break;
-  }
-
+  auto CastOp = (Instruction::CastOps) BBI->getOpcode();
+  Result.markConstantRange(LHSRange.castOp(CastOp, ResultBitWidth));
   BBLV = Result;
   return true;
 }
@@ -1238,37 +1221,8 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
   LVILatticeVal Result;
-  switch (BBI->getOpcode()) {
-  case Instruction::Add:
-    Result.markConstantRange(LHSRange.add(RHSRange));
-    break;
-  case Instruction::Sub:
-    Result.markConstantRange(LHSRange.sub(RHSRange));
-    break;
-  case Instruction::Mul:
-    Result.markConstantRange(LHSRange.multiply(RHSRange));
-    break;
-  case Instruction::UDiv:
-    Result.markConstantRange(LHSRange.udiv(RHSRange));
-    break;
-  case Instruction::Shl:
-    Result.markConstantRange(LHSRange.shl(RHSRange));
-    break;
-  case Instruction::LShr:
-    Result.markConstantRange(LHSRange.lshr(RHSRange));
-    break;
-  case Instruction::And:
-    Result.markConstantRange(LHSRange.binaryAnd(RHSRange));
-    break;
-  case Instruction::Or:
-    Result.markConstantRange(LHSRange.binaryOr(RHSRange));
-    break;
-  default:
-    // Should be dead if the code above is correct
-    llvm_unreachable("inconsistent with above");
-    break;
-  }
-
+  auto BinOp = (Instruction::BinaryOps) BBI->getOpcode();
+  Result.markConstantRange(LHSRange.binaryOp(BinOp, RHSRange));
   BBLV = Result;
   return true;
 }

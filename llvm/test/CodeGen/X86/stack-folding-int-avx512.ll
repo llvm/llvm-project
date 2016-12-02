@@ -701,3 +701,113 @@ define <64 x i8> @stack_fold_punpckhbw_maskz_zmm(<64 x i8> %a0, <64 x i8> %a1, i
   %4 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> zeroinitializer
   ret <64 x i8> %4
 }
+
+define <64 x i8> @stack_fold_pshufb_zmm(<64 x i8> %a0, <64 x i8> %a1) {
+  ;CHECK-LABEL: stack_fold_pshufb_zmm
+  ;CHECK:       vpshufb {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> undef, i64 -1)
+  ret <64 x i8> %2
+}
+declare <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
+
+define <64 x i8> @stack_fold_pshufb_zmm_mask(<64 x i8>* %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
+  ;CHECK-LABEL: stack_fold_pshufb_zmm_mask
+  ;CHECK:       vpshufb {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = load <64 x i8>, <64 x i8>* %passthru
+  %3 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %2, i64 %mask)
+  ret <64 x i8> %3
+}
+
+define <64 x i8> @stack_fold_pshufb_zmm_maskz(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
+  ;CHECK-LABEL: stack_fold_pshufb_zmm_maskz
+  ;CHECK:       vpshufb {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {z} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %2
+}
+
+define <16 x i32> @stack_fold_pshufd_zmm(<16 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_pshufd_zmm
+  ;CHECK:       vpshufd $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <16 x i32> %a0, <16 x i32> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+  ret <16 x i32> %2
+}
+
+define <16 x i32> @stack_fold_pshufd_zmm_mask(<16 x i32> %passthru, <16 x i32> %a0, i16 %mask) {
+  ;CHECK-LABEL: stack_fold_pshufd_zmm_mask
+  ;CHECK:       vpshufd $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <16 x i32> %a0, <16 x i32> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+  %3 = bitcast i16 %mask to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> %passthru
+  ret <16 x i32> %4
+}
+
+define <16 x i32> @stack_fold_pshufd_zmm_maskz(<16 x i32> %a0, i16 %mask) {
+  ;CHECK-LABEL: stack_fold_pshufd_zmm_maskz
+  ;CHECK:       vpshufd $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <16 x i32> %a0, <16 x i32> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+  %3 = bitcast i16 %mask to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> zeroinitializer
+  ret <16 x i32> %4
+}
+
+define <32 x i16> @stack_fold_pshufhw_zmm(<32 x i16> %a0) {
+  ;CHECK-LABEL: stack_fold_pshufhw_zmm
+  ;CHECK:       vpshufhw $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 5, i32 4, i32 8, i32 9, i32 10, i32 11, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 23, i32 22, i32 21, i32 20, i32 24, i32 25, i32 26, i32 27, i32 31, i32 30, i32 29, i32 28>
+  ret <32 x i16> %2
+}
+
+define <32 x i16> @stack_fold_pshufhw_zmm_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
+  ;CHECK-LABEL: stack_fold_pshufhw_zmm_mask
+  ;CHECK:       vpshufhw $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 5, i32 4, i32 8, i32 9, i32 10, i32 11, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 23, i32 22, i32 21, i32 20, i32 24, i32 25, i32 26, i32 27, i32 31, i32 30, i32 29, i32 28>
+  %3 = bitcast i32 %mask to <32 x i1>
+  %4 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %passthru
+  ret <32 x i16> %4
+}
+
+define <32 x i16> @stack_fold_pshufhw_zmm_maskz(<32 x i16> %a0, i32 %mask) {
+  ;CHECK-LABEL: stack_fold_pshufhw_zmm_maskz
+  ;CHECK:       vpshufhw $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 5, i32 4, i32 8, i32 9, i32 10, i32 11, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 23, i32 22, i32 21, i32 20, i32 24, i32 25, i32 26, i32 27, i32 31, i32 30, i32 29, i32 28>
+  %3 = bitcast i32 %mask to <32 x i1>
+  %4 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> zeroinitializer
+  ret <32 x i16> %4
+}
+
+define <32 x i16> @stack_fold_pshuflw_zmm(<32 x i16> %a0) {
+  ;CHECK-LABEL: stack_fold_pshuflw_zmm
+  ;CHECK:       vpshuflw $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 12, i32 13, i32 14, i32 15, i32 19, i32 18, i32 17, i32 16, i32 20, i32 21, i32 22, i32 23, i32 27, i32 26, i32 25, i32 24, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i16> %2
+}
+
+define <32 x i16> @stack_fold_pshuflw_zmm_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
+  ;CHECK-LABEL: stack_fold_pshuflw_zmm_mask
+  ;CHECK:       vpshuflw $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 12, i32 13, i32 14, i32 15, i32 19, i32 18, i32 17, i32 16, i32 20, i32 21, i32 22, i32 23, i32 27, i32 26, i32 25, i32 24, i32 28, i32 29, i32 30, i32 31>
+  %3 = bitcast i32 %mask to <32 x i1>
+  %4 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> %passthru
+  ret <32 x i16> %4
+}
+
+define <32 x i16> @stack_fold_pshuflw_zmm_maskz(<32 x i16> %a0, i32 %mask) {
+  ;CHECK-LABEL: stack_fold_pshuflw_zmm_maskz
+  ;CHECK:       vpshuflw $27, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {z} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 12, i32 13, i32 14, i32 15, i32 19, i32 18, i32 17, i32 16, i32 20, i32 21, i32 22, i32 23, i32 27, i32 26, i32 25, i32 24, i32 28, i32 29, i32 30, i32 31>
+  %3 = bitcast i32 %mask to <32 x i1>
+  %4 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> zeroinitializer
+  ret <32 x i16> %4
+}

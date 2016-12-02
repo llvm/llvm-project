@@ -4061,6 +4061,7 @@ static bool isTargetShuffle(unsigned Opcode) {
 static bool isTargetShuffleVariableMask(unsigned Opcode) {
   switch (Opcode) {
   default: return false;
+  // Target Shuffles.
   case X86ISD::PSHUFB:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERMIL2:
@@ -4068,6 +4069,9 @@ static bool isTargetShuffleVariableMask(unsigned Opcode) {
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
   case X86ISD::VPERMIV3:
+    return true;
+  // 'Faux' Target Shuffles.
+  case ISD::AND:
     return true;
   }
 }
@@ -4476,6 +4480,90 @@ static bool isUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
     if (!isUndefOrZero(Mask[i]))
       return false;
   return true;
+}
+
+/// \brief Helper function to test whether a shuffle mask could be
+/// simplified by widening the elements being shuffled.
+///
+/// Appends the mask for wider elements in WidenedMask if valid. Otherwise
+/// leaves it in an unspecified state.
+///
+/// NOTE: This must handle normal vector shuffle masks and *target* vector
+/// shuffle masks. The latter have the special property of a '-2' representing
+/// a zero-ed lane of a vector.
+static bool canWidenShuffleElements(ArrayRef<int> Mask,
+                                    SmallVectorImpl<int> &WidenedMask) {
+  WidenedMask.assign(Mask.size() / 2, 0);
+  for (int i = 0, Size = Mask.size(); i < Size; i += 2) {
+    // If both elements are undef, its trivial.
+    if (Mask[i] == SM_SentinelUndef && Mask[i + 1] == SM_SentinelUndef) {
+      WidenedMask[i / 2] = SM_SentinelUndef;
+      continue;
+    }
+
+    // Check for an undef mask and a mask value properly aligned to fit with
+    // a pair of values. If we find such a case, use the non-undef mask's value.
+    if (Mask[i] == SM_SentinelUndef && Mask[i + 1] >= 0 &&
+        Mask[i + 1] % 2 == 1) {
+      WidenedMask[i / 2] = Mask[i + 1] / 2;
+      continue;
+    }
+    if (Mask[i + 1] == SM_SentinelUndef && Mask[i] >= 0 && Mask[i] % 2 == 0) {
+      WidenedMask[i / 2] = Mask[i] / 2;
+      continue;
+    }
+
+    // When zeroing, we need to spread the zeroing across both lanes to widen.
+    if (Mask[i] == SM_SentinelZero || Mask[i + 1] == SM_SentinelZero) {
+      if ((Mask[i] == SM_SentinelZero || Mask[i] == SM_SentinelUndef) &&
+          (Mask[i + 1] == SM_SentinelZero || Mask[i + 1] == SM_SentinelUndef)) {
+        WidenedMask[i / 2] = SM_SentinelZero;
+        continue;
+      }
+      return false;
+    }
+
+    // Finally check if the two mask values are adjacent and aligned with
+    // a pair.
+    if (Mask[i] != SM_SentinelUndef && Mask[i] % 2 == 0 &&
+        Mask[i] + 1 == Mask[i + 1]) {
+      WidenedMask[i / 2] = Mask[i] / 2;
+      continue;
+    }
+
+    // Otherwise we can't safely widen the elements used in this shuffle.
+    return false;
+  }
+  assert(WidenedMask.size() == Mask.size() / 2 &&
+         "Incorrect size of mask after widening the elements!");
+
+  return true;
+}
+
+/// Helper function to scale a shuffle or target shuffle mask, replacing each
+/// mask index with the scaled sequential indices for an equivalent narrowed
+/// mask. This is the reverse process to canWidenShuffleElements, but can always
+/// succeed.
+static void scaleShuffleMask(int Scale, ArrayRef<int> Mask,
+                             SmallVectorImpl<int> &ScaledMask) {
+  assert(0 < Scale && "Unexpected scaling factor");
+  int NumElts = Mask.size();
+  ScaledMask.assign(NumElts * Scale, -1);
+
+  for (int i = 0; i != NumElts; ++i) {
+    int M = Mask[i];
+
+    // Repeat sentinel values in every mask element.
+    if (M < 0) {
+      for (int s = 0; s != Scale; ++s)
+        ScaledMask[(Scale * i) + s] = M;
+      continue;
+    }
+
+    // Scale mask element and increment across each mask element.
+    for (int s = 0; s != Scale; ++s)
+      ScaledMask[(Scale * i) + s] = (Scale * M) + s;
+  }
 }
 
 /// Return true if the specified EXTRACT_SUBVECTOR operand specifies a vector
@@ -5558,6 +5646,25 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
 
   unsigned Opcode = N.getOpcode();
   switch (Opcode) {
+  case ISD::AND: {
+    // Attempt to decode as a per-byte mask.
+    SmallBitVector UndefElts;
+    SmallVector<APInt, 32> EltBits;
+    if (!getTargetConstantBitsFromNode(N.getOperand(1), 8, UndefElts, EltBits))
+      return false;
+    for (int i = 0, e = (int)EltBits.size(); i != e; ++i) {
+      if (UndefElts[i]) {
+        Mask.push_back(SM_SentinelUndef);
+        continue;
+      }
+      uint64_t ByteBits = EltBits[i].getZExtValue();
+      if (ByteBits != 0 && ByteBits != 255)
+        return false;
+      Mask.push_back(ByteBits == 0 ? SM_SentinelZero : i);
+    }
+    Ops.push_back(N.getOperand(0));
+    return true;
+  }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     uint64_t ShiftVal = N.getConstantOperandVal(1);
@@ -7488,28 +7595,6 @@ static bool
 is256BitLaneRepeatedShuffleMask(MVT VT, ArrayRef<int> Mask,
                                 SmallVectorImpl<int> &RepeatedMask) {
   return isRepeatedShuffleMask(256, VT, Mask, RepeatedMask);
-}
-
-static void scaleShuffleMask(int Scale, ArrayRef<int> Mask,
-                             SmallVectorImpl<int> &ScaledMask) {
-  assert(0 < Scale && "Unexpected scaling factor");
-  int NumElts = Mask.size();
-  ScaledMask.assign(NumElts * Scale, -1);
-
-  for (int i = 0; i != NumElts; ++i) {
-    int M = Mask[i];
-
-    // Repeat sentinel values in every mask element.
-    if (M < 0) {
-      for (int s = 0; s != Scale; ++s)
-        ScaledMask[(Scale * i) + s] = M;
-      continue;
-    }
-
-    // Scale mask element and increment across each mask element.
-    for (int s = 0; s != Scale; ++s)
-      ScaledMask[(Scale * i) + s] = (Scale * M) + s;
-  }
 }
 
 /// \brief Checks whether a shuffle mask is equivalent to an explicit list of
@@ -10905,62 +10990,6 @@ static SDValue lower128BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   default:
     llvm_unreachable("Unimplemented!");
   }
-}
-
-/// \brief Helper function to test whether a shuffle mask could be
-/// simplified by widening the elements being shuffled.
-///
-/// Appends the mask for wider elements in WidenedMask if valid. Otherwise
-/// leaves it in an unspecified state.
-///
-/// NOTE: This must handle normal vector shuffle masks and *target* vector
-/// shuffle masks. The latter have the special property of a '-2' representing
-/// a zero-ed lane of a vector.
-static bool canWidenShuffleElements(ArrayRef<int> Mask,
-                                    SmallVectorImpl<int> &WidenedMask) {
-  WidenedMask.assign(Mask.size() / 2, 0);
-  for (int i = 0, Size = Mask.size(); i < Size; i += 2) {
-    // If both elements are undef, its trivial.
-    if (Mask[i] == SM_SentinelUndef && Mask[i + 1] == SM_SentinelUndef) {
-      WidenedMask[i/2] = SM_SentinelUndef;
-      continue;
-    }
-
-    // Check for an undef mask and a mask value properly aligned to fit with
-    // a pair of values. If we find such a case, use the non-undef mask's value.
-    if (Mask[i] == SM_SentinelUndef && Mask[i + 1] >= 0 && Mask[i + 1] % 2 == 1) {
-      WidenedMask[i/2] = Mask[i + 1] / 2;
-      continue;
-    }
-    if (Mask[i + 1] == SM_SentinelUndef && Mask[i] >= 0 && Mask[i] % 2 == 0) {
-      WidenedMask[i/2] = Mask[i] / 2;
-      continue;
-    }
-
-    // When zeroing, we need to spread the zeroing across both lanes to widen.
-    if (Mask[i] == SM_SentinelZero || Mask[i + 1] == SM_SentinelZero) {
-      if ((Mask[i] == SM_SentinelZero || Mask[i] == SM_SentinelUndef) &&
-          (Mask[i + 1] == SM_SentinelZero || Mask[i + 1] == SM_SentinelUndef)) {
-        WidenedMask[i/2] = SM_SentinelZero;
-        continue;
-      }
-      return false;
-    }
-
-    // Finally check if the two mask values are adjacent and aligned with
-    // a pair.
-    if (Mask[i] != SM_SentinelUndef && Mask[i] % 2 == 0 && Mask[i] + 1 == Mask[i + 1]) {
-      WidenedMask[i/2] = Mask[i] / 2;
-      continue;
-    }
-
-    // Otherwise we can't safely widen the elements used in this shuffle.
-    return false;
-  }
-  assert(WidenedMask.size() == Mask.size() / 2 &&
-         "Incorrect size of mask after widening the elements!");
-
-  return true;
 }
 
 /// \brief Generic routine to split vector shuffle into half-sized shuffles.
@@ -24980,7 +25009,6 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
                                          MachineBasicBlock *BB) const {
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = BB->getParent();
-  MachineModuleInfo *MMI = &MF->getMMI();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -25004,10 +25032,10 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       break;
     }
 
-    if (!MMI->hasCallSiteLandingPad(Sym))
+    if (!MF->hasCallSiteLandingPad(Sym))
       continue;
 
-    for (unsigned CSI : MMI->getCallSiteLandingPad(Sym)) {
+    for (unsigned CSI : MF->getCallSiteLandingPad(Sym)) {
       CallSiteNumToLPad[CSI].push_back(&MBB);
       MaxCSNum = std::max(MaxCSNum, CSI);
     }
@@ -26236,6 +26264,38 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       return true;
     }
     return false;
+  }
+
+  // See if we can combine a single input shuffle with zeros to a bit-mask,
+  // which is much simpler than any shuffle.
+  if (UnaryShuffle && MaskContainsZeros && (Depth >= 3 || HasVariableMask) &&
+      isSequentialOrUndefOrZeroInRange(Mask, 0, NumMaskElts, 0) &&
+      DAG.getTargetLoweringInfo().isTypeLegal(MaskVT)) {
+    APInt Zero = APInt::getNullValue(MaskEltSizeInBits);
+    APInt AllOnes = APInt::getAllOnesValue(MaskEltSizeInBits);
+    SmallBitVector UndefElts(NumMaskElts, false);
+    SmallVector<APInt, 64> EltBits(NumMaskElts, Zero);
+    for (unsigned i = 0; i != NumMaskElts; ++i) {
+      int M = Mask[i];
+      if (M == SM_SentinelUndef) {
+        UndefElts[i] = true;
+        continue;
+      }
+      if (M == SM_SentinelZero)
+        continue;
+      EltBits[i] = AllOnes;
+    }
+    SDValue BitMask = getConstVector(EltBits, UndefElts, MaskVT, DAG, DL);
+    DCI.AddToWorklist(BitMask.getNode());
+    Res = DAG.getBitcast(MaskVT, V1);
+    DCI.AddToWorklist(Res.getNode());
+    unsigned AndOpcode =
+        FloatDomain ? unsigned(X86ISD::FAND) : unsigned(ISD::AND);
+    Res = DAG.getNode(AndOpcode, DL, MaskVT, Res, BitMask);
+    DCI.AddToWorklist(Res.getNode());
+    DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                  /*AddTo*/ true);
+    return true;
   }
 
   // If we have a single input shuffle with different shuffle patterns in the
@@ -29837,6 +29897,17 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDLoc DL(N);
+
+  // Attempt to recursively combine a bitmask AND with shuffles.
+  if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
+    SDValue Op(N, 0);
+    SmallVector<int, 1> NonceMask; // Just a placeholder.
+    NonceMask.push_back(0);
+    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+                                      /*Depth*/ 1, /*HasPSHUFB*/ false, DAG,
+                                      DCI, Subtarget))
+      return SDValue(); // This routine will use CombineTo to replace N.
+  }
 
   // Create BEXTR instructions
   // BEXTR is ((X >> imm) & (2**size-1))

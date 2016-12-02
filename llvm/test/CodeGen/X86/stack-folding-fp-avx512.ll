@@ -496,5 +496,25 @@ define <8 x double> @stack_fold_insertf64x4(<4 x double> %a0, <4 x double> %a1) 
   ret <8 x double> %2
 }
 
+define <8 x double> @stack_fold_insertf64x4_mask(<8 x double> %passthru, <4 x double> %a0, <4 x double> %a1, i8 %mask) {
+  ;CHECK-LABEL: stack_fold_insertf64x4_mask
+  ;CHECK:       vinsertf64x4 $1, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[1-7]}}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
+  %2 = shufflevector <4 x double> %a0, <4 x double> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %3 = bitcast i8 %mask to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> %passthru
+  ret <8 x double> %4
+}
+
+define <8 x double> @stack_fold_insertf64x4_maskz(<4 x double> %a0, <4 x double> %a1, i8 %mask) {
+  ;CHECK-LABEL: stack_fold_insertf64x4_maskz
+  ;CHECK:       vinsertf64x4 $1, {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[1-7]}}} {z} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
+  %2 = shufflevector <4 x double> %a0, <4 x double> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %3 = bitcast i8 %mask to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> zeroinitializer
+  ret <8 x double> %4
+}
+
 attributes #0 = { "unsafe-fp-math"="false" }
 attributes #1 = { "unsafe-fp-math"="true" }

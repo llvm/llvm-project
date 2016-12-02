@@ -643,8 +643,7 @@ private:
   /// The introduction of different cases necessarily complicates the memory
   /// access function, but cases that can be statically proven to not happen
   /// will be eliminated later on.
-  __isl_give isl_map *foldAccess(__isl_take isl_map *AccessRelation,
-                                 ScopStmt *Statement);
+  void foldAccessRelation();
 
   /// Create the access relation for the underlying memory intrinsic.
   void buildMemIntrinsicAccessRelation();
@@ -1876,7 +1875,7 @@ private:
   /// @param R          The region we build the statement for.
   void addScopStmt(Region *R);
 
-  /// @param Update access dimensionalities.
+  /// Update access dimensionalities.
   ///
   /// When detecting memory accesses different accesses to the same array may
   /// have built with different dimensionality, as outer zero-values dimensions
@@ -1884,6 +1883,30 @@ private:
   /// again over all memory accesses and updates their dimensionality to match
   /// the dimensionality of the underlying ScopArrayInfo object.
   void updateAccessDimensionality();
+
+  /// Fold memory accesses to handle parametric offset.
+  ///
+  /// As a post-processing step, we 'fold' memory accesses to parameteric
+  /// offsets in the access functions. @see MemoryAccess::foldAccess for
+  /// details.
+  void foldAccessRelations();
+
+  /// Assume that all memory accesses are within bounds.
+  ///
+  /// After we have built a model of all memory accesses, we need to assume
+  /// that the model we built matches reality -- aka. all modeled memory
+  /// accesses always remain within bounds. We do this as last step, after
+  /// all memory accesses have been modeled and canonicalized.
+  void assumeNoOutOfBounds();
+
+  /// Finalize all access relations.
+  ///
+  /// When building up access relations, temporary access relations that
+  /// correctly represent each individual access are constructed. However, these
+  /// access relations can be inconsistent or non-optimal when looking at the
+  /// set of accesses as a whole. This function finalizes the memory accesses
+  /// and constructs a globally consistent state.
+  void finalizeAccesses();
 
   /// Construct the schedule of this SCoP.
   ///

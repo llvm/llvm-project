@@ -129,7 +129,7 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
   // in the compact unwind encoding that Darwin uses. So, bail if there
   // is a danger of that being generated.
   if (STI->isTargetDarwin() &&
-      (!MF.getMMI().getLandingPads().empty() ||
+      (!MF.getLandingPads().empty() ||
        (MF.getFunction()->needsUnwindTableEntry() && !TFL->hasFP(MF))))
     return false;
 

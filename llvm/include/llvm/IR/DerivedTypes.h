@@ -153,7 +153,7 @@ unsigned Type::getFunctionNumParams() const {
   return cast<FunctionType>(this)->getNumParams();
 }
 
-/// Common super class of ArrayType, StructType, PointerType and VectorType.
+/// Common super class of ArrayType, StructType and VectorType.
 class CompositeType : public Type {
 protected:
   explicit CompositeType(LLVMContext &C, TypeID tid) : Type(C, tid) {}
@@ -169,7 +169,6 @@ public:
   static inline bool classof(const Type *T) {
     return T->getTypeID() == ArrayTyID ||
            T->getTypeID() == StructTyID ||
-           T->getTypeID() == PointerTyID ||
            T->getTypeID() == VectorTyID;
   }
 };
@@ -306,39 +305,38 @@ Type *Type::getStructElementType(unsigned N) const {
   return cast<StructType>(this)->getElementType(N);
 }
 
-/// This is the superclass of the array, pointer and vector type classes.
-/// All of these represent "arrays" in memory. The array type represents a
-/// specifically sized array, pointer types are unsized/unknown size arrays,
-/// vector types represent specifically sized arrays that allow for use of SIMD
-/// instructions. SequentialType holds the common features of all, which stem
-/// from the fact that all three lay their components out in memory identically.
+/// This is the superclass of the array and vector type classes. Both of these
+/// represent "arrays" in memory. The array type represents a specifically sized
+/// array, and the vector type represents a specifically sized array that allows
+/// for use of SIMD instructions. SequentialType holds the common features of
+/// both, which stem from the fact that both lay their components out in memory
+/// identically.
 class SequentialType : public CompositeType {
   Type *ContainedType;               ///< Storage for the single contained type.
+  uint64_t NumElements;
   SequentialType(const SequentialType &) = delete;
   const SequentialType &operator=(const SequentialType &) = delete;
 
 protected:
-  SequentialType(TypeID TID, Type *ElType)
-    : CompositeType(ElType->getContext(), TID), ContainedType(ElType) {
+  SequentialType(TypeID TID, Type *ElType, uint64_t NumElements)
+    : CompositeType(ElType->getContext(), TID), ContainedType(ElType),
+      NumElements(NumElements) {
     ContainedTys = &ContainedType;
     NumContainedTys = 1;
   }
 
 public:
-  Type *getElementType() const { return getSequentialElementType(); }
+  uint64_t getNumElements() const { return NumElements; }
+  Type *getElementType() const { return ContainedType; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const Type *T) {
-    return T->getTypeID() == ArrayTyID ||
-           T->getTypeID() == PointerTyID ||
-           T->getTypeID() == VectorTyID;
+    return T->getTypeID() == ArrayTyID || T->getTypeID() == VectorTyID;
   }
 };
 
 /// Class to represent array types.
 class ArrayType : public SequentialType {
-  uint64_t NumElements;
-
   ArrayType(const ArrayType &) = delete;
   const ArrayType &operator=(const ArrayType &) = delete;
   ArrayType(Type *ElType, uint64_t NumEl);
@@ -349,8 +347,6 @@ public:
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
-
-  uint64_t getNumElements() const { return NumElements; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const Type *T) {
@@ -364,8 +360,6 @@ uint64_t Type::getArrayNumElements() const {
 
 /// Class to represent vector types.
 class VectorType : public SequentialType {
-  unsigned NumElements;
-
   VectorType(const VectorType &) = delete;
   const VectorType &operator=(const VectorType &) = delete;
   VectorType(Type *ElType, unsigned NumEl);
@@ -421,13 +415,10 @@ public:
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
 
-  /// Return the number of elements in the Vector type.
-  unsigned getNumElements() const { return NumElements; }
-
   /// Return the number of bits in the Vector type.
   /// Returns zero when the vector is a vector of pointers.
   unsigned getBitWidth() const {
-    return NumElements * getElementType()->getPrimitiveSizeInBits();
+    return getNumElements() * getElementType()->getPrimitiveSizeInBits();
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
@@ -441,10 +432,12 @@ unsigned Type::getVectorNumElements() const {
 }
 
 /// Class to represent pointers.
-class PointerType : public SequentialType {
+class PointerType : public Type {
   PointerType(const PointerType &) = delete;
   const PointerType &operator=(const PointerType &) = delete;
   explicit PointerType(Type *ElType, unsigned AddrSpace);
+
+  Type *PointeeTy;
 
 public:
   /// This constructs a pointer to an object of the specified type in a numbered
@@ -456,6 +449,8 @@ public:
   static PointerType *getUnqual(Type *ElementType) {
     return PointerType::get(ElementType, 0);
   }
+
+  Type *getElementType() const { return PointeeTy; }
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);

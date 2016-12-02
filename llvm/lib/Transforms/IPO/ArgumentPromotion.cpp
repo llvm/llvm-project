@@ -176,8 +176,7 @@ static bool isDenselyPacked(Type *type, const DataLayout &DL) {
 
   // For homogenous sequential types, check for padding within members.
   if (SequentialType *seqTy = dyn_cast<SequentialType>(type))
-    return isa<PointerType>(seqTy) ||
-           isDenselyPacked(seqTy->getElementType(), DL);
+    return isDenselyPacked(seqTy->getElementType(), DL);
 
   // Check for padding within and between elements of a struct.
   StructType *StructTy = cast<StructType>(type);
@@ -835,7 +834,10 @@ DoPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
                     Type::getInt64Ty(F->getContext()));
               Ops.push_back(ConstantInt::get(IdxTy, II));
               // Keep track of the type we're currently indexing.
-              ElTy = cast<CompositeType>(ElTy)->getTypeAtIndex(II);
+              if (auto *ElPTy = dyn_cast<PointerType>(ElTy))
+                ElTy = ElPTy->getElementType();
+              else
+                ElTy = cast<CompositeType>(ElTy)->getTypeAtIndex(II);
             }
             // And create a GEP to extract those indices.
             V = GetElementPtrInst::Create(ArgIndex.first, V, Ops,

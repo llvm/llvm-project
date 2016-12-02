@@ -78,40 +78,41 @@ define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
   ret void
 }
 
-; ALL-LABEL: max_12_sgprs_12_input_sgprs{{$}}
+; The following test is commented out for now; http://llvm.org/PR31230
+; XALL-LABEL: max_12_sgprs_12_input_sgprs{{$}}
 ; ; Make sure copies for input buffer are not clobbered. This requires
 ; ; swapping the order the registers are copied from what normally
 ; ; happens.
 
-; TOSMEM: s_mov_b32 s5, s11
-; TOSMEM: s_add_u32 m0, s5,
-; TOSMEM: s_buffer_store_dword vcc_lo, s[0:3], m0
+; XTOSMEM: s_mov_b32 s5, s11
+; XTOSMEM: s_add_u32 m0, s5,
+; XTOSMEM: s_buffer_store_dword vcc_lo, s[0:3], m0
 
-; ALL: SGPRBlocks: 2
-; ALL: NumSGPRsForWavesPerEU: 18
-define void @max_12_sgprs_12_input_sgprs(i32 addrspace(1)* %out1,
-                                        i32 addrspace(1)* %out2,
-                                        i32 addrspace(1)* %out3,
-                                        i32 addrspace(1)* %out4,
-                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
-  store volatile i32 0, i32* undef
-  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
-  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
-  %x.2 = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
-  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
-  store volatile i64 %x.3, i64 addrspace(1)* undef
-  %x.4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
-
-  store i32 %one, i32 addrspace(1)* %out1
-  store i32 %two, i32 addrspace(1)* %out2
-  store i32 %three, i32 addrspace(1)* %out3
-  store i32 %four, i32 addrspace(1)* %out4
-  ret void
-}
+; XALL: SGPRBlocks: 2
+; XALL: NumSGPRsForWavesPerEU: 18
+;define void @max_12_sgprs_12_input_sgprs(i32 addrspace(1)* %out1,
+;                                        i32 addrspace(1)* %out2,
+;                                        i32 addrspace(1)* %out3,
+;                                        i32 addrspace(1)* %out4,
+;                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
+;  store volatile i32 0, i32* undef
+;  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
+;  store volatile i32 %x.0, i32 addrspace(1)* undef
+;  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
+;  store volatile i32 %x.0, i32 addrspace(1)* undef
+;  %x.2 = call i32 @llvm.amdgcn.workgroup.id.z()
+;  store volatile i32 %x.0, i32 addrspace(1)* undef
+;  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
+;  store volatile i64 %x.3, i64 addrspace(1)* undef
+;  %x.4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
+;  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
+;
+;  store i32 %one, i32 addrspace(1)* %out1
+;  store i32 %two, i32 addrspace(1)* %out2
+;  store i32 %three, i32 addrspace(1)* %out3
+;  store i32 %four, i32 addrspace(1)* %out4
+;  ret void
+;}
 
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.y() #1

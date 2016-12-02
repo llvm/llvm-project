@@ -76,12 +76,12 @@ class X86AsmBackend : public MCAsmBackend {
 public:
   X86AsmBackend(const Target &T, StringRef CPU)
       : MCAsmBackend(), CPU(CPU),
-        MaxNopLength((CPU == "slm" || CPU == "lakemont") ? 7 : 15) {
+        MaxNopLength((CPU == "slm") ? 7 : 15) {
     HasNopl = CPU != "generic" && CPU != "i386" && CPU != "i486" &&
               CPU != "i586" && CPU != "pentium" && CPU != "pentium-mmx" &&
               CPU != "i686" && CPU != "k6" && CPU != "k6-2" && CPU != "k6-3" &&
               CPU != "geode" && CPU != "winchip-c6" && CPU != "winchip2" &&
-              CPU != "c3" && CPU != "c3-2";
+              CPU != "c3" && CPU != "c3-2" && CPU != "lakemont";
   }
 
   unsigned getNumFixupKinds() const override {

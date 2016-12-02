@@ -13,6 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/Support/Regex.h"
 #include <string>
 
 namespace clang {
@@ -131,6 +132,7 @@ private:
   std::string DiffNewNamespace;
   // A regex pattern that matches files to be processed.
   std::string FilePattern;
+  llvm::Regex FilePatternRE;
   // Information about moved namespaces grouped by file.
   // Since we are modifying code in old namespaces (e.g. add namespace
   // spedifiers) as well as moving them, we store information about namespaces

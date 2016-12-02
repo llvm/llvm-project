@@ -16,7 +16,7 @@
 #define LLVM_IR_GETELEMENTPTRTYPEITERATOR_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
@@ -33,18 +33,15 @@ namespace llvm {
                           Type *, ptrdiff_t> super;
 
     ItTy OpIt;
-    PointerIntPair<Type *, 1> CurTy;
-    unsigned AddrSpace;
-
+    PointerUnion<StructType *, Type *> CurTy;
+    enum { Unbounded = -1ull };
+    uint64_t NumElements = Unbounded;
     generic_gep_type_iterator() = default;
 
   public:
-    static generic_gep_type_iterator begin(Type *Ty, unsigned AddrSpace,
-                                           ItTy It) {
+    static generic_gep_type_iterator begin(Type *Ty, ItTy It) {
       generic_gep_type_iterator I;
-      I.CurTy.setPointer(Ty);
-      I.CurTy.setInt(true);
-      I.AddrSpace = AddrSpace;
+      I.CurTy = Ty;
       I.OpIt = It;
       return I;
     }
@@ -63,40 +60,64 @@ namespace llvm {
       return !operator==(x);
     }
 
-    Type *operator*() const {
-      if (CurTy.getInt())
-        return CurTy.getPointer()->getPointerTo(AddrSpace);
-      return CurTy.getPointer();
-    }
-
+    // FIXME: Make this the iterator's operator*() after the 4.0 release.
+    // operator*() had a different meaning in earlier releases, so we're
+    // temporarily not giving this iterator an operator*() to avoid a subtle
+    // semantics break.
     Type *getIndexedType() const {
-      if (CurTy.getInt())
-        return CurTy.getPointer();
-      CompositeType *CT = cast<CompositeType>(CurTy.getPointer());
-      return CT->getTypeAtIndex(getOperand());
+      if (auto *T = CurTy.dyn_cast<Type *>())
+        return T;
+      return CurTy.get<StructType *>()->getTypeAtIndex(getOperand());
     }
-
-    // This is a non-standard operator->.  It allows you to call methods on the
-    // current type directly.
-    Type *operator->() const { return operator*(); }
 
     Value *getOperand() const { return const_cast<Value *>(&**OpIt); }
 
     generic_gep_type_iterator& operator++() {   // Preincrement
-      if (CurTy.getInt()) {
-        CurTy.setInt(false);
-      } else if (CompositeType *CT =
-                     dyn_cast<CompositeType>(CurTy.getPointer())) {
-        CurTy.setPointer(CT->getTypeAtIndex(getOperand()));
-      } else {
-        CurTy.setPointer(nullptr);
-      }
+      Type *Ty = getIndexedType();
+      if (auto *STy = dyn_cast<SequentialType>(Ty)) {
+        CurTy = STy->getElementType();
+        NumElements = STy->getNumElements();
+      } else
+        CurTy = dyn_cast<StructType>(Ty);
       ++OpIt;
       return *this;
     }
 
     generic_gep_type_iterator operator++(int) { // Postincrement
       generic_gep_type_iterator tmp = *this; ++*this; return tmp;
+    }
+
+    // All of the below API is for querying properties of the "outer type", i.e.
+    // the type that contains the indexed type. Most of the time this is just
+    // the type that was visited immediately prior to the indexed type, but for
+    // the first element this is an unbounded array of the GEP's source element
+    // type, for which there is no clearly corresponding IR type (we've
+    // historically used a pointer type as the outer type in this case, but
+    // pointers will soon lose their element type).
+    //
+    // FIXME: Most current users of this class are just interested in byte
+    // offsets (a few need to know whether the outer type is a struct because
+    // they are trying to replace a constant with a variable, which is only
+    // legal for arrays, e.g. canReplaceOperandWithVariable in SimplifyCFG.cpp);
+    // we should provide a more minimal API here that exposes not much more than
+    // that.
+
+    bool isStruct() const { return CurTy.is<StructType *>(); }
+    bool isSequential() const { return CurTy.is<Type *>(); }
+
+    StructType *getStructType() const { return CurTy.get<StructType *>(); }
+
+    StructType *getStructTypeOrNull() const {
+      return CurTy.dyn_cast<StructType *>();
+    }
+
+    bool isBoundedSequential() const {
+      return isSequential() && NumElements != Unbounded;
+    }
+
+    uint64_t getSequentialNumElements() const {
+      assert(isBoundedSequential());
+      return NumElements;
     }
   };
 
@@ -106,8 +127,6 @@ namespace llvm {
     auto *GEPOp = cast<GEPOperator>(GEP);
     return gep_type_iterator::begin(
         GEPOp->getSourceElementType(),
-        cast<PointerType>(GEPOp->getPointerOperandType()->getScalarType())
-            ->getAddressSpace(),
         GEP->op_begin() + 1);
   }
 
@@ -119,8 +138,6 @@ namespace llvm {
     auto &GEPOp = cast<GEPOperator>(GEP);
     return gep_type_iterator::begin(
         GEPOp.getSourceElementType(),
-        cast<PointerType>(GEPOp.getPointerOperandType()->getScalarType())
-            ->getAddressSpace(),
         GEP.op_begin() + 1);
   }
 
@@ -130,13 +147,13 @@ namespace llvm {
 
   template<typename T>
   inline generic_gep_type_iterator<const T *>
-  gep_type_begin(Type *Op0, unsigned AS, ArrayRef<T> A) {
-    return generic_gep_type_iterator<const T *>::begin(Op0, AS, A.begin());
+  gep_type_begin(Type *Op0, ArrayRef<T> A) {
+    return generic_gep_type_iterator<const T *>::begin(Op0, A.begin());
   }
 
   template<typename T>
   inline generic_gep_type_iterator<const T *>
-  gep_type_end(Type * /*Op0*/, unsigned /*AS*/, ArrayRef<T> A) {
+  gep_type_end(Type * /*Op0*/, ArrayRef<T> A) {
     return generic_gep_type_iterator<const T *>::end(A.end());
   }
 

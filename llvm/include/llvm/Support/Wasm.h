@@ -52,6 +52,35 @@ enum : unsigned {
   WASM_SEC_DATA = 11     // Data segments
 };
 
+// Type immediate encodings used in various contexts.
+enum : unsigned {
+  WASM_TYPE_I32          = 0x7f,
+  WASM_TYPE_I64          = 0x7e,
+  WASM_TYPE_F32          = 0x7d,
+  WASM_TYPE_F64          = 0x7c,
+  WASM_TYPE_ANYFUNC      = 0x70,
+  WASM_TYPE_FUNC         = 0x60,
+  WASM_TYPE_NORESULT     = 0x40, // for blocks with no result values
+};
+
+// Kinds of externals (for imports and exports).
+enum : unsigned {
+  WASM_EXTERNAL_FUNCTION = 0x0,
+  WASM_EXTERNAL_TABLE    = 0x1,
+  WASM_EXTERNAL_MEMORY   = 0x2,
+  WASM_EXTERNAL_GLOBAL   = 0x3,
+};
+
+// Opcodes used in initializer expressions.
+enum : unsigned {
+  WASM_OPCODE_END        = 0x0b,
+  WASM_OPCODE_GET_GLOBAL = 0x23,
+  WASM_OPCODE_I32_CONST  = 0x41,
+  WASM_OPCODE_I64_CONST  = 0x42,
+  WASM_OPCODE_F32_CONST  = 0x43,
+  WASM_OPCODE_F64_CONST  = 0x44,
+};
+
 } // end namespace wasm
 } // end namespace llvm
 

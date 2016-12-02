@@ -260,6 +260,22 @@ MCSymbol *MCContext::lookupSymbol(const Twine &Name) const {
   return Symbols.lookup(NameRef);
 }
 
+int MCContext::setSymbolValue(MCStreamer &Streamer, std::string &I) {
+    auto Pair = StringRef(I).split('=');
+    if (Pair.second.empty()) {
+      errs() << "error: defsym must be of the form: sym=value: " << I << "\n";
+      return 1;
+    }
+    int64_t Value;
+    if (Pair.second.getAsInteger(0, Value)) {
+      errs() << "error: Value is not an integer: " << Pair.second << "\n";
+      return 1;
+    }
+    auto Symbol = getOrCreateSymbol(Pair.first);
+    Streamer.EmitAssignment(Symbol, MCConstantExpr::create(Value, *this));
+    return 0;
+}
+
 //===----------------------------------------------------------------------===//
 // Section Management
 //===----------------------------------------------------------------------===//

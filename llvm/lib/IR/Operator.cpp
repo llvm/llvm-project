@@ -33,7 +33,7 @@ bool GEPOperator::accumulateConstantOffset(const DataLayout &DL,
       continue;
 
     // Handle a struct index, which adds its field offset to the pointer.
-    if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
       unsigned ElementIdx = OpC->getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       Offset += APInt(Offset.getBitWidth(), SL->getElementOffset(ElementIdx));

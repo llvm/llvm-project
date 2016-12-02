@@ -927,16 +927,71 @@ public:
 
   unsigned getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwise) {
     assert(Ty->isVectorTy() && "Expect a vector type");
+    Type *ScalarTy = Ty->getVectorElementType();
     unsigned NumVecElts = Ty->getVectorNumElements();
     unsigned NumReduxLevels = Log2_32(NumVecElts);
-    unsigned ArithCost =
-        NumReduxLevels *
-        static_cast<T *>(this)->getArithmeticInstrCost(Opcode, Ty);
-    // Assume the pairwise shuffles add a cost.
-    unsigned ShuffleCost =
-        NumReduxLevels * (IsPairwise + 1) *
-        static_cast<T *>(this)
-            ->getShuffleCost(TTI::SK_ExtractSubvector, Ty, NumVecElts / 2, Ty);
+    // Try to calculate arithmetic and shuffle op costs for reduction operations.
+    // We're assuming that reduction operation are performing the following way:
+    // 1. Non-pairwise reduction
+    // %val1 = shufflevector<n x t> %val, <n x t> %undef,
+    // <n x i32> <i32 n/2, i32 n/2 + 1, ..., i32 n, i32 undef, ..., i32 undef>
+    //            \----------------v-------------/  \----------v------------/
+    //                            n/2 elements               n/2 elements
+    // %red1 = op <n x t> %val, <n x t> val1
+    // After this operation we have a vector %red1 with only maningfull the
+    // first n/2 elements, the second n/2 elements are undefined and can be
+    // dropped. All other operations are actually working with the vector of
+    // length n/2, not n. though the real vector length is still n.
+    // %val2 = shufflevector<n x t> %red1, <n x t> %undef,
+    // <n x i32> <i32 n/4, i32 n/4 + 1, ..., i32 n/2, i32 undef, ..., i32 undef>
+    //            \----------------v-------------/  \----------v------------/
+    //                            n/4 elements               3*n/4 elements
+    // %red2 = op <n x t> %red1, <n x t> val2  - working with the vector of
+    // length n/2, the resulting vector has length n/4 etc.
+    // 2. Pairwise reduction:
+    // Everything is the same except for an additional shuffle operation which
+    // is used to produce operands for pairwise kind of reductions.
+    // %val1 = shufflevector<n x t> %val, <n x t> %undef,
+    // <n x i32> <i32 0, i32 2, ..., i32 n-2, i32 undef, ..., i32 undef>
+    //            \-------------v----------/  \----------v------------/
+    //                   n/2 elements               n/2 elements
+    // %val2 = shufflevector<n x t> %val, <n x t> %undef,
+    // <n x i32> <i32 1, i32 3, ..., i32 n-1, i32 undef, ..., i32 undef>
+    //            \-------------v----------/  \----------v------------/
+    //                   n/2 elements               n/2 elements
+    // %red1 = op <n x t> %val1, <n x t> val2
+    // Again, the operation is performed on <n x t> vector, but the resulting
+    // vector %red1 is <n/2 x t> vector.
+    //
+    // The cost model should take into account that the actual length of the
+    // vector is reduced on each iteration.
+    unsigned ArithCost = 0;
+    unsigned ShuffleCost = 0;
+    auto *ConcreteTTI = static_cast<T *>(this);
+    std::pair<unsigned, MVT> LT =
+        ConcreteTTI->getTLI()->getTypeLegalizationCost(DL, Ty);
+    unsigned LongVectorCount = 0;
+    unsigned MVTLen =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+    while (NumVecElts > MVTLen) {
+      NumVecElts /= 2;
+      // Assume the pairwise shuffles add a cost.
+      ShuffleCost += (IsPairwise + 1) *
+                     ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
+                                                 NumVecElts, Ty);
+      ArithCost += ConcreteTTI->getArithmeticInstrCost(Opcode, Ty);
+      Ty = VectorType::get(ScalarTy, NumVecElts);
+      ++LongVectorCount;
+    }
+    // The minimal length of the vector is limited by the real length of vector
+    // operations performed on the current platform. That's why several final
+    // reduction opertions are perfomed on the vectors with the same
+    // architecture-dependent length.
+    ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
+                   ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
+                                               NumVecElts, Ty);
+    ArithCost += (NumReduxLevels - LongVectorCount) *
+                 ConcreteTTI->getArithmeticInstrCost(Opcode, Ty);
     return ShuffleCost + ArithCost + getScalarizationOverhead(Ty, false, true);
   }
 

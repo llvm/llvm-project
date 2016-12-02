@@ -14,13 +14,17 @@
 #ifndef LLVM_SUPPORT_MEMORYBUFFER_H
 #define LLVM_SUPPORT_MEMORYBUFFER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm-c/Types.h"
 #include <memory>
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
+
 class MemoryBufferRef;
 
 /// This interface provides simple read-only access to a block of memory, and
@@ -37,13 +41,15 @@ class MemoryBuffer {
   const char *BufferStart; // Start of the buffer.
   const char *BufferEnd;   // End of the buffer.
 
-  MemoryBuffer(const MemoryBuffer &) = delete;
-  MemoryBuffer &operator=(const MemoryBuffer &) = delete;
+
 protected:
-  MemoryBuffer() {}
+  MemoryBuffer() = default;
+
   void init(const char *BufStart, const char *BufEnd,
             bool RequiresNullTerminator);
 public:
+  MemoryBuffer(const MemoryBuffer &) = delete;
+  MemoryBuffer &operator=(const MemoryBuffer &) = delete;
   virtual ~MemoryBuffer();
 
   const char *getBufferStart() const { return BufferStart; }
@@ -154,7 +160,7 @@ class MemoryBufferRef {
   StringRef Identifier;
 
 public:
-  MemoryBufferRef() {}
+  MemoryBufferRef() = default;
   MemoryBufferRef(MemoryBuffer& Buffer)
       : Buffer(Buffer.getBuffer()), Identifier(Buffer.getBufferIdentifier()) {}
   MemoryBufferRef(StringRef Buffer, StringRef Identifier)
@@ -174,4 +180,4 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(MemoryBuffer, LLVMMemoryBufferRef)
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_MEMORYBUFFER_H

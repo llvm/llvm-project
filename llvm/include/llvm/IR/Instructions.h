@@ -898,11 +898,6 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  // getType - Overload to return most specific sequential type.
-  SequentialType *getType() const {
-    return cast<SequentialType>(Instruction::getType());
-  }
-
   Type *getSourceElementType() const { return SourceElementType; }
 
   void setSourceElementType(Type *Ty) { SourceElementType = Ty; }

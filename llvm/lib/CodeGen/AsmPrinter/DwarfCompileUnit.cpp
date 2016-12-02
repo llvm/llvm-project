@@ -242,7 +242,7 @@ void DwarfCompileUnit::initStmtList() {
   // is not okay to use line_table_start here.
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   StmtListValue =
-      addSectionLabel(UnitDie, dwarf::DW_AT_stmt_list, LineTableStartSym,
+      addSectionLabel(getUnitDie(), dwarf::DW_AT_stmt_list, LineTableStartSym,
                       TLOF.getDwarfLineSection()->getBeginSymbol());
 }
 

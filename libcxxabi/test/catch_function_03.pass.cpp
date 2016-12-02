@@ -9,7 +9,7 @@
 
 // Can a noexcept function pointer be caught by a non-noexcept catch clause?
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// UNSUPPORTED: libcxxabi-no-exceptions, libcxxabi-no-qualified-function-types
+// UNSUPPORTED: libcxxabi-no-exceptions
 
 #include <cassert>
 
@@ -57,9 +57,11 @@ void check_deep() {
 
 int main()
 {
+#ifdef __cpp_noexcept_function_type
     check<false, false>();
     check<false, true>();
     check<true, false>();
     check<true, true>();
     check_deep();
+#endif
 }

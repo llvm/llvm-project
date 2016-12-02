@@ -26,17 +26,18 @@
 #ifndef LLVM_SUPPORT_FORMATVARIADIC_H
 #define LLVM_SUPPORT_FORMATVARIADIC_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/FormatCommon.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
 #include "llvm/Support/raw_ostream.h"
-
+#include <cstddef>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -44,13 +45,14 @@ namespace llvm {
 enum class ReplacementType { Empty, Format, Literal };
 
 struct ReplacementItem {
-  ReplacementItem() {}
+  ReplacementItem() = default;
   explicit ReplacementItem(StringRef Literal)
       : Type(ReplacementType::Literal), Spec(Literal) {}
   ReplacementItem(StringRef Spec, size_t Index, size_t Align, AlignStyle Where,
                   char Pad, StringRef Options)
       : Type(ReplacementType::Format), Spec(Spec), Index(Index), Align(Align),
         Where(Where), Pad(Pad), Options(Options) {}
+
   ReplacementType Type = ReplacementType::Empty;
   StringRef Spec;
   size_t Index = 0;
@@ -90,7 +92,6 @@ public:
   formatv_object_base(StringRef Fmt, std::size_t ParamCount)
       : Fmt(Fmt), Replacements(parseFormatString(Fmt)) {
     Wrappers.reserve(ParamCount);
-    return;
   }
 
   void format(raw_ostream &S) const {
@@ -124,7 +125,7 @@ public:
     return Result;
   }
 
-  template <unsigned N> llvm::SmallString<N> sstr() const {
+  template <unsigned N> SmallString<N> sstr() const {
     SmallString<N> Result;
     raw_svector_ostream Stream(Result);
     Stream << *this;
@@ -243,4 +244,4 @@ inline auto formatv(const char *Fmt, Ts &&... Vals) -> formatv_object<decltype(
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_FORMATVARIADIC_H

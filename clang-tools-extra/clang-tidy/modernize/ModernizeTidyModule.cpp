@@ -22,8 +22,8 @@
 #include "ShrinkToFitCheck.h"
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
-#include "UseDefaultCheck.h"
 #include "UseEmplaceCheck.h"
+#include "UseEqualsDefaultCheck.h"
 #include "UseEqualsDeleteCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
@@ -56,8 +56,8 @@ public:
     CheckFactories.registerCheck<UseAutoCheck>("modernize-use-auto");
     CheckFactories.registerCheck<UseBoolLiteralsCheck>(
         "modernize-use-bool-literals");
-    CheckFactories.registerCheck<UseDefaultCheck>("modernize-use-default");
     CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
+    CheckFactories.registerCheck<UseEqualsDefaultCheck>("modernize-use-equals-default");
     CheckFactories.registerCheck<UseEqualsDeleteCheck>(
         "modernize-use-equals-delete");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");

@@ -14,27 +14,38 @@
 #ifndef LLVM_SUPPORT_ERROR_H
 #define LLVM_SUPPORT_ERROR_H
 
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
+#include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <functional>
+#include <memory>
+#include <new>
+#include <string>
+#include <system_error>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
 
-class Error;
-class ErrorList;
 class ErrorSuccess;
 
 /// Base class for error info classes. Do not extend this directly: Extend
 /// the ErrorInfo template subclass instead.
 class ErrorInfoBase {
 public:
-  virtual ~ErrorInfoBase() {}
+  virtual ~ErrorInfoBase() = default;
 
   /// Print an error message to an output stream.
   virtual void log(raw_ostream &OS) const = 0;
@@ -69,6 +80,7 @@ public:
 
 private:
   virtual void anchor();
+
   static char ID;
 };
 
@@ -138,7 +150,6 @@ private:
 /// they're moved-assigned or constructed from Success values that have already
 /// been checked. This enforces checking through all levels of the call stack.
 class LLVM_NODISCARD Error {
-
   // ErrorList needs to be able to yank ErrorInfoBase pointers out of this
   // class to add to the error list.
   friend class ErrorList;
@@ -315,7 +326,6 @@ public:
 /// Special ErrorInfo subclass representing a list of ErrorInfos.
 /// Instances of this class are constructed by joinError.
 class ErrorList final : public ErrorInfo<ErrorList> {
-
   // handleErrors needs to be able to iterate the payload list of an
   // ErrorList.
   template <typename... HandlerTs>
@@ -601,6 +611,7 @@ public:
     if (Err)
       (void)!!*Err;
   }
+
   ~ErrorAsOutParameter() {
     // Clear the checked bit.
     if (Err && !*Err)
@@ -854,6 +865,7 @@ private:
 /// std::error_codes.
 class ECError : public ErrorInfo<ECError> {
   friend Error errorCodeToError(std::error_code);
+
 public:
   void setErrorCode(std::error_code EC) { this->EC = EC; }
   std::error_code convertToErrorCode() const override { return EC; }
@@ -865,6 +877,7 @@ public:
 protected:
   ECError() = default;
   ECError(std::error_code EC) : EC(EC) {}
+
   std::error_code EC;
 };
 
@@ -907,9 +920,12 @@ template <typename T> ErrorOr<T> expectedToErrorOr(Expected<T> &&E) {
 class StringError : public ErrorInfo<StringError> {
 public:
   static char ID;
+
   StringError(const Twine &S, std::error_code EC);
+
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
+
 private:
   std::string Msg;
   std::error_code EC;
@@ -969,6 +985,6 @@ private:
 LLVM_ATTRIBUTE_NORETURN void report_fatal_error(Error Err,
                                                 bool gen_crash_diag = true);
 
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_SUPPORT_ERROR_H

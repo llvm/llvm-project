@@ -190,21 +190,14 @@ void Float2IntPass::walkBackwards(const SmallPtrSetImpl<Instruction*> &Roots) {
       seen(I, badRange());
       break;
 
-    case Instruction::UIToFP: {
-      // Path terminated cleanly.
-      unsigned BW = I->getOperand(0)->getType()->getPrimitiveSizeInBits();
-      APInt Min = APInt::getMinValue(BW).zextOrSelf(MaxIntegerBW+1);
-      APInt Max = APInt::getMaxValue(BW).zextOrSelf(MaxIntegerBW+1);
-      seen(I, validateRange(ConstantRange(Min, Max)));
-      continue;
-    }
-
+    case Instruction::UIToFP:
     case Instruction::SIToFP: {
-      // Path terminated cleanly.
+      // Path terminated cleanly - use the type of the integer input to seed
+      // the analysis.
       unsigned BW = I->getOperand(0)->getType()->getPrimitiveSizeInBits();
-      APInt SMin = APInt::getSignedMinValue(BW).sextOrSelf(MaxIntegerBW+1);
-      APInt SMax = APInt::getSignedMaxValue(BW).sextOrSelf(MaxIntegerBW+1);
-      seen(I, validateRange(ConstantRange(SMin, SMax)));
+      auto Input = ConstantRange(BW, true);
+      auto CastOp = (Instruction::CastOps)I->getOpcode();
+      seen(I, validateRange(Input.castOp(CastOp, MaxIntegerBW+1)));
       continue;
     }
 
@@ -249,23 +242,12 @@ void Float2IntPass::walkForwards() {
       llvm_unreachable("Should have been handled in walkForwards!");
 
     case Instruction::FAdd:
-      Op = [](ArrayRef<ConstantRange> Ops) {
-        assert(Ops.size() == 2 && "FAdd is a binary operator!");
-        return Ops[0].add(Ops[1]);
-      };
-      break;
-
     case Instruction::FSub:
-      Op = [](ArrayRef<ConstantRange> Ops) {
-        assert(Ops.size() == 2 && "FSub is a binary operator!");
-        return Ops[0].sub(Ops[1]);
-      };
-      break;
-
     case Instruction::FMul:
-      Op = [](ArrayRef<ConstantRange> Ops) {
-        assert(Ops.size() == 2 && "FMul is a binary operator!");
-        return Ops[0].multiply(Ops[1]);
+      Op = [I](ArrayRef<ConstantRange> Ops) {
+        assert(Ops.size() == 2 && "its a binary operator!");
+        auto BinOp = (Instruction::BinaryOps) I->getOpcode();
+        return Ops[0].binaryOp(BinOp, Ops[1]);
       };
       break;
 
@@ -275,9 +257,12 @@ void Float2IntPass::walkForwards() {
     //
     case Instruction::FPToUI:
     case Instruction::FPToSI:
-      Op = [](ArrayRef<ConstantRange> Ops) {
+      Op = [I](ArrayRef<ConstantRange> Ops) {
         assert(Ops.size() == 1 && "FPTo[US]I is a unary operator!");
-        return Ops[0];
+        // Note: We're ignoring the casts output size here as that's what the
+        // caller expects.
+        auto CastOp = (Instruction::CastOps)I->getOpcode();
+        return Ops[0].castOp(CastOp, MaxIntegerBW+1);
       };
       break;
 

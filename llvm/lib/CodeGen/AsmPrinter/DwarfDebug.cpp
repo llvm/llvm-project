@@ -437,9 +437,9 @@ DwarfDebug::constructDwarfCompileUnit(const DICompileUnit *DIUnit) {
   }
 
   if (useSplitDwarf())
-    NewCU.initSection(Asm->getObjFileLowering().getDwarfInfoDWOSection());
+    NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoDWOSection());
   else
-    NewCU.initSection(Asm->getObjFileLowering().getDwarfInfoSection());
+    NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
 
   if (DIUnit->getDWOId()) {
     // This CU is either a clang module DWO or a skeleton CU.
@@ -520,7 +520,7 @@ void DwarfDebug::finishVariableDefinitions() {
     // FIXME: Consider the time-space tradeoff of just storing the unit pointer
     // in the ConcreteVariables list, rather than looking it up again here.
     // DIE::getUnit isn't simple - it walks parent pointers, etc.
-    DwarfCompileUnit *Unit = lookupUnit(VariableDie->getUnit());
+    DwarfCompileUnit *Unit = CUDieMap.lookup(VariableDie->getUnitDie());
     assert(Unit);
     DbgVariable *AbsVar = getExistingAbstractVariable(
         InlinedVariable(Var->getVariable(), Var->getInlinedAt()));
@@ -1821,7 +1821,7 @@ DwarfCompileUnit &DwarfDebug::constructSkeletonCU(const DwarfCompileUnit &CU) {
   auto OwnedUnit = make_unique<DwarfCompileUnit>(
       CU.getUniqueID(), CU.getCUNode(), Asm, this, &SkeletonHolder);
   DwarfCompileUnit &NewCU = *OwnedUnit;
-  NewCU.initSection(Asm->getObjFileLowering().getDwarfInfoSection());
+  NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
 
   NewCU.initStmtList();
 
@@ -1913,11 +1913,10 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   Ins.first->second = Signature;
 
   if (useSplitDwarf())
-    NewTU.initSection(Asm->getObjFileLowering().getDwarfTypesDWOSection());
+    NewTU.setSection(Asm->getObjFileLowering().getDwarfTypesDWOSection());
   else {
     CU.applyStmtList(UnitDie);
-    NewTU.initSection(
-        Asm->getObjFileLowering().getDwarfTypesSection(Signature));
+    NewTU.setSection(Asm->getObjFileLowering().getDwarfTypesSection(Signature));
   }
 
   NewTU.setType(NewTU.createTypeDIE(CTy));

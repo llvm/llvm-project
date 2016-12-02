@@ -62,11 +62,13 @@ int main(int argc, char **argv) {
     SmallVector<char, 0> Header;
     BitcodeWriter Writer(Header);
     Out->os() << Header << Ms[ModuleIndex].getBuffer();
+    Out->keep();
     return 0;
   }
 
   std::unique_ptr<Module> M = ExitOnErr(Ms[ModuleIndex].parseModule(Context));
   WriteBitcodeToFile(M.get(), Out->os());
 
+  Out->keep();
   return 0;
 }

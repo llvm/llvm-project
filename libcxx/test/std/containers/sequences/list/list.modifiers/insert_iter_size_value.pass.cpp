@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <list>
 
 // iterator insert(const_iterator position, size_type n, const value_type& x);
@@ -20,6 +19,7 @@
 
 #include "min_allocator.h"
 #include "count_new.hpp"
+#include "test_macros.h"
 
 template <class List>
 void test() {
@@ -29,6 +29,7 @@ void test() {
     typename List::iterator i = l1.insert(next(l1.cbegin()), 5, 4);
     assert(i == next(l1.begin()));
     assert(l1 == List(a2, a2+8));
+#ifndef TEST_HAS_NO_EXCEPTIONS
     globalMemCounter.throw_after = 4;
     int save_count = globalMemCounter.outstanding_new;
     try
@@ -41,6 +42,7 @@ void test() {
     }
     assert(globalMemCounter.checkOutstandingNewEq(save_count));
     assert(l1 == List(a2, a2+8));
+#endif
 }
 
 int main()

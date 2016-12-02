@@ -107,11 +107,11 @@ unsigned llvm::getGEPInductionOperand(const GetElementPtrInst *Gep) {
   while (LastOperand > 1 && match(Gep->getOperand(LastOperand), m_Zero())) {
     // Find the type we're currently indexing into.
     gep_type_iterator GEPTI = gep_type_begin(Gep);
-    std::advance(GEPTI, LastOperand - 1);
+    std::advance(GEPTI, LastOperand - 2);
 
     // If it's a type with the same allocation size as the result of the GEP we
     // can peel off the zero index.
-    if (DL.getTypeAllocSize(*GEPTI) != GEPAllocSize)
+    if (DL.getTypeAllocSize(GEPTI.getIndexedType()) != GEPAllocSize)
       break;
     --LastOperand;
   }
