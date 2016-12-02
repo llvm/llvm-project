@@ -17,6 +17,21 @@ typedef uint64_t semval_t;
 typedef unsigned semval_t;
 #endif
 
+// glibc 2.21 has introduced some changes in the way the semaphore value is
+// handled for 32-bit platforms, but since these changes are not ABI-breaking
+// they are not versioned. On newer platforms such as ARM, there is only one
+// version of the symbol, so it's enough to check the glibc version. However,
+// for old platforms such as i386, glibc contains two or even three versions of
+// the sem_init symbol, and the sanitizers always pick the oldest one.
+// Therefore, it is not enough to rely on the __GLIBC_PREREQ macro - we should
+// instead check the platform as well to make sure we only expect the new
+// behavior on platforms where the older symbols do not exist.
+#if defined(__arm__) && __GLIBC_PREREQ(2, 21)
+#define GET_SEM_VALUE(V) ((V) >> 1)
+#else
+#define GET_SEM_VALUE(V) (V)
+#endif
+
 void my_sem_init(bool priv, int value, semval_t *a, unsigned char *b) {
   sem_t sem;
   memset(&sem, 0xAB, sizeof(sem));
@@ -34,10 +49,10 @@ int main() {
   unsigned char b;
 
   my_sem_init(false, 42, &a, &b);
-  assert(a == 42);
+  assert(GET_SEM_VALUE(a) == 42);
   assert(b != 0xAB);
 
   my_sem_init(true, 43, &a, &b);
-  assert(a == 43);
+  assert(GET_SEM_VALUE(a) == 43);
   assert(b != 0xAB);
 }
