@@ -242,7 +242,7 @@ namespace {
 
     /// This function searches in the backward direction for an instruction that
     /// can be moved to the delay slot. Returns true on success.
-    bool searchBackward(MachineBasicBlock &MBB, Iter Slot) const;
+    bool searchBackward(MachineBasicBlock &MBB, MachineInstr &Slot) const;
 
     /// This function searches MBB in the forward direction for an instruction
     /// that can be moved to the delay slot. Returns true on success.
@@ -594,7 +594,7 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
 
       if (MipsCompactBranchPolicy.getValue() != CB_Always ||
            !TII->getEquivalentCompactForm(I)) {
-        if (searchBackward(MBB, I)) {
+        if (searchBackward(MBB, *I)) {
           Filled = true;
         } else if (I->isTerminator()) {
           if (searchSuccBBs(MBB, I)) {
@@ -659,8 +659,6 @@ template<typename IterTy>
 bool Filler::searchRange(MachineBasicBlock &MBB, IterTy Begin, IterTy End,
                          RegDefsUses &RegDU, InspectMemInstr& IM, Iter Slot,
                          IterTy &Filler) const {
-  bool IsReverseIter = std::is_convertible<IterTy, ReverseIter>::value;
-
   for (IterTy I = Begin; I != End;) {
     IterTy CurrI = I;
     ++I;
@@ -677,12 +675,6 @@ bool Filler::searchRange(MachineBasicBlock &MBB, IterTy Begin, IterTy End,
 
     if (CurrI->isKill()) {
       CurrI->eraseFromParent();
-
-      // This special case is needed for reverse iterators, because when we
-      // erase an instruction, the iterators are updated to point to the next
-      // instruction.
-      if (IsReverseIter && I != End)
-        I = CurrI;
       continue;
     }
 
@@ -722,7 +714,7 @@ bool Filler::searchRange(MachineBasicBlock &MBB, IterTy Begin, IterTy End,
   return false;
 }
 
-bool Filler::searchBackward(MachineBasicBlock &MBB, Iter Slot) const {
+bool Filler::searchBackward(MachineBasicBlock &MBB, MachineInstr &Slot) const {
   if (DisableBackwardSearch)
     return false;
 
@@ -731,14 +723,15 @@ bool Filler::searchBackward(MachineBasicBlock &MBB, Iter Slot) const {
   MemDefsUses MemDU(Fn->getDataLayout(), &Fn->getFrameInfo());
   ReverseIter Filler;
 
-  RegDU.init(*Slot);
+  RegDU.init(Slot);
 
-  if (!searchRange(MBB, ReverseIter(Slot), MBB.rend(), RegDU, MemDU, Slot,
+  MachineBasicBlock::iterator SlotI = Slot;
+  if (!searchRange(MBB, ++SlotI.getReverse(), MBB.rend(), RegDU, MemDU, Slot,
                    Filler))
     return false;
 
-  MBB.splice(std::next(Slot), &MBB, std::next(Filler).base());
-  MIBundleBuilder(MBB, Slot, std::next(Slot, 2));
+  MBB.splice(std::next(SlotI), &MBB, Filler.getReverse());
+  MIBundleBuilder(MBB, SlotI, std::next(SlotI, 2));
   ++UsefulSlots;
   return true;
 }

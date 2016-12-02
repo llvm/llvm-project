@@ -669,7 +669,7 @@ bool TailDuplicator::duplicateSimpleBB(
                  << "From simple Succ: " << *TailBB);
 
     MachineBasicBlock *NewTarget = *TailBB->succ_begin();
-    MachineBasicBlock *NextBB = &*std::next(PredBB->getIterator());
+    MachineBasicBlock *NextBB = PredBB->getNextNode();
 
     // Make PredFBB explicit.
     if (PredCond.empty())

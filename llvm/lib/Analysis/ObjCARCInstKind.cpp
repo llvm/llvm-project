@@ -96,43 +96,47 @@ ARCInstKind llvm::objcarc::GetFunctionClass(const Function *F) {
 
   // One argument.
   const Argument *A0 = &*AI++;
-  if (AI == AE)
+  if (AI == AE) {
     // Argument is a pointer.
-    if (PointerType *PTy = dyn_cast<PointerType>(A0->getType())) {
-      Type *ETy = PTy->getElementType();
-      // Argument is i8*.
-      if (ETy->isIntegerTy(8))
+    PointerType *PTy = dyn_cast<PointerType>(A0->getType());
+    if (!PTy)
+      return ARCInstKind::CallOrUser;
+
+    Type *ETy = PTy->getElementType();
+    // Argument is i8*.
+    if (ETy->isIntegerTy(8))
+      return StringSwitch<ARCInstKind>(F->getName())
+          .Case("objc_retain", ARCInstKind::Retain)
+          .Case("objc_retainAutoreleasedReturnValue", ARCInstKind::RetainRV)
+          .Case("objc_unsafeClaimAutoreleasedReturnValue", ARCInstKind::ClaimRV)
+          .Case("objc_retainBlock", ARCInstKind::RetainBlock)
+          .Case("objc_release", ARCInstKind::Release)
+          .Case("objc_autorelease", ARCInstKind::Autorelease)
+          .Case("objc_autoreleaseReturnValue", ARCInstKind::AutoreleaseRV)
+          .Case("objc_autoreleasePoolPop", ARCInstKind::AutoreleasepoolPop)
+          .Case("objc_retainedObject", ARCInstKind::NoopCast)
+          .Case("objc_unretainedObject", ARCInstKind::NoopCast)
+          .Case("objc_unretainedPointer", ARCInstKind::NoopCast)
+          .Case("objc_retain_autorelease", ARCInstKind::FusedRetainAutorelease)
+          .Case("objc_retainAutorelease", ARCInstKind::FusedRetainAutorelease)
+          .Case("objc_retainAutoreleaseReturnValue",
+                ARCInstKind::FusedRetainAutoreleaseRV)
+          .Case("objc_sync_enter", ARCInstKind::User)
+          .Case("objc_sync_exit", ARCInstKind::User)
+          .Default(ARCInstKind::CallOrUser);
+
+    // Argument is i8**
+    if (PointerType *Pte = dyn_cast<PointerType>(ETy))
+      if (Pte->getElementType()->isIntegerTy(8))
         return StringSwitch<ARCInstKind>(F->getName())
-            .Case("objc_retain", ARCInstKind::Retain)
-            .Case("objc_retainAutoreleasedReturnValue", ARCInstKind::RetainRV)
-            .Case("objc_unsafeClaimAutoreleasedReturnValue",
-                  ARCInstKind::ClaimRV)
-            .Case("objc_retainBlock", ARCInstKind::RetainBlock)
-            .Case("objc_release", ARCInstKind::Release)
-            .Case("objc_autorelease", ARCInstKind::Autorelease)
-            .Case("objc_autoreleaseReturnValue", ARCInstKind::AutoreleaseRV)
-            .Case("objc_autoreleasePoolPop", ARCInstKind::AutoreleasepoolPop)
-            .Case("objc_retainedObject", ARCInstKind::NoopCast)
-            .Case("objc_unretainedObject", ARCInstKind::NoopCast)
-            .Case("objc_unretainedPointer", ARCInstKind::NoopCast)
-            .Case("objc_retain_autorelease",
-                  ARCInstKind::FusedRetainAutorelease)
-            .Case("objc_retainAutorelease", ARCInstKind::FusedRetainAutorelease)
-            .Case("objc_retainAutoreleaseReturnValue",
-                  ARCInstKind::FusedRetainAutoreleaseRV)
-            .Case("objc_sync_enter", ARCInstKind::User)
-            .Case("objc_sync_exit", ARCInstKind::User)
+            .Case("objc_loadWeakRetained", ARCInstKind::LoadWeakRetained)
+            .Case("objc_loadWeak", ARCInstKind::LoadWeak)
+            .Case("objc_destroyWeak", ARCInstKind::DestroyWeak)
             .Default(ARCInstKind::CallOrUser);
 
-      // Argument is i8**
-      if (PointerType *Pte = dyn_cast<PointerType>(ETy))
-        if (Pte->getElementType()->isIntegerTy(8))
-          return StringSwitch<ARCInstKind>(F->getName())
-              .Case("objc_loadWeakRetained", ARCInstKind::LoadWeakRetained)
-              .Case("objc_loadWeak", ARCInstKind::LoadWeak)
-              .Case("objc_destroyWeak", ARCInstKind::DestroyWeak)
-              .Default(ARCInstKind::CallOrUser);
-    }
+    // Anything else with one argument.
+    return ARCInstKind::CallOrUser;
+  }
 
   // Two arguments, first is i8**.
   const Argument *A1 = &*AI++;
