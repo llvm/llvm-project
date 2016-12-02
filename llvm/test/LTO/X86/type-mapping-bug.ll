@@ -1,6 +1,6 @@
 ; RUN: llvm-as -o %t.dst.bc %s
 ; RUN: llvm-as -o %t.src.bc %S/Inputs/type-mapping-src.ll
-; RUN: llvm-lto %t.dst.bc %t.src.bc -o=/dev/null
+; RUN: llvm-lto %t.dst.bc %t.src.bc -o=%t.lto.bc
 
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
