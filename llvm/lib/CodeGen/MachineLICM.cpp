@@ -1336,6 +1336,11 @@ bool MachineLICM::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
     // Otherwise, splice the instruction to the preheader.
     Preheader->splice(Preheader->getFirstTerminator(),MI->getParent(),MI);
 
+    // Since we are moving the instruction out of its basic block, we do not
+    // retain its debug location. Doing so would degrade the debugging 
+    // experience and adversely affect the accuracy of profiling information.
+    MI->setDebugLoc(DebugLoc());
+
     // Update register pressure for BBs from header to this block.
     UpdateBackTraceRegPressure(MI);
 

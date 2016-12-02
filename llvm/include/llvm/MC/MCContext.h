@@ -302,6 +302,9 @@ namespace llvm {
     /// Get the symbol for \p Name, or null.
     MCSymbol *lookupSymbol(const Twine &Name) const;
 
+    /// Set value for a symbol.
+    int setSymbolValue(MCStreamer &Streamer, std::string &I);
+
     /// getSymbols - Get a reference for the symbol table for clients that
     /// want to, for example, iterate over all symbols. 'const' because we
     /// still want any modifications to the table itself to use the MCContext

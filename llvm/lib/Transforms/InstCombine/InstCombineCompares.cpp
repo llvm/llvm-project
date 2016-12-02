@@ -517,7 +517,7 @@ static Value *evaluateGEPOffsetExpression(User *GEP, InstCombiner &IC,
       if (CI->isZero()) continue;
 
       // Handle a struct index, which adds its field offset to the pointer.
-      if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+      if (StructType *STy = GTI.getStructTypeOrNull()) {
         Offset += DL.getStructLayout(STy)->getElementOffset(CI->getZExtValue());
       } else {
         uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType());
@@ -547,7 +547,7 @@ static Value *evaluateGEPOffsetExpression(User *GEP, InstCombiner &IC,
     if (CI->isZero()) continue;
 
     // Handle a struct index, which adds its field offset to the pointer.
-    if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
       Offset += DL.getStructLayout(STy)->getElementOffset(CI->getZExtValue());
     } else {
       uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType());

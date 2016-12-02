@@ -1389,7 +1389,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   for (User::op_iterator I = GEP.op_begin() + 1, E = GEP.op_end(); I != E;
        ++I, ++GTI) {
     // Skip indices into struct types.
-    if (isa<StructType>(*GTI))
+    if (GTI.isStruct())
       continue;
 
     // Index type should have the same width as IntPtr
@@ -1546,7 +1546,7 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     bool EndsWithSequential = false;
     for (gep_type_iterator I = gep_type_begin(*Src), E = gep_type_end(*Src);
          I != E; ++I)
-      EndsWithSequential = !(*I)->isStructTy();
+      EndsWithSequential = I.isSequential();
 
     // Can we combine the two pointer arithmetics offsets?
     if (EndsWithSequential) {

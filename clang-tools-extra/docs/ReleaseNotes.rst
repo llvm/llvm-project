@@ -91,6 +91,9 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-auto.html>`_ check
   now warns about variable declarations that are initialized with a cast.
 
+- The modernize-use-default check has been renamed to `modernize-use-equals-default
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-default.html>`_.
+
 - New `modernize-use-equals-delete
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-delete.html>`_ check
 

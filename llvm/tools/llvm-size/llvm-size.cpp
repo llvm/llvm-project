@@ -817,11 +817,13 @@ static void printFileSectionSizes(StringRef file) {
   } else if (ObjectFile *o = dyn_cast<ObjectFile>(&Bin)) {
     if (!checkMachOAndArchFlags(o, file))
       return;
+    MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
     if (OutputFormat == sysv)
       outs() << o->getFileName() << "  :\n";
+    else if (MachO && OutputFormat == darwin && MoreThanOneFile)
+      outs() << o->getFileName() << ":\n";
     printObjectSectionSizes(o);
     if (OutputFormat == berkeley) {
-      MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
       if (!MachO || MoreThanOneFile)
         outs() << o->getFileName();
       outs() << "\n";

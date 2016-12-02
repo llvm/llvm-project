@@ -95,11 +95,6 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
     return false;
   }
 
-  // Compare associative sections.
-  for (size_t I = 0, E = A->AssocChildren.size(); I != E; ++I)
-    if (A->AssocChildren[I]->GroupID != B->AssocChildren[I]->GroupID)
-      return false;
-
   // Compare relocations.
   auto Eq = [&](const coff_relocation &R1, const coff_relocation &R2) {
     if (R1.Type != R2.Type ||
@@ -129,11 +124,6 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
 }
 
 bool ICF::equalsVariable(const SectionChunk *A, const SectionChunk *B) {
-  // Compare associative sections.
-  for (size_t I = 0, E = A->AssocChildren.size(); I != E; ++I)
-    if (A->AssocChildren[I]->GroupID != B->AssocChildren[I]->GroupID)
-      return false;
-
   // Compare relocations.
   auto Eq = [&](const coff_relocation &R1, const coff_relocation &R2) {
     SymbolBody *B1 = A->File->getSymbolBody(R1.SymbolTableIndex)->repl();

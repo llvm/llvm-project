@@ -477,7 +477,7 @@ public:
   ///
   /// This corresponds to an assembler statement such as:
   ///  .size symbol, expression
-  virtual void emitELFSize(MCSymbolELF *Symbol, const MCExpr *Value);
+  virtual void emitELFSize(MCSymbol *Symbol, const MCExpr *Value);
 
   /// \brief Emit a Linker Optimization Hint (LOH) directive.
   /// \param Args - Arguments of the LOH.

@@ -542,6 +542,7 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
       for (unsigned j = i+1; j < FieldValues.size(); j++) {
         if (CurVal == FieldValues[j]) {
           FieldValues.erase(FieldValues.begin()+j);
+          --j;
         }
       }
     }

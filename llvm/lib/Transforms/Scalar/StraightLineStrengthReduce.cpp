@@ -490,8 +490,8 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     IndexExprs.push_back(SE->getSCEV(*I));
 
   gep_type_iterator GTI = gep_type_begin(GEP);
-  for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
-    if (!isa<SequentialType>(*GTI++))
+  for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
+    if (GTI.isStruct())
       continue;
 
     const SCEV *OrigIndexExpr = IndexExprs[I - 1];
@@ -501,7 +501,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     // indices except this current one.
     const SCEV *BaseExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
     Value *ArrayIdx = GEP->getOperand(I);
-    uint64_t ElementSize = DL->getTypeAllocSize(*GTI);
+    uint64_t ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
     if (ArrayIdx->getType()->getIntegerBitWidth() <=
         DL->getPointerSizeInBits(GEP->getAddressSpace())) {
       // Skip factoring if ArrayIdx is wider than the pointer size, because

@@ -760,9 +760,11 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       else
         DynType = Target->GotRel;
 
-      if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body)))
+      // FIXME: this logic is almost duplicated above.
+      bool Constant = !Preemptible && !(Config->Pic && !isAbsolute<ELFT>(Body));
+      if (!Constant)
         AddDyn({DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
-      else
+      if (Constant || !RelTy::IsRela)
         In<ELFT>::Got->Relocations.push_back({GotRE, DynType, Off, 0, &Body});
       continue;
     }

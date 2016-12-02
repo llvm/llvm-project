@@ -684,7 +684,7 @@ llvm::getFuncletMembership(const MachineFunction &MF) {
   DenseMap<const MachineBasicBlock *, int> FuncletMembership;
 
   // We don't have anything to do if there aren't any EH pads.
-  if (!MF.getMMI().hasEHFunclets())
+  if (!MF.hasEHFunclets())
     return FuncletMembership;
 
   int EntryBBNumber = MF.front().getNumber();

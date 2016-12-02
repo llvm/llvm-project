@@ -416,7 +416,7 @@ __kmp_i18n_do_catopen(
 
           Issue a hint in this case to let cause of trouble more understandable.
         */
-        __kmp_msg_t err_code = KMP_SYSERRCODE(error);
+        kmp_msg_t err_code = KMP_SYSERRCODE(error);
         __kmp_msg(
             kmp_ms_warning,
             KMP_MSG( CantOpenMessageCatalog, path.str ),

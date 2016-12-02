@@ -393,23 +393,10 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
   return Error;
 }
 
-static int fillCommandLineSymbols(MCAsmParser &Parser){
-  for(auto &I: DefineSymbol){
-    auto Pair = StringRef(I).split('=');
-    if(Pair.second.empty()){
-      errs() << "error: defsym must be of the form: sym=value: " << I;
+static int fillCommandLineSymbols(MCAsmParser &Parser) {
+  for (auto &I: DefineSymbol)
+    if (Parser.getContext().setSymbolValue(Parser.getStreamer(), I))
       return 1;
-    }
-    int64_t Value;
-    if(Pair.second.getAsInteger(0, Value)){
-      errs() << "error: Value is not an integer: " << Pair.second;
-      return 1;
-    }
-    auto &Context = Parser.getContext();
-    auto Symbol = Context.getOrCreateSymbol(Pair.first);
-    Parser.getStreamer().EmitAssignment(Symbol,
-                                        MCConstantExpr::create(Value, Context));
-  }
   return 0;
 }
 

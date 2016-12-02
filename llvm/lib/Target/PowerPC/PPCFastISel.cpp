@@ -358,7 +358,7 @@ bool PPCFastISel::PPCComputeAddress(const Value *Obj, Address &Addr) {
       for (User::const_op_iterator II = U->op_begin() + 1, IE = U->op_end();
            II != IE; ++II, ++GTI) {
         const Value *Op = *II;
-        if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+        if (StructType *STy = GTI.getStructTypeOrNull()) {
           const StructLayout *SL = DL.getStructLayout(STy);
           unsigned Idx = cast<ConstantInt>(Op)->getZExtValue();
           TmpOffset += SL->getElementOffset(Idx);

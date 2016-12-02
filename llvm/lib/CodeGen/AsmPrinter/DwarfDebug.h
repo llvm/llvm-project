@@ -533,11 +533,6 @@ public:
     return Ref.resolve();
   }
 
-  /// Find the DwarfCompileUnit for the given CU Die.
-  DwarfCompileUnit *lookupUnit(const DIE *CU) const {
-    return CUDieMap.lookup(CU);
-  }
-
   void addSubprogramNames(const DISubprogram *SP, DIE &Die);
 
   AddressPool &getAddressPool() { return AddrPool; }

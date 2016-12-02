@@ -477,8 +477,6 @@ void MemoryAccess::updateDimensionality() {
   }
 
   isl_space_free(ArraySpace);
-
-  assumeNoOutOfBound();
 }
 
 const std::string
@@ -738,8 +736,10 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
   AccessRelation = isl_map_intersect_range(AccessRelation, AccessRange);
 }
 
-__isl_give isl_map *MemoryAccess::foldAccess(__isl_take isl_map *AccessRelation,
-                                             ScopStmt *Statement) {
+void MemoryAccess::foldAccessRelation() {
+  if (Sizes.size() < 2 || isa<SCEVConstant>(Sizes[1]))
+    return;
+
   int Size = Subscripts.size();
 
   for (int i = Size - 2; i >= 0; --i) {
@@ -785,7 +785,15 @@ __isl_give isl_map *MemoryAccess::foldAccess(__isl_take isl_map *AccessRelation,
     MapOne = isl_map_union(MapOne, MapTwo);
     AccessRelation = isl_map_apply_range(AccessRelation, MapOne);
   }
-  return AccessRelation;
+
+  isl_id *BaseAddrId = getScopArrayInfo()->getBasePtrId();
+  auto Space = Statement->getDomainSpace();
+  AccessRelation = isl_map_set_tuple_id(
+      AccessRelation, isl_dim_in, isl_space_get_tuple_id(Space, isl_dim_set));
+  AccessRelation =
+      isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
+  AccessRelation = isl_map_gist_domain(AccessRelation, Statement->getDomain());
+  isl_space_free(Space);
 }
 
 /// Check if @p Expr is divisible by @p Size.
@@ -857,9 +865,6 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
     isl_map *SubscriptMap = isl_map_from_pw_aff(Affine);
     AccessRelation = isl_map_flat_range_product(AccessRelation, SubscriptMap);
   }
-
-  if (Sizes.size() >= 2 && !isa<SCEVConstant>(Sizes[1]))
-    AccessRelation = foldAccess(AccessRelation, Statement);
 
   Space = Statement->getDomainSpace();
   AccessRelation = isl_map_set_tuple_id(
@@ -3090,6 +3095,12 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
   buildContext();
 }
 
+void Scop::finalizeAccesses() {
+  updateAccessDimensionality();
+  foldAccessRelations();
+  assumeNoOutOfBounds();
+}
+
 void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
                 LoopInfo &LI) {
   buildInvariantEquivalenceClasses();
@@ -3109,6 +3120,10 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
   for (ScopStmt &Stmt : Stmts)
     Stmt.init(LI);
 
+  // Check early for a feasible runtime context.
+  if (!hasFeasibleRuntimeContext())
+    return;
+
   // Check early for profitability. Afterwards it cannot change anymore,
   // only the runtime context could become infeasible.
   if (!isProfitable()) {
@@ -3118,7 +3133,8 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
 
   buildSchedule(LI);
 
-  updateAccessDimensionality();
+  finalizeAccesses();
+
   realignParams();
   addUserContext();
 
@@ -3137,10 +3153,8 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
 
   // Check late for a feasible runtime context because profitability did not
   // change.
-  if (!hasFeasibleRuntimeContext()) {
-    invalidate(PROFITABLE, DebugLoc());
+  if (!hasFeasibleRuntimeContext())
     return;
-  }
 }
 
 Scop::~Scop() {
@@ -3204,6 +3218,18 @@ void Scop::updateAccessDimensionality() {
   for (auto &Stmt : *this)
     for (auto &Access : Stmt)
       Access->updateDimensionality();
+}
+
+void Scop::foldAccessRelations() {
+  for (auto &Stmt : *this)
+    for (auto &Access : Stmt)
+      Access->foldAccessRelation();
+}
+
+void Scop::assumeNoOutOfBounds() {
+  for (auto &Stmt : *this)
+    for (auto &Access : Stmt)
+      Access->assumeNoOutOfBound();
 }
 
 void Scop::simplifySCoP(bool AfterHoisting) {
@@ -3611,9 +3637,6 @@ __isl_give isl_set *Scop::getAssumedContext() const {
 bool Scop::isProfitable() const {
   if (PollyProcessUnprofitable)
     return true;
-
-  if (!hasFeasibleRuntimeContext())
-    return false;
 
   if (isEmpty())
     return false;

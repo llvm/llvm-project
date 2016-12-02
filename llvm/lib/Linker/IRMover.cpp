@@ -169,11 +169,9 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
     if (DSTy->isLiteral() != SSTy->isLiteral() ||
         DSTy->isPacked() != SSTy->isPacked())
       return false;
-  } else if (ArrayType *DATy = dyn_cast<ArrayType>(DstTy)) {
-    if (DATy->getNumElements() != cast<ArrayType>(SrcTy)->getNumElements())
-      return false;
-  } else if (VectorType *DVTy = dyn_cast<VectorType>(DstTy)) {
-    if (DVTy->getNumElements() != cast<VectorType>(SrcTy)->getNumElements())
+  } else if (auto *DSeqTy = dyn_cast<SequentialType>(DstTy)) {
+    if (DSeqTy->getNumElements() !=
+        cast<SequentialType>(SrcTy)->getNumElements())
       return false;
   }
 

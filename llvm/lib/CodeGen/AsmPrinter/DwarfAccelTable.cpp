@@ -221,9 +221,7 @@ void DwarfAccelTable::EmitData(AsmPrinter *Asm, DwarfDebug *D) {
       Asm->EmitInt32((*HI)->Data.Values.size());
       for (HashDataContents *HD : (*HI)->Data.Values) {
         // Emit the DIE offset
-        DwarfCompileUnit *CU = D->lookupUnit(HD->Die->getUnit());
-        assert(CU && "Accelerated DIE should belong to a CU.");
-        Asm->EmitInt32(HD->Die->getOffset() + CU->getDebugInfoOffset());
+        Asm->EmitInt32(HD->Die->getDebugSectionOffset());
         // If we have multiple Atoms emit that info too.
         // FIXME: A bit of a hack, we either emit only one atom or all info.
         if (HeaderData.Atoms.size() > 1) {

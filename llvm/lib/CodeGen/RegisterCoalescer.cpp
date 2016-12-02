@@ -1571,11 +1571,17 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
   // Deny any overlapping intervals.  This depends on all the reserved
   // register live ranges to look like dead defs.
   if (!MRI->isConstantPhysReg(DstReg)) {
-    for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI)
+    for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI) {
+      // Abort if not all the regunits are reserved.
+      for (MCRegUnitRootIterator RI(*UI, TRI); RI.isValid(); ++RI) {
+        if (!MRI->isReserved(*RI))
+          return false;
+      }
       if (RHS.overlaps(LIS->getRegUnit(*UI))) {
         DEBUG(dbgs() << "\t\tInterference: " << PrintRegUnit(*UI, TRI) << '\n');
         return false;
       }
+    }
   }
 
   // Skip any value computations, we are not adding new values to the

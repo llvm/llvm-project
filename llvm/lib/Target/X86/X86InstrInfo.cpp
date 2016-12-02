@@ -895,6 +895,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZrr,     X86::VPMOVZXDQZrm,       0 },
     { X86::VPMOVZXWDZrr,     X86::VPMOVZXWDZrm,       0 },
     { X86::VPMOVZXWQZrr,     X86::VPMOVZXWQZrm,       0 },
+    { X86::VPSHUFDZri,       X86::VPSHUFDZmi,         0 },
+    { X86::VPSHUFHWZri,      X86::VPSHUFHWZmi,        0 },
+    { X86::VPSHUFLWZri,      X86::VPSHUFLWZmi,        0 },
 
     // AVX-512 foldable instructions (256-bit versions)
     { X86::VBROADCASTSSZ256r,    X86::VBROADCASTSSZ256m,    TB_NO_REVERSE },
@@ -923,6 +926,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZ256rr,      X86::VPMOVZXDQZ256rm,      0 },
     { X86::VPMOVZXWDZ256rr,      X86::VPMOVZXWDZ256rm,      0 },
     { X86::VPMOVZXWQZ256rr,      X86::VPMOVZXWQZ256rm,      TB_NO_REVERSE },
+    { X86::VPSHUFDZ256ri,        X86::VPSHUFDZ256mi,        0 },
+    { X86::VPSHUFHWZ256ri,       X86::VPSHUFHWZ256mi,       0 },
+    { X86::VPSHUFLWZ256ri,       X86::VPSHUFLWZ256mi,       0 },
 
     // AVX-512 foldable instructions (128-bit versions)
     { X86::VBROADCASTSSZ128r,    X86::VBROADCASTSSZ128m,    TB_NO_REVERSE },
@@ -949,6 +955,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZ128rr,      X86::VPMOVZXDQZ128rm,      TB_NO_REVERSE },
     { X86::VPMOVZXWDZ128rr,      X86::VPMOVZXWDZ128rm,      TB_NO_REVERSE },
     { X86::VPMOVZXWQZ128rr,      X86::VPMOVZXWQZ128rm,      TB_NO_REVERSE },
+    { X86::VPSHUFDZ128ri,        X86::VPSHUFDZ128mi,        0 },
+    { X86::VPSHUFHWZ128ri,       X86::VPSHUFHWZ128mi,       0 },
+    { X86::VPSHUFLWZ128ri,       X86::VPSHUFLWZ128mi,       0 },
 
     // F16C foldable instructions
     { X86::VCVTPH2PSrr,        X86::VCVTPH2PSrm,            0 },
@@ -1873,6 +1882,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMULUDQZrr,       X86::VPMULUDQZrm,         0 },
     { X86::VPORDZrr,          X86::VPORDZrm,            0 },
     { X86::VPORQZrr,          X86::VPORQZrm,            0 },
+    { X86::VPSHUFBZrr,        X86::VPSHUFBZrm,          0 },
     { X86::VPSLLVDZrr,        X86::VPSLLVDZrm,          0 },
     { X86::VPSLLVQZrr,        X86::VPSLLVQZrm,          0 },
     { X86::VPSRAVDZrr,        X86::VPSRAVDZrm,          0 },
@@ -2023,6 +2033,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPORDZ256rr,       X86::VPORDZ256rm,         0 },
     { X86::VPORQZ128rr,       X86::VPORQZ128rm,         0 },
     { X86::VPORQZ256rr,       X86::VPORQZ256rm,         0 },
+    { X86::VPSHUFBZ128rr,     X86::VPSHUFBZ128rm,       0 },
+    { X86::VPSHUFBZ256rr,     X86::VPSHUFBZ256rm,       0 },
     { X86::VPSUBBZ128rr,      X86::VPSUBBZ128rm,        0 },
     { X86::VPSUBBZ256rr,      X86::VPSUBBZ256rm,        0 },
     { X86::VPSUBDZ128rr,      X86::VPSUBDZ128rm,        0 },
@@ -2089,6 +2101,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZrrkz,    X86::VPMOVZXDQZrmkz,      0 },
     { X86::VPMOVZXWDZrrkz,    X86::VPMOVZXWDZrmkz,      0 },
     { X86::VPMOVZXWQZrrkz,    X86::VPMOVZXWQZrmkz,      0 },
+    { X86::VPSHUFDZrikz,      X86::VPSHUFDZmikz,        0 },
+    { X86::VPSHUFHWZrikz,     X86::VPSHUFHWZmikz,       0 },
+    { X86::VPSHUFLWZrikz,     X86::VPSHUFLWZmikz,       0 },
 
     // AVX-512VL 256-bit masked foldable instructions
     { X86::VPMOVSXBDZ256rrkz, X86::VPMOVSXBDZ256rmkz,   TB_NO_REVERSE },
@@ -2103,6 +2118,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZ256rrkz, X86::VPMOVZXDQZ256rmkz,   0 },
     { X86::VPMOVZXWDZ256rrkz, X86::VPMOVZXWDZ256rmkz,   0 },
     { X86::VPMOVZXWQZ256rrkz, X86::VPMOVZXWQZ256rmkz,   TB_NO_REVERSE },
+    { X86::VPSHUFDZ256rikz,   X86::VPSHUFDZ256mikz,     0 },
+    { X86::VPSHUFHWZ256rikz,  X86::VPSHUFHWZ256mikz,    0 },
+    { X86::VPSHUFLWZ256rikz,  X86::VPSHUFLWZ256mikz,    0 },
 
     // AVX-512VL 128-bit masked foldable instructions
     { X86::VPMOVSXBDZ128rrkz, X86::VPMOVSXBDZ128rmkz,   TB_NO_REVERSE },
@@ -2117,6 +2135,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZ128rrkz, X86::VPMOVZXDQZ128rmkz,   TB_NO_REVERSE },
     { X86::VPMOVZXWDZ128rrkz, X86::VPMOVZXWDZ128rmkz,   TB_NO_REVERSE },
     { X86::VPMOVZXWQZ128rrkz, X86::VPMOVZXWQZ128rmkz,   TB_NO_REVERSE },
+    { X86::VPSHUFDZ128rikz,   X86::VPSHUFDZ128mikz,     0 },
+    { X86::VPSHUFHWZ128rikz,  X86::VPSHUFHWZ128mikz,    0 },
+    { X86::VPSHUFLWZ128rikz,  X86::VPSHUFLWZ128mikz,    0 },
 
     // AES foldable instructions
     { X86::AESDECLASTrr,      X86::AESDECLASTrm,        TB_ALIGN_16 },
@@ -2254,7 +2275,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPTERNLOGDZ128rri,     X86::VPTERNLOGDZ128rmi,     0 },
     { X86::VPTERNLOGQZ128rri,     X86::VPTERNLOGQZ128rmi,     0 },
 
-    // AVX-512 masked arithmetic instructions
+    // AVX-512 masked instructions
     { X86::VADDPDZrrkz,           X86::VADDPDZrmkz,           0 },
     { X86::VADDPSZrrkz,           X86::VADDPSZrmkz,           0 },
     { X86::VANDNPDZrrkz,          X86::VANDNPDZrmkz,          0 },
@@ -2263,6 +2284,14 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VANDPSZrrkz,           X86::VANDPSZrmkz,           0 },
     { X86::VDIVPDZrrkz,           X86::VDIVPDZrmkz,           0 },
     { X86::VDIVPSZrrkz,           X86::VDIVPSZrmkz,           0 },
+    { X86::VINSERTF32x4Zrrkz,     X86::VINSERTF32x4Zrmkz,     0 },
+    { X86::VINSERTF32x8Zrrkz,     X86::VINSERTF32x8Zrmkz,     0 },
+    { X86::VINSERTF64x2Zrrkz,     X86::VINSERTF64x2Zrmkz,     0 },
+    { X86::VINSERTF64x4Zrrkz,     X86::VINSERTF64x4Zrmkz,     0 },
+    { X86::VINSERTI32x4Zrrkz,     X86::VINSERTI32x4Zrmkz,     0 },
+    { X86::VINSERTI32x8Zrrkz,     X86::VINSERTI32x8Zrmkz,     0 },
+    { X86::VINSERTI64x2Zrrkz,     X86::VINSERTI64x2Zrmkz,     0 },
+    { X86::VINSERTI64x4Zrrkz,     X86::VINSERTI64x4Zrmkz,     0 },
     { X86::VMAXCPDZrrkz,          X86::VMAXCPDZrmkz,          0 },
     { X86::VMAXCPSZrrkz,          X86::VMAXCPSZrmkz,          0 },
     { X86::VMAXPDZrrkz,           X86::VMAXPDZrmkz,           0 },
@@ -2289,6 +2318,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPANDQZrrkz,           X86::VPANDQZrmkz,           0 },
     { X86::VPORDZrrkz,            X86::VPORDZrmkz,            0 },
     { X86::VPORQZrrkz,            X86::VPORQZrmkz,            0 },
+    { X86::VPSHUFBZrrkz,          X86::VPSHUFBZrmkz,          0 },
     { X86::VPSUBBZrrkz,           X86::VPSUBBZrmkz,           0 },
     { X86::VPSUBDZrrkz,           X86::VPSUBDZrmkz,           0 },
     { X86::VPSUBQZrrkz,           X86::VPSUBQZrmkz,           0 },
@@ -2325,6 +2355,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VANDPSZ256rrkz,        X86::VANDPSZ256rmkz,        0 },
     { X86::VDIVPDZ256rrkz,        X86::VDIVPDZ256rmkz,        0 },
     { X86::VDIVPSZ256rrkz,        X86::VDIVPSZ256rmkz,        0 },
+    { X86::VINSERTF32x4Z256rrkz,  X86::VINSERTF32x4Z256rmkz,  0 },
+    { X86::VINSERTF64x2Z256rrkz,  X86::VINSERTF64x2Z256rmkz,  0 },
+    { X86::VINSERTI32x4Z256rrkz,  X86::VINSERTI32x4Z256rmkz,  0 },
+    { X86::VINSERTI64x2Z256rrkz,  X86::VINSERTI64x2Z256rmkz,  0 },
     { X86::VMAXCPDZ256rrkz,       X86::VMAXCPDZ256rmkz,       0 },
     { X86::VMAXCPSZ256rrkz,       X86::VMAXCPSZ256rmkz,       0 },
     { X86::VMAXPDZ256rrkz,        X86::VMAXPDZ256rmkz,        0 },
@@ -2351,6 +2385,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPANDQZ256rrkz,        X86::VPANDQZ256rmkz,        0 },
     { X86::VPORDZ256rrkz,         X86::VPORDZ256rmkz,         0 },
     { X86::VPORQZ256rrkz,         X86::VPORQZ256rmkz,         0 },
+    { X86::VPSHUFBZ256rrkz,       X86::VPSHUFBZ256rmkz,       0 },
     { X86::VPSUBBZ256rrkz,        X86::VPSUBBZ256rmkz,        0 },
     { X86::VPSUBDZ256rrkz,        X86::VPSUBDZ256rmkz,        0 },
     { X86::VPSUBQZ256rrkz,        X86::VPSUBQZ256rmkz,        0 },
@@ -2413,6 +2448,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPANDQZ128rrkz,        X86::VPANDQZ128rmkz,        0 },
     { X86::VPORDZ128rrkz,         X86::VPORDZ128rmkz,         0 },
     { X86::VPORQZ128rrkz,         X86::VPORQZ128rmkz,         0 },
+    { X86::VPSHUFBZ128rrkz,       X86::VPSHUFBZ128rmkz,       0 },
     { X86::VPSUBBZ128rrkz,        X86::VPSUBBZ128rmkz,        0 },
     { X86::VPSUBDZ128rrkz,        X86::VPSUBDZ128rmkz,        0 },
     { X86::VPSUBQZ128rrkz,        X86::VPSUBQZ128rmkz,        0 },
@@ -2453,6 +2489,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZrrk,         X86::VPMOVZXDQZrmk,         0 },
     { X86::VPMOVZXWDZrrk,         X86::VPMOVZXWDZrmk,         0 },
     { X86::VPMOVZXWQZrrk,         X86::VPMOVZXWQZrmk,         0 },
+    { X86::VPSHUFDZrik,           X86::VPSHUFDZmik,           0 },
+    { X86::VPSHUFHWZrik,          X86::VPSHUFHWZmik,          0 },
+    { X86::VPSHUFLWZrik,          X86::VPSHUFLWZmik,          0 },
 
     // AVX-512VL 256-bit masked foldable instructions
     { X86::VPMOVSXBDZ256rrk,      X86::VPMOVSXBDZ256rmk,      TB_NO_REVERSE },
@@ -2467,6 +2506,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZ256rrk,      X86::VPMOVZXDQZ256rmk,      0 },
     { X86::VPMOVZXWDZ256rrk,      X86::VPMOVZXWDZ256rmk,      0 },
     { X86::VPMOVZXWQZ256rrk,      X86::VPMOVZXWQZ256rmk,      TB_NO_REVERSE },
+    { X86::VPSHUFDZ256rik,        X86::VPSHUFDZ256mik,        0 },
+    { X86::VPSHUFHWZ256rik,       X86::VPSHUFHWZ256mik,       0 },
+    { X86::VPSHUFLWZ256rik,       X86::VPSHUFLWZ256mik,       0 },
 
     // AVX-512VL 128-bit masked foldable instructions
     { X86::VPMOVSXBDZ128rrk,      X86::VPMOVSXBDZ128rmk,      TB_NO_REVERSE },
@@ -2481,6 +2523,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMOVZXDQZ128rrk,      X86::VPMOVZXDQZ128rmk,      TB_NO_REVERSE },
     { X86::VPMOVZXWDZ128rrk,      X86::VPMOVZXWDZ128rmk,      TB_NO_REVERSE },
     { X86::VPMOVZXWQZ128rrk,      X86::VPMOVZXWQZ128rmk,      TB_NO_REVERSE },
+    { X86::VPSHUFDZ128rik,        X86::VPSHUFDZ128mik,        0 },
+    { X86::VPSHUFHWZ128rik,       X86::VPSHUFHWZ128mik,       0 },
+    { X86::VPSHUFLWZ128rik,       X86::VPSHUFLWZ128mik,       0 },
   };
 
   for (X86MemoryFoldTableEntry Entry : MemoryFoldTable3) {
@@ -2516,6 +2561,14 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VANDPSZrrk,         X86::VANDPSZrmk,           0 },
     { X86::VDIVPDZrrk,         X86::VDIVPDZrmk,           0 },
     { X86::VDIVPSZrrk,         X86::VDIVPSZrmk,           0 },
+    { X86::VINSERTF32x4Zrrk,   X86::VINSERTF32x4Zrmk,     0 },
+    { X86::VINSERTF32x8Zrrk,   X86::VINSERTF32x8Zrmk,     0 },
+    { X86::VINSERTF64x2Zrrk,   X86::VINSERTF64x2Zrmk,     0 },
+    { X86::VINSERTF64x4Zrrk,   X86::VINSERTF64x4Zrmk,     0 },
+    { X86::VINSERTI32x4Zrrk,   X86::VINSERTI32x4Zrmk,     0 },
+    { X86::VINSERTI32x8Zrrk,   X86::VINSERTI32x8Zrmk,     0 },
+    { X86::VINSERTI64x2Zrrk,   X86::VINSERTI64x2Zrmk,     0 },
+    { X86::VINSERTI64x4Zrrk,   X86::VINSERTI64x4Zrmk,     0 },
     { X86::VMAXCPDZrrk,        X86::VMAXCPDZrmk,          0 },
     { X86::VMAXCPSZrrk,        X86::VMAXCPSZrmk,          0 },
     { X86::VMAXPDZrrk,         X86::VMAXPDZrmk,           0 },
@@ -2542,6 +2595,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPANDQZrrk,         X86::VPANDQZrmk,           0 },
     { X86::VPORDZrrk,          X86::VPORDZrmk,            0 },
     { X86::VPORQZrrk,          X86::VPORQZrmk,            0 },
+    { X86::VPSHUFBZrrk,        X86::VPSHUFBZrmk,          0 },
     { X86::VPSUBBZrrk,         X86::VPSUBBZrmk,           0 },
     { X86::VPSUBDZrrk,         X86::VPSUBDZrmk,           0 },
     { X86::VPSUBQZrrk,         X86::VPSUBQZrmk,           0 },
@@ -2581,6 +2635,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VANDPSZ256rrk,      X86::VANDPSZ256rmk,        0 },
     { X86::VDIVPDZ256rrk,      X86::VDIVPDZ256rmk,        0 },
     { X86::VDIVPSZ256rrk,      X86::VDIVPSZ256rmk,        0 },
+    { X86::VINSERTF32x4Z256rrk,X86::VINSERTF32x4Z256rmk,  0 },
+    { X86::VINSERTF64x2Z256rrk,X86::VINSERTF64x2Z256rmk,  0 },
+    { X86::VINSERTI32x4Z256rrk,X86::VINSERTI32x4Z256rmk,  0 },
+    { X86::VINSERTI64x2Z256rrk,X86::VINSERTI64x2Z256rmk,  0 },
     { X86::VMAXCPDZ256rrk,     X86::VMAXCPDZ256rmk,       0 },
     { X86::VMAXCPSZ256rrk,     X86::VMAXCPSZ256rmk,       0 },
     { X86::VMAXPDZ256rrk,      X86::VMAXPDZ256rmk,        0 },
@@ -2607,6 +2665,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPANDQZ256rrk,      X86::VPANDQZ256rmk,        0 },
     { X86::VPORDZ256rrk,       X86::VPORDZ256rmk,         0 },
     { X86::VPORQZ256rrk,       X86::VPORQZ256rmk,         0 },
+    { X86::VPSHUFBZ256rrk,     X86::VPSHUFBZ256rmk,       0 },
     { X86::VPSUBBZ256rrk,      X86::VPSUBBZ256rmk,        0 },
     { X86::VPSUBDZ256rrk,      X86::VPSUBDZ256rmk,        0 },
     { X86::VPSUBQZ256rrk,      X86::VPSUBQZ256rmk,        0 },
@@ -2673,6 +2732,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPANDQZ128rrk,      X86::VPANDQZ128rmk,        0 },
     { X86::VPORDZ128rrk,       X86::VPORDZ128rmk,         0 },
     { X86::VPORQZ128rrk,       X86::VPORQZ128rmk,         0 },
+    { X86::VPSHUFBZ128rrk,     X86::VPSHUFBZ128rmk,       0 },
     { X86::VPSUBBZ128rrk,      X86::VPSUBBZ128rmk,        0 },
     { X86::VPSUBDZ128rrk,      X86::VPSUBDZ128rmk,        0 },
     { X86::VPSUBQZ128rrk,      X86::VPSUBQZ128rmk,        0 },

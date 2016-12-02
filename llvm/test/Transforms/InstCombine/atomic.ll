@@ -267,3 +267,23 @@ define void @pr27490b(i8** %p1, i8** %p2) {
   store atomic i8* %l, i8** %p2 seq_cst, align 8
   ret void
 }
+
+;; At the moment, we can't form atomic vectors by folding since these are 
+;; not representable in the IR.  This was pr29121.  The right long term
+;; solution is to extend the IR to handle this case.
+define <2 x float> @no_atomic_vector_load(i64* %p) {
+; CHECK-LABEL @no_atomic_vector_load
+; CHECK: load atomic i64, i64* %p unordered, align 8
+  %load = load atomic i64, i64* %p unordered, align 8
+  %.cast = bitcast i64 %load to <2 x float>
+  ret <2 x float> %.cast
+}
+
+define void @no_atomic_vector_store(<2 x float> %p, i8* %p2) {
+; CHECK-LABEL: @no_atomic_vector_store
+; CHECK: store atomic i64 %1, i64* %2 unordered, align 8
+  %1 = bitcast <2 x float> %p to i64
+  %2 = bitcast i8* %p2 to i64*
+  store atomic i64 %1, i64* %2 unordered, align 8
+  ret void
+}

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-default %t -- -- -std=c++11 -fno-delayed-template-parsing  -fexceptions
+// RUN: %check_clang_tidy %s modernize-use-equals-default %t -- -- -std=c++11 -fno-delayed-template-parsing  -fexceptions
 
 // Out of line definition.
 class OL {
@@ -8,10 +8,10 @@ public:
 };
 
 OL::OL() {}
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial default constructor [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial default constructor [modernize-use-equals-default]
 // CHECK-FIXES: OL::OL() = default;
 OL::~OL() {}
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial destructor [modernize-use-default]
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use '= default' to define a trivial destructor [modernize-use-equals-default]
 // CHECK-FIXES: OL::~OL() = default;
 
 // Inline definitions.

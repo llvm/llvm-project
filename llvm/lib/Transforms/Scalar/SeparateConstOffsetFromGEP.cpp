@@ -722,7 +722,7 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToPointerSize(
   for (User::op_iterator I = GEP->op_begin() + 1, E = GEP->op_end();
        I != E; ++I, ++GTI) {
     // Skip struct member indices which must be i32.
-    if (isa<SequentialType>(*GTI)) {
+    if (GTI.isSequential()) {
       if ((*I)->getType() != IntPtrTy) {
         *I = CastInst::CreateIntegerCast(*I, IntPtrTy, true, "idxprom", GEP);
         Changed = true;
@@ -739,7 +739,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
   int64_t AccumulativeByteOffset = 0;
   gep_type_iterator GTI = gep_type_begin(*GEP);
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
-    if (isa<SequentialType>(*GTI)) {
+    if (GTI.isSequential()) {
       // Tries to extract a constant offset from this GEP index.
       int64_t ConstantOffset =
           ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP, DT);
@@ -752,7 +752,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
             ConstantOffset * DL->getTypeAllocSize(GTI.getIndexedType());
       }
     } else if (LowerGEP) {
-      StructType *StTy = cast<StructType>(*GTI);
+      StructType *StTy = GTI.getStructType();
       uint64_t Field = cast<ConstantInt>(GEP->getOperand(I))->getZExtValue();
       // Skip field 0 as the offset is always 0.
       if (Field != 0) {
@@ -787,7 +787,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   // Create an ugly GEP for each sequential index. We don't create GEPs for
   // structure indices, as they are accumulated in the constant offset index.
   for (unsigned I = 1, E = Variadic->getNumOperands(); I != E; ++I, ++GTI) {
-    if (isa<SequentialType>(*GTI)) {
+    if (GTI.isSequential()) {
       Value *Idx = Variadic->getOperand(I);
       // Skip zero indices.
       if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx))
@@ -848,7 +848,7 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
   // don't create arithmetics for structure indices, as they are accumulated
   // in the constant offset index.
   for (unsigned I = 1, E = Variadic->getNumOperands(); I != E; ++I, ++GTI) {
-    if (isa<SequentialType>(*GTI)) {
+    if (GTI.isSequential()) {
       Value *Idx = Variadic->getOperand(I);
       // Skip zero indices.
       if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx))
@@ -928,7 +928,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // handle the constant offset and won't need a new structure index.
   gep_type_iterator GTI = gep_type_begin(*GEP);
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
-    if (isa<SequentialType>(*GTI)) {
+    if (GTI.isSequential()) {
       // Splits this GEP index into a variadic part and a constant offset, and
       // uses the variadic part as the new index.
       Value *OldIdx = GEP->getOperand(I);

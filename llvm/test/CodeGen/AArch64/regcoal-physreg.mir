@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=aarch64-apple-ios -run-pass=simple-register-coalescing %s -o - | FileCheck %s
+--- |
+  define void @func() { ret void }
+...
+---
+# Check coalescing of COPYs from reserved physregs.
+# CHECK-LABEL: name: func
+name: func
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: gpr64 }
+  - { id: 3, class: gpr32 }
+  - { id: 4, class: gpr64 }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: xseqpairsclass }
+body: |
+  bb.0:
+    ; We usually should not coalesce copies from allocatable physregs.
+    ; CHECK: %0 = COPY %w7
+    ; CHECK: STRWui %0, %x1, 0
+    %0 = COPY %w7
+    STRWui %0, %x1, 0
+
+    ; It is fine to coalesce copies from reserved physregs
+    ; CHECK-NOT: COPY
+    ; CHECK: STRXui %fp, %x1, 0
+    %1 = COPY %fp
+    STRXui %1, %x1, 0
+
+    ; It is not fine to coalesce copies from reserved physregs when they are
+    ; clobbered.
+    ; CHECK: %2 = COPY %fp
+    ; CHECK: STRXui %2, %x1, 0
+    %2 = COPY %fp
+    %fp = SUBXri %fp, 4, 0
+    STRXui %2, %x1, 0
+
+    ; Is is fine to coalesce copies from constant physregs even when they are
+    ; clobbered.
+    ; CHECK-NOT: COPY
+    ; CHECK: STRWui %wzr, %x1
+    %3 = COPY %wzr
+    dead %wzr = SUBSWri %w1, 0, 0, implicit-def %nzcv
+    STRWui %3, %x1, 0
+
+    ; Is is fine to coalesce copies from constant physregs even when they are
+    ; clobbered.
+    ; CHECK-NOT: COPY
+    ; CHECK: STRXui %xzr, %x1
+    %4 = COPY %xzr
+    dead %wzr = SUBSWri %w1, 0, 0, implicit-def %nzcv
+    STRXui %4, %x1, 0
+
+    ; Coalescing COPYs into constant physregs.
+    ; CHECK: %wzr = SUBSWri %w1, 0, 0
+    %5 = SUBSWri %w1, 0, 0, implicit-def %nzcv
+    %wzr = COPY %5
+
+    ; Only coalesce when the source register is reserved as a whole (this is
+    ; a limitation of the current code which cannot update liveness information
+    ; of the non-reserved part).
+    ; CHECK: %6 = COPY %xzr_x0
+    ; CHECK: HINT 0, implicit %6
+    %6 = COPY %xzr_x0
+    HINT 0, implicit %6
+...
