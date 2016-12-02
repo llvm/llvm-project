@@ -276,7 +276,8 @@ public:
     return true;
   }
 
-  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C) {
+  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
+                             Expr *Init) {
     if (C->capturesThis() || C->capturesVLAType())
       return true;
 
