@@ -1840,9 +1840,9 @@ int BoUpSLP::getSpillCost() {
       );
 
     // Now find the sequence of instructions between PrevInst and Inst.
-    BasicBlock::reverse_iterator InstIt(Inst->getIterator()),
-        PrevInstIt(PrevInst->getIterator());
-    --PrevInstIt;
+    BasicBlock::reverse_iterator InstIt = ++Inst->getIterator().getReverse(),
+                                 PrevInstIt =
+                                     PrevInst->getIterator().getReverse();
     while (InstIt != PrevInstIt) {
       if (PrevInstIt == PrevInst->getParent()->rend()) {
         PrevInstIt = Inst->getParent()->rbegin();
@@ -2958,9 +2958,10 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V) {
   }
   // Search up and down at the same time, because we don't know if the new
   // instruction is above or below the existing scheduling region.
-  BasicBlock::reverse_iterator UpIter(ScheduleStart->getIterator());
+  BasicBlock::reverse_iterator UpIter =
+      ++ScheduleStart->getIterator().getReverse();
   BasicBlock::reverse_iterator UpperEnd = BB->rend();
-  BasicBlock::iterator DownIter(ScheduleEnd);
+  BasicBlock::iterator DownIter = ScheduleEnd->getIterator();
   BasicBlock::iterator LowerEnd = BB->end();
   for (;;) {
     if (++ScheduleRegionSize > ScheduleRegionSizeLimit) {
