@@ -235,18 +235,12 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
     if (!X || !Y)
       return false;
 
-    // Performance hack for single-thread. If no other threads are
-    // running, we can safely read next colors as there is no race
-    // condition. This optimization may reduce the number of
-    // iterations of the main loop because we can see results of the
-    // same iteration.
-    size_t Idx = (Config->Threads ? Cnt : Cnt + 1) % 2;
+    // Ineligible sections have the special color 0.
+    // They can never be the same in terms of section colors.
+    if (X->Color[Cnt % 2] == 0)
+      return false;
 
-    // All colorable sections must have some colors.
-    // 0 is a default non-color value.
-    assert(X->Color[Idx] != 0 && Y->Color[Idx] != 0);
-
-    return X->Color[Idx] == Y->Color[Idx];
+    return X->Color[Cnt % 2] == Y->Color[Cnt % 2];
   };
 
   return std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
