@@ -111,6 +111,7 @@ extern bool PollyDelinearize;
 extern bool PollyUseRuntimeAliasChecks;
 extern bool PollyProcessUnprofitable;
 extern bool PollyInvariantLoadHoisting;
+extern bool PollyAllowUnsignedOperations;
 
 /// A function attribute which will cause Polly to skip the function
 extern llvm::StringRef PollySkipFnAttr;
@@ -218,6 +219,16 @@ private:
 
   /// Remove cached results for the children of @p R recursively.
   void removeCachedResultsRecursively(const Region &R);
+
+  /// Check if @p S0 and @p S1 do contain multiple possibly aliasing pointers.
+  ///
+  /// @param S0    A expression to check.
+  /// @param S1    Another expression to check or nullptr.
+  /// @param Scope The loop/scope the expressions are checked in.
+  ///
+  /// @returns True, if multiple possibly aliasing pointers are used in @p S0
+  ///          (and @p S1 if given).
+  bool involvesMultiplePtrs(const SCEV *S0, const SCEV *S1, Loop *Scope) const;
 
   /// Add the region @p AR as over approximated sub-region in @p Context.
   ///

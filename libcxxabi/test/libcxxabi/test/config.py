@@ -37,8 +37,6 @@ class Configuration(LibcxxConfiguration):
         super(Configuration, self).configure_features()
         if not self.get_lit_bool('enable_exceptions', True):
             self.config.available_features.add('libcxxabi-no-exceptions')
-        if not self.cxx.addCompileFlagIfSupported(['-Xclang', '-mqualified-function-type-info']):
-            self.config.available_features.add("libcxxabi-no-qualified-function-types")
 
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']

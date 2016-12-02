@@ -121,7 +121,7 @@ class AsanTestCase(TestBase):
             "Process should be stopped due to ASan report",
             substrs=[
                 'stopped',
-                'stop reason = Use of deallocated memory detected'])
+                'stop reason = Use of deallocated memory'])
 
         # make sure the 'memory history' command still works even when we're
         # generating a report now

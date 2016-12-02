@@ -595,6 +595,8 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
+  case R_X86_64_NONE:
+    return R_HINT;
   }
 }
 
