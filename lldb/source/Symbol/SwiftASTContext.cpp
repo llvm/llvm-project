@@ -1871,9 +1871,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             framework_search_paths.GetFileSpecAtIndex(fi).GetPath().c_str());
       }
 
-      for (size_t mi = 0, me = framework_search_paths.GetSize(); mi != me;
+      for (size_t mi = 0, me = module_search_paths.GetSize(); mi != me;
            ++mi) {
-        swift_ast_sp->AddFrameworkSearchPath(
+        swift_ast_sp->AddModuleSearchPath(
             module_search_paths.GetFileSpecAtIndex(mi).GetPath().c_str());
       }
 
