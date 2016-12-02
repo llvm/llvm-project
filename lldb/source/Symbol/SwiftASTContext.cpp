@@ -477,12 +477,11 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
                   CompilerType(GetASTContext(), superclass_type.getPointer());
               member_info.byte_size =
                   member_info.clang_type.GetByteSize(nullptr);
-              // showing somemodule.sometype<A> is confusing to the user because
-              // it will show the *unboud* archetype name
-              // even though the type is actually properly bound (or it should!)
-              // and since one cannot overload a class
-              // on the number of generic arguments, somemodule.sometype is just
-              // as unique
+              // Showing somemodule.sometype<A> is confusing to the user because
+              // it will show the *unboud* archetype name even though the type
+              // is actually properly bound (or it should!) and since one cannot
+              // overload a class on the number of generic arguments,
+              // somemodule.sometype is just as unique.
               member_info.name.SetCString(
                   member_info.clang_type.GetUnboundType()
                       .GetTypeName()
@@ -536,20 +535,15 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     if (!member_infos_sp->member_infos.empty()) {
       if (is_class) {
         // If we have a class, then all offsets are fragile so we don't need to
-        // do layout
-        // since we will need to lookup the ivar offset symbol, or munge the
-        // runtime data
-        // to find the offsets.
+        // do layout since we will need to lookup the ivar offset symbol, or
+        // munge the runtime data to find the offsets.
       } else if (!is_protocol) {
         // Only do struct layout if we don't have a union since the only thing
-        // we need
-        // layout for currently is for the byte offset and the byte offset of
-        // everything
-        // in a union is zero.
+        // we need layout for currently is for the byte offset and the byte
+        // offset of everything in a union is zero.
         // As for protocols, their fields are artificially generated from what a
-        // protocol_container
-        // contains in the Swift runtime itself, and it's just pointers, so no
-        // need to get fancy
+        // protocol_container contains in the Swift runtime itself, and it's
+        // just pointers, so no need to get fancy.
         swift::irgen::StructLayout layout(
             GetIRGenModule(), swift_can_type,
             swift::irgen::LayoutKind::NonHeapObject, layout_strategy,
@@ -841,11 +835,10 @@ GetFunctionArgumentTuple(const CompilerType &compiler_type) {
       swift::TypeBase *input = func->getInput().getPointer();
       if (!input)
         return CompilerType();
-      // see comment in swift::AnyFunctionType for rationale here:
-      // a function can take either a tuple or a parentype, but if a parentype
+      // See comment in swift::AnyFunctionType for rationale here:
+      // A function can take either a tuple or a parentype, but if a parentype
       // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
-      // is
-      // not a tuple, that must mean there is only 1 input
+      // is not a tuple, that must mean there is only 1 input.
       swift::TupleType *tuple = llvm::dyn_cast_or_null<swift::TupleType>(input);
       if (tuple)
         return CompilerType(compiler_type.GetTypeSystem(), tuple);
@@ -1305,7 +1298,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       if (triple.getOS() == llvm::Triple::UnknownOS) {
 // cl_kernels are the only binaries that don't have an LC_MIN_VERSION_xxx load
 // command.
-// This avoids a swift assertion.
+// This avoids a Swift assertion.
 
 #if defined(__APPLE__)
         switch (triple.getArch()) {
@@ -1321,7 +1314,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         }
 
 #else
-        // Not an elegant hack on OS X, not an elegant hack elsewheere.
+        // Not an elegant hack on OS X, not an elegant hack elsewhere.
         // But we shouldn't be claiming things are Mac binaries when they are
         // not.
         triple.setOS(HostInfo::GetArchitecture().GetTriple().getOS());
@@ -1425,15 +1418,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           }
         }
 
-        // TODO: make sure we only get options for swift files, we really
-        // should be passing down a language enumeration into
-        // sym_vendor->GetCompileOption()
-        // so we don't get compiler options for a C/C++ file...
+        // TODO: make sure we only get options for Swift files.
+        // We really should be passing down a language enumeration into
+        // sym_vendor->GetCompileOption() so we don't get compiler options
+        // for a C/C++ file...
 
         if (got_serialized_options) {
           // Some of the bits in the compiler options we keep separately, so we
-          // need to populate them from the
-          // serialized options:
+          // need to populate them from the serialized options:
           llvm::StringRef serialized_triple =
               swift_ast_sp->GetCompilerInvocation().getTargetTriple();
           if (serialized_triple.empty()) {
@@ -1557,7 +1549,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         llvm::Triple llvm_triple(swift_ast_sp->GetTriple());
 
         // LLVM wants this to be set to iOS or MacOSX; if we're working on
-        // a bare-boards type image, change the triple for llvm's benefit.
+        // a bare-boards type image, change the triple for LLVM's benefit.
         if (llvm_triple.getVendor() == llvm::Triple::Apple &&
             llvm_triple.getOS() == llvm::Triple::UnknownOS) {
           if (llvm_triple.getArch() == llvm::Triple::arm ||
@@ -1608,8 +1600,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       bool handled_resource_dir = false;
       const size_t num_images = target->GetImages().GetSize();
       // Set the SDK path and resource dir prior to doing search paths.
-      // Otherwise
-      // when we create search path options we put in the wrong SDK path.
+      // Otherwise when we create search path options we put in the wrong SDK
+      // path.
 
       FileSpec &target_sdk_spec = target->GetSDKPath();
       if (target_sdk_spec && target_sdk_spec.Exists()) {
@@ -1629,9 +1621,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         if (!module_swift_ast || module_swift_ast->HasFatalErrors() ||
             !module_swift_ast->GetClangImporter()) {
           // Make sure we warn about this module load failure, the one that
-          // comes from loading types
-          // often gets swallowed up and not seen, this is the only reliable
-          // point where we can show this.
+          // comes from loading types often gets swallowed up and not seen,
+          // this is the only reliable point where we can show this.
           // But only do it once per UUID so we don't overwhelm the user with
           // warnings...
           std::unordered_set<std::string> m_swift_warnings_issued;
@@ -1669,7 +1660,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             swift_ast_sp->SetResourceDir(resource_dir);
             if (GetDefaultResourceDir().empty()) {
               // Tuck this away as a reasonable default resource dir
-              // for contexts that don't have one.  The Swift parser
+              // for contexts that don't have one. The Swift parser
               // will assert without one.
               GetDefaultResourceDir() = resource_dir;
             }
@@ -1685,7 +1676,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       ModuleSP exe_module_sp(target->GetExecutableModule());
 
       // If we're debugging a testsuite, then treat the main test bundle as the
-      // executable
+      // executable.
       static ConstString s_XCTest("XCTest");
 
       if (exe_module_sp &&
@@ -1877,11 +1868,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             module_search_paths.GetFileSpecAtIndex(mi).GetPath().c_str());
       }
 
-      // Now fold any extra options we were passed.  This has to be done BEFORE
-      // the
-      // ClangImporter is made by calling GetClangImporter or these options will
-      // be
-      // ignored.
+      // Now fold any extra options we were passed. This has to be done BEFORE
+      // the ClangImporter is made by calling GetClangImporter or these options
+      // will be ignored.
 
       if (extra_options) {
         swift::CompilerInvocation &compiler_invocation =
@@ -1895,8 +1884,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
       Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-      // this needs to happen once all the import paths are set, or otherwise no
-      // modules will be found
+      // This needs to happen once all the import paths are set, or otherwise no
+      // modules will be found.
       if (!swift_ast_sp->GetClangImporter()) {
         if (log) {
           log->Printf("((Target*)%p)->GetSwiftASTContext() returning NULL - "
@@ -2014,8 +2003,8 @@ bool SwiftASTContext::SetTriple(const char *triple_cstr, Module *module) {
       // If the OS version is unspecified, do fancy things
       if (llvm_triple.getOSMajorVersion() == unspecified) {
         // If a triple is "<arch>-apple-darwin" change it to be
-        // "<arch>-apple-macosx" otherwise
-        // the major and minor OS version we append below would be wrong
+        // "<arch>-apple-macosx" otherwise the major and minor OS version we
+        // append below would be wrong.
         if (llvm_triple.getVendor() == llvm::Triple::VendorType::Apple &&
             llvm_triple.getOS() == llvm::Triple::OSType::Darwin) {
           llvm_triple.setOS(llvm::Triple::OSType::MacOSX);
@@ -2360,7 +2349,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
   if (!HostInfo::GetOSVersion(major, minor, update))
     return ConstString();
 
-  // if there are minimum requirements that exceed the current OS, apply those
+  // If there are minimum requirements that exceed the current OS, apply those
 
   if (least_major > major) {
     major = least_major;
@@ -2462,7 +2451,7 @@ static ConstString GetResourceDir() {
       }
     }
 
-    // Nothing in our bundle.  Are we in a toolchain that has its own Swift
+    // Nothing in our bundle. Are we in a toolchain that has its own Swift
     // compiler resource dir?
 
     {
@@ -2488,8 +2477,7 @@ static ConstString GetResourceDir() {
       }
     }
 
-    // We're not in a toolchain that has one.  Use the Xcode default
-    // toolchain.
+    // We're not in a toolchain that has one. Use the Xcode default toolchain.
 
     {
       std::string xcode_contents_path = GetXcodeContentsPath();
@@ -2517,7 +2505,7 @@ static ConstString GetResourceDir() {
       }
     }
 
-    // We're not in Xcode.  We might be in the command-line tools.
+    // We're not in Xcode. We might be in the command-line tools.
 
     {
       std::string cl_tools_path = GetCurrentCLToolsPath();
@@ -2711,8 +2699,7 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
       if (provided_sdk_path.Exists()) {
         // We don't check whether the SDK supports swift because we figure if
         // someone is passing this to us on the command line (e.g., for the
-        // REPL),
-        // they probably know what they're doing.
+        // REPL), they probably know what they're doing.
 
         set_sdk = true;
       }
@@ -2898,7 +2885,7 @@ public:
       source_mgr.getLLVMSourceMgr().PrintMessage(os, message);
 
       // Use the llvm::raw_string_ostream::str() accessor as it will flush
-      // the stream into our "message" and return us a reference to "message"
+      // the stream into our "message" and return us a reference to "message".
       std::string &message_ref = os.str();
 
       if (message_ref.empty())
@@ -2960,7 +2947,7 @@ public:
       // we correct them below. LLVM stores in SourceLoc objects as character
       // offsets so there is no way to get LLVM to move its error line numbers
       // around by adjusting the source location, we must do it manually. We
-      // also want to use the same error formatting as llvm and clang, so we
+      // also want to use the same error formatting as LLVM and Clang, so we
       // must muck with the string.
 
       const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
@@ -3015,17 +3002,15 @@ public:
     }
 
     // In general, we don't want to see diagnostics from outside of the source
-    // text range of the actual user
-    // expression.  But if we didn't find any diagnostics in the text range,
-    // it's probably because the source
-    // range was not specified correctly, and we don't want to lose legit errors
-    // because of that.  So in that
-    // case we'll add them all here:
+    // text range of the actual user expression. But if we didn't find any
+    // diagnostics in the text range, it's probably because the source range was
+    // not specified correctly, and we don't want to lose legit errors because
+    // of that. So in that case we'll add them all here:
 
     if (!added_one_diagnostic) {
       // This will report diagnostic errors from outside the expression's source
-      // range.  Those are
-      // not interesting to users, so we only emit them in debug builds.
+      // range. Those are not interesting to users, so we only emit them in
+      // debug builds.
       for (const RawDiagnostic &diagnostic : m_diagnostics) {
         const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
         const DiagnosticOrigin origin = eDiagnosticOriginSwift;
@@ -3045,11 +3030,9 @@ public:
 
 private:
   // We don't currently use lldb_private::Diagostic or any of the lldb
-  // DiagnosticManager
-  // machinery to store diagnostics as they occur.  Instead, we store them in
-  // raw
-  // form using this struct, then transcode them to SwiftDiagnostics in
-  // PrintDiagnostic.
+  // DiagnosticManager machinery to store diagnostics as they occur. Instead,
+  // we store them in raw form using this struct, then transcode them to
+  // SwiftDiagnostics in PrintDiagnostic.
   struct RawDiagnostic {
     RawDiagnostic(std::string in_desc, swift::DiagnosticKind in_kind,
                   llvm::StringRef in_bufferName, unsigned in_bufferID,
@@ -3104,10 +3087,10 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
     GetASTMap().Insert(m_ast_context_ap.get(), this);
 
-    // store common useful manglings for quick lookup - this also ensures that
-    // types that didn't come out of the visitor
-    // (e.g. fallback ObjCPointers) still exist in our tables for later mangled
-    // name retrieval (the expression parser needs to do this)
+    // Store common useful manglings for quick lookup - this also ensures that
+    // types that didn't come out of the visitor (e.g. fallback ObjCPointers)
+    // still exist in our tables for later mangled name retrieval
+    // (the expression parser needs to do this).
     CacheDemangledType(ConstString("_TtBO").GetCString(),
                        m_ast_context_ap->TheUnknownObjectType.getPointer());
     CacheDemangledType(ConstString("_TtBp").GetCString(),
@@ -3626,10 +3609,9 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
     switch (library_kind) {
     case swift::LibraryKind::Framework: {
 
-      // First make sure the library isn't already loaded, since this is a
-      // framework, we make sure the file name
-      // and the framework name are the same, and that we are contained in
-      // FileName.framework with no other
+      // First make sure the library isn't already loaded. Since this is a
+      // framework, we make sure the file name and the framework name are the
+      // same, and that we are contained in FileName.framework with no other
       // intervening frameworks.  We can get more restrictive if this gives
       // false positives.
 
@@ -3658,8 +3640,6 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       }
       // If we already have this library loaded, don't try and load it again.
       if (module_already_loaded) {
-        // Then Framework is already loaded, so we don't need to try to load it
-        // again.
         if (log)
           log->Printf("Skipping load of %s as it is already loaded.",
                       framework_name.c_str());
@@ -3674,7 +3654,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
           size_t framework_offset = module_path.rfind(framework_name);
 
           if (framework_offset != std::string::npos) {
-            // Then Framework is already loaded, so we don't need to try to load
+            // The Framework is already loaded, so we don't need to try to load
             // it again.
             if (log)
               log->Printf("Skipping load of %s as it is already loaded.",
@@ -3705,8 +3685,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       for (const std::string &framework_search_dir :
            swift_module->getASTContext().SearchPathOpts.FrameworkSearchPaths) {
         // The framework search dir as it comes from the AST context often has
-        // duplicate entries, don't
-        // try to load along the same path twice.
+        // duplicate entries, don't try to load along the same path twice.
 
         std::pair<std::unordered_set<std::string>::iterator, bool>
             insert_result = seen_paths.insert(framework_search_dir);
@@ -3732,11 +3711,10 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       }
 
       // Maybe we were told to add a link library that exists in the system.  I
-      // tried just specifying
-      // Foo.framework/Foo and letting the System search figure that out, but if
-      // DYLD_FRAMEWORK_FALLBACK_PATH
-      // is see (e.g. in Xcode's test scheme) then these aren't found.  So for
-      // now I dial them in explicitly:
+      // tried just specifying Foo.framework/Foo and letting the system search
+      // figure that out, but if DYLD_FRAMEWORK_FALLBACK_PATH is set
+      // (e.g. in Xcode's test scheme) then these aren't found. So for now I
+      // dial them in explicitly:
 
       std::string system_path("/System/Library/Frameworks/");
       system_path.append(library_name);
@@ -3799,12 +3777,11 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
 
   if (ConstString::Equals(runtime->GetStandardLibraryBaseName(),
                           ConstString(library_name))) {
-    // Never dlopen the standard library.  Some binaries statically link to the
-    // Swift standard library
-    // and dlopening it here will cause ObjC runtime conflicts.
+    // Never dlopen the standard library. Some binaries statically link to the
+    // Swift standard library and dlopening it here will cause ObjC runtime
+    // conflicts.
     // If you want to run Swift expressions you have to arrange to load the
-    // swift standard library
-    // by hand before doing so.
+    // Swift standard library by hand before doing so.
     if (log)
       log->Printf("Skipping swift standard library \"%s\" - we don't hand load "
                   "that one.",
@@ -3849,8 +3826,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
 
   for (const std::string &library_search_dir : search_paths) {
     // The library search dir as it comes from the AST context often has
-    // duplicate entries, don't
-    // try to load along the same path twice.
+    // duplicate entries, don't try to load along the same path twice.
 
     std::pair<std::unordered_set<std::string>::iterator, bool> insert_result =
         seen_paths.insert(library_search_dir);
@@ -4098,7 +4074,7 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
 
     error.Clear();
 
-    // if we were to crash doing this, remember what type caused it
+    // If we were to crash doing this, remember what type caused it
     Host::SetCrashDescriptionWithFormat("error finding type for %s",
                                         mangled_typename);
     // Make a scoped cleanup object that will clear the crash description string
@@ -4531,10 +4507,9 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Error &error) {
   }
 
   // For now we're going to do this all using mangled names.  If we find that is
-  // too slow, we can use the
-  // TypeBase * in the CompilerType to match this to the version of the type we
-  // got from the mangled name
-  // in the original swift::ASTContext.
+  // too slow, we can use the TypeBase * in the CompilerType to match this to
+  // the version of the type we got from the mangled name in the original
+  // swift::ASTContext.
 
   ConstString mangled_name(type.GetMangledTypeName());
   if (mangled_name) {
@@ -4879,14 +4854,13 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                        uint32_t bufferID, uint32_t first_line,
                                        uint32_t last_line,
                                        uint32_t line_offset) {
-  // If this is a fatal error, copy the error into the AST Context's fatal error
-  // field,
-  // and then put it to the stream, otherwise just dump the diagnostics to the
-  // stream.
+  // If this is a fatal error, copy the error into the AST context's fatal error
+  // field, and then put it to the stream, otherwise just dump the diagnostics
+  // to the stream.
 
 
-   // N.B. you cannot use VALID_OR_RETURN_VOID here since that exits if you have
-   // fatal errors, which are what we are trying to print here.
+  // N.B. you cannot use VALID_OR_RETURN_VOID here since that exits if you have
+  // fatal errors, which are what we are trying to print here.
   if (!m_ast_context_ap.get()) {
     SymbolFile *sym_file = GetSymbolFile();
     if (sym_file) {
@@ -4994,12 +4968,9 @@ bool SwiftASTContext::HasTarget() const {
   lldb::TargetWP empty_wp;
 
   // If either call to "std::weak_ptr::owner_before(...) value returns true,
-  // this
-  // indicates that m_section_wp once contained (possibly still does) a
-  // reference
-  // to a valid shared pointer. This helps us know if we had a valid reference
-  // to
-  // a target which is now invalid because the target was deleted.
+  // this indicates that m_section_wp once contained (possibly still does) a
+  // reference to a valid shared pointer. This helps us know if we had a valid
+  // reference to a target which is now invalid because the target was deleted.
   return empty_wp.owner_before(m_target_wp) ||
          m_target_wp.owner_before(empty_wp);
 }
@@ -5309,11 +5280,10 @@ size_t SwiftASTContext::GetNumberOfFunctionArguments(void *type) {
       swift::TypeBase *input = func->getInput().getPointer();
       if (!input)
         return 0;
-      // see comment in swift::AnyFunctionType for rationale here:
-      // a function can take either a tuple or a parentype, but if a parentype
+      // See comment in swift::AnyFunctionType for rationale here:
+      // A function can take either a tuple or a parentype, but if a parentype
       // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
-      // is
-      // not a tuple, that must mean there is only 1 input
+      // is not a tuple, that must mean there is only 1 input.
       swift::TupleType *tuple = llvm::dyn_cast_or_null<swift::TupleType>(input);
       if (tuple)
         return tuple->getNumElements();
@@ -5337,11 +5307,10 @@ CompilerType SwiftASTContext::GetFunctionArgumentAtIndex(void *type,
       swift::TypeBase *input = func->getInput().getPointer();
       if (!input)
         return CompilerType();
-      // see comment in swift::AnyFunctionType for rationale here:
-      // a function can take either a tuple or a parentype, but if a parentype
+      // See comment in swift::AnyFunctionType for rationale here:
+      // A function can take either a tuple or a parentype, but if a parentype
       // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
-      // is
-      // not a tuple, that must mean there is only 1 input
+      // is not a tuple, that must mean there is only 1 input.
       swift::TupleType *tuple = llvm::dyn_cast_or_null<swift::TupleType>(input);
       if (tuple) {
         if (index < tuple->getNumElements())
@@ -6075,7 +6044,8 @@ SwiftASTContext::GetTypeInfo(void *type,
     // TODO: extract element type
     //                if (pointee_or_element_clang_type)
     //                    pointee_or_element_clang_type->SetClangType(m_ast,
-    //                    llvm::cast<clang::ArrayType>(qual_type.getTypePtr())->getElementType());
+    //                    llvm::cast<clang::ArrayType>(qual_type.getTypePtr())
+    //                        ->getElementType());
     swift_flags |= eTypeHasChildren | eTypeIsArray;
     break;
 
@@ -6237,11 +6207,11 @@ CompilerType SwiftASTContext::GetArrayElementType(void *type,
       element_type = CompilerType(GetASTContext(), baseType.getPointer());
     } break;
     case swift::TypeKind::BoundGenericStruct: {
-      // there are a couple of structs that mean "Array" in Swift:
+      // There are a couple of structs that mean "Array" in Swift:
       // Array<T>
       // NativeArray<T>
       // Slice<T>
-      // treat them as arrays for convenience sake
+      // Treat them as arrays for convenience sake.
       swift::BoundGenericStructType *boundGenericStructType(
           swift_type->getAs<swift::BoundGenericStructType>());
       if (!boundGenericStructType)
@@ -6771,16 +6741,15 @@ const swift::irgen::TypeInfo *SwiftASTContext::GetSwiftTypeInfo(void *type) {
         return &GetIRGenModule().getTypeInfo(
             swift::SILType::getPrimitiveObjectType(swift_can_type));
       else {
-        // if you encounter one of these, print out a message - this is
+        // If you encounter one of these, print out a message - this is
         // temporary to help us figure out what bases we didn't cover well
-        // enough
-        // it should be removed at some point before GM though; and since we
-        // don't know what to do here,
+        // enough it should be removed at some point before GM though;
+        // and since we don't know what to do here,
         printf("GetSwiftTypeInfo() on non-legal SIL type not special cased. "
                "Name: %s - Kind: %u\n",
                GetTypeName(type).AsCString("<unknown>"),
                swift_can_type->getKind());
-        // go for a pointer - it's probably a reasonable assumption in most
+        // Go for a pointer - it's probably a reasonable assumption in most
         // cases
         return GetSwiftTypeInfo(
             GetASTContext()->TheRawPointerType.getPointer());
@@ -7678,7 +7647,7 @@ static int64_t GetInstanceVariableOffset(ValueObject *valobj,
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
       if (target) {
-        // given a type there are three cases:
+        // Given a type there are three cases:
         //   non generic type - field offset symbols are emitted
         //   generic type:
         //     iVar offsets depend on the type arguments - no field offsets
@@ -7973,7 +7942,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
         child_name += parent_name;
       }
 
-      // We have a pointer to an simple type
+      // We have a pointer to a simple type
       if (idx == 0) {
         child_byte_size = pointee_clang_type.GetByteSize(
             exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
@@ -8019,20 +7988,20 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 //    {
 //    };
 //
-// If we have a clang type that describes "class C", and we wanted to looked
+// If we have a clang type that describes "class C", and we wanted to look for
 // "m_b" in it:
 //
 // With omit_empty_base_classes == false we would get an integer array back
 // with:
 // { 1,  1 }
-// The first index 1 is the child index for "class A" within class C
-// The second index 1 is the child index for "m_b" within class A
+// The first index 1 is the child index for "class A" within class C.
+// The second index 1 is the child index for "m_b" within class A.
 //
 // With omit_empty_base_classes == true we would get an integer array back with:
 // { 0,  1 }
 // The first index 0 is the child index for "class A" within class C (since
-// class B doesn't have any members it doesn't count)
-// The second index 1 is the child index for "m_b" within class A
+// class B doesn't have any members it doesn't count).
+// The second index 1 is the child index for "m_b" within class A.
 
 size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     void *type, const char *name, bool omit_empty_base_classes,
@@ -8300,7 +8269,7 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
                 return i;
             }
           }
-          // Check the base class name if  have one...
+          // Check the base class name if we have one...
           if (cached_member_info->member_infos[0].member_type ==
                   MemberType::BaseClass &&
               cached_member_info->member_infos[0].name == const_name) {
@@ -8606,7 +8575,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Class:
   case swift::TypeKind::BoundGenericClass:
     // If we have a class that is in a variable then it is a pointer,
-    // else if it is a base class, it has no value
+    // else if it is a base class, it has no value.
     if (is_base_class)
       break;
   // Fall through to case below
