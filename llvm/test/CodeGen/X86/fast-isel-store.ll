@@ -368,7 +368,7 @@ define <4 x double> @test_store_4xf64(<4 x double>* nocapture %addr, <4 x double
 ; SSE64-LABEL: test_store_4xf64:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp0:
+; SSE64-NEXT:  .Lcfi0:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm1
@@ -407,7 +407,7 @@ define <4 x double> @test_store_4xf64_aligned(<4 x double>* nocapture %addr, <4 
 ; SSE64-LABEL: test_store_4xf64_aligned:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp1:
+; SSE64-NEXT:  .Lcfi1:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm1
@@ -446,7 +446,7 @@ define <16 x i32> @test_store_16xi32(<16 x i32>* nocapture %addr, <16 x i32> %va
 ; SSE64-LABEL: test_store_16xi32:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp2:
+; SSE64-NEXT:  .Lcfi2:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movaps {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -496,7 +496,7 @@ define <16 x i32> @test_store_16xi32_aligned(<16 x i32>* nocapture %addr, <16 x 
 ; SSE64-LABEL: test_store_16xi32_aligned:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp3:
+; SSE64-NEXT:  .Lcfi3:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movaps {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -546,7 +546,7 @@ define <16 x float> @test_store_16xf32(<16 x float>* nocapture %addr, <16 x floa
 ; SSE64-LABEL: test_store_16xf32:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp4:
+; SSE64-NEXT:  .Lcfi4:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movaps {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -596,7 +596,7 @@ define <16 x float> @test_store_16xf32_aligned(<16 x float>* nocapture %addr, <1
 ; SSE64-LABEL: test_store_16xf32_aligned:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp5:
+; SSE64-NEXT:  .Lcfi5:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movaps {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -650,7 +650,7 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ; SSE64-LABEL: test_store_8xf64:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp6:
+; SSE64-NEXT:  .Lcfi6:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -676,12 +676,12 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ; AVXONLY64-LABEL: test_store_8xf64:
 ; AVXONLY64:       # BB#0:
 ; AVXONLY64-NEXT:    pushl %ebp
-; AVXONLY64-NEXT:  .Ltmp0:
+; AVXONLY64-NEXT:  .Lcfi0:
 ; AVXONLY64-NEXT:    .cfi_def_cfa_offset 8
-; AVXONLY64-NEXT:  .Ltmp1:
+; AVXONLY64-NEXT:  .Lcfi1:
 ; AVXONLY64-NEXT:    .cfi_offset %ebp, -8
 ; AVXONLY64-NEXT:    movl %esp, %ebp
-; AVXONLY64-NEXT:  .Ltmp2:
+; AVXONLY64-NEXT:  .Lcfi2:
 ; AVXONLY64-NEXT:    .cfi_def_cfa_register %ebp
 ; AVXONLY64-NEXT:    andl $-32, %esp
 ; AVXONLY64-NEXT:    subl $32, %esp
@@ -727,7 +727,7 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ; SSE64-LABEL: test_store_8xf64_aligned:
 ; SSE64:       # BB#0:
 ; SSE64-NEXT:    subl $12, %esp
-; SSE64-NEXT:  .Ltmp7:
+; SSE64-NEXT:  .Lcfi7:
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
 ; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -753,12 +753,12 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ; AVXONLY64-LABEL: test_store_8xf64_aligned:
 ; AVXONLY64:       # BB#0:
 ; AVXONLY64-NEXT:    pushl %ebp
-; AVXONLY64-NEXT:  .Ltmp3:
+; AVXONLY64-NEXT:  .Lcfi3:
 ; AVXONLY64-NEXT:    .cfi_def_cfa_offset 8
-; AVXONLY64-NEXT:  .Ltmp4:
+; AVXONLY64-NEXT:  .Lcfi4:
 ; AVXONLY64-NEXT:    .cfi_offset %ebp, -8
 ; AVXONLY64-NEXT:    movl %esp, %ebp
-; AVXONLY64-NEXT:  .Ltmp5:
+; AVXONLY64-NEXT:  .Lcfi5:
 ; AVXONLY64-NEXT:    .cfi_def_cfa_register %ebp
 ; AVXONLY64-NEXT:    andl $-32, %esp
 ; AVXONLY64-NEXT:    subl $32, %esp

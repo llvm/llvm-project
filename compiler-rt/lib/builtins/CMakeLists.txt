@@ -395,7 +395,7 @@ if(MINGW)
       udivmodsi4.c
       udivsi3.c
       umoddi3.c)
-else(MINGW)
+elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_SOURCES}

@@ -24,7 +24,6 @@
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstVisitor.h"
@@ -108,6 +107,11 @@ static cl::opt<unsigned> FlatLoopTripCountThreshold(
              "threshold, the loop is considered as flat and will be less "
              "aggressively unrolled."));
 
+static cl::opt<bool>
+    UnrollAllowPeeling("unroll-allow-peeling", cl::Hidden,
+                       cl::desc("Allows loops to be peeled when the dynamic "
+                                "trip count is known to be low."));
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -129,6 +133,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.PartialThreshold = UP.Threshold;
   UP.PartialOptSizeThreshold = 0;
   UP.Count = 0;
+  UP.PeelCount = 0;
   UP.DefaultUnrollRuntimeCount = 8;
   UP.MaxCount = UINT_MAX;
   UP.FullUnrollMaxCount = UINT_MAX;
@@ -139,6 +144,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.AllowExpensiveTripCount = false;
   UP.Force = false;
   UP.UpperBound = false;
+  UP.AllowPeeling = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, UP);
@@ -171,6 +177,8 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     UP.Runtime = UnrollRuntime;
   if (UnrollMaxUpperBound == 0)
     UP.UpperBound = false;
+  if (UnrollAllowPeeling.getNumOccurrences() > 0)
+    UP.AllowPeeling = UnrollAllowPeeling;
 
   // Apply user values provided by argument
   if (UserThreshold.hasValue()) {
@@ -754,16 +762,6 @@ static bool computeUnrollCount(
   bool ExplicitUnroll = PragmaCount > 0 || PragmaFullUnroll ||
                         PragmaEnableUnroll || UserUnrollCount;
 
-  // Check if the runtime trip count is too small when profile is available.
-  if (L->getHeader()->getParent()->getEntryCount() && TripCount == 0) {
-    if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
-      if (*ProfileTripCount < FlatLoopTripCountThreshold)
-        return false;
-      else
-        UP.AllowExpensiveTripCount = true;
-    }
-  }
-
   if (ExplicitUnroll && TripCount != 0) {
     // If the loop has an unrolling pragma, we want to be more aggressive with
     // unrolling limits. Set thresholds to at least the PragmaThreshold value
@@ -878,12 +876,31 @@ static bool computeUnrollCount(
         << "Unable to fully unroll loop as directed by unroll(full) pragma "
            "because loop has a runtime trip count.");
 
-  // 5th priority is runtime unrolling.
+  // 5th priority is loop peeling
+  computePeelCount(L, LoopSize, UP);
+  if (UP.PeelCount) {
+    UP.Runtime = false;
+    UP.Count = 1;
+    return ExplicitUnroll;
+  }
+
+  // 6th priority is runtime unrolling.
   // Don't unroll a runtime trip count loop when it is disabled.
   if (HasRuntimeUnrollDisablePragma(L)) {
     UP.Count = 0;
     return false;
   }
+  
+  // Check if the runtime trip count is too small when profile is available.
+  if (L->getHeader()->getParent()->getEntryCount()) {
+    if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
+      if (*ProfileTripCount < FlatLoopTripCountThreshold)
+        return false;
+      else
+        UP.AllowExpensiveTripCount = true;
+    }
+  }  
+
   // Reduce count based on the type of unrolling and the threshold values.
   UP.Runtime |= PragmaEnableUnroll || PragmaCount > 0 || UserUnrollCount;
   if (!UP.Runtime) {
@@ -1042,13 +1059,17 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // Unroll the loop.
   if (!UnrollLoop(L, UP.Count, TripCount, UP.Force, UP.Runtime,
                   UP.AllowExpensiveTripCount, UseUpperBound, MaxOrZero,
-                  TripMultiple, LI, SE, &DT, &AC, &ORE, PreserveLCSSA))
+                  TripMultiple, UP.PeelCount, LI, SE, &DT, &AC, &ORE,
+                  PreserveLCSSA))
     return false;
 
   // If loop has an unroll count pragma or unrolled by explicitly set count
   // mark loop as unrolled to prevent unrolling beyond that requested.
-  if (IsCountSetExplicitly)
+  // If the loop was peeled, we already "used up" the profile information
+  // we had, so we don't want to unroll or peel again.
+  if (IsCountSetExplicitly || UP.PeelCount)
     SetLoopAlreadyUnrolled(L);
+
   return true;
 }
 

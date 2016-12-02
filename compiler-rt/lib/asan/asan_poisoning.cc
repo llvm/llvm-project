@@ -64,12 +64,9 @@ struct ShadowSegmentEndpoint {
 };
 
 void FlushUnneededASanShadowMemory(uptr p, uptr size) {
-    // Since asan's mapping is compacting, the shadow chunk may be
-    // not page-aligned, so we only flush the page-aligned portion.
-    uptr page_size = GetPageSizeCached();
-    uptr shadow_beg = RoundUpTo(MemToShadow(p), page_size);
-    uptr shadow_end = RoundDownTo(MemToShadow(p + size), page_size);
-    ReleaseMemoryToOS(shadow_beg, shadow_end - shadow_beg);
+  // Since asan's mapping is compacting, the shadow chunk may be
+  // not page-aligned, so we only flush the page-aligned portion.
+  ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
 }
 
 void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {

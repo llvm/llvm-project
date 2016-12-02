@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // <vector>
 
 // void push_back(const value_type& x);
@@ -16,10 +15,10 @@
 #include <cassert>
 
 #include "asan_testing.h"
+#include "test_macros.h"
 
 // Flag that makes the copy constructor for CMyClass throw an exception
-static bool gCopyConstructorShouldThow = false;
-
+static bool gCopyConstructorShouldThrow = false;
 
 class CMyClass {
     public: CMyClass(int tag);
@@ -52,8 +51,8 @@ CMyClass::CMyClass(const CMyClass& iOther) :
     fMagicValue(kStartedConstructionMagicValue), fTag(iOther.fTag)
 {
     // If requested, throw an exception _before_ setting fMagicValue to kFinishedConstructionMagicValue
-    if (gCopyConstructorShouldThow) {
-        throw std::exception();
+    if (gCopyConstructorShouldThrow) {
+        TEST_THROW(std::exception());
     }
     // Signal that the constructor has finished running
     fMagicValue = kFinishedConstructionMagicValue;
@@ -76,12 +75,15 @@ int main()
     assert(is_contiguous_container_asan_correct(vec));
     assert(is_contiguous_container_asan_correct(vec2));
 
-    gCopyConstructorShouldThow = true;
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    gCopyConstructorShouldThrow = true;
     try {
         vec.push_back(instance);
+        assert(false);
     }
     catch (...) {
         assert(vec==vec2);
         assert(is_contiguous_container_asan_correct(vec));
     }
+#endif
 }

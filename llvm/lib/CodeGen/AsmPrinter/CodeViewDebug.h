@@ -227,7 +227,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void collectVariableInfo(const DISubprogram *SP);
 
-  void collectVariableInfoFromMMITable(DenseSet<InlinedVariable> &Processed);
+  void collectVariableInfoFromMFTable(DenseSet<InlinedVariable> &Processed);
 
   /// Records information about a local variable in the appropriate scope. In
   /// particular, locals from inlined code live inside the inlining site.

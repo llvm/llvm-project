@@ -341,11 +341,15 @@ void MCStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   Frame.End = (MCSymbol *) 1;
 }
 
-MCSymbol *MCStreamer::EmitCFICommon() {
-  EnsureValidDwarfFrame();
-  MCSymbol *Label = getContext().createTempSymbol();
+MCSymbol *MCStreamer::EmitCFILabel() {
+  MCSymbol *Label = getContext().createTempSymbol("cfi", true);
   EmitLabel(Label);
   return Label;
+}
+
+MCSymbol *MCStreamer::EmitCFICommon() {
+  EnsureValidDwarfFrame();
+  return EmitCFILabel();
 }
 
 void MCStreamer::EmitCFIDefCfa(int64_t Register, int64_t Offset) {
@@ -504,8 +508,7 @@ void MCStreamer::EmitWinCFIStartProc(const MCSymbol *Symbol) {
   if (CurrentWinFrameInfo && !CurrentWinFrameInfo->End)
     report_fatal_error("Starting a function before ending the previous one!");
 
-  MCSymbol *StartProc = getContext().createTempSymbol();
-  EmitLabel(StartProc);
+  MCSymbol *StartProc = EmitCFILabel();
 
   WinFrameInfos.push_back(new WinEH::FrameInfo(Symbol, StartProc));
   CurrentWinFrameInfo = WinFrameInfos.back();
@@ -517,16 +520,14 @@ void MCStreamer::EmitWinCFIEndProc() {
   if (CurrentWinFrameInfo->ChainedParent)
     report_fatal_error("Not all chained regions terminated!");
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
   CurrentWinFrameInfo->End = Label;
 }
 
 void MCStreamer::EmitWinCFIStartChained() {
   EnsureValidWinFrameInfo();
 
-  MCSymbol *StartProc = getContext().createTempSymbol();
-  EmitLabel(StartProc);
+  MCSymbol *StartProc = EmitCFILabel();
 
   WinFrameInfos.push_back(new WinEH::FrameInfo(CurrentWinFrameInfo->Function,
                                                StartProc, CurrentWinFrameInfo));
@@ -539,8 +540,7 @@ void MCStreamer::EmitWinCFIEndChained() {
   if (!CurrentWinFrameInfo->ChainedParent)
     report_fatal_error("End of a chained region outside a chained region!");
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   CurrentWinFrameInfo->End = Label;
   CurrentWinFrameInfo =
@@ -604,8 +604,7 @@ void MCStreamer::EmitSyntaxDirective() {}
 void MCStreamer::EmitWinCFIPushReg(unsigned Register) {
   EnsureValidWinFrameInfo();
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   WinEH::Instruction Inst = Win64EH::Instruction::PushNonVol(Label, Register);
   CurrentWinFrameInfo->Instructions.push_back(Inst);
@@ -620,8 +619,7 @@ void MCStreamer::EmitWinCFISetFrame(unsigned Register, unsigned Offset) {
   if (Offset > 240)
     report_fatal_error("Frame offset must be less than or equal to 240!");
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   WinEH::Instruction Inst =
       Win64EH::Instruction::SetFPReg(Label, Register, Offset);
@@ -636,8 +634,7 @@ void MCStreamer::EmitWinCFIAllocStack(unsigned Size) {
   if (Size & 7)
     report_fatal_error("Misaligned stack allocation!");
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   WinEH::Instruction Inst = Win64EH::Instruction::Alloc(Label, Size);
   CurrentWinFrameInfo->Instructions.push_back(Inst);
@@ -648,8 +645,7 @@ void MCStreamer::EmitWinCFISaveReg(unsigned Register, unsigned Offset) {
   if (Offset & 7)
     report_fatal_error("Misaligned saved register offset!");
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   WinEH::Instruction Inst =
       Win64EH::Instruction::SaveNonVol(Label, Register, Offset);
@@ -661,8 +657,7 @@ void MCStreamer::EmitWinCFISaveXMM(unsigned Register, unsigned Offset) {
   if (Offset & 0x0F)
     report_fatal_error("Misaligned saved vector register offset!");
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   WinEH::Instruction Inst =
       Win64EH::Instruction::SaveXMM(Label, Register, Offset);
@@ -674,8 +669,7 @@ void MCStreamer::EmitWinCFIPushFrame(bool Code) {
   if (CurrentWinFrameInfo->Instructions.size() > 0)
     report_fatal_error("If present, PushMachFrame must be the first UOP");
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   WinEH::Instruction Inst = Win64EH::Instruction::PushMachFrame(Label, Code);
   CurrentWinFrameInfo->Instructions.push_back(Inst);
@@ -684,8 +678,7 @@ void MCStreamer::EmitWinCFIPushFrame(bool Code) {
 void MCStreamer::EmitWinCFIEndProlog() {
   EnsureValidWinFrameInfo();
 
-  MCSymbol *Label = getContext().createTempSymbol();
-  EmitLabel(Label);
+  MCSymbol *Label = EmitCFILabel();
 
   CurrentWinFrameInfo->PrologEnd = Label;
 }
@@ -805,7 +798,7 @@ void MCStreamer::EndCOFFSymbolDef() {}
 void MCStreamer::EmitFileDirective(StringRef Filename) {}
 void MCStreamer::EmitCOFFSymbolStorageClass(int StorageClass) {}
 void MCStreamer::EmitCOFFSymbolType(int Type) {}
-void MCStreamer::emitELFSize(MCSymbolELF *Symbol, const MCExpr *Value) {}
+void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        unsigned ByteAlignment) {}
 void MCStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,

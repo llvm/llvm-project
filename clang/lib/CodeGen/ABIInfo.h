@@ -142,6 +142,8 @@ namespace swiftcall {
                                            llvm::Type *eltTy,
                                            unsigned elts) const;
 
+    virtual bool isSwiftErrorInRegister() const = 0;
+
     static bool classof(const ABIInfo *info) {
       return info->supportsSwift();
     }

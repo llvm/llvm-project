@@ -11,8 +11,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 
-#include <iostream>
-
 namespace llvm {
 namespace object {
 

@@ -72,7 +72,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 
 ; Callsites
 ; The GC one
-; CHECK: .long	.Ltmp1-test
+; CHECK: .long	.Ltmp0-test
 ; CHECK: .short	0
 ; CHECK: .short	4
 ; SmallConstant (0)
@@ -101,7 +101,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK: .p2align	3
 
 ; The Deopt one
-; CHECK: .long	.Ltmp3-test2
+; CHECK: .long	.Ltmp1-test2
 ; CHECK: .short	0
 ; CHECK: .short	4
 ; SmallConstant (0)

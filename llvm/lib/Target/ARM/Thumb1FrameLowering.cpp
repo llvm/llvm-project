@@ -121,7 +121,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     emitSPUpdate(MBB, MBBI, TII, dl, *RegInfo, -ArgRegsSaveSize,
                  MachineInstr::FrameSetup);
     CFAOffset -= ArgRegsSaveSize;
-    unsigned CFIIndex = MMI.addFrameInst(
+    unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
@@ -133,7 +133,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       emitSPUpdate(MBB, MBBI, TII, dl, *RegInfo, -(NumBytes - ArgRegsSaveSize),
                    MachineInstr::FrameSetup);
       CFAOffset -= NumBytes - ArgRegsSaveSize;
-      unsigned CFIIndex = MMI.addFrameInst(
+      unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
@@ -197,7 +197,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   if (adjustedGPRCS1Size) {
     CFAOffset -= adjustedGPRCS1Size;
-    unsigned CFIIndex = MMI.addFrameInst(
+    unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
@@ -225,7 +225,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R6:
     case ARM::R7:
     case ARM::LR:
-      unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, MRI->getDwarfRegNum(Reg, true), MFI.getObjectOffset(FI)));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
@@ -243,14 +243,14 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlags(MachineInstr::FrameSetup));
     if(FramePtrOffsetInBlock) {
       CFAOffset += FramePtrOffsetInBlock;
-      unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createDefCfa(
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
           nullptr, MRI->getDwarfRegNum(FramePtr, true), CFAOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
     } else {
       unsigned CFIIndex =
-          MMI.addFrameInst(MCCFIInstruction::createDefCfaRegister(
+          MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
               nullptr, MRI->getDwarfRegNum(FramePtr, true)));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
@@ -292,7 +292,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R10:
     case ARM::R11:
     case ARM::R12: {
-      unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, MRI->getDwarfRegNum(Reg, true), MFI.getObjectOffset(FI)));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
@@ -310,7 +310,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
                  MachineInstr::FrameSetup);
     if (!HasFP) {
       CFAOffset -= NumBytes;
-      unsigned CFIIndex = MMI.addFrameInst(
+      unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfaOffset(nullptr, CFAOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)

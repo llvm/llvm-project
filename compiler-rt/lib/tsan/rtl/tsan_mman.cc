@@ -54,7 +54,8 @@ struct MapUnmapCallback {
     diff = p + size - RoundDown(p + size, kPageSize);
     if (diff != 0)
       size -= diff;
-    ReleaseMemoryToOS((uptr)MemToMeta(p), size / kMetaRatio);
+    uptr p_meta = (uptr)MemToMeta(p);
+    ReleaseMemoryPagesToOS(p_meta, p_meta + size / kMetaRatio);
   }
 };
 

@@ -32,12 +32,12 @@ define void @test1() {
 ; X32-LABEL: test1:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    pushl %edi
-; X32-NEXT:  Ltmp0:
+; X32-NEXT:  Lcfi0:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    subl $16, %esp
-; X32-NEXT:  Ltmp1:
+; X32-NEXT:  Lcfi1:
 ; X32-NEXT:    .cfi_def_cfa_offset 24
-; X32-NEXT:  Ltmp2:
+; X32-NEXT:  Lcfi2:
 ; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    movlps %xmm0, (%esp)

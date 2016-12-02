@@ -24,7 +24,7 @@ namespace llvm {
 ///
 /// This template is used to explicitly build up a collection of aligned
 /// character array types. We have to build these up using a macro and explicit
-/// specialization to cope with old versions of MSVC where only an
+/// specialization to cope with MSVC (at least till 2015) where only an
 /// integer literal can be used to specify an alignment constraint. Once built
 /// up here, we can then begin to indirect between these using normal C++
 /// template parameters.

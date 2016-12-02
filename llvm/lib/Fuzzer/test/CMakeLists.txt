@@ -85,6 +85,7 @@ set(Tests
   NthRunCrashTest
   OneHugeAllocTest
   OutOfMemoryTest
+  OutOfMemorySingleLargeMallocTest
   RepeatedMemcmp
   RepeatedBytesTest
   SimpleCmpTest

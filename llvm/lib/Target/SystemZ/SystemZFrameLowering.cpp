@@ -82,7 +82,7 @@ void SystemZFrameLowering::determineCalleeSaves(MachineFunction &MF,
       SavedRegs.set(SystemZ::ArgGPRs[I]);
 
   // If there are any landing pads, entering them will modify r6/r7.
-  if (!MF.getMMI().getLandingPads().empty()) {
+  if (!MF.getLandingPads().empty()) {
     SavedRegs.set(SystemZ::R6D);
     SavedRegs.set(SystemZ::R7D);
   }
@@ -350,7 +350,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
       unsigned Reg = Save.getReg();
       if (SystemZ::GR64BitRegClass.contains(Reg)) {
         int64_t Offset = SPOffsetFromCFA + RegSpillOffsets[Reg];
-        unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
             nullptr, MRI->getDwarfRegNum(Reg, true), Offset));
         BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
@@ -374,7 +374,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
     emitIncrement(MBB, MBBI, DL, SystemZ::R15D, Delta, ZII);
 
     // Add CFI for the allocation.
-    unsigned CFIIndex = MMI.addFrameInst(
+    unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createDefCfaOffset(nullptr, SPOffsetFromCFA + Delta));
     BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
@@ -392,7 +392,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Add CFI for the new frame location.
     unsigned HardFP = MRI->getDwarfRegNum(SystemZ::R11D, true);
-    unsigned CFIIndex = MMI.addFrameInst(
+    unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createDefCfaRegister(nullptr, HardFP));
     BuildMI(MBB, MBBI, DL, ZII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
@@ -422,7 +422,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
       int64_t Offset =
           getFrameIndexReference(MF, Save.getFrameIdx(), IgnoredFrameReg);
 
-      unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, DwarfReg, SPOffsetFromCFA + Offset));
       CFIIndexes.push_back(CFIIndex);
     }

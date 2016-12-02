@@ -23,6 +23,7 @@
 #include "FuzzerExtFunctions.h"
 #include "FuzzerInterface.h"
 #include "FuzzerOptions.h"
+#include "FuzzerSHA1.h"
 #include "FuzzerValueBitMap.h"
 
 namespace fuzzer {
@@ -103,6 +104,8 @@ public:
   size_t GetCurrentUnitInFuzzingThead(const uint8_t **Data) const;
   void TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
                                bool DuringInitialCorpusExecution);
+
+  void HandleMalloc(size_t Size);
 
 private:
   void AlarmCallback();

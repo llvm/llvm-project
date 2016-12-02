@@ -109,7 +109,7 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 
 ; Callsites
 ; Constant arguments
-; CHECK-NEXT: .long	.Ltmp1-test
+; CHECK-NEXT: .long	.Ltmp0-test
 ; CHECK: .short	0
 ; CHECK: .short	11
 ; SmallConstant (0)
@@ -181,7 +181,7 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 
 ; Callsites
 ; Constant arguments
-; CHECK-NEXT: .long	.Ltmp3-test_derived_arg
+; CHECK-NEXT: .long	.Ltmp1-test_derived_arg
 ; CHECK: .short	0
 ; CHECK: .short	11
 ; SmallConstant (0)
@@ -246,7 +246,7 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; CHECK-NEXT: .quad	237
 
 ; Instruction Offset
-; CHECK-NEXT: .long	.Ltmp5-test_id
+; CHECK-NEXT: .long	.Ltmp2-test_id
 
 ; Reserved:
 ; CHECK: .short	0

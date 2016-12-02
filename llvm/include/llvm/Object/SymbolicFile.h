@@ -88,7 +88,6 @@ class BasicSymbolRef {
   const SymbolicFile *OwningObject;
 
 public:
-  // FIXME: should we add a SF_Text?
   enum Flags : unsigned {
     SF_None = 0,
     SF_Undefined = 1U << 0,      // Symbol is defined in another object file
@@ -103,6 +102,8 @@ public:
     SF_Thumb = 1U << 8,          // Thumb symbol in a 32-bit ARM binary
     SF_Hidden = 1U << 9,         // Symbol has hidden visibility
     SF_Const = 1U << 10,         // Symbol value is constant
+    SF_Executable = 1U << 11,    // Symbol points to an executable section
+                                 // (IR only)
   };
 
   BasicSymbolRef() : OwningObject(nullptr) { }

@@ -247,6 +247,15 @@ TEST(HasDeclaration, HasDeclarationOfCXXNewExpr) {
               cxxNewExpr(hasDeclaration(functionDecl(parameterCountIs(1))))));
 }
 
+TEST(HasUnqualifiedDesugaredType, DesugarsUsing) {
+  EXPECT_TRUE(
+      matches("struct A {}; using B = A; B b;",
+              varDecl(hasType(hasUnqualifiedDesugaredType(recordType())))));
+  EXPECT_TRUE(
+      matches("struct A {}; using B = A; using C = B; C b;",
+              varDecl(hasType(hasUnqualifiedDesugaredType(recordType())))));
+}
+
 TEST(HasUnderlyingDecl, Matches) {
   EXPECT_TRUE(matches("namespace N { template <class T> void f(T t); }"
                       "template <class T> void g() { using N::f; f(T()); }",

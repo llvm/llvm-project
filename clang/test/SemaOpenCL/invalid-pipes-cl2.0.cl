@@ -28,3 +28,12 @@ bool test_id_comprision(void) {
   reserve_id_t id1, id2;
   return (id1 == id2);          // expected-error {{invalid operands to binary expression ('reserve_id_t' and 'reserve_id_t')}}
 }
+
+// Tests ASTContext::mergeTypes rejects this.
+int f(pipe int x, int y); // expected-note {{previous declaration is here}}
+int f(x, y) // expected-error {{conflicting types for 'f}}
+pipe short x;
+int y;
+{
+    return y;
+}

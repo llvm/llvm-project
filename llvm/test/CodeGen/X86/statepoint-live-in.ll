@@ -10,7 +10,7 @@ entry:
 ; We expect the argument to be passed in an extra register to bar
 ; CHECK-LABEL: test1
 ; CHECK:       pushq	%rax
-; CHECK-NEXT: Ltmp0:
+; CHECK-NEXT: Lcfi0:
 ; CHECK-NEXT:  .cfi_def_cfa_offset 16
 ; CHECK-NEXT: callq	_bar
   %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 1, i32 %a)
@@ -90,7 +90,7 @@ entry:
 ; CHECK:        movl %edi, %ebx
 ; CHECK:        movl %ebx, 12(%rsp)
 ; CHECK-NEXT:   callq	_baz
-; CHECK-NEXT:  Ltmp30:
+; CHECK-NEXT:  Ltmp6:
 ; CHECK-NEXT:   callq	_bar
   call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @baz, i32 0, i32 0, i32 0, i32 1, i32 %a)
   call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 1, i32 %a)
@@ -98,13 +98,13 @@ entry:
 }
 
 
-; CHECK: Ltmp1-_test1
+; CHECK: Ltmp0-_test1
 ; CHECK:      .byte	1
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .short	5
 ; CHECK-NEXT: .long	0
 
-; CHECK: Ltmp7-_test2
+; CHECK: Ltmp1-_test2
 ; CHECK:      .byte	1
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .short	6
@@ -113,7 +113,7 @@ entry:
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .short	3
 ; CHECK-NEXT: .long	0
-; CHECK: Ltmp8-_test2
+; CHECK: Ltmp2-_test2
 ; CHECK:      .byte	1
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .short	3

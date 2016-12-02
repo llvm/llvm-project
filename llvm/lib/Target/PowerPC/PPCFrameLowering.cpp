@@ -1105,12 +1105,12 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       // because if the stack needed aligning then CFA won't be at a fixed
       // offset from FP/SP.
       unsigned Reg = MRI->getDwarfRegNum(BPReg, true);
-      CFIIndex = MMI.addFrameInst(
+      CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfaRegister(nullptr, Reg));
     } else {
       // Adjust the definition of CFA to account for the change in SP.
       assert(NegFrameSize);
-      CFIIndex = MMI.addFrameInst(
+      CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfaOffset(nullptr, NegFrameSize));
     }
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1119,7 +1119,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     if (HasFP) {
       // Describe where FP was saved, at a fixed offset from CFA.
       unsigned Reg = MRI->getDwarfRegNum(FPReg, true);
-      CFIIndex = MMI.addFrameInst(
+      CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, Reg, FPOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
@@ -1128,7 +1128,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     if (FI->usesPICBase()) {
       // Describe where FP was saved, at a fixed offset from CFA.
       unsigned Reg = MRI->getDwarfRegNum(PPC::R30, true);
-      CFIIndex = MMI.addFrameInst(
+      CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, Reg, PBPOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
@@ -1137,7 +1137,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     if (HasBP) {
       // Describe where BP was saved, at a fixed offset from CFA.
       unsigned Reg = MRI->getDwarfRegNum(BPReg, true);
-      CFIIndex = MMI.addFrameInst(
+      CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, Reg, BPOffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
@@ -1146,7 +1146,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     if (MustSaveLR) {
       // Describe where LR was saved, at a fixed offset from CFA.
       unsigned Reg = MRI->getDwarfRegNum(LRReg, true);
-      CFIIndex = MMI.addFrameInst(
+      CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, Reg, LROffset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
@@ -1163,7 +1163,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       // Change the definition of CFA from SP+offset to FP+offset, because SP
       // will change at every alloca.
       unsigned Reg = MRI->getDwarfRegNum(FPReg, true);
-      unsigned CFIIndex = MMI.addFrameInst(
+      unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createDefCfaRegister(nullptr, Reg));
 
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1197,7 +1197,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         // the whole CR word.  In the ELFv2 ABI, every CR that was
         // actually saved gets its own CFI record.
         unsigned CRReg = isELFv2ABI? Reg : (unsigned) PPC::CR2;
-        unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
             nullptr, MRI->getDwarfRegNum(CRReg, true), 8));
         BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
@@ -1205,7 +1205,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       }
 
       int Offset = MFI.getObjectOffset(CSI[I].getFrameIdx());
-      unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, MRI->getDwarfRegNum(Reg, true), Offset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);

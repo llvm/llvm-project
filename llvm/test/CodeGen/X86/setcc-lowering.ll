@@ -32,9 +32,9 @@ define void @pr26232(i64 %a) {
 ; KNL-32-LABEL: pr26232:
 ; KNL-32:       # BB#0: # %for_loop599.preheader
 ; KNL-32-NEXT:    pushl %esi
-; KNL-32-NEXT:  .Ltmp0:
+; KNL-32-NEXT:  .Lcfi0:
 ; KNL-32-NEXT:    .cfi_def_cfa_offset 8
-; KNL-32-NEXT:  .Ltmp1:
+; KNL-32-NEXT:  .Lcfi1:
 ; KNL-32-NEXT:    .cfi_offset %esi, -8
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx

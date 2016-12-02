@@ -26,6 +26,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
+#include <cassert>
+#include <cstddef>
+#include <iterator>
 #include <vector>
 
 namespace llvm {
@@ -93,7 +96,7 @@ class scc_iterator : public iterator_facade_base<
   }
 
   /// End is when the DFS stack is empty.
-  scc_iterator() {}
+  scc_iterator() = default;
 
 public:
   static scc_iterator begin(const GraphT &G) {
@@ -230,15 +233,15 @@ template <class T> scc_iterator<T> scc_end(const T &G) {
 }
 
 /// \brief Construct the begin iterator for a deduced graph type T's Inverse<T>.
-template <class T> scc_iterator<Inverse<T> > scc_begin(const Inverse<T> &G) {
-  return scc_iterator<Inverse<T> >::begin(G);
+template <class T> scc_iterator<Inverse<T>> scc_begin(const Inverse<T> &G) {
+  return scc_iterator<Inverse<T>>::begin(G);
 }
 
 /// \brief Construct the end iterator for a deduced graph type T's Inverse<T>.
-template <class T> scc_iterator<Inverse<T> > scc_end(const Inverse<T> &G) {
-  return scc_iterator<Inverse<T> >::end(G);
+template <class T> scc_iterator<Inverse<T>> scc_end(const Inverse<T> &G) {
+  return scc_iterator<Inverse<T>>::end(G);
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_SCCITERATOR_H

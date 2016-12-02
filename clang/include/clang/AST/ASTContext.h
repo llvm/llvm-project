@@ -135,8 +135,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<AutoType> AutoTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
   llvm::FoldingSet<AttributedType> AttributedTypes;
-  mutable llvm::FoldingSet<ReadPipeType> ReadPipeTypes;
-  mutable llvm::FoldingSet<WritePipeType> WritePipeTypes;
+  mutable llvm::FoldingSet<PipeType> PipeTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
   mutable llvm::FoldingSet<DependentTemplateName> DependentTemplateNames;
@@ -1011,6 +1010,8 @@ private:
   QualType getExtQualType(const Type *Base, Qualifiers Quals) const;
 
   QualType getTypeDeclTypeSlow(const TypeDecl *Decl) const;
+
+  QualType getPipeType(QualType T, bool ReadOnly) const;
 
 public:
   /// \brief Return the uniqued reference to the type for an address space

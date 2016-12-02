@@ -8,7 +8,7 @@ define i32 @test(float %a, float %b)  {
 ; CHECK-LABEL: test:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:  Ltmp0:
+; CHECK-NEXT:  Lcfi0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm0

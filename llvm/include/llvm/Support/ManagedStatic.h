@@ -46,6 +46,7 @@ protected:
   mutable const ManagedStaticBase *Next;
 
   void RegisterManagedStatic(void *(*creator)(), void (*deleter)(void*)) const;
+
 public:
   /// isConstructed - Return true if this object has not been created yet.
   bool isConstructed() const { return Ptr != nullptr; }
@@ -89,10 +90,10 @@ void llvm_shutdown();
 /// llvm_shutdown_obj - This is a simple helper class that calls
 /// llvm_shutdown() when it is destroyed.
 struct llvm_shutdown_obj {
-  llvm_shutdown_obj() { }
+  llvm_shutdown_obj() = default;
   ~llvm_shutdown_obj() { llvm_shutdown(); }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_MANAGEDSTATIC_H

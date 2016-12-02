@@ -443,6 +443,26 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc, InstCombiner &IC,
   return ExtractElementInst::Create(VecInput, IC.Builder->getInt32(Elt));
 }
 
+/// Try to narrow the width of bitwise logic instructions with constants.
+Instruction *InstCombiner::shrinkBitwiseLogic(TruncInst &Trunc) {
+  Type *SrcTy = Trunc.getSrcTy();
+  Type *DestTy = Trunc.getType();
+  if (isa<IntegerType>(SrcTy) && !ShouldChangeType(SrcTy, DestTy))
+    return nullptr;
+
+  BinaryOperator *LogicOp;
+  Constant *C;
+  if (!match(Trunc.getOperand(0), m_OneUse(m_BinOp(LogicOp))) ||
+      !LogicOp->isBitwiseLogicOp() ||
+      !match(LogicOp->getOperand(1), m_Constant(C)))
+    return nullptr;
+
+  // trunc (logic X, C) --> logic (trunc X, C')
+  Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
+  Value *NarrowOp0 = Builder->CreateTrunc(LogicOp->getOperand(0), DestTy);
+  return BinaryOperator::Create(LogicOp->getOpcode(), NarrowOp0, NarrowC);
+}
+
 Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   if (Instruction *Result = commonCastTransforms(CI))
     return Result;
@@ -531,17 +551,11 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     }
   }
 
+  if (Instruction *I = shrinkBitwiseLogic(CI))
+    return I;
+
   if (Src->hasOneUse() && isa<IntegerType>(SrcTy) &&
       ShouldChangeType(SrcTy, DestTy)) {
-
-    // Transform "trunc (and X, cst)" -> "and (trunc X), cst" so long as the
-    // dest type is native.
-    if (match(Src, m_And(m_Value(A), m_ConstantInt(Cst)))) {
-      Value *NewTrunc = Builder->CreateTrunc(A, DestTy, A->getName() + ".tr");
-      return BinaryOperator::CreateAnd(NewTrunc,
-                                       ConstantExpr::getTrunc(Cst, DestTy));
-    }
-
     // Transform "trunc (shl X, cst)" -> "shl (trunc X), cst" so long as the
     // dest type is native and cst < dest size.
     if (match(Src, m_Shl(m_Value(A), m_ConstantInt(Cst))) &&

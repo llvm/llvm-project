@@ -36,6 +36,12 @@
 
 	aesd v0.16b, v2.16b
 
+	.cpu generic+v8.1a+nolse
+        casa  w5, w7, [x20]
+
+	.cpu generic+v8.1a+lse
+        casa  w5, w7, [x20]
+
 // NOTE: the errors precede the actual output!  The errors appear in order
 // though, so validate by hoisting them to the top and preservering relative
 // ordering
@@ -56,8 +62,13 @@
 // CHECK: 	aesd v0.16b, v2.16b
 // CHECK: 	^
 
+// CHECK: error: instruction requires: lse
+// CHECK:       casa  w5, w7, [x20]
+// CHECK:       ^
+
 // CHECK:	fminnm d0, d0, d1
 // CHECK:	fminnm d0, d0, d1
 // CHECK:	addp v0.4s, v0.4s, v0.4s
 // CHECK:	crc32cx w0, w1, x3
 // CHECK:	aesd v0.16b, v2.16b
+// CHECK:       casa  w5, w7, [x20]

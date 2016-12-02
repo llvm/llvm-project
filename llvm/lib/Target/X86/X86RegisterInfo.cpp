@@ -270,7 +270,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
-  bool CallsEHReturn = MF->getMMI().callsEHReturn();
+  bool CallsEHReturn = MF->callsEHReturn();
 
   switch (MF->getFunction()->getCallingConv()) {
   case CallingConv::GHC:
@@ -558,6 +558,8 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     }
   }
 
+  assert(checkAllSuperRegsMarked(Reserved,
+                                 {X86::SIL, X86::DIL, X86::BPL, X86::SPL}));
   return Reserved;
 }
 

@@ -313,10 +313,10 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
       NType |= MachO::N_SECT;
       if (SymFlags & SymbolRef::SF_Const)
         NSect = 3;
-      else {
-        IRObjectFile *IRobj = dyn_cast<IRObjectFile>(&Obj);
-        NSect = (getSymbolNMTypeChar(*IRobj, I->Sym) == 't') ? 1 : 2;
-      }
+      else if (SymFlags & SymbolRef::SF_Executable)
+        NSect = 1;
+      else
+        NSect = 2;
     }
     if (SymFlags & SymbolRef::SF_Weak)
       NDesc |= MachO::N_WEAK_DEF;
@@ -882,15 +882,17 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   return '?';
 }
 
-static char getSymbolNMTypeChar(const GlobalValue &GV) {
+static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I) {
+  uint32_t Flags = I->getFlags();
   // FIXME: should we print 'b'? At the IR level we cannot be sure if this
   // will be in bss or not, but we could approximate.
-  return GV.getValueType()->isFunctionTy() ? 't' : 'd';
-}
-
-static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I) {
-  const GlobalValue *GV = Obj.getSymbolGV(I->getRawDataRefImpl());
-  return !GV ? 't' : getSymbolNMTypeChar(*GV);
+  if (Flags & SymbolRef::SF_Executable)
+    return 't';
+  else if (Triple(Obj.getTargetTriple()).isOSDarwin() &&
+           (Flags & SymbolRef::SF_Const))
+    return 's';
+  else
+    return 'd';
 }
 
 static bool isObject(SymbolicFile &Obj, basic_symbol_iterator I) {
@@ -915,12 +917,8 @@ static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {
   char Ret = '?';
   if (Symflags & object::SymbolRef::SF_Absolute)
     Ret = 'a';
-  else if (IRObjectFile *IR = dyn_cast<IRObjectFile>(&Obj)) {
+  else if (IRObjectFile *IR = dyn_cast<IRObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*IR, I);
-    Triple Host(sys::getDefaultTargetTriple());
-    if (Ret == 'd' && Host.isOSDarwin() && Symflags & SymbolRef::SF_Const)
-      Ret = 's';
-  }
   else if (COFFObjectFile *COFF = dyn_cast<COFFObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*COFF, I);
   else if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
@@ -1000,13 +998,8 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     uint32_t SymFlags = Sym.getFlags();
     if (!DebugSyms && (SymFlags & SymbolRef::SF_FormatSpecific))
       continue;
-    if (WithoutAliases) {
-      if (IRObjectFile *IR = dyn_cast<IRObjectFile>(&Obj)) {
-        const GlobalValue *GV = IR->getSymbolGV(Sym.getRawDataRefImpl());
-        if (GV && isa<GlobalAlias>(GV))
-          continue;
-      }
-    }
+    if (WithoutAliases && (SymFlags & SymbolRef::SF_Indirect))
+      continue;
     // If a "-s segname sectname" option was specified and this is a Mach-O
     // file and this section appears in this file, Nsect will be non-zero then
     // see if this symbol is a symbol from that section and if not skip it.

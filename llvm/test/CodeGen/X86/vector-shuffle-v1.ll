@@ -393,12 +393,12 @@ define i64 @shuf64i1_zero(i64 %a) {
 ; AVX512F-LABEL: shuf64i1_zero:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:  .Ltmp0:
+; AVX512F-NEXT:  .Lcfi0:
 ; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:  .Ltmp1:
+; AVX512F-NEXT:  .Lcfi1:
 ; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:  .Ltmp2:
+; AVX512F-NEXT:  .Lcfi2:
 ; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $96, %rsp

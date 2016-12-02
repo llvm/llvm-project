@@ -3,13 +3,14 @@
 ; Check that we do not try to preload *I and assume p != 42.
 ;
 ; CHECK:      Invariant Accesses: {
-; CHECK-NEXT:   ReadAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:   [N, p, tmp1, q] -> { Stmt_if_then[i0] -> MemRef_I[0] };
-; CHECK-NEXT:   Execution Context: [N, p, tmp1, q] -> {  : 1 = 0 }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [N, p, tmp1, q] -> {  : p = 42 and N > 0 }
+; CHECK-NEXT: [N, p] -> {  : 1 = 0 }
+;
+; CHECK:      Stmt_if_then__TO__if_end
+; CHECK-NEXT:   Domain :=
+; CHECK-NEXT:   [N, p] -> { Stmt_if_then__TO__if_end[i0] : p = 42 and 0 <= i0 < N };
 ;
 ;    void f(int *A, int *I, int N, int p, int q) {
 ;      for (int i = 0; i < N; i++) {

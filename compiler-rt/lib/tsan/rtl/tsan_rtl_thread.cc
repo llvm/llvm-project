@@ -68,7 +68,8 @@ void ThreadContext::OnCreated(void *arg) {
 
 void ThreadContext::OnReset() {
   CHECK_EQ(sync.size(), 0);
-  ReleaseMemoryToOS(GetThreadTrace(tid), TraceSize() * sizeof(Event));
+  uptr trace_p = GetThreadTrace(tid);
+  ReleaseMemoryPagesToOS(trace_p, trace_p + TraceSize() * sizeof(Event));
   //!!! ReleaseMemoryToOS(GetThreadTraceHeader(tid), sizeof(Trace));
 }
 

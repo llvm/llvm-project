@@ -236,7 +236,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                 StaticAllocaMap.find(AI);
               if (SI != StaticAllocaMap.end()) { // Check for VLAs.
                 int FI = SI->second;
-                MMI.setVariableDbgInfo(DI->getVariable(), DI->getExpression(),
+                MF->setVariableDbgInfo(DI->getVariable(), DI->getExpression(),
                                        FI, DI->getDebugLoc());
               }
             }
@@ -261,7 +261,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       // FIXME: SEH catchpads do not create funclets, so we could avoid setting
       // this in such cases in order to improve frame layout.
       if (!isa<LandingPadInst>(I)) {
-        MMI.setHasEHFunclets(true);
+        MF->setHasEHFunclets(true);
         MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
       }
       if (isa<CatchSwitchInst>(I)) {

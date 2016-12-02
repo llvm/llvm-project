@@ -33,9 +33,9 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !12 = !DILocation(line: 5, column: 1, scope: !4)
 
 ; CHECK: calll .L0$pb
-; CHECK-NEXT: .Ltmp3:
+; CHECK-NEXT: .Lcfi3:
 ; CHECK-NEXT: .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT: .L0$pb:
 ; CHECK-NEXT: popl
-; CHECK-NEXT: .Ltmp4:
+; CHECK-NEXT: .Lcfi4:
 ; CHECK-NEXT: .cfi_adjust_cfa_offset -4
