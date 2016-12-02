@@ -1352,9 +1352,10 @@ public:
     const uint32_t start_frame = 0;
     const uint32_t num_frames = 1;
     const uint32_t num_frames_with_source = 1;
+    const bool     stop_format = true;
     process->GetStatus(strm);
     process->GetThreadStatus(strm, only_threads_with_stop_reason, start_frame,
-                             num_frames, num_frames_with_source);
+                             num_frames, num_frames_with_source, stop_format);
     return result.Succeeded();
   }
 };

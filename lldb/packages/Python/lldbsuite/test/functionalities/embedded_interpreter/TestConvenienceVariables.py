@@ -72,21 +72,37 @@ class ConvenienceVariablesCase(TestBase):
         self.expect(child.before, exe=False, patterns=[
                     'SBProcess: pid = \d+, state = stopped, threads = \d, executable = a.out'])
 
-        child.sendline('print(lldb.thread)')
+        child.sendline('print(lldb.thread.GetStopDescription(100))')
         child.expect_exact(python_prompt)
-        # Linux outputs decimal tid and 'name' instead of 'queue'
         self.expect(
             child.before,
             exe=False,
             patterns=[
-                'thread #1: tid = (0x[0-9a-f]+|[0-9]+), 0x[0-9a-f]+ a\.out`main\(argc=1, argv=0x[0-9a-f]+\) \+ \d+ at main\.c:%d, (name|queue) = \'.+\', stop reason = breakpoint 1\.1' %
-                self.line])
+                'breakpoint 1\.1'])
 
-        child.sendline('print(lldb.frame)')
+        child.sendline('lldb.frame.GetLineEntry().GetLine()')
         child.expect_exact(python_prompt)
+        line_number = "%d"%(self.line)
         self.expect(
             child.before,
             exe=False,
-            patterns=[
-                'frame #0: 0x[0-9a-f]+ a\.out`main\(argc=1, argv=0x[0-9a-f]+\) \+ \d+ at main\.c:%d' %
-                self.line])
+            substrs=[
+                line_number])
+
+        child.sendline('lldb.frame.GetLineEntry().GetFileSpec().GetFilename()')
+        child.expect_exact(python_prompt)
+        line_number = "%d"%(self.line)
+        self.expect(
+            child.before,
+            exe=False,
+            substrs=[
+                "main.c"])
+
+        child.sendline('lldb.frame.GetFunctionName()')
+        child.expect_exact(python_prompt)
+        line_number = "%d"%(self.line)
+        self.expect(
+            child.before,
+            exe=False,
+            substrs=[
+                "main"])
