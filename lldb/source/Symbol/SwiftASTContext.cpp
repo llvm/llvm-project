@@ -4174,6 +4174,37 @@ CompilerType SwiftASTContext::GetVoidFunctionType() {
   return m_void_function_type;
 }
 
+static CompilerType ValueDeclToType(swift::ValueDecl *decl,
+                                    swift::ASTContext *ast) {
+  if (decl) {
+    switch (decl->getKind()) {
+    case swift::DeclKind::TypeAlias: {
+      swift::TypeAliasDecl *alias_decl = llvm::cast<swift::TypeAliasDecl>(decl);
+      if (alias_decl->getAliasType()) {
+        swift::Type swift_type = alias_decl->getAliasType();
+        return CompilerType(ast, swift_type.getPointer());
+      }
+      break;
+    }
+
+    case swift::DeclKind::Enum:
+    case swift::DeclKind::Struct:
+    case swift::DeclKind::Protocol:
+    case swift::DeclKind::Class: {
+      swift::NominalTypeDecl *nominal_decl = llvm::cast<swift::NominalTypeDecl>(decl);
+      if (nominal_decl->hasInterfaceType()) {
+        swift::Type swift_type = nominal_decl->getDeclaredType();
+        return CompilerType(ast, swift_type.getPointer());
+      }
+    } break;
+
+    default:
+      break;
+    }
+  }
+  return CompilerType();
+}
+
 CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
   VALID_OR_RETURN(CompilerType());
 
@@ -4188,51 +4219,10 @@ CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
         const char *module_type_name = dot_pos + 1;
         swift_module->lookupValue(access_path, GetIdentifier(module_type_name),
                                   swift::NLKind::UnqualifiedLookup, decls);
-        if (!decls.empty()) {
-          for (auto decl : decls) {
-            switch (decl->getKind()) {
-            case swift::DeclKind::Import:
-            case swift::DeclKind::Extension:
-            case swift::DeclKind::PatternBinding:
-            case swift::DeclKind::TopLevelCode:
-            case swift::DeclKind::InfixOperator:
-            case swift::DeclKind::PrefixOperator:
-            case swift::DeclKind::PostfixOperator:
-            case swift::DeclKind::GenericTypeParam:
-            case swift::DeclKind::AssociatedType:
-            case swift::DeclKind::EnumElement:
-            case swift::DeclKind::EnumCase:
-            case swift::DeclKind::IfConfig:
-            case swift::DeclKind::Param:
-            case swift::DeclKind::Module:
-            case swift::DeclKind::PrecedenceGroup:
-              break;
-
-            case swift::DeclKind::TypeAlias:
-            case swift::DeclKind::Enum:
-            case swift::DeclKind::Struct:
-            case swift::DeclKind::Class:
-              if (decl->hasType()) {
-                swift::Type swift_type = decl->getType();
-                swift::MetatypeType *meta_type =
-                    swift_type->getAs<swift::MetatypeType>();
-                swift::ASTContext *ast = GetASTContext();
-                if (meta_type)
-                  return CompilerType(
-                      ast, meta_type->getInstanceType().getPointer());
-                else
-                  return CompilerType(ast, swift_type.getPointer());
-              }
-              break;
-            case swift::DeclKind::Protocol:
-            case swift::DeclKind::Var:
-            case swift::DeclKind::Func:
-            case swift::DeclKind::Subscript:
-            case swift::DeclKind::Constructor:
-            case swift::DeclKind::Destructor:
-              break;
-            }
-          }
+        for (auto decl : decls) {
+          CompilerType type = ValueDeclToType(decl, GetASTContext());
+          if (type)
+            return type;
         }
       }
     }
@@ -4240,41 +4230,10 @@ CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
   return CompilerType();
 }
 
-// FIXME: other guys try to do similar stuff - can we grand-unify all of them?
-static CompilerType ValueDeclToType(swift::ValueDecl *decl,
-                                    swift::ASTContext *ast,
-                                    bool metatype_is_instance = true) {
-  if (decl) {
-    switch (decl->getKind()) {
-    case swift::DeclKind::TypeAlias:
-    case swift::DeclKind::Enum:
-    case swift::DeclKind::Struct:
-    case swift::DeclKind::Class:
-    case swift::DeclKind::Protocol:
-    case swift::DeclKind::Func:
-      if (decl->hasType()) {
-        swift::Type swift_type = decl->getType();
-        swift::MetatypeType *meta_type =
-            swift_type->getAs<swift::MetatypeType>();
-        if (meta_type && metatype_is_instance)
-          return CompilerType(ast, meta_type->getInstanceType().getPointer());
-        else
-          return CompilerType(ast, swift_type.getPointer());
-      }
-      break;
-
-    default:
-      break;
-    }
-  }
-  return CompilerType();
-}
-
-static CompilerType DeclToType(swift::Decl *decl, swift::ASTContext *ast,
-                               bool metatype_is_instance = true) {
+static CompilerType DeclToType(swift::Decl *decl, swift::ASTContext *ast) {
   if (swift::ValueDecl *value_decl =
           llvm::dyn_cast_or_null<swift::ValueDecl>(decl))
-    return ValueDeclToType(value_decl, ast, metatype_is_instance);
+    return ValueDeclToType(value_decl, ast);
   return CompilerType();
 }
 
@@ -4301,21 +4260,23 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::PrecedenceGroup:
       return decl;
 
-    case swift::DeclKind::TypeAlias:
+    case swift::DeclKind::TypeAlias: {
+      swift::TypeAliasDecl *alias_decl =
+          llvm::dyn_cast_or_null<swift::TypeAliasDecl>(decl);
+      if (alias_decl->getAliasType()) {
+        swift::Type swift_type = alias_decl->getAliasType();
+        return CompilerType(ast, swift_type.getPointer());
+      }
+    } break;
     case swift::DeclKind::Enum:
     case swift::DeclKind::Struct:
     case swift::DeclKind::Class:
     case swift::DeclKind::Protocol: {
-      swift::ValueDecl *value_decl =
-          llvm::dyn_cast_or_null<swift::ValueDecl>(decl);
-      if (value_decl->hasType()) {
-        swift::Type swift_type = value_decl->getType();
-        swift::MetatypeType *meta_type =
-            swift_type->getAs<swift::MetatypeType>();
-        if (meta_type)
-          return CompilerType(ast, meta_type->getInstanceType().getPointer());
-        else
-          return CompilerType(ast, swift_type.getPointer());
+      swift::NominalTypeDecl *nominal_decl =
+          llvm::dyn_cast_or_null<swift::NominalTypeDecl>(decl);
+      if (nominal_decl->hasInterfaceType()) {
+        swift::Type swift_type = nominal_decl->getDeclaredType();
+        return CompilerType(ast, swift_type.getPointer());
       }
     } break;
 
@@ -4447,8 +4408,8 @@ size_t SwiftASTContext::FindTypes(const char *name,
         [this](swift::Decl *decl) -> CompilerType {
           if (swift::ValueDecl *value_decl =
                   llvm::dyn_cast_or_null<swift::ValueDecl>(decl)) {
-            if (value_decl->hasType()) {
-              swift::Type swift_type = value_decl->getType();
+            if (value_decl->hasInterfaceType()) {
+              swift::Type swift_type = value_decl->getInterfaceType();
               swift::MetatypeType *meta_type =
                   swift_type->getAs<swift::MetatypeType>();
               swift::ASTContext *ast = GetASTContext();
@@ -4778,10 +4739,7 @@ CompilerType SwiftASTContext::GetErrorType() {
     swift_ctx->getStdlibModule(true);
     swift::NominalTypeDecl *error_type_decl = GetASTContext()->getErrorDecl();
     if (error_type_decl) {
-      auto error_type = error_type_decl->getType().getPointer();
-      if (swift::MetatypeType *error_metatype =
-              error_type->getAs<swift::MetatypeType>())
-        error_type = error_metatype->getInstanceType().getPointer();
+      auto error_type = error_type_decl->getDeclaredType().getPointer();
       return CompilerType(GetASTContext(), error_type);
     }
   }
@@ -6547,7 +6505,7 @@ TypeMemberFunctionImpl SwiftASTContext::GetMemberFunctionAtIndex(void *type,
                   }
                   result_type =
                       CompilerType(GetASTContext(),
-                                   abstract_func_decl->getType().getPointer());
+                                   abstract_func_decl->getInterfaceType().getPointer());
                 }
               } else
                 --idx;
@@ -6612,7 +6570,7 @@ TypeMemberFunctionImpl SwiftASTContext::GetMemberFunctionAtIndex(void *type,
                   }
                   result_type =
                       CompilerType(GetASTContext(),
-                                   abstract_func_decl->getType().getPointer());
+                                   abstract_func_decl->getInterfaceType().getPointer());
                 }
               } else
                 --idx;
@@ -8988,11 +8946,9 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
                   llvm::dyn_cast_or_null<swift::TypeDecl>(decl);
               if (type_decl) {
                 CompilerType clang_type(&module->getASTContext(),
-                                        type_decl->getType().getPointer());
+                                        type_decl->getDeclaredInterfaceType().getPointer());
                 if (clang_type) {
                   Flags clang_type_flags(clang_type.GetTypeInfo());
-                  if (clang_type_flags.AllSet(eTypeIsSwift | eTypeIsMetatype))
-                    clang_type = clang_type.GetInstanceType();
                   DumpTypeDescription(clang_type.GetOpaqueQualType(), s,
                                       print_help_if_available,
                                       print_extensions_if_available);
@@ -9026,7 +8982,7 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
                             llvm::dyn_cast_or_null<swift::ValueDecl>(
                                 imported_decl)) {
                       if (swift::TypeBase *decl_type =
-                              imported_value_decl->getType().getPointer()) {
+                              imported_value_decl->getInterfaceType().getPointer()) {
                         DumpTypeDescription(decl_type, s,
                                             print_help_if_available,
                                             print_extensions_if_available);
