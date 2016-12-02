@@ -17,7 +17,6 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/COFF.h"
-#include <atomic>
 #include <utility>
 #include <vector>
 
@@ -203,7 +202,7 @@ private:
 
   // Used for ICF (Identical COMDAT Folding)
   void replace(SectionChunk *Other);
-  std::atomic<uint64_t> GroupID = { 0 };
+  uint32_t Color[2] = {0, 0};
 
   // Sym points to a section symbol if this is a COMDAT chunk.
   DefinedRegular *Sym = nullptr;

@@ -255,7 +255,9 @@ public:
   ///  @param Sizes       A vector of array sizes where the rightmost array
   ///                     sizes need to match the innermost array sizes already
   ///                     defined in SAI.
-  bool updateSizes(ArrayRef<const SCEV *> Sizes);
+  ///  @param CheckConsistency Update sizes, even if new sizes are inconsistent
+  ///                          with old sizes
+  bool updateSizes(ArrayRef<const SCEV *> Sizes, bool CheckConsistency = true);
 
   /// Destructor to free the isl id of the base pointer.
   ~ScopArrayInfo();
@@ -1001,6 +1003,15 @@ public:
 
   /// Get the reduction type of this access
   ReductionType getReductionType() const { return RedType; }
+
+  /// Update the original access relation.
+  ///
+  /// We need to update the original access relation during scop construction,
+  /// when unifying the memory accesses that access the same scop array info
+  /// object. After the scop has been constructed, the original access relation
+  /// should not be changed any more. Instead setNewAccessRelation should
+  /// be called.
+  void setAccessRelation(__isl_take isl_map *AccessRelation);
 
   /// Set the updated access relation read from JSCOP file.
   void setNewAccessRelation(__isl_take isl_map *NewAccessRelation);
@@ -1883,6 +1894,33 @@ private:
   /// again over all memory accesses and updates their dimensionality to match
   /// the dimensionality of the underlying ScopArrayInfo object.
   void updateAccessDimensionality();
+
+  /// Fold size constants to the right.
+  ///
+  /// In case all memory accesses in a given dimension are multiplied with a
+  /// common constant, we can remove this constant from the individual access
+  /// functions and move it to the size of the memory access. We do this as this
+  /// increases the size of the innermost dimension, consequently widens the
+  /// valid range the array subscript in this dimension can evaluate to, and
+  /// as a result increases the likelyhood that our delinearization is
+  /// correct.
+  ///
+  /// Example:
+  ///
+  ///    A[][n]
+  ///    S[i,j] -> A[2i][2j+1]
+  ///    S[i,j] -> A[2i][2j]
+  ///
+  ///    =>
+  ///
+  ///    A[][2n]
+  ///    S[i,j] -> A[i][2j+1]
+  ///    S[i,j] -> A[i][2j]
+  ///
+  /// Constants in outer dimensions can arise when the elements of a parametric
+  /// multi-dimensional array are not elementar data types, but e.g.,
+  /// structures.
+  void foldSizeConstantsToRight();
 
   /// Fold memory accesses to handle parametric offset.
   ///
