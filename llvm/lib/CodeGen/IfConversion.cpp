@@ -1498,7 +1498,8 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   // can compute this set by simulating liveness backwards from the end of BB2.
   DontKill.init(TRI);
   for (MachineBasicBlock::reverse_iterator I = BBI2->BB->rbegin(),
-       E = MachineBasicBlock::reverse_iterator(DI2); I != E; ++I) {
+                                           E = ++DI2.getReverse();
+       I != E; ++I) {
     DontKill.stepBackward(*I);
   }
 
