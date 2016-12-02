@@ -67,18 +67,10 @@ static void setNameForBody(Function *FBody, const Function &FKernel) {
   FBody->setName(NewName.str());
 }
 
-static Function *copyDeclaration(const Function &F) {
-  Function *NewF = Function::Create(F.getFunctionType(), F.getLinkage());
-  NewF->setAttributes(F.getAttributes());
-  return NewF;
-}
-
 static Function *cloneKernel(Function &F) {
   ValueToValueMapTy ignored;
-  Function *NewF =
-      F.empty() ? copyDeclaration(F) : CloneFunction(&F, ignored, false);
-  F.getParent()->getOrInsertFunction(NewF->getName(), NewF->getFunctionType(),
-    NewF->getAttributes());
+  assert(!F.isDeclaration() && "called kernel function should have a body");
+  Function *NewF = CloneFunction(&F, ignored, false);
   NewF->setCallingConv(CallingConv::C);
   setNameForBody(NewF, F);
   return NewF;
