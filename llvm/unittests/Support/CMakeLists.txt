@@ -19,6 +19,7 @@ add_llvm_unittest(SupportTests
   ErrorTest.cpp
   ErrorOrTest.cpp
   FileOutputBufferTest.cpp
+  Host.cpp
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
