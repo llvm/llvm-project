@@ -140,7 +140,7 @@ To bootstrap clang/LLVM with ThinLTO, follow these steps:
   * ``-DCMAKE_C_COMPILER=/path/to/host/clang``
   * ``-DCMAKE_CXX_COMPILER=/path/to/host/clang++``
   * ``-DCMAKE_RANLIB=/path/to/host/llvm-ranlib``
-  * ``-DCMAKE_AR=/path/to/host/llvm-nm``
+  * ``-DCMAKE_AR=/path/to/host/llvm-ar``
 
 #. To use additional linker arguments for controlling the backend
    parallelism_ or enabling incremental_ builds of the bootstrap compiler,
