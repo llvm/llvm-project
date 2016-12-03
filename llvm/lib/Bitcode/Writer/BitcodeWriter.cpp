@@ -2500,7 +2500,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
 
     // Emit type/value pairs for varargs params.
     if (FTy->isVarArg()) {
-      for (unsigned i = FTy->getNumParams(), e = I.getNumOperands()-3;
+      for (unsigned i = FTy->getNumParams(), e = II->getNumArgOperands();
            i != e; ++i)
         pushValueAndType(I.getOperand(i), InstID, Vals); // vararg
     }
@@ -2999,7 +2999,8 @@ void ModuleBitcodeWriter::writeFunction(
     }
 
   // Emit names for all the instructions etc.
-  writeValueSymbolTable(F.getValueSymbolTable());
+  if (auto *Symtab = F.getValueSymbolTable())
+    writeValueSymbolTable(*Symtab);
 
   if (NeedsMetadataAttachment)
     writeFunctionMetadataAttachment(F);
