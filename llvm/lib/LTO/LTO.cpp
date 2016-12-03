@@ -29,6 +29,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -227,7 +228,8 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
 
 LTO::ThinLTOState::ThinLTOState(ThinBackend Backend) : Backend(Backend) {
   if (!Backend)
-    this->Backend = createInProcessThinBackend(thread::hardware_concurrency());
+    this->Backend =
+        createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
 }
 
 LTO::LTO(Config Conf, ThinBackend Backend,
