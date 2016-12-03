@@ -257,23 +257,23 @@ void LTO::addSymbolToGlobalRes(IRObjectFile *Obj,
     GlobalRes.Partition = Partition;
 }
 
-void LTO::writeToResolutionFile(InputFile *Input,
-                                ArrayRef<SymbolResolution> Res) {
-  StringRef Path = Input->Obj->getMemoryBufferRef().getBufferIdentifier();
-  *Conf.ResolutionFile << Path << '\n';
+static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
+                                  ArrayRef<SymbolResolution> Res) {
+  StringRef Path = Input->getMemoryBufferRef().getBufferIdentifier();
+  OS << Path << '\n';
   auto ResI = Res.begin();
   for (const InputFile::Symbol &Sym : Input->symbols()) {
     assert(ResI != Res.end());
     SymbolResolution Res = *ResI++;
 
-    *Conf.ResolutionFile << "-r=" << Path << ',' << Sym.getName() << ',';
+    OS << "-r=" << Path << ',' << Sym.getName() << ',';
     if (Res.Prevailing)
-      *Conf.ResolutionFile << 'p';
+      OS << 'p';
     if (Res.FinalDefinitionInLinkageUnit)
-      *Conf.ResolutionFile << 'l';
+      OS << 'l';
     if (Res.VisibleToRegularObj)
-      *Conf.ResolutionFile << 'x';
-    *Conf.ResolutionFile << '\n';
+      OS << 'x';
+    OS << '\n';
   }
   assert(ResI == Res.end());
 }
@@ -283,7 +283,7 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
   assert(!CalledGetMaxTasks);
 
   if (Conf.ResolutionFile)
-    writeToResolutionFile(Input.get(), Res);
+    writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
 
   // FIXME: move to backend
   Module &M = Input->Obj->getModule();

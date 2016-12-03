@@ -368,8 +368,6 @@ private:
   // Global mapping from mangled symbol names to resolutions.
   StringMap<GlobalResolution> GlobalResolutions;
 
-  void writeToResolutionFile(InputFile *Input, ArrayRef<SymbolResolution> Res);
-
   void addSymbolToGlobalRes(object::IRObjectFile *Obj,
                             SmallPtrSet<GlobalValue *, 8> &Used,
                             const InputFile::Symbol &Sym, SymbolResolution Res,
