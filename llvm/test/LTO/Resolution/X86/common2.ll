@@ -1,5 +1,5 @@
 ; RUN: llvm-as < %s > %t1.bc
-; RUN: llvm-as < %p/Inputs/common.ll > %t2.bc
+; RUN: llvm-as < %p/Inputs/common2.ll > %t2.bc
 
 ; Test that the common merging (size + alignment) is properly handled
 
