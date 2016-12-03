@@ -577,8 +577,7 @@ bool ReduceCrashingConditionals::TestBlocks(
     const ValueSymbolTable &GST = M->getValueSymbolTable();
     for (auto &BI : BlockInfo) {
       auto *F = cast<Function>(GST.lookup(BI.first));
-      ValueSymbolTable &ST = F->getValueSymbolTable();
-      Value *V = ST.lookup(BI.second);
+      Value *V = F->getValueSymbolTable()->lookup(BI.second);
       if (V && V->getType() == Type::getLabelTy(V->getContext()))
         BBs.push_back(cast<BasicBlock>(V));
     }
@@ -676,8 +675,7 @@ bool ReduceSimplifyCFG::TestBlocks(
     const ValueSymbolTable &GST = M->getValueSymbolTable();
     for (auto &BI : BlockInfo){
       auto *F = cast<Function>(GST.lookup(BI.first));
-      ValueSymbolTable &ST = F->getValueSymbolTable();
-      Value *V = ST.lookup(BI.second);
+      Value *V = F->getValueSymbolTable()->lookup(BI.second);
       if (V && V->getType() == Type::getLabelTy(V->getContext()))
         BBs.push_back(cast<BasicBlock>(V));
     }

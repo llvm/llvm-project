@@ -219,7 +219,8 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
     if (I.hasLocalLinkage() && llvmUsedValues.count(&I) == 0)
       if (!PreserveDbgInfo || !I.getName().startswith("llvm.dbg"))
         I.setName(""); // Internal symbols can't participate in linkage
-    StripSymtab(I.getValueSymbolTable(), PreserveDbgInfo);
+    if (auto *Symtab = I.getValueSymbolTable())
+      StripSymtab(*Symtab, PreserveDbgInfo);
   }
 
   // Remove all names from types.
