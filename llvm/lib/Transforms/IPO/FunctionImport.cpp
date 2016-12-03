@@ -791,6 +791,17 @@ static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
   ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
                                     ImportList);
 
+  // Conservatively mark all internal values as promoted. This interface is
+  // only used when doing importing via the function importing pass. The pass
+  // is only enabled when testing importing via the 'opt' tool, which does
+  // not do the ThinLink that would normally determine what values to promote.
+  for (auto &I : *Index) {
+    for (auto &S : I.second) {
+      if (GlobalValue::isLocalLinkage(S->linkage()))
+        S->setLinkage(GlobalValue::ExternalLinkage);
+    }
+  }
+
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
   if (renameModuleForThinLTO(M, *Index, nullptr)) {
