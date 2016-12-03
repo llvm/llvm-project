@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=arm64-apple-ios -O2 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -O2 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s --check-prefix=CHECK-ELF
+; RUN: llc -o - %s -mtriple=arm64-apple-ios -O2 | FileCheck %s
+; RUN: llc -o - %s -mtriple=arm64-linux-gnu -O2 | FileCheck %s --check-prefix=CHECK-ELF
 
 ; CHECK-ELF-NOT: .loh
 ; CHECK-ELF-NOT: AdrpAdrp
@@ -633,11 +633,14 @@ define void @setL(<1 x i8> %t) {
 ; a tuple register to appear in the lowering. Thus, the target
 ; cpu is required to have the problem reproduced.
 ; CHECK-LABEL: _uninterestingSub
+; CHECK: [[LOH_LABEL0:Lloh[0-9]+]]:
 ; CHECK: adrp [[ADRP_REG:x[0-9]+]], [[CONSTPOOL:lCPI[0-9]+_[0-9]+]]@PAGE
-; CHECK-NEXT: ldr q[[IDX:[0-9]+]], {{\[}}[[ADRP_REG]], [[CONSTPOOL]]@PAGEOFF]
+; CHECK: [[LOH_LABEL1:Lloh[0-9]+]]:
+; CHECK: ldr q[[IDX:[0-9]+]], {{\[}}[[ADRP_REG]], [[CONSTPOOL]]@PAGEOFF]
 ; The tuple comes from the next instruction.
 ; CHECK-NEXT: tbl.16b v{{[0-9]+}}, { v{{[0-9]+}}, v{{[0-9]+}} }, v[[IDX]]
 ; CHECK: ret
+; CHECK: .loh AdrpLdr [[LOH_LABEL0]], [[LOH_LABEL1]]
 define void @uninterestingSub(i8* nocapture %row) #0 {
   %tmp = bitcast i8* %row to <16 x i8>*
   %tmp1 = load <16 x i8>, <16 x i8>* %tmp, align 16
@@ -664,10 +667,10 @@ entry:
 if.then.i:
   ret void
 if.end.i:
-; CHECK: .loh AdrpAdrp Lloh91, Lloh93
-; CHECK: .loh AdrpLdr Lloh91, Lloh92
-; CHECK: .loh AdrpLdrGot Lloh93, Lloh95
-; CHECK: .loh AdrpLdrGot Lloh94, Lloh96
+; CHECK: .loh AdrpLdrGot
+; CHECK: .loh AdrpLdrGot
+; CHECK: .loh AdrpAdrp
+; CHECK: .loh AdrpLdr
   %mul.i.i.i = fmul double undef, 1.000000e-06
   %add.i.i.i = fadd double undef, %mul.i.i.i
   %sub.i.i = fsub double %add.i.i.i, undef
