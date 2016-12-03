@@ -70,11 +70,6 @@ public:
 // object for the module, to be written to bitcode or LLVM assembly.
 //
 ModulePass *createModuleSummaryIndexWrapperPass();
-
-/// Returns true if \p M is eligible for ThinLTO promotion.
-///
-/// Currently we check if it has any any InlineASM that uses an internal symbol.
-bool moduleCanBeRenamedForThinLTO(const Module &M);
 }
 
 #endif

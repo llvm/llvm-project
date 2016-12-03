@@ -220,14 +220,6 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 }
 
 void FunctionImportGlobalProcessing::processGlobalsForThinLTO() {
-  if (!moduleCanBeRenamedForThinLTO(M)) {
-    // We would have blocked importing from this module by suppressing index
-    // generation. We still may be able to import into this module though.
-    assert(!isPerformingImport() &&
-           "Should have blocked importing from module with local used in ASM");
-    return;
-  }
-
   for (GlobalVariable &GV : M.globals())
     processGlobalForThinLTO(GV);
   for (Function &SF : M)
