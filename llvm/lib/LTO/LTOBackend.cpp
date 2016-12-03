@@ -258,9 +258,9 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddOutputFn AddOutput,
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return Error();
 
-  thinLTOResolveWeakForLinkerModule(Mod, DefinedGlobals);
-
   renameModuleForThinLTO(Mod, CombinedIndex);
+
+  thinLTOResolveWeakForLinkerModule(Mod, DefinedGlobals);
 
   if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
     return Error();
