@@ -410,11 +410,15 @@ unsigned LTO::getMaxTasks() const {
 }
 
 Error LTO::run(AddOutputFn AddOutput) {
+  // Save the status of having a regularLTO combined module, as
+  // this is needed for generating the ThinLTO Task ID, and
+  // the CombinedModule will be moved at the end of runRegularLTO.
+  bool HasRegularLTO = RegularLTO.CombinedModule != nullptr;
   // Invoke regular LTO if there was a regular LTO module to start with.
-  if (RegularLTO.CombinedModule)
+  if (HasRegularLTO)
     if (auto E = runRegularLTO(AddOutput))
       return E;
-  return runThinLTO(AddOutput);
+  return runThinLTO(AddOutput, HasRegularLTO);
 }
 
 Error LTO::runRegularLTO(AddOutputFn AddOutput) {
@@ -696,7 +700,7 @@ ThinBackend lto::createWriteIndexesThinBackend(std::string OldPrefix,
   };
 }
 
-Error LTO::runThinLTO(AddOutputFn AddOutput) {
+Error LTO::runThinLTO(AddOutputFn AddOutput, bool HasRegularLTO) {
   if (ThinLTO.ModuleMap.empty())
     return Error();
 
@@ -753,9 +757,8 @@ Error LTO::runThinLTO(AddOutputFn AddOutput) {
   // ParallelCodeGenParallelismLevel if an LTO module is present, as tasks 0
   // through ParallelCodeGenParallelismLevel-1 are reserved for parallel code
   // generation partitions.
-  unsigned Task = RegularLTO.CombinedModule
-                      ? RegularLTO.ParallelCodeGenParallelismLevel
-                      : 0;
+  unsigned Task =
+      HasRegularLTO ? RegularLTO.ParallelCodeGenParallelismLevel : 0;
   unsigned Partition = 1;
 
   for (auto &Mod : ThinLTO.ModuleMap) {

@@ -387,7 +387,7 @@ private:
                    ArrayRef<SymbolResolution> Res);
 
   Error runRegularLTO(AddOutputFn AddOutput);
-  Error runThinLTO(AddOutputFn AddOutput);
+  Error runThinLTO(AddOutputFn AddOutput, bool HasRegularLTO);
 
   mutable bool CalledGetMaxTasks = false;
 };
