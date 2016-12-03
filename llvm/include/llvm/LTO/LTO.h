@@ -85,6 +85,13 @@ void thinLTOInternalizeAndPromoteInIndex(
 
 namespace lto {
 
+/// Given the original \p Path to an output file, replace any path
+/// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
+/// resulting directory if it does not yet exist.
+std::string getThinLTOOutputFile(const std::string &Path,
+                                 const std::string &OldPrefix,
+                                 const std::string &NewPrefix);
+
 class LTO;
 struct SymbolResolution;
 class ThinBackendProc;

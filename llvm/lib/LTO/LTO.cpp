@@ -609,6 +609,26 @@ ThinBackend lto::createInProcessThinBackend(unsigned ParallelismLevel) {
   };
 }
 
+// Given the original \p Path to an output file, replace any path
+// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
+// resulting directory if it does not yet exist.
+std::string lto::getThinLTOOutputFile(const std::string &Path,
+                                      const std::string &OldPrefix,
+                                      const std::string &NewPrefix) {
+  if (OldPrefix.empty() && NewPrefix.empty())
+    return Path;
+  SmallString<128> NewPath(Path);
+  llvm::sys::path::replace_path_prefix(NewPath, OldPrefix, NewPrefix);
+  StringRef ParentPath = llvm::sys::path::parent_path(NewPath.str());
+  if (!ParentPath.empty()) {
+    // Make sure the new directory exists, creating it if necessary.
+    if (std::error_code EC = llvm::sys::fs::create_directories(ParentPath))
+      llvm::errs() << "warning: could not create directory '" << ParentPath
+                   << "': " << EC.message() << '\n';
+  }
+  return NewPath.str();
+}
+
 class WriteIndexesThinBackend : public ThinBackendProc {
   std::string OldPrefix, NewPrefix;
   bool ShouldEmitImportsFiles;
@@ -626,26 +646,6 @@ public:
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         ShouldEmitImportsFiles(ShouldEmitImportsFiles),
         LinkedObjectsFileName(LinkedObjectsFileName) {}
-
-  /// Given the original \p Path to an output file, replace any path
-  /// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
-  /// resulting directory if it does not yet exist.
-  std::string getThinLTOOutputFile(const std::string &Path,
-                                   const std::string &OldPrefix,
-                                   const std::string &NewPrefix) {
-    if (OldPrefix.empty() && NewPrefix.empty())
-      return Path;
-    SmallString<128> NewPath(Path);
-    llvm::sys::path::replace_path_prefix(NewPath, OldPrefix, NewPrefix);
-    StringRef ParentPath = llvm::sys::path::parent_path(NewPath.str());
-    if (!ParentPath.empty()) {
-      // Make sure the new directory exists, creating it if necessary.
-      if (std::error_code EC = llvm::sys::fs::create_directories(ParentPath))
-        llvm::errs() << "warning: could not create directory '" << ParentPath
-                     << "': " << EC.message() << '\n';
-    }
-    return NewPath.str();
-  }
 
   Error start(
       unsigned Task, MemoryBufferRef MBRef,
