@@ -465,7 +465,7 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock*> &BBs) {
     const ValueSymbolTable &GST = M->getValueSymbolTable();
     for (unsigned i = 0, e = BlockInfo.size(); i != e; ++i) {
       Function *F = cast<Function>(GST.lookup(BlockInfo[i].first));
-      Value *V = F->getValueSymbolTable()->lookup(BI.second);
+      Value *V = F->getValueSymbolTable()->lookup(BlockInfo[i].second);
       if (V && V->getType() == Type::getLabelTy(V->getContext()))
         BBs.push_back(cast<BasicBlock>(V));
     }
