@@ -67,9 +67,9 @@ bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
   if (GVar && GVar->isConstant() && GVar->hasGlobalUnnamedAddr())
     return false;
 
-  if (GVar && GVar->hasSection())
-    // Some sections like "__DATA,__cfstring" are "magic" and promotion is not
-    // allowed. Just disable promotion on any GVar with sections right now.
+  auto *Summary = ImportIndex.getGlobalValueSummary(SGV->getGUID());
+  assert(Summary && "Missing summary for global value");
+  if (Summary->noRename())
     return false;
 
   // Eventually we only need to promote functions in the exporting module that
@@ -78,14 +78,14 @@ bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
   return true;
 }
 
-std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV) {
+std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV,
+                                                    bool DoPromote) {
   // For locals that must be promoted to global scope, ensure that
   // the promoted name uniquely identifies the copy in the original module,
   // using the ID assigned during combined index creation. When importing,
   // we rename all locals (not just those that are promoted) in order to
   // avoid naming conflicts between locals imported from different modules.
-  if (SGV->hasLocalLinkage() &&
-      (doPromoteLocalToGlobal(SGV) || isPerformingImport()))
+  if (SGV->hasLocalLinkage() && (DoPromote || isPerformingImport()))
     return ModuleSummaryIndex::getGlobalNameForLocal(
         SGV->getName(),
         ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
@@ -93,13 +93,14 @@ std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV) {
 }
 
 GlobalValue::LinkageTypes
-FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV) {
+FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
+                                           bool DoPromote) {
   // Any local variable that is referenced by an exported function needs
   // to be promoted to global scope. Since we don't currently know which
   // functions reference which local variables/functions, we must treat
   // all as potentially exported if this module is exporting anything.
   if (isModuleExporting()) {
-    if (SGV->hasLocalLinkage() && doPromoteLocalToGlobal(SGV))
+    if (SGV->hasLocalLinkage() && DoPromote)
       return GlobalValue::ExternalLinkage;
     return SGV->getLinkage();
   }
@@ -164,7 +165,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV) {
   case GlobalValue::PrivateLinkage:
     // If we are promoting the local to global scope, it is handled
     // similarly to a normal externally visible global.
-    if (doPromoteLocalToGlobal(SGV)) {
+    if (DoPromote) {
       if (doImportAsDefinition(SGV) && !dyn_cast<GlobalAlias>(SGV))
         return GlobalValue::AvailableExternallyLinkage;
       else
@@ -190,14 +191,19 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV) {
 }
 
 void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
+  bool DoPromote = false;
   if (GV.hasLocalLinkage() &&
-      (doPromoteLocalToGlobal(&GV) || isPerformingImport())) {
-    GV.setName(getName(&GV));
-    GV.setLinkage(getLinkage(&GV));
+      ((DoPromote = doPromoteLocalToGlobal(&GV)) || isPerformingImport())) {
+    // Once we change the name or linkage it is difficult to determine
+    // again whether we should promote since doPromoteLocalToGlobal needs
+    // to locate the summary (based on GUID from name and linkage). Therefore,
+    // use DoPromote result saved above.
+    GV.setName(getName(&GV, DoPromote));
+    GV.setLinkage(getLinkage(&GV, DoPromote));
     if (!GV.hasLocalLinkage())
       GV.setVisibility(GlobalValue::HiddenVisibility);
   } else
-    GV.setLinkage(getLinkage(&GV));
+    GV.setLinkage(getLinkage(&GV, /* DoPromote */ false));
 
   // Remove functions imported as available externally defs from comdats,
   // as this is a declaration for the linker, and will be dropped eventually.
