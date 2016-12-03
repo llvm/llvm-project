@@ -48,7 +48,7 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
                                                               GlobalsToImport);
 }
 
-bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
+bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
     const GlobalValue *SGV) {
   assert(SGV->hasLocalLinkage());
   // Both the imported references and the original local variable must
@@ -193,9 +193,9 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
 void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   bool DoPromote = false;
   if (GV.hasLocalLinkage() &&
-      ((DoPromote = doPromoteLocalToGlobal(&GV)) || isPerformingImport())) {
+      ((DoPromote = shouldPromoteLocalToGlobal(&GV)) || isPerformingImport())) {
     // Once we change the name or linkage it is difficult to determine
-    // again whether we should promote since doPromoteLocalToGlobal needs
+    // again whether we should promote since shouldPromoteLocalToGlobal needs
     // to locate the summary (based on GUID from name and linkage). Therefore,
     // use DoPromote result saved above.
     GV.setName(getName(&GV, DoPromote));
