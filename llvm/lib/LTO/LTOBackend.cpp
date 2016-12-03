@@ -253,6 +253,10 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
             std::move(BC), ThreadCount++);
       },
       false);
+
+  // Because the inner lambda (which runs in a worker thread) captures our local
+  // variables, we need to wait for the worker threads to terminate before we
+  // can leave the function scope.
   CodegenThreadPool.wait();
 }
 
