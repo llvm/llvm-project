@@ -22,13 +22,13 @@
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; RUN: llvm-lto -thinlto-action=run %t2.bc  %t.bc -exported-symbol=main -thinlto-cache-dir %t.cache
 ; RUN: ls %t.cache/llvmcache.timestamp
-; RUN: ls %t.cache | count 2
+; RUN: ls %t.cache | count 1
 
 ; Verify that caching is disabled for module without hash, with llvm-lto2
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; RUN: llvm-lto2 -o %t.o %t2.bc  %t.bc -cache-dir %t.cache \
 ; RUN:  -r=%t2.bc,_main,plx
-; RUN: ls %t.cache | count 1
+; RUN: ls %t.cache | count 0
 
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

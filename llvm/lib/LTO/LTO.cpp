@@ -542,8 +542,12 @@ public:
     };
 
     auto ModuleID = MBRef.getBufferIdentifier();
-    if (!Cache || !CombinedIndex.modulePaths().count(ModuleID))
-      // Cache disabled or no entry for this module in the combined index
+
+    if (!Cache || !CombinedIndex.modulePaths().count(ModuleID) ||
+        all_of(CombinedIndex.getModuleHash(ModuleID),
+               [](uint32_t V) { return V == 0; }))
+      // Cache disabled or no entry for this module in the combined index or
+      // no module hash.
       return RunThinBackend(AddStream);
 
     SmallString<40> Key;
