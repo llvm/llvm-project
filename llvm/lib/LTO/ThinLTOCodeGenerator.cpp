@@ -378,7 +378,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
     SmallVector<char, 128> OutputBuffer;
     {
       raw_svector_ostream OS(OutputBuffer);
-      ProfileSummaryInfo PSI(TheModule);
+      ProfileSummaryInfo PSI(&TheModule);
       auto Index = buildModuleSummaryIndex(TheModule, nullptr, nullptr);
       WriteBitcodeToFile(&TheModule, OS, true, &Index);
     }
