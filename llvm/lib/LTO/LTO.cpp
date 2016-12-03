@@ -230,10 +230,8 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
   if (Conf.ResolutionFile)
     writeToResolutionFile(Input.get(), Res);
 
+  // FIXME: move to backend
   Module &M = Input->Obj->getModule();
-  SmallPtrSet<GlobalValue *, 8> Used;
-  collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
-
   if (!Conf.OverrideTriple.empty())
     M.setTargetTriple(Conf.OverrideTriple);
   else if (M.getTargetTriple().empty())
