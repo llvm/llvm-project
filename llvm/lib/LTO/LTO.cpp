@@ -541,13 +541,15 @@ public:
                          ImportList, DefinedGlobals, ModuleMap);
     };
 
-    if (!Cache)
+    auto ModuleID = MBRef.getBufferIdentifier();
+    if (!Cache || !CombinedIndex.modulePaths().count(ModuleID))
+      // Cache disabled or no entry for this module in the combined index
       return RunThinBackend(AddStream);
 
     SmallString<40> Key;
     // The module may be cached, this helps handling it.
-    computeCacheKey(Key, CombinedIndex, MBRef.getBufferIdentifier(),
-                    ImportList, ExportList, ResolvedODR, DefinedGlobals);
+    computeCacheKey(Key, CombinedIndex, ModuleID, ImportList, ExportList,
+                    ResolvedODR, DefinedGlobals);
     if (AddStreamFn CacheAddStream = Cache(Task, Key))
       return RunThinBackend(CacheAddStream);
 
