@@ -31,6 +31,8 @@
 #include <cstring>
 using namespace llvm;
 
+static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
+
 // Upgrade the declarations of the SSE4.1 functions whose arguments have
 // changed their type from v4f32 to v2i64.
 static bool UpgradeSSE41Function(Function* F, Intrinsic::ID IID,
@@ -42,7 +44,7 @@ static bool UpgradeSSE41Function(Function* F, Intrinsic::ID IID,
     return false;
 
   // Yes, it's old, replace it with new version.
-  F->setName(F->getName() + ".old");
+  rename(F);
   NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
   return true;
 }
@@ -58,7 +60,7 @@ static bool UpgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
     return false;
 
   // Move this function aside and map down.
-  F->setName(F->getName() + ".old");
+  rename(F);
   NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
   return true;
 }
@@ -135,13 +137,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
   case 'c': {
     if (Name.startswith("ctlz.") && F->arg_size() == 1) {
-      F->setName(Name + ".old");
+      rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
                                         F->arg_begin()->getType());
       return true;
     }
     if (Name.startswith("cttz.") && F->arg_size() == 1) {
-      F->setName(Name + ".old");
+      rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
                                         F->arg_begin()->getType());
       return true;
@@ -154,7 +156,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       Type* ObjectPtr[1] = {Args[1]};
       if (F->getName() !=
           Intrinsic::getName(Intrinsic::invariant_start, ObjectPtr)) {
-        F->setName(Name + ".old");
+        rename(F);
         NewFn = Intrinsic::getDeclaration(
             F->getParent(), Intrinsic::invariant_start, ObjectPtr);
         return true;
@@ -165,7 +167,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       Type* ObjectPtr[1] = {Args[2]};
       if (F->getName() !=
           Intrinsic::getName(Intrinsic::invariant_end, ObjectPtr)) {
-        F->setName(Name + ".old");
+        rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::invariant_end, ObjectPtr);
         return true;
@@ -177,7 +179,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (Name.startswith("masked.load.")) {
       Type *Tys[] = { F->getReturnType(), F->arg_begin()->getType() };
       if (F->getName() != Intrinsic::getName(Intrinsic::masked_load, Tys)) {
-        F->setName(Name + ".old");
+        rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_load,
                                           Tys);
@@ -188,7 +190,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       auto Args = F->getFunctionType()->params();
       Type *Tys[] = { Args[0], Args[1] };
       if (F->getName() != Intrinsic::getName(Intrinsic::masked_store, Tys)) {
-        F->setName(Name + ".old");
+        rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_store,
                                           Tys);
@@ -204,7 +206,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (F->arg_size() == 2 && Name.startswith("objectsize.")) {
       Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
       if (F->getName() != Intrinsic::getName(Intrinsic::objectsize, Tys)) {
-        F->setName(Name + ".old");
+        rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::objectsize, Tys);
         return true;
@@ -359,13 +361,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
     // frcz.ss/sd may need to have an argument dropped
     if (IsX86 && Name.startswith("xop.vfrcz.ss") && F->arg_size() == 2) {
-      F->setName(Name + ".old");
+      rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(),
                                         Intrinsic::x86_xop_vfrcz_ss);
       return true;
     }
     if (IsX86 && Name.startswith("xop.vfrcz.sd") && F->arg_size() == 2) {
-      F->setName(Name + ".old");
+      rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(),
                                         Intrinsic::x86_xop_vfrcz_sd);
       return true;
@@ -383,13 +385,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       else
         ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psrl_di_512
                                   : Intrinsic::x86_avx512_mask_psrl_qi_512;
-      F->setName("llvm.x86." + Name + ".old");
+      rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), ShiftID);
       return true;
     }
     // Fix the FMA4 intrinsics to remove the 4
     if (IsX86 && Name.startswith("fma4.")) {
-      F->setName("llvm.x86.fma" + Name.substr(5));
+      rename(F);
       NewFn = F;
       return true;
     }
@@ -398,7 +400,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       auto Params = F->getFunctionType()->params();
       auto Idx = Params[2];
       if (Idx->getScalarType()->isFloatingPointTy()) {
-        F->setName("llvm.x86." + Name + ".old");
+        rename(F);
         unsigned IdxSize = Idx->getPrimitiveSizeInBits();
         unsigned EltSize = Idx->getScalarSizeInBits();
         Intrinsic::ID Permil2ID;
