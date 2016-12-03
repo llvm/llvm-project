@@ -740,8 +740,6 @@ static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
   }
   std::unique_ptr<ModuleSummaryIndex> CombinedIndex = std::move(*IndexOrErr);
 
-  auto AddStream = [&](size_t Task) { return std::move(OS); };
-
   StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -766,7 +764,9 @@ static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
     ModuleMap[I.first()] = (*MBOrErr)->getMemBufferRef();
     OwnedImports.push_back(std::move(*MBOrErr));
   }
-
+  auto AddStream = [&](size_t Task) {
+    return llvm::make_unique<lto::NativeObjectStream>(std::move(OS));
+  };
   lto::Config Conf;
   if (Error E = thinBackend(
           Conf, 0, AddStream, *M, *CombinedIndex, ImportList,
