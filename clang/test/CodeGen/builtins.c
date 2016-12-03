@@ -351,6 +351,9 @@ void test_float_builtin_ops(float F, double D, long double LD) {
 
 }
 
+// __builtin_longjmp isn't supported on all platforms, so only test it on X86.
+#ifdef __x86_64__
+
 // CHECK-LABEL: define void @test_builtin_longjmp
 void test_builtin_longjmp(void **buffer) {
   // CHECK: [[BITCAST:%.*]] = bitcast
@@ -358,6 +361,8 @@ void test_builtin_longjmp(void **buffer) {
   __builtin_longjmp(buffer, 1);
   // CHECK-NEXT: unreachable
 }
+
+#endif
 
 // CHECK-LABEL: define i64 @test_builtin_readcyclecounter
 long long test_builtin_readcyclecounter() {
