@@ -876,8 +876,9 @@ forward_list<_Tp, _Alloc>::forward_list(size_type __n)
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp, class _Alloc>
-forward_list<_Tp, _Alloc>::forward_list(size_type __n, const allocator_type& __a)
-    : base ( __a )
+forward_list<_Tp, _Alloc>::forward_list(size_type __n,
+                                        const allocator_type& __base_alloc)
+    : base ( __base_alloc )
 {
     if (__n > 0)
     {

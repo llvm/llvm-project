@@ -3644,6 +3644,19 @@ VersionTuple visualstudio::getMSVCVersion(const Driver *D, const ToolChain &TC,
   return VersionTuple();
 }
 
+static Arg *getLastProfileUseArg(const ArgList &Args) {
+  auto *ProfileUseArg = Args.getLastArg(
+      options::OPT_fprofile_instr_use, options::OPT_fprofile_instr_use_EQ,
+      options::OPT_fprofile_use, options::OPT_fprofile_use_EQ,
+      options::OPT_fno_profile_instr_use);
+
+  if (ProfileUseArg &&
+      ProfileUseArg->getOption().matches(options::OPT_fno_profile_instr_use))
+    ProfileUseArg = nullptr;
+
+  return ProfileUseArg;
+}
+
 static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
                                    const InputInfo &Output, const ArgList &Args,
                                    ArgStringList &CmdArgs) {
@@ -3668,13 +3681,7 @@ static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << PGOGenerateArg->getSpelling() << ProfileGenerateArg->getSpelling();
 
-  auto *ProfileUseArg = Args.getLastArg(
-      options::OPT_fprofile_instr_use, options::OPT_fprofile_instr_use_EQ,
-      options::OPT_fprofile_use, options::OPT_fprofile_use_EQ,
-      options::OPT_fno_profile_instr_use);
-  if (ProfileUseArg &&
-      ProfileUseArg->getOption().matches(options::OPT_fno_profile_instr_use))
-    ProfileUseArg = nullptr;
+  auto *ProfileUseArg = getLastProfileUseArg(Args);
 
   if (PGOGenerateArg && ProfileUseArg)
     D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -8472,6 +8479,11 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     F = Output.getFilename();
     F += ".opt.yaml";
     CmdArgs.push_back(Args.MakeArgString(F));
+
+    if (getLastProfileUseArg(Args)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-lto-pass-remarks-with-hotness");
+    }
   }
 
   // It seems that the 'e' option is completely ignored for dynamic executables

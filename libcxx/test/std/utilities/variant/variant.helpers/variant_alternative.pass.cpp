@@ -66,10 +66,10 @@ int main() {
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
-    using V = std::variant<int, int &, int const &, int &&, long double>;
+    using V = std::variant<int, int &, const int &, int &&, long double>;
     test<V, 0, int>();
     test<V, 1, int &>();
-    test<V, 2, int const &>();
+    test<V, 2, const int &>();
     test<V, 3, int &&>();
     test<V, 4, long double>();
   }

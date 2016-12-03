@@ -30,6 +30,21 @@ auto deduce_auto_from_noexcept_function_ptr_b = redecl4<false>;
 using DeducedType_b = decltype(deduce_auto_from_noexcept_function_ptr_b);
 using DeducedType_b = void (*)(int);
 
+static_assert(noexcept(init_with_exact_type_a(0)));
+static_assert(noexcept((+init_with_exact_type_a)(0)));
+static_assert(!noexcept(init_with_exact_type_b(0)));
+static_assert(!noexcept((+init_with_exact_type_b)(0)));
+
+// Don't look through casts, use the direct type of the expression.
+// FIXME: static_cast here would be reasonable, but is not currently permitted.
+static_assert(noexcept(static_cast<decltype(init_with_exact_type_a)>(init_with_exact_type_b)(0))); // expected-error {{is not allowed}}
+static_assert(noexcept(reinterpret_cast<decltype(init_with_exact_type_a)>(init_with_exact_type_b)(0)));
+static_assert(!noexcept(static_cast<decltype(init_with_exact_type_b)>(init_with_exact_type_a)(0)));
+
+template<bool B> auto get_fn() noexcept -> void (*)() noexcept(B) {}
+static_assert(noexcept(get_fn<true>()()));
+static_assert(!noexcept(get_fn<false>()()));
+
 namespace DependentDefaultCtorExceptionSpec {
   template<typename> struct T { static const bool value = true; };
 

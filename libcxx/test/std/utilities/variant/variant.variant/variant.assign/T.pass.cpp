@@ -116,7 +116,7 @@ void test_T_assignment_sfinae() {
     static_assert(!std::is_assignable<V, int>::value, "ambiguous");
   }
   {
-    using V = std::variant<int, int const &>;
+    using V = std::variant<int, const int &>;
     static_assert(!std::is_assignable<V, int>::value, "ambiguous");
   }
 #endif
@@ -149,9 +149,9 @@ void test_T_assignment_basic() {
     v = std::move(x);
     assert(v.index() == 1);
     assert(&std::get<1>(v) == &x);
-    // 'long' is selected by FUN(int const&) since 'int const&' cannot bind
+    // 'long' is selected by FUN(const int &) since 'const int &' cannot bind
     // to 'int&'.
-    int const &cx = x;
+    const int &cx = x;
     v = cx;
     assert(v.index() == 2);
     assert(std::get<2>(v) == 42);

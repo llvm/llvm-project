@@ -25,7 +25,7 @@
 #ifndef TEST_HAS_NO_EXCEPTIONS
 namespace std {
 template <> struct hash<::MakeEmptyT> {
-  size_t operator()(::MakeEmptyT const &) const {
+  size_t operator()(const ::MakeEmptyT &) const {
     assert(false);
     return 0;
   }
@@ -40,7 +40,6 @@ void test_hash_variant() {
     const V v(std::in_place_index<0>, 42);
     const V v_copy = v;
     V v2(std::in_place_index<0>, 100);
-    const V v3(std::in_place_index<2>, 42);
     const H h{};
     assert(h(v) == h(v));
     assert(h(v) != h(v2));
@@ -106,7 +105,20 @@ void test_hash_monostate() {
   }
 }
 
+void test_hash_variant_duplicate_elements() {
+    // Test that the index of the alternative participates in the hash value.
+    using V = std::variant<std::monostate, std::monostate>;
+    using H = std::hash<V>;
+    H h{};
+    const V v1(std::in_place_index<0>);
+    const V v2(std::in_place_index<1>);
+    assert(h(v1) == h(v1));
+    assert(h(v2) == h(v2));
+    LIBCPP_ASSERT(h(v1) != h(v2));
+}
+
 int main() {
   test_hash_variant();
+  test_hash_variant_duplicate_elements();
   test_hash_monostate();
 }

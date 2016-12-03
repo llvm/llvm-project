@@ -1112,7 +1112,7 @@ static bool HelperToDiagnoseMismatchedMethodsInGlobalPool(Sema &S,
                                       MatchingMethodDecl, Sema::MMS_loose)) {
       if (!Warned) {
         Warned = true;
-        S.Diag(AtLoc, diag::warning_multiple_selectors)
+        S.Diag(AtLoc, diag::warn_multiple_selectors)
           << Method->getSelector() << FixItHint::CreateInsertion(LParenLoc, "(")
           << FixItHint::CreateInsertion(RParenLoc, ")");
         S.Diag(Method->getLocation(), diag::note_method_declared_at)
@@ -1131,7 +1131,7 @@ static void DiagnoseMismatchedSelectors(Sema &S, SourceLocation AtLoc,
                                         SourceLocation RParenLoc,
                                         bool WarnMultipleSelectors) {
   if (!WarnMultipleSelectors ||
-      S.Diags.isIgnored(diag::warning_multiple_selectors, SourceLocation()))
+      S.Diags.isIgnored(diag::warn_multiple_selectors, SourceLocation()))
     return;
   bool Warned = false;
   for (Sema::GlobalMethodPool::iterator b = S.MethodPool.begin(),
@@ -1534,7 +1534,7 @@ bool Sema::CheckMessageArgumentTypes(QualType ReceiverType,
       const ObjCMethodDecl *OMD = SelectorsForTypoCorrection(Sel, ReceiverType);
       if (OMD && !OMD->isInvalidDecl()) {
         if (getLangOpts().ObjCAutoRefCount)
-          DiagID = diag::error_method_not_found_with_typo;
+          DiagID = diag::err_method_not_found_with_typo;
         else
           DiagID = isClassMessage ? diag::warn_class_method_not_found_with_typo
                                   : diag::warn_instance_method_not_found_with_typo;
@@ -1956,7 +1956,7 @@ ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
           if (CurMethod->isInstanceMethod()) {
             if (SuperType.isNull()) {
               // The current class does not have a superclass.
-              Diag(receiverNameLoc, diag::error_root_class_cannot_use_super)
+              Diag(receiverNameLoc, diag::err_root_class_cannot_use_super)
                 << CurMethod->getClassInterface()->getIdentifier();
               return ExprError();
             }
@@ -2165,7 +2165,7 @@ ExprResult Sema::ActOnSuperMessage(Scope *S,
 
   ObjCInterfaceDecl *Class = Method->getClassInterface();
   if (!Class) {
-    Diag(SuperLoc, diag::error_no_super_class_message)
+    Diag(SuperLoc, diag::err_no_super_class_message)
       << Method->getDeclName();
     return ExprError();
   }
@@ -2173,7 +2173,7 @@ ExprResult Sema::ActOnSuperMessage(Scope *S,
   QualType SuperTy(Class->getSuperClassType(), 0);
   if (SuperTy.isNull()) {
     // The current class does not have a superclass.
-    Diag(SuperLoc, diag::error_root_class_cannot_use_super)
+    Diag(SuperLoc, diag::err_root_class_cannot_use_super)
       << Class->getIdentifier();
     return ExprError();
   }

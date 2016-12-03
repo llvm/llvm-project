@@ -71,7 +71,7 @@ void test_default_ctor_throws() {
   try {
     V v;
     assert(false);
-  } catch (int const &ex) {
+  } catch (const int &ex) {
     assert(ex == 42);
   } catch (...) {
     assert(false);

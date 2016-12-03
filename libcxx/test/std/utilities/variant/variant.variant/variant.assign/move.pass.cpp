@@ -26,36 +26,36 @@
 #include "variant_test_helpers.hpp"
 
 struct NoCopy {
-  NoCopy(NoCopy const &) = delete;
-  NoCopy &operator=(NoCopy const &) = default;
+  NoCopy(const NoCopy &) = delete;
+  NoCopy &operator=(const NoCopy &) = default;
 };
 
 struct CopyOnly {
-  CopyOnly(CopyOnly const &) = default;
+  CopyOnly(const CopyOnly &) = default;
   CopyOnly(CopyOnly &&) = delete;
-  CopyOnly &operator=(CopyOnly const &) = default;
+  CopyOnly &operator=(const CopyOnly &) = default;
   CopyOnly &operator=(CopyOnly &&) = delete;
 };
 
 struct MoveOnly {
-  MoveOnly(MoveOnly const &) = delete;
+  MoveOnly(const MoveOnly &) = delete;
   MoveOnly(MoveOnly &&) = default;
-  MoveOnly &operator=(MoveOnly const &) = delete;
+  MoveOnly &operator=(const MoveOnly &) = delete;
   MoveOnly &operator=(MoveOnly &&) = default;
 };
 
 struct MoveOnlyNT {
-  MoveOnlyNT(MoveOnlyNT const &) = delete;
+  MoveOnlyNT(const MoveOnlyNT &) = delete;
   MoveOnlyNT(MoveOnlyNT &&) {}
-  MoveOnlyNT &operator=(MoveOnlyNT const &) = delete;
+  MoveOnlyNT &operator=(const MoveOnlyNT &) = delete;
   MoveOnlyNT &operator=(MoveOnlyNT &&) = default;
 };
 
 struct MoveOnlyOddNothrow {
   MoveOnlyOddNothrow(MoveOnlyOddNothrow &&) noexcept(false) {}
-  MoveOnlyOddNothrow(MoveOnlyOddNothrow const &) = delete;
+  MoveOnlyOddNothrow(const MoveOnlyOddNothrow &) = delete;
   MoveOnlyOddNothrow &operator=(MoveOnlyOddNothrow &&) noexcept = default;
-  MoveOnlyOddNothrow &operator=(MoveOnlyOddNothrow const &) = delete;
+  MoveOnlyOddNothrow &operator=(const MoveOnlyOddNothrow &) = delete;
 };
 
 struct MoveAssignOnly {
@@ -308,29 +308,6 @@ void test_move_assignment_different_index() {
 #endif
 }
 
-template <size_t NewIdx, class ValueType>
-constexpr bool test_constexpr_assign_extension_imp(
-    std::variant<long, void*, const int>&& v, ValueType&& new_value)
-{
-  std::variant<long, void*, const int> v2(
-      std::forward<ValueType>(new_value));
-  const auto cp = v2;
-  v = std::move(v2);
-  return v.index() == NewIdx &&
-        std::get<NewIdx>(v) == std::get<NewIdx>(cp);
-}
-
-void test_constexpr_move_ctor_extension() {
-#ifdef _LIBCPP_VERSION
-  using V = std::variant<long, void*, int>;
-  static_assert(std::is_trivially_copyable<V>::value, "");
-  static_assert(std::is_trivially_move_assignable<V>::value, "");
-  static_assert(test_constexpr_assign_extension_imp<0>(V(42l), 101l), "");
-  static_assert(test_constexpr_assign_extension_imp<0>(V(nullptr), 101l), "");
-  static_assert(test_constexpr_assign_extension_imp<1>(V(42l), nullptr), "");
-  static_assert(test_constexpr_assign_extension_imp<2>(V(42l), 101), "");
-#endif
-}
 int main() {
   test_move_assignment_empty_empty();
   test_move_assignment_non_empty_empty();
@@ -339,5 +316,4 @@ int main() {
   test_move_assignment_different_index();
   test_move_assignment_sfinae();
   test_move_assignment_noexcept();
-  test_constexpr_move_assignment_extension();
 }

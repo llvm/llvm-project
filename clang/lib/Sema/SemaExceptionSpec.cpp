@@ -944,24 +944,37 @@ static CanThrowResult canSubExprsThrow(Sema &S, const Expr *E) {
 }
 
 static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D) {
-  assert(D && "Expected decl");
-
-  // See if we can get a function type from the decl somehow.
-  const ValueDecl *VD = dyn_cast<ValueDecl>(D);
-  if (!VD) {
-    // In C++17, we may have a canonical exception specification. If so, use it.
-    if (auto *FT = E->getType().getCanonicalType()->getAs<FunctionProtoType>())
-      return FT->isNothrow(S.Context) ? CT_Cannot : CT_Can;
-    // If we have no clue what we're calling, assume the worst.
-    return CT_Can;
-  }
-
   // As an extension, we assume that __attribute__((nothrow)) functions don't
   // throw.
-  if (isa<FunctionDecl>(D) && D->hasAttr<NoThrowAttr>())
+  if (D && isa<FunctionDecl>(D) && D->hasAttr<NoThrowAttr>())
     return CT_Cannot;
 
-  QualType T = VD->getType();
+  QualType T;
+
+  // In C++1z, just look at the function type of the callee.
+  if (S.getLangOpts().CPlusPlus1z && isa<CallExpr>(E)) {
+    E = cast<CallExpr>(E)->getCallee();
+    T = E->getType();
+    if (T->isSpecificPlaceholderType(BuiltinType::BoundMember)) {
+      // Sadly we don't preserve the actual type as part of the "bound member"
+      // placeholder, so we need to reconstruct it.
+      E = E->IgnoreParenImpCasts();
+
+      // Could be a call to a pointer-to-member or a plain member access.
+      if (auto *Op = dyn_cast<BinaryOperator>(E)) {
+        assert(Op->getOpcode() == BO_PtrMemD || Op->getOpcode() == BO_PtrMemI);
+        T = Op->getRHS()->getType()
+              ->castAs<MemberPointerType>()->getPointeeType();
+      } else {
+        T = cast<MemberExpr>(E)->getMemberDecl()->getType();
+      }
+    }
+  } else if (const ValueDecl *VD = dyn_cast_or_null<ValueDecl>(D))
+    T = VD->getType();
+  else
+    // If we have no clue what we're calling, assume the worst.
+    return CT_Can;
+
   const FunctionProtoType *FT;
   if ((FT = T->getAs<FunctionProtoType>())) {
   } else if (const PointerType *PT = T->getAs<PointerType>())
@@ -1053,10 +1066,8 @@ CanThrowResult Sema::canThrow(const Expr *E) {
       CT = CT_Dependent;
     else if (isa<CXXPseudoDestructorExpr>(CE->getCallee()->IgnoreParens()))
       CT = CT_Cannot;
-    else if (CE->getCalleeDecl())
-      CT = canCalleeThrow(*this, E, CE->getCalleeDecl());
     else
-      CT = CT_Can;
+      CT = canCalleeThrow(*this, E, CE->getCalleeDecl());
     if (CT == CT_Can)
       return CT;
     return mergeCanThrow(CT, canSubExprsThrow(*this, E));

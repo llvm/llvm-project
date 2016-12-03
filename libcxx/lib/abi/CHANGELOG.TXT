@@ -16,6 +16,15 @@ New entries should be added directly below the "Version" header.
 Version 4.0
 -----------
 
+* r288547 - Implement C++17 <variant>
+
+  All Platforms
+  -------------
+  Symbol added: _ZTVSt18bad_variant_access
+  Symbol added: _ZTISt18bad_variant_access
+  Symbol added: _ZTSSt18bad_variant_access
+  Symbol added: _ZNKSt18bad_variant_access4whatEv
+
 * rTBD - Remove std::string::append template methods which should be inline
 
   These functions should never have had visible definitions in the dylib but
