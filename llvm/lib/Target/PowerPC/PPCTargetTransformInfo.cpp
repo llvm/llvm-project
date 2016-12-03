@@ -360,11 +360,6 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
 
   int Cost = BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace);
 
-  // Aligned loads and stores are easy.
-  unsigned SrcBytes = LT.second.getStoreSize();
-  if (!SrcBytes || !Alignment || Alignment >= SrcBytes)
-    return Cost;
-
   bool IsAltivecType = ST->hasAltivec() &&
                        (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||
                         LT.second == MVT::v4i32 || LT.second == MVT::v4f32);
@@ -372,6 +367,20 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
                    (LT.second == MVT::v2f64 || LT.second == MVT::v2i64);
   bool IsQPXType = ST->hasQPX() &&
                    (LT.second == MVT::v4f64 || LT.second == MVT::v4f32);
+
+  // VSX has 32b/64b load instructions. Legalization can handle loading of
+  // 32b/64b to VSR correctly and cheaply. But BaseT::getMemoryOpCost and
+  // PPCTargetLowering can't compute the cost appropriately. So here we
+  // explicitly check this case.
+  unsigned MemBytes = Src->getPrimitiveSizeInBits();
+  if (Opcode == Instruction::Load && ST->hasVSX() && IsAltivecType &&
+      (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32)))
+    return 1;
+
+  // Aligned loads and stores are easy.
+  unsigned SrcBytes = LT.second.getStoreSize();
+  if (!SrcBytes || !Alignment || Alignment >= SrcBytes)
+    return Cost;
 
   // If we can use the permutation-based load sequence, then this is also
   // relatively cheap (not counting loop-invariant instructions): one load plus

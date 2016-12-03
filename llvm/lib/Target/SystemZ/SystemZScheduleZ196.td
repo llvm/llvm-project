@@ -494,8 +494,30 @@ def : InstRW<[FXU, LSU, Lat5], (instregex "LAN(G)?$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "LAO(G)?$")>;
 def : InstRW<[FXU, LSU, Lat5], (instregex "LAX(G)?$")>;
 
+// Test and set
+def : InstRW<[FXU, LSU, Lat5, EndGroup], (instregex "TS$")>;
+
 // Compare and swap
 def : InstRW<[FXU, LSU, FXU, Lat6, GroupAlone], (instregex "CS(G|Y)?$")>;
+
+// Compare double and swap
+def : InstRW<[FXU, FXU, FXU, FXU, FXU, LSU, Lat10, GroupAlone],
+             (instregex "CDS(Y)?$")>;
+def : InstRW<[FXU, FXU, FXU, FXU, FXU, FXU, LSU, LSU, Lat12, GroupAlone],
+             (instregex "CDSG$")>;
+
+// Compare and swap and store
+def : InstRW<[FXU, Lat30, GroupAlone], (instregex "CSST$")>;
+
+// Perform locked operation
+def : InstRW<[LSU, Lat30, GroupAlone], (instregex "PLO$")>;
+
+// Load/store pair from/to quadword
+def : InstRW<[LSU, LSU, Lat5, GroupAlone], (instregex "LPQ$")>;
+def : InstRW<[FXU, FXU, LSU, LSU, Lat6, GroupAlone], (instregex "STPQ$")>;
+
+// Load pair disjoint
+def : InstRW<[LSU, LSU, Lat5, GroupAlone], (instregex "LPD(G)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Access registers
@@ -730,6 +752,18 @@ def : InstRW<[FPU, FPU, Lat30], (instregex "CXBR$")>;
 // Test Data Class
 def : InstRW<[FPU, LSU, Lat15], (instregex "TC(E|D)B$")>;
 def : InstRW<[FPU2, FPU2, LSU, Lat15, GroupAlone], (instregex "TCXB$")>;
+
+//===----------------------------------------------------------------------===//
+// FP: Floating-point control register instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, LSU, Lat4, GroupAlone], (instregex "EFPC$")>;
+def : InstRW<[LSU, Lat3, GroupAlone], (instregex "SFPC$")>;
+def : InstRW<[LSU, LSU, Lat6, GroupAlone], (instregex "LFPC$")>;
+def : InstRW<[LSU, Lat3, GroupAlone], (instregex "STFPC$")>;
+def : InstRW<[FXU, Lat30, GroupAlone], (instregex "SFASR$")>;
+def : InstRW<[FXU, LSU, Lat30, GroupAlone], (instregex "LFAS$")>;
+def : InstRW<[FXU, Lat2, GroupAlone], (instregex "SRNM(B|T)?$")>;
 
 }
 

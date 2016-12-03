@@ -94,9 +94,29 @@ TEST_F(TrigramIndexTest, TooComplicatedRegex2) {
   EXPECT_TRUE(TI->isDefeated());
 }
 
-TEST_F(TrigramIndexTest, SpecialSymbol) {
+TEST_F(TrigramIndexTest, EscapedSymbols) {
   std::unique_ptr<TrigramIndex> TI =
-      makeTrigramIndex({"*c\\+\\+*"});
+      makeTrigramIndex({"*c\\+\\+*", "*hello\\\\world*", "a\\tb", "a\\0b"});
+  EXPECT_FALSE(TI->isDefeated());
+  EXPECT_FALSE(TI->isDefinitelyOut("c++"));
+  EXPECT_TRUE(TI->isDefinitelyOut("c\\+\\+"));
+  EXPECT_FALSE(TI->isDefinitelyOut("hello\\world"));
+  EXPECT_TRUE(TI->isDefinitelyOut("hello\\\\world"));
+  EXPECT_FALSE(TI->isDefinitelyOut("atb"));
+  EXPECT_TRUE(TI->isDefinitelyOut("a\\tb"));
+  EXPECT_TRUE(TI->isDefinitelyOut("a\tb"));
+  EXPECT_FALSE(TI->isDefinitelyOut("a0b"));
+}
+
+TEST_F(TrigramIndexTest, Backreference1) {
+  std::unique_ptr<TrigramIndex> TI =
+      makeTrigramIndex({"*foo\\1*"});
+  EXPECT_TRUE(TI->isDefeated());
+}
+
+TEST_F(TrigramIndexTest, Backreference2) {
+  std::unique_ptr<TrigramIndex> TI =
+      makeTrigramIndex({"*foo\\2*"});
   EXPECT_TRUE(TI->isDefeated());
 }
 

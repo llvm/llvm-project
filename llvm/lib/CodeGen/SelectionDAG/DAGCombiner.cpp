@@ -8392,16 +8392,22 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
   assert(N->getOpcode() == ISD::FMUL && "Expected FMUL Operation");
 
   const TargetOptions &Options = DAG.getTarget().Options;
-  bool AllowFusion =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath);
 
-  // Floating-point multiply-add with intermediate rounding.
-  bool HasFMAD = (LegalOperations && TLI.isOperationLegal(ISD::FMAD, VT));
+  // The transforms below are incorrect when x == 0 and y == inf, because the
+  // intermediate multiplication produces a nan.
+  if (!Options.NoInfsFPMath)
+    return SDValue();
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      AllowFusion && TLI.isFMAFasterThanFMulAndFAdd(VT) &&
+      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath) &&
+      TLI.isFMAFasterThanFMulAndFAdd(VT) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT));
+
+  // Floating-point multiply-add with intermediate rounding. This can result
+  // in a less precise result due to the changed rounding order.
+  bool HasFMAD = Options.UnsafeFPMath &&
+                 (LegalOperations && TLI.isOperationLegal(ISD::FMAD, VT));
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)

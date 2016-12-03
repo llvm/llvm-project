@@ -26,28 +26,41 @@ using namespace llvm;
 
 static const char RegexAdvancedMetachars[] = "()^$|+?[]\\{}";
 
-static bool isSimpleWildcard(StringRef Str) {
-  // Check for regex metacharacters other than '*' and '.'.
-  return Str.find_first_of(RegexAdvancedMetachars) == StringRef::npos;
+static bool isAdvancedMetachar(unsigned Char) {
+  return strchr(RegexAdvancedMetachars, Char) != nullptr;
 }
 
 void TrigramIndex::insert(std::string Regex) {
   if (Defeated) return;
-  if (!isSimpleWildcard(Regex)) {
-    Defeated = true;
-    return;
-  }
-
   std::set<unsigned> Was;
   unsigned Cnt = 0;
   unsigned Tri = 0;
   unsigned Len = 0;
+  bool Escaped = false;
   for (unsigned Char : Regex) {
-    if (Char == '.' || Char == '*') {
-      Tri = 0;
-      Len = 0;
-      continue;
+    if (!Escaped) {
+      // Regular expressions allow escaping symbols by preceding it with '\'.
+      if (Char == '\\') {
+        Escaped = true;
+        continue;
+      }
+      if (isAdvancedMetachar(Char)) {
+        // This is a more complicated regex than we can handle here.
+        Defeated = true;
+        return;
+      }
+      if (Char == '.' || Char == '*') {
+        Tri = 0;
+        Len = 0;
+        continue;
+      }
     }
+    if (Escaped && Char >= '1' && Char <= '9') {
+      Defeated = true;
+      return;
+    }
+    // We have already handled escaping and can reset the flag.
+    Escaped = false;
     Tri = ((Tri << 8) + Char) & 0xFFFFFF;
     Len++;
     if (Len < 3)

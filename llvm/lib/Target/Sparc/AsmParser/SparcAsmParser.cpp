@@ -121,7 +121,7 @@ public:
   static const MCPhysReg DoubleRegs[32] = {
     Sparc::D0,  Sparc::D1,  Sparc::D2,  Sparc::D3,
     Sparc::D4,  Sparc::D5,  Sparc::D6,  Sparc::D7,
-    Sparc::D8,  Sparc::D7,  Sparc::D8,  Sparc::D9,
+    Sparc::D8,  Sparc::D9,  Sparc::D10, Sparc::D11,
     Sparc::D12, Sparc::D13, Sparc::D14, Sparc::D15,
     Sparc::D16, Sparc::D17, Sparc::D18, Sparc::D19,
     Sparc::D20, Sparc::D21, Sparc::D22, Sparc::D23,

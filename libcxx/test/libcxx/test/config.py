@@ -634,8 +634,9 @@ class Configuration(object):
         self.cxx.compile_flags += ['-D_LIBCPP_DEBUG=%s' % debug_level]
 
     def configure_warnings(self):
-        default_enable_warnings = len(
-            self.config.available_features.intersection(
+        # Turn on warnings by default for Clang based compilers when C++ >= 11
+        default_enable_warnings = self.cxx.type in ['clang', 'apple-clang'] \
+            and len(self.config.available_features.intersection(
                 ['c++11', 'c++14', 'c++1z'])) != 0
         enable_warnings = self.get_lit_bool('enable_warnings',
                                             default_enable_warnings)
