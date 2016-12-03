@@ -136,6 +136,9 @@ std::string getPGOFuncName(StringRef RawFuncName,
 // (when \c InLTO is true): LTO's internalization privatizes many global linkage
 // symbols. This happens after value profile annotation, but those internal
 // linkage functions should not have a source prefix.
+// Additionally, for ThinLTO mode, exported internal functions are promoted
+// and renamed. We need to ensure that the original internal PGO name is
+// used when computing the GUID that is compared against the profiled GUIDs.
 // To differentiate compiler generated internal symbols from original ones,
 // PGOFuncName meta data are created and attached to the original internal
 // symbols in the value profile annotation step
