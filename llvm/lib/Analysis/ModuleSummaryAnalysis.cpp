@@ -78,7 +78,7 @@ static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
 static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
                                    const Function &F, BlockFrequencyInfo *BFI,
                                    ProfileSummaryInfo *PSI,
-                                   SmallPtrSetImpl<GlobalValue *> &LocalsUsed) {
+                                   bool HasLocalsInUsed) {
   // Summary not currently supported for anonymous functions, they should
   // have been named.
   assert(F.hasName());
@@ -90,8 +90,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   DenseMap<GlobalValue::GUID, CalleeInfo> IndirectCallEdges;
   DenseSet<const Value *> RefEdges;
   ICallPromotionAnalysis ICallAnalysis;
-  bool HasLocalsInUsed = !LocalsUsed.empty();
 
+  bool HasInlineAsmMaybeReferencingInternal = false;
   SmallPtrSet<const User *, 8> Visited;
   for (const BasicBlock &BB : F)
     for (const Instruction &I : BB) {
@@ -105,11 +105,12 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
 
       const auto *CI = dyn_cast<CallInst>(&I);
       // Since we don't know exactly which local values are referenced in inline
-      // assembly, conservatively reference all of them from this function, to
-      // ensure we don't export a reference (which would require renaming and
-      // promotion).
+      // assembly, conservatively mark the function as possibly referencing
+      // a local value from inline assembly to ensure we don't export a
+      // reference (which would require renaming and promotion of the
+      // referenced value).
       if (HasLocalsInUsed && CI && CI->isInlineAsm())
-        RefEdges.insert(LocalsUsed.begin(), LocalsUsed.end());
+        HasInlineAsmMaybeReferencingInternal = true;
 
       auto *CalledValue = CS.getCalledValue();
       auto *CalledFunction = CS.getCalledFunction();
@@ -162,6 +163,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   FuncSummary->addCallGraphEdges(CallGraphEdges);
   FuncSummary->addCallGraphEdges(IndirectCallEdges);
   FuncSummary->addRefEdges(RefEdges);
+  if (HasInlineAsmMaybeReferencingInternal)
+    FuncSummary->setHasInlineAsmMaybeReferencingInternal();
   Index.addGlobalValueSummary(F.getName(), std::move(FuncSummary));
 }
 
@@ -222,7 +225,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
       BFI = BFIPtr.get();
     }
 
-    computeFunctionSummary(Index, M, F, BFI, PSI, LocalsUsed);
+    computeFunctionSummary(Index, M, F, BFI, PSI, !LocalsUsed.empty());
   }
 
   // Compute summaries for all variables defined in module, and save in the

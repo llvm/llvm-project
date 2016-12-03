@@ -153,7 +153,11 @@ static bool eligibleForImport(const ModuleSummaryIndex &Index,
 
   // Check references (and potential calls) in the same module. If the current
   // value references a global that can't be externally referenced it is not
-  // eligible for import.
+  // eligible for import. First check the flag set when we have possible
+  // opaque references (e.g. inline asm calls), then check the call and
+  // reference sets.
+  if (Summary.hasInlineAsmMaybeReferencingInternal())
+    return false;
   bool AllRefsCanBeExternallyReferenced =
       llvm::all_of(Summary.refs(), [&](const ValueInfo &VI) {
         return canBeExternallyReferenced(Index, VI.getGUID());
