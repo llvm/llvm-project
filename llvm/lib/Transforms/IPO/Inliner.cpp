@@ -617,7 +617,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 bool Inliner::inlineCalls(CallGraphSCC &SCC) {
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   ACT = &getAnalysis<AssumptionCacheTracker>();
-  PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI(CG.getModule());
+  PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   // We compute dedicated AA results for each function in the SCC as needed. We
   // use a lambda referencing external objects so that they live long enough to

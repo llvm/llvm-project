@@ -57,7 +57,7 @@ static uint64_t getMinCountForPercentile(SummaryEntryVector &DS,
 void ProfileSummaryInfo::computeSummary() {
   if (Summary)
     return;
-  auto *SummaryMD = M->getProfileSummary();
+  auto *SummaryMD = M.getProfileSummary();
   if (!SummaryMD)
     return;
   Summary.reset(ProfileSummary::getFromMD(SummaryMD));
@@ -113,13 +113,6 @@ void ProfileSummaryInfo::computeThresholds() {
       getMinCountForPercentile(DetailedSummary, ProfileSummaryCutoffCold);
 }
 
-void ProfileSummaryInfo::resetModule(Module *NewM) {
-  if (NewM == M)
-    return;
-  M = NewM;
-  Summary.reset(nullptr);
-}
-
 bool ProfileSummaryInfo::isHotCount(uint64_t C) {
   if (!HotCountThreshold)
     computeThresholds();
@@ -132,14 +125,6 @@ bool ProfileSummaryInfo::isColdCount(uint64_t C) {
   return ColdCountThreshold && C <= ColdCountThreshold.getValue();
 }
 
-ProfileSummaryInfo *ProfileSummaryInfoWrapperPass::getPSI(Module &M) {
-  if (!PSI)
-    PSI.reset(new ProfileSummaryInfo(&M));
-  else
-    PSI->resetModule(&M);
-  return PSI.get();
-}
-
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",
                 "Profile summary info", false, true)
 
@@ -148,10 +133,20 @@ ProfileSummaryInfoWrapperPass::ProfileSummaryInfoWrapperPass()
   initializeProfileSummaryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
+bool ProfileSummaryInfoWrapperPass::doInitialization(Module &M) {
+  PSI.reset(new ProfileSummaryInfo(M));
+  return false;
+}
+
+bool ProfileSummaryInfoWrapperPass::doFinalization(Module &M) {
+  PSI.reset();
+  return false;
+}
+
 char ProfileSummaryAnalysis::PassID;
 ProfileSummaryInfo ProfileSummaryAnalysis::run(Module &M,
                                                ModuleAnalysisManager &) {
-  return ProfileSummaryInfo(&M);
+  return ProfileSummaryInfo(M);
 }
 
 // FIXME: This only tests isHotFunction and isColdFunction and not the
