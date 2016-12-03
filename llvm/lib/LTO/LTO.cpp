@@ -477,11 +477,11 @@ class lto::ThinBackendProc {
 protected:
   Config &Conf;
   ModuleSummaryIndex &CombinedIndex;
-  StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries;
+  const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries;
 
 public:
   ThinBackendProc(Config &Conf, ModuleSummaryIndex &CombinedIndex,
-                  StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries)
+                  const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries)
       : Conf(Conf), CombinedIndex(CombinedIndex),
         ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries) {}
 
@@ -503,10 +503,11 @@ class InProcessThinBackend : public ThinBackendProc {
   std::mutex ErrMu;
 
 public:
-  InProcessThinBackend(Config &Conf, ModuleSummaryIndex &CombinedIndex,
-                       unsigned ThinLTOParallelismLevel,
-                       StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-                       AddOutputFn AddOutput)
+  InProcessThinBackend(
+      Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      unsigned ThinLTOParallelismLevel,
+      const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      AddOutputFn AddOutput)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
         BackendThreadPool(ThinLTOParallelismLevel),
         AddOutput(std::move(AddOutput)) {}
@@ -551,13 +552,16 @@ public:
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       MapVector<StringRef, MemoryBufferRef> &ModuleMap) override {
     StringRef ModulePath = MBRef.getBufferIdentifier();
+    assert(ModuleToDefinedGVSummaries.count(ModulePath));
+    const GVSummaryMapTy &DefinedGlobals =
+        ModuleToDefinedGVSummaries.find(ModulePath)->second;
     BackendThreadPool.async(
         [=](MemoryBufferRef MBRef, ModuleSummaryIndex &CombinedIndex,
             const FunctionImporter::ImportMapTy &ImportList,
             const FunctionImporter::ExportSetTy &ExportList,
             const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
                 &ResolvedODR,
-            GVSummaryMapTy &DefinedGlobals,
+            const GVSummaryMapTy &DefinedGlobals,
             MapVector<StringRef, MemoryBufferRef> &ModuleMap) {
           Error E = runThinLTOBackendThread(
               AddOutput, Task, MBRef, CombinedIndex, ImportList, ExportList,
@@ -571,8 +575,8 @@ public:
           }
         },
         MBRef, std::ref(CombinedIndex), std::ref(ImportList),
-        std::ref(ExportList), std::ref(ResolvedODR),
-        std::ref(ModuleToDefinedGVSummaries[ModulePath]), std::ref(ModuleMap));
+        std::ref(ExportList), std::ref(ResolvedODR), std::ref(DefinedGlobals),
+        std::ref(ModuleMap));
     return Error();
   }
 
@@ -587,7 +591,7 @@ public:
 
 ThinBackend lto::createInProcessThinBackend(unsigned ParallelismLevel) {
   return [=](Config &Conf, ModuleSummaryIndex &CombinedIndex,
-             StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+             const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
              AddOutputFn AddOutput) {
     return llvm::make_unique<InProcessThinBackend>(
         Conf, CombinedIndex, ParallelismLevel, ModuleToDefinedGVSummaries,
@@ -603,11 +607,11 @@ class WriteIndexesThinBackend : public ThinBackendProc {
   std::unique_ptr<llvm::raw_fd_ostream> LinkedObjectsFile;
 
 public:
-  WriteIndexesThinBackend(Config &Conf, ModuleSummaryIndex &CombinedIndex,
-                          StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-                          std::string OldPrefix, std::string NewPrefix,
-                          bool ShouldEmitImportsFiles,
-                          std::string LinkedObjectsFileName)
+  WriteIndexesThinBackend(
+      Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      std::string OldPrefix, std::string NewPrefix, bool ShouldEmitImportsFiles,
+      std::string LinkedObjectsFileName)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         ShouldEmitImportsFiles(ShouldEmitImportsFiles),
@@ -678,7 +682,7 @@ ThinBackend lto::createWriteIndexesThinBackend(std::string OldPrefix,
                                                bool ShouldEmitImportsFiles,
                                                std::string LinkedObjectsFile) {
   return [=](Config &Conf, ModuleSummaryIndex &CombinedIndex,
-             StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+             const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
              AddOutputFn AddOutput) {
     return llvm::make_unique<WriteIndexesThinBackend>(
         Conf, CombinedIndex, ModuleToDefinedGVSummaries, OldPrefix, NewPrefix,
