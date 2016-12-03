@@ -268,18 +268,6 @@ static void exportGlobalInModule(const ModuleSummaryIndex &Index,
   auto GVS = dyn_cast<GlobalVarSummary>(Summary);
   if (!GVS)
     return;
-  // FunctionImportGlobalProcessing::doPromoteLocalToGlobal() will always
-  // trigger importing  the initializer for `constant unnamed addr` globals that
-  // are referenced. We conservatively export all the referenced symbols for
-  // every global to workaround this, so that the ExportList is accurate.
-  // FIXME: with a "isConstant" flag in the summary we could be more targetted.
-  for (auto &Ref : GVS->refs()) {
-    auto GUID = Ref.getGUID();
-    auto *RefSummary = FindGlobalSummaryInModule(GUID);
-    if (RefSummary)
-      // Found a ref in the current module, mark it as exported
-      ExportList.insert(GUID);
-  }
 }
 
 using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;

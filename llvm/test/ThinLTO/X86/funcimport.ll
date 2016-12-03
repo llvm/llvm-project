@@ -10,7 +10,8 @@
 ; constant variable need promotion).
 ; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTSTATIC
 ; EXPORTSTATIC-DAG: @staticvar.llvm.0 = hidden global
-; EXPORTSTATIC-DAG: @staticconstvar = internal unnamed_addr constant
+; Eventually @staticconstvar can be exported as a copy and not promoted
+; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = hidden unnamed_addr constant
 ; EXPORTSTATIC-DAG: @P.llvm.0 = hidden global void ()* null
 ; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.0
 ; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.0
