@@ -46,7 +46,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
 
   std::error_code EC;
   ResolutionFile = llvm::make_unique<raw_fd_ostream>(
-      OutputFileName + ".resolution.txt", EC, sys::fs::OpenFlags::F_Text);
+      OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::F_Text);
   if (EC)
     return errorCodeToError(EC);
 
@@ -64,9 +64,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
       // user hasn't requested using the input module's path, emit to a file
       // named from the provided OutputFileName with the Task ID appended.
       if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
-        PathPrefix = OutputFileName;
-        if (Task != 0)
-          PathPrefix += "." + utostr(Task);
+        PathPrefix = OutputFileName + utostr(Task);
       } else
         PathPrefix = M.getModuleIdentifier();
       std::string Path = PathPrefix + "." + PathSuffix + ".bc";
@@ -92,7 +90,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
   setHook("5.precodegen", PreCodeGenModuleHook);
 
   CombinedIndexHook = [=](const ModuleSummaryIndex &Index) {
-    std::string Path = OutputFileName + ".index.bc";
+    std::string Path = OutputFileName + "index.bc";
     std::error_code EC;
     raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
     if (EC) {

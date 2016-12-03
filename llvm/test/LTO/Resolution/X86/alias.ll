@@ -1,7 +1,7 @@
 ; RUN: llvm-as %s -o %t1.o
 ; RUN: llvm-as %p/Inputs/alias-1.ll -o %t2.o
 ; RUN: llvm-lto2 -o %t3.o %t2.o %t1.o -r %t2.o,a,px -r %t1.o,a, -r %t1.o,b,px -save-temps
-; RUN: llvm-dis < %t3.o.0.preopt.bc -o - | FileCheck %s
+; RUN: llvm-dis < %t3.o.0.0.preopt.bc -o - | FileCheck %s
 ; RUN: FileCheck --check-prefix=RES %s < %t3.o.resolution.txt
 
 ; CHECK-NOT: alias
