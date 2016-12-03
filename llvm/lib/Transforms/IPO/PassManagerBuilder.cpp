@@ -491,8 +491,8 @@ void PassManagerBuilder::populateModulePassManager(
   if (PrepareForThinLTO) {
     // Reduce the size of the IR as much as possible.
     MPM.add(createGlobalOptimizerPass());
-    // Rename anon function to be able to export them in the summary.
-    MPM.add(createNameAnonFunctionPass());
+    // Rename anon globals to be able to export them in the summary.
+    MPM.add(createNameAnonGlobalPass());
     return;
   }
 
