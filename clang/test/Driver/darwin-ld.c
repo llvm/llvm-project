@@ -332,7 +332,12 @@
 // RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -### -o foo/bar.out 2> %t.log
 // RUN: FileCheck -check-prefix=PASS_REMARKS_OUTPUT %s < %t.log
 // PASS_REMARKS_OUTPUT: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml"
+// PASS_REMARKS_OUTPUT-NOT: -lto-pass-remarks-with-hotness
 
 // RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -### 2> %t.log
 // RUN: FileCheck -check-prefix=PASS_REMARKS_OUTPUT_NO_O %s < %t.log
 // PASS_REMARKS_OUTPUT_NO_O: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "a.out.opt.yaml"
+
+// RUN: %clang -target x86_64-apple-darwin12 %t.o -fsave-optimization-record -fprofile-instr-use=blah -### -o foo/bar.out 2> %t.log
+// RUN: FileCheck -check-prefix=PASS_REMARKS_WITH_HOTNESS %s < %t.log
+// PASS_REMARKS_WITH_HOTNESS: "-mllvm" "-lto-pass-remarks-output" "-mllvm" "foo/bar.out.opt.yaml" "-mllvm" "-lto-pass-remarks-with-hotness"

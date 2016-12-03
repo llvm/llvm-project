@@ -839,6 +839,11 @@ public:
   const Expr *skipRValueSubobjectAdjustments(
       SmallVectorImpl<const Expr *> &CommaLHS,
       SmallVectorImpl<SubobjectAdjustment> &Adjustments) const;
+  const Expr *skipRValueSubobjectAdjustments() const {
+    SmallVector<const Expr *, 8> CommaLHSs;
+    SmallVector<SubobjectAdjustment, 8> Adjustments;
+    return skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() >= firstExprConstant &&

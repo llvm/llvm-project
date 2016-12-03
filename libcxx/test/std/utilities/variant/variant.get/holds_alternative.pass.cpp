@@ -15,6 +15,7 @@
 // template <class T, class... Types>
 // constexpr bool holds_alternative(const variant<Types...>& v) noexcept;
 
+#include "test_macros.h"
 #include <variant>
 
 int main() {
@@ -32,6 +33,6 @@ int main() {
   { // noexcept test
     using V = std::variant<int>;
     const V v;
-    static_assert(noexcept(std::holds_alternative<int>(v)), "must be noexcept");
+    ASSERT_NOEXCEPT(std::holds_alternative<int>(v));
   }
 }

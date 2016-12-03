@@ -817,6 +817,7 @@ void OverloadCandidateSet::destroyCandidates() {
 
 void OverloadCandidateSet::clear() {
   destroyCandidates();
+  ConversionSequenceAllocator.Reset();
   NumInlineSequences = 0;
   Candidates.clear();
   Functions.clear();

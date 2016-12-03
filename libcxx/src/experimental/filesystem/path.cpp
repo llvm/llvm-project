@@ -6,6 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#undef NDEBUG
 #include "experimental/filesystem"
 #include "string_view"
 #include "utility"
@@ -390,19 +391,13 @@ int path::__compare(string_view_t __s) const {
 // path.nonmembers
 size_t hash_value(const path& __p) noexcept {
   auto PP = PathParser::CreateBegin(__p.native());
-  struct HashPairT {
-    size_t first;
-    size_t second;
-  };
-  HashPairT hp = {0, 0};
+  size_t hash_value = 0;
   std::hash<string_view> hasher;
-  std::__scalar_hash<decltype(hp)> pair_hasher;
   while (PP) {
-    hp.second = hasher(*PP);
-    hp.first = pair_hasher(hp);
+    hash_value = __hash_combine(hash_value, hasher(*PP));
     ++PP;
   }
-  return hp.first;
+  return hash_value;
 }
 
 ////////////////////////////////////////////////////////////////////////////

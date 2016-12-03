@@ -8762,6 +8762,11 @@ public:
   // argument, and arguments that have type float are promoted to double.
   ExprResult DefaultArgumentPromotion(Expr *E);
 
+  /// If \p E is a prvalue denoting an unmaterialized temporary, materialize
+  /// it as an xvalue. In C++98, the result will still be a prvalue, because
+  /// we don't have xvalues there.
+  ExprResult TemporaryMaterializationConversion(Expr *E);
+
   // Used for emitting the right warning by DefaultVariadicArgumentPromotion
   enum VariadicCallType {
     VariadicFunction,

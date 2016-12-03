@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// Clang 3.8 doesn't allow constexpr variables of non-literal type
+// XFAIL: clang-3.8, apple-clang-7
+
 // <variant>
 
 // template <class ...Types> class variant;

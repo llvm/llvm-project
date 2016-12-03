@@ -142,15 +142,21 @@ namespace dr615 { // dr615: yes
   static int n = f();
 }
 
-namespace dr616 { // dr616: no
+namespace dr616 { // dr616: 4.0
 #if __cplusplus >= 201103L
   struct S { int n; } s;
-  // FIXME: These should all be 'int &&'
-  using T = decltype(S().n);
-  using T = decltype(static_cast<S&&>(s).n);
-  using T = decltype(S().*&S::n); // expected-note 2{{previous}}
-  using T = decltype(static_cast<S&&>(s).*&S::n); // expected-error {{different type}}
-  using T = int&&; // expected-error {{different type}}
+  S f();
+  using T = decltype((S().n));
+  using T = decltype((static_cast<S&&>(s).n));
+  using T = decltype((f().n));
+  using T = decltype(S().*&S::n);
+  using T = decltype(static_cast<S&&>(s).*&S::n);
+  using T = decltype(f().*&S::n);
+  using T = int&&;
+
+  using U = decltype(S().n);
+  using U = decltype(static_cast<S&&>(s).n);
+  using U = int;
 #endif
 }
 

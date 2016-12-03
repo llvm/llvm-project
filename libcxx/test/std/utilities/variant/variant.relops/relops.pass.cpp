@@ -49,27 +49,27 @@ struct MakeEmptyT {
   MakeEmptyT(MakeEmptyT &&) { throw 42; }
   MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
 };
-inline bool operator==(MakeEmptyT const &, MakeEmptyT const &) {
+inline bool operator==(const MakeEmptyT &, const MakeEmptyT &) {
   assert(false);
   return false;
 }
-inline bool operator!=(MakeEmptyT const &, MakeEmptyT const &) {
+inline bool operator!=(const MakeEmptyT &, const MakeEmptyT &) {
   assert(false);
   return false;
 }
-inline bool operator<(MakeEmptyT const &, MakeEmptyT const &) {
+inline bool operator<(const MakeEmptyT &, const MakeEmptyT &) {
   assert(false);
   return false;
 }
-inline bool operator<=(MakeEmptyT const &, MakeEmptyT const &) {
+inline bool operator<=(const MakeEmptyT &, const MakeEmptyT &) {
   assert(false);
   return false;
 }
-inline bool operator>(MakeEmptyT const &, MakeEmptyT const &) {
+inline bool operator>(const MakeEmptyT &, const MakeEmptyT &) {
   assert(false);
   return false;
 }
-inline bool operator>=(MakeEmptyT const &, MakeEmptyT const &) {
+inline bool operator>=(const MakeEmptyT &, const MakeEmptyT &) {
   assert(false);
   return false;
 }
@@ -158,7 +158,7 @@ void test_equality() {
 }
 
 template <class Var>
-constexpr bool test_less(Var const &l, Var const &r, bool expect_less,
+constexpr bool test_less(const Var &l, const Var &r, bool expect_less,
                          bool expect_greater) {
   return ((l < r) == expect_less) && (!(l >= r) == expect_less) &&
          ((l > r) == expect_greater) && (!(l <= r) == expect_greater);

@@ -594,7 +594,7 @@ TEST(MaterializeTemporaryExpr, MatchesTemporary) {
                materializeTemporaryExpr()));
 
   EXPECT_TRUE(
-    notMatches(ClassString +
+    matches(ClassString +
                  "string GetStringByValue();"
                    "void run() { int k = GetStringByValue().length(); }",
                materializeTemporaryExpr()));

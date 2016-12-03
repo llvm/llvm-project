@@ -77,16 +77,16 @@ struct ForwardingCallObject {
   }
 
   static CallType last_call_type;
-  static TypeID const *last_call_args;
+  static const TypeID *last_call_args;
 };
 
 CallType ForwardingCallObject::last_call_type = CT_None;
-TypeID const *ForwardingCallObject::last_call_args = nullptr;
+const TypeID *ForwardingCallObject::last_call_args = nullptr;
 
 void test_call_operator_forwarding() {
   using Fn = ForwardingCallObject;
   Fn obj{};
-  Fn const &cobj = obj;
+  const Fn &cobj = obj;
   { // test call operator forwarding - single variant, single arg
     using V = std::variant<int>;
     V v(42);
@@ -134,11 +134,11 @@ void test_argument_forwarding() {
   { // single argument - value type
     using V = std::variant<int>;
     V v(42);
-    V const &cv = v;
+    const V &cv = v;
     std::visit(obj, v);
     assert(Fn::check_call<int &>(Val));
     std::visit(obj, cv);
-    assert(Fn::check_call<int const &>(Val));
+    assert(Fn::check_call<const int &>(Val));
     std::visit(obj, std::move(v));
     assert(Fn::check_call<int &&>(Val));
     std::visit(obj, std::move(cv));
@@ -149,7 +149,7 @@ void test_argument_forwarding() {
     using V = std::variant<int &>;
     int x = 42;
     V v(x);
-    V const &cv = v;
+    const V &cv = v;
     std::visit(obj, v);
     assert(Fn::check_call<int &>(Val));
     std::visit(obj, cv);
@@ -163,7 +163,7 @@ void test_argument_forwarding() {
     using V = std::variant<int &&>;
     int x = 42;
     V v(std::move(x));
-    V const &cv = v;
+    const V &cv = v;
     std::visit(obj, v);
     assert(Fn::check_call<int &>(Val));
     std::visit(obj, cv);
@@ -174,16 +174,16 @@ void test_argument_forwarding() {
     assert(Fn::check_call<int &&>(Val));
   }
   { // multi argument - multi variant
-    using S = std::string const &;
+    using S = const std::string &;
     using V = std::variant<int, S, long &&>;
-    std::string const str = "hello";
+    const std::string str = "hello";
     long l = 43;
     V v1(42);
-    V const &cv1 = v1;
+    const V &cv1 = v1;
     V v2(str);
-    V const &cv2 = v2;
+    const V &cv2 = v2;
     V v3(std::move(l));
-    V const &cv3 = v3;
+    const V &cv3 = v3;
     std::visit(obj, v1, v2, v3);
     assert((Fn::check_call<int &, S, long &>(Val)));
     std::visit(obj, cv1, cv2, std::move(v3));
@@ -243,7 +243,7 @@ void test_exceptions() {
   auto test = [&](auto &&... args) {
     try {
       std::visit(obj, args...);
-    } catch (std::bad_variant_access const &) {
+    } catch (const std::bad_variant_access &) {
       return true;
     } catch (...) {
     }

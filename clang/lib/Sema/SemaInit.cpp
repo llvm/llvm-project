@@ -5963,10 +5963,7 @@ performReferenceExtension(Expr *Init,
 
     // Step over any subobject adjustments; we may have a materialized
     // temporary inside them.
-    SmallVector<const Expr *, 2> CommaLHSs;
-    SmallVector<SubobjectAdjustment, 2> Adjustments;
-    Init = const_cast<Expr *>(
-        Init->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments));
+    Init = const_cast<Expr *>(Init->skipRValueSubobjectAdjustments());
 
     // Per current approach for DR1376, look through casts to reference type
     // when performing lifetime extension.
@@ -5996,10 +5993,7 @@ performReferenceExtension(Expr *Init,
 static void performLifetimeExtension(Expr *Init,
                                      const InitializedEntity *ExtendingEntity) {
   // Dig out the expression which constructs the extended temporary.
-  SmallVector<const Expr *, 2> CommaLHSs;
-  SmallVector<SubobjectAdjustment, 2> Adjustments;
-  Init = const_cast<Expr *>(
-      Init->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments));
+  Init = const_cast<Expr *>(Init->skipRValueSubobjectAdjustments());
 
   if (CXXBindTemporaryExpr *BTE = dyn_cast<CXXBindTemporaryExpr>(Init))
     Init = BTE->getSubExpr();
@@ -6218,6 +6212,22 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
   return MTE;
 }
 
+ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
+  // In C++98, we don't want to implicitly create an xvalue.
+  // FIXME: This means that AST consumers need to deal with "prvalues" that
+  // denote materialized temporaries. Maybe we should add another ValueKind
+  // for "xvalue pretending to be a prvalue" for C++98 support.
+  if (!E->isRValue() || !getLangOpts().CPlusPlus11)
+    return E;
+
+  // C++1z [conv.rval]/1: T shall be a complete type.
+  QualType T = E->getType();
+  if (RequireCompleteType(E->getExprLoc(), T, diag::err_incomplete_type))
+    return ExprError();
+
+  return CreateMaterializeTemporaryExpr(E->getType(), E, false);
+}
+
 ExprResult
 InitializationSequence::Perform(Sema &S,
                                 const InitializedEntity &Entity,
@@ -6316,7 +6326,9 @@ InitializationSequence::Perform(Sema &S,
   if (Args.size() == 1 && Args[0]->getType()->isArrayType() &&
       Entity.getType()->isPointerType() &&
       InitializedEntityOutlivesFullExpression(Entity)) {
-    Expr *Init = Args[0];
+    const Expr *Init = Args[0]->skipRValueSubobjectAdjustments();
+    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init))
+      Init = MTE->GetTemporaryExpr();
     Expr::LValueClassification Kind = Init->ClassifyLValue(S.Context);
     if (Kind == Expr::LV_ClassTemporary || Kind == Expr::LV_ArrayTemporary)
       S.Diag(Init->getLocStart(), diag::warn_temporary_array_to_pointer_decay)

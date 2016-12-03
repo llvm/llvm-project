@@ -24,22 +24,22 @@
 
 struct NonT {
   NonT(int v) : value(v) {}
-  NonT(NonT const &o) : value(o.value) {}
+  NonT(const NonT &o) : value(o.value) {}
   int value;
 };
 static_assert(!std::is_trivially_copy_constructible<NonT>::value, "");
 
 struct NoCopy {
-  NoCopy(NoCopy const &) = delete;
+  NoCopy(const NoCopy &) = delete;
 };
 
 struct MoveOnly {
-  MoveOnly(MoveOnly const &) = delete;
+  MoveOnly(const MoveOnly &) = delete;
   MoveOnly(MoveOnly &&) = default;
 };
 
 struct MoveOnlyNT {
-  MoveOnlyNT(MoveOnlyNT const &) = delete;
+  MoveOnlyNT(const MoveOnlyNT &) = delete;
   MoveOnlyNT(MoveOnlyNT &&) {}
 };
 
@@ -47,13 +47,13 @@ struct MoveOnlyNT {
 struct MakeEmptyT {
   static int alive;
   MakeEmptyT() { ++alive; }
-  MakeEmptyT(MakeEmptyT const &) {
+  MakeEmptyT(const MakeEmptyT &) {
     ++alive;
     // Don't throw from the copy constructor since variant's assignment
     // operator performs a copy before committing to the assignment.
   }
   MakeEmptyT(MakeEmptyT &&) { throw 42; }
-  MakeEmptyT &operator=(MakeEmptyT const &) { throw 42; }
+  MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
   MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
   ~MakeEmptyT() { --alive; }
 };
@@ -124,7 +124,7 @@ void test_copy_ctor_valueless_by_exception() {
   using V = std::variant<int, MakeEmptyT>;
   V v1;
   makeEmpty(v1);
-  V const &cv1 = v1;
+  const V &cv1 = v1;
   V v(cv1);
   assert(v.valueless_by_exception());
 #endif
