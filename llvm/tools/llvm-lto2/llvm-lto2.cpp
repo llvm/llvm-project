@@ -39,6 +39,10 @@ static cl::opt<std::string> OptPipeline("opt-pipeline",
                                         cl::desc("Optimizer Pipeline"),
                                         cl::value_desc("pipeline"));
 
+static cl::opt<std::string> AAPipeline("aa-pipeline",
+                                       cl::desc("Alias Analysis Pipeline"),
+                                       cl::value_desc("aapipeline"));
+
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
 static cl::opt<bool>
@@ -154,6 +158,7 @@ int main(int argc, char **argv) {
 
   // Run a custom pipeline, if asked for.
   Conf.OptPipeline = OptPipeline;
+  Conf.AAPipeline = AAPipeline;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
