@@ -157,7 +157,7 @@ int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
   const uint8_t *Beg = UnitData;
   const uint8_t *End = Beg + UnitSize;
   for (const uint8_t *Cur = Beg; Cur < End; Cur++) {
-    Cur = (uint8_t *)memmem(Cur, End - Cur, &PresentData, DataSize);
+    Cur = (uint8_t *)SearchMemory(Cur, End - Cur, &PresentData, DataSize);
     if (!Cur)
       break;
     size_t Pos = Cur - Beg;
@@ -181,7 +181,7 @@ int TraceState::TryToAddDesiredData(const uint8_t *PresentData,
   const uint8_t *Beg = UnitData;
   const uint8_t *End = Beg + UnitSize;
   for (const uint8_t *Cur = Beg; Cur < End; Cur++) {
-    Cur = (uint8_t *)memmem(Cur, End - Cur, PresentData, DataSize);
+    Cur = (uint8_t *)SearchMemory(Cur, End - Cur, PresentData, DataSize);
     if (!Cur)
       break;
     size_t Pos = Cur - Beg;

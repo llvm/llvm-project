@@ -600,13 +600,23 @@ EVT SITargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
 
 static bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS ||
-    AS == AMDGPUAS::FLAT_ADDRESS ||
-    AS == AMDGPUAS::CONSTANT_ADDRESS;
+         AS == AMDGPUAS::FLAT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS;
 }
 
 bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   return isFlatGlobalAddrSpace(SrcAS) && isFlatGlobalAddrSpace(DestAS);
+}
+
+bool SITargetLowering::isCheapAddrSpaceCast(unsigned SrcAS,
+                                            unsigned DestAS) const {
+  // Flat -> private/local is a simple truncate.
+  // Flat -> global is no-op
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS)
+    return true;
+
+  return isNoopAddrSpaceCast(SrcAS, DestAS);
 }
 
 bool SITargetLowering::isMemOpUniform(const SDNode *N) const {

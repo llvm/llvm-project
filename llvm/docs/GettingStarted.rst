@@ -736,6 +736,17 @@ commited. Note that a current limitation is that `git` does not directly record
 file rename, and thus it is propagated to SVN as a combination of delete-add
 instead of a file rename.
 
+If you are using `arc` to interact with Phabricator, you need to manually put it
+at the root of the checkout:
+
+.. code-block:: console
+
+  % cd $TOP_LEVEL_DIR
+  % cp llvm/.arcconfig ./
+  % mkdir -p .git/info/
+  % echo .arcconfig >> .git/info/exclude
+
+
 Local LLVM Configuration
 ------------------------
 

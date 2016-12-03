@@ -81,7 +81,7 @@ test_int_array_struct_source()
 
 struct test1 {
     test1() : c(0) { }
-    test1(char c) : c(c + 1) { }
+    test1(char xc) : c(xc + 1) { }
     char c;
 };
 

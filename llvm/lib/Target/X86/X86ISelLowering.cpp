@@ -5131,77 +5131,109 @@ static const Constant *getTargetConstantFromNode(SDValue Op) {
   return dyn_cast<Constant>(CNode->getConstVal());
 }
 
-// Extract constant bits from constant pool vector.
+// Extract raw constant bits from constant pools.
 static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                           SmallBitVector &UndefElts,
                                           SmallVectorImpl<APInt> &EltBits) {
   assert(UndefElts.empty() && "Expected an empty UndefElts vector");
   assert(EltBits.empty() && "Expected an empty EltBits vector");
 
+  Op = peekThroughBitcasts(Op);
+
   EVT VT = Op.getValueType();
   unsigned SizeInBits = VT.getSizeInBits();
   assert((SizeInBits % EltSizeInBits) == 0 && "Can't split constant!");
   unsigned NumElts = SizeInBits / EltSizeInBits;
 
-  auto *Cst = getTargetConstantFromNode(Op);
-  if (!Cst)
-    return false;
-
-  Type *CstTy = Cst->getType();
-  if (!CstTy->isVectorTy() || (SizeInBits != CstTy->getPrimitiveSizeInBits()))
-    return false;
-
   // Extract all the undef/constant element data and pack into single bitsets.
   APInt UndefBits(SizeInBits, 0);
   APInt MaskBits(SizeInBits, 0);
 
-  unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
-  for (unsigned i = 0, e = CstTy->getVectorNumElements(); i != e; ++i) {
-    auto *COp = Cst->getAggregateElement(i);
-    if (!COp ||
-        !(isa<UndefValue>(COp) || isa<ConstantInt>(COp) ||
-          isa<ConstantFP>(COp)))
+  // Split the undef/constant single bitset data into the target elements.
+  auto SplitBitData = [&]() {
+    UndefElts = SmallBitVector(NumElts, false);
+    EltBits.resize(NumElts, APInt(EltSizeInBits, 0));
+
+    for (unsigned i = 0; i != NumElts; ++i) {
+      APInt UndefEltBits = UndefBits.lshr(i * EltSizeInBits);
+      UndefEltBits = UndefEltBits.zextOrTrunc(EltSizeInBits);
+
+      // Only treat an element as UNDEF if all bits are UNDEF, otherwise
+      // treat it as zero.
+      if (UndefEltBits.isAllOnesValue()) {
+        UndefElts[i] = true;
+        continue;
+      }
+
+      APInt Bits = MaskBits.lshr(i * EltSizeInBits);
+      Bits = Bits.zextOrTrunc(EltSizeInBits);
+      EltBits[i] = Bits.getZExtValue();
+    }
+    return true;
+  };
+
+  auto ExtractConstantBits = [SizeInBits](const Constant *Cst, APInt &Mask,
+                                          APInt &Undefs) {
+    if (!Cst)
+      return false;
+    unsigned CstSizeInBits = Cst->getType()->getPrimitiveSizeInBits();
+    if (isa<UndefValue>(Cst)) {
+      Mask = APInt::getNullValue(SizeInBits);
+      Undefs = APInt::getLowBitsSet(SizeInBits, CstSizeInBits);
+      return true;
+    }
+    if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
+      Mask = CInt->getValue().zextOrTrunc(SizeInBits);
+      Undefs = APInt::getNullValue(SizeInBits);
+      return true;
+    }
+    if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
+      Mask = CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(SizeInBits);
+      Undefs = APInt::getNullValue(SizeInBits);
+      return true;
+    }
+    return false;
+  };
+
+  // Extract constant bits from constant pool vector.
+  if (auto *Cst = getTargetConstantFromNode(Op)) {
+    Type *CstTy = Cst->getType();
+    if (!CstTy->isVectorTy() || (SizeInBits != CstTy->getPrimitiveSizeInBits()))
       return false;
 
-    if (isa<UndefValue>(COp)) {
-      APInt EltUndef = APInt::getLowBitsSet(SizeInBits, CstEltSizeInBits);
-      UndefBits |= EltUndef.shl(i * CstEltSizeInBits);
-      continue;
+    unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
+    for (unsigned i = 0, e = CstTy->getVectorNumElements(); i != e; ++i) {
+      APInt Bits, Undefs;
+      if (!ExtractConstantBits(Cst->getAggregateElement(i), Bits, Undefs))
+        return false;
+      MaskBits |= Bits.shl(i * CstEltSizeInBits);
+      UndefBits |= Undefs.shl(i * CstEltSizeInBits);
     }
 
-    APInt Bits;
-    if (auto *CInt = dyn_cast<ConstantInt>(COp))
-      Bits = CInt->getValue();
-    else if (auto *CFP = dyn_cast<ConstantFP>(COp))
-      Bits = CFP->getValueAPF().bitcastToAPInt();
-
-    Bits = Bits.zextOrTrunc(SizeInBits);
-    MaskBits |= Bits.shl(i * CstEltSizeInBits);
+    return SplitBitData();
   }
 
-  UndefElts = SmallBitVector(NumElts, false);
-  EltBits.resize(NumElts, APInt(EltSizeInBits, 0));
-
-  // Now extract the undef/constant bit data into the target elts.
-  for (unsigned i = 0; i != NumElts; ++i) {
-    APInt UndefEltBits = UndefBits.lshr(i * EltSizeInBits);
-    UndefEltBits = UndefEltBits.zextOrTrunc(EltSizeInBits);
-
-    // Only treat the element as UNDEF if all bits are UNDEF, otherwise
-    // treat it as zero.
-    if (UndefEltBits.isAllOnesValue()) {
-      UndefElts[i] = true;
-      continue;
+  // Extract constant bits from a broadcasted constant pool scalar.
+  if (Op.getOpcode() == X86ISD::VBROADCAST &&
+      EltSizeInBits <= Op.getScalarValueSizeInBits()) {
+    if (auto *Broadcast = getTargetConstantFromNode(Op.getOperand(0))) {
+      APInt Bits, Undefs;
+      if (ExtractConstantBits(Broadcast, Bits, Undefs)) {
+        unsigned NumBroadcastBits = Op.getScalarValueSizeInBits();
+        unsigned NumBroadcastElts = SizeInBits / NumBroadcastBits;
+        for (unsigned i = 0; i != NumBroadcastElts; ++i) {
+          MaskBits |= Bits.shl(i * NumBroadcastBits);
+          UndefBits |= Undefs.shl(i * NumBroadcastBits);
+        }
+        return SplitBitData();
+      }
     }
-
-    APInt Bits = MaskBits.lshr(i * EltSizeInBits);
-    Bits = Bits.zextOrTrunc(EltSizeInBits);
-    EltBits[i] = Bits.getZExtValue();
   }
 
-  return true;
+  return false;
 }
 
+// TODO: Merge more of this with getTargetConstantBitsFromNode.
 static bool getTargetShuffleMaskIndices(SDValue MaskNode,
                                         unsigned MaskEltSizeInBits,
                                         SmallVectorImpl<uint64_t> &RawMask) {
@@ -25970,12 +26002,12 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       if (Mask[i] < 0)
         Zeroable[i] = true;
 
-    if (Zeroable.any())
-      if (matchVectorShuffleAsInsertPS(V1, V2, PermuteImm, Zeroable, Mask, DAG)) {
-        Shuffle = X86ISD::INSERTPS;
-        ShuffleVT = MVT::v4f32;
-        return true;
-      }
+    if (Zeroable.any() &&
+        matchVectorShuffleAsInsertPS(V1, V2, PermuteImm, Zeroable, Mask, DAG)) {
+      Shuffle = X86ISD::INSERTPS;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
   }
 
   return false;

@@ -41,17 +41,11 @@ define <4 x i32> @_clearupper4xi32a(<4 x i32>) nounwind {
 ; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper4xi32a:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper4xi32a:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
-; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper4xi32a:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; AVX-NEXT:    retq
   %x0 = extractelement <4 x i32> %0, i32 0
   %x1 = extractelement <4 x i32> %0, i32 1
   %x2 = extractelement <4 x i32> %0, i32 2

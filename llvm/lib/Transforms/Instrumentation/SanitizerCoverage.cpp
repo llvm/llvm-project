@@ -705,8 +705,8 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           GuardLoad, Constant::getNullValue(GuardLoad->getType()));
       auto Ins = SplitBlockAndInsertIfThen(
           Cmp, &*IP, false, MDBuilder(*C).createBranchWeights(1, 100000));
-      IRB.SetCurrentDebugLocation(EntryLoc);
       IRB.SetInsertPoint(Ins);
+      IRB.SetCurrentDebugLocation(EntryLoc);
     }
     IRB.CreateCall(SanCovTracePCGuard, GuardPtr);
     IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.

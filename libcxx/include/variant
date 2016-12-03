@@ -225,6 +225,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14
 
+_LIBCPP_NORETURN
+inline _LIBCPP_INLINE_VISIBILITY
+void __throw_bad_variant_access() {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+        throw bad_variant_access();
+#else
+        _VSTD::abort();
+#endif
+}
+
 template <class... _Types>
 class _LIBCPP_TYPE_VIS_ONLY variant;
 
@@ -1291,7 +1301,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 static constexpr auto&& __generic_get(_Vp&& __v) {
   using __variant_detail::__access::__variant;
   if (!__holds_alternative<_Ip>(__v)) {
-    throw bad_variant_access{};
+    __throw_bad_variant_access();
   }
   return __variant::__get_alt<_Ip>(_VSTD::forward<_Vp>(__v)).__value;
 }
@@ -1483,7 +1493,7 @@ constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
   bool __results[] = {__vs.valueless_by_exception()...};
   for (bool __result : __results) {
     if (__result) {
-      throw bad_variant_access{};
+      __throw_bad_variant_access();
     }
   }
   return __variant::__visit_value(_VSTD::forward<_Visitor>(__visitor),

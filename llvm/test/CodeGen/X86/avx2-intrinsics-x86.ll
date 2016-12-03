@@ -756,6 +756,25 @@ define <16 x i16> @test_x86_avx2_pmadd_ub_sw(<32 x i8> %a0, <32 x i8> %a1) {
 }
 declare <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>) nounwind readnone
 
+; Make sure we don't commute this operation.
+define <16 x i16> @test_x86_avx2_pmadd_ub_sw_load_op0(<32 x i8>* %ptr, <32 x i8> %a1) {
+; AVX2-LABEL: test_x86_avx2_pmadd_ub_sw_load_op0:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; AVX2-NEXT:    vmovdqa (%eax), %ymm1 ## encoding: [0xc5,0xfd,0x6f,0x08]
+; AVX2-NEXT:    vpmaddubsw %ymm0, %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x75,0x04,0xc0]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx2_pmadd_ub_sw_load_op0:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; AVX512VL-NEXT:    vmovdqu8 (%eax), %ymm1 ## encoding: [0x62,0xf1,0x7f,0x28,0x6f,0x08]
+; AVX512VL-NEXT:    vpmaddubsw %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf2,0x75,0x28,0x04,0xc0]
+; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+  %a0 = load <32 x i8>, <32 x i8>* %ptr
+  %res = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %a0, <32 x i8> %a1) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
 
 define <16 x i16> @test_x86_avx2_pmul_hr_sw(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX2-LABEL: test_x86_avx2_pmul_hr_sw:
@@ -1356,18 +1375,18 @@ define <4 x i32> @test_x86_avx2_psrav_d_const(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX2:       ## BB#0:
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [2,9,4294967284,23]
 ; AVX2-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x05,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI90_0, kind: FK_Data_4
-; AVX2-NEXT:    vpsravd LCPI90_1, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x46,0x05,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 5, value: LCPI90_1, kind: FK_Data_4
+; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI91_0, kind: FK_Data_4
+; AVX2-NEXT:    vpsravd LCPI91_1, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x46,0x05,A,A,A,A]
+; AVX2-NEXT:    ## fixup A - offset: 5, value: LCPI91_1, kind: FK_Data_4
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrav_d_const:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} xmm0 = [2,9,4294967284,23]
 ; AVX512VL-NEXT:    ## encoding: [0x62,0xf1,0x7d,0x08,0x6f,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI90_0, kind: FK_Data_4
-; AVX512VL-NEXT:    vpsravd LCPI90_1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x46,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI90_1, kind: FK_Data_4
+; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI91_0, kind: FK_Data_4
+; AVX512VL-NEXT:    vpsravd LCPI91_1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x46,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI91_1, kind: FK_Data_4
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> <i32 2, i32 9, i32 -12, i32 23>, <4 x i32> <i32 1, i32 18, i32 35, i32 52>)
   ret <4 x i32> %res
@@ -1393,18 +1412,18 @@ define <8 x i32> @test_x86_avx2_psrav_d_256_const(<8 x i32> %a0, <8 x i32> %a1) 
 ; AVX2:       ## BB#0:
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
 ; AVX2-NEXT:    ## encoding: [0xc5,0xfd,0x6f,0x05,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI92_0, kind: FK_Data_4
-; AVX2-NEXT:    vpsravd LCPI92_1, %ymm0, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x46,0x05,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 5, value: LCPI92_1, kind: FK_Data_4
+; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI93_0, kind: FK_Data_4
+; AVX2-NEXT:    vpsravd LCPI93_1, %ymm0, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x46,0x05,A,A,A,A]
+; AVX2-NEXT:    ## fixup A - offset: 5, value: LCPI93_1, kind: FK_Data_4
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrav_d_256_const:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
 ; AVX512VL-NEXT:    ## encoding: [0x62,0xf1,0x7d,0x28,0x6f,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI92_0, kind: FK_Data_4
-; AVX512VL-NEXT:    vpsravd LCPI92_1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x46,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI92_1, kind: FK_Data_4
+; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI93_0, kind: FK_Data_4
+; AVX512VL-NEXT:    vpsravd LCPI93_1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x46,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI93_1, kind: FK_Data_4
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> <i32 2, i32 9, i32 -12, i32 23, i32 -26, i32 37, i32 -40, i32 51>, <8 x i32> <i32 1, i32 18, i32 35, i32 52, i32 69, i32 15, i32 32, i32 49>)
   ret <8 x i32> %res

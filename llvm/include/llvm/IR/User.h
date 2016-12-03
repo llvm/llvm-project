@@ -21,8 +21,15 @@
 
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 
 namespace llvm {
 
@@ -36,9 +43,9 @@ template <class>
 struct OperandTraits;
 
 class User : public Value {
-  User(const User &) = delete;
   template <unsigned>
   friend struct HungoffOperandTraits;
+
   virtual void anchor();
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE inline static void *
@@ -87,8 +94,9 @@ protected:
   void growHungoffUses(unsigned N, bool IsPhi = false);
 
 public:
-  ~User() override {
-  }
+  User(const User &) = delete;
+  ~User() override = default;
+
   /// \brief Free memory allocated for User and Use objects.
   void operator delete(void *Usr);
   /// \brief Placement delete - required by std, but never called.
@@ -99,6 +107,7 @@ public:
   void operator delete(void*, unsigned, bool) {
     llvm_unreachable("Constructor throws?");
   }
+
 protected:
   template <int Idx, typename U> static Use &OpFrom(const U *that) {
     return Idx < 0
@@ -111,6 +120,7 @@ protected:
   template <int Idx> const Use &Op() const {
     return OpFrom<Idx>(this);
   }
+
 private:
   Use *&getHungOffOperands() { return *(reinterpret_cast<Use **>(this) - 1); }
 
@@ -123,6 +133,7 @@ private:
            "Setting operand list only required for hung off uses");
     getHungOffOperands() = NewList;
   }
+
 public:
   Use *getOperandList() {
     return HasHungOffUses ? getHungOffOperands() : getIntrusiveOperands();
@@ -130,10 +141,12 @@ public:
   const Use *getOperandList() const {
     return const_cast<User *>(this)->getOperandList();
   }
+
   Value *getOperand(unsigned i) const {
     assert(i < NumUserOperands && "getOperand() out of range!");
     return getOperandList()[i];
   }
+
   void setOperand(unsigned i, Value *Val) {
     assert(i < NumUserOperands && "setOperand() out of range!");
     assert((!isa<Constant>((const Value*)this) ||
@@ -141,6 +154,7 @@ public:
            "Cannot mutate a constant with setOperand!");
     getOperandList()[i] = Val;
   }
+
   const Use &getOperandUse(unsigned i) const {
     assert(i < NumUserOperands && "getOperandUse() out of range!");
     return getOperandList()[i];
@@ -267,6 +281,6 @@ template<> struct simplify_type<User::const_op_iterator> {
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_USER_H

@@ -26,9 +26,6 @@
 ; AVX2: [[FPMASKCSTADDR:.LCPI[0-9_]+]]:
 ; AVX2-NEXT: .long 1199570944 # float 65536
 
-; AVX2: [[MASKCSTADDR:.LCPI[0-9_]+]]:
-; AVX2-NEXT: .long 65535 # 0xffff
-
 define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; SSE2-LABEL: test_uitofp_v4i32_to_v4f32:
 ; SSE2:       # BB#0:
@@ -69,8 +66,8 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; AVX2-NEXT:    vcvtdq2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vbroadcastss [[FPMASKCSTADDR]](%rip), %xmm2
 ; AVX2-NEXT:    vmulps %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastd [[MASKCSTADDR]](%rip), %xmm2
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
 ; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq

@@ -194,7 +194,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (HasBP) {
     unsigned BitmaskReg = MRI.createVirtualRegister(PtrRC);
     unsigned Alignment = MFI.getMaxAlignment();
-    assert((1 << countTrailingZeros(Alignment)) == Alignment &&
+    assert((1u << countTrailingZeros(Alignment)) == Alignment &&
       "Alignment must be a power of 2");
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), BitmaskReg)
         .addImm((int)~(Alignment - 1));

@@ -483,7 +483,9 @@ public:
     int64_t Scale = 0;
 
     auto GTI = gep_type_begin(PointeeType, Operands);
+    Type *TargetType;
     for (auto I = Operands.begin(); I != Operands.end(); ++I, ++GTI) {
+      TargetType = GTI.getIndexedType();
       // We assume that the cost of Scalar GEP with constant index and the
       // cost of Vector GEP with splat constant index are the same.
       const ConstantInt *ConstIdx = dyn_cast<ConstantInt>(*I);
@@ -513,11 +515,9 @@ public:
     unsigned AS =
         (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
     if (static_cast<T *>(this)->isLegalAddressingMode(
-            PointerType::get(Type::getInt8Ty(PointeeType->getContext()), AS),
-            const_cast<GlobalValue *>(BaseGV),
-            BaseOffset, HasBaseReg, Scale, AS)) {
+            TargetType, const_cast<GlobalValue *>(BaseGV), BaseOffset,
+            HasBaseReg, Scale, AS))
       return TTI::TCC_Free;
-    }
     return TTI::TCC_Basic;
   }
 

@@ -10,22 +10,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerUtil.h"
-#include "FuzzerInternal.h"
 #include "FuzzerIO.h"
-#include <sstream>
-#include <iomanip>
-#include <sys/resource.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/syscall.h>
+#include "FuzzerInternal.h"
 #include <cassert>
 #include <chrono>
 #include <cstring>
-#include <stdio.h>
+#include <errno.h>
 #include <signal.h>
 #include <sstream>
-#include <unistd.h>
-#include <errno.h>
+#include <stdio.h>
+#include <sys/types.h>
 #include <thread>
 
 namespace fuzzer {
@@ -60,80 +54,6 @@ void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter) {
 
 void PrintASCII(const Unit &U, const char *PrintAfter) {
   PrintASCII(U.data(), U.size(), PrintAfter);
-}
-
-static void AlarmHandler(int, siginfo_t *, void *) {
-  Fuzzer::StaticAlarmCallback();
-}
-
-static void CrashHandler(int, siginfo_t *, void *) {
-  Fuzzer::StaticCrashSignalCallback();
-}
-
-static void InterruptHandler(int, siginfo_t *, void *) {
-  Fuzzer::StaticInterruptCallback();
-}
-
-static void SetSigaction(int signum,
-                         void (*callback)(int, siginfo_t *, void *)) {
-  struct sigaction sigact;
-  memset(&sigact, 0, sizeof(sigact));
-  sigact.sa_sigaction = callback;
-  if (sigaction(signum, &sigact, 0)) {
-    Printf("libFuzzer: sigaction failed with %d\n", errno);
-    exit(1);
-  }
-}
-
-void SetTimer(int Seconds) {
-  struct itimerval T {{Seconds, 0}, {Seconds, 0}};
-  if (setitimer(ITIMER_REAL, &T, nullptr)) {
-    Printf("libFuzzer: setitimer failed with %d\n", errno);
-    exit(1);
-  }
-  SetSigaction(SIGALRM, AlarmHandler);
-}
-
-void SetSigSegvHandler() { SetSigaction(SIGSEGV, CrashHandler); }
-void SetSigBusHandler() { SetSigaction(SIGBUS, CrashHandler); }
-void SetSigAbrtHandler() { SetSigaction(SIGABRT, CrashHandler); }
-void SetSigIllHandler() { SetSigaction(SIGILL, CrashHandler); }
-void SetSigFpeHandler() { SetSigaction(SIGFPE, CrashHandler); }
-void SetSigIntHandler() { SetSigaction(SIGINT, InterruptHandler); }
-void SetSigTermHandler() { SetSigaction(SIGTERM, InterruptHandler); }
-
-int NumberOfCpuCores() {
-  const char *CmdLine = nullptr;
-  if (LIBFUZZER_LINUX) {
-    CmdLine = "nproc";
-  } else if (LIBFUZZER_APPLE) {
-    CmdLine = "sysctl -n hw.ncpu";
-  } else {
-    assert(0 && "NumberOfCpuCores() is not implemented for your platform");
-  }
-
-  FILE *F = popen(CmdLine, "r");
-  int N = 1;
-  if (!F || fscanf(F, "%d", &N) != 1) {
-    Printf("WARNING: Failed to parse output of command \"%s\" in %s(). "
-           "Assuming CPU count of 1.\n",
-           CmdLine, __func__);
-    N = 1;
-  }
-
-  if (pclose(F)) {
-    Printf("WARNING: Executing command \"%s\" failed in %s(). "
-           "Assuming CPU count of 1.\n",
-           CmdLine, __func__);
-    N = 1;
-  }
-  if (N < 1) {
-    Printf("WARNING: Reported CPU count (%d) from command \"%s\" was invalid "
-           "in %s(). Assuming CPU count of 1.\n",
-           N, CmdLine, __func__);
-    N = 1;
-  }
-  return N;
 }
 
 bool ToASCII(uint8_t *Data, size_t Size) {
@@ -231,12 +151,6 @@ bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
   return true;
 }
 
-void SleepSeconds(int Seconds) {
-  sleep(Seconds);  // Use C API to avoid coverage from instrumented libc++.
-}
-
-int GetPid() { return getpid(); }
-
 std::string Base64(const Unit &U) {
   static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                               "abcdefghijklmnopqrstuvwxyz"
@@ -265,21 +179,6 @@ std::string Base64(const Unit &U) {
   return Res;
 }
 
-size_t GetPeakRSSMb() {
-  struct rusage usage;
-  if (getrusage(RUSAGE_SELF, &usage))
-    return 0;
-  if (LIBFUZZER_LINUX) {
-    // ru_maxrss is in KiB
-    return usage.ru_maxrss >> 10;
-  } else if (LIBFUZZER_APPLE) {
-    // ru_maxrss is in bytes
-    return usage.ru_maxrss >> 20;
-  }
-  assert(0 && "GetPeakRSSMb() is not implemented for your platform");
-  return 0;
-}
-
 std::string DescribePC(const char *SymbolizedFMT, uintptr_t PC) {
   if (!EF->__sanitizer_symbolize_pc) return "<can not symbolize>";
   char PcDescr[1024];
@@ -296,8 +195,18 @@ void PrintPC(const char *SymbolizedFMT, const char *FallbackFMT, uintptr_t PC) {
     Printf(FallbackFMT, PC);
 }
 
+int NumberOfCpuCores() {
+  unsigned N = std::thread::hardware_concurrency();
+  if (!N) {
+    Printf("WARNING: std::thread::hardware_concurrency not well defined for "
+           "your platform. Assuming CPU count of 1.\n");
+    N = 1;
+  }
+  return N;
+}
+
 bool ExecuteCommandAndReadOutput(const std::string &Command, std::string *Out) {
-  FILE *Pipe = popen(Command.c_str(), "r");
+  FILE *Pipe = OpenProcessPipe(Command.c_str(), "r");
   if (!Pipe) return false;
   char Buff[1024];
   size_t N;

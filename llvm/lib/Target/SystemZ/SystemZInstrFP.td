@@ -479,6 +479,26 @@ let Defs = [CC], CCValues = 0xC in {
 }
 
 //===----------------------------------------------------------------------===//
+// Floating-point control register instructions
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 1 in {
+  def EFPC  : InherentRRE<"efpc", 0xB38C, GR32, int_s390_efpc>;
+  def STFPC : StoreInherentS<"stfpc", 0xB29C, storei<int_s390_efpc>, 4>;
+
+  def SFPC : SideEffectUnaryRRE<"sfpc", 0xB384, GR32, int_s390_sfpc>;
+  def LFPC : SideEffectUnaryS<"lfpc", 0xB29D, loadu<int_s390_sfpc>, 4>;
+
+  def SFASR : SideEffectUnaryRRE<"sfasr", 0xB385, GR32, null_frag>;
+  def LFAS  : SideEffectUnaryS<"lfas", 0xB2BD, null_frag, 4>;
+
+  def SRNMB : SideEffectAddressS<"srnmb", 0xB2B8, null_frag, shift12only>,
+              Requires<[FeatureFPExtension]>;
+  def SRNM  : SideEffectAddressS<"srnm", 0xB299, null_frag, shift12only>;
+  def SRNMT : SideEffectAddressS<"srnmt", 0xB2B9, null_frag, shift12only>;
+}
+
+//===----------------------------------------------------------------------===//
 // Peepholes
 //===----------------------------------------------------------------------===//
 
