@@ -727,11 +727,11 @@ static std::unique_ptr<LTO> createLTO() {
     break;
 
   case options::OT_DISABLE:
-    Conf.PreOptModuleHook = [](size_t Task, Module &M) { return false; };
+    Conf.PreOptModuleHook = [](size_t Task, const Module &M) { return false; };
     break;
 
   case options::OT_BC_ONLY:
-    Conf.PostInternalizeModuleHook = [](size_t Task, Module &M) {
+    Conf.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
       std::error_code EC;
       raw_fd_ostream OS(output_name, EC, sys::fs::OpenFlags::F_None);
       if (EC)
