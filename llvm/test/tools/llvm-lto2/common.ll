@@ -1,3 +1,4 @@
+; REQUIRES: X86
 ; RUN: llvm-as < %s > %t1.bc
 ; RUN: llvm-as < %p/Inputs/common.ll > %t2.bc
 
