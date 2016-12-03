@@ -236,7 +236,7 @@ public:
 typedef std::function<std::unique_ptr<ThinBackendProc>(
     Config &C, ModuleSummaryIndex &CombinedIndex,
     StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-    AddStreamFn AddStream)>
+    AddOutputFn AddOutput)>
     ThinBackend;
 
 /// This ThinBackend runs the individual backend jobs in-process.
@@ -269,7 +269,7 @@ ThinBackend createWriteIndexesThinBackend(std::string OldPrefix,
 ///   and pass it and an array of symbol resolutions to the add() function.
 /// - Call the getMaxTasks() function to get an upper bound on the number of
 ///   native object files that LTO may add to the link.
-/// - Call the run() function. This function will use the supplied AddStream
+/// - Call the run() function. This function will use the supplied AddOutput
 ///   function to add up to getMaxTasks() native object files to the link.
 class LTO {
   friend InputFile;
@@ -293,9 +293,9 @@ public:
   /// full description of tasks see LTOBackend.h.
   unsigned getMaxTasks() const;
 
-  /// Runs the LTO pipeline. This function calls the supplied AddStream function
+  /// Runs the LTO pipeline. This function calls the supplied AddOutput function
   /// to add native object files to the link.
-  Error run(AddStreamFn AddStream);
+  Error run(AddOutputFn AddOutput);
 
 private:
   Config Conf;
@@ -371,8 +371,8 @@ private:
   Error addThinLTO(std::unique_ptr<InputFile> Input,
                    ArrayRef<SymbolResolution> Res);
 
-  Error runRegularLTO(AddStreamFn AddStream);
-  Error runThinLTO(AddStreamFn AddStream);
+  Error runRegularLTO(AddOutputFn AddOutput);
+  Error runThinLTO(AddOutputFn AddOutput);
 
   mutable bool CalledGetMaxTasks = false;
 };

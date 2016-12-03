@@ -30,6 +30,15 @@ class raw_pwrite_stream;
 
 namespace lto {
 
+/// Abstract class representing a single Task output to be implemented by the
+/// client of the LTO API.
+class NativeObjectOutput {
+public:
+  // Return an allocated stream for the output, or null in case of failure.
+  virtual std::unique_ptr<raw_pwrite_stream> getStream() = 0;
+  virtual ~NativeObjectOutput() = default;
+};
+
 /// LTO configuration. A linker can configure LTO by setting fields in this data
 /// structure and passing it to the lto::LTO constructor.
 struct Config {
@@ -186,13 +195,12 @@ struct Config {
                      bool UseInputModulePath = false);
 };
 
-/// This type defines a stream callback. A stream callback is used to add a
-/// native object that is generated on the fly. The callee must set up and
-/// return a output stream to write the native object to.
+/// This type defines the callback to add a native object that is generated on
+/// the fly.
 ///
-/// Stream callbacks must be thread safe.
-typedef std::function<std::unique_ptr<raw_pwrite_stream>(unsigned Task)>
-    AddStreamFn;
+/// Output callbacks must be thread safe.
+typedef std::function<std::unique_ptr<NativeObjectOutput>(unsigned Task)>
+    AddOutputFn;
 
 /// A derived class of LLVMContext that initializes itself according to a given
 /// Config object. The purpose of this class is to tie ownership of the
