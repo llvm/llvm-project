@@ -69,7 +69,12 @@ public:
   static char ID;
   ProfileSummaryInfoWrapperPass();
 
-  ProfileSummaryInfo *getPSI(Module &M);
+  ProfileSummaryInfo *getPSI() {
+    return &*PSI;
+  }
+
+  bool doInitialization(Module &M) override;
+  bool doFinalization(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }

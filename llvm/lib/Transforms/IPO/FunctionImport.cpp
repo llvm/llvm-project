@@ -49,6 +49,22 @@ static cl::opt<float>
                                "`import-instr-limit` threshold by this factor "
                                "before processing newly imported functions"));
 
+static cl::opt<float> ImportHotInstrFactor(
+    "import-hot-evolution-factor", cl::init(1.0), cl::Hidden,
+    cl::value_desc("x"),
+    cl::desc("As we import functions called from hot callsite, multiply the "
+             "`import-instr-limit` threshold by this factor "
+             "before processing newly imported functions"));
+
+static cl::opt<float> ImportHotMultiplier(
+    "import-hot-multiplier", cl::init(3.0), cl::Hidden, cl::value_desc("x"),
+    cl::desc("Multiply the `import-instr-limit` threshold for hot callsites"));
+
+// FIXME: This multiplier was not really tuned up.
+static cl::opt<float> ImportColdMultiplier(
+    "import-cold-multiplier", cl::init(0), cl::Hidden, cl::value_desc("N"),
+    cl::desc("Multiply the `import-instr-limit` threshold for cold callsites"));
+
 static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
                                   cl::desc("Print imported functions"));
 
@@ -95,8 +111,9 @@ static bool canBeExternallyReferenced(const GlobalValueSummary &Summary) {
   if (!Summary.needsRenaming())
     return true;
 
-  if (Summary.hasSection())
-    // Can't rename a global that needs renaming if has a section.
+  if (Summary.noRename())
+    // Can't externally reference a global that needs renaming if has a section
+    // or is referenced from inline assembly, for example.
     return false;
 
   return true;
@@ -136,7 +153,11 @@ static bool eligibleForImport(const ModuleSummaryIndex &Index,
 
   // Check references (and potential calls) in the same module. If the current
   // value references a global that can't be externally referenced it is not
-  // eligible for import.
+  // eligible for import. First check the flag set when we have possible
+  // opaque references (e.g. inline asm calls), then check the call and
+  // reference sets.
+  if (Summary.hasInlineAsmMaybeReferencingInternal())
+    return false;
   bool AllRefsCanBeExternallyReferenced =
       llvm::all_of(Summary.refs(), [&](const ValueInfo &VI) {
         return canBeExternallyReferenced(Index, VI.getGUID());
@@ -247,18 +268,6 @@ static void exportGlobalInModule(const ModuleSummaryIndex &Index,
   auto GVS = dyn_cast<GlobalVarSummary>(Summary);
   if (!GVS)
     return;
-  // FunctionImportGlobalProcessing::doPromoteLocalToGlobal() will always
-  // trigger importing  the initializer for `constant unnamed addr` globals that
-  // are referenced. We conservatively export all the referenced symbols for
-  // every global to workaround this, so that the ExportList is accurate.
-  // FIXME: with a "isConstant" flag in the summary we could be more targetted.
-  for (auto &Ref : GVS->refs()) {
-    auto GUID = Ref.getGUID();
-    auto *RefSummary = FindGlobalSummaryInModule(GUID);
-    if (RefSummary)
-      // Found a ref in the current module, mark it as exported
-      ExportList.insert(GUID);
-  }
 }
 
 using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
@@ -268,7 +277,7 @@ using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
 /// exported from their source module.
 static void computeImportForFunction(
     const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
-    unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
+    const unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
@@ -281,7 +290,18 @@ static void computeImportForFunction(
       continue;
     }
 
-    auto *CalleeSummary = selectCallee(GUID, Threshold, Index);
+    auto GetBonusMultiplier = [](CalleeInfo::HotnessType Hotness) -> float {
+      if (Hotness == CalleeInfo::HotnessType::Hot)
+        return ImportHotMultiplier;
+      if (Hotness == CalleeInfo::HotnessType::Cold)
+        return ImportColdMultiplier;
+      return 1.0;
+    };
+
+    const auto NewThreshold =
+        Threshold * GetBonusMultiplier(Edge.second.Hotness);
+
+    auto *CalleeSummary = selectCallee(GUID, NewThreshold, Index);
     if (!CalleeSummary) {
       DEBUG(dbgs() << "ignored! No qualifying callee with summary found.\n");
       continue;
@@ -297,7 +317,7 @@ static void computeImportForFunction(
     } else
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
-    assert(ResolvedCalleeSummary->instCount() <= Threshold &&
+    assert(ResolvedCalleeSummary->instCount() <= NewThreshold &&
            "selectCallee() didn't honor the threshold");
 
     auto ExportModulePath = ResolvedCalleeSummary->modulePath();
@@ -329,8 +349,20 @@ static void computeImportForFunction(
       }
     }
 
+    auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
+      // Adjust the threshold for next level of imported functions.
+      // The threshold is different for hot callsites because we can then
+      // inline chains of hot calls.
+      if (IsHotCallsite)
+        return Threshold * ImportHotInstrFactor;
+      return Threshold * ImportInstrFactor;
+    };
+
+    bool IsHotCallsite = Edge.second.Hotness == CalleeInfo::HotnessType::Hot;
+
     // Insert the newly imported function to the worklist.
-    Worklist.push_back(std::make_pair(ResolvedCalleeSummary, Threshold));
+    Worklist.emplace_back(ResolvedCalleeSummary,
+                          GetAdjustedThreshold(Threshold, IsHotCallsite));
   }
 }
 
@@ -361,14 +393,11 @@ static void ComputeImportForModule(
                              ExportLists);
   }
 
+  // Process the newly imported functions and add callees to the worklist.
   while (!Worklist.empty()) {
     auto FuncInfo = Worklist.pop_back_val();
     auto *Summary = FuncInfo.first;
     auto Threshold = FuncInfo.second;
-
-    // Process the newly imported functions and add callees to the worklist.
-    // Adjust the threshold
-    Threshold = Threshold * ImportInstrFactor;
 
     computeImportForFunction(*Summary, Index, Threshold, DefinedGVSummaries,
                              Worklist, ImportList, ExportLists);
@@ -749,6 +778,17 @@ static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
   FunctionImporter::ImportMapTy ImportList;
   ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
                                     ImportList);
+
+  // Conservatively mark all internal values as promoted. This interface is
+  // only used when doing importing via the function importing pass. The pass
+  // is only enabled when testing importing via the 'opt' tool, which does
+  // not do the ThinLink that would normally determine what values to promote.
+  for (auto &I : *Index) {
+    for (auto &S : I.second) {
+      if (GlobalValue::isLocalLinkage(S->linkage()))
+        S->setLinkage(GlobalValue::ExternalLinkage);
+    }
+  }
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.

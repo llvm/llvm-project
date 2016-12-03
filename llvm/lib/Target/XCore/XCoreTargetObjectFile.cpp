@@ -95,10 +95,8 @@ static unsigned getXCoreSectionFlags(SectionKind K, bool IsCPRel) {
   return Flags;
 }
 
-MCSection *
-XCoreTargetObjectFile::getExplicitSectionGlobal(const GlobalValue *GV,
-                                                SectionKind Kind, Mangler &Mang,
-                                                const TargetMachine &TM) const {
+MCSection *XCoreTargetObjectFile::getExplicitSectionGlobal(
+    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
   StringRef SectionName = GV->getSection();
   // Infer section flags from the section name if we can.
   bool IsCPRel = SectionName.startswith(".cp.");
@@ -108,10 +106,8 @@ XCoreTargetObjectFile::getExplicitSectionGlobal(const GlobalValue *GV,
                                     getXCoreSectionFlags(Kind, IsCPRel));
 }
 
-MCSection *
-XCoreTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
-                                              SectionKind Kind, Mangler &Mang,
-                                              const TargetMachine &TM) const {
+MCSection *XCoreTargetObjectFile::SelectSectionForGlobal(
+    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
 
   bool UseCPRel = GV->isLocalLinkage(GV->getLinkage());
 

@@ -9,9 +9,9 @@
 ; RUN:     -m elf_x86_64 --plugin-opt=save-temps \
 ; RUN:    -shared %t.o -o %t3.o
 ; RUN: FileCheck --check-prefix=RES %s < %t3.o.resolution.txt
-; RUN: llvm-dis %t3.o.2.internalize.bc -o - | FileCheck %s
-; RUN: llvm-dis %t3.o.4.opt.bc -o - | FileCheck --check-prefix=OPT %s
-; RUN: llvm-dis %t3.o.4.opt.bc -o - | FileCheck --check-prefix=OPT2 %s
+; RUN: llvm-dis %t3.o.0.2.internalize.bc -o - | FileCheck %s
+; RUN: llvm-dis %t3.o.0.4.opt.bc -o - | FileCheck --check-prefix=OPT %s
+; RUN: llvm-dis %t3.o.0.4.opt.bc -o - | FileCheck --check-prefix=OPT2 %s
 ; RUN: llvm-nm %t3.o.o | FileCheck --check-prefix=NM %s
 
 ; RUN: rm -f %t4.o

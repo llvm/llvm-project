@@ -542,6 +542,9 @@ private:
   std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
   std::pair<GlobalValue::GUID, GlobalValue::GUID>
   getGUIDFromValueId(unsigned ValueId);
+  std::pair<GlobalValue::GUID, CalleeInfo::HotnessType>
+  readCallGraphEdge(const SmallVector<uint64_t, 64> &Record, unsigned int &I,
+                    bool IsOldProfileFormat, bool HasProfile);
 };
 } // end anonymous namespace
 
@@ -726,9 +729,12 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   // to getDecodedLinkage() will need to be taken into account here as above.
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   RawFlags = RawFlags >> 4;
-  bool HasSection = RawFlags & 0x1;
+  bool NoRename = RawFlags & 0x1;
   bool IsNotViableToInline = RawFlags & 0x2;
-  return GlobalValueSummary::GVFlags(Linkage, HasSection, IsNotViableToInline);
+  bool HasInlineAsmMaybeReferencingInternal = RawFlags & 0x4;
+  return GlobalValueSummary::GVFlags(Linkage, NoRename,
+                                     HasInlineAsmMaybeReferencingInternal,
+                                     IsNotViableToInline);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -6042,13 +6048,18 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
           return error("Invalid record");
         break;
       case bitc::GLOBALVAL_SUMMARY_BLOCK_ID:
-        assert(VSTOffset > 0 && "Expected non-zero VST offset");
         assert(!SeenValueSymbolTable &&
                "Already read VST when parsing summary block?");
-        if (std::error_code EC =
-                parseValueSymbolTable(VSTOffset, ValueIdToLinkageMap))
-          return EC;
-        SeenValueSymbolTable = true;
+        // We might not have a VST if there were no values in the
+        // summary. An empty summary block generated when we are
+        // performing ThinLTO compiles so we don't later invoke
+        // the regular LTO process on them.
+        if (VSTOffset > 0) {
+          if (std::error_code EC =
+                  parseValueSymbolTable(VSTOffset, ValueIdToLinkageMap))
+            return EC;
+          SeenValueSymbolTable = true;
+        }
         SeenGlobalValSummary = true;
         if (std::error_code EC = parseEntireSummary())
           return EC;
@@ -6081,8 +6092,8 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
           if (!TheIndex)
             break;
           if (TheIndex->modulePaths().empty())
-            // Does not have any summary emitted.
-            break;
+            // We always seed the index with the module.
+            TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0);
           if (TheIndex->modulePaths().size() != 1)
             return error("Don't expect multiple modules defined?");
           auto &Hash = TheIndex->modulePaths().begin()->second.second;
@@ -6155,8 +6166,10 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       return error("Invalid Summary Block: version expected");
   }
   const uint64_t Version = Record[0];
-  if (Version != 1)
-    return error("Invalid summary version " + Twine(Version) + ", 1 expected");
+  const bool IsOldProfileFormat = Version == 1;
+  if (!IsOldProfileFormat && Version != 2)
+    return error("Invalid summary version " + Twine(Version) +
+                 ", 1 or 2 expected");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -6200,10 +6213,10 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
     default: // Default behavior: ignore.
       break;
     // FS_PERMODULE: [valueid, flags, instcount, numrefs, numrefs x valueid,
-    //                n x (valueid, callsitecount)]
+    //                n x (valueid)]
     // FS_PERMODULE_PROFILE: [valueid, flags, instcount, numrefs,
     //                        numrefs x valueid,
-    //                        n x (valueid, callsitecount, profilecount)]
+    //                        n x (valueid, hotness)]
     case bitc::FS_PERMODULE:
     case bitc::FS_PERMODULE_PROFILE: {
       unsigned ValueID = Record[0];
@@ -6232,12 +6245,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
       for (unsigned I = CallGraphEdgeStartIndex, E = Record.size(); I != E;
            ++I) {
-        unsigned CalleeValueId = Record[I];
-        unsigned CallsiteCount = Record[++I];
-        uint64_t ProfileCount = HasProfile ? Record[++I] : 0;
-        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
-        FS->addCallGraphEdge(CalleeGUID,
-                             CalleeInfo(CallsiteCount, ProfileCount));
+        CalleeInfo::HotnessType Hotness;
+        GlobalValue::GUID CalleeGUID;
+        std::tie(CalleeGUID, Hotness) =
+            readCallGraphEdge(Record, I, IsOldProfileFormat, HasProfile);
+        FS->addCallGraphEdge(CalleeGUID, CalleeInfo(Hotness));
       }
       auto GUID = getGUIDFromValueId(ValueID);
       FS->setOriginalName(GUID.second);
@@ -6292,10 +6304,9 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       break;
     }
     // FS_COMBINED: [valueid, modid, flags, instcount, numrefs,
-    //               numrefs x valueid, n x (valueid, callsitecount)]
+    //               numrefs x valueid, n x (valueid)]
     // FS_COMBINED_PROFILE: [valueid, modid, flags, instcount, numrefs,
-    //                       numrefs x valueid,
-    //                       n x (valueid, callsitecount, profilecount)]
+    //                       numrefs x valueid, n x (valueid, hotness)]
     case bitc::FS_COMBINED:
     case bitc::FS_COMBINED_PROFILE: {
       unsigned ValueID = Record[0];
@@ -6321,12 +6332,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       bool HasProfile = (BitCode == bitc::FS_COMBINED_PROFILE);
       for (unsigned I = CallGraphEdgeStartIndex, E = Record.size(); I != E;
            ++I) {
-        unsigned CalleeValueId = Record[I];
-        unsigned CallsiteCount = Record[++I];
-        uint64_t ProfileCount = HasProfile ? Record[++I] : 0;
-        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
-        FS->addCallGraphEdge(CalleeGUID,
-                             CalleeInfo(CallsiteCount, ProfileCount));
+        CalleeInfo::HotnessType Hotness;
+        GlobalValue::GUID CalleeGUID;
+        std::tie(CalleeGUID, Hotness) =
+            readCallGraphEdge(Record, I, IsOldProfileFormat, HasProfile);
+        FS->addCallGraphEdge(CalleeGUID, CalleeInfo(Hotness));
       }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       TheIndex->addGlobalValueSummary(GUID, std::move(FS));
@@ -6390,6 +6400,23 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
     }
   }
   llvm_unreachable("Exit infinite loop");
+}
+
+std::pair<GlobalValue::GUID, CalleeInfo::HotnessType>
+ModuleSummaryIndexBitcodeReader::readCallGraphEdge(
+    const SmallVector<uint64_t, 64> &Record, unsigned int &I,
+    const bool IsOldProfileFormat, const bool HasProfile) {
+
+  auto Hotness = CalleeInfo::HotnessType::Unknown;
+  unsigned CalleeValueId = Record[I];
+  GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
+  if (IsOldProfileFormat) {
+    I += 1; // Skip old callsitecount field
+    if (HasProfile)
+      I += 1; // Skip old profilecount field
+  } else if (HasProfile)
+    Hotness = static_cast<CalleeInfo::HotnessType>(Record[++I]);
+  return {CalleeGUID, Hotness};
 }
 
 // Parse the  module string table block into the Index.

@@ -397,6 +397,12 @@ class IRLinker {
       Worklist.push_back(GV);
   }
 
+  /// Flag whether the ModuleInlineAsm string in Src should be linked with
+  /// (concatenated into) the ModuleInlineAsm string for the destination
+  /// module. It should be true for full LTO, but not when importing for
+  /// ThinLTO, otherwise we can have duplicate symbols.
+  bool LinkModuleInlineAsm;
+
   /// Set to true when all global value body linking is complete (including
   /// lazy linking). Used to prevent metadata linking from creating new
   /// references.
@@ -482,10 +488,11 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor)
+           std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor,
+           bool LinkModuleInlineAsm)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
         TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
-        SharedMDs(SharedMDs),
+        SharedMDs(SharedMDs), LinkModuleInlineAsm(LinkModuleInlineAsm),
         Mapper(ValueMap, RF_MoveDistinctMDs | RF_IgnoreMissingLocals, &TypeMap,
                &GValMaterializer),
         AliasMCID(Mapper.registerAlternateMappingContext(AliasValueMap,
@@ -693,6 +700,14 @@ void IRLinker::computeTypeMapping() {
   for (StructType *ST : Types) {
     if (!ST->hasName())
       continue;
+
+    if (TypeMap.DstStructTypesSet.hasType(ST)) {
+      // This is actually a type from the destination module.
+      // getIdentifiedStructTypes() can have found it by walking debug info
+      // metadata nodes, some of which get linked by name when ODR Type Uniquing
+      // is enabled on the Context, from the source to the destination module.
+      continue;
+    }
 
     // Check to see if there is a dot in the name followed by a digit.
     size_t DotPos = ST->getName().rfind('.');
@@ -1214,7 +1229,7 @@ Error IRLinker::run() {
   DstM.setTargetTriple(mergeTriples(SrcTriple, DstTriple));
 
   // Append the module inline asm string.
-  if (!SrcM->getModuleInlineAsm().empty()) {
+  if (LinkModuleInlineAsm && !SrcM->getModuleInlineAsm().empty()) {
     if (DstM.getModuleInlineAsm().empty())
       DstM.setModuleInlineAsm(SrcM->getModuleInlineAsm());
     else
@@ -1335,7 +1350,7 @@ bool IRMover::IdentifiedStructTypeSet::hasType(StructType *Ty) {
 
 IRMover::IRMover(Module &M) : Composite(M) {
   TypeFinder StructTypes;
-  StructTypes.run(M, true);
+  StructTypes.run(M, /* OnlyNamed */ false);
   for (StructType *Ty : StructTypes) {
     if (Ty->isOpaque())
       IdentifiedStructTypes.addOpaque(Ty);
@@ -1352,9 +1367,11 @@ IRMover::IRMover(Module &M) : Composite(M) {
 
 Error IRMover::move(
     std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
-    std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor) {
+    std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor,
+    bool LinkModuleInlineAsm) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
-                       std::move(Src), ValuesToLink, std::move(AddLazyFor));
+                       std::move(Src), ValuesToLink, std::move(AddLazyFor),
+                       LinkModuleInlineAsm);
   Error E = TheIRLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
   return E;

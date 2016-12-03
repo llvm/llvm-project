@@ -30,18 +30,14 @@ namespace llvm {
 
 /// \brief Class to accumulate and hold information about a callee.
 struct CalleeInfo {
-  /// The static number of callsites calling corresponding function.
-  unsigned CallsiteCount;
-  /// The cumulative profile count of calls to corresponding function
-  /// (if using PGO, otherwise 0).
-  uint64_t ProfileCount;
-  CalleeInfo() : CallsiteCount(0), ProfileCount(0) {}
-  CalleeInfo(unsigned CallsiteCount, uint64_t ProfileCount)
-      : CallsiteCount(CallsiteCount), ProfileCount(ProfileCount) {}
-  CalleeInfo &operator+=(uint64_t RHSProfileCount) {
-    CallsiteCount++;
-    ProfileCount += RHSProfileCount;
-    return *this;
+  enum class HotnessType : uint8_t { Unknown = 0, Cold = 1, None = 2, Hot = 3 };
+  HotnessType Hotness = HotnessType::Unknown;
+
+  CalleeInfo() = default;
+  explicit CalleeInfo(HotnessType Hotness) : Hotness(Hotness) {}
+
+  void updateHotness(const HotnessType OtherHotness) {
+    Hotness = std::max(Hotness, OtherHotness);
   }
 };
 
@@ -90,7 +86,7 @@ public:
   /// \brief Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind { AliasKind, FunctionKind, GlobalVarKind };
 
-  /// Group flags (Linkage, hasSection, isOptSize, etc.) as a bitfield.
+  /// Group flags (Linkage, noRename, isOptSize, etc.) as a bitfield.
   struct GVFlags {
     /// \brief The linkage type of the associated global value.
     ///
@@ -101,20 +97,33 @@ public:
     /// types based on global summary-based analysis.
     unsigned Linkage : 4;
 
-    /// Indicate if the global value is located in a specific section.
-    unsigned HasSection : 1;
+    /// Indicate if the global value cannot be renamed (in a specific section,
+    /// possibly referenced from inline assembly, etc).
+    unsigned NoRename : 1;
+
+    /// Indicate if a function contains inline assembly (which is opaque),
+    /// that may reference a local value. This is used to prevent importing
+    /// of this function, since we can't promote and rename the uses of the
+    /// local in the inline assembly. Use a flag rather than bloating the
+    /// summary with references to every possible local value in the
+    /// llvm.used set.
+    unsigned HasInlineAsmMaybeReferencingInternal : 1;
 
     /// Indicate if the function is not viable to inline.
     unsigned IsNotViableToInline : 1;
 
     /// Convenience Constructors
-    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool HasSection,
+    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool NoRename,
+                     bool HasInlineAsmMaybeReferencingInternal,
                      bool IsNotViableToInline)
-        : Linkage(Linkage), HasSection(HasSection),
+        : Linkage(Linkage), NoRename(NoRename),
+          HasInlineAsmMaybeReferencingInternal(
+              HasInlineAsmMaybeReferencingInternal),
           IsNotViableToInline(IsNotViableToInline) {}
 
     GVFlags(const GlobalValue &GV)
-        : Linkage(GV.getLinkage()), HasSection(GV.hasSection()) {
+        : Linkage(GV.getLinkage()), NoRename(GV.hasSection()),
+          HasInlineAsmMaybeReferencingInternal(false) {
       IsNotViableToInline = false;
       if (const auto *F = dyn_cast<Function>(&GV))
         // Inliner doesn't handle variadic functions.
@@ -193,8 +202,25 @@ public:
   /// to be referenced from another module.
   bool needsRenaming() const { return GlobalValue::isLocalLinkage(linkage()); }
 
-  /// Return true if this global value is located in a specific section.
-  bool hasSection() const { return Flags.HasSection; }
+  /// Return true if this global value cannot be renamed (in a specific section,
+  /// possibly referenced from inline assembly, etc).
+  bool noRename() const { return Flags.NoRename; }
+
+  /// Flag that this global value cannot be renamed (in a specific section,
+  /// possibly referenced from inline assembly, etc).
+  void setNoRename() { Flags.NoRename = true; }
+
+  /// Return true if this global value possibly references another value
+  /// that can't be renamed.
+  bool hasInlineAsmMaybeReferencingInternal() const {
+    return Flags.HasInlineAsmMaybeReferencingInternal;
+  }
+
+  /// Flag that this global value possibly references another value that
+  /// can't be renamed.
+  void setHasInlineAsmMaybeReferencingInternal() {
+    Flags.HasInlineAsmMaybeReferencingInternal = true;
+  }
 
   /// Record a reference from this global value to the global value identified
   /// by \p RefGUID.
@@ -363,11 +389,14 @@ private:
 
 public:
   ModuleSummaryIndex() = default;
-
-  // Disable the copy constructor and assignment operators, so
-  // no unexpected copying/moving occurs.
-  ModuleSummaryIndex(const ModuleSummaryIndex &) = delete;
-  void operator=(const ModuleSummaryIndex &) = delete;
+  ModuleSummaryIndex(ModuleSummaryIndex &&Arg)
+      : GlobalValueMap(std::move(Arg.GlobalValueMap)),
+        ModulePathStringTable(std::move(Arg.ModulePathStringTable)) {}
+  ModuleSummaryIndex &operator=(ModuleSummaryIndex &&RHS) {
+    GlobalValueMap = std::move(RHS.GlobalValueMap);
+    ModulePathStringTable = std::move(RHS.ModulePathStringTable);
+    return *this;
+  }
 
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }
   const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }

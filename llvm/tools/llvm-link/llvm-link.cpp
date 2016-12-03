@@ -326,6 +326,16 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       }
       auto Index = std::move(IndexOrErr.get());
 
+      // Conservatively mark all internal values as promoted, since this tool
+      // does not do the ThinLink that would normally determine what values to
+      // promote.
+      for (auto &I : *Index) {
+        for (auto &S : I.second) {
+          if (GlobalValue::isLocalLinkage(S->linkage()))
+            S->setLinkage(GlobalValue::ExternalLinkage);
+        }
+      }
+
       // Promotion
       if (renameModuleForThinLTO(*M, *Index))
         return true;

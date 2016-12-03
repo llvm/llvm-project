@@ -3,7 +3,7 @@
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o -o %t2.o
-; RUN: llvm-dis %t2.o.2.internalize.bc -o - | FileCheck %s
+; RUN: llvm-dis %t2.o.0.2.internalize.bc -o - | FileCheck %s
 
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=emit-llvm \

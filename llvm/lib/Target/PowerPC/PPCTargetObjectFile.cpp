@@ -23,8 +23,7 @@ Initialize(MCContext &Ctx, const TargetMachine &TM) {
 }
 
 MCSection *PPC64LinuxTargetObjectFile::SelectSectionForGlobal(
-    const GlobalValue *GV, SectionKind Kind, Mangler &Mang,
-    const TargetMachine &TM) const {
+    const GlobalValue *GV, SectionKind Kind, const TargetMachine &TM) const {
   // Here override ReadOnlySection to DataRelROSection for PPC64 SVR4 ABI
   // when we have a constant that contains global relocations.  This is
   // necessary because of this ABI's handling of pointers to functions in
@@ -46,8 +45,7 @@ MCSection *PPC64LinuxTargetObjectFile::SelectSectionForGlobal(
       Kind = SectionKind::getReadOnlyWithRel();
   }
 
-  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind,
-                                                             Mang, TM);
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, TM);
 }
 
 const MCExpr *PPC64LinuxTargetObjectFile::

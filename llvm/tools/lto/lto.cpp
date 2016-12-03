@@ -170,7 +170,7 @@ const char* lto_get_error_message() {
 }
 
 bool lto_module_is_object_file(const char* path) {
-  return LTOModule::isBitcodeFile(path);
+  return LTOModule::isBitcodeFile(StringRef(path));
 }
 
 bool lto_module_is_object_file_for_target(const char* path,
@@ -178,7 +178,8 @@ bool lto_module_is_object_file_for_target(const char* path,
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer = MemoryBuffer::getFile(path);
   if (!Buffer)
     return false;
-  return LTOModule::isBitcodeForTarget(Buffer->get(), target_triplet_prefix);
+  return LTOModule::isBitcodeForTarget(Buffer->get(),
+                                       StringRef(target_triplet_prefix));
 }
 
 bool lto_module_has_objc_category(const void *mem, size_t length) {
@@ -200,14 +201,15 @@ lto_module_is_object_file_in_memory_for_target(const void* mem,
   std::unique_ptr<MemoryBuffer> buffer(LTOModule::makeBuffer(mem, length));
   if (!buffer)
     return false;
-  return LTOModule::isBitcodeForTarget(buffer.get(), target_triplet_prefix);
+  return LTOModule::isBitcodeForTarget(buffer.get(),
+                                       StringRef(target_triplet_prefix));
 }
 
 lto_module_t lto_module_create(const char* path) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M =
-      LTOModule::createFromFile(*LTOContext, path, Options);
+      LTOModule::createFromFile(*LTOContext, StringRef(path), Options);
   if (!M)
     return nullptr;
   return wrap(M->release());
@@ -216,8 +218,8 @@ lto_module_t lto_module_create(const char* path) {
 lto_module_t lto_module_create_from_fd(int fd, const char *path, size_t size) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  ErrorOr<std::unique_ptr<LTOModule>> M =
-      LTOModule::createFromOpenFile(*LTOContext, fd, path, size, Options);
+  ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromOpenFile(
+      *LTOContext, fd, StringRef(path), size, Options);
   if (!M)
     return nullptr;
   return wrap(M->release());
@@ -230,7 +232,7 @@ lto_module_t lto_module_create_from_fd_at_offset(int fd, const char *path,
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromOpenFileSlice(
-      *LTOContext, fd, path, map_size, offset, Options);
+      *LTOContext, fd, StringRef(path), map_size, offset, Options);
   if (!M)
     return nullptr;
   return wrap(M->release());
@@ -251,8 +253,8 @@ lto_module_t lto_module_create_from_memory_with_path(const void* mem,
                                                      const char *path) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  ErrorOr<std::unique_ptr<LTOModule>> M =
-      LTOModule::createFromBuffer(*LTOContext, mem, length, Options, path);
+  ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromBuffer(
+      *LTOContext, mem, length, Options, StringRef(path));
   if (!M)
     return nullptr;
   return wrap(M->release());
@@ -267,9 +269,8 @@ lto_module_t lto_module_create_in_local_context(const void *mem, size_t length,
   std::unique_ptr<LLVMContext> Context = llvm::make_unique<LLVMContext>();
   Context->setDiagnosticHandler(diagnosticHandler, nullptr, true);
 
-  ErrorOr<std::unique_ptr<LTOModule>> M =
-      LTOModule::createInLocalContext(std::move(Context), mem, length, Options,
-                                      path);
+  ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createInLocalContext(
+      std::move(Context), mem, length, Options, StringRef(path));
   if (!M)
     return nullptr;
   return wrap(M->release());
@@ -282,7 +283,7 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromBuffer(
-      unwrap(cg)->getContext(), mem, length, Options, path);
+      unwrap(cg)->getContext(), mem, length, Options, StringRef(path));
   return wrap(M->release());
 }
 
@@ -293,7 +294,7 @@ const char* lto_module_get_target_triple(lto_module_t mod) {
 }
 
 void lto_module_set_target_triple(lto_module_t mod, const char *triple) {
-  return unwrap(mod)->setTargetTriple(triple);
+  return unwrap(mod)->setTargetTriple(StringRef(triple));
 }
 
 unsigned int lto_module_get_num_symbols(lto_module_t mod) {
@@ -301,7 +302,7 @@ unsigned int lto_module_get_num_symbols(lto_module_t mod) {
 }
 
 const char* lto_module_get_symbol_name(lto_module_t mod, unsigned int index) {
-  return unwrap(mod)->getSymbolName(index);
+  return unwrap(mod)->getSymbolName(index).data();
 }
 
 lto_symbol_attributes lto_module_get_symbol_attribute(lto_module_t mod,
@@ -310,7 +311,7 @@ lto_symbol_attributes lto_module_get_symbol_attribute(lto_module_t mod,
 }
 
 const char* lto_module_get_linkeropts(lto_module_t mod) {
-  return unwrap(mod)->getLinkerOpts();
+  return unwrap(mod)->getLinkerOpts().data();
 }
 
 void lto_codegen_set_diagnostic_handler(lto_code_gen_t cg,

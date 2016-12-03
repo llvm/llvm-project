@@ -92,13 +92,11 @@ public:
   }
 
   MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
-                                      Mangler &Mang,
                                       const TargetMachine &TM) const override {
     return DataSection;
   }
 
   MCSection *SelectSectionForGlobal(const GlobalValue *GV, SectionKind Kind,
-                                    Mangler &Mang,
                                     const TargetMachine &TM) const override;
 };
 

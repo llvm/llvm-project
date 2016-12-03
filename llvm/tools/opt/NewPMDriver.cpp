@@ -47,7 +47,7 @@ static cl::opt<std::string>
                         "pipeline for handling managed aliasing queries"),
                cl::Hidden);
 
-bool llvm::runPassPipeline(StringRef Arg0, LLVMContext &Context, Module &M,
+bool llvm::runPassPipeline(StringRef Arg0, Module &M,
                            TargetMachine *TM, tool_output_file *Out,
                            StringRef PassPipeline, OutputKind OK,
                            VerifierKind VK,

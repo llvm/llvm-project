@@ -85,6 +85,13 @@ void thinLTOInternalizeAndPromoteInIndex(
 
 namespace lto {
 
+/// Given the original \p Path to an output file, replace any path
+/// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
+/// resulting directory if it does not yet exist.
+std::string getThinLTOOutputFile(const std::string &Path,
+                                 const std::string &OldPrefix,
+                                 const std::string &NewPrefix);
+
 class LTO;
 struct SymbolResolution;
 class ThinBackendProc;
@@ -164,7 +171,15 @@ public:
     bool canBeOmittedFromSymbolTable() const {
       return GV && llvm::canBeOmittedFromSymbolTable(GV);
     }
+    bool isTLS() const {
+      // FIXME: Expose a thread-local flag for module asm symbols.
+      return GV && GV->isThreadLocal();
+    }
+
+    //FIXME: We shouldn't expose this information.
     Expected<const Comdat *> getComdat() const {
+      if (!GV)
+        return nullptr;
       const GlobalObject *GO;
       if (auto *GA = dyn_cast<GlobalAlias>(GV)) {
         GO = GA->getBaseObject();
@@ -174,10 +189,11 @@ public:
       } else {
         GO = cast<GlobalObject>(GV);
       }
-      if (GV)
-        return GV->getComdat();
+      if (GO)
+        return GO->getComdat();
       return nullptr;
     }
+
     uint64_t getCommonSize() const {
       assert(Flags & object::BasicSymbolRef::SF_Common);
       if (!GV)
@@ -225,10 +241,57 @@ public:
                             symbol_iterator(Obj->symbol_end()));
   }
 
+  StringRef getDataLayoutStr() const {
+    return Obj->getModule().getDataLayoutStr();
+  }
+
   StringRef getSourceFileName() const {
     return Obj->getModule().getSourceFileName();
   }
+
+  MemoryBufferRef getMemoryBufferRef() const {
+    return Obj->getMemoryBufferRef();
+  }
+
+  // FIXME: We should fix lld and not expose this information.
+  StringMap<Comdat> &getComdatSymbolTable() {
+    return Obj->getModule().getComdatSymbolTable();
+  }
 };
+
+/// This class wraps an output stream for a native object. Most clients should
+/// just be able to return an instance of this base class from the stream
+/// callback, but if a client needs to perform some action after the stream is
+/// written to, that can be done by deriving from this class and overriding the
+/// destructor.
+class NativeObjectStream {
+public:
+  NativeObjectStream(std::unique_ptr<raw_pwrite_stream> OS) : OS(std::move(OS)) {}
+  std::unique_ptr<raw_pwrite_stream> OS;
+  virtual ~NativeObjectStream() = default;
+};
+
+/// This type defines the callback to add a native object that is generated on
+/// the fly.
+///
+/// Stream callbacks must be thread safe.
+typedef std::function<std::unique_ptr<NativeObjectStream>(unsigned Task)>
+    AddStreamFn;
+
+/// This is the type of a native object cache. To request an item from the
+/// cache, pass a unique string as the Key. For hits, the cached file will be
+/// added to the link and this function will return AddStreamFn(). For misses,
+/// the cache will return a stream callback which must be called at most once to
+/// produce content for the stream. The native object stream produced by the
+/// stream callback will add the file to the link after the stream is written
+/// to.
+///
+/// Clients generally look like this:
+///
+/// if (AddStreamFn AddStream = Cache(Task, Key))
+///   ProduceContent(AddStream);
+typedef std::function<AddStreamFn(unsigned Task, StringRef Key)>
+    NativeObjectCache;
 
 /// A ThinBackend defines what happens after the thin-link phase during ThinLTO.
 /// The details of this type definition aren't important; clients can only
@@ -236,7 +299,7 @@ public:
 typedef std::function<std::unique_ptr<ThinBackendProc>(
     Config &C, ModuleSummaryIndex &CombinedIndex,
     StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-    AddStreamFn AddStream)>
+    AddStreamFn AddStream, NativeObjectCache Cache)>
     ThinBackend;
 
 /// This ThinBackend runs the individual backend jobs in-process.
@@ -270,7 +333,8 @@ ThinBackend createWriteIndexesThinBackend(std::string OldPrefix,
 /// - Call the getMaxTasks() function to get an upper bound on the number of
 ///   native object files that LTO may add to the link.
 /// - Call the run() function. This function will use the supplied AddStream
-///   function to add up to getMaxTasks() native object files to the link.
+///   and Cache functions to add up to getMaxTasks() native object files to
+///   the link.
 class LTO {
   friend InputFile;
 
@@ -293,21 +357,34 @@ public:
   /// full description of tasks see LTOBackend.h.
   unsigned getMaxTasks() const;
 
-  /// Runs the LTO pipeline. This function calls the supplied AddStream function
-  /// to add native object files to the link.
-  Error run(AddStreamFn AddStream);
+  /// Runs the LTO pipeline. This function calls the supplied AddStream
+  /// function to add native object files to the link.
+  ///
+  /// The Cache parameter is optional. If supplied, it will be used to cache
+  /// native object files and add them to the link.
+  ///
+  /// The client will receive at most one callback (via either AddStream or
+  /// Cache) for each task identifier.
+  Error run(AddStreamFn AddStream, NativeObjectCache Cache = nullptr);
 
 private:
   Config Conf;
 
   struct RegularLTOState {
     RegularLTOState(unsigned ParallelCodeGenParallelismLevel, Config &Conf);
+    struct CommonResolution {
+      uint64_t Size = 0;
+      unsigned Align = 0;
+      /// Record if at least one instance of the common was marked as prevailing
+      bool Prevailing = false;
+    };
+    std::map<std::string, CommonResolution> Commons;
 
     unsigned ParallelCodeGenParallelismLevel;
     LTOLLVMContext Ctx;
     bool HasModule = false;
     std::unique_ptr<Module> CombinedModule;
-    IRMover Mover;
+    std::unique_ptr<IRMover> Mover;
   } RegularLTO;
 
   struct ThinLTOState {
@@ -359,8 +436,6 @@ private:
   // Global mapping from mangled symbol names to resolutions.
   StringMap<GlobalResolution> GlobalResolutions;
 
-  void writeToResolutionFile(InputFile *Input, ArrayRef<SymbolResolution> Res);
-
   void addSymbolToGlobalRes(object::IRObjectFile *Obj,
                             SmallPtrSet<GlobalValue *, 8> &Used,
                             const InputFile::Symbol &Sym, SymbolResolution Res,
@@ -372,7 +447,8 @@ private:
                    ArrayRef<SymbolResolution> Res);
 
   Error runRegularLTO(AddStreamFn AddStream);
-  Error runThinLTO(AddStreamFn AddStream);
+  Error runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
+                   bool HasRegularLTO);
 
   mutable bool CalledGetMaxTasks = false;
 };
