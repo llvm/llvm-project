@@ -67,12 +67,17 @@ bool llvm::nameUnamedFunctions(Module &M) {
   bool Changed = false;
   ModuleHasher ModuleHash(M);
   int count = 0;
-  for (auto &F : M) {
-    if (F.hasName())
-      continue;
-    F.setName(Twine("anon.") + ModuleHash.get() + "." + Twine(count++));
+  auto RenameIfNeed = [&] (GlobalValue &GV) {
+    if (GV.hasName())
+      return;
+    GV.setName(Twine("anon.") + ModuleHash.get() + "." + Twine(count++));
     Changed = true;
-  }
+  };
+  for (auto &GO : M.global_objects())
+    RenameIfNeed(GO);
+  for (auto &GA : M.aliases())
+    RenameIfNeed(GA);
+
   return Changed;
 }
 
