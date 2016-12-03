@@ -167,8 +167,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
-      Ctx(Conf), CombinedModule(llvm::make_unique<Module>("ld-temp.o", Ctx)),
-      Mover(*CombinedModule) {}
+      Ctx(Conf) {}
 
 LTO::ThinLTOState::ThinLTOState(ThinBackend Backend) : Backend(Backend) {
   if (!Backend)
@@ -249,8 +248,11 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
 // Add a regular LTO object to the link.
 Error LTO::addRegularLTO(std::unique_ptr<InputFile> Input,
                          ArrayRef<SymbolResolution> Res) {
-  RegularLTO.HasModule = true;
-
+  if (!RegularLTO.CombinedModule) {
+    RegularLTO.CombinedModule =
+        llvm::make_unique<Module>("ld-temp.o", RegularLTO.Ctx);
+    RegularLTO.Mover = llvm::make_unique<IRMover>(*RegularLTO.CombinedModule);
+  }
   ErrorOr<std::unique_ptr<object::IRObjectFile>> ObjOrErr =
       IRObjectFile::create(Input->Obj->getMemoryBufferRef(), RegularLTO.Ctx);
   if (!ObjOrErr)
@@ -305,8 +307,8 @@ Error LTO::addRegularLTO(std::unique_ptr<InputFile> Input,
   }
   assert(ResI == Res.end());
 
-  return RegularLTO.Mover.move(Obj->takeModule(), Keep,
-                               [](GlobalValue &, IRMover::ValueAdder) {});
+  return RegularLTO.Mover->move(Obj->takeModule(), Keep,
+                                [](GlobalValue &, IRMover::ValueAdder) {});
 }
 
 // Add a ThinLTO object to the link.
@@ -315,14 +317,6 @@ Error LTO::addThinLTO(std::unique_ptr<InputFile> Input,
   Module &M = Input->Obj->getModule();
   SmallPtrSet<GlobalValue *, 8> Used;
   collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
-
-  // We need to initialize the target info for the combined regular LTO module
-  // in case we have no regular LTO objects. In that case we still need to build
-  // it as usual because the client may want to add symbol definitions to it.
-  if (RegularLTO.CombinedModule->getTargetTriple().empty()) {
-    RegularLTO.CombinedModule->setTargetTriple(M.getTargetTriple());
-    RegularLTO.CombinedModule->setDataLayout(M.getDataLayout());
-  }
 
   MemoryBufferRef MBRef = Input->Obj->getMemoryBufferRef();
   ErrorOr<std::unique_ptr<object::ModuleSummaryIndexObjectFile>>
@@ -357,12 +351,8 @@ unsigned LTO::getMaxTasks() const {
 }
 
 Error LTO::run(AddOutputFn AddOutput) {
-  // Invoke regular LTO if there was a regular LTO module to start with,
-  // or if there are any hooks that the linker may have used to add
-  // its own resolved symbols to the combined module.
-  if (RegularLTO.HasModule || Conf.PreOptModuleHook ||
-      Conf.PostInternalizeModuleHook || Conf.PostOptModuleHook ||
-      Conf.PreCodeGenModuleHook)
+  // Invoke regular LTO if there was a regular LTO module to start with.
+  if (RegularLTO.CombinedModule)
     if (auto E = runRegularLTO(AddOutput))
       return E;
   return runThinLTO(AddOutput);
@@ -662,7 +652,9 @@ Error LTO::runThinLTO(AddOutputFn AddOutput) {
   // ParallelCodeGenParallelismLevel, as tasks 0 through
   // ParallelCodeGenParallelismLevel-1 are reserved for parallel code generation
   // partitions.
-  unsigned Task = RegularLTO.ParallelCodeGenParallelismLevel;
+  unsigned Task = RegularLTO.CombinedModule
+                      ? RegularLTO.ParallelCodeGenParallelismLevel
+                      : 0;
   unsigned Partition = 1;
 
   for (auto &Mod : ThinLTO.ModuleMap) {
