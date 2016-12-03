@@ -185,17 +185,18 @@ void LTOCodeGenerator::setOptLevel(unsigned Level) {
   switch (OptLevel) {
   case 0:
     CGOptLevel = CodeGenOpt::None;
-    break;
+    return;
   case 1:
     CGOptLevel = CodeGenOpt::Less;
-    break;
+    return;
   case 2:
     CGOptLevel = CodeGenOpt::Default;
-    break;
+    return;
   case 3:
     CGOptLevel = CodeGenOpt::Aggressive;
-    break;
+    return;
   }
+  llvm_unreachable("Unknown optimization level!");
 }
 
 bool LTOCodeGenerator::writeMergedModules(const char *Path) {
