@@ -174,8 +174,8 @@ public:
       } else {
         GO = cast<GlobalObject>(GV);
       }
-      if (GV)
-        return GV->getComdat();
+      if (GO)
+        return GO->getComdat();
       return nullptr;
     }
     uint64_t getCommonSize() const {
