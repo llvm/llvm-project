@@ -742,36 +742,40 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       ThinLTO.ModuleMap.size());
   StringMap<FunctionImporter::ExportSetTy> ExportLists(
       ThinLTO.ModuleMap.size());
-  ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                           ImportLists, ExportLists);
-
-  std::set<GlobalValue::GUID> ExportedGUIDs;
-  for (auto &Res : GlobalResolutions) {
-    if (!Res.second.IRName.empty() &&
-        Res.second.Partition == GlobalResolution::External)
-      ExportedGUIDs.insert(GlobalValue::getGUID(Res.second.IRName));
-  }
-
-  auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
-    return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
-  };
-  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
-    const auto &ExportList = ExportLists.find(ModuleIdentifier);
-    return (ExportList != ExportLists.end() &&
-            ExportList->second.count(GUID)) ||
-           ExportedGUIDs.count(GUID);
-  };
-  thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported);
-
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  auto recordNewLinkage = [&](StringRef ModuleIdentifier,
-                              GlobalValue::GUID GUID,
-                              GlobalValue::LinkageTypes NewLinkage) {
-    ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
-  };
 
-  thinLTOResolveWeakForLinkerInIndex(ThinLTO.CombinedIndex, isPrevailing,
-                                     recordNewLinkage);
+  if (Conf.OptLevel > 0) {
+    ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
+                             ImportLists, ExportLists);
+
+    std::set<GlobalValue::GUID> ExportedGUIDs;
+    for (auto &Res : GlobalResolutions) {
+      if (!Res.second.IRName.empty() &&
+          Res.second.Partition == GlobalResolution::External)
+        ExportedGUIDs.insert(GlobalValue::getGUID(Res.second.IRName));
+    }
+
+    auto isPrevailing = [&](GlobalValue::GUID GUID,
+                            const GlobalValueSummary *S) {
+      return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
+    };
+    auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
+      const auto &ExportList = ExportLists.find(ModuleIdentifier);
+      return (ExportList != ExportLists.end() &&
+              ExportList->second.count(GUID)) ||
+             ExportedGUIDs.count(GUID);
+    };
+    thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported);
+
+    auto recordNewLinkage = [&](StringRef ModuleIdentifier,
+                                GlobalValue::GUID GUID,
+                                GlobalValue::LinkageTypes NewLinkage) {
+      ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
+    };
+
+    thinLTOResolveWeakForLinkerInIndex(ThinLTO.CombinedIndex, isPrevailing,
+                                       recordNewLinkage);
+  }
 
   std::unique_ptr<ThinBackendProc> BackendProc =
       ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
