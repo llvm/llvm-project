@@ -49,6 +49,13 @@ static cl::opt<float>
                                "`import-instr-limit` threshold by this factor "
                                "before processing newly imported functions"));
 
+static cl::opt<float> ImportHotInstrFactor(
+    "import-hot-evolution-factor", cl::init(1.0), cl::Hidden,
+    cl::value_desc("x"),
+    cl::desc("As we import functions called from hot callsite, multiply the "
+             "`import-instr-limit` threshold by this factor "
+             "before processing newly imported functions"));
+
 static cl::opt<float> ImportHotMultiplier(
     "import-hot-multiplier", cl::init(3.0), cl::Hidden, cl::value_desc("x"),
     cl::desc("Multiply the `import-instr-limit` threshold for hot callsites"));
@@ -300,6 +307,7 @@ static void computeImportForFunction(
 
     const auto NewThreshold =
         Threshold * GetBonusMultiplier(Edge.second.Hotness);
+
     auto *CalleeSummary = selectCallee(GUID, NewThreshold, Index);
     if (!CalleeSummary) {
       DEBUG(dbgs() << "ignored! No qualifying callee with summary found.\n");
@@ -348,8 +356,20 @@ static void computeImportForFunction(
       }
     }
 
+    auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
+      // Adjust the threshold for next level of imported functions.
+      // The threshold is different for hot callsites because we can then
+      // inline chains of hot calls.
+      if (IsHotCallsite)
+        return Threshold * ImportHotInstrFactor;
+      return Threshold * ImportInstrFactor;
+    };
+
+    bool IsHotCallsite = Edge.second.Hotness == CalleeInfo::HotnessType::Hot;
+
     // Insert the newly imported function to the worklist.
-    Worklist.push_back(std::make_pair(ResolvedCalleeSummary, Threshold));
+    Worklist.emplace_back(ResolvedCalleeSummary,
+                          GetAdjustedThreshold(Threshold, IsHotCallsite));
   }
 }
 
@@ -380,14 +400,11 @@ static void ComputeImportForModule(
                              ExportLists);
   }
 
+  // Process the newly imported functions and add callees to the worklist.
   while (!Worklist.empty()) {
     auto FuncInfo = Worklist.pop_back_val();
     auto *Summary = FuncInfo.first;
     auto Threshold = FuncInfo.second;
-
-    // Process the newly imported functions and add callees to the worklist.
-    // Adjust the threshold
-    Threshold = Threshold * ImportInstrFactor;
 
     computeImportForFunction(*Summary, Index, Threshold, DefinedGVSummaries,
                              Worklist, ImportList, ExportLists);
