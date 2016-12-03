@@ -7857,23 +7857,23 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back("-object_path_lto");
       CmdArgs.push_back(TmpPath);
     }
+  }
 
-    // Use -lto_library option to specify the libLTO.dylib path. Try to find
-    // it in clang installed libraries. If not found, the option is not used
-    // and 'ld' will use its default mechanism to search for libLTO.dylib.
-    if (Version[0] >= 133) {
-      // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
-      StringRef P = llvm::sys::path::parent_path(D.getInstalledDir());
-      SmallString<128> LibLTOPath(P);
-      llvm::sys::path::append(LibLTOPath, "lib");
-      llvm::sys::path::append(LibLTOPath, "libLTO.dylib");
-      if (llvm::sys::fs::exists(LibLTOPath)) {
-        CmdArgs.push_back("-lto_library");
-        CmdArgs.push_back(C.getArgs().MakeArgString(LibLTOPath));
-      } else {
-        D.Diag(diag::warn_drv_lto_libpath);
-      }
-    }
+  // Use -lto_library option to specify the libLTO.dylib path. Try to find
+  // it in clang installed libraries. ld64 will only look at this argument
+  // when it actually uses LTO, so libLTO.dylib only needs to exist at link
+  // time if ld64 decides that it needs to use LTO.
+  // Since this is passed unconditionally, ld64 will never look for libLTO.dylib
+  // next to it. That's ok since ld64 using a libLTO.dylib not matching the
+  // clang version won't work anyways.
+  if (Version[0] >= 133) {
+    // Search for libLTO in <InstalledDir>/../lib/libLTO.dylib
+    StringRef P = llvm::sys::path::parent_path(D.getInstalledDir());
+    SmallString<128> LibLTOPath(P);
+    llvm::sys::path::append(LibLTOPath, "lib");
+    llvm::sys::path::append(LibLTOPath, "libLTO.dylib");
+    CmdArgs.push_back("-lto_library");
+    CmdArgs.push_back(C.getArgs().MakeArgString(LibLTOPath));
   }
 
   // ld64 version 262 and above run the deduplicate pass by default.
