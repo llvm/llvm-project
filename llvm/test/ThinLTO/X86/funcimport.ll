@@ -3,6 +3,9 @@
 ; RUN: opt -module-summary %p/Inputs/funcimport.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t3.bc %t.bc %t2.bc
 
+; RUN: llvm-lto -thinlto-index-stats %t3.bc | FileCheck %s -check-prefix=STATS
+; STATS: Index {{.*}} contains 24 nodes (13 functions, 3 alias, 8 globals) and 19 edges (8 refs and 11 calls)
+
 ; Ensure statics are promoted/renamed correctly from this file (all but
 ; constant variable need promotion).
 ; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTSTATIC
