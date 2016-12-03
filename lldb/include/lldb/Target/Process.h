@@ -1508,7 +1508,8 @@ public:
 
   size_t GetThreadStatus(Stream &ostrm, bool only_threads_with_stop_reason,
                          uint32_t start_frame, uint32_t num_frames,
-                         uint32_t num_frames_with_source);
+                         uint32_t num_frames_with_source,
+                         bool stop_format);
 
   void SendAsyncInterrupt();
 

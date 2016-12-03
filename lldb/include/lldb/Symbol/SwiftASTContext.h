@@ -225,10 +225,8 @@ public:
   void CacheModule(swift::ModuleDecl *module);
 
   // Call this after the search paths are set up, it will find the module given
-  // by
-  // module, load the module into the AST context, and also load any
-  // "LinkLibraries" that the
-  // module requires.
+  // by module, load the module into the AST context, and also load any
+  // "LinkLibraries" that the module requires.
 
   swift::ModuleDecl *FindAndLoadModule(const ConstString &module_basename,
                                        Process &process, Error &error);
@@ -245,15 +243,12 @@ public:
   void ValidateSectionModules(Module &module, // this is used to print errors
                               const std::vector<std::string> &module_names);
 
-  // swift modules that are backed by dylibs (libFoo.dylib) rather than
-  // frameworks
-  // don't actually record the library dependencies in the module.  This will
-  // hand load any
-  // libraries that are on the IRGen LinkLibraries list using the compiler's
-  // search paths.
+  // Swift modules that are backed by dylibs (libFoo.dylib) rather than
+  // frameworks don't actually record the library dependencies in the module.
+  // This will hand load any libraries that are on the IRGen LinkLibraries list
+  // using the compiler's search paths.
   // It doesn't do frameworks since frameworks don't need it and this is kind of
-  // a hack
-  // anyway.
+  // a hack anyway.
 
   void LoadExtraDylibs(Process &process, Error &error);
 
@@ -262,7 +257,7 @@ public:
   swift::Identifier GetIdentifier(const llvm::StringRef &name);
 
   // Find a type by a fully qualified name that includes the module name
-  // (the format being "<module_name>.<type_name>"
+  // (the format being "<module_name>.<type_name>").
   CompilerType FindQualifiedType(const char *qualified_name);
 
   CompilerType FindType(const char *name, swift::ModuleDecl *swift_module);
@@ -307,10 +302,9 @@ public:
 
   uint32_t GetPointerBitAlignment();
 
-  // Imports the type from the passed in type into this SwiftASTContext.  The
-  // type must be a
-  // Swift type.  If the type can be imported, returns the CompilerType for the
-  // imported type.
+  // Imports the type from the passed in type into this SwiftASTContext. The
+  // type must be a Swift type. If the type can be imported, returns the
+  // CompilerType for the imported type.
   // If it cannot be, returns an invalid CompilerType, and sets the error to
   // indicate what went wrong.
   CompilerType ImportType(CompilerType &type, Error &error);
@@ -376,8 +370,7 @@ public:
   bool CheckProcessChanged();
 
   // FIXME: this should be removed once we figure out who should really own the
-  // DebuggerClient's that we
-  // are sticking into the Swift Modules.
+  // DebuggerClient's that we are sticking into the Swift Modules.
   void AddDebuggerClient(swift::DebuggerClient *debugger_client);
 
   typedef llvm::DenseMap<const char *, swift::ModuleDecl *> SwiftModuleMap;
@@ -579,8 +572,7 @@ public:
   CompilerType GetInstanceType(void *type) override;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
-  // prototype
-  // Returns a value >override if there is a prototype.
+  // prototype. Returns a value >override if there is a prototype.
   int GetFunctionArgumentCount(void *type) override;
 
   CompilerType GetFunctionArgumentTypeAtIndex(void *type, size_t idx) override;
@@ -630,7 +622,7 @@ public:
       ValueObject *valobj, uint64_t &language_flags) override;
 
   // Lookup a child given a name. This function will match base class names
-  // and member member names in "clang_type" only, not descendants.
+  // and member names in "clang_type" only, not descendants.
   uint32_t GetIndexOfChildWithName(void *type, const char *name,
                                    bool omit_empty_base_classes) override;
 
@@ -638,8 +630,8 @@ public:
   // only and will descend into "clang_type" children in search for the first
   // member in this class, or any base class that matches "name".
   // TODO: Return all matches for a given name by returning a
-  // vector<vector<uint32_t>>
-  // so we catch all names that match a given child name, not just the first.
+  // vector<vector<uint32_t>> so we catch all names that match a given child
+  // name, not just the first.
   size_t
   GetIndexOfChildMemberWithName(void *type, const char *name,
                                 bool omit_empty_base_classes,
@@ -791,9 +783,8 @@ public:
 
 protected:
   // This map uses the string value of ConstStrings as the key, and the TypeBase
-  // * as the value.  Since the
-  // ConstString strings are uniqued, we can use pointer equality for string
-  // value equality.
+  // * as the value. Since the ConstString strings are uniqued, we can use
+  // pointer equality for string value equality.
   typedef llvm::DenseMap<const char *, swift::TypeBase *>
       SwiftTypeFromMangledNameMap;
   // Similar logic applies to this "reverse" map
@@ -854,15 +845,12 @@ protected:
   std::string m_resource_dir;
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;
-  /// FIXME: this vector is needed because the LLDBNameLookup debugger clients
-  /// are being put into
-  /// the Module for the SourceFile that we compile the expression into, and so
-  /// have to live as long
-  /// as the Module.  But it's too late to change swift to get it to take
-  /// ownership of these DebuggerClients.
-  /// Since we use the same Target SwiftASTContext for all our compilations,
-  /// holding them here will keep them
-  /// alive as long as we need.
+  // FIXME: this vector is needed because the LLDBNameLookup debugger clients
+  // are being put into the Module for the SourceFile that we compile the
+  // expression into, and so have to live as long as the Module. But it's too
+  // late to change swift to get it to take ownership of these DebuggerClients.
+  // Since we use the same Target SwiftASTContext for all our compilations,
+  // holding them here will keep them alive as long as we need.
   std::vector<std::unique_ptr<swift::DebuggerClient>> m_debugger_clients;
   bool m_initialized_language_options;
   bool m_initialized_search_path_options;
