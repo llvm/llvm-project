@@ -118,6 +118,7 @@ namespace llvm {
 
   /// Get the amount of currency based on physical cores, if available for the
   /// host system, otherwise falls back to thread::hardware_concurrency().
+  /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF
   unsigned hardware_physical_concurrency();
 }
 
