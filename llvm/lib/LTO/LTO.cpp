@@ -367,27 +367,29 @@ Error LTO::runRegularLTO(AddOutputFn AddOutput) {
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
     return Error();
 
-  for (const auto &R : GlobalResolutions) {
-    if (R.second.IRName.empty())
-      continue;
-    if (R.second.Partition != 0 &&
-        R.second.Partition != GlobalResolution::External)
-      continue;
+  if (!Conf.CodeGenOnly) {
+    for (const auto &R : GlobalResolutions) {
+      if (R.second.IRName.empty())
+        continue;
+      if (R.second.Partition != 0 &&
+          R.second.Partition != GlobalResolution::External)
+        continue;
 
-    GlobalValue *GV = RegularLTO.CombinedModule->getNamedValue(R.second.IRName);
-    // Ignore symbols defined in other partitions.
-    if (!GV || GV->hasLocalLinkage())
-      continue;
-    GV->setUnnamedAddr(R.second.UnnamedAddr ? GlobalValue::UnnamedAddr::Global
-                                            : GlobalValue::UnnamedAddr::None);
-    if (R.second.Partition == 0)
-      GV->setLinkage(GlobalValue::InternalLinkage);
+      GlobalValue *GV =
+          RegularLTO.CombinedModule->getNamedValue(R.second.IRName);
+      // Ignore symbols defined in other partitions.
+      if (!GV || GV->hasLocalLinkage())
+        continue;
+      GV->setUnnamedAddr(R.second.UnnamedAddr ? GlobalValue::UnnamedAddr::Global
+                                              : GlobalValue::UnnamedAddr::None);
+      if (R.second.Partition == 0)
+        GV->setLinkage(GlobalValue::InternalLinkage);
+    }
+
+    if (Conf.PostInternalizeModuleHook &&
+        !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
+      return Error();
   }
-
-  if (Conf.PostInternalizeModuleHook &&
-      !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
-    return Error();
-
   return backend(Conf, AddOutput, RegularLTO.ParallelCodeGenParallelismLevel,
                  std::move(RegularLTO.CombinedModule));
 }
