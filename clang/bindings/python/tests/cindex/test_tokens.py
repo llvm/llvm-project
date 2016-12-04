@@ -14,7 +14,7 @@ def test_token_to_cursor():
     r = tu.get_extent('t.c', (0, 9))
     tokens = list(tu.get_tokens(extent=r))
 
-    assert len(tokens) == 5
+    assert len(tokens) == 4
     assert tokens[1].spelling == 'i'
     assert tokens[1].kind == TokenKind.IDENTIFIER
 

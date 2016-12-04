@@ -47,7 +47,7 @@ class ClangASTNodesEmitter {
     if (&R == &Root && !BaseSuffix.empty())
       return BaseSuffix;
 
-    return R.getName() + BaseSuffix;
+    return R.getName().str() + BaseSuffix;
   }
 
   std::pair<Record *, Record *> EmitNode (const ChildMap &Tree, raw_ostream& OS,

@@ -24,10 +24,10 @@
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
+#include "Threads.h"
 #include "Writer.h"
 
 #include "lld/Config/Version.h"
-#include "lld/Core/Parallel.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
@@ -334,14 +334,9 @@ void BuildIdSection<ELFT>::computeHash(
   std::vector<ArrayRef<uint8_t>> Chunks = split(Data, 1024 * 1024);
   std::vector<uint8_t> Hashes(Chunks.size() * HashSize);
 
-  auto Fn = [&](size_t I) { HashFn(Hashes.data() + I * HashSize, Chunks[I]); };
-
   // Compute hash values.
-  if (Config->Threads)
-    parallel_for(size_t(0), Chunks.size(), Fn);
-  else
-    for (size_t I = 0, E = Chunks.size(); I != E; ++I)
-      Fn(I);
+  forLoop(0, Chunks.size(),
+          [&](size_t I) { HashFn(Hashes.data() + I * HashSize, Chunks[I]); });
 
   // Write to the final output buffer.
   HashFn(HashBuf, Hashes);
