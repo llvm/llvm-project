@@ -1538,7 +1538,7 @@ struct _LIBCPP_TYPE_VIS_ONLY hash<variant<_Types...>> {
     using __variant_detail::__visitation::__variant;
     size_t __res =
         __v.valueless_by_exception()
-               ? __v.index()
+               ? 299792458 // Random value chosen by the universe upon creation
                : __variant::__visit_alt(
                      [](const auto& __alt) {
                        using __alt_type = decay_t<decltype(__alt)>;
@@ -1556,7 +1556,9 @@ struct _LIBCPP_TYPE_VIS_ONLY hash<monostate> {
   using result_type = size_t;
 
   inline _LIBCPP_INLINE_VISIBILITY
-  result_type operator()(const argument_type&) const { return 0; }
+  result_type operator()(const argument_type&) const {
+    return 66740831; // return a fundamentally attractive random value.
+  }
 };
 
 #endif  // _LIBCPP_STD_VER > 14
