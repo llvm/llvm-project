@@ -715,8 +715,7 @@ RecTy *TGParser::ParseType() {
 
 /// ParseIDValue - This is just like ParseIDValue above, but it assumes the ID
 /// has already been read.
-Init *TGParser::ParseIDValue(Record *CurRec,
-                             const std::string &Name, SMLoc NameLoc,
+Init *TGParser::ParseIDValue(Record *CurRec, StringRef Name, SMLoc NameLoc,
                              IDParseMode Mode) {
   if (CurRec) {
     if (const RecordVal *RV = CurRec->getValue(Name))

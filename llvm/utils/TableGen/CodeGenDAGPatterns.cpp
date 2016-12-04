@@ -755,7 +755,7 @@ bool TreePredicateFn::isAlwaysTrue() const {
 /// Return the name to use in the generated code to reference this, this is
 /// "Predicate_foo" if from a pattern fragment "foo".
 std::string TreePredicateFn::getFnName() const {
-  return "Predicate_" + PatFragRec->getRecord()->getName();
+  return "Predicate_" + PatFragRec->getRecord()->getName().str();
 }
 
 /// getCodeToRunOnSDNode - Return the code for the function body that

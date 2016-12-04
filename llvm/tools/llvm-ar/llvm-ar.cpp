@@ -359,6 +359,11 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
     outs() << ' ' << ModTimeOrErr.get();
     outs() << ' ';
   }
+
+  if (C.getParent()->isThin()) {
+    outs() << sys::path::parent_path(ArchiveName);
+    outs() << '/';
+  }
   outs() << Name << "\n";
 }
 

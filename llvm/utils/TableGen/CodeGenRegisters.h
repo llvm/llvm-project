@@ -145,7 +145,7 @@ namespace llvm {
 
     CodeGenRegister(Record *R, unsigned Enum);
 
-    const std::string &getName() const;
+    const StringRef getName() const;
 
     // Extract more information from TheDef. This is used to build an object
     // graph after all CodeGenRegister objects have been created.

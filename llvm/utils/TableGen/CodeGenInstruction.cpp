@@ -647,8 +647,8 @@ CodeGenInstAlias::CodeGenInstAlias(Record *R, unsigned Variant,
 
           // Take care to instantiate each of the suboperands with the correct
           // nomenclature: $foo.bar
-          ResultOperands.emplace_back(Result->getArgName(AliasOpNo) + "." +
-                                          MIOI->getArgName(SubOp),
+          ResultOperands.emplace_back(Result->getArgName(AliasOpNo).str()
+                                      + "." + MIOI->getArgName(SubOp).str(),
                                       SubRec);
           ResultInstOperandIndex.push_back(std::make_pair(i, SubOp));
          }

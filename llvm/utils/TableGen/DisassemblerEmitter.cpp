@@ -104,7 +104,7 @@ extern void EmitFixedLenDecoder(RecordKeeper &RK, raw_ostream &OS,
 
 void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);
-  emitSourceFileHeader(" * " + Target.getName() + " Disassembler", OS);
+  emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
   // X86 uses a custom disassembler.
   if (Target.getName() == "X86") {

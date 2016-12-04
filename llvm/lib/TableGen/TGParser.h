@@ -36,8 +36,7 @@ namespace llvm {
     std::vector<unsigned> Bits;
     Init *Value;
     SMLoc Loc;
-    LetRecord(const std::string &N, const std::vector<unsigned> &B, Init *V,
-              SMLoc L)
+    LetRecord(StringRef N, const std::vector<unsigned> &B, Init *V, SMLoc L)
       : Name(N), Bits(B), Value(V), Loc(L) {
     }
   };
@@ -107,7 +106,7 @@ private:  // Semantic analysis methods.
   bool SetValue(Record *TheRec, SMLoc Loc, Init *ValName,
                 ArrayRef<unsigned> BitList, Init *V,
                 bool AllowSelfAssignment = false);
-  bool SetValue(Record *TheRec, SMLoc Loc, const std::string &ValName,
+  bool SetValue(Record *TheRec, SMLoc Loc, StringRef ValName,
                 ArrayRef<unsigned> BitList, Init *V,
                 bool AllowSelfAssignment = false) {
     return SetValue(TheRec, Loc, StringInit::get(ValName), BitList, V,
@@ -168,7 +167,7 @@ private:  // Parser methods.
   SubClassReference ParseSubClassReference(Record *CurRec, bool isDefm);
   SubMultiClassReference ParseSubMultiClassReference(MultiClass *CurMC);
 
-  Init *ParseIDValue(Record *CurRec, const std::string &Name, SMLoc NameLoc,
+  Init *ParseIDValue(Record *CurRec, StringRef Name, SMLoc NameLoc,
                      IDParseMode Mode = ParseValueMode);
   Init *ParseSimpleValue(Record *CurRec, RecTy *ItemType = nullptr,
                          IDParseMode Mode = ParseValueMode);
