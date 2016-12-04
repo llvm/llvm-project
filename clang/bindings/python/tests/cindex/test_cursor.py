@@ -375,7 +375,7 @@ def test_get_tokens():
     foo = get_cursor(tu, 'foo')
 
     tokens = list(foo.get_tokens())
-    assert len(tokens) == 7
+    assert len(tokens) == 6
     assert tokens[0].spelling == 'int'
     assert tokens[1].spelling == 'foo'
 

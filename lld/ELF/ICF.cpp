@@ -69,8 +69,8 @@
 #include "ICF.h"
 #include "Config.h"
 #include "SymbolTable.h"
+#include "Threads.h"
 
-#include "lld/Core/Parallel.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
@@ -295,9 +295,8 @@ void ICF<ELFT>::forEachColor(std::function<void(size_t, size_t)> Fn) {
   // Split sections into 256 shards and call Fn in parallel.
   size_t NumShards = 256;
   size_t Step = Sections.size() / NumShards;
-  parallel_for(size_t(0), NumShards, [&](size_t I) {
-    forEachColorRange(I * Step, (I + 1) * Step, Fn);
-  });
+  forLoop(0, NumShards,
+          [&](size_t I) { forEachColorRange(I * Step, (I + 1) * Step, Fn); });
   forEachColorRange(Step * NumShards, Sections.size(), Fn);
 }
 
