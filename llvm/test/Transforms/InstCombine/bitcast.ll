@@ -134,15 +134,12 @@ define <4 x i32> @bitcast_xor_bitcast(<4 x i32> %a, i128 %b) {
   ret <4 x i32> %bc2
 }
 
-; FIXME: Change the type of the vector select to eliminate 2 bitcasts.
 ; https://llvm.org/bugs/show_bug.cgi?id=6137#c6
 
 define <4 x float> @bitcast_vector_select(<4 x float> %x, <2 x i64> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @bitcast_vector_select(
-; CHECK-NEXT:    [[T4:%.*]] = bitcast <4 x float> %x to <4 x i32>
-; CHECK-NEXT:    [[T5:%.*]] = bitcast <2 x i64> %y to <4 x i32>
-; CHECK-NEXT:    [[T6:%.*]] = select <4 x i1> %cmp, <4 x i32> [[T4]], <4 x i32> [[T5]]
-; CHECK-NEXT:    [[T7:%.*]] = bitcast <4 x i32> [[T6]] to <4 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %y to <4 x float>
+; CHECK-NEXT:    [[T7:%.*]] = select <4 x i1> %cmp, <4 x float> %x, <4 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;
   %t4 = bitcast <4 x float> %x to <4 x i32>
@@ -152,10 +149,23 @@ define <4 x float> @bitcast_vector_select(<4 x float> %x, <2 x i64> %y, <4 x i1>
   ret <4 x float> %t7
 }
 
-; FIXME: Change the type of the scalar select to eliminate a bitcast.
+define float @bitcast_scalar_select_of_scalars(float %x, i32 %y, i1 %cmp) {
+; CHECK-LABEL: @bitcast_scalar_select_of_scalars(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 %y to float
+; CHECK-NEXT:    [[T7:%.*]] = select i1 %cmp, float %x, float [[TMP1]]
+; CHECK-NEXT:    ret float [[T7]]
+;
+  %t4 = bitcast float %x to i32
+  %t6 = select i1 %cmp, i32 %t4, i32 %y
+  %t7 = bitcast i32 %t6 to float
+  ret float %t7
+}
 
-define float @bitcast_scalar_select(float %x, <4 x i8> %y, i1 %cmp) {
-; CHECK-LABEL: @bitcast_scalar_select(
+; FIXME: We should change the select operand types to scalars, but we need to make
+; sure the backend can reverse that transform if needed.
+
+define float @bitcast_scalar_select_type_mismatch1(float %x, <4 x i8> %y, i1 %cmp) {
+; CHECK-LABEL: @bitcast_scalar_select_type_mismatch1(
 ; CHECK-NEXT:    [[T4:%.*]] = bitcast float %x to <4 x i8>
 ; CHECK-NEXT:    [[T6:%.*]] = select i1 %cmp, <4 x i8> [[T4]], <4 x i8> %y
 ; CHECK-NEXT:    [[T7:%.*]] = bitcast <4 x i8> [[T6]] to float
@@ -167,14 +177,26 @@ define float @bitcast_scalar_select(float %x, <4 x i8> %y, i1 %cmp) {
   ret float %t7
 }
 
-; FIXME: Change the type of the scalar select of vectors to eliminate 2 bitcasts.
+; FIXME: We should change the select operand types to vectors, but we need to make
+; sure the backend can reverse that transform if needed.
+
+define <4 x i8> @bitcast_scalar_select_type_mismatch2(<4 x i8> %x, float %y, i1 %cmp) {
+; CHECK-LABEL: @bitcast_scalar_select_type_mismatch2(
+; CHECK-NEXT:    [[T4:%.*]] = bitcast <4 x i8> %x to float
+; CHECK-NEXT:    [[T6:%.*]] = select i1 %cmp, float [[T4]], float %y
+; CHECK-NEXT:    [[T7:%.*]] = bitcast float [[T6]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[T7]]
+;
+  %t4 = bitcast <4 x i8> %x to float
+  %t6 = select i1 %cmp, float %t4, float %y
+  %t7 = bitcast float %t6 to <4 x i8>
+  ret <4 x i8> %t7
+}
 
 define <4 x float> @bitcast_scalar_select_of_vectors(<4 x float> %x, <2 x i64> %y, i1 %cmp) {
 ; CHECK-LABEL: @bitcast_scalar_select_of_vectors(
-; CHECK-NEXT:    [[T4:%.*]] = bitcast <4 x float> %x to <4 x i32>
-; CHECK-NEXT:    [[T5:%.*]] = bitcast <2 x i64> %y to <4 x i32>
-; CHECK-NEXT:    [[T6:%.*]] = select i1 %cmp, <4 x i32> [[T4]], <4 x i32> [[T5]]
-; CHECK-NEXT:    [[T7:%.*]] = bitcast <4 x i32> [[T6]] to <4 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %y to <4 x float>
+; CHECK-NEXT:    [[T7:%.*]] = select i1 %cmp, <4 x float> %x, <4 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;
   %t4 = bitcast <4 x float> %x to <4 x i32>

@@ -82,9 +82,9 @@ namespace llvm {
     /// Bindings of names to symbols.
     SymbolTable Symbols;
 
-    /// ELF sections can have a corresponding symbol. This maps one to the
+    /// Sections can have a corresponding symbol. This maps one to the
     /// other.
-    DenseMap<const MCSectionELF *, MCSymbolELF *> SectionSymbols;
+    DenseMap<const MCSection *, MCSymbol *> SectionSymbols;
 
     /// A mapping from a local label number and an instance count to a symbol.
     /// For example, in the assembly

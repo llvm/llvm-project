@@ -727,18 +727,18 @@ define <4 x i64> @insert_v4i64(<4 x i64> %x, i64 %y , i64* %ptr) {
 define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , i64* %ptr) {
 ; KNL-LABEL: insert_v2i64:
 ; KNL:       ## BB#0:
+; KNL-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrq $3, %rdi, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v2i64:
 ; SKX:       ## BB#0:
+; SKX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
 ; SKX-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm0
-; SKX-NEXT:    vpinsrq $3, %rdi, %xmm0, %xmm0
 ; SKX-NEXT:    retq
   %val = load i64, i64* %ptr
   %r1 = insertelement <2 x i64> %x, i64 %val, i32 1
-  %r2 = insertelement <2 x i64> %r1, i64 %y, i32 3
+  %r2 = insertelement <2 x i64> %r1, i64 %y, i32 0
   ret <2 x i64> %r2
 }
 

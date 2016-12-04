@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -26,6 +27,8 @@
 #include <new>
 
 using namespace llvm;
+
+static BumpPtrAllocator Allocator;
 
 //===----------------------------------------------------------------------===//
 //    std::string wrapper for DenseMap purposes
@@ -43,10 +46,10 @@ namespace llvm {
 
 class TableGenStringKey {
 public:
-  TableGenStringKey(const std::string &str) : data(str) {}
+  TableGenStringKey(StringRef str) : data(str) {}
   TableGenStringKey(const char *str) : data(str) {}
 
-  const std::string &str() const { return data; }
+  StringRef str() const { return data; }
 
   friend hash_code hash_value(const TableGenStringKey &Value) {
     using llvm::hash_value;
@@ -96,8 +99,8 @@ LLVM_DUMP_METHOD void RecTy::dump() const { print(errs()); }
 
 ListRecTy *RecTy::getListTy() {
   if (!ListTy)
-    ListTy.reset(new ListRecTy(this));
-  return ListTy.get();
+    ListTy = new(Allocator) ListRecTy(this);
+  return ListTy;
 }
 
 bool RecTy::typeIsConvertibleTo(const RecTy *RHS) const {
@@ -114,13 +117,13 @@ bool BitRecTy::typeIsConvertibleTo(const RecTy *RHS) const{
 }
 
 BitsRecTy *BitsRecTy::get(unsigned Sz) {
-  static std::vector<std::unique_ptr<BitsRecTy>> Shared;
+  static std::vector<BitsRecTy*> Shared;
   if (Sz >= Shared.size())
     Shared.resize(Sz + 1);
-  std::unique_ptr<BitsRecTy> &Ty = Shared[Sz];
+  BitsRecTy *&Ty = Shared[Sz];
   if (!Ty)
-    Ty.reset(new BitsRecTy(Sz));
-  return Ty.get();
+    Ty = new(Allocator) BitsRecTy(Sz);
+  return Ty;
 }
 
 std::string BitsRecTy::getAsString() const {
@@ -267,7 +270,7 @@ ProfileBitsInit(FoldingSetNodeID &ID, ArrayRef<Init *> Range) {
 
 BitsInit *BitsInit::get(ArrayRef<Init *> Range) {
   static FoldingSet<BitsInit> ThePool;
-  static std::vector<std::unique_ptr<BitsInit>> TheActualPool;
+  static std::vector<BitsInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileBitsInit(ID, Range);
@@ -276,12 +279,13 @@ BitsInit *BitsInit::get(ArrayRef<Init *> Range) {
   if (BitsInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  void *Mem = ::operator new (totalSizeToAlloc<Init *>(Range.size()));
-  BitsInit *I = new (Mem) BitsInit(Range.size());
+  void *Mem = Allocator.Allocate(totalSizeToAlloc<Init *>(Range.size()),
+                                 alignof(BitsInit));
+  BitsInit *I = new(Mem) BitsInit(Range.size());
   std::uninitialized_copy(Range.begin(), Range.end(),
                           I->getTrailingObjects<Init *>());
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(std::unique_ptr<BitsInit>(I));
+  TheActualPool.push_back(I);
   return I;
 }
 
@@ -397,11 +401,11 @@ Init *BitsInit::resolveReferences(Record &R, const RecordVal *RV) const {
 }
 
 IntInit *IntInit::get(int64_t V) {
-  static DenseMap<int64_t, std::unique_ptr<IntInit>> ThePool;
+  static DenseMap<int64_t, IntInit*> ThePool;
 
-  std::unique_ptr<IntInit> &I = ThePool[V];
-  if (!I) I.reset(new IntInit(V));
-  return I.get();
+  IntInit *&I = ThePool[V];
+  if (!I) I = new(Allocator) IntInit(V);
+  return I;
 }
 
 std::string IntInit::getAsString() const {
@@ -454,19 +458,27 @@ IntInit::convertInitializerBitRange(const std::vector<unsigned> &Bits) const {
 }
 
 CodeInit *CodeInit::get(StringRef V) {
-  static StringMap<std::unique_ptr<CodeInit>> ThePool;
+  static DenseMap<StringRef, CodeInit*> ThePool;
 
-  std::unique_ptr<CodeInit> &I = ThePool[V];
-  if (!I) I.reset(new CodeInit(V));
-  return I.get();
+  auto I = ThePool.insert(std::make_pair(V, nullptr));
+  if (I.second) {
+    StringRef VCopy = V.copy(Allocator);
+    I.first->first = VCopy;
+    I.first->second = new(Allocator) CodeInit(VCopy);
+  }
+  return I.first->second;
 }
 
 StringInit *StringInit::get(StringRef V) {
-  static StringMap<std::unique_ptr<StringInit>> ThePool;
+  static DenseMap<StringRef, StringInit*> ThePool;
 
-  std::unique_ptr<StringInit> &I = ThePool[V];
-  if (!I) I.reset(new StringInit(V));
-  return I.get();
+  auto I = ThePool.insert(std::make_pair(V, nullptr));
+  if (I.second) {
+    StringRef VCopy = V.copy(Allocator);
+    I.first->first = VCopy;
+    I.first->second = new(Allocator) StringInit(VCopy);
+  }
+  return I.first->second;
 }
 
 Init *StringInit::convertInitializerTo(RecTy *Ty) const {
@@ -495,7 +507,7 @@ static void ProfileListInit(FoldingSetNodeID &ID,
 
 ListInit *ListInit::get(ArrayRef<Init *> Range, RecTy *EltTy) {
   static FoldingSet<ListInit> ThePool;
-  static std::vector<std::unique_ptr<ListInit>> TheActualPool;
+  static std::vector<ListInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileListInit(ID, Range, EltTy);
@@ -504,12 +516,13 @@ ListInit *ListInit::get(ArrayRef<Init *> Range, RecTy *EltTy) {
   if (ListInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  void *Mem = ::operator new (totalSizeToAlloc<Init *>(Range.size()));
-  ListInit *I = new (Mem) ListInit(Range.size(), EltTy);
+  void *Mem = Allocator.Allocate(totalSizeToAlloc<Init *>(Range.size()),
+                                 alignof(ListInit));
+  ListInit *I = new(Mem) ListInit(Range.size(), EltTy);
   std::uninitialized_copy(Range.begin(), Range.end(),
                           I->getTrailingObjects<Init *>());
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(std::unique_ptr<ListInit>(I));
+  TheActualPool.push_back(I);
   return I;
 }
 
@@ -633,7 +646,7 @@ ProfileUnOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *Op, RecTy *Type) {
 
 UnOpInit *UnOpInit::get(UnaryOp Opc, Init *LHS, RecTy *Type) {
   static FoldingSet<UnOpInit> ThePool;
-  static std::vector<std::unique_ptr<UnOpInit>> TheActualPool;
+  static std::vector<UnOpInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileUnOpInit(ID, Opc, LHS, Type);
@@ -642,9 +655,9 @@ UnOpInit *UnOpInit::get(UnaryOp Opc, Init *LHS, RecTy *Type) {
   if (UnOpInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  UnOpInit *I = new UnOpInit(Opc, LHS, Type);
+  UnOpInit *I = new(Allocator) UnOpInit(Opc, LHS, Type);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(std::unique_ptr<UnOpInit>(I));
+  TheActualPool.push_back(I);
   return I;
 }
 
@@ -666,7 +679,7 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
         return StringInit::get(LHSi->getAsString());
     } else {
       if (StringInit *LHSs = dyn_cast<StringInit>(LHS)) {
-        const std::string &Name = LHSs->getValue();
+        StringRef Name = LHSs->getValue();
 
         // From TGParser::ParseIDValue
         if (CurRec) {
@@ -781,7 +794,7 @@ ProfileBinOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *LHS, Init *RHS,
 BinOpInit *BinOpInit::get(BinaryOp Opc, Init *LHS,
                           Init *RHS, RecTy *Type) {
   static FoldingSet<BinOpInit> ThePool;
-  static std::vector<std::unique_ptr<BinOpInit>> TheActualPool;
+  static std::vector<BinOpInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileBinOpInit(ID, Opc, LHS, RHS, Type);
@@ -790,9 +803,9 @@ BinOpInit *BinOpInit::get(BinaryOp Opc, Init *LHS,
   if (BinOpInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  BinOpInit *I = new BinOpInit(Opc, LHS, RHS, Type);
+  BinOpInit *I = new(Allocator) BinOpInit(Opc, LHS, RHS, Type);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(std::unique_ptr<BinOpInit>(I));
+  TheActualPool.push_back(I);
   return I;
 }
 
@@ -839,8 +852,12 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
   case STRCONCAT: {
     StringInit *LHSs = dyn_cast<StringInit>(LHS);
     StringInit *RHSs = dyn_cast<StringInit>(RHS);
-    if (LHSs && RHSs)
-      return StringInit::get(LHSs->getValue() + RHSs->getValue());
+    if (LHSs && RHSs) {
+      // STRCONCAT is common; Use a SmallString to avoid most heap allocations.
+      SmallString<80> Concat(LHSs->getValue());
+      Concat.append(RHSs->getValue());
+      return StringInit::get(Concat);
+    }
     break;
   }
   case EQ: {
@@ -932,7 +949,7 @@ ProfileTernOpInit(FoldingSetNodeID &ID, unsigned Opcode, Init *LHS, Init *MHS,
 TernOpInit *TernOpInit::get(TernaryOp Opc, Init *LHS, Init *MHS, Init *RHS,
                             RecTy *Type) {
   static FoldingSet<TernOpInit> ThePool;
-  static std::vector<std::unique_ptr<TernOpInit>> TheActualPool;
+  static std::vector<TernOpInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileTernOpInit(ID, Opc, LHS, MHS, RHS, Type);
@@ -941,9 +958,9 @@ TernOpInit *TernOpInit::get(TernaryOp Opc, Init *LHS, Init *MHS, Init *RHS,
   if (TernOpInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  TernOpInit *I = new TernOpInit(Opc, LHS, MHS, RHS, Type);
+  TernOpInit *I = new(Allocator) TernOpInit(Opc, LHS, MHS, RHS, Type);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(std::unique_ptr<TernOpInit>(I));
+  TheActualPool.push_back(I);
   return I;
 }
 
@@ -1155,7 +1172,7 @@ std::string TernOpInit::getAsString() const {
          RHS->getAsString() + ")";
 }
 
-RecTy *TypedInit::getFieldType(const std::string &FieldName) const {
+RecTy *TypedInit::getFieldType(StringRef FieldName) const {
   if (RecordRecTy *RecordType = dyn_cast<RecordRecTy>(getType()))
     if (RecordVal *Field = RecordType->getRecord()->getValue(FieldName))
       return Field->getType();
@@ -1277,23 +1294,24 @@ TypedInit::convertInitListSlice(const std::vector<unsigned> &Elements) const {
 }
 
 
-VarInit *VarInit::get(const std::string &VN, RecTy *T) {
+VarInit *VarInit::get(StringRef VN, RecTy *T) {
   Init *Value = StringInit::get(VN);
   return VarInit::get(Value, T);
 }
 
 VarInit *VarInit::get(Init *VN, RecTy *T) {
   typedef std::pair<RecTy *, Init *> Key;
-  static DenseMap<Key, std::unique_ptr<VarInit>> ThePool;
+  static DenseMap<Key, VarInit*> ThePool;
 
   Key TheKey(std::make_pair(T, VN));
 
-  std::unique_ptr<VarInit> &I = ThePool[TheKey];
-  if (!I) I.reset(new VarInit(VN, T));
-  return I.get();
+  VarInit *&I = ThePool[TheKey];
+  if (!I)
+    I = new(Allocator) VarInit(VN, T);
+  return I;
 }
 
-const std::string &VarInit::getName() const {
+StringRef VarInit::getName() const {
   StringInit *NameString = cast<StringInit>(getNameInit());
   return NameString->getValue();
 }
@@ -1327,7 +1345,7 @@ Init *VarInit::resolveListElementReference(Record &R,
   return nullptr;
 }
 
-RecTy *VarInit::getFieldType(const std::string &FieldName) const {
+RecTy *VarInit::getFieldType(StringRef FieldName) const {
   if (RecordRecTy *RTy = dyn_cast<RecordRecTy>(getType()))
     if (const RecordVal *RV = RTy->getRecord()->getValue(FieldName))
       return RV->getType();
@@ -1335,7 +1353,7 @@ RecTy *VarInit::getFieldType(const std::string &FieldName) const {
 }
 
 Init *VarInit::getFieldInit(Record &R, const RecordVal *RV,
-                            const std::string &FieldName) const {
+                            StringRef FieldName) const {
   if (isa<RecordRecTy>(getType()))
     if (const RecordVal *Val = R.getValue(VarName)) {
       if (RV != Val && (RV || isa<UnsetInit>(Val->getValue())))
@@ -1358,13 +1376,14 @@ Init *VarInit::resolveReferences(Record &R, const RecordVal *RV) const {
 
 VarBitInit *VarBitInit::get(TypedInit *T, unsigned B) {
   typedef std::pair<TypedInit *, unsigned> Key;
-  static DenseMap<Key, std::unique_ptr<VarBitInit>> ThePool;
+  static DenseMap<Key, VarBitInit*> ThePool;
 
   Key TheKey(std::make_pair(T, B));
 
-  std::unique_ptr<VarBitInit> &I = ThePool[TheKey];
-  if (!I) I.reset(new VarBitInit(T, B));
-  return I.get();
+  VarBitInit *&I = ThePool[TheKey];
+  if (!I)
+    I = new(Allocator) VarBitInit(T, B);
+  return I;
 }
 
 Init *VarBitInit::convertInitializerTo(RecTy *Ty) const {
@@ -1389,13 +1408,13 @@ Init *VarBitInit::resolveReferences(Record &R, const RecordVal *RV) const {
 VarListElementInit *VarListElementInit::get(TypedInit *T,
                                             unsigned E) {
   typedef std::pair<TypedInit *, unsigned> Key;
-  static DenseMap<Key, std::unique_ptr<VarListElementInit>> ThePool;
+  static DenseMap<Key, VarListElementInit*> ThePool;
 
   Key TheKey(std::make_pair(T, E));
 
-  std::unique_ptr<VarListElementInit> &I = ThePool[TheKey];
-  if (!I) I.reset(new VarListElementInit(T, E));
-  return I.get();
+  VarListElementInit *&I = ThePool[TheKey];
+  if (!I) I = new(Allocator) VarListElementInit(T, E);
+  return I;
 }
 
 std::string VarListElementInit::getAsString() const {
@@ -1442,14 +1461,14 @@ Init *DefInit::convertInitializerTo(RecTy *Ty) const {
   return nullptr;
 }
 
-RecTy *DefInit::getFieldType(const std::string &FieldName) const {
+RecTy *DefInit::getFieldType(StringRef FieldName) const {
   if (const RecordVal *RV = Def->getValue(FieldName))
     return RV->getType();
   return nullptr;
 }
 
 Init *DefInit::getFieldInit(Record &R, const RecordVal *RV,
-                            const std::string &FieldName) const {
+                            StringRef FieldName) const {
   return Def->getValue(FieldName)->getValue();
 }
 
@@ -1457,15 +1476,15 @@ std::string DefInit::getAsString() const {
   return Def->getName();
 }
 
-FieldInit *FieldInit::get(Init *R, const std::string &FN) {
+FieldInit *FieldInit::get(Init *R, StringRef FN) {
   typedef std::pair<Init *, TableGenStringKey> Key;
-  static DenseMap<Key, std::unique_ptr<FieldInit>> ThePool;
+  static DenseMap<Key, FieldInit*> ThePool;
 
   Key TheKey(std::make_pair(R, FN));
 
-  std::unique_ptr<FieldInit> &I = ThePool[TheKey];
-  if (!I) I.reset(new FieldInit(R, FN));
-  return I.get();
+  FieldInit *&I = ThePool[TheKey];
+  if (!I) I = new(Allocator) FieldInit(R, FN);
+  return I;
 }
 
 Init *FieldInit::getBit(unsigned Bit) const {
@@ -1503,7 +1522,7 @@ Init *FieldInit::resolveReferences(Record &R, const RecordVal *RV) const {
   return const_cast<FieldInit *>(this);
 }
 
-static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, const std::string &VN,
+static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, StringRef VN,
                            ArrayRef<Init *> ArgRange,
                            ArrayRef<std::string> NameRange) {
   ID.AddPointer(V);
@@ -1520,11 +1539,10 @@ static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, const std::string &VN,
 }
 
 DagInit *
-DagInit::get(Init *V, const std::string &VN,
-             ArrayRef<Init *> ArgRange,
+DagInit::get(Init *V, StringRef VN, ArrayRef<Init *> ArgRange,
              ArrayRef<std::string> NameRange) {
   static FoldingSet<DagInit> ThePool;
-  static std::vector<std::unique_ptr<DagInit>> TheActualPool;
+  static std::vector<DagInit*> TheActualPool;
 
   FoldingSetNodeID ID;
   ProfileDagInit(ID, V, VN, ArgRange, NameRange);
@@ -1533,14 +1551,14 @@ DagInit::get(Init *V, const std::string &VN,
   if (DagInit *I = ThePool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  DagInit *I = new DagInit(V, VN, ArgRange, NameRange);
+  DagInit *I = new(Allocator) DagInit(V, VN, ArgRange, NameRange);
   ThePool.InsertNode(I, IP);
-  TheActualPool.push_back(std::unique_ptr<DagInit>(I));
+  TheActualPool.push_back(I);
   return I;
 }
 
 DagInit *
-DagInit::get(Init *V, const std::string &VN,
+DagInit::get(Init *V, StringRef VN,
              const std::vector<std::pair<Init*, std::string> > &args) {
   std::vector<Init *> Args;
   std::vector<std::string> Names;
@@ -1602,13 +1620,13 @@ RecordVal::RecordVal(Init *N, RecTy *T, bool P)
   assert(Value && "Cannot create unset value for current type!");
 }
 
-RecordVal::RecordVal(const std::string &N, RecTy *T, bool P)
+RecordVal::RecordVal(StringRef N, RecTy *T, bool P)
   : NameAndPrefix(StringInit::get(N), P), Ty(T) {
   Value = UnsetInit::get()->convertInitializerTo(Ty);
   assert(Value && "Cannot create unset value for current type!");
 }
 
-const std::string &RecordVal::getName() const {
+StringRef RecordVal::getName() const {
   return cast<StringInit>(getNameInit())->getValue();
 }
 
@@ -1644,11 +1662,11 @@ void Record::checkName() {
 
 DefInit *Record::getDefInit() {
   if (!TheInit)
-    TheInit.reset(new DefInit(this, new RecordRecTy(this)));
-  return TheInit.get();
+    TheInit = new(Allocator) DefInit(this, new(Allocator) RecordRecTy(this));
+  return TheInit;
 }
 
-const std::string &Record::getName() const {
+StringRef Record::getName() const {
   return cast<StringInit>(Name)->getValue();
 }
 
@@ -1668,7 +1686,7 @@ void Record::setName(Init *NewName) {
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
 }
 
-void Record::setName(const std::string &Name) {
+void Record::setName(StringRef Name) {
   setName(StringInit::get(Name));
 }
 
@@ -1909,7 +1927,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
 }
 
 std::vector<Record *>
-RecordKeeper::getAllDerivedDefinitions(const std::string &ClassName) const {
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   Record *Class = getClass(ClassName);
   if (!Class)
     PrintFatalError("ERROR: Couldn't find the `" + ClassName + "' class!\n");
@@ -1923,7 +1941,7 @@ RecordKeeper::getAllDerivedDefinitions(const std::string &ClassName) const {
 }
 
 Init *llvm::QualifyName(Record &CurRec, MultiClass *CurMultiClass,
-                        Init *Name, const std::string &Scoper) {
+                        Init *Name, StringRef Scoper) {
   RecTy *Type = cast<TypedInit>(Name)->getType();
 
   BinOpInit *NewName =
@@ -1950,7 +1968,6 @@ Init *llvm::QualifyName(Record &CurRec, MultiClass *CurMultiClass,
 }
 
 Init *llvm::QualifyName(Record &CurRec, MultiClass *CurMultiClass,
-                        const std::string &Name,
-                        const std::string &Scoper) {
+                        StringRef Name, StringRef Scoper) {
   return QualifyName(CurRec, CurMultiClass, StringInit::get(Name), Scoper);
 }

@@ -400,7 +400,7 @@ protected:
   }
 
   // Returns the record name.
-  const std::string &nameWithID(unsigned Opcode) const {
+  const StringRef nameWithID(unsigned Opcode) const {
     return AllInstructions[Opcode]->TheDef->getName();
   }
 
@@ -1720,7 +1720,7 @@ static std::string findOperandDecoderMethod(TypedInit *TI) {
     TypeRecord = TypeRecord->getValueAsDef("RegClass");
 
   if (TypeRecord->isSubClassOf("RegisterClass")) {
-    Decoder = "Decode" + TypeRecord->getName() + "RegisterClass";
+    Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
   } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
     Decoder = "DecodePointerLikeRegClass" +
       utostr(TypeRecord->getValueAsInt("RegClassKind"));
@@ -1889,7 +1889,7 @@ static bool populateInstruction(CodeGenTarget &Target,
       if (TypeRecord->isSubClassOf("RegisterOperand"))
         TypeRecord = TypeRecord->getValueAsDef("RegClass");
       if (TypeRecord->isSubClassOf("RegisterClass")) {
-        Decoder = "Decode" + TypeRecord->getName() + "RegisterClass";
+        Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
         isReg = true;
       } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
         Decoder = "DecodePointerLikeRegClass" +
