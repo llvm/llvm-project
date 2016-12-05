@@ -15,8 +15,8 @@
 ; CHECK-LABEL: bitpiece_spill:                         # @bitpiece_spill
 ; CHECK:               callq   g
 ; CHECK:               movl    %eax, [[offs:[0-9]+]](%rsp)          # 4-byte Spill
-; CHECK:               #DEBUG_VALUE: bitpiece_spill:o [bit_piece offset=32 size=32] <- 0
-; CHECK:               #DEBUG_VALUE: bitpiece_spill:o [bit_piece offset=0 size=32] <- [%RSP+[[offs]]]
+; CHECK:               #DEBUG_VALUE: bitpiece_spill:o [fragment offset=32 size=32] <- 0
+; CHECK:               #DEBUG_VALUE: bitpiece_spill:o [fragment offset=0 size=32] <- [%RSP+[[offs]]]
 ; CHECK:               #APP
 ; CHECK:               #NO_APP
 ; CHECK:               movl    [[offs]](%rsp), %eax          # 4-byte Reload
@@ -77,8 +77,8 @@ attributes #3 = { nounwind }
 !17 = !DIExpression()
 !18 = !DILocation(line: 4, column: 18, scope: !7)
 !19 = !DILocation(line: 4, column: 23, scope: !7)
-!20 = !DIExpression(DW_OP_bit_piece, 0, 32)
-!21 = !DIExpression(DW_OP_bit_piece, 32, 32)
+!20 = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+!21 = !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 !22 = !DILocation(line: 6, column: 3, scope: !7)
 !23 = !{i32 138}
 !24 = !DILocation(line: 8, column: 3, scope: !7)
