@@ -2719,16 +2719,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                       const std::unique_ptr<MatchableInfo> &b){
                      return *a < *b;});
 
-#ifndef NDEBUG
-  // Verify that the table is now sorted
-  for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
-       ++I) {
-    for (auto J = I; J != E; ++J) {
-      assert(!(**J < **I));
-    }
-  }
-#endif // NDEBUG
-
   DEBUG_WITH_TYPE("instruction_info", {
       for (const auto &MI : Info.Matchables)
         MI->dump();
