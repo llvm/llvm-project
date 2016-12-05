@@ -904,6 +904,38 @@ define <16 x i32> @combine_vpermi2var_16i32_identity(<16 x i32> %x0, <16 x i32> 
   ret <16 x i32> %res1
 }
 
+define <16 x float> @combine_vpermt2var_vpermi2var_16f32_as_unpckhps(<16 x float> %a0, <16 x float> %a1) {
+; X32-LABEL: combine_vpermt2var_vpermi2var_16f32_as_unpckhps:
+; X32:       # BB#0:
+; X32-NEXT:    vmovaps {{.*#+}} zmm2 = [18,2,19,3,22,6,23,7,26,10,27,11,30,14,31,15]
+; X32-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermt2var_vpermi2var_16f32_as_unpckhps:
+; X64:       # BB#0:
+; X64-NEXT:    vmovaps {{.*#+}} zmm2 = [18,2,19,3,22,6,23,7,26,10,27,11,30,14,31,15]
+; X64-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; X64-NEXT:    retq
+  %res0 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %a0, <16 x i32> <i32 18, i32 2, i32 19, i32 3, i32 22, i32 6, i32 23, i32 7, i32 26, i32 10, i32 27, i32 11, i32 30, i32 14, i32 31, i32 15>, <16 x float> %a1, i16 -1)
+  ret <16 x float> %res0
+}
+
+define <16 x i32> @vpermt2var_vpermi2var_16i32_as_unpckldq(<16 x i32> %a0, <16 x i32> %a1) {
+; X32-LABEL: vpermt2var_vpermi2var_16i32_as_unpckldq:
+; X32:       # BB#0:
+; X32-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,16,1,17,4,20,5,21,8,24,9,25,12,28,13,29]
+; X32-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: vpermt2var_vpermi2var_16i32_as_unpckldq:
+; X64:       # BB#0:
+; X64-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,16,1,17,4,20,5,21,8,24,9,25,12,28,13,29]
+; X64-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; X64-NEXT:    retq
+  %res0 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %a0, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>, <16 x i32> %a1, i16 -1)
+  ret <16 x i32> %res0
+}
+
 define <32 x i16> @combine_vpermi2var_32i16_identity(<32 x i16> %x0, <32 x i16> %x1) {
 ; X32-LABEL: combine_vpermi2var_32i16_identity:
 ; X32:       # BB#0:

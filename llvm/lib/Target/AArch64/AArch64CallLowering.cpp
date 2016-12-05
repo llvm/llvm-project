@@ -32,44 +32,8 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
-bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
-                                            CCAssignFn *AssignFn,
-                                            ArrayRef<ArgInfo> Args,
-                                            ValueHandler &Handler) const {
-  MachineFunction &MF = MIRBuilder.getMF();
-  const Function &F = *MF.getFunction();
-
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
-
-  unsigned NumArgs = Args.size();
-  for (unsigned i = 0; i != NumArgs; ++i) {
-    MVT CurVT = MVT::getVT(Args[i].Ty);
-    if (AssignFn(i, CurVT, CurVT, CCValAssign::Full, Args[i].Flags, CCInfo))
-      return false;
-  }
-
-  for (unsigned i = 0, e = Args.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
-
-    if (VA.isRegLoc())
-      Handler.assignValueToReg(Args[i].Reg, VA.getLocReg(), VA);
-    else if (VA.isMemLoc()) {
-      unsigned Size = VA.getValVT().getSizeInBits() / 8;
-      unsigned Offset = VA.getLocMemOffset();
-      MachinePointerInfo MPO;
-      unsigned StackAddr = Handler.getStackAddress(Size, Offset, MPO);
-      Handler.assignValueToAddress(Args[i].Reg, StackAddr, Size, MPO, VA);
-    } else {
-      // FIXME: Support byvals and other weirdness
-      return false;
-    }
-  }
-  return true;
-}
-
-unsigned AArch64CallLowering::ValueHandler::extendRegister(unsigned ValReg,
-                                                           CCValAssign &VA) {
+unsigned CallLowering::ValueHandler::extendRegister(unsigned ValReg,
+                                                    CCValAssign &VA) {
   LLT LocTy{VA.getLocVT()};
   switch (VA.getLocInfo()) {
   default: break;
@@ -96,7 +60,7 @@ unsigned AArch64CallLowering::ValueHandler::extendRegister(unsigned ValReg,
   llvm_unreachable("unable to extend register");
 }
 
-struct IncomingArgHandler : public AArch64CallLowering::ValueHandler {
+struct IncomingArgHandler : public CallLowering::ValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
     : ValueHandler(MIRBuilder, MRI) {}
 
@@ -152,7 +116,7 @@ struct CallReturnHandler : public IncomingArgHandler {
   MachineInstrBuilder MIB;
 };
 
-struct OutgoingArgHandler : public AArch64CallLowering::ValueHandler {
+struct OutgoingArgHandler : public CallLowering::ValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      MachineInstrBuilder MIB)
       : ValueHandler(MIRBuilder, MRI), MIB(MIB) {}

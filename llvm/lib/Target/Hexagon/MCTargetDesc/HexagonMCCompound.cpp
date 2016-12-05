@@ -290,8 +290,7 @@ MCInst *getCompoundInsn(MCContext &Context, MCInst const &L, MCInst const &R) {
     CompoundInsn = new (Context) MCInst;
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
-    if (Value != -1)
-      CompoundInsn->addOperand(L.getOperand(2));
+    CompoundInsn->addOperand(L.getOperand(2));
     CompoundInsn->addOperand(R.getOperand(1));
     break;
 
@@ -309,8 +308,7 @@ MCInst *getCompoundInsn(MCContext &Context, MCInst const &L, MCInst const &R) {
     CompoundInsn = new (Context) MCInst;
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
-    if (Value != -1)
-      CompoundInsn->addOperand(L.getOperand(2));
+    CompoundInsn->addOperand(L.getOperand(2));
     CompoundInsn->addOperand(R.getOperand(1));
     break;
 

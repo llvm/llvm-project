@@ -2072,8 +2072,8 @@ TreePatternNode *TreePattern::ParseTreePattern(Init *TheInit, StringRef OpName){
     ///   (foo GPR, imm) -> (foo GPR, (imm))
     if (R->isSubClassOf("SDNode") || R->isSubClassOf("PatFrag"))
       return ParseTreePattern(
-        DagInit::get(DI, "",
-                     std::vector<std::pair<Init*, std::string> >()),
+        DagInit::get(DI, nullptr,
+                     std::vector<std::pair<Init*, StringInit*> >()),
         OpName);
 
     // Input argument?
@@ -2127,7 +2127,8 @@ TreePatternNode *TreePattern::ParseTreePattern(Init *TheInit, StringRef OpName){
     if (Dag->getNumArgs() != 1)
       error("Type cast only takes one operand!");
 
-    TreePatternNode *New = ParseTreePattern(Dag->getArg(0), Dag->getArgName(0));
+    TreePatternNode *New = ParseTreePattern(Dag->getArg(0),
+                                            Dag->getArgNameStr(0));
 
     // Apply the type cast.
     assert(New->getNumTypes() == 1 && "FIXME: Unhandled");
@@ -2178,7 +2179,7 @@ TreePatternNode *TreePattern::ParseTreePattern(Init *TheInit, StringRef OpName){
 
   // Parse all the operands.
   for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i)
-    Children.push_back(ParseTreePattern(Dag->getArg(i), Dag->getArgName(i)));
+    Children.push_back(ParseTreePattern(Dag->getArg(i), Dag->getArgNameStr(i)));
 
   // If the operator is an intrinsic, then this is just syntactic sugar for for
   // (intrinsic_* <number>, ..children..).  Pick the right intrinsic node, and
@@ -2226,9 +2227,9 @@ TreePatternNode *TreePattern::ParseTreePattern(Init *TheInit, StringRef OpName){
   TreePatternNode *Result = new TreePatternNode(Operator, Children, NumResults);
   Result->setName(OpName);
 
-  if (!Dag->getName().empty()) {
+  if (Dag->getName()) {
     assert(Result->getName().empty());
-    Result->setName(Dag->getName());
+    Result->setName(Dag->getNameStr());
   }
   return Result;
 }
@@ -2484,13 +2485,14 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
       if (!isa<DefInit>(OpsList->getArg(j)) ||
           cast<DefInit>(OpsList->getArg(j))->getDef()->getName() != "node")
         P->error("Operands list should all be 'node' values.");
-      if (OpsList->getArgName(j).empty())
+      if (!OpsList->getArgName(j))
         P->error("Operands list should have names for each operand!");
-      if (!OperandsSet.count(OpsList->getArgName(j)))
-        P->error("'" + OpsList->getArgName(j) +
+      StringRef ArgNameStr = OpsList->getArgNameStr(j);
+      if (!OperandsSet.count(ArgNameStr))
+        P->error("'" + ArgNameStr +
                  "' does not occur in pattern or was multiply specified!");
-      OperandsSet.erase(OpsList->getArgName(j));
-      Args.push_back(OpsList->getArgName(j));
+      OperandsSet.erase(ArgNameStr);
+      Args.push_back(ArgNameStr);
     }
 
     if (!OperandsSet.empty())
@@ -2542,11 +2544,11 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
 
     // Clone the DefaultInfo dag node, changing the operator from 'ops' to
     // SomeSDnode so that we can parse this.
-    std::vector<std::pair<Init*, std::string> > Ops;
+    std::vector<std::pair<Init*, StringInit*> > Ops;
     for (unsigned op = 0, e = DefaultInfo->getNumArgs(); op != e; ++op)
       Ops.push_back(std::make_pair(DefaultInfo->getArg(op),
                                    DefaultInfo->getArgName(op)));
-    DagInit *DI = DagInit::get(SomeSDNode, "", Ops);
+    DagInit *DI = DagInit::get(SomeSDNode, nullptr, Ops);
 
     // Create a TreePattern to parse this.
     TreePattern P(DefaultOps[i], DI, false, *this);

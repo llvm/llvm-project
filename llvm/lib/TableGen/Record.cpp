@@ -31,61 +31,6 @@ using namespace llvm;
 static BumpPtrAllocator Allocator;
 
 //===----------------------------------------------------------------------===//
-//    std::string wrapper for DenseMap purposes
-//===----------------------------------------------------------------------===//
-
-namespace llvm {
-
-/// This is a wrapper for std::string suitable for using as a key to a DenseMap.
-/// Because there isn't a particularly
-/// good way to indicate tombstone or empty keys for strings, we want
-/// to wrap std::string to indicate that this is a "special" string
-/// not expected to take on certain values (those of the tombstone and
-/// empty keys).  This makes things a little safer as it clarifies
-/// that DenseMap is really not appropriate for general strings.
-
-class TableGenStringKey {
-public:
-  TableGenStringKey(StringRef str) : data(str) {}
-  TableGenStringKey(const char *str) : data(str) {}
-
-  StringRef str() const { return data; }
-
-  friend hash_code hash_value(const TableGenStringKey &Value) {
-    using llvm::hash_value;
-    return hash_value(Value.str());
-  }
-
-private:
-  std::string data;
-};
-
-/// Specialize DenseMapInfo for TableGenStringKey.
-template<> struct DenseMapInfo<TableGenStringKey> {
-  static inline TableGenStringKey getEmptyKey() {
-    TableGenStringKey Empty("<<<EMPTY KEY>>>");
-    return Empty;
-  }
-
-  static inline TableGenStringKey getTombstoneKey() {
-    TableGenStringKey Tombstone("<<<TOMBSTONE KEY>>>");
-    return Tombstone;
-  }
-
-  static unsigned getHashValue(const TableGenStringKey& Val) {
-    using llvm::hash_value;
-    return hash_value(Val);
-  }
-
-  static bool isEqual(const TableGenStringKey& LHS,
-                      const TableGenStringKey& RHS) {
-    return LHS.str() == RHS.str();
-  }
-};
-
-} // end namespace llvm
-
-//===----------------------------------------------------------------------===//
 //    Type implementations
 //===----------------------------------------------------------------------===//
 
@@ -320,7 +265,7 @@ Init *BitsInit::convertInitializerTo(RecTy *Ty) const {
 }
 
 Init *
-BitsInit::convertInitializerBitRange(const std::vector<unsigned> &Bits) const {
+BitsInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   SmallVector<Init *, 16> NewBits(Bits.size());
 
   for (unsigned i = 0, e = Bits.size(); i != e; ++i) {
@@ -445,7 +390,7 @@ Init *IntInit::convertInitializerTo(RecTy *Ty) const {
 }
 
 Init *
-IntInit::convertInitializerBitRange(const std::vector<unsigned> &Bits) const {
+IntInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   SmallVector<Init *, 16> NewBits(Bits.size());
 
   for (unsigned i = 0, e = Bits.size(); i != e; ++i) {
@@ -533,31 +478,40 @@ void ListInit::Profile(FoldingSetNodeID &ID) const {
 }
 
 Init *ListInit::convertInitializerTo(RecTy *Ty) const {
+  if (getType() == Ty)
+    return const_cast<ListInit*>(this);
+
   if (auto *LRT = dyn_cast<ListRecTy>(Ty)) {
-    std::vector<Init*> Elements;
+    SmallVector<Init*, 8> Elements;
+    Elements.reserve(getValues().size());
 
     // Verify that all of the elements of the list are subclasses of the
     // appropriate class!
+    bool Changed = false;
+    RecTy *ElementType = LRT->getElementType();
     for (Init *I : getValues())
-      if (Init *CI = I->convertInitializerTo(LRT->getElementType()))
+      if (Init *CI = I->convertInitializerTo(ElementType)) {
         Elements.push_back(CI);
-      else
+        if (CI != I)
+          Changed = true;
+	  } else
         return nullptr;
 
-    if (isa<ListRecTy>(getType()))
-      return ListInit::get(Elements, Ty);
+    if (!Changed)
+      return const_cast<ListInit*>(this);
+    return ListInit::get(Elements, Ty);
   }
 
   return nullptr;
 }
 
-Init *
-ListInit::convertInitListSlice(const std::vector<unsigned> &Elements) const {
-  std::vector<Init*> Vals;
-  for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
-    if (Elements[i] >= size())
+Init *ListInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
+  SmallVector<Init*, 8> Vals;
+  Vals.reserve(Elements.size());
+  for (unsigned Element : Elements) {
+    if (Element >= size())
       return nullptr;
-    Vals.push_back(getElement(Elements[i]));
+    Vals.push_back(getElement(Element));
   }
   return ListInit::get(Vals, getType());
 }
@@ -571,7 +525,7 @@ Record *ListInit::getElementAsRecord(unsigned i) const {
 }
 
 Init *ListInit::resolveReferences(Record &R, const RecordVal *RV) const {
-  std::vector<Init*> Resolved;
+  SmallVector<Init*, 8> Resolved;
   Resolved.reserve(size());
   bool Changed = false;
 
@@ -606,9 +560,11 @@ Init *ListInit::resolveListElementReference(Record &R, const RecordVal *IRV,
 
 std::string ListInit::getAsString() const {
   std::string Result = "[";
-  for (unsigned i = 0, e = NumValues; i != e; ++i) {
-    if (i) Result += ", ";
-    Result += getElement(i)->getAsString();
+  const char *sep = "";
+  for (Init *Element : *this) {
+    Result += sep;
+    sep = ", ";
+    Result += Element->getAsString();
   }
   return Result + "]";
 }
@@ -678,9 +634,7 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
       if (IntInit *LHSi = dyn_cast<IntInit>(LHS))
         return StringInit::get(LHSi->getAsString());
     } else {
-      if (StringInit *LHSs = dyn_cast<StringInit>(LHS)) {
-        StringRef Name = LHSs->getValue();
-
+      if (StringInit *Name = dyn_cast<StringInit>(LHS)) {
         // From TGParser::ParseIDValue
         if (CurRec) {
           if (const RecordVal *RV = CurRec->getValue(Name)) {
@@ -718,11 +672,11 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
           }
         }
         assert(CurRec && "NULL pointer");
-        if (Record *D = (CurRec->getRecords()).getDef(Name))
+        if (Record *D = (CurRec->getRecords()).getDef(Name->getValue()))
           return DefInit::get(D);
 
         PrintFatalError(CurRec->getLoc(),
-                        "Undefined reference:'" + Name + "'\n");
+                        "Undefined reference:'" + Name->getValue() + "'\n");
       }
 
       if (isa<IntRecTy>(getType())) {
@@ -813,6 +767,13 @@ void BinOpInit::Profile(FoldingSetNodeID &ID) const {
   ProfileBinOpInit(ID, getOpcode(), getLHS(), getRHS(), getType());
 }
 
+static StringInit *ConcatStringInits(const StringInit *I0,
+                                     const StringInit *I1) {
+  SmallString<80> Concat(I0->getValue());
+  Concat.append(I1->getValue());
+  return StringInit::get(Concat);
+}
+
 Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
   switch (getOpcode()) {
   case CONCAT: {
@@ -823,8 +784,8 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
       DefInit *ROp = dyn_cast<DefInit>(RHSs->getOperator());
       if (!LOp || !ROp || LOp->getDef() != ROp->getDef())
         PrintFatalError("Concated Dag operators do not match!");
-      std::vector<Init*> Args;
-      std::vector<std::string> ArgNames;
+      SmallVector<Init*, 8> Args;
+      SmallVector<StringInit*, 8> ArgNames;
       for (unsigned i = 0, e = LHSs->getNumArgs(); i != e; ++i) {
         Args.push_back(LHSs->getArg(i));
         ArgNames.push_back(LHSs->getArgName(i));
@@ -833,7 +794,7 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
         Args.push_back(RHSs->getArg(i));
         ArgNames.push_back(RHSs->getArgName(i));
       }
-      return DagInit::get(LHSs->getOperator(), "", Args, ArgNames);
+      return DagInit::get(LHSs->getOperator(), nullptr, Args, ArgNames);
     }
     break;
   }
@@ -841,7 +802,7 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
     ListInit *LHSs = dyn_cast<ListInit>(LHS);
     ListInit *RHSs = dyn_cast<ListInit>(RHS);
     if (LHSs && RHSs) {
-      std::vector<Init *> Args;
+      SmallVector<Init *, 8> Args;
       Args.insert(Args.end(), LHSs->begin(), LHSs->end());
       Args.insert(Args.end(), RHSs->begin(), RHSs->end());
       return ListInit::get(
@@ -852,12 +813,8 @@ Init *BinOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
   case STRCONCAT: {
     StringInit *LHSs = dyn_cast<StringInit>(LHS);
     StringInit *RHSs = dyn_cast<StringInit>(RHS);
-    if (LHSs && RHSs) {
-      // STRCONCAT is common; Use a SmallString to avoid most heap allocations.
-      SmallString<80> Concat(LHSs->getValue());
-      Concat.append(RHSs->getValue());
-      return StringInit::get(Concat);
-    }
+    if (LHSs && RHSs)
+      return ConcatStringInits(LHSs, RHSs);
     break;
   }
   case EQ: {
@@ -979,8 +936,9 @@ static Init *EvaluateOperation(OpInit *RHSo, Init *LHS, Init *Arg,
     if (isa<DagRecTy>(TArg->getType()))
       return ForeachHelper(LHS, Arg, RHSo, Type, CurRec, CurMultiClass);
 
-  std::vector<Init *> NewOperands;
-  for (unsigned i = 0; i < RHSo->getNumOperands(); ++i) {
+  SmallVector<Init *, 8> NewOperands;
+  NewOperands.reserve(RHSo->getNumOperands());
+  for (unsigned i = 0, e = RHSo->getNumOperands(); i < e; ++i) {
     if (auto *RHSoo = dyn_cast<OpInit>(RHSo->getOperand(i))) {
       if (Init *Result = EvaluateOperation(RHSoo, LHS, Arg,
                                            Type, CurRec, CurMultiClass))
@@ -1020,10 +978,10 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
                                          Type, CurRec, CurMultiClass))
       Val = Result;
 
-    std::vector<std::pair<Init *, std::string> > args;
+    SmallVector<std::pair<Init *, StringInit*>, 8> args;
     for (unsigned int i = 0; i < MHSd->getNumArgs(); ++i) {
       Init *Arg = MHSd->getArg(i);
-      std::string ArgName = MHSd->getArgName(i);
+      StringInit *ArgName = MHSd->getArgName(i);
 
       // Process args
       if (Init *Result = EvaluateOperation(RHSo, LHS, Arg, Type,
@@ -1034,13 +992,13 @@ static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
       args.push_back(std::make_pair(Arg, ArgName));
     }
 
-    return DagInit::get(Val, "", args);
+    return DagInit::get(Val, nullptr, args);
   }
 
   ListInit *MHSl = dyn_cast<ListInit>(MHS);
   if (MHSl && isa<ListRecTy>(Type)) {
-    std::vector<Init *> NewOperands;
-    std::vector<Init *> NewList(MHSl->begin(), MHSl->end());
+    SmallVector<Init *, 8> NewOperands;
+    SmallVector<Init *, 8> NewList(MHSl->begin(), MHSl->end());
 
     for (Init *&Item : NewList) {
       NewOperands.clear();
@@ -1172,7 +1130,7 @@ std::string TernOpInit::getAsString() const {
          RHS->getAsString() + ")";
 }
 
-RecTy *TypedInit::getFieldType(StringRef FieldName) const {
+RecTy *TypedInit::getFieldType(StringInit *FieldName) const {
   if (RecordRecTy *RecordType = dyn_cast<RecordRecTy>(getType()))
     if (RecordVal *Field = RecordType->getRecord()->getValue(FieldName))
       return Field->getType();
@@ -1261,35 +1219,34 @@ TypedInit::convertInitializerTo(RecTy *Ty) const {
   return nullptr;
 }
 
-Init *
-TypedInit::convertInitializerBitRange(const std::vector<unsigned> &Bits) const {
+Init *TypedInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   BitsRecTy *T = dyn_cast<BitsRecTy>(getType());
   if (!T) return nullptr;  // Cannot subscript a non-bits variable.
   unsigned NumBits = T->getNumBits();
 
-  SmallVector<Init *, 16> NewBits(Bits.size());
-  for (unsigned i = 0, e = Bits.size(); i != e; ++i) {
-    if (Bits[i] >= NumBits)
+  SmallVector<Init *, 16> NewBits;
+  NewBits.reserve(Bits.size());
+  for (unsigned Bit : Bits) {
+    if (Bit >= NumBits)
       return nullptr;
 
-    NewBits[i] = VarBitInit::get(const_cast<TypedInit *>(this), Bits[i]);
+    NewBits.push_back(VarBitInit::get(const_cast<TypedInit *>(this), Bit));
   }
   return BitsInit::get(NewBits);
 }
 
-Init *
-TypedInit::convertInitListSlice(const std::vector<unsigned> &Elements) const {
+Init *TypedInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
   ListRecTy *T = dyn_cast<ListRecTy>(getType());
   if (!T) return nullptr;  // Cannot subscript a non-list variable.
 
   if (Elements.size() == 1)
     return VarListElementInit::get(const_cast<TypedInit *>(this), Elements[0]);
 
-  std::vector<Init*> ListInits;
+  SmallVector<Init*, 8> ListInits;
   ListInits.reserve(Elements.size());
-  for (unsigned i = 0, e = Elements.size(); i != e; ++i)
+  for (unsigned Element : Elements)
     ListInits.push_back(VarListElementInit::get(const_cast<TypedInit *>(this),
-                                                Elements[i]));
+                                                Element));
   return ListInit::get(ListInits, T);
 }
 
@@ -1345,7 +1302,7 @@ Init *VarInit::resolveListElementReference(Record &R,
   return nullptr;
 }
 
-RecTy *VarInit::getFieldType(StringRef FieldName) const {
+RecTy *VarInit::getFieldType(StringInit *FieldName) const {
   if (RecordRecTy *RTy = dyn_cast<RecordRecTy>(getType()))
     if (const RecordVal *RV = RTy->getRecord()->getValue(FieldName))
       return RV->getType();
@@ -1353,7 +1310,7 @@ RecTy *VarInit::getFieldType(StringRef FieldName) const {
 }
 
 Init *VarInit::getFieldInit(Record &R, const RecordVal *RV,
-                            StringRef FieldName) const {
+                            StringInit *FieldName) const {
   if (isa<RecordRecTy>(getType()))
     if (const RecordVal *Val = R.getValue(VarName)) {
       if (RV != Val && (RV || isa<UnsetInit>(Val->getValue())))
@@ -1461,14 +1418,14 @@ Init *DefInit::convertInitializerTo(RecTy *Ty) const {
   return nullptr;
 }
 
-RecTy *DefInit::getFieldType(StringRef FieldName) const {
+RecTy *DefInit::getFieldType(StringInit *FieldName) const {
   if (const RecordVal *RV = Def->getValue(FieldName))
     return RV->getType();
   return nullptr;
 }
 
 Init *DefInit::getFieldInit(Record &R, const RecordVal *RV,
-                            StringRef FieldName) const {
+                            StringInit *FieldName) const {
   return Def->getValue(FieldName)->getValue();
 }
 
@@ -1476,8 +1433,8 @@ std::string DefInit::getAsString() const {
   return Def->getName();
 }
 
-FieldInit *FieldInit::get(Init *R, StringRef FN) {
-  typedef std::pair<Init *, TableGenStringKey> Key;
+FieldInit *FieldInit::get(Init *R, StringInit *FN) {
+  typedef std::pair<Init *, StringInit *> Key;
   static DenseMap<Key, FieldInit*> ThePool;
 
   Key TheKey(std::make_pair(R, FN));
@@ -1522,25 +1479,25 @@ Init *FieldInit::resolveReferences(Record &R, const RecordVal *RV) const {
   return const_cast<FieldInit *>(this);
 }
 
-static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, StringRef VN,
+static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, StringInit *VN,
                            ArrayRef<Init *> ArgRange,
-                           ArrayRef<std::string> NameRange) {
+                           ArrayRef<StringInit *> NameRange) {
   ID.AddPointer(V);
-  ID.AddString(VN);
+  ID.AddPointer(VN);
 
-  ArrayRef<Init *>::iterator Arg  = ArgRange.begin();
-  ArrayRef<std::string>::iterator  Name = NameRange.begin();
+  ArrayRef<Init *>::iterator Arg = ArgRange.begin();
+  ArrayRef<StringInit *>::iterator Name = NameRange.begin();
   while (Arg != ArgRange.end()) {
     assert(Name != NameRange.end() && "Arg name underflow!");
     ID.AddPointer(*Arg++);
-    ID.AddString(*Name++);
+    ID.AddPointer(*Name++);
   }
   assert(Name == NameRange.end() && "Arg name overflow!");
 }
 
 DagInit *
-DagInit::get(Init *V, StringRef VN, ArrayRef<Init *> ArgRange,
-             ArrayRef<std::string> NameRange) {
+DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
+             ArrayRef<StringInit *> NameRange) {
   static FoldingSet<DagInit> ThePool;
   static std::vector<DagInit*> TheActualPool;
 
@@ -1558,10 +1515,10 @@ DagInit::get(Init *V, StringRef VN, ArrayRef<Init *> ArgRange,
 }
 
 DagInit *
-DagInit::get(Init *V, StringRef VN,
-             const std::vector<std::pair<Init*, std::string> > &args) {
-  std::vector<Init *> Args;
-  std::vector<std::string> Names;
+DagInit::get(Init *V, StringInit *VN,
+             ArrayRef<std::pair<Init*, StringInit*>> args) {
+  SmallVector<Init *, 8> Args;
+  SmallVector<StringInit *, 8> Names;
 
   for (const auto &Arg : args) {
     Args.push_back(Arg.first);
@@ -1583,13 +1540,17 @@ Init *DagInit::convertInitializerTo(RecTy *Ty) const {
 }
 
 Init *DagInit::resolveReferences(Record &R, const RecordVal *RV) const {
-  std::vector<Init*> NewArgs;
-  for (unsigned i = 0, e = Args.size(); i != e; ++i)
-    NewArgs.push_back(Args[i]->resolveReferences(R, RV));
+  SmallVector<Init*, 8> NewArgs;
+  NewArgs.reserve(Args.size());
+  bool ArgsChanged = false;
+  for (const Init *Arg : Args) {
+    Init *NewArg = Arg->resolveReferences(R, RV);
+    NewArgs.push_back(NewArg);
+    ArgsChanged |= NewArg != Arg;
+  }
 
   Init *Op = Val->resolveReferences(R, RV);
-
-  if (Args != NewArgs || Op != Val)
+  if (Op != Val || ArgsChanged)
     return DagInit::get(Op, ValName, NewArgs, ArgNames);
 
   return const_cast<DagInit *>(this);
@@ -1597,14 +1558,14 @@ Init *DagInit::resolveReferences(Record &R, const RecordVal *RV) const {
 
 std::string DagInit::getAsString() const {
   std::string Result = "(" + Val->getAsString();
-  if (!ValName.empty())
-    Result += ":" + ValName;
+  if (ValName)
+    Result += ":" + ValName->getAsUnquotedString();
   if (!Args.empty()) {
     Result += " " + Args[0]->getAsString();
-    if (!ArgNames[0].empty()) Result += ":$" + ArgNames[0];
+    if (ArgNames[0]) Result += ":$" + ArgNames[0]->getAsUnquotedString();
     for (unsigned i = 1, e = Args.size(); i != e; ++i) {
       Result += ", " + Args[i]->getAsString();
-      if (!ArgNames[i].empty()) Result += ":$" + ArgNames[i];
+      if (ArgNames[i]) Result += ":$" + ArgNames[i]->getAsUnquotedString();
     }
   }
   return Result + ")";
@@ -1615,14 +1576,14 @@ std::string DagInit::getAsString() const {
 //===----------------------------------------------------------------------===//
 
 RecordVal::RecordVal(Init *N, RecTy *T, bool P)
-  : NameAndPrefix(N, P), Ty(T) {
-  Value = UnsetInit::get()->convertInitializerTo(Ty);
+  : Name(N), TyAndPrefix(T, P) {
+  Value = UnsetInit::get()->convertInitializerTo(T);
   assert(Value && "Cannot create unset value for current type!");
 }
 
 RecordVal::RecordVal(StringRef N, RecTy *T, bool P)
-  : NameAndPrefix(StringInit::get(N), P), Ty(T) {
-  Value = UnsetInit::get()->convertInitializerTo(Ty);
+  : Name(StringInit::get(N)), TyAndPrefix(T, P) {
+  Value = UnsetInit::get()->convertInitializerTo(T);
   assert(Value && "Cannot create unset value for current type!");
 }
 
@@ -1691,13 +1652,13 @@ void Record::setName(StringRef Name) {
 }
 
 void Record::resolveReferencesTo(const RecordVal *RV) {
-  for (unsigned i = 0, e = Values.size(); i != e; ++i) {
-    if (RV == &Values[i]) // Skip resolve the same field as the given one
+  for (RecordVal &Value : Values) {
+    if (RV == &Value) // Skip resolve the same field as the given one
       continue;
-    if (Init *V = Values[i].getValue())
-      if (Values[i].setValue(V->resolveReferences(*this, RV)))
+    if (Init *V = Value.getValue())
+      if (Value.setValue(V->resolveReferences(*this, RV)))
         PrintFatalError(getLoc(), "Invalid value is found when setting '" +
-                        Values[i].getNameInitAsString() +
+                        Value.getNameInitAsString() +
                         "' after resolving references" +
                         (RV ? " against '" + RV->getNameInitAsString() +
                               "' of (" + RV->getValue()->getAsUnquotedString() +
@@ -1741,10 +1702,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   OS << "\n";
 
   for (const RecordVal &Val : R.getValues())
-    if (Val.getPrefix() && !R.isTemplateArg(Val.getName()))
+    if (Val.getPrefix() && !R.isTemplateArg(Val.getNameInit()))
       OS << Val;
   for (const RecordVal &Val : R.getValues())
-    if (!Val.getPrefix() && !R.isTemplateArg(Val.getName()))
+    if (!Val.getPrefix() && !R.isTemplateArg(Val.getNameInit()))
       OS << Val;
 
   return OS << "}\n";
@@ -1940,34 +1901,25 @@ RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   return Defs;
 }
 
-Init *llvm::QualifyName(Record &CurRec, MultiClass *CurMultiClass,
-                        Init *Name, StringRef Scoper) {
-  RecTy *Type = cast<TypedInit>(Name)->getType();
-
-  BinOpInit *NewName =
-    BinOpInit::get(BinOpInit::STRCONCAT,
-                   BinOpInit::get(BinOpInit::STRCONCAT,
-                                  CurRec.getNameInit(),
-                                  StringInit::get(Scoper),
-                                  Type)->Fold(&CurRec, CurMultiClass),
-                   Name,
-                   Type);
-
-  if (CurMultiClass && Scoper != "::") {
-    NewName =
-      BinOpInit::get(BinOpInit::STRCONCAT,
-                     BinOpInit::get(BinOpInit::STRCONCAT,
-                                    CurMultiClass->Rec.getNameInit(),
-                                    StringInit::get("::"),
-                                    Type)->Fold(&CurRec, CurMultiClass),
-                     NewName->Fold(&CurRec, CurMultiClass),
-                     Type);
-  }
-
-  return NewName->Fold(&CurRec, CurMultiClass);
+static Init *GetStrConcat(Init *I0, Init *I1) {
+  // Shortcut for the common case of concatenating two strings.
+  if (const StringInit *I0s = dyn_cast<StringInit>(I0))
+    if (const StringInit *I1s = dyn_cast<StringInit>(I1))
+      return ConcatStringInits(I0s, I1s);
+  return BinOpInit::get(BinOpInit::STRCONCAT, I0, I1, StringRecTy::get());
 }
 
 Init *llvm::QualifyName(Record &CurRec, MultiClass *CurMultiClass,
-                        StringRef Name, StringRef Scoper) {
-  return QualifyName(CurRec, CurMultiClass, StringInit::get(Name), Scoper);
+                        Init *Name, StringRef Scoper) {
+  Init *NewName = GetStrConcat(CurRec.getNameInit(), StringInit::get(Scoper));
+  NewName = GetStrConcat(NewName, Name);
+  if (CurMultiClass && Scoper != "::") {
+    Init *Prefix = GetStrConcat(CurMultiClass->Rec.getNameInit(),
+                                StringInit::get("::"));
+    NewName = GetStrConcat(Prefix, NewName);
+  }
+
+  if (BinOpInit *BinOp = dyn_cast<BinOpInit>(NewName))
+    NewName = BinOp->Fold(&CurRec, CurMultiClass);
+  return NewName;
 }

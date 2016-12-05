@@ -12,11 +12,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetLowering.h"
 
@@ -100,3 +100,39 @@ template void
 CallLowering::setArgFlags<CallInst>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const DataLayout &DL,
                                     const CallInst &FuncInfo) const;
+
+bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
+                                     CCAssignFn *AssignFn,
+                                     ArrayRef<ArgInfo> Args,
+                                     ValueHandler &Handler) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = *MF.getFunction();
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
+
+  unsigned NumArgs = Args.size();
+  for (unsigned i = 0; i != NumArgs; ++i) {
+    MVT CurVT = MVT::getVT(Args[i].Ty);
+    if (AssignFn(i, CurVT, CurVT, CCValAssign::Full, Args[i].Flags, CCInfo))
+      return false;
+  }
+
+  for (unsigned i = 0, e = Args.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+
+    if (VA.isRegLoc())
+      Handler.assignValueToReg(Args[i].Reg, VA.getLocReg(), VA);
+    else if (VA.isMemLoc()) {
+      unsigned Size = VA.getValVT().getSizeInBits() / 8;
+      unsigned Offset = VA.getLocMemOffset();
+      MachinePointerInfo MPO;
+      unsigned StackAddr = Handler.getStackAddress(Size, Offset, MPO);
+      Handler.assignValueToAddress(Args[i].Reg, StackAddr, Size, MPO, VA);
+    } else {
+      // FIXME: Support byvals and other weirdness
+      return false;
+    }
+  }
+  return true;
+}
