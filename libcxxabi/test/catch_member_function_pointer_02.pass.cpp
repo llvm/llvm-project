@@ -9,8 +9,7 @@
 
 // Can a noexcept member function pointer be caught by a non-noexcept catch
 // clause?
-// UNSUPPORTED: c++98, c++03, c++11, c++14
-// UNSUPPORTED: libcxxabi-no-exceptions, libcxxabi-no-qualified-function-types
+// UNSUPPORTED: libcxxabi-no-exceptions, libcxxabi-no-noexcept-function-type
 
 #include <cassert>
 

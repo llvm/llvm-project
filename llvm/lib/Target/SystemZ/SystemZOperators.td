@@ -570,6 +570,12 @@ class storeu<SDPatternOperator operator, SDPatternOperator store = store>
   : PatFrag<(ops node:$value, node:$addr),
             (store (operator node:$value), node:$addr)>;
 
+// Create a store operator that performs the given inherent operation
+// and stores the resulting value.
+class storei<SDPatternOperator operator, SDPatternOperator store = store>
+  : PatFrag<(ops node:$addr),
+            (store (operator), node:$addr)>;
+
 // Vector representation of all-zeros and all-ones.
 def z_vzero : PatFrag<(ops), (bitconvert (v16i8 (z_byte_mask (i32 0))))>;
 def z_vones : PatFrag<(ops), (bitconvert (v16i8 (z_byte_mask (i32 65535))))>;

@@ -794,10 +794,8 @@ UndefValue *UndefValue::getElementValue(unsigned Idx) const {
 
 unsigned UndefValue::getNumElements() const {
   Type *Ty = getType();
-  if (auto *AT = dyn_cast<ArrayType>(Ty))
-    return AT->getNumElements();
-  if (auto *VT = dyn_cast<VectorType>(Ty))
-    return VT->getNumElements();
+  if (auto *ST = dyn_cast<SequentialType>(Ty))
+    return ST->getNumElements();
   return Ty->getStructNumElements();
 }
 
@@ -1073,19 +1071,14 @@ bool ConstantExpr::isGEPWithNoNotionalOverIndexing() const {
   gep_type_iterator GEPI = gep_type_begin(this), E = gep_type_end(this);
   User::const_op_iterator OI = std::next(this->op_begin());
 
-  // Skip the first index, as it has no static limit.
-  ++GEPI;
-  ++OI;
-
   // The remaining indices must be compile-time known integers within the
   // bounds of the corresponding notional static array types.
   for (; GEPI != E; ++GEPI, ++OI) {
     ConstantInt *CI = dyn_cast<ConstantInt>(*OI);
-    if (!CI) return false;
-    if (ArrayType *ATy = dyn_cast<ArrayType>(*GEPI))
-      if (CI->getValue().getActiveBits() > 64 ||
-          CI->getZExtValue() >= ATy->getNumElements())
-        return false;
+    if (GEPI.isBoundedSequential() &&
+        (CI->getValue().getActiveBits() > 64 ||
+         CI->getZExtValue() >= GEPI.getSequentialNumElements()))
+      return false;
   }
 
   // All the indices checked out.

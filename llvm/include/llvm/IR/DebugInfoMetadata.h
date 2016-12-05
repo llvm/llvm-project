@@ -1955,13 +1955,13 @@ public:
   }
 
   /// Return whether this is a piece of an aggregate variable.
-  bool isBitPiece() const;
+  bool isFragment() const;
 
-  /// Return the offset of this piece in bits.
-  uint64_t getBitPieceOffset() const;
+  /// Return the offset of this fragment in bits.
+  uint64_t getFragmentOffsetInBits() const;
 
-  /// Return the size of this piece in bits.
-  uint64_t getBitPieceSize() const;
+  /// Return the size of this fragment in bits.
+  uint64_t getFragmentSizeInBits() const;
 
   typedef ArrayRef<uint64_t>::iterator element_iterator;
   element_iterator elements_begin() const { return getElements().begin(); }

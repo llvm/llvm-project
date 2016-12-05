@@ -1393,21 +1393,8 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
         if (Module *M = CI.getPreprocessor()
                             .getHeaderSearchInfo()
                             .getModuleMap()
-                            .findModule(II->getName())) {
+                            .findModule(II->getName()))
           M->HasIncompatibleModuleFile = true;
-
-          // Mark module as available if the only reason it was unavailable
-          // was missing headers.
-          SmallVector<Module *, 2> Stack;
-          Stack.push_back(M);
-          while (!Stack.empty()) {
-            Module *Current = Stack.pop_back_val();
-            if (Current->IsMissingRequirement) continue;
-            Current->IsAvailable = true;
-            Stack.insert(Stack.end(),
-                         Current->submodule_begin(), Current->submodule_end());
-          }
-        }
       }
       LoadedModules.clear();
     }
@@ -1511,7 +1498,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       if (Module && Module->HasIncompatibleModuleFile) {
         // We tried and failed to load a module file for this module. Fall
         // back to textual inclusion for its headers.
-        return ModuleLoadResult::ConfigMismatch;
+        return ModuleLoadResult(nullptr, /*missingExpected*/true);
       }
 
       getDiagnostics().Report(ModuleNameLoc, diag::err_module_build_disabled)
@@ -1718,7 +1705,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         << Module->getFullModuleName()
         << SourceRange(Path.front().second, Path.back().second);
 
-      return ModuleLoadResult::MissingExpected;
+      return ModuleLoadResult(nullptr, true);
     }
 
     // Check whether this module is available.
@@ -1752,7 +1739,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   }
 
   LastModuleImportLoc = ImportLoc;
-  LastModuleImportResult = ModuleLoadResult(Module);
+  LastModuleImportResult = ModuleLoadResult(Module, false);
   return LastModuleImportResult;
 }
 

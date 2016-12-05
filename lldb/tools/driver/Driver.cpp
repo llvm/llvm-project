@@ -19,8 +19,6 @@
 #if defined(_WIN32)
 #include <fcntl.h>
 #include <io.h>
-#elif defined(__ANDROID_NDK__)
-#include <errno.h>
 #else
 #include <unistd.h>
 #endif

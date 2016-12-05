@@ -29,16 +29,13 @@ define double @FsANDPSrr(double %x, double %y) {
 define double @FsANDNPSrr(double %x, double %y) {
 ; SSE-LABEL: FsANDNPSrr:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    xorpd %xmm1, %xmm2
-; SSE-NEXT:    andpd %xmm2, %xmm0
+; SSE-NEXT:    andnps %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: FsANDNPSrr:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX-NEXT:    vxorpd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandnps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64

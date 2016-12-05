@@ -135,12 +135,27 @@ public:
     return ValidatorResult(SCEVType::INT);
   }
 
+  class ValidatorResult visitZeroExtendOrTruncateExpr(const SCEV *Expr,
+                                                      const SCEV *Operand) {
+    ValidatorResult Op = visit(Operand);
+    auto Type = Op.getType();
+
+    // If unsigned operations are allowed return the operand, otherwise
+    // check if we can model the expression without unsigned assumptions.
+    if (PollyAllowUnsignedOperations || Type == SCEVType::INVALID)
+      return Op;
+
+    if (Type == SCEVType::IV)
+      return ValidatorResult(SCEVType::INVALID);
+    return ValidatorResult(SCEVType::PARAM, Expr);
+  }
+
   class ValidatorResult visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    return visit(Expr->getOperand());
+    return visitZeroExtendOrTruncateExpr(Expr, Expr->getOperand());
   }
 
   class ValidatorResult visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    return visit(Expr->getOperand());
+    return visitZeroExtendOrTruncateExpr(Expr, Expr->getOperand());
   }
 
   class ValidatorResult visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
@@ -325,6 +340,9 @@ public:
   }
 
   ValidatorResult visitUDivExpr(const SCEVUDivExpr *Expr) {
+    if (!PollyAllowUnsignedOperations)
+      return ValidatorResult(SCEVType::INVALID);
+
     auto *Dividend = Expr->getLHS();
     auto *Divisor = Expr->getRHS();
     return visitDivision(Dividend, Divisor, Expr);

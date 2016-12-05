@@ -569,14 +569,8 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
     std::tie(EltSize, ScalarStoreOp) = getSpillEltSize(RC->getSize(), true);
   }
 
-  const TargetRegisterClass *SubRC = nullptr;
-  unsigned NumSubRegs = 1;
   ArrayRef<int16_t> SplitParts = getRegSplitParts(RC, EltSize);
-
-  if (!SplitParts.empty()) {
-    NumSubRegs = SplitParts.size();
-    SubRC = getSubRegClass(RC, SplitParts[0]);
-  }
+  unsigned NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
 
   // SubReg carries the "Kill" flag when SubReg == SuperReg.
   unsigned SubKillState = getKillRegState((NumSubRegs == 1) && IsKill);
@@ -720,14 +714,8 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
     std::tie(EltSize, ScalarLoadOp) = getSpillEltSize(RC->getSize(), false);
   }
 
-  const TargetRegisterClass *SubRC = nullptr;
-  unsigned NumSubRegs = 1;
   ArrayRef<int16_t> SplitParts = getRegSplitParts(RC, EltSize);
-
-  if (!SplitParts.empty()) {
-    NumSubRegs = SplitParts.size();
-    SubRC = getSubRegClass(RC, SplitParts[0]);
-  }
+  unsigned NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
 
   // SubReg carries the "Kill" flag when SubReg == SuperReg.
   int64_t FrOffset = FrameInfo.getObjectOffset(Index);

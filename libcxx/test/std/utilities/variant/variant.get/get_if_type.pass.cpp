@@ -30,18 +30,18 @@ void test_const_get_if() {
     static_assert(std::get_if<int>(v) == nullptr, "");
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     constexpr V v(42);
     ASSERT_NOEXCEPT(std::get_if<int>(&v));
-    ASSERT_SAME_TYPE(decltype(std::get_if<int>(&v)), int const *);
+    ASSERT_SAME_TYPE(decltype(std::get_if<int>(&v)), const int *);
     static_assert(*std::get_if<int>(&v) == 42, "");
-    static_assert(std::get_if<long>(&v) == nullptr, "");
+    static_assert(std::get_if<const long>(&v) == nullptr, "");
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     constexpr V v(42l);
-    ASSERT_SAME_TYPE(decltype(std::get_if<long>(&v)), long const *);
-    static_assert(*std::get_if<long>(&v) == 42, "");
+    ASSERT_SAME_TYPE(decltype(std::get_if<const long>(&v)), const long *);
+    static_assert(*std::get_if<const long>(&v) == 42, "");
     static_assert(std::get_if<int>(&v) == nullptr, "");
   }
 // FIXME: Remove these once reference support is reinstated
@@ -77,18 +77,18 @@ void test_get_if() {
     assert(std::get_if<int>(v) == nullptr);
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     V v(42);
     ASSERT_NOEXCEPT(std::get_if<int>(&v));
     ASSERT_SAME_TYPE(decltype(std::get_if<int>(&v)), int *);
     assert(*std::get_if<int>(&v) == 42);
-    assert(std::get_if<long>(&v) == nullptr);
+    assert(std::get_if<const long>(&v) == nullptr);
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     V v(42l);
-    ASSERT_SAME_TYPE(decltype(std::get_if<long>(&v)), long *);
-    assert(*std::get_if<long>(&v) == 42);
+    ASSERT_SAME_TYPE(decltype(std::get_if<const long>(&v)), const long *);
+    assert(*std::get_if<const long>(&v) == 42);
     assert(std::get_if<int>(&v) == nullptr);
   }
 // FIXME: Remove these once reference support is reinstated

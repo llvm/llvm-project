@@ -482,18 +482,22 @@ public:
     int64_t BaseOffset = 0;
     int64_t Scale = 0;
 
-    // Assumes the address space is 0 when Ptr is nullptr.
-    unsigned AS =
-        (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
-    auto GTI = gep_type_begin(PointeeType, AS, Operands);
+    auto GTI = gep_type_begin(PointeeType, Operands);
+    Type *TargetType;
     for (auto I = Operands.begin(); I != Operands.end(); ++I, ++GTI) {
+      TargetType = GTI.getIndexedType();
       // We assume that the cost of Scalar GEP with constant index and the
       // cost of Vector GEP with splat constant index are the same.
       const ConstantInt *ConstIdx = dyn_cast<ConstantInt>(*I);
       if (!ConstIdx)
         if (auto Splat = getSplatValue(*I))
           ConstIdx = dyn_cast<ConstantInt>(Splat);
-      if (isa<SequentialType>(*GTI)) {
+      if (StructType *STy = GTI.getStructTypeOrNull()) {
+        // For structures the index is always splat or scalar constant
+        assert(ConstIdx && "Unexpected GEP index");
+        uint64_t Field = ConstIdx->getZExtValue();
+        BaseOffset += DL.getStructLayout(STy)->getElementOffset(Field);
+      } else {
         int64_t ElementSize = DL.getTypeAllocSize(GTI.getIndexedType());
         if (ConstIdx)
           BaseOffset += ConstIdx->getSExtValue() * ElementSize;
@@ -504,20 +508,16 @@ public:
             return TTI::TCC_Basic;
           Scale = ElementSize;
         }
-      } else {
-        StructType *STy = cast<StructType>(*GTI);
-        // For structures the index is always splat or scalar constant
-        assert(ConstIdx && "Unexpected GEP index");
-        uint64_t Field = ConstIdx->getZExtValue();
-        BaseOffset += DL.getStructLayout(STy)->getElementOffset(Field);
       }
     }
 
+    // Assumes the address space is 0 when Ptr is nullptr.
+    unsigned AS =
+        (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
     if (static_cast<T *>(this)->isLegalAddressingMode(
-            PointerType::get(*GTI, AS), const_cast<GlobalValue *>(BaseGV),
-            BaseOffset, HasBaseReg, Scale, AS)) {
+            TargetType, const_cast<GlobalValue *>(BaseGV), BaseOffset,
+            HasBaseReg, Scale, AS))
       return TTI::TCC_Free;
-    }
     return TTI::TCC_Basic;
   }
 

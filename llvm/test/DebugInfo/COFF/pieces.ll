@@ -35,27 +35,27 @@
 ; }
 
 ; ASM-LABEL: loop_csr: # @loop_csr
-; ASM:        #DEBUG_VALUE: loop_csr:o [bit_piece offset=0 size=32] <- 0
-; ASM:        #DEBUG_VALUE: loop_csr:o [bit_piece offset=32 size=32] <- 0
+; ASM:        #DEBUG_VALUE: loop_csr:o [fragment offset=0 size=32] <- 0
+; ASM:        #DEBUG_VALUE: loop_csr:o [fragment offset=32 size=32] <- 0
 ; ASM: # BB#2:                                 # %for.body.preheader
 ; ASM:         xorl    %edi, %edi
 ; ASM:         xorl    %esi, %esi
 ; ASM:         .p2align        4, 0x90
 ; ASM: .LBB0_3:                                # %for.body
 ; ASM: [[ox_start:\.Ltmp[0-9]+]]:
-; ASM:        #DEBUG_VALUE: loop_csr:o [bit_piece offset=0 size=32] <- %EDI
+; ASM:        #DEBUG_VALUE: loop_csr:o [fragment offset=0 size=32] <- %EDI
 ; ASM:        .cv_loc 0 1 13 11               # t.c:13:11
 ; ASM:        movl    %edi, %ecx
 ; ASM:        callq   g
 ; ASM:        movl    %eax, %edi
 ; ASM: [[oy_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: loop_csr:o [bit_piece offset=0 size=32] <- %EDI
-; ASM:         #DEBUG_VALUE: loop_csr:o [bit_piece offset=32 size=32] <- %ESI
+; ASM:         #DEBUG_VALUE: loop_csr:o [fragment offset=0 size=32] <- %EDI
+; ASM:         #DEBUG_VALUE: loop_csr:o [fragment offset=32 size=32] <- %ESI
 ; ASM:         .cv_loc 0 1 14 11               # t.c:14:11
 ; ASM:         movl    %esi, %ecx
 ; ASM:         callq   g
 ; ASM:         movl    %eax, %esi
-; ASM:         #DEBUG_VALUE: loop_csr:o [bit_piece offset=32 size=32] <- %ESI
+; ASM:         #DEBUG_VALUE: loop_csr:o [fragment offset=32 size=32] <- %ESI
 ; ASM:         cmpl    n(%rip), %eax
 ; ASM:         jl      .LBB0_3
 ; ASM: [[oy_end:\.Ltmp[0-9]+]]:
@@ -64,13 +64,13 @@
 
 
 ; ASM-LABEL: pad_right: # @pad_right
-; ASM:         #DEBUG_VALUE: pad_right:o [bit_piece offset=32 size=32] <- %ECX
+; ASM:         #DEBUG_VALUE: pad_right:o [fragment offset=32 size=32] <- %ECX
 ; ASM:         movl    %ecx, %eax
 ; ASM:         retq
 
 
 ; ASM-LABEL: pad_left: # @pad_left
-; ASM:         #DEBUG_VALUE: pad_left:o [bit_piece offset=0 size=32] <- %ECX
+; ASM:         #DEBUG_VALUE: pad_left:o [fragment offset=0 size=32] <- %ECX
 ; ASM:         .cv_loc 2 1 24 3                # t.c:24:3
 ; ASM:         movl    %ecx, %eax
 ; ASM:         retq
@@ -80,16 +80,16 @@
 ; ASM:         #DEBUG_VALUE: nested:o <- [%RCX+0]
 ; ASM:         movl    12(%rcx), %eax
 ; ASM: [[p_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: nested:p [bit_piece offset=32 size=32] <- %EAX
+; ASM:         #DEBUG_VALUE: nested:p [fragment offset=32 size=32] <- %EAX
 ; ASM:         retq
 
 ; ASM-LABEL: bitpiece_spill: # @bitpiece_spill
-; ASM:         #DEBUG_VALUE: bitpiece_spill:o [bit_piece offset=0 size=32] <- 0
+; ASM:         #DEBUG_VALUE: bitpiece_spill:o [fragment offset=0 size=32] <- 0
 ; ASM:         xorl    %ecx, %ecx
 ; ASM:         callq   g
 ; ASM:         movl    %eax, [[offset_o_x:[0-9]+]](%rsp)          # 4-byte Spill
 ; ASM: [[spill_o_x_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: bitpiece_spill:o [bit_piece offset=32 size=32] <- [%RSP+[[offset_o_x]]]
+; ASM:         #DEBUG_VALUE: bitpiece_spill:o [fragment offset=32 size=32] <- [%RSP+[[offset_o_x]]]
 ; ASM:         #APP
 ; ASM:         #NO_APP
 ; ASM:         movl    [[offset_o_x]](%rsp), %eax          # 4-byte Reload
@@ -360,8 +360,8 @@ attributes #5 = { nounwind }
 !16 = !DIDerivedType(tag: DW_TAG_member, name: "y", scope: !13, file: !1, line: 1, baseType: !10, size: 32, align: 32, offset: 32)
 !17 = !DIExpression()
 !18 = !DILocation(line: 11, column: 18, scope: !7)
-!19 = !DIExpression(DW_OP_bit_piece, 0, 32)
-!20 = !DIExpression(DW_OP_bit_piece, 32, 32)
+!19 = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+!20 = !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 !21 = !DILocation(line: 12, column: 23, scope: !22)
 !22 = distinct !DILexicalBlock(scope: !23, file: !1, line: 12, column: 3)
 !23 = distinct !DILexicalBlock(scope: !7, file: !1, line: 12, column: 3)

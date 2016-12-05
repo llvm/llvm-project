@@ -483,7 +483,7 @@ private:
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
 
-  void verifyBitPieceExpression(const DbgInfoIntrinsic &I);
+  void verifyFragmentExpression(const DbgInfoIntrinsic &I);
 
   /// Module-level debug info verification...
   void verifyCompileUnits();
@@ -3826,7 +3826,7 @@ void Verifier::visitInstruction(Instruction &I) {
   }
 
   if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I))
-    verifyBitPieceExpression(*DII);
+    verifyFragmentExpression(*DII);
 
   InstsInThisBlock.insert(&I);
 }
@@ -4307,7 +4307,7 @@ static uint64_t getVariableSize(const DILocalVariable &V) {
   return 0;
 }
 
-void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I) {
+void Verifier::verifyFragmentExpression(const DbgInfoIntrinsic &I) {
   DILocalVariable *V;
   DIExpression *E;
   if (auto *DVI = dyn_cast<DbgValueInst>(&I)) {
@@ -4324,7 +4324,7 @@ void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I) {
     return;
 
   // Nothing to do if this isn't a bit piece expression.
-  if (!E->isBitPiece())
+  if (!E->isFragment())
     return;
 
   // The frontend helps out GDB by emitting the members of local anonymous
@@ -4342,11 +4342,11 @@ void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I) {
   if (!VarSize)
     return;
 
-  unsigned PieceSize = E->getBitPieceSize();
-  unsigned PieceOffset = E->getBitPieceOffset();
-  AssertDI(PieceSize + PieceOffset <= VarSize,
-         "piece is larger than or outside of variable", &I, V, E);
-  AssertDI(PieceSize != VarSize, "piece covers entire variable", &I, V, E);
+  unsigned FragSize = E->getFragmentSizeInBits();
+  unsigned FragOffset = E->getFragmentOffsetInBits();
+  AssertDI(FragSize + FragOffset <= VarSize,
+         "fragment is larger than or outside of variable", &I, V, E);
+  AssertDI(FragSize != VarSize, "fragment covers entire variable", &I, V, E);
 }
 
 void Verifier::verifyCompileUnits() {

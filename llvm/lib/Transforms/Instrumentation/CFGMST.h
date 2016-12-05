@@ -78,6 +78,14 @@ public:
     return *It->second.get();
   }
 
+  // Give BB, return the auxiliary information if it's available.
+  BBInfo *findBBInfo(const BasicBlock *BB) const {
+    auto It = BBInfos.find(BB);
+    if (It == BBInfos.end())
+      return nullptr;
+    return It->second.get();
+  }
+
   // Traverse the CFG using a stack. Find all the edges and assign the weight.
   // Edges with large weight will be put into MST first so they are less likely
   // to be instrumented.

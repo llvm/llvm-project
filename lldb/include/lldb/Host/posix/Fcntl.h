@@ -12,7 +12,7 @@
 #ifndef liblldb_Host_posix_Fcntl_h_
 #define liblldb_Host_posix_Fcntl_h_
 
-#ifdef __ANDROID_NDK__
+#ifdef __ANDROID__
 #include <android/api-level.h>
 #endif
 

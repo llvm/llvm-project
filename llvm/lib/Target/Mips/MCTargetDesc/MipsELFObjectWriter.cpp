@@ -419,6 +419,13 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
 /// always match using the expressions from the source.
 void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
                                      std::vector<ELFRelocationEntry> &Relocs) {
+
+  // We do not need to sort the relocation table for RELA relocations which
+  // N32/N64 uses as the relocation addend contains the value we require,
+  // rather than it being split across a pair of relocations.
+  if (hasRelocationAddend())
+    return;
+
   if (Relocs.size() < 2)
     return;
 

@@ -132,8 +132,8 @@ void large_auto_object() {
 
 int large_combiner_test(S_large s) {
 // CHECK-LABEL: define i32 @large_combiner_test
-// CHECK: [[T1:%.*]] = alloca %struct.Combiner
 // CHECK: [[T2:%.*]] = alloca %struct.Combiner
+// CHECK: [[T1:%.*]] = alloca %struct.Combiner
 // CHECK: [[T3:%.*]] = call %struct.Combiner* @_ZN8CombinerC1E7S_large(%struct.Combiner* nonnull [[T1]], [9 x i32] %s.coerce)
 // CHECK: call void @_ZN8Combiner1fEv(%struct.Combiner* nonnull sret [[T2]], %struct.Combiner* nonnull [[T1]])
 // CHECK: [[T4:%.*]] = getelementptr inbounds %struct.Combiner, %struct.Combiner* [[T2]], i32 0, i32 0, i32 0, i32 0

@@ -667,16 +667,6 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
                                     .addReg(cmpOp2, getKillRegState(MO2IsKill))
                                     .addMBB(jmpTarget);
 
-          else if ((cmpInstr->getOpcode() == Hexagon::C2_cmpeqi ||
-                    cmpInstr->getOpcode() == Hexagon::C2_cmpgti) &&
-                    cmpOp2 == -1 )
-            // Corresponding new-value compare jump instructions don't have the
-            // operand for -1 immediate value.
-            NewMI = BuildMI(*MBB, jmpPos, dl,
-                                  QII->get(opc))
-                                    .addReg(cmpReg1, getKillRegState(MO1IsKill))
-                                    .addMBB(jmpTarget);
-
           else
             NewMI = BuildMI(*MBB, jmpPos, dl,
                                   QII->get(opc))

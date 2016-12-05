@@ -279,7 +279,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
         R->getValueAsBit("isPseudo"))
       continue;
     const std::string &InstName = R->getValueAsString("Namespace") + "::"
-      + R->getName();
+      + R->getName().str();
     std::string Case = getInstructionCase(R, Target);
 
     CaseMap[Case].push_back(InstName);

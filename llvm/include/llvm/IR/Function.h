@@ -18,18 +18,29 @@
 #ifndef LLVM_IR_FUNCTION_H
 #define LLVM_IR_FUNCTION_H
 
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Compiler.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
 
 namespace llvm {
 
 template <typename T> class Optional;
+class AssemblyAnnotationWriter;
 class FunctionType;
 class LLVMContext;
 class DISubprogram;
@@ -88,10 +99,8 @@ private:
     if (hasLazyArguments())
       BuildLazyArguments();
   }
-  void BuildLazyArguments() const;
 
-  Function(const Function&) = delete;
-  void operator=(const Function&) = delete;
+  void BuildLazyArguments() const;
 
   /// Function ctor - If the (optional) Module argument is specified, the
   /// function is automatically inserted into the end of the function list for
@@ -101,12 +110,14 @@ private:
            const Twine &N = "", Module *M = nullptr);
 
 public:
+  Function(const Function&) = delete;
+  void operator=(const Function&) = delete;
+  ~Function() override;
+
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {
     return new Function(Ty, Linkage, N, M);
   }
-
-  ~Function() override;
 
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -489,12 +500,14 @@ public:
     CheckLazyArguments();
     return ArgumentList;
   }
+
   static ArgumentListType Function::*getSublistAccess(Argument*) {
     return &Function::ArgumentList;
   }
 
   const BasicBlockListType &getBasicBlockList() const { return BasicBlocks; }
         BasicBlockListType &getBasicBlockList()       { return BasicBlocks; }
+
   static BasicBlockListType Function::*getSublistAccess(BasicBlock*) {
     return &Function::BasicBlocks;
   }
@@ -538,6 +551,7 @@ public:
     CheckLazyArguments();
     return ArgumentList.begin();
   }
+
   arg_iterator arg_end() {
     CheckLazyArguments();
     return ArgumentList.end();
@@ -550,7 +564,6 @@ public:
   iterator_range<arg_iterator> args() {
     return make_range(arg_begin(), arg_end());
   }
-
   iterator_range<const_arg_iterator> args() const {
     return make_range(arg_begin(), arg_end());
   }
@@ -671,6 +684,6 @@ struct OperandTraits<Function> : public HungoffOperandTraits<3> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(Function, Value)
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_FUNCTION_H

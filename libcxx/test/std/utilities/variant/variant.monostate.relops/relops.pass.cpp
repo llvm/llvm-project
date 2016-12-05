@@ -19,6 +19,7 @@
 // constexpr bool operator==(monostate, monostate) noexcept { return true; }
 // constexpr bool operator!=(monostate, monostate) noexcept { return false; }
 
+#include "test_macros.h"
 #include <cassert>
 #include <type_traits>
 #include <variant>
@@ -29,26 +30,26 @@ int main() {
   constexpr M m2{};
   {
     static_assert((m1 < m2) == false, "");
-    static_assert(noexcept(m1 < m2), "");
+    ASSERT_NOEXCEPT(m1 < m2);
   }
   {
     static_assert((m1 > m2) == false, "");
-    static_assert(noexcept(m1 > m2), "");
+    ASSERT_NOEXCEPT(m1 > m2);
   }
   {
     static_assert((m1 <= m2) == true, "");
-    static_assert(noexcept(m1 <= m2), "");
+    ASSERT_NOEXCEPT(m1 <= m2);
   }
   {
     static_assert((m1 >= m2) == true, "");
-    static_assert(noexcept(m1 >= m2), "");
+    ASSERT_NOEXCEPT(m1 >= m2);
   }
   {
     static_assert((m1 == m2) == true, "");
-    static_assert(noexcept(m1 == m2), "");
+    ASSERT_NOEXCEPT(m1 == m2);
   }
   {
     static_assert((m1 != m2) == false, "");
-    static_assert(noexcept(m1 != m2), "");
+    ASSERT_NOEXCEPT(m1 != m2);
   }
 }

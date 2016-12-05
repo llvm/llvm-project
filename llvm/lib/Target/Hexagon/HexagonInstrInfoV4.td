@@ -1379,19 +1379,22 @@ let isPredicated = 1, isBranch = 1, isNewValue = 1, isTerminator = 1,
 // with a register and an hardcoded 0/-1 immediate value.
 //===----------------------------------------------------------------------===//
 
-let isExtendable = 1, opExtendable = 1, isExtentSigned = 1, opExtentBits = 11,
+let isExtendable = 1, isExtentSigned = 1, opExtentBits = 11,
     opExtentAlign = 2 in
 class NVJ_ConstImm_template<string mnemonic, bits<3> majOp, string ImmVal,
                             bit isNegCond, bit isTak>
   : NVInst_V4<(outs),
-    (ins IntRegs:$src1, brtarget:$offset),
+    !if(!eq(ImmVal, "{-1}"),
+        (ins IntRegs:$src1, n1Const:$n1, brtarget:$offset),
+        (ins IntRegs:$src1, brtarget:$offset)),
     "if ("#!if(isNegCond, "!","")#mnemonic
-    #"($src1.new, #" # ImmVal # ")) jump:"
+    #"($src1.new, #" # !if(!eq(ImmVal, "{-1}"), "$n1", ImmVal) # ")) jump:"
     #!if(isTak, "t","nt")#" $offset", []> {
 
       let isTaken = isTak;
       let isPredicatedFalse = isNegCond;
       let isTaken = isTak;
+      let opExtendable = !if(!eq(ImmVal, "{-1}"), 2, 1);
 
       bits<3> src1;
       bits<11> offset;
@@ -1428,8 +1431,8 @@ multiclass NVJ_ConstImm_base<string mnemonic, string BaseOp, bits<3> majOp,
 let isPredicated = 1, isBranch = 1, isNewValue = 1, isTerminator=1,
     Defs = [PC], hasSideEffects = 0 in {
   defm J4_tstbit0 : NVJ_ConstImm_base<"tstbit", "TSTBIT", 0b011, "0">, PredRel;
-  defm J4_cmpeqn1 : NVJ_ConstImm_base<"cmp.eq", "CMPEQ",  0b100, "-1">, PredRel;
-  defm J4_cmpgtn1 : NVJ_ConstImm_base<"cmp.gt", "CMPGT",  0b101, "-1">, PredRel;
+  defm J4_cmpeqn1 : NVJ_ConstImm_base<"cmp.eq", "CMPEQ",  0b100, "{-1}">, PredRel;
+  defm J4_cmpgtn1 : NVJ_ConstImm_base<"cmp.gt", "CMPGT",  0b101, "{-1}">, PredRel;
 }
 
 // J4_hintjumpr: Hint indirect conditional jump.
@@ -3202,11 +3205,11 @@ defm gtu : T_pnp_CJInst_RU5<"gtu">;
 
 let isBranch = 1, hasSideEffects = 0, isExtentSigned = 1,
     isPredicated = 1, isPredicatedFalse = 1, isPredicatedNew = 1,
-    isExtendable = 1, opExtentBits = 11, opExtentAlign = 2, opExtendable = 1,
+    isExtendable = 1, opExtentBits = 11, opExtentAlign = 2, opExtendable = 2,
     isTerminator = 1 in
 class CJInst_Rn1<string px, string op, bit np, string tnt>
-  : InstHexagon<(outs), (ins IntRegs:$Rs, brtarget:$r9_2),
-  ""#px#" = cmp."#op#"($Rs,#-1); if ("
+  : InstHexagon<(outs), (ins IntRegs:$Rs, n1Const:$n1, brtarget:$r9_2),
+  ""#px#" = cmp."#op#"($Rs,#$n1); if ("
   #!if(np, "!","")#""#px#".new) jump:"#tnt#" $r9_2",
   [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCOMPOUND>, OpcodeHexagon {
   bits<4> Rs;

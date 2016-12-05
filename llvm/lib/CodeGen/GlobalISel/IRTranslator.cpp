@@ -336,7 +336,7 @@ bool IRTranslator::translateGetElementPtr(const User &U) {
   for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
        GTI != E; ++GTI) {
     const Value *Idx = GTI.getOperand();
-    if (StructType *StTy = dyn_cast<StructType>(*GTI)) {
+    if (StructType *StTy = GTI.getStructTypeOrNull()) {
       unsigned Field = cast<Constant>(Idx)->getUniqueInteger().getZExtValue();
       Offset += DL->getStructLayout(StTy)->getElementOffset(Field);
       continue;

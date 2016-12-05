@@ -340,6 +340,37 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
     }
   }
 
+  switch(MI.getOpcode()) {
+  case Hexagon::J4_cmpeqn1_f_jumpnv_nt:
+  case Hexagon::J4_cmpeqn1_f_jumpnv_t:
+  case Hexagon::J4_cmpeqn1_fp0_jump_nt:
+  case Hexagon::J4_cmpeqn1_fp0_jump_t:
+  case Hexagon::J4_cmpeqn1_fp1_jump_nt:
+  case Hexagon::J4_cmpeqn1_fp1_jump_t:
+  case Hexagon::J4_cmpeqn1_t_jumpnv_nt:
+  case Hexagon::J4_cmpeqn1_t_jumpnv_t:
+  case Hexagon::J4_cmpeqn1_tp0_jump_nt:
+  case Hexagon::J4_cmpeqn1_tp0_jump_t:
+  case Hexagon::J4_cmpeqn1_tp1_jump_nt:
+  case Hexagon::J4_cmpeqn1_tp1_jump_t:
+  case Hexagon::J4_cmpgtn1_f_jumpnv_nt:
+  case Hexagon::J4_cmpgtn1_f_jumpnv_t:
+  case Hexagon::J4_cmpgtn1_fp0_jump_nt:
+  case Hexagon::J4_cmpgtn1_fp0_jump_t:
+  case Hexagon::J4_cmpgtn1_fp1_jump_nt:
+  case Hexagon::J4_cmpgtn1_fp1_jump_t:
+  case Hexagon::J4_cmpgtn1_t_jumpnv_nt:
+  case Hexagon::J4_cmpgtn1_t_jumpnv_t:
+  case Hexagon::J4_cmpgtn1_tp0_jump_nt:
+  case Hexagon::J4_cmpgtn1_tp0_jump_t:
+  case Hexagon::J4_cmpgtn1_tp1_jump_nt:
+  case Hexagon::J4_cmpgtn1_tp1_jump_t:
+    MI.insert(MI.begin() + 1, MCOperand::createExpr(MCConstantExpr::create(-1, getContext())));
+    break;
+  default:
+    break;
+  }
+
   if (HexagonMCInstrInfo::isNewValue(*MCII, MI)) {
     unsigned OpIndex = HexagonMCInstrInfo::getNewValueOp(*MCII, MI);
     MCOperand &MCO = MI.getOperand(OpIndex);

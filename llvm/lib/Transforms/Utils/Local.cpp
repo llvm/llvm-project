@@ -1102,26 +1102,26 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   if (SExtInst *SExt = dyn_cast<SExtInst>(SI->getOperand(0)))
     ExtendedArg = dyn_cast<Argument>(SExt->getOperand(0));
   if (ExtendedArg) {
-    // We're now only describing a subset of the variable. The piece we're
+    // We're now only describing a subset of the variable. The fragment we're
     // describing will always be smaller than the variable size, because
     // VariableSize == Size of Alloca described by DDI. Since SI stores
     // to the alloca described by DDI, if it's first operand is an extend,
     // we're guaranteed that before extension, the value was narrower than
     // the size of the alloca, hence the size of the described variable.
     SmallVector<uint64_t, 3> Ops;
-    unsigned PieceOffset = 0;
-    // If this already is a bit piece, we drop the bit piece from the expression
-    // and record the offset.
-    if (DIExpr->isBitPiece()) {
+    unsigned FragmentOffset = 0;
+    // If this already is a bit fragment, we drop the bit fragment from the
+    // expression and record the offset.
+    if (DIExpr->isFragment()) {
       Ops.append(DIExpr->elements_begin(), DIExpr->elements_end()-3);
-      PieceOffset = DIExpr->getBitPieceOffset();
+      FragmentOffset = DIExpr->getFragmentOffsetInBits();
     } else {
       Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
     }
-    Ops.push_back(dwarf::DW_OP_bit_piece);
-    Ops.push_back(PieceOffset); // Offset
+    Ops.push_back(dwarf::DW_OP_LLVM_fragment);
+    Ops.push_back(FragmentOffset);
     const DataLayout &DL = DDI->getModule()->getDataLayout();
-    Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType())); // Size
+    Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType()));
     auto NewDIExpr = Builder.createExpression(Ops);
     if (!LdStHasDebugValue(DIVar, NewDIExpr, SI))
       Builder.insertDbgValueIntrinsic(ExtendedArg, 0, DIVar, NewDIExpr,

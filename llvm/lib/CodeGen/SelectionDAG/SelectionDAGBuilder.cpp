@@ -3274,7 +3274,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   for (gep_type_iterator GTI = gep_type_begin(&I), E = gep_type_end(&I);
        GTI != E; ++GTI) {
     const Value *Idx = GTI.getOperand();
-    if (StructType *StTy = dyn_cast<StructType>(*GTI)) {
+    if (StructType *StTy = GTI.getStructTypeOrNull()) {
       unsigned Field = cast<Constant>(Idx)->getUniqueInteger().getZExtValue();
       if (Field) {
         // N = N + Offset

@@ -91,8 +91,10 @@ TEST_CASE(access_denied_test_case)
     env.create_file(testFile, 42);
 
     // Test that we can iterator over the directory before changing the perms
-    RDI it(testDir);
-    TEST_REQUIRE(it != RDI{});
+    {
+        RDI it(testDir);
+        TEST_REQUIRE(it != RDI{});
+    }
 
     // Change the permissions so we can no longer iterate
     permissions(testDir, perms::none);

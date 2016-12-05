@@ -26,36 +26,36 @@
 #include "variant_test_helpers.hpp"
 
 struct NoCopy {
-  NoCopy(NoCopy const &) = delete;
-  NoCopy &operator=(NoCopy const &) = default;
+  NoCopy(const NoCopy &) = delete;
+  NoCopy &operator=(const NoCopy &) = default;
 };
 
 struct CopyOnly {
-  CopyOnly(CopyOnly const &) = default;
+  CopyOnly(const CopyOnly &) = default;
   CopyOnly(CopyOnly &&) = delete;
-  CopyOnly &operator=(CopyOnly const &) = default;
+  CopyOnly &operator=(const CopyOnly &) = default;
   CopyOnly &operator=(CopyOnly &&) = delete;
 };
 
 struct MoveOnly {
-  MoveOnly(MoveOnly const &) = delete;
+  MoveOnly(const MoveOnly &) = delete;
   MoveOnly(MoveOnly &&) = default;
-  MoveOnly &operator=(MoveOnly const &) = delete;
+  MoveOnly &operator=(const MoveOnly &) = delete;
   MoveOnly &operator=(MoveOnly &&) = default;
 };
 
 struct MoveOnlyNT {
-  MoveOnlyNT(MoveOnlyNT const &) = delete;
+  MoveOnlyNT(const MoveOnlyNT &) = delete;
   MoveOnlyNT(MoveOnlyNT &&) {}
-  MoveOnlyNT &operator=(MoveOnlyNT const &) = delete;
+  MoveOnlyNT &operator=(const MoveOnlyNT &) = delete;
   MoveOnlyNT &operator=(MoveOnlyNT &&) = default;
 };
 
 struct MoveOnlyOddNothrow {
   MoveOnlyOddNothrow(MoveOnlyOddNothrow &&) noexcept(false) {}
-  MoveOnlyOddNothrow(MoveOnlyOddNothrow const &) = delete;
+  MoveOnlyOddNothrow(const MoveOnlyOddNothrow &) = delete;
   MoveOnlyOddNothrow &operator=(MoveOnlyOddNothrow &&) noexcept = default;
-  MoveOnlyOddNothrow &operator=(MoveOnlyOddNothrow const &) = delete;
+  MoveOnlyOddNothrow &operator=(const MoveOnlyOddNothrow &) = delete;
 };
 
 struct MoveAssignOnly {

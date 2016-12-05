@@ -11,6 +11,7 @@
 {'type': 'U', 'is_defined': False, 'name': '__ZNKSt16bad_array_length4whatEv'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt16bad_array_length4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt16nested_exception14rethrow_nestedEv'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt18bad_variant_access4whatEv'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNKSt20bad_array_new_length4whatEv'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt20bad_array_new_length4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__110__time_put8__do_putEPcRS1_PK2tmcc'}
@@ -1792,6 +1793,7 @@
 {'type': 'U', 'is_defined': False, 'name': '__ZTISt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTISt16nested_exception', 'size': 0}
+{'type': 'OBJECT', 'is_defined': True, 'name': '__ZTISt18bad_variant_access', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTISt19bad_optional_access', 'size': 0}
 {'type': 'U', 'is_defined': False, 'name': '__ZTISt20bad_array_new_length'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt20bad_array_new_length'}
@@ -2046,6 +2048,7 @@
 {'type': 'U', 'is_defined': False, 'name': '__ZTSSt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTSSt16nested_exception', 'size': 0}
+{'type': 'OBJECT', 'is_defined': True, 'name': '__ZTSSt18bad_variant_access', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTSSt19bad_optional_access', 'size': 0}
 {'type': 'U', 'is_defined': False, 'name': '__ZTSSt20bad_array_new_length'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt20bad_array_new_length'}
@@ -2236,6 +2239,7 @@
 {'type': 'U', 'is_defined': False, 'name': '__ZTVSt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVSt16nested_exception', 'size': 0}
+{'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVSt18bad_variant_access', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVSt19bad_optional_access', 'size': 0}
 {'type': 'U', 'is_defined': False, 'name': '__ZTVSt20bad_array_new_length'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt20bad_array_new_length'}

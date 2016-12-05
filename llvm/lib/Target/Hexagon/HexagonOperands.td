@@ -107,6 +107,8 @@ let OperandType = "OPERAND_IMMEDIATE" in {
   def s3_7Imm : Operand<i32> { let PrintMethod = "prints3_7ImmOperand";
                                let DecoderMethod = "s3_6ImmDecoder";}
 }
+def n1ConstOperand : AsmOperandClass { let Name = "n1Const"; }
+def n1Const : Operand<i32> { let ParserMatchClass = n1ConstOperand; }
 
 //
 // Immediate predicates

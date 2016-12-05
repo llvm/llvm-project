@@ -138,7 +138,7 @@ std::string llvm::getQualifiedName(const Record *R) {
   if (R->getValue("Namespace"))
      Namespace = R->getValueAsString("Namespace");
   if (Namespace.empty()) return R->getName();
-  return Namespace + "::" + R->getName();
+  return Namespace + "::" + R->getName().str();
 }
 
 
@@ -157,7 +157,7 @@ CodeGenTarget::CodeGenTarget(RecordKeeper &records)
 CodeGenTarget::~CodeGenTarget() {
 }
 
-const std::string &CodeGenTarget::getName() const {
+const StringRef CodeGenTarget::getName() const {
   return TargetRec->getName();
 }
 

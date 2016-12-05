@@ -30,14 +30,14 @@ void swap(NotSwappable &, NotSwappable &) = delete;
 
 struct NotCopyable {
   NotCopyable() = default;
-  NotCopyable(NotCopyable const &) = delete;
-  NotCopyable &operator=(NotCopyable const &) = delete;
+  NotCopyable(const NotCopyable &) = delete;
+  NotCopyable &operator=(const NotCopyable &) = delete;
 };
 
 struct NotCopyableWithSwap {
   NotCopyableWithSwap() = default;
-  NotCopyableWithSwap(NotCopyableWithSwap const &) = delete;
-  NotCopyableWithSwap &operator=(NotCopyableWithSwap const &) = delete;
+  NotCopyableWithSwap(const NotCopyableWithSwap &) = delete;
+  NotCopyableWithSwap &operator=(const NotCopyableWithSwap &) = delete;
 };
 void swap(NotCopyableWithSwap &, NotCopyableWithSwap) {}
 
@@ -73,7 +73,7 @@ struct NothrowTypeImp {
   static void reset() { move_called = move_assign_called = swap_called = 0; }
   NothrowTypeImp() = default;
   explicit NothrowTypeImp(int v) : value(v) {}
-  NothrowTypeImp(NothrowTypeImp const &o) noexcept(NT_Copy) : value(o.value) {
+  NothrowTypeImp(const NothrowTypeImp &o) noexcept(NT_Copy) : value(o.value) {
     assert(false);
   } // never called by test
   NothrowTypeImp(NothrowTypeImp &&o) noexcept(NT_Move) : value(o.value) {
@@ -81,7 +81,7 @@ struct NothrowTypeImp {
     do_throw<!NT_Move>();
     o.value = -1;
   }
-  NothrowTypeImp &operator=(NothrowTypeImp const &) noexcept(NT_CopyAssign) {
+  NothrowTypeImp &operator=(const NothrowTypeImp &) noexcept(NT_CopyAssign) {
     assert(false);
     return *this;
   } // never called by the tests

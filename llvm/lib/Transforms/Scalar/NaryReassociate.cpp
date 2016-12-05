@@ -281,9 +281,10 @@ Instruction *NaryReassociatePass::tryReassociateGEP(GetElementPtrInst *GEP) {
     return nullptr;
 
   gep_type_iterator GTI = gep_type_begin(*GEP);
-  for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
-    if (isa<SequentialType>(*GTI++)) {
-      if (auto *NewGEP = tryReassociateGEPAtIndex(GEP, I - 1, *GTI)) {
+  for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
+    if (GTI.isSequential()) {
+      if (auto *NewGEP = tryReassociateGEPAtIndex(GEP, I - 1,
+                                                  GTI.getIndexedType())) {
         return NewGEP;
       }
     }

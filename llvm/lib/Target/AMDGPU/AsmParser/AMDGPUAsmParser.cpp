@@ -72,9 +72,9 @@ public:
   typedef std::unique_ptr<AMDGPUOperand> Ptr;
 
   struct Modifiers {
-    bool Abs;
-    bool Neg;
-    bool Sext;
+    bool Abs = false;
+    bool Neg = false;
+    bool Sext = false;
 
     bool hasFPModifiers() const { return Abs || Neg; }
     bool hasIntModifiers() const { return Sext; }
@@ -518,7 +518,7 @@ public:
     Op->Imm.Val = Val;
     Op->Imm.IsFPImm = IsFPImm;
     Op->Imm.Type = Type;
-    Op->Imm.Mods = {false, false, false};
+    Op->Imm.Mods = Modifiers();
     Op->StartLoc = Loc;
     Op->EndLoc = Loc;
     return Op;
@@ -541,7 +541,7 @@ public:
                                       bool ForceVOP3) {
     auto Op = llvm::make_unique<AMDGPUOperand>(Register, AsmParser);
     Op->Reg.RegNo = RegNo;
-    Op->Reg.Mods = {false, false, false};
+    Op->Reg.Mods = Modifiers();
     Op->Reg.IsForcedVOP3 = ForceVOP3;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1289,7 +1289,7 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands) {
     return Res;
   }
 
-  AMDGPUOperand::Modifiers Mods = {false, false, false};
+  AMDGPUOperand::Modifiers Mods;
   if (Negate) {
     Mods.Neg = true;
   }
@@ -1336,7 +1336,7 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
     return Res;
   }
 
-  AMDGPUOperand::Modifiers Mods = {false, false, false};
+  AMDGPUOperand::Modifiers Mods;
   if (Sext) {
     if (getLexer().isNot(AsmToken::RParen)) {
       Error(Parser.getTok().getLoc(), "expected closing parentheses");
@@ -1846,7 +1846,6 @@ OperandMatchResultTy
 AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
                                     enum AMDGPUOperand::ImmTy ImmTy,
                                     bool (*ConvertResult)(int64_t&)) {
-
   SMLoc S = Parser.getTok().getLoc();
   int64_t Value = 0;
 

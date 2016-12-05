@@ -210,7 +210,8 @@ std::string wrapCodeInNamespace(StringRef NestedNs, std::string Code) {
   if (Code.back() != '\n')
     Code += "\n";
   llvm::SmallVector<StringRef, 4> NsSplitted;
-  NestedNs.split(NsSplitted, "::");
+  NestedNs.split(NsSplitted, "::", /*MaxSplit=*/-1,
+                 /*KeepEmpty=*/false);
   while (!NsSplitted.empty()) {
     // FIXME: consider code style for comments.
     Code = ("namespace " + NsSplitted.back() + " {\n" + Code +
@@ -272,7 +273,9 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // be "a::b". Declarations in this namespace will not be visible in the new
   // namespace. If DiffOldNamespace is empty, Prefix will be a invalid name "-".
   llvm::SmallVector<llvm::StringRef, 4> DiffOldNsSplitted;
-  llvm::StringRef(DiffOldNamespace).split(DiffOldNsSplitted, "::");
+  llvm::StringRef(DiffOldNamespace)
+      .split(DiffOldNsSplitted, "::", /*MaxSplit=*/-1,
+             /*KeepEmpty=*/false);
   std::string Prefix = "-";
   if (!DiffOldNsSplitted.empty())
     Prefix = (StringRef(FullOldNs).drop_back(DiffOldNamespace.size()) +

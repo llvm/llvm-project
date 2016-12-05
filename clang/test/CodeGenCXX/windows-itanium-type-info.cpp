@@ -9,5 +9,24 @@ public:
 __fundamental_type_info::~__fundamental_type_info() {}
 }
 
-// CHECK: @_ZTIi = dllexport constant
+struct __declspec(dllimport) base {
+  virtual void method();
+};
+struct __declspec(dllexport) derived : base {
+  virtual ~derived();
+};
+derived::~derived() {
+  method();
+}
+
+// CHECK-DAG: @_ZTIi = dllexport constant
+// CHECK-DAG: @_ZTSi = dllexport constant
+
+// CHECK-DAG: @_ZTI7derived = dllexport constant
+// CHECK-DAG: @_ZTS7derived = dllexport constant
+// CHECK-DAG: @_ZTV7derived = dllexport unnamed_addr constant
+
+// CHECK-DAG: @_ZTI4base = external dllimport constant
+// CHECK-DAG: @_ZTS4base = external dllimport constant
+// CHECK-NOT: @_ZTV4base = external dllimport constant
 

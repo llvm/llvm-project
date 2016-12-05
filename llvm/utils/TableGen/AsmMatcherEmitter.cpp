@@ -1289,10 +1289,10 @@ buildRegisterClasses(SmallPtrSetImpl<Record*> &SingletonRegisters) {
 
     if (CI->ValueName.empty()) {
       CI->ClassName = Rec->getName();
-      CI->Name = "MCK_" + Rec->getName();
+      CI->Name = "MCK_" + Rec->getName().str();
       CI->ValueName = Rec->getName();
     } else
-      CI->ValueName = CI->ValueName + "," + Rec->getName();
+      CI->ValueName = CI->ValueName + "," + Rec->getName().str();
   }
 }
 
@@ -1819,7 +1819,7 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   size_t MaxRowLength = 2; // minimum is custom converter plus terminator.
 
   // TargetOperandClass - This is the target's operand class, like X86Operand.
-  std::string TargetOperandClass = Target.getName() + "Operand";
+  std::string TargetOperandClass = Target.getName().str() + "Operand";
 
   // Write the convert function to a separate stream, so we can drop it after
   // the enum. We'll build up the conversion handlers for the individual
@@ -2054,7 +2054,7 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
           Reg = "0";
         } else {
           Reg = getQualifiedName(OpInfo.Register);
-          Name = "reg" + OpInfo.Register->getName();
+          Name = "reg" + OpInfo.Register->getName().str();
         }
         Signature += "__" + Name;
         Name = "CVT_" + Name;
@@ -2718,16 +2718,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                    [](const std::unique_ptr<MatchableInfo> &a,
                       const std::unique_ptr<MatchableInfo> &b){
                      return *a < *b;});
-
-#ifndef NDEBUG
-  // Verify that the table is now sorted
-  for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
-       ++I) {
-    for (auto J = I; J != E; ++J) {
-      assert(!(**J < **I));
-    }
-  }
-#endif // NDEBUG
 
   DEBUG_WITH_TYPE("instruction_info", {
       for (const auto &MI : Info.Matchables)

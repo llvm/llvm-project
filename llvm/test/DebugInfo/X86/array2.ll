@@ -18,7 +18,7 @@
 ; CHECK: define i32 @main
 ; CHECK: call void @llvm.dbg.value(metadata i32 42, i64 0, metadata ![[ARRAY:[0-9]+]], metadata ![[EXPR:[0-9]+]])
 ; CHECK: ![[ARRAY]] = !DILocalVariable(name: "array",{{.*}} line: 6
-; CHECK: ![[EXPR]] = !DIExpression(DW_OP_bit_piece, 0, 32)
+; CHECK: ![[EXPR]] = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
 

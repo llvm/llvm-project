@@ -28,8 +28,8 @@ int main()
 {
   using namespace fs;
   const char* const value = "hello world";
-  path p(value);
   { // Check signature
+    path p(value);
     ASSERT_SAME_TYPE(path::string_type const&, decltype(p.native()));
     ASSERT_NOEXCEPT(p.native());
   }

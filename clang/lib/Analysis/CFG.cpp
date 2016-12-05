@@ -3581,11 +3581,13 @@ CFGBlock *CFGBuilder::VisitCXXDeleteExpr(CXXDeleteExpr *DE,
   autoCreateBlock();
   appendStmt(Block, DE);
   QualType DTy = DE->getDestroyedType();
-  DTy = DTy.getNonReferenceType();
-  CXXRecordDecl *RD = Context->getBaseElementType(DTy)->getAsCXXRecordDecl();
-  if (RD) {
-    if (RD->isCompleteDefinition() && !RD->hasTrivialDestructor())
-      appendDeleteDtor(Block, RD, DE);
+  if (!DTy.isNull()) {
+    DTy = DTy.getNonReferenceType();
+    CXXRecordDecl *RD = Context->getBaseElementType(DTy)->getAsCXXRecordDecl();
+    if (RD) {
+      if (RD->isCompleteDefinition() && !RD->hasTrivialDestructor())
+        appendDeleteDtor(Block, RD, DE);
+    }
   }
 
   return VisitChildren(DE);

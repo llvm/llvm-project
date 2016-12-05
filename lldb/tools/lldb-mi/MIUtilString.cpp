@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Third party headers
+#include <cstdlib>
 #include <inttypes.h> // for PRIx8
 #include <limits.h>   // for ULONG_MAX
 #include <memory>     // std::unique_ptr

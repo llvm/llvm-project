@@ -839,6 +839,93 @@ TEST_F(CleanUpReplacementsTest, InsertionAndDeleteHeader) {
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
+TEST_F(CleanUpReplacementsTest, NoInsertionAfterCode) {
+  std::string Code = "#include \"a.h\"\n"
+                     "void f() {}\n"
+                     "#include \"b.h\"\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "#include \"c.h\"\n"
+                         "void f() {}\n"
+                         "#include \"b.h\"\n";
+  tooling::Replacements Replaces = toReplacements(
+      {createInsertion("#include \"c.h\"")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, NoInsertionInStringLiteral) {
+  std::string Code = "#include \"a.h\"\n"
+                     "const char[] = R\"(\n"
+                     "#include \"b.h\"\n"
+                     ")\";\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "#include \"c.h\"\n"
+                         "const char[] = R\"(\n"
+                         "#include \"b.h\"\n"
+                         ")\";\n";
+  tooling::Replacements Replaces =
+      toReplacements({createInsertion("#include \"c.h\"")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, NoInsertionAfterOtherDirective) {
+  std::string Code = "#include \"a.h\"\n"
+                     "#ifdef X\n"
+                     "#include \"b.h\"\n"
+                     "#endif\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "#include \"c.h\"\n"
+                         "#ifdef X\n"
+                         "#include \"b.h\"\n"
+                         "#endif\n";
+  tooling::Replacements Replaces = toReplacements(
+      {createInsertion("#include \"c.h\"")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, CanInsertAfterLongSystemInclude) {
+  std::string Code = "#include \"a.h\"\n"
+                     "// comment\n\n"
+                     "#include <a/b/c/d/e.h>\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "// comment\n\n"
+                         "#include <a/b/c/d/e.h>\n"
+                         "#include <x.h>\n";
+  tooling::Replacements Replaces =
+      toReplacements({createInsertion("#include <x.h>")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, CanInsertAfterComment) {
+  std::string Code = "#include \"a.h\"\n"
+                     "// Comment\n"
+                     "\n"
+                     "/* Comment */\n"
+                     "// Comment\n"
+                     "\n"
+                     "#include \"b.h\"\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "// Comment\n"
+                         "\n"
+                         "/* Comment */\n"
+                         "// Comment\n"
+                         "\n"
+                         "#include \"b.h\"\n"
+                         "#include \"c.h\"\n";
+  tooling::Replacements Replaces =
+      toReplacements({createInsertion("#include \"c.h\"")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, CanDeleteAfterCode) {
+  std::string Code = "#include \"a.h\"\n"
+                     "void f() {}\n"
+                     "#include \"b.h\"\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "void f() {}\n";
+  tooling::Replacements Replaces = toReplacements({createDeletion("\"b.h\"")});
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
