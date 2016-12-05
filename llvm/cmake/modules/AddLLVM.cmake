@@ -1261,11 +1261,11 @@ function(add_llvm_tool_symlink name dest)
     set_target_properties(${name} PROPERTIES FOLDER Tools)
 
     # Make sure both the link and target are toolchain tools
-    if (NOT ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT ${dest} IN_LIST LLVM_TOOLCHAIN_TOOLS)
-      return()
+    if (${name} IN_LIST LLVM_TOOLCHAIN_TOOLS AND ${dest} IN_LIST LLVM_TOOLCHAIN_TOOLS)
+      set(TOOL_IS_TOOLCHAIN ON)
     endif()
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_TOOLS )
+    if ((TOOL_IS_TOOLCHAIN OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY) AND LLVM_BUILD_TOOLS)
       llvm_install_symlink(${name} ${dest})
     endif()
   endif()
