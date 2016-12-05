@@ -775,8 +775,7 @@ macro(add_llvm_tool name)
   endif()
   add_llvm_executable(${name} ${ARGN})
 
-  list(FIND LLVM_TOOLCHAIN_TOOLS ${name} LLVM_IS_${name}_TOOLCHAIN_TOOL)
-  if (LLVM_IS_${name}_TOOLCHAIN_TOOL GREATER -1 OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  if ( ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if( LLVM_BUILD_TOOLS )
       install(TARGETS ${name}
               EXPORT LLVMExports
@@ -1261,20 +1260,13 @@ function(add_llvm_tool_symlink name dest)
     add_custom_target(${name} ALL DEPENDS ${output_path})
     set_target_properties(${name} PROPERTIES FOLDER Tools)
 
-    # Make sure the parent tool is a toolchain tool, otherwise exclude this tool
-    list(FIND LLVM_TOOLCHAIN_TOOLS ${dest} LLVM_IS_${dest}_TOOLCHAIN_TOOL)
-    if (NOT LLVM_IS_${dest}_TOOLCHAIN_TOOL GREATER -1)
-      set(LLVM_IS_${name}_TOOLCHAIN_TOOL ${LLVM_IS_${dest}_TOOLCHAIN_TOOL})
-    else()
-      list(FIND LLVM_TOOLCHAIN_TOOLS ${name} LLVM_IS_${name}_TOOLCHAIN_TOOL)
+    # Make sure both the link and target are toolchain tools
+    if (NOT ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT ${dest} IN_LIST LLVM_TOOLCHAIN_TOOLS)
+      return()
     endif()
 
-    # LLVM_IS_${name}_TOOLCHAIN_TOOL will only be greater than -1 if both this
-    # tool and its parent tool are in LLVM_TOOLCHAIN_TOOLS
-    if (LLVM_IS_${name}_TOOLCHAIN_TOOL GREATER -1 OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-      if( LLVM_BUILD_TOOLS )
-        llvm_install_symlink(${name} ${dest})
-      endif()
+    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_TOOLS )
+      llvm_install_symlink(${name} ${dest})
     endif()
   endif()
 endfunction()
