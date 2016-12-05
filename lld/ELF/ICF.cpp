@@ -339,11 +339,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // the same color are consecutive in the vector.
   std::stable_sort(Sections.begin(), Sections.end(),
                    [](InputSection<ELFT> *A, InputSection<ELFT> *B) {
-                     if (A->Color[0] != B->Color[0])
-                       return A->Color[0] < B->Color[0];
-                     // Within a group, put the highest alignment
-                     // requirement first, so that's the one we'll keep.
-                     return B->Alignment < A->Alignment;
+                     return A->Color[0] < B->Color[0];
                    });
 
   // Compare static contents and assign unique IDs for each static content.

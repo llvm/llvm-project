@@ -5971,9 +5971,10 @@ performReferenceExtension(Expr *Init,
       if (CE->getSubExpr()->isGLValue())
         Init = CE->getSubExpr();
 
-    // FIXME: Per DR1213, subscripting on an array temporary produces an xvalue.
-    // It's unclear if binding a reference to that xvalue extends the array
-    // temporary.
+    // Per the current approach for DR1299, look through array element access
+    // when performing lifetime extension.
+    if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Init))
+      Init = ASE->getBase();
   } while (Init != Old);
 
   if (MaterializeTemporaryExpr *ME = dyn_cast<MaterializeTemporaryExpr>(Init)) {

@@ -1467,13 +1467,26 @@ namespace VLASizeof {
 }
 
 namespace CompoundLiteral {
-  // FIXME:
-  // We don't model the semantics of this correctly: the compound literal is
-  // represented as a prvalue in the AST, but actually behaves like an lvalue.
-  // We treat the compound literal as a temporary and refuse to produce a
-  // pointer to it. This is OK: we're not required to treat this as a constant
-  // in C++, and in C we model compound literals as lvalues.
-  constexpr int *p = (int*)(int[1]){0}; // expected-warning {{C99}} expected-error {{constant expression}} expected-note 2{{temporary}}
+  // Matching GCC, file-scope array compound literals initialized by constants
+  // are lifetime-extended.
+  constexpr int *p = (int*)(int[1]){3}; // expected-warning {{C99}}
+  static_assert(*p == 3, "");
+  static_assert((int[2]){1, 2}[1] == 2, ""); // expected-warning {{C99}}
+
+  // Other kinds are not.
+  struct X { int a[2]; };
+  constexpr int *n = (X){1, 2}.a; // expected-warning {{C99}} expected-warning {{temporary array}}
+  // expected-error@-1 {{constant expression}}
+  // expected-note@-2 {{pointer to subobject of temporary}}
+  // expected-note@-3 {{temporary created here}}
+
+  void f() {
+    static constexpr int *p = (int*)(int[1]){3}; // expected-warning {{C99}}
+    // expected-error@-1 {{constant expression}}
+    // expected-note@-2 {{pointer to subobject of temporary}}
+    // expected-note@-3 {{temporary created here}}
+    static_assert((int[2]){1, 2}[1] == 2, ""); // expected-warning {{C99}}
+  }
 }
 
 namespace Vector {

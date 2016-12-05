@@ -141,10 +141,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     return Cl::CL_LValue;
 
     // C99 6.5.2.5p5 says that compound literals are lvalues.
-    // In C++, they're prvalue temporaries.
+    // In C++, they're prvalue temporaries, except for file-scope arrays.
   case Expr::CompoundLiteralExprClass:
-    return Ctx.getLangOpts().CPlusPlus ? ClassifyTemporary(E->getType())
-                                       : Cl::CL_LValue;
+    return !E->isLValue() ? ClassifyTemporary(E->getType()) : Cl::CL_LValue;
 
     // Expressions that are prvalues.
   case Expr::CXXBoolLiteralExprClass:
@@ -196,11 +195,20 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     return ClassifyInternal(Ctx,
                  cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
 
-    // C++ [expr.sub]p1: The result is an lvalue of type "T".
-    // However, subscripting vector types is more like member access.
+    // C, C++98 [expr.sub]p1: The result is an lvalue of type "T".
+    // C++11 (DR1213): in the case of an array operand, the result is an lvalue
+    //                 if that operand is an lvalue and an xvalue otherwise.
+    // Subscripting vector types is more like member access.
   case Expr::ArraySubscriptExprClass:
     if (cast<ArraySubscriptExpr>(E)->getBase()->getType()->isVectorType())
       return ClassifyInternal(Ctx, cast<ArraySubscriptExpr>(E)->getBase());
+    if (Lang.CPlusPlus11) {
+      // Step over the array-to-pointer decay if present, but not over the
+      // temporary materialization.
+      auto *Base = cast<ArraySubscriptExpr>(E)->getBase()->IgnoreImpCasts();
+      if (Base->getType()->isArrayType())
+        return ClassifyInternal(Ctx, Base);
+    }
     return Cl::CL_LValue;
 
     // C++ [expr.prim.general]p3: The result is an lvalue if the entity is a

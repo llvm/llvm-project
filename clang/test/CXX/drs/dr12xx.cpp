@@ -5,6 +5,17 @@
 
 // expected-no-diagnostics
 
+namespace dr1213 { // dr1213: 4.0
+#if __cplusplus >= 201103L
+  using T = int[3];
+  int &&r = T{}[1];
+
+  using T = decltype((T{}));
+  using U = decltype((T{}[2]));
+  using U = int &&;
+#endif
+}
+
 namespace dr1250 {  // dr1250: 3.9
 struct Incomplete;
 

@@ -779,6 +779,36 @@ namespace MultipleExtension {
   }
 }
 
+namespace ArrayAccess {
+  struct A { A(int); ~A(); };
+  void g();
+  void f() {
+    using T = A[3];
+
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 1
+    // CHECK-NOT: @_ZN11ArrayAccess1AD
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 2
+    // CHECK-NOT: @_ZN11ArrayAccess1AD
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 3
+    // CHECK-NOT: @_ZN11ArrayAccess1AD
+    A &&a = T{1, 2, 3}[1];
+
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 4
+    // CHECK-NOT: @_ZN11ArrayAccess1AD
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 5
+    // CHECK-NOT: @_ZN11ArrayAccess1AD
+    // CHECK: call void @_ZN11ArrayAccess1AC1Ei({{.*}}, i32 6
+    // CHECK-NOT: @_ZN11ArrayAccess1AD
+    A &&b = 2[T{4, 5, 6}];
+
+    // CHECK: call void @_ZN11ArrayAccess1gEv(
+    g();
+
+    // CHECK: call void @_ZN11ArrayAccess1AD
+    // CHECK: call void @_ZN11ArrayAccess1AD
+  }
+}
+
 namespace PR14130 {
   struct S { S(int); };
   struct U { S &&s; };
