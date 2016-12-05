@@ -23,7 +23,7 @@ class AsanTestReportDataCase(TestBase):
         bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
-    @skipUnlessCompilerRt
+    @skipUnlessAddressSanitizer
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28658860")
     def test(self):
         self.build()

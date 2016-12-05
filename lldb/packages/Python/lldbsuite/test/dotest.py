@@ -483,6 +483,8 @@ def parseOptionsAndInitTestdirs():
         # Shut off multiprocessing mode when test directories are specified.
         configuration.no_multiprocess_test_runner = True
 
+    lldbtest_config.codesign_identity = args.codesign_identity
+
     #print("testdirs:", testdirs)
 
 
@@ -726,7 +728,10 @@ def setupSysPath():
             configuration.skipCategories.append("lldb-mi")
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
+    if not configuration.lldbFrameworkPath and os.path.exists(os.path.join(lldbLibDir, "LLDB.framework")):
+        configuration.lldbFrameworkPath = os.path.join(lldbLibDir, "LLDB.framework")
     if configuration.lldbFrameworkPath:
+        lldbtest_config.lldbFrameworkPath = configuration.lldbFrameworkPath
         candidatePath = os.path.join(
             configuration.lldbFrameworkPath, 'Resources', 'Python')
         if os.path.isfile(os.path.join(candidatePath, 'lldb/__init__.py')):

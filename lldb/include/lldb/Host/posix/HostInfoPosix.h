@@ -40,6 +40,8 @@ protected:
   static bool ComputePythonDirectory(FileSpec &file_spec);
   static bool ComputeClangDirectory(FileSpec &file_spec);
   static bool ComputeSwiftDirectory(FileSpec &file_spec);
+  static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
+                                           llvm::StringRef dir);
 };
 }
 
