@@ -85,7 +85,8 @@ void SymbolMetadata::dumpToStream(raw_ostream &os) const {
 void SymbolData::anchor() { }
 
 void SymbolRegionValue::dumpToStream(raw_ostream &os) const {
-  os << "reg_$" << getSymbolID() << "<" << R << ">";
+  os << "reg_$" << getSymbolID()
+     << '<' << getType().getAsString() << ' ' << R << '>';
 }
 
 bool SymExpr::symbol_iterator::operator==(const symbol_iterator &X) const {
