@@ -321,7 +321,6 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
     case swift::TypeKind::ImplicitlyUnwrappedOptional:
     case swift::TypeKind::Metatype:
     case swift::TypeKind::Module:
-    case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::ArraySlice:
@@ -5196,7 +5195,6 @@ bool SwiftASTContext::IsAggregateType(void *type) {
     case swift::TypeKind::Protocol:
     case swift::TypeKind::Module:
     case swift::TypeKind::Archetype:
-    case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::ProtocolComposition:
@@ -5393,7 +5391,6 @@ bool SwiftASTContext::IsPointerType(void *type, CompilerType *pointee_type) {
 
     case swift::TypeKind::Module:
     case swift::TypeKind::Archetype:
-    case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::ArraySlice:
@@ -5542,11 +5539,6 @@ bool SwiftASTContext::IsTypedefType(void *type) {
   switch (swift_type->getKind()) {
   case swift::TypeKind::NameAlias:
     return true;
-  case swift::TypeKind::Substituted:
-    if (swift::SubstitutedType *substituted =
-            (swift::SubstitutedType *)swift_type.getPointer())
-      return IsTypedefType(substituted->getReplacementType().getPointer());
-    break;
   default:
     break;
   }
@@ -5924,7 +5916,6 @@ SwiftASTContext::GetTypeInfo(void *type,
   case swift::TypeKind::Error:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::Module:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::TypeVariable:
     break;
   case swift::TypeKind::UnboundGeneric:
@@ -6139,8 +6130,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   case swift::TypeKind::Module:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Archetype:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::Substituted:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Function:
     return lldb::eTypeClassFunction;
@@ -6622,11 +6611,6 @@ CompilerType SwiftASTContext::GetTypedefedType(void *type) {
                             name_alias_type->getSinglyDesugaredType());
       }
     } break;
-    case swift::TypeKind::Substituted: {
-      if (swift::SubstitutedType *substituted =
-              (swift::SubstitutedType *)swift_type.getPointer())
-        return GetTypedefedType(substituted->getReplacementType().getPointer());
-    } break;
     default:
       break;
     }
@@ -6905,7 +6889,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Module:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::ArraySlice:
   case swift::TypeKind::ProtocolComposition:
     break;
@@ -6994,7 +6977,6 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::ArraySlice:
   case swift::TypeKind::ProtocolComposition:
     break;
@@ -7040,7 +7022,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::BuiltinVector:
   case swift::TypeKind::NameAlias:
   case swift::TypeKind::Module:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::DynamicSelf:
@@ -7250,7 +7231,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
 
   case swift::TypeKind::Module:
   case swift::TypeKind::Archetype:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::ArraySlice:
@@ -7404,7 +7384,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
 
   case swift::TypeKind::Module:
   case swift::TypeKind::Archetype:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::ArraySlice:
@@ -7494,8 +7473,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   case swift::TypeKind::Module:
     return 0;
   case swift::TypeKind::Archetype:
-    return 0;
-  case swift::TypeKind::Substituted:
     return 0;
   case swift::TypeKind::Function:
     return 0;
@@ -7927,7 +7904,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 
   case swift::TypeKind::Module:
   case swift::TypeKind::Archetype:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::ArraySlice:
@@ -8139,7 +8115,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
     case swift::TypeKind::Module:
     case swift::TypeKind::Archetype:
-    case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::ArraySlice:
@@ -8287,7 +8262,6 @@ SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
 
     case swift::TypeKind::Module:
     case swift::TypeKind::Archetype:
-    case swift::TypeKind::Substituted:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
     case swift::TypeKind::ArraySlice:
@@ -8729,7 +8703,6 @@ bool SwiftASTContext::DumpTypeValue(
   } break;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::Substituted:
   case swift::TypeKind::ArraySlice:
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::UnboundGeneric:
