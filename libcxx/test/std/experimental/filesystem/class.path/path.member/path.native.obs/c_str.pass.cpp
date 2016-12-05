@@ -30,8 +30,8 @@ int main()
   using namespace fs;
   const char* const value = "hello world";
   const std::string str_value = value;
-  path p(value);
   { // Check signature
+    path p(value);
     ASSERT_SAME_TYPE(path::value_type const*, decltype(p.c_str()));
     ASSERT_NOEXCEPT(p.c_str());
   }

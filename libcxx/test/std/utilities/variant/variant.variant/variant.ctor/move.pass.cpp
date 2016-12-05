@@ -28,20 +28,20 @@ struct ThrowsMove {
 };
 
 struct NoCopy {
-  NoCopy(NoCopy const &) = delete;
+  NoCopy(const NoCopy &) = delete;
 };
 
 struct MoveOnly {
   int value;
   MoveOnly(int v) : value(v) {}
-  MoveOnly(MoveOnly const &) = delete;
+  MoveOnly(const MoveOnly &) = delete;
   MoveOnly(MoveOnly &&) = default;
 };
 
 struct MoveOnlyNT {
   int value;
   MoveOnlyNT(int v) : value(v) {}
-  MoveOnlyNT(MoveOnlyNT const &) = delete;
+  MoveOnlyNT(const MoveOnlyNT &) = delete;
   MoveOnlyNT(MoveOnlyNT &&other) : value(other.value) { other.value = -1; }
 };
 
@@ -49,13 +49,13 @@ struct MoveOnlyNT {
 struct MakeEmptyT {
   static int alive;
   MakeEmptyT() { ++alive; }
-  MakeEmptyT(MakeEmptyT const &) {
+  MakeEmptyT(const MakeEmptyT &) {
     ++alive;
     // Don't throw from the copy constructor since variant's assignment
     // operator performs a copy before committing to the assignment.
   }
   MakeEmptyT(MakeEmptyT &&) { throw 42; }
-  MakeEmptyT &operator=(MakeEmptyT const &) { throw 42; }
+  MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
   MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
   ~MakeEmptyT() { --alive; }
 };

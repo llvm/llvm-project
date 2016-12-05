@@ -92,9 +92,10 @@ template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Hdr, StringRef Name,
                                          Kind SectionKind)
-    : InputSectionBase(File, Hdr->sh_flags, Hdr->sh_type, Hdr->sh_entsize,
-                       Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
-                       getSectionContents(File, Hdr), Name, SectionKind) {
+    : InputSectionBase(File, Hdr->sh_flags & ~SHF_INFO_LINK, Hdr->sh_type,
+                       Hdr->sh_entsize, Hdr->sh_link, Hdr->sh_info,
+                       Hdr->sh_addralign, getSectionContents(File, Hdr), Name,
+                       SectionKind) {
   this->Offset = Hdr->sh_offset;
 }
 
@@ -621,7 +622,7 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
-  assert(Other->Alignment <= this->Alignment);
+  this->Alignment = std::max(this->Alignment, Other->Alignment);
   Other->Repl = this->Repl;
   Other->Live = false;
 }

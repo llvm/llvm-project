@@ -52,12 +52,12 @@ void test_emplace_sfinae() {
     static_assert(!emplace_exists<V, void *, int>(), "cannot construct");
     static_assert(emplace_exists<V, void *, int *>(), "");
     static_assert(!emplace_exists<V, void *, const int *>(), "");
-    static_assert(emplace_exists<V, void const *, const int *>(), "");
-    static_assert(emplace_exists<V, void const *, int *>(), "");
+    static_assert(emplace_exists<V, const void *, const int *>(), "");
+    static_assert(emplace_exists<V, const void *, int *>(), "");
     static_assert(!emplace_exists<V, TestTypes::NoCtors>(), "cannot construct");
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  using V = std::variant<int, int &, int const &, int &&, long, long,
+  using V = std::variant<int, int &, const int &, int &&, long, long,
                          TestTypes::NoCtors>;
   static_assert(emplace_exists<V, int>(), "");
   static_assert(emplace_exists<V, int, int>(), "");
@@ -65,17 +65,17 @@ void test_emplace_sfinae() {
   static_assert(!emplace_exists<V, int, int, int>(), "too many args");
   static_assert(emplace_exists<V, int &, int &>(), "");
   static_assert(!emplace_exists<V, int &>(), "cannot default construct ref");
-  static_assert(!emplace_exists<V, int &, int const &>(), "cannot bind ref");
+  static_assert(!emplace_exists<V, int &, const int &>(), "cannot bind ref");
   static_assert(!emplace_exists<V, int &, int &&>(), "cannot bind ref");
-  static_assert(emplace_exists<V, int const &, int &>(), "");
-  static_assert(emplace_exists<V, int const &, const int &>(), "");
-  static_assert(emplace_exists<V, int const &, int &&>(), "");
-  static_assert(!emplace_exists<V, int const &, void *>(),
+  static_assert(emplace_exists<V, const int &, int &>(), "");
+  static_assert(emplace_exists<V, const int &, const int &>(), "");
+  static_assert(emplace_exists<V, const int &, int &&>(), "");
+  static_assert(!emplace_exists<V, const int &, void *>(),
                 "not constructible from void*");
   static_assert(emplace_exists<V, int &&, int>(), "");
   static_assert(!emplace_exists<V, int &&, int &>(), "cannot bind ref");
-  static_assert(!emplace_exists<V, int &&, int const &>(), "cannot bind ref");
-  static_assert(!emplace_exists<V, int &&, int const &&>(), "cannot bind ref");
+  static_assert(!emplace_exists<V, int &&, const int &>(), "cannot bind ref");
+  static_assert(!emplace_exists<V, int &&, const int &&>(), "cannot bind ref");
   static_assert(!emplace_exists<V, long, long>(), "ambiguous");
   static_assert(!emplace_exists<V, TestTypes::NoCtors>(),
                 "cannot construct void");
@@ -107,7 +107,7 @@ void test_basic() {
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
-    using V = std::variant<int, long, int const &, int &&, TestTypes::NoCtors,
+    using V = std::variant<int, long, const int &, int &&, TestTypes::NoCtors,
                            std::string>;
     const int x = 100;
     int y = 42;
@@ -117,8 +117,8 @@ void test_basic() {
     v.emplace<long>();
     assert(std::get<long>(v) == 0);
     // emplace a reference
-    v.emplace<int const &>(x);
-    assert(&std::get<int const &>(v) == &x);
+    v.emplace<const int &>(x);
+    assert(&std::get<const int &>(v) == &x);
     // emplace an rvalue reference
     v.emplace<int &&>(std::move(y));
     assert(&std::get<int &&>(v) == &y);

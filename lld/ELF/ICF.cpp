@@ -69,8 +69,8 @@
 #include "ICF.h"
 #include "Config.h"
 #include "SymbolTable.h"
+#include "Threads.h"
 
-#include "lld/Core/Parallel.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
@@ -109,8 +109,37 @@ private:
   void forEachColor(std::function<void(size_t, size_t)> Fn);
 
   std::vector<InputSection<ELFT> *> Sections;
+
+  // We repeat the main loop while `Repeat` is true.
+  std::atomic<bool> Repeat;
+
+  // The main loop counter.
   int Cnt = 0;
-  std::atomic<bool> Repeat = {false};
+
+  // We have two locations for colors. On the first iteration of the main
+  // loop, Color[0] has a valid value, and Color[1] contains garbage. We
+  // read colors from slot 0 and write to slot 1. So, Color[0] represents
+  // the current color, and Color[1] represents the next color. On each
+  // iteration, they switch the roles, so we use them alternately.
+  //
+  // Why are we doing this? Recall that other threads may be working on
+  // other colors in parallel. They may read colors that we are updating.
+  // We cannot update colors in place because it breaks the invariance
+  // that all possibly-identical sections must have the same color at any
+  // moment. In other words, the for loop to update colors is not an
+  // atomic operation, and that is observable from other threads. By
+  // writing new colors to write-only places, we can keep the invariance.
+  //
+  // Below, `Current` has the index of the current color, and `Next` has
+  // the index of the next color. If threading is enabled, they are
+  // either (0, 1) or (1, 0).
+  //
+  // Note on single-thread: if that's the case, they are always (0, 0)
+  // because we can safely read next colors without worrying about race
+  // conditions. Using the same location makes this algorithm converge
+  // faster because it uses results of the same iteration earlier.
+  int Current = 0;
+  int Next = 0;
 };
 }
 
@@ -154,24 +183,10 @@ void ICF<ELFT>::segregate(size_t Begin, size_t End, bool Constant) {
     size_t Mid = Bound - Sections.begin();
 
     // Now we split [Begin, End) into [Begin, Mid) and [Mid, End) by
-    // updating the section colors in [Begin, End). We use Mid as a
-    // color ID because every group ends with a unique index.
-    //
-    // Note on Color[0] and Color[1]: we have two storages for colors.
-    // At the beginning of each iteration of the main loop, both have
-    // the same color. Color[0] contains the current color, and Color[1]
-    // contains the next color which will be used on the next iteration.
-    //
-    // Recall that other threads may be working on other ranges. They
-    // may be reading colors that we are about to update. We cannot
-    // update colors in place because it breaks the invariance that
-    // all sections in the same group must have the same color. In
-    // other words, the following for loop is not an atomic operation,
-    // and that is observable from other threads.
-    //
-    // By writing new colors to write-only places, we can keep the invariance.
+    // updating the sections in [Begin, End). We use Mid as a color ID
+    // because every group ends with a unique index.
     for (size_t I = Begin; I < Mid; ++I)
-      Sections[I]->Color[(Cnt + 1) % 2] = Mid;
+      Sections[I]->Color[Next] = Mid;
 
     // If we created a group, we need to iterate the main loop again.
     if (Mid != End)
@@ -237,10 +252,10 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
 
     // Ineligible sections have the special color 0.
     // They can never be the same in terms of section colors.
-    if (X->Color[Cnt % 2] == 0)
+    if (X->Color[Current] == 0)
       return false;
 
-    return X->Color[Cnt % 2] == Y->Color[Cnt % 2];
+    return X->Color[Current] == Y->Color[Current];
   };
 
   return std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
@@ -257,7 +272,7 @@ bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
 
 template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t Begin, size_t End) {
   for (size_t I = Begin + 1; I < End; ++I)
-    if (Sections[Begin]->Color[Cnt % 2] != Sections[I]->Color[Cnt % 2])
+    if (Sections[Begin]->Color[Current] != Sections[I]->Color[Current])
       return I;
   return End;
 }
@@ -289,16 +304,20 @@ void ICF<ELFT>::forEachColor(std::function<void(size_t, size_t)> Fn) {
   // too small to use threading, call Fn sequentially.
   if (!Config->Threads || Sections.size() < 1024) {
     forEachColorRange(0, Sections.size(), Fn);
+    ++Cnt;
     return;
   }
+
+  Current = Cnt % 2;
+  Next = (Cnt + 1) % 2;
 
   // Split sections into 256 shards and call Fn in parallel.
   size_t NumShards = 256;
   size_t Step = Sections.size() / NumShards;
-  parallel_for(size_t(0), NumShards, [&](size_t I) {
-    forEachColorRange(I * Step, (I + 1) * Step, Fn);
-  });
+  forLoop(0, NumShards,
+          [&](size_t I) { forEachColorRange(I * Step, (I + 1) * Step, Fn); });
   forEachColorRange(Step * NumShards, Sections.size(), Fn);
+  ++Cnt;
 }
 
 // The main function of ICF.
@@ -320,23 +339,17 @@ template <class ELFT> void ICF<ELFT>::run() {
   // the same color are consecutive in the vector.
   std::stable_sort(Sections.begin(), Sections.end(),
                    [](InputSection<ELFT> *A, InputSection<ELFT> *B) {
-                     if (A->Color[0] != B->Color[0])
-                       return A->Color[0] < B->Color[0];
-                     // Within a group, put the highest alignment
-                     // requirement first, so that's the one we'll keep.
-                     return B->Alignment < A->Alignment;
+                     return A->Color[0] < B->Color[0];
                    });
 
   // Compare static contents and assign unique IDs for each static content.
   forEachColor([&](size_t Begin, size_t End) { segregate(Begin, End, true); });
-  ++Cnt;
 
   // Split groups by comparing relocations until convergence is obtained.
   do {
     Repeat = false;
     forEachColor(
         [&](size_t Begin, size_t End) { segregate(Begin, End, false); });
-    ++Cnt;
   } while (Repeat);
 
   log("ICF needed " + Twine(Cnt) + " iterations");

@@ -180,10 +180,15 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    Phdrs = Script<ELFT>::X->hasPhdrsCommands() ? Script<ELFT>::X->createPhdrs()
-                                                : createPhdrs();
-    addPtArmExid(Phdrs);
-    fixHeaders();
+    // Binary output does not have PHDRS.
+    if (!Config->OFormatBinary) {
+      Phdrs = Script<ELFT>::X->hasPhdrsCommands()
+                  ? Script<ELFT>::X->createPhdrs()
+                  : createPhdrs();
+      addPtArmExid(Phdrs);
+      fixHeaders();
+    }
+
     if (ScriptConfig->HasSections) {
       Script<ELFT>::X->assignAddresses(Phdrs);
     } else {

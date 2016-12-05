@@ -3,6 +3,7 @@
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt12experimental15fundamentals_v112bad_any_cast4whatEv'}
 {'is_defined': False, 'type': 'FUNC', 'name': '_ZNKSt13runtime_error4whatEv'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt16nested_exception14rethrow_nestedEv'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt18bad_variant_access4whatEv'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__110__time_put8__do_putEPcRS1_PK2tmcc'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__110__time_put8__do_putEPwRS1_PK2tmcc'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__110error_code7messageEv'}
@@ -1600,6 +1601,7 @@
 {'is_defined': False, 'type': 'OBJECT', 'name': '_ZTISt14overflow_error', 'size': 0}
 {'is_defined': False, 'type': 'OBJECT', 'name': '_ZTISt16invalid_argument', 'size': 0}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTISt16nested_exception', 'size': 16}
+{'is_defined': True, 'type': 'OBJECT', 'name': '_ZTISt18bad_variant_access', 'size': 24}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTISt19bad_optional_access', 'size': 24}
 {'is_defined': False, 'type': 'OBJECT', 'name': '_ZTISt8bad_cast', 'size': 0}
 {'is_defined': False, 'type': 'OBJECT', 'name': '_ZTISt9bad_alloc', 'size': 0}
@@ -1718,6 +1720,7 @@
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__19time_baseE', 'size': 19}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSSt12bad_any_cast', 'size': 17}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSSt16nested_exception', 'size': 21}
+{'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSSt18bad_variant_access', 'size': 23}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSSt19bad_optional_access', 'size': 24}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTTNSt3__110istrstreamE', 'size': 32}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTTNSt3__110ostrstreamE', 'size': 32}
@@ -1829,6 +1832,7 @@
 {'is_defined': False, 'type': 'OBJECT', 'name': '_ZTVSt14overflow_error', 'size': 0}
 {'is_defined': False, 'type': 'OBJECT', 'name': '_ZTVSt16invalid_argument', 'size': 0}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVSt16nested_exception', 'size': 32}
+{'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVSt18bad_variant_access', 'size': 40}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVSt19bad_optional_access', 'size': 40}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZThn16_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED0Ev'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZThn16_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED1Ev'}
@@ -1885,4 +1889,3 @@
 {'is_defined': False, 'type': 'FUNC', 'name': '__cxa_rethrow_primary_exception'}
 {'is_defined': False, 'type': 'FUNC', 'name': '__cxa_throw'}
 {'is_defined': False, 'type': 'FUNC', 'name': '__cxa_uncaught_exception'}
-{'is_defined': False, 'type': 'FUNC', 'name': '__gxx_personality_v0'}
