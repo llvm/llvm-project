@@ -89,6 +89,7 @@ FunctionPass *createAMDGPUPromoteAlloca(const TargetMachine *TM = nullptr);
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
 
+Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
                                   CodeGenOpt::Level OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass();
@@ -98,10 +99,6 @@ FunctionPass *createAMDGPUAnnotateUniformValues();
 ModulePass *createAMDGPUOCL12AdapterPass();
 void initializeAMDGPUOCL12AdapterPass(PassRegistry&);
 extern char &AMDGPUOCL12AdapterID;
-
-ModulePass *createAMDGPULowerKernelCallsPass();
-void initializeAMDGPULowerKernelCallsPass(PassRegistry&);
-extern char &AMDGPULowerKernelCallsID;
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
