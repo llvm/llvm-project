@@ -27,6 +27,11 @@ if(TARGET lldb-mi)
   list(APPEND LLDB_TEST_DEPS lldb-mi)
 endif()
 
+# This target will only exist if the user is using a CMake older than 3.7
+if(TARGET lldb_header_symlink)
+  list(APPEND LLDB_TEST_DEPS lldb_header_symlink)
+endif()
+
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
     string(REGEX REPLACE ".*ccache\ +" "" LLDB_TEST_COMPILER ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
 endif()
@@ -48,6 +53,18 @@ set(LLDB_TEST_ARCH
 # change has made its way through bots to clean up their CMake caches.
 string(REPLACE "-C;${LLDB_TEST_COMPILER}" "" LLDB_TEST_USER_ARGS_New "${LLDB_TEST_USER_ARGS}")
 
+if(LLDB_TEST_CLANG)
+  set(LLDB_TEST_COMPILER $<TARGET_FILE:clang>)
+endif()
+
+if(LLDB_TEST_SWIFT)
+  set(LLDB_TEST_SWIFT_COMPILER $<TARGET_FILE:swift>c)
+endif()
+
+if(LLDB_TEST_SWIFT_COMPILER)
+  set(SWIFT_TEST_ARGS --swift-compiler ${LLDB_TEST_SWIFT_COMPILER})
+endif()
+
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   "${LLDB_TEST_USER_ARGS_New}"
@@ -62,6 +79,7 @@ set(LLDB_TEST_COMMON_ARGS
   -u CXXFLAGS
   -u CFLAGS
   -C ${LLDB_TEST_COMPILER}
+  ${SWIFT_TEST_ARGS}
   )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
@@ -83,6 +101,14 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   if (NOT LLDB_TEST_HIDE_CONSOLE_WINDOWS)
     set(LLDB_TEST_COMMON_ARGS ${LLDB_TEST_COMMON_ARGS} --show-inferior-console)
   endif()
+endif()
+
+if(LLDB_CODESIGN_IDENTITY)
+  list(APPEND LLDB_TEST_COMMON_ARGS --codesign-identity "${LLDB_CODESIGN_IDENTITY}")
+endif()
+
+if(LLDB_BUILD_FRAMEWORK)
+  list(APPEND LLDB_TEST_COMMON_ARGS --framework $<TARGET_FILE_DIR:liblldb>)
 endif()
 
 add_python_test_target(check-lldb-single

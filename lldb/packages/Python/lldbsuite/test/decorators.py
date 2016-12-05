@@ -670,39 +670,6 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
             archs))
 
 
-def skipUnlessCompilerRt(func):
-    """Decorate the item to skip tests if testing remotely."""
-    def is_compiler_rt_missing():
-        # This path is where compiler-rt sources would be on LLVM.org LLDB
-        # builds and Swift LLDB builds driven by Xcode.
-        compilerRtPathXcode = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "..",
-            "llvm",
-            "projects",
-            "compiler-rt")
-
-        # This path is where compiler-rt sources would be on Swift
-        # build-script-driven builds as found on our CI.
-        compilerRtPathBuildScript = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "..",
-            "..",
-            "llvm",
-            "projects",
-            "compiler-rt")
-        compiler_rt_exists = os.path.exists(
-            compilerRtPathXcode) or os.path.exists(compilerRtPathBuildScript)
-        return "compiler-rt not found" if not compiler_rt_exists else None
-    return skipTestIfFn(is_compiler_rt_missing)(func)
-
-
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -723,3 +690,19 @@ def skipUnlessThreadSanitizer(func):
             return "Compiler cannot compile with -fsanitize=thread"
         return None
     return skipTestIfFn(is_compiler_clang_with_thread_sanitizer)(func)
+
+def skipUnlessAddressSanitizer(func):
+    """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
+
+    def is_compiler_with_address_sanitizer(self):
+        compiler_path = self.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            return None  # The compiler cannot compile at all, let's *not* skip the test
+        cmd = "echo 'int main() {}' | %s -fsanitize=address -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Compiler cannot compile with -fsanitize=address"
+        return None
+    return skipTestIfFn(is_compiler_with_address_sanitizer)(func)

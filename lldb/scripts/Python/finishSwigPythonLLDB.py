@@ -452,39 +452,6 @@ def make_symlink_liblldb(
     return (bOk, strErrMsg)
 
 #++---------------------------------------------------------------------------
-# Details:  Make the symbolic link to the darwin-debug.
-# Args:     vDictArgs               - (R) Program input parameters.
-#           vstrFrameworkPythonDir  - (R) Python framework directory.
-#           vstrDarwinDebugFileName - (R) File name for darwin-debug.
-# Returns:  Bool - True = function success, False = failure.
-#           Str - Error description on task failure.
-# Throws:   None.
-#--
-
-
-def make_symlink_darwin_debug(
-        vDictArgs,
-        vstrFrameworkPythonDir,
-        vstrDarwinDebugFileName):
-    dbg = utilsDebug.CDebugFnVerbose(
-        "Python script make_symlink_darwin_debug()")
-    bOk = True
-    strErrMsg = ""
-    strTarget = vstrDarwinDebugFileName
-    strSrc = ""
-
-    bMakeFileCalled = "-m" in vDictArgs
-    if not bMakeFileCalled:
-        return (bOk, strErrMsg)
-    else:
-        strSrc = os.path.join("bin", "lldb-launcher")
-
-    bOk, strErrMsg = make_symlink(
-        vDictArgs, vstrFrameworkPythonDir, strSrc, strTarget)
-
-    return (bOk, strErrMsg)
-
-#++---------------------------------------------------------------------------
 # Details:  Make the symbolic link to the lldb-argdumper.
 # Args:     vDictArgs               - (R) Program input parameters.
 #           vstrFrameworkPythonDir  - (R) Python framework directory.
@@ -549,13 +516,6 @@ def create_symlinks(vDictArgs, vstrFrameworkPythonDir, vstrLldbLibDir):
                                               vstrFrameworkPythonDir,
                                               strLibLldbFileName,
                                               vstrLldbLibDir)
-
-    # Make symlink for darwin-debug on Darwin
-    strDarwinDebugFileName = "darwin-debug"
-    if bOk and eOSType == utilsOsType.EnumOsType.Darwin:
-        bOk, strErrMsg = make_symlink_darwin_debug(vDictArgs,
-                                                   vstrFrameworkPythonDir,
-                                                   strDarwinDebugFileName)
 
     # Make symlink for lldb-argdumper
     strArgdumperFileName = "lldb-argdumper"
