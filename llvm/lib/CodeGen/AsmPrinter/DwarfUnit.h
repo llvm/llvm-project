@@ -235,11 +235,13 @@ public:
   /// Add template parameters in buffer.
   void addTemplateParams(DIE &Buffer, DINodeArray TParams);
 
-  /// Add register operand.
+  /// Add register operand for a source variable fragment of the specified size
+  /// and offset.
+  ///
   /// \returns false if the register does not exist, e.g., because it was never
-  /// materialized.
-  bool addRegisterOpPiece(DIELoc &TheDie, unsigned Reg,
-                          unsigned SizeInBits = 0, unsigned OffsetInBits = 0);
+  ///          materialized.
+  bool addRegisterFragment(DIELoc &TheDie, unsigned Reg,
+                           unsigned SizeInBits = 0, unsigned OffsetInBits = 0);
 
   /// Add register offset.
   /// \returns false if the register does not exist, e.g., because it was never

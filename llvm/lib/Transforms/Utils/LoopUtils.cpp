@@ -1086,9 +1086,6 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
   // To estimate the number of times the loop body was executed, we want to
   // know the number of times the backedge was taken, vs. the number of times
   // we exited the loop.
-  // The branch weights give us almost what we want, since they were adjusted
-  // from the raw counts to provide a better probability estimate. Remove
-  // the adjustment by subtracting 1 from both weights.
   uint64_t TrueVal, FalseVal;
   if (!LatchBR->extractProfMetadata(TrueVal, FalseVal))
     return None;

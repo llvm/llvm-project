@@ -55,10 +55,8 @@
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/editlinewin.h"
-#else
-#if !defined(__ANDROID_NDK__)
+#elif !defined(__ANDROID__)
 #include <histedit.h>
-#endif
 #endif
 
 #include <mutex>

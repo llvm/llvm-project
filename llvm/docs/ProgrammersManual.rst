@@ -3278,20 +3278,20 @@ Important Derived Types
   * ``unsigned getBitWidth() const``: Get the bit width of an integer type.
 
 ``SequentialType``
-  This is subclassed by ArrayType, PointerType and VectorType.
+  This is subclassed by ArrayType and VectorType.
 
   * ``const Type * getElementType() const``: Returns the type of each
     of the elements in the sequential type.
+
+  * ``uint64_t getNumElements() const``: Returns the number of elements
+    in the sequential type.
 
 ``ArrayType``
   This is a subclass of SequentialType and defines the interface for array
   types.
 
-  * ``unsigned getNumElements() const``: Returns the number of elements
-    in the array.
-
 ``PointerType``
-  Subclass of SequentialType for pointer types.
+  Subclass of Type for pointer types.
 
 ``VectorType``
   Subclass of SequentialType for vector types.  A vector type is similar to an

@@ -554,16 +554,30 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // simplify the LHS, here we're using information from the LHS to simplify
     // the RHS.
     if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      SDValue Op0 = Op.getOperand(0);
       APInt LHSZero, LHSOne;
       // Do not increment Depth here; that can cause an infinite loop.
-      TLO.DAG.computeKnownBits(Op.getOperand(0), LHSZero, LHSOne, Depth);
+      TLO.DAG.computeKnownBits(Op0, LHSZero, LHSOne, Depth);
       // If the LHS already has zeros where RHSC does, this and is dead.
       if ((LHSZero & NewMask) == (~RHSC->getAPIntValue() & NewMask))
-        return TLO.CombineTo(Op, Op.getOperand(0));
+        return TLO.CombineTo(Op, Op0);
+
       // If any of the set bits in the RHS are known zero on the LHS, shrink
       // the constant.
       if (TLO.ShrinkDemandedConstant(Op, ~LHSZero & NewMask))
         return true;
+
+      // Bitwise-not (xor X, -1) is a special case: we don't usually shrink its
+      // constant, but if this 'and' is only clearing bits that were just set by
+      // the xor, then this 'and' can be eliminated by shrinking the mask of
+      // the xor. For example, for a 32-bit X:
+      // and (xor (srl X, 31), -1), 1 --> xor (srl X, 31), 1
+      if (isBitwiseNot(Op0) && Op0.hasOneUse() &&
+          LHSOne == ~RHSC->getAPIntValue()) {
+        SDValue Xor = TLO.DAG.getNode(ISD::XOR, dl, Op.getValueType(),
+                                      Op0.getOperand(0), Op.getOperand(1));
+        return TLO.CombineTo(Op, Xor);
+      }
     }
 
     if (SimplifyDemandedBits(Op.getOperand(1), NewMask, KnownZero,
@@ -679,10 +693,10 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
 
     // If the RHS is a constant, see if we can simplify it.
     // for XOR, we prefer to force bits to 1 if they will make a -1.
-    // if we can't force bits, try to shrink constant
+    // If we can't force bits, try to shrink the constant.
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       APInt Expanded = C->getAPIntValue() | (~NewMask);
-      // if we can expand it to have all bits set, do it
+      // If we can expand it to have all bits set, do it.
       if (Expanded.isAllOnesValue()) {
         if (Expanded != C->getAPIntValue()) {
           EVT VT = Op.getValueType();
@@ -690,7 +704,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                         TLO.DAG.getConstant(Expanded, dl, VT));
           return TLO.CombineTo(Op, New);
         }
-        // if it already has all the bits set, nothing to change
+        // If it already has all the bits set, nothing to change
         // but don't shrink either!
       } else if (TLO.ShrinkDemandedConstant(Op, NewMask)) {
         return true;

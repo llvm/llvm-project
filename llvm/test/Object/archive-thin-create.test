@@ -6,9 +6,9 @@ RUN: touch foo/test2.o
 RUN: llvm-ar qcT foo/libtest.a foo/test1.o
 RUN: llvm-ar qcT foo/libtest.a foo/test1.o
 RUN: llvm-ar qcT foo/libtest.a foo/test2.o
-RUN: llvm-ar t foo/libtest.a | FileCheck %s
+RUN: llvm-ar t foo/libtest.a | FileCheck --match-full-lines %s
 
-CHECK: test1.o
-CHECK: test1.o
-CHECK: test2.o
+CHECK: foo/test1.o
+CHECK: foo/test1.o
+CHECK: foo/test2.o
 

@@ -250,7 +250,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
   // If we have a physreg reference like (mul gpr:$src, EAX) then we need to
   // record the register
   if (LeafRec->isSubClassOf("Register")) {
-    AddMatcher(new RecordMatcher("physreg input "+LeafRec->getName(),
+    AddMatcher(new RecordMatcher("physreg input "+LeafRec->getName().str(),
                                  NextRecordedOperandNo));
     PhysRegInputs.push_back(std::make_pair(LeafRec, NextRecordedOperandNo++));
     return;
@@ -354,7 +354,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
   unsigned OpNo = 0;
   if (N->NodeHasProperty(SDNPHasChain, CGP)) {
     // Record the node and remember it in our chained nodes list.
-    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName() +
+    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName().str() +
                                          "' chained node",
                                  NextRecordedOperandNo));
     // Remember all of the input chains our pattern will match.
@@ -418,7 +418,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
     // TODO: This redundantly records nodes with both glues and chains.
 
     // Record the node and remember it in our chained nodes list.
-    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName() +
+    AddMatcher(new RecordMatcher("'" + N->getOperator()->getName().str() +
                                          "' glue output node",
                                  NextRecordedOperandNo));
   }
@@ -887,7 +887,7 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
   assert((!ResultVTs.empty() || TreeHasOutGlue || NodeHasChain) &&
          "Node has no result");
 
-  AddMatcher(new EmitNodeMatcher(II.Namespace+"::"+II.TheDef->getName(),
+  AddMatcher(new EmitNodeMatcher(II.Namespace+"::"+II.TheDef->getName().str(),
                                  ResultVTs, InstOps,
                                  NodeHasChain, TreeHasInGlue, TreeHasOutGlue,
                                  NodeHasMemRefs, NumFixedArityOperands,

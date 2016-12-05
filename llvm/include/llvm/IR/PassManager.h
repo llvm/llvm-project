@@ -137,7 +137,7 @@ public:
   }
 
   /// \brief Query whether all of the analyses in the set are preserved.
-  bool preserved(PreservedAnalyses Arg) {
+  bool preserved(const PreservedAnalyses& Arg) {
     if (Arg.areAllPreserved())
       return areAllPreserved();
     for (auto ID : Arg.PreservedAnalysisIDs)
@@ -251,7 +251,8 @@ public:
   /// \brief Construct a pass manager.
   ///
   /// It can be passed a flag to get debug logging as the passes are run.
-  PassManager(bool DebugLogging = false) : DebugLogging(DebugLogging) {}
+  explicit PassManager(bool DebugLogging = false) : DebugLogging(DebugLogging) {}
+
   // FIXME: These are equivalent to the default move constructor/move
   // assignment. However, using = default triggers linker errors due to the
   // explicit instantiations below. Find away to use the default and remove the
@@ -468,15 +469,12 @@ public:
     if (DebugLogging)
       dbgs() << "Clearing all analysis results for: " << IR.getName() << "\n";
 
-    // Clear all the invalidated results associated specifically with this
-    // function.
-    SmallVector<AnalysisKey *, 8> InvalidatedIDs;
     auto ResultsListI = AnalysisResultLists.find(&IR);
     if (ResultsListI == AnalysisResultLists.end())
       return;
     // Clear the map pointing into the results list.
     for (auto &IDAndResult : ResultsListI->second)
-      AnalysisResults.erase(std::make_pair(IDAndResult.first, &IR));
+      AnalysisResults.erase({IDAndResult.first, &IR});
 
     // And actually destroy and erase the results associated with this IR.
     AnalysisResultLists.erase(ResultsListI);
@@ -547,7 +545,8 @@ public:
   /// interface also lends itself to minimizing the number of times we have to
   /// do lookups for analyses or construct complex passes only to throw them
   /// away.
-  template <typename PassBuilderT> bool registerPass(PassBuilderT PassBuilder) {
+  template <typename PassBuilderT>
+  bool registerPass(PassBuilderT &&PassBuilder) {
     typedef decltype(PassBuilder()) PassT;
     typedef detail::AnalysisPassModel<IRUnitT, PassT, PreservedAnalyses,
                                       Invalidator, ExtraArgTs...>
@@ -617,37 +616,38 @@ public:
     }
 
     // Now erase the results that were marked above as invalidated.
-    for (auto I = ResultsList.begin(), E = ResultsList.end(); I != E;) {
-      AnalysisKey *ID = I->first;
-      if (!IsResultInvalidated.lookup(ID)) {
-        ++I;
-        continue;
+    if (!IsResultInvalidated.empty()) {
+      for (auto I = ResultsList.begin(), E = ResultsList.end(); I != E;) {
+        AnalysisKey *ID = I->first;
+        if (!IsResultInvalidated.lookup(ID)) {
+          ++I;
+          continue;
+        }
+
+        if (DebugLogging)
+          dbgs() << "Invalidating analysis: " << this->lookUpPass(ID).name()
+                 << "\n";
+
+        I = ResultsList.erase(I);
+        AnalysisResults.erase({ID, &IR});
       }
-
-      if (DebugLogging)
-        dbgs() << "Invalidating analysis: " << this->lookupPass(ID).name()
-               << "\n";
-
-      I = ResultsList.erase(I);
-      AnalysisResults.erase({ID, &IR});
     }
+
     if (ResultsList.empty())
       AnalysisResultLists.erase(&IR);
-
-    return;
   }
 
 private:
-  /// \brief Lookup a registered analysis pass.
-  PassConceptT &lookupPass(AnalysisKey *ID) {
+  /// \brief Look up a registered analysis pass.
+  PassConceptT &lookUpPass(AnalysisKey *ID) {
     typename AnalysisPassMapT::iterator PI = AnalysisPasses.find(ID);
     assert(PI != AnalysisPasses.end() &&
            "Analysis passes must be registered prior to being queried!");
     return *PI->second;
   }
 
-  /// \brief Lookup a registered analysis pass.
-  const PassConceptT &lookupPass(AnalysisKey *ID) const {
+  /// \brief Look up a registered analysis pass.
+  const PassConceptT &lookUpPass(AnalysisKey *ID) const {
     typename AnalysisPassMapT::const_iterator PI = AnalysisPasses.find(ID);
     assert(PI != AnalysisPasses.end() &&
            "Analysis passes must be registered prior to being queried!");
@@ -665,7 +665,7 @@ private:
     // If we don't have a cached result for this function, look up the pass and
     // run it to produce a result, which we then add to the cache.
     if (Inserted) {
-      auto &P = this->lookupPass(ID);
+      auto &P = this->lookUpPass(ID);
       if (DebugLogging)
         dbgs() << "Running analysis: " << P.name() << "\n";
       AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
@@ -673,7 +673,7 @@ private:
 
       // P.run may have inserted elements into AnalysisResults and invalidated
       // RI.
-      RI = AnalysisResults.find(std::make_pair(ID, &IR));
+      RI = AnalysisResults.find({ID, &IR});
       assert(RI != AnalysisResults.end() && "we just inserted it!");
 
       RI->second = std::prev(ResultList.end());
@@ -685,19 +685,19 @@ private:
   /// \brief Get a cached analysis result or return null.
   ResultConceptT *getCachedResultImpl(AnalysisKey *ID, IRUnitT &IR) const {
     typename AnalysisResultMapT::const_iterator RI =
-        AnalysisResults.find(std::make_pair(ID, &IR));
+        AnalysisResults.find({ID, &IR});
     return RI == AnalysisResults.end() ? nullptr : &*RI->second->second;
   }
 
   /// \brief Invalidate a function pass result.
   void invalidateImpl(AnalysisKey *ID, IRUnitT &IR) {
     typename AnalysisResultMapT::iterator RI =
-        AnalysisResults.find(std::make_pair(ID, &IR));
+        AnalysisResults.find({ID, &IR});
     if (RI == AnalysisResults.end())
       return;
 
     if (DebugLogging)
-      dbgs() << "Invalidating analysis: " << this->lookupPass(ID).name()
+      dbgs() << "Invalidating analysis: " << this->lookUpPass(ID).name()
              << "\n";
     AnalysisResultLists[&IR].erase(RI->second);
     AnalysisResults.erase(RI);

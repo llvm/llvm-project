@@ -31,7 +31,7 @@ inline int regexec(const llvm_regex_t *a, const char *b, size_t c,
 
 inline void regfree(llvm_regex_t *a) { llvm_regfree(a); }
 #else
-#if __ANDROID_NDK__
+#ifdef __ANDROID__
 #include <regex>
 #endif
 #include <regex.h>

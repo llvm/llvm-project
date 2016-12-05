@@ -284,7 +284,7 @@ def HexagonAsmParser : AsmParser {
 
 def HexagonAsmParserVariant : AsmParserVariant {
   int Variant = 0;
-  string TokenizingCharacters = "#()=:.<>!+*";
+  string TokenizingCharacters = "#()=:.<>!+*-|^&";
 }
 
 def Hexagon : Target {

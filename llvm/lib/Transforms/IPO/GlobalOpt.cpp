@@ -467,12 +467,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         NGV->setAlignment(NewAlign);
     }
   } else if (SequentialType *STy = dyn_cast<SequentialType>(Ty)) {
-    unsigned NumElements = 0;
-    if (ArrayType *ATy = dyn_cast<ArrayType>(STy))
-      NumElements = ATy->getNumElements();
-    else
-      NumElements = cast<VectorType>(STy)->getNumElements();
-
+    unsigned NumElements = STy->getNumElements();
     if (NumElements > 16 && GV->hasNUsesOrMore(16))
       return nullptr; // It's not worth it.
     NewGlobals.reserve(NumElements);
@@ -2119,12 +2114,7 @@ static Constant *EvaluateStoreInto(Constant *Init, Constant *Val,
 
   ConstantInt *CI = cast<ConstantInt>(Addr->getOperand(OpNo));
   SequentialType *InitTy = cast<SequentialType>(Init->getType());
-
-  uint64_t NumElts;
-  if (ArrayType *ATy = dyn_cast<ArrayType>(InitTy))
-    NumElts = ATy->getNumElements();
-  else
-    NumElts = InitTy->getVectorNumElements();
+  uint64_t NumElts = InitTy->getNumElements();
 
   // Break up the array into elements.
   for (uint64_t i = 0, e = NumElts; i != e; ++i)

@@ -2911,16 +2911,18 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
 
   case VisibleNoLinkage:
   case ExternalLinkage:
-    if (!CGM.getLangOpts().RTTI) {
-      // RTTI is not enabled, which means that this type info struct is going
-      // to be used for exception handling. Give it linkonce_odr linkage.
+    // RTTI is not enabled, which means that this type info struct is going
+    // to be used for exception handling. Give it linkonce_odr linkage.
+    if (!CGM.getLangOpts().RTTI)
       return llvm::GlobalValue::LinkOnceODRLinkage;
-    }
 
     if (const RecordType *Record = dyn_cast<RecordType>(Ty)) {
       const CXXRecordDecl *RD = cast<CXXRecordDecl>(Record->getDecl());
       if (RD->hasAttr<WeakAttr>())
         return llvm::GlobalValue::WeakODRLinkage;
+      if (CGM.getTriple().isWindowsItaniumEnvironment())
+        if (RD->hasAttr<DLLImportAttr>())
+          return llvm::GlobalValue::ExternalLinkage;
       if (RD->isDynamicClass()) {
         llvm::GlobalValue::LinkageTypes LT = CGM.getVTableLinkage(RD);
         // MinGW won't export the RTTI information when there is a key function.
@@ -3122,10 +3124,26 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     llvmVisibility = llvm::GlobalValue::HiddenVisibility;
   else
     llvmVisibility = CodeGenModule::GetLLVMVisibility(Ty->getVisibility());
+
   TypeName->setVisibility(llvmVisibility);
   GV->setVisibility(llvmVisibility);
-  if (DLLExport)
-    GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+
+  if (CGM.getTriple().isWindowsItaniumEnvironment()) {
+    auto RD = Ty->getAsCXXRecordDecl();
+    if (DLLExport || (RD && RD->hasAttr<DLLExportAttr>())) {
+      TypeName->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+      GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+    } else if (RD && RD->hasAttr<DLLImportAttr>()) {
+      TypeName->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+
+      // Because the typename and the typeinfo are DLL import, convert them to
+      // declarations rather than definitions.  The initializers still need to
+      // be constructed to calculate the type for the declarations.
+      TypeName->setInitializer(nullptr);
+      GV->setInitializer(nullptr);
+    }
+  }
 
   return llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy);
 }

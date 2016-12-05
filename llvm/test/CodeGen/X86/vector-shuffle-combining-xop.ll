@@ -213,13 +213,13 @@ define <16 x i8> @combine_vpperm_as_blend_with_zero(<16 x i8> %a0, <16 x i8> %a1
   ret <16 x i8> %res0
 }
 
-define <16 x i8> @combine_vpperm_as_unary_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
-; X32-LABEL: combine_vpperm_as_unary_unpckhwd:
+define <16 x i8> @combine_vpperm_as_unary_unpckhbw(<16 x i8> %a0, <16 x i8> %a1) {
+; X32-LABEL: combine_vpperm_as_unary_unpckhbw:
 ; X32:       # BB#0:
 ; X32-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: combine_vpperm_as_unary_unpckhwd:
+; X64-LABEL: combine_vpperm_as_unary_unpckhbw:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; X64-NEXT:    retq
@@ -227,17 +227,31 @@ define <16 x i8> @combine_vpperm_as_unary_unpckhwd(<16 x i8> %a0, <16 x i8> %a1)
   ret <16 x i8> %res0
 }
 
-define <16 x i8> @combine_vpperm_as_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
-; X32-LABEL: combine_vpperm_as_unpckhwd:
+define <16 x i8> @combine_vpperm_as_unpckhbw(<16 x i8> %a0, <16 x i8> %a1) {
+; X32-LABEL: combine_vpperm_as_unpckhbw:
 ; X32:       # BB#0:
-; X32-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; X32-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: combine_vpperm_as_unpckhwd:
+; X64-LABEL: combine_vpperm_as_unpckhbw:
 ; X64:       # BB#0:
-; X64-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; X64-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; X64-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 8, i8 24, i8 9, i8 25, i8 10, i8 26, i8 11, i8 27, i8 12, i8 28, i8 13, i8 29, i8 14, i8 30, i8 15, i8 31>)
+  ret <16 x i8> %res0
+}
+
+define <16 x i8> @combine_vpperm_as_unpcklbw(<16 x i8> %a0, <16 x i8> %a1) {
+; X32-LABEL: combine_vpperm_as_unpcklbw:
+; X32:       # BB#0:
+; X32-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpperm_as_unpcklbw:
+; X64:       # BB#0:
+; X64-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; X64-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 16, i8 0, i8 17, i8 1, i8 18, i8 2, i8 19, i8 3, i8 20, i8 4, i8 21, i8 5, i8 22, i8 6, i8 23, i8 7>)
   ret <16 x i8> %res0
 }
 

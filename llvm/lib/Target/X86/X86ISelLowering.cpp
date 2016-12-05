@@ -5054,29 +5054,35 @@ static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
   return DAG.getBitcast(VT, Vec);
 }
 
+/// Generate unpacklo/unpackhi shuffle mask.
+static void createUnpackShuffleMask(MVT VT, SmallVectorImpl<int> &Mask, bool Lo,
+                                    bool Unary) {
+  assert(Mask.empty() && "Expected an empty shuffle mask vector");
+  int NumElts = VT.getVectorNumElements();
+  int NumEltsInLane = 128 / VT.getScalarSizeInBits();
+
+  for (int i = 0; i < NumElts; ++i) {
+    unsigned LaneStart = (i / NumEltsInLane) * NumEltsInLane;
+    int Pos = (i % NumEltsInLane) / 2 + LaneStart;
+    Pos += (Unary ? 0 : NumElts * (i % 2));
+    Pos += (Lo ? 0 : NumEltsInLane / 2);
+    Mask.push_back(Pos);
+  }
+}
+
 /// Returns a vector_shuffle node for an unpackl operation.
 static SDValue getUnpackl(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
                           SDValue V1, SDValue V2) {
-  assert(VT.is128BitVector() && "Expected a 128-bit vector type");
-  unsigned NumElems = VT.getVectorNumElements();
-  SmallVector<int, 8> Mask(NumElems);
-  for (unsigned i = 0, e = NumElems/2; i != e; ++i) {
-    Mask[i * 2]     = i;
-    Mask[i * 2 + 1] = i + NumElems;
-  }
+  SmallVector<int, 8> Mask;
+  createUnpackShuffleMask(VT, Mask, /* Lo = */ true, /* Unary = */ false);
   return DAG.getVectorShuffle(VT, dl, V1, V2, Mask);
 }
 
 /// Returns a vector_shuffle node for an unpackh operation.
 static SDValue getUnpackh(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
                           SDValue V1, SDValue V2) {
-  assert(VT.is128BitVector() && "Expected a 128-bit vector type");
-  unsigned NumElems = VT.getVectorNumElements();
-  SmallVector<int, 8> Mask(NumElems);
-  for (unsigned i = 0, Half = NumElems/2; i != Half; ++i) {
-    Mask[i * 2]     = i + Half;
-    Mask[i * 2 + 1] = i + NumElems + Half;
-  }
+  SmallVector<int, 8> Mask;
+  createUnpackShuffleMask(VT, Mask, /* Lo = */ false, /* Unary = */ false);
   return DAG.getVectorShuffle(VT, dl, V1, V2, Mask);
 }
 
@@ -5131,77 +5137,109 @@ static const Constant *getTargetConstantFromNode(SDValue Op) {
   return dyn_cast<Constant>(CNode->getConstVal());
 }
 
-// Extract constant bits from constant pool vector.
+// Extract raw constant bits from constant pools.
 static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                           SmallBitVector &UndefElts,
                                           SmallVectorImpl<APInt> &EltBits) {
   assert(UndefElts.empty() && "Expected an empty UndefElts vector");
   assert(EltBits.empty() && "Expected an empty EltBits vector");
 
+  Op = peekThroughBitcasts(Op);
+
   EVT VT = Op.getValueType();
   unsigned SizeInBits = VT.getSizeInBits();
   assert((SizeInBits % EltSizeInBits) == 0 && "Can't split constant!");
   unsigned NumElts = SizeInBits / EltSizeInBits;
 
-  auto *Cst = getTargetConstantFromNode(Op);
-  if (!Cst)
-    return false;
-
-  Type *CstTy = Cst->getType();
-  if (!CstTy->isVectorTy() || (SizeInBits != CstTy->getPrimitiveSizeInBits()))
-    return false;
-
   // Extract all the undef/constant element data and pack into single bitsets.
   APInt UndefBits(SizeInBits, 0);
   APInt MaskBits(SizeInBits, 0);
 
-  unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
-  for (unsigned i = 0, e = CstTy->getVectorNumElements(); i != e; ++i) {
-    auto *COp = Cst->getAggregateElement(i);
-    if (!COp ||
-        !(isa<UndefValue>(COp) || isa<ConstantInt>(COp) ||
-          isa<ConstantFP>(COp)))
+  // Split the undef/constant single bitset data into the target elements.
+  auto SplitBitData = [&]() {
+    UndefElts = SmallBitVector(NumElts, false);
+    EltBits.resize(NumElts, APInt(EltSizeInBits, 0));
+
+    for (unsigned i = 0; i != NumElts; ++i) {
+      APInt UndefEltBits = UndefBits.lshr(i * EltSizeInBits);
+      UndefEltBits = UndefEltBits.zextOrTrunc(EltSizeInBits);
+
+      // Only treat an element as UNDEF if all bits are UNDEF, otherwise
+      // treat it as zero.
+      if (UndefEltBits.isAllOnesValue()) {
+        UndefElts[i] = true;
+        continue;
+      }
+
+      APInt Bits = MaskBits.lshr(i * EltSizeInBits);
+      Bits = Bits.zextOrTrunc(EltSizeInBits);
+      EltBits[i] = Bits.getZExtValue();
+    }
+    return true;
+  };
+
+  auto ExtractConstantBits = [SizeInBits](const Constant *Cst, APInt &Mask,
+                                          APInt &Undefs) {
+    if (!Cst)
+      return false;
+    unsigned CstSizeInBits = Cst->getType()->getPrimitiveSizeInBits();
+    if (isa<UndefValue>(Cst)) {
+      Mask = APInt::getNullValue(SizeInBits);
+      Undefs = APInt::getLowBitsSet(SizeInBits, CstSizeInBits);
+      return true;
+    }
+    if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
+      Mask = CInt->getValue().zextOrTrunc(SizeInBits);
+      Undefs = APInt::getNullValue(SizeInBits);
+      return true;
+    }
+    if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
+      Mask = CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(SizeInBits);
+      Undefs = APInt::getNullValue(SizeInBits);
+      return true;
+    }
+    return false;
+  };
+
+  // Extract constant bits from constant pool vector.
+  if (auto *Cst = getTargetConstantFromNode(Op)) {
+    Type *CstTy = Cst->getType();
+    if (!CstTy->isVectorTy() || (SizeInBits != CstTy->getPrimitiveSizeInBits()))
       return false;
 
-    if (isa<UndefValue>(COp)) {
-      APInt EltUndef = APInt::getLowBitsSet(SizeInBits, CstEltSizeInBits);
-      UndefBits |= EltUndef.shl(i * CstEltSizeInBits);
-      continue;
+    unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
+    for (unsigned i = 0, e = CstTy->getVectorNumElements(); i != e; ++i) {
+      APInt Bits, Undefs;
+      if (!ExtractConstantBits(Cst->getAggregateElement(i), Bits, Undefs))
+        return false;
+      MaskBits |= Bits.shl(i * CstEltSizeInBits);
+      UndefBits |= Undefs.shl(i * CstEltSizeInBits);
     }
 
-    APInt Bits;
-    if (auto *CInt = dyn_cast<ConstantInt>(COp))
-      Bits = CInt->getValue();
-    else if (auto *CFP = dyn_cast<ConstantFP>(COp))
-      Bits = CFP->getValueAPF().bitcastToAPInt();
-
-    Bits = Bits.zextOrTrunc(SizeInBits);
-    MaskBits |= Bits.shl(i * CstEltSizeInBits);
+    return SplitBitData();
   }
 
-  UndefElts = SmallBitVector(NumElts, false);
-  EltBits.resize(NumElts, APInt(EltSizeInBits, 0));
-
-  // Now extract the undef/constant bit data into the target elts.
-  for (unsigned i = 0; i != NumElts; ++i) {
-    APInt UndefEltBits = UndefBits.lshr(i * EltSizeInBits);
-    UndefEltBits = UndefEltBits.zextOrTrunc(EltSizeInBits);
-
-    // Only treat the element as UNDEF if all bits are UNDEF, otherwise
-    // treat it as zero.
-    if (UndefEltBits.isAllOnesValue()) {
-      UndefElts[i] = true;
-      continue;
+  // Extract constant bits from a broadcasted constant pool scalar.
+  if (Op.getOpcode() == X86ISD::VBROADCAST &&
+      EltSizeInBits <= Op.getScalarValueSizeInBits()) {
+    if (auto *Broadcast = getTargetConstantFromNode(Op.getOperand(0))) {
+      APInt Bits, Undefs;
+      if (ExtractConstantBits(Broadcast, Bits, Undefs)) {
+        unsigned NumBroadcastBits = Op.getScalarValueSizeInBits();
+        unsigned NumBroadcastElts = SizeInBits / NumBroadcastBits;
+        for (unsigned i = 0; i != NumBroadcastElts; ++i) {
+          MaskBits |= Bits.shl(i * NumBroadcastBits);
+          UndefBits |= Undefs.shl(i * NumBroadcastBits);
+        }
+        return SplitBitData();
+      }
     }
-
-    APInt Bits = MaskBits.lshr(i * EltSizeInBits);
-    Bits = Bits.zextOrTrunc(EltSizeInBits);
-    EltBits[i] = Bits.getZExtValue();
   }
 
-  return true;
+  return false;
 }
 
+// TODO: Merge more of this with getTargetConstantBitsFromNode.
 static bool getTargetShuffleMaskIndices(SDValue MaskNode,
                                         unsigned MaskEltSizeInBits,
                                         SmallVectorImpl<uint64_t> &RawMask) {
@@ -7822,21 +7860,13 @@ static SDValue lowerVectorShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
 static SDValue lowerVectorShuffleWithUNPCK(const SDLoc &DL, MVT VT,
                                            ArrayRef<int> Mask, SDValue V1,
                                            SDValue V2, SelectionDAG &DAG) {
-  int NumElts = VT.getVectorNumElements();
-  int NumEltsInLane = 128 / VT.getScalarSizeInBits();
-  SmallVector<int, 8> Unpckl(NumElts);
-  SmallVector<int, 8> Unpckh(NumElts);
-
-  for (int i = 0; i < NumElts; ++i) {
-    unsigned LaneStart = (i / NumEltsInLane) * NumEltsInLane;
-    int LoPos = (i % NumEltsInLane) / 2 + LaneStart + NumElts * (i % 2);
-    int HiPos = LoPos + NumEltsInLane / 2;
-    Unpckl[i] = LoPos;
-    Unpckh[i] = HiPos;
-  }
-
+  SmallVector<int, 8> Unpckl;
+  createUnpackShuffleMask(VT, Unpckl, /* Lo = */ true, /* Unary = */ false);
   if (isShuffleEquivalent(V1, V2, Mask, Unpckl))
     return DAG.getNode(X86ISD::UNPCKL, DL, VT, V1, V2);
+
+  SmallVector<int, 8> Unpckh;
+  createUnpackShuffleMask(VT, Unpckh, /* Lo = */ false, /* Unary = */ false);
   if (isShuffleEquivalent(V1, V2, Mask, Unpckh))
     return DAG.getNode(X86ISD::UNPCKH, DL, VT, V1, V2);
 
@@ -25816,8 +25846,10 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
 static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                      SDValue &V1, SDValue &V2,
                                      const X86Subtarget &Subtarget,
-                                     unsigned &Shuffle, MVT &ShuffleVT) {
+                                     unsigned &Shuffle, MVT &ShuffleVT,
+                                     bool IsUnary) {
   bool FloatDomain = MaskVT.isFloatingPoint();
+  unsigned EltSizeInBits = MaskVT.getScalarSizeInBits();
 
   if (MaskVT.is128BitVector()) {
     if (isTargetShuffleEquivalent(Mask, {0, 0}) && FloatDomain) {
@@ -25845,33 +25877,65 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       ShuffleVT = MVT::v4f32;
       return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {0, 0, 1, 1}) && FloatDomain) {
-      V2 = V1;
-      Shuffle = X86ISD::UNPCKL;
-      ShuffleVT = MVT::v4f32;
-      return true;
-    }
-    if (isTargetShuffleEquivalent(Mask, {2, 2, 3, 3}) && FloatDomain) {
-      V2 = V1;
-      Shuffle = X86ISD::UNPCKH;
-      ShuffleVT = MVT::v4f32;
-      return true;
-    }
-    if (isTargetShuffleEquivalent(Mask, {0, 0, 1, 1, 2, 2, 3, 3}) ||
-        isTargetShuffleEquivalent(
-            Mask, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7})) {
-      V2 = V1;
-      Shuffle = X86ISD::UNPCKL;
-      ShuffleVT = Mask.size() == 8 ? MVT::v8i16 : MVT::v16i8;
-      return true;
-    }
-    if (isTargetShuffleEquivalent(Mask, {4, 4, 5, 5, 6, 6, 7, 7}) ||
-        isTargetShuffleEquivalent(Mask, {8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13,
-                                         13, 14, 14, 15, 15})) {
-      V2 = V1;
-      Shuffle = X86ISD::UNPCKH;
-      ShuffleVT = Mask.size() == 8 ? MVT::v8i16 : MVT::v16i8;
-      return true;
+  }
+
+  // Attempt to match against either a unary or binary UNPCKL/UNPCKH shuffle.
+  if ((MaskVT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+      (MaskVT.is128BitVector() && Subtarget.hasSSE2()) ||
+      (MaskVT.is256BitVector() && 32 <= EltSizeInBits && Subtarget.hasAVX()) ||
+      (MaskVT.is256BitVector() && Subtarget.hasAVX2()) ||
+      (MaskVT.is512BitVector() && Subtarget.hasAVX512())) {
+    MVT LegalVT = MaskVT;
+    if (LegalVT.is256BitVector() && !Subtarget.hasAVX2())
+      LegalVT = (32 == EltSizeInBits ? MVT::v8f32 : MVT::v4f64);
+
+    SmallVector<int, 64> Unpckl, Unpckh;
+    if (IsUnary) {
+      createUnpackShuffleMask(MaskVT, Unpckl, true, true);
+      if (isTargetShuffleEquivalent(Mask, Unpckl)) {
+        V2 = V1;
+        Shuffle = X86ISD::UNPCKL;
+        ShuffleVT = LegalVT;
+        return true;
+      }
+
+      createUnpackShuffleMask(MaskVT, Unpckh, false, true);
+      if (isTargetShuffleEquivalent(Mask, Unpckh)) {
+        V2 = V1;
+        Shuffle = X86ISD::UNPCKH;
+        ShuffleVT = LegalVT;
+        return true;
+      }
+    } else {
+      createUnpackShuffleMask(MaskVT, Unpckl, true, false);
+      if (isTargetShuffleEquivalent(Mask, Unpckl)) {
+        Shuffle = X86ISD::UNPCKL;
+        ShuffleVT = LegalVT;
+        return true;
+      }
+
+      createUnpackShuffleMask(MaskVT, Unpckh, false, false);
+      if (isTargetShuffleEquivalent(Mask, Unpckh)) {
+        Shuffle = X86ISD::UNPCKH;
+        ShuffleVT = LegalVT;
+        return true;
+      }
+
+      ShuffleVectorSDNode::commuteMask(Unpckl);
+      if (isTargetShuffleEquivalent(Mask, Unpckl)) {
+        std::swap(V1, V2);
+        Shuffle = X86ISD::UNPCKL;
+        ShuffleVT = LegalVT;
+        return true;
+      }
+
+      ShuffleVectorSDNode::commuteMask(Unpckh);
+      if (isTargetShuffleEquivalent(Mask, Unpckh)) {
+        std::swap(V1, V2);
+        Shuffle = X86ISD::UNPCKH;
+        ShuffleVT = LegalVT;
+        return true;
+      }
     }
   }
 
@@ -25970,12 +26034,12 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       if (Mask[i] < 0)
         Zeroable[i] = true;
 
-    if (Zeroable.any())
-      if (matchVectorShuffleAsInsertPS(V1, V2, PermuteImm, Zeroable, Mask, DAG)) {
-        Shuffle = X86ISD::INSERTPS;
-        ShuffleVT = MVT::v4f32;
-        return true;
-      }
+    if (Zeroable.any() &&
+        matchVectorShuffleAsInsertPS(V1, V2, PermuteImm, Zeroable, Mask, DAG)) {
+      Shuffle = X86ISD::INSERTPS;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
   }
 
   return false;
@@ -26137,7 +26201,7 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   }
 
   if (matchBinaryVectorShuffle(MaskVT, Mask, V1, V2, Subtarget, Shuffle,
-                               ShuffleVT)) {
+                               ShuffleVT, UnaryShuffle)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
     if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
@@ -27332,13 +27396,10 @@ static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
   // index, but elements from the second source no longer need to skip an undef.
   SmallVector<int, 8> Mask;
   int NumElts = VT.getVectorNumElements();
-  for (int i = 0; i < NumElts; ++i) {
-    int Elt = cast<ShuffleVectorSDNode>(N)->getMaskElt(i);
-    if (Elt < NumElts)
-      Mask.push_back(Elt);
-    else
-      Mask.push_back(Elt - NumElts / 2);
-  }
+
+  ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(N);
+  for (int Elt : SVOp->getMask())
+    Mask.push_back(Elt < NumElts ? Elt : (Elt - NumElts / 2));
 
   SDLoc DL(N);
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(0),
@@ -31703,6 +31764,34 @@ static SDValue getNullFPConstForNullVal(SDValue V, SelectionDAG &DAG,
   return V;
 }
 
+static SDValue combineFAndFNotToFAndn(SDNode *N, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Vector types are handled in combineANDXORWithAllOnesIntoANDNP().
+  if (!((VT == MVT::f32 && Subtarget.hasSSE1()) ||
+        (VT == MVT::f64 && Subtarget.hasSSE2())))
+    return SDValue();
+
+  auto isAllOnesConstantFP = [](SDValue V) {
+    auto *C = dyn_cast<ConstantFPSDNode>(V);
+    return C && C->getConstantFPValue()->isAllOnesValue();
+  };
+
+  // fand (fxor X, -1), Y --> fandn X, Y
+  if (N0.getOpcode() == X86ISD::FXOR && isAllOnesConstantFP(N0.getOperand(1)))
+    return DAG.getNode(X86ISD::FANDN, DL, VT, N0.getOperand(0), N1);
+
+  // fand X, (fxor Y, -1) --> fandn Y, X
+  if (N1.getOpcode() == X86ISD::FXOR && isAllOnesConstantFP(N1.getOperand(1)))
+    return DAG.getNode(X86ISD::FANDN, DL, VT, N1.getOperand(0), N0);
+
+  return SDValue();
+}
+
 /// Do target-specific dag combines on X86ISD::FAND nodes.
 static SDValue combineFAnd(SDNode *N, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
@@ -31712,6 +31801,9 @@ static SDValue combineFAnd(SDNode *N, SelectionDAG &DAG,
 
   // FAND(x, 0.0) -> 0.0
   if (SDValue V = getNullFPConstForNullVal(N->getOperand(1), DAG, Subtarget))
+    return V;
+
+  if (SDValue V = combineFAndFNotToFAndn(N, DAG, Subtarget))
     return V;
 
   return lowerX86FPLogicOp(N, DAG, Subtarget);

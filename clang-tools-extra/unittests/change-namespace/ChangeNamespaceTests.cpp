@@ -1114,6 +1114,42 @@ TEST_F(ChangeNamespaceTest, DerivedClassWithConstructorsAndTypeRefs) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, MoveToGlobalNamespace) {
+  NewNamespace = "";
+  std::string Code = "namespace na {\n"
+                     "class C_A {};\n"
+                     "namespace nc {\n"
+                     "class C_C {};"
+                     "} // namespace nc\n"
+                     "namespace nb {\n"
+                     "class C_X {\n"
+                     "public:\n"
+                     "  C_A a;\n"
+                     "  nc::C_C c;\n"
+                     "};\n"
+                     "class C_Y {\n"
+                     "  C_X x;\n"
+                     "};\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "class C_A {};\n"
+                         "namespace nc {\n"
+                         "class C_C {};"
+                         "} // namespace nc\n"
+                         "\n"
+                         "} // namespace na\n"
+                         "class C_X {\n"
+                         "public:\n"
+                         "  na::C_A a;\n"
+                         "  na::nc::C_C c;\n"
+                         "};\n"
+                         "class C_Y {\n"
+                         "  C_X x;\n"
+                         "};\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

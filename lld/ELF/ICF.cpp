@@ -69,13 +69,13 @@
 #include "ICF.h"
 #include "Config.h"
 #include "SymbolTable.h"
+#include "Threads.h"
 
-#include "lld/Core/Parallel.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
 #include <algorithm>
-#include <mutex>
+#include <atomic>
 
 using namespace lld;
 using namespace lld::elf;
@@ -84,17 +84,12 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 
 namespace {
-struct Range {
-  size_t Begin;
-  size_t End;
-};
-
 template <class ELFT> class ICF {
 public:
   void run();
 
 private:
-  void segregate(Range *R, bool Constant);
+  void segregate(size_t Begin, size_t End, bool Constant);
 
   template <class RelTy>
   bool constantEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB);
@@ -106,12 +101,45 @@ private:
   bool equalsConstant(const InputSection<ELFT> *A, const InputSection<ELFT> *B);
   bool equalsVariable(const InputSection<ELFT> *A, const InputSection<ELFT> *B);
 
-  std::vector<InputSection<ELFT> *> Sections;
-  std::vector<Range> Ranges;
-  std::mutex Mu;
+  size_t findBoundary(size_t Begin, size_t End);
 
-  uint32_t NextId = 1;
+  void forEachColorRange(size_t Begin, size_t End,
+                         std::function<void(size_t, size_t)> Fn);
+
+  void forEachColor(std::function<void(size_t, size_t)> Fn);
+
+  std::vector<InputSection<ELFT> *> Sections;
+
+  // We repeat the main loop while `Repeat` is true.
+  std::atomic<bool> Repeat;
+
+  // The main loop counter.
   int Cnt = 0;
+
+  // We have two locations for colors. On the first iteration of the main
+  // loop, Color[0] has a valid value, and Color[1] contains garbage. We
+  // read colors from slot 0 and write to slot 1. So, Color[0] represents
+  // the current color, and Color[1] represents the next color. On each
+  // iteration, they switch the roles, so we use them alternately.
+  //
+  // Why are we doing this? Recall that other threads may be working on
+  // other colors in parallel. They may read colors that we are updating.
+  // We cannot update colors in place because it breaks the invariance
+  // that all possibly-identical sections must have the same color at any
+  // moment. In other words, the for loop to update colors is not an
+  // atomic operation, and that is observable from other threads. By
+  // writing new colors to write-only places, we can keep the invariance.
+  //
+  // Below, `Current` has the index of the current color, and `Next` has
+  // the index of the next color. If threading is enabled, they are
+  // either (0, 1) or (1, 0).
+  //
+  // Note on single-thread: if that's the case, they are always (0, 0)
+  // because we can safely read next colors without worrying about race
+  // conditions. Using the same location makes this algorithm converge
+  // faster because it uses results of the same iteration earlier.
+  int Current = 0;
+  int Next = 0;
 };
 }
 
@@ -130,20 +158,20 @@ template <class ELFT> static bool isEligible(InputSection<ELFT> *S) {
          S->Name != ".init" && S->Name != ".fini";
 }
 
-// Split R into smaller ranges by recoloring its members.
-template <class ELFT> void ICF<ELFT>::segregate(Range *R, bool Constant) {
-  // This loop rearranges sections in range R so that all sections
+// Split a range into smaller ranges by recoloring sections
+// in a given range.
+template <class ELFT>
+void ICF<ELFT>::segregate(size_t Begin, size_t End, bool Constant) {
+  // This loop rearranges sections in [Begin, End) so that all sections
   // that are equal in terms of equals{Constant,Variable} are contiguous
-  // in Sections vector.
+  // in [Begin, End).
   //
   // The algorithm is quadratic in the worst case, but that is not an
   // issue in practice because the number of the distinct sections in
-  // [R.Begin, R.End] is usually very small.
-  while (R->End - R->Begin > 1) {
-    size_t Begin = R->Begin;
-    size_t End = R->End;
+  // each range is usually very small.
 
-    // Divide range R into two. Let Mid be the start index of the
+  while (Begin < End) {
+    // Divide [Begin, End) into two. Let Mid be the start index of the
     // second group.
     auto Bound = std::stable_partition(
         Sections.begin() + Begin + 1, Sections.begin() + End,
@@ -154,39 +182,17 @@ template <class ELFT> void ICF<ELFT>::segregate(Range *R, bool Constant) {
         });
     size_t Mid = Bound - Sections.begin();
 
-    if (Mid == End)
-      return;
+    // Now we split [Begin, End) into [Begin, Mid) and [Mid, End) by
+    // updating the sections in [Begin, End). We use Mid as a color ID
+    // because every group ends with a unique index.
+    for (size_t I = Begin; I < Mid; ++I)
+      Sections[I]->Color[Next] = Mid;
 
-    // Now we split [Begin, End) into [Begin, Mid) and [Mid, End).
-    uint32_t Id;
-    Range *NewRange;
-    {
-      std::lock_guard<std::mutex> Lock(Mu);
-      Ranges.push_back({Mid, End});
-      NewRange = &Ranges.back();
-      Id = NextId++;
-    }
-    R->End = Mid;
+    // If we created a group, we need to iterate the main loop again.
+    if (Mid != End)
+      Repeat = true;
 
-    // Update the new group member colors.
-    //
-    // Note on Color[0] and Color[1]: we have two storages for colors.
-    // At the beginning of each iteration of the main loop, both have
-    // the same color. Color[0] contains the current color, and Color[1]
-    // contains the next color which will be used in the next iteration.
-    //
-    // Recall that other threads may be working on other ranges. They
-    // may be reading colors that we are about to update. We cannot
-    // update colors in place because it breaks the invariance that
-    // all sections in the same group must have the same color. In
-    // other words, the following for loop is not an atomic operation,
-    // and that is observable from other threads.
-    //
-    // By writing new colors to write-only places, we can keep the invariance.
-    for (size_t I = Mid; I < End; ++I)
-      Sections[I]->Color[(Cnt + 1) % 2] = Id;
-
-    R = NewRange;
+    Begin = Mid;
   }
 }
 
@@ -244,18 +250,12 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
     if (!X || !Y)
       return false;
 
-    // Performance hack for single-thread. If no other threads are
-    // running, we can safely read next colors as there is no race
-    // condition. This optimization may reduce the number of
-    // iterations of the main loop because we can see results of the
-    // same iteration.
-    size_t Idx = (Config->Threads ? Cnt : Cnt + 1) % 2;
+    // Ineligible sections have the special color 0.
+    // They can never be the same in terms of section colors.
+    if (X->Color[Current] == 0)
+      return false;
 
-    // All colorable sections must have some colors.
-    // 0 is a default non-color value.
-    assert(X->Color[Idx] != 0 && Y->Color[Idx] != 0);
-
-    return X->Color[Idx] == Y->Color[Idx];
+    return X->Color[Current] == Y->Color[Current];
   };
 
   return std::equal(RelsA.begin(), RelsA.end(), RelsB.begin(), Eq);
@@ -270,12 +270,54 @@ bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
   return variableEq(A, A->rels(), B, B->rels());
 }
 
-template <class IterTy, class FuncTy>
-static void foreach(IterTy Begin, IterTy End, FuncTy Fn) {
-  if (Config->Threads)
-    parallel_for_each(Begin, End, Fn);
-  else
-    std::for_each(Begin, End, Fn);
+template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t Begin, size_t End) {
+  for (size_t I = Begin + 1; I < End; ++I)
+    if (Sections[Begin]->Color[Current] != Sections[I]->Color[Current])
+      return I;
+  return End;
+}
+
+// Sections in the same color are contiguous in Sections vector.
+// Therefore, Sections vector can be considered as contiguous groups
+// of sections, grouped by colors.
+//
+// This function calls Fn on every group that starts within [Begin, End).
+// Note that a group must starts in that range but doesn't necessarily
+// have to end before End.
+template <class ELFT>
+void ICF<ELFT>::forEachColorRange(size_t Begin, size_t End,
+                                  std::function<void(size_t, size_t)> Fn) {
+  if (Begin > 0)
+    Begin = findBoundary(Begin - 1, End);
+
+  while (Begin < End) {
+    size_t Mid = findBoundary(Begin, Sections.size());
+    Fn(Begin, Mid);
+    Begin = Mid;
+  }
+}
+
+// Call Fn on each color group.
+template <class ELFT>
+void ICF<ELFT>::forEachColor(std::function<void(size_t, size_t)> Fn) {
+  // If threading is disabled or the number of sections are
+  // too small to use threading, call Fn sequentially.
+  if (!Config->Threads || Sections.size() < 1024) {
+    forEachColorRange(0, Sections.size(), Fn);
+    ++Cnt;
+    return;
+  }
+
+  Current = Cnt % 2;
+  Next = (Cnt + 1) % 2;
+
+  // Split sections into 256 shards and call Fn in parallel.
+  size_t NumShards = 256;
+  size_t Step = Sections.size() / NumShards;
+  forLoop(0, NumShards,
+          [&](size_t I) { forEachColorRange(I * Step, (I + 1) * Step, Fn); });
+  forEachColorRange(Step * NumShards, Sections.size(), Fn);
+  ++Cnt;
 }
 
 // The main function of ICF.
@@ -291,74 +333,38 @@ template <class ELFT> void ICF<ELFT>::run() {
   // guaranteed) to have the same static contents in terms of ICF.
   for (InputSection<ELFT> *S : Sections)
     // Set MSB to 1 to avoid collisions with non-hash colors.
-    S->Color[0] = S->Color[1] = getHash(S) | (1 << 31);
+    S->Color[0] = getHash(S) | (1 << 31);
 
   // From now on, sections in Sections are ordered so that sections in
   // the same color are consecutive in the vector.
   std::stable_sort(Sections.begin(), Sections.end(),
                    [](InputSection<ELFT> *A, InputSection<ELFT> *B) {
-                     if (A->Color[0] != B->Color[0])
-                       return A->Color[0] < B->Color[0];
-                     // Within a group, put the highest alignment
-                     // requirement first, so that's the one we'll keep.
-                     return B->Alignment < A->Alignment;
+                     return A->Color[0] < B->Color[0];
                    });
 
-  // Create ranges in which each range contains sections in the same
-  // color. And then we are going to split ranges into more and more
-  // smaller ranges. Note that we do not add single element ranges
-  // because they are already the smallest.
-  Ranges.reserve(Sections.size());
-  for (size_t I = 0, E = Sections.size(); I < E - 1;) {
-    // Let J be the first index whose element has a different ID.
-    size_t J = I + 1;
-    while (J < E && Sections[I]->Color[0] == Sections[J]->Color[0])
-      ++J;
-    if (J - I > 1)
-      Ranges.push_back({I, J});
-    I = J;
-  }
-
-  // This function copies colors from former write-only space to former
-  // read-only space, so that we can flip Color[0] and Color[1]. Note
-  // that new colors are always be added to end of Ranges.
-  auto Copy = [&](Range &R) {
-    for (size_t I = R.Begin; I < R.End; ++I)
-      Sections[I]->Color[Cnt % 2] = Sections[I]->Color[(Cnt + 1) % 2];
-  };
-
   // Compare static contents and assign unique IDs for each static content.
-  size_t Size = Ranges.size();
-  foreach(Ranges.begin(), Ranges.end(),
-          [&](Range &R) { segregate(&R, true); });
-  foreach(Ranges.begin() + Size, Ranges.end(), Copy);
-  ++Cnt;
+  forEachColor([&](size_t Begin, size_t End) { segregate(Begin, End, true); });
 
-  // Split ranges by comparing relocations until convergence is obtained.
-  for (;;) {
-    size_t Size = Ranges.size();
-    foreach(Ranges.begin(), Ranges.end(),
-            [&](Range &R) { segregate(&R, false); });
-    foreach(Ranges.begin() + Size, Ranges.end(), Copy);
-    ++Cnt;
-
-    if (Size == Ranges.size())
-      break;
-  }
+  // Split groups by comparing relocations until convergence is obtained.
+  do {
+    Repeat = false;
+    forEachColor(
+        [&](size_t Begin, size_t End) { segregate(Begin, End, false); });
+  } while (Repeat);
 
   log("ICF needed " + Twine(Cnt) + " iterations");
 
   // Merge sections in the same colors.
-  for (Range R : Ranges) {
-    if (R.End - R.Begin == 1)
-      continue;
+  forEachColor([&](size_t Begin, size_t End) {
+    if (End - Begin == 1)
+      return;
 
-    log("selected " + Sections[R.Begin]->Name);
-    for (size_t I = R.Begin + 1; I < R.End; ++I) {
+    log("selected " + Sections[Begin]->Name);
+    for (size_t I = Begin + 1; I < End; ++I) {
       log("  removed " + Sections[I]->Name);
-      Sections[R.Begin]->replace(Sections[I]);
+      Sections[Begin]->replace(Sections[I]);
     }
-  }
+  });
 }
 
 // ICF entry point function.

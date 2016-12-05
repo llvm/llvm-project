@@ -65,6 +65,7 @@ namespace llvm {
 // Flags -discard-value-names, defined in LTOCodeGenerator.cpp
 extern cl::opt<bool> LTODiscardValueNames;
 extern cl::opt<std::string> LTORemarksFilename;
+extern cl::opt<bool> LTOPassRemarksWithHotness;
 }
 
 namespace {
@@ -74,6 +75,9 @@ static cl::opt<int>
 
 Expected<std::unique_ptr<tool_output_file>>
 setupOptimizationRemarks(LLVMContext &Ctx, int Count) {
+  if (LTOPassRemarksWithHotness)
+    Ctx.setDiagnosticHotnessRequested(true);
+
   if (LTORemarksFilename.empty())
     return nullptr;
 

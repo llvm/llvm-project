@@ -234,11 +234,11 @@ struct UnrolledInstStateKeyInfo {
 namespace {
 struct EstimatedUnrollCost {
   /// \brief The estimated cost after unrolling.
-  int UnrolledCost;
+  unsigned UnrolledCost;
 
   /// \brief The estimated dynamic cost of executing the instructions in the
   /// rolled form.
-  int RolledDynamicCost;
+  unsigned RolledDynamicCost;
 };
 }
 
@@ -258,7 +258,7 @@ struct EstimatedUnrollCost {
 static Optional<EstimatedUnrollCost>
 analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
                       ScalarEvolution &SE, const TargetTransformInfo &TTI,
-                      int MaxUnrolledLoopSize) {
+                      unsigned MaxUnrolledLoopSize) {
   // We want to be able to scale offsets by the trip count and add more offsets
   // to them without checking for overflows, and we already don't want to
   // analyze *massive* trip counts, so we force the max to be reasonably small.
@@ -282,14 +282,14 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
 
   // The estimated cost of the unrolled form of the loop. We try to estimate
   // this by simplifying as much as we can while computing the estimate.
-  int UnrolledCost = 0;
+  unsigned UnrolledCost = 0;
 
   // We also track the estimated dynamic (that is, actually executed) cost in
   // the rolled form. This helps identify cases when the savings from unrolling
   // aren't just exposing dead control flows, but actual reduced dynamic
   // instructions due to the simplifications which we expect to occur after
   // unrolling.
-  int RolledDynamicCost = 0;
+  unsigned RolledDynamicCost = 0;
 
   // We track the simplification of each instruction in each iteration. We use
   // this to recursively merge costs into the unrolled cost on-demand so that

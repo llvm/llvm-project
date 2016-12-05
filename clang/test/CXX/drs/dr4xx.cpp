@@ -327,7 +327,7 @@ namespace dr420 { // dr420: yes
 
 namespace dr421 { // dr421: yes
   struct X { X(); int n; int &r; };
-  int *p = &X().n; // expected-error {{taking the address of a temporary}}
+  int *p = &X().n; // expected-error-re {{{{taking the address of a temporary|cannot take the address of an rvalue}}}}
   int *q = &X().r;
 }
 

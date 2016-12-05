@@ -400,7 +400,7 @@ protected:
   }
 
   // Returns the record name.
-  const std::string &nameWithID(unsigned Opcode) const {
+  const StringRef nameWithID(unsigned Opcode) const {
     return AllInstructions[Opcode]->TheDef->getName();
   }
 
@@ -1720,7 +1720,7 @@ static std::string findOperandDecoderMethod(TypedInit *TI) {
     TypeRecord = TypeRecord->getValueAsDef("RegClass");
 
   if (TypeRecord->isSubClassOf("RegisterClass")) {
-    Decoder = "Decode" + TypeRecord->getName() + "RegisterClass";
+    Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
   } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
     Decoder = "DecodePointerLikeRegClass" +
       utostr(TypeRecord->getValueAsInt("RegClassKind"));
@@ -1759,13 +1759,15 @@ static bool populateInstruction(CodeGenTarget &Target,
   // Gather the outputs/inputs of the instruction, so we can find their
   // positions in the encoding.  This assumes for now that they appear in the
   // MCInst in the order that they're listed.
-  std::vector<std::pair<Init*, std::string>> InOutOperands;
+  std::vector<std::pair<Init*, StringRef>> InOutOperands;
   DagInit *Out  = Def.getValueAsDag("OutOperandList");
   DagInit *In  = Def.getValueAsDag("InOperandList");
   for (unsigned i = 0; i < Out->getNumArgs(); ++i)
-    InOutOperands.push_back(std::make_pair(Out->getArg(i), Out->getArgName(i)));
+    InOutOperands.push_back(std::make_pair(Out->getArg(i),
+                                           Out->getArgNameStr(i)));
   for (unsigned i = 0; i < In->getNumArgs(); ++i)
-    InOutOperands.push_back(std::make_pair(In->getArg(i), In->getArgName(i)));
+    InOutOperands.push_back(std::make_pair(In->getArg(i),
+                                           In->getArgNameStr(i)));
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
@@ -1889,7 +1891,7 @@ static bool populateInstruction(CodeGenTarget &Target,
       if (TypeRecord->isSubClassOf("RegisterOperand"))
         TypeRecord = TypeRecord->getValueAsDef("RegClass");
       if (TypeRecord->isSubClassOf("RegisterClass")) {
-        Decoder = "Decode" + TypeRecord->getName() + "RegisterClass";
+        Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
         isReg = true;
       } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
         Decoder = "DecodePointerLikeRegClass" +

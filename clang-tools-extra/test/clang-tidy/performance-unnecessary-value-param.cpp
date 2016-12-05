@@ -271,3 +271,21 @@ void PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType A) {
 void ReferenceFunctionByCallingIt() {
   PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType());
 }
+
+// Virtual method overrides of dependent types cannot be recognized unless they
+// are marked as override or final. Test that check is not triggered on methods
+// marked with override or final.
+template <typename T>
+struct NegativeDependentTypeInterface {
+  virtual void Method(ExpensiveToCopyType E) = 0;
+};
+
+template <typename T>
+struct NegativeOverrideImpl : public NegativeDependentTypeInterface<T> {
+  void Method(ExpensiveToCopyType E) override {}
+};
+
+template <typename T>
+struct NegativeFinalImpl : public NegativeDependentTypeInterface<T> {
+  void Method(ExpensiveToCopyType E) final {}
+};

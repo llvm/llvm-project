@@ -73,8 +73,8 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         TestResource R2;
-        auto& P = R2.getController();
-        P.throw_on_alloc = true;
+        auto& P2 = R2.getController();
+        P2.throw_on_alloc = true;
         memory_resource& M2 = R2;
         try {
             M2.allocate(42);

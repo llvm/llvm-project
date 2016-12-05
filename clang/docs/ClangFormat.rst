@@ -184,7 +184,7 @@ So to reformat all the lines in the latest :program:`git` commit, just do:
 
 .. code-block:: console
 
-  git diff -U0 HEAD^ | clang-format-diff.py -i -p1
+  git diff -U0 --no-color HEAD^ | clang-format-diff.py -i -p1
 
 In an SVN client, you can do:
 

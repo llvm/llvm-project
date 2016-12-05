@@ -233,6 +233,9 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
     return translate(cast<ExprWithCleanups>(S)->getSubExpr(), Ctx);
   case Stmt::CXXBindTemporaryExprClass:
     return translate(cast<CXXBindTemporaryExpr>(S)->getSubExpr(), Ctx);
+  case Stmt::MaterializeTemporaryExprClass:
+    return translate(cast<MaterializeTemporaryExpr>(S)->GetTemporaryExpr(),
+                     Ctx);
 
   // Collect all literals
   case Stmt::CharacterLiteralClass:

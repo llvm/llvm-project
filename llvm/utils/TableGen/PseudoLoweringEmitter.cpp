@@ -177,10 +177,10 @@ void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
     if (OperandMap[Insn.Operands[i].MIOperandNo].Kind != OpData::Operand)
       continue;
     StringMap<unsigned>::iterator SourceOp =
-      SourceOperands.find(Dag->getArgName(i));
+      SourceOperands.find(Dag->getArgNameStr(i));
     if (SourceOp == SourceOperands.end())
       PrintFatalError(Rec->getLoc(),
-                      "Pseudo output operand '" + Dag->getArgName(i) +
+                      "Pseudo output operand '" + Dag->getArgNameStr(i) +
                       "' has no matching source operand.");
     // Map the source operand to the destination operand index for each
     // MachineInstr operand.

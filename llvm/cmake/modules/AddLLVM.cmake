@@ -1254,7 +1254,7 @@ function(llvm_install_library_symlink name dest type)
 endfunction()
 
 function(llvm_install_symlink name dest)
-  cmake_parse_arguments(ARG "ALWAYS_GENERATE" "" "" ${ARGN})
+  cmake_parse_arguments(ARG "ALWAYS_GENERATE" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -1262,10 +1262,14 @@ function(llvm_install_symlink name dest)
     endif()
   endforeach()
 
-  if(ARG_ALWAYS_GENERATE)
-    set(component ${dest})
+  if(ARG_COMPONENT)
+    set(component ${ARG_COMPONENT})
   else()
-    set(component ${name})
+    if(ARG_ALWAYS_GENERATE)
+      set(component ${dest})
+    else()
+      set(component ${name})
+    endif()
   endif()
 
   set(full_name ${name}${CMAKE_EXECUTABLE_SUFFIX})
@@ -1284,43 +1288,74 @@ function(llvm_install_symlink name dest)
   endif()
 endfunction()
 
-function(add_llvm_tool_symlink name dest)
-  cmake_parse_arguments(ARG "ALWAYS_GENERATE" "" "" ${ARGN})
-  if(UNIX)
-    set(LLVM_LINK_OR_COPY create_symlink)
-    set(dest_binary "${dest}${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLVM_LINK_OR_COPY copy)
-    set(dest_binary "${LLVM_RUNTIME_OUTPUT_INTDIR}/${dest}${CMAKE_EXECUTABLE_SUFFIX}")
+function(add_llvm_tool_symlink link_name target)
+  cmake_parse_arguments(ARG "ALWAYS_GENERATE" "OUTPUT_DIR" "" ${ARGN})
+  # This got a bit gross... For multi-configuration generators the target
+  # properties return the resolved value of the string, not the build system
+  # expression. To reconstruct the platform-agnostic path we have to do some
+  # magic. First we grab one of the types, and a type-specific path. Then from
+  # the type-specific path we find the last occurrence of the type in the path,
+  # and replace it with CMAKE_CFG_INTDIR. This allows the build step to be type
+  # agnostic again. 
+  if(NOT ARG_OUTPUT_DIR)
+    if(CMAKE_CONFIGURATION_TYPES)
+      list(GET CMAKE_CONFIGURATION_TYPES 0 first_type)
+      string(TOUPPER ${first_type} first_type_upper)
+      set(first_type_suffix _${first_type_upper})
+    endif()
+    get_target_property(target_type ${target} TYPE)
+    if(${target_type} STREQUAL "STATIC_LIBRARY")
+      get_target_property(ARG_OUTPUT_DIR ${target} ARCHIVE_OUTPUT_DIRECTORY${first_type_suffix})
+    elseif(UNIX AND ${target_type} STREQUAL "SHARED_LIBRARY")
+      get_target_property(ARG_OUTPUT_DIR ${target} LIBRARY_OUTPUT_DIRECTORY${first_type_suffix})
+    else()
+      get_target_property(ARG_OUTPUT_DIR ${target} RUNTIME_OUTPUT_DIRECTORY${first_type_suffix})
+    endif()
+    if(CMAKE_CONFIGURATION_TYPES)
+      string(FIND "${ARG_OUTPUT_DIR}" "/${first_type}/" type_start REVERSE)
+      string(SUBSTRING "${ARG_OUTPUT_DIR}" 0 ${type_start} path_prefix)
+      string(SUBSTRING "${ARG_OUTPUT_DIR}" ${type_start} -1 path_suffix)
+      string(REPLACE "/${first_type}/" "/${CMAKE_CFG_INTDIR}/"
+             path_suffix ${path_suffix})
+      set(ARG_OUTPUT_DIR ${path_prefix}${path_suffix})
+    endif()
   endif()
 
-  set(output_path "${LLVM_RUNTIME_OUTPUT_INTDIR}/${name}${CMAKE_EXECUTABLE_SUFFIX}")
+  if(UNIX)
+    set(LLVM_LINK_OR_COPY create_symlink)
+    set(dest_binary "$<TARGET_FILE_NAME:${target}>")
+  else()
+    set(LLVM_LINK_OR_COPY copy)
+    set(dest_binary "$<TARGET_FILE:${target}>")
+  endif()
 
-  set(target_name ${name})
-  if(TARGET ${name})
-    set(target_name ${name}-link)
+  set(output_path "${ARG_OUTPUT_DIR}/${link_name}${CMAKE_EXECUTABLE_SUFFIX}")
+
+  set(target_name ${link_name})
+  if(TARGET ${link_name})
+    set(target_name ${link_name}-link)
   endif()
 
 
   if(ARG_ALWAYS_GENERATE)
     set_property(DIRECTORY APPEND PROPERTY
       ADDITIONAL_MAKE_CLEAN_FILES ${dest_binary})
-    add_custom_command(TARGET ${dest} POST_BUILD
+    add_custom_command(TARGET ${target} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${dest_binary}" "${output_path}")
   else()
     add_custom_command(OUTPUT ${output_path}
                      COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${dest_binary}" "${output_path}"
-                     DEPENDS ${dest})
-    add_custom_target(${target_name} ALL DEPENDS ${output_path})
+                     DEPENDS ${target})
+    add_custom_target(${target_name} ALL DEPENDS ${target} ${output_path})
     set_target_properties(${target_name} PROPERTIES FOLDER Tools)
 
     # Make sure both the link and target are toolchain tools
-    if (${name} IN_LIST LLVM_TOOLCHAIN_TOOLS AND ${dest} IN_LIST LLVM_TOOLCHAIN_TOOLS)
+    if (${link_name} IN_LIST LLVM_TOOLCHAIN_TOOLS AND ${target} IN_LIST LLVM_TOOLCHAIN_TOOLS)
       set(TOOL_IS_TOOLCHAIN ON)
     endif()
 
     if ((TOOL_IS_TOOLCHAIN OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY) AND LLVM_BUILD_TOOLS)
-      llvm_install_symlink(${name} ${dest})
+      llvm_install_symlink(${link_name} ${target})
     endif()
   endif()
 endfunction()

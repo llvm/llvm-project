@@ -135,6 +135,53 @@ namespace dr1512 { // dr1512: 4.0
   }
 }
 
+namespace dr1518 { // dr1518: 4.0
+#if __cplusplus >= 201103L
+struct Z0 { // expected-note 0+ {{candidate}}
+  explicit Z0() = default; // expected-note 0+ {{here}}
+};
+struct Z { // expected-note 0+ {{candidate}}
+  explicit Z(); // expected-note 0+ {{here}}
+  explicit Z(int);
+  explicit Z(int, int); // expected-note 0+ {{here}}
+};
+template <class T> int Eat(T); // expected-note 0+ {{candidate}}
+Z0 a;
+Z0 b{};
+Z0 c = {}; // expected-error {{explicit in copy-initialization}}
+int i = Eat<Z0>({}); // expected-error {{no matching function for call to 'Eat'}}
+
+Z c2 = {}; // expected-error {{explicit in copy-initialization}}
+int i2 = Eat<Z>({}); // expected-error {{no matching function for call to 'Eat'}}
+Z a1 = 1; // expected-error {{no viable conversion}}
+Z a3 = Z(1);
+Z a2(1);
+Z *p = new Z(1);
+Z a4 = (Z)1;
+Z a5 = static_cast<Z>(1);
+Z a6 = {4, 3}; // expected-error {{explicit in copy-initialization}}
+
+struct UserProvidedBaseCtor { // expected-note 0+ {{candidate}}
+  UserProvidedBaseCtor() {}
+};
+struct DoesntInheritCtor : UserProvidedBaseCtor { // expected-note 0+ {{candidate}}
+  int x;
+};
+DoesntInheritCtor I{{}, 42};
+#if __cplusplus <= 201402L
+// expected-error@-2 {{no matching constructor}}
+#endif
+
+struct BaseCtor { BaseCtor() = default; }; // expected-note 0+ {{candidate}}
+struct InheritsCtor : BaseCtor { // expected-note 1+ {{candidate}}
+  using BaseCtor::BaseCtor;      // expected-note 2 {{inherited here}}
+  int x;
+};
+InheritsCtor II = {{}, 42}; // expected-error {{no matching constructor}}
+
+#endif                      // __cplusplus >= 201103L
+}
+
 namespace dr1550 { // dr1550: yes
   int f(bool b, int n) {
     return (b ? (throw 0) : n) + (b ? n : (throw 0));

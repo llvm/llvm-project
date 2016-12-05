@@ -39,7 +39,7 @@ int NonTDtor1::count = 0;
 static_assert(!std::is_trivially_destructible<NonTDtor1>::value, "");
 
 struct TDtor {
-  TDtor(TDtor const &) {} // non-trivial copy
+  TDtor(const TDtor &) {} // non-trivial copy
   ~TDtor() = default;
 };
 static_assert(!std::is_trivially_copy_constructible<TDtor>::value, "");

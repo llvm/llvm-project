@@ -30,8 +30,8 @@ int main()
   using namespace fs;
   using string_type = path::string_type;
   const char* const value = "hello world";
-  path p(value);
   { // Check signature
+    path p(value);
     static_assert(std::is_convertible<path, string_type>::value, "");
     static_assert(std::is_constructible<string_type, path>::value, "");
     ASSERT_SAME_TYPE(string_type, decltype(p.operator string_type()));

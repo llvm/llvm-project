@@ -28,7 +28,6 @@ namespace fs = std::experimental::filesystem;
 
 int main() {
   using namespace fs;
-  const path p("/foo/bar/baz");
   {
     path p;
     ASSERT_NOEXCEPT(p.clear());
@@ -37,6 +36,7 @@ int main() {
     assert(p.empty());
   }
   {
+    const path p("/foo/bar/baz");
     path p2(p);
     assert(p == p2);
     p2.clear();

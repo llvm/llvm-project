@@ -92,9 +92,10 @@ template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Hdr, StringRef Name,
                                          Kind SectionKind)
-    : InputSectionBase(File, Hdr->sh_flags, Hdr->sh_type, Hdr->sh_entsize,
-                       Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
-                       getSectionContents(File, Hdr), Name, SectionKind) {
+    : InputSectionBase(File, Hdr->sh_flags & ~SHF_INFO_LINK, Hdr->sh_type,
+                       Hdr->sh_entsize, Hdr->sh_link, Hdr->sh_info,
+                       Hdr->sh_addralign, getSectionContents(File, Hdr), Name,
+                       SectionKind) {
   this->Offset = Hdr->sh_offset;
 }
 
@@ -300,13 +301,6 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     P->r_offset = RelocatedSection->getOffset(Rel.r_offset);
     P->setSymbolAndType(Body.DynsymIndex, Type, Config->Mips64EL);
   }
-}
-
-// Page(Expr) is the page address of the expression Expr, defined
-// as (Expr & ~0xFFF). (This applies even if the machine page size
-// supported by the platform has a different value.)
-static uint64_t getAArch64Page(uint64_t Expr) {
-  return Expr & (~static_cast<uint64_t>(0xFFF));
 }
 
 static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
@@ -621,7 +615,7 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
-  assert(Other->Alignment <= this->Alignment);
+  this->Alignment = std::max(this->Alignment, Other->Alignment);
   Other->Repl = this->Repl;
   Other->Live = false;
 }

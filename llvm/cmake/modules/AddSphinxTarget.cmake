@@ -50,6 +50,7 @@ function (add_sphinx_target builder project)
       if (builder STREQUAL man)
         # FIXME: We might not ship all the tools that these man pages describe
         install(DIRECTORY "${SPHINX_BUILD_DIR}/" # Slash indicates contents of
+                COMPONENT "${project}-sphinx-man"
                 DESTINATION share/man/man1)
 
       elseif (builder STREQUAL html)
@@ -61,6 +62,7 @@ function (add_sphinx_target builder project)
         # the specified destination, without recreating the last component
         # of ${SPHINX_BUILD_DIR} implicitly.
         install(DIRECTORY "${SPHINX_BUILD_DIR}/."
+                COMPONENT "${project}-sphinx-html"
                 DESTINATION "${${project_upper}_INSTALL_SPHINX_HTML_DIR}")
       else()
         message(WARNING Installation of ${builder} not supported)

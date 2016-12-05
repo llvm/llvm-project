@@ -1093,9 +1093,9 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:     1: int a;
 // CHECK:     2: NoReturn() (CXXConstructExpr, class NoReturn)
 // CHECK:     3: [B2.2] (BindTemporary)
-// CHECK:     4: [B2.3].f
-// CHECK:     5: [B2.4]()
-// CHECK:     6: ~NoReturn() (Temporary object destructor)
+// CHECK:     [[MEMBER:[45]]]: [B2.{{[34]}}].f
+// CHECK:     {{[56]}}: [B2.[[MEMBER]]]()
+// CHECK:     {{[67]}}: ~NoReturn() (Temporary object destructor)
 // CHECK:     Preds (1): B3
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]

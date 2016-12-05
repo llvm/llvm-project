@@ -1361,7 +1361,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "};\n";      // End of register descriptors...
 
 
-  std::string ClassName = Target.getName() + "GenRegisterInfo";
+  std::string ClassName = Target.getName().str() + "GenRegisterInfo";
 
   auto SubRegIndicesSize =
       std::distance(SubRegIndices.begin(), SubRegIndices.end());

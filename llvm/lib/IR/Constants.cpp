@@ -794,10 +794,8 @@ UndefValue *UndefValue::getElementValue(unsigned Idx) const {
 
 unsigned UndefValue::getNumElements() const {
   Type *Ty = getType();
-  if (auto *AT = dyn_cast<ArrayType>(Ty))
-    return AT->getNumElements();
-  if (auto *VT = dyn_cast<VectorType>(Ty))
-    return VT->getNumElements();
+  if (auto *ST = dyn_cast<SequentialType>(Ty))
+    return ST->getNumElements();
   return Ty->getStructNumElements();
 }
 

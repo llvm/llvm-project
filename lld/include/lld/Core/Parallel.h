@@ -307,7 +307,7 @@ void parallel_for_each(IterTy Begin, IterTy End, FuncTy Fn) {
     Tg.spawn([=, &Fn] { std::for_each(Begin, Begin + TaskSize, Fn); });
     Begin += TaskSize;
   }
-  std::for_each(Begin, End, Fn);
+  Tg.spawn([=, &Fn] { std::for_each(Begin, End, Fn); });
 }
 
 template <class IndexTy, class FuncTy>
@@ -325,8 +325,10 @@ void parallel_for(IndexTy Begin, IndexTy End, FuncTy Fn) {
     });
     Begin += TaskSize;
   }
-  for (; I < End; ++I)
-    Fn(I);
+  Tg.spawn([=, &Fn] {
+    for (IndexTy J = I; J < End; ++J)
+      Fn(J);
+  });
 }
 #endif
 } // end namespace lld

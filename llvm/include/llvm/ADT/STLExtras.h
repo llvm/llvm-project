@@ -639,6 +639,14 @@ bool is_contained(R &&Range, const E &Element) {
          std::end(Range);
 }
 
+/// Wrapper function around std::count to count the number of times an element
+/// \p Element occurs in the given range \p Range.
+template <typename R, typename E>
+auto count(R &&Range, const E &Element) -> typename std::iterator_traits<
+    decltype(std::begin(Range))>::difference_type {
+  return std::count(std::begin(Range), std::end(Range), Element);
+}
+
 /// Wrapper function around std::count_if to count the number of times an
 /// element satisfying a given predicate occurs in a range.
 template <typename R, typename UnaryPredicate>

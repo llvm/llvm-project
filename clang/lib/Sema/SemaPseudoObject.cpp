@@ -661,7 +661,7 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
         if (ObjCPropertyDecl *prop1 = IFace->FindPropertyDeclaration(
                 AltMember, prop->getQueryKind()))
           if (prop != prop1 && (prop1->getSetterMethodDecl() == setter)) {
-            S.Diag(RefExpr->getExprLoc(), diag::error_property_setter_ambiguous_use)
+            S.Diag(RefExpr->getExprLoc(), diag::err_property_setter_ambiguous_use)
               << prop << prop1 << setter->getSelector();
             S.Diag(prop->getLocation(), diag::note_property_declare);
             S.Diag(prop1->getLocation(), diag::note_property_declare);
@@ -1104,8 +1104,9 @@ Sema::ObjCSubscriptKind
   Diag(FromE->getExprLoc(), diag::err_objc_multiple_subscript_type_conversion)
       << FromE->getType();
   for (unsigned int i = 0; i < ConversionDecls.size(); i++)
-    Diag(ConversionDecls[i]->getLocation(), diag::not_conv_function_declared_at);
-    
+    Diag(ConversionDecls[i]->getLocation(),
+         diag::note_conv_function_declared_at);
+
   return OS_Error;
 }
 
@@ -1480,7 +1481,7 @@ ExprResult MSPropertyOpBuilder::buildGet() {
                               SourceLocation(), GetterName, nullptr);
   if (GetterExpr.isInvalid()) {
     S.Diag(RefExpr->getMemberLoc(),
-           diag::error_cannot_find_suitable_accessor) << 0 /* getter */
+           diag::err_cannot_find_suitable_accessor) << 0 /* getter */
       << RefExpr->getPropertyDecl();
     return ExprError();
   }
@@ -1509,7 +1510,7 @@ ExprResult MSPropertyOpBuilder::buildSet(Expr *op, SourceLocation sl,
                               SourceLocation(), SetterName, nullptr);
   if (SetterExpr.isInvalid()) {
     S.Diag(RefExpr->getMemberLoc(),
-           diag::error_cannot_find_suitable_accessor) << 1 /* setter */
+           diag::err_cannot_find_suitable_accessor) << 1 /* setter */
       << RefExpr->getPropertyDecl();
     return ExprError();
   }

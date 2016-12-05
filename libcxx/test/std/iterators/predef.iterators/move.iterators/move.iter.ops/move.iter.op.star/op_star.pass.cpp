@@ -17,9 +17,7 @@
 
 #include <iterator>
 #include <cassert>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
-#endif
 
 #include "test_macros.h"
 
@@ -44,25 +42,25 @@ test(It i, typename std::iterator_traits<It>::value_type x)
     assert(x2 == x);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 struct do_nothing
 {
     void operator()(void*) const {}
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 int main()
 {
-    A a;
-    test(&a, A());
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    int i;
-    std::unique_ptr<int, do_nothing> p(&i);
-    test(&p, std::unique_ptr<int, do_nothing>(&i));
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+    {
+        A a;
+        test(&a, A());
+    }
+#if TEST_STD_VER >= 11
+    {
+        int i;
+        std::unique_ptr<int, do_nothing> p(&i);
+        test(&p, std::unique_ptr<int, do_nothing>(&i));
+    }
+#endif
 #if TEST_STD_VER > 14
     {
     constexpr const char *p = "123456789";

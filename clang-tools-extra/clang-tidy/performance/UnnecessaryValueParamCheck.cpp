@@ -61,7 +61,8 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
                                                  unless(referenceType())))),
                   decl().bind("param"));
   Finder->addMatcher(
-      functionDecl(isDefinition(), unless(cxxMethodDecl(isOverride())),
+      functionDecl(isDefinition(),
+                   unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
                    unless(isInstantiated()),
                    has(typeLoc(forEach(ExpensiveValueParamDecl))),
                    decl().bind("functionDecl")),

@@ -517,7 +517,7 @@ namespace llvm {
     ///
     /// \param OffsetInBits Offset of the piece in bits.
     /// \param SizeInBits   Size of the piece in bits.
-    DIExpression *createBitPieceExpression(unsigned OffsetInBits,
+    DIExpression *createFragmentExpression(unsigned OffsetInBits,
                                            unsigned SizeInBits);
 
     /// Create an expression for a variable that does not have an address, but

@@ -217,7 +217,8 @@ void InstrInfoEmitter::initOperandMapData(
       }
       OpList[I->second] = Info.MIOperandNo;
     }
-    OperandMap[OpList].push_back(Namespace + "::" + Inst->TheDef->getName());
+    OperandMap[OpList].push_back(Namespace + "::" +
+                                 Inst->TheDef->getName().str());
   }
 }
 

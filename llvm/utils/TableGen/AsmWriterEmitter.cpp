@@ -138,12 +138,12 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts,
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
       OpsToPrint.push_back(std::make_pair(FirstInst.CGI->Namespace + "::" +
-                                          FirstInst.CGI->TheDef->getName(),
+                                          FirstInst.CGI->TheDef->getName().str(),
                                           FirstInst.Operands[i]));
 
       for (const AsmWriterInst &AWI : SimilarInsts) {
-        OpsToPrint.push_back(std::make_pair(AWI.CGI->Namespace+"::"+
-                                            AWI.CGI->TheDef->getName(),
+        OpsToPrint.push_back(std::make_pair(AWI.CGI->Namespace+"::" +
+                                            AWI.CGI->TheDef->getName().str(),
                                             AWI.Operands[i]));
       }
       std::reverse(OpsToPrint.begin(), OpsToPrint.end());
@@ -865,9 +865,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               Record *R = CGA.ResultOperands[i].getRecord();
               if (R->isSubClassOf("RegisterOperand"))
                 R = R->getValueAsDef("RegClass");
-              Cond = std::string("MRI.getRegClass(") + Target.getName() + "::" +
-                     R->getName() + "RegClassID)"
-                                    ".contains(" + Op + ".getReg())";
+              Cond = std::string("MRI.getRegClass(") + Target.getName().str() +
+                     "::" + R->getName().str() + "RegClassID).contains(" + Op +
+                     ".getReg())";
             } else {
               Cond = Op + ".getReg() == MI->getOperand(" +
                      utostr(IAP.getOpIndex(ROName)) + ").getReg()";
@@ -887,7 +887,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               } else
                 break; // No conditions on this operand at all
             }
-            Cond = Target.getName() + ClassName + "ValidateMCOperand(" +
+            Cond = Target.getName().str() + ClassName + "ValidateMCOperand(" +
                    Op + ", STI, " + utostr(Entry) + ")";
           }
           // for all subcases of ResultOperand::K_Record:
@@ -911,8 +911,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             break;
           }
 
-          Cond = Op + ".getReg() == " + Target.getName() + "::" +
-                 CGA.ResultOperands[i].getRegister()->getName();
+          Cond = Op + ".getReg() == " + Target.getName().str() + "::" +
+                 CGA.ResultOperands[i].getRegister()->getName().str();
           IAP.addCond(Cond);
           break;
         }

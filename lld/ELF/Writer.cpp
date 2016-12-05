@@ -21,8 +21,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
+#include <thread>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -180,10 +182,15 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    Phdrs = Script<ELFT>::X->hasPhdrsCommands() ? Script<ELFT>::X->createPhdrs()
-                                                : createPhdrs();
-    addPtArmExid(Phdrs);
-    fixHeaders();
+    // Binary output does not have PHDRS.
+    if (!Config->OFormatBinary) {
+      Phdrs = Script<ELFT>::X->hasPhdrsCommands()
+                  ? Script<ELFT>::X->createPhdrs()
+                  : createPhdrs();
+      addPtArmExid(Phdrs);
+      fixHeaders();
+    }
+
     if (ScriptConfig->HasSections) {
       Script<ELFT>::X->assignAddresses(Phdrs);
     } else {
@@ -1499,10 +1506,46 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     Sec->writeHeaderTo<ELFT>(++SHdrs);
 }
 
+// Removes a given file asynchronously. This is a performance hack,
+// so remove this when operating systems are improved.
+//
+// On Linux (and probably on other Unix-like systems), unlink(2) is a
+// noticeably slow system call. As of 2016, unlink takes 250
+// milliseconds to remove a 1 GB file on ext4 filesystem on my machine.
+//
+// To create a new result file, we first remove existing file. So, if
+// you repeatedly link a 1 GB program in a regular compile-link-debug
+// cycle, every cycle wastes 250 milliseconds only to remove a file.
+// Since LLD can link a 1 GB binary in about 5 seconds, that waste
+// actually counts.
+//
+// This function spawns a background thread to call unlink.
+// The calling thread returns almost immediately.
+static void unlinkAsync(StringRef Path) {
+  if (!Config->Threads || !sys::fs::exists(Config->OutputFile))
+    return;
+
+  // First, rename Path to avoid race condition. We cannot remomve
+  // Path from a different thread because we are now going to create
+  // Path as a new file. If we do that in a different thread, the new
+  // thread can remove the new file.
+  SmallString<128> TempPath;
+  if (auto EC = sys::fs::createUniqueFile(Path + "tmp%%%%%%%%", TempPath))
+    fatal(EC, "createUniqueFile failed");
+  if (auto EC = sys::fs::rename(Path, TempPath))
+    fatal(EC, "rename failed");
+
+  // Remove TempPath in background.
+  std::thread([=] { ::remove(TempPath.str().str().c_str()); }).detach();
+}
+
+// Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
+  unlinkAsync(Config->OutputFile);
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
+
   if (auto EC = BufferOrErr.getError())
     error(EC, "failed to open " + Config->OutputFile);
   else

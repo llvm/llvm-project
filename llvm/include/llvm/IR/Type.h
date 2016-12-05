@@ -110,7 +110,7 @@ protected:
   Type * const *ContainedTys;
 
   static bool isSequentialType(TypeID TyID) {
-    return TyID == ArrayTyID || TyID == PointerTyID || TyID == VectorTyID;
+    return TyID == ArrayTyID || TyID == VectorTyID;
   }
 
 public:

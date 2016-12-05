@@ -33,7 +33,9 @@ struct SubtargetFeatureInfo {
   SubtargetFeatureInfo(Record *D, uint64_t Idx) : TheDef(D), Index(Idx) {}
 
   /// \brief The name of the enumerated constant identifying this feature.
-  std::string getEnumName() const { return "Feature_" + TheDef->getName(); }
+  std::string getEnumName() const {
+    return "Feature_" + TheDef->getName().str();
+  }
 
   void dump() const;
   static std::vector<std::pair<Record *, SubtargetFeatureInfo>>

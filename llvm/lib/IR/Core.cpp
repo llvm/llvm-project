@@ -578,8 +578,11 @@ LLVMTypeRef LLVMVectorType(LLVMTypeRef ElementType, unsigned ElementCount) {
   return wrap(VectorType::get(unwrap(ElementType), ElementCount));
 }
 
-LLVMTypeRef LLVMGetElementType(LLVMTypeRef Ty) {
-  return wrap(unwrap<SequentialType>(Ty)->getElementType());
+LLVMTypeRef LLVMGetElementType(LLVMTypeRef WrappedTy) {
+  auto *Ty = unwrap<Type>(WrappedTy);
+  if (auto *PTy = dyn_cast<PointerType>(Ty))
+    return wrap(PTy->getElementType());
+  return wrap(cast<SequentialType>(Ty)->getElementType());
 }
 
 unsigned LLVMGetArrayLength(LLVMTypeRef ArrayTy) {

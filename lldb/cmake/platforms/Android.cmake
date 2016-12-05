@@ -33,8 +33,7 @@ set( CMAKE_SYSTEM_NAME Linux )
 include( CMakeForceCompiler )
 
 # flags and definitions
-remove_definitions( -DANDROID -D__ANDROID__ )
-add_definitions( -DANDROID -D__ANDROID_NDK__ -DLLDB_DISABLE_LIBEDIT )
+add_definitions( -DANDROID -DLLDB_DISABLE_LIBEDIT )
 set( ANDROID True )
 set( __ANDROID_NDK__ True )
 set( LLDB_DEFAULT_DISABLE_LIBEDIT True )

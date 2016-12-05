@@ -200,8 +200,8 @@ N: Ulrich Weigand
 E: uweigand@de.ibm.com
 D: SystemZ Backend
 
-N: Bill Wendling
-E: isanbard@gmail.com
+N: Teresa Johnson
+E: tejohnson@google.com
 D: IR Linker
 
 N: Hans Wennborg

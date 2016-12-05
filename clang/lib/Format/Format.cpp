@@ -1514,10 +1514,23 @@ inline bool isHeaderDeletion(const tooling::Replacement &Replace) {
   return Replace.getOffset() == UINT_MAX && Replace.getLength() == 1;
 }
 
-void skipComments(Lexer &Lex, Token &Tok) {
-  while (Tok.is(tok::comment))
-    if (Lex.LexFromRawLexer(Tok))
-      return;
+// Returns the offset after skipping a sequence of tokens, matched by \p
+// GetOffsetAfterSequence, from the start of the code.
+// \p GetOffsetAfterSequence should be a function that matches a sequence of
+// tokens and returns an offset after the sequence.
+unsigned getOffsetAfterTokenSequence(
+    StringRef FileName, StringRef Code, const FormatStyle &Style,
+    std::function<unsigned(const SourceManager &, Lexer &, Token &)>
+        GetOffsetAfterSequense) {
+  std::unique_ptr<Environment> Env =
+      Environment::CreateVirtualEnvironment(Code, FileName, /*Ranges=*/{});
+  const SourceManager &SourceMgr = Env->getSourceManager();
+  Lexer Lex(Env->getFileID(), SourceMgr.getBuffer(Env->getFileID()), SourceMgr,
+            getFormattingLangOpts(Style));
+  Token Tok;
+  // Get the first token.
+  Lex.LexFromRawLexer(Tok);
+  return GetOffsetAfterSequense(SourceMgr, Lex, Tok);
 }
 
 // Check if a sequence of tokens is like "#<Name> <raw_identifier>". If it is,
@@ -1527,31 +1540,88 @@ bool checkAndConsumeDirectiveWithName(Lexer &Lex, StringRef Name, Token &Tok) {
   bool Matched = Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
                  Tok.is(tok::raw_identifier) &&
                  Tok.getRawIdentifier() == Name && !Lex.LexFromRawLexer(Tok) &&
-                 Tok.is(tok::raw_identifier);
+                 tok::raw_identifier;
   if (Matched)
     Lex.LexFromRawLexer(Tok);
   return Matched;
 }
 
+void skipComments(Lexer &Lex, Token &Tok) {
+  while (Tok.is(tok::comment))
+    if (Lex.LexFromRawLexer(Tok))
+      return;
+}
+
+// Returns the offset after header guard directives and any comments
+// before/after header guards. If no header guard presents in the code, this
+// will returns the offset after skipping all comments from the start of the
+// code.
 unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
                                                StringRef Code,
                                                const FormatStyle &Style) {
-  std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Code, FileName, /*Ranges=*/{});
-  const SourceManager &SourceMgr = Env->getSourceManager();
-  Lexer Lex(Env->getFileID(), SourceMgr.getBuffer(Env->getFileID()), SourceMgr,
-            getFormattingLangOpts(Style));
-  Token Tok;
-  // Get the first token.
-  Lex.LexFromRawLexer(Tok);
-  skipComments(Lex, Tok);
-  unsigned AfterComments = SourceMgr.getFileOffset(Tok.getLocation());
-  if (checkAndConsumeDirectiveWithName(Lex, "ifndef", Tok)) {
-    skipComments(Lex, Tok);
-    if (checkAndConsumeDirectiveWithName(Lex, "define", Tok))
-      return SourceMgr.getFileOffset(Tok.getLocation());
+  return getOffsetAfterTokenSequence(
+      FileName, Code, Style,
+      [](const SourceManager &SM, Lexer &Lex, Token Tok) {
+        skipComments(Lex, Tok);
+        unsigned InitialOffset = SM.getFileOffset(Tok.getLocation());
+        if (checkAndConsumeDirectiveWithName(Lex, "ifndef", Tok)) {
+          skipComments(Lex, Tok);
+          if (checkAndConsumeDirectiveWithName(Lex, "define", Tok))
+            return SM.getFileOffset(Tok.getLocation());
+        }
+        return InitialOffset;
+      });
+}
+
+// Check if a sequence of tokens is like
+//    "#include ("header.h" | <header.h>)".
+// If it is, \p Tok will be the token after this directive; otherwise, it can be
+// any token after the given \p Tok (including \p Tok).
+bool checkAndConsumeInclusiveDirective(Lexer &Lex, Token &Tok) {
+  auto Matched = [&]() {
+    Lex.LexFromRawLexer(Tok);
+    return true;
+  };
+  if (Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
+      Tok.is(tok::raw_identifier) && Tok.getRawIdentifier() == "include") {
+    if (Lex.LexFromRawLexer(Tok))
+      return false;
+    if (Tok.is(tok::string_literal))
+      return Matched();
+    if (Tok.is(tok::less)) {
+      while (!Lex.LexFromRawLexer(Tok) && Tok.isNot(tok::greater)) {
+      }
+      if (Tok.is(tok::greater))
+        return Matched();
+    }
   }
-  return AfterComments;
+  return false;
+}
+
+// Returns the offset of the last #include directive after which a new
+// #include can be inserted. This ignores #include's after the #include block(s)
+// in the beginning of a file to avoid inserting headers into code sections
+// where new #include's should not be added by default.
+// These code sections include:
+//      - raw string literals (containing #include).
+//      - #if blocks.
+//      - Special #include's among declarations (e.g. functions).
+//
+// If no #include after which a new #include can be inserted, this returns the
+// offset after skipping all comments from the start of the code.
+// Inserting after an #include is not allowed if it comes after code that is not
+// #include (e.g. pre-processing directive that is not #include, declarations).
+unsigned getMaxHeaderInsertionOffset(StringRef FileName, StringRef Code,
+                                     const FormatStyle &Style) {
+  return getOffsetAfterTokenSequence(
+      FileName, Code, Style,
+      [](const SourceManager &SM, Lexer &Lex, Token Tok) {
+        skipComments(Lex, Tok);
+        unsigned MaxOffset = SM.getFileOffset(Tok.getLocation());
+        while (checkAndConsumeInclusiveDirective(Lex, Tok))
+          MaxOffset = SM.getFileOffset(Tok.getLocation());
+        return MaxOffset;
+      });
 }
 
 bool isDeletedHeader(llvm::StringRef HeaderName,
@@ -1560,11 +1630,6 @@ bool isDeletedHeader(llvm::StringRef HeaderName,
          HeadersToDelete.count(HeaderName.trim("\"<>"));
 }
 
-// FIXME: we also need to insert a '\n' at the end of the code if we have an
-// insertion with offset Code.size(), and there is no '\n' at the end of the
-// code.
-// FIXME: do not insert headers into conditional #include blocks, e.g. #includes
-// surrounded by compile condition "#if...".
 // FIXME: insert empty lines between newly created blocks.
 tooling::Replacements
 fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
@@ -1612,6 +1677,8 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   unsigned MinInsertOffset =
       getOffsetAfterHeaderGuardsAndComments(FileName, Code, Style);
   StringRef TrimmedCode = Code.drop_front(MinInsertOffset);
+  unsigned MaxInsertOffset =
+      getMaxHeaderInsertionOffset(FileName, TrimmedCode, Style);
   SmallVector<StringRef, 32> Lines;
   TrimmedCode.split(Lines, '\n');
   unsigned Offset = MinInsertOffset;
@@ -1623,11 +1690,14 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
       // The header name with quotes or angle brackets.
       StringRef IncludeName = Matches[2];
       ExistingIncludes.insert(IncludeName);
-      int Category = Categories.getIncludePriority(
-          IncludeName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
-      CategoryEndOffsets[Category] = NextLineOffset;
-      if (FirstIncludeOffset < 0)
-        FirstIncludeOffset = Offset;
+      // Only record the offset of current #include if we can insert after it.
+      if (Offset <= MaxInsertOffset) {
+        int Category = Categories.getIncludePriority(
+            IncludeName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
+        CategoryEndOffsets[Category] = NextLineOffset;
+        if (FirstIncludeOffset < 0)
+          FirstIncludeOffset = Offset;
+      }
       if (isDeletedHeader(IncludeName, HeadersToDelete)) {
         // If this is the last line without trailing newline, we need to make
         // sure we don't delete across the file boundary.

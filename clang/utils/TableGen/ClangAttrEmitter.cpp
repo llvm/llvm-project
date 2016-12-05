@@ -2695,7 +2695,7 @@ static std::string GetSubjectWithSuffix(const Record *R) {
 
 static std::string GenerateCustomAppertainsTo(const Record &Subject,
                                               raw_ostream &OS) {
-  std::string FnName = "is" + Subject.getName();
+  std::string FnName = "is" + Subject.getName().str();
 
   // If this code has already been generated, simply return the previous
   // instance of it.
@@ -2744,7 +2744,7 @@ static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // Otherwise, generate an appertainsTo check specific to this attribute which
   // checks all of the given subjects against the Decl passed in. Return the
   // name of that check to the caller.
-  std::string FnName = "check" + Attr.getName() + "AppertainsTo";
+  std::string FnName = "check" + Attr.getName().str() + "AppertainsTo";
   std::stringstream SS;
   SS << "static bool " << FnName << "(Sema &S, const AttributeList &Attr, ";
   SS << "const Decl *D) {\n";
@@ -2915,7 +2915,7 @@ static std::string GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
   // Generate the enumeration we will use for the mapping.
   SemanticSpellingMap SemanticToSyntacticMap;
   std::string Enum = CreateSemanticSpellings(Spellings, SemanticToSyntacticMap);
-  std::string Name = Attr.getName() + "AttrSpellingMap";
+  std::string Name = Attr.getName().str() + "AttrSpellingMap";
 
   OS << "static unsigned " << Name << "(const AttributeList &Attr) {\n";
   OS << Enum;
