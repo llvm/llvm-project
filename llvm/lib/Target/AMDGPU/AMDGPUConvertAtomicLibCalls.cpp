@@ -287,7 +287,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> LlvmBuilder,
 Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
                                             StringRef FuncName,
                                             CallSite *Inst) {
-  bool isAtomicClear = FuncName.startswith("atomic_flag_clear") ? true : false;
+  bool isAtomicClear = isOCLAtomicFlagClear(FuncName);
   Value *Ptr = Inst->getArgOperand(0);
   Value *Val =
       isAtomicClear
