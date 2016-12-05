@@ -289,7 +289,7 @@ public:
   void relocateNonAlloc(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 
   // Used by ICF.
-  uint32_t Color[2] = {0, 0};
+  uint32_t Class[2] = {0, 0};
 
   // Called by ICF to merge two input sections.
   void replace(InputSection<ELFT> *Other);

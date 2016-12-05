@@ -303,13 +303,6 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   }
 }
 
-// Page(Expr) is the page address of the expression Expr, defined
-// as (Expr & ~0xFFF). (This applies even if the machine page size
-// supported by the platform has a different value.)
-static uint64_t getAArch64Page(uint64_t Expr) {
-  return Expr & (~static_cast<uint64_t>(0xFFF));
-}
-
 static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
                                               uint32_t P) {
   switch (Type) {

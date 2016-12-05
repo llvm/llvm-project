@@ -36,7 +36,6 @@
 #ifdef __ANDROID__
 #include <arpa/inet.h>
 #include <asm-generic/errno-base.h>
-#include <bits/error_constants.h>
 #include <errno.h>
 #include <linux/tcp.h>
 #if defined(ANDROID_ARM_BUILD_STATIC) || defined(ANDROID_MIPS_BUILD_STATIC)

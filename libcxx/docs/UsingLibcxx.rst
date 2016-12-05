@@ -149,3 +149,9 @@ thread safety annotations.
   This macro is used to enable -Wthread-safety annotations on libc++'s
   ``std::mutex`` and ``std::lock_guard``. By default these annotations are
   disabled and must be manually enabled by the user.
+
+**_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
+  This macro is used to disable all visibility annotations inside libc++.
+  Defining this macro and then building libc++ with hidden visibility gives a
+  build of libc++ which does not export any symbols, which can be useful when
+  building statically for inclusion into another library.

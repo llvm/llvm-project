@@ -124,6 +124,7 @@ struct OutputSectionCommand : BaseCommand {
   std::vector<StringRef> Phdrs;
   uint32_t Filler = 0;
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
+  std::string Location;
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
@@ -268,7 +269,7 @@ private:
   ScriptConfiguration &Opt = *ScriptConfig;
 
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
-  size_t getPhdrIndex(StringRef PhdrName);
+  size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
 
   uintX_t Dot;
   uintX_t LMAOffset = 0;

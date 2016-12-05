@@ -105,6 +105,7 @@ public:
 
 std::string toString(uint32_t RelType);
 uint64_t getPPC64TocBase();
+uint64_t getAArch64Page(uint64_t Expr);
 
 extern TargetInfo *Target;
 TargetInfo *createTarget();

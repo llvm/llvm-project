@@ -141,16 +141,20 @@ foo128:
 .section .R_AARCH64_LDST16_ABS_LO12_NC,"ax",@progbits
 ldst16:
   ldr h17, [x19, :lo12:foo16]
+  ldrh w1, [x19, :lo12:foo16]
+  ldrh w2, [x19, :lo12:foo16 + 2]
 foo16:
   .asciz "foo"
-  .size mystr, 3
+  .size mystr, 4
 
 # S = 0x20054, A = 0x4
 # R = ((S + A) & 0x0FFC) << 9 = 0xb000
 # 0xb000 | 0x7d400271 = 0x7d40b271
 # CHECK: Disassembly of section .R_AARCH64_LDST16_ABS_LO12_NC:
 # CHECK-NEXT: ldst16:
-# CHECK-NEXT:   20054:       71 b2 40 7d     ldr     h17, [x19, #88]
+# CHECK-NEXT:   20054:       71 c2 40 7d     ldr     h17, [x19, #96]
+# CHECK-NEXT:   20058:       61 c2 40 79     ldrh    w1, [x19, #96]
+# CHECK-NEXT:   2005c:       62 c6 40 79     ldrh    w2, [x19, #98]
 
 .section .R_AARCH64_MOVW_UABS,"ax",@progbits
 movz1:

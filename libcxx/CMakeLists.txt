@@ -518,7 +518,7 @@ config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 # static library only we modify the headers to disable DLL import/export.
 if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   message(STATUS "Generating custom __config for non-DLL Windows build")
-  config_define(ON _LIBCPP_DISABLE_DLL_IMPORT_EXPORT)
+  config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
 if (LIBCXX_NEEDS_SITE_CONFIG)

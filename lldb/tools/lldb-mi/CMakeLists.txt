@@ -87,7 +87,7 @@ set(LLVM_LINK_COMPONENTS Support)
 add_lldb_executable(lldb-mi ${LLDB_MI_SOURCES})
 
 target_link_libraries(lldb-mi liblldb)
-if ( NOT CMAKE_SYSTEM_NAME MATCHES "Windows" )
+if (HAVE_LIBPTHREAD)
   target_link_libraries(lldb-mi pthread)
 endif ()
 
