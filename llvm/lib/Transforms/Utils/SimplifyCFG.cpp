@@ -1390,7 +1390,7 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     if (RI2 == RE2)
       return Changed;
 
-    Instruction *I1 = &*RI1, *I2 = &*RI2;
+    Instruction *I1 = &*RI1++, *I2 = &*RI2++;
     auto InstPair = std::make_pair(I1, I2);
     // I1 and I2 should have a single use in the same PHI node, and they
     // perform the same operation.
@@ -1463,9 +1463,6 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     PHINode *OldPN = JointValueMap[InstPair];
     JointValueMap.erase(InstPair);
 
-    // We need to update RE1 and RE2 if we are going to sink the first
-    // instruction in the basic block down.
-    bool UpdateRE1 = (I1 == &BB1->front()), UpdateRE2 = (I2 == &BB2->front());
     // Sink the instruction.
     BBEnd->getInstList().splice(FirstNonPhiInBBEnd->getIterator(),
                                 BB1->getInstList(), I1);
@@ -1480,10 +1477,6 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     // (analogous to the hoisting case above).
     I2->eraseFromParent();
 
-    if (UpdateRE1)
-      RE1 = BB1->getInstList().rend();
-    if (UpdateRE2)
-      RE2 = BB2->getInstList().rend();
     FirstNonPhiInBBEnd = &*I1;
     NumSinkCommons++;
     Changed = true;
