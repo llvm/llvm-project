@@ -61,19 +61,6 @@ _start:
 # CHECK-NEXT:     Offset:
 # CHECK-NEXT:     VirtualAddress:
 # CHECK-NEXT:     PhysicalAddress:
-# CHECK-NEXT:     FileSize: 0
-# CHECK-NEXT:     MemSize: 0
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       PF_R
-# CHECK-NEXT:       PF_X
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Alignment:
-# CHECK-NEXT:   }
-# CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:     Type: PT_LOAD
-# CHECK-NEXT:     Offset:
-# CHECK-NEXT:     VirtualAddress:
-# CHECK-NEXT:     PhysicalAddress:
 # CHECK-NEXT:     FileSize: 16
 # CHECK-NEXT:     MemSize: 16
 # CHECK-NEXT:     Flags [

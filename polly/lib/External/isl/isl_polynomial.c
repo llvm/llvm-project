@@ -449,6 +449,21 @@ __isl_give isl_space *isl_qpolynomial_get_space(__isl_keep isl_qpolynomial *qp)
 	return space;
 }
 
+/* Return the number of variables of the given type in the domain of "qp".
+ */
+unsigned isl_qpolynomial_domain_dim(__isl_keep isl_qpolynomial *qp,
+	enum isl_dim_type type)
+{
+	if (!qp)
+		return 0;
+	if (type == isl_dim_div)
+		return qp->div->n_row;
+	if (type == isl_dim_all)
+		return isl_space_dim(qp->dim, isl_dim_all) +
+				    isl_qpolynomial_domain_dim(qp, isl_dim_div);
+	return isl_space_dim(qp->dim, type);
+}
+
 /* Externally, an isl_qpolynomial has a map space, but internally, the
  * ls field corresponds to the domain of that space.
  */
@@ -461,7 +476,28 @@ unsigned isl_qpolynomial_dim(__isl_keep isl_qpolynomial *qp,
 		return 1;
 	if (type == isl_dim_in)
 		type = isl_dim_set;
-	return isl_space_dim(qp->dim, type);
+	return isl_qpolynomial_domain_dim(qp, type);
+}
+
+/* Return the offset of the first coefficient of type "type" in
+ * the domain of "qp".
+ */
+unsigned isl_qpolynomial_domain_offset(__isl_keep isl_qpolynomial *qp,
+	enum isl_dim_type type)
+{
+	if (!qp)
+		return 0;
+	switch (type) {
+	case isl_dim_cst:
+		return 0;
+	case isl_dim_param:
+	case isl_dim_set:
+		return 1 + isl_space_offset(qp->dim, type);
+	case isl_dim_div:
+		return 1 + isl_space_dim(qp->dim, isl_dim_all);
+	default:
+		return 0;
+	}
 }
 
 isl_bool isl_qpolynomial_is_zero(__isl_keep isl_qpolynomial *qp)
@@ -2238,11 +2274,11 @@ static __isl_give isl_qpolynomial *substitute_non_divs(
  * inside the division, so we need to add floor(e/d) * x outside.
  * That is, we replace q by q' + floor(e/d) * x and we therefore need
  * to adjust the coefficient of x in each later div that depends on the
- * current div "div" and also in the affine expression "aff"
- * (if it too depends on "div").
+ * current div "div" and also in the affine expressions in the rows of "mat"
+ * (if they too depend on "div").
  */
 static void reduce_div(__isl_keep isl_qpolynomial *qp, int div,
-	__isl_keep isl_vec *aff)
+	__isl_keep isl_mat **mat)
 {
 	int i, j;
 	isl_int v;
@@ -2256,8 +2292,7 @@ static void reduce_div(__isl_keep isl_qpolynomial *qp, int div,
 		isl_int_fdiv_q(v, qp->div->row[div][1 + i], qp->div->row[div][0]);
 		isl_int_fdiv_r(qp->div->row[div][1 + i],
 				qp->div->row[div][1 + i], qp->div->row[div][0]);
-		if (!isl_int_is_zero(aff->el[1 + total + div]))
-			isl_int_addmul(aff->el[i], v, aff->el[1 + total + div]);
+		*mat = isl_mat_col_addmul(*mat, i, v, 1 + total + div);
 		for (j = div + 1; j < qp->div->n_row; ++j) {
 			if (isl_int_is_zero(qp->div->row[j][2 + total + div]))
 				continue;
@@ -2297,11 +2332,11 @@ static int needs_invert(__isl_keep isl_mat *div, int row)
 
 /* Replace div "div" q = [e/d] by -[(-e+(d-1))/d].
  * We only invert the coefficients of e (and the coefficient of q in
- * later divs and in "aff").  After calling this function, the
+ * later divs and in the rows of "mat").  After calling this function, the
  * coefficients of e should be reduced again.
  */
 static void invert_div(__isl_keep isl_qpolynomial *qp, int div,
-	__isl_keep isl_vec *aff)
+	__isl_keep isl_mat **mat)
 {
 	unsigned total = qp->div->n_col - qp->div->n_row - 2;
 
@@ -2310,15 +2345,18 @@ static void invert_div(__isl_keep isl_qpolynomial *qp, int div,
 	isl_int_sub_ui(qp->div->row[div][1], qp->div->row[div][1], 1);
 	isl_int_add(qp->div->row[div][1],
 		    qp->div->row[div][1], qp->div->row[div][0]);
-	if (!isl_int_is_zero(aff->el[1 + total + div]))
-		isl_int_neg(aff->el[1 + total + div], aff->el[1 + total + div]);
+	*mat = isl_mat_col_neg(*mat, 1 + total + div);
 	isl_mat_col_mul(qp->div, 2 + total + div,
 			qp->div->ctx->negone, 2 + total + div);
 }
 
-/* Assuming "qp" is a monomial, reduce all its divs to have coefficients
+/* Reduce all divs of "qp" to have coefficients
  * in the interval [0, d-1], with d the denominator and such that the
  * last non-zero coefficient that is not equal to d/2 is smaller than d/2.
+ * The modifications to the integer divisions need to be reflected
+ * in the factors of the polynomial that refer to the original
+ * integer divisions.  To this end, the modifications are collected
+ * as a set of affine expressions and then plugged into the polynomial.
  *
  * After the reduction, some divs may have become redundant or identical,
  * so we call substitute_non_divs and sort_divs.  If these functions
@@ -2329,48 +2367,58 @@ static void invert_div(__isl_keep isl_qpolynomial *qp, int div,
 static __isl_give isl_qpolynomial *reduce_divs(__isl_take isl_qpolynomial *qp)
 {
 	int i;
-	isl_vec *aff = NULL;
-	struct isl_upoly *s;
-	unsigned n_div;
+	isl_ctx *ctx;
+	isl_mat *mat;
+	struct isl_upoly **s;
+	unsigned o_div, n_div, total;
 
 	if (!qp)
 		return NULL;
 
-	aff = isl_vec_alloc(qp->div->ctx, qp->div->n_col - 1);
-	aff = isl_vec_clr(aff);
-	if (!aff)
-		goto error;
+	total = isl_qpolynomial_domain_dim(qp, isl_dim_all);
+	n_div = isl_qpolynomial_domain_dim(qp, isl_dim_div);
+	o_div = isl_qpolynomial_domain_offset(qp, isl_dim_div);
+	ctx = isl_qpolynomial_get_ctx(qp);
+	mat = isl_mat_zero(ctx, n_div, 1 + total);
 
-	isl_int_set_si(aff->el[1 + qp->upoly->var], 1);
+	for (i = 0; i < n_div; ++i)
+		mat = isl_mat_set_element_si(mat, i, o_div + i, 1);
 
 	for (i = 0; i < qp->div->n_row; ++i) {
 		normalize_div(qp, i);
-		reduce_div(qp, i, aff);
+		reduce_div(qp, i, &mat);
 		if (needs_invert(qp->div, i)) {
-			invert_div(qp, i, aff);
-			reduce_div(qp, i, aff);
+			invert_div(qp, i, &mat);
+			reduce_div(qp, i, &mat);
 		}
 	}
+	if (!mat)
+		goto error;
 
-	s = isl_upoly_from_affine(qp->div->ctx, aff->el,
-				  qp->div->ctx->one, aff->size);
-	qp->upoly = isl_upoly_subs(qp->upoly, qp->upoly->var, 1, &s);
-	isl_upoly_free(s);
+	s = isl_alloc_array(ctx, struct isl_upoly *, n_div);
+	if (n_div && !s)
+		goto error;
+	for (i = 0; i < n_div; ++i)
+		s[i] = isl_upoly_from_affine(ctx, mat->row[i], ctx->one,
+					    1 + total);
+	qp->upoly = isl_upoly_subs(qp->upoly, o_div - 1, n_div, s);
+	for (i = 0; i < n_div; ++i)
+		isl_upoly_free(s[i]);
+	free(s);
 	if (!qp->upoly)
 		goto error;
 
-	isl_vec_free(aff);
+	isl_mat_free(mat);
 
-	n_div = qp->div->n_row;
 	qp = substitute_non_divs(qp);
 	qp = sort_divs(qp);
-	if (qp && qp->div->n_row < n_div)
+	if (qp && isl_qpolynomial_domain_dim(qp, isl_dim_div) < n_div)
 		return reduce_divs(qp);
 
 	return qp;
 error:
 	isl_qpolynomial_free(qp);
-	isl_vec_free(aff);
+	isl_mat_free(mat);
 	return NULL;
 }
 
@@ -2628,6 +2676,12 @@ __isl_give isl_qpolynomial *isl_qpolynomial_set_dim_name(
 	qp = isl_qpolynomial_cow(qp);
 	if (!qp)
 		return NULL;
+	if (type == isl_dim_out)
+		isl_die(isl_qpolynomial_get_ctx(qp), isl_error_invalid,
+			"cannot set name of output/set dimension",
+			return isl_qpolynomial_free(qp));
+	if (type == isl_dim_in)
+		type = isl_dim_set;
 	qp->dim = isl_space_set_dim_name(qp->dim, type, pos, s);
 	if (!qp->dim)
 		goto error;
@@ -3031,15 +3085,35 @@ error:
 	return NULL;
 }
 
+/* Evaluate "qp" in the void point "pnt".
+ * In particular, return the value NaN.
+ */
+static __isl_give isl_val *eval_void(__isl_take isl_qpolynomial *qp,
+	__isl_take isl_point *pnt)
+{
+	isl_ctx *ctx;
+
+	ctx = isl_point_get_ctx(pnt);
+	isl_qpolynomial_free(qp);
+	isl_point_free(pnt);
+	return isl_val_nan(ctx);
+}
+
 __isl_give isl_val *isl_qpolynomial_eval(__isl_take isl_qpolynomial *qp,
 	__isl_take isl_point *pnt)
 {
+	isl_bool is_void;
 	isl_vec *ext;
 	isl_val *v;
 
 	if (!qp || !pnt)
 		goto error;
 	isl_assert(pnt->dim->ctx, isl_space_is_equal(pnt->dim, qp->dim), goto error);
+	is_void = isl_point_is_void(pnt);
+	if (is_void < 0)
+		goto error;
+	if (is_void)
+		return eval_void(qp, pnt);
 
 	if (qp->div->n_row == 0)
 		ext = isl_vec_copy(pnt->vec);

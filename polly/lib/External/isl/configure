@@ -19276,6 +19276,8 @@ ac_config_commands="$ac_config_commands $ax_create_pkgconfig_generate"
 
 ac_config_headers="$ac_config_headers isl_config.h"
 
+ac_config_files="$ac_config_files isl_srcdir.c"
+
 ac_config_files="$ac_config_files Makefile"
 
 ac_config_files="$ac_config_files doc/Makefile"
@@ -20474,6 +20476,7 @@ do
     "$ac_stdint_h") CONFIG_COMMANDS="$CONFIG_COMMANDS $ac_stdint_h" ;;
     "$ax_create_pkgconfig_generate") CONFIG_COMMANDS="$CONFIG_COMMANDS $ax_create_pkgconfig_generate" ;;
     "isl_config.h") CONFIG_HEADERS="$CONFIG_HEADERS isl_config.h" ;;
+    "isl_srcdir.c") CONFIG_FILES="$CONFIG_FILES isl_srcdir.c" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
     "interface/Makefile") CONFIG_FILES="$CONFIG_FILES interface/Makefile" ;;
@@ -21183,6 +21186,7 @@ $as_echo X"$file" |
     cat <<_LT_EOF >> "$cfgfile"
 #! $SHELL
 # Generated automatically by $as_me ($PACKAGE) $VERSION
+# Libtool was configured on host `(hostname || uname -n) 2>/dev/null | sed 1q`:
 # NOTE: Changes made to this file will be lost: look at ltmain.sh.
 
 # Provide generalized library-building support services.

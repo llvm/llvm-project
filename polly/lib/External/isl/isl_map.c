@@ -13174,3 +13174,69 @@ __isl_give isl_set *isl_set_preimage_multi_pw_aff(__isl_take isl_set *set,
 {
 	return isl_map_preimage_multi_pw_aff(set, isl_dim_set, mpa);
 }
+
+/* Is the point "inner" internal to inequality constraint "ineq"
+ * of "bset"?
+ * The point is considered to be internal to the inequality constraint,
+ * if it strictly lies on the positive side of the inequality constraint,
+ * or if it lies on the constraint and the constraint is lexico-positive.
+ */
+static isl_bool is_internal(__isl_keep isl_vec *inner,
+	__isl_keep isl_basic_set *bset, int ineq)
+{
+	isl_ctx *ctx;
+	int pos;
+	unsigned total;
+
+	if (!inner || !bset)
+		return isl_bool_error;
+
+	ctx = isl_basic_set_get_ctx(bset);
+	isl_seq_inner_product(inner->el, bset->ineq[ineq], inner->size,
+				&ctx->normalize_gcd);
+	if (!isl_int_is_zero(ctx->normalize_gcd))
+		return isl_int_is_nonneg(ctx->normalize_gcd);
+
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	pos = isl_seq_first_non_zero(bset->ineq[ineq] + 1, total);
+	return isl_int_is_pos(bset->ineq[ineq][1 + pos]);
+}
+
+/* Tighten the inequality constraints of "bset" that are outward with respect
+ * to the point "vec".
+ * That is, tighten the constraints that are not satisfied by "vec".
+ *
+ * "vec" is a point internal to some superset S of "bset" that is used
+ * to make the subsets of S disjoint, by tightening one half of the constraints
+ * that separate two subsets.  In particular, the constraints of S
+ * are all satisfied by "vec" and should not be tightened.
+ * Of the internal constraints, those that have "vec" on the outside
+ * are tightened.  The shared facet is included in the adjacent subset
+ * with the opposite constraint.
+ * For constraints that saturate "vec", this criterion cannot be used
+ * to determine which of the two sides should be tightened.
+ * Instead, the sign of the first non-zero coefficient is used
+ * to make this choice.  Note that this second criterion is never used
+ * on the constraints of S since "vec" is interior to "S".
+ */
+__isl_give isl_basic_set *isl_basic_set_tighten_outward(
+	__isl_take isl_basic_set *bset, __isl_keep isl_vec *vec)
+{
+	int j;
+
+	bset = isl_basic_set_cow(bset);
+	if (!bset)
+		return NULL;
+	for (j = 0; j < bset->n_ineq; ++j) {
+		isl_bool internal;
+
+		internal = is_internal(vec, bset, j);
+		if (internal < 0)
+			return isl_basic_set_free(bset);
+		if (internal)
+			continue;
+		isl_int_sub_ui(bset->ineq[j][0], bset->ineq[j][0], 1);
+	}
+
+	return bset;
+}

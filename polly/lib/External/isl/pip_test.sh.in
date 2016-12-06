@@ -1,6 +1,7 @@
 #!/bin/sh
 
 EXEEXT=@EXEEXT@
+srcdir=@srcdir@
 
 PIP_TESTS="\
 	boulet.pip \
