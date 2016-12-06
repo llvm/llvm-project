@@ -65,8 +65,10 @@ define { i128, i1 } @test_cmpxchg_128(i128* %addr, i128 %desired, i128 %new) nou
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
 ; CHECK:     ldaxp [[OLD_LO:x[0-9]+]], [[OLD_HI:x[0-9]+]], [x0]
 ; CHECK:     cmp [[OLD_LO]], x2
-; CHECK:     sbcs xzr, [[OLD_HI]], x3
-; CHECK:     b.ne [[DONE:.LBB[0-9]+_[0-9]+]]
+; CHECK:     cset [[CMP_TMP:w[0-9]+]], ne
+; CHECK:     cmp [[OLD_HI]], x3
+; CHECK:     cinc [[CMP:w[0-9]+]], [[CMP_TMP]], ne
+; CHECK:     cbnz [[CMP]], [[DONE:.LBB[0-9]+_[0-9]+]]
 ; CHECK:     stlxp [[STATUS:w[0-9]+]], x4, x5, [x0]
 ; CHECK:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK: [[DONE]]:
@@ -88,8 +90,10 @@ define {i128, i1} @test_cmpxchg_128_unsplit(i128* %addr) {
 ; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
 ; CHECK:     ldaxp [[OLD_LO:x[0-9]+]], [[OLD_HI:x[0-9]+]], [x0]
 ; CHECK:     cmp [[OLD_LO]], [[DESIRED_LO]]
-; CHECK:     sbcs xzr, [[OLD_HI]], [[DESIRED_HI]]
-; CHECK:     b.ne [[DONE:.LBB[0-9]+_[0-9]+]]
+; CHECK:     cset [[CMP_TMP:w[0-9]+]], ne
+; CHECK:     cmp [[OLD_HI]], [[DESIRED_HI]]
+; CHECK:     cinc [[CMP:w[0-9]+]], [[CMP_TMP]], ne
+; CHECK:     cbnz [[CMP]], [[DONE:.LBB[0-9]+_[0-9]+]]
 ; CHECK:     stlxp [[STATUS:w[0-9]+]], [[NEW_LO]], [[NEW_HI]], [x0]
 ; CHECK:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK: [[DONE]]:
