@@ -95,7 +95,9 @@ struct ClangMoveContext {
 // The goal of this tool is to make the new files as compliable as possible.
 //
 // Note: When all declarations in old header are being moved, all code in
-// old.h/cc will be moved, which means old.h/cc are empty.
+// old.h/cc will be moved, which means old.h/cc are empty. This ignores symbols
+// that are not supported (e.g. typedef and enum) so that we always move old
+// files to new files when all symbols produced from dump_decls are moved.
 class ClangMoveTool : public ast_matchers::MatchFinder::MatchCallback {
 public:
   ClangMoveTool(ClangMoveContext *const Context,

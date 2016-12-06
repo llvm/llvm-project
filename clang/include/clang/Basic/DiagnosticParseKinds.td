@@ -422,8 +422,6 @@ def err_unexpected_protocol_qualifier : Error<
   "@implementation declaration cannot be protocol qualified">;
 def err_objc_unexpected_atend : Error<
   "'@end' appears where closing brace '}' is expected">;
-def err_property_ivar_decl : Error<
-  "property synthesize requires specification of an ivar">;
 def err_synthesized_property_name : Error<
   "expected a property name in @synthesize">;
 def warn_semicolon_before_method_body : Warning<
