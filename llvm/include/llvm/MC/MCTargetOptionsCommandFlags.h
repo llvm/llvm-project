@@ -53,6 +53,9 @@ cl::opt<bool> FatalWarnings("fatal-warnings",
 cl::opt<bool> NoWarn("no-warn", cl::desc("Suppress all warnings"));
 cl::alias NoWarnW("W", cl::desc("Alias for --no-warn"), cl::aliasopt(NoWarn));
 
+cl::opt<bool> NoDeprecatedWarn("no-deprecated-warn",
+                               cl::desc("Suppress all deprecated warnings"));
+
 cl::opt<std::string>
 ABIName("target-abi", cl::Hidden,
         cl::desc("The name of the ABI to be targeted from the backend."),
@@ -70,6 +73,7 @@ static inline MCTargetOptions InitMCTargetOptionsFromFlags() {
   Options.ABIName = ABIName;
   Options.MCFatalWarnings = FatalWarnings;
   Options.MCNoWarn = NoWarn;
+  Options.MCNoDeprecatedWarn = NoDeprecatedWarn;
   return Options;
 }
 

@@ -26,7 +26,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 ; CHECK:     %w1 = COPY [[SEL_RET]]
 
 ; CHECK:   bb.2:
-; CHECK:     [[SEL:%[0-9]+]](s32) = G_CONSTANT 1
+; CHECK:     [[SEL:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK:     {{%[0-9]+}}(s128) = G_INSERT {{%[0-9]+}}(s128), [[SEL]](s32), 64
 
 define { i8*, i32 } @bar() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

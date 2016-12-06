@@ -81,7 +81,7 @@ int main()
     for (int i = 0; static_cast<std::size_t>(i) < v.size(); ++i)
         v[i].reset(new int(i));
     std::nth_element(v.begin(), v.begin() + v.size()/2, v.end(), indirect_less());
-    assert(*v[v.size()/2] == v.size()/2);
+    assert(static_cast<std::size_t>(*v[v.size()/2]) == v.size()/2);
     }
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

@@ -16,5 +16,6 @@
 // dialects, including C++03, even though it is forward declared using
 // variadic templates.
 
+// MODULES_DEFINES: _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include "mutex.pass.cpp" // Use the existing non-variadic test

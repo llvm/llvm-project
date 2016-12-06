@@ -2683,6 +2683,29 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Src);
     return DAG.getNode(AMDGPUISD::KILL, DL, MVT::Other, Chain, Cast);
   }
+  case AMDGPUIntrinsic::SI_export: {
+    const ConstantSDNode *En = cast<ConstantSDNode>(Op.getOperand(2));
+    const ConstantSDNode *VM = cast<ConstantSDNode>(Op.getOperand(3));
+    const ConstantSDNode *Done = cast<ConstantSDNode>(Op.getOperand(4));
+    const ConstantSDNode *Tgt = cast<ConstantSDNode>(Op.getOperand(5));
+    const ConstantSDNode *Compr = cast<ConstantSDNode>(Op.getOperand(6));
+
+    const SDValue Ops[] = {
+      Chain,
+      DAG.getTargetConstant(En->getZExtValue(), DL, MVT::i8),
+      DAG.getTargetConstant(VM->getZExtValue(), DL, MVT::i1),
+      DAG.getTargetConstant(Tgt->getZExtValue(), DL, MVT::i8),
+      DAG.getTargetConstant(Compr->getZExtValue(), DL, MVT::i1),
+      Op.getOperand(7), // src0
+      Op.getOperand(8), // src1
+      Op.getOperand(9), // src2
+      Op.getOperand(10) // src3
+    };
+
+    unsigned Opc = Done->isNullValue() ?
+      AMDGPUISD::EXPORT : AMDGPUISD::EXPORT_DONE;
+    return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
+  }
   default:
     return SDValue();
   }

@@ -3116,6 +3116,24 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                  Value.startswith("-mhwdiv") || Value.startswith("-march")) {
         // Do nothing, we'll validate it later.
       } else if (Value == "-defsym") {
+          if (A->getNumValues() != 2) {
+            D.Diag(diag::err_drv_defsym_invalid_format) << Value;
+            break;
+          }
+          const char *S = A->getValue(1);
+          auto Pair = StringRef(S).split('=');
+          auto Sym = Pair.first;
+          auto SVal = Pair.second;
+
+          if (Sym.empty() || SVal.empty()) {
+            D.Diag(diag::err_drv_defsym_invalid_format) << S;
+            break;
+          }
+          int64_t IVal;
+          if (SVal.getAsInteger(0, IVal)) {
+            D.Diag(diag::err_drv_defsym_invalid_symval) << SVal;
+            break;
+          }
           CmdArgs.push_back(Value.data());
           TakeNextArg = true;
       } else {

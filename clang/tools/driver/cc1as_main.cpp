@@ -426,10 +426,13 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
 
   // Set values for symbols, if any.
   for (auto &S : Opts.SymbolDefs) {
-    if (Ctx.setSymbolValue(Parser->getStreamer(), S)) {
-      Failed = true;
-      break;
-    }
+    auto Pair = StringRef(S).split('=');
+    auto Sym = Pair.first;
+    auto Val = Pair.second;
+    int64_t Value;
+    // We have already error checked this in the driver.
+    Val.getAsInteger(0, Value);
+    Ctx.setSymbolValue(Parser->getStreamer(), Sym, Value);
   }
 
   if (!Failed) {

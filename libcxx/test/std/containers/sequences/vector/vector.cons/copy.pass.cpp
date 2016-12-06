@@ -23,7 +23,7 @@ template <class C>
 void
 test(const C& x)
 {
-    unsigned s = x.size();
+    typename C::size_type s = x.size();
     C c(x);
     LIBCPP_ASSERT(c.__invariants());
     assert(c.size() == s);

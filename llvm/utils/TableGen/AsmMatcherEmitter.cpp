@@ -1595,15 +1595,15 @@ void AsmMatcherInfo::buildInfo() {
   // Reorder classes so that classes precede super classes.
   Classes.sort();
 
-#ifndef NDEBUG
-  // Verify that the table is now sorted
+#ifdef EXPENSIVE_CHECKS
+  // Verify that the table is sorted and operator < works transitively.
   for (auto I = Classes.begin(), E = Classes.end(); I != E; ++I) {
     for (auto J = I; J != E; ++J) {
       assert(!(*J < *I));
       assert(I == J || !J->isSubsetOf(*I));
     }
   }
-#endif // NDEBUG
+#endif
 }
 
 /// buildInstructionOperandReference - The specified operand is a reference to a
@@ -2719,6 +2719,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                       const std::unique_ptr<MatchableInfo> &b){
                      return *a < *b;});
 
+#ifdef EXPENSIVE_CHECKS
+  // Verify that the table is sorted and operator < works transitively.
+  for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
+       ++I) {
+    for (auto J = I; J != E; ++J) {
+      assert(!(**J < **I));
+    }
+  }
+#endif
+
   DEBUG_WITH_TYPE("instruction_info", {
       for (const auto &MI : Info.Matchables)
         MI->dump();
@@ -3189,7 +3199,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   if (HasDeprecation) {
     OS << "    std::string Info;\n";
-    OS << "    if (MII.get(Inst.getOpcode()).getDeprecatedInfo(Inst, getSTI(), Info)) {\n";
+    OS << "    if (!getParser().getTargetParser().\n";
+    OS << "        getTargetOptions().MCNoDeprecatedWarn &&\n";
+    OS << "        MII.get(Inst.getOpcode()).getDeprecatedInfo(Inst, getSTI(), Info)) {\n";
     OS << "      SMLoc Loc = ((" << Target.getName()
        << "Operand&)*Operands[0]).getStartLoc();\n";
     OS << "      getParser().Warning(Loc, Info, None);\n";

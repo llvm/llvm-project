@@ -59,12 +59,12 @@ public:
     int outstanding_new;
     int new_called;
     int delete_called;
-    int last_new_size;
+    std::size_t last_new_size;
 
     int outstanding_array_new;
     int new_array_called;
     int delete_array_called;
-    int last_new_array_size;
+    std::size_t last_new_array_size;
 
 public:
     void newCalled(std::size_t s)
@@ -174,12 +174,12 @@ public:
         return disable_checking || n != delete_called;
     }
 
-    bool checkLastNewSizeEq(int n) const
+    bool checkLastNewSizeEq(std::size_t n) const
     {
         return disable_checking || n == last_new_size;
     }
 
-    bool checkLastNewSizeNotEq(int n) const
+    bool checkLastNewSizeNotEq(std::size_t n) const
     {
         return disable_checking || n != last_new_size;
     }
@@ -214,12 +214,12 @@ public:
         return disable_checking || n != delete_array_called;
     }
 
-    bool checkLastNewArraySizeEq(int n) const
+    bool checkLastNewArraySizeEq(std::size_t n) const
     {
         return disable_checking || n == last_new_array_size;
     }
 
-    bool checkLastNewArraySizeNotEq(int n) const
+    bool checkLastNewArraySizeNotEq(std::size_t n) const
     {
         return disable_checking || n != last_new_array_size;
     }
@@ -304,10 +304,10 @@ struct RequireAllocationGuard {
     void requireExactly(std::size_t N) { m_req_alloc = N; m_exactly = true; }
 
     ~RequireAllocationGuard() {
-        assert(globalMemCounter.checkOutstandingNewEq(m_outstanding_new_on_init));
+        assert(globalMemCounter.checkOutstandingNewEq(static_cast<int>(m_outstanding_new_on_init)));
         std::size_t Expect = m_new_count_on_init + m_req_alloc;
-        assert(globalMemCounter.checkNewCalledEq(Expect) ||
-               (!m_exactly && globalMemCounter.checkNewCalledGreaterThan(Expect)));
+        assert(globalMemCounter.checkNewCalledEq(static_cast<int>(Expect)) ||
+               (!m_exactly && globalMemCounter.checkNewCalledGreaterThan(static_cast<int>(Expect))));
     }
 
 private:

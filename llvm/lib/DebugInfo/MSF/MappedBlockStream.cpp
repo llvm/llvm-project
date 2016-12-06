@@ -63,6 +63,7 @@ std::unique_ptr<MappedBlockStream>
 MappedBlockStream::createIndexedStream(const MSFLayout &Layout,
                                        const ReadableStream &MsfData,
                                        uint32_t StreamIndex) {
+  assert(StreamIndex < Layout.StreamMap.size() && "Invalid stream index");
   MSFStreamLayout SL;
   SL.Blocks = Layout.StreamMap[StreamIndex];
   SL.Length = Layout.StreamSizes[StreamIndex];
@@ -334,6 +335,7 @@ std::unique_ptr<WritableMappedBlockStream>
 WritableMappedBlockStream::createIndexedStream(const MSFLayout &Layout,
                                                const WritableStream &MsfData,
                                                uint32_t StreamIndex) {
+  assert(StreamIndex < Layout.StreamMap.size() && "Invalid stream index");
   MSFStreamLayout SL;
   SL.Blocks = Layout.StreamMap[StreamIndex];
   SL.Length = Layout.StreamSizes[StreamIndex];

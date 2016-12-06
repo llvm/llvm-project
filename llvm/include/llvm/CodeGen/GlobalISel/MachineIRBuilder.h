@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 
 #include <queue>
@@ -289,6 +290,18 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildBrCond(unsigned Tst, MachineBasicBlock &BB);
+
+  /// Build and insert \p Res = G_CONSTANT \p Val
+  ///
+  /// G_CONSTANT is an integer constant with the specified size and value. \p
+  /// Val will be extended or truncated to the size of \p Reg.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar or pointer
+  ///      type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildConstant(unsigned Res, const ConstantInt &Val);
 
   /// Build and insert \p Res = G_CONSTANT \p Val
   ///

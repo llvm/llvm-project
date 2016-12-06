@@ -15,18 +15,19 @@
 #ifndef LLVM_IR_GLOBALOBJECT_H
 #define LLVM_IR_GLOBALOBJECT_H
 
-#include "llvm/IR/DerivedTypes.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Value.h"
+#include <string>
+#include <utility>
 
 namespace llvm {
+
 class Comdat;
 class MDNode;
 class Metadata;
-class Module;
 
 class GlobalObject : public GlobalValue {
-  GlobalObject(const GlobalObject &) = delete;
-
 protected:
   GlobalObject(Type *Ty, ValueTy VTy, Use *Ops, unsigned NumOps,
                LinkageTypes Linkage, const Twine &Name,
@@ -53,6 +54,8 @@ private:
   static const unsigned GlobalObjectMask = (1 << GlobalObjectBits) - 1;
 
 public:
+  GlobalObject(const GlobalObject &) = delete;
+
   unsigned getAlignment() const {
     unsigned Data = getGlobalValueSubClassData();
     unsigned AlignmentData = Data & AlignmentMask;
@@ -141,6 +144,6 @@ private:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GLOBALOBJECT_H

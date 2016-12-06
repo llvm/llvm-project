@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ;
 ;
 ; Most SALU instructions ignore control flow, so we need to make sure
@@ -9,9 +9,50 @@
 ; about instructions in different blocks overwriting each other.
 ; SI-LABEL: {{^}}sgpr_if_else_salu_br:
 ; SI: s_add
-; SI: s_add
+; SI: s_branch
+
+; SI: s_sub
 
 define void @sgpr_if_else_salu_br(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+entry:
+  %0 = icmp eq i32 %a, 0
+  br i1 %0, label %if, label %else
+
+if:
+  %1 = sub i32 %b, %c
+  br label %endif
+
+else:
+  %2 = add i32 %d, %e
+  br label %endif
+
+endif:
+  %3 = phi i32 [%1, %if], [%2, %else]
+  %4 = add i32 %3, %a
+  store i32 %4, i32 addrspace(1)* %out
+  ret void
+}
+
+; SI-LABEL: {{^}}sgpr_if_else_salu_br_opt:
+; SI: s_cmp_lg_u32
+; SI: s_cbranch_scc0 [[IF:BB[0-9]+_[0-9]+]]
+
+; SI: ; BB#1: ; %else
+; SI: s_load_dword [[LOAD0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xe
+; SI: s_load_dword [[LOAD1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xf
+; SI-NOT: add
+; SI: s_branch [[ENDIF:BB[0-9]+_[0-9]+]]
+
+; SI: [[IF]]: ; %if
+; SI: s_load_dword [[LOAD0]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
+; SI: s_load_dword [[LOAD1]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
+; SI-NOT: add
+
+; SI: [[ENDIF]]: ; %endif
+; SI: s_add_i32 s{{[0-9]+}}, [[LOAD0]], [[LOAD1]]
+; SI: buffer_store_dword
+; SI-NEXT: s_endpgm
+define void @sgpr_if_else_salu_br_opt(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 entry:
   %0 = icmp eq i32 %a, 0
   br i1 %0, label %if, label %else
@@ -67,7 +108,7 @@ endif:
 ; SI: v_cmp_gt_i32_e32 [[CMP_IF:vcc]], 0, [[AVAL]]
 ; SI: v_cndmask_b32_e64 [[V_CMP:v[0-9]+]], 0, -1, [[CMP_IF]]
 
-; SI: BB2_2:
+; SI: BB{{[0-9]+}}_2:
 ; SI: buffer_load_dword [[AVAL:v[0-9]+]]
 ; SI: v_cmp_eq_u32_e32 [[CMP_ELSE:vcc]], 0, [[AVAL]]
 ; SI: v_cndmask_b32_e64 [[V_CMP]], 0, -1, [[CMP_ELSE]]

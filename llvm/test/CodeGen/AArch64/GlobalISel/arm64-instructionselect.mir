@@ -2325,7 +2325,7 @@ registers:
 # CHECK: %0 = MOVi32imm 42
 body:             |
   bb.0:
-    %0(s32) = G_CONSTANT 42
+    %0(s32) = G_CONSTANT i32 42
 ...
 
 ---
@@ -2340,7 +2340,7 @@ registers:
 # CHECK: %0 = MOVi64imm 1234567890123
 body:             |
   bb.0:
-    %0(s64) = G_CONSTANT 1234567890123
+    %0(s64) = G_CONSTANT i64 1234567890123
 ...
 
 ---
@@ -2392,7 +2392,7 @@ body:             |
   bb.0:
       liveins: %x0
     %0(p0) = COPY %x0
-    %1(s64) = G_CONSTANT 42
+    %1(s64) = G_CONSTANT i64 42
     %2(p0) = G_GEP %0, %1(s64)
 ...
 

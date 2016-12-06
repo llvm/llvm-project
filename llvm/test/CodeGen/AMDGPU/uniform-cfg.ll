@@ -197,15 +197,15 @@ if.end:                                           ; preds = %if.else, %if.then
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
 ; GCN-NEXT: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
 
-; GCN: v_mov_b32_e32 [[TWO:v[0-9]+]], 2
-; GCN: buffer_store_dword [[TWO]]
+; GCN: v_mov_b32_e32 [[IMM_REG:v[0-9]+]], 2
 ; GCN: s_branch [[ENDIF_LABEL:[0-9_A-Za-z]+]]
 
 ; GCN: [[IF_LABEL]]:
-; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
-; GCN: buffer_store_dword [[ONE]]
+; GCN-NEXT: v_mov_b32_e32 [[IMM_REG]], 1
 
-; GCN: [[ENDIF_LABEL]]:
+; GCN-NEXT: [[ENDIF_LABEL]]:
+; GCN: buffer_store_dword [[IMM_REG]]
+
 ; GCN: v_mov_b32_e32 [[THREE:v[0-9]+]], 3
 ; GCN: buffer_store_dword [[THREE]]
 ; GCN: s_endpgm

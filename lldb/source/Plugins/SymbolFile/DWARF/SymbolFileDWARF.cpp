@@ -2586,8 +2586,7 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
       if (sc_list.GetSize() == original_size) {
         ArchSpec arch;
         if (!parent_decl_ctx && GetObjectFile()->GetArchitecture(arch) &&
-            (arch.GetTriple().isOSFreeBSD() || arch.GetTriple().isOSLinux() ||
-             arch.GetMachine() == llvm::Triple::hexagon)) {
+            arch.GetTriple().isOSBinFormatELF()) {
           SymbolContextList temp_sc_list;
           FindFunctions(name, m_function_basename_index, include_inlines,
                         temp_sc_list);

@@ -64,6 +64,9 @@
 //
 // 
 // RUN: %clang_cc1 -std=c11 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
+// RUN: %clang_cc1 -std=c1x -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
+// RUN: %clang_cc1 -std=iso9899:2011 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
+// RUN: %clang_cc1 -std=iso9899:201x -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
 //
 // C11:#define __STDC_UTF_16__ 1
 // C11:#define __STDC_UTF_32__ 1

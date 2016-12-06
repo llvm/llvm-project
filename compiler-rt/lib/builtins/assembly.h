@@ -71,7 +71,8 @@
 #define ARM_HAS_BX
 #endif
 #if !defined(__ARM_FEATURE_CLZ) &&                                             \
-    (__ARM_ARCH >= 6 || (__ARM_ARCH == 5 && !defined(__ARM_ARCH_5__)))
+    ((__ARM_ARCH >= 6 && __ARM_ARCH_PROFILE != 'M') ||                         \
+     (__ARM_ARCH == 5 && !defined(__ARM_ARCH_5__)))
 #define __ARM_FEATURE_CLZ
 #endif
 

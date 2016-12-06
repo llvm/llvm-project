@@ -15,6 +15,7 @@
 #include <queue>
 #include <cassert>
 #include <functional>
+#include <cstddef>
 
 int main()
 {
@@ -22,6 +23,6 @@ int main()
     int* an = a + sizeof(a)/sizeof(a[0]);
     std::priority_queue<int, std::vector<int>, std::greater<int> >
         q(a, an, std::greater<int>());
-    assert(q.size() == an - a);
+    assert(q.size() == static_cast<std::size_t>(an - a));
     assert(q.top() == 0);
 }

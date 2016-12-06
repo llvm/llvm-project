@@ -19,6 +19,7 @@
 #include <string>
 #include <cassert>
 #include <cfloat>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "../../../test_compare.h"
@@ -74,8 +75,8 @@ int main()
         i = eq.first;
         assert(i->first == 4);
         assert(i->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
         assert(c.hash_function() == test_hash<std::hash<int> >());
@@ -128,8 +129,8 @@ int main()
         i = eq.first;
         assert(i->first == 4);
         assert(i->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
         assert(c.hash_function() == test_hash<std::hash<int> >());
@@ -183,8 +184,8 @@ int main()
         i = eq.first;
         assert(i->first == 4);
         assert(i->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
         assert(c.hash_function() == HF());
@@ -239,8 +240,8 @@ int main()
         i = eq.first;
         assert(i->first == 4);
         assert(i->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
         assert(c.hash_function() == hf);

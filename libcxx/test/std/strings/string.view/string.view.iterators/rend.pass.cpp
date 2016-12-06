@@ -13,6 +13,7 @@
 
 #include <string_view>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
@@ -38,9 +39,9 @@ test(S s)
         assert(ce2 !=  s.rbegin());
     }
 
-    assert(  e -  s.rbegin() == s.size());
-    assert(ce1 - cs.rbegin() == cs.size());
-    assert(ce2 - s.crbegin() == s.size());
+    assert(static_cast<std::size_t>(  e -  s.rbegin()) == s.size());
+    assert(static_cast<std::size_t>(ce1 - cs.rbegin()) == cs.size());
+    assert(static_cast<std::size_t>(ce2 - s.crbegin()) == s.size());
 
     assert(  e == ce1);
     assert(  e == ce2);

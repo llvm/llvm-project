@@ -370,7 +370,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
   case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_LOAD: {
     // Those ID must match getInstrAlternativeMappings.
-    assert((OpdMapper.getInstrMapping().getID() >= 1 ||
+    assert((OpdMapper.getInstrMapping().getID() >= 1 &&
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);

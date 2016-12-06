@@ -1866,10 +1866,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
     // slightly worse diagnostics).
-    if (!SuggestedModule.getModule()->isAvailable() &&
-        !SuggestedModule.getModule()
-             ->getTopLevelModule()
-             ->HasIncompatibleModuleFile) {
+    if (!SuggestedModule.getModule()->isAvailable()) {
       Module::Requirement Requirement;
       Module::UnresolvedHeaderDirective MissingHeader;
       Module *M = SuggestedModule.getModule();
@@ -1918,9 +1915,12 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     else if (Imported.isMissingExpected()) {
       // We failed to find a submodule that we assumed would exist (because it
       // was in the directory of an umbrella header, for instance), but no
-      // actual module exists for it (because the umbrella header is
+      // actual module containing it exists (because the umbrella header is
       // incomplete).  Treat this as a textual inclusion.
       SuggestedModule = ModuleMap::KnownHeader();
+    } else if (Imported.isConfigMismatch()) {
+      // On a configuration mismatch, enter the header textually. We still know
+      // that it's part of the corresponding module.
     } else {
       // We hit an error processing the import. Bail out.
       if (hadModuleLoaderFatalFailure()) {

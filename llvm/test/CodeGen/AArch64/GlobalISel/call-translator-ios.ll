@@ -18,14 +18,14 @@ define signext i8 @test_stack_slots([8 x i64], i8 signext %lhs, i8 signext %rhs)
 }
 
 ; CHECK-LABEL: name: test_call_stack
-; CHECK: [[C42:%[0-9]+]](s8) = G_CONSTANT 42
-; CHECK: [[C12:%[0-9]+]](s8) = G_CONSTANT 12
+; CHECK: [[C12:%[0-9]+]](s8) = G_CONSTANT i8 12
+; CHECK: [[C42:%[0-9]+]](s8) = G_CONSTANT i8 42
 ; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
-; CHECK: [[C42_OFFS:%[0-9]+]](s64) = G_CONSTANT 0
+; CHECK: [[C42_OFFS:%[0-9]+]](s64) = G_CONSTANT i64 0
 ; CHECK: [[C42_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[C42_OFFS]](s64)
 ; CHECK: G_STORE [[C42]](s8), [[C42_LOC]](p0) :: (store 1 into stack, align 0)
 ; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
-; CHECK: [[C12_OFFS:%[0-9]+]](s64) = G_CONSTANT 1
+; CHECK: [[C12_OFFS:%[0-9]+]](s64) = G_CONSTANT i64 1
 ; CHECK: [[C12_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[C12_OFFS]](s64)
 ; CHECK: G_STORE [[C12]](s8), [[C12_LOC]](p0) :: (store 1 into stack + 1, align 0)
 ; CHECK: BL @test_stack_slots

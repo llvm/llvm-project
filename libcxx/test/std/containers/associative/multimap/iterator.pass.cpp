@@ -28,6 +28,7 @@
 
 #include <map>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -64,8 +65,8 @@ int main()
             V(8, 2)
         };
         std::multimap<int, double> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
         std::multimap<int, double>::iterator i;
         i = m.begin();
         std::multimap<int, double>::const_iterator k = i;
@@ -109,10 +110,10 @@ int main()
             V(8, 2)
         };
         const std::multimap<int, double> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.cbegin(), m.cend()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
-        assert(std::distance(m.crbegin(), m.crend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size());
         std::multimap<int, double>::const_iterator i;
         i = m.begin();
         for (int j = 1; j <= 8; ++j)
@@ -153,8 +154,8 @@ int main()
             V(8, 2)
         };
         std::multimap<int, double, std::less<int>, min_allocator<V>> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
         std::multimap<int, double, std::less<int>, min_allocator<V>>::iterator i;
         i = m.begin();
         std::multimap<int, double, std::less<int>, min_allocator<V>>::const_iterator k = i;
@@ -198,10 +199,10 @@ int main()
             V(8, 2)
         };
         const std::multimap<int, double, std::less<int>, min_allocator<V>> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.cbegin(), m.cend()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
-        assert(std::distance(m.crbegin(), m.crend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size());
         std::multimap<int, double, std::less<int>, min_allocator<V>>::const_iterator i;
         i = m.begin();
         for (int j = 1; j <= 8; ++j)

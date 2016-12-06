@@ -156,8 +156,8 @@ func (c *compiler) logf(format string, v ...interface{}) {
 func (c *compiler) addCommonFunctionAttrs(fn llvm.Value) {
 	fn.AddTargetDependentFunctionAttr("disable-tail-calls", "true")
 	fn.AddTargetDependentFunctionAttr("split-stack", "")
-	if attr := c.SanitizerAttribute; attr != 0 {
-		fn.AddFunctionAttr(attr)
+	if c.SanitizerAttribute.GetEnumKind() != 0 {
+		fn.AddFunctionAttr(c.SanitizerAttribute)
 	}
 }
 

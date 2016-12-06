@@ -1,4 +1,4 @@
-; RUN: llc -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
@@ -364,7 +364,7 @@ define void @unreachable(i32 %a) {
   ; rest of the entry block.
 ; CHECK-LABEL: name: constant_int
 ; CHECK: [[IN:%[0-9]+]](s32) = COPY %w0
-; CHECK: [[ONE:%[0-9]+]](s32) = G_CONSTANT 1
+; CHECK: [[ONE:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK: G_BR
 
 ; CHECK: [[SUM1:%[0-9]+]](s32) = G_ADD [[IN]], [[ONE]]
@@ -383,8 +383,8 @@ next:
 }
 
 ; CHECK-LABEL: name: constant_int_start
-; CHECK: [[TWO:%[0-9]+]](s32) = G_CONSTANT 2
-; CHECK: [[ANSWER:%[0-9]+]](s32) = G_CONSTANT 42
+; CHECK: [[ANSWER:%[0-9]+]](s32) = G_CONSTANT i32 42
+; CHECK: [[TWO:%[0-9]+]](s32) = G_CONSTANT i32 2
 ; CHECK: [[RES:%[0-9]+]](s32) = G_ADD [[TWO]], [[ANSWER]]
 define i32 @constant_int_start() {
   %res = add i32 2, 42
@@ -399,7 +399,7 @@ define i32 @test_undef() {
 }
 
 ; CHECK-LABEL: name: test_constant_inttoptr
-; CHECK: [[ONE:%[0-9]+]](s64) = G_CONSTANT 1
+; CHECK: [[ONE:%[0-9]+]](s64) = G_CONSTANT i64 1
 ; CHECK: [[PTR:%[0-9]+]](p0) = G_INTTOPTR [[ONE]]
 ; CHECK: %x0 = COPY [[PTR]]
 define i8* @test_constant_inttoptr() {
@@ -409,7 +409,7 @@ define i8* @test_constant_inttoptr() {
   ; This failed purely because the Constant -> VReg map was kept across
   ; functions, so reuse the "i64 1" from above.
 ; CHECK-LABEL: name: test_reused_constant
-; CHECK: [[ONE:%[0-9]+]](s64) = G_CONSTANT 1
+; CHECK: [[ONE:%[0-9]+]](s64) = G_CONSTANT i64 1
 ; CHECK: %x0 = COPY [[ONE]]
 define i64 @test_reused_constant() {
   ret i64 1
@@ -512,7 +512,7 @@ define i32 @test_urem(i32 %arg1, i32 %arg2) {
 }
 
 ; CHECK-LABEL: name: test_constant_null
-; CHECK: [[NULL:%[0-9]+]](p0) = G_CONSTANT 0
+; CHECK: [[NULL:%[0-9]+]](p0) = G_CONSTANT i64 0
 ; CHECK: %x0 = COPY [[NULL]]
 define i8* @test_constant_null() {
   ret i8* null
@@ -635,7 +635,7 @@ define void @test_sadd_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
 ; CHECK: [[LHS:%[0-9]+]](s32) = COPY %w0
 ; CHECK: [[RHS:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
-; CHECK: [[ZERO:%[0-9]+]](s1) = G_CONSTANT 0
+; CHECK: [[ZERO:%[0-9]+]](s1) = G_CONSTANT i1 false
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_UADDE [[LHS]], [[RHS]], [[ZERO]]
 ; CHECK: [[RES:%[0-9]+]](s64) = G_SEQUENCE [[VAL]](s32), 0, [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -664,7 +664,7 @@ define void @test_ssub_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %subr) {
 ; CHECK: [[LHS:%[0-9]+]](s32) = COPY %w0
 ; CHECK: [[RHS:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
-; CHECK: [[ZERO:%[0-9]+]](s1) = G_CONSTANT 0
+; CHECK: [[ZERO:%[0-9]+]](s1) = G_CONSTANT i1 false
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_USUBE [[LHS]], [[RHS]], [[ZERO]]
 ; CHECK: [[RES:%[0-9]+]](s64) = G_SEQUENCE [[VAL]](s32), 0, [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -896,13 +896,36 @@ define void @test_objectsize(i8* %addr0, i8* %addr1) {
 ; CHECK-LABEL: name: test_objectsize
 ; CHECK: [[ADDR0:%[0-9]+]](p0) = COPY %x0
 ; CHECK: [[ADDR1:%[0-9]+]](p0) = COPY %x1
-; CHECK: {{%[0-9]+}}(s64) = G_CONSTANT -1
-; CHECK: {{%[0-9]+}}(s64) = G_CONSTANT 0
-; CHECK: {{%[0-9]+}}(s32) = G_CONSTANT -1
-; CHECK: {{%[0-9]+}}(s32) = G_CONSTANT 0
+; CHECK: {{%[0-9]+}}(s64) = G_CONSTANT i64 -1
+; CHECK: {{%[0-9]+}}(s64) = G_CONSTANT i64 0
+; CHECK: {{%[0-9]+}}(s32) = G_CONSTANT i32 -1
+; CHECK: {{%[0-9]+}}(s32) = G_CONSTANT i32 0
   %size64.0 = call i64 @llvm.objectsize.i64(i8* %addr0, i1 0)
   %size64.intmin = call i64 @llvm.objectsize.i64(i8* %addr0, i1 1)
   %size32.0 = call i32 @llvm.objectsize.i32(i8* %addr0, i1 0)
   %size32.intmin = call i32 @llvm.objectsize.i32(i8* %addr0, i1 1)
   ret void
+}
+
+define void @test_large_const(i128* %addr) {
+; CHECK-LABEL: name: test_large_const
+; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](s128) = G_CONSTANT i128 42
+; CHECK: G_STORE [[VAL]](s128), [[ADDR]](p0)
+  store i128 42, i128* %addr
+  ret void
+}
+
+; When there was no formal argument handling (so the first BB was empty) we used
+; to insert the constants at the end of the block, even if they were encountered
+; after the block's terminators had been emitted.
+define i32 @test_const_placement() {
+; CHECK-LABEL: name: test_const_placement
+; CHECK: [[VAL:%[0-9]+]](s32) = G_CONSTANT i32 42
+; CHECK: G_BR
+
+  br label %next
+
+next:
+  ret i32 42
 }

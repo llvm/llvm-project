@@ -35,5 +35,5 @@ int main()
                                     for_each_test(0));
     assert(f.count == s);
     for (unsigned i = 0; i < s; ++i)
-        assert(ia[i] == i+1);
+        assert(ia[i] == static_cast<int>(i+1));
 }

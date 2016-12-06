@@ -15,7 +15,7 @@
 
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.
-enum {
+enum : uint32_t {
   SALU = 1 << 3,
   VALU = 1 << 4,
 
@@ -38,15 +38,16 @@ enum {
   DS = 1 << 19,
   MIMG = 1 << 20,
   FLAT = 1 << 21,
-  WQM = 1 << 22,
-  VGPRSpill = 1 << 23,
-  SGPRSpill = 1 << 24,
-  VOPAsmPrefer32Bit = 1 << 25,
-  Gather4 = 1 << 26,
-  DisableWQM = 1 << 27,
-  SOPK_ZEXT = 1 << 28,
-  SCALAR_STORE = 1 << 29,
-  FIXED_SIZE = 1 << 30
+  EXP = 1 << 22,
+  WQM = 1 << 23,
+  VGPRSpill = 1 << 24,
+  SGPRSpill = 1 << 25,
+  VOPAsmPrefer32Bit = 1 << 26,
+  Gather4 = 1 << 27,
+  DisableWQM = 1 << 28,
+  SOPK_ZEXT = 1 << 29,
+  SCALAR_STORE = 1 << 30,
+  FIXED_SIZE = 1u << 31
 };
 }
 

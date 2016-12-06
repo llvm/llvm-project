@@ -2155,8 +2155,8 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
 
   // Choose the SSE instruction sequence based on data type (float or double).
   static const uint16_t OpcTable[2][4] = {
-    { X86::CMPSSrr,  X86::FsANDPSrr,  X86::FsANDNPSrr,  X86::FsORPSrr  },
-    { X86::CMPSDrr,  X86::FsANDPDrr,  X86::FsANDNPDrr,  X86::FsORPDrr  }
+    { X86::CMPSSrr,  X86::ANDPSrr,  X86::ANDNPSrr,  X86::ORPSrr  },
+    { X86::CMPSDrr,  X86::ANDPDrr,  X86::ANDNPDrr,  X86::ORPDrr  }
   };
 
   const uint16_t *Opc = nullptr;
@@ -2236,14 +2236,18 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), ResultReg).addReg(VBlendReg);
   } else {
+    const TargetRegisterClass *VR128 = &X86::VR128RegClass;
     unsigned CmpReg = fastEmitInst_rri(Opc[0], RC, CmpLHSReg, CmpLHSIsKill,
                                        CmpRHSReg, CmpRHSIsKill, CC);
-    unsigned AndReg = fastEmitInst_rr(Opc[1], RC, CmpReg, /*IsKill=*/false,
+    unsigned AndReg = fastEmitInst_rr(Opc[1], VR128, CmpReg, /*IsKill=*/false,
                                       LHSReg, LHSIsKill);
-    unsigned AndNReg = fastEmitInst_rr(Opc[2], RC, CmpReg, /*IsKill=*/true,
+    unsigned AndNReg = fastEmitInst_rr(Opc[2], VR128, CmpReg, /*IsKill=*/true,
                                        RHSReg, RHSIsKill);
-    ResultReg = fastEmitInst_rr(Opc[3], RC, AndNReg, /*IsKill=*/true,
-                                         AndReg, /*IsKill=*/true);
+    unsigned OrReg = fastEmitInst_rr(Opc[3], VR128, AndNReg, /*IsKill=*/true,
+                                     AndReg, /*IsKill=*/true);
+    ResultReg = createResultReg(RC);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(TargetOpcode::COPY), ResultReg).addReg(OrReg);
   }
   updateValueMap(I, ResultReg);
   return true;

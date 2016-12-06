@@ -53,6 +53,14 @@ def warn_pointer_abs : Warning<
   "taking the absolute value of %select{pointer|function|array}0 type %1 is suspicious">,
   InGroup<AbsoluteValue>;
 
+def warn_max_unsigned_zero : Warning<
+  "taking the max of "
+  "%select{a value and unsigned zero|unsigned zero and a value}0 "
+  "is always equal to the other value">,
+  InGroup<MaxUnsignedZero>;
+def note_remove_max_call : Note<
+  "remove call to max function and unsigned zero argument">;
+
 def warn_infinite_recursive_function : Warning<
   "all paths through this function will call itself">,
   InGroup<InfiniteRecursion>, DefaultIgnore;

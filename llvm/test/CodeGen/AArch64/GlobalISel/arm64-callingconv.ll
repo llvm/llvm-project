@@ -49,3 +49,10 @@ define i8* @args_ptrs(i8* %x0, i16* %x1, <2 x i8>* %x2, {i8, i16, i32}* %x3,
                       [3 x float]* %x4, double* %x5, i8* %x6, i8* %x7) {
   ret i8* %x0
 }
+
+; CHECK-LABEL: name: args_arr
+; CHECK: %[[ARG0:[0-9]+]](s64) = COPY %d0
+; CHECK: %d0 = COPY %[[ARG0]]
+define [1 x double] @args_arr([1 x double] %d0) {
+  ret [1 x double] %d0
+}

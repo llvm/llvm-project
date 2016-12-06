@@ -168,8 +168,10 @@ void AArch64CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
 
   if (SplitVTs.size() == 1) {
-    // No splitting to do, just forward the input directly.
-    SplitArgs.push_back(OrigArg);
+    // No splitting to do, but we want to replace the original type (e.g. [1 x
+    // double] -> double).
+    SplitArgs.emplace_back(OrigArg.Reg, SplitVTs[0].getTypeForEVT(Ctx),
+                           OrigArg.Flags);
     return;
   }
 
