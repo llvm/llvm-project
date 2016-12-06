@@ -350,11 +350,15 @@ void LLVMOutputStyle::dumpBitVector(StringRef Name, const BitVector &V) {
 Error LLVMOutputStyle::dumpGlobalsStream() {
   if (!opts::raw::DumpGlobals)
     return Error::success();
+  if (!File.hasPDBGlobalsStream()) {
+    P.printString("Globals Stream not present");
+    return Error::success();
+  }
 
-  DictScope D(P, "Globals Stream");
   auto Globals = File.getPDBGlobalsStream();
   if (!Globals)
     return Globals.takeError();
+  DictScope D(P, "Globals Stream");
 
   auto Dbi = File.getPDBDbiStream();
   if (!Dbi)
@@ -447,6 +451,10 @@ Error LLVMOutputStyle::dumpStreamBytes() {
 Error LLVMOutputStyle::dumpInfoStream() {
   if (!opts::raw::DumpHeaders)
     return Error::success();
+  if (!File.hasPDBInfoStream()) {
+    P.printString("PDB Stream not present");
+    return Error::success();
+  }
   auto IS = File.getPDBInfoStream();
   if (!IS)
     return IS.takeError();
@@ -485,11 +493,19 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   StringRef Label;
   StringRef VerLabel;
   if (StreamIdx == StreamTPI) {
+    if (!File.hasPDBTpiStream()) {
+      P.printString("Type Info Stream (TPI) not present");
+      return Error::success();
+    }
     DumpRecordBytes = opts::raw::DumpTpiRecordBytes;
     DumpRecords = opts::raw::DumpTpiRecords;
     Label = "Type Info Stream (TPI)";
     VerLabel = "TPI Version";
   } else if (StreamIdx == StreamIPI) {
+    if (!File.hasPDBIpiStream()) {
+      P.printString("Type Info Stream (IPI) not present");
+      return Error::success();
+    }
     DumpRecordBytes = opts::raw::DumpIpiRecordBytes;
     DumpRecords = opts::raw::DumpIpiRecords;
     Label = "Type Info Stream (IPI)";
@@ -556,6 +572,10 @@ Error LLVMOutputStyle::dumpDbiStream() {
                      opts::raw::DumpModuleFiles || opts::raw::DumpLineInfo;
   if (!opts::raw::DumpHeaders && !DumpModules)
     return Error::success();
+  if (!File.hasPDBDbiStream()) {
+    P.printString("DBI Stream not present");
+    return Error::success();
+  }
 
   auto DS = File.getPDBDbiStream();
   if (!DS)
@@ -742,6 +762,10 @@ Error LLVMOutputStyle::dumpDbiStream() {
 Error LLVMOutputStyle::dumpSectionContribs() {
   if (!opts::raw::DumpSectionContribs)
     return Error::success();
+  if (!File.hasPDBDbiStream()) {
+    P.printString("DBI Stream not present");
+    return Error::success();
+  }
 
   auto Dbi = File.getPDBDbiStream();
   if (!Dbi)
@@ -789,6 +813,10 @@ Error LLVMOutputStyle::dumpSectionContribs() {
 Error LLVMOutputStyle::dumpSectionMap() {
   if (!opts::raw::DumpSectionMap)
     return Error::success();
+  if (!File.hasPDBDbiStream()) {
+    P.printString("DBI Stream not present");
+    return Error::success();
+  }
 
   auto Dbi = File.getPDBDbiStream();
   if (!Dbi)
@@ -813,11 +841,15 @@ Error LLVMOutputStyle::dumpSectionMap() {
 Error LLVMOutputStyle::dumpPublicsStream() {
   if (!opts::raw::DumpPublics)
     return Error::success();
+  if (!File.hasPDBPublicsStream()) {
+    P.printString("Publics Stream not present");
+    return Error::success();
+  }
 
-  DictScope D(P, "Publics Stream");
   auto Publics = File.getPDBPublicsStream();
   if (!Publics)
     return Publics.takeError();
+  DictScope D(P, "Publics Stream");
 
   auto Dbi = File.getPDBDbiStream();
   if (!Dbi)
@@ -856,6 +888,10 @@ Error LLVMOutputStyle::dumpPublicsStream() {
 Error LLVMOutputStyle::dumpSectionHeaders() {
   if (!opts::raw::DumpSectionHeaders)
     return Error::success();
+  if (!File.hasPDBDbiStream()) {
+    P.printString("DBI Stream not present");
+    return Error::success();
+  }
 
   auto Dbi = File.getPDBDbiStream();
   if (!Dbi)
@@ -885,6 +921,10 @@ Error LLVMOutputStyle::dumpSectionHeaders() {
 Error LLVMOutputStyle::dumpFpoStream() {
   if (!opts::raw::DumpFpo)
     return Error::success();
+  if (!File.hasPDBDbiStream()) {
+    P.printString("DBI Stream not present");
+    return Error::success();
+  }
 
   auto Dbi = File.getPDBDbiStream();
   if (!Dbi)

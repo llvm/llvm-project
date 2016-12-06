@@ -258,6 +258,9 @@ void LazyCallGraph::RefSCC::verify() {
            "SCC doesn't think it is inside this RefSCC!");
     bool Inserted = SCCSet.insert(C).second;
     assert(Inserted && "Found a duplicate SCC!");
+    auto IndexIt = SCCIndices.find(C);
+    assert(IndexIt != SCCIndices.end() &&
+           "Found an SCC that doesn't have an index!");
   }
 
   // Check that our indices map correctly.
@@ -1203,9 +1206,8 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
           }
 
           // If this child isn't currently in this RefSCC, no need to process
-          // it.
-          // However, we do need to remove this RefSCC from its RefSCC's parent
-          // set.
+          // it. However, we do need to remove this RefSCC from its RefSCC's
+          // parent set.
           RefSCC &ChildRC = *G->lookupRefSCC(ChildN);
           ChildRC.Parents.erase(this);
           ++I;
@@ -1305,7 +1307,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
     RefSCC &RC = *Result[SCCNumber - 1];
     int SCCIndex = RC.SCCs.size();
     RC.SCCs.push_back(C);
-    SCCIndices[C] = SCCIndex;
+    RC.SCCIndices[C] = SCCIndex;
     C->OuterRefSCC = &RC;
   }
 
@@ -1375,6 +1377,12 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
     G->LeafRefSCCs.erase(
         std::remove(G->LeafRefSCCs.begin(), G->LeafRefSCCs.end(), this),
         G->LeafRefSCCs.end());
+
+#ifndef NDEBUG
+  // Verify all of the new RefSCCs.
+  for (RefSCC *RC : Result)
+    RC->verify();
+#endif
 
   // Return the new list of SCCs.
   return Result;

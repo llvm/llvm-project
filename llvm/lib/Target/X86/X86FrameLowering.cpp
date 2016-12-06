@@ -1550,19 +1550,22 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
   uint64_t SEHStackAllocAmt = NumBytes;
 
+  MachineBasicBlock::iterator FirstCSPop = MBBI;
   // Skip the callee-saved pop instructions.
   while (MBBI != MBB.begin()) {
     MachineBasicBlock::iterator PI = std::prev(MBBI);
     unsigned Opc = PI->getOpcode();
 
-    if ((Opc != X86::POP32r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-        (Opc != X86::POP64r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-        Opc != X86::DBG_VALUE && !PI->isTerminator())
-      break;
+    if (Opc != X86::DBG_VALUE && !PI->isTerminator()) {
+      if ((Opc != X86::POP32r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+          (Opc != X86::POP64r || !PI->getFlag(MachineInstr::FrameDestroy)))
+        break;
+      FirstCSPop = PI;
+    }
 
     --MBBI;
   }
-  MachineBasicBlock::iterator FirstCSPop = MBBI;
+  MBBI = FirstCSPop;
 
   if (TargetMBB) {
     // Fill EAX/RAX with the address of the target block.

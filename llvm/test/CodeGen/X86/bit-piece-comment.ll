@@ -59,5 +59,5 @@ attributes #1 = { nounwind readnone }
 !18 = !{!"clang version 3.8.0 (trunk 256088) (llvm/trunk 256097)"}
 !19 = !DIExpression()
 !20 = !DILocation(line: 4, column: 5, scope: !4)
-!21 = !DIExpression(DW_OP_bit_piece, 32, 32)
+!21 = !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 !22 = !DILocation(line: 6, column: 1, scope: !4)

@@ -74,7 +74,7 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
         if (!TPC->isGlobalISelAbortEnabled()) {
           MIRBuilder.getMF().getProperties().set(
               MachineFunctionProperties::Property::FailedISel);
-          return 0;
+          return VReg;
         }
         reportTranslationError(Val, "unable to translate constant");
       }
@@ -678,8 +678,6 @@ void IRTranslator::finishPendingPhis() {
       MIB.addMBB(BBToMBB[PI->getIncomingBlock(i)]);
     }
   }
-
-  PendingPHIs.clear();
 }
 
 bool IRTranslator::translate(const Instruction &Inst) {
@@ -697,15 +695,13 @@ bool IRTranslator::translate(const Instruction &Inst) {
 
 bool IRTranslator::translate(const Constant &C, unsigned Reg) {
   if (auto CI = dyn_cast<ConstantInt>(&C))
-    EntryBuilder.buildConstant(Reg, CI->getZExtValue());
+    EntryBuilder.buildConstant(Reg, *CI);
   else if (auto CF = dyn_cast<ConstantFP>(&C))
     EntryBuilder.buildFConstant(Reg, *CF);
   else if (isa<UndefValue>(C))
     EntryBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Reg);
   else if (isa<ConstantPointerNull>(C))
-    EntryBuilder.buildInstr(TargetOpcode::G_CONSTANT)
-        .addDef(Reg)
-        .addImm(0);
+    EntryBuilder.buildConstant(Reg, 0);
   else if (auto GV = dyn_cast<GlobalValue>(&C))
     EntryBuilder.buildGlobalValue(Reg, GV);
   else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
@@ -727,10 +723,9 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
 }
 
 void IRTranslator::finalizeFunction() {
-  finishPendingPhis();
-
   // Release the memory used by the different maps we
   // needed during the translation.
+  PendingPHIs.clear();
   ValToVReg.clear();
   FrameIndices.clear();
   Constants.clear();
@@ -760,6 +755,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
     if (!TPC->isGlobalISelAbortEnabled()) {
       MIRBuilder.getMF().getProperties().set(
           MachineFunctionProperties::Property::FailedISel);
+      finalizeFunction();
       return false;
     }
     report_fatal_error("Unable to lower arguments");
@@ -768,7 +764,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
   // Now that we've got the ABI handling code, it's safe to set a location for
   // any Constants we find in the IR.
   if (MBB.empty())
-    EntryBuilder.setMBB(MBB);
+    EntryBuilder.setMBB(MBB, /* Beginning */ true);
   else
     EntryBuilder.setInstr(MBB.back(), /* Before */ false);
 
@@ -779,7 +775,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
     MIRBuilder.setMBB(MBB);
 
     for (const Instruction &Inst: BB) {
-      bool Succeeded = translate(Inst);
+      Succeeded &= translate(Inst);
       if (!Succeeded) {
         if (TPC->isGlobalISelAbortEnabled())
           reportTranslationError(Inst, "unable to translate instruction");
@@ -789,11 +785,15 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  finalizeFunction();
+  if (Succeeded) {
+    finishPendingPhis();
 
-  // Now that the MachineFrameInfo has been configured, no further changes to
-  // the reserved registers are possible.
-  MRI->freezeReservedRegs(MF);
+    // Now that the MachineFrameInfo has been configured, no further changes to
+    // the reserved registers are possible.
+    MRI->freezeReservedRegs(MF);
+  }
+
+  finalizeFunction();
 
   return false;
 }

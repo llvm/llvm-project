@@ -168,8 +168,12 @@ unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo);
 
 /// \brief Is this literal inlinable
-bool isInlinableLiteral64(int64_t Literal, bool IsVI);
-bool isInlinableLiteral32(int32_t Literal, bool IsVI);
+LLVM_READNONE
+bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
+
 
 } // end namespace AMDGPU
 } // end namespace llvm

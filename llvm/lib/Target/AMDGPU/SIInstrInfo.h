@@ -372,6 +372,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  static bool isEXP(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::EXP;
+  }
+
+  bool isEXP(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::EXP;
+  }
+
   static bool isWQM(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::WQM;
   }

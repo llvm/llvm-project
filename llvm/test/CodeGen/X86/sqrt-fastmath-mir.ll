@@ -17,10 +17,10 @@ define float @foo(float %f) #0 {
 ; CHECK:     %10 = VFMADD213SSr %8, %9, %4
 ; CHECK:     %11 = VMULSSrr %9, %6
 ; CHECK:     %12 = VMULSSrr killed %11, killed %10
-; CHECK:     %13 = FsFLD0SS
-; CHECK:     %14 = VCMPSSrr %0, killed %13, 0
-; CHECK:     %15 = VFsANDNPSrr killed %14, killed %12
-; CHECK:     %xmm0 = COPY %15
+; CHECK:     %14 = FsFLD0SS
+; CHECK:     %15 = VCMPSSrr %0, killed %14, 0
+; CHECK:     %17 = VANDNPSrr killed %16, killed %13
+; CHECK:     %xmm0 = COPY %18
 ; CHECK:     RET 0, %xmm0
   %call = tail call float @llvm.sqrt.f32(float %f) #1
   ret float %call

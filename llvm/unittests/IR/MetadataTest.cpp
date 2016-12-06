@@ -2011,19 +2011,20 @@ TEST_F(DIExpressionTest, isValid) {
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus, 6);
   EXPECT_VALID(dwarf::DW_OP_deref);
-  EXPECT_VALID(dwarf::DW_OP_bit_piece, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus, 6, dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6);
-  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_bit_piece, 3, 7);
-  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6, dwarf::DW_OP_bit_piece, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_fragment, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus, 6,
+               dwarf::DW_OP_LLVM_fragment, 3, 7);
 
   // Invalid constructions.
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3, 7, dwarf::DW_OP_plus, 3);
-  EXPECT_INVALID(dwarf::DW_OP_bit_piece, 3, 7, dwarf::DW_OP_deref);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus, 3);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_deref);
 
 #undef EXPECT_VALID
 #undef EXPECT_INVALID

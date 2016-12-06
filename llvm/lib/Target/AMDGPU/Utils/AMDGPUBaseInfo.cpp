@@ -392,40 +392,38 @@ unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
 
-bool isInlinableLiteral64(int64_t Literal, bool IsVI) {
+bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
   if (Literal >= -16 && Literal <= 64)
     return true;
 
-  double D = BitsToDouble(Literal);
-
-  if (D == 0.5 || D == -0.5 ||
-      D == 1.0 || D == -1.0 ||
-      D == 2.0 || D == -2.0 ||
-      D == 4.0 || D == -4.0)
-    return true;
-
-  if (IsVI && Literal == 0x3fc45f306dc9c882)
-    return true;
-
-  return false;
+  uint64_t Val = static_cast<uint64_t>(Literal);
+  return (Val == DoubleToBits(0.0)) ||
+         (Val == DoubleToBits(1.0)) ||
+         (Val == DoubleToBits(-1.0)) ||
+         (Val == DoubleToBits(0.5)) ||
+         (Val == DoubleToBits(-0.5)) ||
+         (Val == DoubleToBits(2.0)) ||
+         (Val == DoubleToBits(-2.0)) ||
+         (Val == DoubleToBits(4.0)) ||
+         (Val == DoubleToBits(-4.0)) ||
+         (Val == 0x3fc45f306dc9c882 && HasInv2Pi);
 }
 
-bool isInlinableLiteral32(int32_t Literal, bool IsVI) {
+bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
   if (Literal >= -16 && Literal <= 64)
     return true;
 
-  float F = BitsToFloat(Literal);
-
-  if (F == 0.5 || F == -0.5 ||
-      F == 1.0 || F == -1.0 ||
-      F == 2.0 || F == -2.0 ||
-      F == 4.0 || F == -4.0)
-    return true;
-
-  if (IsVI && Literal == 0x3e22f983)
-    return true;
-
-  return false;
+  uint32_t Val = static_cast<uint32_t>(Literal);
+  return (Val == FloatToBits(0.0f)) ||
+         (Val == FloatToBits(1.0f)) ||
+         (Val == FloatToBits(-1.0f)) ||
+         (Val == FloatToBits(0.5f)) ||
+         (Val == FloatToBits(-0.5f)) ||
+         (Val == FloatToBits(2.0f)) ||
+         (Val == FloatToBits(-2.0f)) ||
+         (Val == FloatToBits(4.0f)) ||
+         (Val == FloatToBits(-4.0f)) ||
+         (Val == 0x3e22f983 && HasInv2Pi);
 }
 
 

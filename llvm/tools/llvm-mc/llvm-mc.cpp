@@ -394,9 +394,22 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
 }
 
 static int fillCommandLineSymbols(MCAsmParser &Parser) {
-  for (auto &I: DefineSymbol)
-    if (Parser.getContext().setSymbolValue(Parser.getStreamer(), I))
+  for (auto &I: DefineSymbol) {
+    auto Pair = StringRef(I).split('=');
+    auto Sym = Pair.first;
+    auto Val = Pair.second;
+
+    if (Sym.empty() || Val.empty()) {
+      errs() << "error: defsym must be of the form: sym=value: " << I << "\n";
       return 1;
+    }
+    int64_t Value;
+    if (Val.getAsInteger(0, Value)) {
+      errs() << "error: Value is not an integer: " << Val << "\n";
+      return 1;
+    }
+    Parser.getContext().setSymbolValue(Parser.getStreamer(), Sym, Value);
+  }
   return 0;
 }
 

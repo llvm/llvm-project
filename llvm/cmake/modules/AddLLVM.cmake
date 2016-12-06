@@ -1290,14 +1290,34 @@ endfunction()
 
 function(add_llvm_tool_symlink link_name target)
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "OUTPUT_DIR" "" ${ARGN})
+  # This got a bit gross... For multi-configuration generators the target
+  # properties return the resolved value of the string, not the build system
+  # expression. To reconstruct the platform-agnostic path we have to do some
+  # magic. First we grab one of the types, and a type-specific path. Then from
+  # the type-specific path we find the last occurrence of the type in the path,
+  # and replace it with CMAKE_CFG_INTDIR. This allows the build step to be type
+  # agnostic again. 
   if(NOT ARG_OUTPUT_DIR)
+    if(CMAKE_CONFIGURATION_TYPES)
+      list(GET CMAKE_CONFIGURATION_TYPES 0 first_type)
+      string(TOUPPER ${first_type} first_type_upper)
+      set(first_type_suffix _${first_type_upper})
+    endif()
     get_target_property(target_type ${target} TYPE)
     if(${target_type} STREQUAL "STATIC_LIBRARY")
-      get_target_property(ARG_OUTPUT_DIR ${target} ARCHIVE_OUTPUT_DIRECTORY)
+      get_target_property(ARG_OUTPUT_DIR ${target} ARCHIVE_OUTPUT_DIRECTORY${first_type_suffix})
     elseif(UNIX AND ${target_type} STREQUAL "SHARED_LIBRARY")
-      get_target_property(ARG_OUTPUT_DIR ${target} LIBRARY_OUTPUT_DIRECTORY)
+      get_target_property(ARG_OUTPUT_DIR ${target} LIBRARY_OUTPUT_DIRECTORY${first_type_suffix})
     else()
-      get_target_property(ARG_OUTPUT_DIR ${target} RUNTIME_OUTPUT_DIRECTORY)
+      get_target_property(ARG_OUTPUT_DIR ${target} RUNTIME_OUTPUT_DIRECTORY${first_type_suffix})
+    endif()
+    if(CMAKE_CONFIGURATION_TYPES)
+      string(FIND "${ARG_OUTPUT_DIR}" "/${first_type}/" type_start REVERSE)
+      string(SUBSTRING "${ARG_OUTPUT_DIR}" 0 ${type_start} path_prefix)
+      string(SUBSTRING "${ARG_OUTPUT_DIR}" ${type_start} -1 path_suffix)
+      string(REPLACE "/${first_type}/" "/${CMAKE_CFG_INTDIR}/"
+             path_suffix ${path_suffix})
+      set(ARG_OUTPUT_DIR ${path_prefix}${path_suffix})
     endif()
   endif()
 

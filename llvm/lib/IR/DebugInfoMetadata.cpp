@@ -559,7 +559,7 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
 
 unsigned DIExpression::ExprOperand::getSize() const {
   switch (getOp()) {
-  case dwarf::DW_OP_bit_piece:
+  case dwarf::DW_OP_LLVM_fragment:
     return 3;
   case dwarf::DW_OP_constu:
   case dwarf::DW_OP_plus:
@@ -580,9 +580,9 @@ bool DIExpression::isValid() const {
     switch (I->getOp()) {
     default:
       return false;
-    case dwarf::DW_OP_bit_piece:
+    case dwarf::DW_OP_LLVM_fragment:
     case dwarf::DW_OP_stack_value:
-      // We only support bit piece and stack value expressions which appear at
+      // We only support fragment and stack value expressions which appear at
       // the end.
       return I->get() + I->getSize() == E->get();
     case dwarf::DW_OP_constu:
@@ -595,21 +595,21 @@ bool DIExpression::isValid() const {
   return true;
 }
 
-bool DIExpression::isBitPiece() const {
+bool DIExpression::isFragment() const {
   assert(isValid() && "Expected valid expression");
   if (unsigned N = getNumElements())
     if (N >= 3)
-      return getElement(N - 3) == dwarf::DW_OP_bit_piece;
+      return getElement(N - 3) == dwarf::DW_OP_LLVM_fragment;
   return false;
 }
 
-uint64_t DIExpression::getBitPieceOffset() const {
-  assert(isBitPiece() && "Expected bit piece");
+uint64_t DIExpression::getFragmentOffsetInBits() const {
+  assert(isFragment() && "Expected fragment");
   return getElement(getNumElements() - 2);
 }
 
-uint64_t DIExpression::getBitPieceSize() const {
-  assert(isBitPiece() && "Expected bit piece");
+uint64_t DIExpression::getFragmentSizeInBits() const {
+  assert(isFragment() && "Expected fragment");
   return getElement(getNumElements() - 1);
 }
 

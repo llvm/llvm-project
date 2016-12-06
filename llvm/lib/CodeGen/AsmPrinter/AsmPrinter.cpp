@@ -713,9 +713,9 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << V->getName();
 
   const DIExpression *Expr = MI->getDebugExpression();
-  if (Expr->isBitPiece())
-    OS << " [bit_piece offset=" << Expr->getBitPieceOffset()
-       << " size=" << Expr->getBitPieceSize() << "]";
+  if (Expr->isFragment())
+    OS << " [fragment offset=" << Expr->getFragmentOffsetInBits()
+       << " size=" << Expr->getFragmentSizeInBits() << "]";
   OS << " <- ";
 
   // The second operand is only an offset if it's an immediate.
@@ -724,7 +724,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
 
   for (unsigned i = 0; i < Expr->getNumElements(); ++i) {
     uint64_t Op = Expr->getElement(i);
-    if (Op == dwarf::DW_OP_bit_piece) {
+    if (Op == dwarf::DW_OP_LLVM_fragment) {
       // There can't be any operands after this in a valid expression
       break;
     } else if (Deref) {

@@ -5,20 +5,12 @@
 ; Clear high bits via shift, set them with xor (not), then mask them off.
 
 define i32 @shrink_xor_constant1(i32 %x) {
-; NO_BMI-LABEL: shrink_xor_constant1:
-; NO_BMI:       # BB#0:
-; NO_BMI-NEXT:    shrl $31, %edi
-; NO_BMI-NEXT:    notl %edi
-; NO_BMI-NEXT:    andl $1, %edi
-; NO_BMI-NEXT:    movl %edi, %eax
-; NO_BMI-NEXT:    retq
-;
-; BMI-LABEL: shrink_xor_constant1:
-; BMI:       # BB#0:
-; BMI-NEXT:    shrl $31, %edi
-; BMI-NEXT:    movl $1, %eax
-; BMI-NEXT:    andnl %eax, %edi, %eax
-; BMI-NEXT:    retq
+; ALL-LABEL: shrink_xor_constant1:
+; ALL:       # BB#0:
+; ALL-NEXT:    shrl $31, %edi
+; ALL-NEXT:    xorl $1, %edi
+; ALL-NEXT:    movl %edi, %eax
+; ALL-NEXT:    retq
 ;
   %sh = lshr i32 %x, 31
   %not = xor i32 %sh, -1
@@ -32,8 +24,7 @@ define i8 @shrink_xor_constant2(i8 %x) {
 ; ALL-LABEL: shrink_xor_constant2:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    shlb $5, %dil
-; ALL-NEXT:    notb %dil
-; ALL-NEXT:    andb $-32, %dil
+; ALL-NEXT:    xorb $-32, %dil
 ; ALL-NEXT:    movl %edi, %eax
 ; ALL-NEXT:    retq
 ;

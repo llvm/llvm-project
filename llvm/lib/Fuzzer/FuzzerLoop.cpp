@@ -193,6 +193,8 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
     EpochOfLastReadOfOutputCorpus = GetEpoch(Options.OutputCorpus);
   MaxInputLen = MaxMutationLen = Options.MaxLen;
   AllocateCurrentUnitData();
+  CurrentUnitSize = 0;
+  memset(BaseSha1, 0, sizeof(BaseSha1));
 }
 
 Fuzzer::~Fuzzer() { }
@@ -486,7 +488,9 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   ExecuteCallback(Data, Size);
 
   size_t Res = 0;
-  if (size_t NumFeatures = TPC.FinalizeTrace(&Corpus, Size, Options.Shrink))
+  if (size_t NumFeatures = TPC.CollectFeatures([&](size_t Feature) -> bool {
+        return Corpus.AddFeature(Feature, Size, Options.Shrink);
+      }))
     Res = NumFeatures;
 
   if (!TPC.UsingTracePcGuard()) {

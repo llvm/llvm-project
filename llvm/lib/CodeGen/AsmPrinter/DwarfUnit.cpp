@@ -371,11 +371,12 @@ void DwarfUnit::addSourceLine(DIE &Die, const DINamespace *NS) {
   addSourceLine(Die, NS->getLine(), NS->getFilename(), NS->getDirectory());
 }
 
-bool DwarfUnit::addRegisterOpPiece(DIELoc &TheDie, unsigned Reg,
-                                   unsigned SizeInBits, unsigned OffsetInBits) {
+bool DwarfUnit::addRegisterFragment(DIELoc &TheDie, unsigned Reg,
+                                    unsigned SizeInBits,
+                                    unsigned OffsetInBits) {
   DIEDwarfExpression Expr(*Asm, *this, TheDie);
-  Expr.AddMachineRegPiece(*Asm->MF->getSubtarget().getRegisterInfo(), Reg,
-                          SizeInBits, OffsetInBits);
+  Expr.AddMachineRegFragment(*Asm->MF->getSubtarget().getRegisterInfo(), Reg,
+                             SizeInBits, OffsetInBits);
   return true;
 }
 
@@ -481,7 +482,7 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
 
   bool validReg;
   if (Location.isReg())
-    validReg = addRegisterOpPiece(*Loc, Location.getReg());
+    validReg = addRegisterFragment(*Loc, Location.getReg());
   else
     validReg = addRegisterOffset(*Loc, Location.getReg(), Location.getOffset());
 

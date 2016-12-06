@@ -37,7 +37,8 @@ let SubtargetPredicate = isGCN in {
 // EXP Instructions
 //===----------------------------------------------------------------------===//
 
-defm EXP : EXP_m;
+defm EXP : EXP_m<0, AMDGPUexport>;
+defm EXP_DONE : EXP_m<1, AMDGPUexport_done>;
 
 //===----------------------------------------------------------------------===//
 // VINTRP Instructions
@@ -386,13 +387,6 @@ def : Pat<
 def : Pat <
   (int_AMDGPU_kilp),
   (SI_KILL (i32 0xbf800000))
->;
-
-def : Pat <
-  (int_SI_export imm:$en, imm:$vm, imm:$done, imm:$tgt, imm:$compr,
-                 f32:$src0, f32:$src1, f32:$src2, f32:$src3),
-  (EXP imm:$en, imm:$tgt, imm:$compr, imm:$done, imm:$vm,
-       $src0, $src1, $src2, $src3)
 >;
 
 //===----------------------------------------------------------------------===//
