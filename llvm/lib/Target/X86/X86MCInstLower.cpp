@@ -68,9 +68,6 @@ public:
 
 private:
   MachineModuleInfoMachO &getMachOMMI() const;
-  Mangler *getMang() const {
-    return AsmPrinter.Mang;
-  }
 };
 
 } // end anonymous namespace
