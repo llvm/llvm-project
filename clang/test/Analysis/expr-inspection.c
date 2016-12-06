@@ -7,7 +7,7 @@ void clang_analyzer_printState();
 void clang_analyzer_numTimesReached();
 
 void foo(int x) {
-  clang_analyzer_dump(x); // expected-warning{{reg_$0<x>}}
+  clang_analyzer_dump(x); // expected-warning{{reg_$0<int x>}}
   int y = 1;
   clang_analyzer_printState();
   for (; y < 3; ++y)

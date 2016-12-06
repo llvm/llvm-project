@@ -40,10 +40,7 @@ module std [system] {
     // FIXME: <stdalign.h> is missing.
     // <signal.h> provided by C library.
     // <stdarg.h> provided by compiler.
-    module stdbool_h {
-      header "stdbool.h"
-      export *
-    }
+    // <stdbool.h> provided by compiler.
     module stddef_h {
       // <stddef.h>'s __need_* macros require textual inclusion.
       textual header "stddef.h"

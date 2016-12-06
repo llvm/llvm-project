@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple i686-windows-itanium -fdeclspec -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686-windows-itanium -fdeclspec -fcxx-exceptions -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686-windows-itanium -fdeclspec -fcxx-exceptions -fno-rtti -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-EH-IMPORT
 
 namespace __cxxabiv1 {
 class __declspec(dllexport) __fundamental_type_info {
@@ -19,6 +20,10 @@ derived::~derived() {
   method();
 }
 
+void f() {
+  throw base();
+}
+
 // CHECK-DAG: @_ZTIi = dllexport constant
 // CHECK-DAG: @_ZTSi = dllexport constant
 
@@ -29,4 +34,7 @@ derived::~derived() {
 // CHECK-DAG: @_ZTI4base = external dllimport constant
 // CHECK-DAG: @_ZTS4base = external dllimport constant
 // CHECK-NOT: @_ZTV4base = external dllimport constant
+
+// CHECK-EH-IMPORT: @_ZTS4base = linkonce_odr constant
+// CHECK-EH-IMPORT: @_ZTI4base = linkonce_odr constant
 

@@ -6100,7 +6100,8 @@ void Sema::EvaluateImplicitExceptionSpec(SourceLocation Loc, CXXMethodDecl *MD) 
     return;
 
   // Evaluate the exception specification.
-  auto ESI = computeImplicitExceptionSpec(*this, Loc, MD).getExceptionSpec();
+  auto IES = computeImplicitExceptionSpec(*this, Loc, MD);
+  auto ESI = IES.getExceptionSpec();
 
   // Update the type of the special member to use it.
   UpdateExceptionSpec(MD, ESI);
@@ -6298,8 +6299,8 @@ void Sema::CheckExplicitlyDefaultedMemberExceptionSpec(
   CallingConv CC = Context.getDefaultCallingConvention(/*IsVariadic=*/false,
                                                        /*IsCXXMethod=*/true);
   FunctionProtoType::ExtProtoInfo EPI(CC);
-  EPI.ExceptionSpec = computeImplicitExceptionSpec(*this, MD->getLocation(), MD)
-                          .getExceptionSpec();
+  auto IES = computeImplicitExceptionSpec(*this, MD->getLocation(), MD);
+  EPI.ExceptionSpec = IES.getExceptionSpec();
   const FunctionProtoType *ImplicitType = cast<FunctionProtoType>(
     Context.getFunctionType(Context.VoidTy, None, EPI));
 

@@ -74,7 +74,8 @@ class Parser : public CodeCompletionHandler {
   // a statement).
   SourceLocation PrevTokLocation;
 
-  unsigned short ParenCount, BracketCount, BraceCount;
+  unsigned short ParenCount = 0, BracketCount = 0, BraceCount = 0;
+  unsigned short MisplacedModuleBeginCount = 0;
 
   /// Actions - These are the callbacks we invoke as we parse various constructs
   /// in the file.

@@ -78,14 +78,14 @@ go ahead, creating code for the host platform, which will break later
 on when assembling or linking.
 
 The triple has the general format ``<arch><sub>-<vendor>-<sys>-<abi>``, where:
- * ``arch`` = ``x86``, ``arm``, ``thumb``, ``mips``, etc.
+ * ``arch`` = ``x86_64``, ``i386``, ``arm``, ``thumb``, ``mips``, etc.
  * ``sub`` = for ex. on ARM: ``v5``, ``v6m``, ``v7a``, ``v7m``, etc.
  * ``vendor`` = ``pc``, ``apple``, ``nvidia``, ``ibm``, etc.
  * ``sys`` = ``none``, ``linux``, ``win32``, ``darwin``, ``cuda``, etc.
  * ``abi`` = ``eabi``, ``gnu``, ``android``, ``macho``, ``elf``, etc.
 
 The sub-architecture options are available for their own architectures,
-of course, so "x86v7a" doesn't make sense. The vendor needs to be 
+of course, so "x86v7a" doesn't make sense. The vendor needs to be
 specified only if there's a relevant change, for instance between PC
 and Apple. Most of the time it can be omitted (and Unknown)
 will be assumed, which sets the defaults for the specified architecture.

@@ -256,6 +256,7 @@ def LoopAnalysis : DiagGroup<"loop-analysis", [ForLoopAnalysis,
 def MalformedWarningCheck : DiagGroup<"malformed-warning-check">;
 def Main : DiagGroup<"main">;
 def MainReturnType : DiagGroup<"main-return-type">;
+def MaxUnsignedZero : DiagGroup<"max-unsigned-zero">;
 def MissingBraces : DiagGroup<"missing-braces">;
 def MissingDeclarations: DiagGroup<"missing-declarations">;
 def : DiagGroup<"missing-format-attribute">;

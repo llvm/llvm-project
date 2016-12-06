@@ -7437,6 +7437,30 @@ static bool ScopeSpecifierHasTemplateId(const CXXScopeSpec &SS) {
   return false;
 }
 
+/// Make a dllexport or dllimport attr on a class template specialization take
+/// effect.
+static void dllExportImportClassTemplateSpecialization(
+    Sema &S, ClassTemplateSpecializationDecl *Def) {
+  auto *A = cast_or_null<InheritableAttr>(getDLLAttr(Def));
+  assert(A && "dllExportImportClassTemplateSpecialization called "
+              "on Def without dllexport or dllimport");
+
+  // We reject explicit instantiations in class scope, so there should
+  // never be any delayed exported classes to worry about.
+  assert(S.DelayedDllExportClasses.empty() &&
+         "delayed exports present at explicit instantiation");
+  S.checkClassLevelDLLAttribute(Def);
+
+  // Propagate attribute to base class templates.
+  for (auto &B : Def->bases()) {
+    if (auto *BT = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+            B.getType()->getAsCXXRecordDecl()))
+      S.propagateDLLAttrToBaseClassTemplate(Def, A, BT, B.getLocStart());
+  }
+
+  S.referenceDLLExportedClassMethods();
+}
+
 // Explicit instantiation of a class template specialization
 DeclResult
 Sema::ActOnExplicitInstantiation(Scope *S,
@@ -7684,22 +7708,31 @@ Sema::ActOnExplicitInstantiation(Scope *S,
             getDLLAttr(Specialization)->clone(getASTContext()));
         A->setInherited(true);
         Def->addAttr(A);
-
-        // We reject explicit instantiations in class scope, so there should
-        // never be any delayed exported classes to worry about.
-        assert(DelayedDllExportClasses.empty() &&
-               "delayed exports present at explicit instantiation");
-        checkClassLevelDLLAttribute(Def);
-
-        // Propagate attribute to base class templates.
-        for (auto &B : Def->bases()) {
-          if (auto *BT = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
-                  B.getType()->getAsCXXRecordDecl()))
-            propagateDLLAttrToBaseClassTemplate(Def, A, BT, B.getLocStart());
-        }
-
-        referenceDLLExportedClassMethods();
+        dllExportImportClassTemplateSpecialization(*this, Def);
       }
+    }
+
+    // Fix a TSK_ImplicitInstantiation followed by a
+    // TSK_ExplicitInstantiationDefinition
+    if (Old_TSK == TSK_ImplicitInstantiation &&
+        Specialization->hasAttr<DLLExportAttr>() &&
+        (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
+         Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment())) {
+      // In the MS ABI, an explicit instantiation definition can add a dll
+      // attribute to a template with a previous implicit instantiation.
+      // MinGW doesn't allow this. We limit clang to only adding dllexport, to
+      // avoid potentially strange codegen behavior.  For example, if we extend
+      // this conditional to dllimport, and we have a source file calling a
+      // method on an implicitly instantiated template class instance and then
+      // declaring a dllimport explicit instantiation definition for the same
+      // template class, the codegen for the method call will not respect the
+      // dllimport, while it will with cl. The Def will already have the DLL
+      // attribute, since the Def and Specialization will be the same in the
+      // case of Old_TSK == TSK_ImplicitInstantiation, and we already added the
+      // attribute to the Specialization; we just need to make it take effect.
+      assert(Def == Specialization &&
+             "Def and Specialization should match for implicit instantiation");
+      dllExportImportClassTemplateSpecialization(*this, Def);
     }
 
     // Set the template specialization kind. Make sure it is set before
