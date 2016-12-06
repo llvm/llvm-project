@@ -1,8 +1,5 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-; FIXME: Enabling critical edge splitting will fix this.
-; XFAIL: *
-
 ; Make sure that m0 is not reinitialized in the loop.
 
 ; GCN-LABEL: {{^}}copy_local_to_global_loop_m0_init:
@@ -12,7 +9,9 @@
 ; GCN: s_mov_b32 m0, -1
 
 ; GCN: BB0_2:
+; GCN-NOT: m0
 ; GCN: ds_read_b32
+; GCN-NOT: m0
 ; GCN: buffer_store_dword
 
 ; GCN: s_cbranch_scc0 BB0_2

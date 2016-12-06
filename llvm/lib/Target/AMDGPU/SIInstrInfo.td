@@ -315,6 +315,13 @@ def SendMsgMatchClass : AsmOperandClass {
   let RenderMethod = "addImmOperands";
 }
 
+def ExpTgtMatchClass : AsmOperandClass {
+  let Name = "ExpTgt";
+  let PredicateMethod = "isExpTgt";
+  let ParserMethod = "parseExpTgt";
+  let RenderMethod = "printExpTgt";
+}
+
 def SendMsgImm : Operand<i32> {
   let PrintMethod = "printSendMsg";
   let ParserMatchClass = SendMsgMatchClass;
@@ -326,6 +333,11 @@ def SWaitMatchClass : AsmOperandClass {
   let ParserMethod = "parseSWaitCntOps";
 }
 
+def VReg32OrOffClass : AsmOperandClass {
+  let Name = "VReg32OrOff";
+  let ParserMethod = "parseVReg32OrOff";
+}
+
 def WAIT_FLAG : Operand <i32> {
   let ParserMatchClass = SWaitMatchClass;
   let PrintMethod = "printWaitFlag";
@@ -333,6 +345,31 @@ def WAIT_FLAG : Operand <i32> {
 
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
+
+// ===----------------------------------------------------------------------===//
+// ExpSrc* Special cases for exp src operands which are printed as
+// "off" depending on en operand.
+// ===----------------------------------------------------------------------===//
+
+def ExpSrc0 : RegisterOperand<VGPR_32> {
+  let PrintMethod = "printExpSrc0";
+  let ParserMatchClass = VReg32OrOffClass;
+}
+
+def ExpSrc1 : RegisterOperand<VGPR_32> {
+  let PrintMethod = "printExpSrc1";
+  let ParserMatchClass = VReg32OrOffClass;
+}
+
+def ExpSrc2 : RegisterOperand<VGPR_32> {
+  let PrintMethod = "printExpSrc2";
+  let ParserMatchClass = VReg32OrOffClass;
+}
+
+def ExpSrc3 : RegisterOperand<VGPR_32> {
+  let PrintMethod = "printExpSrc3";
+  let ParserMatchClass = VReg32OrOffClass;
+}
 
 class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
   let Name = "Imm"#CName;
@@ -385,6 +422,8 @@ def unorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;
 def da : NamedOperandBit<"DA", NamedMatchClass<"DA">>;
 def r128 : NamedOperandBit<"R128", NamedMatchClass<"R128">>;
 def lwe : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
+def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
+def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 
 def dmask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
 
@@ -399,6 +438,10 @@ def src1_sel : NamedOperandU32<"SDWASrc1Sel", NamedMatchClass<"SDWASrc1Sel">>;
 def dst_unused : NamedOperandU32<"SDWADstUnused", NamedMatchClass<"SDWADstUnused">>;
 
 def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
+
+def exp_tgt : NamedOperandU8<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
+
+}
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 
@@ -518,32 +561,41 @@ class SIMCInstr <string pseudo, int subtarget> {
 // EXP classes
 //===----------------------------------------------------------------------===//
 
-class EXPCommon : InstSI<
+class EXP_Helper<bit done, SDPatternOperator node = null_frag> : EXPCommon<
   (outs),
-  (ins i32imm:$en, i32imm:$tgt, i32imm:$compr, i32imm:$done, i32imm:$vm,
-       VGPR_32:$src0, VGPR_32:$src1, VGPR_32:$src2, VGPR_32:$src3),
-  "exp $en, $tgt, $compr, $done, $vm, $src0, $src1, $src2, $src3",
-  [] > {
-
-  let EXP_CNT = 1;
-  let Uses = [EXEC];
-  let SchedRW = [WriteExport];
+  (ins exp_tgt:$tgt,
+       ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
+       exp_vm:$vm, exp_compr:$compr, i8imm:$en),
+  "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")#"$compr$vm",
+  [(node (i8 timm:$en), (i1 timm:$vm), (i8 timm:$tgt), (i1 timm:$compr),
+         f32:$src0, f32:$src1, f32:$src2, f32:$src3)]> {
+  let AsmMatchConverter = "cvtExp";
 }
 
-multiclass EXP_m {
+// Split EXP instruction into EXP and EXP_DONE so we can set
+// mayLoad for done=1.
+multiclass EXP_m<bit done, SDPatternOperator node> {
+  let mayLoad = done in {
+    let isPseudo = 1, isCodeGenOnly = 1 in {
+      def "" : EXP_Helper<done, node>,
+               SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.NONE>;
+    }
 
-  let isPseudo = 1, isCodeGenOnly = 1 in {
-    def "" : EXPCommon, SIMCInstr <"exp", SIEncodingFamily.NONE> ;
-  }
+    let done = done in {
+      def _si : EXP_Helper<done>,
+                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
+                EXPe {
+        let DecoderNamespace = "SICI";
+        let DisableDecoder = DisableSIDecoder;
+      }
 
-  def _si : EXPCommon, SIMCInstr <"exp", SIEncodingFamily.SI>, EXPe {
-    let DecoderNamespace="SICI";
-    let DisableDecoder = DisableSIDecoder;
-  }
-
-  def _vi : EXPCommon, SIMCInstr <"exp", SIEncodingFamily.VI>, EXPe_vi {
-    let DecoderNamespace="VI";
-    let DisableDecoder = DisableVIDecoder;
+      def _vi : EXP_Helper<done>,
+                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
+                EXPe_vi {
+        let DecoderNamespace = "VI";
+        let DisableDecoder = DisableVIDecoder;
+      }
+    }
   }
 }
 

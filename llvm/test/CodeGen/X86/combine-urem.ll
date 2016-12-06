@@ -54,12 +54,11 @@ define <4 x i32> @combine_vec_urem_by_pow2b(<4 x i32> %x) {
 ; SSE-NEXT:    andl $7, %eax
 ; SSE-NEXT:    movd %eax, %xmm2
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,1,0,1]
 ; SSE-NEXT:    pextrd $1, %xmm0, %eax
 ; SSE-NEXT:    andl $3, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_urem_by_pow2b:
@@ -71,12 +70,11 @@ define <4 x i32> @combine_vec_urem_by_pow2b(<4 x i32> %x) {
 ; AVX-NEXT:    andl $7, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm2
 ; AVX-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; AVX-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; AVX-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX-NEXT:    andl $3, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    retq
   %1 = urem <4 x i32> %x, <i32 1, i32 4, i32 8, i32 16>
   ret <4 x i32> %1

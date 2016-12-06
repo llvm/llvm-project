@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/GlobalIndirectSymbol.h"
+#include "llvm/IR/Value.h"
 
 namespace llvm {
 
@@ -27,13 +28,14 @@ template <typename ValueSubClass> class SymbolTableListTraits;
 class GlobalAlias : public GlobalIndirectSymbol,
                     public ilist_node<GlobalAlias> {
   friend class SymbolTableListTraits<GlobalAlias>;
-  void operator=(const GlobalAlias &) = delete;
-  GlobalAlias(const GlobalAlias &) = delete;
 
   GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Linkage,
               const Twine &Name, Constant *Aliasee, Module *Parent);
 
 public:
+  GlobalAlias(const GlobalAlias &) = delete;
+  GlobalAlias &operator=(const GlobalAlias &) = delete;
+
   /// If a parent module is specified, the alias is automatically inserted into
   /// the end of the specified module's alias list.
   static GlobalAlias *create(Type *Ty, unsigned AddressSpace,
@@ -87,6 +89,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GLOBALALIAS_H

@@ -15,6 +15,11 @@
 /* Define to enable checks that alter the LLVM C++ ABI */
 #cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS
 
+/* Define to disable the link-time checking of mismatch for
+   LLVM_ENABLE_ABI_BREAKING_CHECKS */
+#cmakedefine01 LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING
+#if !LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING
+
 // ABI_BREAKING_CHECKS protection: provides link-time failure when clients build
 // mismatch with LLVM
 #if defined(_MSC_VER)
@@ -37,5 +42,7 @@ __attribute__((weak, visibility ("hidden"))) int *VerifyDisableABIBreakingChecks
 #endif
 }
 #endif // _MSC_VER
+
+#endif // LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING
 
 #endif

@@ -165,10 +165,26 @@ MachineInstrBuilder MachineIRBuilder::buildCopy(unsigned Res, unsigned Op) {
   return buildInstr(TargetOpcode::COPY).addDef(Res).addUse(Op);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res, int64_t Val) {
-  assert(MRI->getType(Res).isScalar() && "invalid operand type");
+MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
+                                                    const ConstantInt &Val) {
+  LLT Ty = MRI->getType(Res);
 
-  return buildInstr(TargetOpcode::G_CONSTANT).addDef(Res).addImm(Val);
+  assert((Ty.isScalar() || Ty.isPointer()) && "invalid operand type");
+
+  const ConstantInt *NewVal = &Val;
+  if (Ty.getSizeInBits() != Val.getBitWidth())
+    NewVal = ConstantInt::get(MF->getFunction()->getContext(),
+                              Val.getValue().sextOrTrunc(Ty.getSizeInBits()));
+
+  return buildInstr(TargetOpcode::G_CONSTANT).addDef(Res).addCImm(NewVal);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
+                                                    int64_t Val) {
+  auto IntN = IntegerType::get(MF->getFunction()->getContext(),
+                               MRI->getType(Res).getSizeInBits());
+  ConstantInt *CI = ConstantInt::get(IntN, Val, true);
+  return buildConstant(Res, *CI);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(unsigned Res,

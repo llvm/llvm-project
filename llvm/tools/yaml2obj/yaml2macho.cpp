@@ -41,6 +41,8 @@ private:
   Error writeLoadCommands(raw_ostream &OS);
   Error writeSectionData(raw_ostream &OS);
   Error writeLinkEditData(raw_ostream &OS);
+  Error writeDWARFData(raw_ostream &OS,
+                       std::vector<MachOYAML::Section> &Sections);
   void writeBindOpcodes(raw_ostream &OS,
                         std::vector<MachOYAML::BindOpcode> &BindOpcodes);
   // LinkEdit writers
@@ -240,6 +242,9 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
       if (0 == strncmp(&segname[0], "__LINKEDIT", 16)) {
         if (auto Err = writeLinkEditData(OS))
           return Err;
+      } else if (0 == strncmp(&segname[0], "__DWARF", 16)) {
+        if (auto Err = writeDWARFData(OS, LC.Sections))
+          return Err;
       } else {
         // Zero Fill any data between the end of the last thing we wrote and the
         // start of this section.
@@ -252,7 +257,8 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
           // the
           // start of this section.
           assert(
-              OS.tell() - fileStart <= Sec.offset &&
+              (OS.tell() - fileStart <= Sec.offset ||
+               Sec.offset == (uint32_t)0) &&
               "Wrote too much data somewhere, section offsets don't line up.");
           currOffset = OS.tell() - fileStart;
           if (currOffset < Sec.offset) {
@@ -375,6 +381,20 @@ Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
       return Err;
   }
 
+  return Error::success();
+}
+
+Error MachOWriter::writeDWARFData(raw_ostream &OS,
+                                  std::vector<MachOYAML::Section> &Sections) {
+  for(auto Section : Sections) {
+    ZeroToOffset(OS, Section.offset);
+    if (0 == strncmp(&Section.sectname[0], "__debug_str", 16)) {
+      for (auto Str : Obj.DWARF.DebugStrings) {
+        OS.write(Str.data(), Str.size());
+        OS.write('\0');
+      }
+    }
+  }
   return Error::success();
 }
 

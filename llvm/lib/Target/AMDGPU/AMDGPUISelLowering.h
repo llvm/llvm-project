@@ -280,7 +280,9 @@ enum NodeType : unsigned {
   MUL_LOHI_I24,
   MUL_LOHI_U24,
   TEXTURE_FETCH,
-  EXPORT,
+  EXPORT, // exp on SI+
+  EXPORT_DONE, // exp on SI+ with done bit set
+  R600_EXPORT,
   CONST_ADDRESS,
   REGISTER_LOAD,
   REGISTER_STORE,

@@ -18,17 +18,19 @@
 #ifndef LLVM_IR_DERIVEDTYPES_H
 #define LLVM_IR_DERIVEDTYPES_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
+#include <cassert>
+#include <cstdint>
 
 namespace llvm {
 
 class Value;
 class APInt;
 class LLVMContext;
-template<typename T> class ArrayRef;
-class StringRef;
 
 /// Class to represent integer types. Note that this class is also used to
 /// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
@@ -98,11 +100,12 @@ unsigned Type::getIntegerBitWidth() const {
 /// Class to represent function types
 ///
 class FunctionType : public Type {
-  FunctionType(const FunctionType &) = delete;
-  const FunctionType &operator=(const FunctionType &) = delete;
   FunctionType(Type *Result, ArrayRef<Type*> Params, bool IsVarArgs);
 
 public:
+  FunctionType(const FunctionType &) = delete;
+  FunctionType &operator=(const FunctionType &) = delete;
+
   /// This static method is the primary way of constructing a FunctionType.
   static FunctionType *get(Type *Result,
                            ArrayRef<Type*> Params, bool isVarArg);
@@ -194,10 +197,9 @@ public:
 /// generator for a target expects).
 ///
 class StructType : public CompositeType {
-  StructType(const StructType &) = delete;
-  const StructType &operator=(const StructType &) = delete;
   StructType(LLVMContext &C)
     : CompositeType(C, StructTyID), SymbolTableEntry(nullptr) {}
+
   enum {
     /// This is the contents of the SubClassData field.
     SCDB_HasBody = 1,
@@ -213,6 +215,9 @@ class StructType : public CompositeType {
   void *SymbolTableEntry;
 
 public:
+  StructType(const StructType &) = delete;
+  StructType &operator=(const StructType &) = delete;
+
   /// This creates an identified struct.
   static StructType *create(LLVMContext &Context, StringRef Name);
   static StructType *create(LLVMContext &Context);
@@ -314,8 +319,6 @@ Type *Type::getStructElementType(unsigned N) const {
 class SequentialType : public CompositeType {
   Type *ContainedType;               ///< Storage for the single contained type.
   uint64_t NumElements;
-  SequentialType(const SequentialType &) = delete;
-  const SequentialType &operator=(const SequentialType &) = delete;
 
 protected:
   SequentialType(TypeID TID, Type *ElType, uint64_t NumElements)
@@ -326,6 +329,9 @@ protected:
   }
 
 public:
+  SequentialType(const SequentialType &) = delete;
+  SequentialType &operator=(const SequentialType &) = delete;
+
   uint64_t getNumElements() const { return NumElements; }
   Type *getElementType() const { return ContainedType; }
 
@@ -337,11 +343,12 @@ public:
 
 /// Class to represent array types.
 class ArrayType : public SequentialType {
-  ArrayType(const ArrayType &) = delete;
-  const ArrayType &operator=(const ArrayType &) = delete;
   ArrayType(Type *ElType, uint64_t NumEl);
 
 public:
+  ArrayType(const ArrayType &) = delete;
+  ArrayType &operator=(const ArrayType &) = delete;
+
   /// This static method is the primary way to construct an ArrayType
   static ArrayType *get(Type *ElementType, uint64_t NumElements);
 
@@ -360,11 +367,12 @@ uint64_t Type::getArrayNumElements() const {
 
 /// Class to represent vector types.
 class VectorType : public SequentialType {
-  VectorType(const VectorType &) = delete;
-  const VectorType &operator=(const VectorType &) = delete;
   VectorType(Type *ElType, unsigned NumEl);
 
 public:
+  VectorType(const VectorType &) = delete;
+  VectorType &operator=(const VectorType &) = delete;
+
   /// This static method is the primary way to construct an VectorType.
   static VectorType *get(Type *ElementType, unsigned NumElements);
 
@@ -433,13 +441,14 @@ unsigned Type::getVectorNumElements() const {
 
 /// Class to represent pointers.
 class PointerType : public Type {
-  PointerType(const PointerType &) = delete;
-  const PointerType &operator=(const PointerType &) = delete;
   explicit PointerType(Type *ElType, unsigned AddrSpace);
 
   Type *PointeeTy;
 
 public:
+  PointerType(const PointerType &) = delete;
+  PointerType &operator=(const PointerType &) = delete;
+
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
   static PointerType *get(Type *ElementType, unsigned AddressSpace);
@@ -471,6 +480,6 @@ unsigned Type::getPointerAddressSpace() const {
   return cast<PointerType>(getScalarType())->getAddressSpace();
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_DERIVEDTYPES_H

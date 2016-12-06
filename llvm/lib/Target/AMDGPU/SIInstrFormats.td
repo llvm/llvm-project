@@ -41,6 +41,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit DS = 0;
   field bit MIMG = 0;
   field bit FLAT = 0;
+  field bit EXP = 0;
 
   // Whether WQM _must_ be enabled for this instruction.
   field bit WQM = 0;
@@ -96,15 +97,16 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{19} = DS;
   let TSFlags{20} = MIMG;
   let TSFlags{21} = FLAT;
-  let TSFlags{22} = WQM;
-  let TSFlags{23} = VGPRSpill;
-  let TSFlags{24} = SGPRSpill;
-  let TSFlags{25} = VOPAsmPrefer32Bit;
-  let TSFlags{26} = Gather4;
-  let TSFlags{27} = DisableWQM;
-  let TSFlags{28} = SOPKZext;
-  let TSFlags{29} = ScalarStore;
-  let TSFlags{30} = FixedSize;
+  let TSFlags{22} = EXP;
+  let TSFlags{23} = WQM;
+  let TSFlags{24} = VGPRSpill;
+  let TSFlags{25} = SGPRSpill;
+  let TSFlags{26} = VOPAsmPrefer32Bit;
+  let TSFlags{27} = Gather4;
+  let TSFlags{28} = DisableWQM;
+  let TSFlags{29} = SOPKZext;
+  let TSFlags{30} = ScalarStore;
+  let TSFlags{31} = FixedSize;
 
   let SchedRW = [Write32Bit];
 
@@ -230,6 +232,17 @@ class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
+}
+
+class EXPCommon<dag outs, dag ins, string asm, list<dag> pattern> :
+  InstSI<outs, ins, asm, pattern> {
+  let EXP = 1;
+  let EXP_CNT = 1;
+  let mayLoad = 0; // Set to 1 if done bit is set.
+  let mayStore = 1;
+  let UseNamedOperandTable = 1;
+  let Uses = [EXEC];
+  let SchedRW = [WriteExport];
 }
 
 } // End Uses = [EXEC]

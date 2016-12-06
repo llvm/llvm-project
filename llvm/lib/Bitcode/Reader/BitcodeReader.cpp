@@ -3017,7 +3017,14 @@ Error BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() < 1)
         return error("Invalid record");
 
-      IsDistinct = Record[0];
+      IsDistinct = Record[0] & 1;
+      bool HasOpFragment = Record[0] & 2;
+      auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
+      if (!HasOpFragment)
+        if (unsigned N = Elts.size())
+          if (N >= 3 && Elts[N - 3] == dwarf::DW_OP_bit_piece)
+            Elts[N-3] = dwarf::DW_OP_LLVM_fragment;
+
       MetadataList.assignValue(
           GET_OR_DISTINCT(DIExpression,
                           (Context, makeArrayRef(Record).slice(1))),

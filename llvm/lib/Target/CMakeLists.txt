@@ -1,5 +1,7 @@
 list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
 
+list(APPEND LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_SRC_DIR}/lib/Target)
+
 add_llvm_library(LLVMTarget
   Target.cpp
   TargetIntrinsicInfo.cpp

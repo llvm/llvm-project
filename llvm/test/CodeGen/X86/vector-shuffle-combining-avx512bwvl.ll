@@ -78,14 +78,12 @@ define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_vperm2(<16 x i16> %x0,
 define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_unpckhwd(<16 x i16> %a0, <16 x i16> %a1) {
 ; X32-LABEL: combine_vpermt2var_vpermi2var_16i16_as_unpckhwd:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqu16 {{.*#+}} ymm2 = [20,4,21,5,22,6,23,7,28,12,29,13,30,14,31,15]
-; X32-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
+; X32-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_vpermi2var_16i16_as_unpckhwd:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovdqu16 {{.*#+}} ymm2 = [20,4,21,5,22,6,23,7,28,12,29,13,30,14,31,15]
-; X64-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
+; X64-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15]
 ; X64-NEXT:    retq
   %res0 = call <16 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.256(<16 x i16> %a0, <16 x i16> <i16 20, i16 4, i16 21, i16 5, i16 22, i16 6, i16 23, i16 7, i16 28, i16 12, i16 29, i16 13, i16 30, i16 14, i16 31, i16 15>, <16 x i16> %a1, i16 -1)
   ret <16 x i16> %res0
@@ -94,14 +92,12 @@ define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_unpckhwd(<16 x i16> %a
 define <16 x i16> @combine_vpermt2var_vpermi2var_16i16_as_unpcklwd(<16 x i16> %a0, <16 x i16> %a1) {
 ; X32-LABEL: combine_vpermt2var_vpermi2var_16i16_as_unpcklwd:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqu16 {{.*#+}} ymm2 = [0,16,1,17,2,18,3,19,8,24,9,25,10,26,11,27]
-; X32-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
+; X32-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_vpermi2var_16i16_as_unpcklwd:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovdqu16 {{.*#+}} ymm2 = [0,16,1,17,2,18,3,19,8,24,9,25,10,26,11,27]
-; X64-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
+; X64-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; X64-NEXT:    retq
   %res0 = call <16 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.256(<16 x i16> <i16 0, i16 16, i16 1, i16 17, i16 2, i16 18, i16 3, i16 19, i16 8, i16 24, i16 9, i16 25, i16 10, i16 26, i16 11, i16 27>, <16 x i16> %a0, <16 x i16> %a1, i16 -1)
   ret <16 x i16> %res0

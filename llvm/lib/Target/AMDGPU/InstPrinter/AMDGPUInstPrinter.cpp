@@ -195,6 +195,20 @@ void AMDGPUInstPrinter::printLWE(const MCInst *MI, unsigned OpNo,
   printNamedBit(MI, OpNo, O, "lwe");
 }
 
+void AMDGPUInstPrinter::printExpCompr(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  if (MI->getOperand(OpNo).getImm())
+    O << " compr";
+}
+
+void AMDGPUInstPrinter::printExpVM(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI,
+                                   raw_ostream &O) {
+  if (MI->getOperand(OpNo).getImm())
+    O << " vm";
+}
+
 void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
   switch (RegNo) {
@@ -599,10 +613,72 @@ void AMDGPUInstPrinter::printSDWADstUnused(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNo,
+template <unsigned N>
+void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  int EnIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::en);
+  unsigned En = MI->getOperand(EnIdx).getImm();
+
+  // FIXME: What do we do with compr? The meaning of en changes depending on if
+  // compr is set.
+
+  if (En & (1 << N))
+    printRegOperand(MI->getOperand(OpNo).getReg(), O, MRI);
+  else
+    O << "off";
+}
+
+void AMDGPUInstPrinter::printExpSrc0(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  printExpSrcN<0>(MI, OpNo, STI, O);
+}
+
+void AMDGPUInstPrinter::printExpSrc1(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  printExpSrcN<1>(MI, OpNo, STI, O);
+}
+
+void AMDGPUInstPrinter::printExpSrc2(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  printExpSrcN<2>(MI, OpNo, STI, O);
+}
+
+void AMDGPUInstPrinter::printExpSrc3(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  printExpSrcN<3>(MI, OpNo, STI, O);
+}
+
+void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  // This is really a 6 bit field.
+  uint32_t Tgt = MI->getOperand(OpNo).getImm() & ((1 << 6) - 1);
+
+  if (Tgt <= 7)
+    O << " mrt" << Tgt;
+  else if (Tgt == 8)
+    O << " mrtz";
+  else if (Tgt == 9)
+    O << " null";
+  else if (Tgt >= 12 && Tgt <= 15)
+    O << " pos" << Tgt - 12;
+  else if (Tgt >= 32 && Tgt <= 63)
+    O << " param" << Tgt - 32;
+  else {
+    // Reserved values 10, 11
+    O << " invalid_target_" << Tgt;
+  }
+}
+
+void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
+  unsigned Imm = MI->getOperand(OpNum).getImm();
 
   if (Imm == 2) {
     O << "P0";
