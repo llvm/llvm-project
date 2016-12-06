@@ -1870,18 +1870,24 @@ expandBounds(const RuntimePointerChecking::CheckingPtrGroup *CG, Loop *TheLoop,
   Value *Ptr = PtrRtChecking.Pointers[CG->Members[0]].PointerValue;
   const SCEV *Sc = SE->getSCEV(Ptr);
 
+  unsigned AS = Ptr->getType()->getPointerAddressSpace();
+  LLVMContext &Ctx = Loc->getContext();
+
+  // Use this type for pointer arithmetic.
+  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, AS);
+
   if (SE->isLoopInvariant(Sc, TheLoop)) {
     DEBUG(dbgs() << "LAA: Adding RT check for a loop invariant ptr:" << *Ptr
                  << "\n");
-    return {Ptr, Ptr};
+    // Ptr could be in the loop body. If so, expand a new one at the correct
+    // location.
+    Instruction *Inst = dyn_cast<Instruction>(Ptr);
+    Value *NewPtr = (Inst && TheLoop->contains(Inst))
+                        ? Exp.expandCodeFor(Sc, PtrArithTy, Loc)
+                        : Ptr;
+    return {NewPtr, NewPtr};
   } else {
-    unsigned AS = Ptr->getType()->getPointerAddressSpace();
-    LLVMContext &Ctx = Loc->getContext();
-
-    // Use this type for pointer arithmetic.
-    Type *PtrArithTy = Type::getInt8PtrTy(Ctx, AS);
     Value *Start = nullptr, *End = nullptr;
-
     DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
     Start = Exp.expandCodeFor(CG->Low, PtrArithTy, Loc);
     End = Exp.expandCodeFor(CG->High, PtrArithTy, Loc);

@@ -327,7 +327,7 @@ func (u *unit) defineFunction(f *ssa.Function) {
 	fr.addCommonFunctionAttrs(fr.function)
 	fr.function.SetLinkage(linkage)
 
-	fr.logf("Define function: %s", f.String())
+	fr.logf("Define function: %s @ %s", f.String(), fr.pkg.Prog.Fset.Position(f.Pos()))
 	fti := u.llvmtypes.getSignatureInfo(f.Signature)
 	delete(u.undefinedFuncs, f)
 	fr.retInf = fti.retInf
@@ -534,7 +534,9 @@ func (fr *frame) emitInitPrologue() llvm.BasicBlock {
 func (fr *frame) bridgeRecoverFunc(llfn llvm.Value, fti functionTypeInfo) *frame {
 	// The bridging function must not be inlined, or the return address
 	// may not correspond to the source function.
-	llfn.AddFunctionAttr(llvm.NoInlineAttribute)
+	attrKind := llvm.AttributeKindID("noinline")
+	noInlineAttr := fr.module.Context().CreateEnumAttribute(attrKind, 0)
+	llfn.AddFunctionAttr(noInlineAttr)
 
 	// Call __go_can_recover, passing in the function's return address.
 	entry := llvm.AddBasicBlock(llfn, "entry")

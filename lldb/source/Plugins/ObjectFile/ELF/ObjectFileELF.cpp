@@ -1513,8 +1513,14 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     const uint32_t sub_type = subTypeFromElfHeader(header);
     arch_spec.SetArchitecture(eArchTypeELF, header.e_machine, sub_type,
                               header.e_ident[EI_OSABI]);
-    //
-    // Validate if it is ok to remove GetOsFromOSABI
+    
+    // Validate if it is ok to remove GetOsFromOSABI.
+    // Note, that now the OS is determined based on EI_OSABI flag and
+    // the info extracted from ELF notes (see RefineModuleDetailsFromNote).
+    // However in some cases that still might be not enough: for example
+    // a shared library might not have any notes at all
+    // and have EI_OSABI flag set to System V,
+    // as result the OS will be set to UnknownOS.
     GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
     spec_ostype = arch_spec.GetTriple().getOS();
     assert(spec_ostype == ostype);

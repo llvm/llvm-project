@@ -303,7 +303,7 @@ namespace llvm {
     MCSymbol *lookupSymbol(const Twine &Name) const;
 
     /// Set value for a symbol.
-    int setSymbolValue(MCStreamer &Streamer, std::string &I);
+    void setSymbolValue(MCStreamer &Streamer, StringRef Sym, uint64_t Val);
 
     /// getSymbols - Get a reference for the symbol table for clients that
     /// want to, for example, iterate over all symbols. 'const' because we

@@ -14,6 +14,7 @@
 
 #include <string>
 #include <cassert>
+#include <cstddef>
 
 #include "min_allocator.h"
 
@@ -29,8 +30,8 @@ test(S s)
         assert(e == s.rbegin());
         assert(ce == cs.rbegin());
     }
-    assert(e - s.rbegin() == s.size());
-    assert(ce - cs.rbegin() == cs.size());
+    assert(static_cast<std::size_t>(e - s.rbegin()) == s.size());
+    assert(static_cast<std::size_t>(ce - cs.rbegin()) == cs.size());
 }
 
 int main()

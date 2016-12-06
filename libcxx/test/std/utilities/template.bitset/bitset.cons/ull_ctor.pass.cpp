@@ -12,6 +12,7 @@
 #include <bitset>
 #include <cassert>
 #include <algorithm> // for 'min' and 'max'
+#include <cstddef>
 
 #include "test_macros.h"
 
@@ -21,9 +22,9 @@ void test_val_ctor()
     {
         TEST_CONSTEXPR std::bitset<N> v(0xAAAAAAAAAAAAAAAAULL);
         assert(v.size() == N);
-        unsigned M = std::min<std::size_t>(N, 64);
+        std::size_t M = std::min<std::size_t>(N, 64);
         for (std::size_t i = 0; i < M; ++i)
-            assert(v[i] == (i & 1));
+            assert(v[i] == ((i & 1) != 0));
         for (std::size_t i = M; i < N; ++i)
             assert(v[i] == false);
     }

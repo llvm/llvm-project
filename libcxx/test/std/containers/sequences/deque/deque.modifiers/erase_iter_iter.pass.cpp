@@ -53,7 +53,7 @@ test(int P, C& c1, int size)
     I i = c1.erase(c1.cbegin() + P, c1.cbegin() + (P + size));
     assert(i == c1.begin() + P);
     assert(c1.size() == c1_osize - size);
-    assert(distance(c1.begin(), c1.end()) == c1.size());
+    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
     i = c1.begin();
     int j = 0;
     for (; j < P; ++j, ++i)

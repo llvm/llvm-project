@@ -713,7 +713,24 @@ void ClangMoveTool::onEndOfTranslationUnit() {
 
   if (RemovedDecls.empty())
     return;
-  if (UnremovedDeclsInOldHeader.empty() && !Context->Spec.OldHeader.empty()) {
+  // Ignore symbols that are not supported (e.g. typedef and enum) when
+  // checking if there is unremoved symbol in old header. This makes sure that
+  // we always move old files to new files when all symbols produced from
+  // dump_decls are moved.
+  auto IsSupportedKind = [](const clang::NamedDecl *Decl) {
+    switch (Decl->getKind()) {
+    case Decl::Kind::Function:
+    case Decl::Kind::FunctionTemplate:
+    case Decl::Kind::ClassTemplate:
+    case Decl::Kind::CXXRecord:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (std::none_of(UnremovedDeclsInOldHeader.begin(),
+                   UnremovedDeclsInOldHeader.end(), IsSupportedKind) &&
+      !Context->Spec.OldHeader.empty()) {
     auto &SM = RemovedDecls[0]->getASTContext().getSourceManager();
     moveAll(SM, Context->Spec.OldHeader, Context->Spec.NewHeader);
     moveAll(SM, Context->Spec.OldCC, Context->Spec.NewCC);

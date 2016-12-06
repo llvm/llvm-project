@@ -719,16 +719,6 @@ void MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data,
   }
 }
 
-// Returns I'th piece's data.
-template <class ELFT>
-CachedHashStringRef MergeInputSection<ELFT>::getData(size_t I) const {
-  size_t End =
-      (Pieces.size() - 1 == I) ? this->Data.size() : Pieces[I + 1].InputOff;
-  const SectionPiece &P = Pieces[I];
-  StringRef S = toStringRef(this->Data.slice(P.InputOff, End - P.InputOff));
-  return {S, Hashes[I]};
-}
-
 // Split non-SHF_STRINGS section. Such section is a sequence of
 // fixed size records.
 template <class ELFT>

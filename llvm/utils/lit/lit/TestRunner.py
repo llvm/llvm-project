@@ -630,7 +630,7 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
     # version.
 
     keywords_re = re.compile(
-        to_bytes("(%s)(.*)\n" % ("|".join(k for k in keywords),)))
+        to_bytes("(%s)(.*)\n" % ("|".join(re.escape(k) for k in keywords),)))
 
     f = open(source_path, 'rb')
     try:
@@ -657,7 +657,7 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # Python 2, to avoid other code having to differentiate between the
             # str and unicode types.
             keyword,ln = match.groups()
-            yield (line_number, to_string(keyword[:-1].decode('utf-8')),
+            yield (line_number, to_string(keyword.decode('utf-8')),
                    to_string(ln.decode('utf-8')))
     finally:
         f.close()
@@ -739,10 +739,119 @@ def applySubstitutions(script, substitutions):
     # convert to list before returning.
     return list(map(processLine, script))
 
-def parseIntegratedTestScript(test, require_script=True):
+
+class ParserKind(object):
+    """
+    An enumeration representing the style of an integrated test keyword or
+    command.
+
+    TAG: A keyword taking no value. Ex 'END.'
+    COMMAND: A Keyword taking a list of shell commands. Ex 'RUN:'
+    LIST: A keyword taking a comma separated list of value. Ex 'XFAIL:'
+    CUSTOM: A keyword with custom parsing semantics.
+    """
+    TAG = 0
+    COMMAND = 1
+    LIST = 2
+    CUSTOM = 3
+
+
+class IntegratedTestKeywordParser(object):
+    """A parser for LLVM/Clang style integrated test scripts.
+
+    keyword: The keyword to parse for. It must end in either '.' or ':'.
+    kind: An value of ParserKind.
+    parser: A custom parser. This value may only be specified with
+            ParserKind.CUSTOM.
+    """
+    def __init__(self, keyword, kind, parser=None, initial_value=None):
+        if not keyword.endswith('.') and not keyword.endswith(':'):
+            raise ValueError("keyword '%s' must end with either '.' or ':' "
+                             % keyword)
+        if keyword.endswith('.') and kind in \
+                [ParserKind.LIST, ParserKind.COMMAND]:
+            raise ValueError("Keyword '%s' should end in ':'" % keyword)
+
+        elif keyword.endswith(':') and kind in [ParserKind.TAG]:
+            raise ValueError("Keyword '%s' should end in '.'" % keyword)
+        if parser is not None and kind != ParserKind.CUSTOM:
+            raise ValueError("custom parsers can only be specified with "
+                             "ParserKind.CUSTOM")
+        self.keyword = keyword
+        self.kind = kind
+        self.parsed_lines = []
+        self.value = initial_value
+        self.parser = parser
+
+        if kind == ParserKind.COMMAND:
+            self.parser = self._handleCommand
+        elif kind == ParserKind.LIST:
+            self.parser = self._handleList
+        elif kind == ParserKind.TAG:
+            if not keyword.endswith('.'):
+                raise ValueError("keyword '%s' should end with '.'" % keyword)
+            self.parser = self._handleTag
+        elif kind == ParserKind.CUSTOM:
+            if parser is None:
+                raise ValueError("ParserKind.CUSTOM requires a custom parser")
+            self.parser = parser
+        else:
+            raise ValueError("Unknown kind '%s'" % kind)
+
+    def parseLine(self, line_number, line):
+        self.parsed_lines += [(line_number, line)]
+        self.value = self.parser(line_number, line, self.value)
+
+    def getValue(self):
+        return self.value
+
+    @staticmethod
+    def _handleTag(line_number, line, output):
+        """A helper for parsing TAG type keywords"""
+        return (not line.strip() or output)
+
+    @staticmethod
+    def _handleCommand(line_number, line, output):
+        """A helper for parsing COMMAND type keywords"""
+        # Trim trailing whitespace.
+        line = line.rstrip()
+        # Substitute line number expressions
+        line = re.sub('%\(line\)', str(line_number), line)
+
+        def replace_line_number(match):
+            if match.group(1) == '+':
+                return str(line_number + int(match.group(2)))
+            if match.group(1) == '-':
+                return str(line_number - int(match.group(2)))
+        line = re.sub('%\(line *([\+-]) *(\d+)\)', replace_line_number, line)
+        # Collapse lines with trailing '\\'.
+        if output and output[-1][-1] == '\\':
+            output[-1] = output[-1][:-1] + line
+        else:
+            if output is None:
+                output = []
+            output.append(line)
+        return output
+
+    @staticmethod
+    def _handleList(line_number, line, output):
+        """A parser for LIST type keywords"""
+        if output is None:
+            output = []
+        output.extend([s.strip() for s in line.split(',')])
+        return output
+
+
+def parseIntegratedTestScript(test, additional_parsers=[],
+                              require_script=True):
     """parseIntegratedTestScript - Scan an LLVM/Clang style integrated test
     script and extract the lines to 'RUN' as well as 'XFAIL' and 'REQUIRES'
-    and 'UNSUPPORTED' information. If 'require_script' is False an empty script
+    'REQUIRES-ANY' and 'UNSUPPORTED' information.
+
+    If additional parsers are specified then the test is also scanned for the
+    keywords they specify and all matches are passed to the custom parser.
+
+    If 'require_script' is False an empty script
     may be returned. This can be used for test formats where the actual script
     is optional or ignored.
     """
@@ -752,43 +861,36 @@ def parseIntegratedTestScript(test, require_script=True):
     requires = []
     requires_any = []
     unsupported = []
-    keywords = ['RUN:', 'XFAIL:', 'REQUIRES:', 'REQUIRES-ANY:',
-                'UNSUPPORTED:', 'END.']
+    builtin_parsers = [
+        IntegratedTestKeywordParser('RUN:', ParserKind.COMMAND,
+                                    initial_value=script),
+        IntegratedTestKeywordParser('XFAIL:', ParserKind.LIST,
+                                    initial_value=test.xfails),
+        IntegratedTestKeywordParser('REQUIRES:', ParserKind.LIST,
+                                    initial_value=requires),
+        IntegratedTestKeywordParser('REQUIRES-ANY:', ParserKind.LIST,
+                                    initial_value=requires_any),
+        IntegratedTestKeywordParser('UNSUPPORTED:', ParserKind.LIST,
+                                    initial_value=unsupported),
+        IntegratedTestKeywordParser('END.', ParserKind.TAG)
+    ]
+    keyword_parsers = {p.keyword: p for p in builtin_parsers}
+    for parser in additional_parsers:
+        if not isinstance(parser, IntegratedTestKeywordParser):
+            raise ValueError('additional parser must be an instance of '
+                             'IntegratedTestKeywordParser')
+        if parser.keyword in keyword_parsers:
+            raise ValueError("Parser for keyword '%s' already exists"
+                             % parser.keyword)
+        keyword_parsers[parser.keyword] = parser
+
     for line_number, command_type, ln in \
-            parseIntegratedTestScriptCommands(sourcepath, keywords):
-        if command_type == 'RUN':
-            # Trim trailing whitespace.
-            ln = ln.rstrip()
-
-            # Substitute line number expressions
-            ln = re.sub('%\(line\)', str(line_number), ln)
-            def replace_line_number(match):
-                if match.group(1) == '+':
-                    return str(line_number + int(match.group(2)))
-                if match.group(1) == '-':
-                    return str(line_number - int(match.group(2)))
-            ln = re.sub('%\(line *([\+-]) *(\d+)\)', replace_line_number, ln)
-
-            # Collapse lines with trailing '\\'.
-            if script and script[-1][-1] == '\\':
-                script[-1] = script[-1][:-1] + ln
-            else:
-                script.append(ln)
-        elif command_type == 'XFAIL':
-            test.xfails.extend([s.strip() for s in ln.split(',')])
-        elif command_type == 'REQUIRES':
-            requires.extend([s.strip() for s in ln.split(',')])
-        elif command_type == 'REQUIRES-ANY':
-            requires_any.extend([s.strip() for s in ln.split(',')])
-        elif command_type == 'UNSUPPORTED':
-            unsupported.extend([s.strip() for s in ln.split(',')])
-        elif command_type == 'END':
-            # END commands are only honored if the rest of the line is empty.
-            if not ln.strip():
-                break
-        else:
-            raise ValueError("unknown script command type: %r" % (
-                    command_type,))
+            parseIntegratedTestScriptCommands(sourcepath,
+                                              keyword_parsers.keys()):
+        parser = keyword_parsers[command_type]
+        parser.parseLine(line_number, ln)
+        if command_type == 'END.' and parser.getValue() is True:
+            break
 
     # Verify the script contains a run line.
     if require_script and not script:
@@ -805,26 +907,30 @@ def parseIntegratedTestScript(test, require_script=True):
     if missing_required_features:
         msg = ', '.join(missing_required_features)
         return lit.Test.Result(Test.UNSUPPORTED,
-                               "Test requires the following features: %s" % msg)
+                               "Test requires the following features: %s"
+                               % msg)
     requires_any_features = [f for f in requires_any
                              if f in test.config.available_features]
     if requires_any and not requires_any_features:
         msg = ' ,'.join(requires_any)
         return lit.Test.Result(Test.UNSUPPORTED,
-            "Test requires any of the following features: %s" % msg)
+                               "Test requires any of the following features: "
+                               "%s" % msg)
     unsupported_features = [f for f in unsupported
                             if f in test.config.available_features]
     if unsupported_features:
         msg = ', '.join(unsupported_features)
-        return lit.Test.Result(Test.UNSUPPORTED,
-                    "Test is unsupported with the following features: %s" % msg)
+        return lit.Test.Result(
+            Test.UNSUPPORTED,
+            "Test is unsupported with the following features: %s" % msg)
 
     unsupported_targets = [f for f in unsupported
                            if f in test.suite.config.target_triple]
     if unsupported_targets:
-      return lit.Test.Result(Test.UNSUPPORTED,
-                  "Test is unsupported with the following triple: %s" % (
-                      test.suite.config.target_triple,))
+        return lit.Test.Result(
+            Test.UNSUPPORTED,
+            "Test is unsupported with the following triple: %s" % (
+             test.suite.config.target_triple,))
 
     if test.config.limit_to_features:
         # Check that we have one of the limit_to_features features in requires.
@@ -832,10 +938,11 @@ def parseIntegratedTestScript(test, require_script=True):
                                    if f in requires]
         if not limit_to_features_tests:
             msg = ', '.join(test.config.limit_to_features)
-            return lit.Test.Result(Test.UNSUPPORTED,
-                 "Test requires one of the limit_to_features features %s" % msg)
-
+            return lit.Test.Result(
+                Test.UNSUPPORTED,
+                "Test requires one of the limit_to_features features %s" % msg)
     return script
+
 
 def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     # Create the output directory if it does not already exist.

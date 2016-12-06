@@ -33,7 +33,7 @@ void test_op_or()
     std::bitset<N> v1 = make_bitset<N>();
     std::bitset<N> v2 = make_bitset<N>();
     std::bitset<N> v3 = v1;
-    assert((v1 | v2) == (v3 |= v2));;
+    assert((v1 | v2) == (v3 |= v2));
 }
 
 int main()

@@ -414,6 +414,9 @@ option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
 
+option(LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING
+  "Disable abi-breaking checks mismatch detection at link-tim." OFF)
+
 option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
        "Set to ON to force using an old, unsupported host toolchain." OFF)
 
@@ -799,6 +802,8 @@ endif()
 
 include(AddLLVM)
 include(TableGen)
+
+set(LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_INCLUDE_DIR})
 
 if( MINGW )
   # People report that -O3 is unreliable on MinGW. The traditional

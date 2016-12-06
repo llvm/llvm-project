@@ -104,11 +104,18 @@ struct LinkEditData {
   bool isEmpty() const;
 };
 
+struct DWARFData {
+  std::vector<StringRef> DebugStrings;
+
+  bool isEmpty() const;
+};
+
 struct Object {
   FileHeader Header;
   std::vector<LoadCommand> LoadCommands;
   std::vector<Section> Sections;
   LinkEditData LinkEdit;
+  DWARFData DWARF;
 };
 
 struct FatHeader {
@@ -196,6 +203,10 @@ template <> struct MappingTraits<MachOYAML::Section> {
 
 template <> struct MappingTraits<MachOYAML::NListEntry> {
   static void mapping(IO &IO, MachOYAML::NListEntry &NListEntry);
+};
+
+template <> struct MappingTraits<MachOYAML::DWARFData> {
+  static void mapping(IO &IO, MachOYAML::DWARFData &DWARF);
 };
 
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \

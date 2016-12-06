@@ -15439,10 +15439,6 @@ static void checkModuleImportContext(Sema &S, Module *M,
   }
 }
 
-void Sema::diagnoseMisplacedModuleImport(Module *M, SourceLocation ImportLoc) {
-  return checkModuleImportContext(*this, M, ImportLoc, CurContext);
-}
-
 Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation ModuleLoc,
                                            ModuleDeclKind MDK,
                                            ModuleIdPath Path) {
@@ -15610,7 +15606,7 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
 }
 
 void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
-  checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext);
+  checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext, true);
 
   ModuleScopes.push_back({});
   ModuleScopes.back().Module = Mod;
@@ -15621,8 +15617,6 @@ void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
 }
 
 void Sema::ActOnModuleEnd(SourceLocation EofLoc, Module *Mod) {
-  checkModuleImportContext(*this, Mod, EofLoc, CurContext);
-
   if (getLangOpts().ModulesLocalVisibility) {
     VisibleModules = std::move(ModuleScopes.back().OuterVisibleModules);
     // Leaving a module hides namespace names, so our visible namespace cache

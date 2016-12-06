@@ -6316,8 +6316,47 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   return SDValue();
 }
 
-/// Attempt to use the vbroadcast instruction to generate a splat value for a
-/// splat BUILD_VECTOR which uses a single scalar load, or a constant.
+static Constant *getConstantVector(MVT VT, APInt SplatValue,
+                                   unsigned SplatBitSize, LLVMContext &C) {
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  unsigned NumElm = SplatBitSize / ScalarSize;
+
+  SmallVector<Constant *, 32> ConstantVec;
+  for (unsigned i = 0; i < NumElm; i++) {
+    APInt Val = SplatValue.lshr(ScalarSize * i).trunc(ScalarSize);
+    Constant *Const;
+    if (VT.isFloatingPoint()) {
+      assert((ScalarSize == 32 || ScalarSize == 64) &&
+             "Unsupported floating point scalar size");
+      if (ScalarSize == 32)
+        Const = ConstantFP::get(Type::getFloatTy(C), Val.bitsToFloat());
+      else
+        Const = ConstantFP::get(Type::getDoubleTy(C), Val.bitsToDouble());
+    } else
+      Const = Constant::getIntegerValue(Type::getIntNTy(C, ScalarSize), Val);
+    ConstantVec.push_back(Const);
+  }
+  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec));
+}
+
+static bool isUseOfShuffle(SDNode *N) {
+  for (auto *U : N->uses()) {
+    if (isTargetShuffle(U->getOpcode()))
+      return true;
+    if (U->getOpcode() == ISD::BITCAST) // Ignore bitcasts
+      return isUseOfShuffle(U);
+  }
+  return false;
+}
+
+/// Attempt to use the vbroadcast instruction to generate a splat value for the
+/// following cases:
+/// 1. A splat BUILD_VECTOR which uses:
+///    a. A single scalar load, or a constant.
+///    b. Repeated pattern of constants (e.g. <0,1,0,1> or <0,1,2,3,0,1,2,3>).
+/// 2. A splat shuffle which uses a scalar_to_vector node which comes from
+/// a scalar load, or a constant.
+///
 /// The VBROADCAST node is returned when a pattern is found,
 /// or SDValue() otherwise.
 static SDValue LowerVectorBroadcast(BuildVectorSDNode *BVOp, const X86Subtarget &Subtarget,
@@ -6339,8 +6378,82 @@ static SDValue LowerVectorBroadcast(BuildVectorSDNode *BVOp, const X86Subtarget 
 
   // We need a splat of a single value to use broadcast, and it doesn't
   // make any sense if the value is only in one element of the vector.
-  if (!Ld || (VT.getVectorNumElements() - UndefElements.count()) <= 1)
+  if (!Ld || (VT.getVectorNumElements() - UndefElements.count()) <= 1) {
+    APInt SplatValue, Undef;
+    unsigned SplatBitSize;
+    bool HasUndef;
+    // Check if this is a repeated constant pattern suitable for broadcasting.
+    if (BVOp->isConstantSplat(SplatValue, Undef, SplatBitSize, HasUndef) &&
+        SplatBitSize > VT.getScalarSizeInBits() &&
+        SplatBitSize < VT.getSizeInBits()) {
+      // Avoid replacing with broadcast when it's a use of a shuffle
+      // instruction to preserve the present custom lowering of shuffles.
+      if (isUseOfShuffle(BVOp) || BVOp->hasOneUse())
+        return SDValue();
+      // replace BUILD_VECTOR with broadcast of the repeated constants.
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      LLVMContext *Ctx = DAG.getContext();
+      MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
+      if (Subtarget.hasAVX()) {
+        if (SplatBitSize <= 64 && Subtarget.hasAVX2() &&
+            !(SplatBitSize == 64 && Subtarget.is32Bit())) {
+          // Splatted value can fit in one INTEGER constant in constant pool.
+          // Load the constant and broadcast it.
+          MVT CVT = MVT::getIntegerVT(SplatBitSize);
+          Type *ScalarTy = Type::getIntNTy(*Ctx, SplatBitSize);
+          Constant *C = Constant::getIntegerValue(ScalarTy, SplatValue);
+          SDValue CP = DAG.getConstantPool(C, PVT);
+          unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
+
+          unsigned Alignment = cast<ConstantPoolSDNode>(CP)->getAlignment();
+          Ld = DAG.getLoad(
+              CVT, dl, DAG.getEntryNode(), CP,
+              MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
+              Alignment);
+          SDValue Brdcst = DAG.getNode(X86ISD::VBROADCAST, dl,
+                                       MVT::getVectorVT(CVT, Repeat), Ld);
+          return DAG.getBitcast(VT, Brdcst);
+        } else if (SplatBitSize == 32 || SplatBitSize == 64) {
+          // Splatted value can fit in one FLOAT constant in constant pool.
+          // Load the constant and broadcast it.
+          // AVX have support for 32 and 64 bit broadcast for floats only.
+          // No 64bit integer in 32bit subtarget.
+          MVT CVT = MVT::getFloatingPointVT(SplatBitSize);
+          Constant *C = SplatBitSize == 32
+                            ? ConstantFP::get(Type::getFloatTy(*Ctx),
+                                              SplatValue.bitsToFloat())
+                            : ConstantFP::get(Type::getDoubleTy(*Ctx),
+                                              SplatValue.bitsToDouble());
+          SDValue CP = DAG.getConstantPool(C, PVT);
+          unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
+
+          unsigned Alignment = cast<ConstantPoolSDNode>(CP)->getAlignment();
+          Ld = DAG.getLoad(
+              CVT, dl, DAG.getEntryNode(), CP,
+              MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
+              Alignment);
+          SDValue Brdcst = DAG.getNode(X86ISD::VBROADCAST, dl,
+                                       MVT::getVectorVT(CVT, Repeat), Ld);
+          return DAG.getBitcast(VT, Brdcst);
+        } else if (SplatBitSize > 64) {
+          // Load the vector of constants and broadcast it.
+          MVT CVT = VT.getScalarType();
+          Constant *VecC = getConstantVector(VT, SplatValue, SplatBitSize,
+                                             *Ctx);
+          SDValue VCP = DAG.getConstantPool(VecC, PVT);
+          unsigned NumElm = SplatBitSize / VT.getScalarSizeInBits();
+          unsigned Alignment = cast<ConstantPoolSDNode>(VCP)->getAlignment();
+          Ld = DAG.getLoad(
+              MVT::getVectorVT(CVT, NumElm), dl, DAG.getEntryNode(), VCP,
+              MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
+              Alignment);
+          SDValue Brdcst = DAG.getNode(X86ISD::SUBV_BROADCAST, dl, VT, Ld);
+          return DAG.getBitcast(VT, Brdcst);
+        }
+      }
+    }
     return SDValue();
+  }
 
   bool ConstSplatVal =
       (Ld.getOpcode() == ISD::Constant || Ld.getOpcode() == ISD::ConstantFP);

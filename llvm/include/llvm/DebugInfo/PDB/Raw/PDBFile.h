@@ -26,7 +26,6 @@ namespace llvm {
 
 namespace msf {
 class MappedBlockStream;
-class WritableStream;
 }
 
 namespace pdb {
@@ -96,7 +95,20 @@ public:
 
   BumpPtrAllocator &getAllocator() { return Allocator; }
 
-private:
+  bool hasPDBDbiStream() const;
+  bool hasPDBGlobalsStream();
+  bool hasPDBInfoStream();
+  bool hasPDBIpiStream() const;
+  bool hasPDBPublicsStream();
+  bool hasPDBSymbolStream();
+  bool hasPDBTpiStream() const;
+  bool hasStringTable();
+
+ private:
+  Expected<std::unique_ptr<msf::MappedBlockStream>> safelyCreateIndexedStream(
+      const msf::MSFLayout &Layout, const msf::ReadableStream &MsfData,
+      uint32_t StreamIndex) const;
+
   BumpPtrAllocator &Allocator;
 
   std::unique_ptr<msf::ReadableStream> Buffer;

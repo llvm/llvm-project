@@ -1175,4 +1175,54 @@ define void @sitofp_16i8_16f32() #0 {
   ret void
 }
 
+;
+; SITOFP BUILDVECTOR
+;
+
+define <4 x double> @sitofp_4xi32_4f64(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
+; CHECK-LABEL: @sitofp_4xi32_4f64(
+; CHECK-NEXT:    [[CVT0:%.*]] = sitofp i32 %a0 to double
+; CHECK-NEXT:    [[CVT1:%.*]] = sitofp i32 %a1 to double
+; CHECK-NEXT:    [[CVT2:%.*]] = sitofp i32 %a2 to double
+; CHECK-NEXT:    [[CVT3:%.*]] = sitofp i32 %a3 to double
+; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x double> undef, double [[CVT0]], i32 0
+; CHECK-NEXT:    [[RES1:%.*]] = insertelement <4 x double> [[RES0]], double [[CVT1]], i32 1
+; CHECK-NEXT:    [[RES2:%.*]] = insertelement <4 x double> [[RES1]], double [[CVT2]], i32 2
+; CHECK-NEXT:    [[RES3:%.*]] = insertelement <4 x double> [[RES2]], double [[CVT3]], i32 3
+; CHECK-NEXT:    ret <4 x double> [[RES3]]
+;
+  %cvt0 = sitofp i32 %a0 to double
+  %cvt1 = sitofp i32 %a1 to double
+  %cvt2 = sitofp i32 %a2 to double
+  %cvt3 = sitofp i32 %a3 to double
+  %res0 = insertelement <4 x double> undef, double %cvt0, i32 0
+  %res1 = insertelement <4 x double> %res0, double %cvt1, i32 1
+  %res2 = insertelement <4 x double> %res1, double %cvt2, i32 2
+  %res3 = insertelement <4 x double> %res2, double %cvt3, i32 3
+  ret <4 x double> %res3
+}
+
+define <4 x float> @sitofp_4xi32_4f32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
+; CHECK-LABEL: @sitofp_4xi32_4f32(
+; CHECK-NEXT:    [[CVT0:%.*]] = sitofp i32 %a0 to float
+; CHECK-NEXT:    [[CVT1:%.*]] = sitofp i32 %a1 to float
+; CHECK-NEXT:    [[CVT2:%.*]] = sitofp i32 %a2 to float
+; CHECK-NEXT:    [[CVT3:%.*]] = sitofp i32 %a3 to float
+; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x float> undef, float [[CVT0]], i32 0
+; CHECK-NEXT:    [[RES1:%.*]] = insertelement <4 x float> [[RES0]], float [[CVT1]], i32 1
+; CHECK-NEXT:    [[RES2:%.*]] = insertelement <4 x float> [[RES1]], float [[CVT2]], i32 2
+; CHECK-NEXT:    [[RES3:%.*]] = insertelement <4 x float> [[RES2]], float [[CVT3]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[RES3]]
+;
+  %cvt0 = sitofp i32 %a0 to float
+  %cvt1 = sitofp i32 %a1 to float
+  %cvt2 = sitofp i32 %a2 to float
+  %cvt3 = sitofp i32 %a3 to float
+  %res0 = insertelement <4 x float> undef, float %cvt0, i32 0
+  %res1 = insertelement <4 x float> %res0, float %cvt1, i32 1
+  %res2 = insertelement <4 x float> %res1, float %cvt2, i32 2
+  %res3 = insertelement <4 x float> %res2, float %cvt3, i32 3
+  ret <4 x float> %res3
+}
+
 attributes #0 = { nounwind }

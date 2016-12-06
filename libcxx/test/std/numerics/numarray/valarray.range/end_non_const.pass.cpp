@@ -17,6 +17,7 @@
 
 #include <valarray>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -27,6 +28,6 @@ int main()
         std::valarray<T> v(a, N);
         *(end(v) - 1) = 10;
         assert(v[v.size()-1] == 10);
-        assert(end(v) - begin(v) == v.size());
+        assert(static_cast<std::size_t>(end(v) - begin(v)) == v.size());
     }
 }

@@ -36,15 +36,34 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42);
-    ASSERT_NOT_NOEXCEPT(std::get<0>(v));
+#ifndef __clang__ // Avoid https://llvm.org/bugs/show_bug.cgi?id=15481
+    ASSERT_NOEXCEPT(std::get<0>(v));
+#endif
     ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
     static_assert(std::get<0>(v) == 42, "");
   }
   {
     using V = std::variant<int, const long>;
+    const V v(42);
+    ASSERT_NOT_NOEXCEPT(std::get<0>(v));
+    ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
+    assert(std::get<0>(v) == 42);
+  }
+  {
+    using V = std::variant<int, const long>;
     constexpr V v(42l);
+#ifndef __clang__ // Avoid https://llvm.org/bugs/show_bug.cgi?id=15481
+    ASSERT_NOEXCEPT(std::get<1>(v));
+#endif
     ASSERT_SAME_TYPE(decltype(std::get<1>(v)), const long &);
     static_assert(std::get<1>(v) == 42, "");
+  }
+  {
+    using V = std::variant<int, const long>;
+    const V v(42l);
+    ASSERT_NOT_NOEXCEPT(std::get<1>(v));
+    ASSERT_SAME_TYPE(decltype(std::get<1>(v)), const long &);
+    assert(std::get<1>(v) == 42);
   }
 // FIXME: Remove these once reference support is reinstated
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)

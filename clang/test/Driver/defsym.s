@@ -17,6 +17,21 @@
 // CHECK-DEFSYM-ERR1: error: defsym must be of the form: sym=value: abc=
 
 // RUN: not %clang -c -integrated-as -o /dev/null %s \
-// RUN: -Wa,-defsym,abc=1a2b3c \
+// RUN: -Wa,-defsym,=123 \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM-ERR2
-// CHECK-DEFSYM-ERR2: error: Value is not an integer: 1a2b3c
+// CHECK-DEFSYM-ERR2: error: defsym must be of the form: sym=value: =123
+
+// RUN: not %clang -c -integrated-as -o /dev/null %s \
+// RUN: -Wa,-defsym,abc=1a2b3c \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM-ERR3
+// CHECK-DEFSYM-ERR3: error: Value is not an integer: 1a2b3c
+
+// RUN: not %clang -c -integrated-as -o /dev/null %s \
+// RUN: -Wa,-defsym \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM-ERR4
+
+// RUN: not %clang -c -integrated-as -o /dev/null %s \
+// RUN: -Wa,-defsym, \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM-ERR4
+
+// CHECK-DEFSYM-ERR4: error: defsym must be of the form: sym=value: -defsym

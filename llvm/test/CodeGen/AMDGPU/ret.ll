@@ -6,7 +6,7 @@ declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float
 ; GCN-LABEL: {{^}}vgpr:
 ; GCN: v_mov_b32_e32 v1, v0
 ; GCN-DAG: v_add_f32_e32 v0, 1.0, v1
-; GCN-DAG: exp 15, 0, 1, 1, 1, v1, v1, v1, v1
+; GCN-DAG: exp mrt0 v1, v1, v1, v1 done compr vm
 ; GCN: s_waitcnt expcnt(0)
 ; GCN-NOT: s_endpgm
 define amdgpu_vs {float, float} @vgpr([9 x <16 x i8>] addrspace(2)* byval, i32 inreg, i32 inreg, float) {
@@ -19,7 +19,8 @@ define amdgpu_vs {float, float} @vgpr([9 x <16 x i8>] addrspace(2)* byval, i32 i
 
 ; GCN-LABEL: {{^}}vgpr_literal:
 ; GCN: v_mov_b32_e32 v4, v0
-; GCN: exp 15, 0, 1, 1, 1, v4, v4, v4, v4
+; GCN: exp mrt0 v4, v4, v4, v4 done compr vm
+
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: v_mov_b32_e32 v1, 2.0
 ; GCN-DAG: v_mov_b32_e32 v2, 4.0
@@ -43,7 +44,6 @@ define amdgpu_vs {float, float, float, float} @vgpr_literal([9 x <16 x i8>] addr
 ; GCN: v_mov_b32_e32 v3, v4
 ; GCN: v_mov_b32_e32 v4, v6
 ; GCN-NOT: s_endpgm
-attributes #0 = { "InitialPSInputAddr"="0" }
 define amdgpu_ps {float, float, float, float, float} @vgpr_ps_addr0([9 x <16 x i8>] addrspace(2)* byval, i32 inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, float, float, float) #0 {
   %i0 = extractelement <2 x i32> %4, i32 0
   %i1 = extractelement <2 x i32> %4, i32 1
@@ -209,7 +209,7 @@ define amdgpu_vs {i32, i32, i32, i32} @sgpr_literal([9 x <16 x i8>] addrspace(2)
 
 ; GCN-LABEL: {{^}}both:
 ; GCN: v_mov_b32_e32 v1, v0
-; GCN-DAG: exp 15, 0, 1, 1, 1, v1, v1, v1, v1
+; GCN-DAG: exp mrt0 v1, v1, v1, v1 done compr vm
 ; GCN-DAG: v_add_f32_e32 v0, 1.0, v1
 ; GCN-DAG: s_add_i32 s0, s3, 2
 ; GCN-DAG: s_mov_b32 s1, s2
@@ -231,7 +231,8 @@ define amdgpu_vs {float, i32, float, i32, i32} @both([9 x <16 x i8>] addrspace(2
 
 ; GCN-LABEL: {{^}}structure_literal:
 ; GCN: v_mov_b32_e32 v3, v0
-; GCN: exp 15, 0, 1, 1, 1, v3, v3, v3, v3
+; GCN: exp mrt0 v3, v3, v3, v3 done compr vm
+
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: s_mov_b32 s0, 2
 ; GCN-DAG: s_mov_b32 s1, 3
@@ -242,3 +243,5 @@ define amdgpu_vs {{float, i32}, {i32, <2 x float>}} @structure_literal([9 x <16 
   call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %3, float %3, float %3, float %3)
   ret {{float, i32}, {i32, <2 x float>}} {{float, i32} {float 1.0, i32 2}, {i32, <2 x float>} {i32 3, <2 x float> <float 2.0, float 4.0>}}
 }
+
+attributes #0 = { nounwind "InitialPSInputAddr"="0" }

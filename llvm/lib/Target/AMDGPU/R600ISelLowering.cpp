@@ -443,7 +443,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
         DAG.getConstant(2, DL, MVT::i32), // SWZ_Z
         DAG.getConstant(3, DL, MVT::i32) // SWZ_W
       };
-      return DAG.getNode(AMDGPUISD::EXPORT, DL, Op.getValueType(), Args);
+      return DAG.getNode(AMDGPUISD::R600_EXPORT, DL, Op.getValueType(), Args);
     }
 
     // default for switch(IntrinsicID)
@@ -1882,7 +1882,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     return SDValue();
   }
 
-  case AMDGPUISD::EXPORT: {
+  case AMDGPUISD::R600_EXPORT: {
     SDValue Arg = N->getOperand(1);
     if (Arg.getOpcode() != ISD::BUILD_VECTOR)
       break;
@@ -1898,7 +1898,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
       N->getOperand(7) // SWZ_W
     };
     NewArgs[1] = OptimizeSwizzle(N->getOperand(1), &NewArgs[4], DAG, DL);
-    return DAG.getNode(AMDGPUISD::EXPORT, DL, N->getVTList(), NewArgs);
+    return DAG.getNode(AMDGPUISD::R600_EXPORT, DL, N->getVTList(), NewArgs);
   }
   case AMDGPUISD::TEXTURE_FETCH: {
     SDValue Arg = N->getOperand(1);

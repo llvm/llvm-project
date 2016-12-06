@@ -159,16 +159,15 @@ bool SIInsertSkips::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB) {
   MachineBasicBlock::iterator Insert = SkipBB->begin();
 
   // Exec mask is zero: Export to NULL target...
-  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::EXP))
-    .addImm(0)
+  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::EXP_DONE))
     .addImm(0x09) // V_008DFC_SQ_EXP_NULL
-    .addImm(0)
-    .addImm(1)
-    .addImm(1)
     .addReg(AMDGPU::VGPR0, RegState::Undef)
     .addReg(AMDGPU::VGPR0, RegState::Undef)
     .addReg(AMDGPU::VGPR0, RegState::Undef)
-    .addReg(AMDGPU::VGPR0, RegState::Undef);
+    .addReg(AMDGPU::VGPR0, RegState::Undef)
+    .addImm(1)  // vm
+    .addImm(0)  // compr
+    .addImm(0); // en
 
   // ... and terminate wavefront.
   BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::S_ENDPGM));
