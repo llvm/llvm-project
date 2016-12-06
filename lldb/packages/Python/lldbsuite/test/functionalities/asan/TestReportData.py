@@ -56,7 +56,7 @@ class AsanTestReportDataCase(TestBase):
             "Process should be stopped due to ASan report",
             substrs=[
                 'stopped',
-                'stop reason = Use of deallocated memory detected'])
+                'stop reason = Use of deallocated memory'])
 
         self.assertEqual(
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),

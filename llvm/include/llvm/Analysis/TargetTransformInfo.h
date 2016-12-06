@@ -265,6 +265,11 @@ public:
     /// transformation will select an unrolling factor based on the current cost
     /// threshold and other factors.
     unsigned Count;
+    /// A forced peeling factor (the number of bodied of the original loop
+    /// that should be peeled off before the loop body). When set to 0, the
+    /// unrolling transformation will select a peeling factor based on profile
+    /// information and other factors.
+    unsigned PeelCount;
     /// Default unroll count for loops with run-time trip count.
     unsigned DefaultUnrollRuntimeCount;
     // Set the maximum unrolling factor. The unrolling factor may be selected
@@ -298,6 +303,8 @@ public:
     bool Force;
     /// Allow using trip count upper bound to unroll loops.
     bool UpperBound;
+    /// Allow peeling off loop iterations for loops with low dynamic tripcount.
+    bool AllowPeeling;
   };
 
   /// \brief Get target-customized preferences for the generic loop unrolling

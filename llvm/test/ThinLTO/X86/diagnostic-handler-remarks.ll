@@ -13,28 +13,28 @@
 
 ; Verify that bar is imported and inlined into foo
 ; RUN: cat %t.yaml.thin.0.yaml | FileCheck %s -check-prefix=YAML1
-; YAML1: --- !Passed
-; YAML1: Pass:            inline
-; YAML1: Name:            Inlined
-; YAML1: Function:        main
-; YAML1: Args:
-; YAML1:   - Callee:          foo
-; YAML1:   - String:          ' inlined into '
-; YAML1:   - Caller:          main
-; YAML1: ...
+; YAML1:      --- !Passed
+; YAML1-NEXT: Pass:            inline
+; YAML1-NEXT: Name:            Inlined
+; YAML1-NEXT: Function:        main
+; YAML1-NEXT: Args:
+; YAML1-NEXT:   - Callee:          foo
+; YAML1-NEXT:   - String:          ' inlined into '
+; YAML1-NEXT:   - Caller:          main
+; YAML1-NEXT: ...
 
 
 ; Verify that bar is imported and inlined into foo
 ; RUN: cat %t.yaml.thin.1.yaml | FileCheck %s -check-prefix=YAML2
 ; YAML2: --- !Passed
-; YAML2: Pass:            inline
-; YAML2: Name:            Inlined
-; YAML2: Function:        foo
-; YAML2: Args:
-; YAML2:   - Callee:          bar
-; YAML2:   - String:          ' inlined into '
-; YAML2:   - Caller:          foo
-; YAML2: ...
+; YAML2-NEXT: Pass:            inline
+; YAML2-NEXT: Name:            Inlined
+; YAML2-NEXT: Function:        foo
+; YAML2-NEXT: Args:
+; YAML2-NEXT:   - Callee:          bar
+; YAML2-NEXT:   - String:          ' inlined into '
+; YAML2-NEXT:   - Caller:          foo
+; YAML2-NEXT: ...
 
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

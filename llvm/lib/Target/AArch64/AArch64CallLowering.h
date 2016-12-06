@@ -16,7 +16,6 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64CALLLOWERING
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ValueTypes.h"
 
 namespace llvm {
@@ -25,46 +24,6 @@ class AArch64TargetLowering;
 
 class AArch64CallLowering: public CallLowering {
  public:
-
-  /// Argument handling is mostly uniform between the four places that
-  /// make these decisions: function formal arguments, call
-  /// instruction args, call instruction returns and function
-  /// returns. However, once a decision has been made on where an
-  /// arugment should go, exactly what happens can vary slightly. This
-  /// class abstracts the differences.
-  struct ValueHandler {
-    /// Materialize a VReg containing the address of the specified
-    /// stack-based object. This is either based on a FrameIndex or
-    /// direct SP manipulation, depending on the context. \p MPO
-    /// should be initialized to an appropriate description of the
-    /// address created.
-    virtual unsigned getStackAddress(uint64_t Size, int64_t Offset,
-                                     MachinePointerInfo &MPO) = 0;
-
-    /// The specified value has been assigned to a physical register,
-    /// handle the appropriate COPY (either to or from) and mark any
-    /// relevant uses/defines as needed.
-    virtual void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
-                                  CCValAssign &VA) = 0;
-
-    /// The specified value has been assigned to a stack
-    /// location. Load or store it there, with appropriate extension
-    /// if necessary.
-    virtual void assignValueToAddress(unsigned ValVReg, unsigned Addr,
-                                      uint64_t Size, MachinePointerInfo &MPO,
-                                      CCValAssign &VA) = 0;
-
-    unsigned extendRegister(unsigned ValReg, CCValAssign &VA);
-
-    ValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
-        : MIRBuilder(MIRBuilder), MRI(MRI) {}
-
-    virtual ~ValueHandler() {}
-
-    MachineIRBuilder &MIRBuilder;
-    MachineRegisterInfo &MRI;
-  };
-
   AArch64CallLowering(const AArch64TargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
@@ -92,10 +51,6 @@ private:
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, MachineRegisterInfo &MRI,
                          SplitArgTy SplitArg) const;
-
-  bool handleAssignments(MachineIRBuilder &MIRBuilder, CCAssignFn *AssignFn,
-                         ArrayRef<ArgInfo> Args,
-                         ValueHandler &Callback) const;
 };
 } // End of namespace llvm;
 #endif

@@ -47,7 +47,6 @@ protected:
   bool UseARMMethodPtrABI;
   bool UseARMGuardVarABI;
   bool Use32BitVTableOffsetABI;
-  bool UseQualifiedFunctionTypeInfoABI;
 
   ItaniumMangleContext &getMangleContext() {
     return cast<ItaniumMangleContext>(CodeGen::CGCXXABI::getMangleContext());
@@ -59,8 +58,7 @@ public:
                 bool UseARMGuardVarABI = false) :
     CGCXXABI(CGM), UseARMMethodPtrABI(UseARMMethodPtrABI),
     UseARMGuardVarABI(UseARMGuardVarABI),
-    Use32BitVTableOffsetABI(false),
-    UseQualifiedFunctionTypeInfoABI(CGM.getCodeGenOpts().QualifiedFunctionTypeInfo) { }
+    Use32BitVTableOffsetABI(false) { }
 
   bool classifyReturnType(CGFunctionInfo &FI) const override;
 
@@ -2432,9 +2430,6 @@ class ItaniumRTTIBuilder {
   /// descriptor of the given type.
   llvm::Constant *GetAddrOfExternalRTTIDescriptor(QualType Ty);
 
-  /// Determine whether FnTy should be emitted as a qualified function type.
-  bool EmitAsQualifiedFunctionType(const FunctionType *FnTy);
-
   /// BuildVTablePointer - Build the vtable pointer for the given type.
   void BuildVTablePointer(const Type *Ty);
 
@@ -2446,10 +2441,6 @@ class ItaniumRTTIBuilder {
   /// classes with bases that do not satisfy the abi::__si_class_type_info
   /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
   void BuildVMIClassTypeInfo(const CXXRecordDecl *RD);
-
-  /// Build an abi::__qualified_function_type_info struct, used for function
-  /// types with various kinds of qualifiers.
-  void BuildQualifiedFunctionTypeInfo(const FunctionType *FnTy);
 
   /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct, used
   /// for pointer types.
@@ -2467,27 +2458,6 @@ public:
   ItaniumRTTIBuilder(const ItaniumCXXABI &ABI)
       : CGM(ABI.CGM), VMContext(CGM.getModule().getContext()), CXXABI(ABI) {}
 
-  // Function type info flags.
-  enum {
-    /// Qualifiers for 'this' pointer of member function type.
-    //@{
-    QFTI_Const = 0x1,
-    QFTI_Volatile = 0x2,
-    QFTI_Restrict = 0x4,
-    QFTI_LValRef = 0x8,
-    QFTI_RValRef = 0x10,
-    //@}
-
-    /// Noexcept function qualifier (C++17 onwards).
-    QFTI_Noexcept = 0x20,
-
-    // Transaction-safe function qualifier (Transactional Memory TS).
-    //QFTI_TxSafe = 0x40,
-
-    /// Noreturn function type qualifier (GNU/Clang extension).
-    QFTI_Noreturn = 0x80
-  };
-
   // Pointer type info flags.
   enum {
     /// PTI_Const - Type has const qualifier.
@@ -2504,7 +2474,13 @@ public:
 
     /// PTI_ContainingClassIncomplete - Containing class is incomplete.
     /// (in pointer to member).
-    PTI_ContainingClassIncomplete = 0x10
+    PTI_ContainingClassIncomplete = 0x10,
+
+    /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
+    //PTI_TransactionSafe = 0x20,
+
+    /// PTI_Noexcept - Pointee is noexcept function (C++1z).
+    PTI_Noexcept = 0x40,
   };
 
   // VMI type info flags.
@@ -2839,12 +2815,8 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
 
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    if (EmitAsQualifiedFunctionType(cast<FunctionType>(Ty)))
-      // abi::__qualified_function_type_info.
-      VTableName = "_ZTVN10__cxxabiv130__qualified_function_type_infoE";
-    else
-      // abi::__function_type_info.
-      VTableName = "_ZTVN10__cxxabiv120__function_type_infoE";
+    // abi::__function_type_info.
+    VTableName = "_ZTVN10__cxxabiv120__function_type_infoE";
     break;
 
   case Type::Enum:
@@ -2939,16 +2911,18 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
 
   case VisibleNoLinkage:
   case ExternalLinkage:
-    if (!CGM.getLangOpts().RTTI) {
-      // RTTI is not enabled, which means that this type info struct is going
-      // to be used for exception handling. Give it linkonce_odr linkage.
+    // RTTI is not enabled, which means that this type info struct is going
+    // to be used for exception handling. Give it linkonce_odr linkage.
+    if (!CGM.getLangOpts().RTTI)
       return llvm::GlobalValue::LinkOnceODRLinkage;
-    }
 
     if (const RecordType *Record = dyn_cast<RecordType>(Ty)) {
       const CXXRecordDecl *RD = cast<CXXRecordDecl>(Record->getDecl());
       if (RD->hasAttr<WeakAttr>())
         return llvm::GlobalValue::WeakODRLinkage;
+      if (CGM.getTriple().isWindowsItaniumEnvironment())
+        if (RD->hasAttr<DLLImportAttr>())
+          return llvm::GlobalValue::ExternalLinkage;
       if (RD->isDynamicClass()) {
         llvm::GlobalValue::LinkageTypes LT = CGM.getVTableLinkage(RD);
         // MinGW won't export the RTTI information when there is a key function.
@@ -3058,15 +3032,10 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     break;
 
   case Type::FunctionNoProto:
-  case Type::FunctionProto: {
-    auto *FnTy = cast<FunctionType>(Ty);
+  case Type::FunctionProto:
     // Itanium C++ ABI 2.9.5p5:
     // abi::__function_type_info adds no data members to std::type_info.
-    if (EmitAsQualifiedFunctionType(FnTy))
-      // abi::__qualified_type_info adds a base function type and qualifiers.
-      BuildQualifiedFunctionTypeInfo(FnTy);
     break;
-  }
 
   case Type::Enum:
     // Itanium C++ ABI 2.9.5p5:
@@ -3155,27 +3124,28 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty, bool Force,
     llvmVisibility = llvm::GlobalValue::HiddenVisibility;
   else
     llvmVisibility = CodeGenModule::GetLLVMVisibility(Ty->getVisibility());
+
   TypeName->setVisibility(llvmVisibility);
   GV->setVisibility(llvmVisibility);
-  if (DLLExport)
-    GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+
+  if (CGM.getTriple().isWindowsItaniumEnvironment()) {
+    auto RD = Ty->getAsCXXRecordDecl();
+    if (DLLExport || (RD && RD->hasAttr<DLLExportAttr>())) {
+      TypeName->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+      GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+    } else if (RD && RD->hasAttr<DLLImportAttr>()) {
+      TypeName->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+
+      // Because the typename and the typeinfo are DLL import, convert them to
+      // declarations rather than definitions.  The initializers still need to
+      // be constructed to calculate the type for the declarations.
+      TypeName->setInitializer(nullptr);
+      GV->setInitializer(nullptr);
+    }
+  }
 
   return llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy);
-}
-
-/// ComputeQualifierFlags - Compute the pointer type info flags from the
-/// given qualifier.
-static unsigned ComputeQualifierFlags(Qualifiers Quals) {
-  unsigned Flags = 0;
-
-  if (Quals.hasConst())
-    Flags |= ItaniumRTTIBuilder::PTI_Const;
-  if (Quals.hasVolatile())
-    Flags |= ItaniumRTTIBuilder::PTI_Volatile;
-  if (Quals.hasRestrict())
-    Flags |= ItaniumRTTIBuilder::PTI_Restrict;
-
-  return Flags;
 }
 
 /// BuildObjCObjectTypeInfo - Build the appropriate kind of type_info
@@ -3361,89 +3331,44 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
   }
 }
 
-bool ItaniumRTTIBuilder::EmitAsQualifiedFunctionType(const FunctionType *FnTy) {
-  if (!CXXABI.UseQualifiedFunctionTypeInfoABI)
-    return false;
+/// Compute the flags for a __pbase_type_info, and remove the corresponding
+/// pieces from \p Type.
+static unsigned extractPBaseFlags(ASTContext &Ctx, QualType &Type) {
+  unsigned Flags = 0;
 
-  auto *FPT = dyn_cast<FunctionProtoType>(FnTy);
-  if (!FPT)
-    return false;
-  return FPT->getTypeQuals() || FPT->getRefQualifier() != RQ_None ||
-         FPT->isNothrow(CXXABI.getContext()) || FPT->getNoReturnAttr();
-}
+  if (Type.isConstQualified())
+    Flags |= ItaniumRTTIBuilder::PTI_Const;
+  if (Type.isVolatileQualified())
+    Flags |= ItaniumRTTIBuilder::PTI_Volatile;
+  if (Type.isRestrictQualified())
+    Flags |= ItaniumRTTIBuilder::PTI_Restrict;
+  Type = Type.getUnqualifiedType();
 
-void ItaniumRTTIBuilder::BuildQualifiedFunctionTypeInfo(
-    const FunctionType *FnTy) {
-  unsigned int Qualifiers = 0;
+  // Itanium C++ ABI 2.9.5p7:
+  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
+  //   incomplete class type, the incomplete target type flag is set.
+  if (ContainsIncompleteClassType(Type))
+    Flags |= ItaniumRTTIBuilder::PTI_Incomplete;
 
-  auto ExtInfo = FnTy->getExtInfo();
-  if (ExtInfo.getNoReturn()) {
-    Qualifiers |= QFTI_Noreturn;
-    ExtInfo = ExtInfo.withNoReturn(false);
+  if (auto *Proto = Type->getAs<FunctionProtoType>()) {
+    if (Proto->isNothrow(Ctx)) {
+      Flags |= ItaniumRTTIBuilder::PTI_Noexcept;
+      Type = Ctx.getFunctionType(
+          Proto->getReturnType(), Proto->getParamTypes(),
+          Proto->getExtProtoInfo().withExceptionSpec(EST_None));
+    }
   }
 
-  QualType BaseType;
-  if (auto *FPT = dyn_cast<FunctionProtoType>(FnTy)) {
-    auto EPI = FPT->getExtProtoInfo();
-    EPI.ExtInfo = ExtInfo;
-
-    if (EPI.TypeQuals & Qualifiers::Const)
-      Qualifiers |= QFTI_Const;
-    if (EPI.TypeQuals & Qualifiers::Volatile)
-      Qualifiers |= QFTI_Volatile;
-    if (EPI.TypeQuals & Qualifiers::Restrict)
-      Qualifiers |= QFTI_Restrict;
-    EPI.TypeQuals = 0;
-
-    if (EPI.RefQualifier == RQ_LValue)
-      Qualifiers |= QFTI_LValRef;
-    else if (EPI.RefQualifier == RQ_RValue)
-      Qualifiers |= QFTI_RValRef;
-    EPI.RefQualifier = RQ_None;
-
-    if (EPI.ExceptionSpec.Type == EST_BasicNoexcept)
-      Qualifiers |= QFTI_Noexcept;
-    else
-      assert(EPI.ExceptionSpec.Type == EST_None &&
-             "unexpected canonical non-dependent exception spec");
-    EPI.ExceptionSpec.Type = EST_None;
-
-    BaseType = CXXABI.getContext().getFunctionType(FPT->getReturnType(),
-                                                   FPT->getParamTypes(), EPI);
-  } else {
-    BaseType =
-        QualType(CXXABI.getContext().adjustFunctionType(FnTy, ExtInfo), 0);
-  }
-
-  assert(Qualifiers && "should not have created qualified type info");
-
-  // __base_type is a pointer to the std::type_info derivation for the
-  // unqualified version of the function type.
-  Fields.push_back(ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(BaseType));
-
-  // __qualifiers is a flag word describing the qualifiers of the function type.
-  llvm::Type *UnsignedIntLTy =
-    CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
-  Fields.push_back(llvm::ConstantInt::get(UnsignedIntLTy, Qualifiers));
+  return Flags;
 }
 
 /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct,
 /// used for pointer types.
 void ItaniumRTTIBuilder::BuildPointerTypeInfo(QualType PointeeTy) {
-  Qualifiers Quals;
-  QualType UnqualifiedPointeeTy =
-    CGM.getContext().getUnqualifiedArrayType(PointeeTy, Quals);
-
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to
-  unsigned Flags = ComputeQualifierFlags(Quals);
-
-  // Itanium C++ ABI 2.9.5p7:
-  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
-  //   incomplete class type, the incomplete target type flag is set.
-  if (ContainsIncompleteClassType(UnqualifiedPointeeTy))
-    Flags |= PTI_Incomplete;
+  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   llvm::Type *UnsignedIntLTy =
     CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
@@ -3453,7 +3378,7 @@ void ItaniumRTTIBuilder::BuildPointerTypeInfo(QualType PointeeTy) {
   //  __pointee is a pointer to the std::type_info derivation for the
   //  unqualified type being pointed to.
   llvm::Constant *PointeeTypeInfo =
-    ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(UnqualifiedPointeeTy);
+      ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(PointeeTy);
   Fields.push_back(PointeeTypeInfo);
 }
 
@@ -3463,23 +3388,12 @@ void
 ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   QualType PointeeTy = Ty->getPointeeType();
 
-  Qualifiers Quals;
-  QualType UnqualifiedPointeeTy =
-    CGM.getContext().getUnqualifiedArrayType(PointeeTy, Quals);
-
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to.
-  unsigned Flags = ComputeQualifierFlags(Quals);
+  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   const RecordType *ClassType = cast<RecordType>(Ty->getClass());
-
-  // Itanium C++ ABI 2.9.5p7:
-  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
-  //   incomplete class type, the incomplete target type flag is set.
-  if (ContainsIncompleteClassType(UnqualifiedPointeeTy))
-    Flags |= PTI_Incomplete;
-
   if (IsIncompleteClassType(ClassType))
     Flags |= PTI_ContainingClassIncomplete;
 
@@ -3491,7 +3405,7 @@ ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   //   __pointee is a pointer to the std::type_info derivation for the
   //   unqualified type being pointed to.
   llvm::Constant *PointeeTypeInfo =
-    ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(UnqualifiedPointeeTy);
+      ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(PointeeTy);
   Fields.push_back(PointeeTypeInfo);
 
   // Itanium C++ ABI 2.9.5p9:

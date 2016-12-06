@@ -12,6 +12,7 @@
 #include "FuzzerCorpus.h"
 #include "FuzzerInterface.h"
 #include "FuzzerInternal.h"
+#include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
 
@@ -22,7 +23,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <unistd.h>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
@@ -441,7 +441,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   // Initialize Seed.
   if (Seed == 0)
     Seed = (std::chrono::system_clock::now().time_since_epoch().count() << 10) +
-           getpid();
+           GetPid();
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 

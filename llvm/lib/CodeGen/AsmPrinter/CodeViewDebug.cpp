@@ -864,14 +864,14 @@ CodeViewDebug::createDefRangeGeneral(uint16_t CVRegister, bool InMemory,
   return DR;
 }
 
-void CodeViewDebug::collectVariableInfoFromMMITable(
+void CodeViewDebug::collectVariableInfoFromMFTable(
     DenseSet<InlinedVariable> &Processed) {
-  const TargetSubtargetInfo &TSI = Asm->MF->getSubtarget();
+  const MachineFunction &MF = *Asm->MF;
+  const TargetSubtargetInfo &TSI = MF.getSubtarget();
   const TargetFrameLowering *TFI = TSI.getFrameLowering();
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
-  for (const MachineModuleInfo::VariableDbgInfo &VI :
-       MMI->getVariableDbgInfo()) {
+  for (const MachineFunction::VariableDbgInfo &VI : MF.getVariableDbgInfo()) {
     if (!VI.Var)
       continue;
     assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
@@ -908,7 +908,7 @@ void CodeViewDebug::collectVariableInfoFromMMITable(
 void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
   DenseSet<InlinedVariable> Processed;
   // Grab the variable info that was squirreled away in the MMI side-table.
-  collectVariableInfoFromMMITable(Processed);
+  collectVariableInfoFromMFTable(Processed);
 
   const TargetRegisterInfo *TRI = Asm->MF->getSubtarget().getRegisterInfo();
 
@@ -943,10 +943,10 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
       bool IsSubfield = false;
       unsigned StructOffset = 0;
 
-      // Handle bitpieces.
-      if (DIExpr && DIExpr->isBitPiece()) {
+      // Handle fragments.
+      if (DIExpr && DIExpr->isFragment()) {
         IsSubfield = true;
-        StructOffset = DIExpr->getBitPieceOffset() / 8;
+        StructOffset = DIExpr->getFragmentOffsetInBits() / 8;
       } else if (DIExpr && DIExpr->getNumElements() > 0) {
         continue; // Ignore unrecognized exprs.
       }
@@ -985,7 +985,8 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
         // This range is valid until the next overlapping bitpiece. In the
         // common case, ranges will not be bitpieces, so they will overlap.
         auto J = std::next(I);
-        while (J != E && !piecesOverlap(DIExpr, J->first->getDebugExpression()))
+        while (J != E &&
+               !fragmentsOverlap(DIExpr, J->first->getDebugExpression()))
           ++J;
         if (J != E)
           End = getLabelBeforeInsn(J->first);

@@ -1546,9 +1546,38 @@ def ATOMIC_CMP_SWAPW
   let hasNoSchedulingInfo = 1;
 }
 
+// Test and set.
+let mayLoad = 1, Defs = [CC] in
+  def TS : StoreInherentS<"ts", 0x9300, null_frag, 1>;
+
+// Compare and swap.
 let Defs = [CC] in {
   defm CS  : CmpSwapRSPair<"cs", 0xBA, 0xEB14, atomic_cmp_swap_32, GR32>;
   def  CSG : CmpSwapRSY<"csg", 0xEB30, atomic_cmp_swap_64, GR64>;
+}
+
+// Compare double and swap.
+let Defs = [CC] in {
+  defm CDS  : CmpSwapRSPair<"cds", 0xBB, 0xEB31, null_frag, GR128>;
+  def  CDSG : CmpSwapRSY<"cdsg", 0xEB3E, null_frag, GR128>;
+}
+
+// Compare and swap and store.
+let Uses = [R0L, R1D], Defs = [CC], mayStore = 1, mayLoad = 1 in
+  def CSST : SideEffectTernarySSF<"csst", 0xC82, GR64>;
+
+// Perform locked operation.
+let Uses = [R0L, R1D], Defs = [CC], mayStore = 1, mayLoad =1 in
+  def PLO : SideEffectQuaternarySSe<"plo", 0xEE, GR64>;
+
+// Load/store pair from/to quadword.
+def LPQ  : UnaryRXY<"lpq", 0xE38F, null_frag, GR128, 16>;
+def STPQ : StoreRXY<"stpq", 0xE38E, null_frag, GR128, 16>;
+
+// Load pair disjoint.
+let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
+  def LPD  : BinarySSF<"lpd", 0xC84, GR128>;
+  def LPDG : BinarySSF<"lpdg", 0xC85, GR128>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1584,7 +1613,7 @@ let Uses = [CC] in
   def IPM : InherentRRE<"ipm", 0xB222, GR32, z_ipm>;
 
 // Set CC and program mask from a register.
-let Defs = [CC] in
+let hasSideEffects = 1, Defs = [CC] in
   def SPM : SideEffectUnaryRR<"spm", 0x04, GR32>;
 
 // Branch and link - like BAS, but also extracts CC and program mask.
@@ -1598,9 +1627,11 @@ let Defs = [CC] in
   def TAM : SideEffectInherentE<"tam", 0x010B>;
 
 // Set addressing mode.
-def SAM24 : SideEffectInherentE<"sam24", 0x010C>;
-def SAM31 : SideEffectInherentE<"sam31", 0x010D>;
-def SAM64 : SideEffectInherentE<"sam64", 0x010E>;
+let hasSideEffects = 1 in {
+  def SAM24 : SideEffectInherentE<"sam24", 0x010C>;
+  def SAM31 : SideEffectInherentE<"sam31", 0x010D>;
+  def SAM64 : SideEffectInherentE<"sam64", 0x010E>;
+}
 
 // Branch and set mode.  Not really a call, but also sets an output register.
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in
@@ -1614,7 +1645,7 @@ let isCall = 1, Defs = [CC] in
 // Transactional execution
 //===----------------------------------------------------------------------===//
 
-let Predicates = [FeatureTransactionalExecution] in {
+let hasSideEffects = 1, Predicates = [FeatureTransactionalExecution] in {
   // Transaction Begin
   let mayStore = 1, usesCustomInserter = 1, Defs = [CC] in {
     def TBEGIN : SideEffectBinarySIL<"tbegin", 0xE560, z_tbegin, imm32zx16>;
@@ -1630,15 +1661,13 @@ let Predicates = [FeatureTransactionalExecution] in {
 
   // Transaction Abort
   let isTerminator = 1, isBarrier = 1 in
-    def TABORT : SideEffectUnaryS<"tabort", 0xB2FC, int_s390_tabort>;
+    def TABORT : SideEffectAddressS<"tabort", 0xB2FC, int_s390_tabort>;
 
   // Nontransactional Store
-  let hasSideEffects = 1 in
-    def NTSTG : StoreRXY<"ntstg", 0xE325, int_s390_ntstg, GR64, 8>;
+  def NTSTG : StoreRXY<"ntstg", 0xE325, int_s390_ntstg, GR64, 8>;
 
   // Extract Transaction Nesting Depth
-  let hasSideEffects = 1 in
-    def ETND : InherentRRE<"etnd", 0xB2EC, GR32, int_s390_etnd>;
+  def ETND : InherentRRE<"etnd", 0xB2EC, GR32, int_s390_etnd>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1646,7 +1675,8 @@ let Predicates = [FeatureTransactionalExecution] in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [FeatureProcessorAssist] in {
-  def PPA : SideEffectTernaryRRFc<"ppa", 0xB2E8, GR64, GR64, imm32zx4>;
+  let hasSideEffects = 1 in
+    def PPA : SideEffectTernaryRRFc<"ppa", 0xB2E8, GR64, GR64, imm32zx4>;
   def : Pat<(int_s390_ppa_txassist GR32:$src),
             (PPA (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, subreg_l32),
                  0, 1)>;
@@ -1685,30 +1715,32 @@ let mayLoad = 1, Defs = [CC] in
   defm SRST : StringRRE<"srst", 0xb25e, z_search_string>;
 
 // Supervisor call.
-let isCall = 1, Defs = [CC] in
+let hasSideEffects = 1, isCall = 1, Defs = [CC] in
   def SVC : SideEffectUnaryI<"svc", 0x0A, imm32zx8>;
 
 // Store clock.
 let hasSideEffects = 1, Defs = [CC] in {
-  def STCK  : StoreInherentS<"stck",  0xB205>;
-  def STCKF : StoreInherentS<"stckf", 0xB27C>;
-  def STCKE : StoreInherentS<"stcke", 0xB278>;
+  def STCK  : StoreInherentS<"stck",  0xB205, null_frag, 8>;
+  def STCKF : StoreInherentS<"stckf", 0xB27C, null_frag, 8>;
+  def STCKE : StoreInherentS<"stcke", 0xB278, null_frag, 16>;
 }
 
 // Store facility list.
-let hasSideEffects = 1, Defs = [CC] in
-  def STFLE : StoreInherentS<"stfle", 0xB2B0>;
+let hasSideEffects = 1, Uses = [R0D], Defs = [R0D, CC] in
+  def STFLE : StoreInherentS<"stfle", 0xB2B0, null_frag, 0>;
 
 // Extract CPU time.
-let Defs = [R0D, R1D], mayLoad = 1 in
+let Defs = [R0D, R1D], hasSideEffects = 1, mayLoad = 1 in
   def ECTG : SideEffectTernarySSF<"ectg", 0xC81, GR64>;
 
 // Execute.
-def EX   : SideEffectBinaryRX<"ex", 0x44, GR64>;
-def EXRL : SideEffectBinaryRILPC<"exrl", 0xC60, GR64>;
+let hasSideEffects = 1 in {
+  def EX   : SideEffectBinaryRX<"ex", 0x44, GR64>;
+  def EXRL : SideEffectBinaryRILPC<"exrl", 0xC60, GR64>;
+}
 
 // Program return.
-let Defs = [CC] in
+let hasSideEffects = 1, Defs = [CC] in
   def PR : SideEffectInherentE<"pr", 0x0101>;
 
 // Move with key.

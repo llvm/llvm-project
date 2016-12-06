@@ -74,6 +74,8 @@ StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
   case DW_OP_##NAME:                                                           \
     return "DW_OP_" #NAME;
 #include "llvm/Support/Dwarf.def"
+  case DW_OP_LLVM_fragment:
+    return "DW_OP_LLVM_fragment";
   }
 }
 
@@ -81,6 +83,7 @@ unsigned llvm::dwarf::getOperationEncoding(StringRef OperationEncodingString) {
   return StringSwitch<unsigned>(OperationEncodingString)
 #define HANDLE_DW_OP(ID, NAME) .Case("DW_OP_" #NAME, DW_OP_##NAME)
 #include "llvm/Support/Dwarf.def"
+      .Case("DW_OP_LLVM_fragment", DW_OP_LLVM_fragment)
       .Default(0);
 }
 

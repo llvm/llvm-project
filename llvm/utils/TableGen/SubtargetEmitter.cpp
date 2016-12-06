@@ -294,7 +294,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
     // For each unit
     for (unsigned j = 0, M = UnitList.size(); j < M;) {
       // Add name and bitwise or
-      ItinString += Name + "FU::" + UnitList[j]->getName();
+      ItinString += Name + "FU::" + UnitList[j]->getName().str();
       if (++j < M) ItinString += " | ";
     }
 
@@ -341,7 +341,7 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
   unsigned N = BypassList.size();
   unsigned i = 0;
   for (; i < N;) {
-    ItinString += Name + "Bypass::" + BypassList[i]->getName();
+    ItinString += Name + "Bypass::" + BypassList[i]->getName().str();
     if (++i < NOperandCycles) ItinString += ", ";
   }
   for (; i < NOperandCycles;) {

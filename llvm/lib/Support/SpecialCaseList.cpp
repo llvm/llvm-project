@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/TrigramIndex.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -33,10 +34,15 @@ namespace llvm {
 /// literal strings than Regex.
 struct SpecialCaseList::Entry {
   StringSet<> Strings;
+  TrigramIndex Trigrams;
   std::unique_ptr<Regex> RegEx;
 
   bool match(StringRef Query) const {
-    return Strings.count(Query) || (RegEx && RegEx->match(Query));
+    if (Strings.count(Query))
+      return true;
+    if (Trigrams.isDefinitelyOut(Query))
+      return false;
+    return RegEx && RegEx->match(Query);
   }
 };
 
@@ -104,13 +110,15 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
     StringRef Category = SplitRegexp.second;
 
     // See if we can store Regexp in Strings.
+    auto &Entry = Entries[Prefix][Category];
     if (Regex::isLiteralERE(Regexp)) {
-      Entries[Prefix][Category].Strings.insert(Regexp);
+      Entry.Strings.insert(Regexp);
       continue;
     }
+    Entry.Trigrams.insert(Regexp);
 
     // Replace * with .*
-    for (size_t pos = 0; (pos = Regexp.find("*", pos)) != std::string::npos;
+    for (size_t pos = 0; (pos = Regexp.find('*', pos)) != std::string::npos;
          pos += strlen(".*")) {
       Regexp.replace(pos, strlen("*"), ".*");
     }

@@ -17,7 +17,7 @@ define void @test(%S* %cpi, i1 %b) {
 ; SCOPS-NEXT:            Execution Context: [l2, l1] -> {  : l2 > 0 }
 ; SCOPS-NEXT:    }
 ; SCOPS:         Arrays {
-; SCOPS-NEXT:        i32 MemRef_cpi[*][%l1]; // Element size 4
+; SCOPS-NEXT:        i32 MemRef_cpi[*][(10 * %l1)]; // Element size 4
 ; SCOPS-NEXT:    }
 
 ; FIXME: Figure out how to actually generate code for this loop.

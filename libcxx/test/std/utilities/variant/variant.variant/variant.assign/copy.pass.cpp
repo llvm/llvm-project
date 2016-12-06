@@ -24,32 +24,32 @@
 #include "test_macros.h"
 
 struct NoCopy {
-  NoCopy(NoCopy const &) = delete;
-  NoCopy &operator=(NoCopy const &) = default;
+  NoCopy(const NoCopy &) = delete;
+  NoCopy &operator=(const NoCopy &) = default;
 };
 
 struct NothrowCopy {
-  NothrowCopy(NothrowCopy const &) noexcept = default;
-  NothrowCopy &operator=(NothrowCopy const &) noexcept = default;
+  NothrowCopy(const NothrowCopy &) noexcept = default;
+  NothrowCopy &operator=(const NothrowCopy &) noexcept = default;
 };
 
 struct CopyOnly {
-  CopyOnly(CopyOnly const &) = default;
+  CopyOnly(const CopyOnly &) = default;
   CopyOnly(CopyOnly &&) = delete;
-  CopyOnly &operator=(CopyOnly const &) = default;
+  CopyOnly &operator=(const CopyOnly &) = default;
   CopyOnly &operator=(CopyOnly &&) = delete;
 };
 
 struct MoveOnly {
-  MoveOnly(MoveOnly const &) = delete;
+  MoveOnly(const MoveOnly &) = delete;
   MoveOnly(MoveOnly &&) = default;
-  MoveOnly &operator=(MoveOnly const &) = default;
+  MoveOnly &operator=(const MoveOnly &) = default;
 };
 
 struct MoveOnlyNT {
-  MoveOnlyNT(MoveOnlyNT const &) = delete;
+  MoveOnlyNT(const MoveOnlyNT &) = delete;
   MoveOnlyNT(MoveOnlyNT &&) {}
-  MoveOnlyNT &operator=(MoveOnlyNT const &) = default;
+  MoveOnlyNT &operator=(const MoveOnlyNT &) = default;
 };
 
 struct CopyAssign {
@@ -62,7 +62,7 @@ struct CopyAssign {
     copy_construct = copy_assign = move_construct = move_assign = alive = 0;
   }
   CopyAssign(int v) : value(v) { ++alive; }
-  CopyAssign(CopyAssign const &o) : value(o.value) {
+  CopyAssign(const CopyAssign &o) : value(o.value) {
     ++alive;
     ++copy_construct;
   }
@@ -71,7 +71,7 @@ struct CopyAssign {
     ++alive;
     ++move_construct;
   }
-  CopyAssign &operator=(CopyAssign const &o) {
+  CopyAssign &operator=(const CopyAssign &o) {
     value = o.value;
     ++copy_assign;
     return *this;
@@ -93,27 +93,27 @@ int CopyAssign::move_construct = 0;
 int CopyAssign::move_assign = 0;
 
 struct CopyMaybeThrows {
-  CopyMaybeThrows(CopyMaybeThrows const &);
-  CopyMaybeThrows &operator=(CopyMaybeThrows const &);
+  CopyMaybeThrows(const CopyMaybeThrows &);
+  CopyMaybeThrows &operator=(const CopyMaybeThrows &);
 };
 struct CopyDoesThrow {
-  CopyDoesThrow(CopyDoesThrow const &) noexcept(false);
-  CopyDoesThrow &operator=(CopyDoesThrow const &) noexcept(false);
+  CopyDoesThrow(const CopyDoesThrow &) noexcept(false);
+  CopyDoesThrow &operator=(const CopyDoesThrow &) noexcept(false);
 };
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct CopyThrows {
   CopyThrows() = default;
-  CopyThrows(CopyThrows const &) { throw 42; }
-  CopyThrows &operator=(CopyThrows const &) { throw 42; }
+  CopyThrows(const CopyThrows &) { throw 42; }
+  CopyThrows &operator=(const CopyThrows &) { throw 42; }
 };
 
 struct MoveThrows {
   static int alive;
   MoveThrows() { ++alive; }
-  MoveThrows(MoveThrows const &) { ++alive; }
+  MoveThrows(const MoveThrows &) { ++alive; }
   MoveThrows(MoveThrows &&) { throw 42; }
-  MoveThrows &operator=(MoveThrows const &) { return *this; }
+  MoveThrows &operator=(const MoveThrows &) { return *this; }
   MoveThrows &operator=(MoveThrows &&) { throw 42; }
   ~MoveThrows() { --alive; }
 };
@@ -123,13 +123,13 @@ int MoveThrows::alive = 0;
 struct MakeEmptyT {
   static int alive;
   MakeEmptyT() { ++alive; }
-  MakeEmptyT(MakeEmptyT const &) {
+  MakeEmptyT(const MakeEmptyT &) {
     ++alive;
     // Don't throw from the copy constructor since variant's assignment
     // operator performs a copy before committing to the assignment.
   }
   MakeEmptyT(MakeEmptyT &&) { throw 42; }
-  MakeEmptyT &operator=(MakeEmptyT const &) { throw 42; }
+  MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
   MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
   ~MakeEmptyT() { --alive; }
 };
@@ -164,7 +164,7 @@ void test_copy_assignment_sfinae() {
     static_assert(std::is_copy_assignable<V>::value, "");
   }
   {
-    // variant only provides copy assignment when beth the copy and move
+    // variant only provides copy assignment when both the copy and move
     // constructors are well formed
     using V = std::variant<int, CopyOnly>;
     static_assert(!std::is_copy_assignable<V>::value, "");
@@ -384,6 +384,7 @@ void test_copy_assignment_different_index() {
   }
 #endif
 }
+
 
 int main() {
   test_copy_assignment_empty_empty();

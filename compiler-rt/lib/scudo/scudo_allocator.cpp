@@ -22,23 +22,57 @@
 
 #include <limits.h>
 #include <pthread.h>
-#include <smmintrin.h>
 
 #include <cstring>
 
+// Hardware CRC32 is supported at compilation via the following:
+// - for i386 & x86_64: -msse4.2
+// - for ARM & AArch64: -march=armv8-a+crc
+// An additional check must be performed at runtime as well to make sure the
+// emitted instructions are valid on the target host.
+#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+# ifdef __SSE4_2__
+#  include <smmintrin.h>
+#  define HW_CRC32 FIRST_32_SECOND_64(_mm_crc32_u32, _mm_crc32_u64)
+# endif
+# ifdef __ARM_FEATURE_CRC32
+#  include <arm_acle.h>
+#  define HW_CRC32 FIRST_32_SECOND_64(__crc32cw, __crc32cd)
+# endif
+#endif
+
 namespace __scudo {
 
+#if SANITIZER_CAN_USE_ALLOCATOR64
+const uptr AllocatorSpace = ~0ULL;
+const uptr AllocatorSize = 0x40000000000ULL;
+typedef DefaultSizeClassMap SizeClassMap;
 struct AP {
-  static const uptr kSpaceBeg = ~0ULL;
-  static const uptr kSpaceSize = 0x10000000000ULL;
+  static const uptr kSpaceBeg = AllocatorSpace;
+  static const uptr kSpaceSize = AllocatorSize;
   static const uptr kMetadataSize = 0;
-  typedef DefaultSizeClassMap SizeClassMap;
+  typedef __scudo::SizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags =
       SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
 };
-
 typedef SizeClassAllocator64<AP> PrimaryAllocator;
+#else
+// Currently, the 32-bit Sanitizer allocator has not yet benefited from all the
+// security improvements brought to the 64-bit one. This makes the 32-bit
+// version of Scudo slightly less toughened.
+static const uptr RegionSizeLog = 20;
+static const uptr NumRegions = SANITIZER_MMAP_RANGE_SIZE >> RegionSizeLog;
+# if SANITIZER_WORDSIZE == 32
+typedef FlatByteMap<NumRegions> ByteMap;
+# elif SANITIZER_WORDSIZE == 64
+typedef TwoLevelByteMap<(NumRegions >> 12), 1 << 12> ByteMap;
+# endif  // SANITIZER_WORDSIZE
+typedef SizeClassMap<3, 4, 8, 16, 64, 14> SizeClassMap;
+typedef SizeClassAllocator32<0, SANITIZER_MMAP_RANGE_SIZE, 0, SizeClassMap,
+    RegionSizeLog, ByteMap> PrimaryAllocator;
+#endif  // SANITIZER_CAN_USE_ALLOCATOR64
+
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef ScudoLargeMmapAllocator SecondaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator, AllocatorCache, SecondaryAllocator>
@@ -48,7 +82,34 @@ static ScudoAllocator &getAllocator();
 
 static thread_local Xorshift128Plus Prng;
 // Global static cookie, initialized at start-up.
-static u64 Cookie;
+static uptr Cookie;
+
+enum : u8 {
+  CRC32Software = 0,
+  CRC32Hardware = 1,
+};
+// We default to software CRC32 if the alternatives are not supported, either
+// at compilation or at runtime.
+static atomic_uint8_t HashAlgorithm = { CRC32Software };
+
+// Helper function that will compute the chunk checksum, being passed all the
+// the needed information as uptrs. It will opt for the hardware version of
+// the checksumming function if available.
+INLINE u32 hashUptrs(uptr Pointer, uptr *Array, uptr ArraySize, u8 HashType) {
+  u32 Crc;
+#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+  if (HashType == CRC32Hardware) {
+    Crc = HW_CRC32(Cookie, Pointer);
+    for (uptr i = 0; i < ArraySize; i++)
+      Crc = HW_CRC32(Crc, Array[i]);
+    return Crc;
+  }
+#endif
+  Crc = computeCRC32(Cookie, Pointer);
+  for (uptr i = 0; i < ArraySize; i++)
+    Crc = computeCRC32(Crc, Array[i]);
+  return Crc;
+}
 
 struct ScudoChunk : UnpackedHeader {
   // We can't use the offset member of the chunk itself, as we would double
@@ -59,19 +120,37 @@ struct ScudoChunk : UnpackedHeader {
         reinterpret_cast<uptr>(this) - (Header->Offset << MinAlignmentLog));
   }
 
-  // CRC32 checksum of the Chunk pointer and its ChunkHeader.
-  // It currently uses the Intel Nehalem SSE4.2 crc32 64-bit instruction.
+  // Returns the usable size for a chunk, meaning the amount of bytes from the
+  // beginning of the user data to the end of the backend allocated chunk.
+  uptr getUsableSize(UnpackedHeader *Header) {
+    uptr Size = getAllocator().GetActuallyAllocatedSize(getAllocBeg(Header));
+    if (Size == 0)
+      return Size;
+    return Size - AlignedChunkHeaderSize - (Header->Offset << MinAlignmentLog);
+  }
+
+  // Compute the checksum of the Chunk pointer and its ChunkHeader.
   u16 computeChecksum(UnpackedHeader *Header) const {
-    u64 HeaderHolder[2];
-    memcpy(HeaderHolder, Header, sizeof(HeaderHolder));
-    u64 Crc = _mm_crc32_u64(Cookie, reinterpret_cast<uptr>(this));
-    // This is somewhat of a shortcut. The checksum is stored in the 16 least
-    // significant bits of the first 8 bytes of the header, hence zero-ing
-    // those bits out. It would be more valid to zero the checksum field of the
-    // UnpackedHeader, but would require holding an additional copy of it.
-    Crc = _mm_crc32_u64(Crc, HeaderHolder[0] & 0xffffffffffff0000ULL);
-    Crc = _mm_crc32_u64(Crc, HeaderHolder[1]);
-    return static_cast<u16>(Crc);
+    UnpackedHeader ZeroChecksumHeader = *Header;
+    ZeroChecksumHeader.Checksum = 0;
+    uptr HeaderHolder[sizeof(UnpackedHeader) / sizeof(uptr)];
+    memcpy(&HeaderHolder, &ZeroChecksumHeader, sizeof(HeaderHolder));
+    u32 Hash = hashUptrs(reinterpret_cast<uptr>(this),
+                         HeaderHolder,
+                         ARRAY_SIZE(HeaderHolder),
+                         atomic_load_relaxed(&HashAlgorithm));
+    return static_cast<u16>(Hash);
+  }
+
+  // Checks the validity of a chunk by verifying its checksum.
+  bool isValid() {
+    UnpackedHeader NewUnpackedHeader;
+    const AtomicPackedHeader *AtomicHeader =
+        reinterpret_cast<const AtomicPackedHeader *>(this);
+    PackedHeader NewPackedHeader =
+        AtomicHeader->load(std::memory_order_relaxed);
+    NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
+    return (NewUnpackedHeader.Checksum == computeChecksum(&NewUnpackedHeader));
   }
 
   // Loads and unpacks the header, verifying the checksum in the process.
@@ -81,9 +160,7 @@ struct ScudoChunk : UnpackedHeader {
     PackedHeader NewPackedHeader =
         AtomicHeader->load(std::memory_order_relaxed);
     *NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
-    if ((NewUnpackedHeader->Unused_0_ != 0) ||
-        (NewUnpackedHeader->Unused_1_ != 0) ||
-        (NewUnpackedHeader->Checksum != computeChecksum(NewUnpackedHeader))) {
+    if (NewUnpackedHeader->Checksum != computeChecksum(NewUnpackedHeader)) {
       dieWithMessage("ERROR: corrupted chunk header at address %p\n", this);
     }
   }
@@ -119,7 +196,7 @@ struct ScudoChunk : UnpackedHeader {
 static bool ScudoInitIsRunning = false;
 
 static pthread_once_t GlobalInited = PTHREAD_ONCE_INIT;
-static pthread_key_t pkey;
+static pthread_key_t PThreadKey;
 
 static thread_local bool ThreadInited = false;
 static thread_local bool ThreadTornDown = false;
@@ -133,7 +210,7 @@ static void teardownThread(void *p) {
   // like, so we wait until PTHREAD_DESTRUCTOR_ITERATIONS before draining the
   // quarantine and swallowing the cache.
   if (v < PTHREAD_DESTRUCTOR_ITERATIONS) {
-    pthread_setspecific(pkey, reinterpret_cast<void *>(v + 1));
+    pthread_setspecific(PThreadKey, reinterpret_cast<void *>(v + 1));
     return;
   }
   drainQuarantine();
@@ -145,6 +222,11 @@ static void initInternal() {
   SanitizerToolName = "Scudo";
   CHECK(!ScudoInitIsRunning && "Scudo init calls itself!");
   ScudoInitIsRunning = true;
+
+  // Check is SSE4.2 is supported, if so, opt for the CRC32 hardware version.
+  if (testCPUFeature(CRC32CPUFeature)) {
+    atomic_store_relaxed(&HashAlgorithm, CRC32Hardware);
+  }
 
   initFlags();
 
@@ -158,13 +240,13 @@ static void initInternal() {
 }
 
 static void initGlobal() {
-  pthread_key_create(&pkey, teardownThread);
+  pthread_key_create(&PThreadKey, teardownThread);
   initInternal();
 }
 
 static void NOINLINE initThread() {
   pthread_once(&GlobalInited, initGlobal);
-  pthread_setspecific(pkey, reinterpret_cast<void *>(1));
+  pthread_setspecific(PThreadKey, reinterpret_cast<void *>(1));
   getAllocator().InitCache(&Cache);
   ThreadInited = true;
 }
@@ -253,9 +335,6 @@ struct Allocator {
       FallbackQuarantineCache(LINKER_INITIALIZED) {}
 
   void init(const AllocatorOptions &Options) {
-    // Currently SSE 4.2 support is required. This might change later.
-    CHECK(testCPUFeature(SSE4_2)); // for crc32
-
     // Verify that the header offset field can hold the maximum offset. In the
     // case of the Secondary allocator, it takes care of alignment and the
     // offset will always be 0. In the case of the Primary, the worst case
@@ -266,13 +345,24 @@ struct Allocator {
     // last size class minus the header size, in multiples of MinAlignment.
     UnpackedHeader Header = {};
     uptr MaxPrimaryAlignment = 1 << MostSignificantSetBitIndex(
-        PrimaryAllocator::SizeClassMap::kMaxSize - MinAlignment);
-    uptr MaximumOffset = (MaxPrimaryAlignment - ChunkHeaderSize) >>
+        SizeClassMap::kMaxSize - MinAlignment);
+    uptr MaxOffset = (MaxPrimaryAlignment - AlignedChunkHeaderSize) >>
         MinAlignmentLog;
-    Header.Offset = MaximumOffset;
-    if (Header.Offset != MaximumOffset) {
+    Header.Offset = MaxOffset;
+    if (Header.Offset != MaxOffset) {
       dieWithMessage("ERROR: the maximum possible offset doesn't fit in the "
                      "header\n");
+    }
+    // Verify that we can fit the maximum amount of unused bytes in the header.
+    // The worst case scenario would be when allocating 1 byte on a MaxAlignment
+    // alignment. Since the combined allocator currently rounds the size up to
+    // the alignment before passing it to the secondary, we end up with
+    // MaxAlignment - 1 extra bytes.
+    uptr MaxUnusedBytes = MaxAlignment - 1;
+    Header.UnusedBytes = MaxUnusedBytes;
+    if (Header.UnusedBytes != MaxUnusedBytes) {
+      dieWithMessage("ERROR: the maximum possible unused bytes doesn't fit in "
+                     "the header\n");
     }
 
     DeallocationTypeMismatch = Options.DeallocationTypeMismatch;
@@ -284,6 +374,17 @@ struct Allocator {
         static_cast<uptr>(Options.ThreadLocalQuarantineSizeKb) << 10);
     BackendAllocator.InitCache(&FallbackAllocatorCache);
     Cookie = Prng.Next();
+  }
+
+  // Helper function that checks for a valid Scudo chunk.
+  bool isValidPointer(const void *UserPtr) {
+    uptr ChunkBeg = reinterpret_cast<uptr>(UserPtr);
+    if (!IsAligned(ChunkBeg, MinAlignment)) {
+      return false;
+    }
+    ScudoChunk *Chunk =
+        reinterpret_cast<ScudoChunk *>(ChunkBeg - AlignedChunkHeaderSize);
+    return Chunk->isValid();
   }
 
   // Allocates a chunk.
@@ -302,7 +403,7 @@ struct Allocator {
     if (Size >= MaxAllowedMallocSize)
       return BackendAllocator.ReturnNullOrDieOnBadRequest();
     uptr RoundedSize = RoundUpTo(Size, MinAlignment);
-    uptr NeededSize = RoundedSize + ChunkHeaderSize;
+    uptr NeededSize = RoundedSize + AlignedChunkHeaderSize;
     if (Alignment > MinAlignment)
       NeededSize += Alignment;
     if (NeededSize >= MaxAllowedMallocSize)
@@ -321,28 +422,33 @@ struct Allocator {
     if (!Ptr)
       return BackendAllocator.ReturnNullOrDieOnOOM();
 
-    // If requested, we will zero out the entire contents of the returned chunk.
-    if (ZeroContents && BackendAllocator.FromPrimary(Ptr))
-       memset(Ptr, 0, BackendAllocator.GetActuallyAllocatedSize(Ptr));
-
     uptr AllocBeg = reinterpret_cast<uptr>(Ptr);
     // If the allocation was serviced by the secondary, the returned pointer
     // accounts for ChunkHeaderSize to pass the alignment check of the combined
     // allocator. Adjust it here.
     if (!FromPrimary)
-      AllocBeg -= ChunkHeaderSize;
-    uptr ChunkBeg = AllocBeg + ChunkHeaderSize;
+      AllocBeg -= AlignedChunkHeaderSize;
+
+    uptr ActuallyAllocatedSize = BackendAllocator.GetActuallyAllocatedSize(
+        reinterpret_cast<void *>(AllocBeg));
+    // If requested, we will zero out the entire contents of the returned chunk.
+    if (ZeroContents && FromPrimary)
+       memset(Ptr, 0, ActuallyAllocatedSize);
+
+    uptr ChunkBeg = AllocBeg + AlignedChunkHeaderSize;
     if (!IsAligned(ChunkBeg, Alignment))
       ChunkBeg = RoundUpTo(ChunkBeg, Alignment);
     CHECK_LE(ChunkBeg + Size, AllocBeg + NeededSize);
     ScudoChunk *Chunk =
-        reinterpret_cast<ScudoChunk *>(ChunkBeg - ChunkHeaderSize);
+        reinterpret_cast<ScudoChunk *>(ChunkBeg - AlignedChunkHeaderSize);
     UnpackedHeader Header = {};
     Header.State = ChunkAllocated;
-    Header.Offset = (ChunkBeg - ChunkHeaderSize - AllocBeg) >> MinAlignmentLog;
+    uptr Offset = ChunkBeg - AlignedChunkHeaderSize - AllocBeg;
+    Header.Offset = Offset >> MinAlignmentLog;
     Header.AllocType = Type;
-    Header.RequestedSize = Size;
-    Header.Salt = static_cast<u16>(Prng.Next());
+    Header.UnusedBytes = ActuallyAllocatedSize - Offset -
+        AlignedChunkHeaderSize - Size;
+    Header.Salt = static_cast<u8>(Prng.Next());
     Chunk->storeHeader(&Header);
     void *UserPtr = reinterpret_cast<void *>(ChunkBeg);
     // TODO(kostyak): hooks sound like a terrible idea security wise but might
@@ -366,13 +472,14 @@ struct Allocator {
                      "aligned at address %p\n", UserPtr);
     }
     ScudoChunk *Chunk =
-        reinterpret_cast<ScudoChunk *>(ChunkBeg - ChunkHeaderSize);
+        reinterpret_cast<ScudoChunk *>(ChunkBeg - AlignedChunkHeaderSize);
     UnpackedHeader OldHeader;
     Chunk->loadHeader(&OldHeader);
     if (OldHeader.State != ChunkAllocated) {
       dieWithMessage("ERROR: invalid chunk state when deallocating address "
-                     "%p\n", Chunk);
+                     "%p\n", UserPtr);
     }
+    uptr UsableSize = Chunk->getUsableSize(&OldHeader);
     UnpackedHeader NewHeader = OldHeader;
     NewHeader.State = ChunkQuarantine;
     Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
@@ -386,57 +493,23 @@ struct Allocator {
         }
       }
     }
-    uptr Size = NewHeader.RequestedSize;
+    uptr Size = UsableSize - OldHeader.UnusedBytes;
     if (DeleteSizeMismatch) {
       if (DeleteSize && DeleteSize != Size) {
         dieWithMessage("ERROR: invalid sized delete on chunk at address %p\n",
                        Chunk);
       }
     }
+
     if (LIKELY(!ThreadTornDown)) {
       AllocatorQuarantine.Put(&ThreadQuarantineCache,
-                              QuarantineCallback(&Cache), Chunk, Size);
+                              QuarantineCallback(&Cache), Chunk, UsableSize);
     } else {
       SpinMutexLock l(&FallbackMutex);
       AllocatorQuarantine.Put(&FallbackQuarantineCache,
                               QuarantineCallback(&FallbackAllocatorCache),
-                              Chunk, Size);
+                              Chunk, UsableSize);
     }
-  }
-
-  // Returns the actual usable size of a chunk. Since this requires loading the
-  // header, we will return it in the second parameter, as it can be required
-  // by the caller to perform additional processing.
-  uptr getUsableSize(const void *Ptr, UnpackedHeader *Header) {
-    if (UNLIKELY(!ThreadInited))
-      initThread();
-    if (!Ptr)
-      return 0;
-    uptr ChunkBeg = reinterpret_cast<uptr>(Ptr);
-    ScudoChunk *Chunk =
-        reinterpret_cast<ScudoChunk *>(ChunkBeg - ChunkHeaderSize);
-    Chunk->loadHeader(Header);
-    // Getting the usable size of a chunk only makes sense if it's allocated.
-    if (Header->State != ChunkAllocated) {
-      dieWithMessage("ERROR: attempted to size a non-allocated chunk at "
-                     "address %p\n", Chunk);
-    }
-    uptr Size =
-        BackendAllocator.GetActuallyAllocatedSize(Chunk->getAllocBeg(Header));
-    // UsableSize works as malloc_usable_size, which is also what (AFAIU)
-    // tcmalloc's MallocExtension::GetAllocatedSize aims at providing. This
-    // means we will return the size of the chunk from the user beginning to
-    // the end of the 'user' allocation, hence us subtracting the header size
-    // and the offset from the size.
-    if (Size == 0)
-      return Size;
-    return Size - ChunkHeaderSize - (Header->Offset << MinAlignmentLog);
-  }
-
-  // Helper function that doesn't care about the header.
-  uptr getUsableSize(const void *Ptr) {
-    UnpackedHeader Header;
-    return getUsableSize(Ptr, &Header);
   }
 
   // Reallocates a chunk. We can save on a new allocation if the new requested
@@ -444,11 +517,16 @@ struct Allocator {
   void *reallocate(void *OldPtr, uptr NewSize) {
     if (UNLIKELY(!ThreadInited))
       initThread();
-    UnpackedHeader OldHeader;
-    uptr Size = getUsableSize(OldPtr, &OldHeader);
     uptr ChunkBeg = reinterpret_cast<uptr>(OldPtr);
     ScudoChunk *Chunk =
-        reinterpret_cast<ScudoChunk *>(ChunkBeg - ChunkHeaderSize);
+        reinterpret_cast<ScudoChunk *>(ChunkBeg - AlignedChunkHeaderSize);
+    UnpackedHeader OldHeader;
+    Chunk->loadHeader(&OldHeader);
+    if (OldHeader.State != ChunkAllocated) {
+      dieWithMessage("ERROR: invalid chunk state when reallocating address "
+                     "%p\n", OldPtr);
+    }
+    uptr Size = Chunk->getUsableSize(&OldHeader);
     if (OldHeader.AllocType != FromMalloc) {
       dieWithMessage("ERROR: invalid chunk type when reallocating address %p\n",
                      Chunk);
@@ -456,7 +534,7 @@ struct Allocator {
     UnpackedHeader NewHeader = OldHeader;
     // The new size still fits in the current chunk.
     if (NewSize <= Size) {
-      NewHeader.RequestedSize = NewSize;
+      NewHeader.UnusedBytes = Size - NewSize;
       Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
       return OldPtr;
     }
@@ -464,21 +542,40 @@ struct Allocator {
     // old one.
     void *NewPtr = allocate(NewSize, MinAlignment, FromMalloc);
     if (NewPtr) {
-      uptr OldSize = OldHeader.RequestedSize;
+      uptr OldSize = Size - OldHeader.UnusedBytes;
       memcpy(NewPtr, OldPtr, Min(NewSize, OldSize));
       NewHeader.State = ChunkQuarantine;
       Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
       if (LIKELY(!ThreadTornDown)) {
         AllocatorQuarantine.Put(&ThreadQuarantineCache,
-                                QuarantineCallback(&Cache), Chunk, OldSize);
+                                QuarantineCallback(&Cache), Chunk, Size);
       } else {
         SpinMutexLock l(&FallbackMutex);
         AllocatorQuarantine.Put(&FallbackQuarantineCache,
                                 QuarantineCallback(&FallbackAllocatorCache),
-                                Chunk, OldSize);
+                                Chunk, Size);
       }
     }
     return NewPtr;
+  }
+
+  // Helper function that returns the actual usable size of a chunk.
+  uptr getUsableSize(const void *Ptr) {
+    if (UNLIKELY(!ThreadInited))
+      initThread();
+    if (!Ptr)
+      return 0;
+    uptr ChunkBeg = reinterpret_cast<uptr>(Ptr);
+    ScudoChunk *Chunk =
+        reinterpret_cast<ScudoChunk *>(ChunkBeg - AlignedChunkHeaderSize);
+    UnpackedHeader Header;
+    Chunk->loadHeader(&Header);
+    // Getting the usable size of a chunk only makes sense if it's allocated.
+    if (Header.State != ChunkAllocated) {
+      dieWithMessage("ERROR: invalid chunk state when sizing address %p\n",
+                     Ptr);
+    }
+    return Chunk->getUsableSize(&Header);
   }
 
   void *calloc(uptr NMemB, uptr Size) {
@@ -575,7 +672,7 @@ uptr scudoMallocUsableSize(void *Ptr) {
   return Instance.getUsableSize(Ptr);
 }
 
-} // namespace __scudo
+}  // namespace __scudo
 
 using namespace __scudo;
 
@@ -605,10 +702,10 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) {
   return size;
 }
 
-int __sanitizer_get_ownership(const void *p) {
-  return Instance.getUsableSize(p) != 0;
+int __sanitizer_get_ownership(const void *Ptr) {
+  return Instance.isValidPointer(Ptr);
 }
 
-uptr __sanitizer_get_allocated_size(const void *p) {
-  return Instance.getUsableSize(p);
+uptr __sanitizer_get_allocated_size(const void *Ptr) {
+  return Instance.getUsableSize(Ptr);
 }

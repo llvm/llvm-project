@@ -144,15 +144,13 @@ int main(int argc, const char **argv) {
   if (DumpDecls) {
     llvm::outs() << "[\n";
     const auto &Declarations = Reporter.getDeclarationList();
-    for (auto DeclPair : Declarations) {
+    for (auto I = Declarations.begin(), E = Declarations.end(); I != E; ++I) {
       llvm::outs() << "  {\n";
-      llvm::outs() << "    \"DeclarationName\": \"" << DeclPair.first
-                   << "\",\n";
-      llvm::outs() << "    \"DeclarationType\": \"" << DeclPair.second
-                   << "\"\n";
+      llvm::outs() << "    \"DeclarationName\": \"" << I->first << "\",\n";
+      llvm::outs() << "    \"DeclarationType\": \"" << I->second << "\"\n";
       llvm::outs() << "  }";
       // Don't print trailing "," at the end of last element.
-      if (DeclPair != *(--Declarations.end()))
+      if (I != std::prev(E))
         llvm::outs() << ",\n";
     }
     llvm::outs() << "\n]\n";
@@ -196,10 +194,10 @@ int main(int argc, const char **argv) {
       Files.insert(it.first);
     auto WriteToJson = [&](llvm::raw_ostream &OS) {
       OS << "[\n";
-      for (auto File : Files) {
+      for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
         OS << "  {\n";
-        OS << "    \"FilePath\": \"" << File << "\",\n";
-        const auto *Entry = FileMgr.getFile(File);
+        OS << "    \"FilePath\": \"" << *I << "\",\n";
+        const auto *Entry = FileMgr.getFile(*I);
         auto ID = SM.translateFile(Entry);
         std::string Content;
         llvm::raw_string_ostream ContentStream(Content);
@@ -207,7 +205,7 @@ int main(int argc, const char **argv) {
         OS << "    \"SourceText\": \""
            << llvm::yaml::escape(ContentStream.str()) << "\"\n";
         OS << "  }";
-        if (File != *(--Files.end()))
+        if (I != std::prev(E))
           OS << ",\n";
       }
       OS << "\n]\n";

@@ -335,6 +335,9 @@ clang_Cursor_hasAttrs
 clang_Cursor_Evaluate
 clang_EvalResult_getKind
 clang_EvalResult_getAsInt
+clang_EvalResult_getAsLongLong
+clang_EvalResult_getAsUnsigned
+clang_EvalResult_isUnsignedInt
 clang_EvalResult_getAsDouble
 clang_EvalResult_getAsStr
 clang_EvalResult_dispose

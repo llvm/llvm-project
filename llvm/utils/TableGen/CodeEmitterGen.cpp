@@ -13,26 +13,35 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "SubtargetFeatureInfo.h"
-#include "Types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <cassert>
+#include <cstdint>
 #include <map>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
+
 using namespace llvm;
 
 namespace {
 
 class CodeEmitterGen {
   RecordKeeper &Records;
+
 public:
   CodeEmitterGen(RecordKeeper &R) : Records(R) {}
 
   void run(raw_ostream &o);
+
 private:
   int getVariableBit(const std::string &VarName, BitsInit *BI, int bit);
   std::string getInstructionCase(Record *R, CodeGenTarget &Target);
@@ -175,7 +184,6 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
   }
 }
 
-
 std::string CodeEmitterGen::getInstructionCase(Record *R,
                                                CodeGenTarget &Target) {
   std::string Case;
@@ -261,7 +269,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   o << "    UINT64_C(0)\n  };\n";
 
   // Map to accumulate all the cases.
-  std::map<std::string, std::vector<std::string> > CaseMap;
+  std::map<std::string, std::vector<std::string>> CaseMap;
 
   // Construct all cases statement for each opcode
   for (std::vector<Record*>::iterator IC = Insts.begin(), EC = Insts.end();
@@ -271,7 +279,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
         R->getValueAsBit("isPseudo"))
       continue;
     const std::string &InstName = R->getValueAsString("Namespace") + "::"
-      + R->getName();
+      + R->getName().str();
     std::string Case = getInstructionCase(R, Target);
 
     CaseMap[Case].push_back(InstName);
@@ -285,7 +293,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
     << "  switch (opcode) {\n";
 
   // Emit each case statement
-  std::map<std::string, std::vector<std::string> >::iterator IE, EE;
+  std::map<std::string, std::vector<std::string>>::iterator IE, EE;
   for (IE = CaseMap.begin(), EE = CaseMap.end(); IE != EE; ++IE) {
     const std::string &Case = IE->first;
     std::vector<std::string> &InstList = IE->second;
@@ -374,7 +382,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   o << "#endif\n";
 }
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -383,4 +391,4 @@ void EmitCodeEmitter(RecordKeeper &RK, raw_ostream &OS) {
   CodeEmitterGen(RK).run(OS);
 }
 
-} // End llvm namespace
+} // end namespace llvm

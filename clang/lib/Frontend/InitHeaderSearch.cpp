@@ -526,7 +526,7 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookup> &SearchList,
     if (CurEntry.getDirCharacteristic() != SrcMgr::C_User) {
       // Find the dir that this is the same of.
       unsigned FirstDir;
-      for (FirstDir = 0; ; ++FirstDir) {
+      for (FirstDir = First;; ++FirstDir) {
         assert(FirstDir != i && "Didn't find dupe?");
 
         const DirectoryLookup &SearchEntry = SearchList[FirstDir];

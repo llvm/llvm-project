@@ -96,6 +96,11 @@ cl::opt<std::string>
     LTORemarksFilename("lto-pass-remarks-output",
                        cl::desc("Output filename for pass remarks"),
                        cl::value_desc("filename"));
+
+cl::opt<bool> LTOPassRemarksWithHotness(
+    "lto-pass-remarks-with-hotness",
+    cl::desc("With PGO, include profile count in optimization remarks"),
+    cl::Hidden);
 }
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -513,6 +518,10 @@ bool LTOCodeGenerator::setupOptimizationRemarks() {
     Context.setDiagnosticsOutputFile(
         llvm::make_unique<yaml::Output>(DiagnosticOutputFile->os()));
   }
+
+  if (LTOPassRemarksWithHotness)
+    Context.setDiagnosticHotnessRequested(true);
+
   return true;
 }
 

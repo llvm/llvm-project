@@ -14,13 +14,33 @@
 
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntEqClasses.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Record.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <map>
+#include <set>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -145,12 +165,13 @@ void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
   }
 }
 
-const std::string &CodeGenRegister::getName() const {
+const StringRef CodeGenRegister::getName() const {
   assert(TheDef && "no def");
   return TheDef->getName();
 }
 
 namespace {
+
 // Iterate over all register units in a set of registers.
 class RegUnitIterator {
   CodeGenRegister::Vec::const_iterator RegI, RegE;
@@ -158,7 +179,7 @@ class RegUnitIterator {
 
 public:
   RegUnitIterator(const CodeGenRegister::Vec &Regs):
-    RegI(Regs.begin()), RegE(Regs.end()), UnitI(), UnitE() {
+    RegI(Regs.begin()), RegE(Regs.end()) {
 
     if (RegI != RegE) {
       UnitI = (*RegI)->getRegUnits().begin();
@@ -190,7 +211,8 @@ protected:
     }
   }
 };
-} // namespace
+
+} // end anonymous namespace
 
 // Return true of this unit appears in RegUnits.
 static bool hasRegUnit(CodeGenRegister::RegUnitList &RegUnits, unsigned Unit) {
@@ -538,6 +560,7 @@ unsigned CodeGenRegister::getWeight(const CodeGenRegBank &RegBank) const {
 // sub-registers. We provide a SetTheory expander class that returns the new
 // registers.
 namespace {
+
 struct TupleExpander : SetTheory::Expander {
   void expand(SetTheory &ST, Record *Def, SetTheory::RecSet &Elts) override {
     std::vector<Record*> Indices = Def->getValueAsListOfDefs("SubRegIndices");
@@ -639,7 +662,8 @@ struct TupleExpander : SetTheory::Expander {
     }
   }
 };
-}
+
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 //                            CodeGenRegisterClass
@@ -767,13 +791,15 @@ bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
 }
 
 namespace llvm {
+
   raw_ostream &operator<<(raw_ostream &OS, const CodeGenRegisterClass::Key &K) {
     OS << "{ S=" << K.SpillSize << ", A=" << K.SpillAlignment;
     for (const auto R : *K.Members)
       OS << ", " << R->getName();
     return OS << " }";
   }
-}
+
+} // end namespace llvm
 
 // This is a simple lexicographical order that can be used to search for sets.
 // It is not the same as the topological order provided by TopoOrderRC.
@@ -813,7 +839,7 @@ static bool TopoOrderRC(const CodeGenRegisterClass &PA,
   auto *A = &PA;
   auto *B = &PB;
   if (A == B)
-    return 0;
+    return false;
 
   // Order by ascending spill size.
   if (A->SpillSize < B->SpillSize)
@@ -1289,6 +1315,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
 }
 
 namespace {
+
 // UberRegSet is a helper class for computeRegUnitWeights. Each UberRegSet is
 // the transitive closure of the union of overlapping register
 // classes. Together, the UberRegSets form a partition of the registers. If we
@@ -1307,12 +1334,13 @@ namespace {
 // their weight increased.
 struct UberRegSet {
   CodeGenRegister::Vec Regs;
-  unsigned Weight;
+  unsigned Weight = 0;
   CodeGenRegister::RegUnitList SingularDeterminants;
 
-  UberRegSet(): Weight(0) {}
+  UberRegSet() = default;
 };
-} // namespace
+
+} // end anonymous namespace
 
 // Partition registers into UberRegSets, where each set is the transitive
 // closure of the union of overlapping register classes.
@@ -1321,7 +1349,6 @@ struct UberRegSet {
 static void computeUberSets(std::vector<UberRegSet> &UberSets,
                             std::vector<UberRegSet*> &RegSets,
                             CodeGenRegBank &RegBank) {
-
   const auto &Registers = RegBank.getRegisters();
 
   // The Register EnumValue is one greater than its index into Registers.
@@ -1789,7 +1816,7 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
       CodeGenRegister *SubReg = S->second;
       // Ignore non-leaf subregisters, their lane masks are fully covered by
       // the leaf subregisters anyway.
-      if (SubReg->getSubRegs().size() != 0)
+      if (!SubReg->getSubRegs().empty())
         continue;
       CodeGenSubRegIndex *SubRegIndex = S->first;
       const CodeGenRegister *SubRegister = S->second;
@@ -2007,7 +2034,6 @@ void CodeGenRegBank::inferMatchingSuperRegClass(CodeGenRegisterClass *RC,
     }
   }
 }
-
 
 //
 // Infer missing register classes.

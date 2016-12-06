@@ -1,5 +1,4 @@
 ; RUN: llc -march=avr -print-after=expand-isel-pseudos < %s 2>&1 | FileCheck %s
-; XFAIL: *
 
 ; Because `switch` seems to trigger Machine Basic Blocks to be ordered
 ; in a different order than they were constructed, this exposes an

@@ -72,4 +72,4 @@ INTERCEPTOR(int, mallopt, int cmd, int value) {
   return -1;
 }
 
-#endif // SANITIZER_LINUX
+#endif  // SANITIZER_LINUX

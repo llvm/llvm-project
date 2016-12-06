@@ -5285,7 +5285,6 @@ class AtomicType : public Type, public llvm::FoldingSetNode {
 
 /// PipeType - OpenCL20.
 class PipeType : public Type, public llvm::FoldingSetNode {
-protected:
   QualType ElementType;
   bool isRead;
 
@@ -5295,6 +5294,7 @@ protected:
          elemType->isVariablyModifiedType(),
          elemType->containsUnexpandedParameterPack()),
     ElementType(elemType), isRead(isRead) {}
+  friend class ASTContext;  // ASTContext creates these.
 
 public:
   QualType getElementType() const { return ElementType; }
@@ -5304,11 +5304,12 @@ public:
   QualType desugar() const { return QualType(this, 0); }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType());
+    Profile(ID, getElementType(), isReadOnly());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType T) {
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType T, bool isRead) {
     ID.AddPointer(T.getAsOpaquePtr());
+    ID.AddBoolean(isRead);
   }
 
   static bool classof(const Type *T) {
@@ -5316,18 +5317,6 @@ public:
   }
 
   bool isReadOnly() const { return isRead; }
-};
-
-class ReadPipeType : public PipeType {
-  ReadPipeType(QualType elemType, QualType CanonicalPtr) :
-    PipeType(elemType, CanonicalPtr, true) {}
-  friend class ASTContext;  // ASTContext creates these.
-};
-
-class WritePipeType : public PipeType {
-  WritePipeType(QualType elemType, QualType CanonicalPtr) :
-    PipeType(elemType, CanonicalPtr, false) {}
-  friend class ASTContext;  // ASTContext creates these.
 };
 
 /// A qualifier set is used to build a set of qualifiers.

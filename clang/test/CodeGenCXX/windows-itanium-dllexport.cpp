@@ -23,3 +23,8 @@ template class __declspec(dllexport) c<char>;
 // CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIcEaSERKS0_
 // CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIcE1fEv
 
+c<double> g;
+template class __declspec(dllexport) c<double>;
+
+// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIdEaSERKS0_
+// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIdE1fEv

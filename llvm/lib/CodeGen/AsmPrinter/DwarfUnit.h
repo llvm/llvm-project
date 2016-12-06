@@ -65,16 +65,13 @@ public:
 //===----------------------------------------------------------------------===//
 /// This dwarf writer support class manages information associated with a
 /// source file.
-class DwarfUnit {
+  class DwarfUnit : public DIEUnit {
 protected:
   /// MDNode for the compile unit.
   const DICompileUnit *CUNode;
 
   // All DIEValues are allocated through this allocator.
   BumpPtrAllocator DIEValueAllocator;
-
-  /// Unit debug information entry.
-  DIE &UnitDie;
 
   /// Target of Dwarf emission.
   AsmPrinter *Asm;
@@ -83,7 +80,7 @@ protected:
   DwarfDebug *DD;
   DwarfFile *DU;
 
-  /// An anonymous type for index type.  Owned by UnitDie.
+  /// An anonymous type for index type.  Owned by DIEUnit.
   DIE *IndexTyDie;
 
   /// Tracks the mapping of unit level debug information variables to debug
@@ -101,9 +98,6 @@ protected:
   /// corresponds to the MDNode mapped with the subprogram DIE.
   DenseMap<DIE *, const DINode *> ContainingTypeMap;
 
-  /// The section this unit will be emitted in.
-  MCSection *Section;
-
   DwarfUnit(dwarf::Tag, const DICompileUnit *CU, AsmPrinter *A, DwarfDebug *DW,
             DwarfFile *DWU);
 
@@ -112,21 +106,13 @@ protected:
 public:
   virtual ~DwarfUnit();
 
-  void initSection(MCSection *Section);
-
-  MCSection *getSection() const {
-    assert(Section);
-    return Section;
-  }
-
   // Accessors.
   AsmPrinter* getAsmPrinter() const { return Asm; }
   uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
   const DICompileUnit *getCUNode() const { return CUNode; }
-  DIE &getUnitDie() { return UnitDie; }
 
   /// Return true if this compile unit has something to write out.
-  bool hasContent() const { return UnitDie.hasChildren(); }
+  bool hasContent() const { return getUnitDie().hasChildren(); }
 
   /// Get string containing language specific context for a global name.
   ///
@@ -249,11 +235,13 @@ public:
   /// Add template parameters in buffer.
   void addTemplateParams(DIE &Buffer, DINodeArray TParams);
 
-  /// Add register operand.
+  /// Add register operand for a source variable fragment of the specified size
+  /// and offset.
+  ///
   /// \returns false if the register does not exist, e.g., because it was never
-  /// materialized.
-  bool addRegisterOpPiece(DIELoc &TheDie, unsigned Reg,
-                          unsigned SizeInBits = 0, unsigned OffsetInBits = 0);
+  ///          materialized.
+  bool addRegisterFragment(DIELoc &TheDie, unsigned Reg,
+                           unsigned SizeInBits = 0, unsigned OffsetInBits = 0);
 
   /// Add register offset.
   /// \returns false if the register does not exist, e.g., because it was never

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++14 -verify %s
-// RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++14 -verify -fexceptions -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++1z -verify -fexceptions -fcxx-exceptions %s
 
 #if __cplusplus > 201402L
 
@@ -10,10 +10,9 @@ template<typename T> void redecl1() noexcept(noexcept(T())) {} // expected-error
 template<bool A, bool B> void redecl2() noexcept(A); // expected-note {{previous}}
 template<bool A, bool B> void redecl2() noexcept(B); // expected-error {{conflicting types}}
 
-// These have the same canonical type.
-// FIXME: It's not clear whether this is supposed to be valid.
-template<typename A, typename B> void redecl3() throw(A);
-template<typename A, typename B> void redecl3() throw(B);
+// These have the same canonical type, but are still different.
+template<typename A, typename B> void redecl3() throw(A); // expected-note {{previous}}
+template<typename A, typename B> void redecl3() throw(B); // expected-error {{does not match previous}}
 
 typedef int I;
 template<bool B> void redecl4(I) noexcept(B);
@@ -30,6 +29,21 @@ void (*init_with_mismatched_type_b)(int) noexcept = redecl4<false>; // expected-
 auto deduce_auto_from_noexcept_function_ptr_b = redecl4<false>;
 using DeducedType_b = decltype(deduce_auto_from_noexcept_function_ptr_b);
 using DeducedType_b = void (*)(int);
+
+static_assert(noexcept(init_with_exact_type_a(0)));
+static_assert(noexcept((+init_with_exact_type_a)(0)));
+static_assert(!noexcept(init_with_exact_type_b(0)));
+static_assert(!noexcept((+init_with_exact_type_b)(0)));
+
+// Don't look through casts, use the direct type of the expression.
+// FIXME: static_cast here would be reasonable, but is not currently permitted.
+static_assert(noexcept(static_cast<decltype(init_with_exact_type_a)>(init_with_exact_type_b)(0))); // expected-error {{is not allowed}}
+static_assert(noexcept(reinterpret_cast<decltype(init_with_exact_type_a)>(init_with_exact_type_b)(0)));
+static_assert(!noexcept(static_cast<decltype(init_with_exact_type_b)>(init_with_exact_type_a)(0)));
+
+template<bool B> auto get_fn() noexcept -> void (*)() noexcept(B) {}
+static_assert(noexcept(get_fn<true>()()));
+static_assert(!noexcept(get_fn<false>()()));
 
 namespace DependentDefaultCtorExceptionSpec {
   template<typename> struct T { static const bool value = true; };
@@ -106,4 +120,48 @@ namespace Builtins {
   // Check we recognized both as builtins.
   typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)];
   typedef int arr[3];
+}
+
+namespace ExplicitInstantiation {
+  template<typename T> void f() noexcept {}
+  template<typename T> struct X { void f() noexcept {} };
+  template void f<int>();
+  template void X<int>::f();
+}
+
+namespace ConversionFunction {
+  struct A { template<typename T> operator T() noexcept; };
+  int a = A().operator int();
+}
+
+using size_t = decltype(sizeof(0));
+
+namespace OperatorDelete {
+  struct W {};
+  struct X {};
+  struct Y {};
+  struct Z {};
+  template<bool N, bool D> struct T {};
+}
+void *operator new(size_t, OperatorDelete::W) noexcept(false);
+void operator delete(void*, OperatorDelete::W) noexcept(false) = delete; // expected-note {{here}}
+void *operator new(size_t, OperatorDelete::X) noexcept(false);
+void operator delete(void*, OperatorDelete::X) noexcept(true) = delete; // expected-note {{here}}
+void *operator new(size_t, OperatorDelete::Y) noexcept(true);
+void operator delete(void*, OperatorDelete::Y) noexcept(false) = delete; // expected-note {{here}}
+void *operator new(size_t, OperatorDelete::Z) noexcept(true);
+void operator delete(void*, OperatorDelete::Z) noexcept(true) = delete; // expected-note {{here}}
+template<bool N, bool D> void *operator new(size_t, OperatorDelete::T<N, D>) noexcept(N);
+template<bool N, bool D> void operator delete(void*, OperatorDelete::T<N, D>) noexcept(D) = delete; // expected-note 4{{here}}
+namespace OperatorDelete {
+  struct A { A(); };
+  A *w = new (W{}) A; // expected-error {{deleted function}}
+  A *x = new (X{}) A; // expected-error {{deleted function}}
+  A *y = new (Y{}) A; // expected-error {{deleted function}}
+  A *z = new (Z{}) A; // expected-error {{deleted function}}
+
+  A *t00 = new (T<false, false>{}) A; // expected-error {{deleted function}}
+  A *t01 = new (T<false, true>{}) A; // expected-error {{deleted function}}
+  A *t10 = new (T<true, false>{}) A; // expected-error {{deleted function}}
+  A *t11 = new (T<true, true>{}) A; // expected-error {{deleted function}}
 }

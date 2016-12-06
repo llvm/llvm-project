@@ -135,7 +135,7 @@ public:
     Expr.append(V.Expr.begin(), V.Expr.end());
     FrameIndex.append(V.FrameIndex.begin(), V.FrameIndex.end());
     assert(all_of(Expr, [](const DIExpression *E) {
-             return E && E->isBitPiece();
+             return E && E->isFragment();
            }) && "conflicting locations for variable");
   }
 
@@ -440,9 +440,8 @@ class DwarfDebug : public DebugHandlerBase {
   void buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                          const DbgValueHistoryMap::InstrRanges &Ranges);
 
-  /// Collect variable information from the side table maintained
-  /// by MMI.
-  void collectVariableInfoFromMMITable(DenseSet<InlinedVariable> &P);
+  /// Collect variable information from the side table maintained by MF.
+  void collectVariableInfoFromMFTable(DenseSet<InlinedVariable> &P);
 
 public:
   //===--------------------------------------------------------------------===//
@@ -532,11 +531,6 @@ public:
   /// Find the MDNode for the given reference.
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
     return Ref.resolve();
-  }
-
-  /// Find the DwarfCompileUnit for the given CU Die.
-  DwarfCompileUnit *lookupUnit(const DIE *CU) const {
-    return CUDieMap.lookup(CU);
   }
 
   void addSubprogramNames(const DISubprogram *SP, DIE &Die);

@@ -12,22 +12,32 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <map>
+#include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -37,6 +47,7 @@ using namespace llvm;
 #define DEBUG_TYPE "decoder-emitter"
 
 namespace {
+
 struct EncodingField {
   unsigned Base, Width, Offset;
   EncodingField(unsigned B, unsigned W, unsigned O)
@@ -76,13 +87,10 @@ struct DecoderTableInfo {
   DecoderSet Decoders;
 };
 
-} // End anonymous namespace
-
-namespace {
 class FixedLenDecoderEmitter {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions;
-public:
 
+public:
   // Defaults preserved here for documentation, even though they aren't
   // strictly necessary given the way that this is currently being called.
   FixedLenDecoderEmitter(RecordKeeper &R, std::string PredicateNamespace,
@@ -112,13 +120,15 @@ public:
 
 private:
   CodeGenTarget Target;
+
 public:
   std::string PredicateNamespace;
   std::string GuardPrefix, GuardPostfix;
   std::string ReturnOK, ReturnFail;
   std::string Locals;
 };
-} // End anonymous namespace
+
+} // end anonymous namespace
 
 // The set (BIT_TRUE, BIT_FALSE, BIT_UNSET) represents a ternary logic system
 // for a bit value.
@@ -135,12 +145,15 @@ typedef enum {
 static bool ValueSet(bit_value_t V) {
   return (V == BIT_TRUE || V == BIT_FALSE);
 }
+
 static bool ValueNotSet(bit_value_t V) {
   return (V == BIT_UNSET);
 }
+
 static int Value(bit_value_t V) {
   return ValueNotSet(V) ? -1 : (V == BIT_FALSE ? 0 : 1);
 }
+
 static bit_value_t bitFromBits(const BitsInit &bits, unsigned index) {
   if (BitInit *bit = dyn_cast<BitInit>(bits.getBit(index)))
     return bit->getValue() ? BIT_TRUE : BIT_FALSE;
@@ -148,6 +161,7 @@ static bit_value_t bitFromBits(const BitsInit &bits, unsigned index) {
   // The bit is uninitialized.
   return BIT_UNSET;
 }
+
 // Prints the bit value for each position.
 static void dumpBits(raw_ostream &o, const BitsInit &bits) {
   for (unsigned index = bits.getNumBits(); index > 0; --index) {
@@ -172,13 +186,12 @@ static BitsInit &getBitsField(const Record &def, StringRef str) {
   return *bits;
 }
 
-// Forward declaration.
-namespace {
-class FilterChooser;
-} // End anonymous namespace
-
 // Representation of the instruction to work on.
 typedef std::vector<bit_value_t> insn_t;
+
+namespace {
+
+class FilterChooser;
 
 /// Filter - Filter works with FilterChooser to produce the decoding tree for
 /// the ISA.
@@ -216,7 +229,6 @@ typedef std::vector<bit_value_t> insn_t;
 /// decoder could try to decode the even/odd register numbering and assign to
 /// VST4q8a or VST4q8b, but for the time being, the decoder chooses the "a"
 /// version and return the Opcode since the two have the same Asm format string.
-namespace {
 class Filter {
 protected:
   const FilterChooser *Owner;// points to the FilterChooser who owns this filter
@@ -225,7 +237,7 @@ protected:
   bool Mixed; // a mixed region contains both set and unset bits
 
   // Map of well-known segment value to the set of uid's with that value.
-  std::map<uint64_t, std::vector<unsigned> > FilteredInstructions;
+  std::map<uint64_t, std::vector<unsigned>> FilteredInstructions;
 
   // Set of uid's with non-constant segment values.
   std::vector<unsigned> VariableInstructions;
@@ -240,11 +252,18 @@ protected:
   unsigned LastOpcFiltered;
 
 public:
+  Filter(Filter &&f);
+  Filter(FilterChooser &owner, unsigned startBit, unsigned numBits, bool mixed);
+
+  ~Filter() = default;
+
   unsigned getNumFiltered() const { return NumFiltered; }
+
   unsigned getSingletonOpc() const {
     assert(NumFiltered == 1);
     return LastOpcFiltered;
   }
+
   // Return the filter chooser for the group of instructions without constant
   // segment values.
   const FilterChooser &getVariableFC() const {
@@ -252,11 +271,6 @@ public:
     assert(FilterChooserMap.size() == 1);
     return *(FilterChooserMap.find((unsigned)-1)->second);
   }
-
-  Filter(Filter &&f);
-  Filter(FilterChooser &owner, unsigned startBit, unsigned numBits, bool mixed);
-
-  ~Filter();
 
   // Divides the decoding task into sub tasks and delegates them to the
   // inferior FilterChooser's.
@@ -273,8 +287,9 @@ public:
   // Returns the number of fanout produced by the filter.  More fanout implies
   // the filter distinguishes more categories of instructions.
   unsigned usefulness() const;
-}; // End of class Filter
-} // End anonymous namespace
+}; // end class Filter
+
+} // end anonymous namespace
 
 // These are states of our finite state machines used in FilterChooser's
 // filterProcessor() which produces the filter candidates to use.
@@ -302,6 +317,7 @@ typedef enum {
 /// decoding tree.  And each case is delegated to an inferior FilterChooser to
 /// decide what further remaining bits to look at.
 namespace {
+
 class FilterChooser {
 protected:
   friend class Filter;
@@ -313,7 +329,7 @@ protected:
   const std::vector<unsigned> &Opcodes;
 
   // Lookup table for the operand decoding of instructions.
-  const std::map<unsigned, std::vector<OperandInfo> > &Operands;
+  const std::map<unsigned, std::vector<OperandInfo>> &Operands;
 
   // Vector of candidate filters.
   std::vector<Filter> Filters;
@@ -334,16 +350,13 @@ protected:
   // Parent emitter
   const FixedLenDecoderEmitter *Emitter;
 
-  FilterChooser(const FilterChooser &) = delete;
-  void operator=(const FilterChooser &) = delete;
 public:
-
   FilterChooser(ArrayRef<const CodeGenInstruction *> Insts,
                 const std::vector<unsigned> &IDs,
-                const std::map<unsigned, std::vector<OperandInfo> > &Ops,
+                const std::map<unsigned, std::vector<OperandInfo>> &Ops,
                 unsigned BW,
                 const FixedLenDecoderEmitter *E)
-    : AllInstructions(Insts), Opcodes(IDs), Operands(Ops), Filters(),
+    : AllInstructions(Insts), Opcodes(IDs), Operands(Ops),
       FilterBitValues(BW, BIT_UNFILTERED), Parent(nullptr), BestIndex(-1),
       BitWidth(BW), Emitter(E) {
     doFilter();
@@ -351,15 +364,17 @@ public:
 
   FilterChooser(ArrayRef<const CodeGenInstruction *> Insts,
                 const std::vector<unsigned> &IDs,
-                const std::map<unsigned, std::vector<OperandInfo> > &Ops,
+                const std::map<unsigned, std::vector<OperandInfo>> &Ops,
                 const std::vector<bit_value_t> &ParentFilterBitValues,
                 const FilterChooser &parent)
     : AllInstructions(Insts), Opcodes(IDs), Operands(Ops),
-      Filters(), FilterBitValues(ParentFilterBitValues),
-      Parent(&parent), BestIndex(-1), BitWidth(parent.BitWidth),
-      Emitter(parent.Emitter) {
+      FilterBitValues(ParentFilterBitValues), Parent(&parent), BestIndex(-1),
+      BitWidth(parent.BitWidth), Emitter(parent.Emitter) {
     doFilter();
   }
+
+  FilterChooser(const FilterChooser &) = delete;
+  void operator=(const FilterChooser &) = delete;
 
   unsigned getBitWidth() const { return BitWidth; }
 
@@ -385,7 +400,7 @@ protected:
   }
 
   // Returns the record name.
-  const std::string &nameWithID(unsigned Opcode) const {
+  const StringRef nameWithID(unsigned Opcode) const {
     return AllInstructions[Opcode]->TheDef->getName();
   }
 
@@ -477,7 +492,8 @@ public:
   // instructions.
   void emitTableEntries(DecoderTableInfo &TableInfo) const;
 };
-} // End anonymous namespace
+
+} // end anonymous namespace
 
 ///////////////////////////
 //                       //
@@ -526,9 +542,6 @@ Filter::Filter(FilterChooser &owner, unsigned startBit, unsigned numBits,
 
   assert((FilteredInstructions.size() + VariableInstructions.size() > 0)
          && "Filter returns no instruction categories");
-}
-
-Filter::~Filter() {
 }
 
 // Divides the decoding task into sub tasks and delegates them to the
@@ -1072,7 +1085,7 @@ void FilterChooser::emitDecoder(raw_ostream &OS, unsigned Indentation,
 
   for (const auto &Op : Operands.find(Opc)->second) {
     // If a custom instruction decoder was specified, use that.
-    if (Op.numFields() == 0 && Op.Decoder.size()) {
+    if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
       OS.indent(Indentation) << Emitter->GuardPrefix << Op.Decoder
         << "(MI, insn, Address, Decoder)"
@@ -1142,7 +1155,7 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
 
     StringRef SR(P);
     std::pair<StringRef, StringRef> pairs = SR.split(',');
-    while (pairs.second.size()) {
+    while (!pairs.second.empty()) {
       emitSinglePredicateMatch(o, pairs.first, Emitter->PredicateNamespace);
       o << " && ";
       pairs = pairs.second.split(',');
@@ -1370,7 +1383,6 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
 
   Best.getVariableFC().emitTableEntries(TableInfo);
 }
-
 
 // Assign a single filter and run with it.  Top level API client can initialize
 // with a single filter to start the filtering process.
@@ -1708,7 +1720,7 @@ static std::string findOperandDecoderMethod(TypedInit *TI) {
     TypeRecord = TypeRecord->getValueAsDef("RegClass");
 
   if (TypeRecord->isSubClassOf("RegisterClass")) {
-    Decoder = "Decode" + TypeRecord->getName() + "RegisterClass";
+    Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
   } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
     Decoder = "DecodePointerLikeRegClass" +
       utostr(TypeRecord->getValueAsInt("RegClassKind"));
@@ -1719,7 +1731,7 @@ static std::string findOperandDecoderMethod(TypedInit *TI) {
 
 static bool populateInstruction(CodeGenTarget &Target,
                        const CodeGenInstruction &CGI, unsigned Opc,
-                       std::map<unsigned, std::vector<OperandInfo> > &Operands){
+                       std::map<unsigned, std::vector<OperandInfo>> &Operands){
   const Record &Def = *CGI.TheDef;
   // If all the bit positions are not specified; do not decode this instruction.
   // We are bound to fail!  For proper disassembly, the well-known encoding bits
@@ -1747,13 +1759,15 @@ static bool populateInstruction(CodeGenTarget &Target,
   // Gather the outputs/inputs of the instruction, so we can find their
   // positions in the encoding.  This assumes for now that they appear in the
   // MCInst in the order that they're listed.
-  std::vector<std::pair<Init*, std::string> > InOutOperands;
+  std::vector<std::pair<Init*, StringRef>> InOutOperands;
   DagInit *Out  = Def.getValueAsDag("OutOperandList");
   DagInit *In  = Def.getValueAsDag("InOperandList");
   for (unsigned i = 0; i < Out->getNumArgs(); ++i)
-    InOutOperands.push_back(std::make_pair(Out->getArg(i), Out->getArgName(i)));
+    InOutOperands.push_back(std::make_pair(Out->getArg(i),
+                                           Out->getArgNameStr(i)));
   for (unsigned i = 0; i < In->getNumArgs(); ++i)
-    InOutOperands.push_back(std::make_pair(In->getArg(i), In->getArgName(i)));
+    InOutOperands.push_back(std::make_pair(In->getArg(i),
+                                           In->getArgNameStr(i)));
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
@@ -1768,7 +1782,7 @@ static bool populateInstruction(CodeGenTarget &Target,
     }
   }
 
-  std::map<std::string, std::vector<OperandInfo> > NumberedInsnOperands;
+  std::map<std::string, std::vector<OperandInfo>> NumberedInsnOperands;
   std::set<std::string> NumberedInsnOperandsNoTie;
   if (Target.getInstructionSet()->
         getValueAsBit("decodePositionallyEncodedOperands")) {
@@ -1853,7 +1867,7 @@ static bool populateInstruction(CodeGenTarget &Target,
                       Name << "(" << SO.first << ", " << SO.second << ") => " <<
                       Vals[i].getName() << "\n");
 
-      std::string Decoder = "";
+      std::string Decoder;
       Record *TypeRecord = CGI.Operands[SO.first].Rec;
 
       RecordVal *DecoderString = TypeRecord->getValue("DecoderMethod");
@@ -1877,7 +1891,7 @@ static bool populateInstruction(CodeGenTarget &Target,
       if (TypeRecord->isSubClassOf("RegisterOperand"))
         TypeRecord = TypeRecord->getValueAsDef("RegClass");
       if (TypeRecord->isSubClassOf("RegisterClass")) {
-        Decoder = "Decode" + TypeRecord->getName() + "RegisterClass";
+        Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
         isReg = true;
       } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
         Decoder = "DecodePointerLikeRegClass" +
@@ -2014,7 +2028,6 @@ static bool populateInstruction(CodeGenTarget &Target,
 
   Operands[Opc] = InsnOperands;
 
-
 #if 0
   DEBUG({
       // Dumps the instruction encoding bits.
@@ -2067,7 +2080,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "  const uint8_t *Ptr = DecodeTable;\n"
      << "  uint32_t CurFieldValue = 0;\n"
      << "  DecodeStatus S = MCDisassembler::Success;\n"
-     << "  for (;;) {\n"
+     << "  while (true) {\n"
      << "    ptrdiff_t Loc = Ptr - DecodeTable;\n"
      << "    switch (*Ptr) {\n"
      << "    default:\n"
@@ -2235,8 +2248,8 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
   // Parameterize the decoders based on namespace and instruction width.
   NumberedInstructions = Target.getInstructionsByEnumValue();
   std::map<std::pair<std::string, unsigned>,
-           std::vector<unsigned> > OpcMap;
-  std::map<unsigned, std::vector<OperandInfo> > Operands;
+           std::vector<unsigned>> OpcMap;
+  std::map<unsigned, std::vector<OperandInfo>> Operands;
 
   for (unsigned i = 0; i < NumberedInstructions.size(); ++i) {
     const CodeGenInstruction *Inst = NumberedInstructions[i];
@@ -2309,4 +2322,4 @@ void EmitFixedLenDecoder(RecordKeeper &RK, raw_ostream &OS,
                          ROK, RFail, L).run(OS);
 }
 
-} // End llvm namespace
+} // end namespace llvm

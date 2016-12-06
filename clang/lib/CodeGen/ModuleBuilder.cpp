@@ -112,7 +112,7 @@ namespace {
     }
 
     llvm::Constant *GetAddrOfGlobal(GlobalDecl global, bool isForDefinition) {
-      return Builder->GetAddrOfGlobal(global, isForDefinition);
+      return Builder->GetAddrOfGlobal(global, ForDefinition_t(isForDefinition));
     }
 
     void Initialize(ASTContext &Context) override {

@@ -20,7 +20,7 @@
 
 #include "lldb/Host/PosixApi.h"
 
-#if defined(__ANDROID_NDK__)
+#if defined(__ANDROID__)
 int posix_openpt(int flags);
 #endif
 

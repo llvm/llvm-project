@@ -115,8 +115,6 @@ bool Communication::HasConnection() const {
 size_t Communication::Read(void *dst, size_t dst_len,
                            const Timeout<std::micro> &timeout,
                            ConnectionStatus &status, Error *error_ptr) {
-  using std::chrono::microseconds;
-
   lldb_private::LogIfAnyCategoriesSet(
       LIBLLDB_LOG_COMMUNICATION,
       "%p Communication::Read (dst = %p, dst_len = %" PRIu64
@@ -143,9 +141,7 @@ size_t Communication::Read(void *dst, size_t dst_len,
     listener_sp->StartListeningForEvents(
         this, eBroadcastBitReadThreadGotBytes | eBroadcastBitReadThreadDidExit);
     EventSP event_sp;
-    microseconds listener_timeout =
-        timeout ? microseconds(*timeout) : microseconds(0);
-    while (listener_sp->WaitForEvent(listener_timeout, event_sp)) {
+    while (listener_sp->GetEvent(event_sp, timeout)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_type & eBroadcastBitReadThreadGotBytes) {
         return GetCachedBytes(dst, dst_len);
@@ -386,7 +382,7 @@ void Communication::SynchronizeWithReadThread() {
 
   // Wait for the synchronization event.
   EventSP event_sp;
-  listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp);
+  listener_sp->GetEvent(event_sp, llvm::None);
 }
 
 void Communication::SetConnection(Connection *connection) {

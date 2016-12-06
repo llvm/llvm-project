@@ -480,15 +480,7 @@ void ExprEngine::VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
     Loc CLLoc = State->getLValue(CL, LCtx);
     State = State->bindLoc(CLLoc, V);
 
-    // Compound literal expressions are a GNU extension in C++.
-    // Unlike in C, where CLs are lvalues, in C++ CLs are prvalues,
-    // and like temporary objects created by the functional notation T()
-    // CLs are destroyed at the end of the containing full-expression.
-    // HOWEVER, an rvalue of array type is not something the analyzer can
-    // reason about, since we expect all regions to be wrapped in Locs.
-    // So we treat array CLs as lvalues as well, knowing that they will decay
-    // to pointers as soon as they are used.
-    if (CL->isGLValue() || CL->getType()->isArrayType())
+    if (CL->isGLValue())
       V = CLLoc;
   }
 

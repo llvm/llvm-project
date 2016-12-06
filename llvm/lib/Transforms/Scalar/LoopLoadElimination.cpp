@@ -20,18 +20,37 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <forward_list>
+#include <cassert>
+#include <algorithm>
+#include <set>
+#include <tuple>
+#include <utility>
 
 #define LLE_OPTION "loop-load-elim"
 #define DEBUG_TYPE LLE_OPTION
@@ -47,7 +66,6 @@ static cl::opt<unsigned> LoadElimSCEVCheckThreshold(
     "loop-load-elimination-scev-check-threshold", cl::init(8), cl::Hidden,
     cl::desc("The maximum number of SCEV checks allowed for Loop "
              "Load Elimination"));
-
 
 STATISTIC(NumLoopLoadEliminted, "Number of loads eliminated by LLE");
 
@@ -114,7 +132,7 @@ bool doesStoreDominatesAllLatches(BasicBlock *StoreBlock, Loop *L,
                                   DominatorTree *DT) {
   SmallVector<BasicBlock *, 8> Latches;
   L->getLoopLatches(Latches);
-  return all_of(Latches, [&](const BasicBlock *Latch) {
+  return llvm::all_of(Latches, [&](const BasicBlock *Latch) {
     return DT->dominates(StoreBlock, Latch);
   });
 }
@@ -586,7 +604,8 @@ public:
 
   static char ID;
 };
-}
+
+} // end anonymous namespace
 
 char LoopLoadElimination::ID;
 static const char LLE_name[] = "Loop Load Elimination";
@@ -600,7 +619,9 @@ INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_END(LoopLoadElimination, LLE_OPTION, LLE_name, false, false)
 
 namespace llvm {
+
 FunctionPass *createLoopLoadEliminationPass() {
   return new LoopLoadElimination();
 }
-}
+
+} // end namespace llvm

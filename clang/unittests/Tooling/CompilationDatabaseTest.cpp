@@ -44,6 +44,7 @@ TEST(JSONCompilationDatabase, ErrsOnInvalidFormat) {
   expectFailure("[{\"directory\":\"\",\"command\":[],\"file\":\"\"}]", "Command not string");
   expectFailure("[{\"directory\":\"\",\"arguments\":[[]],\"file\":\"\"}]",
                 "Arguments contain non-string");
+  expectFailure("[{\"output\":[]}]", "Expected strings as value.");
 }
 
 static std::vector<std::string> getAllFiles(StringRef JSONDatabase,
@@ -105,16 +106,19 @@ TEST(JSONCompilationDatabase, GetAllCompileCommands) {
   StringRef Directory1("//net/dir1");
   StringRef FileName1("file1");
   StringRef Command1("command1");
+  StringRef Output1("file1.o");
   StringRef Directory2("//net/dir2");
   StringRef FileName2("file2");
   StringRef Command2("command2");
+  StringRef Output2("");
 
   std::vector<CompileCommand> Commands = getAllCompileCommands(
       JSONCommandLineSyntax::Gnu,
       ("[{\"directory\":\"" + Directory1 + "\"," + "\"command\":\"" + Command1 +
        "\","
        "\"file\":\"" +
-       FileName1 + "\"},"
+       FileName1 + "\", \"output\":\"" +
+       Output1 + "\"},"
                    " {\"directory\":\"" +
        Directory2 + "\"," + "\"command\":\"" + Command2 + "\","
                                                           "\"file\":\"" +
@@ -124,10 +128,12 @@ TEST(JSONCompilationDatabase, GetAllCompileCommands) {
   EXPECT_EQ(2U, Commands.size()) << ErrorMessage;
   EXPECT_EQ(Directory1, Commands[0].Directory) << ErrorMessage;
   EXPECT_EQ(FileName1, Commands[0].Filename) << ErrorMessage;
+  EXPECT_EQ(Output1, Commands[0].Output) << ErrorMessage;
   ASSERT_EQ(1u, Commands[0].CommandLine.size());
   EXPECT_EQ(Command1, Commands[0].CommandLine[0]) << ErrorMessage;
   EXPECT_EQ(Directory2, Commands[1].Directory) << ErrorMessage;
   EXPECT_EQ(FileName2, Commands[1].Filename) << ErrorMessage;
+  EXPECT_EQ(Output2, Commands[1].Output) << ErrorMessage;
   ASSERT_EQ(1u, Commands[1].CommandLine.size());
   EXPECT_EQ(Command2, Commands[1].CommandLine[0]) << ErrorMessage;
 

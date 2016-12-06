@@ -3,11 +3,12 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-
 target triple = "thumbv7-apple-macosx10.6.7"
 
 ;CHECK: 	vadd.f32	q4, q8, q8
-;CHECK-NEXT: Ltmp1
-;CHECK-NEXT: LBB0_1
+;CHECK:         LBB0_1:
+;CHECK-NOT:     beq LBB0_1
 
-;CHECK:@DEBUG_VALUE: x <- %Q4{{$}}
-;CHECK-NEXT:@DEBUG_VALUE: y <- %Q4{{$}}
+;CHECK:         @DEBUG_VALUE: x <- %Q4{{$}}
+;CHECK-NEXT:    @DEBUG_VALUE: y <- %Q4{{$}}
+;CHECK:         beq LBB0_1
 
 
 @.str = external constant [13 x i8]

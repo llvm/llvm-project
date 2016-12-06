@@ -111,13 +111,10 @@ TEST(IncludeFixer, Typo) {
   EXPECT_EQ("#include <string>\nstd::string foo;\n",
             runIncludeFixer("std::string foo;\n"));
 
-  // FIXME: the current version of include-fixer does not get this test case
-  // right - header should be inserted before definition.
-  EXPECT_EQ(
-      "// comment\n#include \"foo.h\"\nstd::string foo;\n"
-      "#include \"dir/bar.h\"\n#include <string>\n",
-      runIncludeFixer("// comment\n#include \"foo.h\"\nstd::string foo;\n"
-                      "#include \"dir/bar.h\"\n"));
+  EXPECT_EQ("// comment\n#include \"foo.h\"\n#include <string>\n"
+            "std::string foo;\n#include \"dir/bar.h\"\n",
+            runIncludeFixer("// comment\n#include \"foo.h\"\nstd::string foo;\n"
+                            "#include \"dir/bar.h\"\n"));
 
   EXPECT_EQ("#include \"foo.h\"\n#include <string>\nstd::string foo;\n",
             runIncludeFixer("#include \"foo.h\"\nstd::string foo;\n"));

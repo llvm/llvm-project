@@ -329,6 +329,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_TLSLD;
   case R_386_PLT32:
     return R_PLT_PC;
+  case R_386_PC16:
   case R_386_PC32:
     return R_PC;
   case R_386_GOTPC:
@@ -437,11 +438,13 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   switch (Type) {
   default:
     return 0;
+  case R_386_16:
   case R_386_32:
   case R_386_GOT32:
   case R_386_GOT32X:
   case R_386_GOTOFF:
   case R_386_GOTPC:
+  case R_386_PC16:
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_TLS_LE:
@@ -452,6 +455,13 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
   checkInt<32>(Loc, Val, Type);
+
+  // R_386_PC16 and R_386_16 are not part of the current i386 psABI. They are
+  // used by 16-bit x86 objects, like boot loaders.
+  if (Type == R_386_16 || Type == R_386_PC16) {
+    write16le(Loc, Val);
+    return;
+  }
   write32le(Loc, Val);
 }
 
@@ -595,6 +605,8 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
+  case R_X86_64_NONE:
+    return R_HINT;
   }
 }
 
@@ -1262,7 +1274,10 @@ void AArch64TargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
   write64le(Buf, In<ELF64LE>::Plt->getVA());
 }
 
-static uint64_t getAArch64Page(uint64_t Expr) {
+// Page(Expr) is the page address of the expression Expr, defined
+// as (Expr & ~0xFFF). (This applies even if the machine page size
+// supported by the platform has a different value.)
+uint64_t getAArch64Page(uint64_t Expr) {
   return Expr & (~static_cast<uint64_t>(0xFFF));
 }
 
@@ -1334,11 +1349,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
-    // This relocation stores 12 bits and there's no instruction
-    // to do it. Instead, we do a 32 bits store of the value
-    // of r_addend bitwise-or'ed Loc. This assumes that the addend
-    // bits in Loc are zero.
-    or32le(Loc, (Val & 0xFFF) << 10);
+    updateAArch64Add(Loc, Val);
     break;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_PG_HI21:
@@ -1370,7 +1381,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32le(Loc, (Val & 0x0FF8) << 6);
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
-    or32le(Loc, (Val & 0x0FFC) << 9);
+    or32le(Loc, (Val & 0x0FFE) << 9);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
     or32le(Loc, (Val & 0xFFF) << 10);

@@ -18,6 +18,41 @@ namespace clang {
 namespace analysis {
 namespace {
 
+enum BuildResult {
+  ToolFailed,
+  ToolRan,
+  SawFunctionBody,
+  BuiltCFG,
+};
+
+class CFGCallback : public ast_matchers::MatchFinder::MatchCallback {
+public:
+  BuildResult TheBuildResult = ToolRan;
+
+  void run(const ast_matchers::MatchFinder::MatchResult &Result) override {
+    const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
+    Stmt *Body = Func->getBody();
+    if (!Body)
+      return;
+    TheBuildResult = SawFunctionBody;
+    if (CFG::buildCFG(nullptr, Body, Result.Context, CFG::BuildOptions()))
+        TheBuildResult = BuiltCFG;
+  }
+};
+
+BuildResult BuildCFG(const char *Code) {
+  CFGCallback Callback;
+
+  ast_matchers::MatchFinder Finder;
+  Finder.addMatcher(ast_matchers::functionDecl().bind("func"), &Callback);
+  std::unique_ptr<tooling::FrontendActionFactory> Factory(
+      tooling::newFrontendActionFactory(&Finder));
+  std::vector<std::string> Args = {"-std=c++11", "-fno-delayed-template-parsing"};
+  if (!tooling::runToolOnCodeWithArgs(Factory->create(), Code, Args))
+    return ToolFailed;
+  return Callback.TheBuildResult;
+}
+
 // Constructing a CFG for a range-based for over a dependent type fails (but
 // should not crash).
 TEST(CFG, RangeBasedForOverDependentType) {
@@ -27,30 +62,17 @@ TEST(CFG, RangeBasedForOverDependentType) {
                      "  for (const Foo *TheFoo : Range) {\n"
                      "  }\n"
                      "}\n";
+  EXPECT_EQ(SawFunctionBody, BuildCFG(Code));
+}
 
-  class CFGCallback : public ast_matchers::MatchFinder::MatchCallback {
-  public:
-    bool SawFunctionBody = false;
-
-    void run(const ast_matchers::MatchFinder::MatchResult &Result) override {
-      const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
-      Stmt *Body = Func->getBody();
-      if (!Body)
-        return;
-      SawFunctionBody = true;
-      std::unique_ptr<CFG> cfg =
-          CFG::buildCFG(nullptr, Body, Result.Context, CFG::BuildOptions());
-      EXPECT_EQ(nullptr, cfg);
-    }
-  } Callback;
-
-  ast_matchers::MatchFinder Finder;
-  Finder.addMatcher(ast_matchers::functionDecl().bind("func"), &Callback);
-  std::unique_ptr<tooling::FrontendActionFactory> Factory(
-      tooling::newFrontendActionFactory(&Finder));
-  std::vector<std::string> Args = {"-std=c++11", "-fno-delayed-template-parsing"};
-  ASSERT_TRUE(tooling::runToolOnCodeWithArgs(Factory->create(), Code, Args));
-  EXPECT_TRUE(Callback.SawFunctionBody);
+// Constructing a CFG containing a delete expression on a dependent type should
+// not crash.
+TEST(CFG, DeleteExpressionOnDependentType) {
+  const char *Code = "template<class T>\n"
+                     "void f(T t) {\n"
+                     "  delete t;\n"
+                     "}\n";
+  EXPECT_EQ(BuiltCFG, BuildCFG(Code));
 }
 
 } // namespace

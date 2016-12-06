@@ -125,15 +125,15 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
 }
 
 MCSymbolELF *MCContext::getOrCreateSectionSymbol(const MCSectionELF &Section) {
-  MCSymbolELF *&Sym = SectionSymbols[&Section];
+  MCSymbol *&Sym = SectionSymbols[&Section];
   if (Sym)
-    return Sym;
+    return cast<MCSymbolELF>(Sym);
 
   StringRef Name = Section.getSectionName();
   auto NameIter = UsedNames.insert(std::make_pair(Name, false)).first;
   Sym = new (&*NameIter, *this) MCSymbolELF(&*NameIter, /*isTemporary*/ false);
 
-  return Sym;
+  return cast<MCSymbolELF>(Sym);
 }
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(StringRef FuncName,
@@ -258,6 +258,22 @@ MCSymbol *MCContext::lookupSymbol(const Twine &Name) const {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
   return Symbols.lookup(NameRef);
+}
+
+int MCContext::setSymbolValue(MCStreamer &Streamer, std::string &I) {
+    auto Pair = StringRef(I).split('=');
+    if (Pair.second.empty()) {
+      errs() << "error: defsym must be of the form: sym=value: " << I << "\n";
+      return 1;
+    }
+    int64_t Value;
+    if (Pair.second.getAsInteger(0, Value)) {
+      errs() << "error: Value is not an integer: " << Pair.second << "\n";
+      return 1;
+    }
+    auto Symbol = getOrCreateSymbol(Pair.first);
+    Streamer.EmitAssignment(Symbol, MCConstantExpr::create(Value, *this));
+    return 0;
 }
 
 //===----------------------------------------------------------------------===//

@@ -63,8 +63,8 @@ void WinException::beginFunction(const MachineFunction *MF) {
   shouldEmitMoves = shouldEmitPersonality = shouldEmitLSDA = false;
 
   // If any landing pads survive, we need an EH table.
-  bool hasLandingPads = !MMI->getLandingPads().empty();
-  bool hasEHFunclets = MMI->hasEHFunclets();
+  bool hasLandingPads = !MF->getLandingPads().empty();
+  bool hasEHFunclets = MF->hasEHFunclets();
 
   const Function *F = MF->getFunction();
 
@@ -126,13 +126,15 @@ void WinException::endFunction(const MachineFunction *MF) {
   // Get rid of any dead landing pads if we're not using funclets. In funclet
   // schemes, the landing pad is not actually reachable. It only exists so
   // that we can emit the right table data.
-  if (!isFuncletEHPersonality(Per))
-    MMI->TidyLandingPads();
+  if (!isFuncletEHPersonality(Per)) {
+    MachineFunction *NonConstMF = const_cast<MachineFunction*>(MF);
+    NonConstMF->tidyLandingPads();
+  }
 
   endFunclet();
 
   // endFunclet will emit the necessary .xdata tables for x64 SEH.
-  if (Per == EHPersonality::MSVC_Win64SEH && MMI->hasEHFunclets())
+  if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets())
     return;
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
@@ -234,8 +236,9 @@ void WinException::endFunclet() {
   if (!CurrentFuncletEntry)
     return;
 
+  const MachineFunction *MF = Asm->MF;
   if (shouldEmitMoves || shouldEmitPersonality) {
-    const Function *F = Asm->MF->getFunction();
+    const Function *F = MF->getFunction();
     EHPersonality Per = EHPersonality::Unknown;
     if (F->hasPersonalityFn())
       Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
@@ -255,11 +258,11 @@ void WinException::endFunclet() {
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->EmitValue(create32bitRef(FuncInfoXData), 4);
-    } else if (Per == EHPersonality::MSVC_Win64SEH && MMI->hasEHFunclets() &&
+    } else if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
       // If this is the parent function in Win64 SEH, emit the LSDA immediately
       // following .seh_handlerdata.
-      emitCSpecificHandlerTable(Asm->MF);
+      emitCSpecificHandlerTable(MF);
     }
 
     // Switch back to the previous section now that we are done writing to

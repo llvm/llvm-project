@@ -82,9 +82,9 @@ namespace llvm {
     /// Bindings of names to symbols.
     SymbolTable Symbols;
 
-    /// ELF sections can have a corresponding symbol. This maps one to the
+    /// Sections can have a corresponding symbol. This maps one to the
     /// other.
-    DenseMap<const MCSectionELF *, MCSymbolELF *> SectionSymbols;
+    DenseMap<const MCSection *, MCSymbol *> SectionSymbols;
 
     /// A mapping from a local label number and an instance count to a symbol.
     /// For example, in the assembly
@@ -301,6 +301,9 @@ namespace llvm {
 
     /// Get the symbol for \p Name, or null.
     MCSymbol *lookupSymbol(const Twine &Name) const;
+
+    /// Set value for a symbol.
+    int setSymbolValue(MCStreamer &Streamer, std::string &I);
 
     /// getSymbols - Get a reference for the symbol table for clients that
     /// want to, for example, iterate over all symbols. 'const' because we

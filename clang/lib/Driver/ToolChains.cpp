@@ -4973,6 +4973,19 @@ void CudaToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
   HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
+SanitizerMask CudaToolChain::getSupportedSanitizers() const {
+  // The CudaToolChain only supports sanitizers in the sense that it allows
+  // sanitizer arguments on the command line if they are supported by the host
+  // toolchain. The CudaToolChain will actually ignore any command line
+  // arguments for any of these "supported" sanitizers. That means that no
+  // sanitization of device code is actually supported at this time.
+  //
+  // This behavior is necessary because the host and device toolchains
+  // invocations often share the command line, so the device toolchain must
+  // tolerate flags meant only for the host toolchain.
+  return HostTC.getSupportedSanitizers();
+}
+
 /// XCore tool chain
 XCoreToolChain::XCoreToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)

@@ -68,7 +68,7 @@ void test_T_ctor_sfinae() {
     static_assert(!std::is_constructible<V, int>::value, "ambiguous");
   }
   {
-    using V = std::variant<int, int const &>;
+    using V = std::variant<int, const int &>;
     static_assert(!std::is_constructible<V, int>::value, "ambiguous");
   }
 #endif
@@ -87,7 +87,7 @@ void test_T_ctor_basic() {
   }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
-    using V = std::variant<int const &, int &&, long>;
+    using V = std::variant<const int &, int &&, long>;
     static_assert(std::is_convertible<int &, V>::value, "must be implicit");
     int x = 42;
     V v(x);
@@ -95,7 +95,7 @@ void test_T_ctor_basic() {
     assert(&std::get<0>(v) == &x);
   }
   {
-    using V = std::variant<int const &, int &&, long>;
+    using V = std::variant<const int &, int &&, long>;
     static_assert(std::is_convertible<int, V>::value, "must be implicit");
     int x = 42;
     V v(std::move(x));

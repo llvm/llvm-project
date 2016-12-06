@@ -46,4 +46,4 @@ int main(int argc, char **argv)
   return 0;
 }
 
-// CHECK: ERROR: invalid chunk state when deallocating address
+// CHECK: ERROR: invalid chunk state

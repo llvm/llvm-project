@@ -256,13 +256,11 @@ class PPCAsmParser : public MCTargetAsmParser {
   bool IsDarwin;
 
   void Warning(SMLoc L, const Twine &Msg) { getParser().Warning(L, Msg); }
-  bool Error(SMLoc L, const Twine &Msg) { return getParser().Error(L, Msg); }
 
   bool isPPC64() const { return IsPPC64; }
   bool isDarwin() const { return IsDarwin; }
 
-  bool MatchRegisterName(const AsmToken &Tok,
-                         unsigned &RegNo, int64_t &IntVal);
+  bool MatchRegisterName(unsigned &RegNo, int64_t &IntVal);
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
@@ -274,8 +272,8 @@ class PPCAsmParser : public MCTargetAsmParser {
 
   bool ParseOperand(OperandVector &Operands);
 
-  bool ParseDirectiveWord(unsigned Size, SMLoc L);
-  bool ParseDirectiveTC(unsigned Size, SMLoc L);
+  bool ParseDirectiveWord(unsigned Size, AsmToken ID);
+  bool ParseDirectiveTC(unsigned Size, AsmToken ID);
   bool ParseDirectiveMachine(SMLoc L);
   bool ParseDarwinDirectiveMachine(SMLoc L);
   bool ParseDirectiveAbiVersion(SMLoc L);
@@ -1296,68 +1294,54 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-bool PPCAsmParser::
-MatchRegisterName(const AsmToken &Tok, unsigned &RegNo, int64_t &IntVal) {
-  if (Tok.is(AsmToken::Identifier)) {
-    StringRef Name = Tok.getString();
-
+bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
+  if (getParser().getTok().is(AsmToken::Identifier)) {
+    StringRef Name = getParser().getTok().getString();
     if (Name.equals_lower("lr")) {
       RegNo = isPPC64()? PPC::LR8 : PPC::LR;
       IntVal = 8;
-      return false;
     } else if (Name.equals_lower("ctr")) {
       RegNo = isPPC64()? PPC::CTR8 : PPC::CTR;
       IntVal = 9;
-      return false;
     } else if (Name.equals_lower("vrsave")) {
       RegNo = PPC::VRSAVE;
       IntVal = 256;
-      return false;
     } else if (Name.startswith_lower("r") &&
                !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
       RegNo = isPPC64()? XRegs[IntVal] : RRegs[IntVal];
-      return false;
     } else if (Name.startswith_lower("f") &&
                !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
       RegNo = FRegs[IntVal];
-      return false;
     } else if (Name.startswith_lower("vs") &&
                !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
       RegNo = VSRegs[IntVal];
-      return false;
     } else if (Name.startswith_lower("v") &&
                !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
       RegNo = VRegs[IntVal];
-      return false;
     } else if (Name.startswith_lower("q") &&
                !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
       RegNo = QFRegs[IntVal];
-      return false;
     } else if (Name.startswith_lower("cr") &&
                !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
       RegNo = CRRegs[IntVal];
-      return false;
-    }
+    } else
+      return true;
+    getParser().Lex();
+    return false;
   }
-
   return true;
 }
 
 bool PPCAsmParser::
 ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
-  MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
+  const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   RegNo = 0;
   int64_t IntVal;
-
-  if (!MatchRegisterName(Tok, RegNo, IntVal)) {
-    Parser.Lex(); // Eat identifier token.
-    return false;
-  }
-
-  return Error(StartLoc, "invalid register name");
+  if (MatchRegisterName(RegNo, IntVal))
+    return TokError("invalid register name");
+  return false;
 }
 
 /// Extract \code @l/@ha \endcode modifier from expression.  Recursively scan
@@ -1583,30 +1567,13 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
     Parser.Lex(); // Eat the '%'.
     unsigned RegNo;
     int64_t IntVal;
-    if (!MatchRegisterName(Parser.getTok(), RegNo, IntVal)) {
-      Parser.Lex(); // Eat the identifier token.
-      Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
-      return false;
-    }
-    return Error(S, "invalid register name");
+    if (MatchRegisterName(RegNo, IntVal))
+      return Error(S, "invalid register name");
+
+    Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
+    return false;
 
   case AsmToken::Identifier:
-    // Note that non-register-name identifiers from the compiler will begin
-    // with '_', 'L'/'l' or '"'.  Of course, handwritten asm could include
-    // identifiers like r31foo - so we fall through in the event that parsing
-    // a register name fails.
-    if (isDarwin()) {
-      unsigned RegNo;
-      int64_t IntVal;
-      if (!MatchRegisterName(Parser.getTok(), RegNo, IntVal)) {
-        Parser.Lex(); // Eat the identifier token.
-        Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
-        return false;
-      }
-    }
-    // Fall-through to process non-register-name identifiers as expression.
-    LLVM_FALLTHROUGH;
-  // All other expressions
   case AsmToken::LParen:
   case AsmToken::Plus:
   case AsmToken::Minus:
@@ -1615,9 +1582,24 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   case AsmToken::Dollar:
   case AsmToken::Exclaim:
   case AsmToken::Tilde:
+    // Note that non-register-name identifiers from the compiler will begin
+    // with '_', 'L'/'l' or '"'.  Of course, handwritten asm could include
+    // identifiers like r31foo - so we fall through in the event that parsing
+    // a register name fails.
+    if (isDarwin()) {
+      unsigned RegNo;
+      int64_t IntVal;
+      if (!MatchRegisterName(RegNo, IntVal)) {
+        Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
+        return false;
+      }
+    }
+    // All other expressions
+
     if (!ParseExpression(EVal))
       break;
-    /* fall through */
+    // Fall-through
+    LLVM_FALLTHROUGH;
   default:
     return Error(S, "unknown operand");
   }
@@ -1655,26 +1637,21 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
     case AsmToken::Percent:
       Parser.Lex(); // Eat the '%'.
       unsigned RegNo;
-      if (MatchRegisterName(Parser.getTok(), RegNo, IntVal))
+      if (MatchRegisterName(RegNo, IntVal))
         return Error(S, "invalid register name");
-      Parser.Lex(); // Eat the identifier token.
       break;
 
     case AsmToken::Integer:
-      if (!isDarwin()) {
-        if (getParser().parseAbsoluteExpression(IntVal) ||
-          IntVal < 0 || IntVal > 31)
-        return Error(S, "invalid register number");
-      } else {
+      if (isDarwin())
         return Error(S, "unexpected integer value");
-      }
+      else if (getParser().parseAbsoluteExpression(IntVal) || IntVal < 0 ||
+               IntVal > 31)
+        return Error(S, "invalid register number");
       break;
-
    case AsmToken::Identifier:
     if (isDarwin()) {
       unsigned RegNo;
-      if (!MatchRegisterName(Parser.getTok(), RegNo, IntVal)) {
-        Parser.Lex(); // Eat the identifier token.
+      if (!MatchRegisterName(RegNo, IntVal)) {
         break;
       }
     }
@@ -1684,11 +1661,9 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
       return Error(S, "invalid memory operand");
     }
 
-    if (getLexer().isNot(AsmToken::RParen))
-      return Error(Parser.getTok().getLoc(), "missing ')'");
     E = Parser.getTok().getLoc();
-    Parser.Lex(); // Eat the ')'.
-
+    if (parseToken(AsmToken::RParen, "missing ')'"))
+      return true;
     Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
   }
 
@@ -1702,14 +1677,12 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // If the next character is a '+' or '-', we need to add it to the
   // instruction name, to match what TableGen is doing.
   std::string NewOpcode;
-  if (getLexer().is(AsmToken::Plus)) {
-    getLexer().Lex();
+  if (parseOptionalToken(AsmToken::Plus)) {
     NewOpcode = Name;
     NewOpcode += '+';
     Name = NewOpcode;
   }
-  if (getLexer().is(AsmToken::Minus)) {
-    getLexer().Lex();
+  if (parseOptionalToken(AsmToken::Minus)) {
     NewOpcode = Name;
     NewOpcode += '-';
     Name = NewOpcode;
@@ -1734,20 +1707,15 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // If there are no more operands then finish
-  if (getLexer().is(AsmToken::EndOfStatement))
+  if (parseOptionalToken(AsmToken::EndOfStatement))
     return false;
 
   // Parse the first operand
   if (ParseOperand(Operands))
     return true;
 
-  while (getLexer().isNot(AsmToken::EndOfStatement) &&
-         getLexer().is(AsmToken::Comma)) {
-    // Consume the comma token
-    Lex();
-
-    // Parse the next operand
-    if (ParseOperand(Operands))
+  while (!parseOptionalToken(AsmToken::EndOfStatement)) {
+    if (parseToken(AsmToken::Comma) || ParseOperand(Operands))
       return true;
   }
 
@@ -1772,108 +1740,94 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 /// ParseDirective parses the PPC specific directives
 bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
-  if (!isDarwin()) {
-    if (IDVal == ".word")
-      return ParseDirectiveWord(2, DirectiveID.getLoc());
-    if (IDVal == ".llong")
-      return ParseDirectiveWord(8, DirectiveID.getLoc());
-    if (IDVal == ".tc")
-      return ParseDirectiveTC(isPPC64()? 8 : 4, DirectiveID.getLoc());
+  if (isDarwin()) {
     if (IDVal == ".machine")
-      return ParseDirectiveMachine(DirectiveID.getLoc());
-    if (IDVal == ".abiversion")
-      return ParseDirectiveAbiVersion(DirectiveID.getLoc());
-    if (IDVal == ".localentry")
-      return ParseDirectiveLocalEntry(DirectiveID.getLoc());
-  } else {
-    if (IDVal == ".machine")
-      return ParseDarwinDirectiveMachine(DirectiveID.getLoc());
-  }
-  return true;
+      ParseDarwinDirectiveMachine(DirectiveID.getLoc());
+    else
+      return true;
+  } else if (IDVal == ".word")
+    ParseDirectiveWord(2, DirectiveID);
+  else if (IDVal == ".llong")
+    ParseDirectiveWord(8, DirectiveID);
+  else if (IDVal == ".tc")
+    ParseDirectiveTC(isPPC64() ? 8 : 4, DirectiveID);
+  else if (IDVal == ".machine")
+    ParseDirectiveMachine(DirectiveID.getLoc());
+  else if (IDVal == ".abiversion")
+    ParseDirectiveAbiVersion(DirectiveID.getLoc());
+  else if (IDVal == ".localentry")
+    ParseDirectiveLocalEntry(DirectiveID.getLoc());
+  else
+    return true;
+  return false;
 }
 
 /// ParseDirectiveWord
 ///  ::= .word [ expression (, expression)* ]
-bool PPCAsmParser::ParseDirectiveWord(unsigned Size, SMLoc L) {
-  MCAsmParser &Parser = getParser();
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    for (;;) {
-      const MCExpr *Value;
-      SMLoc ExprLoc = getLexer().getLoc();
-      if (getParser().parseExpression(Value))
-        return false;
+bool PPCAsmParser::ParseDirectiveWord(unsigned Size, AsmToken ID) {
+  auto parseOp = [&]() -> bool {
+    const MCExpr *Value;
+    SMLoc ExprLoc = getParser().getTok().getLoc();
+    if (getParser().parseExpression(Value))
+      return true;
+    if (const auto *MCE = dyn_cast<MCConstantExpr>(Value)) {
+      assert(Size <= 8 && "Invalid size");
+      uint64_t IntValue = MCE->getValue();
+      if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
+        return Error(ExprLoc, "literal value out of range for '" +
+                                  ID.getIdentifier() + "' directive");
+      getStreamer().EmitIntValue(IntValue, Size);
+    } else
+      getStreamer().EmitValue(Value, Size, ExprLoc);
+    return false;
+  };
 
-      if (const auto *MCE = dyn_cast<MCConstantExpr>(Value)) {
-        assert(Size <= 8 && "Invalid size");
-        uint64_t IntValue = MCE->getValue();
-        if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
-          return Error(ExprLoc, "literal value out of range for directive");
-        getStreamer().EmitIntValue(IntValue, Size);
-      } else {
-        getStreamer().EmitValue(Value, Size, ExprLoc);
-      }
-
-      if (getLexer().is(AsmToken::EndOfStatement))
-        break;
-
-      if (getLexer().isNot(AsmToken::Comma))
-        return Error(L, "unexpected token in directive");
-      Parser.Lex();
-    }
-  }
-
-  Parser.Lex();
+  if (parseMany(parseOp))
+    return addErrorSuffix(" in '" + ID.getIdentifier() + "' directive");
   return false;
 }
 
 /// ParseDirectiveTC
 ///  ::= .tc [ symbol (, expression)* ]
-bool PPCAsmParser::ParseDirectiveTC(unsigned Size, SMLoc L) {
+bool PPCAsmParser::ParseDirectiveTC(unsigned Size, AsmToken ID) {
   MCAsmParser &Parser = getParser();
   // Skip TC symbol, which is only used with XCOFF.
   while (getLexer().isNot(AsmToken::EndOfStatement)
          && getLexer().isNot(AsmToken::Comma))
     Parser.Lex();
-  if (getLexer().isNot(AsmToken::Comma)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
-  Parser.Lex();
+  if (parseToken(AsmToken::Comma))
+    return addErrorSuffix(" in '.tc' directive");
 
   // Align to word size.
   getParser().getStreamer().EmitValueToAlignment(Size);
 
   // Emit expressions.
-  return ParseDirectiveWord(Size, L);
+  return ParseDirectiveWord(Size, ID);
 }
 
 /// ParseDirectiveMachine (ELF platforms)
 ///  ::= .machine [ cpu | "push" | "pop" ]
 bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
-  if (getLexer().isNot(AsmToken::Identifier) &&
-      getLexer().isNot(AsmToken::String)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
+  if (Parser.getTok().isNot(AsmToken::Identifier) &&
+      Parser.getTok().isNot(AsmToken::String))
+    return Error(L, "unexpected token in '.machine' directive");
 
   StringRef CPU = Parser.getTok().getIdentifier();
-  Parser.Lex();
 
   // FIXME: Right now, the parser always allows any available
   // instruction, so the .machine directive is not useful.
   // Implement ".machine any" (by doing nothing) for the benefit
   // of existing assembler code.  Likewise, we can then implement
   // ".machine push" and ".machine pop" as no-op.
-  if (CPU != "any" && CPU != "push" && CPU != "pop") {
-    Error(L, "unrecognized machine type");
-    return false;
-  }
+  if (CPU != "any" && CPU != "push" && CPU != "pop")
+    return TokError("unrecognized machine type");
 
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
+  Parser.Lex();
+
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.machine' directive");
+
   PPCTargetStreamer &TStreamer =
       *static_cast<PPCTargetStreamer *>(
            getParser().getStreamer().getTargetStreamer());
@@ -1886,11 +1840,9 @@ bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
 ///  ::= .machine cpu-identifier
 bool PPCAsmParser::ParseDarwinDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
-  if (getLexer().isNot(AsmToken::Identifier) &&
-      getLexer().isNot(AsmToken::String)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
+  if (Parser.getTok().isNot(AsmToken::Identifier) &&
+      Parser.getTok().isNot(AsmToken::String))
+    return Error(L, "unexpected token in directive");
 
   StringRef CPU = Parser.getTok().getIdentifier();
   Parser.Lex();
@@ -1898,25 +1850,14 @@ bool PPCAsmParser::ParseDarwinDirectiveMachine(SMLoc L) {
   // FIXME: this is only the 'default' set of cpu variants.
   // However we don't act on this information at present, this is simply
   // allowing parsing to proceed with minimal sanity checking.
-  if (CPU != "ppc7400" && CPU != "ppc" && CPU != "ppc64") {
-    Error(L, "unrecognized cpu type");
-    return false;
-  }
-
-  if (isPPC64() && (CPU == "ppc7400" || CPU == "ppc")) {
-    Error(L, "wrong cpu type specified for 64bit");
-    return false;
-  }
-  if (!isPPC64() && CPU == "ppc64") {
-    Error(L, "wrong cpu type specified for 32bit");
-    return false;
-  }
-
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
-
+  if (check(CPU != "ppc7400" && CPU != "ppc" && CPU != "ppc64", L,
+            "unrecognized cpu type") ||
+      check(isPPC64() && (CPU == "ppc7400" || CPU == "ppc"), L,
+            "wrong cpu type specified for 64bit") ||
+      check(!isPPC64() && CPU == "ppc64", L,
+            "wrong cpu type specified for 32bit") ||
+      parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.machine' directive");
   return false;
 }
 
@@ -1924,14 +1865,10 @@ bool PPCAsmParser::ParseDarwinDirectiveMachine(SMLoc L) {
 ///  ::= .abiversion constant-expression
 bool PPCAsmParser::ParseDirectiveAbiVersion(SMLoc L) {
   int64_t AbiVersion;
-  if (getParser().parseAbsoluteExpression(AbiVersion)){
-    Error(L, "expected constant expression");
-    return false;
-  }
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
+  if (check(getParser().parseAbsoluteExpression(AbiVersion), L,
+            "expected constant expression") ||
+      parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.abiversion' directive");
 
   PPCTargetStreamer &TStreamer =
       *static_cast<PPCTargetStreamer *>(
@@ -1945,28 +1882,16 @@ bool PPCAsmParser::ParseDirectiveAbiVersion(SMLoc L) {
 ///  ::= .localentry symbol, expression
 bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
   StringRef Name;
-  if (getParser().parseIdentifier(Name)) {
-    Error(L, "expected identifier in directive");
-    return false;
-  }
+  if (getParser().parseIdentifier(Name))
+    return Error(L, "expected identifier in '.localentry' directive");
+
   MCSymbolELF *Sym = cast<MCSymbolELF>(getContext().getOrCreateSymbol(Name));
-
-  if (getLexer().isNot(AsmToken::Comma)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
-  Lex();
-
   const MCExpr *Expr;
-  if (getParser().parseExpression(Expr)) {
-    Error(L, "expected expression");
-    return false;
-  }
 
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    Error(L, "unexpected token in directive");
-    return false;
-  }
+  if (parseToken(AsmToken::Comma) ||
+      check(getParser().parseExpression(Expr), L, "expected expression") ||
+      parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.localentry' directive");
 
   PPCTargetStreamer &TStreamer =
       *static_cast<PPCTargetStreamer *>(

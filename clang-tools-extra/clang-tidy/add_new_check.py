@@ -226,8 +226,13 @@ def update_checks_list(clang_tidy_path):
   def format_link(doc_file):
     check_name = doc_file.replace('.rst', '')
     with open(os.path.join(docs_dir, doc_file), 'r') as doc:
+      content = doc.read()
+      match = re.search('.*:orphan:.*', content)
+      if match:
+        return ''
+
       match = re.search('.*:http-equiv=refresh: \d+;URL=(.*).html.*',
-                        doc.read())
+                        content)
       if match:
         return '   %(check)s (redirects to %(target)s) <%(check)s>\n' % {
             'check': check_name,

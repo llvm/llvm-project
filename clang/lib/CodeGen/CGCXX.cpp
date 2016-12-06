@@ -218,7 +218,7 @@ llvm::Function *CodeGenModule::codegenCXXStructor(const CXXMethodDecl *MD,
       getTypes().arrangeCXXStructorDeclaration(MD, Type);
   auto *Fn = cast<llvm::Function>(
       getAddrOfCXXStructor(MD, Type, &FnInfo, /*FnType=*/nullptr,
-                           /*DontDefer=*/true, /*IsForDefinition=*/true));
+                           /*DontDefer=*/true, ForDefinition));
 
   GlobalDecl GD;
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
@@ -239,7 +239,8 @@ llvm::Function *CodeGenModule::codegenCXXStructor(const CXXMethodDecl *MD,
 
 llvm::Constant *CodeGenModule::getAddrOfCXXStructor(
     const CXXMethodDecl *MD, StructorType Type, const CGFunctionInfo *FnInfo,
-    llvm::FunctionType *FnType, bool DontDefer, bool IsForDefinition) {
+    llvm::FunctionType *FnType, bool DontDefer,
+    ForDefinition_t IsForDefinition) {
   GlobalDecl GD;
   if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
     GD = GlobalDecl(CD, toCXXCtorType(Type));

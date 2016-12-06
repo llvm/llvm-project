@@ -26,6 +26,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -194,32 +196,45 @@ AddressSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report) {
                                 ->GetValueForKey("description")
                                 ->GetAsString()
                                 ->GetValue();
-  if (description == "heap-use-after-free") {
-    return "Use of deallocated memory detected";
-  } else if (description == "heap-buffer-overflow") {
-    return "Heap buffer overflow detected";
-  } else if (description == "stack-buffer-underflow") {
-    return "Stack buffer underflow detected";
-  } else if (description == "initialization-order-fiasco") {
-    return "Initialization order problem detected";
-  } else if (description == "stack-buffer-overflow") {
-    return "Stack buffer overflow detected";
-  } else if (description == "stack-use-after-return") {
-    return "Use of returned stack memory detected";
-  } else if (description == "use-after-poison") {
-    return "Use of poisoned memory detected";
-  } else if (description == "container-overflow") {
-    return "Container overflow detected";
-  } else if (description == "stack-use-after-scope") {
-    return "Use of out-of-scope stack memory detected";
-  } else if (description == "global-buffer-overflow") {
-    return "Global buffer overflow detected";
-  } else if (description == "unknown-crash") {
-    return "Invalid memory access detected";
-  }
-
-  // for unknown report codes just show the code
-  return description;
+  return llvm::StringSwitch<std::string>(description)
+      .Case("heap-use-after-free", "Use of deallocated memory")
+      .Case("heap-buffer-overflow", "Heap buffer overflow")
+      .Case("stack-buffer-underflow", "Stack buffer underflow")
+      .Case("initialization-order-fiasco", "Initialization order problem")
+      .Case("stack-buffer-overflow", "Stack buffer overflow")
+      .Case("stack-use-after-return", "Use of stack memory after return")
+      .Case("use-after-poison", "Use of poisoned memory")
+      .Case("container-overflow", "Container overflow")
+      .Case("stack-use-after-scope", "Use of out-of-scope stack memory")
+      .Case("global-buffer-overflow", "Global buffer overflow")
+      .Case("unknown-crash", "Invalid memory access")
+      .Case("stack-overflow", "Stack space exhausted")
+      .Case("null-deref", "Dereference of null pointer")
+      .Case("wild-jump", "Jump to non-executable address")
+      .Case("wild-addr-write", "Write through wild pointer")
+      .Case("wild-addr-read", "Read from wild pointer")
+      .Case("wild-addr", "Access through wild pointer")
+      .Case("signal", "Deadly signal")
+      .Case("double-free", "Deallocation of freed memory")
+      .Case("new-delete-type-mismatch",
+            "Deallocation size different from allocation size")
+      .Case("bad-free", "Deallocation of non-allocated memory")
+      .Case("alloc-dealloc-mismatch",
+            "Mismatch between allocation and deallocation APIs")
+      .Case("bad-malloc_usable_size", "Invalid argument to malloc_usable_size")
+      .Case("bad-__sanitizer_get_allocated_size",
+            "Invalid argument to __sanitizer_get_allocated_size")
+      .Case("param-overlap",
+            "Call to function disallowing overlapping memory ranges")
+      .Case("negative-size-param", "Negative size used when accessing memory")
+      .Case("bad-__sanitizer_annotate_contiguous_container",
+            "Invalid argument to __sanitizer_annotate_contiguous_container")
+      .Case("odr-violation", "Symbol defined in multiple translation units")
+      .Case(
+          "invalid-pointer-pair",
+          "Comparison or arithmetic on pointers from different memory regions")
+      // for unknown report codes just show the code
+      .Default("AddressSanitizer detected: " + description);
 }
 
 bool AddressSanitizerRuntime::NotifyBreakpointHit(

@@ -17,7 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-TEST(ListenerTest, GetNextEvent) {
+TEST(ListenerTest, GetEventImmediate) {
   EventSP event_sp;
   Broadcaster broadcaster(nullptr, "test-broadcaster");
 
@@ -27,31 +27,34 @@ TEST(ListenerTest, GetNextEvent) {
   ASSERT_EQ(event_mask,
             listener_sp->StartListeningForEvents(&broadcaster, event_mask));
 
+  const std::chrono::seconds timeout(0);
   // Without any events sent, these should return false.
-  EXPECT_FALSE(listener_sp->GetNextEvent(event_sp));
-  EXPECT_FALSE(listener_sp->GetNextEventForBroadcaster(nullptr, event_sp));
-  EXPECT_FALSE(listener_sp->GetNextEventForBroadcaster(&broadcaster, event_sp));
-  EXPECT_FALSE(listener_sp->GetNextEventForBroadcasterWithType(
-      &broadcaster, event_mask, event_sp));
+  EXPECT_FALSE(listener_sp->GetEvent(event_sp, timeout));
+  EXPECT_FALSE(listener_sp->GetEventForBroadcaster(nullptr, event_sp, timeout));
+  EXPECT_FALSE(
+      listener_sp->GetEventForBroadcaster(&broadcaster, event_sp, timeout));
+  EXPECT_FALSE(listener_sp->GetEventForBroadcasterWithType(
+      &broadcaster, event_mask, event_sp, timeout));
 
   // Now send events and make sure they get it.
   broadcaster.BroadcastEvent(event_mask, nullptr);
-  EXPECT_TRUE(listener_sp->GetNextEvent(event_sp));
+  EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
 
   broadcaster.BroadcastEvent(event_mask, nullptr);
-  EXPECT_TRUE(listener_sp->GetNextEventForBroadcaster(nullptr, event_sp));
+  EXPECT_TRUE(listener_sp->GetEventForBroadcaster(nullptr, event_sp, timeout));
 
   broadcaster.BroadcastEvent(event_mask, nullptr);
-  EXPECT_TRUE(listener_sp->GetNextEventForBroadcaster(&broadcaster, event_sp));
+  EXPECT_TRUE(
+      listener_sp->GetEventForBroadcaster(&broadcaster, event_sp, timeout));
 
   broadcaster.BroadcastEvent(event_mask, nullptr);
-  EXPECT_FALSE(listener_sp->GetNextEventForBroadcasterWithType(
-      &broadcaster, event_mask * 2, event_sp));
-  EXPECT_TRUE(listener_sp->GetNextEventForBroadcasterWithType(
-      &broadcaster, event_mask, event_sp));
+  EXPECT_FALSE(listener_sp->GetEventForBroadcasterWithType(
+      &broadcaster, event_mask * 2, event_sp, timeout));
+  EXPECT_TRUE(listener_sp->GetEventForBroadcasterWithType(
+      &broadcaster, event_mask, event_sp, timeout));
 }
 
-TEST(ListenerTest, WaitForEvent) {
+TEST(ListenerTest, GetEventWait) {
   EventSP event_sp;
   Broadcaster broadcaster(nullptr, "test-broadcaster");
 
@@ -63,33 +66,30 @@ TEST(ListenerTest, WaitForEvent) {
 
   // Without any events sent, these should make a short wait and return false.
   std::chrono::microseconds timeout(10);
-  EXPECT_FALSE(listener_sp->WaitForEvent(timeout, event_sp));
+  EXPECT_FALSE(listener_sp->GetEvent(event_sp, timeout));
+  EXPECT_FALSE(listener_sp->GetEventForBroadcaster(nullptr, event_sp, timeout));
   EXPECT_FALSE(
-      listener_sp->WaitForEventForBroadcaster(timeout, nullptr, event_sp));
-  EXPECT_FALSE(
-      listener_sp->WaitForEventForBroadcaster(timeout, &broadcaster, event_sp));
-  EXPECT_FALSE(listener_sp->WaitForEventForBroadcasterWithType(
-      timeout, &broadcaster, event_mask, event_sp));
+      listener_sp->GetEventForBroadcaster(&broadcaster, event_sp, timeout));
+  EXPECT_FALSE(listener_sp->GetEventForBroadcasterWithType(
+      &broadcaster, event_mask, event_sp, timeout));
 
   // Now send events and make sure they get it.
   broadcaster.BroadcastEvent(event_mask, nullptr);
-  EXPECT_TRUE(listener_sp->WaitForEvent(timeout, event_sp));
+  EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
+
+  broadcaster.BroadcastEvent(event_mask, nullptr);
+  EXPECT_TRUE(listener_sp->GetEventForBroadcaster(nullptr, event_sp, timeout));
 
   broadcaster.BroadcastEvent(event_mask, nullptr);
   EXPECT_TRUE(
-      listener_sp->WaitForEventForBroadcaster(timeout, nullptr, event_sp));
+      listener_sp->GetEventForBroadcaster(&broadcaster, event_sp, timeout));
 
   broadcaster.BroadcastEvent(event_mask, nullptr);
-  EXPECT_TRUE(
-      listener_sp->WaitForEventForBroadcaster(timeout, &broadcaster, event_sp));
+  EXPECT_FALSE(listener_sp->GetEventForBroadcasterWithType(
+      &broadcaster, event_mask * 2, event_sp, timeout));
+  EXPECT_TRUE(listener_sp->GetEventForBroadcasterWithType(
+      &broadcaster, event_mask, event_sp, timeout));
 
-  broadcaster.BroadcastEvent(event_mask, nullptr);
-  EXPECT_FALSE(listener_sp->WaitForEventForBroadcasterWithType(
-      timeout, &broadcaster, event_mask * 2, event_sp));
-  EXPECT_TRUE(listener_sp->WaitForEventForBroadcasterWithType(
-      timeout, &broadcaster, event_mask, event_sp));
-
-  timeout = std::chrono::seconds(0);
   auto delayed_broadcast = [&] {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     broadcaster.BroadcastEvent(event_mask, nullptr);
@@ -99,16 +99,16 @@ TEST(ListenerTest, WaitForEvent) {
   // broadcast sends.
   std::future<void> async_broadcast =
       std::async(std::launch::async, delayed_broadcast);
-  EXPECT_TRUE(listener_sp->WaitForEvent(timeout, event_sp));
+  EXPECT_TRUE(listener_sp->GetEvent(event_sp, llvm::None));
   async_broadcast.get();
 
   async_broadcast = std::async(std::launch::async, delayed_broadcast);
   EXPECT_TRUE(
-      listener_sp->WaitForEventForBroadcaster(timeout, &broadcaster, event_sp));
+      listener_sp->GetEventForBroadcaster(&broadcaster, event_sp, llvm::None));
   async_broadcast.get();
 
   async_broadcast = std::async(std::launch::async, delayed_broadcast);
-  EXPECT_TRUE(listener_sp->WaitForEventForBroadcasterWithType(
-      timeout, &broadcaster, event_mask, event_sp));
+  EXPECT_TRUE(listener_sp->GetEventForBroadcasterWithType(
+      &broadcaster, event_mask, event_sp, llvm::None));
   async_broadcast.get();
 }

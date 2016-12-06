@@ -20,6 +20,7 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/Endian.h"
+#include "lldb/Host/Time.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -27,12 +28,6 @@
 #include "lldb/Utility/ProcessStructReader.h"
 
 #include <algorithm>
-
-#if __ANDROID_NDK__
-#include <sys/types.h>
-#endif
-
-#include "lldb/Host/Time.h"
 
 using namespace lldb;
 using namespace lldb_private;

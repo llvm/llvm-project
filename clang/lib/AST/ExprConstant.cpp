@@ -2907,7 +2907,6 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
       // In C99, a CompoundLiteralExpr is an lvalue, and we defer evaluating the
       // initializer until now for such expressions. Such an expression can't be
       // an ICE in C, so this only matters for fold.
-      assert(!Info.getLangOpts().CPlusPlus && "lvalue compound literal in c++?");
       if (Type.isVolatileQualified()) {
         Info.FFDiag(Conv);
         return false;
@@ -4711,7 +4710,7 @@ public:
 //  * VarDecl
 //  * FunctionDecl
 // - Literals
-//  * CompoundLiteralExpr in C
+//  * CompoundLiteralExpr in C (and in global scope in C++)
 //  * StringLiteral
 //  * CXXTypeidExpr
 //  * PredefinedExpr
@@ -4906,7 +4905,8 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
 
 bool
 LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
-  assert(!Info.getLangOpts().CPlusPlus && "lvalue compound literal in c++?");
+  assert((!Info.getLangOpts().CPlusPlus || E->isFileScope()) &&
+         "lvalue compound literal in c++?");
   // Defer visiting the literal until the lvalue-to-rvalue conversion. We can
   // only see this when folding in C, so there's no standard to follow here.
   return Success(E);

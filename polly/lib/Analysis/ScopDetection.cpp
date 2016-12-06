@@ -109,6 +109,13 @@ static cl::opt<bool>
                    cl::Hidden, cl::init(false), cl::ZeroOrMore,
                    cl::cat(PollyCategory));
 
+bool polly::PollyAllowUnsignedOperations;
+static cl::opt<bool, true> XPollyAllowUnsignedOperations(
+    "polly-allow-unsigned-operations",
+    cl::desc("Allow unsigned operations such as comparisons or zero-extends."),
+    cl::location(PollyAllowUnsignedOperations), cl::Hidden, cl::ZeroOrMore,
+    cl::init(true), cl::cat(PollyCategory));
+
 bool polly::PollyUseRuntimeAliasChecks;
 static cl::opt<bool, true> XPollyUseRuntimeAliasChecks(
     "polly-use-runtime-alias-checks",
@@ -346,6 +353,40 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
   return true;
 }
 
+bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
+                                         Loop *Scope) const {
+  SetVector<Value *> Values;
+  findValues(S0, *SE, Values);
+  if (S1)
+    findValues(S1, *SE, Values);
+
+  SmallPtrSet<Value *, 8> PtrVals;
+  for (auto *V : Values) {
+    if (auto *P2I = dyn_cast<PtrToIntInst>(V))
+      V = P2I->getOperand(0);
+
+    if (!V->getType()->isPointerTy())
+      continue;
+
+    auto *PtrSCEV = SE->getSCEVAtScope(V, Scope);
+    if (isa<SCEVConstant>(PtrSCEV))
+      continue;
+
+    auto *BasePtr = dyn_cast<SCEVUnknown>(SE->getPointerBase(PtrSCEV));
+    if (!BasePtr)
+      return true;
+
+    auto *BasePtrVal = BasePtr->getValue();
+    if (PtrVals.insert(BasePtrVal).second) {
+      for (auto *PtrVal : PtrVals)
+        if (PtrVal != BasePtrVal && !AA->isNoAlias(PtrVal, BasePtrVal))
+          return true;
+    }
+  }
+
+  return false;
+}
+
 bool ScopDetection::isAffine(const SCEV *S, Loop *Scope,
                              DetectionContext &Context) const {
 
@@ -366,6 +407,10 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
   const SCEV *ConditionSCEV = SE->getSCEVAtScope(Condition, L);
 
   if (IsLoopBranch && L->isLoopLatch(&BB))
+    return false;
+
+  // Check for invalid usage of different pointers in one expression.
+  if (involvesMultiplePtrs(ConditionSCEV, nullptr, L))
     return false;
 
   if (isAffine(ConditionSCEV, L, Context))
@@ -415,6 +460,20 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
   Loop *L = LI->getLoopFor(&BB);
   const SCEV *LHS = SE->getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE->getSCEVAtScope(ICmp->getOperand(1), L);
+
+  // If unsigned operations are not allowed try to approximate the region.
+  if (ICmp->isUnsigned() && !PollyAllowUnsignedOperations)
+    return !IsLoopBranch && AllowNonAffineSubRegions &&
+           addOverApproximatedRegion(RI->getRegionFor(&BB), Context);
+
+  // Check for invalid usage of different pointers in one expression.
+  if (ICmp->isEquality() && involvesMultiplePtrs(LHS, nullptr, L) &&
+      involvesMultiplePtrs(RHS, nullptr, L))
+    return false;
+
+  // Check for invalid usage of different pointers in a relational comparison.
+  if (ICmp->isRelational() && involvesMultiplePtrs(LHS, RHS, L))
+    return false;
 
   if (isAffine(LHS, L, Context) && isAffine(RHS, L, Context))
     return true;

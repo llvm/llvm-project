@@ -178,6 +178,8 @@ namespace {
 
 
   Type *next_type(Type *Ty, Value *Idx) {
+    if (auto *PTy = dyn_cast<PointerType>(Ty))
+      return PTy->getElementType();
     // Advance the type.
     if (!Ty->isStructTy()) {
       Type *NexTy = cast<SequentialType>(Ty)->getElementType();

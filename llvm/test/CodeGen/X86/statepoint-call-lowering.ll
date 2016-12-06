@@ -81,7 +81,7 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; Check that an ununsed relocate has no code-generation impact
 ; CHECK: pushq %rax
 ; CHECK: callq return_i1
-; CHECK-NEXT: .Ltmp11:
+; CHECK-NEXT: .Ltmp5:
 ; CHECK-NEXT: popq %rcx
 ; CHECK-NEXT: retq
 entry:

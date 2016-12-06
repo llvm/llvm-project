@@ -116,7 +116,8 @@ macro(add_lldb_executable name)
             BUILD_WITH_INSTALL_RPATH On
             INSTALL_RPATH "@loader_path/../../../../${_dots}/${LLDB_FRAMEWORK_INSTALL_DIR}")
 
-      add_llvm_tool_symlink(${name} $<TARGET_FILE:${name}> ARG_ALWAYS_GENERATE)
+      add_llvm_tool_symlink(${name} ${name} ARG_ALWAYS_GENERATE
+                            OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
     else()
       set_target_properties(${name} PROPERTIES
             BUILD_WITH_INSTALL_RPATH On

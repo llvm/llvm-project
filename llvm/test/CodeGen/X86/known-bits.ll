@@ -16,8 +16,7 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-NEXT:    shrl $14, %eax
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    vmovd %eax, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    vpextrd $1, %xmm0, %ebp
 ; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    vmovd %xmm0, %esi
@@ -55,8 +54,7 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X64-NEXT:    shrl $14, %eax
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    vpextrd $1, %xmm0, %r8d
 ; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    vmovd %xmm0, %r9d

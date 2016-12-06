@@ -762,6 +762,46 @@
 
 	niai	0, 0
 
+#CHECK: error: invalid register pair
+#CHECK: lpd	%r1, 0, 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lpd	%r2, 160(%r1,%r15), 160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpd	%r2, -1(%r1), 160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpd	%r2, 4096(%r1), 160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpd	%r2, 0(%r1), -1(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpd	%r2, 0(%r1), 4096(%r15)
+
+	lpd	%r1, 0, 0
+	lpd	%r2, 160(%r1,%r15), 160(%r15)
+	lpd	%r2, -1(%r1), 160(%r15)
+	lpd	%r2, 4096(%r1), 160(%r15)
+	lpd	%r2, 0(%r1), -1(%r15)
+	lpd	%r2, 0(%r1), 4096(%r15)
+
+#CHECK: error: invalid register pair
+#CHECK: lpdg	%r1, 0, 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lpdg	%r2, 160(%r1,%r15), 160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpdg	%r2, -1(%r1), 160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpdg	%r2, 4096(%r1), 160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpdg	%r2, 0(%r1), -1(%r15)
+#CHECK: error: invalid operand
+#CHECK: lpdg	%r2, 0(%r1), 4096(%r15)
+
+	lpdg	%r1, 0, 0
+	lpdg	%r2, 160(%r1,%r15), 160(%r15)
+	lpdg	%r2, -1(%r1), 160(%r15)
+	lpdg	%r2, 4096(%r1), 160(%r15)
+	lpdg	%r2, 0(%r1), -1(%r15)
+	lpdg	%r2, 0(%r1), 4096(%r15)
+
 #CHECK: error: instruction requires: transactional-execution
 #CHECK: ntstg	%r0, 524287(%r1,%r15)
 
@@ -872,6 +912,17 @@
 	srlk	%r0,%r0,524288
 	srlk	%r0,%r0,0(%r0)
 	srlk	%r0,%r0,0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: srnmb	-1
+#CHECK: error: invalid operand
+#CHECK: srnmb	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: srnmb	0(%r1,%r2)
+
+	srnmb	-1
+	srnmb	4096
+	srnmb	0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: stch	%r0, -524289

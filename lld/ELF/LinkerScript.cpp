@@ -972,21 +972,21 @@ std::vector<size_t> LinkerScript<ELFT>::getPhdrIndices(StringRef SectionName) {
 
     std::vector<size_t> Ret;
     for (StringRef PhdrName : Cmd->Phdrs)
-      Ret.push_back(getPhdrIndex(PhdrName));
+      Ret.push_back(getPhdrIndex(Cmd->Location, PhdrName));
     return Ret;
   }
   return {};
 }
 
 template <class ELFT>
-size_t LinkerScript<ELFT>::getPhdrIndex(StringRef PhdrName) {
+size_t LinkerScript<ELFT>::getPhdrIndex(const Twine &Loc, StringRef PhdrName) {
   size_t I = 0;
   for (PhdrsCommand &Cmd : Opt.PhdrsCommands) {
     if (Cmd.Name == PhdrName)
       return I;
     ++I;
   }
-  error("section header '" + PhdrName + "' is not listed in PHDRS");
+  error(Loc + ": section header '" + PhdrName + "' is not listed in PHDRS");
   return 0;
 }
 
@@ -1441,6 +1441,7 @@ uint32_t ScriptParser::readFill() {
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
+  Cmd->Location = getCurrentLocation();
 
   // Read an address expression.
   // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html#Output-Section-Address
@@ -1713,7 +1714,7 @@ Expr ScriptParser::readPrimary() {
     return readParenExpr();
 
   StringRef Tok = next();
-  std::string Location = currentLocation();
+  std::string Location = getCurrentLocation();
 
   if (Tok == "~") {
     Expr E = readPrimary();

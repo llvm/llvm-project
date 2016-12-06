@@ -43,10 +43,11 @@ namespace tooling {
 struct CompileCommand {
   CompileCommand() {}
   CompileCommand(Twine Directory, Twine Filename,
-                 std::vector<std::string> CommandLine)
+                 std::vector<std::string> CommandLine, Twine Output)
       : Directory(Directory.str()),
         Filename(Filename.str()),
-        CommandLine(std::move(CommandLine)) {}
+        CommandLine(std::move(CommandLine)),
+        Output(Output.str()){}
 
   /// \brief The working directory the command was executed from.
   std::string Directory;
@@ -56,6 +57,9 @@ struct CompileCommand {
 
   /// \brief The command line that was executed.
   std::vector<std::string> CommandLine;
+
+  /// The output file associated with the command.
+  std::string Output;
 
   /// \brief An optional mapping from each file's path to its content for all
   /// files needed for the compilation that are not available via the file

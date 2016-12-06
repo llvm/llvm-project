@@ -34,16 +34,16 @@
 
 void test_const_lvalue_get() {
   {
-    using V = std::variant<int>;
+    using V = std::variant<int, const long>;
     constexpr V v(42);
-    // ASSERT_NOT_NOEXCEPT(std::get<0>(v));
-    ASSERT_SAME_TYPE(decltype(std::get<0>(v)), int const &);
+    ASSERT_NOT_NOEXCEPT(std::get<0>(v));
+    ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
     static_assert(std::get<0>(v) == 42, "");
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     constexpr V v(42l);
-    ASSERT_SAME_TYPE(decltype(std::get<1>(v)), long const &);
+    ASSERT_SAME_TYPE(decltype(std::get<1>(v)), const long &);
     static_assert(std::get<1>(v) == 42, "");
   }
 // FIXME: Remove these once reference support is reinstated
@@ -74,16 +74,16 @@ void test_const_lvalue_get() {
 
 void test_lvalue_get() {
   {
-    using V = std::variant<int>;
+    using V = std::variant<int, const long>;
     V v(42);
     ASSERT_NOT_NOEXCEPT(std::get<0>(v));
     ASSERT_SAME_TYPE(decltype(std::get<0>(v)), int &);
     assert(std::get<0>(v) == 42);
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     V v(42l);
-    ASSERT_SAME_TYPE(decltype(std::get<1>(v)), long &);
+    ASSERT_SAME_TYPE(decltype(std::get<1>(v)), const long &);
     assert(std::get<1>(v) == 42);
   }
 // FIXME: Remove these once reference support is reinstated
@@ -121,16 +121,16 @@ void test_lvalue_get() {
 
 void test_rvalue_get() {
   {
-    using V = std::variant<int>;
+    using V = std::variant<int, const long>;
     V v(42);
     ASSERT_NOT_NOEXCEPT(std::get<0>(std::move(v)));
     ASSERT_SAME_TYPE(decltype(std::get<0>(std::move(v))), int &&);
     assert(std::get<0>(std::move(v)) == 42);
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     V v(42l);
-    ASSERT_SAME_TYPE(decltype(std::get<1>(std::move(v))), long &&);
+    ASSERT_SAME_TYPE(decltype(std::get<1>(std::move(v))), const long &&);
     assert(std::get<1>(std::move(v)) == 42);
   }
 // FIXME: Remove these once reference support is reinstated
@@ -170,14 +170,14 @@ void test_rvalue_get() {
 
 void test_const_rvalue_get() {
   {
-    using V = std::variant<int>;
+    using V = std::variant<int, const long>;
     const V v(42);
     ASSERT_NOT_NOEXCEPT(std::get<0>(std::move(v)));
     ASSERT_SAME_TYPE(decltype(std::get<0>(std::move(v))), const int &&);
     assert(std::get<0>(std::move(v)) == 42);
   }
   {
-    using V = std::variant<int, long>;
+    using V = std::variant<int, const long>;
     const V v(42l);
     ASSERT_SAME_TYPE(decltype(std::get<1>(std::move(v))), const long &&);
     assert(std::get<1>(std::move(v)) == 42);
@@ -234,7 +234,7 @@ void test_throws_for_all_value_categories() {
     using Idx = decltype(idx);
     try {
       std::get<Idx::value>(std::forward<decltype(v)>(v));
-    } catch (std::bad_variant_access const &) {
+    } catch (const std::bad_variant_access &) {
       return true;
     } catch (...) { /* ... */
     }

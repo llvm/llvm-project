@@ -18,9 +18,9 @@
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
+#include "Threads.h"
 #include "Writer.h"
 #include "lld/Config/Version.h"
-#include "lld/Core/Parallel.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -420,6 +420,8 @@ static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
 }
 
 static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
+  if (Config->Relocatable)
+    return DiscardPolicy::None;
   auto *Arg =
       Args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
   if (!Arg)
@@ -515,7 +517,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
   Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
-  Config->Discard = getDiscardOption(Args);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
@@ -530,6 +531,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Pie = getArg(Args, OPT_pie, OPT_nopie, false);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
+  Config->Discard = getDiscardOption(Args);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
   Config->Shared = Args.hasArg(OPT_shared);
@@ -574,6 +576,13 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SortSection = getSortKind(Args);
   Config->Target2 = getTarget2Option(Args);
   Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
+
+  // --omagic is an option to create old-fashioned executables in which
+  // .text segments are writable. Today, the option is still in use to
+  // create special-purpose programs such as boot loaders. It doesn't
+  // make sense to create PT_GNU_RELRO for such executables.
+  if (Config->OMagic)
+    Config->ZRelro = false;
 
   if (!Config->Relocatable)
     Config->Strip = getStripOption(Args);
@@ -823,18 +832,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // MergeInputSection::splitIntoPieces needs to be called before
   // any call of MergeInputSection::getOffset. Do that.
-  auto Fn = [](InputSectionBase<ELFT> *S) {
-    if (!S->Live)
-      return;
-    if (S->Compressed)
-      S->uncompress();
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
-      MS->splitIntoPieces();
-  };
-  if (Config->Threads)
-    parallel_for_each(Symtab.Sections.begin(), Symtab.Sections.end(), Fn);
-  else
-    std::for_each(Symtab.Sections.begin(), Symtab.Sections.end(), Fn);
+  forEach(Symtab.Sections.begin(), Symtab.Sections.end(),
+          [](InputSectionBase<ELFT> *S) {
+            if (!S->Live)
+              return;
+            if (S->Compressed)
+              S->uncompress();
+            if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+              MS->splitIntoPieces();
+          });
 
   // Write the result to the file.
   writeResult<ELFT>();

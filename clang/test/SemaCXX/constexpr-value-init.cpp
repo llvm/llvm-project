@@ -34,7 +34,7 @@ struct V : virtual C {};
 template<typename T> struct Z : T {
   constexpr Z() : V() {}
 };
-constexpr int n = Z<V>().c; // expected-error {{constant expression}} expected-note {{virtual base class}}
+constexpr int n = Z<V>().c; // expected-error {{constant expression}} expected-note {{non-literal type 'Z<V>'}}
 
 struct E {
   A a[2];

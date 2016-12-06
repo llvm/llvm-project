@@ -103,7 +103,9 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding);
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
-void ReleaseMemoryToOS(uptr addr, uptr size);
+// Releases memory pages entirely within the [beg, end] address range. Noop if
+// the provided range does not contain at least one entire page.
+void ReleaseMemoryPagesToOS(uptr beg, uptr end);
 void IncreaseTotalMmap(uptr size);
 void DecreaseTotalMmap(uptr size);
 uptr GetRSS();
@@ -644,18 +646,40 @@ uptr InternalLowerBound(const Container &v, uptr first, uptr last,
   return first;
 }
 
+enum ModuleArch {
+  kModuleArchUnknown,
+  kModuleArchI386,
+  kModuleArchX86_64,
+  kModuleArchX86_64H,
+  kModuleArchARMV6,
+  kModuleArchARMV7,
+  kModuleArchARMV7S,
+  kModuleArchARMV7K,
+  kModuleArchARM64
+};
+
+const uptr kModuleUUIDSize = 16;
+
 // Represents a binary loaded into virtual memory (e.g. this can be an
 // executable or a shared object).
 class LoadedModule {
  public:
-  LoadedModule() : full_name_(nullptr), base_address_(0) { ranges_.clear(); }
+  LoadedModule()
+      : full_name_(nullptr), base_address_(0), arch_(kModuleArchUnknown) {
+    internal_memset(uuid_, 0, kModuleUUIDSize);
+    ranges_.clear();
+  }
   void set(const char *module_name, uptr base_address);
+  void set(const char *module_name, uptr base_address, ModuleArch arch,
+           u8 uuid[kModuleUUIDSize]);
   void clear();
   void addAddressRange(uptr beg, uptr end, bool executable);
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
   uptr base_address() const { return base_address_; }
+  ModuleArch arch() const { return arch_; }
+  const u8 *uuid() const { return uuid_; }
 
   struct AddressRange {
     AddressRange *next;
@@ -672,6 +696,8 @@ class LoadedModule {
  private:
   char *full_name_;  // Owned.
   uptr base_address_;
+  ModuleArch arch_;
+  u8 uuid_[kModuleUUIDSize];
   IntrusiveList<AddressRange> ranges_;
 };
 

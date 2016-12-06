@@ -727,18 +727,18 @@ define <4 x i64> @insert_v4i64(<4 x i64> %x, i64 %y , i64* %ptr) {
 define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , i64* %ptr) {
 ; KNL-LABEL: insert_v2i64:
 ; KNL:       ## BB#0:
+; KNL-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm0
-; KNL-NEXT:    vpinsrq $3, %rdi, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v2i64:
 ; SKX:       ## BB#0:
+; SKX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
 ; SKX-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm0
-; SKX-NEXT:    vpinsrq $3, %rdi, %xmm0, %xmm0
 ; SKX-NEXT:    retq
   %val = load i64, i64* %ptr
   %r1 = insertelement <2 x i64> %x, i64 %val, i32 1
-  %r2 = insertelement <2 x i64> %r1, i64 %y, i32 3
+  %r2 = insertelement <2 x i64> %r1, i64 %y, i32 0
   ret <2 x i64> %r2
 }
 
@@ -1044,12 +1044,12 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; KNL-LABEL: test_insertelement_v32i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp0:
+; KNL-NEXT:  Lcfi0:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Ltmp1:
+; KNL-NEXT:  Lcfi1:
 ; KNL-NEXT:    .cfi_offset %rbp, -16
 ; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Ltmp2:
+; KNL-NEXT:  Lcfi2:
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $32, %rsp

@@ -831,11 +831,6 @@ def TRAILZ : InstSpecial<0b011, (outs GPR:$Rd), (ins GPR:$Rs1),
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//
 
-// i32 0 and R0 can be used interchangeably.
-def : Pat<(i32 0), (i32 R0)>;
-// i32 -1 and R1 can be used interchangeably.
-def : Pat<(i32 -1), (i32 R1)>;
-
 // unsigned 16-bit immediate
 def : Pat<(i32 i32lo16z:$imm), (OR_I_LO (i32 R0), imm:$imm)>;
 

@@ -8,3 +8,7 @@ target triple = "wasm32-unknown-unknown"
 define void @foo() {
   ret void
 }
+
+; Check import directives - must be at the end of the file
+; CHECK: .import_global bar{{$}}
+@bar = external global i32

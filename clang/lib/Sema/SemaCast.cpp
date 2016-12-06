@@ -2441,7 +2441,7 @@ void CastOperation::CheckCStyleCast() {
           return;
         }
         Self.Diag(OpRange.getBegin(),
-                  diag::error_opencl_cast_non_zero_to_event_t)
+                  diag::err_opencl_cast_non_zero_to_event_t)
                   << CastInt.toString(10) << SrcExpr.get()->getSourceRange();
         SrcExpr = ExprError();
         return;

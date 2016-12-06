@@ -280,9 +280,6 @@ public:
   virtual llvm::Constant *BuildByrefLayout(CodeGen::CodeGenModule &CGM,
                                            QualType T) = 0;
 
-  virtual llvm::GlobalVariable *GetClassGlobal(StringRef Name,
-                                               bool Weak = false) = 0;
-
   struct MessageSendInfo {
     const CGFunctionInfo &CallInfo;
     llvm::PointerType *MessengerType;

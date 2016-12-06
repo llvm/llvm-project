@@ -41,7 +41,7 @@ private:
 class ThrowOnCopy {
 public:
     ThrowOnCopy() : should_throw(false) {}
-    explicit ThrowOnCopy(bool should_throw) : should_throw(should_throw) {}
+    explicit ThrowOnCopy(bool xshould_throw) : should_throw(xshould_throw) {}
 
     ThrowOnCopy(ThrowOnCopy const & other)
         : should_throw(other.should_throw)

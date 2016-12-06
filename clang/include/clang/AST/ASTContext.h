@@ -135,8 +135,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<AutoType> AutoTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
   llvm::FoldingSet<AttributedType> AttributedTypes;
-  mutable llvm::FoldingSet<ReadPipeType> ReadPipeTypes;
-  mutable llvm::FoldingSet<WritePipeType> WritePipeTypes;
+  mutable llvm::FoldingSet<PipeType> PipeTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
   mutable llvm::FoldingSet<DependentTemplateName> DependentTemplateNames;
@@ -1012,6 +1011,8 @@ private:
 
   QualType getTypeDeclTypeSlow(const TypeDecl *Decl) const;
 
+  QualType getPipeType(QualType T, bool ReadOnly) const;
+
 public:
   /// \brief Return the uniqued reference to the type for an address space
   /// qualified type with the specified type and address space.
@@ -1621,9 +1622,6 @@ public:
 
   /// \brief Emit the encoded type for the method declaration \p Decl into
   /// \p S.
-  ///
-  /// \returns true if an error occurred (e.g., because one of the parameter
-  /// types is incomplete), false otherwise.
   std::string getObjCEncodingForMethodDecl(const ObjCMethodDecl *Decl,
                                            bool Extended = false) const;
 

@@ -2540,6 +2540,27 @@ define <8 x i16> @test_x86_ssse3_pmadd_ub_sw_128(<16 x i8> %a0, <16 x i8> %a1) {
 declare <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>) nounwind readnone
 
 
+; Make sure we don't commute this operation.
+define <8 x i16> @test_x86_ssse3_pmadd_ub_sw_128_load_op0(<16 x i8>* %ptr, <16 x i8> %a1) {
+; AVX-LABEL: test_x86_ssse3_pmadd_ub_sw_128_load_op0:
+; AVX:       ## BB#0:
+; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; AVX-NEXT:    vmovdqa (%eax), %xmm1 ## encoding: [0xc5,0xf9,0x6f,0x08]
+; AVX-NEXT:    vpmaddubsw %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe2,0x71,0x04,0xc0]
+; AVX-NEXT:    retl ## encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_ssse3_pmadd_ub_sw_128_load_op0:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; AVX512VL-NEXT:    vmovdqu8 (%eax), %xmm1 ## encoding: [0x62,0xf1,0x7f,0x08,0x6f,0x08]
+; AVX512VL-NEXT:    vpmaddubsw %xmm0, %xmm1, %xmm0 ## encoding: [0x62,0xf2,0x75,0x08,0x04,0xc0]
+; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+  %a0 = load <16 x i8>, <16 x i8>* %ptr
+  %res = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a0, <16 x i8> %a1) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
+
+
 define <8 x i16> @test_x86_ssse3_pmul_hr_sw_128(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX-LABEL: test_x86_ssse3_pmul_hr_sw_128:
 ; AVX:       ## BB#0:
@@ -3717,8 +3738,8 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX-LABEL: movnt_dq:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX-NEXT:    vpaddq LCPI246_0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xd4,0x05,A,A,A,A]
-; AVX-NEXT:    ## fixup A - offset: 4, value: LCPI246_0, kind: FK_Data_4
+; AVX-NEXT:    vpaddq LCPI247_0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xd4,0x05,A,A,A,A]
+; AVX-NEXT:    ## fixup A - offset: 4, value: LCPI247_0, kind: FK_Data_4
 ; AVX-NEXT:    vmovntdq %ymm0, (%eax) ## encoding: [0xc5,0xfd,0xe7,0x00]
 ; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX-NEXT:    retl ## encoding: [0xc3]
@@ -3726,8 +3747,8 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX512VL-LABEL: movnt_dq:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vpaddq LCPI246_0, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xd4,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI246_0, kind: FK_Data_4
+; AVX512VL-NEXT:    vpaddq LCPI247_0, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xd4,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI247_0, kind: FK_Data_4
 ; AVX512VL-NEXT:    vmovntdq %ymm0, (%eax) ## encoding: [0x62,0xf1,0x7d,0x28,0xe7,0x00]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %a2 = add <2 x i64> %a1, <i64 1, i64 1>

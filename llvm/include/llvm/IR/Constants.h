@@ -24,21 +24,29 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
 
 class ArrayType;
 class IntegerType;
-class StructType;
 class PointerType;
-class VectorType;
 class SequentialType;
-
-struct ConstantExprKeyType;
+class StructType;
+class VectorType;
 template <class ConstantClass> struct ConstantAggrKeyType;
 
 /// Base class for constants with no operands.
@@ -47,21 +55,25 @@ template <class ConstantClass> struct ConstantAggrKeyType;
 /// Since they can be in use by unrelated modules (and are never based on
 /// GlobalValues), it never makes sense to RAUW them.
 class ConstantData : public Constant {
-  void anchor() override;
-  void *operator new(size_t, unsigned) = delete;
-  ConstantData() = delete;
-  ConstantData(const ConstantData &) = delete;
-
   friend class Constant;
+
+  void anchor() override;
+
   Value *handleOperandChangeImpl(Value *From, Value *To) {
     llvm_unreachable("Constant data does not have operands!");
   }
 
 protected:
   explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, nullptr, 0) {}
+
   void *operator new(size_t s) { return User::operator new(s, 0); }
 
 public:
+  ConstantData() = delete;
+  ConstantData(const ConstantData &) = delete;
+
+  void *operator new(size_t, unsigned) = delete;
+
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
     return V->getValueID() >= ConstantDataFirstVal &&
@@ -74,15 +86,18 @@ public:
 /// represents both boolean and integral constants.
 /// @brief Class for constant integers.
 class ConstantInt final : public ConstantData {
-  void anchor() override;
-  ConstantInt(const ConstantInt &) = delete;
-  ConstantInt(IntegerType *Ty, const APInt& V);
+  friend class Constant;
+
   APInt Val;
 
-  friend class Constant;
+  ConstantInt(IntegerType *Ty, const APInt& V);
+
+  void anchor() override;
   void destroyConstantImpl();
 
 public:
+  ConstantInt(const ConstantInt &) = delete;
+
   static ConstantInt *getTrue(LLVMContext &Context);
   static ConstantInt *getFalse(LLVMContext &Context);
   static Constant *getTrue(Type *Ty);
@@ -248,21 +263,22 @@ public:
   }
 };
 
-
 //===----------------------------------------------------------------------===//
 /// ConstantFP - Floating Point Values [float, double]
 ///
 class ConstantFP final : public ConstantData {
-  APFloat Val;
-  void anchor() override;
-  ConstantFP(const ConstantFP &) = delete;
-
   friend class Constant;
-  void destroyConstantImpl();
+
+  APFloat Val;
 
   ConstantFP(Type *Ty, const APFloat& V);
 
+  void anchor() override;
+  void destroyConstantImpl();
+
 public:
+  ConstantFP(const ConstantFP &) = delete;
+
   /// Floating point negation must be implemented with f(x) = -0.0 - x. This
   /// method returns the negative zero constant for floating point or vector
   /// floating point types; for all other types, it returns the null value.
@@ -309,6 +325,7 @@ public:
     FV.convert(Val.getSemantics(), APFloat::rmNearestTiesToEven, &ignored);
     return isExactlyValue(FV);
   }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == ConstantFPVal;
@@ -319,15 +336,16 @@ public:
 /// All zero aggregate value
 ///
 class ConstantAggregateZero final : public ConstantData {
-  ConstantAggregateZero(const ConstantAggregateZero &) = delete;
-
   friend class Constant;
-  void destroyConstantImpl();
 
   explicit ConstantAggregateZero(Type *Ty)
       : ConstantData(Ty, ConstantAggregateZeroVal) {}
 
+  void destroyConstantImpl();
+
 public:
+  ConstantAggregateZero(const ConstantAggregateZero &) = delete;
+
   static ConstantAggregateZero *get(Type *Ty);
 
   /// If this CAZ has array or vector type, return a zero with the right element
@@ -393,10 +411,11 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantAggregate, Constant)
 class ConstantArray final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantArray>;
   friend class Constant;
-  void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To);
 
   ConstantArray(ArrayType *T, ArrayRef<Constant *> Val);
+
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
   // ConstantArray accessors
@@ -424,10 +443,11 @@ public:
 class ConstantStruct final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantStruct>;
   friend class Constant;
-  void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To);
 
   ConstantStruct(StructType *T, ArrayRef<Constant *> Val);
+
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
   // ConstantStruct accessors
@@ -464,17 +484,17 @@ public:
   }
 };
 
-
 //===----------------------------------------------------------------------===//
 /// Constant Vector Declarations
 ///
 class ConstantVector final : public ConstantAggregate {
   friend struct ConstantAggrKeyType<ConstantVector>;
   friend class Constant;
-  void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To);
 
   ConstantVector(VectorType *T, ArrayRef<Constant *> Val);
+
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
   // ConstantVector accessors
@@ -507,15 +527,16 @@ public:
 /// A constant pointer value that points to null
 ///
 class ConstantPointerNull final : public ConstantData {
-  ConstantPointerNull(const ConstantPointerNull &) = delete;
-
   friend class Constant;
-  void destroyConstantImpl();
 
   explicit ConstantPointerNull(PointerType *T)
       : ConstantData(T, Value::ConstantPointerNullVal) {}
 
+  void destroyConstantImpl();
+
 public:
+  ConstantPointerNull(const ConstantPointerNull &) = delete;
+
   /// Static factory methods - Return objects of the specified value
   static ConstantPointerNull *get(PointerType *T);
 
@@ -542,6 +563,8 @@ public:
 ///
 class ConstantDataSequential : public ConstantData {
   friend class LLVMContextImpl;
+  friend class Constant;
+
   /// A pointer to the bytes underlying this constant (which is owned by the
   /// uniquing StringMap).
   const char *DataElements;
@@ -551,9 +574,7 @@ class ConstantDataSequential : public ConstantData {
   /// element array of i8, or a 1-element array of i32.  They'll both end up in
   /// the same StringMap bucket, linked up.
   ConstantDataSequential *Next;
-  ConstantDataSequential(const ConstantDataSequential &) = delete;
 
-  friend class Constant;
   void destroyConstantImpl();
 
 protected:
@@ -564,6 +585,8 @@ protected:
   static Constant *getImpl(StringRef Bytes, Type *Ty);
 
 public:
+  ConstantDataSequential(const ConstantDataSequential &) = delete;
+
   /// Return true if a ConstantDataSequential can be formed with a vector or
   /// array of the specified element type.
   /// ConstantDataArray only works with normal float and int types that are
@@ -639,6 +662,7 @@ public:
     return V->getValueID() == ConstantDataArrayVal ||
            V->getValueID() == ConstantDataVectorVal;
   }
+
 private:
   const char *getElementPointer(unsigned Elt) const;
 };
@@ -650,18 +674,23 @@ private:
 /// stores all of the elements of the constant as densely packed data, instead
 /// of as Value*'s.
 class ConstantDataArray final : public ConstantDataSequential {
-  void *operator new(size_t, unsigned) = delete;
-  ConstantDataArray(const ConstantDataArray &) = delete;
-  void anchor() override;
   friend class ConstantDataSequential;
+
   explicit ConstantDataArray(Type *ty, const char *Data)
       : ConstantDataSequential(ty, ConstantDataArrayVal, Data) {}
+
   /// Allocate space for exactly zero operands.
   void *operator new(size_t s) {
     return User::operator new(s, 0);
   }
 
+  void anchor() override;
+
 public:
+  ConstantDataArray(const ConstantDataArray &) = delete;
+
+  void *operator new(size_t, unsigned) = delete;
+
   /// get() constructors - Return a constant with array type with an element
   /// count and element type matching the ArrayRef passed in.  Note that this
   /// can return a ConstantAggregateZero object.
@@ -708,18 +737,23 @@ public:
 /// stores all of the elements of the constant as densely packed data, instead
 /// of as Value*'s.
 class ConstantDataVector final : public ConstantDataSequential {
-  void *operator new(size_t, unsigned) = delete;
-  ConstantDataVector(const ConstantDataVector &) = delete;
-  void anchor() override;
   friend class ConstantDataSequential;
+
   explicit ConstantDataVector(Type *ty, const char *Data)
       : ConstantDataSequential(ty, ConstantDataVectorVal, Data) {}
+
   // allocate space for exactly zero operands.
   void *operator new(size_t s) {
     return User::operator new(s, 0);
   }
 
+  void anchor() override;
+
 public:
+  ConstantDataVector(const ConstantDataVector &) = delete;
+
+  void *operator new(size_t, unsigned) = delete;
+
   /// get() constructors - Return a constant with vector type with an element
   /// count and element type matching the ArrayRef passed in.  Note that this
   /// can return a ConstantAggregateZero object.
@@ -764,15 +798,16 @@ public:
 /// A constant token which is empty
 ///
 class ConstantTokenNone final : public ConstantData {
-  ConstantTokenNone(const ConstantTokenNone &) = delete;
-
   friend class Constant;
-  void destroyConstantImpl();
 
   explicit ConstantTokenNone(LLVMContext &Context)
       : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {}
 
+  void destroyConstantImpl();
+
 public:
+  ConstantTokenNone(const ConstantTokenNone &) = delete;
+
   /// Return the ConstantTokenNone.
   static ConstantTokenNone *get(LLVMContext &Context);
 
@@ -785,15 +820,18 @@ public:
 /// The address of a basic block.
 ///
 class BlockAddress final : public Constant {
-  void *operator new(size_t, unsigned) = delete;
-  void *operator new(size_t s) { return User::operator new(s, 2); }
+  friend class Constant;
+
   BlockAddress(Function *F, BasicBlock *BB);
 
-  friend class Constant;
+  void *operator new(size_t s) { return User::operator new(s, 2); }
+
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
+  void *operator new(size_t, unsigned) = delete;
+
   /// Return a BlockAddress for the specified function and basic block.
   static BlockAddress *get(Function *F, BasicBlock *BB);
 
@@ -825,7 +863,6 @@ struct OperandTraits<BlockAddress> :
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 
-
 //===----------------------------------------------------------------------===//
 /// A constant value that is initialized with an expression using
 /// other constant values.
@@ -835,8 +872,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 /// maintained in the Value::SubclassData field.
 class ConstantExpr : public Constant {
   friend struct ConstantExprKeyType;
-
   friend class Constant;
+
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
@@ -920,39 +957,51 @@ public:
 
   static Constant *getNSWNeg(Constant *C) { return getNeg(C, false, true); }
   static Constant *getNUWNeg(Constant *C) { return getNeg(C, true, false); }
+
   static Constant *getNSWAdd(Constant *C1, Constant *C2) {
     return getAdd(C1, C2, false, true);
   }
+
   static Constant *getNUWAdd(Constant *C1, Constant *C2) {
     return getAdd(C1, C2, true, false);
   }
+
   static Constant *getNSWSub(Constant *C1, Constant *C2) {
     return getSub(C1, C2, false, true);
   }
+
   static Constant *getNUWSub(Constant *C1, Constant *C2) {
     return getSub(C1, C2, true, false);
   }
+
   static Constant *getNSWMul(Constant *C1, Constant *C2) {
     return getMul(C1, C2, false, true);
   }
+
   static Constant *getNUWMul(Constant *C1, Constant *C2) {
     return getMul(C1, C2, true, false);
   }
+
   static Constant *getNSWShl(Constant *C1, Constant *C2) {
     return getShl(C1, C2, false, true);
   }
+
   static Constant *getNUWShl(Constant *C1, Constant *C2) {
     return getShl(C1, C2, true, false);
   }
+
   static Constant *getExactSDiv(Constant *C1, Constant *C2) {
     return getSDiv(C1, C2, true);
   }
+
   static Constant *getExactUDiv(Constant *C1, Constant *C2) {
     return getUDiv(C1, C2, true);
   }
+
   static Constant *getExactAShr(Constant *C1, Constant *C2) {
     return getAShr(C1, C2, true);
   }
+
   static Constant *getExactLShr(Constant *C1, Constant *C2) {
     return getLShr(C1, C2, true);
   }
@@ -1207,14 +1256,15 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantExpr, Constant)
 /// LangRef.html#undefvalues for details.
 ///
 class UndefValue final : public ConstantData {
-  UndefValue(const UndefValue &) = delete;
-
   friend class Constant;
-  void destroyConstantImpl();
 
   explicit UndefValue(Type *T) : ConstantData(T, UndefValueVal) {}
 
+  void destroyConstantImpl();
+
 public:
+  UndefValue(const UndefValue &) = delete;
+
   /// Static factory methods - Return an 'undef' object of the specified type.
   static UndefValue *get(Type *T);
 
@@ -1242,6 +1292,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_CONSTANTS_H

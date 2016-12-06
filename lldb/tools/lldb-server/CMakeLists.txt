@@ -72,7 +72,6 @@ set( LLDB_USED_LIBS
   lldbPluginInstructionMIPS
   lldbPluginInstructionMIPS64
   lldbPluginObjectFilePECOFF
-  lldbPluginProcessElfCore
   lldbPluginExpressionParserClang
   lldbPluginExpressionParserGo
   )
@@ -109,15 +108,13 @@ set( CLANG_USED_LIBS
   )
 
 set(LLDB_SYSTEM_LIBS)
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT __ANDROID_NDK__)
-  if (NOT LLDB_DISABLE_LIBEDIT)
-    list(APPEND LLDB_SYSTEM_LIBS edit)
-  endif()
-  if (NOT LLDB_DISABLE_CURSES)
-    list(APPEND LLDB_SYSTEM_LIBS ${CURSES_LIBRARIES})
-    if(LLVM_ENABLE_TERMINFO AND HAVE_TERMINFO)
-      list(APPEND LLDB_SYSTEM_LIBS ${TERMINFO_LIBS})
-    endif()
+if (NOT LLDB_DISABLE_LIBEDIT)
+  list(APPEND LLDB_SYSTEM_LIBS edit)
+endif()
+if (NOT LLDB_DISABLE_CURSES)
+  list(APPEND LLDB_SYSTEM_LIBS ${CURSES_LIBRARIES})
+  if(LLVM_ENABLE_TERMINFO AND HAVE_TERMINFO)
+    list(APPEND LLDB_SYSTEM_LIBS ${TERMINFO_LIBS})
   endif()
 endif()
 

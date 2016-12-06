@@ -3115,6 +3115,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value.startswith("-mcpu") || Value.startswith("-mfpu") ||
                  Value.startswith("-mhwdiv") || Value.startswith("-march")) {
         // Do nothing, we'll validate it later.
+      } else if (Value == "-defsym") {
+          CmdArgs.push_back(Value.data());
+          TakeNextArg = true;
       } else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;
@@ -3641,6 +3644,19 @@ VersionTuple visualstudio::getMSVCVersion(const Driver *D, const ToolChain &TC,
   return VersionTuple();
 }
 
+static Arg *getLastProfileUseArg(const ArgList &Args) {
+  auto *ProfileUseArg = Args.getLastArg(
+      options::OPT_fprofile_instr_use, options::OPT_fprofile_instr_use_EQ,
+      options::OPT_fprofile_use, options::OPT_fprofile_use_EQ,
+      options::OPT_fno_profile_instr_use);
+
+  if (ProfileUseArg &&
+      ProfileUseArg->getOption().matches(options::OPT_fno_profile_instr_use))
+    ProfileUseArg = nullptr;
+
+  return ProfileUseArg;
+}
+
 static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
                                    const InputInfo &Output, const ArgList &Args,
                                    ArgStringList &CmdArgs) {
@@ -3665,13 +3681,7 @@ static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << PGOGenerateArg->getSpelling() << ProfileGenerateArg->getSpelling();
 
-  auto *ProfileUseArg = Args.getLastArg(
-      options::OPT_fprofile_instr_use, options::OPT_fprofile_instr_use_EQ,
-      options::OPT_fprofile_use, options::OPT_fprofile_use_EQ,
-      options::OPT_fno_profile_instr_use);
-  if (ProfileUseArg &&
-      ProfileUseArg->getOption().matches(options::OPT_fno_profile_instr_use))
-    ProfileUseArg = nullptr;
+  auto *ProfileUseArg = getLastProfileUseArg(Args);
 
   if (PGOGenerateArg && ProfileUseArg)
     D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -8433,6 +8443,11 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     F = Output.getFilename();
     F += ".opt.yaml";
     CmdArgs.push_back(Args.MakeArgString(F));
+
+    if (getLastProfileUseArg(Args)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-lto-pass-remarks-with-hotness");
+    }
   }
 
   // It seems that the 'e' option is completely ignored for dynamic executables
@@ -9941,7 +9956,7 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
       return "elf32_x86_64";
     return "elf_x86_64";
   default:
-    llvm_unreachable("Unexpected arch");
+    return nullptr;
   }
 }
 
@@ -10014,8 +10029,13 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--eh-frame-hdr");
   }
 
-  CmdArgs.push_back("-m");
-  CmdArgs.push_back(getLDMOption(ToolChain.getTriple(), Args));
+  if (const char *LDMOption = getLDMOption(ToolChain.getTriple(), Args)) {
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(LDMOption);
+  } else {
+    D.Diag(diag::err_target_unknown_triple) << Triple.str();
+    return;
+  }
 
   if (Args.hasArg(options::OPT_static)) {
     if (Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||

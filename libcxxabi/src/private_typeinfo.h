@@ -49,33 +49,6 @@ public:
                                            void *&) const;
 };
 
-// This implements the following proposal from cxx-abi-dev (not yet part of the
-// ABI document):
-//
-//   http://sourcerytools.com/pipermail/cxx-abi-dev/2016-October/002988.html
-//
-// This is necessary for support of http://wg21.link/p0012, which permits throwing
-// noexcept function and member function pointers and catching them as non-noexcept
-// pointers.
-class _LIBCXXABI_TYPE_VIS __qualified_function_type_info : public __shim_type_info {
-public:
-  const __function_type_info* __base_type;
-  unsigned int __qualifiers;
-
-  enum __qualifiers_mask {
-    __const_mask = 0x01,
-    __volatile_mask = 0x02,
-    __restrict_mask = 0x04,
-    __lval_ref_mask = 0x08,
-    __rval_ref_mask = 0x10,
-    __noexcept_mask = 0x20,
-    __transaction_safe_mask = 0x40,
-    __noreturn_mask = 0x80
-  };
-
-  _LIBCXXABI_HIDDEN virtual ~__qualified_function_type_info();
-};
-
 class _LIBCXXABI_TYPE_VIS __enum_type_info : public __shim_type_info {
 public:
   _LIBCXXABI_HIDDEN virtual ~__enum_type_info();
@@ -233,7 +206,22 @@ public:
     __volatile_mask = 0x2,
     __restrict_mask = 0x4,
     __incomplete_mask = 0x8,
-    __incomplete_class_mask = 0x10
+    __incomplete_class_mask = 0x10,
+    __transaction_safe_mask = 0x20,
+    // This implements the following proposal from cxx-abi-dev (not yet part of
+    // the ABI document):
+    //
+    //   http://sourcerytools.com/pipermail/cxx-abi-dev/2016-October/002986.html
+    //
+    // This is necessary for support of http://wg21.link/p0012, which permits
+    // throwing noexcept function and member function pointers and catching
+    // them as non-noexcept pointers.
+    __noexcept_mask = 0x40,
+
+    // Flags that cannot be removed by a standard conversion.
+    __no_remove_flags_mask = __const_mask | __volatile_mask | __restrict_mask,
+    // Flags that cannot be added by a standard conversion.
+    __no_add_flags_mask = __transaction_safe_mask | __noexcept_mask
   };
 
   _LIBCXXABI_HIDDEN virtual ~__pbase_type_info();

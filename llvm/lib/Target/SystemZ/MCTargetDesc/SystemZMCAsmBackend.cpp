@@ -94,12 +94,15 @@ void SystemZMCAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                      bool IsPCRel) const {
   MCFixupKind Kind = Fixup.getKind();
   unsigned Offset = Fixup.getOffset();
-  unsigned Size = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
+  unsigned BitSize = getFixupKindInfo(Kind).TargetSize;
+  unsigned Size = (BitSize + 7) / 8;
 
   assert(Offset + Size <= DataSize && "Invalid fixup offset!");
 
   // Big-endian insertion of Size bytes.
   Value = extractBitsForFixup(Kind, Value);
+  if (BitSize < 64)
+    Value &= ((uint64_t)1 << BitSize) - 1;
   unsigned ShiftValue = (Size * 8) - 8;
   for (unsigned I = 0; I != Size; ++I) {
     Data[Offset + I] |= uint8_t(Value >> ShiftValue);

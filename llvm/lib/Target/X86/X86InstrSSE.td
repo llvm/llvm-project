@@ -5496,13 +5496,13 @@ let isCommutable = 0 in {
   defm VPSHUFB    : SS3I_binop_rm<0x00, "vpshufb", X86pshufb, v16i8, v16i8,
                                   VR128, loadv2i64, i128mem,
                                   SSE_PSHUFB, 0>, VEX_4V;
+  defm VPMADDUBSW : SS3I_binop_rm<0x04, "vpmaddubsw", X86vpmaddubsw, v8i16,
+                                  v16i8, VR128, loadv2i64, i128mem,
+                                  SSE_PMADD, 0>, VEX_4V;
 }
 defm VPMULHRSW    : SS3I_binop_rm<0x0B, "vpmulhrsw", X86mulhrs, v8i16, v8i16,
                                   VR128, loadv2i64, i128mem,
                                   SSE_PMULHRSW, 0>, VEX_4V;
-defm VPMADDUBSW : SS3I_binop_rm<0x04, "vpmaddubsw", X86vpmaddubsw, v8i16,
-                                v16i8, VR128, loadv2i64, i128mem,
-                                SSE_PMADD, 0>, VEX_4V;
 }
 
 let ImmT = NoImm, Predicates = [HasAVX] in {
@@ -5542,13 +5542,13 @@ let isCommutable = 0 in {
   defm VPSHUFBY   : SS3I_binop_rm<0x00, "vpshufb", X86pshufb, v32i8, v32i8,
                                   VR256, loadv4i64, i256mem,
                                   SSE_PSHUFB, 0>, VEX_4V, VEX_L;
+  defm VPMADDUBSWY : SS3I_binop_rm<0x04, "vpmaddubsw", X86vpmaddubsw, v16i16,
+                                   v32i8, VR256, loadv4i64, i256mem,
+                                   SSE_PMADD, 0>, VEX_4V, VEX_L;
 }
 defm VPMULHRSWY   : SS3I_binop_rm<0x0B, "vpmulhrsw", X86mulhrs, v16i16, v16i16,
                                   VR256, loadv4i64, i256mem,
                                   SSE_PMULHRSW, 0>, VEX_4V, VEX_L;
-defm VPMADDUBSWY : SS3I_binop_rm<0x04, "vpmaddubsw", X86vpmaddubsw, v16i16,
-                                 v32i8, VR256, loadv4i64, i256mem,
-                                 SSE_PMADD, 0>, VEX_4V, VEX_L;
 }
 
 let ImmT = NoImm, Predicates = [HasAVX2] in {

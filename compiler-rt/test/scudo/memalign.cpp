@@ -31,7 +31,7 @@ int main(int argc, char **argv)
       return 1;
     free(p);
     // Tests various combinations of alignment and sizes
-    for (int i = 4; i < 20; i++) {
+    for (int i = (sizeof(void *) == 4) ? 3 : 4; i <= 24; i++) {
       alignment = 1U << i;
       for (int j = 1; j < 33; j++) {
         size = 0x800 * j;

@@ -1583,7 +1583,7 @@ void BuildLockset::warnIfMutexHeld(const NamedDecl *D, const Expr *Exp,
 /// a pointer marked with pt_guarded_by.
 void BuildLockset::checkAccess(const Expr *Exp, AccessKind AK,
                                ProtectedOperationKind POK) {
-  Exp = Exp->IgnoreParenCasts();
+  Exp = Exp->IgnoreImplicit()->IgnoreParenCasts();
 
   SourceLocation Loc = Exp->getExprLoc();
 

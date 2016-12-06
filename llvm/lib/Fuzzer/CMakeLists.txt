@@ -10,18 +10,23 @@ if( LLVM_USE_SANITIZE_COVERAGE )
   endif()
   add_library(LLVMFuzzerNoMainObjects OBJECT
     FuzzerCrossOver.cpp
-    FuzzerTraceState.cpp
     FuzzerDriver.cpp
     FuzzerExtFunctionsDlsym.cpp
     FuzzerExtFunctionsWeak.cpp
+    FuzzerExtFunctionsWeakAlias.cpp
     FuzzerIO.cpp
+    FuzzerIOPosix.cpp
+    FuzzerIOWindows.cpp
     FuzzerLoop.cpp
     FuzzerMutate.cpp
     FuzzerSHA1.cpp
     FuzzerTracePC.cpp
+    FuzzerTraceState.cpp
     FuzzerUtil.cpp
     FuzzerUtilDarwin.cpp
     FuzzerUtilLinux.cpp
+    FuzzerUtilPosix.cpp
+    FuzzerUtilWindows.cpp
     )
   add_library(LLVMFuzzerNoMain STATIC
     $<TARGET_OBJECTS:LLVMFuzzerNoMainObjects>

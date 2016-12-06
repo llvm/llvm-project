@@ -1,0 +1,24 @@
+# RUN: llvm-objdump -h %p/Inputs/test.wasm | FileCheck %s
+
+# CHECK: Sections:
+# CHECK: Idx Name          Size      Address          Type
+# CHECK:   0 TYPE          0000000f 0000000000000000 
+# CHECK:   1 IMPORT        0000000b 0000000000000000 
+# CHECK:   2 FUNCTION      00000003 0000000000000000 
+# CHECK:   3 TABLE         00000005 0000000000000000 
+# CHECK:   4 EXPORT        0000000e 0000000000000000 
+# CHECK:   5 ELEM          00000007 0000000000000000 
+# CHECK:   6 CODE          0000002a 0000000000000000 TEXT 
+# CHECK:   7 name          0000002c 0000000000000000 
+
+# RUN: llvm-objdump -p %p/Inputs/test.wasm | FileCheck %s -check-prefix CHECK-HEADER
+
+# CHECK-HEADER: Program Header:
+# CHECK-HEADER: Version: 0xd
+
+# RUN: llvm-objdump -s --section=CODE %p/Inputs/test.wasm | FileCheck %s -check-prefix CHECK-SECTIONS
+
+# CHECK-SECTIONS: Contents of section CODE:
+# CHECK-SECTIONS: 0000 02070043 0000803f 0b200201 7d017c10  ...C...?. ..}.|.
+# CHECK-SECTIONS: 0010 001a4100 10011a41 00410111 00001a20  ..A....A.A..... 
+# CHECK-SECTIONS: 0020 011a4300 00000021 020b               ..C....!..

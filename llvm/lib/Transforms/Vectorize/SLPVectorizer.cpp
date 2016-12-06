@@ -4287,7 +4287,8 @@ private:
     int VecReduxCost = IsPairwiseReduction ? PairwiseRdxCost : SplittingRdxCost;
 
     int ScalarReduxCost =
-        ReduxWidth * TTI->getArithmeticInstrCost(ReductionOpcode, VecTy);
+        (ReduxWidth - 1) *
+        TTI->getArithmeticInstrCost(ReductionOpcode, ScalarTy);
 
     DEBUG(dbgs() << "SLP: Adding cost " << VecReduxCost - ScalarReduxCost
                  << " for reduction that starts with " << *FirstReducedVal

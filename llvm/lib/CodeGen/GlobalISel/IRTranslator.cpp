@@ -336,7 +336,7 @@ bool IRTranslator::translateGetElementPtr(const User &U) {
   for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
        GTI != E; ++GTI) {
     const Value *Idx = GTI.getOperand();
-    if (StructType *StTy = dyn_cast<StructType>(*GTI)) {
+    if (StructType *StTy = GTI.getStructTypeOrNull()) {
       unsigned Field = cast<Constant>(Idx)->getUniqueInteger().getZExtValue();
       Offset += DL->getStructLayout(StTy)->getElementOffset(Field);
       continue;
@@ -448,7 +448,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::eh_typeid_for: {
     GlobalValue *GV = ExtractTypeInfo(CI.getArgOperand(0));
     unsigned Reg = getOrCreateVReg(CI);
-    unsigned TypeID = MIRBuilder.getMF().getMMI().getTypeIDFor(GV);
+    unsigned TypeID = MIRBuilder.getMF().getTypeIDFor(GV);
     MIRBuilder.buildConstant(Reg, TypeID);
     return true;
   }
@@ -541,7 +541,7 @@ bool IRTranslator::translateCall(const User &U) {
 bool IRTranslator::translateInvoke(const User &U) {
   const InvokeInst &I = cast<InvokeInst>(U);
   MachineFunction &MF = MIRBuilder.getMF();
-  MachineModuleInfo &MMI = MF.getMMI();
+  MCContext &Context = MF.getContext();
 
   const BasicBlock *ReturnBB = I.getSuccessor(0);
   const BasicBlock *EHPadBB = I.getSuccessor(1);
@@ -564,9 +564,9 @@ bool IRTranslator::translateInvoke(const User &U) {
     return false;
 
 
-  // Emit the actual call, bracketed by EH_LABELs so that the MMI knows about
+  // Emit the actual call, bracketed by EH_LABELs so that the MF knows about
   // the region covered by the try.
-  MCSymbol *BeginSymbol = MMI.getContext().createTempSymbol();
+  MCSymbol *BeginSymbol = Context.createTempSymbol();
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(BeginSymbol);
 
   unsigned Res = I.getType()->isVoidTy() ? 0 : getOrCreateVReg(I);
@@ -578,13 +578,13 @@ bool IRTranslator::translateInvoke(const User &U) {
                       CallLowering::ArgInfo(Res, I.getType()), Args))
     return false;
 
-  MCSymbol *EndSymbol = MMI.getContext().createTempSymbol();
+  MCSymbol *EndSymbol = Context.createTempSymbol();
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
 
   // FIXME: track probabilities.
   MachineBasicBlock &EHPadMBB = getOrCreateBB(*EHPadBB),
                     &ReturnMBB = getOrCreateBB(*ReturnBB);
-  MMI.addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
+  MF.addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
   MIRBuilder.getMBB().addSuccessor(&ReturnMBB);
   MIRBuilder.getMBB().addSuccessor(&EHPadMBB);
 
@@ -596,8 +596,7 @@ bool IRTranslator::translateLandingPad(const User &U) {
 
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineFunction &MF = MIRBuilder.getMF();
-  MachineModuleInfo &MMI = MF.getMMI();
-  addLandingPadInfo(LP, MMI, MBB);
+  addLandingPadInfo(LP, MBB);
 
   MBB.setIsEHPad();
 
@@ -619,7 +618,7 @@ bool IRTranslator::translateLandingPad(const User &U) {
   // Add a label to mark the beginning of the landing pad.  Deletion of the
   // landing pad can thus be detected via the MachineModuleInfo.
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
-    .addSym(MMI.addLandingPad(&MBB));
+    .addSym(MF.addLandingPad(&MBB));
 
   // Mark exception register as live in.
   SmallVector<unsigned, 2> Regs;

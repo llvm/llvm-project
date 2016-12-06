@@ -32,12 +32,11 @@ namespace llvm {
   struct SubMultiClassReference;
 
   struct LetRecord {
-    std::string Name;
+    StringInit *Name;
     std::vector<unsigned> Bits;
     Init *Value;
     SMLoc Loc;
-    LetRecord(const std::string &N, const std::vector<unsigned> &B, Init *V,
-              SMLoc L)
+    LetRecord(StringInit *N, ArrayRef<unsigned> B, Init *V, SMLoc L)
       : Name(N), Bits(B), Value(V), Loc(L) {
     }
   };
@@ -54,7 +53,7 @@ namespace llvm {
 
 class TGParser {
   TGLexer Lex;
-  std::vector<std::vector<LetRecord> > LetStack;
+  std::vector<SmallVector<LetRecord, 4>> LetStack;
   std::map<std::string, std::unique_ptr<MultiClass>> MultiClasses;
 
   /// Loops - Keep track of any foreach loops we are within.
@@ -107,12 +106,6 @@ private:  // Semantic analysis methods.
   bool SetValue(Record *TheRec, SMLoc Loc, Init *ValName,
                 ArrayRef<unsigned> BitList, Init *V,
                 bool AllowSelfAssignment = false);
-  bool SetValue(Record *TheRec, SMLoc Loc, const std::string &ValName,
-                ArrayRef<unsigned> BitList, Init *V,
-                bool AllowSelfAssignment = false) {
-    return SetValue(TheRec, Loc, StringInit::get(ValName), BitList, V,
-                    AllowSelfAssignment);
-  }
   bool AddSubClass(Record *Rec, SubClassReference &SubClass);
   bool AddSubMultiClass(MultiClass *CurMC,
                         SubMultiClassReference &SubMultiClass);
@@ -141,12 +134,11 @@ private:  // Parser methods.
   Record *InstantiateMulticlassDef(MultiClass &MC, Record *DefProto,
                                    Init *&DefmPrefix, SMRange DefmPrefixRange,
                                    ArrayRef<Init *> TArgs,
-                                   std::vector<Init *> &TemplateVals);
+                                   ArrayRef<Init *> TemplateVals);
   bool ResolveMulticlassDefArgs(MultiClass &MC, Record *DefProto,
                                 SMLoc DefmPrefixLoc, SMLoc SubClassLoc,
                                 ArrayRef<Init *> TArgs,
-                                std::vector<Init *> &TemplateVals,
-                                bool DeleteArgs);
+                                ArrayRef<Init *> TemplateVals, bool DeleteArgs);
   bool ResolveMulticlassDef(MultiClass &MC,
                             Record *CurRec,
                             Record *DefProto,
@@ -155,7 +147,7 @@ private:  // Parser methods.
   bool ParseDef(MultiClass *CurMultiClass);
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
-  std::vector<LetRecord> ParseLetList();
+  void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
   bool ParseObjectBody(Record *CurRec);
   bool ParseBody(Record *CurRec);
@@ -168,19 +160,21 @@ private:  // Parser methods.
   SubClassReference ParseSubClassReference(Record *CurRec, bool isDefm);
   SubMultiClassReference ParseSubMultiClassReference(MultiClass *CurMC);
 
-  Init *ParseIDValue(Record *CurRec, const std::string &Name, SMLoc NameLoc,
+  Init *ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
                      IDParseMode Mode = ParseValueMode);
   Init *ParseSimpleValue(Record *CurRec, RecTy *ItemType = nullptr,
                          IDParseMode Mode = ParseValueMode);
   Init *ParseValue(Record *CurRec, RecTy *ItemType = nullptr,
                    IDParseMode Mode = ParseValueMode);
-  std::vector<Init*> ParseValueList(Record *CurRec, Record *ArgsRec = nullptr,
-                                    RecTy *EltTy = nullptr);
-  std::vector<std::pair<llvm::Init*, std::string> > ParseDagArgList(Record *);
-  bool ParseOptionalRangeList(std::vector<unsigned> &Ranges);
-  bool ParseOptionalBitList(std::vector<unsigned> &Ranges);
-  std::vector<unsigned> ParseRangeList();
-  bool ParseRangePiece(std::vector<unsigned> &Ranges);
+  void ParseValueList(SmallVectorImpl<llvm::Init*> &Result, Record *CurRec,
+                      Record *ArgsRec = nullptr, RecTy *EltTy = nullptr);
+  void ParseDagArgList(
+      SmallVectorImpl<std::pair<llvm::Init*, StringInit*>> &Result,
+      Record *CurRec);
+  bool ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges);
+  bool ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges);
+  void ParseRangeList(SmallVectorImpl<unsigned> &Result);
+  bool ParseRangePiece(SmallVectorImpl<unsigned> &Ranges);
   RecTy *ParseType();
   Init *ParseOperation(Record *CurRec, RecTy *ItemType);
   RecTy *ParseOperatorType();

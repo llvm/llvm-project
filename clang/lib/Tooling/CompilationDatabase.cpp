@@ -300,7 +300,8 @@ FixedCompilationDatabase(Twine Directory, ArrayRef<std::string> CommandLine) {
   ToolCommandLine.insert(ToolCommandLine.end(),
                          CommandLine.begin(), CommandLine.end());
   CompileCommands.emplace_back(Directory, StringRef(),
-                               std::move(ToolCommandLine));
+                               std::move(ToolCommandLine),
+                               StringRef());
 }
 
 std::vector<CompileCommand>

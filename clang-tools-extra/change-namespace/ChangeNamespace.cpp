@@ -41,7 +41,7 @@ SourceLocation startLocationForType(TypeLoc TLoc) {
   return TLoc.getLocStart();
 }
 
-SourceLocation EndLocationForType(TypeLoc TLoc) {
+SourceLocation endLocationForType(TypeLoc TLoc) {
   // Dig past any namespace or keyword qualifications.
   while (TLoc.getTypeLocClass() == TypeLoc::Elaborated ||
          TLoc.getTypeLocClass() == TypeLoc::Qualified)
@@ -210,7 +210,8 @@ std::string wrapCodeInNamespace(StringRef NestedNs, std::string Code) {
   if (Code.back() != '\n')
     Code += "\n";
   llvm::SmallVector<StringRef, 4> NsSplitted;
-  NestedNs.split(NsSplitted, "::");
+  NestedNs.split(NsSplitted, "::", /*MaxSplit=*/-1,
+                 /*KeepEmpty=*/false);
   while (!NsSplitted.empty()) {
     // FIXME: consider code style for comments.
     Code = ("namespace " + NsSplitted.back() + " {\n" + Code +
@@ -249,7 +250,7 @@ ChangeNamespaceTool::ChangeNamespaceTool(
     llvm::StringRef FallbackStyle)
     : FallbackStyle(FallbackStyle), FileToReplacements(*FileToReplacements),
       OldNamespace(OldNs.ltrim(':')), NewNamespace(NewNs.ltrim(':')),
-      FilePattern(FilePattern) {
+      FilePattern(FilePattern), FilePatternRE(FilePattern) {
   FileToReplacements->clear();
   llvm::SmallVector<llvm::StringRef, 4> OldNsSplitted;
   llvm::SmallVector<llvm::StringRef, 4> NewNsSplitted;
@@ -272,7 +273,9 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // be "a::b". Declarations in this namespace will not be visible in the new
   // namespace. If DiffOldNamespace is empty, Prefix will be a invalid name "-".
   llvm::SmallVector<llvm::StringRef, 4> DiffOldNsSplitted;
-  llvm::StringRef(DiffOldNamespace).split(DiffOldNsSplitted, "::");
+  llvm::StringRef(DiffOldNamespace)
+      .split(DiffOldNsSplitted, "::", /*MaxSplit=*/-1,
+             /*KeepEmpty=*/false);
   std::string Prefix = "-";
   if (!DiffOldNsSplitted.empty())
     Prefix = (StringRef(FullOldNs).drop_back(DiffOldNamespace.size()) +
@@ -407,7 +410,7 @@ void ChangeNamespaceTool::run(
                  Result.Nodes.getNodeAs<NestedNameSpecifierLoc>(
                      "nested_specifier_loc")) {
     SourceLocation Start = Specifier->getBeginLoc();
-    SourceLocation End = EndLocationForType(Specifier->getTypeLoc());
+    SourceLocation End = endLocationForType(Specifier->getTypeLoc());
     fixTypeLoc(Result, Start, End, Specifier->getTypeLoc());
   } else if (const auto *BaseInitializer =
                  Result.Nodes.getNodeAs<CXXCtorInitializer>(
@@ -415,7 +418,7 @@ void ChangeNamespaceTool::run(
     BaseCtorInitializerTypeLocs.push_back(
         BaseInitializer->getTypeSourceInfo()->getTypeLoc());
   } else if (const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type")) {
-    fixTypeLoc(Result, startLocationForType(*TLoc), EndLocationForType(*TLoc),
+    fixTypeLoc(Result, startLocationForType(*TLoc), endLocationForType(*TLoc),
                *TLoc);
   } else if (const auto *VarRef =
                  Result.Nodes.getNodeAs<DeclRefExpr>("var_ref")) {
@@ -667,8 +670,7 @@ void ChangeNamespaceTool::fixTypeLoc(
         return false;
       llvm::StringRef Filename =
           Result.SourceManager->getFilename(ExpansionLoc);
-      llvm::Regex RE(FilePattern);
-      return RE.match(Filename);
+      return FilePatternRE.match(Filename);
     };
     // Don't fix the \p Type if it refers to a type alias decl in the moved
     // namespace since the alias decl will be moved along with the type
@@ -779,6 +781,12 @@ void ChangeNamespaceTool::onEndOfTranslationUnit() {
     }
     FileToReplacements[FilePath] = *CleanReplacements;
   }
+
+  // Make sure we don't generate replacements for files that do not match
+  // FilePattern.
+  for (auto &Entry : FileToReplacements)
+    if (!FilePatternRE.match(Entry.first))
+      Entry.second.clear();
 }
 
 } // namespace change_namespace

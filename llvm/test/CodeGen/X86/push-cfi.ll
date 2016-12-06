@@ -13,16 +13,16 @@ declare void @empty()
 ; CHECK-LABEL: test1_nofp:
 ; LINUX: .cfi_escape 0x2e, 0x10
 ; LINUX-NEXT: pushl   $4
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $3
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $2
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $1
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: call
 ; LINUX-NEXT: addl $16, %esp
@@ -70,16 +70,16 @@ cleanup:
 ; CHECK-LABEL: test2_nofp:
 ; LINUX-NOT: .cfi_escape
 ; LINUX: pushl   $4
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $3
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $2
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $1
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: call
 ; LINUX-NEXT: addl $28, %esp
@@ -185,16 +185,16 @@ cleanup:
 ; CHECK-LABEL: test5_nofp:
 ; LINUX: .cfi_escape 0x2e, 0x10
 ; LINUX-NEXT: pushl   $4
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $3
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $2
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: pushl   $1
-; LINUX-NEXT: Ltmp{{[0-9]+}}:
+; LINUX-NEXT: Lcfi{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: call
 ; LINUX-NEXT: addl $16, %esp

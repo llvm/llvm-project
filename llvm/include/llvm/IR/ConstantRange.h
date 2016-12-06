@@ -233,6 +233,15 @@ public:
   ///
   ConstantRange unionWith(const ConstantRange &CR) const;
 
+  /// Return a new range representing the possible values resulting
+  /// from an application of the specified cast operator to this range. \p
+  /// BitWidth is the target bitwidth of the cast.  For casts which don't
+  /// change bitwidth, it must be the same as the source bitwidth.  For casts
+  /// which do change bitwidth, the bitwidth must be consistent with the
+  /// requested cast and source bitwidth.
+  ConstantRange castOp(Instruction::CastOps CastOp,
+                       uint32_t BitWidth) const;
+
   /// Return a new range in the specified integer type, which must
   /// be strictly larger than the current type.  The returned range will
   /// correspond to the possible range of values if the source range had been
@@ -258,6 +267,12 @@ public:
   /// Make this range have the bit width given by \p BitWidth. The
   /// value is sign extended, truncated, or left alone to make it that width.
   ConstantRange sextOrTrunc(uint32_t BitWidth) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from an application of the specified binary operator to an left hand side
+  /// of this range and a right hand side of \p Other.
+  ConstantRange binaryOp(Instruction::BinaryOps BinOp,
+                         const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
   /// from an addition of a value in this range and a value in \p Other.

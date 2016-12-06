@@ -131,18 +131,16 @@ void BitstreamCursor::skipRecord(unsigned AbbrevID) {
       default:
         report_fatal_error("Array element type can't be an Array or a Blob");
       case BitCodeAbbrevOp::Fixed:
-        assert((unsigned)Op.getEncodingData() <= MaxChunkSize);
-        for (; NumElts; --NumElts)
-          Read((unsigned)EltEnc.getEncodingData());
+        assert((unsigned)EltEnc.getEncodingData() <= MaxChunkSize);
+        JumpToBit(GetCurrentBitNo() + NumElts * EltEnc.getEncodingData());
         break;
       case BitCodeAbbrevOp::VBR:
-        assert((unsigned)Op.getEncodingData() <= MaxChunkSize);
+        assert((unsigned)EltEnc.getEncodingData() <= MaxChunkSize);
         for (; NumElts; --NumElts)
           ReadVBR64((unsigned)EltEnc.getEncodingData());
         break;
       case BitCodeAbbrevOp::Char6:
-        for (; NumElts; --NumElts)
-          Read(6);
+        JumpToBit(GetCurrentBitNo() + NumElts * 6);
         break;
       }
       continue;

@@ -28,20 +28,20 @@ struct ThrowsMove {
 };
 
 struct NoCopy {
-  NoCopy(NoCopy const &) = delete;
+  NoCopy(const NoCopy &) = delete;
 };
 
 struct MoveOnly {
   int value;
   MoveOnly(int v) : value(v) {}
-  MoveOnly(MoveOnly const &) = delete;
+  MoveOnly(const MoveOnly &) = delete;
   MoveOnly(MoveOnly &&) = default;
 };
 
 struct MoveOnlyNT {
   int value;
   MoveOnlyNT(int v) : value(v) {}
-  MoveOnlyNT(MoveOnlyNT const &) = delete;
+  MoveOnlyNT(const MoveOnlyNT &) = delete;
   MoveOnlyNT(MoveOnlyNT &&other) : value(other.value) { other.value = -1; }
 };
 
@@ -49,13 +49,13 @@ struct MoveOnlyNT {
 struct MakeEmptyT {
   static int alive;
   MakeEmptyT() { ++alive; }
-  MakeEmptyT(MakeEmptyT const &) {
+  MakeEmptyT(const MakeEmptyT &) {
     ++alive;
     // Don't throw from the copy constructor since variant's assignment
     // operator performs a copy before committing to the assignment.
   }
   MakeEmptyT(MakeEmptyT &&) { throw 42; }
-  MakeEmptyT &operator=(MakeEmptyT const &) { throw 42; }
+  MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
   MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
   ~MakeEmptyT() { --alive; }
 };
@@ -166,9 +166,32 @@ void test_move_ctor_valueless_by_exception() {
 #endif
 }
 
+template <size_t Idx>
+constexpr bool test_constexpr_ctor_extension_imp(
+    std::variant<long, void*, const int> const& v)
+{
+  auto copy = v;
+  auto v2 = std::move(copy);
+  return v2.index() == v.index() &&
+         v2.index() == Idx &&
+        std::get<Idx>(v2) == std::get<Idx>(v);
+}
+
+void test_constexpr_move_ctor_extension() {
+#ifdef _LIBCPP_VERSION
+  using V = std::variant<long, void*, const int>;
+  static_assert(std::is_trivially_copyable<V>::value, "");
+  static_assert(std::is_trivially_move_constructible<V>::value, "");
+  static_assert(test_constexpr_ctor_extension_imp<0>(V(42l)), "");
+  static_assert(test_constexpr_ctor_extension_imp<1>(V(nullptr)), "");
+  static_assert(test_constexpr_ctor_extension_imp<2>(V(101)), "");
+#endif
+}
+
 int main() {
   test_move_ctor_basic();
   test_move_ctor_valueless_by_exception();
   test_move_noexcept();
   test_move_ctor_sfinae();
+  test_constexpr_move_ctor_extension();
 }

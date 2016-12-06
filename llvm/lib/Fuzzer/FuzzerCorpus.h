@@ -16,7 +16,9 @@
 #include <unordered_set>
 
 #include "FuzzerDefs.h"
+#include "FuzzerIO.h"
 #include "FuzzerRandom.h"
+#include "FuzzerSHA1.h"
 #include "FuzzerTracePC.h"
 
 namespace fuzzer {

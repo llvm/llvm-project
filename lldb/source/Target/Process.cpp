@@ -13,6 +13,7 @@
 #include <mutex>
 
 // Other libraries and framework includes
+#include "llvm/Support/ScopedPrinter.h"
 // Project includes
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -67,6 +68,16 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace std::chrono;
+
+// A temporary function to convert between old representations of timeouts (0
+// means infinite wait) and new Timeout class (0 means "poll").
+// TODO(labath): Fix up all callers and remove this.
+static Timeout<std::micro> ConvertTimeout(std::chrono::microseconds t) {
+  if (t == std::chrono::microseconds(0))
+    return llvm::None;
+  return t;
+}
 
 // Comment out line below to disable memory caching, overriding the process
 // setting
@@ -937,7 +948,9 @@ void Process::SynchronouslyNotifyStateChanged(StateType state) {
 StateType Process::GetNextEvent(EventSP &event_sp) {
   StateType state = eStateInvalid;
 
-  if (m_listener_sp->GetNextEventForBroadcaster(this, event_sp) && event_sp)
+  if (m_listener_sp->GetEventForBroadcaster(this, event_sp,
+                                            std::chrono::seconds(0)) &&
+      event_sp)
     state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
   return state;
@@ -960,11 +973,10 @@ void Process::SyncIOHandler(uint32_t iohandler_id, uint64_t timeout_msec) {
                 __FUNCTION__, iohandler_id, new_iohandler_id);
 }
 
-StateType
-Process::WaitForProcessToStop(const std::chrono::microseconds &timeout,
-                              EventSP *event_sp_ptr, bool wait_always,
-                              ListenerSP hijack_listener_sp, Stream *stream,
-                              bool use_run_lock) {
+StateType Process::WaitForProcessToStop(const Timeout<std::micro> &timeout,
+                                        EventSP *event_sp_ptr, bool wait_always,
+                                        ListenerSP hijack_listener_sp,
+                                        Stream *stream, bool use_run_lock) {
   // We can't just wait for a "stopped" event, because the stopped event may
   // have restarted the target.
   // We have to actually check each event, and in the case of a stopped event
@@ -980,8 +992,9 @@ Process::WaitForProcessToStop(const std::chrono::microseconds &timeout,
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log)
-    log->Printf("Process::%s (timeout = %llu)", __FUNCTION__,
-                static_cast<unsigned long long>(timeout.count()));
+    log->Printf(
+        "Process::%s (timeout = %llu)", __FUNCTION__,
+        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
 
   if (!wait_always && StateIsStoppedState(state, true) &&
       StateIsStoppedState(GetPrivateState(), true)) {
@@ -998,7 +1011,7 @@ Process::WaitForProcessToStop(const std::chrono::microseconds &timeout,
 
   while (state != eStateInvalid) {
     EventSP event_sp;
-    state = WaitForStateChangedEvents(timeout, event_sp, hijack_listener_sp);
+    state = GetStateChangedEvents(event_sp, timeout, hijack_listener_sp);
     if (event_sp_ptr && event_sp)
       *event_sp_ptr = event_sp;
 
@@ -1243,27 +1256,6 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
   return true;
 }
 
-StateType Process::WaitForState(const std::chrono::microseconds &timeout,
-                                const StateType *match_states,
-                                const uint32_t num_match_states) {
-  EventSP event_sp;
-  StateType state = GetState();
-  while (state != eStateInvalid) {
-    // If we are exited or detached, we won't ever get back to any
-    // other valid state...
-    if (state == eStateDetached || state == eStateExited)
-      return state;
-
-    state = WaitForStateChangedEvents(timeout, event_sp, nullptr);
-
-    for (uint32_t i = 0; i < num_match_states; ++i) {
-      if (match_states[i] == state)
-        return state;
-    }
-  }
-  return state;
-}
-
 bool Process::HijackProcessEvents(ListenerSP listener_sp) {
   if (listener_sp) {
     return HijackBroadcaster(listener_sp, eBroadcastBitStateChanged |
@@ -1274,24 +1266,24 @@ bool Process::HijackProcessEvents(ListenerSP listener_sp) {
 
 void Process::RestoreProcessEvents() { RestoreBroadcaster(); }
 
-StateType
-Process::WaitForStateChangedEvents(const std::chrono::microseconds &timeout,
-                                   EventSP &event_sp,
-                                   ListenerSP hijack_listener_sp) {
+StateType Process::GetStateChangedEvents(EventSP &event_sp,
+                                         const Timeout<std::micro> &timeout,
+                                         ListenerSP hijack_listener_sp) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (log)
-    log->Printf("Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
-                static_cast<unsigned long long>(timeout.count()));
+    log->Printf(
+        "Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
+        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
 
   ListenerSP listener_sp = hijack_listener_sp;
   if (!listener_sp)
     listener_sp = m_listener_sp;
 
   StateType state = eStateInvalid;
-  if (listener_sp->WaitForEventForBroadcasterWithType(
-          timeout, this, eBroadcastBitStateChanged | eBroadcastBitInterrupt,
-          event_sp)) {
+  if (listener_sp->GetEventForBroadcasterWithType(
+          this, eBroadcastBitStateChanged | eBroadcastBitInterrupt, event_sp,
+          timeout)) {
     if (event_sp && event_sp->GetType() == eBroadcastBitStateChanged)
       state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
     else if (log)
@@ -1299,9 +1291,10 @@ Process::WaitForStateChangedEvents(const std::chrono::microseconds &timeout,
   }
 
   if (log)
-    log->Printf("Process::%s (timeout = %llu, event_sp) => %s", __FUNCTION__,
-                static_cast<unsigned long long>(timeout.count()),
-                StateAsCString(state));
+    log->Printf(
+        "Process::%s (timeout = %llu, event_sp) => %s", __FUNCTION__,
+        static_cast<unsigned long long>(timeout ? timeout->count() : -1),
+        StateAsCString(state));
   return state;
 }
 
@@ -1326,18 +1319,21 @@ Event *Process::PeekAtStateChangedEvents() {
   return event_ptr;
 }
 
-StateType Process::WaitForStateChangedEventsPrivate(
-    const std::chrono::microseconds &timeout, EventSP &event_sp) {
+StateType
+Process::GetStateChangedEventsPrivate(EventSP &event_sp,
+                                      const Timeout<std::micro> &timeout) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (log)
-    log->Printf("Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
-                static_cast<unsigned long long>(timeout.count()));
+    log->Printf(
+        "Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
+        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
 
   StateType state = eStateInvalid;
-  if (m_private_state_listener_sp->WaitForEventForBroadcasterWithType(
-          timeout, &m_private_state_broadcaster,
-          eBroadcastBitStateChanged | eBroadcastBitInterrupt, event_sp))
+  if (m_private_state_listener_sp->GetEventForBroadcasterWithType(
+          &m_private_state_broadcaster,
+          eBroadcastBitStateChanged | eBroadcastBitInterrupt, event_sp,
+          timeout))
     if (event_sp && event_sp->GetType() == eBroadcastBitStateChanged)
       state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
@@ -1345,25 +1341,28 @@ StateType Process::WaitForStateChangedEventsPrivate(
   // to the command-line, and that could disable the log, which would render the
   // log we got above invalid.
   if (log)
-    log->Printf("Process::%s (timeout = %llu, event_sp) => %s", __FUNCTION__,
-                static_cast<unsigned long long>(timeout.count()),
-                state == eStateInvalid ? "TIMEOUT" : StateAsCString(state));
+    log->Printf(
+        "Process::%s (timeout = %llu, event_sp) => %s", __FUNCTION__,
+        static_cast<unsigned long long>(timeout ? timeout->count() : -1),
+        state == eStateInvalid ? "TIMEOUT" : StateAsCString(state));
   return state;
 }
 
-bool Process::WaitForEventsPrivate(const std::chrono::microseconds &timeout,
-                                   EventSP &event_sp, bool control_only) {
+bool Process::GetEventsPrivate(EventSP &event_sp,
+                               const Timeout<std::micro> &timeout,
+                               bool control_only) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   if (log)
-    log->Printf("Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
-                static_cast<unsigned long long>(timeout.count()));
+    log->Printf(
+        "Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
+        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
 
   if (control_only)
-    return m_private_state_listener_sp->WaitForEventForBroadcaster(
-        timeout, &m_private_state_control_broadcaster, event_sp);
+    return m_private_state_listener_sp->GetEventForBroadcaster(
+        &m_private_state_control_broadcaster, event_sp, timeout);
   else
-    return m_private_state_listener_sp->WaitForEvent(timeout, event_sp);
+    return m_private_state_listener_sp->GetEvent(event_sp, timeout);
 }
 
 bool Process::IsRunning() const {
@@ -1674,8 +1673,8 @@ Error Process::ResumeSynchronous(Stream *stream) {
 
   Error error = PrivateResume();
   if (error.Success()) {
-    StateType state = WaitForProcessToStop(std::chrono::microseconds(0), NULL,
-                                           true, listener_sp, stream);
+    StateType state =
+        WaitForProcessToStop(llvm::None, NULL, true, listener_sp, stream);
     const bool must_be_alive =
         false; // eStateExited is ok, so this must be false
     if (!StateIsStoppedState(state, must_be_alive))
@@ -2704,14 +2703,14 @@ Error Process::DisableWatchpoint(Watchpoint *watchpoint, bool notify) {
 }
 
 StateType
-Process::WaitForProcessStopPrivate(const std::chrono::microseconds &timeout,
-                                   EventSP &event_sp) {
+Process::WaitForProcessStopPrivate(EventSP &event_sp,
+                                   const Timeout<std::micro> &timeout) {
   StateType state;
   // Now wait for the process to launch and return control to us, and then
   // call DidLaunch:
   while (true) {
     event_sp.reset();
-    state = WaitForStateChangedEventsPrivate(timeout, event_sp);
+    state = GetStateChangedEventsPrivate(event_sp, timeout);
 
     if (StateIsStoppedState(state, false))
       break;
@@ -2787,8 +2786,7 @@ Error Process::Launch(ProcessLaunchInfo &launch_info) {
           }
         } else {
           EventSP event_sp;
-          StateType state =
-              WaitForProcessStopPrivate(std::chrono::seconds(10), event_sp);
+          StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
 
           if (state == eStateInvalid || !event_sp) {
             // We were able to launch the process, but we failed to
@@ -2881,7 +2879,7 @@ Error Process::LoadCore() {
 
     // Wait indefinitely for a stopped event since we just posted one above...
     lldb::EventSP event_sp;
-    listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp);
+    listener_sp->GetEvent(event_sp, llvm::None);
     StateType state = ProcessEventData::GetStateFromEvent(event_sp.get());
 
     if (!StateIsStoppedState(state, false)) {
@@ -3257,8 +3255,7 @@ Error Process::ConnectRemote(Stream *strm, llvm::StringRef remote_url) {
   if (error.Success()) {
     if (GetID() != LLDB_INVALID_PROCESS_ID) {
       EventSP event_sp;
-      StateType state =
-          WaitForProcessStopPrivate(std::chrono::microseconds(0), event_sp);
+      StateType state = WaitForProcessStopPrivate(event_sp, llvm::None);
 
       if (state == eStateStopped || state == eStateCrashed) {
         // If we attached and actually have a process on the other end, then
@@ -3360,9 +3357,8 @@ Error Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   }
 
   // Wait for 10 second for the process to stop.
-  StateType state =
-      WaitForProcessToStop(std::chrono::seconds(10), &event_sp, true,
-                           halt_listener_sp, nullptr, use_run_lock);
+  StateType state = WaitForProcessToStop(
+      seconds(10), &event_sp, true, halt_listener_sp, nullptr, use_run_lock);
   RestoreProcessEvents();
 
   if (state == eStateInvalid || !event_sp) {
@@ -3394,8 +3390,8 @@ Error Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
     SendAsyncInterrupt();
 
     // Consume the interrupt event.
-    StateType state = WaitForProcessToStop(std::chrono::seconds(10),
-                                           &exit_event_sp, true, listener_sp);
+    StateType state =
+        WaitForProcessToStop(seconds(10), &exit_event_sp, true, listener_sp);
 
     RestoreProcessEvents();
 
@@ -4024,7 +4020,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
   bool interrupt_requested = false;
   while (!exit_now) {
     EventSP event_sp;
-    WaitForEventsPrivate(std::chrono::microseconds(0), event_sp, control_only);
+    GetEventsPrivate(event_sp, llvm::None, control_only);
     if (event_sp->BroadcasterIs(&m_private_state_control_broadcaster)) {
       if (log)
         log->Printf("Process::%s (arg = %p, pid = %" PRIu64
@@ -4804,6 +4800,45 @@ private:
 };
 } // anonymous namespace
 
+static microseconds
+GetOneThreadExpressionTimeout(const EvaluateExpressionOptions &options) {
+  const milliseconds default_one_thread_timeout(250);
+
+  // If the overall wait is forever, then we don't need to worry about it.
+  if (options.GetTimeoutUsec() == 0) {
+    if (options.GetOneThreadTimeoutUsec() != 0)
+      return microseconds(options.GetOneThreadTimeoutUsec());
+    return default_one_thread_timeout;
+  }
+
+  // If the one thread timeout is set, use it.
+  if (options.GetOneThreadTimeoutUsec() != 0)
+    return microseconds(options.GetOneThreadTimeoutUsec());
+
+  // Otherwise use half the total timeout, bounded by the
+  // default_one_thread_timeout.
+  return std::min<microseconds>(default_one_thread_timeout,
+                                microseconds(options.GetTimeoutUsec()) / 2);
+}
+
+static Timeout<std::micro>
+GetExpressionTimeout(const EvaluateExpressionOptions &options,
+                     bool before_first_timeout) {
+  // If we are going to run all threads the whole time, or if we are only
+  // going to run one thread, we can just return the overall timeout.
+  if (!options.GetStopOthers() || !options.GetTryAllThreads())
+    return ConvertTimeout(microseconds(options.GetTimeoutUsec()));
+
+  if (before_first_timeout)
+    return GetOneThreadExpressionTimeout(options);
+
+  if (options.GetTimeoutUsec() == 0)
+    return llvm::None;
+  else
+    return microseconds(options.GetTimeoutUsec()) -
+           GetOneThreadExpressionTimeout(options);
+}
+
 ExpressionResults
 Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        lldb::ThreadPlanSP &thread_plan_sp,
@@ -4882,6 +4917,16 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           thread_idx_id);
       return eExpressionSetupError;
     }
+  }
+
+  // Make sure the timeout values make sense. The one thread timeout needs to be
+  // smaller than the overall timeout.
+  if (options.GetOneThreadTimeoutUsec() != 0 && options.GetTimeoutUsec() != 0 &&
+      options.GetTimeoutUsec() < options.GetOneThreadTimeoutUsec()) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "RunThreadPlan called with one thread "
+                                 "timeout greater than total timeout");
+    return eExpressionSetupError;
   }
 
   StackID ctx_frame_id = selected_frame_sp->GetStackID();
@@ -4990,67 +5035,20 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                                       // that we have to halt the target.
     bool do_resume = true;
     bool handle_running_event = true;
-    const uint64_t default_one_thread_timeout_usec = 250000;
 
     // This is just for accounting:
     uint32_t num_resumes = 0;
 
-    uint32_t timeout_usec = options.GetTimeoutUsec();
-    uint32_t one_thread_timeout_usec;
-    uint32_t all_threads_timeout_usec = 0;
-
     // If we are going to run all threads the whole time, or if we are only
-    // going to run one thread,
-    // then we don't need the first timeout.  So we set the final timeout, and
-    // pretend we are after the
-    // first timeout already.
-
-    if (!options.GetStopOthers() || !options.GetTryAllThreads()) {
+    // going to run one thread, then we don't need the first timeout.  So we
+    // pretend we are after the first timeout already.
+    if (!options.GetStopOthers() || !options.GetTryAllThreads())
       before_first_timeout = false;
-      one_thread_timeout_usec = 0;
-      all_threads_timeout_usec = timeout_usec;
-    } else {
-      uint32_t option_one_thread_timeout = options.GetOneThreadTimeoutUsec();
-
-      // If the overall wait is forever, then we only need to set the one thread
-      // timeout:
-      if (timeout_usec == 0) {
-        if (option_one_thread_timeout != 0)
-          one_thread_timeout_usec = option_one_thread_timeout;
-        else
-          one_thread_timeout_usec = default_one_thread_timeout_usec;
-      } else {
-        // Otherwise, if the one thread timeout is set, make sure it isn't
-        // longer than the overall timeout,
-        // and use it, otherwise use half the total timeout, bounded by the
-        // default_one_thread_timeout_usec.
-        uint64_t computed_one_thread_timeout;
-        if (option_one_thread_timeout != 0) {
-          if (timeout_usec < option_one_thread_timeout) {
-            diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                         "RunThreadPlan called without one "
-                                         "thread timeout greater than total "
-                                         "timeout");
-            return eExpressionSetupError;
-          }
-          computed_one_thread_timeout = option_one_thread_timeout;
-        } else {
-          computed_one_thread_timeout = timeout_usec / 2;
-          if (computed_one_thread_timeout > default_one_thread_timeout_usec)
-            computed_one_thread_timeout = default_one_thread_timeout_usec;
-        }
-        one_thread_timeout_usec = computed_one_thread_timeout;
-        all_threads_timeout_usec = timeout_usec - one_thread_timeout_usec;
-      }
-    }
 
     if (log)
-      log->Printf(
-          "Stop others: %u, try all: %u, before_first: %u, one thread: %" PRIu32
-          " - all threads: %" PRIu32 ".\n",
-          options.GetStopOthers(), options.GetTryAllThreads(),
-          before_first_timeout, one_thread_timeout_usec,
-          all_threads_timeout_usec);
+      log->Printf("Stop others: %u, try all: %u, before_first: %u.\n",
+                  options.GetStopOthers(), options.GetTryAllThreads(),
+                  before_first_timeout);
 
     // This isn't going to work if there are unfetched events on the queue.
     // Are there cases where we might want to run the remaining events here, and
@@ -5088,8 +5086,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // The expression evaluation should still succeed.
     bool miss_first_event = true;
 #endif
-    std::chrono::microseconds timeout = std::chrono::microseconds(0);
-
     while (true) {
       // We usually want to resume the process if we get to the top of the loop.
       // The only exception is if we get two running events with no intervening
@@ -5116,8 +5112,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           }
         }
 
-        got_event = listener_sp->WaitForEvent(std::chrono::microseconds(500000),
-                                              event_sp);
+        got_event =
+            listener_sp->GetEvent(event_sp, std::chrono::milliseconds(500));
         if (!got_event) {
           if (log)
             log->Printf("Process::RunThreadPlan(): didn't get any event after "
@@ -5183,36 +5179,21 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
           log->PutCString("Process::RunThreadPlan(): waiting for next event.");
       }
 
-      if (before_first_timeout) {
-        if (options.GetTryAllThreads())
-          timeout = std::chrono::microseconds(one_thread_timeout_usec);
-        else
-          timeout = std::chrono::microseconds(timeout_usec);
-      } else {
-        if (timeout_usec == 0)
-          timeout = std::chrono::microseconds(0);
-        else
-          timeout = std::chrono::microseconds(all_threads_timeout_usec);
-      }
-
       do_resume = true;
       handle_running_event = true;
 
       // Now wait for the process to stop again:
       event_sp.reset();
 
+      Timeout<std::micro> timeout =
+          GetExpressionTimeout(options, before_first_timeout);
       if (log) {
-        if (timeout.count()) {
-          log->Printf(
-              "Process::RunThreadPlan(): about to wait - now is %llu - "
-              "endpoint is %llu",
-              static_cast<unsigned long long>(
-                  std::chrono::system_clock::now().time_since_epoch().count()),
-              static_cast<unsigned long long>(
-                  std::chrono::time_point<std::chrono::system_clock,
-                                          std::chrono::microseconds>(timeout)
-                      .time_since_epoch()
-                      .count()));
+        if (timeout) {
+          auto now = system_clock::now();
+          log->Printf("Process::RunThreadPlan(): about to wait - now is %s - "
+                      "endpoint is %s",
+                      llvm::to_string(now).c_str(),
+                      llvm::to_string(now + *timeout).c_str());
         } else {
           log->Printf("Process::RunThreadPlan(): about to wait forever.");
         }
@@ -5226,7 +5207,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         got_event = false;
       } else
 #endif
-        got_event = listener_sp->WaitForEvent(timeout, event_sp);
+        got_event = listener_sp->GetEvent(event_sp, timeout);
 
       if (got_event) {
         if (event_sp) {
@@ -5376,27 +5357,19 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         if (log) {
           if (options.GetTryAllThreads()) {
             if (before_first_timeout) {
-              if (timeout_usec != 0) {
-                log->Printf("Process::RunThreadPlan(): Running function with "
-                            "one thread timeout timed out, "
-                            "running for %" PRIu32
-                            " usec with all threads enabled.",
-                            all_threads_timeout_usec);
-              } else {
-                log->Printf("Process::RunThreadPlan(): Running function with "
-                            "one thread timeout timed out, "
-                            "running forever with all threads enabled.");
-              }
+              log->Printf("Process::RunThreadPlan(): Running function with "
+                          "one thread timeout timed out.");
             } else
               log->Printf("Process::RunThreadPlan(): Restarting function with "
                           "all threads enabled "
-                          "and timeout: %u timed out, abandoning execution.",
-                          timeout_usec);
+                          "and timeout: %" PRIu64
+                          " timed out, abandoning execution.",
+                          timeout ? timeout->count() : -1);
           } else
             log->Printf("Process::RunThreadPlan(): Running function with "
-                        "timeout: %u timed out, "
+                        "timeout: %" PRIu64 " timed out, "
                         "abandoning execution.",
-                        timeout_usec);
+                        timeout ? timeout->count() : -1);
         }
 
         // It is possible that between the time we issued the Halt, and we get
@@ -5426,8 +5399,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             if (log)
               log->PutCString("Process::RunThreadPlan(): Halt succeeded.");
 
-            got_event = listener_sp->WaitForEvent(
-                std::chrono::microseconds(500000), event_sp);
+            got_event =
+                listener_sp->GetEvent(event_sp, std::chrono::milliseconds(500));
 
             if (got_event) {
               stop_state =
