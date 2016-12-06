@@ -569,7 +569,7 @@ std::string AMDGPUclpVectorExpansion::getNextFunctionName(StringRef CurFuncName,
 
   StringRef ArgType;
   StringRef Suffix = CurFuncName.substr(SeparatorPos);
-  //  llvm::raw_ostream oss1;
+
   std::ostringstream Oss;
   Oss << CurFuncName.slice(0, SeparatorPos).str();
 
@@ -612,28 +612,27 @@ std::string AMDGPUclpVectorExpansion::getNextFunctionName(StringRef CurFuncName,
 ///
 void AMDGPUclpVectorExpansion::checkAndAddToExpansion(Function *TheFunc) {
   StringRef FuncName = TheFunc->getName();
-  size_t SeparatorPos = FuncName.find(OPENCL_VARG_BUILTIN_SPIR_VECTYPE);
-  if (FuncName.startswith(OPENCL_VARG_BUILTIN_SPIR_PREFIX) &&
-      SeparatorPos != StringRef::npos) {
-    StringRef SubStr =
-        FuncName.slice(OPENCL_VARG_BUILTIN_PREFIX_LEN, SeparatorPos);
+  if (!FuncName.startswith(OPENCL_VARG_BUILTIN_SPIR_PREFIX))
+    return;
 
-    // drop function length
-    assert(SubStr[0] >= '0' && SubStr[0] <= '9');
-    while (SubStr[0] >= '0' && SubStr[0] <= '9') {
-      SubStr = SubStr.substr(1);
-    }
+  FuncName = FuncName.drop_front(OPENCL_VARG_BUILTIN_PREFIX_LEN);
+  auto UnmangledLen = getAndPassVecSize(FuncName);
 
-    DEBUG(dbgs() << "check " << SubStr << "\n");
+  // processing specific functions only
+  if (!FuncName.substr(UnmangledLen)
+           .startswith(OPENCL_VARG_BUILTIN_SPIR_VECTYPE))
+    return;
 
-    const a_builtinfunc *Builtin = getBuiltinInfo(SubStr);
-    if (Builtin) {
-      StringRef Suffix =
-          FuncName.substr(SeparatorPos + OPENCL_VARG_BUILTIN_SPIR_VECTYPE_LEN);
-      int vecSize = getAndPassVecSize(Suffix);
-      if (vecSize > 1) {
-        addFuncuseInfo(TheFunc, vecSize, Builtin);
-      }
+  StringRef Suffix =
+      FuncName.substr(UnmangledLen + OPENCL_VARG_BUILTIN_SPIR_VECTYPE_LEN);
+  FuncName = FuncName.take_front(UnmangledLen);
+
+  DEBUG(dbgs() << "check " << FuncName << "\n");
+  const a_builtinfunc *Builtin = getBuiltinInfo(FuncName);
+  if (Builtin) {
+    int vecSize = getAndPassVecSize(Suffix);
+    if (vecSize > 1) {
+      addFuncuseInfo(TheFunc, vecSize, Builtin);
     }
   }
 } // AMDGPUclpVectorExpansion::checkAndAddToExpansion
@@ -961,17 +960,17 @@ Value *AMDGPUclpVectorExpansion::loadVectorSlice(int SrcStartIdx,
   if (NumEle == 1) {
     Value *SrcIdx =
         ConstantInt::get(Type::getInt32Ty(BB->getContext()), SrcStartIdx);
-    DstVal = ExtractElementInst::Create(SrcVal, SrcIdx, "tmp", BB);
+    DstVal = ExtractElementInst::Create(SrcVal, SrcIdx, "", BB);
   } else {
     Type *EleTy = cast<VectorType>(SrcTy)->getElementType();
     Type *DstTy = VectorType::get(EleTy, NumEle);
     DstVal = UndefValue::get(DstTy);
     for (int i = SrcStartIdx; i < SrcPassIdx; ++i) {
       Value *SrcIdx = ConstantInt::get(Type::getInt32Ty(BB->getContext()), i);
-      Value *TmpVal = ExtractElementInst::Create(SrcVal, SrcIdx, "tmp", BB);
+      Value *TmpVal = ExtractElementInst::Create(SrcVal, SrcIdx, "", BB);
       Value *DstIdx =
           ConstantInt::get(Type::getInt32Ty(BB->getContext()), i - SrcStartIdx);
-      DstVal = InsertElementInst::Create(DstVal, TmpVal, DstIdx, "tmp", BB);
+      DstVal = InsertElementInst::Create(DstVal, TmpVal, DstIdx, "", BB);
     }
   }
 
@@ -991,10 +990,10 @@ Value *AMDGPUclpVectorExpansion::insertVectorSlice(int DstStartIdx,
     } else {
       Value *SrcIdx = ConstantInt::get(Type::getInt32Ty(BB->getContext()),
                                        Idx - DstStartIdx);
-      TmpVal = ExtractElementInst::Create(SrcVal, SrcIdx, "tmp", BB);
+      TmpVal = ExtractElementInst::Create(SrcVal, SrcIdx, "", BB);
     }
     Value *DstIdx = ConstantInt::get(Type::getInt32Ty(BB->getContext()), Idx);
-    DstVal = InsertElementInst::Create(DstVal, TmpVal, DstIdx, "tmp", BB);
+    DstVal = InsertElementInst::Create(DstVal, TmpVal, DstIdx, "", BB);
   }
 
   return DstVal;
