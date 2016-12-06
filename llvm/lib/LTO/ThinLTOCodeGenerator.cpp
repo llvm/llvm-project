@@ -776,11 +776,14 @@ void ThinLTOCodeGenerator::run() {
   // Changes are made in the index, consumed in the ThinLTO backends.
   thinLTOInternalizeAndPromoteInIndex(*Index, isExported);
 
-  // Make sure that every module has an entry in the ExportLists and
-  // ResolvedODR maps to enable threaded access to these maps below.
-  for (auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
-    ExportLists[DefinedGVSummaries.first()];
-    ResolvedODR[DefinedGVSummaries.first()];
+  // Make sure that every module has an entry in these maps to enable concurrent
+  // access to these maps below in the parallel execution.
+  for (auto &ModuleBuffer : Modules) {
+    auto ModuleIdentifier = ModuleBuffer.getBufferIdentifier();
+    ExportLists[ModuleIdentifier];
+    ResolvedODR[ModuleIdentifier];
+    ImportLists[ModuleIdentifier];
+    ModuleToDefinedGVSummaries[ModuleIdentifier];
   }
 
   // Compute the ordering we will process the inputs: the rough heuristic here
