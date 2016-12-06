@@ -55,7 +55,7 @@ const char *DemangleCXXABI(const char *name) {
   // own demangler (libc++abi's implementation could be adapted so that
   // it does not allocate). For now, we just call it anyway, and we leak
   // the returned value.
-  if (__cxxabiv1::__cxa_demangle)
+  if (&__cxxabiv1::__cxa_demangle)
     if (const char *demangled_name =
           __cxxabiv1::__cxa_demangle(name, 0, 0, 0))
       return demangled_name;
@@ -152,8 +152,10 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
 
   int pid = -1;
 
-  int infd[2] = {};
-  int outfd[2] = {};
+  int infd[2];
+  internal_memset(&infd, 0, sizeof(infd));
+  int outfd[2];
+  internal_memset(&outfd, 0, sizeof(outfd));
   if (!CreateTwoHighNumberedPipes(infd, outfd)) {
     Report("WARNING: Can't create a socket pair to start "
            "external symbolizer (errno: %d)\n", errno);

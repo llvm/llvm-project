@@ -58,7 +58,7 @@ test_one(unsigned N, unsigned M)
     if(N > 0)
     {
         assert(ia[0] == 0);
-        assert(ia[N-1] == N-1);
+        assert(ia[N-1] == static_cast<value_type>(N-1));
         assert(std::is_sorted(ia, ia+N));
     }
     delete [] ia;

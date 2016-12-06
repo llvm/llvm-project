@@ -23,6 +23,20 @@
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_uidivmod)
+#if __ARM_ARCH_ISA_THUMB == 1
+        cmp     r0, r1
+        bcc     LOCAL_LABEL(case_denom_larger)
+        push    {r0, r1, lr}
+        bl      SYMBOL_NAME(__aeabi_uidiv)
+        pop     {r1, r2, r3}
+        muls    r2, r2, r0 // r2 = quot * denom
+        subs    r1, r1, r2
+        JMP     (r3)
+LOCAL_LABEL(case_denom_larger):
+        movs    r1, r0
+        movs    r0, #0
+        JMP     (lr)
+#else
         push    { lr }
         sub     sp, sp, #4
         mov     r2, sp
@@ -35,6 +49,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_uidivmod)
         ldr     r1, [sp]
         add     sp, sp, #4
         pop     { pc }
+#endif
 END_COMPILERRT_FUNCTION(__aeabi_uidivmod)
 
 NO_EXEC_STACK_DIRECTIVE

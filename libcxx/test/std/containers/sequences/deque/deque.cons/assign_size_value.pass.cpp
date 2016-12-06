@@ -13,6 +13,7 @@
 
 #include <deque>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -46,8 +47,8 @@ test(C& c1, int size, int v)
 {
     typedef typename C::const_iterator CI;
     c1.assign(size, v);
-    assert(c1.size() == size);
-    assert(distance(c1.begin(), c1.end()) == c1.size());
+    assert(c1.size() == static_cast<std::size_t>(size));
+    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
     for (CI i = c1.begin(); i != c1.end(); ++i)
         assert(*i == v);
 }

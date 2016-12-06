@@ -213,7 +213,7 @@ void SymbolBody::parseSymbolVersion() {
   }
 
   // It is an error if the specified version is not defined.
-  error("symbol " + S + " has undefined version " + Verstr);
+  error(toString(File) + ": symbol " + S + " has undefined version " + Verstr);
 }
 
 Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,

@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 typedef std::codecvt<wchar_t, char, std::mbstate_t> F;
 
@@ -35,8 +36,8 @@ int main()
     F::result r = f.in(mbs, from.data(), from.data() + from.size(), from_next,
                             &to[0], &to[0] + to.size(), to_next);
     assert(r == F::ok);
-    assert(from_next - from.data() == from.size());
-    assert(to_next - to.data() == expected.size());
-    assert(to_next - to.data() == expected.size());
+    assert(static_cast<std::size_t>(from_next - from.data()) == from.size());
+    assert(static_cast<std::size_t>(to_next - to.data()) == expected.size());
+    assert(static_cast<std::size_t>(to_next - to.data()) == expected.size());
     assert(to == expected);
 }

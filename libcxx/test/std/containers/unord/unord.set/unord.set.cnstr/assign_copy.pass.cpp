@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <cassert>
 #include <cfloat>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "../../../test_compare.h"
@@ -67,8 +68,8 @@ int main()
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
         assert(c.get_allocator() == A(4));
         assert(!c.empty());
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
     }
@@ -130,8 +131,8 @@ int main()
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
         assert(c.get_allocator() == A(10));
         assert(!c.empty());
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
     }
@@ -176,8 +177,8 @@ int main()
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
         assert(c.get_allocator() == A());
         assert(!c.empty());
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
     }

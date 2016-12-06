@@ -23,9 +23,9 @@
 struct TestT {
   int x;
   int size;
-  constexpr TestT(std::initializer_list<int> il) : x(*il.begin()), size(il.size()) {}
+  constexpr TestT(std::initializer_list<int> il) : x(*il.begin()), size(static_cast<int>(il.size())) {}
   constexpr TestT(std::initializer_list<int> il, const int*)
-      : x(*il.begin()), size(il.size()) {}
+      : x(*il.begin()), size(static_cast<int>(il.size())) {}
 };
 
 int main()

@@ -26,7 +26,7 @@ int main()
         assert(ss.good());
         assert(ss.str() == " 123 456");
         int i = 234;
-        ss << i << ' ' << 567;;
+        ss << i << ' ' << 567;
         assert(ss.str() == "234 5676");
     }
     {
@@ -35,7 +35,7 @@ int main()
         assert(ss.good());
         assert(ss.str() == " 123 456");
         int i = 234;
-        ss << i << ' ' << 567;;
+        ss << i << ' ' << 567;
         assert(ss.str() == "234 5676");
     }
     {
@@ -44,7 +44,7 @@ int main()
         assert(ss.good());
         assert(ss.str() == L" 123 456");
         int i = 234;
-        ss << i << ' ' << 567;;
+        ss << i << ' ' << 567;
         assert(ss.str() == L"234 5676");
     }
     {
@@ -53,7 +53,7 @@ int main()
         assert(ss.good());
         assert(ss.str() == L" 123 456");
         int i = 234;
-        ss << i << ' ' << 567;;
+        ss << i << ' ' << 567;
         assert(ss.str() == L"234 5676");
     }
 }

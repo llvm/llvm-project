@@ -40,12 +40,26 @@ DEFINE_COMPILERRT_FUNCTION(__udivsi3)
 #else
 	cmp	r1, #1
 	bcc	LOCAL_LABEL(divby0)
+#if __ARM_ARCH_ISA_THUMB == 1
+	bne LOCAL_LABEL(num_neq_denom)
+	JMP(lr)
+LOCAL_LABEL(num_neq_denom):
+#else
 	IT(eq)
 	JMPc(lr, eq)
+#endif
 	cmp	r0, r1
+#if __ARM_ARCH_ISA_THUMB == 1
+	bhs LOCAL_LABEL(num_ge_denom)
+	movs r0, #0
+	JMP(lr)
+LOCAL_LABEL(num_ge_denom):
+#else
 	ITT(cc)
 	movcc	r0, #0
 	JMPc(lr, cc)
+#endif
+
 	/*
 	 * Implement division using binary long division algorithm.
 	 *
@@ -62,7 +76,7 @@ DEFINE_COMPILERRT_FUNCTION(__udivsi3)
 	 * that (r0 << shift) < 2 * r1. The quotient is stored in r3.
 	 */
 
-#  ifdef __ARM_FEATURE_CLZ
+#  if defined(__ARM_FEATURE_CLZ)
 	clz	ip, r0
 	clz	r3, r1
 	/* r0 >= r1 implies clz(r0) <= clz(r1), so ip <= r3. */
@@ -77,49 +91,128 @@ DEFINE_COMPILERRT_FUNCTION(__udivsi3)
 	sub	ip, ip, r3, lsl #3
 	mov	r3, #0
 	bx	ip
-#  else
+#  else /* No CLZ Feature */
 #    if __ARM_ARCH_ISA_THUMB == 2
 #    error THUMB mode requires CLZ or UDIV
 #    endif
+#    if __ARM_ARCH_ISA_THUMB == 1
+#      define BLOCK_SIZE 10
+#    else
+#      define BLOCK_SIZE 12
+#    endif
+
 	mov	r2, r0
+#    if __ARM_ARCH_ISA_THUMB == 1
+	mov ip, r0
+	adr r0, LOCAL_LABEL(div0block)
+	adds r0, #1
+#    else
 	adr	ip, LOCAL_LABEL(div0block)
-
-	lsr	r3, r2, #16
+#    endif
+	lsrs	r3, r2, #16
 	cmp	r3, r1
+#    if __ARM_ARCH_ISA_THUMB == 1
+	blo LOCAL_LABEL(skip_16)
+	movs r2, r3
+	subs r0, r0, #(16 * BLOCK_SIZE)
+LOCAL_LABEL(skip_16):
+#    else
 	movhs	r2, r3
-	subhs	ip, ip, #(16 * 12)
+	subhs	ip, ip, #(16 * BLOCK_SIZE)
+#    endif
 
-	lsr	r3, r2, #8
+	lsrs	r3, r2, #8
 	cmp	r3, r1
+#    if __ARM_ARCH_ISA_THUMB == 1
+	blo LOCAL_LABEL(skip_8)
+	movs r2, r3
+	subs r0, r0, #(8 * BLOCK_SIZE)
+LOCAL_LABEL(skip_8):
+#    else
 	movhs	r2, r3
-	subhs	ip, ip, #(8 * 12)
+	subhs	ip, ip, #(8 * BLOCK_SIZE)
+#    endif
 
-	lsr	r3, r2, #4
+	lsrs	r3, r2, #4
 	cmp	r3, r1
+#    if __ARM_ARCH_ISA_THUMB == 1
+	blo LOCAL_LABEL(skip_4)
+	movs r2, r3
+	subs r0, r0, #(4 * BLOCK_SIZE)
+LOCAL_LABEL(skip_4):
+#    else
 	movhs	r2, r3
-	subhs	ip, #(4 * 12)
+	subhs	ip, #(4 * BLOCK_SIZE)
+#    endif
 
-	lsr	r3, r2, #2
+	lsrs	r3, r2, #2
 	cmp	r3, r1
+#    if __ARM_ARCH_ISA_THUMB == 1
+	blo LOCAL_LABEL(skip_2)
+	movs r2, r3
+	subs r0, r0, #(2 * BLOCK_SIZE)
+LOCAL_LABEL(skip_2):
+#    else
 	movhs	r2, r3
-	subhs	ip, ip, #(2 * 12)
+	subhs	ip, ip, #(2 * BLOCK_SIZE)
+#    endif
 
 	/* Last block, no need to update r2 or r3. */
-	cmp	r1, r2, lsr #1
-	subls	ip, ip, #(1 * 12)
+#    if __ARM_ARCH_ISA_THUMB == 1
+	lsrs r3, r2, #1
+	cmp r3, r1
+	blo LOCAL_LABEL(skip_1)
+	subs r0, r0, #(1 * BLOCK_SIZE)
+LOCAL_LABEL(skip_1):
+	movs r2, r0
+	mov r0, ip
+	movs r3, #0
+	JMP (r2)
 
-	mov	r3, #0
+#    else
+	cmp	r1, r2, lsr #1
+	subls	ip, ip, #(1 * BLOCK_SIZE)
+
+	movs	r3, #0
 
 	JMP(ip)
-#  endif
+#    endif
+#  endif /* __ARM_FEATURE_CLZ */
+
 
 #define	IMM	#
+	/* due to the range limit of branch in Thumb1, we have to place the
+		 block closer */
+LOCAL_LABEL(divby0):
+	movs	r0, #0
+#      if defined(__ARM_EABI__)
+	bl	__aeabi_idiv0 // due to relocation limit, can't use b.
+#      endif
+	JMP(lr)
 
+
+#if __ARM_ARCH_ISA_THUMB == 1
+#define block(shift)                                                           \
+	lsls r2, r1, IMM shift;                                                      \
+	cmp r0, r2;                                                                  \
+	blo LOCAL_LABEL(block_skip_##shift);                                         \
+	subs r0, r0, r2;                                                             \
+	LOCAL_LABEL(block_skip_##shift) :;                                           \
+	adcs r3, r3 /* same as ((r3 << 1) | Carry). Carry is set if r0 >= r2. */
+
+	/* TODO: if current location counter is not not word aligned, we don't
+		 need the .p2align and nop */
+	/* Label div0block must be word-aligned. First align block 31 */
+	.p2align 2
+	nop /* Padding to align div0block as 31 blocks = 310 bytes */
+
+#else
 #define block(shift)                                                           \
 	cmp	r0, r1, lsl IMM shift;                                         \
 	ITT(hs);                                                               \
 	WIDE(addhs)	r3, r3, IMM (1 << shift);                              \
 	WIDE(subhs)	r0, r0, r1, lsl IMM shift
+#endif
 
 	block(31)
 	block(30)
@@ -159,12 +252,14 @@ LOCAL_LABEL(div0block):
 	JMP(lr)
 #endif /* __ARM_ARCH_EXT_IDIV__ */
 
+#if __ARM_ARCH_EXT_IDIV__
 LOCAL_LABEL(divby0):
-	mov	r0, #0
-#ifdef __ARM_EABI__
-	b	__aeabi_idiv0
-#else
-	JMP(lr)
+        mov     r0, #0
+#  ifdef __ARM_EABI__
+        b       __aeabi_idiv0
+#  else
+        JMP(lr)
+#  endif
 #endif
 
 END_COMPILERRT_FUNCTION(__udivsi3)
