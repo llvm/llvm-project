@@ -29,7 +29,7 @@ int main()
     const S& cs = s;
     for (S::size_type i = 0; i < cs.size(); ++i)
     {
-        assert(s[i] == '0' + i);
+        assert(s[i] == static_cast<char>('0' + i));
         assert(cs[i] == s[i]);
     }
     assert(cs[cs.size()] == '\0');
@@ -43,7 +43,7 @@ int main()
     const S& cs = s;
     for (S::size_type i = 0; i < cs.size(); ++i)
     {
-        assert(s[i] == '0' + i);
+        assert(s[i] == static_cast<char>('0' + i));
         assert(cs[i] == s[i]);
     }
     assert(cs[cs.size()] == '\0');

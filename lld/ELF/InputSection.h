@@ -194,7 +194,21 @@ public:
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
   std::vector<SectionPiece> Pieces;
-  llvm::CachedHashStringRef getData(size_t Idx) const;
+
+  // Returns I'th piece's data. This function is very hot when
+  // string merging is enabled, so we want to inline.
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  llvm::CachedHashStringRef getData(size_t I) const {
+    size_t Begin = Pieces[I].InputOff;
+    size_t End;
+    if (Pieces.size() - 1 == I)
+      End = this->Data.size();
+    else
+      End = Pieces[I + 1].InputOff;
+
+    StringRef S = {(const char *)(this->Data.data() + Begin), End - Begin};
+    return {S, Hashes[I]};
+  }
 
   // Returns the SectionPiece at a given input section offset.
   SectionPiece *getSectionPiece(uintX_t Offset);

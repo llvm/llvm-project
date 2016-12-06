@@ -27,7 +27,7 @@ int main()
         const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c0(std::begin(t), std::end(t), A(10));
         C c(c0, A(9));
-        unsigned n = 0;
+        int n = 0;
         for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
             assert(*i == n);
         assert(n == std::end(t) - std::begin(t));
@@ -41,7 +41,7 @@ int main()
         const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c0(std::begin(t), std::end(t), A(10));
         C c(c0, A(9));
-        unsigned n = 0;
+        int n = 0;
         for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
             assert(*i == n);
         assert(n == std::end(t) - std::begin(t));
@@ -56,7 +56,7 @@ int main()
         const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c0(std::begin(t), std::end(t), A());
         C c(c0, A());
-        unsigned n = 0;
+        int n = 0;
         for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
             assert(*i == n);
         assert(n == std::end(t) - std::begin(t));

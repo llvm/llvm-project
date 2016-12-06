@@ -13,6 +13,7 @@
 
 #include <deque>
 #include <cassert>
+#include <cstddef>
 
 #include "test_allocator.h"
 #include "test_iterators.h"
@@ -27,8 +28,8 @@ test(InputIterator f, InputIterator l)
     typedef std::deque<T, Allocator> C;
     typedef typename C::const_iterator const_iterator;
     C d(f, l);
-    assert(d.size() == std::distance(f, l));
-    assert(distance(d.begin(), d.end()) == d.size());
+    assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
+    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, ++f)
         assert(*i == *f);
 }
@@ -41,8 +42,8 @@ test(InputIterator f, InputIterator l)
     typedef std::deque<T, Allocator> C;
     typedef typename C::const_iterator const_iterator;
     C d(f, l);
-    assert(d.size() == std::distance(f, l));
-    assert(distance(d.begin(), d.end()) == d.size());
+    assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
+    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, ++f)
         assert(*i == *f);
 }

@@ -13,6 +13,7 @@
 
 #include <list>
 #include <cassert>
+#include <cstddef>
 #include "test_macros.h"
 #include "DefaultOnly.h"
 #include "test_allocator.h"
@@ -28,7 +29,7 @@ test3(unsigned n, Allocator const &alloc = Allocator())
     {
     C d(n, alloc);
     assert(d.size() == n);
-    assert(std::distance(d.begin(), d.end()) == n);
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == n);
     assert(d.get_allocator() == alloc);
     }
 #endif

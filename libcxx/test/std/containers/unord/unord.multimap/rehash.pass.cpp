@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cfloat>
 #include <cmath>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -62,8 +63,8 @@ void test(const C& c)
     i = eq.first;
     assert(i->first == 4);
     assert(i->second == "four");
-    assert(std::distance(c.begin(), c.end()) == c.size());
-    assert(std::distance(c.cbegin(), c.cend()) == c.size());
+    assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+    assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
 }
 

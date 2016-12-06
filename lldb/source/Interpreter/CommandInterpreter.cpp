@@ -1418,7 +1418,7 @@ Error CommandInterpreter::PreprocessCommand(std::string &command) {
           options.SetIgnoreBreakpoints(true);
           options.SetKeepInMemory(false);
           options.SetTryAllThreads(true);
-          options.SetTimeoutUsec(0);
+          options.SetTimeout(llvm::None);
 
           ExpressionResults expr_result = target->EvaluateExpression(
               expr_str.c_str(), exe_ctx.GetFramePtr(), expr_result_valobj_sp,

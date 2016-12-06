@@ -148,25 +148,27 @@ func parseLLVMAttribute(value string) llvmAttribute {
 	for _, field := range strings.Fields(value) {
 		switch strings.ToLower(field) {
 		case "noreturn":
-			result |= llvmAttribute(llvm.NoReturnAttribute)
 		case "nounwind":
-			result |= llvmAttribute(llvm.NoUnwindAttribute)
 		case "noinline":
-			result |= llvmAttribute(llvm.NoInlineAttribute)
 		case "alwaysinline":
-			result |= llvmAttribute(llvm.AlwaysInlineAttribute)
+			kind := llvm.AttributeKindID(strings.ToLower(field))
+			result.AttrKinds = append(result.AttrKinds, kind)
 		}
 	}
 	return result
 }
 
-type llvmAttribute llvm.Attribute
+type llvmAttribute struct {
+	AttrKinds []uint
+}
 
 func (a llvmAttribute) Apply(v llvm.Value) {
+	ctx := v.GlobalParent().Context()
 	if !v.IsAFunction().IsNil() {
-		v.AddFunctionAttr(llvm.Attribute(a))
-	} else {
-		v.AddAttribute(llvm.Attribute(a))
+		for _, kind := range a.AttrKinds {
+			attr := ctx.CreateEnumAttribute(kind, 0)
+			v.AddFunctionAttr(attr)
+		}
 	}
 }
 

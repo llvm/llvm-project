@@ -330,11 +330,8 @@ TEST(ClangMove, DontMoveAll) {
                                 "#endif // NEW_FOO_H\n";
   const char Code[] = "#include \"foo.h\"\nint A::f() { return 0; }";
   std::vector<std::string> TestHeaders = {
-    "typedef int Int;\nclass A {\npublic:\n  int f();\n};\n",
-    "using Int=int;\nclass A {\npublic:\n  int f();\n};\n",
     "class B {};\nclass A {\npublic:\n  int f();\n};\n",
     "void f() {};\nclass A {\npublic:\n  int f();\n};\n",
-    "enum Color { RED };\nclass A {\npublic:\n  int f();\n};\n",
   };
   move::MoveDefinitionSpec Spec;
   Spec.Names.push_back("A");
@@ -348,6 +345,26 @@ TEST(ClangMove, DontMoveAll) {
     // The expected old header should not contain class A definition.
     std::string ExpectedOldHeader = Header.substr(0, Header.size() - 32);
     EXPECT_EQ(ExpectedOldHeader, Results[Spec.OldHeader]);
+  }
+}
+
+TEST(ClangMove, IgnoreUnsupportedKindsAndMoveAll) {
+  const char Code[] = "#include \"foo.h\"\nint A::f() { return 0; }";
+  std::vector<std::string> TestHeaders = {
+      "typedef int Int;\nclass A {\npublic:\n  int f();\n};\n",
+      "using Int = int;\nclass A {\npublic:\n  int f();\n};\n",
+      "enum Color { RED };\nclass A {\npublic:\n  int f();\n};\n",
+  };
+  move::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("A");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  for (const auto &Header : TestHeaders) {
+    auto Results = runClangMoveOnCode(Spec, Header.c_str(), Code);
+    EXPECT_EQ(Header, Results[Spec.NewHeader]);
+    EXPECT_EQ("", Results[Spec.OldHeader]);
   }
 }
 

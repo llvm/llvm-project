@@ -154,9 +154,6 @@ func (d *DIBuilder) Value(b llvm.Builder, v ssa.Value, llv llvm.Value, paramInde
 
 // SetLocation sets the current debug location.
 func (d *DIBuilder) SetLocation(b llvm.Builder, pos token.Pos) {
-	if !pos.IsValid() {
-		return
-	}
 	position := d.fset.Position(pos)
 	d.lb = llvm.Metadata{}
 	if position.Filename != d.fnFile && position.Filename != "" {
@@ -250,14 +247,12 @@ func (d *DIBuilder) descriptorBasic(t *types.Basic, name string) llvm.Metadata {
 		return d.builder.CreateBasicType(llvm.DIBasicType{
 			Name:        name,
 			SizeInBits:  uint64(d.sizes.Sizeof(t) * 8),
-			AlignInBits: uint64(d.sizes.Alignof(t) * 8),
 			Encoding:    llvm.DW_ATE_unsigned,
 		})
 	default:
 		bt := llvm.DIBasicType{
 			Name:        t.String(),
 			SizeInBits:  uint64(d.sizes.Sizeof(t) * 8),
-			AlignInBits: uint64(d.sizes.Alignof(t) * 8),
 		}
 		switch bi := t.Info(); {
 		case bi&types.IsBoolean != 0:
@@ -283,7 +278,7 @@ func (d *DIBuilder) descriptorPointer(t *types.Pointer) llvm.Metadata {
 	return d.builder.CreatePointerType(llvm.DIPointerType{
 		Pointee:     d.DIType(t.Elem()),
 		SizeInBits:  uint64(d.sizes.Sizeof(t) * 8),
-		AlignInBits: uint64(d.sizes.Alignof(t) * 8),
+		AlignInBits: uint32(d.sizes.Alignof(t) * 8),
 	})
 }
 
@@ -301,7 +296,7 @@ func (d *DIBuilder) descriptorStruct(t *types.Struct, name string) llvm.Metadata
 			Name:         f.Name(),
 			Type:         d.DIType(t),
 			SizeInBits:   uint64(d.sizes.Sizeof(t) * 8),
-			AlignInBits:  uint64(d.sizes.Alignof(t) * 8),
+			AlignInBits:  uint32(d.sizes.Alignof(t) * 8),
 			OffsetInBits: uint64(offsets[i] * 8),
 		})
 	}
@@ -309,7 +304,7 @@ func (d *DIBuilder) descriptorStruct(t *types.Struct, name string) llvm.Metadata
 	return d.builder.CreateStructType(d.cu, llvm.DIStructType{
 		Name:        name,
 		SizeInBits:  uint64(d.sizes.Sizeof(t) * 8),
-		AlignInBits: uint64(d.sizes.Alignof(t) * 8),
+		AlignInBits: uint32(d.sizes.Alignof(t) * 8),
 		Elements:    members,
 	})
 }
@@ -345,7 +340,7 @@ func (d *DIBuilder) descriptorNamed(t *types.Named) llvm.Metadata {
 func (d *DIBuilder) descriptorArray(t *types.Array, name string) llvm.Metadata {
 	return d.builder.CreateArrayType(llvm.DIArrayType{
 		SizeInBits:  uint64(d.sizes.Sizeof(t) * 8),
-		AlignInBits: uint64(d.sizes.Alignof(t) * 8),
+		AlignInBits: uint32(d.sizes.Alignof(t) * 8),
 		ElementType: d.DIType(t.Elem()),
 		Subscripts:  []llvm.DISubrange{{Count: t.Len()}},
 	})

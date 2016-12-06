@@ -16,6 +16,7 @@
 
 #include <regex>
 #include <cassert>
+#include <cstddef>
 #include "test_macros.h"
 
 void
@@ -28,7 +29,7 @@ test()
     std::match_results<const char*>::const_iterator i = m.cbegin();
     std::match_results<const char*>::const_iterator e = m.cend();
 
-    assert(e - i == m.size());
+    assert(static_cast<std::size_t>(e - i) == m.size());
     for (int j = 0; i != e; ++i, ++j)
         assert(*i == m[j]);
 }

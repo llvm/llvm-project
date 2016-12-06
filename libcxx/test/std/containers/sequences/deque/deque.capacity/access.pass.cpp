@@ -52,18 +52,18 @@ int main()
 {
     {
         std::deque<int> c = make<std::deque<int> >(10);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);
     }
     {
         const std::deque<int> c = make<std::deque<int> >(10);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);
@@ -71,18 +71,18 @@ int main()
 #if TEST_STD_VER >= 11
     {
         std::deque<int, min_allocator<int>> c = make<std::deque<int, min_allocator<int>> >(10);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);
     }
     {
         const std::deque<int, min_allocator<int>> c = make<std::deque<int, min_allocator<int>> >(10);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c[i] == i);
-        for (unsigned i = 0; i < 10; ++i)
+        for (int i = 0; i < 10; ++i)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);

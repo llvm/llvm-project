@@ -46,7 +46,7 @@ test()
     OutIter r = std::merge(InIter1(ia), InIter1(ia+N),
                            InIter2(ib), InIter2(ib+N), OutIter(ic), pred);
     assert(base(r) == ic+2*N);
-    assert(ic[0] == 2*N-1);
+    assert(ic[0] == static_cast<int>(2*N-1));
     assert(ic[2*N-1] == 0);
     assert(std::is_sorted(ic, ic+2*N, std::greater<int>()));
     assert(pred.count() <= (N + N - 1));
@@ -70,7 +70,7 @@ test()
     OutIter r = std::merge(InIter1(ia), InIter1(ia+N),
                            InIter2(ib), InIter2(ib+N), OutIter(ic), pred);
     assert(base(r) == ic+2*N);
-    assert(ic[0] == 2*N-1);
+    assert(ic[0] == static_cast<int>(2*N-1));
     assert(ic[2*N-1] == 0);
     assert(std::is_sorted(ic, ic+2*N, std::greater<int>()));
     assert(pred.count() <= (N + N - 1));

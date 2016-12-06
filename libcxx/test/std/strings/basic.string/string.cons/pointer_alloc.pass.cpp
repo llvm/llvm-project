@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "test_allocator.h"
@@ -27,7 +28,7 @@ test(const charT* s)
     typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
-    unsigned n = T::length(s);
+    std::size_t n = T::length(s);
     S s2(s);
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);
@@ -42,7 +43,7 @@ test(const charT* s, const A& a)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
     typedef typename S::traits_type T;
-    unsigned n = T::length(s);
+    std::size_t n = T::length(s);
     S s2(s, a);
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);

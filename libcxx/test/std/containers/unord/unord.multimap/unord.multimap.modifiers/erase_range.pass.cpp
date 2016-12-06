@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <string>
 #include <cassert>
+#include <cstddef>
 
 #include "min_allocator.h"
 
@@ -68,8 +69,8 @@ int main()
         k = eq.first;
         assert(k->first == 4);
         assert(k->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
 
         k = c.erase(i, j);
         assert(c.size() == 4);
@@ -91,8 +92,8 @@ int main()
         k = eq.first;
         assert(k->first == 4);
         assert(k->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
 
         k = c.erase(c.cbegin(), c.cend());
         assert(c.size() == 0);
@@ -145,8 +146,8 @@ int main()
         k = eq.first;
         assert(k->first == 4);
         assert(k->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
 
         k = c.erase(i, j);
         assert(c.size() == 4);
@@ -168,8 +169,8 @@ int main()
         k = eq.first;
         assert(k->first == 4);
         assert(k->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
 
         k = c.erase(c.cbegin(), c.cend());
         assert(c.size() == 0);

@@ -28,6 +28,7 @@
 
 #include <set>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -64,8 +65,8 @@ int main()
             8
         };
         std::multiset<int> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
         std::multiset<int>::iterator i;
         i = m.begin();
         std::multiset<int>::const_iterator k = i;
@@ -104,10 +105,10 @@ int main()
             8
         };
         const std::multiset<int> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.cbegin(), m.cend()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
-        assert(std::distance(m.crbegin(), m.crend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size());
         std::multiset<int>::const_iterator i;
         i = m.begin();
         for (int j = 1; j <= 8; ++j)
@@ -145,8 +146,8 @@ int main()
             8
         };
         std::multiset<int, std::less<int>, min_allocator<int>> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
         std::multiset<int, std::less<int>, min_allocator<int>>::iterator i;
         i = m.begin();
         std::multiset<int, std::less<int>, min_allocator<int>>::const_iterator k = i;
@@ -185,10 +186,10 @@ int main()
             8
         };
         const std::multiset<int, std::less<int>, min_allocator<int>> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
-        assert(std::distance(m.begin(), m.end()) == m.size());
-        assert(std::distance(m.cbegin(), m.cend()) == m.size());
-        assert(std::distance(m.rbegin(), m.rend()) == m.size());
-        assert(std::distance(m.crbegin(), m.crend()) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.begin(), m.end())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.cbegin(), m.cend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.rbegin(), m.rend())) == m.size());
+        assert(static_cast<std::size_t>(std::distance(m.crbegin(), m.crend())) == m.size());
         std::multiset<int, std::less<int>, min_allocator<int>>::const_iterator i;
         i = m.begin();
         for (int j = 1; j <= 8; ++j)

@@ -49,8 +49,8 @@ test(C& c1, int size)
     typedef typename C::const_iterator CI;
     typename C::size_type c1_osize = c1.size();
     c1.resize(size);
-    assert(c1.size() == size);
-    assert(distance(c1.begin(), c1.end()) == c1.size());
+    assert(c1.size() == static_cast<std::size_t>(size));
+    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
     CI i = c1.begin();
     for (int j = 0; static_cast<std::size_t>(j) < std::min(c1_osize, c1.size()); ++j, ++i)
         assert(*i == j);
