@@ -366,6 +366,7 @@ INTERFACE_FUNCTION(__sanitizer_verify_contiguous_container)
 INTERFACE_FUNCTION(__sanitizer_install_malloc_and_free_hooks)
 INTERFACE_FUNCTION(__sanitizer_start_switch_fiber)
 INTERFACE_FUNCTION(__sanitizer_finish_switch_fiber)
+INTERFACE_FUNCTION(__sanitizer_get_module_and_offset_for_pc)
 
 // TODO(timurrrr): Add more interface functions on the as-needed basis.
 

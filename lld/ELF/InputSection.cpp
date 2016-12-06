@@ -303,13 +303,6 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   }
 }
 
-// Page(Expr) is the page address of the expression Expr, defined
-// as (Expr & ~0xFFF). (This applies even if the machine page size
-// supported by the platform has a different value.)
-static uint64_t getAArch64Page(uint64_t Expr) {
-  return Expr & (~static_cast<uint64_t>(0xFFF));
-}
-
 static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
                                               uint32_t P) {
   switch (Type) {
@@ -724,16 +717,6 @@ void MergeInputSection<ELFT>::splitStrings(ArrayRef<uint8_t> Data,
     Data = Data.slice(Size);
     Off += Size;
   }
-}
-
-// Returns I'th piece's data.
-template <class ELFT>
-CachedHashStringRef MergeInputSection<ELFT>::getData(size_t I) const {
-  size_t End =
-      (Pieces.size() - 1 == I) ? this->Data.size() : Pieces[I + 1].InputOff;
-  const SectionPiece &P = Pieces[I];
-  StringRef S = toStringRef(this->Data.slice(P.InputOff, End - P.InputOff));
-  return {S, Hashes[I]};
 }
 
 // Split non-SHF_STRINGS section. Such section is a sequence of

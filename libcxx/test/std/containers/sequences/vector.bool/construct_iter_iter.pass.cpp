@@ -14,6 +14,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -25,7 +26,7 @@ test(Iterator first, Iterator last)
 {
     C c(first, last);
     LIBCPP_ASSERT(c.__invariants());
-    assert(c.size() == std::distance(first, last));
+    assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
     for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i, ++first)
         assert(*i == *first);
 }

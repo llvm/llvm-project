@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// XFAIL: libcpp-no-exceptions
 // <iterator>
 
 // __libcpp_is_trivial_iterator<Tp>
@@ -26,6 +25,15 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
+static const bool expected = false;
+#else
+// Under libcpp-no-exceptions all noexcept expressions are trivially true, so
+// any check for a noexcept returning false must actually check for it being
+// true.
+static const bool expected = true;
+#endif
+
 int main()
 {
 //  basic tests
@@ -43,17 +51,17 @@ int main()
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::reverse_iterator<std::__wrap_iter<char *> > > ::value), "");
 
 //  iterators in the libc++ test suite
-    static_assert((!std::__libcpp_string_gets_noexcept_iterator<output_iterator       <char *> >::value), "");
-    static_assert((!std::__libcpp_string_gets_noexcept_iterator<input_iterator        <char *> >::value), "");
-    static_assert((!std::__libcpp_string_gets_noexcept_iterator<forward_iterator      <char *> >::value), "");
-    static_assert((!std::__libcpp_string_gets_noexcept_iterator<bidirectional_iterator<char *> >::value), "");
-    static_assert((!std::__libcpp_string_gets_noexcept_iterator<random_access_iterator<char *> >::value), "");
-    static_assert((!std::__libcpp_string_gets_noexcept_iterator<ThrowingIterator      <char *> >::value), "");
+    static_assert(std::__libcpp_string_gets_noexcept_iterator<output_iterator       <char *> >::value == expected, "");
+    static_assert(std::__libcpp_string_gets_noexcept_iterator<input_iterator        <char *> >::value == expected, "");
+    static_assert(std::__libcpp_string_gets_noexcept_iterator<forward_iterator      <char *> >::value == expected, "");
+    static_assert(std::__libcpp_string_gets_noexcept_iterator<bidirectional_iterator<char *> >::value == expected, "");
+    static_assert(std::__libcpp_string_gets_noexcept_iterator<random_access_iterator<char *> >::value == expected, "");
+    static_assert(std::__libcpp_string_gets_noexcept_iterator<ThrowingIterator      <char *> >::value == expected, "");
 
 #if TEST_STD_VER >= 11
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value), "");
 #else
-    static_assert((!std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value), "");
+    static_assert(std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value == expected, "");
 #endif
 
 //

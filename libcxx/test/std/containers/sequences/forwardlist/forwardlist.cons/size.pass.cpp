@@ -14,6 +14,7 @@
 
 #include <forward_list>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "DefaultOnly.h"
@@ -26,7 +27,7 @@ void check_allocator(unsigned n, Allocator const &alloc = Allocator())
     typedef std::forward_list<T, Allocator> C;
     C d(n, alloc);
     assert(d.get_allocator() == alloc);
-    assert(std::distance(d.begin(), d.end()) == n);
+    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == n);
 #endif
 }
 

@@ -145,6 +145,11 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 	ByteSlice := types.NewSlice(types.Typ[types.Byte])
 	IntSlice := types.NewSlice(types.Typ[types.Int])
 
+	AttrKind := llvm.AttributeKindID("nounwind")
+	NoUnwindAttr := module.Context().CreateEnumAttribute(AttrKind, 0)
+	AttrKind = llvm.AttributeKindID("noreturn")
+	NoReturnAttr := module.Context().CreateEnumAttribute(AttrKind, 0)
+
 	for _, rt := range [...]struct {
 		name      string
 		rfi       *runtimeFnInfo
@@ -168,7 +173,7 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 			rfi:   &ri.byteArrayToString,
 			args:  []types.Type{UnsafePointer, Int},
 			res:   []types.Type{String},
-			attrs: []llvm.Attribute{llvm.NoUnwindAttribute},
+			attrs: []llvm.Attribute{NoUnwindAttr},
 		},
 		{
 			name: "__go_can_recover",
@@ -314,7 +319,7 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 			rfi:   &ri.New,
 			args:  []types.Type{UnsafePointer, Uintptr},
 			res:   []types.Type{UnsafePointer},
-			attrs: []llvm.Attribute{llvm.NoUnwindAttribute},
+			attrs: []llvm.Attribute{NoUnwindAttr},
 		},
 		{
 			name: "__go_new_channel",
@@ -338,7 +343,7 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 			name:  "__go_panic",
 			rfi:   &ri.panic,
 			args:  []types.Type{EmptyInterface},
-			attrs: []llvm.Attribute{llvm.NoReturnAttribute},
+			attrs: []llvm.Attribute{NoReturnAttr},
 		},
 		{
 			name: "__go_print_bool",
@@ -417,7 +422,7 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 			name:  "__go_runtime_error",
 			rfi:   &ri.runtimeError,
 			args:  []types.Type{Int32},
-			attrs: []llvm.Attribute{llvm.NoReturnAttribute},
+			attrs: []llvm.Attribute{NoReturnAttr},
 		},
 		{
 			name: "runtime.selectdefault",
@@ -474,7 +479,7 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 			rfi:   &ri.stringToByteArray,
 			args:  []types.Type{String},
 			res:   []types.Type{ByteSlice},
-			attrs: []llvm.Attribute{llvm.NoUnwindAttribute},
+			attrs: []llvm.Attribute{NoUnwindAttr},
 		},
 		{
 			name: "__go_string_to_int_array",

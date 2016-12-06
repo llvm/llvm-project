@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <cstddef>
 
 typedef std::codecvt<wchar_t, char, std::mbstate_t> F;
 
@@ -35,8 +36,8 @@ int main()
         F::result r = f.out(mbs, from.data(), from.data() + from.size(), from_next,
                                  to.data(), to.data() + to.size(), to_next);
         assert(r == F::ok);
-        assert(from_next - from.data() == from.size());
-        assert(to_next - to.data() == from.size());
+        assert(static_cast<std::size_t>(from_next - from.data()) == from.size());
+        assert(static_cast<std::size_t>(to_next - to.data()) == from.size());
         assert(to.data() == std::string("some text"));
     }
     {
@@ -49,8 +50,8 @@ int main()
         F::result r = f.out(mbs, from.data(), from.data() + from.size(), from_next,
                                  to.data(), to.data() + to.size(), to_next);
         assert(r == F::ok);
-        assert(from_next - from.data() == from.size());
-        assert(to_next - to.data() == from.size());
+        assert(static_cast<std::size_t>(from_next - from.data()) == from.size());
+        assert(static_cast<std::size_t>(to_next - to.data()) == from.size());
         assert(memcmp(to.data(), "some\0text", from.size()) == 0);
     }
     {
@@ -62,8 +63,8 @@ int main()
         F::result r = f.out(mbs, from.data(), from.data() + from.size(), from_next,
                                  to.data(), to.data() + to.size()-1, to_next);
         assert(r == F::partial);
-        assert(from_next - from.data() == to.size()-1);
-        assert(to_next - to.data() == to.size()-1);
+        assert(static_cast<std::size_t>(from_next - from.data()) == to.size()-1);
+        assert(static_cast<std::size_t>(to_next - to.data()) == to.size()-1);
         assert(to.data() == std::string("some te"));
     }
 }

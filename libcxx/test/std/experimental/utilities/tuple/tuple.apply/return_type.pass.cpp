@@ -20,32 +20,32 @@
 
 static int my_int = 42;
 
-template <int N> struct index {};
+template <int N> struct index_t {};
 
-void f(index<0>) {}
+void f(index_t<0>) {}
 
-int f(index<1>) { return 0; }
+int f(index_t<1>) { return 0; }
 
-int & f(index<2>) { return static_cast<int &>(my_int); }
-int const & f(index<3>) { return static_cast<int const &>(my_int); }
-int volatile & f(index<4>) { return static_cast<int volatile &>(my_int); }
-int const volatile & f(index<5>) { return static_cast<int const volatile &>(my_int); }
+int & f(index_t<2>) { return static_cast<int &>(my_int); }
+int const & f(index_t<3>) { return static_cast<int const &>(my_int); }
+int volatile & f(index_t<4>) { return static_cast<int volatile &>(my_int); }
+int const volatile & f(index_t<5>) { return static_cast<int const volatile &>(my_int); }
 
-int && f(index<6>) { return static_cast<int &&>(my_int); }
-int const && f(index<7>) { return static_cast<int const &&>(my_int); }
-int volatile && f(index<8>) { return static_cast<int volatile &&>(my_int); }
-int const volatile && f(index<9>) { return static_cast<int const volatile &&>(my_int); }
+int && f(index_t<6>) { return static_cast<int &&>(my_int); }
+int const && f(index_t<7>) { return static_cast<int const &&>(my_int); }
+int volatile && f(index_t<8>) { return static_cast<int volatile &&>(my_int); }
+int const volatile && f(index_t<9>) { return static_cast<int const volatile &&>(my_int); }
 
-int * f(index<10>) { return static_cast<int *>(&my_int); }
-int const * f(index<11>) { return static_cast<int const *>(&my_int); }
-int volatile * f(index<12>) { return static_cast<int volatile *>(&my_int); }
-int const volatile * f(index<13>) { return static_cast<int const volatile *>(&my_int); }
+int * f(index_t<10>) { return static_cast<int *>(&my_int); }
+int const * f(index_t<11>) { return static_cast<int const *>(&my_int); }
+int volatile * f(index_t<12>) { return static_cast<int volatile *>(&my_int); }
+int const volatile * f(index_t<13>) { return static_cast<int const volatile *>(&my_int); }
 
 
 template <int Func, class Expect>
 void test()
 {
-    using F = decltype(f(index<Func>{}));
+    using F = decltype(f(index_t<Func>{}));
     static_assert(std::is_same<F, Expect>::value, "");
 }
 

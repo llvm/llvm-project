@@ -17,6 +17,7 @@
 
 #include <valarray>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -26,6 +27,6 @@ int main()
         const unsigned N = sizeof(a)/sizeof(a[0]);
         const std::valarray<T> v(a, N);
         assert(v[v.size()-1] == 5);
-        assert(end(v) - begin(v) == v.size());
+        assert(static_cast<std::size_t>(end(v) - begin(v)) == v.size());
     }
 }

@@ -16,6 +16,7 @@
 #include <string>
 #include <iterator>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "test_allocator.h"
@@ -32,7 +33,7 @@ test(It first, It last)
     typedef typename S::allocator_type A;
     S s2(first, last);
     LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == std::distance(first, last));
+    assert(s2.size() == static_cast<std::size_t>(std::distance(first, last)));
     unsigned i = 0;
     for (It it = first; it != last; ++it, ++i)
         assert(s2[i] == *it);
@@ -49,7 +50,7 @@ test(It first, It last, const A& a)
     typedef typename S::traits_type T;
     S s2(first, last, a);
     LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == std::distance(first, last));
+    assert(s2.size() == static_cast<std::size_t>(std::distance(first, last)));
     unsigned i = 0;
     for (It it = first; it != last; ++it, ++i)
         assert(s2[i] == *it);

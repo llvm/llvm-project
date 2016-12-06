@@ -13,6 +13,7 @@
 
 #include <initializer_list>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
@@ -25,7 +26,7 @@ struct A
         const int* b = begin(il);
         const int* e = end(il);
         assert(il.size() == 3);
-        assert(e - b == il.size());
+        assert(static_cast<std::size_t>(e - b) == il.size());
         assert(*b++ == 3);
         assert(*b++ == 2);
         assert(*b++ == 1);
@@ -40,7 +41,7 @@ struct B
         const int* b = begin(il);
         const int* e = end(il);
         assert(il.size() == 3);
-        assert(e - b == il.size());
+        assert(static_cast<std::size_t>(e - b) == il.size());
         assert(*b++ == 3);
         assert(*b++ == 2);
         assert(*b++ == 1);

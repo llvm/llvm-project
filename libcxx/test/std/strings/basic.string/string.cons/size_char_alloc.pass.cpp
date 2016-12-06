@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "test_allocator.h"
@@ -61,7 +62,7 @@ test(Tp n, Tp c)
     typedef typename S::allocator_type A;
     S s2(n, c);
     LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == n);
+    assert(s2.size() == static_cast<std::size_t>(n));
     for (int i = 0; i < n; ++i)
         assert(s2[i] == c);
     assert(s2.get_allocator() == A());
@@ -77,7 +78,7 @@ test(Tp n, Tp c, const A& a)
     typedef typename S::traits_type T;
     S s2(n, c, a);
     LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == n);
+    assert(s2.size() == static_cast<std::size_t>(n));
     for (int i = 0; i < n; ++i)
         assert(s2[i] == c);
     assert(s2.get_allocator() == a);

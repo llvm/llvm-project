@@ -249,6 +249,7 @@ func (tm *llvmTypeMap) expandType(argTypes []llvm.Type, argAttrs []llvm.Attribut
 
 	switch bt := bt.(type) {
 	case *structBType, *arrayBType:
+		noneAttr := tm.ctx.CreateEnumAttribute(0, 0)
 		bo := tm.getBackendOffsets(bt)
 		sp := 0
 		for sp != len(bo) && bo[sp].offset < 8 {
@@ -258,21 +259,23 @@ func (tm *llvmTypeMap) expandType(argTypes []llvm.Type, argAttrs []llvm.Attribut
 		eb2 := bo[sp:]
 		if len(eb2) > 0 {
 			argTypes = append(argTypes, tm.classifyEightbyte(eb1, &numInt, &numSSE), tm.classifyEightbyte(eb2, &numInt, &numSSE))
-			argAttrs = append(argAttrs, 0, 0)
+			argAttrs = append(argAttrs, noneAttr, noneAttr)
 		} else {
 			argTypes = append(argTypes, tm.classifyEightbyte(eb1, &numInt, &numSSE))
-			argAttrs = append(argAttrs, 0)
+			argAttrs = append(argAttrs, noneAttr)
 		}
 
 		return argTypes, argAttrs, numInt, numSSE
 
 	case *intBType:
 		if bt.width < 4 {
+			var argAttrKind uint
 			if bt.signed {
-				argAttr = llvm.SExtAttribute
+				argAttrKind = llvm.AttributeKindID("signext")
 			} else {
-				argAttr = llvm.ZExtAttribute
+				argAttrKind = llvm.AttributeKindID("zeroext")
 			}
+			argAttr = tm.ctx.CreateEnumAttribute(argAttrKind, 0)
 		}
 	}
 
@@ -516,10 +519,12 @@ type functionTypeInfo struct {
 
 func (fi *functionTypeInfo) declare(m llvm.Module, name string) llvm.Value {
 	fn := llvm.AddFunction(m, name, fi.functionType)
-	fn.AddFunctionAttr(fi.retAttr)
+	if fi.retAttr.GetEnumKind() != 0 {
+		fn.AddAttributeAtIndex(0, fi.retAttr)
+	}
 	for i, a := range fi.argAttrs {
-		if a != 0 {
-			fn.Param(i).AddAttribute(a)
+		if a.GetEnumKind() != 0 {
+			fn.AddAttributeAtIndex(i + 1, a)
 		}
 	}
 	return fn
@@ -537,9 +542,13 @@ func (fi *functionTypeInfo) call(ctx llvm.Context, allocaBuilder llvm.Builder, b
 	fi.retInf.prepare(ctx, allocaBuilder, callArgs)
 	typedCallee := builder.CreateBitCast(callee, llvm.PointerType(fi.functionType, 0), "")
 	call := builder.CreateCall(typedCallee, callArgs, "")
-	call.AddInstrAttribute(0, fi.retAttr)
+	if fi.retAttr.GetEnumKind() != 0 {
+		call.AddCallSiteAttribute(0, fi.retAttr)
+	}
 	for i, a := range fi.argAttrs {
-		call.AddInstrAttribute(i+1, a)
+		if a.GetEnumKind() != 0 {
+			call.AddCallSiteAttribute(i + 1, a)
+		}
 	}
 	return fi.retInf.decode(ctx, allocaBuilder, builder, call)
 }
@@ -556,9 +565,13 @@ func (fi *functionTypeInfo) invoke(ctx llvm.Context, allocaBuilder llvm.Builder,
 	fi.retInf.prepare(ctx, allocaBuilder, callArgs)
 	typedCallee := builder.CreateBitCast(callee, llvm.PointerType(fi.functionType, 0), "")
 	call := builder.CreateInvoke(typedCallee, callArgs, cont, lpad, "")
-	call.AddInstrAttribute(0, fi.retAttr)
+	if fi.retAttr.GetEnumKind() != 0 {
+		call.AddCallSiteAttribute(0, fi.retAttr)
+	}
 	for i, a := range fi.argAttrs {
-		call.AddInstrAttribute(i+1, a)
+		if a.GetEnumKind() != 0 {
+			call.AddCallSiteAttribute(i + 1, a)
+		}
 	}
 	builder.SetInsertPointAtEnd(cont)
 	return fi.retInf.decode(ctx, allocaBuilder, builder, call)
@@ -567,6 +580,7 @@ func (fi *functionTypeInfo) invoke(ctx llvm.Context, allocaBuilder llvm.Builder,
 func (tm *llvmTypeMap) getFunctionTypeInfo(args []types.Type, results []types.Type) (fi functionTypeInfo) {
 	var returnType llvm.Type
 	var argTypes []llvm.Type
+	var argAttrKind uint
 	if len(results) == 0 {
 		returnType = llvm.VoidType()
 		fi.retInf = &directRetInfo{}
@@ -609,7 +623,8 @@ func (tm *llvmTypeMap) getFunctionTypeInfo(args []types.Type, results []types.Ty
 		case AIK_Indirect:
 			returnType = llvm.VoidType()
 			argTypes = []llvm.Type{llvm.PointerType(resultsType, 0)}
-			fi.argAttrs = []llvm.Attribute{llvm.StructRetAttribute}
+			argAttrKind = llvm.AttributeKindID("sret")
+			fi.argAttrs = []llvm.Attribute{tm.ctx.CreateEnumAttribute(argAttrKind, 0)}
 			fi.retInf = &indirectRetInfo{numResults: len(results), resultsType: resultsType}
 		}
 	}
@@ -617,7 +632,8 @@ func (tm *llvmTypeMap) getFunctionTypeInfo(args []types.Type, results []types.Ty
 	// Allocate an argument for the call chain.
 	fi.chainIndex = len(argTypes)
 	argTypes = append(argTypes, llvm.PointerType(tm.ctx.Int8Type(), 0))
-	fi.argAttrs = append(fi.argAttrs, llvm.NestAttribute)
+	argAttrKind = llvm.AttributeKindID("nest")
+	fi.argAttrs = append(fi.argAttrs, tm.ctx.CreateEnumAttribute(argAttrKind, 0))
 
 	// Keep track of the number of INTEGER/SSE class registers remaining.
 	remainingInt := 6
@@ -651,7 +667,8 @@ func (tm *llvmTypeMap) getFunctionTypeInfo(args []types.Type, results []types.Ty
 		if !isDirect {
 			fi.argInfos = append(fi.argInfos, &indirectArgInfo{len(argTypes)})
 			argTypes = append(argTypes, llvm.PointerType(tm.ToLLVM(arg), 0))
-			fi.argAttrs = append(fi.argAttrs, llvm.ByValAttribute)
+			argAttrKind = llvm.AttributeKindID("byval")
+			fi.argAttrs = append(fi.argAttrs, tm.ctx.CreateEnumAttribute(argAttrKind, 0))
 		}
 	}
 

@@ -9,7 +9,7 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// FLAKY_TEST
+// FLAKY_TEST.
 
 // <mutex>
 
