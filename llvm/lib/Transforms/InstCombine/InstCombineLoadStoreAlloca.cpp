@@ -223,6 +223,55 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   return nullptr;
 }
 
+// If I and V are pointers in different address space, it is not allowed to
+// use replaceAllUsesWith since I and V have different types. A
+// non-target-specific transformation should not use addrspacecast on V since
+// the two address space may be disjoint depending on target.
+//
+// This function chases down uses of the old pointer until reaching the load
+// instructions, then replaces the old pointer in the load instructions with
+// the new pointer. If during the chasing it sees bitcast or GEP, it will
+// create new bitcast or GEP with the new pointer and use them in the load
+// instruction.
+bool InstCombiner::replacePointer(Instruction &I,
+                                  Value *V) {
+  auto *PT = dyn_cast<PointerType>(I.getType());
+  auto *NT = dyn_cast<PointerType>(V->getType());
+  assert(PT && NT && PT != NT && PT->getElementType() == NT->getElementType() &&
+         "Invalid usage");
+
+  for (auto U : I.users()) {
+    DEBUG(dbgs() << "Found pointer user: " << *U << '\n');
+    if (auto *LT = dyn_cast<LoadInst>(&*U)) {
+      auto *NewI = new LoadInst(V);
+      NewI->takeName(LT);
+      InsertNewInstWith(NewI, *LT);
+      replaceInstUsesWith(*LT, NewI);
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&*U)) {
+      SmallVector<Value *, 8> Indices;
+      Indices.append(GEP->idx_begin(), GEP->idx_end());
+      auto *NewI = GetElementPtrInst::Create(NT->getElementType(), V, Indices);
+      InsertNewInstWith(NewI, *GEP);
+      if (!replacePointer(*GEP, NewI))
+        return false;
+      else
+        NewI->takeName(GEP);
+    } else if (auto *BC = dyn_cast<BitCastInst>(&*U)) {
+      auto *NewT = PointerType::get(BC->getType()->getPointerElementType(),
+          NT->getAddressSpace());
+      auto *NewI = new BitCastInst(V, NewT);
+      InsertNewInstWith(NewI, *BC);
+      if (!replacePointer(*BC, NewI))
+        return false;
+      else
+        NewI->takeName(BC);
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
 Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
   if (auto *I = simplifyAllocaArraySize(*this, AI))
     return I;
@@ -293,12 +342,21 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
         for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
           eraseInstFromFunction(*ToDelete[i]);
         Constant *TheSrc = cast<Constant>(Copy->getSource());
+        auto *SrcTy = TheSrc->getType();
+        auto *DestTy = PointerType::get(AI.getType()->getPointerElementType(),
+          SrcTy->getPointerAddressSpace());
         Constant *Cast
-          = ConstantExpr::getPointerBitCastOrAddrSpaceCast(TheSrc, AI.getType());
-        Instruction *NewI = replaceInstUsesWith(AI, Cast);
-        eraseInstFromFunction(*Copy);
-        ++NumGlobalCopies;
-        return NewI;
+          = ConstantExpr::getPointerBitCastOrAddrSpaceCast(TheSrc, DestTy);
+        if (AI.getType()->getPointerAddressSpace()
+            == SrcTy->getPointerAddressSpace()) {
+          Instruction *NewI = replaceInstUsesWith(AI, Cast);
+          eraseInstFromFunction(*Copy);
+          ++NumGlobalCopies;
+          return NewI;
+        } else {
+          replacePointer(AI, Cast);
+          ++NumGlobalCopies;
+        }
       }
     }
   }
