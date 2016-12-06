@@ -259,6 +259,18 @@ int isl_mat_cols(__isl_keep isl_mat *mat)
 	return mat ? mat->n_col : -1;
 }
 
+/* Check that "col" is a valid column position for "mat".
+ */
+static isl_stat check_col(__isl_keep isl_mat *mat, int col)
+{
+	if (!mat)
+		return isl_stat_error;
+	if (col < 0 || col >= mat->n_col)
+		isl_die(isl_mat_get_ctx(mat), isl_error_invalid,
+			"column out of range", return isl_stat_error);
+	return isl_stat_ok;
+}
+
 int isl_mat_get_element(__isl_keep isl_mat *mat, int row, int col, isl_int *v)
 {
 	if (!mat)
@@ -266,9 +278,8 @@ int isl_mat_get_element(__isl_keep isl_mat *mat, int row, int col, isl_int *v)
 	if (row < 0 || row >= mat->n_row)
 		isl_die(mat->ctx, isl_error_invalid, "row out of range",
 			return -1);
-	if (col < 0 || col >= mat->n_col)
-		isl_die(mat->ctx, isl_error_invalid, "column out of range",
-			return -1);
+	if (check_col(mat, col) < 0)
+		return -1;
 	isl_int_set(*v, mat->row[row][col]);
 	return 0;
 }
@@ -286,9 +297,8 @@ __isl_give isl_val *isl_mat_get_element_val(__isl_keep isl_mat *mat,
 	if (row < 0 || row >= mat->n_row)
 		isl_die(ctx, isl_error_invalid, "row out of range",
 			return NULL);
-	if (col < 0 || col >= mat->n_col)
-		isl_die(ctx, isl_error_invalid, "column out of range",
-			return NULL);
+	if (check_col(mat, col) < 0)
+		return NULL;
 	return isl_val_int_from_isl_int(ctx, mat->row[row][col]);
 }
 
@@ -301,9 +311,8 @@ __isl_give isl_mat *isl_mat_set_element(__isl_take isl_mat *mat,
 	if (row < 0 || row >= mat->n_row)
 		isl_die(mat->ctx, isl_error_invalid, "row out of range",
 			goto error);
-	if (col < 0 || col >= mat->n_col)
-		isl_die(mat->ctx, isl_error_invalid, "column out of range",
-			goto error);
+	if (check_col(mat, col) < 0)
+		return isl_mat_free(mat);
 	isl_int_set(mat->row[row][col], v);
 	return mat;
 error:
@@ -320,9 +329,8 @@ __isl_give isl_mat *isl_mat_set_element_si(__isl_take isl_mat *mat,
 	if (row < 0 || row >= mat->n_row)
 		isl_die(mat->ctx, isl_error_invalid, "row out of range",
 			goto error);
-	if (col < 0 || col >= mat->n_col)
-		isl_die(mat->ctx, isl_error_invalid, "column out of range",
-			goto error);
+	if (check_col(mat, col) < 0)
+		return isl_mat_free(mat);
 	isl_int_set_si(mat->row[row][col], v);
 	return mat;
 error:
@@ -361,6 +369,22 @@ __isl_give isl_mat *isl_mat_diag(isl_ctx *ctx, unsigned n_row, isl_int d)
 		isl_int_set(mat->row[i][i], d);
 		isl_seq_clr(mat->row[i]+i+1, n_row-(i+1));
 	}
+
+	return mat;
+}
+
+/* Create an "n_row" by "n_col" matrix with zero elements.
+ */
+__isl_give isl_mat *isl_mat_zero(isl_ctx *ctx, unsigned n_row, unsigned n_col)
+{
+	int i;
+	isl_mat *mat;
+
+	mat = isl_mat_alloc(ctx, n_row, n_col);
+	if (!mat)
+		return NULL;
+	for (i = 0; i < n_row; ++i)
+		isl_seq_clr(mat->row[i], n_col);
 
 	return mat;
 }
@@ -1520,6 +1544,50 @@ void isl_mat_col_mul(struct isl_mat *mat, int dst_col, isl_int f, int src_col)
 
 	for (i = 0; i < mat->n_row; ++i)
 		isl_int_mul(mat->row[i][dst_col], f, mat->row[i][src_col]);
+}
+
+/* Add "f" times column "src_col" to column "dst_col" of "mat" and
+ * return the result.
+ */
+__isl_give isl_mat *isl_mat_col_addmul(__isl_take isl_mat *mat, int dst_col,
+	isl_int f, int src_col)
+{
+	int i;
+
+	if (check_col(mat, dst_col) < 0 || check_col(mat, src_col) < 0)
+		return isl_mat_free(mat);
+
+	for (i = 0; i < mat->n_row; ++i) {
+		if (isl_int_is_zero(mat->row[i][src_col]))
+			continue;
+		mat = isl_mat_cow(mat);
+		if (!mat)
+			return NULL;
+		isl_int_addmul(mat->row[i][dst_col], f, mat->row[i][src_col]);
+	}
+
+	return mat;
+}
+
+/* Negate column "col" of "mat" and return the result.
+ */
+__isl_give isl_mat *isl_mat_col_neg(__isl_take isl_mat *mat, int col)
+{
+	int i;
+
+	if (check_col(mat, col) < 0)
+		return isl_mat_free(mat);
+
+	for (i = 0; i < mat->n_row; ++i) {
+		if (isl_int_is_zero(mat->row[i][col]))
+			continue;
+		mat = isl_mat_cow(mat);
+		if (!mat)
+			return NULL;
+		isl_int_neg(mat->row[i][col], mat->row[i][col]);
+	}
+
+	return mat;
 }
 
 struct isl_mat *isl_mat_unimodular_complete(struct isl_mat *M, int row)

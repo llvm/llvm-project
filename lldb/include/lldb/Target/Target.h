@@ -33,6 +33,7 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/SectionLoadHistory.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
@@ -224,23 +225,11 @@ private:
 
 class EvaluateExpressionOptions {
 public:
-  static const uint32_t default_timeout = 500000;
-  static const ExecutionPolicy default_execution_policy =
+  static constexpr std::chrono::milliseconds default_timeout{500};
+  static constexpr ExecutionPolicy default_execution_policy =
       eExecutionPolicyOnlyWhenNeeded;
 
-  EvaluateExpressionOptions()
-      : m_execution_policy(default_execution_policy),
-        m_language(lldb::eLanguageTypeUnknown),
-        m_prefix(), // A prefix specific to this expression that is added after
-                    // the prefix from the settings (if any)
-        m_coerce_to_id(false), m_unwind_on_error(true),
-        m_ignore_breakpoints(false), m_keep_in_memory(false),
-        m_try_others(true), m_stop_others(true), m_debug(false),
-        m_trap_exceptions(true), m_generate_debug_info(false),
-        m_result_is_internal(false), m_auto_apply_fixits(true),
-        m_use_dynamic(lldb::eNoDynamicValues), m_timeout_usec(default_timeout),
-        m_one_thread_timeout_usec(0), m_cancel_callback(nullptr),
-        m_cancel_callback_baton(nullptr) {}
+  EvaluateExpressionOptions() = default;
 
   ExecutionPolicy GetExecutionPolicy() const { return m_execution_policy; }
 
@@ -288,14 +277,16 @@ public:
     m_use_dynamic = dynamic;
   }
 
-  uint32_t GetTimeoutUsec() const { return m_timeout_usec; }
+  const Timeout<std::micro> &GetTimeout() const { return m_timeout; }
 
-  void SetTimeoutUsec(uint32_t timeout = 0) { m_timeout_usec = timeout; }
+  void SetTimeout(const Timeout<std::micro> &timeout) { m_timeout = timeout; }
 
-  uint32_t GetOneThreadTimeoutUsec() const { return m_one_thread_timeout_usec; }
+  const Timeout<std::micro> &GetOneThreadTimeout() const {
+    return m_one_thread_timeout;
+  }
 
-  void SetOneThreadTimeoutUsec(uint32_t timeout = 0) {
-    m_one_thread_timeout_usec = timeout;
+  void SetOneThreadTimeout(const Timeout<std::micro> &timeout) {
+    m_one_thread_timeout = timeout;
   }
 
   bool GetTryAllThreads() const { return m_try_others; }
@@ -369,27 +360,27 @@ public:
   bool GetAutoApplyFixIts() const { return m_auto_apply_fixits; }
 
 private:
-  ExecutionPolicy m_execution_policy;
-  lldb::LanguageType m_language;
+  ExecutionPolicy m_execution_policy = default_execution_policy;
+  lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
   std::string m_prefix;
-  bool m_coerce_to_id;
-  bool m_unwind_on_error;
-  bool m_ignore_breakpoints;
-  bool m_keep_in_memory;
-  bool m_try_others;
-  bool m_stop_others;
-  bool m_debug;
-  bool m_trap_exceptions;
-  bool m_repl;
-  bool m_generate_debug_info;
-  bool m_ansi_color_errors;
-  bool m_result_is_internal;
-  bool m_auto_apply_fixits;
-  lldb::DynamicValueType m_use_dynamic;
-  uint32_t m_timeout_usec;
-  uint32_t m_one_thread_timeout_usec;
-  lldb::ExpressionCancelCallback m_cancel_callback;
-  void *m_cancel_callback_baton;
+  bool m_coerce_to_id = false;
+  bool m_unwind_on_error = true;
+  bool m_ignore_breakpoints = false;
+  bool m_keep_in_memory = false;
+  bool m_try_others = true;
+  bool m_stop_others = true;
+  bool m_debug = false;
+  bool m_trap_exceptions = true;
+  bool m_repl = false;
+  bool m_generate_debug_info = false;
+  bool m_ansi_color_errors = false;
+  bool m_result_is_internal = false;
+  bool m_auto_apply_fixits = true;
+  lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
+  Timeout<std::micro> m_timeout = default_timeout;
+  Timeout<std::micro> m_one_thread_timeout = llvm::None;
+  lldb::ExpressionCancelCallback m_cancel_callback = nullptr;
+  void *m_cancel_callback_baton = nullptr;
   // If m_pound_line_file is not empty and m_pound_line_line is non-zero,
   // use #line %u "%s" before the expression content to remap where the source
   // originates

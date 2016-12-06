@@ -134,7 +134,8 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = isl_config.h
-CONFIG_CLEAN_FILES = bound_test.sh codegen_test.sh pip_test.sh
+CONFIG_CLEAN_FILES = isl_srcdir.c bound_test.sh codegen_test.sh \
+	pip_test.sh
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -622,9 +623,9 @@ TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
 	$(TEST_LOG_FLAGS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/bound_test.sh.in \
 	$(srcdir)/codegen_test.sh.in $(srcdir)/isl_config.h.in \
-	$(srcdir)/pip_test.sh.in AUTHORS ChangeLog README compile \
-	config.guess config.sub depcomp install-sh ltmain.sh missing \
-	test-driver
+	$(srcdir)/isl_srcdir.c.in $(srcdir)/pip_test.sh.in AUTHORS \
+	ChangeLog README compile config.guess config.sub depcomp \
+	install-sh ltmain.sh missing test-driver
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -1215,6 +1216,8 @@ $(srcdir)/isl_config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f isl_config.h stamp-h1
+isl_srcdir.c: $(top_builddir)/config.status $(srcdir)/isl_srcdir.c.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 bound_test.sh: $(top_builddir)/config.status $(srcdir)/bound_test.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 codegen_test.sh: $(top_builddir)/config.status $(srcdir)/codegen_test.sh.in

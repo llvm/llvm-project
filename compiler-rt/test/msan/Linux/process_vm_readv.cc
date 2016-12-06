@@ -1,5 +1,5 @@
 // RUN: %clangxx_msan -std=c++11 -O0 %s -o %t && %run %t
-// RUN: %clangxx_msan -std=c++11 -O0 %s -o %t -DPOSITIVE && not %run %t |& FileCheck %s
+// RUN: %clangxx_msan -std=c++11 -O0 %s -o %t -DPOSITIVE && not %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <dlfcn.h>

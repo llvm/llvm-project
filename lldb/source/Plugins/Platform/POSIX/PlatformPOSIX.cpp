@@ -734,7 +734,7 @@ Error PlatformPOSIX::EvaluateLibdlExpression(
   expr_options.SetLanguage(eLanguageTypeC_plus_plus);
   expr_options.SetTrapExceptions(false); // dlopen can't throw exceptions, so
                                          // don't do the work to trap them.
-  expr_options.SetTimeoutUsec(2000000);  // 2 seconds
+  expr_options.SetTimeout(std::chrono::seconds(2));
 
   Error expr_error;
   ExpressionResults result =
