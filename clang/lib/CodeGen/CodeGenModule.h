@@ -1155,6 +1155,9 @@ public:
   llvm::Value *
   createOpenCLIntToSamplerConversion(const Expr *E, CodeGenFunction &CGF);
 
+  /// Get target specific null pointer.
+  llvm::Constant *getNullPtr(llvm::PointerType *T, QualType QT);
+
 private:
   llvm::Constant *
   GetOrCreateLLVMFunction(StringRef MangledName, llvm::Type *Ty, GlobalDecl D,

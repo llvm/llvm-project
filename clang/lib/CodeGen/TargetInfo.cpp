@@ -401,6 +401,11 @@ unsigned TargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::C;
 }
 
+llvm::Constant *TargetCodeGenInfo::getNullPtr(const CodeGen::CodeGenModule &CGM,
+    llvm::PointerType *T, QualType QT) const {
+  return llvm::ConstantPointerNull::get(T);
+}
+
 static bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays);
 
 /// isEmptyField - Return true iff a the field is "empty", that is it
@@ -7075,6 +7080,9 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
+
+  llvm::Constant *getNullPtr(const CodeGen::CodeGenModule &CGM,
+      llvm::PointerType *T, QualType QT) const override;
 };
 
 }
@@ -7138,6 +7146,24 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
 
 unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
+}
+
+// Currently LLVM assumes null pointers always have value 0,
+// which results in incorrectly transformed IR. Therefore, instead of
+// emitting null pointers in private and local address spaces, a null
+// pointer in generic address space is emitted which is casted to a
+// pointer in local or private address space.
+llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPtr(
+    const CodeGen::CodeGenModule &CGM, llvm::PointerType *PT,
+    QualType QT) const {
+  if (CGM.getContext().getTargetNullPtrValue(QT) == 0)
+    return llvm::ConstantPointerNull::get(PT);
+
+  auto &Ctx = CGM.getContext();
+  auto NPT = llvm::PointerType::get(PT->getElementType(),
+      Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  return llvm::ConstantExpr::getAddrSpaceCast(
+      llvm::ConstantPointerNull::get(NPT), PT);
 }
 
 //===----------------------------------------------------------------------===//
