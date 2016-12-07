@@ -16,8 +16,7 @@ int tmain(T argc, S **argv) {
 #pragma omp teams distribute parallel for simd if // expected-error {{expected '(' after 'if'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
-#pragma omp teams
-#pragma omp distribute parallel for simd if ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp teams distribute parallel for simd if ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for simd if () // expected-error {{expected expression}}

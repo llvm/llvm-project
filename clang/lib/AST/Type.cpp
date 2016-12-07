@@ -1057,7 +1057,7 @@ QualType simpleTransform(ASTContext &ctx, QualType type, F &&f) {
   SplitQualType splitType = type.split();
 
   // Visit the type itself.
-  SimpleTransformVisitor<F> visitor(ctx, std::move(f));
+  SimpleTransformVisitor<F> visitor(ctx, std::forward<F>(f));
   QualType result = visitor.Visit(splitType.Ty);
   if (result.isNull())
     return result;
