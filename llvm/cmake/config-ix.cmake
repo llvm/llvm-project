@@ -82,6 +82,14 @@ check_include_file(mach/mach.h HAVE_MACH_MACH_H)
 check_include_file(mach-o/dyld.h HAVE_MACH_O_DYLD_H)
 check_include_file(histedit.h HAVE_HISTEDIT_H)
 check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
+if(APPLE)
+  include(CheckCSourceCompiles)
+  CHECK_C_SOURCE_COMPILES("
+     static const char *__crashreporter_info__ = 0;
+     asm(\".desc ___crashreporter_info__, 0x10\");
+     int main() { return 0; }"
+    HAVE_CRASHREPORTER_INFO)
+endif()
 
 # size_t must be defined before including cxxabi.h on FreeBSD 10.0.
 check_cxx_source_compiles("

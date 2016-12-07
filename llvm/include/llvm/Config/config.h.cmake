@@ -35,7 +35,7 @@
 #cmakedefine HAVE_CRASHREPORTERCLIENT_H
 
 /* can use __crashreporter_info__ */
-#undef HAVE_CRASHREPORTER_INFO
+#cmakedefine01 HAVE_CRASHREPORTER_INFO
 
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */
