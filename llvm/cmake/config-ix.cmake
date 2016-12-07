@@ -81,6 +81,7 @@ check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_include_file(mach/mach.h HAVE_MACH_MACH_H)
 check_include_file(mach-o/dyld.h HAVE_MACH_O_DYLD_H)
 check_include_file(histedit.h HAVE_HISTEDIT_H)
+check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 
 # size_t must be defined before including cxxabi.h on FreeBSD 10.0.
 check_cxx_source_compiles("
