@@ -13,19 +13,22 @@ kernel void foo() {}
 
 // CHECK-SPIR-CL10: !opencl.spir.version = !{[[SPIR:![0-9]+]]}
 // CHECK-SPIR-CL10: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
-// CHECK-SPIR-CL10: [[SPIR]] = !{i32 2, i32 0}
+// CHECK-SPIR-CL10: [[SPIR]] = !{i32 1, i32 2}
 // CHECK-SPIR-CL10: [[OCL]] = !{i32 1, i32 0}
-// CHECK-SPIR-CL12: !opencl.spir.version = !{[[SPIR:![0-9]+]]}
-// CHECK-SPIR-CL12: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
-// CHECK-SPIR-CL12: [[SPIR]] = !{i32 2, i32 0}
-// CHECK-SPIR-CL12: [[OCL]] = !{i32 1, i32 2}
-// CHECK-SPIR-CL20: !opencl.spir.version = !{[[SPIR:![0-9]+]]}
-// CHECK-SPIR-CL20: !opencl.ocl.version = !{[[SPIR:![0-9]+]]}
-// CHECK-SPIR-CL20: [[SPIR]] = !{i32 2, i32 0}
+// CHECK-SPIR-CL12: !opencl.spir.version = !{[[VER:![0-9]+]]}
+// CHECK-SPIR-CL12: !opencl.ocl.version = !{[[VER]]}
+// CHECK-SPIR-CL12: [[VER]] = !{i32 1, i32 2}
 
+// CHECK-SPIR-CL20: !opencl.spir.version = !{[[VER:![0-9]+]]}
+// CHECK-SPIR-CL20: !opencl.ocl.version = !{[[VER]]}
+// CHECK-SPIR-CL20: [[VER]] = !{i32 2, i32 0}
+
+// CHECK-AMDGCN-CL10-NOT: !opencl.spir.version
 // CHECK-AMDGCN-CL10: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
 // CHECK-AMDGCN-CL10: [[OCL]] = !{i32 1, i32 0}
+// CHECK-AMDGCN-CL12-NOT: !opencl.spir.version
 // CHECK-AMDGCN-CL12: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
 // CHECK-AMDGCN-CL12: [[OCL]] = !{i32 1, i32 2}
+// CHECK-AMDGCN-CL20-NOT: !opencl.spir.version
 // CHECK-AMDGCN-CL20: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
 // CHECK-AMDGCN-CL20: [[OCL]] = !{i32 2, i32 0}

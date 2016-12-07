@@ -38,8 +38,8 @@ define <4 x float> @ExeDepsFix_broadcastss_inreg(<4 x float> %arg, <4 x float> %
 ; CHECK-LABEL: ExeDepsFix_broadcastss_inreg:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovd %edi, %xmm2
-; CHECK-NEXT:    vbroadcastss %xmm2, %xmm2
-; CHECK-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastd %xmm2, %xmm2
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bitcast = bitcast <4 x float> %arg to <4 x i32>
@@ -56,8 +56,8 @@ define <8 x float> @ExeDepsFix_broadcastss256_inreg(<8 x float> %arg, <8 x float
 ; CHECK-LABEL: ExeDepsFix_broadcastss256_inreg:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovd %edi, %xmm2
-; CHECK-NEXT:    vbroadcastss %xmm2, %ymm2
-; CHECK-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastd %xmm2, %ymm2
+; CHECK-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %bitcast = bitcast <8 x float> %arg to <8 x i32>
@@ -124,8 +124,8 @@ define <4 x double> @ExeDepsFix_broadcastsd256_inreg(<4 x double> %arg, <4 x dou
 ; CHECK-LABEL: ExeDepsFix_broadcastsd256_inreg:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovq %rdi, %xmm2
-; CHECK-NEXT:    vbroadcastsd %xmm2, %ymm2
-; CHECK-NEXT:    vandpd %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpbroadcastq %xmm2, %ymm2
+; CHECK-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %bitcast = bitcast <4 x double> %arg to <4 x i64>
