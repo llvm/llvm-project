@@ -1669,6 +1669,8 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // boundaries prevents incorrect movements of such instructions.
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF) ||
          MI.modifiesRegister(AMDGPU::EXEC, &RI) ||
+         MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
+         MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
          changesVGPRIndexingMode(MI);
 }
 
