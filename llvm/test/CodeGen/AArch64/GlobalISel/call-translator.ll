@@ -41,7 +41,7 @@ define void @test_indirect_call(void()* %func) {
 
 ; CHECK-LABEL: name: test_multiple_args
 ; CHECK: [[IN:%[0-9]+]](s64) = COPY %x0
-; CHECK: [[ANSWER:%[0-9]+]](s32) = G_CONSTANT 42
+; CHECK: [[ANSWER:%[0-9]+]](s32) = G_CONSTANT i32 42
 ; CHECK: %w0 = COPY [[ANSWER]]
 ; CHECK: %x1 = COPY [[IN]]
 ; CHECK: BL @multiple_args_callee, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0, implicit %x1
@@ -146,30 +146,48 @@ define zeroext i8 @test_abi_zext_ret(i8* %addr) {
 ; CHECK: fixedStack:
 ; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], offset: 0, size: 8
 ; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], offset: 8, size: 8
+; CHECK-DAG:  - { id: [[STACK16:[0-9]+]], offset: 16, size: 8
 ; CHECK: [[LHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
 ; CHECK: [[LHS:%[0-9]+]](s64) = G_LOAD [[LHS_ADDR]](p0) :: (invariant load 8 from %fixed-stack.[[STACK0]], align 0)
 ; CHECK: [[RHS_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
 ; CHECK: [[RHS:%[0-9]+]](s64) = G_LOAD [[RHS_ADDR]](p0) :: (invariant load 8 from %fixed-stack.[[STACK8]], align 0)
+; CHECK: [[ADDR_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK16]]
+; CHECK: [[ADDR:%[0-9]+]](p0) = G_LOAD [[ADDR_ADDR]](p0) :: (invariant load 8 from %fixed-stack.[[STACK16]], align 0)
 ; CHECK: [[SUM:%[0-9]+]](s64) = G_ADD [[LHS]], [[RHS]]
-; CHECK: %x0 = COPY [[SUM]](s64)
-define i64 @test_stack_slots([8 x i64], i64 %lhs, i64 %rhs) {
+; CHECK: G_STORE [[SUM]](s64), [[ADDR]](p0)
+define void @test_stack_slots([8 x i64], i64 %lhs, i64 %rhs, i64* %addr) {
   %sum = add i64 %lhs, %rhs
-  ret i64 %sum
+  store i64 %sum, i64* %addr
+  ret void
 }
 
 ; CHECK-LABEL: name: test_call_stack
-; CHECK: [[C42:%[0-9]+]](s64) = G_CONSTANT 42
-; CHECK: [[C12:%[0-9]+]](s64) = G_CONSTANT 12
+; CHECK: [[PTR:%[0-9]+]](p0) = G_CONSTANT i64 0
+; CHECK: [[C12:%[0-9]+]](s64) = G_CONSTANT i64 12
+; CHECK: [[C42:%[0-9]+]](s64) = G_CONSTANT i64 42
 ; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
-; CHECK: [[C42_OFFS:%[0-9]+]](s64) = G_CONSTANT 0
+; CHECK: [[C42_OFFS:%[0-9]+]](s64) = G_CONSTANT i64 0
 ; CHECK: [[C42_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[C42_OFFS]](s64)
 ; CHECK: G_STORE [[C42]](s64), [[C42_LOC]](p0) :: (store 8 into stack, align 0)
 ; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
-; CHECK: [[C12_OFFS:%[0-9]+]](s64) = G_CONSTANT 8
+; CHECK: [[C12_OFFS:%[0-9]+]](s64) = G_CONSTANT i64 8
 ; CHECK: [[C12_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[C12_OFFS]](s64)
 ; CHECK: G_STORE [[C12]](s64), [[C12_LOC]](p0) :: (store 8 into stack + 8, align 0)
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[PTR_OFFS:%[0-9]+]](s64) = G_CONSTANT i64 16
+; CHECK: [[PTR_LOC:%[0-9]+]](p0) = G_GEP [[SP]], [[PTR_OFFS]](s64)
+; CHECK: G_STORE [[PTR]](p0), [[PTR_LOC]](p0) :: (store 8 into stack + 16, align 0)
 ; CHECK: BL @test_stack_slots
 define void @test_call_stack() {
-  call i64 @test_stack_slots([8 x i64] undef, i64 42, i64 12)
+  call void @test_stack_slots([8 x i64] undef, i64 42, i64 12, i64* null)
+  ret void
+}
+
+; CHECK-LABEL: name: test_mem_i1
+; CHECK: fixedStack:
+; CHECK-NEXT: - { id: [[SLOT:[0-9]+]], offset: 0, size: 1, alignment: 16, isImmutable: true, isAliased: false }
+; CHECK: [[ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[SLOT]]
+; CHECK: {{%[0-9]+}}(s1) = G_LOAD [[ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[SLOT]], align 0)
+define void @test_mem_i1([8 x i64], i1 %in) {
   ret void
 }

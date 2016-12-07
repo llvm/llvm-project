@@ -3546,12 +3546,47 @@ static void TryConstructorInitialization(Sema &S,
                                          InitializationSequence &Sequence,
                                          bool IsListInit = false,
                                          bool IsInitListCopy = false) {
-  assert((!IsListInit || (Args.size() == 1 && isa<InitListExpr>(Args[0]))) &&
-         "IsListInit must come with a single initializer list argument.");
+  assert(((!IsListInit && !IsInitListCopy) ||
+          (Args.size() == 1 && isa<InitListExpr>(Args[0]))) &&
+         "IsListInit/IsInitListCopy must come with a single initializer list "
+         "argument.");
+  InitListExpr *ILE =
+      (IsListInit || IsInitListCopy) ? cast<InitListExpr>(Args[0]) : nullptr;
+  MultiExprArg UnwrappedArgs =
+      ILE ? MultiExprArg(ILE->getInits(), ILE->getNumInits()) : Args;
 
   // The type we're constructing needs to be complete.
   if (!S.isCompleteType(Kind.getLocation(), DestType)) {
     Sequence.setIncompleteTypeFailure(DestType);
+    return;
+  }
+
+  // C++1z [dcl.init]p17:
+  //     - If the initializer expression is a prvalue and the cv-unqualified
+  //       version of the source type is the same class as the class of the
+  //       destination, the initializer expression is used to initialize the
+  //       destination object.
+  // Per DR (no number yet), this does not apply when initializing a base
+  // class or delegating to another constructor from a mem-initializer.
+  if (S.getLangOpts().CPlusPlus1z &&
+      Entity.getKind() != InitializedEntity::EK_Base &&
+      Entity.getKind() != InitializedEntity::EK_Delegating &&
+      UnwrappedArgs.size() == 1 && UnwrappedArgs[0]->isRValue() &&
+      S.Context.hasSameUnqualifiedType(UnwrappedArgs[0]->getType(), DestType)) {
+    // Convert qualifications if necessary.
+    QualType InitType = UnwrappedArgs[0]->getType();
+    ImplicitConversionSequence ICS;
+    ICS.setStandard();
+    ICS.Standard.setAsIdentityConversion();
+    ICS.Standard.setFromType(InitType);
+    ICS.Standard.setAllToTypes(InitType);
+    if (!S.Context.hasSameType(InitType, DestType)) {
+      ICS.Standard.Third = ICK_Qualification;
+      ICS.Standard.setToType(2, DestType);
+    }
+    Sequence.AddConversionSequenceStep(ICS, DestType);
+    if (ILE)
+      Sequence.RewrapReferenceInitList(DestType, ILE);
     return;
   }
 
@@ -3588,20 +3623,16 @@ static void TryConstructorInitialization(Sema &S,
   //     constructors of the class T and the argument list consists of the
   //     initializer list as a single argument.
   if (IsListInit) {
-    InitListExpr *ILE = cast<InitListExpr>(Args[0]);
     AsInitializerList = true;
 
     // If the initializer list has no elements and T has a default constructor,
     // the first phase is omitted.
-    if (ILE->getNumInits() != 0 || !DestRecordDecl->hasDefaultConstructor())
+    if (!(UnwrappedArgs.empty() && DestRecordDecl->hasDefaultConstructor()))
       Result = ResolveConstructorOverload(S, Kind.getLocation(), Args,
                                           CandidateSet, Ctors, Best,
                                           CopyInitialization, AllowExplicit,
                                           /*OnlyListConstructor=*/true,
                                           IsListInit);
-
-    // Time to unwrap the init list.
-    Args = MultiExprArg(ILE->getInits(), ILE->getNumInits());
   }
 
   // C++11 [over.match.list]p1:
@@ -3611,7 +3642,7 @@ static void TryConstructorInitialization(Sema &S,
   //     elements of the initializer list.
   if (Result == OR_No_Viable_Function) {
     AsInitializerList = false;
-    Result = ResolveConstructorOverload(S, Kind.getLocation(), Args,
+    Result = ResolveConstructorOverload(S, Kind.getLocation(), UnwrappedArgs,
                                         CandidateSet, Ctors, Best,
                                         CopyInitialization, AllowExplicit,
                                         /*OnlyListConstructors=*/false,
@@ -3821,8 +3852,8 @@ static void TryListInitialization(Sema &S,
       QualType InitType = InitList->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, DestType) ||
           S.IsDerivedFrom(InitList->getLocStart(), InitType, DestType)) {
-        Expr *InitAsExpr = InitList->getInit(0);
-        TryConstructorInitialization(S, Entity, Kind, InitAsExpr, DestType,
+        Expr *InitListAsExpr = InitList;
+        TryConstructorInitialization(S, Entity, Kind, InitListAsExpr, DestType,
                                      Sequence, /*InitListSyntax*/ false,
                                      /*IsInitListCopy*/ true);
         return;
@@ -4332,16 +4363,21 @@ static void TryReferenceInitializationCore(Sema &S,
   }
 
   //    - If the initializer expression
+  // C++14-and-before:
   //      - is an xvalue, class prvalue, array prvalue, or function lvalue and
   //        "cv1 T1" is reference-compatible with "cv2 T2"
+  // C++1z:
+  //      - is an rvalue or function lvalue and "cv1 T1" is reference-compatible
+  //        with "cv2 T2"
   // Note: functions are handled below.
   if (!T1Function &&
       (RefRelationship == Sema::Ref_Compatible ||
        (Kind.isCStyleOrFunctionalCast() &&
         RefRelationship == Sema::Ref_Related)) &&
       (InitCategory.isXValue() ||
-       (InitCategory.isPRValue() && T2->isRecordType()) ||
-       (InitCategory.isPRValue() && T2->isArrayType()))) {
+       (InitCategory.isPRValue() &&
+        (S.getLangOpts().CPlusPlus1z || T2->isRecordType() ||
+         T2->isArrayType())))) {
     ExprValueKind ValueKind = InitCategory.isXValue()? VK_XValue : VK_RValue;
     if (InitCategory.isPRValue() && T2->isRecordType()) {
       // The corresponding bullet in C++03 [dcl.init.ref]p5 gives the
@@ -6604,7 +6640,26 @@ InitializationSequence::Perform(Sema &S,
         CreatedObject = Conversion->getReturnType()->isRecordType();
       }
 
+      // C++14 and before:
+      //   - if the function is a constructor, the call initializes a temporary
+      //     of the cv-unqualified version of the destination type [...]
+      // C++1z:
+      //   - if the function is a constructor, the call is a prvalue of the
+      //     cv-unqualified version of the destination type whose return object
+      //     is initialized by the constructor [...]
+      // Both:
+      //     The [..] call is used to direct-initialize, according to the rules
+      //     above, the object that is the destination of the
+      //     copy-initialization.
+      // In C++14 and before, that always means the "constructors are
+      // considered" bullet, because we have arrived at a reference-related
+      // type. In C++1z, it only means that if the types are different or we
+      // didn't produce a prvalue, so just check for that case here.
       bool RequiresCopy = !IsCopy && !isReferenceBinding(Steps.back());
+      if (S.getLangOpts().CPlusPlus1z && CurInit.get()->isRValue() &&
+          S.Context.hasSameUnqualifiedType(
+              Entity.getType().getNonReferenceType(), CurInit.get()->getType()))
+        RequiresCopy = false;
       bool MaybeBindToTemp = RequiresCopy || shouldBindAsTemporary(Entity);
 
       if (!MaybeBindToTemp && CreatedObject && shouldDestroyTemporary(Entity)) {

@@ -71,12 +71,14 @@ class LVILatticeVal {
     /// "nothing known yet".
     undefined,
 
-    /// This Value has a specific constant value.  (For integers, constantrange
-    /// is used instead.)
+    /// This Value has a specific constant value.  (For constant integers,
+    /// constantrange is used instead.  Integer typed constantexprs can appear
+    /// as constant.) 
     constant,
 
-    /// This Value is known to not have the specified value.  (For integers,
-    /// constantrange is used instead.)
+    /// This Value is known to not have the specified value.  (For constant
+    /// integers, constantrange is used instead.  As above, integer typed
+    /// constantexprs can appear here.)
     notconstant,
 
     /// The Value falls within this range. (Used only for integer typed values.)
@@ -140,37 +142,37 @@ public:
     return Range;
   }
 
-  /// Return true if this is a change in status.
-  bool markOverdefined() {
+private:
+  void markOverdefined() {
     if (isOverdefined())
-      return false;
+      return;
     Tag = overdefined;
-    return true;
   }
 
-  /// Return true if this is a change in status.
-  bool markConstant(Constant *V) {
+  void markConstant(Constant *V) {
     assert(V && "Marking constant with NULL");
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
-      return markConstantRange(ConstantRange(CI->getValue()));
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+      markConstantRange(ConstantRange(CI->getValue()));
+      return;
+    }
     if (isa<UndefValue>(V))
-      return false;
+      return;
 
     assert((!isConstant() || getConstant() == V) &&
            "Marking constant with different value");
     assert(isUndefined());
     Tag = constant;
     Val = V;
-    return true;
   }
 
-  /// Return true if this is a change in status.
-  bool markNotConstant(Constant *V) {
+  void markNotConstant(Constant *V) {
     assert(V && "Marking constant with NULL");
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
-      return markConstantRange(ConstantRange(CI->getValue()+1, CI->getValue()));
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+      markConstantRange(ConstantRange(CI->getValue()+1, CI->getValue()));
+      return;
+    }
     if (isa<UndefValue>(V))
-      return false;
+      return;
 
     assert((!isConstant() || getConstant() != V) &&
            "Marking constant !constant with same value");
@@ -179,100 +181,70 @@ public:
     assert(isUndefined() || isConstant());
     Tag = notconstant;
     Val = V;
-    return true;
   }
 
-  /// Return true if this is a change in status.
-  bool markConstantRange(ConstantRange NewR) {
+  void markConstantRange(ConstantRange NewR) {
     if (isConstantRange()) {
       if (NewR.isEmptySet())
-        return markOverdefined();
-
-      bool changed = Range != NewR;
-      Range = std::move(NewR);
-      return changed;
+        markOverdefined();
+      else {
+        Range = std::move(NewR);
+      }
+      return;
     }
 
     assert(isUndefined());
     if (NewR.isEmptySet())
-      return markOverdefined();
-
-    Tag = constantrange;
-    Range = std::move(NewR);
-    return true;
+      markOverdefined();
+    else {
+      Tag = constantrange;
+      Range = std::move(NewR);
+    }
   }
+
+public:
 
   /// Merge the specified lattice value into this one, updating this
   /// one and returning true if anything changed.
-  bool mergeIn(const LVILatticeVal &RHS, const DataLayout &DL) {
-    if (RHS.isUndefined() || isOverdefined()) return false;
-    if (RHS.isOverdefined()) return markOverdefined();
+  void mergeIn(const LVILatticeVal &RHS, const DataLayout &DL) {
+    if (RHS.isUndefined() || isOverdefined())
+      return;
+    if (RHS.isOverdefined()) {
+      markOverdefined();
+      return;
+    }
 
     if (isUndefined()) {
-      Tag = RHS.Tag;
-      Val = RHS.Val;
-      Range = RHS.Range;
-      return true;
+      *this = RHS;
+      return;
     }
 
     if (isConstant()) {
-      if (RHS.isConstant()) {
-        if (Val == RHS.Val)
-          return false;
-        return markOverdefined();
-      }
-
-      if (RHS.isNotConstant()) {
-        if (Val == RHS.Val)
-          return markOverdefined();
-
-        // Unless we can prove that the two Constants are different, we must
-        // move to overdefined.
-        if (ConstantInt *Res =
-                dyn_cast<ConstantInt>(ConstantFoldCompareInstOperands(
-                    CmpInst::ICMP_NE, getConstant(), RHS.getNotConstant(), DL)))
-          if (Res->isOne())
-            return markNotConstant(RHS.getNotConstant());
-
-        return markOverdefined();
-      }
-
-      return markOverdefined();
+      if (RHS.isConstant() && Val == RHS.Val)
+          return;
+      markOverdefined();
+      return;
     }
 
     if (isNotConstant()) {
-      if (RHS.isConstant()) {
-        if (Val == RHS.Val)
-          return markOverdefined();
-
-        // Unless we can prove that the two Constants are different, we must
-        // move to overdefined.
-        if (ConstantInt *Res =
-                dyn_cast<ConstantInt>(ConstantFoldCompareInstOperands(
-                    CmpInst::ICMP_NE, getNotConstant(), RHS.getConstant(), DL)))
-          if (Res->isOne())
-            return false;
-
-        return markOverdefined();
-      }
-
-      if (RHS.isNotConstant()) {
-        if (Val == RHS.Val)
-          return false;
-        return markOverdefined();
-      }
-
-      return markOverdefined();
+      if (RHS.isNotConstant() && Val == RHS.Val)
+          return;
+      markOverdefined();
+      return;
     }
 
     assert(isConstantRange() && "New LVILattice type?");
-    if (!RHS.isConstantRange())
-      return markOverdefined();
-
+    if (!RHS.isConstantRange()) {
+      // We can get here if we've encountered a constantexpr of integer type
+      // and merge it with a constantrange.
+      markOverdefined();
+      return;
+    }
     ConstantRange NewR = Range.unionWith(RHS.getConstantRange());
     if (NewR.isFullSet())
-      return markOverdefined();
-    return markConstantRange(NewR);
+      markOverdefined();
+    else
+      markConstantRange(NewR);
   }
 };
 
@@ -620,6 +592,7 @@ namespace {
   // returned means that the work item was not completely processed and must
   // be revisited after going through the new items.
   bool solveBlockValue(Value *Val, BasicBlock *BB);
+  bool solveBlockValueImpl(LVILatticeVal &Res, Value *Val, BasicBlock *BB);
   bool solveBlockValueNonLocal(LVILatticeVal &BBLV, Value *Val, BasicBlock *BB);
   bool solveBlockValuePHINode(LVILatticeVal &BBLV, PHINode *PN, BasicBlock *BB);
   bool solveBlockValueSelect(LVILatticeVal &BBLV, SelectInst *S,
@@ -744,28 +717,26 @@ bool LazyValueInfoImpl::solveBlockValue(Value *Val, BasicBlock *BB) {
   // Hold off inserting this value into the Cache in case we have to return
   // false and come back later.
   LVILatticeVal Res;
+  if (!solveBlockValueImpl(Res, Val, BB))
+    // Work pushed, will revisit
+    return false;
+
+  TheCache.insertResult(Val, BB, Res);
+  return true;
+}
+
+bool LazyValueInfoImpl::solveBlockValueImpl(LVILatticeVal &Res,
+                                            Value *Val, BasicBlock *BB) {
 
   Instruction *BBI = dyn_cast<Instruction>(Val);
-  if (!BBI || BBI->getParent() != BB) {
-    if (!solveBlockValueNonLocal(Res, Val, BB))
-      return false;
-   TheCache.insertResult(Val, BB, Res);
-   return true;
-  }
+  if (!BBI || BBI->getParent() != BB)
+    return solveBlockValueNonLocal(Res, Val, BB);
 
-  if (PHINode *PN = dyn_cast<PHINode>(BBI)) {
-    if (!solveBlockValuePHINode(Res, PN, BB))
-      return false;
-    TheCache.insertResult(Val, BB, Res);
-    return true;
-  }
+  if (PHINode *PN = dyn_cast<PHINode>(BBI))
+    return solveBlockValuePHINode(Res, PN, BB);
 
-  if (auto *SI = dyn_cast<SelectInst>(BBI)) {
-    if (!solveBlockValueSelect(Res, SI, BB))
-      return false;
-    TheCache.insertResult(Val, BB, Res);
-    return true;
-  }
+  if (auto *SI = dyn_cast<SelectInst>(BBI))
+    return solveBlockValueSelect(Res, SI, BB);
 
   // If this value is a nonnull pointer, record it's range and bailout.  Note
   // that for all other pointer typed values, we terminate the search at the
@@ -779,29 +750,20 @@ bool LazyValueInfoImpl::solveBlockValue(Value *Val, BasicBlock *BB) {
   PointerType *PT = dyn_cast<PointerType>(BBI->getType());
   if (PT && isKnownNonNull(BBI)) {
     Res = LVILatticeVal::getNot(ConstantPointerNull::get(PT));
-    TheCache.insertResult(Val, BB, Res);
     return true;
   }
   if (BBI->getType()->isIntegerTy()) {
-    if (isa<CastInst>(BBI)) {
-      if (!solveBlockValueCast(Res, BBI, BB))
-        return false;
-      TheCache.insertResult(Val, BB, Res);
-      return true;
-    }
+    if (isa<CastInst>(BBI))
+      return solveBlockValueCast(Res, BBI, BB);
+    
     BinaryOperator *BO = dyn_cast<BinaryOperator>(BBI);
-    if (BO && isa<ConstantInt>(BO->getOperand(1))) {
-      if (!solveBlockValueBinaryOp(Res, BBI, BB))
-        return false;
-      TheCache.insertResult(Val, BB, Res);
-      return true;
-    }
+    if (BO && isa<ConstantInt>(BO->getOperand(1)))
+      return solveBlockValueBinaryOp(Res, BBI, BB);
   }
 
   DEBUG(dbgs() << " compute BB '" << BB->getName()
                  << "' - unknown inst def found.\n");
   Res = getFromRangeMetadata(BBI);
-  TheCache.insertResult(Val, BB, Res);
   return true;
 }
 
@@ -869,7 +831,7 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(LVILatticeVal &BBLV,
       PointerType *PTy = cast<PointerType>(Val->getType());
       Result = LVILatticeVal::getNot(ConstantPointerNull::get(PTy));
     } else {
-      Result.markOverdefined();
+      Result = LVILatticeVal::getOverdefined();
     }
     BBLV = Result;
     return true;
@@ -993,28 +955,28 @@ bool LazyValueInfoImpl::solveBlockValueSelect(LVILatticeVal &BBLV,
   if (!hasBlockValue(SI->getTrueValue(), BB)) {
     if (pushBlockValue(std::make_pair(BB, SI->getTrueValue())))
       return false;
-    BBLV.markOverdefined();
+    BBLV = LVILatticeVal::getOverdefined();
     return true;
   }
   LVILatticeVal TrueVal = getBlockValue(SI->getTrueValue(), BB);
   // If we hit overdefined, don't ask more queries.  We want to avoid poisoning
   // extra slots in the table if we can.
   if (TrueVal.isOverdefined()) {
-    BBLV.markOverdefined();
+    BBLV = LVILatticeVal::getOverdefined();
     return true;
   }
 
   if (!hasBlockValue(SI->getFalseValue(), BB)) {
     if (pushBlockValue(std::make_pair(BB, SI->getFalseValue())))
       return false;
-    BBLV.markOverdefined();
+    BBLV = LVILatticeVal::getOverdefined();
     return true;
   }
   LVILatticeVal FalseVal = getBlockValue(SI->getFalseValue(), BB);
   // If we hit overdefined, don't ask more queries.  We want to avoid poisoning
   // extra slots in the table if we can.
   if (FalseVal.isOverdefined()) {
-    BBLV.markOverdefined();
+    BBLV = LVILatticeVal::getOverdefined();
     return true;
   }
 
@@ -1028,22 +990,22 @@ bool LazyValueInfoImpl::solveBlockValueSelect(LVILatticeVal &BBLV,
     // ValueTracking getting smarter looking back past our immediate inputs.)
     if (SelectPatternResult::isMinOrMax(SPR.Flavor) &&
         LHS == SI->getTrueValue() && RHS == SI->getFalseValue()) {
-      switch (SPR.Flavor) {
-      default:
-        llvm_unreachable("unexpected minmax type!");
-      case SPF_SMIN:                   /// Signed minimum
-        BBLV.markConstantRange(TrueCR.smin(FalseCR));
-        return true;
-      case SPF_UMIN:                   /// Unsigned minimum
-        BBLV.markConstantRange(TrueCR.umin(FalseCR));
-        return true;
-      case SPF_SMAX:                   /// Signed maximum
-        BBLV.markConstantRange(TrueCR.smax(FalseCR));
-        return true;
-      case SPF_UMAX:                   /// Unsigned maximum
-        BBLV.markConstantRange(TrueCR.umax(FalseCR));
-        return true;
-      };
+      ConstantRange ResultCR = [&]() {
+        switch (SPR.Flavor) {
+        default:
+          llvm_unreachable("unexpected minmax type!");
+        case SPF_SMIN:                   /// Signed minimum
+          return TrueCR.smin(FalseCR);
+        case SPF_UMIN:                   /// Unsigned minimum
+          return TrueCR.umin(FalseCR);
+        case SPF_SMAX:                   /// Signed maximum
+          return TrueCR.smax(FalseCR);
+        case SPF_UMAX:                   /// Unsigned maximum
+          return TrueCR.umax(FalseCR);
+        };
+      }();
+      BBLV = LVILatticeVal::getRange(ResultCR);
+      return true;
     }
 
     // TODO: ABS, NABS from the SelectPatternResult
@@ -1113,7 +1075,7 @@ bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
   if (!BBI->getOperand(0)->getType()->isSized()) {
     // Without knowing how wide the input is, we can't analyze it in any useful
     // way.
-    BBLV.markOverdefined();
+    BBLV = LVILatticeVal::getOverdefined();
     return true;
   }
 
@@ -1130,7 +1092,7 @@ bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
     // Unhandled instructions are overdefined.
     DEBUG(dbgs() << " compute BB '" << BB->getName()
                  << "' - overdefined (unknown cast).\n");
-    BBLV.markOverdefined();
+    BBLV = LVILatticeVal::getOverdefined();
     return true;
   }
 
@@ -1159,10 +1121,8 @@ bool LazyValueInfoImpl::solveBlockValueCast(LVILatticeVal &BBLV,
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
-  LVILatticeVal Result;
   auto CastOp = (Instruction::CastOps) BBI->getOpcode();
-  Result.markConstantRange(LHSRange.castOp(CastOp, ResultBitWidth));
-  BBLV = Result;
+  BBLV = LVILatticeVal::getRange(LHSRange.castOp(CastOp, ResultBitWidth));
   return true;
 }
 
@@ -1191,7 +1151,7 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
     // Unhandled instructions are overdefined.
     DEBUG(dbgs() << " compute BB '" << BB->getName()
                  << "' - overdefined (unknown binary operator).\n");
-    BBLV.markOverdefined();
+    BBLV = LVILatticeVal::getOverdefined();
     return true;
   };
 
@@ -1220,10 +1180,8 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
-  LVILatticeVal Result;
   auto BinOp = (Instruction::BinaryOps) BBI->getOpcode();
-  Result.markConstantRange(LHSRange.binaryOp(BinOp, RHSRange));
-  BBLV = Result;
+  BBLV = LVILatticeVal::getRange(LHSRange.binaryOp(BinOp, RHSRange));
   return true;
 }
 
@@ -1405,7 +1363,7 @@ bool LazyValueInfoImpl::getEdgeValue(Value *Val, BasicBlock *BBFrom,
   if (!getEdgeValueLocal(Val, BBFrom, BBTo, LocalResult))
     // If we couldn't constrain the value on the edge, LocalResult doesn't
     // provide any information.
-    LocalResult.markOverdefined();
+    LocalResult = LVILatticeVal::getOverdefined();
 
   if (hasSingleValue(LocalResult)) {
     // Can't get any more precise here

@@ -244,7 +244,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_CONSTANT: {
     unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildConstant(DstExt, MI.getOperand(1).getImm());
+    MIRBuilder.buildConstant(DstExt, *MI.getOperand(1).getCImm());
     MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
     MI.eraseFromParent();
     return Legalized;

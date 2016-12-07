@@ -62,6 +62,7 @@ private:
   void addPredefinedSections();
 
   std::vector<Phdr> createPhdrs();
+  void removeEmptyPTLoad();
   void addPtArmExid(std::vector<Phdr> &Phdrs);
   void assignAddresses();
   void assignFileOffsets();
@@ -134,6 +135,16 @@ template <class ELFT> static bool needsInterpSection() {
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
+template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
+  auto I = std::remove_if(Phdrs.begin(), Phdrs.end(), [&](const Phdr &P) {
+    if (P.H.p_type != PT_LOAD)
+      return false;
+    uintX_t Size = P.Last->Addr + P.Last->Size - P.First->Addr;
+    return Size == 0;
+  });
+  Phdrs.erase(I, Phdrs.end());
+}
+
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
   // Create linker-synthesized sections such as .got or .plt.
@@ -197,6 +208,11 @@ template <class ELFT> void Writer<ELFT>::run() {
       fixSectionAlignments();
       assignAddresses();
     }
+
+    // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
+    // 0 sized region. This has to be done late since only after assignAddresses
+    // we know the size of the sections.
+    removeEmptyPTLoad();
 
     if (!Config->OFormatBinary)
       assignFileOffsets();
@@ -1386,22 +1402,26 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 // 4. the address of the first byte of the .text section, if present;
 // 5. the address 0.
 template <class ELFT> typename ELFT::uint Writer<ELFT>::getEntryAddr() {
-  // Case 1, 2 or 3
-  if (Config->Entry.empty())
-    return Config->EntryAddr;
+  // Case 1, 2 or 3. As a special case, if the symbol is actually
+  // a number, we'll use that number as an address.
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Entry))
     return B->getVA<ELFT>();
+  uint64_t Addr;
+  if (!Config->Entry.getAsInteger(0, Addr))
+    return Addr;
 
   // Case 4
   if (OutputSectionBase *Sec = findSection(".text")) {
-    warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
-         utohexstr(Sec->Addr));
+    if (Config->WarnMissingEntry)
+      warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
+           utohexstr(Sec->Addr));
     return Sec->Addr;
   }
 
   // Case 5
-  warn("cannot find entry symbol " + Config->Entry +
-       "; not setting start address");
+  if (Config->WarnMissingEntry)
+    warn("cannot find entry symbol " + Config->Entry +
+         "; not setting start address");
   return 0;
 }
 

@@ -23,6 +23,7 @@
 // C++11 and C++03. This is important since the mangling of `lock_guard` depends
 // on it being declared as a variadic template, even in C++03.
 
+// MODULES_DEFINES: _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include <mutex>
 #include <string>

@@ -523,6 +523,7 @@ public:
     Match_RequiresV6,
     Match_RequiresThumb2,
     Match_RequiresV8,
+    Match_RequiresFlagSetting,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "ARMGenAsmMatcher.inc"
 
@@ -8905,7 +8906,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       ;
     // If we're parsing Thumb1, reject it completely.
     if (isThumbOne() && Inst.getOperand(OpNo).getReg() != ARM::CPSR)
-      return Match_MnemonicFail;
+      return Match_RequiresFlagSetting;
     // If we're parsing Thumb2, which form is legal depends on whether we're
     // in an IT block.
     if (isThumbTwo() && Inst.getOperand(OpNo).getReg() != ARM::CPSR &&
@@ -9171,6 +9172,8 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, "instruction variant requires Thumb2");
   case Match_RequiresV8:
     return Error(IDLoc, "instruction variant requires ARMv8 or later");
+  case Match_RequiresFlagSetting:
+    return Error(IDLoc, "no flag-preserving variant of this instruction available");
   case Match_ImmRange0_15: {
     SMLoc ErrorLoc = ((ARMOperand &)*Operands[ErrorInfo]).getStartLoc();
     if (ErrorLoc == SMLoc()) ErrorLoc = IDLoc;

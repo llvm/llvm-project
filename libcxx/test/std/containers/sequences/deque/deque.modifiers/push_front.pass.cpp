@@ -47,7 +47,7 @@ test(C& c1, int x)
     std::size_t c1_osize = c1.size();
     c1.push_front(x);
     assert(c1.size() == c1_osize + 1);
-    assert(distance(c1.begin(), c1.end()) == c1.size());
+    assert(static_cast<std::size_t>(distance(c1.begin(), c1.end())) == c1.size());
     I i = c1.begin();
     assert(*i == x);
     ++i;

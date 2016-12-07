@@ -62,6 +62,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
+
 ConstString &Target::GetStaticBroadcasterClass() {
   static ConstString class_name("lldb.target");
   return class_name;

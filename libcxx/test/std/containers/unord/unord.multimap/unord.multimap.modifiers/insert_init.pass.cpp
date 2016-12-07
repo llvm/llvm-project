@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <string>
 #include <cassert>
+#include <cstddef>
 
 #include "test_iterators.h"
 #include "min_allocator.h"
@@ -67,8 +68,8 @@ int main()
         k = eq.first;
         assert(k->first == 4);
         assert(k->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     }
 #if TEST_STD_VER >= 11
     {
@@ -114,8 +115,8 @@ int main()
         k = eq.first;
         assert(k->first == 4);
         assert(k->second == "four");
-        assert(std::distance(c.begin(), c.end()) == c.size());
-        assert(std::distance(c.cbegin(), c.cend()) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
+        assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     }
 #endif
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS

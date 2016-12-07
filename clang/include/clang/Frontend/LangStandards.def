@@ -81,7 +81,7 @@ LANGSTANDARD(iso9899_2011,
              "iso9899:2011", "ISO C 2011",
              LineComment | C99 | C11 | Digraphs | HexFloat)
 LANGSTANDARD(iso9899_201x,
-             "iso9899:2011", "ISO C 2011",
+             "iso9899:201x", "ISO C 2011",
              LineComment | C99 | C11 | Digraphs | HexFloat)
 
 LANGSTANDARD(gnu11, "gnu11",

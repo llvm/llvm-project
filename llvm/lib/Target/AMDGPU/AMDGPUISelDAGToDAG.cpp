@@ -135,6 +135,8 @@ private:
 
   void SelectADD_SUB_I64(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
+  void SelectFMA_W_CHAIN(SDNode *N);
+  void SelectFMUL_W_CHAIN(SDNode *N);
 
   SDNode *getS_BFE(unsigned Opcode, const SDLoc &DL, SDValue Val,
                    uint32_t Offset, uint32_t Width);
@@ -296,6 +298,15 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectADD_SUB_I64(N);
     return;
   }
+  case AMDGPUISD::FMUL_W_CHAIN: {
+    SelectFMUL_W_CHAIN(N);
+    return;
+  }
+  case AMDGPUISD::FMA_W_CHAIN: {
+    SelectFMA_W_CHAIN(N);
+    return;
+  }
+
   case ISD::SCALAR_TO_VECTOR:
   case AMDGPUISD::BUILD_VERTICAL_VECTOR:
   case ISD::BUILD_VECTOR: {
@@ -651,6 +662,33 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   // Replace the remaining uses.
   CurDAG->ReplaceAllUsesWith(N, RegSequence);
   CurDAG->RemoveDeadNode(N);
+}
+
+void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
+  SDLoc SL(N);
+  //  src0_modifiers, src0,  src1_modifiers, src1, src2_modifiers, src2, clamp, omod
+  SDValue Ops[10];
+
+  SelectVOP3Mods0(N->getOperand(1), Ops[1], Ops[0], Ops[6], Ops[7]);
+  SelectVOP3Mods(N->getOperand(2), Ops[3], Ops[2]);
+  SelectVOP3Mods(N->getOperand(3), Ops[5], Ops[4]);
+  Ops[8] = N->getOperand(0);
+  Ops[9] = N->getOperand(4);
+
+  CurDAG->SelectNodeTo(N, AMDGPU::V_FMA_F32, N->getVTList(), Ops);
+}
+
+void AMDGPUDAGToDAGISel::SelectFMUL_W_CHAIN(SDNode *N) {
+  SDLoc SL(N);
+  //	src0_modifiers, src0,  src1_modifiers, src1, clamp, omod
+  SDValue Ops[8];
+
+  SelectVOP3Mods0(N->getOperand(1), Ops[1], Ops[0], Ops[4], Ops[5]);
+  SelectVOP3Mods(N->getOperand(2), Ops[3], Ops[2]);
+  Ops[6] = N->getOperand(0);
+  Ops[7] = N->getOperand(3);
+
+  CurDAG->SelectNodeTo(N, AMDGPU::V_MUL_F32_e64, N->getVTList(), Ops);
 }
 
 // We need to handle this here because tablegen doesn't support matching

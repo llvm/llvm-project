@@ -65,8 +65,6 @@ class Configuration(object):
         self.cxx_library_root = None
         self.cxx_runtime_root = None
         self.abi_library_root = None
-        self.enable_modules = False
-        self.modules_flags = None
         self.env = {}
         self.use_target = False
         self.use_system_cxx_lib = False
@@ -128,6 +126,9 @@ class Configuration(object):
         # Print the final compile and link flags.
         self.lit_config.note('Using compiler: %s' % self.cxx.path)
         self.lit_config.note('Using flags: %s' % self.cxx.flags)
+        if self.cxx.use_modules:
+            self.lit_config.note('Using modules flags: %s' %
+                                 self.cxx.modules_flags)
         self.lit_config.note('Using compile flags: %s'
                              % self.cxx.compile_flags)
         if len(self.cxx.warning_flags):
@@ -250,8 +251,9 @@ class Configuration(object):
         if self.use_clang_verify is None:
             # NOTE: We do not test for the -verify flag directly because
             #   -verify will always exit with non-zero on an empty file.
-            self.use_clang_verify = self.cxx.hasCompileFlag(
-                ['-Xclang', '-verify-ignore-unexpected'])
+            self.use_clang_verify = self.cxx.isVerifySupported()
+            if self.use_clang_verify:
+                self.config.available_features.add('verify-support')
             self.lit_config.note(
                 "inferred use_clang_verify as: %r" % self.use_clang_verify)
 
@@ -735,8 +737,11 @@ class Configuration(object):
         if platform.system() != 'Darwin':
             modules_flags += ['-Xclang', '-fmodules-local-submodule-visibility']
         supports_modules = self.cxx.hasCompileFlag(modules_flags)
-        self.enable_modules = self.get_lit_bool('enable_modules', False)
-        if self.enable_modules and not supports_modules:
+        enable_modules_default = supports_modules and \
+            os.environ.get('LIBCXX_USE_MODULES') is not None
+        enable_modules = self.get_lit_bool('enable_modules',
+                                           enable_modules_default)
+        if enable_modules and not supports_modules:
             self.lit_config.fatal(
                 '-fmodules is enabled but not supported by the compiler')
         if not supports_modules:
@@ -748,11 +753,11 @@ class Configuration(object):
         if os.path.isdir(module_cache):
             shutil.rmtree(module_cache)
         os.makedirs(module_cache)
-        self.modules_flags = modules_flags + \
+        self.cxx.modules_flags = modules_flags + \
             ['-fmodules-cache-path=' + module_cache]
-        if self.enable_modules:
+        if enable_modules:
             self.config.available_features.add('-fmodules')
-            self.cxx.compile_flags += self.modules_flags
+            self.cxx.useModules()
 
     def configure_substitutions(self):
         sub = self.config.substitutions
@@ -767,21 +772,25 @@ class Configuration(object):
         sub.append(('%compile_flags', compile_flags_str))
         sub.append(('%link_flags', link_flags_str))
         sub.append(('%all_flags', all_flags))
-
+        if self.cxx.isVerifySupported():
+            verify_str = ' ' + ' '.join(self.cxx.verify_flags) + ' '
+            sub.append(('%verify', verify_str))
         # Add compile and link shortcuts
         compile_str = (self.cxx.path + ' -o %t.o %s -c ' + flags_str
-                       + compile_flags_str)
-        link_str = (self.cxx.path + ' -o %t.exe %t.o ' + flags_str
+                       + ' ' + compile_flags_str)
+        link_str = (self.cxx.path + ' -o %t.exe %t.o ' + flags_str + ' '
                     + link_flags_str)
         assert type(link_str) is str
         build_str = self.cxx.path + ' -o %t.exe %s ' + all_flags
+        if self.cxx.use_modules:
+            sub.append(('%compile_module', compile_str))
+            sub.append(('%build_module', build_str))
+        elif self.cxx.modules_flags is not None:
+            modules_str = ' '.join(self.cxx.modules_flags) + ' '
+            sub.append(('%compile_module', compile_str + ' ' + modules_str))
+            sub.append(('%build_module', build_str + ' ' + modules_str))
         sub.append(('%compile', compile_str))
         sub.append(('%link', link_str))
-        if self.enable_modules:
-            sub.append(('%build_module', build_str))
-        elif self.modules_flags is not None:
-            modules_str = ' '.join(self.modules_flags) + ' '
-            sub.append(('%build_module', build_str + ' ' + modules_str))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
         exec_env_str = 'env ' if len(self.env) != 0 else ''
@@ -796,8 +805,8 @@ class Configuration(object):
         sub.append(('%run', exec_str + ' %t.exe'))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not', 'not.py')
-        not_str = '%s %s' % (sys.executable, not_py)
-        sub.append(('not', not_str))
+        not_str = '%s %s ' % (sys.executable, not_py)
+        sub.append(('not ', not_str))
 
     def configure_triple(self):
         # Get or infer the target triple.

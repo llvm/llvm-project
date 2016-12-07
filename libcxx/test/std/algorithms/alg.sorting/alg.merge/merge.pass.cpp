@@ -40,7 +40,7 @@ test()
                            InIter2(ib), InIter2(ib+N), OutIter(ic));
     assert(base(r) == ic+2*N);
     assert(ic[0] == 0);
-    assert(ic[2*N-1] == 2*N-1);
+    assert(ic[2*N-1] == static_cast<int>(2*N-1));
     assert(std::is_sorted(ic, ic+2*N));
     delete [] ic;
     delete [] ib;
@@ -62,7 +62,7 @@ test()
                            InIter2(ib), InIter2(ib+N), OutIter(ic));
     assert(base(r) == ic+2*N);
     assert(ic[0] == 0);
-    assert(ic[2*N-1] == 2*N-1);
+    assert(ic[2*N-1] == static_cast<int>(2*N-1));
     assert(std::is_sorted(ic, ic+2*N));
     delete [] ic;
     delete [] ib;

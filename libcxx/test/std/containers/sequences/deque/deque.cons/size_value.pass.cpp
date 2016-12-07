@@ -13,6 +13,7 @@
 
 #include <deque>
 #include <cassert>
+#include <cstddef>
 
 #include "test_allocator.h"
 #include "min_allocator.h"
@@ -25,7 +26,7 @@ test(unsigned n, const T& x)
     typedef typename C::const_iterator const_iterator;
     C d(n, x);
     assert(d.size() == n);
-    assert(distance(d.begin(), d.end()) == d.size());
+    assert(static_cast<std::size_t>(distance(d.begin(), d.end())) == d.size());
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
         assert(*i == x);
 }

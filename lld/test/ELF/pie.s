@@ -25,20 +25,6 @@
 # CHECK-NEXT:    Unused: (00 00 00 00 00 00 00)
 # CHECK-NEXT:  }
 # CHECK-NEXT:  Type: SharedObject
-# CHECK-NEXT:  Machine: EM_X86_64
-# CHECK-NEXT:  Version: 1
-# CHECK-NEXT:  Entry: 0x1000
-# CHECK-NEXT:  ProgramHeaderOffset: 0x40
-# CHECK-NEXT:  SectionHeaderOffset: 0x1120
-# CHECK-NEXT:  Flags [
-# CHECK-NEXT:  ]
-# CHECK-NEXT:  HeaderSize: 64
-# CHECK-NEXT:  ProgramHeaderEntrySize: 56
-# CHECK-NEXT:  ProgramHeaderCount: 7
-# CHECK-NEXT:  SectionHeaderEntrySize: 64
-# CHECK-NEXT:  SectionHeaderCount: 10
-# CHECK-NEXT:  StringTableSectionIndex: 8
-# CHECK-NEXT: }
 
 # CHECK:      ProgramHeaders [
 # CHECK-NEXT:  ProgramHeader {
@@ -46,8 +32,8 @@
 # CHECK-NEXT:    Offset: 0x40
 # CHECK-NEXT:    VirtualAddress: 0x40
 # CHECK-NEXT:    PhysicalAddress: 0x40
-# CHECK-NEXT:    FileSize: 392
-# CHECK-NEXT:    MemSize: 392
+# CHECK-NEXT:    FileSize:
+# CHECK-NEXT:    MemSize:
 # CHECK-NEXT:    Flags [
 # CHECK-NEXT:      PF_R
 # CHECK-NEXT:    ]
@@ -58,52 +44,8 @@
 # CHECK-NEXT:    Offset: 0x0
 # CHECK-NEXT:    VirtualAddress: 0x0
 # CHECK-NEXT:    PhysicalAddress: 0x0
-# CHECK-NEXT:    FileSize: 497
-# CHECK-NEXT:    MemSize: 497
-# CHECK-NEXT:    Flags [
-# CHECK-NEXT:      PF_R
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Alignment: 4096
-# CHECK-NEXT:  }
-# CHECK-NEXT:  ProgramHeader {
-# CHECK-NEXT:    Type: PT_LOAD
-# CHECK-NEXT:    Offset: 0x1000
-# CHECK-NEXT:    VirtualAddress: 0x1000
-# CHECK-NEXT:    PhysicalAddress: 0x1000
-# CHECK-NEXT:    FileSize: 0
-# CHECK-NEXT:    MemSize: 0
-# CHECK-NEXT:    Flags [
-# CHECK-NEXT:      PF_R
-# CHECK-NEXT:      PF_X
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Alignment: 4096
-# CHECK-NEXT:  }
-# CHECK-NEXT:  ProgramHeader {
-# CHECK-NEXT:    Type: PT_LOAD
-# CHECK-NEXT:    Offset: 0x1000
-# CHECK-NEXT:    VirtualAddress: 0x1000
-# CHECK-NEXT:    PhysicalAddress: 0x1000
-# CHECK-NEXT:    FileSize: 112
-# CHECK-NEXT:    MemSize: 112
-# CHECK-NEXT:    Flags [
-# CHECK-NEXT:      PF_R
-# CHECK-NEXT:      PF_W
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Alignment: 4096
-# CHECK-NEXT:  }
-# CHECK-NEXT:  ProgramHeader {
-# CHECK-NEXT:    Type: PT_DYNAMIC
-# CHECK-NEXT:    Offset: 0x1000
-# CHECK-NEXT:    VirtualAddress: 0x1000
-# CHECK-NEXT:    PhysicalAddress: 0x1000
-# CHECK-NEXT:    FileSize: 112
-# CHECK-NEXT:    MemSize: 112
-# CHECK-NEXT:    Flags [
-# CHECK-NEXT:      PF_R
-# CHECK-NEXT:      PF_W
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Alignment: 8
-# CHECK-NEXT:  }
+
+# CHECK:         Type: PT_DYNAMIC
 
 ## Check -nopie
 # RUN: ld.lld -nopie %t1.o -o %t2

@@ -23,7 +23,14 @@ namespace llvm {
 MachOYAML::LoadCommand::~LoadCommand() {}
 
 bool MachOYAML::LinkEditData::isEmpty() const {
-  return 0 == RebaseOpcodes.size() + BindOpcodes.size() + WeakBindOpcodes.size() + LazyBindOpcodes.size() + ExportTrie.Children.size() + NameList.size() + StringTable.size();
+  return 0 ==
+         RebaseOpcodes.size() + BindOpcodes.size() + WeakBindOpcodes.size() +
+             LazyBindOpcodes.size() + ExportTrie.Children.size() +
+             NameList.size() + StringTable.size();
+}
+
+bool MachOYAML::DWARFData::isEmpty() const {
+  return 0 == DebugStrings.size();
 }
 
 namespace yaml {
@@ -101,6 +108,9 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   IO.mapOptional("LoadCommands", Object.LoadCommands);
   if(!Object.LinkEdit.isEmpty() || !IO.outputting())
     IO.mapOptional("LinkEditData", Object.LinkEdit);
+
+  if(!Object.DWARF.isEmpty() || !IO.outputting())
+    IO.mapOptional("DWARF", Object.DWARF);
 
   if (IO.getContext() == &Object)
     IO.setContext(nullptr);
@@ -545,6 +555,11 @@ void MappingTraits<MachO::version_min_command>::mapping(
 
   IO.mapRequired("version", LoadCommand.version);
   IO.mapRequired("sdk", LoadCommand.sdk);
+}
+
+void MappingTraits<MachOYAML::DWARFData>::mapping(
+    IO &IO, MachOYAML::DWARFData &DWARF) {
+  IO.mapRequired("DebugStrings", DWARF.DebugStrings);
 }
 
 } // namespace llvm::yaml

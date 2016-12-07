@@ -264,6 +264,7 @@ int main(int argc, char **argv) {
   initializeLowerIntrinsicsPass(*Registry);
   initializeCountingFunctionInserterPass(*Registry);
   initializeUnreachableBlockElimLegacyPassPass(*Registry);
+  initializeConstantHoistingLegacyPassPass(*Registry);
 
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);

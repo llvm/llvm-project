@@ -168,7 +168,6 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                       FS, Options, getEffectiveRelocModel(RM), CM, OptLevel),
     TLOF(createTLOF(getTargetTriple())),
     IntrinsicInfo() {
-  setRequiresStructuredCFG(true);
   initAsmInfo();
 }
 
@@ -204,7 +203,9 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      TargetOptions Options,
                                      Optional<Reloc::Model> RM,
                                      CodeModel::Model CM, CodeGenOpt::Level OL)
-  : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
+  : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
+  setRequiresStructuredCFG(true);
+}
 
 const R600Subtarget *R600TargetMachine::getSubtargetImpl(
   const Function &F) const {

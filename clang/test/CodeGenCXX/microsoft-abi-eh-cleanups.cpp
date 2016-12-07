@@ -278,3 +278,38 @@ void f() {
 // WIN32-LIFETIME: %[[bc2:.*]] = bitcast %"struct.lifetime_marker::C"* %[[c]] to i8*
 // WIN32-LIFETIME: call void @llvm.lifetime.end(i64 1, i8* %[[bc2]])
 }
+
+struct class_2 {
+  class_2();
+  virtual ~class_2();
+};
+struct class_1 : virtual class_2 {
+  class_1(){throw "Unhandled exception";}
+  virtual ~class_1() {}
+};
+struct class_0 : class_1 {
+  class_0() ;
+  virtual ~class_0() {}
+};
+
+class_0::class_0() {
+  // WIN32: define x86_thiscallcc %struct.class_0* @"\01??0class_0@@QAE@XZ"(%struct.class_0* returned %this, i32 %is_most_derived) 
+  // WIN32: store i32 %is_most_derived, i32* %[[IS_MOST_DERIVED_VAR:.*]], align 4
+  // WIN32: %[[IS_MOST_DERIVED_VAL:.*]] = load i32, i32* %[[IS_MOST_DERIVED_VAR]]
+  // WIN32: %[[SHOULD_CALL_VBASE_CTORS:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0
+  // WIN32: br i1 %[[SHOULD_CALL_VBASE_CTORS]], label %[[INIT_VBASES:.*]], label %[[SKIP_VBASES:.*]]
+  // WIN32: [[INIT_VBASES]]
+  // WIN32: br label %[[SKIP_VBASES]]
+  // WIN32: [[SKIP_VBASES]]
+// ehcleanup:
+  // WIN32: %[[CLEANUPPAD:.*]] = cleanuppad within none []
+  // WIN32-NEXT: bitcast %{{.*}}* %{{.*}} to i8*
+  // WIN32-NEXT: getelementptr inbounds i8, i8* %{{.*}}, i{{.*}} {{.}} 
+  // WIN32-NEXT: bitcast i8* %{{.*}} to %{{.*}}*
+  // WIN32-NEXT: %[[SHOULD_CALL_VBASE_DTOR:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0
+  // WIN32-NEXT: br i1 %[[SHOULD_CALL_VBASE_DTOR]], label %[[DTOR_VBASE:.*]], label %[[SKIP_VBASE:.*]]
+  // WIN32: [[DTOR_VBASE]]
+  // WIN32-NEXT: call x86_thiscallcc void @"\01??1class_2@@UAE@XZ"
+  // WIN32: br label %[[SKIP_VBASE]]
+  // WIN32: [[SKIP_VBASE]]
+}

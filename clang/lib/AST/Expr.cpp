@@ -1864,6 +1864,24 @@ bool InitListExpr::isStringLiteralInit() const {
   return isa<StringLiteral>(Init) || isa<ObjCEncodeExpr>(Init);
 }
 
+bool InitListExpr::isTransparent() const {
+  assert(isSemanticForm() && "syntactic form never semantically transparent");
+
+  // A glvalue InitListExpr is always just sugar.
+  if (isGLValue()) {
+    assert(getNumInits() == 1 && "multiple inits in glvalue init list");
+    return true;
+  }
+
+  // Otherwise, we're sugar if and only if we have exactly one initializer that
+  // is of the same type.
+  if (getNumInits() != 1 || !getInit(0))
+    return false;
+
+  return getType().getCanonicalType() ==
+         getInit(0)->getType().getCanonicalType();
+}
+
 SourceLocation InitListExpr::getLocStart() const {
   if (InitListExpr *SyntacticForm = getSyntacticForm())
     return SyntacticForm->getLocStart();
@@ -2246,12 +2264,15 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     // effects (e.g. a placement new with an uninitialized POD).
   case CXXDeleteExprClass:
     return false;
+  case MaterializeTemporaryExprClass:
+    return cast<MaterializeTemporaryExpr>(this)->GetTemporaryExpr()
+               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   case CXXBindTemporaryExprClass:
-    return (cast<CXXBindTemporaryExpr>(this)
-            ->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx));
+    return cast<CXXBindTemporaryExpr>(this)->getSubExpr()
+               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   case ExprWithCleanupsClass:
-    return (cast<ExprWithCleanups>(this)
-            ->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx));
+    return cast<ExprWithCleanups>(this)->getSubExpr()
+               ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   }
 }
 

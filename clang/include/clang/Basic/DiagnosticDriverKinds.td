@@ -87,6 +87,8 @@ def err_drv_clang_unsupported_opt_cxx_darwin_i386 : Error<
   "the clang compiler does not support '%0' for C++ on Darwin/i386">;
 def err_drv_command_failed : Error<
   "%0 command failed with exit code %1 (use -v to see invocation)">;
+def err_drv_compilationdatabase : Error<
+  "compilation database '%0' could not be opened: %1">;
 def err_drv_command_signalled : Error<
   "%0 command failed due to signal (use -v to see invocation)">;
 def err_drv_force_crash : Error<
@@ -135,8 +137,6 @@ def err_drv_preamble_format : Error<
     "incorrect format for -preamble-bytes=N,END">;
 def err_drv_conflicting_deployment_targets : Error<
   "conflicting deployment targets, both '%0' and '%1' are present in environment">;
-def err_drv_objc_gc_arr : Error<
-  "cannot specify both '-fobjc-arc' and '%0'">;
 def err_arc_unsupported_on_runtime : Error<
   "-fobjc-arc is not supported on platforms using the legacy runtime">;
 def err_arc_unsupported_on_toolchain : Error< // feel free to generalize this
@@ -209,8 +209,6 @@ def warn_drv_overriding_flag_option : Warning<
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
-def warn_drv_objc_gc_unsupported : Warning<
-  "Objective-C garbage collection is not supported on this platform, ignoring '%0'">;
 def warn_drv_pch_not_first_include : Warning<
   "precompiled header '%0' was ignored because '%1' is not first '-include'">;
 def warn_missing_sysroot : Warning<"no such sysroot directory: '%0'">,
@@ -277,4 +275,6 @@ def warn_drv_ps4_sdk_dir : Warning<
   InGroup<InvalidOrNonExistentDirectory>;
 
 def err_drv_unsupported_linker : Error<"unsupported value '%0' for -linker option">;
+def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
+def err_drv_defsym_invalid_symval : Error<"Value is not an integer: %0">;
 }

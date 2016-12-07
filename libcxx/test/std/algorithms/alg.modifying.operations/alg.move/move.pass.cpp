@@ -53,7 +53,7 @@ test1()
     OutIter r = std::move(InIter(ia), InIter(ia+N), OutIter(ib));
     assert(base(r) == ib+N);
     for (unsigned i = 0; i < N; ++i)
-        assert(*ib[i] == i);
+        assert(*ib[i] == static_cast<int>(i));
 }
 
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES

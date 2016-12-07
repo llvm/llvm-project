@@ -19,7 +19,7 @@
 
 #include <tuple>
 
-template <class T> void cref(T const&) {};
+template <class T> void cref(T const&) {}
 template <class T> void cref(T const&&) = delete;
 
 std::tuple<int> const tup4() { return std::make_tuple(4); }

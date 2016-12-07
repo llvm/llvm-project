@@ -553,12 +553,21 @@ namespace dr446 { // dr446: yes
     void(b ? a : a);
     b ? A() : a; // expected-error {{deleted}}
     b ? a : A(); // expected-error {{deleted}}
-    b ? A() : A(); // expected-error {{deleted}}
+    b ? A() : A();
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{deleted}}
+#endif
 
     void(b ? a : c);
     b ? a : C(); // expected-error {{deleted}}
-    b ? c : A(); // expected-error {{deleted}}
-    b ? A() : C(); // expected-error {{deleted}}
+    b ? c : A();
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{deleted}}
+#endif
+    b ? A() : C();
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{deleted}}
+#endif
   }
 }
 
@@ -874,10 +883,12 @@ namespace dr479 { // dr479: yes
   void f() {
     throw S();
     // expected-error@-1 {{temporary of type 'dr479::S' has private destructor}}
-    // expected-error@-2 {{calling a private constructor}}
-    // expected-error@-3 {{exception object of type 'dr479::S' has private destructor}}
+    // expected-error@-2 {{exception object of type 'dr479::S' has private destructor}}
 #if __cplusplus < 201103L
-    // expected-error@-5 {{C++98 requires an accessible copy constructor}}
+    // expected-error@-4 {{C++98 requires an accessible copy constructor}}
+#endif
+#if __cplusplus <= 201402L
+    // expected-error@-7 {{calling a private constructor}} (copy ctor)
 #endif
   }
   void g() {

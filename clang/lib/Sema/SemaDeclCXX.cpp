@@ -6100,7 +6100,8 @@ void Sema::EvaluateImplicitExceptionSpec(SourceLocation Loc, CXXMethodDecl *MD) 
     return;
 
   // Evaluate the exception specification.
-  auto ESI = computeImplicitExceptionSpec(*this, Loc, MD).getExceptionSpec();
+  auto IES = computeImplicitExceptionSpec(*this, Loc, MD);
+  auto ESI = IES.getExceptionSpec();
 
   // Update the type of the special member to use it.
   UpdateExceptionSpec(MD, ESI);
@@ -6298,8 +6299,8 @@ void Sema::CheckExplicitlyDefaultedMemberExceptionSpec(
   CallingConv CC = Context.getDefaultCallingConvention(/*IsVariadic=*/false,
                                                        /*IsCXXMethod=*/true);
   FunctionProtoType::ExtProtoInfo EPI(CC);
-  EPI.ExceptionSpec = computeImplicitExceptionSpec(*this, MD->getLocation(), MD)
-                          .getExceptionSpec();
+  auto IES = computeImplicitExceptionSpec(*this, MD->getLocation(), MD);
+  EPI.ExceptionSpec = IES.getExceptionSpec();
   const FunctionProtoType *ImplicitType = cast<FunctionProtoType>(
     Context.getFunctionType(Context.VoidTy, None, EPI));
 
@@ -14280,6 +14281,8 @@ bool Sema::DefineUsedVTables() {
     CXXRecordDecl *Class = VTableUses[I].first->getDefinition();
     if (!Class)
       continue;
+    TemplateSpecializationKind ClassTSK =
+        Class->getTemplateSpecializationKind();
 
     SourceLocation Loc = VTableUses[I].second;
 
@@ -14303,9 +14306,8 @@ bool Sema::DefineUsedVTables() {
       // of an explicit instantiation declaration, suppress the
       // vtable; it will live with the explicit instantiation
       // definition.
-      bool IsExplicitInstantiationDeclaration
-        = Class->getTemplateSpecializationKind()
-                                      == TSK_ExplicitInstantiationDeclaration;
+      bool IsExplicitInstantiationDeclaration =
+          ClassTSK == TSK_ExplicitInstantiationDeclaration;
       for (auto R : Class->redecls()) {
         TemplateSpecializationKind TSK
           = cast<CXXRecordDecl>(R)->getTemplateSpecializationKind();
@@ -14338,17 +14340,20 @@ bool Sema::DefineUsedVTables() {
     if (VTablesUsed[Canonical])
       Consumer.HandleVTable(Class);
 
-    // Optionally warn if we're emitting a weak vtable.
-    if (Class->isExternallyVisible() &&
-        Class->getTemplateSpecializationKind() != TSK_ImplicitInstantiation) {
+    // Warn if we're emitting a weak vtable. The vtable will be weak if there is
+    // no key function or the key function is inlined. Don't warn in C++ ABIs
+    // that lack key functions, since the user won't be able to make one.
+    if (Context.getTargetInfo().getCXXABI().hasKeyFunctions() &&
+        Class->isExternallyVisible() && ClassTSK != TSK_ImplicitInstantiation) {
       const FunctionDecl *KeyFunctionDef = nullptr;
-      if (!KeyFunction || 
-          (KeyFunction->hasBody(KeyFunctionDef) && 
-           KeyFunctionDef->isInlined()))
-        Diag(Class->getLocation(), Class->getTemplateSpecializationKind() ==
-             TSK_ExplicitInstantiationDefinition 
-             ? diag::warn_weak_template_vtable : diag::warn_weak_vtable) 
-          << Class;
+      if (!KeyFunction || (KeyFunction->hasBody(KeyFunctionDef) &&
+                           KeyFunctionDef->isInlined())) {
+        Diag(Class->getLocation(),
+             ClassTSK == TSK_ExplicitInstantiationDefinition
+                 ? diag::warn_weak_template_vtable
+                 : diag::warn_weak_vtable)
+            << Class;
+      }
     }
   }
   VTableUses.clear();

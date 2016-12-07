@@ -59,41 +59,6 @@ void TracePC::PrintModuleInfo() {
   Printf("\n");
 }
 
-size_t TracePC::FinalizeTrace(InputCorpus *C, size_t InputSize, bool Shrink) {
-  if (!UsingTracePcGuard()) return 0;
-  size_t Res = 0;
-  const size_t Step = 8;
-  assert(reinterpret_cast<uintptr_t>(Counters) % Step == 0);
-  size_t N = Min(kNumCounters, NumGuards + 1);
-  N = (N + Step - 1) & ~(Step - 1);  // Round up.
-  for (size_t Idx = 0; Idx < N; Idx += Step) {
-    uint64_t Bundle = *reinterpret_cast<uint64_t*>(&Counters[Idx]);
-    if (!Bundle) continue;
-    for (size_t i = Idx; i < Idx + Step; i++) {
-      uint8_t Counter = (Bundle >> (i * 8)) & 0xff;
-      if (!Counter) continue;
-      Counters[i] = 0;
-      unsigned Bit = 0;
-      /**/ if (Counter >= 128) Bit = 7;
-      else if (Counter >= 32) Bit = 6;
-      else if (Counter >= 16) Bit = 5;
-      else if (Counter >= 8) Bit = 4;
-      else if (Counter >= 4) Bit = 3;
-      else if (Counter >= 3) Bit = 2;
-      else if (Counter >= 2) Bit = 1;
-      size_t Feature = (i * 8 + Bit);
-      if (C->AddFeature(Feature, InputSize, Shrink))
-        Res++;
-    }
-  }
-  if (UseValueProfile)
-    ValueProfileMap.ForEach([&](size_t Idx) {
-      if (C->AddFeature(NumGuards + Idx, InputSize, Shrink))
-        Res++;
-    });
-  return Res;
-}
-
 void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   const uintptr_t kBits = 12;
   const uintptr_t kMask = (1 << kBits) - 1;

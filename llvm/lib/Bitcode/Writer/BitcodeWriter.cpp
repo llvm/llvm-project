@@ -1732,7 +1732,7 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
   Record.reserve(N->getElements().size() + 1);
 
   const uint64_t HasOpFragmentFlag = 1 << 1;
-  Record.push_back(N->isDistinct() | HasOpFragmentFlag);
+  Record.push_back((uint64_t)N->isDistinct() | HasOpFragmentFlag);
   Record.append(N->elements_begin(), N->elements_end());
 
   Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);

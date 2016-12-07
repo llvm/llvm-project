@@ -478,5 +478,30 @@ bb4:
   br label %bb1
 }
 
+; GCN-LABEL: {{^}}phi_imm_in_sgprs
+; GCN: s_movk_i32 [[A:s[0-9]+]], 0x400
+; GCN: s_movk_i32 [[B:s[0-9]+]], 0x400
+; GCN: [[LOOP_LABEL:[0-9a-zA-Z_]+]]:
+; GCN: s_xor_b32 [[B]], [[B]], [[A]]
+; GCN: s_cbranch_scc{{[01]}} [[LOOP_LABEL]]
+define void @phi_imm_in_sgprs(i32 addrspace(3)* %out, i32 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [0, %entry], [%i.add, %loop]
+  %offset = phi i32 [1024, %entry], [%offset.xor, %loop]
+  %offset.xor = xor i32 %offset, 1024
+  %offset.i = add i32 %offset.xor, %i
+  %ptr = getelementptr i32, i32 addrspace(3)* %out, i32 %offset.i
+  store i32 0, i32 addrspace(3)* %ptr
+  %i.add = add i32 %i, 1
+  %cmp = icmp ult i32 %i.add, %cond
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

@@ -16,20 +16,25 @@
 #ifndef LLVM_IR_GLOBALINDIRECTSYMBOL_H
 #define LLVM_IR_GLOBALINDIRECTSYMBOL_H
 
+#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <cstddef>
 
 namespace llvm {
 
 class GlobalIndirectSymbol : public GlobalValue {
-  void operator=(const GlobalIndirectSymbol &) = delete;
-  GlobalIndirectSymbol(const GlobalIndirectSymbol &) = delete;
-
 protected:
   GlobalIndirectSymbol(Type *Ty, ValueTy VTy, unsigned AddressSpace,
       LinkageTypes Linkage, const Twine &Name, Constant *Symbol);
 
 public:
+  GlobalIndirectSymbol(const GlobalIndirectSymbol &) = delete;
+  GlobalIndirectSymbol &operator=(const GlobalIndirectSymbol &) = delete;
+
   // allocate space for exactly one operand
   void *operator new(size_t s) {
     return User::operator new(s, 1);
@@ -79,6 +84,6 @@ struct OperandTraits<GlobalIndirectSymbol> :
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GlobalIndirectSymbol, Constant)
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GLOBALINDIRECTSYMBOL_H

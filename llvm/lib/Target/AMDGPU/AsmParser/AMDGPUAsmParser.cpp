@@ -135,7 +135,11 @@ public:
     ImmTyDA,
     ImmTyR128,
     ImmTyLWE,
+    ImmTyExpTgt,
+    ImmTyExpCompr,
+    ImmTyExpVM,
     ImmTyHwreg,
+    ImmTyOff,
     ImmTySendMsg,
   };
 
@@ -213,6 +217,10 @@ public:
     return isRegOrImmWithInputMods(MVT::f64);
   }
 
+  bool isVReg32OrOff() const {
+    return isOff() || isRegClass(AMDGPU::VGPR_32RegClassID);
+  }
+
   bool isImmTy(ImmTy ImmT) const {
     return isImm() && Imm.Type == ImmT;
   }
@@ -228,6 +236,10 @@ public:
   bool isDA() const { return isImmTy(ImmTyDA); }
   bool isR128() const { return isImmTy(ImmTyUNorm); }
   bool isLWE() const { return isImmTy(ImmTyLWE); }
+  bool isOff() const { return isImmTy(ImmTyOff); }
+  bool isExpTgt() const { return isImmTy(ImmTyExpTgt); }
+  bool isExpVM() const { return isImmTy(ImmTyExpVM); }
+  bool isExpCompr() const { return isImmTy(ImmTyExpCompr); }
   bool isOffen() const { return isImmTy(ImmTyOffen); }
   bool isIdxen() const { return isImmTy(ImmTyIdxen); }
   bool isAddr64() const { return isImmTy(ImmTyAddr64); }
@@ -456,7 +468,7 @@ public:
     }
   }
 
-  void printImmTy(raw_ostream& OS, ImmTy Type) const {
+  static void printImmTy(raw_ostream& OS, ImmTy Type) {
     switch (Type) {
     case ImmTyNone: OS << "None"; break;
     case ImmTyGDS: OS << "GDS"; break;
@@ -484,6 +496,10 @@ public:
     case ImmTyDA: OS << "DA"; break;
     case ImmTyR128: OS << "R128"; break;
     case ImmTyLWE: OS << "LWE"; break;
+    case ImmTyOff: OS << "Off"; break;
+    case ImmTyExpTgt: OS << "ExpTgt"; break;
+    case ImmTyExpCompr: OS << "ExpCompr"; break;
+    case ImmTyExpVM: OS << "ExpVM"; break;
     case ImmTyHwreg: OS << "Hwreg"; break;
     case ImmTySendMsg: OS << "SendMsg"; break;
     }
@@ -650,6 +666,10 @@ public:
     return AMDGPU::isVI(getSTI());
   }
 
+  bool hasInv2PiInlineImm() const {
+    return getSTI().getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm];
+  }
+
   bool hasSGPR102_SGPR103() const {
     return !isVI();
   }
@@ -707,9 +727,11 @@ public:
   OperandMatchResultTy parseRegOrImm(OperandVector &Operands);
   OperandMatchResultTy parseRegOrImmWithFPInputMods(OperandVector &Operands);
   OperandMatchResultTy parseRegOrImmWithIntInputMods(OperandVector &Operands);
+  OperandMatchResultTy parseVReg32OrOff(OperandVector &Operands);
 
   void cvtDSOffset01(MCInst &Inst, const OperandVector &Operands);
   void cvtDS(MCInst &Inst, const OperandVector &Operands);
+  void cvtExp(MCInst &Inst, const OperandVector &Operands);
 
   bool parseCnt(int64_t &IntVal);
   OperandMatchResultTy parseSWaitCntOps(OperandVector &Operands);
@@ -724,9 +746,14 @@ private:
 
   bool parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &Operation, int64_t &StreamId);
   bool parseHwregConstruct(OperandInfoTy &HwReg, int64_t &Offset, int64_t &Width);
+
+  void errorExpTgt();
+  OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
+
 public:
   OperandMatchResultTy parseOptionalOperand(OperandVector &Operands);
 
+  OperandMatchResultTy parseExpTgt(OperandVector &Operands);
   OperandMatchResultTy parseSendMsgOp(OperandVector &Operands);
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
 
@@ -745,6 +772,9 @@ public:
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
   AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
+  AMDGPUOperand::Ptr defaultExpTgt() const;
+  AMDGPUOperand::Ptr defaultExpCompr() const;
+  AMDGPUOperand::Ptr defaultExpVM() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
 
@@ -778,11 +808,43 @@ struct OptionalOperand {
   bool (*ConvertResult)(int64_t&);
 };
 
+// May be called with integer type with equivalent bitwidth.
+static const fltSemantics *getFltSemantics(MVT VT) {
+  switch (VT.getSizeInBits()) {
+  case 32:
+    return &APFloat::IEEEsingle;
+  case 64:
+    return &APFloat::IEEEdouble;
+  case 16:
+    return &APFloat::IEEEhalf;
+  default:
+    llvm_unreachable("unsupported fp type");
+  }
+}
+
 }
 
 //===----------------------------------------------------------------------===//
 // Operand
 //===----------------------------------------------------------------------===//
+
+static bool canLosslesslyConvertToFPType(APFloat &FPLiteral, MVT VT) {
+  bool Lost;
+
+  // Convert literal to single precision
+  APFloat::opStatus Status = FPLiteral.convert(*getFltSemantics(VT),
+                                               APFloat::rmNearestTiesToEven,
+                                               &Lost);
+  // We allow precision lost but not overflow or underflow
+  if (Status != APFloat::opOK &&
+      Lost &&
+      ((Status & APFloat::opOverflow)  != 0 ||
+       (Status & APFloat::opUnderflow) != 0)) {
+    return false;
+  }
+
+  return true;
+}
 
 bool AMDGPUOperand::isInlinableImm(MVT type) const {
   if (!isImmTy(ImmTyNone)) {
@@ -797,36 +859,30 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
 
   if (Imm.IsFPImm) { // We got fp literal token
     if (type == MVT::f64 || type == MVT::i64) { // Expected 64-bit operand
-      return AMDGPU::isInlinableLiteral64(Imm.Val, AsmParser->isVI());
-    } else { // Expected 32-bit operand
-      bool lost;
-      APFloat FPLiteral(APFloat::IEEEdouble, Literal);
-      // Convert literal to single precision
-      APFloat::opStatus status = FPLiteral.convert(APFloat::IEEEsingle,
-                                                    APFloat::rmNearestTiesToEven,
-                                                    &lost);
-      // We allow precision lost but not overflow or underflow
-      if (status != APFloat::opOK &&
-          lost &&
-          ((status & APFloat::opOverflow)  != 0 ||
-            (status & APFloat::opUnderflow) != 0)) {
-        return false;
-      }
-      // Check if single precision literal is inlinable
-      return AMDGPU::isInlinableLiteral32(
-              static_cast<int32_t>(FPLiteral.bitcastToAPInt().getZExtValue()),
-              AsmParser->isVI());
+      return AMDGPU::isInlinableLiteral64(Imm.Val,
+                                          AsmParser->hasInv2PiInlineImm());
     }
-  } else { // We got int literal token
-    if (type == MVT::f64 || type == MVT::i64) { // Expected 64-bit operand
-      return AMDGPU::isInlinableLiteral64(Imm.Val, AsmParser->isVI());
-    } else { // Expected 32-bit operand
-      return AMDGPU::isInlinableLiteral32(
-            static_cast<int32_t>(Literal.getLoBits(32).getZExtValue()),
-            AsmParser->isVI());
-    }
+
+    APFloat FPLiteral(APFloat::IEEEdouble, APInt(64, Imm.Val));
+    if (!canLosslesslyConvertToFPType(FPLiteral, type))
+      return false;
+
+    // Check if single precision literal is inlinable
+    return AMDGPU::isInlinableLiteral32(
+      static_cast<int32_t>(FPLiteral.bitcastToAPInt().getZExtValue()),
+      AsmParser->hasInv2PiInlineImm());
   }
-  return false;
+
+
+  // We got int literal token.
+  if (type == MVT::f64 || type == MVT::i64) { // Expected 64-bit operand
+    return AMDGPU::isInlinableLiteral64(Imm.Val,
+                                        AsmParser->hasInv2PiInlineImm());
+  }
+
+  return AMDGPU::isInlinableLiteral32(
+    static_cast<int32_t>(Literal.getLoBits(32).getZExtValue()),
+    AsmParser->hasInv2PiInlineImm());
 }
 
 bool AMDGPUOperand::isLiteralImm(MVT type) const {
@@ -835,45 +891,28 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
     return false;
   }
 
-  APInt Literal(64, Imm.Val);
+  if (!Imm.IsFPImm) {
+    // We got int literal token.
 
-  if (Imm.IsFPImm) { // We got fp literal token
-    if (type == MVT::f64) { // Expected 64-bit fp operand
-      // We would set low 64-bits of literal to zeroes but we accept this literals
-      return true;
-    } else if (type == MVT::i64) { // Expected 64-bit int operand
-        // We don't allow fp literals in 64-bit integer instructions. It is
-        // unclear how we should encode them.
-      return false;
-    } else { // Expected 32-bit operand
-      bool lost;
-      APFloat FPLiteral(APFloat::IEEEdouble, Literal);
-      // Convert literal to single precision
-      APFloat::opStatus status = FPLiteral.convert(APFloat::IEEEsingle,
-                                                    APFloat::rmNearestTiesToEven,
-                                                    &lost);
-      // We allow precision lost but not overflow or underflow
-      if (status != APFloat::opOK &&
-          lost &&
-          ((status & APFloat::opOverflow)  != 0 ||
-            (status & APFloat::opUnderflow) != 0)) {
-        return false;
-      }
-      return true;
-    }
-  } else { // We got int literal token
-    APInt HiBits = Literal.getHiBits(32);
-    if (HiBits == 0xffffffff &&
-        (*Literal.getLoBits(32).getRawData() & 0x80000000) != 0) {
-      // If high 32 bits aren't zeroes then they all should be ones and 32nd
-      // bit should be set. So that this 64-bit literal is sign-extension of
-      // 32-bit value.
-      return true;
-    } else if (HiBits == 0) {
-      return true;
-    }
+    // FIXME: 64-bit operands can zero extend, sign extend, or pad zeroes for FP
+    // types.
+    return isUInt<32>(Imm.Val) || isInt<32>(Imm.Val);
   }
-  return false;
+
+  // We got fp literal token
+  if (type == MVT::f64) { // Expected 64-bit fp operand
+    // We would set low 64-bits of literal to zeroes but we accept this literals
+    return true;
+  }
+
+  if (type == MVT::i64) { // Expected 64-bit int operand
+    // We don't allow fp literals in 64-bit integer instructions. It is
+    // unclear how we should encode them.
+    return false;
+  }
+
+  APFloat FPLiteral(APFloat::IEEEdouble, APInt(64, Imm.Val));
+  return canLosslesslyConvertToFPType(FPLiteral, type);
 }
 
 bool AMDGPUOperand::isRegClass(unsigned RCID) const {
@@ -912,7 +951,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
   if (Imm.IsFPImm) { // We got fp literal token
     if (OpSize == 8) { // Expected 64-bit operand
       // Check if literal is inlinable
-      if (AMDGPU::isInlinableLiteral64(Literal.getZExtValue(), AsmParser->isVI())) {
+      if (AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
+                                       AsmParser->hasInv2PiInlineImm())) {
         Inst.addOperand(MCOperand::createImm(Literal.getZExtValue()));
       } else if (AMDGPU::isSISrcFPOperand(InstDesc, OpNum)) { // Expected 64-bit fp operand
         // For fp operands we check if low 32 bits are zeros
@@ -941,13 +981,15 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
   } else { // We got int literal token
     if (OpSize == 8) { // Expected 64-bit operand
       auto LiteralVal = Literal.getZExtValue();
-      if (AMDGPU::isInlinableLiteral64(LiteralVal, AsmParser->isVI())) {
+      if (AMDGPU::isInlinableLiteral64(LiteralVal,
+                                       AsmParser->hasInv2PiInlineImm())) {
         Inst.addOperand(MCOperand::createImm(LiteralVal));
         return;
       }
     } else { // Expected 32-bit operand
       auto LiteralVal = static_cast<int32_t>(Literal.getLoBits(32).getZExtValue());
-      if (AMDGPU::isInlinableLiteral32(LiteralVal, AsmParser->isVI())) {
+      if (AMDGPU::isInlinableLiteral32(LiteralVal,
+                                       AsmParser->hasInv2PiInlineImm())) {
         Inst.addOperand(MCOperand::createImm(LiteralVal));
         return;
       }
@@ -1350,7 +1392,26 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     Op.setModifiers(Mods);
   }
+
   return MatchOperand_Success;
+}
+
+OperandMatchResultTy AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) {
+  std::unique_ptr<AMDGPUOperand> Reg = parseRegister();
+  if (Reg) {
+    Operands.push_back(std::move(Reg));
+    return MatchOperand_Success;
+  }
+
+  const AsmToken &Tok = Parser.getTok();
+  if (Tok.getString() == "off") {
+    Operands.push_back(AMDGPUOperand::CreateImm(this, 0, Tok.getLoc(),
+                                                AMDGPUOperand::ImmTyOff, false));
+    Parser.Lex();
+    return MatchOperand_Success;
+  }
+
+  return MatchOperand_NoMatch;
 }
 
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
@@ -1992,6 +2053,46 @@ void AMDGPUAsmParser::cvtDS(MCInst &Inst, const OperandVector &Operands) {
   Inst.addOperand(MCOperand::createReg(AMDGPU::M0)); // m0
 }
 
+void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
+  OptionalImmIndexMap OptionalIdx;
+
+  unsigned EnMask = 0;
+  int SrcIdx = 0;
+
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+
+    // Add the register arguments
+    if (Op.isReg()) {
+      EnMask |= (1 << SrcIdx);
+      Op.addRegOperands(Inst, 1);
+      ++SrcIdx;
+      continue;
+    }
+
+    if (Op.isOff()) {
+      ++SrcIdx;
+      Inst.addOperand(MCOperand::createReg(AMDGPU::NoRegister));
+      continue;
+    }
+
+    if (Op.isImm() && Op.getImmTy() == AMDGPUOperand::ImmTyExpTgt) {
+      Op.addImmOperands(Inst, 1);
+      continue;
+    }
+
+    if (Op.isToken() && Op.getToken() == "done")
+      continue;
+
+    // Handle optional arguments
+    OptionalIdx[Op.getImmTy()] = i;
+  }
+
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyExpVM);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyExpCompr);
+
+  Inst.addOperand(MCOperand::createImm(EnMask));
+}
 
 //===----------------------------------------------------------------------===//
 // s_waitcnt
@@ -2266,6 +2367,85 @@ bool AMDGPUAsmParser::parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &O
   return false;
 }
 
+void AMDGPUAsmParser::errorExpTgt() {
+  Error(Parser.getTok().getLoc(), "invalid exp target");
+}
+
+OperandMatchResultTy AMDGPUAsmParser::parseExpTgtImpl(StringRef Str,
+                                                      uint8_t &Val) {
+  if (Str == "null") {
+    Val = 9;
+    return MatchOperand_Success;
+  }
+
+  if (Str.startswith("mrt")) {
+    Str = Str.drop_front(3);
+    if (Str == "z") { // == mrtz
+      Val = 8;
+      return MatchOperand_Success;
+    }
+
+    if (Str.getAsInteger(10, Val))
+      return MatchOperand_ParseFail;
+
+    if (Val > 7)
+      errorExpTgt();
+
+    return MatchOperand_Success;
+  }
+
+  if (Str.startswith("pos")) {
+    Str = Str.drop_front(3);
+    if (Str.getAsInteger(10, Val))
+      return MatchOperand_ParseFail;
+
+    if (Val > 3)
+      errorExpTgt();
+
+    Val += 12;
+    return MatchOperand_Success;
+  }
+
+  if (Str.startswith("param")) {
+    Str = Str.drop_front(5);
+    if (Str.getAsInteger(10, Val))
+      return MatchOperand_ParseFail;
+
+    if (Val >= 32)
+      errorExpTgt();
+
+    Val += 32;
+    return MatchOperand_Success;
+  }
+
+  if (Str.startswith("invalid_target_")) {
+    Str = Str.drop_front(15);
+    if (Str.getAsInteger(10, Val))
+      return MatchOperand_ParseFail;
+
+    errorExpTgt();
+    return MatchOperand_Success;
+  }
+
+  return MatchOperand_NoMatch;
+}
+
+OperandMatchResultTy AMDGPUAsmParser::parseExpTgt(OperandVector &Operands) {
+  uint8_t Val;
+  StringRef Str = Parser.getTok().getString();
+
+  auto Res = parseExpTgtImpl(Str, Val);
+  if (Res != MatchOperand_Success)
+    return Res;
+
+  SMLoc S = Parser.getTok().getLoc();
+  Parser.Lex();
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Val, S,
+                                              AMDGPUOperand::ImmTyExpTgt));
+  return MatchOperand_Success;
+}
+
 OperandMatchResultTy
 AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
   using namespace llvm::AMDGPU::SendMsg;
@@ -2531,6 +2711,18 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultLWE() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyLWE);
 }
 
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultExpTgt() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyExpTgt);
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultExpCompr() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyExpCompr);
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultExpVM() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyExpVM);
+}
+
 //===----------------------------------------------------------------------===//
 // smrd
 //===----------------------------------------------------------------------===//
@@ -2627,6 +2819,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"src0_sel",   AMDGPUOperand::ImmTySdwaSrc0Sel, false, nullptr},
   {"src1_sel",   AMDGPUOperand::ImmTySdwaSrc1Sel, false, nullptr},
   {"dst_unused", AMDGPUOperand::ImmTySdwaDstUnused, false, nullptr},
+  {"vm", AMDGPUOperand::ImmTyExpVM, true, nullptr},
 };
 
 OperandMatchResultTy AMDGPUAsmParser::parseOptionalOperand(OperandVector &Operands) {
@@ -3109,6 +3302,9 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isSSrcF32() ? Match_Success : Match_InvalidOperand;
   case MCK_SoppBrTarget:
     return Operand.isSoppBrTarget() ? Match_Success : Match_InvalidOperand;
-  default: return Match_InvalidOperand;
+  case MCK_VReg32OrOff:
+    return Operand.isVReg32OrOff() ? Match_Success : Match_InvalidOperand;
+  default:
+    return Match_InvalidOperand;
   }
 }

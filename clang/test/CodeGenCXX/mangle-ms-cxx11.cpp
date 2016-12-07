@@ -318,3 +318,28 @@ void unaligned_foo8_S::unaligned_foo8() volatile __unaligned {}
 
 // CHECK-DAG: @"\01?unaligned_foo8@unaligned_foo8_S@@QFCEXXZ"
 
+namespace PR31197 {
+struct A {
+  // CHECK-DAG: define linkonce_odr x86_thiscallcc i32* @"\01??R<lambda_1>@x@A@PR31197@@QBE@XZ"(
+  int *x = []() {
+    static int white;
+    // CHECK-DAG: @"\01?white@?1???R<lambda_1>@x@A@PR31197@@QBE@XZ@4HA"
+    return &white;
+  }();
+  // CHECK-DAG: define linkonce_odr x86_thiscallcc i32* @"\01??R<lambda_1>@y@A@PR31197@@QBE@XZ"(
+  int *y = []() {
+    static int black;
+    // CHECK-DAG: @"\01?black@?1???R<lambda_1>@y@A@PR31197@@QBE@XZ@4HA"
+    return &black;
+  }();
+  using FPtrTy = void(void);
+  static void default_args(FPtrTy x = [] {}, FPtrTy y = [] {}, int z = [] { return 1; }() + [] { return 2; }()) {}
+  // CHECK-DAG: @"\01??R<lambda_1_1>@?0??default_args@A@PR31197@@SAXP6AXXZ0H@Z@QBE@XZ"(
+  // CHECK-DAG: @"\01??R<lambda_1_2>@?0??default_args@A@PR31197@@SAXP6AXXZ0H@Z@QBE@XZ"(
+  // CHECK-DAG: @"\01??R<lambda_2_1>@?0??default_args@A@PR31197@@SAXP6AXXZ0H@Z@QBE@XZ"(
+  // CHECK-DAG: @"\01??R<lambda_3_1>@?0??default_args@A@PR31197@@SAXP6AXXZ0H@Z@QBE@XZ"(
+};
+A a;
+
+int call_it = (A::default_args(), 1);
+}

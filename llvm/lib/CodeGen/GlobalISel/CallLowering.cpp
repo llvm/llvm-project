@@ -107,6 +107,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      ValueHandler &Handler) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
+  const DataLayout &DL = F.getParent()->getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
@@ -124,7 +125,9 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
     if (VA.isRegLoc())
       Handler.assignValueToReg(Args[i].Reg, VA.getLocReg(), VA);
     else if (VA.isMemLoc()) {
-      unsigned Size = VA.getValVT().getSizeInBits() / 8;
+      unsigned Size = VA.getValVT() == MVT::iPTR
+                          ? DL.getPointerSize()
+                          : alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
       unsigned Offset = VA.getLocMemOffset();
       MachinePointerInfo MPO;
       unsigned StackAddr = Handler.getStackAddress(Size, Offset, MPO);

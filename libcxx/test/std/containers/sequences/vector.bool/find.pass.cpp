@@ -17,6 +17,7 @@
 #include <vector>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 
 int main()
 {
@@ -25,7 +26,7 @@ int main()
         {
             std::vector<bool> b(i,true);
             std::vector<bool>::iterator j = std::find(b.begin()+1, b.end(), false);
-            assert(j-b.begin() == i);
+            assert(static_cast<std::size_t>(j-b.begin()) == i);
             assert(b.end() == j);
         }
     }
@@ -34,7 +35,7 @@ int main()
         {
             std::vector<bool> b(i,false);
             std::vector<bool>::iterator j = std::find(b.begin()+1, b.end(), true);
-            assert(j-b.begin() == i);
+            assert(static_cast<std::size_t>(j-b.begin()) == i);
             assert(b.end() == j);
         }
     }

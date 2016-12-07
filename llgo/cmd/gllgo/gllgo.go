@@ -154,16 +154,21 @@ func (san *sanitizerOptions) addLibs(triple string, flags []string) []string {
 }
 
 func (san *sanitizerOptions) getAttribute() llvm.Attribute {
+	var attrKind uint
+
 	switch {
 	case san.address:
-		return llvm.SanitizeAddressAttribute
+		attrKind = llvm.AttributeKindID("sanitize_address")
 	case san.thread:
-		return llvm.SanitizeThreadAttribute
+		attrKind = llvm.AttributeKindID("sanitize_thread")
 	case san.memory:
-		return llvm.SanitizeMemoryAttribute
+		attrKind = llvm.AttributeKindID("sanitize_memory")
 	default:
-		return 0
+		attrKind = 0
 	}
+
+	ctx := llvm.GlobalContext()
+	return ctx.CreateEnumAttribute(attrKind, 0)
 }
 
 type driverOptions struct {

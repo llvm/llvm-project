@@ -57,7 +57,7 @@ struct A {
   A(int);
   ~A();
   
-  A(const A&) = delete; // expected-note 2 {{'A' has been explicitly marked deleted here}}
+  A(const A&) = delete; // expected-note 0-2{{'A' has been explicitly marked deleted here}}
 };
 
 struct B {
@@ -70,10 +70,16 @@ struct C {
 
 void f() {
   A as1[1] = { };
-  A as2[1] = { 1 }; // expected-error {{copying array element of type 'A' invokes deleted constructor}}
+  A as2[1] = { 1 };
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{copying array element of type 'A' invokes deleted constructor}}
+#endif
 
   B b1 = { };
-  B b2 = { 1 }; // expected-error {{copying member subobject of type 'A' invokes deleted constructor}}
+  B b2 = { 1 };
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{copying member subobject of type 'A' invokes deleted constructor}}
+#endif
   
   C c1 = { 1 };
 }

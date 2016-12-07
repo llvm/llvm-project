@@ -3522,7 +3522,7 @@ LValue CodeGenFunction::EmitInitListLValue(const InitListExpr *E) {
     return EmitAggExprToLValue(E);
 
   // An lvalue initializer list must be initializing a reference.
-  assert(E->getNumInits() == 1 && "reference init with multiple values");
+  assert(E->isTransparent() && "non-transparent glvalue init list");
   return EmitLValue(E->getInit(0));
 }
 

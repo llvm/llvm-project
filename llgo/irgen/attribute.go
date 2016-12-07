@@ -74,8 +74,6 @@ func parseAttribute(line string) Attribute {
 		return parseLinkageAttribute(value)
 	case "name":
 		return nameAttribute(strings.TrimSpace(value))
-	case "attr":
-		return parseLLVMAttribute(strings.TrimSpace(value))
 	case "thread_local":
 		return tlsAttribute{}
 	default:
@@ -139,34 +137,6 @@ func (a nameAttribute) Apply(v llvm.Value) {
 		v.SetName(name)
 	} else {
 		v.SetName(string(a))
-	}
-}
-
-func parseLLVMAttribute(value string) llvmAttribute {
-	var result llvmAttribute
-	value = strings.Replace(value, ",", " ", -1)
-	for _, field := range strings.Fields(value) {
-		switch strings.ToLower(field) {
-		case "noreturn":
-			result |= llvmAttribute(llvm.NoReturnAttribute)
-		case "nounwind":
-			result |= llvmAttribute(llvm.NoUnwindAttribute)
-		case "noinline":
-			result |= llvmAttribute(llvm.NoInlineAttribute)
-		case "alwaysinline":
-			result |= llvmAttribute(llvm.AlwaysInlineAttribute)
-		}
-	}
-	return result
-}
-
-type llvmAttribute llvm.Attribute
-
-func (a llvmAttribute) Apply(v llvm.Value) {
-	if !v.IsAFunction().IsNil() {
-		v.AddFunctionAttr(llvm.Attribute(a))
-	} else {
-		v.AddAttribute(llvm.Attribute(a))
 	}
 }
 

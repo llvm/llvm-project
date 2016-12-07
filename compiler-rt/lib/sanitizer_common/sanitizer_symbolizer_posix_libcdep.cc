@@ -55,7 +55,7 @@ const char *DemangleCXXABI(const char *name) {
   // own demangler (libc++abi's implementation could be adapted so that
   // it does not allocate). For now, we just call it anyway, and we leak
   // the returned value.
-  if (__cxxabiv1::__cxa_demangle)
+  if (&__cxxabiv1::__cxa_demangle)
     if (const char *demangled_name =
           __cxxabiv1::__cxa_demangle(name, 0, 0, 0))
       return demangled_name;

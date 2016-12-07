@@ -67,19 +67,22 @@ void SBExpressionOptions::SetFetchDynamicValue(lldb::DynamicValueType dynamic) {
 }
 
 uint32_t SBExpressionOptions::GetTimeoutInMicroSeconds() const {
-  return m_opaque_ap->GetTimeoutUsec();
+  return m_opaque_ap->GetTimeout() ? m_opaque_ap->GetTimeout()->count() : 0;
 }
 
 void SBExpressionOptions::SetTimeoutInMicroSeconds(uint32_t timeout) {
-  m_opaque_ap->SetTimeoutUsec(timeout);
+  m_opaque_ap->SetTimeout(timeout == 0 ? Timeout<std::micro>(llvm::None)
+                                       : std::chrono::microseconds(timeout));
 }
 
 uint32_t SBExpressionOptions::GetOneThreadTimeoutInMicroSeconds() const {
-  return m_opaque_ap->GetOneThreadTimeoutUsec();
+  return m_opaque_ap->GetOneThreadTimeout() ? m_opaque_ap->GetOneThreadTimeout()->count() : 0;
 }
 
 void SBExpressionOptions::SetOneThreadTimeoutInMicroSeconds(uint32_t timeout) {
-  m_opaque_ap->SetOneThreadTimeoutUsec(timeout);
+  m_opaque_ap->SetOneThreadTimeout(timeout == 0
+                                       ? Timeout<std::micro>(llvm::None)
+                                       : std::chrono::microseconds(timeout));
 }
 
 bool SBExpressionOptions::GetTryAllThreads() const {

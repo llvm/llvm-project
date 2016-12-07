@@ -14,6 +14,7 @@
 // template <class T, class... Args>
 //   struct is_constructible;
 
+// MODULES_DEFINES: _LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE
 #define _LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE
 #include <type_traits>
 #include "test_macros.h"

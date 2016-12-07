@@ -77,7 +77,6 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   Tok.setKind(tok::eof);
   Actions.CurScope = nullptr;
   NumCachedScopes = 0;
-  ParenCount = BracketCount = BraceCount = 0;
   CurParsedObjCImpl = nullptr;
 
   // Add #pragma handlers. These are removed and destroyed in the
@@ -2169,19 +2168,35 @@ bool Parser::parseMisplacedModuleImport() {
   while (true) {
     switch (Tok.getKind()) {
     case tok::annot_module_end:
+      // If we recovered from a misplaced module begin, we expect to hit a
+      // misplaced module end too. Stay in the current context when this
+      // happens.
+      if (MisplacedModuleBeginCount) {
+        --MisplacedModuleBeginCount;
+        Actions.ActOnModuleEnd(Tok.getLocation(),
+                               reinterpret_cast<Module *>(
+                                   Tok.getAnnotationValue()));
+        ConsumeToken();
+        continue;
+      }
       // Inform caller that recovery failed, the error must be handled at upper
-      // level.
+      // level. This will generate the desired "missing '}' at end of module"
+      // diagnostics on the way out.
       return true;
     case tok::annot_module_begin:
-      Actions.diagnoseMisplacedModuleImport(reinterpret_cast<Module *>(
-        Tok.getAnnotationValue()), Tok.getLocation());
-      return true;
+      // Recover by entering the module (Sema will diagnose).
+      Actions.ActOnModuleBegin(Tok.getLocation(),
+                               reinterpret_cast<Module *>(
+                                   Tok.getAnnotationValue()));
+      ConsumeToken();
+      ++MisplacedModuleBeginCount;
+      continue;
     case tok::annot_module_include:
       // Module import found where it should not be, for instance, inside a
       // namespace. Recover by importing the module.
       Actions.ActOnModuleInclude(Tok.getLocation(),
                                  reinterpret_cast<Module *>(
-                                 Tok.getAnnotationValue()));
+                                     Tok.getAnnotationValue()));
       ConsumeToken();
       // If there is another module import, process it.
       continue;

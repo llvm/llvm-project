@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; This test checks that no VGPR to SGPR copies are created by the register
 ; allocator.
@@ -223,8 +223,15 @@ declare i32 @llvm.SI.packf16(float, float) #1
 ; an assertion failure.
 
 ; CHECK-LABEL: {{^}}sample_v3:
-; CHECK: image_sample
-; CHECK: image_sample
+; CHECK: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
+; CHECK: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
+; CHECK: s_branch
+
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
+
+; CHECK: BB{{[0-9]+_[0-9]+}}:
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[SAMPLE_LO]]:[[SAMPLE_HI]]{{\]}}
 ; CHECK: exp
 ; CHECK: s_endpgm
 define amdgpu_ps void @sample_v3([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
@@ -241,14 +248,14 @@ entry:
   br i1 %tmp27, label %if, label %else
 
 if:                                               ; preds = %entry
-  %val.if = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> zeroinitializer, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %val.if = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 11, i32 13>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %val.if.0 = extractelement <4 x float> %val.if, i32 0
   %val.if.1 = extractelement <4 x float> %val.if, i32 1
   %val.if.2 = extractelement <4 x float> %val.if, i32 2
   br label %endif
 
 else:                                             ; preds = %entry
-  %val.else = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 1, i32 0>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %val.else = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 5, i32 7>, <8 x i32> %tmp24, <4 x i32> %tmp26.bc, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %val.else.0 = extractelement <4 x float> %val.else, i32 0
   %val.else.1 = extractelement <4 x float> %val.else, i32 1
   %val.else.2 = extractelement <4 x float> %val.else, i32 2
@@ -317,9 +324,15 @@ ENDIF69:                                          ; preds = %LOOP68
 
 ; This test checks that image_sample resource descriptors aren't loaded into
 ; vgprs.  The verifier will fail if this happens.
-; CHECK-LABEL:{{^}}sample_rsrc:
-; CHECK: image_sample
-; CHECK: image_sample
+; CHECK-LABEL:{{^}}sample_rsrc
+
+; CHECK: s_cmp_eq_u32
+; CHECK: s_cbranch_scc0 [[END:BB[0-9]+_[0-9]+]]
+
+; CHECK: v_add_i32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
+
+; [[END]]:
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]{{\]}}
 ; CHECK: s_endpgm
 define amdgpu_ps void @sample_rsrc([6 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <4 x i32>] addrspace(2)* byval %arg2, [32 x <8 x i32>] addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 bb:

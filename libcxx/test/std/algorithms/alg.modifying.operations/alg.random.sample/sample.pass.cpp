@@ -21,6 +21,7 @@
 #include <random>
 #include <type_traits>
 #include <cassert>
+#include <cstddef>
 
 #include "test_iterators.h"
 #include "test_macros.h"
@@ -70,14 +71,14 @@ void test() {
   end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
-  assert(end.base() - oa == std::min(os, is));
+  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
   // sample() is deterministic but non-reproducible;
   // its results can vary between implementations.
   LIBCPP_ASSERT(std::equal(oa, oa + os, oa1));
   end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, std::move(g));
-  assert(end.base() - oa == std::min(os, is));
+  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
   LIBCPP_ASSERT(std::equal(oa, oa + os, oa2));
 }
 
@@ -127,7 +128,7 @@ void test_small_population() {
   end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
-  assert(end.base() - oa == std::min(os, is));
+  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
   typedef typename std::iterator_traits<PopulationIterator>::iterator_category PopulationCategory;
   if (std::is_base_of<std::forward_iterator_tag, PopulationCategory>::value) {
     assert(std::equal(oa, end.base(), oa1));

@@ -214,7 +214,7 @@ public:
         : Base(&makeArgumentID<UsesAllocatorV1 &&>()) {}
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    UsesAllocatorV1(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {};
+    UsesAllocatorV1(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Arg Ctor
     template <class ...Args>
@@ -248,7 +248,7 @@ public:
 
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    UsesAllocatorV2(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {};
+    UsesAllocatorV2(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Last Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity + 1> = false>
@@ -274,7 +274,7 @@ public:
 
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    UsesAllocatorV3(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {};
+    UsesAllocatorV3(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Arg Ctor
     template <class ...Args>
@@ -305,7 +305,7 @@ public:
         : Base(&makeArgumentID<NotUsesAllocator &&>()) {}
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    NotUsesAllocator(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {};
+    NotUsesAllocator(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Arg Ctor
     template <class ...Args>

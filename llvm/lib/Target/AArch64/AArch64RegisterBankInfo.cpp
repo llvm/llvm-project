@@ -83,61 +83,63 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
   // Check that the TableGen'ed like file is in sync we our expectations.
   // First, the Idx.
-  assert(AArch64::PartialMappingIdx::GPR32 ==
-             AArch64::PartialMappingIdx::FirstGPR &&
+  assert(AArch64::PartialMappingIdx::PMI_GPR32 ==
+             AArch64::PartialMappingIdx::PMI_FirstGPR &&
          "GPR32 index not first in the GPR list");
-  assert(AArch64::PartialMappingIdx::GPR64 ==
-             AArch64::PartialMappingIdx::LastGPR &&
+  assert(AArch64::PartialMappingIdx::PMI_GPR64 ==
+             AArch64::PartialMappingIdx::PMI_LastGPR &&
          "GPR64 index not last in the GPR list");
-  assert(AArch64::PartialMappingIdx::FirstGPR <=
-             AArch64::PartialMappingIdx::LastGPR &&
+  assert(AArch64::PartialMappingIdx::PMI_FirstGPR <=
+             AArch64::PartialMappingIdx::PMI_LastGPR &&
          "GPR list is backward");
-  assert(AArch64::PartialMappingIdx::FPR32 ==
-             AArch64::PartialMappingIdx::FirstFPR &&
+  assert(AArch64::PartialMappingIdx::PMI_FPR32 ==
+             AArch64::PartialMappingIdx::PMI_FirstFPR &&
          "FPR32 index not first in the FPR list");
-  assert(AArch64::PartialMappingIdx::FPR512 ==
-             AArch64::PartialMappingIdx::LastFPR &&
+  assert(AArch64::PartialMappingIdx::PMI_FPR512 ==
+             AArch64::PartialMappingIdx::PMI_LastFPR &&
          "FPR512 index not last in the FPR list");
-  assert(AArch64::PartialMappingIdx::FirstFPR <=
-             AArch64::PartialMappingIdx::LastFPR &&
+  assert(AArch64::PartialMappingIdx::PMI_FirstFPR <=
+             AArch64::PartialMappingIdx::PMI_LastFPR &&
          "FPR list is backward");
-  assert(AArch64::PartialMappingIdx::FPR32 + 1 ==
-             AArch64::PartialMappingIdx::FPR64 &&
-         AArch64::PartialMappingIdx::FPR64 + 1 ==
-             AArch64::PartialMappingIdx::FPR128 &&
-         AArch64::PartialMappingIdx::FPR128 + 1 ==
-             AArch64::PartialMappingIdx::FPR256 &&
-         AArch64::PartialMappingIdx::FPR256 + 1 ==
-             AArch64::PartialMappingIdx::FPR512 &&
+  assert(AArch64::PartialMappingIdx::PMI_FPR32 + 1 ==
+             AArch64::PartialMappingIdx::PMI_FPR64 &&
+         AArch64::PartialMappingIdx::PMI_FPR64 + 1 ==
+             AArch64::PartialMappingIdx::PMI_FPR128 &&
+         AArch64::PartialMappingIdx::PMI_FPR128 + 1 ==
+             AArch64::PartialMappingIdx::PMI_FPR256 &&
+         AArch64::PartialMappingIdx::PMI_FPR256 + 1 ==
+             AArch64::PartialMappingIdx::PMI_FPR512 &&
          "FPR indices not properly ordered");
 // Now, the content.
 // Check partial mapping.
 #define CHECK_PARTIALMAP(Idx, ValStartIdx, ValLength, RB)                      \
   do {                                                                         \
     const PartialMapping &Map =                                                \
-        AArch64::PartMappings[AArch64::PartialMappingIdx::Idx];                \
-    (void) Map;                                                                \
+        AArch64::PartMappings[AArch64::PartialMappingIdx::Idx -                \
+                              AArch64::PartialMappingIdx::PMI_Min];            \
+    (void)Map;                                                                 \
     assert(Map.StartIdx == ValStartIdx && Map.Length == ValLength &&           \
            Map.RegBank == &RB && #Idx " is incorrectly initialized");          \
   } while (0)
 
-  CHECK_PARTIALMAP(GPR32, 0, 32, RBGPR);
-  CHECK_PARTIALMAP(GPR64, 0, 64, RBGPR);
-  CHECK_PARTIALMAP(FPR32, 0, 32, RBFPR);
-  CHECK_PARTIALMAP(FPR64, 0, 64, RBFPR);
-  CHECK_PARTIALMAP(FPR128, 0, 128, RBFPR);
-  CHECK_PARTIALMAP(FPR256, 0, 256, RBFPR);
-  CHECK_PARTIALMAP(FPR512, 0, 512, RBFPR);
+  CHECK_PARTIALMAP(PMI_GPR32, 0, 32, RBGPR);
+  CHECK_PARTIALMAP(PMI_GPR64, 0, 64, RBGPR);
+  CHECK_PARTIALMAP(PMI_FPR32, 0, 32, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR64, 0, 64, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR128, 0, 128, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR256, 0, 256, RBFPR);
+  CHECK_PARTIALMAP(PMI_FPR512, 0, 512, RBFPR);
 
 // Check value mapping.
 #define CHECK_VALUEMAP_IMPL(RBName, Size, Offset)                              \
   do {                                                                         \
-    AArch64::PartialMappingIdx PartialMapBaseIdx =                             \
-        AArch64::PartialMappingIdx::RBName##Size;                              \
-    (void) PartialMapBaseIdx;                                                  \
-    const ValueMapping &Map =                                                  \
-        AArch64::getValueMapping(AArch64::First##RBName, Size)[Offset];        \
-    (void) Map;                                                                \
+    unsigned PartialMapBaseIdx =                                               \
+        AArch64::PartialMappingIdx::PMI_##RBName##Size -                       \
+        AArch64::PartialMappingIdx::PMI_Min;                                   \
+    (void)PartialMapBaseIdx;                                                   \
+    const ValueMapping &Map = AArch64::getValueMapping(                        \
+        AArch64::PartialMappingIdx::PMI_First##RBName, Size)[Offset];          \
+    (void)Map;                                                                 \
     assert(Map.BreakDown == &AArch64::PartMappings[PartialMapBaseIdx] &&       \
            Map.NumBreakDowns == 1 && #RBName #Size                             \
            " " #Offset " is incorrectly initialized");                         \
@@ -172,15 +174,15 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
 #define CHECK_VALUEMAP_CROSSREGCPY(RBNameDst, RBNameSrc, Size)                 \
   do {                                                                         \
-    AArch64::PartialMappingIdx PartialMapDstIdx =                              \
-        AArch64::PartialMappingIdx::RBNameDst##Size;                           \
-    AArch64::PartialMappingIdx PartialMapSrcIdx =                              \
-        AArch64::PartialMappingIdx::RBNameSrc##Size;                           \
+    unsigned PartialMapDstIdx =                                                \
+        AArch64::PMI_##RBNameDst##Size - AArch64::PMI_Min;                     \
+    unsigned PartialMapSrcIdx =                                                \
+        AArch64::PMI_##RBNameSrc##Size - AArch64::PMI_Min;                     \
     (void) PartialMapDstIdx;                                                   \
     (void) PartialMapSrcIdx;                                                   \
     const ValueMapping *Map = AArch64::getCopyMapping(                         \
-        AArch64::First##RBNameDst == AArch64::FirstGPR,                        \
-        AArch64::First##RBNameSrc == AArch64::FirstGPR, Size);                 \
+        AArch64::PMI_First##RBNameDst == AArch64::PMI_FirstGPR,                \
+        AArch64::PMI_First##RBNameSrc == AArch64::PMI_FirstGPR, Size);         \
     (void) Map;                                                                \
     assert(Map[0].BreakDown == &AArch64::PartMappings[PartialMapDstIdx] &&     \
            Map[0].NumBreakDowns == 1 && #RBNameDst #Size                       \
@@ -283,10 +285,12 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
       break;
     InstructionMappings AltMappings;
     InstructionMapping GPRMapping(
-        /*ID*/ 1, /*Cost*/ 1, AArch64::getValueMapping(AArch64::FirstGPR, Size),
+        /*ID*/ 1, /*Cost*/ 1,
+        AArch64::getValueMapping(AArch64::PMI_FirstGPR, Size),
         /*NumOperands*/ 3);
     InstructionMapping FPRMapping(
-        /*ID*/ 2, /*Cost*/ 1, AArch64::getValueMapping(AArch64::FirstFPR, Size),
+        /*ID*/ 2, /*Cost*/ 1,
+        AArch64::getValueMapping(AArch64::PMI_FirstFPR, Size),
         /*NumOperands*/ 3);
 
     AltMappings.emplace_back(std::move(GPRMapping));
@@ -310,17 +314,17 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
         /*NumOperands*/ 2);
     InstructionMapping FPRMapping(
         /*ID*/ 2, /*Cost*/ 1,
-        AArch64::getCopyMapping(/*DstIsFPR*/ false, /*SrcIsFPR*/ false, Size),
+        AArch64::getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ false, Size),
         /*NumOperands*/ 2);
     InstructionMapping GPRToFPRMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
-        AArch64::getCopyMapping(/*DstIsFPR*/ false, /*SrcIsFPR*/ true, Size),
+        AArch64::getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ true, Size),
         /*NumOperands*/ 2);
     InstructionMapping FPRToGPRMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
-        AArch64::getCopyMapping(/*DstIsFPR*/ true, /*SrcIsFPR*/ false, Size),
+        AArch64::getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ false, Size),
         /*NumOperands*/ 2);
 
     AltMappings.emplace_back(std::move(GPRMapping));
@@ -342,15 +346,17 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     InstructionMappings AltMappings;
     InstructionMapping GPRMapping(
         /*ID*/ 1, /*Cost*/ 1,
-        getOperandsMapping({AArch64::getValueMapping(AArch64::FirstGPR, Size),
-                            // Addresses are GPR 64-bit.
-                            AArch64::getValueMapping(AArch64::FirstGPR, 64)}),
+        getOperandsMapping(
+            {AArch64::getValueMapping(AArch64::PMI_FirstGPR, Size),
+             // Addresses are GPR 64-bit.
+             AArch64::getValueMapping(AArch64::PMI_FirstGPR, 64)}),
         /*NumOperands*/ 2);
     InstructionMapping FPRMapping(
         /*ID*/ 2, /*Cost*/ 1,
-        getOperandsMapping({AArch64::getValueMapping(AArch64::FirstFPR, Size),
-                            // Addresses are GPR 64-bit.
-                            AArch64::getValueMapping(AArch64::FirstGPR, 64)}),
+        getOperandsMapping(
+            {AArch64::getValueMapping(AArch64::PMI_FirstFPR, Size),
+             // Addresses are GPR 64-bit.
+             AArch64::getValueMapping(AArch64::PMI_FirstGPR, 64)}),
         /*NumOperands*/ 2);
 
     AltMappings.emplace_back(std::move(GPRMapping));
@@ -370,7 +376,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
   case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_LOAD: {
     // Those ID must match getInstrAlternativeMappings.
-    assert((OpdMapper.getInstrMapping().getID() >= 1 ||
+    assert((OpdMapper.getInstrMapping().getID() >= 1 &&
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
@@ -431,7 +437,7 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(const MachineInstr &MI) {
 #endif // End NDEBUG.
 
   AArch64::PartialMappingIdx RBIdx =
-      IsFPR ? AArch64::FirstFPR : AArch64::FirstGPR;
+      IsFPR ? AArch64::PMI_FirstFPR : AArch64::PMI_FirstGPR;
 
   return InstructionMapping{DefaultMappingID, 1,
                             AArch64::getValueMapping(RBIdx, Size), NumOperands};
@@ -488,6 +494,10 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                               AArch64::getCopyMapping(DstIsGPR, SrcIsGPR, Size),
                               /*NumOperands*/ 2};
   }
+  case TargetOpcode::G_SEQUENCE:
+    // FIXME: support this, but the generic code is really not going to do
+    // anything sane.
+    return InstructionMapping();
   default:
     break;
   }
@@ -508,9 +518,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // As a top-level guess, vectors go in FPRs, scalars and pointers in GPRs.
     // For floating-point instructions, scalars go in FPRs.
     if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc))
-      OpRegBankIdx[Idx] = AArch64::FirstFPR;
+      OpRegBankIdx[Idx] = AArch64::PMI_FirstFPR;
     else
-      OpRegBankIdx[Idx] = AArch64::FirstGPR;
+      OpRegBankIdx[Idx] = AArch64::PMI_FirstGPR;
   }
 
   unsigned Cost = 1;
@@ -519,18 +529,18 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP: {
-    OpRegBankIdx = {AArch64::FirstFPR, AArch64::FirstGPR};
+    OpRegBankIdx = {AArch64::PMI_FirstFPR, AArch64::PMI_FirstGPR};
     break;
   }
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
-    OpRegBankIdx = {AArch64::FirstGPR, AArch64::FirstFPR};
+    OpRegBankIdx = {AArch64::PMI_FirstGPR, AArch64::PMI_FirstFPR};
     break;
   }
   case TargetOpcode::G_FCMP: {
-    OpRegBankIdx = {AArch64::FirstGPR,
-                    /* Predicate */ AArch64::PartialMappingIdx::None,
-                    AArch64::FirstFPR, AArch64::FirstFPR};
+    OpRegBankIdx = {AArch64::PMI_FirstGPR,
+                    /* Predicate */ AArch64::PMI_None, AArch64::PMI_FirstFPR,
+                    AArch64::PMI_FirstFPR};
     break;
   }
   case TargetOpcode::G_BITCAST: {
@@ -548,7 +558,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // for the greedy mode the cost of the cross bank copy will
     // offset this number.
     // FIXME: Should be derived from the scheduling model.
-    if (OpRegBankIdx[0] >= AArch64::FirstFPR)
+    if (OpRegBankIdx[0] >= AArch64::PMI_FirstFPR)
       Cost = 2;
   }
   }

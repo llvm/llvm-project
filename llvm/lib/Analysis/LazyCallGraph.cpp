@@ -258,6 +258,9 @@ void LazyCallGraph::RefSCC::verify() {
            "SCC doesn't think it is inside this RefSCC!");
     bool Inserted = SCCSet.insert(C).second;
     assert(Inserted && "Found a duplicate SCC!");
+    auto IndexIt = SCCIndices.find(C);
+    assert(IndexIt != SCCIndices.end() &&
+           "Found an SCC that doesn't have an index!");
   }
 
   // Check that our indices map correctly.
@@ -285,6 +288,20 @@ void LazyCallGraph::RefSCC::verify() {
         assert(TargetSCC.getOuterRefSCC().Parents.count(this) &&
                "Edge to a RefSCC missing us in its parent set.");
       }
+  }
+
+  // Check that our parents are actually parents.
+  for (RefSCC *ParentRC : Parents) {
+    assert(ParentRC != this && "Cannot be our own parent!");
+    auto HasConnectingEdge = [&] {
+      for (SCC &C : *ParentRC)
+        for (Node &N : C)
+          for (Edge &E : N)
+            if (G->lookupRefSCC(*E.getNode()) == this)
+              return true;
+      return false;
+    };
+    assert(HasConnectingEdge() && "No edge connects the parent to us!");
   }
 }
 #endif
@@ -934,8 +951,12 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
           SourceC, *this, G->PostOrderRefSCCs, G->RefSCCIndices,
           ComputeSourceConnectedSet, ComputeTargetConnectedSet);
 
-  // Build a set so we can do fast tests for whether a merge is occuring.
+  // Build a set so we can do fast tests for whether a RefSCC will end up as
+  // part of the merged RefSCC.
   SmallPtrSet<RefSCC *, 16> MergeSet(MergeRange.begin(), MergeRange.end());
+
+  // This RefSCC will always be part of that set, so just insert it here.
+  MergeSet.insert(this);
 
   // Now that we have identified all of the SCCs which need to be merged into
   // a connected set with the inserted edge, merge all of them into this SCC.
@@ -1203,9 +1224,8 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
           }
 
           // If this child isn't currently in this RefSCC, no need to process
-          // it.
-          // However, we do need to remove this RefSCC from its RefSCC's parent
-          // set.
+          // it. However, we do need to remove this RefSCC from its RefSCC's
+          // parent set.
           RefSCC &ChildRC = *G->lookupRefSCC(ChildN);
           ChildRC.Parents.erase(this);
           ++I;
@@ -1305,7 +1325,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
     RefSCC &RC = *Result[SCCNumber - 1];
     int SCCIndex = RC.SCCs.size();
     RC.SCCs.push_back(C);
-    SCCIndices[C] = SCCIndex;
+    RC.SCCIndices[C] = SCCIndex;
     C->OuterRefSCC = &RC;
   }
 
@@ -1358,12 +1378,13 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
   SmallVector<RefSCC *, 4> OldParents(Parents.begin(), Parents.end());
   Parents.clear();
   for (RefSCC *ParentRC : OldParents)
-    for (SCC *ParentC : ParentRC->SCCs)
-      for (Node &ParentN : *ParentC)
+    for (SCC &ParentC : *ParentRC)
+      for (Node &ParentN : ParentC)
         for (Edge &E : ParentN) {
           assert(E.getNode() && "Cannot have a missing node in a visited SCC!");
           RefSCC &RC = *G->lookupRefSCC(*E.getNode());
-          RC.Parents.insert(ParentRC);
+          if (&RC != ParentRC)
+            RC.Parents.insert(ParentRC);
         }
 
   // If this SCC stopped being a leaf through this edge removal, remove it from
@@ -1375,6 +1396,12 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
     G->LeafRefSCCs.erase(
         std::remove(G->LeafRefSCCs.begin(), G->LeafRefSCCs.end(), this),
         G->LeafRefSCCs.end());
+
+#ifndef NDEBUG
+  // Verify all of the new RefSCCs.
+  for (RefSCC *RC : Result)
+    RC->verify();
+#endif
 
   // Return the new list of SCCs.
   return Result;
