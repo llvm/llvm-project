@@ -270,8 +270,7 @@ bool SIMemoryLegalizer::expandAtomicLoad(MachineBasicBlock::iterator &MI) {
   switch (SynchScope) {
   case AMDGPUSynchronizationScope::System:
   case AMDGPUSynchronizationScope::Agent: {
-    if (Ordering == AtomicOrdering::Monotonic ||
-        Ordering == AtomicOrdering::Acquire ||
+    if (Ordering == AtomicOrdering::Acquire ||
         Ordering == AtomicOrdering::SequentiallyConsistent)
       Changed |= setGLC(MI);
 
