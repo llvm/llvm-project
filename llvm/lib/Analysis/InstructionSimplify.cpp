@@ -1523,11 +1523,8 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
 static Value *simplifyAndOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
   ICmpInst::Predicate Pred0, Pred1;
   Value *A ,*B;
-  match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B)));
-  if (match(Op1, m_ICmp(Pred1, m_Specific(B), m_Specific(A))))
-    Op1->swapOperands();
-
-  if (!match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
+  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
+      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
     return nullptr;
 
   // We have (icmp Pred0, A, B) & (icmp Pred1, A, B).
@@ -1738,11 +1735,8 @@ Value *llvm::SimplifyAndInst(Value *Op0, Value *Op1, const DataLayout &DL,
 static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
   ICmpInst::Predicate Pred0, Pred1;
   Value *A ,*B;
-  match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B)));
-  if (match(Op1, m_ICmp(Pred1, m_Specific(B), m_Specific(A))))
-    Op1->swapOperands();
-
-  if (!match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
+  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
+      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
     return nullptr;
 
   // We have (icmp Pred0, A, B) | (icmp Pred1, A, B).

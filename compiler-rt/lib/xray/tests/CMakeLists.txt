@@ -46,6 +46,7 @@ macro(add_xray_unittest testname)
           DEPS ${TEST_DEPS}
           LINK_FLAGS ${TARGET_LINK_FLAGS}
           -lstdc++ -lm ${CMAKE_THREAD_LIBS_INIT}
+          -lpthread
           -L${COMPILER_RT_LIBRARY_OUTPUT_DIR} -lclang_rt.xray-fdr-${arch})
       endif()
       # FIXME: Figure out how to run even just the unit tests on APPLE.

@@ -18,24 +18,30 @@
 #ifndef LLVM_IR_GLOBALVALUE_H
 #define LLVM_IR_GLOBALVALUE_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
+#include <string>
 
 namespace llvm {
 
 class Comdat;
 class Error;
 class GlobalObject;
-class PointerType;
 class Module;
 
 namespace Intrinsic {
   enum ID : unsigned;
-}
+} // end namespace Intrinsic
 
 class GlobalValue : public Constant {
-  GlobalValue(const GlobalValue &) = delete;
 public:
   /// @brief An enumeration for the kinds of linkage for global values.
   enum LinkageTypes {
@@ -90,11 +96,12 @@ protected:
   static const unsigned GlobalValueSubClassDataBits = 19;
 
 private:
+  friend class Constant;
+
   // Give subclasses access to what otherwise would be wasted padding.
   // (19 + 4 + 2 + 2 + 2 + 3) == 32.
   unsigned SubClassData : GlobalValueSubClassDataBits;
 
-  friend class Constant;
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
@@ -154,6 +161,8 @@ public:
     InitialExecTLSModel,
     LocalExecTLSModel
   };
+
+  GlobalValue(const GlobalValue &) = delete;
 
   ~GlobalValue() override {
     removeDeadConstantUsers();   // remove any dead constants using this.
@@ -522,6 +531,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GLOBALVALUE_H

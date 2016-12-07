@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/BasicBlock.h"
@@ -45,6 +44,8 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <algorithm>
+#include <functional>
 
 namespace llvm {
 
@@ -101,7 +102,7 @@ protected:
 public:
   IRBuilderBase(LLVMContext &context, MDNode *FPMathTag = nullptr,
                 ArrayRef<OperandBundleDef> OpBundles = None)
-      : Context(context), DefaultFPMathTag(FPMathTag), FMF(),
+      : Context(context), DefaultFPMathTag(FPMathTag),
         DefaultOperandBundles(OpBundles) {
     ClearInsertionPoint();
   }
@@ -165,12 +166,12 @@ public:
 
   /// InsertPoint - A saved insertion point.
   class InsertPoint {
-    BasicBlock *Block;
+    BasicBlock *Block = nullptr;
     BasicBlock::iterator Point;
 
   public:
     /// \brief Creates a new insertion point which doesn't point to anything.
-    InsertPoint() : Block(nullptr) {}
+    InsertPoint() = default;
 
     /// \brief Creates a new insertion point at the given location.
     InsertPoint(BasicBlock *InsertBlock, BasicBlock::iterator InsertPoint)
@@ -179,8 +180,8 @@ public:
     /// \brief Returns true if this insert point is set.
     bool isSet() const { return (Block != nullptr); }
 
-    llvm::BasicBlock *getBlock() const { return Block; }
-    llvm::BasicBlock::iterator getPoint() const { return Point; }
+    BasicBlock *getBlock() const { return Block; }
+    BasicBlock::iterator getPoint() const { return Point; }
   };
 
   /// \brief Returns the current insert point.
@@ -230,13 +231,13 @@ public:
     BasicBlock::iterator Point;
     DebugLoc DbgLoc;
 
-    InsertPointGuard(const InsertPointGuard &) = delete;
-    InsertPointGuard &operator=(const InsertPointGuard &) = delete;
-
   public:
     InsertPointGuard(IRBuilderBase &B)
         : Builder(B), Block(B.GetInsertBlock()), Point(B.GetInsertPoint()),
           DbgLoc(B.getCurrentDebugLocation()) {}
+
+    InsertPointGuard(const InsertPointGuard &) = delete;
+    InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
     ~InsertPointGuard() {
       Builder.restoreIP(InsertPoint(Block, Point));
@@ -251,13 +252,12 @@ public:
     FastMathFlags FMF;
     MDNode *FPMathTag;
 
-    FastMathFlagGuard(const FastMathFlagGuard &) = delete;
-    FastMathFlagGuard &operator=(
-        const FastMathFlagGuard &) = delete;
-
   public:
     FastMathFlagGuard(IRBuilderBase &B)
         : Builder(B), FMF(B.FMF), FPMathTag(B.DefaultFPMathTag) {}
+
+    FastMathFlagGuard(const FastMathFlagGuard &) = delete;
+    FastMathFlagGuard &operator=(const FastMathFlagGuard &) = delete;
 
     ~FastMathFlagGuard() {
       Builder.FMF = FMF;
@@ -1035,7 +1035,7 @@ public:
     if (Constant *LC = dyn_cast<Constant>(LHS))
       if (Constant *RC = dyn_cast<Constant>(RHS))
         return Insert(Folder.CreateBinOp(Opc, LC, RC), Name);
-    llvm::Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
+    Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
       BinOp = AddFPMathAttributes(BinOp, FPMathTag, FMF);
     return Insert(BinOp, Name);
@@ -1445,12 +1445,6 @@ public:
     return CreateBitCast(V, DestTy, Name);
   }
 
-private:
-  // \brief Provided to resolve 'CreateIntCast(Ptr, Ptr, "...")', giving a
-  // compile time error, instead of converting the string to bool for the
-  // isSigned parameter.
-  Value *CreateIntCast(Value *, Type *, const char *) = delete;
-
 public:
   Value *CreateFPCast(Value *V, Type *DestTy, const Twine &Name = "") {
     if (V->getType() == DestTy)
@@ -1459,6 +1453,11 @@ public:
       return Insert(Folder.CreateFPCast(VC, DestTy), Name);
     return Insert(CastInst::CreateFPCast(V, DestTy), Name);
   }
+
+  // \brief Provided to resolve 'CreateIntCast(Ptr, Ptr, "...")', giving a
+  // compile time error, instead of converting the string to bool for the
+  // isSigned parameter.
+  Value *CreateIntCast(Value *, Type *, const char *) = delete;
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions
@@ -1584,7 +1583,7 @@ public:
     return CreateCall(FTy, Callee, Args, Name, FPMathTag);
   }
 
-  CallInst *CreateCall(llvm::FunctionType *FTy, Value *Callee,
+  CallInst *CreateCall(FunctionType *FTy, Value *Callee,
                        ArrayRef<Value *> Args, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
     CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);

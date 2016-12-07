@@ -224,29 +224,15 @@ public:
           return false;
         return markOverdefined();
       }
-
-      if (RHS.isNotConstant()) {
-        if (Val == RHS.Val)
-          return markOverdefined();
-        return markOverdefined();
-      }
-
       return markOverdefined();
     }
 
     if (isNotConstant()) {
-      if (RHS.isConstant()) {
-        if (Val == RHS.Val)
-          return markOverdefined();
-        return markOverdefined();
-      }
-
       if (RHS.isNotConstant()) {
         if (Val == RHS.Val)
           return false;
         return markOverdefined();
       }
-
       return markOverdefined();
     }
 
