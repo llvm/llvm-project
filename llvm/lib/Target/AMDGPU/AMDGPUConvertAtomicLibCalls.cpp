@@ -84,7 +84,7 @@ private:
   Value *lowerAtomicLoad(IRBuilder<> LlvmBuilder, CallSite *CS);
   Value *lowerAtomicStore(IRBuilder<> LlvmBuilder, StringRef Name,
                           CallSite *CS);
-  Value *lowerAtomicCmpXchg(IRBuilder<> LlvmBuilder, CallSite *CS);
+  Value *lowerAtomicCmpXchg(IRBuilder<> LlvmBuilder, CallSite *CS, bool isWeak);
   Value *lowerAtomicRMW(IRBuilder<> LlvmBuilder, StringRef Name, CallSite *CS);
   Value *lowerAtomicInit(IRBuilder<> LlvmBuilder, CallSite *CS);
 };
@@ -119,10 +119,16 @@ static bool isOCLAtomicStore(StringRef FuncName) {
   return true;
 }
 
-static bool isOCLAtomicCmpXchg(StringRef FuncName) {
+static bool isOCLAtomicCmpXchgStrong(StringRef FuncName) {
   if (!FuncName.startswith("_Z") ||
-      ((FuncName.find("atomic_compare_exchange_strong") == StringRef::npos) &&
-       (FuncName.find("atomic_compare_exchange_weak") == StringRef::npos)))
+      FuncName.find("atomic_compare_exchange_strong") == StringRef::npos)
+    return false;
+  return true;
+}
+
+static bool isOCLAtomicCmpXchgWeak(StringRef FuncName) {
+  if (!FuncName.startswith("_Z") ||
+      FuncName.find("atomic_compare_exchange_weak") == StringRef::npos)
     return false;
   return true;
 }
@@ -242,8 +248,10 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomic(StringRef Name, CallSite *CS) {
     return lowerAtomicLoad(LlvmBuilder, CS);
   if (isOCLAtomicStore(Name) || isOCLAtomicFlagClear(Name))
     return lowerAtomicStore(LlvmBuilder, Name, CS);
-  if (isOCLAtomicCmpXchg(Name))
-    return lowerAtomicCmpXchg(LlvmBuilder, CS);
+  if (isOCLAtomicCmpXchgStrong(Name))
+    return lowerAtomicCmpXchg(LlvmBuilder, CS, false);
+  if (isOCLAtomicCmpXchgWeak(Name))
+    return lowerAtomicCmpXchg(LlvmBuilder, CS, true);
   if (isOCLAtomicRMW(Name) || isOCLAtomicTestAndSet(Name))
     return lowerAtomicRMW(LlvmBuilder, Name, CS);
   if (isOCLAtomicInit(Name))
@@ -308,7 +316,8 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
 }
 
 Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
-                                                       CallSite *Inst) {
+                                                       CallSite *Inst,
+                                                       bool isWeak) {
   Value *Ptr = Inst->getArgOperand(0);
   Value *Expected = Inst->getArgOperand(1);
   Value *Desired = Inst->getArgOperand(2);
@@ -321,6 +330,8 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
       (SynchronizationScope)AMDGPUSynchronizationScope::System);
   dyn_cast<AtomicCmpXchgInst>(Cas)->setSynchScope(
       (SynchronizationScope)memScope);
+  dyn_cast<AtomicCmpXchgInst>(Cas)->setVolatile(true);
+  dyn_cast<AtomicCmpXchgInst>(Cas)->setWeak(isWeak);
 
   Value *Cas0 = llvmBuilder.CreateExtractValue(Cas, 0);
   Value *Cas1 = llvmBuilder.CreateExtractValue(Cas, 1);
