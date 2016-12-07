@@ -14,6 +14,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -446,6 +447,15 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
       AMDGPU::BUFFER_WBINVL1 : AMDGPU::BUFFER_WBINVL1_VOL;
   Vmcnt0Immediate =
       AMDGPU::encodeWaitcnt(IV, 0, getExpcntBitMask(IV), getLgkmcntBitMask(IV));
+
+  // FIXME: M0 initialization should be done during ISel.
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  if (MFI.HasFlatLocalCasts) {
+    MachineBasicBlock &MBB = *MF.begin();
+    MachineInstr &MI = *MBB.begin();
+    BuildMI(MBB, MI, DebugLoc(), TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+        .addImm(-1);
+  }
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
