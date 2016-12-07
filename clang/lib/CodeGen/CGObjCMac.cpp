@@ -7148,7 +7148,7 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
 
   assert(GV->getLinkage() == L);
 
-  if (ForDefinition ||
+  if (IsForDefinition ||
       GV->getValueType() == ObjCTypes.ClassnfABITy)
     return GV;
 
