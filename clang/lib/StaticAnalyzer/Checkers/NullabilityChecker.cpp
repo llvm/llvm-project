@@ -333,7 +333,7 @@ PathDiagnosticPiece *NullabilityChecker::NullabilityBugVisitor::VisitNode(
 
   std::string InfoText =
       (llvm::Twine("Nullability '") +
-       getNullabilityString(TrackedNullab->getValue()) + "' is infered")
+       getNullabilityString(TrackedNullab->getValue()) + "' is inferred")
           .str();
 
   // Generate the extra diagnostic.
