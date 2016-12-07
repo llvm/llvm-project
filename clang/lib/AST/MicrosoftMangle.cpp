@@ -66,6 +66,16 @@ struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
   }
 };
 
+static const DeclContext *
+getLambdaDefaultArgumentDeclContext(const Decl *D) {
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(D))
+    if (RD->isLambda())
+      if (const auto *Parm =
+              dyn_cast_or_null<ParmVarDecl>(RD->getLambdaContextDecl()))
+        return Parm->getDeclContext();
+  return nullptr;
+}
+
 /// \brief Retrieve the declaration context that should be used when mangling
 /// the given declaration.
 static const DeclContext *getEffectiveDeclContext(const Decl *D) {
@@ -75,12 +85,8 @@ static const DeclContext *getEffectiveDeclContext(const Decl *D) {
   // not the case: the lambda closure type ends up living in the context
   // where the function itself resides, because the function declaration itself
   // had not yet been created. Fix the context here.
-  if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
-    if (RD->isLambda())
-      if (ParmVarDecl *ContextParam =
-              dyn_cast_or_null<ParmVarDecl>(RD->getLambdaContextDecl()))
-        return ContextParam->getDeclContext();
-  }
+  if (const auto *LDADC = getLambdaDefaultArgumentDeclContext(D))
+    return LDADC;
 
   // Perform the same check for block literals.
   if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
@@ -110,14 +116,6 @@ static const FunctionDecl *getStructor(const NamedDecl *ND) {
     return FTD->getTemplatedDecl();
 
   return FD;
-}
-
-static bool isLambda(const NamedDecl *ND) {
-  const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(ND);
-  if (!Record)
-    return false;
-
-  return Record->isLambda();
 }
 
 /// MicrosoftMangleContextImpl - Overrides the default MangleContext for the
@@ -200,9 +198,11 @@ public:
 
     // Lambda closure types are already numbered, give out a phony number so
     // that they demangle nicely.
-    if (isLambda(ND)) {
-      disc = 1;
-      return true;
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
+      if (RD->isLambda()) {
+        disc = 1;
+        return true;
+      }
     }
 
     // Use the canonical number for externally visible decls.
@@ -824,9 +824,24 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
       if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
         if (Record->isLambda()) {
           llvm::SmallString<10> Name("<lambda_");
+
+          Decl *LambdaContextDecl = Record->getLambdaContextDecl();
+          unsigned LambdaManglingNumber = Record->getLambdaManglingNumber();
           unsigned LambdaId;
-          if (Record->getLambdaManglingNumber())
-            LambdaId = Record->getLambdaManglingNumber();
+          const ParmVarDecl *Parm =
+              dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
+          const FunctionDecl *Func =
+              Parm ? dyn_cast<FunctionDecl>(Parm->getDeclContext()) : nullptr;
+
+          if (Func) {
+            unsigned DefaultArgNo =
+                Func->getNumParams() - Parm->getFunctionScopeIndex();
+            Name += llvm::utostr(DefaultArgNo);
+            Name += "_";
+          }
+
+          if (LambdaManglingNumber)
+            LambdaId = LambdaManglingNumber;
           else
             LambdaId = Context.getLambdaId(Record);
 
@@ -834,6 +849,16 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
           Name += ">";
 
           mangleSourceName(Name);
+
+          // If the context of a closure type is an initializer for a class
+          // member (static or nonstatic), it is encoded in a qualified name.
+          if (LambdaManglingNumber && LambdaContextDecl) {
+            if ((isa<VarDecl>(LambdaContextDecl) ||
+                 isa<FieldDecl>(LambdaContextDecl)) &&
+                LambdaContextDecl->getDeclContext()->isRecord()) {
+              mangleUnqualifiedName(cast<NamedDecl>(LambdaContextDecl));
+            }
+          }
           break;
         }
       }
@@ -937,7 +962,6 @@ void MicrosoftCXXNameMangler::mangleNestedName(const NamedDecl *ND) {
       // for how this should be done.
       Out << "__block_invoke" << Context.getBlockId(BD, false);
       Out << '@';
-      continue;
     } else if (const ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(DC)) {
       mangleObjCMethodName(Method);
     } else if (isa<NamedDecl>(DC)) {
@@ -945,8 +969,15 @@ void MicrosoftCXXNameMangler::mangleNestedName(const NamedDecl *ND) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
         mangle(FD, "?");
         break;
-      } else
+      } else {
         mangleUnqualifiedName(ND);
+        // Lambdas in default arguments conceptually belong to the function the
+        // parameter corresponds to.
+        if (const auto *LDADC = getLambdaDefaultArgumentDeclContext(ND)) {
+          DC = LDADC;
+          continue;
+        }
+      }
     }
     DC = DC->getParent();
   }

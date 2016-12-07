@@ -795,7 +795,7 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   if (DtFlags1)
     add({DT_FLAGS_1, DtFlags1});
 
-  if (!Config->Entry.empty())
+  if (!Config->Shared && !Config->Relocatable)
     add({DT_DEBUG, (uint64_t)0});
 }
 

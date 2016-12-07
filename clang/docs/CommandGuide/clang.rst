@@ -167,16 +167,6 @@ Language Selection and Mode Options
 
  Enable the "Blocks" language feature.
 
-.. option:: -fobjc-gc-only
-
- Indicate that Objective-C code should be compiled in GC-only mode, which only
- works when Objective-C Garbage Collection is enabled.
-
-.. option:: -fobjc-gc
-
- Indicate that Objective-C code should be compiled in hybrid-GC mode, which
- works with both GC and non-GC mode.
-
 .. option:: -fobjc-abi-version=version
 
  Select the Objective-C ABI version to use. Available versions are 1 (legacy
