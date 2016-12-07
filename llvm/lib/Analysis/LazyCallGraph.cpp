@@ -289,6 +289,20 @@ void LazyCallGraph::RefSCC::verify() {
                "Edge to a RefSCC missing us in its parent set.");
       }
   }
+
+  // Check that our parents are actually parents.
+  for (RefSCC *ParentRC : Parents) {
+    assert(ParentRC != this && "Cannot be our own parent!");
+    auto HasConnectingEdge = [&] {
+      for (SCC &C : *ParentRC)
+        for (Node &N : C)
+          for (Edge &E : N)
+            if (G->lookupRefSCC(*E.getNode()) == this)
+              return true;
+      return false;
+    };
+    assert(HasConnectingEdge() && "No edge connects the parent to us!");
+  }
 }
 #endif
 
@@ -937,8 +951,12 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
           SourceC, *this, G->PostOrderRefSCCs, G->RefSCCIndices,
           ComputeSourceConnectedSet, ComputeTargetConnectedSet);
 
-  // Build a set so we can do fast tests for whether a merge is occuring.
+  // Build a set so we can do fast tests for whether a RefSCC will end up as
+  // part of the merged RefSCC.
   SmallPtrSet<RefSCC *, 16> MergeSet(MergeRange.begin(), MergeRange.end());
+
+  // This RefSCC will always be part of that set, so just insert it here.
+  MergeSet.insert(this);
 
   // Now that we have identified all of the SCCs which need to be merged into
   // a connected set with the inserted edge, merge all of them into this SCC.
@@ -1360,12 +1378,13 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
   SmallVector<RefSCC *, 4> OldParents(Parents.begin(), Parents.end());
   Parents.clear();
   for (RefSCC *ParentRC : OldParents)
-    for (SCC *ParentC : ParentRC->SCCs)
-      for (Node &ParentN : *ParentC)
+    for (SCC &ParentC : *ParentRC)
+      for (Node &ParentN : ParentC)
         for (Edge &E : ParentN) {
           assert(E.getNode() && "Cannot have a missing node in a visited SCC!");
           RefSCC &RC = *G->lookupRefSCC(*E.getNode());
-          RC.Parents.insert(ParentRC);
+          if (&RC != ParentRC)
+            RC.Parents.insert(ParentRC);
         }
 
   // If this SCC stopped being a leaf through this edge removal, remove it from

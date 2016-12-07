@@ -21,6 +21,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "SIDefines.h"
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -2502,6 +2503,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::INTERP_P2, DL, MVT::f32, P1, J,
                              Op.getOperand(1), Op.getOperand(2), Glue);
   }
+  case Intrinsic::amdgcn_interp_mov: {
+    SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(4));
+    SDValue Glue = M0.getValue(1);
+    return DAG.getNode(AMDGPUISD::INTERP_MOV, DL, MVT::f32, Op.getOperand(1),
+                       Op.getOperand(2), Op.getOperand(3), Glue);
+  }
   case Intrinsic::amdgcn_interp_p1: {
     SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(4));
     SDValue Glue = M0.getValue(1);
@@ -2896,6 +2903,47 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   return SDValue();
 }
 
+static SDValue getFPBinOp(SelectionDAG &DAG, unsigned Opcode, const SDLoc &SL,
+                          EVT VT, SDValue A, SDValue B, SDValue GlueChain) {
+  if (GlueChain->getNumValues() <= 1) {
+    return DAG.getNode(Opcode, SL, VT, A, B);
+  }
+
+  assert(GlueChain->getNumValues() == 3);
+
+  SDVTList VTList = DAG.getVTList(VT, MVT::Other, MVT::Glue);
+  switch (Opcode) {
+  default: llvm_unreachable("no chain equivalent for opcode");
+  case ISD::FMUL:
+    Opcode = AMDGPUISD::FMUL_W_CHAIN;
+    break;
+  }
+
+  return DAG.getNode(Opcode, SL, VTList, GlueChain.getValue(1), A, B,
+                     GlueChain.getValue(2));
+}
+
+static SDValue getFPTernOp(SelectionDAG &DAG, unsigned Opcode, const SDLoc &SL,
+                           EVT VT, SDValue A, SDValue B, SDValue C,
+                           SDValue GlueChain) {
+  if (GlueChain->getNumValues() <= 1) {
+    return DAG.getNode(Opcode, SL, VT, A, B, C);
+  }
+
+  assert(GlueChain->getNumValues() == 3);
+
+  SDVTList VTList = DAG.getVTList(VT, MVT::Other, MVT::Glue);
+  switch (Opcode) {
+  default: llvm_unreachable("no chain equivalent for opcode");
+  case ISD::FMA:
+    Opcode = AMDGPUISD::FMA_W_CHAIN;
+    break;
+  }
+
+  return DAG.getNode(Opcode, SL, VTList, GlueChain.getValue(1), A, B, C,
+                     GlueChain.getValue(2));
+}
+
 // Faster 2.5 ULP division that does not support denormals.
 SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
@@ -2942,25 +2990,73 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
 
   SDVTList ScaleVT = DAG.getVTList(MVT::f32, MVT::i1);
 
-  SDValue DenominatorScaled = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT, RHS, RHS, LHS);
-  SDValue NumeratorScaled = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT, LHS, RHS, LHS);
+  SDValue DenominatorScaled = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT,
+                                          RHS, RHS, LHS);
+  SDValue NumeratorScaled = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT,
+                                        LHS, RHS, LHS);
 
   // Denominator is scaled to not be denormal, so using rcp is ok.
-  SDValue ApproxRcp = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, DenominatorScaled);
+  SDValue ApproxRcp = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32,
+                                  DenominatorScaled);
+  SDValue NegDivScale0 = DAG.getNode(ISD::FNEG, SL, MVT::f32,
+                                     DenominatorScaled);
 
-  SDValue NegDivScale0 = DAG.getNode(ISD::FNEG, SL, MVT::f32, DenominatorScaled);
+  const unsigned Denorm32Reg = AMDGPU::Hwreg::ID_MODE |
+                               (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
+                               (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
 
-  SDValue Fma0 = DAG.getNode(ISD::FMA, SL, MVT::f32, NegDivScale0, ApproxRcp, One);
-  SDValue Fma1 = DAG.getNode(ISD::FMA, SL, MVT::f32, Fma0, ApproxRcp, ApproxRcp);
+  const SDValue BitField = DAG.getTargetConstant(Denorm32Reg, SL, MVT::i16);
 
-  SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f32, NumeratorScaled, Fma1);
+  if (!Subtarget->hasFP32Denormals()) {
+    SDVTList BindParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
+    const SDValue EnableDenormValue = DAG.getConstant(FP_DENORM_FLUSH_NONE,
+                                                      SL, MVT::i32);
+    SDValue EnableDenorm = DAG.getNode(AMDGPUISD::SETREG, SL, BindParamVTs,
+                                       DAG.getEntryNode(),
+                                       EnableDenormValue, BitField);
+    SDValue Ops[3] = {
+      NegDivScale0,
+      EnableDenorm.getValue(0),
+      EnableDenorm.getValue(1)
+    };
 
-  SDValue Fma2 = DAG.getNode(ISD::FMA, SL, MVT::f32, NegDivScale0, Mul, NumeratorScaled);
-  SDValue Fma3 = DAG.getNode(ISD::FMA, SL, MVT::f32, Fma2, Fma1, Mul);
-  SDValue Fma4 = DAG.getNode(ISD::FMA, SL, MVT::f32, NegDivScale0, Fma3, NumeratorScaled);
+    NegDivScale0 = DAG.getMergeValues(Ops, SL);
+  }
+
+  SDValue Fma0 = getFPTernOp(DAG, ISD::FMA, SL, MVT::f32, NegDivScale0,
+                             ApproxRcp, One, NegDivScale0);
+
+  SDValue Fma1 = getFPTernOp(DAG, ISD::FMA, SL, MVT::f32, Fma0, ApproxRcp,
+                             ApproxRcp, Fma0);
+
+  SDValue Mul = getFPBinOp(DAG, ISD::FMUL, SL, MVT::f32, NumeratorScaled,
+                           Fma1, Fma1);
+
+  SDValue Fma2 = getFPTernOp(DAG, ISD::FMA, SL, MVT::f32, NegDivScale0, Mul,
+                             NumeratorScaled, Mul);
+
+  SDValue Fma3 = getFPTernOp(DAG, ISD::FMA,SL, MVT::f32, Fma2, Fma1, Mul, Fma2);
+
+  SDValue Fma4 = getFPTernOp(DAG, ISD::FMA, SL, MVT::f32, NegDivScale0, Fma3,
+                             NumeratorScaled, Fma3);
+
+  if (!Subtarget->hasFP32Denormals()) {
+    const SDValue DisableDenormValue =
+        DAG.getConstant(FP_DENORM_FLUSH_IN_FLUSH_OUT, SL, MVT::i32);
+    SDValue DisableDenorm = DAG.getNode(AMDGPUISD::SETREG, SL, MVT::Other,
+                                        Fma4.getValue(1),
+                                        DisableDenormValue,
+                                        BitField,
+                                        Fma4.getValue(2));
+
+    SDValue OutputChain = DAG.getNode(ISD::TokenFactor, SL, MVT::Other,
+                                      DisableDenorm, DAG.getRoot());
+    DAG.setRoot(OutputChain);
+  }
 
   SDValue Scale = NumeratorScaled.getValue(1);
-  SDValue Fmas = DAG.getNode(AMDGPUISD::DIV_FMAS, SL, MVT::f32, Fma4, Fma1, Fma3, Scale);
+  SDValue Fmas = DAG.getNode(AMDGPUISD::DIV_FMAS, SL, MVT::f32,
+                             Fma4, Fma1, Fma3, Scale);
 
   return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f32, Fmas, RHS, LHS);
 }

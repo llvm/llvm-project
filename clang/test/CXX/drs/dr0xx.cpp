@@ -248,7 +248,7 @@ namespace dr20 { // dr20: yes
   private:
     X(const X&); // expected-note {{here}}
   };
-  X f();
+  X &f();
   X x = f(); // expected-error {{private}}
 }
 
@@ -316,8 +316,15 @@ namespace dr25 { // dr25: yes
 namespace dr26 { // dr26: yes
   struct A { A(A, const A & = A()); }; // expected-error {{must pass its first argument by reference}}
   struct B {
-    B(); // expected-note {{candidate}}
-    B(const B &, B = B()); // expected-error {{no matching constructor}} expected-note {{candidate}} expected-note {{here}}
+    B(); // expected-note 0-1{{candidate}}
+    B(const B &, B = B());
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{no matching constructor}} expected-note@-2 {{candidate}} expected-note@-2 {{here}}
+#endif
+  };
+  struct C {
+    static C &f();
+    C(const C &, C = f()); // expected-error {{no matching constructor}} expected-note {{candidate}} expected-note {{here}}
   };
 }
 
@@ -662,24 +669,32 @@ namespace dr58 { // dr58: yes
 
 namespace dr59 { // dr59: yes
   template<typename T> struct convert_to { operator T() const; };
-  struct A {}; // expected-note 2{{volatile qualifier}} expected-note 2{{requires 0 arguments}}
-  struct B : A {}; // expected-note 2{{volatile qualifier}} expected-note 2{{requires 0 arguments}}
-#if __cplusplus >= 201103L // move constructors
-  // expected-note@-3 2{{volatile qualifier}}
-  // expected-note@-3 2{{volatile qualifier}}
-#endif
+  struct A {}; // expected-note 5+{{candidate}}
+  struct B : A {}; // expected-note 0+{{candidate}}
 
   A a1 = convert_to<A>();
   A a2 = convert_to<A&>();
   A a3 = convert_to<const A>();
-  A a4 = convert_to<const volatile A>(); // expected-error {{no viable}}
+  A a4 = convert_to<const volatile A>();
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{no viable}}
+#endif
   A a5 = convert_to<const volatile A&>(); // expected-error {{no viable}}
 
   B b1 = convert_to<B>();
   B b2 = convert_to<B&>();
   B b3 = convert_to<const B>();
-  B b4 = convert_to<const volatile B>(); // expected-error {{no viable}}
+  B b4 = convert_to<const volatile B>();
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{no viable}}
+#endif
   B b5 = convert_to<const volatile B&>(); // expected-error {{no viable}}
+
+  A c1 = convert_to<B>();
+  A c2 = convert_to<B&>();
+  A c3 = convert_to<const B>();
+  A c4 = convert_to<const volatile B>(); // expected-error {{no viable}}
+  A c5 = convert_to<const volatile B&>(); // expected-error {{no viable}}
 
   int n1 = convert_to<int>();
   int n2 = convert_to<int&>();
@@ -920,14 +935,17 @@ namespace dr84 { // dr84: yes
   struct A { operator B() const; };
   struct C {};
   struct B {
-    B(B&); // expected-note {{candidate}}
-    B(C); // expected-note {{no known conversion from 'dr84::B' to 'dr84::C'}}
+    B(B&); // expected-note 0-1{{candidate}}
+    B(C); // expected-note 0-1{{no known conversion from 'dr84::B' to 'dr84::C'}}
     operator C() const;
   };
   A a;
   // Cannot use B(C) / operator C() pair to construct the B from the B temporary
-  // here.
-  B b = a; // expected-error {{no viable}}
+  // here. In C++1z, we initialize the B object directly using 'A::operator B()'.
+  B b = a;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{no viable}}
+#endif
 }
 
 namespace dr85 { // dr85: yes

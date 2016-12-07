@@ -173,6 +173,13 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
       MI->setDesc(TII->get(Opc));
     }
 
+    // Special case for s_setreg_b32
+    if (Opc == AMDGPU::S_SETREG_B32 && OpToFold->isImm()) {
+      MI->setDesc(TII->get(AMDGPU::S_SETREG_IMM32_B32));
+      FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold));
+      return true;
+    }
+
     // If we are already folding into another operand of MI, then
     // we can't commute the instruction, otherwise we risk making the
     // other fold illegal.

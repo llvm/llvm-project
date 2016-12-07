@@ -1410,14 +1410,16 @@ template <class ELFT> typename ELFT::uint Writer<ELFT>::getEntryAddr() {
 
   // Case 4
   if (OutputSectionBase *Sec = findSection(".text")) {
-    warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
-         utohexstr(Sec->Addr));
+    if (!Config->Shared || Config->HasEntry)
+      warn("cannot find entry symbol " + Config->Entry + "; defaulting to 0x" +
+           utohexstr(Sec->Addr));
     return Sec->Addr;
   }
 
   // Case 5
-  warn("cannot find entry symbol " + Config->Entry +
-       "; not setting start address");
+  if (!Config->Shared || Config->HasEntry)
+    warn("cannot find entry symbol " + Config->Entry +
+         "; not setting start address");
   return 0;
 }
 
