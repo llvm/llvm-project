@@ -14,11 +14,14 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/DiagnosticInfo.h"
+
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "si-memory-legalizer"
 #define PASS_NAME "SI Memory Legalizer"
@@ -27,13 +30,14 @@ namespace {
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
 private:
-  /// \brief Immediate for "vmcnt(0)".
-  static const unsigned Vmcnt0;
-
   /// \brief Target instruction info.
   const SIInstrInfo *TII;
   /// \brief LLVM context.
   LLVMContext *CTX;
+
+  /// \brief Immediate for "vmcnt(0)".
+  unsigned Vmcnt0Immediate;
+
   /// \brief List of atomic pseudo machine instructions.
   std::list<MachineBasicBlock::iterator> AtomicPseudoMI;
 
@@ -88,7 +92,8 @@ public:
   static char ID;
 
   SIMemoryLegalizer()
-      : MachineFunctionPass(ID), TII(nullptr), CTX(nullptr) {}
+      : MachineFunctionPass(ID), TII(nullptr), CTX(nullptr),
+        Vmcnt0Immediate(0) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -106,7 +111,6 @@ public:
 
 INITIALIZE_PASS(SIMemoryLegalizer, DEBUG_TYPE, PASS_NAME, false, false)
 
-const unsigned SIMemoryLegalizer::Vmcnt0 = 0x7 << 4 | 0xF << 8;
 char SIMemoryLegalizer::ID = 0;
 char &llvm::SIMemoryLegalizerID = SIMemoryLegalizer::ID;
 
@@ -131,7 +135,7 @@ bool SIMemoryLegalizer::insertWaitcntVmcnt0(
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
-  BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Vmcnt0);
+  BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Vmcnt0Immediate);
   return true;
 }
 
@@ -434,8 +438,13 @@ bool SIMemoryLegalizer::expandAtomicRmw(MachineBasicBlock::iterator &MI) {
 bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
-  TII = MF.getSubtarget<SISubtarget>().getInstrInfo();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const IsaVersion &IV = getIsaVersion(ST.getFeatureBits());
+
+  TII = ST.getInstrInfo();
   CTX = &MF.getFunction()->getContext();
+  Vmcnt0Immediate =
+      AMDGPU::encodeWaitcnt(IV, 0, getExpcntBitMask(IV), getLgkmcntBitMask(IV));
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
