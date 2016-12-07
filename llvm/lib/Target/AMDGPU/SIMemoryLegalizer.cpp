@@ -35,6 +35,8 @@ private:
   /// \brief LLVM context.
   LLVMContext *CTX;
 
+  /// \brief Opcode for cache invalidation instruction (L1).
+  unsigned Wbinvl1Opcode;
   /// \brief Immediate for "vmcnt(0)".
   unsigned Vmcnt0Immediate;
 
@@ -93,7 +95,7 @@ public:
 
   SIMemoryLegalizer()
       : MachineFunctionPass(ID), TII(nullptr), CTX(nullptr),
-        Vmcnt0Immediate(0) {}
+        Wbinvl1Opcode(0), Vmcnt0Immediate(0) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -121,12 +123,9 @@ FunctionPass *llvm::createSIMemoryLegalizerPass() {
 bool SIMemoryLegalizer::insertBufferWbinvl1Vol(
     const MachineBasicBlock::iterator &MI) const {
   MachineBasicBlock &MBB = *MI->getParent();
-  const SISubtarget &ST = MBB.getParent()->getSubtarget<SISubtarget>();
   DebugLoc DL = MI->getDebugLoc();
 
-  unsigned Opcode = ST.getGeneration() <= AMDGPUSubtarget::SOUTHERN_ISLANDS ?
-      AMDGPU::BUFFER_WBINVL1 : AMDGPU::BUFFER_WBINVL1_VOL;
-  BuildMI(MBB, MI, DL, TII->get(Opcode));
+  BuildMI(MBB, MI, DL, TII->get(Wbinvl1Opcode));
   return true;
 }
 
@@ -443,6 +442,8 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   TII = ST.getInstrInfo();
   CTX = &MF.getFunction()->getContext();
+  Wbinvl1Opcode = ST.getGeneration() <= AMDGPUSubtarget::SOUTHERN_ISLANDS ?
+      AMDGPU::BUFFER_WBINVL1 : AMDGPU::BUFFER_WBINVL1_VOL;
   Vmcnt0Immediate =
       AMDGPU::encodeWaitcnt(IV, 0, getExpcntBitMask(IV), getLgkmcntBitMask(IV));
 
