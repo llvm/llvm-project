@@ -57,11 +57,11 @@ entry:
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
 ; CHECK-LABEL: veculuc
-; CHECK: lxsibzx 34, 0, 3
-; CHECK-NEXT: xxspltd 34, 34, 0
+; CHECK: lxsibzx 0, 0, 3
+; CHECK-NEXT: xxspltd 34, 0, 0
 ; CHECK-BE-LABEL: veculuc
-; CHECK-BE: lxsibzx 34, 0, 3
-; CHECK-BE-NEXT: xxspltd 34, 34, 0
+; CHECK-BE: lxsibzx 0, 0, 3
+; CHECK-BE-NEXT: xxspltd 34, 0, 0
 }
 
 ; Function Attrs: norecurse nounwind readonly
@@ -120,11 +120,11 @@ entry:
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
 ; CHECK-LABEL: vecsluc
-; CHECK: lxsibzx 34, 0, 3
-; CHECK-NEXT: xxspltd 34, 34, 0
+; CHECK: lxsibzx 0, 0, 3
+; CHECK-NEXT: xxspltd 34, 0, 0
 ; CHECK-BE-LABEL: vecsluc
-; CHECK-BE: lxsibzx 34, 0, 3
-; CHECK-BE-NEXT: xxspltd 34, 34, 0
+; CHECK-BE: lxsibzx 0, 0, 3
+; CHECK-BE-NEXT: xxspltd 34, 0, 0
 }
 
 ; Function Attrs: norecurse nounwind readonly
@@ -366,11 +366,11 @@ entry:
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
 ; CHECK-LABEL: veculus
-; CHECK: lxsihzx 34, 0, 3
-; CHECK-NEXT: xxspltd 34, 34, 0
+; CHECK: lxsihzx 0, 0, 3
+; CHECK-NEXT: xxspltd 34, 0, 0
 ; CHECK-BE-LABEL: veculus
-; CHECK-BE: lxsihzx 34, 0, 3
-; CHECK-BE-NEXT: xxspltd 34, 34, 0
+; CHECK-BE: lxsihzx 0, 0, 3
+; CHECK-BE-NEXT: xxspltd 34, 0, 0
 }
 
 ; Function Attrs: norecurse nounwind readonly
@@ -430,11 +430,11 @@ entry:
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
 ; CHECK-LABEL: vecslus
-; CHECK: lxsihzx 34, 0, 3
-; CHECK-NEXT: xxspltd 34, 34, 0
+; CHECK: lxsihzx 0, 0, 3
+; CHECK-NEXT: xxspltd 34, 0, 0
 ; CHECK-BE-LABEL: vecslus
-; CHECK-BE: lxsihzx 34, 0, 3
-; CHECK-BE-NEXT: xxspltd 34, 34, 0
+; CHECK-BE: lxsihzx 0, 0, 3
+; CHECK-BE-NEXT: xxspltd 34, 0, 0
 }
 
 ; Function Attrs: norecurse nounwind readonly

@@ -34,7 +34,7 @@ namespace llvm {
 
     ItTy OpIt;
     PointerUnion<StructType *, Type *> CurTy;
-    enum { Unbounded = -1ull };
+    enum : uint64_t { Unbounded = -1ull };
     uint64_t NumElements = Unbounded;
     generic_gep_type_iterator() = default;
 

@@ -40,7 +40,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#define PO_FUNCTION_TIMEOUT_USEC 15 * 1000 * 1000
+static constexpr std::chrono::seconds g_po_function_timeout(15);
 
 AppleObjCRuntime::~AppleObjCRuntime() {}
 
@@ -169,7 +169,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   options.SetTryAllThreads(true);
   options.SetStopOthers(true);
   options.SetIgnoreBreakpoints(true);
-  options.SetTimeoutUsec(PO_FUNCTION_TIMEOUT_USEC);
+  options.SetTimeout(g_po_function_timeout);
 
   ExpressionResults results = m_print_object_caller_up->ExecuteFunction(
       exe_ctx, &wrapper_struct_addr, options, diagnostics, ret);

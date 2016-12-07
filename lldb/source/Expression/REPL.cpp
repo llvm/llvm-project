@@ -296,9 +296,9 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       expr_options.SetPoundLine(m_repl_source_path.c_str(),
                                 m_code.GetSize() + 1);
       if (m_command_options.timeout > 0)
-        expr_options.SetTimeoutUsec(m_command_options.timeout);
+        expr_options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
       else
-        expr_options.SetTimeoutUsec(0);
+        expr_options.SetTimeout(llvm::None);
 
       expr_options.SetLanguage(GetLanguage());
 

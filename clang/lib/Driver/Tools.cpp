@@ -40,9 +40,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/YAMLParser.h"
 
 #ifdef LLVM_ON_UNIX
 #include <unistd.h> // For getuid().
@@ -4030,6 +4030,65 @@ static void AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back("-KPIC");
 }
 
+void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
+                                    StringRef Target, const InputInfo &Output,
+                                    const InputInfo &Input, const ArgList &Args) const {
+  // If this is a dry run, do not create the compilation database file.
+  if (C.getArgs().hasArg(options::OPT__HASH_HASH_HASH))
+    return;
+
+  using llvm::yaml::escape;
+  const Driver &D = getToolChain().getDriver();
+
+  if (!CompilationDatabase) {
+    std::error_code EC;
+    auto File = llvm::make_unique<llvm::raw_fd_ostream>(Filename, EC, llvm::sys::fs::F_Text);
+    if (EC) {
+      D.Diag(clang::diag::err_drv_compilationdatabase) << Filename
+                                                       << EC.message();
+      return;
+    }
+    CompilationDatabase = std::move(File);
+  }
+  auto &CDB = *CompilationDatabase;
+  SmallString<128> Buf;
+  if (llvm::sys::fs::current_path(Buf))
+    Buf = ".";
+  CDB << "{ \"directory\": \"" << escape(Buf) << "\"";
+  CDB << ", \"file\": \"" << escape(Input.getFilename()) << "\"";
+  CDB << ", \"output\": \"" << escape(Output.getFilename()) << "\"";
+  CDB << ", \"arguments\": [\"" << escape(D.ClangExecutable) << "\"";
+  Buf = "-x";
+  Buf += types::getTypeName(Input.getType());
+  CDB << ", \"" << escape(Buf) << "\"";
+  if (!D.SysRoot.empty() && !Args.hasArg(options::OPT__sysroot_EQ)) {
+    Buf = "--sysroot=";
+    Buf += D.SysRoot;
+    CDB << ", \"" << escape(Buf) << "\"";
+  }
+  CDB << ", \"" << escape(Input.getFilename()) << "\"";
+  for (auto &A: Args) {
+    auto &O = A->getOption();
+    // Skip language selection, which is positional.
+    if (O.getID() == options::OPT_x)
+      continue;
+    // Skip writing dependency output and the compilation database itself.
+    if (O.getGroup().isValid() && O.getGroup().getID() == options::OPT_M_Group)
+      continue;
+    // Skip inputs.
+    if (O.getKind() == Option::InputClass)
+      continue;
+    // All other arguments are quoted and appended.
+    ArgStringList ASL;
+    A->render(Args, ASL);
+    for (auto &it: ASL)
+      CDB << ", \"" << escape(it) << "\"";
+  }
+  Buf = "--target=";
+  Buf += Target;
+  CDB << ", \"" << escape(Buf) << "\"]},\n";
+}
+
 void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -4073,6 +4132,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add the "effective" target triple.
   CmdArgs.push_back("-triple");
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
+
+  if (const Arg *MJ = Args.getLastArg(options::OPT_MJ)) {
+    DumpCompilationDatabase(C, MJ->getValue(), TripleStr, Output, Input, Args);
+    Args.ClaimAllArgs(options::OPT_MJ);
+  }
 
   if (IsCuda) {
     // We have to pass the triple of the host if compiling for a CUDA device and

@@ -294,6 +294,38 @@ static bool hasTerminatorThatModifiesExec(const MachineBasicBlock &MBB,
   return false;
 }
 
+static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
+                                    const MachineInstr *MoveImm,
+                                    const SIInstrInfo *TII,
+                                    unsigned &SMovOp,
+                                    int64_t &Imm) {
+
+  if (!MoveImm->isMoveImmediate())
+    return false;
+
+  const MachineOperand *ImmOp =
+      TII->getNamedOperand(*MoveImm, AMDGPU::OpName::src0);
+  if (!ImmOp->isImm())
+    return false;
+
+  // FIXME: Handle copies with sub-regs.
+  if (Copy->getOperand(0).getSubReg())
+    return false;
+
+  switch (MoveImm->getOpcode()) {
+  default:
+    return false;
+  case AMDGPU::V_MOV_B32_e32:
+    SMovOp = AMDGPU::S_MOV_B32;
+    break;
+  case AMDGPU::V_MOV_B64_PSEUDO:
+    SMovOp = AMDGPU::S_MOV_B64;
+    break;
+  }
+  Imm = ImmOp->getImm();
+  return true;
+}
+
 bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -323,7 +355,17 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, MRI);
         if (isVGPRToSGPRCopy(SrcRC, DstRC, *TRI)) {
-          DEBUG(dbgs() << "Fixing VGPR -> SGPR copy: " << MI);
+          MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+          unsigned SMovOp;
+          int64_t Imm;
+          // If we are just copying an immediate, we can replace the copy with
+          // s_mov_b32.
+          if (isSafeToFoldImmIntoCopy(&MI, DefMI, TII, SMovOp, Imm)) {
+            MI.getOperand(1).ChangeToImmediate(Imm);
+            MI.addImplicitDefUseOperands(MF);
+            MI.setDesc(TII->get(SMovOp));
+            break;
+          }
           TII->moveToVALU(MI);
         }
 

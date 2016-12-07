@@ -488,7 +488,7 @@ public:
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
   ///      with the same type.
-  /// \pre \p Tst must be a generic virtual register with scalar or
+  /// \pre \p Tst must be a generic virtual register with scalar, pointer or
   ///      vector type. If vector then it must have the same number of
   ///      elements as the other parameters.
   ///

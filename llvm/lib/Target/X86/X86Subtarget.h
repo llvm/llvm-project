@@ -178,6 +178,10 @@ protected:
   /// True if SHLD instructions are slow.
   bool IsSHLDSlow;
 
+  /// True if the PMULLD instruction is slow compared to PMULLW/PMULHW and
+  //  PMULUDQ.
+  bool IsPMULLDSlow;
+
   /// True if unaligned memory accesses of 16-bytes are slow.
   bool IsUAMem16Slow;
 
@@ -452,6 +456,7 @@ public:
   bool hasMWAITX() const { return HasMWAITX; }
   bool isBTMemSlow() const { return IsBTMemSlow; }
   bool isSHLDSlow() const { return IsSHLDSlow; }
+  bool isPMULLDSlow() const { return IsPMULLDSlow; }
   bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }
   bool isUnalignedMem32Slow() const { return IsUAMem32Slow; }
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
