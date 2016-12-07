@@ -308,8 +308,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
 }
 
 Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
-                                              CallSite *Inst) {
-  LLVMContext &llvmContext = Mod->getContext();
+                                                       CallSite *Inst) {
   Value *Ptr = Inst->getArgOperand(0);
   Value *Expected = Inst->getArgOperand(1);
   Value *Desired = Inst->getArgOperand(2);
@@ -322,19 +321,13 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
       (SynchronizationScope)AMDGPUSynchronizationScope::System);
   dyn_cast<AtomicCmpXchgInst>(Cas)->setSynchScope(
       (SynchronizationScope)memScope);
-  Cas = llvmBuilder.CreateExtractValue(Cas, 0);
-  Type *ValType = Expected->getType();
-  Value *Cmp = NULL;
-  if (ValType->isFloatTy() || ValType->isDoubleTy())
-    Cmp = llvmBuilder.CreateFCmp(FCmpInst::FCMP_OEQ, Cas, OrigExpected);
-  else
-    Cmp = llvmBuilder.CreateICmp(ICmpInst::ICMP_EQ, Cas, OrigExpected);
-  Cmp = llvmBuilder.CreateCast(Instruction::BitCast, Cmp,
-                               IntegerType::get(llvmContext, 1));
-  Value *Select = llvmBuilder.CreateSelect(
-      Cmp, ConstantInt::get(IntegerType::get(llvmContext, 1), 1),
-      ConstantInt::get(IntegerType::get(llvmContext, 1), 0));
-  return Select;
+
+  Value *Cas0 = llvmBuilder.CreateExtractValue(Cas, 0);
+  Value *Cas1 = llvmBuilder.CreateExtractValue(Cas, 1);
+  Value *Select = llvmBuilder.CreateSelect(Cas1, OrigExpected, Cas0);
+  llvmBuilder.CreateStore(Select, Expected);
+
+  return Cas1;
 }
 
 static AtomicRMWInst::BinOp atomicFetchBinOp(StringRef Name, bool IsSigned) {
