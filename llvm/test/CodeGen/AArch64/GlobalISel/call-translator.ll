@@ -182,3 +182,12 @@ define void @test_call_stack() {
   call void @test_stack_slots([8 x i64] undef, i64 42, i64 12, i64* null)
   ret void
 }
+
+; CHECK-LABEL: name: test_mem_i1
+; CHECK: fixedStack:
+; CHECK-NEXT: - { id: [[SLOT:[0-9]+]], offset: 0, size: 1, alignment: 16, isImmutable: true, isAliased: false }
+; CHECK: [[ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[SLOT]]
+; CHECK: {{%[0-9]+}}(s1) = G_LOAD [[ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[SLOT]], align 0)
+define void @test_mem_i1([8 x i64], i1 %in) {
+  ret void
+}

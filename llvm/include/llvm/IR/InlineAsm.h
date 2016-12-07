@@ -18,15 +18,14 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include <cassert>
+#include <string>
 #include <vector>
 
 namespace llvm {
 
-class PointerType;
 class FunctionType;
-class Module;
-
-struct InlineAsmKeyType;
+class PointerType;
 template <class ConstantClass> class ConstantUniqueMap;
 
 class InlineAsm : public Value {
@@ -39,9 +38,6 @@ public:
 private:
   friend struct InlineAsmKeyType;
   friend class ConstantUniqueMap<InlineAsm>;
-
-  InlineAsm(const InlineAsm &) = delete;
-  void operator=(const InlineAsm&) = delete;
 
   std::string AsmString, Constraints;
   FunctionType *FTy;
@@ -59,6 +55,9 @@ private:
   void destroyConstant();
 
 public:
+  InlineAsm(const InlineAsm &) = delete;
+  InlineAsm &operator=(const InlineAsm &) = delete;
+
   /// InlineAsm::get - Return the specified uniqued inline asm string.
   ///
   static InlineAsm *get(FunctionType *Ty, StringRef AsmString,
@@ -361,6 +360,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_INLINEASM_H

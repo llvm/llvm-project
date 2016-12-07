@@ -14,7 +14,9 @@ main_body:
   %p1_0 = call float @llvm.amdgcn.interp.p2(float %p0_0, float %j, i32 0, i32 0, i32 %3)
   %p0_1 = call float @llvm.amdgcn.interp.p1(float %i, i32 1, i32 0, i32 %3)
   %p1_1 = call float @llvm.amdgcn.interp.p2(float %p0_1, float %j, i32 1, i32 0, i32 %3)
-  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %p0_0, float %p0_0, float %p1_1, float %p1_1)
+  %const = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %3)
+  %w = fadd float %p1_1, %const
+  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %p0_0, float %p0_0, float %p1_1, float %w)
   ret void
 }
 
@@ -23,6 +25,8 @@ declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
+
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #0
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 

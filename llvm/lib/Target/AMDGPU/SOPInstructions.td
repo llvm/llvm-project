@@ -590,10 +590,13 @@ def S_GETREG_B32 : SOPK_Pseudo <
 >;
 }
 
+let hasSideEffects = 1 in {
+
 def S_SETREG_B32 : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
-  "$simm16, $sdst"
+  "$simm16, $sdst",
+  [(AMDGPUsetreg i32:$sdst, (i16 timm:$simm16))]
 >;
 
 // FIXME: Not on SI?
@@ -607,6 +610,7 @@ def S_SETREG_IMM32_B32 : SOPK_Pseudo <
   let has_sdst = 0;
 }
 
+} // End hasSideEffects = 1
 
 //===----------------------------------------------------------------------===//
 // SOPC Instructions

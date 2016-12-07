@@ -1,4 +1,4 @@
-//===-- llvm/IR/Statepoint.h - gc.statepoint utilities ------ --*- C++ -*-===//
+//===-- llvm/IR/Statepoint.h - gc.statepoint utilities ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -26,8 +27,14 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
+
 /// The statepoint intrinsic accepts a set of flags as its third argument.
 /// Valid values come out of this set.
 enum class StatepointFlags {
@@ -47,7 +54,6 @@ enum class StatepointFlags {
 
 class GCRelocateInst;
 class GCResultInst;
-class ImmutableStatepoint;
 
 bool isStatepoint(ImmutableCallSite CS);
 bool isStatepoint(const Value *V);
@@ -66,8 +72,6 @@ template <typename FunTy, typename InstructionTy, typename ValueTy,
           typename CallSiteTy>
 class StatepointBase {
   CallSiteTy StatepointCS;
-  void *operator new(size_t, unsigned) = delete;
-  void *operator new(size_t s) = delete;
 
 protected:
   explicit StatepointBase(InstructionTy *I) {
@@ -76,6 +80,7 @@ protected:
       assert(StatepointCS && "isStatepoint implies CallSite");
     }
   }
+
   explicit StatepointBase(CallSiteTy CS) {
     if (isStatepoint(CS))
       StatepointCS = CS;
@@ -92,6 +97,9 @@ public:
     FlagsPos = 4,
     CallArgsBeginPos = 5,
   };
+
+  void *operator new(size_t, unsigned) = delete;
+  void *operator new(size_t s) = delete;
 
   explicit operator bool() const {
     // We do not assign non-statepoint CallSites to StatepointCS.
@@ -451,6 +459,7 @@ StatepointDirectives parseStatepointDirectivesFromAttrs(AttributeSet AS);
 /// Return \c true if the the \p Attr is an attribute that is a statepoint
 /// directive.
 bool isStatepointDirectiveAttr(Attribute Attr);
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_IR_STATEPOINT_H

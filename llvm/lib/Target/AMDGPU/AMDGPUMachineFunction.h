@@ -50,6 +50,10 @@ public:
     return KernArgSize;
   }
 
+  unsigned getMaxKernArgAlign() const {
+    return MaxKernArgAlign;
+  }
+
   void setABIArgOffset(unsigned NewOffset) {
     ABIArgOffset = NewOffset;
   }

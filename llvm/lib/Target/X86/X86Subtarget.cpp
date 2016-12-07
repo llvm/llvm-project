@@ -228,6 +228,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   else if (isTargetDarwin() || isTargetLinux() || isTargetSolaris() ||
            isTargetKFreeBSD() || In64BitMode)
     stackAlignment = 16;
+
+  assert((!isPMULLDSlow() || hasSSE41()) &&
+         "Feature Slow PMULLD can only be set on a subtarget with SSE4.1");
 }
 
 void X86Subtarget::initializeEnvironment() {
@@ -275,6 +278,7 @@ void X86Subtarget::initializeEnvironment() {
   HasMWAITX = false;
   HasMPX = false;
   IsBTMemSlow = false;
+  IsPMULLDSlow = false;
   IsSHLDSlow = false;
   IsUAMem16Slow = false;
   IsUAMem32Slow = false;

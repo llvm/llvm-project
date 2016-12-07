@@ -35,113 +35,35 @@ using namespace llvm;
 LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   // Create the fixed metadata kinds. This is done in the same order as the
   // MD_* enum values so that they correspond.
+  std::pair<unsigned, StringRef> MDKinds[] = {
+    {MD_dbg, "dbg"},
+    {MD_tbaa, "tbaa"},
+    {MD_prof, "prof"},
+    {MD_fpmath, "fpmath"},
+    {MD_range, "range"},
+    {MD_tbaa_struct, "tbaa.struct"},
+    {MD_invariant_load, "invariant.load"},
+    {MD_alias_scope, "alias.scope"},
+    {MD_noalias, "noalias"},
+    {MD_nontemporal, "nontemporal"},
+    {MD_mem_parallel_loop_access, "llvm.mem.parallel_loop_access"},
+    {MD_nonnull, "nonnull"},
+    {MD_dereferenceable, "dereferenceable"},
+    {MD_dereferenceable_or_null, "dereferenceable_or_null"},
+    {MD_make_implicit, "make.implicit"},
+    {MD_unpredictable, "unpredictable"},
+    {MD_invariant_group, "invariant.group"},
+    {MD_align, "align"},
+    {MD_loop, "llvm.loop"},
+    {MD_type, "type"},
+    {MD_section_prefix, "section_prefix"},
+  };
 
-  // Create the 'dbg' metadata kind.
-  unsigned DbgID = getMDKindID("dbg");
-  assert(DbgID == MD_dbg && "dbg kind id drifted"); (void)DbgID;
-
-  // Create the 'tbaa' metadata kind.
-  unsigned TBAAID = getMDKindID("tbaa");
-  assert(TBAAID == MD_tbaa && "tbaa kind id drifted"); (void)TBAAID;
-
-  // Create the 'prof' metadata kind.
-  unsigned ProfID = getMDKindID("prof");
-  assert(ProfID == MD_prof && "prof kind id drifted"); (void)ProfID;
-
-  // Create the 'fpmath' metadata kind.
-  unsigned FPAccuracyID = getMDKindID("fpmath");
-  assert(FPAccuracyID == MD_fpmath && "fpmath kind id drifted");
-  (void)FPAccuracyID;
-
-  // Create the 'range' metadata kind.
-  unsigned RangeID = getMDKindID("range");
-  assert(RangeID == MD_range && "range kind id drifted");
-  (void)RangeID;
-
-  // Create the 'tbaa.struct' metadata kind.
-  unsigned TBAAStructID = getMDKindID("tbaa.struct");
-  assert(TBAAStructID == MD_tbaa_struct && "tbaa.struct kind id drifted");
-  (void)TBAAStructID;
-
-  // Create the 'invariant.load' metadata kind.
-  unsigned InvariantLdId = getMDKindID("invariant.load");
-  assert(InvariantLdId == MD_invariant_load && "invariant.load kind id drifted");
-  (void)InvariantLdId;
-
-  // Create the 'alias.scope' metadata kind.
-  unsigned AliasScopeID = getMDKindID("alias.scope");
-  assert(AliasScopeID == MD_alias_scope && "alias.scope kind id drifted");
-  (void)AliasScopeID;
-
-  // Create the 'noalias' metadata kind.
-  unsigned NoAliasID = getMDKindID("noalias");
-  assert(NoAliasID == MD_noalias && "noalias kind id drifted");
-  (void)NoAliasID;
-
-  // Create the 'nontemporal' metadata kind.
-  unsigned NonTemporalID = getMDKindID("nontemporal");
-  assert(NonTemporalID == MD_nontemporal && "nontemporal kind id drifted");
-  (void)NonTemporalID;
-
-  // Create the 'llvm.mem.parallel_loop_access' metadata kind.
-  unsigned MemParallelLoopAccessID = getMDKindID("llvm.mem.parallel_loop_access");
-  assert(MemParallelLoopAccessID == MD_mem_parallel_loop_access &&
-         "mem_parallel_loop_access kind id drifted");
-  (void)MemParallelLoopAccessID;
-
-  // Create the 'nonnull' metadata kind.
-  unsigned NonNullID = getMDKindID("nonnull");
-  assert(NonNullID == MD_nonnull && "nonnull kind id drifted");
-  (void)NonNullID;
-  
-  // Create the 'dereferenceable' metadata kind.
-  unsigned DereferenceableID = getMDKindID("dereferenceable");
-  assert(DereferenceableID == MD_dereferenceable && 
-         "dereferenceable kind id drifted");
-  (void)DereferenceableID;
-  
-  // Create the 'dereferenceable_or_null' metadata kind.
-  unsigned DereferenceableOrNullID = getMDKindID("dereferenceable_or_null");
-  assert(DereferenceableOrNullID == MD_dereferenceable_or_null && 
-         "dereferenceable_or_null kind id drifted");
-  (void)DereferenceableOrNullID;
-
-  // Create the 'make.implicit' metadata kind.
-  unsigned MakeImplicitID = getMDKindID("make.implicit");
-  assert(MakeImplicitID == MD_make_implicit &&
-         "make.implicit kind id drifted");
-  (void)MakeImplicitID;
-
-  // Create the 'unpredictable' metadata kind.
-  unsigned UnpredictableID = getMDKindID("unpredictable");
-  assert(UnpredictableID == MD_unpredictable &&
-         "unpredictable kind id drifted");
-  (void)UnpredictableID;
-
-  // Create the 'invariant.group' metadata kind.
-  unsigned InvariantGroupId = getMDKindID("invariant.group");
-  assert(InvariantGroupId == MD_invariant_group &&
-         "invariant.group kind id drifted");
-  (void)InvariantGroupId;
-
-  // Create the 'align' metadata kind.
-  unsigned AlignID = getMDKindID("align");
-  assert(AlignID == MD_align && "align kind id drifted");
-  (void)AlignID;
-
-  // Create the 'llvm.loop' metadata kind.
-  unsigned LoopID = getMDKindID("llvm.loop");
-  assert(LoopID == MD_loop && "llvm.loop kind id drifted");
-  (void)LoopID;
-
-  unsigned TypeID = getMDKindID("type");
-  assert(TypeID == MD_type && "type kind id drifted");
-  (void)TypeID;
-
-  unsigned SectionPrefixID = getMDKindID("section_prefix");
-  assert(SectionPrefixID == MD_section_prefix &&
-         "section_prefix kind id drifted");
-  (void)SectionPrefixID;
+  for (auto &MDKind : MDKinds) {
+    unsigned ID = getMDKindID(MDKind.second);
+    assert(ID == MDKind.first && "metadata kind id drifted");
+    (void)ID;
+  }
 
   auto *DeoptEntry = pImpl->getOrInsertBundleTag("deopt");
   assert(DeoptEntry->second == LLVMContext::OB_deopt &&

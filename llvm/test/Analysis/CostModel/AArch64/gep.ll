@@ -125,7 +125,7 @@ define i32 @test15(i32* %p, i32 %i) {
 
 define i64 @test16(i64* %p, i32 %i) {
 ; CHECK-LABEL: test16
-; CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds i64, i64*
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i64, i64*
   %a = getelementptr inbounds i64, i64* %p, i32 -64
   %v = load i64, i64* %a
   ret i64 %v
@@ -191,6 +191,102 @@ define i64 @test24(i64* %p, i32 %i) {
 ; CHECK-LABEL: test24
 ; CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds i64, i64*
   %a = getelementptr inbounds i64, i64* %p, i32 %i
+  %v = load i64, i64* %a
+  ret i64 %v
+}
+
+define i8 @test25(i8* %p, i32 %i) {
+; CHECK-LABEL: test25
+; CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds i8, i8*
+  %a = getelementptr inbounds i8, i8* %p, i32 -128
+  %v = load i8, i8* %a
+  ret i8 %v
+}
+
+define i16 @test26(i16* %p, i32 %i) {
+; CHECK-LABEL: test26
+; CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds i16, i16*
+  %a = getelementptr inbounds i16, i16* %p, i32 -128
+  %v = load i16, i16* %a
+  ret i16 %v
+}
+
+define i32 @test27(i32* %p, i32 %i) {
+; CHECK-LABEL: test27
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i32, i32*
+  %a = getelementptr inbounds i32, i32* %p, i32 -128
+  %v = load i32, i32* %a
+  ret i32 %v
+}
+
+define i64 @test28(i64* %p, i32 %i) {
+; CHECK-LABEL: test28
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i64, i64*
+  %a = getelementptr inbounds i64, i64* %p, i32 -128
+  %v = load i64, i64* %a
+  ret i64 %v
+}
+
+define i8 @test29(i8* %p, i32 %i) {
+; CHECK-LABEL: test29
+; CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds i8, i8*
+  %a = getelementptr inbounds i8, i8* %p, i32 -256
+  %v = load i8, i8* %a
+  ret i8 %v
+}
+
+define i16 @test30(i16* %p, i32 %i) {
+; CHECK-LABEL: test30
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i16, i16*
+  %a = getelementptr inbounds i16, i16* %p, i32 -256
+  %v = load i16, i16* %a
+  ret i16 %v
+}
+
+define i32 @test31(i32* %p, i32 %i) {
+; CHECK-LABEL: test31
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i32, i32*
+  %a = getelementptr inbounds i32, i32* %p, i32 -256
+  %v = load i32, i32* %a
+  ret i32 %v
+}
+
+define i64 @test32(i64* %p, i32 %i) {
+; CHECK-LABEL: test32
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i64, i64*
+  %a = getelementptr inbounds i64, i64* %p, i32 -256
+  %v = load i64, i64* %a
+  ret i64 %v
+}
+
+define i8 @test33(i8* %p, i32 %i) {
+; CHECK-LABEL: test33
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i8, i8*
+  %a = getelementptr inbounds i8, i8* %p, i32 -512
+  %v = load i8, i8* %a
+  ret i8 %v
+}
+
+define i16 @test34(i16* %p, i32 %i) {
+; CHECK-LABEL: test34
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i16, i16*
+  %a = getelementptr inbounds i16, i16* %p, i32 -512
+  %v = load i16, i16* %a
+  ret i16 %v
+}
+
+define i32 @test35(i32* %p, i32 %i) {
+; CHECK-LABEL: test35
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i32, i32*
+  %a = getelementptr inbounds i32, i32* %p, i32 -512
+  %v = load i32, i32* %a
+  ret i32 %v
+}
+
+define i64 @test36(i64* %p, i32 %i) {
+; CHECK-LABEL: test36
+; CHECK: cost of 1 for instruction: {{.*}} getelementptr inbounds i64, i64*
+  %a = getelementptr inbounds i64, i64* %p, i32 -512
   %v = load i64, i64* %a
   ret i64 %v
 }

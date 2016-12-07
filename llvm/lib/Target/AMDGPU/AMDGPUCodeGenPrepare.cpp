@@ -146,9 +146,10 @@ public:
 
 Value *AMDGPUCodeGenPrepare::copyFlags(
     const BinaryOperator &I, Value *V) const {
-  assert(isa<BinaryOperator>(V) && "V must be binary operation");
+  BinaryOperator *BinOp = dyn_cast<BinaryOperator>(V);
+  if (!BinOp) // Possibly constant expression.
+    return V;
 
-  BinaryOperator *BinOp = cast<BinaryOperator>(V);
   if (isa<OverflowingBinaryOperator>(BinOp)) {
     BinOp->setHasNoSignedWrap(I.hasNoSignedWrap());
     BinOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());

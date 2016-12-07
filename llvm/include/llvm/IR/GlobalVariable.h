@@ -24,31 +24,28 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/Value.h"
+#include <cassert>
+#include <cstddef>
 
 namespace llvm {
 
 class Constant;
 class DIGlobalVariable;
 class Module;
+
 template <typename ValueSubClass> class SymbolTableListTraits;
 
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   friend class SymbolTableListTraits<GlobalVariable>;
-  void *operator new(size_t, unsigned) = delete;
-  void operator=(const GlobalVariable &) = delete;
-  GlobalVariable(const GlobalVariable &) = delete;
 
   bool isConstantGlobal : 1;                   // Is this a global constant?
   bool isExternallyInitializedConstant : 1;    // Is this a global whose value
                                                // can change from its initial
                                                // value before global
                                                // initializers are run?
-public:
-  // allocate space for exactly one operand
-  void *operator new(size_t s) {
-    return User::operator new(s, 1);
-  }
 
+public:
   /// GlobalVariable ctor - If a parent module is specified, the global is
   /// automatically inserted into the end of the specified modules global list.
   GlobalVariable(Type *Ty, bool isConstant, LinkageTypes Linkage,
@@ -62,6 +59,8 @@ public:
                  const Twine &Name = "", GlobalVariable *InsertBefore = nullptr,
                  ThreadLocalMode = NotThreadLocal, unsigned AddressSpace = 0,
                  bool isExternallyInitialized = false);
+  GlobalVariable(const GlobalVariable &) = delete;
+  GlobalVariable &operator=(const GlobalVariable &) = delete;
 
   ~GlobalVariable() override {
     dropAllReferences();
@@ -69,6 +68,13 @@ public:
     // FIXME: needed by operator delete
     setGlobalVariableNumOperands(1);
   }
+
+  // allocate space for exactly one operand
+  void *operator new(size_t s) {
+    return User::operator new(s, 1);
+  }
+
+  void *operator new(size_t, unsigned) = delete;
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -180,6 +186,6 @@ struct OperandTraits<GlobalVariable> :
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GlobalVariable, Value)
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_GLOBALVARIABLE_H
