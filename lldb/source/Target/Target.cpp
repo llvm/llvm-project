@@ -3416,7 +3416,7 @@ static PropertyDefinition g_properties[] = {
      "List of directories to be searched when locating modules for Clang."},
     {"swift-framework-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, nullptr,
-     "List of directories to be searched when locating fraomeworks for Swift."},
+     "List of directories to be searched when locating frameworks for Swift."},
     {"swift-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, nullptr,
      "List of directories to be searched when locating modules for Swift."},
