@@ -844,19 +844,9 @@ let Uses = [RM] in {
   def XXPERMDI : XX3Form_2<60, 10,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, u2imm:$DM),
                        "xxpermdi $XT, $XA, $XB, $DM", IIC_VecPerm, []>;
-  let isCodeGenOnly = 1 in {
-  def XXPERMDIs : XX3Form_2s<60, 10, (outs vsrc:$XT), (ins vfrc:$XA, u2imm:$DM),
+  let isCodeGenOnly = 1 in
+  def XXPERMDIs : XX3Form_2s<60, 10, (outs vsrc:$XT), (ins vsfrc:$XA, u2imm:$DM),
                              "xxpermdi $XT, $XA, $XA, $DM", IIC_VecPerm, []>;
-  let D = 0 in
-  def XXSPLTD0s : XX3Form_2s<60, 10, (outs vsrc:$XT), (ins vfrc:$XA),
-                             "xxspltd $XT, $XA, 0", IIC_VecPerm, []>;
-  let D = 1 in
-  def XXSPLTD1s : XX3Form_2s<60, 10, (outs vsrc:$XT), (ins vfrc:$XA),
-                             "xxspltd $XT, $XA, 1", IIC_VecPerm, []>;
-  let D = 2 in
-  def XXSWAPDs  : XX3Form_2s<60, 10, (outs vsrc:$XT), (ins vfrc:$XA),
-                             "xxswapd $XT, $XA", IIC_VecPerm, []>;
-  }
   def XXSEL : XX4Form<60, 3,
                       (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, vsrc:$XC),
                       "xxsel $XT, $XA, $XB, $XC", IIC_VecPerm, []>;
@@ -928,6 +918,12 @@ def : InstAlias<"xxmrgld $XT, $XA, $XB",
                 (XXPERMDI vsrc:$XT, vsrc:$XA, vsrc:$XB, 3)>;
 def : InstAlias<"xxswapd $XT, $XB",
                 (XXPERMDI vsrc:$XT, vsrc:$XB, vsrc:$XB, 2)>;
+def : InstAlias<"xxspltd $XT, $XB, 0",
+                (XXPERMDIs vsrc:$XT, vsfrc:$XB, 0)>;
+def : InstAlias<"xxspltd $XT, $XB, 1",
+                (XXPERMDIs vsrc:$XT, vsfrc:$XB, 3)>;
+def : InstAlias<"xxswapd $XT, $XB",
+                (XXPERMDIs vsrc:$XT, vsfrc:$XB, 2)>;
 
 let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
 
@@ -2510,11 +2506,11 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(v4i32 (scalar_to_vector ScalarLoads.ZELi8)),
            (v4i32 (XXSPLTWs (LXSIBZX xoaddr:$src), 1))>;
   def : Pat<(v2i64 (scalar_to_vector ScalarLoads.ZELi8i64)),
-            (v2i64 (XXSPLTD0s (LXSIBZX xoaddr:$src)))>;
+            (v2i64 (XXPERMDIs (LXSIBZX xoaddr:$src), 0))>;
   def : Pat<(v4i32 (scalar_to_vector ScalarLoads.SELi8)),
             (v4i32 (XXSPLTWs (VEXTSB2Ws (LXSIBZX xoaddr:$src)), 1))>;
   def : Pat<(v2i64 (scalar_to_vector ScalarLoads.SELi8i64)),
-            (v2i64 (XXSPLTD0s (VEXTSB2Ds (LXSIBZX xoaddr:$src))))>;
+            (v2i64 (XXPERMDIs (VEXTSB2Ds (LXSIBZX xoaddr:$src)), 0))>;
 
   // Build vectors from i16 loads
   def : Pat<(v8i16 (scalar_to_vector ScalarLoads.Li16)),
@@ -2522,11 +2518,11 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(v4i32 (scalar_to_vector ScalarLoads.ZELi16)),
             (v4i32 (XXSPLTWs (LXSIHZX xoaddr:$src), 1))>;
   def : Pat<(v2i64 (scalar_to_vector ScalarLoads.ZELi16i64)),
-           (v2i64 (XXSPLTD0s (LXSIHZX xoaddr:$src)))>;
+           (v2i64 (XXPERMDIs (LXSIHZX xoaddr:$src), 0))>;
   def : Pat<(v4i32 (scalar_to_vector ScalarLoads.SELi16)),
             (v4i32 (XXSPLTWs (VEXTSH2Ws (LXSIHZX xoaddr:$src)), 1))>;
   def : Pat<(v2i64 (scalar_to_vector ScalarLoads.SELi16i64)),
-            (v2i64 (XXSPLTD0s (VEXTSH2Ds (LXSIHZX xoaddr:$src))))>;
+            (v2i64 (XXPERMDIs (VEXTSH2Ds (LXSIHZX xoaddr:$src)), 0))>;
 
   let Predicates = [IsBigEndian, HasP9Vector] in {
   // Scalar stores of i8
@@ -2760,9 +2756,11 @@ let AddedComplexity = 400 in {
 
     // Build vectors of floating point converted to i64.
     def : Pat<(v2i64 (build_vector FltToLong.A, FltToLong.A)),
-              (v2i64 (XXPERMDIs (COPY_TO_REGCLASS (XSCVDPSXDSs $A), VSFRC), 0))>;
+              (v2i64 (XXPERMDIs
+                       (COPY_TO_REGCLASS (XSCVDPSXDSs $A), VSFRC), 0))>;
     def : Pat<(v2i64 (build_vector FltToULong.A, FltToULong.A)),
-              (v2i64 (XXPERMDIs (COPY_TO_REGCLASS (XSCVDPUXDSs $A), VSFRC), 0))>;
+              (v2i64 (XXPERMDIs
+                       (COPY_TO_REGCLASS (XSCVDPUXDSs $A), VSFRC), 0))>;
     def : Pat<(v2i64 (scalar_to_vector DblToLongLoad.A)),
               (v2i64 (XVCVDPSXDS (LXVDSX xoaddr:$A)))>;
     def : Pat<(v2i64 (scalar_to_vector DblToULongLoad.A)),

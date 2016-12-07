@@ -761,6 +761,17 @@ define i32 @test_select(i1 %tst, i32 %lhs, i32 %rhs) {
   ret i32 %res
 }
 
+; CHECK-LABEL: name: test_select_ptr
+; CHECK: [[TST:%[0-9]+]](s1) = COPY %w0
+; CHECK: [[LHS:%[0-9]+]](p0) = COPY %x1
+; CHECK: [[RHS:%[0-9]+]](p0) = COPY %x2
+; CHECK: [[RES:%[0-9]+]](p0) = G_SELECT [[TST]](s1), [[LHS]], [[RHS]]
+; CHECK: %x0 = COPY [[RES]]
+define i8* @test_select_ptr(i1 %tst, i8* %lhs, i8* %rhs) {
+  %res = select i1 %tst, i8* %lhs, i8* %rhs
+  ret i8* %res
+}
+
 ; CHECK-LABEL: name: test_fptosi
 ; CHECK: [[FPADDR:%[0-9]+]](p0) = COPY %x0
 ; CHECK: [[FP:%[0-9]+]](s32) = G_LOAD [[FPADDR]](p0)

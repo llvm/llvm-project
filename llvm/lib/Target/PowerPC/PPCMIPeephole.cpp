@@ -124,10 +124,40 @@ bool PPCMIPeephole::simplifyCode(void) {
           if (TrueReg1 == TrueReg2
               && TargetRegisterInfo::isVirtualRegister(TrueReg1)) {
             MachineInstr *DefMI = MRI->getVRegDef(TrueReg1);
+            unsigned DefOpc = DefMI ? DefMI->getOpcode() : 0;
+
+            // If this is a splat fed by a splatting load, the splat is
+            // redundant. Replace with a copy. This doesn't happen directly due
+            // to code in PPCDAGToDAGISel.cpp, but it can happen when converting
+            // a load of a double to a vector of 64-bit integers.
+            auto isConversionOfLoadAndSplat = [=]() -> bool {
+              if (DefOpc != PPC::XVCVDPSXDS && DefOpc != PPC::XVCVDPUXDS)
+                return false;
+              unsigned DefReg = lookThruCopyLike(DefMI->getOperand(1).getReg());
+              if (TargetRegisterInfo::isVirtualRegister(DefReg)) {
+                MachineInstr *LoadMI = MRI->getVRegDef(DefReg);
+                if (LoadMI && LoadMI->getOpcode() == PPC::LXVDSX)
+                  return true;
+              }
+              return false;
+            };
+            if (DefMI && (Immed == 0 || Immed == 3)) {
+              if (DefOpc == PPC::LXVDSX || isConversionOfLoadAndSplat()) {
+                DEBUG(dbgs()
+                      << "Optimizing load-and-splat/splat "
+                      "to load-and-splat/copy: ");
+                DEBUG(MI.dump());
+                BuildMI(MBB, &MI, MI.getDebugLoc(),
+                        TII->get(PPC::COPY), MI.getOperand(0).getReg())
+                  .addOperand(MI.getOperand(1));
+                ToErase = &MI;
+                Simplified = true;
+              }
+            }
 
             // If this is a splat or a swap fed by another splat, we
             // can replace it with a copy.
-            if (DefMI && DefMI->getOpcode() == PPC::XXPERMDI) {
+            if (DefOpc == PPC::XXPERMDI) {
               unsigned FeedImmed = DefMI->getOperand(3).getImm();
               unsigned FeedReg1
                 = lookThruCopyLike(DefMI->getOperand(1).getReg());
@@ -170,8 +200,9 @@ bool PPCMIPeephole::simplifyCode(void) {
                 ToErase = &MI;
                 Simplified = true;
               }
-            } else if ((Immed == 0 || Immed == 3) &&
-                       DefMI && DefMI->getOpcode() == PPC::XXPERMDIs) {
+            } else if ((Immed == 0 || Immed == 3) && DefOpc == PPC::XXPERMDIs &&
+                       (DefMI->getOperand(2).getImm() == 0 ||
+                        DefMI->getOperand(2).getImm() == 3)) {
               // Splat fed by another splat - switch the output of the first
               // and remove the second.
               DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
@@ -190,17 +221,32 @@ bool PPCMIPeephole::simplifyCode(void) {
         unsigned MyOpcode = MI.getOpcode();
         unsigned OpNo = MyOpcode == PPC::XXSPLTW ? 1 : 2;
         unsigned TrueReg = lookThruCopyLike(MI.getOperand(OpNo).getReg());
+        if (!TargetRegisterInfo::isVirtualRegister(TrueReg))
+          break;
         MachineInstr *DefMI = MRI->getVRegDef(TrueReg);
         if (!DefMI)
           break;
         unsigned DefOpcode = DefMI->getOpcode();
-        bool SameOpcode = (MyOpcode == DefOpcode) ||
+        auto isConvertOfSplat = [=]() -> bool {
+          if (DefOpcode != PPC::XVCVSPSXWS && DefOpcode != PPC::XVCVSPUXWS)
+            return false;
+          unsigned ConvReg = DefMI->getOperand(1).getReg();
+          if (!TargetRegisterInfo::isVirtualRegister(ConvReg))
+            return false;
+          MachineInstr *Splt = MRI->getVRegDef(ConvReg);
+          return Splt && (Splt->getOpcode() == PPC::LXVWSX ||
+            Splt->getOpcode() == PPC::XXSPLTW);
+        };
+        bool AlreadySplat = (MyOpcode == DefOpcode) ||
           (MyOpcode == PPC::VSPLTB && DefOpcode == PPC::VSPLTBs) ||
           (MyOpcode == PPC::VSPLTH && DefOpcode == PPC::VSPLTHs) ||
-          (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::XXSPLTWs);
-        // Splat fed by another splat - switch the output of the first
-        // and remove the second.
-        if (SameOpcode) {
+          (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::XXSPLTWs) ||
+          (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::LXVWSX) ||
+          (MyOpcode == PPC::XXSPLTW && DefOpcode == PPC::MTVSRWS)||
+          (MyOpcode == PPC::XXSPLTW && isConvertOfSplat());
+        // If the instruction[s] that feed this splat have already splat
+        // the value, this splat is redundant.
+        if (AlreadySplat) {
           DEBUG(dbgs() << "Changing redundant splat to a copy: ");
           DEBUG(MI.dump());
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
@@ -234,9 +280,64 @@ bool PPCMIPeephole::simplifyCode(void) {
         }
         break;
       }
+      case PPC::XVCVDPSP: {
+        // If this is a DP->SP conversion fed by an FRSP, the FRSP is redundant.
+        unsigned TrueReg = lookThruCopyLike(MI.getOperand(1).getReg());
+        if (!TargetRegisterInfo::isVirtualRegister(TrueReg))
+          break;
+        MachineInstr *DefMI = MRI->getVRegDef(TrueReg);
+
+        // This can occur when building a vector of single precision or integer
+        // values.
+        if (DefMI && DefMI->getOpcode() == PPC::XXPERMDI) {
+          unsigned DefsReg1 = lookThruCopyLike(DefMI->getOperand(1).getReg());
+          unsigned DefsReg2 = lookThruCopyLike(DefMI->getOperand(2).getReg());
+          if (!TargetRegisterInfo::isVirtualRegister(DefsReg1) ||
+              !TargetRegisterInfo::isVirtualRegister(DefsReg2))
+            break;
+          MachineInstr *P1 = MRI->getVRegDef(DefsReg1);
+          MachineInstr *P2 = MRI->getVRegDef(DefsReg2);
+
+          if (!P1 || !P2)
+            break;
+
+          // Remove the passed FRSP instruction if it only feeds this MI and
+          // set any uses of that FRSP (in this MI) to the source of the FRSP.
+          auto removeFRSPIfPossible = [&](MachineInstr *RoundInstr) {
+            if (RoundInstr->getOpcode() == PPC::FRSP &&
+                MRI->hasOneNonDBGUse(RoundInstr->getOperand(0).getReg())) {
+              Simplified = true;
+              unsigned ConvReg1 = RoundInstr->getOperand(1).getReg();
+              unsigned FRSPDefines = RoundInstr->getOperand(0).getReg();
+              MachineInstr &Use = *(MRI->use_instr_begin(FRSPDefines));
+              for (int i = 0, e = Use.getNumOperands(); i < e; ++i)
+                if (Use.getOperand(i).isReg() &&
+                    Use.getOperand(i).getReg() == FRSPDefines)
+                  Use.getOperand(i).setReg(ConvReg1);
+              DEBUG(dbgs() << "Removing redundant FRSP:\n");
+              DEBUG(RoundInstr->dump());
+              DEBUG(dbgs() << "As it feeds instruction:\n");
+              DEBUG(MI.dump());
+              DEBUG(dbgs() << "Through instruction:\n");
+              DEBUG(DefMI->dump());
+              RoundInstr->eraseFromParent();
+            }
+          };
+
+          // If the input to XVCVDPSP is a vector that was built (even
+          // partially) out of FRSP's, the FRSP(s) can safely be removed
+          // since this instruction performs the same operation.
+          if (P1 != P2) {
+            removeFRSPIfPossible(P1);
+            removeFRSPIfPossible(P2);
+            break;
+          }
+          removeFRSPIfPossible(P1);
+        }
+        break;
+      }
       }
     }
-
     // If the last instruction was marked for elimination,
     // remove it now.
     if (ToErase) {

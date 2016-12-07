@@ -489,4 +489,54 @@ define void @fptosi_8f32_8i8() #0 {
   ret void
 }
 
+;
+; FPTOSI BUILDVECTOR
+;
+
+define <4 x i32> @fptosi_4xf64_4i32(double %a0, double %a1, double %a2, double %a3) #0 {
+; CHECK-LABEL: @fptosi_4xf64_4i32(
+; CHECK-NEXT:    [[CVT0:%.*]] = fptosi double %a0 to i32
+; CHECK-NEXT:    [[CVT1:%.*]] = fptosi double %a1 to i32
+; CHECK-NEXT:    [[CVT2:%.*]] = fptosi double %a2 to i32
+; CHECK-NEXT:    [[CVT3:%.*]] = fptosi double %a3 to i32
+; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x i32> undef, i32 [[CVT0]], i32 0
+; CHECK-NEXT:    [[RES1:%.*]] = insertelement <4 x i32> [[RES0]], i32 [[CVT1]], i32 1
+; CHECK-NEXT:    [[RES2:%.*]] = insertelement <4 x i32> [[RES1]], i32 [[CVT2]], i32 2
+; CHECK-NEXT:    [[RES3:%.*]] = insertelement <4 x i32> [[RES2]], i32 [[CVT3]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[RES3]]
+;
+  %cvt0 = fptosi double %a0 to i32
+  %cvt1 = fptosi double %a1 to i32
+  %cvt2 = fptosi double %a2 to i32
+  %cvt3 = fptosi double %a3 to i32
+  %res0 = insertelement <4 x i32> undef, i32 %cvt0, i32 0
+  %res1 = insertelement <4 x i32> %res0, i32 %cvt1, i32 1
+  %res2 = insertelement <4 x i32> %res1, i32 %cvt2, i32 2
+  %res3 = insertelement <4 x i32> %res2, i32 %cvt3, i32 3
+  ret <4 x i32> %res3
+}
+
+define <4 x i32> @fptosi_4xf32_4i32(float %a0, float %a1, float %a2, float %a3) #0 {
+; CHECK-LABEL: @fptosi_4xf32_4i32(
+; CHECK-NEXT:    [[CVT0:%.*]] = fptosi float %a0 to i32
+; CHECK-NEXT:    [[CVT1:%.*]] = fptosi float %a1 to i32
+; CHECK-NEXT:    [[CVT2:%.*]] = fptosi float %a2 to i32
+; CHECK-NEXT:    [[CVT3:%.*]] = fptosi float %a3 to i32
+; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x i32> undef, i32 [[CVT0]], i32 0
+; CHECK-NEXT:    [[RES1:%.*]] = insertelement <4 x i32> [[RES0]], i32 [[CVT1]], i32 1
+; CHECK-NEXT:    [[RES2:%.*]] = insertelement <4 x i32> [[RES1]], i32 [[CVT2]], i32 2
+; CHECK-NEXT:    [[RES3:%.*]] = insertelement <4 x i32> [[RES2]], i32 [[CVT3]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[RES3]]
+;
+  %cvt0 = fptosi float %a0 to i32
+  %cvt1 = fptosi float %a1 to i32
+  %cvt2 = fptosi float %a2 to i32
+  %cvt3 = fptosi float %a3 to i32
+  %res0 = insertelement <4 x i32> undef, i32 %cvt0, i32 0
+  %res1 = insertelement <4 x i32> %res0, i32 %cvt1, i32 1
+  %res2 = insertelement <4 x i32> %res1, i32 %cvt2, i32 2
+  %res3 = insertelement <4 x i32> %res2, i32 %cvt3, i32 3
+  ret <4 x i32> %res3
+}
+
 attributes #0 = { nounwind }

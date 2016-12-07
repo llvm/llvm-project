@@ -15,21 +15,27 @@
 #ifndef LLVM_IR_DIBUILDER_H
 #define LLVM_IR_DIBUILDER_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/TrackingMDRef.h"
-#include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cstdint>
 
 namespace llvm {
+
   class BasicBlock;
-  class Instruction;
+  class Constant;
   class Function;
+  class Instruction;
+  class LLVMContext;
   class Module;
   class Value;
-  class Constant;
-  class LLVMContext;
-  class StringRef;
-  template <typename T> class ArrayRef;
 
   class DIBuilder {
     Module &M;
@@ -57,9 +63,6 @@ namespace llvm {
     /// copy.
     DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedVariables;
 
-    DIBuilder(const DIBuilder &) = delete;
-    void operator=(const DIBuilder &) = delete;
-
     /// Create a temporary.
     ///
     /// Create an \a temporary node and track it in \a UnresolvedNodes.
@@ -71,6 +74,8 @@ namespace llvm {
     /// If \c AllowUnresolved, collect unresolved nodes attached to the module
     /// in order to resolve cycles during \a finalize().
     explicit DIBuilder(Module &M, bool AllowUnresolved = true);
+    DIBuilder(const DIBuilder &) = delete;
+    DIBuilder &operator=(const DIBuilder &) = delete;
 
     /// Construct any deferred debug info descriptors.
     void finalize();
@@ -223,7 +228,7 @@ namespace llvm {
     DIDerivedType *createStaticMemberType(DIScope *Scope, StringRef Name,
                                           DIFile *File, unsigned LineNo,
                                           DIType *Ty, DINode::DIFlags Flags,
-                                          llvm::Constant *Val,
+                                          Constant *Val,
                                           uint32_t AlignInBits = 0);
 
     /// Create debugging information entry for Objective-C
@@ -742,6 +747,7 @@ namespace llvm {
       return Replacement;
     }
   };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_IR_DIBUILDER_H

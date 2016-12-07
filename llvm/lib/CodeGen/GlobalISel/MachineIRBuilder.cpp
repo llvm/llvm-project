@@ -392,11 +392,12 @@ MachineInstrBuilder MachineIRBuilder::buildFCmp(CmpInst::Predicate Pred,
 MachineInstrBuilder MachineIRBuilder::buildSelect(unsigned Res, unsigned Tst,
                                                   unsigned Op0, unsigned Op1) {
 #ifndef NDEBUG
-  assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
+  LLT ResTy = MRI->getType(Res);
+  assert((ResTy.isScalar() || ResTy.isVector() || ResTy.isPointer()) &&
          "invalid operand type");
-  assert(MRI->getType(Res) == MRI->getType(Op0) &&
-         MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
-  if (MRI->getType(Res).isScalar())
+  assert(ResTy == MRI->getType(Op0) && ResTy == MRI->getType(Op1) &&
+         "type mismatch");
+  if (ResTy.isScalar() || ResTy.isPointer())
     assert(MRI->getType(Tst).isScalar() && "type mismatch");
   else
     assert(MRI->getType(Tst).isVector() &&

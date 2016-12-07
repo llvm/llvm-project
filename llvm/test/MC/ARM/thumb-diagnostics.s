@@ -11,7 +11,7 @@
 
 @ ADD instruction w/o 'S' suffix.
         add r1, r2, r3
-@ CHECK-ERRORS: error: invalid instruction
+@ CHECK-ERRORS: error: no flag-preserving variant of this instruction available
 @ CHECK-ERRORS:         add r1, r2, r3
 @ CHECK-ERRORS:         ^
 

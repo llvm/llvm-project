@@ -3515,6 +3515,15 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       TopHalf = DAG.getSetCC(dl, getSetCCResultType(VT), TopHalf,
                              DAG.getConstant(0, dl, VT), ISD::SETNE);
     }
+
+    // Truncate the result if SetCC returns a larger type than needed.
+    EVT RType = Node->getValueType(1);
+    if (RType.getSizeInBits() < TopHalf.getValueSizeInBits())
+      TopHalf = DAG.getNode(ISD::TRUNCATE, dl, RType, TopHalf);
+
+    assert(RType.getSizeInBits() == TopHalf.getValueSizeInBits() &&
+           "Unexpected result type for S/UMULO legalization");
+
     Results.push_back(BottomHalf);
     Results.push_back(TopHalf);
     break;

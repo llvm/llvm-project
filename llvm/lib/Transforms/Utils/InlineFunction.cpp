@@ -1350,7 +1350,7 @@ static bool allocaWouldBeStaticInEntry(const AllocaInst *AI ) {
 /// Update inlined instructions' line numbers to
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
-                             Instruction *TheCall) {
+                             Instruction *TheCall, bool CalleeHasDebugInfo) {
   const DebugLoc &TheCallDL = TheCall->getDebugLoc();
   if (!TheCallDL)
     return;
@@ -1374,6 +1374,8 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
          BI != BE; ++BI) {
       DebugLoc DL = BI->getDebugLoc();
       if (!DL) {
+        if (CalleeHasDebugInfo)
+          continue;
         // If the inlined instruction has no line number, make it look as if it
         // originates from the call location. This is important for
         // ((__always_inline__, __nodebug__)) functions which must use caller
@@ -1643,8 +1645,11 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     if (IFI.CG)
       UpdateCallGraphAfterInlining(CS, FirstNewBlock, VMap, IFI);
 
-    // Update inlined instructions' line number information.
-    fixupLineNumbers(Caller, FirstNewBlock, TheCall);
+    // For 'nodebug' functions, the associated DISubprogram is always null.
+    // Conservatively avoid propagating the callsite debug location to
+    // instructions inlined from a function whose DISubprogram is not null.
+    fixupLineNumbers(Caller, FirstNewBlock, TheCall,
+                     CalledFunc->getSubprogram() != nullptr);
 
     // Clone existing noalias metadata if necessary.
     CloneAliasScopeMetadata(CS, VMap);

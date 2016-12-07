@@ -15,12 +15,20 @@
 #ifndef LLVM_TRANSFORMS_UTILS_FUNCTIONCOMPARATOR_H
 #define LLVM_TRANSFORMS_UTILS_FUNCTIONCOMPARATOR_H
 
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
+#include <cstdint>
+#include <tuple>
 
 namespace llvm {
+
+class GetElementPtrInst;
 
 /// GlobalNumberState assigns an integer to each global value in the program,
 /// which is used by the comparison routine to order references to globals. This
@@ -44,20 +52,23 @@ class GlobalNumberState {
   typedef ValueMap<GlobalValue *, uint64_t, Config> ValueNumberMap;
   ValueNumberMap GlobalNumbers;
   // The next unused serial number to assign to a global.
-  uint64_t NextNumber;
-  public:
-    GlobalNumberState() : GlobalNumbers(), NextNumber(0) {}
-    uint64_t getNumber(GlobalValue* Global) {
-      ValueNumberMap::iterator MapIter;
-      bool Inserted;
-      std::tie(MapIter, Inserted) = GlobalNumbers.insert({Global, NextNumber});
-      if (Inserted)
-        NextNumber++;
-      return MapIter->second;
-    }
-    void clear() {
-      GlobalNumbers.clear();
-    }
+  uint64_t NextNumber = 0;
+
+public:
+  GlobalNumberState() = default;
+
+  uint64_t getNumber(GlobalValue* Global) {
+    ValueNumberMap::iterator MapIter;
+    bool Inserted;
+    std::tie(MapIter, Inserted) = GlobalNumbers.insert({Global, NextNumber});
+    if (Inserted)
+      NextNumber++;
+    return MapIter->second;
+  }
+
+  void clear() {
+    GlobalNumbers.clear();
+  }
 };
 
 /// FunctionComparator - Compares two functions to determine whether or not
@@ -78,7 +89,6 @@ public:
   static FunctionHash functionHash(Function &);
 
 protected:
-
   /// Start the comparison.
   void beginCompare() {
     sn_mapL.clear();
@@ -302,7 +312,6 @@ protected:
   const Function *FnL, *FnR;
 
 private:
-
   int cmpOrderings(AtomicOrdering L, AtomicOrdering R) const;
   int cmpInlineAsm(const InlineAsm *L, const InlineAsm *R) const;
   int cmpAttrs(const AttributeSet L, const AttributeSet R) const;
@@ -362,6 +371,6 @@ private:
   GlobalNumberState* GlobalNumbers;
 };
 
-}
+} // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_FUNCTIONCOMPARATOR_H

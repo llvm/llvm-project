@@ -15,28 +15,22 @@
 #ifndef LLVM_IR_OPERATOR_H
 #define LLVM_IR_OPERATOR_H
 
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <cstddef>
 
 namespace llvm {
-
-class GetElementPtrInst;
-class BinaryOperator;
-class ConstantExpr;
 
 /// This is a utility class that provides an abstraction for the common
 /// functionality between Instructions and ConstantExprs.
 class Operator : public User {
-private:
-  // The Operator class is intended to be used as a utility, and is never itself
-  // instantiated.
-  void *operator new(size_t, unsigned) = delete;
-  void *operator new(size_t s) = delete;
-  Operator() = delete;
-
 protected:
   // NOTE: Cannot use = delete because it's not legal to delete
   // an overridden method that's not deleted in the base class. Cannot leave
@@ -44,6 +38,13 @@ protected:
   ~Operator() override;
 
 public:
+  // The Operator class is intended to be used as a utility, and is never itself
+  // instantiated.
+  Operator() = delete;
+
+  void *operator new(size_t, unsigned) = delete;
+  void *operator new(size_t s) = delete;
+
   /// Return the opcode for this Instruction or ConstantExpr.
   unsigned getOpcode() const {
     if (const Instruction *I = dyn_cast<Instruction>(this))
@@ -81,6 +82,7 @@ public:
 private:
   friend class Instruction;
   friend class ConstantExpr;
+
   void setHasNoUnsignedWrap(bool B) {
     SubclassOptionalData =
       (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
@@ -132,6 +134,7 @@ public:
 private:
   friend class Instruction;
   friend class ConstantExpr;
+
   void setIsExact(bool B) {
     SubclassOptionalData = (SubclassOptionalData & ~IsExact) | (B * IsExact);
   }
@@ -148,6 +151,7 @@ public:
            OpC == Instruction::AShr ||
            OpC == Instruction::LShr;
   }
+
   static inline bool classof(const ConstantExpr *CE) {
     return isPossiblyExactOpcode(CE->getOpcode());
   }
@@ -164,7 +168,9 @@ public:
 class FastMathFlags {
 private:
   friend class FPMathOperator;
-  unsigned Flags;
+
+  unsigned Flags = 0;
+
   FastMathFlags(unsigned F) : Flags(F) { }
 
 public:
@@ -176,8 +182,7 @@ public:
     AllowReciprocal = (1 << 4)
   };
 
-  FastMathFlags() : Flags(0)
-  { }
+  FastMathFlags() = default;
 
   /// Whether any flag is set
   bool any() const { return Flags != 0; }
@@ -210,7 +215,6 @@ public:
   }
 };
 
-
 /// Utility class for floating point operations which can have
 /// information about relaxed accuracy requirements attached to them.
 class FPMathOperator : public Operator {
@@ -230,21 +234,25 @@ private:
       setHasAllowReciprocal(true);
     }
   }
+
   void setHasNoNaNs(bool B) {
     SubclassOptionalData =
       (SubclassOptionalData & ~FastMathFlags::NoNaNs) |
       (B * FastMathFlags::NoNaNs);
   }
+
   void setHasNoInfs(bool B) {
     SubclassOptionalData =
       (SubclassOptionalData & ~FastMathFlags::NoInfs) |
       (B * FastMathFlags::NoInfs);
   }
+
   void setHasNoSignedZeros(bool B) {
     SubclassOptionalData =
       (SubclassOptionalData & ~FastMathFlags::NoSignedZeros) |
       (B * FastMathFlags::NoSignedZeros);
   }
+
   void setHasAllowReciprocal(bool B) {
     SubclassOptionalData =
       (SubclassOptionalData & ~FastMathFlags::AllowReciprocal) |
@@ -313,7 +321,6 @@ public:
   }
 };
 
-
 /// A helper template for defining operators for individual opcodes.
 template<typename SuperClass, unsigned Opc>
 class ConcreteOperator : public SuperClass {
@@ -343,7 +350,6 @@ class ShlOperator
   : public ConcreteOperator<OverflowingBinaryOperator, Instruction::Shl> {
 };
 
-
 class SDivOperator
   : public ConcreteOperator<PossiblyExactOperator, Instruction::SDiv> {
 };
@@ -357,19 +363,18 @@ class LShrOperator
   : public ConcreteOperator<PossiblyExactOperator, Instruction::LShr> {
 };
 
-
 class ZExtOperator : public ConcreteOperator<Operator, Instruction::ZExt> {};
-
 
 class GEPOperator
   : public ConcreteOperator<Operator, Instruction::GetElementPtr> {
+  friend class GetElementPtrInst;
+  friend class ConstantExpr;
+
   enum {
     IsInBounds = (1 << 0),
     // InRangeIndex: bits 1-6
   };
 
-  friend class GetElementPtrInst;
-  friend class ConstantExpr;
   void setIsInBounds(bool B) {
     SubclassOptionalData =
       (SubclassOptionalData & ~IsInBounds) | (B * IsInBounds);
@@ -380,6 +385,7 @@ public:
   bool isInBounds() const {
     return SubclassOptionalData & IsInBounds;
   }
+
   /// Returns the offset of the index with an inrange attachment, or None if
   /// none.
   Optional<unsigned> getInRangeIndex() const {
@@ -470,6 +476,7 @@ public:
   const Value *getPointerOperand() const {
     return getOperand(0);
   }
+
   static unsigned getPointerOperandIndex() {
     return 0U;                      // get index for modifying correct operand
   }
@@ -500,6 +507,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_OPERATOR_H

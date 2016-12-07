@@ -308,8 +308,11 @@ public:
 
       do {
         LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
-        if (InvalidRefSCCSet.count(RC))
+        if (InvalidRefSCCSet.count(RC)) {
+          if (DebugLogging)
+            dbgs() << "Skipping an invalid RefSCC...\n";
           continue;
+        }
 
         assert(CWorklist.empty() &&
                "Should always start with an empty SCC worklist");
@@ -328,8 +331,17 @@ public:
           // other RefSCCs in the worklist. The invalid ones are dead and the
           // other RefSCCs should be queued above, so we just need to skip both
           // scenarios here.
-          if (InvalidSCCSet.count(C) || &C->getOuterRefSCC() != RC)
+          if (InvalidSCCSet.count(C)) {
+            if (DebugLogging)
+              dbgs() << "Skipping an invalid SCC...\n";
             continue;
+          }
+          if (&C->getOuterRefSCC() != RC) {
+            if (DebugLogging)
+              dbgs() << "Skipping an SCC that is now part of some other "
+                        "RefSCC...\n";
+            continue;
+          }
 
           do {
             // Check that we didn't miss any update scenario.

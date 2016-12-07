@@ -533,6 +533,27 @@ define i16 @add_i16(i16 %a, i16 %b) {
   ret i16 %r
 }
 
+; GCN-LABEL: @constant_add_i16(
+; VI: ret i16 3
+define i16 @constant_add_i16() {
+  %r = add i16 1, 2
+  ret i16 %r
+}
+
+; GCN-LABEL: @constant_add_nsw_i16(
+; VI: ret i16 3
+define i16 @constant_add_nsw_i16() {
+  %r = add nsw i16 1, 2
+  ret i16 %r
+}
+
+; GCN-LABEL: @constant_add_nuw_i16(
+; VI: ret i16 3
+define i16 @constant_add_nuw_i16() {
+  %r = add nsw i16 1, 2
+  ret i16 %r
+}
+
 ; GCN-LABEL: @add_nsw_i16(
 ; SI: %r = add nsw i16 %a, %b
 ; SI-NEXT: ret i16 %r
@@ -803,6 +824,13 @@ define i16 @ashr_i16(i16 %a, i16 %b) {
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @ashr_exact_i16(i16 %a, i16 %b) {
   %r = ashr exact i16 %a, %b
+  ret i16 %r
+}
+
+; GCN-LABEL: @constant_lshr_exact_i16(
+; VI: ret i16 2
+define i16 @constant_lshr_exact_i16(i16 %a, i16 %b) {
+  %r = lshr exact i16 4, 1
   ret i16 %r
 }
 

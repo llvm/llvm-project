@@ -39,6 +39,11 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
   SmallVector<Instruction*, 128> Worklist;
   bool Changed = false;
   for (Instruction &I : instructions(F)) {
+    // If the instruction has side effects and no non-dbg uses,
+    // BDCE should skip it.
+    if (I.mayHaveSideEffects() && I.use_empty())
+      continue;
+
     if (I.getType()->isIntegerTy() &&
         !DB.getDemandedBits(&I).getBoolValue()) {
       // For live instructions that have all dead bits, first make them dead by
