@@ -7,7 +7,7 @@
 // rdar://problem/24528966
 
 @class NSString;
-extern __attribute__((visibility("default"))) NSString *GenString();
+extern __attribute__((visibility("default"))) NSString * GenString();
 
 // Behavior of __builtin_os_log differs between platforms, so only test on X86
 #ifdef __x86_64__

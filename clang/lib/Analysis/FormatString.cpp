@@ -590,8 +590,7 @@ const char *ConversionSpecifier::toString() const {
   case cArg: return "c";
   case sArg: return "s";
   case pArg: return "p";
-  case PArg:
-    return "P";
+  case PArg: return "P";
   case nArg: return "n";
   case PercentArg:  return "%";
   case ScanListArg: return "[";
