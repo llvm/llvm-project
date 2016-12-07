@@ -370,9 +370,6 @@ long long test_builtin_readcyclecounter() {
   return __builtin_readcyclecounter();
 }
 
-// Behavior of __builtin_os_log differs between platforms, so only test on X86
-#ifdef __x86_64__
-
 // CHECK-LABEL: define void @test_builtin_os_log
 // CHECK: (i8* [[BUF:%.*]], i32 [[I:%.*]], i8* [[DATA:%.*]])
 void test_builtin_os_log(void *buf, int i, const char *data) {
@@ -510,5 +507,3 @@ void test_builtin_os_log_percent(void *buf, const char *data) {
   // CHECK: store i8* [[DATA2]], i8** [[ARG1_PTR]]
   __builtin_os_log_format(buf, "%s %%", data);
 }
-
-#endif
