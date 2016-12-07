@@ -13,7 +13,10 @@ RUN:     | FileCheck %s -check-prefix ELF-MIPS64
 ##
 ## test.s is an empty file.
 ## linker.script:
-## PHDRS { text PT_LOAD FILEHDR PHDRS; foo 0x65a3dbe6; bar 0x65a3dbe7; }
+## PHDRS { text PT_LOAD FILEHDR PHDRS; foo 0x65a3dbe6; bar 0x65a3dbe7; zed 0x65a41be6; }
+##   Where 0x65a3dbe6 is the value of PT_OPENBSD_RANDOMIZE,
+##         0x65a3dbe7 is the value of PT_OPENBSD_WXNEEDED,
+##         0x65a41be6 is the value of PT_OPENBSD_BOOTDATA
 ## SECTIONS { . = SIZEOF_HEADERS; .all : { *(.*) } : text }
 RUN: llvm-readobj -program-headers %p/../../Object/Inputs/openbsd-phdrs.elf-x86-64 \
 RUN:     | FileCheck %s -check-prefix OPENBSD-X86-64
@@ -166,6 +169,17 @@ OPENBSD-X86-64-NEXT:     Alignment:
 OPENBSD-X86-64-NEXT:   }
 OPENBSD-X86-64-NEXT:   ProgramHeader {
 OPENBSD-X86-64-NEXT:     Type:  PT_OPENBSD_WXNEEDED
+OPENBSD-X86-64-NEXT:     Offset:
+OPENBSD-X86-64-NEXT:     VirtualAddress:
+OPENBSD-X86-64-NEXT:     PhysicalAddress:
+OPENBSD-X86-64-NEXT:     FileSize:
+OPENBSD-X86-64-NEXT:     MemSize:
+OPENBSD-X86-64-NEXT:     Flags [
+OPENBSD-X86-64-NEXT:     ]
+OPENBSD-X86-64-NEXT:     Alignment:
+OPENBSD-X86-64-NEXT:   }
+OPENBSD-X86-64-NEXT:   ProgramHeader {
+OPENBSD-X86-64-NEXT:     Type:  PT_OPENBSD_BOOTDATA
 OPENBSD-X86-64-NEXT:     Offset:
 OPENBSD-X86-64-NEXT:     VirtualAddress:
 OPENBSD-X86-64-NEXT:     PhysicalAddress:

@@ -36,7 +36,9 @@ public:
     SameSize,     ///< The data referenced by the COMDAT must be the same size.
   };
 
+  Comdat(const Comdat &) = delete;
   Comdat(Comdat &&C);
+
   SelectionKind getSelectionKind() const { return SK; }
   void setSelectionKind(SelectionKind Val) { SK = Val; }
   StringRef getName() const;
@@ -45,8 +47,8 @@ public:
 
 private:
   friend class Module;
+
   Comdat();
-  Comdat(const Comdat &) = delete;
 
   // Points to the map in Module.
   StringMapEntry<Comdat> *Name;
@@ -58,6 +60,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Comdat &C) {
   return OS;
 }
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_COMDAT_H

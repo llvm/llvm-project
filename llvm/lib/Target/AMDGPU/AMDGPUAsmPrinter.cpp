@@ -763,6 +763,11 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
   header.reserved_vgpr_first = KernelInfo.ReservedVGPRFirst;
   header.reserved_vgpr_count = KernelInfo.ReservedVGPRCount;
 
+  // These alignment values are specified in powers of two, so alignment =
+  // 2^n.  The minimum alignment is 2^4 = 16.
+  header.kernarg_segment_alignment = std::max((size_t)4,
+      countTrailingZeros(MFI->getMaxKernArgAlign()));
+
   if (STM.debuggerEmitPrologue()) {
     header.debug_wavefront_private_segment_offset_sgpr =
       KernelInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;

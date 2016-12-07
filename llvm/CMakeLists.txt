@@ -803,8 +803,6 @@ endif()
 include(AddLLVM)
 include(TableGen)
 
-set(LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_INCLUDE_DIR})
-
 if( MINGW )
   # People report that -O3 is unreliable on MinGW. The traditional
   # build also uses -O2 for that reason:

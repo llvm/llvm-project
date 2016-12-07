@@ -367,6 +367,9 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     const RegBankSelect::MappingCost *BestCost) {
   assert((MBFI || !BestCost) && "Costs comparison require MBFI");
 
+  if (!InstrMapping.isValid())
+    return MappingCost::ImpossibleCost();
+
   // If mapped with InstrMapping, MI will have the recorded cost.
   MappingCost Cost(MBFI ? MBFI->getBlockFreq(MI.getParent()) : 1);
   bool Saturated = Cost.addLocalCost(InstrMapping.getCost());

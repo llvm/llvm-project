@@ -50,11 +50,11 @@ let Uses = [M0, EXEC] in {
 
 multiclass V_INTERP_P1_F32_m : VINTRP_m <
   0x00000000,
-  (outs VGPR_32:$dst),
+  (outs VGPR_32:$vdst),
   (ins VGPR_32:$i, i32imm:$attr_chan, i32imm:$attr),
-  "v_interp_p1_f32 $dst, $i, $attr_chan, $attr, [m0]",
-  [(set f32:$dst, (AMDGPUinterp_p1 f32:$i, (i32 imm:$attr_chan),
-                                           (i32 imm:$attr)))]
+  "v_interp_p1_f32 $vdst, $i, $attr_chan, $attr, [m0]",
+  [(set f32:$vdst, (AMDGPUinterp_p1 f32:$i, (i32 imm:$attr_chan),
+                                            (i32 imm:$attr)))]
 >;
 
 let OtherPredicates = [has32BankLDS] in {
@@ -63,31 +63,31 @@ defm V_INTERP_P1_F32 : V_INTERP_P1_F32_m;
 
 } // End OtherPredicates = [has32BankLDS]
 
-let OtherPredicates = [has16BankLDS], Constraints = "@earlyclobber $dst", isAsmParserOnly=1 in {
+let OtherPredicates = [has16BankLDS], Constraints = "@earlyclobber $vdst", isAsmParserOnly=1 in {
 
 defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
 
-} // End OtherPredicates = [has32BankLDS], Constraints = "@earlyclobber $dst", isAsmParserOnly=1
+} // End OtherPredicates = [has32BankLDS], Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
 
-let DisableEncoding = "$src0", Constraints = "$src0 = $dst" in {
+let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
 
 defm V_INTERP_P2_F32 : VINTRP_m <
   0x00000001,
-  (outs VGPR_32:$dst),
+  (outs VGPR_32:$vdst),
   (ins VGPR_32:$src0, VGPR_32:$j, i32imm:$attr_chan, i32imm:$attr),
-  "v_interp_p2_f32 $dst, [$src0], $j, $attr_chan, $attr, [m0]",
-  [(set f32:$dst, (AMDGPUinterp_p2 f32:$src0, f32:$j, (i32 imm:$attr_chan),
-                                                     (i32 imm:$attr)))]>;
+  "v_interp_p2_f32 $vdst, [$src0], $j, $attr_chan, $attr, [m0]",
+  [(set f32:$vdst, (AMDGPUinterp_p2 f32:$src0, f32:$j, (i32 imm:$attr_chan),
+                                                       (i32 imm:$attr)))]>;
 
-} // End DisableEncoding = "$src0", Constraints = "$src0 = $dst"
+} // End DisableEncoding = "$src0", Constraints = "$src0 = $vdst"
 
 defm V_INTERP_MOV_F32 : VINTRP_m <
   0x00000002,
-  (outs VGPR_32:$dst),
+  (outs VGPR_32:$vdst),
   (ins InterpSlot:$src0, i32imm:$attr_chan, i32imm:$attr),
-  "v_interp_mov_f32 $dst, $src0, $attr_chan, $attr, [m0]",
-  [(set f32:$dst, (AMDGPUinterp_mov (i32 imm:$src0), (i32 imm:$attr_chan),
-                                    (i32 imm:$attr)))]>;
+  "v_interp_mov_f32 $vdst, $src0, $attr_chan, $attr, [m0]",
+  [(set f32:$vdst, (AMDGPUinterp_mov (i32 imm:$src0), (i32 imm:$attr_chan),
+                                     (i32 imm:$attr)))]>;
 
 } // End Uses = [M0, EXEC]
 

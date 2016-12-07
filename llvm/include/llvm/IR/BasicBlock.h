@@ -14,21 +14,24 @@
 #ifndef LLVM_IR_BASICBLOCK_H
 #define LLVM_IR_BASICBLOCK_H
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm-c/Types.h"
+#include <cassert>
+#include <cstddef>
 
 namespace llvm {
 
 class CallInst;
-class LandingPadInst;
-class TerminatorInst;
-class LLVMContext;
-class BlockAddress;
 class Function;
+class LandingPadInst;
+class LLVMContext;
+class TerminatorInst;
 
 /// \brief LLVM Basic Block Representation
 ///
@@ -47,19 +50,17 @@ class Function;
 /// are "well formed".
 class BasicBlock : public Value, // Basic blocks are data objects also
                    public ilist_node_with_parent<BasicBlock, Function> {
-  friend class BlockAddress;
 public:
   typedef SymbolTableList<Instruction> InstListType;
 
 private:
+  friend class BlockAddress;
+  friend class SymbolTableListTraits<BasicBlock>;
+
   InstListType InstList;
   Function *Parent;
 
   void setParent(Function *parent);
-  friend class SymbolTableListTraits<BasicBlock>;
-
-  BasicBlock(const BasicBlock &) = delete;
-  void operator=(const BasicBlock &) = delete;
 
   /// \brief Constructor.
   ///
@@ -69,7 +70,12 @@ private:
   explicit BasicBlock(LLVMContext &C, const Twine &Name = "",
                       Function *Parent = nullptr,
                       BasicBlock *InsertBefore = nullptr);
+
 public:
+  BasicBlock(const BasicBlock &) = delete;
+  BasicBlock &operator=(const BasicBlock &) = delete;
+  ~BasicBlock() override;
+
   /// \brief Get the context in which this basic block lives.
   LLVMContext &getContext() const;
 
@@ -89,7 +95,6 @@ public:
                             BasicBlock *InsertBefore = nullptr) {
     return new BasicBlock(Context, Name, Parent, InsertBefore);
   }
-  ~BasicBlock() override;
 
   /// \brief Return the enclosing method, or null if none.
   const Function *getParent() const { return Parent; }
@@ -330,6 +335,7 @@ private:
     assert((int)(signed char)getSubclassDataFromValue() >= 0 &&
            "Refcount wrap-around");
   }
+
   /// \brief Shadow Value::setValueSubclassData with a private forwarding method
   /// so that any future subclasses cannot accidentally use it.
   void setValueSubclassData(unsigned short D) {
@@ -340,6 +346,6 @@ private:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(BasicBlock, LLVMBasicBlockRef)
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_BASICBLOCK_H

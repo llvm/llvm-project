@@ -115,8 +115,9 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 #define CHECK_PARTIALMAP(Idx, ValStartIdx, ValLength, RB)                      \
   do {                                                                         \
     const PartialMapping &Map =                                                \
-        AArch64::PartMappings[AArch64::PartialMappingIdx::Idx];                \
-    (void) Map;                                                                \
+        AArch64::PartMappings[AArch64::PartialMappingIdx::Idx -                \
+                              AArch64::PartialMappingIdx::PMI_Min];            \
+    (void)Map;                                                                 \
     assert(Map.StartIdx == ValStartIdx && Map.Length == ValLength &&           \
            Map.RegBank == &RB && #Idx " is incorrectly initialized");          \
   } while (0)
@@ -132,12 +133,13 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 // Check value mapping.
 #define CHECK_VALUEMAP_IMPL(RBName, Size, Offset)                              \
   do {                                                                         \
-    AArch64::PartialMappingIdx PartialMapBaseIdx =                             \
-        AArch64::PartialMappingIdx::PMI_##RBName##Size;                        \
-    (void) PartialMapBaseIdx;                                                  \
-    const ValueMapping &Map =                                                  \
-        AArch64::getValueMapping(AArch64::PMI_First##RBName, Size)[Offset];    \
-    (void) Map;                                                                \
+    unsigned PartialMapBaseIdx =                                               \
+        AArch64::PartialMappingIdx::PMI_##RBName##Size -                       \
+        AArch64::PartialMappingIdx::PMI_Min;                                   \
+    (void)PartialMapBaseIdx;                                                   \
+    const ValueMapping &Map = AArch64::getValueMapping(                        \
+        AArch64::PartialMappingIdx::PMI_First##RBName, Size)[Offset];          \
+    (void)Map;                                                                 \
     assert(Map.BreakDown == &AArch64::PartMappings[PartialMapBaseIdx] &&       \
            Map.NumBreakDowns == 1 && #RBName #Size                             \
            " " #Offset " is incorrectly initialized");                         \
@@ -172,10 +174,10 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
 #define CHECK_VALUEMAP_CROSSREGCPY(RBNameDst, RBNameSrc, Size)                 \
   do {                                                                         \
-    AArch64::PartialMappingIdx PartialMapDstIdx =                              \
-        AArch64::PartialMappingIdx::PMI_##RBNameDst##Size;                     \
-    AArch64::PartialMappingIdx PartialMapSrcIdx =                              \
-        AArch64::PartialMappingIdx::PMI_##RBNameSrc##Size;                     \
+    unsigned PartialMapDstIdx =                                                \
+        AArch64::PMI_##RBNameDst##Size - AArch64::PMI_Min;                     \
+    unsigned PartialMapSrcIdx =                                                \
+        AArch64::PMI_##RBNameSrc##Size - AArch64::PMI_Min;                     \
     (void) PartialMapDstIdx;                                                   \
     (void) PartialMapSrcIdx;                                                   \
     const ValueMapping *Map = AArch64::getCopyMapping(                         \
@@ -492,6 +494,10 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                               AArch64::getCopyMapping(DstIsGPR, SrcIsGPR, Size),
                               /*NumOperands*/ 2};
   }
+  case TargetOpcode::G_SEQUENCE:
+    // FIXME: support this, but the generic code is really not going to do
+    // anything sane.
+    return InstructionMapping();
   default:
     break;
   }

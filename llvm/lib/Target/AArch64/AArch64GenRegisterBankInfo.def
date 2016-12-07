@@ -27,7 +27,7 @@ RegisterBank *RegBanks[] = {&GPRRegBank, &FPRRegBank, &CCRRegBank};
 // PartialMappings.
 enum PartialMappingIdx {
   PMI_None = -1,
-  PMI_GPR32 = 0,
+  PMI_GPR32 = 1,
   PMI_GPR64,
   PMI_FPR32,
   PMI_FPR64,
@@ -137,10 +137,11 @@ const RegisterBankInfo::ValueMapping *
 getValueMapping(PartialMappingIdx RBIdx, unsigned Size) {
   assert(RBIdx != PartialMappingIdx::PMI_None && "No mapping needed for that");
   unsigned ValMappingIdx = First3OpsIdx +
-                      (RBIdx + getRegBankBaseIdxOffset(Size)) *
-                          ValueMappingIdx::DistanceBetweenRegBanks;
-    assert(ValMappingIdx >= AArch64::First3OpsIdx &&
-           ValMappingIdx <= AArch64::Last3OpsIdx && "Mapping out of bound");
+                           (RBIdx - AArch64::PartialMappingIdx::PMI_Min +
+                            getRegBankBaseIdxOffset(Size)) *
+                               ValueMappingIdx::DistanceBetweenRegBanks;
+  assert(ValMappingIdx >= AArch64::First3OpsIdx &&
+         ValMappingIdx <= AArch64::Last3OpsIdx && "Mapping out of bound");
 
   return &ValMappings[ValMappingIdx];
 }
@@ -160,7 +161,7 @@ getCopyMapping(bool DstIsGPR, bool SrcIsGPR, unsigned Size) {
   assert(Size <= 64 && "GPR cannot handle that size");
   unsigned ValMappingIdx =
       FirstCrossRegCpyIdx +
-      (DstRBIdx - PMI_FirstGPR + getRegBankBaseIdxOffset(Size)) *
+      (DstRBIdx - PMI_Min + getRegBankBaseIdxOffset(Size)) *
           ValueMappingIdx::DistanceBetweenCrossRegCpy;
   assert(ValMappingIdx >= AArch64::FirstCrossRegCpyIdx &&
          ValMappingIdx <= AArch64::LastCrossRegCpyIdx &&

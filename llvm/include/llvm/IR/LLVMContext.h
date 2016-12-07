@@ -15,28 +15,30 @@
 #ifndef LLVM_IR_LLVMCONTEXT_H
 #define LLVM_IR_LLVMCONTEXT_H
 
+#include "llvm-c/Types.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Options.h"
+#include <cstdint>
+#include <memory>
+#include <string>
 
 namespace llvm {
 
-class LLVMContextImpl;
-class StringRef;
-class Twine;
-class Instruction;
-class Module;
-class MDString;
-class DICompositeType;
-class SMDiagnostic;
 class DiagnosticInfo;
 enum DiagnosticSeverity : char;
-template <typename T> class SmallVectorImpl;
 class Function;
-class DebugLoc;
+class Instruction;
+class LLVMContextImpl;
+class Module;
 class OptBisect;
+template <typename T> class SmallVectorImpl;
+class SMDiagnostic;
+class StringRef;
+class Twine;
+
 namespace yaml {
 class Output;
-}
+} // end namespace yaml
 
 /// This is an important class for using LLVM in a threaded context.  It
 /// (opaquely) owns and manages the core "global" data of LLVM's core
@@ -47,6 +49,8 @@ class LLVMContext {
 public:
   LLVMContextImpl *const pImpl;
   LLVMContext();
+  LLVMContext(LLVMContext &) = delete;
+  LLVMContext &operator=(const LLVMContext &) = delete;
   ~LLVMContext();
 
   // Pinned metadata names, which always have the same value.  This is a
@@ -259,8 +263,8 @@ public:
   /// analysis.
   OptBisect &getOptBisect();
 private:
-  LLVMContext(LLVMContext&) = delete;
-  void operator=(LLVMContext&) = delete;
+  // Module needs access to the add/removeModule methods.
+  friend class Module;
 
   /// addModule - Register a module as being instantiated in this context.  If
   /// the context is deleted, the module will be deleted as well.
@@ -268,9 +272,6 @@ private:
 
   /// removeModule - Unregister a module from this context.
   void removeModule(Module*);
-
-  // Module needs access to the add/removeModule methods.
-  friend class Module;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -286,6 +287,6 @@ inline LLVMContextRef *wrap(const LLVMContext **Tys) {
   return reinterpret_cast<LLVMContextRef*>(const_cast<LLVMContext**>(Tys));
 }
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_LLVMCONTEXT_H
