@@ -14,7 +14,7 @@ define void @system_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 
 ; CHECK-LABEL: {{^}}system_monotonic
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
-; CHECK: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; CHECK: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
@@ -62,7 +62,7 @@ define void @agent_unordered(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 
 ; CHECK-LABEL: {{^}}agent_monotonic
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
-; CHECK: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; CHECK: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; CHECK-NOT: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NOT: buffer_wbinvl1_vol
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]

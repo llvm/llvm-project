@@ -2118,8 +2118,14 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   SDValue SegmentNullPtr = DAG.getConstant(-1, SL, MVT::i32);
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
+  MachineFunction &MF = DAG.getMachineFunction();
+  SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
   // flat -> local/private
   if (ASC->getSrcAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+    if (ASC->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+      MFI.HasFlatLocalCasts = true;
+
     if (ASC->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
         ASC->getDestAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
       SDValue NonNull = DAG.getSetCC(SL, MVT::i1, Src, FlatNullPtr, ISD::SETNE);
@@ -2132,6 +2138,9 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   // local/private -> flat
   if (ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+    if (ASC->getSrcAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+      MFI.HasFlatLocalCasts = true;
+
     if (ASC->getSrcAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
         ASC->getSrcAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
       SDValue NonNull
@@ -2151,7 +2160,6 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   DEBUG(dbgs() << "Invalid addrspacecast:\n";
         ASC->dump());
 
-  const MachineFunction &MF = DAG.getMachineFunction();
   DiagnosticInfoUnsupported InvalidAddrSpaceCast(
     *MF.getFunction(), "invalid addrspacecast", SL.getDebugLoc());
   DAG.getContext()->diagnose(InvalidAddrSpaceCast);

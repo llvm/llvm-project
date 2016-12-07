@@ -56,6 +56,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     PSInputEna(0),
     NumUserSGPRs(0),
     NumSystemSGPRs(0),
+    HasFlatLocalCasts(false),
     HasSpilledSGPRs(false),
     HasSpilledVGPRs(false),
     HasNonSpillStackObjects(false),
