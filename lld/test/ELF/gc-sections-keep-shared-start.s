@@ -1,5 +1,6 @@
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# REQUIRES: x86
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld -shared --gc-sections -o %t1 %t
 # RUN: llvm-readobj --elf-output-style=GNU --file-headers --symbols %t1
 #   | FileCheck %s

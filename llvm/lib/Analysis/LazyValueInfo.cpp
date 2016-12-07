@@ -71,12 +71,14 @@ class LVILatticeVal {
     /// "nothing known yet".
     undefined,
 
-    /// This Value has a specific constant value.  (For integers, constantrange
-    /// is used instead.)
+    /// This Value has a specific constant value.  (For constant integers,
+    /// constantrange is used instead.  Integer typed constantexprs can appear
+    /// as constant.) 
     constant,
 
-    /// This Value is known to not have the specified value.  (For integers,
-    /// constantrange is used instead.)
+    /// This Value is known to not have the specified value.  (For constant
+    /// integers, constantrange is used instead.  As above, integer typed
+    /// constantexprs can appear here.)
     notconstant,
 
     /// The Value falls within this range. (Used only for integer typed values.)
@@ -186,7 +188,6 @@ private:
       if (NewR.isEmptySet())
         markOverdefined();
       else {
-        bool changed = Range != NewR;
         Range = std::move(NewR);
       }
       return;
@@ -233,6 +234,12 @@ public:
     }
 
     assert(isConstantRange() && "New LVILattice type?");
+    if (!RHS.isConstantRange()) {
+      // We can get here if we've encountered a constantexpr of integer type
+      // and merge it with a constantrange.
+      markOverdefined();
+      return;
+    }
     ConstantRange NewR = Range.unionWith(RHS.getConstantRange());
     if (NewR.isFullSet())
       markOverdefined();
