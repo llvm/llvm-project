@@ -27,9 +27,12 @@
 /* If we're on MinGW, fall back to the system's float.h, which might have
  * additional definitions provided for Windows.
  * For more details see http://msdn.microsoft.com/en-us/library/y0ybw9fy.aspx
+ *
+ * Also fall back on Darwin to allow additional definitions and
+ * implementation-defined values.
  */
-#if (defined(__MINGW32__) || defined(_MSC_VER)) && __STDC_HOSTED__ && \
-    __has_include_next(<float.h>)
+#if (defined(__APPLE__) || (defined(__MINGW32__) || defined(_MSC_VER))) && \
+    __STDC_HOSTED__ && __has_include_next(<float.h>)
 #  include_next <float.h>
 
 /* Undefine anything that we'll be redefining below. */
