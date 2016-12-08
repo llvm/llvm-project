@@ -5064,9 +5064,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_ftlsmodel_EQ);
 
   // -fhosted is default.
+  bool IsHosted = true;
   if (Args.hasFlag(options::OPT_ffreestanding, options::OPT_fhosted, false) ||
-      KernelOrKext)
+      KernelOrKext) {
     CmdArgs.push_back("-ffreestanding");
+    IsHosted = false;
+  }
 
   // Forward -f (flag) options which we can pass directly.
   Args.AddLastArg(CmdArgs, options::OPT_femit_all_decls);
@@ -5200,6 +5203,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     StackProtectorLevel =
         getToolChain().GetDefaultStackProtectorLevel(KernelOrKext);
+    // Only use a default stack protector on Darwin in case -ffreestanding
+    // is not specified.
+    if (Triple.isOSDarwin() && !IsHosted)
+      StackProtectorLevel = 0;
   }
   if (StackProtectorLevel) {
     CmdArgs.push_back("-stack-protector");
