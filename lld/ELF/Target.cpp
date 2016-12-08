@@ -1972,10 +1972,10 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_MIPS_HI16:
   case R_MIPS_LO16:
   case R_MIPS_GOT_OFST:
-    // MIPS _gp_disp designates offset between start of function and 'gp'
-    // pointer into GOT. __gnu_local_gp is equal to the current value of
-    // the 'gp'. Therefore any relocations against them do not require
-    // dynamic relocation.
+    // R_MIPS_HI16/R_MIPS_LO16 relocations against _gp_disp calculate
+    // offset between start of function and 'gp' value which by default
+    // equal to the start of .got section. In that case we consider these
+    // relocations as relative.
     if (&S == ElfSym<ELFT>::MipsGpDisp)
       return R_PC;
     return R_ABS;
