@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++14 -verify -fexceptions -fcxx-exceptions %s
-// RUN: %clang_cc1 -std=c++1z -verify -fexceptions -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++1z -verify -fexceptions -fcxx-exceptions %s -Wno-dynamic-exception-spec
 
 #if __cplusplus > 201402L
 

@@ -576,7 +576,10 @@ void SymbolTable<ELFT>::initDemangledSyms() {
 
   for (Symbol *Sym : SymVector) {
     SymbolBody *B = Sym->body();
-    (*DemangledSyms)[demangle(B->getName())].push_back(B);
+    if (Optional<std::string> S = demangle(B->getName()))
+      (*DemangledSyms)[*S].push_back(B);
+    else
+      (*DemangledSyms)[B->getName()].push_back(B);
   }
 }
 

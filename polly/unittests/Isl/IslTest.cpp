@@ -232,4 +232,111 @@ TEST(Isl, IslValToAPInt) {
   isl_ctx_free(IslCtx);
 }
 
+TEST(Isl, Foreach) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  auto MapSpace = give(isl_space_alloc(Ctx.get(), 0, 1, 1));
+  auto TestBMap = give(isl_basic_map_universe(MapSpace.copy()));
+  TestBMap = give(isl_basic_map_fix_si(TestBMap.take(), isl_dim_in, 0, 0));
+  TestBMap = give(isl_basic_map_fix_si(TestBMap.take(), isl_dim_out, 0, 0));
+  auto TestMap = give(isl_map_from_basic_map(TestBMap.copy()));
+  auto TestUMap = give(isl_union_map_from_map(TestMap.copy()));
+
+  auto SetSpace = give(isl_space_set_alloc(Ctx.get(), 0, 1));
+  auto TestBSet =
+      give(isl_basic_set_from_point(isl_point_zero(SetSpace.copy())));
+  auto TestSet = give(isl_set_from_basic_set(TestBSet.copy()));
+  auto TestUSet = give(isl_union_set_from_set(TestSet.copy()));
+
+  {
+    auto NumBMaps = 0;
+    foreachElt(TestMap, [&](IslPtr<isl_basic_map> BMap) {
+      EXPECT_EQ(isl_bool_true,
+                isl_basic_map_is_equal(BMap.keep(), TestBMap.keep()));
+      NumBMaps++;
+    });
+    EXPECT_EQ(1, NumBMaps);
+  }
+
+  {
+    auto NumBSets = 0;
+    foreachElt(TestSet, [&](IslPtr<isl_basic_set> BSet) {
+      EXPECT_EQ(isl_bool_true,
+                isl_basic_set_is_equal(BSet.keep(), TestBSet.keep()));
+      NumBSets++;
+    });
+    EXPECT_EQ(1, NumBSets);
+  }
+
+  {
+    auto NumMaps = 0;
+    foreachElt(TestUMap, [&](IslPtr<isl_map> Map) {
+      EXPECT_EQ(isl_bool_true, isl_map_is_equal(Map.keep(), TestMap.keep()));
+      NumMaps++;
+    });
+    EXPECT_EQ(1, NumMaps);
+  }
+
+  {
+    auto NumSets = 0;
+    foreachElt(TestUSet, [&](IslPtr<isl_set> Set) {
+      EXPECT_EQ(isl_bool_true, isl_set_is_equal(Set.keep(), TestSet.keep()));
+      NumSets++;
+    });
+    EXPECT_EQ(1, NumSets);
+  }
+
+  {
+    auto UPwAff = give(isl_union_pw_aff_val_on_domain(TestUSet.copy(),
+                                                      isl_val_zero(Ctx.get())));
+    auto NumPwAffs = 0;
+    foreachElt(UPwAff, [&](IslPtr<isl_pw_aff> PwAff) {
+      EXPECT_EQ(isl_bool_true, isl_pw_aff_is_cst(PwAff.keep()));
+      NumPwAffs++;
+    });
+    EXPECT_EQ(1, NumPwAffs);
+  }
+
+  {
+    auto NumBMaps = 0;
+    EXPECT_EQ(isl_stat_error,
+              foreachEltWithBreak(
+                  TestMap, [&](IslPtr<isl_basic_map> BMap) -> isl_stat {
+                    EXPECT_EQ(isl_bool_true, isl_basic_map_is_equal(
+                                                 BMap.keep(), TestBMap.keep()));
+                    NumBMaps++;
+                    return isl_stat_error;
+                  }));
+    EXPECT_EQ(1, NumBMaps);
+  }
+
+  {
+    auto NumMaps = 0;
+    EXPECT_EQ(
+        isl_stat_error,
+        foreachEltWithBreak(TestUMap, [&](IslPtr<isl_map> Map) -> isl_stat {
+          EXPECT_EQ(isl_bool_true,
+                    isl_map_is_equal(Map.keep(), TestMap.keep()));
+          NumMaps++;
+          return isl_stat_error;
+        }));
+    EXPECT_EQ(1, NumMaps);
+  }
+
+  {
+    auto TestPwAff =
+        give(isl_pw_aff_val_on_domain(TestSet.copy(), isl_val_zero(Ctx.get())));
+    auto NumPieces = 0;
+    foreachPieceWithBreak(TestPwAff, [&](IslPtr<isl_set> Domain,
+                                         IslPtr<isl_aff> Aff) -> isl_stat {
+      EXPECT_EQ(isl_bool_true, isl_set_is_equal(Domain.keep(), TestSet.keep()));
+      EXPECT_EQ(isl_bool_true, isl_aff_is_cst(Aff.keep()));
+      NumPieces++;
+      return isl_stat_error;
+    });
+    EXPECT_EQ(1, NumPieces);
+  }
+}
+
 } // anonymous namespace

@@ -10,7 +10,7 @@ void no_tuple_size_1() { auto [x, y] = A(); } // ok, decompose elementwise
 namespace std { template<typename T> struct tuple_size; }
 void no_tuple_size_2() { auto [x, y] = A(); } // ok, decompose elementwise
 
-struct Bad1 {};
+struct Bad1 { int a, b; };
 template<> struct std::tuple_size<Bad1> {};
 void no_tuple_size_3() { auto [x, y] = Bad1(); } // expected-error {{cannot decompose this type; 'std::tuple_size<Bad1>::value' is not a valid integral constant expression}}
 

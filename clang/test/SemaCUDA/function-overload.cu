@@ -40,21 +40,21 @@ __host__ HostReturnTy dh() { return HostReturnTy(); }
 __device__ DeviceReturnTy dh() { return DeviceReturnTy(); }
 
 // H/HD and D/HD are not allowed.
-__host__ __device__ int hdh() { return 0; } // expected-note {{previous definition is here}}
-__host__ int hdh() { return 0; }            // expected-error {{redefinition of 'hdh'}}
+__host__ __device__ int hdh() { return 0; } // expected-note {{previous declaration is here}}
+__host__ int hdh() { return 0; }
+// expected-error@-1 {{__host__ function 'hdh' cannot overload __host__ __device__ function 'hdh'}}
 
-__host__ int hhd() { return 0; }            // expected-note {{previous definition is here}}
-__host__ __device__ int hhd() { return 0; } // expected-error {{redefinition of 'hhd'}}
-// expected-warning@-1 {{attribute declaration must precede definition}}
-// expected-note@-3 {{previous definition is here}}
+__host__ int hhd() { return 0; }            // expected-note {{previous declaration is here}}
+__host__ __device__ int hhd() { return 0; }
+// expected-error@-1 {{__host__ __device__ function 'hhd' cannot overload __host__ function 'hhd'}}
 
-__host__ __device__ int hdd() { return 0; } // expected-note {{previous definition is here}}
-__device__ int hdd() { return 0; }          // expected-error {{redefinition of 'hdd'}}
+__host__ __device__ int hdd() { return 0; } // expected-note {{previous declaration is here}}
+__device__ int hdd() { return 0; }
+// expected-error@-1 {{__device__ function 'hdd' cannot overload __host__ __device__ function 'hdd'}}
 
-__device__ int dhd() { return 0; }          // expected-note {{previous definition is here}}
-__host__ __device__ int dhd() { return 0; } // expected-error {{redefinition of 'dhd'}}
-// expected-warning@-1 {{attribute declaration must precede definition}}
-// expected-note@-3 {{previous definition is here}}
+__device__ int dhd() { return 0; }          // expected-note {{previous declaration is here}}
+__host__ __device__ int dhd() { return 0; }
+// expected-error@-1 {{__host__ __device__ function 'dhd' cannot overload __device__ function 'dhd'}}
 
 // Same tests for extern "C" functions.
 extern "C" __host__ int chh() { return 0; } // expected-note {{previous definition is here}}
@@ -65,13 +65,13 @@ extern "C" __device__ DeviceReturnTy cdh() { return DeviceReturnTy(); }
 extern "C" __host__ HostReturnTy cdh() { return HostReturnTy(); }
 
 // H/HD and D/HD overloading is not allowed.
-extern "C" __host__ __device__ int chhd1() { return 0; } // expected-note {{previous definition is here}}
-extern "C" __host__ int chhd1() { return 0; }            // expected-error {{redefinition of 'chhd1'}}
+extern "C" __host__ __device__ int chhd1() { return 0; } // expected-note {{previous declaration is here}}
+extern "C" __host__ int chhd1() { return 0; }
+// expected-error@-1 {{__host__ function 'chhd1' cannot overload __host__ __device__ function 'chhd1'}}
 
-extern "C" __host__ int chhd2() { return 0; }            // expected-note {{previous definition is here}}
-extern "C" __host__ __device__ int chhd2() { return 0; } // expected-error {{redefinition of 'chhd2'}}
-// expected-warning@-1 {{attribute declaration must precede definition}}
-// expected-note@-3 {{previous definition is here}}
+extern "C" __host__ int chhd2() { return 0; } // expected-note {{previous declaration is here}}
+extern "C" __host__ __device__ int chhd2() { return 0; }
+// expected-error@-1 {{__host__ __device__ function 'chhd2' cannot overload __host__ function 'chhd2'}}
 
 // Helper functions to verify calling restrictions.
 __device__ DeviceReturnTy d() { return DeviceReturnTy(); }
@@ -250,33 +250,39 @@ struct m_hd {
 
 struct m_hhd {
   __host__ void operator delete(void *ptr) {} // expected-note {{previous declaration is here}}
-  __host__ __device__ void operator delete(void *ptr) {} // expected-error {{class member cannot be redeclared}}
+  __host__ __device__ void operator delete(void *ptr) {}
+  // expected-error@-1 {{__host__ __device__ function 'operator delete' cannot overload __host__ function 'operator delete'}}
 };
 
 struct m_hdh {
   __host__ __device__ void operator delete(void *ptr) {} // expected-note {{previous declaration is here}}
-  __host__ void operator delete(void *ptr) {} // expected-error {{class member cannot be redeclared}}
+  __host__ void operator delete(void *ptr) {}
+  // expected-error@-1 {{__host__ function 'operator delete' cannot overload __host__ __device__ function 'operator delete'}}
 };
 
 struct m_dhd {
   __device__ void operator delete(void *ptr) {} // expected-note {{previous declaration is here}}
-  __host__ __device__ void operator delete(void *ptr) {} // expected-error {{class member cannot be redeclared}}
+  __host__ __device__ void operator delete(void *ptr) {}
+  // expected-error@-1 {{__host__ __device__ function 'operator delete' cannot overload __device__ function 'operator delete'}}
 };
 
 struct m_hdd {
   __host__ __device__ void operator delete(void *ptr) {} // expected-note {{previous declaration is here}}
-  __device__ void operator delete(void *ptr) {} // expected-error {{class member cannot be redeclared}}
+  __device__ void operator delete(void *ptr) {}
+  // expected-error@-1 {{__device__ function 'operator delete' cannot overload __host__ __device__ function 'operator delete'}}
 };
 
 // __global__ functions can't be overloaded based on attribute
 // difference.
 struct G {
-  friend void friend_of_g(G &arg);
+  friend void friend_of_g(G &arg); // expected-note {{previous declaration is here}}
 private:
-  int x;
+  int x; // expected-note {{declared private here}}
 };
-__global__ void friend_of_g(G &arg) { int x = arg.x; } // expected-note {{previous definition is here}}
-void friend_of_g(G &arg) { int x = arg.x; } // expected-error {{redefinition of 'friend_of_g'}}
+__global__ void friend_of_g(G &arg) { int x = arg.x; }
+// expected-error@-1 {{__global__ function 'friend_of_g' cannot overload __host__ function 'friend_of_g'}}
+// expected-error@-2 {{'x' is a private member of 'G'}}
+void friend_of_g(G &arg) { int x = arg.x; }
 
 // HD functions are sometimes allowed to call H or D functions -- this
 // is an artifact of the source-to-source splitting performed by nvcc

@@ -50,14 +50,6 @@ static void writeMember(raw_fd_ostream &OS, StringRef Path, StringRef Data) {
   OS << Data;                            // c_filedata
 }
 
-// Converts path to use unix path separators so the cpio can be extracted on
-// both unix and windows.
-static void convertToUnixPathSeparator(SmallString<128> &Path) {
-#ifdef LLVM_ON_WIN32
-  std::replace(Path.begin(), Path.end(), '\\', '/');
-#endif
-}
-
 void CpioFile::append(StringRef Path, StringRef Data) {
   if (!Seen.insert(Path).second)
     return;
@@ -67,9 +59,8 @@ void CpioFile::append(StringRef Path, StringRef Data) {
   // (i.e. in that case we are creating baz.cpio.)
   SmallString<128> Fullpath;
   path::append(Fullpath, Basename, Path);
-  convertToUnixPathSeparator(Fullpath);
 
-  writeMember(*OS, Fullpath, Data);
+  writeMember(*OS, convertToUnixPathSeparator(Fullpath), Data);
 
   // Print the trailer and seek back.
   // This way we have a valid archive if we crash.
@@ -100,9 +91,7 @@ std::string lld::relativeToRoot(StringRef Path) {
     Res = Root.substr(2);
 
   path::append(Res, path::relative_path(Abs));
-  convertToUnixPathSeparator(Res);
-
-  return Res.str();
+  return convertToUnixPathSeparator(Res);
 }
 
 // Quote a given string if it contains a space character.
@@ -126,4 +115,14 @@ std::string lld::stringize(opt::Arg *Arg) {
   if (Arg->getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
     return K + V;
   return K + " " + V;
+}
+
+std::string lld::convertToUnixPathSeparator(StringRef S) {
+#ifdef LLVM_ON_WIN32
+  std::string Ret = S.str();
+  std::replace(Ret.begin(), Ret.end(), '\\', '/');
+  return Ret;
+#else
+  return S;
+#endif
 }

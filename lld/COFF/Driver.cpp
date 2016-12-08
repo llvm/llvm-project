@@ -581,7 +581,7 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
       continue;
     }
     if (Config->Machine != MT)
-      fatal(File->getShortName() + ": machine type " + machineToStr(MT) +
+      fatal(toString(File.get()) + ": machine type " + machineToStr(MT) +
             " conflicts with " + machineToStr(Config->Machine));
   }
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {

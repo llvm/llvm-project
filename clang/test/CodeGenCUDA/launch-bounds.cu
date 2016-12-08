@@ -36,7 +36,7 @@ Kernel3()
 {
 }
 
-template void Kernel3<MAX_THREADS_PER_BLOCK>();
+template __global__ void Kernel3<MAX_THREADS_PER_BLOCK>();
 // CHECK: !{{[0-9]+}} = !{void ()* @{{.*}}Kernel3{{.*}}, !"maxntidx", i32 256}
 
 template <int max_threads_per_block, int min_blocks_per_mp>
@@ -45,7 +45,7 @@ __launch_bounds__(max_threads_per_block, min_blocks_per_mp)
 Kernel4()
 {
 }
-template void Kernel4<MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP>();
+template __global__ void Kernel4<MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP>();
 
 // CHECK: !{{[0-9]+}} = !{void ()* @{{.*}}Kernel4{{.*}}, !"maxntidx", i32 256}
 // CHECK: !{{[0-9]+}} = !{void ()* @{{.*}}Kernel4{{.*}}, !"minctasm", i32 2}
@@ -58,7 +58,7 @@ __launch_bounds__(max_threads_per_block + constint,
 Kernel5()
 {
 }
-template void Kernel5<MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP>();
+template __global__ void Kernel5<MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP>();
 
 // CHECK: !{{[0-9]+}} = !{void ()* @{{.*}}Kernel5{{.*}}, !"maxntidx", i32 356}
 // CHECK: !{{[0-9]+}} = !{void ()* @{{.*}}Kernel5{{.*}}, !"minctasm", i32 258}
