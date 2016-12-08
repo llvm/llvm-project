@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i386-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t.so -shared
-// RUN: llvm-readobj -s -l -section-data %t.so | FileCheck %s
+// RUN: llvm-readobj -s -l -section-data -r %t.so | FileCheck %s
 
 // CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS
@@ -19,6 +19,12 @@
 // CHECK-NEXT: SectionData (
 // CHECK-NEXT:   0000: 00200000                |
 // CHECK-NEXT: )
+
+// CHECK:      Relocations [
+// CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
+// CHECK-NEXT:     0x2050 R_386_RELATIVE - 0x0
+// CHECK-NEXT:   }
+// CHECK-NEXT: ]
 
 // CHECK:      Type: PT_DYNAMIC
 // CHECK-NEXT: Offset: 0x2000

@@ -8,7 +8,7 @@
 # RUN: not lld-link /out:%t.exe %t.lto1.obj %t.lto2.obj >& %t.log
 # RUN: FileCheck %s < %t.log
 
-# CHECK: duplicate symbol: foo {{.+}}1.obj and foo {{.+}}2.obj
+# CHECK: duplicate symbol: foo in {{.+}}1.obj and in {{.+}}2.obj
 
 --- !COFF
 header:

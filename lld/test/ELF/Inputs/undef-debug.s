@@ -1,4 +1,4 @@
-.file 1 "undef-debug.s"
+.file 1 "dir/undef-debug.s"
 .loc 1 3
         .quad zed3
 

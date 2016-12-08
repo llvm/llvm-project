@@ -11,6 +11,7 @@
 #define LLD_CORE_REPRODUCE_H
 
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
@@ -65,6 +66,8 @@ std::string rewritePath(StringRef S);
 // Returns the string form of the given argument.
 std::string stringize(llvm::opt::Arg *Arg);
 
+// Replaces backslashes with slashes if Windows.
+std::string convertToUnixPathSeparator(StringRef S);
 }
 
 #endif

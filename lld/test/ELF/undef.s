@@ -9,9 +9,9 @@
 # CHECK: error: undef.s:(.text+0x6): undefined symbol 'bar'
 # CHECK: error: undef.s:(.text+0x10): undefined symbol 'foo(int)'
 # CHECK: error: {{.*}}2.a({{.*}}.o):(.text+0x0): undefined symbol 'zed2'
-# CHECK: error: undef-debug.s:3: undefined symbol 'zed3'
-# CHECK: error: undef-debug.s:7: undefined symbol 'zed4'
-# CHECK: error: undef-debug.s:11: undefined symbol 'zed5'
+# CHECK: error: dir/undef-debug.s:3: undefined symbol 'zed3'
+# CHECK: error: dir/undef-debug.s:7: undefined symbol 'zed4'
+# CHECK: error: dir/undef-debug.s:11: undefined symbol 'zed5'
 
 # RUN: not ld.lld %t.o %t2.a -o %t.exe -no-demangle 2>&1 | \
 # RUN:   FileCheck -check-prefix=NO-DEMANGLE %s

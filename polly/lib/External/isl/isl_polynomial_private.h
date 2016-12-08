@@ -134,6 +134,9 @@ int isl_qpolynomial_is_affine(__isl_keep isl_qpolynomial *qp);
 int isl_qpolynomial_is_cst(__isl_keep isl_qpolynomial *qp,
 	isl_int *n, isl_int *d);
 
+unsigned isl_qpolynomial_domain_offset(__isl_keep isl_qpolynomial *qp,
+	enum isl_dim_type type);
+
 __isl_give isl_qpolynomial *isl_qpolynomial_add_on_domain(
 	__isl_keep isl_set *dom,
 	__isl_take isl_qpolynomial *qp1,

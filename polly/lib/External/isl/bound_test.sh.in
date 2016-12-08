@@ -1,6 +1,7 @@
 #!/bin/sh
 
 EXEEXT=@EXEEXT@
+srcdir=@srcdir@
 
 BOUND_TESTS="\
 	basicLinear2.pwqp \

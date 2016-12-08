@@ -348,8 +348,13 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   // resolve to the image base. This is a little strange, but it allows us to
   // link function calls to such symbols. Normally such a call will be guarded
   // with a comparison, which will load a zero from the GOT.
+  // Another special case is MIPS _gp_disp symbol which represents offset
+  // between start of a function and '_gp' value and defined as absolute just
+  // to simplify the code.
   if (AbsVal && RelE) {
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
+      return true;
+    if (&Body == ElfSym<ELFT>::MipsGpDisp)
       return true;
     error(S.getLocation(RelOff) + ": relocation " + toString(Type) +
           " cannot refer to absolute symbol '" + toString(Body) +
@@ -764,7 +769,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       bool Constant = !Preemptible && !(Config->Pic && !isAbsolute<ELFT>(Body));
       if (!Constant)
         AddDyn({DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
-      if (Constant || !RelTy::IsRela)
+      if (Constant || (!RelTy::IsRela && !Preemptible))
         In<ELFT>::Got->Relocations.push_back({GotRE, DynType, Off, 0, &Body});
       continue;
     }

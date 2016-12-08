@@ -165,6 +165,7 @@ configure_file("${ISL_BINARY_DIR}/include/isl/stdint.h.tmp"
                "${ISL_BINARY_DIR}/include/isl/stdint.h" COPYONLY)
 
 configure_file("isl_config.h.cmake" "${ISL_BINARY_DIR}/isl_config.h")
+configure_file("isl_srcdir.c.cmake" "${ISL_BINARY_DIR}/isl_srcdir.c")
 
 include_directories(BEFORE
   ${ISL_BINARY_DIR}

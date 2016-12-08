@@ -18,7 +18,7 @@
 # CHECK-NEXT:    20010:   24 42 80 38   addiu   $2, $2, -32712
 
 # CHECK: 0000000000020014     .text   00000000 foo
-# CHECK: 0000000000037ff0     .got    00000000 .hidden _gp
+# CHECK: 0000000000037ff0     *ABS*   00000000 .hidden _gp
 # CHECK: 0000000000020000     .text   00000000 __start
 # CHECK: 0000000000000000 g F *UND*   00000000 foo1a
 
