@@ -70,3 +70,19 @@ void noQualifierParens(NoQualifierParens *f) {
 //CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType BarBlock}{TypedText blockProperty2} (35)
 //CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty2:}{Placeholder BarBlock blockProperty2} (35)
 //CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty:}{Placeholder void (^)(void)blockProperty} (35)
+
+@interface ClassProperties
+
+@property(class) void (^explicit)();
+@property(class, readonly) void (^explicitReadonly)();
+
+@end
+
+void classBlockProperties() {
+  ClassProperties.explicit;
+}
+
+// RUN: c-index-test -code-completion-at=%s:82:19 %s | FileCheck -check-prefix=CHECK-CC3 %s
+//CHECK-CC3: ObjCPropertyDecl:{ResultType void}{TypedText explicit}{LeftParen (}{RightParen )} (35)
+//CHECK-CC3-NEXT: ObjCPropertyDecl:{ResultType void (^)()}{TypedText explicit}{Equal  = }{Placeholder ^(void)} (38)
+//CHECK-CC3-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText explicitReadonly}{LeftParen (}{RightParen )} (35)
