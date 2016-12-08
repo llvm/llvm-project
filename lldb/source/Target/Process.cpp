@@ -4336,6 +4336,13 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   process_sp->SetPublicState(
       m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
 
+  if (m_state == eStateStopped && !m_restarted) {
+    // Let process subclasses know we are about to do a public stop and
+    // do anything they might need to in order to speed up register and
+    // memory accesses.
+    process_sp->WillPublicStop();
+  }
+
   // If this is a halt event, even if the halt stopped with some reason other
   // than a plain interrupt (e.g. we had
   // already stopped for a breakpoint when the halt request came through) don't
@@ -4346,11 +4353,6 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
 
   // If we're stopped and haven't restarted, then do the StopInfo actions here:
   if (m_state == eStateStopped && !m_restarted) {
-    // Let process subclasses know we are about to do a public stop and
-    // do anything they might need to in order to speed up register and
-    // memory accesses.
-    process_sp->WillPublicStop();
-
     ThreadList &curr_thread_list = process_sp->GetThreadList();
     uint32_t num_threads = curr_thread_list.GetSize();
     uint32_t idx;
