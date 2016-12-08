@@ -1207,6 +1207,7 @@ Constraints = "$ptrreg = $base_wb,@earlyclobber $reg,@earlyclobber $base_wb" in
 let canFoldAsLoad = 1,
 isReMaterializable = 1 in
 {
+  let Constraints = "@earlyclobber $reg" in
   def LDDRdPtrQ : FSTDLDD<0,
                           (outs GPR8:$reg),
                           (ins memri:$memri),
@@ -1227,7 +1228,8 @@ isReMaterializable = 1 in
                    Requires<[HasSRAM]>;
 
   let mayLoad = 1,
-  hasSideEffects = 0 in
+  hasSideEffects = 0,
+  Constraints = "@earlyclobber $dst" in
   def LDDWRdYQ : Pseudo<(outs DREGS:$dst),
                         (ins memri:$memri),
                         "lddw\t$dst, $memri",

@@ -240,7 +240,7 @@ LinkEditData:
     - __mh_execute_header
     - _main
 DWARF:           
-  DebugStrings:    
+  debug_str:    
     - ''
     - 'clang version 4.0.0 (trunk 288677) (llvm/trunk 288676)'
     - hello_world.c
@@ -253,7 +253,7 @@ DWARF:
 ...
 
 #CHECK: DWARF:           
-#CHECK:   DebugStrings:    
+#CHECK:   debug_str:    
 #CHECK:     - ''
 #CHECK:     - 'clang version 4.0.0 (trunk 288677) (llvm/trunk 288676)'
 #CHECK:     - hello_world.c

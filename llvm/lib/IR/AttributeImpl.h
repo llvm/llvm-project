@@ -16,17 +16,22 @@
 #ifndef LLVM_LIB_IR_ATTRIBUTEIMPL_H
 #define LLVM_LIB_IR_ATTRIBUTEIMPL_H
 
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/IR/Attributes.h"
 #include "AttributeSetNode.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/Support/TrailingObjects.h"
+#include <algorithm>
+#include <cassert>
 #include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <string>
+#include <utility>
 
 namespace llvm {
 
-class Constant;
 class LLVMContext;
 
 //===----------------------------------------------------------------------===//
@@ -35,10 +40,6 @@ class LLVMContext;
 /// could be a single enum, a tuple, or a string.
 class AttributeImpl : public FoldingSetNode {
   unsigned char KindID; ///< Holds the AttrEntryKind of the attribute
-
-  // AttributesImpl is uniqued, these should not be publicly available.
-  void operator=(const AttributeImpl &) = delete;
-  AttributeImpl(const AttributeImpl &) = delete;
 
 protected:
   enum AttrEntryKind {
@@ -50,6 +51,10 @@ protected:
   AttributeImpl(AttrEntryKind KindID) : KindID(KindID) {}
 
 public:
+  // AttributesImpl is uniqued, these should not be available.
+  AttributeImpl(const AttributeImpl &) = delete;
+  AttributeImpl &operator=(const AttributeImpl &) = delete;
+
   virtual ~AttributeImpl();
 
   bool isEnumAttribute() const { return KindID == EnumAttrEntry; }
@@ -165,12 +170,9 @@ private:
     return getTrailingObjects<IndexAttrPair>() + Slot;
   }
 
-  // AttributesSet is uniqued, these should not be publicly available.
-  void operator=(const AttributeSetImpl &) = delete;
-  AttributeSetImpl(const AttributeSetImpl &) = delete;
 public:
   AttributeSetImpl(LLVMContext &C,
-                   ArrayRef<std::pair<unsigned, AttributeSetNode *> > Slots)
+                   ArrayRef<std::pair<unsigned, AttributeSetNode *>> Slots)
       : Context(C), NumSlots(Slots.size()), AvailableFunctionAttrs(0) {
     static_assert(Attribute::EndAttrKinds <=
                       sizeof(AvailableFunctionAttrs) * CHAR_BIT,
@@ -202,6 +204,10 @@ public:
       }
     }
   }
+
+  // AttributesSetImpt is uniqued, these should not be available.
+  AttributeSetImpl(const AttributeSetImpl &) = delete;
+  AttributeSetImpl &operator=(const AttributeSetImpl &) = delete;
 
   void operator delete(void *p) { ::operator delete(p); }
 
@@ -248,16 +254,16 @@ public:
     Profile(ID, makeArrayRef(getNode(0), getNumSlots()));
   }
   static void Profile(FoldingSetNodeID &ID,
-                      ArrayRef<std::pair<unsigned, AttributeSetNode*> > Nodes) {
-    for (unsigned i = 0, e = Nodes.size(); i != e; ++i) {
-      ID.AddInteger(Nodes[i].first);
-      ID.AddPointer(Nodes[i].second);
+                      ArrayRef<std::pair<unsigned, AttributeSetNode*>> Nodes) {
+    for (const auto &Node : Nodes) {
+      ID.AddInteger(Node.first);
+      ID.AddPointer(Node.second);
     }
   }
 
   void dump() const;
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_IR_ATTRIBUTEIMPL_H

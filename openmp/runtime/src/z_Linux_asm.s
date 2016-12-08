@@ -1776,7 +1776,7 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_PPC64 */
 
-#if KMP_ARCH_ARM
+#if KMP_ARCH_ARM || KMP_ARCH_MIPS
     .data
     .comm .gomp_critical_user_,32,8
     .data
@@ -1787,7 +1787,7 @@ __kmp_unnamed_critical_addr:
     .size __kmp_unnamed_critical_addr,4
 #endif /* KMP_ARCH_ARM */
 
-#if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64
+#if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64
     .data
     .comm .gomp_critical_user_,32,8
     .data

@@ -15,6 +15,7 @@
 #define LLVM_ADT_PACKEDVECTOR_H
 
 #include "llvm/ADT/BitVector.h"
+#include <cassert>
 #include <limits>
 
 namespace llvm {
@@ -83,14 +84,15 @@ public:
     PackedVector &Vec;
     const unsigned Idx;
 
-    reference(); // Undefined
   public:
+    reference() = delete;
     reference(PackedVector &vec, unsigned idx) : Vec(vec), Idx(idx) {}
 
     reference &operator=(T val) {
       Vec.setValue(Vec.Bits, Idx, val);
       return *this;
     }
+
     operator T() const {
       return Vec.getValue(Vec.Bits, Idx);
     }
@@ -144,6 +146,6 @@ public:
 // Leave BitNum=0 undefined.
 template <typename T> class PackedVector<T, 0>;
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_PACKEDVECTOR_H

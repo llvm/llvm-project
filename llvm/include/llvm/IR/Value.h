@@ -239,6 +239,7 @@ public:
 
 private:
   void destroyValueName();
+  void doRAUW(Value *New, bool NoMetadata);
   void setNameImpl(const Twine &Name);
 
 public:
@@ -268,6 +269,12 @@ public:
   /// "V" instead of "this".  After this completes, 'this's use list is
   /// guaranteed to be empty.
   void replaceAllUsesWith(Value *V);
+
+  /// \brief Change non-metadata uses of this to point to a new Value.
+  ///
+  /// Go through the uses list for this definition and make each use point to
+  /// "V" instead of "this". This function skips metadata entries in the list.
+  void replaceNonMetadataUsesWith(Value *V);
 
   /// replaceUsesOutsideBlock - Go through the uses list for this definition and
   /// make each use point to "V" instead of "this" when the use is outside the

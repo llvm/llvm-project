@@ -128,6 +128,20 @@ public:
   }
 };
 
+/// A callback class which is notified of each comment in an assembly file as
+/// it is lexed.
+class AsmCommentConsumer {
+public:
+  virtual ~AsmCommentConsumer() {};
+
+  /// Callback function for when a comment is lexed. Loc is the start of the
+  /// comment text (excluding the comment-start marker). CommentText is the text
+  /// of the comment, excluding the comment start and end markers, and the
+  /// newline for single-line comments.
+  virtual void HandleComment(SMLoc Loc, StringRef CommentText) = 0;
+};
+
+
 /// Generic assembler lexer interface, for use by target specific assembly
 /// lexers.
 class MCAsmLexer {
@@ -145,6 +159,7 @@ protected: // Can only create subclasses.
   bool SkipSpace;
   bool AllowAtInIdentifier;
   bool IsAtStartOfStatement;
+  AsmCommentConsumer *CommentConsumer;
 
   MCAsmLexer();
 
@@ -234,6 +249,10 @@ public:
 
   bool getAllowAtInIdentifier() { return AllowAtInIdentifier; }
   void setAllowAtInIdentifier(bool v) { AllowAtInIdentifier = v; }
+
+  void setCommentConsumer(AsmCommentConsumer *CommentConsumer) {
+    this->CommentConsumer = CommentConsumer;
+  }
 };
 
 } // End llvm namespace

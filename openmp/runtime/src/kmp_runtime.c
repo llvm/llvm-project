@@ -7565,7 +7565,7 @@ __kmp_determine_reduction_method( ident_t *loc, kmp_int32 global_tid,
         int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
         int tree_available   = FAST_REDUCTION_TREE_METHOD_GENERATED;
 
-        #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64
+        #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64
 
             #if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN
 
@@ -7591,7 +7591,7 @@ __kmp_determine_reduction_method( ident_t *loc, kmp_int32 global_tid,
                 #error "Unknown or unsupported OS"
             #endif // KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN
 
-        #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH
+        #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS
 
             #if KMP_OS_LINUX || KMP_OS_WINDOWS
 

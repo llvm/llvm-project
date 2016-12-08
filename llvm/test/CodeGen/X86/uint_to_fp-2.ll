@@ -8,7 +8,7 @@ define float @test1(i32 %x) nounwind readnone {
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    orpd %xmm0, %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
 ; CHECK-NEXT:    subsd %xmm0, %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtsd2ss %xmm1, %xmm0

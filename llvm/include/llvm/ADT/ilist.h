@@ -25,11 +25,9 @@
 #define LLVM_ADT_ILIST_H
 
 #include "llvm/ADT/simple_ilist.h"
-#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
-#include <type_traits>
 
 namespace llvm {
 
@@ -208,12 +206,12 @@ private:
   static bool op_less(const_reference L, const_reference R) { return L < R; }
   static bool op_equal(const_reference L, const_reference R) { return L == R; }
 
-  // Copying intrusively linked nodes doesn't make sense.
-  iplist_impl(const iplist_impl &) = delete;
-  void operator=(const iplist_impl &) = delete;
-
 public:
   iplist_impl() = default;
+
+  iplist_impl(const iplist_impl &) = delete;
+  iplist_impl &operator=(const iplist_impl &) = delete;
+
   iplist_impl(iplist_impl &&X)
       : TraitsT(std::move(X)), IntrusiveListT(std::move(X)) {}
   iplist_impl &operator=(iplist_impl &&X) {
@@ -221,6 +219,7 @@ public:
     *static_cast<IntrusiveListT *>(this) = std::move(X);
     return *this;
   }
+
   ~iplist_impl() { clear(); }
 
   // Miscellaneous inspection routines.
@@ -308,7 +307,6 @@ private:
   }
 
 public:
-
   //===----------------------------------------------------------------------===
   // Functionality derived from other functions defined above...
   //
@@ -408,25 +406,29 @@ class iplist
 
 public:
   iplist() = default;
-  iplist(iplist &&X) : iplist_impl_type(std::move(X)) {}
+
   iplist(const iplist &X) = delete;
+  iplist &operator=(const iplist &X) = delete;
+
+  iplist(iplist &&X) : iplist_impl_type(std::move(X)) {}
   iplist &operator=(iplist &&X) {
     *static_cast<iplist_impl_type *>(this) = std::move(X);
     return *this;
   }
-  iplist &operator=(const iplist &X) = delete;
 };
 
 template <class T, class... Options> using ilist = iplist<T, Options...>;
 
-} // End llvm namespace
+} // end namespace llvm
 
 namespace std {
+
   // Ensure that swap uses the fast list swap...
   template<class Ty>
   void swap(llvm::iplist<Ty> &Left, llvm::iplist<Ty> &Right) {
     Left.swap(Right);
   }
-}  // End 'std' extensions...
+
+} // end namespace std
 
 #endif // LLVM_ADT_ILIST_H

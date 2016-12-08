@@ -367,7 +367,7 @@ static bool contains(Value *Expr, Value *V) {
 }
 #endif // NDEBUG
 
-void Value::replaceAllUsesWith(Value *New) {
+void Value::doRAUW(Value *New, bool NoMetadata) {
   assert(New && "Value::replaceAllUsesWith(<null>) is invalid!");
   assert(!contains(New, this) &&
          "this->replaceAllUsesWith(expr(this)) is NOT valid!");
@@ -377,7 +377,7 @@ void Value::replaceAllUsesWith(Value *New) {
   // Notify all ValueHandles (if present) that this value is going away.
   if (HasValueHandle)
     ValueHandleBase::ValueIsRAUWd(this, New);
-  if (isUsedByMetadata())
+  if (!NoMetadata && isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, New);
 
   while (!use_empty()) {
@@ -396,6 +396,14 @@ void Value::replaceAllUsesWith(Value *New) {
 
   if (BasicBlock *BB = dyn_cast<BasicBlock>(this))
     BB->replaceSuccessorsPhiUsesWith(cast<BasicBlock>(New));
+}
+
+void Value::replaceAllUsesWith(Value *New) {
+  doRAUW(New, false /* NoMetadata */);
+}
+
+void Value::replaceNonMetadataUsesWith(Value *New) {
+  doRAUW(New, true /* NoMetadata */);
 }
 
 // Like replaceAllUsesWith except it does not handle constants or basic blocks.

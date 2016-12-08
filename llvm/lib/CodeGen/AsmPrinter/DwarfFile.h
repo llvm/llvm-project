@@ -16,10 +16,10 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/DIE.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
 #include <memory>
-#include <vector>
 
 namespace llvm {
 class AsmPrinter;
@@ -41,10 +41,7 @@ class DwarfFile {
   BumpPtrAllocator AbbrevAllocator;
 
   // Used to uniquely define abbreviations.
-  FoldingSet<DIEAbbrev> AbbreviationsSet;
-
-  // A list of all the unique abbreviations in use.
-  std::vector<DIEAbbrev *> Abbreviations;
+  DIEAbbrevSet Abbrevs;
 
   // A pointer to all units in the section.
   SmallVector<std::unique_ptr<DwarfCompileUnit>, 1> CUs;
@@ -65,8 +62,6 @@ class DwarfFile {
 public:
   DwarfFile(AsmPrinter *AP, StringRef Pref, BumpPtrAllocator &DA);
 
-  ~DwarfFile();
-
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return CUs;
   }
@@ -80,12 +75,6 @@ public:
   /// \brief Compute the size and offset of all the DIEs in the given unit.
   /// \returns The size of the root DIE.
   unsigned computeSizeAndOffsetsForUnit(DwarfUnit *TheU);
-
-  /// Define a unique number for the abbreviation.
-  ///
-  /// Compute the abbreviation for \c Die, look up its unique number, and
-  /// return a reference to it in the uniquing table.
-  DIEAbbrev &assignAbbrevNumber(DIE &Die);
 
   /// \brief Add a unit to the list of CUs.
   void addUnit(std::unique_ptr<DwarfCompileUnit> U);

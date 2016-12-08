@@ -77,6 +77,9 @@ TargetPassConfig *AVRTargetMachine::createPassConfig(PassManagerBase &PM) {
 extern "C" void LLVMInitializeAVRTarget() {
   // Register the target.
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
+
+  auto &PR = *PassRegistry::getPassRegistry();
+  initializeAVRExpandPseudoPass(PR);
 }
 
 const AVRSubtarget *AVRTargetMachine::getSubtargetImpl() const {

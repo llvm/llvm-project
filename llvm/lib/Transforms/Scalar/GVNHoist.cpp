@@ -802,6 +802,7 @@ private:
 
         // Move the instruction at the end of HoistPt.
         Instruction *Last = HoistPt->getTerminator();
+        MD->removeInstruction(Repl);
         Repl->moveBefore(Last);
 
         DFSNumber[Repl] = DFSNumber[Last]++;

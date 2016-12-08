@@ -125,7 +125,7 @@ bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
   // For all basic blocks in the function.
   for (auto &MBB : MF) {
     DEBUG(dbgs() << "****** BB " << MBB.getName() << " ******\n");
-    LiveRegs.init(TRI);
+    LiveRegs.init(*TRI);
     // FIXME: This should probably be addLiveOuts().
     LiveRegs.addLiveOutsNoPristines(MBB);
     bool HasStackMap = false;

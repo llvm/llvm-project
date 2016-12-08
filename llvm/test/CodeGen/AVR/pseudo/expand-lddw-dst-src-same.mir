@@ -1,0 +1,33 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+
+# This test ensures that the pseudo expander can correctly handle the case
+# where we are expanding a 16-bit LDD instruction where the source and
+# destination registers are the same.
+#
+# The instruction itself is earlyclobber and so ISel will never produce an
+# instruction like this, but the stack slot loading can and will.
+
+--- |
+  target triple = "avr--"
+  define void @test_lddw() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_lddw
+registers:
+  - { id: 0, class: _ }
+body: |
+  ; CHECK-LABEL: bb.0.entry
+  bb.0.entry:
+
+    ; CHECK-NEXT: early-clobber %r0 = LDDRdPtrQ %r29r28, 1
+    ; CHECK-NEXT: PUSHRr %r0, implicit-def %sp, implicit %sp
+    ; CHECK-NEXT: early-clobber %r0 = LDDRdPtrQ %r29r28, 2
+    ; CHECK-NEXT: MOVRdRr %r29, %r0
+    ; CHECK-NEXT: POPRd %r28, implicit-def %sp, implicit %sp
+
+    early-clobber %r29r28 = LDDWRdYQ %r29r28, 1
+...

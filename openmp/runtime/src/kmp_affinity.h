@@ -204,7 +204,28 @@ public:
 #  elif __NR_sched_getaffinity != 223
 #   error Wrong code for getaffinity system call.
 #  endif /* __NR_sched_getaffinity */
-# else
+#  elif KMP_ARCH_MIPS
+#   ifndef __NR_sched_setaffinity
+#    define __NR_sched_setaffinity  4239
+#   elif __NR_sched_setaffinity != 4239
+#    error Wrong code for setaffinity system call.
+#   endif /* __NR_sched_setaffinity */
+#   ifndef __NR_sched_getaffinity
+#    define __NR_sched_getaffinity  4240
+#   elif __NR_sched_getaffinity != 4240
+#    error Wrong code for getaffinity system call.
+#   endif /* __NR_sched_getaffinity */
+#  elif KMP_ARCH_MIPS64
+#   ifndef __NR_sched_setaffinity
+#    define __NR_sched_setaffinity  5195
+#   elif __NR_sched_setaffinity != 5195
+#    error Wrong code for setaffinity system call.
+#   endif /* __NR_sched_setaffinity */
+#   ifndef __NR_sched_getaffinity
+#    define __NR_sched_getaffinity  5196
+#   elif __NR_sched_getaffinity != 5196
+#    error Wrong code for getaffinity system call.
+#   endif /* __NR_sched_getaffinity */
 #  error Unknown or unsupported architecture
 # endif /* KMP_ARCH_* */
 class KMPNativeAffinity : public KMPAffinity {
