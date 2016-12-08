@@ -15,12 +15,12 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
 
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
@@ -31,6 +31,7 @@
 #include <iterator>
 #include <new>
 #include <type_traits>
+#include <vector>
 
 namespace llvm {
 
@@ -109,6 +110,37 @@ public:
 
   void print(raw_ostream &O);
   void dump();
+};
+
+//===--------------------------------------------------------------------===//
+/// Helps unique DIEAbbrev objects and assigns abbreviation numbers.
+///
+/// This class will unique the DIE abbreviations for a llvm::DIE object and
+/// assign a unique abbreviation number to each unique DIEAbbrev object it
+/// finds. The resulting collection of DIEAbbrev objects can then be emitted
+/// into the .debug_abbrev section.
+class DIEAbbrevSet {
+  /// The bump allocator to use when creating DIEAbbrev objects in the uniqued
+  /// storage container.
+  BumpPtrAllocator &Alloc;
+  /// \brief FoldingSet that uniques the abbreviations.
+  llvm::FoldingSet<DIEAbbrev> AbbreviationsSet;
+  /// A list of all the unique abbreviations in use.
+  std::vector<DIEAbbrev *> Abbreviations;
+
+public:
+  DIEAbbrevSet(BumpPtrAllocator &A) : Alloc(A) {}
+  ~DIEAbbrevSet();
+  /// Generate the abbreviation declaration for a DIE and return a pointer to
+  /// the generated abbreviation.
+  ///
+  /// \param DIE the debug info entry to generate the abbreviation for.
+  /// \returns A reference to the uniqued abbreviation declaration that is
+  /// owned by this class.
+  DIEAbbrev &uniqueAbbreviation(DIE &Die);
+
+  /// Print all abbreviations using the specified asm printer.
+  void Emit(const AsmPrinter *AP, MCSection *Section) const;
 };
 
 //===--------------------------------------------------------------------===//
@@ -201,8 +233,9 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-/// A container for string values.
+/// A container for string pool string values.
 ///
+/// This class is used with the DW_FORM_strp and DW_FORM_GNU_str_index forms.
 class DIEString {
   DwarfStringPoolEntryRef S;
 
@@ -211,6 +244,27 @@ public:
 
   /// Grab the string out of the object.
   StringRef getString() const { return S.getString(); }
+
+  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
+
+  void print(raw_ostream &O) const;
+};
+
+//===--------------------------------------------------------------------===//
+/// A container for inline string values.
+///
+/// This class is used with the DW_FORM_string form.
+class DIEInlineString {
+  std::string S;
+
+public:
+  explicit DIEInlineString(StringRef Str) : S(Str.str()) {}
+
+  ~DIEInlineString() = default;
+
+  /// Grab the string out of the object.
+  StringRef getString() const { return StringRef(S); }
 
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
@@ -233,14 +287,8 @@ public:
 
   DIE &getEntry() const { return *Entry; }
 
-  /// Returns size of a ref_addr entry.
-  static unsigned getRefAddrSize(const AsmPrinter *AP);
-
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-    return Form == dwarf::DW_FORM_ref_addr ? getRefAddrSize(AP)
-                                           : sizeof(int32_t);
-  }
+  unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
 };
@@ -595,20 +643,13 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   friend class IntrusiveBackList<DIE>;
   friend class DIEUnit;
 
-  /// Offset - Dwarf unit relative offset.
-  ///
+  /// Dwarf unit relative offset.
   unsigned Offset;
-
-  /// Size - Size of instance + children.
-  ///
+  /// Size of instance + children.
   unsigned Size;
-
   unsigned AbbrevNumber = ~0u;
-
-  /// Tag - Dwarf tag code.
-  ///
+  /// Dwarf tag code.
   dwarf::Tag Tag = (dwarf::Tag)0;
-
   /// Children DIEs.
   IntrusiveBackList<DIE> Children;
 
@@ -663,6 +704,25 @@ public:
   /// Get the absolute offset within the .debug_info or .debug_types section
   /// for this DIE.
   unsigned getDebugSectionOffset() const;
+
+  /// Compute the offset of this DIE and all its children.
+  ///
+  /// This function gets called just before we are going to generate the debug
+  /// information and gives each DIE a chance to figure out its CU relative DIE
+  /// offset, unique its abbreviation and fill in the abbreviation code, and
+  /// return the unit offset that points to where the next DIE will be emitted
+  /// within the debug unit section. After this function has been called for all
+  /// DIE objects, the DWARF can be generated since all DIEs will be able to
+  /// properly refer to other DIE objects since all DIEs have calculated their
+  /// offsets.
+  ///
+  /// \param AP AsmPrinter to use when calculating sizes.
+  /// \param AbbrevSet the abbreviation used to unique DIE abbreviations.
+  /// \param CUOffset the compile/type unit relative offset in bytes.
+  /// \returns the offset for the DIE that follows this DIE within the
+  /// current compile/type unit.
+  unsigned computeOffsetsAndAbbrevs(const AsmPrinter *AP,
+                                    DIEAbbrevSet &AbbrevSet, unsigned CUOffset);
 
   /// Climb up the parent chain to get the compile unit or type unit DIE that
   /// this DIE belongs to.

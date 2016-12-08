@@ -9090,6 +9090,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
              diag::warn_cxx1z_compat_exception_spec_in_signature)
             << NewFD;
     }
+
+    if (!Redeclaration && LangOpts.CUDA)
+      checkCUDATargetOverload(NewFD, Previous);
   }
   return Redeclaration;
 }

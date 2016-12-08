@@ -3552,19 +3552,6 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
     CmdArgs.push_back(types::getTypeName(Input.getType()));
 }
 
-static VersionTuple getMSCompatibilityVersion(unsigned Version) {
-  if (Version < 100)
-    return VersionTuple(Version);
-
-  if (Version < 10000)
-    return VersionTuple(Version / 100, Version % 100);
-
-  unsigned Build = 0, Factor = 1;
-  for (; Version > 10000; Version = Version / 10, Factor = Factor * 10)
-    Build = Build + (Version % 10) * Factor;
-  return VersionTuple(Version / 100, Version % 100, Build);
-}
-
 // Claim options we don't want to warn if they are unused. We do this for
 // options that build systems might add but are unused when assembling or only
 // running the preprocessor for example.
@@ -3606,60 +3593,6 @@ static void appendUserToPath(SmallVectorImpl<char> &Result) {
   std::string UID = "9999";
 #endif
   Result.append(UID.begin(), UID.end());
-}
-
-VersionTuple visualstudio::getMSVCVersion(const Driver *D, const ToolChain &TC,
-                                          const llvm::Triple &Triple,
-                                          const llvm::opt::ArgList &Args,
-                                          bool IsWindowsMSVC) {
-  if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
-                   IsWindowsMSVC) ||
-      Args.hasArg(options::OPT_fmsc_version) ||
-      Args.hasArg(options::OPT_fms_compatibility_version)) {
-    const Arg *MSCVersion = Args.getLastArg(options::OPT_fmsc_version);
-    const Arg *MSCompatibilityVersion =
-        Args.getLastArg(options::OPT_fms_compatibility_version);
-
-    if (MSCVersion && MSCompatibilityVersion) {
-      if (D)
-        D->Diag(diag::err_drv_argument_not_allowed_with)
-            << MSCVersion->getAsString(Args)
-            << MSCompatibilityVersion->getAsString(Args);
-      return VersionTuple();
-    }
-
-    if (MSCompatibilityVersion) {
-      VersionTuple MSVT;
-      if (MSVT.tryParse(MSCompatibilityVersion->getValue()) && D)
-        D->Diag(diag::err_drv_invalid_value)
-            << MSCompatibilityVersion->getAsString(Args)
-            << MSCompatibilityVersion->getValue();
-      return MSVT;
-    }
-
-    if (MSCVersion) {
-      unsigned Version = 0;
-      if (StringRef(MSCVersion->getValue()).getAsInteger(10, Version) && D)
-        D->Diag(diag::err_drv_invalid_value) << MSCVersion->getAsString(Args)
-                                             << MSCVersion->getValue();
-      return getMSCompatibilityVersion(Version);
-    }
-
-    unsigned Major, Minor, Micro;
-    Triple.getEnvironmentVersion(Major, Minor, Micro);
-    if (Major || Minor || Micro)
-      return VersionTuple(Major, Minor, Micro);
-
-    if (IsWindowsMSVC) {
-      VersionTuple MSVT = TC.getMSVCVersionFromExe();
-      if (!MSVT.empty())
-        return MSVT;
-
-      // FIXME: Consider bumping this to 19 (MSVC2015) soon.
-      return VersionTuple(18);
-    }
-  }
-  return VersionTuple();
 }
 
 static Arg *getLastProfileUseArg(const ArgList &Args) {
@@ -5346,9 +5279,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_ftlsmodel_EQ);
 
   // -fhosted is default.
+  bool IsHosted = true;
   if (Args.hasFlag(options::OPT_ffreestanding, options::OPT_fhosted, false) ||
-      KernelOrKext)
+      KernelOrKext) {
     CmdArgs.push_back("-ffreestanding");
+    IsHosted = false;
+  }
 
   // Forward -f (flag) options which we can pass directly.
   Args.AddLastArg(CmdArgs, options::OPT_femit_all_decls);
@@ -5481,6 +5417,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     StackProtectorLevel =
         getToolChain().GetDefaultStackProtectorLevel(KernelOrKext);
+    // Only use a default stack protector on Darwin in case -ffreestanding
+    // is not specified.
+    if (Triple.isOSDarwin() && !IsHosted)
+      StackProtectorLevel = 0;
   }
   if (StackProtectorLevel) {
     CmdArgs.push_back("-stack-protector");
@@ -5867,9 +5807,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                  options::OPT_fno_ms_extensions, true))))
     CmdArgs.push_back("-fms-compatibility");
 
-  // -fms-compatibility-version=18.00 is default.
-  VersionTuple MSVT = visualstudio::getMSVCVersion(
-      &D, getToolChain(), getToolChain().getTriple(), Args, IsWindowsMSVC);
+  VersionTuple MSVT =
+      getToolChain().computeMSVCVersion(&getToolChain().getDriver(), Args);
   if (!MSVT.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fms-compatibility-version=" + MSVT.getAsString()));

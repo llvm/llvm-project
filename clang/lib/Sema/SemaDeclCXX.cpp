@@ -983,11 +983,8 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
   if (lookupStdTypeTraitMember(S, R, Loc, "tuple_size", Args, /*DiagID*/0))
     return IsTupleLike::NotTupleLike;
 
-  // FIXME: According to the standard, we're not supposed to diagnose if any
-  // of the steps below fail (or if lookup for ::value is ambiguous or otherwise
-  // results in an error), but this is subject to a pending CWG issue / NB
-  // comment, which says we do diagnose if tuple_size<T> is complete but
-  // tuple_size<T>::value is not an ICE.
+  // If we get this far, we've committed to the tuple interpretation, but
+  // we can still fail if there actually isn't a usable ::value.
 
   struct ICEDiagnoser : Sema::VerifyICEDiagnoser {
     LookupResult &R;

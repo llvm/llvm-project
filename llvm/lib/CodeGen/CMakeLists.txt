@@ -17,6 +17,7 @@ add_llvm_library(LLVMCodeGen
   DetectDeadLanes.cpp
   DFAPacketizer.cpp
   DwarfEHPrepare.cpp
+  DwarfGenerator.cpp
   EarlyIfConversion.cpp
   EdgeBundles.cpp
   ExecutionDepsFix.cpp

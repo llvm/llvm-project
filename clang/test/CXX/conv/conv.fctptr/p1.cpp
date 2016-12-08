@@ -35,8 +35,8 @@ static_assert(q == &S::f);
 
 
 namespace std_example {
-  void (*p)() throw(int);
-  void (**pp)() noexcept = &p; // expected-error {{cannot initialize a variable of type 'void (**)() noexcept' with an rvalue of type 'void (**)() throw(int)'}}
+  void (*p)();
+  void (**pp)() noexcept = &p; // expected-error {{cannot initialize a variable of type 'void (**)() noexcept' with an rvalue of type 'void (**)()'}}
 
   struct S { typedef void (*p)(); operator p(); }; // expected-note {{candidate}}
   void (*q)() noexcept = S(); // expected-error {{no viable conversion from 'std_example::S' to 'void (*)() noexcept'}}

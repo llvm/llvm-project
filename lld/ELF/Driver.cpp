@@ -738,7 +738,7 @@ static uint64_t getImageBase(opt::InputArgList &Args) {
     error("-image-base: number expected, but got " + S);
     return 0;
   }
-  if ((V % Target->MaxPageSize) != 0)
+  if ((V % Config->MaxPageSize) != 0)
     warn("-image-base: address isn't multiple of page size: " + S);
   return V;
 }
@@ -758,6 +758,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       ELFT::Is64Bits || Config->EMachine == EM_X86_64 || Config->MipsN32Abi;
   Config->Mips64EL =
       (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind);
+
+  // Initialize Config->MaxPageSize. The default value is defined by
+  // each target.
+  Config->MaxPageSize =
+      getZOptionValue(Args, "max-page-size", Target->DefaultMaxPageSize);
+  if (!isPowerOf2_64(Config->MaxPageSize))
+    error("max-page-size: value isn't a power of 2");
+
   Config->ImageBase = getImageBase(Args);
 
   // Default output filename is "a.out" by the Unix tradition.
@@ -774,13 +782,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Handle --trace-symbol.
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
     Symtab.trace(Arg->getValue());
-
-  // Initialize Config->MaxPageSize. The default value is defined by
-  // each target.
-  Config->MaxPageSize =
-      getZOptionValue(Args, "max-page-size", Target->MaxPageSize);
-  if (!isPowerOf2_64(Config->MaxPageSize))
-    error("max-page-size: value isn't a power of 2");
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.

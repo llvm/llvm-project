@@ -1020,7 +1020,7 @@ PPC64TargetInfo::PPC64TargetInfo() {
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
-  MaxPageSize = 65536;
+  DefaultMaxPageSize = 65536;
 
   // The PPC64 ELF ABI v1 spec, says:
   //
@@ -1190,7 +1190,7 @@ AArch64TargetInfo::AArch64TargetInfo() {
   GotPltEntrySize = 8;
   PltEntrySize = 16;
   PltHeaderSize = 32;
-  MaxPageSize = 65536;
+  DefaultMaxPageSize = 65536;
 
   // It doesn't seem to be documented anywhere, but tls on aarch64 uses variant
   // 1 of the tls structures and the tcb size is 16.
@@ -1326,7 +1326,15 @@ static void updateAArch64Addr(uint8_t *L, uint64_t Imm) {
   write32le(L, (read32le(L) & ~Mask) | ImmLo | ImmHi);
 }
 
-static inline void updateAArch64Add(uint8_t *L, uint64_t Imm) {
+// Return the bits [Start, End] from Val shifted Start bits.  For instance,
+// getBits<4,8>(0xF0) returns 0xF.
+template <uint8_t Start, uint8_t End> static uint64_t getBits(uint64_t Val) {
+  uint64_t Mask = ((uint64_t)1 << (End + 1 - Start)) - 1;
+  return (Val >> Start) & Mask;
+}
+
+// Update the immediate field in a ldr, str, and add instruction.
+static inline void updateAArch64LdStrAdd(uint8_t *L, uint64_t Imm) {
   or32le(L, (Imm & 0xFFF) << 10);
 }
 
@@ -1349,7 +1357,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
-    updateAArch64Add(Loc, Val);
+    updateAArch64LdStrAdd(Loc, Val);
     break;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_PG_HI21:
@@ -1377,20 +1385,20 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     checkAlignment<8>(Loc, Val, Type);
     or32le(Loc, (Val & 0xFF8) << 7);
     break;
-  case R_AARCH64_LDST128_ABS_LO12_NC:
-    or32le(Loc, (Val & 0x0FF8) << 6);
+  case R_AARCH64_LDST8_ABS_LO12_NC:
+    updateAArch64LdStrAdd(Loc, getBits<0, 11>(Val));
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
-    or32le(Loc, (Val & 0x0FFE) << 9);
-    break;
-  case R_AARCH64_LDST8_ABS_LO12_NC:
-    or32le(Loc, (Val & 0xFFF) << 10);
+    updateAArch64LdStrAdd(Loc, getBits<1, 11>(Val));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
-    or32le(Loc, (Val & 0xFFC) << 8);
+    updateAArch64LdStrAdd(Loc, getBits<2, 11>(Val));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
-    or32le(Loc, (Val & 0xFF8) << 7);
+    updateAArch64LdStrAdd(Loc, getBits<3, 11>(Val));
+    break;
+  case R_AARCH64_LDST128_ABS_LO12_NC:
+    updateAArch64LdStrAdd(Loc, getBits<4, 11>(Val));
     break;
   case R_AARCH64_MOVW_UABS_G0_NC:
     or32le(Loc, (Val & 0xFFFF) << 5);
@@ -1410,11 +1418,11 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkInt<24>(Loc, Val, Type);
-    updateAArch64Add(Loc, Val >> 12);
+    updateAArch64LdStrAdd(Loc, Val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
-    updateAArch64Add(Loc, Val);
+    updateAArch64LdStrAdd(Loc, Val);
     break;
   default:
     fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
@@ -1924,7 +1932,7 @@ bool ARMTargetInfo::isTlsInitialExecRel(uint32_t Type) const {
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   GotPltHeaderEntriesNum = 2;
-  MaxPageSize = 65536;
+  DefaultMaxPageSize = 65536;
   GotEntrySize = sizeof(typename ELFT::uint);
   GotPltEntrySize = sizeof(typename ELFT::uint);
   PltEntrySize = 16;

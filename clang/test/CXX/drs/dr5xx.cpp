@@ -953,6 +953,9 @@ namespace dr591 { // dr591: no
 namespace dr595 { // dr595: dup 1330
   template<class T> struct X {
     void f() throw(T) {}
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
   };
   struct S {
     X<S> xs;

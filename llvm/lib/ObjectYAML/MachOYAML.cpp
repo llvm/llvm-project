@@ -29,10 +29,6 @@ bool MachOYAML::LinkEditData::isEmpty() const {
              NameList.size() + StringTable.size();
 }
 
-bool MachOYAML::DWARFData::isEmpty() const {
-  return 0 == DebugStrings.size();
-}
-
 namespace yaml {
 
 void ScalarTraits<char_16>::output(const char_16 &Val, void *,
@@ -555,11 +551,6 @@ void MappingTraits<MachO::version_min_command>::mapping(
 
   IO.mapRequired("version", LoadCommand.version);
   IO.mapRequired("sdk", LoadCommand.sdk);
-}
-
-void MappingTraits<MachOYAML::DWARFData>::mapping(
-    IO &IO, MachOYAML::DWARFData &DWARF) {
-  IO.mapRequired("DebugStrings", DWARF.DebugStrings);
 }
 
 } // namespace llvm::yaml

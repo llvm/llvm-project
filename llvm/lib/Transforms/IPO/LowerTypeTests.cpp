@@ -683,6 +683,7 @@ unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
     case Triple::x86_64:
       return kX86JumpTableEntrySize;
     case Triple::arm:
+    case Triple::thumb:
     case Triple::aarch64:
       return kARMJumpTableEntrySize;
     default:
@@ -730,6 +731,8 @@ void LowerTypeTestsModule::createJumpTableEntry(raw_ostream &OS, Function *Dest,
     OS << "int3\nint3\nint3\n";
   } else if (Arch == Triple::arm || Arch == Triple::aarch64) {
     OS << "b " << Name << "\n";
+  } else if (Arch == Triple::thumb) {
+    OS << "b.w " << Name << "\n";
   } else {
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -754,8 +757,13 @@ void LowerTypeTestsModule::createJumpTableAlias(raw_ostream &OS, Function *Dest,
   else if (!Dest->hasLocalLinkage())
     OS << ".globl " << Name << "\n";
   OS << ".type " << Name << ", function\n";
-  OS << Name << " = " << JumpTable->getName() << " + "
-     << (getJumpTableEntrySize() * Distance) << "\n";
+  if (Arch == Triple::thumb) {
+    OS << ".thumb_set " << Name << ", " << JumpTable->getName() << " + "
+       << (getJumpTableEntrySize() * Distance) << "\n";
+  } else {
+    OS << Name << " = " << JumpTable->getName() << " + "
+       << (getJumpTableEntrySize() * Distance) << "\n";
+  }
   OS << ".size " << Name << ", " << getJumpTableEntrySize() << "\n";
 }
 
@@ -768,7 +776,7 @@ Type *LowerTypeTestsModule::getJumpTableEntryType() {
 void LowerTypeTestsModule::buildBitSetsFromFunctions(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalTypeMember *> Functions) {
   if (Arch == Triple::x86 || Arch == Triple::x86_64 || Arch == Triple::arm ||
-      Arch == Triple::aarch64)
+      Arch == Triple::thumb || Arch == Triple::aarch64)
     buildBitSetsFromFunctionsNative(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
     buildBitSetsFromFunctionsWASM(TypeIds, Functions);
@@ -990,10 +998,12 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
   // FIXME: this magic section name seems to do the trick.
   AsmOS << ".section " << (ObjectFormat == Triple::MachO
                                ? "__TEXT,__text,regular,pure_instructions"
-                               : ".text.cfi, \"ax\", @progbits")
+                               : ".text.cfi, \"ax\", %progbits")
         << "\n";
   // Align the whole table by entry size.
   AsmOS << ".balign " << EntrySize << "\n";
+  if (Arch == Triple::thumb)
+    AsmOS << ".thumb_func\n";
   AsmOS << JumpTable->getName() << ":\n";
   for (unsigned I = 0; I != Functions.size(); ++I)
     createJumpTableEntry(AsmOS, cast<Function>(Functions[I]->getGlobal()), I);

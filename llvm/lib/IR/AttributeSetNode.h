@@ -15,10 +15,17 @@
 #ifndef LLVM_IR_ATTRIBUTESETNODE_H
 #define LLVM_IR_ATTRIBUTESETNODE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/TrailingObjects.h"
+#include <algorithm>
 #include <climits>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -49,10 +56,11 @@ class AttributeSetNode final
     }
   }
 
-  // AttributesSetNode is uniqued, these should not be publicly available.
-  void operator=(const AttributeSetNode &) = delete;
-  AttributeSetNode(const AttributeSetNode &) = delete;
 public:
+  // AttributesSetNode is uniqued, these should not be available.
+  AttributeSetNode(const AttributeSetNode &) = delete;
+  AttributeSetNode &operator=(const AttributeSetNode &) = delete;
+
   void operator delete(void *p) { ::operator delete(p); }
 
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
@@ -88,11 +96,11 @@ public:
     Profile(ID, makeArrayRef(begin(), end()));
   }
   static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {
-    for (unsigned I = 0, E = AttrList.size(); I != E; ++I)
-      AttrList[I].Profile(ID);
+    for (const auto &Attr : AttrList)
+      Attr.Profile(ID);
   }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_ATTRIBUTESETNODE_H

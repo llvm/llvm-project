@@ -24,4 +24,15 @@ std::error_code elf2yaml(llvm::raw_ostream &Out,
 std::error_code macho2yaml(llvm::raw_ostream &Out,
                            const llvm::object::Binary &Obj);
 
+// Forward decls for dwarf2yaml
+namespace llvm {
+class DWARFContextInMemory;
+namespace DWARFYAML {
+struct DWARFData;
+}
+}
+
+std::error_code dwarf2yaml(llvm::DWARFContextInMemory &DCtx,
+                           llvm::DWARFYAML::DWARFData &Y);
+
 #endif

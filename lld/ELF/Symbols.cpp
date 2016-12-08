@@ -306,7 +306,8 @@ void elf::printTraceSymbol(Symbol *Sym) {
 // Returns a symbol for an error message.
 std::string elf::toString(const SymbolBody &B) {
   if (Config->Demangle)
-    return demangle(B.getName());
+    if (Optional<std::string> S = demangle(B.getName()))
+      return *S;
   return B.getName();
 }
 

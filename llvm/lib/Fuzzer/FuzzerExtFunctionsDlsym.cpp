@@ -15,6 +15,7 @@
 #if LIBFUZZER_APPLE
 
 #include "FuzzerExtFunctions.h"
+#include "FuzzerIO.h"
 #include <dlfcn.h>
 
 using namespace fuzzer;

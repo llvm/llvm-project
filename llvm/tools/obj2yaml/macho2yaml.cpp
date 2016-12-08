@@ -35,8 +35,10 @@ class MachODumper {
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDWARF(std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDebugStrings(DWARFContextInMemory &DCtx, std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpDebugAbbrev(DWARFContextInMemory &DCtx,
+                        std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpDebugStrings(DWARFContextInMemory &DCtx,
+                        std::unique_ptr<MachOYAML::Object> &Y);
 
 public:
   MachODumper(const object::MachOObjectFile &O) : Obj(O) {}
@@ -166,7 +168,10 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   dumpHeader(Y);
   dumpLoadCommands(Y);
   dumpLinkEdit(Y);
-  dumpDWARF(Y);
+
+  DWARFContextInMemory DICtx(Obj);
+  if(auto Err = dwarf2yaml(DICtx, Y->DWARF))
+    return errorCodeToError(Err);
   return std::move(Y);
 }
 
@@ -460,21 +465,6 @@ void MachODumper::dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
     auto SymbolPair = RemainingTable.split('\0');
     RemainingTable = SymbolPair.second;
     LEData.StringTable.push_back(SymbolPair.first);
-  }
-}
-
-void MachODumper::dumpDWARF(std::unique_ptr<MachOYAML::Object> &Y) {
-  DWARFContextInMemory DICtx(Obj);
-  dumpDebugStrings(DICtx, Y);
-}
-
-void MachODumper::dumpDebugStrings(DWARFContextInMemory &DICtx,
-                                   std::unique_ptr<MachOYAML::Object> &Y) {
-  StringRef RemainingTable = DICtx.getStringSection();
-  while (RemainingTable.size() > 0) {
-    auto SymbolPair = RemainingTable.split('\0');
-    RemainingTable = SymbolPair.second;
-    Y->DWARF.DebugStrings.push_back(SymbolPair.first);
   }
 }
 

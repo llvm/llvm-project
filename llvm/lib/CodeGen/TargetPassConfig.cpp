@@ -38,8 +38,8 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DisablePostRA("disable-post-ra", cl::Hidden,
-    cl::desc("Disable Post Regalloc"));
+static cl::opt<bool> DisablePostRASched("disable-post-ra", cl::Hidden,
+    cl::desc("Disable Post Regalloc Scheduler"));
 static cl::opt<bool> DisableBranchFold("disable-branch-fold", cl::Hidden,
     cl::desc("Disable branch folding"));
 static cl::opt<bool> DisableTailDuplicate("disable-tail-duplicate", cl::Hidden,
@@ -157,7 +157,7 @@ static IdentifyingPassPtr applyDisable(IdentifyingPassPtr PassID,
 static IdentifyingPassPtr overridePass(AnalysisID StandardID,
                                        IdentifyingPassPtr TargetID) {
   if (StandardID == &PostRASchedulerID)
-    return applyDisable(TargetID, DisablePostRA);
+    return applyDisable(TargetID, DisablePostRASched);
 
   if (StandardID == &BranchFolderPassID)
     return applyDisable(TargetID, DisableBranchFold);

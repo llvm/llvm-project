@@ -207,3 +207,57 @@ if.end:                                           ; preds = %if.then, %check
   %exitcond = icmp eq i64 %indvars.iv.next, 128
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
+
+
+define i32 @predicated_udiv_scalarized_operand(i32* %a, i1 %c, i32 %x, i64 %n) {
+entry:
+  br label %for.body
+
+; CHECK-LABEL: predicated_udiv_scalarized_operand
+; CHECK: vector.body:
+; CHECK:   %wide.load = load <2 x i32>, <2 x i32>* {{.*}}, align 4
+; CHECK:   br i1 {{.*}}, label %[[IF0:.+]], label %[[CONT0:.+]]
+; CHECK: [[IF0]]:
+; CHECK:   %[[T00:.+]] = extractelement <2 x i32> %wide.load, i32 0
+; CHECK:   %[[T01:.+]] = extractelement <2 x i32> %wide.load, i32 0
+; CHECK:   %[[T02:.+]] = add nsw i32 %[[T01]], %x
+; CHECK:   %[[T03:.+]] = udiv i32 %[[T00]], %[[T02]]
+; CHECK:   %[[T04:.+]] = insertelement <2 x i32> undef, i32 %[[T03]], i32 0
+; CHECK:   br label %[[CONT0]]
+; CHECK: [[CONT0]]:
+; CHECK:   %[[T05:.+]] = phi <2 x i32> [ undef, %vector.body ], [ %[[T04]], %[[IF0]] ]
+; CHECK:   br i1 {{.*}}, label %[[IF1:.+]], label %[[CONT1:.+]]
+; CHECK: [[IF1]]:
+; CHECK:   %[[T06:.+]] = extractelement <2 x i32> %wide.load, i32 1
+; CHECK:   %[[T07:.+]] = extractelement <2 x i32> %wide.load, i32 1
+; CHECK:   %[[T08:.+]] = add nsw i32 %[[T07]], %x
+; CHECK:   %[[T09:.+]] = udiv i32 %[[T06]], %[[T08]]
+; CHECK:   %[[T10:.+]] = insertelement <2 x i32> %[[T05]], i32 %[[T09]], i32 1
+; CHECK:   br label %[[CONT1]]
+; CHECK: [[CONT1]]:
+; CHECK:   phi <2 x i32> [ %[[T05]], %[[CONT0]] ], [ %[[T10]], %[[IF1]] ]
+; CHECK:   br i1 {{.*}}, label %middle.block, label %vector.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %r = phi i32 [ 0, %entry ], [ %tmp6, %for.inc ]
+  %tmp0 = getelementptr inbounds i32, i32* %a, i64 %i
+  %tmp2 = load i32, i32* %tmp0, align 4
+  br i1 %c, label %if.then, label %for.inc
+
+if.then:
+  %tmp3 = add nsw i32 %tmp2, %x
+  %tmp4 = udiv i32 %tmp2, %tmp3
+  br label %for.inc
+
+for.inc:
+  %tmp5 = phi i32 [ %tmp2, %for.body ], [ %tmp4, %if.then]
+  %tmp6 = add i32 %r, %tmp5
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  %tmp7 = phi i32 [ %tmp6, %for.inc ]
+  ret i32 %tmp7
+}
