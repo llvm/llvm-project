@@ -511,79 +511,9 @@ void RuntimeDyldELF::resolveMIPSRelocation(const SectionEntry &Section,
                << " Type: " << format("%x", Type)
                << " Addend: " << format("%x", Addend) << "\n");
 
-  uint32_t Insn = readBytesUnaligned(TargetPtr, 4);
+  Value = evaluateMIPS32Relocation(Section, Offset, Value, Type);
 
-  switch (Type) {
-  default:
-    llvm_unreachable("Not implemented relocation type!");
-    break;
-  case ELF::R_MIPS_32:
-    writeBytesUnaligned(Value, TargetPtr, 4);
-    break;
-  case ELF::R_MIPS_26:
-    Insn &= 0xfc000000;
-    Insn |= (Value & 0x0fffffff) >> 2;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  case ELF::R_MIPS_HI16:
-    // Get the higher 16-bits. Also add 1 if bit 15 is 1.
-    Insn &= 0xffff0000;
-    Insn |= ((Value + 0x8000) >> 16) & 0xffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  case ELF::R_MIPS_LO16:
-    Insn &= 0xffff0000;
-    Insn |= Value & 0xffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  case ELF::R_MIPS_PC32: {
-    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    writeBytesUnaligned(Value - FinalAddress, (uint8_t *)TargetPtr, 4);
-    break;
-  }
-  case ELF::R_MIPS_PC16: {
-    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    Insn &= 0xffff0000;
-    Insn |= ((Value - FinalAddress) >> 2) & 0xffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  }
-  case ELF::R_MIPS_PC19_S2: {
-    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    Insn &= 0xfff80000;
-    Insn |= ((Value - (FinalAddress & ~0x3)) >> 2) & 0x7ffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  }
-  case ELF::R_MIPS_PC21_S2: {
-    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    Insn &= 0xffe00000;
-    Insn |= ((Value - FinalAddress) >> 2) & 0x1fffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  }
-  case ELF::R_MIPS_PC26_S2: {
-    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    Insn &= 0xfc000000;
-    Insn |= ((Value - FinalAddress) >> 2) & 0x3ffffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  }
-  case ELF::R_MIPS_PCHI16: {
-    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    Insn &= 0xffff0000;
-    Insn |= ((Value - FinalAddress + 0x8000) >> 16) & 0xffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  }
-  case ELF::R_MIPS_PCLO16: {
-    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
-    Insn &= 0xffff0000;
-    Insn |= (Value - FinalAddress) & 0xffff;
-    writeBytesUnaligned(Insn, TargetPtr, 4);
-    break;
-  }
-  }
+  applyMIPSRelocation(TargetPtr, Value, Type);
 }
 
 void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
@@ -608,8 +538,8 @@ void RuntimeDyldELF::resolveMIPSN32Relocation(const SectionEntry &Section,
                                               SID SectionID) {
   int64_t CalculatedValue = evaluateMIPS64Relocation(
       Section, Offset, Value, Type, Addend, SymOffset, SectionID);
-  applyMIPS64Relocation(Section.getAddressWithOffset(Offset), CalculatedValue,
-                        Type);
+  applyMIPSRelocation(Section.getAddressWithOffset(Offset), CalculatedValue,
+                      Type);
 }
 
 void RuntimeDyldELF::resolveMIPSN64Relocation(const SectionEntry &Section,
@@ -639,8 +569,64 @@ void RuntimeDyldELF::resolveMIPSN64Relocation(const SectionEntry &Section,
                                                CalculatedValue, SymOffset,
                                                SectionID);
   }
-  applyMIPS64Relocation(Section.getAddressWithOffset(Offset), CalculatedValue,
-                        RelType);
+  applyMIPSRelocation(Section.getAddressWithOffset(Offset), CalculatedValue,
+                      RelType);
+}
+
+int64_t RuntimeDyldELF::evaluateMIPS32Relocation(const SectionEntry &Section,
+                                                 uint64_t Offset,
+                                                 uint64_t Value,
+                                                 uint32_t Type) {
+
+  DEBUG(dbgs() << "evaluateMIPS32Relocation, LocalAddress: 0x"
+               << format("%llx", Section.getAddressWithOffset(Offset))
+               << " FinalAddress: 0x"
+               << format("%llx", Section.getLoadAddressWithOffset(Offset))
+               << " Value: 0x" << format("%llx", Value) << " Type: 0x"
+               << format("%x", Type) << "\n");
+
+  switch (Type) {
+  default:
+    llvm_unreachable("Unknown relocation type!");
+    return Value;
+  case ELF::R_MIPS_32:
+    return Value;
+  case ELF::R_MIPS_26:
+    return Value >> 2;
+  case ELF::R_MIPS_HI16:
+    // Get the higher 16-bits. Also add 1 if bit 15 is 1.
+    return (Value + 0x8000) >> 16;
+  case ELF::R_MIPS_LO16:
+    return Value;
+  case ELF::R_MIPS_PC32: {
+    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    return Value - FinalAddress;
+  }
+  case ELF::R_MIPS_PC16: {
+    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    return (Value - FinalAddress) >> 2;
+  }
+  case ELF::R_MIPS_PC19_S2: {
+    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    return (Value - (FinalAddress & ~0x3)) >> 2;
+  }
+  case ELF::R_MIPS_PC21_S2: {
+    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    return (Value - FinalAddress) >> 2;
+  }
+  case ELF::R_MIPS_PC26_S2: {
+    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    return (Value - FinalAddress) >> 2;
+  }
+  case ELF::R_MIPS_PCHI16: {
+    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    return (Value - FinalAddress + 0x8000) >> 16;
+  }
+  case ELF::R_MIPS_PCLO16: {
+    uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    return Value - FinalAddress;
+  }
+  }
 }
 
 int64_t
@@ -743,57 +729,54 @@ RuntimeDyldELF::evaluateMIPS64Relocation(const SectionEntry &Section,
   return 0;
 }
 
-void RuntimeDyldELF::applyMIPS64Relocation(uint8_t *TargetPtr,
-                                           int64_t CalculatedValue,
-                                           uint32_t Type) {
+void RuntimeDyldELF::applyMIPSRelocation(uint8_t *TargetPtr, int64_t Value,
+                                         uint32_t Type) {
   uint32_t Insn = readBytesUnaligned(TargetPtr, 4);
 
   switch (Type) {
-    default:
-      break;
-    case ELF::R_MIPS_32:
-    case ELF::R_MIPS_GPREL32:
-    case ELF::R_MIPS_PC32:
-      writeBytesUnaligned(CalculatedValue & 0xffffffff, TargetPtr, 4);
-      break;
-    case ELF::R_MIPS_64:
-    case ELF::R_MIPS_SUB:
-      writeBytesUnaligned(CalculatedValue, TargetPtr, 8);
-      break;
-    case ELF::R_MIPS_26:
-    case ELF::R_MIPS_PC26_S2:
-      Insn = (Insn & 0xfc000000) | CalculatedValue;
-      writeBytesUnaligned(Insn, TargetPtr, 4);
-      break;
-    case ELF::R_MIPS_GPREL16:
-      Insn = (Insn & 0xffff0000) | (CalculatedValue & 0xffff);
-      writeBytesUnaligned(Insn, TargetPtr, 4);
-      break;
-    case ELF::R_MIPS_HI16:
-    case ELF::R_MIPS_LO16:
-    case ELF::R_MIPS_PCHI16:
-    case ELF::R_MIPS_PCLO16:
-    case ELF::R_MIPS_PC16:
-    case ELF::R_MIPS_CALL16:
-    case ELF::R_MIPS_GOT_DISP:
-    case ELF::R_MIPS_GOT_PAGE:
-    case ELF::R_MIPS_GOT_OFST:
-      Insn = (Insn & 0xffff0000) | CalculatedValue;
-      writeBytesUnaligned(Insn, TargetPtr, 4);
-      break;
-    case ELF::R_MIPS_PC18_S3:
-      Insn = (Insn & 0xfffc0000) | CalculatedValue;
-      writeBytesUnaligned(Insn, TargetPtr, 4);
-      break;
-    case ELF::R_MIPS_PC19_S2:
-      Insn = (Insn & 0xfff80000) | CalculatedValue;
-      writeBytesUnaligned(Insn, TargetPtr, 4);
-      break;
-    case ELF::R_MIPS_PC21_S2:
-      Insn = (Insn & 0xffe00000) | CalculatedValue;
-      writeBytesUnaligned(Insn, TargetPtr, 4);
-      break;
-    }
+  default:
+    llvm_unreachable("Unknown relocation type!");
+    break;
+  case ELF::R_MIPS_GPREL16:
+  case ELF::R_MIPS_HI16:
+  case ELF::R_MIPS_LO16:
+  case ELF::R_MIPS_PC16:
+  case ELF::R_MIPS_PCHI16:
+  case ELF::R_MIPS_PCLO16:
+  case ELF::R_MIPS_CALL16:
+  case ELF::R_MIPS_GOT_DISP:
+  case ELF::R_MIPS_GOT_PAGE:
+  case ELF::R_MIPS_GOT_OFST:
+    Insn = (Insn & 0xffff0000) | (Value & 0x0000ffff);
+    writeBytesUnaligned(Insn, TargetPtr, 4);
+    break;
+  case ELF::R_MIPS_PC18_S3:
+    Insn = (Insn & 0xfffc0000) | (Value & 0x0003ffff);
+    writeBytesUnaligned(Insn, TargetPtr, 4);
+    break;
+  case ELF::R_MIPS_PC19_S2:
+    Insn = (Insn & 0xfff80000) | (Value & 0x0007ffff);
+    writeBytesUnaligned(Insn, TargetPtr, 4);
+    break;
+  case ELF::R_MIPS_PC21_S2:
+    Insn = (Insn & 0xffe00000) | (Value & 0x001fffff);
+    writeBytesUnaligned(Insn, TargetPtr, 4);
+    break;
+  case ELF::R_MIPS_26:
+  case ELF::R_MIPS_PC26_S2:
+    Insn = (Insn & 0xfc000000) | (Value & 0x03ffffff);
+    writeBytesUnaligned(Insn, TargetPtr, 4);
+    break;
+  case ELF::R_MIPS_32:
+  case ELF::R_MIPS_GPREL32:
+  case ELF::R_MIPS_PC32:
+    writeBytesUnaligned(Value & 0xffffffff, TargetPtr, 4);
+    break;
+  case ELF::R_MIPS_64:
+  case ELF::R_MIPS_SUB:
+    writeBytesUnaligned(Value, TargetPtr, 8);
+    break;
+  }
 }
 
 // Return the .TOC. section and offset.

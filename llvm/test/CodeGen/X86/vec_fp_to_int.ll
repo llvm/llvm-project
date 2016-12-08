@@ -2343,7 +2343,7 @@ define <4 x i32> @fptosi_2f128_to_4i32(<2 x fp128> %a) nounwind {
 ; SSE-NEXT:    movq %rcx, %rsi
 ; SSE-NEXT:    callq __fixtfdi
 ; SSE-NEXT:    movd %rax, %xmm0
-; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    movq %rbx, %rdi
 ; SSE-NEXT:    movq %r14, %rsi
 ; SSE-NEXT:    callq __fixtfdi
@@ -2368,7 +2368,7 @@ define <4 x i32> @fptosi_2f128_to_4i32(<2 x fp128> %a) nounwind {
 ; VEX-NEXT:    movq %rcx, %rsi
 ; VEX-NEXT:    callq __fixtfdi
 ; VEX-NEXT:    vmovq %rax, %xmm0
-; VEX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; VEX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; VEX-NEXT:    movq %rbx, %rdi
 ; VEX-NEXT:    movq %r14, %rsi
 ; VEX-NEXT:    callq __fixtfdi

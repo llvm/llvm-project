@@ -142,6 +142,14 @@
 #  define ITT_ARCH_PPC64  5
 #endif /* ITT_ARCH_PPC64 */
 
+#ifndef ITT_ARCH_MIPS
+#  define ITT_ARCH_MIPS  6
+#endif /* ITT_ARCH_MIPS */
+
+#ifndef ITT_ARCH_MIPS64
+#  define ITT_ARCH_MIPS64  6
+#endif /* ITT_ARCH_MIPS64 */
+
 
 #ifndef ITT_ARCH
 #  if defined _M_IX86 || defined __i386__
@@ -156,6 +164,10 @@
 #    define ITT_ARCH ITT_ARCH_PPC64
 #  elif defined __aarch64__
 #    define ITT_ARCH ITT_ARCH_AARCH64
+#  elif defined __mips__ && !defined __mips64
+#    define ITT_ARCH ITT_ARCH_MIPS
+#  elif defined __mips__ && defined __mips64
+#    define ITT_ARCH ITT_ARCH_MIPS64
 #  endif
 #endif
 
@@ -293,7 +305,7 @@ ITT_INLINE long __TBB_machine_fetchadd4(volatile void* ptr, long addend)
                           : "memory");
     return result;
 }
-#elif ITT_ARCH==ITT_ARCH_ARM || ITT_ARCH==ITT_ARCH_PPC64 || ITT_ARCH==ITT_ARCH_AARCH64
+#elif ITT_ARCH==ITT_ARCH_ARM || ITT_ARCH==ITT_ARCH_PPC64 || ITT_ARCH==ITT_ARCH_AARCH64 || ITT_ARCH==ITT_ARCH_MIPS ||  ITT_ARCH==ITT_ARCH_MIPS64
 #define __TBB_machine_fetchadd4(addr, val) __sync_fetch_and_add(addr, val)
 #endif /* ITT_ARCH==ITT_ARCH_IA64 */
 #ifndef ITT_SIMPLE_INIT

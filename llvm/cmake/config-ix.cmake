@@ -78,6 +78,15 @@ check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 
 check_include_file(mach/mach.h HAVE_MACH_MACH_H)
 check_include_file(histedit.h HAVE_HISTEDIT_H)
+check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
+if(APPLE)
+  include(CheckCSourceCompiles)
+  CHECK_C_SOURCE_COMPILES("
+     static const char *__crashreporter_info__ = 0;
+     asm(\".desc ___crashreporter_info__, 0x10\");
+     int main() { return 0; }"
+    HAVE_CRASHREPORTER_INFO)
+endif()
 
 # library checks
 if( NOT PURE_WINDOWS )

@@ -50,8 +50,8 @@ using namespace object;
 // export/import and other global analysis results.
 // The hash is produced in \p Key.
 static void computeCacheKey(
-    SmallString<40> &Key, const ModuleSummaryIndex &Index, StringRef ModuleID,
-    const FunctionImporter::ImportMapTy &ImportList,
+    SmallString<40> &Key, const Config &Conf, const ModuleSummaryIndex &Index,
+    StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals) {
@@ -66,6 +66,39 @@ static void computeCacheKey(
 #ifdef HAVE_LLVM_REVISION
   Hasher.update(LLVM_REVISION);
 #endif
+
+  // Include the parts of the LTO configuration that affect code generation.
+  auto AddString = [&](StringRef Str) {
+    Hasher.update(Str);
+    Hasher.update(ArrayRef<uint8_t>{0});
+  };
+  auto AddUnsigned = [&](unsigned I) {
+    uint8_t Data[4];
+    Data[0] = I;
+    Data[1] = I >> 8;
+    Data[2] = I >> 16;
+    Data[3] = I >> 24;
+    Hasher.update(ArrayRef<uint8_t>{Data, 4});
+  };
+  AddString(Conf.CPU);
+  // FIXME: Hash more of Options. For now all clients initialize Options from
+  // command-line flags (which is unsupported in production), but may set
+  // RelaxELFRelocations. The clang driver can also pass FunctionSections,
+  // DataSections and DebuggerTuning via command line flags.
+  AddUnsigned(Conf.Options.RelaxELFRelocations);
+  AddUnsigned(Conf.Options.FunctionSections);
+  AddUnsigned(Conf.Options.DataSections);
+  AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
+  for (auto &A : Conf.MAttrs)
+    AddString(A);
+  AddUnsigned(Conf.RelocModel);
+  AddUnsigned(Conf.CodeModel);
+  AddUnsigned(Conf.CGOptLevel);
+  AddUnsigned(Conf.OptLevel);
+  AddString(Conf.OptPipeline);
+  AddString(Conf.AAPipeline);
+  AddString(Conf.OverrideTriple);
+  AddString(Conf.DefaultTriple);
 
   // Include the hash for the current module
   auto ModHash = Index.getModuleHash(ModuleID);
@@ -562,7 +595,7 @@ public:
 
     SmallString<40> Key;
     // The module may be cached, this helps handling it.
-    computeCacheKey(Key, CombinedIndex, ModuleID, ImportList, ExportList,
+    computeCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList, ExportList,
                     ResolvedODR, DefinedGlobals);
     if (AddStreamFn CacheAddStream = Cache(Task, Key))
       return RunThinBackend(CacheAddStream);

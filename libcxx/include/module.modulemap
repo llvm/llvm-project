@@ -1,4 +1,12 @@
+// define the module for __config outside of the top level 'std' module
+// since __config may be included from C headers which may create an
+// include cycle.
+module std_config [system] [extern_c] {
+    header "__config"
+}
+
 module std [system] {
+  export std_config
   // FIXME: The standard does not require that each of these submodules
   // re-exports its imported modules. We should provide an alternative form of
   // export that issues a warning if a name from the submodule is used, and
@@ -462,11 +470,6 @@ module std [system] {
     export initializer_list
     export *
   }
-
-  // FIXME: We don't have modules for the <foo.h> headers, because they might
-  // be included from the C library's headers, and that would create a #include
-  // cycle. For the same reason, we don't have a module for __config.
-  //module __config { header "__config" export * }
 
   // FIXME: These should be private.
   module __bit_reference { header "__bit_reference" export * }

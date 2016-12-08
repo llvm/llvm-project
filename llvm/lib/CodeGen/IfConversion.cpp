@@ -1517,13 +1517,13 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
 
   // Initialize liveins to the first BB. These are potentiall redefined by
   // predicated instructions.
-  Redefs.init(TRI);
+  Redefs.init(*TRI);
   Redefs.addLiveIns(CvtMBB);
   Redefs.addLiveIns(NextMBB);
 
   // Compute a set of registers which must not be killed by instructions in
   // BB1: This is everything live-in to BB2.
-  DontKill.init(TRI);
+  DontKill.init(*TRI);
   DontKill.addLiveIns(NextMBB);
 
   if (CvtMBB.pred_size() > 1) {
@@ -1621,7 +1621,7 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
 
   // Initialize liveins to the first BB. These are potentially redefined by
   // predicated instructions.
-  Redefs.init(TRI);
+  Redefs.init(*TRI);
   Redefs.addLiveIns(CvtMBB);
   Redefs.addLiveIns(NextMBB);
 
@@ -1785,7 +1785,7 @@ bool IfConverter::IfConvertDiamondCommon(
   // - BB1 live-out regs need implicit uses before being redefined by BB2
   //   instructions. We start with BB1 live-ins so we have the live-out regs
   //   after tracking the BB1 instructions.
-  Redefs.init(TRI);
+  Redefs.init(*TRI);
   Redefs.addLiveIns(MBB1);
   Redefs.addLiveIns(MBB2);
 
@@ -1811,7 +1811,7 @@ bool IfConverter::IfConvertDiamondCommon(
   // Compute a set of registers which must not be killed by instructions in BB1:
   // This is everything used+live in BB2 after the duplicated instructions. We
   // can compute this set by simulating liveness backwards from the end of BB2.
-  DontKill.init(TRI);
+  DontKill.init(*TRI);
   for (const MachineInstr &MI : make_range(MBB2.rbegin(), ++DI2.getReverse()))
     DontKill.stepBackward(MI);
 

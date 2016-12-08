@@ -38,7 +38,7 @@ if(${LIBOMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc64/ppc64le/aarch64/mic).")
+    "The architecture to build for (x86_64/i386/arm/ppc64/ppc64le/aarch64/mic/mips/mips64).")
   # Allow user to choose a suffix for the installation directory.
   set(LIBOMP_LIBDIR_SUFFIX "" CACHE STRING
     "suffix of lib installation directory e.g., 64 => lib64")
@@ -83,7 +83,7 @@ else() # Part of LLVM build
   set(LIBOMP_ENABLE_ASSERTIONS ${LLVM_ENABLE_ASSERTIONS})
   set(LIBOMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 endif()
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 mic)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 mic mips mips64)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -174,6 +174,8 @@ set(PPC64BE FALSE)
 set(PPC64LE FALSE)
 set(PPC64 FALSE)
 set(MIC FALSE)
+set(MIPS64 FALSE)
+set(MIPS FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
@@ -190,6 +192,10 @@ elseif("${LIBOMP_ARCH}" STREQUAL "aarch64") # AARCH64 architecture
   set(AARCH64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "mic") # Intel(R) Many Integrated Core Architecture
   set(MIC TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "mips") # MIPS architecture
+    set(MIPS TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "mips64") # MIPS64 architecture
+    set(MIPS64 TRUE)
 endif()
 
 # Set some flags based on build_type

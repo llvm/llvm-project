@@ -33,8 +33,9 @@ namespace lto {
 /// LTO configuration. A linker can configure LTO by setting fields in this data
 /// structure and passing it to the lto::LTO constructor.
 struct Config {
+  // Note: when adding fields here, consider whether they need to be added to
+  // computeCacheKey in LTO.cpp.
   std::string CPU;
-  std::string Features;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   Reloc::Model RelocModel = Reloc::PIC_;

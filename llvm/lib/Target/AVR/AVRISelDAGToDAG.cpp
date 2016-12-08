@@ -366,6 +366,8 @@ template <> bool AVRDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
     return selectIndexedLoad(N);
   }
 
+  assert(Subtarget->hasLPM() && "cannot load from program memory on this mcu");
+
   // This is a flash memory load, move the pointer into R31R30 and emit
   // the lpm instruction.
   MVT VT = LD->getMemoryVT().getSimpleVT();

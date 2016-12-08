@@ -330,6 +330,12 @@ void DIEHash::hashAttribute(const DIEValue &Value, dwarf::Tag Tag) {
     addULEB128(dwarf::DW_FORM_string);
     addString(Value.getDIEString().getString());
     break;
+  case DIEValue::isInlineString:
+    addULEB128('A');
+    addULEB128(Attribute);
+    addULEB128(dwarf::DW_FORM_string);
+    addString(Value.getDIEInlineString().getString());
+    break;
   case DIEValue::isBlock:
   case DIEValue::isLoc:
   case DIEValue::isLocList:

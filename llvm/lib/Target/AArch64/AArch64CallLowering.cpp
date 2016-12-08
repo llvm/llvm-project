@@ -200,12 +200,10 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
 
-  MachineInstrBuilder MIB = MIRBuilder.buildInstr(AArch64::RET_ReallyLR);
-  assert(MIB.getInstr() && "Unable to build a return instruction?!");
-
+  auto MIB = MIRBuilder.buildInstrNoInsert(AArch64::RET_ReallyLR);
   assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
+  bool Success = true;
   if (VReg) {
-    MIRBuilder.setInstr(*MIB.getInstr(), /* Before */ true);
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
     MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -221,9 +219,11 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                       });
 
     OutgoingArgHandler Handler(MIRBuilder, MRI, MIB);
-    return handleAssignments(MIRBuilder, AssignFn, SplitArgs, Handler);
+    Success = handleAssignments(MIRBuilder, AssignFn, SplitArgs, Handler);
   }
-  return true;
+
+  MIRBuilder.insertInstr(MIB);
+  return Success;
 }
 
 bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,

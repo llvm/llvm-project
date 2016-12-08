@@ -306,7 +306,7 @@ protected:
     static _LIBCPP_CONSTEXPR const bool is_signed = true;
     static _LIBCPP_CONSTEXPR const int  digits = __FLT_MANT_DIG__;
     static _LIBCPP_CONSTEXPR const int  digits10 = __FLT_DIG__;
-    static _LIBCPP_CONSTEXPR const int  max_digits10 = 2+(digits * 30103)/100000;
+    static _LIBCPP_CONSTEXPR const int  max_digits10 = 2+(digits * 30103l)/100000l;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type min() _NOEXCEPT {return __FLT_MIN__;}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type max() _NOEXCEPT {return __FLT_MAX__;}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type lowest() _NOEXCEPT {return -max();}
@@ -352,7 +352,7 @@ protected:
     static _LIBCPP_CONSTEXPR const bool is_signed = true;
     static _LIBCPP_CONSTEXPR const int  digits = __DBL_MANT_DIG__;
     static _LIBCPP_CONSTEXPR const int  digits10 = __DBL_DIG__;
-    static _LIBCPP_CONSTEXPR const int  max_digits10 = 2+(digits * 30103)/100000;
+    static _LIBCPP_CONSTEXPR const int  max_digits10 = 2+(digits * 30103l)/100000l;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type min() _NOEXCEPT {return __DBL_MIN__;}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type max() _NOEXCEPT {return __DBL_MAX__;}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type lowest() _NOEXCEPT {return -max();}
@@ -398,7 +398,7 @@ protected:
     static _LIBCPP_CONSTEXPR const bool is_signed = true;
     static _LIBCPP_CONSTEXPR const int  digits = __LDBL_MANT_DIG__;
     static _LIBCPP_CONSTEXPR const int  digits10 = __LDBL_DIG__;
-    static _LIBCPP_CONSTEXPR const int  max_digits10 = 2+(digits * 30103)/100000;
+    static _LIBCPP_CONSTEXPR const int  max_digits10 = 2+(digits * 30103l)/100000l;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type min() _NOEXCEPT {return __LDBL_MIN__;}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type max() _NOEXCEPT {return __LDBL_MAX__;}
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type lowest() _NOEXCEPT {return -max();}
