@@ -76,7 +76,7 @@ define float @f5(float %x, i32 %y) {
 ; CHECK-LABEL: f5:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movd %edi, %xmm1
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast float %x to i32
@@ -91,7 +91,7 @@ define float @f6(float %x, i32 %y) {
 ; CHECK-LABEL: f6:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movd %edi, %xmm1
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast float %x to i32
@@ -135,7 +135,7 @@ define float @f8(float %x) {
 define i32 @f9(float %x, float %y) {
 ; CHECK-LABEL: f9:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    retq
 ;

@@ -1,5 +1,4 @@
 ; RUN: llc < %s -march=avr | FileCheck %s
-; XFAIL: *
 
 ; Causes an assertion error
 ; Assertion failed: (Lo.getValueType() == TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType()) &&
@@ -20,4 +19,3 @@ then:
 else:
   ret void
 }
-

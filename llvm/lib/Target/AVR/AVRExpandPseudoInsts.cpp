@@ -25,6 +25,8 @@
 
 using namespace llvm;
 
+#define AVR_EXPAND_PSEUDO_NAME "AVR pseudo instruction expansion pass"
+
 namespace {
 
 /// Expands "placeholder" instructions marked as pseudo into
@@ -33,13 +35,13 @@ class AVRExpandPseudo : public MachineFunctionPass {
 public:
   static char ID;
 
-  AVRExpandPseudo() : MachineFunctionPass(ID) {}
+  AVRExpandPseudo() : MachineFunctionPass(ID) {
+    initializeAVRExpandPseudoPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  StringRef getPassName() const override {
-    return "AVR pseudo instruction expansion pass";
-  }
+  StringRef getPassName() const override { return AVR_EXPAND_PSEUDO_NAME; }
 
 private:
   typedef MachineBasicBlock Block;
@@ -653,17 +655,46 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
   assert(Imm < 63 && "Offset is out of range");
-  assert(DstReg != SrcReg && "SrcReg and DstReg cannot be the same");
+
+  unsigned TmpLoReg = DstLoReg;
+  unsigned TmpHiReg = DstHiReg;
+
+  // HACK: We shouldn't have instances of this instruction
+  // where src==dest because the instruction itself is
+  // marked earlyclobber. We do however get this instruction when
+  // loading from stack slots where the earlyclobber isn't useful.
+  //
+  // In this case, just use a temporary register.
+  if (DstReg == SrcReg) {
+    TmpLoReg = SCRATCH_REGISTER;
+    TmpHiReg = SCRATCH_REGISTER;
+  }
 
   auto MIBLO = buildMI(MBB, MBBI, OpLo)
-    .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+    .addReg(TmpLoReg, RegState::Define | getDeadRegState(DstIsDead))
     .addReg(SrcReg)
     .addImm(Imm);
 
+  // Push the low part of the temporary register to the stack.
+  if (TmpLoReg != DstLoReg)
+    buildMI(MBB, MBBI, AVR::PUSHRr)
+      .addReg(AVR::R0);
+
   auto MIBHI = buildMI(MBB, MBBI, OpHi)
-    .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+    .addReg(TmpHiReg, RegState::Define | getDeadRegState(DstIsDead))
     .addReg(SrcReg, getKillRegState(SrcIsKill))
     .addImm(Imm + 1);
+
+  // If we need to use a temporary register.
+  if (TmpHiReg != DstHiReg) {
+    // Move the hi result from the tmp register to the destination.
+    buildMI(MBB, MBBI, AVR::MOVRdRr)
+      .addReg(DstHiReg).addReg(SCRATCH_REGISTER);
+
+    // Pop the lo result calculated previously and put it into
+    // the lo destination.
+    buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
+  }
 
   MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
   MIBHI->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
@@ -1424,6 +1455,8 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
 
 } // end of anonymous namespace
 
+INITIALIZE_PASS(AVRExpandPseudo, "avr-expand-pseudo",
+                AVR_EXPAND_PSEUDO_NAME, false, false)
 namespace llvm {
 
 FunctionPass *createAVRExpandPseudoPass() { return new AVRExpandPseudo(); }

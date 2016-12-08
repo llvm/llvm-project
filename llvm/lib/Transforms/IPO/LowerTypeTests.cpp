@@ -30,6 +30,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -211,26 +212,29 @@ struct ByteArrayInfo {
 /// metadata types referenced by a global, which at the IR level is an expensive
 /// operation involving a map lookup; this data structure helps to reduce the
 /// number of times we need to do this lookup.
-class GlobalTypeMember {
+class GlobalTypeMember final : TrailingObjects<GlobalTypeMember, MDNode *> {
   GlobalObject *GO;
   size_t NTypes;
-  MDNode *Types[1]; // We treat this as a flexible array member.
+
+  friend TrailingObjects;
+  size_t numTrailingObjects(OverloadToken<MDNode *>) const { return NTypes; }
 
 public:
   static GlobalTypeMember *create(BumpPtrAllocator &Alloc, GlobalObject *GO,
                                   ArrayRef<MDNode *> Types) {
-    auto GTM = Alloc.Allocate<GlobalTypeMember>(
-        sizeof(GlobalTypeMember) + (Types.size() - 1) * sizeof(MDNode *));
+    auto *GTM = static_cast<GlobalTypeMember *>(Alloc.Allocate(
+        totalSizeToAlloc<MDNode *>(Types.size()), alignof(GlobalTypeMember)));
     GTM->GO = GO;
     GTM->NTypes = Types.size();
-    std::copy(Types.begin(), Types.end(), GTM->Types);
+    std::uninitialized_copy(Types.begin(), Types.end(),
+                            GTM->getTrailingObjects<MDNode *>());
     return GTM;
   }
   GlobalObject *getGlobal() const {
     return GO;
   }
   ArrayRef<MDNode *> types() const {
-    return {&Types[0], &Types[NTypes]};
+    return makeArrayRef(getTrailingObjects<MDNode *>(), NTypes);
   }
 };
 

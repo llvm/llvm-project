@@ -7801,8 +7801,10 @@ void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
   // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
   // opencl.spir.version named metadata.
   llvm::Metadata *SPIRVerElts[] = {
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 2)),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 0))};
+      llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(Int32Ty, CGM.getLangOpts().OpenCLVersion / 100)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          Int32Ty, (CGM.getLangOpts().OpenCLVersion / 100 > 1) ? 0 : 2))};
   llvm::NamedMDNode *SPIRVerMD =
       M.getOrInsertNamedMetadata("opencl.spir.version");
   SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
