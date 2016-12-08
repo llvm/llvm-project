@@ -127,9 +127,10 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLTOObject() {
 
 template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addAbsolute(StringRef Name,
-                                                     uint8_t Visibility) {
-  Symbol *Sym = addRegular(Name, Visibility, STT_NOTYPE, 0, 0, STB_GLOBAL,
-                           nullptr, nullptr);
+                                                     uint8_t Visibility,
+                                                     uint8_t Type) {
+  Symbol *Sym =
+      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, Type, nullptr, nullptr);
   return cast<DefinedRegular<ELFT>>(Sym->body());
 }
 
