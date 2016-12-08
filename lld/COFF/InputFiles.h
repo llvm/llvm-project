@@ -61,13 +61,8 @@ public:
   // Returns the CPU type this file was compiled to.
   virtual MachineTypes getMachineType() { return IMAGE_FILE_MACHINE_UNKNOWN; }
 
-  // Returns a short, human-friendly filename. If this is a member of
-  // an archive file, a returned value includes parent's filename.
-  // Used for logging or debugging.
-  std::string getShortName();
-
-  // Sets a parent filename if this file is created from an archive.
-  void setParentName(StringRef N) { ParentName = N; }
+  // An archive file name if this file is created from an archive.
+  StringRef ParentName;
 
   // Returns .drectve section contents if exist.
   StringRef getDirectives() { return StringRef(Directives).trim(); }
@@ -86,7 +81,6 @@ protected:
 
 private:
   const Kind FileKind;
-  StringRef ParentName;
 };
 
 // .lib or .a file.
@@ -221,6 +215,8 @@ private:
   std::unique_ptr<LTOModule> M;
   static std::mutex Mu;
 };
+
+std::string toString(InputFile *File);
 
 } // namespace coff
 } // namespace lld

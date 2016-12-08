@@ -75,6 +75,9 @@ public:
   // Returns the symbol name.
   StringRef getName();
 
+  // Returns the file from which this symbol was created.
+  InputFile *getFile();
+
   // A SymbolBody has a backreference to a Symbol. Originally they are
   // doubly-linked. A backreference will never change. But the pointer
   // in the Symbol may be mutated by the resolver. If you have a
@@ -88,10 +91,6 @@ public:
   // the Other. Returns 1 if this wins, -1 if the Other wins, or 0 if
   // they are duplicate (conflicting) symbols.
   int compare(SymbolBody *Other);
-
-  // Returns a name of this symbol including source file name.
-  // Used only for debugging and logging.
-  std::string getDebugName();
 
 protected:
   explicit SymbolBody(Kind K, StringRef N = "")
@@ -149,12 +148,14 @@ public:
     return S->kind() <= LastDefinedCOFFKind;
   }
 
+  ObjectFile *getFile() { return File; }
   int getFileIndex() { return File->Index; }
 
   COFFSymbolRef getCOFFSymbol();
 
-protected:
   ObjectFile *File;
+
+protected:
   const coff_symbol_generic *Sym;
 };
 
@@ -259,8 +260,9 @@ public:
 
   int getFileIndex() { return File->Index; }
 
-private:
   ArchiveFile *File;
+
+private:
   const Archive::Symbol Sym;
 };
 
@@ -368,7 +370,6 @@ public:
     return S->kind() == DefinedBitcodeKind;
   }
 
-private:
   BitcodeFile *File;
 };
 
@@ -396,6 +397,8 @@ inline uint64_t Defined::getRVA() {
   }
   llvm_unreachable("unknown symbol kind");
 }
+
+std::string toString(SymbolBody &B);
 
 } // namespace coff
 } // namespace lld

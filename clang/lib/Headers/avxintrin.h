@@ -400,7 +400,7 @@ _mm256_rcp_ps(__m256 __a)
 ///    0: A normal PE exception is used. \n
 ///    1: The PE field is not updated. \n
 ///    Bit [2] is the rounding control source: \n
-///    0: Use bits [1:0] of M. \n
+///    0: Use bits [1:0] of \a M. \n
 ///    1: Use the current MXCSR setting. \n
 ///    Bits [1:0] contain the rounding control definition: \n
 ///    00: Nearest. \n
@@ -432,7 +432,7 @@ _mm256_rcp_ps(__m256 __a)
 ///      0: A normal PE exception is used. \n
 ///      1: The PE field is not updated. \n
 ///    Bit [2] is the rounding control source: \n
-///      0: Use bits [1:0] of M. \n
+///      0: Use bits [1:0] of \a M. \n
 ///      1: Use the current MXCSR setting. \n
 ///    Bits [1:0] contain the rounding control definition: \n
 ///      00: Nearest. \n
@@ -1242,22 +1242,22 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    An immediate integer operand specifying how the values are to be
 ///    permuted.
 ///    Bits [1:0]:
-///    00: Bits [127:0] of operand V1 are copied to bits [127:0] of the
+///    00: Bits [127:0] of operand \a V1 are copied to bits [127:0] of the
 ///    destination.
-///    01: Bits [255:128] of operand V1 are copied to bits [127:0] of the
+///    01: Bits [255:128] of operand \a V1 are copied to bits [127:0] of the
 ///    destination.
-///    10: Bits [127:0] of operand V2 are copied to bits [127:0] of the
+///    10: Bits [127:0] of operand \a V2 are copied to bits [127:0] of the
 ///    destination.
-///    11: Bits [255:128] of operand V2 are copied to bits [127:0] of the
+///    11: Bits [255:128] of operand \a V2 are copied to bits [127:0] of the
 ///    destination.
 ///    Bits [5:4]:
-///    00: Bits [127:0] of operand V1 are copied to bits [255:128] of the
+///    00: Bits [127:0] of operand \a V1 are copied to bits [255:128] of the
+///    destination.                                 
+///    01: Bits [255:128] of operand \a V1 are copied to bits [255:128] of the
 ///    destination.
-///    01: Bits [255:128] of operand V1 are copied to bits [255:128] of the
+///    10: Bits [127:0] of operand \a V2 are copied to bits [255:128] of the
 ///    destination.
-///    10: Bits [127:0] of operand V2 are copied to bits [255:128] of the
-///    destination.
-///    11: Bits [255:128] of operand V2 are copied to bits [255:128] of the
+///    11: Bits [255:128] of operand \a V2 are copied to bits [255:128] of the
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_permute2f128_pd(V1, V2, M) __extension__ ({ \
@@ -1283,22 +1283,22 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    An immediate integer operand specifying how the values are to be
 ///    permuted.
 ///    Bits [1:0]:
-///    00: Bits [127:0] of operand V1 are copied to bits [127:0] of the
+///    00: Bits [127:0] of operand \a V1 are copied to bits [127:0] of the
 ///    destination.
-///    01: Bits [255:128] of operand V1 are copied to bits [127:0] of the
+///    01: Bits [255:128] of operand \a V1 are copied to bits [127:0] of the
 ///    destination.
-///    10: Bits [127:0] of operand V2 are copied to bits [127:0] of the
+///    10: Bits [127:0] of operand \a V2 are copied to bits [127:0] of the
 ///    destination.
-///    11: Bits [255:128] of operand V2 are copied to bits [127:0] of the
+///    11: Bits [255:128] of operand \a V2 are copied to bits [127:0] of the
 ///    destination.
 ///    Bits [5:4]:
-///    00: Bits [127:0] of operand V1 are copied to bits [255:128] of the
+///    00: Bits [127:0] of operand \a V1 are copied to bits [255:128] of the
 ///    destination.
-///    01: Bits [255:128] of operand V1 are copied to bits [255:128] of the
+///    01: Bits [255:128] of operand \a V1 are copied to bits [255:128] of the
 ///    destination.
-///    10: Bits [127:0] of operand V2 are copied to bits [255:128] of the
+///    10: Bits [127:0] of operand \a V2 are copied to bits [255:128] of the
 ///    destination.
-///    11: Bits [255:128] of operand V2 are copied to bits [255:128] of the
+///    11: Bits [255:128] of operand \a V2 are copied to bits [255:128] of the
 ///    destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_permute2f128_ps(V1, V2, M) __extension__ ({ \
@@ -1323,22 +1323,22 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \param M
 ///    An immediate integer operand specifying how the values are to be copied.
 ///    Bits [1:0]:
-///    00: Bits [127:0] of operand V1 are copied to bits [127:0] of the
+///    00: Bits [127:0] of operand \a V1 are copied to bits [127:0] of the
 ///    destination.
-///    01: Bits [255:128] of operand V1 are copied to bits [127:0] of the
+///    01: Bits [255:128] of operand \a V1 are copied to bits [127:0] of the
 ///    destination.
-///    10: Bits [127:0] of operand V2 are copied to bits [127:0] of the
+///    10: Bits [127:0] of operand \a V2 are copied to bits [127:0] of the
 ///    destination.
-///    11: Bits [255:128] of operand V2 are copied to bits [127:0] of the
+///    11: Bits [255:128] of operand \a V2 are copied to bits [127:0] of the
 ///    destination.
 ///    Bits [5:4]:
-///    00: Bits [127:0] of operand V1 are copied to bits [255:128] of the
+///    00: Bits [127:0] of operand \a V1 are copied to bits [255:128] of the
 ///    destination.
-///    01: Bits [255:128] of operand V1 are copied to bits [255:128] of the
+///    01: Bits [255:128] of operand \a V1 are copied to bits [255:128] of the
 ///    destination.
-///    10: Bits [127:0] of operand V2 are copied to bits [255:128] of the
+///    10: Bits [127:0] of operand \a V2 are copied to bits [255:128] of the
 ///    destination.
-///    11: Bits [255:128] of operand V2 are copied to bits [255:128] of the
+///    11: Bits [255:128] of operand \a V2 are copied to bits [255:128] of the
 ///    destination.
 /// \returns A 256-bit integer vector containing the copied values.
 #define _mm256_permute2f128_si256(V1, V2, M) __extension__ ({ \
@@ -1366,9 +1366,9 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    An immediate integer operand, with mask bits [3:0] specifying how the
 ///    values are to be copied. The position of the mask bit corresponds to the
 ///    index of a copied value. When a mask bit is 0, the corresponding 64-bit
-///    element in operand V1 is copied to the same position in the destination.
-///    When a mask bit is 1, the corresponding 64-bit element in operand V2 is
-///    copied to the same position in the destination.
+///    element in operand \a V1 is copied to the same position in the
+///    destination. When a mask bit is 1, the corresponding 64-bit element in
+///    operand \a V2 is copied to the same position in the destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_blend_pd(V1, V2, M) __extension__ ({ \
   (__m256d)__builtin_shufflevector((__v4df)(__m256d)(V1), \
@@ -1398,9 +1398,9 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    An immediate integer operand, with mask bits [7:0] specifying how the
 ///    values are to be copied. The position of the mask bit corresponds to the
 ///    index of a copied value. When a mask bit is 0, the corresponding 32-bit
-///    element in operand V1 is copied to the same position in the destination.
-///    When a mask bit is 1, the corresponding 32-bit element in operand V2 is
-///    copied to the same position in the destination.
+///    element in operand \a V1 is copied to the same position in the
+///    destination. When a mask bit is 1, the corresponding 32-bit element in
+///    operand \a V2 is copied to the same position in the destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_blend_ps(V1, V2, M) __extension__ ({ \
   (__m256)__builtin_shufflevector((__v8sf)(__m256)(V1), \
@@ -1430,7 +1430,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    A 256-bit vector operand, with mask bits 255, 191, 127, and 63 specifying
 ///    how the values are to be copied. The position of the mask bit corresponds
 ///    to the most significant bit of a copied value. When a mask bit is 0, the
-///    corresponding 64-bit element in operand __a is copied to the same
+///    corresponding 64-bit element in operand \a __a is copied to the same
 ///    position in the destination. When a mask bit is 1, the corresponding
 ///    64-bit element in operand \a __b is copied to the same position in the
 ///    destination.
@@ -1458,9 +1458,9 @@ _mm256_blendv_pd(__m256d __a, __m256d __b, __m256d __c)
 ///    A 256-bit vector operand, with mask bits 255, 223, 191, 159, 127, 95, 63,
 ///    and 31 specifying how the values are to be copied. The position of the
 ///    mask bit corresponds to the most significant bit of a copied value. When
-///    a mask bit is 0, the corresponding 32-bit element in operand __a is
+///    a mask bit is 0, the corresponding 32-bit element in operand \a __a is
 ///    copied to the same position in the destination. When a mask bit is 1, the
-///    corresponding 32-bit element in operand __b is copied to the same
+///    corresponding 32-bit element in operand \a __b is copied to the same
 ///    position in the destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 static __inline __m256 __DEFAULT_FN_ATTRS
@@ -1541,7 +1541,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    destination, according to the bits specified in the immediate operand.
 /// \param mask
 ///    An immediate value containing an 8-bit value specifying which elements to
-///    copy from a and b. 
+///    copy from \a a and \a b. 
 ///    Bits [3:0] specify the values copied from operand a.
 ///    Bits [7:4] specify the values copied from operand b.
 ///    The destinations within the 256-bit destination are assigned values as
@@ -1595,22 +1595,22 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    A 256-bit vector of [4 x double].
 /// \param mask
 ///    An immediate value containing 8-bit values specifying which elements to
-///    copy from a and b:
-///    Bit [0]=0: Bits [63:0] are copied from a to bits [63:0] of the
+///    copy from \a a and \a b:
+///    Bit [0]=0: Bits [63:0] are copied from \a a to bits [63:0] of the
 ///    destination.
-///    Bit [0]=1: Bits [127:64] are copied from a to bits [63:0] of the
+///    Bit [0]=1: Bits [127:64] are copied from \a a to bits [63:0] of the
 ///    destination.
-///    Bit [1]=0: Bits [63:0] are copied from b to bits [127:64] of the
+///    Bit [1]=0: Bits [63:0] are copied from \a b to bits [127:64] of the
 ///    destination.
-///    Bit [1]=1: Bits [127:64] are copied from b to bits [127:64] of the
+///    Bit [1]=1: Bits [127:64] are copied from \a b to bits [127:64] of the
 ///    destination.
-///    Bit [2]=0: Bits [191:128] are copied from a to bits [191:128] of the
+///    Bit [2]=0: Bits [191:128] are copied from \a a to bits [191:128] of the
 ///    destination.
-///    Bit [2]=1: Bits [255:192] are copied from a to bits [191:128] of the
+///    Bit [2]=1: Bits [255:192] are copied from \a a to bits [191:128] of the
 ///    destination.
-///    Bit [3]=0: Bits [191:128] are copied from b to bits [255:192] of the
+///    Bit [3]=0: Bits [191:128] are copied from \a b to bits [255:192] of the
 ///    destination.
-///    Bit [3]=1: Bits [255:192] are copied from b to bits [255:192] of the
+///    Bit [3]=1: Bits [255:192] are copied from \a b to bits [255:192] of the
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the shuffled values.
 #define _mm256_shuffle_pd(a, b, mask) __extension__ ({ \
@@ -1980,8 +1980,8 @@ _mm256_extract_epi64(__m256i __a, const int __imm)
 /// \param __imm
 ///    An immediate integer specifying the index of the vector element to be
 ///    replaced.
-/// \returns A copy of vector __a, after replacing its element indexed by __imm
-///     with __b.
+/// \returns A copy of vector \a __a, after replacing its element indexed by
+///    \a __imm with \a __b.
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_insert_epi32(__m256i __a, int __b, int const __imm)
 {
@@ -2006,8 +2006,8 @@ _mm256_insert_epi32(__m256i __a, int __b, int const __imm)
 /// \param __imm
 ///    An immediate integer specifying the index of the vector element to be
 ///    replaced.
-/// \returns A copy of vector __a, after replacing its element indexed by __imm
-///     with __b.
+/// \returns A copy of vector \a __a, after replacing its element indexed by
+///    \a __imm with \a __b.
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_insert_epi16(__m256i __a, int __b, int const __imm)
 {
@@ -2031,8 +2031,8 @@ _mm256_insert_epi16(__m256i __a, int __b, int const __imm)
 /// \param __imm
 ///    An immediate integer specifying the index of the vector element to be
 ///    replaced.
-/// \returns A copy of vector __a, after replacing its element indexed by __imm
-///    with __b.
+/// \returns A copy of vector \a __a, after replacing its element indexed by
+///    \a __imm with \a __b.
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_insert_epi8(__m256i __a, int __b, int const __imm)
 {
@@ -2057,8 +2057,8 @@ _mm256_insert_epi8(__m256i __a, int __b, int const __imm)
 /// \param __imm
 ///    An immediate integer specifying the index of the vector element to be
 ///    replaced.
-/// \returns A copy of vector __a, after replacing its element indexed by __imm
-///     with __b.
+/// \returns A copy of vector \a __a, after replacing its element indexed by
+///     \a __imm with \a __b.
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_insert_epi64(__m256i __a, long long __b, int const __imm)
 {
@@ -2218,13 +2218,13 @@ _mm256_cvtss_f32(__m256 __a)
 /* Vector replicate */
 /// \brief Moves and duplicates high-order (odd-indexed) values from a 256-bit
 ///    vector of [8 x float] to float values in a 256-bit vector of [8 x float].
-///    Bits [255:224] of __a are written to bits [255:224] and [223:192]
+///    Bits [255:224] of \a __a are written to bits [255:224] and [223:192]
 ///    of the return value.
-///    Bits [191:160] of __a are written to bits [191:160] and [159:128]
+///    Bits [191:160] of \a __a are written to bits [191:160] and [159:128]
 ///    of the return value.
-///    Bits [127:96] of __a are written to bits [127:96] and [95:64] of
+///    Bits [127:96] of \a __a are written to bits [127:96] and [95:64] of
 ///    the return value.
-///    Bits [63:32] of __a are written to bits [63:32] and [31:0] of the
+///    Bits [63:32] of \a __a are written to bits [63:32] and [31:0] of the
 ///    return value.
 ///
 /// \headerfile <x86intrin.h>
@@ -2243,13 +2243,13 @@ _mm256_movehdup_ps(__m256 __a)
 
 /// \brief Moves and duplicates low-order (even-indexed) values from a 256-bit
 ///    vector of [8 x float] to float values in a 256-bit vector of [8 x float].
-///    Bits [223:192] of __a are written to bits [255:224] and [223:192]
+///    Bits [223:192] of \a __a are written to bits [255:224] and [223:192]
 ///    of the return value.
-///    Bits [159:128] of __a are written to bits [191:160] and [159:128]
+///    Bits [159:128] of \a __a are written to bits [191:160] and [159:128]
 ///    of the return value.
-///    Bits [95:64] of __a are written to bits [127:96] and [95:64] of
+///    Bits [95:64] of \a __a are written to bits [127:96] and [95:64] of
 ///    the return value.
-///    Bits [31:0] of __a are written to bits [63:32] and [31:0] of the
+///    Bits [31:0] of \a __a are written to bits [63:32] and [31:0] of the
 ///    return value.
 ///
 /// \headerfile <x86intrin.h>
@@ -2269,9 +2269,9 @@ _mm256_moveldup_ps(__m256 __a)
 /// \brief Moves and duplicates double-precision floating point values from a
 ///    256-bit vector of [4 x double] to double-precision values in a 256-bit
 ///    vector of [4 x double].
-///    Bits [63:0] of __a are written to bits [127:64] and [63:0] of the
+///    Bits [63:0] of \a __a are written to bits [127:64] and [63:0] of the
 ///    return value.
-///    Bits [191:128] of __a are written to bits [255:192] and [191:128]
+///    Bits [191:128] of \a __a are written to bits [255:192] and [191:128]
 ///    of the return value.
 ///
 /// \headerfile <x86intrin.h>
@@ -2851,8 +2851,8 @@ _mm256_zeroupper(void)
 
 /* Vector load with broadcast */
 /// \brief Loads a scalar single-precision floating point value from the
-///    specified address pointed to by __a and broadcasts it to the elements of
-///    a [4 x float] vector.
+///    specified address pointed to by \a __a and broadcasts it to the elements
+///    of a [4 x float] vector.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2870,8 +2870,8 @@ _mm_broadcast_ss(float const *__a)
 }
 
 /// \brief Loads a scalar double-precision floating point value from the
-///    specified address pointed to by __a and broadcasts it to the elements of
-///    a [4 x double] vector.
+///    specified address pointed to by \a __a and broadcasts it to the elements
+///    of a [4 x double] vector.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2889,8 +2889,8 @@ _mm256_broadcast_sd(double const *__a)
 }
 
 /// \brief Loads a scalar single-precision floating point value from the
-///    specified address pointed to by __a and broadcasts it to the elements of
-///    a [8 x float] vector.
+///    specified address pointed to by \a __a and broadcasts it to the elements
+///    of a [8 x float] vector.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2908,7 +2908,7 @@ _mm256_broadcast_ss(float const *__a)
 }
 
 /// \brief Loads the data from a 128-bit vector of [2 x double] from the
-///    specified address pointed to by __a and broadcasts it to 128-bit
+///    specified address pointed to by \a __a and broadcasts it to 128-bit
 ///    elements in a 256-bit vector of [4 x double].
 ///
 /// \headerfile <x86intrin.h>
@@ -2926,7 +2926,7 @@ _mm256_broadcast_pd(__m128d const *__a)
 }
 
 /// \brief Loads the data from a 128-bit vector of [4 x float] from the
-///    specified address pointed to by __a and broadcasts it to 128-bit
+///    specified address pointed to by \a __a and broadcasts it to 128-bit
 ///    elements in a 256-bit vector of [8 x float].
 ///
 /// \headerfile <x86intrin.h>
@@ -2945,7 +2945,7 @@ _mm256_broadcast_ps(__m128 const *__a)
 
 /* SIMD load ops */
 /// \brief Loads 4 double-precision floating point values from a 32-byte aligned
-///    memory location pointed to by __p into a vector of [4 x double].
+///    memory location pointed to by \a __p into a vector of [4 x double].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2962,7 +2962,7 @@ _mm256_load_pd(double const *__p)
 }
 
 /// \brief Loads 8 single-precision floating point values from a 32-byte aligned
-///    memory location pointed to by __p into a vector of [8 x float].
+///    memory location pointed to by \a __p into a vector of [8 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2978,7 +2978,7 @@ _mm256_load_ps(float const *__p)
 }
 
 /// \brief Loads 4 double-precision floating point values from an unaligned
-///    memory location pointed to by __p into a vector of [4 x double].
+///    memory location pointed to by \a __p into a vector of [4 x double].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2998,7 +2998,7 @@ _mm256_loadu_pd(double const *__p)
 }
 
 /// \brief Loads 8 single-precision floating point values from an unaligned
-///    memory location pointed to by __p into a vector of [8 x float].
+///    memory location pointed to by \a __p into a vector of [8 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3018,7 +3018,7 @@ _mm256_loadu_ps(float const *__p)
 }
 
 /// \brief Loads 256 bits of integer data from a 32-byte aligned memory
-///    location pointed to by __p into elements of a 256-bit integer vector.
+///    location pointed to by \a __p into elements of a 256-bit integer vector.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3035,7 +3035,7 @@ _mm256_load_si256(__m256i const *__p)
 }
 
 /// \brief Loads 256 bits of integer data from an unaligned memory location
-///    pointed to by __p into a 256-bit integer vector.
+///    pointed to by \a __p into a 256-bit integer vector.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3054,8 +3054,8 @@ _mm256_loadu_si256(__m256i const *__p)
 }
 
 /// \brief Loads 256 bits of integer data from an unaligned memory location
-///    pointed to by __p into a 256-bit integer vector. This intrinsic may
-///    perform better than _mm256_loadu_si256 when the data crosses a cache
+///    pointed to by \a __p into a 256-bit integer vector. This intrinsic may
+///    perform better than \c _mm256_loadu_si256 when the data crosses a cache
 ///    line boundary.
 ///
 /// \headerfile <x86intrin.h>
@@ -3073,7 +3073,8 @@ _mm256_lddqu_si256(__m256i const *__p)
 
 /* SIMD store ops */
 /// \brief Stores double-precision floating point values from a 256-bit vector
-///    of [4 x double] to a 32-byte aligned memory location pointed to by __p.
+///    of [4 x double] to a 32-byte aligned memory location pointed to by
+///    \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3091,7 +3092,7 @@ _mm256_store_pd(double *__p, __m256d __a)
 }
 
 /// \brief Stores single-precision floating point values from a 256-bit vector
-///     of [8 x float] to a 32-byte aligned memory location pointed to by __p.
+///    of [8 x float] to a 32-byte aligned memory location pointed to by \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3109,7 +3110,7 @@ _mm256_store_ps(float *__p, __m256 __a)
 }
 
 /// \brief Stores double-precision floating point values from a 256-bit vector
-///    of [4 x double] to an unaligned memory location pointed to by __p.
+///    of [4 x double] to an unaligned memory location pointed to by \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3130,7 +3131,7 @@ _mm256_storeu_pd(double *__p, __m256d __a)
 }
 
 /// \brief Stores single-precision floating point values from a 256-bit vector
-///    of [8 x float] to an unaligned memory location pointed to by __p.
+///    of [8 x float] to an unaligned memory location pointed to by \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3150,7 +3151,7 @@ _mm256_storeu_ps(float *__p, __m256 __a)
 }
 
 /// \brief Stores integer values from a 256-bit integer vector to a 32-byte
-///    aligned memory location pointed to by __p.
+///    aligned memory location pointed to by \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3168,7 +3169,7 @@ _mm256_store_si256(__m256i *__p, __m256i __a)
 }
 
 /// \brief Stores integer values from a 256-bit integer vector to an unaligned
-///    memory location pointed to by __p.
+///    memory location pointed to by \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3189,7 +3190,7 @@ _mm256_storeu_si256(__m256i *__p, __m256i __a)
 
 /* Conditional load ops */
 /// \brief Conditionally loads double-precision floating point elements
-///    from a memory location pointed to by __p into a 128-bit vector of
+///    from a memory location pointed to by \a __p into a 128-bit vector of
 ///    [2 x double], depending on the mask bits associated with each data
 ///    element.
 ///
@@ -3213,7 +3214,7 @@ _mm_maskload_pd(double const *__p, __m128i __m)
 }
 
 /// \brief Conditionally loads double-precision floating point elements
-///    from a memory location pointed to by __p into a 256-bit vector of
+///    from a memory location pointed to by \a __p into a 256-bit vector of
 ///    [4 x double], depending on the mask bits associated with each data
 ///    element.
 ///
@@ -3238,7 +3239,7 @@ _mm256_maskload_pd(double const *__p, __m256i __m)
 }
 
 /// \brief Conditionally loads single-precision floating point elements
-///    from a memory location pointed to by __p into a 128-bit vector of
+///    from a memory location pointed to by \a __p into a 128-bit vector of
 ///    [4 x float], depending on the mask bits associated with each data
 ///    element.
 ///
@@ -3262,8 +3263,9 @@ _mm_maskload_ps(float const *__p, __m128i __m)
 }
 
 /// \brief Conditionally loads single-precision floating point elements from a
-///    memory location pointed to by __p into a 256-bit vector of [8 x float],
-///    depending on the mask bits associated with each data element.
+///    memory location pointed to by \a __p into a 256-bit vector of
+///    [8 x float], depending on the mask bits associated with each data
+///    element.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3286,8 +3288,8 @@ _mm256_maskload_ps(float const *__p, __m256i __m)
 
 /* Conditional store ops */
 /// \brief Moves single-precision floating point values from a 256-bit vector
-///    of [8 x float] to a memory location pointed to by __p, according to the
-///    specified mask.
+///    of [8 x float] to a memory location pointed to by \a __p, according to
+///    the specified mask.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3298,9 +3300,9 @@ _mm256_maskload_ps(float const *__p, __m256i __m)
 /// \param __m
 ///    A 256-bit integer vector of [8 x dword] containing the mask. The most
 ///    significant bit of each dword element in the mask vector represents the
-///    mask bits. If a mask bit is zero, the corresponding value from vector __a
-///    is not stored and the corresponding field in the memory location pointed
-///    to by __p is not changed.
+///    mask bits. If a mask bit is zero, the corresponding value from vector
+///    \a __a is not stored and the corresponding field in the memory location
+///    pointed to by \a __p is not changed.
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing the values to be stored.
 static __inline void __DEFAULT_FN_ATTRS
@@ -3310,7 +3312,8 @@ _mm256_maskstore_ps(float *__p, __m256i __m, __m256 __a)
 }
 
 /// \brief Moves double-precision values from a 128-bit vector of [2 x double]
-///    to a memory location pointed to by __p, according to the specified mask.
+///    to a memory location pointed to by \a __p, according to the specified
+///    mask.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3321,8 +3324,8 @@ _mm256_maskstore_ps(float *__p, __m256i __m, __m256 __a)
 /// \param __m
 ///    A 128-bit integer vector containing the mask. The most significant bit of
 ///    each field in the mask vector represents the mask bits. If a mask bit is
-///    zero, the corresponding value from vector __a is not stored and the
-///    corresponding field in the memory location pointed to by __p is not
+///    zero, the corresponding value from vector \a __a is not stored and the
+///    corresponding field in the memory location pointed to by \a __p is not
 ///    changed.
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the values to be stored.
@@ -3333,7 +3336,8 @@ _mm_maskstore_pd(double *__p, __m128i __m, __m128d __a)
 }
 
 /// \brief Moves double-precision values from a 256-bit vector of [4 x double]
-///    to a memory location pointed to by __p, according to the specified mask.
+///    to a memory location pointed to by \a __p, according to the specified
+///    mask.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3346,7 +3350,7 @@ _mm_maskstore_pd(double *__p, __m128i __m, __m128d __a)
 ///    significant bit of each quadword element in the mask vector represents
 ///    the mask bits. If a mask bit is zero, the corresponding value from vector
 ///    __a is not stored and the corresponding field in the memory location
-///    pointed to by __p is not changed.
+///    pointed to by \a __p is not changed.
 /// \param __a
 ///    A 256-bit vector of [4 x double] containing the values to be stored.
 static __inline void __DEFAULT_FN_ATTRS
@@ -3356,8 +3360,8 @@ _mm256_maskstore_pd(double *__p, __m256i __m, __m256d __a)
 }
 
 /// \brief Moves single-precision floating point values from a 128-bit vector
-///    of [4 x float] to a memory location pointed to by __p, according to the
-///    specified mask.
+///    of [4 x float] to a memory location pointed to by \a __p, according to
+///    the specified mask.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3369,7 +3373,7 @@ _mm256_maskstore_pd(double *__p, __m256i __m, __m256d __a)
 ///    A 128-bit integer vector containing the mask. The most significant bit of
 ///    each field in the mask vector represents the mask bits. If a mask bit is
 ///    zero, the corresponding value from vector __a is not stored and the
-///    corresponding field in the memory location pointed to by __p is not
+///    corresponding field in the memory location pointed to by \a __p is not
 ///    changed.
 /// \param __a
 ///    A 128-bit vector of [4 x float] containing the values to be stored.
@@ -4390,18 +4394,19 @@ _mm256_castsi128_si256(__m128i __a)
 /// \param V1
 ///    A 256-bit vector of [8 x float]. This vector is copied to the result
 ///    first, and then either the upper or the lower 128 bits of the result will
-///    be replaced by the contents of V2.
+///    be replaced by the contents of \a V2.
 /// \param V2
 ///    A 128-bit vector of [4 x float]. The contents of this parameter are
 ///    written to either the upper or the lower 128 bits of the result depending
-///    on the value of parameter M.
+///    on the value of parameter \a M.
 /// \param M
 ///    An immediate integer. The least significant bit determines how the values
 ///    from the two parameters are interleaved:
-///    If bit [0] of M is 0, V2 are copied to bits [127:0] of the result, and
-///    bits [255:128] of V1 are copied to bits [255:128] of the result.
-///    If bit [0] of M is 1, V2 are copied to bits [255:128] of the result, and
-///    bits [127:0] of V1 are copied to bits [127:0] of the result.
+///    If bit [0] of \a M is 0, \a V2 are copied to bits [127:0] of the result,
+///    and bits [255:128] of \a V1 are copied to bits [255:128] of the result.
+///    If bit [0] of \a M is 1, \a V2 are copied to bits [255:128] of the
+///    result, and bits [127:0] of \a V1 are copied to bits [127:0] of the
+///    result.
 /// \returns A 256-bit vector of [8 x float] containing the interleaved values.
 #define _mm256_insertf128_ps(V1, V2, M) __extension__ ({ \
   (__m256)__builtin_shufflevector( \
@@ -4433,18 +4438,19 @@ _mm256_castsi128_si256(__m128i __a)
 /// \param V1
 ///    A 256-bit vector of [4 x double]. This vector is copied to the result
 ///    first, and then either the upper or the lower 128 bits of the result will
-///    be replaced by the contents of V2.
+///    be replaced by the contents of \a V2.
 /// \param V2
 ///    A 128-bit vector of [2 x double]. The contents of this parameter are
 ///    written to either the upper or the lower 128 bits of the result depending
-///    on the value of parameter M.
+///    on the value of parameter \a M.
 /// \param M
 ///    An immediate integer. The least significant bit determines how the values
 ///    from the two parameters are interleaved:
-///    If bit [0] of M is 0, V2 are copied to bits [127:0] of the result, and
-///    bits [255:128] of V1 are copied to bits [255:128] of the result.
-///    If bit [0] of M is 1, V2 are copied to bits [255:128] of the result, and
-///    bits [127:0] of V1 are copied to bits [127:0] of the result.
+///    If bit [0] of \a M is 0, \a V2 are copied to bits [127:0] of the result,
+///    and bits [255:128] of \a V1 are copied to bits [255:128] of the result.
+///    If bit [0] of \a M is 1, \a V2 are copied to bits [255:128] of the
+///    result, and bits [127:0] of \a V1 are copied to bits [127:0] of the
+///    result.
 /// \returns A 256-bit vector of [4 x double] containing the interleaved values.
 #define _mm256_insertf128_pd(V1, V2, M) __extension__ ({ \
   (__m256d)__builtin_shufflevector( \
@@ -4472,18 +4478,19 @@ _mm256_castsi128_si256(__m128i __a)
 /// \param V1
 ///    A 256-bit integer vector. This vector is copied to the result first, and
 ///    then either the upper or the lower 128 bits of the result will be
-///    replaced by the contents of V2.
+///    replaced by the contents of \a V2.
 /// \param V2
 ///    A 128-bit integer vector. The contents of this parameter are written to
 ///    either the upper or the lower 128 bits of the result depending on the
-///     value of parameter M.
+///     value of parameter \a M.
 /// \param M
 ///    An immediate integer. The least significant bit determines how the values
 ///    from the two parameters are interleaved:
-///    If bit [0] of M is 0, V2 are copied to bits [127:0] of the result, and
-///    bits [255:128] of V1 are copied to bits [255:128] of the result.
-///    If bit [0] of M is 1, V2 are copied to bits [255:128] of the result, and
-///    bits [127:0] of V1 are copied to bits [127:0] of the result.
+///    If bit [0] of \a M is 0, \a V2 are copied to bits [127:0] of the result,
+///    and bits [255:128] of \a V1 are copied to bits [255:128] of the result.
+///    If bit [0] of \a M is 1, \a V2 are copied to bits [255:128] of the
+///    result, and bits [127:0] of \a V1 are copied to bits [127:0] of the
+///    result.
 /// \returns A 256-bit integer vector containing the interleaved values.
 #define _mm256_insertf128_si256(V1, V2, M) __extension__ ({ \
   (__m256i)__builtin_shufflevector( \
@@ -4516,8 +4523,8 @@ _mm256_castsi128_si256(__m128i __a)
 /// \param M
 ///    An immediate integer. The least significant bit determines which bits are
 ///    extracted from the first parameter:
-///    If bit [0] of M is 0, bits [127:0] of V are copied to the result.
-///    If bit [0] of M is 1, bits [255:128] of V are copied to the result.
+///    If bit [0] of \a M is 0, bits [127:0] of \a V are copied to the result.
+///    If bit [0] of \a M is 1, bits [255:128] of \a V are copied to the result.
 /// \returns A 128-bit vector of [4 x float] containing the extracted bits.
 #define _mm256_extractf128_ps(V, M) __extension__ ({ \
   (__m128)__builtin_shufflevector( \
@@ -4527,7 +4534,7 @@ _mm256_castsi128_si256(__m128i __a)
     (((M) & 1) ? 5 : 1), \
     (((M) & 1) ? 6 : 2), \
     (((M) & 1) ? 7 : 3) );})
-
+                                                   
 /// \brief Extracts either the upper or the lower 128 bits from a 256-bit vector
 ///    of [4 x double], as determined by the immediate integer parameter, and
 ///    returns the extracted bits as a 128-bit vector of [2 x double].
@@ -4545,8 +4552,8 @@ _mm256_castsi128_si256(__m128i __a)
 /// \param M
 ///    An immediate integer. The least significant bit determines which bits are
 ///    extracted from the first parameter:
-///    If bit [0] of M is 0, bits [127:0] of V are copied to the result.
-///    If bit [0] of M is 1, bits [255:128] of V are copied to the result.
+///    If bit [0] of \a M is 0, bits [127:0] of \a V are copied to the result.
+///    If bit [0] of \a M is 1, bits [255:128] of \a V are copied to the result.
 /// \returns A 128-bit vector of [2 x double] containing the extracted bits.
 #define _mm256_extractf128_pd(V, M) __extension__ ({ \
   (__m128d)__builtin_shufflevector( \
@@ -4572,8 +4579,8 @@ _mm256_castsi128_si256(__m128i __a)
 /// \param M
 ///    An immediate integer. The least significant bit determines which bits are
 ///    extracted from the first parameter:
-///    If bit [0] of M is 0, bits [127:0] of V are copied to the result.
-///    If bit [0] of M is 1, bits [255:128] of V are copied to the result.
+///    If bit [0] of \a M is 0, bits [127:0] of \a V are copied to the result.
+///    If bit [0] of \a M is 1, bits [255:128] of \a V are copied to the result.
 /// \returns A 128-bit integer vector containing the extracted bits.
 #define _mm256_extractf128_si256(V, M) __extension__ ({ \
   (__m128i)__builtin_shufflevector( \
@@ -4674,11 +4681,11 @@ _mm256_loadu2_m128i(__m128i const *__addr_hi, __m128i const *__addr_lo)
 ///    instructions.
 ///
 /// \param __addr_hi
-///    A pointer to a 128-bit memory location. Bits[255:128] of __a are to be
+///    A pointer to a 128-bit memory location. Bits[255:128] of \a __a are to be
 ///    copied to this memory location. The address of this memory location does
 ///    not have to be aligned.
 /// \param __addr_lo
-///    A pointer to a 128-bit memory location. Bits[127:0] of __a are to be
+///    A pointer to a 128-bit memory location. Bits[127:0] of \a __a are to be
 ///    copied to this memory location. The address of this memory location does
 ///    not have to be aligned.
 /// \param __a
@@ -4703,11 +4710,11 @@ _mm256_storeu2_m128(float *__addr_hi, float *__addr_lo, __m256 __a)
 ///    instructions.
 ///
 /// \param __addr_hi
-///    A pointer to a 128-bit memory location. Bits[255:128] of __a are to be
+///    A pointer to a 128-bit memory location. Bits[255:128] of \a __a are to be
 ///    copied to this memory location. The address of this memory location does
 ///    not have to be aligned.
 /// \param __addr_lo
-///    A pointer to a 128-bit memory location. Bits[127:0] of __a are to be
+///    A pointer to a 128-bit memory location. Bits[127:0] of \a __a are to be
 ///    copied to this memory location. The address of this memory location does
 ///    not have to be aligned.
 /// \param __a
@@ -4732,11 +4739,11 @@ _mm256_storeu2_m128d(double *__addr_hi, double *__addr_lo, __m256d __a)
 ///    instructions.
 ///
 /// \param __addr_hi
-///    A pointer to a 128-bit memory location. Bits[255:128] of __a are to be
+///    A pointer to a 128-bit memory location. Bits[255:128] of \a __a are to be
 ///    copied to this memory location. The address of this memory location does
 ///    not have to be aligned.
 /// \param __addr_lo
-///    A pointer to a 128-bit memory location. Bits[127:0] of __a are to be
+///    A pointer to a 128-bit memory location. Bits[127:0] of \a __a are to be
 ///    copied to this memory location. The address of this memory location does
 ///    not have to be aligned.
 /// \param __a

@@ -24,6 +24,9 @@ namespace change_namespace {
 // namespaces while references to symbols (e.g. types, functions) which are not
 // defined in the changed namespace will be correctly qualified by prepending
 // namespace specifiers before them.
+// This will try to add shortest namespace specifiers possible. When a symbol
+// reference needs to be fully-qualified, this adds a "::" prefix to the
+// namespace specifiers unless the new namespace is the global namespace.
 // For classes, only classes that are declared/defined in the given namespace in
 // speficifed files will be moved: forward declarations will remain in the old
 // namespace.
@@ -38,7 +41,7 @@ namespace change_namespace {
 //   class FWD;
 //   }  // a
 //   namespace x {
-//   class A { a::FWD *fwd; }
+//   class A { ::a::FWD *fwd; }
 //   }  // x
 // FIXME: support moving typedef, enums across namespaces.
 class ChangeNamespaceTool : public ast_matchers::MatchFinder::MatchCallback {
@@ -64,7 +67,7 @@ private:
 
   void moveClassForwardDeclaration(
       const ast_matchers::MatchFinder::MatchResult &Result,
-      const CXXRecordDecl *FwdDecl);
+      const NamedDecl *FwdDecl);
 
   void replaceQualifiedSymbolInDeclContext(
       const ast_matchers::MatchFinder::MatchResult &Result,

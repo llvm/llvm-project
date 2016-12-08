@@ -7045,6 +7045,19 @@ bool Sema::CheckFunctionTemplateSpecialization(
         continue;
       }
 
+      // Target attributes are part of function signature during cuda
+      // compilation, so deduced template must also have matching CUDA
+      // target. Given that regular template deduction does not take
+      // target attributes into account, we perform target match check
+      // here and reject candidates that have different target.
+      if (LangOpts.CUDA &&
+          IdentifyCUDATarget(Specialization) != IdentifyCUDATarget(FD)) {
+        FailedCandidates.addCandidate().set(
+            I.getPair(), FunTmpl->getTemplatedDecl(),
+            MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
+        continue;
+      }
+
       // Record this candidate.
       if (ExplicitTemplateArgs)
         ConvertedTemplateArgs[Specialization] = std::move(Args);
@@ -8107,6 +8120,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   //  instantiated from the member definition associated with its class
   //  template.
   UnresolvedSet<8> Matches;
+  AttributeList *Attr = D.getDeclSpec().getAttributes().getList();
   TemplateSpecCandidateSet FailedCandidates(D.getIdentifierLoc());
   for (LookupResult::iterator P = Previous.begin(), PEnd = Previous.end();
        P != PEnd; ++P) {
@@ -8142,6 +8156,26 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                MakeDeductionFailureInfo(Context, TDK, Info));
       (void)TDK;
       continue;
+    }
+
+    // Target attributes are part of function signature during cuda
+    // compilation, so deduced template must also have matching CUDA
+    // target. Given that regular template deduction does not take it
+    // into account, we perform target match check here and reject
+    // candidates that have different target.
+    if (LangOpts.CUDA) {
+      CUDAFunctionTarget DeclaratorTarget = IdentifyCUDATarget(Attr);
+      // We need to adjust target when HD is forced by
+      // #pragma clang force_cuda_host_device
+      if (ForceCUDAHostDeviceDepth > 0 &&
+          (DeclaratorTarget == CFT_Device || DeclaratorTarget == CFT_Host))
+        DeclaratorTarget = CFT_HostDevice;
+      if (IdentifyCUDATarget(Specialization) != DeclaratorTarget) {
+        FailedCandidates.addCandidate().set(
+            P.getPair(), FunTmpl->getTemplatedDecl(),
+            MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
+        continue;
+      }
     }
 
     Matches.addDecl(Specialization, P.getAccess());
@@ -8214,7 +8248,6 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   }
 
   Specialization->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
-  AttributeList *Attr = D.getDeclSpec().getAttributes().getList();
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);
   ProcessAPINotes(Specialization);

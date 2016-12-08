@@ -45,29 +45,13 @@ namespace coff {
 
 int InputFile::NextIndex = 0;
 llvm::LLVMContext BitcodeFile::Context;
-
-// Returns the last element of a path, which is supposed to be a filename.
-static StringRef getBasename(StringRef Path) {
-  size_t Pos = Path.find_last_of("\\/");
-  if (Pos == StringRef::npos)
-    return Path;
-  return Path.substr(Pos + 1);
-}
-
-// Returns a string in the format of "foo.obj" or "foo.obj(bar.lib)".
-std::string InputFile::getShortName() {
-  if (ParentName == "")
-    return getName().lower();
-  std::string Res = (getBasename(ParentName) + "(" +
-                     getBasename(getName()) + ")").str();
-  return StringRef(Res).lower();
-}
+std::mutex BitcodeFile::Mu;
 
 ArchiveFile::ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
 
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
-  File = check(Archive::create(MB), getShortName());
+  File = check(Archive::create(MB), toString(this));
 
   // Allocate a buffer for Lazy objects.
   size_t NumSyms = File->getNumberOfSymbols();
@@ -84,7 +68,7 @@ void ArchiveFile::parse() {
   for (auto &Child : File->children(Err))
     Seen[Child.getChildOffset()].clear();
   if (Err)
-    fatal(Err, getShortName());
+    fatal(Err, toString(this));
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -113,14 +97,13 @@ MutableArrayRef<Lazy> ArchiveFile::getLazySymbols() { return LazySymbols; }
 
 void ObjectFile::parse() {
   // Parse a memory buffer as a COFF file.
-  std::unique_ptr<Binary> Bin =
-      check(createBinary(MB), getShortName());
+  std::unique_ptr<Binary> Bin = check(createBinary(MB), toString(this));
 
   if (auto *Obj = dyn_cast<COFFObjectFile>(Bin.get())) {
     Bin.release();
     COFFObj.reset(Obj);
   } else {
-    fatal(getShortName() + " is not a COFF file");
+    fatal(toString(this) + " is not a COFF file");
   }
 
   // Read section and symbol tables.
@@ -189,7 +172,7 @@ void ObjectFile::initializeSymbols() {
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
     COFFSymbolRef Sym =
-        check(COFFObj->getSymbol(I), "broken object file: " + getShortName());
+        check(COFFObj->getSymbol(I), "broken object file: " + toString(this));
 
     const void *AuxP = nullptr;
     if (Sym.getNumberOfAuxSymbols())
@@ -251,12 +234,12 @@ Defined *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
 
   // Reserved sections numbers don't have contents.
   if (llvm::COFF::isReservedSectionNumber(SectionNumber))
-    fatal("broken object file: " + getShortName());
+    fatal("broken object file: " + toString(this));
 
   // This symbol references a section which is not present in the section
   // header.
   if ((uint32_t)SectionNumber >= SparseChunks.size())
-    fatal("broken object file: " + getShortName());
+    fatal("broken object file: " + toString(this));
 
   // Nothing else to do without a section chunk.
   auto *SC = cast_or_null<SectionChunk>(SparseChunks[SectionNumber]);
@@ -395,7 +378,26 @@ MachineTypes BitcodeFile::getMachineType() {
   }
 }
 
-std::mutex BitcodeFile::Mu;
+// Returns the last element of a path, which is supposed to be a filename.
+static StringRef getBasename(StringRef Path) {
+  size_t Pos = Path.find_last_of("\\/");
+  if (Pos == StringRef::npos)
+    return Path;
+  return Path.substr(Pos + 1);
+}
+
+// Returns a string in the format of "foo.obj" or "foo.obj(bar.lib)".
+std::string toString(InputFile *File) {
+  if (!File)
+    return "(internal)";
+  if (File->ParentName.empty())
+    return File->getName().lower();
+
+  std::string Res =
+      (getBasename(File->ParentName) + "(" + getBasename(File->getName()) + ")")
+          .str();
+  return StringRef(Res).lower();
+}
 
 } // namespace coff
 } // namespace lld

@@ -1,14 +1,10 @@
+# REQUIRES: system-windows
 # RUN: yaml2obj < %s > %t1.obj
 # RUN: yaml2obj < %s > %t2.obj
 # RUN: not lld-link /out:%t.exe %t1.obj %t2.obj >& %t.log
 # RUN: FileCheck %s < %t.log
 
-# RUN: llvm-as -o %t.lto1.obj %S/Inputs/conflict.ll
-# RUN: llvm-as -o %t.lto2.obj %S/Inputs/conflict.ll
-# RUN: not lld-link /out:%t.exe %t.lto1.obj %t.lto2.obj >& %t.log
-# RUN: FileCheck %s < %t.log
-
-# CHECK: duplicate symbol: foo in {{.+}}1.obj and in {{.+}}2.obj
+# CHECK: duplicate symbol: "int __cdecl mangled(void)" (?mangled@@YAHXZ) in {{.+}}1.obj and in {{.+}}2.obj
 
 --- !COFF
 header:
@@ -32,7 +28,7 @@ symbols:
       NumberOfLinenumbers: 0
       CheckSum:        0
       Number:          0
-  - Name:            foo
+  - Name:            '?mangled@@YAHXZ'
     Value:           0
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL

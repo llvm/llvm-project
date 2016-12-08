@@ -239,6 +239,7 @@ namespace dr125 {
 }
 
 namespace dr126 { // dr126: no
+#if __cplusplus <= 201402L
   struct C {};
   struct D : C {};
   struct E : private C { friend class A; friend class B; };
@@ -311,12 +312,15 @@ namespace dr126 { // dr126: no
     virtual void y() throw(int*); // ok
     virtual void z() throw(long); // expected-error {{more lax}}
   };
+#else
+  void f() throw(int); // expected-error {{ISO C++1z does not allow}} expected-note {{use 'noexcept}}
+#endif
 }
 
 namespace dr127 { // dr127: yes
   __extension__ typedef __decltype(sizeof(0)) size_t;
   template<typename T> struct A {
-    A() throw(int);
+    A() { throw 0; }
     void *operator new(size_t, const char * = 0);
     void operator delete(void *, const char *) { T::error; } // expected-error 2{{no members}}
     void operator delete(void *) { T::error; }

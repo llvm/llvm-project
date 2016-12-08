@@ -6,7 +6,7 @@
 namespace dr1330 { // dr1330: 4.0 c++11
   // exception-specifications are parsed in a context where the class is complete.
   struct A {
-    void f() throw(T) {}
+    void f() throw(T) {} // expected-error 0-1{{C++1z}} expected-note 0-1{{noexcept}}
     struct T {};
 
 #if __cplusplus >= 201103L
@@ -16,7 +16,7 @@ namespace dr1330 { // dr1330: 4.0 c++11
 #endif
   };
 
-  void (A::*af1)() throw(A::T) = &A::f;
+  void (A::*af1)() throw(A::T) = &A::f; // expected-error 0-1{{C++1z}} expected-note 0-1{{noexcept}}
   void (A::*af2)() throw() = &A::f; // expected-error-re {{{{not superset|different exception spec}}}}
 
 #if __cplusplus >= 201103L
@@ -26,7 +26,7 @@ namespace dr1330 { // dr1330: 4.0 c++11
   // Likewise, they're instantiated separately from an enclosing class template.
   template<typename U>
   struct B {
-    void f() throw(T, typename U::type) {}
+    void f() throw(T, typename U::type) {} // expected-error 0-1{{C++1z}} expected-note 0-1{{noexcept}}
     struct T {};
 
 #if __cplusplus >= 201103L
@@ -43,7 +43,7 @@ namespace dr1330 { // dr1330: 4.0 c++11
     static const int value = true;
   };
 
-  void (B<P>::*bpf1)() throw(B<P>::T, int) = &B<P>::f;
+  void (B<P>::*bpf1)() throw(B<P>::T, int) = &B<P>::f; // expected-error 0-1{{C++1z}} expected-note 0-1{{noexcept}}
 #if __cplusplus < 201103L
   // expected-error@-2 {{not superset}}
   // FIXME: We only delay instantiation in C++11 onwards. In C++98, something
@@ -54,7 +54,7 @@ namespace dr1330 { // dr1330: 4.0 c++11
   // the "T has not yet been instantiated" error here, rather than giving
   // confusing errors later on.
 #endif
-  void (B<P>::*bpf2)() throw(int) = &B<P>::f;
+  void (B<P>::*bpf2)() throw(int) = &B<P>::f; // expected-error 0-1{{C++1z}} expected-note 0-1{{noexcept}}
 #if __cplusplus <= 201402L
   // expected-error@-2 {{not superset}}
 #else
@@ -75,6 +75,9 @@ namespace dr1330 { // dr1330: 4.0 c++11
 #endif
 
   template<typename T> int f() throw(typename T::error) { return 0; } // expected-error 1-4{{prior to '::'}} expected-note 0-1{{instantiation of}}
+#if __cplusplus > 201402L
+    // expected-error@-2 0-1{{C++1z}} expected-note@-2 0-1{{noexcept}}
+#endif
   // An exception-specification is needed even if the function is only used in
   // an unevaluated operand.
   int f1 = sizeof(f<int>()); // expected-note {{instantiation of}}
@@ -86,6 +89,9 @@ namespace dr1330 { // dr1330: 4.0 c++11
 
   template<typename T> struct C {
     C() throw(typename T::type); // expected-error 1-2{{prior to '::'}}
+#if __cplusplus > 201402L
+    // expected-error@-2 0-1{{C++1z}} expected-note@-2 0-1{{noexcept}}
+#endif
   };
   struct D : C<void> {}; // ok
 #if __cplusplus < 201103L
