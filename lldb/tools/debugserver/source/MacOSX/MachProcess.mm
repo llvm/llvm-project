@@ -157,7 +157,7 @@ static bool CallBoardSystemServiceOpenApplication(NSString *bundleIDNSStr,
 
   ];
 
-  const uint32_t timeout_secs = 9;
+  const uint32_t timeout_secs = 20;
 
   dispatch_time_t timeout =
       dispatch_time(DISPATCH_TIME_NOW, timeout_secs * NSEC_PER_SEC);
