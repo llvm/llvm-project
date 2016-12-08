@@ -1700,7 +1700,10 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
     if (isa<PHINode>(V))
       V->takeName(LI);
     if (Instruction *I = dyn_cast<Instruction>(V))
-      if (LI->getDebugLoc())
+      // If instruction I has debug info, then we should not update it.
+      // Also, if I has a null DebugLoc, then it is still potentially incorrect
+      // to propagate LI's DebugLoc because LI may not post-dominate I.
+      if (LI->getDebugLoc() && ValuesPerBlock.size() != 1)
         I->setDebugLoc(LI->getDebugLoc());
     if (V->getType()->getScalarType()->isPointerTy())
       MD->invalidateCachedPointerInfo(V);

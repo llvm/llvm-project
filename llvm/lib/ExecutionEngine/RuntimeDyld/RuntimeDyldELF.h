@@ -62,13 +62,15 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
                                 uint64_t Value, uint32_t Type, int64_t Addend,
                                 uint64_t SymOffset, SID SectionID);
 
+  int64_t evaluateMIPS32Relocation(const SectionEntry &Section, uint64_t Offset,
+                                   uint64_t Value, uint32_t Type);
   int64_t evaluateMIPS64Relocation(const SectionEntry &Section,
                                    uint64_t Offset, uint64_t Value,
                                    uint32_t Type,  int64_t Addend,
                                    uint64_t SymOffset, SID SectionID);
 
-  void applyMIPS64Relocation(uint8_t *TargetPtr, int64_t CalculatedValue,
-                             uint32_t Type);
+  void applyMIPSRelocation(uint8_t *TargetPtr, int64_t CalculatedValue,
+                           uint32_t Type);
 
   unsigned getMaxStubSize() override {
     if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)

@@ -983,6 +983,9 @@ namespace dr289 { // dr289: yes
 
 namespace dr294 { // dr294: no
   void f() throw(int);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
   int main() {
     (void)static_cast<void (*)() throw()>(f); // FIXME: ill-formed in C++14 and before
 #if __cplusplus > 201402L
@@ -992,12 +995,20 @@ namespace dr294 { // dr294: no
     // we reject it. In C++14 and before, this is ill-formed because an
     // exception-specification is not permitted in a type-id. In C++17, this is
     // valid because it's the inverse of a standard conversion sequence
-    // containing a function pointer conversion.
+    // containing a function pointer conversion. (Well, it's actually not valid
+    // yet, as a static_cast is not permitted to reverse a function pointer
+    // conversion, but that is being changed by core issue).
 #endif
     (void)static_cast<void (*)() throw(int)>(f); // FIXME: ill-formed in C++14 and before
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
 
     void (*p)() throw() = f; // expected-error-re {{{{not superset|different exception specification}}}}
     void (*q)() throw(int) = f;
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
   }
 }
 

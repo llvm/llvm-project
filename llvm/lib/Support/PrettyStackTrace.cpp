@@ -79,7 +79,7 @@ static void PrintCurStackTrace(raw_ostream &OS) {
 }
 
 // Integrate with crash reporter libraries.
-#if defined (__APPLE__) && HAVE_CRASHREPORTERCLIENT_H
+#if defined (__APPLE__) && defined(HAVE_CRASHREPORTERCLIENT_H)
 //  If any clients of llvm try to link to libCrashReporterClient.a themselves,
 //  only one crash info struct will be used.
 extern "C" {

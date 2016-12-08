@@ -27,34 +27,29 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   this->MRI = &MF.getRegInfo();
   this->TII = MF.getSubtarget().getInstrInfo();
   this->DL = DebugLoc();
-  this->MI = nullptr;
+  this->II = MachineBasicBlock::iterator();
   this->InsertedInstr = nullptr;
 }
 
-void MachineIRBuilder::setMBB(MachineBasicBlock &MBB, bool Beginning) {
+void MachineIRBuilder::setMBB(MachineBasicBlock &MBB) {
   this->MBB = &MBB;
-  this->MI = nullptr;
-  Before = Beginning;
+  this->II = MBB.end();
   assert(&getMF() == MBB.getParent() &&
          "Basic block is in a different function");
 }
 
-void MachineIRBuilder::setInstr(MachineInstr &MI, bool Before) {
+void MachineIRBuilder::setInstr(MachineInstr &MI) {
   assert(MI.getParent() && "Instruction is not part of a basic block");
   setMBB(*MI.getParent());
-  this->MI = &MI;
-  this->Before = Before;
+  this->II = MI.getIterator();
 }
 
-MachineBasicBlock::iterator MachineIRBuilder::getInsertPt() {
-  if (MI) {
-    if (Before)
-      return MI;
-    if (!MI->getNextNode())
-      return getMBB().end();
-    return MI->getNextNode();
-  }
-  return Before ? getMBB().begin() : getMBB().end();
+void MachineIRBuilder::setInsertPt(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator II) {
+  assert(MBB.getParent() == &getMF() &&
+         "Basic block is in a different function");
+  this->MBB = &MBB;
+  this->II = II;
 }
 
 void MachineIRBuilder::recordInsertions(

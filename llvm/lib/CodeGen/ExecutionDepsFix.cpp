@@ -612,7 +612,7 @@ void ExeDepsFix::processUndefReads(MachineBasicBlock *MBB) {
     return;
 
   // Collect this block's live out register units.
-  LiveRegSet.init(TRI);
+  LiveRegSet.init(*TRI);
   // We do not need to care about pristine registers as they are just preserved
   // but not actually used in the function.
   LiveRegSet.addLiveOutsNoPristines(*MBB);

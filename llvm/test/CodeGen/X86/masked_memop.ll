@@ -1019,7 +1019,7 @@ define void @one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; AVX512F-LABEL: one_mask_bit_set3:
 ; AVX512F:       ## BB#0:
 ; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vmovq %xmm0, 16(%rdi)
+; AVX512F-NEXT:    vmovlps %xmm0, 16(%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: one_mask_bit_set3:

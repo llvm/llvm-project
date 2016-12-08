@@ -303,7 +303,7 @@ define <2 x i64> @_clearupper2xi64b(<2 x i64>) nounwind {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    movd %eax, %xmm2
-; SSE-NEXT:    movaps %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm2, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[2,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm1[2,0]

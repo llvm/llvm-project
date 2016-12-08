@@ -764,19 +764,6 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
   MinVA = alignDown(MinVA - HeaderSize, Config->MaxPageSize);
   Out<ELFT>::ElfHeader->Addr = MinVA;
   Out<ELFT>::ProgramHeaders->Addr = Out<ELFT>::ElfHeader->Size + MinVA;
-
-  if (!FirstPTLoad->First) {
-    // Sometimes the very first PT_LOAD segment can be empty.
-    // This happens if (all conditions met):
-    //  - Linker script is used
-    //  - First section in ELF image is not RO
-    //  - Not enough space for program headers.
-    // The code below removes empty PT_LOAD segment and updates
-    // program headers size.
-    Phdrs.erase(FirstPTLoad);
-    Out<ELFT>::ProgramHeaders->Size =
-        sizeof(typename ELFT::Phdr) * Phdrs.size();
-  }
 }
 
 // Creates program headers as instructed by PHDRS linker script command.

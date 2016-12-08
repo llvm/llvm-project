@@ -145,6 +145,11 @@ addOffset(const MachineInstrBuilder &MIB, int Offset) {
   return MIB.addImm(1).addReg(0).addImm(Offset).addReg(0);
 }
 
+static inline const MachineInstrBuilder &
+addOffset(const MachineInstrBuilder &MIB, const MachineOperand& Offset) {
+  return MIB.addImm(1).addReg(0).addOperand(Offset).addReg(0);
+}
+
 /// addRegOffset - This function is used to add a memory reference of the form
 /// [Reg + Offset], i.e., one with no scale or index, but with a
 /// displacement. An example is: DWORD PTR [EAX + 4].

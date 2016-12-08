@@ -508,9 +508,18 @@ namespace dr437 { // dr437: sup 1308
   template<typename U> struct T : U {};
   struct S {
     void f() throw(S);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
     void g() throw(T<S>);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
     struct U;
     void h() throw(U);
+#if __cplusplus > 201402L
+    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+#endif
     struct U {};
   };
 }

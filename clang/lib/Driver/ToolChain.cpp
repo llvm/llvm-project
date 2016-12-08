@@ -721,3 +721,57 @@ void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 
 void ToolChain::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
                                     ArgStringList &CC1Args) const {}
+
+static VersionTuple separateMSVCFullVersion(unsigned Version) {
+  if (Version < 100)
+    return VersionTuple(Version);
+
+  if (Version < 10000)
+    return VersionTuple(Version / 100, Version % 100);
+
+  unsigned Build = 0, Factor = 1;
+  for (; Version > 10000; Version = Version / 10, Factor = Factor * 10)
+    Build = Build + (Version % 10) * Factor;
+  return VersionTuple(Version / 100, Version % 100, Build);
+}
+
+VersionTuple
+ToolChain::computeMSVCVersion(const Driver *D,
+                              const llvm::opt::ArgList &Args) const {
+  const Arg *MSCVersion = Args.getLastArg(options::OPT_fmsc_version);
+  const Arg *MSCompatibilityVersion =
+      Args.getLastArg(options::OPT_fms_compatibility_version);
+
+  if (MSCVersion && MSCompatibilityVersion) {
+    if (D)
+      D->Diag(diag::err_drv_argument_not_allowed_with)
+          << MSCVersion->getAsString(Args)
+          << MSCompatibilityVersion->getAsString(Args);
+    return VersionTuple();
+  }
+
+  if (MSCompatibilityVersion) {
+    VersionTuple MSVT;
+    if (MSVT.tryParse(MSCompatibilityVersion->getValue())) {
+      if (D)
+        D->Diag(diag::err_drv_invalid_value)
+            << MSCompatibilityVersion->getAsString(Args)
+            << MSCompatibilityVersion->getValue();
+    } else {
+      return MSVT;
+    }
+  }
+
+  if (MSCVersion) {
+    unsigned Version = 0;
+    if (StringRef(MSCVersion->getValue()).getAsInteger(10, Version)) {
+      if (D)
+        D->Diag(diag::err_drv_invalid_value)
+            << MSCVersion->getAsString(Args) << MSCVersion->getValue();
+    } else {
+      return separateMSVCFullVersion(Version);
+    }
+  }
+
+  return VersionTuple();
+}

@@ -380,9 +380,15 @@ class CrashLog(symbolication.Symbolicator):
                 elif line.startswith('Exception Codes:'):
                     self.thread_exception_data = line[16:].strip()
                     continue
+                elif line.startswith('Exception Subtype:'): # iOS
+                    self.thread_exception_data = line[18:].strip()
+                    continue                                                          
                 elif line.startswith('Crashed Thread:'):
                     self.crashed_thread_idx = int(line[15:].strip().split()[0])
                     continue
+                elif line.startswith('Triggered by Thread:'): # iOS
+                    self.crashed_thread_idx = int(line[20:].strip().split()[0])
+                    continue                    
                 elif line.startswith('Report Version:'):
                     self.version = int(line[15:].strip())
                     continue
@@ -423,6 +429,11 @@ class CrashLog(symbolication.Symbolicator):
                         app_specific_backtrace = True
                         idx = int(app_backtrace_match.group(1))
                         thread = CrashLog.Thread(idx, True)
+                elif line.startswith('Last Exception Backtrace:'): # iOS
+                    parse_mode = PARSE_MODE_THREAD
+                    app_specific_backtrace = True
+                    idx = 1
+                    thread = CrashLog.Thread(idx, True)
                 self.info_lines.append(line.strip())
             elif parse_mode == PARSE_MODE_THREAD:
                 if line.startswith('Thread'):

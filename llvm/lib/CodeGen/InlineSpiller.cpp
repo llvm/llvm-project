@@ -768,6 +768,11 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
       FoldOps.push_back(Idx);
   }
 
+  // If we only have implicit uses, we won't be able to fold that.
+  // Moreover, TargetInstrInfo::foldMemoryOperand will assert if we try!
+  if (FoldOps.empty())
+    return false;
+
   MachineInstrSpan MIS(MI);
 
   MachineInstr *FoldMI =

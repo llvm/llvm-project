@@ -34,7 +34,6 @@ namespace lto {
 /// structure and passing it to the lto::LTO constructor.
 struct Config {
   std::string CPU;
-  std::string Features;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   Reloc::Model RelocModel = Reloc::PIC_;

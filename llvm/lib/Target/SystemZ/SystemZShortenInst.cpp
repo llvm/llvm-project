@@ -275,7 +275,7 @@ bool SystemZShortenInst::runOnMachineFunction(MachineFunction &F) {
   const SystemZSubtarget &ST = F.getSubtarget<SystemZSubtarget>();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
-  LiveRegs.init(TRI);
+  LiveRegs.init(*TRI);
 
   bool Changed = false;
   for (auto &MBB : F)
