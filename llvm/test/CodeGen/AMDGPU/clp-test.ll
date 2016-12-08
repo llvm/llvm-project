@@ -1,9 +1,10 @@
 ; RUN: opt -amdgpu-clp-vector-expansion -mtriple=amdgcn-- -mcpu=fiji -S < %s | FileCheck %s
 ; Function Attrs: nounwind
-define amdgpu_kernel void @foo(<2 x float> %p2, <3 x float> %p3) {
+define void @foo(float %p1, <2 x float> %p2, <3 x float> %p3, <4 x float> %p4) {
 entry:
   call <2 x float> @_Z4cbrtDv2_f(<2 x float> %p2)
   call <3 x float> @_Z3madDv3_fS_S_(<3 x float> %p3, <3 x float> %p3, <3 x float> %p3)
+  call <4 x float> @_Z4fmaxDv4_ff(<4 x float> %p4, float %p1)
   ret void
 }
 
@@ -41,3 +42,17 @@ declare <2 x float> @_Z4cbrtDv2_f(<2 x float>)
 declare <3 x float> @_Z3madDv3_fS_S_(<3 x float>, <3 x float>, <3 x float>)
 ; CHECK: declare float @_Z3madfff(float, float, float)
 ; CHECK-NOT: declare <3 x float> @_Z3madDv3_fS_S_(<3 x float>, <3 x float>, <3 x float>)
+
+; CHECK: define weak <4 x float> @_Z4fmaxDv4_ff(<4 x float> %_p1, float %_p2)
+; CHECK: %hi.call = call <2 x float> @_Z4fmaxDv2_ff(<2 x float> %{{[0-9]+}}, float %_p2)
+
+; CHECK: define weak <2 x float> @_Z4fmaxDv2_ff(<2 x float> %_p1, float %_p2)
+; CHECK: %lo.call = call float @_Z4fmaxff(float %{{[0-9]+}}, float %_p2)
+; CHECK: %[[var11:[0-9]+]] = insertelement <2 x float> undef, float %lo.call, i32 0
+; CHECK: %hi.call = call float @_Z4fmaxff(float %{{[0-9]+}}, float %_p2)
+; CHECK: %[[var12:[0-9]+]] = insertelement <2 x float> %[[var11]], float %hi.call, i32 1
+; CHECK: ret <2 x float> %[[var12]]
+
+declare <4 x float> @_Z4fmaxDv4_ff(<4 x float>, float)
+; CHECK: declare float @_Z4fmaxff(float, float)
+; CHECK-NOT: declare <2 x float> @_Z4fmaxDv2_ff(<2 x float>, float)

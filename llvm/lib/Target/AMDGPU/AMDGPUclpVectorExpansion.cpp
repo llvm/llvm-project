@@ -525,9 +525,14 @@ std::string
 AMDGPUclpVectorExpansion::replaceSubstituteTypes(StringRef &Suffix,
                                                  StringRef ArgType) {
   std::ostringstream Oss;
-  while (!Suffix.empty() && Suffix[0] == 'S') {
+  while (!Suffix.empty()) {
+    if (Suffix[0] == 'S') {
+      Suffix = Suffix.substr(Suffix.find_first_of('_') + 1);
+    } else if (ArgType == Suffix.take_front(1)) {
+      Suffix = Suffix.drop_front(1);
+    } else
+      break;
     Oss << ArgType.str();
-    Suffix = Suffix.substr(Suffix.find_first_of('_') + 1);
   }
   return Oss.str();
 } // replaceSubstituteTypes
@@ -764,6 +769,8 @@ Function *AMDGPUclpVectorExpansion::adjustFunctionImpl(
     Type *NextTy;
     if (Idx == Lead1)
       NextTy = NextLeadTy;
+    else if (Idx > 1 && !CurTy->isVectorTy())
+      NextTy = CurTy;
     else
       NextTy = getNextOtherType(CurTy, CurVecSize, NextVecSize);
 
@@ -890,10 +897,14 @@ Function *AMDGPUclpVectorExpansion::checkAndExpand(Function *CurFunc,
     Oss << "_p" << Idx;
     CurArgVal->setName(Oss.str());
     if (Idx != Lead1 || !NextLeadTy) { // input
-      Value *NextArgVal = loadVectorSlice(0, NextVecSize, CurArgVal, EntryBlk);
+      bool ScalarTailArg = (Idx > 1) && !CurArgVal->getType()->isVectorTy();
+      Value *NextArgVal =
+          ScalarTailArg ? CurArgVal
+                        : loadVectorSlice(0, NextVecSize, CurArgVal, EntryBlk);
       LoArgs.push_back(NextArgVal);
       NextArgVal =
-          loadVectorSlice(NextVecSize, CurVecSize, CurArgVal, EntryBlk);
+          ScalarTailArg ? CurArgVal : loadVectorSlice(NextVecSize, CurVecSize,
+                                                      CurArgVal, EntryBlk);
       HiArgs.push_back(NextArgVal);
     } else { // output
       // if there is another part of the result is stored in a ptr parameter
