@@ -54,6 +54,45 @@ ExprResult Sema::ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                        /*IsExecConfig=*/true);
 }
 
+Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const AttributeList *Attr) {
+  bool HasHostAttr = false;
+  bool HasDeviceAttr = false;
+  bool HasGlobalAttr = false;
+  bool HasInvalidTargetAttr = false;
+  while (Attr) {
+    switch(Attr->getKind()){
+    case AttributeList::AT_CUDAGlobal:
+      HasGlobalAttr = true;
+      break;
+    case AttributeList::AT_CUDAHost:
+      HasHostAttr = true;
+      break;
+    case AttributeList::AT_CUDADevice:
+      HasDeviceAttr = true;
+      break;
+    case AttributeList::AT_CUDAInvalidTarget:
+      HasInvalidTargetAttr = true;
+      break;
+    default:
+      break;
+    }
+    Attr = Attr->getNext();
+  }
+  if (HasInvalidTargetAttr)
+    return CFT_InvalidTarget;
+
+  if (HasGlobalAttr)
+    return CFT_Global;
+
+  if (HasHostAttr && HasDeviceAttr)
+    return CFT_HostDevice;
+
+  if (HasDeviceAttr)
+    return CFT_Device;
+
+  return CFT_Host;
+}
+
 /// IdentifyCUDATarget - Determine the CUDA compilation target for this function
 Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D) {
   // Code that lives outside a function is run on the host.
@@ -813,5 +852,34 @@ void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
   } else if (Target == CFT_HostDevice) {
     Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
     Method->addAttr(CUDAHostAttr::CreateImplicit(Context));
+  }
+}
+
+void Sema::checkCUDATargetOverload(FunctionDecl *NewFD,
+                                   LookupResult &Previous) {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  CUDAFunctionTarget NewTarget = IdentifyCUDATarget(NewFD);
+  for (NamedDecl *OldND : Previous) {
+    FunctionDecl *OldFD = OldND->getAsFunction();
+    if (!OldFD)
+      continue;
+
+    CUDAFunctionTarget OldTarget = IdentifyCUDATarget(OldFD);
+    // Don't allow HD and global functions to overload other functions with the
+    // same signature.  We allow overloading based on CUDA attributes so that
+    // functions can have different implementations on the host and device, but
+    // HD/global functions "exist" in some sense on both the host and device, so
+    // should have the same implementation on both sides.
+    if (NewTarget != OldTarget &&
+        ((NewTarget == CFT_HostDevice) || (OldTarget == CFT_HostDevice) ||
+         (NewTarget == CFT_Global) || (OldTarget == CFT_Global)) &&
+        !IsOverload(NewFD, OldFD, /* UseMemberUsingDeclRules = */ false,
+                    /* ConsiderCudaAttrs = */ false)) {
+      Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
+          << NewTarget << NewFD->getDeclName() << OldTarget << OldFD;
+      Diag(OldFD->getLocation(), diag::note_previous_declaration);
+      NewFD->setInvalidDecl();
+      break;
+    }
   }
 }

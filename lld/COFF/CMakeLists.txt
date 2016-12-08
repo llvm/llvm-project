@@ -14,6 +14,7 @@ add_lld_library(lldCOFF
   MarkLive.cpp
   ModuleDef.cpp
   PDB.cpp
+  Strings.cpp
   SymbolTable.cpp
   Symbols.cpp
   Writer.cpp

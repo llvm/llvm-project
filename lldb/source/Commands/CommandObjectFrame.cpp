@@ -372,14 +372,20 @@ protected:
         }
       }
     } else {
+      if (command.GetArgumentCount() > 1) {
+        result.AppendErrorWithFormat(
+            "too many arguments; expected frame-index, saw '%s'.\n",
+            command.GetArgumentAtIndex(0));
+        m_options.GenerateOptionUsage(
+            result.GetErrorStream(), this,
+            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+        return false;
+      }
+
       if (command.GetArgumentCount() == 1) {
-        const char *frame_idx_cstr = command.GetArgumentAtIndex(0);
-        bool success = false;
-        frame_idx =
-            StringConvert::ToUInt32(frame_idx_cstr, UINT32_MAX, 0, &success);
-        if (!success) {
+        if (command[0].ref.getAsInteger(0, frame_idx)) {
           result.AppendErrorWithFormat("invalid frame index argument '%s'.",
-                                       frame_idx_cstr);
+                                       command[0].c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
@@ -388,14 +394,6 @@ protected:
         if (frame_idx == UINT32_MAX) {
           frame_idx = 0;
         }
-      } else {
-        result.AppendErrorWithFormat(
-            "too many arguments; expected frame-index, saw '%s'.\n",
-            command.GetArgumentAtIndex(0));
-        m_options.GenerateOptionUsage(
-            result.GetErrorStream(), this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-        return false;
       }
     }
 
@@ -524,9 +522,6 @@ protected:
     VariableSP var_sp;
     ValueObjectSP valobj_sp;
 
-    const char *name_cstr = nullptr;
-    size_t idx;
-
     TypeSummaryImplSP summary_format_sp;
     if (!m_option_variable.summary.IsCurrentValueEmpty())
       DataVisualization::NamedSummaryFormats::GetSummaryFormat(
@@ -555,11 +550,10 @@ protected:
 
         // If we have any args to the variable command, we will make
         // variable objects from them...
-        for (idx = 0; (name_cstr = command.GetArgumentAtIndex(idx)) != nullptr;
-             ++idx) {
+        for (auto &entry : command) {
           if (m_option_variable.use_regex) {
             const size_t regex_start_index = regex_var_list.GetSize();
-            llvm::StringRef name_str(name_cstr);
+            llvm::StringRef name_str = entry.ref;
             RegularExpression regex(name_str);
             if (regex.Compile(name_str)) {
               size_t num_matches = 0;
@@ -575,12 +569,6 @@ protected:
                     valobj_sp = frame->GetValueObjectForFrameVariable(
                         var_sp, m_varobj_options.use_dynamic);
                     if (valobj_sp) {
-                      //                                            if (format
-                      //                                            !=
-                      //                                            eFormatDefault)
-                      //                                                valobj_sp->SetFormat
-                      //                                                (format);
-
                       std::string scope_string;
                       if (m_option_variable.show_scope)
                         scope_string = GetScopeString(var_sp).str();
@@ -603,7 +591,7 @@ protected:
               } else if (num_matches == 0) {
                 result.GetErrorStream().Printf("error: no variables matched "
                                                "the regular expression '%s'.\n",
-                                               name_cstr);
+                                               entry.c_str());
               }
             } else {
               char regex_error[1024];
@@ -612,7 +600,7 @@ protected:
               else
                 result.GetErrorStream().Printf(
                     "error: unknown regex error when compiling '%s'\n",
-                    name_cstr);
+                    entry.c_str());
             }
           } else // No regex, either exact variable names or variable
                  // expressions.
@@ -624,7 +612,7 @@ protected:
                 StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
             lldb::VariableSP var_sp;
             valobj_sp = frame->GetValueForVariableExpressionPath(
-                name_cstr, m_varobj_options.use_dynamic, expr_path_options,
+                entry.ref, m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
             if (valobj_sp) {
               std::string scope_string;
@@ -647,8 +635,8 @@ protected:
                   valobj_sp->GetPreferredDisplayLanguage());
 
               Stream &output_stream = result.GetOutputStream();
-              options.SetRootValueObjectName(valobj_sp->GetParent() ? name_cstr
-                                                                    : nullptr);
+              options.SetRootValueObjectName(
+                  valobj_sp->GetParent() ? entry.c_str() : nullptr);
               valobj_sp->Dump(output_stream, options);
             } else {
               const char *error_cstr = error.AsCString(nullptr);
@@ -658,7 +646,7 @@ protected:
                 result.GetErrorStream().Printf("error: unable to find any "
                                                "variable expression path that "
                                                "matches '%s'.\n",
-                                               name_cstr);
+                                               entry.c_str());
             }
           }
         }
@@ -680,10 +668,6 @@ protected:
               valobj_sp = frame->GetValueObjectForFrameVariable(
                   var_sp, m_varobj_options.use_dynamic);
               if (valobj_sp) {
-                //                                if (format != eFormatDefault)
-                //                                    valobj_sp->SetFormat
-                //                                    (format);
-
                 // When dumping all variables, don't print any variables
                 // that are not in scope to avoid extra unneeded output
                 if (valobj_sp->IsInScope()) {
@@ -704,7 +688,8 @@ protected:
                   options.SetFormat(format);
                   options.SetVariableFormatDisplayLanguage(
                       valobj_sp->GetPreferredDisplayLanguage());
-                  options.SetRootValueObjectName(name_cstr);
+                  options.SetRootValueObjectName(
+                      var_sp ? var_sp->GetName().AsCString() : nullptr);
                   valobj_sp->Dump(result.GetOutputStream(), options);
                 }
               }

@@ -711,3 +711,36 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: %[[load:.*]] = load i32, i32* %y, align 1
 ; CHECK: %[[phi:.*]] = phi i32 [ %[[load]], %{{.*}} ], [ %[[load]], %{{.*}} ]
 ; CHECK: i32 %[[phi]]
+
+
+declare i8 @pr30991_f() nounwind readonly
+declare void @pr30991_f1(i8)
+define i8 @pr30991(i8* %sp, i8* %word, i1 %b1, i1 %b2) {
+entry:
+  br i1 %b1, label %a, label %b
+
+a:
+  %r0 = load i8, i8* %word, align 1
+  %incdec.ptr = getelementptr i8, i8* %sp, i32 1
+  %rr0 = call i8 @pr30991_f() nounwind readonly
+  call void @pr30991_f1(i8 %r0)
+  ret i8 %rr0
+
+b:
+  br i1 %b2, label %c, label %x
+
+c:
+  %r1 = load i8, i8* %word, align 1
+  %incdec.ptr115 = getelementptr i8, i8* %sp, i32 1
+  %rr1 = call i8 @pr30991_f() nounwind readonly
+  call void @pr30991_f1(i8 %r1)
+  ret i8 %rr1
+
+x:
+  %r2 = load i8, i8* %word, align 1
+  ret i8 %r2
+}
+
+; CHECK-LABEL: define i8 @pr30991
+; CHECK:  %r0 = load i8, i8* %word, align 1
+; CHECK-NEXT:  br i1 %b1, label %a, label %b

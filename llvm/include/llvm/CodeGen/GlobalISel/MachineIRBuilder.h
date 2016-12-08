@@ -48,8 +48,7 @@ class MachineIRBuilder {
   /// Fields describing the insertion point.
   /// @{
   MachineBasicBlock *MBB;
-  MachineInstr *MI;
-  bool Before;
+  MachineBasicBlock::iterator II;
   /// @}
 
   std::function<void(MachineInstr *)> InsertedInstr;
@@ -75,22 +74,28 @@ public:
   }
 
   /// Current insertion point for new instructions.
-  MachineBasicBlock::iterator getInsertPt();
+  MachineBasicBlock::iterator getInsertPt() {
+    return II;
+  }
+
+  /// Set the insertion point before the specified position.
+  /// \pre MBB must be in getMF().
+  /// \pre II must be a valid iterator in MBB.
+  void setInsertPt(MachineBasicBlock &MBB, MachineBasicBlock::iterator II);
+  /// @}
 
   /// Setters for the insertion point.
   /// @{
   /// Set the MachineFunction where to build instructions.
   void setMF(MachineFunction &);
 
-  /// Set the insertion point to the beginning (\p Beginning = true) or end
-  /// (\p Beginning = false) of \p MBB.
+  /// Set the insertion point to the  end of \p MBB.
   /// \pre \p MBB must be contained by getMF().
-  void setMBB(MachineBasicBlock &MBB, bool Beginning = false);
+  void setMBB(MachineBasicBlock &MBB);
 
-  /// Set the insertion point to before (\p Before = true) or after
-  /// (\p Before = false) \p MI.
+  /// Set the insertion point to before MI.
   /// \pre MI must be in getMF().
-  void setInstr(MachineInstr &MI, bool Before = true);
+  void setInstr(MachineInstr &MI);
   /// @}
 
   /// Control where instructions we create are recorded (typically for

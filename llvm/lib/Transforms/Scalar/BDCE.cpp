@@ -40,7 +40,8 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
   bool Changed = false;
   for (Instruction &I : instructions(F)) {
     // If the instruction has side effects and no non-dbg uses,
-    // BDCE should skip it.
+    // skip it. This way we avoid computing known bits on an instruction
+    // that will not help us.
     if (I.mayHaveSideEffects() && I.use_empty())
       continue;
 
@@ -55,7 +56,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       // undef, poison, etc.
       Value *Zero = ConstantInt::get(I.getType(), 0);
       ++NumSimplified;
-      I.replaceAllUsesWith(Zero);
+      I.replaceNonMetadataUsesWith(Zero);
       Changed = true;
     }
     if (!DB.isInstructionDead(&I))

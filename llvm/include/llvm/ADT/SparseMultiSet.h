@@ -21,7 +21,15 @@
 #ifndef LLVM_ADT_SPARSEMULTISET_H
 #define LLVM_ADT_SPARSEMULTISET_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#include <limits>
+#include <utility>
 
 namespace llvm {
 
@@ -73,7 +81,7 @@ namespace llvm {
 /// @tparam SparseT     An unsigned integer type. See above.
 ///
 template<typename ValueT,
-         typename KeyFunctorT = llvm::identity<unsigned>,
+         typename KeyFunctorT = identity<unsigned>,
          typename SparseT = uint8_t>
 class SparseMultiSet {
   static_assert(std::numeric_limits<SparseT>::is_integer &&
@@ -113,16 +121,16 @@ class SparseMultiSet {
   typedef typename KeyFunctorT::argument_type KeyT;
   typedef SmallVector<SMSNode, 8> DenseT;
   DenseT Dense;
-  SparseT *Sparse;
-  unsigned Universe;
+  SparseT *Sparse = nullptr;
+  unsigned Universe = 0;
   KeyFunctorT KeyIndexOf;
   SparseSetValFunctor<KeyT, ValueT, KeyFunctorT> ValIndexOf;
 
   /// We have a built-in recycler for reusing tombstone slots. This recycler
   /// puts a singly-linked free list into tombstone slots, allowing us quick
   /// erasure, iterator preservation, and dense size.
-  unsigned FreelistIdx;
-  unsigned NumFree;
+  unsigned FreelistIdx = SMSNode::INVALID;
+  unsigned NumFree = 0;
 
   unsigned sparseIndex(const ValueT &Val) const {
     assert(ValIndexOf(Val) < Universe &&
@@ -130,11 +138,6 @@ class SparseMultiSet {
     return ValIndexOf(Val);
   }
   unsigned sparseIndex(const SMSNode &N) const { return sparseIndex(N.Data); }
-
-  // Disable copy construction and assignment.
-  // This data structure is not meant to be used that way.
-  SparseMultiSet(const SparseMultiSet&) = delete;
-  SparseMultiSet &operator=(const SparseMultiSet&) = delete;
 
   /// Whether the given entry is the head of the list. List heads's previous
   /// pointers are to the tail of the list, allowing for efficient access to the
@@ -187,9 +190,9 @@ public:
   typedef const ValueT *const_pointer;
   typedef unsigned size_type;
 
-  SparseMultiSet()
-    : Sparse(nullptr), Universe(0), FreelistIdx(SMSNode::INVALID), NumFree(0) {}
-
+  SparseMultiSet() = default;
+  SparseMultiSet(const SparseMultiSet &) = delete;
+  SparseMultiSet &operator=(const SparseMultiSet &) = delete;
   ~SparseMultiSet() { free(Sparse); }
 
   /// Set the universe size which determines the largest key the set can hold.
@@ -218,6 +221,7 @@ public:
   class iterator_base : public std::iterator<std::bidirectional_iterator_tag,
                                              ValueT> {
     friend class SparseMultiSet;
+
     SMSPtrTy SMS;
     unsigned Idx;
     unsigned SparseIdx;
@@ -515,4 +519,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_SPARSEMULTISET_H

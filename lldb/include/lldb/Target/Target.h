@@ -225,7 +225,19 @@ private:
 
 class EvaluateExpressionOptions {
 public:
+// MSVC has a bug here that reports C4268: 'const' static/global data
+// initialized with compiler generated default constructor fills the object
+// with zeros.
+// Confirmed that MSVC is *not* zero-initializing, it's just a bogus warning.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4268)
+#endif
   static constexpr std::chrono::milliseconds default_timeout{500};
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
   static constexpr ExecutionPolicy default_execution_policy =
       eExecutionPolicyOnlyWhenNeeded;
 

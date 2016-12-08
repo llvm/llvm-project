@@ -120,9 +120,6 @@ public:
     NoRet,
     /// Indicates that the returned value is an owned (+1) symbol.
     OwnedSymbol,
-    /// Indicates that the returned value is an owned (+1) symbol and
-    /// that it should be treated as freshly allocated.
-    OwnedAllocatedSymbol,
     /// Indicates that the returned value is an object with retain count
     /// semantics but that it is not owned (+0).  This is the default
     /// for getters, etc.
@@ -163,8 +160,7 @@ public:
   ObjKind getObjKind() const { return O; }
   
   bool isOwned() const {
-    return K == OwnedSymbol || K == OwnedAllocatedSymbol ||
-    K == OwnedWhenTrackedReceiver;
+    return K == OwnedSymbol || K == OwnedWhenTrackedReceiver;
   }
   
   bool notOwned() const {
@@ -179,8 +175,8 @@ public:
     return RetEffect(OwnedWhenTrackedReceiver, ObjC);
   }
   
-  static RetEffect MakeOwned(ObjKind o, bool isAllocated = false) {
-    return RetEffect(isAllocated ? OwnedAllocatedSymbol : OwnedSymbol, o);
+  static RetEffect MakeOwned(ObjKind o) {
+    return RetEffect(OwnedSymbol, o);
   }
   static RetEffect MakeNotOwned(ObjKind o) {
     return RetEffect(NotOwnedSymbol, o);

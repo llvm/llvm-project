@@ -353,7 +353,7 @@ void BranchFolder::computeLiveIns(MachineBasicBlock &MBB) {
   if (!UpdateLiveIns)
     return;
 
-  LiveRegs.init(TRI);
+  LiveRegs.init(*TRI);
   LiveRegs.addLiveOutsNoPristines(MBB);
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend()))
     LiveRegs.stepBackward(MI);

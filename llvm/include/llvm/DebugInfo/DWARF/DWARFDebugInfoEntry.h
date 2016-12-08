@@ -105,6 +105,10 @@ public:
                                       dwarf::Attribute Attr,
                                       uint64_t FailValue) const;
 
+  int64_t getAttributeValueAsSignedConstant(const DWARFUnit *U,
+                                            dwarf::Attribute Attr,
+                                            int64_t FailValue) const;
+
   uint64_t getAttributeValueAsUnsignedConstant(const DWARFUnit *U,
                                                dwarf::Attribute Attr,
                                                uint64_t FailValue) const;

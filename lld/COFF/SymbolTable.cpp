@@ -71,7 +71,7 @@ void SymbolTable::readArchives() {
   for (std::future<ArchiveFile *> &Future : ArchiveQueue) {
     ArchiveFile *File = Future.get();
     if (Config->Verbose)
-      llvm::outs() << "Reading " << File->getShortName() << "\n";
+      llvm::outs() << "Reading " << toString(File) << "\n";
     for (Lazy &Sym : File->getLazySymbols())
       addLazy(&Sym, &LazySyms);
   }
@@ -92,7 +92,7 @@ void SymbolTable::readObjects() {
   for (size_t I = 0; I < ObjectQueue.size(); ++I) {
     InputFile *File = ObjectQueue[I].get();
     if (Config->Verbose)
-      llvm::outs() << "Reading " << File->getShortName() << "\n";
+      llvm::outs() << "Reading " << toString(File) << "\n";
     // Adding symbols may add more files to ObjectQueue
     // (but not to ArchiveQueue).
     for (SymbolBody *Sym : File->getSymbols())
@@ -102,8 +102,7 @@ void SymbolTable::readObjects() {
     if (!S.empty()) {
       Directives.push_back(S);
       if (Config->Verbose)
-        llvm::outs() << "Directives: " << File->getShortName()
-                     << ": " << S << "\n";
+        llvm::outs() << "Directives: " << toString(File) << ": " << S << "\n";
     }
   }
   ObjectQueue.clear();
@@ -161,8 +160,8 @@ void SymbolTable::reportRemainingUndefines(bool Resolve) {
     if (!isa<ArchiveFile>(File.get()))
       for (SymbolBody *Sym : File->getSymbols())
         if (Undefs.count(Sym->repl()))
-          llvm::errs() << File->getShortName() << ": undefined symbol: "
-                       << Sym->getName() << "\n";
+          llvm::errs() << toString(File.get())
+                       << ": undefined symbol: " << Sym->getName() << "\n";
   if (!Config->Force)
     fatal("link failed");
 }
@@ -211,8 +210,9 @@ void SymbolTable::addSymbol(SymbolBody *New) {
   // equivalent (conflicting), or more preferable, respectively.
   int Comp = Existing->compare(New);
   if (Comp == 0)
-    fatal("duplicate symbol: " + Existing->getDebugName() + " and " +
-          New->getDebugName());
+    fatal("duplicate symbol: " + toString(*Existing) + " in " +
+          toString(Existing->getFile()) + " and in " +
+          toString(New->getFile()));
   if (Comp < 0)
     Sym->Body = New;
 }
@@ -237,7 +237,7 @@ void SymbolTable::addMemberFile(Lazy *Body) {
   if (!File)
     return;
   if (Config->Verbose)
-    llvm::outs() << "Loaded " << File->getShortName() << " for "
+    llvm::outs() << "Loaded " << toString(File.get()) << " for "
                  << Body->getName() << "\n";
   addFile(std::move(File));
 }
@@ -321,7 +321,7 @@ DefinedAbsolute *SymbolTable::addAbsolute(StringRef Name, uint64_t VA) {
 
 void SymbolTable::printMap(llvm::raw_ostream &OS) {
   for (ObjectFile *File : ObjectFiles) {
-    OS << File->getShortName() << ":\n";
+    OS << toString(File) << ":\n";
     for (SymbolBody *Body : File->getSymbols())
       if (auto *R = dyn_cast<DefinedRegular>(Body))
         if (R->getChunk()->isLive())

@@ -269,6 +269,15 @@ uint64_t DWARFDebugInfoEntryMinimal::getAttributeValueAsAddress(
   return Result.hasValue() ? Result.getValue() : FailValue;
 }
 
+int64_t DWARFDebugInfoEntryMinimal::getAttributeValueAsSignedConstant(
+    const DWARFUnit *U, dwarf::Attribute Attr, int64_t FailValue) const {
+  DWARFFormValue FormValue;
+  if (!getAttributeValue(U, Attr, FormValue))
+    return FailValue;
+  Optional<int64_t> Result = FormValue.getAsSignedConstant();
+  return Result.hasValue() ? Result.getValue() : FailValue;
+}
+
 uint64_t DWARFDebugInfoEntryMinimal::getAttributeValueAsUnsignedConstant(
     const DWARFUnit *U, dwarf::Attribute Attr, 
     uint64_t FailValue) const {

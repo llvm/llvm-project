@@ -740,7 +740,7 @@ public:
      ObjCAllocRetE(gcenabled
                     ? RetEffect::MakeGCNotOwned()
                     : (usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
-                               : RetEffect::MakeOwned(RetEffect::ObjC, true))),
+                               : RetEffect::MakeOwned(RetEffect::ObjC))),
      ObjCInitRetE(gcenabled
                     ? RetEffect::MakeGCNotOwned()
                     : (usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
@@ -1086,7 +1086,7 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
                FName == "IOOpenFirmwarePathMatching") {
       // Part of <rdar://problem/6961230>. (IOKit)
       // This should be addressed using a API table.
-      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true),
+      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
                                DoNothing, DoNothing);
     } else if (FName == "IOServiceGetMatchingService" ||
                FName == "IOServiceGetMatchingServices") {
@@ -1116,7 +1116,7 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       // passed to CGBitmapContextCreateWithData is released via
       // a callback and doing full IPA to make sure this is done correctly.
       ScratchArgs = AF.add(ScratchArgs, 8, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true),
+      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
                                DoNothing, DoNothing);
     } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
       // FIXES: <rdar://problem/7283567>
@@ -1292,7 +1292,7 @@ const RetainSummary *
 RetainSummaryManager::getCFSummaryCreateRule(const FunctionDecl *FD) {
   assert (ScratchArgs.isEmpty());
 
-  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true));
+  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF));
 }
 
 const RetainSummary *
@@ -1322,7 +1322,7 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
   }
 
   if (D->hasAttr<CFReturnsRetainedAttr>())
-    return RetEffect::MakeOwned(RetEffect::CF, true);
+    return RetEffect::MakeOwned(RetEffect::CF);
 
   if (D->hasAttr<CFReturnsNotRetainedAttr>())
     return RetEffect::MakeNotOwned(RetEffect::CF);
@@ -1435,7 +1435,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
           case OMF_new:
           case OMF_copy:
           case OMF_mutableCopy:
-            ResultEff = RetEffect::MakeOwned(RetEffect::CF, true);
+            ResultEff = RetEffect::MakeOwned(RetEffect::CF);
             break;
           default:
             ResultEff = RetEffect::MakeNotOwned(RetEffect::CF);
@@ -1457,7 +1457,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
       if (cocoa::isCocoaObjectRef(RetTy))
         ResultEff = ObjCAllocRetE;
       else if (coreFoundation::isCFObjectRef(RetTy))
-        ResultEff = RetEffect::MakeOwned(RetEffect::CF, true);
+        ResultEff = RetEffect::MakeOwned(RetEffect::CF);
       break;
     case OMF_autorelease:
       ReceiverEff = Autorelease;
@@ -1588,7 +1588,7 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   // The next methods are allocators.
   const RetainSummary *AllocSumm = getPersistentSummary(ObjCAllocRetE);
   const RetainSummary *CFAllocSumm =
-    getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF, true));
+    getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF));
 
   // Create the "retain" selector.
   RetEffect NoRet = RetEffect::MakeNoRet();
@@ -3076,7 +3076,6 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       // No work necessary.
       break;
 
-    case RetEffect::OwnedAllocatedSymbol:
     case RetEffect::OwnedSymbol: {
       SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol();
       if (!Sym)

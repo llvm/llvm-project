@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++1z -verify %s -fexceptions -fcxx-exceptions -Wno-dynamic-exception-spec
 
 struct X {};
 struct Y : X {};

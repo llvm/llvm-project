@@ -12,12 +12,13 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <cstdint>
 #include <string>
 
 namespace llvm {
+
   class raw_ostream;
 
   /// Twine - A lightweight data structure for efficiently representing the
@@ -146,7 +147,6 @@ namespace llvm {
       const uint64_t *uHex;
     };
 
-  private:
     /// LHS - The prefix in the concatenation, which may be uninitialized for
     /// Null or Empty kinds.
     Child LHS;
@@ -158,7 +158,6 @@ namespace llvm {
     /// RHSKind - The NodeKind of the right hand side, \see getRHSKind().
     NodeKind RHSKind;
 
-  private:
     /// Construct a nullary twine; the kind must be NullKind or EmptyKind.
     explicit Twine(NodeKind Kind)
       : LHSKind(Kind), RHSKind(EmptyKind) {
@@ -178,10 +177,6 @@ namespace llvm {
         : LHS(LHS), RHS(RHS), LHSKind(LHSKind), RHSKind(RHSKind) {
       assert(isValid() && "Invalid twine!");
     }
-
-    /// Since the intended use of twines is as temporary objects, assignments
-    /// when concatenating might cause undefined behavior or stack corruptions
-    Twine &operator=(const Twine &Other) = delete;
 
     /// Check for the null twine.
     bool isNull() const {
@@ -370,6 +365,10 @@ namespace llvm {
       assert(isValid() && "Invalid twine!");
     }
 
+    /// Since the intended use of twines is as temporary objects, assignments
+    /// when concatenating might cause undefined behavior or stack corruptions
+    Twine &operator=(const Twine &) = delete;
+
     /// Create a 'null' string, which is an empty string that always
     /// concatenates to form another empty string.
     static Twine createNull() {
@@ -535,6 +534,7 @@ namespace llvm {
   }
 
   /// @}
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_ADT_TWINE_H

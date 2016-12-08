@@ -4,4 +4,5 @@ add_llvm_library(LLVMObjectYAML
   ELFYAML.cpp
   MachOYAML.cpp
   ObjectYAML.cpp
+  DWARFYAML.cpp
   )

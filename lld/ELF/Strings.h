@@ -93,9 +93,8 @@ private:
 };
 
 // Returns a demangled C++ symbol name. If Name is not a mangled
-// name or the system does not provide __cxa_demangle function,
-// it returns an unmodified string.
-std::string demangle(StringRef Name);
+// name, it returns Optional::None.
+llvm::Optional<std::string> demangle(StringRef Name);
 
 inline StringRef toStringRef(ArrayRef<uint8_t> Arr) {
   return {(const char *)Arr.data(), Arr.size()};
