@@ -25,6 +25,14 @@
 #ifndef __TGMATH_H
 #define __TGMATH_H
 
+/*
+ * Allow additional definitions and implementation-defined values on Apple
+ * platforms.
+ */
+#if defined(__APPLE__) && __STDC_HOSTED__ && __has_include_next(<tgmath.h>)
+#  include_next <tgmath.h>
+#else
+
 /* C99 7.22 Type-generic math <tgmath.h>. */
 #include <math.h>
 
@@ -1371,4 +1379,5 @@ static long double
 #undef _TG_ATTRS
 
 #endif /* __cplusplus */
+#endif /* __has_include_next */
 #endif /* __TGMATH_H */

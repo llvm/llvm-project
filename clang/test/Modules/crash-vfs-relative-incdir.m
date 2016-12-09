@@ -1,14 +1,11 @@
-// REQUIRES: crash-recovery, shell
-
-// FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: mingw32
+// REQUIRES: crash-recovery, shell, system-darwin
 
 // RUN: rm -rf %t
-// RUN: mkdir -p %t/i %t/m %t
+// RUN: mkdir -p %t/m
+// RUN: cd %S/Inputs/crash-recovery/usr
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang -fsyntax-only -nostdinc %s \
-// RUN:     -I %S/Inputs/crash-recovery/usr/include -isysroot %/t/i/ \
+// RUN: %clang -fsyntax-only -nostdinc %s -Iinclude \
 // RUN:     -fmodules -fmodules-cache-path=%t/m/ 2>&1 | FileCheck %s
 
 // RUN: FileCheck --check-prefix=CHECKSRC %s -input-file %t/crash-vfs-*.m
@@ -31,7 +28,7 @@
 // CHECKSH-NEXT: # Original command: {{.*$}}
 // CHECKSH-NEXT: "-cc1"
 // CHECKSH: "-resource-dir"
-// CHECKSH: "-isysroot" "{{[^"]*}}/i/"
+// CHECKSH: "-I" "/[[INCPATH:.*]]/include"
 // CHECKSH: "crash-vfs-{{[^ ]*}}.m"
 // CHECKSH: "-ivfsoverlay" "crash-vfs-{{[^ ]*}}.cache/vfs/vfs.yaml"
 // CHECKSH: "-fmodules-cache-path=crash-vfs-{{[^ ]*}}.cache/repro-modules"
@@ -39,6 +36,7 @@
 // CHECKYAML: 'case-sensitive':
 // CHECKYAML-NEXT: 'use-external-names': 'false',
 // CHECKYAML-NEXT: 'overlay-relative': 'true',
+// CHECKYAML-NEXT: 'ignore-non-existent-contents': 'false'
 // CHECKYAML: 'type': 'directory'
 // CHECKYAML: 'name': "/[[PATH:.*]]/Inputs/crash-recovery/usr/include",
 // CHECKYAML-NEXT: 'contents': [
@@ -49,13 +47,11 @@
 // CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.map"
 // CHECKYAML-NEXT:   },
 
-// Test that reading the YAML file will yield the correct path after
-// the overlay dir is prefixed to access headers in .cache/vfs directory.
+// Run the reproducer script - regular exit code is enough to test it works.
+// Note that we don't yet support reusing the modules pcm; what we do
+// support is re-building the modules relying solely on the header files dumped
+// inside .cache/vfs, mapped by .cache/vfs/vfs.yaml.
 
-// RUN: unset FORCE_CLANG_DIAGNOSTICS_CRASH
-// RUN: %clang -E %s -I %S/Inputs/crash-recovery/usr/include -isysroot %/t/i/ \
-// RUN:     -ivfsoverlay %t/crash-vfs-*.cache/vfs/vfs.yaml -fmodules \
-// RUN:     -fmodules-cache-path=%t/m/ 2>&1 \
-// RUN:     | FileCheck %s --check-prefix=CHECKOVERLAY
-
-// CHECKOVERLAY: @import cstd.stdio; /* clang -E: implicit import for "/{{[^ ].*}}/usr/include/stdio.h" */
+// RUN: cd %t
+// RUN: chmod 755 crash-vfs-*.sh
+// RUN: ./crash-vfs-*.sh
