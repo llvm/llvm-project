@@ -7,21 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Memory.h"
+#include "lld/Support/Memory.h"
 
 using namespace llvm;
-using namespace lld;
-using namespace lld::elf;
 
 namespace lld {
-BumpPtrAllocator elf::BAlloc;
-StringSaver elf::Saver{elf::BAlloc};
+BumpPtrAllocator BAlloc;
+StringSaver Saver{BAlloc};
 
 SpecificAllocBase::SpecificAllocBase() { Instances.push_back(this); }
 
 std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
 
-void elf::freeArena() {
+void freeArena() {
   for (SpecificAllocBase *Alloc : SpecificAllocBase::Instances)
     Alloc->reset();
   BAlloc.Reset();

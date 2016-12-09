@@ -22,10 +22,10 @@ int main()
     int v = 12;
     assert ( std::exchange ( v, 23 ) == 12 );
     assert ( v == 23 );
-    assert ( std::exchange ( v, 67.2 ) == 23 );
+    assert ( std::exchange ( v, static_cast<short>(67) ) == 23 );
     assert ( v == 67 );
 
-    assert ((std::exchange<int, float> ( v, {} )) == 67 );
+    assert ((std::exchange<int, short> ( v, {} )) == 67 );
     assert ( v == 0 );
 
     }

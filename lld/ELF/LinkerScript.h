@@ -66,6 +66,8 @@ void readLinkerScript(MemoryBufferRef MB);
 // Parses a version script.
 void readVersionScript(MemoryBufferRef MB);
 
+void readDynamicList(MemoryBufferRef MB);
+
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
 enum SectionsCommandKind {
@@ -166,12 +168,12 @@ struct AssertCommand : BaseCommand {
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
 struct BytesDataCommand : BaseCommand {
-  BytesDataCommand(uint64_t Data, unsigned Size)
-      : BaseCommand(BytesDataKind), Data(Data), Size(Size) {}
+  BytesDataCommand(Expr E, unsigned Size)
+      : BaseCommand(BytesDataKind), Expression(E), Size(Size) {}
 
   static bool classof(const BaseCommand *C);
 
-  uint64_t Data;
+  Expr Expression;
   unsigned Offset;
   unsigned Size;
 };

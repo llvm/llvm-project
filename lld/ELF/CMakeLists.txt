@@ -14,7 +14,6 @@ add_lld_library(lldELF
   LTO.cpp
   LinkerScript.cpp
   MarkLive.cpp
-  Memory.cpp
   Mips.cpp
   OutputSections.cpp
   Relocations.cpp
@@ -50,6 +49,7 @@ add_lld_library(lldELF
   LINK_LIBS
   lldConfig
   lldCore
+  lldSupport
   ${PTHREAD_LIB}
 
   DEPENDS

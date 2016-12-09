@@ -27,8 +27,8 @@
 int main()
 {
     {
-        typedef std::pair<double, int> T0;
-        typedef std::tuple<int, double> T1;
+        typedef std::pair<long, int> T0;
+        typedef std::tuple<long long, double> T1;
         T0 t0(2, 3);
         T1 t1(std::allocator_arg, A1<int>(5), t0);
         assert(std::get<0>(t1) == 2);

@@ -44,6 +44,7 @@ const ThreadList &ThreadList::operator=(const ThreadList &rhs) {
     // Lock both mutexes to make sure neither side changes anyone on us
     // while the assignment occurs
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.GetMutex());
 
     m_process = rhs.m_process;
     m_stop_id = rhs.m_stop_id;
@@ -749,7 +750,7 @@ void ThreadList::Flush() {
     (*pos)->Flush();
 }
 
-std::recursive_mutex &ThreadList::GetMutex() {
+std::recursive_mutex &ThreadList::GetMutex() const {
   return m_process->m_thread_mutex;
 }
 

@@ -48,11 +48,11 @@ public:
     return ThreadIterable(m_threads, GetMutex());
   }
 
-  virtual std::recursive_mutex &GetMutex() { return m_mutex; }
+  virtual std::recursive_mutex &GetMutex() const { return m_mutex; }
 
 protected:
   collection m_threads;
-  std::recursive_mutex m_mutex;
+  mutable std::recursive_mutex m_mutex;
 };
 
 } // namespace lldb_private

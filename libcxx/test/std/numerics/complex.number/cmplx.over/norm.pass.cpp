@@ -24,7 +24,7 @@ void
 test(T x, typename std::enable_if<std::is_integral<T>::value>::type* = 0)
 {
     static_assert((std::is_same<decltype(std::norm(x)), double>::value), "");
-    assert(std::norm(x) == norm(std::complex<double>(x, 0)));
+    assert(std::norm(x) == norm(std::complex<double>(static_cast<double>(x), 0)));
 }
 
 template <class T>

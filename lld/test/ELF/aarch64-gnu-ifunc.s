@@ -22,8 +22,8 @@
 // CHECK-NEXT: }
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     0x30018 R_AARCH64_IRELATIVE
-// CHECK-NEXT:     0x30020 R_AARCH64_IRELATIVE
+// CHECK-NEXT:     0x30000 R_AARCH64_IRELATIVE
+// CHECK-NEXT:     0x30008 R_AARCH64_IRELATIVE
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:      Symbols [
@@ -98,34 +98,27 @@
 
 // 344 = 0x158
 // 392 = 0x188
-// DISASM:      Disassembly of section .text:
+
+// DISASM: Disassembly of section .text:
 // DISASM-NEXT: foo:
 // DISASM-NEXT:  20000: c0 03 5f d6 ret
-// DISASM:      bar:
+// DISASM: bar:
 // DISASM-NEXT:  20004: c0 03 5f d6 ret
 // DISASM:      _start:
-// DISASM-NEXT:  20008: 0e 00 00 94 bl #56
-// DISASM-NEXT:  2000c: 11 00 00 94 bl #68
-// DISASM-NEXT:  20010: 42 60 05 91 add x2, x2, #344
-// DISASM-NEXT:  20014: 42 20 06 91 add x2, x2, #392
+// DISASM-NEXT:  20008: 06 00 00 94 bl #24
+// DISASM-NEXT:  2000c: 09 00 00 94     bl      #36
+// DISASM-NEXT:  20010: 42 60 05 91     add     x2, x2, #344
+// DISASM-NEXT:  20014: 42 20 06 91     add     x2, x2, #392
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:  20020: f0 7b bf a9 stp x16, x30, [sp, #-16]!
-// DISASM-NEXT:  20024: 90 00 00 90 adrp x16, #65536
-// DISASM-NEXT:  20028: 11 0a 40 f9 ldr x17, [x16, #16]
-// DISASM-NEXT:  2002c: 10 42 00 91 add x16, x16, #16
-// DISASM-NEXT:  20030: 20 02 1f d6 br x17
-// DISASM-NEXT:  20034: 1f 20 03 d5 nop
-// DISASM-NEXT:  20038: 1f 20 03 d5 nop
-// DISASM-NEXT:  2003c: 1f 20 03 d5 nop
-// DISASM-NEXT:  20040: 90 00 00 90 adrp x16, #65536
-// DISASM-NEXT:  20044: 11 0e 40 f9 ldr x17, [x16, #24]
-// DISASM-NEXT:  20048: 10 62 00 91 add x16, x16, #24
-// DISASM-NEXT:  2004c: 20 02 1f d6 br x17
-// DISASM-NEXT:  20050: 90 00 00 90 adrp x16, #65536
-// DISASM-NEXT:  20054: 11 12 40 f9 ldr x17, [x16, #32]
-// DISASM-NEXT:  20058: 10 82 00 91 add x16, x16, #32
-// DISASM-NEXT:  2005c: 20 02 1f d6 br x17
+// DISASM-NEXT:  20020: 90 00 00 90 adrp x16, #65536
+// DISASM-NEXT:  20024: 11 02 40 f9 ldr x17, [x16]
+// DISASM-NEXT:  20028: 10 02 00 91 add x16, x16, #0
+// DISASM-NEXT:  2002c: 20 02 1f d6 br x17
+// DISASM-NEXT:  20030: 90 00 00 90 adrp x16, #65536
+// DISASM-NEXT:  20034: 11 06 40 f9 ldr x17, [x16, #8]
+// DISASM-NEXT:  20038: 10 22 00 91 add x16, x16, #8
+// DISASM-NEXT:  2003c: 20 02 1f d6 br x17
 
 .text
 .type foo STT_GNU_IFUNC

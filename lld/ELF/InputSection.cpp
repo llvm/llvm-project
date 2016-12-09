@@ -13,13 +13,12 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "Relocations.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-
+#include "lld/Support/Memory.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include <mutex>

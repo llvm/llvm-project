@@ -14,6 +14,7 @@
 #include <forward_list>
 #include <cassert>
 #include <iterator>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -21,8 +22,8 @@
 typedef int T;
 const T t1[] = {0, 1, 2, 3, 4, 5, 6, 7};
 const T t2[] = {10, 11, 12};
-const int size_t1 = std::end(t1) - std::begin(t1);
-const int size_t2 = std::end(t2) - std::begin(t2);
+const std::ptrdiff_t size_t1 = std::end(t1) - std::begin(t1);
+const std::ptrdiff_t size_t2 = std::end(t2) - std::begin(t2);
 
 template <class C>
 void

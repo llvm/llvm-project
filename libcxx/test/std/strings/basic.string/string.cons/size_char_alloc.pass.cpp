@@ -103,8 +103,8 @@ int main()
     test(100, 'a');
     test(100, 'a', A(2));
 
-    test(100, 65);
-    test(100, 65, A(3));
+    test(static_cast<char>(100), static_cast<char>(65));
+    test(static_cast<char>(100), static_cast<char>(65), A(3));
     }
 #if TEST_STD_VER >= 11
     {
@@ -123,8 +123,8 @@ int main()
     test(100, 'a');
     test(100, 'a', A());
 
-    test(100, 65);
-    test(100, 65, A());
+    test(static_cast<char>(100), static_cast<char>(65));
+    test(static_cast<char>(100), static_cast<char>(65), A());
     }
 #endif
 }

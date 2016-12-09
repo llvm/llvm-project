@@ -477,6 +477,12 @@ class _LIBCPP_TYPE_VIS_ONLY tuple
 
     base base_;
 
+#if defined(_LIBCPP_ENABLE_TUPLE_IMPLICIT_REDUCED_ARITY_EXTENSION)
+    static constexpr bool _EnableImplicitReducedArityExtension = true;
+#else
+    static constexpr bool _EnableImplicitReducedArityExtension = false;
+#endif
+
     template <class ..._Args>
     struct _PackExpandsToThisTuple : false_type {};
 
@@ -703,11 +709,17 @@ public:
                ) {}
 
     template <class ..._Up,
+              bool _PackIsTuple = _PackExpandsToThisTuple<_Up...>::value,
               typename enable_if
                       <
                          _CheckArgsConstructor<
-                             sizeof...(_Up) <= sizeof...(_Tp)
-                             && !_PackExpandsToThisTuple<_Up...>::value
+                             sizeof...(_Up) == sizeof...(_Tp)
+                             && !_PackIsTuple
+                         >::template __enable_implicit<_Up...>() ||
+                        _CheckArgsConstructor<
+                            _EnableImplicitReducedArityExtension
+                            && sizeof...(_Up) < sizeof...(_Tp)
+                            && !_PackIsTuple
                          >::template __enable_implicit<_Up...>(),
                          bool
                       >::type = false
@@ -735,7 +747,12 @@ public:
                          _CheckArgsConstructor<
                              sizeof...(_Up) <= sizeof...(_Tp)
                              && !_PackExpandsToThisTuple<_Up...>::value
-                         >::template __enable_explicit<_Up...>(),
+                         >::template __enable_explicit<_Up...>() ||
+                         _CheckArgsConstructor<
+                            !_EnableImplicitReducedArityExtension
+                            && sizeof...(_Up) < sizeof...(_Tp)
+                            && !_PackExpandsToThisTuple<_Up...>()
+                         >::template __enable_implicit<_Up...>(),
                          bool
                       >::type = false
              >
