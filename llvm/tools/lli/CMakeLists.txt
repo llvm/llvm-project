@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
   IRReader
-  Instrumentation
   Interpreter
   MC
   MCJIT

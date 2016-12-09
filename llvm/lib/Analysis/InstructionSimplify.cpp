@@ -1127,6 +1127,10 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (match(Op1, m_Undef()))
     return Op1;
 
+  // X / 1.0 -> X
+  if (match(Op1, m_FPOne()))
+    return Op0;
+
   // 0 / X -> 0
   // Requires that NaNs are off (X could be zero) and signed zeroes are
   // ignored (X could be positive or negative, so the output sign is unknown).
@@ -4093,6 +4097,8 @@ static Value *SimplifyFPBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return SimplifyFSubInst(LHS, RHS, FMF, Q, MaxRecurse);
   case Instruction::FMul:
     return SimplifyFMulInst(LHS, RHS, FMF, Q, MaxRecurse);
+  case Instruction::FDiv:
+    return SimplifyFDivInst(LHS, RHS, FMF, Q, MaxRecurse);
   default:
     return SimplifyBinOp(Opcode, LHS, RHS, Q, MaxRecurse);
   }

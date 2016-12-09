@@ -466,6 +466,18 @@ def X86FnmsubRnd    : SDNode<"X86ISD::FNMSUB_RND",    SDTFmaRound>;
 def X86FmaddsubRnd  : SDNode<"X86ISD::FMADDSUB_RND",  SDTFmaRound>;
 def X86FmsubaddRnd  : SDNode<"X86ISD::FMSUBADD_RND",  SDTFmaRound>;
 
+// Scalar FMA intrinsics with passthru bits in operand 1.
+def X86FmaddRnds1   : SDNode<"X86ISD::FMADDS1_RND",     SDTFmaRound>;
+def X86FnmaddRnds1  : SDNode<"X86ISD::FNMADDS1_RND",    SDTFmaRound>;
+def X86FmsubRnds1   : SDNode<"X86ISD::FMSUBS1_RND",     SDTFmaRound>;
+def X86FnmsubRnds1  : SDNode<"X86ISD::FNMSUBS1_RND",    SDTFmaRound>;
+
+// Scalar FMA intrinsics with passthru bits in operand 3.
+def X86FmaddRnds3   : SDNode<"X86ISD::FMADDS3_RND",     SDTFmaRound>;
+def X86FnmaddRnds3  : SDNode<"X86ISD::FNMADDS3_RND",    SDTFmaRound>;
+def X86FmsubRnds3   : SDNode<"X86ISD::FMSUBS3_RND",     SDTFmaRound>;
+def X86FnmsubRnds3  : SDNode<"X86ISD::FNMSUBS3_RND",    SDTFmaRound>;
+
 def x86vpmadd52l     : SDNode<"X86ISD::VPMADD52L",     SDTFma>;
 def x86vpmadd52h     : SDNode<"X86ISD::VPMADD52H",     SDTFma>;
 

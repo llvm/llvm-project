@@ -203,6 +203,14 @@ bool SIRegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const
   return true;
 }
 
+int64_t SIRegisterInfo::getMUBUFInstrOffset(const MachineInstr *MI) const {
+  assert(SIInstrInfo::isMUBUF(*MI));
+
+  int OffIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
+                                          AMDGPU::OpName::offset);
+  return MI->getOperand(OffIdx).getImm();
+}
+
 int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
                                                  int Idx) const {
   if (!SIInstrInfo::isMUBUF(*MI))
@@ -212,13 +220,16 @@ int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
                                            AMDGPU::OpName::vaddr) &&
          "Should never see frame index on non-address operand");
 
-  int OffIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                          AMDGPU::OpName::offset);
-  return MI->getOperand(OffIdx).getImm();
+  return getMUBUFInstrOffset(MI);
 }
 
 bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
-  return MI->mayLoadOrStore();
+  if (!MI->mayLoadOrStore())
+    return false;
+
+  int64_t FullOffset = Offset + getMUBUFInstrOffset(MI);
+
+  return !isUInt<12>(FullOffset);
 }
 
 void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
@@ -295,7 +306,12 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                         unsigned BaseReg,
                                         int64_t Offset) const {
-  return SIInstrInfo::isMUBUF(*MI) && isUInt<12>(Offset);
+  if (!SIInstrInfo::isMUBUF(*MI))
+    return false;
+
+  int64_t NewOffset = Offset + getMUBUFInstrOffset(MI);
+
+  return isUInt<12>(NewOffset);
 }
 
 const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
@@ -1165,6 +1181,8 @@ unsigned SIRegisterInfo::getNumAddressableSGPRs(const SISubtarget &ST) const {
 unsigned SIRegisterInfo::getNumReservedSGPRs(const SISubtarget &ST) const {
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
     return 6; // VCC, FLAT_SCRATCH, XNACK.
+  if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS)
+    return 4; // VCC, FLAT_SCRATCH.
   return 2; // VCC.
 }
 

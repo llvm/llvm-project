@@ -1,4 +1,4 @@
-; RUN: llc -asm-verbose=false -mtriple=mipsel-linux-gnueabi -relocation-model=pic < %s | FileCheck %s -check-prefix=CHECK-LIBCALL
+; RUN: llc -asm-verbose=false -mtriple=mipsel-linux-gnu -relocation-model=pic < %s | FileCheck %s -check-prefix=CHECK-LIBCALL
 
 ; CHECK-LIBCALL-LABEL: test_fadd:
 ; CHECK-LIBCALL: %call16(__gnu_h2f_ieee)

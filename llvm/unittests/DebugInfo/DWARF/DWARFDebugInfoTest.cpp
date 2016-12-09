@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../lib/CodeGen/DwarfGenerator.h"
+#include "DwarfGenerator.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"

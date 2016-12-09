@@ -89,6 +89,9 @@ public:
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
+  void CrashResistantMerge(const std::vector<std::string> &Args,
+                           const std::vector<std::string> &Corpora);
+  void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
   // Returns a subset of 'Extra' that adds coverage to 'Initial'.
   UnitVector FindExtraUnits(const UnitVector &Initial, const UnitVector &Extra);
   MutationDispatcher &GetMD() { return MD; }

@@ -706,9 +706,22 @@ def : Pat <
   (S_MOV_B32 imm:$imm)
 >;
 
+// FIXME: Workaround for ordering issue with peephole optimizer where
+// a register class copy interferes with immediate folding.  Should
+// use s_mov_b32, which can be shrunk to s_movk_i32
+def : Pat <
+  (VGPRImm<(f16 fpimm)>:$imm),
+  (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
 def : Pat <
   (f32 fpimm:$imm),
   (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : Pat <
+  (f16 fpimm:$imm),
+  (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : Pat <

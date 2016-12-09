@@ -56,6 +56,8 @@ public:
   bool requiresVirtualBaseRegisters(const MachineFunction &Fn) const override;
   bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
 
+  int64_t getMUBUFInstrOffset(const MachineInstr *MI) const;
+
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
 

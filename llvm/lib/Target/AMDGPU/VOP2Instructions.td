@@ -349,7 +349,7 @@ defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP_F16_F16_F16, fmul>;
 def V_MADAK_F16 : VOP2_Pseudo <"v_madak_f16", VOP_MADAK_F16>;
 defm V_ADD_U16 : VOP2Inst <"v_add_u16", VOP_I16_I16_I16>;
 defm V_SUB_U16 : VOP2Inst <"v_sub_u16" , VOP_I16_I16_I16>;
-defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16>;
+defm V_SUBREV_U16 : VOP2Inst <"v_subrev_u16", VOP_I16_I16_I16, null_frag, "v_sub_u16">;
 defm V_MUL_LO_U16 : VOP2Inst <"v_mul_lo_u16", VOP_I16_I16_I16>;
 defm V_MAX_F16 : VOP2Inst <"v_max_f16", VOP_F16_F16_F16, fmaxnum>;
 defm V_MIN_F16 : VOP2Inst <"v_min_f16", VOP_F16_F16_F16, fminnum>;
@@ -416,27 +416,27 @@ class ZExt_i16_i1_Pat <SDNode ext> : Pat <
 
 let Predicates = [isVI] in {
 
-defm : Arithmetic_i16_Pats<add, V_ADD_U16_e32>;
-defm : Arithmetic_i16_Pats<mul, V_MUL_LO_U16_e32>;
-defm : Arithmetic_i16_Pats<sub, V_SUB_U16_e32>;
-defm : Arithmetic_i16_Pats<smin, V_MIN_I16_e32>;
-defm : Arithmetic_i16_Pats<smax, V_MAX_I16_e32>;
-defm : Arithmetic_i16_Pats<umin, V_MIN_U16_e32>;
-defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e32>;
+defm : Arithmetic_i16_Pats<add, V_ADD_U16_e64>;
+defm : Arithmetic_i16_Pats<mul, V_MUL_LO_U16_e64>;
+defm : Arithmetic_i16_Pats<sub, V_SUB_U16_e64>;
+defm : Arithmetic_i16_Pats<smin, V_MIN_I16_e64>;
+defm : Arithmetic_i16_Pats<smax, V_MAX_I16_e64>;
+defm : Arithmetic_i16_Pats<umin, V_MIN_U16_e64>;
+defm : Arithmetic_i16_Pats<umax, V_MAX_U16_e64>;
 
 def : Pat <
   (and i16:$src0, i16:$src1),
-  (V_AND_B32_e32 $src0, $src1)
+  (V_AND_B32_e64 $src0, $src1)
 >;
 
 def : Pat <
   (or i16:$src0, i16:$src1),
-  (V_OR_B32_e32 $src0, $src1)
+  (V_OR_B32_e64 $src0, $src1)
 >;
 
 def : Pat <
   (xor i16:$src0, i16:$src1),
-  (V_XOR_B32_e32 $src0, $src1)
+  (V_XOR_B32_e64 $src0, $src1)
 >;
 
 defm : Bits_OpsRev_i16_Pats<shl, V_LSHLREV_B16_e32>;

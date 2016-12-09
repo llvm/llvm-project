@@ -5580,14 +5580,16 @@ multiclass avx512_fma3s_common<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
 }// Constraints = "$src1 = $dst"
 
 multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
-         string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd, X86VectorVTInfo _ ,
-                                                                  string SUFF> {
+                            string OpcodeStr, SDNode OpNode, SDNode OpNodeRnds1,
+                            SDNode OpNodeRnds3, X86VectorVTInfo _ , string SUFF> {
 
   defm NAME#213#SUFF#Z: avx512_fma3s_common<opc213, OpcodeStr#"213"#_.Suffix , _ ,
-                (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src1, _.RC:$src3, (i32 FROUND_CURRENT))),
-                (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src1,
+                // Operands for intrinsic are in 123 order to preserve passthu
+                // semantics.
+                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src2, _.RC:$src3, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src2,
                          (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))), (i32 FROUND_CURRENT))),
-                (_.VT ( OpNodeRnd _.RC:$src2, _.RC:$src1, _.RC:$src3,
+                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src2, _.RC:$src3,
                          (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src1,
                          _.FRC:$src3))),
@@ -5595,11 +5597,11 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                          (_.ScalarLdFrag addr:$src3))))>;
 
   defm NAME#231#SUFF#Z: avx512_fma3s_common<opc231, OpcodeStr#"231"#_.Suffix , _ ,
-                (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src3, _.RC:$src1, (i32 FROUND_CURRENT))),
-                (_.VT (OpNodeRnd _.RC:$src2,
+                (_.VT (OpNodeRnds3 _.RC:$src2, _.RC:$src3, _.RC:$src1, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodeRnds3 _.RC:$src2,
                        (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))),
                               _.RC:$src1, (i32 FROUND_CURRENT))),
-                (_.VT ( OpNodeRnd _.RC:$src2, _.RC:$src3, _.RC:$src1,
+                (_.VT ( OpNodeRnds3 _.RC:$src2, _.RC:$src3, _.RC:$src1,
                                   (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src3,
                                           _.FRC:$src1))),
@@ -5607,11 +5609,11 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                             (_.ScalarLdFrag addr:$src3), _.FRC:$src1)))>;
 
   defm NAME#132#SUFF#Z: avx512_fma3s_common<opc132, OpcodeStr#"132"#_.Suffix , _ ,
-                (_.VT (OpNodeRnd _.RC:$src1, _.RC:$src3, _.RC:$src2, (i32 FROUND_CURRENT))),
-                (_.VT (OpNodeRnd _.RC:$src1,
+                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src3, _.RC:$src2, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodeRnds1 _.RC:$src1,
                        (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))),
                               _.RC:$src2, (i32 FROUND_CURRENT))),
-                (_.VT ( OpNodeRnd _.RC:$src1, _.RC:$src3, _.RC:$src2,
+                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src3, _.RC:$src2,
                          (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1, _.FRC:$src3,
                          _.FRC:$src2))),
@@ -5620,21 +5622,26 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
 }
 
 multiclass avx512_fma3s<bits<8> opc213, bits<8> opc231, bits<8> opc132,
-                             string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd>{
+                        string OpcodeStr, SDNode OpNode, SDNode OpNodeRnds1,
+                        SDNode OpNodeRnds3> {
   let Predicates = [HasAVX512] in {
     defm NAME : avx512_fma3s_all<opc213, opc231, opc132, OpcodeStr, OpNode,
-                                   OpNodeRnd, f32x_info, "SS">,
-                                   EVEX_CD8<32, CD8VT1>, VEX_LIG;
+                                 OpNodeRnds1, OpNodeRnds3, f32x_info, "SS">,
+                                 EVEX_CD8<32, CD8VT1>, VEX_LIG;
     defm NAME : avx512_fma3s_all<opc213, opc231, opc132, OpcodeStr, OpNode,
-                                   OpNodeRnd, f64x_info, "SD">,
-                                   EVEX_CD8<64, CD8VT1>, VEX_LIG, VEX_W;
+                                 OpNodeRnds1, OpNodeRnds3, f64x_info, "SD">,
+                                 EVEX_CD8<64, CD8VT1>, VEX_LIG, VEX_W;
   }
 }
 
-defm VFMADD  : avx512_fma3s<0xA9, 0xB9, 0x99, "vfmadd", X86Fmadd, X86FmaddRnd>;
-defm VFMSUB  : avx512_fma3s<0xAB, 0xBB, 0x9B, "vfmsub", X86Fmsub, X86FmsubRnd>;
-defm VFNMADD : avx512_fma3s<0xAD, 0xBD, 0x9D, "vfnmadd", X86Fnmadd, X86FnmaddRnd>;
-defm VFNMSUB : avx512_fma3s<0xAF, 0xBF, 0x9F, "vfnmsub", X86Fnmsub, X86FnmsubRnd>;
+defm VFMADD  : avx512_fma3s<0xA9, 0xB9, 0x99, "vfmadd", X86Fmadd, X86FmaddRnds1,
+                            X86FmaddRnds3>;
+defm VFMSUB  : avx512_fma3s<0xAB, 0xBB, 0x9B, "vfmsub", X86Fmsub, X86FmsubRnds1,
+                            X86FmsubRnds3>;
+defm VFNMADD : avx512_fma3s<0xAD, 0xBD, 0x9D, "vfnmadd", X86Fnmadd,
+                            X86FnmaddRnds1, X86FnmaddRnds3>;
+defm VFNMSUB : avx512_fma3s<0xAF, 0xBF, 0x9F, "vfnmsub", X86Fnmsub,
+                            X86FnmsubRnds1, X86FnmsubRnds3>;
 
 //===----------------------------------------------------------------------===//
 // AVX-512  Packed Multiply of Unsigned 52-bit Integers and Add the Low 52-bit IFMA

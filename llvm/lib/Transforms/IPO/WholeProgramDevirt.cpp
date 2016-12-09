@@ -293,6 +293,7 @@ struct DevirtModule {
   void buildTypeIdentifierMap(
       std::vector<VTableBits> &Bits,
       DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap);
+  Constant *getPointerAtOffset(Constant *I, uint64_t Offset);
   bool
   tryFindVirtualCallTargets(std::vector<VirtualCallTarget> &TargetsForSlot,
                             const std::set<TypeMemberInfo> &TypeMemberInfos,
@@ -382,6 +383,38 @@ void DevirtModule::buildTypeIdentifierMap(
   }
 }
 
+Constant *DevirtModule::getPointerAtOffset(Constant *I, uint64_t Offset) {
+  if (I->getType()->isPointerTy()) {
+    if (Offset == 0)
+      return I;
+    return nullptr;
+  }
+
+  const DataLayout &DL = M.getDataLayout();
+
+  if (auto *C = dyn_cast<ConstantStruct>(I)) {
+    const StructLayout *SL = DL.getStructLayout(C->getType());
+    if (Offset >= SL->getSizeInBytes())
+      return nullptr;
+
+    unsigned Op = SL->getElementContainingOffset(Offset);
+    return getPointerAtOffset(cast<Constant>(I->getOperand(Op)),
+                              Offset - SL->getElementOffset(Op));
+  }
+  if (auto *C = dyn_cast<ConstantArray>(I)) {
+    ArrayType *VTableTy = C->getType();
+    uint64_t ElemSize = DL.getTypeAllocSize(VTableTy->getElementType());
+
+    unsigned Op = Offset / ElemSize;
+    if (Op >= C->getNumOperands())
+      return nullptr;
+
+    return getPointerAtOffset(cast<Constant>(I->getOperand(Op)),
+                              Offset % ElemSize);
+  }
+  return nullptr;
+}
+
 bool DevirtModule::tryFindVirtualCallTargets(
     std::vector<VirtualCallTarget> &TargetsForSlot,
     const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset) {
@@ -389,22 +422,12 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    auto Init = dyn_cast<ConstantArray>(TM.Bits->GV->getInitializer());
-    if (!Init)
-      return false;
-    ArrayType *VTableTy = Init->getType();
-
-    uint64_t ElemSize =
-        M.getDataLayout().getTypeAllocSize(VTableTy->getElementType());
-    uint64_t GlobalSlotOffset = TM.Offset + ByteOffset;
-    if (GlobalSlotOffset % ElemSize != 0)
+    Constant *Ptr = getPointerAtOffset(TM.Bits->GV->getInitializer(),
+                                       TM.Offset + ByteOffset);
+    if (!Ptr)
       return false;
 
-    unsigned Op = GlobalSlotOffset / ElemSize;
-    if (Op >= Init->getNumOperands())
-      return false;
-
-    auto Fn = dyn_cast<Function>(Init->getOperand(Op)->stripPointerCasts());
+    auto Fn = dyn_cast<Function>(Ptr->stripPointerCasts());
     if (!Fn)
       return false;
 

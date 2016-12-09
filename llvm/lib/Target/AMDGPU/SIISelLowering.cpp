@@ -277,7 +277,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::i16, Promote);
 
     // F16 - Constant Actions.
-    setOperationAction(ISD::ConstantFP, MVT::f16, Custom);
+    setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
 
     // F16 - Load/Store Actions.
     setOperationAction(ISD::LOAD, MVT::f16, Promote);
@@ -608,6 +608,13 @@ static bool isFlatGlobalAddrSpace(unsigned AS) {
 bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   return isFlatGlobalAddrSpace(SrcAS) && isFlatGlobalAddrSpace(DestAS);
+}
+
+bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
+  const MemSDNode *MemNode = cast<MemSDNode>(N);
+  const Value *Ptr = MemNode->getMemOperand()->getValue();
+  const Instruction *I = dyn_cast<Instruction>(Ptr);
+  return I && I->getMetadata("amdgpu.noclobber");
 }
 
 bool SITargetLowering::isCheapAddrSpaceCast(unsigned SrcAS,
@@ -1841,9 +1848,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INTRINSIC_VOID: return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::ADDRSPACECAST: return lowerADDRSPACECAST(Op, DAG);
   case ISD::TRAP: return lowerTRAP(Op, DAG);
-
-  case ISD::ConstantFP:
-    return lowerConstantFP(Op, DAG);
   case ISD::FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
   }
@@ -2046,15 +2050,6 @@ SDValue SITargetLowering::getFPExtOrFPTrunc(SelectionDAG &DAG,
   return Op.getValueType().bitsLE(VT) ?
       DAG.getNode(ISD::FP_EXTEND, DL, VT, Op) :
       DAG.getNode(ISD::FTRUNC, DL, VT, Op);
-}
-
-SDValue SITargetLowering::lowerConstantFP(SDValue Op, SelectionDAG &DAG) const {
-  if (ConstantFPSDNode *FP = dyn_cast<ConstantFPSDNode>(Op)) {
-    return DAG.getConstant(FP->getValueAPF().bitcastToAPInt().getZExtValue(),
-                           SDLoc(Op), MVT::i32);
-  }
-
-  return SDValue();
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -2773,11 +2768,19 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     if (isMemOpUniform(Load))
       return SDValue();
     // Non-uniform loads will be selected to MUBUF instructions, so they
-    // have the same legalization requires ments as global and private
+    // have the same legalization requirements as global and private
     // loads.
     //
     LLVM_FALLTHROUGH;
-  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::GLOBAL_ADDRESS: {
+    if (isMemOpUniform(Load) && isMemOpHasNoClobberedMemOperand(Load))
+      return SDValue();
+    // Non-uniform loads will be selected to MUBUF instructions, so they
+    // have the same legalization requirements as global and private
+    // loads.
+    //
+  }
+    LLVM_FALLTHROUGH;
   case AMDGPUAS::FLAT_ADDRESS:
     if (NumElements > 4)
       return SplitVectorLoad(Op, DAG);

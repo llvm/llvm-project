@@ -219,8 +219,8 @@ static void WorkerThread(const std::string &Cmd, std::atomic<int> *Counter,
   }
 }
 
-static std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
-                                     const char *X1, const char *X2) {
+std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
+                              const char *X1, const char *X2) {
   std::string Cmd;
   for (auto &S : Args) {
     if (FlagValue(S.c_str(), X1) || FlagValue(S.c_str(), X2))
@@ -228,11 +228,6 @@ static std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
     Cmd += S + " ";
   }
   return Cmd;
-}
-
-static std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
-                                     const char *X) {
-  return CloneArgsWithoutX(Args, X, X);
 }
 
 static int RunInMultipleProcesses(const std::vector<std::string> &Args,
@@ -496,6 +491,16 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (Options.MaxLen == 0)
       F->SetMaxInputLen(kMaxSaneLen);
     F->Merge(*Inputs);
+    exit(0);
+  }
+
+  if (Flags.experimental_merge) {
+    if (Options.MaxLen == 0)
+      F->SetMaxInputLen(kMaxSaneLen);
+    if (Flags.merge_control_file)
+      F->CrashResistantMergeInternalStep(Flags.merge_control_file);
+    else
+      F->CrashResistantMerge(Args, *Inputs);
     exit(0);
   }
 

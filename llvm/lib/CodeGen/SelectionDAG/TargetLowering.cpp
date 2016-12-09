@@ -3093,24 +3093,29 @@ verifyReturnAddressArgumentIsConstant(SDValue Op, SelectionDAG &DAG) const {
 // Legalization Utilities
 //===----------------------------------------------------------------------===//
 
-bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
-                               SelectionDAG &DAG, SDValue LL, SDValue LH,
-                               SDValue RL, SDValue RH) const {
-  EVT VT = N->getValueType(0);
-  SDLoc dl(N);
+bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, SDLoc dl,
+                                    SDValue LHS, SDValue RHS,
+                                    SmallVectorImpl<SDValue> &Result,
+                                    EVT HiLoVT, SelectionDAG &DAG,
+                                    MulExpansionKind Kind, SDValue LL,
+                                    SDValue LH, SDValue RL, SDValue RH) const {
+  assert(Opcode == ISD::MUL || Opcode == ISD::UMUL_LOHI ||
+         Opcode == ISD::SMUL_LOHI);
 
-  bool HasMULHS = isOperationLegalOrCustom(ISD::MULHS, HiLoVT);
-  bool HasMULHU = isOperationLegalOrCustom(ISD::MULHU, HiLoVT);
-  bool HasSMUL_LOHI = isOperationLegalOrCustom(ISD::SMUL_LOHI, HiLoVT);
-  bool HasUMUL_LOHI = isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT);
+  bool HasMULHS = (Kind == MulExpansionKind::Always) ||
+                  isOperationLegalOrCustom(ISD::MULHS, HiLoVT);
+  bool HasMULHU = (Kind == MulExpansionKind::Always) ||
+                  isOperationLegalOrCustom(ISD::MULHU, HiLoVT);
+  bool HasSMUL_LOHI = (Kind == MulExpansionKind::Always) ||
+                      isOperationLegalOrCustom(ISD::SMUL_LOHI, HiLoVT);
+  bool HasUMUL_LOHI = (Kind == MulExpansionKind::Always) ||
+                      isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT);
 
   if (!HasMULHU && !HasMULHS && !HasUMUL_LOHI && !HasSMUL_LOHI)
     return false;
 
   unsigned OuterBitSize = VT.getScalarSizeInBits();
   unsigned InnerBitSize = HiLoVT.getScalarSizeInBits();
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
   unsigned LHSSB = DAG.ComputeNumSignBits(LHS);
   unsigned RHSSB = DAG.ComputeNumSignBits(RHS);
 
@@ -3134,6 +3139,8 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
     return false;
   };
 
+  SDValue Lo, Hi;
+
   if (!LL.getNode() && !RL.getNode() &&
       isOperationLegalOrCustom(ISD::TRUNCATE, HiLoVT)) {
     LL = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, LHS);
@@ -3144,20 +3151,41 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
     return false;
 
   APInt HighMask = APInt::getHighBitsSet(OuterBitSize, InnerBitSize);
-  if (DAG.MaskedValueIsZero(N->getOperand(0), HighMask) &&
-      DAG.MaskedValueIsZero(N->getOperand(1), HighMask)) {
+  if (DAG.MaskedValueIsZero(LHS, HighMask) &&
+      DAG.MaskedValueIsZero(RHS, HighMask)) {
     // The inputs are both zero-extended.
-    if (MakeMUL_LOHI(LL, RL, Lo, Hi, false))
+    if (MakeMUL_LOHI(LL, RL, Lo, Hi, false)) {
+      Result.push_back(Lo);
+      Result.push_back(Hi);
+      if (Opcode != ISD::MUL) {
+        SDValue Zero = DAG.getConstant(0, dl, HiLoVT);
+        Result.push_back(Zero);
+        Result.push_back(Zero);
+      }
       return true;
-  }
-  if (LHSSB > InnerBitSize && RHSSB > InnerBitSize) {
-    // The input values are both sign-extended.
-    if (MakeMUL_LOHI(LL, RL, Lo, Hi, true))
-      return true;
+    }
   }
 
-  SDValue Shift = DAG.getConstant(OuterBitSize - InnerBitSize, dl,
-                                  getShiftAmountTy(VT, DAG.getDataLayout()));
+  if (!VT.isVector() && Opcode == ISD::MUL && LHSSB > InnerBitSize &&
+      RHSSB > InnerBitSize) {
+    // The input values are both sign-extended.
+    // TODO non-MUL case?
+    if (MakeMUL_LOHI(LL, RL, Lo, Hi, true)) {
+      Result.push_back(Lo);
+      Result.push_back(Hi);
+      return true;
+    }
+  }
+
+  unsigned ShiftAmount = OuterBitSize - InnerBitSize;
+  EVT ShiftAmountTy = getShiftAmountTy(VT, DAG.getDataLayout());
+  if (APInt::getMaxValue(ShiftAmountTy.getSizeInBits()).ult(ShiftAmount)) {
+    // FIXME getShiftAmountTy does not always return a sensible result when VT
+    // is an illegal type, and so the type may be too small to fit the shift
+    // amount. Override it with i32. The shift will have to be legalized.
+    ShiftAmountTy = MVT::i32;
+  }
+  SDValue Shift = DAG.getConstant(ShiftAmount, dl, ShiftAmountTy);
 
   if (!LH.getNode() && !RH.getNode() &&
       isOperationLegalOrCustom(ISD::SRL, VT) &&
@@ -3171,15 +3199,84 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
   if (!LH.getNode())
     return false;
 
-  if (MakeMUL_LOHI(LL, RL, Lo, Hi, false)) {
+  if (!MakeMUL_LOHI(LL, RL, Lo, Hi, false))
+    return false;
+
+  Result.push_back(Lo);
+
+  if (Opcode == ISD::MUL) {
     RH = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RH);
     LH = DAG.getNode(ISD::MUL, dl, HiLoVT, LH, RL);
     Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, RH);
     Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, LH);
+    Result.push_back(Hi);
     return true;
   }
 
-  return false;
+  // Compute the full width result.
+  auto Merge = [&](SDValue Lo, SDValue Hi) -> SDValue {
+    Lo = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Lo);
+    Hi = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Hi);
+    Hi = DAG.getNode(ISD::SHL, dl, VT, Hi, Shift);
+    return DAG.getNode(ISD::OR, dl, VT, Lo, Hi);
+  };
+
+  SDValue Next = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Hi);
+  if (!MakeMUL_LOHI(LL, RH, Lo, Hi, false))
+    return false;
+
+  // This is effectively the add part of a multiply-add of half-sized operands,
+  // so it cannot overflow.
+  Next = DAG.getNode(ISD::ADD, dl, VT, Next, Merge(Lo, Hi));
+
+  if (!MakeMUL_LOHI(LH, RL, Lo, Hi, false))
+    return false;
+
+  Next = DAG.getNode(ISD::ADDC, dl, DAG.getVTList(VT, MVT::Glue), Next,
+                     Merge(Lo, Hi));
+
+  SDValue Carry = Next.getValue(1);
+  Result.push_back(DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, Next));
+  Next = DAG.getNode(ISD::SRL, dl, VT, Next, Shift);
+
+  if (!MakeMUL_LOHI(LH, RH, Lo, Hi, Opcode == ISD::SMUL_LOHI))
+    return false;
+
+  SDValue Zero = DAG.getConstant(0, dl, HiLoVT);
+  Hi = DAG.getNode(ISD::ADDE, dl, DAG.getVTList(HiLoVT, MVT::Glue), Hi, Zero,
+                   Carry);
+  Next = DAG.getNode(ISD::ADD, dl, VT, Next, Merge(Lo, Hi));
+
+  if (Opcode == ISD::SMUL_LOHI) {
+    SDValue NextSub = DAG.getNode(ISD::SUB, dl, VT, Next,
+                                  DAG.getNode(ISD::ZERO_EXTEND, dl, VT, RL));
+    Next = DAG.getSelectCC(dl, LH, Zero, NextSub, Next, ISD::SETLT);
+
+    NextSub = DAG.getNode(ISD::SUB, dl, VT, Next,
+                          DAG.getNode(ISD::ZERO_EXTEND, dl, VT, LL));
+    Next = DAG.getSelectCC(dl, RH, Zero, NextSub, Next, ISD::SETLT);
+  }
+
+  Result.push_back(DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, Next));
+  Next = DAG.getNode(ISD::SRL, dl, VT, Next, Shift);
+  Result.push_back(DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, Next));
+  return true;
+}
+
+bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
+                               SelectionDAG &DAG, MulExpansionKind Kind,
+                               SDValue LL, SDValue LH, SDValue RL,
+                               SDValue RH) const {
+  SmallVector<SDValue, 2> Result;
+  bool Ok = expandMUL_LOHI(N->getOpcode(), N->getValueType(0), N,
+                           N->getOperand(0), N->getOperand(1), Result, HiLoVT,
+                           DAG, Kind, LL, LH, RL, RH);
+  if (Ok) {
+    assert(Result.size() == 2);
+    Lo = Result[0];
+    Hi = Result[1];
+  }
+  return Ok;
 }
 
 bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,

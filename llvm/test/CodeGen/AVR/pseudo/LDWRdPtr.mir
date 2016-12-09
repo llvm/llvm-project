@@ -1,0 +1,24 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+
+# This test checks the expansion of the 16-bit LDWRdPtr pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_ldwrdptr() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_ldwrdptr
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_ldwrdptr
+
+    ; CHECK:                    %r0 = LDRdPtr %r31r30
+    ; CHECK-NEXT: early-clobber %r1 = LDDRdPtrQ %r31r30, 1
+
+    %r1r0 = LDWRdPtr %r31r30
+...

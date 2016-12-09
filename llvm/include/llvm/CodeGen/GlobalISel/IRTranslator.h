@@ -126,6 +126,9 @@ private:
 
   void getStackGuard(unsigned DstReg, MachineIRBuilder &MIRBuilder);
 
+  bool translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
+                                  MachineIRBuilder &MIRBuilder);
+
   bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);
 

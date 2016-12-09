@@ -409,6 +409,9 @@ class Configuration(object):
             self.lit_config.fatal("cxx_headers='%s' is not a directory."
                                   % cxx_headers)
         self.cxx.compile_flags += ['-I' + cxx_headers]
+        cxxabi_headers = os.path.join(self.libcxx_obj_root, 'include', 'c++-build')
+        if os.path.isdir(cxxabi_headers):
+            self.cxx.compile_flags += ['-I' + cxxabi_headers]
 
     def configure_config_site_header(self):
         # Check for a possible __config_site in the build directory. We

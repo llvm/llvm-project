@@ -703,6 +703,16 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
+template <>
+bool AVRExpandPseudo::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
+  llvm_unreachable("wide LPM is unimplemented");
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::LPMWRdZPi>(Block &MBB, BlockIt MBBI) {
+  llvm_unreachable("wide LPMPi is unimplemented");
+}
+
 template<typename Func>
 bool AVRExpandPseudo::expandAtomic(Block &MBB, BlockIt MBBI, Func f) {
   // Remove the pseudo instruction.
@@ -1415,6 +1425,8 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::LDWRdPtrPd);
   case AVR::LDDWRdYQ: //:FIXME: remove this once PR13375 gets fixed
     EXPAND(AVR::LDDWRdPtrQ);
+    EXPAND(AVR::LPMWRdZ);
+    EXPAND(AVR::LPMWRdZPi);
     EXPAND(AVR::AtomicLoad8);
     EXPAND(AVR::AtomicLoad16);
     EXPAND(AVR::AtomicStore8);
