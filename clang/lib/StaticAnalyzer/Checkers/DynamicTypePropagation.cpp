@@ -626,7 +626,7 @@ static bool isObjCTypeParamDependent(QualType Type) {
       : public RecursiveASTVisitor<IsObjCTypeParamDependentTypeVisitor> {
   public:
     IsObjCTypeParamDependentTypeVisitor() : Result(false) {}
-    bool VisitTypedefType(const TypedefType *Type) {
+    bool VisitObjCTypeParamType(const ObjCTypeParamType *Type) {
       if (isa<ObjCTypeParamDecl>(Type->getDecl())) {
         Result = true;
         return false;
