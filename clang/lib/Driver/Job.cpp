@@ -268,11 +268,14 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     OS << ' ';
     printArg(OS, CrashInfo->VFSPath.str().c_str(), Quote);
 
-    // Insert -fmodules-cache-path and use the relative module directory
-    // <name>.cache/vfs/modules where we already dumped the modules.
+    // The leftover modules from the crash are stored in
+    //  <name>.cache/vfs/modules
+    // Leave it untouched for pcm inspection and provide a clean/empty dir
+    // path to contain the future generated module cache:
+    //  <name>.cache/vfs/repro-modules
     SmallString<128> RelModCacheDir = llvm::sys::path::parent_path(
         llvm::sys::path::parent_path(CrashInfo->VFSPath));
-    llvm::sys::path::append(RelModCacheDir, "modules");
+    llvm::sys::path::append(RelModCacheDir, "repro-modules");
 
     std::string ModCachePath = "-fmodules-cache-path=";
     ModCachePath.append(RelModCacheDir.c_str());
