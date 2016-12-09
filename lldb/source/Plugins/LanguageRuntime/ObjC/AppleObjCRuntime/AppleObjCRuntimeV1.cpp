@@ -435,8 +435,5 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
 }
 
 DeclVendor *AppleObjCRuntimeV1::GetDeclVendor() {
-  if (!m_decl_vendor_ap.get())
-    m_decl_vendor_ap.reset(new AppleObjCDeclVendor(*this));
-
-  return m_decl_vendor_ap.get();
+  return nullptr;
 }

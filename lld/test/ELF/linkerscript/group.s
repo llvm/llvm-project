@@ -1,4 +1,4 @@
-# REQUIRES: x86, shell
+# REQUIRES: x86
 
 # RUN: mkdir -p %t.dir
 # RUN: rm -f %t.dir/libxyz.a

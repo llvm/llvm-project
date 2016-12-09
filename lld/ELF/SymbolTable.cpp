@@ -423,8 +423,12 @@ void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *F, StringRef Name,
   std::tie(S, WasInserted) =
       insert(Name, Sym.getType(), STV_DEFAULT, /*CanOmitFromDynSym*/ true, F);
   // Make sure we preempt DSO symbols with default visibility.
-  if (Sym.getVisibility() == STV_DEFAULT)
+  if (Sym.getVisibility() == STV_DEFAULT) {
     S->ExportDynamic = true;
+    // Exporting preempting symbols takes precedence over linker scripts.
+    if (S->VersionId == VER_NDX_LOCAL)
+      S->VersionId = VER_NDX_GLOBAL;
+  }
   if (WasInserted || isa<Undefined>(S->body())) {
     replaceBody<SharedSymbol<ELFT>>(S, F, Name, Sym, Verdef);
     if (!S->isWeak())
@@ -614,7 +618,8 @@ template <class ELFT> void SymbolTable<ELFT>::handleAnonymousVersion() {
       continue;
     }
     for (SymbolBody *B : find(Ver))
-      B->symbol()->VersionId = VER_NDX_GLOBAL;
+      if (B)
+        B->symbol()->VersionId = VER_NDX_GLOBAL;
   }
 }
 

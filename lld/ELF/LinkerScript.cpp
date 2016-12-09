@@ -1915,9 +1915,11 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
 std::vector<SymbolVersion> ScriptParser::readSymbols() {
   std::vector<SymbolVersion> Ret;
   for (;;) {
-    if (consume("extern"))
+    if (consume("extern")) {
       for (SymbolVersion V : readVersionExtern())
         Ret.push_back(V);
+      continue;
+    }
 
     if (peek() == "}" || peek() == "local:" || Error)
       break;
