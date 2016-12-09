@@ -1406,10 +1406,9 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
 static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                               ByteStreamer &Streamer,
                               const DebugLocEntry::Value &Value,
-                              unsigned FragmentOffsetInBits) {
+                              DwarfExpression &DwarfExpr) {
   DIExpressionCursor ExprCursor(Value.getExpression());
-  DebugLocDwarfExpression DwarfExpr(AP.getDwarfDebug()->getDwarfVersion(),
-                                    Streamer);
+  DwarfExpr.addFragmentOffset(Value.getExpression());
   // Regular entry.
   if (Value.isInt()) {
     if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
@@ -1419,23 +1418,16 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.AddUnsignedConstant(Value.getInt());
   } else if (Value.isLocation()) {
     MachineLocation Loc = Value.getLoc();
-    if (!ExprCursor)
-      // Regular entry.
-      AP.EmitDwarfRegOp(Streamer, Loc);
-    else {
-      // Complex address entry.
-      const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
-      if (Loc.getOffset())
-        DwarfExpr.AddMachineRegIndirect(TRI, Loc.getReg(), Loc.getOffset());
-      else
-        DwarfExpr.AddMachineRegExpression(TRI, ExprCursor, Loc.getReg(),
-                                          FragmentOffsetInBits);
-    }
+    const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
+    if (Loc.getOffset())
+      DwarfExpr.AddMachineRegIndirect(TRI, Loc.getReg(), Loc.getOffset());
+    else
+      DwarfExpr.AddMachineRegExpression(TRI, ExprCursor, Loc.getReg());
   } else if (Value.isConstantFP()) {
     APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
     DwarfExpr.AddUnsignedConstant(RawBytes);
   }
-  DwarfExpr.AddExpression(std::move(ExprCursor), FragmentOffsetInBits);
+  DwarfExpr.AddExpression(std::move(ExprCursor));
 }
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,
@@ -1443,6 +1435,7 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
                              const DIBasicType *BT) {
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();
+  DebugLocDwarfExpression DwarfExpr(AP.getDwarfDebug()->getDwarfVersion(), Streamer);
   const DebugLocEntry::Value &Value = Values[0];
   if (Value.isFragment()) {
     // Emit all fragments that belong to the same variable and range.
@@ -1451,27 +1444,14 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
         }) && "all values are expected to be fragments");
     assert(std::is_sorted(Values.begin(), Values.end()) &&
            "fragments are expected to be sorted");
-   
-    unsigned Offset = 0;
-    for (auto Fragment : Values) {
-      const DIExpression *Expr = Fragment.getExpression();
-      unsigned FragmentOffset = Expr->getFragmentOffsetInBits();
-      unsigned FragmentSize = Expr->getFragmentSizeInBits();
-      assert(Offset <= FragmentOffset && "overlapping or duplicate fragments");
-      if (Offset < FragmentOffset) {
-        // DWARF represents gaps as pieces with no locations.
-        DebugLocDwarfExpression Expr(AP.getDwarfDebug()->getDwarfVersion(), Streamer);
-        Expr.AddOpPiece(FragmentOffset-Offset, 0);
-        Offset += FragmentOffset-Offset;
-      }
-      Offset += FragmentSize;
+    for (auto Fragment : Values)
+      emitDebugLocValue(AP, BT, Streamer, Fragment, DwarfExpr);
 
-      emitDebugLocValue(AP, BT, Streamer, Fragment, FragmentOffset);
-    }
   } else {
     assert(Values.size() == 1 && "only fragments may have >1 value");
-    emitDebugLocValue(AP, BT, Streamer, Value, 0);
+    emitDebugLocValue(AP, BT, Streamer, Value, DwarfExpr);
   }
+  DwarfExpr.finalize();
 }
 
 void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry) {
