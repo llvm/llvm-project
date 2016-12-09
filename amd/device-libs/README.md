@@ -8,6 +8,7 @@ This repository contains the following libraries:
 | --- | --- | --- |
 | irif | Interface to LLVM IR | |
 | ocml | Open Compute Math library ([documentation](doc/OCML.md)) | irif |
+| oclc | Open Compute library controls ([documentation](doc/OCML.md#controls)) | |
 | ockl | Open Compute Kernel library. | irif |
 | opencl | OpenCL built-in library | ocml, ockl |
 | hc | Heterogeneous Compute built-in library | ocml, ockl |
@@ -55,6 +56,27 @@ To run offline tests:
 
 To create packages for the library:
    make package
+
+## USING BITCODE LIBRARIES
+
+The bitcode libraries should be linked to user bitcode (obtained from source) *before* final code generation with llvm-link or -Xmlink-bitcode-file option of clang.
+
+For OpenCL, the list of bitcode libraries includes opencl and its dependencies (ocml, ockl, irif) and oclc control libraries selected according to OpenCL compilation mode.  
+Assuming that the build of this repository was done in /srv/git/ROCm-Device-Libs/build, the following command line
+shows how to compile simple OpenCL source test.cl into code object test.so:
+
+    clang -x cl -Xclang -finclude-default-header \
+        -target amdgcn--amdhsa -mcpu=fiji \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/opencl/opencl.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ocml/ocml.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ockl/ockl.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_correctly_rounded_sqrt_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_daz_opt_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_finite_only_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_isa_version_803.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_unsafe_math_off.amdgcn.bc \
+        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/irif/irif.amdgcn.bc \
+        test.cl -o test.so
 
 ## TESTING
 
