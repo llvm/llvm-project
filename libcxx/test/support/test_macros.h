@@ -128,22 +128,26 @@
 #define TEST_NORETURN [[noreturn]]
 #endif
 
-/* Macros for testing libc++ specific behavior and extensions */
-#if defined(_LIBCPP_VERSION)
-#define LIBCPP_ASSERT(...) assert(__VA_ARGS__)
-#define LIBCPP_STATIC_ASSERT(...) static_assert(__VA_ARGS__)
-#define LIBCPP_ONLY(...) __VA_ARGS__
-#else
-#define LIBCPP_ASSERT(...) ((void)0)
-#define LIBCPP_STATIC_ASSERT(...) ((void)0)
-#define LIBCPP_ONLY(...) ((void)0)
-#endif
-
 #define ASSERT_NOEXCEPT(...) \
     static_assert(noexcept(__VA_ARGS__), "Operation must be noexcept")
 
 #define ASSERT_NOT_NOEXCEPT(...) \
     static_assert(!noexcept(__VA_ARGS__), "Operation must NOT be noexcept")
+
+/* Macros for testing libc++ specific behavior and extensions */
+#if defined(_LIBCPP_VERSION)
+#define LIBCPP_ASSERT(...) assert(__VA_ARGS__)
+#define LIBCPP_STATIC_ASSERT(...) static_assert(__VA_ARGS__)
+#define LIBCPP_ASSERT_NOEXCEPT(...) ASSERT_NOEXCEPT(__VA_ARGS__)
+#define LIBCPP_ASSERT_NOT_NOEXCEPT(...) ASSERT_NOT_NOEXCEPT(__VA_ARGS__)
+#define LIBCPP_ONLY(...) __VA_ARGS__
+#else
+#define LIBCPP_ASSERT(...) ((void)0)
+#define LIBCPP_STATIC_ASSERT(...) ((void)0)
+#define LIBCPP_ASSERT_NOEXCEPT(...) ((void)0)
+#define LIBCPP_ASSERT_NOT_NOEXCEPT(...) ((void)0)
+#define LIBCPP_ONLY(...) ((void)0)
+#endif
 
 namespace test_macros_detail {
 template <class T, class U>

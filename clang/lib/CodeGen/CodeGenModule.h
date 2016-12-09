@@ -1155,6 +1155,11 @@ public:
   llvm::Value *
   createOpenCLIntToSamplerConversion(const Expr *E, CodeGenFunction &CGF);
 
+  /// Get target specific null pointer.
+  /// \param T is the LLVM type of the null pointer.
+  /// \param QT is the clang QualType of the null pointer.
+  llvm::Constant *getNullPointer(llvm::PointerType *T, QualType QT);
+
 private:
   llvm::Constant *
   GetOrCreateLLVMFunction(StringRef MangledName, llvm::Type *Ty, GlobalDecl D,

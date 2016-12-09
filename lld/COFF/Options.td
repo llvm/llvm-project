@@ -95,7 +95,8 @@ def nosymtab : F<"nosymtab">;
 
 // Flags for debugging
 def dumppdb : Joined<["/", "-"], "dumppdb">;
-def lldmap : Joined<["/", "-"], "lldmap:">;
+def lldmap : F<"lldmap">;
+def lldmap_file : Joined<["/", "-"], "lldmap:">;
 
 //==============================================================================
 // The flags below do nothing. They are defined only for link.exe compatibility.

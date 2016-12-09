@@ -1164,7 +1164,8 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
 /// \brief Retrieve the type of the temporary object whose lifetime was 
 /// extended by a local reference with the given initializer.
 static QualType getReferenceInitTemporaryType(ASTContext &Context,
-                                              const Expr *Init) {
+                                              const Expr *Init,
+                                              bool *FoundMTE = nullptr) {
   while (true) {
     // Skip parentheses.
     Init = Init->IgnoreParens();
@@ -1179,6 +1180,8 @@ static QualType getReferenceInitTemporaryType(ASTContext &Context,
     if (const MaterializeTemporaryExpr *MTE
           = dyn_cast<MaterializeTemporaryExpr>(Init)) {
       Init = MTE->GetTemporaryExpr();
+      if (FoundMTE)
+        *FoundMTE = true;
       continue;
     }
     
@@ -1370,13 +1373,12 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
     const Expr *Init = VD->getInit();
     if (!Init)
       return Scope;
-    if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(Init))
-      Init = EWC->getSubExpr();
-    if (!isa<MaterializeTemporaryExpr>(Init))
-      return Scope;
 
     // Lifetime-extending a temporary.
-    QT = getReferenceInitTemporaryType(*Context, Init);
+    bool FoundMTE = false;
+    QT = getReferenceInitTemporaryType(*Context, Init, &FoundMTE);
+    if (!FoundMTE)
+      return Scope;
   }
 
   // Check for constant size array. Set type to array element type.

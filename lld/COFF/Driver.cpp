@@ -307,6 +307,18 @@ static unsigned parseDebugType(StringRef Arg) {
   return DebugTypes;
 }
 
+static std::string getMapFile(const opt::InputArgList &Args) {
+  auto *Arg = Args.getLastArg(OPT_lldmap, OPT_lldmap_file);
+  if (!Arg)
+    return "";
+  if (Arg->getOption().getID() == OPT_lldmap_file)
+    return Arg->getValue();
+
+  assert(Arg->getOption().getID() == OPT_lldmap);
+  StringRef OutFile = Config->OutputFile;
+  return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // If the first command line argument is "/lib", link.exe acts like lib.exe.
   // We call our own implementation of lib.exe that understands bitcode files.
@@ -763,13 +775,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Create a symbol map file containing symbol VAs and their names
   // to help debugging.
-  if (auto *Arg = Args.getLastArg(OPT_lldmap)) {
+  std::string MapFile = getMapFile(Args);
+  if (!MapFile.empty()) {
     std::error_code EC;
-    raw_fd_ostream Out(Arg->getValue(), EC, OpenFlags::F_Text);
+    raw_fd_ostream Out(MapFile, EC, OpenFlags::F_Text);
     if (EC)
-      fatal(EC, "could not create the symbol map");
+      fatal(EC, "could not create the symbol map " + MapFile);
     Symtab.printMap(Out);
   }
+
   // Call exit to avoid calling destructors.
   exit(0);
 }

@@ -1868,7 +1868,8 @@ def mno_odd_spreg : Flag<["-"], "mno-odd-spreg">, Group<m_Group>,
   Flags<[HelpHidden]>;
 def mglibc : Flag<["-"], "mglibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;
 def muclibc : Flag<["-"], "muclibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;
-def module_file_info : Flag<["-"], "module-file-info">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>;
+def module_file_info : Flag<["-"], "module-file-info">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>,
+  HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>;
 def multi__module : Flag<["-"], "multi_module">;

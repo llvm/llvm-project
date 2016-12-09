@@ -43,7 +43,7 @@ namespace good { // Only good in C++98/03
 
 namespace unsupported {
 #ifndef FIXING
- template struct y;     // expected-error {{elaborated type refers to a template}}
+ template struct y;     // expected-error {{template 'y' cannot be referenced with a struct specifier}}
 #endif
 }
 

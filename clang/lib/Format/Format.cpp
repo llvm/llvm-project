@@ -1677,7 +1677,9 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   unsigned MinInsertOffset =
       getOffsetAfterHeaderGuardsAndComments(FileName, Code, Style);
   StringRef TrimmedCode = Code.drop_front(MinInsertOffset);
+  // Max insertion offset in the original code.
   unsigned MaxInsertOffset =
+      MinInsertOffset +
       getMaxHeaderInsertionOffset(FileName, TrimmedCode, Style);
   SmallVector<StringRef, 32> Lines;
   TrimmedCode.split(Lines, '\n');

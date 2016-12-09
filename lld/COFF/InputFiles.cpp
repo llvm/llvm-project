@@ -171,8 +171,10 @@ void ObjectFile::initializeSymbols() {
   int32_t LastSectionNumber = 0;
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
-    COFFSymbolRef Sym =
-        check(COFFObj->getSymbol(I), "broken object file: " + toString(this));
+    ErrorOr<COFFSymbolRef> SymOrErr = COFFObj->getSymbol(I);
+    if (!SymOrErr)
+      fatal(SymOrErr.getError(), "broken object file: " + toString(this));
+    COFFSymbolRef Sym = *SymOrErr;
 
     const void *AuxP = nullptr;
     if (Sym.getNumberOfAuxSymbols())

@@ -38,7 +38,7 @@
 /// __m128i _mm_extracti_si64(__m128i x, const int len, const int idx);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c EXTRQ instruction.
+/// This intrinsic corresponds to the <c> EXTRQ </c> instruction.
 ///
 /// \param x
 ///    The value from which bits are extracted.
@@ -63,7 +63,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c EXTRQ instruction.
+/// This intrinsic corresponds to the <c> EXTRQ </c> instruction.
 ///
 /// \param __x
 ///    The value from which bits are extracted.
@@ -93,7 +93,7 @@ _mm_extract_si64(__m128i __x, __m128i __y)
 /// const int idx);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c INSERTQ instruction.
+/// This intrinsic corresponds to the <c> INSERTQ </c> instruction.
 ///
 /// \param x
 ///    The destination operand where bits will be inserted. The inserted bits
@@ -126,7 +126,7 @@ _mm_extract_si64(__m128i __x, __m128i __y)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c INSERTQ instruction.
+/// This intrinsic corresponds to the <c> INSERTQ </c> instruction.
 ///
 /// \param __x
 ///    The destination operand where bits will be inserted. The inserted bits
@@ -158,7 +158,7 @@ _mm_insert_si64(__m128i __x, __m128i __y)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c MOVNTSD instruction.
+/// This intrinsic corresponds to the <c> MOVNTSD </c> instruction.
 ///
 /// \param __p
 ///    The 64-bit memory location used to store the register value.
@@ -176,7 +176,7 @@ _mm_stream_sd(double *__p, __m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c MOVNTSS instruction.
+/// This intrinsic corresponds to the <c> MOVNTSS </c> instruction.
 ///
 /// \param __p
 ///    The 32-bit memory location used to store the register value.

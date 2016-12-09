@@ -4773,6 +4773,9 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     // Type is an aggregate, argument is an init list. At this point it comes
     // down to checking whether the initialization works.
     // FIXME: Find out whether this parameter is consumed or not.
+    // FIXME: Expose SemaInit's aggregate initialization code so that we don't
+    // need to call into the initialization code here; overload resolution
+    // should not be doing that.
     InitializedEntity Entity =
         InitializedEntity::InitializeParameter(S.Context, ToType,
                                                /*Consumed=*/false);

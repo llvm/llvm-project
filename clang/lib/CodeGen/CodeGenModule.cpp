@@ -2611,9 +2611,16 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   else
     GV->setDLLStorageClass(llvm::GlobalVariable::DefaultStorageClass);
 
-  if (Linkage == llvm::GlobalVariable::CommonLinkage)
+  if (Linkage == llvm::GlobalVariable::CommonLinkage) {
     // common vars aren't constant even if declared const.
     GV->setConstant(false);
+    // Tentative definition of global variables may be initialized with
+    // non-zero null pointers. In this case they should have weak linkage
+    // since common linkage must have zero initializer and must not have
+    // explicit section therefore cannot have non-zero initial value.
+    if (!GV->getInitializer()->isNullValue())
+      GV->setLinkage(llvm::GlobalVariable::WeakAnyLinkage);
+  }
 
   setNonAliasAttributes(D, GV);
 

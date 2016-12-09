@@ -333,7 +333,7 @@ namespace dr27 { // dr27: yes
   E &m = true ? n : n;
 }
 
-// dr28: na
+// dr28: na lib
 
 namespace dr29 { // dr29: 3.4
   void dr29_f0(); // expected-note {{here}}

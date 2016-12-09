@@ -772,7 +772,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
       }
 
       if (Chunk.Fun.getExceptionSpecType() == EST_Dynamic) {
-        for (unsigned i = 0; i != Chunk.Fun.NumExceptions; ++i) {
+        for (unsigned i = 0; i != Chunk.Fun.getNumExceptions(); ++i) {
           if (Chunk.Fun.Exceptions[i]
                   .Ty.get()
                   ->containsUnexpandedParameterPack())

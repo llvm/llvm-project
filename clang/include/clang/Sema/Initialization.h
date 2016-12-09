@@ -668,6 +668,9 @@ public:
     /// temporary object, which is permitted (but not required) by
     /// C++98/03 but not C++0x.
     SK_ExtraneousCopyToTemporary,
+    /// \brief Direct-initialization from a reference-related object in the
+    /// final stage of class copy-initialization.
+    SK_FinalCopy,
     /// \brief Perform a user-defined conversion, either via a conversion
     /// function or via a constructor.
     SK_UserConversion,
@@ -805,6 +808,10 @@ public:
     FK_ReferenceInitOverloadFailed,
     /// \brief Non-const lvalue reference binding to a temporary.
     FK_NonConstLValueReferenceBindingToTemporary,
+    /// \brief Non-const lvalue reference binding to a bit-field.
+    FK_NonConstLValueReferenceBindingToBitfield,
+    /// \brief Non-const lvalue reference binding to a vector element.
+    FK_NonConstLValueReferenceBindingToVectorElement,
     /// \brief Non-const lvalue reference binding to an lvalue of unrelated
     /// type.
     FK_NonConstLValueReferenceBindingToUnrelated,
@@ -1027,6 +1034,10 @@ public:
   //
   /// \param T The type of the temporary being created.
   void AddExtraneousCopyToTemporary(QualType T);
+
+  /// \brief Add a new step that makes a copy of the input to an object of
+  /// the given type, as the final step in class copy-initialization.
+  void AddFinalCopy(QualType T);
 
   /// \brief Add a new step invoking a conversion function, which is either
   /// a constructor or a conversion function.

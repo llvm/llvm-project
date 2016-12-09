@@ -76,8 +76,8 @@ namespace {
       const Expr *Inner = Temp->skipRValueSubobjectAdjustments(CommaLHSs,
                                                                Adjustments);
       // Keep any cv-qualifiers from the reference if we generated a temporary
-      // for it.
-      if (Inner != Temp)
+      // for it directly. Otherwise use the type after adjustment.
+      if (!Adjustments.empty())
         return Inner->getType();
     }
 
@@ -1070,6 +1070,7 @@ namespace {
     unsigned InvalidBase : 1;
     unsigned CallIndex : 31;
     SubobjectDesignator Designator;
+    bool IsNullPtr;
 
     const APValue::LValueBase getLValueBase() const { return Base; }
     CharUnits &getLValueOffset() { return Offset; }
@@ -1077,13 +1078,15 @@ namespace {
     unsigned getLValueCallIndex() const { return CallIndex; }
     SubobjectDesignator &getLValueDesignator() { return Designator; }
     const SubobjectDesignator &getLValueDesignator() const { return Designator;}
+    bool isNullPointer() const { return IsNullPtr;}
 
     void moveInto(APValue &V) const {
       if (Designator.Invalid)
-        V = APValue(Base, Offset, APValue::NoLValuePath(), CallIndex);
+        V = APValue(Base, Offset, APValue::NoLValuePath(), CallIndex,
+                    IsNullPtr);
       else
         V = APValue(Base, Offset, Designator.Entries,
-                    Designator.IsOnePastTheEnd, CallIndex);
+                    Designator.IsOnePastTheEnd, CallIndex, IsNullPtr);
     }
     void setFrom(ASTContext &Ctx, const APValue &V) {
       assert(V.isLValue());
@@ -1092,14 +1095,17 @@ namespace {
       InvalidBase = false;
       CallIndex = V.getLValueCallIndex();
       Designator = SubobjectDesignator(Ctx, V);
+      IsNullPtr = V.isNullPointer();
     }
 
-    void set(APValue::LValueBase B, unsigned I = 0, bool BInvalid = false) {
+    void set(APValue::LValueBase B, unsigned I = 0, bool BInvalid = false,
+             bool IsNullPtr_ = false, uint64_t Offset_ = 0) {
       Base = B;
-      Offset = CharUnits::Zero();
+      Offset = CharUnits::fromQuantity(Offset_);
       InvalidBase = BInvalid;
       CallIndex = I;
       Designator = SubobjectDesignator(getType(B));
+      IsNullPtr = IsNullPtr_;
     }
 
     void setInvalid(APValue::LValueBase B, unsigned I = 0) {
@@ -1112,7 +1118,7 @@ namespace {
                           CheckSubobjectKind CSK) {
       if (Designator.Invalid)
         return false;
-      if (!Base) {
+      if (IsNullPtr) {
         Info.CCEDiag(E, diag::note_constexpr_null_subobject)
           << CSK;
         Designator.setInvalid();
@@ -1141,9 +1147,22 @@ namespace {
       if (checkSubobject(Info, E, Imag ? CSK_Imag : CSK_Real))
         Designator.addComplexUnchecked(EltTy, Imag);
     }
-    void adjustIndex(EvalInfo &Info, const Expr *E, uint64_t N) {
-      if (N && checkNullPointer(Info, E, CSK_ArrayIndex))
-        Designator.adjustIndex(Info, E, N);
+    void clearIsNullPointer() {
+      IsNullPtr = false;
+    }
+    void adjustOffsetAndIndex(EvalInfo &Info, const Expr *E, uint64_t Index,
+                              CharUnits ElementSize) {
+      // Compute the new offset in the appropriate width.
+      Offset += Index * ElementSize;
+      if (Index && checkNullPointer(Info, E, CSK_ArrayIndex))
+        Designator.adjustIndex(Info, E, Index);
+      if (Index)
+        clearIsNullPointer();
+    }
+    void adjustOffset(CharUnits N) {
+      Offset += N;
+      if (N.getQuantity())
+        clearIsNullPointer();
     }
   };
 
@@ -2018,7 +2037,7 @@ static bool HandleLValueMember(EvalInfo &Info, const Expr *E, LValue &LVal,
   }
 
   unsigned I = FD->getFieldIndex();
-  LVal.Offset += Info.Ctx.toCharUnitsFromBits(RL->getFieldOffset(I));
+  LVal.adjustOffset(Info.Ctx.toCharUnitsFromBits(RL->getFieldOffset(I)));
   LVal.addDecl(Info, E, FD);
   return true;
 }
@@ -2072,9 +2091,7 @@ static bool HandleLValueArrayAdjustment(EvalInfo &Info, const Expr *E,
   if (!HandleSizeof(Info, E->getExprLoc(), EltTy, SizeOfPointee))
     return false;
 
-  // Compute the new offset in the appropriate width.
-  LVal.Offset += Adjustment * SizeOfPointee;
-  LVal.adjustIndex(Info, E, Adjustment);
+  LVal.adjustOffsetAndIndex(Info, E, Adjustment, SizeOfPointee);
   return true;
 }
 
@@ -5060,7 +5077,9 @@ public:
     return true;
   }
   bool ZeroInitialization(const Expr *E) {
-    return Success((Expr*)nullptr);
+    auto Offset = Info.Ctx.getTargetNullPointerValue(E->getType());
+    Result.set((Expr*)nullptr, 0, false, true, Offset);
+    return true;
   }
 
   bool VisitBinaryOperator(const BinaryOperator *E);
@@ -5159,6 +5178,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
       else
         CCEDiag(E, diag::note_constexpr_invalid_cast) << 2;
     }
+    if (E->getCastKind() == CK_AddressSpaceConversion && Result.IsNullPtr)
+      ZeroInitialization(E);
     return true;
 
   case CK_DerivedToBase:
@@ -5200,6 +5221,7 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
       Result.Offset = CharUnits::fromQuantity(N);
       Result.CallIndex = 0;
       Result.Designator.setInvalid();
+      Result.IsNullPtr = false;
       return true;
     } else {
       // Cast is of an lvalue, no need to change value.
@@ -8334,8 +8356,13 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return true;
     }
 
-    APSInt AsInt = Info.Ctx.MakeIntValue(LV.getLValueOffset().getQuantity(), 
-                                         SrcType);
+    uint64_t V;
+    if (LV.isNullPointer())
+      V = Info.Ctx.getTargetNullPointerValue(SrcType);
+    else
+      V = LV.getLValueOffset().getQuantity();
+
+    APSInt AsInt = Info.Ctx.MakeIntValue(V, SrcType);
     return Success(HandleIntToIntCast(Info, E, DestType, SrcType, AsInt), E);
   }
 

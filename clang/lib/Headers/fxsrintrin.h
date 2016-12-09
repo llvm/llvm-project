@@ -35,7 +35,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXSAVE instruction.
+/// This intrinsic corresponds to the <c> FXSAVE </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory
@@ -53,7 +53,7 @@ _fxsave(void *__p)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXRSTOR instruction.
+/// This intrinsic corresponds to the <c> FXRSTOR </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory
@@ -70,7 +70,7 @@ _fxrstor(void *__p)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXSAVE64 instruction.
+/// This intrinsic corresponds to the <c> FXSAVE64 </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory
@@ -88,7 +88,7 @@ _fxsave64(void *__p)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXRSTOR64 instruction.
+/// This intrinsic corresponds to the <c> FXRSTOR64 </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory

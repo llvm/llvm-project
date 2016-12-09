@@ -8228,8 +8228,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Copy the parameter declarations from the declarator D to the function
   // declaration NewFD, if they are available.  First scavenge them into Params.
   SmallVector<ParmVarDecl*, 16> Params;
-  if (D.isFunctionDeclarator()) {
-    DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
+  unsigned FTIIdx;
+  if (D.isFunctionDeclarator(FTIIdx)) {
+    DeclaratorChunk::FunctionTypeInfo &FTI = D.getTypeObject(FTIIdx).Fun;
 
     // Check for C99 6.7.5.3p10 - foo(void) is a non-varargs
     // function that takes no arguments, not a function that takes a
@@ -8245,6 +8246,19 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
         if (Param->isInvalidDecl())
           NewFD->setInvalidDecl();
+      }
+    }
+
+    if (!getLangOpts().CPlusPlus) {
+      // In C, find all the non-parameter declarations from the prototype and
+      // move them into the new function decl context as well. Typically they
+      // will have been added to the surrounding context of the prototype.
+      for (NamedDecl *NonParmDecl : FTI.getDeclsInPrototype()) {
+        DeclContext *OldDC = NonParmDecl->getDeclContext();
+        if (OldDC->containsDecl(NonParmDecl))
+          OldDC->removeDecl(NonParmDecl);
+        NonParmDecl->setDeclContext(NewFD);
+        NewFD->addDecl(NonParmDecl);
       }
     }
   } else if (const FunctionProtoType *FT = R->getAs<FunctionProtoType>()) {
@@ -8271,15 +8285,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Finally, we know we have the right number of parameters, install them.
   NewFD->setParams(Params);
-
-  // Find all anonymous symbols defined during the declaration of this function
-  // and add to NewFD. This lets us track decls such 'enum Y' in:
-  //
-  //   void f(enum Y {AA} x) {}
-  //
-  // which would otherwise incorrectly end up in the translation unit scope.
-  NewFD->setDeclsInPrototypeScope(DeclsInPrototypeScope);
-  DeclsInPrototypeScope.clear();
 
   if (D.getDeclSpec().isNoreturnSpecified())
     NewFD->addAttr(
@@ -11646,6 +11651,29 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   CheckParmsForFunctionDef(FD->parameters(),
                            /*CheckParameterNames=*/true);
 
+  // Add non-parameter declarations already in the function to the current
+  // scope.
+  if (FnBodyScope) {
+    for (Decl *NPD : FD->decls()) {
+      auto *NonParmDecl = dyn_cast<NamedDecl>(NPD);
+      if (!NonParmDecl)
+        continue;
+      assert(!isa<ParmVarDecl>(NonParmDecl) &&
+             "parameters should not be in newly created FD yet");
+
+      // If the decl has a name, make it accessible in the current scope.
+      if (NonParmDecl->getDeclName())
+        PushOnScopeChains(NonParmDecl, FnBodyScope, /*AddToContext=*/false);
+
+      // Similarly, dive into enums and fish their constants out, making them
+      // accessible in this scope.
+      if (auto *ED = dyn_cast<EnumDecl>(NonParmDecl)) {
+        for (auto *EI : ED->enumerators())
+          PushOnScopeChains(EI, FnBodyScope, /*AddToContext=*/false);
+      }
+    }
+  }
+
   // Introduce our parameters into the function scope
   for (auto Param : FD->parameters()) {
     Param->setOwningFunction(FD);
@@ -11655,39 +11683,6 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       CheckShadow(FnBodyScope, Param);
 
       PushOnScopeChains(Param, FnBodyScope);
-    }
-  }
-
-  // If we had any tags defined in the function prototype,
-  // introduce them into the function scope.
-  if (FnBodyScope) {
-    for (ArrayRef<NamedDecl *>::iterator
-             I = FD->getDeclsInPrototypeScope().begin(),
-             E = FD->getDeclsInPrototypeScope().end();
-         I != E; ++I) {
-      NamedDecl *D = *I;
-
-      // Some of these decls (like enums) may have been pinned to the
-      // translation unit for lack of a real context earlier. If so, remove
-      // from the translation unit and reattach to the current context.
-      if (D->getLexicalDeclContext() == Context.getTranslationUnitDecl()) {
-        // Is the decl actually in the context?
-        if (Context.getTranslationUnitDecl()->containsDecl(D))
-          Context.getTranslationUnitDecl()->removeDecl(D);
-        // Either way, reassign the lexical decl context to our FunctionDecl.
-        D->setLexicalDeclContext(CurContext);
-      }
-
-      // If the decl has a non-null name, make accessible in the current scope.
-      if (!D->getName().empty())
-        PushOnScopeChains(D, FnBodyScope, /*AddToContext=*/false);
-
-      // Similarly, dive into enums and fish their constants out, making them
-      // accessible in this scope.
-      if (auto *ED = dyn_cast<EnumDecl>(D)) {
-        for (auto *EI : ED->enumerators())
-          PushOnScopeChains(EI, FnBodyScope, /*AddToContext=*/false);
-      }
     }
   }
 
@@ -12177,6 +12172,7 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                                              /*NumExceptions=*/0,
                                              /*NoexceptExpr=*/nullptr,
                                              /*ExceptionSpecTokens=*/nullptr,
+                                             /*DeclsInPrototype=*/None,
                                              Loc, Loc, D),
                 DS.getAttributes(),
                 SourceLocation());
@@ -12450,7 +12446,8 @@ static bool isClassCompatTagKind(TagTypeKind Tag)
   return Tag == TTK_Struct || Tag == TTK_Class || Tag == TTK_Interface;
 }
 
-Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl) {
+Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
+                                             TagTypeKind TTK) {
   if (isa<TypedefDecl>(PrevDecl))
     return NTK_Typedef;
   else if (isa<TypeAliasDecl>(PrevDecl))
@@ -12461,7 +12458,17 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl) {
     return NTK_TypeAliasTemplate;
   else if (isa<TemplateTemplateParmDecl>(PrevDecl))
     return NTK_TemplateTemplateArgument;
-  return NTK_Unknown;
+  switch (TTK) {
+  case TTK_Struct:
+  case TTK_Interface:
+  case TTK_Class:
+    return getLangOpts().CPlusPlus ? NTK_NonClass : NTK_NonStruct;
+  case TTK_Union:
+    return NTK_NonUnion;
+  case TTK_Enum:
+    return NTK_NonEnum;
+  }
+  llvm_unreachable("invalid TTK");
 }
 
 /// \brief Determine whether a tag with a given kind is acceptable
@@ -13244,8 +13251,9 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
       // (non-redeclaration) lookup.
       if ((TUK == TUK_Reference || TUK == TUK_Friend) &&
           !Previous.isForRedeclaration()) {
-        NonTagKind NTK = getNonTagTypeDeclKind(PrevDecl);
-        Diag(NameLoc, diag::err_tag_reference_non_tag) << NTK;
+        NonTagKind NTK = getNonTagTypeDeclKind(PrevDecl, Kind);
+        Diag(NameLoc, diag::err_tag_reference_non_tag) << PrevDecl << NTK
+                                                       << Kind;
         Diag(PrevDecl->getLocation(), diag::note_declared_at);
         Invalid = true;
 
@@ -13256,7 +13264,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
       // Diagnose implicit declarations introduced by elaborated types.
       } else if (TUK == TUK_Reference || TUK == TUK_Friend) {
-        NonTagKind NTK = getNonTagTypeDeclKind(PrevDecl);
+        NonTagKind NTK = getNonTagTypeDeclKind(PrevDecl, Kind);
         Diag(NameLoc, diag::err_tag_reference_conflict) << NTK;
         Diag(PrevDecl->getLocation(), diag::note_previous_decl) << PrevDecl;
         Invalid = true;
@@ -13446,7 +13454,6 @@ CreateNewDecl:
     } else if (!PrevDecl) {
       Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
     }
-    DeclsInPrototypeScope.push_back(New);
   }
 
   if (Invalid)

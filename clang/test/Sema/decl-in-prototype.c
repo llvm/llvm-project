@@ -1,13 +1,19 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
+#define SA(n, c) int arr##n[(c) ? 1 : -1] = {}
+
 const int AA = 5;
 
 int f1(enum {AA,BB} E) { // expected-warning {{will not be visible outside of this function}}
-    return BB;
+  SA(1, AA == 0);
+  SA(2, BB == 1);
+  return BB;
 }
 
 int f2(enum {AA=7,BB} E) { // expected-warning {{will not be visible outside of this function}}
-    return AA;
+  SA(1, AA == 7);
+  SA(2, BB == 8);
+  return AA;
 }
 
 struct a {
@@ -38,3 +44,11 @@ enum e19018 qq; //expected-error{{tentative definition has type 'enum e19018' th
 
 // Only warn once, even if we create two declarations.
 void f(struct q *, struct __attribute__((aligned(4))) q *); // expected-warning {{will not be visible outside}}
+
+// This enum inside the function pointer parameter shouldn't leak into the
+// function.
+enum { BB = 0 };
+void enum_in_fun_in_fun(void (*fp)(enum { AA, BB } e)) { // expected-warning {{will not be visible}}
+  SA(1, AA == 5);
+  SA(2, BB == 0);
+}

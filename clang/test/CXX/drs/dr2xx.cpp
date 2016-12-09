@@ -620,7 +620,7 @@ namespace dr254 { // dr254: yes
   template<typename T> struct A {
     typedef typename T::type type; // ok even if this is a typedef-name, because
                                    // it's not an elaborated-type-specifier
-    typedef struct T::type foo; // expected-error {{elaborated type refers to a typedef}}
+    typedef struct T::type foo; // expected-error {{typedef 'type' cannot be referenced with a struct specifier}}
   };
   struct B { struct type {}; };
   struct C { typedef struct {} type; }; // expected-note {{here}}
@@ -1048,8 +1048,8 @@ namespace dr298 { // dr298: yes
   C::type i3;
 
   struct A a;
-  struct B b; // expected-error {{refers to a typedef}}
-  struct C c; // expected-error {{refers to a typedef}}
+  struct B b; // expected-error {{typedef 'B' cannot be referenced with a struct specifier}}
+  struct C c; // expected-error {{typedef 'C' cannot be referenced with a struct specifier}}
 
   B::B() {} // expected-error {{requires a type specifier}}
   B::A() {} // ok

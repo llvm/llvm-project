@@ -718,6 +718,7 @@ static void maybeSynthesizeBlockSignature(TypeProcessingState &state,
       /*NumExceptions=*/0,
       /*NoexceptExpr=*/nullptr,
       /*ExceptionSpecTokens=*/nullptr,
+      /*DeclsInPrototype=*/None,
       loc, loc, declarator));
 
   // For consistency, make sure the state still has us as processing
@@ -4473,7 +4474,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (FTI.getExceptionSpecType() == EST_Dynamic) {
           // FIXME: It's rather inefficient to have to split into two vectors
           // here.
-          unsigned N = FTI.NumExceptions;
+          unsigned N = FTI.getNumExceptions();
           DynamicExceptions.reserve(N);
           DynamicExceptionRanges.reserve(N);
           for (unsigned I = 0; I != N; ++I) {

@@ -2490,7 +2490,8 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     //   If the identifier resolves to a typedef-name or the simple-template-id
     //   resolves to an alias template specialization, the
     //   elaborated-type-specifier is ill-formed.
-    Diag(TemplateLoc, diag::err_tag_reference_non_tag) << NTK_TypeAliasTemplate;
+    Diag(TemplateLoc, diag::err_tag_reference_non_tag)
+        << TAT << NTK_TypeAliasTemplate << TagKind;
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
   
@@ -7510,8 +7511,8 @@ Sema::ActOnExplicitInstantiation(Scope *S,
   ClassTemplateDecl *ClassTemplate = dyn_cast<ClassTemplateDecl>(TD);
 
   if (!ClassTemplate) {
-    NonTagKind NTK = getNonTagTypeDeclKind(TD);
-    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << NTK;
+    NonTagKind NTK = getNonTagTypeDeclKind(TD, Kind);
+    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << TD << NTK << Kind;
     Diag(TD->getLocation(), diag::note_previous_use);
     return true;
   }
