@@ -7198,7 +7198,7 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
             .second) {
       if (ReturnType.isNull()) {
         Builder.AddChunk(CodeCompletionString::CK_LeftParen);
-        Builder.AddTextChunk("NSSet *");
+        Builder.AddTextChunk("NSSet<NSString *> *");
         Builder.AddChunk(CodeCompletionString::CK_RightParen);
       }
        
