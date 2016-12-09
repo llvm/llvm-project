@@ -182,3 +182,4 @@ thread safety annotations.
       using Tup = std::tuple<std::string, int, std::error_code>;
       return Tup{"hello world", 42}; // explicit constructor called. OK.
     }
+
