@@ -52,6 +52,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUConvertAtomicLibCalls.cpp
   AMDGPUOCL12Adapter.cpp
   AMDGPUPrintfRuntimeBinding.cpp
+  AMDGPUclpVectorExpansion.cpp
   GCNHazardRecognizer.cpp
   GCNSchedStrategy.cpp
   R600ClauseMergePass.cpp
