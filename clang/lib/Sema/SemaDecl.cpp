@@ -8311,9 +8311,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
 
-  if (getLangOpts().CUDA)
-    maybeAddCUDAHostDeviceAttrs(NewFD, Previous);
-
   if (getLangOpts().OpenCL) {
     // OpenCL v1.1 s6.5: Using an address space qualifier in a function return
     // type declaration will generate a compilation error.
@@ -8415,6 +8412,15 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       TemplateArgs.setLAngleLoc(D.getIdentifierLoc());
       TemplateArgs.setRAngleLoc(D.getIdentifierLoc());
     }
+
+    // We do not add HD attributes to specializations here because
+    // they may have different constexpr-ness compared to their
+    // templates and, after maybeAddCUDAHostDeviceAttrs() is applied,
+    // may end up with different effective targets. Instead, a
+    // specialization inherits its target attributes from its template
+    // in the CheckFunctionTemplateSpecialization() call below.
+    if (getLangOpts().CUDA & !isFunctionTemplateSpecialization)
+      maybeAddCUDAHostDeviceAttrs(NewFD, Previous);
 
     // If it's a friend (and only if it's a friend), it's possible
     // that either the specialized function type or the specialized

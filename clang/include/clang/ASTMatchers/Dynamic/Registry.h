@@ -1,4 +1,4 @@
-//===--- Registry.h - Matcher registry -----*- C++ -*-===//
+//===--- Registry.h - Matcher registry --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,27 +19,35 @@
 
 #include "clang/ASTMatchers/Dynamic/Diagnostics.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
-#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace ast_matchers {
 namespace dynamic {
 
 namespace internal {
+
 class MatcherDescriptor;
-}
+
+} // end namespace internal
 
 typedef const internal::MatcherDescriptor *MatcherCtor;
 
 struct MatcherCompletion {
-  MatcherCompletion() {}
+  MatcherCompletion() = default;
   MatcherCompletion(StringRef TypedText, StringRef MatcherDecl,
                     unsigned Specificity)
       : TypedText(TypedText), MatcherDecl(MatcherDecl),
         Specificity(Specificity) {}
+
+  bool operator==(const MatcherCompletion &Other) const {
+    return TypedText == Other.TypedText && MatcherDecl == Other.MatcherDecl;
+  }
 
   /// \brief The text to type to select this matcher.
   std::string TypedText;
@@ -53,14 +61,12 @@ struct MatcherCompletion {
   /// matcher that will either always or never match.
   /// Such matchers are excluded from code completion results.
   unsigned Specificity;
-
-  bool operator==(const MatcherCompletion &Other) const {
-    return TypedText == Other.TypedText && MatcherDecl == Other.MatcherDecl;
-  }
 };
 
 class Registry {
 public:
+  Registry() = delete;
+
   /// \brief Look up a matcher in the registry by name,
   ///
   /// \return An opaque value which may be used to refer to the matcher
@@ -121,13 +127,10 @@ public:
                                               StringRef BindID,
                                               ArrayRef<ParserValue> Args,
                                               Diagnostics *Error);
-
-private:
-  Registry() = delete;
 };
 
-}  // namespace dynamic
-}  // namespace ast_matchers
-}  // namespace clang
+} // end namespace dynamic
+} // end namespace ast_matchers
+} // end namespace clang
 
-#endif  // LLVM_CLANG_AST_MATCHERS_DYNAMIC_REGISTRY_H
+#endif // LLVM_CLANG_AST_MATCHERS_DYNAMIC_REGISTRY_H

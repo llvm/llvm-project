@@ -953,7 +953,10 @@ void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
       if (IdentifierInfo *Name = FC->getDecl()->getIdentifier()) {
         // When the CGBitmapContext is deallocated, the callback here will free
         // the associated data buffer.
-        if (Name->isStr("CGBitmapContextCreateWithData"))
+        // The callback in dispatch_data_create frees the buffer, but not
+        // the data object.
+        if (Name->isStr("CGBitmapContextCreateWithData") ||
+            Name->isStr("dispatch_data_create"))
           RE = S->getRetEffect();
       }
     }

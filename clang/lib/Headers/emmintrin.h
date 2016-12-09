@@ -232,8 +232,8 @@ _mm_div_pd(__m128d __a, __m128d __b)
 ///    A 128-bit vector of [2 x double] containing one of the operands. The
 ///    square root is calculated using the lower 64 bits of this operand.
 /// \returns A 128-bit vector of [2 x double] whose lower 64 bits contain the
-///    square root of the lower 64 bits of operand __b, and whose upper 64 bits
-///    are copied from the upper 64 bits of operand __a.
+///    square root of the lower 64 bits of operand \a __b, and whose upper 64
+///    bits are copied from the upper 64 bits of operand \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sqrt_sd(__m128d __a, __m128d __b)
 {
@@ -674,12 +674,12 @@ _mm_cmpnge_pd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpeq_sd(__m128d __a, __m128d __b)
 {
@@ -698,12 +698,12 @@ _mm_cmpeq_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmplt_sd(__m128d __a, __m128d __b)
 {
@@ -722,12 +722,12 @@ _mm_cmplt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmple_sd(__m128d __a, __m128d __b)
 {
@@ -746,12 +746,12 @@ _mm_cmple_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///     A 128-bit vector of [2 x double]. The lower double-precision value is
-///     compared to the lower double-precision value of __b.
+///     compared to the lower double-precision value of \a __b.
 /// \param __b
 ///     A 128-bit vector of [2 x double]. The lower double-precision value is
-///     compared to the lower double-precision value of __a.
+///     compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///     results. The upper 64 bits are copied from the upper 64 bits of __a.
+///     results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpgt_sd(__m128d __a, __m128d __b)
 {
@@ -771,12 +771,12 @@ _mm_cmpgt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpge_sd(__m128d __a, __m128d __b)
 {
@@ -797,12 +797,12 @@ _mm_cmpge_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpord_sd(__m128d __a, __m128d __b)
 {
@@ -822,12 +822,12 @@ _mm_cmpord_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpunord_sd(__m128d __a, __m128d __b)
 {
@@ -846,12 +846,12 @@ _mm_cmpunord_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpneq_sd(__m128d __a, __m128d __b)
 {
@@ -870,12 +870,12 @@ _mm_cmpneq_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnlt_sd(__m128d __a, __m128d __b)
 {
@@ -894,12 +894,12 @@ _mm_cmpnlt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns  A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnle_sd(__m128d __a, __m128d __b)
 {
@@ -918,12 +918,12 @@ _mm_cmpnle_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpngt_sd(__m128d __a, __m128d __b)
 {
@@ -943,12 +943,12 @@ _mm_cmpngt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
-///    results. The upper 64 bits are copied from the upper 64 bits of __a.
+///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnge_sd(__m128d __a, __m128d __b)
 {
@@ -966,10 +966,10 @@ _mm_cmpnge_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comieq_sd(__m128d __a, __m128d __b)
@@ -988,10 +988,10 @@ _mm_comieq_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comilt_sd(__m128d __a, __m128d __b)
@@ -1011,10 +1011,10 @@ _mm_comilt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///     A 128-bit vector of [2 x double]. The lower double-precision value is
-///     compared to the lower double-precision value of __a.
+///     compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comile_sd(__m128d __a, __m128d __b)
@@ -1033,10 +1033,10 @@ _mm_comile_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comigt_sd(__m128d __a, __m128d __b)
@@ -1056,10 +1056,10 @@ _mm_comigt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comige_sd(__m128d __a, __m128d __b)
@@ -1078,10 +1078,10 @@ _mm_comige_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comineq_sd(__m128d __a, __m128d __b)
@@ -1100,10 +1100,10 @@ _mm_comineq_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results. If either of the two
 ///    lower double-precision values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -1124,10 +1124,10 @@ _mm_ucomieq_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results. If either of the two
 ///    lower double-precision values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -1149,10 +1149,10 @@ _mm_ucomilt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///     A 128-bit vector of [2 x double]. The lower double-precision value is
-///     compared to the lower double-precision value of __a.
+///     compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results. If either of the two
 ///     lower double-precision values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -1173,10 +1173,10 @@ _mm_ucomile_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///     A 128-bit vector of [2 x double]. The lower double-precision value is
-///     compared to the lower double-precision value of __a.
+///     compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results. If either of the two
 ///     lower double-precision values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -1198,10 +1198,10 @@ _mm_ucomigt_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison results. If either of the two
 ///    lower double-precision values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -1222,10 +1222,10 @@ _mm_ucomige_sd(__m128d __a, __m128d __b)
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __b.
+///    compared to the lower double-precision value of \a __b.
 /// \param __b
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
-///    compared to the lower double-precision value of __a.
+///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison result. If either of the two
 ///    lower double-precision values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -1506,7 +1506,7 @@ _mm_cvtpi32_pd(__m64 __a)
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are returned.
 /// \returns A double-precision floating-point value copied from the lower 64
-///    bits of __a.
+///    bits of \a __a.
 static __inline__ double __DEFAULT_FN_ATTRS
 _mm_cvtsd_f64(__m128d __a)
 {
@@ -2646,7 +2646,7 @@ _mm_xor_si128(__m128i __a, __m128i __b)
 ///    A 128-bit integer vector containing the source operand.
 /// \param imm
 ///    An immediate value specifying the number of bytes to left-shift
-///    operand a.
+///    operand \a a.
 /// \returns A 128-bit integer vector containing the left-shifted value.
 #define _mm_slli_si128(a, imm) __extension__ ({                              \
   (__m128i)__builtin_shufflevector(                                          \
@@ -2683,7 +2683,7 @@ _mm_xor_si128(__m128i __a, __m128i __b)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to left-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_slli_epi16(__m128i __a, int __count)
@@ -2702,7 +2702,7 @@ _mm_slli_epi16(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to left-shift each value in operand __a.
+///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sll_epi16(__m128i __a, __m128i __count)
@@ -2721,7 +2721,7 @@ _mm_sll_epi16(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to left-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_slli_epi32(__m128i __a, int __count)
@@ -2740,7 +2740,7 @@ _mm_slli_epi32(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to left-shift each value in operand __a.
+///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sll_epi32(__m128i __a, __m128i __count)
@@ -2759,7 +2759,7 @@ _mm_sll_epi32(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to left-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_slli_epi64(__m128i __a, int __count)
@@ -2778,7 +2778,7 @@ _mm_slli_epi64(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to left-shift each value in operand __a.
+///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sll_epi64(__m128i __a, __m128i __count)
@@ -2798,7 +2798,7 @@ _mm_sll_epi64(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to right-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srai_epi16(__m128i __a, int __count)
@@ -2818,7 +2818,7 @@ _mm_srai_epi16(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to right-shift each value in operand __a.
+///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sra_epi16(__m128i __a, __m128i __count)
@@ -2838,7 +2838,7 @@ _mm_sra_epi16(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to right-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srai_epi32(__m128i __a, int __count)
@@ -2858,7 +2858,7 @@ _mm_srai_epi32(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to right-shift each value in operand __a.
+///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sra_epi32(__m128i __a, __m128i __count)
@@ -2881,7 +2881,7 @@ _mm_sra_epi32(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param imm
 ///    An immediate value specifying the number of bytes to right-shift operand
-///    a.
+///    \a a.
 /// \returns A 128-bit integer vector containing the right-shifted value.
 #define _mm_srli_si128(a, imm) __extension__ ({                              \
   (__m128i)__builtin_shufflevector(                                          \
@@ -2918,7 +2918,7 @@ _mm_sra_epi32(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to right-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srli_epi16(__m128i __a, int __count)
@@ -2937,7 +2937,7 @@ _mm_srli_epi16(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to right-shift each value in operand __a.
+///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srl_epi16(__m128i __a, __m128i __count)
@@ -2956,7 +2956,7 @@ _mm_srl_epi16(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to right-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srli_epi32(__m128i __a, int __count)
@@ -2975,7 +2975,7 @@ _mm_srli_epi32(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to right-shift each value in operand __a.
+///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srl_epi32(__m128i __a, __m128i __count)
@@ -2994,7 +2994,7 @@ _mm_srl_epi32(__m128i __a, __m128i __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    An integer value specifying the number of bits to right-shift each value
-///    in operand __a.
+///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srli_epi64(__m128i __a, int __count)
@@ -3013,7 +3013,7 @@ _mm_srli_epi64(__m128i __a, int __count)
 ///    A 128-bit integer vector containing the source operand.
 /// \param __count
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
-///    to right-shift each value in operand __a.
+///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srl_epi64(__m128i __a, __m128i __count)
@@ -4001,7 +4001,7 @@ _mm_stream_si64(long long *__p, long long __a)
 extern "C" {
 #endif
 
-/// \brief The cache line containing __p is flushed and invalidated from all
+/// \brief The cache line containing \a __p is flushed and invalidated from all
 ///    caches in the coherency domain.
 ///
 /// \headerfile <x86intrin.h>
@@ -4133,16 +4133,16 @@ _mm_packus_epi16(__m128i __a, __m128i __b)
 /// \param __a
 ///    A 128-bit integer vector.
 /// \param __imm
-///    An immediate value. Bits [3:0] selects values from __a to be assigned to
-///    bits[15:0] of the result.
-///    000: assign values from bits [15:0] of __a.
-///    001: assign values from bits [31:16] of __a.
-///    010: assign values from bits [47:32] of __a.
-///    011: assign values from bits [63:48] of __a.
-///    100: assign values from bits [79:64] of __a.
-///    101: assign values from bits [95:80] of __a.
-///    110: assign values from bits [111:96] of __a.
-///    111: assign values from bits [127:112] of __a.
+///    An immediate value. Bits [3:0] selects values from \a __a to be assigned
+///    to bits[15:0] of the result.
+///    000: assign values from bits [15:0] of \a __a.
+///    001: assign values from bits [31:16] of \a __a.
+///    010: assign values from bits [47:32] of \a __a.
+///    011: assign values from bits [63:48] of \a __a.
+///    100: assign values from bits [79:64] of \a __a.
+///    101: assign values from bits [95:80] of \a __a.
+///    110: assign values from bits [111:96] of \a __a.
+///    111: assign values from bits [127:112] of \a __a.
 /// \returns An integer, whose lower 16 bits are selected from the 128-bit
 ///    integer vector parameter and the remaining bits are assigned zeros.
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -4164,13 +4164,13 @@ _mm_extract_epi16(__m128i __a, int __imm)
 /// \param __a
 ///    A 128-bit integer vector of [8 x i16]. This vector is copied to the
 ///    result and then one of the eight elements in the result is replaced by
-///    the lower 16 bits of __b.
+///    the lower 16 bits of \a __b.
 /// \param __b
 ///    An integer. The lower 16 bits of this parameter are written to the
-///    result beginning at an offset specified by __imm.
+///    result beginning at an offset specified by \a __imm.
 /// \param __imm
 ///    An immediate value specifying the bit offset in the result at which the
-///    lower 16 bits of__b are written.
+///    lower 16 bits of \a __b are written.
 /// \returns A 128-bit integer vector containing the constructed values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_insert_epi16(__m128i __a, int __b, int __imm)
@@ -4190,8 +4190,8 @@ _mm_insert_epi16(__m128i __a, int __b, int __imm)
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the values with bits to be extracted.
-/// \returns The most significant bits from each 8-bit element in __a, written
-///    to bits [15:0]. The other bits are assigned zeros.
+/// \returns The most significant bits from each 8-bit element in \a __a,
+///    written to bits [15:0]. The other bits are assigned zeros.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_movemask_epi8(__m128i __a)
 {
@@ -4612,7 +4612,7 @@ _mm_unpacklo_pd(__m128d __a, __m128d __b)
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the values with sign bits to
 ///    be extracted.
-/// \returns The sign bits from each of the double-precision elements in __a,
+/// \returns The sign bits from each of the double-precision elements in \a __a,
 ///    written to bits [1:0]. The remaining bits are assigned values of zero.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_movemask_pd(__m128d __a)
@@ -4642,8 +4642,8 @@ _mm_movemask_pd(__m128d __a)
 ///    elements to copy from a and b:
 ///    Bit[0] = 0: lower element of a copied to lower element of result.
 ///    Bit[0] = 1: upper element of a copied to lower element of result.
-///    Bit[1] = 0: lower element of b copied to upper element of result.
-///    Bit[1] = 1: upper element of b copied to upper element of result.
+///    Bit[1] = 0: lower element of \a b copied to upper element of result.
+///    Bit[1] = 1: upper element of \a b copied to upper element of result.
 /// \returns A 128-bit vector of [2 x double] containing the shuffled values.
 #define _mm_shuffle_pd(a, b, i) __extension__ ({ \
   (__m128d)__builtin_shufflevector((__v2df)(__m128d)(a), (__v2df)(__m128d)(b), \

@@ -2204,5 +2204,22 @@ TEST(Matcher, HasAnyDeclaration) {
                                        functionDecl(hasName("bar"))))));
 }
 
+TEST(SubstTemplateTypeParmType, HasReplacementType)
+{
+  std::string Fragment = "template<typename T>"
+                         "double F(T t);"
+                         "int i;"
+                         "double j = F(i);";
+  EXPECT_TRUE(matches(Fragment, substTemplateTypeParmType(hasReplacementType(
+                                    qualType(asString("int"))))));
+  EXPECT_TRUE(notMatches(Fragment, substTemplateTypeParmType(hasReplacementType(
+                                       qualType(asString("double"))))));
+  EXPECT_TRUE(
+      notMatches("template<int N>"
+                 "double F();"
+                 "double j = F<5>();",
+                 substTemplateTypeParmType(hasReplacementType(qualType()))));
+}
+
 } // namespace ast_matchers
 } // namespace clang
