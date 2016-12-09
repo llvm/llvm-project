@@ -8,9 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include <stdio.h>
 #include <stdint.h>
-
 alignas(16) uint8_t buf[32];
-
 // This uses inline assembly to generate an instruction that writes to a large
 // block of memory. If it fails on your compiler/architecture, please add
 // appropriate code to generate a large write to "buf". If you cannot write at
@@ -24,6 +22,8 @@ int main() {
   asm volatile ("stm %0, { r0, r1, r2, r3 }" : : "r"(buf));
 #elif defined(__aarch64__)
   asm volatile ("stp x0, x1, %0" : : "m"(buf));
+#elif defined(__mips__)
+  asm volatile ("lw $2, %0" : : "m"(buf));
 #endif
   return 0;
 }

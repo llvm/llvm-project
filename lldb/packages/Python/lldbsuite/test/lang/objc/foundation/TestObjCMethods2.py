@@ -186,6 +186,7 @@ class FoundationTestCase2(TestBase):
                 "be completed."])
         self.runCmd("process continue")
 
+    @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
     def test_NSError_p(self):
         """Test that p of the result of an unknown method does require a cast."""
         self.build()
