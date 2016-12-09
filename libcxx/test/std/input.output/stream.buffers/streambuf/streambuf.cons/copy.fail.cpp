@@ -17,9 +17,9 @@
 #include <streambuf>
 #include <cassert>
 
-std::streambuf get();
+std::streambuf &get();
 
 int main()
 {
-    std::streambuf sb = get();
+    std::streambuf sb = get(); // expected-error {{calling a protected constructor}}
 }

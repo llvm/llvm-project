@@ -5421,6 +5421,20 @@ sizeof.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1SubstTemplateTypeParmType.html">SubstTemplateTypeParmType</a>&gt;</td><td class="name" onclick="toggle('hasReplacementType0')"><a name="hasReplacementType0Anchor">hasReplacementType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="hasReplacementType0"><pre>Matches template type parameter substitutions that have a replacement
+type that matches the provided matcher.
+
+Given
+  template &lt;typename T&gt;
+  double F(T t);
+  int i;
+  double j = F(i);
+
+substTemplateTypeParmType(hasReplacementType(type())) matches int
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1SwitchStmt.html">SwitchStmt</a>&gt;</td><td class="name" onclick="toggle('forEachSwitchCase0')"><a name="forEachSwitchCase0Anchor">forEachSwitchCase</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1SwitchCase.html">SwitchCase</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="forEachSwitchCase0"><pre>Matches each case or default statement belonging to the given switch
 statement. This matcher may produce multiple matches.

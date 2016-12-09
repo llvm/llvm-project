@@ -226,7 +226,7 @@ void SectionChunk::printDiscardedMessage() const {
   // Removed by dead-stripping. If it's removed by ICF, ICF already
   // printed out the name, so don't repeat that here.
   if (Sym && this == Repl)
-    llvm::outs() << "Discarded " << Sym->getName() << "\n";
+    outs() << "Discarded " << Sym->getName() << "\n";
 }
 
 StringRef SectionChunk::getDebugName() {

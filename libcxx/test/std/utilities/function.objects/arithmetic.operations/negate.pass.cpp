@@ -34,7 +34,7 @@ int main()
     constexpr int foo = std::negate<int> () (3);
     static_assert ( foo == -3, "" );
 
-    constexpr int bar = std::negate<> () (3.0);
-    static_assert ( bar == -3, "" );
+    constexpr double bar = std::negate<> () (3.0);
+    static_assert ( bar == -3.0, "" );
 #endif
 }

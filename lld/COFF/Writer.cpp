@@ -134,9 +134,9 @@ private:
   std::map<StringRef, std::vector<DefinedImportData *>> binImports();
 
   SymbolTable *Symtab;
-  std::unique_ptr<llvm::FileOutputBuffer> Buffer;
-  llvm::SpecificBumpPtrAllocator<OutputSection> CAlloc;
-  llvm::SpecificBumpPtrAllocator<BaserelChunk> BAlloc;
+  std::unique_ptr<FileOutputBuffer> Buffer;
+  SpecificBumpPtrAllocator<OutputSection> CAlloc;
+  SpecificBumpPtrAllocator<BaserelChunk> BAlloc;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
   std::vector<llvm::object::coff_symbol16> OutputSymtab;

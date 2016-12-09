@@ -8,12 +8,37 @@
 # This test the property that we have a needed line for every undefined.
 # It would also be OK to drop bar2 and the need for the .so
 
+# CHECK:      DynamicSymbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type:
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: Undefined (0x0)
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: bar2
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type:
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type:
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
 
-# CHECK: Name: bar
-# CHECK: Name: bar2
-# CHECK: Name: foo
 # CHECK: NEEDED SharedLibrary ({{.*}}.so)
-
 
 .section .text.foo, "ax"
 .globl foo

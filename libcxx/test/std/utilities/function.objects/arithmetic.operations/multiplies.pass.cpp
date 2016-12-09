@@ -35,7 +35,7 @@ int main()
     constexpr int foo = std::multiplies<int> () (3, 2);
     static_assert ( foo == 6, "" );
 
-    constexpr int bar = std::multiplies<> () (3.0, 2);
-    static_assert ( bar == 6, "" );
+    constexpr double bar = std::multiplies<> () (3.0, 2);
+    static_assert ( bar == 6.0, "" );
 #endif
 }

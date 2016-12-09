@@ -44,7 +44,7 @@ namespace lld {
 namespace coff {
 
 int InputFile::NextIndex = 0;
-llvm::LLVMContext BitcodeFile::Context;
+LLVMContext BitcodeFile::Context;
 std::mutex BitcodeFile::Mu;
 
 ArchiveFile::ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
@@ -167,7 +167,7 @@ void ObjectFile::initializeSymbols() {
   uint32_t NumSymbols = COFFObj->getNumberOfSymbols();
   SymbolBodies.reserve(NumSymbols);
   SparseSymbolBodies.resize(NumSymbols);
-  llvm::SmallVector<std::pair<Undefined *, uint32_t>, 8> WeakAliases;
+  SmallVector<std::pair<Undefined *, uint32_t>, 8> WeakAliases;
   int32_t LastSectionNumber = 0;
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
@@ -339,7 +339,7 @@ void BitcodeFile::parse() {
       Context, MB.getBufferStart(), MB.getBufferSize(), llvm::TargetOptions());
   M = check(std::move(ModOrErr), "could not create LTO module");
 
-  llvm::StringSaver Saver(Alloc);
+  StringSaver Saver(Alloc);
   for (unsigned I = 0, E = M->getSymbolCount(); I != E; ++I) {
     lto_symbol_attributes Attrs = M->getSymbolAttributes(I);
     if ((Attrs & LTO_SYMBOL_SCOPE_MASK) == LTO_SYMBOL_SCOPE_INTERNAL)

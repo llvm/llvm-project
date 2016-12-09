@@ -32,6 +32,8 @@ namespace coff {
 
 class Chunk;
 class Defined;
+class DefinedAbsolute;
+class DefinedRelative;
 class Lazy;
 class SectionChunk;
 class SymbolBody;
@@ -49,8 +51,8 @@ struct Symbol;
 // to replace the lazy symbol. The logic is implemented in resolve().
 class SymbolTable {
 public:
-  void addFile(std::unique_ptr<InputFile> File);
-  std::vector<std::unique_ptr<InputFile>> &getFiles() { return Files; }
+  void addFile(InputFile *File);
+  std::vector<InputFile *> &getFiles() { return Files; }
   void step();
   void run();
   bool queueEmpty();
@@ -111,7 +113,7 @@ private:
 
   llvm::DenseMap<StringRef, Symbol *> Symtab;
 
-  std::vector<std::unique_ptr<InputFile>> Files;
+  std::vector<InputFile *> Files;
   std::vector<std::future<ArchiveFile *>> ArchiveQueue;
   std::vector<std::future<InputFile *>> ObjectQueue;
 

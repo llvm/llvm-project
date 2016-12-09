@@ -348,8 +348,13 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   // resolve to the image base. This is a little strange, but it allows us to
   // link function calls to such symbols. Normally such a call will be guarded
   // with a comparison, which will load a zero from the GOT.
+  // Another special case is MIPS _gp_disp symbol which represents offset
+  // between start of a function and '_gp' value and defined as absolute just
+  // to simplify the code.
   if (AbsVal && RelE) {
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
+      return true;
+    if (&Body == ElfSym<ELFT>::MipsGpDisp)
       return true;
     error(S.getLocation(RelOff) + ": relocation " + toString(Type) +
           " cannot refer to absolute symbol '" + toString(Body) +
@@ -714,18 +719,20 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     if (needsPlt(Expr)) {
       if (Body.isInPlt())
         continue;
-      In<ELFT>::Plt->addEntry(Body);
 
-      uint32_t Rel;
-      if (Body.isGnuIFunc() && !Preemptible)
-        Rel = Target->IRelativeRel;
-      else
-        Rel = Target->PltRel;
-
-      In<ELFT>::GotPlt->addEntry(Body);
-      In<ELFT>::RelaPlt->addReloc({Rel, In<ELFT>::GotPlt,
-                                   Body.getGotPltOffset<ELFT>(), !Preemptible,
-                                   &Body, 0});
+      if (Body.isGnuIFunc() && !Preemptible) {
+        In<ELFT>::Iplt->addEntry(Body);
+        In<ELFT>::IgotPlt->addEntry(Body);
+        In<ELFT>::RelaIplt->addReloc({Target->IRelativeRel, In<ELFT>::IgotPlt,
+                                      Body.getGotPltOffset<ELFT>(),
+                                      !Preemptible, &Body, 0});
+      } else {
+        In<ELFT>::Plt->addEntry(Body);
+        In<ELFT>::GotPlt->addEntry(Body);
+        In<ELFT>::RelaPlt->addReloc({Target->PltRel, In<ELFT>::GotPlt,
+                                     Body.getGotPltOffset<ELFT>(), !Preemptible,
+                                     &Body, 0});
+      }
       continue;
     }
 

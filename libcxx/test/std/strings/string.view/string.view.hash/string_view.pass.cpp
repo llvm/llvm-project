@@ -38,7 +38,7 @@ test()
     char_type g1 [ 10 ];
     char_type g2 [ 10 ];
     for ( int i = 0; i < 10; ++i )
-        g1[i] = g2[9-i] = '0' + i;
+        g1[i] = g2[9-i] = static_cast<char_type>('0' + i);
     T s1(g1, 10);
     T s2(g2, 10);
     assert(h(s1) != h(s2));

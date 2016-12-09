@@ -35,7 +35,7 @@ int main()
     constexpr int foo = std::divides<int> () (3, 2);
     static_assert ( foo == 1, "" );
 
-    constexpr int bar = std::divides<> () (3.0, 2);
-    static_assert ( bar == 1, "" );
+    constexpr double bar = std::divides<> () (3.0, 2);
+    static_assert ( bar == 1.5, "" ); // exact in binary
 #endif
 }

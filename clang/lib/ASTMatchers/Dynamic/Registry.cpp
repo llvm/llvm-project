@@ -252,6 +252,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasQualifier);
   REGISTER_MATCHER(hasRangeInit);
   REGISTER_MATCHER(hasReceiverType);
+  REGISTER_MATCHER(hasReplacementType);
   REGISTER_MATCHER(hasReturnValue);
   REGISTER_MATCHER(hasRHS);
   REGISTER_MATCHER(hasSelector);

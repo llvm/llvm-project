@@ -35,7 +35,7 @@ int main()
     constexpr int foo = std::minus<int> () (3, 2);
     static_assert ( foo == 1, "" );
 
-    constexpr int bar = std::minus<> () (3.0, 2);
-    static_assert ( bar == 1, "" );
+    constexpr double bar = std::minus<> () (3.0, 2);
+    static_assert ( bar == 1.0, "" );
 #endif
 }
