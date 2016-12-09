@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple i386-apple-darwin9 -x objective-c++ -Wno-return-type -fblocks -fms-extensions -rewrite-objc %s -o %t-rw.cpp
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -fblocks -Wno-address-of-temporary -D"Class=void*" -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-rw.cpp
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -std=gnu++98 -fblocks -Wno-address-of-temporary -D"Class=void*" -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-rw.cpp
 
 @interface B @end
 

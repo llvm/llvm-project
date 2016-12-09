@@ -3760,6 +3760,9 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   if (Init.isInt())
     InitExpr =
         DBuilder.createConstantValueExpression(Init.getInt().getExtValue());
+  else if (Init.isFloat() && CGM.getContext().getTypeSize(VD->getType()) <= 64)
+    InitExpr = DBuilder.createConstantValueExpression(
+        Init.getFloat().bitcastToAPInt().getZExtValue());
   GV.reset(DBuilder.createGlobalVariable(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
       true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),

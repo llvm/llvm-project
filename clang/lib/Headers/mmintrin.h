@@ -734,7 +734,8 @@ _mm_mullo_pi16(__m64 __m1, __m64 __m2)
 /// \param __count
 ///    A 64-bit integer vector interpreted as a single 64-bit integer.
 /// \returns A 64-bit integer vector of [4 x i16] containing the left-shifted
-///    values. If __count is greater or equal to 16, the result is set to all 0.
+///    values. If \a __count is greater or equal to 16, the result is set to all
+///    0.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_sll_pi16(__m64 __m, __m64 __count)
 {
@@ -755,7 +756,8 @@ _mm_sll_pi16(__m64 __m, __m64 __count)
 /// \param __count
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [4 x i16] containing the left-shifted
-///    values. If __count is greater or equal to 16, the result is set to all 0.
+///    values. If \a __count is greater or equal to 16, the result is set to all
+///    0.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_slli_pi16(__m64 __m, int __count)
 {
@@ -777,7 +779,8 @@ _mm_slli_pi16(__m64 __m, int __count)
 /// \param __count
 ///    A 64-bit integer vector interpreted as a single 64-bit integer.
 /// \returns A 64-bit integer vector of [2 x i32] containing the left-shifted
-///    values. If __count is greater or equal to 32, the result is set to all 0.
+///    values. If \a __count is greater or equal to 32, the result is set to all
+///    0.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_sll_pi32(__m64 __m, __m64 __count)
 {
@@ -798,7 +801,8 @@ _mm_sll_pi32(__m64 __m, __m64 __count)
 /// \param __count
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [2 x i32] containing the left-shifted
-///    values. If __count is greater or equal to 32, the result is set to all 0.
+///    values. If \a __count is greater or equal to 32, the result is set to all
+///    0.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_slli_pi32(__m64 __m, int __count)
 {
@@ -818,7 +822,7 @@ _mm_slli_pi32(__m64 __m, int __count)
 /// \param __count
 ///    A 64-bit integer vector interpreted as a single 64-bit integer.
 /// \returns A 64-bit integer vector containing the left-shifted value. If
-///     __count is greater or equal to 64, the result is set to 0.
+///     \a __count is greater or equal to 64, the result is set to 0.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_sll_si64(__m64 __m, __m64 __count)
 {
@@ -838,7 +842,7 @@ _mm_sll_si64(__m64 __m, __m64 __count)
 /// \param __count
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector containing the left-shifted value. If
-///     __count is greater or equal to 64, the result is set to 0.
+///     \a __count is greater or equal to 64, the result is set to 0.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_slli_si64(__m64 __m, int __count)
 {

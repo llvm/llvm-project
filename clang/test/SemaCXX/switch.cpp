@@ -100,3 +100,33 @@ namespace Conversion {
   }
   template void f(S); // expected-note {{instantiation of}}
 }
+
+// rdar://29230764
+namespace OpaqueEnumWarnings {
+
+enum Opaque : int;
+enum class OpaqueClass : int;
+
+enum class Defined : int;
+enum class Defined : int { a };
+
+void test(Opaque o, OpaqueClass oc, Defined d) {
+  // Don't warn that case value is not present in opaque enums.
+  switch (o) {
+  case (Opaque)1:
+    break;
+  }
+  switch (oc) {
+  case (OpaqueClass)1:
+    break;
+  }
+
+  switch (d) {
+  case Defined::a:
+    break;
+  case (Defined)2: // expected-warning {{case value not in enumerated type 'OpaqueEnumWarnings::Defined'}}
+    break;
+  }
+}
+
+}
