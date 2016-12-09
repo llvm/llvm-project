@@ -249,9 +249,8 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
     }
 
     DeclVendor *decl_vendor = m_runtime.GetDeclVendor();
-
-    assert(decl_vendor); // how are we parsing type encodings for expressions if
-                         // a type vendor isn't in play?
+    if (!decl_vendor)
+      return clang::QualType();
 
     const bool append = false;
     const uint32_t max_matches = 1;
