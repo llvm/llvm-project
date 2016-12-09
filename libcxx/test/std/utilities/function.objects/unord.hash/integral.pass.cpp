@@ -35,7 +35,7 @@ test()
 
     for (int i = 0; i <= 5; ++i)
     {
-        T t(i);
+        T t(static_cast<T>(i));
         if (sizeof(T) <= sizeof(std::size_t))
         {
             const std::size_t result = h(t);

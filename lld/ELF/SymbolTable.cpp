@@ -18,8 +18,8 @@
 #include "Config.h"
 #include "Error.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "Symbols.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
@@ -128,9 +128,9 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLTOObject() {
 template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addAbsolute(StringRef Name,
                                                      uint8_t Visibility,
-                                                     uint8_t Type) {
+                                                     uint8_t Binding) {
   Symbol *Sym =
-      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, Type, nullptr, nullptr);
+      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, Binding, nullptr, nullptr);
   return cast<DefinedRegular<ELFT>>(Sym->body());
 }
 
@@ -460,20 +460,6 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
   return SymVector[V.Idx]->body();
 }
 
-// Returns a list of defined symbols that match with a given pattern.
-template <class ELFT>
-std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(StringRef GlobPat) {
-  std::vector<SymbolBody *> Res;
-  StringMatcher M({GlobPat});
-  for (Symbol *Sym : SymVector) {
-    SymbolBody *B = Sym->body();
-    StringRef Name = B->getName();
-    if (!B->isUndefined() && M.match(Name))
-      Res.push_back(B);
-  }
-  return Res;
-}
-
 template <class ELFT>
 void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
                                        const object::Archive::Symbol Sym) {
@@ -549,13 +535,6 @@ template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
           Sym->symbol()->ExportDynamic = true;
 }
 
-// This function processes --export-dynamic-symbol and --dynamic-list.
-template <class ELFT> void SymbolTable<ELFT>::scanDynamicList() {
-  for (StringRef S : Config->DynamicList)
-    if (SymbolBody *B = find(S))
-      B->symbol()->ExportDynamic = true;
-}
-
 // Initialize DemangledSyms with a map from demangled symbols to symbol
 // objects. Used to handle "extern C++" directive in version scripts.
 //
@@ -585,25 +564,40 @@ void SymbolTable<ELFT>::initDemangledSyms() {
 }
 
 template <class ELFT>
-ArrayRef<SymbolBody *> SymbolTable<ELFT>::findDemangled(StringRef Name) {
-  initDemangledSyms();
-  auto I = DemangledSyms->find(Name);
-  if (I != DemangledSyms->end())
-    return I->second;
-  return {};
+std::vector<SymbolBody *> SymbolTable<ELFT>::find(SymbolVersion Ver) {
+  if (Ver.IsExternCpp) {
+    initDemangledSyms();
+    auto I = DemangledSyms->find(Ver.Name);
+    if (I != DemangledSyms->end())
+      return I->second;
+    return {};
+  }
+  std::vector<SymbolBody *> Syms;
+  Syms.push_back(find(Ver.Name));
+  return Syms;
 }
 
 template <class ELFT>
-std::vector<SymbolBody *>
-SymbolTable<ELFT>::findAllDemangled(StringRef GlobPat) {
-  initDemangledSyms();
+std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(SymbolVersion Ver) {
   std::vector<SymbolBody *> Res;
-  StringMatcher M({GlobPat});
-  for (auto &P : *DemangledSyms)
-    if (M.match(P.first()))
-      for (SymbolBody *Body : P.second)
-        if (!Body->isUndefined())
-          Res.push_back(Body);
+  StringMatcher M({Ver.Name});
+
+  if (Ver.IsExternCpp) {
+    initDemangledSyms();
+    for (auto &P : *DemangledSyms)
+      if (M.match(P.first()))
+        for (SymbolBody *Body : P.second)
+          if (!Body->isUndefined())
+            Res.push_back(Body);
+    return Res;
+  }
+
+  for (Symbol *Sym : SymVector) {
+    SymbolBody *B = Sym->body();
+    StringRef Name = B->getName();
+    if (!B->isUndefined() && M.match(Name))
+      Res.push_back(B);
+  }
   return Res;
 }
 
@@ -614,12 +608,12 @@ SymbolTable<ELFT>::findAllDemangled(StringRef GlobPat) {
 // In this function, we make specified symbols global.
 template <class ELFT> void SymbolTable<ELFT>::handleAnonymousVersion() {
   for (SymbolVersion &Ver : Config->VersionScriptGlobals) {
-    if (hasWildcard(Ver.Name)) {
-      for (SymbolBody *B : findAll(Ver.Name))
+    if (Ver.HasWildcard) {
+      for (SymbolBody *B : findAll(Ver))
         B->symbol()->VersionId = VER_NDX_GLOBAL;
       continue;
     }
-    if (SymbolBody *B = find(Ver.Name))
+    for (SymbolBody *B : find(Ver))
       B->symbol()->VersionId = VER_NDX_GLOBAL;
   }
 }
@@ -633,11 +627,7 @@ void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId
     return;
 
   // Get a list of symbols which we need to assign the version to.
-  std::vector<SymbolBody *> Syms;
-  if (Ver.IsExternCpp)
-    Syms = findDemangled(Ver.Name);
-  else
-    Syms.push_back(find(Ver.Name));
+  std::vector<SymbolBody *> Syms = find(Ver);
 
   // Assign the version.
   for (SymbolBody *B : Syms) {
@@ -659,8 +649,7 @@ void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
                                               uint16_t VersionId) {
   if (!Ver.HasWildcard)
     return;
-  std::vector<SymbolBody *> Syms =
-      Ver.IsExternCpp ? findAllDemangled(Ver.Name) : findAll(Ver.Name);
+  std::vector<SymbolBody *> Syms = findAll(Ver);
 
   // Exact matching takes precendence over fuzzy matching,
   // so we set a version to a symbol only if no version has been assigned

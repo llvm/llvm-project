@@ -21,7 +21,7 @@ int main()
     {
         typedef std::pair<int, short> P1;
         typedef std::pair<double, long> P2;
-        const P1 p1(3, 4);
+        const P1 p1(3, static_cast<short>(4));
         const P2 p2 = p1;
         assert(p2.first == 3);
         assert(p2.second == 4);

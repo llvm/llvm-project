@@ -32,25 +32,25 @@ int main()
         typedef std::pair<C::iterator, bool> R;
         typedef std::pair<double, short> P;
         C c;
-        R r = c.insert(P(3.5, 3));
+        R r = c.insert(P(3.5, static_cast<short>(3)));
         assert(r.second);
         assert(c.size() == 1);
         assert(r.first->first == 3.5);
         assert(r.first->second == 3);
 
-        r = c.insert(P(3.5, 4));
+        r = c.insert(P(3.5, static_cast<short>(4)));
         assert(!r.second);
         assert(c.size() == 1);
         assert(r.first->first == 3.5);
         assert(r.first->second == 3);
 
-        r = c.insert(P(4.5, 4));
+        r = c.insert(P(4.5, static_cast<short>(4)));
         assert(r.second);
         assert(c.size() == 2);
         assert(r.first->first == 4.5);
         assert(r.first->second == 4);
 
-        r = c.insert(P(5.5, 4));
+        r = c.insert(P(5.5, static_cast<short>(4)));
         assert(r.second);
         assert(c.size() == 3);
         assert(r.first->first == 5.5);
@@ -91,25 +91,25 @@ int main()
         typedef std::pair<C::iterator, bool> R;
         typedef std::pair<double, short> P;
         C c;
-        R r = c.insert(P(3.5, 3));
+        R r = c.insert(P(3.5, static_cast<short>(3)));
         assert(r.second);
         assert(c.size() == 1);
         assert(r.first->first == 3.5);
         assert(r.first->second == 3);
 
-        r = c.insert(P(3.5, 4));
+        r = c.insert(P(3.5, static_cast<short>(4)));
         assert(!r.second);
         assert(c.size() == 1);
         assert(r.first->first == 3.5);
         assert(r.first->second == 3);
 
-        r = c.insert(P(4.5, 4));
+        r = c.insert(P(4.5, static_cast<short>(4)));
         assert(r.second);
         assert(c.size() == 2);
         assert(r.first->first == 4.5);
         assert(r.first->second == 4);
 
-        r = c.insert(P(5.5, 4));
+        r = c.insert(P(5.5, static_cast<short>(4)));
         assert(r.second);
         assert(c.size() == 3);
         assert(r.first->first == 5.5);

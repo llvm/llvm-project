@@ -17,12 +17,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
 struct gen
 {
-    int operator()(int n)
+    std::ptrdiff_t operator()(std::ptrdiff_t n)
     {
         return n-1;
     }

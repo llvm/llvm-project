@@ -256,7 +256,7 @@ public:
 
   // Returns an object file for this symbol, or a nullptr if the file
   // was already returned.
-  std::unique_ptr<InputFile> getMember();
+  InputFile *getMember();
 
   int getFileIndex() { return File->Index; }
 

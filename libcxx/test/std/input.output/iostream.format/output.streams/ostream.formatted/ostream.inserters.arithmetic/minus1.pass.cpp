@@ -51,7 +51,7 @@ void test_hex(const char *expected)
 
     std::string str = ss.str();
     for (size_t i = 0; i < str.size(); ++i )
-        str[i] = std::toupper(str[i]);
+        str[i] = static_cast<char>(std::toupper(str[i]));
 
     assert(str == expected);
 }

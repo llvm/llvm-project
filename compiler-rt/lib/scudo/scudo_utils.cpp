@@ -17,7 +17,9 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <cpuid.h>
+#if defined(__x86_64__) || defined(__i386__)
+# include <cpuid.h>
+#endif
 
 #include <cstring>
 

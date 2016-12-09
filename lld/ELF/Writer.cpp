@@ -10,14 +10,13 @@
 #include "Writer.h"
 #include "Config.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "Relocations.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -356,6 +355,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
   Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GotPlt);
+  In<ELFT>::IgotPlt = make<IgotPltSection<ELFT>>();
+  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::IgotPlt);
 
   if (Config->GdbIndex) {
     In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
@@ -368,8 +369,17 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   Symtab<ELFT>::X->Sections.push_back(In<ELFT>::RelaPlt);
 
+  // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
+  // that the IRelative relocations are processed last by the dynamic loader
+  In<ELFT>::RelaIplt = make<RelocationSection<ELFT>>(
+      (Config->EMachine == EM_ARM) ? ".rel.dyn" : In<ELFT>::RelaPlt->Name,
+      false /*Sort*/);
+  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::RelaIplt);
+
   In<ELFT>::Plt = make<PltSection<ELFT>>();
   Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Plt);
+  In<ELFT>::Iplt = make<IpltSection<ELFT>>();
+  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Iplt);
 
   if (Config->EhFrameHdr) {
     In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
@@ -651,10 +661,10 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (In<ELFT>::DynSymTab)
     return;
   StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
-  addOptionalRegular<ELFT>(S, In<ELFT>::RelaPlt, 0);
+  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0);
 
   S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
-  addOptionalRegular<ELFT>(S, In<ELFT>::RelaPlt, -1);
+  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, -1);
 }
 
 // The linker is expected to define some symbols depending on
@@ -1036,11 +1046,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // symbol table section (DynSymTab) must be the first one.
   finalizeSynthetic<ELFT>(
       {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
-       In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab, In<ELFT>::VerDef,
-       In<ELFT>::DynStrTab, In<ELFT>::GdbIndex, In<ELFT>::Got,
-       In<ELFT>::MipsGot, In<ELFT>::GotPlt, In<ELFT>::RelaDyn,
-       In<ELFT>::RelaPlt, In<ELFT>::Plt, In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,
-       In<ELFT>::VerNeed, In<ELFT>::Dynamic});
+       In<ELFT>::SymTab,    In<ELFT>::ShStrTab,   In<ELFT>::StrTab,
+       In<ELFT>::VerDef,    In<ELFT>::DynStrTab,  In<ELFT>::GdbIndex,
+       In<ELFT>::Got,       In<ELFT>::MipsGot,    In<ELFT>::IgotPlt,
+       In<ELFT>::GotPlt,    In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt,
+       In<ELFT>::RelaPlt,   In<ELFT>::Plt,        In<ELFT>::Iplt,
+       In<ELFT>::Plt,       In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,
+       In<ELFT>::VerNeed,   In<ELFT>::Dynamic});
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
