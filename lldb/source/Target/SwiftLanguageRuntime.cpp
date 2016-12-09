@@ -1804,8 +1804,10 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
     if (!descriptor_sp)
       return false;
     std::vector<clang::NamedDecl *> decls;
-    objc_runtime->GetDeclVendor()->FindDecls(descriptor_sp->GetClassName(),
-                                             true, 1, decls);
+    DeclVendor *vendor = objc_runtime->GetDeclVendor();
+    if (!vendor)
+      return false;
+    vendor->FindDecls(descriptor_sp->GetClassName(), true, 1, decls);
     if (decls.size() == 0)
       return false;
     CompilerType type = ClangASTContext::GetTypeForDecl(decls[0]);
