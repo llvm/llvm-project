@@ -2148,6 +2148,50 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     }
     break;
   }
+  case ISD::BITCAST: {
+    SDValue N0 = Op.getOperand(0);
+    unsigned SubBitWidth = N0.getScalarValueSizeInBits();
+
+    // Ignore bitcasts from floating point.
+    if (!N0.getValueType().isInteger())
+      break;
+
+    // Fast handling of 'identity' bitcasts.
+    if (BitWidth == SubBitWidth) {
+      computeKnownBits(N0, KnownZero, KnownOne, DemandedElts, Depth + 1);
+      break;
+    }
+
+    // Support big-endian targets when it becomes useful.
+    bool IsLE = getDataLayout().isLittleEndian();
+    if (!IsLE)
+      break;
+
+    // Bitcast 'small element' vector to 'large element' scalar/vector.
+    if ((BitWidth % SubBitWidth) == 0) {
+      assert(N0.getValueType().isVector() && "Expected bitcast from vector");
+
+      // Collect known bits for the (larger) output by collecting the known
+      // bits from each set of sub elements and shift these into place.
+      // We need to separately call computeKnownBits for each set of
+      // sub elements as the knownbits for each is likely to be different.
+      unsigned SubScale = BitWidth / SubBitWidth;
+      APInt SubDemandedElts(NumElts * SubScale, 0);
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i])
+          SubDemandedElts.setBit(i * SubScale);
+
+      for (unsigned i = 0; i != SubScale; ++i) {
+        computeKnownBits(N0, KnownZero2, KnownOne2, SubDemandedElts.shl(i),
+                         Depth + 1);
+        KnownOne |= KnownOne2.zext(BitWidth).shl(SubBitWidth * i);
+        KnownZero |= KnownZero2.zext(BitWidth).shl(SubBitWidth * i);
+      }
+    }
+
+    // TODO - support ((SubBitWidth % BitWidth) == 0) when it becomes useful.
+    break;
+  }
   case ISD::AND:
     // If either the LHS or the RHS are Zero, the result is zero.
     computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, DemandedElts,
@@ -2587,42 +2631,6 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (BitWidth > EltBitWidth) {
       KnownZero = KnownZero.zext(BitWidth);
       KnownOne = KnownOne.zext(BitWidth);
-    }
-    break;
-  }
-  case ISD::INSERT_VECTOR_ELT: {
-    SDValue InVec = Op.getOperand(0);
-    SDValue InVal = Op.getOperand(1);
-    SDValue EltNo = Op.getOperand(2);
-
-    ConstantSDNode *CEltNo = dyn_cast<ConstantSDNode>(EltNo);
-    if (CEltNo && CEltNo->getAPIntValue().ult(NumElts)) {
-      // If we know the element index, split the demand between the
-      // source vector and the inserted element.
-      KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
-      unsigned EltIdx = CEltNo->getZExtValue();
-
-      // If we demand the inserted element then add its common known bits.
-      if (DemandedElts[EltIdx]) {
-        computeKnownBits(InVal, KnownZero2, KnownOne2, Depth + 1);
-        KnownOne &= KnownOne2.zextOrTrunc(KnownOne.getBitWidth());
-        KnownZero &= KnownZero2.zextOrTrunc(KnownZero.getBitWidth());;
-      }
-
-      // If we demand the source vector then add its common known bits, ensuring
-      // that we don't demand the inserted element.
-      APInt VectorElts = DemandedElts & ~(APInt::getOneBitSet(NumElts, EltIdx));
-      if (!!VectorElts) {
-        computeKnownBits(InVec, KnownZero2, KnownOne2, VectorElts, Depth + 1);
-        KnownOne &= KnownOne2;
-        KnownZero &= KnownZero2;
-      }
-    } else {
-      // Unknown element index, so ignore DemandedElts and demand them all.
-      computeKnownBits(InVec, KnownZero, KnownOne, Depth + 1);
-      computeKnownBits(InVal, KnownZero2, KnownOne2, Depth + 1);
-      KnownOne &= KnownOne2.zextOrTrunc(KnownOne.getBitWidth());
-      KnownZero &= KnownZero2.zextOrTrunc(KnownZero.getBitWidth());;
     }
     break;
   }

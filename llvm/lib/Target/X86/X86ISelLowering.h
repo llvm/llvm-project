@@ -488,6 +488,13 @@ namespace llvm {
       FMADDSUB_RND,
       FMSUBADD_RND,
 
+      // Scalar intrinsic FMA with rounding mode.
+      // Two versions, passthru bits on op1 or op3.
+      FMADDS1_RND, FMADDS3_RND,
+      FNMADDS1_RND, FNMADDS3_RND,
+      FMSUBS1_RND, FMSUBS3_RND,
+      FNMSUBS1_RND, FNMSUBS3_RND,
+
       // Compress and expand.
       COMPRESS,
       EXPAND,
@@ -1115,7 +1122,7 @@ namespace llvm {
     SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
 
-    unsigned getGlobalWrapperKind() const;
+    unsigned getGlobalWrapperKind(const GlobalValue *GV = nullptr) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(const GlobalValue *GV, const SDLoc &dl,

@@ -11,6 +11,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
@@ -25,21 +26,11 @@ using namespace llvm;
 static void addEdge(SmallVectorImpl<LazyCallGraph::Edge> &Edges,
                     DenseMap<Function *, int> &EdgeIndexMap, Function &F,
                     LazyCallGraph::Edge::Kind EK) {
-  // Note that we consider *any* function with a definition to be a viable
-  // edge. Even if the function's definition is subject to replacement by
-  // some other module (say, a weak definition) there may still be
-  // optimizations which essentially speculate based on the definition and
-  // a way to check that the specific definition is in fact the one being
-  // used. For example, this could be done by moving the weak definition to
-  // a strong (internal) definition and making the weak definition be an
-  // alias. Then a test of the address of the weak function against the new
-  // strong definition's address would be an effective way to determine the
-  // safety of optimizing a direct call edge.
-  if (!F.isDeclaration() &&
-      EdgeIndexMap.insert({&F, Edges.size()}).second) {
-    DEBUG(dbgs() << "    Added callable function: " << F.getName() << "\n");
-    Edges.emplace_back(LazyCallGraph::Edge(F, EK));
-  }
+  if (!EdgeIndexMap.insert({&F, Edges.size()}).second)
+    return;
+
+  DEBUG(dbgs() << "    Added callable function: " << F.getName() << "\n");
+  Edges.emplace_back(LazyCallGraph::Edge(F, EK));
 }
 
 LazyCallGraph::Node::Node(LazyCallGraph &G, Function &F)
@@ -56,14 +47,26 @@ LazyCallGraph::Node::Node(LazyCallGraph &G, Function &F)
   // are trivially added, but to accumulate the latter we walk the instructions
   // and add every operand which is a constant to the worklist to process
   // afterward.
+  //
+  // Note that we consider *any* function with a definition to be a viable
+  // edge. Even if the function's definition is subject to replacement by
+  // some other module (say, a weak definition) there may still be
+  // optimizations which essentially speculate based on the definition and
+  // a way to check that the specific definition is in fact the one being
+  // used. For example, this could be done by moving the weak definition to
+  // a strong (internal) definition and making the weak definition be an
+  // alias. Then a test of the address of the weak function against the new
+  // strong definition's address would be an effective way to determine the
+  // safety of optimizing a direct call edge.
   for (BasicBlock &BB : F)
     for (Instruction &I : BB) {
       if (auto CS = CallSite(&I))
         if (Function *Callee = CS.getCalledFunction())
-          if (Callees.insert(Callee).second) {
-            Visited.insert(Callee);
-            addEdge(Edges, EdgeIndexMap, *Callee, LazyCallGraph::Edge::Call);
-          }
+          if (!Callee->isDeclaration())
+            if (Callees.insert(Callee).second) {
+              Visited.insert(Callee);
+              addEdge(Edges, EdgeIndexMap, *Callee, LazyCallGraph::Edge::Call);
+            }
 
       for (Value *Op : I.operand_values())
         if (Constant *C = dyn_cast<Constant>(Op))

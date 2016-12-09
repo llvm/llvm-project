@@ -1,0 +1,22 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+# XFAIL: *
+
+# This instruction is currently unimplemented.
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test
+
+    %r5r4 = LPMWRdZPi %r31r30, implicit-def %r31r30
+...

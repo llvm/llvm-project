@@ -3345,11 +3345,11 @@ bool llvm::isKnownNonNull(const Value *V) {
   if (const Argument *A = dyn_cast<Argument>(V))
     return A->hasByValOrInAllocaAttr() || A->hasNonNullAttr();
 
-  // A global variable in address space 0 is non null unless extern weak.
-  // Other address spaces may have null as a valid address for a global,
-  // so we can't assume anything.
+  // A global variable in address space 0 is non null unless extern weak
+  // or an absolute symbol reference. Other address spaces may have null as a
+  // valid address for a global, so we can't assume anything.
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))
-    return !GV->hasExternalWeakLinkage() &&
+    return !GV->isAbsoluteSymbolRef() && !GV->hasExternalWeakLinkage() &&
            GV->getType()->getAddressSpace() == 0;
 
   // A Load tagged with nonnull metadata is never null.

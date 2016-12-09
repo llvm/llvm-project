@@ -95,6 +95,7 @@ public:
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -189,6 +190,7 @@ public:
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -273,6 +275,10 @@ bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
 bool TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const { return false; }
 
 bool TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const { return false; }
+
+void TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+  writeGotPlt(Buf, S);
+}
 
 RelExpr TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
                                     RelExpr Expr) const {
@@ -369,6 +375,11 @@ void X86TargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {
   // Entries in .got.plt initially points back to the corresponding
   // PLT entries with a fixed offset to skip the first instruction.
   write32le(Buf, S.getPltVA<ELF32LE>() + 6);
+}
+
+void X86TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+  // An x86 entry is the address of the ifunc resolver function.
+  write32le(Buf, S.getVA<ELF32LE>());
 }
 
 uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
@@ -1647,6 +1658,11 @@ uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
 
 void ARMTargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
   write32le(Buf, In<ELF32LE>::Plt->getVA());
+}
+
+void ARMTargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+  // An ARM entry is the address of the ifunc resolver function.
+  write32le(Buf, S.getVA<ELF32LE>());
 }
 
 void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {

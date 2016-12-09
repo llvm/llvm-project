@@ -3386,8 +3386,8 @@ def SSE_RCPS : OpndItins<
 /// the HW instructions are 2 operand / destructive.
 multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
                           ValueType vt, ValueType ScalarVT,
-                          X86MemOperand x86memop, Operand vec_memop,
-                          ComplexPattern mem_cpat, Intrinsic Intr,
+                          X86MemOperand x86memop,
+                          Intrinsic Intr,
                           SDNode OpNode, Domain d, OpndItins itins,
                           Predicate target, string Suffix> {
   let hasSideEffects = 0 in {
@@ -3407,7 +3407,7 @@ multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
               !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
             []>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
   let mayLoad = 1 in
-  def m_Int : I<opc, MRMSrcMem, (outs VR128:$dst), (ins VR128:$src1, vec_memop:$src2),
+  def m_Int : I<opc, MRMSrcMem, (outs VR128:$dst), (ins VR128:$src1, x86memop:$src2),
               !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
             []>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
   }
@@ -3427,16 +3427,15 @@ multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   // which has a clobber before the rcp, vs.
   // rcpss mem, %xmm0
   let Predicates = [target, OptForSize] in {
-    def : Pat<(Intr mem_cpat:$src),
+    def : Pat<(Intr (scalar_to_vector (ScalarVT (load addr:$src2)))),
                (!cast<Instruction>(NAME#Suffix##m_Int)
-                      (vt (IMPLICIT_DEF)), mem_cpat:$src)>;
+                      (vt (IMPLICIT_DEF)), addr:$src2)>;
   }
 }
 
 multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
                           ValueType vt, ValueType ScalarVT,
-                          X86MemOperand x86memop, Operand vec_memop,
-                          ComplexPattern mem_cpat,
+                          X86MemOperand x86memop,
                           Intrinsic Intr, SDNode OpNode, Domain d,
                           OpndItins itins, string Suffix> {
   let hasSideEffects = 0 in {
@@ -3454,7 +3453,7 @@ multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
              []>, Sched<[itins.Sched.Folded]>;
   let mayLoad = 1 in
   def m_Int : I<opc, MRMSrcMem, (outs VR128:$dst),
-                (ins VR128:$src1, vec_memop:$src2),
+                (ins VR128:$src1, x86memop:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              []>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
   }
@@ -3479,9 +3478,9 @@ multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
                                  VR128:$src)>;
   }
   let Predicates = [HasAVX, OptForSize] in {
-    def : Pat<(Intr mem_cpat:$src),
+    def : Pat<(Intr (scalar_to_vector (ScalarVT (load addr:$src2)))),
               (!cast<Instruction>("V"#NAME#Suffix##m_Int)
-                    (vt (IMPLICIT_DEF)), mem_cpat:$src)>;
+                    (vt (IMPLICIT_DEF)), addr:$src2)>;
   }
   let Predicates = [UseAVX, OptForSize] in {
     def : Pat<(ScalarVT (OpNode (load addr:$src))),
@@ -3565,11 +3564,10 @@ let Predicates = [HasAVX] in {
 multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           OpndItins itins> {
   defm SS        :  sse_fp_unop_s<opc, OpcodeStr##ss, FR32, v4f32, f32, f32mem,
-                      ssmem, sse_load_f32,
                       !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss), OpNode,
                       SSEPackedSingle, itins, UseSSE1, "SS">, XS;
   defm V#NAME#SS  : avx_fp_unop_s<opc, "v"#OpcodeStr##ss, FR32, v4f32, f32,
-                      f32mem, ssmem, sse_load_f32,
+                      f32mem,
                       !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss), OpNode,
                       SSEPackedSingle, itins, "SS">, XS, VEX_4V, VEX_LIG;
 }
@@ -3577,11 +3575,10 @@ multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
 multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           OpndItins itins> {
   defm SD         : sse_fp_unop_s<opc, OpcodeStr##sd, FR64, v2f64, f64, f64mem,
-                         sdmem, sse_load_f64,
                          !cast<Intrinsic>("int_x86_sse2_"##OpcodeStr##_sd),
                          OpNode, SSEPackedDouble, itins, UseSSE2, "SD">, XD;
   defm V#NAME#SD  : avx_fp_unop_s<opc, "v"#OpcodeStr##sd, FR64, v2f64, f64,
-                         f64mem, sdmem, sse_load_f64,
+                         f64mem,
                          !cast<Intrinsic>("int_x86_sse2_"##OpcodeStr##_sd),
                          OpNode, SSEPackedDouble, itins, "SD">,
                          XD, VEX_4V, VEX_LIG;

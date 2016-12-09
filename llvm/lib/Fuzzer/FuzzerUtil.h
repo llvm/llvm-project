@@ -66,5 +66,13 @@ FILE *OpenProcessPipe(const char *Command, const char *Mode);
 const void *SearchMemory(const void *haystack, size_t haystacklen,
                          const void *needle, size_t needlelen);
 
+std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
+                              const char *X1, const char *X2);
+
+inline std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
+                                     const char *X) {
+  return CloneArgsWithoutX(Args, X, X);
+}
+
 }  // namespace fuzzer
 #endif  // LLVM_FUZZER_UTIL_H

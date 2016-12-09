@@ -47,8 +47,9 @@ two:
 
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
 ; SI:  v_cmp_ngt_f32_e32 vcc, v[[B_F32]], v[[A_F32]]
-; VI:  v_cmp_nle_f16_e32 vcc, v[[A_F16]], v[[B_F16]]
 ; SI: s_cbranch_vccz
+
+; VI:  v_cmp_nlt_f16_e32 vcc, v[[A_F16]], v[[B_F16]]
 ; VI: s_cbranch_vccnz
 
 ; VI: one{{$}}
@@ -85,7 +86,7 @@ two:
 
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
 ; SI:  v_cmp_nlt_f32_e32 vcc, v[[A_F32]], v[[B_F32]]
-; VI:  v_cmp_nge_f16_e32 vcc, v[[B_F16]], v[[A_F16]]
+; VI:  v_cmp_ngt_f16_e32 vcc, v[[B_F16]], v[[A_F16]]
 ; GCN: s_cbranch_vccnz
 
 ; GCN: one{{$}}

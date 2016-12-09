@@ -1,4 +1,4 @@
-//===--- lib/CodeGen/DwarfGenerator.h ---------------------------*- C++ -*-===//
+//===--- unittests/DebugInfo/DWARF/DwarfGenerator.h -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DWARFGENERATOR_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFGENERATOR_H
+#ifndef LLVM_UNITTESTS_DEBUG_INFO_DWARF_DWARFGENERATOR_H
+#define LLVM_UNITTESTS_DEBUG_INFO_DWARF_DWARFGENERATOR_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
@@ -120,7 +120,7 @@ public:
   /// \param Form the dwarf::Form to use when encoding the attribute. The form
   /// must be one of DW_FORM_strp or DW_FORM_string.
   /// \param P a pointer to the data to store as the attribute value.
-  /// \param S the size in bytes of the data pointed to by \param P .
+  /// \param S the size in bytes of the data pointed to by P .
   void addAttribute(uint16_t Attr, dwarf::Form Form, const void *P, size_t S);
 
   /// Add a new child to this DIE object.
@@ -170,7 +170,7 @@ class Generator {
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<AsmPrinter> Asm;
-  std::unique_ptr<DwarfStringPool> StringPool;
+  DwarfStringPool *StringPool; // Owned by Allocator
   std::vector<std::unique_ptr<CompileUnit>> CompileUnits;
   BumpPtrAllocator Allocator;
   DIEAbbrevSet Abbreviations;
@@ -228,4 +228,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DWARFGENERATOR_H
+#endif // LLVM_UNITTESTS_DEBUG_INFO_DWARF_DWARFGENERATOR_H

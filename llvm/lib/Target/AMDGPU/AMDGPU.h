@@ -90,6 +90,10 @@ ModulePass *createAMDGPUAlwaysInlinePass();
 ModulePass *createAMDGPUOpenCLImageTypeLoweringPass();
 FunctionPass *createAMDGPUAnnotateUniformValues();
 
+FunctionPass* createAMDGPUUnifyMetadataPass();
+void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
+extern char &AMDGPUUnifyMetadataID;
+
 void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
 extern char &SIFixControlFlowLiveIntervalsID;
 

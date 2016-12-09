@@ -56,6 +56,7 @@ template <typename T> class missing_format_wrapper;
 //
 // void format(raw_ostream &, StringRef);
 //
+// It is assumed T is a non-reference type.
 template <class T, class Enable = void> class has_FormatMember {
 public:
   static bool const value = false;
@@ -63,8 +64,11 @@ public:
 
 template <class T>
 class has_FormatMember<T,
-                       typename std::enable_if<std::is_class<T>::value>::type> {
-  using Signature_format = void (T::*)(llvm::raw_ostream &S, StringRef Options);
+                       typename std::enable_if<std::is_class<T>::value &&
+                                               std::is_const<T>::value>::type> {
+  using CleanT = typename std::remove_volatile<T>::type;
+  using Signature_format = void (CleanT::*)(llvm::raw_ostream &S,
+                                            StringRef Options) const;
 
   template <typename U>
   static char test2(SameType<Signature_format, &U::format> *);
@@ -72,7 +76,25 @@ class has_FormatMember<T,
   template <typename U> static double test2(...);
 
 public:
-  static bool const value = (sizeof(test2<T>(nullptr)) == 1);
+  static bool const value = (sizeof(test2<CleanT>(nullptr)) == 1);
+};
+
+template <class T>
+class has_FormatMember<
+    T, typename std::enable_if<std::is_class<T>::value &&
+                               !std::is_const<T>::value>::type> {
+  using CleanT = typename std::remove_cv<T>::type;
+  using Signature_format = void (CleanT::*)(llvm::raw_ostream &S,
+                                            StringRef Options);
+
+  template <typename U>
+  static char test2(SameType<Signature_format, &U::format> *);
+
+  template <typename U> static double test2(...);
+
+public:
+  static bool const value =
+      (sizeof(test2<CleanT>(nullptr)) == 1) || has_FormatMember<const T>::value;
 };
 
 // Test if format_provider<T> is defined on T and contains a member function
@@ -98,15 +120,18 @@ public:
 // based format() invocation.
 template <typename T>
 struct uses_format_member
-    : public std::integral_constant<bool, has_FormatMember<T>::value> {};
+    : public std::integral_constant<
+          bool,
+          has_FormatMember<typename std::remove_reference<T>::type>::value> {};
 
 // Simple template that decides whether a type T should use the format_provider
 // based format() invocation.  The member function takes priority, so this test
 // will only be true if there is not ALSO a format member.
 template <typename T>
 struct uses_format_provider
-    : public std::integral_constant<bool, !has_FormatMember<T>::value &&
-                                              has_FormatProvider<T>::value> {};
+    : public std::integral_constant<
+          bool, !uses_format_member<T>::value && has_FormatProvider<T>::value> {
+};
 
 // Simple template that decides whether a type T has neither a member-function
 // nor format_provider based implementation that it can use.  Mostly used so
@@ -114,8 +139,9 @@ struct uses_format_provider
 // implementation can be located.
 template <typename T>
 struct uses_missing_provider
-    : public std::integral_constant<bool, !has_FormatMember<T>::value &&
-                                              !has_FormatProvider<T>::value> {};
+    : public std::integral_constant<bool,
+                                    !uses_format_member<T>::value &&
+                                        !uses_format_provider<T>::value> {};
 
 template <typename T>
 typename std::enable_if<uses_format_member<T>::value,

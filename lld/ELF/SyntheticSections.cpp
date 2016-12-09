@@ -727,11 +727,7 @@ template <class ELFT> size_t IgotPltSection<ELFT>::getSize() const {
 
 template <class ELFT> void IgotPltSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const SymbolBody *B : Entries) {
-    if (Config->EMachine == EM_ARM)
-      // On ARM we are actually part of the Got and not GotPlt.
-      write32le(Buf, B->getVA<ELFT>());
-    else
-      Target->writeGotPlt(Buf, *B);
+    Target->writeIgotPlt(Buf, *B);
     Buf += sizeof(uintX_t);
   }
 }

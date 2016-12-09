@@ -9,22 +9,23 @@
 
 #include "Error.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 
 using namespace llvm;
 
-void dumpDebugAbbrev(DWARFContextInMemory &DCtx, DWARFYAML::DWARFData &Y) {
+void dumpDebugAbbrev(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
   auto AbbrevSetPtr = DCtx.getDebugAbbrev();
   if (AbbrevSetPtr) {
     for (auto AbbrvDeclSet : *AbbrevSetPtr) {
       for (auto AbbrvDecl : AbbrvDeclSet.second) {
-        DWARFYAML::DWARFAbbrev Abbrv;
+        DWARFYAML::Abbrev Abbrv;
         Abbrv.Code = AbbrvDecl.getCode();
         Abbrv.Tag = AbbrvDecl.getTag();
         Abbrv.Children = AbbrvDecl.hasChildren() ? dwarf::DW_CHILDREN_yes
                                                  : dwarf::DW_CHILDREN_no;
         for (auto Attribute : AbbrvDecl.attributes()) {
-          DWARFYAML::DWARFAttributeAbbrev AttAbrv;
+          DWARFYAML::AttributeAbbrev AttAbrv;
           AttAbrv.Attribute = Attribute.Attr;
           AttAbrv.Form = Attribute.Form;
           Abbrv.Attributes.push_back(AttAbrv);
@@ -35,7 +36,7 @@ void dumpDebugAbbrev(DWARFContextInMemory &DCtx, DWARFYAML::DWARFData &Y) {
   }
 }
 
-void dumpDebugStrings(DWARFContextInMemory &DCtx, DWARFYAML::DWARFData &Y) {
+void dumpDebugStrings(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
   StringRef RemainingTable = DCtx.getStringSection();
   while (RemainingTable.size() > 0) {
     auto SymbolPair = RemainingTable.split('\0');
@@ -44,10 +45,33 @@ void dumpDebugStrings(DWARFContextInMemory &DCtx, DWARFYAML::DWARFData &Y) {
   }
 }
 
+void dumpDebugARanges(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
+  DataExtractor ArangesData(DCtx.getARangeSection(), DCtx.isLittleEndian(), 0);
+  uint32_t Offset = 0;
+  DWARFDebugArangeSet Set;
+
+  while (Set.extract(ArangesData, &Offset)) {
+    DWARFYAML::ARange Range;
+    Range.Length = Set.getHeader().Length;
+    Range.Version = Set.getHeader().Version;
+    Range.CuOffset = Set.getHeader().CuOffset;
+    Range.AddrSize = Set.getHeader().AddrSize;
+    Range.SegSize = Set.getHeader().SegSize;
+    for (auto Descriptor : Set.descriptors()) {
+      DWARFYAML::ARangeDescriptor Desc;
+      Desc.Address = Descriptor.Address;
+      Desc.Length = Descriptor.Length;
+      Range.Descriptors.push_back(Desc);
+    }
+    Y.ARanges.push_back(Range);
+  }
+}
+
 std::error_code dwarf2yaml(DWARFContextInMemory &DCtx,
-                           DWARFYAML::DWARFData &Y) {
+                           DWARFYAML::Data &Y) {
   dumpDebugAbbrev(DCtx, Y);
   dumpDebugStrings(DCtx, Y);
+  dumpDebugARanges(DCtx, Y);
 
   return obj2yaml_error::success;
 }

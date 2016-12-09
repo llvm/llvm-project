@@ -13,6 +13,35 @@
 
 using namespace llvm;
 
+// Compile-time tests for the uses_format_member template
+namespace {
+struct ConstFormat {
+  void format(raw_ostream &OS, StringRef Opt) const { OS << "ConstFormat"; }
+};
+
+struct Format {
+  void format(raw_ostream &OS, StringRef Opt) { OS << "Format"; }
+};
+
+using detail::uses_format_member;
+
+static_assert(uses_format_member<Format>::value, "");
+static_assert(uses_format_member<Format &>::value, "");
+static_assert(uses_format_member<Format &&>::value, "");
+static_assert(!uses_format_member<const Format>::value, "");
+static_assert(!uses_format_member<const Format &>::value, "");
+static_assert(!uses_format_member<const volatile Format>::value, "");
+static_assert(!uses_format_member<const volatile Format &>::value, "");
+
+static_assert(uses_format_member<ConstFormat>::value, "");
+static_assert(uses_format_member<ConstFormat &>::value, "");
+static_assert(uses_format_member<ConstFormat &&>::value, "");
+static_assert(uses_format_member<const ConstFormat>::value, "");
+static_assert(uses_format_member<const ConstFormat &>::value, "");
+static_assert(uses_format_member<const volatile ConstFormat>::value, "");
+static_assert(uses_format_member<const volatile ConstFormat &>::value, "");
+}
+
 TEST(FormatVariadicTest, EmptyFormatString) {
   auto Replacements = formatv_object_base::parseFormatString("");
   EXPECT_EQ(0U, Replacements.size());
@@ -511,7 +540,7 @@ TEST(FormatVariadicTest, Adapter) {
 
   public:
     explicit Negative(int N) : N(N) {}
-    void format(raw_ostream &S, StringRef Options) { S << -N; }
+    void format(raw_ostream &S, StringRef Options) const { S << -N; }
   };
 
   EXPECT_EQ("-7", formatv("{0}", Negative(7)).str());
@@ -535,4 +564,27 @@ TEST(FormatVariadicTest, ImplicitConversions) {
 
   SmallString<4> S2 = formatv("{0} {1}", 1, 2);
   EXPECT_EQ("1 2", S2);
+}
+
+TEST(FormatVariadicTest, FormatMember) {
+  EXPECT_EQ("Format", formatv("{0}", Format()).str());
+
+  Format var;
+  EXPECT_EQ("Format", formatv("{0}", var).str());
+  EXPECT_EQ("Format", formatv("{0}", std::move(var)).str());
+
+  // Not supposed to compile
+  // const Format cvar{};
+  // EXPECT_EQ("Format", formatv("{0}", cvar).str());
+}
+
+TEST(FormatVariadicTest, FormatMemberConst) {
+  EXPECT_EQ("ConstFormat", formatv("{0}", ConstFormat()).str());
+
+  ConstFormat var;
+  EXPECT_EQ("ConstFormat", formatv("{0}", var).str());
+  EXPECT_EQ("ConstFormat", formatv("{0}", std::move(var)).str());
+
+  const ConstFormat cvar{};
+  EXPECT_EQ("ConstFormat", formatv("{0}", cvar).str());
 }

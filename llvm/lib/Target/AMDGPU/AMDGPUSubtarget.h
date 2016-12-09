@@ -114,6 +114,7 @@ protected:
   bool CFALUBug;
   bool HasVertexCache;
   short TexVTXClauseSize;
+  bool ScalarizeGlobal;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable;
@@ -400,6 +401,9 @@ public:
   unsigned getWavesPerWorkGroup(unsigned FlatWorkGroupSize) const {
     return alignTo(FlatWorkGroupSize, getWavefrontSize()) / getWavefrontSize();
   }
+
+  void setScalarizeGlobalBehavior(bool b) { ScalarizeGlobal = b;}
+  bool getScalarizeGlobalBehavior() const { return ScalarizeGlobal;}
 
   /// \returns Subtarget's default pair of minimum/maximum flat work group sizes
   /// for function \p F, or minimum/maximum flat work group sizes explicitly

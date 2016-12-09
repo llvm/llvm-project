@@ -1502,7 +1502,7 @@ isReMaterializable = 1 in
                      [(set i8:$dst, (load ioaddr8:$src))]>;
 
   def INWRdA : Pseudo<(outs DREGS:$dst),
-                      (ins i16imm:$src),
+                      (ins imm_port6:$src),
                       "inw\t$dst, $src",
                       [(set i16:$dst, (load ioaddr16:$src))]>;
 }
@@ -1514,7 +1514,7 @@ def OUTARr : FIOARr<(outs),
                     [(store i8:$src, ioaddr8:$dst)]>;
 
 def OUTWARr : Pseudo<(outs),
-                     (ins i16imm:$dst, DREGS:$src),
+                     (ins imm_port6:$dst, DREGS:$src),
                      "outw\t$dst, $src",
                      [(store i16:$src, ioaddr16:$dst)]>;
 

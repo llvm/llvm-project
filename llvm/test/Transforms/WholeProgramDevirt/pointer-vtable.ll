@@ -19,7 +19,7 @@ define void @call(i8* %obj) {
   %fptrptr = getelementptr [1 x i8*], [1 x i8*]* %vtable, i32 0, i32 0
   %fptr = load i8*, i8** %fptrptr
   %fptr_casted = bitcast i8* %fptr to void (i8*)*
-  ; CHECK: call void %
+  ; CHECK: call void @vf(
   call void %fptr_casted(i8* %obj)
   ret void
 }

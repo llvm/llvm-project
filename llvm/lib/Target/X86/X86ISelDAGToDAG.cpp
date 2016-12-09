@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -1571,7 +1572,15 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
     return false;
 
   Imm = N;
-  return TM.getCodeModel() == CodeModel::Small;
+  if (N->getOpcode() != ISD::TargetGlobalAddress)
+    return TM.getCodeModel() == CodeModel::Small;
+
+  Optional<ConstantRange> CR =
+      cast<GlobalAddressSDNode>(N)->getGlobal()->getAbsoluteSymbolRange();
+  if (!CR)
+    return TM.getCodeModel() == CodeModel::Small;
+
+  return CR->getUnsignedMax().ult(1ull << 32);
 }
 
 bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,
@@ -1710,10 +1719,39 @@ bool X86DAGToDAGISel::selectRelocImm(SDValue N, SDValue &Op) {
     return true;
   }
 
+  // Keep track of the original value type and whether this value was
+  // truncated. If we see a truncation from pointer type to VT that truncates
+  // bits that are known to be zero, we can use a narrow reference.
+  EVT VT = N.getValueType();
+  bool WasTruncated = false;
+  if (N.getOpcode() == ISD::TRUNCATE) {
+    WasTruncated = true;
+    N = N.getOperand(0);
+  }
+
   if (N.getOpcode() != X86ISD::Wrapper)
     return false;
 
-  Op = N.getOperand(0);
+  // We can only use non-GlobalValues as immediates if they were not truncated,
+  // as we do not have any range information. If we have a GlobalValue and the
+  // address was not truncated, we can select it as an operand directly.
+  unsigned Opc = N.getOperand(0)->getOpcode();
+  if (Opc != ISD::TargetGlobalAddress || !WasTruncated) {
+    Op = N.getOperand(0);
+    // We can only select the operand directly if we didn't have to look past a
+    // truncate.
+    return !WasTruncated;
+  }
+
+  // Check that the global's range fits into VT.
+  auto *GA = cast<GlobalAddressSDNode>(N.getOperand(0));
+  Optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
+  if (!CR || CR->getUnsignedMax().uge(1ull << VT.getSizeInBits()))
+    return false;
+
+  // Okay, we can use a narrow reference.
+  Op = CurDAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(N), VT,
+                                      GA->getOffset(), GA->getTargetFlags());
   return true;
 }
 

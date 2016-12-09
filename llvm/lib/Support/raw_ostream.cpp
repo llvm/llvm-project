@@ -598,7 +598,13 @@ void raw_fd_ostream::close() {
 uint64_t raw_fd_ostream::seek(uint64_t off) {
   assert(SupportsSeeking && "Stream does not support seeking!");
   flush();
+#ifdef LLVM_ON_WIN32
+  pos = ::_lseeki64(FD, off, SEEK_SET);
+#elif defined(HAVE_LSEEK64)
+  pos = ::lseek64(FD, off, SEEK_SET);
+#else
   pos = ::lseek(FD, off, SEEK_SET);
+#endif
   if (pos == (uint64_t)-1)
     error_detected();
   return pos;

@@ -121,6 +121,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     CFALUBug(false),
     HasVertexCache(false),
     TexVTXClauseSize(0),
+    ScalarizeGlobal(false),
 
     FeatureDisable(false),
     InstrItins(getInstrItineraryForCPU(GPU)),

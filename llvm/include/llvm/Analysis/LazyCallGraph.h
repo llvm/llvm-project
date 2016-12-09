@@ -953,6 +953,13 @@ public:
   /// useful to code doing updates or otherwise wanting to walk the IR in the
   /// same patterns as when we build the call graph.
 
+  /// Recursively visits the defined functions whose address is reachable from
+  /// every constant in the \p Worklist.
+  ///
+  /// Doesn't recurse through any constants already in the \p Visited set, and
+  /// updates that set with every constant visited.
+  ///
+  /// For each defined function, calls \p Callback with that function.
   template <typename CallbackT>
   static void visitReferences(SmallVectorImpl<Constant *> &Worklist,
                               SmallPtrSetImpl<Constant *> &Visited,
@@ -961,7 +968,8 @@ public:
       Constant *C = Worklist.pop_back_val();
 
       if (Function *F = dyn_cast<Function>(C)) {
-        Callback(*F);
+        if (!F->isDeclaration())
+          Callback(*F);
         continue;
       }
 
@@ -969,9 +977,9 @@ public:
         if (Visited.insert(cast<Constant>(Op)).second)
           Worklist.push_back(cast<Constant>(Op));
     }
-
-    ///@}
   }
+
+  ///@}
 
 private:
   typedef SmallVectorImpl<Node *>::reverse_iterator node_stack_iterator;
