@@ -15,7 +15,6 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputSection.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"
@@ -24,6 +23,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -852,7 +852,7 @@ void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
   auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I].get());
   for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
     if (auto *Data = dyn_cast<BytesDataCommand>(Base.get()))
-      writeInt<ELFT>(Buf + Data->Offset, Data->Data, Data->Size);
+      writeInt<ELFT>(Buf + Data->Offset, Data->Expression(0), Data->Size);
 }
 
 template <class ELFT> bool LinkerScript<ELFT>::hasLMA(StringRef Name) {
@@ -987,6 +987,7 @@ public:
 
   void readLinkerScript();
   void readVersionScript();
+  void readDynamicList();
 
 private:
   void addFile(StringRef Path);
@@ -1039,6 +1040,13 @@ private:
   bool IsUnderSysroot;
   std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
+
+void ScriptParser::readDynamicList() {
+  expect("{");
+  readAnonymousDeclaration();
+  if (!atEOF())
+    setError("EOF expected, but got " + next());
+}
 
 void ScriptParser::readVersionScript() {
   readVersionScriptCommand();
@@ -1680,13 +1688,7 @@ BytesDataCommand *ScriptParser::readBytesDataCommand(StringRef Tok) {
   if (Size == -1)
     return nullptr;
 
-  expect("(");
-  uint64_t Val = 0;
-  StringRef S = next();
-  if (!readInteger(S, Val))
-    setError("unexpected value: " + S);
-  expect(")");
-  return new BytesDataCommand(Val, Size);
+  return new BytesDataCommand(readParenExpr(), Size);
 }
 
 StringRef ScriptParser::readParenLiteral() {
@@ -1929,14 +1931,17 @@ std::vector<SymbolVersion> ScriptParser::readSymbols() {
 // Reads an "extern C++" directive, e.g.,
 // "extern "C++" { ns::*; "f(int, double)"; };"
 std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
-  expect("\"C++\"");
+  StringRef Tok = next();
+  bool IsCXX = Tok == "\"C++\"";
+  if (!IsCXX && Tok != "\"C\"")
+    setError("Unknown language");
   expect("{");
 
   std::vector<SymbolVersion> Ret;
   while (!Error && peek() != "}") {
     StringRef Tok = next();
     bool HasWildcard = !Tok.startswith("\"") && hasWildcard(Tok);
-    Ret.push_back({unquote(Tok), true, HasWildcard});
+    Ret.push_back({unquote(Tok), IsCXX, HasWildcard});
     expect(";");
   }
 
@@ -1951,6 +1956,10 @@ void elf::readLinkerScript(MemoryBufferRef MB) {
 
 void elf::readVersionScript(MemoryBufferRef MB) {
   ScriptParser(MB).readVersionScript();
+}
+
+void elf::readDynamicList(MemoryBufferRef MB) {
+  ScriptParser(MB).readDynamicList();
 }
 
 template class elf::LinkerScript<ELF32LE>;

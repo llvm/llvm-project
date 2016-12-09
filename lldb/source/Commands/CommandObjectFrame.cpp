@@ -375,7 +375,7 @@ protected:
       if (command.GetArgumentCount() > 1) {
         result.AppendErrorWithFormat(
             "too many arguments; expected frame-index, saw '%s'.\n",
-            command.GetArgumentAtIndex(0));
+            command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), this,
             GetCommandInterpreter().GetDebugger().GetTerminalWidth());

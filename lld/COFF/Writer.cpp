@@ -16,6 +16,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Core/Parallel.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -134,9 +135,7 @@ private:
   std::map<StringRef, std::vector<DefinedImportData *>> binImports();
 
   SymbolTable *Symtab;
-  std::unique_ptr<llvm::FileOutputBuffer> Buffer;
-  llvm::SpecificBumpPtrAllocator<OutputSection> CAlloc;
-  llvm::SpecificBumpPtrAllocator<BaserelChunk> BAlloc;
+  std::unique_ptr<FileOutputBuffer> Buffer;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
   std::vector<llvm::object::coff_symbol16> OutputSymtab;
@@ -342,7 +341,7 @@ void Writer::createSections() {
     StringRef Name = getOutputSection(Pair.first);
     OutputSection *&Sec = Sections[Name];
     if (!Sec) {
-      Sec = new (CAlloc.Allocate()) OutputSection(Name);
+      Sec = make<OutputSection>(Name);
       OutputSections.push_back(Sec);
     }
     std::vector<Chunk *> &Chunks = Pair.second;
@@ -866,7 +865,7 @@ OutputSection *Writer::createSection(StringRef Name) {
                        .Default(0);
   if (!Perms)
     llvm_unreachable("unknown section name");
-  auto Sec = new (CAlloc.Allocate()) OutputSection(Name);
+  auto Sec = make<OutputSection>(Name);
   Sec->addPermissions(Perms);
   OutputSections.push_back(Sec);
   return Sec;
@@ -897,13 +896,11 @@ void Writer::addBaserelBlocks(OutputSection *Dest, std::vector<Baserel> &V) {
     uint32_t P = V[J].RVA & Mask;
     if (P == Page)
       continue;
-    BaserelChunk *Buf = BAlloc.Allocate();
-    Dest->addChunk(new (Buf) BaserelChunk(Page, &V[I], &V[0] + J));
+    Dest->addChunk(make<BaserelChunk>(Page, &V[I], &V[0] + J));
     I = J;
     Page = P;
   }
   if (I == J)
     return;
-  BaserelChunk *Buf = BAlloc.Allocate();
-  Dest->addChunk(new (Buf) BaserelChunk(Page, &V[I], &V[0] + J));
+  Dest->addChunk(make<BaserelChunk>(Page, &V[I], &V[0] + J));
 }

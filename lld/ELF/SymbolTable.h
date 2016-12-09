@@ -51,7 +51,7 @@ public:
 
   DefinedRegular<ELFT> *addAbsolute(StringRef Name,
                                     uint8_t Visibility = llvm::ELF::STV_HIDDEN,
-                                    uint8_t Type = llvm::ELF::STB_GLOBAL);
+                                    uint8_t Binding = llvm::ELF::STB_GLOBAL);
   DefinedRegular<ELFT> *addIgnored(StringRef Name,
                                    uint8_t Visibility = llvm::ELF::STV_HIDDEN);
 
@@ -81,7 +81,6 @@ public:
 
   void scanUndefinedFlags();
   void scanShlibUndefined();
-  void scanDynamicList();
   void scanVersionScript();
 
   SymbolBody *find(StringRef Name);
@@ -92,14 +91,13 @@ public:
   std::vector<InputSectionBase<ELFT> *> Sections;
 
 private:
-  std::vector<SymbolBody *> findAll(StringRef GlobPat);
   std::pair<Symbol *, bool> insert(StringRef Name);
   std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
 
-  ArrayRef<SymbolBody *> findDemangled(StringRef Name);
-  std::vector<SymbolBody *> findAllDemangled(StringRef GlobPat);
+  std::vector<SymbolBody *> find(SymbolVersion Ver);
+  std::vector<SymbolBody *> findAll(SymbolVersion Ver);
 
   void initDemangledSyms();
   void handleAnonymousVersion();

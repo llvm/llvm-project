@@ -72,7 +72,7 @@ static const char* ittnotify_lib_name = "libittnotify.dylib";
 
 
 #ifndef LIB_VAR_NAME
-#if ITT_ARCH==ITT_ARCH_IA32 || ITT_ARCH==ITT_ARCH_ARM
+#if ITT_ARCH==ITT_ARCH_IA32 || ITT_ARCH==ITT_ARCH_ARM || ITT_ARCH==ITT_ARCH_MIPS
 #define LIB_VAR_NAME INTEL_LIBITTNOTIFY32
 #else
 #define LIB_VAR_NAME INTEL_LIBITTNOTIFY64

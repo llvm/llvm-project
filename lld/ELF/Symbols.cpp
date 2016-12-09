@@ -95,8 +95,8 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
 SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
     : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(IsLocal),
-      IsInGlobalMipsGot(false), Is32BitMipsGot(false), Type(Type),
-      StOther(StOther), Name(Name) {}
+      IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
+      IsInIgot(false), Type(Type), StOther(StOther), Name(Name) {}
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
@@ -151,6 +151,8 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
+  if (this->IsInIgot)
+    return In<ELFT>::IgotPlt->getVA() + getGotPltOffset<ELFT>();
   return In<ELFT>::GotPlt->getVA() + getGotPltOffset<ELFT>();
 }
 
@@ -159,6 +161,8 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotPltOffset() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
+  if (this->IsInIplt)
+    return In<ELFT>::Iplt->getVA() + PltIndex * Target->PltEntrySize;
   return In<ELFT>::Plt->getVA() + Target->PltHeaderSize +
          PltIndex * Target->PltEntrySize;
 }

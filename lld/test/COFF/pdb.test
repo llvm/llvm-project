@@ -1,10 +1,10 @@
 # RUN: yaml2obj %s > %t.obj
-# RUN: lld-link /debug /pdb:%t.pdb /dll /out:%t.dll /entry:DllMain /nodefaultlib %t.obj
+# RUN: lld-link /debug /pdb:%t.pdb /dll /out:%t.dll /entry:main /nodefaultlib %t.obj
 # RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
-# RUN:   -dbi-stream -ipi-stream %t.pdb | FileCheck %s
+# RUN:   -dbi-stream -ipi-stream -tpi-stream %t.pdb | FileCheck %s
 
-# RUN: llvm-pdbdump raw -modules -section-map -section-headers -section-contribs %t.pdb \
-# RUN:   | FileCheck -check-prefix RAW %s
+# RUN: llvm-pdbdump raw -modules -section-map -section-headers -section-contribs \
+# RUN:   -tpi-records %t.pdb | FileCheck -check-prefix RAW %s
 
 # CHECK:      MSF:
 # CHECK-NEXT:   SuperBlock:
@@ -14,37 +14,184 @@
 # CHECK-NEXT:     NumDirectoryBytes: 48
 # CHECK-NEXT:     Unknown1:        0
 # CHECK-NEXT:     BlockMapAddr:    3
-# CHECK-NEXT:     NumDirectoryBlocks: 1
-# CHECK-NEXT:     DirectoryBlocks: [ 9 ]
-# CHECK-NEXT:     NumStreams:      6
-# CHECK-NEXT:     FileSize:        40960
-# CHECK-NEXT:   StreamSizes:     [ 0, 48, 56, 322, 56, 80 ]
-# CHECK-NEXT:   StreamMap:
-# CHECK-NEXT:     - Stream:          [  ]
-# CHECK-NEXT:     - Stream:          [ 5 ]
-# CHECK-NEXT:     - Stream:          [ 7 ]
-# CHECK-NEXT:     - Stream:          [ 6 ]
-# CHECK-NEXT:     - Stream:          [ 8 ]
-# CHECK-NEXT:     - Stream:          [ 4 ]
-# CHECK-NEXT:   PdbStream:
-# CHECK-NEXT:     Age:             1
-# CHECK-NEXT:     Guid:            '{00000000-0000-0000-0000-000000000000}'
-# CHECK-NEXT:     Signature:       0
-# CHECK-NEXT:     Version:         VC70
-# CHECK-NEXT:     NamedStreams:
-# CHECK-NEXT:   DbiStream:
-# CHECK-NEXT:     VerHeader:       V110
-# CHECK-NEXT:     Age:             1
-# CHECK-NEXT:     BuildNumber:     0
-# CHECK-NEXT:     PdbDllVersion:   0
-# CHECK-NEXT:     PdbDllRbld:      0
-# CHECK-NEXT:     Flags:           0
-# CHECK-NEXT:     MachineType:     x86
-# CHECK-NEXT:   IpiStream:
-# CHECK-NEXT:     Version:         VC80
-# CHECK-NEXT:     Records:
+# CHECK-NEXT:   NumDirectoryBlocks: 1
+# CHECK-NEXT:   DirectoryBlocks: [ 9 ]
+# CHECK-NEXT:   NumStreams:      6
+# CHECK-NEXT:   FileSize:        40960
+# CHECK-NEXT: StreamSizes:     [ 0, 48, 628, 266, 56, 80 ]
+# CHECK-NEXT: StreamMap:
+# CHECK-NEXT:   - Stream:          [  ]
+# CHECK-NEXT:   - Stream:          [ 5 ]
+# CHECK-NEXT:   - Stream:          [ 7 ]
+# CHECK-NEXT:   - Stream:          [ 6 ]
+# CHECK-NEXT:   - Stream:          [ 8 ]
+# CHECK-NEXT:   - Stream:          [ 4 ]
+# CHECK-NEXT: PdbStream:
+# CHECK-NEXT:   Age:             1
+# CHECK-NEXT:   Guid:            '{00000000-0000-0000-0000-000000000000}'
+# CHECK-NEXT:   Signature:       0
+# CHECK-NEXT:   Version:         VC70
+# CHECK-NEXT:   NamedStreams:
+# CHECK-NEXT: DbiStream:
+# CHECK-NEXT:   VerHeader:       V110
+# CHECK-NEXT:   Age:             1
+# CHECK-NEXT:   BuildNumber:     0
+# CHECK-NEXT:   PdbDllVersion:   0
+# CHECK-NEXT:   PdbDllRbld:      0
+# CHECK-NEXT:   Flags:           0
+# CHECK-NEXT:   MachineType:     x86
+# CHECK-NEXT: TpiStream:
+# CHECK-NEXT:   Version:         VC80
+# CHECK-NEXT:   Records:
+# CHECK-NEXT:     - Kind:            LF_ARGLIST
+# CHECK-NEXT:       ArgList:
+# CHECK-NEXT:         ArgIndices:      [ 0 ]
+# CHECK-NEXT:     - Kind:            LF_PROCEDURE
+# CHECK-NEXT:       Procedure:
+# CHECK-NEXT:         ReturnType:      116
+# CHECK-NEXT:         CallConv:        NearC
+# CHECK-NEXT:         Options:         [ None ]
+# CHECK-NEXT:         ParameterCount:  0
+# CHECK-NEXT:         ArgumentList:    4096
+# CHECK-NEXT:     - Kind:            LF_FUNC_ID
+# CHECK-NEXT:       FuncId:
+# CHECK-NEXT:         ParentScope:     0
+# CHECK-NEXT:         FunctionType:    4097
+# CHECK-NEXT:         Name:            main
+# CHECK-NEXT:     - Kind:            LF_STRING_ID
+# CHECK-NEXT:       StringId:
+# CHECK-NEXT:         Id:              0
+# CHECK-NEXT:         String:          'D:\b'
+# CHECK-NEXT:     - Kind:            LF_STRING_ID
+# CHECK-NEXT:       StringId:
+# CHECK-NEXT:         Id:              0
+# CHECK-NEXT:         String:          'C:\vs14\VC\BIN\amd64\cl.exe'
+# CHECK-NEXT:     - Kind:            LF_STRING_ID
+# CHECK-NEXT:       StringId:
+# CHECK-NEXT:         Id:              0
+# CHECK-NEXT:         String:          '-Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared"'
+# CHECK-NEXT:     - Kind:            LF_SUBSTR_LIST
+# CHECK-NEXT:       ArgList:
+# CHECK-NEXT:         ArgIndices:      [ 4101 ]
+# CHECK-NEXT:     - Kind:            LF_STRING_ID
+# CHECK-NEXT:       StringId:
+# CHECK-NEXT:         Id:              4102
+# CHECK-NEXT:         String:          ' -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X'
+# CHECK-NEXT:     - Kind:            LF_STRING_ID
+# CHECK-NEXT:       StringId:
+# CHECK-NEXT:         Id:              0
+# CHECK-NEXT:         String:          ret42.c
+# CHECK-NEXT:     - Kind:            LF_STRING_ID
+# CHECK-NEXT:       StringId:
+# CHECK-NEXT:         Id:              0
+# CHECK-NEXT:         String:          'D:\b\vc140.pdb'
+# CHECK-NEXT:     - Kind:            LF_BUILDINFO
+# CHECK-NEXT:       BuildInfo:
+# CHECK-NEXT:         ArgIndices:      [ 4099, 4100, 4104, 4105, 4103 ]
+# CHECK-NEXT: IpiStream:
+# CHECK-NEXT:   Version:         VC80
+# CHECK-NEXT:   Records:
+# CHECK-NEXT: ...
 
-# RAW:      DBI Stream {
+# RAW:      Type Info Stream (TPI) {
+# RAW-NEXT:   TPI Version: 20040203
+# RAW-NEXT:   Record count: 11
+# RAW-NEXT:   Records [
+# RAW-NEXT:     {
+# RAW-NEXT:       ArgList (0x1000) {
+# RAW-NEXT:         TypeLeafKind: LF_ARGLIST (0x1201)
+# RAW-NEXT:         NumArgs: 1
+# RAW-NEXT:         Arguments [
+# RAW-NEXT:           ArgType: 0x0
+# RAW-NEXT:         ]
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       Procedure (0x1001) {
+# RAW-NEXT:         TypeLeafKind: LF_PROCEDURE (0x1008)
+# RAW-NEXT:         ReturnType: int (0x74)
+# RAW-NEXT:         CallingConvention: NearC (0x0)
+# RAW-NEXT:         FunctionOptions [ (0x0)
+# RAW-NEXT:         ]
+# RAW-NEXT:         NumParameters: 0
+# RAW-NEXT:         ArgListType: (<no type>) (0x1000)
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       FuncId (0x1002) {
+# RAW-NEXT:         TypeLeafKind: LF_FUNC_ID (0x1601)
+# RAW-NEXT:         ParentScope: 0x0
+# RAW-NEXT:         FunctionType: int (<no type>) (0x1001)
+# RAW-NEXT:         Name: main
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       StringId (0x1003) {
+# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
+# RAW-NEXT:         Id: 0x0
+# RAW-NEXT:         StringData: D:\b
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       StringId (0x1004) {
+# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
+# RAW-NEXT:         Id: 0x0
+# RAW-NEXT:         StringData: C:\vs14\VC\BIN\amd64\cl.exe
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       StringId (0x1005) {
+# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
+# RAW-NEXT:         Id: 0x0
+# RAW-NEXT:         StringData: -Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared"
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       StringList (0x1006) {
+# RAW-NEXT:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
+# RAW-NEXT:         NumArgs: 1
+# RAW-NEXT:         Arguments [
+# RAW-NEXT:           ArgType: -Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" (0x1005)
+# RAW-NEXT:         ]
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       StringId (0x1007) {
+# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
+# RAW-NEXT:         Id: (-Z7 -c -MT -IC:\vs14\VC\INCLUDE -IC:\vs14\VC\ATLMFC\INCLUDE -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.10150.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared") (0x1006)
+# RAW-NEXT:         StringData:  -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       StringId (0x1008) {
+# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
+# RAW-NEXT:         Id: 0x0
+# RAW-NEXT:         StringData: ret42.c
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       StringId (0x1009) {
+# RAW-NEXT:         TypeLeafKind: LF_STRING_ID (0x1605)
+# RAW-NEXT:         Id: 0x0
+# RAW-NEXT:         StringData: D:\b\vc140.pdb
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       BuildInfo (0x100A) {
+# RAW-NEXT:         TypeLeafKind: LF_BUILDINFO (0x1603)
+# RAW-NEXT:         NumArgs: 5
+# RAW-NEXT:         Arguments [
+# RAW-NEXT:           ArgType: D:\b (0x1003)
+# RAW-NEXT:           ArgType: C:\vs14\VC\BIN\amd64\cl.exe (0x1004)
+# RAW-NEXT:           ArgType: ret42.c (0x1008)
+# RAW-NEXT:           ArgType: D:\b\vc140.pdb (0x1009)
+# RAW-NEXT:           ArgType:  -I"C:\Program Files (x86)\Windows Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TC -X (0x1007)
+# RAW-NEXT:         ]
+# RAW-NEXT:       }
+# RAW-NEXT:     }
+# RAW-NEXT:   ]
+# RAW-NEXT: }
+# RAW-NEXT: DBI Stream {
 # RAW-NEXT:   Dbi Version: 20091201
 # RAW-NEXT:   Age: 1
 # RAW-NEXT:   Incremental Linking: No
@@ -75,47 +222,13 @@
 # RAW-NEXT: Section Contributions [
 # RAW-NEXT:   Contribution {
 # RAW-NEXT:     ISect: 0
-# RAW-NEXT:     Off: 140
-# RAW-NEXT:     Size: 3
-# RAW-NEXT:     Characteristics [ (0x60300020)
-# RAW-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+# RAW-NEXT:     Off: 1140
+# RAW-NEXT:     Size: 6
+# RAW-NEXT:     Characteristics [ (0x60500020)
+# RAW-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
 # RAW-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
 # RAW-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
 # RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-# RAW-NEXT:     ]
-# RAW-NEXT:     Module {
-# RAW-NEXT:       Index: 0
-# RAW-NEXT:       Name: * Linker *
-# RAW-NEXT:     }
-# RAW-NEXT:     Data CRC: 0
-# RAW-NEXT:     Reloc CRC: 0
-# RAW-NEXT:   }
-# RAW-NEXT:   Contribution {
-# RAW-NEXT:     ISect: 0
-# RAW-NEXT:     Off: 0
-# RAW-NEXT:     Size: 0
-# RAW-NEXT:     Characteristics [ (0xC0300040)
-# RAW-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-# RAW-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-# RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-# RAW-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
-# RAW-NEXT:     ]
-# RAW-NEXT:     Module {
-# RAW-NEXT:       Index: 0
-# RAW-NEXT:       Name: * Linker *
-# RAW-NEXT:     }
-# RAW-NEXT:     Data CRC: 0
-# RAW-NEXT:     Reloc CRC: 0
-# RAW-NEXT:   }
-# RAW-NEXT:   Contribution {
-# RAW-NEXT:     ISect: 0
-# RAW-NEXT:     Off: 0
-# RAW-NEXT:     Size: 0
-# RAW-NEXT:     Characteristics [ (0xC0300080)
-# RAW-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-# RAW-NEXT:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
-# RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-# RAW-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
 # RAW-NEXT:       Index: 0
@@ -139,7 +252,7 @@
 # RAW-NEXT:     SecName: 65535
 # RAW-NEXT:     ClassName: 65535
 # RAW-NEXT:     Offset: 0
-# RAW-NEXT:     SecByteLength:
+# RAW-NEXT:     SecByteLength: 6
 # RAW-NEXT:   }
 # RAW-NEXT:   Entry {
 # RAW-NEXT:     Flags [ (0x109)
@@ -172,10 +285,10 @@
 # RAW-NEXT: Section Headers [
 # RAW-NEXT:   {
 # RAW-NEXT:     Name: .text
-# RAW-NEXT:     Virtual Size:
-# RAW-NEXT:     Virtual Address:
-# RAW-NEXT:     Size of Raw Data:
-# RAW-NEXT:     File Pointer to Raw Data:
+# RAW-NEXT:     Virtual Size: 6
+# RAW-NEXT:     Virtual Address: 4096
+# RAW-NEXT:     Size of Raw Data: 512
+# RAW-NEXT:     File Pointer to Raw Data: 512
 # RAW-NEXT:     File Pointer to Relocations: 0
 # RAW-NEXT:     File Pointer to Linenumbers: 0
 # RAW-NEXT:     Number of Relocations: 0
@@ -189,9 +302,9 @@
 # RAW-NEXT:   {
 # RAW-NEXT:     Name: .rdata
 # RAW-NEXT:     Virtual Size:
-# RAW-NEXT:     Virtual Address:
-# RAW-NEXT:     Size of Raw Data:
-# RAW-NEXT:     File Pointer to Raw Data:
+# RAW-NEXT:     Virtual Address: 8192
+# RAW-NEXT:     Size of Raw Data: 512
+# RAW-NEXT:     File Pointer to Raw Data: 1024
 # RAW-NEXT:     File Pointer to Relocations: 0
 # RAW-NEXT:     File Pointer to Linenumbers: 0
 # RAW-NEXT:     Number of Relocations: 0
@@ -205,67 +318,102 @@
 
 --- !COFF
 header:
-  Machine:         IMAGE_FILE_MACHINE_I386
+  Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [  ]
 sections:
-  - Name:            .text
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     2020202F44454641554C544C49423A224C4942434D5422202F44454641554C544C49423A224F4C444E414D45532220
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     04000000F1000000530000001500011100000000443A5C625C72657434322E6F626A003A003C1100600000D00013000000F259000013000000F25900004D6963726F736F667420285229204F7074696D697A696E6720436F6D70696C65720000F10000004E0000002A00471100000000000000000000000006000000000000000500000002100000000000000000006D61696E001C001210000000000000000000000000000000000000000000000042110002004F110000F2000000200000000000000000000000060000000000000001000000140000000000000001000080F4000000180000000100000010010BFC79AA614B536E3D64B110330D1E580000F30000000E00000000643A5C625C72657434322E63000000F10000000800000006004C110A100000
+    Relocations:
+      - VirtualAddress:  136
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  140
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  192
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  196
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECTION
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     040000000A00011201000000000000000E0008107400000000000000001000001200011600000000011000006D61696E00F3F2F10E00051600000000443A5C6200F3F2F12200051600000000433A5C767331345C56435C42494E5C616D6436345C636C2E6578650002010516000000002D5A37202D63202D4D54202D49433A5C767331345C56435C494E434C554445202D49433A5C767331345C56435C41544C4D46435C494E434C554445202D4922433A5C50726F6772616D2046696C65732028783836295C57696E646F7773204B6974735C31305C696E636C7564655C31302E302E31303135302E305C7563727422202D4922433A5C50726F6772616D2046696C65732028783836295C57696E646F7773204B6974735C4E4554465853444B5C342E365C696E636C7564655C756D22202D4922433A5C50726F6772616D2046696C65732028783836295C57696E646F7773204B6974735C382E315C696E636C7564655C73686172656422000A00041601000000051000008200051606100000202D4922433A5C50726F6772616D2046696C65732028783836295C57696E646F7773204B6974735C382E315C696E636C7564655C756D22202D4922433A5C50726F6772616D2046696C65732028783836295C57696E646F7773204B6974735C382E315C696E636C7564655C77696E727422202D5443202D5800F3F2F10E0005160000000072657434322E63001600051600000000443A5C625C76633134302E70646200F11A00031605000310000004100000081000000910000007100000F2F1
+  - Name:            '.text$mn'
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       4
-    SectionData:     31C0C3
-  - Name:            .data
-    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
-    Alignment:       4
-    SectionData:     ''
-  - Name:            .bss
-    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
-    Alignment:       4
-    SectionData:     ''
+    Alignment:       16
+    SectionData:     B82A000000C3
 symbols:
-  - Name:            .text
+  - Name:            '@comp.id'
+    Value:           17062386
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '@feat.00'
+    Value:           2147484048
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .drectve
     Value:           0
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          3
+      Length:          47
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        3963538403
-      Number:          1
-  - Name:            .data
+      CheckSum:        0
+      Number:          0
+  - Name:            '.debug$S'
     Value:           0
     SectionNumber:   2
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          0
-      NumberOfRelocations: 0
+      Length:          296
+      NumberOfRelocations: 4
       NumberOfLinenumbers: 0
       CheckSum:        0
-      Number:          2
-  - Name:            .bss
+      Number:          0
+  - Name:            '.debug$T'
     Value:           0
     SectionNumber:   3
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          0
+      Length:          576
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       CheckSum:        0
-      Number:          3
-  - Name:            '@feat.00'
-    Value:           1
-    SectionNumber:   -1
+      Number:          0
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   4
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-  - Name:            _DllMain
+    SectionDefinition:
+      Length:          6
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2139436471
+      Number:          0
+  - Name:            main
     Value:           0
-    SectionNumber:   1
+    SectionNumber:   4
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL

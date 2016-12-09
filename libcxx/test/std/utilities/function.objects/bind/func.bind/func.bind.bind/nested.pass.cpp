@@ -28,7 +28,7 @@ struct power
   T
   operator()(T a, T b)
   {
-    return std::pow(a, b);
+    return static_cast<T>(std::pow(a, b));
   }
 };
 

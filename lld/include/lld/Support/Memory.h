@@ -19,15 +19,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_MEMORY_H
-#define LLD_ELF_MEMORY_H
+#ifndef LLD_MEMORY_H
+#define LLD_MEMORY_H
 
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
 #include <vector>
 
 namespace lld {
-namespace elf {
 
 // Use this arena if your object doesn't have a destructor.
 extern llvm::BumpPtrAllocator BAlloc;
@@ -55,7 +54,6 @@ template <typename T, typename... U> inline T *make(U &&... Args) {
 }
 
 void freeArena();
-}
 }
 
 #endif

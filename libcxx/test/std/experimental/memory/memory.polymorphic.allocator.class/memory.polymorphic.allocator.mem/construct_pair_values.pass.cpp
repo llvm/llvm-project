@@ -23,7 +23,12 @@
 #include <tuple>
 #include <cassert>
 #include <cstdlib>
+
+#include "test_macros.h"
+#include "test_memory_resource.hpp"
 #include "uses_alloc_types.hpp"
+#include "controlled_allocators.hpp"
+#include "test_allocator.h"
 
 namespace ex = std::experimental::pmr;
 

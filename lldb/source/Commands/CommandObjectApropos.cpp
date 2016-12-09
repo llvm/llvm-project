@@ -51,11 +51,10 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   const size_t argc = args.GetArgumentCount();
 
   if (argc == 1) {
-    const char *search_word = args.GetArgumentAtIndex(0);
-    if ((search_word != nullptr) && (strlen(search_word) > 0)) {
+    auto search_word = args[0].ref;
+    if (!search_word.empty()) {
       // The bulk of the work must be done inside the Command Interpreter, since
-      // the command dictionary
-      // is private.
+      // the command dictionary is private.
       StringList commands_found;
       StringList commands_help;
 
@@ -66,11 +65,11 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
         result.AppendMessageWithFormat("No commands found pertaining to '%s'. "
                                        "Try 'help' to see a complete list of "
                                        "debugger commands.\n",
-                                       search_word);
+                                       args[0].c_str());
       } else {
         if (commands_found.GetSize() > 0) {
           result.AppendMessageWithFormat(
-              "The following commands may relate to '%s':\n", search_word);
+              "The following commands may relate to '%s':\n", args[0].c_str());
           size_t max_len = 0;
 
           for (size_t i = 0; i < commands_found.GetSize(); ++i) {
@@ -93,7 +92,7 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
         const bool dump_qualified_name = true;
         result.AppendMessageWithFormat(
             "\nThe following settings variables may relate to '%s': \n\n",
-            search_word);
+            args[0].c_str());
         for (size_t i = 0; i < num_properties; ++i)
           properties[i]->DumpDescription(
               m_interpreter, result.GetOutputStream(), 0, dump_qualified_name);

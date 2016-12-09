@@ -117,6 +117,12 @@ public:
   // True if this symbol is referenced by 32-bit GOT relocations.
   unsigned Is32BitMipsGot : 1;
 
+  // True if this symbol is in the Iplt sub-section of the Plt.
+  unsigned IsInIplt : 1;
+
+  // True if this symbol is in the Igot sub-section of the .got.plt or .got.
+  unsigned IsInIgot : 1;
+
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value

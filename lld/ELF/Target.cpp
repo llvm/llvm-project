@@ -32,11 +32,11 @@
 #include "SyntheticSections.h"
 #include "Thunks.h"
 #include "Writer.h"
-
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -95,6 +95,7 @@ public:
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -189,6 +190,7 @@ public:
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -221,34 +223,34 @@ TargetInfo *createTarget() {
   switch (Config->EMachine) {
   case EM_386:
   case EM_IAMCU:
-    return new X86TargetInfo();
+    return make<X86TargetInfo>();
   case EM_AARCH64:
-    return new AArch64TargetInfo();
+    return make<AArch64TargetInfo>();
   case EM_AMDGPU:
-    return new AMDGPUTargetInfo();
+    return make<AMDGPUTargetInfo>();
   case EM_ARM:
-    return new ARMTargetInfo();
+    return make<ARMTargetInfo>();
   case EM_MIPS:
     switch (Config->EKind) {
     case ELF32LEKind:
-      return new MipsTargetInfo<ELF32LE>();
+      return make<MipsTargetInfo<ELF32LE>>();
     case ELF32BEKind:
-      return new MipsTargetInfo<ELF32BE>();
+      return make<MipsTargetInfo<ELF32BE>>();
     case ELF64LEKind:
-      return new MipsTargetInfo<ELF64LE>();
+      return make<MipsTargetInfo<ELF64LE>>();
     case ELF64BEKind:
-      return new MipsTargetInfo<ELF64BE>();
+      return make<MipsTargetInfo<ELF64BE>>();
     default:
       fatal("unsupported MIPS target");
     }
   case EM_PPC:
-    return new PPCTargetInfo();
+    return make<PPCTargetInfo>();
   case EM_PPC64:
-    return new PPC64TargetInfo();
+    return make<PPC64TargetInfo>();
   case EM_X86_64:
     if (Config->EKind == ELF32LEKind)
-      return new X86_64TargetInfo<ELF32LE>();
-    return new X86_64TargetInfo<ELF64LE>();
+      return make<X86_64TargetInfo<ELF32LE>>();
+    return make<X86_64TargetInfo<ELF64LE>>();
   }
   fatal("unknown target machine");
 }
@@ -273,6 +275,10 @@ bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
 bool TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const { return false; }
 
 bool TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const { return false; }
+
+void TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+  writeGotPlt(Buf, S);
+}
 
 RelExpr TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
                                     RelExpr Expr) const {
@@ -371,6 +377,11 @@ void X86TargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {
   write32le(Buf, S.getPltVA<ELF32LE>() + 6);
 }
 
+void X86TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+  // An x86 entry is the address of the ifunc resolver function.
+  write32le(Buf, S.getVA<ELF32LE>());
+}
+
 uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_386_TLS_LE)
     return R_386_TLS_TPOFF;
@@ -439,12 +450,13 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   default:
     return 0;
   case R_386_16:
+  case R_386_PC16:
+    return read16le(Buf);
   case R_386_32:
   case R_386_GOT32:
   case R_386_GOT32X:
   case R_386_GOTOFF:
   case R_386_GOTPC:
-  case R_386_PC16:
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_TLS_LE:
@@ -1319,22 +1331,22 @@ void AArch64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   relocateOne(Buf + 8, R_AARCH64_ADD_ABS_LO12_NC, GotEntryAddr);
 }
 
-static void updateAArch64Addr(uint8_t *L, uint64_t Imm) {
+static void write32addr(uint8_t *L, uint64_t Imm) {
   uint32_t ImmLo = (Imm & 0x3) << 29;
   uint32_t ImmHi = (Imm & 0x1FFFFC) << 3;
   uint64_t Mask = (0x3 << 29) | (0x1FFFFC << 3);
   write32le(L, (read32le(L) & ~Mask) | ImmLo | ImmHi);
 }
 
-// Return the bits [Start, End] from Val shifted Start bits.  For instance,
-// getBits<4,8>(0xF0) returns 0xF.
-template <uint8_t Start, uint8_t End> static uint64_t getBits(uint64_t Val) {
+// Return the bits [Start, End] from Val shifted Start bits.
+// For instance, getBits(0xF0, 4, 8) returns 0xF.
+static uint64_t getBits(uint64_t Val, int Start, int End) {
   uint64_t Mask = ((uint64_t)1 << (End + 1 - Start)) - 1;
   return (Val >> Start) & Mask;
 }
 
-// Update the immediate field in a ldr, str, and add instruction.
-static inline void updateAArch64LdStrAdd(uint8_t *L, uint64_t Imm) {
+// Update the immediate field in a AARCH64 ldr, str, and add instruction.
+static void or32imm(uint8_t *L, uint64_t Imm) {
   or32le(L, (Imm & 0xFFF) << 10);
 }
 
@@ -1357,18 +1369,18 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
-    updateAArch64LdStrAdd(Loc, Val);
+    or32imm(Loc, Val);
     break;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     checkInt<33>(Loc, Val, Type);
-    updateAArch64Addr(Loc, Val >> 12);
+    write32addr(Loc, Val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
     checkInt<21>(Loc, Val, Type);
-    updateAArch64Addr(Loc, Val);
+    write32addr(Loc, Val);
     break;
   case R_AARCH64_CALL26:
   case R_AARCH64_JUMP26:
@@ -1386,19 +1398,19 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32le(Loc, (Val & 0xFF8) << 7);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
-    updateAArch64LdStrAdd(Loc, getBits<0, 11>(Val));
+    or32imm(Loc, getBits(Val, 0, 11));
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
-    updateAArch64LdStrAdd(Loc, getBits<1, 11>(Val));
+    or32imm(Loc, getBits(Val, 1, 11));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
-    updateAArch64LdStrAdd(Loc, getBits<2, 11>(Val));
+    or32imm(Loc, getBits(Val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
-    updateAArch64LdStrAdd(Loc, getBits<3, 11>(Val));
+    or32imm(Loc, getBits(Val, 3, 11));
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
-    updateAArch64LdStrAdd(Loc, getBits<4, 11>(Val));
+    or32imm(Loc, getBits(Val, 4, 11));
     break;
   case R_AARCH64_MOVW_UABS_G0_NC:
     or32le(Loc, (Val & 0xFFFF) << 5);
@@ -1418,11 +1430,11 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkInt<24>(Loc, Val, Type);
-    updateAArch64LdStrAdd(Loc, Val >> 12);
+    or32imm(Loc, Val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
-    updateAArch64LdStrAdd(Loc, Val);
+    or32imm(Loc, Val);
     break;
   default:
     fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
@@ -1646,6 +1658,11 @@ uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
 
 void ARMTargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
   write32le(Buf, In<ELF32LE>::Plt->getVA());
+}
+
+void ARMTargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+  // An ARM entry is the address of the ifunc resolver function.
+  write32le(Buf, S.getVA<ELF32LE>());
 }
 
 void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {

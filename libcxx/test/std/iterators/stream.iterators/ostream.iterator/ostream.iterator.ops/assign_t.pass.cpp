@@ -21,6 +21,10 @@
 #pragma clang diagnostic ignored "-Wliteral-conversion"
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4244) // conversion from 'X' to 'Y', possible loss of data
+#endif
+
 int main()
 {
     {

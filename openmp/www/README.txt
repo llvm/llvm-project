@@ -52,6 +52,7 @@ Architectures Supported
 * Aarch64 (64-bit ARM) architecture
 * IBM(R) Power architecture (big endian)
 * IBM(R) Power architecture (little endian)
+* MIPS and MIPS64 architectures
 
 Supported RTL Build Configurations
 ==================================

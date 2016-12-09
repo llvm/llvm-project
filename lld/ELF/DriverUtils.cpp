@@ -15,10 +15,10 @@
 
 #include "Driver.h"
 #include "Error.h"
-#include "Memory.h"
 #include "ScriptParser.h"
 #include "lld/Config/Version.h"
 #include "lld/Core/Reproduce.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
@@ -88,32 +88,6 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + Arg->getSpelling());
   return Args;
-}
-
-// Parse the --dynamic-list argument.  A dynamic list is in the form
-//
-//  { symbol1; symbol2; [...]; symbolN };
-//
-// Multiple groups can be defined in the same file, and they are merged
-// into a single group.
-void elf::parseDynamicList(MemoryBufferRef MB) {
-  class Parser : public ScriptParserBase {
-  public:
-    Parser(MemoryBufferRef MB) : ScriptParserBase(MB) {}
-
-    void run() {
-      while (!atEOF()) {
-        expect("{");
-        while (!Error && !consume("}")) {
-          Config->DynamicList.push_back(unquote(next()));
-          expect(";");
-        }
-        expect(";");
-      }
-    }
-  };
-
-  Parser(MB).run();
 }
 
 void elf::printHelp(const char *Argv0) {

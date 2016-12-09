@@ -2477,15 +2477,14 @@ void CommandInterpreter::HandleCommandsFromFile(
 }
 
 ScriptInterpreter *CommandInterpreter::GetScriptInterpreter(bool can_create) {
-  if (m_script_interpreter_sp)
-    return m_script_interpreter_sp.get();
-
-  if (!can_create)
-    return nullptr;
-
-  lldb::ScriptLanguage script_lang = GetDebugger().GetScriptLanguage();
-  m_script_interpreter_sp =
-      PluginManager::GetScriptInterpreterForLanguage(script_lang, *this);
+  std::lock_guard<std::mutex> locker(m_script_interpreter_mutex);
+  if (!m_script_interpreter_sp) {
+    if (!can_create)
+      return nullptr;
+    lldb::ScriptLanguage script_lang = GetDebugger().GetScriptLanguage();
+    m_script_interpreter_sp =
+        PluginManager::GetScriptInterpreterForLanguage(script_lang, *this);
+  }
   return m_script_interpreter_sp.get();
 }
 

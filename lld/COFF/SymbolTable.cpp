@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SymbolTable.h"
 #include "Config.h"
 #include "Driver.h"
 #include "Error.h"
-#include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Core/Parallel.h"
+#include "lld/Support/Memory.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/Support/Debug.h"
@@ -24,15 +25,14 @@ using namespace llvm;
 namespace lld {
 namespace coff {
 
-void SymbolTable::addFile(std::unique_ptr<InputFile> FileP) {
+void SymbolTable::addFile(InputFile *File) {
 #if LLVM_ENABLE_THREADS
   std::launch Policy = std::launch::async;
 #else
   std::launch Policy = std::launch::deferred;
 #endif
 
-  InputFile *File = FileP.get();
-  Files.push_back(std::move(FileP));
+  Files.push_back(File);
   if (auto *F = dyn_cast<ArchiveFile>(File)) {
     ArchiveQueue.push_back(
         std::async(Policy, [=]() { F->parse(); return F; }));
@@ -71,7 +71,7 @@ void SymbolTable::readArchives() {
   for (std::future<ArchiveFile *> &Future : ArchiveQueue) {
     ArchiveFile *File = Future.get();
     if (Config->Verbose)
-      llvm::outs() << "Reading " << toString(File) << "\n";
+      outs() << "Reading " << toString(File) << "\n";
     for (Lazy &Sym : File->getLazySymbols())
       addLazy(&Sym, &LazySyms);
   }
@@ -92,7 +92,7 @@ void SymbolTable::readObjects() {
   for (size_t I = 0; I < ObjectQueue.size(); ++I) {
     InputFile *File = ObjectQueue[I].get();
     if (Config->Verbose)
-      llvm::outs() << "Reading " << toString(File) << "\n";
+      outs() << "Reading " << toString(File) << "\n";
     // Adding symbols may add more files to ObjectQueue
     // (but not to ArchiveQueue).
     for (SymbolBody *Sym : File->getSymbols())
@@ -102,7 +102,7 @@ void SymbolTable::readObjects() {
     if (!S.empty()) {
       Directives.push_back(S);
       if (Config->Verbose)
-        llvm::outs() << "Directives: " << toString(File) << ": " << S << "\n";
+        outs() << "Directives: " << toString(File) << ": " << S << "\n";
     }
   }
   ObjectQueue.clear();
@@ -118,7 +118,7 @@ bool SymbolTable::queueEmpty() {
 }
 
 void SymbolTable::reportRemainingUndefines(bool Resolve) {
-  llvm::SmallPtrSet<SymbolBody *, 8> Undefs;
+  SmallPtrSet<SymbolBody *, 8> Undefs;
   for (auto &I : Symtab) {
     Symbol *Sym = I.second;
     auto *Undef = dyn_cast<Undefined>(Sym->Body);
@@ -139,7 +139,7 @@ void SymbolTable::reportRemainingUndefines(bool Resolve) {
         if (!Resolve)
           continue;
         auto *D = cast<Defined>(Imp->Body);
-        auto *S = new (Alloc) DefinedLocalImport(Name, D);
+        auto *S = make<DefinedLocalImport>(Name, D);
         LocalImportChunks.push_back(S->getChunk());
         Sym->Body = S;
         continue;
@@ -148,20 +148,20 @@ void SymbolTable::reportRemainingUndefines(bool Resolve) {
     // Remaining undefined symbols are not fatal if /force is specified.
     // They are replaced with dummy defined symbols.
     if (Config->Force && Resolve)
-      Sym->Body = new (Alloc) DefinedAbsolute(Name, 0);
+      Sym->Body = make<DefinedAbsolute>(Name, 0);
     Undefs.insert(Sym->Body);
   }
   if (Undefs.empty())
     return;
   for (Undefined *U : Config->GCRoot)
     if (Undefs.count(U->repl()))
-      llvm::errs() << "<root>: undefined symbol: " << U->getName() << "\n";
-  for (std::unique_ptr<InputFile> &File : Files)
-    if (!isa<ArchiveFile>(File.get()))
+      errs() << "<root>: undefined symbol: " << U->getName() << "\n";
+  for (InputFile *File : Files)
+    if (!isa<ArchiveFile>(File))
       for (SymbolBody *Sym : File->getSymbols())
         if (Undefs.count(Sym->repl()))
-          llvm::errs() << toString(File.get())
-                       << ": undefined symbol: " << Sym->getName() << "\n";
+          errs() << toString(File) << ": undefined symbol: " << Sym->getName()
+                 << "\n";
   if (!Config->Force)
     fatal("link failed");
 }
@@ -223,23 +223,22 @@ Symbol *SymbolTable::insert(SymbolBody *New) {
     New->setBackref(Sym);
     return Sym;
   }
-  Sym = new (Alloc) Symbol(New);
+  Sym = make<Symbol>(New);
   New->setBackref(Sym);
   return Sym;
 }
 
 // Reads an archive member file pointed by a given symbol.
 void SymbolTable::addMemberFile(Lazy *Body) {
-  std::unique_ptr<InputFile> File = Body->getMember();
+  InputFile *File = Body->getMember();
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
   if (!File)
     return;
   if (Config->Verbose)
-    llvm::outs() << "Loaded " << toString(File.get()) << " for "
-                 << Body->getName() << "\n";
-  addFile(std::move(File));
+    outs() << "Loaded " << toString(File) << " for " << Body->getName() << "\n";
+  addFile(File);
 }
 
 std::vector<Chunk *> SymbolTable::getChunks() {
@@ -300,7 +299,7 @@ void SymbolTable::mangleMaybe(Undefined *U) {
 }
 
 Undefined *SymbolTable::addUndefined(StringRef Name) {
-  auto *New = new (Alloc) Undefined(Name);
+  auto *New = make<Undefined>(Name);
   addSymbol(New);
   if (auto *U = dyn_cast<Undefined>(New->repl()))
     return U;
@@ -308,13 +307,13 @@ Undefined *SymbolTable::addUndefined(StringRef Name) {
 }
 
 DefinedRelative *SymbolTable::addRelative(StringRef Name, uint64_t VA) {
-  auto *New = new (Alloc) DefinedRelative(Name, VA);
+  auto *New = make<DefinedRelative>(Name, VA);
   addSymbol(New);
   return New;
 }
 
 DefinedAbsolute *SymbolTable::addAbsolute(StringRef Name, uint64_t VA) {
-  auto *New = new (Alloc) DefinedAbsolute(Name, VA);
+  auto *New = make<DefinedAbsolute>(Name, VA);
   addSymbol(New);
   return New;
 }
