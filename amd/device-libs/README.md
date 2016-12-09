@@ -59,10 +59,12 @@ To create packages for the library:
 
 ## USING BITCODE LIBRARIES
 
-The bitcode libraries should be linked to user bitcode (obtained from source) *before* final code generation with llvm-link or -Xmlink-bitcode-file option of clang.
+The bitcode libraries should be linked to user bitcode (obtained from source) *before* final code generation
+with llvm-link or -mlink-bitcode-file option of clang.
 
-For OpenCL, the list of bitcode libraries includes opencl and its dependencies (ocml, ockl, irif) and oclc control libraries selected according to OpenCL compilation mode.  
-Assuming that the build of this repository was done in /srv/git/ROCm-Device-Libs/build, the following command line
+For OpenCL, the list of bitcode libraries includes opencl, its dependencies (ocml, ockl, irif)
+and oclc control libraries selected according to OpenCL compilation mode.  Assuming that the build
+of this repository was done in /srv/git/ROCm-Device-Libs/build, the following command line
 shows how to compile simple OpenCL source test.cl into code object test.so:
 
     clang -x cl -Xclang -finclude-default-header \
