@@ -3653,22 +3653,20 @@ static void AddObjCBlockCall(ASTContext &Context, const PrintingPolicy &Policy,
   Builder.AddChunk(CodeCompletionString::CK_RightParen);
 }
 
-static void AddObjCProperties(const CodeCompletionContext &CCContext,
-                              ObjCContainerDecl *Container,
-                              bool AllowCategories, bool AllowNullaryMethods,
-                              DeclContext *CurContext,
-                              AddedPropertiesSet &AddedProperties,
-                              ResultBuilder &Results,
-                              bool IsBaseExprStatement = false) {
+static void AddObjCProperties(
+    const CodeCompletionContext &CCContext, ObjCContainerDecl *Container,
+    bool AllowCategories, bool AllowNullaryMethods, DeclContext *CurContext,
+    AddedPropertiesSet &AddedProperties, ResultBuilder &Results,
+    bool IsBaseExprStatement = false, bool IsClassProperty = false) {
   typedef CodeCompletionResult Result;
 
   // Retrieve the definition.
   Container = getContainerDef(Container);
   
   // Add properties in this container.
-  for (const auto *P : Container->instance_properties()) {
+  const auto AddProperty = [&](const ObjCPropertyDecl *P) {
     if (!AddedProperties.insert(P->getIdentifier()).second)
-      continue;
+      return;
 
     // FIXME: Provide block invocation completion for non-statement
     // expressions.
@@ -3676,7 +3674,7 @@ static void AddObjCProperties(const CodeCompletionContext &CCContext,
         !IsBaseExprStatement) {
       Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
                              CurContext);
-      continue;
+      return;
     }
 
     // Block setter and invocation completion is provided only when we are able
@@ -3688,7 +3686,7 @@ static void AddObjCProperties(const CodeCompletionContext &CCContext,
     if (!BlockLoc) {
       Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
                              CurContext);
-      continue;
+      return;
     }
 
     // The default completion result for block properties should be the block
@@ -3726,64 +3724,89 @@ static void AddObjCProperties(const CodeCompletionContext &CCContext,
                  Results.getBasePriority(P) + CCD_BlockPropertySetter),
           CurContext);
     }
+  };
+
+  if (IsClassProperty) {
+    for (const auto *P : Container->class_properties())
+      AddProperty(P);
+  } else {
+    for (const auto *P : Container->instance_properties())
+      AddProperty(P);
   }
 
-  // Add nullary methods
+  // Add nullary methods or implicit class properties
   if (AllowNullaryMethods) {
     ASTContext &Context = Container->getASTContext();
     PrintingPolicy Policy = getCompletionPrintingPolicy(Results.getSema());
-    for (auto *M : Container->methods()) {
-      if (M->getSelector().isUnarySelector())
-        if (IdentifierInfo *Name = M->getSelector().getIdentifierInfoForSlot(0))
-          if (AddedProperties.insert(Name).second) {
-            CodeCompletionBuilder Builder(Results.getAllocator(),
-                                          Results.getCodeCompletionTUInfo());
-            AddResultTypeChunk(Context, Policy, M, CCContext.getBaseType(),
-                               Builder);
-            Builder.AddTypedTextChunk(
-                            Results.getAllocator().CopyString(Name->getName()));
-            
-            Results.MaybeAddResult(Result(Builder.TakeString(), M,
-                                  CCP_MemberDeclaration + CCD_MethodAsProperty),
-                                          CurContext);
-          }
+    // Adds a method result
+    const auto AddMethod = [&](const ObjCMethodDecl *M) {
+      IdentifierInfo *Name = M->getSelector().getIdentifierInfoForSlot(0);
+      if (!Name)
+        return;
+      if (!AddedProperties.insert(Name).second)
+        return;
+      CodeCompletionBuilder Builder(Results.getAllocator(),
+                                    Results.getCodeCompletionTUInfo());
+      AddResultTypeChunk(Context, Policy, M, CCContext.getBaseType(), Builder);
+      Builder.AddTypedTextChunk(
+          Results.getAllocator().CopyString(Name->getName()));
+      Results.MaybeAddResult(
+          Result(Builder.TakeString(), M,
+                 CCP_MemberDeclaration + CCD_MethodAsProperty),
+          CurContext);
+    };
+
+    if (IsClassProperty) {
+      for (const auto *M : Container->methods()) {
+        // Gather the class method that can be used as implicit property
+        // getters. Methods with arguments or methods that return void aren't
+        // added to the results as they can't be used as a getter.
+        if (!M->getSelector().isUnarySelector() ||
+            M->getReturnType()->isVoidType() || M->isInstanceMethod())
+          continue;
+        AddMethod(M);
+      }
+    } else {
+      for (auto *M : Container->methods()) {
+        if (M->getSelector().isUnarySelector())
+          AddMethod(M);
+      }
     }
   }
-    
   
   // Add properties in referenced protocols.
   if (ObjCProtocolDecl *Protocol = dyn_cast<ObjCProtocolDecl>(Container)) {
     for (auto *P : Protocol->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
                         CurContext, AddedProperties, Results,
-                        IsBaseExprStatement);
+                        IsBaseExprStatement, IsClassProperty);
   } else if (ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Container)){
     if (AllowCategories) {
       // Look through categories.
       for (auto *Cat : IFace->known_categories())
         AddObjCProperties(CCContext, Cat, AllowCategories, AllowNullaryMethods,
                           CurContext, AddedProperties, Results,
-                          IsBaseExprStatement);
+                          IsBaseExprStatement, IsClassProperty);
     }
 
     // Look through protocols.
     for (auto *I : IFace->all_referenced_protocols())
       AddObjCProperties(CCContext, I, AllowCategories, AllowNullaryMethods,
                         CurContext, AddedProperties, Results,
-                        IsBaseExprStatement);
+                        IsBaseExprStatement, IsClassProperty);
 
     // Look in the superclass.
     if (IFace->getSuperClass())
       AddObjCProperties(CCContext, IFace->getSuperClass(), AllowCategories,
                         AllowNullaryMethods, CurContext, AddedProperties,
-                        Results, IsBaseExprStatement);
+                        Results, IsBaseExprStatement, IsClassProperty);
   } else if (const ObjCCategoryDecl *Category
                                     = dyn_cast<ObjCCategoryDecl>(Container)) {
     // Look through protocols.
     for (auto *P : Category->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
                         CurContext, AddedProperties, Results,
-                        IsBaseExprStatement);
+                        IsBaseExprStatement, IsClassProperty);
   }
 }
 
@@ -3906,6 +3929,30 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
   HandleCodeCompleteResults(this, CodeCompleter, 
                             Results.getCompletionContext(),
                             Results.data(),Results.size());
+}
+
+void Sema::CodeCompleteObjCClassPropertyRefExpr(Scope *S,
+                                                IdentifierInfo &ClassName,
+                                                SourceLocation ClassNameLoc,
+                                                bool IsBaseExprStatement) {
+  IdentifierInfo *ClassNamePtr = &ClassName;
+  ObjCInterfaceDecl *IFace = getObjCInterfaceDecl(ClassNamePtr, ClassNameLoc);
+  if (!IFace)
+    return;
+  CodeCompletionContext CCContext(
+      CodeCompletionContext::CCC_ObjCPropertyAccess);
+  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(), CCContext,
+                        &ResultBuilder::IsMember);
+  Results.EnterNewScope();
+  AddedPropertiesSet AddedProperties;
+  AddObjCProperties(CCContext, IFace, true,
+                    /*AllowNullaryMethods=*/true, CurContext, AddedProperties,
+                    Results, IsBaseExprStatement,
+                    /*IsClassProperty=*/true);
+  Results.ExitScope();
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteTag(Scope *S, unsigned TagSpec) {
