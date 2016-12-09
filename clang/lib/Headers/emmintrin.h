@@ -55,7 +55,7 @@ typedef signed char __v16qs __attribute__((__vector_size__(16)));
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VADDSD / ADDSD instruction.
+/// This intrinsic corresponds to the <c> VADDSD / ADDSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
@@ -75,7 +75,7 @@ _mm_add_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VADDPD / ADDPD instruction.
+/// This intrinsic corresponds to the <c> VADDPD / ADDPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
@@ -97,7 +97,7 @@ _mm_add_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSUBSD / SUBSD instruction.
+/// This intrinsic corresponds to the <c> VSUBSD / SUBSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the minuend.
@@ -117,7 +117,7 @@ _mm_sub_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSUBPD / SUBPD instruction.
+/// This intrinsic corresponds to the <c> VSUBPD / SUBPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the minuend.
@@ -138,7 +138,7 @@ _mm_sub_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMULSD / MULSD instruction.
+/// This intrinsic corresponds to the <c> VMULSD / MULSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
@@ -158,7 +158,7 @@ _mm_mul_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMULPD / MULPD instruction.
+/// This intrinsic corresponds to the <c> VMULPD / MULPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the operands.
@@ -180,7 +180,7 @@ _mm_mul_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VDIVSD / DIVSD instruction.
+/// This intrinsic corresponds to the <c> VDIVSD / DIVSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the dividend.
@@ -201,7 +201,7 @@ _mm_div_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VDIVPD / DIVPD instruction.
+/// This intrinsic corresponds to the <c> VDIVPD / DIVPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the dividend.
@@ -222,7 +222,7 @@ _mm_div_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSQRTSD / SQRTSD instruction.
+/// This intrinsic corresponds to the <c> VSQRTSD / SQRTSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the operands. The
@@ -246,7 +246,7 @@ _mm_sqrt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VSQRTPD / SQRTPD instruction.
+/// This intrinsic corresponds to the <c> VSQRTPD / SQRTPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -265,7 +265,7 @@ _mm_sqrt_pd(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMINSD / MINSD instruction.
+/// This intrinsic corresponds to the <c> VMINSD / MINSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the operands. The
@@ -288,7 +288,7 @@ _mm_min_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMINPD / MINPD instruction.
+/// This intrinsic corresponds to the <c> VMINPD / MINPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the operands.
@@ -309,7 +309,7 @@ _mm_min_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMAXSD / MAXSD instruction.
+/// This intrinsic corresponds to the <c> VMAXSD / MAXSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the operands. The
@@ -332,7 +332,7 @@ _mm_max_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMAXPD / MAXPD instruction.
+/// This intrinsic corresponds to the <c> VMAXPD / MAXPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the operands.
@@ -350,7 +350,7 @@ _mm_max_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPAND / PAND instruction.
+/// This intrinsic corresponds to the <c> VPAND / PAND </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
@@ -369,7 +369,7 @@ _mm_and_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPANDN / PANDN instruction.
+/// This intrinsic corresponds to the <c> VPANDN / PANDN </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the left source operand. The
@@ -389,7 +389,7 @@ _mm_andnot_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPOR / POR instruction.
+/// This intrinsic corresponds to the <c> VPOR / POR </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
@@ -407,7 +407,7 @@ _mm_or_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPXOR / PXOR instruction.
+/// This intrinsic corresponds to the <c> VPXOR / PXOR </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing one of the source operands.
@@ -427,7 +427,7 @@ _mm_xor_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPEQPD / CMPEQPD instruction.
+/// This intrinsic corresponds to the <c> VCMPEQPD / CMPEQPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -447,7 +447,7 @@ _mm_cmpeq_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLTPD / CMPLTPD instruction.
+/// This intrinsic corresponds to the <c> VCMPLTPD / CMPLTPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -467,7 +467,7 @@ _mm_cmplt_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLEPD / CMPLEPD instruction.
+/// This intrinsic corresponds to the <c> VCMPLEPD / CMPLEPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -487,7 +487,7 @@ _mm_cmple_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLTPD / CMPLTPD instruction.
+/// This intrinsic corresponds to the <c> VCMPLTPD / CMPLTPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -507,7 +507,7 @@ _mm_cmpgt_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLEPD / CMPLEPD instruction.
+/// This intrinsic corresponds to the <c> VCMPLEPD / CMPLEPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -529,7 +529,7 @@ _mm_cmpge_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPORDPD / CMPORDPD instruction.
+/// This intrinsic corresponds to the <c> VCMPORDPD / CMPORDPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -551,7 +551,7 @@ _mm_cmpord_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPUNORDPD / CMPUNORDPD instruction.
+/// This intrinsic corresponds to the <c> VCMPUNORDPD / CMPUNORDPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -571,7 +571,7 @@ _mm_cmpunord_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNEQPD / CMPNEQPD instruction.
+/// This intrinsic corresponds to the <c> VCMPNEQPD / CMPNEQPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -591,7 +591,7 @@ _mm_cmpneq_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLTPD / CMPNLTPD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLTPD / CMPNLTPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -611,7 +611,7 @@ _mm_cmpnlt_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLEPD / CMPNLEPD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLEPD / CMPNLEPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -631,7 +631,7 @@ _mm_cmpnle_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLTPD / CMPNLTPD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLTPD / CMPNLTPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -651,7 +651,7 @@ _mm_cmpngt_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLEPD / CMPNLEPD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLEPD / CMPNLEPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -670,7 +670,7 @@ _mm_cmpnge_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPEQSD / CMPEQSD instruction.
+/// This intrinsic corresponds to the <c> VCMPEQSD / CMPEQSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -694,7 +694,7 @@ _mm_cmpeq_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLTSD / CMPLTSD instruction.
+/// This intrinsic corresponds to the <c> VCMPLTSD / CMPLTSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -718,7 +718,7 @@ _mm_cmplt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLESD / CMPLESD instruction.
+/// This intrinsic corresponds to the <c> VCMPLESD / CMPLESD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -742,7 +742,7 @@ _mm_cmple_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLTSD / CMPLTSD instruction.
+/// This intrinsic corresponds to the <c> VCMPLTSD / CMPLTSD </c> instruction.
 ///
 /// \param __a
 ///     A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -767,7 +767,7 @@ _mm_cmpgt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPLESD / CMPLESD instruction.
+/// This intrinsic corresponds to the <c> VCMPLESD / CMPLESD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -793,7 +793,7 @@ _mm_cmpge_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPORDSD / CMPORDSD instruction.
+/// This intrinsic corresponds to the <c> VCMPORDSD / CMPORDSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -818,7 +818,7 @@ _mm_cmpord_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPUNORDSD / CMPUNORDSD instruction.
+/// This intrinsic corresponds to the <c> VCMPUNORDSD / CMPUNORDSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -842,7 +842,7 @@ _mm_cmpunord_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNEQSD / CMPNEQSD instruction.
+/// This intrinsic corresponds to the <c> VCMPNEQSD / CMPNEQSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -866,7 +866,7 @@ _mm_cmpneq_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLTSD / CMPNLTSD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLTSD / CMPNLTSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -890,7 +890,7 @@ _mm_cmpnlt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLESD / CMPNLESD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLESD / CMPNLESD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -914,7 +914,7 @@ _mm_cmpnle_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLTSD / CMPNLTSD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLTSD / CMPNLTSD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -939,7 +939,7 @@ _mm_cmpngt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCMPNLESD / CMPNLESD instruction.
+/// This intrinsic corresponds to the <c> VCMPNLESD / CMPNLESD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -962,7 +962,7 @@ _mm_cmpnge_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+/// This intrinsic corresponds to the <c> VCOMISD / COMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -984,7 +984,7 @@ _mm_comieq_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+/// This intrinsic corresponds to the <c> VCOMISD / COMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1007,7 +1007,7 @@ _mm_comilt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+/// This intrinsic corresponds to the <c> VCOMISD / COMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1029,7 +1029,7 @@ _mm_comile_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+/// This intrinsic corresponds to the <c> VCOMISD / COMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1052,7 +1052,7 @@ _mm_comigt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+/// This intrinsic corresponds to the <c> VCOMISD / COMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1074,7 +1074,7 @@ _mm_comige_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCOMISD / COMISD instruction.
+/// This intrinsic corresponds to the <c> VCOMISD / COMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1096,7 +1096,7 @@ _mm_comineq_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+/// This intrinsic corresponds to the <c> VUCOMISD / UCOMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1120,7 +1120,7 @@ _mm_ucomieq_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+/// This intrinsic corresponds to the <c> VUCOMISD / UCOMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1145,7 +1145,7 @@ _mm_ucomilt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+/// This intrinsic corresponds to the <c> VUCOMISD / UCOMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1169,7 +1169,7 @@ _mm_ucomile_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+/// This intrinsic corresponds to the <c> VUCOMISD / UCOMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1194,7 +1194,7 @@ _mm_ucomigt_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+/// This intrinsic corresponds to the <c> VUCOMISD / UCOMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1218,7 +1218,7 @@ _mm_ucomige_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUCOMISD / UCOMISD instruction.
+/// This intrinsic corresponds to the <c> VUCOMISD / UCOMISD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
@@ -1241,7 +1241,7 @@ _mm_ucomineq_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPD2PS / CVTPD2PS instruction.
+/// This intrinsic corresponds to the <c> VCVTPD2PS / CVTPD2PS </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -1260,7 +1260,7 @@ _mm_cvtpd_ps(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPS2PD / CVTPS2PD instruction.
+/// This intrinsic corresponds to the <c> VCVTPS2PD / CVTPS2PD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x float]. The lower two single-precision
@@ -1281,7 +1281,7 @@ _mm_cvtps_pd(__m128 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTDQ2PD / CVTDQ2PD instruction.
+/// This intrinsic corresponds to the <c> VCVTDQ2PD / CVTDQ2PD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector of [4 x i32]. The lower two integer elements are
@@ -1301,7 +1301,7 @@ _mm_cvtepi32_pd(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPD2DQ / CVTPD2DQ instruction.
+/// This intrinsic corresponds to the <c> VCVTPD2DQ / CVTPD2DQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -1318,7 +1318,7 @@ _mm_cvtpd_epi32(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTSD2SI / CVTSD2SI instruction.
+/// This intrinsic corresponds to the <c> VCVTSD2SI / CVTSD2SI </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
@@ -1338,7 +1338,7 @@ _mm_cvtsd_si32(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTSD2SS / CVTSD2SS instruction.
+/// This intrinsic corresponds to the <c> VCVTSD2SS / CVTSD2SS </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x float]. The upper 96 bits of this parameter are
@@ -1362,7 +1362,7 @@ _mm_cvtsd_ss(__m128 __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTSI2SD / CVTSI2SD instruction.
+/// This intrinsic corresponds to the <c> VCVTSI2SD / CVTSI2SD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The upper 64 bits of this parameter are
@@ -1387,7 +1387,7 @@ _mm_cvtsi32_sd(__m128d __a, int __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTSS2SD / CVTSS2SD instruction.
+/// This intrinsic corresponds to the <c> VCVTSS2SD / CVTSS2SD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The upper 64 bits of this parameter are
@@ -1414,7 +1414,7 @@ _mm_cvtss_sd(__m128d __a, __m128 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTTPD2DQ / CVTTPD2DQ instruction.
+/// This intrinsic corresponds to the <c> VCVTTPD2DQ / CVTTPD2DQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -1431,7 +1431,7 @@ _mm_cvttpd_epi32(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTTSD2SI / CVTTSD2SI instruction.
+/// This intrinsic corresponds to the <c> VCVTTSD2SI / CVTTSD2SI </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
@@ -1449,7 +1449,7 @@ _mm_cvttsd_si32(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c CVTPD2PI instruction.
+/// This intrinsic corresponds to the <c> CVTPD2PI </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -1468,7 +1468,7 @@ _mm_cvtpd_pi32(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c CVTTPD2PI instruction.
+/// This intrinsic corresponds to the <c> CVTTPD2PI </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -1485,7 +1485,7 @@ _mm_cvttpd_pi32(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c CVTPI2PD instruction.
+/// This intrinsic corresponds to the <c> CVTPI2PD </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit vector of [2 x i32].
@@ -1518,7 +1518,7 @@ _mm_cvtsd_f64(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVAPD / MOVAPD instruction.
+/// This intrinsic corresponds to the <c> VMOVAPD / MOVAPD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 128-bit memory location. The address of the memory
@@ -1536,7 +1536,7 @@ _mm_load_pd(double const *__dp)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVDDUP / MOVDDUP instruction.
+/// This intrinsic corresponds to the <c> VMOVDDUP / MOVDDUP </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a memory location containing a double-precision value.
@@ -1559,7 +1559,7 @@ _mm_load1_pd(double const *__dp)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVAPD / MOVAPD instruction + needed
+/// This intrinsic corresponds to the <c> VMOVAPD / MOVAPD </c> instruction + needed
 /// shuffling instructions. In AVX mode, the shuffling may be combined with the
 /// \c VMOVAPD, resulting in only a \c VPERMILPD instruction.
 ///
@@ -1580,7 +1580,7 @@ _mm_loadr_pd(double const *__dp)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVUPD / MOVUPD instruction.
+/// This intrinsic corresponds to the <c> VMOVUPD / MOVUPD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 128-bit memory location. The address of the memory
@@ -1621,7 +1621,7 @@ _mm_load_sd(double const *__dp)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVHPD / MOVHPD instruction.
+/// This intrinsic corresponds to the <c> VMOVHPD / MOVHPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -1648,7 +1648,7 @@ _mm_loadh_pd(__m128d __a, double const *__dp)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVLPD / MOVLPD instruction.
+/// This intrinsic corresponds to the <c> VMOVLPD / MOVLPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -1692,7 +1692,7 @@ _mm_undefined_pd(void)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVQ / MOVQ instruction.
+/// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction.
 ///
 /// \param __w
 ///    A double-precision floating-point value used to initialize the lower 64
@@ -1712,7 +1712,7 @@ _mm_set_sd(double __w)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVDDUP / MOVLHPS instruction.
+/// This intrinsic corresponds to the <c> VMOVDDUP / MOVLHPS </c> instruction.
 ///
 /// \param __w
 ///    A double-precision floating-point value used to initialize each vector
@@ -1729,7 +1729,7 @@ _mm_set1_pd(double __w)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUNPCKLPD / UNPCKLPD instruction.
+/// This intrinsic corresponds to the <c> VUNPCKLPD / UNPCKLPD </c> instruction.
 ///
 /// \param __w
 ///    A double-precision floating-point value used to initialize the upper 64
@@ -1750,7 +1750,7 @@ _mm_set_pd(double __w, double __x)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUNPCKLPD / UNPCKLPD instruction.
+/// This intrinsic corresponds to the <c> VUNPCKLPD / UNPCKLPD </c> instruction.
 ///
 /// \param __w
 ///    A double-precision floating-point value used to initialize the lower 64
@@ -1770,7 +1770,7 @@ _mm_setr_pd(double __w, double __x)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VXORPS / XORPS instruction.
+/// This intrinsic corresponds to the <c> VXORPS / XORPS </c> instruction.
 ///
 /// \returns An initialized 128-bit floating-point vector of [2 x double] with
 ///    all elements set to zero.
@@ -1786,7 +1786,7 @@ _mm_setzero_pd(void)
 //
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VBLENDPD / BLENDPD instruction.
+/// This intrinsic corresponds to the <c> VBLENDPD / BLENDPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The upper 64 bits are written to the
@@ -1806,7 +1806,7 @@ _mm_move_sd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVSD / MOVSD instruction.
+/// This intrinsic corresponds to the <c> VMOVSD / MOVSD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 64-bit memory location.
@@ -1839,7 +1839,7 @@ _mm_store1_pd(double *__dp, __m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVAPD / MOVAPD instruction.
+/// This intrinsic corresponds to the <c> VMOVAPD / MOVAPD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 128-bit memory location. The address of the memory
@@ -1857,7 +1857,7 @@ _mm_store_pd1(double *__dp, __m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVUPD / MOVUPD instruction.
+/// This intrinsic corresponds to the <c> VMOVUPD / MOVUPD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 128-bit memory location. The address of the memory
@@ -1879,7 +1879,7 @@ _mm_storeu_pd(double *__dp, __m128d __a)
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to a shuffling instruction followed by a
-/// \c VMOVAPD / MOVAPD instruction.
+/// <c> VMOVAPD / MOVAPD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 16-byte aligned memory location that can store two
@@ -1899,7 +1899,7 @@ _mm_storer_pd(double *__dp, __m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVHPD / MOVHPD instruction.
+/// This intrinsic corresponds to the <c> VMOVHPD / MOVHPD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 64-bit memory location.
@@ -1919,7 +1919,7 @@ _mm_storeh_pd(double *__dp, __m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVLPD / MOVLPD instruction.
+/// This intrinsic corresponds to the <c> VMOVLPD / MOVLPD </c> instruction.
 ///
 /// \param __dp
 ///    A pointer to a 64-bit memory location.
@@ -1941,7 +1941,7 @@ _mm_storel_pd(double *__dp, __m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDB / PADDB instruction.
+/// This intrinsic corresponds to the <c> VPADDB / PADDB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [16 x i8].
@@ -1962,7 +1962,7 @@ _mm_add_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDW / PADDW instruction.
+/// This intrinsic corresponds to the <c> VPADDW / PADDW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [8 x i16].
@@ -1983,7 +1983,7 @@ _mm_add_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDD / PADDD instruction.
+/// This intrinsic corresponds to the <c> VPADDD / PADDD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x i32].
@@ -2002,7 +2002,7 @@ _mm_add_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PADDQ instruction.
+/// This intrinsic corresponds to the <c> PADDQ </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit integer.
@@ -2022,7 +2022,7 @@ _mm_add_si64(__m64 __a, __m64 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDQ / PADDQ instruction.
+/// This intrinsic corresponds to the <c> VPADDQ / PADDQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x i64].
@@ -2043,7 +2043,7 @@ _mm_add_epi64(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDSB / PADDSB instruction.
+/// This intrinsic corresponds to the <c> VPADDSB / PADDSB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit signed [16 x i8] vector.
@@ -2065,7 +2065,7 @@ _mm_adds_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDSW / PADDSW instruction.
+/// This intrinsic corresponds to the <c> VPADDSW / PADDSW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit signed [8 x i16] vector.
@@ -2086,7 +2086,7 @@ _mm_adds_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDUSB / PADDUSB instruction.
+/// This intrinsic corresponds to the <c> VPADDUSB / PADDUSB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit unsigned [16 x i8] vector.
@@ -2107,7 +2107,7 @@ _mm_adds_epu8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPADDUSB / PADDUSB instruction.
+/// This intrinsic corresponds to the <c> VPADDUSB / PADDUSB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit unsigned [8 x i16] vector.
@@ -2127,7 +2127,7 @@ _mm_adds_epu16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPAVGB / PAVGB instruction.
+/// This intrinsic corresponds to the <c> VPAVGB / PAVGB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit unsigned [16 x i8] vector.
@@ -2147,7 +2147,7 @@ _mm_avg_epu8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPAVGW / PAVGW instruction.
+/// This intrinsic corresponds to the <c> VPAVGW / PAVGW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit unsigned [8 x i16] vector.
@@ -2171,7 +2171,7 @@ _mm_avg_epu16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMADDWD / PMADDWD instruction.
+/// This intrinsic corresponds to the <c> VPMADDWD / PMADDWD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit signed [8 x i16] vector.
@@ -2191,7 +2191,7 @@ _mm_madd_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMAXSW / PMAXSW instruction.
+/// This intrinsic corresponds to the <c> VPMAXSW / PMAXSW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit signed [8 x i16] vector.
@@ -2211,7 +2211,7 @@ _mm_max_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMAXUB / PMAXUB instruction.
+/// This intrinsic corresponds to the <c> VPMAXUB / PMAXUB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit unsigned [16 x i8] vector.
@@ -2231,7 +2231,7 @@ _mm_max_epu8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMINSW / PMINSW instruction.
+/// This intrinsic corresponds to the <c> VPMINSW / PMINSW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit signed [8 x i16] vector.
@@ -2251,7 +2251,7 @@ _mm_min_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMINUB / PMINUB instruction.
+/// This intrinsic corresponds to the <c> VPMINUB / PMINUB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit unsigned [16 x i8] vector.
@@ -2271,7 +2271,7 @@ _mm_min_epu8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMULHW / PMULHW instruction.
+/// This intrinsic corresponds to the <c> VPMULHW / PMULHW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit signed [8 x i16] vector.
@@ -2291,7 +2291,7 @@ _mm_mulhi_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMULHUW / PMULHUW instruction.
+/// This intrinsic corresponds to the <c> VPMULHUW / PMULHUW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit unsigned [8 x i16] vector.
@@ -2311,7 +2311,7 @@ _mm_mulhi_epu16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMULLW / PMULLW instruction.
+/// This intrinsic corresponds to the <c> VPMULLW / PMULLW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit signed [8 x i16] vector.
@@ -2331,7 +2331,7 @@ _mm_mullo_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PMULUDQ instruction.
+/// This intrinsic corresponds to the <c> PMULUDQ </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit integer containing one of the source operands.
@@ -2350,7 +2350,7 @@ _mm_mul_su32(__m64 __a, __m64 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMULUDQ / PMULUDQ instruction.
+/// This intrinsic corresponds to the <c> VPMULUDQ / PMULUDQ </c> instruction.
 ///
 /// \param __a
 ///    A [2 x i64] vector containing one of the source operands.
@@ -2371,7 +2371,7 @@ _mm_mul_epu32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSADBW / PSADBW instruction.
+/// This intrinsic corresponds to the <c> VPSADBW / PSADBW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing one of the source operands.
@@ -2389,7 +2389,7 @@ _mm_sad_epu8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBB / PSUBB instruction.
+/// This intrinsic corresponds to the <c> VPSUBB / PSUBB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2407,7 +2407,7 @@ _mm_sub_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBW / PSUBW instruction.
+/// This intrinsic corresponds to the <c> VPSUBW / PSUBW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2425,7 +2425,7 @@ _mm_sub_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBD / PSUBD instruction.
+/// This intrinsic corresponds to the <c> VPSUBD / PSUBD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2444,7 +2444,7 @@ _mm_sub_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PSUBQ instruction.
+/// This intrinsic corresponds to the <c> PSUBQ </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit integer vector containing the minuend.
@@ -2462,7 +2462,7 @@ _mm_sub_si64(__m64 __a, __m64 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBQ / PSUBQ instruction.
+/// This intrinsic corresponds to the <c> VPSUBQ / PSUBQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2483,7 +2483,7 @@ _mm_sub_epi64(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBSB / PSUBSB instruction.
+/// This intrinsic corresponds to the <c> VPSUBSB / PSUBSB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2504,7 +2504,7 @@ _mm_subs_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBSW / PSUBSW instruction.
+/// This intrinsic corresponds to the <c> VPSUBSW / PSUBSW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2524,7 +2524,7 @@ _mm_subs_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBUSB / PSUBUSB instruction.
+/// This intrinsic corresponds to the <c> VPSUBUSB / PSUBUSB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2544,7 +2544,7 @@ _mm_subs_epu8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSUBUSW / PSUBUSW instruction.
+/// This intrinsic corresponds to the <c> VPSUBUSW / PSUBUSW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the minuends.
@@ -2562,7 +2562,7 @@ _mm_subs_epu16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPAND / PAND instruction.
+/// This intrinsic corresponds to the <c> VPAND / PAND </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing one of the source operands.
@@ -2581,7 +2581,7 @@ _mm_and_si128(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPANDN / PANDN instruction.
+/// This intrinsic corresponds to the <c> VPANDN / PANDN </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector containing the left source operand. The one's complement
@@ -2599,7 +2599,7 @@ _mm_andnot_si128(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPOR / POR instruction.
+/// This intrinsic corresponds to the <c> VPOR / POR </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing one of the source operands.
@@ -2617,7 +2617,7 @@ _mm_or_si128(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPXOR / PXOR instruction.
+/// This intrinsic corresponds to the <c> VPXOR / PXOR </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing one of the source operands.
@@ -2640,7 +2640,7 @@ _mm_xor_si128(__m128i __a, __m128i __b)
 /// __m128i _mm_slli_si128(__m128i a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPSLLDQ / PSLLDQ instruction.
+/// This intrinsic corresponds to the <c> VPSLLDQ / PSLLDQ </c> instruction.
 ///
 /// \param a
 ///    A 128-bit integer vector containing the source operand.
@@ -2677,7 +2677,7 @@ _mm_xor_si128(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSLLW / PSLLW instruction.
+/// This intrinsic corresponds to the <c> VPSLLW / PSLLW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2696,7 +2696,7 @@ _mm_slli_epi16(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSLLW / PSLLW instruction.
+/// This intrinsic corresponds to the <c> VPSLLW / PSLLW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2715,7 +2715,7 @@ _mm_sll_epi16(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSLLD / PSLLD instruction.
+/// This intrinsic corresponds to the <c> VPSLLD / PSLLD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2734,7 +2734,7 @@ _mm_slli_epi32(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSLLD / PSLLD instruction.
+/// This intrinsic corresponds to the <c> VPSLLD / PSLLD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2753,7 +2753,7 @@ _mm_sll_epi32(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSLLQ / PSLLQ instruction.
+/// This intrinsic corresponds to the <c> VPSLLQ / PSLLQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2772,7 +2772,7 @@ _mm_slli_epi64(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSLLQ / PSLLQ instruction.
+/// This intrinsic corresponds to the <c> VPSLLQ / PSLLQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2792,7 +2792,7 @@ _mm_sll_epi64(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRAW / PSRAW instruction.
+/// This intrinsic corresponds to the <c> VPSRAW / PSRAW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2812,7 +2812,7 @@ _mm_srai_epi16(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRAW / PSRAW instruction.
+/// This intrinsic corresponds to the <c> VPSRAW / PSRAW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2832,7 +2832,7 @@ _mm_sra_epi16(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRAD / PSRAD instruction.
+/// This intrinsic corresponds to the <c> VPSRAD / PSRAD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2852,7 +2852,7 @@ _mm_srai_epi32(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRAD / PSRAD instruction.
+/// This intrinsic corresponds to the <c> VPSRAD / PSRAD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2875,7 +2875,7 @@ _mm_sra_epi32(__m128i __a, __m128i __count)
 /// __m128i _mm_srli_si128(__m128i a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPSRLDQ / PSRLDQ instruction.
+/// This intrinsic corresponds to the <c> VPSRLDQ / PSRLDQ </c> instruction.
 ///
 /// \param a
 ///    A 128-bit integer vector containing the source operand.
@@ -2912,7 +2912,7 @@ _mm_sra_epi32(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRLW / PSRLW instruction.
+/// This intrinsic corresponds to the <c> VPSRLW / PSRLW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2931,7 +2931,7 @@ _mm_srli_epi16(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRLW / PSRLW instruction.
+/// This intrinsic corresponds to the <c> VPSRLW / PSRLW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2950,7 +2950,7 @@ _mm_srl_epi16(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRLD / PSRLD instruction.
+/// This intrinsic corresponds to the <c> VPSRLD / PSRLD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2969,7 +2969,7 @@ _mm_srli_epi32(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRLD / PSRLD instruction.
+/// This intrinsic corresponds to the <c> VPSRLD / PSRLD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -2988,7 +2988,7 @@ _mm_srl_epi32(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRLQ / PSRLQ instruction.
+/// This intrinsic corresponds to the <c> VPSRLQ / PSRLQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -3007,7 +3007,7 @@ _mm_srli_epi64(__m128i __a, int __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPSRLQ / PSRLQ instruction.
+/// This intrinsic corresponds to the <c> VPSRLQ / PSRLQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the source operand.
@@ -3027,7 +3027,7 @@ _mm_srl_epi64(__m128i __a, __m128i __count)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPEQB / PCMPEQB instruction.
+/// This intrinsic corresponds to the <c> VPCMPEQB / PCMPEQB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3046,7 +3046,7 @@ _mm_cmpeq_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPEQW / PCMPEQW instruction.
+/// This intrinsic corresponds to the <c> VPCMPEQW / PCMPEQW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3065,7 +3065,7 @@ _mm_cmpeq_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPEQD / PCMPEQD instruction.
+/// This intrinsic corresponds to the <c> VPCMPEQD / PCMPEQD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3085,7 +3085,7 @@ _mm_cmpeq_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPGTB / PCMPGTB instruction.
+/// This intrinsic corresponds to the <c> VPCMPGTB / PCMPGTB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3107,7 +3107,7 @@ _mm_cmpgt_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPGTW / PCMPGTW instruction.
+/// This intrinsic corresponds to the <c> VPCMPGTW / PCMPGTW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3127,7 +3127,7 @@ _mm_cmpgt_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPGTD / PCMPGTD instruction.
+/// This intrinsic corresponds to the <c> VPCMPGTD / PCMPGTD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3147,7 +3147,7 @@ _mm_cmpgt_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPGTB / PCMPGTB instruction.
+/// This intrinsic corresponds to the <c> VPCMPGTB / PCMPGTB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3167,7 +3167,7 @@ _mm_cmplt_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPGTW / PCMPGTW instruction.
+/// This intrinsic corresponds to the <c> VPCMPGTW / PCMPGTW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3187,7 +3187,7 @@ _mm_cmplt_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPCMPGTD / PCMPGTD instruction.
+/// This intrinsic corresponds to the <c> VPCMPGTD / PCMPGTD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3208,7 +3208,7 @@ _mm_cmplt_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTSI2SD / CVTSI2SD instruction.
+/// This intrinsic corresponds to the <c> VCVTSI2SD / CVTSI2SD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The upper 64 bits of this operand are
@@ -3230,7 +3230,7 @@ _mm_cvtsi64_sd(__m128d __a, long long __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTSD2SI / CVTSD2SI instruction.
+/// This intrinsic corresponds to the <c> VCVTSD2SI / CVTSD2SI </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
@@ -3247,7 +3247,7 @@ _mm_cvtsd_si64(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTTSD2SI / CVTTSD2SI instruction.
+/// This intrinsic corresponds to the <c> VCVTTSD2SI / CVTTSD2SI </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
@@ -3264,7 +3264,7 @@ _mm_cvttsd_si64(__m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTDQ2PS / CVTDQ2PS instruction.
+/// This intrinsic corresponds to the <c> VCVTDQ2PS / CVTDQ2PS </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -3279,7 +3279,7 @@ _mm_cvtepi32_ps(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPS2DQ / CVTPS2DQ instruction.
+/// This intrinsic corresponds to the <c> VCVTPS2DQ / CVTPS2DQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x float].
@@ -3296,7 +3296,7 @@ _mm_cvtps_epi32(__m128 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTTPS2DQ / CVTTPS2DQ instruction.
+/// This intrinsic corresponds to the <c> VCVTTPS2DQ / CVTTPS2DQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x float].
@@ -3312,7 +3312,7 @@ _mm_cvttps_epi32(__m128 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVD / MOVD instruction.
+/// This intrinsic corresponds to the <c> VMOVD / MOVD </c> instruction.
 ///
 /// \param __a
 ///    A 32-bit signed integer operand.
@@ -3329,7 +3329,7 @@ _mm_cvtsi32_si128(int __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVQ / MOVQ instruction.
+/// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit signed integer operand containing the value to be converted.
@@ -3346,7 +3346,7 @@ _mm_cvtsi64_si128(long long __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVD / MOVD instruction.
+/// This intrinsic corresponds to the <c> VMOVD / MOVD </c> instruction.
 ///
 /// \param __a
 ///    A vector of [4 x i32]. The least significant 32 bits are moved to the
@@ -3365,7 +3365,7 @@ _mm_cvtsi128_si32(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVQ / MOVQ instruction.
+/// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction.
 ///
 /// \param __a
 ///    A vector of [2 x i64]. The least significant 64 bits are moved to the
@@ -3383,7 +3383,7 @@ _mm_cvtsi128_si64(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVDQA / MOVDQA instruction.
+/// This intrinsic corresponds to the <c> VMOVDQA / MOVDQA </c> instruction.
 ///
 /// \param __p
 ///    An aligned pointer to a memory location containing integer values.
@@ -3399,7 +3399,7 @@ _mm_load_si128(__m128i const *__p)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVDQU / MOVDQU instruction.
+/// This intrinsic corresponds to the <c> VMOVDQU / MOVDQU </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a memory location containing integer values.
@@ -3418,7 +3418,7 @@ _mm_loadu_si128(__m128i const *__p)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVQ / MOVQ instruction.
+/// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction.
 ///
 /// \param __p
 ///    A 128-bit vector of [2 x i64]. Bits [63:0] are written to bits [63:0] of
@@ -3709,7 +3709,7 @@ _mm_set1_epi8(char __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKLQDQ / PUNPCKLQDQ instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKLQDQ / PUNPCKLQDQ </c> instruction.
 ///
 /// \param __q0
 ///    A 64-bit integral value used to initialize the lower 64 bits of the
@@ -3829,7 +3829,7 @@ _mm_setr_epi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5, 
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VXORPS / XORPS instruction.
+/// This intrinsic corresponds to the <c> VXORPS / XORPS </c> instruction.
 ///
 /// \returns An initialized 128-bit integer vector with all elements set to
 ///    zero.
@@ -3844,7 +3844,7 @@ _mm_setzero_si128(void)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVAPS / MOVAPS instruction.
+/// This intrinsic corresponds to the <c> VMOVAPS / MOVAPS </c> instruction.
 ///
 /// \param __p
 ///    A pointer to an aligned memory location that will receive the integer
@@ -3861,7 +3861,7 @@ _mm_store_si128(__m128i *__p, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVUPS / MOVUPS instruction.
+/// This intrinsic corresponds to the <c> VMOVUPS / MOVUPS </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a memory location that will receive the integer values.
@@ -3885,7 +3885,7 @@ _mm_storeu_si128(__m128i *__p, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMASKMOVDQU / MASKMOVDQU instruction.
+/// This intrinsic corresponds to the <c> VMASKMOVDQU / MASKMOVDQU </c> instruction.
 ///
 /// \param __d
 ///    A 128-bit integer vector containing the values to be moved.
@@ -3906,7 +3906,7 @@ _mm_maskmoveu_si128(__m128i __d, __m128i __n, char *__p)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVLPS / MOVLPS instruction.
+/// This intrinsic corresponds to the <c> VMOVLPS / MOVLPS </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 64-bit memory location that will receive the lower 64 bits
@@ -3929,7 +3929,7 @@ _mm_storel_epi64(__m128i *__p, __m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVNTPS / MOVNTPS instruction.
+/// This intrinsic corresponds to the <c> VMOVNTPS / MOVNTPS </c> instruction.
 ///
 /// \param __p
 ///    A pointer to the 128-bit aligned memory location used to store the value.
@@ -3947,7 +3947,7 @@ _mm_stream_pd(double *__p, __m128d __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVNTPS / MOVNTPS instruction.
+/// This intrinsic corresponds to the <c> VMOVNTPS / MOVNTPS </c> instruction.
 ///
 /// \param __p
 ///    A pointer to the 128-bit aligned memory location used to store the value.
@@ -3965,7 +3965,7 @@ _mm_stream_si128(__m128i *__p, __m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c MOVNTI instruction.
+/// This intrinsic corresponds to the <c> MOVNTI </c> instruction.
 ///
 /// \param __p
 ///    A pointer to the 32-bit memory location used to store the value.
@@ -3984,7 +3984,7 @@ _mm_stream_si32(int *__p, int __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c MOVNTIQ instruction.
+/// This intrinsic corresponds to the <c> MOVNTIQ </c> instruction.
 ///
 /// \param __p
 ///    A pointer to the 64-bit memory location used to store the value.
@@ -4006,7 +4006,7 @@ extern "C" {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c CLFLUSH instruction.
+/// This intrinsic corresponds to the <c> CLFLUSH </c> instruction.
 ///
 /// \param __p
 ///    A pointer to the memory location used to identify the cache line to be
@@ -4020,7 +4020,7 @@ void _mm_clflush(void const *);
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c LFENCE instruction.
+/// This intrinsic corresponds to the <c> LFENCE </c> instruction.
 ///
 void _mm_lfence(void);
 
@@ -4031,7 +4031,7 @@ void _mm_lfence(void);
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c MFENCE instruction.
+/// This intrinsic corresponds to the <c> MFENCE </c> instruction.
 ///
 void _mm_mfence(void);
 
@@ -4046,7 +4046,7 @@ void _mm_mfence(void);
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPACKSSWB / PACKSSWB instruction.
+/// This intrinsic corresponds to the <c> VPACKSSWB / PACKSSWB </c> instruction.
 ///
 /// \param __a
 ///   A 128-bit integer vector of [8 x i16]. Each 16-bit element is treated as
@@ -4074,7 +4074,7 @@ _mm_packs_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPACKSSDW / PACKSSDW instruction.
+/// This intrinsic corresponds to the <c> VPACKSSDW / PACKSSDW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector of [4 x i32]. Each 32-bit element is treated as
@@ -4102,7 +4102,7 @@ _mm_packs_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPACKUSWB / PACKUSWB instruction.
+/// This intrinsic corresponds to the <c> VPACKUSWB / PACKUSWB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector of [8 x i16]. Each 16-bit element is treated as
@@ -4128,7 +4128,7 @@ _mm_packus_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPEXTRW / PEXTRW instruction.
+/// This intrinsic corresponds to the <c> VPEXTRW / PEXTRW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector.
@@ -4159,7 +4159,7 @@ _mm_extract_epi16(__m128i __a, int __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPINSRW / PINSRW instruction.
+/// This intrinsic corresponds to the <c> VPINSRW / PINSRW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector of [8 x i16]. This vector is copied to the
@@ -4186,7 +4186,7 @@ _mm_insert_epi16(__m128i __a, int __b, int __imm)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPMOVMSKB / PMOVMSKB instruction.
+/// This intrinsic corresponds to the <c> VPMOVMSKB / PMOVMSKB </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector containing the values with bits to be extracted.
@@ -4208,7 +4208,7 @@ _mm_movemask_epi8(__m128i __a)
 /// __m128i _mm_shuffle_epi32(__m128i a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPSHUFD / PSHUFD instruction.
+/// This intrinsic corresponds to the <c> VPSHUFD / PSHUFD </c> instruction.
 ///
 /// \param a
 ///    A 128-bit integer vector containing the values to be copied.
@@ -4242,7 +4242,7 @@ _mm_movemask_epi8(__m128i __a)
 /// __m128i _mm_shufflelo_epi16(__m128i a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPSHUFLW / PSHUFLW instruction.
+/// This intrinsic corresponds to the <c> VPSHUFLW / PSHUFLW </c> instruction.
 ///
 /// \param a
 ///    A 128-bit integer vector of [8 x i16]. Bits [127:64] are copied to bits
@@ -4276,7 +4276,7 @@ _mm_movemask_epi8(__m128i __a)
 /// __m128i _mm_shufflehi_epi16(__m128i a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPSHUFHW / PSHUFHW instruction.
+/// This intrinsic corresponds to the <c> VPSHUFHW / PSHUFHW </c> instruction.
 ///
 /// \param a
 ///    A 128-bit integer vector of [8 x i16]. Bits [63:0] are copied to bits
@@ -4307,7 +4307,7 @@ _mm_movemask_epi8(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKHBW / PUNPCKHBW instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKHBW / PUNPCKHBW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [16 x i8].
@@ -4341,7 +4341,7 @@ _mm_unpackhi_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKHWD / PUNPCKHWD instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKHWD / PUNPCKHWD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [8 x i16].
@@ -4367,7 +4367,7 @@ _mm_unpackhi_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKHDQ / PUNPCKHDQ instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKHDQ / PUNPCKHDQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x i32].
@@ -4389,7 +4389,7 @@ _mm_unpackhi_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKHQDQ / PUNPCKHQDQ instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKHQDQ / PUNPCKHQDQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x i64].
@@ -4409,7 +4409,7 @@ _mm_unpackhi_epi64(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKLBW / PUNPCKLBW instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKLBW / PUNPCKLBW </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [16 x i8].
@@ -4444,7 +4444,7 @@ _mm_unpacklo_epi8(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKLWD / PUNPCKLWD instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKLWD / PUNPCKLWD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [8 x i16].
@@ -4470,7 +4470,7 @@ _mm_unpacklo_epi16(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKLDQ / PUNPCKLDQ instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKLDQ / PUNPCKLDQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x i32].
@@ -4492,7 +4492,7 @@ _mm_unpacklo_epi32(__m128i __a, __m128i __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VPUNPCKLQDQ / PUNPCKLQDQ instruction.
+/// This intrinsic corresponds to the <c> VPUNPCKLQDQ / PUNPCKLQDQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x i64].
@@ -4529,7 +4529,7 @@ _mm_movepi64_pi64(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVQ / MOVQ / MOVD instruction.
+/// This intrinsic corresponds to the <c> VMOVQ / MOVQ / MOVD </c> instruction.
 ///
 /// \param __a
 ///    A 64-bit value.
@@ -4546,7 +4546,7 @@ _mm_movpi64_epi64(__m64 __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVQ / MOVQ instruction.
+/// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit integer vector operand. The lower 64 bits are moved to the
@@ -4565,7 +4565,7 @@ _mm_move_epi64(__m128i __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUNPCKHPD / UNPCKHPD instruction.
+/// This intrinsic corresponds to the <c> VUNPCKHPD / UNPCKHPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -4586,7 +4586,7 @@ _mm_unpackhi_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VUNPCKLPD / UNPCKLPD instruction.
+/// This intrinsic corresponds to the <c> VUNPCKLPD / UNPCKLPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double].
@@ -4607,7 +4607,7 @@ _mm_unpacklo_pd(__m128d __a, __m128d __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VMOVMSKPD / MOVMSKPD instruction.
+/// This intrinsic corresponds to the <c> VMOVMSKPD / MOVMSKPD </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [2 x double] containing the values with sign bits to
@@ -4631,7 +4631,7 @@ _mm_movemask_pd(__m128d __a)
 /// __m128d _mm_shuffle_pd(__m128d a, __m128d b, const int i);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VSHUFPD / SHUFPD instruction.
+/// This intrinsic corresponds to the <c> VSHUFPD / SHUFPD </c> instruction.
 ///
 /// \param a
 ///    A 128-bit vector of [2 x double].
@@ -4761,7 +4761,7 @@ extern "C" {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PAUSE instruction.
+/// This intrinsic corresponds to the <c> PAUSE </c> instruction.
 ///
 void _mm_pause(void);
 

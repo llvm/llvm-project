@@ -39,3 +39,8 @@ namespace NoexceptFunctionTypes {
   static_assert(A<int>().g());
   static_assert(A<int>()());
 }
+
+namespace Cxx17CD_NB_GB19 {
+  const int &r = 0;
+  constexpr int n = r;
+}

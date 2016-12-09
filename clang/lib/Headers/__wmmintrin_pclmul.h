@@ -34,7 +34,7 @@
 /// __m128i _mm_clmulepi64_si128(__m128i __X, __m128i __Y, const int __I);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPCLMULQDQ instruction.
+/// This intrinsic corresponds to the <c> VPCLMULQDQ </c> instruction.
 ///
 /// \param __X
 ///    A 128-bit vector of [2 x i64] containing one of the source operands.

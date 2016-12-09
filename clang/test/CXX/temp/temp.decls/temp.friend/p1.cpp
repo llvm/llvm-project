@@ -174,7 +174,7 @@ namespace test7 {
 
   // This shouldn't crash.
   template <class T> class D {
-    friend class A; // expected-error {{elaborated type refers to a template}}
+    friend class A; // expected-error {{template 'A' cannot be referenced with a class specifier}}
   };
   template class D<int>;
 }

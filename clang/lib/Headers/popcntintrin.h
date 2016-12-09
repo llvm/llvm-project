@@ -31,7 +31,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c POPCNT instruction.
+/// This intrinsic corresponds to the <c> POPCNT </c> instruction.
 ///
 /// \param __A
 ///    An unsigned 32-bit integer operand.
@@ -47,7 +47,7 @@ _mm_popcnt_u32(unsigned int __A)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c POPCNT instruction.
+/// This intrinsic corresponds to the <c> POPCNT </c> instruction.
 ///
 /// \param __A
 ///    A signed 32-bit integer operand.
@@ -64,7 +64,7 @@ _popcnt32(int __A)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c POPCNT instruction.
+/// This intrinsic corresponds to the <c> POPCNT </c> instruction.
 ///
 /// \param __A
 ///    An unsigned 64-bit integer operand.
@@ -80,7 +80,7 @@ _mm_popcnt_u64(unsigned long long __A)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c POPCNT instruction.
+/// This intrinsic corresponds to the <c> POPCNT </c> instruction.
 ///
 /// \param __A
 ///    A signed 64-bit integer operand.

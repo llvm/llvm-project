@@ -3048,6 +3048,7 @@ void InitializationSequence::Step::Destroy() {
   case SK_CastDerivedToBaseLValue:
   case SK_BindReference:
   case SK_BindReferenceToTemporary:
+  case SK_FinalCopy:
   case SK_ExtraneousCopyToTemporary:
   case SK_UserConversion:
   case SK_QualificationConversionRValue:
@@ -3082,7 +3083,14 @@ void InitializationSequence::Step::Destroy() {
 }
 
 bool InitializationSequence::isDirectReferenceBinding() const {
-  return !Steps.empty() && Steps.back().Kind == SK_BindReference;
+  // There can be some lvalue adjustments after the SK_BindReference step.
+  for (auto I = Steps.rbegin(); I != Steps.rend(); ++I) {
+    if (I->Kind == SK_BindReference)
+      return true;
+    if (I->Kind == SK_BindReferenceToTemporary)
+      return false;
+  }
+  return false;
 }
 
 bool InitializationSequence::isAmbiguous() const {
@@ -3099,6 +3107,8 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_IncompatWideStringIntoWideChar:
   case FK_AddressOfOverloadFailed: // FIXME: Could do better
   case FK_NonConstLValueReferenceBindingToTemporary:
+  case FK_NonConstLValueReferenceBindingToBitfield:
+  case FK_NonConstLValueReferenceBindingToVectorElement:
   case FK_NonConstLValueReferenceBindingToUnrelated:
   case FK_RValueReferenceBindingToLValue:
   case FK_ReferenceInitDropsQualifiers:
@@ -3163,6 +3173,13 @@ void InitializationSequence::AddReferenceBindingStep(QualType T,
                                                      bool BindingTemporary) {
   Step S;
   S.Kind = BindingTemporary? SK_BindReferenceToTemporary : SK_BindReference;
+  S.Type = T;
+  Steps.push_back(S);
+}
+
+void InitializationSequence::AddFinalCopy(QualType T) {
+  Step S;
+  S.Kind = SK_FinalCopy;
   S.Type = T;
   Steps.push_back(S);
 }
@@ -4002,12 +4019,10 @@ static void TryListInitialization(Sema &S,
 
 /// \brief Try a reference initialization that involves calling a conversion
 /// function.
-static OverloadingResult TryRefInitWithConversionFunction(Sema &S,
-                                             const InitializedEntity &Entity,
-                                             const InitializationKind &Kind,
-                                             Expr *Initializer,
-                                             bool AllowRValues,
-                                             InitializationSequence &Sequence) {
+static OverloadingResult TryRefInitWithConversionFunction(
+    Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
+    Expr *Initializer, bool AllowRValues, bool IsLValueRef,
+    InitializationSequence &Sequence) {
   QualType DestType = Entity.getType();
   QualType cv1T1 = DestType->getAs<ReferenceType>()->getPointeeType();
   QualType T1 = cv1T1.getUnqualifiedType();
@@ -4123,58 +4138,68 @@ static OverloadingResult TryRefInitWithConversionFunction(Sema &S,
   // use this initialization. Mark it as referenced.
   Function->setReferenced();
 
-  // Compute the returned type of the conversion.
+  // Compute the returned type and value kind of the conversion.
+  QualType cv3T3;
   if (isa<CXXConversionDecl>(Function))
-    T2 = Function->getReturnType();
+    cv3T3 = Function->getReturnType();
   else
-    T2 = cv1T1;
+    cv3T3 = T1;
+
+  ExprValueKind VK = VK_RValue;
+  if (cv3T3->isLValueReferenceType())
+    VK = VK_LValue;
+  else if (const auto *RRef = cv3T3->getAs<RValueReferenceType>())
+    VK = RRef->getPointeeType()->isFunctionType() ? VK_LValue : VK_XValue;
+  cv3T3 = cv3T3.getNonLValueExprType(S.Context);
 
   // Add the user-defined conversion step.
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
-  Sequence.AddUserConversionStep(Function, Best->FoundDecl,
-                                 T2.getNonLValueExprType(S.Context),
+  Sequence.AddUserConversionStep(Function, Best->FoundDecl, cv3T3,
                                  HadMultipleCandidates);
 
-  // Determine whether we need to perform derived-to-base or
-  // cv-qualification adjustments.
-  ExprValueKind VK = VK_RValue;
-  if (T2->isLValueReferenceType())
-    VK = VK_LValue;
-  else if (const RValueReferenceType *RRef = T2->getAs<RValueReferenceType>())
-    VK = RRef->getPointeeType()->isFunctionType() ? VK_LValue : VK_XValue;
-
+  // Determine whether we'll need to perform derived-to-base adjustments or
+  // other conversions.
   bool NewDerivedToBase = false;
   bool NewObjCConversion = false;
   bool NewObjCLifetimeConversion = false;
   Sema::ReferenceCompareResult NewRefRelationship
-    = S.CompareReferenceRelationship(DeclLoc, T1,
-                                     T2.getNonLValueExprType(S.Context),
+    = S.CompareReferenceRelationship(DeclLoc, T1, cv3T3,
                                      NewDerivedToBase, NewObjCConversion,
                                      NewObjCLifetimeConversion);
+
+  // Add the final conversion sequence, if necessary.
   if (NewRefRelationship == Sema::Ref_Incompatible) {
-    // If the type we've converted to is not reference-related to the
-    // type we're looking for, then there is another conversion step
-    // we need to perform to produce a temporary of the right type
-    // that we'll be binding to.
+    assert(!isa<CXXConstructorDecl>(Function) &&
+           "should not have conversion after constructor");
+
     ImplicitConversionSequence ICS;
     ICS.setStandard();
     ICS.Standard = Best->FinalConversion;
-    T2 = ICS.Standard.getToType(2);
-    Sequence.AddConversionSequenceStep(ICS, T2);
-  } else if (NewDerivedToBase)
-    Sequence.AddDerivedToBaseCastStep(
-                                S.Context.getQualifiedType(T1,
-                                  T2.getNonReferenceType().getQualifiers()),
-                                      VK);
+    Sequence.AddConversionSequenceStep(ICS, ICS.Standard.getToType(2));
+
+    // Every implicit conversion results in a prvalue, except for a glvalue
+    // derived-to-base conversion, which we handle below.
+    cv3T3 = ICS.Standard.getToType(2);
+    VK = VK_RValue;
+  }
+
+  //   If the converted initializer is a prvalue, its type T4 is adjusted to
+  //   type "cv1 T4" and the temporary materialization conversion is applied.
+  //
+  // We adjust the cv-qualifications to match the reference regardless of
+  // whether we have a prvalue so that the AST records the change. In this
+  // case, T4 is "cv3 T3".
+  QualType cv1T4 = S.Context.getQualifiedType(cv3T3, cv1T1.getQualifiers());
+  if (cv1T4.getQualifiers() != cv3T3.getQualifiers())
+    Sequence.AddQualificationConversionStep(cv1T4, VK);
+  Sequence.AddReferenceBindingStep(cv1T4, VK == VK_RValue);
+  VK = IsLValueRef ? VK_LValue : VK_XValue;
+
+  if (NewDerivedToBase)
+    Sequence.AddDerivedToBaseCastStep(cv1T1, VK);
   else if (NewObjCConversion)
-    Sequence.AddObjCObjectConversionStep(
-                                S.Context.getQualifiedType(T1,
-                                  T2.getNonReferenceType().getQualifiers()));
+    Sequence.AddObjCObjectConversionStep(cv1T1);
 
-  if (cv1T1.getQualifiers() != T2.getNonReferenceType().getQualifiers())
-    Sequence.AddQualificationConversionStep(cv1T1, VK);
-
-  Sequence.AddReferenceBindingStep(cv1T1, !T2->isReferenceType());
   return OR_Success;
 }
 
@@ -4208,54 +4233,11 @@ static void TryReferenceInitialization(Sema &S,
                                  T1Quals, cv2T2, T2, T2Quals, Sequence);
 }
 
-/// Converts the target of reference initialization so that it has the
-/// appropriate qualifiers and value kind.
-///
-/// In this case, 'x' is an 'int' lvalue, but it needs to be 'const int'.
-/// \code
-///   int x;
-///   const int &r = x;
-/// \endcode
-///
-/// In this case the reference is binding to a bitfield lvalue, which isn't
-/// valid. Perform a load to create a lifetime-extended temporary instead.
-/// \code
-///   const int &r = someStruct.bitfield;
-/// \endcode
-static ExprValueKind
-convertQualifiersAndValueKindIfNecessary(Sema &S,
-                                         InitializationSequence &Sequence,
-                                         Expr *Initializer,
-                                         QualType cv1T1,
-                                         Qualifiers T1Quals,
-                                         Qualifiers T2Quals,
-                                         bool IsLValueRef) {
-  bool IsNonAddressableType = Initializer->refersToBitField() ||
-                              Initializer->refersToVectorElement();
-
-  if (IsNonAddressableType) {
-    // C++11 [dcl.init.ref]p5: [...] Otherwise, the reference shall be an
-    // lvalue reference to a non-volatile const type, or the reference shall be
-    // an rvalue reference.
-    //
-    // If not, we can't make a temporary and bind to that. Give up and allow the
-    // error to be diagnosed later.
-    if (IsLValueRef && (!T1Quals.hasConst() || T1Quals.hasVolatile())) {
-      assert(Initializer->isGLValue());
-      return Initializer->getValueKind();
-    }
-
-    // Force a load so we can materialize a temporary.
-    Sequence.AddLValueToRValueStep(cv1T1.getUnqualifiedType());
-    return VK_RValue;
-  }
-
-  if (T1Quals != T2Quals) {
-    Sequence.AddQualificationConversionStep(cv1T1,
-                                            Initializer->getValueKind());
-  }
-
-  return Initializer->getValueKind();
+/// Determine whether an expression is a non-referenceable glvalue (one to
+/// which a reference can never bind). Attemting to bind a reference to
+/// such a glvalue will always create a temporary.
+static bool isNonReferenceableGLValue(Expr *E) {
+  return E->refersToBitField() || E->refersToVectorElement();
 }
 
 /// \brief Reference initialization without resolving overloaded functions.
@@ -4293,31 +4275,28 @@ static void TryReferenceInitializationCore(Sema &S,
   OverloadingResult ConvOvlResult = OR_Success;
   bool T1Function = T1->isFunctionType();
   if (isLValueRef || T1Function) {
-    if (InitCategory.isLValue() &&
+    if (InitCategory.isLValue() && !isNonReferenceableGLValue(Initializer) &&
         (RefRelationship == Sema::Ref_Compatible ||
          (Kind.isCStyleOrFunctionalCast() &&
           RefRelationship == Sema::Ref_Related))) {
       //   - is an lvalue (but is not a bit-field), and "cv1 T1" is
       //     reference-compatible with "cv2 T2," or
-      //
-      // Per C++ [over.best.ics]p2, we don't diagnose whether the lvalue is a
-      // bit-field when we're determining whether the reference initialization
-      // can occur. However, we do pay attention to whether it is a bit-field
-      // to decide whether we're actually binding to a temporary created from
-      // the bit-field.
+      if (T1Quals != T2Quals)
+        // Convert to cv1 T2. This should only add qualifiers unless this is a
+        // c-style cast. The removal of qualifiers in that case notionally
+        // happens after the reference binding, but that doesn't matter.
+        Sequence.AddQualificationConversionStep(
+            S.Context.getQualifiedType(T2, T1Quals),
+            Initializer->getValueKind());
       if (DerivedToBase)
-        Sequence.AddDerivedToBaseCastStep(
-                         S.Context.getQualifiedType(T1, T2Quals),
-                         VK_LValue);
+        Sequence.AddDerivedToBaseCastStep(cv1T1, VK_LValue);
       else if (ObjCConversion)
-        Sequence.AddObjCObjectConversionStep(
-                                     S.Context.getQualifiedType(T1, T2Quals));
+        Sequence.AddObjCObjectConversionStep(cv1T1);
 
-      ExprValueKind ValueKind =
-        convertQualifiersAndValueKindIfNecessary(S, Sequence, Initializer,
-                                                 cv1T1, T1Quals, T2Quals,
-                                                 isLValueRef);
-      Sequence.AddReferenceBindingStep(cv1T1, ValueKind == VK_RValue);
+      // We only create a temporary here when binding a reference to a
+      // bit-field or vector element. Those cases are't supposed to be
+      // handled by this bullet, but the outcome is the same either way.
+      Sequence.AddReferenceBindingStep(cv1T1, false);
       return;
     }
 
@@ -4332,7 +4311,8 @@ static void TryReferenceInitializationCore(Sema &S,
     if (RefRelationship == Sema::Ref_Incompatible && T2->isRecordType() &&
         (isLValueRef || InitCategory.isRValue())) {
       ConvOvlResult = TryRefInitWithConversionFunction(
-          S, Entity, Kind, Initializer, /*AllowRValues*/isRValueRef, Sequence);
+          S, Entity, Kind, Initializer, /*AllowRValues*/ isRValueRef,
+          /*IsLValueRef*/ isLValueRef, Sequence);
       if (ConvOvlResult == OR_Success)
         return;
       if (ConvOvlResult != OR_No_Viable_Function)
@@ -4352,33 +4332,51 @@ static void TryReferenceInitializationCore(Sema &S,
       Sequence.SetOverloadFailure(
                         InitializationSequence::FK_ReferenceInitOverloadFailed,
                                   ConvOvlResult);
-    else
-      Sequence.SetFailed(InitCategory.isLValue()
-        ? (RefRelationship == Sema::Ref_Related
-             ? InitializationSequence::FK_ReferenceInitDropsQualifiers
-             : InitializationSequence::FK_NonConstLValueReferenceBindingToUnrelated)
-        : InitializationSequence::FK_NonConstLValueReferenceBindingToTemporary);
-
+    else if (!InitCategory.isLValue())
+      Sequence.SetFailed(
+          InitializationSequence::FK_NonConstLValueReferenceBindingToTemporary);
+    else {
+      InitializationSequence::FailureKind FK;
+      switch (RefRelationship) {
+      case Sema::Ref_Compatible:
+        if (Initializer->refersToBitField())
+          FK = InitializationSequence::
+              FK_NonConstLValueReferenceBindingToBitfield;
+        else if (Initializer->refersToVectorElement())
+          FK = InitializationSequence::
+              FK_NonConstLValueReferenceBindingToVectorElement;
+        else
+          llvm_unreachable("unexpected kind of compatible initializer");
+        break;
+      case Sema::Ref_Related:
+        FK = InitializationSequence::FK_ReferenceInitDropsQualifiers;
+        break;
+      case Sema::Ref_Incompatible:
+        FK = InitializationSequence::
+            FK_NonConstLValueReferenceBindingToUnrelated;
+        break;
+      }
+      Sequence.SetFailed(FK);
+    }
     return;
   }
 
   //    - If the initializer expression
-  // C++14-and-before:
-  //      - is an xvalue, class prvalue, array prvalue, or function lvalue and
-  //        "cv1 T1" is reference-compatible with "cv2 T2"
-  // C++1z:
-  //      - is an rvalue or function lvalue and "cv1 T1" is reference-compatible
-  //        with "cv2 T2"
-  // Note: functions are handled below.
+  //      - is an
+  // [<=14] xvalue (but not a bit-field), class prvalue, array prvalue, or
+  // [1z]   rvalue (but not a bit-field) or
+  //        function lvalue and "cv1 T1" is reference-compatible with "cv2 T2"
+  //
+  // Note: functions are handled above and below rather than here...
   if (!T1Function &&
       (RefRelationship == Sema::Ref_Compatible ||
        (Kind.isCStyleOrFunctionalCast() &&
         RefRelationship == Sema::Ref_Related)) &&
-      (InitCategory.isXValue() ||
+      ((InitCategory.isXValue() && !isNonReferenceableGLValue(Initializer)) ||
        (InitCategory.isPRValue() &&
         (S.getLangOpts().CPlusPlus1z || T2->isRecordType() ||
          T2->isArrayType())))) {
-    ExprValueKind ValueKind = InitCategory.isXValue()? VK_XValue : VK_RValue;
+    ExprValueKind ValueKind = InitCategory.isXValue() ? VK_XValue : VK_RValue;
     if (InitCategory.isPRValue() && T2->isRecordType()) {
       // The corresponding bullet in C++03 [dcl.init.ref]p5 gives the
       // compiler the freedom to perform a copy here or bind to the
@@ -4395,19 +4393,22 @@ static void TryReferenceInitializationCore(Sema &S,
         CheckCXX98CompatAccessibleCopy(S, Entity, Initializer);
     }
 
+    // C++1z [dcl.init.ref]/5.2.1.2:
+    //   If the converted initializer is a prvalue, its type T4 is adjusted
+    //   to type "cv1 T4" and the temporary materialization conversion is
+    //   applied.
+    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1Quals);
+    if (T1Quals != T2Quals)
+      Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
+    Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_RValue);
+    ValueKind = isLValueRef ? VK_LValue : VK_XValue;
+
+    //   In any case, the reference is bound to the resulting glvalue (or to
+    //   an appropriate base class subobject).
     if (DerivedToBase)
-      Sequence.AddDerivedToBaseCastStep(S.Context.getQualifiedType(T1, T2Quals),
-                                        ValueKind);
+      Sequence.AddDerivedToBaseCastStep(cv1T1, ValueKind);
     else if (ObjCConversion)
-      Sequence.AddObjCObjectConversionStep(
-                                       S.Context.getQualifiedType(T1, T2Quals));
-
-    ValueKind = convertQualifiersAndValueKindIfNecessary(S, Sequence,
-                                                         Initializer, cv1T1,
-                                                         T1Quals, T2Quals,
-                                                         isLValueRef);
-
-    Sequence.AddReferenceBindingStep(cv1T1, ValueKind == VK_RValue);
+      Sequence.AddObjCObjectConversionStep(cv1T1);
     return;
   }
 
@@ -4420,7 +4421,8 @@ static void TryReferenceInitializationCore(Sema &S,
   if (T2->isRecordType()) {
     if (RefRelationship == Sema::Ref_Incompatible) {
       ConvOvlResult = TryRefInitWithConversionFunction(
-          S, Entity, Kind, Initializer, /*AllowRValues*/true, Sequence);
+          S, Entity, Kind, Initializer, /*AllowRValues*/ true,
+          /*IsLValueRef*/ isLValueRef, Sequence);
       if (ConvOvlResult)
         Sequence.SetOverloadFailure(
             InitializationSequence::FK_ReferenceInitOverloadFailed,
@@ -4746,25 +4748,50 @@ static void TryUserDefinedConversion(Sema &S,
     Sequence.AddUserConversionStep(Function, Best->FoundDecl,
                                    DestType.getUnqualifiedType(),
                                    HadMultipleCandidates);
+
+    // C++14 and before:
+    //   - if the function is a constructor, the call initializes a temporary
+    //     of the cv-unqualified version of the destination type. The [...]
+    //     temporary [...] is then used to direct-initialize, according to the
+    //     rules above, the object that is the destination of the
+    //     copy-initialization.
+    // Note that this just performs a simple object copy from the temporary.
+    //
+    // C++1z:
+    //   - if the function is a constructor, the call is a prvalue of the
+    //     cv-unqualified version of the destination type whose return object
+    //     is initialized by the constructor. The call is used to
+    //     direct-initialize, according to the rules above, the object that
+    //     is the destination of the copy-initialization.
+    // Therefore we need to do nothing further.
+    //
+    // FIXME: Mark this copy as extraneous.
+    if (!S.getLangOpts().CPlusPlus1z)
+      Sequence.AddFinalCopy(DestType);
     return;
   }
 
   // Add the user-defined conversion step that calls the conversion function.
   QualType ConvType = Function->getCallResultType();
-  if (ConvType->getAs<RecordType>()) {
-    // If we're converting to a class type, there may be an copy of
-    // the resulting temporary object (possible to create an object of
-    // a base class type). That copy is not a separate conversion, so
-    // we just make a note of the actual destination type (possibly a
-    // base class of the type returned by the conversion function) and
-    // let the user-defined conversion step handle the conversion.
-    Sequence.AddUserConversionStep(Function, Best->FoundDecl, DestType,
-                                   HadMultipleCandidates);
-    return;
-  }
-
   Sequence.AddUserConversionStep(Function, Best->FoundDecl, ConvType,
                                  HadMultipleCandidates);
+
+  if (ConvType->getAs<RecordType>()) {
+    //   The call is used to direct-initialize [...] the object that is the
+    //   destination of the copy-initialization.
+    //
+    // In C++1z, this does not call a constructor if we enter /17.6.1:
+    //   - If the initializer expression is a prvalue and the cv-unqualified
+    //     version of the source type is the same as the class of the
+    //     destination [... do not make an extra copy]
+    //
+    // FIXME: Mark this copy as extraneous.
+    if (!S.getLangOpts().CPlusPlus1z ||
+        Function->getReturnType()->isReferenceType() ||
+        !S.Context.hasSameUnqualifiedType(ConvType, DestType))
+      Sequence.AddFinalCopy(DestType);
+    return;
+  }
 
   // If the conversion following the call to the conversion function
   // is interesting, add it as a separate step.
@@ -5382,7 +5409,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
 
 /// \brief Whether the given entity, when initialized with an object
 /// created for that initialization, requires destruction.
-static bool shouldDestroyTemporary(const InitializedEntity &Entity) {
+static bool shouldDestroyEntity(const InitializedEntity &Entity) {
   switch (Entity.getKind()) {
     case InitializedEntity::EK_Result:
     case InitializedEntity::EK_New:
@@ -5684,11 +5711,6 @@ void InitializationSequence::PrintInitLocationNote(Sema &S,
     S.Diag(Entity.getMethodDecl()->getLocation(),
            diag::note_method_return_type_change)
       << Entity.getMethodDecl()->getDeclName();
-}
-
-static bool isReferenceBinding(const InitializationSequence::Step &s) {
-  return s.Kind == InitializationSequence::SK_BindReference ||
-         s.Kind == InitializationSequence::SK_BindReferenceToTemporary;
 }
 
 /// Returns true if the parameters describe a constructor initialization of
@@ -6392,6 +6414,7 @@ InitializationSequence::Perform(Sema &S,
   case SK_CastDerivedToBaseLValue:
   case SK_BindReference:
   case SK_BindReferenceToTemporary:
+  case SK_FinalCopy:
   case SK_ExtraneousCopyToTemporary:
   case SK_UserConversion:
   case SK_QualificationConversionLValue:
@@ -6479,30 +6502,6 @@ InitializationSequence::Perform(Sema &S,
     }
 
     case SK_BindReference:
-      // References cannot bind to bit-fields (C++ [dcl.init.ref]p5).
-      if (CurInit.get()->refersToBitField()) {
-        // We don't necessarily have an unambiguous source bit-field.
-        FieldDecl *BitField = CurInit.get()->getSourceBitField();
-        S.Diag(Kind.getLocation(), diag::err_reference_bind_to_bitfield)
-          << Entity.getType().isVolatileQualified()
-          << (BitField ? BitField->getDeclName() : DeclarationName())
-          << (BitField != nullptr)
-          << CurInit.get()->getSourceRange();
-        if (BitField)
-          S.Diag(BitField->getLocation(), diag::note_bitfield_decl);
-
-        return ExprError();
-      }
-
-      if (CurInit.get()->refersToVectorElement()) {
-        // References cannot bind to vector elements.
-        S.Diag(Kind.getLocation(), diag::err_reference_bind_to_vector_element)
-          << Entity.getType().isVolatileQualified()
-          << CurInit.get()->getSourceRange();
-        PrintInitLocationNote(S, Entity);
-        return ExprError();
-      }
-
       // Reference binding does not have any corresponding ASTs.
 
       // Check exception specifications
@@ -6532,15 +6531,15 @@ InitializationSequence::Perform(Sema &S,
 
       // Materialize the temporary into memory.
       MaterializeTemporaryExpr *MTE = S.CreateMaterializeTemporaryExpr(
-          Entity.getType().getNonReferenceType(), CurInit.get(),
-          Entity.getType()->isLValueReferenceType());
+          Step->Type, CurInit.get(), Entity.getType()->isLValueReferenceType());
 
       // Maybe lifetime-extend the temporary's subobjects to match the
       // entity's lifetime.
       if (const InitializedEntity *ExtendingEntity =
               getEntityForTemporaryLifetimeExtension(&Entity))
         if (performReferenceExtension(MTE, ExtendingEntity))
-          warnOnLifetimeExtension(S, Entity, CurInit.get(), /*IsInitializerList=*/false,
+          warnOnLifetimeExtension(S, Entity, CurInit.get(),
+                                  /*IsInitializerList=*/false,
                                   ExtendingEntity->getDecl());
 
       // If we're binding to an Objective-C object that has lifetime, we
@@ -6557,6 +6556,18 @@ InitializationSequence::Perform(Sema &S,
       break;
     }
 
+    case SK_FinalCopy:
+      // If the overall initialization is initializing a temporary, we already
+      // bound our argument if it was necessary to do so. If not (if we're
+      // ultimately initializing a non-temporary), our argument needs to be
+      // bound since it's initializing a function parameter.
+      // FIXME: This is a mess. Rationalize temporary destruction.
+      if (!shouldBindAsTemporary(Entity))
+        CurInit = S.MaybeBindToTemporary(CurInit.get());
+      CurInit = CopyObject(S, Step->Type, Entity, CurInit,
+                           /*IsExtraneousCopy=*/false);
+      break;
+
     case SK_ExtraneousCopyToTemporary:
       CurInit = CopyObject(S, Step->Type, Entity, CurInit,
                            /*IsExtraneousCopy=*/true);
@@ -6566,7 +6577,6 @@ InitializationSequence::Perform(Sema &S,
       // We have a user-defined conversion that invokes either a constructor
       // or a conversion function.
       CastKind CastKind;
-      bool IsCopy = false;
       FunctionDecl *Fn = Step->Function.Function;
       DeclAccessPair FoundFn = Step->Function.FoundDecl;
       bool HadMultipleCandidates = Step->Function.HadMultipleCandidates;
@@ -6575,7 +6585,6 @@ InitializationSequence::Perform(Sema &S,
         // Build a call to the selected constructor.
         SmallVector<Expr*, 8> ConstructorArgs;
         SourceLocation Loc = CurInit.get()->getLocStart();
-        CurInit.get(); // Ownership transferred into MultiExprArg, below.
 
         // Determine the arguments required to actually perform the constructor
         // call.
@@ -6604,11 +6613,6 @@ InitializationSequence::Perform(Sema &S,
           return ExprError();
 
         CastKind = CK_ConstructorConversion;
-        QualType Class = S.Context.getTypeDeclType(Constructor->getParent());
-        if (S.Context.hasSameUnqualifiedType(SourceType, Class) ||
-            S.IsDerivedFrom(Loc, SourceType, Class))
-          IsCopy = true;
-
         CreatedObject = true;
       } else {
         // Build a call to the conversion function.
@@ -6621,48 +6625,35 @@ InitializationSequence::Perform(Sema &S,
         // FIXME: Should we move this initialization into a separate
         // derived-to-base conversion? I believe the answer is "no", because
         // we don't want to turn off access control here for c-style casts.
-        ExprResult CurInitExprRes =
-          S.PerformObjectArgumentInitialization(CurInit.get(),
-                                                /*Qualifier=*/nullptr,
-                                                FoundFn, Conversion);
-        if(CurInitExprRes.isInvalid())
+        CurInit = S.PerformObjectArgumentInitialization(CurInit.get(),
+                                                        /*Qualifier=*/nullptr,
+                                                        FoundFn, Conversion);
+        if (CurInit.isInvalid())
           return ExprError();
-        CurInit = CurInitExprRes;
 
         // Build the actual call to the conversion function.
         CurInit = S.BuildCXXMemberCallExpr(CurInit.get(), FoundFn, Conversion,
                                            HadMultipleCandidates);
-        if (CurInit.isInvalid() || !CurInit.get())
+        if (CurInit.isInvalid())
           return ExprError();
 
         CastKind = CK_UserDefinedConversion;
-
         CreatedObject = Conversion->getReturnType()->isRecordType();
       }
 
-      // C++14 and before:
-      //   - if the function is a constructor, the call initializes a temporary
-      //     of the cv-unqualified version of the destination type [...]
-      // C++1z:
-      //   - if the function is a constructor, the call is a prvalue of the
-      //     cv-unqualified version of the destination type whose return object
-      //     is initialized by the constructor [...]
-      // Both:
-      //     The [..] call is used to direct-initialize, according to the rules
-      //     above, the object that is the destination of the
-      //     copy-initialization.
-      // In C++14 and before, that always means the "constructors are
-      // considered" bullet, because we have arrived at a reference-related
-      // type. In C++1z, it only means that if the types are different or we
-      // didn't produce a prvalue, so just check for that case here.
-      bool RequiresCopy = !IsCopy && !isReferenceBinding(Steps.back());
-      if (S.getLangOpts().CPlusPlus1z && CurInit.get()->isRValue() &&
-          S.Context.hasSameUnqualifiedType(
-              Entity.getType().getNonReferenceType(), CurInit.get()->getType()))
-        RequiresCopy = false;
-      bool MaybeBindToTemp = RequiresCopy || shouldBindAsTemporary(Entity);
+      CurInit = ImplicitCastExpr::Create(S.Context, CurInit.get()->getType(),
+                                         CastKind, CurInit.get(), nullptr,
+                                         CurInit.get()->getValueKind());
 
-      if (!MaybeBindToTemp && CreatedObject && shouldDestroyTemporary(Entity)) {
+      if (shouldBindAsTemporary(Entity))
+        // The overall entity is temporary, so this expression should be
+        // destroyed at the end of its full-expression.
+        CurInit = S.MaybeBindToTemporary(CurInit.getAs<Expr>());
+      else if (CreatedObject && shouldDestroyEntity(Entity)) {
+        // The object outlasts the full-expression, but we need to prepare for
+        // a destructor being run on it.
+        // FIXME: It makes no sense to do this here. This should happen
+        // regardless of how we initialized the entity.
         QualType T = CurInit.get()->getType();
         if (const RecordType *Record = T->getAs<RecordType>()) {
           CXXDestructorDecl *Destructor
@@ -6674,15 +6665,6 @@ InitializationSequence::Perform(Sema &S,
             return ExprError();
         }
       }
-
-      CurInit = ImplicitCastExpr::Create(S.Context, CurInit.get()->getType(),
-                                         CastKind, CurInit.get(), nullptr,
-                                         CurInit.get()->getValueKind());
-      if (MaybeBindToTemp)
-        CurInit = S.MaybeBindToTemporary(CurInit.getAs<Expr>());
-      if (RequiresCopy)
-        CurInit = CopyObject(S, Entity.getType().getNonReferenceType(), Entity,
-                             CurInit, /*IsExtraneousCopy=*/false);
       break;
     }
 
@@ -7350,6 +7332,25 @@ bool InitializationSequence::Diagnose(Sema &S,
       << Args[0]->getSourceRange();
     break;
 
+  case FK_NonConstLValueReferenceBindingToBitfield: {
+    // We don't necessarily have an unambiguous source bit-field.
+    FieldDecl *BitField = Args[0]->getSourceBitField();
+    S.Diag(Kind.getLocation(), diag::err_reference_bind_to_bitfield)
+      << DestType.isVolatileQualified()
+      << (BitField ? BitField->getDeclName() : DeclarationName())
+      << (BitField != nullptr)
+      << Args[0]->getSourceRange();
+    if (BitField)
+      S.Diag(BitField->getLocation(), diag::note_bitfield_decl);
+    break;
+  }
+
+  case FK_NonConstLValueReferenceBindingToVectorElement:
+    S.Diag(Kind.getLocation(), diag::err_reference_bind_to_vector_element)
+      << DestType.isVolatileQualified()
+      << Args[0]->getSourceRange();
+    break;
+
   case FK_RValueReferenceBindingToLValue:
     S.Diag(Kind.getLocation(), diag::err_lvalue_to_rvalue_ref)
       << DestType.getNonReferenceType() << Args[0]->getType()
@@ -7647,6 +7648,14 @@ void InitializationSequence::dump(raw_ostream &OS) const {
       OS << "non-const lvalue reference bound to temporary";
       break;
 
+    case FK_NonConstLValueReferenceBindingToBitfield:
+      OS << "non-const lvalue reference bound to bit-field";
+      break;
+
+    case FK_NonConstLValueReferenceBindingToVectorElement:
+      OS << "non-const lvalue reference bound to vector element";
+      break;
+
     case FK_NonConstLValueReferenceBindingToUnrelated:
       OS << "non-const lvalue reference bound to unrelated type";
       break;
@@ -7743,15 +7752,15 @@ void InitializationSequence::dump(raw_ostream &OS) const {
       break;
 
     case SK_CastDerivedToBaseRValue:
-      OS << "derived-to-base case (rvalue" << S->Type.getAsString() << ")";
+      OS << "derived-to-base (rvalue)";
       break;
 
     case SK_CastDerivedToBaseXValue:
-      OS << "derived-to-base case (xvalue" << S->Type.getAsString() << ")";
+      OS << "derived-to-base (xvalue)";
       break;
 
     case SK_CastDerivedToBaseLValue:
-      OS << "derived-to-base case (lvalue" << S->Type.getAsString() << ")";
+      OS << "derived-to-base (lvalue)";
       break;
 
     case SK_BindReference:
@@ -7760,6 +7769,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case SK_BindReferenceToTemporary:
       OS << "bind reference to a temporary";
+      break;
+
+    case SK_FinalCopy:
+      OS << "final copy in class direct-initialization";
       break;
 
     case SK_ExtraneousCopyToTemporary:

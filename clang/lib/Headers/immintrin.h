@@ -78,7 +78,7 @@
 /// __m128i _mm256_cvtps_ph(__m256 a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCVTPS2PH instruction.
+/// This intrinsic corresponds to the <c> VCVTPS2PH </c> instruction.
 ///
 /// \param a
 ///    A 256-bit vector containing 32-bit single-precision float values to be
@@ -100,7 +100,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPH2PS instruction.
+/// This intrinsic corresponds to the <c> VCVTPH2PS </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector containing 16-bit half-precision float values to be

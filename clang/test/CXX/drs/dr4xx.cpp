@@ -90,7 +90,7 @@ namespace dr407 { // dr407: 3.8
     struct S *p;
     {
       typedef struct S S; // expected-note {{here}}
-      struct S *p; // expected-error {{refers to a typedef}}
+      struct S *p; // expected-error {{typedef 'S' cannot be referenced with a struct specifier}}
     }
   }
   struct S {};
