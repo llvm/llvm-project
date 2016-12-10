@@ -29387,7 +29387,12 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
     // <4 x i16> undef).
     //
     // Legalize the operands of mul.
-    SmallVector<SDValue, 16> Ops(RegSize / ReducedVT.getSizeInBits(),
+    // FIXME: We may be able to handle non-concatenated vectors by insertion.
+    unsigned ReducedSizeInBits = ReducedVT.getSizeInBits();
+    if ((RegSize % ReducedSizeInBits) != 0)
+      return SDValue();
+
+    SmallVector<SDValue, 16> Ops(RegSize / ReducedSizeInBits,
                                  DAG.getUNDEF(ReducedVT));
     Ops[0] = NewN0;
     NewN0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, OpsVT, Ops);

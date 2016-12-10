@@ -38,10 +38,20 @@ extern template class AnalysisManager<Loop>;
 /// pass manager infrastructure.
 typedef AnalysisManager<Loop> LoopAnalysisManager;
 
-extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 /// A proxy from a \c LoopAnalysisManager to a \c Function.
 typedef InnerAnalysisManagerProxy<LoopAnalysisManager, Function>
     LoopAnalysisManagerFunctionProxy;
+
+/// Specialization of the invalidate method for the \c
+/// LoopAnalysisManagerFunctionProxy's result.
+template <>
+bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv);
+
+// Ensure the \c LoopAnalysisManagerFunctionProxy is provided as an extern
+// template.
+extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 
 extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
 /// A proxy from a \c FunctionAnalysisManager to a \c Loop.

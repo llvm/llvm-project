@@ -328,7 +328,8 @@ template <> bool AVRDAGToDAGISel::select<ISD::STORE>(SDNode *N) {
   SDValue BasePtr = ST->getBasePtr();
 
   // Early exit when the base pointer is a frame index node or a constant.
-  if (isa<FrameIndexSDNode>(BasePtr) || isa<ConstantSDNode>(BasePtr)) {
+  if (isa<FrameIndexSDNode>(BasePtr) || isa<ConstantSDNode>(BasePtr) ||
+      BasePtr.isUndef()) {
     return false;
   }
 

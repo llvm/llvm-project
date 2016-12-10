@@ -17,12 +17,30 @@
 
 using namespace llvm;
 
-// Explicit instantiations for core typedef'ed templates.
+// Explicit template instantiations and specialization defininitions for core
+// template typedefs.
 namespace llvm {
 template class PassManager<Loop>;
 template class AnalysisManager<Loop>;
 template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
+
+template <>
+bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv) {
+  // If this proxy isn't marked as preserved, the set of Function objects in
+  // the module may have changed. We therefore can't call
+  // InnerAM->invalidate(), because any pointers to Functions it has may be
+  // stale.
+  if (!PA.preserved(LoopAnalysisManagerFunctionProxy::ID()))
+    InnerAM->clear();
+
+  // FIXME: Proper suppor for invalidation isn't yet implemented for the LPM.
+
+  // Return false to indicate that this result is still a valid proxy.
+  return false;
+}
 }
 
 PreservedAnalyses llvm::getLoopPassPreservedAnalyses() {

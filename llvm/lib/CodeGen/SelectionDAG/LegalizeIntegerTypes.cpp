@@ -2205,7 +2205,7 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
   else if (VT == MVT::i128)
     LC = RTLIB::MUL_I128;
 
-  if (LC == RTLIB::UNKNOWN_LIBCALL) {
+  if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
     // We'll expand the multiplication by brute force because we have no other
     // options. This is a trivially-generalized version of the code from
     // Hacker's Delight (itself derived from Knuth's Algorithm M from section

@@ -79,6 +79,7 @@ MODULE_PASS("verify", VerifierPass())
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)
 #endif
 CGSCC_ANALYSIS("no-op-cgscc", NoOpCGSCCAnalysis())
+CGSCC_ANALYSIS("fam-proxy", FunctionAnalysisManagerCGSCCProxy())
 #undef CGSCC_ANALYSIS
 
 #ifndef CGSCC_PASS

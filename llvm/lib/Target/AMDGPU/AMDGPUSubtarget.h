@@ -23,16 +23,22 @@
 #include "SIISelLowering.h"
 #include "SIFrameLowering.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <utility>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
 
 namespace llvm {
 
-class SIMachineFunctionInfo;
 class StringRef;
 
 class AMDGPUSubtarget : public AMDGPUGenSubtargetInfo {
@@ -125,7 +131,8 @@ protected:
 public:
   AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                   const TargetMachine &TM);
-  virtual ~AMDGPUSubtarget();
+  ~AMDGPUSubtarget() override;
+
   AMDGPUSubtarget &initializeSubtargetDependencies(const Triple &TT,
                                                    StringRef GPU, StringRef FS);
 
@@ -595,6 +602,6 @@ public:
   unsigned getMaxNumSGPRs() const;
 };
 
-} // End namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H

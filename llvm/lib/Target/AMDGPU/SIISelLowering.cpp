@@ -658,10 +658,22 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
 }
 
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
+  if (Subtarget->has16BitInsts() && VT == MVT::i16) {
+    switch (Op) {
+    case ISD::LOAD:
+    case ISD::STORE:
 
-  // i16 is not desirable unless it is a load or a store.
-  if (VT == MVT::i16 && Op != ISD::LOAD && Op != ISD::STORE)
-    return false;
+    // These operations are done with 32-bit instructions anyway.
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::SELECT:
+      // TODO: Extensions?
+      return true;
+    default:
+      return false;
+    }
+  }
 
   // SimplifySetCC uses this function to determine whether or not it should
   // create setcc with i1 operands.  We don't have instructions for i1 setcc.

@@ -468,10 +468,6 @@ public:
   /// Get the value for DW_AT_APPLE_isa. Zero if no isa encoding specified.
   virtual unsigned getISAEncoding() { return 0; }
 
-  /// EmitDwarfRegOp - Emit a dwarf register operation.
-  virtual void EmitDwarfRegOp(ByteStreamer &BS,
-                              const MachineLocation &MLoc) const;
-
   //===------------------------------------------------------------------===//
   // Dwarf Lowering Routines
   //===------------------------------------------------------------------===//

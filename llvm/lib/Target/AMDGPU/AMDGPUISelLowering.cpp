@@ -435,6 +435,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT, MVT::v4f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v4f32, MVT::v4i32);
 
+  // There are no libcalls of any kind.
+  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
+    setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+
   setBooleanContents(ZeroOrNegativeOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 

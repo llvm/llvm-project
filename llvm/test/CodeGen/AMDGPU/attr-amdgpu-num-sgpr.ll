@@ -4,16 +4,16 @@
 ; If spilling to smem, additional registers are used for the resource
 ; descriptor.
 
-; ALL-LABEL: {{^}}max_14_sgprs:
+; ALL-LABEL: {{^}}max_12_sgprs:
 
 ; FIXME: Should be ablo to skip this copying of the private segment
 ; buffer because all the SGPR spills are to VGPRs.
 
-; ALL: s_mov_b64 s[6:7], s[2:3]
-; ALL: s_mov_b64 s[4:5], s[0:1]
+; ALL: s_mov_b64 s[10:11], s[2:3]
+; ALL: s_mov_b64 s[8:9], s[0:1]
 ; ALL: SGPRBlocks: 1
 ; ALL: NumSGPRsForWavesPerEU: 14
-define void @max_14_sgprs(i32 addrspace(1)* %out1,
+define void @max_12_sgprs(i32 addrspace(1)* %out1,
 
                           i32 addrspace(1)* %out2,
                           i32 addrspace(1)* %out3,
@@ -35,7 +35,7 @@ define void @max_14_sgprs(i32 addrspace(1)* %out1,
 ; ---------------------
 ; total: 14
 
-; + reserved vcc, xnack, flat_scratch = 20
+; + reserved vcc = 16
 
 ; Because we can't handle re-using the last few input registers as the
 ; special vcc etc. registers (as well as decide to not use the unused
@@ -43,15 +43,15 @@ define void @max_14_sgprs(i32 addrspace(1)* %out1,
 ; more than expected.
 
 ; ALL-LABEL: {{^}}max_12_sgprs_14_input_sgprs:
-; TOSGPR: SGPRBlocks: 2
-; TOSGPR: NumSGPRsForWavesPerEU: 20
+; TOSGPR: SGPRBlocks: 1
+; TOSGPR: NumSGPRsForWavesPerEU: 16
 
-; TOSMEM: s_mov_b64 s[6:7], s[2:3]
-; TOSMEM: s_mov_b64 s[4:5], s[0:1]
-; TOSMEM: s_mov_b32 s3, s13
+; TOSMEM: s_mov_b64 s[10:11], s[2:3]
+; TOSMEM: s_mov_b64 s[8:9], s[0:1]
+; TOSMEM: s_mov_b32 s7, s13
 
-; TOSMEM: SGPRBlocks: 2
-; TOSMEM: NumSGPRsForWavesPerEU: 20
+; TOSMEM: SGPRBlocks: 1
+; TOSMEM: NumSGPRsForWavesPerEU: 16
 define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
                                         i32 addrspace(1)* %out2,
                                         i32 addrspace(1)* %out3,

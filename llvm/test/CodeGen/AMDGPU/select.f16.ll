@@ -45,8 +45,7 @@ entry:
 ; SI:  v_cvt_f32_f16_e32 v[[D_F32:[0-9]+]], v[[D_F16]]
 ; SI:  v_cndmask_b32_e32 v[[R_F32:[0-9]+]], v[[D_F32]], v[[C_F32]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[R_F32]]
-; VI:  v_mov_b32_e32 v[[A_F16:[0-9]+]], 0x3800{{$}}
-; VI:  v_cmp_lt_f16_e32 vcc, v[[A_F16]], v[[B_F16]]
+; VI:  v_cmp_lt_f16_e32 vcc, 0.5, v[[B_F16]]
 ; VI:  v_cndmask_b32_e32 v[[R_F16:[0-9]+]], v[[D_F16]], v[[C_F16]], vcc
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
@@ -76,8 +75,7 @@ entry:
 ; SI:  v_cvt_f32_f16_e32 v[[D_F32:[0-9]+]], v[[D_F16]]
 ; SI:  v_cndmask_b32_e32 v[[R_F32:[0-9]+]], v[[D_F32]], v[[C_F32]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[R_F32]]
-; VI:  v_mov_b32_e32 v[[B_F16:[0-9]+]], 0x3800{{$}}
-; VI:  v_cmp_gt_f16_e32 vcc, v[[B_F16]], v[[A_F16]]
+; VI:  v_cmp_gt_f16_e32 vcc, 0.5, v[[A_F16]]
 ; VI:  v_cndmask_b32_e32 v[[R_F16:[0-9]+]], v[[D_F16]], v[[C_F16]], vcc
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm

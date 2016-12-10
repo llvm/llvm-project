@@ -579,6 +579,12 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
       WorkList.push_back(ICmp);
     }
 
+    if (UseInst->getOpcode() == Instruction::AddrSpaceCast) {
+      // Don't collect the users of this.
+      WorkList.push_back(User);
+      continue;
+    }
+
     if (!User->getType()->isPointerTy())
       continue;
 
@@ -739,7 +745,8 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
         continue;
       }
 
-      // The operand's value should be corrected on its own.
+      // The operand's value should be corrected on its own and we don't want to
+      // touch the users.
       if (isa<AddrSpaceCastInst>(V))
         continue;
 

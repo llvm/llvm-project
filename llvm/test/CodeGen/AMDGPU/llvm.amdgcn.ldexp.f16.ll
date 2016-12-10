@@ -20,7 +20,7 @@ define void @ldexp_f16(
 
 ; GCN-LABEL: {{^}}ldexp_f16_imm_a
 ; GCN: buffer_load_dword v[[B_I32:[0-9]+]]
-; VI: v_ldexp_f16_e32 v[[R_F16:[0-9]+]], 0x4000, v[[B_I32]]
+; VI: v_ldexp_f16_e32 v[[R_F16:[0-9]+]], 2.0, v[[B_I32]]
 ; GCN: buffer_store_short v[[R_F16]]
 define void @ldexp_f16_imm_a(
     half addrspace(1)* %r,

@@ -170,9 +170,9 @@ class Generator {
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<AsmPrinter> Asm;
-  DwarfStringPool *StringPool; // Owned by Allocator
-  std::vector<std::unique_ptr<CompileUnit>> CompileUnits;
   BumpPtrAllocator Allocator;
+  std::unique_ptr<DwarfStringPool> StringPool; // Entries owned by Allocator.
+  std::vector<std::unique_ptr<CompileUnit>> CompileUnits;
   DIEAbbrevSet Abbreviations;
 
   SmallString<4096> FileBytes;

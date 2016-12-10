@@ -36,6 +36,7 @@ add_lld_library(lldCOFF
 
   LINK_LIBS
   lldCore
+  lldSupport
   ${PTHREAD_LIB}
 
   DEPENDS

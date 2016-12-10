@@ -3268,9 +3268,9 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   if (VectorWidth && !N.getValueType().isVector()) {
     LLVMContext &Context = *DAG.getContext();
     EVT VT = EVT::getVectorVT(Context, N.getValueType(), VectorWidth);
-    SmallVector<SDValue, 16> Ops(VectorWidth, N);
-    N = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
+    N = DAG.getSplatBuildVector(VT, dl, N);
   }
+
   for (gep_type_iterator GTI = gep_type_begin(&I), E = gep_type_end(&I);
        GTI != E; ++GTI) {
     const Value *Idx = GTI.getOperand();
@@ -3326,9 +3326,9 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
       if (!IdxN.getValueType().isVector() && VectorWidth) {
         MVT VT = MVT::getVectorVT(IdxN.getValueType().getSimpleVT(), VectorWidth);
-        SmallVector<SDValue, 16> Ops(VectorWidth, IdxN);
-        IdxN = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
+        IdxN = DAG.getSplatBuildVector(VT, dl, IdxN);
       }
+
       // If the index is smaller or larger than intptr_t, truncate or extend
       // it.
       IdxN = DAG.getSExtOrTrunc(IdxN, dl, N.getValueType());
@@ -3770,8 +3770,7 @@ static bool getUniformBase(const Value* &Ptr, SDValue& Base, SDValue& Index,
   if (!Index.getValueType().isVector()) {
     unsigned GEPWidth = GEP->getType()->getVectorNumElements();
     EVT VT = EVT::getVectorVT(Context, Index.getValueType(), GEPWidth);
-    SmallVector<SDValue, 16> Ops(GEPWidth, Index);
-    Index = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(Index), VT, Ops);
+    Index = DAG.getSplatBuildVector(VT, SDLoc(Index), Index);
   }
   return true;
 }

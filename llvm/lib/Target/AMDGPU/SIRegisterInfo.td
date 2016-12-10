@@ -283,13 +283,13 @@ def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add TTMP_64Regs)> 
 }
 
 def SReg_64_XEXEC : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
-  (add SGPR_64, VCC, FLAT_SCR)> {
+  (add SGPR_64, VCC, FLAT_SCR, TTMP_64, TBA, TMA)> {
   let CopyCost = 1;
   let AllocationPriority = 2;
 }
 
 def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
-  (add SReg_64_XEXEC, EXEC, TTMP_64, TBA, TMA)> {
+  (add SReg_64_XEXEC, EXEC)> {
   let CopyCost = 1;
   let AllocationPriority = 2;
 }
@@ -384,31 +384,43 @@ class RegImmMatcher<string name> : AsmOperandClass {
 
 multiclass SIRegOperand <string rc, string MatchName, string opType> {
   let OperandNamespace = "AMDGPU" in {
+    def _b16 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
+      let OperandType = opType#"_INT16";
+      let ParserMatchClass = RegImmMatcher<MatchName#"B16">;
+      let DecoderMethod = "decodeOperand_VSrc16";
+    }
+
+    def _f16 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
+      let OperandType = opType#"_FP16";
+      let ParserMatchClass = RegImmMatcher<MatchName#"F16">;
+      let DecoderMethod = "decodeOperand_VSrc16";
+    }
 
     def _b32 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
-      let OperandType = opType#"_INT";
+      let OperandType = opType#"_INT32";
       let ParserMatchClass = RegImmMatcher<MatchName#"B32">;
     }
 
     def _f32 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
-      let OperandType = opType#"_FP";
+      let OperandType = opType#"_FP32";
       let ParserMatchClass = RegImmMatcher<MatchName#"F32">;
     }
 
     def _b64 : RegisterOperand<!cast<RegisterClass>(rc#"_64")> {
-      let OperandType = opType#"_INT";
+      let OperandType = opType#"_INT64";
       let ParserMatchClass = RegImmMatcher<MatchName#"B64">;
     }
 
     def _f64 : RegisterOperand<!cast<RegisterClass>(rc#"_64")> {
-      let OperandType = opType#"_FP";
+      let OperandType = opType#"_FP64";
       let ParserMatchClass = RegImmMatcher<MatchName#"F64">;
     }
   }
 }
 
+// FIXME: 64-bit sources can sometimes use 32-bit constants.
 multiclass RegImmOperand <string rc, string MatchName>
-  : SIRegOperand<rc, MatchName, "OPERAND_REG_IMM32">;
+  : SIRegOperand<rc, MatchName, "OPERAND_REG_IMM">;
 
 multiclass RegInlineOperand <string rc, string MatchName>
   : SIRegOperand<rc, MatchName, "OPERAND_REG_INLINE_C">;

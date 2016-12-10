@@ -61,7 +61,8 @@ void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form,
   auto &DG = CU->getGenerator();
   if (Form == DW_FORM_string) {
     Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
-                  new (DG.getAllocator()) DIEInlineString(String));
+                  new (DG.getAllocator())
+                      DIEInlineString(String, DG.getAllocator()));
   } else {
     Die->addValue(
         DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
@@ -203,7 +204,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   MC->setDwarfVersion(Version);
   Asm->setDwarfVersion(Version);
 
-  StringPool = new DwarfStringPool(Allocator, *Asm, StringRef());
+  StringPool = llvm::make_unique<DwarfStringPool>(Allocator, *Asm, StringRef());
 
   return Error::success();
 }

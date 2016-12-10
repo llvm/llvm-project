@@ -1,4 +1,4 @@
-//===-- SIMachineScheduler.h - SI Scheduler Interface -*- C++ -*-------===//
+//===-- SIMachineScheduler.h - SI Scheduler Interface -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,10 +16,16 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIMACHINESCHEDULER_H
 
 #include "SIInstrInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterPressure.h"
-
-using namespace llvm;
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include <cassert>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <set>
+#include <vector>
 
 namespace llvm {
 
@@ -93,12 +99,10 @@ class SIScheduleBlock {
 public:
   SIScheduleBlock(SIScheduleDAGMI *DAG, SIScheduleBlockCreator *BC,
                   unsigned ID):
-    DAG(DAG), BC(BC), SUnits(), TopReadySUs(), ScheduledSUnits(),
-    TopRPTracker(TopPressure), Scheduled(false),
-    HighLatencyBlock(false), ID(ID),
-    Preds(), Succs(), NumHighLatencySuccessors(0) {};
+    DAG(DAG), BC(BC), TopRPTracker(TopPressure), Scheduled(false),
+    HighLatencyBlock(false), ID(ID), NumHighLatencySuccessors(0) {}
 
-  ~SIScheduleBlock() {};
+  ~SIScheduleBlock() = default;
 
   unsigned getID() const { return ID; }
 
@@ -146,7 +150,6 @@ public:
 
   bool isScheduled() { return Scheduled; }
 
-
   // Needs the block to be scheduled inside
   // TODO: find a way to compute it.
   std::vector<unsigned> &getInternalAdditionnalRegUsage() {
@@ -161,7 +164,7 @@ public:
 private:
   struct SISchedCandidate : SISchedulerCandidate {
     // The best SUnit candidate.
-    SUnit *SU;
+    SUnit *SU = nullptr;
 
     unsigned SGPRUsage;
     unsigned VGPRUsage;
@@ -169,8 +172,7 @@ private:
     unsigned LowLatencyOffset;
     bool HasLowLatencyNonWaitedParent;
 
-    SISchedCandidate()
-      : SU(nullptr) {}
+    SISchedCandidate() = default;
 
     bool isValid() const { return SU; }
 
@@ -341,17 +343,17 @@ public:
   SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
                            SISchedulerBlockSchedulerVariant Variant,
                            SIScheduleBlocks BlocksStruct);
-  ~SIScheduleBlockScheduler() {};
+  ~SIScheduleBlockScheduler() = default;
 
-  std::vector<SIScheduleBlock*> getBlocks() { return BlocksScheduled; };
+  std::vector<SIScheduleBlock*> getBlocks() { return BlocksScheduled; }
 
-  unsigned getVGPRUsage() { return maxVregUsage; };
-  unsigned getSGPRUsage() { return maxSregUsage; };
+  unsigned getVGPRUsage() { return maxVregUsage; }
+  unsigned getSGPRUsage() { return maxSregUsage; }
 
 private:
   struct SIBlockSchedCandidate : SISchedulerCandidate {
     // The best Block candidate.
-    SIScheduleBlock *Block;
+    SIScheduleBlock *Block = nullptr;
 
     bool IsHighLatency;
     int VGPRUsageDiff;
@@ -360,8 +362,7 @@ private:
     unsigned LastPosHighLatParentScheduled;
     unsigned Height;
 
-    SIBlockSchedCandidate()
-      : Block(nullptr) {}
+    SIBlockSchedCandidate() = default;
 
     bool isValid() const { return Block; }
 
@@ -409,9 +410,9 @@ class SIScheduler {
   SIScheduleBlockCreator BlockCreator;
 
 public:
-  SIScheduler(SIScheduleDAGMI *DAG) : DAG(DAG), BlockCreator(DAG) {};
+  SIScheduler(SIScheduleDAGMI *DAG) : DAG(DAG), BlockCreator(DAG) {}
 
-  ~SIScheduler() {};
+  ~SIScheduler() = default;
 
   struct SIScheduleBlockResult
   scheduleVariant(SISchedulerBlockCreatorVariant BlockVariant,
@@ -445,13 +446,13 @@ public:
   }
 
   MachineBasicBlock *getBB() { return BB; }
-  MachineBasicBlock::iterator getCurrentTop() { return CurrentTop; };
-  MachineBasicBlock::iterator getCurrentBottom() { return CurrentBottom; };
+  MachineBasicBlock::iterator getCurrentTop() { return CurrentTop; }
+  MachineBasicBlock::iterator getCurrentBottom() { return CurrentBottom; }
   LiveIntervals *getLIS() { return LIS; }
   MachineRegisterInfo *getMRI() { return &MRI; }
   const TargetRegisterInfo *getTRI() { return TRI; }
-  SUnit& getEntrySU() { return EntrySU; };
-  SUnit& getExitSU() { return ExitSU; };
+  SUnit& getEntrySU() { return EntrySU; }
+  SUnit& getExitSU() { return ExitSU; }
 
   void restoreSULinksLeft();
 
@@ -459,13 +460,14 @@ public:
                                                      _Iterator End,
                                                      unsigned &VgprUsage,
                                                      unsigned &SgprUsage);
+
   std::set<unsigned> getInRegs() {
     std::set<unsigned> InRegs;
     for (const auto &RegMaskPair : RPTracker.getPressure().LiveInRegs) {
       InRegs.insert(RegMaskPair.RegUnit);
     }
     return InRegs;
-  };
+  }
 
   unsigned getVGPRSetID() const { return VGPRSetID; }
   unsigned getSGPRSetID() const { return SGPRSetID; }
@@ -486,6 +488,6 @@ public:
   std::vector<int> BottomUpIndex2SU;
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif /* SIMACHINESCHEDULER_H_ */
+#endif // LLVM_LIB_TARGET_AMDGPU_SIMACHINESCHEDULER_H

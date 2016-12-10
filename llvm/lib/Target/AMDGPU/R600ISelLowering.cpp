@@ -17,16 +17,36 @@
 #include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "R600Defines.h"
+#include "R600FrameLowering.h"
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/DAGCombine.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/Argument.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -71,7 +91,6 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i1, Expand);
   setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i1, Expand);
   setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i1, Expand);
-
 
   setOperationAction(ISD::STORE, MVT::i8, Custom);
   setOperationAction(ISD::STORE, MVT::i32, Custom);
@@ -192,7 +211,6 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   setSchedulingPreference(Sched::Source);
 
-
   setTargetDAGCombine(ISD::FP_ROUND);
   setTargetDAGCombine(ISD::FP_TO_SINT);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
@@ -214,7 +232,7 @@ static inline bool isEOP(MachineBasicBlock::iterator I) {
 MachineBasicBlock *
 R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                 MachineBasicBlock *BB) const {
-  MachineFunction * MF = BB->getParent();
+  MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineBasicBlock::iterator I = MI;
   const R600InstrInfo *TII = getSubtarget()->getInstrInfo();
@@ -281,10 +299,12 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                             .bitcastToAPInt()
                                                             .getZExtValue());
     break;
+
   case AMDGPU::MOV_IMM_I32:
     TII->buildMovImm(*BB, I, MI.getOperand(0).getReg(),
                      MI.getOperand(1).getImm());
     break;
+
   case AMDGPU::MOV_IMM_GLOBAL_ADDR: {
     //TODO: Perhaps combine this instruction with the next if possible
     auto MIB = TII->buildDefaultInstruction(
@@ -294,6 +314,7 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB->getOperand(Idx) = MI.getOperand(1);
     break;
   }
+
   case AMDGPU::CONST_COPY: {
     MachineInstr *NewMI = TII->buildDefaultInstruction(
         *BB, MI, AMDGPU::MOV, MI.getOperand(0).getReg(), AMDGPU::ALU_CONST);
@@ -304,21 +325,21 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   case AMDGPU::RAT_WRITE_CACHELESS_32_eg:
   case AMDGPU::RAT_WRITE_CACHELESS_64_eg:
-  case AMDGPU::RAT_WRITE_CACHELESS_128_eg: {
+  case AMDGPU::RAT_WRITE_CACHELESS_128_eg:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
         .addOperand(MI.getOperand(0))
         .addOperand(MI.getOperand(1))
         .addImm(isEOP(I)); // Set End of program bit
     break;
-  }
-  case AMDGPU::RAT_STORE_TYPED_eg: {
+
+  case AMDGPU::RAT_STORE_TYPED_eg:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
         .addOperand(MI.getOperand(0))
         .addOperand(MI.getOperand(1))
         .addOperand(MI.getOperand(2))
         .addImm(isEOP(I)); // Set End of program bit
     break;
-  }
+
   case AMDGPU::BRANCH:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP))
         .addOperand(MI.getOperand(0));
@@ -619,14 +640,12 @@ void R600TargetLowering::ReplaceNodeResults(SDNode *N,
 
 SDValue R600TargetLowering::vectorToVerticalVector(SelectionDAG &DAG,
                                                    SDValue Vector) const {
-
   SDLoc DL(Vector);
   EVT VecVT = Vector.getValueType();
   EVT EltVT = VecVT.getVectorElementType();
   SmallVector<SDValue, 8> Args;
 
-  for (unsigned i = 0, e = VecVT.getVectorNumElements();
-                                                           i != e; ++i) {
+  for (unsigned i = 0, e = VecVT.getVectorNumElements(); i != e; ++i) {
     Args.push_back(DAG.getNode(
         ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vector,
         DAG.getConstant(i, DL, getVectorIdxTy(DAG.getDataLayout()))));
@@ -637,7 +656,6 @@ SDValue R600TargetLowering::vectorToVerticalVector(SelectionDAG &DAG,
 
 SDValue R600TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                     SelectionDAG &DAG) const {
-
   SDLoc DL(Op);
   SDValue Vector = Op.getOperand(0);
   SDValue Index = Op.getOperand(1);
@@ -671,7 +689,6 @@ SDValue R600TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
 SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                                SDValue Op,
                                                SelectionDAG &DAG) const {
-
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
   if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
@@ -1130,7 +1147,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   // Private AS needs special fixes
   if (Align < MemVT.getStoreSize() && (AS != AMDGPUAS::PRIVATE_ADDRESS) &&
-      !allowsMisalignedMemoryAccesses(MemVT, AS, Align, NULL)) {
+      !allowsMisalignedMemoryAccesses(MemVT, AS, Align, nullptr)) {
     return expandUnalignedStore(StoreNode, DAG);
   }
 
@@ -1710,7 +1727,6 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[4],
   return BuildVector;
 }
 
-
 //===----------------------------------------------------------------------===//
 // Custom DAG Optimizations
 //===----------------------------------------------------------------------===//
@@ -2021,7 +2037,6 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
   case AMDGPU::MOV_IMM_F32: {
     unsigned ImmReg = AMDGPU::ALU_LITERAL_X;
     uint64_t ImmValue = 0;
-
 
     if (Src.getMachineOpcode() == AMDGPU::MOV_IMM_F32) {
       ConstantFPSDNode *FPC = dyn_cast<ConstantFPSDNode>(Src.getOperand(0));

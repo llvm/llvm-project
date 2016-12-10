@@ -134,7 +134,8 @@ multiclass VOP2eInst <string opName,
 }
 
 class VOP_MADAK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
-  field dag Ins32 = (ins VCSrc_f32:$src0, VGPR_32:$src1, f32kimm:$imm);
+  field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
+  field dag Ins32 = (ins VCSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm);
   field string Asm32 = "$vdst, $src0, $src1, $imm";
   field bit HasExt = 0;
 }
@@ -143,7 +144,8 @@ def VOP_MADAK_F16 : VOP_MADAK <f16>;
 def VOP_MADAK_F32 : VOP_MADAK <f32>;
 
 class VOP_MADMK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
-  field dag Ins32 = (ins VCSrc_f32:$src0, f32kimm:$imm, VGPR_32:$src1);
+  field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
+  field dag Ins32 = (ins VCSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1);
   field string Asm32 = "$vdst, $src0, $imm, $src1";
   field bit HasExt = 0;
 }
