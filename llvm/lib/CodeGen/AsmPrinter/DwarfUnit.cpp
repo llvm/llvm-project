@@ -371,22 +371,6 @@ void DwarfUnit::addSourceLine(DIE &Die, const DINamespace *NS) {
   addSourceLine(Die, NS->getLine(), NS->getFilename(), NS->getDirectory());
 }
 
-bool DwarfUnit::addRegisterFragment(DIELoc &TheDie, unsigned Reg,
-                                    unsigned SizeInBits,
-                                    unsigned OffsetInBits) {
-  DIEDwarfExpression Expr(*Asm, *this, TheDie);
-  Expr.AddMachineRegFragment(*Asm->MF->getSubtarget().getRegisterInfo(), Reg,
-                             SizeInBits, OffsetInBits);
-  return true;
-}
-
-bool DwarfUnit::addRegisterOffset(DIELoc &TheDie, unsigned Reg,
-                                  int64_t Offset) {
-  DIEDwarfExpression Expr(*Asm, *this, TheDie);
-  return Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
-                                    Reg, Offset);
-}
-
 /* Byref variables, in Blocks, are declared by the programmer as "SomeType
    VarName;", but the compiler creates a __Block_byref_x_VarName struct, and
    gives the variable VarName either the struct, or a pointer to the struct, as
@@ -479,12 +463,17 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
   // Decode the original location, and use that as the start of the byref
   // variable's location.
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+  SmallVector<uint64_t, 6> DIExpr;
+  DIEDwarfExpression Expr(*Asm, *this, *Loc);
 
   bool validReg;
   if (Location.isReg())
-    validReg = addRegisterFragment(*Loc, Location.getReg());
+    validReg = Expr.AddMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
+                                  Location.getReg());
   else
-    validReg = addRegisterOffset(*Loc, Location.getReg(), Location.getOffset());
+    validReg =
+        Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
+                                   Location.getReg(), Location.getOffset());
 
   if (!validReg)
     return;
@@ -492,27 +481,29 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
   // If we started with a pointer to the __Block_byref... struct, then
   // the first thing we need to do is dereference the pointer (DW_OP_deref).
   if (isPointer)
-    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_deref);
+    DIExpr.push_back(dwarf::DW_OP_deref);
 
   // Next add the offset for the '__forwarding' field:
   // DW_OP_plus_uconst ForwardingFieldOffset.  Note there's no point in
   // adding the offset if it's 0.
   if (forwardingFieldOffset > 0) {
-    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus_uconst);
-    addUInt(*Loc, dwarf::DW_FORM_udata, forwardingFieldOffset);
+    DIExpr.push_back(dwarf::DW_OP_plus);
+    DIExpr.push_back(forwardingFieldOffset);
   }
 
   // Now dereference the __forwarding field to get to the real __Block_byref
   // struct:  DW_OP_deref.
-  addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_deref);
+  DIExpr.push_back(dwarf::DW_OP_deref);
 
   // Now that we've got the real __Block_byref... struct, add the offset
   // for the variable's field to get to the location of the actual variable:
   // DW_OP_plus_uconst varFieldOffset.  Again, don't add if it's 0.
   if (varFieldOffset > 0) {
-    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus_uconst);
-    addUInt(*Loc, dwarf::DW_FORM_udata, varFieldOffset);
+    DIExpr.push_back(dwarf::DW_OP_plus);
+    DIExpr.push_back(varFieldOffset);
   }
+  Expr.AddExpression(makeArrayRef(DIExpr));
+  Expr.finalize();
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, Loc);

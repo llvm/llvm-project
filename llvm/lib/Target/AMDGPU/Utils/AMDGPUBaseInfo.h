@@ -13,6 +13,8 @@
 #include "AMDKernelCodeT.h"
 #include "llvm/IR/CallingConv.h"
 
+#include "SIDefines.h"
+
 #define GET_INSTRINFO_OPERAND_ENUM
 #include "AMDGPUGenInstrInfo.inc"
 #undef GET_INSTRINFO_OPERAND_ENUM
@@ -167,6 +169,37 @@ unsigned getRegBitWidth(const MCRegisterClass &RC);
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo);
 
+LLVM_READNONE
+inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
+  switch (OpInfo.OperandType) {
+  case AMDGPU::OPERAND_REG_IMM_INT32:
+  case AMDGPU::OPERAND_REG_IMM_FP32:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+    return 4;
+
+  case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_FP64:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    return 8;
+
+  case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+    return 2;
+
+  default:
+    llvm_unreachable("unhandled operand type");
+  }
+}
+
+LLVM_READNONE
+inline unsigned getOperandSize(const MCInstrDesc &Desc, unsigned OpNo) {
+  return getOperandSize(Desc.OpInfo[OpNo]);
+}
+
 /// \brief Is this literal inlinable
 LLVM_READNONE
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
@@ -174,6 +207,8 @@ bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
 LLVM_READNONE
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
 
+LLVM_READNONE
+bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi);
 
 } // end namespace AMDGPU
 } // end namespace llvm

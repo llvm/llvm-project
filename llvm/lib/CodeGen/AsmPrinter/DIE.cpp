@@ -606,7 +606,7 @@ unsigned DIEInlineString::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
 
 LLVM_DUMP_METHOD
 void DIEInlineString::print(raw_ostream &O) const {
-  O << "InlineString: " << S.c_str();
+  O << "InlineString: " << S;
 }
 
 //===----------------------------------------------------------------------===//

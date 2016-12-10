@@ -1085,19 +1085,6 @@ bool SIRegisterInfo::shouldRewriteCopySrc(
   return getCommonSubClass(DefRC, SrcRC) != nullptr;
 }
 
-bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
-  return OpType == AMDGPU::OPERAND_REG_IMM32_INT ||
-         OpType == AMDGPU::OPERAND_REG_IMM32_FP;
-}
-
-bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
-  if (opCanUseLiteralConstant(OpType))
-    return true;
-
-  return OpType == AMDGPU::OPERAND_REG_INLINE_C_INT ||
-         OpType == AMDGPU::OPERAND_REG_INLINE_C_FP;
-}
-
 // FIXME: Most of these are flexible with HSA and we don't need to reserve them
 // as input registers if unused. Whether the dispatch ptr is necessary should be
 // easy to detect from used intrinsics. Scratch setup is harder to know.
@@ -1178,11 +1165,19 @@ unsigned SIRegisterInfo::getNumAddressableSGPRs(const SISubtarget &ST) const {
   return 104;
 }
 
-unsigned SIRegisterInfo::getNumReservedSGPRs(const SISubtarget &ST) const {
-  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
-    return 6; // VCC, FLAT_SCRATCH, XNACK.
-  if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS)
-    return 4; // VCC, FLAT_SCRATCH.
+unsigned SIRegisterInfo::getNumReservedSGPRs(const SISubtarget &ST,
+                                             const SIMachineFunctionInfo &MFI) const {
+  if (MFI.hasFlatScratchInit()) {
+    if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return 6; // FLAT_SCRATCH, XNACK, VCC (in that order)
+
+    if (ST.getGeneration() == AMDGPUSubtarget::SEA_ISLANDS)
+      return 4; // FLAT_SCRATCH, VCC (in that order)
+  }
+
+  if (ST.isXNACKEnabled())
+    return 4; // XNACK, VCC (in that order)
+
   return 2; // VCC.
 }
 
@@ -1211,14 +1206,15 @@ unsigned SIRegisterInfo::getMinNumSGPRs(const SISubtarget &ST,
 }
 
 unsigned SIRegisterInfo::getMaxNumSGPRs(const SISubtarget &ST,
-                                        unsigned WavesPerEU) const {
+                                        unsigned WavesPerEU,
+                                        bool Addressable) const {
   if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
     switch (WavesPerEU) {
       case 0:  return 80;
       case 10: return 80;
       case 9:  return 80;
       case 8:  return 96;
-      default: return getNumAddressableSGPRs(ST);
+      default: return Addressable ? getNumAddressableSGPRs(ST) : 112;
     }
   } else {
     switch (WavesPerEU) {
@@ -1243,7 +1239,8 @@ unsigned SIRegisterInfo::getMaxNumSGPRs(const MachineFunction &MF) const {
   // Compute maximum number of SGPRs function can use using default/requested
   // minimum number of waves per execution unit.
   std::pair<unsigned, unsigned> WavesPerEU = MFI.getWavesPerEU();
-  unsigned MaxNumSGPRs = getMaxNumSGPRs(ST, WavesPerEU.first);
+  unsigned MaxNumSGPRs = getMaxNumSGPRs(ST, WavesPerEU.first, false);
+  unsigned MaxNumAddressableSGPRs = getMaxNumSGPRs(ST, WavesPerEU.first, true);
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
@@ -1252,7 +1249,7 @@ unsigned SIRegisterInfo::getMaxNumSGPRs(const MachineFunction &MF) const {
       F, "amdgpu-num-sgpr", MaxNumSGPRs);
 
     // Make sure requested value does not violate subtarget's specifications.
-    if (Requested && (Requested <= getNumReservedSGPRs(ST)))
+    if (Requested && (Requested <= getNumReservedSGPRs(ST, MFI)))
       Requested = 0;
 
     // If more SGPRs are required to support the input user/system SGPRs,
@@ -1268,7 +1265,7 @@ unsigned SIRegisterInfo::getMaxNumSGPRs(const MachineFunction &MF) const {
 
     // Make sure requested value is compatible with values implied by
     // default/requested minimum/maximum number of waves per execution unit.
-    if (Requested && Requested > getMaxNumSGPRs(ST, WavesPerEU.first))
+    if (Requested && Requested > getMaxNumSGPRs(ST, WavesPerEU.first, false))
       Requested = 0;
     if (WavesPerEU.second &&
         Requested && Requested < getMinNumSGPRs(ST, WavesPerEU.second))
@@ -1281,7 +1278,8 @@ unsigned SIRegisterInfo::getMaxNumSGPRs(const MachineFunction &MF) const {
   if (ST.hasSGPRInitBug())
     MaxNumSGPRs = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
 
-  return MaxNumSGPRs - getNumReservedSGPRs(ST);
+  return std::min(MaxNumSGPRs - getNumReservedSGPRs(ST, MFI),
+                  MaxNumAddressableSGPRs);
 }
 
 unsigned SIRegisterInfo::getNumDebuggerReservedVGPRs(

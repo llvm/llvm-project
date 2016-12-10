@@ -91,19 +91,6 @@ struct TestPreservingModulePass : PassInfoMixin<TestPreservingModulePass> {
   }
 };
 
-struct TestMinPreservingModulePass
-    : PassInfoMixin<TestMinPreservingModulePass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
-    PreservedAnalyses PA;
-
-    // Force running an analysis.
-    (void)AM.getResult<TestModuleAnalysis>(M);
-
-    PA.preserve<FunctionAnalysisManagerModuleProxy>();
-    return PA;
-  }
-};
-
 struct TestFunctionPass : PassInfoMixin<TestFunctionPass> {
   TestFunctionPass(int &RunCount, int &AnalyzedInstrCount,
                    int &AnalyzedFunctionCount,
@@ -215,11 +202,11 @@ TEST_F(PassManagerTest, BasicPreservedAnalyses) {
 }
 
 TEST_F(PassManagerTest, Basic) {
-  FunctionAnalysisManager FAM;
+  FunctionAnalysisManager FAM(/*DebugLogging*/ true);
   int FunctionAnalysisRuns = 0;
   FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
 
-  ModuleAnalysisManager MAM;
+  ModuleAnalysisManager MAM(/*DebugLogging*/ true);
   int ModuleAnalysisRuns = 0;
   MAM.registerPass([&] { return TestModuleAnalysis(ModuleAnalysisRuns); });
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
@@ -233,11 +220,11 @@ TEST_F(PassManagerTest, Basic) {
   int AnalyzedFunctionCount1 = 0;
   {
     // Pointless scoped copy to test move assignment.
-    ModulePassManager NestedMPM;
+    ModulePassManager NestedMPM(/*DebugLogging*/ true);
     FunctionPassManager FPM;
     {
       // Pointless scope to test move assignment.
-      FunctionPassManager NestedFPM;
+      FunctionPassManager NestedFPM(/*DebugLogging*/ true);
       NestedFPM.addPass(TestFunctionPass(
           FunctionPassRunCount1, AnalyzedInstrCount1, AnalyzedFunctionCount1));
       FPM = std::move(NestedFPM);
@@ -255,7 +242,7 @@ TEST_F(PassManagerTest, Basic) {
   int AnalyzedInstrCount2 = 0;
   int AnalyzedFunctionCount2 = 0;
   {
-    FunctionPassManager FPM;
+    FunctionPassManager FPM(/*DebugLogging*/ true);
     FPM.addPass(TestFunctionPass(FunctionPassRunCount2, AnalyzedInstrCount2,
                                  AnalyzedFunctionCount2));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -268,15 +255,16 @@ TEST_F(PassManagerTest, Basic) {
   int AnalyzedInstrCount3 = 0;
   int AnalyzedFunctionCount3 = 0;
   {
-    FunctionPassManager FPM;
+    FunctionPassManager FPM(/*DebugLogging*/ true);
     FPM.addPass(TestFunctionPass(FunctionPassRunCount3, AnalyzedInstrCount3,
                                  AnalyzedFunctionCount3));
     FPM.addPass(TestInvalidationFunctionPass("f"));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
-  // A fourth function pass manager but with a minimal intervening passes.
-  MPM.addPass(TestMinPreservingModulePass());
+  // A fourth function pass manager but with only preserving intervening
+  // passes but triggering the module analysis.
+  MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
   int FunctionPassRunCount4 = 0;
   int AnalyzedInstrCount4 = 0;
   int AnalyzedFunctionCount4 = 0;
@@ -287,12 +275,13 @@ TEST_F(PassManagerTest, Basic) {
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
-  // A fifth function pass manager but which uses only cached results.
+  // A fifth function pass manager which invalidates one function first but
+  // uses only cached results.
   int FunctionPassRunCount5 = 0;
   int AnalyzedInstrCount5 = 0;
   int AnalyzedFunctionCount5 = 0;
   {
-    FunctionPassManager FPM;
+    FunctionPassManager FPM(/*DebugLogging*/ true);
     FPM.addPass(TestInvalidationFunctionPass("f"));
     FPM.addPass(TestFunctionPass(FunctionPassRunCount5, AnalyzedInstrCount5,
                                  AnalyzedFunctionCount5,
@@ -317,16 +306,17 @@ TEST_F(PassManagerTest, Basic) {
   EXPECT_EQ(0, AnalyzedFunctionCount3);
   EXPECT_EQ(3, FunctionPassRunCount4);
   EXPECT_EQ(5, AnalyzedInstrCount4);
-  EXPECT_EQ(0, AnalyzedFunctionCount4);
+  EXPECT_EQ(9, AnalyzedFunctionCount4);
   EXPECT_EQ(3, FunctionPassRunCount5);
   EXPECT_EQ(2, AnalyzedInstrCount5); // Only 'g' and 'h' were cached.
-  EXPECT_EQ(0, AnalyzedFunctionCount5);
+  EXPECT_EQ(9, AnalyzedFunctionCount5);
 
   // Validate the analysis counters:
   //   first run over 3 functions, then module pass invalidates
   //   second run over 3 functions, nothing invalidates
   //   third run over 0 functions, but 1 function invalidated
   //   fourth run over 1 function
+  //   fifth run invalidates 1 function first, but runs over 0 functions
   EXPECT_EQ(7, FunctionAnalysisRuns);
 
   EXPECT_EQ(1, ModuleAnalysisRuns);

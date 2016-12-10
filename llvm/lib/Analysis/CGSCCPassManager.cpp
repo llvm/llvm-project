@@ -13,6 +13,8 @@
 
 using namespace llvm;
 
+// Explicit template instantiations and specialization defininitions for core
+// template typedefs.
 namespace llvm {
 
 // Explicit instantiations for the core proxy templates.
@@ -22,9 +24,9 @@ template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>;
 template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                         LazyCallGraph::SCC>;
+                                         LazyCallGraph::SCC, LazyCallGraph &>;
 template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
-                                         LazyCallGraph::SCC>;
+                                         LazyCallGraph::SCC, LazyCallGraph &>;
 template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// Explicitly specialize the pass manager run method to handle call graph
@@ -82,6 +84,87 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     dbgs() << "Finished CGSCC pass manager run.\n";
 
   return PA;
+}
+
+bool CGSCCAnalysisManagerModuleProxy::Result::invalidate(
+    Module &M, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &Inv) {
+  // If this proxy or the call graph is going to be invalidated, we also need
+  // to clear all the keys coming from that analysis.
+  //
+  // We also directly invalidate the FAM's module proxy if necessary, and if
+  // that proxy isn't preserved we can't preserve this proxy either. We rely on
+  // it to handle module -> function analysis invalidation in the face of
+  // structural changes and so if it's unavailable we conservatively clear the
+  // entire SCC layer as well rather than trying to do invaliadtion ourselves.
+  if (!PA.preserved<CGSCCAnalysisManagerModuleProxy>() ||
+      Inv.invalidate<LazyCallGraphAnalysis>(M, PA) ||
+      Inv.invalidate<FunctionAnalysisManagerModuleProxy>(M, PA)) {
+    InnerAM->clear();
+
+    // And the proxy itself should be marked as invalid so that we can observe
+    // the new call graph. This isn't strictly necessary because we cheat
+    // above, but is still useful.
+    return true;
+  }
+
+  // Ok, we have a graph, so we can propagate the invalidation down into it.
+  for (auto &RC : G->postorder_ref_sccs())
+    for (auto &C : RC)
+      InnerAM->invalidate(C, PA);
+
+  // Return false to indicate that this result is still a valid proxy.
+  return false;
+}
+
+template <>
+CGSCCAnalysisManagerModuleProxy::Result
+CGSCCAnalysisManagerModuleProxy::run(Module &M, ModuleAnalysisManager &AM) {
+  // Force the Function analysis manager to also be available so that it can
+  // be accessed in an SCC analysis and proxied onward to function passes.
+  // FIXME: It is pretty awkward to just drop the result here and assert that
+  // we can find it again later.
+  (void)AM.getResult<FunctionAnalysisManagerModuleProxy>(M);
+
+  return Result(*InnerAM, AM.getResult<LazyCallGraphAnalysis>(M));
+}
+
+AnalysisKey FunctionAnalysisManagerCGSCCProxy::Key;
+
+FunctionAnalysisManagerCGSCCProxy::Result
+FunctionAnalysisManagerCGSCCProxy::run(LazyCallGraph::SCC &C,
+                                       CGSCCAnalysisManager &AM,
+                                       LazyCallGraph &CG) {
+  // Collect the FunctionAnalysisManager from the Module layer and use that to
+  // build the proxy result.
+  //
+  // This allows us to rely on the FunctionAnalysisMangaerModuleProxy to
+  // invalidate the function analyses.
+  auto &MAM = AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG).getManager();
+  Module &M = *C.begin()->getFunction().getParent();
+  auto *FAMProxy = MAM.getCachedResult<FunctionAnalysisManagerModuleProxy>(M);
+  assert(FAMProxy && "The CGSCC pass manager requires that the FAM module "
+                     "proxy is run on the module prior to entering the CGSCC "
+                     "walk.");
+
+  // Note that we special-case invalidation handling of this proxy in the CGSCC
+  // analysis manager's Module proxy. This avoids the need to do anything
+  // special here to recompute all of this if ever the FAM's module proxy goes
+  // away.
+  return Result(FAMProxy->getManager());
+}
+
+bool FunctionAnalysisManagerCGSCCProxy::Result::invalidate(
+    LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
+    CGSCCAnalysisManager::Invalidator &Inv) {
+  for (LazyCallGraph::Node &N : C)
+    FAM->invalidate(N.getFunction(), PA);
+
+  // This proxy doesn't need to handle invalidation itself. Instead, the
+  // module-level CGSCC proxy handles it above by ensuring that if the
+  // module-level FAM proxy becomes invalid the entire SCC layer, which
+  // includes this proxy, is cleared.
+  return false;
 }
 
 } // End llvm namespace

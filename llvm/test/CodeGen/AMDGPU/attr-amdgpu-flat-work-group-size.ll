@@ -34,9 +34,9 @@ entry:
 attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 
 ; CHECK-LABEL: {{^}}min_1024_max_2048
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 1
 ; CHECK: VGPRBlocks: 7
-; CHECK: NumSGPRsForWavesPerEU: 19
+; CHECK: NumSGPRsForWavesPerEU: 13
 ; CHECK: NumVGPRsForWavesPerEU: 32
 @var = addrspace(1) global float 0.0
 define void @min_1024_max_2048() #3 {

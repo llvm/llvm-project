@@ -25,8 +25,7 @@ foreach (VARNAME ${variables_to_filter})
 endforeach()
 
 # Enable the coverage instrumentation (it is disabled for the Fuzzer lib).
-#set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=8bit-counters  -fsanitize-coverage=edge,indirect-calls,trace-cmp,trace-div,trace-gep,trace-pc-guard -g")
-set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fsanitize-coverage=edge,indirect-calls,trace-cmp,trace-div,trace-gep -g")
+set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fsanitize-coverage=trace-pc-guard,indirect-calls,trace-cmp,trace-div,trace-gep -g")
 
 # add_libfuzzer_test(<name>
 #   SOURCES source0.cpp [source1.cpp ...]
@@ -106,6 +105,7 @@ set(Tests
   StrstrTest
   SwapCmpTest
   SwitchTest
+  Switch2Test
   ThreadedLeakTest
   ThreadedTest
   TimeoutTest
@@ -172,8 +172,28 @@ include_directories(..)
 add_subdirectory(uninstrumented)
 add_subdirectory(no-coverage)
 add_subdirectory(ubsan)
-add_subdirectory(trace-bb)
-add_subdirectory(trace-pc)
+
+add_library(LLVMFuzzer-DSO1 SHARED DSO1.cpp)
+add_library(LLVMFuzzer-DSO2 SHARED DSO2.cpp)
+
+add_executable(LLVMFuzzer-DSOTest
+  DSOTestMain.cpp
+  DSOTestExtra.cpp)
+
+target_link_libraries(LLVMFuzzer-DSOTest
+  LLVMFuzzer-DSO1
+  LLVMFuzzer-DSO2
+  LLVMFuzzer
+  )
+
+set_target_properties(LLVMFuzzer-DSOTest PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+  "${CMAKE_BINARY_DIR}/lib/Fuzzer/test")
+set_target_properties(LLVMFuzzer-DSO1 PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+  "${CMAKE_BINARY_DIR}/lib/Fuzzer/lib")
+set_target_properties(LLVMFuzzer-DSO2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+  "${CMAKE_BINARY_DIR}/lib/Fuzzer/lib")
+
+set(TestBinaries ${TestBinaries} LLVMFuzzer-DSOTest)
 
 ###############################################################################
 # Configure lit to run the tests

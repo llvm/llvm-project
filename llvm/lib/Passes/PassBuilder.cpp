@@ -769,7 +769,6 @@ void PassBuilder::crossRegisterProxies(LoopAnalysisManager &LAM,
                                        ModuleAnalysisManager &MAM) {
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
-  CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(FAM); });
   CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
   FAM.registerPass([&] { return CGSCCAnalysisManagerFunctionProxy(CGAM); });
   FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
