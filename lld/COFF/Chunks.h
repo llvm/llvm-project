@@ -28,7 +28,6 @@ using llvm::object::COFFSymbolRef;
 using llvm::object::SectionRef;
 using llvm::object::coff_relocation;
 using llvm::object::coff_section;
-using llvm::sys::fs::file_magic;
 
 class Baserel;
 class Defined;

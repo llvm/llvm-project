@@ -132,3 +132,11 @@ R_X86_64_GOT32:
 
 // CHECK: Contents of section .R_X86_64_GOT32:
 // CHECK-NEXT: f8ffffff
+
+
+// CHECK: Contents of section .R_X86_64_GOT64:
+// CHECK-NEXT: f8ffffff ffffffff
+.section .R_X86_64_GOT64,"a",@progbits
+.global R_X86_64_GOT64
+R_X86_64_GOT64:
+        .quad zed@got

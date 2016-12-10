@@ -59,6 +59,7 @@ private:
 
 class LinkerDriver {
 public:
+  LinkerDriver() { coff::Symtab = &Symtab; }
   void link(llvm::ArrayRef<const char *> Args);
 
   // Used by the resolver to parse .drectve section contents.
@@ -86,7 +87,7 @@ private:
   std::vector<StringRef> SearchPaths;
   std::set<std::string> VisitedFiles;
 
-  Undefined *addUndefined(StringRef Sym);
+  SymbolBody *addUndefined(StringRef Sym);
   StringRef mangle(StringRef Sym);
 
   // Windows specific -- "main" is not the only main function in Windows.

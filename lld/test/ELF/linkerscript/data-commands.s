@@ -40,11 +40,7 @@
 # BE:      Contents of section .foo:
 # BE-NEXT:   ff11ff11 22ff1122 3344ff11 22334455
 # BE-NEXT:   667788
-
-# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %tmips64be
-# RUN: ld.lld --script %t.script %tmips64be -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck %s --check-prefix=BE
-# BE:      Contents of section .bar:
+# BE-NEXT: Contents of section .bar:
 # BE-NEXT:   ff12ff11 22ff1122 3346ff11 22334455
 # BE-NEXT:   667788
 

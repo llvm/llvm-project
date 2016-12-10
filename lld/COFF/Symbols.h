@@ -32,15 +32,8 @@ class ArchiveFile;
 class BitcodeFile;
 class InputFile;
 class ObjectFile;
-class SymbolBody;
-
-// A real symbol object, SymbolBody, is usually accessed indirectly
-// through a Symbol. There's always one Symbol for each symbol name.
-// The resolver updates SymbolBody pointers as it resolves symbols.
-struct Symbol {
-  explicit Symbol(SymbolBody *P) : Body(P) {}
-  SymbolBody *Body;
-};
+struct Symbol;
+class SymbolTable;
 
 // The base class for real symbol classes.
 class SymbolBody {
@@ -78,21 +71,13 @@ public:
   // Returns the file from which this symbol was created.
   InputFile *getFile();
 
-  // A SymbolBody has a backreference to a Symbol. Originally they are
-  // doubly-linked. A backreference will never change. But the pointer
-  // in the Symbol may be mutated by the resolver. If you have a
-  // pointer P to a SymbolBody and are not sure whether the resolver
-  // has chosen the object among other objects having the same name,
-  // you can access P->Backref->Body to get the resolver's result.
-  void setBackref(Symbol *P) { Backref = P; }
-  SymbolBody *repl() { return Backref ? Backref->Body : this; }
-
-  // Decides which symbol should "win" in the symbol table, this or
-  // the Other. Returns 1 if this wins, -1 if the Other wins, or 0 if
-  // they are duplicate (conflicting) symbols.
-  int compare(SymbolBody *Other);
+  Symbol *symbol();
+  const Symbol *symbol() const {
+    return const_cast<SymbolBody *>(this)->symbol();
+  }
 
 protected:
+  friend SymbolTable;
   explicit SymbolBody(Kind K, StringRef N = "")
       : SymbolKind(K), IsExternal(true), IsCOMDAT(false),
         IsReplaceable(false), Name(N) {}
@@ -107,7 +92,6 @@ protected:
   unsigned IsReplaceable : 1;
 
   StringRef Name;
-  Symbol *Backref = nullptr;
 };
 
 // The base class for any defined symbols, including absolute symbols,
@@ -149,7 +133,6 @@ public:
   }
 
   ObjectFile *getFile() { return File; }
-  int getFileIndex() { return File->Index; }
 
   COFFSymbolRef getCOFFSymbol();
 
@@ -195,7 +178,7 @@ public:
   uint64_t getRVA() { return Data->getRVA(); }
 
 private:
-  friend SymbolBody;
+  friend SymbolTable;
   uint64_t getSize() { return Sym->Value; }
   CommonChunk *Data;
 };
@@ -254,13 +237,10 @@ public:
 
   static bool classof(const SymbolBody *S) { return S->kind() == LazyKind; }
 
-  // Returns an object file for this symbol, or a nullptr if the file
-  // was already returned.
-  InputFile *getMember();
-
-  int getFileIndex() { return File->Index; }
-
   ArchiveFile *File;
+
+private:
+  friend SymbolTable;
 
 private:
   const Archive::Symbol Sym;
@@ -295,26 +275,22 @@ public:
 // table in an output. The former has "__imp_" prefix.
 class DefinedImportData : public Defined {
 public:
-  DefinedImportData(StringRef D, StringRef N, StringRef E,
-                    const coff_import_header *H)
-      : Defined(DefinedImportDataKind, N), DLLName(D), ExternalName(E), Hdr(H) {
+  DefinedImportData(StringRef N, ImportFile *F)
+      : Defined(DefinedImportDataKind, N), File(F) {
   }
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == DefinedImportDataKind;
   }
 
-  uint64_t getRVA() { return Location->getRVA(); }
-  StringRef getDLLName() { return DLLName; }
-  StringRef getExternalName() { return ExternalName; }
-  void setLocation(Chunk *AddressTable) { Location = AddressTable; }
-  uint16_t getOrdinal() { return Hdr->OrdinalHint; }
+  uint64_t getRVA() { return File->Location->getRVA(); }
+  StringRef getDLLName() { return File->DLLName; }
+  StringRef getExternalName() { return File->ExternalName; }
+  void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
+  uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
 private:
-  StringRef DLLName;
-  StringRef ExternalName;
-  const coff_import_header *Hdr;
-  Chunk *Location = nullptr;
+  ImportFile *File;
 };
 
 // This class represents a symbol for a jump table entry which jumps
@@ -345,17 +321,17 @@ private:
 class DefinedLocalImport : public Defined {
 public:
   DefinedLocalImport(StringRef N, Defined *S)
-      : Defined(DefinedLocalImportKind, N), Data(S) {}
+      : Defined(DefinedLocalImportKind, N), Data(new LocalImportChunk(S)) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == DefinedLocalImportKind;
   }
 
-  uint64_t getRVA() { return Data.getRVA(); }
-  Chunk *getChunk() { return &Data; }
+  uint64_t getRVA() { return Data->getRVA(); }
+  Chunk *getChunk() { return Data.get(); }
 
 private:
-  LocalImportChunk Data;
+  std::unique_ptr<LocalImportChunk> Data;
 };
 
 class DefinedBitcode : public Defined {
@@ -363,6 +339,11 @@ class DefinedBitcode : public Defined {
 public:
   DefinedBitcode(BitcodeFile *F, StringRef N, bool IsReplaceable)
       : Defined(DefinedBitcodeKind, N), File(F) {
+    // IsReplaceable tracks whether the bitcode symbol may be replaced with some
+    // other (defined, common or bitcode) symbol. This is the case for common,
+    // comdat and weak external symbols. We try to replace bitcode symbols with
+    // "real" symbols (see SymbolTable::add{Regular,Bitcode}), and resolve the
+    // result against the real symbol from the combined LTO object.
     this->IsReplaceable = IsReplaceable;
   }
 
@@ -396,6 +377,45 @@ inline uint64_t Defined::getRVA() {
     llvm_unreachable("Cannot get the address for an undefined symbol.");
   }
   llvm_unreachable("unknown symbol kind");
+}
+
+// A real symbol object, SymbolBody, is usually stored within a Symbol. There's
+// always one Symbol for each symbol name. The resolver updates the SymbolBody
+// stored in the Body field of this object as it resolves symbols. Symbol also
+// holds computed properties of symbol names.
+struct Symbol {
+  // True if this symbol was referenced by a regular (non-bitcode) object.
+  unsigned IsUsedInRegularObj : 1;
+
+  // This field is used to store the Symbol's SymbolBody. This instantiation of
+  // AlignedCharArrayUnion gives us a struct with a char array field that is
+  // large and aligned enough to store any derived class of SymbolBody.
+  llvm::AlignedCharArrayUnion<DefinedRegular, DefinedCommon, DefinedAbsolute,
+                              DefinedRelative, Lazy, Undefined,
+                              DefinedImportData, DefinedImportThunk,
+                              DefinedLocalImport, DefinedBitcode>
+      Body;
+
+  SymbolBody *body() {
+    return reinterpret_cast<SymbolBody *>(Body.buffer);
+  }
+  const SymbolBody *body() const { return const_cast<Symbol *>(this)->body(); }
+};
+
+template <typename T, typename... ArgT>
+void replaceBody(Symbol *S, ArgT &&... Arg) {
+  static_assert(sizeof(T) <= sizeof(S->Body), "Body too small");
+  static_assert(alignof(T) <= alignof(decltype(S->Body)),
+                "Body not aligned enough");
+  assert(static_cast<SymbolBody *>(static_cast<T *>(nullptr)) == nullptr &&
+         "Not a SymbolBody");
+  new (S->Body.buffer) T(std::forward<ArgT>(Arg)...);
+}
+
+inline Symbol *SymbolBody::symbol() {
+  assert(isExternal());
+  return reinterpret_cast<Symbol *>(reinterpret_cast<char *>(this) -
+                                    offsetof(Symbol, Body));
 }
 
 std::string toString(SymbolBody &B);

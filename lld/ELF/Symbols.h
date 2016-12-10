@@ -405,6 +405,9 @@ struct Symbol {
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
 
+  // This symbol version was found in a version script.
+  unsigned InVersionScript : 1;
+
   bool includeInDynsym() const;
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
 

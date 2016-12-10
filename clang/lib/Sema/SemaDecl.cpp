@@ -9631,6 +9631,20 @@ namespace {
   }
 } // end anonymous namespace
 
+namespace {
+  // Simple wrapper to add the name of a variable or (if no variable is
+  // available) a DeclarationName into a diagnostic.
+  struct VarDeclOrName {
+    VarDecl *VDecl;
+    DeclarationName Name;
+
+    friend const Sema::SemaDiagnosticBuilder &
+    operator<<(const Sema::SemaDiagnosticBuilder &Diag, VarDeclOrName VN) {
+      return VN.VDecl ? Diag << VN.VDecl : Diag << VN.Name;
+    }
+  };
+} // end anonymous namespace
+
 QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
                                             DeclarationName Name, QualType Type,
                                             TypeSourceInfo *TSI,
@@ -9639,6 +9653,8 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   bool IsInitCapture = !VDecl;
   assert((!VDecl || !VDecl->isInitCapture()) &&
          "init captures are expected to be deduced prior to initialization");
+
+  VarDeclOrName VN{VDecl, Name};
 
   // FIXME: Deduction for a decomposition declaration does weird things if the
   // initializer is an array.
@@ -9658,7 +9674,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     Diag(Init->getLocStart(), IsInitCapture
                                   ? diag::err_init_capture_no_expression
                                   : diag::err_auto_var_init_no_expression)
-        << Name << Type << Range;
+        << VN << Type << Range;
     return QualType();
   }
 
@@ -9666,7 +9682,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     Diag(DeduceInits[1]->getLocStart(),
          IsInitCapture ? diag::err_init_capture_multiple_expressions
                        : diag::err_auto_var_init_multiple_expressions)
-        << Name << Type << Range;
+        << VN << Type << Range;
     return QualType();
   }
 
@@ -9675,7 +9691,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     Diag(Init->getLocStart(), IsInitCapture
                                   ? diag::err_init_capture_paren_braces
                                   : diag::err_auto_var_init_paren_braces)
-        << isa<InitListExpr>(Init) << Name << Type << Range;
+        << isa<InitListExpr>(Init) << VN << Type << Range;
     return QualType();
   }
 
@@ -9698,13 +9714,13 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     else if (isa<InitListExpr>(Init))
       Diag(Range.getBegin(),
            diag::err_init_capture_deduction_failure_from_init_list)
-          << Name
+          << VN
           << (DeduceInit->getType().isNull() ? TSI->getType()
                                              : DeduceInit->getType())
           << DeduceInit->getSourceRange();
     else
       Diag(Range.getBegin(), diag::err_init_capture_deduction_failure)
-          << Name << TSI->getType()
+          << VN << TSI->getType()
           << (DeduceInit->getType().isNull() ? TSI->getType()
                                              : DeduceInit->getType())
           << DeduceInit->getSourceRange();
@@ -9718,7 +9734,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   if (ActiveTemplateInstantiations.empty() && !DefaultedAnyToId &&
       !IsInitCapture && !DeducedType.isNull() && DeducedType->isObjCIdType()) {
     SourceLocation Loc = TSI->getTypeLoc().getBeginLoc();
-    Diag(Loc, diag::warn_auto_var_is_id) << Name << Range;
+    Diag(Loc, diag::warn_auto_var_is_id) << VN << Range;
   }
 
   return DeducedType;
@@ -9751,11 +9767,6 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
     RealDecl->setInvalidDecl();
     return;
   }
-
-  // C++1z [dcl.dcl]p1 grammar implies that a parenthesized initializer is not
-  // permitted.
-  if (isa<DecompositionDecl>(VDecl) && DirectInit && isa<ParenListExpr>(Init))
-    Diag(VDecl->getLocation(), diag::err_decomp_decl_paren_init) << VDecl;
 
   // C++11 [decl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   if (TypeMayContainAuto && VDecl->getType()->isUndeducedType()) {

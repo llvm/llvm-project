@@ -150,7 +150,7 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
   // Apply relocations.
   for (const coff_relocation &Rel : Relocs) {
     uint8_t *Off = Buf + OutputSectionOff + Rel.VirtualAddress;
-    SymbolBody *Body = File->getSymbolBody(Rel.SymbolTableIndex)->repl();
+    SymbolBody *Body = File->getSymbolBody(Rel.SymbolTableIndex);
     Defined *Sym = cast<Defined>(Body);
     uint64_t P = RVA + Rel.VirtualAddress;
     switch (Config->Machine) {
@@ -203,7 +203,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *Res) {
     uint8_t Ty = getBaserelType(Rel);
     if (Ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
-    SymbolBody *Body = File->getSymbolBody(Rel.SymbolTableIndex)->repl();
+    SymbolBody *Body = File->getSymbolBody(Rel.SymbolTableIndex);
     if (isa<DefinedAbsolute>(Body))
       continue;
     Res->emplace_back(RVA + Rel.VirtualAddress, Ty);
