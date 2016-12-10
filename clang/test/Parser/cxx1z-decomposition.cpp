@@ -139,9 +139,11 @@ namespace Init {
     int arr[1];
     struct S { int n; };
     auto &[bad1]; // expected-error {{decomposition declaration '[bad1]' requires an initializer}}
-    const auto &[bad2](S{}); // expected-error {{decomposition declaration '[bad2]' cannot have a parenthesized initializer}}
+    const auto &[bad2](S{}, S{}); // expected-error {{initializer for variable '[bad2]' with type 'const auto &' contains multiple expressions}}
+    const auto &[bad3](); // expected-error {{expected expression}}
     auto &[good1] = arr;
     auto &&[good2] = S{};
+    const auto &[good3](S{});
     S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
     S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
   }

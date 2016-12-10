@@ -611,6 +611,7 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_PC64:
     return R_PC;
   case R_X86_64_GOT32:
+  case R_X86_64_GOT64:
     return R_GOT_FROM_END;
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
@@ -836,6 +837,7 @@ void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_GLOB_DAT:
   case R_X86_64_PC64:
   case R_X86_64_SIZE64:
+  case R_X86_64_GOT64:
     write64le(Loc, Val);
     break;
   default:

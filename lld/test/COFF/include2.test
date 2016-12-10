@@ -9,6 +9,6 @@
 
 CHECK: include2.test.tmp1.obj
 CHECK: include2.test.tmp2.lib
-CHECK: include2.test.tmp3.lib
 CHECK: include2.test.tmp2.lib(include2.test.tmp2.obj) for foo
+CHECK: include2.test.tmp3.lib
 CHECK: include2.test.tmp3.lib(include2.test.tmp3.obj) for bar

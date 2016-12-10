@@ -38,8 +38,8 @@ void markLive(const std::vector<Chunk *> &Chunks) {
   };
 
   // Add GC root chunks.
-  for (Undefined *U : Config->GCRoot)
-    if (auto *D = dyn_cast<DefinedRegular>(U->repl()))
+  for (SymbolBody *B : Config->GCRoot)
+    if (auto *D = dyn_cast<DefinedRegular>(B))
       Enqueue(D->getChunk());
 
   while (!Worklist.empty()) {
@@ -48,7 +48,7 @@ void markLive(const std::vector<Chunk *> &Chunks) {
 
     // Mark all symbols listed in the relocation table for this section.
     for (SymbolBody *S : SC->symbols())
-      if (auto *D = dyn_cast<DefinedRegular>(S->repl()))
+      if (auto *D = dyn_cast<DefinedRegular>(S))
         Enqueue(D->getChunk());
 
     // Mark associative sections if any.

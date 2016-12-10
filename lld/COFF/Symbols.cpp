@@ -18,8 +18,6 @@
 
 using namespace llvm;
 using namespace llvm::object;
-using llvm::sys::fs::identify_magic;
-using llvm::sys::fs::file_magic;
 
 namespace lld {
 namespace coff {
@@ -49,120 +47,6 @@ InputFile *SymbolBody::getFile() {
   return nullptr;
 }
 
-// Returns 1, 0 or -1 if this symbol should take precedence
-// over the Other, tie or lose, respectively.
-int SymbolBody::compare(SymbolBody *Other) {
-  Kind LK = kind(), RK = Other->kind();
-
-  // Normalize so that the smaller kind is on the left.
-  if (LK > RK)
-    return -Other->compare(this);
-
-  // First handle comparisons between two different kinds.
-  if (LK != RK) {
-    if (RK > LastDefinedKind) {
-      if (LK == LazyKind && cast<Undefined>(Other)->WeakAlias)
-        return -1;
-
-      // The LHS is either defined or lazy and so it wins.
-      assert((LK <= LastDefinedKind || LK == LazyKind) && "Bad kind!");
-      return 1;
-    }
-
-    // Bitcode has special complexities.
-    if (RK == DefinedBitcodeKind) {
-      auto *RHS = cast<DefinedBitcode>(Other);
-
-      switch (LK) {
-      case DefinedCommonKind:
-        return 1;
-
-      case DefinedRegularKind:
-        // As an approximation, regular symbols win over bitcode symbols,
-        // but we definitely have a conflict if the regular symbol is not
-        // replaceable and neither is the bitcode symbol. We do not
-        // replicate the rest of the symbol resolution logic here; symbol
-        // resolution will be done accurately after lowering bitcode symbols
-        // to regular symbols in addCombinedLTOObject().
-        if (cast<DefinedRegular>(this)->isCOMDAT() || RHS->IsReplaceable)
-          return 1;
-
-        // Fallthrough to the default of a tie otherwise.
-      default:
-        return 0;
-      }
-    }
-
-    // Either of the object file kind will trump a higher kind.
-    if (LK <= LastDefinedCOFFKind)
-      return 1;
-
-    // The remaining kind pairs are ties amongst defined symbols.
-    return 0;
-  }
-
-  // Now handle the case where the kinds are the same.
-  switch (LK) {
-  case DefinedRegularKind: {
-    auto *LHS = cast<DefinedRegular>(this);
-    auto *RHS = cast<DefinedRegular>(Other);
-    if (LHS->isCOMDAT() && RHS->isCOMDAT())
-      return LHS->getFileIndex() < RHS->getFileIndex() ? 1 : -1;
-    return 0;
-  }
-
-  case DefinedCommonKind: {
-    auto *LHS = cast<DefinedCommon>(this);
-    auto *RHS = cast<DefinedCommon>(Other);
-    if (LHS->getSize() == RHS->getSize())
-      return LHS->getFileIndex() < RHS->getFileIndex() ? 1 : -1;
-    return LHS->getSize() > RHS->getSize() ? 1 : -1;
-  }
-
-  case DefinedBitcodeKind: {
-    auto *LHS = cast<DefinedBitcode>(this);
-    auto *RHS = cast<DefinedBitcode>(Other);
-    // If both are non-replaceable, we have a tie.
-    if (!LHS->IsReplaceable && !RHS->IsReplaceable)
-      return 0;
-
-    // Non-replaceable symbols win, but even two replaceable symboles don't
-    // tie. If both symbols are replaceable, choice is arbitrary.
-    if (RHS->IsReplaceable && LHS->IsReplaceable)
-      return uintptr_t(LHS) < uintptr_t(RHS) ? 1 : -1;
-    return LHS->IsReplaceable ? -1 : 1;
-  }
-
-  case LazyKind: {
-    // Don't tie, pick the earliest.
-    auto *LHS = cast<Lazy>(this);
-    auto *RHS = cast<Lazy>(Other);
-    return LHS->getFileIndex() < RHS->getFileIndex() ? 1 : -1;
-  }
-
-  case UndefinedKind: {
-    auto *LHS = cast<Undefined>(this);
-    auto *RHS = cast<Undefined>(Other);
-    // Tie if both undefined symbols have different weak aliases.
-    if (LHS->WeakAlias && RHS->WeakAlias) {
-      if (LHS->WeakAlias->getName() != RHS->WeakAlias->getName())
-        return 0;
-      return uintptr_t(LHS) < uintptr_t(RHS) ? 1 : -1;
-    }
-    return LHS->WeakAlias ? 1 : -1;
-  }
-
-  case DefinedLocalImportKind:
-  case DefinedImportThunkKind:
-  case DefinedImportDataKind:
-  case DefinedAbsoluteKind:
-  case DefinedRelativeKind:
-    // These all simply tie.
-    return 0;
-  }
-  llvm_unreachable("unknown symbol kind");
-}
-
 COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
   size_t SymSize = File->getCOFFObj()->getSymbolTableEntrySize();
   if (SymSize == sizeof(coff_symbol16))
@@ -182,34 +66,10 @@ DefinedImportThunk::DefinedImportThunk(StringRef Name, DefinedImportData *S,
   }
 }
 
-InputFile *Lazy::getMember() {
-  MemoryBufferRef MBRef = File->getMember(&Sym);
-
-  // getMember returns an empty buffer if the member was already
-  // read from the library.
-  if (MBRef.getBuffer().empty())
-    return nullptr;
-
-  file_magic Magic = identify_magic(MBRef.getBuffer());
-  if (Magic == file_magic::coff_import_library)
-    return make<ImportFile>(MBRef);
-
-  InputFile *Obj;
-  if (Magic == file_magic::coff_object)
-    Obj = make<ObjectFile>(MBRef);
-  else if (Magic == file_magic::bitcode)
-    Obj = make<BitcodeFile>(MBRef);
-  else
-    fatal("unknown file type: " + File->getName());
-
-  Obj->ParentName = File->getName();
-  return Obj;
-}
-
 Defined *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
   for (SymbolBody *A = WeakAlias; A; A = cast<Undefined>(A)->WeakAlias)
-    if (auto *D = dyn_cast<Defined>(A->repl()))
+    if (auto *D = dyn_cast<Defined>(A))
       return D;
   return nullptr;
 }

@@ -11,5 +11,5 @@
 CHECK: order.test.tmp1.obj
 CHECK: order.test.tmp3.obj
 CHECK: order.test.tmp2.lib
-CHECK: order.test.tmp3.lib
 CHECK: order.test.tmp2.lib(order.test.tmp2.obj) for foo
+CHECK: order.test.tmp3.lib

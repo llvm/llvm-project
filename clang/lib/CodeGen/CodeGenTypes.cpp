@@ -742,7 +742,7 @@ bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
 }
 
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  if (auto PT = T->getAs<PointerType>())
+  if (T->getAs<PointerType>())
     return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {

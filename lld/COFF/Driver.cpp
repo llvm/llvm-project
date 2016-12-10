@@ -207,10 +207,10 @@ void LinkerDriver::addLibSearchPaths() {
   }
 }
 
-Undefined *LinkerDriver::addUndefined(StringRef Name) {
-  Undefined *U = Symtab.addUndefined(Name);
-  Config->GCRoot.insert(U);
-  return U;
+SymbolBody *LinkerDriver::addUndefined(StringRef Name) {
+  SymbolBody *B = Symtab.addUndefined(Name);
+  Config->GCRoot.insert(B);
+  return B;
 }
 
 // Symbol names are mangled by appending "_" prefix on x86.
@@ -232,7 +232,7 @@ StringRef LinkerDriver::findDefaultEntry() {
   };
   for (auto E : Entries) {
     StringRef Entry = Symtab.findMangle(mangle(E[0]));
-    if (!Entry.empty() && !isa<Undefined>(Symtab.find(Entry)->Body))
+    if (!Entry.empty() && !isa<Undefined>(Symtab.find(Entry)->body()))
       return mangle(E[1]);
   }
   return "";
@@ -715,7 +715,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Symbol *Sym = Symtab.find(From);
       if (!Sym)
         continue;
-      if (auto *U = dyn_cast<Undefined>(Sym->Body))
+      if (auto *U = dyn_cast<Undefined>(Sym->body()))
         if (!U->WeakAlias)
           U->WeakAlias = Symtab.addUndefined(To);
     }
@@ -734,7 +734,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab.addCombinedLTOObjects();
 
   // Make sure we have resolved all symbols.
-  Symtab.reportRemainingUndefines(/*Resolve=*/true);
+  Symtab.reportRemainingUndefines();
 
   // Windows specific -- if no /subsystem is given, we need to infer
   // that from entry point name.
