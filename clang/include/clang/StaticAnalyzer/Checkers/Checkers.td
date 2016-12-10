@@ -42,6 +42,7 @@ def Nullability : Package<"nullability">;
 
 def Cplusplus : Package<"cplusplus">;
 def CplusplusAlpha : Package<"cplusplus">, InPackage<Alpha>, Hidden;
+def CplusplusOptIn : Package<"cplusplus">, InPackage<OptIn>;
 
 def Valist : Package<"valist">;
 def ValistAlpha : Package<"valist">, InPackage<Alpha>, Hidden;
@@ -262,13 +263,13 @@ def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
 
 } // end: "cplusplus"
 
-let ParentPackage = CplusplusAlpha in {
+let ParentPackage = CplusplusOptIn in {
 
 def VirtualCallChecker : Checker<"VirtualCall">,
   HelpText<"Check virtual function calls during construction or destruction">,
   DescFile<"VirtualCallChecker.cpp">;
 
-} // end: "alpha.cplusplus"
+} // end: "optin.cplusplus"
 
 
 //===----------------------------------------------------------------------===//
