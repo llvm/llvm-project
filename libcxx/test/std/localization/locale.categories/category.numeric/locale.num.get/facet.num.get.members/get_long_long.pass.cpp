@@ -100,6 +100,7 @@ int main()
                   ios, err, v);
         assert(iter.base() == str+sizeof(str)-1);
         assert(err == ios.goodbit);
-        assert(v == 0x8000000000000000LL);
+        const long long expect = 0x8000000000000000LL;
+        assert(v == expect);
     }
 }

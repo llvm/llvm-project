@@ -656,12 +656,17 @@ class Configuration(object):
             self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
             self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
             self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
-            # TODO(EricWF) Remove the unused warnings once the test suite
-            # compiles clean with them.
+            # These warnings should be enabled in order to support the MSVC
+            # team using the test suite; They enable the warnings below and
+            # expect the test suite to be clean.
+            # FIXME: Re-enable this after fixing remaining occurrences.
             self.cxx.addWarningFlagIfSupported('-Wno-sign-compare')
-            self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
+            # FIXME: Enable the two warnings below.
             self.cxx.addWarningFlagIfSupported('-Wno-unused-variable')
             self.cxx.addWarningFlagIfSupported('-Wno-unused-parameter')
+            # TODO(EricWF) Remove the unused warnings once the test suite
+            # compiles clean with them.
+            self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
             std = self.get_lit_conf('std', None)
             if std in ['c++98', 'c++03']:
                 # The '#define static_assert' provided by libc++ in C++03 mode

@@ -51,10 +51,10 @@ test1()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -114,10 +114,10 @@ test2()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -177,10 +177,10 @@ test3()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -240,10 +240,10 @@ test4()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -303,10 +303,10 @@ test5()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -366,10 +366,10 @@ test6()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -429,10 +429,10 @@ test7()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -492,10 +492,10 @@ test8()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -555,10 +555,10 @@ test9()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -618,10 +618,10 @@ test10()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);
@@ -681,10 +681,10 @@ test11()
     }
     std::vector<double> prob(std::begin(p), std::end(p));
     double s = std::accumulate(prob.begin(), prob.end(), 0.0);
-    for (int i = 0; i < prob.size(); ++i)
+    for (std::size_t i = 0; i < prob.size(); ++i)
         prob[i] /= s;
     std::sort(u.begin(), u.end());
-    for (int i = 0; i < Np; ++i)
+    for (std::size_t i = 0; i < Np; ++i)
     {
         typedef std::vector<D::result_type>::iterator I;
         I lb = std::lower_bound(u.begin(), u.end(), b[i]);

@@ -53,7 +53,7 @@ int main()
         v2 = std::move(v);
         assert(v2.size() == N);
         assert(v.size() == 0);
-        for (int i = 0; i < N; ++i)
+        for (unsigned i = 0; i < N; ++i)
         {
             assert(v2[i].size() == a[i].size());
             for (std::size_t j = 0; j < a[i].size(); ++j)
