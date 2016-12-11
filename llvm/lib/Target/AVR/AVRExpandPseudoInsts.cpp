@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
@@ -109,6 +110,9 @@ bool AVRExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
+
+  // We need to track liveness in order to use register scavenging.
+  MF.getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
 
   for (Block &MBB : MF) {
     bool ContinueExpanding = true;
@@ -656,8 +660,7 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
 
   assert(Imm <= 63 && "Offset is out of range");
 
-  unsigned TmpLoReg = DstLoReg;
-  unsigned TmpHiReg = DstHiReg;
+  MachineInstr *MIBLO, *MIBHI;
 
   // HACK: We shouldn't have instances of this instruction
   // where src==dest because the instruction itself is
@@ -666,34 +669,51 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   //
   // In this case, just use a temporary register.
   if (DstReg == SrcReg) {
-    TmpLoReg = SCRATCH_REGISTER;
-    TmpHiReg = SCRATCH_REGISTER;
-  }
+    RegScavenger RS;
 
-  auto MIBLO = buildMI(MBB, MBBI, OpLo)
-    .addReg(TmpLoReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(SrcReg)
-    .addImm(Imm);
+    RS.enterBasicBlock(MBB);
+    RS.forward(MBBI);
 
-  // Push the low part of the temporary register to the stack.
-  if (TmpLoReg != DstLoReg)
-    buildMI(MBB, MBBI, AVR::PUSHRr)
-      .addReg(AVR::R0);
+    BitVector Candidates =
+        TRI->getAllocatableSet
+        (*MBB.getParent(), &AVR::GPR8RegClass);
 
-  auto MIBHI = buildMI(MBB, MBBI, OpHi)
-    .addReg(TmpHiReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(SrcReg, getKillRegState(SrcIsKill))
-    .addImm(Imm + 1);
+    // Exclude all the registers being used by the instruction.
+    for (MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
+          !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
+        Candidates.reset(MO.getReg());
+    }
 
-  // If we need to use a temporary register.
-  if (TmpHiReg != DstHiReg) {
-    // Move the hi result from the tmp register to the destination.
-    buildMI(MBB, MBBI, AVR::MOVRdRr)
-      .addReg(DstHiReg).addReg(SCRATCH_REGISTER);
+    BitVector Available = RS.getRegsAvailable(&AVR::GPR8RegClass);
+    Available &= Candidates;
 
-    // Pop the lo result calculated previously and put it into
-    // the lo destination.
-    buildMI(MBB, MBBI, AVR::POPRd).addReg(DstLoReg);
+    signed TmpReg = Available.find_first();
+    assert(TmpReg != -1 && "ran out of registers");
+
+    MIBLO = buildMI(MBB, MBBI, OpLo)
+      .addReg(TmpReg, RegState::Define)
+      .addReg(SrcReg)
+      .addImm(Imm);
+
+    buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstLoReg).addReg(TmpReg);
+
+    MIBHI = buildMI(MBB, MBBI, OpHi)
+      .addReg(TmpReg, RegState::Define)
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .addImm(Imm + 1);
+
+    buildMI(MBB, MBBI, AVR::MOVRdRr).addReg(DstHiReg).addReg(TmpReg);
+  } else {
+    MIBLO = buildMI(MBB, MBBI, OpLo)
+      .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(SrcReg)
+      .addImm(Imm);
+
+    MIBHI = buildMI(MBB, MBBI, OpHi)
+      .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .addImm(Imm + 1);
   }
 
   MIBLO->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());

@@ -3853,63 +3853,111 @@ define <4 x float>@test_int_x86_avx512_mask_getmant_ss(<4 x float> %x0, <4 x flo
   ret <4 x float> %res13
 }
 
-declare <8 x double> @llvm.x86.avx512.mask.vpermilvar.pd.512(<8 x double>, <8 x i64>, <8 x double>, i8)
+declare <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double>, <8 x i64>)
 
-define <8 x double>@test_int_x86_avx512_mask_vpermilvar_pd_512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2, i8 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_vpermilvar_pd_512:
+define <8 x double>@test_int_x86_avx512_vpermilvar_pd_512(<8 x double> %x0, <8 x i64> %x1) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_pd_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpermilpd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> %x0, <8 x i64> %x1)
+  ret <8 x double> %res
+}
+
+define <8 x double>@test_int_x86_avx512_vpermilvar_pd_512_mask(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_pd_512_mask:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermilpd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpermilpd %zmm1, %zmm0, %zmm3 {%k1} {z}
-; CHECK-NEXT:    vpermilpd %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vaddpd %zmm3, %zmm2, %zmm1
-; CHECK-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vpermilvar.pd.512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2, i8 %x3)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.vpermilvar.pd.512(<8 x double> %x0, <8 x i64> %x1, <8 x double> zeroinitializer, i8 %x3)
-  %res2 = call <8 x double> @llvm.x86.avx512.mask.vpermilvar.pd.512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2, i8 -1)
-  %res3 = fadd <8 x double> %res, %res1
-  %res4 = fadd <8 x double> %res2, %res3
-  ret <8 x double> %res4
+  %res = call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> %x0, <8 x i64> %x1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x double> %res, <8 x double> %x2
+  ret <8 x double> %res2
 }
 
-declare <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float>, <16 x i32>, <16 x float>, i16)
+define <8 x double>@test_int_x86_avx512_vpermilvar_pd_512_maskz(<8 x double> %x0, <8 x i64> %x1, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_pd_512_maskz:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpermilpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> %x0, <8 x i64> %x1)
+  %mask.cast = bitcast i8 %mask to <8 x i1>
+  %res2 = select <8 x i1> %mask.cast, <8 x double> %res, <8 x double> zeroinitializer
+  ret <8 x double> %res2
+}
 
-define <16 x float>@test_int_x86_avx512_mask_vpermilvar_ps_512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_vpermilvar_ps_512:
+declare <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float>, <16 x i32>)
+
+define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512(<16 x float> %x0, <16 x i32> %x1) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_ps_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpermilps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> %x1)
+  ret <16 x float> %res
+}
+
+define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_mask(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_ps_512_mask:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermilps %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpermilps %zmm1, %zmm0, %zmm3 {%k1} {z}
-; CHECK-NEXT:    vpermilps %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vaddps %zmm3, %zmm2, %zmm1
-; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 %x3)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> %x1, <16 x float> zeroinitializer, i16 %x3)
-  %res2 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 -1)
-  %res3 = fadd <16 x float> %res, %res1
-  %res4 = fadd <16 x float> %res2, %res3
-  ret <16 x float> %res4
+  %res = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> %x1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x float> %res, <16 x float> %x2
+  ret <16 x float> %res2
+}
+
+define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_maskz(<16 x float> %x0, <16 x i32> %x1, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_ps_512_maskz:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpermilps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> %x1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x float> %res, <16 x float> zeroinitializer
+  ret <16 x float> %res2
 }
 
 ; Test case to make sure we can print shuffle decode comments for constant pool loads.
-define <16 x float>@test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 %x3) {
-; CHECK-LABEL: test_int_x86_avx512_mask_vpermilvar_ps_512_constant_pool:
+define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_constant_pool(<16 x float> %x0, <16 x i32> %x1) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_ps_512_constant_pool:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
+  ret <16 x float> %res
+}
+
+define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_constant_pool_mask(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_ps_512_constant_pool_mask:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm2 {%k1} = zmm0[2,3,0,1,7,6,5,4,9,8,11,10,12,13,14,15]
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} {z} = zmm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
-; CHECK-NEXT:    vaddps %zmm1, %zmm2, %zmm1
-; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm2 {%k1} = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 3, i32 2, i32 1, i32 0, i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3>, <16 x float> %x2, i16 %x3)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3>, <16 x float> zeroinitializer, i16 %x3)
-  %res2 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>, <16 x float> %x2, i16 -1)
-  %res3 = fadd <16 x float> %res, %res1
-  %res4 = fadd <16 x float> %res2, %res3
-  ret <16 x float> %res4
+  %res = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x float> %res, <16 x float> %x2
+  ret <16 x float> %res2
+}
+
+define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_constant_pool_maskz(<16 x float> %x0, <16 x i32> %x1, i16 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_vpermilvar_ps_512_constant_pool_maskz:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[1,0,3,2,4,5,6,7,10,11,8,9,14,15,13,12]
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x float> %res, <16 x float> zeroinitializer
+  ret <16 x float> %res2
 }
 
 declare <16 x float> @llvm.x86.avx512.mask.insertf32x4.512(<16 x float>, <4 x float>, i32, <16 x float>, i16)

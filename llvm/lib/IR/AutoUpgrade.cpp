@@ -258,8 +258,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name == "sse2.pminu.b" || // Added in 3.9
          Name == "sse41.pminuw" || // Added in 3.9
          Name == "sse41.pminud" || // Added in 3.9
-         Name == "avx512.mask.pshuf.b.128" || // Added in 4.0
-         Name == "avx512.mask.pshuf.b.256" || // Added in 4.0
+         Name.startswith("avx512.mask.pshuf.b.") || // Added in 4.0
          Name.startswith("avx2.pmax") || // Added in 3.9
          Name.startswith("avx2.pmin") || // Added in 3.9
          Name.startswith("avx512.mask.pmax") || // Added in 4.0
@@ -313,6 +312,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name == "avx512.mask.sub.pd.256" || // Added in 4.0
          Name == "avx512.mask.sub.ps.128" || // Added in 4.0
          Name == "avx512.mask.sub.ps.256" || // Added in 4.0
+         Name.startswith("avx512.mask.vpermilvar.") || // Added in 4.0
          Name.startswith("avx512.mask.psll.d") || // Added in 4.0
          Name.startswith("avx512.mask.psll.q") || // Added in 4.0
          Name.startswith("avx512.mask.psll.w") || // Added in 4.0
@@ -745,6 +745,108 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     if (IsX86)
       Name = Name.substr(4);
 
+    if (IsX86 && Name.startswith("sse4a.movnt.")) {
+      Module *M = F->getParent();
+      SmallVector<Metadata *, 1> Elts;
+      Elts.push_back(
+          ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
+      MDNode *Node = MDNode::get(C, Elts);
+
+      Value *Arg0 = CI->getArgOperand(0);
+      Value *Arg1 = CI->getArgOperand(1);
+
+      // Nontemporal (unaligned) store of the 0'th element of the float/double
+      // vector.
+      Type *SrcEltTy = cast<VectorType>(Arg1->getType())->getElementType();
+      PointerType *EltPtrTy = PointerType::getUnqual(SrcEltTy);
+      Value *Addr = Builder.CreateBitCast(Arg0, EltPtrTy, "cast");
+      Value *Extract =
+          Builder.CreateExtractElement(Arg1, (uint64_t)0, "extractelement");
+
+      StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, 1);
+      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
+    }
+
+    if (IsX86 && (Name.startswith("avx.movnt.") ||
+                  Name.startswith("avx512.storent."))) {
+      Module *M = F->getParent();
+      SmallVector<Metadata *, 1> Elts;
+      Elts.push_back(
+          ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
+      MDNode *Node = MDNode::get(C, Elts);
+
+      Value *Arg0 = CI->getArgOperand(0);
+      Value *Arg1 = CI->getArgOperand(1);
+
+      // Convert the type of the pointer to a pointer to the stored type.
+      Value *BC = Builder.CreateBitCast(Arg0,
+                                        PointerType::getUnqual(Arg1->getType()),
+                                        "cast");
+      VectorType *VTy = cast<VectorType>(Arg1->getType());
+      StoreInst *SI = Builder.CreateAlignedStore(Arg1, BC,
+                                                 VTy->getBitWidth() / 8);
+      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
+    }
+
+    if (IsX86 && Name == "sse2.storel.dq") {
+      Value *Arg0 = CI->getArgOperand(0);
+      Value *Arg1 = CI->getArgOperand(1);
+
+      Type *NewVecTy = VectorType::get(Type::getInt64Ty(C), 2);
+      Value *BC0 = Builder.CreateBitCast(Arg1, NewVecTy, "cast");
+      Value *Elt = Builder.CreateExtractElement(BC0, (uint64_t)0);
+      Value *BC = Builder.CreateBitCast(Arg0,
+                                        PointerType::getUnqual(Elt->getType()),
+                                        "cast");
+      Builder.CreateAlignedStore(Elt, BC, 1);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
+    }
+
+    if (IsX86 && (Name.startswith("sse.storeu.") ||
+                  Name.startswith("sse2.storeu.") ||
+                  Name.startswith("avx.storeu."))) {
+      Value *Arg0 = CI->getArgOperand(0);
+      Value *Arg1 = CI->getArgOperand(1);
+
+      Arg0 = Builder.CreateBitCast(Arg0,
+                                   PointerType::getUnqual(Arg1->getType()),
+                                   "cast");
+      Builder.CreateAlignedStore(Arg1, Arg0, 1);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
+    }
+
+    if (IsX86 && (Name.startswith("avx512.mask.storeu."))) {
+      UpgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+                         CI->getArgOperand(2), /*Aligned*/false);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
+    }
+
+    if (IsX86 && (Name.startswith("avx512.mask.store."))) {
+      UpgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+                         CI->getArgOperand(2), /*Aligned*/true);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
+    }
+
     Value *Rep;
     // Upgrade packed integer vector compare intrinsics to compare instructions.
     if (IsX86 && (Name.startswith("sse2.pcmpeq.") ||
@@ -854,96 +956,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
-    } else if (IsX86 && Name.startswith("sse4a.movnt.")) {
-      Module *M = F->getParent();
-      SmallVector<Metadata *, 1> Elts;
-      Elts.push_back(
-          ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
-      MDNode *Node = MDNode::get(C, Elts);
-
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-
-      // Nontemporal (unaligned) store of the 0'th element of the float/double
-      // vector.
-      Type *SrcEltTy = cast<VectorType>(Arg1->getType())->getElementType();
-      PointerType *EltPtrTy = PointerType::getUnqual(SrcEltTy);
-      Value *Addr = Builder.CreateBitCast(Arg0, EltPtrTy, "cast");
-      Value *Extract =
-          Builder.CreateExtractElement(Arg1, (uint64_t)0, "extractelement");
-
-      StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, 1);
-      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
-
-      // Remove intrinsic.
-      CI->eraseFromParent();
-      return;
-    } else if (IsX86 && (Name.startswith("avx.movnt.") ||
-                         Name.startswith("avx512.storent."))) {
-      Module *M = F->getParent();
-      SmallVector<Metadata *, 1> Elts;
-      Elts.push_back(
-          ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
-      MDNode *Node = MDNode::get(C, Elts);
-
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-
-      // Convert the type of the pointer to a pointer to the stored type.
-      Value *BC = Builder.CreateBitCast(Arg0,
-                                        PointerType::getUnqual(Arg1->getType()),
-                                        "cast");
-      VectorType *VTy = cast<VectorType>(Arg1->getType());
-      StoreInst *SI = Builder.CreateAlignedStore(Arg1, BC,
-                                                 VTy->getBitWidth() / 8);
-      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
-
-      // Remove intrinsic.
-      CI->eraseFromParent();
-      return;
-    } else if (IsX86 && Name == "sse2.storel.dq") {
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-
-      Type *NewVecTy = VectorType::get(Type::getInt64Ty(C), 2);
-      Value *BC0 = Builder.CreateBitCast(Arg1, NewVecTy, "cast");
-      Value *Elt = Builder.CreateExtractElement(BC0, (uint64_t)0);
-      Value *BC = Builder.CreateBitCast(Arg0,
-                                        PointerType::getUnqual(Elt->getType()),
-                                        "cast");
-      Builder.CreateAlignedStore(Elt, BC, 1);
-
-      // Remove intrinsic.
-      CI->eraseFromParent();
-      return;
-    } else if (IsX86 && (Name.startswith("sse.storeu.") ||
-                         Name.startswith("sse2.storeu.") ||
-                         Name.startswith("avx.storeu."))) {
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-
-      Arg0 = Builder.CreateBitCast(Arg0,
-                                   PointerType::getUnqual(Arg1->getType()),
-                                   "cast");
-      Builder.CreateAlignedStore(Arg1, Arg0, 1);
-
-      // Remove intrinsic.
-      CI->eraseFromParent();
-      return;
-    } else if (IsX86 && (Name.startswith("avx512.mask.storeu."))) {
-      UpgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
-                         CI->getArgOperand(2), /*Aligned*/false);
-
-      // Remove intrinsic.
-      CI->eraseFromParent();
-      return;
-    } else if (IsX86 && (Name.startswith("avx512.mask.store."))) {
-      UpgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
-                         CI->getArgOperand(2), /*Aligned*/true);
-
-      // Remove intrinsic.
-      CI->eraseFromParent();
-      return;
     } else if (IsX86 && (Name.startswith("avx512.mask.loadu."))) {
       Rep = UpgradeMaskedLoad(Builder, CI->getArgOperand(0),
                               CI->getArgOperand(1), CI->getArgOperand(2),
@@ -1435,6 +1447,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         IID = Intrinsic::x86_ssse3_pshuf_b_128;
       else if (VecTy->getPrimitiveSizeInBits() == 256)
         IID = Intrinsic::x86_avx2_pshuf_b;
+      else if (VecTy->getPrimitiveSizeInBits() == 512)
+        IID = Intrinsic::x86_avx512_pshuf_b_512;
       else
         llvm_unreachable("Unexpected intrinsic");
 
@@ -1646,6 +1660,28 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = UpgradeX86MaskedShift(Builder, *CI, IID);
     } else if (IsX86 && Name.startswith("avx512.mask.move.s")) {
       Rep = upgradeMaskedMove(Builder, *CI);
+    } else if (IsX86 && Name.startswith("avx512.mask.vpermilvar.")) {
+      Intrinsic::ID IID;
+      if (Name.endswith("ps.128"))
+        IID = Intrinsic::x86_avx_vpermilvar_ps;
+      else if (Name.endswith("pd.128"))
+        IID = Intrinsic::x86_avx_vpermilvar_pd;
+      else if (Name.endswith("ps.256"))
+        IID = Intrinsic::x86_avx_vpermilvar_ps_256;
+      else if (Name.endswith("pd.256"))
+        IID = Intrinsic::x86_avx_vpermilvar_pd_256;
+      else if (Name.endswith("ps.512"))
+        IID = Intrinsic::x86_avx512_vpermilvar_ps_512;
+      else if (Name.endswith("pd.512"))
+        IID = Intrinsic::x86_avx512_vpermilvar_pd_512;
+      else
+        llvm_unreachable("Unexpected vpermilvar intrinsic");
+
+      Function *Intrin = Intrinsic::getDeclaration(F->getParent(), IID);
+      Rep = Builder.CreateCall(Intrin,
+                               { CI->getArgOperand(0), CI->getArgOperand(1) });
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
     } else {
       llvm_unreachable("Unknown function for CallInst upgrade.");
     }

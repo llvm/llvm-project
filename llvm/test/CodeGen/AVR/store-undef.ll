@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=avr6 | FileCheck %s
+; RUN: llc < %s -march=avr | FileCheck %s
 
 ; This test checks that we can successfully lower a store
 ; to an undefined pointer.

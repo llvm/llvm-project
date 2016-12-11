@@ -805,11 +805,11 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
   auto *VecTy = cast<VectorType>(II.getType());
   auto *MaskEltTy = Type::getInt32Ty(II.getContext());
   unsigned NumElts = VecTy->getNumElements();
-  assert((NumElts == 16 || NumElts == 32) &&
+  assert((NumElts == 16 || NumElts == 32 || NumElts == 64) &&
          "Unexpected number of elements in shuffle mask!");
 
   // Construct a shuffle mask from constant integers or UNDEFs.
-  Constant *Indexes[32] = {nullptr};
+  Constant *Indexes[64] = {nullptr};
 
   // Each byte in the shuffle control mask forms an index to permute the
   // corresponding byte in the destination operand.
@@ -849,12 +849,15 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
   if (!V)
     return nullptr;
 
+  auto *VecTy = cast<VectorType>(II.getType());
   auto *MaskEltTy = Type::getInt32Ty(II.getContext());
-  unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
-  assert(NumElts == 8 || NumElts == 4 || NumElts == 2);
+  unsigned NumElts = VecTy->getVectorNumElements();
+  bool IsPD = VecTy->getScalarType()->isDoubleTy();
+  unsigned NumLaneElts = IsPD ? 2 : 4;
+  assert(NumElts == 16 || NumElts == 8 || NumElts == 4 || NumElts == 2);
 
   // Construct a shuffle mask from constant integers or UNDEFs.
-  Constant *Indexes[8] = {nullptr};
+  Constant *Indexes[16] = {nullptr};
 
   // The intrinsics only read one or two bits, clear the rest.
   for (unsigned I = 0; I < NumElts; ++I) {
@@ -872,18 +875,13 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
 
     // The PD variants uses bit 1 to select per-lane element index, so
     // shift down to convert to generic shuffle mask index.
-    if (II.getIntrinsicID() == Intrinsic::x86_avx_vpermilvar_pd ||
-        II.getIntrinsicID() == Intrinsic::x86_avx_vpermilvar_pd_256)
+    if (IsPD)
       Index = Index.lshr(1);
 
     // The _256 variants are a bit trickier since the mask bits always index
     // into the corresponding 128 half. In order to convert to a generic
     // shuffle, we have to make that explicit.
-    if ((II.getIntrinsicID() == Intrinsic::x86_avx_vpermilvar_ps_256 ||
-         II.getIntrinsicID() == Intrinsic::x86_avx_vpermilvar_pd_256) &&
-        ((NumElts / 2) <= I)) {
-      Index += APInt(32, NumElts / 2);
-    }
+    Index += APInt(32, (I / NumLaneElts) * NumLaneElts);
 
     Indexes[I] = ConstantInt::get(MaskEltTy, Index);
   }
@@ -1740,7 +1738,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse2_ucomigt_sd:
   case Intrinsic::x86_sse2_ucomile_sd:
   case Intrinsic::x86_sse2_ucomilt_sd:
-  case Intrinsic::x86_sse2_ucomineq_sd: {
+  case Intrinsic::x86_sse2_ucomineq_sd:
+  case Intrinsic::x86_avx512_mask_cmp_ss:
+  case Intrinsic::x86_avx512_mask_cmp_sd: {
     // These intrinsics only demand the 0th element of their input vectors. If
     // we can simplify the input based on that, do so now.
     bool MadeChange = false;
@@ -1774,6 +1774,45 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       II->setArgOperand(1, V);
       return II;
     }
+    break;
+  }
+
+  case Intrinsic::x86_fma_vfmadd_ss:
+  case Intrinsic::x86_fma_vfmsub_ss:
+  case Intrinsic::x86_fma_vfnmadd_ss:
+  case Intrinsic::x86_fma_vfnmsub_ss:
+  case Intrinsic::x86_fma_vfmadd_sd:
+  case Intrinsic::x86_fma_vfmsub_sd:
+  case Intrinsic::x86_fma_vfnmadd_sd:
+  case Intrinsic::x86_fma_vfnmsub_sd:
+  case Intrinsic::x86_avx512_mask_add_ss_round:
+  case Intrinsic::x86_avx512_mask_div_ss_round:
+  case Intrinsic::x86_avx512_mask_mul_ss_round:
+  case Intrinsic::x86_avx512_mask_sub_ss_round:
+  case Intrinsic::x86_avx512_mask_max_ss_round:
+  case Intrinsic::x86_avx512_mask_min_ss_round:
+  case Intrinsic::x86_avx512_mask_add_sd_round:
+  case Intrinsic::x86_avx512_mask_div_sd_round:
+  case Intrinsic::x86_avx512_mask_mul_sd_round:
+  case Intrinsic::x86_avx512_mask_sub_sd_round:
+  case Intrinsic::x86_avx512_mask_max_sd_round:
+  case Intrinsic::x86_avx512_mask_min_sd_round: {
+    // These intrinsics only demand the lowest element of the second and third
+    // input vector.
+    bool MadeChange = false;
+    Value *Arg1 = II->getArgOperand(1);
+    Value *Arg2 = II->getArgOperand(2);
+    unsigned VWidth = Arg1->getType()->getVectorNumElements();
+    if (Value *V = SimplifyDemandedVectorEltsLow(Arg1, VWidth, 1)) {
+      II->setArgOperand(1, V);
+      MadeChange = true;
+    }
+    if (Value *V = SimplifyDemandedVectorEltsLow(Arg2, VWidth, 1)) {
+      II->setArgOperand(2, V);
+      MadeChange = true;
+    }
+    if (MadeChange)
+      return II;
     break;
   }
 
@@ -2081,14 +2120,17 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   case Intrinsic::x86_ssse3_pshuf_b_128:
   case Intrinsic::x86_avx2_pshuf_b:
+  case Intrinsic::x86_avx512_pshuf_b_512:
     if (Value *V = simplifyX86pshufb(*II, *Builder))
       return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_avx_vpermilvar_ps:
   case Intrinsic::x86_avx_vpermilvar_ps_256:
+  case Intrinsic::x86_avx512_vpermilvar_ps_512:
   case Intrinsic::x86_avx_vpermilvar_pd:
   case Intrinsic::x86_avx_vpermilvar_pd_256:
+  case Intrinsic::x86_avx512_vpermilvar_pd_512:
     if (Value *V = simplifyX86vpermilvar(*II, *Builder))
       return replaceInstUsesWith(*II, V);
     break;

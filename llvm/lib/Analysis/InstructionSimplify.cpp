@@ -2804,9 +2804,11 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
-/// Simplify comparisons corresponding to integer min/max idioms.
-static Value *simplifyMinMax(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
-                             const Query &Q, unsigned MaxRecurse) {
+/// Simplify integer comparisons where at least one operand of the compare
+/// matches an integer min/max idiom.
+static Value *simplifyICmpWithMinMax(CmpInst::Predicate Pred, Value *LHS,
+                                     Value *RHS, const Query &Q,
+                                     unsigned MaxRecurse) {
   Type *ITy = GetCompareTy(LHS); // The return type.
   Value *A, *B;
   CmpInst::Predicate P = CmpInst::BAD_ICMP_PREDICATE;
@@ -3233,7 +3235,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (Value *V = simplifyICmpWithBinOp(Pred, LHS, RHS, Q, MaxRecurse))
     return V;
 
-  if (Value *V = simplifyMinMax(Pred, LHS, RHS, Q, MaxRecurse))
+  if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
     return V;
 
   // Simplify comparisons of related pointers using a powerful, recursive
