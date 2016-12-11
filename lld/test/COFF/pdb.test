@@ -1,5 +1,6 @@
 # RUN: yaml2obj %s > %t.obj
-# RUN: lld-link /debug /pdb:%t.pdb /dll /out:%t.dll /entry:main /nodefaultlib %t.obj
+# RUN: lld-link /debug /pdb:%t.pdb /dll /out:%t.dll /entry:main /nodefaultlib \
+# RUN:   /debugpdb %t.obj
 # RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
 # RUN:   -dbi-stream -ipi-stream -tpi-stream %t.pdb | FileCheck %s
 

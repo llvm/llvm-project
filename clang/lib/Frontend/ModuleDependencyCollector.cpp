@@ -38,6 +38,24 @@ public:
   }
 };
 
+struct ModuleDependencyPPCallbacks : public PPCallbacks {
+  ModuleDependencyCollector &Collector;
+  SourceManager &SM;
+  ModuleDependencyPPCallbacks(ModuleDependencyCollector &Collector,
+                              SourceManager &SM)
+      : Collector(Collector), SM(SM) {}
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange, const FileEntry *File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported) override {
+    if (!File)
+      return;
+    Collector.addFile(File->getName());
+  }
+};
+
 struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
   ModuleDependencyCollector &Collector;
   ModuleDependencyMMCallbacks(ModuleDependencyCollector &Collector)
@@ -102,6 +120,8 @@ void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
 }
 
 void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
+  PP.addPPCallbacks(llvm::make_unique<ModuleDependencyPPCallbacks>(
+      *this, PP.getSourceManager()));
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
       llvm::make_unique<ModuleDependencyMMCallbacks>(*this));
 }

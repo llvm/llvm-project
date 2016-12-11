@@ -142,6 +142,14 @@ void CompilerInstance::setModuleDepCollector(
   ModuleDepCollector = std::move(Collector);
 }
 
+static void collectHeaderMaps(const HeaderSearch &HS,
+                              std::shared_ptr<ModuleDependencyCollector> MDC) {
+  SmallVector<std::string, 4> HeaderMapFileNames;
+  HS.getHeaderMapFileNames(HeaderMapFileNames);
+  for (auto &Name : HeaderMapFileNames)
+    MDC->addFile(Name);
+}
+
 // Diagnostics
 static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
                                const CodeGenOptions *CodeGenOpts,
@@ -367,8 +375,12 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
         DepOpts.ModuleDependencyOutputDir);
   }
 
-  if (ModuleDepCollector)
+  // If there is a module dep collector, register with other dep collectors
+  // and also (a) collect header maps and (b) TODO: input vfs overlay files.
+  if (ModuleDepCollector) {
     addDependencyCollector(ModuleDepCollector);
+    collectHeaderMaps(PP->getHeaderSearchInfo(), ModuleDepCollector);
+  }
 
   for (auto &Listener : DependencyCollectors)
     Listener->attachToPreprocessor(*PP);

@@ -20,6 +20,8 @@
 #include <cassert>
 #include <limits>
 
+#include "test_macros.h"
+
 constexpr auto OverAligned = alignof(std::max_align_t) * 2;
 
 int A_constructed = 0;
@@ -41,7 +43,7 @@ struct B {
 int new_called = 0;
 alignas(OverAligned) char Buff[OverAligned * 3];
 
-void* operator new[](std::size_t s, std::align_val_t a) throw(std::bad_alloc)
+void* operator new[](std::size_t s, std::align_val_t a) TEST_THROW_SPEC(std::bad_alloc)
 {
     assert(!new_called);
     assert(s <= sizeof(Buff));
@@ -50,7 +52,7 @@ void* operator new[](std::size_t s, std::align_val_t a) throw(std::bad_alloc)
     return Buff;
 }
 
-void  operator delete[](void* p, std::align_val_t a) throw()
+void  operator delete[](void* p, std::align_val_t a) TEST_NOEXCEPT
 {
     assert(p == Buff);
     assert(static_cast<std::size_t>(a) == OverAligned);
