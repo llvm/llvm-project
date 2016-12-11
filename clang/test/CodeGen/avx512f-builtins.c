@@ -3738,37 +3738,41 @@ __m512 test_mm512_maskz_permute_ps(__mmask16 __U, __m512 __X) {
 
 __m512d test_mm512_permutevar_pd(__m512d __A, __m512i __C) {
   // CHECK-LABEL: @test_mm512_permutevar_pd
-  // CHECK: @llvm.x86.avx512.mask.vpermilvar.pd.512
+  // CHECK: @llvm.x86.avx512.vpermilvar.pd.512
   return _mm512_permutevar_pd(__A, __C); 
 }
 
 __m512d test_mm512_mask_permutevar_pd(__m512d __W, __mmask8 __U, __m512d __A, __m512i __C) {
   // CHECK-LABEL: @test_mm512_mask_permutevar_pd
-  // CHECK: @llvm.x86.avx512.mask.vpermilvar.pd.512
+  // CHECK: @llvm.x86.avx512.vpermilvar.pd.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_permutevar_pd(__W, __U, __A, __C); 
 }
 
 __m512d test_mm512_maskz_permutevar_pd(__mmask8 __U, __m512d __A, __m512i __C) {
   // CHECK-LABEL: @test_mm512_maskz_permutevar_pd
-  // CHECK: @llvm.x86.avx512.mask.vpermilvar.pd.512
+  // CHECK: @llvm.x86.avx512.vpermilvar.pd.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_permutevar_pd(__U, __A, __C); 
 }
 
 __m512 test_mm512_permutevar_ps(__m512 __A, __m512i __C) {
   // CHECK-LABEL: @test_mm512_permutevar_ps
-  // CHECK: @llvm.x86.avx512.mask.vpermilvar.ps.512
+  // CHECK: @llvm.x86.avx512.vpermilvar.ps.512
   return _mm512_permutevar_ps(__A, __C); 
 }
 
 __m512 test_mm512_mask_permutevar_ps(__m512 __W, __mmask16 __U, __m512 __A, __m512i __C) {
   // CHECK-LABEL: @test_mm512_mask_permutevar_ps
-  // CHECK: @llvm.x86.avx512.mask.vpermilvar.ps.512
+  // CHECK: @llvm.x86.avx512.vpermilvar.ps.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_permutevar_ps(__W, __U, __A, __C); 
 }
 
 __m512 test_mm512_maskz_permutevar_ps(__mmask16 __U, __m512 __A, __m512i __C) {
   // CHECK-LABEL: @test_mm512_maskz_permutevar_ps
-  // CHECK: @llvm.x86.avx512.mask.vpermilvar.ps.512
+  // CHECK: @llvm.x86.avx512.vpermilvar.ps.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_permutevar_ps(__U, __A, __C); 
 }
 

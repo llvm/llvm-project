@@ -162,7 +162,8 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   // Add an empty TPI stream.
   auto &TpiBuilder = Builder.getTpiBuilder();
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
-  addTypeInfo(Symtab, TpiBuilder);
+  if (Config->DebugPdb)
+    addTypeInfo(Symtab, TpiBuilder);
 
   // Add an empty IPI stream.
   auto &IpiBuilder = Builder.getIpiBuilder();

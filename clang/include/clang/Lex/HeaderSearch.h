@@ -464,6 +464,9 @@ public:
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
   const HeaderMap *CreateHeaderMap(const FileEntry *FE);
 
+  /// \brief Get filenames for all registered header maps.
+  void getHeaderMapFileNames(SmallVectorImpl<std::string> &Names) const;
+
   /// \brief Retrieve the name of the module file that should be used to 
   /// load the given module.
   ///

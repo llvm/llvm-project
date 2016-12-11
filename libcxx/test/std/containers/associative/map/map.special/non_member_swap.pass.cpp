@@ -121,17 +121,17 @@ int main()
             V(11, 11),
             V(12, 12)
         };
-        M m1(ar1, ar1+sizeof(ar1)/sizeof(ar1[0]), C(1), A(1));
-        M m2(ar2, ar2+sizeof(ar2)/sizeof(ar2[0]), C(2), A(2));
+        M m1(ar1, ar1+sizeof(ar1)/sizeof(ar1[0]), C(1), A(1, 1));
+        M m2(ar2, ar2+sizeof(ar2)/sizeof(ar2[0]), C(2), A(1, 2));
         M m1_save = m1;
         M m2_save = m2;
         swap(m1, m2);
         assert(m1 == m2_save);
         assert(m2 == m1_save);
         assert(m1.key_comp() == C(2));
-        assert(m1.get_allocator() == A(1));
+        assert(m1.get_allocator().get_id() == 1); // not swapped
         assert(m2.key_comp() == C(1));
-        assert(m2.get_allocator() == A(2));
+        assert(m2.get_allocator().get_id() == 2);
     }
     {
         typedef other_allocator<V> A;

@@ -540,6 +540,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_nosymtab))
     Config->WriteSymtab = false;
   Config->DumpPdb = Args.hasArg(OPT_dumppdb);
+  Config->DebugPdb = Args.hasArg(OPT_debugpdb);
 
   // Create a list of input files. Files can be given as arguments
   // for /defaultlib option.

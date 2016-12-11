@@ -153,6 +153,7 @@ struct Configuration {
   bool HighEntropyVA = false;
 
   // This is for debugging.
+  bool DebugPdb = false;
   bool DumpPdb = false;
 };
 

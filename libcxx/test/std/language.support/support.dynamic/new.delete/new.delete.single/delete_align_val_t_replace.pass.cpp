@@ -23,6 +23,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 constexpr auto OverAligned = alignof(std::max_align_t) * 2;
 
 int unsized_delete_called = 0;
@@ -35,19 +37,19 @@ void reset() {
     aligned_delete_called = 0;
 }
 
-void operator delete(void* p) throw()
+void operator delete(void* p) TEST_NOEXCEPT
 {
     ++unsized_delete_called;
     std::free(p);
 }
 
-void operator delete(void* p, const std::nothrow_t&) throw()
+void operator delete(void* p, const std::nothrow_t&) TEST_NOEXCEPT
 {
     ++unsized_delete_nothrow_called;
     std::free(p);
 }
 
-void operator delete(void* p, std::align_val_t a) throw()
+void operator delete(void* p, std::align_val_t a) TEST_NOEXCEPT
 {
     ++aligned_delete_called;
     std::free(p);
