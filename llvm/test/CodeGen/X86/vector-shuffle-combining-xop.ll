@@ -272,6 +272,29 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res3
 }
 
+define void @buildvector_v4f23_0404(float %a, float %b, <4 x float>* %ptr) {
+; X32-LABEL: buildvector_v4f23_0404:
+; X32:       # BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X32-NEXT:    vmovaps %xmm0, (%eax)
+; X32-NEXT:    retl
+;
+; X64-LABEL: buildvector_v4f23_0404:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[0],xmm1[0]
+; X64-NEXT:    vmovaps %xmm0, (%rdi)
+; X64-NEXT:    retq
+  %v0 = insertelement <4 x float> undef, float %a, i32 0
+  %v1 = insertelement <4 x float> %v0,   float %b, i32 1
+  %v2 = insertelement <4 x float> %v1,   float %a, i32 2
+  %v3 = insertelement <4 x float> %v2,   float %b, i32 3
+  store <4 x float> %v3, <4 x float>* %ptr
+  ret void
+}
+
 define <2 x double> @constant_fold_vpermil2pd() {
 ; X32-LABEL: constant_fold_vpermil2pd:
 ; X32:       # BB#0:

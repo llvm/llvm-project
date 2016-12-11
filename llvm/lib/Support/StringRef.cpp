@@ -148,16 +148,20 @@ size_t StringRef::find(StringRef Str, size_t From) const {
   if (From > Length)
     return npos;
 
+  const char *Start = Data + From;
+  size_t Size = Length - From;
+
   const char *Needle = Str.data();
   size_t N = Str.size();
   if (N == 0)
     return From;
-
-  size_t Size = Length - From;
   if (Size < N)
     return npos;
+  if (N == 1) {
+    const char *Ptr = (const char *)::memchr(Start, Needle[0], Size);
+    return Ptr == nullptr ? npos : Ptr - Data;
+  }
 
-  const char *Start = Data + From;
   const char *Stop = Start + (Size - N + 1);
 
   // For short haystacks or unsupported needles fall back to the naive algorithm
@@ -177,11 +181,13 @@ size_t StringRef::find(StringRef Str, size_t From) const {
     BadCharSkip[(uint8_t)Str[i]] = N-1-i;
 
   do {
-    if (std::memcmp(Start, Needle, N) == 0)
-      return Start - Data;
+    uint8_t Last = Start[N - 1];
+    if (LLVM_UNLIKELY(Last == (uint8_t)Needle[N - 1]))
+      if (std::memcmp(Start, Needle, N - 1) == 0)
+        return Start - Data;
 
     // Otherwise skip the appropriate number of bytes.
-    Start += BadCharSkip[(uint8_t)Start[N-1]];
+    Start += BadCharSkip[Last];
   } while (Start < Stop);
 
   return npos;

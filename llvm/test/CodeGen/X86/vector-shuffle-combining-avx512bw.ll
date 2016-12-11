@@ -593,9 +593,7 @@ define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ; X32:       # BB#0:
 ; X32-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
 ; X32-NEXT:    vmovdqu8 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    kunpckdq %k0, %k1, %k1
+; X32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3
 ; X32-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X32-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
@@ -604,9 +602,9 @@ define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ;
 ; X64-LABEL: combine_pshufb_identity_mask:
 ; X64:       # BB#0:
-; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
 ; X64-NEXT:    vmovdqu8 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3
 ; X64-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X64-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
@@ -759,9 +757,7 @@ define <64 x i8> @combine_pshufb_as_pslldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_pslldq_mask(<64 x i8> %a0, i64 %m) {
 ; X32-LABEL: combine_pshufb_as_pslldq_mask:
 ; X32:       # BB#0:
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    kunpckdq %k0, %k1, %k1
+; X32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
 ; X32-NEXT:    retl
 ;
@@ -790,9 +786,7 @@ define <64 x i8> @combine_pshufb_as_psrldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_psrldq_mask(<64 x i8> %a0, i64 %m) {
 ; X32-LABEL: combine_pshufb_as_psrldq_mask:
 ; X32:       # BB#0:
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    kunpckdq %k0, %k1, %k1
+; X32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    retl
 ;
