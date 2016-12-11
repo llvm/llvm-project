@@ -14,8 +14,10 @@
 // template <class... Args> reference emplace_back(Args&&... args);
 
 #include <deque>
+#include <cstddef>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"
 #include "test_allocator.h"
@@ -51,7 +53,8 @@ test(C& c1)
     std::size_t c1_osize = c1.size();
     Ref ref = c1.emplace_back(Emplaceable(1, 2.5));
     assert(c1.size() == c1_osize + 1);
-    assert(distance(c1.begin(), c1.end()) == c1.size());
+    assert(distance(c1.begin(), c1.end())
+               == static_cast<std::ptrdiff_t>(c1.size()));
     I i = c1.end();
     assert(*--i == Emplaceable(1, 2.5));
     assert(&(*i) == &ref);

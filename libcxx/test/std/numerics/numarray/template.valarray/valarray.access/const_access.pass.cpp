@@ -23,7 +23,7 @@ int main()
         T a[] = {5, 4, 3, 2, 1};
         const unsigned N = sizeof(a)/sizeof(a[0]);
         const std::valarray<T> v(a, N);
-        for (int i = 0; i < N; ++i)
+        for (unsigned i = 0; i < N; ++i)
         {
             assert(v[i] == a[i]);
         }

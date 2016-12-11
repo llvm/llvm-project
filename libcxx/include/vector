@@ -3093,7 +3093,9 @@ typename enable_if
 >::type
 vector<bool, _Allocator>::insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last)
 {
-    difference_type __n = _VSTD::distance(__first, __last);
+    const difference_type __n_signed = _VSTD::distance(__first, __last);
+    _LIBCPP_ASSERT(__n_signed >= 0, "invalid range specified");
+    const size_type __n = static_cast<size_type>(__n_signed);
     iterator __r;
     size_type __c = capacity();
     if (__n <= __c && size() <= __c - __n)

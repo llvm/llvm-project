@@ -63,7 +63,7 @@ test_sort_driver(RI f, RI l, int start)
     test_sort_driver_driver(f, l, start, l);
 }
 
-template <unsigned sa>
+template <int sa>
 void
 test_sort_()
 {
