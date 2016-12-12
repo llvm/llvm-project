@@ -65,6 +65,17 @@ define i1 @gep4() {
 ; CHECK-NEXT: ret i1 false
 }
 
+@a = common global [1 x i32] zeroinitializer, align 4
+
+define i1 @PR31262() {
+; CHECK-LABEL: @PR31262(
+; CHECK-NEXT:    ret i1 icmp uge (i32* getelementptr ([1 x i32], [1 x i32]* @a, i64 0, i64 undef), i32* getelementptr inbounds ([1 x i32], [1 x i32]* @a, i32 0, i32 0))
+;
+  %idx = getelementptr inbounds [1 x i32], [1 x i32]* @a, i64 0, i64 undef
+  %cmp = icmp uge i32* %idx, getelementptr inbounds ([1 x i32], [1 x i32]* @a, i32 0, i32 0)
+  ret i1 %cmp
+}
+
 define i1 @gep5() {
 ; CHECK-LABEL: @gep5(
   %x = alloca %gept, align 8

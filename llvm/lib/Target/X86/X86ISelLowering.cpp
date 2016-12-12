@@ -2100,14 +2100,26 @@ const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
 }
 
 /// Lowers masks values (v*i1) to the local register values
+/// \returns DAG node after lowering to register type
 static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,
                                const SDLoc &Dl, SelectionDAG &DAG) {
   EVT ValVT = ValArg.getValueType();
 
-  if (ValVT == MVT::v64i1 && ValLoc == MVT::i64) {
+  if ((ValVT == MVT::v8i1 && (ValLoc == MVT::i8 || ValLoc == MVT::i32)) ||
+      (ValVT == MVT::v16i1 && (ValLoc == MVT::i16 || ValLoc == MVT::i32))) {
+    // Two stage lowering might be required
+    // bitcast:   v8i1 -> i8 / v16i1 -> i16
+    // anyextend: i8   -> i32 / i16   -> i32
+    EVT TempValLoc = ValVT == MVT::v8i1 ? MVT::i8 : MVT::i16;
+    SDValue ValToCopy = DAG.getBitcast(TempValLoc, ValArg);
+    if (ValLoc == MVT::i32)
+      ValToCopy = DAG.getNode(ISD::ANY_EXTEND, Dl, ValLoc, ValToCopy);
+    return ValToCopy;
+  } else if ((ValVT == MVT::v32i1 && ValLoc == MVT::i32) ||
+             (ValVT == MVT::v64i1 && ValLoc == MVT::i64)) {
     // One stage lowering is required
-    // bitcast:   v64i1 -> i64
-    return DAG.getBitcast(MVT::i64, ValArg);
+    // bitcast:   v32i1 -> i32 / v64i1 -> i64
+    return DAG.getBitcast(ValLoc, ValArg);
   } else
     return DAG.getNode(ISD::SIGN_EXTEND, Dl, ValLoc, ValArg);
 }
@@ -2379,14 +2391,14 @@ EVT X86TargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
 }
 
 /// Reads two 32 bit registers and creates a 64 bit mask value.
-/// @param VA The current 32 bit value that need to be assigned.
-/// @param NextVA The next 32 bit value that need to be assigned.
-/// @param Root The parent DAG node.
-/// @param [in,out] InFlag Represents SDvalue in the parent DAG node for
+/// \param VA The current 32 bit value that need to be assigned.
+/// \param NextVA The next 32 bit value that need to be assigned.
+/// \param Root The parent DAG node.
+/// \param [in,out] InFlag Represents SDvalue in the parent DAG node for
 ///                        glue purposes. In the case the DAG is already using
 ///                        physical register instead of virtual, we should glue
 ///                        our new SDValue to InFlag SDvalue.
-/// @return a new SDvalue of size 64bit.
+/// \return a new SDvalue of size 64bit.
 static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
                                 SDValue &Root, SelectionDAG &DAG,
                                 const SDLoc &Dl, const X86Subtarget &Subtarget,
@@ -2436,23 +2448,38 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
   return DAG.getNode(ISD::CONCAT_VECTORS, Dl, MVT::v64i1, Lo, Hi);
 }
 
+/// The function will lower a register of various sizes (8/16/32/64)
+/// to a mask value of the expected size (v8i1/v16i1/v32i1/v64i1)
+/// \returns a DAG node contains the operand after lowering to mask type.
 static SDValue lowerRegToMasks(const SDValue &ValArg, const EVT &ValVT,
                                const EVT &ValLoc, const SDLoc &Dl,
                                SelectionDAG &DAG) {
-  assert((ValLoc == MVT::i64 || ValLoc == MVT::i32) &&
-         "Expecting register location of size 32/64 bit");
+  SDValue ValReturned = ValArg;
 
-  // Currently not referenced - will be used in other mask lowering
-  (void)Dl;
+  if (ValVT == MVT::v64i1) {
+    // In 32 bit machine, this case is handled by getv64i1Argument
+    assert(ValLoc == MVT::i64 && "Expecting only i64 locations");
+    // In 64 bit machine, There is no need to truncate the value only bitcast
+  } else {
+    MVT maskLen;
+    switch (ValVT.getSimpleVT().SimpleTy) {
+    case MVT::v8i1:
+      maskLen = MVT::i8;
+      break;
+    case MVT::v16i1:
+      maskLen = MVT::i16;
+      break;
+    case MVT::v32i1:
+      maskLen = MVT::i32;
+      break;
+    default:
+      llvm_unreachable("Expecting a vector of i1 types");
+    }
 
-  // In the case of v64i1 no special handling is required due to two reasons:
-  // In 32 bit machine, this case is handled by getv64i1Argument
-  // In 64 bit machine, There is no need to truncate the value only bitcast
-  if (ValVT == MVT::v64i1 && ValLoc == MVT::i32) {
-    llvm_unreachable("Expecting only i64 locations");
+    ValReturned = DAG.getNode(ISD::TRUNCATE, Dl, maskLen, ValReturned);
   }
 
-  return DAG.getBitcast(ValVT, ValArg);
+  return DAG.getBitcast(ValVT, ValReturned);
 }
 
 /// Lower the result values of a call into the
@@ -2513,8 +2540,9 @@ SDValue X86TargetLowering::LowerCallResult(
 
     if (VA.isExtInLoc() && (VA.getValVT().getScalarType() == MVT::i1)) {
       if (VA.getValVT().isVector() &&
-          (VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::i64)) {
-        // promoting a mask type (v*i1) into a register of type i64/i32
+          ((VA.getLocVT() == MVT::i64) || (VA.getLocVT() == MVT::i32) ||
+           (VA.getLocVT() == MVT::i16) || (VA.getLocVT() == MVT::i8))) {
+        // promoting a mask type (v*i1) into a register of type i64/i32/i16/i8
         Val = lowerRegToMasks(Val, VA.getValVT(), VA.getLocVT(), dl, DAG);
       } else
         Val = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), Val);
@@ -2867,8 +2895,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
           ArgValue = DAG.getNode(X86ISD::MOVDQ2Q, dl, VA.getValVT(), ArgValue);
         else if (VA.getValVT().isVector() &&
                  VA.getValVT().getScalarType() == MVT::i1 &&
-                 ((RegVT == MVT::i32) || (RegVT == MVT::i64))) {
-          // Promoting a mask type (v*i1) into a register of type i64/i32
+                 ((VA.getLocVT() == MVT::i64) || (VA.getLocVT() == MVT::i32) ||
+                  (VA.getLocVT() == MVT::i16) || (VA.getLocVT() == MVT::i8))) {
+          // Promoting a mask type (v*i1) into a register of type i64/i32/i16/i8
           ArgValue = lowerRegToMasks(ArgValue, VA.getValVT(), RegVT, dl, DAG);
         } else
           ArgValue = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), ArgValue);
@@ -11838,35 +11867,52 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
                               SubLaneMask);
 }
 
-static SDValue lowerVectorShuffleWithSHUFPD(const SDLoc &DL, MVT VT,
-                                            ArrayRef<int> Mask, SDValue V1,
-                                            SDValue V2, SelectionDAG &DAG) {
+static bool matchVectorShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
+                                         unsigned &ShuffleImm,
+                                         ArrayRef<int> Mask) {
+  int NumElts = VT.getVectorNumElements();
+  assert(VT.getScalarType() == MVT::f64 &&
+         (NumElts == 2 || NumElts == 4 || NumElts == 8) &&
+         "Unexpected data type for VSHUFPD");
 
   // Mask for V8F64: 0/1,  8/9,  2/3,  10/11, 4/5, ..
   // Mask for V4F64; 0/1,  4/5,  2/3,  6/7..
-  assert(VT.getScalarSizeInBits() == 64 && "Unexpected data type for VSHUFPD");
-  int NumElts = VT.getVectorNumElements();
+  ShuffleImm = 0;
   bool ShufpdMask = true;
   bool CommutableMask = true;
-  unsigned Immediate = 0;
   for (int i = 0; i < NumElts; ++i) {
-    if (Mask[i] < 0)
+    if (Mask[i] == SM_SentinelUndef)
       continue;
+    if (Mask[i] < 0)
+      return false;
     int Val = (i & 6) + NumElts * (i & 1);
-    int CommutVal = (i & 0xe) + NumElts * ((i & 1)^1);
-    if (Mask[i] < Val ||  Mask[i] > Val + 1)
+    int CommutVal = (i & 0xe) + NumElts * ((i & 1) ^ 1);
+    if (Mask[i] < Val || Mask[i] > Val + 1)
       ShufpdMask = false;
-    if (Mask[i] < CommutVal ||  Mask[i] > CommutVal + 1)
+    if (Mask[i] < CommutVal || Mask[i] > CommutVal + 1)
       CommutableMask = false;
-    Immediate |= (Mask[i] % 2) << i;
+    ShuffleImm |= (Mask[i] % 2) << i;
   }
+
   if (ShufpdMask)
-    return DAG.getNode(X86ISD::SHUFP, DL, VT, V1, V2,
-                       DAG.getConstant(Immediate, DL, MVT::i8));
-  if (CommutableMask)
-    return DAG.getNode(X86ISD::SHUFP, DL, VT, V2, V1,
-                       DAG.getConstant(Immediate, DL, MVT::i8));
-  return SDValue();
+    return true;
+  if (CommutableMask) {
+    std::swap(V1, V2);
+    return true;
+  }
+
+  return false;
+}
+
+static SDValue lowerVectorShuffleWithSHUFPD(const SDLoc &DL, MVT VT,
+                                            ArrayRef<int> Mask, SDValue V1,
+                                            SDValue V2, SelectionDAG &DAG) {
+  unsigned Immediate = 0;
+  if (!matchVectorShuffleWithSHUFPD(VT, V1, V2, Immediate, Mask))
+    return SDValue();
+
+  return DAG.getNode(X86ISD::SHUFP, DL, VT, V1, V2,
+                     DAG.getConstant(Immediate, DL, MVT::i8));
 }
 
 static SDValue lowerVectorShuffleWithPERMV(const SDLoc &DL, MVT VT,
@@ -26166,6 +26212,17 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
         matchVectorShuffleAsInsertPS(V1, V2, PermuteImm, Zeroable, Mask, DAG)) {
       Shuffle = X86ISD::INSERTPS;
       ShuffleVT = MVT::v4f32;
+      return true;
+    }
+  }
+
+  // Attempt to combine to SHUFPD.
+  if ((MaskVT == MVT::v2f64 && Subtarget.hasSSE2()) ||
+      (MaskVT == MVT::v4f64 && Subtarget.hasAVX()) ||
+      (MaskVT == MVT::v8f64 && Subtarget.hasAVX512())) {
+    if (matchVectorShuffleWithSHUFPD(MaskVT, V1, V2, PermuteImm, Mask)) {
+      Shuffle = X86ISD::SHUFP;
+      ShuffleVT = MaskVT;
       return true;
     }
   }

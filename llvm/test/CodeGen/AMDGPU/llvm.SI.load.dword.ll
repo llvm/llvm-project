@@ -49,4 +49,5 @@ declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float
 
 attributes #0 = { nounwind readonly }
 
-!0 = !{!"const", null, i32 1}
+!0 = !{!"const", !1, i32 1}
+!1 = !{!"tbaa root"}

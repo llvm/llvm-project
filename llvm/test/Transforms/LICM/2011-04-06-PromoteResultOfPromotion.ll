@@ -32,7 +32,7 @@ for.end:                                          ; preds = %for.inc
 
 !0 = !{!5, !5, i64 0}
 !1 = !{!"omnipotent char", !2}
-!2 = !{!"Simple C/C++ TBAA", null}
+!2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!"short", !1}
 !4 = !{!6, !6, i64 0}
 !5 = !{!"any pointer", !1}

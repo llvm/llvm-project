@@ -497,4 +497,5 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0, i32 1}
-!1 = !{!"const", null}
+!1 = !{!"const", !2}
+!2 = !{!"tbaa root"}

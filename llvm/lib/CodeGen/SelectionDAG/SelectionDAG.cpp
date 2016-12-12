@@ -2977,6 +2977,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
       return ComputeNumSignBits(Op.getOperand(0), Depth+1);
     break;
   }
+  case ISD::EXTRACT_SUBVECTOR:
+    return ComputeNumSignBits(Op.getOperand(0), Depth + 1);
   case ISD::CONCAT_VECTORS:
     // Determine the minimum number of sign bits across all input vectors.
     // Early out if the result is already 1.

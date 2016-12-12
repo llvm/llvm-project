@@ -17,7 +17,7 @@ define double @test_vfrcz_sd_0(double %a) {
 
 define double @test_vfrcz_sd_1(double %a) {
 ; CHECK-LABEL: @test_vfrcz_sd_1(
-; CHECK-NEXT:    ret double 1.000000e+00
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %1 = insertelement <2 x double> undef, double %a, i32 0
   %2 = insertelement <2 x double> %1, double 1.000000e+00, i32 1
@@ -44,7 +44,7 @@ define float @test_vfrcz_ss_0(float %a) {
 
 define float @test_vfrcz_ss_3(float %a) {
 ; CHECK-LABEL: @test_vfrcz_ss_3(
-; CHECK-NEXT:    ret float 3.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %1 = insertelement <4 x float> undef, float %a, i32 0
   %2 = insertelement <4 x float> %1, float 1.000000e+00, i32 1

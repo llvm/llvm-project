@@ -91,5 +91,6 @@ if.else:
 !4 = !{!8, !8, i64 0}
 !5 = !{!"red", !0}
 !6 = !{!"blu", !0}
-!7 = !{!"outer space"}
+!7 = !{!"outer space", !9}
 !8 = !{!"brick red", !5}
+!9 = !{!"observable universe"}

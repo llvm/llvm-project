@@ -1619,4 +1619,5 @@ attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind readonly }
 
 !0 = !{!1, !1, i64 0, i32 1}
-!1 = !{!"const", null}
+!1 = !{!"const", !2}
+!2 = !{!"tbaa root"}

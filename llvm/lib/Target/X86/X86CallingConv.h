@@ -41,7 +41,6 @@ inline bool CC_X86_32_VectorCallIndirect(unsigned &ValNo, MVT &ValVT,
   return false; // Continue the search, but now for i32.
 }
 
-
 inline bool CC_X86_AnyReg_Error(unsigned &, MVT &, MVT &,
                                 CCValAssign::LocInfo &, ISD::ArgFlagsTy &,
                                 CCState &) {
@@ -49,13 +48,6 @@ inline bool CC_X86_AnyReg_Error(unsigned &, MVT &, MVT &,
                    "stackmap and patchpoint intrinsics.");
   // gracefully fallback to X86 C calling convention on Release builds.
   return false;
-}
-
-inline bool CC_X86_RegCall_Error(unsigned &, MVT &, MVT &,
-                                 CCValAssign::LocInfo &, ISD::ArgFlagsTy &,
-                                 CCState &) {
-  report_fatal_error("LLVM x86 RegCall calling convention implementation" \
-    " doesn't support long double and mask types yet.");
 }
 
 inline bool CC_X86_32_MCUInReg(unsigned &ValNo, MVT &ValVT,
