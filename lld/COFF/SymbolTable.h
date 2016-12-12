@@ -11,6 +11,7 @@
 #define LLD_COFF_SYMBOL_TABLE_H
 
 #include "InputFiles.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Allocator.h"
@@ -20,9 +21,6 @@
 // <future> depends on <eh.h> for __uncaught_exception.
 #include <eh.h>
 #endif
-
-#include <future>
-#include <list>
 
 namespace llvm {
 struct LTOCodeGenerator;
@@ -56,10 +54,6 @@ struct Symbol;
 class SymbolTable {
 public:
   void addFile(InputFile *File);
-  std::vector<InputFile *> &getFiles() { return Files; }
-  void step();
-  void run();
-  bool queueEmpty();
 
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
@@ -127,11 +121,7 @@ private:
   void addCombinedLTOObject(ObjectFile *Obj);
   std::vector<ObjectFile *> createLTOObjects(llvm::LTOCodeGenerator *CG);
 
-  llvm::DenseMap<StringRef, Symbol *> Symtab;
-
-  std::vector<InputFile *> Files;
-  std::list<ArchiveFile *> ArchiveQueue;
-  std::vector<InputFile *> ObjectQueue;
+  llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> Symtab;
 
   std::vector<BitcodeFile *> BitcodeFiles;
   std::vector<SmallString<0>> Objs;

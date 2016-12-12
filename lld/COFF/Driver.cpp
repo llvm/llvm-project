@@ -575,27 +575,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     MBs.erase(It, MBs.end());
   }
 
-  // Read all input files given via the command line. Note that step()
-  // doesn't read files that are specified by directive sections.
+  // Read all input files given via the command line.
   for (MemoryBufferRef MB : MBs)
     Symtab.addFile(createFile(MB));
-  Symtab.step();
 
-  // Determine machine type and check if all object files are
-  // for the same CPU type. Note that this needs to be done before
-  // any call to mangle().
-  for (InputFile *File : Symtab.getFiles()) {
-    MachineTypes MT = File->getMachineType();
-    if (MT == IMAGE_FILE_MACHINE_UNKNOWN)
-      continue;
-    if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-      Config->Machine = MT;
-      continue;
-    }
-    if (Config->Machine != MT)
-      fatal(toString(File) + ": machine type " + machineToStr(MT) +
-            " conflicts with " + machineToStr(Config->Machine));
-  }
+  // We should have inferred a machine type by now from the input files, but if
+  // not we assume x64.
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
     errs() << "warning: /machine is not specified. x64 is assumed.\n";
     Config->Machine = AMD64;
@@ -686,49 +671,36 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab.addAbsolute(mangle("__guard_fids_count"), 0);
   Symtab.addAbsolute(mangle("__guard_flags"), 0x100);
 
-  // Read as much files as we can from directives sections.
-  Symtab.run();
+  // Windows specific -- if entry point is not found,
+  // search for its mangled names.
+  if (Config->Entry)
+    Symtab.mangleMaybe(Config->Entry);
 
-  // Resolve auxiliary symbols until we get a convergence.
-  // (Trying to resolve a symbol may trigger a Lazy symbol to load a new file.
-  // A new file may contain a directive section to add new command line options.
-  // That's why we have to repeat until converge.)
-  for (;;) {
-    // Windows specific -- if entry point is not found,
-    // search for its mangled names.
-    if (Config->Entry)
-      Symtab.mangleMaybe(Config->Entry);
-
-    // Windows specific -- Make sure we resolve all dllexported symbols.
-    for (Export &E : Config->Exports) {
-      if (!E.ForwardTo.empty())
-        continue;
-      E.Sym = addUndefined(E.Name);
-      if (!E.Directives)
-        Symtab.mangleMaybe(E.Sym);
-    }
-
-    // Add weak aliases. Weak aliases is a mechanism to give remaining
-    // undefined symbols final chance to be resolved successfully.
-    for (auto Pair : Config->AlternateNames) {
-      StringRef From = Pair.first;
-      StringRef To = Pair.second;
-      Symbol *Sym = Symtab.find(From);
-      if (!Sym)
-        continue;
-      if (auto *U = dyn_cast<Undefined>(Sym->body()))
-        if (!U->WeakAlias)
-          U->WeakAlias = Symtab.addUndefined(To);
-    }
-
-    // Windows specific -- if __load_config_used can be resolved, resolve it.
-    if (Symtab.findUnderscore("_load_config_used"))
-      addUndefined(mangle("_load_config_used"));
-
-    if (Symtab.queueEmpty())
-      break;
-    Symtab.run();
+  // Windows specific -- Make sure we resolve all dllexported symbols.
+  for (Export &E : Config->Exports) {
+    if (!E.ForwardTo.empty())
+      continue;
+    E.Sym = addUndefined(E.Name);
+    if (!E.Directives)
+      Symtab.mangleMaybe(E.Sym);
   }
+
+  // Add weak aliases. Weak aliases is a mechanism to give remaining
+  // undefined symbols final chance to be resolved successfully.
+  for (auto Pair : Config->AlternateNames) {
+    StringRef From = Pair.first;
+    StringRef To = Pair.second;
+    Symbol *Sym = Symtab.find(From);
+    if (!Sym)
+      continue;
+    if (auto *U = dyn_cast<Undefined>(Sym->body()))
+      if (!U->WeakAlias)
+        U->WeakAlias = Symtab.addUndefined(To);
+  }
+
+  // Windows specific -- if __load_config_used can be resolved, resolve it.
+  if (Symtab.findUnderscore("_load_config_used"))
+    addUndefined(mangle("_load_config_used"));
 
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files.

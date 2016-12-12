@@ -32,13 +32,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(HandleOutOfTreeLLVM)
 endif()
 
-if (LIBCXX_STANDALONE_BUILD AND NOT LLVM_FOUND)
-  message(WARNING "UNSUPPORTED LIBCXX CONFIGURATION DETECTED: "
-                  "llvm-config not found and LLVM_PATH not defined.\n"
-                  "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config "
-                  "or -DLLVM_PATH=path/to/llvm-source-root.")
-endif()
-
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
 MACRO_ENSURE_OUT_OF_SOURCE_BUILD(

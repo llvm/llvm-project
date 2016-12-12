@@ -41,6 +41,10 @@ macro(find_llvm_parts)
     set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
   else()
     set(LLVM_FOUND OFF)
+    message(WARNING "UNSUPPORTED LIBCXX CONFIGURATION DETECTED: "
+                    "llvm-config not found and LLVM_PATH not defined.\n"
+                    "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config "
+                    "or -DLLVM_PATH=path/to/llvm-source-root.")
     return()
   endif()
 

@@ -55,29 +55,19 @@ void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
   File = check(Archive::create(MB), toString(this));
 
-  // Seen is a map from member files to boolean values. Initially
-  // all members are mapped to false, which indicates all these files
-  // are not read yet.
-  Error Err = Error::success();
-  for (auto &Child : File->children(Err))
-    Seen[Child.getChildOffset()].clear();
-  if (Err)
-    fatal(Err, toString(this));
-
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &Sym : File->symbols())
     Symtab->addLazy(this, Sym);
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
-// This function is thread-safe.
 InputFile *ArchiveFile::getMember(const Archive::Symbol *Sym) {
   const Archive::Child &C =
       check(Sym->getMember(),
             "could not get the member for symbol " + Sym->getName());
 
   // Return an empty buffer if we have already returned the same buffer.
-  if (Seen[C.getChildOffset()].test_and_set())
+  if (!Seen.insert(C.getChildOffset()).second)
     return nullptr;
 
   MemoryBufferRef MB =

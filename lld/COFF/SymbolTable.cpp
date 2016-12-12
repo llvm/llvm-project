@@ -27,76 +27,33 @@ namespace coff {
 SymbolTable *Symtab;
 
 void SymbolTable::addFile(InputFile *File) {
-  Files.push_back(File);
-  if (auto *F = dyn_cast<ArchiveFile>(File)) {
-    ArchiveQueue.push_back(F);
-    return;
+  if (Config->Verbose)
+    outs() << "Reading " << toString(File) << "\n";
+  File->parse();
+
+  MachineTypes MT = File->getMachineType();
+  if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
+    Config->Machine = MT;
+  } else if (MT != IMAGE_FILE_MACHINE_UNKNOWN && Config->Machine != MT) {
+    fatal(toString(File) + ": machine type " + machineToStr(MT) +
+          " conflicts with " + machineToStr(Config->Machine));
   }
-  ObjectQueue.push_back(File);
+
   if (auto *F = dyn_cast<ObjectFile>(File)) {
     ObjectFiles.push_back(F);
   } else if (auto *F = dyn_cast<BitcodeFile>(File)) {
     BitcodeFiles.push_back(F);
-  } else {
-    ImportFiles.push_back(cast<ImportFile>(File));
+  } else if (auto *F = dyn_cast<ImportFile>(File)) {
+    ImportFiles.push_back(F);
   }
-}
 
-void SymbolTable::step() {
-  if (queueEmpty())
-    return;
-  readObjects();
-  readArchive();
-}
-
-void SymbolTable::run() {
-  while (!queueEmpty())
-    step();
-}
-
-void SymbolTable::readArchive() {
-  if (ArchiveQueue.empty())
+  StringRef S = File->getDirectives();
+  if (S.empty())
     return;
 
-  // Add lazy symbols to the symbol table. Lazy symbols that conflict
-  // with existing undefined symbols are accumulated in LazySyms.
-  ArchiveFile *File = ArchiveQueue.front();
-  ArchiveQueue.pop_front();
   if (Config->Verbose)
-    outs() << "Reading " << toString(File) << "\n";
-  File->parse();
-}
-
-void SymbolTable::readObjects() {
-  if (ObjectQueue.empty())
-    return;
-
-  // Add defined and undefined symbols to the symbol table.
-  std::vector<StringRef> Directives;
-  for (size_t I = 0; I < ObjectQueue.size(); ++I) {
-    InputFile *File = ObjectQueue[I];
-    if (Config->Verbose)
-      outs() << "Reading " << toString(File) << "\n";
-    File->parse();
-    // Adding symbols may add more files to ObjectQueue
-    // (but not to ArchiveQueue).
-    StringRef S = File->getDirectives();
-    if (!S.empty()) {
-      Directives.push_back(S);
-      if (Config->Verbose)
-        outs() << "Directives: " << toString(File) << ": " << S << "\n";
-    }
-  }
-  ObjectQueue.clear();
-
-  // Parse directive sections. This may add files to
-  // ArchiveQueue and ObjectQueue.
-  for (StringRef S : Directives)
-    Driver->parseDirectives(S);
-}
-
-bool SymbolTable::queueEmpty() {
-  return ArchiveQueue.empty() && ObjectQueue.empty();
+    outs() << "Directives: " << toString(File) << ": " << S << "\n";
+  Driver->parseDirectives(S);
 }
 
 void SymbolTable::reportRemainingUndefines() {
@@ -160,7 +117,7 @@ void SymbolTable::reportRemainingUndefines() {
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
-  Symbol *&Sym = Symtab[Name];
+  Symbol *&Sym = Symtab[CachedHashStringRef(Name)];
   if (Sym)
     return {Sym, false};
   Sym = make<Symbol>();
@@ -345,7 +302,7 @@ std::vector<Chunk *> SymbolTable::getChunks() {
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  auto It = Symtab.find(Name);
+  auto It = Symtab.find(CachedHashStringRef(Name));
   if (It == Symtab.end())
     return nullptr;
   return It->second;
@@ -359,7 +316,7 @@ Symbol *SymbolTable::findUnderscore(StringRef Name) {
 
 StringRef SymbolTable::findByPrefix(StringRef Prefix) {
   for (auto Pair : Symtab) {
-    StringRef Name = Pair.first;
+    StringRef Name = Pair.first.val();
     if (Name.startswith(Prefix))
       return Name;
   }
@@ -419,7 +376,6 @@ void SymbolTable::addCombinedLTOObjects() {
   size_t NumBitcodeFiles = BitcodeFiles.size();
   for (ObjectFile *Obj : Objs)
     Obj->parse();
-  run();
   if (BitcodeFiles.size() != NumBitcodeFiles)
     fatal("LTO: late loaded symbol created new bitcode reference");
 }
@@ -465,7 +421,6 @@ std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
   std::vector<ObjectFile *> ObjFiles;
   for (SmallString<0> &Obj : Objs) {
     auto *ObjFile = new ObjectFile(MemoryBufferRef(Obj, "<LTO object>"));
-    Files.emplace_back(ObjFile);
     ObjectFiles.push_back(ObjFile);
     ObjFiles.push_back(ObjFile);
   }
