@@ -97,6 +97,11 @@ public:
     abbrev.Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, Width));
   }
 
+  static void assertValid(const bool &data) {
+    assert(llvm::isUInt<Width>(data) &&
+           "data value does not fit in the given bit width");
+  }
+
   template<typename T>
   static void assertValid(const T &data) {
     assert(data >= 0 && "cannot encode signed integers");
