@@ -10,4 +10,6 @@ define weak void @foo(i32* %p) {
   ret void
 }
 
-!0 = !{!"Simple C/C++ TBAA"}
+!0 = !{!1, !1, i64 0}
+!1 = !{!"int", !2}
+!2 = !{!"Simple C/C++ TBAA"}

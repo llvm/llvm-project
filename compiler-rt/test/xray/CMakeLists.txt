@@ -1,12 +1,15 @@
 set(XRAY_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(XRAY_TESTSUITES)
+set(XRAY_FDR_TESTSUITES)
 
 set(XRAY_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
+set(XRAY_FDR_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 
 if(NOT COMPILER_RT_STANDALONE_BUILD AND COMPILER_RT_BUILD_XRAY AND
    COMPILER_RT_HAS_XRAY)
   list(APPEND XRAY_TEST_DEPS xray)
+  list(APPEND XRAY_FDR_TEST_DEPS xray-fdr)
 endif()
 
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
@@ -38,3 +41,8 @@ add_lit_testsuite(check-xray "Running the XRay tests"
   ${XRAY_TESTSUITES}
   DEPENDS ${XRAY_TEST_DEPS})
 set_target_properties(check-xray PROPERTIES FOLDER "Compiler-RT Misc")
+
+add_lit_testsuite(check-xray-fdr "Running the XRay flight data recorder tests"
+  ${XRAY_FDR_TESTSUITES}
+  DEPENDS ${XRAY_FDR_TEST_DEPS})
+set_target_properties(check-xray-fdr PROPERTIES FOLDER "Compiler-RT Misc")

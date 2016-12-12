@@ -80,7 +80,7 @@ protected:
   friend SymbolTable;
   explicit SymbolBody(Kind K, StringRef N = "")
       : SymbolKind(K), IsExternal(true), IsCOMDAT(false),
-        IsReplaceable(false), Name(N) {}
+        IsReplaceable(false), WrittenToSymtab(false), Name(N) {}
 
   const unsigned SymbolKind : 8;
   unsigned IsExternal : 1;
@@ -91,6 +91,11 @@ protected:
   // This bit is used by the \c DefinedBitcode subclass.
   unsigned IsReplaceable : 1;
 
+public:
+  // This bit is used by Writer::createSymbolAndStringTable().
+  unsigned WrittenToSymtab : 1;
+
+protected:
   StringRef Name;
 };
 
