@@ -905,6 +905,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     // Cases not handled yet; but will handle some day.
     case Stmt::DesignatedInitExprClass:
     case Stmt::DesignatedInitUpdateExprClass:
+    case Stmt::ArrayInitLoopExprClass:
+    case Stmt::ArrayInitIndexExprClass:
     case Stmt::ExtVectorElementExprClass:
     case Stmt::ImaginaryLiteralClass:
     case Stmt::ObjCAtCatchStmtClass:

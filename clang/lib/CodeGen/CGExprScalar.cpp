@@ -311,6 +311,12 @@ public:
 
   Value *VisitInitListExpr(InitListExpr *E);
 
+  Value *VisitArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+    assert(CGF.getArrayInitIndex() &&
+           "ArrayInitIndexExpr not inside an ArrayInitLoopExpr?");
+    return CGF.getArrayInitIndex();
+  }
+
   Value *VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
     return EmitNullValue(E->getType());
   }

@@ -2910,7 +2910,7 @@ DeclarationName InitializedEntity::getName() const {
   case EK_Variable:
   case EK_Member:
   case EK_Binding:
-    return VariableOrMember->getDeclName();
+    return Variable.VariableOrMember->getDeclName();
 
   case EK_LambdaCapture:
     return DeclarationName(Capture.VarID);
@@ -2938,7 +2938,7 @@ ValueDecl *InitializedEntity::getDecl() const {
   case EK_Variable:
   case EK_Member:
   case EK_Binding:
-    return VariableOrMember;
+    return Variable.VariableOrMember;
 
   case EK_Parameter:
   case EK_Parameter_CF_Audited:
@@ -3065,6 +3065,8 @@ void InitializationSequence::Step::Destroy() {
   case SK_CAssignment:
   case SK_StringInit:
   case SK_ObjCObjectConversion:
+  case SK_ArrayLoopIndex:
+  case SK_ArrayLoopInit:
   case SK_ArrayInit:
   case SK_ParenthesizedArrayInit:
   case SK_PassByIndirectCopyRestore:
@@ -3303,6 +3305,17 @@ void InitializationSequence::AddObjCObjectConversionStep(QualType T) {
 void InitializationSequence::AddArrayInitStep(QualType T) {
   Step S;
   S.Kind = SK_ArrayInit;
+  S.Type = T;
+  Steps.push_back(S);
+}
+
+void InitializationSequence::AddArrayInitLoopStep(QualType T, QualType EltT) {
+  Step S;
+  S.Kind = SK_ArrayLoopIndex;
+  S.Type = EltT;
+  Steps.insert(Steps.begin(), S);
+
+  S.Kind = SK_ArrayLoopInit;
   S.Type = T;
   Steps.push_back(S);
 }
@@ -3552,6 +3565,9 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
 /// \brief Attempt initialization by constructor (C++ [dcl.init]), which
 /// enumerates the constructors of the initialized entity and performs overload
 /// resolution to select the best.
+/// \param DestType       The destination class type.
+/// \param DestArrayType  The destination type, which is either DestType or
+///                       a (possibly multidimensional) array of DestType.
 /// \param IsListInit     Is this list-initialization?
 /// \param IsInitListCopy Is this non-list-initialization resulting from a
 ///                       list-initialization from {x} where x is the same
@@ -3560,6 +3576,7 @@ static void TryConstructorInitialization(Sema &S,
                                          const InitializedEntity &Entity,
                                          const InitializationKind &Kind,
                                          MultiExprArg Args, QualType DestType,
+                                         QualType DestArrayType,
                                          InitializationSequence &Sequence,
                                          bool IsListInit = false,
                                          bool IsInitListCopy = false) {
@@ -3703,7 +3720,7 @@ static void TryConstructorInitialization(Sema &S,
   // subsumed by the initialization.
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
   Sequence.AddConstructorInitializationStep(
-      Best->FoundDecl, CtorDecl, DestType, HadMultipleCandidates,
+      Best->FoundDecl, CtorDecl, DestArrayType, HadMultipleCandidates,
       IsListInit | IsInitListCopy, AsInitializerList);
 }
 
@@ -3871,8 +3888,9 @@ static void TryListInitialization(Sema &S,
           S.IsDerivedFrom(InitList->getLocStart(), InitType, DestType)) {
         Expr *InitListAsExpr = InitList;
         TryConstructorInitialization(S, Entity, Kind, InitListAsExpr, DestType,
-                                     Sequence, /*InitListSyntax*/ false,
-                                     /*IsInitListCopy*/ true);
+                                     DestType, Sequence,
+                                     /*InitListSyntax*/false,
+                                     /*IsInitListCopy*/true);
         return;
       }
     }
@@ -3927,7 +3945,7 @@ static void TryListInitialization(Sema &S,
       //   - Otherwise, if T is a class type, constructors are considered.
       Expr *InitListAsExpr = InitList;
       TryConstructorInitialization(S, Entity, Kind, InitListAsExpr, DestType,
-                                   Sequence, /*InitListSyntax*/ true);
+                                   DestType, Sequence, /*InitListSyntax*/true);
     } else
       Sequence.SetFailed(InitializationSequence::FK_InitListBadDestinationType);
     return;
@@ -4580,8 +4598,10 @@ static void TryValueInitialization(Sema &S,
       MultiExprArg Args(&InitListAsExpr, InitList ? 1 : 0);
       bool InitListSyntax = InitList;
 
-      return TryConstructorInitialization(S, Entity, Kind, Args, T, Sequence,
-                                          InitListSyntax);
+      // FIXME: Instead of creating a CXXConstructExpr of non-array type here,
+      // wrap a class-typed CXXConstructExpr in an ArrayInitLoopExpr.
+      return TryConstructorInitialization(
+          S, Entity, Kind, Args, T, Entity.getType(), Sequence, InitListSyntax);
     }
   }
 
@@ -4604,7 +4624,8 @@ static void TryDefaultInitialization(Sema &S,
   //       constructor for T is called (and the initialization is ill-formed if
   //       T has no accessible default constructor);
   if (DestType->isRecordType() && S.getLangOpts().CPlusPlus) {
-    TryConstructorInitialization(S, Entity, Kind, None, DestType, Sequence);
+    TryConstructorInitialization(S, Entity, Kind, None, DestType,
+                                 Entity.getType(), Sequence);
     return;
   }
 
@@ -5030,6 +5051,42 @@ static bool isExprAnUnaddressableFunction(Sema &S, const Expr *E) {
       cast<FunctionDecl>(DRE->getDecl()));
 }
 
+/// Determine whether we can perform an elementwise array copy for this kind
+/// of entity.
+static bool canPerformArrayCopy(const InitializedEntity &Entity) {
+  switch (Entity.getKind()) {
+  case InitializedEntity::EK_LambdaCapture:
+    // C++ [expr.prim.lambda]p24:
+    //   For array members, the array elements are direct-initialized in
+    //   increasing subscript order.
+    return true;
+
+  case InitializedEntity::EK_Variable:
+    // C++ [dcl.decomp]p1:
+    //   [...] each element is copy-initialized or direct-initialized from the
+    //   corresponding element of the assignment-expression [...]
+    return isa<DecompositionDecl>(Entity.getDecl());
+
+  case InitializedEntity::EK_Member:
+    // C++ [class.copy.ctor]p14:
+    //   - if the member is an array, each element is direct-initialized with
+    //     the corresponding subobject of x
+    return Entity.isImplicitMemberInitializer();
+
+  case InitializedEntity::EK_ArrayElement:
+    // All the above cases are intended to apply recursively, even though none
+    // of them actually say that.
+    if (auto *E = Entity.getParent())
+      return canPerformArrayCopy(*E);
+    break;
+
+  default:
+    break;
+  }
+
+  return false;
+}
+
 void InitializationSequence::InitializeFrom(Sema &S,
                                             const InitializedEntity &Entity,
                                             const InitializationKind &Kind,
@@ -5152,6 +5209,34 @@ void InitializationSequence::InitializeFrom(Sema &S,
       }
     }
 
+    // Some kinds of initialization permit an array to be initialized from
+    // another array of the same type, and perform elementwise initialization.
+    if (Initializer && isa<ConstantArrayType>(DestAT) &&
+        S.Context.hasSameUnqualifiedType(Initializer->getType(),
+                                         Entity.getType()) &&
+        canPerformArrayCopy(Entity)) {
+      // If source is a prvalue, use it directly.
+      if (Initializer->getValueKind() == VK_RValue) {
+        // FIXME: This produces a bogus extwarn
+        AddArrayInitStep(DestType);
+        return;
+      }
+
+      // Emit element-at-a-time copy loop.
+      InitializedEntity Element =
+          InitializedEntity::InitializeElement(S.Context, 0, Entity);
+      QualType InitEltT =
+          Context.getAsArrayType(Initializer->getType())->getElementType();
+      OpaqueValueExpr OVE(SourceLocation(), InitEltT,
+                          Initializer->getValueKind());
+      Expr *OVEAsExpr = &OVE;
+      InitializeFrom(S, Element, Kind, OVEAsExpr, TopLevelOfInitList,
+                     TreatUnavailableAsInvalid);
+      if (!Failed())
+        AddArrayInitLoopStep(Entity.getType(), InitEltT);
+      return;
+    }
+
     // Note: as an GNU C extension, we allow initialization of an
     // array from a compound literal that creates an array of the same
     // type, so long as the initializer has no side effects.
@@ -5225,7 +5310,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
          (Context.hasSameUnqualifiedType(SourceType, DestType) ||
           S.IsDerivedFrom(Initializer->getLocStart(), SourceType, DestType))))
       TryConstructorInitialization(S, Entity, Kind, Args,
-                                   DestType, *this);
+                                   DestType, DestType, *this);
     //     - Otherwise (i.e., for the remaining copy-initialization cases),
     //       user-defined conversion sequences that can convert from the source
     //       type to the destination type or (when a conversion function is
@@ -5842,7 +5927,7 @@ PerformConstructorInitialization(Sema &S,
     // If the entity allows NRVO, mark the construction as elidable
     // unconditionally.
     if (Entity.allowsNRVO())
-      CurInit = S.BuildCXXConstructExpr(Loc, Entity.getType(),
+      CurInit = S.BuildCXXConstructExpr(Loc, Step.Type,
                                         Step.Function.FoundDecl,
                                         Constructor, /*Elidable=*/true,
                                         ConstructorArgs,
@@ -5853,7 +5938,7 @@ PerformConstructorInitialization(Sema &S,
                                         ConstructKind,
                                         ParenOrBraceRange);
     else
-      CurInit = S.BuildCXXConstructExpr(Loc, Entity.getType(),
+      CurInit = S.BuildCXXConstructExpr(Loc, Step.Type,
                                         Step.Function.FoundDecl,
                                         Constructor,
                                         ConstructorArgs,
@@ -6403,6 +6488,7 @@ InitializationSequence::Perform(Sema &S,
                                      Entity.getType();
 
   ExprResult CurInit((Expr *)nullptr);
+  SmallVector<Expr*, 4> ArrayLoopCommonExprs;
 
   // For initialization steps that start with a single initializer,
   // grab the only argument out the Args and place it into the "current"
@@ -6430,6 +6516,8 @@ InitializationSequence::Perform(Sema &S,
   case SK_CAssignment:
   case SK_StringInit:
   case SK_ObjCObjectConversion:
+  case SK_ArrayLoopIndex:
+  case SK_ArrayLoopInit:
   case SK_ArrayInit:
   case SK_ParenthesizedArrayInit:
   case SK_PassByIndirectCopyRestore:
@@ -6813,13 +6901,15 @@ InitializationSequence::Perform(Sema &S,
       bool UseTemporary = Entity.getType()->isReferenceType();
       bool IsStdInitListInit =
           Step->Kind == SK_StdInitializerListConstructorCall;
+      Expr *Source = CurInit.get();
       CurInit = PerformConstructorInitialization(
-          S, UseTemporary ? TempEntity : Entity, Kind, Args, *Step,
+          S, UseTemporary ? TempEntity : Entity, Kind,
+          Source ? MultiExprArg(Source) : Args, *Step,
           ConstructorInitRequiresZeroInit,
-          /*IsListInitialization*/IsStdInitListInit,
-          /*IsStdInitListInitialization*/IsStdInitListInit,
-          /*LBraceLoc*/SourceLocation(),
-          /*RBraceLoc*/SourceLocation());
+          /*IsListInitialization*/ IsStdInitListInit,
+          /*IsStdInitListInitialization*/ IsStdInitListInit,
+          /*LBraceLoc*/ SourceLocation(),
+          /*RBraceLoc*/ SourceLocation());
       break;
     }
 
@@ -6897,6 +6987,28 @@ InitializationSequence::Perform(Sema &S,
                           CK_ObjCObjectLValueCast,
                           CurInit.get()->getValueKind());
       break;
+
+    case SK_ArrayLoopIndex: {
+      Expr *Cur = CurInit.get();
+      Expr *BaseExpr = new (S.Context)
+          OpaqueValueExpr(Cur->getExprLoc(), Cur->getType(),
+                          Cur->getValueKind(), Cur->getObjectKind(), Cur);
+      Expr *IndexExpr =
+          new (S.Context) ArrayInitIndexExpr(S.Context.getSizeType());
+      CurInit = S.CreateBuiltinArraySubscriptExpr(
+          BaseExpr, Kind.getLocation(), IndexExpr, Kind.getLocation());
+      ArrayLoopCommonExprs.push_back(BaseExpr);
+      break;
+    }
+
+    case SK_ArrayLoopInit: {
+      assert(!ArrayLoopCommonExprs.empty() &&
+             "mismatched SK_ArrayLoopIndex and SK_ArrayLoopInit");
+      Expr *Common = ArrayLoopCommonExprs.pop_back_val();
+      CurInit = new (S.Context) ArrayInitLoopExpr(Step->Type, Common,
+                                                  CurInit.get());
+      break;
+    }
 
     case SK_ArrayInit:
       // Okay: we checked everything before creating this step. Note that
@@ -7849,6 +7961,14 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case SK_ObjCObjectConversion:
       OS << "Objective-C object conversion";
+      break;
+
+    case SK_ArrayLoopIndex:
+      OS << "indexing for array initialization loop";
+      break;
+
+    case SK_ArrayLoopInit:
+      OS << "array initialization loop";
       break;
 
     case SK_ArrayInit:

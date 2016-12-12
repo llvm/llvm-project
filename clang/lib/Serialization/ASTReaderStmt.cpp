@@ -845,6 +845,16 @@ void ASTStmtReader::VisitNoInitExpr(NoInitExpr *E) {
   VisitExpr(E);
 }
 
+void ASTStmtReader::VisitArrayInitLoopExpr(ArrayInitLoopExpr *E) {
+  VisitExpr(E);
+  E->SubExprs[0] = Reader.ReadSubExpr();
+  E->SubExprs[1] = Reader.ReadSubExpr();
+}
+
+void ASTStmtReader::VisitArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+  VisitExpr(E);
+}
+
 void ASTStmtReader::VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
   VisitExpr(E);
 }
@@ -3229,6 +3239,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_NO_INIT:
       S = new (Context) NoInitExpr(Empty);
+      break;
+
+    case EXPR_ARRAY_INIT_LOOP:
+      S = new (Context) ArrayInitLoopExpr(Empty);
+      break;
+
+    case EXPR_ARRAY_INIT_INDEX:
+      S = new (Context) ArrayInitIndexExpr(Empty);
       break;
 
     case EXPR_VA_ARG:
