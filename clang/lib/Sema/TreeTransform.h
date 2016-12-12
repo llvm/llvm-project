@@ -3221,6 +3221,9 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   if (ExprWithCleanups *ExprTemp = dyn_cast<ExprWithCleanups>(Init))
     Init = ExprTemp->getSubExpr();
 
+  if (auto *AIL = dyn_cast<ArrayInitLoopExpr>(Init))
+    Init = AIL->getCommonExpr();
+
   if (MaterializeTemporaryExpr *MTE = dyn_cast<MaterializeTemporaryExpr>(Init))
     Init = MTE->GetTemporaryExpr();
 
@@ -9042,6 +9045,20 @@ ExprResult
 TreeTransform<Derived>::TransformNoInitExpr(
     NoInitExpr *E) {
   llvm_unreachable("Unexpected NoInitExpr in syntactic form of initializer");
+  return ExprError();
+}
+
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformArrayInitLoopExpr(ArrayInitLoopExpr *E) {
+  llvm_unreachable("Unexpected ArrayInitLoopExpr outside of initializer");
+  return ExprError();
+}
+
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+  llvm_unreachable("Unexpected ArrayInitIndexExpr outside of initializer");
   return ExprError();
 }
 

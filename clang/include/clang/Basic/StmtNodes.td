@@ -85,6 +85,8 @@ def DesignatedInitExpr : DStmt<Expr>;
 def DesignatedInitUpdateExpr : DStmt<Expr>;
 def ImplicitValueInitExpr : DStmt<Expr>;
 def NoInitExpr : DStmt<Expr>;
+def ArrayInitLoopExpr : DStmt<Expr>;
+def ArrayInitIndexExpr : DStmt<Expr>;
 def ParenListExpr : DStmt<Expr>;
 def VAArgExpr : DStmt<Expr>;
 def GenericSelectionExpr : DStmt<Expr>;

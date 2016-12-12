@@ -469,6 +469,10 @@ namespace {
     /// declaration whose initializer is being evaluated, if any.
     APValue *EvaluatingDeclValue;
 
+    /// The current array initialization index, if we're performing array
+    /// initialization.
+    uint64_t ArrayInitIndex = -1;
+
     /// HasActiveDiagnostic - Was the previous diagnostic stored? If so, further
     /// notes attached to it will also be stored, otherwise they will not be.
     bool HasActiveDiagnostic;
@@ -803,6 +807,20 @@ namespace {
     bool allowInvalidBaseExpr() const {
       return EvalMode == EM_DesignatorFold;
     }
+
+    class ArrayInitLoopIndex {
+      EvalInfo &Info;
+      uint64_t OuterIndex;
+
+    public:
+      ArrayInitLoopIndex(EvalInfo &Info)
+          : Info(Info), OuterIndex(Info.ArrayInitIndex) {
+        Info.ArrayInitIndex = 0;
+      }
+      ~ArrayInitLoopIndex() { Info.ArrayInitIndex = OuterIndex; }
+
+      operator uint64_t&() { return Info.ArrayInitIndex; }
+    };
   };
 
   /// Object used to treat all foldable expressions as constant expressions.
@@ -6190,6 +6208,7 @@ namespace {
       return handleCallExpr(E, Result, &This);
     }
     bool VisitInitListExpr(const InitListExpr *E);
+    bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
     bool VisitCXXConstructExpr(const CXXConstructExpr *E);
     bool VisitCXXConstructExpr(const CXXConstructExpr *E,
                                const LValue &Subobject,
@@ -6270,6 +6289,35 @@ bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   assert(FillerExpr && "no array filler for incomplete init list");
   return EvaluateInPlace(Result.getArrayFiller(), Info, Subobject,
                          FillerExpr) && Success;
+}
+
+bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
+  if (E->getCommonExpr() &&
+      !Evaluate(Info.CurrentCall->createTemporary(E->getCommonExpr(), false),
+                Info, E->getCommonExpr()->getSourceExpr()))
+    return false;
+
+  auto *CAT = cast<ConstantArrayType>(E->getType()->castAsArrayTypeUnsafe());
+
+  uint64_t Elements = CAT->getSize().getZExtValue();
+  Result = APValue(APValue::UninitArray(), Elements, Elements);
+
+  LValue Subobject = This;
+  Subobject.addArray(Info, E, CAT);
+
+  bool Success = true;
+  for (EvalInfo::ArrayInitLoopIndex Index(Info); Index != Elements; ++Index) {
+    if (!EvaluateInPlace(Result.getArrayInitializedElt(Index),
+                         Info, Subobject, E->getSubExpr()) ||
+        !HandleLValueArrayAdjustment(Info, E, Subobject,
+                                     CAT->getElementType(), 1)) {
+      if (!Info.noteFailure())
+        return false;
+      Success = false;
+    }
+  }
+
+  return Success;
 }
 
 bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
@@ -6426,6 +6474,16 @@ public:
 
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
     return Success(E->getValue(), E);
+  }
+
+  bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E) {
+    if (Info.ArrayInitIndex == uint64_t(-1)) {
+      // We were asked to evaluate this subexpression independent of the
+      // enclosing ArrayInitLoopExpr. We can't do that.
+      Info.FFDiag(E);
+      return false;
+    }
+    return Success(Info.ArrayInitIndex, E);
   }
     
   // Note, GNU defines __null as an integer, not a pointer.
@@ -9590,6 +9648,8 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
   case Expr::DesignatedInitExprClass:
+  case Expr::ArrayInitLoopExprClass:
+  case Expr::ArrayInitIndexExprClass:
   case Expr::NoInitExprClass:
   case Expr::DesignatedInitUpdateExprClass:
   case Expr::ImplicitValueInitExprClass:

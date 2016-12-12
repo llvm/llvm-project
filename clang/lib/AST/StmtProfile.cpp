@@ -972,6 +972,14 @@ void StmtProfiler::VisitDesignatedInitUpdateExpr(
                    "initializer");
 }
 
+void StmtProfiler::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitArrayInitIndexExpr(const ArrayInitIndexExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitNoInitExpr(const NoInitExpr *S) {
   llvm_unreachable("Unexpected NoInitExpr in syntactic form of initializer");
 }

@@ -164,6 +164,7 @@ public:
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *CO);
   void VisitChooseExpr(const ChooseExpr *CE);
   void VisitInitListExpr(InitListExpr *E);
+  void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
   void VisitImplicitValueInitExpr(ImplicitValueInitExpr *E);
   void VisitNoInitExpr(NoInitExpr *E) { } // Do nothing.
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE) {
@@ -1306,6 +1307,85 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // Destroy the placeholder if we made one.
   if (cleanupDominator)
     cleanupDominator->eraseFromParent();
+}
+
+void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
+  // Emit the common subexpression.
+  CodeGenFunction::OpaqueValueMapping binding(CGF, E->getCommonExpr());
+
+  Address destPtr = EnsureSlot(E->getType()).getAddress();
+  uint64_t numElements = E->getArraySize().getZExtValue();
+
+  if (!numElements)
+    return;
+
+  // FIXME: Dig through nested ArrayInitLoopExprs to find the overall array
+  // size, and only emit a single loop for a multidimensional array.
+
+  // destPtr is an array*. Construct an elementType* by drilling down a level.
+  llvm::Value *zero = llvm::ConstantInt::get(CGF.SizeTy, 0);
+  llvm::Value *indices[] = {zero, zero};
+  llvm::Value *begin = Builder.CreateInBoundsGEP(destPtr.getPointer(), indices,
+                                                 "arrayinit.begin");
+
+  QualType elementType = E->getSubExpr()->getType();
+  CharUnits elementSize = CGF.getContext().getTypeSizeInChars(elementType);
+  CharUnits elementAlign =
+      destPtr.getAlignment().alignmentOfArrayElement(elementSize);
+
+  // Prepare for a cleanup.
+  QualType::DestructionKind dtorKind = elementType.isDestructedType();
+  Address endOfInit = Address::invalid();
+  EHScopeStack::stable_iterator cleanup;
+  llvm::Instruction *cleanupDominator = nullptr;
+  if (CGF.needsEHCleanup(dtorKind)) {
+    endOfInit = CGF.CreateTempAlloca(begin->getType(), CGF.getPointerAlign(),
+                                     "arrayinit.endOfInit");
+    CGF.pushIrregularPartialArrayCleanup(begin, endOfInit, elementType,
+                                         elementAlign,
+                                         CGF.getDestroyer(dtorKind));
+    cleanup = CGF.EHStack.stable_begin();
+  } else {
+    dtorKind = QualType::DK_none;
+  }
+
+  llvm::BasicBlock *entryBB = Builder.GetInsertBlock();
+  llvm::BasicBlock *bodyBB = CGF.createBasicBlock("arrayinit.body");
+
+  // Jump into the body.
+  CGF.EmitBlock(bodyBB);
+  llvm::PHINode *index =
+      Builder.CreatePHI(zero->getType(), 2, "arrayinit.index");
+  index->addIncoming(zero, entryBB);
+  llvm::Value *element = Builder.CreateInBoundsGEP(begin, index);
+
+  // Tell the EH cleanup that we finished with the last element.
+  if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
+
+  // Emit the actual filler expression.
+  {
+    CodeGenFunction::ArrayInitLoopExprScope Scope(CGF, index);
+    LValue elementLV =
+        CGF.MakeAddrLValue(Address(element, elementAlign), elementType);
+    EmitInitializationToLValue(E->getSubExpr(), elementLV);
+  }
+
+  // Move on to the next element.
+  llvm::Value *nextIndex = Builder.CreateNUWAdd(
+      index, llvm::ConstantInt::get(CGF.SizeTy, 1), "arrayinit.next");
+  index->addIncoming(nextIndex, Builder.GetInsertBlock());
+
+  // Leave the loop if we're done.
+  llvm::Value *done = Builder.CreateICmpEQ(
+      nextIndex, llvm::ConstantInt::get(CGF.SizeTy, numElements),
+      "arrayinit.done");
+  llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
+  Builder.CreateCondBr(done, endBB, bodyBB);
+
+  CGF.EmitBlock(endBB);
+
+  // Leave the partial-array cleanup if we entered one.
+  if (dtorKind) CGF.DeactivateCleanupBlock(cleanup, cleanupDominator);
 }
 
 void AggExprEmitter::VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E) {

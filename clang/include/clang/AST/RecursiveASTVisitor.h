@@ -2399,6 +2399,8 @@ DEF_TRAVERSE_STMT(ExtVectorElementExpr, {})
 DEF_TRAVERSE_STMT(GNUNullExpr, {})
 DEF_TRAVERSE_STMT(ImplicitValueInitExpr, {})
 DEF_TRAVERSE_STMT(NoInitExpr, {})
+DEF_TRAVERSE_STMT(ArrayInitLoopExpr, {})
+DEF_TRAVERSE_STMT(ArrayInitIndexExpr, {})
 DEF_TRAVERSE_STMT(ObjCBoolLiteralExpr, {})
 
 DEF_TRAVERSE_STMT(ObjCEncodeExpr, {
