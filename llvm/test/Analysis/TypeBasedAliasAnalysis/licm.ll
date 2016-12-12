@@ -29,7 +29,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-!0 = !{!"root", null}
+!0 = !{!"root"}
 !1 = !{!6, !6, i64 0}
 !2 = !{!7, !7, i64 0}
 
@@ -58,8 +58,9 @@ loop:
 
 !3 = !{!"pointer", !8}
 !4 = !{!8, !8, i64 0}
-!5 = !{!9, !9, i64 0}
+!5 = !{!10, !10, i64 0}
 !6 = !{!"pointer", !0}
 !7 = !{!"double", !0}
 !8 = !{!"char", !9}
-!9 = !{!"root", null}
+!9 = !{!"root"}
+!10 = !{!"scalar-type", !9}

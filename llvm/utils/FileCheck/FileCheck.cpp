@@ -744,93 +744,68 @@ static size_t SkipWord(StringRef Str, size_t Loc) {
   return Loc;
 }
 
-// Try to find the first match in buffer for any prefix. If a valid match is
-// found, return that prefix and set its type and location.  If there are almost
-// matches (e.g. the actual prefix string is found, but is not an actual check
-// string), but no valid match, return an empty string and set the position to
-// resume searching from. If no partial matches are found, return an empty
-// string and the location will be StringRef::npos. If one prefix is a substring
-// of another, the maximal match should be found. e.g. if "A" and "AA" are
-// prefixes then AA-CHECK: should match the second one.
-static StringRef FindFirstCandidateMatch(StringRef &Buffer,
-                                         Check::CheckType &CheckTy,
-                                         size_t &CheckLoc) {
-  StringRef FirstPrefix;
-  size_t FirstLoc = StringRef::npos;
-  size_t SearchLoc = StringRef::npos;
-  Check::CheckType FirstTy = Check::CheckNone;
-
-  CheckTy = Check::CheckNone;
-  CheckLoc = StringRef::npos;
-
-  for (StringRef Prefix : CheckPrefixes) {
-    size_t PrefixLoc = Buffer.find(Prefix);
-
-    if (PrefixLoc == StringRef::npos)
-      continue;
-
-    // Track where we are searching for invalid prefixes that look almost right.
-    // We need to only advance to the first partial match on the next attempt
-    // since a partial match could be a substring of a later, valid prefix.
-    // Need to skip to the end of the word, otherwise we could end up
-    // matching a prefix in a substring later.
-    if (PrefixLoc < SearchLoc)
-      SearchLoc = SkipWord(Buffer, PrefixLoc);
-
-    // We only want to find the first match to avoid skipping some.
-    if (PrefixLoc > FirstLoc)
-      continue;
-    // If one matching check-prefix is a prefix of another, choose the
-    // longer one.
-    if (PrefixLoc == FirstLoc && Prefix.size() < FirstPrefix.size())
-      continue;
-
-    StringRef Rest = Buffer.drop_front(PrefixLoc);
-    // Make sure we have actually found the prefix, and not a word containing
-    // it. This should also prevent matching the wrong prefix when one is a
-    // substring of another.
-    if (PrefixLoc != 0 && IsPartOfWord(Buffer[PrefixLoc - 1]))
-      FirstTy = Check::CheckNone;
-    else
-      FirstTy = FindCheckType(Rest, Prefix);
-
-    FirstLoc = PrefixLoc;
-    FirstPrefix = Prefix;
-  }
-
-  // If the first prefix is invalid, we should continue the search after it.
-  if (FirstTy == Check::CheckNone) {
-    CheckLoc = SearchLoc;
-    return "";
-  }
-
-  CheckTy = FirstTy;
-  CheckLoc = FirstLoc;
-  return FirstPrefix;
-}
-
-static StringRef FindFirstMatchingPrefix(StringRef &Buffer,
+/// Search the buffer for the first prefix in the prefix regular expression.
+///
+/// This searches the buffer using the provided regular expression, however it
+/// enforces constraints beyond that:
+/// 1) The found prefix must not be a suffix of something that looks like
+///    a valid prefix.
+/// 2) The found prefix must be followed by a valid check type suffix using \c
+///    FindCheckType above.
+///
+/// The first match of the regular expression to satisfy these two is returned,
+/// otherwise an empty StringRef is returned to indicate failure.
+///
+/// If this routine returns a valid prefix, it will also shrink \p Buffer to
+/// start at the beginning of the returned prefix, increment \p LineNumber for
+/// each new line consumed from \p Buffer, and set \p CheckTy to the type of
+/// check found by examining the suffix.
+///
+/// If no valid prefix is found, the state of Buffer, LineNumber, and CheckTy
+/// is unspecified.
+static StringRef FindFirstMatchingPrefix(Regex &PrefixRE, StringRef &Buffer,
                                          unsigned &LineNumber,
-                                         Check::CheckType &CheckTy,
-                                         size_t &CheckLoc) {
-  while (!Buffer.empty()) {
-    StringRef Prefix = FindFirstCandidateMatch(Buffer, CheckTy, CheckLoc);
-    // If we found a real match, we are done.
-    if (!Prefix.empty()) {
-      LineNumber += Buffer.substr(0, CheckLoc).count('\n');
-      return Prefix;
-    }
+                                         Check::CheckType &CheckTy) {
+  SmallVector<StringRef, 2> Matches;
 
-    // We didn't find any almost matches either, we are also done.
-    if (CheckLoc == StringRef::npos)
+  while (!Buffer.empty()) {
+    // Find the first (longest) match using the RE.
+    if (!PrefixRE.match(Buffer, &Matches))
+      // No match at all, bail.
       return StringRef();
 
-    LineNumber += Buffer.substr(0, CheckLoc + 1).count('\n');
+    StringRef Prefix = Matches[0];
+    Matches.clear();
 
-    // Advance to the last possible match we found and try again.
-    Buffer = Buffer.drop_front(CheckLoc + 1);
+    assert(Prefix.data() >= Buffer.data() &&
+           Prefix.data() < Buffer.data() + Buffer.size() &&
+           "Prefix doesn't start inside of buffer!");
+    size_t Loc = Prefix.data() - Buffer.data();
+    StringRef Skipped = Buffer.substr(0, Loc);
+    Buffer = Buffer.drop_front(Loc);
+    LineNumber += Skipped.count('\n');
+
+    // Check that the matched prefix isn't a suffix of some other check-like
+    // word.
+    // FIXME: This is a very ad-hoc check. it would be better handled in some
+    // other way. Among other things it seems hard to distinguish between
+    // intentional and unintentional uses of this feature.
+    if (Skipped.empty() || !IsPartOfWord(Skipped.back())) {
+      // Now extract the type.
+      CheckTy = FindCheckType(Buffer, Prefix);
+
+      // If we've found a valid check type for this prefix, we're done.
+      if (CheckTy != Check::CheckNone)
+        return Prefix;
+    }
+
+    // If we didn't successfully find a prefix, we need to skip this invalid
+    // prefix and continue scanning. We directly skip the prefix that was
+    // matched and any additional parts of that check-like word.
+    Buffer = Buffer.drop_front(SkipWord(Buffer, Prefix.size()));
   }
 
+  // We ran out of buffer while skipping partial matches so give up.
   return StringRef();
 }
 
@@ -838,7 +813,7 @@ static StringRef FindFirstMatchingPrefix(StringRef &Buffer,
 ///
 /// The strings are added to the CheckStrings vector. Returns true in case of
 /// an error, false otherwise.
-static bool ReadCheckFile(SourceMgr &SM, StringRef Buffer,
+static bool ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
                           std::vector<CheckString> &CheckStrings) {
   std::vector<Pattern> ImplicitNegativeChecks;
   for (const auto &PatternString : ImplicitCheckNot) {
@@ -866,20 +841,20 @@ static bool ReadCheckFile(SourceMgr &SM, StringRef Buffer,
 
   while (1) {
     Check::CheckType CheckTy;
-    size_t PrefixLoc;
 
     // See if a prefix occurs in the memory buffer.
-    StringRef UsedPrefix =
-        FindFirstMatchingPrefix(Buffer, LineNumber, CheckTy, PrefixLoc);
+    StringRef UsedPrefix = FindFirstMatchingPrefix(PrefixRE, Buffer, LineNumber,
+                                                   CheckTy);
     if (UsedPrefix.empty())
       break;
-
-    Buffer = Buffer.drop_front(PrefixLoc);
+    assert(UsedPrefix.data() == Buffer.data() &&
+           "Failed to move Buffer's start forward, or pointed prefix outside "
+           "of the buffer!");
 
     // Location to use for error messages.
-    const char *UsedPrefixStart = Buffer.data() + (PrefixLoc == 0 ? 0 : 1);
+    const char *UsedPrefixStart = UsedPrefix.data();
 
-    // PrefixLoc is to the start of the prefix. Skip to the end.
+    // Skip the buffer to the end.
     Buffer = Buffer.drop_front(UsedPrefix.size() + CheckTypeSize(CheckTy));
 
     // Complain about useful-looking but unsupported suffixes.
@@ -1254,11 +1229,28 @@ static bool ValidateCheckPrefixes() {
   return true;
 }
 
-// I don't think there's a way to specify an initial value for cl::list,
-// so if nothing was specified, add the default
-static void AddCheckPrefixIfNeeded() {
+// Combines the check prefixes into a single regex so that we can efficiently
+// scan for any of the set.
+//
+// The semantics are that the longest-match wins which matches our regex
+// library.
+static Regex buildCheckPrefixRegex() {
+  // I don't think there's a way to specify an initial value for cl::list,
+  // so if nothing was specified, add the default
   if (CheckPrefixes.empty())
     CheckPrefixes.push_back("CHECK");
+
+  // We already validated the contents of CheckPrefixes so just concatenate
+  // them as alternatives.
+  SmallString<32> PrefixRegexStr;
+  for (StringRef Prefix : CheckPrefixes) {
+    if (Prefix != CheckPrefixes.front())
+      PrefixRegexStr.push_back('|');
+
+    PrefixRegexStr.append(Prefix);
+  }
+
+  return Regex(PrefixRegexStr);
 }
 
 static void DumpCommandLine(int argc, char **argv) {
@@ -1342,7 +1334,16 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  AddCheckPrefixIfNeeded();
+  Regex PrefixRE = buildCheckPrefixRegex();
+  std::string REError;
+  if (!PrefixRE.isValid(REError)) {
+    errs() << "Unable to combine check-prefix strings into a prefix regular "
+              "expression! This is likely a bug in FileCheck's verification of "
+              "the check-prefix strings. Regular expression parsing failed "
+              "with the following error: "
+           << REError << "\n";
+    return 2;
+  }
 
   SourceMgr SM;
 
@@ -1364,7 +1365,7 @@ int main(int argc, char **argv) {
                         SMLoc());
 
   std::vector<CheckString> CheckStrings;
-  if (ReadCheckFile(SM, CheckFileText, CheckStrings))
+  if (ReadCheckFile(SM, CheckFileText, PrefixRE, CheckStrings))
     return 2;
 
   // Open the file to check and add it to SourceMgr.

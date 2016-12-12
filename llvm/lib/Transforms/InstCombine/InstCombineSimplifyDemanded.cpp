@@ -1255,13 +1255,25 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     switch (II->getIntrinsicID()) {
     default: break;
 
+    case Intrinsic::x86_xop_vfrcz_ss:
+    case Intrinsic::x86_xop_vfrcz_sd:
+      // The instructions for these intrinsics are speced to zero upper bits not
+      // pass them through like other scalar intrinsics. So we shouldn't just
+      // use Arg0 if DemandedElts[0] is clear like we do for other intrinsics.
+      // Instead we should return a zero vector.
+      if (!DemandedElts[0])
+        return ConstantAggregateZero::get(II->getType());
+
+      TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
+                                        UndefElts, Depth + 1);
+      if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
+      break;
+
     // Unary scalar-as-vector operations that work column-wise.
     case Intrinsic::x86_sse_rcp_ss:
     case Intrinsic::x86_sse_rsqrt_ss:
     case Intrinsic::x86_sse_sqrt_ss:
     case Intrinsic::x86_sse2_sqrt_sd:
-    case Intrinsic::x86_xop_vfrcz_ss:
-    case Intrinsic::x86_xop_vfrcz_sd:
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
                                         UndefElts, Depth + 1);
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }

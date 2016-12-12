@@ -855,6 +855,20 @@ define <8 x double> @combine_vpermi2var_8f64_identity(<8 x double> %x0, <8 x dou
   ret <8 x double> %res1
 }
 
+define <8 x double> @combine_vpermi2var_8f64_as_shufpd(<8 x double> %x0, <8 x double> %x1) {
+; X32-LABEL: combine_vpermi2var_8f64_as_shufpd:
+; X32:       # BB#0:
+; X32-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1],zmm1[0],zmm0[2],zmm1[2],zmm0[5],zmm1[5],zmm0[6],zmm1[7]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_8f64_as_shufpd:
+; X64:       # BB#0:
+; X64-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1],zmm1[0],zmm0[2],zmm1[2],zmm0[5],zmm1[5],zmm0[6],zmm1[7]
+; X64-NEXT:    retq
+  %1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 1, i64 8, i64 2, i64 10, i64 5, i64 13, i64 6, i64 15>, <8 x double> %x1, i8 -1)
+  ret <8 x double> %1
+}
+
 define <8 x i64> @combine_vpermi2var_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_vpermi2var_8i64_identity:
 ; X32:       # BB#0:

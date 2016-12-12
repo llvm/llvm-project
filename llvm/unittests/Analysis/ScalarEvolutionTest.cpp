@@ -349,6 +349,13 @@ static Instruction *getInstructionByName(Function &F, StringRef Name) {
   llvm_unreachable("Expected to find instruction!");
 }
 
+static Argument *getArgByName(Function &F, StringRef Name) {
+  for (auto &A : F.args())
+    if (A.getName() == Name)
+      return &A;
+  llvm_unreachable("Expected to find argument!");
+}
+
 TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
   LLVMContext C;
   SMDiagnostic Err;
@@ -530,6 +537,75 @@ TEST_F(ScalarEvolutionsTest, SCEVCompareComplexity) {
   ScalarEvolution SE = buildSE(*F);
 
   EXPECT_NE(nullptr, SE.getSCEV(Acc[0]));
+}
+
+TEST_F(ScalarEvolutionsTest, BadHoistingSCEVExpander_PR30942) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "target datalayout = \"e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128\" "
+      " "
+      "define void @f_1(i32 %x, i32 %y, i32 %n, i1* %cond_buf) "
+      "    local_unnamed_addr { "
+      "entry: "
+      "  %entrycond = icmp sgt i32 %n, 0 "
+      "  br i1 %entrycond, label %loop.ph, label %for.end "
+      " "
+      "loop.ph: "
+      "  br label %loop "
+      " "
+      "loop: "
+      "  %iv1 = phi i32 [ %iv1.inc, %right ], [ 0, %loop.ph ] "
+      "  %iv1.inc = add nuw nsw i32 %iv1, 1 "
+      "  %cond = load volatile i1, i1* %cond_buf  "
+      "  br i1 %cond, label %left, label %right  "
+      "  "
+      "left: "
+      "  %div = udiv i32 %x, %y  "
+      "  br label %right  "
+      "  "
+      "right: "
+      "  %exitcond = icmp eq i32 %iv1.inc, %n "
+      "  br i1 %exitcond, label %for.end.loopexit, label %loop "
+      " "
+      "for.end.loopexit: "
+      "  br label %for.end "
+      " "
+      "for.end: "
+      "  ret void "
+      "} ",
+      Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithFunctionAndSE(*M, "f_1", [&](Function &F, ScalarEvolution &SE) {
+    SCEVExpander Expander(SE, M->getDataLayout(), "unittests");
+    auto *DivInst = getInstructionByName(F, "div");
+
+    {
+      auto *DivSCEV = SE.getSCEV(DivInst);
+      auto *DivExpansion = Expander.expandCodeFor(
+          DivSCEV, DivSCEV->getType(), DivInst->getParent()->getTerminator());
+      auto *DivExpansionInst = dyn_cast<Instruction>(DivExpansion);
+      ASSERT_NE(DivExpansionInst, nullptr);
+      EXPECT_EQ(DivInst->getParent(), DivExpansionInst->getParent());
+    }
+
+    {
+      auto *ArgY = getArgByName(F, "y");
+      auto *DivFromScratchSCEV =
+          SE.getUDivExpr(SE.getOne(ArgY->getType()), SE.getSCEV(ArgY));
+
+      auto *DivFromScratchExpansion = Expander.expandCodeFor(
+          DivFromScratchSCEV, DivFromScratchSCEV->getType(),
+          DivInst->getParent()->getTerminator());
+      auto *DivFromScratchExpansionInst =
+          dyn_cast<Instruction>(DivFromScratchExpansion);
+      ASSERT_NE(DivFromScratchExpansionInst, nullptr);
+      EXPECT_EQ(DivInst->getParent(), DivFromScratchExpansionInst->getParent());
+    }
+  });
 }
 
 }  // end anonymous namespace

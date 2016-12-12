@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=i386-pc-win32       -mattr=+avx512bw  | FileCheck --check-prefix=X32 %s
-; RUN: llc < %s -mtriple=x86_64-win32        -mattr=+avx512bw  | FileCheck --check-prefix=WIN64 %s
-; RUN: llc < %s -mtriple=x86_64-linux-gnu    -mattr=+avx512bw  | FileCheck --check-prefix=LINUXOSX64 %s
+; RUN: llc < %s -mtriple=i386-pc-win32       -mattr=+avx512bw  | FileCheck --check-prefix=CHECK --check-prefix=X32 %s
+; RUN: llc < %s -mtriple=x86_64-win32        -mattr=+avx512bw  | FileCheck --check-prefix=CHECK --check-prefix=CHECK64 --check-prefix=WIN64 %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu    -mattr=+avx512bw  | FileCheck --check-prefix=CHECK --check-prefix=CHECK64 --check-prefix=LINUXOSX64 %s
 
 ; X32-LABEL:  test_argv64i1:
 ; X32:        kmovd   %edx, %k0
@@ -155,7 +155,7 @@ define x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, <64 x i1> 
 ; LINUXOSX64:       call{{.*}}   test_argv64i1
 
 ; Test regcall when passing arguments of v64i1 type
-define x86_regcallcc i64 @caller_argv64i1() #0 {
+define i64 @caller_argv64i1() #0 {
 entry:
   %v0 = bitcast i64 4294967298 to <64 x i1>
   %call = call x86_regcallcc i64 @test_argv64i1(<64 x i1> %v0, <64 x i1> %v0, <64 x i1> %v0,
@@ -171,9 +171,9 @@ entry:
 ; X32:       mov{{.*}}    $1, %ecx
 ; X32:       ret{{.*}}
 
-; WIN64-LABEL: test_retv64i1:
-; WIN64:       mov{{.*}} $4294967298, %rax
-; WIN64:       ret{{.*}}
+; CHECK64-LABEL: test_retv64i1:
+; CHECK64:       mov{{.*}} $4294967298, %rax
+; CHECK64:       ret{{.*}}
 
 ; Test regcall when returning v64i1 type
 define x86_regcallcc <64 x i1> @test_retv64i1()  {
@@ -187,9 +187,164 @@ define x86_regcallcc <64 x i1> @test_retv64i1()  {
 ; X32:       kmov{{.*}}   %ecx, %k1
 ; X32:       kunpckdq     %k0, %k1, %k0
 
+; CHECK64-LABEL: caller_retv64i1:
+; CHECK64:       call{{.*}}   {{_*}}test_retv64i1
+; CHECK64:       kmovq %rax, %k0
+; CHECK64:       ret{{.*}}
+
 ; Test regcall when processing result of v64i1 type
-define x86_regcallcc <64 x i1> @caller_retv64i1() #0 {
+define <64 x i1> @caller_retv64i1() #0 {
 entry:
   %call = call x86_regcallcc <64 x i1> @test_retv64i1()
   ret <64 x i1> %call
+}
+
+; CHECK-LABEL:  test_argv32i1:
+; CHECK:        kmovd    %edx, %k{{[0-9]+}}
+; CHECK:        kmovd    %ecx, %k{{[0-9]+}}
+; CHECK:        kmovd    %eax, %k{{[0-9]+}}
+; CHECK:        ret{{l|q}}
+
+; Test regcall when receiving arguments of v32i1 type
+declare i32 @test_argv32i1helper(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)
+define x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)  {
+entry:
+  %res = call i32 @test_argv32i1helper(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)
+  ret i32 %res
+}
+
+; CHECK-LABEL:  caller_argv32i1:
+; CHECK:        mov{{.*}}    $1, %eax
+; CHECK:        mov{{.*}}    $1, %ecx
+; CHECK:        mov{{.*}}    $1, %edx
+; CHECK:        call{{.*}}   {{_*}}test_argv32i1
+
+; Test regcall when passing arguments of v32i1 type
+define i32 @caller_argv32i1() #0 {
+entry:
+  %v0 = bitcast i32 1 to <32 x i1>
+  %call = call x86_regcallcc i32 @test_argv32i1(<32 x i1> %v0, <32 x i1> %v0, <32 x i1> %v0)
+  ret i32 %call
+}
+
+; CHECK-LABEL: test_retv32i1:
+; CHECK:       movl    $1, %eax
+; CHECK:       ret{{l|q}}
+
+; Test regcall when returning v32i1 type
+define x86_regcallcc <32 x i1> @test_retv32i1()  {
+  %a = bitcast i32 1 to <32 x i1>
+  ret <32 x i1> %a
+}
+
+; CHECK-LABEL: caller_retv32i1:
+; CHECK:       call{{.*}}   {{_*}}test_retv32i1
+; CHECK:       incl %eax
+
+; Test regcall when processing result of v32i1 type
+define i32 @caller_retv32i1() #0 {
+entry:
+  %call = call x86_regcallcc <32 x i1> @test_retv32i1()
+  %c = bitcast <32 x i1> %call to i32
+  %add = add i32 %c, 1
+  ret i32 %add
+}
+
+; CHECK-LABEL:  test_argv16i1:
+; CHECK:        kmovw    %edx, %k{{[0-9]+}}
+; CHECK:        kmovw    %ecx, %k{{[0-9]+}}
+; CHECK:        kmovw    %eax, %k{{[0-9]+}}
+; CHECK:        ret{{l|q}}
+
+; Test regcall when receiving arguments of v16i1 type
+declare i16 @test_argv16i1helper(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)
+define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)  {
+  %res = call i16 @test_argv16i1helper(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)
+  ret i16 %res
+}
+
+; CHECK-LABEL:  caller_argv16i1:
+; CHECK:        movl    $1, %eax
+; CHECK:        movl    $1, %ecx
+; CHECK:        movl    $1, %edx
+; CHECK:        call{{l|q}}   {{_*}}test_argv16i1
+
+; Test regcall when passing arguments of v16i1 type
+define i16 @caller_argv16i1() #0 {
+entry:
+  %v0 = bitcast i16 1 to <16 x i1>
+  %call = call x86_regcallcc i16 @test_argv16i1(<16 x i1> %v0, <16 x i1> %v0, <16 x i1> %v0)
+  ret i16 %call
+}
+
+; CHECK-LABEL: test_retv16i1:
+; CHECK:       movw    $1, %ax
+; CHECK:       ret{{l|q}}
+
+; Test regcall when returning v16i1 type
+define x86_regcallcc <16 x i1> @test_retv16i1()  {
+  %a = bitcast i16 1 to <16 x i1>
+  ret <16 x i1> %a
+}
+
+; CHECK-LABEL: caller_retv16i1:
+; CHECK:       call{{l|q}}   {{_*}}test_retv16i1
+; CHECK:       incl   %eax
+
+; Test regcall when processing result of v16i1 type
+define i16 @caller_retv16i1() #0 {
+entry:
+  %call = call x86_regcallcc <16 x i1> @test_retv16i1()
+  %c = bitcast <16 x i1> %call to i16
+  %add = add i16 %c, 1
+  ret i16 %add
+}
+
+; CHECK-LABEL:  test_argv8i1:
+; CHECK:        kmovw    %edx, %k{{[0-9]+}}
+; CHECK:        kmovw    %ecx, %k{{[0-9]+}}
+; CHECK:        kmovw    %eax, %k{{[0-9]+}}
+; CHECK:        ret{{l|q}}
+
+; Test regcall when receiving arguments of v8i1 type
+declare i8 @test_argv8i1helper(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)
+define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)  {
+  %res = call i8 @test_argv8i1helper(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)
+  ret i8 %res
+}
+
+; CHECK-LABEL:  caller_argv8i1:
+; CHECK:        movl    $1, %eax
+; CHECK:        movl    $1, %ecx
+; CHECK:        movl    $1, %edx
+; CHECK:        call{{l|q}}   {{_*}}test_argv8i1
+
+; Test regcall when passing arguments of v8i1 type
+define i8 @caller_argv8i1() #0 {
+entry:
+  %v0 = bitcast i8 1 to <8 x i1>
+  %call = call x86_regcallcc i8 @test_argv8i1(<8 x i1> %v0, <8 x i1> %v0, <8 x i1> %v0)
+  ret i8 %call
+}
+
+; CHECK-LABEL: test_retv8i1:
+; CHECK:       movb    $1, %al
+; CHECK:       ret{{q|l}}
+
+; Test regcall when returning v8i1 type
+define x86_regcallcc <8 x i1> @test_retv8i1()  {
+  %a = bitcast i8 1 to <8 x i1>
+  ret <8 x i1> %a
+}
+
+; CHECK-LABEL: caller_retv8i1:
+; CHECK:       call{{l|q}}   {{_*}}test_retv8i1
+; CHECK:       kmovw %eax, %k{{[0-9]+}}
+; CHECK:       ret{{l|q}}
+
+; Test regcall when processing result of v8i1 type
+define <8 x i1> @caller_retv8i1() #0 {
+entry:
+  %call = call x86_regcallcc <8 x i1> @test_retv8i1()
+  ret <8 x i1> %call
 }

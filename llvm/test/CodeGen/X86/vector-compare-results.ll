@@ -1876,24 +1876,12 @@ define <64 x i1> @test_cmp_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ;
 ; AVX512-LABEL: test_cmp_v64i8:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpcmpgtb %ymm3, %ymm1, %ymm3
-; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm0, %ymm1
-; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; AVX512-NEXT:    vpand %xmm4, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; AVX512-NEXT:    vpcmpgtb %xmm0, %xmm5, %xmm0
-; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm1
-; AVX512-NEXT:    vpand %xmm4, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpgtb %xmm1, %xmm5, %xmm1
-; AVX512-NEXT:    vpsllw $7, %xmm3, %xmm2
-; AVX512-NEXT:    vpand %xmm4, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtb %xmm2, %xmm5, %xmm2
-; AVX512-NEXT:    vextracti128 $1, %ymm3, %xmm3
-; AVX512-NEXT:    vpsllw $7, %xmm3, %xmm3
-; AVX512-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; AVX512-NEXT:    vpcmpgtb %xmm3, %xmm5, %xmm3
+; AVX512-NEXT:    vpcmpgtb %ymm3, %ymm1, %ymm4
+; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vextracti128 $1, %ymm4, %xmm3
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX512-NEXT:    vmovdqa %xmm4, %xmm2
 ; AVX512-NEXT:    retq
   %1 = icmp sgt <64 x i8> %a0, %a1
   ret <64 x i1> %1
@@ -4491,11 +4479,11 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
 ; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; AVX512-NEXT:    vpsllw $7, %ymm2, %ymm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; AVX512-NEXT:    vpand %ymm2, %ymm3, %ymm3
+; AVX512-NEXT:    vpsllw $7, %ymm2, %ymm2
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX512-NEXT:    vpand %ymm3, %ymm2, %ymm2
 ; AVX512-NEXT:    vpxor %ymm6, %ymm6, %ymm6
-; AVX512-NEXT:    vpcmpgtb %ymm3, %ymm6, %ymm3
+; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm6, %ymm2
 ; AVX512-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX512-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; AVX512-NEXT:    vpslld $31, %zmm1, %zmm1
@@ -4632,24 +4620,12 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpsllw $7, %ymm0, %ymm0
-; AVX512-NEXT:    vpand %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpcmpgtb %ymm0, %ymm6, %ymm1
-; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; AVX512-NEXT:    vpand %xmm4, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; AVX512-NEXT:    vpcmpgtb %xmm0, %xmm5, %xmm0
-; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm1
-; AVX512-NEXT:    vpand %xmm4, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpgtb %xmm1, %xmm5, %xmm1
-; AVX512-NEXT:    vpsllw $7, %xmm3, %xmm2
-; AVX512-NEXT:    vpand %xmm4, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtb %xmm2, %xmm5, %xmm2
-; AVX512-NEXT:    vextracti128 $1, %ymm3, %xmm3
-; AVX512-NEXT:    vpsllw $7, %xmm3, %xmm3
-; AVX512-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; AVX512-NEXT:    vpcmpgtb %xmm3, %xmm5, %xmm3
+; AVX512-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512-NEXT:    vpcmpgtb %ymm0, %ymm6, %ymm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX512-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<kill>
 ; AVX512-NEXT:    retq
   %1 = icmp sgt <64 x i16> %a0, %a1
   ret <64 x i1> %1
