@@ -375,7 +375,8 @@ Error LTO::addRegularLTO(std::unique_ptr<InputFile> Input,
 
   return RegularLTO.Mover->move(Obj->takeModule(), Keep,
                                 [](GlobalValue &, IRMover::ValueAdder) {},
-                                /* LinkModuleInlineAsm */ true);
+                                /* LinkModuleInlineAsm */ true,
+                                /* IsPerformingImport */ false);
 }
 
 // Add a ThinLTO object to the link.
