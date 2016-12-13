@@ -2840,28 +2840,6 @@ void FunctionDecl::setParams(ASTContext &C,
   }
 }
 
-void FunctionDecl::setDeclsInPrototypeScope(ArrayRef<NamedDecl *> NewDecls) {
-  assert(DeclsInPrototypeScope.empty() && "Already has prototype decls!");
-
-  if (!NewDecls.empty()) {
-    NamedDecl **A = new (getASTContext()) NamedDecl*[NewDecls.size()];
-    std::copy(NewDecls.begin(), NewDecls.end(), A);
-    DeclsInPrototypeScope = llvm::makeArrayRef(A, NewDecls.size());
-    // Move declarations introduced in prototype to the function context.
-    for (auto I : NewDecls) {
-      DeclContext *DC = I->getDeclContext();
-      // Forward-declared reference to an enumeration is not added to
-      // declaration scope, so skip declaration that is absent from its
-      // declaration contexts.
-      if (DC->containsDecl(I)) {
-          DC->removeDecl(I);
-          I->setDeclContext(this);
-          addDecl(I);
-      }
-    }
-  }
-}
-
 /// getMinRequiredArguments - Returns the minimum number of arguments
 /// needed to call this function. This may be fewer than the number of
 /// function parameters, if some of the parameters have default

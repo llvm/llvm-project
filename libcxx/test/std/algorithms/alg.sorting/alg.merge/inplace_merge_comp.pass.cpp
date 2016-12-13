@@ -74,7 +74,7 @@ test_one(unsigned N, unsigned M)
     std::inplace_merge(Iter(ia), Iter(ia+M), Iter(ia+N), std::ref(pred));
     if(N > 0)
     {
-        assert(ia[0] == N-1);
+        assert(ia[0] == static_cast<int>(N)-1);
         assert(ia[N-1] == 0);
         assert(std::is_sorted(ia, ia+N, std::greater<value_type>()));
         assert(pred.count() <= (N-1));
@@ -125,10 +125,10 @@ int main()
     test<S*>();
 
     {
-    unsigned N = 100;
+    int N = 100;
     unsigned M = 50;
     std::unique_ptr<int>* ia = new std::unique_ptr<int>[N];
-    for (unsigned i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
         ia[i].reset(new int(i));
     std::random_shuffle(ia, ia+N);
     std::sort(ia, ia+M, indirect_less());

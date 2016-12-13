@@ -1517,6 +1517,9 @@ TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
         ? InitializationKind::CreateFunctionalCast(OpRange, ListInitialization)
     : InitializationKind::CreateCast(OpRange);
   Expr *SrcExprRaw = SrcExpr.get();
+  // FIXME: Per DR242, we should check for an implicit conversion sequence
+  // or for a constructor that could be invoked by direct-initialization
+  // here, not for an initialization sequence.
   InitializationSequence InitSeq(Self, Entity, InitKind, SrcExprRaw);
 
   // At this point of CheckStaticCast, if the destination is a reference,
@@ -1652,7 +1655,8 @@ static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
   if (NeedToMaterializeTemporary)
     // This is a const_cast from a class prvalue to an rvalue reference type.
     // Materialize a temporary to store the result of the conversion.
-    SrcExpr = Self.CreateMaterializeTemporaryExpr(SrcType, SrcExpr.get(),
+    SrcExpr = Self.CreateMaterializeTemporaryExpr(SrcExpr.get()->getType(),
+                                                  SrcExpr.get(),
                                                   /*IsLValueReference*/ false);
 
   return TC_Success;
@@ -1916,7 +1920,10 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     switch (SrcExpr.get()->getObjectKind()) {
     case OK_Ordinary:
       break;
-    case OK_BitField:        inappropriate = "bit-field";           break;
+    case OK_BitField:
+      msg = diag::err_bad_cxx_cast_bitfield;
+      return TC_NotApplicable;
+      // FIXME: Use a specific diagnostic for the rest of these cases.
     case OK_VectorComponent: inappropriate = "vector element";      break;
     case OK_ObjCProperty:    inappropriate = "property expression"; break;
     case OK_ObjCSubscript:   inappropriate = "container subscripting expression"; 

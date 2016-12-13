@@ -18,9 +18,11 @@
 #include <cassert>
 #include <limits>
 
+#include "test_macros.h"
+
 volatile int new_called = 0;
 
-void* operator new(std::size_t s) throw(std::bad_alloc)
+void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 {
     ++new_called;
     void* ret = std::malloc(s);
@@ -28,7 +30,7 @@ void* operator new(std::size_t s) throw(std::bad_alloc)
     return  ret;
 }
 
-void  operator delete(void* p) throw()
+void  operator delete(void* p) TEST_NOEXCEPT
 {
     --new_called;
     std::free(p);

@@ -57,6 +57,7 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     {MD_loop, "llvm.loop"},
     {MD_type, "type"},
     {MD_section_prefix, "section_prefix"},
+    {MD_absolute_symbol, "absolute_symbol"},
   };
 
   for (auto &MDKind : MDKinds) {

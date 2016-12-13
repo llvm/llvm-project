@@ -87,7 +87,7 @@ namespace PR14838 {
   struct thing {};
   struct another {
     another() : r(thing()) {}
-    // expected-error@-1 {{temporary of type 'const PR14838::function' has private destructor}}
+    // expected-error@-1 {{temporary of type 'PR14838::function' has private destructor}}
     // expected-warning@-2 {{binding reference member 'r' to a temporary value}}
     const function &r; // expected-note {{reference member declared here}}
   } af;

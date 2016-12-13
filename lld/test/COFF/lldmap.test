@@ -1,6 +1,8 @@
 # RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
-# RUN: lld-link /out:%t.exe /entry:main /lldmap:%t.map %t.obj
-# RUN: FileCheck %s < %t.map
+# RUN: lld-link /out:%t.exe /entry:main /lldmap:%T/foo.map %t.obj
+# RUN: FileCheck %s < %T/foo.map
+# RUN: lld-link /out:%T/bar.exe /entry:main /lldmap %t.obj
+# RUN: FileCheck %s < %T/bar.map
 
 # CHECK: .obj:
 # CHECK-NEXT: 140001000 .text$mn

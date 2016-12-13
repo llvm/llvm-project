@@ -54,6 +54,6 @@ entry:
 ; CHECK: = load
 ; CHECK: ret void
 
-!0 = !{!"Simple C/C++ TBAA", null}
+!0 = !{!"Simple C/C++ TBAA"}
 !1 = !{!"vtable pointer", !0}
 !2 = !{!1, !1, i64 0}

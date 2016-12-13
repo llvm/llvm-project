@@ -12,12 +12,26 @@
 # RUN:      *(.foo.4)                \
 # RUN:      QUAD(0x1122334455667788) \
 # RUN:    }                          \
+# RUN:    .bar : {                   \
+# RUN:      *(.bar.1)                \
+# RUN:      BYTE(a + 1)              \
+# RUN:      *(.bar.2)                \
+# RUN:      SHORT(b)                 \
+# RUN:      *(.bar.3)                \
+# RUN:      LONG(c + 2)              \
+# RUN:      *(.bar.4)                \
+# RUN:      QUAD(d)                  \
+# RUN:    }                          \
 # RUN:  }" > %t.script
-# RUN: ld.lld -o %t --script %t.script %t.o
+# RUN: ld.lld -o %t %t.o --script %t.script
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .foo:
 # CHECK-NEXT:   ff11ff22 11ff4433 2211ff88 77665544
+# CHECK-NEXT:   332211
+
+# CHECK:      Contents of section .bar:
+# CHECK-NEXT:   ff12ff22 11ff4633 2211ff88 77665544
 # CHECK-NEXT:   332211
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %tmips64be
@@ -26,6 +40,21 @@
 # BE:      Contents of section .foo:
 # BE-NEXT:   ff11ff11 22ff1122 3344ff11 22334455
 # BE-NEXT:   667788
+# BE-NEXT: Contents of section .bar:
+# BE-NEXT:   ff12ff11 22ff1122 3346ff11 22334455
+# BE-NEXT:   667788
+
+.global a
+a = 0x11
+
+.global b
+b = 0x1122
+
+.global c
+c = 0x11223344
+
+.global d
+d = 0x1122334455667788
 
 .section .foo.1, "a"
  .byte 0xFF
@@ -37,4 +66,16 @@
  .byte 0xFF
 
 .section .foo.4, "a"
+ .byte 0xFF
+
+.section .bar.1, "a"
+ .byte 0xFF
+
+.section .bar.2, "a"
+ .byte 0xFF
+
+.section .bar.3, "a"
+ .byte 0xFF
+
+.section .bar.4, "a"
  .byte 0xFF

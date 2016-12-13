@@ -5,8 +5,8 @@
 ; CHECK: DW_TAG_inlined_subroutine
 ; CHECK:    "_Z3f111A"
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_location [DW_FORM_block1]    (<0x0b> 91 51 9d 78 08 91 4a 9d 38 88 01 )
-;  -- fbreg -47, bit-piece 120 8 , fbreg -54, bit-piece 56 136 ------^
+; CHECK: DW_AT_location [DW_FORM_block1]    (<0x0c> 93 01 91 51 93 0f 93 01 91 4a 93 07 )
+;  -- piece 0x00000001, fbreg -47, piece 0x0000000f, piece 0x00000001, fbreg -54, piece 0x00000007 ------^
 ; CHECK: DW_AT_abstract_origin {{.*}} "p1"
 ;
 ; long a;

@@ -398,8 +398,6 @@ def err_decomp_decl_not_alone : Error<
   "decomposition declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
   "decomposition declaration %0 requires an initializer">;
-def err_decomp_decl_paren_init : Error<
-  "decomposition declaration %0 cannot have a parenthesized initializer">;
 def err_decomp_decl_wrong_number_bindings : Error<
   "type %0 decomposes into %2 elements, but %select{only |}3%1 "
   "names were provided">;
@@ -4564,10 +4562,15 @@ def err_redefinition_different_typedef : Error<
   "%select{typedef|type alias|type alias template}0 "
   "redefinition with different types%diff{ ($ vs $)|}1,2">;
 def err_tag_reference_non_tag : Error<
-  "elaborated type refers to %select{a non-tag type|a typedef|a type alias|a template|a type alias template|a template template argument}0">;
+  "%select{non-struct type|non-class type|non-union type|non-enum "
+  "type|typedef|type alias|template|type alias template|template "
+  "template argument}1 %0 cannot be referenced with a "
+  "%select{struct|interface|union|class|enum}2 specifier">;
 def err_tag_reference_conflict : Error<
-  "implicit declaration introduced by elaborated type conflicts with "
-  "%select{a declaration|a typedef|a type alias|a template}0 of the same name">;
+  "implicit declaration introduced by elaborated type conflicts with a "
+  "%select{non-struct type|non-class type|non-union type|non-enum "
+  "type|typedef|type alias|template|type alias template|template "
+  "template argument}0 of the same name">;
 def err_dependent_tag_decl : Error<
   "%select{declaration|definition}0 of "
   "%select{struct|interface|union|class|enum}1 in a dependent scope">;

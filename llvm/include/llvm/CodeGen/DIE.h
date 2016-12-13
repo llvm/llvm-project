@@ -134,7 +134,7 @@ public:
   /// Generate the abbreviation declaration for a DIE and return a pointer to
   /// the generated abbreviation.
   ///
-  /// \param DIE the debug info entry to generate the abbreviation for.
+  /// \param Die the debug info entry to generate the abbreviation for.
   /// \returns A reference to the uniqued abbreviation declaration that is
   /// owned by this class.
   DIEAbbrev &uniqueAbbreviation(DIE &Die);
@@ -256,15 +256,16 @@ public:
 ///
 /// This class is used with the DW_FORM_string form.
 class DIEInlineString {
-  std::string S;
+  StringRef S;
 
 public:
-  explicit DIEInlineString(StringRef Str) : S(Str.str()) {}
+  template <typename Allocator>
+  explicit DIEInlineString(StringRef Str, Allocator &A) : S(Str.copy(A)) {}
 
   ~DIEInlineString() = default;
 
   /// Grab the string out of the object.
-  StringRef getString() const { return StringRef(S); }
+  StringRef getString() const { return S; }
 
   void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;

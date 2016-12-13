@@ -179,6 +179,45 @@ struct InheritsCtor : BaseCtor { // expected-note 1+ {{candidate}}
 };
 InheritsCtor II = {{}, 42}; // expected-error {{no matching constructor}}
 
+namespace std_example {
+  struct A {
+    explicit A() = default; // expected-note 2{{declared here}}
+  };
+
+  struct B : A {
+    explicit B() = default; // expected-note 2{{declared here}}
+  };
+
+  struct C {
+    explicit C(); // expected-note 2{{declared here}}
+  };
+
+  struct D : A {
+    C c;
+    explicit D() = default; // expected-note 2{{declared here}}
+  };
+
+  template <typename T> void f() {
+    T t; // ok
+    T u{}; // ok
+    T v = {}; // expected-error 4{{explicit}}
+  }
+  template <typename T> void g() {
+    void x(T t); // expected-note 4{{parameter}}
+    x({}); // expected-error 4{{explicit}}
+  }
+
+  void test() {
+    f<A>(); // expected-note {{instantiation of}}
+    f<B>(); // expected-note {{instantiation of}}
+    f<C>(); // expected-note {{instantiation of}}
+    f<D>(); // expected-note {{instantiation of}}
+    g<A>(); // expected-note {{instantiation of}}
+    g<B>(); // expected-note {{instantiation of}}
+    g<C>(); // expected-note {{instantiation of}}
+    g<D>(); // expected-note {{instantiation of}}
+  }
+}
 #endif                      // __cplusplus >= 201103L
 }
 

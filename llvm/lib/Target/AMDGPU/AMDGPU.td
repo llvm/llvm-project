@@ -73,6 +73,13 @@ def FeatureUnalignedScratchAccess : SubtargetFeature<"unaligned-scratch-access",
   "Support unaligned scratch loads and stores"
 >;
 
+// XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
+// XNACK. The current default kernel driver setting is:
+// - graphics ring: XNACK disabled
+// - compute ring: XNACK enabled
+//
+// If XNACK is enabled, the VMEM latency can be worse.
+// If XNACK is disabled, the 2 SGPRs can be used for general purposes.
 def FeatureXNACK : SubtargetFeature<"xnack",
   "EnableXNACK",
   "true",
@@ -356,8 +363,7 @@ def FeatureISAVersion7_0_1 : SubtargetFeatureISAVersion <7,0,1,
 
 def FeatureISAVersion7_0_2 : SubtargetFeatureISAVersion <7,0,2,
   [FeatureSeaIslands,
-   FeatureLDSBankCount16,
-   FeatureXNACK]>;
+   FeatureLDSBankCount16]>;
 
 def FeatureISAVersion8_0_0 : SubtargetFeatureISAVersion <8,0,0,
   [FeatureVolcanicIslands,

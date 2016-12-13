@@ -221,12 +221,12 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     const MCSymbol *PersHandlerSym =
         TLOF.getCFIPersonalitySymbol(PerFn, Asm->TM, MMI);
 
-    // Classify the personality routine so that we may reason about it.
-    EHPersonality Per = classifyEHPersonality(PerFn);
-
-    // Do not emit a .seh_handler directive if it is a C++ cleanup funclet.
-    if (Per != EHPersonality::MSVC_CXX ||
-        !CurrentFuncletEntry->isCleanupFuncletEntry())
+    // Do not emit a .seh_handler directives for cleanup funclets.
+    // FIXME: This means cleanup funclets cannot handle exceptions. Given that
+    // Clang doesn't produce EH constructs inside cleanup funclets and LLVM's
+    // inliner doesn't allow inlining them, this isn't a major problem in
+    // practice.
+    if (!CurrentFuncletEntry->isCleanupFuncletEntry())
       Asm->OutStreamer->EmitWinEHHandler(PersHandlerSym, true, true);
   }
 }

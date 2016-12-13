@@ -110,7 +110,7 @@ struct Object {
   std::vector<LoadCommand> LoadCommands;
   std::vector<Section> Sections;
   LinkEditData LinkEdit;
-  DWARFYAML::DWARFData DWARF;
+  DWARFYAML::Data DWARF;
 };
 
 struct FatHeader {

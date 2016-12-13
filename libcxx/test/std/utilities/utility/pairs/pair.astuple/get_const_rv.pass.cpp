@@ -28,7 +28,7 @@ int main()
 {
     {
     typedef std::pair<std::unique_ptr<int>, short> P;
-    const P p(std::unique_ptr<int>(new int(3)), 4);
+    const P p(std::unique_ptr<int>(new int(3)), static_cast<short>(4));
     static_assert(std::is_same<const std::unique_ptr<int>&&, decltype(std::get<0>(std::move(p)))>::value, "");
     static_assert(noexcept(std::get<0>(std::move(p))), "");
     const std::unique_ptr<int>&& ptr = std::get<0>(std::move(p));
@@ -58,7 +58,7 @@ int main()
 #if TEST_STD_VER > 11
     {
     typedef std::pair<int, short> P;
-    constexpr const P p1(3, 4);
+    constexpr const P p1(3, static_cast<short>(4));
     static_assert(std::get<0>(std::move(p1)) == 3, "");
     static_assert(std::get<1>(std::move(p1)) == 4, "");
     }

@@ -3870,10 +3870,11 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
   unsigned Opcode0 = I0->getOpcode();
 
-  // FIXME: Register size should be a parameter to this function, so we can
-  // try different vectorization factors.
   unsigned Sz = R.getVectorElementSize(I0);
-  unsigned VF = R.getMinVecRegSize() / Sz;
+  unsigned MinVF = std::max(2U, R.getMinVecRegSize() / Sz);
+  unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
+  if (MaxVF < 2)
+    return false;
 
   for (Value *V : VL) {
     Type *Ty = V->getType();
@@ -3889,76 +3890,89 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   // Keep track of values that were deleted by vectorizing in the loop below.
   SmallVector<WeakVH, 8> TrackValues(VL.begin(), VL.end());
 
-  for (unsigned i = 0, e = VL.size(); i < e; ++i) {
-    unsigned OpsWidth = 0;
-
-    if (i + VF > e)
-      OpsWidth = e - i;
-    else
-      OpsWidth = VF;
-
-    if (!isPowerOf2_32(OpsWidth) || OpsWidth < 2)
-      break;
-
-    // Check that a previous iteration of this loop did not delete the Value.
-    if (hasValueBeenRAUWed(VL, TrackValues, i, OpsWidth))
+  unsigned NextInst = 0, MaxInst = VL.size();
+  for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
+       VF /= 2) {
+    // No actual vectorization should happen, if number of parts is the same as
+    // provided vectorization factor (i.e. the scalar type is used for vector
+    // code during codegen).
+    auto *VecTy = VectorType::get(VL[0]->getType(), VF);
+    if (TTI->getNumberOfParts(VecTy) == VF)
       continue;
+    for (unsigned I = NextInst; I < MaxInst; ++I) {
+      unsigned OpsWidth = 0;
 
-    DEBUG(dbgs() << "SLP: Analyzing " << OpsWidth << " operations "
-                 << "\n");
-    ArrayRef<Value *> Ops = VL.slice(i, OpsWidth);
+      if (I + VF > MaxInst)
+        OpsWidth = MaxInst - I;
+      else
+        OpsWidth = VF;
 
-    ArrayRef<Value *> BuildVectorSlice;
-    if (!BuildVector.empty())
-      BuildVectorSlice = BuildVector.slice(i, OpsWidth);
+      if (!isPowerOf2_32(OpsWidth) || OpsWidth < 2)
+        break;
 
-    R.buildTree(Ops, BuildVectorSlice);
-    // TODO: check if we can allow reordering for more cases.
-    if (AllowReorder && R.shouldReorder()) {
-      // Conceptually, there is nothing actually preventing us from trying to
-      // reorder a larger list. In fact, we do exactly this when vectorizing
-      // reductions. However, at this point, we only expect to get here from
-      // tryToVectorizePair().
-      assert(Ops.size() == 2);
-      assert(BuildVectorSlice.empty());
-      Value *ReorderedOps[] = { Ops[1], Ops[0] };
-      R.buildTree(ReorderedOps, None);
-    }
-    if (R.isTreeTinyAndNotFullyVectorizable())
-      continue;
+      // Check that a previous iteration of this loop did not delete the Value.
+      if (hasValueBeenRAUWed(VL, TrackValues, I, OpsWidth))
+        continue;
 
-    R.computeMinimumValueSizes();
-    int Cost = R.getTreeCost();
+      DEBUG(dbgs() << "SLP: Analyzing " << OpsWidth << " operations "
+                   << "\n");
+      ArrayRef<Value *> Ops = VL.slice(I, OpsWidth);
 
-    if (Cost < -SLPCostThreshold) {
-      DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
-      Value *VectorizedRoot = R.vectorizeTree();
+      ArrayRef<Value *> BuildVectorSlice;
+      if (!BuildVector.empty())
+        BuildVectorSlice = BuildVector.slice(I, OpsWidth);
 
-      // Reconstruct the build vector by extracting the vectorized root. This
-      // way we handle the case where some elements of the vector are undefined.
-      //  (return (inserelt <4 xi32> (insertelt undef (opd0) 0) (opd1) 2))
-      if (!BuildVectorSlice.empty()) {
-        // The insert point is the last build vector instruction. The vectorized
-        // root will precede it. This guarantees that we get an instruction. The
-        // vectorized tree could have been constant folded.
-        Instruction *InsertAfter = cast<Instruction>(BuildVectorSlice.back());
-        unsigned VecIdx = 0;
-        for (auto &V : BuildVectorSlice) {
-          IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
-                                      ++BasicBlock::iterator(InsertAfter));
-          Instruction *I = cast<Instruction>(V);
-          assert(isa<InsertElementInst>(I) || isa<InsertValueInst>(I));
-          Instruction *Extract = cast<Instruction>(Builder.CreateExtractElement(
-              VectorizedRoot, Builder.getInt32(VecIdx++)));
-          I->setOperand(1, Extract);
-          I->removeFromParent();
-          I->insertAfter(Extract);
-          InsertAfter = I;
-        }
+      R.buildTree(Ops, BuildVectorSlice);
+      // TODO: check if we can allow reordering for more cases.
+      if (AllowReorder && R.shouldReorder()) {
+        // Conceptually, there is nothing actually preventing us from trying to
+        // reorder a larger list. In fact, we do exactly this when vectorizing
+        // reductions. However, at this point, we only expect to get here from
+        // tryToVectorizePair().
+        assert(Ops.size() == 2);
+        assert(BuildVectorSlice.empty());
+        Value *ReorderedOps[] = {Ops[1], Ops[0]};
+        R.buildTree(ReorderedOps, None);
       }
-      // Move to the next bundle.
-      i += VF - 1;
-      Changed = true;
+      if (R.isTreeTinyAndNotFullyVectorizable())
+        continue;
+
+      R.computeMinimumValueSizes();
+      int Cost = R.getTreeCost();
+
+      if (Cost < -SLPCostThreshold) {
+        DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
+        Value *VectorizedRoot = R.vectorizeTree();
+
+        // Reconstruct the build vector by extracting the vectorized root. This
+        // way we handle the case where some elements of the vector are
+        // undefined.
+        //  (return (inserelt <4 xi32> (insertelt undef (opd0) 0) (opd1) 2))
+        if (!BuildVectorSlice.empty()) {
+          // The insert point is the last build vector instruction. The
+          // vectorized root will precede it. This guarantees that we get an
+          // instruction. The vectorized tree could have been constant folded.
+          Instruction *InsertAfter = cast<Instruction>(BuildVectorSlice.back());
+          unsigned VecIdx = 0;
+          for (auto &V : BuildVectorSlice) {
+            IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
+                                        ++BasicBlock::iterator(InsertAfter));
+            Instruction *I = cast<Instruction>(V);
+            assert(isa<InsertElementInst>(I) || isa<InsertValueInst>(I));
+            Instruction *Extract =
+                cast<Instruction>(Builder.CreateExtractElement(
+                    VectorizedRoot, Builder.getInt32(VecIdx++)));
+            I->setOperand(1, Extract);
+            I->removeFromParent();
+            I->insertAfter(Extract);
+            InsertAfter = I;
+          }
+        }
+        // Move to the next bundle.
+        I += VF - 1;
+        NextInst = I + 1;
+        Changed = true;
+      }
     }
   }
 

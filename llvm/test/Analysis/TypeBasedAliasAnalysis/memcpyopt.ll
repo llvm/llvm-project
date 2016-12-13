@@ -20,7 +20,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, 
 
 ; CHECK: [[TAGA]] = !{[[TYPEA:!.*]], [[TYPEA]], i64 0}
 ; CHECK: [[TYPEA]] = !{!"A", !{{.*}}}
-!0 = !{!"tbaa root", null}
+!0 = !{!"tbaa root"}
 !1 = !{!3, !3, i64 0}
 !2 = !{!4, !4, i64 0}
 !3 = !{!"A", !0}

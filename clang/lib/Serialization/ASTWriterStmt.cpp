@@ -792,6 +792,18 @@ void ASTStmtWriter::VisitNoInitExpr(NoInitExpr *E) {
   Code = serialization::EXPR_NO_INIT;
 }
 
+void ASTStmtWriter::VisitArrayInitLoopExpr(ArrayInitLoopExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->SubExprs[0]);
+  Record.AddStmt(E->SubExprs[1]);
+  Code = serialization::EXPR_ARRAY_INIT_LOOP;
+}
+
+void ASTStmtWriter::VisitArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+  VisitExpr(E);
+  Code = serialization::EXPR_ARRAY_INIT_INDEX;
+}
+
 void ASTStmtWriter::VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
   VisitExpr(E);
   Code = serialization::EXPR_IMPLICIT_VALUE_INIT;
@@ -2530,6 +2542,12 @@ void ASTStmtWriter::VisitOMPTeamsDistributeParallelForSimdDirective(
     OMPTeamsDistributeParallelForSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPTeamsDistributeParallelForDirective(
+    OMPTeamsDistributeParallelForDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

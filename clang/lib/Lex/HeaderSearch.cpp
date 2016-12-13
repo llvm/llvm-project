@@ -121,6 +121,13 @@ const HeaderMap *HeaderSearch::CreateHeaderMap(const FileEntry *FE) {
   return nullptr;
 }
 
+/// \brief Get filenames for all registered header maps.
+void HeaderSearch::getHeaderMapFileNames(
+    SmallVectorImpl<std::string> &Names) const {
+  for (auto &HM : HeaderMaps)
+    Names.push_back(HM.first->getName());
+}
+
 std::string HeaderSearch::getModuleFileName(Module *Module) {
   const FileEntry *ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);

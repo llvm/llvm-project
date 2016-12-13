@@ -918,6 +918,17 @@ public:
                                           e->getCommon());
     }
 
+    /// Build the opaque value mapping for an OpaqueValueExpr whose source
+    /// expression is set to the expression the OVE represents.
+    OpaqueValueMapping(CodeGenFunction &CGF, const OpaqueValueExpr *OV)
+        : CGF(CGF) {
+      if (OV) {
+        assert(OV->getSourceExpr() && "wrong form of OpaqueValueMapping used "
+                                      "for OVE with no source expression");
+        Data = OpaqueValueMappingData::bind(CGF, OV, OV->getSourceExpr());
+      }
+    }
+
     OpaqueValueMapping(CodeGenFunction &CGF,
                        const OpaqueValueExpr *opaqueValue,
                        LValue lvalue)
@@ -1183,6 +1194,23 @@ public:
     CharUnits OldCXXThisAlignment;
   };
 
+  /// The scope of an ArrayInitLoopExpr. Within this scope, the value of the
+  /// current loop index is overridden.
+  class ArrayInitLoopExprScope {
+  public:
+    ArrayInitLoopExprScope(CodeGenFunction &CGF, llvm::Value *Index)
+      : CGF(CGF), OldArrayInitIndex(CGF.ArrayInitIndex) {
+      CGF.ArrayInitIndex = Index;
+    }
+    ~ArrayInitLoopExprScope() {
+      CGF.ArrayInitIndex = OldArrayInitIndex;
+    }
+
+  private:
+    CodeGenFunction &CGF;
+    llvm::Value *OldArrayInitIndex;
+  };
+
   class InlinedInheritingConstructorScope {
   public:
     InlinedInheritingConstructorScope(CodeGenFunction &CGF, GlobalDecl GD)
@@ -1250,6 +1278,10 @@ private:
   /// The value of 'this' to use when evaluating CXXDefaultInitExprs within
   /// this expression.
   Address CXXDefaultInitExprThis = Address::invalid();
+
+  /// The current array initialization index when evaluating an
+  /// ArrayInitIndexExpr within an ArrayInitLoopExpr.
+  llvm::Value *ArrayInitIndex = nullptr;
 
   /// The values of function arguments to use when evaluating
   /// CXXInheritedCtorInitExprs within this context.
@@ -1953,6 +1985,9 @@ public:
     return it->second;
   }
 
+  /// Get the index of the current ArrayInitLoopExpr, if any.
+  llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }
+
   /// getAccessedFieldNo - Given an encoded value and a result number, return
   /// the input field number being accessed.
   static unsigned getAccessedFieldNo(unsigned Idx, const llvm::Constant *Elts);
@@ -2633,6 +2668,8 @@ public:
   EmitOMPTeamsDistributeSimdDirective(const OMPTeamsDistributeSimdDirective &S);
   void EmitOMPTeamsDistributeParallelForSimdDirective(
       const OMPTeamsDistributeParallelForSimdDirective &S);
+  void EmitOMPTeamsDistributeParallelForDirective(
+      const OMPTeamsDistributeParallelForDirective &S);
 
   /// Emit outlined function for the target directive.
   static std::pair<llvm::Function * /*OutlinedFn*/,

@@ -47,7 +47,13 @@ void AMDGPUInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xffff);
+  // It's possible to end up with a 32-bit literal used with a 16-bit operand
+  // with ignored high bits. Print as 32-bit anyway in that case.
+  int64_t Imm = MI->getOperand(OpNo).getImm();
+  if (isInt<16>(Imm) || isUInt<16>(Imm))
+    O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
+  else
+    printU32ImmOperand(MI, OpNo, STI, O);
 }
 
 void AMDGPUInstPrinter::printU4ImmDecOperand(const MCInst *MI, unsigned OpNo,
@@ -336,6 +342,38 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo, STI, O);
 }
 
+void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  int16_t SImm = static_cast<int16_t>(Imm);
+  if (SImm >= -16 && SImm <= 64) {
+    O << SImm;
+    return;
+  }
+
+  if (Imm == 0x3C00)
+    O<< "1.0";
+  else if (Imm == 0xBC00)
+    O<< "-1.0";
+  else if (Imm == 0x3800)
+    O<< "0.5";
+  else if (Imm == 0xB800)
+    O<< "-0.5";
+  else if (Imm == 0x4000)
+    O<< "2.0";
+  else if (Imm == 0xC000)
+    O<< "-2.0";
+  else if (Imm == 0x4400)
+    O<< "4.0";
+  else if (Imm == 0xC400)
+    O<< "-4.0";
+  else if (Imm == 0x3118) {
+    assert(STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm]);
+    O << "0.15915494";
+  } else
+    O << formatHex(static_cast<uint64_t>(Imm));
+}
+
 void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
@@ -431,22 +469,39 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     }
   } else if (Op.isImm()) {
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    int RCID = Desc.OpInfo[OpNo].RegClass;
-    if (RCID != -1) {
-      unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
-      if (RCBits == 32)
-        printImmediate32(Op.getImm(), STI, O);
-      else if (RCBits == 64)
-        printImmediate64(Op.getImm(), STI, O);
-      else
-        llvm_unreachable("Invalid register class size");
-    } else if (Desc.OpInfo[OpNo].OperandType == MCOI::OPERAND_IMMEDIATE) {
+    switch (Desc.OpInfo[OpNo].OperandType) {
+    case AMDGPU::OPERAND_REG_IMM_INT32:
+    case AMDGPU::OPERAND_REG_IMM_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+    case MCOI::OPERAND_IMMEDIATE:
       printImmediate32(Op.getImm(), STI, O);
-    } else {
+      break;
+    case AMDGPU::OPERAND_REG_IMM_INT64:
+    case AMDGPU::OPERAND_REG_IMM_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+      printImmediate64(Op.getImm(), STI, O);
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+    case AMDGPU::OPERAND_REG_IMM_INT16:
+    case AMDGPU::OPERAND_REG_IMM_FP16:
+      printImmediate16(Op.getImm(), STI, O);
+      break;
+    case MCOI::OPERAND_UNKNOWN:
+    case MCOI::OPERAND_PCREL:
+      O << formatDec(Op.getImm());
+      break;
+    case MCOI::OPERAND_REGISTER:
+      // FIXME: This should be removed and handled somewhere else. Seems to come
+      // from a disassembler bug.
+      O << "/*invalid immediate*/";
+      break;
+    default:
       // We hit this for the immediate instruction bits that don't yet have a
       // custom printer.
-      // TODO: Eventually this should be unnecessary.
-      O << formatDec(Op.getImm());
+      llvm_unreachable("unexpected immediate operand type");
     }
   } else if (Op.isFPImm()) {
     // We special case 0.0 because otherwise it will be printed as an integer.
@@ -679,15 +734,18 @@ void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNum).getImm();
-
-  if (Imm == 2) {
-    O << "P0";
-  } else if (Imm == 1) {
-    O << "P20";
-  } else if (Imm == 0) {
-    O << "P10";
-  } else {
-    llvm_unreachable("Invalid interpolation parameter slot");
+  switch (Imm) {
+  case 0:
+    O << "p10";
+    break;
+  case 1:
+    O << "p20";
+    break;
+  case 2:
+    O << "p0";
+    break;
+  default:
+    O << "invalid_param_" << Imm;
   }
 }
 

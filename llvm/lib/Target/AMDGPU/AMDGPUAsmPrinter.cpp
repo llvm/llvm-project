@@ -391,7 +391,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         case AMDGPU::FLAT_SCR:
         case AMDGPU::FLAT_SCR_LO:
         case AMDGPU::FLAT_SCR_HI:
-          FlatUsed = true;
+          // Even if FLAT_SCRATCH is implicitly used, it has no effect if flat
+          // instructions aren't used to access the scratch buffer.
+          if (MFI->hasFlatScratchInit())
+            FlatUsed = true;
           continue;
 
         case AMDGPU::TBA:
@@ -489,6 +492,22 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       RI->getHWRegIndex(MFI->getScratchRSrcReg());
   }
 
+  // Check the addressable register limit before we add ExtraSGPRs.
+  if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
+      !STM.hasSGPRInitBug()) {
+    unsigned MaxAddressableNumSGPRs = STM.getMaxNumSGPRs();
+    if (MaxSGPR + 1 > MaxAddressableNumSGPRs) {
+      // This can happen due to a compiler bug or when using inline asm.
+      LLVMContext &Ctx = MF.getFunction()->getContext();
+      DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
+                                       "addressable scalar registers",
+                                       MaxSGPR + 1, DS_Error,
+                                       DK_ResourceLimit, MaxAddressableNumSGPRs);
+      Ctx.diagnose(Diag);
+      MaxSGPR = MaxAddressableNumSGPRs - 1;
+    }
+  }
+
   // Account for extra SGPRs and VGPRs reserved for debugger use.
   MaxSGPR += ExtraSGPRs;
   MaxVGPR += RI->getNumDebuggerReservedVGPRs(STM);
@@ -505,19 +524,22 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.NumVGPRsForWavesPerEU = std::max(
     ProgInfo.NumVGPR, RI->getMinNumVGPRs(MFI->getMaxWavesPerEU()));
 
-  unsigned MaxNumSGPRs = STM.getMaxNumSGPRs();
-  if (ProgInfo.NumSGPR > MaxNumSGPRs) {
-    // This can happen due to a compiler bug or when using inline asm to use the
-    // registers which are usually reserved for vcc etc.
+  if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
+      STM.hasSGPRInitBug()) {
+    unsigned MaxNumSGPRs = STM.getMaxNumSGPRs();
+    if (ProgInfo.NumSGPR > MaxNumSGPRs) {
+      // This can happen due to a compiler bug or when using inline asm to use the
+      // registers which are usually reserved for vcc etc.
 
-    LLVMContext &Ctx = MF.getFunction()->getContext();
-    DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
-                                     "scalar registers",
-                                     ProgInfo.NumSGPR, DS_Error,
-                                     DK_ResourceLimit, MaxNumSGPRs);
-    Ctx.diagnose(Diag);
-    ProgInfo.NumSGPR = MaxNumSGPRs;
-    ProgInfo.NumSGPRsForWavesPerEU = MaxNumSGPRs;
+      LLVMContext &Ctx = MF.getFunction()->getContext();
+      DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
+                                       "scalar registers",
+                                       ProgInfo.NumSGPR, DS_Error,
+                                       DK_ResourceLimit, MaxNumSGPRs);
+      Ctx.diagnose(Diag);
+      ProgInfo.NumSGPR = MaxNumSGPRs;
+      ProgInfo.NumSGPRsForWavesPerEU = MaxNumSGPRs;
+    }
   }
 
   if (STM.hasSGPRInitBug()) {

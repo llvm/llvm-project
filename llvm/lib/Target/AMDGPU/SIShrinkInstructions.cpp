@@ -134,15 +134,14 @@ static void foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
   assert(TII->isVOP1(MI) || TII->isVOP2(MI) || TII->isVOPC(MI));
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-  MachineOperand &Src0 = MI.getOperand(Src0Idx);
 
   // Only one literal constant is allowed per instruction, so if src0 is a
   // literal constant then we can't do any folding.
-  if (Src0.isImm() &&
-      TII->isLiteralConstant(Src0, TII->getOpSize(MI, Src0Idx)))
+  if (TII->isLiteralConstant(MI, Src0Idx))
     return;
 
   // Try to fold Src0
+  MachineOperand &Src0 = MI.getOperand(Src0Idx);
   if (Src0.isReg() && MRI.hasOneUse(Src0.getReg())) {
     unsigned Reg = Src0.getReg();
     MachineInstr *Def = MRI.getUniqueVRegDef(Reg);
@@ -184,11 +183,15 @@ static void copyFlagsToImplicitVCC(MachineInstr &MI,
 }
 
 static bool isKImmOperand(const SIInstrInfo *TII, const MachineOperand &Src) {
-  return isInt<16>(Src.getImm()) && !TII->isInlineConstant(Src, 4);
+  return isInt<16>(Src.getImm()) &&
+    !TII->isInlineConstant(*Src.getParent(),
+                           Src.getParent()->getOperandNo(&Src));
 }
 
 static bool isKUImmOperand(const SIInstrInfo *TII, const MachineOperand &Src) {
-  return isUInt<16>(Src.getImm()) && !TII->isInlineConstant(Src, 4);
+  return isUInt<16>(Src.getImm()) &&
+    !TII->isInlineConstant(*Src.getParent(),
+                           Src.getParent()->getOperandNo(&Src));
 }
 
 static bool isKImmOrKUImmOperand(const SIInstrInfo *TII,
@@ -196,12 +199,12 @@ static bool isKImmOrKUImmOperand(const SIInstrInfo *TII,
                                  bool &IsUnsigned) {
   if (isInt<16>(Src.getImm())) {
     IsUnsigned = false;
-    return !TII->isInlineConstant(Src, 4);
+    return !TII->isInlineConstant(Src);
   }
 
   if (isUInt<16>(Src.getImm())) {
     IsUnsigned = true;
-    return !TII->isInlineConstant(Src, 4);
+    return !TII->isInlineConstant(Src);
   }
 
   return false;
@@ -212,7 +215,7 @@ static bool isKImmOrKUImmOperand(const SIInstrInfo *TII,
 static bool isReverseInlineImm(const SIInstrInfo *TII,
                                const MachineOperand &Src,
                                int32_t &ReverseImm) {
-  if (!isInt<32>(Src.getImm()) || TII->isInlineConstant(Src, 4))
+  if (!isInt<32>(Src.getImm()) || TII->isInlineConstant(Src))
     return false;
 
   ReverseImm = reverseBits<int32_t>(static_cast<int32_t>(Src.getImm()));

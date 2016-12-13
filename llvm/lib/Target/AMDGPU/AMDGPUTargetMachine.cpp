@@ -62,6 +62,14 @@ static cl::opt<bool> EnableLoadStoreVectorizer(
   cl::init(true),
   cl::Hidden);
 
+// Option to to control global loads scalarization
+static cl::opt<bool> ScalarizeGlobal(
+  "amdgpu-scalarize-global-loads",
+  cl::desc("Enable global load scalarization"),
+  cl::init(false),
+  cl::Hidden);
+
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -78,6 +86,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
+  initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
   initializeSIInsertWaitsPass(*PR);
   initializeSIWholeQuadModePass(*PR);
@@ -194,6 +203,10 @@ void AMDGPUTargetMachine::addPreLinkPasses(PassManagerBase & PM) {
   PM.add(llvm::createAMDGPUclpVectorExpansionPass());
 }
 
+void AMDGPUTargetMachine::addEarlyAsPossiblePasses(PassManagerBase &PM) {
+  PM.add(llvm::createAMDGPUUnifyMetadataPass());
+}
+
 //===----------------------------------------------------------------------===//
 // R600 Target Machine (R600 -> Cayman)
 //===----------------------------------------------------------------------===//
@@ -274,6 +287,8 @@ const SISubtarget *GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 
     I->setGISelAccessor(*GISel);
   }
+
+  I->setScalarizeGlobalBehavior(ScalarizeGlobal);
 
   return I.get();
 }

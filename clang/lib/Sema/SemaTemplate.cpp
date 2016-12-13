@@ -2489,7 +2489,8 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     //   If the identifier resolves to a typedef-name or the simple-template-id
     //   resolves to an alias template specialization, the
     //   elaborated-type-specifier is ill-formed.
-    Diag(TemplateLoc, diag::err_tag_reference_non_tag) << NTK_TypeAliasTemplate;
+    Diag(TemplateLoc, diag::err_tag_reference_non_tag)
+        << TAT << NTK_TypeAliasTemplate << TagKind;
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
   
@@ -7043,13 +7044,15 @@ bool Sema::CheckFunctionTemplateSpecialization(
         continue;
       }
 
-      // Target attributes are part of function signature during cuda
-      // compilation, so deduced template must also have matching CUDA
-      // target. Given that regular template deduction does not take
-      // target attributes into account, we perform target match check
-      // here and reject candidates that have different target.
+      // Target attributes are part of the cuda function signature, so
+      // the deduced template's cuda target must match that of the
+      // specialization.  Given that C++ template deduction does not
+      // take target attributes into account, we reject candidates
+      // here that have a different target.
       if (LangOpts.CUDA &&
-          IdentifyCUDATarget(Specialization) != IdentifyCUDATarget(FD)) {
+          IdentifyCUDATarget(Specialization,
+                             /* IgnoreImplicitHDAttributes = */ true) !=
+              IdentifyCUDATarget(FD, /* IgnoreImplicitHDAttributes = */ true)) {
         FailedCandidates.addCandidate().set(
             I.getPair(), FunTmpl->getTemplatedDecl(),
             MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
@@ -7165,6 +7168,14 @@ bool Sema::CheckFunctionTemplateSpecialization(
       Specialization->getPrimaryTemplate(), TemplArgs, /*InsertPos=*/nullptr,
       SpecInfo->getTemplateSpecializationKind(),
       ExplicitTemplateArgs ? &ConvertedTemplateArgs[Specialization] : nullptr);
+
+  // A function template specialization inherits the target attributes
+  // of its template.  (We require the attributes explicitly in the
+  // code to match, but a template may have implicit attributes by
+  // virtue e.g. of being constexpr, and it passes these implicit
+  // attributes on to its specializations.)
+  if (LangOpts.CUDA)
+    inheritCUDATargetAttrs(FD, *Specialization->getPrimaryTemplate());
 
   // The "previous declaration" for this function template specialization is
   // the prior function template specialization.
@@ -7498,8 +7509,8 @@ Sema::ActOnExplicitInstantiation(Scope *S,
   ClassTemplateDecl *ClassTemplate = dyn_cast<ClassTemplateDecl>(TD);
 
   if (!ClassTemplate) {
-    NonTagKind NTK = getNonTagTypeDeclKind(TD);
-    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << NTK;
+    NonTagKind NTK = getNonTagTypeDeclKind(TD, Kind);
+    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << TD << NTK << Kind;
     Diag(TD->getLocation(), diag::note_previous_use);
     return true;
   }
@@ -8154,24 +8165,19 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       continue;
     }
 
-    // Target attributes are part of function signature during cuda
-    // compilation, so deduced template must also have matching CUDA
-    // target. Given that regular template deduction does not take it
-    // into account, we perform target match check here and reject
-    // candidates that have different target.
-    if (LangOpts.CUDA) {
-      CUDAFunctionTarget DeclaratorTarget = IdentifyCUDATarget(Attr);
-      // We need to adjust target when HD is forced by
-      // #pragma clang force_cuda_host_device
-      if (ForceCUDAHostDeviceDepth > 0 &&
-          (DeclaratorTarget == CFT_Device || DeclaratorTarget == CFT_Host))
-        DeclaratorTarget = CFT_HostDevice;
-      if (IdentifyCUDATarget(Specialization) != DeclaratorTarget) {
-        FailedCandidates.addCandidate().set(
-            P.getPair(), FunTmpl->getTemplatedDecl(),
-            MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
-        continue;
-      }
+    // Target attributes are part of the cuda function signature, so
+    // the cuda target of the instantiated function must match that of its
+    // template.  Given that C++ template deduction does not take
+    // target attributes into account, we reject candidates here that
+    // have a different target.
+    if (LangOpts.CUDA &&
+        IdentifyCUDATarget(Specialization,
+                           /* IgnoreImplicitHDAttributes = */ true) !=
+            IdentifyCUDATarget(Attr)) {
+      FailedCandidates.addCandidate().set(
+          P.getPair(), FunTmpl->getTemplatedDecl(),
+          MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
+      continue;
     }
 
     Matches.addDecl(Specialization, P.getAccess());

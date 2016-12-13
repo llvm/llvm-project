@@ -1127,6 +1127,10 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (match(Op1, m_Undef()))
     return Op1;
 
+  // X / 1.0 -> X
+  if (match(Op1, m_FPOne()))
+    return Op0;
+
   // 0 / X -> 0
   // Requires that NaNs are off (X could be zero) and signed zeroes are
   // ignored (X could be positive or negative, so the output sign is unknown).
@@ -2800,9 +2804,11 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
-/// Simplify comparisons corresponding to integer min/max idioms.
-static Value *simplifyMinMax(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
-                             const Query &Q, unsigned MaxRecurse) {
+/// Simplify integer comparisons where at least one operand of the compare
+/// matches an integer min/max idiom.
+static Value *simplifyICmpWithMinMax(CmpInst::Predicate Pred, Value *LHS,
+                                     Value *RHS, const Query &Q,
+                                     unsigned MaxRecurse) {
   Type *ITy = GetCompareTy(LHS); // The return type.
   Value *A, *B;
   CmpInst::Predicate P = CmpInst::BAD_ICMP_PREDICATE;
@@ -3229,7 +3235,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (Value *V = simplifyICmpWithBinOp(Pred, LHS, RHS, Q, MaxRecurse))
     return V;
 
-  if (Value *V = simplifyMinMax(Pred, LHS, RHS, Q, MaxRecurse))
+  if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
     return V;
 
   // Simplify comparisons of related pointers using a powerful, recursive
@@ -4093,6 +4099,8 @@ static Value *SimplifyFPBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return SimplifyFSubInst(LHS, RHS, FMF, Q, MaxRecurse);
   case Instruction::FMul:
     return SimplifyFMulInst(LHS, RHS, FMF, Q, MaxRecurse);
+  case Instruction::FDiv:
+    return SimplifyFDivInst(LHS, RHS, FMF, Q, MaxRecurse);
   default:
     return SimplifyBinOp(Opcode, LHS, RHS, Q, MaxRecurse);
   }

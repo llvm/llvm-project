@@ -242,25 +242,21 @@ static const char *ParseFileLineInfo(AddressInfo *info, const char *str) {
   char *file_line_info = 0;
   str = ExtractToken(str, "\n", &file_line_info);
   CHECK(file_line_info);
-  // Parse the last :<int>, which must be there.
-  char *last_colon = internal_strrchr(file_line_info, ':');
-  CHECK(last_colon);
-  int line_or_column = internal_atoll(last_colon + 1);
-  // Truncate the string at the last colon and find the next-to-last colon.
-  *last_colon = '\0';
-  last_colon = internal_strrchr(file_line_info, ':');
-  if (last_colon && IsDigit(last_colon[1])) {
-    // If the second-to-last colon is followed by a digit, it must be the line
-    // number, and the previous parsed number was a column.
-    info->line = internal_atoll(last_colon + 1);
-    info->column = line_or_column;
-    *last_colon = '\0';
-  } else {
-    // Otherwise, we have line info but no column info.
-    info->line = line_or_column;
-    info->column = 0;
+
+  if (uptr size = internal_strlen(file_line_info)) {
+    char *back = file_line_info + size - 1;
+    for (int i = 0; i < 2; ++i) {
+      while (back > file_line_info && IsDigit(*back)) --back;
+      if (*back != ':' || !IsDigit(back[1])) break;
+      info->column = info->line;
+      info->line = internal_atoll(back + 1);
+      // Truncate the string at the colon to keep only filename.
+      *back = '\0';
+      --back;
+    }
+    ExtractToken(file_line_info, "", &info->file);
   }
-  ExtractToken(file_line_info, "", &info->file);
+
   InternalFree(file_line_info);
   return str;
 }

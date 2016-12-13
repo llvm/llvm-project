@@ -126,8 +126,8 @@ declare <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a, <8 x d
 define <2 x double> @test10(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vfnmsub213sd %xmm2, %xmm0, %xmm1
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vxorps {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 -1, i32 4) #2
@@ -188,7 +188,7 @@ define <2 x double> @test13(<2 x double> %a, <2 x double> %b, <2 x double> %c, i
 ; CHECK-NEXT:    vxorps {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vfmadd132sd %xmm1, %xmm2, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
 entry:
   %sub.i = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a

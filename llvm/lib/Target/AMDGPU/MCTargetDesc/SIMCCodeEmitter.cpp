@@ -39,7 +39,7 @@ class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
   const MCRegisterInfo &MRI;
 
   /// \brief Encode an fp or int literal
-  uint32_t getLitEncoding(const MCOperand &MO, unsigned OpSize,
+  uint32_t getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
                           const MCSubtargetInfo &STI) const;
 
 public:
@@ -85,6 +85,42 @@ static uint32_t getIntInlineImmEncoding(IntTy Imm) {
     return 192 + std::abs(Imm);
 
   return 0;
+}
+
+static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
+  uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
+  if (IntImm != 0)
+    return IntImm;
+
+  if (Val == 0x3800) // 0.5
+    return 240;
+
+  if (Val == 0xB800) // -0.5
+    return 241;
+
+  if (Val == 0x3C00) // 1.0
+    return 242;
+
+  if (Val == 0xBC00) // -1.0
+    return 243;
+
+  if (Val == 0x4000) // 2.0
+    return 244;
+
+  if (Val == 0xC000) // -2.0
+    return 245;
+
+  if (Val == 0x4400) // 4.0
+    return 246;
+
+  if (Val == 0xC400) // -4.0
+    return 247;
+
+  if (Val == 0x3118 && // 1.0 / (2.0 * pi)
+      STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+    return 248;
+
+  return 255;
 }
 
 static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
@@ -160,7 +196,7 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
 }
 
 uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
-                                         unsigned OpSize,
+                                         const MCOperandInfo &OpInfo,
                                          const MCSubtargetInfo &STI) const {
 
   int64_t Imm;
@@ -180,12 +216,16 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     Imm = MO.getImm();
   }
 
-  if (OpSize == 4)
+  switch (AMDGPU::getOperandSize(OpInfo)) {
+  case 4:
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
-
-  assert(OpSize == 8);
-
-  return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
+  case 8:
+    return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
+  case 2:
+    return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
+  default:
+    llvm_unreachable("invalid operand size");
+  }
 }
 
 void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -212,12 +252,9 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     if (!AMDGPU::isSISrcOperand(Desc, i))
       continue;
 
-    int RCID = Desc.OpInfo[i].RegClass;
-    const MCRegisterClass &RC = MRI.getRegClass(RCID);
-
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
-    if (getLitEncoding(Op, AMDGPU::getRegBitWidth(RC) / 8, STI) != 255)
+    if (getLitEncoding(Op, Desc.OpInfo[i], STI) != 255)
       continue;
 
     // Yes! Encode it
@@ -282,9 +319,7 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
-    uint32_t Enc = getLitEncoding(MO,
-                                  AMDGPU::getRegOperandSize(&MRI, Desc, OpNo),
-                                  STI);
+    uint32_t Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
     if (Enc != ~0U && (Enc != 255 || Desc.getSize() == 4))
       return Enc;
 

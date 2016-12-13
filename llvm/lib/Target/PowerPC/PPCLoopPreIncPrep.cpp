@@ -20,31 +20,38 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "ppc-loop-preinc-prep"
+
 #include "PPC.h"
+#include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
+#include <cassert>
+#include <iterator>
+#include <utility>
+
 using namespace llvm;
 
 // By default, we limit this to creating 16 PHIs (which is a little over half
@@ -54,14 +61,17 @@ static cl::opt<unsigned> MaxVars("ppc-preinc-prep-max-vars",
   cl::desc("Potential PHI threshold for PPC preinc loop prep"));
 
 namespace llvm {
+
   void initializePPCLoopPreIncPrepPass(PassRegistry&);
-}
+
+} // end namespace llvm
 
 namespace {
 
   class PPCLoopPreIncPrep : public FunctionPass {
   public:
     static char ID; // Pass ID, replacement for typeid
+
     PPCLoopPreIncPrep() : FunctionPass(ID), TM(nullptr) {
       initializePPCLoopPreIncPrepPass(*PassRegistry::getPassRegistry());
     }
@@ -89,7 +99,8 @@ namespace {
     ScalarEvolution *SE;
     bool PreserveLCSSA;
   };
-}
+
+} // end anonymous namespace
 
 char PPCLoopPreIncPrep::ID = 0;
 static const char *name = "Prepare loop for pre-inc. addressing modes";
@@ -103,6 +114,7 @@ FunctionPass *llvm::createPPCLoopPreIncPrepPass(PPCTargetMachine &TM) {
 }
 
 namespace {
+
   struct BucketElement {
     BucketElement(const SCEVConstant *O, Instruction *I) : Offset(O), Instr(I) {}
     BucketElement(Instruction *I) : Offset(nullptr), Instr(I) {}
@@ -118,7 +130,8 @@ namespace {
     const SCEV *BaseSCEV;
     SmallVector<BucketElement, 16> Elements;
   };
-}
+
+} // end anonymous namespace
 
 static bool IsPtrInBounds(Value *BasePtr) {
   Value *StrippedBasePtr = BasePtr;
@@ -140,7 +153,7 @@ static Value *GetPointerOperand(Value *MemI) {
       return IMemI->getArgOperand(0);
   }
 
-  return 0;
+  return nullptr;
 }
 
 bool PPCLoopPreIncPrep::runOnFunction(Function &F) {
@@ -394,7 +407,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
         Instruction *PtrIP = dyn_cast<Instruction>(Ptr);
         if (PtrIP && isa<Instruction>(NewBasePtr) &&
             cast<Instruction>(NewBasePtr)->getParent() == PtrIP->getParent())
-          PtrIP = 0;
+          PtrIP = nullptr;
         else if (isa<PHINode>(PtrIP))
           PtrIP = &*PtrIP->getParent()->getFirstInsertionPt();
         else if (!PtrIP)
@@ -437,4 +450,3 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
 
   return MadeChange;
 }
-

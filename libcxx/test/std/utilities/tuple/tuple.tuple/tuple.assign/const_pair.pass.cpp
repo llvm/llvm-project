@@ -23,9 +23,9 @@
 int main()
 {
     {
-        typedef std::pair<double, char> T0;
-        typedef std::tuple<int, short> T1;
-        T0 t0(2.5, 'a');
+        typedef std::pair<long, char> T0;
+        typedef std::tuple<long long, short> T1;
+        T0 t0(2, 'a');
         T1 t1;
         t1 = t0;
         assert(std::get<0>(t1) == 2);

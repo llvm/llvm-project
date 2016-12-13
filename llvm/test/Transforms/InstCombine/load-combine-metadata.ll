@@ -26,4 +26,5 @@ define void @test_load_load_combine_metadata(i32*, i32*, i32*) {
 !5 = !{!3}
 !6 = !{!4}
 !7 = !{ !"tbaa root" }
-!8 = !{ !7, !7, i64 0 }
+!8 = !{ !9, !9, i64 0 }
+!9 = !{ !"scalar type", !7}

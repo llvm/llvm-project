@@ -865,6 +865,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTeamsDistributeDirectiveClass:
     case Stmt::OMPTeamsDistributeSimdDirectiveClass:
     case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+    case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
       llvm_unreachable("Stmt should not be in analyzer evaluation loop");
 
     case Stmt::ObjCSubscriptRefExprClass:
@@ -904,6 +905,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     // Cases not handled yet; but will handle some day.
     case Stmt::DesignatedInitExprClass:
     case Stmt::DesignatedInitUpdateExprClass:
+    case Stmt::ArrayInitLoopExprClass:
+    case Stmt::ArrayInitIndexExprClass:
     case Stmt::ExtVectorElementExprClass:
     case Stmt::ImaginaryLiteralClass:
     case Stmt::ObjCAtCatchStmtClass:

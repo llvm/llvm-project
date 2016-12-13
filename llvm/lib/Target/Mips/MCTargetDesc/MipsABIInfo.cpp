@@ -51,12 +51,11 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef CPU,
                                           const MCTargetOptions &Options) {
   if (Options.getABIName().startswith("o32"))
     return MipsABIInfo::O32();
-  else if (Options.getABIName().startswith("n32"))
+  if (Options.getABIName().startswith("n32"))
     return MipsABIInfo::N32();
-  else if (Options.getABIName().startswith("n64"))
+  if (Options.getABIName().startswith("n64"))
     return MipsABIInfo::N64();
-  else if (!Options.getABIName().empty())
-    llvm_unreachable("Unknown ABI option for MIPS");
+  assert(Options.getABIName().empty() && "Unknown ABI option for MIPS");
 
   if (TT.getArch() == Triple::mips64 || TT.getArch() == Triple::mips64el)
     return MipsABIInfo::N64();

@@ -32,5 +32,6 @@ attributes #1 = { nounwind readnone }
 !5 = !DICompositeType(tag: DW_TAG_class_type, scope: !4, file: !1, line: 25, size: 8, align: 8)
 !6 = !DIExpression()
 !7 = !DILocation(line: 25, column: 8, scope: !4)
-!8 = !{!9, !9, i64 0}
+!8 = !{!10, !10, i64 0}
 !9 = !{i64 0}
+!10 = !{!"scalar type", !9}

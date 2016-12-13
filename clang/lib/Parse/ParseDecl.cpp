@@ -5827,6 +5827,21 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     }
   }
 
+  // Collect non-parameter declarations from the prototype if this is a function
+  // declaration. They will be moved into the scope of the function. Only do
+  // this in C and not C++, where the decls will continue to live in the
+  // surrounding context.
+  SmallVector<NamedDecl *, 0> DeclsInPrototype;
+  if (getCurScope()->getFlags() & Scope::FunctionDeclarationScope &&
+      !getLangOpts().CPlusPlus) {
+    for (Decl *D : getCurScope()->decls()) {
+      NamedDecl *ND = dyn_cast<NamedDecl>(D);
+      if (!ND || isa<ParmVarDecl>(ND))
+        continue;
+      DeclsInPrototype.push_back(ND);
+    }
+  }
+
   // Remember that we parsed a function type, and remember the attributes.
   D.AddTypeInfo(DeclaratorChunk::getFunction(HasProto,
                                              IsAmbiguous,
@@ -5846,6 +5861,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
                                              NoexceptExpr.isUsable() ?
                                                NoexceptExpr.get() : nullptr,
                                              ExceptionSpecTokens,
+                                             DeclsInPrototype,
                                              StartLoc, LocalEndLoc, D,
                                              TrailingReturnType),
                 FnAttrs, EndLoc);

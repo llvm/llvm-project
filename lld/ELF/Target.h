@@ -30,6 +30,7 @@ public:
   virtual uint32_t getDynRel(uint32_t Type) const { return Type; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {};
+  virtual void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const;
   virtual uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const;
 
   // If lazy binding is supported, the first entry of the PLT has code

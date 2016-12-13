@@ -14,4 +14,5 @@ top:
 }
 
 !0 = !{!1, !1, i64 0}
-!1 = !{!"load_tbaa"}
+!1 = !{!"scalar type", !2}
+!2 = !{!"load_tbaa"}

@@ -393,11 +393,6 @@ if( MSVC )
     endif()
   endif()
 
-  # Disable sized deallocation if the flag is supported. MSVC fails to compile
-  # the operator new overload in User otherwise.
-  check_c_compiler_flag("/WX /Zc:sizedDealloc-" SUPPORTS_SIZED_DEALLOC)
-  append_if(SUPPORTS_SIZED_DEALLOC "/Zc:sizedDealloc-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-
 elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   if (LLVM_ENABLE_WARNINGS)
     append("-Wall -W -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -572,7 +567,7 @@ if(LLVM_USE_SANITIZER)
     message(FATAL_ERROR "LLVM_USE_SANITIZER is not supported on this platform.")
   endif()
   if (LLVM_USE_SANITIZE_COVERAGE)
-    append("-fsanitize-coverage=edge,indirect-calls,8bit-counters,trace-cmp" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append("-fsanitize-coverage=trace-pc-guard,indirect-calls,trace-cmp" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 endif()
 

@@ -108,6 +108,10 @@ ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
+FunctionPass* createAMDGPUUnifyMetadataPass();
+void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
+extern char &AMDGPUUnifyMetadataID;
+
 void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
 extern char &SIFixControlFlowLiveIntervalsID;
 

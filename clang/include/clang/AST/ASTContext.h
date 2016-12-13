@@ -19,73 +19,107 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RawCommentList.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Linkage.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SanitizerBlacklist.h"
-#include "clang/Basic/VersionTuple.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 #include <memory>
+#include <new>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
-  struct fltSemantics;
-}
+
+struct fltSemantics;
+
+} // end namespace llvm
 
 namespace clang {
-  class FileManager;
-  class AtomicExpr;
-  class ASTRecordLayout;
-  class BlockExpr;
-  class CharUnits;
-  class DiagnosticsEngine;
-  class Expr;
-  class ASTMutationListener;
-  class IdentifierTable;
-  class MaterializeTemporaryExpr;
-  class SelectorTable;
-  class TargetInfo;
-  class CXXABI;
-  class MangleNumberingContext;
-  // Decls
-  class MangleContext;
-  class ObjCIvarDecl;
-  class ObjCPropertyDecl;
-  class UnresolvedSetIterator;
-  class UsingDecl;
-  class UsingShadowDecl;
-  class VTableContextBase;
 
-  namespace Builtin { class Context; }
-  enum BuiltinTemplateKind : int;
+class ASTMutationListener;
+class ASTRecordLayout;
+class AtomicExpr;
+class BlockExpr;
+class CharUnits;
+class CXXABI;
+class DiagnosticsEngine;
+class Expr;
+class MangleNumberingContext;
+class MaterializeTemporaryExpr;
+class TargetInfo;
+// Decls
+class MangleContext;
+class ObjCIvarDecl;
+class ObjCPropertyDecl;
+class UnresolvedSetIterator;
+class UsingDecl;
+class UsingShadowDecl;
+class VTableContextBase;
 
-  namespace comments {
-    class FullComment;
-  }
+namespace Builtin {
 
-  struct TypeInfo {
-    uint64_t Width;
-    unsigned Align;
-    bool AlignIsRequired : 1;
-    TypeInfo() : Width(0), Align(0), AlignIsRequired(false) {}
-    TypeInfo(uint64_t Width, unsigned Align, bool AlignIsRequired)
-        : Width(Width), Align(Align), AlignIsRequired(AlignIsRequired) {}
-  };
+  class Context;
+
+} // end namespace Builtin
+
+enum BuiltinTemplateKind : int;
+
+namespace comments {
+
+  class FullComment;
+
+} // end namespace comments
+
+struct TypeInfo {
+  uint64_t Width;
+  unsigned Align;
+  bool AlignIsRequired : 1;
+
+  TypeInfo() : Width(0), Align(0), AlignIsRequired(false) {}
+  TypeInfo(uint64_t Width, unsigned Align, bool AlignIsRequired)
+      : Width(Width), Align(Align), AlignIsRequired(AlignIsRequired) {}
+};
 
 /// \brief Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
@@ -331,7 +365,6 @@ public:
   TemplateOrSpecializationInfo;
 
 private:
-
   /// \brief A mapping to contain the template or declaration that
   /// a variable declaration describes or was instantiated from,
   /// respectively.
@@ -527,6 +560,7 @@ public:
 
     size_t size() const { return end() - begin(); }
     bool empty() const { return begin() == end(); }
+
     const DynTypedNode &operator[](size_t N) const {
       assert(N < size() && "Out of bounds!");
       return *(begin() + N);
@@ -952,7 +986,8 @@ public:
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins);
-
+  ASTContext(const ASTContext &) = delete;
+  ASTContext &operator=(const ASTContext &) = delete;
   ~ASTContext();
 
   /// \brief Attach an external AST source to the AST context.
@@ -1489,7 +1524,6 @@ public:
       return getObjCSelType();
     return ObjCSelRedefinitionType;
   }
-
   
   /// \brief Set the user-written type that redefines 'SEL'.
   void setObjCSelRedefinitionType(QualType RedefType) {
@@ -1909,7 +1943,7 @@ public:
 
   /// \brief Return the default alignment for __attribute__((aligned)) on
   /// this target, to be used if no alignment value is specified.
-  unsigned getTargetDefaultAlignForAttributeAligned(void) const;
+  unsigned getTargetDefaultAlignForAttributeAligned() const;
 
   /// \brief Return the alignment in bits that should be given to a
   /// global variable with type \p T.
@@ -2261,6 +2295,10 @@ public:
       return (*AddrSpaceMap)[AS - LangAS::Offset];
   }
 
+  /// Get target-dependent integer value for null pointer which is used for
+  /// constant folding.
+  uint64_t getTargetNullPointerValue(QualType QT) const;
+
   bool addressSpaceMapManglingFor(unsigned AS) const {
     return AddrSpaceMapMangling || 
            AS < LangAS::Offset || 
@@ -2272,7 +2310,6 @@ private:
   unsigned getIntegerRank(const Type *T) const;
 
 public:
-
   //===--------------------------------------------------------------------===//
   //                    Type Compatibility Predicates
   //===--------------------------------------------------------------------===//
@@ -2527,10 +2564,6 @@ public:
   /// declarations were built.
   static unsigned NumImplicitDestructorsDeclared;
   
-private:
-  ASTContext(const ASTContext &) = delete;
-  void operator=(const ASTContext &) = delete;
-
 public:
   /// \brief Initialize built-in types.
   ///
@@ -2610,6 +2643,7 @@ private:
 
   friend class DeclContext;
   friend class DeclarationNameTable;
+
   void ReleaseDeclContextMaps();
   void ReleaseParentMapEntries();
 
@@ -2632,7 +2666,8 @@ public:
     DeclaratorDecl *Decl;
     SourceLocation PragmaSectionLocation;
     int SectionFlags;
-    SectionInfo() {}
+
+    SectionInfo() = default;
     SectionInfo(DeclaratorDecl *Decl,
                 SourceLocation PragmaSectionLocation,
                 int SectionFlags)
@@ -2754,4 +2789,4 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
   return Value;
 }
 
-#endif
+#endif // LLVM_CLANG_AST_ASTCONTEXT_H

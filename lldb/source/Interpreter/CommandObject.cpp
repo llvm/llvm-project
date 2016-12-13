@@ -537,17 +537,15 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
   }
 }
 
-CommandArgumentType CommandObject::LookupArgumentName(const char *arg_name) {
+CommandArgumentType
+CommandObject::LookupArgumentName(llvm::StringRef arg_name) {
   CommandArgumentType return_type = eArgTypeLastArg;
 
-  std::string arg_name_str(arg_name);
-  size_t len = arg_name_str.length();
-  if (arg_name[0] == '<' && arg_name[len - 1] == '>')
-    arg_name_str = arg_name_str.substr(1, len - 2);
+  arg_name = arg_name.ltrim('<').rtrim('>');
 
   const ArgumentTableEntry *table = GetArgumentTable();
   for (int i = 0; i < eArgTypeLastArg; ++i)
-    if (arg_name_str.compare(table[i].arg_name) == 0)
+    if (arg_name == table[i].arg_name)
       return_type = g_arguments_data[i].arg_type;
 
   return return_type;

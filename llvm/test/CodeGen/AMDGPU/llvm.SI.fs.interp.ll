@@ -5,10 +5,10 @@
 
 ;GCN-LABEL: {{^}}main:
 ;GCN-NOT: s_wqm
-;GCN: s_mov_b32
-;GCN-NEXT: v_interp_mov_f32
-;GCN: v_interp_p1_f32
-;GCN: v_interp_p2_f32
+;GCN: s_mov_b32 m0
+;GCN-DAG: v_interp_mov_f32
+;GCN-DAG: v_interp_p1_f32
+;GCN-DAG: v_interp_p2_f32
 
 define amdgpu_ps void @main(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg, <2 x i32>) {
 main_body:

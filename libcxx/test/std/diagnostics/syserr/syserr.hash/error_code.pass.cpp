@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 void
-test(int i)
+test(std::size_t i)
 {
     typedef std::error_code T;
     typedef std::hash<T> H;

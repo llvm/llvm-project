@@ -981,6 +981,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
 
   bool MadeChange = false;
   APInt UndefElts2(VWidth, 0);
+  APInt UndefElts3(VWidth, 0);
   Value *TmpV;
   switch (I->getOpcode()) {
   default: break;
@@ -1254,13 +1255,25 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     switch (II->getIntrinsicID()) {
     default: break;
 
+    case Intrinsic::x86_xop_vfrcz_ss:
+    case Intrinsic::x86_xop_vfrcz_sd:
+      // The instructions for these intrinsics are speced to zero upper bits not
+      // pass them through like other scalar intrinsics. So we shouldn't just
+      // use Arg0 if DemandedElts[0] is clear like we do for other intrinsics.
+      // Instead we should return a zero vector.
+      if (!DemandedElts[0])
+        return ConstantAggregateZero::get(II->getType());
+
+      TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
+                                        UndefElts, Depth + 1);
+      if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
+      break;
+
     // Unary scalar-as-vector operations that work column-wise.
     case Intrinsic::x86_sse_rcp_ss:
     case Intrinsic::x86_sse_rsqrt_ss:
     case Intrinsic::x86_sse_sqrt_ss:
     case Intrinsic::x86_sse2_sqrt_sd:
-    case Intrinsic::x86_xop_vfrcz_ss:
-    case Intrinsic::x86_xop_vfrcz_sd:
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
                                         UndefElts, Depth + 1);
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
@@ -1296,6 +1309,34 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       // Output elements are undefined if both are undefined.  Consider things
       // like undef&0.  The result is known zero, not undef.
       UndefElts &= UndefElts2;
+      break;
+
+    case Intrinsic::x86_fma_vfmadd_ss:
+    case Intrinsic::x86_fma_vfmsub_ss:
+    case Intrinsic::x86_fma_vfnmadd_ss:
+    case Intrinsic::x86_fma_vfnmsub_ss:
+    case Intrinsic::x86_fma_vfmadd_sd:
+    case Intrinsic::x86_fma_vfmsub_sd:
+    case Intrinsic::x86_fma_vfnmadd_sd:
+    case Intrinsic::x86_fma_vfnmsub_sd:
+      TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
+                                        UndefElts, Depth + 1);
+      if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
+      TmpV = SimplifyDemandedVectorElts(II->getArgOperand(1), DemandedElts,
+                                        UndefElts2, Depth + 1);
+      if (TmpV) { II->setArgOperand(1, TmpV); MadeChange = true; }
+      TmpV = SimplifyDemandedVectorElts(II->getArgOperand(2), DemandedElts,
+                                        UndefElts3, Depth + 1);
+      if (TmpV) { II->setArgOperand(2, TmpV); MadeChange = true; }
+
+      // If lowest element of a scalar op isn't used then use Arg0.
+      if (DemandedElts.getLoBits(1) != 1)
+        return II->getArgOperand(0);
+
+      // Output elements are undefined if all three are undefined.  Consider
+      // things like undef&0.  The result is known zero, not undef.
+      UndefElts &= UndefElts2;
+      UndefElts &= UndefElts3;
       break;
 
     // SSE4A instructions leave the upper 64-bits of the 128-bit result

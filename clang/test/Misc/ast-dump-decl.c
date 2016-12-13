@@ -102,15 +102,21 @@ struct testIndirectFieldDecl {
 // CHECK-NEXT:   Field{{.*}} ''
 // CHECK-NEXT:   Field{{.*}} 'TestIndirectFieldDecl'
 
+// FIXME: It would be nice to dump the enum and its enumerators.
 int TestFunctionDecl(int x, enum { e } y) {
   return x;
 }
 // CHECK:      FunctionDecl{{.*}} TestFunctionDecl 'int (int, enum {{.*}})'
-// CHECK-NEXT:   EnumDecl
-// CHECK-NEXT:     EnumConstantDecl{{.*}} e
 // CHECK-NEXT:   ParmVarDecl{{.*}} x
 // CHECK-NEXT:   ParmVarDecl{{.*}} y
 // CHECK-NEXT:   CompoundStmt
+
+// FIXME: It would be nice to 'Enum' and 'e'.
+int TestFunctionDecl2(enum Enum { e } x) { return x; }
+// CHECK:      FunctionDecl{{.*}} TestFunctionDecl2 'int (enum {{.*}})'
+// CHECK-NEXT:   ParmVarDecl{{.*}} x
+// CHECK-NEXT:   CompoundStmt
+
 
 int TestFunctionDeclProto(int x);
 // CHECK:      FunctionDecl{{.*}} TestFunctionDeclProto 'int (int)'

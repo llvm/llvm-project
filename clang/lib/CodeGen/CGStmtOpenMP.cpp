@@ -1991,6 +1991,18 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForSimdDirective(
       });
 }
 
+void CodeGenFunction::EmitOMPTeamsDistributeParallelForDirective(
+    const OMPTeamsDistributeParallelForDirective &S) {
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_teams_distribute_parallel_for,
+      [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        OMPLoopScope PreInitScope(CGF, S);
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
 /// \brief Emit a helper variable and return corresponding lvalue.
 static LValue EmitOMPHelperVar(CodeGenFunction &CGF,
                                const DeclRefExpr *Helper) {

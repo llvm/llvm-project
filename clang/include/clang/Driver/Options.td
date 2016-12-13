@@ -414,6 +414,9 @@ def cuda_compile_host_device : Flag<["--"], "cuda-compile-host-device">,
            "effect on non-CUDA compilations.">;
 def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">, Flags<[DriverOption]>,
   HelpText<"CUDA GPU architecture (e.g. sm_35).  May be specified more than once.">;
+def no_cuda_gpu_arch_EQ : Joined<["--"], "no-cuda-gpu-arch=">, Flags<[DriverOption]>,
+  HelpText<"Remove GPU architecture (e.g. sm_35) from the list of GPUs to compile for. "
+           "'all' resets the list to its default value.">;
 def cuda_noopt_device_debug : Flag<["--"], "cuda-noopt-device-debug">,
   HelpText<"Enable device-side debug info generation. Disables ptxas optimizations.">;
 def no_cuda_version_check : Flag<["--"], "no-cuda-version-check">,
@@ -1851,7 +1854,8 @@ def mno_odd_spreg : Flag<["-"], "mno-odd-spreg">, Group<m_Group>,
   Flags<[HelpHidden]>;
 def mglibc : Flag<["-"], "mglibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;
 def muclibc : Flag<["-"], "muclibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;
-def module_file_info : Flag<["-"], "module-file-info">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>;
+def module_file_info : Flag<["-"], "module-file-info">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>,
+  HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>;
 def multi__module : Flag<["-"], "multi_module">;

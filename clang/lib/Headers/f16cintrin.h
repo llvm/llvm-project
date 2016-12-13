@@ -37,7 +37,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPH2PS instruction.
+/// This intrinsic corresponds to the <c> VCVTPH2PS </c> instruction.
 ///
 /// \param __a
 ///    A 16-bit half-precision float value.
@@ -59,7 +59,7 @@ _cvtsh_ss(unsigned short __a)
 /// unsigned short _cvtss_sh(float a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCVTPS2PH instruction.
+/// This intrinsic corresponds to the <c> VCVTPS2PH </c> instruction.
 ///
 /// \param a
 ///    A 32-bit single-precision float value to be converted to a 16-bit
@@ -85,7 +85,7 @@ _cvtsh_ss(unsigned short __a)
 /// __m128i _mm_cvtps_ph(__m128 a, const int imm);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VCVTPS2PH instruction.
+/// This intrinsic corresponds to the <c> VCVTPS2PH </c> instruction.
 ///
 /// \param a
 ///    A 128-bit vector containing 32-bit float values.
@@ -107,7 +107,7 @@ _cvtsh_ss(unsigned short __a)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VCVTPH2PS instruction.
+/// This intrinsic corresponds to the <c> VCVTPH2PS </c> instruction.
 ///
 /// \param __a
 ///    A 128-bit vector containing 16-bit half-precision float values. The lower

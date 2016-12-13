@@ -2899,6 +2899,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case UnaryExprOrTypeTraitExprClass:
   case AddrLabelExprClass:
   case GNUNullExprClass:
+  case ArrayInitIndexExprClass:
   case NoInitExprClass:
   case CXXBoolLiteralExprClass:
   case CXXNullPtrLiteralExprClass:
@@ -2975,6 +2976,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ExtVectorElementExprClass:
   case DesignatedInitExprClass:
   case DesignatedInitUpdateExprClass:
+  case ArrayInitLoopExprClass:
   case ParenListExprClass:
   case CXXPseudoDestructorExprClass:
   case CXXStdInitializerListExprClass:

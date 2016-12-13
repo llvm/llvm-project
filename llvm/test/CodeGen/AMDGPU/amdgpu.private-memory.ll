@@ -252,8 +252,8 @@ entry:
 ; SI-PROMOTE-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} ; encoding:
 ; SI-PROMOTE-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:1 ; encoding:
 
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x60,0xe0
-; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:1 ; encoding: [0x01,0x10,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} ; encoding: [0x00,0x00,0x60,0xe0
+; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:1 ; encoding: [0x01,0x00,0x60,0xe0
 define void @char_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i8]
@@ -274,7 +274,9 @@ entry:
 ; R600-CHECK: MOV
 ; R600-CHECK: [[CHAN:[XYZW]]]+
 ; R600-NOT: [[CHAN]]+
-; SI: v_mov_b32_e32 v3
+;
+; A total of 5 bytes should be allocated and used.
+; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4 ;
 define void @no_overlap(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1

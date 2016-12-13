@@ -12,6 +12,7 @@
 // constexpr const_iterator rend() const;
 
 #include <experimental/string_view>
+#include <cstddef>
 #include <cassert>
 
 #include "test_macros.h"
@@ -38,9 +39,9 @@ test(S s)
         assert(ce2 !=  s.rbegin());
     }
 
-    assert(  e -  s.rbegin() == s.size());
-    assert(ce1 - cs.rbegin() == cs.size());
-    assert(ce2 - s.crbegin() == s.size());
+    assert(  e -  s.rbegin() == static_cast<std::ptrdiff_t>(s.size()));
+    assert(ce1 - cs.rbegin() == static_cast<std::ptrdiff_t>(cs.size()));
+    assert(ce2 - s.crbegin() == static_cast<std::ptrdiff_t>(s.size()));
 
     assert(  e == ce1);
     assert(  e == ce2);

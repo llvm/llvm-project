@@ -181,12 +181,19 @@ AsmToken AsmLexer::LexSlash() {
 
   // C Style comment.
   ++CurPtr;  // skip the star.
+  const char *CommentTextStart = CurPtr;
   while (CurPtr != CurBuf.end()) {
     switch (*CurPtr++) {
     case '*':
       // End of the comment?
       if (*CurPtr != '/')
         break;
+      // If we have a CommentConsumer, notify it about the comment.
+      if (CommentConsumer) {
+        CommentConsumer->HandleComment(
+            SMLoc::getFromPointer(CommentTextStart),
+            StringRef(CommentTextStart, CurPtr - 1 - CommentTextStart));
+      }
       ++CurPtr;   // End the */.
       return AsmToken(AsmToken::Comment,
                       StringRef(TokStart, CurPtr - TokStart));
@@ -202,9 +209,17 @@ AsmToken AsmLexer::LexLineComment() {
   // comment. While it would be nicer to leave this two tokens,
   // backwards compatability with TargetParsers makes keeping this in this form
   // better.
+  const char *CommentTextStart = CurPtr;
   int CurChar = getNextChar();
   while (CurChar != '\n' && CurChar != '\r' && CurChar != EOF)
     CurChar = getNextChar();
+
+  // If we have a CommentConsumer, notify it about the comment.
+  if (CommentConsumer) {
+    CommentConsumer->HandleComment(
+        SMLoc::getFromPointer(CommentTextStart),
+        StringRef(CommentTextStart, CurPtr - 1 - CommentTextStart));
+  }
 
   IsAtStartOfLine = true;
   // This is a whole line comment. leave newline

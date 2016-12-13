@@ -1070,7 +1070,8 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     const EnumType *ET = CondTypeBeforePromotion->getAs<EnumType>();
 
     // If switch has default case, then ignore it.
-    if (!CaseListIsErroneous  && !HasConstantCond && ET) {
+    if (!CaseListIsErroneous && !HasConstantCond && ET &&
+        ET->getDecl()->isCompleteDefinition()) {
       const EnumDecl *ED = ET->getDecl();
       EnumValsTy EnumVals;
 

@@ -48,12 +48,12 @@ public:
                                int match_start_point, int max_return_elements,
                                bool &word_complete,
                                StringList &matches) override {
-    std::string completion_str(input.GetArgumentAtIndex(cursor_index));
-    completion_str.erase(cursor_char_position);
+    auto completion_str = input[cursor_index].ref;
+    completion_str = completion_str.take_front(cursor_char_position);
 
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        completion_str.c_str(), match_start_point, max_return_elements, nullptr,
+        completion_str, match_start_point, max_return_elements, nullptr,
         word_complete, matches);
     return matches.GetSize();
   }
@@ -68,11 +68,9 @@ protected:
       return false;
     }
 
-    const char *path = command.GetArgumentAtIndex(0);
-
     Error error;
 
-    FileSpec dylib_fspec(path, true);
+    FileSpec dylib_fspec(command[0].ref, true);
 
     if (m_interpreter.GetDebugger().LoadPlugin(dylib_fspec, error))
       result.SetStatus(eReturnStatusSuccessFinishResult);

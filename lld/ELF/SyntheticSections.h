@@ -206,6 +206,25 @@ private:
   std::vector<const SymbolBody *> Entries;
 };
 
+// The IgotPltSection is a Got associated with the IpltSection for GNU Ifunc
+// Symbols that will be relocated by Target->IRelativeRel.
+// On most Targets the IgotPltSection will immediately follow the GotPltSection
+// on ARM the IgotPltSection will immediately follow the GotSection.
+template <class ELFT>
+class IgotPltSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::uint uintX_t;
+
+public:
+  IgotPltSection();
+  void addEntry(SymbolBody &Sym);
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) override;
+  bool empty() const override { return Entries.empty(); }
+
+private:
+  std::vector<const SymbolBody *> Entries;
+};
+
 template <class ELFT>
 class StringTableSection final : public SyntheticSection<ELFT> {
 public:
@@ -431,6 +450,21 @@ private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
 };
 
+// The IpltSection is a variant of Plt for recording entries for GNU Ifunc
+// symbols that will be subject to a Target->IRelativeRel
+// The IpltSection immediately follows the Plt section in the Output Section
+template <class ELFT> class IpltSection final : public SyntheticSection<ELFT> {
+public:
+  IpltSection();
+  void writeTo(uint8_t *Buf) override;
+  size_t getSize() const override;
+  void addEntry(SymbolBody &Sym);
+  bool empty() const override { return Entries.empty(); }
+
+private:
+  std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
+};
+
 template <class ELFT>
 class GdbIndexSection final : public SyntheticSection<ELFT> {
   typedef typename ELFT::uint uintX_t;
@@ -644,12 +678,15 @@ template <class ELFT> struct In {
   static GotSection<ELFT> *Got;
   static MipsGotSection<ELFT> *MipsGot;
   static GotPltSection<ELFT> *GotPlt;
+  static IgotPltSection<ELFT> *IgotPlt;
   static HashTableSection<ELFT> *HashTab;
   static InputSection<ELFT> *Interp;
   static MipsRldMapSection<ELFT> *MipsRldMap;
   static PltSection<ELFT> *Plt;
+  static IpltSection<ELFT> *Iplt;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
+  static RelocationSection<ELFT> *RelaIplt;
   static StringTableSection<ELFT> *ShStrTab;
   static StringTableSection<ELFT> *StrTab;
   static SymbolTableSection<ELFT> *SymTab;
@@ -669,12 +706,15 @@ template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
 template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
+template <class ELFT> IgotPltSection<ELFT> *In<ELFT>::IgotPlt;
 template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Interp;
 template <class ELFT> MipsRldMapSection<ELFT> *In<ELFT>::MipsRldMap;
 template <class ELFT> PltSection<ELFT> *In<ELFT>::Plt;
+template <class ELFT> IpltSection<ELFT> *In<ELFT>::Iplt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
+template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaIplt;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *In<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::SymTab;

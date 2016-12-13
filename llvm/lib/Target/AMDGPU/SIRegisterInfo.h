@@ -16,12 +16,14 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "AMDGPURegisterInfo.h"
+#include "SIDefines.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
 
 class SISubtarget;
 class MachineRegisterInfo;
+class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPURegisterInfo {
 private:
@@ -55,6 +57,8 @@ public:
     const MachineFunction &MF) const override;
   bool requiresVirtualBaseRegisters(const MachineFunction &Fn) const override;
   bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
+
+  int64_t getMUBUFInstrOffset(const MachineInstr *MI) const;
 
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
@@ -135,12 +139,19 @@ public:
 
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
-  bool opCanUseLiteralConstant(unsigned OpType) const;
+  bool opCanUseLiteralConstant(unsigned OpType) const {
+    // TODO: 64-bit operands have extending behavior from 32-bit literal.
+    return OpType >= AMDGPU::OPERAND_REG_IMM_FIRST &&
+           OpType <= AMDGPU::OPERAND_REG_IMM_LAST;
+  }
 
   /// \returns True if operands defined with this operand type can accept
   /// an inline constant. i.e. An integer value in the range (-16, 64) or
   /// -4.0f, -2.0f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 2.0f, 4.0f.
-  bool opCanUseInlineConstant(unsigned OpType) const;
+  bool opCanUseInlineConstant(unsigned OpType) const {
+    return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
+           OpType <= AMDGPU::OPERAND_SRC_LAST;
+  }
 
   enum PreloadedValue {
     // SGPRS:
@@ -196,7 +207,8 @@ public:
   unsigned getNumAddressableSGPRs(const SISubtarget &ST) const;
 
   /// \returns Number of reserved SGPRs supported by the subtarget.
-  unsigned getNumReservedSGPRs(const SISubtarget &ST) const;
+  unsigned getNumReservedSGPRs(const SISubtarget &ST,
+                               const SIMachineFunctionInfo &MFI) const;
 
   /// \returns Minimum number of SGPRs that meets given number of waves per
   /// execution unit requirement for given subtarget.
@@ -204,7 +216,8 @@ public:
 
   /// \returns Maximum number of SGPRs that meets given number of waves per
   /// execution unit requirement for given subtarget.
-  unsigned getMaxNumSGPRs(const SISubtarget &ST, unsigned WavesPerEU) const;
+  unsigned getMaxNumSGPRs(const SISubtarget &ST, unsigned WavesPerEU,
+                          bool Addressable) const;
 
   /// \returns Maximum number of SGPRs that meets number of waves per execution
   /// unit requirement for function \p MF, or number of SGPRs explicitly

@@ -370,8 +370,7 @@ define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, <2 x double>* %
 ; SSE-LABEL: test_x86_sse2_cvtsd2ss_load:
 ; SSE:       ## BB#0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; SSE-NEXT:    movaps (%eax), %xmm1 ## encoding: [0x0f,0x28,0x08]
-; SSE-NEXT:    cvtsd2ss %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x5a,0xc1]
+; SSE-NEXT:    cvtsd2ss (%eax), %xmm0 ## encoding: [0xf2,0x0f,0x5a,0x00]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse2_cvtsd2ss_load:
@@ -444,8 +443,7 @@ define <2 x double> @test_x86_sse2_cvtss2sd_load(<2 x double> %a0, <4 x float>* 
 ; SSE-LABEL: test_x86_sse2_cvtss2sd_load:
 ; SSE:       ## BB#0:
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; SSE-NEXT:    movaps (%eax), %xmm1 ## encoding: [0x0f,0x28,0x08]
-; SSE-NEXT:    cvtss2sd %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x5a,0xc1]
+; SSE-NEXT:    cvtss2sd (%eax), %xmm0 ## encoding: [0xf3,0x0f,0x5a,0x00]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse2_cvtss2sd_load:

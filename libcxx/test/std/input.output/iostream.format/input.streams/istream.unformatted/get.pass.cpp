@@ -43,7 +43,7 @@ int main()
     {
         testbuf<char> sb("          ");
         std::istream is(&sb);
-        char c = is.get();
+        char c = static_cast<char>(is.get());
         assert(!is.eof());
         assert(!is.fail());
         assert(c == ' ');
@@ -52,22 +52,22 @@ int main()
     {
         testbuf<char> sb(" abc");
         std::istream is(&sb);
-        char c = is.get();
+        char c = static_cast<char>(is.get());
         assert(!is.eof());
         assert(!is.fail());
         assert(c == ' ');
         assert(is.gcount() == 1);
-        c = is.get();
+        c = static_cast<char>(is.get());
         assert(!is.eof());
         assert(!is.fail());
         assert(c == 'a');
         assert(is.gcount() == 1);
-        c = is.get();
+        c = static_cast<char>(is.get());
         assert(!is.eof());
         assert(!is.fail());
         assert(c == 'b');
         assert(is.gcount() == 1);
-        c = is.get();
+        c = static_cast<char>(is.get());
         assert(!is.eof());
         assert(!is.fail());
         assert(c == 'c');

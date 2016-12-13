@@ -445,21 +445,29 @@ def exp_tgt : NamedOperandU8<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 
+class KImmMatchClass<int size> : AsmOperandClass {
+  let Name = "KImmFP"#size;
+  let PredicateMethod = "isKImmFP"#size;
+  let ParserMethod = "parseImm";
+  let RenderMethod = "addKImmFP"#size#"Operands";
+}
+
+class kimmOperand<ValueType vt> : Operand<vt> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_KIMM"#vt.Size;
+  let PrintMethod = "printU"#vt.Size#"ImmOperand";
+  let ParserMatchClass = !cast<AsmOperandClass>("KImmFP"#vt.Size#"MatchClass");
+}
 
 // 32-bit VALU immediate operand that uses the constant bus.
-def KImmFP32MatchClass : AsmOperandClass {
-  let Name = "KImmFP32";
-  let PredicateMethod = "isKImmFP32";
-  let ParserMethod = "parseImm";
-  let RenderMethod = "addKImmFP32Operands";
-}
+def KImmFP32MatchClass : KImmMatchClass<32>;
+def f32kimm : kimmOperand<i32>;
 
-def f32kimm : Operand<i32> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_KIMM32";
-  let PrintMethod = "printU32ImmOperand";
-  let ParserMatchClass = KImmFP32MatchClass;
-}
+// 32-bit VALU immediate operand with a 16-bit value that uses the
+// constant bus.
+def KImmFP16MatchClass : KImmMatchClass<16>;
+def f16kimm : kimmOperand<i16>;
+
 
 def VOPDstS64 : VOPDstOperand <SReg_64>;
 
@@ -468,6 +476,7 @@ class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let ParserMethod = "parseRegOrImmWithFPInputMods";
   let PredicateMethod = "isRegOrImmWithFP"#opSize#"InputMods";
 }
+def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
@@ -480,6 +489,8 @@ class InputMods <AsmOperandClass matchClass> : Operand <i32> {
 class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
 }
+
+def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
@@ -629,8 +640,8 @@ class getVOPSrc0ForVT<ValueType VT> {
              !if(!eq(VT.Value, f64.Value), 1,
              0)));
   RegisterOperand ret = !if(isFP,
-                            !if(!eq(VT.Size, 64), VSrc_f64, VSrc_f32),
-                            !if(!eq(VT.Size, 64), VSrc_b64, VSrc_b32));
+                            !if(!eq(VT.Size, 64), VSrc_f64, !if(!eq(VT.Size, 16), VSrc_f16, VSrc_f32)),
+                            !if(!eq(VT.Size, 64), VSrc_b64, !if(!eq(VT.Size, 16), VSrc_b16, VSrc_b32)));
 }
 
 // Returns the vreg register class to use for source operand given VT
@@ -657,8 +668,9 @@ class getVOP3SrcForVT<ValueType VT> {
         !if(!eq(VT.Value, i1.Value),
             SCSrc_b64,
             !if(isFP,
-                VCSrc_f32,
-                VCSrc_b32)
+                !if(!eq(VT.Size, 16), VCSrc_f16, VCSrc_f32),
+                !if(!eq(VT.Size, 16), VCSrc_b16, VCSrc_b32)
+            )
          )
 	   )
      );
@@ -691,7 +703,13 @@ class getSrcMod <ValueType VT> {
                0)));
   Operand ret =  !if(!eq(VT.Size, 64),
                      !if(isFP, FP64InputMods, Int64InputMods),
-                     !if(isFP, FP32InputMods, Int32InputMods));
+                       !if(isFP,
+                         !if(!eq(VT.Value, f16.Value),
+                            FP16InputMods,
+                            FP32InputMods
+                          ),
+                         Int32InputMods)
+                     );
 }
 
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.

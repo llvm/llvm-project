@@ -147,7 +147,7 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 
 ; CHECK: "?dtor$[[finbb]]@?0?main@4HA":
 ; CHECK: .seh_proc "?dtor$[[finbb]]@?0?main@4HA"
-; CHECK:         .seh_handler __C_specific_handler, @unwind, @except
+; CHECK-NOT:         .seh_handler
 ; CHECK: .LBB1_[[finbb]]:                                # %ehcleanup
 ; CHECK:         movq    %rdx, 16(%rsp)
 ; CHECK:         pushq   %rbp

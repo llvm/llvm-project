@@ -50,9 +50,9 @@ int main()
         const size_t Np = sizeof(p) / sizeof(p[0]) - 1;
         D d;
         P pa(b, b+Np+1, p);
-        const int N = 1000000;
+        const size_t N = 1000000;
         std::vector<D::result_type> u;
-        for (int i = 0; i < N; ++i)
+        for (size_t i = 0; i < N; ++i)
         {
             D::result_type v = d(g, pa);
             assert(10 <= v && v < 17);
@@ -66,16 +66,16 @@ int main()
         double c = std::numeric_limits<double>::quiet_NaN();
         std::vector<double> areas(Np);
         double S = 0;
-        for (int i = 0; i < areas.size(); ++i)
+        for (size_t i = 0; i < areas.size(); ++i)
         {
             areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
             S += areas[i];
         }
-        for (int i = 0; i < areas.size(); ++i)
+        for (size_t i = 0; i < areas.size(); ++i)
             areas[i] /= S;
-        for (int i = 0; i < Np+1; ++i)
+        for (size_t i = 0; i < Np+1; ++i)
             p[i] /= S;
-        for (int i = 0; i < N; ++i)
+        for (size_t i = 0; i < N; ++i)
         {
             int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
             if (k != kp)

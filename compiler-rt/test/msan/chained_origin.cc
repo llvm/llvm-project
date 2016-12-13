@@ -1,15 +1,15 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-STACK < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-%short-stack --check-prefix=CHECK-STACK < %t.out
 
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -DHEAP=1 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-HEAP < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-%short-stack --check-prefix=CHECK-HEAP < %t.out
 
 
 // RUN: %clangxx_msan -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-STACK < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-%short-stack --check-prefix=CHECK-STACK < %t.out
 
 // RUN: %clangxx_msan -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DHEAP=1 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
@@ -50,16 +50,18 @@ int main(int argc, char *argv[]) {
 // CHECK: {{#0 .* in main.*chained_origin.cc:}}[[@LINE-4]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK: {{#0 .* in fn_h.*chained_origin.cc:}}[[@LINE-19]]
-// CHECK: {{#1 .* in main.*chained_origin.cc:}}[[@LINE-9]]
+// CHECK-FULL-STACK: {{#0 .* in fn_h.*chained_origin.cc:}}[[@LINE-19]]
+// CHECK-FULL-STACK: {{#1 .* in main.*chained_origin.cc:}}[[@LINE-9]]
+// CHECK-SHORT-STACK: {{#0 .* in fn_h.*chained_origin.cc:}}[[@LINE-21]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK: {{#0 .* in fn_g.*chained_origin.cc:}}[[@LINE-33]]
-// CHECK: {{#1 .* in fn_f.*chained_origin.cc:}}[[@LINE-29]]
-// CHECK: {{#2 .* in main.*chained_origin.cc:}}[[@LINE-15]]
+// CHECK-FULL-STACK: {{#0 .* in fn_g.*chained_origin.cc:}}[[@LINE-34]]
+// CHECK-FULL-STACK: {{#1 .* in fn_f.*chained_origin.cc:}}[[@LINE-30]]
+// CHECK-FULL-STACK: {{#2 .* in main.*chained_origin.cc:}}[[@LINE-16]]
+// CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin.cc:}}[[@LINE-37]]
 
 // CHECK-STACK: Uninitialized value was created by an allocation of 'z' in the stack frame of function 'main'
-// CHECK-STACK: {{#0 .* in main.*chained_origin.cc:}}[[@LINE-25]]
+// CHECK-STACK: {{#0 .* in main.*chained_origin.cc:}}[[@LINE-27]]
 
 // CHECK-HEAP: Uninitialized value was created by a heap allocation
-// CHECK-HEAP: {{#1 .* in main.*chained_origin.cc:}}[[@LINE-26]]
+// CHECK-HEAP: {{#1 .* in main.*chained_origin.cc:}}[[@LINE-28]]

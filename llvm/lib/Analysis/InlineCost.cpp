@@ -1486,7 +1486,7 @@ InlineCost llvm::getInlineCost(
 
   // Don't inline functions which can be interposed at link-time.  Don't inline
   // functions marked noinline or call sites marked noinline.
-  // Note: inlining non-exact non-interposable fucntions is fine, since we know
+  // Note: inlining non-exact non-interposable functions is fine, since we know
   // we have *a* correct implementation of the source level function.
   if (Callee->isInterposable() || Callee->hasFnAttribute(Attribute::NoInline) ||
       CS.isNoInline())

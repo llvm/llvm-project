@@ -28,11 +28,11 @@ std::error_code macho2yaml(llvm::raw_ostream &Out,
 namespace llvm {
 class DWARFContextInMemory;
 namespace DWARFYAML {
-struct DWARFData;
+struct Data;
 }
 }
 
 std::error_code dwarf2yaml(llvm::DWARFContextInMemory &DCtx,
-                           llvm::DWARFYAML::DWARFData &Y);
+                           llvm::DWARFYAML::Data &Y);
 
 #endif

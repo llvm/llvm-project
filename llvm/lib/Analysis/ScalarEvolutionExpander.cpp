@@ -166,6 +166,16 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   return ReuseOrCreateCast(I, Ty, Op, IP);
 }
 
+// Return true when S may contain the value zero.
+static bool mayBeValueZero(Value *V) {
+  if (ConstantInt *C = dyn_cast<ConstantInt>(V))
+    if (!C->isZero())
+      return false;
+
+  // All other expressions may have a zero value.
+  return true;
+}
+
 /// InsertBinop - Insert the specified binary operator, doing a small amount
 /// of work to avoid inserting an obviously redundant operation.
 Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
@@ -198,14 +208,17 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   DebugLoc Loc = Builder.GetInsertPoint()->getDebugLoc();
   SCEVInsertPointGuard Guard(Builder, this);
 
-  // Move the insertion point out of as many loops as we can.
-  while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
-    if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS)) break;
-    BasicBlock *Preheader = L->getLoopPreheader();
-    if (!Preheader) break;
+  // Only move the insertion point up when it is not a division by zero.
+  if (Opcode != Instruction::UDiv || !mayBeValueZero(RHS)) {
+    // Move the insertion point out of as many loops as we can.
+    while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
+      if (!L->isLoopInvariant(LHS) || !L->isLoopInvariant(RHS)) break;
+      BasicBlock *Preheader = L->getLoopPreheader();
+      if (!Preheader) break;
 
-    // Ok, move up a level.
-    Builder.SetInsertPoint(Preheader->getTerminator());
+      // Ok, move up a level.
+      Builder.SetInsertPoint(Preheader->getTerminator());
+    }
   }
 
   // If we haven't found this binop, insert it.
@@ -1182,11 +1195,14 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   PostIncLoopSet SavedPostIncLoops = PostIncLoops;
   PostIncLoops.clear();
 
-  // Expand code for the start value.
-  Value *StartV =
-      expandCodeFor(Normalized->getStart(), ExpandTy, &L->getHeader()->front());
+  // Expand code for the start value into the loop preheader.
+  assert(L->getLoopPreheader() &&
+         "Can't expand add recurrences without a loop preheader!");
+  Value *StartV = expandCodeFor(Normalized->getStart(), ExpandTy,
+                                L->getLoopPreheader()->getTerminator());
 
-  // StartV must be hoisted into L's preheader to dominate the new phi.
+  // StartV must have been be inserted into L's preheader to dominate the new
+  // phi.
   assert(!isa<Instruction>(StartV) ||
          SE.DT.properlyDominates(cast<Instruction>(StartV)->getParent(),
                                  L->getHeader()));
@@ -1663,31 +1679,46 @@ Value *SCEVExpander::expand(const SCEV *S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
   Instruction *InsertPt = &*Builder.GetInsertPoint();
-  for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
-       L = L->getParentLoop())
-    if (SE.isLoopInvariant(S, L)) {
-      if (!L) break;
-      if (BasicBlock *Preheader = L->getLoopPreheader())
-        InsertPt = Preheader->getTerminator();
-      else {
-        // LSR sets the insertion point for AddRec start/step values to the
-        // block start to simplify value reuse, even though it's an invalid
-        // position. SCEVExpander must correct for this in all cases.
-        InsertPt = &*L->getHeader()->getFirstInsertionPt();
+  bool SafeToHoist = !SCEVExprContains(S, [](const SCEV *S) {
+      if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
+        if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
+          // Division by non-zero constants can be hoisted.
+          return SC->getValue()->isZero();
+
+        // All other divisions should not be moved as they may be divisions by
+        // zero and should be kept within the conditions of the surrounding
+        // loops that guard their execution (see PR30935.)
+        return true;
       }
-    } else {
-      // If the SCEV is computable at this level, insert it into the header
-      // after the PHIs (and after any other instructions that we've inserted
-      // there) so that it is guaranteed to dominate any user inside the loop.
-      if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
-        InsertPt = &*L->getHeader()->getFirstInsertionPt();
-      while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
-             (isInsertedInstruction(InsertPt) ||
-              isa<DbgInfoIntrinsic>(InsertPt))) {
-        InsertPt = &*std::next(InsertPt->getIterator());
+      return false;
+    });
+  if (SafeToHoist) {
+    for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
+         L = L->getParentLoop())
+      if (SE.isLoopInvariant(S, L)) {
+        if (!L) break;
+        if (BasicBlock *Preheader = L->getLoopPreheader())
+          InsertPt = Preheader->getTerminator();
+        else {
+          // LSR sets the insertion point for AddRec start/step values to the
+          // block start to simplify value reuse, even though it's an invalid
+          // position. SCEVExpander must correct for this in all cases.
+          InsertPt = &*L->getHeader()->getFirstInsertionPt();
+        }
+      } else {
+        // If the SCEV is computable at this level, insert it into the header
+        // after the PHIs (and after any other instructions that we've inserted
+        // there) so that it is guaranteed to dominate any user inside the loop.
+        if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
+          InsertPt = &*L->getHeader()->getFirstInsertionPt();
+        while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
+               (isInsertedInstruction(InsertPt) ||
+                isa<DbgInfoIntrinsic>(InsertPt))) {
+          InsertPt = &*std::next(InsertPt->getIterator());
+        }
+        break;
       }
-      break;
-    }
+  }
 
   // Check to see if we already expanded this here.
   auto I = InsertedExpressions.find(std::make_pair(S, InsertPt));

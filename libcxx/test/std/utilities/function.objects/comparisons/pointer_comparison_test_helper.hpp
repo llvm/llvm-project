@@ -19,13 +19,13 @@ void do_pointer_comparison_test() {
 #endif
     std::vector<std::shared_ptr<T> > pointers;
     const std::size_t test_size = 100;
-    for (int i=0; i < test_size; ++i)
+    for (size_t i=0; i < test_size; ++i)
         pointers.push_back(std::shared_ptr<T>(new T()));
     Compare comp;
     UIntCompare ucomp;
     VoidCompare vcomp;
-    for (int i=0; i < test_size; ++i) {
-        for (int j=0; j < test_size; ++j) {
+    for (size_t i=0; i < test_size; ++i) {
+        for (size_t j=0; j < test_size; ++j) {
             T* lhs = pointers[i].get();
             T* rhs = pointers[j].get();
             std::uintptr_t lhs_uint = reinterpret_cast<std::uintptr_t>(lhs);

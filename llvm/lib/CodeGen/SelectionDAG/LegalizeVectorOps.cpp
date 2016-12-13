@@ -333,6 +333,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
     QueryType = Node->getValueType(0);
     break;
   case ISD::FP_ROUND_INREG:

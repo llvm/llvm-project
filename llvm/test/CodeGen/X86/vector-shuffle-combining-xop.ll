@@ -147,6 +147,34 @@ define <4 x float> @combine_vpermil2ps_blend_with_zero(<4 x float> %a0, <4 x flo
   ret <4 x float> %res0
 }
 
+define <2 x double> @combine_vpermil2pd_as_shufpd(<2 x double> %a0, <2 x double> %a1) {
+; X32-LABEL: combine_vpermil2pd_as_shufpd:
+; X32:       # BB#0:
+; X32-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1],xmm1[0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermil2pd_as_shufpd:
+; X64:       # BB#0:
+; X64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1],xmm1[0]
+; X64-NEXT:    retq
+  %res0 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x i64> <i64 2, i64 4>, i8 0)
+  ret <2 x double> %res0
+}
+
+define <4 x double> @combine_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x double> %a1) {
+; X32-LABEL: combine_vpermil2pd256_as_shufpd:
+; X32:       # BB#0:
+; X32-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[3]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermil2pd256_as_shufpd:
+; X64:       # BB#0:
+; X64-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[3]
+; X64-NEXT:    retq
+  %res0 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> <i64 0, i64 4, i64 2, i64 7>, i8 0)
+  ret <4 x double> %res0
+}
+
 define <16 x i8> @combine_vpperm_identity(<16 x i8> %a0, <16 x i8> %a1) {
 ; X32-LABEL: combine_vpperm_identity:
 ; X32:       # BB#0:
@@ -270,6 +298,29 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   %res2 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %res1, <16 x i8> undef, <16 x i8> <i8 2, i8 3, i8 0, i8 1, i8 128, i8 128, i8 128, i8 128, i8 10, i8 11, i8 8, i8 9, i8 14, i8 15, i8 12, i8 13>)
   %res3 = bitcast <16 x i8> %res2 to <4 x i32>
   ret <4 x i32> %res3
+}
+
+define void @buildvector_v4f23_0404(float %a, float %b, <4 x float>* %ptr) {
+; X32-LABEL: buildvector_v4f23_0404:
+; X32:       # BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X32-NEXT:    vmovaps %xmm0, (%eax)
+; X32-NEXT:    retl
+;
+; X64-LABEL: buildvector_v4f23_0404:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[0],xmm1[0]
+; X64-NEXT:    vmovaps %xmm0, (%rdi)
+; X64-NEXT:    retq
+  %v0 = insertelement <4 x float> undef, float %a, i32 0
+  %v1 = insertelement <4 x float> %v0,   float %b, i32 1
+  %v2 = insertelement <4 x float> %v1,   float %a, i32 2
+  %v3 = insertelement <4 x float> %v2,   float %b, i32 3
+  store <4 x float> %v3, <4 x float>* %ptr
+  ret void
 }
 
 define <2 x double> @constant_fold_vpermil2pd() {

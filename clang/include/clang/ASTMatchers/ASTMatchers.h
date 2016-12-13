@@ -5019,6 +5019,22 @@ AST_MATCHER_P(ElaboratedType, namesType, internal::Matcher<QualType>,
 /// \c substTemplateTypeParmType() matches the type of 't' but not '1'
 AST_TYPE_MATCHER(SubstTemplateTypeParmType, substTemplateTypeParmType);
 
+/// \brief Matches template type parameter substitutions that have a replacement
+/// type that matches the provided matcher.
+///
+/// Given
+/// \code
+///   template <typename T>
+///   double F(T t);
+///   int i;
+///   double j = F(i);
+/// \endcode
+///
+/// \c substTemplateTypeParmType(hasReplacementType(type())) matches int
+AST_TYPE_TRAVERSE_MATCHER(
+    hasReplacementType, getReplacementType,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(SubstTemplateTypeParmType));
+
 /// \brief Matches template type parameter types.
 ///
 /// Example matches T, but not int.

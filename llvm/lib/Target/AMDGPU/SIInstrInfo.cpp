@@ -1415,10 +1415,12 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     // If this is a free constant, there's no reason to do this.
     // TODO: We could fold this here instead of letting SIFoldOperands do it
     // later.
-    if (isInlineConstant(ImmOp, 4))
+    MachineOperand *Src0 = getNamedOperand(UseMI, AMDGPU::OpName::src0);
+
+    // Any src operand can be used for the legality check.
+    if (isInlineConstant(UseMI, *Src0, ImmOp))
       return false;
 
-    MachineOperand *Src0 = getNamedOperand(UseMI, AMDGPU::OpName::src0);
     MachineOperand *Src1 = getNamedOperand(UseMI, AMDGPU::OpName::src1);
     MachineOperand *Src2 = getNamedOperand(UseMI, AMDGPU::OpName::src2);
 
@@ -1620,8 +1622,10 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   case AMDGPU::V_MAC_F16_e32:
     IsF16 = true;
   case AMDGPU::V_MAC_F32_e32: {
-    const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
-    if (Src0->isImm() && !isInlineConstant(*Src0, 4))
+    int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                             AMDGPU::OpName::src0);
+    const MachineOperand *Src0 = &MI.getOperand(Src0Idx);
+    if (Src0->isImm() && !isInlineConstant(MI, Src0Idx, *Src0))
       return nullptr;
     break;
   }
@@ -1682,46 +1686,55 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
   case 64:
     return AMDGPU::isInlinableLiteral64(Imm.getSExtValue(),
                                         ST.hasInv2PiInlineImm());
+  case 16:
+    return AMDGPU::isInlinableLiteral16(Imm.getSExtValue(),
+                                        ST.hasInv2PiInlineImm());
   default:
     llvm_unreachable("invalid bitwidth");
   }
 }
 
 bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
-                                   unsigned OpSize) const {
-  if (MO.isImm()) {
-    // MachineOperand provides no way to tell the true operand size, since it
-    // only records a 64-bit value. We need to know the size to determine if a
-    // 32-bit floating point immediate bit pattern is legal for an integer
-    // immediate. It would be for any 32-bit integer operand, but would not be
-    // for a 64-bit one.
-    switch (OpSize) {
-    case 4:
-      return AMDGPU::isInlinableLiteral32(static_cast<int32_t>(MO.getImm()),
-                                          ST.hasInv2PiInlineImm());
-    case 8:
-      return AMDGPU::isInlinableLiteral64(MO.getImm(),
-                                          ST.hasInv2PiInlineImm());
-    default:
-      llvm_unreachable("invalid bitwidth");
-    }
+                                   uint8_t OperandType) const {
+  if (!MO.isImm() || OperandType < MCOI::OPERAND_FIRST_TARGET)
+    return false;
+
+  // MachineOperand provides no way to tell the true operand size, since it only
+  // records a 64-bit value. We need to know the size to determine if a 32-bit
+  // floating point immediate bit pattern is legal for an integer immediate. It
+  // would be for any 32-bit integer operand, but would not be for a 64-bit one.
+
+  int64_t Imm = MO.getImm();
+  switch (operandBitWidth(OperandType)) {
+  case 32: {
+    int32_t Trunc = static_cast<int32_t>(Imm);
+    return Trunc == Imm &&
+           AMDGPU::isInlinableLiteral32(Trunc, ST.hasInv2PiInlineImm());
   }
+  case 64: {
+    return AMDGPU::isInlinableLiteral64(MO.getImm(),
+                                        ST.hasInv2PiInlineImm());
+  }
+  case 16: {
+    if (isInt<16>(Imm) || isUInt<16>(Imm)) {
+      int16_t Trunc = static_cast<int16_t>(Imm);
+      return AMDGPU::isInlinableLiteral16(Trunc, ST.hasInv2PiInlineImm());
+    }
 
-  return false;
-}
-
-bool SIInstrInfo::isLiteralConstant(const MachineOperand &MO,
-                                    unsigned OpSize) const {
-  return MO.isImm() && !isInlineConstant(MO, OpSize);
+    return false;
+  }
+  default:
+    llvm_unreachable("invalid bitwidth");
+  }
 }
 
 bool SIInstrInfo::isLiteralConstantLike(const MachineOperand &MO,
-                                        unsigned OpSize) const {
+                                        const MCOperandInfo &OpInfo) const {
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     return false;
   case MachineOperand::MO_Immediate:
-    return !isInlineConstant(MO, OpSize);
+    return !isInlineConstant(MO, OpInfo);
   case MachineOperand::MO_FrameIndex:
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_ExternalSymbol:
@@ -1760,11 +1773,10 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
   if (OpInfo.RegClass < 0)
     return false;
 
-  unsigned OpSize = RI.getRegClass(OpInfo.RegClass)->getSize();
-  if (isLiteralConstant(MO, OpSize))
-    return RI.opCanUseLiteralConstant(OpInfo.OperandType);
+  if (MO.isImm() && isInlineConstant(MO, OpInfo))
+    return RI.opCanUseInlineConstant(OpInfo.OperandType);
 
-  return RI.opCanUseInlineConstant(OpInfo.OperandType);
+  return RI.opCanUseLiteralConstant(OpInfo.OperandType);
 }
 
 bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
@@ -1791,12 +1803,17 @@ bool SIInstrInfo::hasModifiersSet(const MachineInstr &MI,
 
 bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
                                   const MachineOperand &MO,
-                                  unsigned OpSize) const {
+                                  const MCOperandInfo &OpInfo) const {
   // Literal constants use the constant bus.
-  if (isLiteralConstant(MO, OpSize))
-    return true;
+  //if (isLiteralConstantLike(MO, OpInfo))
+  // return true;
+  if (MO.isImm())
+    return !isInlineConstant(MO, OpInfo);
 
-  if (!MO.isReg() || !MO.isUse())
+  if (!MO.isReg())
+    return true; // Misc other operands like FrameIndex
+
+  if (!MO.isUse())
     return false;
 
   if (TargetRegisterInfo::isVirtualRegister(MO.getReg()))
@@ -1925,17 +1942,22 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
       break;
-    case AMDGPU::OPERAND_REG_IMM32_INT:
-    case AMDGPU::OPERAND_REG_IMM32_FP:
+    case AMDGPU::OPERAND_REG_IMM_INT32:
+    case AMDGPU::OPERAND_REG_IMM_FP32:
       break;
-    case AMDGPU::OPERAND_REG_INLINE_C_INT:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP:
-      if (isLiteralConstant(MI.getOperand(i),
-                            RI.getRegClass(RegClass)->getSize())) {
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP16: {
+      const MachineOperand &MO = MI.getOperand(i);
+      if (!MO.isReg() && (!MO.isImm() || !isInlineConstant(MI, i))) {
         ErrInfo = "Illegal immediate value for operand.";
         return false;
       }
       break;
+    }
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_KIMM32:
       // Check if this operand is an immediate.
@@ -1987,7 +2009,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       if (OpIdx == -1)
         break;
       const MachineOperand &MO = MI.getOperand(OpIdx);
-      if (usesConstantBus(MRI, MO, getOpSize(Opcode, OpIdx))) {
+      if (usesConstantBus(MRI, MO, MI.getDesc().OpInfo[OpIdx])) {
         if (MO.isReg()) {
           if (MO.getReg() != SGPRUsed)
             ++ConstantBusCount;
@@ -2330,7 +2352,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   if (!MO)
     MO = &MI.getOperand(OpIdx);
 
-  if (isVALU(MI) && usesConstantBus(MRI, *MO, DefinedRC->getSize())) {
+  if (isVALU(MI) && usesConstantBus(MRI, *MO, OpInfo)) {
 
     RegSubRegPair SGPRUsed;
     if (MO->isReg())
@@ -2342,7 +2364,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       const MachineOperand &Op = MI.getOperand(i);
       if (Op.isReg()) {
         if ((Op.getReg() != SGPRUsed.Reg || Op.getSubReg() != SGPRUsed.SubReg) &&
-            usesConstantBus(MRI, Op, getOpSize(MI, i))) {
+            usesConstantBus(MRI, Op, InstDesc.OpInfo[i])) {
           return false;
         }
       } else if (InstDesc.OpInfo[i].OperandType == AMDGPU::OPERAND_KIMM32) {
@@ -3539,14 +3561,14 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (Src0Idx == -1)
       return 4; // No operands.
 
-    if (isLiteralConstantLike(MI.getOperand(Src0Idx), getOpSize(MI, Src0Idx)))
+    if (isLiteralConstantLike(MI.getOperand(Src0Idx), Desc.OpInfo[Src0Idx]))
       return 8;
 
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
     if (Src1Idx == -1)
       return 4;
 
-    if (isLiteralConstantLike(MI.getOperand(Src1Idx), getOpSize(MI, Src1Idx)))
+    if (isLiteralConstantLike(MI.getOperand(Src1Idx), Desc.OpInfo[Src1Idx]))
       return 8;
 
     return 4;

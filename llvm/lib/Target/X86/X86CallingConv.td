@@ -76,6 +76,9 @@ def CC_#NAME : CallingConv<[
     // Promote i1/i8/i16 arguments to i32.
     CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
+    // Promote v8i1/v16i1/v32i1 arguments to i32.
+    CCIfType<[v8i1, v16i1, v32i1], CCPromoteToType<i32>>,
+
     // bool, char, int, enum, long, pointer --> GPR
     CCIfType<[i32], CCAssignToReg<RC.GPR_32>>,
 
@@ -88,9 +91,6 @@ def CC_#NAME : CallingConv<[
       CCAssignToReg<RC.GPR_64>>>,
     CCIfSubtarget<"is32Bit()", CCIfType<[i64], 
       CCCustom<"CC_X86_32_RegCall_Assign2Regs">>>,
-
-    // TODO: Handle the case of mask types (v*i1)
-    CCIfType<[v8i1, v16i1, v32i1], CCCustom<"CC_X86_RegCall_Error">>,
 
     // float, double, float128 --> XMM
     // In the case of SSE disabled --> save to stack
@@ -146,8 +146,14 @@ def CC_#NAME : CallingConv<[
 ]>;
 
 def RetCC_#NAME : CallingConv<[
-    // Promote i1 arguments to i8.
-    CCIfType<[i1], CCPromoteToType<i8>>,
+    // Promote i1, v8i1 arguments to i8.
+    CCIfType<[i1, v8i1], CCPromoteToType<i8>>,
+
+    // Promote v16i1 arguments to i16.
+    CCIfType<[v16i1], CCPromoteToType<i16>>,
+
+    // Promote v32i1 arguments to i32.
+    CCIfType<[v32i1], CCPromoteToType<i32>>,
 
     // bool, char, int, enum, long, pointer --> GPR
     CCIfType<[i8], CCAssignToReg<RC.GPR_8>>,
@@ -163,9 +169,6 @@ def RetCC_#NAME : CallingConv<[
       CCAssignToReg<RC.GPR_64>>>,
     CCIfSubtarget<"is32Bit()", CCIfType<[i64], 
       CCCustom<"CC_X86_32_RegCall_Assign2Regs">>>,
-
-    // TODO: Handle the case of mask types (v*i1)
-    CCIfType<[v8i1, v16i1, v32i1], CCCustom<"CC_X86_RegCall_Error">>,
 
     // long double --> FP
     CCIfType<[f80], CCAssignToReg<RC.FP_RET>>,

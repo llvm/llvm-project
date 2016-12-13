@@ -887,7 +887,8 @@ public:
     return appendDefMacroDirective(II, MI, MI->getDefinitionLoc());
   }
   /// \brief Set a MacroDirective that was loaded from a PCH file.
-  void setLoadedMacroDirective(IdentifierInfo *II, MacroDirective *MD);
+  void setLoadedMacroDirective(IdentifierInfo *II, MacroDirective *ED,
+                               MacroDirective *MD);
 
   /// \brief Register an exported macro for a module and identifier.
   ModuleMacro *addModuleMacro(Module *Mod, IdentifierInfo *II, MacroInfo *Macro,

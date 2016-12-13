@@ -35,7 +35,7 @@ int main()
     constexpr int foo = std::plus<int> () (3, 2);
     static_assert ( foo == 5, "" );
 
-    constexpr int bar = std::plus<> () (3.0, 2);
-    static_assert ( bar == 5, "" );
+    constexpr double bar = std::plus<> () (3.0, 2);
+    static_assert ( bar == 5.0, "" );
 #endif
 }

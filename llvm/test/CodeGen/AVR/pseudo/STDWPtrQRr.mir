@@ -1,0 +1,22 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo  %s -o - 2>&1 | FileCheck %s
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test
+
+    ; CHECK:      STDPtrQRr %r29r28, 10, %r0
+    ; CHECK-NEXT: STDPtrQRr %r29r28, 11, %r1
+
+    STDWPtrQRr %r29r28, 10, %r1r0
+...

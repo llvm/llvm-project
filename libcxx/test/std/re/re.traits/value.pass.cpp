@@ -116,7 +116,7 @@ int main()
             assert(t.value(c, 10) == -1);
             assert(t.value(c, 16) == c - 'a' +10);
         }
-        for (int c = 'g'; c < 0xFFFF; ++c)
+        for (wchar_t c = 'g'; c < 0xFFFF; ++c)
         {
             assert(t.value(c, 8) == -1);
             assert(t.value(c, 10) == -1);

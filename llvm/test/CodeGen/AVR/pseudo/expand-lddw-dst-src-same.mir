@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+# RUN: llc -O0 %s -o - 2>&1 -march=avr | FileCheck %s
 
 # This test ensures that the pseudo expander can correctly handle the case
 # where we are expanding a 16-bit LDD instruction where the source and
@@ -9,25 +9,26 @@
 
 --- |
   target triple = "avr--"
+
   define void @test_lddw() {
   entry:
     ret void
   }
-...
 
+...
 ---
 name:            test_lddw
-registers:
-  - { id: 0, class: _ }
-body: |
-  ; CHECK-LABEL: bb.0.entry
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 1, alignment: 1, callee-saved-register: '%r28' }
+body:             |
   bb.0.entry:
+    liveins: %r28, %r29
 
-    ; CHECK-NEXT: early-clobber %r0 = LDDRdPtrQ %r29r28, 1
-    ; CHECK-NEXT: PUSHRr %r0, implicit-def %sp, implicit %sp
-    ; CHECK-NEXT: early-clobber %r0 = LDDRdPtrQ %r29r28, 2
-    ; CHECK-NEXT: MOVRdRr %r29, %r0
-    ; CHECK-NEXT: POPRd %r28, implicit-def %sp, implicit %sp
+    ; CHECK-LABEL: test_lddw
 
-    early-clobber %r29r28 = LDDWRdYQ %r29r28, 1
+    ; CHECK:      ldd     [[TMPREG:r[0-9]+]], Y+0
+    ; CHECK-NEXT: mov     r28, [[TMPREG]]
+    ; CHECK-NEXT: ldd     [[TMPREG]], Y+1
+    ; CHECK-NEXT: mov     r29, [[TMPREG]]
+    dead early-clobber %r29r28 = LDDWRdYQ killed %r29r28, 0
 ...

@@ -19,7 +19,6 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/StringSaver.h"
 #include <memory>
 #include <set>
 #include <vector>
@@ -43,7 +42,6 @@ void doICF(const std::vector<Chunk *> &Chunks);
 
 class ArgParser {
 public:
-  ArgParser() : Alloc(AllocAux) {}
   // Parses command line options.
   llvm::opt::InputArgList parse(llvm::ArrayRef<const char *> Args);
 
@@ -57,14 +55,11 @@ private:
   std::vector<const char *> tokenize(StringRef S);
 
   std::vector<const char *> replaceResponseFiles(std::vector<const char *>);
-
-  llvm::BumpPtrAllocator AllocAux;
-  llvm::StringSaver Alloc;
 };
 
 class LinkerDriver {
 public:
-  LinkerDriver() : Alloc(AllocAux) {}
+  LinkerDriver() { coff::Symtab = &Symtab; }
   void link(llvm::ArrayRef<const char *> Args);
 
   // Used by the resolver to parse .drectve section contents.
@@ -73,8 +68,6 @@ public:
   std::unique_ptr<CpioFile> Cpio; // for /linkrepro
 
 private:
-  llvm::BumpPtrAllocator AllocAux;
-  llvm::StringSaver Alloc;
   ArgParser Parser;
   SymbolTable Symtab;
 
@@ -94,7 +87,7 @@ private:
   std::vector<StringRef> SearchPaths;
   std::set<std::string> VisitedFiles;
 
-  Undefined *addUndefined(StringRef Sym);
+  SymbolBody *addUndefined(StringRef Sym);
   StringRef mangle(StringRef Sym);
 
   // Windows specific -- "main" is not the only main function in Windows.
@@ -112,7 +105,7 @@ private:
   std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
 
-void parseModuleDefs(MemoryBufferRef MB, llvm::StringSaver *Alloc);
+void parseModuleDefs(MemoryBufferRef MB);
 void writeImportLibrary();
 
 // Functions below this line are defined in DriverUtils.cpp.

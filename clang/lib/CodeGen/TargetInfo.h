@@ -220,6 +220,22 @@ public:
 
   /// Get LLVM calling convention for OpenCL kernel.
   virtual unsigned getOpenCLKernelCallingConv() const;
+
+  /// Get target specific null pointer.
+  /// \param T is the LLVM type of the null pointer.
+  /// \param QT is the clang QualType of the null pointer.
+  /// \return ConstantPointerNull with the given type \p T.
+  /// Each target can override it to return its own desired constant value.
+  virtual llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+      llvm::PointerType *T, QualType QT) const;
+
+  /// Perform address space cast of an expression of pointer type.
+  /// \param V is the LLVM value to be casted to another address space.
+  /// \param SrcTy is the QualType of \p V.
+  /// \param DestTy is the destination QualType.
+  virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
+      llvm::Value *V, QualType SrcTy, QualType DestTy) const;
+
 };
 
 } // namespace CodeGen

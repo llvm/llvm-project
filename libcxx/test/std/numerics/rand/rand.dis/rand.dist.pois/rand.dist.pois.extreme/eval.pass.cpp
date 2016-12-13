@@ -48,7 +48,7 @@ test1()
     double var = 0;
     double skew = 0;
     double kurtosis = 0;
-    for (int i = 0; i < u.size(); ++i)
+    for (unsigned i = 0; i < u.size(); ++i)
     {
         double dbl = (u[i] - mean);
         double d2 = sqr(dbl);
@@ -90,7 +90,7 @@ test2()
     double var = 0;
     double skew = 0;
     double kurtosis = 0;
-    for (int i = 0; i < u.size(); ++i)
+    for (unsigned i = 0; i < u.size(); ++i)
     {
         double dbl = (u[i] - mean);
         double d2 = sqr(dbl);
@@ -132,7 +132,7 @@ test3()
     double var = 0;
     double skew = 0;
     double kurtosis = 0;
-    for (int i = 0; i < u.size(); ++i)
+    for (unsigned i = 0; i < u.size(); ++i)
     {
         double dbl = (u[i] - mean);
         double d2 = sqr(dbl);
@@ -174,7 +174,7 @@ test4()
     double var = 0;
     double skew = 0;
     double kurtosis = 0;
-    for (int i = 0; i < u.size(); ++i)
+    for (unsigned i = 0; i < u.size(); ++i)
     {
         double dbl = (u[i] - mean);
         double d2 = sqr(dbl);

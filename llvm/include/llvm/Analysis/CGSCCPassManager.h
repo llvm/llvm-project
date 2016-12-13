@@ -145,13 +145,51 @@ struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
   }
 };
 
-extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 /// A proxy from a \c CGSCCAnalysisManager to a \c Module.
 typedef InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>
     CGSCCAnalysisManagerModuleProxy;
 
-extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                                LazyCallGraph::SCC>;
+/// We need a specialized result for the \c CGSCCAnalysisManagerModuleProxy so
+/// it can have access to the call graph in order to walk all the SCCs when
+/// invalidating things.
+template <> class CGSCCAnalysisManagerModuleProxy::Result {
+public:
+  explicit Result(CGSCCAnalysisManager &InnerAM, LazyCallGraph &G)
+      : InnerAM(&InnerAM), G(&G) {}
+
+  /// \brief Accessor for the analysis manager.
+  CGSCCAnalysisManager &getManager() { return *InnerAM; }
+
+  /// \brief Handler for invalidation of the Module.
+  ///
+  /// If the proxy analysis itself is preserved, then we assume that the set of
+  /// SCCs in the Module hasn't changed. Thus any pointers to SCCs in the
+  /// CGSCCAnalysisManager are still valid, and we don't need to call \c clear
+  /// on the CGSCCAnalysisManager.
+  ///
+  /// Regardless of whether this analysis is marked as preserved, all of the
+  /// analyses in the \c CGSCCAnalysisManager are potentially invalidated based
+  /// on the set of preserved analyses.
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &Inv);
+
+private:
+  CGSCCAnalysisManager *InnerAM;
+  LazyCallGraph *G;
+};
+
+/// Provide a specialized run method for the \c CGSCCAnalysisManagerModuleProxy
+/// so it can pass the lazy call graph to the result.
+template <>
+CGSCCAnalysisManagerModuleProxy::Result
+CGSCCAnalysisManagerModuleProxy::run(Module &M, ModuleAnalysisManager &AM);
+
+// Ensure the \c CGSCCAnalysisManagerModuleProxy is provided as an extern
+// template.
+extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
+
+extern template class OuterAnalysisManagerProxy<
+    ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
 typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC,
                                   LazyCallGraph &>
@@ -387,12 +425,12 @@ public:
       } while (!RCWorklist.empty());
     }
 
-    // By definition we preserve the proxy. We also preserve all analyses on
-    // SCCs. This precludes *any* invalidation of CGSCC analyses by the proxy,
-    // but that's OK because we've taken care to invalidate analyses in the
-    // CGSCC analysis manager incrementally above.
+    // By definition we preserve the call garph, all SCC analyses, and the
+    // analysis proxies by handling them above and in any nested pass managers.
+    PA.preserve<LazyCallGraphAnalysis>();
     PA.preserve<AllAnalysesOn<LazyCallGraph::SCC>>();
     PA.preserve<CGSCCAnalysisManagerModuleProxy>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
   }
 
@@ -409,12 +447,43 @@ createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass, bool DebugLogging = fal
   return ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>(std::move(Pass), DebugLogging);
 }
 
-extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
-                                                LazyCallGraph::SCC>;
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
-typedef InnerAnalysisManagerProxy<FunctionAnalysisManager, LazyCallGraph::SCC,
-                                  LazyCallGraph &>
-    FunctionAnalysisManagerCGSCCProxy;
+///
+/// When a module pass runs and triggers invalidation, both the CGSCC and
+/// Function analysis manager proxies on the module get an invalidation event.
+/// We don't want to fully duplicate responsibility for most of the
+/// invalidation logic. Instead, this layer is only responsible for SCC-local
+/// invalidation events. We work with the module's FunctionAnalysisManager to
+/// invalidate function analyses.
+class FunctionAnalysisManagerCGSCCProxy
+    : public AnalysisInfoMixin<FunctionAnalysisManagerCGSCCProxy> {
+public:
+  class Result {
+  public:
+    explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
+
+    /// \brief Accessor for the analysis manager.
+    FunctionAnalysisManager &getManager() { return *FAM; }
+
+    bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
+                    CGSCCAnalysisManager::Invalidator &Inv);
+
+  private:
+    FunctionAnalysisManager *FAM;
+  };
+
+  /// Computes the \c FunctionAnalysisManager and stores it in the result proxy.
+  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM, LazyCallGraph &);
+
+private:
+  friend AnalysisInfoMixin<FunctionAnalysisManagerCGSCCProxy>;
+  static AnalysisKey Key;
+};
+
+// Ensure the \c FunctionAnalysisManagerCGSCCProxy is provided as an extern
+// template.
+extern template class InnerAnalysisManagerProxy<
+    FunctionAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
 
 extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 /// A proxy from a \c CGSCCAnalysisManager to a \c Function.

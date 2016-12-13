@@ -16,16 +16,30 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <ctime>
+#include <memory>
+#include <stack>
+#include <string>
+#include <system_error>
 #include <utility>
+#include <vector>
 
 namespace llvm {
+
 class MemoryBuffer;
-}
+
+} // end namespace llvm
 
 namespace clang {
 namespace vfs {
@@ -90,8 +104,10 @@ public:
   /// Sub-classes should generally call close() inside their destructors.  We
   /// cannot do that from the base class, since close is virtual.
   virtual ~File();
+
   /// \brief Get the status of the file.
   virtual llvm::ErrorOr<Status> status() = 0;
+
   /// \brief Get the name of the file
   virtual llvm::ErrorOr<std::string> getName() {
     if (auto Status = status())
@@ -99,24 +115,30 @@ public:
     else
       return Status.getError();
   }
+
   /// \brief Get the contents of the file as a \p MemoryBuffer.
   virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize = -1,
             bool RequiresNullTerminator = true, bool IsVolatile = false) = 0;
+
   /// \brief Closes the file.
   virtual std::error_code close() = 0;
 };
 
 namespace detail {
+
 /// \brief An interface for virtual file systems to provide an iterator over the
 /// (non-recursive) contents of a directory.
 struct DirIterImpl {
   virtual ~DirIterImpl();
+
   /// \brief Sets \c CurrentEntry to the next entry in the directory on success,
   /// or returns a system-defined \c error_code.
   virtual std::error_code increment() = 0;
+
   Status CurrentEntry;
 };
+
 } // end namespace detail
 
 /// \brief An input iterator over the entries in a virtual path, similar to
@@ -133,7 +155,7 @@ public:
   }
 
   /// \brief Construct an 'end' iterator.
-  directory_iterator() { }
+  directory_iterator() = default;
 
   /// \brief Equivalent to operator++, with an error code.
   directory_iterator &increment(std::error_code &EC) {
@@ -172,7 +194,7 @@ public:
   recursive_directory_iterator(FileSystem &FS, const Twine &Path,
                                std::error_code &EC);
   /// \brief Construct an 'end' iterator.
-  recursive_directory_iterator() { }
+  recursive_directory_iterator() = default;
 
   /// \brief Equivalent to operator++, with an error code.
   recursive_directory_iterator &increment(std::error_code &EC);
@@ -186,6 +208,7 @@ public:
   bool operator!=(const recursive_directory_iterator &RHS) const {
     return !(*this == RHS);
   }
+
   /// \brief Gets the current level. Starting path is at level 0.
   int level() const {
     assert(State->size() && "Cannot get level without any iteration state");
@@ -281,7 +304,9 @@ public:
 };
 
 namespace detail {
+
 class InMemoryDirectory;
+
 } // end namespace detail
 
 /// An in-memory file system.
@@ -293,6 +318,7 @@ class InMemoryFileSystem : public FileSystem {
 public:
   explicit InMemoryFileSystem(bool UseNormalizedPaths = true);
   ~InMemoryFileSystem() override;
+
   /// Add a buffer to the VFS with a path. The VFS owns the buffer.
   /// \return true if the file was successfully added, false if the file already
   /// exists in the file system with different contents.
@@ -345,17 +371,22 @@ class YAMLVFSWriter {
   std::string OverlayDir;
 
 public:
-  YAMLVFSWriter() {}
+  YAMLVFSWriter() = default;
+
   void addFileMapping(StringRef VirtualPath, StringRef RealPath);
+
   void setCaseSensitivity(bool CaseSensitive) {
     IsCaseSensitive = CaseSensitive;
   }
+
   void setUseExternalNames(bool UseExtNames) {
     UseExternalNames = UseExtNames;
   }
+
   void setIgnoreNonExistentContents(bool IgnoreContents) {
     IgnoreNonExistentContents = IgnoreContents;
   }
+
   void setOverlayDir(StringRef OverlayDirectory) {
     IsOverlayRelative = true;
     OverlayDir.assign(OverlayDirectory.str());
@@ -366,4 +397,5 @@ public:
 
 } // end namespace vfs
 } // end namespace clang
-#endif
+
+#endif // LLVM_CLANG_BASIC_VIRTUALFILESYSTEM_H

@@ -885,7 +885,13 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
          // Allow the base to be 'super' if in an objc-method.
          (&II == Ident_super && getCurScope()->isInObjcMethodScope()))) {
       ConsumeToken();
-      
+
+      if (Tok.is(tok::code_completion) && &II != Ident_super) {
+        Actions.CodeCompleteObjCClassPropertyRefExpr(
+            getCurScope(), II, ILoc, ExprStatementTokLoc == ILoc);
+        cutOffParsing();
+        return ExprError();
+      }
       // Allow either an identifier or the keyword 'class' (in C++).
       if (Tok.isNot(tok::identifier) && 
           !(getLangOpts().CPlusPlus && Tok.is(tok::kw_class))) {
@@ -2836,6 +2842,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
                                              /*NumExceptions=*/0,
                                              /*NoexceptExpr=*/nullptr,
                                              /*ExceptionSpecTokens=*/nullptr,
+                                             /*DeclsInPrototype=*/None,
                                              CaretLoc, CaretLoc,
                                              ParamInfo),
                           attrs, CaretLoc);

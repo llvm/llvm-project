@@ -200,8 +200,7 @@ define <4 x float> @test4(<4 x float> %A, float *%b, i32 %C) nounwind {
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    movaps %xmm0, (%esp) ## 16-byte Spill
 ; X32-NEXT:    calll _f
-; X32-NEXT:    movaps (%esp), %xmm1 ## 16-byte Reload
-; X32-NEXT:    roundss $4, %xmm1, %xmm0
+; X32-NEXT:    roundss $4, (%esp), %xmm0 ## 16-byte Folded Reload
 ; X32-NEXT:    addl $28, %esp
 ; X32-NEXT:    retl
 ;
@@ -211,8 +210,7 @@ define <4 x float> @test4(<4 x float> %A, float *%b, i32 %C) nounwind {
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; X64-NEXT:    callq _f
-; X64-NEXT:    movaps (%rsp), %xmm1 ## 16-byte Reload
-; X64-NEXT:    roundss $4, %xmm1, %xmm0
+; X64-NEXT:    roundss $4, (%rsp), %xmm0 ## 16-byte Folded Reload
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 ;

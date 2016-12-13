@@ -1,0 +1,24 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+
+# This test checks the expansion of the 16-bit STSWRdK pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_stswkrr() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_stswkrr
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_stswkrr
+
+    ; CHECK:      STSKRr 2560, %r31
+    ; CHECK-NEXT: STSKRr 2559, %r30
+
+    STSWKRr 2559, %r31r30
+...

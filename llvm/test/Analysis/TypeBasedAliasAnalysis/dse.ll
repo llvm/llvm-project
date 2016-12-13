@@ -68,5 +68,6 @@ define i8 @test1_no(i8* %a, i8* %b) nounwind {
 !7 = !{ !"foo", !0 }
 !8 = !{ !"bar", !0 }
 !9 = !{ !"foo", !0 }
-!10 = !{ !"bar", !"different" }
+!10 = !{ !"bar", !12}
 !11 = !{ !"qux", !0}
+!12 = !{!"different"}

@@ -16,12 +16,11 @@
 
 // char_type thousands_sep() const;
 
-// TODO: investigation needed
-// XFAIL: linux-gnu
 
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
 int main()
@@ -54,15 +53,22 @@ int main()
     }
     {
         std::locale l(LOCALE_fr_FR_UTF_8);
+#if defined(TEST_HAS_GLIBC)
+        const char sep = ' ';
+        const wchar_t wsep = L' ';
+#else
+        const char sep = ',';
+        const wchar_t wsep = L',';
+#endif
         {
             typedef char C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-            assert(np.thousands_sep() == ',');
+            assert(np.thousands_sep() == sep);
         }
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-            assert(np.thousands_sep() == L',');
+            assert(np.thousands_sep() == wsep);
         }
     }
 }

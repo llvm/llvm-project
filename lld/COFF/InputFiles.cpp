@@ -12,7 +12,9 @@
 #include "Driver.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
@@ -39,13 +41,13 @@ using namespace llvm::support::endian;
 
 using llvm::Triple;
 using llvm::support::ulittle32_t;
+using llvm::sys::fs::file_magic;
+using llvm::sys::fs::identify_magic;
 
 namespace lld {
 namespace coff {
 
-int InputFile::NextIndex = 0;
-llvm::LLVMContext BitcodeFile::Context;
-std::mutex BitcodeFile::Mu;
+LLVMContext BitcodeFile::Context;
 
 ArchiveFile::ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
 
@@ -53,34 +55,20 @@ void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
   File = check(Archive::create(MB), toString(this));
 
-  // Allocate a buffer for Lazy objects.
-  size_t NumSyms = File->getNumberOfSymbols();
-  LazySymbols.reserve(NumSyms);
-
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &Sym : File->symbols())
-    LazySymbols.emplace_back(this, Sym);
-
-  // Seen is a map from member files to boolean values. Initially
-  // all members are mapped to false, which indicates all these files
-  // are not read yet.
-  Error Err = Error::success();
-  for (auto &Child : File->children(Err))
-    Seen[Child.getChildOffset()].clear();
-  if (Err)
-    fatal(Err, toString(this));
+    Symtab->addLazy(this, Sym);
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
-// This function is thread-safe.
-MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
+InputFile *ArchiveFile::getMember(const Archive::Symbol *Sym) {
   const Archive::Child &C =
       check(Sym->getMember(),
             "could not get the member for symbol " + Sym->getName());
 
   // Return an empty buffer if we have already returned the same buffer.
-  if (Seen[C.getChildOffset()].test_and_set())
-    return MemoryBufferRef();
+  if (!Seen.insert(C.getChildOffset()).second)
+    return nullptr;
 
   MemoryBufferRef MB =
       check(C.getMemoryBufferRef(),
@@ -90,10 +78,21 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
     Driver->Cpio->append(relativeToRoot(check(C.getFullName())),
                          MB.getBuffer());
 
-  return MB;
-}
+  file_magic Magic = identify_magic(MB.getBuffer());
+  if (Magic == file_magic::coff_import_library)
+    return make<ImportFile>(MB);
 
-MutableArrayRef<Lazy> ArchiveFile::getLazySymbols() { return LazySymbols; }
+  InputFile *Obj;
+  if (Magic == file_magic::coff_object)
+    Obj = make<ObjectFile>(MB);
+  else if (Magic == file_magic::bitcode)
+    Obj = make<BitcodeFile>(MB);
+  else
+    fatal("unknown file type: " + MB.getBufferIdentifier());
+
+  Obj->ParentName = getName();
+  return Obj;
+}
 
 void ObjectFile::parse() {
   // Parse a memory buffer as a COFF file.
@@ -167,12 +166,14 @@ void ObjectFile::initializeSymbols() {
   uint32_t NumSymbols = COFFObj->getNumberOfSymbols();
   SymbolBodies.reserve(NumSymbols);
   SparseSymbolBodies.resize(NumSymbols);
-  llvm::SmallVector<std::pair<Undefined *, uint32_t>, 8> WeakAliases;
+  SmallVector<std::pair<SymbolBody *, uint32_t>, 8> WeakAliases;
   int32_t LastSectionNumber = 0;
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
-    COFFSymbolRef Sym =
-        check(COFFObj->getSymbol(I), "broken object file: " + toString(this));
+    ErrorOr<COFFSymbolRef> SymOrErr = COFFObj->getSymbol(I);
+    if (!SymOrErr)
+      fatal(SymOrErr.getError(), "broken object file: " + toString(this));
+    COFFSymbolRef Sym = *SymOrErr;
 
     const void *AuxP = nullptr;
     if (Sym.getNumberOfAuxSymbols())
@@ -186,7 +187,7 @@ void ObjectFile::initializeSymbols() {
       Body = createUndefined(Sym);
       uint32_t TagIndex =
           static_cast<const coff_aux_weak_external *>(AuxP)->TagIndex;
-      WeakAliases.emplace_back((Undefined *)Body, TagIndex);
+      WeakAliases.emplace_back(Body, TagIndex);
     } else {
       Body = createDefined(Sym, AuxP, IsFirst);
     }
@@ -197,23 +198,30 @@ void ObjectFile::initializeSymbols() {
     I += Sym.getNumberOfAuxSymbols();
     LastSectionNumber = Sym.getSectionNumber();
   }
-  for (auto WeakAlias : WeakAliases)
-    WeakAlias.first->WeakAlias = SparseSymbolBodies[WeakAlias.second];
+  for (auto WeakAlias : WeakAliases) {
+    auto *U = dyn_cast<Undefined>(WeakAlias.first);
+    if (!U)
+      continue;
+    // Report an error if two undefined symbols have different weak aliases.
+    if (U->WeakAlias && U->WeakAlias != SparseSymbolBodies[WeakAlias.second])
+      Symtab->reportDuplicate(U->symbol(), this);
+    U->WeakAlias = SparseSymbolBodies[WeakAlias.second];
+  }
 }
 
-Undefined *ObjectFile::createUndefined(COFFSymbolRef Sym) {
+SymbolBody *ObjectFile::createUndefined(COFFSymbolRef Sym) {
   StringRef Name;
   COFFObj->getSymbolName(Sym, Name);
-  return new (Alloc) Undefined(Name);
+  return Symtab->addUndefined(Name, this, Sym.isWeakExternal())->body();
 }
 
-Defined *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
-                                   bool IsFirst) {
+SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
+                                      bool IsFirst) {
   StringRef Name;
   if (Sym.isCommon()) {
     auto *C = new (Alloc) CommonChunk(Sym);
     Chunks.push_back(C);
-    return new (Alloc) DefinedCommon(this, Sym, C);
+    return Symtab->addCommon(this, Sym, C)->body();
   }
   if (Sym.isAbsolute()) {
     COFFObj->getSymbolName(Sym, Name);
@@ -226,7 +234,10 @@ Defined *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
         SEHCompat = true;
       return nullptr;
     }
-    return new (Alloc) DefinedAbsolute(Name, Sym);
+    if (Sym.isExternal())
+      return Symtab->addAbsolute(Name, Sym)->body();
+    else
+      return new (Alloc) DefinedAbsolute(Name, Sym);
   }
   int32_t SectionNumber = Sym.getSectionNumber();
   if (SectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
@@ -256,7 +267,11 @@ Defined *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
     SC->Checksum = Aux->CheckSum;
   }
 
-  auto *B = new (Alloc) DefinedRegular(this, Sym, SC);
+  DefinedRegular *B;
+  if (Sym.isExternal())
+    B = cast<DefinedRegular>(Symtab->addRegular(this, Sym, SC)->body());
+  else
+    B = new (Alloc) DefinedRegular(this, Sym, SC);
   if (SC->isCOMDAT() && Sym.getValue() == 0 && !AuxP)
     SC->setSymbol(B);
 
@@ -318,28 +333,29 @@ void ImportFile::parse() {
     ExtName = ExtName.substr(0, ExtName.find('@'));
     break;
   }
-  ImpSym = new (Alloc) DefinedImportData(DLLName, ImpName, ExtName, Hdr);
-  SymbolBodies.push_back(ImpSym);
+
+  this->Hdr = Hdr;
+  ExternalName = ExtName;
+
+  ImpSym = cast<DefinedImportData>(
+      Symtab->addImportData(ImpName, this)->body());
 
   // If type is function, we need to create a thunk which jump to an
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
   if (Hdr->getType() != llvm::COFF::IMPORT_CODE)
     return;
-  ThunkSym = new (Alloc) DefinedImportThunk(Name, ImpSym, Hdr->Machine);
-  SymbolBodies.push_back(ThunkSym);
+  ThunkSym = cast<DefinedImportThunk>(
+      Symtab->addImportThunk(Name, ImpSym, Hdr->Machine)->body());
 }
 
 void BitcodeFile::parse() {
-  // Usually parse() is thread-safe, but bitcode file is an exception.
-  std::lock_guard<std::mutex> Lock(Mu);
-
   Context.enableDebugTypeODRUniquing();
   ErrorOr<std::unique_ptr<LTOModule>> ModOrErr = LTOModule::createFromBuffer(
       Context, MB.getBufferStart(), MB.getBufferSize(), llvm::TargetOptions());
   M = check(std::move(ModOrErr), "could not create LTO module");
 
-  llvm::StringSaver Saver(Alloc);
+  StringSaver Saver(Alloc);
   for (unsigned I = 0, E = M->getSymbolCount(); I != E; ++I) {
     lto_symbol_attributes Attrs = M->getSymbolAttributes(I);
     if ((Attrs & LTO_SYMBOL_SCOPE_MASK) == LTO_SYMBOL_SCOPE_INTERNAL)
@@ -348,15 +364,15 @@ void BitcodeFile::parse() {
     StringRef SymName = Saver.save(M->getSymbolName(I));
     int SymbolDef = Attrs & LTO_SYMBOL_DEFINITION_MASK;
     if (SymbolDef == LTO_SYMBOL_DEFINITION_UNDEFINED) {
-      SymbolBodies.push_back(new (Alloc) Undefined(SymName));
+      SymbolBodies.push_back(Symtab->addUndefined(SymName, this, false)->body());
     } else {
       bool Replaceable =
           (SymbolDef == LTO_SYMBOL_DEFINITION_TENTATIVE || // common
            (Attrs & LTO_SYMBOL_COMDAT) ||                  // comdat
            (SymbolDef == LTO_SYMBOL_DEFINITION_WEAK &&     // weak external
             (Attrs & LTO_SYMBOL_ALIAS)));
-      SymbolBodies.push_back(new (Alloc) DefinedBitcode(this, SymName,
-                                                        Replaceable));
+      SymbolBodies.push_back(
+          Symtab->addBitcode(this, SymName, Replaceable)->body());
     }
   }
 

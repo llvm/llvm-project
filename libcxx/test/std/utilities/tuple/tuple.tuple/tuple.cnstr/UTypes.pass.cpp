@@ -21,6 +21,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
+#include "test_convertible.hpp"
 #include "MoveOnly.h"
 
 #if TEST_STD_VER > 11
@@ -124,17 +125,23 @@ int main()
     // extensions
 #ifdef _LIBCPP_VERSION
     {
-        std::tuple<MoveOnly, MoveOnly, MoveOnly> t(MoveOnly(0),
-                                                   MoveOnly(1));
+        using E = MoveOnly;
+        using Tup = std::tuple<E, E, E>;
+        // Test that the reduced arity initialization extension is only
+        // allowed on the explicit constructor.
+        static_assert(test_convertible<Tup, E, E, E>(), "");
+
+        Tup t(E(0), E(1));
+        static_assert(!test_convertible<Tup, E, E>(), "");
         assert(std::get<0>(t) == 0);
         assert(std::get<1>(t) == 1);
         assert(std::get<2>(t) == MoveOnly());
-    }
-    {
-        std::tuple<MoveOnly, MoveOnly, MoveOnly> t(MoveOnly(0));
+
+        Tup t2(E(0));
+        static_assert(!test_convertible<Tup, E>(), "");
         assert(std::get<0>(t) == 0);
-        assert(std::get<1>(t) == MoveOnly());
-        assert(std::get<2>(t) == MoveOnly());
+        assert(std::get<1>(t) == E());
+        assert(std::get<2>(t) == E());
     }
 #endif
 #if TEST_STD_VER > 11

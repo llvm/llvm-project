@@ -3312,15 +3312,47 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::MULHU:
   case ISD::MULHS: {
-    unsigned ExpandOpcode = Node->getOpcode() == ISD::MULHU ? ISD::UMUL_LOHI :
-                                                              ISD::SMUL_LOHI;
+    unsigned ExpandOpcode =
+        Node->getOpcode() == ISD::MULHU ? ISD::UMUL_LOHI : ISD::SMUL_LOHI;
     EVT VT = Node->getValueType(0);
     SDVTList VTs = DAG.getVTList(VT, VT);
-    assert(TLI.isOperationLegalOrCustom(ExpandOpcode, VT) &&
-           "If this wasn't legal, it shouldn't have been created!");
+
     Tmp1 = DAG.getNode(ExpandOpcode, dl, VTs, Node->getOperand(0),
                        Node->getOperand(1));
     Results.push_back(Tmp1.getValue(1));
+    break;
+  }
+  case ISD::UMUL_LOHI:
+  case ISD::SMUL_LOHI: {
+    SDValue LHS = Node->getOperand(0);
+    SDValue RHS = Node->getOperand(1);
+    MVT VT = LHS.getSimpleValueType();
+    unsigned MULHOpcode =
+        Node->getOpcode() == ISD::UMUL_LOHI ? ISD::MULHU : ISD::MULHS;
+
+    if (TLI.isOperationLegalOrCustom(MULHOpcode, VT)) {
+      Results.push_back(DAG.getNode(ISD::MUL, dl, VT, LHS, RHS));
+      Results.push_back(DAG.getNode(MULHOpcode, dl, VT, LHS, RHS));
+      break;
+    }
+
+    SmallVector<SDValue, 4> Halves;
+    EVT HalfType = EVT(VT).getHalfSizedIntegerVT(*DAG.getContext());
+    assert(TLI.isTypeLegal(HalfType));
+    if (TLI.expandMUL_LOHI(Node->getOpcode(), VT, Node, LHS, RHS, Halves,
+                           HalfType, DAG,
+                           TargetLowering::MulExpansionKind::Always)) {
+      for (unsigned i = 0; i < 2; ++i) {
+        SDValue Lo = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Halves[2 * i]);
+        SDValue Hi = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Halves[2 * i + 1]);
+        SDValue Shift = DAG.getConstant(
+            HalfType.getScalarSizeInBits(), dl,
+            TLI.getShiftAmountTy(HalfType, DAG.getDataLayout()));
+        Hi = DAG.getNode(ISD::SHL, dl, VT, Hi, Shift);
+        Results.push_back(DAG.getNode(ISD::OR, dl, VT, Lo, Hi));
+      }
+      break;
+    }
     break;
   }
   case ISD::MUL: {
@@ -3357,7 +3389,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         TLI.isOperationLegalOrCustom(ISD::ANY_EXTEND, VT) &&
         TLI.isOperationLegalOrCustom(ISD::SHL, VT) &&
         TLI.isOperationLegalOrCustom(ISD::OR, VT) &&
-        TLI.expandMUL(Node, Lo, Hi, HalfType, DAG)) {
+        TLI.expandMUL(Node, Lo, Hi, HalfType, DAG,
+                      TargetLowering::MulExpansionKind::OnlyLegalOrCustom)) {
       Lo = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Lo);
       Hi = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Hi);
       SDValue Shift =
@@ -4192,6 +4225,24 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     // Perform the larger operation, then convert back
     Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2);
     Results.push_back(DAG.getNode(TruncOp, dl, OVT, Tmp1));
+    break;
+  }
+  case ISD::UMUL_LOHI:
+  case ISD::SMUL_LOHI: {
+    // Promote to a multiply in a wider integer type.
+    unsigned ExtOp = Node->getOpcode() == ISD::UMUL_LOHI ? ISD::ZERO_EXTEND
+                                                         : ISD::SIGN_EXTEND;
+    Tmp1 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(ISD::MUL, dl, NVT, Tmp1, Tmp2);
+
+    auto &DL = DAG.getDataLayout();
+    unsigned OriginalSize = OVT.getScalarSizeInBits();
+    Tmp2 = DAG.getNode(
+        ISD::SRL, dl, NVT, Tmp1,
+        DAG.getConstant(OriginalSize, dl, TLI.getScalarShiftAmountTy(DL, NVT)));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
     break;
   }
   case ISD::SELECT: {

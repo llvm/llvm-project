@@ -42,6 +42,7 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
+class QualType;
 class SourceLocation;
 class SourceManager;
 
@@ -298,6 +299,12 @@ public:
   /// \brief Return the maximum width of pointers on this target.
   virtual uint64_t getMaxPointerWidth() const {
     return PointerWidth;
+  }
+
+  /// \brief Get integer value for null pointer.
+  /// \param AddrSpace address space of pointee in source language.
+  virtual uint64_t getNullPointerValue(unsigned AddrSpace) const {
+    return 0;
   }
 
   /// \brief Return the size of '_Bool' and C++ 'bool' for this target, in bits.

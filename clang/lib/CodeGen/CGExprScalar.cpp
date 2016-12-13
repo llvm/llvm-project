@@ -19,6 +19,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
@@ -171,9 +172,9 @@ public:
   }
 
   /// EmitPointerToBoolConversion - Perform a pointer to boolean conversion.
-  Value *EmitPointerToBoolConversion(Value *V) {
-    Value *Zero = llvm::ConstantPointerNull::get(
-                                      cast<llvm::PointerType>(V->getType()));
+  Value *EmitPointerToBoolConversion(Value *V, QualType QT) {
+    Value *Zero = CGF.CGM.getNullPointer(cast<llvm::PointerType>(V->getType()), QT);
+
     return Builder.CreateICmpNE(V, Zero, "tobool");
   }
 
@@ -309,6 +310,12 @@ public:
   }
 
   Value *VisitInitListExpr(InitListExpr *E);
+
+  Value *VisitArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+    assert(CGF.getArrayInitIndex() &&
+           "ArrayInitIndexExpr not inside an ArrayInitLoopExpr?");
+    return CGF.getArrayInitIndex();
+  }
 
   Value *VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
     return EmitNullValue(E->getType());
@@ -591,7 +598,7 @@ Value *ScalarExprEmitter::EmitConversionToBool(Value *Src, QualType SrcType) {
     return EmitIntToBoolConversion(Src);
 
   assert(isa<llvm::PointerType>(Src->getType()));
-  return EmitPointerToBoolConversion(Src);
+  return EmitPointerToBoolConversion(Src, SrcType);
 }
 
 void ScalarExprEmitter::EmitFloatConversionCheck(
@@ -1394,11 +1401,23 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Builder.CreateBitCast(Src, DstTy);
   }
   case CK_AddressSpaceConversion: {
-    Value *Src = Visit(const_cast<Expr*>(E));
+    Expr::EvalResult Result;
+    if (E->EvaluateAsRValue(Result, CGF.getContext()) &&
+        Result.Val.isNullPointer()) {
+      // If E has side effect, it is emitted even if its final result is a
+      // null pointer. In that case, a DCE pass should be able to
+      // eliminate the useless instructions emitted during translating E.
+      if (Result.HasSideEffects)
+        Visit(E);
+      return CGF.CGM.getNullPointer(cast<llvm::PointerType>(
+          ConvertType(DestTy)), DestTy);
+    }
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
-    return Builder.CreatePointerBitCastOrAddrSpaceCast(Src,
-                                                       ConvertType(DestTy));
+    auto *Src = Visit(E);
+    return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(CGF, Src,
+                                                               E->getType(),
+                                                               DestTy);
   }
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
@@ -1453,8 +1472,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     if (MustVisitNullValue(E))
       (void) Visit(E);
 
-    return llvm::ConstantPointerNull::get(
-                               cast<llvm::PointerType>(ConvertType(DestTy)));
+    return CGF.CGM.getNullPointer(cast<llvm::PointerType>(ConvertType(DestTy)),
+                              DestTy);
 
   case CK_NullToMemberPointer: {
     if (MustVisitNullValue(E))
@@ -1547,7 +1566,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntegralToBoolean:
     return EmitIntToBoolConversion(Visit(E));
   case CK_PointerToBoolean:
-    return EmitPointerToBoolConversion(Visit(E));
+    return EmitPointerToBoolConversion(Visit(E), E->getType());
   case CK_FloatingToBoolean:
     return EmitFloatToBoolConversion(Visit(E));
   case CK_MemberPointerToBoolean: {

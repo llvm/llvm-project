@@ -46,7 +46,7 @@ class ScudoLargeMmapAllocator {
     uptr UserBeg = MapBeg + PageSize + HeadersSize;
     // In the event of larger alignments, we will attempt to fit the mmap area
     // better and unmap extraneous memory. This will also ensure that the
-    // offset field of the header stays small (it will always be 0).
+    // offset and unused bytes field of the header stay small.
     if (Alignment > MinAlignment) {
       if (UserBeg & (Alignment - 1))
         UserBeg += Alignment - (UserBeg & (Alignment - 1));
