@@ -175,14 +175,14 @@ void test_noexcept() {
         Tuple tup; ((void)tup);
         Tuple const& ctup = tup; ((void)ctup);
         ASSERT_NOT_NOEXCEPT(std::make_from_tuple<TestType>(ctup));
-        LIBCPP_ONLY(ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(std::move(tup))));
+        LIBCPP_ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(std::move(tup)));
     }
     {
         using Tuple = std::pair<int, NothrowMoveable>;
         Tuple tup; ((void)tup);
         Tuple const& ctup = tup; ((void)ctup);
         ASSERT_NOT_NOEXCEPT(std::make_from_tuple<TestType>(ctup));
-        LIBCPP_ONLY(ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(std::move(tup))));
+        LIBCPP_ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(std::move(tup)));
     }
     {
         using Tuple = std::tuple<int, int, int>;
@@ -192,7 +192,7 @@ void test_noexcept() {
     {
         using Tuple = std::tuple<long, long, long>;
         Tuple tup; ((void)tup);
-        LIBCPP_ONLY(ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(tup)));
+        LIBCPP_ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(tup));
     }
     {
         using Tuple = std::array<int, 3>;
@@ -202,7 +202,7 @@ void test_noexcept() {
     {
         using Tuple = std::array<long, 3>;
         Tuple tup; ((void)tup);
-        LIBCPP_ONLY(ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(tup)));
+        LIBCPP_ASSERT_NOEXCEPT(std::make_from_tuple<TestType>(tup));
     }
 }
 

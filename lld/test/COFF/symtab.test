@@ -36,6 +36,24 @@
 # CHECK-NEXT:     AuxSymbolCount: 0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: MessageBoxA
+# CHECK-NEXT:     Value: 80
+# CHECK-NEXT:     Section: .text (2)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Null (0x0)
+# CHECK-NEXT:     StorageClass: External (0x2)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: ExitProcess
+# CHECK-NEXT:     Value: 64
+# CHECK-NEXT:     Section: .text (2)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Null (0x0)
+# CHECK-NEXT:     StorageClass: External (0x2)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: message
 # CHECK-NEXT:     Value: 6
 # CHECK-NEXT:     Section: .text2 (3)
@@ -66,42 +84,6 @@
 # CHECK-NEXT:     Name: abs_symbol
 # CHECK-NEXT:     Value: 2662186735
 # CHECK-NEXT:     Section: IMAGE_SYM_ABSOLUTE (-1)
-# CHECK-NEXT:     BaseType: Null (0x0)
-# CHECK-NEXT:     ComplexType: Null (0x0)
-# CHECK-NEXT:     StorageClass: External (0x2)
-# CHECK-NEXT:     AuxSymbolCount: 0
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __imp_ExitProcess
-# CHECK-NEXT:     Value: 64
-# CHECK-NEXT:     Section: .idata (5)
-# CHECK-NEXT:     BaseType: Null (0x0)
-# CHECK-NEXT:     ComplexType: Null (0x0)
-# CHECK-NEXT:     StorageClass: External (0x2)
-# CHECK-NEXT:     AuxSymbolCount: 0
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: ExitProcess
-# CHECK-NEXT:     Value: 64
-# CHECK-NEXT:     Section: .text (2)
-# CHECK-NEXT:     BaseType: Null (0x0)
-# CHECK-NEXT:     ComplexType: Null (0x0)
-# CHECK-NEXT:     StorageClass: External (0x2)
-# CHECK-NEXT:     AuxSymbolCount: 0
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __imp_MessageBoxA
-# CHECK-NEXT:     Value: 72
-# CHECK-NEXT:     Section: .idata (5)
-# CHECK-NEXT:     BaseType: Null (0x0)
-# CHECK-NEXT:     ComplexType: Null (0x0)
-# CHECK-NEXT:     StorageClass: External (0x2)
-# CHECK-NEXT:     AuxSymbolCount: 0
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: MessageBoxA
-# CHECK-NEXT:     Value: 80
-# CHECK-NEXT:     Section: .text (2)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: External (0x2)

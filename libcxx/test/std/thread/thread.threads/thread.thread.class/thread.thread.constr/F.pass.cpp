@@ -29,7 +29,7 @@ std::atomic<unsigned> throw_one(0xFFFF);
 std::atomic<unsigned> outstanding_new(0);
 
 
-void* operator new(std::size_t s) throw(std::bad_alloc)
+void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 {
     if (throw_one == 0)
         TEST_THROW(std::bad_alloc());
@@ -40,7 +40,7 @@ void* operator new(std::size_t s) throw(std::bad_alloc)
     return ret;
 }
 
-void  operator delete(void* p) throw()
+void  operator delete(void* p) TEST_NOEXCEPT
 {
     --outstanding_new;
     std::free(p);

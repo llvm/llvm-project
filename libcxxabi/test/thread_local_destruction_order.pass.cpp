@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Darwin TLV finalization routines fail when creating a thread-local variable
+// in the destructor for another thread-local variable:
+// http://lists.llvm.org/pipermail/cfe-dev/2016-November/051376.html
+// XFAIL: darwin
 // UNSUPPORTED: c++98, c++03
 // UNSUPPORTED: libcxxabi-no-threads
 

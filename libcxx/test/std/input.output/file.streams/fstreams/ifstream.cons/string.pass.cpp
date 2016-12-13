@@ -25,22 +25,16 @@ int main()
         fs >> x;
         assert(x == 3.25);
     }
-    {
-        std::ifstream fs(std::string("test.dat"), std::ios_base::out);
-        double x = 0;
-        fs >> x;
-        assert(x == 3.25);
-    }
+    // std::ifstream(const std::string&, std::ios_base::openmode) is tested in
+    // test/std/input.output/file.streams/fstreams/ofstream.cons/string.pass.cpp
+    // which creates writable files.
     {
         std::wifstream fs(std::string("test.dat"));
         double x = 0;
         fs >> x;
         assert(x == 3.25);
     }
-    {
-        std::wifstream fs(std::string("test.dat"), std::ios_base::out);
-        double x = 0;
-        fs >> x;
-        assert(x == 3.25);
-    }
+    // std::wifstream(const std::string&, std::ios_base::openmode) is tested in
+    // test/std/input.output/file.streams/fstreams/ofstream.cons/string.pass.cpp
+    // which creates writable files.
 }

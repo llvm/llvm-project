@@ -1189,7 +1189,9 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
     auto *P = isl_printer_to_str(Ctx);
     P = isl_printer_set_yaml_style(P, ISL_YAML_STYLE_BLOCK);
     P = isl_printer_print_schedule(P, Schedule);
-    dbgs() << "NewScheduleTree: \n" << isl_printer_get_str(P) << "\n";
+    auto *str = isl_printer_get_str(P);
+    dbgs() << "NewScheduleTree: \n" << str << "\n";
+    free(str);
     isl_printer_free(P);
   });
 

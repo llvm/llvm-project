@@ -32,7 +32,7 @@ test(int i)
     H h;
     T ec(i, std::system_category());
     const std::size_t result = h(ec);
-    LIBCPP_ASSERT(result == i);
+    LIBCPP_ASSERT(result == static_cast<std::size_t>(i));
     ((void)result); // Prevent unused warning
 }
 

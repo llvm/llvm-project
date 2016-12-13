@@ -388,7 +388,7 @@ void Writer::createMiscChunks() {
     if (!File->SEHCompat)
       return;
     for (SymbolBody *B : File->SEHandlers)
-      Handlers.insert(cast<Defined>(B->repl()));
+      Handlers.insert(cast<Defined>(B));
   }
 
   SEHTable.reset(new SEHTableChunk(Handlers));
@@ -428,7 +428,7 @@ void Writer::createImportTables() {
       Sec->addChunk(C);
   }
   if (!DelayIdata.empty()) {
-    Defined *Helper = cast<Defined>(Config->DelayLoadHelper->repl());
+    Defined *Helper = cast<Defined>(Config->DelayLoadHelper);
     DelayIdata.create(Helper);
     OutputSection *Sec = createSection(".didat");
     for (Chunk *C : DelayIdata.getChunks())
@@ -471,6 +471,10 @@ size_t Writer::addEntryToStringTable(StringRef Str) {
 }
 
 Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
+  // Relative symbols are unrepresentable in a COFF symbol table.
+  if (isa<DefinedRelative>(Def))
+    return None;
+
   if (auto *D = dyn_cast<DefinedRegular>(Def))
     if (!D->getChunk()->isLive())
       return None;
@@ -497,7 +501,6 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
 
   switch (Def->kind()) {
   case SymbolBody::DefinedAbsoluteKind:
-  case SymbolBody::DefinedRelativeKind:
     Sym.Value = Def->getRVA();
     Sym.SectionNumber = IMAGE_SYM_ABSOLUTE;
     break;
@@ -533,13 +536,11 @@ void Writer::createSymbolAndStringTable() {
   for (lld::coff::ObjectFile *File : Symtab->ObjectFiles)
     for (SymbolBody *B : File->getSymbols())
       if (auto *D = dyn_cast<Defined>(B))
-        if (Optional<coff_symbol16> Sym = createSymbol(D))
-          OutputSymtab.push_back(*Sym);
-
-  for (ImportFile *File : Symtab->ImportFiles)
-    for (SymbolBody *B : File->getSymbols())
-      if (Optional<coff_symbol16> Sym = createSymbol(cast<Defined>(B)))
-        OutputSymtab.push_back(*Sym);
+        if (!D->WrittenToSymtab) {
+          D->WrittenToSymtab = true;
+          if (Optional<coff_symbol16> Sym = createSymbol(D))
+            OutputSymtab.push_back(*Sym);
+        }
 
   OutputSection *LastSection = OutputSections.back();
   // We position the symbol table to be adjacent to the end of the last section.
@@ -630,7 +631,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   PE->SizeOfImage = SizeOfImage;
   PE->SizeOfHeaders = SizeOfHeaders;
   if (!Config->NoEntry) {
-    Defined *Entry = cast<Defined>(Config->Entry->repl());
+    Defined *Entry = cast<Defined>(Config->Entry);
     PE->AddressOfEntryPoint = Entry->getRVA();
     // Pointer to thumb code must have the LSB set, so adjust it.
     if (Config->Machine == ARMNT)
@@ -685,7 +686,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     Dir[BASE_RELOCATION_TABLE].Size = Sec->getVirtualSize();
   }
   if (Symbol *Sym = Symtab->findUnderscore("_tls_used")) {
-    if (Defined *B = dyn_cast<Defined>(Sym->Body)) {
+    if (Defined *B = dyn_cast<Defined>(Sym->body())) {
       Dir[TLS_TABLE].RelativeVirtualAddress = B->getRVA();
       Dir[TLS_TABLE].Size = Config->is64()
                                 ? sizeof(object::coff_tls_directory64)
@@ -697,7 +698,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     Dir[DEBUG_DIRECTORY].Size = DebugDirectory->getSize();
   }
   if (Symbol *Sym = Symtab->findUnderscore("_load_config_used")) {
-    if (auto *B = dyn_cast<DefinedRegular>(Sym->Body)) {
+    if (auto *B = dyn_cast<DefinedRegular>(Sym->body())) {
       SectionChunk *SC = B->getChunk();
       assert(B->getRVA() >= SC->getRVA());
       uint64_t OffsetInChunk = B->getRVA() - SC->getRVA();
@@ -754,8 +755,10 @@ void Writer::openFile(StringRef Path) {
 void Writer::fixSafeSEHSymbols() {
   if (!SEHTable)
     return;
-  Config->SEHTable->setRVA(SEHTable->getRVA());
-  Config->SEHCount->setVA(SEHTable->getSize() / 4);
+  if (auto *T = dyn_cast<DefinedRelative>(Config->SEHTable->body()))
+    T->setRVA(SEHTable->getRVA());
+  if (auto *C = dyn_cast<DefinedAbsolute>(Config->SEHCount->body()))
+    C->setVA(SEHTable->getSize() / 4);
 }
 
 // Handles /section options to allow users to overwrite

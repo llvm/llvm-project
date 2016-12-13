@@ -12,9 +12,6 @@
 // REQUIRES: locale.ru_RU.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
 
-// Russia uses ',' for the decimal separator. GLIBC returns '.'
-// XFAIL: linux
-
 // <locale>
 
 // class moneypunct_byname<charT, International>
@@ -25,6 +22,7 @@
 #include <limits>
 #include <cassert>
 
+#include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
 class Fnf
@@ -111,22 +109,29 @@ int main()
         Fwt f(LOCALE_fr_FR_UTF_8, 1);
         assert(f.decimal_point() == L',');
     }
-
+// GLIBC 2.23 uses '.' as the decimal point while other C libraries use ','
+#ifndef TEST_HAS_GLIBC
+    const char sep = ',';
+    const wchar_t wsep = L',';
+#else
+    const char sep = '.';
+    const wchar_t wsep = L'.';
+#endif
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.decimal_point() == ',');
+        assert(f.decimal_point() == sep);
     }
     {
         Fnt f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.decimal_point() == ',');
+        assert(f.decimal_point() == sep);
     }
     {
         Fwf f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.decimal_point() == L',');
+        assert(f.decimal_point() == wsep);
     }
     {
         Fwt f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.decimal_point() == L',');
+        assert(f.decimal_point() == wsep);
     }
 
     {

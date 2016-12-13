@@ -16,12 +16,10 @@
 
 // string grouping() const;
 
-// TODO: investigation needed
-// XFAIL: linux-gnu
-
 #include <locale>
 #include <cassert>
 
+#include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
 int main()
@@ -54,15 +52,20 @@ int main()
     }
     {
         std::locale l(LOCALE_fr_FR_UTF_8);
+#if defined(TEST_HAS_GLIBC)
+        const char* const group = "\3";
+#else
+        const char* const group = "\x7f";
+#endif
         {
             typedef char C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-            assert(np.grouping() == "\x7F");
+            assert(np.grouping() ==  group);
         }
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-            assert(np.grouping() == "\x7F");
+            assert(np.grouping() == group);
         }
     }
 }

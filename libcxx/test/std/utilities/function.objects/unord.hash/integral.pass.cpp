@@ -39,7 +39,7 @@ test()
         if (sizeof(T) <= sizeof(std::size_t))
         {
             const std::size_t result = h(t);
-            LIBCPP_ASSERT(result == t);
+            LIBCPP_ASSERT(result == static_cast<size_t>(t));
             ((void)result); // Prevent unused warning
         }
     }

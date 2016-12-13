@@ -1490,8 +1490,16 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.
   if (Config->EMachine == EM_MIPS) {
-    if (!ElfSym<ELFT>::MipsGp->Value)
-      ElfSym<ELFT>::MipsGp->Value = In<ELFT>::MipsGot->getVA() + 0x7ff0;
+    if (!ElfSym<ELFT>::MipsGp->Value) {
+      // Find GP-relative section with the lowest address
+      // and use this address to calculate default _gp value.
+      uintX_t Gp = -1;
+      for (const OutputSectionBase * OS : OutputSections)
+        if ((OS->Flags & SHF_MIPS_GPREL) && OS->Addr < Gp)
+          Gp = OS->Addr;
+      if (Gp != (uintX_t)-1)
+        ElfSym<ELFT>::MipsGp->Value = Gp + 0x7ff0;
+    }
     if (ElfSym<ELFT>::MipsGpDisp)
       ElfSym<ELFT>::MipsGpDisp->Value = ElfSym<ELFT>::MipsGp->Value;
     if (ElfSym<ELFT>::MipsLocalGp)

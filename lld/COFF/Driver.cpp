@@ -207,10 +207,10 @@ void LinkerDriver::addLibSearchPaths() {
   }
 }
 
-Undefined *LinkerDriver::addUndefined(StringRef Name) {
-  Undefined *U = Symtab.addUndefined(Name);
-  Config->GCRoot.insert(U);
-  return U;
+SymbolBody *LinkerDriver::addUndefined(StringRef Name) {
+  SymbolBody *B = Symtab.addUndefined(Name);
+  Config->GCRoot.insert(B);
+  return B;
 }
 
 // Symbol names are mangled by appending "_" prefix on x86.
@@ -232,7 +232,7 @@ StringRef LinkerDriver::findDefaultEntry() {
   };
   for (auto E : Entries) {
     StringRef Entry = Symtab.findMangle(mangle(E[0]));
-    if (!Entry.empty() && !isa<Undefined>(Symtab.find(Entry)->Body))
+    if (!Entry.empty() && !isa<Undefined>(Symtab.find(Entry)->body()))
       return mangle(E[1]);
   }
   return "";
@@ -305,6 +305,18 @@ static unsigned parseDebugType(StringRef Arg) {
                       .Case("pdata", static_cast<unsigned>(DebugType::PData))
                       .Case("fixup", static_cast<unsigned>(DebugType::Fixup));
   return DebugTypes;
+}
+
+static std::string getMapFile(const opt::InputArgList &Args) {
+  auto *Arg = Args.getLastArg(OPT_lldmap, OPT_lldmap_file);
+  if (!Arg)
+    return "";
+  if (Arg->getOption().getID() == OPT_lldmap_file)
+    return Arg->getValue();
+
+  assert(Arg->getOption().getID() == OPT_lldmap);
+  StringRef OutFile = Config->OutputFile;
+  return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
 }
 
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
@@ -528,6 +540,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_nosymtab))
     Config->WriteSymtab = false;
   Config->DumpPdb = Args.hasArg(OPT_dumppdb);
+  Config->DebugPdb = Args.hasArg(OPT_debugpdb);
 
   // Create a list of input files. Files can be given as arguments
   // for /defaultlib option.
@@ -562,27 +575,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     MBs.erase(It, MBs.end());
   }
 
-  // Read all input files given via the command line. Note that step()
-  // doesn't read files that are specified by directive sections.
+  // Read all input files given via the command line.
   for (MemoryBufferRef MB : MBs)
     Symtab.addFile(createFile(MB));
-  Symtab.step();
 
-  // Determine machine type and check if all object files are
-  // for the same CPU type. Note that this needs to be done before
-  // any call to mangle().
-  for (InputFile *File : Symtab.getFiles()) {
-    MachineTypes MT = File->getMachineType();
-    if (MT == IMAGE_FILE_MACHINE_UNKNOWN)
-      continue;
-    if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-      Config->Machine = MT;
-      continue;
-    }
-    if (Config->Machine != MT)
-      fatal(toString(File) + ": machine type " + machineToStr(MT) +
-            " conflicts with " + machineToStr(Config->Machine));
-  }
+  // We should have inferred a machine type by now from the input files, but if
+  // not we assume x64.
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
     errs() << "warning: /machine is not specified. x64 is assumed.\n";
     Config->Machine = AMD64;
@@ -673,56 +671,43 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab.addAbsolute(mangle("__guard_fids_count"), 0);
   Symtab.addAbsolute(mangle("__guard_flags"), 0x100);
 
-  // Read as much files as we can from directives sections.
-  Symtab.run();
+  // Windows specific -- if entry point is not found,
+  // search for its mangled names.
+  if (Config->Entry)
+    Symtab.mangleMaybe(Config->Entry);
 
-  // Resolve auxiliary symbols until we get a convergence.
-  // (Trying to resolve a symbol may trigger a Lazy symbol to load a new file.
-  // A new file may contain a directive section to add new command line options.
-  // That's why we have to repeat until converge.)
-  for (;;) {
-    // Windows specific -- if entry point is not found,
-    // search for its mangled names.
-    if (Config->Entry)
-      Symtab.mangleMaybe(Config->Entry);
-
-    // Windows specific -- Make sure we resolve all dllexported symbols.
-    for (Export &E : Config->Exports) {
-      if (!E.ForwardTo.empty())
-        continue;
-      E.Sym = addUndefined(E.Name);
-      if (!E.Directives)
-        Symtab.mangleMaybe(E.Sym);
-    }
-
-    // Add weak aliases. Weak aliases is a mechanism to give remaining
-    // undefined symbols final chance to be resolved successfully.
-    for (auto Pair : Config->AlternateNames) {
-      StringRef From = Pair.first;
-      StringRef To = Pair.second;
-      Symbol *Sym = Symtab.find(From);
-      if (!Sym)
-        continue;
-      if (auto *U = dyn_cast<Undefined>(Sym->Body))
-        if (!U->WeakAlias)
-          U->WeakAlias = Symtab.addUndefined(To);
-    }
-
-    // Windows specific -- if __load_config_used can be resolved, resolve it.
-    if (Symtab.findUnderscore("_load_config_used"))
-      addUndefined(mangle("_load_config_used"));
-
-    if (Symtab.queueEmpty())
-      break;
-    Symtab.run();
+  // Windows specific -- Make sure we resolve all dllexported symbols.
+  for (Export &E : Config->Exports) {
+    if (!E.ForwardTo.empty())
+      continue;
+    E.Sym = addUndefined(E.Name);
+    if (!E.Directives)
+      Symtab.mangleMaybe(E.Sym);
   }
+
+  // Add weak aliases. Weak aliases is a mechanism to give remaining
+  // undefined symbols final chance to be resolved successfully.
+  for (auto Pair : Config->AlternateNames) {
+    StringRef From = Pair.first;
+    StringRef To = Pair.second;
+    Symbol *Sym = Symtab.find(From);
+    if (!Sym)
+      continue;
+    if (auto *U = dyn_cast<Undefined>(Sym->body()))
+      if (!U->WeakAlias)
+        U->WeakAlias = Symtab.addUndefined(To);
+  }
+
+  // Windows specific -- if __load_config_used can be resolved, resolve it.
+  if (Symtab.findUnderscore("_load_config_used"))
+    addUndefined(mangle("_load_config_used"));
 
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files.
   Symtab.addCombinedLTOObjects();
 
   // Make sure we have resolved all symbols.
-  Symtab.reportRemainingUndefines(/*Resolve=*/true);
+  Symtab.reportRemainingUndefines();
 
   // Windows specific -- if no /subsystem is given, we need to infer
   // that from entry point name.
@@ -763,13 +748,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Create a symbol map file containing symbol VAs and their names
   // to help debugging.
-  if (auto *Arg = Args.getLastArg(OPT_lldmap)) {
+  std::string MapFile = getMapFile(Args);
+  if (!MapFile.empty()) {
     std::error_code EC;
-    raw_fd_ostream Out(Arg->getValue(), EC, OpenFlags::F_Text);
+    raw_fd_ostream Out(MapFile, EC, OpenFlags::F_Text);
     if (EC)
-      fatal(EC, "could not create the symbol map");
+      fatal(EC, "could not create the symbol map " + MapFile);
     Symtab.printMap(Out);
   }
+
   // Call exit to avoid calling destructors.
   exit(0);
 }
