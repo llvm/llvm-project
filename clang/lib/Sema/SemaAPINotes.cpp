@@ -131,8 +131,7 @@ namespace {
          Sema &S, Decl *D, bool shouldAddAttribute,
          VersionedInfoRole role,
          llvm::function_ref<A *()> createAttr,
-         llvm::function_ref<specific_attr_iterator<A>(Decl *)> getExistingAttr =
-           [](Decl *decl) { return decl->specific_attr_begin<A>(); }) {
+         llvm::function_ref<specific_attr_iterator<A>(Decl *)> getExistingAttr) {
     switch (role) {
     case VersionedInfoRole::AugmentSource:
       // If we're not adding an attribute, there's nothing to do.
@@ -167,6 +166,17 @@ namespace {
       // FIXME: Retain versioned attributes separately.
       break;
     }
+  }
+  
+  template<typename A>
+  void handleAPINotedAttribute(
+         Sema &S, Decl *D, bool shouldAddAttribute,
+         VersionedInfoRole role,
+         llvm::function_ref<A *()> createAttr) {
+    handleAPINotedAttribute<A>(S, D, shouldAddAttribute, role, createAttr, 
+    [](Decl *decl) {
+        return decl->specific_attr_begin<A>();
+    });
   }
 }
 
