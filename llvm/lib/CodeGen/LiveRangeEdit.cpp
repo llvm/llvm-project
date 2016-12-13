@@ -273,7 +273,9 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
   bool isOrigDef = false;
   unsigned Dest;
   if (VRM && MI->getOperand(0).isReg() && MI->getOperand(0).isDef()) {
-    assert(MI->getDesc().getNumDefs() == 1);
+    // It is assumed that callers of eliminateDeadDefs() will never pass in dead
+    // instructions with multiple virtual register defs.
+    assert(MI->getDesc().getNumDefs() == 1 && "Unexpected instruction with multiple defs.");
     Dest = MI->getOperand(0).getReg();
     unsigned Original = VRM->getOriginal(Dest);
     LiveInterval &OrigLI = LIS.getInterval(Original);

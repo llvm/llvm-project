@@ -54,6 +54,36 @@ define i32 @reserve_first(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrsp
   ret i32 1
 }
 
+; Check that we reuse the same stack slot across multiple calls.  The use of
+; more than two calls here is critical.  We've had a bug which allowed reuse
+; exactly once which went undetected for a long time.
+define i32 @back_to_back_deopt(i32 %a, i32 %b, i32 %c) #1 
+  gc "statepoint-example" {
+; CHECK-LABEL: back_to_back_deopt
+; The exact stores don't matter, but there need to be three stack slots created
+; CHECK: movl	%ebx, 12(%rsp)
+; CHECK: movl	%ebp, 8(%rsp)
+; CHECK: movl	%r14d, 4(%rsp)
+; CHECK: callq
+; CHECK: movl	%ebx, 12(%rsp)
+; CHECK: movl	%ebp, 8(%rsp)
+; CHECK: movl	%r14d, 4(%rsp)
+; CHECK: callq
+; CHECK: movl	%ebx, 12(%rsp)
+; CHECK: movl	%ebp, 8(%rsp)
+; CHECK: movl	%r14d, 4(%rsp)
+; CHECK: callq
+; CHECK: movl	%ebx, 12(%rsp)
+; CHECK: movl	%ebp, 8(%rsp)
+; CHECK: movl	%r14d, 4(%rsp)
+; CHECK: callq
+  call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 3, i32 %a, i32 %b, i32 %c)
+call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 3, i32 %a, i32 %b, i32 %c)
+call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 3, i32 %a, i32 %b, i32 %c)
+call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* undef, i32 0, i32 0, i32 0, i32 3, i32 %a, i32 %b, i32 %c)
+  ret i32 1
+}
+
 ; Test that stack slots are reused for invokes
 define i32 @back_to_back_invokes(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c) #1 gc "statepoint-example" personality i32 ()* @"personality_function" {
 ; CHECK-LABEL: back_to_back_invokes

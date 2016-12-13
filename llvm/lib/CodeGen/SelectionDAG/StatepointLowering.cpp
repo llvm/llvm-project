@@ -55,7 +55,8 @@ void StatepointLoweringState::startNewStatepoint(SelectionDAGBuilder &Builder) {
   NextSlotToAllocate = 0;
   // Need to resize this on each safepoint - we need the two to stay in sync and
   // the clear patterns of a SelectionDAGBuilder have no relation to
-  // FunctionLoweringInfo.  SmallBitVector::reset initializes all bits to false.
+  // FunctionLoweringInfo.  Also need to ensure used bits get cleared.
+  AllocatedStackSlots.clear();
   AllocatedStackSlots.resize(Builder.FuncInfo.StatepointStackSlots.size());
 }
 
@@ -82,9 +83,8 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
   const size_t NumSlots = AllocatedStackSlots.size();
   assert(NextSlotToAllocate <= NumSlots && "Broken invariant");
 
-  // The stack slots in StatepointStackSlots beyond the first NumSlots were
-  // added in this instance of StatepointLoweringState, and cannot be re-used.
-  assert(NumSlots <= Builder.FuncInfo.StatepointStackSlots.size() &&
+  assert(AllocatedStackSlots.size() ==
+         Builder.FuncInfo.StatepointStackSlots.size() &&
          "Broken invariant");
 
   for (; NextSlotToAllocate < NumSlots; NextSlotToAllocate++) {
@@ -92,6 +92,7 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
       const int FI = Builder.FuncInfo.StatepointStackSlots[NextSlotToAllocate];
       if (MFI.getObjectSize(FI) == SpillSize) {
         AllocatedStackSlots.set(NextSlotToAllocate);
+        // TODO: Is ValueType the right thing to use here?
         return Builder.DAG.getFrameIndex(FI, ValueType);
       }
     }
@@ -104,6 +105,10 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
   MFI.markAsStatepointSpillSlotObjectIndex(FI);
 
   Builder.FuncInfo.StatepointStackSlots.push_back(FI);
+  AllocatedStackSlots.resize(AllocatedStackSlots.size()+1, true);
+  assert(AllocatedStackSlots.size() ==
+         Builder.FuncInfo.StatepointStackSlots.size() &&
+         "Broken invariant");
 
   StatepointMaxSlotsRequired = std::max<unsigned long>(
       StatepointMaxSlotsRequired, Builder.FuncInfo.StatepointStackSlots.size());

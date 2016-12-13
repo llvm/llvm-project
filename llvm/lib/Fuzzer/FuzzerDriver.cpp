@@ -282,16 +282,18 @@ int MinimizeCrashInput(const std::vector<std::string> &Args) {
     Printf("ERROR: -minimize_crash should be given one input file\n");
     exit(1);
   }
-  if (Flags.runs <= 0 && Flags.max_total_time == 0) {
-    Printf("ERROR: you need to use -runs=N or "
-           "-max_total_time=N with -minimize_crash=1\n" );
-    exit(1);
-  }
   std::string InputFilePath = Inputs->at(0);
-  std::string BaseCmd = CloneArgsWithoutX(Args, "minimize_crash");
+  std::string BaseCmd =
+      CloneArgsWithoutX(Args, "minimize_crash", "exact_artifact_path");
   auto InputPos = BaseCmd.find(" " + InputFilePath + " ");
   assert(InputPos != std::string::npos);
   BaseCmd.erase(InputPos, InputFilePath.size() + 1);
+  if (Flags.runs <= 0 && Flags.max_total_time == 0) {
+    Printf("INFO: you need to specify -runs=N or "
+           "-max_total_time=N with -minimize_crash=1\n"
+           "INFO: defaulting to -max_total_time=600\n");
+    BaseCmd += " -max_total_time=600";
+  }
   // BaseCmd += " >  /dev/null 2>&1 ";
 
   std::string CurrentFilePath = InputFilePath;
@@ -322,6 +324,10 @@ int MinimizeCrashInput(const std::vector<std::string> &Args) {
     Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
     ExitCode = ExecuteCommand(Cmd);
     if (ExitCode == 0) {
+      if (Flags.exact_artifact_path) {
+        CurrentFilePath = Flags.exact_artifact_path;
+        WriteToFile(U, CurrentFilePath);
+      }
       Printf("CRASH_MIN: failed to minimize beyond %s (%d bytes), exiting\n",
              CurrentFilePath.c_str(), U.size());
       return 0;

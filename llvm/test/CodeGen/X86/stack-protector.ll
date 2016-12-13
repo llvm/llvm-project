@@ -3888,23 +3888,27 @@ entry:
 define void @test32() #1 !dbg !7 {
 entry:
 ; LINUX-I386-LABEL: test32:
-; LINUX-I386:       .loc 1 0 0 prologue_end
+; LINUX-I386:       .loc 1 4 2 prologue_end
+; LINUX-I386:       .loc 1 0 0
 ; LINUX-I386-NEXT:  calll __stack_chk_fail
 
 ; LINUX-X64-LABEL: test32:
-; LINUX-X64:       .loc 1 0 0 prologue_end
+; LINUX-X64:       .loc 1 4 2 prologue_end
+; LINUX-X64:       .loc 1 0 0
 ; LINUX-X64-NEXT:  callq __stack_chk_fail
 
 ; LINUX-KERNEL-X64-LABEL: test32:
-; LINUX-KERNEL-X64:       .loc 1 0 0 prologue_end
+; LINUX-KERNEL-X64:       .loc 1 4 2 prologue_end
+; LINUX-KERNEL-X64:       .loc 1 0 0
 ; LINUX-KERNEL-X64-NEXT:  callq __stack_chk_fail
 
 ; OPENBSD-AMD64-LABEL: test32:
-; OPENBSD-AMD64:       .loc 1 0 0 prologue_end
+; OPENBSD-AMD64:       .loc 1 4 2 prologue_end
+; OPENBSD-AMD64:       .loc 1 0 0
 ; OPENBSD-AMD64-NEXT:  movl
 ; OPENBSD-AMD64-NEXT:  callq __stack_smash_handler
   %0 = alloca [5 x i8], align 1
-  ret void
+  ret void, !dbg !9
 }
 
 declare double @testi_aux()
@@ -3940,3 +3944,4 @@ attributes #5 = { ssp "stack-protector-buffer-size"="6" }
 !6 = distinct !DISubprogram(name: "__stack_chk_fail", scope: !1, type: !8, unit: !0)
 !7 = distinct !DISubprogram(name: "test32", scope: !1, type: !8, unit: !0)
 !8 = !DISubroutineType(types: !2)
+!9 = !DILocation(line: 4, column: 2, scope: !7)

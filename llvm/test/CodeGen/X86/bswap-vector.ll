@@ -268,14 +268,12 @@ define <4 x i16> @test7(<4 x i16> %v) {
 ;
 ; CHECK-SSSE3-LABEL: test7:
 ; CHECK-SSSE3:       # BB#0: # %entry
-; CHECK-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; CHECK-SSSE3-NEXT:    psrld $16, %xmm0
+; CHECK-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,0],zero,zero,xmm0[5,4],zero,zero,xmm0[9,8],zero,zero,xmm0[13,12],zero,zero
 ; CHECK-SSSE3-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: test7:
 ; CHECK-AVX:       # BB#0: # %entry
-; CHECK-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; CHECK-AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,0],zero,zero,xmm0[5,4],zero,zero,xmm0[9,8],zero,zero,xmm0[13,12],zero,zero
 ; CHECK-AVX-NEXT:    retq
 ;
 ; CHECK-WIDE-AVX-LABEL: test7:

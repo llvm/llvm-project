@@ -31,6 +31,12 @@ int main()
         fs >> x;
         assert(x == 3.25);
     }
+    {
+        std::ifstream fs(temp, std::ios_base::out);
+        double x = 0;
+        fs >> x;
+        assert(x == 3.25);
+    }
     std::remove(temp.c_str());
     {
         std::wofstream fs(temp);
@@ -38,6 +44,12 @@ int main()
     }
     {
         std::wifstream fs(temp);
+        double x = 0;
+        fs >> x;
+        assert(x == 3.25);
+    }
+    {
+        std::wifstream fs(temp, std::ios_base::out);
         double x = 0;
         fs >> x;
         assert(x == 3.25);

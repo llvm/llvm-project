@@ -95,8 +95,39 @@ BOOL WINAPI TERMHandler(DWORD dwCtrlType) {
   }
 }
 
+void CALLBACK AlarmHandler(PVOID, BOOLEAN) {
+  Fuzzer::StaticAlarmCallback();
+}
+
+class TimerQ {
+  HANDLE TimerQueue;
+ public:
+  TimerQ() : TimerQueue(NULL) {};
+  ~TimerQ() {
+    if (TimerQueue)
+      DeleteTimerQueueEx(TimerQueue, NULL);
+  };
+  void SetTimer(int Seconds) {
+    if (!TimerQueue) {
+      TimerQueue = CreateTimerQueue();
+      if (!TimerQueue) {
+        Printf("libFuzzer: CreateTimerQueue failed.\n");
+        exit(1);
+      }
+    }
+    HANDLE Timer;
+    if (!CreateTimerQueueTimer(&Timer, TimerQueue, AlarmHandler, NULL,
+        Seconds*1000, Seconds*1000, 0)) {
+      Printf("libFuzzer: CreateTimerQueueTimer failed.\n");
+      exit(1);
+    }
+  };
+};
+
+static TimerQ Timer;
+
 void SetTimer(int Seconds) {
-  // TODO: Complete this implementation.
+  Timer.SetTimer(Seconds);
   return;
 }
 

@@ -175,6 +175,10 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
   std::ofstream OF(CFPath, std::ofstream::out | std::ofstream::app);
   for (size_t i = M.FirstNotProcessedFile; i < M.Files.size(); i++) {
     auto U = FileToVector(M.Files[i].Name);
+    if (U.size() > Options.MaxLen) {
+      U.resize(Options.MaxLen);
+      U.shrink_to_fit();
+    }
     std::ostringstream StartedLine;
     // Write the pre-run marker.
     OF << "STARTED " << std::dec << i << " " << U.size() << "\n";

@@ -6606,9 +6606,15 @@ void PPCTargetLowering::spliceIntoChain(SDValue ResChain,
 /// \brief Analyze profitability of direct move
 /// prefer float load to int load plus direct move
 /// when there is no integer use of int load
-static bool directMoveIsProfitable(const SDValue &Op) {
+bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
   SDNode *Origin = Op.getOperand(0).getNode();
   if (Origin->getOpcode() != ISD::LOAD)
+    return true;
+
+  // If there is no LXSIBZX/LXSIHZX, like Power8,
+  // prefer direct move if the memory size is 1 or 2 bytes.
+  MachineMemOperand *MMO = cast<LoadSDNode>(Origin)->getMemOperand();
+  if (!Subtarget.hasP9Vector() && MMO->getSize() <= 2)
     return true;
 
   for (SDNode::use_iterator UI = Origin->use_begin(),

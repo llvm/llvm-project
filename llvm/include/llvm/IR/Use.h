@@ -36,18 +36,6 @@ class User;
 class Use;
 template <typename> struct simplify_type;
 
-// Use** is only 4-byte aligned.
-template <> class PointerLikeTypeTraits<Use **> {
-public:
-  static inline void *getAsVoidPointer(Use **P) { return P; }
-
-  static inline Use **getFromVoidPointer(void *P) {
-    return static_cast<Use **>(P);
-  }
-
-  enum { NumLowBitsAvailable = 2 };
-};
-
 /// \brief A Use represents the edge between a Value definition and its users.
 ///
 /// This is notionally a two-dimensional linked list. It supports traversing

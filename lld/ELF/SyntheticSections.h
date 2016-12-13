@@ -124,7 +124,7 @@ public:
 
   uint32_t getTlsIndexOff() const { return TlsIndexOff; }
 
-  unsigned getGp() const;
+  uintX_t getGp() const;
 
 private:
   // MIPS GOT consists of three parts: local, global and tls. Each part

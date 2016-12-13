@@ -169,7 +169,7 @@ set_target_properties(LLVMFuzzer-StandaloneInitializeTest
 
 include_directories(..)
 
-add_subdirectory(uninstrumented)
+# add_subdirectory(uninstrumented)
 add_subdirectory(no-coverage)
 add_subdirectory(ubsan)
 
