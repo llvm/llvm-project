@@ -1,0 +1,11 @@
+# IR level Instrumentation Flag
+:ir
+foo
+# Func Hash:
+36496524737
+# Num Counters:
+3
+# Counter Values:
+20
+21
+0
