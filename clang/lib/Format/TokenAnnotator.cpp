@@ -317,7 +317,8 @@ private:
          Contexts.back().InTemplateArgument);
 
     bool StartsObjCMethodExpr =
-        !CppArrayTemplates && Style.Language == FormatStyle::LK_Cpp &&
+        !CppArrayTemplates && (Style.Language == FormatStyle::LK_Cpp ||
+                               Style.Language == FormatStyle::LK_ObjC) &&
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         CurrentToken->isNot(tok::l_brace) &&
         (!Parent ||
@@ -433,7 +434,8 @@ private:
           FormatToken *Previous = CurrentToken->getPreviousNonComment();
           if (((CurrentToken->is(tok::colon) &&
                 (!Contexts.back().ColonIsDictLiteral ||
-                 Style.Language != FormatStyle::LK_Cpp)) ||
+                 (Style.Language != FormatStyle::LK_Cpp &&
+                  Style.Language != FormatStyle::LK_ObjC))) ||
                Style.Language == FormatStyle::LK_Proto) &&
               (Previous->Tok.getIdentifierInfo() ||
                Previous->is(tok::string_literal)))
@@ -1174,6 +1176,7 @@ private:
   bool rParenEndsCast(const FormatToken &Tok) {
     // C-style casts are only used in C++ and Java.
     if (Style.Language != FormatStyle::LK_Cpp &&
+        Style.Language != FormatStyle::LK_ObjC &&
         Style.Language != FormatStyle::LK_Java)
       return false;
 

@@ -24,30 +24,28 @@ namespace ento {
 class SimpleConstraintManager : public ConstraintManager {
   SubEngine *SU;
   SValBuilder &SVB;
+
 public:
-  SimpleConstraintManager(SubEngine *subengine, SValBuilder &SB)
-    : SU(subengine), SVB(SB) {}
+  SimpleConstraintManager(SubEngine *SE, SValBuilder &SB) : SU(SE), SVB(SB) {}
   ~SimpleConstraintManager() override;
 
   //===------------------------------------------------------------------===//
   // Common implementation for the interface provided by ConstraintManager.
   //===------------------------------------------------------------------===//
 
-  ProgramStateRef assume(ProgramStateRef state, DefinedSVal Cond,
-                        bool Assumption) override;
+  ProgramStateRef assume(ProgramStateRef State, DefinedSVal Cond,
+                         bool Assumption) override;
 
-  ProgramStateRef assume(ProgramStateRef state, NonLoc Cond, bool Assumption);
+  ProgramStateRef assume(ProgramStateRef State, NonLoc Cond, bool Assumption);
 
-  ProgramStateRef assumeInclusiveRange(ProgramStateRef State,
-                                             NonLoc Value,
-                                             const llvm::APSInt &From,
-                                             const llvm::APSInt &To,
-                                             bool InRange) override;
+  ProgramStateRef assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
+                                       const llvm::APSInt &From,
+                                       const llvm::APSInt &To,
+                                       bool InRange) override;
 
-  ProgramStateRef assumeSymRel(ProgramStateRef state,
-                              const SymExpr *LHS,
-                              BinaryOperator::Opcode op,
-                              const llvm::APSInt& Int);
+  ProgramStateRef assumeSymRel(ProgramStateRef State, const SymExpr *LHS,
+                               BinaryOperator::Opcode Op,
+                               const llvm::APSInt &Int);
 
   ProgramStateRef assumeSymWithinInclusiveRange(ProgramStateRef State,
                                                 SymbolRef Sym,
@@ -55,47 +53,45 @@ public:
                                                 const llvm::APSInt &To,
                                                 bool InRange);
 
-
 protected:
-
   //===------------------------------------------------------------------===//
   // Interface that subclasses must implement.
   //===------------------------------------------------------------------===//
 
-  // Each of these is of the form "$sym+Adj <> V", where "<>" is the comparison
+  // Each of these is of the form "$Sym+Adj <> V", where "<>" is the comparison
   // operation for the method being invoked.
-  virtual ProgramStateRef assumeSymNE(ProgramStateRef state, SymbolRef sym,
-                                     const llvm::APSInt& V,
-                                     const llvm::APSInt& Adjustment) = 0;
+  virtual ProgramStateRef assumeSymNE(ProgramStateRef State, SymbolRef Sym,
+                                      const llvm::APSInt &V,
+                                      const llvm::APSInt &Adjustment) = 0;
 
-  virtual ProgramStateRef assumeSymEQ(ProgramStateRef state, SymbolRef sym,
-                                     const llvm::APSInt& V,
-                                     const llvm::APSInt& Adjustment) = 0;
+  virtual ProgramStateRef assumeSymEQ(ProgramStateRef State, SymbolRef Sym,
+                                      const llvm::APSInt &V,
+                                      const llvm::APSInt &Adjustment) = 0;
 
-  virtual ProgramStateRef assumeSymLT(ProgramStateRef state, SymbolRef sym,
-                                     const llvm::APSInt& V,
-                                     const llvm::APSInt& Adjustment) = 0;
+  virtual ProgramStateRef assumeSymLT(ProgramStateRef State, SymbolRef Sym,
+                                      const llvm::APSInt &V,
+                                      const llvm::APSInt &Adjustment) = 0;
 
-  virtual ProgramStateRef assumeSymGT(ProgramStateRef state, SymbolRef sym,
-                                     const llvm::APSInt& V,
-                                     const llvm::APSInt& Adjustment) = 0;
+  virtual ProgramStateRef assumeSymGT(ProgramStateRef State, SymbolRef Sym,
+                                      const llvm::APSInt &V,
+                                      const llvm::APSInt &Adjustment) = 0;
 
-  virtual ProgramStateRef assumeSymLE(ProgramStateRef state, SymbolRef sym,
-                                     const llvm::APSInt& V,
-                                     const llvm::APSInt& Adjustment) = 0;
+  virtual ProgramStateRef assumeSymLE(ProgramStateRef State, SymbolRef Sym,
+                                      const llvm::APSInt &V,
+                                      const llvm::APSInt &Adjustment) = 0;
 
-  virtual ProgramStateRef assumeSymGE(ProgramStateRef state, SymbolRef sym,
-                                     const llvm::APSInt& V,
-                                     const llvm::APSInt& Adjustment) = 0;
-
+  virtual ProgramStateRef assumeSymGE(ProgramStateRef State, SymbolRef Sym,
+                                      const llvm::APSInt &V,
+                                      const llvm::APSInt &Adjustment) = 0;
 
   virtual ProgramStateRef assumeSymbolWithinInclusiveRange(
       ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
       const llvm::APSInt &To, const llvm::APSInt &Adjustment) = 0;
 
   virtual ProgramStateRef assumeSymbolOutOfInclusiveRange(
-      ProgramStateRef state, SymbolRef Sym, const llvm::APSInt &From,
+      ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
       const llvm::APSInt &To, const llvm::APSInt &Adjustment) = 0;
+
   //===------------------------------------------------------------------===//
   // Internal implementation.
   //===------------------------------------------------------------------===//
@@ -105,13 +101,11 @@ protected:
 
   bool canReasonAbout(SVal X) const override;
 
-  ProgramStateRef assumeAux(ProgramStateRef state,
-                                NonLoc Cond,
-                                bool Assumption);
+  ProgramStateRef assumeAux(ProgramStateRef State, NonLoc Cond,
+                            bool Assumption);
 
-  ProgramStateRef assumeAuxForSymbol(ProgramStateRef State,
-                                         SymbolRef Sym,
-                                         bool Assumption);
+  ProgramStateRef assumeAuxForSymbol(ProgramStateRef State, SymbolRef Sym,
+                                     bool Assumption);
 };
 
 } // end GR namespace

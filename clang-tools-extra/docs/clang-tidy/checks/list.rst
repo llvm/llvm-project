@@ -138,6 +138,7 @@ Clang-Tidy Checks
    readability-non-const-parameter
    readability-redundant-control-flow
    readability-redundant-declaration
+   readability-redundant-function-ptr-dereference
    readability-redundant-member-init
    readability-redundant-smartptr-get
    readability-redundant-string-cstr

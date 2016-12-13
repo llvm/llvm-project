@@ -196,6 +196,11 @@ public:
                              SmallVectorImpl<StringRef> &BiarchLibDirs,
                              SmallVectorImpl<StringRef> &BiarchTripleAliases);
 
+    bool ScanGCCForMultilibs(const llvm::Triple &TargetTriple,
+                             const llvm::opt::ArgList &Args,
+                             StringRef Path,
+                             bool NeedsBiarchSuffix = false);
+
     void ScanLibDirForGCCTriple(const llvm::Triple &TargetArch,
                                 const llvm::opt::ArgList &Args,
                                 const std::string &LibDir,
@@ -207,6 +212,11 @@ public:
                                        const std::string &LibDir,
                                        StringRef CandidateTriple,
                                        bool NeedsBiarchSuffix = false);
+
+    bool ScanGentooGccConfig(const llvm::Triple &TargetTriple,
+                             const llvm::opt::ArgList &Args,
+                             StringRef CandidateTriple,
+                             bool NeedsBiarchSuffix = false);
   };
 
 protected:
