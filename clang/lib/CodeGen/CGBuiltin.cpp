@@ -959,8 +959,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       SanitizerScope SanScope(this);
       EmitCheck(std::make_pair(static_cast<llvm::Value *>(Builder.getFalse()),
                                SanitizerKind::Unreachable),
-                "builtin_unreachable", EmitCheckSourceLocation(E->getExprLoc()),
-                None);
+                SanitizerHandler::BuiltinUnreachable,
+                EmitCheckSourceLocation(E->getExprLoc()), None);
     } else
       Builder.CreateUnreachable();
 

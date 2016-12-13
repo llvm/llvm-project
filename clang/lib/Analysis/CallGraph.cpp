@@ -55,7 +55,7 @@ public:
   void addCalledDecl(Decl *D) {
     if (G->includeInGraph(D)) {
       CallGraphNode *CalleeNode = G->getOrInsertNode(D);
-      CallerNode->addCallee(CalleeNode, G);
+      CallerNode->addCallee(CalleeNode);
     }
   }
 
@@ -154,7 +154,7 @@ CallGraphNode *CallGraph::getOrInsertNode(Decl *F) {
   Node = llvm::make_unique<CallGraphNode>(F);
   // Make Root node a parent of all functions to make sure all are reachable.
   if (F)
-    Root->addCallee(Node.get(), this);
+    Root->addCallee(Node.get());
   return Node.get();
 }
 

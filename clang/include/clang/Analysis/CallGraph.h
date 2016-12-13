@@ -157,7 +157,7 @@ public:
   inline bool empty() const {return CalledFunctions.empty(); }
   inline unsigned size() const {return CalledFunctions.size(); }
 
-  void addCallee(CallGraphNode *N, CallGraph *CG) {
+  void addCallee(CallGraphNode *N) {
     CalledFunctions.push_back(N);
   }
 

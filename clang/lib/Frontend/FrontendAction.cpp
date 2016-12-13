@@ -288,14 +288,15 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       SmallString<128> DirNative;
       llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
-      for (llvm::sys::fs::directory_iterator Dir(DirNative, EC), DirEnd;
+      vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+      for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
         // Check whether this is an acceptable AST file.
         if (ASTReader::isAcceptableASTFile(
-                Dir->path(), FileMgr, CI.getPCHContainerReader(),
+                Dir->getName(), FileMgr, CI.getPCHContainerReader(),
                 CI.getLangOpts(), CI.getTargetOpts(), CI.getPreprocessorOpts(),
                 SpecificModuleCachePath)) {
-          PPOpts.ImplicitPCHInclude = Dir->path();
+          PPOpts.ImplicitPCHInclude = Dir->getName();
           Found = true;
           break;
         }

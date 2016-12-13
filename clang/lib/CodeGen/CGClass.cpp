@@ -2802,8 +2802,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
   llvm::Value *ValidVtable = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_test), {CastedVTable, AllVtables});
-  EmitCheck(std::make_pair(TypeTest, M), "cfi_check_fail", StaticData,
-            {CastedVTable, ValidVtable});
+  EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail,
+            StaticData, {CastedVTable, ValidVtable});
 }
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
@@ -2835,7 +2835,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
 
   EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIVCall),
-            "cfi_check_fail", nullptr, nullptr);
+            SanitizerHandler::CFICheckFail, nullptr, nullptr);
 
   return Builder.CreateBitCast(
       Builder.CreateExtractValue(CheckedLoad, 0),

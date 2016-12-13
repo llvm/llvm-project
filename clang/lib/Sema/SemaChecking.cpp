@@ -11816,7 +11816,8 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
 
 void Sema::RefersToMemberWithReducedAlignment(
     Expr *E,
-    std::function<void(Expr *, RecordDecl *, FieldDecl *, CharUnits)> Action) {
+    llvm::function_ref<void(Expr *, RecordDecl *, FieldDecl *, CharUnits)>
+        Action) {
   const auto *ME = dyn_cast<MemberExpr>(E);
   if (!ME)
     return;

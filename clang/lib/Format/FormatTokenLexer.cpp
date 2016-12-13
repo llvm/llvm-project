@@ -558,7 +558,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.Language == FormatStyle::LK_Cpp) {
+  if (Style.Language == FormatStyle::LK_Cpp ||
+      Style.Language == FormatStyle::LK_ObjC) {
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
           Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
               tok::pp_define) &&

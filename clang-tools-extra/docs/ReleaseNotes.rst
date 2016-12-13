@@ -141,6 +141,11 @@ Improvements to clang-tidy
 
   Finds redundant variable and function declarations.
 
+- New `readability-redundant-function-ptr-dereference
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-function-ptr-dereference.html>`_ check
+
+  Finds redundant function pointer dereferences.
+
 - New `readability-redundant-member-init
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-member-init.html>`_ check
 

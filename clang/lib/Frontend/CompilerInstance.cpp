@@ -150,6 +150,38 @@ static void collectHeaderMaps(const HeaderSearch &HS,
     MDC->addFile(Name);
 }
 
+static void collectIncludePCH(CompilerInstance &CI,
+                              std::shared_ptr<ModuleDependencyCollector> MDC) {
+  const PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+  if (PPOpts.ImplicitPCHInclude.empty())
+    return;
+
+  StringRef PCHInclude = PPOpts.ImplicitPCHInclude;
+  FileManager &FileMgr = CI.getFileManager();
+  const DirectoryEntry *PCHDir = FileMgr.getDirectory(PCHInclude);
+  if (!PCHDir) {
+    MDC->addFile(PCHInclude);
+    return;
+  }
+
+  std::error_code EC;
+  SmallString<128> DirNative;
+  llvm::sys::path::native(PCHDir->getName(), DirNative);
+  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  SimpleASTReaderListener Validator(CI.getPreprocessor());
+  for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
+       Dir != DirEnd && !EC; Dir.increment(EC)) {
+    // Check whether this is an AST file. ASTReader::isAcceptableASTFile is not
+    // used here since we're not interested in validating the PCH at this time,
+    // but only to check whether this is a file containing an AST.
+    if (!ASTReader::readASTFileControlBlock(
+            Dir->getName(), FileMgr, CI.getPCHContainerReader(),
+            /*FindModuleFileExtensions=*/false, Validator,
+            /*ValidateDiagnosticOptions=*/false))
+      MDC->addFile(Dir->getName());
+  }
+}
+
 // Diagnostics
 static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
                                const CodeGenOptions *CodeGenOpts,
@@ -380,6 +412,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   if (ModuleDepCollector) {
     addDependencyCollector(ModuleDepCollector);
     collectHeaderMaps(PP->getHeaderSearchInfo(), ModuleDepCollector);
+    collectIncludePCH(*this, ModuleDepCollector);
   }
 
   for (auto &Listener : DependencyCollectors)

@@ -326,7 +326,7 @@ clang_isFileMultipleIncludeGuarded(CXTranslationUnit tu, CXFile file);
  *
  * \param tu the translation unit
  *
-* \param file_name the name of the file.
+ * \param file_name the name of the file.
  *
  * \returns the file handle for the named file in the translation unit \p tu,
  * or a NULL file handle if the file was not a part of this translation unit.
