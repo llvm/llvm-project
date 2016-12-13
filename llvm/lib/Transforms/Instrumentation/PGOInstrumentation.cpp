@@ -884,12 +884,21 @@ void PGOUseFunc::populateCounters() {
       }
       if (Count->CountValid) {
         if (Count->UnknownCountOutEdge == 1) {
-          uint64_t Total = Count->CountValue - sumEdgeCount(Count->OutEdges);
+          uint64_t Total = 0;
+          uint64_t OutSum = sumEdgeCount(Count->OutEdges);
+          // If the one of the successor block can early terminate (no-return),
+          // we can end up with situation where out edge sum count is larger as
+          // the source BB's count is collected by a post-dominated block.
+          if (Count->CountValue > OutSum)
+            Total = Count->CountValue - OutSum;
           setEdgeCount(Count->OutEdges, Total);
           Changes = true;
         }
         if (Count->UnknownCountInEdge == 1) {
-          uint64_t Total = Count->CountValue - sumEdgeCount(Count->InEdges);
+          uint64_t Total = 0;
+          uint64_t InSum = sumEdgeCount(Count->InEdges);
+          if (Count->CountValue > InSum)
+            Total = Count->CountValue - InSum;
           setEdgeCount(Count->InEdges, Total);
           Changes = true;
         }

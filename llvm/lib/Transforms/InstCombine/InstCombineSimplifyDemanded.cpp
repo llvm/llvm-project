@@ -1264,9 +1264,14 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (!DemandedElts[0])
         return ConstantAggregateZero::get(II->getType());
 
+      // Only the lower element is used.
+      DemandedElts = 1;
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
                                         UndefElts, Depth + 1);
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
+
+      // Only the lower element is undefined. The high elements are zero.
+      UndefElts = UndefElts[0];
       break;
 
     // Unary scalar-as-vector operations that work column-wise.

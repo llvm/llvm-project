@@ -1739,6 +1739,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
+  case R_ARM_RELATIVE:
   case R_ARM_TARGET1:
   case R_ARM_TARGET2:
   case R_ARM_TLS_GD32:
