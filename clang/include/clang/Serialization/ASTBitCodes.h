@@ -1292,10 +1292,14 @@ namespace clang {
       EXPR_DESIGNATED_INIT,
       /// \brief A DesignatedInitUpdateExpr record.
       EXPR_DESIGNATED_INIT_UPDATE,
-      /// \brief An ImplicitValueInitExpr record.
-      EXPR_IMPLICIT_VALUE_INIT,
       /// \brief An NoInitExpr record.
       EXPR_NO_INIT,
+      /// \brief An ArrayInitLoopExpr record.
+      EXPR_ARRAY_INIT_LOOP,
+      /// \brief An ArrayInitIndexExpr record.
+      EXPR_ARRAY_INIT_INDEX,
+      /// \brief An ImplicitValueInitExpr record.
+      EXPR_IMPLICIT_VALUE_INIT,
       /// \brief A VAArgExpr record.
       EXPR_VA_ARG,
       /// \brief An AddrLabelExpr record.
@@ -1500,6 +1504,7 @@ namespace clang {
       STMT_OMP_TEAMS_DISTRIBUTE_DIRECTIVE,
       STMT_OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE,
       STMT_OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE,
+      STMT_OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE,
       EXPR_OMP_ARRAY_SECTION,
 
       // ARC

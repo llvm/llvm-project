@@ -19,6 +19,7 @@
 
 #include <experimental/filesystem>
 #include <type_traits>
+#include <cstddef>
 #include <cassert>
 
 #include "test_macros.h"
@@ -196,7 +197,7 @@ TEST_CASE(from_is_directory)
 {
     struct FileInfo {
         path filename;
-        int size;
+        std::size_t size;
     };
     const FileInfo files[] = {
         {"file1", 0},

@@ -193,7 +193,7 @@ public:
 
   static const ArgumentTableEntry *GetArgumentTable();
 
-  static lldb::CommandArgumentType LookupArgumentName(const char *arg_name);
+  static lldb::CommandArgumentType LookupArgumentName(llvm::StringRef arg_name);
 
   static const ArgumentTableEntry *
   FindArgumentDataByType(lldb::CommandArgumentType arg_type);

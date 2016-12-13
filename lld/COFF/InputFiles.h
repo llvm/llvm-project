@@ -31,6 +31,7 @@ using llvm::COFF::MachineTypes;
 using llvm::object::Archive;
 using llvm::object::COFFObjectFile;
 using llvm::object::COFFSymbolRef;
+using llvm::object::coff_import_header;
 using llvm::object::coff_section;
 
 class Chunk;
@@ -39,6 +40,7 @@ class DefinedImportData;
 class DefinedImportThunk;
 class Lazy;
 class SectionChunk;
+struct Symbol;
 class SymbolBody;
 class Undefined;
 
@@ -52,9 +54,6 @@ public:
   // Returns the filename.
   StringRef getName() { return MB.getBufferIdentifier(); }
 
-  // Returns symbols defined by this file.
-  virtual std::vector<SymbolBody *> &getSymbols() = 0;
-
   // Reads a file (the constructor doesn't do that).
   virtual void parse() = 0;
 
@@ -67,14 +66,8 @@ public:
   // Returns .drectve section contents if exist.
   StringRef getDirectives() { return StringRef(Directives).trim(); }
 
-  // Each file has a unique index. The index number is used to
-  // resolve ties in symbol resolution.
-  int Index;
-  static int NextIndex;
-
 protected:
-  InputFile(Kind K, MemoryBufferRef M)
-      : Index(NextIndex++), MB(M), FileKind(K) {}
+  InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
 
   MemoryBufferRef MB;
   std::string Directives;
@@ -90,22 +83,14 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   void parse() override;
 
-  // Returns a memory buffer for a given symbol. An empty memory buffer
-  // is returned if we have already returned the same memory buffer.
-  // (So that we don't instantiate same members more than once.)
-  MemoryBufferRef getMember(const Archive::Symbol *Sym);
-
-  llvm::MutableArrayRef<Lazy> getLazySymbols();
-
-  // All symbols returned by ArchiveFiles are of Lazy type.
-  std::vector<SymbolBody *> &getSymbols() override {
-    llvm_unreachable("internal fatal");
-  }
+  // Returns an input file for a given symbol. A null pointer is returned if we
+  // have already returned the same input file. (So that we don't instantiate
+  // the same member more than once.)
+  InputFile *getMember(const Archive::Symbol *Sym);
 
 private:
   std::unique_ptr<Archive> File;
   std::string Filename;
-  std::vector<Lazy> LazySymbols;
   std::map<uint64_t, std::atomic_flag> Seen;
 };
 
@@ -118,7 +103,7 @@ public:
   MachineTypes getMachineType() override;
   std::vector<Chunk *> &getChunks() { return Chunks; }
   std::vector<SectionChunk *> &getDebugChunks() { return DebugChunks; }
-  std::vector<SymbolBody *> &getSymbols() override { return SymbolBodies; }
+  std::vector<SymbolBody *> &getSymbols() { return SymbolBodies; }
 
   // Returns a SymbolBody object for the SymbolIndex'th symbol in the
   // underlying object file.
@@ -142,8 +127,8 @@ private:
   void initializeSymbols();
   void initializeSEH();
 
-  Defined *createDefined(COFFSymbolRef Sym, const void *Aux, bool IsFirst);
-  Undefined *createUndefined(COFFSymbolRef Sym);
+  SymbolBody *createDefined(COFFSymbolRef Sym, const void *Aux, bool IsFirst);
+  SymbolBody *createUndefined(COFFSymbolRef Sym);
 
   std::unique_ptr<COFFObjectFile> COFFObj;
   llvm::BumpPtrAllocator Alloc;
@@ -181,7 +166,6 @@ public:
   explicit ImportFile(MemoryBufferRef M)
       : InputFile(ImportKind, M), StringAlloc(StringAllocAux) {}
   static bool classof(const InputFile *F) { return F->kind() == ImportKind; }
-  std::vector<SymbolBody *> &getSymbols() override { return SymbolBodies; }
 
   DefinedImportData *ImpSym = nullptr;
   DefinedImportThunk *ThunkSym = nullptr;
@@ -190,10 +174,14 @@ public:
 private:
   void parse() override;
 
-  std::vector<SymbolBody *> SymbolBodies;
   llvm::BumpPtrAllocator Alloc;
   llvm::BumpPtrAllocator StringAllocAux;
   llvm::StringSaver StringAlloc;
+
+public:
+  StringRef ExternalName;
+  const coff_import_header *Hdr;
+  Chunk *Location = nullptr;
 };
 
 // Used for LTO.
@@ -201,7 +189,7 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
-  std::vector<SymbolBody *> &getSymbols() override { return SymbolBodies; }
+  std::vector<SymbolBody *> &getSymbols() { return SymbolBodies; }
   MachineTypes getMachineType() override;
   std::unique_ptr<LTOModule> takeModule() { return std::move(M); }
 

@@ -166,7 +166,6 @@ void check_apply_quals_and_types(Tuple&& t) {
 
 void test_call_quals_and_arg_types()
 {
-    TrackedCallable obj;
     using Tup = std::tuple<int, int const&, unsigned&&>;
     const int x = 42;
     unsigned y = 101;
@@ -199,7 +198,7 @@ void test_noexcept()
         // test that the functions noexcept-ness is propagated
         using Tup = std::tuple<int, const char*, long>;
         Tup t;
-        ASSERT_NOEXCEPT(std::apply(nec, t));
+        LIBCPP_ASSERT_NOEXCEPT(std::apply(nec, t));
         ASSERT_NOT_NOEXCEPT(std::apply(tc, t));
     }
     {
@@ -207,7 +206,7 @@ void test_noexcept()
         using Tup = std::tuple<NothrowMoveable, int>;
         Tup t;
         ASSERT_NOT_NOEXCEPT(std::apply(nec, t));
-        ASSERT_NOEXCEPT(std::apply(nec, std::move(t)));
+        LIBCPP_ASSERT_NOEXCEPT(std::apply(nec, std::move(t)));
     }
 }
 

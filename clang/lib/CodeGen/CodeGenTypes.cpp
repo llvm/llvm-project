@@ -736,9 +736,14 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
   return *Layout;
 }
 
+bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
+  assert (T->getAs<PointerType>() && "Invalid type");
+  return isZeroInitializable(T);
+}
+
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  if (auto PT = T->getAs<PointerType>())
-    return Context.getTargetNullPtrValue(T) == 0;
+  if (T->getAs<PointerType>())
+    return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {
     if (isa<IncompleteArrayType>(AT))

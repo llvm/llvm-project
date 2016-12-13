@@ -4333,6 +4333,98 @@ public:
   }
 };
 
+/// \brief Represents a loop initializing the elements of an array.
+///
+/// The need to initialize the elements of an array occurs in a number of
+/// contexts:
+///
+///  * in the implicit copy/move constructor for a class with an array member
+///  * when a lambda-expression captures an array by value
+///  * when a decomposition declaration decomposes an array
+///
+/// There are two subexpressions: a common expression (the source array)
+/// that is evaluated once up-front, and a per-element initializer that
+/// runs once for each array element.
+///
+/// Within the per-element initializer, the common expression may be referenced
+/// via an OpaqueValueExpr, and the current index may be obtained via an
+/// ArrayInitIndexExpr.
+class ArrayInitLoopExpr : public Expr {
+  Stmt *SubExprs[2];
+
+  explicit ArrayInitLoopExpr(EmptyShell Empty)
+      : Expr(ArrayInitLoopExprClass, Empty), SubExprs{} {}
+
+public:
+  explicit ArrayInitLoopExpr(QualType T, Expr *CommonInit, Expr *ElementInit)
+      : Expr(ArrayInitLoopExprClass, T, VK_RValue, OK_Ordinary, false,
+             CommonInit->isValueDependent() || ElementInit->isValueDependent(),
+             T->isInstantiationDependentType(),
+             CommonInit->containsUnexpandedParameterPack() ||
+                 ElementInit->containsUnexpandedParameterPack()),
+        SubExprs{CommonInit, ElementInit} {}
+
+  /// Get the common subexpression shared by all initializations (the source
+  /// array).
+  OpaqueValueExpr *getCommonExpr() const {
+    return cast<OpaqueValueExpr>(SubExprs[0]);
+  }
+
+  /// Get the initializer to use for each array element.
+  Expr *getSubExpr() const { return cast<Expr>(SubExprs[1]); }
+
+  llvm::APInt getArraySize() const {
+    return cast<ConstantArrayType>(getType()->castAsArrayTypeUnsafe())
+        ->getSize();
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == ArrayInitLoopExprClass;
+  }
+
+  SourceLocation getLocStart() const LLVM_READONLY {
+    return getCommonExpr()->getLocStart();
+  }
+  SourceLocation getLocEnd() const LLVM_READONLY {
+    return getCommonExpr()->getLocEnd();
+  }
+
+  child_range children() {
+    return child_range(SubExprs, SubExprs + 2);
+  }
+
+  friend class ASTReader;
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+};
+
+/// \brief Represents the index of the current element of an array being
+/// initialized by an ArrayInitLoopExpr. This can only appear within the
+/// subexpression of an ArrayInitLoopExpr.
+class ArrayInitIndexExpr : public Expr {
+  explicit ArrayInitIndexExpr(EmptyShell Empty)
+      : Expr(ArrayInitIndexExprClass, Empty) {}
+
+public:
+  explicit ArrayInitIndexExpr(QualType T)
+      : Expr(ArrayInitIndexExprClass, T, VK_RValue, OK_Ordinary,
+             false, false, false, false) {}
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == ArrayInitIndexExprClass;
+  }
+
+  SourceLocation getLocStart() const LLVM_READONLY { return SourceLocation(); }
+  SourceLocation getLocEnd() const LLVM_READONLY { return SourceLocation(); }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  friend class ASTReader;
+  friend class ASTStmtReader;
+};
+
 /// \brief Represents an implicitly-generated value initialization of
 /// an object of a given type.
 ///

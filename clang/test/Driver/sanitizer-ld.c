@@ -289,9 +289,23 @@
 //
 // CHECK-LSAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-LSAN-LINUX-NOT: "-lc"
+// CHECK-LSAN-LINUX-NOT: libclang_rt.ubsan
 // CHECK-LSAN-LINUX: libclang_rt.lsan-x86_64.a"
 // CHECK-LSAN-LINUX: "-lpthread"
 // CHECK-LSAN-LINUX: "-ldl"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:  -target x86_64-unknown-linux -fsanitize=leak -fsanitize-coverage=func \
+// RUN:  --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LSAN-COV-LINUX %s
+//
+// CHECK-LSAN-COV-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-LSAN-COV-LINUX-NOT: "-lc"
+// CHECK-LSAN-COV-LINUX-NOT: libclang_rt.ubsan
+// CHECK-LSAV-COV-LINUX: libclang_rt.lsan-x86_64.a"
+// CHECK-LSAN-COV-LINUX-NOT: libclang_rt.ubsan
+// CHECK-LSAN-COV-LINUX: "-lpthread"
+// CHECK-LSAN-COV-LINUX: "-ldl"
 
 // RUN: %clang -fsanitize=leak,address %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux \

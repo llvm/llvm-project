@@ -243,6 +243,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::ChooseExprClass:
   case Stmt::DesignatedInitExprClass:
   case Stmt::DesignatedInitUpdateExprClass:
+  case Stmt::ArrayInitLoopExprClass:
+  case Stmt::ArrayInitIndexExprClass:
   case Stmt::ExprWithCleanupsClass:
   case Stmt::ExpressionTraitExprClass:
   case Stmt::ExtVectorElementExprClass:
@@ -661,6 +663,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
     K = CXCursor_OMPTeamsDistributeParallelForSimdDirective;
+    break;
+  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+    K = CXCursor_OMPTeamsDistributeParallelForDirective;
     break;
   }
 

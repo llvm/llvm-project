@@ -113,13 +113,14 @@ declare i32 @foo(i8*) readonly
 ; CHECK: [[TAGA]] = !{[[TYPEA]], [[TYPEA]], i64 0}
 !0 = !{!5, !5, i64 0}
 !1 = !{!6, !6, i64 0}
-!2 = !{!"tbaa root", null}
+!2 = !{!"tbaa root"}
 !3 = !{!7, !7, i64 0}
-!4 = !{!8, !8, i64 0}
+!4 = !{!11, !11, i64 0}
 !5 = !{!"C", !6}
 !6 = !{!"A", !2}
 !7 = !{!"B", !6}
-!8 = !{!"another root", null}
+!8 = !{!"another root"}
+!11 = !{!"scalar type", !8}
 
 
 ;; A TBAA structure who's only point is to have a constant location

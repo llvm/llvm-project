@@ -589,7 +589,7 @@ protected:
     }
 
     if (argc > 0)
-      addr = Args::StringToAddress(&m_exe_ctx, command.GetArgumentAtIndex(0),
+      addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
                                    LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
@@ -600,9 +600,8 @@ protected:
     }
 
     if (argc == 2) {
-      lldb::addr_t end_addr =
-          Args::StringToAddress(&m_exe_ctx, command.GetArgumentAtIndex(1),
-                                LLDB_INVALID_ADDRESS, nullptr);
+      lldb::addr_t end_addr = Args::StringToAddress(
+          &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, nullptr);
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
         result.AppendError(error.AsCString());
@@ -1036,16 +1035,14 @@ protected:
     }
 
     Error error;
-    lldb::addr_t low_addr =
-        Args::StringToAddress(&m_exe_ctx, command.GetArgumentAtIndex(0),
-                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t low_addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
+                                                  LLDB_INVALID_ADDRESS, &error);
     if (low_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid low address");
       return false;
     }
-    lldb::addr_t high_addr =
-        Args::StringToAddress(&m_exe_ctx, command.GetArgumentAtIndex(1),
-                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t high_addr = Args::StringToAddress(
+        &m_exe_ctx, command[1].ref, LLDB_INVALID_ADDRESS, &error);
     if (high_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid high address");
       return false;
@@ -1347,9 +1344,8 @@ protected:
     size_t item_byte_size = byte_size_value.GetCurrentValue();
 
     Error error;
-    lldb::addr_t addr =
-        Args::StringToAddress(&m_exe_ctx, command.GetArgumentAtIndex(0),
-                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
+                                              LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression\n");
@@ -1408,9 +1404,7 @@ protected:
     int64_t sval64;
     bool success = false;
     const size_t num_value_args = command.GetArgumentCount();
-    for (size_t i = 0; i < num_value_args; ++i) {
-      const char *value_str = command.GetArgumentAtIndex(i);
-
+    for (auto &entry : command) {
       switch (m_format_options.GetFormat()) {
       case kNumFormats:
       case eFormatFloat: // TODO: add support for floats soon
@@ -1449,10 +1443,9 @@ protected:
       case eFormatHexUppercase:
       case eFormatPointer:
         // Decode hex bytes
-        uval64 = StringConvert::ToUInt64(value_str, UINT64_MAX, 16, &success);
-        if (!success) {
+        if (entry.ref.getAsInteger(16, uval64)) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid hex string value.\n", value_str);
+              "'%s' is not a valid hex string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
@@ -1467,11 +1460,10 @@ protected:
         break;
 
       case eFormatBoolean:
-        uval64 = Args::StringToBoolean(
-            llvm::StringRef::withNullAsEmpty(value_str), false, &success);
+        uval64 = Args::StringToBoolean(entry.ref, false, &success);
         if (!success) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid boolean string value.\n", value_str);
+              "'%s' is not a valid boolean string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         }
@@ -1479,10 +1471,9 @@ protected:
         break;
 
       case eFormatBinary:
-        uval64 = StringConvert::ToUInt64(value_str, UINT64_MAX, 2, &success);
-        if (!success) {
+        if (entry.ref.getAsInteger(2, uval64)) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid binary string value.\n", value_str);
+              "'%s' is not a valid binary string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
@@ -1498,30 +1489,30 @@ protected:
 
       case eFormatCharArray:
       case eFormatChar:
-      case eFormatCString:
-        if (value_str[0]) {
-          size_t len = strlen(value_str);
-          // Include the NULL for C strings...
-          if (m_format_options.GetFormat() == eFormatCString)
-            ++len;
-          Error error;
-          if (process->WriteMemory(addr, value_str, len, error) == len) {
-            addr += len;
-          } else {
-            result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
-                                         " failed: %s.\n",
-                                         addr, error.AsCString());
-            result.SetStatus(eReturnStatusFailed);
-            return false;
-          }
+      case eFormatCString: {
+        if (entry.ref.empty())
+          break;
+
+        size_t len = entry.ref.size();
+        // Include the NULL for C strings...
+        if (m_format_options.GetFormat() == eFormatCString)
+          ++len;
+        Error error;
+        if (process->WriteMemory(addr, entry.c_str(), len, error) == len) {
+          addr += len;
+        } else {
+          result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
+                                       " failed: %s.\n",
+                                       addr, error.AsCString());
+          result.SetStatus(eReturnStatusFailed);
+          return false;
         }
         break;
-
+      }
       case eFormatDecimal:
-        sval64 = StringConvert::ToSInt64(value_str, INT64_MAX, 0, &success);
-        if (!success) {
+        if (entry.ref.getAsInteger(0, sval64)) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid signed decimal value.\n", value_str);
+              "'%s' is not a valid signed decimal value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!SIntValueIsValidForSize(sval64, item_byte_size)) {
@@ -1536,11 +1527,11 @@ protected:
         break;
 
       case eFormatUnsigned:
-        uval64 = StringConvert::ToUInt64(value_str, UINT64_MAX, 0, &success);
-        if (!success) {
+
+        if (!entry.ref.getAsInteger(0, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid unsigned decimal string value.\n",
-              value_str);
+              entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
@@ -1555,10 +1546,9 @@ protected:
         break;
 
       case eFormatOctal:
-        uval64 = StringConvert::ToUInt64(value_str, UINT64_MAX, 8, &success);
-        if (!success) {
+        if (entry.ref.getAsInteger(8, uval64)) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid octal string value.\n", value_str);
+              "'%s' is not a valid octal string value.\n", entry.c_str());
           result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!UIntValueIsValidForSize(uval64, item_byte_size)) {
@@ -1643,9 +1633,8 @@ protected:
     }
 
     Error error;
-    lldb::addr_t addr =
-        Args::StringToAddress(&m_exe_ctx, command.GetArgumentAtIndex(0),
-                              LLDB_INVALID_ADDRESS, &error);
+    lldb::addr_t addr = Args::StringToAddress(&m_exe_ctx, command[0].ref,
+                                              LLDB_INVALID_ADDRESS, &error);
 
     if (addr == LLDB_INVALID_ADDRESS) {
       result.AppendError("invalid address expression");
@@ -1711,13 +1700,13 @@ protected:
                                      m_cmd_name.c_str(), m_cmd_syntax.c_str());
         result.SetStatus(eReturnStatusFailed);
       } else {
-        const char *load_addr_cstr = command.GetArgumentAtIndex(0);
+        auto load_addr_str = command[0].ref;
         if (command.GetArgumentCount() == 1) {
-          load_addr = Args::StringToAddress(&m_exe_ctx, load_addr_cstr,
+          load_addr = Args::StringToAddress(&m_exe_ctx, load_addr_str,
                                             LLDB_INVALID_ADDRESS, &error);
           if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
             result.AppendErrorWithFormat(
-                "invalid address argument \"%s\": %s\n", load_addr_cstr,
+                "invalid address argument \"%s\": %s\n", command[0].c_str(),
                 error.AsCString());
             result.SetStatus(eReturnStatusFailed);
           }

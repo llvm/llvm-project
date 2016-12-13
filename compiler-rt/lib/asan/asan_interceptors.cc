@@ -454,17 +454,17 @@ INTERCEPTOR(void*, memmove, void *to, const void *from, uptr size) {
 INTERCEPTOR(void*, memcpy, void *to, const void *from, uptr size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, memcpy);
-#if !SANITIZER_MAC
-  ASAN_MEMCPY_IMPL(ctx, to, from, size);
-#else
-  // At least on 10.7 and 10.8 both memcpy() and memmove() are being replaced
-  // with WRAP(memcpy). As a result, false positives are reported for memmove()
-  // calls. If we just disable error reporting with
-  // ASAN_OPTIONS=replace_intrin=0, memmove() is still replaced with
-  // internal_memcpy(), which may lead to crashes, see
-  // http://llvm.org/bugs/show_bug.cgi?id=16362.
-  ASAN_MEMMOVE_IMPL(ctx, to, from, size);
-#endif  // !SANITIZER_MAC
+  if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {
+    ASAN_MEMCPY_IMPL(ctx, to, from, size);
+  } else {
+    // At least on 10.7 and 10.8 both memcpy() and memmove() are being replaced
+    // with WRAP(memcpy). As a result, false positives are reported for
+    // memmove() calls. If we just disable error reporting with
+    // ASAN_OPTIONS=replace_intrin=0, memmove() is still replaced with
+    // internal_memcpy(), which may lead to crashes, see
+    // http://llvm.org/bugs/show_bug.cgi?id=16362.
+    ASAN_MEMMOVE_IMPL(ctx, to, from, size);
+  }
 }
 
 INTERCEPTOR(void*, memset, void *block, int c, uptr size) {

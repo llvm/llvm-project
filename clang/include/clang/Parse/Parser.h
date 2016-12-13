@@ -1530,8 +1530,6 @@ private:
                                       bool IsTypename = false,
                                       IdentifierInfo **LastII = nullptr);
 
-  void CheckForLParenAfterColonColon();
-
   //===--------------------------------------------------------------------===//
   // C++0x 5.1.2: Lambda expressions
 

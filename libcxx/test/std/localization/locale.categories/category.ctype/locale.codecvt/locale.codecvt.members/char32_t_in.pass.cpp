@@ -36,5 +36,5 @@ int main()
     assert(from_next - from == 9);
     assert(to_next - to == 9);
     for (unsigned i = 0; i < 9; ++i)
-        assert(to[i] == from[i]);
+        assert(to[i] == static_cast<char32_t>(from[i]));
 }

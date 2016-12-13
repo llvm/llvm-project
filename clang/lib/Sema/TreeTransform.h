@@ -1013,8 +1013,9 @@ public:
         case LookupResult::FoundOverloaded:
         case LookupResult::FoundUnresolvedValue: {
           NamedDecl *SomeDecl = Result.getRepresentativeDecl();
-          Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl);
-          SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag) << NTK;
+          Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
+          SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag) << SomeDecl
+                                                               << NTK << Kind;
           SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
           break;
         }
@@ -3219,6 +3220,9 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
 
   if (ExprWithCleanups *ExprTemp = dyn_cast<ExprWithCleanups>(Init))
     Init = ExprTemp->getSubExpr();
+
+  if (auto *AIL = dyn_cast<ArrayInitLoopExpr>(Init))
+    Init = AIL->getCommonExpr();
 
   if (MaterializeTemporaryExpr *MTE = dyn_cast<MaterializeTemporaryExpr>(Init))
     Init = MTE->GetTemporaryExpr();
@@ -5706,7 +5710,8 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
               Template.getAsTemplateDecl())) {
         SemaRef.Diag(TL.getNamedTypeLoc().getBeginLoc(),
                      diag::err_tag_reference_non_tag)
-            << Sema::NTK_TypeAliasTemplate;
+            << TAT << Sema::NTK_TypeAliasTemplate
+            << ElaboratedType::getTagTypeKindForKeyword(T->getKeyword());
         SemaRef.Diag(TAT->getLocation(), diag::note_declared_at);
       }
     }
@@ -7711,6 +7716,17 @@ StmtResult TreeTransform<Derived>::TransformOMPTeamsDistributeParallelForSimdDir
   return Res;
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTeamsDistributeParallelForDirective(
+    OMPTeamsDistributeParallelForDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_teams_distribute_parallel_for,
+      DirName, nullptr, D->getLocStart());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
 
 //===----------------------------------------------------------------------===//
 // OpenMP clause transformation
@@ -9029,6 +9045,20 @@ ExprResult
 TreeTransform<Derived>::TransformNoInitExpr(
     NoInitExpr *E) {
   llvm_unreachable("Unexpected NoInitExpr in syntactic form of initializer");
+  return ExprError();
+}
+
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformArrayInitLoopExpr(ArrayInitLoopExpr *E) {
+  llvm_unreachable("Unexpected ArrayInitLoopExpr outside of initializer");
+  return ExprError();
+}
+
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+  llvm_unreachable("Unexpected ArrayInitIndexExpr outside of initializer");
   return ExprError();
 }
 

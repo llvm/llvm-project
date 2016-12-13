@@ -304,7 +304,7 @@ ret2:
 
 !0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
-!2 = !{!"Simple C/C++ TBAA", null}
+!2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!"int", !1}
 !4 = !{ i32 0, i32 1 }
 !5 = !{ i32 8, i32 10 }

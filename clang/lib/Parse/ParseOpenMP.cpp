@@ -40,8 +40,7 @@ enum OpenMPDirectiveKindEx {
   OMPD_target_exit,
   OMPD_update,
   OMPD_distribute_parallel,
-  OMPD_teams_distribute_parallel,
-  OMPD_teams_distribute_parallel_for
+  OMPD_teams_distribute_parallel
 };
 
 class ThreadprivateListParserHelper final {
@@ -750,6 +749,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_teams_distribute:
   case OMPD_teams_distribute_simd:
   case OMPD_teams_distribute_parallel_for_simd:
+  case OMPD_teams_distribute_parallel_for:
     Diag(Tok, diag::err_omp_unexpected_directive)
         << getOpenMPDirectiveName(DKind);
     break;
@@ -785,7 +785,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 ///         'distribute paralle for simd' | 'distribute simd' |
 ///         'target parallel for simd' | 'target simd' |
 ///         'teams distribute' | 'teams distribute simd' |
-///         'teams distribute parallel for simd' {clause}
+///         'teams distribute parallel for simd' |
+///         'teams distribute parallel for' {clause}
 ///         annot_pragma_openmp_end
 ///
 StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
@@ -897,7 +898,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_target_simd:
   case OMPD_teams_distribute:
   case OMPD_teams_distribute_simd:
-  case OMPD_teams_distribute_parallel_for_simd: {
+  case OMPD_teams_distribute_parallel_for_simd:
+  case OMPD_teams_distribute_parallel_for: {
     ConsumeToken();
     // Parse directive name of the 'critical' directive if any.
     if (DKind == OMPD_critical) {

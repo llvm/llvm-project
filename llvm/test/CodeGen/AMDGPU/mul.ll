@@ -198,3 +198,74 @@ endif:
   store i64 %3, i64 addrspace(1)* %out
   ret void
 }
+
+; FIXME: Load dwordx4
+; FUNC-LABEL: {{^}}s_mul_i128:
+; SI: s_load_dwordx2
+; SI: s_load_dwordx2
+; SI: s_load_dwordx2
+; SI: s_load_dwordx2
+
+; SI: v_mul_hi_u32
+; SI: v_mul_hi_u32
+; SI: s_mul_i32
+; SI: v_mul_hi_u32
+; SI: s_mul_i32
+; SI: s_mul_i32
+; SI: v_mul_hi_u32
+; SI: v_mul_hi_u32
+; SI: s_mul_i32
+; SI-DAG: s_mul_i32
+; SI-DAG: v_mul_hi_u32
+; SI: s_mul_i32
+; SI: s_mul_i32
+; SI: s_mul_i32
+; SI: s_mul_i32
+; SI: s_mul_i32
+
+; SI: buffer_store_dwordx4
+define void @s_mul_i128(i128 addrspace(1)* %out, i128 %a, i128 %b) nounwind #0 {
+  %mul = mul i128 %a, %b
+  store i128 %mul, i128 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_mul_i128:
+; SI: {{buffer|flat}}_load_dwordx4
+; SI: {{buffer|flat}}_load_dwordx4
+
+; SI: v_mul_lo_i32
+; SI: v_mul_hi_u32
+; SI: v_mul_hi_u32
+; SI: v_mul_lo_i32
+; SI: v_mul_hi_u32
+; SI: v_mul_hi_u32
+; SI: v_mul_lo_i32
+; SI: v_mul_lo_i32
+; SI: v_add_i32_e32
+; SI: v_mul_hi_u32
+; SI: v_mul_lo_i32
+; SI: v_mul_hi_u32
+; SI: v_mul_lo_i32
+; SI: v_mul_lo_i32
+; SI: v_mul_lo_i32
+; SI: v_mul_lo_i32
+; SI: v_mul_lo_i32
+
+; SI: {{buffer|flat}}_store_dwordx4
+define void @v_mul_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %aptr, i128 addrspace(1)* %bptr) #0 {
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %gep.a = getelementptr inbounds i128, i128 addrspace(1)* %aptr, i32 %tid
+  %gep.b = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
+  %gep.out = getelementptr inbounds i128, i128 addrspace(1)* %bptr, i32 %tid
+  %a = load i128, i128 addrspace(1)* %gep.a
+  %b = load i128, i128 addrspace(1)* %gep.b
+  %mul = mul i128 %a, %b
+  store i128 %mul, i128 addrspace(1)* %gep.out
+  ret void
+}
+
+declare i32 @llvm.r600.read.tidig.x() #1
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone}

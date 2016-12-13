@@ -1,0 +1,24 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+
+# This test checks the expansion of the 16-bit COM pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_comwrd() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_comwrd
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_comwrd
+
+    ; CHECK:      %r14 = COMRd %r14, implicit-def dead %sreg
+    ; CHECK-NEXT: %r15 = COMRd %r15, implicit-def %sreg
+
+    %r15r14 = COMWRd %r9r8, implicit-def %sreg
+...

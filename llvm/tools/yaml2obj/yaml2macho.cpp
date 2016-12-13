@@ -393,6 +393,9 @@ Error MachOWriter::writeDWARFData(raw_ostream &OS,
     } else if (0 == strncmp(&Section.sectname[0], "__debug_abbrev", 16)) {
       yaml2debug_abbrev(OS, Obj.DWARF);
     }
+    else if (0 == strncmp(&Section.sectname[0], "__debug_aranges", 16)) {
+      yaml2debug_aranges(OS, Obj.DWARF);
+    }
   }
   return Error::success();
 }

@@ -324,7 +324,7 @@ public:
       if (E.ForwardChunk) {
         write32le(P, E.ForwardChunk->getRVA());
       } else {
-        write32le(P, cast<Defined>(E.Sym->repl())->getRVA());
+        write32le(P, cast<Defined>(E.Sym)->getRVA());
       }
     }
   }

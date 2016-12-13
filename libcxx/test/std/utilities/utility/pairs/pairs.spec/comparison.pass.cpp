@@ -27,8 +27,8 @@ int main()
 {
     {
         typedef std::pair<int, short> P;
-        P p1(3, 4);
-        P p2(3, 4);
+        P p1(3, static_cast<short>(4));
+        P p2(3, static_cast<short>(4));
         assert( (p1 == p2));
         assert(!(p1 != p2));
         assert(!(p1 <  p2));
@@ -38,8 +38,8 @@ int main()
     }
     {
         typedef std::pair<int, short> P;
-        P p1(2, 4);
-        P p2(3, 4);
+        P p1(2, static_cast<short>(4));
+        P p2(3, static_cast<short>(4));
         assert(!(p1 == p2));
         assert( (p1 != p2));
         assert( (p1 <  p2));
@@ -49,8 +49,8 @@ int main()
     }
     {
         typedef std::pair<int, short> P;
-        P p1(3, 2);
-        P p2(3, 4);
+        P p1(3, static_cast<short>(2));
+        P p2(3, static_cast<short>(4));
         assert(!(p1 == p2));
         assert( (p1 != p2));
         assert( (p1 <  p2));
@@ -60,8 +60,8 @@ int main()
     }
     {
         typedef std::pair<int, short> P;
-        P p1(3, 4);
-        P p2(2, 4);
+        P p1(3, static_cast<short>(4));
+        P p2(2, static_cast<short>(4));
         assert(!(p1 == p2));
         assert( (p1 != p2));
         assert(!(p1 <  p2));
@@ -71,8 +71,8 @@ int main()
     }
     {
         typedef std::pair<int, short> P;
-        P p1(3, 4);
-        P p2(3, 2);
+        P p1(3, static_cast<short>(4));
+        P p2(3, static_cast<short>(2));
         assert(!(p1 == p2));
         assert( (p1 != p2));
         assert(!(p1 <  p2));
@@ -84,8 +84,8 @@ int main()
 #if TEST_STD_VER > 11
     {
         typedef std::pair<int, short> P;
-        constexpr P p1(3, 4);
-        constexpr P p2(3, 2);
+        constexpr P p1(3, static_cast<short>(4));
+        constexpr P p2(3, static_cast<short>(2));
         static_assert(!(p1 == p2), "");
         static_assert( (p1 != p2), "");
         static_assert(!(p1 <  p2), "");

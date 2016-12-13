@@ -948,10 +948,10 @@ def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 // Eventually, it would be nice to allow ConstantHoisting to merge constants
 // globally for potentially added savings.
 //
-def imm8_su : PatLeaf<(i8 imm), [{
+def imm8_su : PatLeaf<(i8 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
-def imm16_su : PatLeaf<(i16 imm), [{
+def imm16_su : PatLeaf<(i16 relocImm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 def imm32_su : PatLeaf<(i32 relocImm), [{

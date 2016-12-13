@@ -28,9 +28,11 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
   set(LIBCXX_CXX_ABI_LIBRARY ${abilib})
   set(LIBCXX_ABILIB_FILES ${abifiles})
 
-  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include")
+  # The place in the build tree where we store out-of-source headers.
+  set(LIBCXX_BUILD_HEADERS_ROOT "${CMAKE_BINARY_DIR}/include/c++-build")
+  file(MAKE_DIRECTORY "${LIBCXX_BUILD_HEADERS_ROOT}")
   foreach(_d ${abidirs})
-    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/${_d}")
+    file(MAKE_DIRECTORY "${LIBCXX_BUILD_HEADERS_ROOT}/${_d}")
   endforeach()
 
   foreach(fpath ${LIBCXX_ABILIB_FILES})
@@ -41,16 +43,16 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
         get_filename_component(dstdir ${fpath} PATH)
         get_filename_component(ifile ${fpath} NAME)
         file(COPY "${incpath}/${fpath}"
-          DESTINATION "${CMAKE_BINARY_DIR}/include/${dstdir}"
+          DESTINATION "${LIBCXX_BUILD_HEADERS_ROOT}/${dstdir}"
           )
         if (LIBCXX_INSTALL_HEADERS)
-          install(FILES "${CMAKE_BINARY_DIR}/include/${fpath}"
+          install(FILES "${LIBCXX_BUILD_HEADERS_ROOT}/${fpath}"
             DESTINATION include/c++/v1/${dstdir}
             COMPONENT libcxx
             PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
             )
         endif()
-        list(APPEND abilib_headers "${CMAKE_BINARY_DIR}/include/${fpath}")
+        list(APPEND abilib_headers "${LIBCXX_BUILD_HEADERS_ROOT}/${fpath}")
       endif()
     endforeach()
     if (NOT found)
@@ -58,7 +60,7 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
     endif()
   endforeach()
 
-  include_directories("${CMAKE_BINARY_DIR}/include")
+  include_directories("${LIBCXX_BUILD_HEADERS_ROOT}")
 endmacro()
 
 

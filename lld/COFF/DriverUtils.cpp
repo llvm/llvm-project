@@ -17,6 +17,7 @@
 #include "Driver.h"
 #include "Error.h"
 #include "Symbols.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/COFF.h"
@@ -49,23 +50,23 @@ public:
   void add(const char *S) { Args.push_back(Saver.save(S).data()); }
 
   void run() {
-    ErrorOr<std::string> ExeOrErr = llvm::sys::findProgramByName(Prog);
+    ErrorOr<std::string> ExeOrErr = sys::findProgramByName(Prog);
     if (auto EC = ExeOrErr.getError())
       fatal(EC, "unable to find " + Prog + " in PATH: ");
     const char *Exe = Saver.save(*ExeOrErr).data();
     Args.insert(Args.begin(), Exe);
     Args.push_back(nullptr);
-    if (llvm::sys::ExecuteAndWait(Args[0], Args.data()) != 0) {
+    if (sys::ExecuteAndWait(Args[0], Args.data()) != 0) {
       for (const char *S : Args)
         if (S)
-          llvm::errs() << S << " ";
+          errs() << S << " ";
       fatal("ExecuteAndWait failed");
     }
   }
 
 private:
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver;
   StringRef Prog;
   std::vector<const char *> Args;
 };
@@ -166,8 +167,8 @@ void parseMerge(StringRef S) {
   if (!Inserted) {
     StringRef Existing = Pair.first->second;
     if (Existing != To)
-      llvm::errs() << "warning: " << S << ": already merged into "
-                   << Existing << "\n";
+      errs() << "warning: " << S << ": already merged into " << Existing
+             << "\n";
   }
 }
 
@@ -322,7 +323,7 @@ TemporaryFile createDefaultXml() {
 
   // Open the temporary file for writing.
   std::error_code EC;
-  llvm::raw_fd_ostream OS(File.Path, EC, sys::fs::F_Text);
+  raw_fd_ostream OS(File.Path, EC, sys::fs::F_Text);
   if (EC)
     fatal(EC, "failed to open " + File.Path);
 
@@ -389,7 +390,7 @@ std::unique_ptr<MemoryBuffer> createManifestRes() {
 
   // Open the temporary file for writing.
   std::error_code EC;
-  llvm::raw_fd_ostream Out(RCFile.Path, EC, sys::fs::F_Text);
+  raw_fd_ostream Out(RCFile.Path, EC, sys::fs::F_Text);
   if (EC)
     fatal(EC, "failed to open " + RCFile.Path);
 
@@ -421,7 +422,7 @@ void createSideBySideManifest() {
   if (Path == "")
     Path = Config->OutputFile + ".manifest";
   std::error_code EC;
-  llvm::raw_fd_ostream Out(Path, EC, llvm::sys::fs::F_Text);
+  raw_fd_ostream Out(Path, EC, sys::fs::F_Text);
   if (EC)
     fatal(EC, "failed to create manifest");
   Out << createManifestXml();
@@ -509,12 +510,14 @@ void fixupExports() {
   }
 
   for (Export &E : Config->Exports) {
+    SymbolBody *Sym = E.Sym;
     if (!E.ForwardTo.empty()) {
       E.SymbolName = E.Name;
-    } else if (Undefined *U = cast_or_null<Undefined>(E.Sym->WeakAlias)) {
-      E.SymbolName = U->getName();
     } else {
-      E.SymbolName = E.Sym->getName();
+      if (auto *U = dyn_cast<Undefined>(Sym))
+        if (U->WeakAlias)
+          Sym = U->WeakAlias;
+      E.SymbolName = Sym->getName();
     }
   }
 
@@ -539,7 +542,7 @@ void fixupExports() {
     Export *Existing = Pair.first->second;
     if (E == *Existing || E.Name != Existing->Name)
       continue;
-    llvm::errs() << "warning: duplicate /export option: " << E.Name << "\n";
+    errs() << "warning: duplicate /export option: " << E.Name << "\n";
   }
   Config->Exports = std::move(V);
 
@@ -601,7 +604,7 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
     TemporaryFile& ResFile = ResFiles.back();
     // Write the content of the resource in a temporary file
     std::error_code EC;
-    llvm::raw_fd_ostream OS(ResFile.Path, EC, sys::fs::F_None);
+    raw_fd_ostream OS(ResFile.Path, EC, sys::fs::F_None);
     if (EC)
       fatal(EC, "failed to open " + ResFile.Path);
     OS << MB.getBuffer();
@@ -638,7 +641,7 @@ public:
 };
 
 // Parses a given list of options.
-llvm::opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
+opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
   // First, replace respnose files (@<file>-style options).
   std::vector<const char *> Argv = replaceResponseFiles(ArgsArr);
 
@@ -646,28 +649,27 @@ llvm::opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
   COFFOptTable Table;
   unsigned MissingIndex;
   unsigned MissingCount;
-  llvm::opt::InputArgList Args =
-      Table.ParseArgs(Argv, MissingIndex, MissingCount);
+  opt::InputArgList Args = Table.ParseArgs(Argv, MissingIndex, MissingCount);
 
   // Print the real command line if response files are expanded.
   if (Args.hasArg(OPT_verbose) && ArgsArr.size() != Argv.size()) {
-    llvm::outs() << "Command line:";
+    outs() << "Command line:";
     for (const char *S : Argv)
-      llvm::outs() << " " << S;
-    llvm::outs() << "\n";
+      outs() << " " << S;
+    outs() << "\n";
   }
 
   if (MissingCount)
     fatal(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
+    errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
   return Args;
 }
 
 // link.exe has an interesting feature. If LINK environment exists,
 // its contents are handled as a command line string. So you can pass
 // extra arguments using the environment variable.
-llvm::opt::InputArgList ArgParser::parseLINK(ArrayRef<const char *> Args) {
+opt::InputArgList ArgParser::parseLINK(ArrayRef<const char *> Args) {
   // Concatenate LINK env and command line arguments, and then parse them.
   Optional<std::string> Env = Process::GetEnv("LINK");
   if (!Env)
@@ -679,8 +681,7 @@ llvm::opt::InputArgList ArgParser::parseLINK(ArrayRef<const char *> Args) {
 
 std::vector<const char *> ArgParser::tokenize(StringRef S) {
   SmallVector<const char *, 16> Tokens;
-  StringSaver Saver(AllocAux);
-  llvm::cl::TokenizeWindowsCommandLine(S, Saver, Tokens);
+  cl::TokenizeWindowsCommandLine(S, Saver, Tokens);
   return std::vector<const char *>(Tokens.begin(), Tokens.end());
 }
 
@@ -689,14 +690,13 @@ std::vector<const char *> ArgParser::tokenize(StringRef S) {
 std::vector<const char *>
 ArgParser::replaceResponseFiles(std::vector<const char *> Argv) {
   SmallVector<const char *, 256> Tokens(Argv.data(), Argv.data() + Argv.size());
-  StringSaver Saver(AllocAux);
   ExpandResponseFiles(Saver, TokenizeWindowsCommandLine, Tokens);
   return std::vector<const char *>(Tokens.begin(), Tokens.end());
 }
 
 void printHelp(const char *Argv0) {
   COFFOptTable Table;
-  Table.PrintHelp(llvm::outs(), Argv0, "LLVM Linker", false);
+  Table.PrintHelp(outs(), Argv0, "LLVM Linker", false);
 }
 
 } // namespace coff

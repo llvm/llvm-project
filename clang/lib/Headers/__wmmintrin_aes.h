@@ -35,7 +35,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VAESENC instruction.
+/// This intrinsic corresponds to the <c> VAESENC </c> instruction.
 ///
 /// \param __V
 ///    A 128-bit integer vector containing the state value.
@@ -55,7 +55,7 @@ _mm_aesenc_si128(__m128i __V, __m128i __R)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VAESENCLAST instruction.
+/// This intrinsic corresponds to the <c> VAESENCLAST </c> instruction.
 ///
 /// \param __V
 ///    A 128-bit integer vector containing the state value.
@@ -75,7 +75,7 @@ _mm_aesenclast_si128(__m128i __V, __m128i __R)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VAESDEC instruction.
+/// This intrinsic corresponds to the <c> VAESDEC </c> instruction.
 ///
 /// \param __V
 ///    A 128-bit integer vector containing the state value.
@@ -95,7 +95,7 @@ _mm_aesdec_si128(__m128i __V, __m128i __R)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VAESDECLAST instruction.
+/// This intrinsic corresponds to the <c> VAESDECLAST </c> instruction.
 ///
 /// \param __V
 ///    A 128-bit integer vector containing the state value.
@@ -114,7 +114,7 @@ _mm_aesdeclast_si128(__m128i __V, __m128i __R)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c VAESIMC instruction.
+/// This intrinsic corresponds to the <c> VAESIMC </c> instruction.
 ///
 /// \param __V
 ///    A 128-bit integer vector containing the expanded key.
@@ -136,7 +136,7 @@ _mm_aesimc_si128(__m128i __V)
 /// __m128i _mm_aeskeygenassist_si128(__m128i C, const int R);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c AESKEYGENASSIST instruction.
+/// This intrinsic corresponds to the <c> AESKEYGENASSIST </c> instruction.
 ///
 /// \param C
 ///    A 128-bit integer vector that is used to generate the AES encryption key.

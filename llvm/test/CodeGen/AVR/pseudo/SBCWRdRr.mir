@@ -1,0 +1,24 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+
+# This test checks the expansion of the 16-bit subtraction with carry pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_sbcwrdrr() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_sbcwrdrr
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_sbcwrdrr
+
+    ; CHECK:      %r14 = SBCRdRr %r14, %r20, implicit-def %sreg
+    ; CHECK-NEXT: %r15 = SBCRdRr %r15, %r21, implicit-def %sreg, implicit killed %sreg
+
+    %r15r14 = SBCWRdRr %r15r14, %r21r20, implicit-def %sreg, implicit %sreg
+...

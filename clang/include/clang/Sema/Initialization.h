@@ -120,6 +120,16 @@ private:
     bool NRVO;
   };
 
+  struct VD {
+    /// \brief The VarDecl, FieldDecl, or BindingDecl being initialized.
+    ValueDecl *VariableOrMember;
+
+    /// \brief When Kind == EK_Member, whether this is an implicit member
+    /// initialization in a copy or move constructor. These can perform array
+    /// copies.
+    bool IsImplicitFieldInit;
+  };
+
   struct C {
     /// \brief The name of the variable being captured by an EK_LambdaCapture.
     IdentifierInfo *VarID;
@@ -129,9 +139,8 @@ private:
   };
 
   union {
-    /// \brief When Kind == EK_Variable, EK_Member or EK_Binding, the VarDecl,
-    /// FieldDecl or BindingDecl, respectively.
-    ValueDecl *VariableOrMember;
+    /// \brief When Kind == EK_Variable, EK_Member or EK_Binding, the variable.
+    VD Variable;
     
     /// \brief When Kind == EK_RelatedResult, the ObjectiveC method where
     /// result type was implicitly changed to accommodate ARC semantics.
@@ -165,7 +174,7 @@ private:
   /// \brief Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
     : Kind(EK), Parent(nullptr), Type(Var->getType()),
-      ManglingNumber(0), VariableOrMember(Var) { }
+      ManglingNumber(0), Variable{Var, false} { }
   
   /// \brief Create the initialization entity for the result of a
   /// function, throwing an object, performing an explicit cast, or
@@ -179,9 +188,11 @@ private:
   }
   
   /// \brief Create the initialization entity for a member subobject.
-  InitializedEntity(FieldDecl *Member, const InitializedEntity *Parent) 
+  InitializedEntity(FieldDecl *Member, const InitializedEntity *Parent,
+                    bool Implicit) 
     : Kind(EK_Member), Parent(Parent), Type(Member->getType()),
-      ManglingNumber(0), VariableOrMember(Member) { }
+      ManglingNumber(0), Variable{Member, Implicit} {
+  }
   
   /// \brief Create the initialization entity for an array element.
   InitializedEntity(ASTContext &Context, unsigned Index, 
@@ -299,15 +310,17 @@ public:
   /// \brief Create the initialization entity for a member subobject.
   static InitializedEntity
   InitializeMember(FieldDecl *Member,
-                   const InitializedEntity *Parent = nullptr) {
-    return InitializedEntity(Member, Parent);
+                   const InitializedEntity *Parent = nullptr,
+                   bool Implicit = false) {
+    return InitializedEntity(Member, Parent, Implicit);
   }
   
   /// \brief Create the initialization entity for a member subobject.
   static InitializedEntity
   InitializeMember(IndirectFieldDecl *Member,
-                   const InitializedEntity *Parent = nullptr) {
-    return InitializedEntity(Member->getAnonField(), Parent);
+                   const InitializedEntity *Parent = nullptr,
+                   bool Implicit = false) {
+    return InitializedEntity(Member->getAnonField(), Parent, Implicit);
   }
 
   /// \brief Create the initialization entity for an array element.
@@ -399,6 +412,12 @@ public:
   bool isVariableLengthArrayNew() const {
     return getKind() == EK_New && dyn_cast_or_null<IncompleteArrayType>(
                                       getType()->getAsArrayTypeUnsafe());
+  }
+
+  /// \brief Is this the implicit initialization of a member of a class from
+  /// a defaulted constructor?
+  bool isImplicitMemberInitializer() const {
+    return getKind() == EK_Member && Variable.IsImplicitFieldInit;
   }
 
   /// \brief Determine the location of the 'return' keyword when initializing
@@ -668,6 +687,9 @@ public:
     /// temporary object, which is permitted (but not required) by
     /// C++98/03 but not C++0x.
     SK_ExtraneousCopyToTemporary,
+    /// \brief Direct-initialization from a reference-related object in the
+    /// final stage of class copy-initialization.
+    SK_FinalCopy,
     /// \brief Perform a user-defined conversion, either via a conversion
     /// function or via a constructor.
     SK_UserConversion,
@@ -705,6 +727,10 @@ public:
     /// \brief An initialization that "converts" an Objective-C object
     /// (not a point to an object) to another Objective-C object type.
     SK_ObjCObjectConversion,
+    /// \brief Array indexing for initialization by elementwise copy.
+    SK_ArrayLoopIndex,
+    /// \brief Array initialization by elementwise copy.
+    SK_ArrayLoopInit,
     /// \brief Array initialization (from an array rvalue).
     /// This is a GNU C extension.
     SK_ArrayInit,
@@ -805,6 +831,10 @@ public:
     FK_ReferenceInitOverloadFailed,
     /// \brief Non-const lvalue reference binding to a temporary.
     FK_NonConstLValueReferenceBindingToTemporary,
+    /// \brief Non-const lvalue reference binding to a bit-field.
+    FK_NonConstLValueReferenceBindingToBitfield,
+    /// \brief Non-const lvalue reference binding to a vector element.
+    FK_NonConstLValueReferenceBindingToVectorElement,
     /// \brief Non-const lvalue reference binding to an lvalue of unrelated
     /// type.
     FK_NonConstLValueReferenceBindingToUnrelated,
@@ -1028,6 +1058,10 @@ public:
   /// \param T The type of the temporary being created.
   void AddExtraneousCopyToTemporary(QualType T);
 
+  /// \brief Add a new step that makes a copy of the input to an object of
+  /// the given type, as the final step in class copy-initialization.
+  void AddFinalCopy(QualType T);
+
   /// \brief Add a new step invoking a conversion function, which is either
   /// a constructor or a conversion function.
   void AddUserConversionStep(FunctionDecl *Function,
@@ -1084,6 +1118,9 @@ public:
   /// \brief Add an Objective-C object conversion step, which is
   /// always a no-op.
   void AddObjCObjectConversionStep(QualType T);
+
+  /// \brief Add an array initialization loop step.
+  void AddArrayInitLoopStep(QualType T, QualType EltTy);
 
   /// \brief Add an array initialization step.
   void AddArrayInitStep(QualType T);

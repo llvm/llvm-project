@@ -5,7 +5,7 @@
 # RUN: echo '  extern "C++" { "foo(int)"; "zed(int)"; "abc::abc()"; };' >> %t.script
 # RUN: echo "};" >> %t.script
 # RUN: echo "LIBSAMPLE_2.0 { global:" >> %t.script
-# RUN: echo '  extern "C++" { "bar(int)"; };' >> %t.script
+# RUN: echo '  extern "C" { _Z3bari; };' >> %t.script
 # RUN: echo "};" >> %t.script
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj -V -dyn-symbols %t.so | FileCheck --check-prefix=DSO %s

@@ -16,6 +16,8 @@
 // Returns: basic_string_view(data()+pos, rlen).
 
 #include <string_view>
+#include <algorithm>
+#include <stdexcept>
 #include <cassert>
 
 #include "test_macros.h"
@@ -39,7 +41,7 @@ void test1(std::basic_string_view<CharT> sv, size_t n, size_t pos) {
 #endif
     const size_t rlen = std::min(n, sv.size() - pos);
     assert (sv1.size() == rlen);
-    for (size_t i = 0; i <= rlen; ++i)
+    for (size_t i = 0; i < rlen; ++i)
         assert(sv[pos+i] == sv1[i]);
 }
 

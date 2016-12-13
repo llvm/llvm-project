@@ -18,6 +18,7 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class Iter>
@@ -65,7 +66,7 @@ test()
     test<Iter>(10);
     test<Iter>(1000);
     {
-    const unsigned N = 100;
+    const int N = 100;
     int* a = new int[N];
     for (int i = 0; i < N; ++i)
         a[i] = 5;

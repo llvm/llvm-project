@@ -122,15 +122,19 @@ private:
 
 AnalysisKey TestImmutableFunctionAnalysis::Key;
 
+struct LambdaModulePass : public PassInfoMixin<LambdaModulePass> {
+  template <typename T>
+  LambdaModulePass(T &&Arg) : Func(std::forward<T>(Arg)) {}
+
+  PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM) {
+    return Func(F, AM);
+  }
+
+  std::function<PreservedAnalyses(Module &, ModuleAnalysisManager &)> Func;
+};
+
 struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
   template <typename T> LambdaSCCPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  LambdaSCCPass(LambdaSCCPass &&Arg) : Func(std::move(Arg.Func)) {}
-  LambdaSCCPass &operator=(LambdaSCCPass &&RHS) {
-    Func = std::move(RHS.Func);
-    return *this;
-  }
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR) {
@@ -143,14 +147,8 @@ struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
 };
 
 struct LambdaFunctionPass : public PassInfoMixin<LambdaFunctionPass> {
-  template <typename T> LambdaFunctionPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  LambdaFunctionPass(LambdaFunctionPass &&Arg) : Func(std::move(Arg.Func)) {}
-  LambdaFunctionPass &operator=(LambdaFunctionPass &&RHS) {
-    Func = std::move(RHS.Func);
-    return *this;
-  }
+  template <typename T>
+  LambdaFunctionPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     return Func(F, AM);
@@ -232,7 +230,7 @@ public:
     MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
     MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
     MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
-    CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(FAM); });
+    CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(); });
     CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
     FAM.registerPass([&] { return CGSCCAnalysisManagerFunctionProxy(CGAM); });
     FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
@@ -257,6 +255,14 @@ TEST_F(CGSCCPassManagerTest, Basic) {
   MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
 
   CGSCCPassManager CGPM1(/*DebugLogging*/ true);
+  FunctionPassManager FPM1(/*DebugLogging*/ true);
+  int FunctionPassRunCount1 = 0;
+  FPM1.addPass(LambdaFunctionPass([&](Function &, FunctionAnalysisManager &) {
+    ++FunctionPassRunCount1;
+    return PreservedAnalyses::none();
+  }));
+  CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
+
   int SCCPassRunCount1 = 0;
   int AnalyzedInstrCount1 = 0;
   int AnalyzedSCCFunctionCount1 = 0;
@@ -289,23 +295,36 @@ TEST_F(CGSCCPassManagerTest, Basic) {
         return PreservedAnalyses::all();
       }));
 
-  FunctionPassManager FPM1(/*DebugLogging*/ true);
-  int FunctionPassRunCount1 = 0;
-  FPM1.addPass(LambdaFunctionPass([&](Function &, FunctionAnalysisManager &) {
-    ++FunctionPassRunCount1;
-    return PreservedAnalyses::all();
+  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  int FunctionPassRunCount2 = 0;
+  FPM2.addPass(LambdaFunctionPass([&](Function &, FunctionAnalysisManager &) {
+    ++FunctionPassRunCount2;
+    return PreservedAnalyses::none();
   }));
-  CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
+  CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM2)));
+
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
 
+  FunctionPassManager FPM3(/*DebugLogging*/ true);
+  int FunctionPassRunCount3 = 0;
+  FPM3.addPass(LambdaFunctionPass([&](Function &, FunctionAnalysisManager &) {
+    ++FunctionPassRunCount3;
+    return PreservedAnalyses::none();
+  }));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM3)));
+
   MPM.run(*M, MAM);
+
+  EXPECT_EQ(4, SCCPassRunCount1);
+  EXPECT_EQ(6, FunctionPassRunCount1);
+  EXPECT_EQ(6, FunctionPassRunCount2);
+  EXPECT_EQ(6, FunctionPassRunCount3);
 
   EXPECT_EQ(1, ModuleAnalysisRuns);
   EXPECT_EQ(4, SCCAnalysisRuns);
   EXPECT_EQ(6, FunctionAnalysisRuns);
   EXPECT_EQ(6, ImmutableFunctionAnalysisRuns);
 
-  EXPECT_EQ(4, SCCPassRunCount1);
   EXPECT_EQ(14, AnalyzedInstrCount1);
   EXPECT_EQ(6, AnalyzedSCCFunctionCount1);
   EXPECT_EQ(4 * 6, AnalyzedModuleFunctionCount1);
@@ -473,4 +492,332 @@ TEST_F(CGSCCPassManagerTest, TestFunctionPassInsideCGSCCInvalidatesModuleAnalysi
   EXPECT_FALSE(FoundModuleAnalysis3);
 }
 
+// Test that a Module pass which fails to preserve an SCC analysis in fact
+// invalidates that analysis.
+TEST_F(CGSCCPassManagerTest, TestModulePassInvalidatesSCCAnalysis) {
+  int SCCAnalysisRuns = 0;
+  CGAM.registerPass([&] { return TestSCCAnalysis(SCCAnalysisRuns); });
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  CGSCCPassManager CGPM1(/*DebugLogging*/ true);
+  CGPM1.addPass(RequireAnalysisPass<TestSCCAnalysis, LazyCallGraph::SCC,
+                                    CGSCCAnalysisManager, LazyCallGraph &,
+                                    CGSCCUpdateResult &>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
+
+  // Now run a module pass that preserves the LazyCallGraph and the proxy but
+  // not the SCC analysis.
+  MPM.addPass(LambdaModulePass([&](Module &M, ModuleAnalysisManager &) {
+    PreservedAnalyses PA;
+    PA.preserve<LazyCallGraphAnalysis>();
+    PA.preserve<CGSCCAnalysisManagerModuleProxy>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again. This
+  // will trigger re-running it.
+  CGSCCPassManager CGPM2(/*DebugLogging*/ true);
+  CGPM2.addPass(RequireAnalysisPass<TestSCCAnalysis, LazyCallGraph::SCC,
+                                    CGSCCAnalysisManager, LazyCallGraph &,
+                                    CGSCCUpdateResult &>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
+
+  MPM.run(*M, MAM);
+  // Two runs and four SCCs.
+  EXPECT_EQ(2 * 4, SCCAnalysisRuns);
+}
+
+// Check that marking the SCC analysis preserved is sufficient to avoid
+// invaliadtion. This should only run the analysis once for each SCC.
+TEST_F(CGSCCPassManagerTest, TestModulePassCanPreserveSCCAnalysis) {
+  int SCCAnalysisRuns = 0;
+  CGAM.registerPass([&] { return TestSCCAnalysis(SCCAnalysisRuns); });
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  CGSCCPassManager CGPM1(/*DebugLogging*/ true);
+  CGPM1.addPass(RequireAnalysisPass<TestSCCAnalysis, LazyCallGraph::SCC,
+                                    CGSCCAnalysisManager, LazyCallGraph &,
+                                    CGSCCUpdateResult &>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
+
+  // Now run a module pass that preserves each of the necessary components
+  // (but not everything).
+  MPM.addPass(LambdaModulePass([&](Module &M, ModuleAnalysisManager &) {
+    PreservedAnalyses PA;
+    PA.preserve<LazyCallGraphAnalysis>();
+    PA.preserve<CGSCCAnalysisManagerModuleProxy>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
+    PA.preserve<TestSCCAnalysis>();
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again but find
+  // it in the cache.
+  CGSCCPassManager CGPM2(/*DebugLogging*/ true);
+  CGPM2.addPass(RequireAnalysisPass<TestSCCAnalysis, LazyCallGraph::SCC,
+                                    CGSCCAnalysisManager, LazyCallGraph &,
+                                    CGSCCUpdateResult &>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
+
+  MPM.run(*M, MAM);
+  // Four SCCs
+  EXPECT_EQ(4, SCCAnalysisRuns);
+}
+
+// Check that even when the analysis is preserved, if the SCC information isn't
+// we still nuke things because the SCC keys could change.
+TEST_F(CGSCCPassManagerTest, TestModulePassInvalidatesSCCAnalysisOnCGChange) {
+  int SCCAnalysisRuns = 0;
+  CGAM.registerPass([&] { return TestSCCAnalysis(SCCAnalysisRuns); });
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  CGSCCPassManager CGPM1(/*DebugLogging*/ true);
+  CGPM1.addPass(RequireAnalysisPass<TestSCCAnalysis, LazyCallGraph::SCC,
+                                    CGSCCAnalysisManager, LazyCallGraph &,
+                                    CGSCCUpdateResult &>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
+
+  // Now run a module pass that preserves the analysis but not the call
+  // graph or proxy.
+  MPM.addPass(LambdaModulePass([&](Module &M, ModuleAnalysisManager &) {
+    PreservedAnalyses PA;
+    PA.preserve<TestSCCAnalysis>();
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again.
+  CGSCCPassManager CGPM2(/*DebugLogging*/ true);
+  CGPM2.addPass(RequireAnalysisPass<TestSCCAnalysis, LazyCallGraph::SCC,
+                                    CGSCCAnalysisManager, LazyCallGraph &,
+                                    CGSCCUpdateResult &>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
+
+  MPM.run(*M, MAM);
+  // Two runs and four SCCs.
+  EXPECT_EQ(2 * 4, SCCAnalysisRuns);
+}
+
+// Test that an SCC pass which fails to preserve a Function analysis in fact
+// invalidates that analysis.
+TEST_F(CGSCCPassManagerTest, TestSCCPassInvalidatesFunctionAnalysis) {
+  int FunctionAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
+
+  // Create a very simple module with a single function and SCC to make testing
+  // these issues much easier.
+  std::unique_ptr<Module> M = parseIR("declare void @g()\n"
+                                      "declare void @h()\n"
+                                      "define void @f() {\n"
+                                      "entry:\n"
+                                      "  call void @g()\n"
+                                      "  call void @h()\n"
+                                      "  ret void\n"
+                                      "}\n");
+
+  CGSCCPassManager CGPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  FunctionPassManager FPM1(/*DebugLogging*/ true);
+  FPM1.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
+
+  // Now run a module pass that preserves the LazyCallGraph and proxy but not
+  // the SCC analysis.
+  CGPM.addPass(LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
+                                 LazyCallGraph &, CGSCCUpdateResult &) {
+    PreservedAnalyses PA;
+    PA.preserve<LazyCallGraphAnalysis>();
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again. This
+  // will trigger re-running it.
+  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  FPM2.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM2)));
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.run(*M, MAM);
+  EXPECT_EQ(2, FunctionAnalysisRuns);
+}
+
+// Check that marking the SCC analysis preserved is sufficient. This should
+// only run the analysis once the SCC.
+TEST_F(CGSCCPassManagerTest, TestSCCPassCanPreserveFunctionAnalysis) {
+  int FunctionAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
+
+  // Create a very simple module with a single function and SCC to make testing
+  // these issues much easier.
+  std::unique_ptr<Module> M = parseIR("declare void @g()\n"
+                                      "declare void @h()\n"
+                                      "define void @f() {\n"
+                                      "entry:\n"
+                                      "  call void @g()\n"
+                                      "  call void @h()\n"
+                                      "  ret void\n"
+                                      "}\n");
+
+  CGSCCPassManager CGPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  FunctionPassManager FPM1(/*DebugLogging*/ true);
+  FPM1.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
+
+  // Now run a module pass that preserves each of the necessary components
+  // (but
+  // not everything).
+  CGPM.addPass(LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
+                                 LazyCallGraph &, CGSCCUpdateResult &) {
+    PreservedAnalyses PA;
+    PA.preserve<LazyCallGraphAnalysis>();
+    PA.preserve<TestFunctionAnalysis>();
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again but find
+  // it in the cache.
+  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  FPM2.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM2)));
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.run(*M, MAM);
+  EXPECT_EQ(1, FunctionAnalysisRuns);
+}
+
+// Note that there is no test for invalidating the call graph or other
+// structure with an SCC pass because there is no mechanism to do that from
+// withinsuch a pass. Instead, such a pass has to directly update the call
+// graph structure.
+
+// Test that a madule pass invalidates function analyses when the CGSCC proxies
+// and pass manager.
+TEST_F(CGSCCPassManagerTest,
+       TestModulePassInvalidatesFunctionAnalysisNestedInCGSCC) {
+  MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
+
+  int FunctionAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  FunctionPassManager FPM1(/*DebugLogging*/ true);
+  FPM1.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGSCCPassManager CGPM1(/*DebugLogging*/ true);
+  CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
+
+  // Now run a module pass that preserves the LazyCallGraph and proxy but not
+  // the Function analysis.
+  MPM.addPass(LambdaModulePass([&](Module &M, ModuleAnalysisManager &) {
+    PreservedAnalyses PA;
+    PA.preserve<LazyCallGraphAnalysis>();
+    PA.preserve<CGSCCAnalysisManagerModuleProxy>();
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again. This
+  // will trigger re-running it.
+  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  FPM2.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGSCCPassManager CGPM2(/*DebugLogging*/ true);
+  CGPM2.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM2)));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
+
+  MPM.run(*M, MAM);
+  // Two runs and 6 functions.
+  EXPECT_EQ(2 * 6, FunctionAnalysisRuns);
+}
+
+// Check that by marking the function pass and FAM proxy as preserved, this
+// propagates all the way through.
+TEST_F(CGSCCPassManagerTest,
+       TestModulePassCanPreserveFunctionAnalysisNestedInCGSCC) {
+  MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
+
+  int FunctionAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  FunctionPassManager FPM1(/*DebugLogging*/ true);
+  FPM1.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGSCCPassManager CGPM1(/*DebugLogging*/ true);
+  CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
+
+  // Now run a module pass that preserves the LazyCallGraph, the proxy, and
+  // the Function analysis.
+  MPM.addPass(LambdaModulePass([&](Module &M, ModuleAnalysisManager &) {
+    PreservedAnalyses PA;
+    PA.preserve<LazyCallGraphAnalysis>();
+    PA.preserve<CGSCCAnalysisManagerModuleProxy>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
+    PA.preserve<TestFunctionAnalysis>();
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again. This
+  // will trigger re-running it.
+  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  FPM2.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGSCCPassManager CGPM2(/*DebugLogging*/ true);
+  CGPM2.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM2)));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
+
+  MPM.run(*M, MAM);
+  // One run and 6 functions.
+  EXPECT_EQ(6, FunctionAnalysisRuns);
+}
+
+// Check that if the lazy call graph itself isn't preserved we still manage to
+// invalidate everything.
+TEST_F(CGSCCPassManagerTest,
+       TestModulePassInvalidatesFunctionAnalysisNestedInCGSCCOnCGChange) {
+  MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
+
+  int FunctionAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+
+  // First force the analysis to be run.
+  FunctionPassManager FPM1(/*DebugLogging*/ true);
+  FPM1.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGSCCPassManager CGPM1(/*DebugLogging*/ true);
+  CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
+
+  // Now run a module pass that preserves the LazyCallGraph but not the
+  // Function analysis.
+  MPM.addPass(LambdaModulePass([&](Module &M, ModuleAnalysisManager &) {
+    PreservedAnalyses PA;
+    return PA;
+  }));
+
+  // And now a second CGSCC run which requires the SCC analysis again. This
+  // will trigger re-running it.
+  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  FPM2.addPass(RequireAnalysisPass<TestFunctionAnalysis, Function>());
+  CGSCCPassManager CGPM2(/*DebugLogging*/ true);
+  CGPM2.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM2)));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
+
+  MPM.run(*M, MAM);
+  // Two runs and 6 functions.
+  EXPECT_EQ(2 * 6, FunctionAnalysisRuns);
+}
 }

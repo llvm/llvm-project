@@ -16,6 +16,7 @@
 //   stable_sort(Iter first, Iter last);
 
 #include <algorithm>
+#include <iterator>
 #include <cassert>
 
 template <class RI>
@@ -23,9 +24,11 @@ void
 test_sort_helper(RI f, RI l)
 {
     typedef typename std::iterator_traits<RI>::value_type value_type;
+    typedef typename std::iterator_traits<RI>::difference_type difference_type;
+
     if (f != l)
     {
-        long len = l - f;
+        difference_type len = l - f;
         value_type* save(new value_type[len]);
         do
         {
@@ -60,7 +63,7 @@ test_sort_driver(RI f, RI l, int start)
     test_sort_driver_driver(f, l, start, l);
 }
 
-template <unsigned sa>
+template <int sa>
 void
 test_sort_()
 {

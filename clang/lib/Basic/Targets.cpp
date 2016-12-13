@@ -2249,7 +2249,7 @@ public:
   // In amdgcn target the null pointer in global, constant, and generic
   // address space has value 0 but in private and local address space has
   // value ~0.
-  uint64_t getNullPtrValue(unsigned AS) const override {
+  uint64_t getNullPointerValue(unsigned AS) const override {
     return AS != LangAS::opencl_local && AS != 0 ? 0 : ~0;
   }
 };

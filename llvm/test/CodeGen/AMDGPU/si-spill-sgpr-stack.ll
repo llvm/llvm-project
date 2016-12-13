@@ -3,8 +3,9 @@
 
 ; Make sure this doesn't crash.
 ; ALL-LABEL: {{^}}test:
-; ALL: s_mov_b32 s92, SCRATCH_RSRC_DWORD0
-; ALL: s_mov_b32 s91, s3
+; ALL: s_mov_b32 s[[LO:[0-9]+]], SCRATCH_RSRC_DWORD0
+; ALL: s_mov_b32 s[[OFF:[0-9]+]], s3
+; ALL: s_mov_b32 s[[HI:[0-9]+]], 0xe80000
 
 ; Make sure we are handling hazards correctly.
 ; SGPR: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:12
@@ -15,11 +16,11 @@
 
 ; Make sure scratch wave offset register is correctly incremented and
 ; then restored.
-; SMEM: s_mov_b32 m0, s91{{$}}
-; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[92:95], m0 ; 16-byte Folded Spill
+; SMEM: s_mov_b32 m0, s[[OFF]]{{$}}
+; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[LO]]:[[HI]]], m0 ; 16-byte Folded Spill
 
-; SMEM: s_mov_b32 m0, s91{{$}}
-; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[92:95], m0 ; 16-byte Folded Reload
+; SMEM: s_mov_b32 m0, s[[OFF]]{{$}}
+; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[LO]]:[[HI]]], m0 ; 16-byte Folded Reload
 
 ; SMEM: s_dcache_wb
 ; ALL: s_endpgm

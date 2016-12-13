@@ -692,7 +692,13 @@ protected:
             if (process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
                     .Success()) {
               if (!wp_triggers_after) {
-                process_sp->DisableWatchpoint(wp_sp.get(), false);
+                // We need to preserve the watch_index before watchpoint 
+                // is disable. Since Watchpoint::SetEnabled will clear the
+                // watch index.
+                // This will fix TestWatchpointIter failure
+                Watchpoint *wp = wp_sp.get();
+                uint32_t watch_index = wp->GetHardwareIndex();
+                process_sp->DisableWatchpoint(wp, false);
                 StopInfoSP stored_stop_info_sp = thread_sp->GetStopInfo();
                 assert(stored_stop_info_sp.get() == this);
 
@@ -710,7 +716,8 @@ protected:
                 process_sp->GetThreadList().SetSelectedThreadByID(
                     thread_sp->GetID());
                 thread_sp->SetStopInfo(stored_stop_info_sp);
-                process_sp->EnableWatchpoint(wp_sp.get(), false);
+                process_sp->EnableWatchpoint(wp, false);
+                wp->SetHardwareIndex(watch_index);
               }
             }
           }

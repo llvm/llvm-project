@@ -1166,6 +1166,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   case Expr::ExprWithCleanupsClass:
   case Expr::ExtVectorElementExprClass:
   case Expr::InitListExprClass:
+  case Expr::ArrayInitLoopExprClass:
   case Expr::MemberExprClass:
   case Expr::ObjCIsaExprClass:
   case Expr::ObjCIvarRefExprClass:
@@ -1259,6 +1260,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   case Expr::ImaginaryLiteralClass:
   case Expr::ImplicitValueInitExprClass:
   case Expr::IntegerLiteralClass:
+  case Expr::ArrayInitIndexExprClass:
   case Expr::NoInitExprClass:
   case Expr::ObjCEncodeExprClass:
   case Expr::ObjCStringLiteralClass:

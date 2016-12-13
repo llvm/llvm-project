@@ -180,7 +180,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
       if (Expr) {
         DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+        DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.AddExpression(Expr);
+        DwarfExpr.finalize();
       }
     }
 
@@ -498,8 +500,10 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
         // If there is an expression, emit raw unsigned bytes.
+        DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.AddUnsignedConstant(DVInsn->getOperand(0).getImm());
         DwarfExpr.AddExpression(Expr);
+        DwarfExpr.finalize();
         addBlock(*VariableDie, dwarf::DW_AT_location, Loc);
       } else
         addConstantValue(*VariableDie, DVInsn->getOperand(0), DV.getType());
@@ -524,11 +528,13 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
     int Offset = TFI->getFrameIndexReference(*Asm->MF, FI, FrameReg);
     assert(Expr != DV.getExpression().end() && "Wrong number of expressions");
+    DwarfExpr.addFragmentOffset(*Expr);
     DwarfExpr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
                                     FrameReg, Offset);
     DwarfExpr.AddExpression(*Expr);
     ++Expr;
   }
+  DwarfExpr.finalize();
   addBlock(*VariableDie, dwarf::DW_AT_location, Loc);
 
   return VariableDie;
@@ -727,15 +733,21 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
 void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
                                   const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+  DIEDwarfExpression Expr(*Asm, *this, *Loc);
 
   bool validReg;
   if (Location.isReg())
-    validReg = addRegisterFragment(*Loc, Location.getReg());
+    validReg = Expr.AddMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
+                                  Location.getReg());
   else
-    validReg = addRegisterOffset(*Loc, Location.getReg(), Location.getOffset());
+    validReg =
+        Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
+                                   Location.getReg(), Location.getOffset());
 
   if (!validReg)
     return;
+
+  Expr.finalize();
 
   // Now attach the location information to the DIE.
   addBlock(Die, Attribute, Loc);
@@ -750,9 +762,11 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
                                          const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  DIExpressionCursor ExprCursor(DV.getSingleExpression());
+  const DIExpression *Expr = DV.getSingleExpression();
+  DIExpressionCursor ExprCursor(Expr);
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   auto Reg = Location.getReg();
+  DwarfExpr.addFragmentOffset(Expr);
   bool ValidReg =
       Location.getOffset()
           ? DwarfExpr.AddMachineRegIndirect(TRI, Reg, Location.getOffset())

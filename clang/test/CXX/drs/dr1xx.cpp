@@ -35,7 +35,7 @@ namespace dr102 { // dr102: yes
 }
 
 // dr103: na
-// dr104 FIXME: add codegen test
+// dr104: na lib
 // dr105: na
 
 namespace dr106 { // dr106: sup 540
@@ -202,7 +202,7 @@ namespace dr116 { // dr116: yes
 }
 
 // dr117: na
-// dr118 FIXME: add codegen test
+// dr118 is in its own file.
 // dr119: na
 // dr120: na
 
@@ -608,7 +608,7 @@ namespace dr155 { // dr155: dup 632
   struct S { int n; } s = { { 1 } }; // expected-warning {{braces around scalar initializer}}
 }
 
-// dr158 FIXME write codegen test
+// dr158 is in its own file.
 
 namespace dr159 { // dr159: 3.5
   namespace X { void f(); }

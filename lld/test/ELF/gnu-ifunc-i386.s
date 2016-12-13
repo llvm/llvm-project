@@ -22,8 +22,8 @@
 // CHECK-NEXT: }
 // CHECK:     Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rel.plt {
-// CHECK-NEXT:     0x1200C R_386_IRELATIVE
-// CHECK-NEXT:     0x12010 R_386_IRELATIVE
+// CHECK-NEXT:     0x12000 R_386_IRELATIVE
+// CHECK-NEXT:     0x12004 R_386_IRELATIVE
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -88,30 +88,24 @@
 // CHECK-NEXT: }
 // CHECK-NEXT:]
 
-// DISASM:      Disassembly of section .text:
+// DISASM: Disassembly of section .text:
 // DISASM-NEXT: foo:
-// DISASM-NEXT: 11000: c3 retl
-// DISASM:      bar:
-// DISASM-NEXT: 11001: c3 retl
+// DISASM-NEXT:    11000: c3 retl
+// DISASM: bar:
+// DISASM-NEXT:    11001: c3 retl
 // DISASM:      _start:
-// DISASM-NEXT:    11002: e8 29 00 00 00 calll 41
-// DISASM-NEXT:    11007: e8 34 00 00 00 calll 52
+// DISASM-NEXT:    11002: e8 19 00 00 00 calll 25
+// DISASM-NEXT:    11007: e8 24 00 00 00 calll 36
 // DISASM-NEXT:    1100c: ba d4 00 01 00 movl $65748, %edx
 // DISASM-NEXT:    11011: ba e4 00 01 00 movl $65764, %edx
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:    11020: ff 35 04 20 01 00 pushl 73732
-// DISASM-NEXT:    11026: ff 25 08 20 01 00 jmpl *73736
-// DISASM-NEXT:    1102c: 90 nop
-// DISASM-NEXT:    1102d: 90 nop
-// DISASM-NEXT:    1102e: 90 nop
-// DISASM-NEXT:    1102f: 90 nop
-// DISASM-NEXT:    11030: ff 25 0c 20 01 00 jmpl *73740
-// DISASM-NEXT:    11036: 68 00 00 00 00    pushl $0
-// DISASM-NEXT:    1103b: e9 e0 ff ff ff    jmp -32 <.plt>
-// DISASM-NEXT:    11040: ff 25 10 20 01 00 jmpl *73744
-// DISASM-NEXT:    11046: 68 08 00 00 00    pushl $8
-// DISASM-NEXT:    1104b: e9 d0 ff ff ff    jmp -48 <.plt>
+// DISASM-NEXT:    11020: ff 25 00 20 01 00 jmpl *73728
+// DISASM-NEXT:    11026: 68 10 00 00 00 pushl $16
+// DISASM-NEXT:    1102b: e9 e0 ff ff ff jmp -32 <_start+0xE>
+// DISASM-NEXT:    11030: ff 25 04 20 01 00 jmpl *73732
+// DISASM-NEXT:    11036: 68 18 00 00 00 pushl $24
+// DISASM-NEXT:    1103b: e9 d0 ff ff ff jmp -48 <_start+0xE>
 
 .text
 .type foo STT_GNU_IFUNC

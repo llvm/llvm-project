@@ -412,5 +412,6 @@ attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }
 
 !0 = !{!1, !1, i64 0, i32 1}
-!1 = !{!"const", null}
+!1 = !{!"const", !3}
 !2 = !{!1, !1, i64 0}
+!3 = !{!"tbaa root"}

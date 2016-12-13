@@ -51,10 +51,10 @@ let Uses = [M0, EXEC] in {
 multiclass V_INTERP_P1_F32_m : VINTRP_m <
   0x00000000,
   (outs VGPR_32:$vdst),
-  (ins VGPR_32:$i, i32imm:$attr_chan, i32imm:$attr),
-  "v_interp_p1_f32 $vdst, $i, $attr_chan, $attr, [m0]",
-  [(set f32:$vdst, (AMDGPUinterp_p1 f32:$i, (i32 imm:$attr_chan),
-                                            (i32 imm:$attr)))]
+  (ins VGPR_32:$vsrc, i32imm:$attrchan, i32imm:$attr),
+  "v_interp_p1_f32 $vdst, $vsrc, $attrchan, $attr",
+  [(set f32:$vdst, (AMDGPUinterp_p1 f32:$vsrc, (i32 imm:$attrchan),
+                                               (i32 imm:$attr)))]
 >;
 
 let OtherPredicates = [has32BankLDS] in {
@@ -74,19 +74,19 @@ let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
 defm V_INTERP_P2_F32 : VINTRP_m <
   0x00000001,
   (outs VGPR_32:$vdst),
-  (ins VGPR_32:$src0, VGPR_32:$j, i32imm:$attr_chan, i32imm:$attr),
-  "v_interp_p2_f32 $vdst, [$src0], $j, $attr_chan, $attr, [m0]",
-  [(set f32:$vdst, (AMDGPUinterp_p2 f32:$src0, f32:$j, (i32 imm:$attr_chan),
-                                                       (i32 imm:$attr)))]>;
+  (ins VGPR_32:$src0, VGPR_32:$vsrc, i32imm:$attrchan, i32imm:$attr),
+  "v_interp_p2_f32 $vdst, $vsrc, $attrchan, $attr",
+  [(set f32:$vdst, (AMDGPUinterp_p2 f32:$src0, f32:$vsrc, (i32 imm:$attrchan),
+                                                          (i32 imm:$attr)))]>;
 
 } // End DisableEncoding = "$src0", Constraints = "$src0 = $vdst"
 
 defm V_INTERP_MOV_F32 : VINTRP_m <
   0x00000002,
   (outs VGPR_32:$vdst),
-  (ins InterpSlot:$src0, i32imm:$attr_chan, i32imm:$attr),
-  "v_interp_mov_f32 $vdst, $src0, $attr_chan, $attr, [m0]",
-  [(set f32:$vdst, (AMDGPUinterp_mov (i32 imm:$src0), (i32 imm:$attr_chan),
+  (ins InterpSlot:$vsrc, i32imm:$attrchan, i32imm:$attr),
+  "v_interp_mov_f32 $vdst, $vsrc, $attrchan, $attr",
+  [(set f32:$vdst, (AMDGPUinterp_mov (i32 imm:$vsrc), (i32 imm:$attrchan),
                                      (i32 imm:$attr)))]>;
 
 } // End Uses = [M0, EXEC]
@@ -107,9 +107,8 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 
 // 64-bit vector move instruction.  This is mainly used by the SIFoldOperands
 // pass to enable folding of inline immediates.
-def V_MOV_B64_PSEUDO : PseudoInstSI <(outs VReg_64:$vdst), (ins VSrc_b64:$src0)> {
-  let VALU = 1;
-}
+def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
+                                      (ins VSrc_b64:$src0)>;
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
 let usesCustomInserter = 1, SALU = 1 in {
@@ -706,9 +705,22 @@ def : Pat <
   (S_MOV_B32 imm:$imm)
 >;
 
+// FIXME: Workaround for ordering issue with peephole optimizer where
+// a register class copy interferes with immediate folding.  Should
+// use s_mov_b32, which can be shrunk to s_movk_i32
+def : Pat <
+  (VGPRImm<(f16 fpimm)>:$imm),
+  (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
 def : Pat <
   (f32 fpimm:$imm),
   (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : Pat <
+  (f16 fpimm:$imm),
+  (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : Pat <

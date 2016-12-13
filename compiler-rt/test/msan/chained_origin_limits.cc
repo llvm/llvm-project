@@ -10,7 +10,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
@@ -25,7 +25,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
@@ -41,7 +41,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
@@ -57,7 +57,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK < %t.out
+// RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
 // RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
@@ -147,13 +147,21 @@ int main(void) {
 // CHECK2-NOT: Uninitialized value was stored to memory at
 // CHECK2: Uninitialized value was created
 
+// For architectures with short stack all the stacks in the chain are same
+// because the stack trace does not contain frames upto the functions fn1, fn2,
+// fn3 from where the uninitialized stores actually originate. Since we report
+// uninitialized value store once for each stack frame
+// (origin_history_per_stack_limit = 1) we expect only one instance of
+// "Uninitialized value was stored to memory at".
+
 // CHECK-PER-STACK: WARNING: MemorySanitizer: use-of-uninitialized-value
 // CHECK-PER-STACK: Uninitialized value was stored to memory at
-// CHECK-PER-STACK: in fn3
-// CHECK-PER-STACK: Uninitialized value was stored to memory at
-// CHECK-PER-STACK: in fn2
-// CHECK-PER-STACK: Uninitialized value was stored to memory at
-// CHECK-PER-STACK: in fn1
+// CHECK-SHORT-STACK: in __msan_memmove
+// CHECK-FULL-STACK: in fn3
+// CHECK-FULL-STACK: Uninitialized value was stored to memory at
+// CHECK-FULL-STACK: in fn2
+// CHECK-FULL-STACK: Uninitialized value was stored to memory at
+// CHECK-FULL-STACK: in fn1
 // CHECK-PER-STACK: Uninitialized value was created
 
 // CHECK-UNLIMITED: WARNING: MemorySanitizer: use-of-uninitialized-value

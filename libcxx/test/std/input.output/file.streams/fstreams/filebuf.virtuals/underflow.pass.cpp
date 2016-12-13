@@ -16,6 +16,7 @@
 // This test is not entirely portable
 
 #include <fstream>
+#include <cstddef>
 #include <cassert>
 
 #include "platform_support.h" // locale name macros
@@ -118,6 +119,6 @@ int main()
         assert(f.sbumpc() == 0x4E51);
         assert(f.sbumpc() == 0x4E52);
         assert(f.sbumpc() == 0x4E53);
-        assert(f.sbumpc() == -1);
+        assert(f.sbumpc() == static_cast<unsigned>(-1));
     }
 }

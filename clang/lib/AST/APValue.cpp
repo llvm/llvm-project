@@ -151,10 +151,10 @@ APValue::APValue(const APValue &RHS) : Kind(Uninitialized) {
     if (RHS.hasLValuePath())
       setLValue(RHS.getLValueBase(), RHS.getLValueOffset(), RHS.getLValuePath(),
                 RHS.isLValueOnePastTheEnd(), RHS.getLValueCallIndex(),
-                RHS.isNullPtr());
+                RHS.isNullPointer());
     else
       setLValue(RHS.getLValueBase(), RHS.getLValueOffset(), NoLValuePath(),
-                RHS.getLValueCallIndex(), RHS.isNullPtr());
+                RHS.getLValueCallIndex(), RHS.isNullPointer());
     break;
   case Array:
     MakeArray(RHS.getArrayInitializedElts(), RHS.getArraySize());
@@ -581,8 +581,9 @@ unsigned APValue::getLValueCallIndex() const {
   return ((const LV*)(const char*)Data.buffer)->CallIndex;
 }
 
-bool APValue::isNullPtr() const {
-  return isLValue() && ((const LV*)(const char*)Data.buffer)->IsNullPtr;
+bool APValue::isNullPointer() const {
+  assert(isLValue() && "Invalid usage");
+  return ((const LV*)(const char*)Data.buffer)->IsNullPtr;
 }
 
 void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,

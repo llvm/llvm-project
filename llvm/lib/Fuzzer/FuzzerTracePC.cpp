@@ -89,8 +89,10 @@ void TracePC::PrintNewPCs() {
 }
 
 void TracePC::PrintCoverage() {
-  if (!EF->__sanitizer_symbolize_pc) {
-    Printf("INFO: __sanitizer_symbolize_pc is not available,"
+  if (!EF->__sanitizer_symbolize_pc ||
+      !EF->__sanitizer_get_module_and_offset_for_pc) {
+    Printf("INFO: __sanitizer_symbolize_pc or "
+           "__sanitizer_get_module_and_offset_for_pc is not available,"
            " not printing coverage\n");
     return;
   }
@@ -106,12 +108,15 @@ void TracePC::PrintCoverage() {
     std::string FixedPCStr = DescribePC("%p", PCs[i]);
     std::string FunctionStr = DescribePC("%F", PCs[i]);
     std::string LineStr = DescribePC("%l", PCs[i]);
-    // TODO(kcc): get the module using some other way since this
-    // does not work with ASAN_OPTIONS=strip_path_prefix=something.
-    std::string Module = DescribePC("%m", PCs[i]);
-    std::string OffsetStr = DescribePC("%o", PCs[i]);
+    char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
+    void *OffsetRaw = nullptr;
+    if (!EF->__sanitizer_get_module_and_offset_for_pc(
+            reinterpret_cast<void *>(PCs[i]), ModulePathRaw,
+            sizeof(ModulePathRaw), &OffsetRaw))
+      continue;
+    std::string Module = ModulePathRaw;
     uintptr_t FixedPC = std::stol(FixedPCStr, 0, 16);
-    uintptr_t PcOffset = std::stol(OffsetStr, 0, 16);
+    uintptr_t PcOffset = reinterpret_cast<uintptr_t>(OffsetRaw);
     ModuleOffsets[Module] = FixedPC - PcOffset;
     CoveredPCsPerModule[Module].push_back(PcOffset);
     CoveredFunctions.insert(FunctionStr);

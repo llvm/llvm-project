@@ -1339,3 +1339,76 @@ define <16 x i32> @test_broadcast_4i32_16i32_chain(<4 x i32>* %p0, <4 x float>* 
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i32> %2
 }
+
+;
+; subvector Load with multiple uses + broadcast
+; Fallback to the broadcast should be done
+;
+
+@ga4 = global <4 x i64> zeroinitializer, align 8
+@gb4 = global <8 x i64> zeroinitializer, align 8
+
+define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
+; X32-AVX512-LABEL: fallback_broadcast_v4i64_to_v8i64:
+; X32-AVX512:       ## BB#0: ## %entry
+; X32-AVX512-NEXT:    vpaddq LCPI26_0, %ymm0, %ymm0
+; X32-AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,2,0,3,0,4,0,1,0,2,0,3,0,4,0]
+; X32-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; X32-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
+; X32-AVX512-NEXT:    vmovdqu64 %ymm0, _ga4
+; X32-AVX512-NEXT:    vmovdqu64 %zmm1, _gb4
+; X32-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: fallback_broadcast_v4i64_to_v8i64:
+; X64-AVX512:       ## BB#0: ## %entry
+; X64-AVX512-NEXT:    vmovdqa64 {{.*#+}} ymm2 = [1,2,3,4]
+; X64-AVX512-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
+; X64-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; X64-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
+; X64-AVX512-NEXT:    vmovdqu64 %ymm0, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vmovdqu64 %zmm1, {{.*}}(%rip)
+; X64-AVX512-NEXT:    retq
+entry:
+  %0 = add <4 x i64> %a, <i64 1, i64 2, i64 3, i64 4>
+  %1 = add <8 x i64> %b, <i64 1, i64 2, i64 3, i64 4, i64 1, i64 2, i64 3, i64 4>
+  %2 = and <8 x i64> %1, <i64 1, i64 2, i64 3, i64 4, i64 1, i64 2, i64 3, i64 4>
+  store <4 x i64> %0, <4 x i64>* @ga4, align 8
+  store <8 x i64> %2, <8 x i64>* @gb4, align 8
+  ret void
+}
+
+
+@ga2 = global <4 x double> zeroinitializer, align 8
+@gb2 = global <8 x double> zeroinitializer, align 8
+
+define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b) {
+; X32-AVX512-LABEL: fallback_broadcast_v4f64_to_v8f64:
+; X32-AVX512:       ## BB#0: ## %entry
+; X32-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00]
+; X32-AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; X32-AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm2, %zmm2
+; X32-AVX512-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
+; X32-AVX512-NEXT:    vdivpd %zmm2, %zmm1, %zmm1
+; X32-AVX512-NEXT:    vmovupd %ymm0, _ga2
+; X32-AVX512-NEXT:    vmovupd %zmm1, _gb2
+; X32-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: fallback_broadcast_v4f64_to_v8f64:
+; X64-AVX512:       ## BB#0: ## %entry
+; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00]
+; X64-AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm2, %zmm2
+; X64-AVX512-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
+; X64-AVX512-NEXT:    vdivpd %zmm2, %zmm1, %zmm1
+; X64-AVX512-NEXT:    vmovupd %ymm0, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vmovupd %zmm1, {{.*}}(%rip)
+; X64-AVX512-NEXT:    retq
+entry:
+  %0 = fadd <4 x double> %a, <double 1.0, double 2.0, double 3.0, double 4.0>
+  %1 = fadd <8 x double> %b, <double 1.0, double 2.0, double 3.0, double 4.0, double 1.0, double 2.0, double 3.0, double 4.0>
+  %2 = fdiv <8 x double> %1, <double 1.0, double 2.0, double 3.0, double 4.0, double 1.0, double 2.0, double 3.0, double 4.0>
+  store <4 x double> %0, <4 x double>* @ga2, align 8
+  store <8 x double> %2, <8 x double>* @gb2, align 8
+  ret void
+}

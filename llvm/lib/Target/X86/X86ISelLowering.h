@@ -488,6 +488,13 @@ namespace llvm {
       FMADDSUB_RND,
       FMSUBADD_RND,
 
+      // Scalar intrinsic FMA with rounding mode.
+      // Two versions, passthru bits on op1 or op3.
+      FMADDS1_RND, FMADDS3_RND,
+      FNMADDS1_RND, FNMADDS3_RND,
+      FMSUBS1_RND, FMSUBS3_RND,
+      FNMSUBS1_RND, FNMSUBS3_RND,
+
       // Compress and expand.
       COMPRESS,
       EXPAND,
@@ -1115,7 +1122,7 @@ namespace llvm {
     SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
 
-    unsigned getGlobalWrapperKind() const;
+    unsigned getGlobalWrapperKind(const GlobalValue *GV = nullptr) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(const GlobalValue *GV, const SDLoc &dl,
@@ -1130,8 +1137,8 @@ namespace llvm {
     SDValue LowerUINT_TO_FP_i32(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerUINT_TO_FP_vec(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_TO_INT(SDValue Op, const X86Subtarget &Subtarget,
+                           SelectionDAG &DAG) const;
     SDValue LowerToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
                       SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;

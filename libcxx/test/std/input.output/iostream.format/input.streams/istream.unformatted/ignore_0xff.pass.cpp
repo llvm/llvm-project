@@ -27,8 +27,8 @@ int main()
 
     std::istringstream is(s);
     const unsigned int ignoreLen=10;
-    size_t a=is.tellg();
+    std::istringstream::pos_type a=is.tellg();
     is.ignore(ignoreLen);
-    size_t b=is.tellg();
+    std::istringstream::pos_type b=is.tellg();
     assert((b-a)==ignoreLen);
 }

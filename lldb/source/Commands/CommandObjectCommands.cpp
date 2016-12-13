@@ -840,7 +840,7 @@ protected:
       result.AppendErrorWithFormat(
           "'%s' is not a known command.\nTry 'help' to see a "
           "current list of commands.\n",
-          command_name);
+          args[0].c_str());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
@@ -850,11 +850,11 @@ protected:
         result.AppendErrorWithFormat(
             "'%s' is not an alias, it is a debugger command which can be "
             "removed using the 'command delete' command.\n",
-            command_name);
+            args[0].c_str());
       } else {
         result.AppendErrorWithFormat(
             "'%s' is a permanent debugger command and cannot be removed.\n",
-            command_name);
+            args[0].c_str());
       }
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -863,10 +863,11 @@ protected:
     if (!m_interpreter.RemoveAlias(command_name)) {
       if (m_interpreter.AliasExists(command_name))
         result.AppendErrorWithFormat(
-            "Error occurred while attempting to unalias '%s'.\n", command_name);
+            "Error occurred while attempting to unalias '%s'.\n",
+            args[0].c_str());
       else
         result.AppendErrorWithFormat("'%s' is not an existing alias.\n",
-                                     command_name);
+                                     args[0].c_str());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
@@ -932,7 +933,7 @@ protected:
     if (!m_interpreter.RemoveCommand(command_name)) {
       result.AppendErrorWithFormat(
           "'%s' is a permanent debugger command and cannot be removed.\n",
-          command_name);
+          args[0].c_str());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
@@ -1882,7 +1883,7 @@ protected:
 
     if (cmd_name.empty() || !m_interpreter.HasUserCommands() ||
         !m_interpreter.UserCommandExists(cmd_name)) {
-      result.AppendErrorWithFormat("command %s not found", cmd_name);
+      result.AppendErrorWithFormat("command %s not found", command[0].c_str());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }

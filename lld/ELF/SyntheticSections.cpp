@@ -19,15 +19,14 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Threads.h"
 #include "Writer.h"
-
 #include "lld/Config/Version.h"
+#include "lld/Support/Memory.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
@@ -707,6 +706,32 @@ template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
+// On ARM the IgotPltSection is part of the GotSection, on other Targets it is
+// part of the .got.plt
+template <class ELFT>
+IgotPltSection<ELFT>::IgotPltSection()
+    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                             Target->GotPltEntrySize,
+                             Config->EMachine == EM_ARM ? ".got" : ".got.plt") {
+}
+
+template <class ELFT> void IgotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
+  Sym.IsInIgot = true;
+  Sym.GotPltIndex = Entries.size();
+  Entries.push_back(&Sym);
+}
+
+template <class ELFT> size_t IgotPltSection<ELFT>::getSize() const {
+  return Entries.size() * Target->GotPltEntrySize;
+}
+
+template <class ELFT> void IgotPltSection<ELFT>::writeTo(uint8_t *Buf) {
+  for (const SymbolBody *B : Entries) {
+    Target->writeIgotPlt(Buf, *B);
+    Buf += sizeof(uintX_t);
+  }
+}
+
 template <class ELFT>
 StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
     : SyntheticSection<ELFT>(Dynamic ? (uintX_t)SHF_ALLOC : 0, SHT_STRTAB, 1,
@@ -805,11 +830,10 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     return; // Already finalized.
 
   this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
-
-  if (!In<ELFT>::RelaDyn->empty()) {
+  if (In<ELFT>::RelaDyn->OutSec->Size > 0) {
     bool IsRela = Config->Rela;
     add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
-    add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getSize()});
+    add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->OutSec->Size});
     add({IsRela ? DT_RELAENT : DT_RELENT,
          uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
 
@@ -822,9 +846,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
         add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
     }
   }
-  if (!In<ELFT>::RelaPlt->empty()) {
+  if (In<ELFT>::RelaPlt->OutSec->Size > 0) {
     add({DT_JMPREL, In<ELFT>::RelaPlt});
-    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getSize()});
+    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->OutSec->Size});
     add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          In<ELFT>::GotPlt});
     add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
@@ -1401,6 +1425,36 @@ template <class ELFT> size_t PltSection<ELFT>::getSize() const {
 }
 
 template <class ELFT>
+IpltSection<ELFT>::IpltSection()
+    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
+                             ".plt") {}
+
+template <class ELFT> void IpltSection<ELFT>::writeTo(uint8_t *Buf) {
+  // The IRelative relocations do not support lazy binding so no header is
+  // needed
+  size_t Off = 0;
+  for (auto &I : Entries) {
+    const SymbolBody *B = I.first;
+    unsigned RelOff = I.second + In<ELFT>::Plt->getSize();
+    uint64_t Got = B->getGotPltVA<ELFT>();
+    uint64_t Plt = this->getVA() + Off;
+    Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
+    Off += Target->PltEntrySize;
+  }
+}
+
+template <class ELFT> void IpltSection<ELFT>::addEntry(SymbolBody &Sym) {
+  Sym.PltIndex = Entries.size();
+  Sym.IsInIplt = true;
+  unsigned RelOff = In<ELFT>::RelaIplt->getRelocOffset();
+  Entries.push_back(std::make_pair(&Sym, RelOff));
+}
+
+template <class ELFT> size_t IpltSection<ELFT>::getSize() const {
+  return Entries.size() * Target->PltEntrySize;
+}
+
+template <class ELFT>
 GdbIndexSection<ELFT>::GdbIndexSection()
     : SyntheticSection<ELFT>(0, SHT_PROGBITS, 1, ".gdb_index") {}
 
@@ -1750,6 +1804,11 @@ template class elf::GotPltSection<ELF32BE>;
 template class elf::GotPltSection<ELF64LE>;
 template class elf::GotPltSection<ELF64BE>;
 
+template class elf::IgotPltSection<ELF32LE>;
+template class elf::IgotPltSection<ELF32BE>;
+template class elf::IgotPltSection<ELF64LE>;
+template class elf::IgotPltSection<ELF64BE>;
+
 template class elf::StringTableSection<ELF32LE>;
 template class elf::StringTableSection<ELF32BE>;
 template class elf::StringTableSection<ELF64LE>;
@@ -1784,6 +1843,11 @@ template class elf::PltSection<ELF32LE>;
 template class elf::PltSection<ELF32BE>;
 template class elf::PltSection<ELF64LE>;
 template class elf::PltSection<ELF64BE>;
+
+template class elf::IpltSection<ELF32LE>;
+template class elf::IpltSection<ELF32BE>;
+template class elf::IpltSection<ELF64LE>;
+template class elf::IpltSection<ELF64BE>;
 
 template class elf::GdbIndexSection<ELF32LE>;
 template class elf::GdbIndexSection<ELF32BE>;

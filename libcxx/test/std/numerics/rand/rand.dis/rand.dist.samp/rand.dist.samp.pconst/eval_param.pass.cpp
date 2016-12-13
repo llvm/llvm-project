@@ -57,7 +57,7 @@ int main()
         for (std::size_t i = 0; i < prob.size(); ++i)
             prob[i] /= s;
         std::sort(u.begin(), u.end());
-        for (int i = 0; i < Np; ++i)
+        for (std::size_t i = 0; i < Np; ++i)
         {
             typedef std::vector<D::result_type>::iterator I;
             I lb = std::lower_bound(u.begin(), u.end(), b[i]);

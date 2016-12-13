@@ -43,7 +43,7 @@ protected:
             if (__c != base::traits_type::eof())
             {
                 int n = static_cast<int>(str_.size());
-                str_.push_back(__c);
+                str_.push_back(static_cast<CharT>(__c));
                 str_.resize(str_.capacity());
                 base::setp(const_cast<CharT*>(str_.data()),
                            const_cast<CharT*>(str_.data() + str_.size()));

@@ -68,17 +68,17 @@ struct C
 int main()
 {
     {
-        typedef std::tuple<double> T0;
-        typedef std::tuple<int> T1;
-        T0 t0(2.5);
+        typedef std::tuple<long> T0;
+        typedef std::tuple<long long> T1;
+        T0 t0(2);
         T1 t1 = t0;
         assert(std::get<0>(t1) == 2);
     }
 #if TEST_STD_VER > 11
     {
-        typedef std::tuple<double> T0;
+        typedef std::tuple<int> T0;
         typedef std::tuple<A> T1;
-        constexpr T0 t0(2.5);
+        constexpr T0 t0(2);
         constexpr T1 t1 = t0;
         static_assert(std::get<0>(t1) == 2, "");
     }
@@ -91,17 +91,17 @@ int main()
     }
 #endif
     {
-        typedef std::tuple<double, char> T0;
-        typedef std::tuple<int, int> T1;
-        T0 t0(2.5, 'a');
+        typedef std::tuple<long, char> T0;
+        typedef std::tuple<long long, int> T1;
+        T0 t0(2, 'a');
         T1 t1 = t0;
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == int('a'));
     }
     {
-        typedef std::tuple<double, char, D> T0;
-        typedef std::tuple<int, int, B> T1;
-        T0 t0(2.5, 'a', D(3));
+        typedef std::tuple<long, char, D> T0;
+        typedef std::tuple<long long, int, B> T1;
+        T0 t0(2, 'a', D(3));
         T1 t1 = t0;
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == int('a'));
@@ -109,9 +109,9 @@ int main()
     }
     {
         D d(3);
-        typedef std::tuple<double, char, D&> T0;
-        typedef std::tuple<int, int, B&> T1;
-        T0 t0(2.5, 'a', d);
+        typedef std::tuple<long, char, D&> T0;
+        typedef std::tuple<long long, int, B&> T1;
+        T0 t0(2, 'a', d);
         T1 t1 = t0;
         d.id_ = 2;
         assert(std::get<0>(t1) == 2);
@@ -119,9 +119,9 @@ int main()
         assert(std::get<2>(t1).id_ == 2);
     }
     {
-        typedef std::tuple<double, char, int> T0;
-        typedef std::tuple<int, int, B> T1;
-        T0 t0(2.5, 'a', 3);
+        typedef std::tuple<long, char, int> T0;
+        typedef std::tuple<long long, int, B> T1;
+        T0 t0(2, 'a', 3);
         T1 t1(t0);
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == int('a'));

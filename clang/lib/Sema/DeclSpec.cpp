@@ -173,6 +173,8 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
                                              unsigned NumExceptions,
                                              Expr *NoexceptExpr,
                                              CachedTokens *ExceptionSpecTokens,
+                                             ArrayRef<NamedDecl*>
+                                                 DeclsInPrototype,
                                              SourceLocation LocalRangeBegin,
                                              SourceLocation LocalRangeEnd,
                                              Declarator &TheDeclarator,
@@ -204,7 +206,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   I.Fun.ExceptionSpecType       = ESpecType;
   I.Fun.ExceptionSpecLocBeg     = ESpecRange.getBegin().getRawEncoding();
   I.Fun.ExceptionSpecLocEnd     = ESpecRange.getEnd().getRawEncoding();
-  I.Fun.NumExceptions           = 0;
+  I.Fun.NumExceptionsOrDecls    = 0;
   I.Fun.Exceptions              = nullptr;
   I.Fun.NoexceptExpr            = nullptr;
   I.Fun.HasTrailingReturnType   = TrailingReturnType.isUsable() ||
@@ -240,7 +242,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   case EST_Dynamic:
     // new[] an exception array if needed
     if (NumExceptions) {
-      I.Fun.NumExceptions = NumExceptions;
+      I.Fun.NumExceptionsOrDecls = NumExceptions;
       I.Fun.Exceptions = new DeclaratorChunk::TypeAndRange[NumExceptions];
       for (unsigned i = 0; i != NumExceptions; ++i) {
         I.Fun.Exceptions[i].Ty = Exceptions[i];
@@ -257,6 +259,17 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     I.Fun.ExceptionSpecTokens = ExceptionSpecTokens;
     break;
   }
+
+  if (!DeclsInPrototype.empty()) {
+    assert(ESpecType == EST_None && NumExceptions == 0 &&
+           "cannot have exception specifiers and decls in prototype");
+    I.Fun.NumExceptionsOrDecls = DeclsInPrototype.size();
+    // Copy the array of decls into stable heap storage.
+    I.Fun.DeclsInPrototype = new NamedDecl *[DeclsInPrototype.size()];
+    for (size_t J = 0; J < DeclsInPrototype.size(); ++J)
+      I.Fun.DeclsInPrototype[J] = DeclsInPrototype[J];
+  }
+
   return I;
 }
 

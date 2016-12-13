@@ -517,6 +517,8 @@ namespace  {
     void VisitFloatingLiteral(const FloatingLiteral *Node);
     void VisitStringLiteral(const StringLiteral *Str);
     void VisitInitListExpr(const InitListExpr *ILE);
+    void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *ILE);
+    void VisitArrayInitIndexExpr(const ArrayInitIndexExpr *ILE);
     void VisitUnaryOperator(const UnaryOperator *Node);
     void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
     void VisitMemberExpr(const MemberExpr *Node);
@@ -1163,11 +1165,6 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (const FunctionTemplateSpecializationInfo *FTSI =
           D->getTemplateSpecializationInfo())
     dumpTemplateArgumentList(*FTSI->TemplateArguments);
-
-  for (ArrayRef<NamedDecl *>::iterator
-       I = D->getDeclsInPrototypeScope().begin(),
-       E = D->getDeclsInPrototypeScope().end(); I != E; ++I)
-    dumpDecl(*I);
 
   if (!D->param_begin() && D->getNumParams())
     dumpChild([=] { OS << "<<NULL params x " << D->getNumParams() << ">>"; });
@@ -2027,6 +2024,14 @@ void ASTDumper::VisitInitListExpr(const InitListExpr *ILE) {
     OS << " field ";
     dumpBareDeclRef(Field);
   }
+}
+
+void ASTDumper::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
+  VisitExpr(E);
+}
+
+void ASTDumper::VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E) {
+  VisitExpr(E);
 }
 
 void ASTDumper::VisitUnaryOperator(const UnaryOperator *Node) {

@@ -1100,23 +1100,22 @@ std::string Args::ParseAliasOptions(Options &options,
       continue;
 
     if (!result_string.empty()) {
-      const char *tmp_arg = GetArgumentAtIndex(idx);
+      auto tmp_arg = m_entries[idx].ref;
       size_t pos = result_string.find(tmp_arg);
       if (pos != std::string::npos)
-        result_string.erase(pos, strlen(tmp_arg));
+        result_string.erase(pos, tmp_arg.size());
     }
     ReplaceArgumentAtIndex(idx, llvm::StringRef());
     if ((long_options[long_options_index].definition->option_has_arg !=
          OptionParser::eNoArgument) &&
         (OptionParser::GetOptionArgument() != nullptr) &&
         (idx + 1 < GetArgumentCount()) &&
-        (strcmp(OptionParser::GetOptionArgument(),
-                GetArgumentAtIndex(idx + 1)) == 0)) {
+        (m_entries[idx + 1].ref == OptionParser::GetOptionArgument())) {
       if (result_string.size() > 0) {
-        const char *tmp_arg = GetArgumentAtIndex(idx + 1);
+        auto tmp_arg = m_entries[idx + 1].ref;
         size_t pos = result_string.find(tmp_arg);
         if (pos != std::string::npos)
-          result_string.erase(pos, strlen(tmp_arg));
+          result_string.erase(pos, tmp_arg.size());
       }
       ReplaceArgumentAtIndex(idx + 1, llvm::StringRef());
     }

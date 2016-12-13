@@ -593,9 +593,7 @@ define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ; X32:       # BB#0:
 ; X32-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
 ; X32-NEXT:    vmovdqu8 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    kunpckdq %k0, %k1, %k1
+; X32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3
 ; X32-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X32-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
@@ -604,9 +602,9 @@ define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ;
 ; X64-LABEL: combine_pshufb_identity_mask:
 ; X64:       # BB#0:
-; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
 ; X64-NEXT:    vmovdqu8 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3
 ; X64-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X64-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
@@ -759,9 +757,7 @@ define <64 x i8> @combine_pshufb_as_pslldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_pslldq_mask(<64 x i8> %a0, i64 %m) {
 ; X32-LABEL: combine_pshufb_as_pslldq_mask:
 ; X32:       # BB#0:
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    kunpckdq %k0, %k1, %k1
+; X32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
 ; X32-NEXT:    retl
 ;
@@ -790,9 +786,7 @@ define <64 x i8> @combine_pshufb_as_psrldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_psrldq_mask(<64 x i8> %a0, i64 %m) {
 ; X32-LABEL: combine_pshufb_as_psrldq_mask:
 ; X32:       # BB#0:
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X32-NEXT:    kunpckdq %k0, %k1, %k1
+; X32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    retl
 ;
@@ -859,6 +853,20 @@ define <8 x double> @combine_vpermi2var_8f64_identity(<8 x double> %x0, <8 x dou
   %res0 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x double> %x1, i8 -1)
   %res1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %res0, <8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x double> %res0, i8 -1)
   ret <8 x double> %res1
+}
+
+define <8 x double> @combine_vpermi2var_8f64_as_shufpd(<8 x double> %x0, <8 x double> %x1) {
+; X32-LABEL: combine_vpermi2var_8f64_as_shufpd:
+; X32:       # BB#0:
+; X32-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1],zmm1[0],zmm0[2],zmm1[2],zmm0[5],zmm1[5],zmm0[6],zmm1[7]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermi2var_8f64_as_shufpd:
+; X64:       # BB#0:
+; X64-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1],zmm1[0],zmm0[2],zmm1[2],zmm0[5],zmm1[5],zmm0[6],zmm1[7]
+; X64-NEXT:    retq
+  %1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> <i64 1, i64 8, i64 2, i64 10, i64 5, i64 13, i64 6, i64 15>, <8 x double> %x1, i8 -1)
+  ret <8 x double> %1
 }
 
 define <8 x i64> @combine_vpermi2var_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {

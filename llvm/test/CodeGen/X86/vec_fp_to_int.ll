@@ -886,15 +886,50 @@ define <2 x i64> @fptosi_2f32_to_2i64(<4 x float> %a) {
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: fptosi_2f32_to_2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vcvttss2si %xmm0, %rax
-; AVX-NEXT:    vmovq %rax, %xmm1
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX-NEXT:    vcvttss2si %xmm0, %rax
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX-NEXT:    retq
+; VEX-LABEL: fptosi_2f32_to_2i64:
+; VEX:       # BB#0:
+; VEX-NEXT:    vcvttss2si %xmm0, %rax
+; VEX-NEXT:    vmovq %rax, %xmm1
+; VEX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; VEX-NEXT:    vcvttss2si %xmm0, %rax
+; VEX-NEXT:    vmovq %rax, %xmm0
+; VEX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; VEX-NEXT:    retq
+;
+; AVX512F-LABEL: fptosi_2f32_to_2i64:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fptosi_2f32_to_2i64:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm1
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    retq
+;
+; AVX512DQ-LABEL: fptosi_2f32_to_2i64:
+; AVX512DQ:       # BB#0:
+; AVX512DQ-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512DQ-NEXT:    vmovq %rax, %xmm1
+; AVX512DQ-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512DQ-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512DQ-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: fptosi_2f32_to_2i64:
+; AVX512VLDQ:       # BB#0:
+; AVX512VLDQ-NEXT:    vcvttps2qq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    retq
   %shuf = shufflevector <4 x float> %a, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %cvt = fptosi <2 x float> %shuf to <2 x i64>
   ret <2 x i64> %cvt
@@ -1384,15 +1419,40 @@ define <2 x i64> @fptoui_2f32_to_2i64(<4 x float> %a) {
 ; VEX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
 ; VEX-NEXT:    retq
 ;
-; AVX512-LABEL: fptoui_2f32_to_2i64:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    vcvttss2usi %xmm0, %rax
-; AVX512-NEXT:    vmovq %rax, %xmm1
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvttss2usi %xmm0, %rax
-; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: fptoui_2f32_to_2i64:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fptoui_2f32_to_2i64:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm1
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    retq
+;
+; AVX512DQ-LABEL: fptoui_2f32_to_2i64:
+; AVX512DQ:       # BB#0:
+; AVX512DQ-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512DQ-NEXT:    vmovq %rax, %xmm1
+; AVX512DQ-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512DQ-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512DQ-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: fptoui_2f32_to_2i64:
+; AVX512VLDQ:       # BB#0:
+; AVX512VLDQ-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    retq
   %shuf = shufflevector <4 x float> %a, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %cvt = fptoui <2 x float> %shuf to <2 x i64>
   ret <2 x i64> %cvt

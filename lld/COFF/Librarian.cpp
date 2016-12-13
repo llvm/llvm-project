@@ -463,7 +463,7 @@ void lld::coff::writeImportLibrary() {
   std::vector<NewArchiveMember> Members;
 
   std::string Path = getImplibPath();
-  std::string DLLName = llvm::sys::path::filename(Config->OutputFile);
+  std::string DLLName = sys::path::filename(Config->OutputFile);
   ObjectFactory OF(DLLName);
 
   std::vector<uint8_t> ImportDescriptor;

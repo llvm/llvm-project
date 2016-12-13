@@ -36,7 +36,7 @@
 /// unsigned short _tzcnt_u16(unsigned short a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param a
 ///    An unsigned 16-bit integer whose trailing zeros are to be counted.
@@ -53,7 +53,7 @@
 /// unsigned int _andn_u32(unsigned int a, unsigned int b);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c ANDN instruction.
+/// This intrinsic corresponds to the <c> ANDN </c> instruction.
 ///
 /// \param a
 ///    An unsigned integer containing one of the operands.
@@ -73,7 +73,7 @@
 /// unsigned int _blsi_u32(unsigned int a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c BLSI instruction.
+/// This intrinsic corresponds to the <c> BLSI </c> instruction.
 ///
 /// \param a
 ///    An unsigned integer whose bits are to be cleared.
@@ -91,7 +91,7 @@
 /// unsigned int _blsmsk_u32(unsigned int a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c BLSMSK instruction.
+/// This intrinsic corresponds to the <c> BLSMSK </c> instruction.
 ///
 /// \param a
 ///    An unsigned integer used to create the mask.
@@ -107,7 +107,7 @@
 /// unsigned int _blsr_u32(unsigned int a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c BLSR instruction.
+/// This intrinsic corresponds to the <c> BLSR </c> instruction.
 ///
 /// \param a
 ///    An unsigned integer containing the operand to be cleared.
@@ -123,7 +123,7 @@
 /// unsigned int _tzcnt_u32(unsigned int a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param a
 ///    An unsigned 32-bit integer whose trailing zeros are to be counted.
@@ -143,7 +143,7 @@
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 16-bit integer whose trailing zeros are to be counted.
@@ -160,7 +160,7 @@ __tzcnt_u16(unsigned short __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c ANDN instruction.
+/// This intrinsic corresponds to the <c> ANDN </c> instruction.
 ///
 /// \param __X
 ///    An unsigned integer containing one of the operands.
@@ -180,7 +180,7 @@ __andn_u32(unsigned int __X, unsigned int __Y)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BEXTR instruction.
+/// This intrinsic corresponds to the <c> BEXTR </c> instruction.
 ///
 /// \param __X
 ///    An unsigned integer whose bits are to be extracted.
@@ -202,7 +202,7 @@ __bextr_u32(unsigned int __X, unsigned int __Y)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BEXTR instruction.
+/// This intrinsic corresponds to the <c> BEXTR </c> instruction.
 ///
 /// \param __X
 ///    An unsigned integer whose bits are to be extracted.
@@ -225,7 +225,7 @@ _bextr_u32(unsigned int __X, unsigned int __Y, unsigned int __Z)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BLSI instruction.
+/// This intrinsic corresponds to the <c> BLSI </c> instruction.
 ///
 /// \param __X
 ///    An unsigned integer whose bits are to be cleared.
@@ -243,7 +243,7 @@ __blsi_u32(unsigned int __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BLSMSK instruction.
+/// This intrinsic corresponds to the <c> BLSMSK </c> instruction.
 ///
 /// \param __X
 ///    An unsigned integer used to create the mask.
@@ -259,7 +259,7 @@ __blsmsk_u32(unsigned int __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BLSR instruction.
+/// This intrinsic corresponds to the <c> BLSR </c> instruction.
 ///
 /// \param __X
 ///    An unsigned integer containing the operand to be cleared.
@@ -275,7 +275,7 @@ __blsr_u32(unsigned int __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 32-bit integer whose trailing zeros are to be counted.
@@ -291,7 +291,7 @@ __tzcnt_u32(unsigned int __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 32-bit integer whose trailing zeros are to be counted.
@@ -314,7 +314,7 @@ _mm_tzcnt_32(unsigned int __X)
 /// unsigned long long _andn_u64 (unsigned long long a, unsigned long long b);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c ANDN instruction.
+/// This intrinsic corresponds to the <c> ANDN </c> instruction.
 ///
 /// \param a
 ///    An unsigned 64-bit integer containing one of the operands.
@@ -334,7 +334,7 @@ _mm_tzcnt_32(unsigned int __X)
 /// unsigned long long _blsi_u64(unsigned long long a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c BLSI instruction.
+/// This intrinsic corresponds to the <c> BLSI </c> instruction.
 ///
 /// \param a
 ///    An unsigned 64-bit integer whose bits are to be cleared.
@@ -352,7 +352,7 @@ _mm_tzcnt_32(unsigned int __X)
 /// unsigned long long _blsmsk_u64(unsigned long long a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c BLSMSK instruction.
+/// This intrinsic corresponds to the <c> BLSMSK </c> instruction.
 ///
 /// \param a
 ///    An unsigned 64-bit integer used to create the mask.
@@ -368,7 +368,7 @@ _mm_tzcnt_32(unsigned int __X)
 /// unsigned long long _blsr_u64(unsigned long long a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c BLSR instruction.
+/// This intrinsic corresponds to the <c> BLSR </c> instruction.
 ///
 /// \param a
 ///    An unsigned 64-bit integer containing the operand to be cleared.
@@ -384,7 +384,7 @@ _mm_tzcnt_32(unsigned int __X)
 /// unsigned long long _tzcnt_u64(unsigned long long a);
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param a
 ///    An unsigned 64-bit integer whose trailing zeros are to be counted.
@@ -397,7 +397,7 @@ _mm_tzcnt_32(unsigned int __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c ANDN instruction.
+/// This intrinsic corresponds to the <c> ANDN </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer containing one of the operands.
@@ -417,7 +417,7 @@ __andn_u64 (unsigned long long __X, unsigned long long __Y)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BEXTR instruction.
+/// This intrinsic corresponds to the <c> BEXTR </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer whose bits are to be extracted.
@@ -439,7 +439,7 @@ __bextr_u64(unsigned long long __X, unsigned long long __Y)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BEXTR instruction.
+/// This intrinsic corresponds to the <c> BEXTR </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer whose bits are to be extracted.
@@ -462,7 +462,7 @@ _bextr_u64(unsigned long long __X, unsigned int __Y, unsigned int __Z)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BLSI instruction.
+/// This intrinsic corresponds to the <c> BLSI </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer whose bits are to be cleared.
@@ -480,7 +480,7 @@ __blsi_u64(unsigned long long __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BLSMSK instruction.
+/// This intrinsic corresponds to the <c> BLSMSK </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer used to create the mask.
@@ -496,7 +496,7 @@ __blsmsk_u64(unsigned long long __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c BLSR instruction.
+/// This intrinsic corresponds to the <c> BLSR </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer containing the operand to be cleared.
@@ -512,7 +512,7 @@ __blsr_u64(unsigned long long __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer whose trailing zeros are to be counted.
@@ -528,7 +528,7 @@ __tzcnt_u64(unsigned long long __X)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c TZCNT instruction.
+/// This intrinsic corresponds to the <c> TZCNT </c> instruction.
 ///
 /// \param __X
 ///    An unsigned 64-bit integer whose trailing zeros are to be counted.

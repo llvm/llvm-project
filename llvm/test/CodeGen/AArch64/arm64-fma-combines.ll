@@ -2,7 +2,7 @@
 define void @foo_2d(double* %src) {
 ; CHECK-LABEL: %entry
 ; CHECK: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
-; CHECK: fmul {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
+; CHECK: fmadd {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}, {{d[0-9]+}}
 entry:
   %arrayidx1 = getelementptr inbounds double, double* %src, i64 5
   %arrayidx2 = getelementptr inbounds double, double* %src, i64 11

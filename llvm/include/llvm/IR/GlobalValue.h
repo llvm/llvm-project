@@ -33,6 +33,7 @@
 namespace llvm {
 
 class Comdat;
+class ConstantRange;
 class Error;
 class GlobalObject;
 class Module;
@@ -510,6 +511,13 @@ public:
     return const_cast<GlobalValue *>(this)->getBaseObject();
   }
   GlobalObject *getBaseObject();
+
+  /// Returns whether this is a reference to an absolute symbol.
+  bool isAbsoluteSymbolRef() const;
+
+  /// If this is an absolute symbol reference, returns the range of the symbol,
+  /// otherwise returns None.
+  Optional<ConstantRange> getAbsoluteSymbolRange() const;
 
   /// This method unlinks 'this' from the containing module, but does not delete
   /// it.

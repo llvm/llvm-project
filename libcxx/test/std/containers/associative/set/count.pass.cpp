@@ -145,23 +145,25 @@ int main()
     m.insert ( V::make ( 11 ));
     m.insert ( V::make ( 12 ));
 
-    R r = m.count(5);
+    const M& mc = m;
+
+    R r = mc.count(5);
     assert(r == 1);
-    r = m.count(6);
+    r = mc.count(6);
     assert(r == 1);
-    r = m.count(7);
+    r = mc.count(7);
     assert(r == 1);
-    r = m.count(8);
+    r = mc.count(8);
     assert(r == 1);
-    r = m.count(9);
+    r = mc.count(9);
     assert(r == 1);
-    r = m.count(10);
+    r = mc.count(10);
     assert(r == 1);
-    r = m.count(11);
+    r = mc.count(11);
     assert(r == 1);
-    r = m.count(12);
+    r = mc.count(12);
     assert(r == 1);
-    r = m.count(4);
+    r = mc.count(4);
     assert(r == 0);
     }
 #endif

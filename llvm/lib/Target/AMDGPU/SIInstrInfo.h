@@ -462,15 +462,96 @@ public:
     return !RI.isSGPRReg(MRI, Dest);
   }
 
+  static int operandBitWidth(uint8_t OperandType) {
+    switch (OperandType) {
+    case AMDGPU::OPERAND_REG_IMM_INT32:
+    case AMDGPU::OPERAND_REG_IMM_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+      return 32;
+    case AMDGPU::OPERAND_REG_IMM_INT64:
+    case AMDGPU::OPERAND_REG_IMM_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+      return 64;
+    case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+    case AMDGPU::OPERAND_REG_IMM_INT16:
+    case AMDGPU::OPERAND_REG_IMM_FP16:
+      return 16;
+    default:
+      llvm_unreachable("unexpected operand type");
+    }
+  }
+
   bool isInlineConstant(const APInt &Imm) const;
-  bool isInlineConstant(const MachineOperand &MO, unsigned OpSize) const;
-  bool isLiteralConstant(const MachineOperand &MO, unsigned OpSize) const;
+
+  bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const;
+
+  bool isInlineConstant(const MachineOperand &MO,
+                        const MCOperandInfo &OpInfo) const {
+    return isInlineConstant(MO, OpInfo.OperandType);
+  }
+
+  /// \p returns true if \p UseMO is substituted with \p DefMO in \p MI it would
+  /// be an inline immediate.
+  bool isInlineConstant(const MachineInstr &MI,
+                        const MachineOperand &UseMO,
+                        const MachineOperand &DefMO) const {
+    assert(UseMO.getParent() == &MI);
+    int OpIdx = MI.getOperandNo(&UseMO);
+    if (!MI.getDesc().OpInfo || OpIdx >= MI.getDesc().NumOperands) {
+      return false;
+    }
+
+    return isInlineConstant(DefMO, MI.getDesc().OpInfo[OpIdx]);
+  }
+
+  /// \p returns true if the operand \p OpIdx in \p MI is a valid inline
+  /// immediate.
+  bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx) const {
+    const MachineOperand &MO = MI.getOperand(OpIdx);
+    return isInlineConstant(MO, MI.getDesc().OpInfo[OpIdx].OperandType);
+  }
+
+  bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
+                        const MachineOperand &MO) const {
+    if (!MI.getDesc().OpInfo || OpIdx >= MI.getDesc().NumOperands)
+      return false;
+
+    if (MI.isCopy()) {
+      unsigned Size = getOpSize(MI, OpIdx);
+      assert(Size == 8 || Size == 4);
+
+      uint8_t OpType = (Size == 8) ?
+        AMDGPU::OPERAND_REG_IMM_INT64 : AMDGPU::OPERAND_REG_IMM_INT32;
+      return isInlineConstant(MO, OpType);
+    }
+
+    return isInlineConstant(MO, MI.getDesc().OpInfo[OpIdx].OperandType);
+  }
+
+  bool isInlineConstant(const MachineOperand &MO) const {
+    const MachineInstr *Parent = MO.getParent();
+    return isInlineConstant(*Parent, Parent->getOperandNo(&MO));
+  }
+
+  bool isLiteralConstant(const MachineOperand &MO,
+                         const MCOperandInfo &OpInfo) const {
+    return MO.isImm() && !isInlineConstant(MO, OpInfo.OperandType);
+  }
+
+  bool isLiteralConstant(const MachineInstr &MI, int OpIdx) const {
+    const MachineOperand &MO = MI.getOperand(OpIdx);
+    return MO.isImm() && !isInlineConstant(MI, OpIdx);
+  }
 
   // Returns true if this operand could potentially require a 32-bit literal
   // operand, but not necessarily. A FrameIndex for example could resolve to an
   // inline immediate value that will not require an additional 4-bytes; this
   // assumes that it will.
-  bool isLiteralConstantLike(const MachineOperand &MO, unsigned OpSize) const;
+  bool isLiteralConstantLike(const MachineOperand &MO,
+                             const MCOperandInfo &OpInfo) const;
 
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const;
@@ -482,7 +563,7 @@ public:
   /// \brief Returns true if this operand uses the constant bus.
   bool usesConstantBus(const MachineRegisterInfo &MRI,
                        const MachineOperand &MO,
-                       unsigned OpSize) const;
+                       const MCOperandInfo &OpInfo) const;
 
   /// \brief Return true if this instruction has any modifiers.
   ///  e.g. src[012]_mod, omod, clamp.

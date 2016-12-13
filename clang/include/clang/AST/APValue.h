@@ -255,7 +255,7 @@ public:
   bool hasLValuePath() const;
   ArrayRef<LValuePathEntry> getLValuePath() const;
   unsigned getLValueCallIndex() const;
-  bool isNullPtr() const;
+  bool isNullPointer() const;
 
   APValue &getVectorElt(unsigned I) {
     assert(isVector() && "Invalid accessor");
@@ -376,7 +376,7 @@ public:
     ((ComplexAPFloat *)(char *)Data.buffer)->Imag = std::move(I);
   }
   void setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
-                 unsigned CallIndex, bool IsNuppPtr);
+                 unsigned CallIndex, bool IsNullPtr);
   void setLValue(LValueBase B, const CharUnits &O,
                  ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
                  unsigned CallIndex, bool IsNullPtr);

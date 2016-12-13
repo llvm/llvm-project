@@ -36,7 +36,7 @@ int main()
         std::valarray<T> v(a, N);
         std::valarray<T> v2 = ~v;
         assert(v2.size() == v.size());
-        for (int i = 0; i < N; ++i)
+        for (unsigned i = 0; i < N; ++i)
         {
             assert(v2[i].size() == v[i].size());
             for (std::size_t j = 0; j < v[i].size(); ++j)

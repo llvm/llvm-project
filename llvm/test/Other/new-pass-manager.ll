@@ -20,7 +20,8 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-CGSCC-PASS
 ; CHECK-CGSCC-PASS: Starting llvm::Module pass manager run
 ; CHECK-CGSCC-PASS-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor
-; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(CGSCCAnalysisManager|AnalysisManager<.*LazyCallGraph::SCC.*>).*}}>
+; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}}>
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-CGSCC-PASS-NEXT: Starting CGSCC pass manager run
@@ -378,7 +379,8 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-CGSCC-PASS
 ; CHECK-REPEAT-CGSCC-PASS: Starting llvm::Module pass manager run
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(CGSCCAnalysisManager|AnalysisManager<.*LazyCallGraph::SCC.*>).*}}>
+; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}}>
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Starting CGSCC pass manager run

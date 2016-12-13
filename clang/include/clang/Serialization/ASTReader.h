@@ -821,6 +821,7 @@ private:
   // \brief A list of late parsed template function data.
   SmallVector<uint64_t, 1> LateParsedTemplates;
 
+public:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
     SourceLocation ImportLoc;
@@ -829,6 +830,7 @@ private:
       : ID(ID), ImportLoc(ImportLoc) {}
   };
 
+private:
   /// \brief A list of modules that were imported by precompiled headers or
   /// any other non-module AST file.
   SmallVector<ImportedSubmodule, 2> ImportedModules;
@@ -1404,9 +1406,13 @@ public:
   /// \param ClientLoadCapabilities The set of client load-failure
   /// capabilities, represented as a bitset of the enumerators of
   /// LoadFailureCapabilities.
+  ///
+  /// \param Imported optional out-parameter to append the list of modules
+  /// that were imported by precompiled headers or any other non-module AST file
   ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
-                        unsigned ClientLoadCapabilities);
+                        unsigned ClientLoadCapabilities,
+                        SmallVectorImpl<ImportedSubmodule> *Imported = nullptr);
 
   /// \brief Make the entities in the given module and any of its (non-explicit)
   /// submodules visible to name lookup.

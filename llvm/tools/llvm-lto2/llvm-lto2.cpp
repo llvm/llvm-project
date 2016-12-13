@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/Caching.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
@@ -30,6 +31,11 @@ static cl::opt<char>
     OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
                            "(default = '-O2')"),
              cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+
+static cl::opt<char> CGOptLevel(
+    "cg-opt-level",
+    cl::desc("Codegen optimization level (0, 1, 2 or 3, default = '2')"),
+    cl::init('2'));
 
 static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
                                             cl::desc("<input bitcode files>"));
@@ -73,6 +79,15 @@ static cl::list<std::string> SymbolResolutions(
              "     visible outside of the LTO unit\n"
              "A resolution for each symbol must be specified."),
     cl::ZeroOrMore);
+
+static cl::opt<std::string> OverrideTriple(
+    "override-triple",
+    cl::desc("Replace target triples in input files with this triple"));
+
+static cl::opt<std::string> DefaultTriple(
+    "default-triple",
+    cl::desc(
+        "Replace unspecified target triples in input files with this triple"));
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -146,6 +161,13 @@ int main(int argc, char **argv) {
     exit(1);
   };
 
+  Conf.CPU = MCPU;
+  Conf.Options = InitTargetOptionsFromCodeGenFlags();
+  Conf.MAttrs = MAttrs;
+  if (auto RM = getRelocModel())
+    Conf.RelocModel = *RM;
+  Conf.CodeModel = CMModel;
+
   if (SaveTemps)
     check(Conf.addSaveTemps(OutputFilename + "."),
           "Config::addSaveTemps failed");
@@ -155,6 +177,26 @@ int main(int argc, char **argv) {
   Conf.AAPipeline = AAPipeline;
 
   Conf.OptLevel = OptLevel - '0';
+  switch (CGOptLevel) {
+  case '0':
+    Conf.CGOptLevel = CodeGenOpt::None;
+    break;
+  case '1':
+    Conf.CGOptLevel = CodeGenOpt::Less;
+    break;
+  case '2':
+    Conf.CGOptLevel = CodeGenOpt::Default;
+    break;
+  case '3':
+    Conf.CGOptLevel = CodeGenOpt::Aggressive;
+    break;
+  default:
+    llvm::errs() << "invalid cg optimization level: " << CGOptLevel << '\n';
+    return 1;
+  }
+
+  Conf.OverrideTriple = OverrideTriple;
+  Conf.DefaultTriple = DefaultTriple;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)

@@ -10,23 +10,22 @@
 // Interface to describe a layout of a stack frame on a AMDGPU target machine.
 //
 //===----------------------------------------------------------------------===//
+
 #include "AMDGPUFrameLowering.h"
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
-
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 AMDGPUFrameLowering::AMDGPUFrameLowering(StackDirection D, unsigned StackAl,
     int LAO, unsigned TransAl)
   : TargetFrameLowering(D, StackAl, LAO, TransAl) { }
 
-AMDGPUFrameLowering::~AMDGPUFrameLowering() { }
+AMDGPUFrameLowering::~AMDGPUFrameLowering() = default;
 
 unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
-
   // XXX: Hardcoding to 1 for now.
   //
   // I think the StackWidth should stored as metadata associated with the
@@ -101,4 +100,3 @@ int AMDGPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
 
   return OffsetBytes / (getStackWidth(MF) * 4);
 }
-

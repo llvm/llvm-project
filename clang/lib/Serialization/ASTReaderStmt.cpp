@@ -845,6 +845,16 @@ void ASTStmtReader::VisitNoInitExpr(NoInitExpr *E) {
   VisitExpr(E);
 }
 
+void ASTStmtReader::VisitArrayInitLoopExpr(ArrayInitLoopExpr *E) {
+  VisitExpr(E);
+  E->SubExprs[0] = Reader.ReadSubExpr();
+  E->SubExprs[1] = Reader.ReadSubExpr();
+}
+
+void ASTStmtReader::VisitArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+  VisitExpr(E);
+}
+
 void ASTStmtReader::VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
   VisitExpr(E);
 }
@@ -2881,6 +2891,11 @@ void ASTStmtReader::VisitOMPTeamsDistributeParallelForSimdDirective(
   VisitOMPLoopDirective(D);
 }
 
+void ASTStmtReader::VisitOMPTeamsDistributeParallelForDirective(
+    OMPTeamsDistributeParallelForDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
 //===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
@@ -3224,6 +3239,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_NO_INIT:
       S = new (Context) NoInitExpr(Empty);
+      break;
+
+    case EXPR_ARRAY_INIT_LOOP:
+      S = new (Context) ArrayInitLoopExpr(Empty);
+      break;
+
+    case EXPR_ARRAY_INIT_INDEX:
+      S = new (Context) ArrayInitIndexExpr(Empty);
       break;
 
     case EXPR_VA_ARG:
@@ -3620,6 +3643,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       auto NumClauses = Record[ASTStmtReader::NumStmtFields];
       auto CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTeamsDistributeParallelForSimdDirective::CreateEmpty(
+          Context, NumClauses, CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE: {
+      auto NumClauses = Record[ASTStmtReader::NumStmtFields];
+      auto CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPTeamsDistributeParallelForDirective::CreateEmpty(
           Context, NumClauses, CollapsedNum, Empty);
       break;
     }

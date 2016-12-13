@@ -18,6 +18,7 @@
 
 #include "Config.h"
 #include "Error.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/StringSaver.h"
@@ -113,7 +114,7 @@ private:
 
 class Parser {
 public:
-  explicit Parser(StringRef S, StringSaver *A) : Lex(S), Alloc(A) {}
+  explicit Parser(StringRef S) : Lex(S) {}
 
   void parse() {
     do {
@@ -197,9 +198,9 @@ private:
 
     if (Config->Machine == I386) {
       if (!isDecorated(E.Name))
-        E.Name = Alloc->save("_" + E.Name);
+        E.Name = Saver.save("_" + E.Name);
       if (!E.ExtName.empty() && !isDecorated(E.ExtName))
-        E.ExtName = Alloc->save("_" + E.ExtName);
+        E.ExtName = Saver.save("_" + E.ExtName);
     }
 
     for (;;) {
@@ -278,14 +279,11 @@ private:
   Lexer Lex;
   Token Tok;
   std::vector<Token> Stack;
-  StringSaver *Alloc;
 };
 
 } // anonymous namespace
 
-void parseModuleDefs(MemoryBufferRef MB, StringSaver *Alloc) {
-  Parser(MB.getBuffer(), Alloc).parse();
-}
+void parseModuleDefs(MemoryBufferRef MB) { Parser(MB.getBuffer()).parse(); }
 
 } // namespace coff
 } // namespace lld

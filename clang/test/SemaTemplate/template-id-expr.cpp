@@ -100,5 +100,5 @@ template void f5<0>(); // expected-note {{in instantiation of function template 
 class C {};
 template <template <typename> class D>  // expected-note{{previous use is here}}
 class E {
-  template class D<C>;  // expected-error {{elaborated type refers to a template template argument}}
+  template class D<C>;  // expected-error {{template template argument 'D' cannot be referenced with a class specifier}}
 };

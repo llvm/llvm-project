@@ -31,11 +31,11 @@
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__,  __target__("fxsr")))
 
 /// \brief Saves the XMM, MMX, MXCSR and x87 FPU registers into a 512-byte
-///    memory region pointed to by the input parameter __p.
+///    memory region pointed to by the input parameter \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXSAVE instruction.
+/// This intrinsic corresponds to the <c> FXSAVE </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory
@@ -47,13 +47,13 @@ _fxsave(void *__p)
 }
 
 /// \brief Restores the XMM, MMX, MXCSR and x87 FPU registers from the 512-byte
-///    memory region pointed to by the input parameter __p. The contents of this
-///    memory region should have been written to by a previous _fxsave or
-///    _fxsave64 intrinsic.
+///    memory region pointed to by the input parameter \a __p. The contents of
+///    this memory region should have been written to by a previous \c _fxsave
+///    or \c _fxsave64 intrinsic.
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXRSTOR instruction.
+/// This intrinsic corresponds to the <c> FXRSTOR </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory
@@ -66,11 +66,11 @@ _fxrstor(void *__p)
 
 #ifdef __x86_64__
 /// \brief Saves the XMM, MMX, MXCSR and x87 FPU registers into a 512-byte
-///    memory region pointed to by the input parameter__p.
+///    memory region pointed to by the input parameter \a __p.
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXSAVE64 instruction.
+/// This intrinsic corresponds to the <c> FXSAVE64 </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory
@@ -82,13 +82,13 @@ _fxsave64(void *__p)
 }
 
 /// \brief Restores the XMM, MMX, MXCSR and x87 FPU registers from the 512-byte
-///    memory region pointed to by the input parameter __p. The contents of this
-///    memory region should have been written to by a previous _fxsave or
-///    _fxsave64 intrinsic.
+///    memory region pointed to by the input parameter \a __p. The contents of
+///    this memory region should have been written to by a previous \c _fxsave
+///    or \c _fxsave64 intrinsic.
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c FXRSTOR64 instruction.
+/// This intrinsic corresponds to the <c> FXRSTOR64 </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 512-byte memory region. The beginning of this memory

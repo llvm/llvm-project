@@ -2,7 +2,7 @@
 # but have coverage rt in the binary.
 
 set(CMAKE_CXX_FLAGS
-  "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters")
+  "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters,trace-pc-guard")
 
 set(NoCoverageTests
   UninstrumentedTest

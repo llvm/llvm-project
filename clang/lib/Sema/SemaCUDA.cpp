@@ -93,8 +93,17 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const AttributeList *Attr) {
   return CFT_Host;
 }
 
+template <typename A>
+static bool hasAttr(const FunctionDecl *D, bool IgnoreImplicitAttr) {
+  return D->hasAttrs() && llvm::any_of(D->getAttrs(), [&](Attr *Attribute) {
+           return isa<A>(Attribute) &&
+                  !(IgnoreImplicitAttr && Attribute->isImplicit());
+         });
+}
+
 /// IdentifyCUDATarget - Determine the CUDA compilation target for this function
-Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D) {
+Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
+                                                  bool IgnoreImplicitHDAttr) {
   // Code that lives outside a function is run on the host.
   if (D == nullptr)
     return CFT_Host;
@@ -105,13 +114,13 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D) {
   if (D->hasAttr<CUDAGlobalAttr>())
     return CFT_Global;
 
-  if (D->hasAttr<CUDADeviceAttr>()) {
-    if (D->hasAttr<CUDAHostAttr>())
+  if (hasAttr<CUDADeviceAttr>(D, IgnoreImplicitHDAttr)) {
+    if (hasAttr<CUDAHostAttr>(D, IgnoreImplicitHDAttr))
       return CFT_HostDevice;
     return CFT_Device;
-  } else if (D->hasAttr<CUDAHostAttr>()) {
+  } else if (hasAttr<CUDAHostAttr>(D, IgnoreImplicitHDAttr)) {
     return CFT_Host;
-  } else if (D->isImplicit()) {
+  } else if (D->isImplicit() && !IgnoreImplicitHDAttr) {
     // Some implicit declarations (like intrinsic functions) are not marked.
     // Set the most lenient target on them for maximal flexibility.
     return CFT_HostDevice;
@@ -856,7 +865,7 @@ void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
 }
 
 void Sema::checkCUDATargetOverload(FunctionDecl *NewFD,
-                                   LookupResult &Previous) {
+                                   const LookupResult &Previous) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   CUDAFunctionTarget NewTarget = IdentifyCUDATarget(NewFD);
   for (NamedDecl *OldND : Previous) {
@@ -882,4 +891,22 @@ void Sema::checkCUDATargetOverload(FunctionDecl *NewFD,
       break;
     }
   }
+}
+
+template <typename AttrTy>
+static void copyAttrIfPresent(Sema &S, FunctionDecl *FD,
+                              const FunctionDecl &TemplateFD) {
+  if (AttrTy *Attribute = TemplateFD.getAttr<AttrTy>()) {
+    AttrTy *Clone = Attribute->clone(S.Context);
+    Clone->setInherited(true);
+    FD->addAttr(Clone);
+  }
+}
+
+void Sema::inheritCUDATargetAttrs(FunctionDecl *FD,
+                                  const FunctionTemplateDecl &TD) {
+  const FunctionDecl &TemplateFD = *TD.getTemplatedDecl();
+  copyAttrIfPresent<CUDAGlobalAttr>(*this, FD, TemplateFD);
+  copyAttrIfPresent<CUDAHostAttr>(*this, FD, TemplateFD);
+  copyAttrIfPresent<CUDADeviceAttr>(*this, FD, TemplateFD);
 }

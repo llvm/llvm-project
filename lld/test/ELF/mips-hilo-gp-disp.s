@@ -34,7 +34,7 @@ bar:
 
 # EXE: SYMBOL TABLE:
 # EXE: 0002000c     .text   00000000 bar
-# EXE: 00037ff0     .got    00000000 .hidden _gp
+# EXE: 00037ff0     *ABS*   00000000 .hidden _gp
 # EXE: 00020000     .text   00000000 __start
 
 # SO:      Disassembly of section .text:
@@ -51,5 +51,5 @@ bar:
 
 # SO: SYMBOL TABLE:
 # SO: 0001000c     .text   00000000 bar
-# SO: 00027ff0     .got    00000000 .hidden _gp
+# SO: 00027ff0     *ABS*   00000000 .hidden _gp
 # SO: 00010000     .text   00000000 __start
