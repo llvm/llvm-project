@@ -793,21 +793,6 @@ template <> struct isa_impl<GlobalObject, Value> {
   }
 };
 
-// Value* is only 4-byte aligned.
-template<>
-class PointerLikeTypeTraits<Value*> {
-  typedef Value* PT;
-
-public:
-  static inline void *getAsVoidPointer(PT P) { return P; }
-
-  static inline PT getFromVoidPointer(void *P) {
-    return static_cast<PT>(P);
-  }
-
-  enum { NumLowBitsAvailable = 2 };
-};
-
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_ISA_CONVERSION_FUNCTIONS(Value, LLVMValueRef)
 

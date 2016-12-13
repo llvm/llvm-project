@@ -14,14 +14,13 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONEXPANDER_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONEXPANDER_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueHandle.h"
+#include <set>
 
 namespace llvm {
   class TargetTransformInfo;
@@ -44,12 +43,11 @@ namespace llvm {
     const char* IVName;
 
     // InsertedExpressions caches Values for reuse, so must track RAUW.
-    DenseMap<std::pair<const SCEV *, Instruction *>, TrackingVH<Value>>
-        InsertedExpressions;
-
+    std::map<std::pair<const SCEV *, Instruction *>, TrackingVH<Value> >
+      InsertedExpressions;
     // InsertedValues only flags inserted instructions so needs no RAUW.
-    DenseSet<AssertingVH<Value>> InsertedValues;
-    DenseSet<AssertingVH<Value>> InsertedPostIncValues;
+    std::set<AssertingVH<Value> > InsertedValues;
+    std::set<AssertingVH<Value> > InsertedPostIncValues;
 
     /// A memoization of the "relevant" loop for a given SCEV.
     DenseMap<const SCEV *, const Loop *> RelevantLoops;
@@ -69,7 +67,7 @@ namespace llvm {
     Instruction *IVIncInsertPos;
 
     /// Phis that complete an IV chain. Reuse
-    DenseSet<AssertingVH<PHINode>> ChainedPhis;
+    std::set<AssertingVH<PHINode> > ChainedPhis;
 
     /// When true, expressions are expanded in "canonical" form. In particular,
     /// addrecs are expanded as arithmetic based on a canonical induction

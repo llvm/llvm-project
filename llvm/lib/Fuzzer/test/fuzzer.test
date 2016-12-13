@@ -30,7 +30,8 @@ COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
 COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
 COUNTERS: BINGO
 
-RUN: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
+# Don't run UninstrumentedTest for now since we build libFuzzer itself with asan.
+DISABLED: not LLVMFuzzer-UninstrumentedTest-Uninstrumented 2>&1 | FileCheck %s --check-prefix=UNINSTRUMENTED
 UNINSTRUMENTED: ERROR: __sanitizer_set_death_callback is not defined. Exiting.
 
 RUN: not LLVMFuzzer-UninstrumentedTest-NoCoverage 2>&1 | FileCheck %s --check-prefix=NO_COVERAGE

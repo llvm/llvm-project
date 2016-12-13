@@ -1540,11 +1540,6 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       if (MI->isDebugValue())
           continue;
 
-      // If we run into an instruction we can't fold across, discard
-      // the load candidates.
-      if (MI->isLoadFoldBarrier())
-        FoldAsLoadDefCandidates.clear();
-
       if (MI->isPosition() || MI->isPHI())
         continue;
 
@@ -1588,7 +1583,6 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         DEBUG(dbgs() << "NAPhysCopy: blowing away all info due to " << *MI
                      << '\n');
         NAPhysToVirtMIs.clear();
-        continue;
       }
 
       if ((isUncoalescableCopy(*MI) &&
@@ -1639,8 +1633,14 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       // earlier load into MI.
       if (!isLoadFoldable(MI, FoldAsLoadDefCandidates) &&
           !FoldAsLoadDefCandidates.empty()) {
+
+        // We visit each operand even after successfully folding a previous
+        // one.  This allows us to fold multiple loads into a single
+        // instruction.  We do assume that optimizeLoadInstr doesn't insert
+        // foldable uses earlier in the argument list.  Since we don't restart
+        // iteration, we'd miss such cases.
         const MCInstrDesc &MIDesc = MI->getDesc();
-        for (unsigned i = MIDesc.getNumDefs(); i != MIDesc.getNumOperands();
+        for (unsigned i = MIDesc.getNumDefs(); i != MI->getNumOperands();
              ++i) {
           const MachineOperand &MOp = MI->getOperand(i);
           if (!MOp.isReg())
@@ -1667,13 +1667,23 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
               MRI->markUsesInDebugValueAsUndef(FoldedReg);
               FoldAsLoadDefCandidates.erase(FoldedReg);
               ++NumLoadFold;
-              // MI is replaced with FoldMI.
+              
+              // MI is replaced with FoldMI so we can continue trying to fold
               Changed = true;
-              break;
+              MI = FoldMI;
             }
           }
         }
       }
+      
+      // If we run into an instruction we can't fold across, discard
+      // the load candidates.  Note: We might be able to fold *into* this
+      // instruction, so this needs to be after the folding logic.
+      if (MI->isLoadFoldBarrier()) {
+        DEBUG(dbgs() << "Encountered load fold barrier on " << *MI << "\n");
+        FoldAsLoadDefCandidates.clear();
+      }
+
     }
   }
 

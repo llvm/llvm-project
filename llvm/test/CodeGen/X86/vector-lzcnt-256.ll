@@ -882,9 +882,7 @@ define <4 x i64> @foldv4i64() nounwind {
 ; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm1
 ; X32-AVX-NEXT:    vpsrld $16, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,4294967295,0,0,4294967295,4294967295,0,4294967295]
-; X32-AVX-NEXT:    vpsrlq $32, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm1
+; X32-AVX-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm4[1,2,3],ymm0[4],ymm4[5],ymm0[6],ymm4[7]
 ; X32-AVX-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; X32-AVX-NEXT:    retl
@@ -927,9 +925,7 @@ define <4 x i64> @foldv4i64u() nounwind {
 ; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm1
 ; X32-AVX-NEXT:    vpsrld $16, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,4294967295,0,0,4294967295,4294967295,0,4294967295]
-; X32-AVX-NEXT:    vpsrlq $32, %ymm1, %ymm1
-; X32-AVX-NEXT:    vpand %ymm1, %ymm0, %ymm1
+; X32-AVX-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm4[1,2,3],ymm0[4],ymm4[5],ymm0[6],ymm4[7]
 ; X32-AVX-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; X32-AVX-NEXT:    retl

@@ -432,7 +432,15 @@ int main(int argc, char **argv) {
                                          const bool Shared) {
     std::string LibFileName;
     if (Shared) {
-      LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
+      if (Lib == DyLibName) {
+        // Treat the DyLibName specially. It is not a component library and
+        // already has the necessary prefix and suffix (e.g. `.so`) added so
+        // just return it unmodified.
+        assert(Lib.endswith(SharedExt) && "DyLib is missing suffix");
+        LibFileName = Lib;
+      } else {
+        LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
+      }
     } else {
       // default to static
       LibFileName = (StaticPrefix + Lib + "." + StaticExt).str();

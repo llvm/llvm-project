@@ -1,0 +1,5 @@
+RUN: llvm-config --system-libs 2>&1 | FileCheck %s
+UNSUPPORTED: system-windows
+CHECK: -l
+CHECK-NOT: error
+CHECK-NOT: warning

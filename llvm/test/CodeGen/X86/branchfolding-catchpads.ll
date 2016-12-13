@@ -93,3 +93,67 @@ unreachable:
 ;
 ; CHECK-LABEL: .def     test2;
 
+declare void @g()
+
+define void @test3() optsize personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+entry:
+  switch i32 undef, label %if.end57 [
+    i32 64, label %sw.bb
+    i32 128, label %sw.epilog
+    i32 256, label %if.then56
+    i32 1024, label %sw.bb
+    i32 4096, label %sw.bb33
+    i32 16, label %sw.epilog
+    i32 8, label %sw.epilog
+    i32 32, label %sw.bb44
+  ]
+
+sw.bb:
+  unreachable
+
+sw.bb33:
+  br i1 undef, label %if.end57, label %while.cond.i163.preheader
+
+while.cond.i163.preheader:
+  unreachable
+
+sw.bb44:
+  %temp0 = load void ()*, void ()** undef
+  invoke void %temp0()
+          to label %if.end57 unwind label %catch.dispatch
+
+sw.epilog:
+  %temp1 = load i8*, i8** undef
+  br label %if.end57
+
+catch.dispatch:
+  %cs = catchswitch within none [label %catch1, label %catch2, label %catch3] unwind to caller
+
+catch1:
+  %c1 = catchpad within %cs [i8* null, i32 8, i8* null]
+  unreachable
+
+catch2:
+  %c2 = catchpad within %cs [i8* null, i32 32, i8* null]
+  unreachable
+
+catch3:
+  %c3 = catchpad within %cs [i8* null, i32 64, i8* null]
+  unreachable
+
+if.then56:
+  call void @g()
+  br label %if.end57
+
+if.end57:
+  ret void
+}
+
+; This test exercises a complex case that produced an infinite loop during
+; compilation when the two cases above did not. The multiple targets from the
+; entry switch are not actually fundamental to the failure, but they are
+; necessary to suppress various control flow optimizations that would prevent
+; the conditions that lead to the failure.
+;
+; CHECK-LABEL: .def     test3;
+

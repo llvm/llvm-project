@@ -22,17 +22,6 @@ namespace llvm {
 class ValueHandleBase;
 template<typename From> struct simplify_type;
 
-// ValueHandleBase** is only 4-byte aligned.
-template<>
-class PointerLikeTypeTraits<ValueHandleBase**> {
-public:
-  static inline void *getAsVoidPointer(ValueHandleBase** P) { return P; }
-  static inline ValueHandleBase **getFromVoidPointer(void *P) {
-    return static_cast<ValueHandleBase**>(P);
-  }
-  enum { NumLowBitsAvailable = 2 };
-};
-
 /// \brief This is the common base class of value handles.
 ///
 /// ValueHandle's are smart pointers to Value's that have special behavior when

@@ -2130,7 +2130,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   }
 
   // Okay, check to see if the same value occurs in the operand list more than
-  // once. If so, merge them together into a multiply expression. Since we
+  // once.  If so, merge them together into an multiply expression.  Since we
   // sorted the list, these values are required to be adjacent.
   Type *Ty = Ops[0]->getType();
   bool FoundMatch = false;

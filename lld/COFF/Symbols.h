@@ -13,6 +13,7 @@
 #include "Chunks.h"
 #include "Config.h"
 #include "lld/Core/LLVM.h"
+#include "lld/Support/Memory.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
@@ -312,10 +313,10 @@ public:
   }
 
   uint64_t getRVA() { return Data->getRVA(); }
-  Chunk *getChunk() { return Data.get(); }
+  Chunk *getChunk() { return Data; }
 
 private:
-  std::unique_ptr<Chunk> Data;
+  Chunk *Data;
 };
 
 // If you have a symbol "__imp_foo" in your object file, a symbol name
@@ -326,17 +327,17 @@ private:
 class DefinedLocalImport : public Defined {
 public:
   DefinedLocalImport(StringRef N, Defined *S)
-      : Defined(DefinedLocalImportKind, N), Data(new LocalImportChunk(S)) {}
+      : Defined(DefinedLocalImportKind, N), Data(make<LocalImportChunk>(S)) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == DefinedLocalImportKind;
   }
 
   uint64_t getRVA() { return Data->getRVA(); }
-  Chunk *getChunk() { return Data.get(); }
+  Chunk *getChunk() { return Data; }
 
 private:
-  std::unique_ptr<LocalImportChunk> Data;
+  LocalImportChunk *Data;
 };
 
 class DefinedBitcode : public Defined {

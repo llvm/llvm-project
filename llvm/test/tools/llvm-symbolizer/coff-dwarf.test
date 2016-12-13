@@ -3,7 +3,7 @@ RUN:     | llvm-symbolizer --inlining --relative-address -obj="%p/Inputs/coff-dw
 RUN:     | FileCheck %s
 
 This test relies on UnDecorateSymbolName, which is Windows-only.
-REQUIRES: system-windows
+REQUIRES: target-windows
 
 ADDR: 0x5009
 ADDR: 0x5038

@@ -420,7 +420,7 @@ std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
 
   std::vector<ObjectFile *> ObjFiles;
   for (SmallString<0> &Obj : Objs) {
-    auto *ObjFile = new ObjectFile(MemoryBufferRef(Obj, "<LTO object>"));
+    auto *ObjFile = make<ObjectFile>(MemoryBufferRef(Obj, "<LTO object>"));
     ObjectFiles.push_back(ObjFile);
     ObjFiles.push_back(ObjFile);
   }

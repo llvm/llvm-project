@@ -19,8 +19,10 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <limits.h>
 
@@ -3847,8 +3849,9 @@ DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, integerPart I)
 }
 
 DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, const APInt &I)
-    : Semantics(&S), Floats(new APFloat[2]{APFloat(PPCDoubleDoubleImpl, I),
-                                           APFloat(IEEEdouble)}) {
+    : Semantics(&S), Floats(new APFloat[2]{
+                         APFloat(PPCDoubleDoubleImpl, I),
+                         APFloat(IEEEdouble, APInt(64, I.getRawData()[1]))}) {
   assert(Semantics == &PPCDoubleDouble);
 }
 
@@ -3858,7 +3861,8 @@ DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, APFloat &&First,
       Floats(new APFloat[2]{std::move(First), std::move(Second)}) {
   assert(Semantics == &PPCDoubleDouble);
   // TODO Check for First == &IEEEdouble once the transition is done.
-  assert(&Floats[0].getSemantics() == &PPCDoubleDoubleImpl);
+  assert(&Floats[0].getSemantics() == &PPCDoubleDoubleImpl ||
+         &Floats[0].getSemantics() == &IEEEdouble);
   assert(&Floats[1].getSemantics() == &IEEEdouble);
 }
 
@@ -3885,6 +3889,198 @@ DoubleAPFloat &DoubleAPFloat::operator=(const DoubleAPFloat &RHS) {
     new (this) DoubleAPFloat(RHS);
   }
   return *this;
+}
+
+// "Software for Doubled-Precision Floating-Point Computations",
+// by Seppo Linnainmaa, ACM TOMS vol 7 no 3, September 1981, pages 272-283.
+APFloat::opStatus DoubleAPFloat::addImpl(const APFloat &a, const APFloat &aa,
+                                         const APFloat &c, const APFloat &cc,
+                                         roundingMode RM) {
+  int Status = opOK;
+  APFloat z = a;
+  Status |= z.add(c, RM);
+  if (!z.isFinite()) {
+    if (!z.isInfinity()) {
+      Floats[0] = std::move(z);
+      Floats[1].makeZero(false);
+      return (opStatus)Status;
+    }
+    Status = opOK;
+    auto AComparedToC = a.compareAbsoluteValue(c);
+    z = cc;
+    Status |= z.add(aa, RM);
+    if (AComparedToC == APFloat::cmpGreaterThan) {
+      // z = cc + aa + c + a;
+      Status |= z.add(c, RM);
+      Status |= z.add(a, RM);
+    } else {
+      // z = cc + aa + a + c;
+      Status |= z.add(a, RM);
+      Status |= z.add(c, RM);
+    }
+    if (!z.isFinite()) {
+      Floats[0] = std::move(z);
+      Floats[1].makeZero(false);
+      return (opStatus)Status;
+    }
+    Floats[0] = z;
+    APFloat zz = aa;
+    Status |= zz.add(cc, RM);
+    if (AComparedToC == APFloat::cmpGreaterThan) {
+      // Floats[1] = a - z + c + zz;
+      Floats[1] = a;
+      Status |= Floats[1].subtract(z, RM);
+      Status |= Floats[1].add(c, RM);
+      Status |= Floats[1].add(zz, RM);
+    } else {
+      // Floats[1] = c - z + a + zz;
+      Floats[1] = c;
+      Status |= Floats[1].subtract(z, RM);
+      Status |= Floats[1].add(a, RM);
+      Status |= Floats[1].add(zz, RM);
+    }
+  } else {
+    // q = a - z;
+    APFloat q = a;
+    Status |= q.subtract(z, RM);
+
+    // zz = q + c + (a - (q + z)) + aa + cc;
+    // Compute a - (q + z) as -((q + z) - a) to avoid temporary copies.
+    auto zz = q;
+    Status |= zz.add(c, RM);
+    Status |= q.add(z, RM);
+    Status |= q.subtract(a, RM);
+    q.changeSign();
+    Status |= zz.add(q, RM);
+    Status |= zz.add(aa, RM);
+    Status |= zz.add(cc, RM);
+    if (zz.isZero() && !zz.isNegative()) {
+      Floats[0] = std::move(z);
+      Floats[1].makeZero(false);
+      return opOK;
+    }
+    Floats[0] = z;
+    Status |= Floats[0].add(zz, RM);
+    if (!Floats[0].isFinite()) {
+      Floats[1].makeZero(false);
+      return (opStatus)Status;
+    }
+    Floats[1] = std::move(z);
+    Status |= Floats[1].subtract(Floats[0], RM);
+    Status |= Floats[1].add(zz, RM);
+  }
+  return (opStatus)Status;
+}
+
+APFloat::opStatus DoubleAPFloat::addWithSpecial(const DoubleAPFloat &LHS,
+                                                const DoubleAPFloat &RHS,
+                                                DoubleAPFloat &Out,
+                                                roundingMode RM) {
+  if (LHS.getCategory() == fcNaN) {
+    Out = LHS;
+    return opOK;
+  }
+  if (RHS.getCategory() == fcNaN) {
+    Out = RHS;
+    return opOK;
+  }
+  if (LHS.getCategory() == fcZero) {
+    Out = RHS;
+    return opOK;
+  }
+  if (RHS.getCategory() == fcZero) {
+    Out = LHS;
+    return opOK;
+  }
+  if (LHS.getCategory() == fcInfinity && RHS.getCategory() == fcInfinity &&
+      LHS.isNegative() != RHS.isNegative()) {
+    Out.makeNaN(false, Out.isNegative(), nullptr);
+    return opInvalidOp;
+  }
+  if (LHS.getCategory() == fcInfinity) {
+    Out = LHS;
+    return opOK;
+  }
+  if (RHS.getCategory() == fcInfinity) {
+    Out = RHS;
+    return opOK;
+  }
+  assert(LHS.getCategory() == fcNormal && RHS.getCategory() == fcNormal);
+
+  // These conversions will go away once PPCDoubleDoubleImpl goes away.
+  // (PPCDoubleDoubleImpl, IEEEDouble) -> (IEEEDouble, IEEEDouble)
+  APFloat A(IEEEdouble,
+            APInt(64, LHS.Floats[0].bitcastToAPInt().getRawData()[0])),
+      AA(LHS.Floats[1]),
+      C(IEEEdouble, APInt(64, RHS.Floats[0].bitcastToAPInt().getRawData()[0])),
+      CC(RHS.Floats[1]);
+  assert(&AA.getSemantics() == &IEEEdouble);
+  assert(&CC.getSemantics() == &IEEEdouble);
+  Out.Floats[0] = APFloat(IEEEdouble);
+  assert(&Out.Floats[1].getSemantics() == &IEEEdouble);
+
+  auto Ret = Out.addImpl(A, AA, C, CC, RM);
+
+  // (IEEEDouble, IEEEDouble) -> (PPCDoubleDoubleImpl, IEEEDouble)
+  uint64_t Buffer[] = {Out.Floats[0].bitcastToAPInt().getRawData()[0],
+                       Out.Floats[1].bitcastToAPInt().getRawData()[0]};
+  Out.Floats[0] = APFloat(PPCDoubleDoubleImpl, APInt(128, 2, Buffer));
+  return Ret;
+}
+
+APFloat::opStatus DoubleAPFloat::add(const DoubleAPFloat &RHS,
+                                     roundingMode RM) {
+  return addWithSpecial(*this, RHS, *this, RM);
+}
+
+APFloat::opStatus DoubleAPFloat::subtract(const DoubleAPFloat &RHS,
+                                          roundingMode RM) {
+  changeSign();
+  auto Ret = add(RHS, RM);
+  changeSign();
+  return Ret;
+}
+
+void DoubleAPFloat::changeSign() {
+  Floats[0].changeSign();
+  Floats[1].changeSign();
+}
+
+APFloat::cmpResult
+DoubleAPFloat::compareAbsoluteValue(const DoubleAPFloat &RHS) const {
+  auto Result = Floats[0].compareAbsoluteValue(RHS.Floats[0]);
+  if (Result != cmpEqual)
+    return Result;
+  Result = Floats[1].compareAbsoluteValue(RHS.Floats[1]);
+  if (Result == cmpLessThan || Result == cmpGreaterThan) {
+    auto Against = Floats[0].isNegative() ^ Floats[1].isNegative();
+    auto RHSAgainst = RHS.Floats[0].isNegative() ^ RHS.Floats[1].isNegative();
+    if (Against && !RHSAgainst)
+      return cmpLessThan;
+    if (!Against && RHSAgainst)
+      return cmpGreaterThan;
+    if (!Against && !RHSAgainst)
+      return Result;
+    if (Against && RHSAgainst)
+      return (cmpResult)(cmpLessThan + cmpGreaterThan - Result);
+  }
+  return Result;
+}
+
+APFloat::fltCategory DoubleAPFloat::getCategory() const {
+  return Floats[0].getCategory();
+}
+
+bool DoubleAPFloat::isNegative() const { return Floats[0].isNegative(); }
+
+void DoubleAPFloat::makeInf(bool Neg) {
+  Floats[0].makeInf(Neg);
+  Floats[1].makeZero(false);
+}
+
+void DoubleAPFloat::makeNaN(bool SNaN, bool Neg, const APInt *fill) {
+  Floats[0].makeNaN(SNaN, Neg, fill);
+  Floats[1].makeZero(false);
 }
 
 } // End detail namespace
@@ -3958,5 +4154,13 @@ APFloat APFloat::getAllOnesValue(unsigned BitWidth, bool isIEEE) {
     return APFloat(PPCDoubleDouble, APInt::getAllOnesValue(BitWidth));
   }
 }
+
+void APFloat::print(raw_ostream &OS) const {
+  SmallVector<char, 16> Buffer;
+  toString(Buffer);
+  OS << Buffer << "\n";
+}
+
+void APFloat::dump() const { print(dbgs()); }
 
 } // End llvm namespace

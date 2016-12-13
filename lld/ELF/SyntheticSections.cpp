@@ -610,7 +610,8 @@ template <class ELFT> bool MipsGotSection<ELFT>::empty() const {
   return Config->Relocatable;
 }
 
-template <class ELFT> unsigned MipsGotSection<ELFT>::getGp() const {
+template <class ELFT>
+typename MipsGotSection<ELFT>::uintX_t MipsGotSection<ELFT>::getGp() const {
   return ElfSym<ELFT>::MipsGp->template getVA<ELFT>(0);
 }
 

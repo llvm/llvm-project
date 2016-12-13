@@ -13,14 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSubtarget.h"
-#include "R600ISelLowering.h"
-#include "R600InstrInfo.h"
-#include "SIFrameLowering.h"
-#include "SIISelLowering.h"
-#include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/Target/TargetFrameLowering.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -31,7 +27,7 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "AMDGPUGenSubtargetInfo.inc"
 
-AMDGPUSubtarget::~AMDGPUSubtarget() {}
+AMDGPUSubtarget::~AMDGPUSubtarget() = default;
 
 AMDGPUSubtarget &
 AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
@@ -124,8 +120,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     ScalarizeGlobal(false),
 
     FeatureDisable(false),
-    InstrItins(getInstrItineraryForCPU(GPU)),
-    TSInfo() {
+    InstrItins(getInstrItineraryForCPU(GPU)) {
   initializeSubtargetDependencies(TT, GPU, FS);
 }
 
@@ -189,7 +184,6 @@ unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes) const {
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   const Function &F) const {
-
   // Default minimum/maximum flat work group sizes.
   std::pair<unsigned, unsigned> Default =
     AMDGPU::isCompute(F.getCallingConv()) ?
@@ -222,7 +216,6 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   const Function &F) const {
-
   // Default minimum/maximum number of waves per execution unit.
   std::pair<unsigned, unsigned> Default(1, 0);
 
@@ -281,8 +274,7 @@ SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   AMDGPUSubtarget(TT, GPU, FS, TM),
   InstrInfo(*this),
   FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
-  TLInfo(TM, *this),
-  GISel() {}
+  TLInfo(TM, *this) {}
 
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
                                       unsigned NumRegionInstrs) const {
