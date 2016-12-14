@@ -27,6 +27,7 @@
 
 namespace llvm {
 
+class BitcodeModule;
 class Error;
 class Module;
 class Target;
@@ -43,7 +44,7 @@ Error thinBackend(Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
                   ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
-                  MapVector<StringRef, MemoryBufferRef> &ModuleMap);
+                  MapVector<StringRef, BitcodeModule> &ModuleMap);
 }
 }
 

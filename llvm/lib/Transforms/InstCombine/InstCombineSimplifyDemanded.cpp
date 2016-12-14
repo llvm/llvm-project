@@ -1290,31 +1290,64 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       // checks).
       break;
 
-    // Binary scalar-as-vector operations that work column-wise.  A dest element
-    // is a function of the corresponding input elements from the two inputs.
+    // Binary scalar-as-vector operations that work column-wise. The high
+    // elements come from operand 0. The low element is a function of both
+    // operands.
     case Intrinsic::x86_sse_min_ss:
     case Intrinsic::x86_sse_max_ss:
     case Intrinsic::x86_sse_cmp_ss:
     case Intrinsic::x86_sse2_min_sd:
     case Intrinsic::x86_sse2_max_sd:
-    case Intrinsic::x86_sse2_cmp_sd:
-    case Intrinsic::x86_sse41_round_ss:
-    case Intrinsic::x86_sse41_round_sd:
+    case Intrinsic::x86_sse2_cmp_sd: {
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
                                         UndefElts, Depth + 1);
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
+
+      // If lowest element of a scalar op isn't used then use Arg0.
+      if (!DemandedElts[0])
+        return II->getArgOperand(0);
+
+      // Only lower element is used for operand 1.
+      DemandedElts = 1;
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(1), DemandedElts,
                                         UndefElts2, Depth + 1);
       if (TmpV) { II->setArgOperand(1, TmpV); MadeChange = true; }
 
+      // Lower element is undefined if both lower elements are undefined.
+      // Consider things like undef&0.  The result is known zero, not undef.
+      if (!UndefElts2[0])
+        UndefElts.clearBit(0);
+
+      break;
+    }
+
+    // Binary scalar-as-vector operations that work column-wise. The high
+    // elements come from operand 0 and the low element comes from operand 1.
+    case Intrinsic::x86_sse41_round_ss:
+    case Intrinsic::x86_sse41_round_sd: {
+      // Don't use the low element of operand 0.
+      APInt DemandedElts2 = DemandedElts;
+      DemandedElts2.clearBit(0);
+      TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts2,
+                                        UndefElts, Depth + 1);
+      if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
+
       // If lowest element of a scalar op isn't used then use Arg0.
-      if (DemandedElts.getLoBits(1) != 1)
+      if (!DemandedElts[0])
         return II->getArgOperand(0);
 
-      // Output elements are undefined if both are undefined.  Consider things
-      // like undef&0.  The result is known zero, not undef.
-      UndefElts &= UndefElts2;
+      // Only lower element is used for operand 1.
+      DemandedElts = 1;
+      TmpV = SimplifyDemandedVectorElts(II->getArgOperand(1), DemandedElts,
+                                        UndefElts2, Depth + 1);
+      if (TmpV) { II->setArgOperand(1, TmpV); MadeChange = true; }
+
+      // Take the high undef elements from operand 0 and take the lower element
+      // from operand 1.
+      UndefElts.clearBit(0);
+      UndefElts |= UndefElts2[0];
       break;
+    }
 
     case Intrinsic::x86_fma_vfmadd_ss:
     case Intrinsic::x86_fma_vfmsub_ss:

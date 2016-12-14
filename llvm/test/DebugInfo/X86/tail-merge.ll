@@ -27,7 +27,7 @@
 ; CHECK: .loc	1 8 10
 ; CHECK: callq	bar
 ; CHECK: [[TAIL]]:
-; CHECK: .loc	1 0 0
+; CHECK: .loc	1 0
 ; CHECK: addl	[[REG]], %eax
 ; CHECK: .loc	1 9 3
 

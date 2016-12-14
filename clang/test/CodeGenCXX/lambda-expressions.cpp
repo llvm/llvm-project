@@ -140,7 +140,7 @@ namespace pr28595 {
     // CHECK: call {{.*}}after_init
     after_init();
 
-    // CHECK: %[[DST_0:.*]] = getelementptr inbounds [3 x [5 x %[[A]]]], {{.*}}, i64 0, i64 0
+    // CHECK: %[[DST_0:.*]] = getelementptr {{.*}} [3 x [5 x %[[A]]]]* %[[DST:.*]], i64 0, i64 0
     // CHECK: br label
     // CHECK: %[[I:.*]] = phi i64 [ 0, %{{.*}} ], [ %[[I_NEXT:.*]], {{.*}} ]
     // CHECK: %[[DST_I:.*]] = getelementptr {{.*}} [5 x %[[A]]]* %[[DST_0]], i64 %[[I]]
@@ -150,6 +150,7 @@ namespace pr28595 {
     // CHECK: br label
     // CHECK: %[[J:.*]] = phi i64 [ 0, %{{.*}} ], [ %[[J_NEXT:.*]], {{.*}} ]
     // CHECK: %[[DST_I_J:.*]] = getelementptr {{.*}} %[[A]]* %[[DST_I_0]], i64 %[[J]]
+    // CHECK: %[[DST_0_0:.*]] = bitcast [5 x %[[A]]]* %[[DST_0]] to %[[A]]*
     // CHECK: %[[SRC_I_J:.*]] = getelementptr {{.*}} [5 x %[[A]]]* %[[SRC_I]], i64 0, i64 %[[J]]
     //
     // CHECK: invoke void @_ZN7pr285954TempC1Ev
@@ -173,21 +174,12 @@ namespace pr28595 {
     // CHECK: invoke void @_ZN7pr285954TempD1Ev
     // CHECK: br label %[[CLEANUP]]
     //
-    // FIXME: only emit a single cleanup loop here
     // CHECK: [[CLEANUP]]:
-    // CHECK: icmp eq %[[A]]* %[[DST_I_0]], %[[DST_I_J]]
+    // CHECK: icmp eq %[[A]]* %[[DST_0_0]], %[[DST_I_J]]
     // CHECK: %[[T0:.*]] = phi %[[A]]*
     // CHECK: %[[T1:.*]] = getelementptr inbounds %[[A]], %[[A]]* %[[T0]], i64 -1
     // CHECK: call void @_ZN7pr285951AD1Ev(%[[A]]* %[[T1]])
-    // CHECK: icmp eq %[[A]]* %[[T1]], %[[DST_I_0]]
-    //
-    // CHECK: %[[BEGIN:.*]] = getelementptr {{.*}} %[[DST_0]], i64 0, i64 0
-    // CHECK: %[[END:.*]] = getelementptr {{.*}} %[[DST_I]], i64 0, i64 0
-    // CHECK: icmp eq %[[A]]* %[[BEGIN]], %[[END]]
-    // CHECK: %[[T0:.*]] = phi %[[A]]*
-    // CHECK: %[[T1:.*]] = getelementptr inbounds %[[A]], %[[A]]* %[[T0]], i64 -1
-    // CHECK: call void @_ZN7pr285951AD1Ev(%[[A]]* %[[T1]])
-    // CHECK: icmp eq %[[A]]* %[[T1]], %[[BEGIN]]
+    // CHECK: icmp eq %[[A]]* %[[T1]], %[[DST_0_0]]
     (void) [array]{};
   }
 }
