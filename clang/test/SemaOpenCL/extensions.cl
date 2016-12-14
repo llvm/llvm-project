@@ -35,6 +35,14 @@ void f1(double da) { // expected-error {{type 'double' requires cl_khr_fp64 exte
 }
 #endif
 
+int isnan(float x) {
+    return __builtin_isnan(x);
+}
+
+int isfinite(float x) {
+    return __builtin_isfinite(x);
+}
+
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #ifdef NOFP64
 // expected-warning@-2{{unsupported OpenCL extension 'cl_khr_fp64' - ignoring}}

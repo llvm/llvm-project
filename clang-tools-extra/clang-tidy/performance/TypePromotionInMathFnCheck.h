@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_TYPE_PROMOTION_IN_MATH_FN_H
 
 #include "../ClangTidy.h"
+#include "../utils/IncludeInserter.h"
 
 namespace clang {
 namespace tidy {
@@ -27,10 +28,16 @@ namespace performance {
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance-type-promotion-in-math-fn.html
 class TypePromotionInMathFnCheck : public ClangTidyCheck {
 public:
-  TypePromotionInMathFnCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  TypePromotionInMathFnCheck(StringRef Name, ClangTidyContext *Context);
+
+  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  std::unique_ptr<utils::IncludeInserter> IncludeInserter;
+  const utils::IncludeSorter::IncludeStyle IncludeStyle;
 };
 
 } // namespace performance

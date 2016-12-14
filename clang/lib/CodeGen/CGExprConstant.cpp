@@ -1365,7 +1365,7 @@ llvm::Constant *CodeGenModule::EmitConstantValue(const APValue &Value,
   }
   case APValue::Float: {
     const llvm::APFloat &Init = Value.getFloat();
-    if (&Init.getSemantics() == &llvm::APFloat::IEEEhalf &&
+    if (&Init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
         !Context.getLangOpts().NativeHalfType &&
         !Context.getLangOpts().HalfArgsAndReturns)
       return llvm::ConstantInt::get(VMContext, Init.bitcastToAPInt());

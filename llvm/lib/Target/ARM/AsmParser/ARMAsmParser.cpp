@@ -5295,7 +5295,7 @@ ARMAsmParser::parseFPImm(OperandVector &Operands) {
   const AsmToken &Tok = Parser.getTok();
   SMLoc Loc = Tok.getLoc();
   if (Tok.is(AsmToken::Real) && isVmovf) {
-    APFloat RealVal(APFloat::IEEEsingle, Tok.getString());
+    APFloat RealVal(APFloat::IEEEsingle(), Tok.getString());
     uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
     // If we had a '-' in front, toggle the sign bit.
     IntVal ^= (uint64_t)isNegative << 31;

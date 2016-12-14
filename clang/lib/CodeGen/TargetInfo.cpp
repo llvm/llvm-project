@@ -2385,13 +2385,13 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
       Current = SSE;
     } else if (k == BuiltinType::LongDouble) {
       const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-      if (LDF == &llvm::APFloat::IEEEquad) {
+      if (LDF == &llvm::APFloat::IEEEquad()) {
         Lo = SSE;
         Hi = SSEUp;
-      } else if (LDF == &llvm::APFloat::x87DoubleExtended) {
+      } else if (LDF == &llvm::APFloat::x87DoubleExtended()) {
         Lo = X87;
         Hi = X87Up;
-      } else if (LDF == &llvm::APFloat::IEEEdouble) {
+      } else if (LDF == &llvm::APFloat::IEEEdouble()) {
         Current = SSE;
       } else
         llvm_unreachable("unexpected long double representation!");
@@ -2510,11 +2510,11 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
       Lo = Hi = SSE;
     } else if (ET == getContext().LongDoubleTy) {
       const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-      if (LDF == &llvm::APFloat::IEEEquad)
+      if (LDF == &llvm::APFloat::IEEEquad())
         Current = Memory;
-      else if (LDF == &llvm::APFloat::x87DoubleExtended)
+      else if (LDF == &llvm::APFloat::x87DoubleExtended())
         Current = ComplexX87;
-      else if (LDF == &llvm::APFloat::IEEEdouble)
+      else if (LDF == &llvm::APFloat::IEEEdouble())
         Lo = Hi = SSE;
       else
         llvm_unreachable("unexpected long double representation!");
@@ -3747,7 +3747,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   // passes them indirectly through memory.
   if (IsMingw64 && BT && BT->getKind() == BuiltinType::LongDouble) {
     const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-    if (LDF == &llvm::APFloat::x87DoubleExtended)
+    if (LDF == &llvm::APFloat::x87DoubleExtended())
       return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
   }
 

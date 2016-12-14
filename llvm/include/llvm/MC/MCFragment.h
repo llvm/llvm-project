@@ -346,9 +346,13 @@ class MCOrgFragment : public MCFragment {
   /// Value - Value to use for filling bytes.
   int8_t Value;
 
+  /// Loc - Source location of the directive that this fragment was created for.
+  SMLoc Loc;
+
 public:
-  MCOrgFragment(const MCExpr &Offset, int8_t Value, MCSection *Sec = nullptr)
-      : MCFragment(FT_Org, false, 0, Sec), Offset(&Offset), Value(Value) {}
+  MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc,
+                MCSection *Sec = nullptr)
+      : MCFragment(FT_Org, false, 0, Sec), Offset(&Offset), Value(Value), Loc(Loc) {}
 
   /// \name Accessors
   /// @{
@@ -356,6 +360,8 @@ public:
   const MCExpr &getOffset() const { return *Offset; }
 
   uint8_t getValue() const { return Value; }
+
+  SMLoc getLoc() const { return Loc; }
 
   /// @}
 

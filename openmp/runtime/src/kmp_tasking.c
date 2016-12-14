@@ -336,12 +336,12 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
     thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK(thread_data->td);
     TCW_4(thread_data -> td.td_deque_ntasks, TCR_4(thread_data -> td.td_deque_ntasks) + 1);             // Adjust task count
 
-    __kmp_release_bootstrap_lock( & thread_data -> td.td_deque_lock );
-
     KA_TRACE(20, ("__kmp_push_task: T#%d returning TASK_SUCCESSFULLY_PUSHED: "
-                  "task=%p ntasks=%d head=%u tail=%u\n",
-                  gtid, taskdata, thread_data->td.td_deque_ntasks,
-                  thread_data->td.td_deque_tail, thread_data->td.td_deque_head) );
+          "task=%p ntasks=%d head=%u tail=%u\n",
+          gtid, taskdata, thread_data->td.td_deque_ntasks,
+          thread_data->td.td_deque_head, thread_data->td.td_deque_tail) );
+
+    __kmp_release_bootstrap_lock( & thread_data->td.td_deque_lock );
 
     return TASK_SUCCESSFULLY_PUSHED;
 }

@@ -809,7 +809,7 @@ public:
     this->PtrDiffType = TargetInfo::SignedInt;
     this->IntPtrType = TargetInfo::SignedInt;
     // RegParmMax is inherited from the underlying architecture.
-    this->LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    this->LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     if (Triple.getArch() == llvm::Triple::arm) {
       // Handled in ARM's setABI().
     } else if (Triple.getArch() == llvm::Triple::x86) {
@@ -906,7 +906,7 @@ public:
       HasBPERMD(false), HasExtDiv(false), HasP9Vector(false) {
     SimdDefaultAlign = 128;
     LongDoubleWidth = LongDoubleAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble;
+    LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
   }
 
   /// \brief Flags for architecture specific defines.
@@ -1146,7 +1146,7 @@ public:
 
   bool useFloat128ManglingForLongDouble() const override {
     return LongDoubleWidth == 128 &&
-           LongDoubleFormat == &llvm::APFloat::PPCDoubleDouble &&
+           LongDoubleFormat == &llvm::APFloat::PPCDoubleDouble() &&
            getTriple().isOSBinFormatELF();
   }
 };
@@ -1650,7 +1650,7 @@ public:
 
     if (getTriple().getOS() == llvm::Triple::FreeBSD) {
       LongDoubleWidth = LongDoubleAlign = 64;
-      LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }
 
     // PPC32 supports atomics up to 4 bytes.
@@ -1684,7 +1684,7 @@ public:
     switch (getTriple().getOS()) {
     case llvm::Triple::FreeBSD:
       LongDoubleWidth = LongDoubleAlign = 64;
-      LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
       break;
     case llvm::Triple::NetBSD:
       IntMaxType = SignedLongLong;
@@ -2746,7 +2746,7 @@ class X86TargetInfo : public TargetInfo {
 public:
   X86TargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
-    LongDoubleFormat = &llvm::APFloat::x87DoubleExtended;
+    LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
   }
   unsigned getFloatEvalMethod() const override {
     // X87 evaluates with 80 bits "long double" precision.
@@ -4297,7 +4297,7 @@ public:
                             const TargetOptions &Opts)
       : WindowsX86_32TargetInfo(Triple, Opts) {
     LongDoubleWidth = LongDoubleAlign = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   }
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
@@ -4396,7 +4396,7 @@ public:
   MCUX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     LongDoubleWidth = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     resetDataLayout("e-m:e-p:32:32-i64:32-f64:32-f128:32-n8:16:32-a:0:32-S32");
     WIntType = UnsignedInt;
   }
@@ -4616,7 +4616,7 @@ public:
                             const TargetOptions &Opts)
       : WindowsX86_64TargetInfo(Triple, Opts) {
     LongDoubleWidth = LongDoubleAlign = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   }
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
@@ -4635,7 +4635,7 @@ public:
     // Mingw64 rounds long double size and alignment up to 16 bytes, but sticks
     // with x86 FP ops. Weird.
     LongDoubleWidth = LongDoubleAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::x87DoubleExtended;
+    LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -5858,7 +5858,7 @@ public:
     MaxAtomicPromoteWidth = 128;
 
     LongDoubleWidth = LongDoubleAlign = SuitableAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
 
     // {} in inline assembly are neon specifiers, not assembly variant
     // specifiers.
@@ -6217,7 +6217,7 @@ public:
     UseSignedCharForObjCBool = false;
 
     LongDoubleWidth = LongDoubleAlign = SuitableAlign = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
 
     TheCXXABI.set(TargetCXXABI::iOS64);
   }
@@ -6895,7 +6895,7 @@ public:
     // aligned. The SPARCv9 SCD 2.4.1 says 16-byte aligned.
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
 
@@ -6938,7 +6938,7 @@ public:
     PointerWidth = PointerAlign = 64;
     LongDoubleWidth = 128;
     LongDoubleAlign = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
     DefaultAlignForAttributeAligned = 64;
     MinGlobalAlign = 16;
     resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64");
@@ -7214,9 +7214,9 @@ public:
     DoubleAlign = 32;
     LongDoubleWidth = 32;
     LongDoubleAlign = 32;
-    FloatFormat = &llvm::APFloat::IEEEsingle;
-    DoubleFormat = &llvm::APFloat::IEEEsingle;
-    LongDoubleFormat = &llvm::APFloat::IEEEsingle;
+    FloatFormat = &llvm::APFloat::IEEEsingle();
+    DoubleFormat = &llvm::APFloat::IEEEsingle();
+    LongDoubleFormat = &llvm::APFloat::IEEEsingle();
     resetDataLayout("E-p:32:32:32-i1:8:8-i8:8:32-"
                     "i16:16:32-i32:32:32-i64:32:32-"
                     "f32:32:32-f64:32:32-v64:32:32-"
@@ -7426,7 +7426,7 @@ public:
   void setO32ABITypes() {
     Int64Type = SignedLongLong;
     IntMaxType = Int64Type;
-    LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     LongDoubleWidth = LongDoubleAlign = 64;
     LongWidth = LongAlign = 32;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
@@ -7438,10 +7438,10 @@ public:
 
   void setN32N64ABITypes() {
     LongDoubleWidth = LongDoubleAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
     if (getTriple().getOS() == llvm::Triple::FreeBSD) {
       LongDoubleWidth = LongDoubleAlign = 64;
-      LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     SuitableAlign = 128;
@@ -7987,7 +7987,7 @@ public:
     SimdDefaultAlign = 128;
     SigAtomicType = SignedLong;
     LongDoubleWidth = LongDoubleAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -8294,7 +8294,7 @@ public:
       : LinuxTargetInfo<X86_32TargetInfo>(Triple, Opts) {
     SuitableAlign = 32;
     LongDoubleWidth = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   }
 };
 
@@ -8303,7 +8303,7 @@ class AndroidX86_64TargetInfo : public LinuxTargetInfo<X86_64TargetInfo> {
 public:
   AndroidX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : LinuxTargetInfo<X86_64TargetInfo>(Triple, Opts) {
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
   }
 
   bool useFloat128ManglingForLongDouble() const override {

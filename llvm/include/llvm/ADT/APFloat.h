@@ -136,16 +136,16 @@ struct APFloatBase {
   /// \name Floating Point Semantics.
   /// @{
 
-  static const fltSemantics IEEEhalf;
-  static const fltSemantics IEEEsingle;
-  static const fltSemantics IEEEdouble;
-  static const fltSemantics IEEEquad;
-  static const fltSemantics PPCDoubleDouble;
-  static const fltSemantics x87DoubleExtended;
+  static const fltSemantics &IEEEhalf();
+  static const fltSemantics &IEEEsingle();
+  static const fltSemantics &IEEEdouble();
+  static const fltSemantics &IEEEquad();
+  static const fltSemantics &PPCDoubleDouble();
+  static const fltSemantics &x87DoubleExtended();
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  static const fltSemantics Bogus;
+  static const fltSemantics &Bogus();
 
   /// @}
 
@@ -664,7 +664,7 @@ class APFloat : public APFloatBase {
     explicit Storage(IEEEFloat F, const fltSemantics &S);
     explicit Storage(DoubleAPFloat F, const fltSemantics &S)
         : Double(std::move(F)) {
-      assert(&S == &PPCDoubleDouble);
+      assert(&S == &PPCDoubleDouble());
     }
 
     template <typename... ArgTypes>
@@ -741,9 +741,9 @@ class APFloat : public APFloatBase {
     static_assert(std::is_same<T, IEEEFloat>::value ||
                   std::is_same<T, DoubleAPFloat>::value, "");
     if (std::is_same<T, DoubleAPFloat>::value) {
-      return &Semantics == &PPCDoubleDouble;
+      return &Semantics == &PPCDoubleDouble();
     }
-    return &Semantics != &PPCDoubleDouble;
+    return &Semantics != &PPCDoubleDouble();
   }
 
   IEEEFloat &getIEEE() {
@@ -793,7 +793,7 @@ class APFloat : public APFloatBase {
   // FIXME: This is due to clang 3.3 (or older version) always checks for the
   // default constructor in an array aggregate initialization, even if no
   // elements in the array is default initialized.
-  APFloat() : U(IEEEdouble) {
+  APFloat() : U(IEEEdouble()) {
     llvm_unreachable("This is a workaround for old clang.");
   }
 
@@ -820,8 +820,8 @@ public:
   APFloat(const fltSemantics &Semantics, uninitializedTag)
       : U(Semantics, uninitialized) {}
   APFloat(const fltSemantics &Semantics, const APInt &I) : U(Semantics, I) {}
-  explicit APFloat(double d) : U(IEEEFloat(d), IEEEdouble) {}
-  explicit APFloat(float f) : U(IEEEFloat(f), IEEEsingle) {}
+  explicit APFloat(double d) : U(IEEEFloat(d), IEEEdouble()) {}
+  explicit APFloat(float f) : U(IEEEFloat(f), IEEEsingle()) {}
   APFloat(const APFloat &RHS) = default;
   APFloat(APFloat &&RHS) = default;
 
@@ -1073,7 +1073,7 @@ public:
   // This is for internal test only.
   // TODO: Remove it after the PPCDoubleDouble transition.
   const APFloat &getSecondFloat() const {
-    assert(&getSemantics() == &PPCDoubleDouble);
+    assert(&getSemantics() == &PPCDoubleDouble());
     return U.Double.getSecond();
   }
 

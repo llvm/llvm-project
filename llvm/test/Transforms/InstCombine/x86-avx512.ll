@@ -499,3 +499,163 @@ define i8 @test_cmp_sd(<2 x double> %a, <2 x double> %b, i8 %mask) {
   %3 = tail call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %1, <2 x double> %2, i32 3, i8 %mask, i32 4)
   ret i8 %3
 }
+
+define i64 @test(float %f, double %d) {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:    [[V00:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> [[V00]], i32 4)
+; CHECK-NEXT:    [[V10:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> [[V10]], i32 4)
+; CHECK-NEXT:    [[V20:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.x86.avx512.cvttss2si(<4 x float> [[V20]], i32 4)
+; CHECK-NEXT:    [[V30:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.x86.avx512.cvttss2si64(<4 x float> [[V30]], i32 4)
+; CHECK-NEXT:    [[V40:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> [[V40]], i32 4)
+; CHECK-NEXT:    [[V50:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> [[V50]], i32 4)
+; CHECK-NEXT:    [[V60:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.x86.avx512.cvttsd2si(<2 x double> [[V60]], i32 4)
+; CHECK-NEXT:    [[V70:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call i64 @llvm.x86.avx512.cvttsd2si64(<2 x double> [[V70]], i32 4)
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    ret i64 [[TMP15]]
+;
+  %v00 = insertelement <4 x float> undef, float %f, i32 0
+  %v01 = insertelement <4 x float> %v00, float 0.000000e+00, i32 1
+  %v02 = insertelement <4 x float> %v01, float 0.000000e+00, i32 2
+  %v03 = insertelement <4 x float> %v02, float 0.000000e+00, i32 3
+  %tmp0 = tail call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %v03, i32 4)
+  %v10 = insertelement <4 x float> undef, float %f, i32 0
+  %v11 = insertelement <4 x float> %v10, float 0.000000e+00, i32 1
+  %v12 = insertelement <4 x float> %v11, float 0.000000e+00, i32 2
+  %v13 = insertelement <4 x float> %v12, float 0.000000e+00, i32 3
+  %tmp1 = tail call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %v13, i32 4)
+  %v20 = insertelement <4 x float> undef, float %f, i32 0
+  %v21 = insertelement <4 x float> %v20, float 0.000000e+00, i32 1
+  %v22 = insertelement <4 x float> %v21, float 0.000000e+00, i32 2
+  %v23 = insertelement <4 x float> %v22, float 0.000000e+00, i32 3
+  %tmp2 = tail call i32 @llvm.x86.avx512.cvttss2si(<4 x float> %v23, i32 4)
+  %v30 = insertelement <4 x float> undef, float %f, i32 0
+  %v31 = insertelement <4 x float> %v30, float 0.000000e+00, i32 1
+  %v32 = insertelement <4 x float> %v31, float 0.000000e+00, i32 2
+  %v33 = insertelement <4 x float> %v32, float 0.000000e+00, i32 3
+  %tmp3 = tail call i64 @llvm.x86.avx512.cvttss2si64(<4 x float> %v33, i32 4)
+  %v40 = insertelement <2 x double> undef, double %d, i32 0
+  %v41 = insertelement <2 x double> %v40, double 0.000000e+00, i32 1
+  %tmp4 = tail call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %v41, i32 4)
+  %v50 = insertelement <2 x double> undef, double %d, i32 0
+  %v51 = insertelement <2 x double> %v50, double 0.000000e+00, i32 1
+  %tmp5 = tail call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %v51, i32 4)
+  %v60 = insertelement <2 x double> undef, double %d, i32 0
+  %v61 = insertelement <2 x double> %v60, double 0.000000e+00, i32 1
+  %tmp6 = tail call i32 @llvm.x86.avx512.cvttsd2si(<2 x double> %v61, i32 4)
+  %v70 = insertelement <2 x double> undef, double %d, i32 0
+  %v71 = insertelement <2 x double> %v70, double 0.000000e+00, i32 1
+  %tmp7 = tail call i64 @llvm.x86.avx512.cvttsd2si64(<2 x double> %v71, i32 4)
+  %tmp8 = add i32 %tmp0, %tmp2
+  %tmp9 = add i32 %tmp4, %tmp6
+  %tmp10 = add i32 %tmp8, %tmp9
+  %tmp11 = sext i32 %tmp10 to i64
+  %tmp12 = add i64 %tmp1, %tmp3
+  %tmp13 = add i64 %tmp5, %tmp7
+  %tmp14 = add i64 %tmp12, %tmp13
+  %tmp15 = add i64 %tmp11, %tmp14
+  ret i64 %tmp15
+}
+
+declare i32 @llvm.x86.avx512.vcvtss2si32(<4 x float>, i32)
+declare i64 @llvm.x86.avx512.vcvtss2si64(<4 x float>, i32)
+declare i32 @llvm.x86.avx512.cvttss2si(<4 x float>, i32)
+declare i64 @llvm.x86.avx512.cvttss2si64(<4 x float>, i32)
+declare i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double>, i32)
+declare i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double>, i32)
+declare i32 @llvm.x86.avx512.cvttsd2si(<2 x double>, i32)
+declare i64 @llvm.x86.avx512.cvttsd2si64(<2 x double>, i32)
+
+define i64 @test2(float %f, double %d) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    [[V00:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> [[V00]], i32 4)
+; CHECK-NEXT:    [[V10:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> [[V10]], i32 4)
+; CHECK-NEXT:    [[V20:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.x86.avx512.cvttss2usi(<4 x float> [[V20]], i32 4)
+; CHECK-NEXT:    [[V30:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.x86.avx512.cvttss2usi64(<4 x float> [[V30]], i32 4)
+; CHECK-NEXT:    [[V40:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> [[V40]], i32 4)
+; CHECK-NEXT:    [[V50:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> [[V50]], i32 4)
+; CHECK-NEXT:    [[V60:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.x86.avx512.cvttsd2usi(<2 x double> [[V60]], i32 4)
+; CHECK-NEXT:    [[V70:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call i64 @llvm.x86.avx512.cvttsd2usi64(<2 x double> [[V70]], i32 4)
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    ret i64 [[TMP15]]
+;
+  %v00 = insertelement <4 x float> undef, float %f, i32 0
+  %v01 = insertelement <4 x float> %v00, float 0.000000e+00, i32 1
+  %v02 = insertelement <4 x float> %v01, float 0.000000e+00, i32 2
+  %v03 = insertelement <4 x float> %v02, float 0.000000e+00, i32 3
+  %tmp0 = tail call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %v03, i32 4)
+  %v10 = insertelement <4 x float> undef, float %f, i32 0
+  %v11 = insertelement <4 x float> %v10, float 0.000000e+00, i32 1
+  %v12 = insertelement <4 x float> %v11, float 0.000000e+00, i32 2
+  %v13 = insertelement <4 x float> %v12, float 0.000000e+00, i32 3
+  %tmp1 = tail call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %v13, i32 4)
+  %v20 = insertelement <4 x float> undef, float %f, i32 0
+  %v21 = insertelement <4 x float> %v20, float 0.000000e+00, i32 1
+  %v22 = insertelement <4 x float> %v21, float 0.000000e+00, i32 2
+  %v23 = insertelement <4 x float> %v22, float 0.000000e+00, i32 3
+  %tmp2 = tail call i32 @llvm.x86.avx512.cvttss2usi(<4 x float> %v23, i32 4)
+  %v30 = insertelement <4 x float> undef, float %f, i32 0
+  %v31 = insertelement <4 x float> %v30, float 0.000000e+00, i32 1
+  %v32 = insertelement <4 x float> %v31, float 0.000000e+00, i32 2
+  %v33 = insertelement <4 x float> %v32, float 0.000000e+00, i32 3
+  %tmp3 = tail call i64 @llvm.x86.avx512.cvttss2usi64(<4 x float> %v33, i32 4)
+  %v40 = insertelement <2 x double> undef, double %d, i32 0
+  %v41 = insertelement <2 x double> %v40, double 0.000000e+00, i32 1
+  %tmp4 = tail call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %v41, i32 4)
+  %v50 = insertelement <2 x double> undef, double %d, i32 0
+  %v51 = insertelement <2 x double> %v50, double 0.000000e+00, i32 1
+  %tmp5 = tail call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %v51, i32 4)
+  %v60 = insertelement <2 x double> undef, double %d, i32 0
+  %v61 = insertelement <2 x double> %v60, double 0.000000e+00, i32 1
+  %tmp6 = tail call i32 @llvm.x86.avx512.cvttsd2usi(<2 x double> %v61, i32 4)
+  %v70 = insertelement <2 x double> undef, double %d, i32 0
+  %v71 = insertelement <2 x double> %v70, double 0.000000e+00, i32 1
+  %tmp7 = tail call i64 @llvm.x86.avx512.cvttsd2usi64(<2 x double> %v71, i32 4)
+  %tmp8 = add i32 %tmp0, %tmp2
+  %tmp9 = add i32 %tmp4, %tmp6
+  %tmp10 = add i32 %tmp8, %tmp9
+  %tmp11 = sext i32 %tmp10 to i64
+  %tmp12 = add i64 %tmp1, %tmp3
+  %tmp13 = add i64 %tmp5, %tmp7
+  %tmp14 = add i64 %tmp12, %tmp13
+  %tmp15 = add i64 %tmp11, %tmp14
+  ret i64 %tmp15
+}
+
+declare i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float>, i32)
+declare i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float>, i32)
+declare i32 @llvm.x86.avx512.cvttss2usi(<4 x float>, i32)
+declare i64 @llvm.x86.avx512.cvttss2usi64(<4 x float>, i32)
+declare i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double>, i32)
+declare i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double>, i32)
+declare i32 @llvm.x86.avx512.cvttsd2usi(<2 x double>, i32)
+declare i64 @llvm.x86.avx512.cvttsd2usi64(<2 x double>, i32)
