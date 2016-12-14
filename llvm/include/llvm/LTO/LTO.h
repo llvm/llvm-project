@@ -31,6 +31,7 @@
 
 namespace llvm {
 
+class BitcodeModule;
 class Error;
 class LLVMContext;
 class MemoryBufferRef;
@@ -80,14 +81,16 @@ class InputFile {
 
   // FIXME: Remove the LLVMContext once we have bitcode symbol tables.
   LLVMContext Ctx;
+  struct InputModule;
+  std::vector<InputModule> Mods;
   ModuleSymbolTable SymTab;
-  std::unique_ptr<Module> Mod;
-  MemoryBufferRef MBRef;
 
   std::vector<StringRef> Comdats;
   DenseMap<const Comdat *, unsigned> ComdatMap;
 
 public:
+  ~InputFile();
+
   /// Create an InputFile.
   static Expected<std::unique_ptr<InputFile>> create(MemoryBufferRef Object);
 
@@ -217,11 +220,17 @@ public:
         symbol_iterator(SymTab.symbols().end(), SymTab, this));
   }
 
-  StringRef getSourceFileName() const { return Mod->getSourceFileName(); }
-  MemoryBufferRef getMemoryBufferRef() const { return MBRef; }
+  /// Returns the path to the InputFile.
+  StringRef getName() const;
+
+  /// Returns the source file path specified at compile time.
+  StringRef getSourceFileName() const;
 
   // Returns a table with all the comdats used by this file.
   ArrayRef<StringRef> getComdatTable() const { return Comdats; }
+
+private:
+  iterator_range<symbol_iterator> module_symbols(InputModule &IM);
 };
 
 /// This class wraps an output stream for a native object. Most clients should
@@ -311,6 +320,7 @@ public:
   /// Until that is fixed, a Config argument is required.
   LTO(Config Conf, ThinBackend Backend = nullptr,
       unsigned ParallelCodeGenParallelismLevel = 1);
+  ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
   /// The symbol resolutions must appear in the enumeration order given by
@@ -357,7 +367,7 @@ private:
 
     ThinBackend Backend;
     ModuleSummaryIndex CombinedIndex;
-    MapVector<StringRef, MemoryBufferRef> ModuleMap;
+    MapVector<StringRef, BitcodeModule> ModuleMap;
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
@@ -405,10 +415,17 @@ private:
                             const InputFile::Symbol &Sym, SymbolResolution Res,
                             unsigned Partition);
 
-  Error addRegularLTO(std::unique_ptr<InputFile> Input,
-                      ArrayRef<SymbolResolution> Res);
-  Error addThinLTO(std::unique_ptr<InputFile> Input,
-                   ArrayRef<SymbolResolution> Res);
+  // These functions take a range of symbol resolutions [ResI, ResE) and consume
+  // the resolutions used by a single input module by incrementing ResI. After
+  // these functions return, [ResI, ResE) will refer to the resolution range for
+  // the remaining modules in the InputFile.
+  Error addModule(InputFile &Input, InputFile::InputModule &IM,
+                  const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Error addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
+                      const SymbolResolution *ResE);
+  Error addThinLTO(BitcodeModule BM, Module &M,
+                   iterator_range<InputFile::symbol_iterator> Syms,
+                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,

@@ -70,6 +70,8 @@ namespace llvm {
       return StringRef((const char *)Buffer.begin(), Buffer.size());
     }
 
+    StringRef getModuleIdentifier() const { return ModuleIdentifier; }
+
     /// Read the bitcode module and prepare for lazy deserialization of function
     /// bodies. If ShouldLazyLoadMetadata is true, lazily load metadata as well.
     Expected<std::unique_ptr<Module>>

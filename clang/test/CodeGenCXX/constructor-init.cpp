@@ -207,20 +207,17 @@ namespace PR10720 {
 
     // CHECK-PR10720-LABEL: define linkonce_odr void @_ZN7PR107205pair2C2ERKS0_
     // CHECK-PR10720-NOT: ret
-    // CHECK-PR10720: load
-    // CHECK-PR10720: icmp ult
-    // CHECK-PR10720-NEXT: br i1
     // CHECK-PR10720: call void @_ZN7PR107201XC1ERKS0_
-    // CHECK-PR10720-NEXT: br label
+    // CHECK-PR10720: icmp eq
+    // CHECK-PR10720-NEXT: br i1
     // CHECK-PR10720: ret void
 
     // CHECK-PR10720-LABEL: define linkonce_odr void @_ZN7PR107205pair2C2EOS0_
     // CHECK-PR10720-NOT: ret
     // CHECK-PR10720: load
-    // CHECK-PR10720: icmp ult
-    // CHECK-PR10720-NEXT: br i1
     // CHECK-PR10720: call void @_ZN7PR107201XC1EOS0_
-    // CHECK-PR10720-NEXT: br label
+    // CHECK-PR10720: icmp eq
+    // CHECK-PR10720-NEXT: br i1
     // CHECK-PR10720: ret void
     pair2(pair2&&) = default;
 

@@ -84,6 +84,7 @@ Some important things to remember about fuzz targets:
 * It must be as deterministic as possible. Non-determinism (e.g. random decisions not based on the input bytes) will make fuzzing inefficient.
 * It must be fast. Try avoiding cubic or greater complexity, logging, or excessive memory consumption.
 * Ideally, it should not modify any global state (although that's not strict).
+* Usually, the narrower the target the better. E.g. if your target can parse several data formats, split it into several targets, one per format.
 
 
 Building

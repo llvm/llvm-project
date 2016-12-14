@@ -23,10 +23,7 @@ typedef struct __CFSetRef * CFSetRef __attribute__((objc_bridge(NSSet))); // exp
 
 typedef union __CFUColor __attribute__((objc_bridge(NSUColor))) * CFUColorRef; // expected-error {{parameter of 'objc_bridge' attribute must be 'id' when used on a typedef}}
 
-// This error requires C11.
-#if __STDC_VERSION__ > 199901L
 typedef union __CFUColor __attribute__((objc_bridge(NSUColor))) * CFUColorRef; // expected-error {{parameter of 'objc_bridge' attribute must be 'id' when used on a typedef}}
-#endif
 
 typedef union __CFUColor __attribute__((objc_bridge(NSUColor))) *CFUColor1Ref; // expected-error {{parameter of 'objc_bridge' attribute must be 'id' when used on a typedef}}
 
