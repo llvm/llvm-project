@@ -48,7 +48,7 @@ void UnusedRAIICheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void UnusedRAIICheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *E = Result.Nodes.getStmtAs<Expr>("expr");
+  const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
 
   // We ignore code expanded from macros to reduce the number of false
   // positives.
@@ -57,7 +57,7 @@ void UnusedRAIICheck::check(const MatchFinder::MatchResult &Result) {
 
   // Don't emit a warning for the last statement in the surrounding compund
   // statement.
-  const auto *CS = Result.Nodes.getStmtAs<CompoundStmt>("compound");
+  const auto *CS = Result.Nodes.getNodeAs<CompoundStmt>("compound");
   if (E == CS->body_back())
     return;
 
@@ -68,7 +68,7 @@ void UnusedRAIICheck::check(const MatchFinder::MatchResult &Result) {
 
   // If this is a default ctor we have to remove the parens or we'll introduce a
   // most vexing parse.
-  const auto *BTE = Result.Nodes.getStmtAs<CXXBindTemporaryExpr>("temp");
+  const auto *BTE = Result.Nodes.getNodeAs<CXXBindTemporaryExpr>("temp");
   if (const auto *TOE = dyn_cast<CXXTemporaryObjectExpr>(BTE->getSubExpr()))
     if (TOE->getNumArgs() == 0) {
       D << FixItHint::CreateReplacement(

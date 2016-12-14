@@ -22,6 +22,7 @@ Clang-Tidy Checks
    cert-msc50-cpp
    cert-oop11-cpp (redirects to misc-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-interfaces-global-init
+   cppcoreguidelines-no-malloc
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-constant-array-index
    cppcoreguidelines-pro-bounds-pointer-arithmetic

@@ -59,7 +59,7 @@ Modularize Command Line Options
 
   Generate a module map and output it to the given file. See the description
   in :ref:`module-map-generation`.
-  
+
 .. option:: -problem-files-list=<problem-files-list-file-name>
 
   For use only with module map assistant. Input list of files that

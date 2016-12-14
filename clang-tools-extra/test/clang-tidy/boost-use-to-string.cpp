@@ -27,7 +27,7 @@ void test_to_string1() {
   // CHECK-FIXES: auto xa = std::to_string(5);
 
   auto z = boost::lexical_cast<std::string>(42LL);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use std::to_string 
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use std::to_string
   // CHECK-FIXES: auto z = std::to_string(42LL);
 
   // this should not trigger
@@ -49,22 +49,22 @@ void test_to_string2() {
   bool j;
 
   fun(boost::lexical_cast<std::string>(a));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string
   // CHECK-FIXES: fun(std::to_string(a));
   fun(boost::lexical_cast<std::string>(b));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string
   // CHECK-FIXES: fun(std::to_string(b));
   fun(boost::lexical_cast<std::string>(c));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string
   // CHECK-FIXES: fun(std::to_string(c));
   fun(boost::lexical_cast<std::string>(d));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string
   // CHECK-FIXES: fun(std::to_string(d));
   fun(boost::lexical_cast<std::string>(e));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string
   // CHECK-FIXES: fun(std::to_string(e));
   fun(boost::lexical_cast<std::string>(f));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_string
   // CHECK-FIXES: fun(std::to_string(f));
 
   // No change for floating numbers.
@@ -93,19 +93,19 @@ void test_to_wstring() {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring instead of boost::lexical_cast<std::wstring> [boost-use-to-string]
   // CHECK-FIXES: fun(std::to_wstring(a));
   fun(boost::lexical_cast<std::wstring>(b));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring
   // CHECK-FIXES: fun(std::to_wstring(b));
   fun(boost::lexical_cast<std::wstring>(c));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring
   // CHECK-FIXES: fun(std::to_wstring(c));
   fun(boost::lexical_cast<std::wstring>(d));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring
   // CHECK-FIXES: fun(std::to_wstring(d));
   fun(boost::lexical_cast<std::wstring>(e));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring
   // CHECK-FIXES: fun(std::to_wstring(e));
   fun(boost::lexical_cast<std::wstring>(f));
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::to_wstring
   // CHECK-FIXES: fun(std::to_wstring(f));
 
   // No change for floating numbers

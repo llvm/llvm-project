@@ -35,7 +35,7 @@ pointer.
   class Point {
     [...]
     size_t size() { return sizeof(this); }  // should probably be sizeof(*this)
-    [...]  
+    [...]
   };
 
 Suspicious usage of 'sizeof(char*)'

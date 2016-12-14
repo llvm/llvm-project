@@ -81,6 +81,10 @@ Improvements to clang-tidy
   Warns if an object is used after it has been moved, without an intervening
   reinitialization.
 
+- New `cppcoreguidelines-no-malloc
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-no-malloc.html>`_ check
+  warns if C-style memory management is used and suggests the use of RAII.
+
 - `modernize-make-unique
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-unique.html>`_
   and `modernize-make-shared

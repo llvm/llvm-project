@@ -150,6 +150,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return handleNoRelaxTlsRelocation<ELFT>(In<ELFT>::MipsGot, Type, Body, C,
                                             Offset, Addend, Expr);
 
+  bool IsPreemptible = isPreemptible(Body, Type);
   if ((Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE || Expr == R_TLSDESC_CALL) &&
       Config->Shared) {
     if (In<ELFT>::Got->addDynTlsEntry(Body)) {
@@ -195,7 +196,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
         uintX_t OffsetOff = Off + (uintX_t)sizeof(uintX_t);
-        if (isPreemptible(Body, Type))
+        if (IsPreemptible)
           In<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, In<ELFT>::Got,
                                        OffsetOff, false, &Body, 0});
         else
@@ -208,7 +209,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 
     // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
-    if (isPreemptible(Body, Type)) {
+    if (IsPreemptible) {
       C.Relocations.push_back(
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_IE), Type,
            Offset, Addend, &Body});
@@ -228,8 +229,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
-  if (Target->isTlsInitialExecRel(Type) && !Config->Shared &&
-      !isPreemptible(Body, Type)) {
+  if (Target->isTlsInitialExecRel(Type) && !Config->Shared && !IsPreemptible) {
     C.Relocations.push_back(
         {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
     return 1;

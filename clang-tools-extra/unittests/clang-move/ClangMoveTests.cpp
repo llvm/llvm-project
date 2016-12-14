@@ -386,6 +386,24 @@ TEST(ClangMove, MacroInFunction) {
   EXPECT_EQ(ExpectedNewCode, Results[Spec.NewCC]);
 }
 
+TEST(ClangMove, DefinitionInMacro) {
+  const char TestHeader[] = "#define DEF(CLASS) void CLASS##_::f() {}\n"
+                            "class A_ {\nvoid f();\n};\n"
+                            "class B {};\n";
+  const char TestCode[] = "#include \"foo.h\"\n"
+                          "DEF(A)\n";
+  const char ExpectedNewCode[] = "#include \"new_foo.h\"\n\n"
+                                 "DEF(A)\n";
+  move::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("A_");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+  auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
+  EXPECT_EQ(ExpectedNewCode, Results[Spec.NewCC]);
+}
+
 TEST(ClangMove, WellFormattedCode) {
   const std::string CommonHeader =
       "namespace a {\n"
