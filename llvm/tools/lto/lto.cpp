@@ -486,6 +486,16 @@ LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
                          MemBuffer->getBufferSize()};
 }
 
+unsigned int thinlto_module_get_num_object_files(thinlto_code_gen_t cg) {
+  return unwrap(cg)->getProducedBinaryFiles().size();
+}
+const char *thinlto_module_get_object_file(thinlto_code_gen_t cg,
+                                           unsigned int index) {
+  assert(index < unwrap(cg)->getProducedBinaryFiles().size() &&
+         "Index overflow");
+  return unwrap(cg)->getProducedBinaryFiles()[index].c_str();
+}
+
 void thinlto_codegen_disable_codegen(thinlto_code_gen_t cg,
                                      lto_bool_t disable) {
   unwrap(cg)->disableCodeGen(disable);
@@ -547,6 +557,11 @@ void thinlto_codegen_set_final_cache_size_relative_to_available_space(
 void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
                                        const char *save_temps_dir) {
   return unwrap(cg)->setSaveTempsDir(save_temps_dir);
+}
+
+void thinlto_set_generated_objects_dir(thinlto_code_gen_t cg,
+                                       const char *save_temps_dir) {
+  unwrap(cg)->setGeneratedObjectsDirectory(save_temps_dir);
 }
 
 lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
