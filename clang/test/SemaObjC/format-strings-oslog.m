@@ -36,9 +36,6 @@ void test_os_log_format(const char *pc, int i, void *p, void *buf) {
   wchar_t wcs[] = {'a', 0};
   __builtin_os_log_format(buf, "%S", wcs);
   printf("%S", wcs);
-
-  struct { char data[0x100]; } toobig;
-  __builtin_os_log_format(buf, "%s", toobig); // expected-error {{os_log() argument 2 is too big (256 bytes, max 255)}}
 }
 
 // Test os_log_format primitive with ObjC string literal format argument.
