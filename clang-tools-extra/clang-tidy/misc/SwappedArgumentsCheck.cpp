@@ -49,7 +49,7 @@ static bool isImplicitCastCandidate(const CastExpr *Cast) {
 
 void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Ctx = *Result.Context;
-  const auto *Call = Result.Nodes.getStmtAs<CallExpr>("call");
+  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
 
   llvm::SmallPtrSet<const Expr *, 4> UsedArgs;
   for (unsigned I = 1, E = Call->getNumArgs(); I < E; ++I) {

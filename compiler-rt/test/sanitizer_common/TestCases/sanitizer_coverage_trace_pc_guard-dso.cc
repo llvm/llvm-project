@@ -1,7 +1,7 @@
 // Tests trace pc guard coverage collection.
 //
 // REQUIRES: has_sancovcc,stable-runtime
-// XFAIL: tsan,darwin,powerpc64
+// XFAIL: tsan,darwin,powerpc64,s390x
 //
 // RUN: DIR=%t_workdir
 // RUN: CLANG_ARGS="-O0 -fsanitize-coverage=trace-pc-guard"
@@ -62,9 +62,9 @@ int baz() {
 // CHECK-NEXT: foo
 // CHECK-NEXT: bar
 // CHECK-NEXT: baz
-// CHECK: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}.sancov 2 PCs written
-// CHECK: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}_2.so.{{.*}}.sancov 1 PCs written
-// CHECK: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}_1.so.{{.*}}.sancov 1 PCs written
+// CHECK-DAG: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}.sancov 2 PCs written
+// CHECK-DAG: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}_2.so.{{.*}}.sancov 1 PCs written
+// CHECK-DAG: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard-dso.{{.*}}_1.so.{{.*}}.sancov 1 PCs written
 //
 // CHECK-SANCOV: Ignoring {{.*}}_1.so and its coverage because __sanitizer_cov* functions were not found.
 // CHECK-SANCOV: Ignoring {{.*}}_2.so and its coverage because __sanitizer_cov* functions were not found.

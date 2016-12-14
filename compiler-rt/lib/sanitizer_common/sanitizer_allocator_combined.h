@@ -49,16 +49,30 @@ class CombinedAllocator {
       size = 1;
     if (size + alignment < size) return ReturnNullOrDieOnBadRequest();
     if (check_rss_limit && RssLimitIsExceeded()) return ReturnNullOrDieOnOOM();
+    uptr original_size = size;
+    // If alignment requirements are to be fulfilled by the frontend allocator
+    // rather than by the primary or secondary, passing an alignment lower than
+    // or equal to 8 will prevent any further rounding up, as well as the later
+    // alignment check.
     if (alignment > 8)
       size = RoundUpTo(size, alignment);
     void *res;
     bool from_primary = primary_.CanAllocate(size, alignment);
+    // The primary allocator should return a 2^x aligned allocation when
+    // requested 2^x bytes, hence using the rounded up 'size' when being
+    // serviced by the primary (this is no longer true when the primary is
+    // using a non-fixed base address). The secondary takes care of the
+    // alignment without such requirement, and allocating 'size' would use
+    // extraneous memory, so we employ 'original_size'.
     if (from_primary)
       res = cache->Allocate(&primary_, primary_.ClassID(size));
     else
-      res = secondary_.Allocate(&stats_, size, alignment);
+      res = secondary_.Allocate(&stats_, original_size, alignment);
     if (alignment > 8)
       CHECK_EQ(reinterpret_cast<uptr>(res) & (alignment - 1), 0);
+    // When serviced by the secondary, the chunk comes from a mmap allocation
+    // and will be zero'd out anyway. We only need to clear our the chunk if
+    // it was serviced by the primary, hence using the rounded up 'size'.
     if (cleared && res && from_primary)
       internal_bzero_aligned16(res, RoundUpTo(size, 16));
     return res;

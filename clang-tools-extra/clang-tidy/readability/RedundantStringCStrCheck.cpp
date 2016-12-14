@@ -177,9 +177,9 @@ void RedundantStringCStrCheck::registerMatchers(
 }
 
 void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Call = Result.Nodes.getStmtAs<CallExpr>("call");
-  const auto *Arg = Result.Nodes.getStmtAs<Expr>("arg");
-  const auto *Member = Result.Nodes.getStmtAs<MemberExpr>("member");
+  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
+  const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
+  const auto *Member = Result.Nodes.getNodeAs<MemberExpr>("member");
   bool Arrow = Member->isArrow();
   // Replace the "call" node with the "arg" node, prefixed with '*'
   // if the call was using '->' rather than '.'.

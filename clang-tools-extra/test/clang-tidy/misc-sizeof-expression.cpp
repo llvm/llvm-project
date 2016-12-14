@@ -67,9 +67,9 @@ int Test1(const char* ptr) {
   sum += (2 * sizeof(char)) * sizeof(int);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious 'sizeof' by 'sizeof' multiplication
   if (sizeof(A) < 0x100000) sum += 42;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: suspicious comparison of 'sizeof(expr)' to a constant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: suspicious comparison of 'sizeof(expr)' to a constant
   if (sizeof(A) <= 0xFFFFFFFEU) sum += 42;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: suspicious comparison of 'sizeof(expr)' to a constant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: suspicious comparison of 'sizeof(expr)' to a constant
   return sum;
 }
 
@@ -134,31 +134,31 @@ int Test5() {
 
   int sum = 0;
   sum += sizeof(&S.arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&kGlocalMyStruct.arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&kGlocalMyStructPtr->arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(S.arr + 0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(+ S.arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof((int*)S.arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
 
   sum += sizeof(S.ptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(kGlocalMyStruct.ptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(kGlocalMyStructPtr->ptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
 
   sum += sizeof(&kGlocalMyStruct);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&S);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
   sum += sizeof(&A10);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate 
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(A*)'; pointer to aggregate
 
   return sum;
 }

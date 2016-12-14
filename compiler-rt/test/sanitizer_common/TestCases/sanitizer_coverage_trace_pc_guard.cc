@@ -1,7 +1,7 @@
 // Tests trace pc guard coverage collection.
 //
 // REQUIRES: has_sancovcc,stable-runtime
-// XFAIL: tsan,darwin,powerpc64
+// XFAIL: tsan,darwin,powerpc64,s390x
 //
 // RUN: DIR=%t_workdir
 // RUN: rm -rf $DIR
