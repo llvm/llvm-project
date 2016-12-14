@@ -1479,7 +1479,7 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
 
   // Create and set the initializer.
   ConstantInitBuilder Builder(CGM);
-  auto Components = Builder.beginArray(CGM.Int8PtrTy);
+  auto Components = Builder.beginStruct();
   CGVT.createVTableInitializer(Components, VTLayout, RTTI);
   Components.finishAndSetAsInitializer(VTable);
 
@@ -1537,17 +1537,21 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
                                      const CXXRecordDecl *VTableClass) {
   llvm::GlobalValue *VTable = getAddrOfVTable(VTableClass, CharUnits());
 
-  // Find the appropriate vtable within the vtable group.
-  uint64_t AddressPoint = CGM.getItaniumVTableContext()
-                              .getVTableLayout(VTableClass)
-                              .getAddressPoint(Base);
+  // Find the appropriate vtable within the vtable group, and the address point
+  // within that vtable.
+  VTableLayout::AddressPointLocation AddressPoint =
+      CGM.getItaniumVTableContext()
+          .getVTableLayout(VTableClass)
+          .getAddressPoint(Base);
   llvm::Value *Indices[] = {
     llvm::ConstantInt::get(CGM.Int32Ty, 0),
-    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint)
+    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.VTableIndex),
+    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
   };
 
-  return llvm::ConstantExpr::getInBoundsGetElementPtr(VTable->getValueType(),
-                                                      VTable, Indices);
+  return llvm::ConstantExpr::getGetElementPtr(VTable->getValueType(), VTable,
+                                              Indices, /*InBounds=*/true,
+                                              /*InRangeIndex=*/1);
 }
 
 llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
@@ -1589,12 +1593,12 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   llvm::raw_svector_ostream Out(Name);
   getMangleContext().mangleCXXVTable(RD, Out);
 
-  ItaniumVTableContext &VTContext = CGM.getItaniumVTableContext();
-  llvm::ArrayType *ArrayType = llvm::ArrayType::get(
-      CGM.Int8PtrTy, VTContext.getVTableLayout(RD).vtable_components().size());
+  const VTableLayout &VTLayout =
+      CGM.getItaniumVTableContext().getVTableLayout(RD);
+  llvm::Type *VTableType = CGM.getVTables().getVTableType(VTLayout);
 
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
-      Name, ArrayType, llvm::GlobalValue::ExternalLinkage);
+      Name, VTableType, llvm::GlobalValue::ExternalLinkage);
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   if (RD->hasAttr<DLLImportAttr>())

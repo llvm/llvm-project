@@ -26,7 +26,7 @@ J::J() {}
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test1::C *'): 0 non-virtual]
 // VFTABLES-NEXT:   2 | test1::D *test1::J::foo()
 
-// GLOBALS-LABEL: @"\01??_7J@test1@@6B@" = linkonce_odr unnamed_addr constant [3 x i8*]
+// GLOBALS-LABEL: @"\01??_7J@test1@@6B@" = linkonce_odr unnamed_addr constant { [3 x i8*] }
 // GLOBALS: @"\01?foo@J@test1@@QAEPAUB@2@XZ"
 // GLOBALS: @"\01?foo@J@test1@@QAEPAUC@2@XZ"
 // GLOBALS: @"\01?foo@J@test1@@UAEPAUD@2@XZ"
@@ -44,7 +44,7 @@ K::K() {}
 
 // Only B to C requires adjustment, but we get 3 thunks in K's vftable, two of
 // which are trivial.
-// GLOBALS-LABEL: @"\01??_7K@test1@@6B@" = linkonce_odr unnamed_addr constant [4 x i8*]
+// GLOBALS-LABEL: @"\01??_7K@test1@@6B@" = linkonce_odr unnamed_addr constant { [4 x i8*] }
 // GLOBALS: @"\01?foo@K@test1@@QAEPAUB@2@XZ"
 // GLOBALS: @"\01?foo@K@test1@@QAEPAUC@2@XZ"
 // GLOBALS: @"\01?foo@K@test1@@QAEPAUD@2@XZ"
@@ -90,7 +90,7 @@ J::J() {}
 // VFTABLES-NEXT:         [return adjustment (to type 'struct test2::B *'): 4 non-virtual]
 // VFTABLES-NEXT:    1 | test2::D *test2::J::foo()
 
-// GLOBALS-LABEL: @"\01??_7J@test2@@6B@" = linkonce_odr unnamed_addr constant [2 x i8*]
+// GLOBALS-LABEL: @"\01??_7J@test2@@6B@" = linkonce_odr unnamed_addr constant { [2 x i8*] }
 
 K::K() {}
 
@@ -101,7 +101,7 @@ K::K() {}
 // VFTABLES-NEXT:         [return adjustment (to type 'struct test2::D *'): 0 non-virtual]
 // VFTABLES-NEXT:    2 | test2::E *test2::K::foo()
 
-// GLOBALS-LABEL: @"\01??_7K@test2@@6B@" = linkonce_odr unnamed_addr constant [3 x i8*]
+// GLOBALS-LABEL: @"\01??_7K@test2@@6B@" = linkonce_odr unnamed_addr constant { [3 x i8*] }
 
 }
 
@@ -124,7 +124,7 @@ struct C : virtual A, B {
 
 C::C() {}
 
-// GLOBALS-LABEL: @"\01??_7C@pr20479@@6B@" = linkonce_odr unnamed_addr constant [2 x i8*]
+// GLOBALS-LABEL: @"\01??_7C@pr20479@@6B@" = linkonce_odr unnamed_addr constant { [2 x i8*] }
 // GLOBALS: @"\01?f@B@pr20479@@QAEPAUA@2@XZ"
 // GLOBALS: @"\01?f@B@pr20479@@UAEPAU12@XZ"
 }
@@ -151,7 +151,7 @@ struct C : virtual A, virtual B {
 
 C::C() {}
 
-// GLOBALS-LABEL: @"\01??_7C@pr21073@@6B@" = linkonce_odr unnamed_addr constant [2 x i8*]
+// GLOBALS-LABEL: @"\01??_7C@pr21073@@6B@" = linkonce_odr unnamed_addr constant { [2 x i8*] }
 // GLOBALS: @"\01?f@B@pr21073@@WPPPPPPPI@AEPAUA@2@XZ"
 // GLOBALS: @"\01?f@B@pr21073@@WPPPPPPPI@AEPAU12@XZ"
 }
@@ -168,7 +168,7 @@ D::D() {}
 // VFTABLES-NEXT:       [return adjustment (to type 'struct pr21073_2::A *'): vbase #1, 0 non-virtual]
 // VFTABLES-NEXT:   1 | pr21073_2::C *pr21073_2::C::foo()
 
-// GLOBALS-LABEL: @"\01??_7D@pr21073_2@@6B@" = {{.*}} constant [2 x i8*]
+// GLOBALS-LABEL: @"\01??_7D@pr21073_2@@6B@" = {{.*}} constant { [2 x i8*] }
 // GLOBALS: @"\01?foo@C@pr21073_2@@QAEPAUA@2@XZ"
 // GLOBALS: @"\01?foo@C@pr21073_2@@UAEPAU12@XZ"
 }
@@ -196,7 +196,7 @@ D::D() {}
 // VFTABLES-NEXT:       [return adjustment (to type 'struct test3::D *'): 0 non-virtual]
 // VFTABLES-NEXT:       [this adjustment: vtordisp at -4, 0 non-virtual]
 
-// GLOBALS-LABEL: @"\01??_7D@test3@@6B@" = {{.*}} constant [3 x i8*]
+// GLOBALS-LABEL: @"\01??_7D@test3@@6B@" = {{.*}} constant { [3 x i8*] }
 // GLOBALS: @"\01?fn@D@test3@@$4PPPPPPPM@A@AEPAUA@2@XZ"
 // GLOBALS: @"\01?fn@D@test3@@$4PPPPPPPM@A@AEPAUB@2@XZ"
 // GLOBALS: @"\01?fn@D@test3@@$4PPPPPPPM@A@AEPAU12@XZ"

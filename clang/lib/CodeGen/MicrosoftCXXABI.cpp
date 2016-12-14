@@ -1618,7 +1618,7 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
       RTTI = getMSCompleteObjectLocator(RD, *Info);
 
     ConstantInitBuilder Builder(CGM);
-    auto Components = Builder.beginArray(CGM.Int8PtrTy);
+    auto Components = Builder.beginStruct();
     CGVT.createVTableInitializer(Components, VTLayout, RTTI);
     Components.finishAndSetAsInitializer(VTable);
 
@@ -1739,17 +1739,14 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
     return VTable;
   }
 
-  uint64_t NumVTableSlots =
-      VTContext.getVFTableLayout(RD, VFPtr->FullOffsetInMDC)
-          .vtable_components()
-          .size();
+  const VTableLayout &VTLayout =
+      VTContext.getVFTableLayout(RD, VFPtr->FullOffsetInMDC);
   llvm::GlobalValue::LinkageTypes VTableLinkage =
       VTableAliasIsRequred ? llvm::GlobalValue::PrivateLinkage : VFTableLinkage;
 
   StringRef VTableName = VTableAliasIsRequred ? StringRef() : VFTableName.str();
 
-  llvm::ArrayType *VTableType =
-      llvm::ArrayType::get(CGM.Int8PtrTy, NumVTableSlots);
+  llvm::Type *VTableType = CGM.getVTables().getVTableType(VTLayout);
 
   // Create a backing variable for the contents of VTable.  The VTable may
   // or may not include space for a pointer to RTTI data.
@@ -1770,8 +1767,9 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // importing it.  We never reference the RTTI data directly so there is no
   // need to make room for it.
   if (VTableAliasIsRequred) {
-    llvm::Value *GEPIndices[] = {llvm::ConstantInt::get(CGM.IntTy, 0),
-                                 llvm::ConstantInt::get(CGM.IntTy, 1)};
+    llvm::Value *GEPIndices[] = {llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                 llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                 llvm::ConstantInt::get(CGM.Int32Ty, 1)};
     // Create a GEP which points just after the first entry in the VFTable,
     // this should be the location of the first virtual method.
     llvm::Constant *VTableGEP = llvm::ConstantExpr::getInBoundsGetElementPtr(

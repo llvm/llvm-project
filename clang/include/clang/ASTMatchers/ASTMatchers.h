@@ -75,18 +75,6 @@ public:
     return MyBoundNodes.getNodeAs<T>(ID);
   }
 
-  /// \brief Deprecated. Please use \c getNodeAs instead.
-  /// @{
-  template <typename T>
-  const T *getDeclAs(StringRef ID) const {
-    return getNodeAs<T>(ID);
-  }
-  template <typename T>
-  const T *getStmtAs(StringRef ID) const {
-    return getNodeAs<T>(ID);
-  }
-  /// @}
-
   /// \brief Type of mapping from binding identifiers to bound nodes. This type
   /// is an associative container with a key type of \c std::string and a value
   /// type of \c clang::ast_type_traits::DynTypedNode

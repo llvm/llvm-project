@@ -1697,7 +1697,9 @@ def Used : InheritableAttr {
 def Uuid : InheritableAttr {
   let Spellings = [Declspec<"uuid">, Microsoft<"uuid">];
   let Args = [StringArgument<"Guid">];
-//  let Subjects = SubjectList<[CXXRecord]>;
+  let Subjects = SubjectList<[Record, Enum], WarnDiag, "ExpectedEnumOrClass">;
+  // FIXME: Allow expressing logical AND for LangOpts. Our condition should be:
+  // CPlusPlus && (MicrosoftExt || Borland)
   let LangOpts = [MicrosoftExt, Borland];
   let Documentation = [Undocumented];
 }

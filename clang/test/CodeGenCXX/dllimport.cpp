@@ -631,15 +631,15 @@ USEMEMFUNC(V, foo)
 struct __declspec(dllimport) W { virtual void foo() {} };
 USECLASS(W)
 // vftable:
-// MO1-DAG: @"\01??_SW@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (void (%struct.W*)* @"\01?foo@W@@UAEXXZ" to i8*)]
-// GO1-DAG: @_ZTV1W = available_externally dllimport unnamed_addr constant [3 x i8*] [i8* null, i8* null, i8* bitcast (void (%struct.W*)* @_ZN1W3fooEv to i8*)]
+// MO1-DAG: @"\01??_SW@@6B@" = linkonce_odr unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void (%struct.W*)* @"\01?foo@W@@UAEXXZ" to i8*)] }
+// GO1-DAG: @_ZTV1W = available_externally dllimport unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* null, i8* bitcast (void (%struct.W*)* @_ZN1W3fooEv to i8*)] }
 
 struct __declspec(dllimport) KeyFuncClass {
   constexpr KeyFuncClass() {}
   virtual void foo();
 };
 extern constexpr KeyFuncClass keyFuncClassVar = {};
-// G32-DAG: @_ZTV12KeyFuncClass = external dllimport unnamed_addr constant [3 x i8*]
+// G32-DAG: @_ZTV12KeyFuncClass = external dllimport unnamed_addr constant { [3 x i8*] }
 
 struct __declspec(dllimport) X : public virtual W {};
 USECLASS(X)
@@ -745,7 +745,7 @@ namespace PR21355 {
   // S::~S is a key function, so we would ordinarily emit a strong definition for
   // the vtable. However, S is imported, so the vtable should be too.
 
-  // GNU-DAG: @_ZTVN7PR213551SE = available_externally dllimport unnamed_addr constant [4 x i8*]
+  // GNU-DAG: @_ZTVN7PR213551SE = available_externally dllimport unnamed_addr constant { [4 x i8*] }
 }
 
 namespace PR21366 {
@@ -767,7 +767,7 @@ namespace PR27319 {
   };
   extern template struct __declspec(dllimport) A<int>;
   void f() { new A<int>(); }
-  // MO1-DAG: @"\01??_S?$A@H@PR27319@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*]
+  // MO1-DAG: @"\01??_S?$A@H@PR27319@@6B@" = linkonce_odr unnamed_addr constant { [1 x i8*] }
 }
 
 // MS ignores DLL attributes on partial specializations.

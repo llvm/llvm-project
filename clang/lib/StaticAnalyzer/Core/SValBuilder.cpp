@@ -36,8 +36,11 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   if (type->isIntegralOrEnumerationType())
     return makeIntVal(0, type);
 
+  if (type->isArrayType() || type->isRecordType() || type->isVectorType() ||
+      type->isAnyComplexType())
+    return makeCompoundVal(type, BasicVals.getEmptySValList());
+
   // FIXME: Handle floats.
-  // FIXME: Handle structs.
   return UnknownVal();
 }
 

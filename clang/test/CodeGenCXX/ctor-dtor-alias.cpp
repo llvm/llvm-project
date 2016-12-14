@@ -172,7 +172,7 @@ void zed() {
 }
 }
 
-// CHECK5: @_ZTV1C = linkonce_odr unnamed_addr constant [4 x i8*] [{{[^@]*}}@_ZTI1C {{[^@]*}}@_ZN1CD2Ev {{[^@]*}}@_ZN1CD0Ev {{[^@]*}}]
+// CHECK5: @_ZTV1C = linkonce_odr unnamed_addr constant { [4 x i8*] } {{[^@]*}}@_ZTI1C {{[^@]*}}@_ZN1CD2Ev {{[^@]*}}@_ZN1CD0Ev {{[^@]*}}]
 // r194296 replaced C::~C with B::~B without emitting the later.
 
 class A {

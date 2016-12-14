@@ -28,6 +28,7 @@ namespace clang {
 namespace CodeGen {
   class CodeGenModule;
   class ConstantArrayBuilder;
+  class ConstantStructBuilder;
 
 class CodeGenVTables {
   CodeGenModule &CGM;
@@ -35,7 +36,7 @@ class CodeGenVTables {
   VTableContextBase *VTContext;
 
   /// VTableAddressPointsMapTy - Address points for a single vtable.
-  typedef llvm::DenseMap<BaseSubobject, uint64_t> VTableAddressPointsMapTy;
+  typedef VTableLayout::AddressPointsMapTy VTableAddressPointsMapTy;
 
   typedef std::pair<const CXXRecordDecl *, BaseSubobject> BaseSubobjectPairTy;
   typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t> SubVTTIndiciesMapTy;
@@ -71,7 +72,7 @@ class CodeGenVTables {
 public:
   /// Add vtable components for the given vtable layout to the given
   /// global initializer.
-  void createVTableInitializer(ConstantArrayBuilder &builder,
+  void createVTableInitializer(ConstantStructBuilder &builder,
                                const VTableLayout &layout,
                                llvm::Constant *rtti);
 
@@ -121,6 +122,11 @@ public:
   void GenerateClassData(const CXXRecordDecl *RD);
 
   bool isVTableExternal(const CXXRecordDecl *RD);
+
+  /// Returns the type of a vtable with the given layout. Normally a struct of
+  /// arrays of pointers, with one struct element for each vtable in the vtable
+  /// group.
+  llvm::Type *getVTableType(const VTableLayout &layout);
 };
 
 } // end namespace CodeGen

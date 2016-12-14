@@ -124,6 +124,12 @@ Improvements to clang-tidy
   Warns about the performance overhead arising from concatenating strings using
   the ``operator+``, instead of ``operator+=``.
 
+- New `performance-type-promotion-in-math-fn
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-type-promotion-in-math-fn.html>`_ check
+
+  Replaces uses of C-style standard math functions with double parameters and float
+  arguments with an equivalent function that takes a float parameter.
+
 - `readability-container-size-empty
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-container-size-empty.html>`_ check
   supports arbitrary containers with with suitable ``empty()`` and ``size()``

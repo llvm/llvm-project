@@ -5109,29 +5109,6 @@ TEST_F(FormatTest, AlignsPipes) {
       "llvm::errs() << aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
-  verifyFormat("return out << \"somepacket = {\\n\"\n"
-               "           << \" aaaaaa = \" << pkt.aaaaaa << \"\\n\"\n"
-               "           << \" bbbb = \" << pkt.bbbb << \"\\n\"\n"
-               "           << \" cccccc = \" << pkt.cccccc << \"\\n\"\n"
-               "           << \" ddd = [\" << pkt.ddd << \"]\\n\"\n"
-               "           << \"}\";");
-
-  verifyFormat("llvm::outs() << \"aaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaa\n"
-               "             << \"aaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaa\n"
-               "             << \"aaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaa;");
-  verifyFormat(
-      "llvm::outs() << \"aaaaaaaaaaaaaaaaa = \" << aaaaaaaaaaaaaaaaa\n"
-      "             << \"bbbbbbbbbbbbbbbbb = \" << bbbbbbbbbbbbbbbbb\n"
-      "             << \"ccccccccccccccccc = \" << ccccccccccccccccc\n"
-      "             << \"ddddddddddddddddd = \" << ddddddddddddddddd\n"
-      "             << \"eeeeeeeeeeeeeeeee = \" << eeeeeeeeeeeeeeeee;");
-  verifyFormat("llvm::outs() << aaaaaaaaaaaaaaaaaaaaaaaa << \"=\"\n"
-               "             << bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;");
-  verifyFormat(
-      "void f() {\n"
-      "  llvm::outs() << \"aaaaaaaaaaaaaaaaaaaa: \"\n"
-      "               << aaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaa);\n"
-      "}");
   verifyFormat("llvm::outs() << \"aaaaaaaaaaaaaaaa: \"\n"
                "             << aaaaaaaa.aaaaaaaaaaaa(aaa)->aaaaaaaaaaaaaa();");
   verifyFormat("llvm::errs() << aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
@@ -5141,22 +5118,6 @@ TEST_F(FormatTest, AlignsPipes) {
   verifyFormat("LOG_IF(aaa == //\n"
                "       bbb)\n"
                "    << a << b;");
-
-  // Breaking before the first "<<" is generally not desirable.
-  verifyFormat(
-      "llvm::errs()\n"
-      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
-      getLLVMStyleWithColumns(70));
-  verifyFormat("llvm::errs() << \"aaaaaaaaaaaaaaaaaaa: \"\n"
-               "             << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "             << \"aaaaaaaaaaaaaaaaaaa: \"\n"
-               "             << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "             << \"aaaaaaaaaaaaaaaaaaa: \"\n"
-               "             << aaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
-               getLLVMStyleWithColumns(70));
 
   // But sometimes, breaking before the first "<<" is desirable.
   verifyFormat("Diag(aaaaaaaaaaaaaaaaaaaa, aaaaaaaa)\n"
@@ -5201,6 +5162,55 @@ TEST_F(FormatTest, AlignsPipes) {
   verifyFormat("llvm::errs() << aaaa << \"aaaaaaaaaaaaaaaaaa\\n\"\n"
                "             << bbbb << \"bbbbbbbbbbbbbbbbbb\\n\";");
   verifyFormat("llvm::errs() << \"\\n\" << bbbbbbbbbbbbbbbbbbbbbb << \"\\n\";");
+}
+
+TEST_F(FormatTest, KeepStringLabelValuePairsOnALine) {
+  verifyFormat("return out << \"somepacket = {\\n\"\n"
+               "           << \" aaaaaa = \" << pkt.aaaaaa << \"\\n\"\n"
+               "           << \" bbbb = \" << pkt.bbbb << \"\\n\"\n"
+               "           << \" cccccc = \" << pkt.cccccc << \"\\n\"\n"
+               "           << \" ddd = [\" << pkt.ddd << \"]\\n\"\n"
+               "           << \"}\";");
+
+  verifyFormat("llvm::outs() << \"aaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaa\n"
+               "             << \"aaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaa\n"
+               "             << \"aaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaa;");
+  verifyFormat(
+      "llvm::outs() << \"aaaaaaaaaaaaaaaaa = \" << aaaaaaaaaaaaaaaaa\n"
+      "             << \"bbbbbbbbbbbbbbbbb = \" << bbbbbbbbbbbbbbbbb\n"
+      "             << \"ccccccccccccccccc = \" << ccccccccccccccccc\n"
+      "             << \"ddddddddddddddddd = \" << ddddddddddddddddd\n"
+      "             << \"eeeeeeeeeeeeeeeee = \" << eeeeeeeeeeeeeeeee;");
+  verifyFormat("llvm::outs() << aaaaaaaaaaaaaaaaaaaaaaaa << \"=\"\n"
+               "             << bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;");
+  verifyFormat(
+      "void f() {\n"
+      "  llvm::outs() << \"aaaaaaaaaaaaaaaaaaaa: \"\n"
+      "               << aaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaa);\n"
+      "}");
+
+  // Breaking before the first "<<" is generally not desirable.
+  verifyFormat(
+      "llvm::errs()\n"
+      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    << \"aaaaaaaaaaaaaaaaaaa: \" << aaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+      getLLVMStyleWithColumns(70));
+  verifyFormat("llvm::errs() << \"aaaaaaaaaaaaaaaaaaa: \"\n"
+               "             << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "             << \"aaaaaaaaaaaaaaaaaaa: \"\n"
+               "             << aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "             << \"aaaaaaaaaaaaaaaaaaa: \"\n"
+               "             << aaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+               getLLVMStyleWithColumns(70));
+
+  verifyFormat("string v = \"aaaaaaaaaaaaaaaa: \" + aaaaaaaaaaaaaaaa +\n"
+               "           \"aaaaaaaaaaaaaaaa: \" + aaaaaaaaaaaaaaaa +\n"
+               "           \"aaaaaaaaaaaaaaaa: \" + aaaaaaaaaaaaaaaa;");
+  verifyFormat("string v = StrCat(\"aaaaaaaaaaaaaaaa: \", aaaaaaaaaaaaaaaa,\n"
+               "                  \"aaaaaaaaaaaaaaaa: \", aaaaaaaaaaaaaaaa,\n"
+               "                  \"aaaaaaaaaaaaaaaa: \", aaaaaaaaaaaaaaaa);");
 }
 
 TEST_F(FormatTest, UnderstandsEquals) {

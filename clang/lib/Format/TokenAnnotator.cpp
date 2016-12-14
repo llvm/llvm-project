@@ -1882,8 +1882,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       return 100;
   }
 
-  if (Left.is(tok::comma) || (Right.is(tok::identifier) && Right.Next &&
-                              Right.Next->is(TT_DictLiteral)))
+  if (Right.is(tok::identifier) && Right.Next && Right.Next->is(TT_DictLiteral))
     return 1;
   if (Right.is(tok::l_square)) {
     if (Style.Language == FormatStyle::LK_Proto)
@@ -1999,21 +1998,17 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   if (Left.is(TT_JavaAnnotation))
     return 50;
 
-  if (Right.is(tok::lessless)) {
-    if (Left.is(tok::string_literal) &&
-        (Right.NextOperator || Right.OperatorIndex != 1)) {
-      StringRef Content = Left.TokenText;
-      if (Content.startswith("\""))
-        Content = Content.drop_front(1);
-      if (Content.endswith("\""))
-        Content = Content.drop_back(1);
-      Content = Content.trim();
-      if (Content.size() > 1 &&
-          (Content.back() == ':' || Content.back() == '='))
-        return 25;
-    }
+  if (Left.isOneOf(tok::plus, tok::comma) && Left.Previous &&
+      Left.Previous->isLabelString() &&
+      (Left.NextOperator || Left.OperatorIndex != 1))
+    return 100;
+  if (Left.is(tok::comma))
+    return 1;
+  if (Right.isOneOf(tok::lessless, tok::plus) && Left.isLabelString() &&
+      (Right.NextOperator || Right.OperatorIndex != 1))
+    return 25;
+  if (Right.is(tok::lessless))
     return 1; // Breaking at a << is really cheap.
-  }
   if (Left.is(TT_ConditionalExpr))
     return prec::Conditional;
   prec::Level Level = Left.getPrecedence();
@@ -2631,7 +2626,8 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
                  << " FakeLParens=";
     for (unsigned i = 0, e = Tok->FakeLParens.size(); i != e; ++i)
       llvm::errs() << Tok->FakeLParens[i] << "/";
-    llvm::errs() << " FakeRParens=" << Tok->FakeRParens << "\n";
+    llvm::errs() << " FakeRParens=" << Tok->FakeRParens;
+    llvm::errs() << " Text='" << Tok->TokenText << "'\n";
     if (!Tok->Next)
       assert(Tok == Line.Last);
     Tok = Tok->Next;
