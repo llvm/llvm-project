@@ -99,7 +99,7 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
   case MachineOperand::MO_FPImmediate: {
     APFloat Val = MO.getFPImm()->getValueAPF();
     bool ignored;
-    Val.convert(APFloat::IEEEdouble, APFloat::rmTowardZero, &ignored);
+    Val.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
     MCOp = MCOperand::createFPImm(Val.convertToDouble());
     break;
   }

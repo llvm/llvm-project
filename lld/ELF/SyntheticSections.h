@@ -667,6 +667,7 @@ template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
 
 // Linker generated sections which can be used as inputs.
 template <class ELFT> struct In {
+  static InputSection<ELFT> *ARMAttributes;
   static BuildIdSection<ELFT> *BuildId;
   static InputSection<ELFT> *Common;
   static DynamicSection<ELFT> *Dynamic;
@@ -695,6 +696,7 @@ template <class ELFT> struct In {
   static VersionNeedSection<ELFT> *VerNeed;
 };
 
+template <class ELFT> InputSection<ELFT> *In<ELFT>::ARMAttributes;
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection<ELFT> *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;

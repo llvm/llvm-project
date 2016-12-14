@@ -25,7 +25,7 @@ class TestingConfig:
                      'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
                      'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
                      'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
-                     'TEMPDIR']
+                     'TEMPDIR', 'AVRLIT_BOARD', 'AVRLIT_PORT']
         for var in pass_vars:
             val = os.environ.get(var, '')
             # Check for empty string as some variables such as LD_PRELOAD cannot be empty

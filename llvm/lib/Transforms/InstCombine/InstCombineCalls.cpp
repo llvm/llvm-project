@@ -1685,7 +1685,23 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse2_cvtsd2si:
   case Intrinsic::x86_sse2_cvtsd2si64:
   case Intrinsic::x86_sse2_cvttsd2si:
-  case Intrinsic::x86_sse2_cvttsd2si64: {
+  case Intrinsic::x86_sse2_cvttsd2si64:
+  case Intrinsic::x86_avx512_vcvtss2si32:
+  case Intrinsic::x86_avx512_vcvtss2si64:
+  case Intrinsic::x86_avx512_vcvtss2usi32:
+  case Intrinsic::x86_avx512_vcvtss2usi64:
+  case Intrinsic::x86_avx512_vcvtsd2si32:
+  case Intrinsic::x86_avx512_vcvtsd2si64:
+  case Intrinsic::x86_avx512_vcvtsd2usi32:
+  case Intrinsic::x86_avx512_vcvtsd2usi64:
+  case Intrinsic::x86_avx512_cvttss2si:
+  case Intrinsic::x86_avx512_cvttss2si64:
+  case Intrinsic::x86_avx512_cvttss2usi:
+  case Intrinsic::x86_avx512_cvttss2usi64:
+  case Intrinsic::x86_avx512_cvttsd2si:
+  case Intrinsic::x86_avx512_cvttsd2si64:
+  case Intrinsic::x86_avx512_cvttsd2usi:
+  case Intrinsic::x86_avx512_cvttsd2usi64: {
     // These intrinsics only demand the 0th element of their input vectors. If
     // we can simplify the input based on that, do so now.
     Value *Arg = II->getArgOperand(0);
@@ -1754,14 +1770,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
-  case Intrinsic::x86_fma_vfmadd_ss:
-  case Intrinsic::x86_fma_vfmsub_ss:
-  case Intrinsic::x86_fma_vfnmadd_ss:
-  case Intrinsic::x86_fma_vfnmsub_ss:
-  case Intrinsic::x86_fma_vfmadd_sd:
-  case Intrinsic::x86_fma_vfmsub_sd:
-  case Intrinsic::x86_fma_vfnmadd_sd:
-  case Intrinsic::x86_fma_vfnmsub_sd:
+  // X86 scalar intrinsics simplified with SimplifyDemandedVectorElts.
   case Intrinsic::x86_avx512_mask_add_ss_round:
   case Intrinsic::x86_avx512_mask_div_ss_round:
   case Intrinsic::x86_avx512_mask_mul_ss_round:
@@ -1773,26 +1782,15 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx512_mask_mul_sd_round:
   case Intrinsic::x86_avx512_mask_sub_sd_round:
   case Intrinsic::x86_avx512_mask_max_sd_round:
-  case Intrinsic::x86_avx512_mask_min_sd_round: {
-    // These intrinsics only demand the lowest element of the second and third
-    // input vector.
-    bool MadeChange = false;
-    Value *Arg1 = II->getArgOperand(1);
-    Value *Arg2 = II->getArgOperand(2);
-    unsigned VWidth = Arg1->getType()->getVectorNumElements();
-    if (Value *V = SimplifyDemandedVectorEltsLow(Arg1, VWidth, 1)) {
-      II->setArgOperand(1, V);
-      MadeChange = true;
-    }
-    if (Value *V = SimplifyDemandedVectorEltsLow(Arg2, VWidth, 1)) {
-      II->setArgOperand(2, V);
-      MadeChange = true;
-    }
-    if (MadeChange)
-      return II;
-    break;
-  }
-
+  case Intrinsic::x86_avx512_mask_min_sd_round:
+  case Intrinsic::x86_fma_vfmadd_ss:
+  case Intrinsic::x86_fma_vfmsub_ss:
+  case Intrinsic::x86_fma_vfnmadd_ss:
+  case Intrinsic::x86_fma_vfnmsub_ss:
+  case Intrinsic::x86_fma_vfmadd_sd:
+  case Intrinsic::x86_fma_vfmsub_sd:
+  case Intrinsic::x86_fma_vfnmadd_sd:
+  case Intrinsic::x86_fma_vfnmsub_sd:
   case Intrinsic::x86_sse_cmp_ss:
   case Intrinsic::x86_sse_min_ss:
   case Intrinsic::x86_sse_max_ss:

@@ -590,13 +590,13 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     if (ConstantFP *FPC = dyn_cast<ConstantFP>(V)) {
       bool ignored;
       APFloat Val = FPC->getValueAPF();
-      Val.convert(DestTy->isHalfTy() ? APFloat::IEEEhalf :
-                  DestTy->isFloatTy() ? APFloat::IEEEsingle :
-                  DestTy->isDoubleTy() ? APFloat::IEEEdouble :
-                  DestTy->isX86_FP80Ty() ? APFloat::x87DoubleExtended :
-                  DestTy->isFP128Ty() ? APFloat::IEEEquad :
-                  DestTy->isPPC_FP128Ty() ? APFloat::PPCDoubleDouble :
-                  APFloat::Bogus,
+      Val.convert(DestTy->isHalfTy() ? APFloat::IEEEhalf() :
+                  DestTy->isFloatTy() ? APFloat::IEEEsingle() :
+                  DestTy->isDoubleTy() ? APFloat::IEEEdouble() :
+                  DestTy->isX86_FP80Ty() ? APFloat::x87DoubleExtended() :
+                  DestTy->isFP128Ty() ? APFloat::IEEEquad() :
+                  DestTy->isPPC_FP128Ty() ? APFloat::PPCDoubleDouble() :
+                  APFloat::Bogus(),
                   APFloat::rmNearestTiesToEven, &ignored);
       return ConstantFP::get(V->getContext(), Val);
     }

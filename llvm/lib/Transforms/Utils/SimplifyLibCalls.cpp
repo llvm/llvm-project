@@ -900,7 +900,7 @@ static Value *valueHasFloatPrecision(Value *Val) {
   if (ConstantFP *Const = dyn_cast<ConstantFP>(Val)) {
     APFloat F = Const->getValueAPF();
     bool losesInfo;
-    (void)F.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven,
+    (void)F.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
                     &losesInfo);
     if (!losesInfo)
       return ConstantFP::get(Const->getContext(), F);
@@ -1129,7 +1129,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     // We cannot readily convert a non-double type (like float) to a double.
     // So we first convert V to something which could be converted to double.
     bool ignored;
-    V.convert(APFloat::IEEEdouble, APFloat::rmTowardZero, &ignored);
+    V.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
     
     // TODO: Should the new instructions propagate the 'fast' flag of the pow()?
     Value *FMul = getPow(InnerChain, V.convertToDouble(), B);

@@ -2206,7 +2206,7 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
 
   const AsmToken &Tok = Parser.getTok();
   if (Tok.is(AsmToken::Real)) {
-    APFloat RealVal(APFloat::IEEEdouble, Tok.getString());
+    APFloat RealVal(APFloat::IEEEdouble(), Tok.getString());
     if (isNegative)
       RealVal.changeSign();
 
@@ -2232,7 +2232,7 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
         return MatchOperand_ParseFail;
       }
     } else {
-      APFloat RealVal(APFloat::IEEEdouble, Tok.getString());
+      APFloat RealVal(APFloat::IEEEdouble(), Tok.getString());
       uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
       // If we had a '-' in front, toggle the sign bit.
       IntVal ^= (uint64_t)isNegative << 63;
@@ -3154,7 +3154,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // so convert the value.
     const AsmToken &Tok = Parser.getTok();
     if (Tok.is(AsmToken::Real)) {
-      APFloat RealVal(APFloat::IEEEdouble, Tok.getString());
+      APFloat RealVal(APFloat::IEEEdouble(), Tok.getString());
       uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
       if (Mnemonic != "fcmp" && Mnemonic != "fcmpe" && Mnemonic != "fcmeq" &&
           Mnemonic != "fcmge" && Mnemonic != "fcmgt" && Mnemonic != "fcmle" &&

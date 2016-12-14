@@ -1466,7 +1466,7 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
 
   // TODO: Are there fast-math-flags to propagate to this FADD?
   Lo = DAG.getNode(ISD::FADD, dl, VT, Hi,
-                   DAG.getConstantFP(APFloat(APFloat::PPCDoubleDouble,
+                   DAG.getConstantFP(APFloat(APFloat::PPCDoubleDouble(),
                                              APInt(128, Parts)),
                                      dl, MVT::ppcf128));
   Lo = DAG.getSelectCC(dl, Src, DAG.getConstant(0, dl, SrcVT),
@@ -1631,7 +1631,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_UINT(SDNode *N) {
     assert(N->getOperand(0).getValueType() == MVT::ppcf128 &&
            "Logic only correct for ppcf128!");
     const uint64_t TwoE31[] = {0x41e0000000000000LL, 0};
-    APFloat APF = APFloat(APFloat::PPCDoubleDouble, APInt(128, TwoE31));
+    APFloat APF = APFloat(APFloat::PPCDoubleDouble(), APInt(128, TwoE31));
     SDValue Tmp = DAG.getConstantFP(APF, dl, MVT::ppcf128);
     //  X>=2^31 ? (int)(X-2^31)+0x80000000 : (int)X
     // FIXME: generated code sucks.

@@ -4661,17 +4661,17 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
         const fltSemantics *Sem;
         // FIXME: This shouldn't be here.
         if (LHSExt->getSrcTy()->isHalfTy())
-          Sem = &APFloat::IEEEhalf;
+          Sem = &APFloat::IEEEhalf();
         else if (LHSExt->getSrcTy()->isFloatTy())
-          Sem = &APFloat::IEEEsingle;
+          Sem = &APFloat::IEEEsingle();
         else if (LHSExt->getSrcTy()->isDoubleTy())
-          Sem = &APFloat::IEEEdouble;
+          Sem = &APFloat::IEEEdouble();
         else if (LHSExt->getSrcTy()->isFP128Ty())
-          Sem = &APFloat::IEEEquad;
+          Sem = &APFloat::IEEEquad();
         else if (LHSExt->getSrcTy()->isX86_FP80Ty())
-          Sem = &APFloat::x87DoubleExtended;
+          Sem = &APFloat::x87DoubleExtended();
         else if (LHSExt->getSrcTy()->isPPC_FP128Ty())
-          Sem = &APFloat::PPCDoubleDouble;
+          Sem = &APFloat::PPCDoubleDouble();
         else
           break;
 

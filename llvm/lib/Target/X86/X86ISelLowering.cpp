@@ -599,14 +599,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UNDEF,     MVT::f80, Expand);
     setOperationAction(ISD::FCOPYSIGN, MVT::f80, Expand);
     {
-      APFloat TmpFlt = APFloat::getZero(APFloat::x87DoubleExtended);
+      APFloat TmpFlt = APFloat::getZero(APFloat::x87DoubleExtended());
       addLegalFPImmediate(TmpFlt);  // FLD0
       TmpFlt.changeSign();
       addLegalFPImmediate(TmpFlt);  // FLD0/FCHS
 
       bool ignored;
       APFloat TmpFlt2(+1.0);
-      TmpFlt2.convert(APFloat::x87DoubleExtended, APFloat::rmNearestTiesToEven,
+      TmpFlt2.convert(APFloat::x87DoubleExtended(), APFloat::rmNearestTiesToEven,
                       &ignored);
       addLegalFPImmediate(TmpFlt2);  // FLD1
       TmpFlt2.changeSign();
@@ -4767,10 +4767,10 @@ static SDValue getConstVector(ArrayRef<APInt> Bits, SmallBitVector &Undefs,
       Ops.push_back(DAG.getConstant(V.trunc(32), dl, EltVT));
       Ops.push_back(DAG.getConstant(V.lshr(32).trunc(32), dl, EltVT));
     } else if (EltVT == MVT::f32) {
-      APFloat FV(APFloat::IEEEsingle, V);
+      APFloat FV(APFloat::IEEEsingle(), V);
       Ops.push_back(DAG.getConstantFP(FV, dl, EltVT));
     } else if (EltVT == MVT::f64) {
-      APFloat FV(APFloat::IEEEdouble, V);
+      APFloat FV(APFloat::IEEEdouble(), V);
       Ops.push_back(DAG.getConstantFP(FV, dl, EltVT));
     } else {
       Ops.push_back(DAG.getConstant(V, dl, EltVT));
@@ -14378,10 +14378,10 @@ SDValue X86TargetLowering::LowerUINT_TO_FP_i64(SDValue Op,
 
   SmallVector<Constant*,2> CV1;
   CV1.push_back(
-    ConstantFP::get(*Context, APFloat(APFloat::IEEEdouble,
+    ConstantFP::get(*Context, APFloat(APFloat::IEEEdouble(),
                                       APInt(64, 0x4330000000000000ULL))));
   CV1.push_back(
-    ConstantFP::get(*Context, APFloat(APFloat::IEEEdouble,
+    ConstantFP::get(*Context, APFloat(APFloat::IEEEdouble(),
                                       APInt(64, 0x4530000000000000ULL))));
   Constant *C1 = ConstantVector::get(CV1);
   SDValue CPIdx1 = DAG.getConstantPool(C1, PtrVT, 16);
@@ -14583,7 +14583,7 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
 
   // Create the vector constant for -(0x1.0p39f + 0x1.0p23f).
   SDValue VecCstFAdd = DAG.getConstantFP(
-      APFloat(APFloat::IEEEsingle, APInt(32, 0xD3000080)), DL, VecFloatVT);
+      APFloat(APFloat::IEEEsingle(), APInt(32, 0xD3000080)), DL, VecFloatVT);
 
   //     float4 fhi = (float4) hi - (0x1.0p39f + 0x1.0p23f);
   SDValue HighBitcast = DAG.getBitcast(VecFloatVT, High);
@@ -14821,15 +14821,15 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     // For X87 we'd like to use the smallest FP type for this constant, but
     // for DAG type consistency we have to match the FP operand type.
 
-    APFloat Thresh(APFloat::IEEEsingle, APInt(32, 0x5f000000));
+    APFloat Thresh(APFloat::IEEEsingle(), APInt(32, 0x5f000000));
     LLVM_ATTRIBUTE_UNUSED APFloat::opStatus Status = APFloat::opOK;
     bool LosesInfo = false;
     if (TheVT == MVT::f64)
       // The rounding mode is irrelevant as the conversion should be exact.
-      Status = Thresh.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven,
+      Status = Thresh.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
                               &LosesInfo);
     else if (TheVT == MVT::f80)
-      Status = Thresh.convert(APFloat::x87DoubleExtended,
+      Status = Thresh.convert(APFloat::x87DoubleExtended(),
                               APFloat::rmNearestTiesToEven, &LosesInfo);
 
     assert(Status == APFloat::opOK && !LosesInfo &&
@@ -15379,8 +15379,8 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
   APInt MaskElt =
     IsFABS ? APInt::getSignedMaxValue(EltBits) : APInt::getSignBit(EltBits);
   const fltSemantics &Sem =
-      EltVT == MVT::f64 ? APFloat::IEEEdouble :
-          (IsF128 ? APFloat::IEEEquad : APFloat::IEEEsingle);
+      EltVT == MVT::f64 ? APFloat::IEEEdouble() :
+          (IsF128 ? APFloat::IEEEquad() : APFloat::IEEEsingle());
   SDValue Mask = DAG.getConstantFP(APFloat(Sem, MaskElt), dl, LogicVT);
 
   SDValue Op0 = Op.getOperand(0);
@@ -15424,8 +15424,8 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
 
   MVT EltVT = VT.getScalarType();
   const fltSemantics &Sem =
-      EltVT == MVT::f64 ? APFloat::IEEEdouble
-                        : (IsF128 ? APFloat::IEEEquad : APFloat::IEEEsingle);
+      EltVT == MVT::f64 ? APFloat::IEEEdouble()
+                        : (IsF128 ? APFloat::IEEEquad() : APFloat::IEEEsingle());
 
   // Perform all scalar logic operations as 16-byte vectors because there are no
   // scalar FP logic instructions in SSE.

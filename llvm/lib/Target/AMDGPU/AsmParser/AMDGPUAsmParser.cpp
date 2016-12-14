@@ -882,11 +882,11 @@ struct OptionalOperand {
 static const fltSemantics *getFltSemantics(unsigned Size) {
   switch (Size) {
   case 4:
-    return &APFloat::IEEEsingle;
+    return &APFloat::IEEEsingle();
   case 8:
-    return &APFloat::IEEEdouble;
+    return &APFloat::IEEEdouble();
   case 2:
-    return &APFloat::IEEEhalf;
+    return &APFloat::IEEEhalf();
   default:
     llvm_unreachable("unsupported fp type");
   }
@@ -935,7 +935,7 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
                                           AsmParser->hasInv2PiInlineImm());
     }
 
-    APFloat FPLiteral(APFloat::IEEEdouble, APInt(64, Imm.Val));
+    APFloat FPLiteral(APFloat::IEEEdouble(), APInt(64, Imm.Val));
     if (!canLosslesslyConvertToFPType(FPLiteral, type))
       return false;
 
@@ -993,7 +993,7 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
     return false;
   }
 
-  APFloat FPLiteral(APFloat::IEEEdouble, APInt(64, Imm.Val));
+  APFloat FPLiteral(APFloat::IEEEdouble(), APInt(64, Imm.Val));
   return canLosslesslyConvertToFPType(FPLiteral, type);
 }
 
@@ -1062,7 +1062,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
     case 4:
     case 2: {
       bool lost;
-      APFloat FPLiteral(APFloat::IEEEdouble, Literal);
+      APFloat FPLiteral(APFloat::IEEEdouble(), Literal);
       // Convert literal to single precision
       FPLiteral.convert(*getFltSemantics(OpSize),
                         APFloat::rmNearestTiesToEven, &lost);
@@ -1130,7 +1130,7 @@ void AMDGPUOperand::addKImmFPOperands(MCInst &Inst, unsigned N) const {
   }
 
   bool Lost;
-  APFloat FPLiteral(APFloat::IEEEdouble, Literal);
+  APFloat FPLiteral(APFloat::IEEEdouble(), Literal);
   FPLiteral.convert(*getFltSemantics(Bitwidth / 8),
                     APFloat::rmNearestTiesToEven, &Lost);
   Inst.addOperand(MCOperand::createImm(FPLiteral.bitcastToAPInt().getZExtValue()));

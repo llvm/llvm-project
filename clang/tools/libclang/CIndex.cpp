@@ -3630,7 +3630,7 @@ static const ExprEvalResult* evaluateExpr(Expr *expr, CXCursor C) {
     result->EvalType = CXEval_Float;
     bool ignored;
     llvm::APFloat apFloat = ER.Val.getFloat();
-    apFloat.convert(llvm::APFloat::IEEEdouble,
+    apFloat.convert(llvm::APFloat::IEEEdouble(),
                     llvm::APFloat::rmNearestTiesToEven, &ignored);
     result->EvalData.floatVal = apFloat.convertToDouble();
     return result.release();

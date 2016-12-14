@@ -739,12 +739,12 @@ def INEG64 :
 
 // Constant 1.0f
 def FloatConst1 : PatLeaf<(fpimm), [{
-  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEsingle &&
+  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEsingle() &&
          N->getValueAPF().convertToFloat() == 1.0f;
 }]>;
 // Constant 1.0 (double)
 def DoubleConst1 : PatLeaf<(fpimm), [{
-  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEdouble &&
+  return &N->getValueAPF().getSemantics() == &llvm::APFloat::IEEEdouble() &&
          N->getValueAPF().convertToDouble() == 1.0;
 }]>;
 

@@ -1349,6 +1349,21 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       break;
     }
 
+    // Three input scalar-as-vector operations that work column-wise. The high
+    // elements come from operand 0 and the low element is a function of all
+    // three inputs.
+    case Intrinsic::x86_avx512_mask_add_ss_round:
+    case Intrinsic::x86_avx512_mask_div_ss_round:
+    case Intrinsic::x86_avx512_mask_mul_ss_round:
+    case Intrinsic::x86_avx512_mask_sub_ss_round:
+    case Intrinsic::x86_avx512_mask_max_ss_round:
+    case Intrinsic::x86_avx512_mask_min_ss_round:
+    case Intrinsic::x86_avx512_mask_add_sd_round:
+    case Intrinsic::x86_avx512_mask_div_sd_round:
+    case Intrinsic::x86_avx512_mask_mul_sd_round:
+    case Intrinsic::x86_avx512_mask_sub_sd_round:
+    case Intrinsic::x86_avx512_mask_max_sd_round:
+    case Intrinsic::x86_avx512_mask_min_sd_round:
     case Intrinsic::x86_fma_vfmadd_ss:
     case Intrinsic::x86_fma_vfmsub_ss:
     case Intrinsic::x86_fma_vfnmadd_ss:
@@ -1360,6 +1375,13 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(0), DemandedElts,
                                         UndefElts, Depth + 1);
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
+
+      // If lowest element of a scalar op isn't used then use Arg0.
+      if (!DemandedElts[0])
+        return II->getArgOperand(0);
+
+      // Only lower element is used for operand 1 and 2.
+      DemandedElts = 1;
       TmpV = SimplifyDemandedVectorElts(II->getArgOperand(1), DemandedElts,
                                         UndefElts2, Depth + 1);
       if (TmpV) { II->setArgOperand(1, TmpV); MadeChange = true; }
@@ -1367,14 +1389,11 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                         UndefElts3, Depth + 1);
       if (TmpV) { II->setArgOperand(2, TmpV); MadeChange = true; }
 
-      // If lowest element of a scalar op isn't used then use Arg0.
-      if (DemandedElts.getLoBits(1) != 1)
-        return II->getArgOperand(0);
+      // Lower element is undefined if all three lower elements are undefined.
+      // Consider things like undef&0.  The result is known zero, not undef.
+      if (!UndefElts2[0] || !UndefElts3[0])
+        UndefElts.clearBit(0);
 
-      // Output elements are undefined if all three are undefined.  Consider
-      // things like undef&0.  The result is known zero, not undef.
-      UndefElts &= UndefElts2;
-      UndefElts &= UndefElts3;
       break;
 
     // SSE4A instructions leave the upper 64-bits of the 128-bit result

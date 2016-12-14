@@ -4561,7 +4561,10 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       return SDValue();
 
     // Calculate the offset of the current byte from the base address
-    unsigned LoadByteWidth = L->getMemoryVT().getSizeInBits() / 8;
+    unsigned LoadBitWidth = L->getMemoryVT().getSizeInBits();
+    assert(LoadBitWidth % 8 == 0 &&
+           "can only analyze providers for individual bytes not bit");
+    unsigned LoadByteWidth = LoadBitWidth / 8;
     int64_t MemoryByteOffset =
         DAG.getDataLayout().isBigEndian()
             ? BigEndianByteAt(LoadByteWidth, Bytes[i].ByteOffset)
@@ -4576,6 +4579,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     Loads.insert(L);
   }
   assert(Base && "must be set");
+  assert(Loads.size() > 0 && "must be at least one load");
 
   // Check if the bytes of the OR we are looking at match with either big or
   // little endian value load

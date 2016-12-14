@@ -75,15 +75,6 @@ typedef uint32_t pid_t;
 
 #endif // _MSC_VER
 
-// MSVC 2015 and higher have timespec.  Otherwise we need to define it
-// ourselves.
-#if !defined(_MSC_VER) || _MSC_VER < 1900
-struct timespec {
-  time_t tv_sec;
-  long tv_nsec;
-};
-#endif
-
 // Various useful posix functions that are not present in Windows.  We provide
 // custom implementations.
 int vasprintf(char **ret, const char *fmt, va_list ap);
@@ -112,21 +103,5 @@ inline char *ptsname(int fd) { LLVM_BUILTIN_UNREACHABLE; }
 
 inline pid_t fork(void) { LLVM_BUILTIN_UNREACHABLE; }
 inline pid_t setsid(void) { LLVM_BUILTIN_UNREACHABLE; }
-
-// vsnprintf and snprintf are provided in MSVC 2015 and higher.
-#if _MSC_VER < 1900
-namespace lldb_private {
-int vsnprintf(char *buffer, size_t count, const char *format, va_list argptr);
-}
-
-// inline to avoid linkage conflicts
-int inline snprintf(char *buffer, size_t count, const char *format, ...) {
-  va_list argptr;
-  va_start(argptr, format);
-  int r = lldb_private::vsnprintf(buffer, count, format, argptr);
-  va_end(argptr);
-  return r;
-}
-#endif
 
 #endif

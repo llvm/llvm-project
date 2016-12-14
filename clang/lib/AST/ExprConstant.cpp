@@ -1050,7 +1050,7 @@ namespace {
     APSInt IntReal, IntImag;
     APFloat FloatReal, FloatImag;
 
-    ComplexValue() : FloatReal(APFloat::Bogus), FloatImag(APFloat::Bogus) {}
+    ComplexValue() : FloatReal(APFloat::Bogus()), FloatImag(APFloat::Bogus()) {}
 
     void makeComplexFloat() { IsInt = false; }
     bool isComplexFloat() const { return !IsInt; }
@@ -6068,7 +6068,7 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (EltTy->isRealFloatingType()) {
       const llvm::fltSemantics &Sem = Info.Ctx.getFloatTypeSemantics(EltTy);
       unsigned FloatEltSize = EltSize;
-      if (&Sem == &APFloat::x87DoubleExtended)
+      if (&Sem == &APFloat::x87DoubleExtended())
         FloatEltSize = 80;
       for (unsigned i = 0; i < NElts; i++) {
         llvm::APInt Elt;
