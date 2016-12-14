@@ -10,7 +10,7 @@
 #include "DwarfGenerator.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Dwarf.h"
@@ -215,45 +215,49 @@ void TestAllForms() {
   uint32_t NumCUs = DwarfContext.getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
   DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
-  auto DiePtr = U->getUnitDIE(false);
-  EXPECT_TRUE(DiePtr != nullptr);
+  auto DieDG = U->getUnitDIE(false);
+  EXPECT_TRUE(DieDG.isValid());
 
   //----------------------------------------------------------------------
   // Test address forms
   //----------------------------------------------------------------------
-  EXPECT_EQ(DiePtr->getAttributeValueAsAddress(U, Attr_DW_FORM_addr, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsAddress(Attr_DW_FORM_addr, 0),
             AddrValue);
 
   //----------------------------------------------------------------------
   // Test block forms
   //----------------------------------------------------------------------
-  DWARFFormValue FormValue;
+  Optional<DWARFFormValue> FormValue;
   ArrayRef<uint8_t> ExtractedBlockData;
   Optional<ArrayRef<uint8_t>> BlockDataOpt;
 
-  EXPECT_TRUE(DiePtr->getAttributeValue(U, Attr_DW_FORM_block, FormValue));
-  BlockDataOpt = FormValue.getAsBlock();
+  FormValue = DieDG.getAttributeValue(Attr_DW_FORM_block);
+  EXPECT_TRUE((bool)FormValue);
+  BlockDataOpt = FormValue->getAsBlock();
   EXPECT_TRUE(BlockDataOpt.hasValue());
   ExtractedBlockData = BlockDataOpt.getValue();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
-  EXPECT_TRUE(DiePtr->getAttributeValue(U, Attr_DW_FORM_block1, FormValue));
-  BlockDataOpt = FormValue.getAsBlock();
+  FormValue = DieDG.getAttributeValue(Attr_DW_FORM_block1);
+  EXPECT_TRUE((bool)FormValue);
+  BlockDataOpt = FormValue->getAsBlock();
   EXPECT_TRUE(BlockDataOpt.hasValue());
   ExtractedBlockData = BlockDataOpt.getValue();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
-  EXPECT_TRUE(DiePtr->getAttributeValue(U, Attr_DW_FORM_block2, FormValue));
-  BlockDataOpt = FormValue.getAsBlock();
+  FormValue = DieDG.getAttributeValue(Attr_DW_FORM_block2);
+  EXPECT_TRUE((bool)FormValue);
+  BlockDataOpt = FormValue->getAsBlock();
   EXPECT_TRUE(BlockDataOpt.hasValue());
   ExtractedBlockData = BlockDataOpt.getValue();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
 
-  EXPECT_TRUE(DiePtr->getAttributeValue(U, Attr_DW_FORM_block4, FormValue));
-  BlockDataOpt = FormValue.getAsBlock();
+  FormValue = DieDG.getAttributeValue(Attr_DW_FORM_block4);
+  EXPECT_TRUE((bool)FormValue);
+  BlockDataOpt = FormValue->getAsBlock();
   EXPECT_TRUE(BlockDataOpt.hasValue());
   ExtractedBlockData = BlockDataOpt.getValue();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
@@ -263,60 +267,60 @@ void TestAllForms() {
   // Test data forms
   //----------------------------------------------------------------------
   EXPECT_EQ(
-      DiePtr->getAttributeValueAsUnsignedConstant(U, Attr_DW_FORM_data1, 0),
+      DieDG.getAttributeValueAsUnsignedConstant(Attr_DW_FORM_data1, 0),
       Data1);
   EXPECT_EQ(
-      DiePtr->getAttributeValueAsUnsignedConstant(U, Attr_DW_FORM_data2, 0),
+      DieDG.getAttributeValueAsUnsignedConstant(Attr_DW_FORM_data2, 0),
       Data2);
   EXPECT_EQ(
-      DiePtr->getAttributeValueAsUnsignedConstant(U, Attr_DW_FORM_data4, 0),
+      DieDG.getAttributeValueAsUnsignedConstant(Attr_DW_FORM_data4, 0),
       Data4);
   EXPECT_EQ(
-      DiePtr->getAttributeValueAsUnsignedConstant(U, Attr_DW_FORM_data8, 0),
+      DieDG.getAttributeValueAsUnsignedConstant(Attr_DW_FORM_data8, 0),
       Data8);
 
   //----------------------------------------------------------------------
   // Test string forms
   //----------------------------------------------------------------------
   const char *ExtractedStringValue =
-      DiePtr->getAttributeValueAsString(U, Attr_DW_FORM_string, nullptr);
+      DieDG.getAttributeValueAsString(Attr_DW_FORM_string, nullptr);
   EXPECT_TRUE(ExtractedStringValue != nullptr);
   EXPECT_TRUE(strcmp(StringValue, ExtractedStringValue) == 0);
 
   const char *ExtractedStrpValue =
-      DiePtr->getAttributeValueAsString(U, Attr_DW_FORM_strp, nullptr);
+      DieDG.getAttributeValueAsString(Attr_DW_FORM_strp, nullptr);
   EXPECT_TRUE(ExtractedStrpValue != nullptr);
   EXPECT_TRUE(strcmp(StrpValue, ExtractedStrpValue) == 0);
 
   //----------------------------------------------------------------------
   // Test reference forms
   //----------------------------------------------------------------------
-  EXPECT_EQ(DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_ref_addr, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsReference(Attr_DW_FORM_ref_addr, 0),
             RefAddr);
-  EXPECT_EQ(DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_ref1, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsReference(Attr_DW_FORM_ref1, 0),
             Data1);
-  EXPECT_EQ(DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_ref2, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsReference(Attr_DW_FORM_ref2, 0),
             Data2);
-  EXPECT_EQ(DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_ref4, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsReference(Attr_DW_FORM_ref4, 0),
             Data4);
-  EXPECT_EQ(DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_ref8, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsReference(Attr_DW_FORM_ref8, 0),
             Data8);
-  EXPECT_EQ(DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_ref_sig8, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsReference(Attr_DW_FORM_ref_sig8, 0),
             Data8_2);
-  EXPECT_EQ(DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_ref_udata, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsReference(Attr_DW_FORM_ref_udata, 0),
             UData[0]);
 
   //----------------------------------------------------------------------
   // Test flag forms
   //----------------------------------------------------------------------
-  EXPECT_EQ(DiePtr->getAttributeValueAsUnsignedConstant(
-                U, Attr_DW_FORM_flag_true, 0ULL),
+  EXPECT_EQ(DieDG.getAttributeValueAsUnsignedConstant(
+                Attr_DW_FORM_flag_true, 0ULL),
             1ULL);
-  EXPECT_EQ(DiePtr->getAttributeValueAsUnsignedConstant(
-                U, Attr_DW_FORM_flag_false, 1ULL),
+  EXPECT_EQ(DieDG.getAttributeValueAsUnsignedConstant(
+                Attr_DW_FORM_flag_false, 1ULL),
             0ULL);
-  EXPECT_EQ(DiePtr->getAttributeValueAsUnsignedConstant(
-                U, Attr_DW_FORM_flag_present, 0ULL),
+  EXPECT_EQ(DieDG.getAttributeValueAsUnsignedConstant(
+                Attr_DW_FORM_flag_present, 0ULL),
             1ULL);
 
   // TODO: test Attr_DW_FORM_implicit_const extraction
@@ -324,30 +328,30 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   // Test SLEB128 based forms
   //----------------------------------------------------------------------
-  EXPECT_EQ(DiePtr->getAttributeValueAsSignedConstant(U, Attr_DW_FORM_sdata, 0),
+  EXPECT_EQ(DieDG.getAttributeValueAsSignedConstant(Attr_DW_FORM_sdata, 0),
             SData);
 
   //----------------------------------------------------------------------
   // Test ULEB128 based forms
   //----------------------------------------------------------------------
   EXPECT_EQ(
-      DiePtr->getAttributeValueAsUnsignedConstant(U, Attr_DW_FORM_udata, 0),
+      DieDG.getAttributeValueAsUnsignedConstant(Attr_DW_FORM_udata, 0),
       UData[0]);
 
   //----------------------------------------------------------------------
   // Test DWARF32/DWARF64 forms
   //----------------------------------------------------------------------
   EXPECT_EQ(
-      DiePtr->getAttributeValueAsReference(U, Attr_DW_FORM_GNU_ref_alt, 0),
+      DieDG.getAttributeValueAsReference(Attr_DW_FORM_GNU_ref_alt, 0),
       Dwarf32Values[0]);
   EXPECT_EQ(
-      DiePtr->getAttributeValueAsSectionOffset(U, Attr_DW_FORM_sec_offset, 0),
+      DieDG.getAttributeValueAsSectionOffset(Attr_DW_FORM_sec_offset, 0),
       Dwarf32Values[1]);
 
   //----------------------------------------------------------------------
   // Add an address at the end to make sure we can decode this value
   //----------------------------------------------------------------------
-  EXPECT_EQ(DiePtr->getAttributeValueAsAddress(U, Attr_Last, 0), AddrValue);
+  EXPECT_EQ(DieDG.getAttributeValueAsAddress(Attr_Last, 0), AddrValue);
 }
 
 TEST(DWARFDebugInfo, TestDWARF32Version2Addr4AllForms) {
@@ -449,41 +453,41 @@ template <uint16_t Version, class AddrType> void TestChildren() {
   DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
-  auto DiePtr = U->getUnitDIE(false);
-  EXPECT_TRUE(DiePtr != nullptr);
-  // DiePtr->dump(llvm::outs(), U, UINT32_MAX);
+  auto DieDG = U->getUnitDIE(false);
+  EXPECT_TRUE(DieDG.isValid());
+  // DieDG.dump(llvm::outs(), U, UINT32_MAX);
 
   // Verify the first child of the compile unit DIE is our subprogram.
-  auto SubprogramDiePtr = DiePtr->getFirstChild();
-  EXPECT_TRUE(SubprogramDiePtr != nullptr);
-  EXPECT_EQ(SubprogramDiePtr->getTag(), DW_TAG_subprogram);
+  auto SubprogramDieDG = DieDG.getFirstChild();
+  EXPECT_TRUE(SubprogramDieDG.isValid());
+  EXPECT_EQ(SubprogramDieDG.getTag(), DW_TAG_subprogram);
 
   // Verify the first child of the subprogram is our formal parameter.
-  auto ArgcDiePtr = SubprogramDiePtr->getFirstChild();
-  EXPECT_TRUE(ArgcDiePtr != nullptr);
-  EXPECT_EQ(ArgcDiePtr->getTag(), DW_TAG_formal_parameter);
+  auto ArgcDieDG = SubprogramDieDG.getFirstChild();
+  EXPECT_TRUE(ArgcDieDG.isValid());
+  EXPECT_EQ(ArgcDieDG.getTag(), DW_TAG_formal_parameter);
 
   // Verify our formal parameter has a NULL tag sibling.
-  auto NullDiePtr = ArgcDiePtr->getSibling();
-  EXPECT_TRUE(NullDiePtr != nullptr);
-  if (NullDiePtr) {
-    EXPECT_EQ(NullDiePtr->getTag(), DW_TAG_null);
-    EXPECT_TRUE(NullDiePtr->getSibling() == nullptr);
-    EXPECT_TRUE(NullDiePtr->getFirstChild() == nullptr);
+  auto NullDieDG = ArgcDieDG.getSibling();
+  EXPECT_TRUE(NullDieDG.isValid());
+  if (NullDieDG) {
+    EXPECT_EQ(NullDieDG.getTag(), DW_TAG_null);
+    EXPECT_TRUE(!NullDieDG.getSibling().isValid());
+    EXPECT_TRUE(!NullDieDG.getFirstChild().isValid());
   }
 
   // Verify the sibling of our subprogram is our integer base type.
-  auto IntDiePtr = SubprogramDiePtr->getSibling();
-  EXPECT_TRUE(IntDiePtr != nullptr);
-  EXPECT_EQ(IntDiePtr->getTag(), DW_TAG_base_type);
+  auto IntDieDG = SubprogramDieDG.getSibling();
+  EXPECT_TRUE(IntDieDG.isValid());
+  EXPECT_EQ(IntDieDG.getTag(), DW_TAG_base_type);
 
   // Verify the sibling of our subprogram is our integer base is a NULL tag.
-  NullDiePtr = IntDiePtr->getSibling();
-  EXPECT_TRUE(NullDiePtr != nullptr);
-  if (NullDiePtr) {
-    EXPECT_EQ(NullDiePtr->getTag(), DW_TAG_null);
-    EXPECT_TRUE(NullDiePtr->getSibling() == nullptr);
-    EXPECT_TRUE(NullDiePtr->getFirstChild() == nullptr);
+  NullDieDG = IntDieDG.getSibling();
+  EXPECT_TRUE(NullDieDG.isValid());
+  if (NullDieDG) {
+    EXPECT_EQ(NullDieDG.getTag(), DW_TAG_null);
+    EXPECT_TRUE(!NullDieDG.getSibling().isValid());
+    EXPECT_TRUE(!NullDieDG.getFirstChild().isValid());
   }
 }
 
@@ -623,127 +627,127 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   DWARFCompileUnit *U2 = DwarfContext.getCompileUnitAtIndex(1);
 
   // Get the compile unit DIE is valid.
-  auto Unit1DiePtr = U1->getUnitDIE(false);
-  EXPECT_TRUE(Unit1DiePtr != nullptr);
-  // Unit1DiePtr->dump(llvm::outs(), U1, UINT32_MAX);
+  auto Unit1DieDG = U1->getUnitDIE(false);
+  EXPECT_TRUE(Unit1DieDG.isValid());
+  // Unit1DieDG.dump(llvm::outs(), UINT32_MAX);
 
-  auto Unit2DiePtr = U2->getUnitDIE(false);
-  EXPECT_TRUE(Unit2DiePtr != nullptr);
-  // Unit2DiePtr->dump(llvm::outs(), U2, UINT32_MAX);
+  auto Unit2DieDG = U2->getUnitDIE(false);
+  EXPECT_TRUE(Unit2DieDG.isValid());
+  // Unit2DieDG.dump(llvm::outs(), UINT32_MAX);
 
   // Verify the first child of the compile unit 1 DIE is our int base type.
-  auto CU1TypeDiePtr = Unit1DiePtr->getFirstChild();
-  EXPECT_TRUE(CU1TypeDiePtr != nullptr);
-  EXPECT_EQ(CU1TypeDiePtr->getTag(), DW_TAG_base_type);
+  auto CU1TypeDieDG = Unit1DieDG.getFirstChild();
+  EXPECT_TRUE(CU1TypeDieDG.isValid());
+  EXPECT_EQ(CU1TypeDieDG.getTag(), DW_TAG_base_type);
   EXPECT_EQ(
-      CU1TypeDiePtr->getAttributeValueAsUnsignedConstant(U1, DW_AT_encoding, 0),
+      CU1TypeDieDG.getAttributeValueAsUnsignedConstant(DW_AT_encoding, 0),
       DW_ATE_signed);
 
   // Verify the first child of the compile unit 2 DIE is our float base type.
-  auto CU2TypeDiePtr = Unit2DiePtr->getFirstChild();
-  EXPECT_TRUE(CU2TypeDiePtr != nullptr);
-  EXPECT_EQ(CU2TypeDiePtr->getTag(), DW_TAG_base_type);
+  auto CU2TypeDieDG = Unit2DieDG.getFirstChild();
+  EXPECT_TRUE(CU2TypeDieDG.isValid());
+  EXPECT_EQ(CU2TypeDieDG.getTag(), DW_TAG_base_type);
   EXPECT_EQ(
-      CU2TypeDiePtr->getAttributeValueAsUnsignedConstant(U2, DW_AT_encoding, 0),
+      CU2TypeDieDG.getAttributeValueAsUnsignedConstant(DW_AT_encoding, 0),
       DW_ATE_float);
 
   // Verify the sibling of the base type DIE is our Ref1 DIE and that its
   // DW_AT_type points to our base type DIE.
-  auto CU1Ref1DiePtr = CU1TypeDiePtr->getSibling();
-  EXPECT_TRUE(CU1Ref1DiePtr != nullptr);
-  EXPECT_EQ(CU1Ref1DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU1Ref1DiePtr->getAttributeValueAsReference(U1, DW_AT_type, -1ULL),
-            CU1TypeDiePtr->getOffset());
+  auto CU1Ref1DieDG = CU1TypeDieDG.getSibling();
+  EXPECT_TRUE(CU1Ref1DieDG.isValid());
+  EXPECT_EQ(CU1Ref1DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU1Ref1DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU1TypeDieDG.getOffset());
   // Verify the sibling is our Ref2 DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
-  auto CU1Ref2DiePtr = CU1Ref1DiePtr->getSibling();
-  EXPECT_TRUE(CU1Ref2DiePtr != nullptr);
-  EXPECT_EQ(CU1Ref2DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU1Ref2DiePtr->getAttributeValueAsReference(U1, DW_AT_type, -1ULL),
-            CU1TypeDiePtr->getOffset());
+  auto CU1Ref2DieDG = CU1Ref1DieDG.getSibling();
+  EXPECT_TRUE(CU1Ref2DieDG.isValid());
+  EXPECT_EQ(CU1Ref2DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU1Ref2DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU1TypeDieDG.getOffset());
 
   // Verify the sibling is our Ref4 DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
-  auto CU1Ref4DiePtr = CU1Ref2DiePtr->getSibling();
-  EXPECT_TRUE(CU1Ref4DiePtr != nullptr);
-  EXPECT_EQ(CU1Ref4DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU1Ref4DiePtr->getAttributeValueAsReference(U1, DW_AT_type, -1ULL),
-            CU1TypeDiePtr->getOffset());
+  auto CU1Ref4DieDG = CU1Ref2DieDG.getSibling();
+  EXPECT_TRUE(CU1Ref4DieDG.isValid());
+  EXPECT_EQ(CU1Ref4DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU1Ref4DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU1TypeDieDG.getOffset());
 
   // Verify the sibling is our Ref8 DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
-  auto CU1Ref8DiePtr = CU1Ref4DiePtr->getSibling();
-  EXPECT_TRUE(CU1Ref8DiePtr != nullptr);
-  EXPECT_EQ(CU1Ref8DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU1Ref8DiePtr->getAttributeValueAsReference(U1, DW_AT_type, -1ULL),
-            CU1TypeDiePtr->getOffset());
+  auto CU1Ref8DieDG = CU1Ref4DieDG.getSibling();
+  EXPECT_TRUE(CU1Ref8DieDG.isValid());
+  EXPECT_EQ(CU1Ref8DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU1Ref8DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU1TypeDieDG.getOffset());
 
   // Verify the sibling is our RefAddr DIE and that its DW_AT_type points to our
   // base type DIE in CU1.
-  auto CU1RefAddrDiePtr = CU1Ref8DiePtr->getSibling();
-  EXPECT_TRUE(CU1RefAddrDiePtr != nullptr);
-  EXPECT_EQ(CU1RefAddrDiePtr->getTag(), DW_TAG_variable);
+  auto CU1RefAddrDieDG = CU1Ref8DieDG.getSibling();
+  EXPECT_TRUE(CU1RefAddrDieDG.isValid());
+  EXPECT_EQ(CU1RefAddrDieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(
-      CU1RefAddrDiePtr->getAttributeValueAsReference(U1, DW_AT_type, -1ULL),
-      CU1TypeDiePtr->getOffset());
+      CU1RefAddrDieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+      CU1TypeDieDG.getOffset());
 
   // Verify the sibling of the Ref4 DIE is our RefAddr DIE and that its
   // DW_AT_type points to our base type DIE.
-  auto CU1ToCU2RefAddrDiePtr = CU1RefAddrDiePtr->getSibling();
-  EXPECT_TRUE(CU1ToCU2RefAddrDiePtr != nullptr);
-  EXPECT_EQ(CU1ToCU2RefAddrDiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU1ToCU2RefAddrDiePtr->getAttributeValueAsReference(U1, DW_AT_type,
+  auto CU1ToCU2RefAddrDieDG = CU1RefAddrDieDG.getSibling();
+  EXPECT_TRUE(CU1ToCU2RefAddrDieDG.isValid());
+  EXPECT_EQ(CU1ToCU2RefAddrDieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU1ToCU2RefAddrDieDG.getAttributeValueAsReference(DW_AT_type,
                                                                 -1ULL),
-            CU2TypeDiePtr->getOffset());
+            CU2TypeDieDG.getOffset());
 
   // Verify the sibling of the base type DIE is our Ref1 DIE and that its
   // DW_AT_type points to our base type DIE.
-  auto CU2Ref1DiePtr = CU2TypeDiePtr->getSibling();
-  EXPECT_TRUE(CU2Ref1DiePtr != nullptr);
-  EXPECT_EQ(CU2Ref1DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2Ref1DiePtr->getAttributeValueAsReference(U2, DW_AT_type, -1ULL),
-            CU2TypeDiePtr->getOffset());
+  auto CU2Ref1DieDG = CU2TypeDieDG.getSibling();
+  EXPECT_TRUE(CU2Ref1DieDG.isValid());
+  EXPECT_EQ(CU2Ref1DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU2Ref1DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU2TypeDieDG.getOffset());
   // Verify the sibling is our Ref2 DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
-  auto CU2Ref2DiePtr = CU2Ref1DiePtr->getSibling();
-  EXPECT_TRUE(CU2Ref2DiePtr != nullptr);
-  EXPECT_EQ(CU2Ref2DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2Ref2DiePtr->getAttributeValueAsReference(U2, DW_AT_type, -1ULL),
-            CU2TypeDiePtr->getOffset());
+  auto CU2Ref2DieDG = CU2Ref1DieDG.getSibling();
+  EXPECT_TRUE(CU2Ref2DieDG.isValid());
+  EXPECT_EQ(CU2Ref2DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU2Ref2DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU2TypeDieDG.getOffset());
 
   // Verify the sibling is our Ref4 DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
-  auto CU2Ref4DiePtr = CU2Ref2DiePtr->getSibling();
-  EXPECT_TRUE(CU2Ref4DiePtr != nullptr);
-  EXPECT_EQ(CU2Ref4DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2Ref4DiePtr->getAttributeValueAsReference(U2, DW_AT_type, -1ULL),
-            CU2TypeDiePtr->getOffset());
+  auto CU2Ref4DieDG = CU2Ref2DieDG.getSibling();
+  EXPECT_TRUE(CU2Ref4DieDG.isValid());
+  EXPECT_EQ(CU2Ref4DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU2Ref4DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU2TypeDieDG.getOffset());
 
   // Verify the sibling is our Ref8 DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
-  auto CU2Ref8DiePtr = CU2Ref4DiePtr->getSibling();
-  EXPECT_TRUE(CU2Ref8DiePtr != nullptr);
-  EXPECT_EQ(CU2Ref8DiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2Ref8DiePtr->getAttributeValueAsReference(U2, DW_AT_type, -1ULL),
-            CU2TypeDiePtr->getOffset());
+  auto CU2Ref8DieDG = CU2Ref4DieDG.getSibling();
+  EXPECT_TRUE(CU2Ref8DieDG.isValid());
+  EXPECT_EQ(CU2Ref8DieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU2Ref8DieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+            CU2TypeDieDG.getOffset());
 
   // Verify the sibling is our RefAddr DIE and that its DW_AT_type points to our
   // base type DIE in CU2.
-  auto CU2RefAddrDiePtr = CU2Ref8DiePtr->getSibling();
-  EXPECT_TRUE(CU2RefAddrDiePtr != nullptr);
-  EXPECT_EQ(CU2RefAddrDiePtr->getTag(), DW_TAG_variable);
+  auto CU2RefAddrDieDG = CU2Ref8DieDG.getSibling();
+  EXPECT_TRUE(CU2RefAddrDieDG.isValid());
+  EXPECT_EQ(CU2RefAddrDieDG.getTag(), DW_TAG_variable);
   EXPECT_EQ(
-      CU2RefAddrDiePtr->getAttributeValueAsReference(U2, DW_AT_type, -1ULL),
-      CU2TypeDiePtr->getOffset());
+      CU2RefAddrDieDG.getAttributeValueAsReference(DW_AT_type, -1ULL),
+      CU2TypeDieDG.getOffset());
 
   // Verify the sibling of the Ref4 DIE is our RefAddr DIE and that its
   // DW_AT_type points to our base type DIE.
-  auto CU2ToCU1RefAddrDiePtr = CU2RefAddrDiePtr->getSibling();
-  EXPECT_TRUE(CU2ToCU1RefAddrDiePtr != nullptr);
-  EXPECT_EQ(CU2ToCU1RefAddrDiePtr->getTag(), DW_TAG_variable);
-  EXPECT_EQ(CU2ToCU1RefAddrDiePtr->getAttributeValueAsReference(U2, DW_AT_type,
+  auto CU2ToCU1RefAddrDieDG = CU2RefAddrDieDG.getSibling();
+  EXPECT_TRUE(CU2ToCU1RefAddrDieDG.isValid());
+  EXPECT_EQ(CU2ToCU1RefAddrDieDG.getTag(), DW_TAG_variable);
+  EXPECT_EQ(CU2ToCU1RefAddrDieDG.getAttributeValueAsReference(DW_AT_type,
                                                                 -1ULL),
-            CU1TypeDiePtr->getOffset());
+            CU1TypeDieDG.getOffset());
 }
 
 TEST(DWARFDebugInfo, TestDWARF32Version2Addr4References) {

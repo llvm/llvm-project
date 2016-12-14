@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_SMALLPTRSET_H
 #define LLVM_ADT_SMALLPTRSET_H
 
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
@@ -24,6 +25,13 @@
 #include <initializer_list>
 #include <iterator>
 #include <utility>
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+namespace llvm {
+template <class T = void> struct ReverseIterate { static bool value; };
+template <class T> bool ReverseIterate<T>::value = false;
+}
+#endif
 
 namespace llvm {
 
@@ -206,6 +214,12 @@ protected:
 public:
   explicit SmallPtrSetIteratorImpl(const void *const *BP, const void*const *E)
     : Bucket(BP), End(E) {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    if (ReverseIterate<bool>::value) {
+      RetreatIfNotValid();
+      return;
+    }
+#endif
     AdvanceIfNotValid();
   }
 
@@ -227,6 +241,17 @@ protected:
             *Bucket == SmallPtrSetImplBase::getTombstoneMarker()))
       ++Bucket;
   }
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  void RetreatIfNotValid() {
+    --Bucket;
+    assert(Bucket <= End);
+    while (Bucket != End &&
+           (*Bucket == SmallPtrSetImplBase::getEmptyMarker() ||
+            *Bucket == SmallPtrSetImplBase::getTombstoneMarker())) {
+      --Bucket;
+    }
+  }
+#endif
 };
 
 /// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
@@ -252,13 +277,27 @@ public:
   }
 
   inline SmallPtrSetIterator& operator++() {          // Preincrement
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    if (ReverseIterate<bool>::value) {
+      RetreatIfNotValid();
+      return *this;
+    }
+#endif
     ++Bucket;
     AdvanceIfNotValid();
     return *this;
   }
 
   SmallPtrSetIterator operator++(int) {        // Postincrement
-    SmallPtrSetIterator tmp = *this; ++*this; return tmp;
+    SmallPtrSetIterator tmp = *this;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    if (ReverseIterate<bool>::value) {
+      --*this;
+      return tmp;
+    }
+#endif
+    ++*this;
+    return tmp;
   }
 };
 
@@ -343,9 +382,22 @@ public:
   }
 
   inline iterator begin() const {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    if (ReverseIterate<bool>::value)
+      return endPtr();
+#endif
     return iterator(CurArray, EndPointer());
   }
   inline iterator end() const {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    if (ReverseIterate<bool>::value)
+      return iterator(CurArray, CurArray);
+#endif
+    return endPtr();
+  }
+
+private:
+  inline iterator endPtr() const {
     const void *const *End = EndPointer();
     return iterator(End, End);
   }

@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -24,8 +24,8 @@ void DWARFCompileUnit::dump(raw_ostream &OS) {
      << " (next unit at " << format("0x%08x", getNextUnitOffset())
      << ")\n";
 
-  if (const DWARFDebugInfoEntryMinimal *CU = getUnitDIE(false))
-    CU->dump(OS, this, -1U);
+  if (DWARFDie CUDie = getUnitDIE(false))
+    CUDie.dump(OS, -1U);
   else
     OS << "<compile unit can't be parsed!>\n\n";
 }

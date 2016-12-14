@@ -318,7 +318,7 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
-                       MapVector<StringRef, MemoryBufferRef> &ModuleMap) {
+                       MapVector<StringRef, BitcodeModule> &ModuleMap) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -353,8 +353,10 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
-    return getLazyBitcodeModule(ModuleMap[Identifier], Mod.getContext(),
-                                /*ShouldLazyLoadMetadata=*/true);
+    auto I = ModuleMap.find(Identifier);
+    assert(I != ModuleMap.end());
+    return I->second.getLazyModule(Mod.getContext(),
+                                   /*ShouldLazyLoadMetadata=*/true);
   };
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader);

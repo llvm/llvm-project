@@ -399,6 +399,34 @@ void InductiveRangeCheck::extractRangeChecksFromBranch(
                                                   Checks, Visited);
 }
 
+// Add metadata to the loop L to disable loop optimizations. Callers need to
+// confirm that optimizing loop L is not beneficial.
+static void DisableAllLoopOptsOnLoop(Loop &L) {
+  // We do not care about any existing loopID related metadata for L, since we
+  // are setting all loop metadata to false.
+  LLVMContext &Context = L.getHeader()->getContext();
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDNode *Dummy = MDNode::get(Context, {});
+  MDNode *DisableUnroll = MDNode::get(
+      Context, {MDString::get(Context, "llvm.loop.unroll.disable")});
+  Metadata *FalseVal =
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt1Ty(Context), 0));
+  MDNode *DisableVectorize = MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.vectorize.enable"), FalseVal});
+  MDNode *DisableLICMVersioning = MDNode::get(
+      Context, {MDString::get(Context, "llvm.loop.licm_versioning.disable")});
+  MDNode *DisableDistribution= MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.distribute.enable"), FalseVal});
+  MDNode *NewLoopID =
+      MDNode::get(Context, {Dummy, DisableUnroll, DisableVectorize,
+                            DisableLICMVersioning, DisableDistribution});
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  L.setLoopID(NewLoopID);
+}
+
 namespace {
 
 // Keeps track of the structure of a loop.  This is similar to llvm::Loop,
@@ -1309,6 +1337,9 @@ bool LoopConstrainer::run() {
         &OriginalLoop, OriginalLoop.getParentLoop(), PreLoop.Map);
     formLCSSARecursively(*L, DT, &LI, &SE);
     simplifyLoop(L, &DT, &LI, &SE, nullptr, true);
+    // Pre loops are slow paths, we do not need to perform any loop
+    // optimizations on them.
+    DisableAllLoopOptsOnLoop(*L);
   }
 
   if (!PostLoop.Blocks.empty()) {
@@ -1316,6 +1347,9 @@ bool LoopConstrainer::run() {
         &OriginalLoop, OriginalLoop.getParentLoop(), PostLoop.Map);
     formLCSSARecursively(*L, DT, &LI, &SE);
     simplifyLoop(L, &DT, &LI, &SE, nullptr, true);
+    // Post loops are slow paths, we do not need to perform any loop
+    // optimizations on them.
+    DisableAllLoopOptsOnLoop(*L);
   }
 
   formLCSSARecursively(OriginalLoop, DT, &LI, &SE);

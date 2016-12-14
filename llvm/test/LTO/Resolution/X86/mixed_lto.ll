@@ -13,6 +13,12 @@
 ; NM1-DAG: T main
 ; NM1-DAG: U g
 
+; Do the same test again, but with the regular and thin LTO modules in the same file.
+; RUN: llvm-cat -b -o %t4.o %t2.o %t1.o
+; RUN: llvm-lto2 -o %t5.o %t4.o -r %t4.o,main,px -r %t4.o,g, -r %t4.o,g,px
+; RUN: llvm-nm %t5.o.0 | FileCheck %s --check-prefix=NM0
+; RUN: llvm-nm %t5.o.1 | FileCheck %s --check-prefix=NM1
+
 target triple = "x86_64-unknown-linux-gnu"
 define i32 @g() {
   ret i32 0

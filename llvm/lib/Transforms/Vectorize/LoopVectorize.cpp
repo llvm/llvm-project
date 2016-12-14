@@ -7382,8 +7382,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check the loop for a trip count threshold:
   // do not vectorize loops with a tiny trip count.
-  const unsigned TC = SE->getSmallConstantTripCount(L);
-  if (TC > 0u && TC < TinyTripCountVectorThreshold) {
+  const unsigned MaxTC = SE->getSmallConstantMaxTripCount(L);
+  if (MaxTC > 0u && MaxTC < TinyTripCountVectorThreshold) {
     DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                  << "This loop is not worth vectorizing.");
     if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 // IO interface.
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_FUZZER_IO_H
 #define LLVM_FUZZER_IO_H
 
@@ -56,7 +57,8 @@ int CloseFile(int Fd);
 
 int DuplicateFile(int Fd);
 
-void DeleteFile(const std::string &Path);
+void RemoveFile(const std::string &Path);
 
 }  // namespace fuzzer
+
 #endif  // LLVM_FUZZER_IO_H

@@ -8,12 +8,10 @@
 //===----------------------------------------------------------------------===//
 // Misc utils implementation for Windows.
 //===----------------------------------------------------------------------===//
-
 #include "FuzzerDefs.h"
 #if LIBFUZZER_WINDOWS
 #include "FuzzerIO.h"
 #include "FuzzerInternal.h"
-#include <Psapi.h>
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -24,75 +22,58 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <windows.h>
+#include <Psapi.h>
 
 namespace fuzzer {
 
-LONG WINAPI SEGVHandler(PEXCEPTION_POINTERS ExceptionInfo) {
+static const FuzzingOptions* HandlerOpt = nullptr;
+
+LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo) {
   switch (ExceptionInfo->ExceptionRecord->ExceptionCode) {
-  case EXCEPTION_ACCESS_VIOLATION:
-  case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-  case EXCEPTION_STACK_OVERFLOW:
-    Fuzzer::StaticCrashSignalCallback();
-    break;
+    case EXCEPTION_ACCESS_VIOLATION:
+    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+    case EXCEPTION_STACK_OVERFLOW:
+      if (HandlerOpt->HandleSegv)
+        Fuzzer::StaticCrashSignalCallback();
+      break;
+    case EXCEPTION_DATATYPE_MISALIGNMENT:
+    case EXCEPTION_IN_PAGE_ERROR:
+      if (HandlerOpt->HandleBus)
+        Fuzzer::StaticCrashSignalCallback();
+      break;
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+    case EXCEPTION_PRIV_INSTRUCTION:
+      if (HandlerOpt->HandleIll)
+        Fuzzer::StaticCrashSignalCallback();
+      break;
+    case EXCEPTION_FLT_DENORMAL_OPERAND:
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+    case EXCEPTION_FLT_INEXACT_RESULT:
+    case EXCEPTION_FLT_INVALID_OPERATION:
+    case EXCEPTION_FLT_OVERFLOW:
+    case EXCEPTION_FLT_STACK_CHECK:
+    case EXCEPTION_FLT_UNDERFLOW:
+    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+    case EXCEPTION_INT_OVERFLOW:
+      if (HandlerOpt->HandleFpe)
+        Fuzzer::StaticCrashSignalCallback();
+      break;
   }
   return EXCEPTION_CONTINUE_SEARCH;
 }
 
-LONG WINAPI BUSHandler(PEXCEPTION_POINTERS ExceptionInfo) {
-  switch (ExceptionInfo->ExceptionRecord->ExceptionCode) {
-  case EXCEPTION_DATATYPE_MISALIGNMENT:
-  case EXCEPTION_IN_PAGE_ERROR:
-    Fuzzer::StaticCrashSignalCallback();
-    break;
-  }
-  return EXCEPTION_CONTINUE_SEARCH;
-}
-
-LONG WINAPI ILLHandler(PEXCEPTION_POINTERS ExceptionInfo) {
-  switch (ExceptionInfo->ExceptionRecord->ExceptionCode) {
-  case EXCEPTION_ILLEGAL_INSTRUCTION:
-  case EXCEPTION_PRIV_INSTRUCTION:
-    Fuzzer::StaticCrashSignalCallback();
-    break;
-  }
-  return EXCEPTION_CONTINUE_SEARCH;
-}
-
-LONG WINAPI FPEHandler(PEXCEPTION_POINTERS ExceptionInfo) {
-  switch (ExceptionInfo->ExceptionRecord->ExceptionCode) {
-  case EXCEPTION_FLT_DENORMAL_OPERAND:
-  case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-  case EXCEPTION_FLT_INEXACT_RESULT:
-  case EXCEPTION_FLT_INVALID_OPERATION:
-  case EXCEPTION_FLT_OVERFLOW:
-  case EXCEPTION_FLT_STACK_CHECK:
-  case EXCEPTION_FLT_UNDERFLOW:
-  case EXCEPTION_INT_DIVIDE_BY_ZERO:
-  case EXCEPTION_INT_OVERFLOW:
-    Fuzzer::StaticCrashSignalCallback();
-    break;
-  }
-  return EXCEPTION_CONTINUE_SEARCH;
-}
-
-BOOL WINAPI INTHandler(DWORD dwCtrlType) {
+BOOL WINAPI CtrlHandler(DWORD dwCtrlType) {
   switch (dwCtrlType) {
-  case CTRL_C_EVENT:
-    Fuzzer::StaticInterruptCallback();
-    return TRUE;
-  default:
-    return FALSE;
+    case CTRL_C_EVENT:
+      if (HandlerOpt->HandleInt)
+        Fuzzer::StaticInterruptCallback();
+      return TRUE;
+    case CTRL_BREAK_EVENT:
+      if (HandlerOpt->HandleTerm)
+        Fuzzer::StaticInterruptCallback();
+      return TRUE;
   }
-}
-
-BOOL WINAPI TERMHandler(DWORD dwCtrlType) {
-  switch (dwCtrlType) {
-  case CTRL_BREAK_EVENT:
-    Fuzzer::StaticInterruptCallback();
-    return TRUE;
-  default:
-    return FALSE;
-  }
+  return FALSE;
 }
 
 void CALLBACK AlarmHandler(PVOID, BOOLEAN) {
@@ -126,64 +107,39 @@ class TimerQ {
 
 static TimerQ Timer;
 
-void SetTimer(int Seconds) {
-  Timer.SetTimer(Seconds);
-  return;
-}
-
-void SetSigSegvHandler() {
-  if (!AddVectoredExceptionHandler(1, SEGVHandler)) {
-    Printf("libFuzzer: AddVectoredExceptionHandler failed.\n");
-    exit(1);
-  }
-}
-
-void SetSigBusHandler() {
-  if (!AddVectoredExceptionHandler(1, BUSHandler)) {
-    Printf("libFuzzer: AddVectoredExceptionHandler failed.\n");
-    exit(1);
-  }
-}
-
 static void CrashHandler(int) { Fuzzer::StaticCrashSignalCallback(); }
 
-void SetSigAbrtHandler() { signal(SIGABRT, CrashHandler); }
+void SetSignalHandler(const FuzzingOptions& Options) {
+  HandlerOpt = &Options;
 
-void SetSigIllHandler() {
-  if (!AddVectoredExceptionHandler(1, ILLHandler)) {
-    Printf("libFuzzer: AddVectoredExceptionHandler failed.\n");
-    exit(1);
-  }
-}
+  if (Options.UnitTimeoutSec > 0)
+    Timer.SetTimer(Options.UnitTimeoutSec / 2 + 1);
 
-void SetSigFpeHandler() {
-  if (!AddVectoredExceptionHandler(1, FPEHandler)) {
-    Printf("libFuzzer: AddVectoredExceptionHandler failed.\n");
-    exit(1);
-  }
-}
+  if (Options.HandleInt || Options.HandleTerm)
+    if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
+      DWORD LastError = GetLastError();
+      Printf("libFuzzer: SetConsoleCtrlHandler failed (Error code: %lu).\n",
+        LastError);
+      exit(1);
+    }
 
-void SetSigIntHandler() {
-  if (!SetConsoleCtrlHandler(INTHandler, TRUE)) {
-    DWORD LastError = GetLastError();
-    Printf("libFuzzer: SetConsoleCtrlHandler failed (Error code: %lu).\n",
-           LastError);
-    exit(1);
-  }
-}
+  if (Options.HandleSegv || Options.HandleBus || Options.HandleIll ||
+      Options.HandleFpe)
+    if (!AddVectoredExceptionHandler(1, ExceptionHandler)) {
+      Printf("libFuzzer: AddVectoredExceptionHandler failed.\n");
+      exit(1);
+    }
 
-void SetSigTermHandler() {
-  if (!SetConsoleCtrlHandler(TERMHandler, TRUE)) {
-    DWORD LastError = GetLastError();
-    Printf("libFuzzer: SetConsoleCtrlHandler failed (Error code: %lu).\n",
-           LastError);
-    exit(1);
-  }
+  if (Options.HandleAbrt)
+    if (SIG_ERR == signal(SIGABRT, CrashHandler)) {
+      Printf("libFuzzer: signal failed with %d\n", errno);
+      exit(1);
+    }
 }
 
 void SleepSeconds(int Seconds) { Sleep(Seconds * 1000); }
 
-int GetPid() { return GetCurrentProcessId(); }
+unsigned long GetPid() { return GetCurrentProcessId(); }
 
 size_t GetPeakRSSMb() {
   PROCESS_MEMORY_COUNTERS info;
@@ -222,4 +178,5 @@ const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
 }
 
 } // namespace fuzzer
+
 #endif // LIBFUZZER_WINDOWS

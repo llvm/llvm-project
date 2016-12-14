@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 // IO functions implementation for Windows.
 //===----------------------------------------------------------------------===//
-
 #include "FuzzerDefs.h"
 #if LIBFUZZER_WINDOWS
+
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
 #include <cstdarg>
@@ -18,8 +18,8 @@
 #include <fstream>
 #include <io.h>
 #include <iterator>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <windows.h>
 
 namespace fuzzer {
@@ -135,13 +135,148 @@ int DuplicateFile(int Fd) {
   return _dup(Fd);
 }
 
-void DeleteFile(const std::string &Path) {
+void RemoveFile(const std::string &Path) {
   _unlink(Path.c_str());
 }
 
+static bool IsSeparator(char C) {
+  return C == '\\' || C == '/';
+}
+
+// Parse disk designators, like "C:\". If Relative == true, also accepts: "C:".
+// Returns number of characters considered if successful.
+static size_t ParseDrive(const std::string &FileName, const size_t Offset,
+                         bool Relative = true) {
+  if (Offset + 1 >= FileName.size() || FileName[Offset + 1] != ':')
+    return 0;
+  if (Offset + 2 >= FileName.size() || !IsSeparator(FileName[Offset + 2])) {
+    if (!Relative) // Accept relative path?
+      return 0;
+    else
+      return 2;
+  }
+  return 3;
+}
+
+// Parse a file name, like: SomeFile.txt
+// Returns number of characters considered if successful.
+static size_t ParseFileName(const std::string &FileName, const size_t Offset) {
+  size_t Pos = Offset;
+  const size_t End = FileName.size();
+  for(; Pos < End && !IsSeparator(FileName[Pos]); ++Pos)
+    ;
+  return Pos - Offset;
+}
+
+// Parse a directory ending in separator, like: SomeDir\
+// Returns number of characters considered if successful.
+static size_t ParseDir(const std::string &FileName, const size_t Offset) {
+  size_t Pos = Offset;
+  const size_t End = FileName.size();
+  if (Pos >= End || IsSeparator(FileName[Pos]))
+    return 0;
+  for(; Pos < End && !IsSeparator(FileName[Pos]); ++Pos)
+    ;
+  if (Pos >= End)
+    return 0;
+  ++Pos; // Include separator.
+  return Pos - Offset;
+}
+
+// Parse a servername and share, like: SomeServer\SomeShare\
+// Returns number of characters considered if successful.
+static size_t ParseServerAndShare(const std::string &FileName,
+                                  const size_t Offset) {
+  size_t Pos = Offset, Res;
+  if (!(Res = ParseDir(FileName, Pos)))
+    return 0;
+  Pos += Res;
+  if (!(Res = ParseDir(FileName, Pos)))
+    return 0;
+  Pos += Res;
+  return Pos - Offset;
+}
+
+// Parse the given Ref string from the position Offset, to exactly match the given
+// string Patt.
+// Returns number of characters considered if successful.
+static size_t ParseCustomString(const std::string &Ref, size_t Offset,
+                                const char *Patt) {
+  size_t Len = strlen(Patt);
+  if (Offset + Len > Ref.size())
+    return 0;
+  return Ref.compare(Offset, Len, Patt) == 0 ? Len : 0;
+}
+
+// Parse a location, like:
+// \\?\UNC\Server\Share\  \\?\C:\  \\Server\Share\  \  C:\  C:
+// Returns number of characters considered if successful.
+static size_t ParseLocation(const std::string &FileName) {
+  size_t Pos = 0, Res;
+
+  if ((Res = ParseCustomString(FileName, Pos, R"(\\?\)"))) {
+    Pos += Res;
+    if ((Res = ParseCustomString(FileName, Pos, R"(UNC\)"))) {
+      Pos += Res;
+      if ((Res = ParseServerAndShare(FileName, Pos)))
+        return Pos + Res;
+      return 0;
+    }
+    if ((Res = ParseDrive(FileName, Pos, false)))
+      return Pos + Res;
+    return 0;
+  }
+
+  if (Pos < FileName.size() && IsSeparator(FileName[Pos])) {
+    ++Pos;
+    if (Pos < FileName.size() && IsSeparator(FileName[Pos])) {
+      ++Pos;
+      if ((Res = ParseServerAndShare(FileName, Pos)))
+        return Pos + Res;
+      return 0;
+    }
+    return Pos;
+  }
+
+  if ((Res = ParseDrive(FileName, Pos)))
+    return Pos + Res;
+
+  return Pos;
+}
+
 std::string DirName(const std::string &FileName) {
-  assert(0 && "Unimplemented");
+  size_t LocationLen = ParseLocation(FileName);
+  size_t DirLen = 0, Res;
+  while ((Res = ParseDir(FileName, LocationLen + DirLen)))
+    DirLen += Res;
+  size_t FileLen = ParseFileName(FileName, LocationLen + DirLen);
+
+  if (LocationLen + DirLen + FileLen != FileName.size()) {
+    Printf("DirName() failed for \"%s\", invalid path.\n", FileName.c_str());
+    exit(1);
+  }
+
+  if (DirLen) {
+    --DirLen; // Remove trailing separator.
+    if (!FileLen) { // Path ended in separator.
+      assert(DirLen);
+      // Remove file name from Dir.
+      while (DirLen && !IsSeparator(FileName[LocationLen + DirLen - 1]))
+        --DirLen;
+      if (DirLen) // Remove trailing separator.
+        --DirLen;
+    }
+  }
+
+  if (!LocationLen) { // Relative path.
+    if (!DirLen)
+      return ".";
+    return std::string(".\\").append(FileName, 0, DirLen);
+  }
+
+  return FileName.substr(0, LocationLen + DirLen);
 }
 
 }  // namespace fuzzer
+
 #endif // LIBFUZZER_WINDOWS

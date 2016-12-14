@@ -10,6 +10,8 @@
 #include "TypePromotionInMathFnCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang::ast_matchers;
@@ -26,6 +28,26 @@ AST_MATCHER_P(Type, isBuiltinType, BuiltinType::Kind, Kind) {
   return false;
 }
 } // anonymous namespace
+
+TypePromotionInMathFnCheck::TypePromotionInMathFnCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
+          Options.get("IncludeStyle", "llvm"))) {}
+
+void TypePromotionInMathFnCheck::registerPPCallbacks(
+    CompilerInstance &Compiler) {
+  IncludeInserter = llvm::make_unique<utils::IncludeInserter>(
+      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle);
+  Compiler.getPreprocessor().addPPCallbacks(
+      IncludeInserter->CreatePPCallbacks());
+}
+
+void TypePromotionInMathFnCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle",
+                utils::IncludeSorter::toString(IncludeStyle));
+}
 
 void TypePromotionInMathFnCheck::registerMatchers(MatchFinder *Finder) {
   constexpr BuiltinType::Kind IntTy = BuiltinType::Int;
@@ -153,18 +175,29 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
   bool StdFnRequiresCpp11 = Cpp11OnlyFns.count(OldFnName);
 
   std::string NewFnName;
+  bool FnInCmath = false;
   if (getLangOpts().CPlusPlus &&
-      (!StdFnRequiresCpp11 || getLangOpts().CPlusPlus11))
+      (!StdFnRequiresCpp11 || getLangOpts().CPlusPlus11)) {
     NewFnName = ("std::" + OldFnName).str();
-  else
+    FnInCmath = true;
+  } else {
     NewFnName = (OldFnName + "f").str();
+  }
 
-  diag(Call->getExprLoc(), "call to '%0' promotes float to double")
-      << OldFnName << FixItHint::CreateReplacement(
-                          Call->getCallee()->getSourceRange(), NewFnName);
+  auto Diag = diag(Call->getExprLoc(), "call to '%0' promotes float to double")
+              << OldFnName
+              << FixItHint::CreateReplacement(
+                     Call->getCallee()->getSourceRange(), NewFnName);
 
-  // FIXME: Perhaps we should suggest #include <cmath> if we suggest a cmath
-  // function and cmath is not already included.
+  // Suggest including <cmath> if the function we're suggesting is declared in
+  // <cmath> and it's not already included.  We never have to suggest including
+  // <math.h>, because the functions we're suggesting moving away from are all
+  // declared in <math.h>.
+  if (FnInCmath)
+    if (auto IncludeFixit = IncludeInserter->CreateIncludeInsertion(
+            Result.Context->getSourceManager().getFileID(Call->getLocStart()),
+            "cmath", /*IsAngled=*/true))
+      Diag << *IncludeFixit;
 }
 
 } // namespace performance

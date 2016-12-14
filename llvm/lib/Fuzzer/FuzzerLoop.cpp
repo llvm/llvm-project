@@ -15,7 +15,6 @@
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
 #include "FuzzerTracePC.h"
-
 #include <algorithm>
 #include <cstring>
 #include <memory>
@@ -265,7 +264,7 @@ void Fuzzer::StaticInterruptCallback() {
 }
 
 void Fuzzer::CrashCallback() {
-  Printf("==%d== ERROR: libFuzzer: deadly signal\n", GetPid());
+  Printf("==%lu== ERROR: libFuzzer: deadly signal\n", GetPid());
   if (EF->__sanitizer_print_stack_trace)
     EF->__sanitizer_print_stack_trace();
   Printf("NOTE: libFuzzer has rudimentary signal handlers.\n"
@@ -278,7 +277,7 @@ void Fuzzer::CrashCallback() {
 }
 
 void Fuzzer::InterruptCallback() {
-  Printf("==%d== libFuzzer: run interrupted; exiting\n", GetPid());
+  Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
   _Exit(0);  // Stop right now, don't perform any at-exit actions.
 }
@@ -287,7 +286,7 @@ NO_SANITIZE_MEMORY
 void Fuzzer::AlarmCallback() {
   assert(Options.UnitTimeoutSec > 0);
   if (!InFuzzingThread()) return;
-  if (!CurrentUnitSize)
+  if (!RunningCB)
     return; // We have not started running units yet.
   size_t Seconds =
       duration_cast<seconds>(system_clock::now() - UnitStartTime).count();
@@ -300,7 +299,7 @@ void Fuzzer::AlarmCallback() {
     Printf("       and the timeout value is %d (use -timeout=N to change)\n",
            Options.UnitTimeoutSec);
     DumpCurrentUnit("timeout-");
-    Printf("==%d== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
+    Printf("==%lu== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
            Seconds);
     if (EF->__sanitizer_print_stack_trace)
       EF->__sanitizer_print_stack_trace();
@@ -312,7 +311,7 @@ void Fuzzer::AlarmCallback() {
 
 void Fuzzer::RssLimitCallback() {
   Printf(
-      "==%d== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %zdMb)\n",
+      "==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %zdMb)\n",
       GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   if (EF->__sanitizer_print_memory_profile)
@@ -533,7 +532,9 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   ResetCounters();  // Reset coverage right before the callback.
   TPC.ResetMaps();
+  RunningCB = true;
   int Res = CB(DataCopy, Size);
+  RunningCB = false;
   UnitStopTime = system_clock::now();
   (void)Res;
   assert(Res == 0);

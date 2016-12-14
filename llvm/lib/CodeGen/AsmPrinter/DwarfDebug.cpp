@@ -1048,11 +1048,16 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     //   location from the physically previous (maybe unrelated) block.
     if (UnknownLocations == Enable || PrevLabel ||
         (PrevInstBB && PrevInstBB != MI->getParent())) {
-      // Preserve the file number, if we can, to save space in the line table.
+      // Preserve the file and column numbers, if we can, to save space in
+      // the encoded line table.
       // Do not update PrevInstLoc, it remembers the last non-0 line.
-      // FIXME: Also preserve the column number, to save more space?
-      const MDNode *Scope = PrevInstLoc ? PrevInstLoc.getScope() : nullptr;
-      recordSourceLine(0, 0, Scope, 0);
+      const MDNode *Scope = nullptr;
+      unsigned Column = 0;
+      if (PrevInstLoc) {
+        Scope = PrevInstLoc.getScope();
+        Column = PrevInstLoc.getCol();
+      }
+      recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
     }
     return;
   }

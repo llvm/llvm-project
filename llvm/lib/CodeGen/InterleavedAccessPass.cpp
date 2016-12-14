@@ -162,12 +162,17 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
   return false;
 }
 
-/// \brief Check if the mask is RE-interleave mask for an interleaved store.
+/// \brief Check if the mask can be used in an interleaved store.
+//
+/// It checks for a more general pattern than the RE-interleave mask.
+/// I.e. <x, y, ... z, x+1, y+1, ...z+1, x+2, y+2, ...z+2, ...>
+/// E.g. For a Factor of 2 (LaneLen=4): <4, 32, 5, 33, 6, 34, 7, 35>
+/// E.g. For a Factor of 3 (LaneLen=4): <4, 32, 16, 5, 33, 17, 6, 34, 18, 7, 35, 19>
+/// E.g. For a Factor of 4 (LaneLen=2): <8, 2, 12, 4, 9, 3, 13, 5>
 ///
-/// I.e. <0, NumSubElts, ... , NumSubElts*(Factor - 1), 1, NumSubElts + 1, ...>
-///
-/// E.g. The RE-interleave mask (Factor = 2) could be:
-///     <0, 4, 1, 5, 2, 6, 3, 7>
+/// The particular case of an RE-interleave mask is:
+/// I.e. <0, LaneLen, ... , LaneLen*(Factor - 1), 1, LaneLen + 1, ...>
+/// E.g. For a Factor of 2 (LaneLen=4): <0, 4, 1, 5, 2, 6, 3, 7>
 static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
                                unsigned MaxFactor) {
   unsigned NumElts = Mask.size();
@@ -179,21 +184,72 @@ static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
     if (NumElts % Factor)
       continue;
 
-    unsigned NumSubElts = NumElts / Factor;
-    if (!isPowerOf2_32(NumSubElts))
+    unsigned LaneLen = NumElts / Factor;
+    if (!isPowerOf2_32(LaneLen))
       continue;
 
-    // Check whether each element matchs the RE-interleaved rule. Ignore undef
-    // elements.
-    unsigned i = 0;
-    for (; i < NumElts; i++)
-      if (Mask[i] >= 0 &&
-          static_cast<unsigned>(Mask[i]) !=
-              (i % Factor) * NumSubElts + i / Factor)
+    // Check whether each element matches the general interleaved rule.
+    // Ignore undef elements, as long as the defined elements match the rule.
+    // Outer loop processes all factors (x, y, z in the above example)
+    unsigned I = 0, J;
+    for (; I < Factor; I++) {
+      unsigned SavedLaneValue;
+      unsigned SavedNoUndefs = 0;
+
+      // Inner loop processes consecutive accesses (x, x+1... in the example)
+      for (J = 0; J < LaneLen - 1; J++) {
+        // Lane computes x's position in the Mask
+        unsigned Lane = J * Factor + I;
+        unsigned NextLane = Lane + Factor;
+        int LaneValue = Mask[Lane];
+        int NextLaneValue = Mask[NextLane];
+
+        // If both are defined, values must be sequential
+        if (LaneValue >= 0 && NextLaneValue >= 0 &&
+            LaneValue + 1 != NextLaneValue)
+          break;
+
+        // If the next value is undef, save the current one as reference
+        if (LaneValue >= 0 && NextLaneValue < 0) {
+          SavedLaneValue = LaneValue;
+          SavedNoUndefs = 1;
+        }
+
+        // Undefs are allowed, but defined elements must still be consecutive:
+        // i.e.: x,..., undef,..., x + 2,..., undef,..., undef,..., x + 5, ....
+        // Verify this by storing the last non-undef followed by an undef
+        // Check that following non-undef masks are incremented with the
+        // corresponding distance.
+        if (SavedNoUndefs > 0 && LaneValue < 0) {
+          SavedNoUndefs++;
+          if (NextLaneValue >= 0 &&
+              SavedLaneValue + SavedNoUndefs != (unsigned)NextLaneValue)
+            break;
+        }
+      }
+
+      if (J < LaneLen - 1)
         break;
 
-    // Find a RE-interleaved mask of current factor.
-    if (i == NumElts)
+      int StartMask = 0;
+      if (Mask[I] >= 0) {
+        // Check that the start of the I range (J=0) is greater than 0
+        StartMask = Mask[I];
+      } else if (Mask[(LaneLen - 1) * Factor + I] >= 0) {
+        // StartMask defined by the last value in lane
+        StartMask = Mask[(LaneLen - 1) * Factor + I] - J;
+      } else if (SavedNoUndefs > 0) {
+        // StartMask defined by some non-zero value in the j loop
+        StartMask = SavedLaneValue - (LaneLen - 1 - SavedNoUndefs);
+      }
+      // else StartMask remains set to 0, i.e. all elements are undefs
+
+      if (StartMask < 0)
+        break;
+    }
+
+    // Found an interleaved mask of current factor.
+    if (I == Factor)
       return true;
   }
 

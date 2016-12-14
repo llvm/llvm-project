@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 // Basic definitions.
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_FUZZER_DEFS_H
 #define LLVM_FUZZER_DEFS_H
 
@@ -77,4 +78,5 @@ inline uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
 inline uint64_t Bswap(uint64_t x) { return __builtin_bswap64(x); }
 
 }  // namespace fuzzer
+
 #endif  // LLVM_FUZZER_DEFS_H
