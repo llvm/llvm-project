@@ -141,10 +141,9 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 
 // Implicitly-generated copy constructor for ObjCArrayMember
 // CHECK-LABEL: define linkonce_odr void @_ZN15ObjCArrayMemberC2ERKS_
-// CHECK: br i1
 // CHECK: call i8* @objc_retain
 // CHECK-NEXT: store i8*
-// CHECK-NEXT: br label
+// CHECK: br i1
 // CHECK: ret
 
 // Implicitly-generated default constructor for ObjCBlockMember

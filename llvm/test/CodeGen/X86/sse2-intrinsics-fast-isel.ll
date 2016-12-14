@@ -1227,14 +1227,12 @@ define <4 x float> @test_mm_cvtsd_ss_load(<4 x float> %a0, <2 x double>* %p1) {
 ; X32-LABEL: test_mm_cvtsd_ss_load:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movaps (%eax), %xmm1
-; X32-NEXT:    cvtsd2ss %xmm1, %xmm0
+; X32-NEXT:    cvtsd2ss (%eax), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtsd_ss_load:
 ; X64:       # BB#0:
-; X64-NEXT:    movaps (%rdi), %xmm1
-; X64-NEXT:    cvtsd2ss %xmm1, %xmm0
+; X64-NEXT:    cvtsd2ss (%rdi), %xmm0
 ; X64-NEXT:    retq
   %a1 = load <2 x double>, <2 x double>* %p1
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1)

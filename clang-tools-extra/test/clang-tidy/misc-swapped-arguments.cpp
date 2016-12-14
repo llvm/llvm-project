@@ -48,6 +48,6 @@ void foo() {
 #define PARAMS 1.0, 3
 #define CALL(P) F(P)
   CALL(PARAMS);
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: argument with implicit conversion from 'int' to 'double' followed by argument converted from 'double' to 'int', potentially swapped arguments.  
-// In macro, don't emit fixits.  
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: argument with implicit conversion from 'int' to 'double' followed by argument converted from 'double' to 'int', potentially swapped arguments.
+// In macro, don't emit fixits.
 }

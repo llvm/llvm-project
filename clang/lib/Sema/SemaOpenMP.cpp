@@ -326,8 +326,8 @@ public:
   Scope *getCurScope() { return Stack.back().CurScope; }
   SourceLocation getConstructLoc() { return Stack.back().ConstructLoc; }
 
-  // Do the check specified in \a Check to all component lists and return true
-  // if any issue is found.
+  /// Do the check specified in \a Check to all component lists and return true
+  /// if any issue is found.
   bool checkMappableExprComponentListsForDecl(
       ValueDecl *VD, bool CurrentRegionOnly,
       const llvm::function_ref<
@@ -355,8 +355,8 @@ public:
     return false;
   }
 
-  // Create a new mappable expression component list associated with a given
-  // declaration and initialize it with the provided list of components.
+  /// Create a new mappable expression component list associated with a given
+  /// declaration and initialize it with the provided list of components.
   void addMappableExpressionComponents(
       ValueDecl *VD,
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
@@ -919,7 +919,7 @@ bool Sema::IsOpenMPCapturedByRef(ValueDecl *D, unsigned Level) {
             OpenMPClauseKind WhereFoundClauseKind) {
           // Only the map clause information influences how a variable is
           // captured. E.g. is_device_ptr does not require changing the default
-          // behaviour.
+          // behavior.
           if (WhereFoundClauseKind != OMPC_map)
             return false;
 
@@ -3359,7 +3359,7 @@ Expr *OpenMPIterationSpaceChecker::BuildPrivateCounterVar() const {
   return nullptr;
 }
 
-/// \brief Build instillation of the counter be used for codegen.
+/// \brief Build initialization of the counter to be used for codegen.
 Expr *OpenMPIterationSpaceChecker::BuildCounterInit() const { return LB; }
 
 /// \brief Build step of the counter be used for codegen.
@@ -6124,11 +6124,10 @@ StmtResult Sema::ActOnOpenMPTeamsDistributeSimdDirective(
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse' with number of loops, it will
   // define the nested loops number.
-  unsigned NestedLoopCount =
-      CheckOpenMPLoop(OMPD_teams_distribute_simd,
-                      getCollapseNumberExpr(Clauses),
-                      nullptr /*ordered not a clause on distribute*/, AStmt,
-                      *this, *DSAStack, VarsWithImplicitDSA, B);
+  unsigned NestedLoopCount = CheckOpenMPLoop(
+      OMPD_teams_distribute_simd, getCollapseNumberExpr(Clauses),
+      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      VarsWithImplicitDSA, B);
 
   if (NestedLoopCount == 0)
     return StmtError();

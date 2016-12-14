@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 // SHA1 utils.
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_FUZZER_SHA1_H
 #define LLVM_FUZZER_SHA1_H
 
@@ -28,4 +29,5 @@ std::string Sha1ToString(const uint8_t Sha1[kSHA1NumBytes]);
 std::string Hash(const Unit &U);
 
 }  // namespace fuzzer
+
 #endif  // LLVM_FUZZER_SHA1_H

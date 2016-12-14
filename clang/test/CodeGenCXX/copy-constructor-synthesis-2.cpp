@@ -24,4 +24,4 @@ struct A { virtual void a(); };
 A x(A& y) { return y; }
 
 // CHECK: define linkonce_odr {{.*}} @_ZN1AC1ERKS_(%struct.A* {{.*}}%this, %struct.A* dereferenceable({{[0-9]+}})) unnamed_addr
-// CHECK: store i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTV1A, i32 0, i32 2) to i32 (...)**)
+// CHECK: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV1A, i32 0, inrange i32 0, i32 2) to i32 (...)**)

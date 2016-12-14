@@ -14,21 +14,23 @@
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "MCTargetDesc/HexagonInstPrinter.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 
 using namespace llvm;
 using namespace Hexagon;
@@ -36,11 +38,13 @@ using namespace Hexagon;
 typedef MCDisassembler::DecodeStatus DecodeStatus;
 
 namespace {
+
 /// \brief Hexagon disassembler for all Hexagon platforms.
 class HexagonDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<MCInstrInfo const> const MCII;
   std::unique_ptr<MCInst *> CurrentBundle;
+
   HexagonDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                       MCInstrInfo const *MCII)
       : MCDisassembler(STI, Ctx), MCII(MCII), CurrentBundle(new MCInst *) {}
@@ -57,7 +61,8 @@ public:
   void adjustExtendedInstructions(MCInst &MCI, MCInst const &MCB) const;
   void addSubinstOperands(MCInst *MI, unsigned opcode, unsigned inst) const;
 };
-}
+
+} // end anonymous namespace
 
 // Forward declare these because the auto-generated code will reference them.
 // Definitions are further down.
@@ -161,7 +166,7 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   *CurrentBundle = &MI;
   MI = HexagonMCInstrInfo::createBundle();
-  while (Result == Success && Complete == false) {
+  while (Result == Success && !Complete) {
     if (Bytes.size() < HEXAGON_INSTR_SIZE)
       return MCDisassembler::Fail;
     MCInst *Inst = new (getContext()) MCInst;
@@ -178,13 +183,12 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   return MCDisassembler::Success;
 }
 
-namespace {
-HexagonDisassembler const &disassembler(void const *Decoder) {
+static HexagonDisassembler const &disassembler(void const *Decoder) {
   return *static_cast<HexagonDisassembler const *>(Decoder);
 }
-MCContext &contextFromDecoder(void const *Decoder) {
+
+static MCContext &contextFromDecoder(void const *Decoder) {
   return disassembler(Decoder).getContext();
-}
 }
 
 DecodeStatus HexagonDisassembler::getSingleInstruction(
@@ -328,8 +332,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
       // follow the duplex model, so the register values in the MCInst are
       // incorrect. If the instruction is a compound, loop through the
       // operands and change registers appropriately.
-      if (llvm::HexagonMCInstrInfo::getType(*MCII, MI) ==
-          HexagonII::TypeCOMPOUND) {
+      if (HexagonMCInstrInfo::getType(*MCII, MI) == HexagonII::TypeCOMPOUND) {
         for (MCInst::iterator i = MI.begin(), last = MI.end(); i < last; ++i) {
           if (i->isReg()) {
             unsigned reg = i->getReg() - Hexagon::R0;
@@ -496,10 +499,6 @@ void HexagonDisassembler::adjustExtendedInstructions(MCInst &MCI,
   }
 }
 
-namespace llvm {
-extern const MCInstrDesc HexagonInsts[];
-}
-
 static DecodeStatus DecodeRegisterClass(MCInst &Inst, unsigned RegNo,
                                         ArrayRef<MCPhysReg> Table) {
   if (RegNo < Table.size()) {
@@ -651,11 +650,8 @@ static DecodeStatus DecodeModRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-namespace {
-uint32_t fullValue(MCInstrInfo const &MCII,
-                  MCInst &MCB,
-                  MCInst &MI,
-                  int64_t Value) {
+static uint32_t fullValue(MCInstrInfo const &MCII, MCInst &MCB, MCInst &MI,
+                          int64_t Value) {
   MCInst const *Extender = HexagonMCInstrInfo::extenderForIndex(
     MCB, HexagonMCInstrInfo::bundleSize(MCB));
   if(!Extender || MI.size() != HexagonMCInstrInfo::getExtendableOp(MCII, MI))
@@ -669,8 +665,9 @@ uint32_t fullValue(MCInstrInfo const &MCII,
   uint32_t Operand = Upper26 | Lower6;
   return Operand;
 }
+
 template <size_t T>
-void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
+static void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
   HexagonDisassembler const &Disassembler = disassembler(Decoder);
   int64_t FullValue = fullValue(*Disassembler.MCII,
                                 **Disassembler.CurrentBundle,
@@ -678,7 +675,6 @@ void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
   int64_t Extended = SignExtend64<32>(FullValue);
   HexagonMCInstrInfo::addConstant(MI, Extended,
                                   Disassembler.getContext());
-}
 }
 
 static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
@@ -859,7 +855,6 @@ static const size_t NumCondS = array_lengthof(StoreConditionalOpcodeData);
 static const size_t NumLS = array_lengthof(LoadStoreOpcodeData);
 
 static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
-
   unsigned MachineOpcode = 0;
   unsigned LLVMOpcode = 0;
 
@@ -898,19 +893,18 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     case Hexagon::S4_pstorerdf_abs:
     case Hexagon::S4_pstorerdt_abs:
     case Hexagon::S4_pstorerdfnew_abs:
-    case Hexagon::S4_pstorerdtnew_abs: {
+    case Hexagon::S4_pstorerdtnew_abs:
       // op: Pv
       Value = insn & UINT64_C(3);
-      DecodePredRegsRegisterClass(MI, Value, 0, 0);
+      DecodePredRegsRegisterClass(MI, Value, 0, nullptr);
       // op: u6
       Value = (insn >> 12) & UINT64_C(48);
       Value |= (insn >> 3) & UINT64_C(15);
       MI.addOperand(MCOperand::createImm(Value));
       // op: Rtt
       Value = (insn >> 8) & UINT64_C(31);
-      DecodeDoubleRegsRegisterClass(MI, Value, 0, 0);
+      DecodeDoubleRegsRegisterClass(MI, Value, 0, nullptr);
       break;
-    }
 
     case Hexagon::S4_pstorerbnewf_abs:
     case Hexagon::S4_pstorerbnewt_abs:
@@ -923,19 +917,18 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     case Hexagon::S4_pstorerinewf_abs:
     case Hexagon::S4_pstorerinewt_abs:
     case Hexagon::S4_pstorerinewfnew_abs:
-    case Hexagon::S4_pstorerinewtnew_abs: {
+    case Hexagon::S4_pstorerinewtnew_abs:
       // op: Pv
       Value = insn & UINT64_C(3);
-      DecodePredRegsRegisterClass(MI, Value, 0, 0);
+      DecodePredRegsRegisterClass(MI, Value, 0, nullptr);
       // op: u6
       Value = (insn >> 12) & UINT64_C(48);
       Value |= (insn >> 3) & UINT64_C(15);
       MI.addOperand(MCOperand::createImm(Value));
       // op: Nt
       Value = (insn >> 8) & UINT64_C(7);
-      DecodeIntRegsRegisterClass(MI, Value, 0, 0);
+      DecodeIntRegsRegisterClass(MI, Value, 0, nullptr);
       break;
-    }
 
     case Hexagon::S4_pstorerbf_abs:
     case Hexagon::S4_pstorerbt_abs:
@@ -948,36 +941,34 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     case Hexagon::S4_pstorerif_abs:
     case Hexagon::S4_pstorerit_abs:
     case Hexagon::S4_pstorerifnew_abs:
-    case Hexagon::S4_pstoreritnew_abs: {
+    case Hexagon::S4_pstoreritnew_abs:
       // op: Pv
       Value = insn & UINT64_C(3);
-      DecodePredRegsRegisterClass(MI, Value, 0, 0);
+      DecodePredRegsRegisterClass(MI, Value, 0, nullptr);
       // op: u6
       Value = (insn >> 12) & UINT64_C(48);
       Value |= (insn >> 3) & UINT64_C(15);
       MI.addOperand(MCOperand::createImm(Value));
       // op: Rt
       Value = (insn >> 8) & UINT64_C(31);
-      DecodeIntRegsRegisterClass(MI, Value, 0, 0);
+      DecodeIntRegsRegisterClass(MI, Value, 0, nullptr);
       break;
-    }
 
     case Hexagon::L4_ploadrdf_abs:
     case Hexagon::L4_ploadrdt_abs:
     case Hexagon::L4_ploadrdfnew_abs:
-    case Hexagon::L4_ploadrdtnew_abs: {
+    case Hexagon::L4_ploadrdtnew_abs:
       // op: Rdd
       Value = insn & UINT64_C(31);
-      DecodeDoubleRegsRegisterClass(MI, Value, 0, 0);
+      DecodeDoubleRegsRegisterClass(MI, Value, 0, nullptr);
       // op: Pt
       Value = ((insn >> 9) & UINT64_C(3));
-      DecodePredRegsRegisterClass(MI, Value, 0, 0);
+      DecodePredRegsRegisterClass(MI, Value, 0, nullptr);
       // op: u6
       Value = ((insn >> 15) & UINT64_C(62));
       Value |= ((insn >> 8) & UINT64_C(1));
       MI.addOperand(MCOperand::createImm(Value));
       break;
-    }
 
     case Hexagon::L4_ploadrbf_abs:
     case Hexagon::L4_ploadrbt_abs:
@@ -1001,10 +992,10 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     case Hexagon::L4_ploadritnew_abs:
       // op: Rd
       Value = insn & UINT64_C(31);
-      DecodeIntRegsRegisterClass(MI, Value, 0, 0);
+      DecodeIntRegsRegisterClass(MI, Value, 0, nullptr);
       // op: Pt
       Value = (insn >> 9) & UINT64_C(3);
-      DecodePredRegsRegisterClass(MI, Value, 0, 0);
+      DecodePredRegsRegisterClass(MI, Value, 0, nullptr);
       // op: u6
       Value = (insn >> 15) & UINT64_C(62);
       Value |= (insn >> 8) & UINT64_C(1);
@@ -1020,28 +1011,26 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       ++shift;
     // op: g16_0
     case Hexagon::PS_loadrbabs:
-    case Hexagon::PS_loadrubabs: {
+    case Hexagon::PS_loadrubabs:
       // op: Rd
       Value |= insn & UINT64_C(31);
-      DecodeIntRegsRegisterClass(MI, Value, 0, 0);
+      DecodeIntRegsRegisterClass(MI, Value, 0, nullptr);
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(511);
       MI.addOperand(MCOperand::createImm(Value << shift));
       break;
-    }
 
-    case Hexagon::PS_loadrdabs: {
+    case Hexagon::PS_loadrdabs:
       Value = insn & UINT64_C(31);
-      DecodeDoubleRegsRegisterClass(MI, Value, 0, 0);
+      DecodeDoubleRegsRegisterClass(MI, Value, 0, nullptr);
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(511);
       MI.addOperand(MCOperand::createImm(Value << 3));
       break;
-    }
 
-    case Hexagon::PS_storerdabs: {
+    case Hexagon::PS_storerdabs:
       // op: g16_3
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
@@ -1050,9 +1039,8 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       MI.addOperand(MCOperand::createImm(Value << 3));
       // op: Rtt
       Value = (insn >> 8) & UINT64_C(31);
-      DecodeDoubleRegsRegisterClass(MI, Value, 0, 0);
+      DecodeDoubleRegsRegisterClass(MI, Value, 0, nullptr);
       break;
-    }
 
     // op: g16_2
     case Hexagon::PS_storerinewabs:
@@ -1061,7 +1049,7 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     case Hexagon::PS_storerhnewabs:
       ++shift;
     // op: g16_0
-    case Hexagon::PS_storerbnewabs: {
+    case Hexagon::PS_storerbnewabs:
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(256);
@@ -1069,9 +1057,8 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       MI.addOperand(MCOperand::createImm(Value << shift));
       // op: Nt
       Value = (insn >> 8) & UINT64_C(7);
-      DecodeIntRegsRegisterClass(MI, Value, 0, 0);
+      DecodeIntRegsRegisterClass(MI, Value, 0, nullptr);
       break;
-    }
 
     // op: g16_2
     case Hexagon::PS_storeriabs:
@@ -1081,7 +1068,7 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
     case Hexagon::PS_storerfabs:
       ++shift;
     // op: g16_0
-    case Hexagon::PS_storerbabs: {
+    case Hexagon::PS_storerbabs:
       Value = (insn >> 11) & UINT64_C(49152);
       Value |= (insn >> 7) & UINT64_C(15872);
       Value |= (insn >> 5) & UINT64_C(256);
@@ -1089,9 +1076,8 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
       MI.addOperand(MCOperand::createImm(Value << shift));
       // op: Rt
       Value = (insn >> 8) & UINT64_C(31);
-      DecodeIntRegsRegisterClass(MI, Value, 0, 0);
+      DecodeIntRegsRegisterClass(MI, Value, 0, nullptr);
       break;
-    }
     }
     return MCDisassembler::Success;
   }
@@ -1100,7 +1086,6 @@ static DecodeStatus decodeSpecial(MCInst &MI, uint32_t insn) {
 
 static DecodeStatus decodeImmext(MCInst &MI, uint32_t insn,
                                  void const *Decoder) {
-
   // Instruction Class for a constant a extender: bits 31:28 = 0x0000
   if ((~insn & 0xf0000000) == 0xf0000000) {
     unsigned Value;

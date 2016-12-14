@@ -562,140 +562,6 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
                                           isBaseVirtual);
 }
 
-/// Initialize a member of aggregate type using the given expression
-/// as an initializer.
-///
-/// The member may be an array.  If so:
-/// - the destination l-value will be a pointer of the *base* element type,
-/// - ArrayIndexVar will be a pointer to a variable containing the current
-///   index within the destination array, and
-/// - ArrayIndexes will be an array of index variables, one for each level
-///   of array nesting, which will need to be updated as appropriate for the
-///   array structure.
-///
-/// On an array, this function will invoke itself recursively.  Each time,
-/// it drills into one nesting level of the member type and sets up a
-/// loop updating the appropriate array index variable.
-static void EmitAggMemberInitializer(CodeGenFunction &CGF,
-                                     LValue LHS,
-                                     Expr *Init,
-                                     Address ArrayIndexVar,
-                                     QualType T,
-                                     ArrayRef<VarDecl *> ArrayIndexes,
-                                     unsigned Index) {
-  assert(ArrayIndexVar.isValid() == (ArrayIndexes.size() != 0));
-
-  if (Index == ArrayIndexes.size()) {
-    LValue LV = LHS;
-
-    Optional<CodeGenFunction::RunCleanupsScope> Scope;
-
-    if (ArrayIndexVar.isValid()) {
-      // When we're processing an array, the temporaries from each
-      // element's construction are destroyed immediately.
-      Scope.emplace(CGF);
-
-      // If we have an array index variable, load it and use it as an offset.
-      // Then, increment the value.
-      llvm::Value *Dest = LHS.getPointer();
-      llvm::Value *ArrayIndex = CGF.Builder.CreateLoad(ArrayIndexVar);
-      Dest = CGF.Builder.CreateInBoundsGEP(Dest, ArrayIndex, "destaddress");
-      llvm::Value *Next = llvm::ConstantInt::get(ArrayIndex->getType(), 1);
-      Next = CGF.Builder.CreateAdd(ArrayIndex, Next, "inc");
-      CGF.Builder.CreateStore(Next, ArrayIndexVar);
-
-      // Update the LValue.
-      CharUnits EltSize = CGF.getContext().getTypeSizeInChars(T);
-      CharUnits Align = LV.getAlignment().alignmentOfArrayElement(EltSize);
-      LV.setAddress(Address(Dest, Align));
-
-      // Enter a partial-array EH cleanup to destroy previous members
-      // of the array if this initialization throws.
-      if (CGF.CGM.getLangOpts().Exceptions) {
-        if (auto DtorKind = T.isDestructedType()) {
-          if (CGF.needsEHCleanup(DtorKind)) {
-            CGF.pushRegularPartialArrayCleanup(LHS.getPointer(),
-                                               LV.getPointer(), T,
-                                               LV.getAlignment(),
-                                               CGF.getDestroyer(DtorKind));
-          }
-        }
-      }
-    }
-
-    switch (CGF.getEvaluationKind(T)) {
-    case TEK_Scalar:
-      CGF.EmitScalarInit(Init, /*decl*/ nullptr, LV, false);
-      break;
-    case TEK_Complex:
-      CGF.EmitComplexExprIntoLValue(Init, LV, /*isInit*/ true);
-      break;
-    case TEK_Aggregate: {
-      AggValueSlot Slot =
-        AggValueSlot::forLValue(LV,
-                                AggValueSlot::IsDestructed,
-                                AggValueSlot::DoesNotNeedGCBarriers,
-                                AggValueSlot::IsNotAliased);
-
-      CGF.EmitAggExpr(Init, Slot);
-      break;
-    }
-    }
-
-    return;
-  }
-
-  const ConstantArrayType *Array = CGF.getContext().getAsConstantArrayType(T);
-  assert(Array && "Array initialization without the array type?");
-  Address IndexVar = CGF.GetAddrOfLocalVar(ArrayIndexes[Index]);
-
-  // Initialize this index variable to zero.
-  llvm::Value* Zero
-    = llvm::Constant::getNullValue(IndexVar.getElementType());
-  CGF.Builder.CreateStore(Zero, IndexVar);
-
-  // Start the loop with a block that tests the condition.
-  llvm::BasicBlock *CondBlock = CGF.createBasicBlock("for.cond");
-  llvm::BasicBlock *AfterFor = CGF.createBasicBlock("for.end");
-
-  CGF.EmitBlock(CondBlock);
-
-  llvm::BasicBlock *ForBody = CGF.createBasicBlock("for.body");
-  // Generate: if (loop-index < number-of-elements) fall to the loop body,
-  // otherwise, go to the block after the for-loop.
-  uint64_t NumElements = Array->getSize().getZExtValue();
-  llvm::Value *Counter = CGF.Builder.CreateLoad(IndexVar);
-  llvm::Value *NumElementsPtr =
-    llvm::ConstantInt::get(Counter->getType(), NumElements);
-  llvm::Value *IsLess = CGF.Builder.CreateICmpULT(Counter, NumElementsPtr,
-                                                  "isless");
-
-  // If the condition is true, execute the body.
-  CGF.Builder.CreateCondBr(IsLess, ForBody, AfterFor);
-
-  CGF.EmitBlock(ForBody);
-  llvm::BasicBlock *ContinueBlock = CGF.createBasicBlock("for.inc");
-
-  // Inside the loop body recurse to emit the inner loop or, eventually, the
-  // constructor call.
-  EmitAggMemberInitializer(CGF, LHS, Init, ArrayIndexVar,
-                           Array->getElementType(), ArrayIndexes, Index + 1);
-
-  CGF.EmitBlock(ContinueBlock);
-
-  // Emit the increment of the loop counter.
-  llvm::Value *NextVal = llvm::ConstantInt::get(Counter->getType(), 1);
-  Counter = CGF.Builder.CreateLoad(IndexVar);
-  NextVal = CGF.Builder.CreateAdd(Counter, NextVal, "inc");
-  CGF.Builder.CreateStore(NextVal, IndexVar);
-
-  // Finally, branch back up to the condition for the next iteration.
-  CGF.EmitBranch(CondBlock);
-
-  // Emit the fall-through block.
-  CGF.EmitBlock(AfterFor, true);
-}
-
 static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
   auto *CD = dyn_cast<CXXConstructorDecl>(D);
   if (!(CD && CD->isCopyOrMoveConstructor()) &&
@@ -779,14 +645,11 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
     }
   }
 
-  ArrayRef<VarDecl *> ArrayIndexes;
-  if (MemberInit->getNumArrayIndices())
-    ArrayIndexes = MemberInit->getArrayIndices();
-  CGF.EmitInitializerForField(Field, LHS, MemberInit->getInit(), ArrayIndexes);
+  CGF.EmitInitializerForField(Field, LHS, MemberInit->getInit());
 }
 
 void CodeGenFunction::EmitInitializerForField(FieldDecl *Field, LValue LHS,
-                                Expr *Init, ArrayRef<VarDecl *> ArrayIndexes) {
+                                              Expr *Init) {
   QualType FieldType = Field->getType();
   switch (getEvaluationKind(FieldType)) {
   case TEK_Scalar:
@@ -801,30 +664,13 @@ void CodeGenFunction::EmitInitializerForField(FieldDecl *Field, LValue LHS,
     EmitComplexExprIntoLValue(Init, LHS, /*isInit*/ true);
     break;
   case TEK_Aggregate: {
-    Address ArrayIndexVar = Address::invalid();
-    if (ArrayIndexes.size()) {
-      // The LHS is a pointer to the first object we'll be constructing, as
-      // a flat array.
-      QualType BaseElementTy = getContext().getBaseElementType(FieldType);
-      llvm::Type *BasePtr = ConvertType(BaseElementTy);
-      BasePtr = llvm::PointerType::getUnqual(BasePtr);
-      Address BaseAddrPtr = Builder.CreateBitCast(LHS.getAddress(), BasePtr);
-      LHS = MakeAddrLValue(BaseAddrPtr, BaseElementTy);
-
-      // Create an array index that will be used to walk over all of the
-      // objects we're constructing.
-      ArrayIndexVar = CreateMemTemp(getContext().getSizeType(), "object.index");
-      llvm::Value *Zero =
-        llvm::Constant::getNullValue(ArrayIndexVar.getElementType());
-      Builder.CreateStore(Zero, ArrayIndexVar);
-
-      // Emit the block variables for the array indices, if any.
-      for (unsigned I = 0, N = ArrayIndexes.size(); I != N; ++I)
-        EmitAutoVarDecl(*ArrayIndexes[I]);
-    }
-
-    EmitAggMemberInitializer(*this, LHS, Init, ArrayIndexVar, FieldType,
-                             ArrayIndexes, 0);
+    AggValueSlot Slot =
+      AggValueSlot::forLValue(LHS,
+                              AggValueSlot::IsDestructed,
+                              AggValueSlot::DoesNotNeedGCBarriers,
+                              AggValueSlot::IsNotAliased);
+    EmitAggExpr(Init, Slot);
+    break;
   }
   }
 
@@ -2802,8 +2648,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
   llvm::Value *ValidVtable = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_test), {CastedVTable, AllVtables});
-  EmitCheck(std::make_pair(TypeTest, M), "cfi_check_fail", StaticData,
-            {CastedVTable, ValidVtable});
+  EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail,
+            StaticData, {CastedVTable, ValidVtable});
 }
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
@@ -2835,7 +2681,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
 
   EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIVCall),
-            "cfi_check_fail", nullptr, nullptr);
+            SanitizerHandler::CFICheckFail, nullptr, nullptr);
 
   return Builder.CreateBitCast(
       Builder.CreateExtractValue(CheckedLoad, 0),

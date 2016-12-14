@@ -6,7 +6,7 @@ This document describes the DarwinLog logging feature.
 
 ## StructuredDataDarwinLog feature
 
-The DarwinLog feature supports logging os_log*() and NSLog() messages
+The DarwinLog feature supports logging `os_log`*() and `NSLog`() messages
 to the command-line lldb console, as well as making those messages
 available to LLDB clients via the event system.  Starting with fall
 2016 OSes, Apple platforms introduce a new fire-hose, stream-style
@@ -17,9 +17,9 @@ However, it also increases the work needed on the consumer end when
 log messages are desired.
 
 The debugserver binary has been modified to support collection of
-os_log*()/NSLog() messages, selection of which messages appear in the
+`os_log`*()/`NSLog`() messages, selection of which messages appear in the
 stream, and fine-grained filtering of what gets passed on to the LLDB
-client.  DarwinLog also tracks the activity chain (i.e. os_activity()
+client.  DarwinLog also tracks the activity chain (i.e. `os_activity`()
 hierarchy) in effect at the time the log messages were issued.  The
 user is able to configure a number of aspects related to the
 formatting of the log message header fields.
@@ -30,11 +30,11 @@ macOS system; hence, the plugin support is built into all LLDB
 clients, not just those built on an Apple platform.
 
 StructuredDataDarwinLog implements the 'DarwinLog' feature type, and
-the plugin name for it shows up as 'darwin-log'.
+the plugin name for it shows up as `darwin-log`.
 
 The user interface to the darwin-log support is via the following:
 
-* 'plugin structured-data darwin-log enable' command
+* `plugin structured-data darwin-log enable` command
 
   This is the main entry point for enabling the command.  It can be
   set before launching a process or while the process is running.
@@ -55,32 +55,32 @@ The user interface to the darwin-log support is via the following:
   This command is sticky.  Once enabled, it will stay enabled for
   future process launches.
 
-* 'plugin structured-data darwin-log disable' command
+* `plugin structured-data darwin-log disable` command
 
   Executing this command disables os_log() capture in the currently
   running process and signals LLDB to stop attempting to launch
   new processes with DarwinLog support enabled.
 
-* 'settings set \
-  plugin.structured-data.darwin-log.enable-on-startup'
+* `settings set 
+  plugin.structured-data.darwin-log.enable-on-startup true`
 
   and
 
-  'settings set \
-  plugin.structured-data.darwin-log.auto-enable-options -- {options}'
+  `settings set 
+  plugin.structured-data.darwin-log.auto-enable-options -- `{options}
 
-  When enable-on-startup is set to true, then LLDB will automatically
+  When `enable-on-startup` is set to `true`, then LLDB will automatically
   enable DarwinLog on startup of relevant processes.  It will use the
   content provided in the auto-enable-options settings as the
   options to pass to the enable command.
 
-  Note the '--' required after auto-enable-command.  That is necessary
-  for raw commands like settings set.  The '--' will not become part
+  Note the `--` required after auto-enable-command.  That is necessary
+  for raw commands like settings set.  The `--` will not become part
   of the options for the enable command.
 
 ### Message flow and related performance considerations
 
-os_log()-style collection is not free.  The more data that must be
+`os_log`()-style collection is not free.  The more data that must be
 processed, the slower it will be.  There are several knobs available
 to the developer to limit how much data goes through the pipe, and how
 much data ultimately goes over the wire to the LLDB client.  The
@@ -91,12 +91,12 @@ The flow of data looks like the following:
 
 1. Data comes into debugserver from the low-level OS facility that
    receives log messages.  The data that comes through this pipe can
-   be limited or expanded by the '--debug', '--info' and
-   '--all-processes' options of the 'plugin structured-data darwin-log
-   enable' command.  options.  Exclude as many categories as possible
+   be limited or expanded by the `--debug`, `--info` and
+   `--all-processes` options of the `plugin structured-data darwin-log
+   enable` command options.  Exclude as many categories as possible
    here (also the default).  The knobs here are very coarse - for
-   example, whether to include os_log_info()-level or
-   os_log_debug()-level info, or to include callstacks in the log
+   example, whether to include `os_log_info()`-level or
+   `os_log_debug()`-level info, or to include callstacks in the log
    message event data.
 
 2. The debugserver process filters the messages that arrive through a
@@ -108,12 +108,12 @@ The flow of data looks like the following:
    message gets the no-match (i.e. fall-through) action.  The no-match
    action defaults to accepting but may be set to reject.
 
-   Filters can be added via the enable command's '--filter
+   Filters can be added via the enable command's '`--filter`
    {filter-spec}' option.  Filters are added in order, and multiple
-   --filter entries can be provided to the enable command.
+   `--filter` entries can be provided to the enable command.
 
    Filters take the following form:
-
+```
    {action} {attribute} {op}
 
    {action} :=
@@ -122,7 +122,7 @@ The flow of data looks like the following:
 
    {attribute} :=
        category       |   // The log message category
-       subsystem      |   // The log message subsystem}
+       subsystem      |   // The log message subsystem
        activity       |   // The child-most activity in force
                           // at the time the message was logged.
        activity-chain |   // The complete activity chain, specified
@@ -138,11 +138,11 @@ The flow of data looks like the following:
               match {exact-match-text} |
               regex {search-regex}        // uses C++ std::regex
                                           // ECMAScript variant.
-
-e.g.
-   --filter "accept subsystem match com.example.mycompany.myproduct"
-   --filter "accept subsystem regex com.example.+"
-   --filter "reject category regex spammy-system-[[:digit:]]+"
+```
+   e.g.
+   `--filter "accept subsystem match com.example.mycompany.myproduct"`
+   `--filter "accept subsystem regex com.example.+"`
+   `--filter "reject category regex spammy-system-[[:digit:]]+"`
 
 3. Messages that are accepted by the log message filter get sent to
    the lldb client, where they are mapped to the
@@ -154,7 +154,7 @@ e.g.
 ### Log message display
 
 Several settings control aspects of displaying log messages in
-command-line LLDB.  See the enable command's help for a description
+command-line LLDB.  See the `enable` command's help for a description
 of these.
 
 

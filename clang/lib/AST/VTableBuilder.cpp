@@ -777,9 +777,8 @@ public:
   
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> 
     VBaseOffsetOffsetsMapTy;
-  
-  typedef llvm::DenseMap<BaseSubobject, uint64_t> 
-    AddressPointsMapTy;
+
+  typedef VTableLayout::AddressPointsMapTy AddressPointsMapTy;
 
   typedef llvm::DenseMap<GlobalDecl, int64_t> MethodVTableIndicesTy;
 
@@ -817,7 +816,7 @@ private:
   /// VBaseOffsetOffsets - Contains the offsets of the virtual base offsets for
   /// the most derived class.
   VBaseOffsetOffsetsMapTy VBaseOffsetOffsets;
-  
+
   /// Components - The components of the vtable being built.
   SmallVector<VTableComponent, 64> Components;
 
@@ -982,6 +981,10 @@ private:
   }
 
 public:
+  /// Component indices of the first component of each of the vtables in the
+  /// vtable group.
+  SmallVector<size_t, 4> VTableIndices;
+
   ItaniumVTableBuilder(ItaniumVTableContext &VTables,
                        const CXXRecordDecl *MostDerivedClass,
                        CharUnits MostDerivedClassOffset,
@@ -1028,20 +1031,8 @@ public:
     return MethodVTableIndices.end();
   }
 
-  /// getNumVTableComponents - Return the number of components in the vtable
-  /// currently built.
-  uint64_t getNumVTableComponents() const {
-    return Components.size();
-  }
+  ArrayRef<VTableComponent> vtable_components() const { return Components; }
 
-  const VTableComponent *vtable_component_begin() const {
-    return Components.begin();
-  }
-  
-  const VTableComponent *vtable_component_end() const {
-    return Components.end();
-  }
-  
   AddressPointsMapTy::const_iterator address_points_begin() const {
     return AddressPoints.begin();
   }
@@ -1639,6 +1630,9 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
     bool BaseIsVirtualInLayoutClass, CharUnits OffsetInLayoutClass) {
   assert(Base.getBase()->isDynamicClass() && "class does not have a vtable!");
 
+  unsigned VTableIndex = Components.size();
+  VTableIndices.push_back(VTableIndex);
+
   // Add vcall and vbase offsets for this vtable.
   VCallAndVBaseOffsetBuilder Builder(MostDerivedClass, LayoutClass, &Overriders,
                                      Base, BaseIsVirtualInLayoutClass, 
@@ -1695,9 +1689,11 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
 
   // Add all address points.
   while (true) {
-    AddressPoints.insert(std::make_pair(
-      BaseSubobject(RD, OffsetInLayoutClass),
-      AddressPoint));
+    AddressPoints.insert(
+        std::make_pair(BaseSubobject(RD, OffsetInLayoutClass),
+                       VTableLayout::AddressPointLocation{
+                           unsigned(VTableIndices.size() - 1),
+                           unsigned(AddressPoint - VTableIndex)}));
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
     const CXXRecordDecl *PrimaryBase = Layout.getPrimaryBase();
@@ -1901,7 +1897,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
   std::multimap<uint64_t, BaseSubobject> AddressPointsByIndex;
   for (const auto &AP : AddressPoints) {
     const BaseSubobject &Base = AP.first;
-    uint64_t Index = AP.second;
+    uint64_t Index =
+        VTableIndices[AP.second.VTableIndex] + AP.second.AddressPointIndex;
 
     AddressPointsByIndex.insert(std::make_pair(Index, Base));
   }
@@ -2203,30 +2200,24 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 }
 }
 
-VTableLayout::VTableLayout(uint64_t NumVTableComponents,
-                           const VTableComponent *VTableComponents,
-                           uint64_t NumVTableThunks,
-                           const VTableThunkTy *VTableThunks,
-                           const AddressPointsMapTy &AddressPoints,
-                           bool IsMicrosoftABI)
-  : NumVTableComponents(NumVTableComponents),
-    VTableComponents(new VTableComponent[NumVTableComponents]),
-    NumVTableThunks(NumVTableThunks),
-    VTableThunks(new VTableThunkTy[NumVTableThunks]),
-    AddressPoints(AddressPoints),
-    IsMicrosoftABI(IsMicrosoftABI) {
-  std::copy(VTableComponents, VTableComponents+NumVTableComponents,
-            this->VTableComponents.get());
-  std::copy(VTableThunks, VTableThunks+NumVTableThunks,
-            this->VTableThunks.get());
-  std::sort(this->VTableThunks.get(),
-            this->VTableThunks.get() + NumVTableThunks,
+VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
+                           ArrayRef<VTableComponent> VTableComponents,
+                           ArrayRef<VTableThunkTy> VTableThunks,
+                           const AddressPointsMapTy &AddressPoints)
+    : VTableComponents(VTableComponents), VTableThunks(VTableThunks),
+      AddressPoints(AddressPoints) {
+  if (VTableIndices.size() <= 1)
+    assert(VTableIndices.size() == 1 && VTableIndices[0] == 0);
+  else
+    this->VTableIndices = OwningArrayRef<size_t>(VTableIndices);
+
+  std::sort(this->VTableThunks.begin(), this->VTableThunks.end(),
             [](const VTableLayout::VTableThunkTy &LHS,
                const VTableLayout::VTableThunkTy &RHS) {
-    assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
-           "Different thunks should have unique indices!");
-    return LHS.first < RHS.first;
-  });
+              assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
+                     "Different thunks should have unique indices!");
+              return LHS.first < RHS.first;
+            });
 }
 
 VTableLayout::~VTableLayout() { }
@@ -2284,9 +2275,8 @@ CreateVTableLayout(const ItaniumVTableBuilder &Builder) {
     VTableThunks(Builder.vtable_thunks_begin(), Builder.vtable_thunks_end());
 
   return llvm::make_unique<VTableLayout>(
-      Builder.getNumVTableComponents(), Builder.vtable_component_begin(),
-      VTableThunks.size(), VTableThunks.data(), Builder.getAddressPoints(),
-      /*IsMicrosoftABI=*/false);
+      Builder.VTableIndices, Builder.vtable_components(), VTableThunks,
+      Builder.getAddressPoints());
 }
 
 void
@@ -2568,15 +2558,7 @@ public:
                                   MethodVFTableLocations.end());
   }
 
-  uint64_t getNumVTableComponents() const { return Components.size(); }
-
-  const VTableComponent *vtable_component_begin() const {
-    return Components.begin();
-  }
-
-  const VTableComponent *vtable_component_end() const {
-    return Components.end();
-  }
+  ArrayRef<VTableComponent> vtable_components() const { return Components; }
 
   VTableThunksMapTy::const_iterator vtable_thunks_begin() const {
     return VTableThunks.begin();
@@ -3591,8 +3573,8 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
     SmallVector<VTableLayout::VTableThunkTy, 1> VTableThunks(
         Builder.vtable_thunks_begin(), Builder.vtable_thunks_end());
     VFTableLayouts[id] = llvm::make_unique<VTableLayout>(
-        Builder.getNumVTableComponents(), Builder.vtable_component_begin(),
-        VTableThunks.size(), VTableThunks.data(), EmptyAddressPointsMap, true);
+        ArrayRef<size_t>{0}, Builder.vtable_components(), VTableThunks,
+        EmptyAddressPointsMap);
     Thunks.insert(Builder.thunks_begin(), Builder.thunks_end());
 
     for (const auto &Loc : Builder.vtable_locations()) {

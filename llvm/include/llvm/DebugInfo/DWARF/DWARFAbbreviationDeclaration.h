@@ -80,8 +80,10 @@ public:
   /// \param U the DWARFUnit the contains the DIE.
   /// \param FormValue the form value that will be filled in.
   /// \returns true if the attribute was extracted into \p FormValue.
-  bool getAttributeValue(const uint32_t DIEOffset, const dwarf::Attribute Attr,
-                         const DWARFUnit &U, DWARFFormValue &FormValue) const;
+  Optional<DWARFFormValue> getAttributeValue(const uint32_t DIEOffset,
+                                             const dwarf::Attribute Attr,
+                                             const DWARFUnit &U) const;
+
   bool extract(DataExtractor Data, uint32_t* OffsetPtr);
   void dump(raw_ostream &OS) const;
 

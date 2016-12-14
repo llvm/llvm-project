@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 #include <vector>
@@ -47,7 +48,9 @@ private:
 
   std::string LinkerOpts;
 
-  std::unique_ptr<object::IRObjectFile> IRFile;
+  std::unique_ptr<Module> Mod;
+  MemoryBufferRef MBRef;
+  ModuleSymbolTable SymTab;
   std::unique_ptr<TargetMachine> _target;
   std::vector<NameAndAttributes> _symbols;
 
@@ -56,7 +59,8 @@ private:
   StringMap<NameAndAttributes> _undefines;
   std::vector<StringRef> _asm_undefines;
 
-  LTOModule(std::unique_ptr<object::IRObjectFile> Obj, TargetMachine *TM);
+  LTOModule(std::unique_ptr<Module> M, MemoryBufferRef MBRef,
+            TargetMachine *TM);
 
 public:
   ~LTOModule();
@@ -108,14 +112,10 @@ public:
                        size_t length, const TargetOptions &options,
                        StringRef path);
 
-  const Module &getModule() const {
-    return const_cast<LTOModule*>(this)->getModule();
-  }
-  Module &getModule() {
-    return IRFile->getModule();
-  }
+  const Module &getModule() const { return *Mod; }
+  Module &getModule() { return *Mod; }
 
-  std::unique_ptr<Module> takeModule() { return IRFile->takeModule(); }
+  std::unique_ptr<Module> takeModule() { return std::move(Mod); }
 
   /// Return the Module's target triple.
   const std::string &getTargetTriple() {
@@ -166,7 +166,7 @@ private:
   void parseSymbols();
 
   /// Add a symbol which isn't defined just yet to a list to be resolved later.
-  void addPotentialUndefinedSymbol(const object::BasicSymbolRef &Sym,
+  void addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
                                    bool isFunc);
 
   /// Add a defined symbol to the list.
@@ -174,11 +174,11 @@ private:
                         bool isFunction);
 
   /// Add a data symbol as defined to the list.
-  void addDefinedDataSymbol(const object::BasicSymbolRef &Sym);
+  void addDefinedDataSymbol(ModuleSymbolTable::Symbol Sym);
   void addDefinedDataSymbol(StringRef Name, const GlobalValue *v);
 
   /// Add a function symbol as defined to the list.
-  void addDefinedFunctionSymbol(const object::BasicSymbolRef &Sym);
+  void addDefinedFunctionSymbol(ModuleSymbolTable::Symbol Sym);
   void addDefinedFunctionSymbol(StringRef Name, const Function *F);
 
   /// Add a global symbol from module-level ASM to the defined list.

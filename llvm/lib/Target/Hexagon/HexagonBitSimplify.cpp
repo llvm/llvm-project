@@ -11,16 +11,36 @@
 
 #include "HexagonBitTracker.h"
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -28,16 +48,19 @@ static cl::opt<bool> PreserveTiedOps("hexbit-keep-tied", cl::Hidden,
   cl::init(true), cl::desc("Preserve subregisters in tied operands"));
 
 namespace llvm {
+
   void initializeHexagonBitSimplifyPass(PassRegistry& Registry);
   FunctionPass *createHexagonBitSimplify();
-}
+
+} // end namespace llvm
 
 namespace {
+
   // Set of virtual registers, based on BitVector.
   struct RegisterSet : private BitVector {
-    RegisterSet() : BitVector() {}
+    RegisterSet() = default;
     explicit RegisterSet(unsigned s, bool t = false) : BitVector(s, t) {}
-    RegisterSet(const RegisterSet &RS) : BitVector(RS) {}
+    RegisterSet(const RegisterSet &RS) = default;
 
     using BitVector::clear;
     using BitVector::count;
@@ -108,20 +131,23 @@ namespace {
       if (size() <= Idx)
         resize(std::max(Idx+1, 32U));
     }
+
     static inline unsigned v2x(unsigned v) {
       return TargetRegisterInfo::virtReg2Index(v);
     }
+
     static inline unsigned x2v(unsigned x) {
       return TargetRegisterInfo::index2VirtReg(x);
     }
   };
 
-
   struct PrintRegSet {
     PrintRegSet(const RegisterSet &S, const TargetRegisterInfo *RI)
       : RS(S), TRI(RI) {}
+
     friend raw_ostream &operator<< (raw_ostream &OS,
           const PrintRegSet &P);
+
   private:
     const RegisterSet &RS;
     const TargetRegisterInfo *TRI;
@@ -136,27 +162,28 @@ namespace {
     OS << " }";
     return OS;
   }
-}
 
-
-namespace {
   class Transformation;
 
   class HexagonBitSimplify : public MachineFunctionPass {
   public:
     static char ID;
-    HexagonBitSimplify() : MachineFunctionPass(ID), MDT(0) {
+
+    HexagonBitSimplify() : MachineFunctionPass(ID), MDT(nullptr) {
       initializeHexagonBitSimplifyPass(*PassRegistry::getPassRegistry());
     }
-    virtual StringRef getPassName() const {
+
+    StringRef getPassName() const override {
       return "Hexagon bit simplification";
     }
-    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineDominatorTree>();
       AU.addPreserved<MachineDominatorTree>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
-    virtual bool runOnMachineFunction(MachineFunction &MF);
+
+    bool runOnMachineFunction(MachineFunction &MF) override;
 
     static void getInstrDefs(const MachineInstr &MI, RegisterSet &Defs);
     static void getInstrUses(const MachineInstr &MI, RegisterSet &Uses);
@@ -199,25 +226,26 @@ namespace {
   char HexagonBitSimplify::ID = 0;
   typedef HexagonBitSimplify HBS;
 
-
   // The purpose of this class is to provide a common facility to traverse
   // the function top-down or bottom-up via the dominator tree, and keep
   // track of the available registers.
   class Transformation {
   public:
     bool TopDown;
+
     Transformation(bool TD) : TopDown(TD) {}
+    virtual ~Transformation() = default;
+
     virtual bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) = 0;
-    virtual ~Transformation() {}
   };
-}
+
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexbit",
       "Hexagon bit simplification", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(HexagonBitSimplify, "hexbit",
       "Hexagon bit simplification", false, false)
-
 
 bool HexagonBitSimplify::visitBlock(MachineBasicBlock &B, Transformation &T,
       RegisterSet &AVs) {
@@ -297,7 +325,6 @@ bool HexagonBitSimplify::isZero(const BitTracker::RegisterCell &RC,
   return true;
 }
 
-
 bool HexagonBitSimplify::getConst(const BitTracker::RegisterCell &RC,
         uint16_t B, uint16_t W, uint64_t &U) {
   assert(B < RC.width() && B+W <= RC.width());
@@ -314,7 +341,6 @@ bool HexagonBitSimplify::getConst(const BitTracker::RegisterCell &RC,
   return true;
 }
 
-
 bool HexagonBitSimplify::replaceReg(unsigned OldR, unsigned NewR,
       MachineRegisterInfo &MRI) {
   if (!TargetRegisterInfo::isVirtualRegister(OldR) ||
@@ -328,7 +354,6 @@ bool HexagonBitSimplify::replaceReg(unsigned OldR, unsigned NewR,
   }
   return Begin != End;
 }
-
 
 bool HexagonBitSimplify::replaceRegWithSub(unsigned OldR, unsigned NewR,
       unsigned NewSR, MachineRegisterInfo &MRI) {
@@ -346,7 +371,6 @@ bool HexagonBitSimplify::replaceRegWithSub(unsigned OldR, unsigned NewR,
   }
   return Begin != End;
 }
-
 
 bool HexagonBitSimplify::replaceSubWithSub(unsigned OldR, unsigned OldSR,
       unsigned NewR, unsigned NewSR, MachineRegisterInfo &MRI) {
@@ -366,7 +390,6 @@ bool HexagonBitSimplify::replaceSubWithSub(unsigned OldR, unsigned OldSR,
   }
   return Begin != End;
 }
-
 
 // For a register ref (pair Reg:Sub), set Begin to the position of the LSB
 // of Sub in Reg, and set Width to the size of Sub in bits. Return true,
@@ -422,7 +445,6 @@ bool HexagonBitSimplify::parseRegSequence(const MachineInstr &I,
   }
   return false;
 }
-
 
 // All stores (except 64-bit stores) take a 32-bit register as the source
 // of the value to be stored. If the instruction stores into a location
@@ -580,7 +602,6 @@ bool HexagonBitSimplify::getUsedBitsInStore(unsigned Opc, BitVector &Bits,
 
   return false;
 }
-
 
 // For an instruction with opcode Opc, calculate the set of bits that it
 // uses in a register in operand OpN. This only calculates the set of used
@@ -861,7 +882,6 @@ bool HexagonBitSimplify::getUsedBits(unsigned Opc, unsigned OpN,
   return false;
 }
 
-
 // Calculate the register class that matches Reg:Sub. For example, if
 // vreg1 is a double register, then vreg1:isub_hi would match the "int"
 // register class.
@@ -894,7 +914,6 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
   return nullptr;
 }
 
-
 // Check if RD could be replaced with RS at any possible use of RD.
 // For example a predicate register cannot be replaced with a integer
 // register, but a 64-bit register with a subregister can be replaced
@@ -912,21 +931,18 @@ bool HexagonBitSimplify::isTransparentCopy(const BitTracker::RegisterRef &RD,
   return DRC == getFinalVRegClass(RS, MRI);
 }
 
-
 bool HexagonBitSimplify::hasTiedUse(unsigned Reg, MachineRegisterInfo &MRI,
       unsigned NewSub) {
   if (!PreserveTiedOps)
     return false;
-  return any_of(MRI.use_operands(Reg),
-                [NewSub] (const MachineOperand &Op) -> bool {
-                  return Op.getSubReg() != NewSub && Op.isTied();
-                });
+  return llvm::any_of(MRI.use_operands(Reg),
+                      [NewSub] (const MachineOperand &Op) -> bool {
+                        return Op.getSubReg() != NewSub && Op.isTied();
+                      });
 }
 
-//
-// Dead code elimination
-//
 namespace {
+
   class DeadCodeElimination {
   public:
     DeadCodeElimination(MachineFunction &mf, MachineDominatorTree &mdt)
@@ -946,8 +962,8 @@ namespace {
     MachineDominatorTree &MDT;
     MachineRegisterInfo &MRI;
   };
-}
 
+} // end anonymous namespace
 
 bool DeadCodeElimination::isDead(unsigned R) const {
   for (auto I = MRI.use_begin(R), E = MRI.use_end(); I != E; ++I) {
@@ -964,7 +980,6 @@ bool DeadCodeElimination::isDead(unsigned R) const {
   }
   return true;
 }
-
 
 bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
   bool Changed = false;
@@ -1015,8 +1030,8 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
   return Changed;
 }
 
+namespace {
 
-//
 // Eliminate redundant instructions
 //
 // This transformation will identify instructions where the output register
@@ -1027,13 +1042,14 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
 // registers.
 // If the output matches an input, the instruction is replaced with COPY.
 // The copies will be removed by another transformation.
-namespace {
   class RedundantInstrElimination : public Transformation {
   public:
     RedundantInstrElimination(BitTracker &bt, const HexagonInstrInfo &hii,
           MachineRegisterInfo &mri)
         : Transformation(true), HII(hii), MRI(mri), BT(bt) {}
+
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
+
   private:
     bool isLossyShiftLeft(const MachineInstr &MI, unsigned OpN,
           unsigned &LostB, unsigned &LostE);
@@ -1048,8 +1064,8 @@ namespace {
     MachineRegisterInfo &MRI;
     BitTracker &BT;
   };
-}
 
+} // end anonymous namespace
 
 // Check if the instruction is a lossy shift left, where the input being
 // shifted is the operand OpN of MI. If true, [LostB, LostE) is the range
@@ -1057,6 +1073,7 @@ namespace {
 bool RedundantInstrElimination::isLossyShiftLeft(const MachineInstr &MI,
       unsigned OpN, unsigned &LostB, unsigned &LostE) {
   using namespace Hexagon;
+
   unsigned Opc = MI.getOpcode();
   unsigned ImN, RegN, Width;
   switch (Opc) {
@@ -1110,13 +1127,13 @@ bool RedundantInstrElimination::isLossyShiftLeft(const MachineInstr &MI,
   return true;
 }
 
-
 // Check if the instruction is a lossy shift right, where the input being
 // shifted is the operand OpN of MI. If true, [LostB, LostE) is the range
 // of bit indices that are lost.
 bool RedundantInstrElimination::isLossyShiftRight(const MachineInstr &MI,
       unsigned OpN, unsigned &LostB, unsigned &LostE) {
   using namespace Hexagon;
+
   unsigned Opc = MI.getOpcode();
   unsigned ImN, RegN;
   switch (Opc) {
@@ -1173,7 +1190,6 @@ bool RedundantInstrElimination::isLossyShiftRight(const MachineInstr &MI,
   return true;
 }
 
-
 // Calculate the bit vector that corresponds to the used bits of register Reg.
 // The vector Bits has the same size, as the size of Reg in bits. If the cal-
 // culation fails (i.e. the used bits are unknown), it returns false. Other-
@@ -1209,7 +1225,6 @@ bool RedundantInstrElimination::computeUsedBits(unsigned Reg, BitVector &Bits) {
   Bits |= Used;
   return true;
 }
-
 
 // Calculate the bits used by instruction MI in a register in operand OpN.
 // Return true/false if the calculation succeeds/fails. If is succeeds, set
@@ -1251,7 +1266,6 @@ bool RedundantInstrElimination::computeUsedBits(const MachineInstr &MI,
   return GotBits;
 }
 
-
 // Calculates the used bits in RD ("defined register"), and checks if these
 // bits in RS ("used register") and RD are identical.
 bool RedundantInstrElimination::usedBitsEqual(BitTracker::RegisterRef RD,
@@ -1277,7 +1291,6 @@ bool RedundantInstrElimination::usedBitsEqual(BitTracker::RegisterRef RD,
       return false;
   return true;
 }
-
 
 bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
       const RegisterSet&) {
@@ -1348,20 +1361,19 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
   return Changed;
 }
 
+namespace {
 
-//
-// Const generation
-//
 // Recognize instructions that produce constant values known at compile-time.
 // Replace them with register definitions that load these constants directly.
-namespace {
   class ConstGeneration : public Transformation {
   public:
     ConstGeneration(BitTracker &bt, const HexagonInstrInfo &hii,
         MachineRegisterInfo &mri)
       : Transformation(true), HII(hii), MRI(mri), BT(bt) {}
+
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
     static bool isTfrConst(const MachineInstr &MI);
+
   private:
     unsigned genTfrConst(const TargetRegisterClass *RC, int64_t C,
         MachineBasicBlock &B, MachineBasicBlock::iterator At, DebugLoc &DL);
@@ -1370,7 +1382,8 @@ namespace {
     MachineRegisterInfo &MRI;
     BitTracker &BT;
   };
-}
+
+} // end anonymous namespace
 
 bool ConstGeneration::isTfrConst(const MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
@@ -1387,7 +1400,6 @@ bool ConstGeneration::isTfrConst(const MachineInstr &MI) {
   }
   return false;
 }
-
 
 // Generate a transfer-immediate instruction that is appropriate for the
 // register class and the actual value being transferred.
@@ -1437,7 +1449,6 @@ unsigned ConstGeneration::genTfrConst(const TargetRegisterClass *RC, int64_t C,
   return 0;
 }
 
-
 bool ConstGeneration::processBlock(MachineBasicBlock &B, const RegisterSet&) {
   if (!BT.reached(&B))
     return false;
@@ -1471,25 +1482,19 @@ bool ConstGeneration::processBlock(MachineBasicBlock &B, const RegisterSet&) {
   return Changed;
 }
 
+namespace {
 
-//
-// Copy generation
-//
 // Identify pairs of available registers which hold identical values.
 // In such cases, only one of them needs to be calculated, the other one
 // will be defined as a copy of the first.
-//
-// Copy propagation
-//
-// Eliminate register copies RD = RS, by replacing the uses of RD with
-// with uses of RS.
-namespace {
   class CopyGeneration : public Transformation {
   public:
     CopyGeneration(BitTracker &bt, const HexagonInstrInfo &hii,
         const HexagonRegisterInfo &hri, MachineRegisterInfo &mri)
       : Transformation(true), HII(hii), HRI(hri), MRI(mri), BT(bt) {}
+
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
+
   private:
     bool findMatch(const BitTracker::RegisterRef &Inp,
         BitTracker::RegisterRef &Out, const RegisterSet &AVs);
@@ -1501,12 +1506,17 @@ namespace {
     RegisterSet Forbidden;
   };
 
+// Eliminate register copies RD = RS, by replacing the uses of RD with
+// with uses of RS.
   class CopyPropagation : public Transformation {
   public:
     CopyPropagation(const HexagonRegisterInfo &hri, MachineRegisterInfo &mri)
         : Transformation(false), HRI(hri), MRI(mri) {}
+
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
+
     static bool isCopyReg(unsigned Opc, bool NoConv);
+
   private:
     bool propagateRegCopy(MachineInstr &MI);
 
@@ -1514,8 +1524,7 @@ namespace {
     MachineRegisterInfo &MRI;
   };
 
-}
-
+} // end anonymous namespace
 
 /// Check if there is a register in AVs that is identical to Inp. If so,
 /// set Out to the found register. The output may be a pair Reg:Sub.
@@ -1565,7 +1574,6 @@ bool CopyGeneration::findMatch(const BitTracker::RegisterRef &Inp,
   }
   return false;
 }
-
 
 bool CopyGeneration::processBlock(MachineBasicBlock &B,
       const RegisterSet &AVs) {
@@ -1631,7 +1639,6 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
   return Changed;
 }
 
-
 bool CopyPropagation::isCopyReg(unsigned Opc, bool NoConv) {
   switch (Opc) {
     case TargetOpcode::COPY:
@@ -1650,7 +1657,6 @@ bool CopyPropagation::isCopyReg(unsigned Opc, bool NoConv) {
   }
   return false;
 }
-
 
 bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
   bool Changed = false;
@@ -1706,7 +1712,6 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
   return Changed;
 }
 
-
 bool CopyPropagation::processBlock(MachineBasicBlock &B, const RegisterSet&) {
   std::vector<MachineInstr*> Instrs;
   for (auto I = B.rbegin(), E = B.rend(); I != E; ++I)
@@ -1723,21 +1728,20 @@ bool CopyPropagation::processBlock(MachineBasicBlock &B, const RegisterSet&) {
   return Changed;
 }
 
+namespace {
 
-//
-// Bit simplification
-//
 // Recognize patterns that can be simplified and replace them with the
 // simpler forms.
 // This is by no means complete
-namespace {
   class BitSimplification : public Transformation {
   public:
     BitSimplification(BitTracker &bt, const HexagonInstrInfo &hii,
         const HexagonRegisterInfo &hri, MachineRegisterInfo &mri,
         MachineFunction &mf)
       : Transformation(true), HII(hii), HRI(hri), MRI(mri), MF(mf), BT(bt) {}
+
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
+
   private:
     struct RegHalf : public BitTracker::RegisterRef {
       bool Low;  // Low/High halfword.
@@ -1770,8 +1774,8 @@ namespace {
     MachineFunction &MF;
     BitTracker &BT;
   };
-}
 
+} // end anonymous namespace
 
 // Check if the bits [B..B+16) in register cell RC form a valid halfword,
 // i.e. [0..16), [16..32), etc. of some register. If so, return true and
@@ -1854,14 +1858,12 @@ bool BitSimplification::matchHalf(unsigned SelfR,
   return true;
 }
 
-
 bool BitSimplification::validateReg(BitTracker::RegisterRef R, unsigned Opc,
       unsigned OpNum) {
   auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI, MF);
   auto *RRC = HBS::getFinalVRegClass(R, MRI);
   return OpRC->hasSubClassEq(RRC);
 }
-
 
 // Check if RC matches the pattern of a S2_packhl. If so, return true and
 // set the inputs Rs and Rt.
@@ -1886,14 +1888,12 @@ bool BitSimplification::matchPackhl(unsigned SelfR,
   return true;
 }
 
-
 unsigned BitSimplification::getCombineOpcode(bool HLow, bool LLow) {
   return HLow ? LLow ? Hexagon::A2_combine_ll
                      : Hexagon::A2_combine_lh
               : LLow ? Hexagon::A2_combine_hl
                      : Hexagon::A2_combine_hh;
 }
-
 
 // If MI stores the upper halfword of a register (potentially obtained via
 // shifts or extracts), replace it with a storerf instruction. This could
@@ -1918,7 +1918,6 @@ bool BitSimplification::genStoreUpperHalf(MachineInstr *MI) {
   ValOp.setSubReg(H.Sub);
   return true;
 }
-
 
 // If MI stores a value known at compile-time, and the value is within a range
 // that avoids using constant-extenders, replace it with a store-immediate.
@@ -1988,7 +1987,6 @@ bool BitSimplification::genStoreImmediate(MachineInstr *MI) {
   return true;
 }
 
-
 // If MI is equivalent o S2_packhl, generate the S2_packhl. MI could be the
 // last instruction in a sequence that results in something equivalent to
 // the pack-halfwords. The intent is to cause the entire sequence to become
@@ -2017,7 +2015,6 @@ bool BitSimplification::genPackhl(MachineInstr *MI,
   BT.put(BitTracker::RegisterRef(NewR), RC);
   return true;
 }
-
 
 // If MI produces halfword of the input in the low half of the output,
 // replace it with zero-extend or extractu.
@@ -2058,7 +2055,6 @@ bool BitSimplification::genExtractHalf(MachineInstr *MI,
   return true;
 }
 
-
 // If MI is equivalent to a combine(.L/.H, .L/.H) replace with with the
 // combine.
 bool BitSimplification::genCombineHalf(MachineInstr *MI,
@@ -2090,7 +2086,6 @@ bool BitSimplification::genCombineHalf(MachineInstr *MI,
   BT.put(BitTracker::RegisterRef(NewR), RC);
   return true;
 }
-
 
 // If MI resets high bits of a register and keeps the lower ones, replace it
 // with zero-extend byte/half, and-immediate, or extractu, as appropriate.
@@ -2154,7 +2149,6 @@ bool BitSimplification::genExtractLow(MachineInstr *MI,
   return false;
 }
 
-
 // Check for tstbit simplification opportunity, where the bit being checked
 // can be tracked back to another register. For example:
 //   vreg2 = S2_lsr_i_r  vreg1, 5
@@ -2184,7 +2178,7 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
     // Need to map V.RefI.Reg to a 32-bit register, i.e. if it is
     // a double register, need to use a subregister and adjust bit
     // number.
-    unsigned P = UINT_MAX;
+    unsigned P = std::numeric_limits<unsigned>::max();
     BitTracker::RegisterRef RR(V.RefI.Reg, 0);
     if (TC == &Hexagon::DoubleRegsRegClass) {
       P = V.RefI.Pos;
@@ -2196,7 +2190,7 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
     } else if (TC == &Hexagon::IntRegsRegClass) {
       P = V.RefI.Pos;
     }
-    if (P != UINT_MAX) {
+    if (P != std::numeric_limits<unsigned>::max()) {
       unsigned NewR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
       BuildMI(B, At, DL, HII.get(Hexagon::S2_tstbit_i), NewR)
           .addReg(RR.Reg, 0, RR.Sub)
@@ -2215,7 +2209,6 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
 
   return false;
 }
-
 
 bool BitSimplification::processBlock(MachineBasicBlock &B,
       const RegisterSet &AVs) {
@@ -2275,7 +2268,6 @@ bool BitSimplification::processBlock(MachineBasicBlock &B,
   return Changed;
 }
 
-
 bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
@@ -2334,7 +2326,6 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
   }
   return Changed;
 }
-
 
 // Recognize loops where the code at the end of the loop matches the code
 // before the entry of the loop, and the matching code is such that is can
@@ -2399,16 +2390,20 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 // }:endloop0
 
 namespace llvm {
+
   FunctionPass *createHexagonLoopRescheduling();
   void initializeHexagonLoopReschedulingPass(PassRegistry&);
-}
+
+} // end namespace llvm
 
 namespace {
+
   class HexagonLoopRescheduling : public MachineFunctionPass {
   public:
     static char ID;
+
     HexagonLoopRescheduling() : MachineFunctionPass(ID),
-        HII(0), HRI(0), MRI(0), BTP(0) {
+        HII(nullptr), HRI(nullptr), MRI(nullptr), BTP(nullptr) {
       initializeHexagonLoopReschedulingPass(*PassRegistry::getPassRegistry());
     }
 
@@ -2448,13 +2443,13 @@ namespace {
         MachineBasicBlock::iterator At, unsigned OldPhiR, unsigned NewPredR);
     bool processLoop(LoopCand &C);
   };
-}
+
+} // end anonymous namespace
 
 char HexagonLoopRescheduling::ID = 0;
 
 INITIALIZE_PASS(HexagonLoopRescheduling, "hexagon-loop-resched",
   "Hexagon Loop Rescheduling", false, false)
-
 
 HexagonLoopRescheduling::PhiInfo::PhiInfo(MachineInstr &P,
       MachineBasicBlock &B) {
@@ -2472,7 +2467,6 @@ HexagonLoopRescheduling::PhiInfo::PhiInfo(MachineInstr &P,
   }
 }
 
-
 unsigned HexagonLoopRescheduling::getDefReg(const MachineInstr *MI) {
   RegisterSet Defs;
   HBS::getInstrDefs(*MI, Defs);
@@ -2480,7 +2474,6 @@ unsigned HexagonLoopRescheduling::getDefReg(const MachineInstr *MI) {
     return 0;
   return Defs.find_first();
 }
-
 
 bool HexagonLoopRescheduling::isConst(unsigned Reg) const {
   if (!BTP->has(Reg))
@@ -2493,7 +2486,6 @@ bool HexagonLoopRescheduling::isConst(unsigned Reg) const {
   }
   return true;
 }
-
 
 bool HexagonLoopRescheduling::isBitShuffle(const MachineInstr *MI,
       unsigned DefR) const {
@@ -2525,7 +2517,6 @@ bool HexagonLoopRescheduling::isBitShuffle(const MachineInstr *MI,
   return false;
 }
 
-
 bool HexagonLoopRescheduling::isStoreInput(const MachineInstr *MI,
       unsigned InpR) const {
   for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
@@ -2537,7 +2528,6 @@ bool HexagonLoopRescheduling::isStoreInput(const MachineInstr *MI,
   }
   return false;
 }
-
 
 bool HexagonLoopRescheduling::isShuffleOf(unsigned OutR, unsigned InpR) const {
   if (!BTP->has(OutR) || !BTP->has(InpR))
@@ -2552,7 +2542,6 @@ bool HexagonLoopRescheduling::isShuffleOf(unsigned OutR, unsigned InpR) const {
   }
   return true;
 }
-
 
 bool HexagonLoopRescheduling::isSameShuffle(unsigned OutR1, unsigned InpR1,
       unsigned OutR2, unsigned &InpR2) const {
@@ -2584,7 +2573,6 @@ bool HexagonLoopRescheduling::isSameShuffle(unsigned OutR1, unsigned InpR1,
   InpR2 = MatchR;
   return true;
 }
-
 
 void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
       MachineBasicBlock &PB, MachineBasicBlock::iterator At, unsigned OldPhiR,
@@ -2624,7 +2612,6 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
 
   HBS::replaceReg(OldPhiR, RegMap[G.Out.Reg], *MRI);
 }
-
 
 bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
   DEBUG(dbgs() << "Processing loop in BB#" << C.LB->getNumber() << "\n");
@@ -2765,7 +2752,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     auto LoopInpEq = [G] (const PhiInfo &P) -> bool {
       return G.Out.Reg == P.LR.Reg;
     };
-    if (find_if(Phis, LoopInpEq) == Phis.end())
+    if (llvm::find_if(Phis, LoopInpEq) == Phis.end())
       continue;
 
     G.Inp.Reg = Inputs.find_first();
@@ -2790,7 +2777,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     auto LoopInpEq = [G] (const PhiInfo &P) -> bool {
       return G.Out.Reg == P.LR.Reg;
     };
-    auto F = find_if(Phis, LoopInpEq);
+    auto F = llvm::find_if(Phis, LoopInpEq);
     if (F == Phis.end())
       continue;
     unsigned PrehR = 0;
@@ -2829,7 +2816,6 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
 
   return Changed;
 }
-
 
 bool HexagonLoopRescheduling::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
@@ -2893,4 +2879,3 @@ FunctionPass *llvm::createHexagonLoopRescheduling() {
 FunctionPass *llvm::createHexagonBitSimplify() {
   return new HexagonBitSimplify();
 }
-

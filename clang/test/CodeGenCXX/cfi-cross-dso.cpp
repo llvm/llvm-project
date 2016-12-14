@@ -26,7 +26,7 @@ void g() {
   b.f();
 }
 
-// MS: @[[B_VTABLE:.*]] = private unnamed_addr constant [2 x i8*] {{.*}}@"\01??_R4B@?A@@6B@"{{.*}}@"\01?f@B@?A@@UEAAXXZ"
+// MS: @[[B_VTABLE:.*]] = private unnamed_addr constant { [2 x i8*] } {{.*}}@"\01??_R4B@?A@@6B@"{{.*}}@"\01?f@B@?A@@UEAAXXZ"
 
 // CHECK:   %[[VT:.*]] = load void (%struct.A*)**, void (%struct.A*)***
 // CHECK:   %[[VT2:.*]] = bitcast {{.*}}%[[VT]] to i8*, !nosanitize

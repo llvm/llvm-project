@@ -46,5 +46,7 @@ ExternalFunctions::ExternalFunctions() {
 
 #undef EXT_FUNC
 }
+
 } // namespace fuzzer
+
 #endif // LIBFUZZER_APPLE

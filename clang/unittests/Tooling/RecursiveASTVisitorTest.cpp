@@ -133,25 +133,6 @@ TEST(RecursiveASTVisitor, AttributesAreVisited) {
     "};\n"));
 }
 
-// Check to ensure that VarDecls are visited.
-class VarDeclVisitor : public ExpectedLocationVisitor<VarDeclVisitor> {
-public:
-  bool VisitVarDecl(VarDecl *VD) {
-    Match(VD->getNameAsString(), VD->getLocStart());
-    return true;
-  }
-};
-
-TEST(RecursiveASTVisitor, ArrayInitializersAreVisited) {
-  VarDeclVisitor Visitor;
-  Visitor.ExpectMatch("__i0", 1, 8);
-  EXPECT_TRUE(
-      Visitor.runOver("struct MyClass {\n"
-                      "  int c[1];\n"
-                      "  static MyClass Create() { return MyClass(); }\n"
-                      "};\n"));
-}
-
 // Check to ensure that implicit default argument expressions are visited.
 class IntegerLiteralVisitor
     : public ExpectedLocationVisitor<IntegerLiteralVisitor> {

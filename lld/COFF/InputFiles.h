@@ -12,13 +12,13 @@
 
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/StringSaver.h"
 #include <memory>
-#include <mutex>
 #include <set>
 #include <vector>
 
@@ -91,7 +91,7 @@ public:
 private:
   std::unique_ptr<Archive> File;
   std::string Filename;
-  std::map<uint64_t, std::atomic_flag> Seen;
+  llvm::DenseSet<uint64_t> Seen;
 };
 
 // .obj or .o file. This may be a member of an archive file.
@@ -201,7 +201,6 @@ private:
   std::vector<SymbolBody *> SymbolBodies;
   llvm::BumpPtrAllocator Alloc;
   std::unique_ptr<LTOModule> M;
-  static std::mutex Mu;
 };
 
 std::string toString(InputFile *File);

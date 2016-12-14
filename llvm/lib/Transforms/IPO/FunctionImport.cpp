@@ -264,10 +264,6 @@ static void exportGlobalInModule(const ModuleSummaryIndex &Index,
     return;
   // We found it in the current module, mark as exported
   ExportList.insert(GUID);
-
-  auto GVS = dyn_cast<GlobalVarSummary>(Summary);
-  if (!GVS)
-    return;
 }
 
 using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;

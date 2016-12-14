@@ -2140,10 +2140,7 @@ void CodeGenFunction::EmitLambdaExpr(const LambdaExpr *E, AggValueSlot Slot) {
       auto VAT = CurField->getCapturedVLAType();
       EmitStoreThroughLValue(RValue::get(VLASizeMap[VAT->getSizeExpr()]), LV);
     } else {
-      ArrayRef<VarDecl *> ArrayIndexes;
-      if (CurField->getType()->isArrayType())
-        ArrayIndexes = E->getCaptureInitIndexVars(i);
-      EmitInitializerForField(*CurField, LV, *i, ArrayIndexes);
+      EmitInitializerForField(*CurField, LV, *i);
     }
   }
 }

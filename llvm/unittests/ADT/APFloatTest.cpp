@@ -15,6 +15,7 @@
 #include <cmath>
 #include <ostream>
 #include <string>
+#include <tuple>
 
 using namespace llvm;
 
@@ -1511,22 +1512,6 @@ TEST(APFloatTest, PPCDoubleDouble) {
   test = APFloat(APFloat::PPCDoubleDouble, "2.00416836000897277799610805135016e-292");
   EXPECT_EQ(0x0360000000000000ull, test.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x0000000000000000ull, test.bitcastToAPInt().getRawData()[1]);
-
-  test = APFloat(APFloat::PPCDoubleDouble, "1.0");
-  test.add(APFloat(APFloat::PPCDoubleDouble, "0x1p-105"), APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(0x3ff0000000000000ull, test.bitcastToAPInt().getRawData()[0]);
-  EXPECT_EQ(0x3960000000000000ull, test.bitcastToAPInt().getRawData()[1]);
-
-  test = APFloat(APFloat::PPCDoubleDouble, "1.0");
-  test.add(APFloat(APFloat::PPCDoubleDouble, "0x1p-106"), APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(0x3ff0000000000000ull, test.bitcastToAPInt().getRawData()[0]);
-#if 0 // XFAIL
-  // This is what we would expect with a true double-double implementation
-  EXPECT_EQ(0x3950000000000000ull, test.bitcastToAPInt().getRawData()[1]);
-#else
-  // This is what we get with our 106-bit mantissa approximation
-  EXPECT_EQ(0x0000000000000000ull, test.bitcastToAPInt().getRawData()[1]);
-#endif
 
   // PR30869
   {
@@ -3185,5 +3170,126 @@ TEST(APFloatTest, frexp) {
   Frac = frexp(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp+51"), Exp, RM);
   EXPECT_EQ(52, Exp);
   EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1").bitwiseIsEqual(Frac));
+}
+
+TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
+  using DataType = std::tuple<uint64_t, uint64_t, uint64_t, uint64_t,
+                              APFloat::fltCategory, APFloat::roundingMode>;
+  DataType Data[] = {
+      // (1 + 0) + (-1 + 0) = fcZero
+      std::make_tuple(0x3ff0000000000000ull, 0, 0xbff0000000000000ull, 0,
+                      APFloat::fcZero, APFloat::rmNearestTiesToEven),
+      // LDBL_MAX + (1.1 >> (1023 - 106) + 0)) = fcInfinity
+      std::make_tuple(0x7fefffffffffffffull, 0x7c8ffffffffffffeull,
+                      0x7948000000000000ull, 0ull, APFloat::fcInfinity,
+                      APFloat::rmNearestTiesToEven),
+      // TODO: change the 4th 0x75effffffffffffe to 0x75efffffffffffff when
+      // PPCDoubleDoubleImpl is gone.
+      // LDBL_MAX + (1.011111... >> (1023 - 106) + (1.1111111...0 >> (1023 -
+      // 160))) = fcNormal
+      std::make_tuple(0x7fefffffffffffffull, 0x7c8ffffffffffffeull,
+                      0x7947ffffffffffffull, 0x75effffffffffffeull,
+                      APFloat::fcNormal, APFloat::rmNearestTiesToEven),
+      // LDBL_MAX + (1.1 >> (1023 - 106) + 0)) = fcInfinity
+      std::make_tuple(0x7fefffffffffffffull, 0x7c8ffffffffffffeull,
+                      0x7fefffffffffffffull, 0x7c8ffffffffffffeull,
+                      APFloat::fcInfinity, APFloat::rmNearestTiesToEven),
+      // NaN + (1 + 0) = fcNaN
+      std::make_tuple(0x7ff8000000000000ull, 0, 0x3ff0000000000000ull, 0,
+                      APFloat::fcNaN, APFloat::rmNearestTiesToEven),
+  };
+
+  for (auto Tp : Data) {
+    uint64_t Op1[2], Op2[2];
+    APFloat::fltCategory Expected;
+    APFloat::roundingMode RM;
+    std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
+
+    APFloat A1(APFloat::PPCDoubleDouble, APInt(128, 2, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble, APInt(128, 2, Op2));
+    A1.add(A2, RM);
+
+    EXPECT_EQ(Expected, A1.getCategory());
+  }
+}
+
+TEST(APFloatTest, PPCDoubleDoubleAdd) {
+  using DataType = std::tuple<uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
+                              uint64_t, APFloat::roundingMode>;
+  DataType Data[] = {
+      // (1 + 0) + (1e-105 + 0) = (1 + 1e-105)
+      std::make_tuple(0x3ff0000000000000ull, 0, 0x3960000000000000ull, 0,
+                      0x3ff0000000000000ull, 0x3960000000000000ull,
+                      APFloat::rmNearestTiesToEven),
+      // (1 + 0) + (1e-106 + 0) = (1 + 1e-106)
+      std::make_tuple(0x3ff0000000000000ull, 0, 0x3950000000000000ull, 0,
+                      0x3ff0000000000000ull, 0x3950000000000000ull,
+                      APFloat::rmNearestTiesToEven),
+      // (1 + 1e-106) + (1e-106 + 0) = (1 + 1e-105)
+      std::make_tuple(0x3ff0000000000000ull, 0x3950000000000000ull,
+                      0x3950000000000000ull, 0, 0x3ff0000000000000ull,
+                      0x3960000000000000ull, APFloat::rmNearestTiesToEven),
+      // (1 + 0) + (epsilon + 0) = (1 + epsilon)
+      std::make_tuple(0x3ff0000000000000ull, 0, 0x0000000000000001ull, 0,
+                      0x3ff0000000000000ull, 0x0000000000000001ull,
+                      APFloat::rmNearestTiesToEven),
+      // TODO: change 0xf950000000000000 to 0xf940000000000000, when
+      // PPCDoubleDoubleImpl is gone.
+      // (DBL_MAX - 1 << (1023 - 105)) + (1 << (1023 - 53) + 0) = DBL_MAX +
+      // 1.11111... << (1023 - 52)
+      std::make_tuple(0x7fefffffffffffffull, 0xf950000000000000ull,
+                      0x7c90000000000000ull, 0, 0x7fefffffffffffffull,
+                      0x7c8ffffffffffffeull, APFloat::rmNearestTiesToEven),
+      // TODO: change 0xf950000000000000 to 0xf940000000000000, when
+      // PPCDoubleDoubleImpl is gone.
+      // (1 << (1023 - 53) + 0) + (DBL_MAX - 1 << (1023 - 105)) = DBL_MAX +
+      // 1.11111... << (1023 - 52)
+      std::make_tuple(0x7c90000000000000ull, 0, 0x7fefffffffffffffull,
+                      0xf950000000000000ull, 0x7fefffffffffffffull,
+                      0x7c8ffffffffffffeull, APFloat::rmNearestTiesToEven),
+  };
+
+  for (auto Tp : Data) {
+    uint64_t Op1[2], Op2[2], Expected[2];
+    APFloat::roundingMode RM;
+    std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
+
+    APFloat A1(APFloat::PPCDoubleDouble, APInt(128, 2, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble, APInt(128, 2, Op2));
+    A1.add(A2, RM);
+
+    EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0]);
+    EXPECT_EQ(Expected[1],
+              A1.getSecondFloat().bitcastToAPInt().getRawData()[0]);
+  }
+}
+
+TEST(APFloatTest, PPCDoubleDoubleSubtract) {
+  using DataType = std::tuple<uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
+                              uint64_t, APFloat::roundingMode>;
+  DataType Data[] = {
+      // (1 + 0) - (-1e-105 + 0) = (1 + 1e-105)
+      std::make_tuple(0x3ff0000000000000ull, 0, 0xb960000000000000ull, 0,
+                      0x3ff0000000000000ull, 0x3960000000000000ull,
+                      APFloat::rmNearestTiesToEven),
+      // (1 + 0) - (-1e-106 + 0) = (1 + 1e-106)
+      std::make_tuple(0x3ff0000000000000ull, 0, 0xb950000000000000ull, 0,
+                      0x3ff0000000000000ull, 0x3950000000000000ull,
+                      APFloat::rmNearestTiesToEven),
+  };
+
+  for (auto Tp : Data) {
+    uint64_t Op1[2], Op2[2], Expected[2];
+    APFloat::roundingMode RM;
+    std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
+
+    APFloat A1(APFloat::PPCDoubleDouble, APInt(128, 2, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble, APInt(128, 2, Op2));
+    A1.subtract(A2, RM);
+
+    EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0]);
+    EXPECT_EQ(Expected[1],
+              A1.getSecondFloat().bitcastToAPInt().getRawData()[0]);
+  }
 }
 }

@@ -50,9 +50,8 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
   bool ShouldSkip = llvm::StringSwitch<bool>(Flag)
     .Cases("-MF", "-MT", "-MQ", "-serialize-diagnostic-file", true)
     .Cases("-o", "-coverage-file", "-dependency-file", true)
-    .Cases("-fdebug-compilation-dir", "-include-pch", true)
+    .Cases("-fdebug-compilation-dir", "-diagnostic-log-file", true)
     .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
-    .Case("-diagnostic-log-file", true)
     .Default(false);
   if (ShouldSkip)
     return true;
@@ -64,7 +63,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     .Cases("-internal-externc-isystem", "-iprefix", true)
     .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
     .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
-    .Case("-iframework", true)
+    .Cases("-iframework", "-include-pch", true)
     .Default(false);
   if (IsInclude)
     return HaveCrashVFS ? false : true;

@@ -218,51 +218,76 @@ private:
 class VTableLayout {
 public:
   typedef std::pair<uint64_t, ThunkInfo> VTableThunkTy;
-  typedef llvm::DenseMap<BaseSubobject, uint64_t> AddressPointsMapTy;
+  struct AddressPointLocation {
+    unsigned VTableIndex, AddressPointIndex;
+  };
+  typedef llvm::DenseMap<BaseSubobject, AddressPointLocation>
+      AddressPointsMapTy;
 
 private:
-  uint64_t NumVTableComponents;
-  std::unique_ptr<VTableComponent[]> VTableComponents;
+  // Stores the component indices of the first component of each virtual table in
+  // the virtual table group. To save a little memory in the common case where
+  // the vtable group contains a single vtable, an empty vector here represents
+  // the vector {0}.
+  OwningArrayRef<size_t> VTableIndices;
+
+  OwningArrayRef<VTableComponent> VTableComponents;
 
   /// \brief Contains thunks needed by vtables, sorted by indices.
-  uint64_t NumVTableThunks;
-  std::unique_ptr<VTableThunkTy[]> VTableThunks;
+  OwningArrayRef<VTableThunkTy> VTableThunks;
 
   /// \brief Address points for all vtables.
   AddressPointsMapTy AddressPoints;
 
-  bool IsMicrosoftABI;
-
 public:
-  VTableLayout(uint64_t NumVTableComponents,
-               const VTableComponent *VTableComponents,
-               uint64_t NumVTableThunks,
-               const VTableThunkTy *VTableThunks,
-               const AddressPointsMapTy &AddressPoints,
-               bool IsMicrosoftABI);
+  VTableLayout(ArrayRef<size_t> VTableIndices,
+               ArrayRef<VTableComponent> VTableComponents,
+               ArrayRef<VTableThunkTy> VTableThunks,
+               const AddressPointsMapTy &AddressPoints);
   ~VTableLayout();
 
   ArrayRef<VTableComponent> vtable_components() const {
-    return {VTableComponents.get(), size_t(NumVTableComponents)};
+    return VTableComponents;
   }
 
   ArrayRef<VTableThunkTy> vtable_thunks() const {
-    return {VTableThunks.get(), size_t(NumVTableThunks)};
+    return VTableThunks;
   }
 
-  uint64_t getAddressPoint(BaseSubobject Base) const {
-    assert(AddressPoints.count(Base) &&
-           "Did not find address point!");
-
-    uint64_t AddressPoint = AddressPoints.lookup(Base);
-    assert(AddressPoint != 0 || IsMicrosoftABI);
-    (void)IsMicrosoftABI;
-
-    return AddressPoint;
+  AddressPointLocation getAddressPoint(BaseSubobject Base) const {
+    assert(AddressPoints.count(Base) && "Did not find address point!");
+    return AddressPoints.find(Base)->second;
   }
 
   const AddressPointsMapTy &getAddressPoints() const {
     return AddressPoints;
+  }
+
+  size_t getNumVTables() const {
+    if (VTableIndices.empty())
+      return 1;
+    return VTableIndices.size();
+  }
+
+  size_t getVTableOffset(size_t i) const {
+    if (VTableIndices.empty()) {
+      assert(i == 0);
+      return 0;
+    }
+    return VTableIndices[i];
+  }
+
+  size_t getVTableSize(size_t i) const {
+    if (VTableIndices.empty()) {
+      assert(i == 0);
+      return vtable_components().size();
+    }
+
+    size_t thisIndex = VTableIndices[i];
+    size_t nextIndex = (i + 1 == VTableIndices.size())
+                           ? vtable_components().size()
+                           : VTableIndices[i + 1];
+    return nextIndex - thisIndex;
   }
 };
 

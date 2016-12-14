@@ -5227,8 +5227,9 @@ void InitializationSequence::InitializeFrom(Sema &S,
           InitializedEntity::InitializeElement(S.Context, 0, Entity);
       QualType InitEltT =
           Context.getAsArrayType(Initializer->getType())->getElementType();
-      OpaqueValueExpr OVE(SourceLocation(), InitEltT,
-                          Initializer->getValueKind());
+      OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
+                          Initializer->getValueKind(),
+                          Initializer->getObjectKind());
       Expr *OVEAsExpr = &OVE;
       InitializeFrom(S, Element, Kind, OVEAsExpr, TopLevelOfInitList,
                      TreatUnavailableAsInvalid);

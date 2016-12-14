@@ -542,7 +542,7 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
   const Arg* A = Args.getLastArg(options::OPT_rtlib_EQ);
   StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_RTLIB;
 
-  // "platform" is only used in tests to override CLANG_DEFAULT_RTLIB
+  // Only use "platform" in tests to override CLANG_DEFAULT_RTLIB!
   if (LibName == "compiler-rt")
     return ToolChain::RLT_CompilerRT;
   else if (LibName == "libgcc")
@@ -556,43 +556,22 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
   return GetDefaultRuntimeLibType();
 }
 
-static bool ParseCXXStdlibType(const StringRef& Name,
-                               ToolChain::CXXStdlibType& Type) {
-  if (Name == "libc++")
-    Type = ToolChain::CST_Libcxx;
-  else if (Name == "libstdc++")
-    Type = ToolChain::CST_Libstdcxx;
-  else
-    return false;
-
-  return true;
-}
-
 ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
-  ToolChain::CXXStdlibType Type;
-  bool HasValidType = false;
-  bool ForcePlatformDefault = false;
-
   const Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
-  if (A) {
-    StringRef Value = A->getValue();
-    HasValidType = ParseCXXStdlibType(Value, Type);
+  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_CXX_STDLIB;
 
-    // Only use in tests to override CLANG_DEFAULT_CXX_STDLIB!
-    if (Value == "platform")
-      ForcePlatformDefault = true;
-    else if (!HasValidType)
-      getDriver().Diag(diag::err_drv_invalid_stdlib_name)
-        << A->getAsString(Args);
-  }
+  // Only use "platform" in tests to override CLANG_DEFAULT_CXX_STDLIB!
+  if (LibName == "libc++")
+    return ToolChain::CST_Libcxx;
+  else if (LibName == "libstdc++")
+    return ToolChain::CST_Libstdcxx;
+  else if (LibName == "platform")
+    return GetDefaultCXXStdlibType();
 
-  // If no argument was provided or its value was invalid, look for the
-  // default unless forced or configured to take the platform default.
-  if (!HasValidType && (ForcePlatformDefault ||
-      !ParseCXXStdlibType(CLANG_DEFAULT_CXX_STDLIB, Type)))
-    Type = GetDefaultCXXStdlibType();
+  if (A)
+    getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
 
-  return Type;
+  return GetDefaultCXXStdlibType();
 }
 
 /// \brief Utility function to add a system include directory to CC1 arguments.

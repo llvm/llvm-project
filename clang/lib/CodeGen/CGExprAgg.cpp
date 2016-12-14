@@ -1328,26 +1328,11 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   llvm::Value *begin = Builder.CreateInBoundsGEP(destPtr.getPointer(), indices,
                                                  "arrayinit.begin");
 
-  QualType elementType = E->getSubExpr()->getType();
+  QualType elementType =
+      CGF.getContext().getAsArrayType(E->getType())->getElementType();
   CharUnits elementSize = CGF.getContext().getTypeSizeInChars(elementType);
   CharUnits elementAlign =
       destPtr.getAlignment().alignmentOfArrayElement(elementSize);
-
-  // Prepare for a cleanup.
-  QualType::DestructionKind dtorKind = elementType.isDestructedType();
-  Address endOfInit = Address::invalid();
-  EHScopeStack::stable_iterator cleanup;
-  llvm::Instruction *cleanupDominator = nullptr;
-  if (CGF.needsEHCleanup(dtorKind)) {
-    endOfInit = CGF.CreateTempAlloca(begin->getType(), CGF.getPointerAlign(),
-                                     "arrayinit.endOfInit");
-    CGF.pushIrregularPartialArrayCleanup(begin, endOfInit, elementType,
-                                         elementAlign,
-                                         CGF.getDestroyer(dtorKind));
-    cleanup = CGF.EHStack.stable_begin();
-  } else {
-    dtorKind = QualType::DK_none;
-  }
 
   llvm::BasicBlock *entryBB = Builder.GetInsertBlock();
   llvm::BasicBlock *bodyBB = CGF.createBasicBlock("arrayinit.body");
@@ -1359,11 +1344,22 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   index->addIncoming(zero, entryBB);
   llvm::Value *element = Builder.CreateInBoundsGEP(begin, index);
 
-  // Tell the EH cleanup that we finished with the last element.
-  if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
+  // Prepare for a cleanup.
+  QualType::DestructionKind dtorKind = elementType.isDestructedType();
+  EHScopeStack::stable_iterator cleanup;
+  if (CGF.needsEHCleanup(dtorKind)) {
+    CGF.pushRegularPartialArrayCleanup(
+        begin, element, elementType, elementAlign, CGF.getDestroyer(dtorKind));
+    cleanup = CGF.EHStack.stable_begin();
+  } else {
+    dtorKind = QualType::DK_none;
+  }
 
   // Emit the actual filler expression.
   {
+    // Temporaries created in an array initialization loop are destroyed
+    // at the end of each iteration.
+    CodeGenFunction::RunCleanupsScope CleanupsScope(CGF);
     CodeGenFunction::ArrayInitLoopExprScope Scope(CGF, index);
     LValue elementLV =
         CGF.MakeAddrLValue(Address(element, elementAlign), elementType);
@@ -1385,7 +1381,8 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   CGF.EmitBlock(endBB);
 
   // Leave the partial-array cleanup if we entered one.
-  if (dtorKind) CGF.DeactivateCleanupBlock(cleanup, cleanupDominator);
+  if (dtorKind)
+    CGF.DeactivateCleanupBlock(cleanup, index);
 }
 
 void AggExprEmitter::VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E) {

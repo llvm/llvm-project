@@ -22,17 +22,17 @@ extern const char kText3[];
 void Test() {
   std::string str('x', 4);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: string constructor parameters are probably swapped; expecting string(count, character) [misc-string-constructor]
-  // CHECK-FIXES: std::string str(4, 'x');  
+  // CHECK-FIXES: std::string str(4, 'x');
   std::wstring wstr(L'x', 4);
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: string constructor parameters are probably swapped
-  // CHECK-FIXES: std::wstring wstr(4, L'x');    
+  // CHECK-FIXES: std::wstring wstr(4, L'x');
   std::string s0(0, 'x');
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
   std::string s1(-4, 'x');
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
   std::string s2(0x1000000, 'x');
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
-  
+
   std::string q0("test", 0);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
   std::string q1(kText, -4);

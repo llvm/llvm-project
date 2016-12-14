@@ -32,34 +32,6 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
-unsigned CallLowering::ValueHandler::extendRegister(unsigned ValReg,
-                                                    CCValAssign &VA) {
-  LLT LocTy{VA.getLocVT()};
-  switch (VA.getLocInfo()) {
-  default: break;
-  case CCValAssign::Full:
-  case CCValAssign::BCvt:
-    // FIXME: bitconverting between vector types may or may not be a
-    // nop in big-endian situations.
-    return ValReg;
-  case CCValAssign::AExt:
-    assert(!VA.getLocVT().isVector() && "unexpected vector extend");
-    // Otherwise, it's a nop.
-    return ValReg;
-  case CCValAssign::SExt: {
-    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
-    MIRBuilder.buildSExt(NewReg, ValReg);
-    return NewReg;
-  }
-  case CCValAssign::ZExt: {
-    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
-    MIRBuilder.buildZExt(NewReg, ValReg);
-    return NewReg;
-  }
-  }
-  llvm_unreachable("unable to extend register");
-}
-
 struct IncomingArgHandler : public CallLowering::ValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
     : ValueHandler(MIRBuilder, MRI) {}

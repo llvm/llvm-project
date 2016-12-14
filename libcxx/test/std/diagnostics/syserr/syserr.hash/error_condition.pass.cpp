@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 void
-test(std::size_t i)
+test(int i)
 {
     typedef std::error_condition T;
     typedef std::hash<T> H;
@@ -32,7 +32,7 @@ test(std::size_t i)
     H h;
     T ec(i, std::system_category());
     const std::size_t result = h(ec);
-    LIBCPP_ASSERT(result == i);
+    LIBCPP_ASSERT(result == static_cast<std::size_t>(i));
     ((void)result); // Prevent unused warning
 }
 

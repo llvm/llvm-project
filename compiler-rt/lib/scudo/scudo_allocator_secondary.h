@@ -32,32 +32,39 @@ class ScudoLargeMmapAllocator {
   void *Allocate(AllocatorStats *Stats, uptr Size, uptr Alignment) {
     // The Scudo frontend prevents us from allocating more than
     // MaxAllowedMallocSize, so integer overflow checks would be superfluous.
-    uptr HeadersSize = sizeof(SecondaryHeader) + AlignedChunkHeaderSize;
-    uptr MapSize = RoundUpTo(Size + sizeof(SecondaryHeader), PageSize);
+    uptr MapSize = Size + SecondaryHeaderSize;
+    MapSize = RoundUpTo(MapSize, PageSize);
     // Account for 2 guard pages, one before and one after the chunk.
     MapSize += 2 * PageSize;
-    // Adding an extra Alignment is not required, it was done by the frontend.
+    // The size passed to the Secondary comprises the alignment, if large
+    // enough. Subtract it here to get the requested size, including header.
+    if (Alignment > MinAlignment)
+      Size -= Alignment;
+
     uptr MapBeg = reinterpret_cast<uptr>(MmapNoAccess(MapSize));
     if (MapBeg == ~static_cast<uptr>(0))
       return ReturnNullOrDieOnOOM();
     // A page-aligned pointer is assumed after that, so check it now.
     CHECK(IsAligned(MapBeg, PageSize));
     uptr MapEnd = MapBeg + MapSize;
+    // The beginning of the user area for that allocation comes after the
+    // initial guard page, and both headers. This is the pointer that has to
+    // abide by alignment requirements.
     uptr UserBeg = MapBeg + PageSize + HeadersSize;
-    // In the event of larger alignments, we will attempt to fit the mmap area
-    // better and unmap extraneous memory. This will also ensure that the
+
+    // In the rare event of larger alignments, we will attempt to fit the mmap
+    // area better and unmap extraneous memory. This will also ensure that the
     // offset and unused bytes field of the header stay small.
     if (Alignment > MinAlignment) {
       if (UserBeg & (Alignment - 1))
         UserBeg += Alignment - (UserBeg & (Alignment - 1));
       CHECK_GE(UserBeg, MapBeg);
-      uptr NewMapBeg = UserBeg - HeadersSize;
-      NewMapBeg = RoundDownTo(NewMapBeg, PageSize) - PageSize;
+      uptr NewMapBeg = RoundDownTo(UserBeg - HeadersSize, PageSize) - PageSize;
       CHECK_GE(NewMapBeg, MapBeg);
-      uptr NewMapSize = RoundUpTo(MapSize - Alignment, PageSize);
-      uptr NewMapEnd = NewMapBeg + NewMapSize;
+      uptr NewMapEnd = RoundUpTo(UserBeg + (Size - AlignedChunkHeaderSize),
+                                 PageSize) + PageSize;
       CHECK_LE(NewMapEnd, MapEnd);
-      // Unmap the extra memory if it's large enough.
+      // Unmap the extra memory if it's large enough, on both sides.
       uptr Diff = NewMapBeg - MapBeg;
       if (Diff > PageSize)
         UnmapOrDie(reinterpret_cast<void *>(MapBeg), Diff);
@@ -65,14 +72,13 @@ class ScudoLargeMmapAllocator {
       if (Diff > PageSize)
         UnmapOrDie(reinterpret_cast<void *>(NewMapEnd), Diff);
       MapBeg = NewMapBeg;
-      MapSize = NewMapSize;
       MapEnd = NewMapEnd;
+      MapSize = NewMapEnd - NewMapBeg;
     }
-    uptr UserEnd = UserBeg - AlignedChunkHeaderSize + Size;
-    // For larger alignments, Alignment was added by the frontend to Size.
-    if (Alignment > MinAlignment)
-      UserEnd -= Alignment;
+
+    uptr UserEnd = UserBeg + (Size - AlignedChunkHeaderSize);
     CHECK_LE(UserEnd, MapEnd - PageSize);
+    // Actually mmap the memory, preserving the guard pages on either side.
     CHECK_EQ(MapBeg + PageSize, reinterpret_cast<uptr>(
         MmapFixedOrDie(MapBeg + PageSize, MapSize - 2 * PageSize)));
     uptr Ptr = UserBeg - AlignedChunkHeaderSize;
@@ -84,7 +90,7 @@ class ScudoLargeMmapAllocator {
     // the guard pages.
     Stats->Add(AllocatorStatAllocated, MapSize - 2 * PageSize);
     Stats->Add(AllocatorStatMapped, MapSize - 2 * PageSize);
-    CHECK(IsAligned(UserBeg, Alignment));
+
     return reinterpret_cast<void *>(UserBeg);
   }
 
@@ -173,6 +179,8 @@ class ScudoLargeMmapAllocator {
     return getHeader(reinterpret_cast<uptr>(Ptr));
   }
 
+  const uptr SecondaryHeaderSize = sizeof(SecondaryHeader);
+  const uptr HeadersSize = SecondaryHeaderSize + AlignedChunkHeaderSize;
   uptr PageSize;
   atomic_uint8_t MayReturnNull;
 };

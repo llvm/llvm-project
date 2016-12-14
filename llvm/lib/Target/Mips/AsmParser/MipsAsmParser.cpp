@@ -1786,6 +1786,17 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     }
   }
 
+  // For PIC code convert unconditional jump to unconditional branch.
+  if ((Inst.getOpcode() == Mips::J || Inst.getOpcode() == Mips::J_MM) &&
+      inPicMode()) {
+    MCInst BInst;
+    BInst.setOpcode(inMicroMipsMode() ? Mips::BEQ_MM : Mips::BEQ);
+    BInst.addOperand(MCOperand::createReg(Mips::ZERO));
+    BInst.addOperand(MCOperand::createReg(Mips::ZERO));
+    BInst.addOperand(Inst.getOperand(0));
+    Inst = BInst;
+  }
+
   // This expansion is not in a function called by tryExpandInstruction()
   // because the pseudo-instruction doesn't have a distinct opcode.
   if ((Inst.getOpcode() == Mips::JAL || Inst.getOpcode() == Mips::JAL_MM) &&

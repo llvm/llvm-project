@@ -12,14 +12,14 @@
 #ifndef LLVM_FUZZER_CORPUS
 #define LLVM_FUZZER_CORPUS
 
-#include <random>
-#include <unordered_set>
-
 #include "FuzzerDefs.h"
 #include "FuzzerIO.h"
 #include "FuzzerRandom.h"
 #include "FuzzerSHA1.h"
 #include "FuzzerTracePC.h"
+#include <numeric>
+#include <random>
+#include <unordered_set>
 
 namespace fuzzer {
 
@@ -119,7 +119,7 @@ class InputCorpus {
   void DeleteInput(size_t Idx) {
     InputInfo &II = *Inputs[Idx];
     if (!OutputCorpus.empty() && II.MayDeleteFile)
-      DeleteFile(DirPlusFile(OutputCorpus, Sha1ToString(II.Sha1)));
+      RemoveFile(DirPlusFile(OutputCorpus, Sha1ToString(II.Sha1)));
     Unit().swap(II.U);
     if (FeatureDebug)
       Printf("EVICTED %zd\n", Idx);

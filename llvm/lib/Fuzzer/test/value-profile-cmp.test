@@ -1,7 +1,2 @@
 CHECK: BINGO
-RUN: not LLVMFuzzer-SimpleCmpTest -use_cmp=0 -use_value_profile=1 -runs=100000000 2>&1 | FileCheck %s
-RUN: not LLVMFuzzer-SimpleHashTest -use_cmp=0 -use_value_profile=1 -runs=100000000 2>&1 | FileCheck %s
-RUN: not LLVMFuzzer-AbsNegAndConstantTest -use_cmp=0 -use_value_profile=1 -runs=100000000 2>&1 | FileCheck %s
-RUN: not LLVMFuzzer-AbsNegAndConstant64Test -use_cmp=0 -use_value_profile=1 -runs=100000000 2>&1 | FileCheck %s
-
-
+RUN: not LLVMFuzzer-SimpleCmpTest -seed=1 -use_cmp=0 -use_value_profile=1 -runs=100000000 2>&1 | FileCheck %s

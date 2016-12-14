@@ -34,35 +34,24 @@ define void @test3(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 entry:
 ; TODO: We should have folded the reload into the statepoint.
 ; CHECK-LABEL: @test3
-; CHECK:       	movl	32(%rsp), %r10d
-; CHECK-NEXT: 	movl	24(%rsp), %r11d
-; CHECK-NEXT:   movl	16(%rsp), %eax
+; CHECK:       	pushq %rax
+; CHECK-NEXT: 	Lcfi
+; CHECK-NEXT:   .cfi_def_cfa_offset 16
 ; CHECK-NEXT:   callq	_bar
   %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 9, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i)
   ret void
 }
 
 ; This case just confirms that we don't crash when given more live values
-; than registers.  This is a case where we *have* to use a stack slot.
+; than registers.  This is a case where we *have* to use a stack slot.  This
+; also ends up being a good test of whether we can fold loads from immutable
+; stack slots into the statepoint.
 define void @test4(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z) gc "statepoint-example" {
 entry:
-; TODO: We should have folded the reload into the statepoint.  
 ; CHECK-LABEL: test4
-; CHECK: pushq %r15
-; CHECK: pushq %r14
-; CHECK: pushq %r13
-; CHECK: pushq %r12
-; CHECK: pushq %rbx
-; CHECK: pushq %rax
-; CHECK:       	movl	128(%rsp), %r13d
-; CHECK-NEXT:   movl	120(%rsp), %r12d
-; CHECK-NEXT:   movl	112(%rsp), %r15d
-; CHECK-NEXT:   movl	104(%rsp), %r14d
-; CHECK-NEXT:   movl	96(%rsp), %ebp
-; CHECK-NEXT:   movl	88(%rsp), %ebx
-; CHECK-NEXT:   movl	80(%rsp), %r11d
-; CHECK-NEXT:   movl	72(%rsp), %r10d
-; CHECK-NEXT:   movl	64(%rsp), %eax
+; CHECK:        pushq %rax
+; CHECK-NEXT: 	Lcfi
+; CHECK-NEXT:   .cfi_def_cfa_offset 16
 ; CHECK-NEXT:   callq	_bar
   %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
   ret void
@@ -90,7 +79,7 @@ entry:
 ; CHECK:        movl %edi, %ebx
 ; CHECK:        movl %ebx, 12(%rsp)
 ; CHECK-NEXT:   callq	_baz
-; CHECK-NEXT:  Ltmp6:
+; CHECK-NEXT:  Ltmp
 ; CHECK-NEXT:   callq	_bar
   call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @baz, i32 0, i32 0, i32 0, i32 1, i32 %a)
   call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 1, i32 %a)

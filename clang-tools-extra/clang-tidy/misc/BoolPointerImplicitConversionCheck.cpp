@@ -32,8 +32,8 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
 
 void BoolPointerImplicitConversionCheck::check(
     const MatchFinder::MatchResult &Result) {
-  auto *If = Result.Nodes.getStmtAs<IfStmt>("if");
-  auto *Var = Result.Nodes.getStmtAs<DeclRefExpr>("expr");
+  auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
+  auto *Var = Result.Nodes.getNodeAs<DeclRefExpr>("expr");
 
   // Ignore macros.
   if (Var->getLocStart().isMacroID())

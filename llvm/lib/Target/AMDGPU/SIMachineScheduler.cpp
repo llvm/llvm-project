@@ -1,4 +1,4 @@
-//===-- SIMachineScheduler.cpp - SI Scheduler Interface -*- C++ -*-----===//
+//===-- SIMachineScheduler.cpp - SI Scheduler Interface -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,12 +13,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "SIInstrInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIRegisterInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <map>
+#include <set>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -120,7 +136,6 @@ using namespace llvm;
 // 300-600 cycles. We do not specially take that into account when scheduling
 // As we expect the driver to be able to preload the constants soon.
 
-
 // common code //
 
 #ifndef NDEBUG
@@ -181,7 +196,6 @@ void SIScheduleBlock::addUnit(SUnit *SU) {
 }
 
 #ifndef NDEBUG
-
 void SIScheduleBlock::traceCandidate(const SISchedCandidate &Cand) {
 
   dbgs() << "  SU(" << Cand.SU->NodeNum << ") " << getReasonStr(Cand.Reason);
@@ -479,7 +493,7 @@ void SIScheduleBlock::releaseSuccessors(SUnit *SU, bool InOrOutBlock) {
 void SIScheduleBlock::nodeScheduled(SUnit *SU) {
   // Is in TopReadySUs
   assert (!SU->NumPredsLeft);
-  std::vector<SUnit *>::iterator I = find(TopReadySUs, SU);
+  std::vector<SUnit *>::iterator I = llvm::find(TopReadySUs, SU);
   if (I == TopReadySUs.end()) {
     dbgs() << "Data Structure Bug in SI Scheduler\n";
     llvm_unreachable(nullptr);
@@ -588,9 +602,8 @@ void SIScheduleBlock::printDebug(bool full) {
     }
   }
 
-   dbgs() << "///////////////////////\n";
+  dbgs() << "///////////////////////\n";
 }
-
 #endif
 
 // SIScheduleBlockCreator //
@@ -599,8 +612,7 @@ SIScheduleBlockCreator::SIScheduleBlockCreator(SIScheduleDAGMI *DAG) :
 DAG(DAG) {
 }
 
-SIScheduleBlockCreator::~SIScheduleBlockCreator() {
-}
+SIScheduleBlockCreator::~SIScheduleBlockCreator() = default;
 
 SIScheduleBlocks
 SIScheduleBlockCreator::getBlocks(SISchedulerBlockCreatorVariant BlockVariant) {
@@ -1058,8 +1070,7 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
     unsigned Color = CurrentColoring[SU->NodeNum];
     if (RealID.find(Color) == RealID.end()) {
       int ID = CurrentBlocks.size();
-      BlockPtrs.push_back(
-        make_unique<SIScheduleBlock>(DAG, this, ID));
+      BlockPtrs.push_back(llvm::make_unique<SIScheduleBlock>(DAG, this, ID));
       CurrentBlocks.push_back(BlockPtrs.rbegin()->get());
       RealID[Color] = ID;
     }
@@ -1264,7 +1275,7 @@ void SIScheduleBlockCreator::fillStats() {
   for (unsigned i = 0, e = DAGSize; i != e; ++i) {
     int BlockIndice = TopDownIndex2Block[i];
     SIScheduleBlock *Block = CurrentBlocks[BlockIndice];
-    if (Block->getPreds().size() == 0)
+    if (Block->getPreds().empty())
       Block->Depth = 0;
     else {
       unsigned Depth = 0;
@@ -1279,7 +1290,7 @@ void SIScheduleBlockCreator::fillStats() {
   for (unsigned i = 0, e = DAGSize; i != e; ++i) {
     int BlockIndice = BottomUpIndex2Block[i];
     SIScheduleBlock *Block = CurrentBlocks[BlockIndice];
-    if (Block->getSuccs().size() == 0)
+    if (Block->getSuccs().empty())
       Block->Height = 0;
     else {
       unsigned Height = 0;
@@ -1653,7 +1664,7 @@ SIScheduler::scheduleVariant(SISchedulerBlockCreatorVariant BlockVariant,
 // SIScheduleDAGMI //
 
 SIScheduleDAGMI::SIScheduleDAGMI(MachineSchedContext *C) :
-  ScheduleDAGMILive(C, make_unique<GenericScheduler>(C)) {
+  ScheduleDAGMILive(C, llvm::make_unique<GenericScheduler>(C)) {
   SITII = static_cast<const SIInstrInfo*>(TII);
   SITRI = static_cast<const SIRegisterInfo*>(TRI);
 
@@ -1661,8 +1672,7 @@ SIScheduleDAGMI::SIScheduleDAGMI(MachineSchedContext *C) :
   SGPRSetID = SITRI->getSGPRPressureSet();
 }
 
-SIScheduleDAGMI::~SIScheduleDAGMI() {
-}
+SIScheduleDAGMI::~SIScheduleDAGMI() = default;
 
 // Code adapted from scheduleDAG.cpp
 // Does a topological sort over the SUs.

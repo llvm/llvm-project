@@ -13191,6 +13191,17 @@ static Constant *getSequentialMask(IRBuilder<> &Builder, unsigned Start,
 ///
 /// Note that the new shufflevectors will be removed and we'll only generate one
 /// vst3 instruction in CodeGen.
+///
+/// Example for a more general valid mask (Factor 3). Lower:
+///        %i.vec = shuffle <32 x i32> %v0, <32 x i32> %v1,
+///                 <4, 32, 16, 5, 33, 17, 6, 34, 18, 7, 35, 19>
+///        store <12 x i32> %i.vec, <12 x i32>* %ptr
+///
+///      Into:
+///        %sub.v0 = shuffle <32 x i32> %v0, <32 x i32> v1, <4, 5, 6, 7>
+///        %sub.v1 = shuffle <32 x i32> %v0, <32 x i32> v1, <32, 33, 34, 35>
+///        %sub.v2 = shuffle <32 x i32> %v0, <32 x i32> v1, <16, 17, 18, 19>
+///        call void llvm.arm.neon.vst3(%ptr, %sub.v0, %sub.v1, %sub.v2, 4)
 bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
                                               ShuffleVectorInst *SVI,
                                               unsigned Factor) const {
@@ -13201,9 +13212,9 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   assert(VecTy->getVectorNumElements() % Factor == 0 &&
          "Invalid interleaved store");
 
-  unsigned NumSubElts = VecTy->getVectorNumElements() / Factor;
+  unsigned LaneLen = VecTy->getVectorNumElements() / Factor;
   Type *EltTy = VecTy->getVectorElementType();
-  VectorType *SubVecTy = VectorType::get(EltTy, NumSubElts);
+  VectorType *SubVecTy = VectorType::get(EltTy, LaneLen);
 
   const DataLayout &DL = SI->getModule()->getDataLayout();
   unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
@@ -13230,7 +13241,7 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
     Op0 = Builder.CreatePtrToInt(Op0, IntVecTy);
     Op1 = Builder.CreatePtrToInt(Op1, IntVecTy);
 
-    SubVecTy = VectorType::get(IntTy, NumSubElts);
+    SubVecTy = VectorType::get(IntTy, LaneLen);
   }
 
   static const Intrinsic::ID StoreInts[3] = {Intrinsic::arm_neon_vst2,
@@ -13246,9 +13257,28 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
       SI->getModule(), StoreInts[Factor - 2], Tys);
 
   // Split the shufflevector operands into sub vectors for the new vstN call.
-  for (unsigned i = 0; i < Factor; i++)
-    Ops.push_back(Builder.CreateShuffleVector(
-        Op0, Op1, getSequentialMask(Builder, NumSubElts * i, NumSubElts)));
+  auto Mask = SVI->getShuffleMask();
+  for (unsigned i = 0; i < Factor; i++) {
+    if (Mask[i] >= 0) {
+      Ops.push_back(Builder.CreateShuffleVector(
+        Op0, Op1, getSequentialMask(Builder, Mask[i], LaneLen)));
+    } else {
+      unsigned StartMask = 0;
+      for (unsigned j = 1; j < LaneLen; j++) {
+        if (Mask[j*Factor + i] >= 0) {
+          StartMask = Mask[j*Factor + i] - j;
+          break;
+        }
+      }
+      // Note: If all elements in a chunk are undefs, StartMask=0!
+      // Note: Filling undef gaps with random elements is ok, since
+      // those elements were being written anyway (with undefs).
+      // In the case of all undefs we're defaulting to using elems from 0
+      // Note: StartMask cannot be negative, it's checked in isReInterleaveMask
+      Ops.push_back(Builder.CreateShuffleVector(
+        Op0, Op1, getSequentialMask(Builder, StartMask, LaneLen)));
+    }
+  }
 
   Ops.push_back(Builder.getInt32(SI->getAlignment()));
   Builder.CreateCall(VstNFunc, Ops);

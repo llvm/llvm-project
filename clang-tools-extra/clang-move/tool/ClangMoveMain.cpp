@@ -10,6 +10,7 @@
 #include "ClangMove.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
@@ -61,19 +62,19 @@ cl::opt<std::string>
     NewCC("new_cc", cl::desc("The relative/absolute file path of new cc."),
           cl::cat(ClangMoveCategory));
 
-cl::opt<bool> OldDependOnNew(
-    "old_depend_on_new",
-    cl::desc(
-        "Whether old header will depend on new header. If true, clang-move will "
-        "add #include of new header to old header."),
-    cl::init(false), cl::cat(ClangMoveCategory));
+cl::opt<bool>
+    OldDependOnNew("old_depend_on_new",
+                   cl::desc("Whether old header will depend on new header. If "
+                            "true, clang-move will "
+                            "add #include of new header to old header."),
+                   cl::init(false), cl::cat(ClangMoveCategory));
 
-cl::opt<bool> NewDependOnOld(
-    "new_depend_on_old",
-    cl::desc(
-        "Whether new header will depend on old header. If true, clang-move will "
-        "add #include of old header to new header."),
-    cl::init(false), cl::cat(ClangMoveCategory));
+cl::opt<bool>
+    NewDependOnOld("new_depend_on_old",
+                   cl::desc("Whether new header will depend on old header. If "
+                            "true, clang-move will "
+                            "add #include of old header to new header."),
+                   cl::init(false), cl::cat(ClangMoveCategory));
 
 cl::opt<std::string>
     Style("style",
@@ -95,18 +96,7 @@ cl::opt<bool> DumpDecls(
 
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
-  // Add "-fparse-all-comments" compile option to make clang parse all comments,
-  // otherwise, ordinary comments like "//" and "/*" won't get parsed (This is
-  // a bit of hacky).
-  std::vector<std::string> ExtraArgs(argv, argv + argc);
-  ExtraArgs.insert(ExtraArgs.begin() + 1, "-extra-arg=-fparse-all-comments");
-  std::unique_ptr<const char *[]> RawExtraArgs(
-      new const char *[ExtraArgs.size()]);
-  for (size_t i = 0; i < ExtraArgs.size(); ++i)
-    RawExtraArgs[i] = ExtraArgs[i].c_str();
-  int Argc = argc + 1;
-  tooling::CommonOptionsParser OptionsParser(Argc, RawExtraArgs.get(),
-                                             ClangMoveCategory);
+  tooling::CommonOptionsParser OptionsParser(argc, argv, ClangMoveCategory);
 
   if (OldDependOnNew && NewDependOnOld) {
     llvm::errs() << "Provide either --old_depend_on_new or "
@@ -117,6 +107,9 @@ int main(int argc, const char **argv) {
 
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(),
                                 OptionsParser.getSourcePathList());
+  // Add "-fparse-all-comments" compile option to make clang parse all comments.
+  Tool.appendArgumentsAdjuster(tooling::getInsertArgumentAdjuster(
+      "-fparse-all-comments", tooling::ArgumentInsertPosition::BEGIN));
   move::MoveDefinitionSpec Spec;
   Spec.Names = {Names.begin(), Names.end()};
   Spec.OldHeader = OldHeader;

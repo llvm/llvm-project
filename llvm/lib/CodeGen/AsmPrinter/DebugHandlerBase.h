@@ -38,10 +38,12 @@ protected:
   MachineModuleInfo *MMI;
 
   /// Previous instruction's location information. This is used to
-  /// determine label location to indicate scope boundries in dwarf
-  /// debug info.
+  /// determine label location to indicate scope boundaries in debug info.
+  /// We track the previous instruction's source location (if not line 0),
+  /// whether it was a label, and its parent BB.
   DebugLoc PrevInstLoc;
   MCSymbol *PrevLabel = nullptr;
+  const MachineBasicBlock *PrevInstBB = nullptr;
 
   /// This location indicates end of function prologue and beginning of
   /// function body.

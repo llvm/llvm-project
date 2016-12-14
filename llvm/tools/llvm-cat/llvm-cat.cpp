@@ -28,7 +28,7 @@ static cl::opt<std::string> OutputFilename("o", cl::Required,
                                            cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
-static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
+static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
                                             cl::desc("<input  files>"));
 
 int main(int argc, char **argv) {

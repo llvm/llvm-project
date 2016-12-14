@@ -139,7 +139,7 @@ Example:
    public:
  =  // using -fdelayed-template-parsing (default on Windows)
  =  C(const std::string &S) : S(S) {}
- 
+
  +  // using -fno-delayed-template-parsing (default on non-Windows systems)
  +  C(std::string S) : S(std::move(S)) {}
    };

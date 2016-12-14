@@ -98,9 +98,8 @@ declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
 define <2 x double> @load_fold_cvtss2sd_int(<4 x float> *%a) {
 ; CHECK-LABEL: load_fold_cvtss2sd_int:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movaps (%rdi), %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cvtss2sd %xmm1, %xmm0
+; CHECK-NEXT:    cvtss2sd (%rdi), %xmm0
 ; CHECK-NEXT:    retq
   %ld = load <4 x float>, <4 x float> *%a
   %x = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> <double 0x0, double 0x0>, <4 x float> %ld)

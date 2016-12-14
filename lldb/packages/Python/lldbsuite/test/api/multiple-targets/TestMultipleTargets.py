@@ -21,15 +21,9 @@ class TestMultipleTargets(TestBase):
     @skipIfNoSBHeaders
     @skipIfHostIncompatibleWithRemote
     @expectedFailureAll(
-        archs="i[3-6]86",
-        bugnumber="multi-process-driver.cpp creates an x64 target")
-    @expectedFailureAll(
-        oslist=[
-            "windows",
-            "linux",
-            "freebsd"],
+        oslist=["windows", "freebsd"],
         bugnumber="llvm.org/pr20282")
-    def test_multiple_debuggers(self):
+    def test_multiple_targets(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
         self.driver_exe = os.path.join(os.getcwd(), "multi-target")

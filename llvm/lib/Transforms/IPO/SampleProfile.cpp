@@ -88,6 +88,52 @@ typedef DenseMap<Edge, uint64_t> EdgeWeightMap;
 typedef DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>
     BlockEdgeMap;
 
+class SampleCoverageTracker {
+public:
+  SampleCoverageTracker() : SampleCoverage(), TotalUsedSamples(0) {}
+
+  bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
+                       uint32_t Discriminator, uint64_t Samples);
+  unsigned computeCoverage(unsigned Used, unsigned Total) const;
+  unsigned countUsedRecords(const FunctionSamples *FS) const;
+  unsigned countBodyRecords(const FunctionSamples *FS) const;
+  uint64_t getTotalUsedSamples() const { return TotalUsedSamples; }
+  uint64_t countBodySamples(const FunctionSamples *FS) const;
+  void clear() {
+    SampleCoverage.clear();
+    TotalUsedSamples = 0;
+  }
+
+private:
+  typedef std::map<LineLocation, unsigned> BodySampleCoverageMap;
+  typedef DenseMap<const FunctionSamples *, BodySampleCoverageMap>
+      FunctionSamplesCoverageMap;
+
+  /// Coverage map for sampling records.
+  ///
+  /// This map keeps a record of sampling records that have been matched to
+  /// an IR instruction. This is used to detect some form of staleness in
+  /// profiles (see flag -sample-profile-check-coverage).
+  ///
+  /// Each entry in the map corresponds to a FunctionSamples instance.  This is
+  /// another map that counts how many times the sample record at the
+  /// given location has been used.
+  FunctionSamplesCoverageMap SampleCoverage;
+
+  /// Number of samples used from the profile.
+  ///
+  /// When a sampling record is used for the first time, the samples from
+  /// that record are added to this accumulator.  Coverage is later computed
+  /// based on the total number of samples available in this function and
+  /// its callsites.
+  ///
+  /// Note that this accumulator tracks samples used from a single function
+  /// and all the inlined callsites. Strictly, we should have a map of counters
+  /// keyed by FunctionSamples pointers, but these stats are cleared after
+  /// every function, so we just need to keep a single counter.
+  uint64_t TotalUsedSamples;
+};
+
 /// \brief Sample profile pass.
 ///
 /// This pass reads profile data from the file specified by
@@ -110,8 +156,8 @@ protected:
   bool runOnFunction(Function &F);
   unsigned getFunctionLoc(Function &F);
   bool emitAnnotations(Function &F);
-  ErrorOr<uint64_t> getInstWeight(const Instruction &I) const;
-  ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB) const;
+  ErrorOr<uint64_t> getInstWeight(const Instruction &I);
+  ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
   const FunctionSamples *findCalleeFunctionSamples(const Instruction &I) const;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineHotFunctions(Function &F);
@@ -169,6 +215,8 @@ protected:
   /// \brief Successors for each basic block in the CFG.
   BlockEdgeMap Successors;
 
+  SampleCoverageTracker CoverageTracker;
+
   /// \brief Profile reader object.
   std::unique_ptr<SampleProfileReader> Reader;
 
@@ -214,54 +262,6 @@ public:
 private:
   SampleProfileLoader SampleLoader;
 };
-
-class SampleCoverageTracker {
-public:
-  SampleCoverageTracker() : SampleCoverage(), TotalUsedSamples(0) {}
-
-  bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
-                       uint32_t Discriminator, uint64_t Samples);
-  unsigned computeCoverage(unsigned Used, unsigned Total) const;
-  unsigned countUsedRecords(const FunctionSamples *FS) const;
-  unsigned countBodyRecords(const FunctionSamples *FS) const;
-  uint64_t getTotalUsedSamples() const { return TotalUsedSamples; }
-  uint64_t countBodySamples(const FunctionSamples *FS) const;
-  void clear() {
-    SampleCoverage.clear();
-    TotalUsedSamples = 0;
-  }
-
-private:
-  typedef std::map<LineLocation, unsigned> BodySampleCoverageMap;
-  typedef DenseMap<const FunctionSamples *, BodySampleCoverageMap>
-      FunctionSamplesCoverageMap;
-
-  /// Coverage map for sampling records.
-  ///
-  /// This map keeps a record of sampling records that have been matched to
-  /// an IR instruction. This is used to detect some form of staleness in
-  /// profiles (see flag -sample-profile-check-coverage).
-  ///
-  /// Each entry in the map corresponds to a FunctionSamples instance.  This is
-  /// another map that counts how many times the sample record at the
-  /// given location has been used.
-  FunctionSamplesCoverageMap SampleCoverage;
-
-  /// Number of samples used from the profile.
-  ///
-  /// When a sampling record is used for the first time, the samples from
-  /// that record are added to this accumulator.  Coverage is later computed
-  /// based on the total number of samples available in this function and
-  /// its callsites.
-  ///
-  /// Note that this accumulator tracks samples used from a single function
-  /// and all the inlined callsites. Strictly, we should have a map of counters
-  /// keyed by FunctionSamples pointers, but these stats are cleared after
-  /// every function, so we just need to keep a single counter.
-  uint64_t TotalUsedSamples;
-};
-
-SampleCoverageTracker CoverageTracker;
 
 /// Return true if the given callsite is hot wrt to its caller.
 ///
@@ -452,7 +452,7 @@ void SampleProfileLoader::printBlockWeight(raw_ostream &OS,
 ///
 /// \returns the weight of \p Inst.
 ErrorOr<uint64_t>
-SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
+SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   const DebugLoc &DLoc = Inst.getDebugLoc();
   if (!DLoc)
     return std::error_code();
@@ -512,7 +512,7 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
 ///
 /// \returns the weight for \p BB.
 ErrorOr<uint64_t>
-SampleProfileLoader::getBlockWeight(const BasicBlock *BB) const {
+SampleProfileLoader::getBlockWeight(const BasicBlock *BB) {
   uint64_t Max = 0;
   bool HasWeight = false;
   for (auto &I : BB->getInstList()) {

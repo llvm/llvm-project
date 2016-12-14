@@ -1,4 +1,4 @@
-//===- PPCBoolRetToInt.cpp - Convert bool literals to i32 if they are returned ==//
+//===- PPCBoolRetToInt.cpp ------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -33,15 +33,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Pass.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -57,7 +68,6 @@ STATISTIC(NumBoolToIntPromotion,
           "Total number of times a bool was promoted to an int");
 
 class PPCBoolRetToInt : public FunctionPass {
-
   static SmallPtrSet<Value *, 8> findAllDefs(Value *V) {
     SmallPtrSet<Value *, 8> Defs;
     SmallVector<Value *, 8> WorkList;
@@ -66,7 +76,7 @@ class PPCBoolRetToInt : public FunctionPass {
     while (!WorkList.empty()) {
       Value *Curr = WorkList.back();
       WorkList.pop_back();
-      User *CurrUser = dyn_cast<User>(Curr);
+      auto *CurrUser = dyn_cast<User>(Curr);
       // Operands of CallInst are skipped because they may not be Bool type,
       // and their positions are defined by ABI.
       if (CurrUser && !isa<CallInst>(Curr))
@@ -80,9 +90,9 @@ class PPCBoolRetToInt : public FunctionPass {
   // Translate a i1 value to an equivalent i32 value:
   static Value *translate(Value *V) {
     Type *Int32Ty = Type::getInt32Ty(V->getContext());
-    if (Constant *C = dyn_cast<Constant>(V))
+    if (auto *C = dyn_cast<Constant>(V))
       return ConstantExpr::getZExt(C, Int32Ty);
-    if (PHINode *P = dyn_cast<PHINode>(V)) {
+    if (auto *P = dyn_cast<PHINode>(V)) {
       // Temporarily set the operands to 0. We'll fix this later in
       // runOnUse.
       Value *Zero = Constant::getNullValue(Int32Ty);
@@ -93,8 +103,8 @@ class PPCBoolRetToInt : public FunctionPass {
       return Q;
     }
 
-    Argument *A = dyn_cast<Argument>(V);
-    Instruction *I = dyn_cast<Instruction>(V);
+    auto *A = dyn_cast<Argument>(V);
+    auto *I = dyn_cast<Instruction>(V);
     assert((A || I) && "Unknown value type");
 
     auto InstPt =
@@ -117,7 +127,7 @@ class PPCBoolRetToInt : public FunctionPass {
     // Condition 1
     for (auto &BB : F)
       for (auto &I : BB)
-        if (const PHINode *P = dyn_cast<PHINode>(&I))
+        if (const auto *P = dyn_cast<PHINode>(&I))
           if (P->getType()->isIntegerTy(1))
             Promotable.insert(P);
 
@@ -134,13 +144,14 @@ class PPCBoolRetToInt : public FunctionPass {
       };
       const auto &Users = P->users();
       const auto &Operands = P->operands();
-      if (!all_of(Users, IsValidUser) || !all_of(Operands, IsValidOperand))
+      if (!llvm::all_of(Users, IsValidUser) ||
+          !llvm::all_of(Operands, IsValidOperand))
         ToRemove.push_back(P);
     }
 
     // Iterate to convergence
     auto IsPromotable = [&Promotable] (const Value *V) -> bool {
-      const PHINode *Phi = dyn_cast<PHINode>(V);
+      const auto *Phi = dyn_cast<PHINode>(V);
       return !Phi || Promotable.count(Phi);
     };
     while (!ToRemove.empty()) {
@@ -152,7 +163,8 @@ class PPCBoolRetToInt : public FunctionPass {
         // Condition 4 and 5
         const auto &Users = P->users();
         const auto &Operands = P->operands();
-        if (!all_of(Users, IsPromotable) || !all_of(Operands, IsPromotable))
+        if (!llvm::all_of(Users, IsPromotable) ||
+            !llvm::all_of(Operands, IsPromotable))
           ToRemove.push_back(P);
       }
     }
@@ -164,11 +176,12 @@ class PPCBoolRetToInt : public FunctionPass {
 
  public:
   static char ID;
+
   PPCBoolRetToInt() : FunctionPass(ID) {
     initializePPCBoolRetToIntPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnFunction(Function &F) {
+  bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
 
@@ -177,12 +190,12 @@ class PPCBoolRetToInt : public FunctionPass {
     bool Changed = false;
     for (auto &BB : F) {
       for (auto &I : BB) {
-        if (ReturnInst *R = dyn_cast<ReturnInst>(&I))
+        if (auto *R = dyn_cast<ReturnInst>(&I))
           if (F.getReturnType()->isIntegerTy(1))
             Changed |=
               runOnUse(R->getOperandUse(0), PromotablePHINodes, Bool2IntMap);
 
-        if (CallInst *CI = dyn_cast<CallInst>(&I))
+        if (auto *CI = dyn_cast<CallInst>(&I))
           for (auto &U : CI->operands())
             if (U->getType()->isIntegerTy(1))
               Changed |= runOnUse(U, PromotablePHINodes, Bool2IntMap);
@@ -197,7 +210,7 @@ class PPCBoolRetToInt : public FunctionPass {
     auto Defs = findAllDefs(U);
 
     // If the values are all Constants or Arguments, don't bother
-    if (none_of(Defs, isa<Instruction, Value *>))
+    if (llvm::none_of(Defs, isa<Instruction, Value *>))
       return false;
 
     // Presently, we only know how to handle PHINode, Constant, Arguments and
@@ -209,7 +222,7 @@ class PPCBoolRetToInt : public FunctionPass {
         return false;
 
     for (Value *V : Defs)
-      if (const PHINode *P = dyn_cast<PHINode>(V))
+      if (const auto *P = dyn_cast<PHINode>(V))
         if (!PromotablePHINodes.count(P))
           return false;
 
@@ -226,8 +239,8 @@ class PPCBoolRetToInt : public FunctionPass {
     // Replace the operands of the translated instructions. They were set to
     // zero in the translate function.
     for (auto &Pair : BoolToIntMap) {
-      User *First = dyn_cast<User>(Pair.first);
-      User *Second = dyn_cast<User>(Pair.second);
+      auto *First = dyn_cast<User>(Pair.first);
+      auto *Second = dyn_cast<User>(Pair.second);
       assert((!First || Second) && "translated from user to non-user!?");
       // Operands of CallInst are skipped because they may not be Bool type,
       // and their positions are defined by ABI.
@@ -238,19 +251,20 @@ class PPCBoolRetToInt : public FunctionPass {
 
     Value *IntRetVal = BoolToIntMap[U];
     Type *Int1Ty = Type::getInt1Ty(U->getContext());
-    Instruction *I = cast<Instruction>(U.getUser());
+    auto *I = cast<Instruction>(U.getUser());
     Value *BackToBool = new TruncInst(IntRetVal, Int1Ty, "backToBool", I);
     U.set(BackToBool);
 
     return true;
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };
-}
+
+} // end anonymous namespace
 
 char PPCBoolRetToInt::ID = 0;
 INITIALIZE_PASS(PPCBoolRetToInt, "bool-ret-to-int",

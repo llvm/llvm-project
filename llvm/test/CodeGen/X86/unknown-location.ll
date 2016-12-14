@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -mtriple=x86_64-apple-darwin10 -use-unknown-locations | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -mtriple=x86_64-apple-darwin10 -use-unknown-locations=Enable | FileCheck %s
 
 ; The divide instruction does not have a debug location. CodeGen should
 ; represent this in the debug information. This is done by setting line
