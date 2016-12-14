@@ -398,6 +398,8 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
 
     ModuleMacroInfo *getModuleInfo(Preprocessor &PP,
                                    const IdentifierInfo *II) const {
+      if (II->isOutOfDate())
+        PP.updateOutOfDateIdentifier(const_cast<IdentifierInfo&>(*II));
       // FIXME: Find a spare bit on IdentifierInfo and store a
       //        HasModuleMacros flag.
       if (!II->hasMacroDefinition() ||
@@ -653,6 +655,8 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
   };
   DeserializedMacroInfoChain *DeserialMIChainHead;
 
+  void updateOutOfDateIdentifier(IdentifierInfo &II) const;
+
 public:
   Preprocessor(IntrusiveRefCntPtr<PreprocessorOptions> PPOpts,
                DiagnosticsEngine &diags, LangOptions &opts,
@@ -900,6 +904,8 @@ public:
 
   /// \brief Get the list of leaf (non-overridden) module macros for a name.
   ArrayRef<ModuleMacro*> getLeafModuleMacros(const IdentifierInfo *II) const {
+    if (II->isOutOfDate())
+      updateOutOfDateIdentifier(const_cast<IdentifierInfo&>(*II));
     auto I = LeafModuleMacros.find(II);
     if (I != LeafModuleMacros.end())
       return I->second;
