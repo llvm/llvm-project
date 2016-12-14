@@ -7592,7 +7592,7 @@ enum OpenCLParamType {
   ValidKernelParam,
   PtrPtrKernelParam,
   PtrKernelParam,
-  PrivatePtrKernelParam,
+  InvalidAddrSpacePtrKernelParam,
   InvalidKernelParam,
   RecordKernelParam
 };
@@ -7602,8 +7602,10 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
     QualType PointeeType = PT->getPointeeType();
     if (PointeeType->isPointerType())
       return PtrPtrKernelParam;
-    return PointeeType.getAddressSpace() == 0 ? PrivatePtrKernelParam
-                                              : PtrKernelParam;
+    if (PointeeType.getAddressSpace() == LangAS::opencl_generic ||
+        PointeeType.getAddressSpace() == 0)
+      return InvalidAddrSpacePtrKernelParam;
+    return PtrKernelParam;
   }
 
   // TODO: Forbid the other integer types (size_t, ptrdiff_t...) when they can
@@ -7651,11 +7653,12 @@ static void checkIsValidOpenCLKernelParameter(
     D.setInvalidType();
     return;
 
-  case PrivatePtrKernelParam:
-    // OpenCL v1.2 s6.9.a:
-    // A kernel function argument cannot be declared as a
-    // pointer to the private address space.
-    S.Diag(Param->getLocation(), diag::err_opencl_private_ptr_kernel_param);
+  case InvalidAddrSpacePtrKernelParam:
+    // OpenCL v1.0 s6.5:
+    // __kernel function arguments declared to be a pointer of a type can point
+    // to one of the following address spaces only : __global, __local or
+    // __constant.
+    S.Diag(Param->getLocation(), diag::err_kernel_arg_address_space);
     D.setInvalidType();
     return;
 
@@ -7742,7 +7745,7 @@ static void checkIsValidOpenCLKernelParameter(
       // do not allow OpenCL objects to be passed as elements of the struct or
       // union.
       if (ParamType == PtrKernelParam || ParamType == PtrPtrKernelParam ||
-          ParamType == PrivatePtrKernelParam) {
+          ParamType == InvalidAddrSpacePtrKernelParam) {
         S.Diag(Param->getLocation(),
                diag::err_record_with_pointers_kernel_param)
           << PT->isUnionType()
@@ -9656,9 +9659,6 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
 
   VarDeclOrName VN{VDecl, Name};
 
-  // FIXME: Deduction for a decomposition declaration does weird things if the
-  // initializer is an array.
-
   ArrayRef<Expr *> DeduceInits = Init;
   if (DirectInit) {
     if (auto *PL = dyn_cast<ParenListExpr>(Init))
@@ -9706,6 +9706,15 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     Init = Result.get();
     DefaultedAnyToId = true;
   }
+
+  // C++ [dcl.decomp]p1:
+  //   If the assignment-expression [...] has array type A and no ref-qualifier
+  //   is present, e has type cv A
+  if (VDecl && isa<DecompositionDecl>(VDecl) &&
+      Context.hasSameUnqualifiedType(Type, Context.getAutoDeductType()) &&
+      DeduceInit->getType()->isConstantArrayType())
+    return Context.getQualifiedType(DeduceInit->getType(),
+                                    Type.getQualifiers());
 
   QualType DeducedType;
   if (DeduceAutoType(TSI, DeduceInit, DeducedType) == DAR_Failed) {

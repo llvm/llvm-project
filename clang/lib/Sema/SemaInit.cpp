@@ -3068,6 +3068,7 @@ void InitializationSequence::Step::Destroy() {
   case SK_ArrayLoopIndex:
   case SK_ArrayLoopInit:
   case SK_ArrayInit:
+  case SK_GNUArrayInit:
   case SK_ParenthesizedArrayInit:
   case SK_PassByIndirectCopyRestore:
   case SK_PassByIndirectRestore:
@@ -3302,9 +3303,9 @@ void InitializationSequence::AddObjCObjectConversionStep(QualType T) {
   Steps.push_back(S);
 }
 
-void InitializationSequence::AddArrayInitStep(QualType T) {
+void InitializationSequence::AddArrayInitStep(QualType T, bool IsGNUExtension) {
   Step S;
-  S.Kind = SK_ArrayInit;
+  S.Kind = IsGNUExtension ? SK_GNUArrayInit : SK_ArrayInit;
   S.Type = T;
   Steps.push_back(S);
 }
@@ -5217,8 +5218,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
         canPerformArrayCopy(Entity)) {
       // If source is a prvalue, use it directly.
       if (Initializer->getValueKind() == VK_RValue) {
-        // FIXME: This produces a bogus extwarn
-        AddArrayInitStep(DestType);
+        AddArrayInitStep(DestType, /*IsGNUExtension*/false);
         return;
       }
 
@@ -5227,8 +5227,9 @@ void InitializationSequence::InitializeFrom(Sema &S,
           InitializedEntity::InitializeElement(S.Context, 0, Entity);
       QualType InitEltT =
           Context.getAsArrayType(Initializer->getType())->getElementType();
-      OpaqueValueExpr OVE(SourceLocation(), InitEltT,
-                          Initializer->getValueKind());
+      OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
+                          Initializer->getValueKind(),
+                          Initializer->getObjectKind());
       Expr *OVEAsExpr = &OVE;
       InitializeFrom(S, Element, Kind, OVEAsExpr, TopLevelOfInitList,
                      TreatUnavailableAsInvalid);
@@ -5250,7 +5251,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       else if (Initializer->HasSideEffects(S.Context))
         SetFailed(FK_NonConstantArrayInit);
       else {
-        AddArrayInitStep(DestType);
+        AddArrayInitStep(DestType, /*IsGNUExtension*/true);
       }
     }
     // Note: as a GNU C++ extension, we allow list-initialization of a
@@ -6519,6 +6520,7 @@ InitializationSequence::Perform(Sema &S,
   case SK_ArrayLoopIndex:
   case SK_ArrayLoopInit:
   case SK_ArrayInit:
+  case SK_GNUArrayInit:
   case SK_ParenthesizedArrayInit:
   case SK_PassByIndirectCopyRestore:
   case SK_PassByIndirectRestore:
@@ -7010,13 +7012,14 @@ InitializationSequence::Perform(Sema &S,
       break;
     }
 
-    case SK_ArrayInit:
+    case SK_GNUArrayInit:
       // Okay: we checked everything before creating this step. Note that
       // this is a GNU extension.
       S.Diag(Kind.getLocation(), diag::ext_array_init_copy)
         << Step->Type << CurInit.get()->getType()
         << CurInit.get()->getSourceRange();
-
+      LLVM_FALLTHROUGH;
+    case SK_ArrayInit:
       // If the destination type is an incomplete array type, update the
       // type accordingly.
       if (ResultType) {
@@ -7973,6 +7976,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case SK_ArrayInit:
       OS << "array initialization";
+      break;
+
+    case SK_GNUArrayInit:
+      OS << "array initialization (GNU extension)";
       break;
 
     case SK_ParenthesizedArrayInit:

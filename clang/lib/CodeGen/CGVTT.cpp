@@ -23,7 +23,7 @@ GetAddrOfVTTVTable(CodeGenVTables &CGVT, CodeGenModule &CGM,
                    const CXXRecordDecl *MostDerivedClass,
                    const VTTVTable &VTable,
                    llvm::GlobalVariable::LinkageTypes Linkage,
-                   llvm::DenseMap<BaseSubobject, uint64_t> &AddressPoints) {
+                   VTableLayout::AddressPointsMapTy &AddressPoints) {
   if (VTable.getBase() == MostDerivedClass) {
     assert(VTable.getBaseOffset().isZero() &&
            "Most derived class vtable must have a zero offset!");
@@ -62,25 +62,27 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
                           *e = Builder.getVTTComponents().end(); i != e; ++i) {
     const VTTVTable &VTTVT = Builder.getVTTVTables()[i->VTableIndex];
     llvm::GlobalVariable *VTable = VTables[i->VTableIndex];
-    uint64_t AddressPoint;
+    VTableLayout::AddressPointLocation AddressPoint;
     if (VTTVT.getBase() == RD) {
       // Just get the address point for the regular vtable.
       AddressPoint =
           getItaniumVTableContext().getVTableLayout(RD).getAddressPoint(
               i->VTableBase);
-      assert(AddressPoint != 0 && "Did not find vtable address point!");
     } else {
       AddressPoint = VTableAddressPoints[i->VTableIndex].lookup(i->VTableBase);
-      assert(AddressPoint != 0 && "Did not find ctor vtable address point!");
+      assert(AddressPoint.AddressPointIndex != 0 &&
+             "Did not find ctor vtable address point!");
     }
 
      llvm::Value *Idxs[] = {
        llvm::ConstantInt::get(Int32Ty, 0),
-       llvm::ConstantInt::get(Int32Ty, AddressPoint)
+       llvm::ConstantInt::get(Int32Ty, AddressPoint.VTableIndex),
+       llvm::ConstantInt::get(Int32Ty, AddressPoint.AddressPointIndex),
      };
 
-     llvm::Constant *Init = llvm::ConstantExpr::getInBoundsGetElementPtr(
-         VTable->getValueType(), VTable, Idxs);
+     llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
+         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true,
+         /*InRangeIndex=*/1);
 
      Init = llvm::ConstantExpr::getBitCast(Init, Int8PtrTy);
 

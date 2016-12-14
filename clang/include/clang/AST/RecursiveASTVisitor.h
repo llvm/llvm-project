@@ -886,16 +886,6 @@ bool RecursiveASTVisitor<Derived>::TraverseConstructorInitializer(
   if (Init->isWritten() || getDerived().shouldVisitImplicitCode())
     TRY_TO(TraverseStmt(Init->getInit()));
 
-  if (getDerived().shouldVisitImplicitCode())
-    // The braces for this one-line loop are required for MSVC2013.  It
-    // refuses to compile
-    //     for (int i : int_vec)
-    //       do {} while(false);
-    // without braces on the for loop.
-    for (VarDecl *VD : Init->getArrayIndices()) {
-      TRY_TO(TraverseDecl(VD));
-    }
-
   return true;
 }
 
@@ -2399,7 +2389,12 @@ DEF_TRAVERSE_STMT(ExtVectorElementExpr, {})
 DEF_TRAVERSE_STMT(GNUNullExpr, {})
 DEF_TRAVERSE_STMT(ImplicitValueInitExpr, {})
 DEF_TRAVERSE_STMT(NoInitExpr, {})
-DEF_TRAVERSE_STMT(ArrayInitLoopExpr, {})
+DEF_TRAVERSE_STMT(ArrayInitLoopExpr, {
+  // FIXME: The source expression of the OVE should be listed as
+  // a child of the ArrayInitLoopExpr.
+  if (OpaqueValueExpr *OVE = S->getCommonExpr())
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(OVE->getSourceExpr());
+})
 DEF_TRAVERSE_STMT(ArrayInitIndexExpr, {})
 DEF_TRAVERSE_STMT(ObjCBoolLiteralExpr, {})
 

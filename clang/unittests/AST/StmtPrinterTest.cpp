@@ -45,7 +45,7 @@ public:
   PrintMatch() : NumFoundStmts(0) {}
 
   void run(const MatchFinder::MatchResult &Result) override {
-    const Stmt *S = Result.Nodes.getStmtAs<Stmt>("id");
+    const Stmt *S = Result.Nodes.getNodeAs<Stmt>("id");
     if (!S)
       return;
     NumFoundStmts++;

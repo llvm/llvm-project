@@ -54,12 +54,14 @@ int c(int x) { return [&x]{return x;}(); }
 // CHECK: ret i32
 
 struct D { D(); D(const D&); int x; };
-int d(int x) { D y[10]; [x,y] { return y[x].x; }(); }
+int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 
 // CHECK-LABEL: define i32 @_Z1di
 // CHECK: call void @_ZN1DC1Ev
-// CHECK: icmp ult i64 %{{.*}}, 10
+// CHECK: br label
 // CHECK: call void @_ZN1DC1ERKS_
+// CHECK: icmp eq i64 %{{.*}}, 10
+// CHECK: br i1
 // CHECK: call i32 @"_ZZ1diENK3$_4clEv"
 // CHECK-LABEL: define internal i32 @"_ZZ1diENK3$_4clEv"
 // CHECK: load i32, i32*
@@ -67,7 +69,7 @@ int d(int x) { D y[10]; [x,y] { return y[x].x; }(); }
 // CHECK: ret i32
 
 struct E { E(); E(const E&); ~E(); int x; };
-int e(E a, E b, bool cond) { [a,b,cond](){ return (cond ? a : b).x; }(); }
+int e(E a, E b, bool cond) { return [a,b,cond](){ return (cond ? a : b).x; }(); }
 // CHECK-LABEL: define i32 @_Z1e1ES_b
 // CHECK: call void @_ZN1EC1ERKS_
 // CHECK: invoke void @_ZN1EC1ERKS_
@@ -127,42 +129,58 @@ namespace pr28595 {
     ~A();
   };
 
+  void after_init() noexcept;
+
   // CHECK-LABEL: define void @_ZN7pr285954testEv()
   void test() {
-    // CHECK: [[ARRAY:%.*]] = alloca [3 x [5 x [[A:%.*]]]], align 1
-    // CHECK: [[DESTIDX:%.*]] = alloca i64, align 8
-    // CHECK: [[I0:%.*]] = alloca i64, align 8
-    // CHECK: [[I1:%.*]] = alloca i64, align 8
+    // CHECK: %[[SRC:.*]] = alloca [3 x [5 x %[[A:.*]]]], align 1
     A array[3][5];
 
-    // CHECK: [[DESTBASE:%.*]] = bitcast [3 x [5 x [[A]]]]* {{.*}} to [[A]]*
-    // CHECK: store i64 0, i64* [[DESTIDX]], align 8
-    // CHECK: store i64 0, i64* [[I0]], align 8
+    // Skip over the initialization loop.
+    // CHECK: call {{.*}}after_init
+    after_init();
+
+    // CHECK: %[[DST_0:.*]] = getelementptr {{.*}} [3 x [5 x %[[A]]]]* %[[DST:.*]], i64 0, i64 0
     // CHECK: br label
-    // CHECK: icmp ult
-    // CHECK: store i64 0, i64* [[I1]], align 8
+    // CHECK: %[[I:.*]] = phi i64 [ 0, %{{.*}} ], [ %[[I_NEXT:.*]], {{.*}} ]
+    // CHECK: %[[DST_I:.*]] = getelementptr {{.*}} [5 x %[[A]]]* %[[DST_0]], i64 %[[I]]
+    // CHECK: %[[SRC_I:.*]] = getelementptr {{.*}} [3 x [5 x %[[A]]]]* %[[SRC]], i64 0, i64 %[[I]]
+    //
+    // CHECK: %[[DST_I_0:.*]] = getelementptr {{.*}} [5 x %[[A]]]* %[[DST_I]], i64 0, i64 0
     // CHECK: br label
-    // CHECK: icmp ult
-    // CHECK: [[T0:%.*]] = load i64, i64* [[DESTIDX]], align 8
-    // CHECK: [[DEST:%.*]] = getelementptr inbounds [[A]], [[A]]* [[DESTBASE]], i64 [[T0]]
+    // CHECK: %[[J:.*]] = phi i64 [ 0, %{{.*}} ], [ %[[J_NEXT:.*]], {{.*}} ]
+    // CHECK: %[[DST_I_J:.*]] = getelementptr {{.*}} %[[A]]* %[[DST_I_0]], i64 %[[J]]
+    // CHECK: %[[DST_0_0:.*]] = bitcast [5 x %[[A]]]* %[[DST_0]] to %[[A]]*
+    // CHECK: %[[SRC_I_J:.*]] = getelementptr {{.*}} [5 x %[[A]]]* %[[SRC_I]], i64 0, i64 %[[J]]
+    //
     // CHECK: invoke void @_ZN7pr285954TempC1Ev
     // CHECK: invoke void @_ZN7pr285951AC1ERKS0_RKNS_4TempE
     // CHECK: invoke void @_ZN7pr285954TempD1Ev
+    //
+    // CHECK: add nuw i64 %[[J]], 1
+    // CHECK: icmp eq
+    // CHECK: br i1
+    //
+    // CHECK: add nuw i64 %[[I]], 1
+    // CHECK: icmp eq
+    // CHECK: br i1
+    //
+    // CHECK: ret void
+    //  
     // CHECK: landingpad
     // CHECK: landingpad
-    // CHECK: br label [[CLEANUP:%.*]]{{$}}
+    // CHECK: br label %[[CLEANUP:.*]]{{$}}
     // CHECK: landingpad
     // CHECK: invoke void @_ZN7pr285954TempD1Ev
-    // CHECK: br label [[CLEANUP]]
-    // CHECK: icmp eq [[A]]* [[DESTBASE]], [[DEST]]
-    // CHECK: [[T0:%.*]] = phi [[A]]*
-    // CHECK: [[T1:%.*]] = getelementptr inbounds [[A]], [[A]]* [[T0]], i64 -1
-    // CHECK: call void @_ZN7pr285951AD1Ev([[A]]* [[T1]])
-    // CHECK: icmp eq [[A]]* [[T1]], [[DESTBASE]]
+    // CHECK: br label %[[CLEANUP]]
+    //
+    // CHECK: [[CLEANUP]]:
+    // CHECK: icmp eq %[[A]]* %[[DST_0_0]], %[[DST_I_J]]
+    // CHECK: %[[T0:.*]] = phi %[[A]]*
+    // CHECK: %[[T1:.*]] = getelementptr inbounds %[[A]], %[[A]]* %[[T0]], i64 -1
+    // CHECK: call void @_ZN7pr285951AD1Ev(%[[A]]* %[[T1]])
+    // CHECK: icmp eq %[[A]]* %[[T1]], %[[DST_0_0]]
     (void) [array]{};
-
-    //   Skip over the initialization loop.
-    // CHECK: [[BEGIN:%.*]] = getelementptr inbounds [3 x [5 x [[A]]]], [3 x [5 x [[A]]]]* [[ARRAY]], i32 0, i32 0, i32 0
   }
 }
 

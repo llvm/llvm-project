@@ -637,12 +637,27 @@ void CodeGenVTables::addVTableComponent(
   llvm_unreachable("Unexpected vtable component kind");
 }
 
-void CodeGenVTables::createVTableInitializer(ConstantArrayBuilder &builder,
+llvm::Type *CodeGenVTables::getVTableType(const VTableLayout &layout) {
+  SmallVector<llvm::Type *, 4> tys;
+  for (unsigned i = 0, e = layout.getNumVTables(); i != e; ++i) {
+    tys.push_back(llvm::ArrayType::get(CGM.Int8PtrTy, layout.getVTableSize(i)));
+  }
+
+  return llvm::StructType::get(CGM.getLLVMContext(), tys);
+}
+
+void CodeGenVTables::createVTableInitializer(ConstantStructBuilder &builder,
                                              const VTableLayout &layout,
                                              llvm::Constant *rtti) {
   unsigned nextVTableThunkIndex = 0;
-  for (unsigned i = 0, e = layout.vtable_components().size(); i != e; ++i) {
-    addVTableComponent(builder, layout, i, rtti, nextVTableThunkIndex);
+  for (unsigned i = 0, e = layout.getNumVTables(); i != e; ++i) {
+    auto vtableElem = builder.beginArray(CGM.Int8PtrTy);
+    size_t thisIndex = layout.getVTableOffset(i);
+    size_t nextIndex = thisIndex + layout.getVTableSize(i);
+    for (unsigned i = thisIndex; i != nextIndex; ++i) {
+      addVTableComponent(vtableElem, layout, i, rtti, nextVTableThunkIndex);
+    }
+    vtableElem.finishAndAddTo(builder);
   }
 }
 
@@ -670,8 +685,7 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
                            Base.getBase(), Out);
   StringRef Name = OutName.str();
 
-  llvm::ArrayType *ArrayType =
-      llvm::ArrayType::get(CGM.Int8PtrTy, VTLayout->vtable_components().size());
+  llvm::Type *VTType = getVTableType(*VTLayout);
 
   // Construction vtable symbols are not part of the Itanium ABI, so we cannot
   // guarantee that they actually will be available externally. Instead, when
@@ -683,7 +697,7 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
 
   // Create the variable that will hold the construction vtable.
   llvm::GlobalVariable *VTable =
-    CGM.CreateOrReplaceCXXRuntimeVariable(Name, ArrayType, Linkage);
+    CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage);
   CGM.setGlobalVisibility(VTable, RD);
 
   // V-tables are always unnamed_addr.
@@ -694,7 +708,7 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
 
   // Create and set the initializer.
   ConstantInitBuilder builder(CGM);
-  auto components = builder.beginArray(CGM.Int8PtrTy);
+  auto components = builder.beginStruct();
   createVTableInitializer(components, *VTLayout, RTTI);
   components.finishAndSetAsInitializer(VTable);
 
@@ -938,7 +952,10 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
   std::vector<BSEntry> BitsetEntries;
   // Create a bit set entry for each address point.
   for (auto &&AP : VTLayout.getAddressPoints())
-    BitsetEntries.push_back(std::make_pair(AP.first.getBase(), AP.second));
+    BitsetEntries.push_back(
+        std::make_pair(AP.first.getBase(),
+                       VTLayout.getVTableOffset(AP.second.VTableIndex) +
+                           AP.second.AddressPointIndex));
 
   // Sort the bit set entries for determinism.
   std::sort(BitsetEntries.begin(), BitsetEntries.end(),

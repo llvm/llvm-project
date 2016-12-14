@@ -396,6 +396,21 @@ struct FormatToken {
     }
   }
 
+  /// \brief Returns \c true if this is a string literal that's like a label,
+  /// e.g. ends with "=" or ":".
+  bool isLabelString() const {
+    if (!is(tok::string_literal))
+      return false;
+    StringRef Content = TokenText;
+    if (Content.startswith("\"") || Content.startswith("'"))
+      Content = Content.drop_front(1);
+    if (Content.endswith("\"") || Content.endswith("'"))
+      Content = Content.drop_back(1);
+    Content = Content.trim();
+    return Content.size() > 1 &&
+           (Content.back() == ':' || Content.back() == '=');
+  }
+
   /// \brief Returns actual token start location without leading escaped
   /// newlines and whitespace.
   ///

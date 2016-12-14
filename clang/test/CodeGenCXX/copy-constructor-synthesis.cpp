@@ -166,7 +166,7 @@ void f(B b1) {
 // CHECK-LABEL:    define linkonce_odr void @_ZN12rdar138169401AC2ERKS0_(
 // CHECK:      [[THIS:%.*]] = load [[A]]*, [[A]]**
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[A]]* [[THIS]] to i32 (...)***
-// CHECK-NEXT: store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTVN12rdar138169401AE, i32 0, i32 2) to i32 (...)**), i32 (...)*** [[T0]]
+// CHECK-NEXT: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTVN12rdar138169401AE, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** [[T0]]
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A]], [[A]]* [[THIS]], i32 0, i32 1
 // CHECK-NEXT: [[OTHER:%.*]] = load [[A]]*, [[A]]**
 // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[A]], [[A]]* [[OTHER]], i32 0, i32 1

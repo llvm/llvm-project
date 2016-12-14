@@ -1384,10 +1384,7 @@ static void addBlockPointerConversion(Sema &S,
 }
 
 static ExprResult performLambdaVarCaptureInitialization(
-    Sema &S, LambdaScopeInfo::Capture &Capture,
-    FieldDecl *Field,
-    SmallVectorImpl<VarDecl *> &ArrayIndexVars,
-    SmallVectorImpl<unsigned> &ArrayIndexStarts) {
+    Sema &S, LambdaScopeInfo::Capture &Capture, FieldDecl *Field) {
   assert(Capture.isVariableCapture() && "not a variable capture");
 
   auto *Var = Capture.getVariable();
@@ -1411,69 +1408,11 @@ static ExprResult performLambdaVarCaptureInitialization(
     return ExprError();
   Expr *Ref = RefResult.get();
 
-  QualType FieldType = Field->getType();
-
-  // When the variable has array type, create index variables for each
-  // dimension of the array. We use these index variables to subscript
-  // the source array, and other clients (e.g., CodeGen) will perform
-  // the necessary iteration with these index variables.
-  //
-  // FIXME: This is dumb. Add a proper AST representation for array
-  // copy-construction and use it here.
-  SmallVector<VarDecl *, 4> IndexVariables;
-  QualType BaseType = FieldType;
-  QualType SizeType = S.Context.getSizeType();
-  ArrayIndexStarts.push_back(ArrayIndexVars.size());
-  while (const ConstantArrayType *Array
-                        = S.Context.getAsConstantArrayType(BaseType)) {
-    // Create the iteration variable for this array index.
-    IdentifierInfo *IterationVarName = nullptr;
-    {
-      SmallString<8> Str;
-      llvm::raw_svector_ostream OS(Str);
-      OS << "__i" << IndexVariables.size();
-      IterationVarName = &S.Context.Idents.get(OS.str());
-    }
-    VarDecl *IterationVar = VarDecl::Create(
-        S.Context, S.CurContext, Loc, Loc, IterationVarName, SizeType,
-        S.Context.getTrivialTypeSourceInfo(SizeType, Loc), SC_None);
-    IterationVar->setImplicit();
-    IndexVariables.push_back(IterationVar);
-    ArrayIndexVars.push_back(IterationVar);
-    
-    // Create a reference to the iteration variable.
-    ExprResult IterationVarRef =
-        S.BuildDeclRefExpr(IterationVar, SizeType, VK_LValue, Loc);
-    assert(!IterationVarRef.isInvalid() &&
-           "Reference to invented variable cannot fail!");
-    IterationVarRef = S.DefaultLvalueConversion(IterationVarRef.get());
-    assert(!IterationVarRef.isInvalid() &&
-           "Conversion of invented variable cannot fail!");
-    
-    // Subscript the array with this iteration variable.
-    ExprResult Subscript =
-        S.CreateBuiltinArraySubscriptExpr(Ref, Loc, IterationVarRef.get(), Loc);
-    if (Subscript.isInvalid())
-      return ExprError();
-
-    Ref = Subscript.get();
-    BaseType = Array->getElementType();
-  }
-
-  // Construct the entity that we will be initializing. For an array, this
-  // will be first element in the array, which may require several levels
-  // of array-subscript entities. 
-  SmallVector<InitializedEntity, 4> Entities;
-  Entities.reserve(1 + IndexVariables.size());
-  Entities.push_back(InitializedEntity::InitializeLambdaCapture(
-      Var->getIdentifier(), FieldType, Loc));
-  for (unsigned I = 0, N = IndexVariables.size(); I != N; ++I)
-    Entities.push_back(
-        InitializedEntity::InitializeElement(S.Context, 0, Entities.back()));
-
+  auto Entity = InitializedEntity::InitializeLambdaCapture(
+      Var->getIdentifier(), Field->getType(), Loc);
   InitializationKind InitKind = InitializationKind::CreateDirect(Loc, Loc, Loc);
-  InitializationSequence Init(S, Entities.back(), InitKind, Ref);
-  return Init.Perform(S, Entities.back(), InitKind, Ref);
+  InitializationSequence Init(S, Entity, InitKind, Ref);
+  return Init.Perform(S, Entity, InitKind, Ref);
 }
          
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body, 
@@ -1514,8 +1453,6 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
   bool ExplicitResultType;
   CleanupInfo LambdaCleanup;
   bool ContainsUnexpandedParameterPack;
-  SmallVector<VarDecl *, 4> ArrayIndexVars;
-  SmallVector<unsigned, 4> ArrayIndexStarts;
   {
     CallOperator = LSI->CallOperator;
     Class = LSI->Lambda;
@@ -1549,14 +1486,12 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
             LambdaCapture(From.getLocation(), IsImplicit,
                           From.isCopyCapture() ? LCK_StarThis : LCK_This));
         CaptureInits.push_back(From.getInitExpr());
-        ArrayIndexStarts.push_back(ArrayIndexVars.size());
         continue;
       }
       if (From.isVLATypeCapture()) {
         Captures.push_back(
             LambdaCapture(From.getLocation(), IsImplicit, LCK_VLAType));
         CaptureInits.push_back(nullptr);
-        ArrayIndexStarts.push_back(ArrayIndexVars.size());
         continue;
       }
 
@@ -1566,13 +1501,11 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                        Var, From.getEllipsisLoc()));
       Expr *Init = From.getInitExpr();
       if (!Init) {
-        auto InitResult = performLambdaVarCaptureInitialization(
-            *this, From, *CurField, ArrayIndexVars, ArrayIndexStarts);
+        auto InitResult =
+            performLambdaVarCaptureInitialization(*this, From, *CurField);
         if (InitResult.isInvalid())
           return ExprError();
         Init = InitResult.get();
-      } else {
-        ArrayIndexStarts.push_back(ArrayIndexVars.size());
       }
       CaptureInits.push_back(Init);
     }
@@ -1609,8 +1542,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                           CaptureDefault, CaptureDefaultLoc,
                                           Captures, 
                                           ExplicitParams, ExplicitResultType,
-                                          CaptureInits, ArrayIndexVars, 
-                                          ArrayIndexStarts, EndLoc,
+                                          CaptureInits, EndLoc,
                                           ContainsUnexpandedParameterPack);
   // If the lambda expression's call operator is not explicitly marked constexpr
   // and we are not in a dependent context, analyze the call operator to infer

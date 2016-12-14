@@ -3748,12 +3748,13 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
                 diag::err_typecheck_call_invalid_unary_fp)
       << OrigArg->getType() << OrigArg->getSourceRange();
 
-  // If this is an implicit conversion from float -> double, remove it.
+  // If this is an implicit conversion from float -> float or double, remove it.
   if (ImplicitCastExpr *Cast = dyn_cast<ImplicitCastExpr>(OrigArg)) {
     Expr *CastArg = Cast->getSubExpr();
     if (CastArg->getType()->isSpecificBuiltinType(BuiltinType::Float)) {
-      assert(Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) &&
-             "promotion from float to double is the only expected cast here");
+        assert((Cast->getType()->isSpecificBuiltinType(BuiltinType::Double) ||
+                Cast->getType()->isSpecificBuiltinType(BuiltinType::Float)) &&
+             "promotion from float to either float or double is the only expected cast here");
       Cast->setSubExpr(nullptr);
       TheCall->setArg(NumArgs-1, CastArg);
     }

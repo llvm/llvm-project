@@ -19,7 +19,7 @@ struct A {
   int ia;
 };
 A a;
-// EMITS-VFTABLE-DAG: @"\01??_7A@@6B@" = linkonce_odr unnamed_addr constant [3 x i8*]
+// EMITS-VFTABLE-DAG: @"\01??_7A@@6B@" = linkonce_odr unnamed_addr constant { [3 x i8*] }
 void use(A *obj) { obj->f(); }
 
 struct B : A {
@@ -39,7 +39,7 @@ struct B : A {
   virtual void j();
 };
 B b;
-// EMITS-VFTABLE-DAG: @"\01??_7B@@6B@" = linkonce_odr unnamed_addr constant [5 x i8*]
+// EMITS-VFTABLE-DAG: @"\01??_7B@@6B@" = linkonce_odr unnamed_addr constant { [5 x i8*] }
 void use(B *obj) { obj->f(); }
 
 struct C {
@@ -69,7 +69,7 @@ struct D {
   virtual ~D();
 };
 D d;
-// EMITS-VFTABLE-DAG: @"\01??_7D@@6B@" = linkonce_odr unnamed_addr constant [2 x i8*]
+// EMITS-VFTABLE-DAG: @"\01??_7D@@6B@" = linkonce_odr unnamed_addr constant { [2 x i8*] }
 void use(D *obj) { obj->f(); }
 
 struct E : A {
@@ -107,7 +107,7 @@ struct F : A {
   virtual ~F();
 };
 F f;
-// EMITS-VFTABLE-DAG: @"\01??_7F@@6B@" = linkonce_odr unnamed_addr constant [5 x i8*]
+// EMITS-VFTABLE-DAG: @"\01??_7F@@6B@" = linkonce_odr unnamed_addr constant { [5 x i8*] }
 void use(F *obj) { obj->i(); }
 
 struct G : E {
@@ -295,7 +295,7 @@ struct S {
   // CHECK-NEXT:   0 | void S::f() [deleted]
   virtual void f() = delete;
   S();
-  // EMITS-VFTABLE-DAG: @"\01??_7S@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)]
+  // EMITS-VFTABLE-DAG: @"\01??_7S@@6B@" = linkonce_odr unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)] }
 };
 
 S::S() {}

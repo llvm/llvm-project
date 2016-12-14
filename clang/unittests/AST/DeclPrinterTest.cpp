@@ -45,7 +45,7 @@ public:
   PrintMatch() : NumFoundDecls(0) {}
 
   void run(const MatchFinder::MatchResult &Result) override {
-    const Decl *D = Result.Nodes.getDeclAs<Decl>("id");
+    const Decl *D = Result.Nodes.getNodeAs<Decl>("id");
     if (!D || D->isImplicit())
       return;
     NumFoundDecls++;
