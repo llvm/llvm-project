@@ -109,6 +109,7 @@ set(Tests
   ThreadedLeakTest
   ThreadedTest
   TimeoutTest
+  TimeoutEmptyTest
   TraceMallocTest
   )
 

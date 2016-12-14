@@ -195,7 +195,7 @@ void PrintPC(const char *SymbolizedFMT, const char *FallbackFMT, uintptr_t PC) {
     Printf(FallbackFMT, PC);
 }
 
-int NumberOfCpuCores() {
+unsigned NumberOfCpuCores() {
   unsigned N = std::thread::hardware_concurrency();
   if (!N) {
     Printf("WARNING: std::thread::hardware_concurrency not well defined for "

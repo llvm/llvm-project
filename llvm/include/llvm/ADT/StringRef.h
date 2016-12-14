@@ -84,11 +84,8 @@ namespace llvm {
 
     /// Construct a string ref from a pointer and length.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
-    /*implicit*/ StringRef(const char *data, size_t length)
-      : Data(data), Length(length) {
-        assert((data || length == 0) &&
-        "StringRef cannot be built from a NULL argument with non-null length");
-      }
+    /*implicit*/ constexpr StringRef(const char *data, size_t length)
+        : Data(data), Length(length) {}
 
     /// Construct a string ref from an std::string.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -837,6 +834,26 @@ namespace llvm {
     }
 
     /// @}
+  };
+
+  /// A wrapper around a string literal that serves as a proxy for constructing
+  /// global tables of StringRefs with the length computed at compile time.
+  /// Using this class with a non-literal char array is considered undefined
+  /// behavior.  To prevent this, it is recommended that StringLiteral *only*
+  /// be used in a constexpr context, as such:
+  ///
+  /// constexpr StringLiteral S("test");
+  ///
+  /// Note: There is a subtle behavioral difference in the constructor of
+  /// StringRef and StringLiteral, as illustrated below:
+  ///
+  /// constexpr StringLiteral S("a\0b");  // S.size() == 3
+  /// StringRef S("a\0b");  // S.size() == 1
+  ///
+  class StringLiteral : public StringRef {
+  public:
+    template <size_t N>
+    constexpr StringLiteral(const char (&Str)[N]) : StringRef(Str, N - 1) {}
   };
 
   /// @name StringRef Comparison Operators

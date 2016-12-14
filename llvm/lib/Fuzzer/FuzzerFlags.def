@@ -54,10 +54,10 @@ FUZZER_FLAG_INT(use_value_profile, 0,
                 "Experimental. Use value profile to guide fuzzing.")
 FUZZER_FLAG_INT(use_cmp, 1, "Use CMP traces to guide mutations")
 FUZZER_FLAG_INT(shrink, 0, "Experimental. Try to shrink corpus elements.")
-FUZZER_FLAG_INT(jobs, 0, "Number of jobs to run. If jobs >= 1 we spawn"
+FUZZER_FLAG_UNSIGNED(jobs, 0, "Number of jobs to run. If jobs >= 1 we spawn"
                           " this number of jobs in separate worker processes"
                           " with stdout/stderr redirected to fuzz-JOB.log.")
-FUZZER_FLAG_INT(workers, 0,
+FUZZER_FLAG_UNSIGNED(workers, 0,
             "Number of simultaneous worker processes to run the jobs."
             " If zero, \"min(jobs,NumberOfCpuCores()/2)\" is used.")
 FUZZER_FLAG_INT(reload, 1,

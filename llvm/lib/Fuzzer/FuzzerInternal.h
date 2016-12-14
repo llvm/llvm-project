@@ -12,19 +12,18 @@
 #ifndef LLVM_FUZZER_INTERNAL_H
 #define LLVM_FUZZER_INTERNAL_H
 
-#include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <climits>
-#include <cstdlib>
-#include <string.h>
-
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerInterface.h"
 #include "FuzzerOptions.h"
 #include "FuzzerSHA1.h"
 #include "FuzzerValueBitMap.h"
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <climits>
+#include <cstdlib>
+#include <string.h>
 
 namespace fuzzer {
 
@@ -148,6 +147,7 @@ private:
   uint8_t *CurrentUnitData = nullptr;
   std::atomic<size_t> CurrentUnitSize;
   uint8_t BaseSha1[kSHA1NumBytes];  // Checksum of the base unit.
+  bool RunningCB = false;
 
   size_t TotalNumberOfRuns = 0;
   size_t NumberOfNewUnitsAdded = 0;

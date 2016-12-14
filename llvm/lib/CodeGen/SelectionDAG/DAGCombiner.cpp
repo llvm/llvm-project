@@ -20,6 +20,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -375,6 +376,7 @@ namespace {
                               unsigned PosOpcode, unsigned NegOpcode,
                               const SDLoc &DL);
     SDNode *MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
+    SDValue MatchLoadCombine(SDNode *N);
     SDValue ReduceLoadWidth(SDNode *N);
     SDValue ReduceLoadOpStoreWidth(SDNode *N);
     SDValue splitMergedValStore(StoreSDNode *ST);
@@ -3969,6 +3971,9 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   if (SDNode *Rot = MatchRotate(N0, N1, SDLoc(N)))
     return SDValue(Rot, 0);
 
+  if (SDValue Load = MatchLoadCombine(N))
+    return Load;
+
   // Simplify the operands using demanded-bits information.
   if (!VT.isVector() &&
       SimplifyDemandedBits(SDValue(N, 0)))
@@ -4234,6 +4239,384 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
     return TryR;
 
   return nullptr;
+}
+
+namespace {
+/// Helper struct to parse and store a memory address as base + index + offset.
+/// We ignore sign extensions when it is safe to do so.
+/// The following two expressions are not equivalent. To differentiate we need
+/// to store whether there was a sign extension involved in the index
+/// computation.
+///  (load (i64 add (i64 copyfromreg %c)
+///                 (i64 signextend (add (i8 load %index)
+///                                      (i8 1))))
+/// vs
+///
+/// (load (i64 add (i64 copyfromreg %c)
+///                (i64 signextend (i32 add (i32 signextend (i8 load %index))
+///                                         (i32 1)))))
+struct BaseIndexOffset {
+  SDValue Base;
+  SDValue Index;
+  int64_t Offset;
+  bool IsIndexSignExt;
+
+  BaseIndexOffset() : Offset(0), IsIndexSignExt(false) {}
+
+  BaseIndexOffset(SDValue Base, SDValue Index, int64_t Offset,
+                  bool IsIndexSignExt) :
+    Base(Base), Index(Index), Offset(Offset), IsIndexSignExt(IsIndexSignExt) {}
+
+  bool equalBaseIndex(const BaseIndexOffset &Other) {
+    return Other.Base == Base && Other.Index == Index &&
+      Other.IsIndexSignExt == IsIndexSignExt;
+  }
+
+  /// Parses tree in Ptr for base, index, offset addresses.
+  static BaseIndexOffset match(SDValue Ptr, SelectionDAG &DAG) {
+    bool IsIndexSignExt = false;
+
+    // Split up a folded GlobalAddress+Offset into its component parts.
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Ptr))
+      if (GA->getOpcode() == ISD::GlobalAddress && GA->getOffset() != 0) {
+        return BaseIndexOffset(DAG.getGlobalAddress(GA->getGlobal(),
+                                                    SDLoc(GA),
+                                                    GA->getValueType(0),
+                                                    /*Offset=*/0,
+                                                    /*isTargetGA=*/false,
+                                                    GA->getTargetFlags()),
+                               SDValue(),
+                               GA->getOffset(),
+                               IsIndexSignExt);
+      }
+
+    // We only can pattern match BASE + INDEX + OFFSET. If Ptr is not an ADD
+    // instruction, then it could be just the BASE or everything else we don't
+    // know how to handle. Just use Ptr as BASE and give up.
+    if (Ptr->getOpcode() != ISD::ADD)
+      return BaseIndexOffset(Ptr, SDValue(), 0, IsIndexSignExt);
+
+    // We know that we have at least an ADD instruction. Try to pattern match
+    // the simple case of BASE + OFFSET.
+    if (isa<ConstantSDNode>(Ptr->getOperand(1))) {
+      int64_t Offset = cast<ConstantSDNode>(Ptr->getOperand(1))->getSExtValue();
+      return  BaseIndexOffset(Ptr->getOperand(0), SDValue(), Offset,
+                              IsIndexSignExt);
+    }
+
+    // Inside a loop the current BASE pointer is calculated using an ADD and a
+    // MUL instruction. In this case Ptr is the actual BASE pointer.
+    // (i64 add (i64 %array_ptr)
+    //          (i64 mul (i64 %induction_var)
+    //                   (i64 %element_size)))
+    if (Ptr->getOperand(1)->getOpcode() == ISD::MUL)
+      return BaseIndexOffset(Ptr, SDValue(), 0, IsIndexSignExt);
+
+    // Look at Base + Index + Offset cases.
+    SDValue Base = Ptr->getOperand(0);
+    SDValue IndexOffset = Ptr->getOperand(1);
+
+    // Skip signextends.
+    if (IndexOffset->getOpcode() == ISD::SIGN_EXTEND) {
+      IndexOffset = IndexOffset->getOperand(0);
+      IsIndexSignExt = true;
+    }
+
+    // Either the case of Base + Index (no offset) or something else.
+    if (IndexOffset->getOpcode() != ISD::ADD)
+      return BaseIndexOffset(Base, IndexOffset, 0, IsIndexSignExt);
+
+    // Now we have the case of Base + Index + offset.
+    SDValue Index = IndexOffset->getOperand(0);
+    SDValue Offset = IndexOffset->getOperand(1);
+
+    if (!isa<ConstantSDNode>(Offset))
+      return BaseIndexOffset(Ptr, SDValue(), 0, IsIndexSignExt);
+
+    // Ignore signextends.
+    if (Index->getOpcode() == ISD::SIGN_EXTEND) {
+      Index = Index->getOperand(0);
+      IsIndexSignExt = true;
+    } else IsIndexSignExt = false;
+
+    int64_t Off = cast<ConstantSDNode>(Offset)->getSExtValue();
+    return BaseIndexOffset(Base, Index, Off, IsIndexSignExt);
+  }
+};
+} // namespace
+
+namespace {
+/// Represents the origin of an individual byte in load combine pattern. The
+/// value of the byte is either unknown, zero or comes from memory.
+struct ByteProvider {
+  enum ProviderTy {
+    Unknown,
+    ZeroConstant,
+    Memory
+  };
+
+  ProviderTy Kind;
+  // Load and ByteOffset are set for Memory providers only.
+  // Load represents the node which loads the byte from memory.
+  // ByteOffset is the offset of the byte in the value produced by the load.
+  LoadSDNode *Load;
+  unsigned ByteOffset;
+
+  ByteProvider() : Kind(ProviderTy::Unknown), Load(nullptr), ByteOffset(0) {}
+
+  static ByteProvider getUnknown() {
+    return ByteProvider(ProviderTy::Unknown, nullptr, 0);
+  }
+  static ByteProvider getMemory(LoadSDNode *Load, unsigned ByteOffset) {
+    return ByteProvider(ProviderTy::Memory, Load, ByteOffset);
+  }
+  static ByteProvider getZero() {
+    return ByteProvider(ProviderTy::ZeroConstant, nullptr, 0);
+  }
+
+  bool operator==(const ByteProvider &Other) const {
+    return Other.Kind == Kind && Other.Load == Load &&
+           Other.ByteOffset == ByteOffset;
+  }
+
+private:
+  ByteProvider(ProviderTy Kind, LoadSDNode *Load, unsigned ByteOffset)
+      : Kind(Kind), Load(Load), ByteOffset(ByteOffset) {}
+};
+
+/// Recursively traverses the expression collecting the origin of individual
+/// bytes of the given value. For all the values except the root of the
+/// expression verifies that it doesn't have uses outside of the expression.
+const Optional<SmallVector<ByteProvider, 4> >
+collectByteProviders(SDValue Op, bool CheckNumberOfUses = false) {
+  if (CheckNumberOfUses && !Op.hasOneUse())
+    return None;
+
+  unsigned BitWidth = Op.getScalarValueSizeInBits();
+  if (BitWidth % 8 != 0)
+    return None;
+  unsigned ByteWidth = BitWidth / 8;
+
+  switch (Op.getOpcode()) {
+  case ISD::OR: {
+    auto LHS = collectByteProviders(Op->getOperand(0),
+                                    /*CheckNumberOfUses=*/true);
+    auto RHS = collectByteProviders(Op->getOperand(1),
+                                    /*CheckNumberOfUses=*/true);
+    if (!LHS || !RHS)
+      return None;
+
+    auto OR = [](ByteProvider LHS, ByteProvider RHS) {
+      if (LHS == RHS)
+        return LHS;
+      if (LHS.Kind == ByteProvider::Unknown ||
+          RHS.Kind == ByteProvider::Unknown)
+        return ByteProvider::getUnknown();
+      if (LHS.Kind == ByteProvider::Memory && RHS.Kind == ByteProvider::Memory)
+        return ByteProvider::getUnknown();
+
+      if (LHS.Kind == ByteProvider::Memory)
+        return LHS;
+      else
+        return RHS;
+    };
+
+    SmallVector<ByteProvider, 4> Result(ByteWidth);
+    for (unsigned i = 0; i < LHS->size(); i++)
+      Result[i] = OR(LHS.getValue()[i], RHS.getValue()[i]);
+
+    return Result;
+  }
+  case ISD::SHL: {
+    auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    if (!ShiftOp)
+      return None;
+
+    uint64_t BitShift = ShiftOp->getZExtValue();
+    if (BitShift % 8 != 0)
+      return None;
+    uint64_t ByteShift = BitShift / 8;
+
+    auto Original = collectByteProviders(Op->getOperand(0),
+                                         /*CheckNumberOfUses=*/true);
+    if (!Original)
+      return None;
+
+    SmallVector<ByteProvider, 4> Result;
+    Result.insert(Result.begin(), ByteShift, ByteProvider::getZero());
+    Result.insert(Result.end(), Original->begin(),
+                  std::prev(Original->end(), ByteShift));
+    assert(Result.size() == ByteWidth &&
+           "Computed width doesn't match from type width");
+    return Result;
+  }
+  case ISD::ZERO_EXTEND: {
+    auto Original = collectByteProviders(Op->getOperand(0),
+                                         /*CheckNumberOfUses=*/true);
+    if (!Original)
+      return None;
+
+    SmallVector<ByteProvider, 4> Result;
+    unsigned NarrowByteWidth = Original->size();
+    Result.insert(Result.begin(), Original->begin(), Original->end());
+    Result.insert(Result.end(), ByteWidth - NarrowByteWidth,
+                  ByteProvider::getZero());
+    assert(Result.size() == ByteWidth &&
+           "Computed width doesn't match from type width");
+    return Result;
+  }
+  case ISD::LOAD: {
+    auto L = cast<LoadSDNode>(Op.getNode());
+    if (L->isVolatile() || L->isIndexed() ||
+        L->getExtensionType() != ISD::NON_EXTLOAD)
+      return None;
+
+    assert(BitWidth == L->getMemoryVT().getSizeInBits() &&
+           "For non-extend loads widths must be the same");
+
+    SmallVector<ByteProvider, 4> Result(ByteWidth);
+    for (unsigned i = 0; i < ByteWidth; i++)
+      Result[i] = ByteProvider::getMemory(L, i);
+
+    return Result;
+  }
+  }
+
+  return None;
+}
+} // namespace
+
+/// Match a pattern where a wide type scalar value is loaded by several narrow
+/// loads and combined by shifts and ors. Fold it into a single load or a load
+/// and a BSWAP if the targets supports it.
+///
+/// Assuming little endian target:
+///  i8 *a = ...
+///  i32 val = a[0] | (a[1] << 8) | (a[2] << 16) | (a[3] << 24)
+/// =>
+///  i32 val = *((i32)a)
+///
+///  i8 *a = ...
+///  i32 val = (a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3]
+/// =>
+///  i32 val = BSWAP(*((i32)a))
+SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
+  assert(N->getOpcode() == ISD::OR &&
+         "Can only match load combining against OR nodes");
+
+  // Handles simple types only
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  // There is nothing to do here if the target can't load a value of this type
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isOperationLegal(ISD::LOAD, VT))
+    return SDValue();
+
+  // Calculate byte providers for the OR we are looking at
+  auto Res = collectByteProviders(SDValue(N, 0));
+  if (!Res)
+    return SDValue();
+  auto &Bytes = Res.getValue();
+  unsigned ByteWidth = Bytes.size();
+  assert(VT.getSizeInBits() == ByteWidth * 8 &&
+         "collectByteProviders computed width differs from type width");
+
+  auto LittleEndianByteAt = [](unsigned BW, unsigned i) { return i; };
+  auto BigEndianByteAt = [](unsigned BW, unsigned i) { return BW - i - 1; };
+
+  Optional<BaseIndexOffset> Base;
+  SDValue Chain;
+
+  SmallSet<LoadSDNode *, 8> Loads;
+  LoadSDNode *FirstLoad = nullptr;
+
+  // Check if all the bytes of the OR we are looking at are loaded from the same
+  // base address. Collect bytes offsets from Base address in ByteOffsets.
+  SmallVector<int64_t, 4> ByteOffsets(ByteWidth);
+  for (unsigned i = 0; i < ByteWidth; i++) {
+    // All the bytes must be loaded from memory
+    if (Bytes[i].Kind != ByteProvider::Memory)
+      return SDValue();
+
+    LoadSDNode *L = Bytes[i].Load;
+    assert(L->hasNUsesOfValue(1, 0) && !L->isVolatile() && !L->isIndexed() &&
+           (L->getExtensionType() == ISD::NON_EXTLOAD) &&
+           "Must be enforced by collectByteProviders");
+    assert(L->getOffset().isUndef() && "Unindexed load must have undef offset");
+
+    // All loads must share the same chain
+    SDValue LChain = L->getChain();
+    if (!Chain)
+      Chain = LChain;
+    if (Chain != LChain)
+      return SDValue();
+
+    // Loads must share the same base address
+    BaseIndexOffset Ptr = BaseIndexOffset::match(L->getBasePtr(), DAG);
+    if (!Base)
+      Base = Ptr;
+    if (!Base->equalBaseIndex(Ptr))
+      return SDValue();
+
+    // Calculate the offset of the current byte from the base address
+    unsigned LoadByteWidth = L->getMemoryVT().getSizeInBits() / 8;
+    int64_t MemoryByteOffset =
+        DAG.getDataLayout().isBigEndian()
+            ? BigEndianByteAt(LoadByteWidth, Bytes[i].ByteOffset)
+            : LittleEndianByteAt(LoadByteWidth, Bytes[i].ByteOffset);
+    int64_t ByteOffsetFromBase = Ptr.Offset + MemoryByteOffset;
+    ByteOffsets[i] = ByteOffsetFromBase;
+
+    // Remember the first byte load
+    if (ByteOffsetFromBase == 0)
+      FirstLoad = L;
+
+    Loads.insert(L);
+  }
+  assert(Base && "must be set");
+
+  // Check if the bytes of the OR we are looking at match with either big or
+  // little endian value load
+  bool BigEndian = true, LittleEndian = true;
+  for (unsigned i = 0; i < ByteWidth; i++) {
+    LittleEndian &= ByteOffsets[i] == LittleEndianByteAt(ByteWidth, i);
+    BigEndian &= ByteOffsets[i] == BigEndianByteAt(ByteWidth, i);
+    if (!BigEndian && !LittleEndian)
+      return SDValue();
+  }
+  assert((BigEndian != LittleEndian) && "should be either or");
+  assert(FirstLoad && "must be set");
+
+  // The node we are looking at matches with the pattern, check if we can
+  // replace it with a single load and bswap if needed.
+
+  // If the load needs byte swap check if the target supports it
+  bool NeedsBswap = DAG.getDataLayout().isBigEndian() != BigEndian;
+  if (NeedsBswap && !TLI.isOperationLegal(ISD::BSWAP, VT))
+    return SDValue();
+
+  // Check that a load of the wide type is both allowed and fast on the target
+  bool Fast = false;
+  bool Allowed = TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                                        VT, FirstLoad->getAddressSpace(),
+                                        FirstLoad->getAlignment(), &Fast);
+  if (!Allowed || !Fast)
+    return SDValue();
+
+  SDValue NewLoad =
+      DAG.getLoad(VT, SDLoc(N), Chain, FirstLoad->getBasePtr(),
+                  FirstLoad->getPointerInfo(), FirstLoad->getAlignment());
+
+  // Transfer chain users from old loads to the new load.
+  for (LoadSDNode *L : Loads)
+    DAG.ReplaceAllUsesOfValueWith(SDValue(L, 1), SDValue(NewLoad.getNode(), 1));
+
+  if (NeedsBswap)
+    return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, NewLoad);
+  else
+    return NewLoad;
 }
 
 SDValue DAGCombiner::visitXOR(SDNode *N) {
@@ -11216,110 +11599,6 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
 
   return SDValue();
 }
-
-namespace {
-/// Helper struct to parse and store a memory address as base + index + offset.
-/// We ignore sign extensions when it is safe to do so.
-/// The following two expressions are not equivalent. To differentiate we need
-/// to store whether there was a sign extension involved in the index
-/// computation.
-///  (load (i64 add (i64 copyfromreg %c)
-///                 (i64 signextend (add (i8 load %index)
-///                                      (i8 1))))
-/// vs
-///
-/// (load (i64 add (i64 copyfromreg %c)
-///                (i64 signextend (i32 add (i32 signextend (i8 load %index))
-///                                         (i32 1)))))
-struct BaseIndexOffset {
-  SDValue Base;
-  SDValue Index;
-  int64_t Offset;
-  bool IsIndexSignExt;
-
-  BaseIndexOffset() : Offset(0), IsIndexSignExt(false) {}
-
-  BaseIndexOffset(SDValue Base, SDValue Index, int64_t Offset,
-                  bool IsIndexSignExt) :
-    Base(Base), Index(Index), Offset(Offset), IsIndexSignExt(IsIndexSignExt) {}
-
-  bool equalBaseIndex(const BaseIndexOffset &Other) {
-    return Other.Base == Base && Other.Index == Index &&
-      Other.IsIndexSignExt == IsIndexSignExt;
-  }
-
-  /// Parses tree in Ptr for base, index, offset addresses.
-  static BaseIndexOffset match(SDValue Ptr, SelectionDAG &DAG) {
-    bool IsIndexSignExt = false;
-
-    // Split up a folded GlobalAddress+Offset into its component parts.
-    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Ptr))
-      if (GA->getOpcode() == ISD::GlobalAddress && GA->getOffset() != 0) {
-        return BaseIndexOffset(DAG.getGlobalAddress(GA->getGlobal(),
-                                                    SDLoc(GA),
-                                                    GA->getValueType(0),
-                                                    /*Offset=*/0,
-                                                    /*isTargetGA=*/false,
-                                                    GA->getTargetFlags()),
-                               SDValue(),
-                               GA->getOffset(),
-                               IsIndexSignExt);
-      }
-
-    // We only can pattern match BASE + INDEX + OFFSET. If Ptr is not an ADD
-    // instruction, then it could be just the BASE or everything else we don't
-    // know how to handle. Just use Ptr as BASE and give up.
-    if (Ptr->getOpcode() != ISD::ADD)
-      return BaseIndexOffset(Ptr, SDValue(), 0, IsIndexSignExt);
-
-    // We know that we have at least an ADD instruction. Try to pattern match
-    // the simple case of BASE + OFFSET.
-    if (isa<ConstantSDNode>(Ptr->getOperand(1))) {
-      int64_t Offset = cast<ConstantSDNode>(Ptr->getOperand(1))->getSExtValue();
-      return  BaseIndexOffset(Ptr->getOperand(0), SDValue(), Offset,
-                              IsIndexSignExt);
-    }
-
-    // Inside a loop the current BASE pointer is calculated using an ADD and a
-    // MUL instruction. In this case Ptr is the actual BASE pointer.
-    // (i64 add (i64 %array_ptr)
-    //          (i64 mul (i64 %induction_var)
-    //                   (i64 %element_size)))
-    if (Ptr->getOperand(1)->getOpcode() == ISD::MUL)
-      return BaseIndexOffset(Ptr, SDValue(), 0, IsIndexSignExt);
-
-    // Look at Base + Index + Offset cases.
-    SDValue Base = Ptr->getOperand(0);
-    SDValue IndexOffset = Ptr->getOperand(1);
-
-    // Skip signextends.
-    if (IndexOffset->getOpcode() == ISD::SIGN_EXTEND) {
-      IndexOffset = IndexOffset->getOperand(0);
-      IsIndexSignExt = true;
-    }
-
-    // Either the case of Base + Index (no offset) or something else.
-    if (IndexOffset->getOpcode() != ISD::ADD)
-      return BaseIndexOffset(Base, IndexOffset, 0, IsIndexSignExt);
-
-    // Now we have the case of Base + Index + offset.
-    SDValue Index = IndexOffset->getOperand(0);
-    SDValue Offset = IndexOffset->getOperand(1);
-
-    if (!isa<ConstantSDNode>(Offset))
-      return BaseIndexOffset(Ptr, SDValue(), 0, IsIndexSignExt);
-
-    // Ignore signextends.
-    if (Index->getOpcode() == ISD::SIGN_EXTEND) {
-      Index = Index->getOperand(0);
-      IsIndexSignExt = true;
-    } else IsIndexSignExt = false;
-
-    int64_t Off = cast<ConstantSDNode>(Offset)->getSExtValue();
-    return BaseIndexOffset(Base, Index, Off, IsIndexSignExt);
-  }
-};
-} // namespace
 
 // This is a helper function for visitMUL to check the profitability
 // of folding (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2).

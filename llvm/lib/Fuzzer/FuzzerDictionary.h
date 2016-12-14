@@ -122,4 +122,3 @@ bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units);
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_DICTIONARY_H
-

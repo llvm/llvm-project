@@ -42,11 +42,11 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; CHECK:      .loc 1 7 7
 ; CHECK-NOT:  .loc
-; CHECK:      .loc 1 0 0 is_stmt 0
+; CHECK:      .loc 1 0 7 is_stmt 0
 ; CHECK-NOT:  .loc
 ; CHECK:      .loc 2 20 5 is_stmt 1
 ; CHECK:      .LBB0_2:
-; CHECK-NEXT: .loc 2 0 0 is_stmt 0
+; CHECK-NEXT: .loc 2 0 5 is_stmt 0
 ; CHECK-NOT:  .loc
 ; CHECK:      .loc 1 10 3 is_stmt 1
 ;

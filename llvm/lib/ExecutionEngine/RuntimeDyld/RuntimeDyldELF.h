@@ -43,9 +43,6 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   void resolveARMRelocation(const SectionEntry &Section, uint64_t Offset,
                             uint32_t Value, uint32_t Type, int32_t Addend);
 
-  void resolveMIPSRelocation(const SectionEntry &Section, uint64_t Offset,
-                             uint32_t Value, uint32_t Type, int32_t Addend);
-
   void resolvePPC32Relocation(const SectionEntry &Section, uint64_t Offset,
                               uint64_t Value, uint32_t Type, int64_t Addend);
 
@@ -54,23 +51,6 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
 
   void resolveSystemZRelocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
-
-  void resolveMIPSN32Relocation(const SectionEntry &Section, uint64_t Offset,
-                                uint64_t Value, uint32_t Type, int64_t Addend,
-                                uint64_t SymOffset, SID SectionID);
-  void resolveMIPSN64Relocation(const SectionEntry &Section, uint64_t Offset,
-                                uint64_t Value, uint32_t Type, int64_t Addend,
-                                uint64_t SymOffset, SID SectionID);
-
-  int64_t evaluateMIPS32Relocation(const SectionEntry &Section, uint64_t Offset,
-                                   uint64_t Value, uint32_t Type);
-  int64_t evaluateMIPS64Relocation(const SectionEntry &Section,
-                                   uint64_t Offset, uint64_t Value,
-                                   uint32_t Type,  int64_t Addend,
-                                   uint64_t SymOffset, SID SectionID);
-
-  void applyMIPSRelocation(uint8_t *TargetPtr, int64_t CalculatedValue,
-                           uint32_t Type);
 
   unsigned getMaxStubSize() override {
     if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)
@@ -104,9 +84,10 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   Error findOPDEntrySection(const ELFObjectFileBase &Obj,
                             ObjSectionToIDMap &LocalSections,
                             RelocationValueRef &Rel);
-
+protected:
   size_t getGOTEntrySize();
 
+private:
   SectionEntry &getSection(unsigned SectionID) { return Sections[SectionID]; }
 
   // Allocate no GOT entries for use in the given section.
@@ -143,10 +124,12 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   // that consume more than one slot)
   unsigned CurrentGOTIndex;
 
+protected:
   // A map from section to a GOT section that has entries for section's GOT
   // relocations. (Mips64 specific)
   DenseMap<SID, SID> SectionToGOTMap;
 
+private:
   // A map to avoid duplicate got entries (Mips64 specific)
   StringMap<uint64_t> GOTSymbolOffsets;
 
@@ -166,6 +149,10 @@ public:
   RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
                  JITSymbolResolver &Resolver);
   ~RuntimeDyldELF() override;
+
+  static std::unique_ptr<RuntimeDyldELF>
+  create(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MemMgr,
+         JITSymbolResolver &Resolver);
 
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
   loadObject(const object::ObjectFile &O) override;

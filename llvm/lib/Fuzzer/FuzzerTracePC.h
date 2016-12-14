@@ -12,10 +12,9 @@
 #ifndef LLVM_FUZZER_TRACE_PC
 #define LLVM_FUZZER_TRACE_PC
 
-#include <set>
-
 #include "FuzzerDefs.h"
 #include "FuzzerValueBitMap.h"
+#include <set>
 
 namespace fuzzer {
 
@@ -127,7 +126,7 @@ size_t TracePC::CollectFeatures(Callback CB) {
     uint64_t Bundle = *reinterpret_cast<uint64_t*>(&Counters[Idx]);
     if (!Bundle) continue;
     for (size_t i = Idx; i < Idx + Step; i++) {
-      uint8_t Counter = (Bundle >> (i * 8)) & 0xff;
+      uint8_t Counter = (Bundle >> ((i - Idx) * 8)) & 0xff;
       if (!Counter) continue;
       Counters[i] = 0;
       unsigned Bit = 0;

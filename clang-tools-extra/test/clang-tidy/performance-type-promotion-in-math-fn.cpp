@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s performance-type-promotion-in-math-fn %t
 
+// CHECK-FIXES: #include <cmath>
+
 double acos(double);
 double acosh(double);
 double asin(double);

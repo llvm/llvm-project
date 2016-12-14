@@ -15,7 +15,6 @@
 #include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
-
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -200,10 +199,10 @@ static void PulseThread() {
   }
 }
 
-static void WorkerThread(const std::string &Cmd, std::atomic<int> *Counter,
-                        int NumJobs, std::atomic<bool> *HasErrors) {
+static void WorkerThread(const std::string &Cmd, std::atomic<unsigned> *Counter,
+                         unsigned NumJobs, std::atomic<bool> *HasErrors) {
   while (true) {
-    int C = (*Counter)++;
+    unsigned C = (*Counter)++;
     if (C >= NumJobs) break;
     std::string Log = "fuzz-" + std::to_string(C) + ".log";
     std::string ToRun = Cmd + " > " + Log + " 2>&1\n";
@@ -213,7 +212,7 @@ static void WorkerThread(const std::string &Cmd, std::atomic<int> *Counter,
     if (ExitCode != 0)
       *HasErrors = true;
     std::lock_guard<std::mutex> Lock(Mu);
-    Printf("================== Job %d exited with exit code %d ============\n",
+    Printf("================== Job %u exited with exit code %d ============\n",
            C, ExitCode);
     fuzzer::CopyFileToErr(Log);
   }
@@ -231,14 +230,14 @@ std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
 }
 
 static int RunInMultipleProcesses(const std::vector<std::string> &Args,
-                                  int NumWorkers, int NumJobs) {
-  std::atomic<int> Counter(0);
+                                  unsigned NumWorkers, unsigned NumJobs) {
+  std::atomic<unsigned> Counter(0);
   std::atomic<bool> HasErrors(false);
   std::string Cmd = CloneArgsWithoutX(Args, "jobs", "workers");
   std::vector<std::thread> V;
   std::thread Pulse(PulseThread);
   Pulse.detach();
-  for (int i = 0; i < NumWorkers; i++)
+  for (unsigned i = 0; i < NumWorkers; i++)
     V.push_back(std::thread(WorkerThread, Cmd, &Counter, NumJobs, &HasErrors));
   for (auto &T : V)
     T.join();
@@ -379,7 +378,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.jobs > 0 && Flags.workers == 0) {
     Flags.workers = std::min(NumberOfCpuCores() / 2, Flags.jobs);
     if (Flags.workers > 1)
-      Printf("Running %d workers\n", Flags.workers);
+      Printf("Running %u workers\n", Flags.workers);
   }
 
   if (Flags.workers > 0 && Flags.jobs > 0)
@@ -457,16 +456,14 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   StartRssThread(F, Flags.rss_limit_mb);
 
-  // Timer
-  if (Flags.timeout > 0)
-    SetTimer(Flags.timeout / 2 + 1);
-  if (Flags.handle_segv) SetSigSegvHandler();
-  if (Flags.handle_bus) SetSigBusHandler();
-  if (Flags.handle_abrt) SetSigAbrtHandler();
-  if (Flags.handle_ill) SetSigIllHandler();
-  if (Flags.handle_fpe) SetSigFpeHandler();
-  if (Flags.handle_int) SetSigIntHandler();
-  if (Flags.handle_term) SetSigTermHandler();
+  Options.HandleAbrt = Flags.handle_abrt;
+  Options.HandleBus = Flags.handle_bus;
+  Options.HandleFpe = Flags.handle_fpe;
+  Options.HandleIll = Flags.handle_ill;
+  Options.HandleInt = Flags.handle_int;
+  Options.HandleSegv = Flags.handle_segv;
+  Options.HandleTerm = Flags.handle_term;
+  SetSignalHandler(Options);
 
   if (Flags.minimize_crash_internal_step)
     return MinimizeCrashInputInternalStep(F, Corpus);

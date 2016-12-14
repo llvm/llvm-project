@@ -35,9 +35,11 @@
 using namespace llvm;
 using namespace object;
 
-IRObjectFile::IRObjectFile(MemoryBufferRef Object, std::unique_ptr<Module> Mod)
-    : SymbolicFile(Binary::ID_IR, Object), M(std::move(Mod)) {
-  SymTab.addModule(M.get());
+IRObjectFile::IRObjectFile(MemoryBufferRef Object,
+                           std::vector<std::unique_ptr<Module>> Mods)
+    : SymbolicFile(Binary::ID_IR, Object), Mods(std::move(Mods)) {
+  for (auto &M : this->Mods)
+    SymTab.addModule(M.get());
 }
 
 IRObjectFile::~IRObjectFile() {}
@@ -60,12 +62,6 @@ uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   return SymTab.getSymbolFlags(getSym(Symb));
 }
 
-GlobalValue *IRObjectFile::getSymbolGV(DataRefImpl Symb) {
-  return getSym(Symb).dyn_cast<GlobalValue *>();
-}
-
-std::unique_ptr<Module> IRObjectFile::takeModule() { return std::move(M); }
-
 basic_symbol_iterator IRObjectFile::symbol_begin() const {
   DataRefImpl Ret;
   Ret.p = reinterpret_cast<uintptr_t>(SymTab.symbols().data());
@@ -79,7 +75,11 @@ basic_symbol_iterator IRObjectFile::symbol_end() const {
   return basic_symbol_iterator(BasicSymbolRef(Ret, this));
 }
 
-StringRef IRObjectFile::getTargetTriple() const { return M->getTargetTriple(); }
+StringRef IRObjectFile::getTargetTriple() const {
+  // Each module must have the same target triple, so we arbitrarily access the
+  // first one.
+  return Mods[0]->getTargetTriple();
+}
 
 ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
   for (const SectionRef &Sec : Obj.sections()) {
@@ -114,18 +114,26 @@ ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Ob
 }
 
 Expected<std::unique_ptr<IRObjectFile>>
-llvm::object::IRObjectFile::create(MemoryBufferRef Object,
-                                   LLVMContext &Context) {
+IRObjectFile::create(MemoryBufferRef Object, LLVMContext &Context) {
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
   if (!BCOrErr)
     return errorCodeToError(BCOrErr.getError());
 
-  Expected<std::unique_ptr<Module>> MOrErr =
-      getLazyBitcodeModule(*BCOrErr, Context,
-                           /*ShouldLazyLoadMetadata*/ true);
-  if (!MOrErr)
-    return MOrErr.takeError();
+  Expected<std::vector<BitcodeModule>> BMsOrErr =
+      getBitcodeModuleList(*BCOrErr);
+  if (!BMsOrErr)
+    return BMsOrErr.takeError();
 
-  std::unique_ptr<Module> &M = MOrErr.get();
-  return llvm::make_unique<IRObjectFile>(BCOrErr.get(), std::move(M));
+  std::vector<std::unique_ptr<Module>> Mods;
+  for (auto BM : *BMsOrErr) {
+    Expected<std::unique_ptr<Module>> MOrErr =
+        BM.getLazyModule(Context, /*ShouldLazyLoadMetadata*/ true);
+    if (!MOrErr)
+      return MOrErr.takeError();
+
+    Mods.push_back(std::move(*MOrErr));
+  }
+
+  return std::unique_ptr<IRObjectFile>(
+      new IRObjectFile(*BCOrErr, std::move(Mods)));
 }

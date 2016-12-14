@@ -1002,4 +1002,10 @@ TEST(StringRefTest, DropWhileUntil) {
   EXPECT_EQ("", Taken);
 }
 
+TEST(StringRefTest, StringLiteral) {
+  constexpr StringLiteral Strings[] = {"Foo", "Bar"};
+  EXPECT_EQ(StringRef("Foo"), Strings[0]);
+  EXPECT_EQ(StringRef("Bar"), Strings[1]);
+}
+
 } // end anonymous namespace

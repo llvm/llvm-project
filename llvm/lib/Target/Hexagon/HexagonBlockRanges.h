@@ -1,4 +1,4 @@
-//===--- HexagonBlockRanges.h ---------------------------------------------===//
+//===--- HexagonBlockRanges.h -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,23 +11,21 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/MC/MCRegisterInfo.h"  // For MCPhysReg.
+#include <cassert>
 #include <map>
 #include <set>
 #include <vector>
+#include <utility>
 
 namespace llvm {
-  class Function;
-  class HexagonSubtarget;
-  class MachineBasicBlock;
-  class MachineFunction;
-  class MachineInstr;
-  class MCInstrDesc;
-  class raw_ostream;
-  class TargetInstrInfo;
-  class TargetRegisterClass;
-  class TargetRegisterInfo;
-  class Type;
+
+class HexagonSubtarget;
+class MachineBasicBlock;
+class MachineFunction;
+class MachineInstr;
+class raw_ostream;
+class TargetInstrInfo;
+class TargetRegisterInfo;
 
 struct HexagonBlockRanges {
   HexagonBlockRanges(MachineFunction &MF);
@@ -50,10 +48,12 @@ struct HexagonBlockRanges {
       Exit  = 2,
       First = 11  // 10th + 1st
     };
-    static bool isInstr(IndexType X) { return X.Index >= First; }
 
     IndexType() : Index(None) {}
     IndexType(unsigned Idx) : Index(Idx) {}
+
+    static bool isInstr(IndexType X) { return X.Index >= First; }
+
     operator unsigned() const;
     bool operator== (unsigned x) const;
     bool operator== (IndexType Idx) const;
@@ -76,21 +76,23 @@ struct HexagonBlockRanges {
   // register is dead.
   class IndexRange : public std::pair<IndexType,IndexType> {
   public:
-    IndexRange() : Fixed(false), TiedEnd(false) {}
+    IndexRange() = default;
     IndexRange(IndexType Start, IndexType End, bool F = false, bool T = false)
       : std::pair<IndexType,IndexType>(Start, End), Fixed(F), TiedEnd(T) {}
+
     IndexType start() const { return first; }
     IndexType end() const   { return second; }
 
     bool operator< (const IndexRange &A) const {
       return start() < A.start();
     }
+
     bool overlaps(const IndexRange &A) const;
     bool contains(const IndexRange &A) const;
     void merge(const IndexRange &A);
 
-    bool Fixed;      // Can be renamed?  "Fixed" means "no".
-    bool TiedEnd;    // The end is not a use, but a dead def tied to a use.
+    bool Fixed = false;   // Can be renamed?  "Fixed" means "no".
+    bool TiedEnd = false; // The end is not a use, but a dead def tied to a use.
 
   private:
     void setStart(const IndexType &S) { first = S; }
@@ -107,6 +109,7 @@ struct HexagonBlockRanges {
     void add(const IndexRange &Range) {
       push_back(Range);
     }
+
     void include(const RangeList &RL);
     void unionize(bool MergeAdjacent = false);
     void subtract(const IndexRange &Range);
@@ -118,6 +121,7 @@ struct HexagonBlockRanges {
   class InstrIndexMap {
   public:
     InstrIndexMap(MachineBasicBlock &B);
+
     MachineInstr *getInstr(IndexType Idx) const;
     IndexType getIndex(MachineInstr *MI) const;
     MachineBasicBlock &getBlock() const { return Block; }
@@ -126,6 +130,7 @@ struct HexagonBlockRanges {
     void replaceInstr(MachineInstr *OldMI, MachineInstr *NewMI);
 
     friend raw_ostream &operator<< (raw_ostream &OS, const InstrIndexMap &Map);
+
     IndexType First, Last;
 
   private:
@@ -144,6 +149,7 @@ struct HexagonBlockRanges {
         : Map(M), TRI(I) {}
 
     friend raw_ostream &operator<< (raw_ostream &OS, const PrintRangeMap &P);
+
   private:
     const RegToRangeMap &Map;
     const TargetRegisterInfo &TRI;
@@ -162,7 +168,6 @@ private:
   const TargetRegisterInfo &TRI;
   BitVector Reserved;
 };
-
 
 inline HexagonBlockRanges::IndexType::operator unsigned() const {
   assert(Index >= First);
@@ -224,7 +229,6 @@ inline bool HexagonBlockRanges::IndexType::operator<= (IndexType Idx) const {
   return operator==(Idx) || operator<(Idx);
 }
 
-
 raw_ostream &operator<< (raw_ostream &OS, HexagonBlockRanges::IndexType Idx);
 raw_ostream &operator<< (raw_ostream &OS,
       const HexagonBlockRanges::IndexRange &IR);
@@ -235,6 +239,6 @@ raw_ostream &operator<< (raw_ostream &OS,
 raw_ostream &operator<< (raw_ostream &OS,
       const HexagonBlockRanges::PrintRangeMap &P);
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // HEXAGON_BLOCK_RANGES_H

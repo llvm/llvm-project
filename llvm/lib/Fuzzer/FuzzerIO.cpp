@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 // IO functions.
 //===----------------------------------------------------------------------===//
+
 #include "FuzzerIO.h"
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
@@ -15,8 +16,8 @@
 #include <cstdarg>
 #include <fstream>
 #include <iterator>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 namespace fuzzer {
 

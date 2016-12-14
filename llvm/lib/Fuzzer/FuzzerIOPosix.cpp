@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 // IO functions implementation using Posix API.
 //===----------------------------------------------------------------------===//
-
 #include "FuzzerDefs.h"
 #if LIBFUZZER_POSIX
+
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
 #include <cstdarg>
@@ -71,7 +71,7 @@ int DuplicateFile(int Fd) {
   return dup(Fd);
 }
 
-void DeleteFile(const std::string &Path) {
+void RemoveFile(const std::string &Path) {
   unlink(Path.c_str());
 }
 
@@ -84,4 +84,5 @@ std::string DirName(const std::string &FileName) {
 }
 
 }  // namespace fuzzer
+
 #endif // LIBFUZZER_POSIX

@@ -156,11 +156,11 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
     OS << "\n.debug_line contents:\n";
     for (const auto &CU : compile_units()) {
       savedAddressByteSize = CU->getAddressByteSize();
-      const auto *CUDIE = CU->getUnitDIE();
-      if (CUDIE == nullptr)
+      auto CUDIE = CU->getUnitDIE();
+      if (!CUDIE)
         continue;
-      unsigned stmtOffset = CUDIE->getAttributeValueAsSectionOffset(
-          CU.get(), DW_AT_stmt_list, -1U);
+      unsigned stmtOffset = CUDIE.getAttributeValueAsSectionOffset(
+          DW_AT_stmt_list, -1U);
       if (stmtOffset != -1U) {
         DataExtractor lineData(getLineSection().Data, isLittleEndian(),
                                savedAddressByteSize);
@@ -412,12 +412,12 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   if (!Line)
     Line.reset(new DWARFDebugLine(&getLineSection().Relocs));
 
-  const auto *UnitDIE = U->getUnitDIE();
-  if (UnitDIE == nullptr)
+  auto UnitDIE = U->getUnitDIE();
+  if (!UnitDIE)
     return nullptr;
 
   unsigned stmtOffset =
-      UnitDIE->getAttributeValueAsSectionOffset(U, DW_AT_stmt_list, -1U);
+      UnitDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list, -1U);
   if (stmtOffset == -1U)
     return nullptr; // No line table for this compile unit.
 
@@ -477,14 +477,12 @@ static bool getFunctionNameForAddress(DWARFCompileUnit *CU, uint64_t Address,
     return false;
   // The address may correspond to instruction in some inlined function,
   // so we have to build the chain of inlined functions and take the
-  // name of the topmost function in it.
-  const DWARFDebugInfoEntryInlinedChain &InlinedChain =
-      CU->getInlinedChainForAddress(Address);
-  if (InlinedChain.DIEs.size() == 0)
+  // name of the topmost function in it.SmallVectorImpl<DWARFDie> &InlinedChain
+  SmallVector<DWARFDie, 4> InlinedChain;
+  CU->getInlinedChainForAddress(Address, InlinedChain);
+  if (InlinedChain.size() == 0)
     return false;
-  const DWARFDebugInfoEntryMinimal &TopFunctionDIE = InlinedChain.DIEs[0];
-  if (const char *Name =
-          TopFunctionDIE.getSubroutineName(InlinedChain.U, Kind)) {
+  if (const char *Name = InlinedChain[0].getSubroutineName(Kind)) {
     FunctionName = Name;
     return true;
   }
@@ -559,9 +557,9 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
     return InliningInfo;
 
   const DWARFLineTable *LineTable = nullptr;
-  const DWARFDebugInfoEntryInlinedChain &InlinedChain =
-      CU->getInlinedChainForAddress(Address);
-  if (InlinedChain.DIEs.size() == 0) {
+  SmallVector<DWARFDie, 4> InlinedChain;
+  CU->getInlinedChainForAddress(Address, InlinedChain);
+  if (InlinedChain.size() == 0) {
     // If there is no DIE for address (e.g. it is in unavailable .dwo file),
     // try to at least get file/line info from symbol table.
     if (Spec.FLIKind != FileLineInfoKind::None) {
@@ -576,12 +574,11 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
   }
 
   uint32_t CallFile = 0, CallLine = 0, CallColumn = 0;
-  for (uint32_t i = 0, n = InlinedChain.DIEs.size(); i != n; i++) {
-    const DWARFDebugInfoEntryMinimal &FunctionDIE = InlinedChain.DIEs[i];
+  for (uint32_t i = 0, n = InlinedChain.size(); i != n; i++) {
+    DWARFDie &FunctionDIE = InlinedChain[i];
     DILineInfo Frame;
     // Get function name if necessary.
-    if (const char *Name =
-            FunctionDIE.getSubroutineName(InlinedChain.U, Spec.FNKind))
+    if (const char *Name = FunctionDIE.getSubroutineName(Spec.FNKind))
       Frame.FunctionName = Name;
     if (Spec.FLIKind != FileLineInfoKind::None) {
       if (i == 0) {
@@ -603,8 +600,7 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
       }
       // Get call file/line/column of a current DIE.
       if (i + 1 < n) {
-        FunctionDIE.getCallerFrame(InlinedChain.U, CallFile, CallLine,
-                                   CallColumn);
+        FunctionDIE.getCallerFrame(CallFile, CallLine, CallColumn);
       }
     }
     InliningInfo.addFrame(Frame);

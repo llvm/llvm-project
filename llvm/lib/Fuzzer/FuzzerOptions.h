@@ -53,6 +53,13 @@ struct FuzzingOptions {
   bool PrintCoverage = false;
   bool DetectLeaks = true;
   int  TraceMalloc = 0;
+  bool HandleAbrt = false;
+  bool HandleBus = false;
+  bool HandleFpe = false;
+  bool HandleIll = false;
+  bool HandleInt = false;
+  bool HandleSegv = false;
+  bool HandleTerm = false;
 };
 
 }  // namespace fuzzer

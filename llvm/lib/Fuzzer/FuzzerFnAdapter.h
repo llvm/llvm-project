@@ -15,10 +15,9 @@
 #ifndef LLVM_FUZZER_ADAPTER_H
 #define LLVM_FUZZER_ADAPTER_H
 
+#include <algorithm>
 #include <stddef.h>
 #include <stdint.h>
-
-#include <algorithm>
 #include <string>
 #include <tuple>
 #include <vector>

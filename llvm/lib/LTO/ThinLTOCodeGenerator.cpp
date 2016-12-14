@@ -343,10 +343,9 @@ public:
   }
 
   // Cache the Produced object file
-  std::unique_ptr<MemoryBuffer>
-  write(std::unique_ptr<MemoryBuffer> OutputBuffer) {
+  void write(const MemoryBuffer &OutputBuffer) {
     if (EntryPath.empty())
-      return OutputBuffer;
+      return;
 
     // Write to a temporary to avoid race condition
     SmallString<128> TempFilename;
@@ -359,7 +358,7 @@ public:
     }
     {
       raw_fd_ostream OS(TempFD, /* ShouldClose */ true);
-      OS << OutputBuffer->getBuffer();
+      OS << OutputBuffer.getBuffer();
     }
     // Rename to final destination (hopefully race condition won't matter here)
     EC = sys::fs::rename(TempFilename, EntryPath);
@@ -369,16 +368,8 @@ public:
       if (EC)
         report_fatal_error(Twine("Failed to open ") + EntryPath +
                            " to save cached entry\n");
-      OS << OutputBuffer->getBuffer();
+      OS << OutputBuffer.getBuffer();
     }
-    auto ReloadedBufferOrErr = MemoryBuffer::getFile(EntryPath);
-    if (auto EC = ReloadedBufferOrErr.getError()) {
-      // FIXME diagnose
-      errs() << "error: can't reload cached file '" << EntryPath
-             << "': " << EC.message() << "\n";
-      return OutputBuffer;
-    }
-    return std::move(*ReloadedBufferOrErr);
   }
 };
 
@@ -745,6 +736,43 @@ std::unique_ptr<MemoryBuffer> ThinLTOCodeGenerator::codegen(Module &TheModule) {
   return codegenModule(TheModule, *TMBuilder.create());
 }
 
+/// Write out the generated object file, either from CacheEntryPath or from
+/// OutputBuffer, preferring hard-link when possible.
+/// Returns the path to the generated file in SavedObjectsDirectoryPath.
+static std::string writeGeneratedObject(int count, StringRef CacheEntryPath,
+                                        StringRef SavedObjectsDirectoryPath,
+                                        const MemoryBuffer &OutputBuffer) {
+  SmallString<128> OutputPath(SavedObjectsDirectoryPath);
+  llvm::sys::path::append(OutputPath, Twine(count) + ".thinlto.o");
+  OutputPath.c_str(); // Ensure the string is null terminated.
+  if (sys::fs::exists(OutputPath))
+    sys::fs::remove(OutputPath);
+
+  // We don't return a memory buffer to the linker, just a list of files.
+  if (!CacheEntryPath.empty()) {
+    // Cache is enabled, hard-link the entry (or copy if hard-link fails).
+    auto Err = sys::fs::create_hard_link(CacheEntryPath, OutputPath);
+    if (!Err)
+      return OutputPath.str();
+    // Hard linking failed, try to copy.
+    Err = sys::fs::copy_file(CacheEntryPath, OutputPath);
+    if (!Err)
+      return OutputPath.str();
+    // Copy failed (could be because the CacheEntry was removed from the cache
+    // in the meantime by another process), fall back and try to write down the
+    // buffer to the output.
+    errs() << "error: can't link or copy from cached entry '" << CacheEntryPath
+           << "' to '" << OutputPath << "'\n";
+  }
+  // No cache entry, just write out the buffer.
+  std::error_code Err;
+  raw_fd_ostream OS(OutputPath, Err, sys::fs::F_None);
+  if (Err)
+    report_fatal_error("Can't open output '" + OutputPath + "'\n");
+  OS << OutputBuffer.getBuffer();
+  return OutputPath.str();
+}
+
 // Main entry point for the ThinLTO processing
 void ThinLTOCodeGenerator::run() {
   if (CodeGenOnly) {
@@ -785,7 +813,16 @@ void ThinLTOCodeGenerator::run() {
 
   // Prepare the resulting object vector
   assert(ProducedBinaries.empty() && "The generator should not be reused");
-  ProducedBinaries.resize(Modules.size());
+  if (SavedObjectsDirectoryPath.empty())
+    ProducedBinaries.resize(Modules.size());
+  else {
+    sys::fs::create_directories(SavedObjectsDirectoryPath);
+    bool IsDir;
+    sys::fs::is_directory(SavedObjectsDirectoryPath, IsDir);
+    if (!IsDir)
+      report_fatal_error("Unexistent dir: '" + SavedObjectsDirectoryPath + "'");
+    ProducedBinaryFiles.resize(Modules.size());
+  }
 
   // Prepare the module map.
   auto ModuleMap = generateModuleMap(Modules);
@@ -865,16 +902,22 @@ void ThinLTOCodeGenerator::run() {
                                     ImportLists[ModuleIdentifier], ExportList,
                                     ResolvedODR[ModuleIdentifier],
                                     DefinedFunctions, GUIDPreservedSymbols);
+        auto CacheEntryPath = CacheEntry.getEntryPath();
 
         {
           auto ErrOrBuffer = CacheEntry.tryLoadingBuffer();
           DEBUG(dbgs() << "Cache " << (ErrOrBuffer ? "hit" : "miss") << " '"
-                       << CacheEntry.getEntryPath() << "' for buffer " << count
-                       << " " << ModuleIdentifier << "\n");
+                       << CacheEntryPath << "' for buffer " << count << " "
+                       << ModuleIdentifier << "\n");
 
           if (ErrOrBuffer) {
             // Cache Hit!
-            ProducedBinaries[count] = std::move(ErrOrBuffer.get());
+            if (SavedObjectsDirectoryPath.empty())
+              ProducedBinaries[count] = std::move(ErrOrBuffer.get());
+            else
+              ProducedBinaryFiles[count] = writeGeneratedObject(
+                  count, CacheEntryPath, SavedObjectsDirectoryPath,
+                  *ErrOrBuffer.get());
             return;
           }
         }
@@ -903,8 +946,32 @@ void ThinLTOCodeGenerator::run() {
             ModuleToDefinedGVSummaries[ModuleIdentifier], CacheOptions,
             DisableCodeGen, SaveTempsDir, count);
 
-        OutputBuffer = CacheEntry.write(std::move(OutputBuffer));
-        ProducedBinaries[count] = std::move(OutputBuffer);
+        // Commit to the cache (if enabled)
+        CacheEntry.write(*OutputBuffer);
+
+        if (SavedObjectsDirectoryPath.empty()) {
+          // We need to generated a memory buffer for the linker.
+          if (!CacheEntryPath.empty()) {
+            // Cache is enabled, reload from the cache
+            // We do this to lower memory pressuree: the buffer is on the heap
+            // and releasing it frees memory that can be used for the next input
+            // file. The final binary link will read from the VFS cache
+            // (hopefully!) or from disk if the memory pressure wasn't too high.
+            auto ReloadedBufferOrErr = CacheEntry.tryLoadingBuffer();
+            if (auto EC = ReloadedBufferOrErr.getError()) {
+              // On error, keeping the preexisting buffer and printing a
+              // diagnostic is more friendly than just crashing.
+              errs() << "error: can't reload cached file '" << CacheEntryPath
+                     << "': " << EC.message() << "\n";
+            } else {
+              OutputBuffer = std::move(*ReloadedBufferOrErr);
+            }
+          }
+          ProducedBinaries[count] = std::move(OutputBuffer);
+          return;
+        }
+        ProducedBinaryFiles[count] = writeGeneratedObject(
+            count, CacheEntryPath, SavedObjectsDirectoryPath, *OutputBuffer);
       }, IndexCount);
     }
   }
