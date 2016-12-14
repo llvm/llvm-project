@@ -492,7 +492,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
             if (fpCons) {
               APFloat Val(fpCons->getValueAPF());
               bool Lost = false;
-              Val.convert(APFloat::IEEEsingle,
+              Val.convert(APFloat::IEEEsingle(),
                           APFloat::rmNearestTiesToEven,
                           &Lost);
               Arg = ConstantFP::get(Ctx, Val);
