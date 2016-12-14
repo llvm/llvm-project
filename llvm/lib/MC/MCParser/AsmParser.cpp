@@ -2965,6 +2965,7 @@ bool AsmParser::parseDirectiveFill() {
 ///  ::= .org expression [ , expression ]
 bool AsmParser::parseDirectiveOrg() {
   const MCExpr *Offset;
+  SMLoc OffsetLoc = Lexer.getLoc();
   if (checkForValidSection() || parseExpression(Offset))
     return true;
 
@@ -2976,7 +2977,7 @@ bool AsmParser::parseDirectiveOrg() {
   if (parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.org' directive");
 
-  getStreamer().emitValueToOffset(Offset, FillExpr);
+  getStreamer().emitValueToOffset(Offset, FillExpr, OffsetLoc);
   return false;
 }
 
@@ -5502,7 +5503,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                           "invalid reassignment of non-absolute variable '" +
                               Name + "'");
   } else if (Name == ".") {
-    Parser.getStreamer().emitValueToOffset(Value, 0);
+    Parser.getStreamer().emitValueToOffset(Value, 0, EqualLoc);
     return false;
   } else
     Sym = Parser.getContext().getOrCreateSymbol(Name);

@@ -14,6 +14,7 @@
 #include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "lld/Support/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -336,8 +337,14 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
 
   switch (Sec.sh_type) {
   case SHT_ARM_ATTRIBUTES:
-    // FIXME: ARM meta-data section. At present attributes are ignored,
-    // they can be used to reason about object compatibility.
+    // FIXME: ARM meta-data section. Retain the first attribute section
+    // we see. The eglibc ARM dynamic loaders require the presence of an
+    // attribute section for dlopen to work.
+    // In a full implementation we would merge all attribute sections.
+    if (In<ELFT>::ARMAttributes == nullptr) {
+      In<ELFT>::ARMAttributes = make<InputSection<ELFT>>(this, &Sec, Name);
+      return In<ELFT>::ARMAttributes;
+    }
     return &InputSection<ELFT>::Discarded;
   case SHT_RELA:
   case SHT_REL: {
