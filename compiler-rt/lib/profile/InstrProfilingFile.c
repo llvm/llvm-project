@@ -286,6 +286,8 @@ static void resetFilenameToDefault(void) {
   lprofCurFilename.PNS = PNS_default;
 }
 
+static int isDigit(char C) { return C >= '0' && C <= '9'; }
+
 static int isNonZeroDigit(char C) { return C >= '1' && C <= '9'; }
 
 static int containsMergeSpecifier(const char *FilenamePat, int I) {
@@ -300,7 +302,7 @@ static int containsExitOnSignalSpecifier(const char *FilenamePat, int I) {
   if (!isNonZeroDigit(FilenamePat[I]))
     return 0;
   return (FilenamePat[I + 1] == 'x') ||
-         (isNonZeroDigit(FilenamePat[I + 1]) && FilenamePat[I + 2] == 'x');
+         (isDigit(FilenamePat[I + 1]) && FilenamePat[I + 2] == 'x');
 }
 
 /* Parses the pattern string \p FilenamePat and stores the result to
