@@ -1,12 +1,24 @@
-// TODO: header template
+//===--- OSLog.cpp - Analysis of calls to os_log builtins -------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines APIs for determining the layout of the data buffer for
+// os_log() and os_trace().
+//
+//===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/OSLog.h"
+#include "clang/Analysis/Analyses/FormatString.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/Analyses/FormatString.h"
-#include "clang/Basic/Builtins.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
@@ -16,75 +28,49 @@ using clang::analyze_os_log::OSLogBufferItem;
 using clang::analyze_os_log::OSLogBufferLayout;
 
 class OSLogFormatStringHandler
-    : public analyze_format_string::FormatStringHandler {
+  : public analyze_format_string::FormatStringHandler {
 private:
-  struct ArgData {
-    const Expr *E = nullptr;
-    Optional<OSLogBufferItem::Kind> Kind;
-    Optional<unsigned> Size;
-    unsigned char Flags = 0;
-  };
-  SmallVector<ArgData, 4> ArgsData;
   ArrayRef<const Expr *> Args;
-
-  OSLogBufferItem::Kind
-  getKind(analyze_format_string::ConversionSpecifier::Kind K) {
-    switch (K) {
-    case clang::analyze_format_string::ConversionSpecifier::sArg: // "%s"
-      return OSLogBufferItem::StringKind;
-    case clang::analyze_format_string::ConversionSpecifier::SArg: // "%S"
-      return OSLogBufferItem::WideStringKind;
-    case clang::analyze_format_string::ConversionSpecifier::PArg: { // "%P"
-      return OSLogBufferItem::PointerKind;
-    case clang::analyze_format_string::ConversionSpecifier::ObjCObjArg: // "%@"
-      return OSLogBufferItem::ObjCObjKind;
-    case clang::analyze_format_string::ConversionSpecifier::PrintErrno: // "%m"
-      return OSLogBufferItem::ErrnoKind;
-    default:
-      return OSLogBufferItem::ScalarKind;
-    }
-    }
-  }
+  SmallVector<Optional<OSLogBufferItem::Kind>, 4> ArgKind;
+  SmallVector<Optional<unsigned>, 4> ArgSize;
+  SmallVector<unsigned char, 4> ArgFlags;
 
 public:
-  OSLogFormatStringHandler(ArrayRef<const Expr *> Args) : Args(Args) {
-    ArgsData.reserve(Args.size());
-  }
+  OSLogFormatStringHandler(ArrayRef<const Expr *> args)
+    : FormatStringHandler(), Args(args), ArgKind(args.size(), None),
+      ArgSize(args.size(), None), ArgFlags(args.size(), 0)
+  {}
 
   virtual bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
-                                     const char *StartSpecifier,
-                                     unsigned SpecifierLen) {
-    if (!FS.consumesDataArgument() &&
-        FS.getConversionSpecifier().getKind() !=
-            clang::analyze_format_string::ConversionSpecifier::PrintErrno)
-      return true;
+                                     const char *startSpecifier,
+                                     unsigned specifierLen) {
 
-    ArgsData.emplace_back();
-    unsigned ArgIndex = FS.getArgIndex();
-    if (ArgIndex < Args.size())
-      ArgsData.back().E = Args[ArgIndex];
+    // Cases to handle:
+    //  * "%f", "%d"... scalar (assumed for anything that doesn't fit the below
+    //    cases)
+    //  * "%s" pointer to null-terminated string
+    //  * "%.*s" strlen (arg), pointer to string
+    //  * "%.16s" strlen (non-arg), pointer to string
+    //  * "%.*P" len (arg), pointer to data
+    //  * "%.16P" len (non-arg), pointer to data
+    //  * "%@" pointer to objc object
 
-    // First get the Kind
-    ArgsData.back().Kind = getKind(FS.getConversionSpecifier().getKind());
-    if (ArgsData.back().Kind != OSLogBufferItem::ErrnoKind &&
-        !ArgsData.back().E) {
-      // missing argument
-      ArgsData.pop_back();
+    unsigned argIndex = FS.getArgIndex();
+    if (argIndex >= Args.size()) {
       return false;
     }
-
     switch (FS.getConversionSpecifier().getKind()) {
-    case clang::analyze_format_string::ConversionSpecifier::sArg:   // "%s"
-    case clang::analyze_format_string::ConversionSpecifier::SArg: { // "%S"
+    case clang::analyze_format_string::ConversionSpecifier::sArg: { // "%s"
+      ArgKind[argIndex] = OSLogBufferItem::StringKind;
       auto &precision = FS.getPrecision();
       switch (precision.getHowSpecified()) {
       case clang::analyze_format_string::OptionalAmount::NotSpecified: // "%s"
         break;
       case clang::analyze_format_string::OptionalAmount::Constant: // "%.16s"
-        ArgsData.back().Size = precision.getConstantAmount();
+        ArgSize[argIndex] = precision.getConstantAmount();
         break;
       case clang::analyze_format_string::OptionalAmount::Arg: // "%.*s"
-        ArgsData.back().Kind = OSLogBufferItem::CountKind;
+        ArgKind[precision.getArgIndex()] = OSLogBufferItem::CountKind;
         break;
       case clang::analyze_format_string::OptionalAmount::Invalid:
         return false;
@@ -92,58 +78,62 @@ public:
       break;
     }
     case clang::analyze_format_string::ConversionSpecifier::PArg: { // "%P"
+      ArgKind[argIndex] = OSLogBufferItem::PointerKind;
       auto &precision = FS.getPrecision();
       switch (precision.getHowSpecified()) {
       case clang::analyze_format_string::OptionalAmount::NotSpecified: // "%P"
         return false; // length must be supplied with pointer format specifier
       case clang::analyze_format_string::OptionalAmount::Constant: // "%.16P"
-        ArgsData.back().Size = precision.getConstantAmount();
+        ArgSize[argIndex] = precision.getConstantAmount();
         break;
       case clang::analyze_format_string::OptionalAmount::Arg: // "%.*P"
-        ArgsData.back().Kind = OSLogBufferItem::CountKind;
+        ArgKind[precision.getArgIndex()] = OSLogBufferItem::CountKind;
         break;
       case clang::analyze_format_string::OptionalAmount::Invalid:
         return false;
       }
       break;
     }
+    case clang::analyze_format_string::ConversionSpecifier::ObjCObjArg: // "%@"
+      ArgKind[argIndex] = OSLogBufferItem::ObjCObjKind;
+      break;
     default:
+      ArgKind[argIndex] = OSLogBufferItem::ScalarKind;
       break;
     }
 
     if (FS.isPrivate()) {
-      ArgsData.back().Flags |= OSLogBufferItem::IsPrivate;
+      ArgFlags[argIndex] |= OSLogBufferItem::IsPrivate;
     }
     if (FS.isPublic()) {
-      ArgsData.back().Flags |= OSLogBufferItem::IsPublic;
+      ArgFlags[argIndex] |= OSLogBufferItem::IsPublic;
     }
     return true;
   }
 
-  void computeLayout(ASTContext &Ctx, OSLogBufferLayout &Layout) const {
-    Layout.Items.clear();
-    for (auto &Data : ArgsData) {
-      if (Data.Size)
-        Layout.Items.emplace_back(Ctx, CharUnits::fromQuantity(*Data.Size),
-                                  Data.Flags);
-      if (Data.Kind) {
-        CharUnits Size;
-        if (*Data.Kind == OSLogBufferItem::ErrnoKind)
-          Size = CharUnits::Zero();
-        else
-          Size = Ctx.getTypeSizeInChars(Data.E->getType());
-        Layout.Items.emplace_back(*Data.Kind, Data.E, Size, Data.Flags);
+  void computeLayout(ASTContext &Ctx, OSLogBufferLayout &layout) const {
+    layout.Items.clear();
+    for (unsigned i = 0; i < Args.size(); i++) {
+      const Expr *arg = Args[i];
+      if (ArgSize[i]) {
+        layout.Items.emplace_back(Ctx, CharUnits::fromQuantity(*ArgSize[i]),
+                                  ArgFlags[i]);
+      }
+      CharUnits size = Ctx.getTypeSizeInChars(arg->getType());
+      if (ArgKind[i]) {
+        layout.Items.emplace_back(*ArgKind[i], arg, size, ArgFlags[i]);
       } else {
-        auto Size = Ctx.getTypeSizeInChars(Data.E->getType());
-        Layout.Items.emplace_back(OSLogBufferItem::ScalarKind, Data.E, Size,
-                                  Data.Flags);
+        layout.Items.emplace_back(OSLogBufferItem::ScalarKind, arg, size,
+                                  ArgFlags[i]);
       }
     }
   }
 };
 
-bool clang::analyze_os_log::computeOSLogBufferLayout(
-    ASTContext &Ctx, const CallExpr *E, OSLogBufferLayout &Layout) {
+bool clang::analyze_os_log::computeOSLogBufferLayout(ASTContext &Ctx,
+                                                     const CallExpr *E,
+                                                     OSLogBufferLayout &layout)
+{
   ArrayRef<const Expr *> Args(E->getArgs(), E->getArgs() + E->getNumArgs());
 
   const Expr *StringArg;
@@ -167,11 +157,11 @@ bool clang::analyze_os_log::computeOSLogBufferLayout(
 
   const StringLiteral *Lit = cast<StringLiteral>(StringArg->IgnoreParenCasts());
   assert(Lit && (Lit->isAscii() || Lit->isUTF8()));
-  StringRef Data = Lit->getString();
+  StringRef data = Lit->getString();
   OSLogFormatStringHandler H(VarArgs);
-  ParsePrintfString(H, Data.begin(), Data.end(), Ctx.getLangOpts(),
-                    Ctx.getTargetInfo(), /*isFreeBSDKPrintf*/ false);
+  ParsePrintfString(H, data.begin(), data.end(), Ctx.getLangOpts(),
+                    Ctx.getTargetInfo(), /*isFreeBSDKPrintf*/false);
 
-  H.computeLayout(Ctx, Layout);
+  H.computeLayout(Ctx, layout);
   return true;
 }
