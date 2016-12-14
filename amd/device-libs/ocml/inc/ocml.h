@@ -144,6 +144,8 @@ DECL_CONST_OCML_BINARY_F32(maxmag)
 DECL_CONST_OCML_BINARY_F32(minmag)
 extern float OCML_MANGLE_F32(modf)(float, __private float *);
 extern __attribute__((const)) float OCML_MANGLE_F32(nan)(uint);
+DECL_PURE_OCML_UNARY_F32(ncdf)
+DECL_PURE_OCML_UNARY_F32(ncdfinv)
 DECL_CONST_OCML_UNARY_F32(nearbyint)
 DECL_CONST_OCML_BINARY_F32(nextafter)
 DECL_PURE_OCML_BINARY_F32(pow)
@@ -266,6 +268,8 @@ DECL_CONST_OCML_BINARY_F64(maxmag)
 DECL_CONST_OCML_BINARY_F64(minmag)
 extern double OCML_MANGLE_F64(modf)(double, __private double *);
 extern __attribute__((const)) double OCML_MANGLE_F64(nan)(ulong);
+DECL_PURE_OCML_UNARY_F64(ncdf)
+DECL_PURE_OCML_UNARY_F64(ncdfinv)
 DECL_CONST_OCML_UNARY_F64(nearbyint)
 DECL_CONST_OCML_BINARY_F64(nextafter)
 DECL_PURE_OCML_BINARY_F64(pow)
@@ -392,6 +396,8 @@ DECL_CONST_OCML_BINARY_F16(maxmag)
 DECL_CONST_OCML_BINARY_F16(minmag)
 extern half OCML_MANGLE_F16(modf)(half, __private half *);
 extern __attribute__((const)) half OCML_MANGLE_F16(nan)(ushort);
+DECL_PURE_OCML_UNARY_F16(ncdf)
+DECL_PURE_OCML_UNARY_F16(ncdfinv)
 DECL_CONST_OCML_UNARY_F16(nearbyint)
 DECL_CONST_OCML_BINARY_F16(nextafter)
 DECL_PURE_OCML_BINARY_F16(pow)
