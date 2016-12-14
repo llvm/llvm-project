@@ -66,6 +66,7 @@
 
 #include "../source/Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
 
 using namespace lldb;
@@ -2156,7 +2157,7 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
       StreamString frame_description;
       if (frame)
         frame->DumpUsingSettingsFormat(&frame_description);
-      Host::SetCrashDescriptionWithFormat(
+      llvm::PrettyStackTraceFormat PST(
           "SBTarget::EvaluateExpression (expr = \"%s\", fetch_dynamic_value = "
           "%u) %s",
           expr, options.GetFetchDynamicValue(),
@@ -2166,9 +2167,6 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
           target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
 
       expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
-#ifdef LLDB_CONFIGURATION_DEBUG
-      Host::SetCrashDescription(NULL);
-#endif
     } else {
       if (log)
         log->Printf("SBTarget::EvaluateExpression () => error: could not "

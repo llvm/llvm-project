@@ -1474,8 +1474,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                         }
 
                         if (add_method) {
-                          // REMOVE THE CRASH DESCRIPTION BELOW
-                          Host::SetCrashDescriptionWithFormat(
+                          llvm::PrettyStackTraceFormat PST(
                               "SymbolFileDWARF::ParseType() is adding a method "
                               "%s to class %s in DIE 0x%8.8" PRIx64 " from %s",
                               type_name_cstr,
@@ -1493,12 +1492,12 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                           if (accessibility == eAccessNone)
                             accessibility = eAccessPublic;
 
-                          clang::CXXMethodDecl *cxx_method_decl;
-                          cxx_method_decl = m_ast.AddMethodToCXXRecordType(
-                              class_opaque_type.GetOpaqueQualType(),
-                              type_name_cstr, clang_type, accessibility,
-                              is_virtual, is_static, is_inline, is_explicit,
-                              is_attr_used, is_artificial);
+                          clang::CXXMethodDecl *cxx_method_decl =
+                              m_ast.AddMethodToCXXRecordType(
+                                  class_opaque_type.GetOpaqueQualType(),
+                                  type_name_cstr, clang_type, accessibility,
+                                  is_virtual, is_static, is_inline, is_explicit,
+                                  is_attr_used, is_artificial);
 
                           type_handled = cxx_method_decl != NULL;
 
@@ -1507,8 +1506,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                                 ClangASTContext::GetAsDeclContext(
                                     cxx_method_decl),
                                 die);
-
-                            Host::SetCrashDescription(NULL);
 
                             ClangASTMetadata metadata;
                             metadata.SetUserID(die.GetID());
