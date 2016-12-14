@@ -479,19 +479,20 @@ def CStringNotNullTerm : Checker<"NotNullTerminated">,
 let ParentPackage = OSX in {
 
 def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
-  InPackage<OSX>,
   HelpText<"Check for erroneous conversions of objects representing numbers into numbers">,
   DescFile<"NumberObjectConversionChecker.cpp">;
 
 def MacOSXAPIChecker : Checker<"API">,
-  InPackage<OSX>,
   HelpText<"Check for proper uses of various Apple APIs">,
   DescFile<"MacOSXAPIChecker.cpp">;
 
 def MacOSKeychainAPIChecker : Checker<"SecKeychainAPI">,
-  InPackage<OSX>,
   HelpText<"Check for proper uses of Secure Keychain APIs">,
   DescFile<"MacOSKeychainAPIChecker.cpp">;
+
+def ObjCPropertyChecker : Checker<"ObjCProperty">,
+  HelpText<"Check for proper uses of Objective-C properties">,
+  DescFile<"ObjCPropertyChecker.cpp">;
 
 } // end "osx"
 
