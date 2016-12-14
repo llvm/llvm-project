@@ -124,9 +124,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
   if (*I == '{') {
     OSLogVisibilityFlagsStart = I++;
     // Find the end of the modifier.
-    while (I != E && *I != '}') {
-      I++;
-    }
+    while (I != E && *I != '}') { I++; }
     if (I == E) {
       if (Warn)
         H.HandleIncompleteSpecifier(Start, E - Start);
@@ -138,11 +136,9 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     // Just see if 'private' or 'public' is the first word. os_log itself will
     // do any further parsing.
     const char *P = OSLogVisibilityFlagsStart + 1;
-    while (P < OSLogVisibilityFlagsEnd && isspace(*P))
-      P++;
+    while (P < OSLogVisibilityFlagsEnd && isspace(*P)) P++;
     const char *WordStart = P;
-    while (P < OSLogVisibilityFlagsEnd && (isalnum(*P) || *P == '_'))
-      P++;
+    while (P < OSLogVisibilityFlagsEnd && (isalnum(*P) || *P == '_')) P++;
     const char *WordEnd = P;
     StringRef Word(WordStart, WordEnd - WordStart);
     if (Word == "private") {
@@ -287,9 +283,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     case 'C': k = ConversionSpecifier::CArg; break;
     case 'S': k = ConversionSpecifier::SArg; break;
     // Apple extension for os_log
-    case 'P':
-      k = ConversionSpecifier::PArg;
-      break;
+    case 'P': k = ConversionSpecifier::PArg; break;
     // Objective-C.
     case '@': k = ConversionSpecifier::ObjCObjArg; break;
     // Glibc specific.

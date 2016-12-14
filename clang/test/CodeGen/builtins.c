@@ -351,6 +351,8 @@ void test_float_builtin_ops(float F, double D, long double LD) {
 
 }
 
+// __builtin_longjmp isn't supported on all platforms, so only test it on X86.
+#ifdef __x86_64__
 // CHECK-LABEL: define void @test_builtin_longjmp
 void test_builtin_longjmp(void **buffer) {
   // CHECK: [[BITCAST:%.*]] = bitcast
@@ -358,6 +360,7 @@ void test_builtin_longjmp(void **buffer) {
   __builtin_longjmp(buffer, 1);
   // CHECK-NEXT: unreachable
 }
+#endif
 
 // CHECK-LABEL: define i64 @test_builtin_readcyclecounter
 long long test_builtin_readcyclecounter() {
@@ -365,6 +368,8 @@ long long test_builtin_readcyclecounter() {
   return __builtin_readcyclecounter();
 }
 
+// Behavior of __builtin_os_log differs between platforms, so only test on X86
+#ifdef __x86_64__
 // CHECK-LABEL: define void @test_builtin_os_log
 // CHECK: (i8* [[BUF:%.*]], i32 [[I:%.*]], i8* [[DATA:%.*]])
 void test_builtin_os_log(void *buf, int i, const char *data) {
@@ -420,85 +425,4 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   __builtin_os_log_format(buf, "%d %{public}s %{private}.16P", i, data, data);
 }
 
-// CHECK-LABEL: define void @test_builtin_os_log_errno
-// CHECK: (i8* [[BUF:%.*]], i8* [[DATA:%.*]])
-void test_builtin_os_log_errno(void *buf, const char *data) {
-  volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
-
-  // CHECK: store volatile i32 2
-  len = __builtin_os_log_format_buffer_size("%S");
-
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 2, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 1, i8* [[NUM_ARGS]]
-
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 96, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 0, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_INT:%.*]] = bitcast i8* [[ARG1]] to i32*
-  // CHECK: store i32 0, i32* [[ARG1_INT]]
-
-  __builtin_os_log_format(buf, "%m");
-}
-
-// CHECK-LABEL: define void @test_builtin_os_log_wide
-// CHECK: (i8* [[BUF:%.*]], i8* [[DATA:%.*]], i32* [[STR:%.*]])
-typedef int wchar_t;
-void test_builtin_os_log_wide(void *buf, const char *data, wchar_t *str) {
-  volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
-  // CHECK: store i32* [[STR]], i32** [[STR_ADDR:%.*]],
-
-  // CHECK: store volatile i32 12
-  len = __builtin_os_log_format_buffer_size("%S", str);
-
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 2, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 1, i8* [[NUM_ARGS]]
-
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 80, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 8, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_PTR:%.*]] = bitcast i8* [[ARG1]] to i32**
-  // CHECK: [[STR2:%.*]] = load i32*, i32** [[STR_ADDR]]
-  // CHECK: store i32* [[STR2]], i32** [[ARG1_PTR]]
-
-  __builtin_os_log_format(buf, "%S", str);
-}
-
-// CHECK-LABEL: define void @test_builtin_os_log_percent
-// Check that the %% which does not consume any argument is correctly handled
-void test_builtin_os_log_percent(void *buf, const char *data) {
-  volatile int len;
-  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
-  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
-  // CHECK: store volatile i32 12
-  len = __builtin_os_log_format_buffer_size("%s %%", data);
-
-  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
-  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
-  // CHECK: store i8 2, i8* [[SUMMARY]]
-  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
-  // CHECK: store i8 1, i8* [[NUM_ARGS]]
-  //
-  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
-  // CHECK: store i8 32, i8* [[ARG1_DESC]]
-  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
-  // CHECK: store i8 8, i8* [[ARG1_SIZE]]
-  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
-  // CHECK: [[ARG1_PTR:%.*]] = bitcast i8* [[ARG1]] to i8**
-  // CHECK: [[DATA2:%.*]] = load i8*, i8** [[DATA_ADDR]]
-  // CHECK: store i8* [[DATA2]], i8** [[ARG1_PTR]]
-  __builtin_os_log_format(buf, "%s %%", data);
-}
+#endif
