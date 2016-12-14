@@ -4,6 +4,4 @@
 #include "a.h"
 #include "b2.h"
 
-#pragma clang __debug macro FOO
-
-FOO // xpected-no-diagnostics
+FOO // expected-no-diagnostics
