@@ -64,6 +64,7 @@ isupper U
 isxdigit U
 log10 U
 lseek U
+lseek64 U
 malloc U
 mbrlen U
 mbrtowc U

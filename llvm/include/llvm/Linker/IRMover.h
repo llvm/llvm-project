@@ -75,9 +75,11 @@ public:
   ///   should be linked with (concatenated into) the ModuleInlineAsm string
   ///   for the destination module. It should be true for full LTO, but not
   ///   when importing for ThinLTO, otherwise we can have duplicate symbols.
+  /// - \p IsPerformingImport is true when this IR link is to perform ThinLTO
+  ///   function importing from Src.
   Error move(std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
              std::function<void(GlobalValue &GV, ValueAdder Add)> AddLazyFor,
-             bool LinkModuleInlineAsm);
+             bool LinkModuleInlineAsm, bool IsPerformingImport);
   Module &getModule() { return Composite; }
 
 private:

@@ -20,25 +20,30 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 namespace {
 
 class R600MCCodeEmitter : public AMDGPUMCCodeEmitter {
-  R600MCCodeEmitter(const R600MCCodeEmitter &) = delete;
-  void operator=(const R600MCCodeEmitter &) = delete;
   const MCRegisterInfo &MRI;
 
 public:
   R600MCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri)
-    : AMDGPUMCCodeEmitter(mcii), MRI(mri) { }
+    : AMDGPUMCCodeEmitter(mcii), MRI(mri) {}
+  R600MCCodeEmitter(const R600MCCodeEmitter &) = delete;
+  R600MCCodeEmitter &operator=(const R600MCCodeEmitter &) = delete;
 
   /// \brief Encode the instruction and write it to the OS.
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -57,7 +62,7 @@ private:
   unsigned getHWReg(unsigned regNo) const;
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 enum RegElement {
   ELEMENT_X = 0,

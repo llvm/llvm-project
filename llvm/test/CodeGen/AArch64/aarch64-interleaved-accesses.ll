@@ -280,3 +280,114 @@ define i32 @load_factor2_with_extract_user(<8 x i32>* %a) {
   %3 = extractelement <8 x i32> %1, i32 2
   ret i32 %3
 }
+
+; NEON-LABEL: store_general_mask_factor4:
+; NEON: st4 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor4:
+; NONEON-NOT: st4
+define void @store_general_mask_factor4(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <8 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
+  store <8 x i32> %i.vec, <8 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor4_undefbeg:
+; NEON: st4 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor4_undefbeg:
+; NONEON-NOT: st4
+define void @store_general_mask_factor4_undefbeg(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <8 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 undef, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 9>
+  store <8 x i32> %i.vec, <8 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor4_undefend:
+; NEON: st4 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor4_undefend:
+; NONEON-NOT: st4
+define void @store_general_mask_factor4_undefend(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <8 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 16, i32 32, i32 8, i32 5, i32 17, i32 33, i32 undef>
+  store <8 x i32> %i.vec, <8 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor4_undefmid:
+; NEON: st4 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor4_undefmid:
+; NONEON-NOT: st4
+define void @store_general_mask_factor4_undefmid(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <8 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 undef, i32 32, i32 8, i32 5, i32 17, i32 undef, i32 9>
+  store <8 x i32> %i.vec, <8 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor4_undefmulti:
+; NEON: st4 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor4_undefmulti:
+; NONEON-NOT: st4
+define void @store_general_mask_factor4_undefmulti(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <8 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <8 x i32> <i32 4, i32 undef, i32 undef, i32 8, i32 undef, i32 undef, i32 undef, i32 9>
+  store <8 x i32> %i.vec, <8 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor3:
+; NEON: st3 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor3:
+; NONEON-NOT: st3
+define void @store_general_mask_factor3(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <12 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 5, i32 33, i32 17, i32 6, i32 34, i32 18, i32 7, i32 35, i32 19>
+  store <12 x i32> %i.vec, <12 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor3_undefmultimid:
+; NEON: st3 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor3_undefmultimid:
+; NONEON-NOT: st3
+define void @store_general_mask_factor3_undefmultimid(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <12 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 7, i32 35, i32 19>
+  store <12 x i32> %i.vec, <12 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor3_undef_fail:
+; NEON-NOT: st3
+; NONEON-LABEL: store_general_mask_factor3_undef_fail:
+; NONEON-NOT: st3
+define void @store_general_mask_factor3_undef_fail(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <12 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 8, i32 35, i32 19>
+  store <12 x i32> %i.vec, <12 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor3_undeflane:
+; NEON: st3 { v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s, v{{[0-9]+}}.{{[0-9]+}}s }, [x0]
+; NONEON-LABEL: store_general_mask_factor3_undeflane:
+; NONEON-NOT: st3
+define void @store_general_mask_factor3_undeflane(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <12 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 undef, i32 35, i32 19>
+  store <12 x i32> %i.vec, <12 x i32>* %base, align 4
+  ret void
+}
+
+; NEON-LABEL: store_general_mask_factor3_negativestart:
+; NEON-NOT: st3
+; NONEON-LABEL: store_general_mask_factor3_negativestart:
+; NONEON-NOT: st3
+define void @store_general_mask_factor3_negativestart(i32* %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+  %base = bitcast i32* %ptr to <12 x i32>*
+  %i.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 undef, i32 32, i32 16, i32 undef, i32 33, i32 17, i32 undef, i32 34, i32 18, i32 2, i32 35, i32 19>
+  store <12 x i32> %i.vec, <12 x i32>* %base, align 4
+  ret void
+}
+

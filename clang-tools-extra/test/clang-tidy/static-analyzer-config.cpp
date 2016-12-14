@@ -7,7 +7,7 @@ void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 
 void f1() {
   void *p = malloc(12);
-  return; 
+  return;
   // CHECK: warning: Potential leak of memory pointed to by 'p' [clang-analyzer-unix.Malloc]
 }
 

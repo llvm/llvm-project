@@ -2650,7 +2650,8 @@ def warn_attribute_wrong_decl_type : Warning<
   "|variables, enums, fields and typedefs"
   "|functions, methods, enums, and classes"
   "|structs, classes, variables, functions, and inline namespaces"
-  "|variables, functions, methods, types, enumerations, enumerators, labels, and non-static data members}1">,
+  "|variables, functions, methods, types, enumerations, enumerators, labels, and non-static data members"
+  "|classes and enumerations}1">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Text>;
 def warn_type_attribute_wrong_type : Warning<
@@ -8076,8 +8077,9 @@ def err_static_kernel : Error<
   "kernel functions cannot be declared static">;
 def err_opencl_ptrptr_kernel_param : Error<
   "kernel parameter cannot be declared as a pointer to a pointer">;
-def err_opencl_private_ptr_kernel_param : Error<
-  "kernel parameter cannot be declared as a pointer to the __private address space">;
+def err_kernel_arg_address_space : Error<
+  "pointer arguments to kernel functions must reside in '__global', "
+  "'__constant' or '__local' address space">;
 def err_opencl_function_variable : Error<
   "%select{non-kernel function|function scope}0 variable cannot be declared in %1 address space">;
 def err_static_function_scope : Error<

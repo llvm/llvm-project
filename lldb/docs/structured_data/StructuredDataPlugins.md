@@ -3,7 +3,7 @@
 ## Overview
 
 This document describes an infrastructural feature called Structured
-Data plugins.  See the DarwinLog.md doc for a description of one
+Data plugins.  See the `DarwinLog.md` doc for a description of one
 such plugin that makes use of this feature.
 
 ## StructuredDataPlugin
@@ -39,7 +39,7 @@ StructuredDataPlugin instances have the following characteristics:
                           const StructuredData::ObjectSP &config_sp)
   ```
 
-  where type_name is the feature name and config_sp points to the
+  where `type_name` is the feature name and `config_sp` points to the
   configuration structured data, which may be nullptr.
 
 * Plugins for features present in a process are notified when modules
@@ -99,7 +99,7 @@ StructuredDataPlugin instances have the following characteristics:
                                       &supported_type_names)
     ```
 
-    The supported_type_names specifies an array of string entries,
+    The `supported_type_names` specifies an array of string entries,
     where each entry specifies the name of a StructuredData feature.
 
   * Provide a way to forward on configuration data for a feature type
@@ -129,8 +129,8 @@ StructuredDataPlugin instances have the following characteristics:
   previously advertised. Everything else about the content of the
   dictionary is entirely up to the feature.
 
-* StructuredDataPlugin commands show up under 'plugin structured-data
-  plugin-name'.
+* StructuredDataPlugin commands show up under `plugin structured-data
+  plugin-name`.
 
 * StructuredDataPlugin settings show up under
-  'plugin.structured-data.{plugin-name}.
+  `plugin.structured-data.{plugin-name}`.

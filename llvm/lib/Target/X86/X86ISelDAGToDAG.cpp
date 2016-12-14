@@ -1514,6 +1514,28 @@ bool X86DAGToDAGISel::selectScalarSSELoad(SDNode *Root,
                                           SDValue &Scale, SDValue &Index,
                                           SDValue &Disp, SDValue &Segment,
                                           SDValue &PatternNodeWithChain) {
+  // We can allow a full vector load here since narrowing a load is ok.
+  if (ISD::isNON_EXTLoad(N.getNode())) {
+    PatternNodeWithChain = N;
+    if (IsProfitableToFold(PatternNodeWithChain, N.getNode(), Root) &&
+        IsLegalToFold(PatternNodeWithChain, N.getNode(), Root, OptLevel)) {
+      LoadSDNode *LD = cast<LoadSDNode>(PatternNodeWithChain);
+      return selectAddr(LD, LD->getBasePtr(), Base, Scale, Index, Disp,
+                        Segment);
+    }
+  }
+
+  // We can also match the special zero extended load opcode.
+  if (N.getOpcode() == X86ISD::VZEXT_LOAD) {
+    PatternNodeWithChain = N;
+    if (IsProfitableToFold(PatternNodeWithChain, N.getNode(), Root) &&
+        IsLegalToFold(PatternNodeWithChain, N.getNode(), Root, OptLevel)) {
+      auto *MI = cast<MemIntrinsicSDNode>(PatternNodeWithChain);
+      return selectAddr(MI, MI->getBasePtr(), Base, Scale, Index, Disp,
+                        Segment);
+    }
+  }
+
   // Need to make sure that the SCALAR_TO_VECTOR and load are both only used
   // once. Otherwise the load might get duplicated and the chain output of the
   // duplicate load will not be observed by all dependencies.

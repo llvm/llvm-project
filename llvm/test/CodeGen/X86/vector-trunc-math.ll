@@ -5200,24 +5200,8 @@ define <4 x i32> @mul_add_v4i64_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxdq %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovsxdq %xmm1, %xmm1
-; AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm4
-; AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm5
-; AVX1-NEXT:    vpmuludq %xmm5, %xmm0, %xmm5
-; AVX1-NEXT:    vpsllq $32, %xmm5, %xmm5
-; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddq %xmm0, %xmm5, %xmm0
-; AVX1-NEXT:    vpaddq %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpmuludq %xmm3, %xmm2, %xmm1
-; AVX1-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX1-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX1-NEXT:    vpsllq $32, %xmm4, %xmm4
-; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm2
-; AVX1-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpsllq $32, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpmuldq %xmm3, %xmm2, %xmm1
 ; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -5229,15 +5213,7 @@ define <4 x i32> @mul_add_v4i64_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm3
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
-; AVX2-NEXT:    vpsllq $32, %ymm3, %ymm3
-; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
-; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
@@ -5249,15 +5225,7 @@ define <4 x i32> @mul_add_v4i64_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; AVX512-NEXT:    vpmovsxdq %xmm1, %ymm1
-; AVX512-NEXT:    vpmuludq %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vpsrlq $32, %ymm1, %ymm3
-; AVX512-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
-; AVX512-NEXT:    vpsllq $32, %ymm3, %ymm3
-; AVX512-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX512-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX512-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
-; AVX512-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
 ; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>

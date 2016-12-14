@@ -104,12 +104,12 @@ An overview of all the command-line options:
 
   clang-tidy options:
 
-    -analyze-temporary-dtors     - 
+    -analyze-temporary-dtors     -
                                    Enable temporary destructor-aware analysis in
                                    clang-analyzer- checks.
                                    This option overrides the value read from a
                                    .clang-tidy file.
-    -checks=<string>             - 
+    -checks=<string>             -
                                    Comma-separated list of globs with optional '-'
                                    prefix. Globs are processed in order of
                                    appearance in the list. Globs without '-'
@@ -119,7 +119,7 @@ An overview of all the command-line options:
                                    checks. This option's value is appended to the
                                    value of the 'Checks' option in .clang-tidy
                                    file, if any.
-    -config=<string>             - 
+    -config=<string>             -
                                    Specifies a configuration in YAML/JSON format:
                                      -config="{Checks: '*',
                                                CheckOptions: [{key: x,
@@ -127,7 +127,7 @@ An overview of all the command-line options:
                                    When the value is empty, clang-tidy will
                                    attempt to find a file named .clang-tidy for
                                    each source file in its parent directories.
-    -dump-config                 - 
+    -dump-config                 -
                                    Dumps configuration in the YAML format to
                                    stdout. This option can be used along with a
                                    file name (and '--' if the file is outside of a
@@ -136,29 +136,29 @@ An overview of all the command-line options:
                                    printed.
                                    Use along with -checks=* to include
                                    configuration of all checks.
-    -enable-check-profile        - 
+    -enable-check-profile        -
                                    Enable per-check timing profiles, and print a
                                    report to stderr.
-    -explain-config              - 
+    -explain-config              -
                                    For each enabled check explains, where it is
                                    enabled, i.e. in clang-tidy binary, command
                                    line or a specific configuration file.
-    -export-fixes=<filename>     - 
+    -export-fixes=<filename>     -
                                    YAML file to store suggested fixes in. The
                                    stored fixes can be applied to the input source
                                    code with clang-apply-replacements.
     -extra-arg=<string>          - Additional argument to append to the compiler command line
     -extra-arg-before=<string>   - Additional argument to prepend to the compiler command line
-    -fix                         - 
+    -fix                         -
                                    Apply suggested fixes. Without -fix-errors
                                    clang-tidy will bail out if any compilation
                                    errors were found.
-    -fix-errors                  - 
+    -fix-errors                  -
                                    Apply suggested fixes even if compilation
                                    errors were found. If compiler errors have
                                    attached fix-its, clang-tidy will apply them as
                                    well.
-    -header-filter=<string>      - 
+    -header-filter=<string>      -
                                    Regular expression matching the names of the
                                    headers to output diagnostics from. Diagnostics
                                    from the main file of each translation unit are
@@ -166,7 +166,7 @@ An overview of all the command-line options:
                                    Can be used together with -line-filter.
                                    This option overrides the 'HeaderFilter' option
                                    in .clang-tidy file, if any.
-    -line-filter=<string>        - 
+    -line-filter=<string>        -
                                    List of files with line ranges to filter the
                                    warnings. Can be used together with
                                    -header-filter. The format of the list is a
@@ -175,7 +175,7 @@ An overview of all the command-line options:
                                        {"name":"file1.cpp","lines":[[1,3],[5,7]]},
                                        {"name":"file2.h"}
                                      ]
-    -list-checks                 - 
+    -list-checks                 -
                                    List all enabled checks and exit. Use with
                                    -checks=* to list all available checks.
     -p=<string>                  - Build path
@@ -183,7 +183,7 @@ An overview of all the command-line options:
                                    Fallback style for reformatting after inserting fixes
                                    if there is no clang-format config file found.
     -system-headers              - Display the errors from system headers.
-    -warnings-as-errors=<string> - 
+    -warnings-as-errors=<string> -
                                    Upgrades warnings to errors. Same format as
                                    '-checks'.
                                    This option's value is appended to the value of
@@ -502,7 +502,7 @@ the check implements and what the current values are (e.g. for the
   class MyCheck : public ClangTidyCheck {
     const unsigned SomeOption1;
     const std::string SomeOption2;
-  
+
   public:
     MyCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),

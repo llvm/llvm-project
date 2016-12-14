@@ -27,9 +27,9 @@ void g(A *a) { a->foo(); }
 // CHECK1-LABEL: define void @_ZN5test14fooAEv()
 // CHECK1: call void @_ZN5test11AC1Ev(%"struct.test1::A"*
 // CHECK1: %[[VTABLE:.*]] = load i8**, i8*** %{{.*}}
-// CHECK1: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTVN5test11AE, i32 0, i32 2)
+// CHECK1: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN5test11AE, i32 0, inrange i32 0, i32 2)
 // CHECK1: call void @llvm.assume(i1 %[[CMP]])
-// CHECK1-LABEL: }
+// CHECK1-LABEL: {{^}}}
 
 void fooA() {
   A a;
@@ -39,9 +39,9 @@ void fooA() {
 // CHECK1-LABEL: define void @_ZN5test14fooBEv()
 // CHECK1: call void @_ZN5test11BC1Ev(%"struct.test1::B"* %{{.*}})
 // CHECK1: %[[VTABLE:.*]] = load i8**, i8*** %{{.*}}
-// CHECK1: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTVN5test11BE, i32 0, i32 2)
+// CHECK1: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN5test11BE, i32 0, inrange i32 0, i32 2)
 // CHECK1: call void @llvm.assume(i1 %[[CMP]])
-// CHECK1-LABEL: }
+// CHECK1-LABEL: {{^}}}
 
 void fooB() {
   B b;
@@ -50,7 +50,7 @@ void fooB() {
 // there should not be any assumes in the ctor that calls base ctor
 // CHECK1-LABEL: define linkonce_odr void @_ZN5test11BC2Ev(%"struct.test1::B"*
 // CHECK1-NOT: @llvm.assume(
-// CHECK1-LABEL: }
+// CHECK1-LABEL: {{^}}}
 }
 namespace test2 {
 struct A {
@@ -73,18 +73,18 @@ void h(B *b) { b->bar(); }
 // CHECK2-LABEL: define void @_ZN5test24testEv()
 // CHECK2: call void @_ZN5test21CC1Ev(%"struct.test2::C"*
 // CHECK2: %[[VTABLE:.*]] = load i8**, i8*** {{.*}}
-// CHECK2: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ([6 x i8*], [6 x i8*]* @_ZTVN5test21CE, i32 0, i32 2)
+// CHECK2: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ({ [3 x i8*], [3 x i8*] }, { [3 x i8*], [3 x i8*] }* @_ZTVN5test21CE, i32 0, inrange i32 0, i32 2)
 // CHECK2: call void @llvm.assume(i1 %[[CMP]])
 
 // CHECK2: %[[V2:.*]] = bitcast %"struct.test2::C"* %{{.*}} to i8*
 // CHECK2: %[[ADD_PTR:.*]] = getelementptr inbounds i8, i8* %[[V2]], i64 8
 // CHECK2: %[[V3:.*]] = bitcast i8* %[[ADD_PTR]] to i8***
 // CHECK2: %[[VTABLE2:.*]] = load i8**, i8*** %[[V3]]
-// CHECK2: %[[CMP2:.*]] = icmp eq i8** %[[VTABLE2]], getelementptr inbounds ([6 x i8*], [6 x i8*]* @_ZTVN5test21CE, i32 0, i32 5)
+// CHECK2: %[[CMP2:.*]] = icmp eq i8** %[[VTABLE2]], getelementptr inbounds ({ [3 x i8*], [3 x i8*] }, { [3 x i8*], [3 x i8*] }* @_ZTVN5test21CE, i32 0, inrange i32 1, i32 2)
 // CHECK2: call void @llvm.assume(i1 %[[CMP2]])
 
 // CHECK2: call void @_ZN5test21gEPNS_1AE(
-// CHECK2-LABEL: }
+// CHECK2-LABEL: {{^}}}
 
 void test() {
   C c;
@@ -111,7 +111,7 @@ void g(B *a) { a->foo(); }
 
 // CHECK3-LABEL: define void @_ZN5test34testEv()
 // CHECK3: call void @_ZN5test31CC1Ev(%"struct.test3::C"*
-// CHECK3: %[[CMP:.*]] = icmp eq i8** %{{.*}}, getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTVN5test31CE, i32 0, i32 3)
+// CHECK3: %[[CMP:.*]] = icmp eq i8** %{{.*}}, getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTVN5test31CE, i32 0, inrange i32 0, i32 3)
 // CHECK3: call void @llvm.assume(i1 %[[CMP]])
 // CHECK3-LABLEL: }
 void test() {
@@ -140,13 +140,13 @@ void g(C *c) { c->foo(); }
 // CHECK4-LABEL: define void @_ZN5test44testEv()
 // CHECK4: call void @_ZN5test41CC1Ev(%"struct.test4::C"*
 // CHECK4: %[[VTABLE:.*]] = load i8**, i8*** %{{.*}}
-// CHECK4: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ([5 x i8*], [5 x i8*]* @_ZTVN5test41CE, i32 0, i32 4)
+// CHECK4: %[[CMP:.*]] = icmp eq i8** %[[VTABLE]], getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTVN5test41CE, i32 0, inrange i32 0, i32 4)
 // CHECK4: call void @llvm.assume(i1 %[[CMP]]
 
 // CHECK4: %[[VTABLE2:.*]] = load i8**, i8*** %{{.*}}
-// CHECK4: %[[CMP2:.*]] = icmp eq i8** %[[VTABLE2]], getelementptr inbounds ([5 x i8*], [5 x i8*]* @_ZTVN5test41CE, i32 0, i32 4)
+// CHECK4: %[[CMP2:.*]] = icmp eq i8** %[[VTABLE2]], getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTVN5test41CE, i32 0, inrange i32 0, i32 4)
 // CHECK4: call void @llvm.assume(i1 %[[CMP2]])
-// CHECK4-LABEL: }
+// CHECK4-LABEL: {{^}}}
 
 void test() {
   C c;
@@ -166,7 +166,7 @@ void g(S &s) { s.foo(); }
 // CHECK-MS-LABEL: define void @"\01?test@testMS@@YAXXZ"()
 // CHECK-MS: call x86_thiscallcc %"struct.testMS::S"* @"\01??0S@testMS@@QAE@XZ"(
 // CHECK-MS-NOT: @llvm.assume
-// CHECK-MS-LABEL: }
+// CHECK-MS-LABEL: {{^}}}
 
 void test() {
   S s;
@@ -196,7 +196,7 @@ struct B : A {
 
 // CHECK6-LABEL:   call void @_ZN5test61BC1Ev(
 // CHECK6-NOT: call void @llvm.assume(
-// CHECK6-LABEL: }
+// CHECK6-LABEL: {{^}}}
 void g() {
   A *a = new A;
   B *b = new B;
@@ -216,7 +216,7 @@ void A::foo() {}
 // CHECK7-LABEL: define void @_ZN5test71gEv()
 // CHECK7: call void @_ZN5test71AC1Ev(
 // CHECK7: call void @llvm.assume(
-// CHECK7-LABEL: }
+// CHECK7-LABEL: {{^}}}
 void g() {
   A *a = new A();
   a->bar();
@@ -259,7 +259,7 @@ struct E : A {
 
 // CHECK8-LABEL: define void @_ZN5test81bEv()
 // CHECK8: call void @llvm.assume(
-// CHECK8-LABEL: }
+// CHECK8-LABEL: {{^}}}
 void b() {
   B b;
   b.bar();
@@ -270,7 +270,7 @@ void b() {
 // defined here) it would be correct to refer to it.
 // CHECK8-LABEL: define void @_ZN5test81cEv()
 // CHECK8-NOT: call void @llvm.assume(
-// CHECK8-LABEL: }
+// CHECK8-LABEL: {{^}}}
 void c() {
   C c;
   c.bar();
@@ -279,7 +279,7 @@ void c() {
 // FIXME: We could generate assumption loads here.
 // CHECK8-LABEL: define void @_ZN5test81dEv()
 // CHECK8-NOT: call void @llvm.assume(
-// CHECK8-LABEL: }
+// CHECK8-LABEL: {{^}}}
 void d() {
   D d;
   d.bar();
@@ -287,7 +287,7 @@ void d() {
 
 // CHECK8-LABEL: define void @_ZN5test81eEv()
 // CHECK8: call void @llvm.assume(
-// CHECK8-LABEL: }
+// CHECK8-LABEL: {{^}}}
 void e() {
   E e;
   e.bar();

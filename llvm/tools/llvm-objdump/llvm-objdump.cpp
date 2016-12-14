@@ -594,6 +594,26 @@ public:
 };
 AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;
 
+class BPFPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+    OS << format("%8" PRId64 ":", Address / 8);
+    if (!NoShowRawInsn) {
+      OS << "\t";
+      dumpBytes(Bytes, OS);
+    }
+    if (MI)
+      IP.printInst(MI, OS, "", STI);
+    else
+      OS << " <unknown>";
+  }
+};
+BPFPrettyPrinter BPFPrettyPrinterInst;
+
 PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
   switch(Triple.getArch()) {
   default:
@@ -602,6 +622,9 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
     return HexagonPrettyPrinterInst;
   case Triple::amdgcn:
     return AMDGCNPrettyPrinterInst;
+  case Triple::bpfel:
+  case Triple::bpfeb:
+    return BPFPrettyPrinterInst;
   }
 }
 }

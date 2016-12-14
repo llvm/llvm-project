@@ -12,15 +12,23 @@
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/PassSupport.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
 
 using namespace llvm;
 
@@ -30,14 +38,18 @@ static cl::opt<uint32_t> BranchRelaxSafetyBuffer("branch-relax-safety-buffer",
   cl::init(200), cl::Hidden, cl::ZeroOrMore, cl::desc("safety buffer size"));
 
 namespace llvm {
+
   FunctionPass *createHexagonBranchRelaxation();
   void initializeHexagonBranchRelaxationPass(PassRegistry&);
-}
+
+} // end namespace llvm
 
 namespace {
+
   struct HexagonBranchRelaxation : public MachineFunctionPass {
   public:
     static char ID;
+
     HexagonBranchRelaxation() : MachineFunctionPass(ID) {
       initializeHexagonBranchRelaxationPass(*PassRegistry::getPassRegistry());
     }
@@ -67,6 +79,7 @@ namespace {
   };
 
   char HexagonBranchRelaxation::ID = 0;
+
 } // end anonymous namespace
 
 INITIALIZE_PASS(HexagonBranchRelaxation, "hexagon-brelax",
@@ -75,7 +88,6 @@ INITIALIZE_PASS(HexagonBranchRelaxation, "hexagon-brelax",
 FunctionPass *llvm::createHexagonBranchRelaxation() {
   return new HexagonBranchRelaxation();
 }
-
 
 bool HexagonBranchRelaxation::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "****** Hexagon Branch Relaxation ******\n");
@@ -88,7 +100,6 @@ bool HexagonBranchRelaxation::runOnMachineFunction(MachineFunction &MF) {
   Changed = relaxBranches(MF);
   return Changed;
 }
-
 
 void HexagonBranchRelaxation::computeOffset(MachineFunction &MF,
       DenseMap<MachineBasicBlock*, unsigned> &OffsetMap) {
@@ -108,7 +119,6 @@ void HexagonBranchRelaxation::computeOffset(MachineFunction &MF,
   }
 }
 
-
 /// relaxBranches - For Hexagon, if the jump target/loop label is too far from
 /// the jump/loop instruction then, we need to make sure that we have constant
 /// extenders set for jumps and loops.
@@ -123,7 +133,6 @@ bool HexagonBranchRelaxation::relaxBranches(MachineFunction &MF) {
 
   return reGenerateBranch(MF, BlockToInstOffset);
 }
-
 
 /// Check if a given instruction is:
 /// - a jump to a distant target
@@ -144,7 +153,7 @@ bool HexagonBranchRelaxation::isJumpOutOfRange(MachineInstr &MI,
   // Number of instructions times typical instruction size.
   InstOffset += HII->nonDbgBBSize(&B) * HEXAGON_INSTR_SIZE;
 
-  MachineBasicBlock *TBB = NULL, *FBB = NULL;
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
 
   // Try to analyze this branch.
@@ -175,7 +184,6 @@ bool HexagonBranchRelaxation::isJumpOutOfRange(MachineInstr &MI,
   }
   return false;
 }
-
 
 bool HexagonBranchRelaxation::reGenerateBranch(MachineFunction &MF,
       DenseMap<MachineBasicBlock*, unsigned> &BlockToInstOffset) {

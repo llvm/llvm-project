@@ -11,5 +11,4 @@
 
 using namespace llvm;
 
-R600FrameLowering::~R600FrameLowering() {
-}
+R600FrameLowering::~R600FrameLowering() = default;

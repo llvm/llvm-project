@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 
 #include <future>
+#include <system_error>
 #include <unistd.h>
 
 namespace __xray {
@@ -25,19 +26,19 @@ TEST(BufferQueueTest, API) { BufferQueue Buffers(kSize, 1); }
 TEST(BufferQueueTest, GetAndRelease) {
   BufferQueue Buffers(kSize, 1);
   BufferQueue::Buffer Buf;
-  ASSERT_FALSE(Buffers.getBuffer(Buf));
+  ASSERT_EQ(Buffers.getBuffer(Buf), std::error_code());
   ASSERT_NE(nullptr, Buf.Buffer);
-  ASSERT_FALSE(Buffers.releaseBuffer(Buf));
+  ASSERT_EQ(Buffers.releaseBuffer(Buf), std::error_code());
   ASSERT_EQ(nullptr, Buf.Buffer);
 }
 
 TEST(BufferQueueTest, GetUntilFailed) {
   BufferQueue Buffers(kSize, 1);
   BufferQueue::Buffer Buf0;
-  EXPECT_FALSE(Buffers.getBuffer(Buf0));
+  EXPECT_EQ(Buffers.getBuffer(Buf0), std::error_code());
   BufferQueue::Buffer Buf1;
   EXPECT_EQ(std::errc::not_enough_memory, Buffers.getBuffer(Buf1));
-  EXPECT_FALSE(Buffers.releaseBuffer(Buf0));
+  EXPECT_EQ(Buffers.releaseBuffer(Buf0), std::error_code());
 }
 
 TEST(BufferQueueTest, ReleaseUnknown) {
@@ -51,13 +52,13 @@ TEST(BufferQueueTest, ReleaseUnknown) {
 TEST(BufferQueueTest, ErrorsWhenFinalising) {
   BufferQueue Buffers(kSize, 2);
   BufferQueue::Buffer Buf;
-  ASSERT_FALSE(Buffers.getBuffer(Buf));
+  ASSERT_EQ(Buffers.getBuffer(Buf), std::error_code());
   ASSERT_NE(nullptr, Buf.Buffer);
-  ASSERT_FALSE(Buffers.finalize());
+  ASSERT_EQ(Buffers.finalize(), std::error_code());
   BufferQueue::Buffer OtherBuf;
   ASSERT_EQ(std::errc::state_not_recoverable, Buffers.getBuffer(OtherBuf));
   ASSERT_EQ(std::errc::state_not_recoverable, Buffers.finalize());
-  ASSERT_FALSE(Buffers.releaseBuffer(Buf));
+  ASSERT_EQ(Buffers.releaseBuffer(Buf), std::error_code());
 }
 
 TEST(BufferQueueTest, MultiThreaded) {

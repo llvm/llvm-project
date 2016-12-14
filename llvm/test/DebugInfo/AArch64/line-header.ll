@@ -3,4 +3,4 @@
 
 ; check line table length is correctly calculated for both big and little endian
 CHECK-LABEL: .debug_line contents:
-CHECK: total_length: 0x0000003c
+CHECK: total_length: 0x0000003e

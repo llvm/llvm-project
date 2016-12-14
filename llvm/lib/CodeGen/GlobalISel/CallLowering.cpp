@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -138,4 +139,32 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
     }
   }
   return true;
+}
+
+unsigned CallLowering::ValueHandler::extendRegister(unsigned ValReg,
+                                                    CCValAssign &VA) {
+  LLT LocTy{VA.getLocVT()};
+  switch (VA.getLocInfo()) {
+  default: break;
+  case CCValAssign::Full:
+  case CCValAssign::BCvt:
+    // FIXME: bitconverting between vector types may or may not be a
+    // nop in big-endian situations.
+    return ValReg;
+  case CCValAssign::AExt:
+    assert(!VA.getLocVT().isVector() && "unexpected vector extend");
+    // Otherwise, it's a nop.
+    return ValReg;
+  case CCValAssign::SExt: {
+    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    MIRBuilder.buildSExt(NewReg, ValReg);
+    return NewReg;
+  }
+  case CCValAssign::ZExt: {
+    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    MIRBuilder.buildZExt(NewReg, ValReg);
+    return NewReg;
+  }
+  }
+  llvm_unreachable("unable to extend register");
 }

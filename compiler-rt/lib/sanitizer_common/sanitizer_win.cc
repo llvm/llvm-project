@@ -659,6 +659,7 @@ void internal__exit(int exitcode) {
   if (::IsDebuggerPresent())
     __debugbreak();
   TerminateProcess(GetCurrentProcess(), exitcode);
+  __assume(0);
 }
 
 uptr internal_ftruncate(fd_t fd, uptr size) {

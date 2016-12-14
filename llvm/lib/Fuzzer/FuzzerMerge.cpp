@@ -16,6 +16,7 @@
 #include "FuzzerUtil.h"
 
 #include <fstream>
+#include <iterator>
 #include <sstream>
 
 namespace fuzzer {
@@ -175,6 +176,10 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
   std::ofstream OF(CFPath, std::ofstream::out | std::ofstream::app);
   for (size_t i = M.FirstNotProcessedFile; i < M.Files.size(); i++) {
     auto U = FileToVector(M.Files[i].Name);
+    if (U.size() > Options.MaxLen) {
+      U.resize(Options.MaxLen);
+      U.shrink_to_fit();
+    }
     std::ostringstream StartedLine;
     // Write the pre-run marker.
     OF << "STARTED " << std::dec << i << " " << U.size() << "\n";
@@ -217,7 +222,7 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
   std::string CFPath =
       "libFuzzerTemp." + std::to_string(GetPid()) + ".txt";
   // Write the control file.
-  DeleteFile(CFPath);
+  RemoveFile(CFPath);
   std::ofstream ControlFile(CFPath);
   ControlFile << AllFiles.size() << "\n";
   ControlFile << NumFilesInFirstCorpus << "\n";
@@ -249,7 +254,7 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
   for (auto &F: NewFiles)
     WriteToOutputCorpus(FileToVector(F));
   // We are done, delete the control file.
-  DeleteFile(CFPath);
+  RemoveFile(CFPath);
 }
 
 } // namespace fuzzer

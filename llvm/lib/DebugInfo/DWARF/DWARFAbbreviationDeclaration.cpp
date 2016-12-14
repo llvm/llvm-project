@@ -143,12 +143,12 @@ DWARFAbbreviationDeclaration::findAttributeIndex(dwarf::Attribute Attr) const {
   return None;
 }
 
-bool DWARFAbbreviationDeclaration::getAttributeValue(
-    const uint32_t DIEOffset, const dwarf::Attribute Attr, const DWARFUnit &U,
-    DWARFFormValue &FormValue) const {
+Optional<DWARFFormValue> DWARFAbbreviationDeclaration::getAttributeValue(
+    const uint32_t DIEOffset, const dwarf::Attribute Attr,
+    const DWARFUnit &U) const {
   Optional<uint32_t> MatchAttrIndex = findAttributeIndex(Attr);
   if (!MatchAttrIndex)
-    return false;
+    return None;
 
   auto DebugInfoData = U.getDebugInfoExtractor();
 
@@ -159,8 +159,9 @@ bool DWARFAbbreviationDeclaration::getAttributeValue(
   for (const auto &Spec : AttributeSpecs) {
     if (*MatchAttrIndex == AttrIndex) {
       // We have arrived at the attribute to extract, extract if from Offset.
-      FormValue.setForm(Spec.Form);
-      return FormValue.extractValue(DebugInfoData, &Offset, &U);
+      DWARFFormValue FormValue(Spec.Form);
+      if (FormValue.extractValue(DebugInfoData, &Offset, &U))
+        return FormValue;
     }
     // March Offset along until we get to the attribute we want.
     if (Optional<uint8_t> FixedSize = Spec.getByteSize(U))
@@ -169,7 +170,7 @@ bool DWARFAbbreviationDeclaration::getAttributeValue(
       DWARFFormValue::skipValue(Spec.Form, DebugInfoData, &Offset, &U);
     ++AttrIndex;
   }
-  return false;
+  return None;
 }
 
 size_t DWARFAbbreviationDeclaration::FixedSizeInfo::getByteSize(

@@ -200,8 +200,10 @@ void DebugHandlerBase::endInstruction() {
   assert(CurMI != nullptr);
   // Don't create a new label after DBG_VALUE instructions.
   // They don't generate code.
-  if (!CurMI->isDebugValue())
+  if (!CurMI->isDebugValue()) {
     PrevLabel = nullptr;
+    PrevInstBB = CurMI->getParent();
+  }
 
   DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
       LabelsAfterInsn.find(CurMI);

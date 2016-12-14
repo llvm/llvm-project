@@ -24,7 +24,7 @@ namespace tooling {
 /// \brief Converts a set of replacements to Replacements class.
 /// \return A Replacements class containing \p Replaces on success; otherwise,
 /// an empty Replacements is returned.
-static tooling::Replacements
+inline tooling::Replacements
 toReplacements(const std::set<tooling::Replacement> &Replaces) {
   tooling::Replacements Result;
   for (const auto &R : Replaces) {

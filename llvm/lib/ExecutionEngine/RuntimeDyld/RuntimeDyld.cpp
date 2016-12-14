@@ -1023,10 +1023,11 @@ createRuntimeDyldCOFF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
 }
 
 static std::unique_ptr<RuntimeDyldELF>
-createRuntimeDyldELF(RuntimeDyld::MemoryManager &MM,
+createRuntimeDyldELF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
                      JITSymbolResolver &Resolver, bool ProcessAllSections,
                      RuntimeDyldCheckerImpl *Checker) {
-  std::unique_ptr<RuntimeDyldELF> Dyld(new RuntimeDyldELF(MM, Resolver));
+  std::unique_ptr<RuntimeDyldELF> Dyld =
+      RuntimeDyldELF::create(Arch, MM, Resolver);
   Dyld->setProcessAllSections(ProcessAllSections);
   Dyld->setRuntimeDyldChecker(Checker);
   return Dyld;
@@ -1048,7 +1049,9 @@ std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyld::loadObject(const ObjectFile &Obj) {
   if (!Dyld) {
     if (Obj.isELF())
-      Dyld = createRuntimeDyldELF(MemMgr, Resolver, ProcessAllSections, Checker);
+      Dyld =
+          createRuntimeDyldELF(static_cast<Triple::ArchType>(Obj.getArch()),
+                               MemMgr, Resolver, ProcessAllSections, Checker);
     else if (Obj.isMachO())
       Dyld = createRuntimeDyldMachO(
                static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,

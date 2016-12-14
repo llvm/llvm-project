@@ -249,8 +249,8 @@ bool ReportUndefOperand::classof(const RejectReason *RR) {
 // ReportNonAffBranch.
 
 std::string ReportNonAffBranch::getMessage() const {
-  return ("Non affine branch in BB '" + BB->getName()).str() + "' with LHS: " +
-         *LHS + " and RHS: " + *RHS;
+  return ("Non affine branch in BB '" + BB->getName()).str() +
+         "' with LHS: " + *LHS + " and RHS: " + *RHS;
 }
 
 bool ReportNonAffBranch::classof(const RejectReason *RR) {
@@ -335,8 +335,8 @@ ReportLoopBound::ReportLoopBound(Loop *L, const SCEV *LoopCount)
       Loc(L->getStartLoc()) {}
 
 std::string ReportLoopBound::getMessage() const {
-  return "Non affine loop bound '" + *LoopCount + "' in loop: " +
-         L->getHeader()->getName();
+  return "Non affine loop bound '" + *LoopCount +
+         "' in loop: " + L->getHeader()->getName();
 }
 
 const DebugLoc &ReportLoopBound::getDebugLoc() const { return Loc; }

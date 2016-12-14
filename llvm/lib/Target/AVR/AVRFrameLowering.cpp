@@ -338,7 +338,6 @@ static void fixStackStores(MachineBasicBlock &MBB,
     // pointer since it is guaranteed to contain a copy of SP.
     unsigned STOpc =
         (Opcode == AVR::STDWSPQRr) ? AVR::STDWPtrQRr : AVR::STDPtrQRr;
-    assert(isUInt<6>(MI.getOperand(1).getImm()) && "Offset is out of range");
 
     MI.setDesc(TII.get(STOpc));
     MI.getOperand(0).setReg(AVR::R29R28);

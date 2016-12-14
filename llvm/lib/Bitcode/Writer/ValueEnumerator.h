@@ -95,7 +95,7 @@ private:
     /// Number of strings in the prefix of the metadata range.
     unsigned NumStrings = 0;
 
-    MDRange() = default;
+    MDRange() {}
     explicit MDRange(unsigned First) : First(First) {}
   };
   SmallDenseMap<unsigned, MDRange, 1> FunctionMDInfo;

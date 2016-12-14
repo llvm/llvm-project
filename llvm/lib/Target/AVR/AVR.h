@@ -27,10 +27,12 @@ FunctionPass *createAVRISelDag(AVRTargetMachine &TM,
                                CodeGenOpt::Level OptLevel);
 FunctionPass *createAVRExpandPseudoPass();
 FunctionPass *createAVRFrameAnalyzerPass();
+FunctionPass *createAVRRelaxMemPass();
 FunctionPass *createAVRDynAllocaSRPass();
 FunctionPass *createAVRBranchSelectionPass();
 
 void initializeAVRExpandPseudoPass(PassRegistry&);
+void initializeAVRRelaxMemPass(PassRegistry&);
 
 /// Contains the AVR backend.
 namespace AVR {

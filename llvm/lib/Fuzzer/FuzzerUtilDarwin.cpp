@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
 #if LIBFUZZER_APPLE
+
 #include "FuzzerIO.h"
 #include <mutex>
 #include <signal.h>
@@ -145,5 +146,7 @@ int ExecuteCommand(const std::string &Command) {
   }
   return ProcessStatus;
 }
-}
+
+} // namespace fuzzer
+
 #endif // LIBFUZZER_APPLE

@@ -343,13 +343,13 @@ namespace VirtualMembers {
     constexpr E() : B(3), c{'b','y','e'} {}
     char c[3];
   };
-  // CHECK: @_ZN14VirtualMembers1eE = global { i8**, double, i32, i8**, double, [5 x i8], i16, i8**, double, [5 x i8], [3 x i8] } { i8** getelementptr inbounds ([11 x i8*], [11 x i8*]* @_ZTVN14VirtualMembers1EE, i32 0, i32 2), double 1.000000e+00, i32 64, i8** getelementptr inbounds ([11 x i8*], [11 x i8*]* @_ZTVN14VirtualMembers1EE, i32 0, i32 5), double 2.000000e+00, [5 x i8] c"hello", i16 5, i8** getelementptr inbounds ([11 x i8*], [11 x i8*]* @_ZTVN14VirtualMembers1EE, i32 0, i32 9), double 3.000000e+00, [5 x i8] c"world", [3 x i8] c"bye" }
+  // CHECK: @_ZN14VirtualMembers1eE = global { i8**, double, i32, i8**, double, [5 x i8], i16, i8**, double, [5 x i8], [3 x i8] } { i8** getelementptr inbounds ({ [3 x i8*], [4 x i8*], [4 x i8*] }, { [3 x i8*], [4 x i8*], [4 x i8*] }* @_ZTVN14VirtualMembers1EE, i32 0, inrange i32 0, i32 2), double 1.000000e+00, i32 64, i8** getelementptr inbounds ({ [3 x i8*], [4 x i8*], [4 x i8*] }, { [3 x i8*], [4 x i8*], [4 x i8*] }* @_ZTVN14VirtualMembers1EE, i32 0, inrange i32 1, i32 2), double 2.000000e+00, [5 x i8] c"hello", i16 5, i8** getelementptr inbounds ({ [3 x i8*], [4 x i8*], [4 x i8*] }, { [3 x i8*], [4 x i8*], [4 x i8*] }* @_ZTVN14VirtualMembers1EE, i32 0, inrange i32 2, i32 2), double 3.000000e+00, [5 x i8] c"world", [3 x i8] c"bye" }
   E e;
 
   struct nsMemoryImpl {
     virtual void f();
   };
-  // CHECK: @_ZN14VirtualMembersL13sGlobalMemoryE = internal global { i8** } { i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTVN14VirtualMembers12nsMemoryImplE, i32 0, i32 2) }
+  // CHECK: @_ZN14VirtualMembersL13sGlobalMemoryE = internal global { i8** } { i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN14VirtualMembers12nsMemoryImplE, i32 0, inrange i32 0, i32 2) }
   __attribute__((used))
   static nsMemoryImpl sGlobalMemory;
 
@@ -360,7 +360,7 @@ namespace VirtualMembers {
 
     T t;
   };
-  // CHECK: @_ZN14VirtualMembers1tE = global { i8**, i32 } { i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTVN14VirtualMembers13TemplateClassIiEE, i32 0, i32 2), i32 42 }
+  // CHECK: @_ZN14VirtualMembers1tE = global { i8**, i32 } { i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN14VirtualMembers13TemplateClassIiEE, i32 0, inrange i32 0, i32 2), i32 42 }
   TemplateClass<int> t;
 }
 

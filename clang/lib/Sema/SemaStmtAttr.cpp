@@ -225,15 +225,11 @@ CheckForIncompatibleAttributes(Sema &S,
 
 static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const AttributeList &A,
                                     SourceRange Range) {
-  // OpenCL v2.0 s6.11.5 - opencl_unroll_hint can have 0 arguments (compiler
+  // Although the feature was introduced only in OpenCL C v2.0 s6.11.5, it's
+  // useful for OpenCL 1.x too and doesn't require HW support.
+  // opencl_unroll_hint can have 0 arguments (compiler
   // determines unrolling factor) or 1 argument (the unroll factor provided
   // by the user).
-
-  if (S.getLangOpts().OpenCLVersion < 200) {
-    S.Diag(A.getLoc(), diag::err_attribute_requires_opencl_version)
-        << A.getName() << "2.0" << 1;
-    return nullptr;
-  }
 
   unsigned NumArgs = A.getNumArgs();
 

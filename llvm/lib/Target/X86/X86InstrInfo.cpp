@@ -6576,14 +6576,6 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
                                               const MachineRegisterInfo *MRI,
                                               unsigned &FoldAsLoadDefReg,
                                               MachineInstr *&DefMI) const {
-  if (FoldAsLoadDefReg == 0)
-    return nullptr;
-  // To be conservative, if there exists another load, clear the load candidate.
-  if (MI.mayLoad()) {
-    FoldAsLoadDefReg = 0;
-    return nullptr;
-  }
-
   // Check whether we can move DefMI here.
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
@@ -6592,27 +6584,24 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
     return nullptr;
 
   // Collect information about virtual register operands of MI.
-  unsigned SrcOperandId = 0;
-  bool FoundSrcOperand = false;
-  for (unsigned i = 0, e = MI.getDesc().getNumOperands(); i != e; ++i) {
+  SmallVector<unsigned, 1> SrcOperandIds;
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
     if (Reg != FoldAsLoadDefReg)
       continue;
-    // Do not fold if we have a subreg use or a def or multiple uses.
-    if (MO.getSubReg() || MO.isDef() || FoundSrcOperand)
+    // Do not fold if we have a subreg use or a def.
+    if (MO.getSubReg() || MO.isDef())
       return nullptr;
-
-    SrcOperandId = i;
-    FoundSrcOperand = true;
+    SrcOperandIds.push_back(i);
   }
-  if (!FoundSrcOperand)
+  if (SrcOperandIds.empty())
     return nullptr;
 
   // Check whether we can fold the def into SrcOperandId.
-  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandId, *DefMI)) {
+  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
     FoldAsLoadDefReg = 0;
     return FoldMI;
   }

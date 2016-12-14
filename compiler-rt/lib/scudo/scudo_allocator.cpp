@@ -402,12 +402,18 @@ struct Allocator {
       Size = 1;
     if (Size >= MaxAllowedMallocSize)
       return BackendAllocator.ReturnNullOrDieOnBadRequest();
-    uptr RoundedSize = RoundUpTo(Size, MinAlignment);
-    uptr NeededSize = RoundedSize + AlignedChunkHeaderSize;
+
+    uptr NeededSize = RoundUpTo(Size, MinAlignment) + AlignedChunkHeaderSize;
     if (Alignment > MinAlignment)
       NeededSize += Alignment;
     if (NeededSize >= MaxAllowedMallocSize)
       return BackendAllocator.ReturnNullOrDieOnBadRequest();
+
+    // Primary backed and Secondary backed allocations have a different
+    // treatment. We deal with alignment requirements of Primary serviced
+    // allocations here, but the Secondary will take care of its own alignment
+    // needs, which means we also have to work around some limitations of the
+    // combined allocator to accommodate the situation.
     bool FromPrimary = PrimaryAllocator::CanAllocate(NeededSize, MinAlignment);
 
     void *Ptr;
@@ -426,8 +432,11 @@ struct Allocator {
     // If the allocation was serviced by the secondary, the returned pointer
     // accounts for ChunkHeaderSize to pass the alignment check of the combined
     // allocator. Adjust it here.
-    if (!FromPrimary)
+    if (!FromPrimary) {
       AllocBeg -= AlignedChunkHeaderSize;
+      if (Alignment > MinAlignment)
+        NeededSize -= Alignment;
+    }
 
     uptr ActuallyAllocatedSize = BackendAllocator.GetActuallyAllocatedSize(
         reinterpret_cast<void *>(AllocBeg));

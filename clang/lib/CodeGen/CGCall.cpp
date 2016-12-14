@@ -2862,7 +2862,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
             EmitCheckSourceLocation(RetNNAttr->getLocation()),
         };
         EmitCheck(std::make_pair(Cond, SanitizerKind::ReturnsNonnullAttribute),
-                  "nonnull_return", StaticData, None);
+                  SanitizerHandler::NonnullReturn, StaticData, None);
       }
     }
     Ret = Builder.CreateRet(RV);
@@ -3202,7 +3202,7 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
       llvm::ConstantInt::get(Int32Ty, ArgNo + 1),
   };
   EmitCheck(std::make_pair(Cond, SanitizerKind::NonnullAttribute),
-                "nonnull_arg", StaticData, None);
+            SanitizerHandler::NonnullArg, StaticData, None);
 }
 
 void CodeGenFunction::EmitCallArgs(

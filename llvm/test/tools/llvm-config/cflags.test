@@ -3,5 +3,5 @@ RUN: llvm-config --cppflags 2>&1 | FileCheck %s
 RUN: llvm-config --cxxflags 2>&1 | FileCheck %s
 CHECK: -I
 CHECK: {{[/\\]}}include
-CHECK-NOT: error
+CHECK-NOT: error:
 CHECK-NOT: warning

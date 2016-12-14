@@ -18,7 +18,7 @@ struct plus {
 template <>
 struct plus<void> {
   template <typename T, typename U>
-  constexpr auto operator()(T &&Lhs, U &&Rhs) const -> 
+  constexpr auto operator()(T &&Lhs, U &&Rhs) const ->
     decltype(forward<T>(Lhs) + forward<U>(Rhs));
 };
 

@@ -34,7 +34,7 @@
 ; CHECK-NEXT:   .quad 56
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _anyreg_test2
-; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _patchpoint_spilldef
 ; CHECK-NEXT:   .quad 56
@@ -272,31 +272,31 @@ entry:
 ; CHECK-NEXT:   .byte 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .long 0
-; Loc 9: Register
-; CHECK-NEXT:   .byte 1
-; CHECK-NEXT:   .byte 8
-; CHECK-NEXT:   .short {{[0-9]+}}
-; CHECK-NEXT:   .long 0
-; Loc 10: Register
-; CHECK-NEXT:   .byte 1
-; CHECK-NEXT:   .byte 8
-; CHECK-NEXT:   .short {{[0-9]+}}
-; CHECK-NEXT:   .long 0
-; Loc 11: Register
-; CHECK-NEXT:   .byte 1
-; CHECK-NEXT:   .byte 8
-; CHECK-NEXT:   .short {{[0-9]+}}
-; CHECK-NEXT:   .long 0
-; Loc 12: Register
-; CHECK-NEXT:   .byte 1
-; CHECK-NEXT:   .byte 8
-; CHECK-NEXT:   .short {{[0-9]+}}
-; CHECK-NEXT:   .long 0
-; Loc 13: Register
-; CHECK-NEXT:   .byte 1
-; CHECK-NEXT:   .byte 8
-; CHECK-NEXT:   .short {{[0-9]+}}
-; CHECK-NEXT:   .long 0
+; Loc 9: Argument, still on stack
+; CHECK-NEXT: .byte  3
+; CHECK-NEXT: .byte  8
+; CHECK-NEXT: .short 6
+; CHECK-NEXT: .long
+; Loc 10: Argument, still on stack
+; CHECK-NEXT: .byte  3
+; CHECK-NEXT: .byte  8
+; CHECK-NEXT: .short 6
+; CHECK-NEXT: .long
+; Loc 11: Argument, still on stack
+; CHECK-NEXT: .byte  3
+; CHECK-NEXT: .byte  8
+; CHECK-NEXT: .short 6
+; CHECK-NEXT: .long
+; Loc 12: Argument, still on stack
+; CHECK-NEXT: .byte  3
+; CHECK-NEXT: .byte  8
+; CHECK-NEXT: .short 6
+; CHECK-NEXT: .long
+; Loc 13: Argument, still on stack
+; CHECK-NEXT: .byte  3
+; CHECK-NEXT: .byte  8
+; CHECK-NEXT: .short 6
+; CHECK-NEXT: .long
 define i64 @anyreg_test2(i8* %a1, i8* %a2, i8* %a3, i8* %a4, i8* %a5, i8* %a6, i8* %a7, i8* %a8, i8* %a9, i8* %a10, i8* %a11, i8* %a12, i8* %a13) nounwind ssp uwtable {
 entry:
   %f = inttoptr i64 12297829382473034410 to i8*

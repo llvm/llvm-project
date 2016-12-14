@@ -104,6 +104,14 @@
 // RUN: %clang -target aarch64_be -mlittle-endian -mtune=exynos-m2 -### -c %s 2>&1 | FileCheck -check-prefix=M2 %s
 // M2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "exynos-m2"
 
+// RUN: %clang -target aarch64_be -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3 %s
+// RUN: %clang -target aarch64 -mbig-endian -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3 %s
+// RUN: %clang -target aarch64_be -mbig-endian -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3 %s
+// RUN: %clang -target aarch64_be -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3 %s
+// RUN: %clang -target aarch64 -mbig-endian -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3 %s
+// RUN: %clang -target aarch64_be -mbig-endian -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3 %s
+// M3: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "exynos-m3"
+
 // RUN: %clang -target arm64 -mcpu=exynos-m1 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M1 %s
 // RUN: %clang -target arm64 -mlittle-endian -mcpu=exynos-m1 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M1 %s
 // RUN: %clang -target arm64 -mtune=exynos-m1 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M1 %s
@@ -115,6 +123,12 @@
 // RUN: %clang -target arm64 -mtune=exynos-m2 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M2 %s
 // RUN: %clang -target arm64 -mlittle-endian -mtune=exynos-m2 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M2 %s
 // ARM64-M2: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "exynos-m2"
+
+// RUN: %clang -target arm64 -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M3 %s
+// RUN: %clang -target arm64 -mlittle-endian -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M3 %s
+// RUN: %clang -target arm64 -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M3 %s
+// RUN: %clang -target arm64 -mlittle-endian -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-M3 %s
+// ARM64-M3: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "exynos-m3"
 
 // RUN: %clang -target aarch64 -mcpu=falkor -### -c %s 2>&1 | FileCheck -check-prefix=FALKOR %s
 // RUN: %clang -target aarch64 -mlittle-endian -mcpu=falkor -### -c %s 2>&1 | FileCheck -check-prefix=FALKOR %s
@@ -214,6 +228,14 @@
 // RUN: %clang -target aarch64 -mbig-endian -mtune=exynos-m2 -### -c %s 2>&1 | FileCheck -check-prefix=M2-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -mtune=exynos-m2 -### -c %s 2>&1 | FileCheck -check-prefix=M2-BE %s
 // M2-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "exynos-m2"
+
+// RUN: %clang -target aarch64_be -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -mcpu=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3-BE %s
+// RUN: %clang -target aarch64_be -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -mtune=exynos-m3 -### -c %s 2>&1 | FileCheck -check-prefix=M3-BE %s
+// M3-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "exynos-m3"
 
 // RUN: %clang -target aarch64_be -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s
 // RUN: %clang -target aarch64 -mbig-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s

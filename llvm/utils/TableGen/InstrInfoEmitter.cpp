@@ -13,22 +13,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenDAGPatterns.h"
+#include "CodeGenInstruction.h"
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
 #include "TableGenBackends.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
-#include <cstdio>
+#include <cassert>
+#include <cstdint>
 #include <map>
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
 
 namespace {
+
 class InstrInfoEmitter {
   RecordKeeper &Records;
   CodeGenDAGPatterns CDP;
@@ -50,7 +57,7 @@ private:
   /// and instruction operand indices as their values.  The values of this map
   /// are lists of instruction names.
   typedef std::map<std::map<unsigned, unsigned>,
-                   std::vector<std::string> > OpNameMapTy;
+                   std::vector<std::string>> OpNameMapTy;
   typedef std::map<std::string, unsigned>::iterator StrUintMapIter;
   void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
                   Record *InstrInfo,
@@ -70,6 +77,7 @@ private:
   void EmitOperandInfo(raw_ostream &OS, OperandInfoMapTy &OperandInfoIDs);
   std::vector<std::string> GetOperandInfo(const CodeGenInstruction &Inst);
 };
+
 } // end anonymous namespace
 
 static void PrintDefList(const std::vector<Record*> &Uses,
@@ -106,7 +114,7 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
       for (unsigned j = 0, e = Op.MINumOperands; j != e; ++j) {
         OperandList.push_back(Op);
 
-        Record *OpR = cast<DefInit>(MIOI->getArg(j))->getDef();
+        auto *OpR = cast<DefInit>(MIOI->getArg(j))->getDef();
         OperandList.back().Rec = OpR;
       }
     }
@@ -202,7 +210,6 @@ void InstrInfoEmitter::initOperandMapData(
         const std::string &Namespace,
         std::map<std::string, unsigned> &Operands,
         OpNameMapTy &OperandMap) {
-
   unsigned NumOperands = 0;
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable"))
@@ -236,7 +243,6 @@ void InstrInfoEmitter::initOperandMapData(
 void InstrInfoEmitter::emitOperandNameMappings(raw_ostream &OS,
            const CodeGenTarget &Target,
            ArrayRef<const CodeGenInstruction*> NumberedInstructions) {
-
   const std::string &Namespace = Target.getInstNamespace();
   std::string OpNameNS = "OpName";
   // Map of operand names to their enumeration value.  This will be used to
@@ -301,7 +307,6 @@ void InstrInfoEmitter::emitOperandNameMappings(raw_ostream &OS,
   OS << "} // end namespace " << Namespace << "\n";
   OS << "} // end namespace llvm\n";
   OS << "#endif //GET_INSTRINFO_NAMED_OPS\n\n";
-
 }
 
 /// Generate an enum for all the operand types for this target, under the
@@ -430,7 +435,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "struct " << ClassName << " : public TargetInstrInfo {\n"
      << "  explicit " << ClassName
      << "(int CFSetupOpcode = -1, int CFDestroyOpcode = -1, int CatchRetOpcode = -1, int ReturnOpcode = -1);\n"
-     << "  ~" << ClassName << "() override {}\n"
+     << "  ~" << ClassName << "() override = default;\n"
      << "};\n";
   OS << "} // end llvm namespace\n";
 
@@ -516,7 +521,7 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
     PrintFatalError("no TSFlags?");
   uint64_t Value = 0;
   for (unsigned i = 0, e = TSF->getNumBits(); i != e; ++i) {
-    if (BitInit *Bit = dyn_cast<BitInit>(TSF->getBit(i)))
+    if (const auto *Bit = dyn_cast<BitInit>(TSF->getBit(i)))
       Value |= uint64_t(Bit->getValue()) << i;
     else
       PrintFatalError("Invalid TSFlags bit in " + Inst.TheDef->getName());
@@ -563,7 +568,6 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
 
 // emitEnums - Print out enum values for all of the instructions.
 void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
-
   OS << "#ifdef GET_INSTRINFO_ENUM\n";
   OS << "#undef GET_INSTRINFO_ENUM\n";
 

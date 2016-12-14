@@ -100,6 +100,13 @@ function(filter_available_targets out_var)
   set(${out_var} ${archs} PARENT_SCOPE)
 endfunction()
 
+# Add $arch as supported with no additional flags.
+macro(add_default_target_arch arch)
+  set(TARGET_${arch}_CFLAGS "")
+  set(CAN_TARGET_${arch} 1)
+  list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})
+endmacro()
+
 function(check_compile_definition def argstring out_var)
   if("${def}" STREQUAL "")
     set(${out_var} TRUE PARENT_SCOPE)
@@ -223,8 +230,16 @@ macro(load_llvm_config)
 endmacro()
 
 macro(construct_compiler_rt_default_triple)
-  set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${TARGET_TRIPLE} CACHE STRING
-      "Default triple for which compiler-rt runtimes will be built.")
+  if(COMPILER_RT_DEFAULT_TARGET_ONLY)
+    if(DEFINED COMPILER_RT_DEFAULT_TARGET_TRIPLE)
+      message(FATAL_ERROR "COMPILER_RT_DEFAULT_TARGET_TRIPLE isn't supported when building for default target only")
+    endif()
+    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${CMAKE_C_COMPILER_TARGET})
+  else()
+    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${TARGET_TRIPLE} CACHE STRING
+          "Default triple for which compiler-rt runtimes will be built.")
+  endif()
+
   if(DEFINED COMPILER_RT_TEST_TARGET_TRIPLE)
     # Backwards compatibility: this variable used to be called
     # COMPILER_RT_TEST_TARGET_TRIPLE.
@@ -234,7 +249,10 @@ macro(construct_compiler_rt_default_triple)
   string(REPLACE "-" ";" TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
   list(GET TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
   list(GET TARGET_TRIPLE_LIST 1 COMPILER_RT_DEFAULT_TARGET_OS)
-  list(GET TARGET_TRIPLE_LIST 2 COMPILER_RT_DEFAULT_TARGET_ABI)
+  list(LENGTH TARGET_TRIPLE_LIST TARGET_TRIPLE_LIST_LENGTH)
+  if(TARGET_TRIPLE_LIST_LENGTH GREATER 2)
+    list(GET TARGET_TRIPLE_LIST 2 COMPILER_RT_DEFAULT_TARGET_ABI)
+  endif()
   # Determine if test target triple is specified explicitly, and doesn't match the
   # default.
   if(NOT COMPILER_RT_DEFAULT_TARGET_TRIPLE STREQUAL TARGET_TRIPLE)

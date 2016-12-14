@@ -77,7 +77,7 @@ void check_vftable_offset() {
   C c;
 // The vftable pointer should point at the beginning of the vftable.
 // CHECK: [[THIS_PTR:%[0-9]+]] = bitcast %"struct.basic::C"* {{.*}} to i32 (...)***
-// CHECK: store i32 (...)** bitcast ([2 x i8*]* @"\01??_7C@basic@@6B@" to i32 (...)**), i32 (...)*** [[THIS_PTR]]
+// CHECK: store i32 (...)** bitcast ({ [2 x i8*] }* @"\01??_7C@basic@@6B@" to i32 (...)**), i32 (...)*** [[THIS_PTR]]
 }
 
 void call_complete_dtor(C *obj_ptr) {

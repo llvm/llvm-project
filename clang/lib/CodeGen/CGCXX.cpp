@@ -272,10 +272,11 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
   VTable = CGF.Builder.CreateBitCast(VTable, Ty);
   assert(VTable && "BuildVirtualCall = kext vtbl pointer is null");
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
-  uint64_t AddressPoint =
-    CGM.getItaniumVTableContext().getVTableLayout(RD)
-       .getAddressPoint(BaseSubobject(RD, CharUnits::Zero()));
-  VTableIndex += AddressPoint;
+  const VTableLayout &VTLayout = CGM.getItaniumVTableContext().getVTableLayout(RD);
+  VTableLayout::AddressPointLocation AddressPoint =
+      VTLayout.getAddressPoint(BaseSubobject(RD, CharUnits::Zero()));
+  VTableIndex += VTLayout.getVTableOffset(AddressPoint.VTableIndex) +
+                 AddressPoint.AddressPointIndex;
   llvm::Value *VFuncPtr =
     CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc =

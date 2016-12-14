@@ -30,6 +30,7 @@
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a73 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m1 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
 // RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m2 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
+// RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu exynos-m3 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-BASIC-V8
 // CHECK-BASIC-V8: "target-features"="+crc,+crypto,+dsp,+fp-armv8,+hwdiv,+hwdiv-arm,+neon"
 
 

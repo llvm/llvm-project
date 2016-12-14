@@ -1622,11 +1622,9 @@ define <2 x i64> @foldv2i64() nounwind {
 ; X32-SSE-NEXT:    pand %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrld $16, %xmm0
 ; X32-SSE-NEXT:    paddd %xmm1, %xmm0
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,4294967295,0,0]
-; X32-SSE-NEXT:    psrlq $32, %xmm1
-; X32-SSE-NEXT:    pand %xmm0, %xmm1
+; X32-SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
 ; X32-SSE-NEXT:    psrlq $32, %xmm0
-; X32-SSE-NEXT:    paddq %xmm1, %xmm0
+; X32-SSE-NEXT:    paddq %xmm2, %xmm0
 ; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 0)
   ret <2 x i64> %out
@@ -1679,11 +1677,9 @@ define <2 x i64> @foldv2i64u() nounwind {
 ; X32-SSE-NEXT:    pand %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrld $16, %xmm0
 ; X32-SSE-NEXT:    paddd %xmm1, %xmm0
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,4294967295,0,0]
-; X32-SSE-NEXT:    psrlq $32, %xmm1
-; X32-SSE-NEXT:    pand %xmm0, %xmm1
+; X32-SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
 ; X32-SSE-NEXT:    psrlq $32, %xmm0
-; X32-SSE-NEXT:    paddq %xmm1, %xmm0
+; X32-SSE-NEXT:    paddq %xmm2, %xmm0
 ; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 -1)
   ret <2 x i64> %out

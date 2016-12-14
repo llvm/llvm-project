@@ -129,3 +129,38 @@ sw.bb2:
 sw.default:
   ret void
 }
+
+; https://llvm.org/bugs/show_bug.cgi?id=31260
+
+define i8 @PR31260(i8 %x) {
+; ALL-LABEL: @PR31260(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[TMP0:%.*]] = trunc i8 %x to i2
+; ALL-NEXT:    [[TRUNC:%.*]] = and i2 [[TMP0]], -2
+; ALL-NEXT:    switch i2 [[TRUNC]], label %exit [
+; ALL-NEXT:    i2 0, label %case126
+; ALL-NEXT:    i2 -2, label %case124
+; ALL-NEXT:    ]
+; ALL:       exit:
+; ALL-NEXT:    ret i8 1
+; ALL:       case126:
+; ALL-NEXT:    ret i8 3
+; ALL:       case124:
+; ALL-NEXT:    ret i8 5
+;
+entry:
+  %t4 = and i8 %x, 2
+  %t5 = add nsw i8 %t4, -126
+  switch i8 %t5, label %exit [
+  i8 -126, label %case126
+  i8 -124, label %case124
+  ]
+
+exit:
+  ret i8 1
+case126:
+  ret i8 3
+case124:
+  ret i8 5
+}
+

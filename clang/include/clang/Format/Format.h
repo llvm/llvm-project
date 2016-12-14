@@ -465,6 +465,8 @@ struct FormatStyle {
     LK_Java,
     /// Should be used for JavaScript.
     LK_JavaScript,
+    /// Should be used for ObjC code.
+    LK_ObjC,
     /// Should be used for Protocol Buffers
     /// (https://developers.google.com/protocol-buffers/).
     LK_Proto,
@@ -852,13 +854,16 @@ extern const char *StyleOptionHelpDescription;
 /// == "file".
 /// \param[in] FallbackStyle The name of a predefined style used to fallback to
 /// in case the style can't be determined from \p StyleName.
+/// \param[in] Code The actual code to be formatted. Used to determine the
+/// language if the filename isn't sufficient.
 /// \param[in] FS The underlying file system, in which the file resides. By
 /// default, the file system is the real file system.
 ///
 /// \returns FormatStyle as specified by ``StyleName``. If no style could be
 /// determined, the default is LLVM Style (see ``getLLVMStyle()``).
 FormatStyle getStyle(StringRef StyleName, StringRef FileName,
-                     StringRef FallbackStyle, vfs::FileSystem *FS = nullptr);
+                     StringRef FallbackStyle, StringRef Code = "",
+                     vfs::FileSystem *FS = nullptr);
 
 // \brief Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {

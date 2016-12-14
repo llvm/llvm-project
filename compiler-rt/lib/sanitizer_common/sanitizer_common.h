@@ -547,6 +547,13 @@ class InternalMmapVectorNoCtor {
   uptr capacity() const {
     return capacity_;
   }
+  void resize(uptr new_size) {
+    Resize(new_size);
+    if (new_size > size_) {
+      internal_memset(&data_[size_], 0, sizeof(T) * (new_size - size_));
+    }
+    size_ = new_size;
+  }
 
   void clear() { size_ = 0; }
   bool empty() const { return size() == 0; }

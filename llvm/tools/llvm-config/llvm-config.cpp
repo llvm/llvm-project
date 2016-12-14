@@ -215,6 +215,7 @@ Options:\n\
   --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
   --link-shared     Link the components as shared libraries.\n\
   --link-static     Link the component libraries statically.\n\
+  --ignore-libllvm  Ignore libLLVM and link component libraries instead.\n\
 Typical components:\n\
   all               All LLVM libraries (default).\n\
   engine            Either a native JIT or a bitcode interpreter.\n";
@@ -432,7 +433,15 @@ int main(int argc, char **argv) {
                                          const bool Shared) {
     std::string LibFileName;
     if (Shared) {
-      LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
+      if (Lib == DyLibName) {
+        // Treat the DyLibName specially. It is not a component library and
+        // already has the necessary prefix and suffix (e.g. `.so`) added so
+        // just return it unmodified.
+        assert(Lib.endswith(SharedExt) && "DyLib is missing suffix");
+        LibFileName = Lib;
+      } else {
+        LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
+      }
     } else {
       // default to static
       LibFileName = (StaticPrefix + Lib + "." + StaticExt).str();
@@ -541,6 +550,9 @@ int main(int argc, char **argv) {
         OS << ActivePrefix << '\n';
       } else if (Arg == "--src-root") {
         OS << LLVM_SRC_ROOT << '\n';
+      } else if (Arg == "--ignore-libllvm") {
+        LinkDyLib = false;
+        LinkMode = BuiltSharedLibs ? LinkModeShared : LinkModeAuto;
       } else if (Arg == "--link-shared") {
         LinkMode = LinkModeShared;
       } else if (Arg == "--link-static") {
@@ -586,7 +598,7 @@ int main(int argc, char **argv) {
     if (!MissingLibs.empty()) {
       switch (LinkMode) {
       case LinkModeShared:
-        if (DyLibExists && !BuiltSharedLibs)
+        if (LinkDyLib && !BuiltSharedLibs)
           break;
         // Using component shared libraries.
         for (auto &Lib : MissingLibs)
@@ -662,7 +674,7 @@ int main(int argc, char **argv) {
         }
       };
 
-      if (LinkMode == LinkModeShared && !BuiltSharedLibs) {
+      if (LinkMode == LinkModeShared && LinkDyLib) {
         PrintForLib(DyLibName);
       } else {
         for (unsigned i = 0, e = RequiredLibs.size(); i != e; ++i) {

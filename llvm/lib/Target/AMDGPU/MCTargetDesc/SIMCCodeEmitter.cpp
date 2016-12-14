@@ -1,4 +1,4 @@
-//===-- SIMCCodeEmitter.cpp - SI Code Emitter -------------------------------===//
+//===-- SIMCCodeEmitter.cpp - SI Code Emitter -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,25 +17,30 @@
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
 #include "MCTargetDesc/AMDGPUMCCodeEmitter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 
 using namespace llvm;
 
 namespace {
 
 class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
-  SIMCCodeEmitter(const SIMCCodeEmitter &) = delete;
-  void operator=(const SIMCCodeEmitter &) = delete;
   const MCRegisterInfo &MRI;
 
   /// \brief Encode an fp or int literal
@@ -46,8 +51,8 @@ public:
   SIMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
                   MCContext &ctx)
       : AMDGPUMCCodeEmitter(mcii), MRI(mri) {}
-
-  ~SIMCCodeEmitter() override {}
+  SIMCCodeEmitter(const SIMCCodeEmitter &) = delete;
+  SIMCCodeEmitter &operator=(const SIMCCodeEmitter &) = delete;
 
   /// \brief Encode the instruction and write it to the OS.
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -66,7 +71,7 @@ public:
                              const MCSubtargetInfo &STI) const override;
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 MCCodeEmitter *llvm::createSIMCCodeEmitter(const MCInstrInfo &MCII,
                                            const MCRegisterInfo &MRI,
@@ -198,10 +203,9 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
 uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
                                          const MCOperandInfo &OpInfo,
                                          const MCSubtargetInfo &STI) const {
-
   int64_t Imm;
   if (MO.isExpr()) {
-    const MCConstantExpr *C = dyn_cast<MCConstantExpr>(MO.getExpr());
+    const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
     if (!C)
       return 255;
 
@@ -263,7 +267,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     if (Op.isImm())
       Imm = Op.getImm();
     else if (Op.isExpr()) {
-      if (const MCConstantExpr *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
+      if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
         Imm = C->getValue();
 
     } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
@@ -301,7 +305,7 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     return MRI.getEncodingValue(MO.getReg());
 
   if (MO.isExpr() && MO.getExpr()->getKind() != MCExpr::Constant) {
-    const MCSymbolRefExpr *Expr = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
+    const auto *Expr = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
     MCFixupKind Kind;
     if (Expr && Expr->getSymbol().isExternal())
       Kind = FK_Data_4;
@@ -329,4 +333,3 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   llvm_unreachable("Encoding of this operand type is not supported yet.");
   return 0;
 }
-

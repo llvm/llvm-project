@@ -138,7 +138,6 @@ int main()
 #endif
 #if TEST_STD_VER > 11
     {
-        std::list<int> c;
         std::list<int>::iterator ii1{}, ii2{};
         std::list<int>::iterator ii4 = ii1;
         std::list<int>::const_iterator cii{};
@@ -151,9 +150,6 @@ int main()
         assert ( (cii == ii1 ));
         assert (!(ii1 != cii ));
         assert (!(cii != ii1 ));
-
-        assert ( ii1 != c.cbegin());
-        assert ( cii != c.begin());
     }
 #endif
 

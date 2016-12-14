@@ -1830,6 +1830,10 @@ extensions are not implemented yet:
      ...
      local_function(1);
 
+-  clang only supports global register variables when the register specified
+   is non-allocatable (e.g. the stack pointer). Support for general global
+   register variables is unlikely to be implemented soon because it requires
+   additional LLVM backend support.
 -  clang does not support static initialization of flexible array
    members. This appears to be a rarely used extension, but could be
    implemented pending user demand.

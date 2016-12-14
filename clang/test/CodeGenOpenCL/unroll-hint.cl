@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL1.2 -o - %s | FileCheck %s
 
 /*** for ***/
 void for_count()

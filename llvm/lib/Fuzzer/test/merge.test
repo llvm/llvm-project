@@ -29,6 +29,8 @@ RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 2>&1 | File
 CHECK3: === Minimizing the initial corpus of 6 units
 CHECK3: === Merge: written 0 units
 
+# Check that we respect max_len during the merge and don't crash.
+RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 -max_len=4
 
 # Check that when merge fails we print an error message.
 RUN: echo 'Hi!' > %tmp/T1/HiI
