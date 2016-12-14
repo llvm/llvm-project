@@ -32,7 +32,7 @@
 #cmakedefine HAVE_CXXABI_H ${HAVE_CXXABI_H}
 
 /* Define to 1 if you have the <CrashReporterClient.h> header file. */
-#undef HAVE_CRASHREPORTERCLIENT_H
+#cmakedefine HAVE_CRASHREPORTERCLIENT_H
 
 /* can use __crashreporter_info__ */
 #undef HAVE_CRASHREPORTER_INFO
