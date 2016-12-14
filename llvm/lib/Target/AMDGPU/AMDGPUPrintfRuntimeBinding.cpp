@@ -668,9 +668,14 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
 }
 
 bool AMDGPUPrintfRuntimeBinding::runOnModule(Module &M) {
+  Triple TT(M.getTargetTriple());
+  if (TT.getArch() == Triple::r600)
+    return false;
+
   if (!prepare(M))
     return false;
-   return lowerPrintfForGpu(M);
+
+  return lowerPrintfForGpu(M);
 }
 
 StringRef AMDGPUPrintfRuntimeBinding::getPassName() const {
