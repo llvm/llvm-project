@@ -47,7 +47,7 @@ int printf(const char * restrict, ...) ;
 
 void check_nslog(unsigned k) {
   NSLog(@"%d%%", k); // no-warning
-  NSLog(@"%s%lb%d", "unix", 10,20); // expected-warning {{invalid conversion specifier 'b'}}
+  NSLog(@"%s%lb%d", "unix", 10, 20); // expected-warning {{invalid conversion specifier 'b'}} expected-warning {{data argument not used by format string}}
 }
 
 // Check type validation
