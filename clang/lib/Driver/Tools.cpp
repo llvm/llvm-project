@@ -2381,9 +2381,11 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
     Features.push_back("+neon");
   } else {
     unsigned ArchKind = llvm::AArch64::parseCPUArch(CPU);
-    unsigned Extersion = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+    if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
+      return false;
 
-    if (!llvm::AArch64::getExtensionFeatures(Extersion, Features))
+    unsigned Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+    if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
    }
 
