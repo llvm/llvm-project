@@ -56,11 +56,6 @@
 //   .debug_gnu_pubnames and .debug_gnu_pubtypes sections. Then it builds the
 //   hashtable in according to .gdb_index format specification.
 // 6) Constant pool is populated at the same time as symbol table.
-//
-// Current version implements steps 1-4. So it writes .gdb_index
-// header, list of compilation units and address area. Since we so not plan to
-// support types CU list area, it is also empty and so far is "implemented".
-// Other data areas are not yet implemented.
 //===----------------------------------------------------------------------===//
 
 #include "GdbIndex.h"
@@ -89,6 +84,80 @@ GdbIndexBuilder<ELFT>::readCUList() {
     Ret.push_back(
         {DebugInfoSec->OutSecOff + CU->getOffset(), CU->getLength() + 4});
   return Ret;
+}
+
+template <class ELFT>
+std::vector<std::pair<StringRef, uint8_t>>
+GdbIndexBuilder<ELFT>::readPubNamesAndTypes() {
+  const bool IsLE = ELFT::TargetEndianness == llvm::support::little;
+  StringRef Data[] = {Dwarf->getGnuPubNamesSection(),
+                      Dwarf->getGnuPubTypesSection()};
+
+  std::vector<std::pair<StringRef, uint8_t>> Ret;
+  for (StringRef D : Data) {
+    DataExtractor PubNames(D, IsLE, 0);
+    uint32_t Offset = 0;
+    while (PubNames.isValidOffset(Offset)) {
+      // Skip length, version, unit offset and size.
+      Offset += 14;
+      while (Offset < D.size()) {
+        uint32_t DieRef = PubNames.getU32(&Offset);
+        if (DieRef == 0)
+          break;
+        uint8_t Flags = PubNames.getU8(&Offset);
+        const char *Name = PubNames.getCStr(&Offset);
+        Ret.push_back({Name, Flags});
+      }
+    }
+  }
+
+  return Ret;
+}
+
+std::pair<bool, GdbSymbol *> GdbHashTab::add(uint32_t Hash, size_t Offset) {
+  if (Size * 4 / 3 >= Table.size())
+    expand();
+
+  GdbSymbol **Slot = findSlot(Hash, Offset);
+  bool New = false;
+  if (*Slot == nullptr) {
+    ++Size;
+    *Slot = new (Alloc) GdbSymbol(Hash, Offset);
+    New = true;
+  }
+  return {New, *Slot};
+}
+
+void GdbHashTab::expand() {
+  if (Table.empty()) {
+    Table.resize(InitialSize);
+    return;
+  }
+  std::vector<GdbSymbol *> NewTable(Table.size() * 2);
+  NewTable.swap(Table);
+
+  for (GdbSymbol *Sym : NewTable) {
+    if (!Sym)
+      continue;
+    GdbSymbol **Slot = findSlot(Sym->NameHash, Sym->NameOffset);
+    *Slot = Sym;
+  }
+}
+
+// Methods finds a slot for symbol with given hash. The step size used to find
+// the next candidate slot when handling a hash collision is specified in
+// .gdb_index section format. The hash value for a table entry is computed by
+// applying an iterative hash function to the symbol's name.
+GdbSymbol **GdbHashTab::findSlot(uint32_t Hash, size_t Offset) {
+  uint32_t Index = Hash & (Table.size() - 1);
+  uint32_t Step = ((Hash * 17) & (Table.size() - 1)) | 1;
+
+  for (;;) {
+    GdbSymbol *S = Table[Index];
+    if (!S || ((S->NameOffset == Offset) && (S->NameHash == Hash)))
+      return &Table[Index];
+    Index = (Index + Step) & (Table.size() - 1);
+  }
 }
 
 template <class ELFT>
