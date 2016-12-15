@@ -152,8 +152,10 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
 
   int pid = -1;
 
-  int infd[2] = {};
-  int outfd[2] = {};
+  int infd[2];
+  internal_memset(&infd, 0, sizeof(infd));
+  int outfd[2];
+  internal_memset(&outfd, 0, sizeof(outfd));
   if (!CreateTwoHighNumberedPipes(infd, outfd)) {
     Report("WARNING: Can't create a socket pair to start "
            "external symbolizer (errno: %d)\n", errno);
