@@ -32,10 +32,10 @@
 #cmakedefine HAVE_CXXABI_H ${HAVE_CXXABI_H}
 
 /* Define to 1 if you have the <CrashReporterClient.h> header file. */
-#cmakedefine HAVE_CRASHREPORTERCLIENT_H
+#undef HAVE_CRASHREPORTERCLIENT_H
 
 /* can use __crashreporter_info__ */
-#cmakedefine01 HAVE_CRASHREPORTER_INFO
+#undef HAVE_CRASHREPORTER_INFO
 
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */
