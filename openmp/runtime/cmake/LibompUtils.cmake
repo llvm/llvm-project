@@ -133,12 +133,12 @@ function(libomp_check_variable var)
 endfunction()
 
 # void libomp_get_build_number(string src_dir, string* return_build_number);
-# - grab the eight digit build number (or 00000000) from kmp_version.c
+# - grab the eight digit build number (or 00000000) from kmp_version.cpp
 function(libomp_get_build_number src_dir return_build_number)
-  # sets file_lines_list to a list of all lines in kmp_version.c
-  file(STRINGS "${src_dir}/src/kmp_version.c" file_lines_list)
+  # sets file_lines_list to a list of all lines in kmp_version.cpp
+  file(STRINGS "${src_dir}/src/kmp_version.cpp" file_lines_list)
 
-  # runs through each line in kmp_version.c
+  # runs through each line in kmp_version.cpp
   foreach(line IN LISTS file_lines_list)
     # if the line begins with "#define KMP_VERSION_BUILD" then we take not of the build number
     string(REGEX MATCH "^[ \t]*#define[ \t]+KMP_VERSION_BUILD" valid "${line}")

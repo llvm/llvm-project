@@ -61,37 +61,16 @@ void ArchiveFile::parse() {
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
-InputFile *ArchiveFile::getMember(const Archive::Symbol *Sym) {
+void ArchiveFile::addMember(const Archive::Symbol *Sym) {
   const Archive::Child &C =
       check(Sym->getMember(),
             "could not get the member for symbol " + Sym->getName());
 
   // Return an empty buffer if we have already returned the same buffer.
   if (!Seen.insert(C.getChildOffset()).second)
-    return nullptr;
+    return;
 
-  MemoryBufferRef MB =
-      check(C.getMemoryBufferRef(),
-            "could not get the buffer for the member defining symbol " +
-                Sym->getName());
-  if (C.getParent()->isThin() && Driver->Cpio)
-    Driver->Cpio->append(relativeToRoot(check(C.getFullName())),
-                         MB.getBuffer());
-
-  file_magic Magic = identify_magic(MB.getBuffer());
-  if (Magic == file_magic::coff_import_library)
-    return make<ImportFile>(MB);
-
-  InputFile *Obj;
-  if (Magic == file_magic::coff_object)
-    Obj = make<ObjectFile>(MB);
-  else if (Magic == file_magic::bitcode)
-    Obj = make<BitcodeFile>(MB);
-  else
-    fatal("unknown file type: " + MB.getBufferIdentifier());
-
-  Obj->ParentName = getName();
-  return Obj;
+  Driver->enqueueArchiveMember(C, Sym->getName(), getName());
 }
 
 void ObjectFile::parse() {

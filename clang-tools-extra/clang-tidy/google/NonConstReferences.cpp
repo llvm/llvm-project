@@ -56,7 +56,7 @@ void NonConstReferences::check(const MatchFinder::MatchResult &Result) {
   if (!Function->isCanonicalDecl())
     return;
 
-  if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Function)) {
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Function)) {
     // Don't warn on implementations of an interface using references.
     if (Method->begin_overridden_methods() != Method->end_overridden_methods())
       return;

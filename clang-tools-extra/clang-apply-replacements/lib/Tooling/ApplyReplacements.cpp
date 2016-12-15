@@ -124,9 +124,7 @@ static void reportConflict(
 bool applyAllReplacements(const std::vector<tooling::Replacement> &Replaces,
                           Rewriter &Rewrite) {
   bool Result = true;
-  for (std::vector<tooling::Replacement>::const_iterator I = Replaces.begin(),
-                                                         E = Replaces.end();
-       I != E; ++I) {
+  for (auto I = Replaces.begin(), E = Replaces.end(); I != E; ++I) {
     if (I->isApplicable()) {
       Result = I->apply(Rewrite) && Result;
     } else {
@@ -293,8 +291,7 @@ RangeVector calculateChangedRanges(
 
 bool writeFiles(const clang::Rewriter &Rewrites) {
 
-  for (Rewriter::const_buffer_iterator BufferI = Rewrites.buffer_begin(),
-                                       BufferE = Rewrites.buffer_end();
+  for (auto BufferI = Rewrites.buffer_begin(), BufferE = Rewrites.buffer_end();
        BufferI != BufferE; ++BufferI) {
     StringRef FileName =
         Rewrites.getSourceMgr().getFileEntryForID(BufferI->first)->getName();

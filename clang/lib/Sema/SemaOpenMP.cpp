@@ -10808,7 +10808,7 @@ OMPClause *Sema::ActOnOpenMPIsDevicePtrClause(ArrayRef<Expr *> VarList,
                                               SourceLocation EndLoc) {
   MappableVarListInfo MVLI(VarList);
   for (auto &RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP use_device_ptr clause.");
+    assert(RefExpr && "NULL expr in OpenMP is_device_ptr clause.");
     SourceLocation ELoc;
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;

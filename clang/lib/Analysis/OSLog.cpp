@@ -22,6 +22,9 @@ private:
     const Expr *E = nullptr;
     Optional<OSLogBufferItem::Kind> Kind;
     Optional<unsigned> Size;
+    Optional<const Expr *> Count;
+    Optional<const Expr *> Precision;
+    Optional<const Expr *> FieldWidth;
     unsigned char Flags = 0;
   };
   SmallVector<ArgData, 4> ArgsData;
@@ -84,7 +87,7 @@ public:
         ArgsData.back().Size = precision.getConstantAmount();
         break;
       case clang::analyze_format_string::OptionalAmount::Arg: // "%.*s"
-        ArgsData.back().Kind = OSLogBufferItem::CountKind;
+        ArgsData.back().Count = Args[precision.getArgIndex()];
         break;
       case clang::analyze_format_string::OptionalAmount::Invalid:
         return false;
@@ -100,7 +103,7 @@ public:
         ArgsData.back().Size = precision.getConstantAmount();
         break;
       case clang::analyze_format_string::OptionalAmount::Arg: // "%.*P"
-        ArgsData.back().Kind = OSLogBufferItem::CountKind;
+        ArgsData.back().Count = Args[precision.getArgIndex()];
         break;
       case clang::analyze_format_string::OptionalAmount::Invalid:
         return false;
@@ -108,7 +111,13 @@ public:
       break;
     }
     default:
+      if (FS.getPrecision().hasDataArgument()) {
+        ArgsData.back().Precision = Args[FS.getPrecision().getArgIndex()];
+      }
       break;
+    }
+    if (FS.getFieldWidth().hasDataArgument()) {
+      ArgsData.back().FieldWidth = Args[FS.getFieldWidth().getArgIndex()];
     }
 
     if (FS.isPrivate()) {
@@ -123,6 +132,22 @@ public:
   void computeLayout(ASTContext &Ctx, OSLogBufferLayout &Layout) const {
     Layout.Items.clear();
     for (auto &Data : ArgsData) {
+      if (Data.FieldWidth) {
+        CharUnits Size = Ctx.getTypeSizeInChars((*Data.FieldWidth)->getType());
+        Layout.Items.emplace_back(OSLogBufferItem::ScalarKind, *Data.FieldWidth,
+                                  Size, 0);
+      }
+      if (Data.Precision) {
+        CharUnits Size = Ctx.getTypeSizeInChars((*Data.Precision)->getType());
+        Layout.Items.emplace_back(OSLogBufferItem::ScalarKind, *Data.Precision,
+                                  Size, 0);
+      }
+      if (Data.Count) {
+        // "%.*P" has an extra "count" that we insert before the argument.
+        CharUnits Size = Ctx.getTypeSizeInChars((*Data.Count)->getType());
+        Layout.Items.emplace_back(OSLogBufferItem::CountKind, *Data.Count, Size,
+                                  0);
+      }
       if (Data.Size)
         Layout.Items.emplace_back(Ctx, CharUnits::fromQuantity(*Data.Size),
                                   Data.Flags);

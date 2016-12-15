@@ -1287,7 +1287,7 @@ extern int __kmp_num_locks_in_block;
                                ? KMP_GET_I_LOCK(KMP_EXTRACT_I_INDEX(l)) \
                                : *((kmp_indirect_lock_t **)(l)) )
 
-// Used once in kmp_error.c
+// Used once in kmp_error.cpp
 extern kmp_int32
 __kmp_get_user_lock_owner(kmp_user_lock_p, kmp_uint32);
 

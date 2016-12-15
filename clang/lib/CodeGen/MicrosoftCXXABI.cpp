@@ -2204,7 +2204,8 @@ static void emitGlobalDtorWithTLRegDtor(CodeGenFunction &CGF, const VarDecl &VD,
       CGF.IntTy, DtorStub->getType(), /*IsVarArg=*/false);
 
   llvm::Constant *TLRegDtor =
-      CGF.CGM.CreateRuntimeFunction(TLRegDtorTy, "__tlregdtor");
+      CGF.CGM.CreateRuntimeFunction(TLRegDtorTy, "__tlregdtor",
+                                    llvm::AttributeSet(), /*Local=*/true);
   if (llvm::Function *TLRegDtorFn = dyn_cast<llvm::Function>(TLRegDtor))
     TLRegDtorFn->setDoesNotThrow();
 
@@ -2302,7 +2303,8 @@ static llvm::Constant *getInitThreadHeaderFn(CodeGenModule &CGM) {
       FTy, "_Init_thread_header",
       llvm::AttributeSet::get(CGM.getLLVMContext(),
                               llvm::AttributeSet::FunctionIndex,
-                              llvm::Attribute::NoUnwind));
+                              llvm::Attribute::NoUnwind),
+      /*Local=*/true);
 }
 
 static llvm::Constant *getInitThreadFooterFn(CodeGenModule &CGM) {
@@ -2313,7 +2315,8 @@ static llvm::Constant *getInitThreadFooterFn(CodeGenModule &CGM) {
       FTy, "_Init_thread_footer",
       llvm::AttributeSet::get(CGM.getLLVMContext(),
                               llvm::AttributeSet::FunctionIndex,
-                              llvm::Attribute::NoUnwind));
+                              llvm::Attribute::NoUnwind),
+      /*Local=*/true);
 }
 
 static llvm::Constant *getInitThreadAbortFn(CodeGenModule &CGM) {
@@ -2324,7 +2327,8 @@ static llvm::Constant *getInitThreadAbortFn(CodeGenModule &CGM) {
       FTy, "_Init_thread_abort",
       llvm::AttributeSet::get(CGM.getLLVMContext(),
                               llvm::AttributeSet::FunctionIndex,
-                              llvm::Attribute::NoUnwind));
+                              llvm::Attribute::NoUnwind),
+      /*Local=*/true);
 }
 
 namespace {

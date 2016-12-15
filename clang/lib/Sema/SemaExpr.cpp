@@ -1194,7 +1194,7 @@ static bool unsupportedTypeConversion(const Sema &S, QualType LHSType,
   */
   return Float128AndLongDouble &&
     (&S.Context.getFloatTypeSemantics(S.Context.LongDoubleTy) !=
-     &llvm::APFloat::IEEEdouble);
+     &llvm::APFloat::IEEEdouble());
 }
 
 typedef ExprResult PerformCastFn(Sema &S, Expr *operand, QualType toType);

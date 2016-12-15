@@ -1001,6 +1001,7 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
 static void getARMTargetFeatures(const ToolChain &TC,
                                  const llvm::Triple &Triple,
                                  const ArgList &Args,
+                                 ArgStringList &CmdArgs,
                                  std::vector<StringRef> &Features,
                                  bool ForAS) {
   const Driver &D = TC.getDriver();
@@ -1137,6 +1138,28 @@ static void getARMTargetFeatures(const ToolChain &TC,
   } else if (KernelOrKext && (!Triple.isiOS() || Triple.isOSVersionLT(6)) &&
              !Triple.isWatchOS()) {
       Features.push_back("+long-calls");
+  }
+
+  // Generate execute-only output (no data access to code sections).
+  // Supported only on ARMv6T2 and ARMv7 and above.
+  // Cannot be combined with -mno-movt or -mlong-calls
+  if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
+    if (A->getOption().matches(options::OPT_mexecute_only)) {
+      if (getARMSubArchVersionNumber(Triple) < 7 &&
+          llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::AK_ARMV6T2)
+            D.Diag(diag::err_target_unsupported_execute_only) << Triple.getArchName();
+      else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
+        D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
+      // Long calls create constant pool entries and have not yet been fixed up
+      // to play nicely with execute-only. Hence, they cannot be used in
+      // execute-only code for now
+      else if (Arg *B = Args.getLastArg(options::OPT_mlong_calls, options::OPT_mno_long_calls)) {
+        if (B->getOption().matches(options::OPT_mlong_calls))
+          D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
+      }
+
+      CmdArgs.push_back("-arm-execute-only");
+    }
   }
 
   // Kernel code has more strict alignment requirements.
@@ -2527,9 +2550,11 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
     Features.push_back("+neon");
   } else {
     unsigned ArchKind = llvm::AArch64::parseCPUArch(CPU);
-    unsigned Extersion = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+    if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
+      return false;
 
-    if (!llvm::AArch64::getExtensionFeatures(Extersion, Features))
+    unsigned Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+    if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
    }
 
@@ -2701,7 +2726,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    getARMTargetFeatures(TC, Triple, Args, Features, ForAS);
+    getARMTargetFeatures(TC, Triple, Args, CmdArgs, Features, ForAS);
     break;
 
   case llvm::Triple::ppc:

@@ -8187,7 +8187,7 @@ ASTReader::ReadCXXCtorInitializers(ModuleFile &F, const RecordData &Record,
           CXXCtorInitializer(Context, IndirectMember, MemberOrEllipsisLoc,
                              LParenLoc, Init, RParenLoc);
 
-    if (bool IsWritten = Record[Idx++]) {
+    if (/*IsWritten*/Record[Idx++]) {
       unsigned SourceOrder = Record[Idx++];
       BOMInit->setSourceOrder(SourceOrder);
     }

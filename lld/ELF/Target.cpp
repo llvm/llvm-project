@@ -1333,7 +1333,7 @@ void AArch64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   relocateOne(Buf + 8, R_AARCH64_ADD_ABS_LO12_NC, GotEntryAddr);
 }
 
-static void write32addr(uint8_t *L, uint64_t Imm) {
+static void write32AArch64Addr(uint8_t *L, uint64_t Imm) {
   uint32_t ImmLo = (Imm & 0x3) << 29;
   uint32_t ImmHi = (Imm & 0x1FFFFC) << 3;
   uint64_t Mask = (0x3 << 29) | (0x1FFFFC << 3);
@@ -1348,7 +1348,7 @@ static uint64_t getBits(uint64_t Val, int Start, int End) {
 }
 
 // Update the immediate field in a AARCH64 ldr, str, and add instruction.
-static void or32imm(uint8_t *L, uint64_t Imm) {
+static void or32AArch64Imm(uint8_t *L, uint64_t Imm) {
   or32le(L, (Imm & 0xFFF) << 10);
 }
 
@@ -1371,18 +1371,18 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
-    or32imm(Loc, Val);
+    or32AArch64Imm(Loc, Val);
     break;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     checkInt<33>(Loc, Val, Type);
-    write32addr(Loc, Val >> 12);
+    write32AArch64Addr(Loc, Val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
     checkInt<21>(Loc, Val, Type);
-    write32addr(Loc, Val);
+    write32AArch64Addr(Loc, Val);
     break;
   case R_AARCH64_CALL26:
   case R_AARCH64_JUMP26:
@@ -1400,19 +1400,19 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32le(Loc, (Val & 0xFF8) << 7);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
-    or32imm(Loc, getBits(Val, 0, 11));
+    or32AArch64Imm(Loc, getBits(Val, 0, 11));
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
-    or32imm(Loc, getBits(Val, 1, 11));
+    or32AArch64Imm(Loc, getBits(Val, 1, 11));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
-    or32imm(Loc, getBits(Val, 2, 11));
+    or32AArch64Imm(Loc, getBits(Val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
-    or32imm(Loc, getBits(Val, 3, 11));
+    or32AArch64Imm(Loc, getBits(Val, 3, 11));
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
-    or32imm(Loc, getBits(Val, 4, 11));
+    or32AArch64Imm(Loc, getBits(Val, 4, 11));
     break;
   case R_AARCH64_MOVW_UABS_G0_NC:
     or32le(Loc, (Val & 0xFFFF) << 5);
@@ -1432,11 +1432,11 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkInt<24>(Loc, Val, Type);
-    or32imm(Loc, Val >> 12);
+    or32AArch64Imm(Loc, Val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
-    or32imm(Loc, Val);
+    or32AArch64Imm(Loc, Val);
     break;
   default:
     fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
