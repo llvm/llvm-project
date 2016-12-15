@@ -4906,6 +4906,39 @@ INTERCEPTOR(void *, __bzero, void *block, uptr size) {
 #define INIT___BZERO
 #endif  // SANITIZER_INTERCEPT___BZERO
 
+#if SANITIZER_INTERCEPT_BZERO
+DECLARE_REAL_AND_INTERCEPTOR(void *, memset, void *, int, uptr)
+
+INTERCEPTOR(void, bzero, void *block, uptr size) {
+  WRAP(memset)(block, 0, size);
+}
+#define INIT_BZERO COMMON_INTERCEPT_FUNCTION(bzero);
+#else
+#define INIT_BZERO
+#endif  // SANITIZER_INTERCEPT_BZERO
+
+#if SANITIZER_INTERCEPT_BCOPY
+DECLARE_REAL_AND_INTERCEPTOR(void *, memmove, void *, const void *, uptr)
+
+INTERCEPTOR(void, bcopy, const void *src, void *dest, uptr size) {
+  WRAP(memmove)(dest, src, size);
+}
+#define INIT_BCOPY COMMON_INTERCEPT_FUNCTION(bcopy);
+#else
+#define INIT_BCOPY
+#endif  // SANITIZER_INTERCEPT_BCOPY
+
+#if SANITIZER_INTERCEPT_BCMP
+DECLARE_REAL_AND_INTERCEPTOR(int, memcmp, const void *, const void *, uptr)
+
+INTERCEPTOR(int, bcmp, const void *s1, const void *s2, uptr size) {
+  return WRAP(memcmp)(s1, s2, size);
+}
+#define INIT_BCMP COMMON_INTERCEPT_FUNCTION(bcmp);
+#else
+#define INIT_BCMP
+#endif  // SANITIZER_INTERCEPT_BCMP
+
 #if SANITIZER_INTERCEPT_FTIME
 INTERCEPTOR(int, ftime, __sanitizer_timeb *tp) {
   void *ctx;
@@ -6056,6 +6089,9 @@ static void InitializeCommonInterceptors() {
   INIT_CAPGET;
   INIT_AEABI_MEM;
   INIT___BZERO;
+  INIT_BZERO;
+  INIT_BCOPY;
+  INIT_BCMP;
   INIT_FTIME;
   INIT_XDR;
   INIT_TSEARCH;
