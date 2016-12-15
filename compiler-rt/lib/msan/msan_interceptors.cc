@@ -178,10 +178,6 @@ INTERCEPTOR(void *, memset, void *s, int c, SIZE_T n) {
   return __msan_memset(s, c, n);
 }
 
-INTERCEPTOR(void *, bcopy, const void *src, void *dest, SIZE_T n) {
-  return __msan_memmove(dest, src, n);
-}
-
 INTERCEPTOR(int, posix_memalign, void **memptr, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
   CHECK_EQ(alignment & (alignment - 1), 0);
@@ -1519,7 +1515,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(mempcpy);
   INTERCEPT_FUNCTION(memset);
   INTERCEPT_FUNCTION(memmove);
-  INTERCEPT_FUNCTION(bcopy);
   INTERCEPT_FUNCTION(wmemset);
   INTERCEPT_FUNCTION(wmemcpy);
   INTERCEPT_FUNCTION(wmempcpy);

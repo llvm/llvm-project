@@ -57,6 +57,10 @@ void __tsan_java_move(jptr src, jptr dst, jptr size) INTERFACE_ATTRIBUTE;
 // It ensures necessary synchronization between
 // java object creation and finalization.
 void __tsan_java_finalize() INTERFACE_ATTRIBUTE;
+// Finds the first allocated memory block in the [*from_ptr, to) range, saves
+// its address in *from_ptr and returns its size. Returns 0 if there are no
+// allocated memory blocks in the range.
+jptr __tsan_java_find(jptr *from_ptr, jptr to) INTERFACE_ATTRIBUTE;
 
 // Mutex lock.
 // Addr is any unique address associated with the mutex.
