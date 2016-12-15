@@ -401,7 +401,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     } else if (getFPImm()->getType()->isHalfTy()) {
       APFloat APF = getFPImm()->getValueAPF();
       bool Unused;
-      APF.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven, &Unused);
+      APF.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &Unused);
       OS << "half " << APF.convertToFloat();
     } else {
       OS << getFPImm()->getValueAPF().convertToDouble();

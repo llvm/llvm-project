@@ -91,7 +91,7 @@ define void @test5(i8 %a) {
 ; CHECK-LABEL: @test5
 ; CHECK: br i1 [[IGNORE:%.*]], label %true, label %false
   %cmp = icmp ult i8 %a, 2 
-  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp) [ "affected"(i8 %a) ]
   switch i8 %a, label %default [i8 1, label %true
                                 i8 0, label %false]
 true:
@@ -112,7 +112,7 @@ define void @test6(i8 %a) {
 ; CHECK: br i1 [[IGNORE:%.*]], label %true, label %false
   %and = and i8 %a, 254
   %cmp = icmp eq i8 %and, 254 
-  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp) [ "affected"(i8 %and, i8 %a) ]
   switch i8 %a, label %default [i8 255, label %true
                                 i8 254, label %false]
 true:
@@ -134,7 +134,7 @@ define void @test7(i8 %a) {
 ; CHECK: br i1 [[IGNORE:%.*]], label %true, label %false
   %and = and i8 %a, 254
   %cmp = icmp eq i8 %and, 254 
-  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp) [ "affected"(i8 %and, i8 %a) ]
   switch i8 %a, label %default [i8 255, label %true
                                 i8 254, label %false
                                 i8 0, label %also_dead]
@@ -162,7 +162,7 @@ define void @test8(i8 %a) {
 ; CHECK: switch i8
   %and = and i8 %a, 254
   %cmp = icmp eq i8 %and, undef
-  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp) [ "affected"(i8 %and, i8 %a) ]
   switch i8 %a, label %default [i8 255, label %true
                                 i8 254, label %false]
 true:

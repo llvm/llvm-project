@@ -330,6 +330,8 @@ def DontUseVMOVSR : Predicate<"!Subtarget->preferVMOVSR() &&"
 def IsLE             : Predicate<"MF->getDataLayout().isLittleEndian()">;
 def IsBE             : Predicate<"MF->getDataLayout().isBigEndian()">;
 
+def GenExecuteOnly : Predicate<"Subtarget->genExecuteOnly()">;
+
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.
 

@@ -39,7 +39,6 @@ protected:
   // Things that we need to build after the function is created.
   struct TestAnalyses {
     DominatorTree DT;
-    AssumptionCache AC;
     AAResults AA;
     BasicAAResult BAA;
     // We need to defer MSSA construction until AA is *entirely* set up, which
@@ -48,8 +47,8 @@ protected:
     MemorySSAWalker *Walker;
 
     TestAnalyses(MemorySSATest &Test)
-        : DT(*Test.F), AC(*Test.F), AA(Test.TLI),
-          BAA(Test.DL, Test.TLI, AC, &DT) {
+        : DT(*Test.F), AA(Test.TLI),
+          BAA(Test.DL, Test.TLI, &DT) {
       AA.addAAResult(BAA);
       MSSA = make_unique<MemorySSA>(*Test.F, &AA, &DT);
       Walker = MSSA->getWalker();

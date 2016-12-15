@@ -331,16 +331,15 @@ There are two ways to customize the formatting behavior for a type.
   to extend the mechanism for formatting a type that the library already knows how to
   format.  For that, we need something else.
     
-2. Provide a **format adapter** with a non-static format method.
+2. Provide a **format adapter** inheriting from ``llvm::FormatAdapter<T>``.
 
   .. code-block:: c++
   
     namespace anything {
-      struct format_int_custom {
-        int N;
-        explicit format_int_custom(int N) : N(N) {}
-        void format(llvm::raw_ostream &Stream, StringRef Style) {
-          // Do whatever is necessary to format ``N`` into ``Stream``
+      struct format_int_custom : public llvm::FormatAdapter<int> {
+        explicit format_int_custom(int N) : llvm::FormatAdapter<int>(N) {}
+        void format(llvm::raw_ostream &Stream, StringRef Style) override {
+          // Do whatever is necessary to format ``this->Item`` into ``Stream``
         }
       };
     }
@@ -350,9 +349,8 @@ There are two ways to customize the formatting behavior for a type.
       }
     }
     
-  If the search for a specialization of ``format_provider<T>`` for the given type
-  fails, ``formatv`` will subsequently check the argument for an instance method
-  named ``format`` with the signature described above.  If so, it will call the
+  If the type is detected to be derived from ``FormatAdapter<T>``, ``formatv``
+  will call the
   ``format`` method on the argument passing in the specified style.  This allows
   one to provide custom formatting of any type, including one which already has
   a builtin format provider.

@@ -232,6 +232,8 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     break;
   }
   case MachineOperand::MO_ConstantPoolIndex:
+    if (Subtarget->genExecuteOnly())
+      llvm_unreachable("execute-only should not generate constant pools");
     GetCPISymbol(MO.getIndex())->print(O, MAI);
     break;
   }

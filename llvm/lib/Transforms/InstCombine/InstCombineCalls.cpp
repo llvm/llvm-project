@@ -109,8 +109,8 @@ static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
 }
 
 Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
-  unsigned DstAlign = getKnownAlignment(MI->getArgOperand(0), DL, MI, &AC, &DT);
-  unsigned SrcAlign = getKnownAlignment(MI->getArgOperand(1), DL, MI, &AC, &DT);
+  unsigned DstAlign = getKnownAlignment(MI->getArgOperand(0), DL, MI, &DT);
+  unsigned SrcAlign = getKnownAlignment(MI->getArgOperand(1), DL, MI, &DT);
   unsigned MinAlign = std::min(DstAlign, SrcAlign);
   unsigned CopyAlign = MI->getAlignment();
 
@@ -210,7 +210,7 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
 }
 
 Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
-  unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
+  unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, &DT);
   if (MI->getAlignment() < Alignment) {
     MI->setAlignment(ConstantInt::get(MI->getAlignmentType(),
                                              Alignment, false));
@@ -1358,7 +1358,7 @@ Instruction *InstCombiner::visitVACopyInst(VACopyInst &I) {
 Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   auto Args = CI.arg_operands();
   if (Value *V = SimplifyCall(CI.getCalledValue(), Args.begin(), Args.end(), DL,
-                              &TLI, &DT, &AC))
+                              &TLI, &DT))
     return replaceInstUsesWith(CI, V);
 
   if (isFreeCall(&CI, &TLI))
@@ -1558,7 +1558,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
     // Turn PPC lvx -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II,
                                    &DT) >= 16) {
       Value *Ptr = Builder->CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
@@ -1575,7 +1575,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
     // Turn stvx -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II,
                                    &DT) >= 16) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
@@ -1592,7 +1592,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ppc_qpx_qvlfs:
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II,
                                    &DT) >= 16) {
       Type *VTy = VectorType::get(Builder->getFloatTy(),
                                   II->getType()->getVectorNumElements());
@@ -1604,7 +1604,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvlfd:
     // Turn PPC QPX qvlfd -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 32, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 32, DL, II,
                                    &DT) >= 32) {
       Value *Ptr = Builder->CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
@@ -1613,7 +1613,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfs:
     // Turn PPC QPX qvstfs -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II,
                                    &DT) >= 16) {
       Type *VTy = VectorType::get(Builder->getFloatTy(),
           II->getArgOperand(0)->getType()->getVectorNumElements());
@@ -1625,7 +1625,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfd:
     // Turn PPC QPX qvstfd -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 32, DL, II, &AC,
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 32, DL, II,
                                    &DT) >= 32) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
@@ -1783,6 +1783,16 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx512_mask_sub_sd_round:
   case Intrinsic::x86_avx512_mask_max_sd_round:
   case Intrinsic::x86_avx512_mask_min_sd_round:
+  case Intrinsic::x86_avx512_mask_vfmadd_ss:
+  case Intrinsic::x86_avx512_mask_vfmadd_sd:
+  case Intrinsic::x86_avx512_maskz_vfmadd_ss:
+  case Intrinsic::x86_avx512_maskz_vfmadd_sd:
+  case Intrinsic::x86_avx512_mask3_vfmadd_ss:
+  case Intrinsic::x86_avx512_mask3_vfmadd_sd:
+  case Intrinsic::x86_avx512_mask3_vfmsub_ss:
+  case Intrinsic::x86_avx512_mask3_vfmsub_sd:
+  case Intrinsic::x86_avx512_mask3_vfnmsub_ss:
+  case Intrinsic::x86_avx512_mask3_vfnmsub_sd:
   case Intrinsic::x86_fma_vfmadd_ss:
   case Intrinsic::x86_fma_vfmsub_ss:
   case Intrinsic::x86_fma_vfnmadd_ss:
@@ -2239,7 +2249,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_neon_vst3lane:
   case Intrinsic::arm_neon_vst4lane: {
     unsigned MemAlign =
-        getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+        getKnownAlignment(II->getArgOperand(0), DL, II, &DT);
     unsigned AlignArg = II->getNumArgOperands() - 1;
     ConstantInt *IntrAlign = dyn_cast<ConstantInt>(II->getArgOperand(AlignArg));
     if (IntrAlign && IntrAlign->getZExtValue() < MemAlign) {
@@ -2517,6 +2527,78 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     computeKnownBits(IIOperand, KnownZero, KnownOne, 0, II);
     if (KnownOne.isAllOnesValue())
       return eraseInstFromFunction(*II);
+
+    // For assumptions, add to the associated operand bundle the values to which
+    // the assumption might apply.
+    // Note: This code must be kept in-sync with the code in
+    // computeKnownBitsFromAssume in ValueTracking.
+    SmallVector<Value *, 16> Affected;
+    auto AddAffected = [&Affected](Value *V) {
+      if (isa<Argument>(V)) {
+        Affected.push_back(V);
+      } else if (auto *I = dyn_cast<Instruction>(V)) {
+        Affected.push_back(I);
+
+        if (I->getOpcode() == Instruction::BitCast ||
+            I->getOpcode() == Instruction::PtrToInt) {
+          V = I->getOperand(0);
+          if (isa<Instruction>(V) || isa<Argument>(V))
+            Affected.push_back(V);
+        }
+      }
+    };
+
+    CmpInst::Predicate Pred;
+    if (match(IIOperand, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      AddAffected(A);
+      AddAffected(B);
+
+      if (Pred == ICmpInst::ICMP_EQ) {
+        // For equality comparisons, we handle the case of bit inversion.
+        auto AddAffectedFromEq = [&AddAffected](Value *V) {
+          Value *A;
+          if (match(V, m_Not(m_Value(A)))) {
+            AddAffected(A);
+            V = A;
+          }
+
+          Value *B;
+          ConstantInt *C;
+          if (match(V,
+                    m_CombineOr(m_And(m_Value(A), m_Value(B)),
+                      m_CombineOr(m_Or(m_Value(A), m_Value(B)),
+                                  m_Xor(m_Value(A), m_Value(B)))))) {
+            AddAffected(A);
+            AddAffected(B);
+          } else if (match(V,
+                           m_CombineOr(m_Shl(m_Value(A), m_ConstantInt(C)),
+                             m_CombineOr(m_LShr(m_Value(A), m_ConstantInt(C)),
+                                         m_AShr(m_Value(A),
+                                                m_ConstantInt(C)))))) {
+            AddAffected(A);
+          }
+        };
+
+        AddAffectedFromEq(A);
+        AddAffectedFromEq(B);
+      }
+    }
+
+    // If the list of affected values is the same as the existing list then
+    // there's nothing more to do here.
+    if (!Affected.empty())
+      if (auto OB = CI.getOperandBundle("affected"))
+        if (Affected.size() == OB.getValue().Inputs.size() &&
+            std::equal(Affected.begin(), Affected.end(),
+                       OB.getValue().Inputs.begin()))
+          Affected.clear();
+
+    if (!Affected.empty()) {
+      Builder->CreateCall(AssumeIntrinsic, IIOperand,
+                          OperandBundleDef("affected", Affected),
+                          II->getName());
+      return eraseInstFromFunction(*II);
+    }
 
     break;
   }

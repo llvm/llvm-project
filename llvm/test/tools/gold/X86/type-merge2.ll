@@ -5,6 +5,8 @@
 ; RUN:    -shared %t.o %t2.o -o %t3.o
 ; RUN: llvm-dis %t3.o.0.2.internalize.bc -o - | FileCheck %s
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 %zed = type { i8 }
 define void @foo()  {
   call void @bar(%zed* null)

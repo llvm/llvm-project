@@ -5,6 +5,8 @@
 ; RUN: FileCheck --check-prefix=RES %s < %t3.o.resolution.txt
 ; RUN: llvm-readobj -t %t3.o | FileCheck --check-prefix=OBJ %s
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 $c1 = comdat any
 
 @v1 = weak_odr global i32 42, comdat($c1)

@@ -1239,14 +1239,14 @@ static Value *lookThroughFPExtensions(Value *V) {
     if (CFP->getType() == Type::getPPC_FP128Ty(V->getContext()))
       return V;  // No constant folding of this.
     // See if the value can be truncated to half and then reextended.
-    if (Value *V = fitsInFPType(CFP, APFloat::IEEEhalf))
+    if (Value *V = fitsInFPType(CFP, APFloat::IEEEhalf()))
       return V;
     // See if the value can be truncated to float and then reextended.
-    if (Value *V = fitsInFPType(CFP, APFloat::IEEEsingle))
+    if (Value *V = fitsInFPType(CFP, APFloat::IEEEsingle()))
       return V;
     if (CFP->getType()->isDoubleTy())
       return V;  // Won't shrink.
-    if (Value *V = fitsInFPType(CFP, APFloat::IEEEdouble))
+    if (Value *V = fitsInFPType(CFP, APFloat::IEEEdouble()))
       return V;
     // Don't try to shrink to various long double types.
   }

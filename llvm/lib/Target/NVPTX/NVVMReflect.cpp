@@ -65,7 +65,6 @@ public:
   bool runOnFunction(Function &) override;
 
 private:
-  bool handleFunction(Function *ReflectFunction);
   void setVarMap();
 };
 }

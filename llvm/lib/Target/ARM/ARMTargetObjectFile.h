@@ -18,6 +18,7 @@ class MCContext;
 class TargetMachine;
 
 class ARMElfTargetObjectFile : public TargetLoweringObjectFileELF {
+  mutable bool genExecuteOnly = false;
 protected:
   const MCSection *AttributesSection;
 public:
@@ -36,6 +37,12 @@ public:
 
   /// \brief Describe a TLS variable address within debug info.
   const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
+
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
+                                      const TargetMachine &TM) const override;
+
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override;
 };
 
 } // end namespace llvm

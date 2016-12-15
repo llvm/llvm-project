@@ -8,4 +8,7 @@
 ; ERR2: unused symbol resolution for {{.*}}.bc,bar
 ; ERR3: invalid character q in resolution: {{.*}}.bc,foo
 ; ERR4: invalid resolution: foo
+
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 @foo = global i32 0

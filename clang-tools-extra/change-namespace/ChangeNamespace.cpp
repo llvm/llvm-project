@@ -454,6 +454,17 @@ void ChangeNamespaceTool::run(
     BaseCtorInitializerTypeLocs.push_back(
         BaseInitializer->getTypeSourceInfo()->getTypeLoc());
   } else if (const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type")) {
+    // This avoids fixing types with record types as qualifier, which is not
+    // filtered by matchers in some cases, e.g. the type is templated. We should
+    // handle the record type qualifier instead.
+    if (TLoc->getTypeLocClass() == TypeLoc::Elaborated) {
+      NestedNameSpecifierLoc NestedNameSpecifier =
+          TLoc->castAs<ElaboratedTypeLoc>().getQualifierLoc();
+      const Type *SpecifierType =
+          NestedNameSpecifier.getNestedNameSpecifier()->getAsType();
+      if (SpecifierType && SpecifierType->isRecordType())
+        return;
+    }
     fixTypeLoc(Result, startLocationForType(*TLoc), endLocationForType(*TLoc),
                *TLoc);
   } else if (const auto *VarRef =
@@ -705,27 +716,32 @@ void ChangeNamespaceTool::fixTypeLoc(
   const auto *FromDecl = Result.Nodes.getNodeAs<NamedDecl>("from_decl");
   // `hasDeclaration` gives underlying declaration, but if the type is
   // a typedef type, we need to use the typedef type instead.
+  auto IsInMovedNs = [&](const NamedDecl *D) {
+    if (!llvm::StringRef(D->getQualifiedNameAsString())
+             .startswith(OldNamespace + "::"))
+      return false;
+    auto ExpansionLoc = Result.SourceManager->getExpansionLoc(D->getLocStart());
+    if (ExpansionLoc.isInvalid())
+      return false;
+    llvm::StringRef Filename = Result.SourceManager->getFilename(ExpansionLoc);
+    return FilePatternRE.match(Filename);
+  };
+  // Make `FromDecl` the immediate declaration that `Type` refers to, i.e. if
+  // `Type` is an alias type, we make `FromDecl` the type alias declaration.
+  // Also, don't fix the \p Type if it refers to a type alias decl in the moved
+  // namespace since the alias decl will be moved along with the type reference.
   if (auto *Typedef = Type.getType()->getAs<TypedefType>()) {
     FromDecl = Typedef->getDecl();
-    auto IsInMovedNs = [&](const NamedDecl *D) {
-      if (!llvm::StringRef(D->getQualifiedNameAsString())
-               .startswith(OldNamespace + "::"))
-        return false;
-      auto ExpansionLoc =
-          Result.SourceManager->getExpansionLoc(D->getLocStart());
-      if (ExpansionLoc.isInvalid())
-        return false;
-      llvm::StringRef Filename =
-          Result.SourceManager->getFilename(ExpansionLoc);
-      return FilePatternRE.match(Filename);
-    };
-    // Don't fix the \p Type if it refers to a type alias decl in the moved
-    // namespace since the alias decl will be moved along with the type
-    // reference.
     if (IsInMovedNs(FromDecl))
       return;
+  } else if (auto *TemplateType =
+                 Type.getType()->getAs<TemplateSpecializationType>()) {
+    if (TemplateType->isTypeAlias()) {
+      FromDecl = TemplateType->getTemplateName().getAsTemplateDecl();
+      if (IsInMovedNs(FromDecl))
+        return;
+    }
   }
-
   const auto *DeclCtx = Result.Nodes.getNodeAs<Decl>("dc");
   assert(DeclCtx && "Empty decl context.");
   replaceQualifiedSymbolInDeclContext(Result, DeclCtx->getDeclContext(), Start,

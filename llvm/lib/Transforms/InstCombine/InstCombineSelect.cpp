@@ -1101,7 +1101,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Type *SelType = SI.getType();
 
   if (Value *V =
-          SimplifySelectInst(CondVal, TrueVal, FalseVal, DL, &TLI, &DT, &AC))
+          SimplifySelectInst(CondVal, TrueVal, FalseVal, DL, &TLI, &DT))
     return replaceInstUsesWith(SI, V);
 
   if (Instruction *I = canonicalizeSelectToShuffle(SI))

@@ -191,7 +191,6 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
 
 bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          bool IsThinLTO) {
-  Mod.setDataLayout(TM->createDataLayout());
   if (Conf.OptPipeline.empty())
     runOldPMPasses(Conf, Mod, TM, IsThinLTO);
   else

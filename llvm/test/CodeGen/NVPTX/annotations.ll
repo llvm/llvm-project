@@ -1,12 +1,10 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
 
-
 @texture = internal addrspace(1) global i64 0, align 8
 ; CHECK: .global .texref texture
 @surface = internal addrspace(1) global i64 0, align 8
 ; CHECK: .global .surfref surface
-
 
 ; CHECK: .entry kernel_func_maxntid
 define void @kernel_func_maxntid(float* %a) {
@@ -29,9 +27,14 @@ define void @kernel_func_minctasm(float* %a) {
   ret void
 }
 
+; CHECK-LABEL: .entry kernel_func_maxnreg
+define void @kernel_func_maxnreg() {
+; CHECK: .maxnreg 1234
+; CHECK: ret
+  ret void
+}
 
-
-!nvvm.annotations = !{!1, !2, !3, !4, !5, !6, !7, !8}
+!nvvm.annotations = !{!1, !2, !3, !4, !5, !6, !7, !8, !9, !10}
 
 !1 = !{void (float*)* @kernel_func_maxntid, !"kernel", i32 1}
 !2 = !{void (float*)* @kernel_func_maxntid, !"maxntidx", i32 10, !"maxntidy", i32 20, !"maxntidz", i32 30}
@@ -42,5 +45,8 @@ define void @kernel_func_minctasm(float* %a) {
 !5 = !{void (float*)* @kernel_func_minctasm, !"kernel", i32 1}
 !6 = !{void (float*)* @kernel_func_minctasm, !"minctasm", i32 42}
 
-!7 = !{i64 addrspace(1)* @texture, !"texture", i32 1}
-!8 = !{i64 addrspace(1)* @surface, !"surface", i32 1}
+!7 = !{void ()* @kernel_func_maxnreg, !"kernel", i32 1}
+!8 = !{void ()* @kernel_func_maxnreg, !"maxnreg", i32 1234}
+
+!9 = !{i64 addrspace(1)* @texture, !"texture", i32 1}
+!10 = !{i64 addrspace(1)* @surface, !"surface", i32 1}

@@ -57,34 +57,33 @@
 //   hashtable in according to .gdb_index format specification.
 // 6) Constant pool is populated at the same time as symbol table.
 //
-// Current version of implementation has 1, 2, 3 steps. So it writes .gdb_index
-// header and list of compilation units. Since we so not plan to support types
-// CU list area, it is also empty and so far is "implemented".
+// Current version implements steps 1-4. So it writes .gdb_index
+// header, list of compilation units and address area. Since we so not plan to
+// support types CU list area, it is also empty and so far is "implemented".
 // Other data areas are not yet implemented.
 //===----------------------------------------------------------------------===//
 
 #include "GdbIndex.h"
 
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace lld::elf;
+
+template <class ELFT>
+GdbIndexBuilder<ELFT>::GdbIndexBuilder(InputSection<ELFT> *DebugInfoSec)
+    : DebugInfoSec(DebugInfoSec) {
+  if (Expected<std::unique_ptr<object::ObjectFile>> Obj =
+          object::ObjectFile::createObjectFile(DebugInfoSec->getFile()->MB))
+    Dwarf.reset(new DWARFContextInMemory(*Obj.get(), this));
+  else
+    error(toString(DebugInfoSec->getFile()) + ": error creating DWARF context");
+}
 
 template <class ELFT>
 std::vector<std::pair<typename ELFT::uint, typename ELFT::uint>>
-lld::elf::readCuList(InputSection<ELFT> *DebugInfoSec) {
-  typedef typename ELFT::uint uintX_t;
-
-  std::unique_ptr<DWARFContext> Dwarf;
-  if (Expected<std::unique_ptr<object::ObjectFile>> Obj =
-          object::ObjectFile::createObjectFile(DebugInfoSec->getFile()->MB))
-    Dwarf.reset(new DWARFContextInMemory(*Obj.get()));
-
-  if (!Dwarf) {
-    error(toString(DebugInfoSec->getFile()) + ": error creating DWARF context");
-    return {};
-  }
-
+GdbIndexBuilder<ELFT>::readCUList() {
   std::vector<std::pair<uintX_t, uintX_t>> Ret;
   for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units())
     Ret.push_back(
@@ -92,11 +91,52 @@ lld::elf::readCuList(InputSection<ELFT> *DebugInfoSec) {
   return Ret;
 }
 
-template std::vector<std::pair<uint32_t, uint32_t>>
-lld::elf::readCuList<ELF32LE>(InputSection<ELF32LE> *);
-template std::vector<std::pair<uint32_t, uint32_t>>
-lld::elf::readCuList<ELF32BE>(InputSection<ELF32BE> *);
-template std::vector<std::pair<uint64_t, uint64_t>>
-lld::elf::readCuList<ELF64LE>(InputSection<ELF64LE> *);
-template std::vector<std::pair<uint64_t, uint64_t>>
-lld::elf::readCuList<ELF64BE>(InputSection<ELF64BE> *);
+template <class ELFT>
+static InputSectionBase<ELFT> *
+findSection(ArrayRef<InputSectionBase<ELFT> *> Arr, uint64_t Offset) {
+  for (InputSectionBase<ELFT> *S : Arr)
+    if (S && S != &InputSection<ELFT>::Discarded)
+      if (Offset >= S->Offset && Offset < S->Offset + S->getSize())
+        return S;
+  return nullptr;
+}
+
+template <class ELFT>
+std::vector<AddressEntry<ELFT>>
+GdbIndexBuilder<ELFT>::readAddressArea(size_t CurrentCU) {
+  std::vector<AddressEntry<ELFT>> Ret;
+  for (const auto &CU : Dwarf->compile_units()) {
+    DWARFAddressRangesVector Ranges;
+    CU->collectAddressRanges(Ranges);
+
+    ArrayRef<InputSectionBase<ELFT> *> Sections =
+        DebugInfoSec->getFile()->getSections();
+
+    for (std::pair<uint64_t, uint64_t> &R : Ranges)
+      if (InputSectionBase<ELFT> *S = findSection(Sections, R.first))
+        Ret.push_back(
+            {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
+    ++CurrentCU;
+  }
+  return Ret;
+}
+
+template <class ELFT>
+uint64_t GdbIndexBuilder<ELFT>::getSectionLoadAddress(
+    const object::SectionRef &Sec) const {
+  return static_cast<const ELFSectionRef &>(Sec).getOffset();
+}
+
+template <class ELFT>
+std::unique_ptr<LoadedObjectInfo> GdbIndexBuilder<ELFT>::clone() const {
+  return {};
+}
+
+namespace lld {
+namespace elf {
+template class GdbIndexBuilder<ELF32LE>;
+template class GdbIndexBuilder<ELF32BE>;
+template class GdbIndexBuilder<ELF64LE>;
+template class GdbIndexBuilder<ELF64BE>;
+}
+}

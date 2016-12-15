@@ -23,7 +23,6 @@
 #include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 
 namespace llvm {
-class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class InlineCost;
@@ -77,7 +76,6 @@ private:
   bool InsertLifetime;
 
 protected:
-  AssumptionCacheTracker *ACT;
   ProfileSummaryInfo *PSI;
   ImportedFunctionsInliningStatistics ImportedFunctionsStats;
 };

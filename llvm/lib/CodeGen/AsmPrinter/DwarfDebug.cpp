@@ -364,13 +364,13 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(LexicalScope *Scope) {
   assert(Scope->isAbstractScope());
   assert(!Scope->getInlinedAt());
 
-  const MDNode *SP = Scope->getScopeNode();
+  auto *SP = cast<DISubprogram>(Scope->getScopeNode());
 
   ProcessedSPNodes.insert(SP);
 
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
-  auto &CU = *CUMap.lookup(cast<DISubprogram>(SP)->getUnit());
+  auto &CU = *CUMap.lookup(SP->getUnit());
   forBothCUs(CU, [&](DwarfCompileUnit &CU) {
     CU.constructAbstractSubprogramScopeDIE(Scope);
   });
@@ -535,13 +535,11 @@ void DwarfDebug::finishVariableDefinitions() {
 }
 
 void DwarfDebug::finishSubprogramDefinitions() {
-  for (auto &F : MMI->getModule()->functions())
-    if (auto *SP = F.getSubprogram())
-      if (ProcessedSPNodes.count(SP) &&
-          SP->getUnit()->getEmissionKind() != DICompileUnit::NoDebug)
-        forBothCUs(*CUMap.lookup(SP->getUnit()), [&](DwarfCompileUnit &CU) {
-          CU.finishSubprogramDefinition(SP);
-        });
+  for (const DISubprogram *SP : ProcessedSPNodes)
+    if (SP->getUnit()->getEmissionKind() != DICompileUnit::NoDebug)
+      forBothCUs(*CUMap.lookup(SP->getUnit()), [&](DwarfCompileUnit &CU) {
+        CU.finishSubprogramDefinition(SP);
+      });
 }
 
 void DwarfDebug::finalizeModuleInfo() {

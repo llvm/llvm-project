@@ -460,7 +460,8 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
     if (!(*CI)->getType()->isPointerTy() ||
-        (!CS.doesNotCapture(ArgNo) && !CS.isByValArgument(ArgNo)))
+        (!CS.doesNotCapture(ArgNo) &&
+         ArgNo < CS.getNumArgOperands() && !CS.isByValArgument(ArgNo)))
       continue;
 
     // If this is a no-capture pointer argument, see if we can tell that it

@@ -107,7 +107,6 @@ public:
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<ScalarEvolutionWrapperPass>();
     AU.addPreserved<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
@@ -123,7 +122,6 @@ private:
 char NaryReassociateLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(NaryReassociateLegacyPass, "nary-reassociate",
                       "Nary reassociation", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
@@ -139,24 +137,22 @@ bool NaryReassociateLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  return Impl.runImpl(F, AC, DT, SE, TLI, TTI);
+  return Impl.runImpl(F, DT, SE, TLI, TTI);
 }
 
 PreservedAnalyses NaryReassociatePass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
-  auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  bool Changed = runImpl(F, AC, DT, SE, TLI, TTI);
+  bool Changed = runImpl(F, DT, SE, TLI, TTI);
 
   // FIXME: We need to invalidate this to avoid PR28400. Is there a better
   // solution?
@@ -173,11 +169,10 @@ PreservedAnalyses NaryReassociatePass::run(Function &F,
   return PA;
 }
 
-bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
-                                  DominatorTree *DT_, ScalarEvolution *SE_,
+bool NaryReassociatePass::runImpl(Function &F, DominatorTree *DT_,
+                                  ScalarEvolution *SE_,
                                   TargetLibraryInfo *TLI_,
                                   TargetTransformInfo *TTI_) {
-  AC = AC_;
   DT = DT_;
   SE = SE_;
   TLI = TLI_;
@@ -307,7 +302,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexToSplit = SExt->getOperand(0);
   } else if (ZExtInst *ZExt = dyn_cast<ZExtInst>(IndexToSplit)) {
     // zext can be treated as sext if the source is non-negative.
-    if (isKnownNonNegative(ZExt->getOperand(0), *DL, 0, AC, GEP, DT))
+    if (isKnownNonNegative(ZExt->getOperand(0), *DL, 0, GEP, DT))
       IndexToSplit = ZExt->getOperand(0);
   }
 
@@ -316,7 +311,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // nsw, we cannot split the add because
     //   sext(LHS + RHS) != sext(LHS) + sext(RHS).
     if (requiresSignExtension(IndexToSplit, GEP) &&
-        computeOverflowForSignedAdd(AO, *DL, AC, GEP, DT) !=
+        computeOverflowForSignedAdd(AO, *DL, GEP, DT) !=
             OverflowResult::NeverOverflows)
       return nullptr;
 
@@ -345,7 +340,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs.push_back(SE->getSCEV(*Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
-  if (isKnownNonNegative(LHS, *DL, 0, AC, GEP, DT) &&
+  if (isKnownNonNegative(LHS, *DL, 0, GEP, DT) &&
       DL->getTypeSizeInBits(LHS->getType()) <
           DL->getTypeSizeInBits(GEP->getOperand(I)->getType())) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to

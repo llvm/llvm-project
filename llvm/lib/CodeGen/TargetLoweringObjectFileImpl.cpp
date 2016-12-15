@@ -181,6 +181,9 @@ static unsigned getELFSectionFlags(SectionKind K) {
   if (K.isText())
     Flags |= ELF::SHF_EXECINSTR;
 
+  if (K.isExecuteOnly())
+    Flags |= ELF::SHF_ARM_PURECODE;
+
   if (K.isWriteable())
     Flags |= ELF::SHF_WRITE;
 
@@ -312,6 +315,9 @@ selectELFSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
     UniqueID = *NextUniqueID;
     (*NextUniqueID)++;
   }
+  // Use 0 as the unique ID for execute-only text
+  if (Kind.isExecuteOnly())
+    UniqueID = 0;
   return Ctx.getELFSection(Name, getELFSectionType(Name, Kind), Flags,
                            EntrySize, Group, UniqueID);
 }

@@ -1336,7 +1336,7 @@ bool LoopConstrainer::run() {
     auto *L = createClonedLoopStructure(
         &OriginalLoop, OriginalLoop.getParentLoop(), PreLoop.Map);
     formLCSSARecursively(*L, DT, &LI, &SE);
-    simplifyLoop(L, &DT, &LI, &SE, nullptr, true);
+    simplifyLoop(L, &DT, &LI, &SE, true);
     // Pre loops are slow paths, we do not need to perform any loop
     // optimizations on them.
     DisableAllLoopOptsOnLoop(*L);
@@ -1346,14 +1346,14 @@ bool LoopConstrainer::run() {
     auto *L = createClonedLoopStructure(
         &OriginalLoop, OriginalLoop.getParentLoop(), PostLoop.Map);
     formLCSSARecursively(*L, DT, &LI, &SE);
-    simplifyLoop(L, &DT, &LI, &SE, nullptr, true);
+    simplifyLoop(L, &DT, &LI, &SE, true);
     // Post loops are slow paths, we do not need to perform any loop
     // optimizations on them.
     DisableAllLoopOptsOnLoop(*L);
   }
 
   formLCSSARecursively(OriginalLoop, DT, &LI, &SE);
-  simplifyLoop(&OriginalLoop, &DT, &LI, &SE, nullptr, true);
+  simplifyLoop(&OriginalLoop, &DT, &LI, &SE, true);
 
   return true;
 }

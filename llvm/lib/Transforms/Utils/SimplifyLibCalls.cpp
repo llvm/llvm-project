@@ -461,8 +461,7 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
       unsigned BitWidth = Offset->getType()->getIntegerBitWidth();
       APInt KnownZero(BitWidth, 0);
       APInt KnownOne(BitWidth, 0);
-      computeKnownBits(Offset, KnownZero, KnownOne, DL, 0, nullptr, CI, 
-                       nullptr);
+      computeKnownBits(Offset, KnownZero, KnownOne, DL, 0, CI, nullptr);
       KnownZero.flipAllBits();
       size_t ArrSize = 
              cast<ArrayType>(GEP->getSourceElementType())->getNumElements();
@@ -900,7 +899,7 @@ static Value *valueHasFloatPrecision(Value *Val) {
   if (ConstantFP *Const = dyn_cast<ConstantFP>(Val)) {
     APFloat F = Const->getValueAPF();
     bool losesInfo;
-    (void)F.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven,
+    (void)F.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
                     &losesInfo);
     if (!losesInfo)
       return ConstantFP::get(Const->getContext(), F);
@@ -1129,7 +1128,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     // We cannot readily convert a non-double type (like float) to a double.
     // So we first convert V to something which could be converted to double.
     bool ignored;
-    V.convert(APFloat::IEEEdouble, APFloat::rmTowardZero, &ignored);
+    V.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
     
     // TODO: Should the new instructions propagate the 'fast' flag of the pow()?
     Value *FMul = getPow(InnerChain, V.convertToDouble(), B);

@@ -1042,7 +1042,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return false;
   }
   case AsmToken::Real: {
-    APFloat RealVal(APFloat::IEEEdouble, getTok().getString());
+    APFloat RealVal(APFloat::IEEEdouble(), getTok().getString());
     uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
     Res = MCConstantExpr::create(IntVal, getContext());
     EndLoc = Lexer.getTok().getEndLoc();
@@ -1761,10 +1761,10 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_SINGLE:
     case DK_FLOAT:
     case DK_DC_S:
-      return parseDirectiveRealValue(IDVal, APFloat::IEEEsingle);
+      return parseDirectiveRealValue(IDVal, APFloat::IEEEsingle());
     case DK_DOUBLE:
     case DK_DC_D:
-      return parseDirectiveRealValue(IDVal, APFloat::IEEEdouble);
+      return parseDirectiveRealValue(IDVal, APFloat::IEEEdouble());
     case DK_ALIGN: {
       bool IsPow2 = !getContext().getAsmInfo()->getAlignmentIsInBytes();
       return parseDirectiveAlign(IsPow2, /*ExprSize=*/1);
@@ -1943,11 +1943,11 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_DCB_B:
       return parseDirectiveDCB(IDVal, 1);
     case DK_DCB_D:
-      return parseDirectiveRealDCB(IDVal, APFloat::IEEEdouble);
+      return parseDirectiveRealDCB(IDVal, APFloat::IEEEdouble());
     case DK_DCB_L:
       return parseDirectiveDCB(IDVal, 4);
     case DK_DCB_S:
-      return parseDirectiveRealDCB(IDVal, APFloat::IEEEsingle);
+      return parseDirectiveRealDCB(IDVal, APFloat::IEEEsingle());
     case DK_DC_X:
     case DK_DCB_X:
       return TokError(Twine(IDVal) +

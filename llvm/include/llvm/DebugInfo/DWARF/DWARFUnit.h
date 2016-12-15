@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_DEBUGINFO_DWARFUNIT_H
 #define LLVM_LIB_DEBUGINFO_DWARFUNIT_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
@@ -223,7 +224,7 @@ public:
   }
 
   const char *getCompilationDir();
-  uint64_t getDWOId();
+  Optional<uint64_t> getDWOId();
 
   void collectAddressRanges(DWARFAddressRangesVector &CURanges);
 

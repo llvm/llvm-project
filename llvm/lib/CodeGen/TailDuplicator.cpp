@@ -550,8 +550,8 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // blocks with unanalyzable fallthrough get layed out contiguously.
   MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
   SmallVector<MachineOperand, 4> PredCond;
-  if (TII->analyzeBranch(TailBB, PredTBB, PredFBB, PredCond, true)
-      && TailBB.canFallThrough())
+  if (TII->analyzeBranch(TailBB, PredTBB, PredFBB, PredCond) &&
+      TailBB.canFallThrough())
     return false;
 
   // If the target has hardware branch prediction that can handle indirect
@@ -660,7 +660,7 @@ bool TailDuplicator::canCompletelyDuplicateBB(MachineBasicBlock &BB) {
 
     MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
     SmallVector<MachineOperand, 4> PredCond;
-    if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
+    if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond))
       return false;
 
     if (!PredCond.empty())
@@ -687,7 +687,7 @@ bool TailDuplicator::duplicateSimpleBB(
 
     MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
     SmallVector<MachineOperand, 4> PredCond;
-    if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
+    if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond))
       continue;
 
     Changed = true;
@@ -750,7 +750,7 @@ bool TailDuplicator::canTailDuplicate(MachineBasicBlock *TailBB,
 
   MachineBasicBlock *PredTBB, *PredFBB;
   SmallVector<MachineOperand, 4> PredCond;
-  if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
+  if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond))
     return false;
   if (!PredCond.empty())
     return false;
@@ -833,7 +833,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     // Simplify
     MachineBasicBlock *PredTBB, *PredFBB;
     SmallVector<MachineOperand, 4> PredCond;
-    TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true);
+    TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond);
 
     NumTailDupAdded += TailBB->size() - 1; // subtract one for removed branch
 
@@ -861,7 +861,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
   if (PrevBB->succ_size() == 1 &&
       // Layout preds are not always CFG preds. Check.
       *PrevBB->succ_begin() == TailBB &&
-      !TII->analyzeBranch(*PrevBB, PriorTBB, PriorFBB, PriorCond, true) &&
+      !TII->analyzeBranch(*PrevBB, PriorTBB, PriorFBB, PriorCond) &&
       PriorCond.empty() &&
       (!PriorTBB || PriorTBB == TailBB) &&
       TailBB->pred_size() == 1 &&

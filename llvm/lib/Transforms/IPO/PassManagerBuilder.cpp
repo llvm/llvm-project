@@ -249,8 +249,6 @@ void PassManagerBuilder::populateFunctionPassManager(
   FPM.add(createCFGSimplificationPass());
   FPM.add(createSROAPass());
   FPM.add(createEarlyCSEPass());
-  if(EnableGVNHoist)
-    FPM.add(createGVNHoistPass());
   FPM.add(createLowerExpectIntrinsicPass());
 }
 
@@ -295,6 +293,8 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // Break up aggregate allocas, using SSAUpdater.
   MPM.add(createSROAPass());
   MPM.add(createEarlyCSEPass());              // Catch trivial redundancies
+  if(EnableGVNHoist)
+    MPM.add(createGVNHoistPass());
   // Speculative execution if the target has divergent branches; otherwise nop.
   MPM.add(createSpeculativeExecutionIfHasBranchDivergencePass());
   MPM.add(createJumpThreadingPass());         // Thread jumps.
@@ -383,6 +383,11 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 
 void PassManagerBuilder::populateModulePassManager(
     legacy::PassManagerBase &MPM) {
+  if (!PGOSampleUse.empty()) {
+    MPM.add(createPruneEHPass());
+    MPM.add(createSampleProfileLoaderPass(PGOSampleUse));
+  }
+
   // Allow forcing function attributes as a debugging and tuning aid.
   MPM.add(createForceFunctionAttrsLegacyPass());
 

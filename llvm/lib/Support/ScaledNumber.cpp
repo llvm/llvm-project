@@ -183,7 +183,7 @@ static std::string toStringAPFloat(uint64_t D, int E, unsigned Precision) {
 
   // Build the float and print it.
   uint64_t RawBits[2] = {D, AdjustedE};
-  APFloat Float(APFloat::x87DoubleExtended, APInt(80, RawBits));
+  APFloat Float(APFloat::x87DoubleExtended(), APInt(80, RawBits));
   SmallVector<char, 24> Chars;
   Float.toString(Chars, Precision, 0);
   return std::string(Chars.begin(), Chars.end());

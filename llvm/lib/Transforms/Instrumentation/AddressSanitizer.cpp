@@ -1046,10 +1046,14 @@ Value *AddressSanitizer::isInterestingMemoryAccess(Instruction *I,
               F->getName().startswith("llvm.masked.store."))) {
       unsigned OpOffset = 0;
       if (F->getName().startswith("llvm.masked.store.")) {
+        if (!ClInstrumentWrites)
+          return nullptr;
         // Masked store has an initial operand for the value.
         OpOffset = 1;
         *IsWrite = true;
       } else {
+        if (!ClInstrumentReads)
+          return nullptr;
         *IsWrite = false;
       }
       // Only instrument if the mask is constant for now.
@@ -2062,11 +2066,20 @@ bool AddressSanitizer::runOnFunction(Function &F) {
     int NumInsnsPerBB = 0;
     for (auto &Inst : BB) {
       if (LooksLikeCodeInBug11395(&Inst)) return false;
+      Value *MaybeMask = nullptr;
       if (Value *Addr = isInterestingMemoryAccess(&Inst, &IsWrite, &TypeSize,
-                                                  &Alignment)) {
+                                                  &Alignment, &MaybeMask)) {
         if (ClOpt && ClOptSameTemp) {
-          if (!TempsToInstrument.insert(Addr).second)
-            continue;  // We've seen this temp in the current BB.
+          // If we have a mask, skip instrumentation if we've already
+          // instrumented the full object. But don't add to TempsToInstrument
+          // because we might get another load/store with a different mask.
+          if (MaybeMask) {
+            if (TempsToInstrument.count(Addr))
+              continue; // We've seen this (whole) temp in the current BB.
+          } else {
+            if (!TempsToInstrument.insert(Addr).second)
+              continue; // We've seen this temp in the current BB.
+          }
         }
       } else if (ClInvalidPointerPairs &&
                  isInterestingPointerComparisonOrSubtraction(&Inst)) {

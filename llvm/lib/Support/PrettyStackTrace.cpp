@@ -21,6 +21,7 @@
 #include "llvm/Support/Watchdog.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdarg>
 #include <tuple>
 
 #ifdef HAVE_CRASHREPORTERCLIENT_H
@@ -88,11 +89,11 @@ struct crashreporter_annotations_t gCRAnnotations
         __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) 
         = { CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0 };
 }
-#elif defined (__APPLE__) && HAVE_CRASHREPORTER_INFO
-static const char *__crashreporter_info__ = 0;
+#elif defined(__APPLE__) && HAVE_CRASHREPORTER_INFO
+extern "C" const char *__crashreporter_info__
+    __attribute__((visibility("hidden"))) = 0;
 asm(".desc ___crashreporter_info__, 0x10");
 #endif
-
 
 /// CrashHandler - This callback is run if a fatal signal is delivered to the
 /// process, it prints the pretty stack trace.
@@ -141,9 +142,25 @@ PrettyStackTraceEntry::~PrettyStackTraceEntry() {
 #endif
 }
 
-void PrettyStackTraceString::print(raw_ostream &OS) const {
-  OS << Str << "\n";
+void PrettyStackTraceString::print(raw_ostream &OS) const { OS << Str << "\n"; }
+
+PrettyStackTraceFormat::PrettyStackTraceFormat(const char *Format, ...) {
+  va_list AP;
+  va_start(AP, Format);
+  const int SizeOrError = vsnprintf(nullptr, 0, Format, AP);
+  va_end(AP);
+  if (SizeOrError < 0) {
+    return;
+  }
+
+  const int Size = SizeOrError + 1; // '\0'
+  Str.resize(Size);
+  va_start(AP, Format);
+  vsnprintf(Str.data(), Size, Format, AP);
+  va_end(AP);
 }
+
+void PrettyStackTraceFormat::print(raw_ostream &OS) const { OS << Str << "\n"; }
 
 void PrettyStackTraceProgram::print(raw_ostream &OS) const {
   OS << "Program arguments: ";

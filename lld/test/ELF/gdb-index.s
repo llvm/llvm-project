@@ -31,8 +31,10 @@
 # CHECK:      .gnu_index contents:
 # CHECK-NEXT:    Version = 7
 # CHECK:       CU list offset = 0x18, has 2 entries:
-# CHECK-NEXT:      0: Offset = 0x0, Length = 0x34
-# CHECK-NEXT:      1: Offset = 0x34, Length = 0x34
-# CHECK:       Address area offset = 0x38, has 0 entries:
-# CHECK:       Symbol table offset = 0x38, size = 0, filled slots:
-# CHECK:       Constant pool offset = 0x38, has 0 CU vectors:
+# CHECK-NEXT:    0: Offset = 0x0, Length = 0x34
+# CHECK-NEXT:    1: Offset = 0x34, Length = 0x34
+# CHECK:       Address area offset = 0x38, has 2 entries:
+# CHECK-NEXT:    Low address = 0x201000, High address = 0x20100b, CU index = 0
+# CHECK-NEXT:    Low address = 0x20100b, High address = 0x201016, CU index = 1
+# CHECK:       Symbol table offset = 0x60, size = 0, filled slots:
+# CHECK:       Constant pool offset = 0x60, has 0 CU vectors:

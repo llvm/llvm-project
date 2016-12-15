@@ -27,8 +27,10 @@ using namespace dwarf;
 
 void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
                                         const TargetMachine &TM) {
-  bool isAAPCS_ABI = static_cast<const ARMTargetMachine &>(TM).TargetABI ==
-                     ARMTargetMachine::ARMABI::ARM_ABI_AAPCS;
+  const ARMTargetMachine &ARM_TM = static_cast<const ARMTargetMachine &>(TM);
+  bool isAAPCS_ABI = ARM_TM.TargetABI == ARMTargetMachine::ARMABI::ARM_ABI_AAPCS;
+  genExecuteOnly = ARM_TM.getSubtargetImpl()->genExecuteOnly();
+
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(isAAPCS_ABI);
 
@@ -38,6 +40,16 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
 
   AttributesSection =
       getContext().getELFSection(".ARM.attributes", ELF::SHT_ARM_ATTRIBUTES, 0);
+
+  // Make code section unreadable when in execute-only mode
+  if (genExecuteOnly) {
+    unsigned  Type = ELF::SHT_PROGBITS;
+    unsigned Flags = ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_ARM_PURECODE;
+    // Since we cannot modify flags for an existing section, we create a new
+    // section with the right flags, and use 0 as the unique ID for
+    // execute-only text
+    TextSection = Ctx.getELFSection(".text", Type, Flags, 0, "", 0U);
+  }
 }
 
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
@@ -57,4 +69,24 @@ const MCExpr *ARMElfTargetObjectFile::
 getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
   return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_ARM_TLSLDO,
                                  getContext());
+}
+
+MCSection *
+ARMElfTargetObjectFile::getExplicitSectionGlobal(const GlobalObject *GO,
+                                                 SectionKind SK, const TargetMachine &TM) const {
+  // Set execute-only access for the explicit section
+  if (genExecuteOnly && SK.isText())
+    SK = SectionKind::getExecuteOnly();
+
+  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, SK, TM);
+}
+
+MCSection *
+ARMElfTargetObjectFile::SelectSectionForGlobal(const GlobalObject *GO,
+                                               SectionKind SK, const TargetMachine &TM) const {
+  // Place the global in the execute-only text section
+  if (genExecuteOnly && SK.isText())
+    SK = SectionKind::getExecuteOnly();
+
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, SK, TM);
 }

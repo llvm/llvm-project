@@ -9,7 +9,7 @@ declare void @llvm.assume(i1) #1
 define i32 @test1(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test1
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %and, i32 %a) ]
 ; CHECK: ret i32 5
 
   %and = and i32 %a, 15
@@ -24,7 +24,7 @@ entry:
 define i32 @test2(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test2
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a.not, i32 %a) ]
 ; CHECK: ret i32 2
 
   %and = and i32 %a, 15
@@ -40,7 +40,7 @@ entry:
 define i32 @test3(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test3
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %v, i32 %a) ]
 ; CHECK: ret i32 5
 
   %v = or i32 %a, 4294967280
@@ -55,7 +55,7 @@ entry:
 define i32 @test4(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test4
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a.not, i32 %a) ]
 ; CHECK: ret i32 2
 
   %v = or i32 %a, 4294967280
@@ -71,7 +71,7 @@ entry:
 define i32 @test5(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test5
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
 ; CHECK: ret i32 4
 
   %v = xor i32 %a, 1
@@ -86,7 +86,7 @@ entry:
 define i32 @test6(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test6
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %v.mask, i32 %a) ]
 ; CHECK: ret i32 5
 
   %v = shl i32 %a, 2
@@ -101,7 +101,7 @@ entry:
 define i32 @test7(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test7
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %v.mask, i32 %a) ]
 ; CHECK: ret i32 20
 
   %v = lshr i32 %a, 2
@@ -116,7 +116,7 @@ entry:
 define i32 @test8(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test8
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %v.mask, i32 %a) ]
 ; CHECK: ret i32 20
 
   %v = lshr i32 %a, 2
@@ -131,7 +131,7 @@ entry:
 define i32 @test9(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test9
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
 ; CHECK: ret i32 0
 
   %cmp = icmp sgt i32 %a, 5
@@ -145,7 +145,7 @@ entry:
 define i32 @test10(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test10
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
 ; CHECK: ret i32 -2147483648
 
   %cmp = icmp sle i32 %a, -2
@@ -159,7 +159,7 @@ entry:
 define i32 @test11(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @test11
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
 ; CHECK: ret i32 0
 
   %cmp = icmp ule i32 %a, 256

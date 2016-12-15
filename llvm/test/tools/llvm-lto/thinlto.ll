@@ -21,6 +21,8 @@
 ; COMBINED-NEXT: <COMBINED_ENTRY abbrevid={{[0-9]+}} op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
 ; COMBINED-NEXT: </VALUE_SYMTAB
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 define void @f() {
 entry:
   ret void

@@ -109,22 +109,20 @@ static DIScope *getNonCompileUnitScope(DIScope *N) {
 }
 
 DICompileUnit *DIBuilder::createCompileUnit(
-    unsigned Lang, StringRef Filename, StringRef Directory, StringRef Producer,
-    bool isOptimized, StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
+    unsigned Lang, DIFile *File, StringRef Producer, bool isOptimized,
+    StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
     DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId,
     bool SplitDebugInlining) {
 
   assert(((Lang <= dwarf::DW_LANG_Fortran08 && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
          "Invalid Language tag");
-  assert(!Filename.empty() &&
-         "Unable to create compile unit without filename");
 
   assert(!CUNode && "Can only make one compile unit per DIBuilder instance");
   CUNode = DICompileUnit::getDistinct(
-      VMContext, Lang, DIFile::get(VMContext, Filename, Directory), Producer,
-      isOptimized, Flags, RunTimeVer, SplitName, Kind, nullptr, nullptr,
-      nullptr, nullptr, nullptr, DWOId, SplitDebugInlining);
+      VMContext, Lang, File, Producer, isOptimized, Flags, RunTimeVer,
+      SplitName, Kind, nullptr, nullptr, nullptr, nullptr, nullptr, DWOId,
+      SplitDebugInlining);
 
   // Create a named metadata so that it is easier to find cu in a module.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");

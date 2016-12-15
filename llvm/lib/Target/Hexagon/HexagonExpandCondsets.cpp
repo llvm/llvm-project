@@ -88,23 +88,30 @@
 
 #define DEBUG_TYPE "expand-condsets"
 
-#include "HexagonTargetMachine.h"
+#include "HexagonInstrInfo.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <algorithm>
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
 #include <iterator>
 #include <set>
 #include <utility>
@@ -117,17 +124,21 @@ static cl::opt<unsigned> OptCoaLimit("expand-condsets-coa-limit",
   cl::init(~0U), cl::Hidden, cl::desc("Max number of segment coalescings"));
 
 namespace llvm {
+
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   FunctionPass *createHexagonExpandCondsets();
-}
+
+} // end namespace llvm
 
 namespace {
+
   class HexagonExpandCondsets : public MachineFunctionPass {
   public:
     static char ID;
+
     HexagonExpandCondsets() :
-        MachineFunctionPass(ID), HII(0), TRI(0), MRI(0),
-        LIS(0), CoaLimitActive(false),
+        MachineFunctionPass(ID), HII(nullptr), TRI(nullptr), MRI(nullptr),
+        LIS(nullptr), CoaLimitActive(false),
         TfrLimitActive(false), CoaCounter(0), TfrCounter(0) {
       if (OptCoaLimit.getPosition())
         CoaLimitActive = true, CoaLimit = OptCoaLimit;
@@ -137,6 +148,7 @@ namespace {
     }
 
     StringRef getPassName() const override { return "Hexagon Expand Condsets"; }
+
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<LiveIntervals>();
       AU.addPreserved<LiveIntervals>();
@@ -145,6 +157,7 @@ namespace {
       AU.addPreserved<MachineDominatorTree>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
+
     bool runOnMachineFunction(MachineFunction &MF) override;
 
   private:
@@ -161,6 +174,7 @@ namespace {
       RegisterRef(const MachineOperand &Op) : Reg(Op.getReg()),
           Sub(Op.getSubReg()) {}
       RegisterRef(unsigned R = 0, unsigned S = 0) : Reg(R), Sub(S) {}
+
       bool operator== (RegisterRef RR) const {
         return Reg == RR.Reg && Sub == RR.Sub;
       }
@@ -168,6 +182,7 @@ namespace {
       bool operator< (RegisterRef RR) const {
         return Reg < RR.Reg || (Reg == RR.Reg && Sub < RR.Sub);
       }
+
       unsigned Reg, Sub;
     };
 
@@ -218,13 +233,16 @@ namespace {
     bool coalesceSegments(const SmallVectorImpl<MachineInstr*> &Condsets,
                           std::set<unsigned> &UpdRegs);
   };
-}
+
+} // end anonymous namespace
 
 char HexagonExpandCondsets::ID = 0;
 
 namespace llvm {
+
   char &HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
-}
+
+} // end namespace llvm
 
 INITIALIZE_PASS_BEGIN(HexagonExpandCondsets, "expand-condsets",
   "Hexagon Expand Condsets", false, false)
@@ -262,13 +280,11 @@ bool HexagonExpandCondsets::isCondset(const MachineInstr &MI) {
   return false;
 }
 
-
 LaneBitmask HexagonExpandCondsets::getLaneMask(unsigned Reg, unsigned Sub) {
   assert(TargetRegisterInfo::isVirtualRegister(Reg));
   return Sub != 0 ? TRI->getSubRegIndexLaneMask(Sub)
                   : MRI->getMaxLaneMaskForVReg(Reg);
 }
-
 
 void HexagonExpandCondsets::addRefToMap(RegisterRef RR, ReferenceMap &Map,
       unsigned Exec) {
@@ -280,7 +296,6 @@ void HexagonExpandCondsets::addRefToMap(RegisterRef RR, ReferenceMap &Map,
     F->second |= Mask;
 }
 
-
 bool HexagonExpandCondsets::isRefInMap(RegisterRef RR, ReferenceMap &Map,
       unsigned Exec) {
   ReferenceMap::iterator F = Map.find(RR.Reg);
@@ -291,7 +306,6 @@ bool HexagonExpandCondsets::isRefInMap(RegisterRef RR, ReferenceMap &Map,
     return true;
   return false;
 }
-
 
 void HexagonExpandCondsets::updateKillFlags(unsigned Reg) {
   auto KillAt = [this,Reg] (SlotIndex K, LaneBitmask LM) -> void {
@@ -341,7 +355,6 @@ void HexagonExpandCondsets::updateKillFlags(unsigned Reg) {
       KillAt(I->end, MRI->getMaxLaneMaskForVReg(Reg));
   }
 }
-
 
 void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
       LiveRange &Range) {
@@ -475,7 +488,6 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
   }
 }
 
-
 void HexagonExpandCondsets::updateDeadFlags(unsigned Reg) {
   LiveInterval &LI = LIS->getInterval(Reg);
   if (LI.hasSubRanges()) {
@@ -490,18 +502,15 @@ void HexagonExpandCondsets::updateDeadFlags(unsigned Reg) {
   }
 }
 
-
 void HexagonExpandCondsets::recalculateLiveInterval(unsigned Reg) {
   LIS->removeInterval(Reg);
   LIS->createAndComputeVirtRegInterval(Reg);
 }
 
-
 void HexagonExpandCondsets::removeInstr(MachineInstr &MI) {
   LIS->RemoveMachineInstrFromMaps(MI);
   MI.eraseFromParent();
 }
-
 
 void HexagonExpandCondsets::updateLiveness(std::set<unsigned> &RegSet,
       bool Recalc, bool UpdateKills, bool UpdateDeads) {
@@ -521,12 +530,12 @@ void HexagonExpandCondsets::updateLiveness(std::set<unsigned> &RegSet,
   }
 }
 
-
 /// Get the opcode for a conditional transfer of the value in SO (source
 /// operand). The condition (true/false) is given in Cond.
 unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
       bool IfTrue) {
   using namespace Hexagon;
+
   if (SO.isReg()) {
     unsigned PhysR;
     RegisterRef RS = SO;
@@ -552,7 +561,6 @@ unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
     return IfTrue ? C2_cmoveit : C2_cmoveif;
   llvm_unreachable("Unexpected source operand");
 }
-
 
 /// Generate a conditional transfer, copying the value SrcOp to the
 /// destination register DstR:DstSR, and using the predicate register from
@@ -595,7 +603,6 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
   DEBUG(dbgs() << "created an initial copy: " << *MIB);
   return &*MIB;
 }
-
 
 /// Replace a MUX instruction MI with a pair A2_tfrt/A2_tfrf. This function
 /// performs all necessary changes to complete the replacement.
@@ -672,7 +679,6 @@ bool HexagonExpandCondsets::isPredicable(MachineInstr *MI) {
   return true;
 }
 
-
 /// Find the reaching definition for a predicated use of RD. The RD is used
 /// under the conditions given by PredR and Cond, and this function will ignore
 /// definitions that set RD under the opposite conditions.
@@ -681,7 +687,7 @@ MachineInstr *HexagonExpandCondsets::getReachingDefForPred(RegisterRef RD,
   MachineBasicBlock &B = *UseIt->getParent();
   MachineBasicBlock::iterator I = UseIt, S = B.begin();
   if (I == S)
-    return 0;
+    return nullptr;
 
   bool PredValid = true;
   do {
@@ -712,14 +718,13 @@ MachineInstr *HexagonExpandCondsets::getReachingDefForPred(RegisterRef RD,
       if (RR.Sub == RD.Sub)
         return MI;
       if (RR.Sub == 0 || RD.Sub == 0)
-        return 0;
+        return nullptr;
       // We have different subregisters, so we can continue looking.
     }
   } while (I != S);
 
-  return 0;
+  return nullptr;
 }
-
 
 /// Check if the instruction MI can be safely moved over a set of instructions
 /// whose side-effects (in terms of register defs and uses) are expressed in
@@ -749,7 +754,6 @@ bool HexagonExpandCondsets::canMoveOver(MachineInstr &MI, ReferenceMap &Defs,
   }
   return true;
 }
-
 
 /// Check if the instruction accessing memory (TheI) can be moved to the
 /// location ToI.
@@ -784,7 +788,6 @@ bool HexagonExpandCondsets::canMoveMemTo(MachineInstr &TheI, MachineInstr &ToI,
   }
   return true;
 }
-
 
 /// Generate a predicated version of MI (where the condition is given via
 /// PredR and Cond) at the point indicated by Where.
@@ -846,7 +849,6 @@ void HexagonExpandCondsets::predicateAt(const MachineOperand &DefOp,
       UpdRegs.insert(Op.getReg());
 }
 
-
 /// In the range [First, Last], rename all references to the "old" register RO
 /// to the "new" register RN, but only in instructions predicated on the given
 /// condition.
@@ -873,7 +875,6 @@ void HexagonExpandCondsets::renameInRange(RegisterRef RO, RegisterRef RN,
     }
   }
 }
-
 
 /// For a given conditional copy, predicate the definition of the source of
 /// the copy under the given condition (using the same predicate register as
@@ -919,7 +920,7 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
   // conditions when collecting def and use information.
   bool PredValid = true;
   for (MachineBasicBlock::iterator I = std::next(DefIt); I != TfrIt; ++I) {
-    if (!I->modifiesRegister(PredR, 0))
+    if (!I->modifiesRegister(PredR, nullptr))
       continue;
     PredValid = false;
     break;
@@ -1011,7 +1012,6 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
   return true;
 }
 
-
 /// Predicate all cases of conditional copies in the specified block.
 bool HexagonExpandCondsets::predicateInBlock(MachineBasicBlock &B,
       std::set<unsigned> &UpdRegs) {
@@ -1038,7 +1038,6 @@ bool HexagonExpandCondsets::predicateInBlock(MachineBasicBlock &B,
   return Changed;
 }
 
-
 bool HexagonExpandCondsets::isIntReg(RegisterRef RR, unsigned &BW) {
   if (!TargetRegisterInfo::isVirtualRegister(RR.Reg))
     return false;
@@ -1054,7 +1053,6 @@ bool HexagonExpandCondsets::isIntReg(RegisterRef RR, unsigned &BW) {
   return false;
 }
 
-
 bool HexagonExpandCondsets::isIntraBlocks(LiveInterval &LI) {
   for (LiveInterval::iterator I = LI.begin(), E = LI.end(); I != E; ++I) {
     LiveRange::Segment &LR = *I;
@@ -1067,7 +1065,6 @@ bool HexagonExpandCondsets::isIntraBlocks(LiveInterval &LI) {
   }
   return true;
 }
-
 
 bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
   if (CoaLimitActive) {
@@ -1133,7 +1130,6 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
   return true;
 }
 
-
 /// Attempt to coalesce one of the source registers to a MUX instruction with
 /// the destination register. This could lead to having only one predicated
 /// instruction in the end instead of two.
@@ -1198,7 +1194,6 @@ bool HexagonExpandCondsets::coalesceSegments(
   }
   return Changed;
 }
-
 
 bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
@@ -1278,7 +1273,6 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 
   return Changed;
 }
-
 
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions

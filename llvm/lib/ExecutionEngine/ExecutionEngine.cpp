@@ -692,7 +692,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       else if (CE->getType()->isDoubleTy())
         GV.DoubleVal = GV.IntVal.roundToDouble();
       else if (CE->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended);
+        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended());
         (void)apf.convertFromAPInt(GV.IntVal,
                                    false,
                                    APFloat::rmNearestTiesToEven);
@@ -707,7 +707,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       else if (CE->getType()->isDoubleTy())
         GV.DoubleVal = GV.IntVal.signedRoundToDouble();
       else if (CE->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended);
+        APFloat apf = APFloat::getZero(APFloat::x87DoubleExtended());
         (void)apf.convertFromAPInt(GV.IntVal,
                                    true,
                                    APFloat::rmNearestTiesToEven);
@@ -724,7 +724,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       else if (Op0->getType()->isDoubleTy())
         GV.IntVal = APIntOps::RoundDoubleToAPInt(GV.DoubleVal, BitWidth);
       else if (Op0->getType()->isX86_FP80Ty()) {
-        APFloat apf = APFloat(APFloat::x87DoubleExtended, GV.IntVal);
+        APFloat apf = APFloat(APFloat::x87DoubleExtended(), GV.IntVal);
         uint64_t v;
         bool ignored;
         (void)apf.convertToInteger(&v, BitWidth,

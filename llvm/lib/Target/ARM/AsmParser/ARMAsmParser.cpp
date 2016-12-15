@@ -5295,7 +5295,7 @@ ARMAsmParser::parseFPImm(OperandVector &Operands) {
   const AsmToken &Tok = Parser.getTok();
   SMLoc Loc = Tok.getLoc();
   if (Tok.is(AsmToken::Real) && isVmovf) {
-    APFloat RealVal(APFloat::IEEEsingle, Tok.getString());
+    APFloat RealVal(APFloat::IEEEsingle(), Tok.getString());
     uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
     // If we had a '-' in front, toggle the sign bit.
     IntVal ^= (uint64_t)isNegative << 31;
@@ -5453,6 +5453,9 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     if (getParser().parseExpression(SubExprVal))
       return true;
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+    // execute-only: we assume that assembly programmers know what they are
+    // doing and allow literal pool creation here
     Operands.push_back(ARMOperand::CreateConstantPoolImm(SubExprVal, S, E));
     return false;
   }

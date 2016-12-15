@@ -479,17 +479,22 @@ public:
   GdbIndexSection();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
-  size_t getSize() const override { return CuTypesOffset; }
+  size_t getSize() const override;
   bool empty() const override;
 
   // Pairs of [CU Offset, CU length].
   std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
+
+  std::vector<AddressEntry<ELFT>> AddressArea;
 
 private:
   void parseDebugSections();
   void readDwarf(InputSection<ELFT> *I);
 
   uint32_t CuTypesOffset;
+  uint32_t SymTabOffset;
+
+  bool Finalized = false;
 };
 
 // --eh-frame-hdr option tells linker to construct a header for all the

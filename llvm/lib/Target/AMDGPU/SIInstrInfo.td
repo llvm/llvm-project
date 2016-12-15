@@ -308,6 +308,18 @@ def InterpSlot : Operand<i32> {
   let PrintMethod = "printInterpSlot";
 }
 
+// It appears to be necessary to create a separate operand for this to
+// be able to parse attr<num> with no space.
+def Attr : Operand<i32> {
+  let PrintMethod = "printInterpAttr";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def AttrChan : Operand<i32> {
+  let PrintMethod = "printInterpAttrChan";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 def SendMsgMatchClass : AsmOperandClass {
   let Name = "SendMsg";
   let PredicateMethod = "isSendMsg";

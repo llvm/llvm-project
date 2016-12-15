@@ -459,7 +459,7 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   // Do not trace into "or" unless it is equivalent to "add". If LHS and RHS
   // don't have common bits, (LHS | RHS) is equivalent to (LHS + RHS).
   if (BO->getOpcode() == Instruction::Or &&
-      !haveNoCommonBitsSet(LHS, RHS, DL, nullptr, BO, DT))
+      !haveNoCommonBitsSet(LHS, RHS, DL, BO, DT))
     return false;
 
   // In addition, tracing into BO requires that its surrounding s/zext (if

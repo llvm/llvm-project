@@ -119,7 +119,7 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
                                     "AMD", "AMDGPU");
 
   // Emit runtime metadata.
-  TS->emitRuntimeMetadataAsNoteElement(M);
+  TS->emitRuntimeMetadata(M);
 }
 
 bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
@@ -824,4 +824,3 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                    *TM.getSubtargetImpl(*MF->getFunction())->getRegisterInfo());
   return false;
 }
-

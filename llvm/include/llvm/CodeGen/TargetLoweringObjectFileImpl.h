@@ -33,7 +33,7 @@ namespace llvm {
 
 class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   bool UseInitArray;
-  mutable unsigned NextUniqueID = 0;
+  mutable unsigned NextUniqueID = 1;  // ID 0 is reserved for execute-only sections
 
 protected:
   MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =

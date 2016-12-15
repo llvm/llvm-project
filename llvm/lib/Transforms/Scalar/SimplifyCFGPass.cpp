@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -129,7 +128,6 @@ static bool mergeEmptyReturnBlocks(Function &F) {
 /// Call SimplifyCFG on all the blocks in the function,
 /// iterating until no more changes are made.
 static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
-                                   AssumptionCache *AC,
                                    unsigned BonusInstThreshold) {
   bool Changed = false;
   bool LocalChange = true;
@@ -145,7 +143,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
     for (Function::iterator BBIt = F.begin(); BBIt != F.end(); ) {
-      if (SimplifyCFG(&*BBIt++, TTI, BonusInstThreshold, AC, &LoopHeaders)) {
+      if (SimplifyCFG(&*BBIt++, TTI, BonusInstThreshold, &LoopHeaders)) {
         LocalChange = true;
         ++NumSimpl;
       }
@@ -156,10 +154,10 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 }
 
 static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
-                                AssumptionCache *AC, int BonusInstThreshold) {
+                                int BonusInstThreshold) {
   bool EverChanged = removeUnreachableBlocks(F);
   EverChanged |= mergeEmptyReturnBlocks(F);
-  EverChanged |= iterativelySimplifyCFG(F, TTI, AC, BonusInstThreshold);
+  EverChanged |= iterativelySimplifyCFG(F, TTI, BonusInstThreshold);
 
   // If neither pass changed anything, we're done.
   if (!EverChanged) return false;
@@ -173,7 +171,7 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
     return true;
 
   do {
-    EverChanged = iterativelySimplifyCFG(F, TTI, AC, BonusInstThreshold);
+    EverChanged = iterativelySimplifyCFG(F, TTI, BonusInstThreshold);
     EverChanged |= removeUnreachableBlocks(F);
   } while (EverChanged);
 
@@ -189,9 +187,8 @@ SimplifyCFGPass::SimplifyCFGPass(int BonusInstThreshold)
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  auto &AC = AM.getResult<AssumptionAnalysis>(F);
 
-  if (!simplifyFunctionCFG(F, TTI, &AC, BonusInstThreshold))
+  if (!simplifyFunctionCFG(F, TTI, BonusInstThreshold))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<GlobalsAA>();
@@ -214,15 +211,12 @@ struct CFGSimplifyPass : public FunctionPass {
     if (skipFunction(F) || (PredicateFtor && !PredicateFtor(F)))
       return false;
 
-    AssumptionCache *AC =
-        &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return simplifyFunctionCFG(F, TTI, AC, BonusInstThreshold);
+    return simplifyFunctionCFG(F, TTI, BonusInstThreshold);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
@@ -233,7 +227,6 @@ char CFGSimplifyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
                     false)
 
