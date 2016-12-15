@@ -60,7 +60,7 @@ static StringRef GetText(const Token &Tok, const SourceManager &Sources) {
 }
 
 void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
-  const FunctionDecl *Method = Result.Nodes.getStmtAs<FunctionDecl>("method");
+  const auto *Method = Result.Nodes.getNodeAs<FunctionDecl>("method");
   const SourceManager &Sources = *Result.SourceManager;
 
   assert(Method != nullptr);

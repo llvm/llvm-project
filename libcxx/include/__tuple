@@ -453,19 +453,57 @@ using tuple_element_t = typename tuple_element <_Ip, _Tp...>::type;
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
 #ifndef _LIBCPP_CXX03_LANG
-template <bool _IsTuple, class _SizeTrait, size_t _Expected>
-struct __tuple_like_with_size_imp : false_type {};
 
-template <class _SizeTrait, size_t _Expected>
-struct __tuple_like_with_size_imp<true, _SizeTrait, _Expected>
-    : integral_constant<bool, _SizeTrait::value == _Expected> {};
+template <class _Tp, size_t _TSize, bool _Good = true>
+struct __lookup_result {
+  using type = _Tp;
+  static constexpr bool _Success = _Good;
+  static constexpr size_t _Size = _TSize;
+};
+using __lookup_failure = __lookup_result<void, (size_t)-1, false>;
 
-template <class _Tuple, size_t _ExpectedSize,
-          class _RawTuple = typename __uncvref<_Tuple>::type>
-using __tuple_like_with_size = __tuple_like_with_size_imp<
-                                   __tuple_like<_RawTuple>::value,
-                                   tuple_size<_RawTuple>, _ExpectedSize
-                              >;
+template <class ..._Args>
+auto __deduce_tuple_type_ovl(tuple<_Args...>&)
+    -> __lookup_result<tuple<_Args...>, sizeof...(_Args)>;
+
+template <class _T1, class _T2>
+auto __deduce_tuple_type_ovl(pair<_T1, _T2>&)
+    -> __lookup_result<pair<_T1, _T2>, 2>;
+
+template <class _Tp, size_t _Size>
+auto __deduce_tuple_type_ovl(array<_Tp, _Size>&)
+  -> __lookup_result<array<_Tp, _Size>, _Size>;
+
+template <class _Tp>
+auto __deduce_tuple_type_imp(int)
+  -> decltype(__deduce_tuple_type_ovl(_VSTD::declval<__uncvref_t<_Tp>&>()));
+template <class> __lookup_failure __deduce_tuple_type_imp(...);
+
+// __deduce_tuple_like - Given a type determine if it is, or is derived from,
+//   a tuple-like type. This trait is used to support constructing and assigning
+//   to std::tuple from user-types derived from a tuple-like type.
+template <class _TupleLike,
+    class _Result = decltype(__deduce_tuple_type_imp<_TupleLike>(0)),
+    bool _Good = _Result::_Success>
+struct __deduce_tuple_like {
+  static_assert(_Good, "incorrect specialization choosen");
+  static constexpr bool _Success = true;
+  static constexpr size_t _Size = _Result::_Size;
+  using _RawType = typename _Result::type;
+  using _QualType =
+    typename __propagate_value_category<_TupleLike>::template __apply<_RawType>;
+};
+
+template <class _TupleLike, class _Result>
+struct __deduce_tuple_like<_TupleLike, _Result, /*_Good=*/false> {
+  static constexpr bool _Success = false;
+  static constexpr size_t _Size = (size_t)-1;
+};
+
+template <class _TupleLike, size_t _ExpectedSize,
+          class _Deduced = __deduce_tuple_like<_TupleLike>>
+using __tuple_like_with_size = integral_constant<bool,
+    _Deduced::_Success && _Deduced::_Size == _ExpectedSize>;
 
 struct _LIBCPP_TYPE_VIS __check_tuple_constructor_fail {
     template <class ...>

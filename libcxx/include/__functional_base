@@ -637,7 +637,8 @@ constexpr size_t uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
 template <class _Tp, class _Alloc, class ..._Args>
 struct __uses_alloc_ctor_imp
 {
-    static const bool __ua = uses_allocator<_Tp, _Alloc>::value;
+    typedef typename __uncvref<_Alloc>::type _RawAlloc;
+    static const bool __ua = uses_allocator<_Tp, _RawAlloc>::value;
     static const bool __ic =
         is_constructible<_Tp, allocator_arg_t, _Alloc, _Args...>::value;
     static const int value = __ua ? 2 - __ic : 0;
@@ -655,6 +656,7 @@ void __user_alloc_construct_impl (integral_constant<int, 0>, _Tp *__storage, con
     new (__storage) _Tp (_VSTD::forward<_Args>(__args)...);
 }
 
+// FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
 inline _LIBCPP_INLINE_VISIBILITY
 void __user_alloc_construct_impl (integral_constant<int, 1>, _Tp *__storage, const _Allocator &__a, _Args &&... __args )
@@ -662,6 +664,7 @@ void __user_alloc_construct_impl (integral_constant<int, 1>, _Tp *__storage, con
     new (__storage) _Tp (allocator_arg, __a, _VSTD::forward<_Args>(__args)...);
 }
 
+// FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
 inline _LIBCPP_INLINE_VISIBILITY
 void __user_alloc_construct_impl (integral_constant<int, 2>, _Tp *__storage, const _Allocator &__a, _Args &&... __args )
@@ -669,6 +672,7 @@ void __user_alloc_construct_impl (integral_constant<int, 2>, _Tp *__storage, con
     new (__storage) _Tp (_VSTD::forward<_Args>(__args)..., __a);
 }
 
+// FIXME: Theis should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
 inline _LIBCPP_INLINE_VISIBILITY
 void __user_alloc_construct (_Tp *__storage, const _Allocator &__a, _Args &&... __args)

@@ -330,7 +330,7 @@ int TestRelational(int X, int Y) {
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: expression is redundant
 
   if (X < 7 && X <= 5) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
   if (X < 7 && X <= 6) return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: equivalent expression on both side of logical operator
   if (X < 7 && X <= 7) return 1;
@@ -352,27 +352,27 @@ int TestRelational(int X, int Y) {
   if (X <= 7 && X <= 7) return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: both side of operator are equivalent
   if (X <= 7 && X <= 8) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: expression is redundant
 
   if (X == 11 && X > 10) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: expression is redundant
   if (X == 11 && X < 12) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: expression is redundant
   if (X > 10 && X == 11) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
   if (X < 12 && X == 11) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
- 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
+
   if (X != 11 && X == 42) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
   if (X != 11 && X > 11) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
   if (X != 11 && X < 11) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
   if (X != 11 && X < 8) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
   if (X != 11 && X > 14) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
 
   if (X < 7 || X < 6) return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: expression is redundant
@@ -480,6 +480,6 @@ int TestWithMinMaxInt(int X) {
 
   if (X > 0x7FFFFFFF || X < ((-0x7FFFFFFF)-1)) return 1;
   if (X <= 0x7FFFFFFF && X >= ((-0x7FFFFFFF)-1)) return 1;
-  
+
   return 0;
 }

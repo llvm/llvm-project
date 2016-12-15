@@ -1,3 +1,6 @@
+// Remove UNSUPPORTED for powerpc64le when the problem introduced by
+// r288563 is resolved.
+// UNSUPPORTED: powerpc64le
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: readability-identifier-naming.AbstractClassCase, value: CamelCase}, \

@@ -161,8 +161,7 @@ static int outputPPTrace(std::vector<CallbackCall> &CallbackCalls,
     const CallbackCall &Callback = *I;
     OS << "- Callback: " << Callback.Name << "\n";
 
-    for (std::vector<Argument>::const_iterator AI = Callback.Arguments.begin(),
-                                               AE = Callback.Arguments.end();
+    for (auto AI = Callback.Arguments.begin(), AE = Callback.Arguments.end();
          AI != AE; ++AI) {
       const Argument &Arg = *AI;
       OS << "  " << Arg.Name << ": " << Arg.Value << "\n";

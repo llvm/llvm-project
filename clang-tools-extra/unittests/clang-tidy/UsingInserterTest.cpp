@@ -33,8 +33,7 @@ public:
     if (!Inserter)
       Inserter.reset(new UsingInserter(*Result.SourceManager));
 
-    const clang::CallExpr *Call =
-        Result.Nodes.getNodeAs<clang::CallExpr>("foo");
+    const auto *Call = Result.Nodes.getNodeAs<clang::CallExpr>("foo");
     assert(Call != nullptr && "Did not find node \"foo\"");
     auto Hint =
         Inserter->createUsingDeclaration(*Result.Context, *Call, "::foo::func");

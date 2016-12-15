@@ -81,6 +81,10 @@ Improvements to clang-tidy
   Warns if an object is used after it has been moved, without an intervening
   reinitialization.
 
+- New `cppcoreguidelines-no-malloc
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-no-malloc.html>`_ check
+  warns if C-style memory management is used and suggests the use of RAII.
+
 - `modernize-make-unique
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-unique.html>`_
   and `modernize-make-shared
@@ -120,6 +124,12 @@ Improvements to clang-tidy
   Warns about the performance overhead arising from concatenating strings using
   the ``operator+``, instead of ``operator+=``.
 
+- New `performance-type-promotion-in-math-fn
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-type-promotion-in-math-fn.html>`_ check
+
+  Replaces uses of C-style standard math functions with double parameters and float
+  arguments with an equivalent function that takes a float parameter.
+
 - `readability-container-size-empty
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-container-size-empty.html>`_ check
   supports arbitrary containers with with suitable ``empty()`` and ``size()``
@@ -140,6 +150,11 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-declaration.html>`_ check
 
   Finds redundant variable and function declarations.
+
+- New `readability-redundant-function-ptr-dereference
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-function-ptr-dereference.html>`_ check
+
+  Finds redundant function pointer dereferences.
 
 - New `readability-redundant-member-init
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-member-init.html>`_ check

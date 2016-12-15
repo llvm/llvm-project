@@ -219,7 +219,8 @@ SourceLocation
 getLocForEndOfDecl(const clang::Decl *D,
                    const LangOptions &LangOpts = clang::LangOptions()) {
   const auto &SM = D->getASTContext().getSourceManager();
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(D->getLocEnd());
+  auto EndExpansionLoc = SM.getExpansionLoc(D->getLocEnd());
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(EndExpansionLoc);
   // Try to load the file buffer.
   bool InvalidTemp = false;
   llvm::StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
@@ -235,7 +236,7 @@ getLocForEndOfDecl(const clang::Decl *D,
   // FIXME: this is a bit hacky to get ReadToEndOfLine work.
   Lex.setParsingPreprocessorDirective(true);
   Lex.ReadToEndOfLine(&Line);
-  SourceLocation EndLoc = D->getLocEnd().getLocWithOffset(Line.size());
+  SourceLocation EndLoc = EndExpansionLoc.getLocWithOffset(Line.size());
   // If we already reach EOF, just return the EOF SourceLocation;
   // otherwise, move 1 offset ahead to include the trailing newline character
   // '\n'.

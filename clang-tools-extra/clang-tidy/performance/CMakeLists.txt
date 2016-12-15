@@ -6,6 +6,7 @@ add_clang_library(clangTidyPerformanceModule
   ImplicitCastInLoopCheck.cpp
   InefficientStringConcatenationCheck.cpp
   PerformanceTidyModule.cpp
+  TypePromotionInMathFnCheck.cpp
   UnnecessaryCopyInitialization.cpp
   UnnecessaryValueParamCheck.cpp
 

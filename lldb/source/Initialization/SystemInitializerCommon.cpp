@@ -35,17 +35,12 @@
 #include "lldb/Host/windows/windows.h"
 #endif
 
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include <string>
 
 using namespace lldb_private;
-
-static void fatal_error_handler(void *user_data, const std::string &reason,
-                                bool gen_crash_diag) {
-  Host::SetCrashDescription(reason.c_str());
-  ::abort();
-}
 
 SystemInitializerCommon::SystemInitializerCommon() {}
 
@@ -74,11 +69,10 @@ void SystemInitializerCommon::Initialize() {
   }
 #endif
 
+  llvm::EnablePrettyStackTrace();
   Log::Initialize();
   HostInfo::Initialize();
   Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
-
-  llvm::install_fatal_error_handler(fatal_error_handler, 0);
 
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 

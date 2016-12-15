@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-forward-declaration-namespace %t 
+// RUN: %check_clang_tidy %s misc-forward-declaration-namespace %t
 
 namespace {
 // This is a declaration in a wrong namespace.
