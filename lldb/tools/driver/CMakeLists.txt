@@ -1,6 +1,6 @@
 include(${LLDB_PROJECT_ROOT}/cmake/LLDBDependencies.cmake)
 
-add_lldb_executable(lldb
+add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
   )
@@ -32,5 +32,3 @@ endif()
 
 set_target_properties(lldb PROPERTIES VERSION ${LLDB_VERSION})
 
-install(TARGETS lldb
-  RUNTIME DESTINATION bin)
