@@ -342,7 +342,6 @@ static void computeImportForFunction(
                    << ProcessedThreshold << "\n");
       continue;
     }
-    bool PreviouslyImported = ProcessedThreshold != 0;
     // Mark this function as imported in this module, with the current Threshold
     ProcessedThreshold = AdjThreshold;
 
@@ -350,18 +349,15 @@ static void computeImportForFunction(
     if (ExportLists) {
       auto &ExportList = (*ExportLists)[ExportModulePath];
       ExportList.insert(GUID);
-      if (!PreviouslyImported) {
-        // This is the first time this function was exported from its source
-        // module, so mark all functions and globals it references as exported
-        // to the outside if they are defined in the same source module.
-        for (auto &Edge : ResolvedCalleeSummary->calls()) {
-          auto CalleeGUID = Edge.first.getGUID();
-          exportGlobalInModule(Index, ExportModulePath, CalleeGUID, ExportList);
-        }
-        for (auto &Ref : ResolvedCalleeSummary->refs()) {
-          auto GUID = Ref.getGUID();
-          exportGlobalInModule(Index, ExportModulePath, GUID, ExportList);
-        }
+      // Mark all functions and globals referenced by this function as exported
+      // to the outside if they are defined in the same source module.
+      for (auto &Edge : ResolvedCalleeSummary->calls()) {
+        auto CalleeGUID = Edge.first.getGUID();
+        exportGlobalInModule(Index, ExportModulePath, CalleeGUID, ExportList);
+      }
+      for (auto &Ref : ResolvedCalleeSummary->refs()) {
+        auto GUID = Ref.getGUID();
+        exportGlobalInModule(Index, ExportModulePath, GUID, ExportList);
       }
     }
 
