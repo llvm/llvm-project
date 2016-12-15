@@ -236,8 +236,7 @@ static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
 }
 
 /// Mark the global \p GUID as export by module \p ExportModulePath if found in
-/// this module. If it is a GlobalVariable, we also mark any referenced global
-/// in the current module as exported.
+/// this module.
 static void exportGlobalInModule(const ModuleSummaryIndex &Index,
                                  StringRef ExportModulePath,
                                  GlobalValue::GUID GUID,
