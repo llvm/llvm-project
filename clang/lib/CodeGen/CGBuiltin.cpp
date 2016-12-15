@@ -2214,7 +2214,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                             llvm::Attribute::ReturnsTwice);
       llvm::Constant *SetJmpEx = CGM.CreateRuntimeFunction(
           llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/false),
-          "_setjmpex", ReturnsTwiceAttr);
+          "_setjmpex", ReturnsTwiceAttr, /*Local=*/true);
       llvm::Value *Buf = Builder.CreateBitOrPointerCast(
           EmitScalarExpr(E->getArg(0)), Int8PtrTy);
       llvm::Value *FrameAddr =
@@ -2239,7 +2239,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
         llvm::Type *ArgTypes[] = {Int8PtrTy, IntTy};
         llvm::Constant *SetJmp3 = CGM.CreateRuntimeFunction(
             llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/true),
-            "_setjmp3", ReturnsTwiceAttr);
+            "_setjmp3", ReturnsTwiceAttr, /*Local=*/true);
         llvm::Value *Count = ConstantInt::get(IntTy, 0);
         llvm::Value *Args[] = {Buf, Count};
         CS = EmitRuntimeCallOrInvoke(SetJmp3, Args);
@@ -2247,7 +2247,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
         llvm::Type *ArgTypes[] = {Int8PtrTy, Int8PtrTy};
         llvm::Constant *SetJmp = CGM.CreateRuntimeFunction(
             llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/false),
-            "_setjmp", ReturnsTwiceAttr);
+            "_setjmp", ReturnsTwiceAttr, /*Local=*/true);
         llvm::Value *FrameAddr =
             Builder.CreateCall(CGM.getIntrinsic(Intrinsic::frameaddress),
                                ConstantInt::get(Int32Ty, 0));

@@ -211,7 +211,7 @@ void FindAllSymbols::run(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  const NamedDecl *ND = Result.Nodes.getNodeAs<NamedDecl>("decl");
+  const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("decl");
   assert(ND && "Matched declaration must be a NamedDecl!");
   const SourceManager *SM = Result.SourceManager;
 

@@ -40,7 +40,7 @@ class AddressBreakpointTestCase(TestBase):
         breakpoint = target.BreakpointCreateBySourceRegex(
             "Set a breakpoint here", lldb.SBFileSpec("main.c"))
         self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
+                        breakpoint.GetNumLocations() >= 1,
                         VALID_BREAKPOINT)
 
         # Get the breakpoint location from breakpoint after we verified that,

@@ -351,33 +351,31 @@ std::string ToolChain::GetProgramPath(const char *Name) const {
 }
 
 std::string ToolChain::GetLinkerPath() const {
-  if (Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
-    StringRef UseLinker = A->getValue();
+  const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  StringRef UseLinker = A ? A->getValue() : CLANG_DEFAULT_LINKER;
 
-    if (llvm::sys::path::is_absolute(UseLinker)) {
-      // If we're passed -fuse-ld= with what looks like an absolute path,
-      // don't attempt to second-guess that.
-      if (llvm::sys::fs::exists(UseLinker))
-        return UseLinker;
-    } else {
-      // If we're passed -fuse-ld= with no argument, or with the argument ld,
-      // then use whatever the default system linker is.
-      if (UseLinker.empty() || UseLinker == "ld")
-        return GetProgramPath("ld");
+  if (llvm::sys::path::is_absolute(UseLinker)) {
+    // If we're passed what looks like an absolute path, don't attempt to
+    // second-guess that.
+    if (llvm::sys::fs::exists(UseLinker))
+      return UseLinker;
+  } else if (UseLinker.empty() || UseLinker == "ld") {
+    // If we're passed -fuse-ld= with no argument, or with the argument ld,
+    // then use whatever the default system linker is.
+    return GetProgramPath(getDefaultLinker());
+  } else {
+    llvm::SmallString<8> LinkerName("ld.");
+    LinkerName.append(UseLinker);
 
-      llvm::SmallString<8> LinkerName("ld.");
-      LinkerName.append(UseLinker);
-
-      std::string LinkerPath(GetProgramPath(LinkerName.c_str()));
-      if (llvm::sys::fs::exists(LinkerPath))
-        return LinkerPath;
-    }
-
-    getDriver().Diag(diag::err_drv_invalid_linker_name) << A->getAsString(Args);
-    return "";
+    std::string LinkerPath(GetProgramPath(LinkerName.c_str()));
+    if (llvm::sys::fs::exists(LinkerPath))
+      return LinkerPath;
   }
 
-  return GetProgramPath(DefaultLinker);
+  if (A)
+    getDriver().Diag(diag::err_drv_invalid_linker_name) << A->getAsString(Args);
+
+  return GetProgramPath(getDefaultLinker());
 }
 
 types::ID ToolChain::LookupTypeForExtension(StringRef Ext) const {

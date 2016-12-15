@@ -77,11 +77,11 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   UseZeroLengthBitfieldAlignment = false;
   UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
-  HalfFormat = &llvm::APFloat::IEEEhalf;
-  FloatFormat = &llvm::APFloat::IEEEsingle;
-  DoubleFormat = &llvm::APFloat::IEEEdouble;
-  LongDoubleFormat = &llvm::APFloat::IEEEdouble;
-  Float128Format = &llvm::APFloat::IEEEquad;
+  HalfFormat = &llvm::APFloat::IEEEhalf();
+  FloatFormat = &llvm::APFloat::IEEEsingle();
+  DoubleFormat = &llvm::APFloat::IEEEdouble();
+  LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+  Float128Format = &llvm::APFloat::IEEEquad();
   MCountName = "mcount";
   RegParmMax = 0;
   SSERegParmMax = 0;
@@ -227,12 +227,12 @@ TargetInfo::RealType TargetInfo::getRealTypeByWidth(unsigned BitWidth) const {
 
   switch (BitWidth) {
   case 96:
-    if (&getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended)
+    if (&getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
       return LongDouble;
     break;
   case 128:
-    if (&getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble ||
-        &getLongDoubleFormat() == &llvm::APFloat::IEEEquad)
+    if (&getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble() ||
+        &getLongDoubleFormat() == &llvm::APFloat::IEEEquad())
       return LongDouble;
     if (hasFloat128Type())
       return Float128;
@@ -309,7 +309,7 @@ void TargetInfo::adjust(const LangOptions &Opts) {
     // to generating illegal code that uses 64bit doubles.
     if (DoubleWidth != FloatWidth) {
       DoubleWidth = DoubleAlign = 64;
-      DoubleFormat = &llvm::APFloat::IEEEdouble;
+      DoubleFormat = &llvm::APFloat::IEEEdouble();
     }
     LongDoubleWidth = LongDoubleAlign = 128;
 
@@ -323,9 +323,9 @@ void TargetInfo::adjust(const LangOptions &Opts) {
     IntMaxType = SignedLongLong;
     Int64Type = SignedLong;
 
-    HalfFormat = &llvm::APFloat::IEEEhalf;
-    FloatFormat = &llvm::APFloat::IEEEsingle;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    HalfFormat = &llvm::APFloat::IEEEhalf();
+    FloatFormat = &llvm::APFloat::IEEEsingle();
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
   }
 
   if (Opts.NewAlignOverride)

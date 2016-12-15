@@ -157,7 +157,7 @@ set(LIBOMP_USE_HWLOC FALSE CACHE BOOL
 set(LIBOMP_HWLOC_INSTALL_DIR /usr/local CACHE PATH
   "Install path for hwloc library")
 
-# Get the build number from kmp_version.c
+# Get the build number from kmp_version.cpp
 libomp_get_build_number("${CMAKE_CURRENT_SOURCE_DIR}" LIBOMP_VERSION_BUILD)
 math(EXPR LIBOMP_VERSION_BUILD_YEAR "${LIBOMP_VERSION_BUILD}/10000")
 math(EXPR LIBOMP_VERSION_BUILD_MONTH_DAY "${LIBOMP_VERSION_BUILD}%10000")

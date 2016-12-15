@@ -44,17 +44,17 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   }
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(Body);
-    InputSectionBase<ELFT> *SC = D.Section;
+    InputSectionBase<ELFT> *IS = D.Section;
 
     // According to the ELF spec reference to a local symbol from outside
     // the group are not allowed. Unfortunately .eh_frame breaks that rule
     // and must be treated specially. For now we just replace the symbol with
     // 0.
-    if (SC == &InputSection<ELFT>::Discarded)
+    if (IS == &InputSection<ELFT>::Discarded)
       return 0;
 
     // This is an absolute symbol.
-    if (!SC)
+    if (!IS)
       return D.Value;
 
     uintX_t Offset = D.Value;
@@ -62,7 +62,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       Offset += Addend;
       Addend = 0;
     }
-    uintX_t VA = (SC->OutSec ? SC->OutSec->Addr : 0) + SC->getOffset(Offset);
+    uintX_t VA = (IS->OutSec ? IS->OutSec->Addr : 0) + IS->getOffset(Offset);
     if (D.isTls() && !Config->Relocatable) {
       if (!Out<ELFT>::TlsPhdr)
         fatal(toString(D.File) +

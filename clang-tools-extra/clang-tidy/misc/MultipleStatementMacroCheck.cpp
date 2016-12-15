@@ -26,7 +26,7 @@ const Stmt *nextStmt(const MatchFinder::MatchResult &Result, const Stmt *S) {
   auto Parents = Result.Context->getParents(*S);
   if (Parents.empty())
     return nullptr;
-  const Stmt *Parent = Parents[0].get<Stmt>();
+  const auto *Parent = Parents[0].get<Stmt>();
   if (!Parent)
     return nullptr;
   const Stmt *Prev = nullptr;

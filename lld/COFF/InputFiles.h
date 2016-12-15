@@ -83,10 +83,10 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   void parse() override;
 
-  // Returns an input file for a given symbol. A null pointer is returned if we
-  // have already returned the same input file. (So that we don't instantiate
-  // the same member more than once.)
-  InputFile *getMember(const Archive::Symbol *Sym);
+  // Enqueues an archive member load for the given symbol. If we've already
+  // enqueued a load for the same archive member, this function does nothing,
+  // which ensures that we don't load the same member more than once.
+  void addMember(const Archive::Symbol *Sym);
 
 private:
   std::unique_ptr<Archive> File;

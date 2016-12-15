@@ -14,7 +14,7 @@ public:
     Finder->addMatcher(ast_matchers::varDecl().bind("var"), this);
   }
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
-    const VarDecl *Var = Result.Nodes.getNodeAs<VarDecl>("var");
+    const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
     // Add diagnostics in the wrong order.
     diag(Var->getLocation(), "variable");
     diag(Var->getTypeSpecStartLoc(), "type specifier");

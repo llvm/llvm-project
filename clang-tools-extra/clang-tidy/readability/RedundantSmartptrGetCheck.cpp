@@ -116,8 +116,8 @@ void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
 
   bool IsPtrToPtr = Result.Nodes.getNodeAs<Decl>("ptr_to_ptr") != nullptr;
   bool IsMemberExpr = Result.Nodes.getNodeAs<Expr>("memberExpr") != nullptr;
-  const Expr *GetCall = Result.Nodes.getNodeAs<Expr>("redundant_get");
-  const Expr *Smartptr = Result.Nodes.getNodeAs<Expr>("smart_pointer");
+  const auto *GetCall = Result.Nodes.getNodeAs<Expr>("redundant_get");
+  const auto *Smartptr = Result.Nodes.getNodeAs<Expr>("smart_pointer");
 
   if (IsPtrToPtr && IsMemberExpr) {
     // Ignore this case (eg. Foo->get()->DoSomething());

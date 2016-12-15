@@ -1291,10 +1291,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                           diag::err_invalid_incomplete_type_use, FullRange))
     return ExprError();
 
-  if (RequireNonAbstractType(TyBeginLoc, Ty,
-                             diag::err_allocation_of_abstract_type))
-    return ExprError();
-
   InitializedEntity Entity = InitializedEntity::InitializeTemporary(TInfo);
   InitializationKind Kind =
       Exprs.size() ? ListInitialization
@@ -5491,9 +5487,6 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   if (Context.getCanonicalType(LTy) == Context.getCanonicalType(RTy)) {
     if (LTy->isRecordType()) {
       // The operands have class type. Make a temporary copy.
-      if (RequireNonAbstractType(QuestionLoc, LTy,
-                                 diag::err_allocation_of_abstract_type))
-        return QualType();
       InitializedEntity Entity = InitializedEntity::InitializeTemporary(LTy);
 
       ExprResult LHSCopy = PerformCopyInitialization(Entity,

@@ -75,8 +75,7 @@ static bool isStdInitializerList(QualType Type) {
 }
 
 void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
-  const CXXConstructorDecl *Ctor =
-      Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
+  const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
   // Do not be confused: isExplicit means 'explicit' keyword is present,
   // isImplicit means that it's a compiler-generated constructor.
   if (Ctor->isOutOfLine() || Ctor->isImplicit() || Ctor->isDeleted() ||

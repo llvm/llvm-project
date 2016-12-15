@@ -28,7 +28,9 @@ namespace BaseClassAggregateInit {
 
 namespace NoexceptFunctionTypes {
   template<typename T> constexpr bool f() noexcept(true) { return true; }
+  constexpr bool (*fp)() = f<int>;
   static_assert(f<int>());
+  static_assert(fp());
 
   template<typename T> struct A {
     constexpr bool f() noexcept(true) { return true; }

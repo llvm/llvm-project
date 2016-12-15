@@ -876,10 +876,11 @@ public:
   }
 
   /// Create a new runtime function with the specified type and name.
-  llvm::Constant *CreateRuntimeFunction(llvm::FunctionType *Ty,
-                                        StringRef Name,
-                                        llvm::AttributeSet ExtraAttrs =
-                                          llvm::AttributeSet());
+  llvm::Constant *
+  CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
+                        llvm::AttributeSet ExtraAttrs = llvm::AttributeSet(),
+                        bool Local = false);
+
   /// Create a new compiler builtin function with the specified type and name.
   llvm::Constant *CreateBuiltinFunction(llvm::FunctionType *Ty,
                                         StringRef Name,

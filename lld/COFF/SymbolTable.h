@@ -17,11 +17,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
 
-#ifdef _MSC_VER
-// <future> depends on <eh.h> for __uncaught_exception.
-#include <eh.h>
-#endif
-
 namespace llvm {
 struct LTOCodeGenerator;
 }
@@ -117,7 +112,6 @@ private:
   std::pair<Symbol *, bool> insert(StringRef Name);
   StringRef findByPrefix(StringRef Prefix);
 
-  void addMemberFile(ArchiveFile *F, const Archive::Symbol Sym);
   void addCombinedLTOObject(ObjectFile *Obj);
   std::vector<ObjectFile *> createLTOObjects(llvm::LTOCodeGenerator *CG);
 

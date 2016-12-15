@@ -2616,7 +2616,7 @@ __kmpc_dispatch_fini_8u( ident_t *loc, kmp_int32 gtid )
 /*! @} */
 
 //-----------------------------------------------------------------------------------------
-//Non-template routines from kmp_dispatch.c used in other sources
+//Non-template routines from kmp_dispatch.cpp used in other sources
 
 kmp_uint32 __kmp_eq_4( kmp_uint32 value, kmp_uint32 checker) {
     return value == checker;

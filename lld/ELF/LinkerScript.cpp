@@ -464,7 +464,11 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
   if (auto *AssignCmd = dyn_cast<SymbolAssignment>(&Base)) {
     if (AssignCmd->Name == ".") {
       // Update to location counter means update to section size.
-      Dot = AssignCmd->Expression(Dot);
+      uintX_t Val = AssignCmd->Expression(Dot);
+      if (Val < Dot)
+        error("unable to move location counter backward for: " +
+              CurOutSec->Name);
+      Dot = Val;
       CurOutSec->Size = Dot - CurOutSec->Addr;
       return;
     }
