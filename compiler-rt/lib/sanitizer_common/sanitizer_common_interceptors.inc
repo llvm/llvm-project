@@ -4906,39 +4906,6 @@ INTERCEPTOR(void *, __bzero, void *block, uptr size) {
 #define INIT___BZERO
 #endif  // SANITIZER_INTERCEPT___BZERO
 
-#if SANITIZER_INTERCEPT_BZERO
-DECLARE_REAL_AND_INTERCEPTOR(void *, memset, void *, int, uptr)
-
-INTERCEPTOR(void, bzero, void *block, uptr size) {
-  WRAP(memset)(block, 0, size);
-}
-#define INIT_BZERO COMMON_INTERCEPT_FUNCTION(bzero);
-#else
-#define INIT_BZERO
-#endif  // SANITIZER_INTERCEPT_BZERO
-
-#if SANITIZER_INTERCEPT_BCOPY
-DECLARE_REAL_AND_INTERCEPTOR(void *, memmove, void *, const void *, uptr)
-
-INTERCEPTOR(void, bcopy, const void *src, void *dest, uptr size) {
-  WRAP(memmove)(dest, src, size);
-}
-#define INIT_BCOPY COMMON_INTERCEPT_FUNCTION(bcopy);
-#else
-#define INIT_BCOPY
-#endif  // SANITIZER_INTERCEPT_BCOPY
-
-#if SANITIZER_INTERCEPT_BCMP
-DECLARE_REAL_AND_INTERCEPTOR(int, memcmp, const void *, const void *, uptr)
-
-INTERCEPTOR(int, bcmp, const void *s1, const void *s2, uptr size) {
-  return WRAP(memcmp)(s1, s2, size);
-}
-#define INIT_BCMP COMMON_INTERCEPT_FUNCTION(bcmp);
-#else
-#define INIT_BCMP
-#endif  // SANITIZER_INTERCEPT_BCMP
-
 #if SANITIZER_INTERCEPT_FTIME
 INTERCEPTOR(int, ftime, __sanitizer_timeb *tp) {
   void *ctx;
@@ -5923,6 +5890,72 @@ INTERCEPTOR(int, __lxstat64, int version, const char *path, void *buf) {
 
 // FIXME: add other *stat interceptor
 
+#if SANITIZER_INTERCEPT_UTMP
+INTERCEPTOR(void *, getutent, int dummy) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getutent, dummy);
+  void *res = REAL(getutent)(dummy);
+  if (res)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, __sanitizer::struct_utmp_sz);
+  return res;
+}
+INTERCEPTOR(void *, getutid, void *ut) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getutid, ut);
+  void *res = REAL(getutid)(ut);
+  if (res)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, __sanitizer::struct_utmp_sz);
+  return res;
+}
+INTERCEPTOR(void *, getutline, void *ut) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getutline, ut);
+  void *res = REAL(getutline)(ut);
+  if (res)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, __sanitizer::struct_utmp_sz);
+  return res;
+}
+#define INIT_UTMP                      \
+  COMMON_INTERCEPT_FUNCTION(getutent); \
+  COMMON_INTERCEPT_FUNCTION(getutid);  \
+  COMMON_INTERCEPT_FUNCTION(getutline);
+#else
+#define INIT_UTMP
+#endif
+
+#if SANITIZER_INTERCEPT_UTMPX
+INTERCEPTOR(void *, getutxent, int dummy) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getutxent, dummy);
+  void *res = REAL(getutxent)(dummy);
+  if (res)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, __sanitizer::struct_utmpx_sz);
+  return res;
+}
+INTERCEPTOR(void *, getutxid, void *ut) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getutxid, ut);
+  void *res = REAL(getutxid)(ut);
+  if (res)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, __sanitizer::struct_utmpx_sz);
+  return res;
+}
+INTERCEPTOR(void *, getutxline, void *ut) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getutxline, ut);
+  void *res = REAL(getutxline)(ut);
+  if (res)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, __sanitizer::struct_utmpx_sz);
+  return res;
+}
+#define INIT_UTMPX                      \
+  COMMON_INTERCEPT_FUNCTION(getutxent); \
+  COMMON_INTERCEPT_FUNCTION(getutxid);  \
+  COMMON_INTERCEPT_FUNCTION(getutxline);
+#else
+#define INIT_UTMPX
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -6089,9 +6122,6 @@ static void InitializeCommonInterceptors() {
   INIT_CAPGET;
   INIT_AEABI_MEM;
   INIT___BZERO;
-  INIT_BZERO;
-  INIT_BCOPY;
-  INIT_BCMP;
   INIT_FTIME;
   INIT_XDR;
   INIT_TSEARCH;
@@ -6122,4 +6152,6 @@ static void InitializeCommonInterceptors() {
   INIT___LXSTAT;
   INIT___LXSTAT64;
   // FIXME: add other *stat interceptors.
+  INIT_UTMP;
+  INIT_UTMPX;
 }

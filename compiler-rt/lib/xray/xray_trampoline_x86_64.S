@@ -30,7 +30,7 @@
 	movq	%rcx, 32(%rsp)
 	movq	%r8, 24(%rsp)
 	movq	%r9, 16(%rsp)
-.endm SAVE_REGISTERS
+.endm
 
 .macro RESTORE_REGISTERS
 	movupd	184(%rsp), %xmm0
@@ -49,7 +49,7 @@
 	movq	24(%rsp), %r8
 	movq	16(%rsp), %r9
 	addq	$200, %rsp
-.endm RESTORE_REGISTERS
+.endm
 
 	.text
 	.file "xray_trampoline_x86.S"

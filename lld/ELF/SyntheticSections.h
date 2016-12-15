@@ -13,6 +13,7 @@
 #include "GdbIndex.h"
 #include "InputSection.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/MC/StringTableBuilder.h"
 
 namespace lld {
 namespace elf {
@@ -485,6 +486,13 @@ public:
   // Pairs of [CU Offset, CU length].
   std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
 
+  llvm::StringTableBuilder StringPool;
+
+  GdbHashTab SymbolTable;
+
+  // The CU vector portion of the constant pool.
+  std::vector<std::vector<std::pair<uint32_t, uint8_t>>> CuVectors;
+
   std::vector<AddressEntry<ELFT>> AddressArea;
 
 private:
@@ -493,6 +501,11 @@ private:
 
   uint32_t CuTypesOffset;
   uint32_t SymTabOffset;
+  uint32_t ConstantPoolOffset;
+  uint32_t StringPoolOffset;
+
+  size_t CuVectorsSize = 0;
+  std::vector<size_t> CuVectorsOffset;
 
   bool Finalized = false;
 };

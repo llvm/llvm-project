@@ -457,16 +457,18 @@ void ChangeNamespaceTool::run(
     // This avoids fixing types with record types as qualifier, which is not
     // filtered by matchers in some cases, e.g. the type is templated. We should
     // handle the record type qualifier instead.
-    if (TLoc->getTypeLocClass() == TypeLoc::Elaborated) {
+    TypeLoc Loc = *TLoc;
+    while (Loc.getTypeLocClass() == TypeLoc::Qualified)
+      Loc = Loc.getNextTypeLoc();
+    if (Loc.getTypeLocClass() == TypeLoc::Elaborated) {
       NestedNameSpecifierLoc NestedNameSpecifier =
-          TLoc->castAs<ElaboratedTypeLoc>().getQualifierLoc();
+          Loc.castAs<ElaboratedTypeLoc>().getQualifierLoc();
       const Type *SpecifierType =
           NestedNameSpecifier.getNestedNameSpecifier()->getAsType();
       if (SpecifierType && SpecifierType->isRecordType())
         return;
     }
-    fixTypeLoc(Result, startLocationForType(*TLoc), endLocationForType(*TLoc),
-               *TLoc);
+    fixTypeLoc(Result, startLocationForType(Loc), endLocationForType(Loc), Loc);
   } else if (const auto *VarRef =
                  Result.Nodes.getNodeAs<DeclRefExpr>("var_ref")) {
     const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var_decl");

@@ -9,9 +9,6 @@
 
 // UNSUPPORTED: c++98, c++03
 
-// Doesn't pass due to use of is_trivially_* trait.
-// XFAIL: gcc-4.9
-
 // <utility>
 
 // template <class T1, class T2> struct pair

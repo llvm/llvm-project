@@ -20,6 +20,12 @@
 # RUN: ld.lld %t.o -Ttext=0x100000 -Tdata=0x110000 -Tbss=0x200000 -o %t4
 # RUN: llvm-objdump -section-headers %t4 | FileCheck %s
 
+## Check Ttext-segment X and Ttext-segment=X forms.
+# RUN: ld.lld %t.o -Ttext-segment=0x100000 -Tdata=0x110000 -Tbss=0x200000 -o %t4
+# RUN: llvm-objdump -section-headers %t4 | FileCheck %s
+# RUN: ld.lld %t.o -Ttext-segment 0x100000 -Tdata=0x110000 -Tbss=0x200000 -o %t4
+# RUN: llvm-objdump -section-headers %t4 | FileCheck %s
+
 ## The same, but dropped "0x" prefix.
 # RUN: ld.lld %t.o -Ttext=100000 -Tdata=110000 -Tbss=200000 -o %t5
 # RUN: llvm-objdump -section-headers %t5 | FileCheck %s
